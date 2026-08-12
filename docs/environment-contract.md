@@ -55,6 +55,19 @@ the privileged reads inside `/admin` (all accounts' `profiles`, `last_sign_in_at
 via `auth.admin.listUsers`) do, and only `requireOperator()` ever constructs
 that client.
 
+**Adding this variable in Vercel is not enough on its own — the deployment has
+to be REBUILT to pick it up, and a plain "Redeploy" of an unchanged commit does
+not rebuild.** `vercel.json`'s `ignoreCommand`
+(`scripts/vercel-should-build.sh`) skips any deployment whose diff against the
+last successful one is empty, which is exactly the case for a same-commit
+redeploy: Vercel marks it "Ignored" and keeps serving the previous build, still
+without the variable. Confirmed live on 2026-08-11 — `/admin` kept returning
+404 through two redeploys for this reason, not because of a wrong UUID. Get a
+real build by pushing a commit that touches a build-affecting path, or by
+temporarily clearing the Ignored Build Step in Project Settings → Git. The same
+applies to **every** server-side variable in this document, not just this one;
+it is written here because this is where it first cost an hour.
+
 Being on this list is necessary but not sufficient: `/admin` also requires an
 `aal2` (TOTP) session, enrolled once at `/mfa/enroll` — see
 `.claude/rules/admin.md` for the full gate and

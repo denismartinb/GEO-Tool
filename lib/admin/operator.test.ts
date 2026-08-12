@@ -82,6 +82,32 @@ describe("requireOperatorCandidate", () => {
     await expect(requireOperatorCandidate()).rejects.toThrow("NOT_FOUND");
     expect(redirectMock).not.toHaveBeenCalled();
   });
+
+  it("logs the denial with the user id when the allow-list exists but excludes them", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    requireUserMock.mockResolvedValue({ supabase: supabaseWith("aal1"), user: { id: OTHER_ID } });
+
+    await expect(requireOperatorCandidate()).rejects.toThrow("NOT_FOUND");
+
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("not on the allow-list"), { userId: OTHER_ID });
+    errorSpy.mockRestore();
+  });
+
+  it("logs the misconfiguration — not a plain denial — when ADMIN_USER_IDS is unset, and names the rebuild trap", async () => {
+    delete process.env.ADMIN_USER_IDS;
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    requireUserMock.mockResolvedValue({ supabase: supabaseWith("aal1"), user: { id: OPERATOR_ID } });
+
+    await expect(requireOperatorCandidate()).rejects.toThrow("NOT_FOUND");
+
+    const logged = String(errorSpy.mock.calls[0]?.[0] ?? "");
+    expect(logged).toContain("ADMIN_USER_IDS is unset");
+    expect(logged).toContain("vercel-should-build.sh");
+    // The operator's own UUID must never be the thing blamed when the variable
+    // is simply missing — that is what sent the founder hunting the wrong bug.
+    expect(logged).not.toContain("not on the allow-list");
+    errorSpy.mockRestore();
+  });
 });
 
 describe("requireOperator", () => {

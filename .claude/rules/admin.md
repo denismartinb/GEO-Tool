@@ -31,6 +31,16 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   callable HTTP endpoint independent of the page that renders its `<form>` —
   `.claude/rules/server-actions.md` already says this generally; here it is
   the entire security model, not a defense-in-depth extra.
+- **The 404 is for the browser; the operator still gets a log line.** Denying
+  access silently makes "variable unset", "wrong UUID" and "someone else
+  poking around" indistinguishable — and the person who can fix the first two
+  is the one staring at the blank 404. `logDeniedOperatorAccess()` separates
+  the misconfiguration case from the real denial in the server logs, and never
+  leaks either into the response body. Same rule as
+  `.claude/rules/scan.md`'s "a failure the operator can fix must reach the
+  operator"; it was written into the ADMIN-CONSOLE-1 proposal, shipped
+  missing, and cost an hour on the first real setup
+  (`docs/brand/design-decisions-log.md` §58).
 - **A non-operator gets `notFound()` (404), never a redirect or a 403.** A
   403 confirms the route exists and is worth attacking; a redirect to
   `/login` reveals the same thing to someone already signed in. 404 says

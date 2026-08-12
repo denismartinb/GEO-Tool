@@ -5769,6 +5769,28 @@ parámetro de query atacable por un enlace manipulado, no sólo el que genera
 `/mfa/challenge?next=https://evil.example` redirigiría una sesión recién
 elevada a `aal2` fuera del sitio.
 
+**Lo que costó la primera puesta en marcha, y qué se cambió por ello.** Con
+`ADMIN_USER_IDS` ya configurada en Vercel, `/admin` siguió devolviendo 404 a
+través de dos «Redeploy». La causa no era el UUID ni la variable: el
+`ignoreCommand` de `vercel.json` (`scripts/vercel-should-build.sh`, BUILD-BUDGET-1)
+salta cualquier deployment cuyo diff contra el último exitoso esté vacío — que
+es exactamente un redeploy del mismo commit —, así que Vercel lo marcó
+«Ignored» y siguió sirviendo el build viejo, sin la variable. El script hace lo
+que se le pidió (matar los commits vacíos de retrigger); lo que nadie había
+documentado es que también mata el caso «redespliega para recoger una variable
+nueva». Ahora está escrito en `docs/environment-contract.md`, y aplica a
+**todas** las variables de servidor, no sólo a ésta.
+
+Lo segundo que falló fue de esta fase, no del script: la propuesta prometía que
+«cada intento fallido queda registrado» y la primera implementación **no
+registraba nada**. Un 404 mudo hace indistinguibles «variable sin configurar»,
+«UUID equivocado» y «alguien fisgoneando», y el único que puede arreglar los dos
+primeros es justo el que se queda mirando el 404. `logDeniedOperatorAccess()`
+distingue ahora los dos casos en los logs del servidor —y el de configuración
+nombra la trampa del rebuild— sin cambiar ni un byte de la respuesta HTTP, que
+sigue siendo un 404 pelado. Misma regla que ya corría en el pipeline de escaneo:
+«un fallo que el operador puede arreglar tiene que llegarle al operador».
+
 ### Pendiente / roto conocido
 
 - **Fase 2 (escritura acotada) y Fase 3 (salud de la plataforma) sin empezar**

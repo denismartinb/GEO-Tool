@@ -33,6 +33,35 @@ export function isOperatorUserId(userId: string): boolean {
   return operatorIdAllowList().has(userId.trim().toLowerCase());
 }
 
+/**
+ * A 404 is the right answer to give the BROWSER (see `requireOperatorCandidate`
+ * below), but it is a terrible answer to give the operator debugging their own
+ * setup: "unset variable" and "wrong UUID" and "someone else's account poking
+ * around" all look identical from outside, and the person who can fix the first
+ * two is the same person staring at the blank 404.
+ *
+ * This is not a nicety. `ADMIN_USER_IDS` was added to Vercel on 2026-08-11 and
+ * `/admin` kept 404ing; the real cause was that `scripts/vercel-should-build.sh`
+ * skips the rebuild of an unchanged commit, so the variable never entered the
+ * running build — an hour lost to a screen that could not say so. Same rule the
+ * scan pipeline already runs on: "a failure the operator can fix must reach the
+ * operator" (`.claude/rules/scan.md`).
+ *
+ * Logged, never rendered: the response body stays an unadorned 404.
+ */
+function logDeniedOperatorAccess(userId: string): void {
+  if (operatorIdAllowList().size === 0) {
+    console.error(
+      "[geo:admin] ADMIN_USER_IDS is unset or empty in this deployment — /admin is unreachable for everyone. " +
+        "Note that adding the variable in Vercel is not enough on its own: the deployment has to be REBUILT to pick " +
+        "it up, and a plain Redeploy of an unchanged commit is skipped by scripts/vercel-should-build.sh."
+    );
+    return;
+  }
+
+  console.error("[geo:admin] denied /admin access to a signed-in user not on the allow-list", { userId });
+}
+
 type OperatorCandidate = {
   supabase: Awaited<ReturnType<typeof createClient>>;
   user: { id: string; email?: string | null };
@@ -51,7 +80,10 @@ type OperatorCandidate = {
  */
 export async function requireOperatorCandidate(): Promise<OperatorCandidate> {
   const { supabase, user } = await requireUser();
-  if (!isOperatorUserId(user.id)) notFound();
+  if (!isOperatorUserId(user.id)) {
+    logDeniedOperatorAccess(user.id);
+    notFound();
+  }
   return { supabase, user };
 }
 
