@@ -5983,6 +5983,64 @@ Contrastar las dos listas es trabajo del Director y no lo hace nadie más — el
 piloto no sabe qué prometía el PR. Antes de dar por verificada una fase, mirar
 si cada pantalla que toca el diff aparece en la tabla.
 
+---
+
+## 63. "Alternativas a X" escrito por X+1 (SEO-POS-1, S3, 2026-08-12)
+
+**El problema del formato.** Buscar "alternativas a Otterly" devuelve una
+página tras otra publicada por una herramienta rival: ZipTie, Nightwatch,
+ZeroRank, GetCito y media docena más, todas explicando por qué deberías
+irte de Otterly y quedarte con ellas. La nuestra es exactamente lo mismo. El
+formato no tiene una versión neutral disponible — lo que sí tiene es una
+versión que lo admite.
+
+**Decisión 1: decirlo en el primer bloque, antes que nada.** El `KeyTakeaway`
+de apertura dice que esta página la escribe un competidor, igual que las otras
+diez, y que la única defensa del lector es exigir que cada afirmación sea
+comprobable. Es contraintuitivo como copy de venta y es lo correcto: sin eso,
+la página pide una confianza que no se ha ganado, y con eso puede pedir algo
+mejor —que la juzguen por sus datos—.
+
+**Decisión 2: `tradeoff` es un campo obligatorio del tipo, no un párrafo
+opcional.** Cada alternativa declara qué NO resuelve. El de Genscore nombra
+Perplexity, Copilot y la ausencia de desglose por país, que es precisamente lo
+que Otterly sí hace, y un test lo exige **por nombre** — no "que tenga
+contrapartida", sino que mencione esas dos cosas. Un listicle de competidor no
+se sesga mintiendo, se sesga olvidando; un test de longitud mínima no habría
+cogido un `tradeoff` que dijera "es una herramienta joven".
+
+**Decisión 3: una sección "cuándo NO deberías cambiar".** Cambiar de
+herramienta reinicia el histórico —las series no se migran entre proveedores— y
+la comparación temporal es justo lo que hace útil a una herramienta GEO. Es la
+recomendación que nadie que venda esto escribe, y es verdad.
+
+**Decisión 4: la página empieza reconociendo en qué es mejor Otterly**, con
+cuatro puntos concretos (usuarios ilimitados a 29 $, 50+ mercados, Perplexity y
+Copilot, la entrada de pago más barata). Mismo criterio que §61: las victorias
+del competidor se marcan. Aquí además es útil — si tu problema es meter a doce
+personas por 29 $, la respuesta correcta es quedarte, y la página lo dice.
+
+**Estructura: por límite, no por ranking.** Quien busca "alternativas a X" ya
+conoce X y ha chocado con algo concreto. Un ranking obliga a declarar un ganador
+global que no existe y empuja a pagar el triple por resolver un problema que no
+se tenía. Los cuatro límites (tope de prompts, motores como add-on, diagnóstico
+sin ejecución, idioma) son la espina dorsal de la página, y dos tests garantizan
+que cada límite tenga al menos una alternativa y que ninguna alternativa apunte
+a un límite inexistente.
+
+**Precios: ninguno de Otterly es de fuente primaria.** `otterly.ai/pricing`
+está bloqueado por el proxy de egress, la misma limitación que ya tuvo Peec AI.
+Se publican porque dos agregadores independientes coinciden y porque cuadran
+con lo investigado el 2026-08-02 para la comparativa 1:1 — y la página dice
+exactamente eso, en vez de presentarlos como verificados. Semrush y Ahrefs se
+describen por estructura de coste (módulo + suite) sin cifra cerrada, porque
+las fuentes públicas se contradicen entre sí.
+
+**Descubribilidad:** cinco SSOT actualizadas en el mismo PR — índice de
+`/comparativas`, `llms.txt`, `sitemap`, journey del piloto y fixture del
+self-check. Las dos últimas ya no son opcionales: las exige el guardián que
+dejó §62.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

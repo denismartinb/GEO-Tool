@@ -206,6 +206,17 @@ test("/comparativas/genscore-vs-profound renders and has its own canonical", asy
   await assertCanonical(page, "/comparativas/genscore-vs-profound");
 });
 
+test("/comparativas/alternativas-a-otterly renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/alternativas-a-otterly",
+    "comparativas-alternativas-a-otterly"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/alternativas-a-otterly");
+});
+
 test("/comparativas renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/comparativas", "comparativas-index");
   assertPageIsHealthy(findings);

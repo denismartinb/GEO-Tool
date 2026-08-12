@@ -129,7 +129,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 |---|---|---|---|---|---|
 | S1 | Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude | 1 — Verificación | `playbooks` | ✅ Publicado | #(este) |
 | S2 | Alternativas a Profound en español | 2 — Alternativas | `comparativas` | ✅ Publicado | #(este) |
-| S3 | Alternativas a Otterly (formato listicle) | 2 — Alternativas | `comparativas` | 🔲 Pendiente | — |
+| S3 | Alternativas a Otterly (formato listicle) | 2 — Alternativas | `comparativas` | ✅ Publicado | #(este) |
 | S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Trendsights, Mentio) | 3 — Herramientas | `comparativas` | 🔲 Pendiente | — |
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | 🔲 Pendiente | — |
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | 🔲 Pendiente | — |
@@ -165,6 +165,38 @@ Profound a propósito, con test (`genscore-vs-profound.test.ts`) que lo
 impone. Presencia en el mercado hispanohablante: sin evidencia encontrada —
 redactado como "sin evidencia de…", nunca como "no soporta…", porque no se
 pudo descartar del todo que su selector de 30+ idiomas incluya castellano.
+
+**S3 — hecho (2026-08-12).** `/comparativas/alternativas-a-otterly`. No es la
+comparativa 1:1 (ya existe) ni el pilar de categoría (también): quien busca
+"alternativas a X" ya conoce X y ha chocado con **un límite concreto**, así que
+la pieza se organiza por el límite —tope de prompts, motores que eran add-on,
+diagnóstico sin ejecución, idioma— y no por un ranking, que obligaría a
+declarar un ganador global que no existe.
+
+Tres decisiones de honestidad, las tres con test
+(`alternativas-a-otterly.test.ts`):
+
+1. **La página declara en el primer bloque que la escribe un competidor.**
+   Prácticamente todos los resultados de esa búsqueda los publica una
+   herramienta rival; la nuestra también. Decirlo es lo único que permite pedir
+   después que se juzgue por si cada afirmación es comprobable.
+2. **Cada alternativa declara qué NO resuelve**, Genscore incluida, y el campo
+   `tradeoff` es obligatorio en el tipo. El de Genscore nombra Perplexity,
+   Copilot y la falta de desglose por país — justo lo que Otterly sí hace — y
+   un test lo exige por nombre, porque es la omisión que un competidor comete
+   sin darse cuenta.
+3. **Hay una sección "cuándo NO deberías cambiar"**: cambiar de herramienta
+   reinicia el histórico, y la comparación temporal es lo que hace útil a una
+   herramienta GEO. Es la recomendación que nadie que venda esto escribe.
+
+**Precios: ninguno de Otterly viene de fuente primaria.** `otterly.ai/pricing`
+está bloqueado por el proxy de egress (misma limitación que tuvo Peec AI). Se
+publican porque dos agregadores independientes coinciden (29 $/15 prompts,
+189 $/100, 489 $/400, con Gemini y Google AI Mode como add-ons de pago) y
+porque cuadran con lo investigado el 2026-08-02 para la comparativa 1:1 — no
+porque se hayan verificado en origen, y la página lo dice. Semrush y Ahrefs se
+describen por estructura de coste (módulo + suite), sin cifra cerrada, porque
+las fuentes públicas se contradicen entre sí.
 
 ---
 
