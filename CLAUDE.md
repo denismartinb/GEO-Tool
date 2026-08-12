@@ -400,6 +400,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **LLM-RESILIENCE-1 Fases A+B (2026-08-09)** | log §45 · ADR 0029 |
 | Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase 0 (2026-08-09)** · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` |
 | Autenticación (login/registro/recuperación) | — *(sin regla propia todavía)* | **AUTH-ERRORS-ES-1 (2026-08-12)** | ADR 0039 |
+| Consola de operador | `admin.md` | **ADMIN-CONSOLE-1 Fase 1 (2026-08-11)** | log §64 · `docs/design-reference/admin-console-1/` |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
 irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
@@ -551,6 +552,7 @@ todavía. Detalle y diagnóstico en log §44.
 | `scoring.md` | `lib/scoring/**` |
 | `growth-content.md` | `app/{blog,comparativas,docs,glosario}/**`, `lib/{blog,comparativas,docs,glosario}/**` |
 | `onboarding.md` | `components/product-tour.tsx`, `components/tour-provider.tsx`, `lib/onboarding/**` |
+| `admin.md` | `app/admin/**`, `app/mfa/**`, `lib/admin/**` |
 
 ### Documentation (`docs/`)
 

@@ -12,20 +12,32 @@ vi.mock("@/lib/email/transactional", () => ({
   sendWelcomeEmail: (...args: unknown[]) => sendWelcomeEmail(...args)
 }));
 
+const sendNewSignupOpsAlert = vi.fn();
+vi.mock("@/lib/admin/signup-alert", () => ({
+  sendNewSignupOpsAlert: (...args: unknown[]) => sendNewSignupOpsAlert(...args)
+}));
+
 import { GET } from "./route";
 
 function requestFor(search: string): Request {
   return new Request(`https://app.example.com/auth/callback${search}`);
 }
 
-function userAt(email: string, createdAt: string, lastSignInAt: string) {
-  return { email, created_at: createdAt, last_sign_in_at: lastSignInAt };
+function userAt(email: string, createdAt: string, lastSignInAt: string, provider?: string) {
+  return {
+    id: "user-1",
+    email,
+    created_at: createdAt,
+    last_sign_in_at: lastSignInAt,
+    app_metadata: provider ? { provider } : undefined
+  };
 }
 
 describe("GET /auth/callback", () => {
   beforeEach(() => {
     exchangeCodeForSession.mockReset();
     sendWelcomeEmail.mockReset();
+    sendNewSignupOpsAlert.mockReset();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -46,7 +58,23 @@ describe("GET /auth/callback", () => {
     expect(response.headers.get("location")).toBe("https://app.example.com/dashboard/billing");
   });
 
-  it("sends the welcome email for a brand-new OAuth signup (last_sign_in_at ≈ created_at)", async () => {
+  it("sends the welcome email and a 'google' ops alert for a brand-new OAuth signup (last_sign_in_at ≈ created_at)", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { user: userAt("new@example.com", "2026-07-11T18:00:00.000Z", "2026-07-11T18:00:00.400Z", "google") },
+      error: null
+    });
+
+    await GET(requestFor("?code=abc123"));
+
+    expect(sendWelcomeEmail).toHaveBeenCalledWith("new@example.com");
+    expect(sendNewSignupOpsAlert).toHaveBeenCalledWith(
+      expect.anything(),
+      { id: "user-1", email: "new@example.com", created_at: "2026-07-11T18:00:00.000Z" },
+      "google"
+    );
+  });
+
+  it("sends a 'password' ops alert for a fresh signup confirmed via the email link (no provider)", async () => {
     exchangeCodeForSession.mockResolvedValue({
       data: { user: userAt("new@example.com", "2026-07-11T18:00:00.000Z", "2026-07-11T18:00:00.400Z") },
       error: null
@@ -54,10 +82,10 @@ describe("GET /auth/callback", () => {
 
     await GET(requestFor("?code=abc123"));
 
-    expect(sendWelcomeEmail).toHaveBeenCalledWith("new@example.com");
+    expect(sendNewSignupOpsAlert).toHaveBeenCalledWith(expect.anything(), expect.anything(), "password");
   });
 
-  it("does not send a welcome email for a returning user signing back in", async () => {
+  it("does not send a welcome email or ops alert for a returning user signing back in", async () => {
     exchangeCodeForSession.mockResolvedValue({
       data: { user: userAt("returning@example.com", "2026-01-01T00:00:00.000Z", "2026-07-11T18:00:00.000Z") },
       error: null
@@ -66,6 +94,7 @@ describe("GET /auth/callback", () => {
     await GET(requestFor("?code=abc123"));
 
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
+    expect(sendNewSignupOpsAlert).not.toHaveBeenCalled();
   });
 
   it("never lands the user on a stale/unauthenticated /dashboard when the exchange fails", async () => {

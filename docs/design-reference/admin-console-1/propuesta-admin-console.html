@@ -1,0 +1,782 @@
+<title>Consola de operador</title>
+<style>
+  /* ————— tokens: claro ————— */
+  :root{
+    --ink:#0B1426;
+    --bg:#F4F6FA;
+    --surface:#FFFFFF;
+    --surface-2:#EEF2F8;
+    --surface-3:#E7ECF4;
+    --border:#DDE4EF;
+    --border-strong:#C6D0E0;
+    --muted:#59687F;
+    --faint:#8494AC;
+    --blue:#2563EB;
+    --blue-soft:#E6EDFD;
+    --amber:#B45309;
+    --amber-soft:#FBEEDC;
+    --green:#0F7A56;
+    --green-soft:#DFF1E9;
+    --red:#B3261E;
+    --red-soft:#FBE6E4;
+    --opbar-bg:#0B1426;
+    --opbar-fg:#F4F6FA;
+    --on-accent:#FFFFFF;
+    --shadow:0 1px 2px rgba(11,20,38,.06), 0 8px 24px -12px rgba(11,20,38,.18);
+    --shadow-lift:0 2px 4px rgba(11,20,38,.07), 0 24px 48px -20px rgba(11,20,38,.28);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  /* ————— tokens: oscuro (sistema, sin sello explícito) ————— */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#E8EEF9;
+      --bg:#070D19;
+      --surface:#0E1728;
+      --surface-2:#141F35;
+      --surface-3:#1A2740;
+      --border:#213048;
+      --border-strong:#2E4062;
+      --muted:#94A4BE;
+      --faint:#6E7F9A;
+      --blue:#7BA3FF;
+      --blue-soft:#152346;
+      --amber:#E5A24B;
+      --amber-soft:#2E2412;
+      --green:#4FC39A;
+      --green-soft:#0F2B23;
+      --red:#F08279;
+      --red-soft:#331716;
+      --opbar-bg:#16223A;
+      --opbar-fg:#E8EEF9;
+      --on-accent:#08122A;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.7);
+      --shadow-lift:0 2px 4px rgba(0,0,0,.55), 0 24px 48px -20px rgba(0,0,0,.8);
+    }
+  }
+  /* ————— tokens: oscuro (elección explícita) ————— */
+  :root[data-theme="dark"]{
+    --ink:#E8EEF9;
+    --bg:#070D19;
+    --surface:#0E1728;
+    --surface-2:#141F35;
+    --surface-3:#1A2740;
+    --border:#213048;
+    --border-strong:#2E4062;
+    --muted:#94A4BE;
+    --faint:#6E7F9A;
+    --blue:#7BA3FF;
+    --blue-soft:#152346;
+    --amber:#E5A24B;
+    --amber-soft:#2E2412;
+    --green:#4FC39A;
+    --green-soft:#0F2B23;
+    --red:#F08279;
+    --red-soft:#331716;
+    --opbar-bg:#16223A;
+    --opbar-fg:#E8EEF9;
+    --on-accent:#08122A;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.7);
+    --shadow-lift:0 2px 4px rgba(0,0,0,.55), 0 24px 48px -20px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 96px}
+
+  /* ————— tipografía ————— */
+  h1,h2,h3,h4{margin:0;text-wrap:balance;letter-spacing:-.018em;line-height:1.18}
+  h1{font-size:clamp(30px,4.4vw,46px);font-weight:700}
+  h2{font-size:clamp(21px,2.6vw,27px);font-weight:680}
+  h3{font-size:17px;font-weight:660;letter-spacing:-.01em}
+  h4{font-size:14px;font-weight:660}
+  p{margin:0}
+  a{color:var(--blue)}
+  code,.mono{font-family:var(--mono);font-size:.86em;font-variant-numeric:tabular-nums}
+  code{background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:.1em .38em;color:var(--ink)}
+  .lede{font-size:18.5px;line-height:1.6;color:var(--muted);max-width:64ch}
+  .eyebrow{
+    font-family:var(--mono);font-size:11.5px;font-weight:600;
+    letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  }
+  .prose{display:flex;flex-direction:column;gap:14px;max-width:68ch}
+  .prose p{color:var(--muted)}
+  .prose strong{color:var(--ink);font-weight:640}
+
+  /* ————— cabecera ————— */
+  header.top{
+    border-bottom:1px solid var(--border);
+    background:
+      radial-gradient(120% 140% at 8% 0%, var(--blue-soft) 0%, transparent 58%),
+      var(--surface);
+  }
+  .top-inner{max-width:1080px;margin:0 auto;padding:40px 24px 34px;display:flex;flex-direction:column;gap:18px}
+  .top h1{max-width:19ch}
+  .meta-strip{
+    display:flex;flex-wrap:wrap;gap:0;margin-top:8px;
+    border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);
+  }
+  .meta-strip div{
+    flex:1 1 150px;padding:11px 15px;border-right:1px solid var(--border);
+    display:flex;flex-direction:column;gap:2px;
+  }
+  .meta-strip div:last-child{border-right:0}
+  .meta-strip dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .meta-strip dd{margin:0;font-size:14px;font-weight:600}
+
+  /* ————— secciones ————— */
+  section{padding-top:56px}
+  .sec-head{display:flex;flex-direction:column;gap:10px;margin-bottom:26px}
+  .sec-head .rule{height:2px;background:var(--ink);width:34px;border-radius:2px;margin-bottom:4px}
+
+  /* ————— tarjetas ————— */
+  .card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;box-shadow:var(--shadow);
+  }
+  .pad{padding:22px 24px}
+  .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  .stack{display:flex;flex-direction:column;gap:16px}
+
+  .rec{
+    border:1px solid var(--blue);
+    background:linear-gradient(180deg,var(--blue-soft) 0%,var(--surface) 46%);
+    border-radius:12px;padding:24px;
+  }
+  .rec-tag{
+    display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);
+    font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--blue);
+  }
+  .rec-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--blue)}
+  .rec h3{margin:10px 0 12px;font-size:20px}
+
+  /* capas de defensa */
+  ol.layers{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:0;counter-reset:l}
+  ol.layers li{
+    counter-increment:l;display:grid;grid-template-columns:30px 1fr;gap:14px;
+    padding:14px 0;border-top:1px solid var(--border);
+  }
+  ol.layers li::before{
+    content:counter(l);font-family:var(--mono);font-size:12px;font-weight:600;
+    color:var(--blue);background:var(--blue-soft);border-radius:6px;
+    width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  }
+  ol.layers b{display:block;font-weight:640;font-size:15px;margin-bottom:2px}
+  ol.layers span{color:var(--muted);font-size:14.5px;line-height:1.55}
+
+  /* ————— tablas de documento ————— */
+  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+  table.doc{border-collapse:collapse;width:100%;min-width:620px;font-size:14.5px}
+  table.doc th,table.doc td{padding:12px 16px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
+  table.doc thead th{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;background:var(--surface-2);white-space:nowrap;
+  }
+  table.doc tbody tr:last-child td{border-bottom:0}
+  table.doc td.opt{font-weight:620;width:26%}
+  table.doc td small{display:block;color:var(--faint);font-weight:450;font-size:12.5px;margin-top:2px}
+  .verdict{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+  .v-yes{color:var(--green)} .v-no{color:var(--red)} .v-mid{color:var(--amber)}
+
+  /* ————— maqueta ————— */
+  .mock-frame{
+    border:1px solid var(--border-strong);border-radius:14px;overflow:hidden;
+    box-shadow:var(--shadow-lift);background:var(--surface);
+  }
+  .mock-chrome{
+    display:flex;align-items:center;gap:10px;padding:10px 14px;
+    background:var(--surface-3);border-bottom:1px solid var(--border);
+  }
+  .dots{display:flex;gap:6px}
+  .dots i{width:10px;height:10px;border-radius:50%;background:var(--border-strong);display:block}
+  .urlbar{
+    flex:1;font-family:var(--mono);font-size:12px;color:var(--muted);
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;
+    padding:4px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .urlbar b{color:var(--ink);font-weight:600}
+  .mock{background:var(--bg);overflow-x:auto}
+  .mock-inner{min-width:720px;padding:0 0 20px}
+
+  .opbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    padding:11px 20px;background:var(--opbar-bg);color:var(--opbar-fg);
+  }
+  .opbar .who{display:flex;align-items:center;gap:12px;font-size:13.5px}
+  .opbar .badge{
+    font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;background:var(--amber);color:#1B1206;
+    padding:3px 8px;border-radius:5px;
+  }
+  .opbar .aal{font-family:var(--mono);font-size:11.5px;opacity:.72}
+
+  .mock-head{padding:20px 20px 0;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .mock-head h4{font-size:19px}
+  .mock-head p{font-size:13px;color:var(--muted)}
+
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:16px 20px 4px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 13px}
+  .kpi dt{font-size:11px;color:var(--faint);font-weight:600;letter-spacing:.03em;text-transform:uppercase;font-family:var(--mono)}
+  .kpi dd{margin:5px 0 0;font-size:25px;font-weight:680;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+  .kpi .delta{font-size:11.5px;font-weight:600;margin-top:5px;display:block;font-variant-numeric:tabular-nums}
+  .kpi .up{color:var(--green)} .kpi .warn{color:var(--amber)} .kpi .flat{color:var(--faint)}
+
+  .toolbar{display:flex;gap:8px;align-items:center;padding:14px 20px 10px;flex-wrap:wrap}
+  .search{
+    flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);
+    border-radius:8px;padding:7px 11px;font-size:13px;color:var(--faint);display:flex;gap:8px;align-items:center;
+  }
+  .chip{
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:6px 11px;font-size:12.5px;font-weight:560;color:var(--muted);white-space:nowrap;
+  }
+  .chip.on{background:var(--blue);border-color:var(--blue);color:var(--on-accent)}
+
+  table.users{border-collapse:collapse;width:100%;font-size:13px}
+  .users-wrap{padding:0 20px}
+  table.users th,table.users td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+  table.users thead th{
+    font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;border-bottom:1px solid var(--border-strong);
+  }
+  table.users tbody tr{background:var(--surface)}
+  table.users tbody tr.sel{background:var(--blue-soft)}
+  table.users .em{font-weight:600}
+  table.users .sub{display:block;font-size:11px;color:var(--faint);font-family:var(--mono);font-weight:450}
+  .num{font-variant-numeric:tabular-nums;text-align:right}
+
+  .pill{
+    display:inline-block;font-size:11px;font-weight:640;padding:2px 8px;border-radius:999px;
+    border:1px solid transparent;letter-spacing:.01em;
+  }
+  .p-pro{background:var(--blue-soft);color:var(--blue);border-color:color-mix(in srgb,var(--blue) 30%,transparent)}
+  .p-trial{background:var(--amber-soft);color:var(--amber);border-color:color-mix(in srgb,var(--amber) 34%,transparent)}
+  .p-free{background:var(--surface-2);color:var(--muted);border-color:var(--border)}
+  .p-paid{background:var(--green-soft);color:var(--green);border-color:color-mix(in srgb,var(--green) 32%,transparent)}
+  .p-risk{background:var(--red-soft);color:var(--red);border-color:color-mix(in srgb,var(--red) 32%,transparent)}
+
+  .drawer{
+    margin:18px 20px 0;background:var(--surface);border:1px solid var(--border-strong);
+    border-radius:12px;box-shadow:var(--shadow);overflow:hidden;
+  }
+  .drawer-top{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;
+    padding:16px 18px;border-bottom:1px solid var(--border);background:var(--surface-2);
+  }
+  .drawer-top h5{margin:0;font-size:16px;font-weight:660;letter-spacing:-.01em}
+  .drawer-top .uid{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:3px;display:block}
+  .drawer-cols{display:grid;grid-template-columns:1.05fr 1fr;gap:0}
+  .drawer-cols > div{padding:16px 18px}
+  .drawer-cols > div:first-child{border-right:1px solid var(--border)}
+  .dl{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:12.5px;margin:0}
+  .dl dt{color:var(--faint);font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;padding-top:1px}
+  .dl dd{margin:0;font-weight:560;font-variant-numeric:tabular-nums}
+  .mini-title{font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:9px}
+  .proj{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:12.5px}
+  .proj:last-of-type{border-bottom:0}
+  .proj .d{font-weight:600}
+  .proj .s{color:var(--faint);font-family:var(--mono);font-size:11.5px;font-variant-numeric:tabular-nums}
+  .actions{display:flex;gap:7px;flex-wrap:wrap;padding:13px 18px;border-top:1px solid var(--border);background:var(--surface-2)}
+  .btn{
+    font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:7px;
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);
+  }
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:var(--on-accent)}
+  .btn.danger{color:var(--red);border-color:color-mix(in srgb,var(--red) 42%,transparent)}
+  .btn.ghost{background:transparent;color:var(--faint);border-style:dashed}
+
+  .caption{font-size:13px;color:var(--faint);margin-top:12px;max-width:70ch;line-height:1.55}
+
+  /* ————— email ————— */
+  .mailcard{
+    border:1px solid var(--border);border-radius:12px;background:var(--surface);
+    overflow:hidden;box-shadow:var(--shadow);
+  }
+  .mailhead{padding:14px 18px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+  .mailhead .subj{font-weight:660;font-size:15px}
+  .mailhead .to{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:3px}
+  .mailbody{padding:16px 18px}
+  .mailbody .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-family:var(--mono);font-size:12.5px;margin:12px 0 0}
+  .mailbody .kv dt{color:var(--faint)}
+  .mailbody .kv dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+
+  /* ————— fases ————— */
+  .phases{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
+  .phase{display:grid;grid-template-columns:104px 1fr auto;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border);align-items:start}
+  .phase:last-child{border-bottom:0}
+  .phase .tag{font-family:var(--mono);font-size:11px;font-weight:660;letter-spacing:.05em;color:var(--blue);padding-top:2px}
+  .phase .body b{display:block;font-size:15px;font-weight:640;margin-bottom:3px}
+  .phase .body span{font-size:14px;color:var(--muted);line-height:1.55}
+  .phase .cost{font-family:var(--mono);font-size:11.5px;color:var(--faint);white-space:nowrap;padding-top:4px}
+
+  /* ————— avisos ————— */
+  .note{
+    border-left:3px solid var(--amber);background:var(--amber-soft);
+    border-radius:0 10px 10px 0;padding:14px 18px;font-size:14.5px;line-height:1.55;
+  }
+  .note b{font-weight:660}
+  .note.blocked{border-left-color:var(--red);background:var(--red-soft)}
+  ul.tight{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+  ul.tight li{color:var(--muted);font-size:14.5px;line-height:1.5}
+  ul.tight li strong{color:var(--ink);font-weight:620}
+
+  .ask{
+    margin-top:56px;border:1px solid var(--ink);border-radius:12px;padding:24px;
+    background:var(--surface);
+  }
+  .ask p{font-size:18px;font-weight:640;letter-spacing:-.012em}
+
+  @media (max-width:760px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .drawer-cols{grid-template-columns:1fr}
+    .drawer-cols > div:first-child{border-right:0;border-bottom:1px solid var(--border)}
+    .phase{grid-template-columns:1fr;gap:6px}
+    .phase .cost{padding-top:0}
+  }
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <span class="eyebrow">Propuesta · ADMIN-CONSOLE-1</span>
+    <h1>Consola de operador</h1>
+    <p class="lede">
+      Un aviso por email en cada alta y una pantalla <code>/admin</code> que sólo abre tu cuenta,
+      con doble factor obligatorio, para ver y gestionar a los usuarios de la plataforma.
+    </p>
+    <dl class="meta-strip">
+      <div><dt>Estado</dt><dd>Sin implementar</dd></div>
+      <div><dt>Migraciones</dt><dd>Ninguna en Fase&nbsp;1</dd></div>
+      <div><dt>Riesgo</dt><dd>Alto (auth)</dd></div>
+      <div><dt>Fases</dt><dd>3</dd></div>
+      <div><dt>Bloquea</dt><dd>Aprobación</dd></div>
+    </dl>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ————————————— 1. EMAIL DE ALTA ————————————— -->
+  <section>
+    <div class="sec-head">
+      <div class="rule"></div>
+      <span class="eyebrow">Parte 1</span>
+      <h2>Aviso por email en cada registro</h2>
+      <p class="lede" style="font-size:16.5px">
+        Lo barato y sin esquema: el mismo sitio donde ya se manda el email de bienvenida manda también
+        el aviso a tu buzón de operador.
+      </p>
+    </div>
+
+    <div class="grid-2">
+      <div class="stack">
+        <div class="prose">
+          <p>
+            El producto ya envía <code>sendWelcomeEmail()</code> desde exactamente dos puntos, y son los
+            dos que existen: <strong>el alta con contraseña</strong> cuando Supabase devuelve sesión
+            inmediata (<code>app/signup/actions.ts</code>), y <strong>el clic en el enlace de confirmación
+            o el alta con Google</strong> (<code>app/auth/callback/route.ts</code>). El aviso se engancha
+            en esos mismos dos sitios: cero migraciones, cero infraestructura nueva, y un solo camino que
+            mantener.
+          </p>
+          <p>
+            Va a <code>OPS_ALERT_EMAIL</code>, nunca a una dirección escrita a mano en el código — es la
+            regla que ya cumplen las alertas de escaneo y de LLM, y es lo que te permite cambiar de buzón
+            sin tocar un despliegue.
+          </p>
+        </div>
+
+        <div class="note">
+          <b>Lo que este enfoque no ve, dicho antes de construirlo:</b>
+          quien se registra y <em>nunca</em> confirma el email no genera aviso, porque nunca llega a
+          existir como cuenta usable. Si quieres ver también esos, hace falta un webhook de base de datos
+          sobre <code>auth.users</code> en Supabase — infraestructura fuera del repo, y su propio Task Intake.
+        </div>
+      </div>
+
+      <div class="mailcard">
+        <div class="mailhead">
+          <div class="subj">[GenScore] Alta nueva — laura@estudiocalma.es</div>
+          <div class="to">para: ops@genscore.es · vía Resend</div>
+        </div>
+        <div class="mailbody">
+          <p style="font-size:14px;color:var(--muted);margin:0">
+            Usuario nº <strong style="color:var(--ink)">128</strong>. Arranca en Pro con prueba de 7 días
+            (comportamiento estándar de <code>handle_new_user</code>).
+          </p>
+          <dl class="kv">
+            <dt>email</dt><dd>laura@estudiocalma.es</dd>
+            <dt>user_id</dt><dd>7f2a9c14-…-b8e1</dd>
+            <dt>método</dt><dd>Google OAuth</dd>
+            <dt>plan</dt><dd>pro · prueba hasta 18 ago</dd>
+            <dt>alta</dt><dd>11 ago 2026, 09:14 CEST</dd>
+          </dl>
+          <p style="margin:16px 0 0"><a href="#pantalla" style="font-weight:600;font-size:13.5px">Abrir ficha en /admin →</a></p>
+        </div>
+      </div>
+    </div>
+    <p class="caption">
+      Plano y denso a propósito, igual que las alertas de operador que ya existen: cuando lo abres estás
+      mirando datos, no leyendo una newsletter. Sin plantilla de marca, sin cabecera de 600&nbsp;px.
+    </p>
+  </section>
+
+  <!-- ————————————— 2. AUTENTICACIÓN ————————————— -->
+  <section>
+    <div class="sec-head">
+      <div class="rule"></div>
+      <span class="eyebrow">Parte 2 · la pregunta que hiciste</span>
+      <h2>Cuál es la mejor autenticación para <code style="font-size:.8em">/admin</code></h2>
+    </div>
+
+    <div class="rec">
+      <span class="rec-tag">Recomendación</span>
+      <h3>Lista blanca por UUID en variable de entorno + segundo factor TOTP obligatorio</h3>
+      <p style="color:var(--muted);max-width:66ch;font-size:15.5px">
+        No es una capa, son cinco. Ninguna de ellas cuesta una migración, y ninguna depende de que
+        recuerdes hacer algo bien cada vez.
+      </p>
+      <ol class="layers">
+        <li>
+          <div>
+            <b>Sesión de Supabase, como cualquier pantalla</b>
+            <span>Sin sesión no hay nada que discutir. Es la puerta que ya existe.</span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <b><code>ADMIN_USER_IDS</code>: tu UUID, no tu email</b>
+            <span>
+              El email lo puede cambiar el propio usuario desde Ajustes; el UUID de <code>auth.users</code>
+              es inmutable. Una lista blanca por email es una lista blanca sobre un dato que el atacante
+              puede intentar mover. Vive en variable de entorno de Vercel, <em>no</em> en la base de datos:
+              una fuga de RLS o una inyección SQL no puede concederse permisos que no están en ninguna tabla.
+            </span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <b>Segundo factor TOTP obligatorio (AAL2)</b>
+            <span>
+              Supabase Auth trae MFA por aplicación de autenticación. <code>/admin</code> exige nivel
+              <code>aal2</code>: con tu contraseña filtrada y sin tu teléfono, no se entra. Es la diferencia
+              real entre «difícil» y «hace falta robarte dos cosas».
+            </span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <b>La comprobación va en cada server action, no sólo en el layout</b>
+            <span>
+              Un <code>layout.tsx</code> protege lo que se pinta, no lo que se ejecuta: una server action
+              es un endpoint HTTP y se puede llamar directamente. Cada acción del panel empieza por
+              <code>requireOperator()</code>, y ese es el único sitio donde se instancia el cliente de
+              service-role.
+            </span>
+          </div>
+        </li>
+        <li>
+          <div>
+            <b>Para quien no sea operador, <code>/admin</code> no existe</b>
+            <span>
+              Devuelve 404, no 403. Un 403 confirma que la ruta está ahí y a quién buscar. Más:
+              <code>noindex</code>, fuera del sitemap, fuera de todos los menús, y cada intento fallido
+              queda registrado.
+            </span>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <h3 style="margin:34px 0 14px">Por qué no las otras cuatro</h3>
+    <div class="tablewrap">
+      <table class="doc">
+        <thead>
+          <tr><th>Opción</th><th>Veredicto</th><th>Razón</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="opt">Lista blanca por email<small>ADMIN_EMAILS</small></td>
+            <td><span class="verdict v-no">Descartada</span></td>
+            <td>Ata el privilegio a un dato mutable por el usuario. Mismo coste de implementación que el UUID y peor propiedad de seguridad: no hay motivo para elegirla.</td>
+          </tr>
+          <tr>
+            <td class="opt">Columna <code>profiles.is_admin</code><small>+ política RLS</small></td>
+            <td><span class="verdict v-mid">Más adelante</span></td>
+            <td>Exige migración — prohibida sin tu aprobación explícita — y mete el privilegio dentro de la misma base de datos que protege. Es la opción correcta el día que haya más de un operador, no hoy con uno.</td>
+          </tr>
+          <tr>
+            <td class="opt">Protección por contraseña de Vercel<small>Deployment Protection</small></td>
+            <td><span class="verdict v-no">No sirve sola</span></td>
+            <td>Protege el despliegue entero, no una ruta, y es una contraseña compartida sin identidad ni registro: no sabe <em>quién</em> entró. Como capa extra sobre los previews, bien; como autenticación de <code>/admin</code>, no.</td>
+          </tr>
+          <tr>
+            <td class="opt">Cloudflare Access / lista blanca de IP<small>perímetro</small></td>
+            <td><span class="verdict v-mid">Opcional, luego</span></td>
+            <td>Es la defensa perimetral más fuerte de la lista, pero mete infraestructura fuera del stack y asume una IP estable que no tienes (móvil, viajes). Se puede añadir después sin tocar nada de lo anterior.</td>
+          </tr>
+          <tr>
+            <td class="opt">Passkey / WebAuthn<small>en vez de TOTP</small></td>
+            <td><span class="verdict v-mid">Mejor, no disponible</span></td>
+            <td>Resistente a phishing, superior a TOTP en el papel. Supabase Auth no lo ofrece de serie hoy, así que implicaría un camino de autenticación propio — bastante más superficie de la que este panel justifica.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note" style="margin-top:20px">
+      <b>Dos cosas que confirmo antes de escribir una línea, no después:</b>
+      <ul class="tight">
+        <li><strong>Que el TOTP de Supabase esté disponible en el plan actual del proyecto.</strong> Lo doy por hecho porque el add-on de pago es el MFA por SMS, no el de aplicación — pero se comprueba en el panel antes de construir sobre ello.</li>
+        <li><strong>Qué pasa si pierdes el móvil.</strong> Con AAL2 obligatorio te quedas fuera de <code>/admin</code>. La salida es desenrolar el factor desde el panel de Supabase, que sigue siendo tuyo. Guarda ese acceso antes de activar esto.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ————————————— 3. LA PANTALLA ————————————— -->
+  <section id="pantalla">
+    <div class="sec-head">
+      <div class="rule"></div>
+      <span class="eyebrow">Parte 3</span>
+      <h2>La pantalla</h2>
+      <p class="lede" style="font-size:16.5px">
+        Fase 1 es de sólo lectura. Todo lo que ves aquí sale de datos que ya existen en la base:
+        nada inventado, nada estimado sin decirlo.
+      </p>
+    </div>
+
+    <div class="mock-frame">
+      <div class="mock-chrome">
+        <div class="dots"><i></i><i></i><i></i></div>
+        <div class="urlbar">genscore.es<b>/admin</b></div>
+      </div>
+      <div class="mock">
+        <div class="mock-inner">
+
+          <div class="opbar">
+            <div class="who">
+              <span class="badge">Modo operador</span>
+              <span>denislagarteiru@gmail.com</span>
+            </div>
+            <span class="aal">aal2 · verificado hace 6 min</span>
+          </div>
+
+          <div class="mock-head">
+            <div>
+              <h4>Usuarios</h4>
+              <p>132 cuentas · actualizado hace 40 s</p>
+            </div>
+            <div style="display:flex;gap:7px">
+              <span class="btn ghost">Exportar CSV</span>
+              <span class="btn">Actualizar</span>
+            </div>
+          </div>
+
+          <dl class="kpis">
+            <div class="kpi"><dt>Cuentas</dt><dd>132</dd><span class="delta up">+9 en 7 días</span></div>
+            <div class="kpi"><dt>En prueba</dt><dd>21</dd><span class="delta warn">6 acaban esta semana</span></div>
+            <div class="kpi"><dt>De pago</dt><dd>14</dd><span class="delta up">+2 en 30 días</span></div>
+            <div class="kpi"><dt>MRR estimado</dt><dd>861&nbsp;€</dd><span class="delta flat">según plan, no Stripe</span></div>
+            <div class="kpi"><dt>Escaneos 24&nbsp;h</dt><dd>47</dd><span class="delta warn">3 fallidos</span></div>
+          </dl>
+
+          <div class="toolbar">
+            <div class="search">Buscar por email, dominio o user_id…</div>
+            <span class="chip on">Todos</span>
+            <span class="chip">En prueba</span>
+            <span class="chip">De pago</span>
+            <span class="chip">Free</span>
+            <span class="chip">Sin escanear</span>
+            <span class="chip">Alta ↓</span>
+          </div>
+
+          <div class="users-wrap">
+            <table class="users">
+              <thead>
+                <tr>
+                  <th>Usuario</th><th>Alta</th><th>Plan</th><th>Estado</th>
+                  <th class="num">Dominios</th><th class="num">Escaneos 30d</th><th>Último acceso</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="sel">
+                  <td><span class="em">laura@estudiocalma.es</span><span class="sub">7f2a9c14…b8e1</span></td>
+                  <td>11 ago</td>
+                  <td><span class="pill p-pro">Pro</span></td>
+                  <td><span class="pill p-trial">Prueba · 7 d</span></td>
+                  <td class="num">1</td><td class="num">2</td><td>hace 12 min</td>
+                </tr>
+                <tr>
+                  <td><span class="em">hola@tallerferrer.com</span><span class="sub">c1d0be47…4a2f</span></td>
+                  <td>2 ago</td>
+                  <td><span class="pill p-pro">Pro</span></td>
+                  <td><span class="pill p-paid">De pago</span></td>
+                  <td class="num">3</td><td class="num">54</td><td>hace 2 h</td>
+                </tr>
+                <tr>
+                  <td><span class="em">marc@nordicbike.es</span><span class="sub">9e77a205…10cd</span></td>
+                  <td>28 jul</td>
+                  <td><span class="pill p-free">Free</span></td>
+                  <td><span class="pill p-risk">Prueba caducada</span></td>
+                  <td class="num">1</td><td class="num">4</td><td>hace 6 días</td>
+                </tr>
+                <tr>
+                  <td><span class="em">info@clinicavelasco.es</span><span class="sub">3b41f8de…77a0</span></td>
+                  <td>26 jul</td>
+                  <td><span class="pill p-pro">Agencia</span></td>
+                  <td><span class="pill p-paid">De pago</span></td>
+                  <td class="num">8</td><td class="num">213</td><td>hace 25 min</td>
+                </tr>
+                <tr>
+                  <td><span class="em">pruebas+3@gmail.com</span><span class="sub">a08c5512…9f3b</span></td>
+                  <td>24 jul</td>
+                  <td><span class="pill p-free">Free</span></td>
+                  <td><span class="pill p-free">Sin escanear</span></td>
+                  <td class="num">0</td><td class="num">0</td><td>hace 18 días</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="drawer">
+            <div class="drawer-top">
+              <div>
+                <h5>laura@estudiocalma.es</h5>
+                <span class="uid">7f2a9c14-3e88-4d51-9a02-6c7f1d4ab8e1 · Google OAuth</span>
+              </div>
+              <span class="pill p-trial">Prueba · acaba el 18 ago</span>
+            </div>
+            <div class="drawer-cols">
+              <div>
+                <div class="mini-title">Cuenta</div>
+                <dl class="dl">
+                  <dt>Alta</dt><dd>11 ago 2026, 09:14</dd>
+                  <dt>Plan</dt><dd>pro (prueba, sin Stripe)</dd>
+                  <dt>Cliente Stripe</dt><dd>—</dd>
+                  <dt>Último acceso</dt><dd>hace 12 min</dd>
+                  <dt>Notificaciones</dt><dd>Resumen semanal activado</dd>
+                  <dt>Prompts</dt><dd>12 de 30</dd>
+                </dl>
+              </div>
+              <div>
+                <div class="mini-title">Dominios y actividad</div>
+                <div class="proj"><span class="d">estudiocalma.es</span><span class="s">2 escaneos · último hace 3 h · 61 pts</span></div>
+                <div class="proj"><span class="d">— sin más dominios —</span><span class="s">1 de 3 del plan</span></div>
+                <div class="mini-title" style="margin-top:18px">Incidencias</div>
+                <div class="proj"><span class="d">Ninguna en 30 días</span><span class="s">0 escaneos fallidos</span></div>
+              </div>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Abrir en Supabase</span>
+              <span class="btn">Abrir en Stripe</span>
+              <span class="btn">Copiar user_id</span>
+              <span class="btn">Reenviar bienvenida</span>
+              <span class="btn ghost">Ampliar prueba · Fase 2</span>
+              <span class="btn danger ghost">Cambiar plan · Fase 2</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <p class="caption">
+      La banda ámbar de arriba está por un motivo concreto: <code>/admin</code> se abre en el mismo
+      navegador y con la misma sesión que la consola de cliente, y la única defensa contra tocar la
+      cuenta equivocada es que nunca dudes de dónde estás. También muestra el nivel de autenticación
+      actual: si cae a <code>aal1</code>, lo ves antes de que la pantalla deje de funcionar.
+    </p>
+
+    <div class="grid-2" style="margin-top:26px">
+      <div class="card pad">
+        <div class="mini-title">Qué mira cada columna</div>
+        <ul class="tight">
+          <li><strong>Estado</strong> distingue cuatro cosas que el plan solo no distingue: prueba viva, prueba caducada, de pago de verdad (hay <code>stripe_subscription_id</code>) y Free.</li>
+          <li><strong>Escaneos 30d</strong> es el único indicador honesto de si la cuenta está viva. Un usuario Pro con 0 escaneos es una conversación pendiente, no un cliente.</li>
+          <li><strong>Último acceso</strong> sale de <code>auth.users.last_sign_in_at</code>, que sólo es legible con service-role — por eso vive aquí y en ningún otro sitio del producto.</li>
+        </ul>
+      </div>
+      <div class="card pad">
+        <div class="mini-title">Lo que no se inventa</div>
+        <ul class="tight">
+          <li><strong>«MRR estimado»</strong> se llama estimado porque lo es: precio de catálogo por plan activo. Lo que Stripe ha cobrado de verdad se mira en Stripe, y el panel enlaza allí en vez de fingir que lo sabe.</li>
+          <li><strong>No hay gráfica de crecimiento</strong> en Fase 1. Con 132 cuentas, una curva de altas es decoración; el filtro «alta ↓» responde la misma pregunta y no miente sobre la muestra.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ————————————— 4. ALCANCE ————————————— -->
+  <section>
+    <div class="sec-head">
+      <div class="rule"></div>
+      <span class="eyebrow">Parte 4</span>
+      <h2>Fases y límites</h2>
+    </div>
+
+    <div class="phases">
+      <div class="phase">
+        <span class="tag">FASE 1</span>
+        <div class="body">
+          <b>Aviso de alta + <code>/admin</code> de sólo lectura</b>
+          <span>
+            El email a <code>OPS_ALERT_EMAIL</code> en los dos puntos de alta, la puerta
+            (<code>requireOperator()</code> con UUID + AAL2 + 404), la tabla de usuarios con filtros y la
+            ficha. Ninguna escritura sobre datos de nadie. Cero migraciones.
+          </span>
+        </div>
+        <span class="cost">~1 PR</span>
+      </div>
+      <div class="phase">
+        <span class="tag">FASE 2</span>
+        <div class="body">
+          <b>Escritura acotada, con motivo obligatorio</b>
+          <span>
+            Ampliar una prueba, cambiar el plan a mano, reenviar la confirmación. Cada acción exige un
+            motivo escrito y deja registro. Necesita decidir <em>dónde</em> vive ese registro: tabla nueva
+            (migración, aprobación aparte) o email a operador. Recomiendo empezar por email.
+          </span>
+        </div>
+        <span class="cost">~1 PR</span>
+      </div>
+      <div class="phase">
+        <span class="tag">FASE 3</span>
+        <div class="body">
+          <b>Salud de la plataforma</b>
+          <span>
+            Cola de trabajos, escaneos fallidos e incidencias de LLM agregados por cuenta — lo que hoy
+            sólo se ve en <code>/debug</code> de un proyecto concreto, visto desde arriba.
+          </span>
+        </div>
+        <span class="cost">~1 PR</span>
+      </div>
+    </div>
+
+    <div class="note blocked" style="margin-top:22px">
+      <b>Fuera de alcance, y no lo meto sin que lo pidas por su nombre:</b>
+      <ul class="tight">
+        <li><strong>Entrar como otro usuario (impersonación).</strong> Es la función más útil de un panel así y también la más peligrosa: crea sesiones que no distingues de las del cliente. Merece su propio Task Intake.</li>
+        <li><strong>Borrar cuentas.</strong> El borrado duro ya está prohibido por la constitución del proyecto y ya existe el camino del propio usuario (DATA-MGMT-1).</li>
+        <li><strong>Tocar facturación real, emitir reembolsos o mandar emails masivos.</strong> El panel enlaza a Stripe; no lo reimplementa.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="ask">
+    <p>¿Apruebas este plan? No implemento nada hasta que lo confirmes.</p>
+    <p style="font-size:14.5px;font-weight:450;color:var(--muted);margin-top:10px">
+      Si dices que sí, empiezo <strong style="color:var(--ink)">sólo por la Fase 1</strong> y en ese mismo PR
+      va este documento a <code>docs/design-reference/admin-console-1/</code>, para que el piloto agéntico
+      pueda juzgar la pantalla contra un diseño aprobado en vez de contra nada.
+    </p>
+  </div>
+
+</div>
