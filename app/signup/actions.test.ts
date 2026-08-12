@@ -101,7 +101,7 @@ describe("signup", () => {
     expect(decodeURIComponent(redirectUrl)).toContain("Espera unos minutos");
   });
 
-  it("passes through other Supabase signup error messages unchanged", async () => {
+  it("maps the user_already_exists error code to a safe Spanish message", async () => {
     signUp.mockResolvedValue({
       data: { session: null },
       error: { code: "user_already_exists", message: "already registered" }
@@ -115,7 +115,26 @@ describe("signup", () => {
       redirectUrl = (e as Error).message.replace("REDIRECT:", "");
     }
 
-    expect(decodeURIComponent(redirectUrl)).toContain("already registered");
+    expect(decodeURIComponent(redirectUrl)).not.toContain("already registered");
+    expect(decodeURIComponent(redirectUrl)).toContain("Ya existe una cuenta");
+  });
+
+  it("never surfaces a raw/unmapped Supabase error message, falling back to a generic Spanish message", async () => {
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { code: "some_unmapped_code", message: "Some raw provider detail" }
+    });
+    const { signup } = await import("./actions");
+
+    let redirectUrl = "";
+    try {
+      await signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }));
+    } catch (e) {
+      redirectUrl = (e as Error).message.replace("REDIRECT:", "");
+    }
+
+    expect(decodeURIComponent(redirectUrl)).not.toContain("Some raw provider detail");
+    expect(decodeURIComponent(redirectUrl)).toContain("No se pudo crear la cuenta");
   });
 
   it("rejects mismatched passwords without calling Supabase", async () => {
