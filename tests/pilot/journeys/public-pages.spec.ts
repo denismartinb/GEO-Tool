@@ -308,10 +308,20 @@ const MISSING_PATH = "/esta-ruta-no-existe-nunca-jamas";
  * exactamente lo que pasó en la primera pasada de este PR.
  */
 test("la 404 pública pinta la misión, no un texto suelto", async ({ page }, testInfo) => {
-  const findings = await visitAsUser(page, testInfo, MISSING_PATH, "not-found-mission", {
-    describedAs: "la escena del cohete y el titular de la 404, no un estado vacío",
-    anyOf: [{ selector: ".nf-scene" }, { text: /no está en el mapa/i }]
-  });
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    MISSING_PATH,
+    "not-found-mission",
+    {
+      describedAs: "la escena del cohete y el titular de la 404, no un estado vacío",
+      anyOf: [{ selector: ".nf-scene" }, { text: /no está en el mapa/i }]
+    },
+    // El documento responde 404 porque es una 404: sin declararlo, el harness
+    // lo cuenta como "first-party request failed" y esta pantalla no puede
+    // pilotarse nunca. Un 404 de un subrecurso sigue tumbando la pasada.
+    { expectDocumentStatus: 404 }
+  );
   assertPageIsHealthy(findings);
 
   // El cohete y el destino inexistente son la pantalla. Si el recorte de

@@ -6047,6 +6047,25 @@ aviso. El invariante duro: en el escaneo el movimiento codifica progreso real;
 en la 404 no puede haber ni barra, ni anillo, ni contador, porque no habría
 nada verdadero que contar.
 
+**El pie era ilegible y lo vio el fundador antes que nadie.** `.nf-page`
+pintaba de oscuro el contenedor entero para que el sobre-scroll no enseñara
+blanco, y el pie de marketing vive dentro de ese contenedor sin fondo propio:
+quedaba con su texto en tinta sobre fondo oscuro. Ahora sólo la ventana de la
+misión es oscura y la página sigue siendo blanca, que es lo que deja el pie
+exactamente igual que en el resto del sitio (fundador, 2026-08-12).
+
+**El harness no podía pilotar una 404, y eso no era culpa de la pantalla.**
+`visitAsUser` marca como fallo cualquier respuesta ≥400 de primera parte, así
+que el piloto reportaba `first-party requests failed` por el único
+comportamiento que una página de error está obligada a tener: responder 404.
+Se añadió `VisitOptions.expectDocumentStatus`, deliberadamente estrecho —exime
+**una** respuesta, la del documento de la ruta visitada, y sólo con el código
+declarado. Un 500 en esa ruta, o un 404 de un subrecurso (un CSS que no carga,
+una imagen rota) siguen tumbando la pasada. Tampoco debilita la garantía de que
+la ruta responde 404: eso lo asevera su propio test con `page.request.get`,
+aparte. Sin este cambio ninguna página de error del producto podría pilotarse
+jamás, hoy ni en el futuro.
+
 **Dos metas `robots`, y las dos legítimas.** La primera pasada del piloto falló
 en las tres anchuras por una aserción propia: `meta[name="robots"]` resuelve a
 **dos** elementos en esta página. Next añade la suya (`noindex`) a toda página

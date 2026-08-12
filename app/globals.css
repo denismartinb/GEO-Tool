@@ -7670,7 +7670,11 @@ select.set-field {
    se pisarían en ambos sentidos. Mismo motivo por el que el tour usa `pt-`.
    ========================================================================== */
 
-.nf-page { background: #081223; }
+/* Sólo la ventana de la misión es oscura; la página sigue siendo blanca, que
+   es lo que deja el pie con su fondo y su tinta de siempre. Pintar `.nf-page`
+   de oscuro dejaba el pie con texto en tinta sobre fondo oscuro, ilegible
+   (fundador, 2026-08-12). */
+.nf-page { background: #fff; }
 
 /* La ventana: nav + escena, sin el pie. Con el pie dentro, la escena perdía
    los ~200px que mide y dejaba de ocupar la pantalla. */
