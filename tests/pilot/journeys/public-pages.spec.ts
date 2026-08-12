@@ -286,3 +286,53 @@ test("/feed.xml responds with a valid RSS 2.0 document", async ({ page }) => {
   expect(body, "/feed.xml no contiene el elemento <rss>").toContain('<rss version="2.0">');
   expect(body, "/feed.xml no enlaza ningún post del blog").toContain(`${SITE_URL}/blog/`);
 });
+
+/**
+ * NOT-FOUND-ROCKET-1. La 404 pública dejó de ser una lista de enlaces y pasó a
+ * ser una pantalla con escena a sangre completa
+ * (`docs/design-reference/not-found-rocket-1/`).
+ *
+ * Las dos mitades que se comprueban aquí son distintas y las dos importan: que
+ * la respuesta siga siendo un 404 de verdad —lo que hace que un buscador no la
+ * trate como contenido— y que lo que se pinta sea la escena y no un
+ * placeholder. La `ContentExpectation` ancla a la escena Y al titular: sin ella
+ * esto certificaría "la página cargó", que es exactamente el pase vacío que
+ * costó la Auditoría web el 2026-08-02.
+ */
+const MISSING_PATH = "/esta-ruta-no-existe-nunca-jamas";
+
+test("una URL inexistente responde 404 de verdad y no se indexa", async ({ page }) => {
+  const response = await page.request.get(MISSING_PATH);
+  expect(response.status(), `${MISSING_PATH} no respondió 404`).toBe(404);
+
+  await page.goto(MISSING_PATH, { waitUntil: "domcontentloaded" });
+  const robots = await page.locator('meta[name="robots"]').getAttribute("content");
+  expect(robots, "la 404 perdió su noindex").toContain("noindex");
+});
+
+test("la 404 pública pinta la misión, no un texto suelto", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, MISSING_PATH, "not-found-mission", {
+    describedAs: "la escena del cohete y el titular de la 404, no un estado vacío",
+    anyOf: [{ selector: ".nf-scene" }, { text: /no está en el mapa/i }]
+  });
+  assertPageIsHealthy(findings);
+
+  // El cohete y el destino inexistente son la pantalla. Si el recorte de
+  // `slice` se los come en una anchura, esto lo dice en esa anchura.
+  await expect(page.locator(".nf-flight")).toBeVisible();
+  await expect(page.locator(".nf-target")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /no está en el mapa/i })).toBeVisible();
+
+  // La cabecera es la blanca del sitio: una instrucción explícita del fundador,
+  // no un accidente de contraste.
+  await expect(page.locator(".nf-page .lp-nav-wrap")).toBeVisible();
+
+  // La escena ocupa el ancho completo, no una columna con márgenes.
+  const stage = await page.locator(".nf-stage").boundingBox();
+  const width = page.viewportSize()?.width ?? 0;
+  expect(stage?.width ?? 0, "la escena no llega a los bordes").toBeGreaterThanOrEqual(width - 1);
+
+  // Las salidas tienen que existir: una 404 que no lleva a ningún sitio es la
+  // que teníamos antes de SEO-POS-1 (T7).
+  await expect(page.locator(".nf-rail a").first()).toBeVisible();
+});

@@ -5983,6 +5983,80 @@ Contrastar las dos listas es trabajo del Director y no lo hace nadie más — el
 piloto no sabe qué prometía el PR. Antes de dar por verificada una fase, mirar
 si cada pantalla que toca el diff aparece en la tabla.
 
+## 63. La única pantalla de Genscore que no parecía de Genscore (NOT-FOUND-ROCKET-1, 2026-08-12)
+
+**Qué pasaba.** La 404 pública (`app/not-found.tsx`, SEO-POS-1 T7) era correcta
+y fea: un `<h1>` y tres listas de enlaces heredadas de `BlogPageShell`, sin
+jerarquía, sin aire y con los títulos de los clusters pegados a sus
+descripciones. Cumplía su trabajo técnico —devolvía 404, llevaba `noindex,
+follow`, enlazaba a lo publicado— y ese es justo el motivo por el que llevaba
+meses así: nada estaba roto. Lo reportó el fundador desde un móvil.
+
+**Qué se decidió.** Se plantearon tres maquetas completas y navegables (no
+bocetos), las tres en `docs/design-reference/not-found-rocket-1/concepts.html`:
+«Fuera de trayectoria» (el cohete del primer escaneo, oscura), «Sin resultados
+que citar» (la URL fallida como consulta y la navegación como lista de fuentes
+citables) y «Falta un segmento» (el anillo del logo con un segmento apagado,
+tipográfica). El fundador eligió la primera. Las otras dos se conservan en el
+mismo fichero: son el registro de qué se consideró, igual que un ADR superado
+no se borra.
+
+**La cabecera es blanca.** Instrucción explícita del fundador: la cabecera del
+sitio no cambia por estar en un 404. Eso obliga a un corte duro entre la nav
+blanca y el cuerpo oscuro, y obliga a algo menos evidente — `.lp-nav-wrap` es
+translúcida con `backdrop-filter`, así que sobre un cuerpo oscuro y con scroll
+dejaba ver el oscuro a través. En esta ruta, y sólo en esta, es opaca.
+
+**Por qué la escena no está centrada bajo el texto.** La primera versión puso
+el copy centrado sobre una escena a sangre y el cohete le pasaba por detrás del
+titular. No es un problema de capas: en una pantalla panorámica quedan ~170 px
+libres por encima del bloque de texto, y no caben un titular y una nave en el
+mismo eje. La composición final reparte por ejes — misión a la derecha y texto
+a la izquierda en horizontal; misión arriba y texto abajo en vertical, donde
+además se encoge, sube y pierde los dos tramos bajos de la estela, que cruzaban
+el titular. La escena sigue ocupando toda la pantalla, que era la petición.
+
+**Lo que se descubrió por el camino, y que no era el encargo.**
+`app/not-found.tsx` es el `not-found` **raíz** y no había ningún otro en el
+repo, así que recogía también los `notFound()` de la consola:
+`lib/project-workspace.ts` (que convierte las seis pantallas de un proyecto
+inexistente en un 404), la página de proyecto y la de un run. Ya antes de esta
+fase eso le enseñaba la cabecera de marketing a alguien con la sesión abierta;
+con el cohete a pantalla completa y un «Prueba gratis» pasaba de raro a
+absurdo. De ahí `app/dashboard/not-found.tsx`, deliberadamente sobrio y
+renderizado dentro del layout de la consola, con el menú lateral intacto.
+
+**Lo que no se hizo, y por qué.** No se tocó `BlogPageShell`. Encierra su
+contenido en `.lp-inner` (max-width 1180 px), que es exactamente lo que impide
+una escena a sangre, y lo comparten blog, legales y pricing: ampliarlo por una
+pantalla habría puesto tres superficies en riesgo. La 404 lleva su propio
+shell, siguiendo el precedente ya escrito en el repo (`blog-page-shell.tsx` es
+a su vez copia deliberada de `legal-page-shell.tsx`). **La deuda, declarada:
+son tres copias de la misma barra de navegación. Si aparece una cuarta, toca
+extraerla.** El nuevo shell se registró en `marketing-content-links.test.ts`,
+que es lo que impide que una superficie con pie público se olvide de las cuatro
+capas de contenido.
+
+**El aviso de los dos cohetes.** A petición del fundador, `.claude/rules/
+mission-rocket.md` cubre a la vez `components/scan-mission-rocket.tsx`,
+`lib/scan/mission-beats.ts` y `components/not-found-mission.tsx`: toques el que
+toques, la regla se inyecta sola y recuerda que hay otro. No comparten código a
+propósito —el del escaneo está atado al estado de un run real y el de la 404 es
+estático y sin datos—, y esa separación es exactamente lo que hace necesario el
+aviso. El invariante duro: en el escaneo el movimiento codifica progreso real;
+en la 404 no puede haber ni barra, ni anillo, ni contador, porque no habría
+nada verdadero que contar.
+
+**Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
+testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
+unitario y no puede tenerlo hoy**. La verificación real es el `ux-pilot`
+(`tests/pilot/journeys/public-pages.spec.ts`), que comprueba el 404 real, el
+`noindex`, y que lo que se pinta es la escena y no un placeholder — anclado a
+`.nf-scene` y al titular, no a "la página cargó". El 404 **de dentro de la
+consola no lo cubre el piloto**: exigiría un journey autenticado sobre un id
+inexistente y eso queda para una fase futura. Verificarlo a mano en el Human
+Gate.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
