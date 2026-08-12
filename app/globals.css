@@ -4986,10 +4986,13 @@ a.notif-row:hover {
   font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .lp-mobnav a:hover { background: var(--surface-2); color: var(--ink); }
 @keyframes lpMobnavIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-/* Homepage hero nav has the burger on the right (.lp-nav--hero .lp-burger) —
-   the drawer should slide in from that same side. /geo, /pricing, /blog
-   keep the burger on the left and don't pass `fromRight`, so they keep
-   the default left-slide .lp-mobnav above untouched. */
+/* GENSCORE-HEADER-1 (2026-08-12): every public header's burger sits on the
+   right (.lp-burger { margin-left: auto } above) and `PublicHeader` always
+   passes `fromRight` to MarketingMobileNav, so the drawer always slides in
+   from that side — founder: "el menú tiene que salir siempre desde la
+   derecha". The plain left-slide .lp-mobnav keyframe below stays as
+   MarketingMobileNav's default for any future caller that doesn't opt into
+   `fromRight`; nothing in the app uses that default today. */
 .lp-mobnav--right { left: auto; right: 0; box-shadow: -20px 0 60px rgba(15,23,41,.20); animation-name: lpMobnavInRight; }
 @keyframes lpMobnavInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 

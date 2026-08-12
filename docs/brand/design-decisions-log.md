@@ -5792,6 +5792,19 @@ mismo PR antes del Human Gate:
   como fase aparte — es la única manera de que este hueco no dependa de que
   alguien se acuerde de mirarlo a mano la próxima vez.
 
+**Segundo addendum (fundador, 2026-08-12): «el menú tiene que salir siempre
+desde la derecha».** Hasta este punto solo la home abría el drawer desde la
+derecha (`fromRight` atado a `hero`); el resto abría desde la izquierda con
+el hamburger estándar de tres líneas — visible en la captura que el fundador
+mandó de `/pricing`. `PublicHeader` ahora pasa `fromRight` siempre, no solo
+en `hero`; el icono de dos líneas (`twoLine`) sigue atado solo a la home,
+porque no fue lo que pidió. Verificado con capturas locales del drawer
+abierto en `/`, `/pricing` y `/blog`: las tres deslizan desde la derecha con
+el mismo `lp-mobnav-close` arriba a la derecha. `.lp-mobnav` (variante
+izquierda) queda sin ningún caller real en la app — se conserva como
+comportamiento por defecto de `MarketingMobileNav` para no borrar capacidad
+del componente genérico que nadie pidió borrar.
+
 ---
 
 ## Cómo mantener este documento

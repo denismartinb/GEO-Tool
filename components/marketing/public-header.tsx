@@ -24,11 +24,12 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * `hero` mirrors the home hero repaint (BRAND-5b): transparent nav bar,
- * right-side two-line burger, drawer sliding from the right. Every other
- * public page keeps its own `.lp-hero`/`.lp-nav-wrap` background untouched
- * (that scoping is deliberate — see app/globals.css around `.lp-nav--hero`)
- * and only opts into the shared links + always-present mobile CTAs.
+ * `hero` mirrors the home hero repaint (BRAND-5b): transparent nav bar and
+ * a two-line burger glyph. Every other public page keeps its own
+ * `.lp-hero`/`.lp-nav-wrap` background untouched (that scoping is
+ * deliberate — see app/globals.css around `.lp-nav--hero`). The drawer
+ * itself always slides from the right (founder, 2026-08-12: "el menú tiene
+ * que salir siempre desde la derecha") — that part isn't hero-only.
  */
 export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; activeHref?: string }) {
   const pathname = usePathname();
@@ -86,7 +87,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
       <MarketingMobileNav
         links={links}
         twoLine={hero}
-        fromRight={hero}
+        fromRight
         ctas={
           <>
             <button type="button" className="lp-cta-soft" onClick={goToLogin}>
