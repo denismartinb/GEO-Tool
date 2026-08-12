@@ -71,6 +71,17 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   unvalidated `next` is an open redirect landing right after a real MFA
   verification, which is a worse place for one than almost anywhere else in
   the app.
+- **Validate a redirect target with a URL parser, never with string prefixes,
+  and validate the value you are about to RETURN as well as the one you were
+  given.** Both halves are scar tissue from the same review (`qa` on PR #387,
+  before merge): `startsWith("/") && !startsWith("//")` let `/\evil.example`
+  through, because a backslash is a slash to the WHATWG parser every browser
+  implements; and resolving-then-returning `pathname` let `/..//evil.example`
+  through, because it normalizes to the protocol-relative `//evil.example`
+  *inside* the checked origin. Hand-rolled rules keep losing to the parser the
+  browser actually runs — resolve against a fixed sentinel origin and demand
+  the result still live there, on the way in and on the way out
+  (`docs/brand/design-decisions-log.md` §58).
 - **No estimated number may be presented as if it were the real one.**
   "MRR estimado" is catalog price × accounts with a real
   `stripe_subscription_id` — it says "estimado" because it is one, and it

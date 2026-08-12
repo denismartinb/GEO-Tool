@@ -5791,6 +5791,39 @@ nombra la trampa del rebuild— sin cambiar ni un byte de la respuesta HTTP, que
 sigue siendo un 404 pelado. Misma regla que ya corría en el pipeline de escaneo:
 «un fallo que el operador puede arreglar tiene que llegarle al operador».
 
+**Lo que encontró la QA, y por qué la validación de `next` cambió de forma.**
+El gate de QA previo al Human Gate devolvió **BLOCKED** con un open-redirect
+real y explotable en `safeAdminNext()`, en el peor sitio posible: el
+`redirect()` que corre justo después de verificar un código TOTP de verdad. La
+primera implementación comparaba prefijos —`startsWith("/")` y no
+`startsWith("//")`—, que parece hermético y no lo es: para el parser WHATWG que
+implementan todos los navegadores **una barra invertida es una barra**, así que
+`/mfa/challenge?next=/\evil.example/steal` pasaba el filtro y mandaba la sesión
+recién elevada a `aal2` a un host externo.
+
+Al reescribirlo resolviendo contra un origen centinela, el test exhaustivo
+—«ningún payload puede resolver fuera de origen», en vez de «la función
+devolvió `/admin`»— cazó **un segundo bypass de la misma familia**:
+`/..//evil.example` sí resuelve dentro del centinela (pasaba la comprobación),
+pero su `pathname` normalizado es `//evil.example`, protocol-relative, que
+vuelve a escapar al resolverse contra el origen real. De ahí que ahora se
+valide también el valor reconstruido, no sólo el recibido.
+
+La lección no es «faltaba un caso»: es que **reimplementar a mano las reglas
+que aplica el navegador es una carrera que se pierde**, y que un test que
+afirma «devolvió `/admin`» no prueba lo que importa —prueba la implementación,
+no la propiedad—. El test que encontró el segundo fallo es el que resuelve el
+resultado como lo haría un navegador y comprueba el host. Invariante añadido a
+`.claude/rules/admin.md`.
+
+Anotado también, sin implementar y sin Task Intake: las dos peticiones del
+fundador del 2026-08-12 para Fase 2 —selección múltiple con borrado permanente,
+y ver/modificar por usuario los automatismos de escaneo y auditoría con su
+coste— en `docs/design-reference/admin-console-1/README.md`, cada una con los
+motivos por los que no es implementable tal como se enunció (FKs `on delete
+restrict`, interruptores que son por proyecto y no por usuario, y el
+`skipped_plan_ineligible` del cron en Free).
+
 ### Pendiente / roto conocido
 
 - **Fase 2 (escritura acotada) y Fase 3 (salud de la plataforma) sin empezar**
