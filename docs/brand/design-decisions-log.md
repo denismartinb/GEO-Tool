@@ -6371,6 +6371,22 @@ donde `.lp-burger` no existe, y afirma por `data-testid` en vez de por texto:
 el email y el plan de la cuenta piloto pueden cambiar, la existencia del chip
 no.
 
+**Addendum — dos ajustes tras probarlo el fundador en su móvil (2026-08-13).**
+El CTA de la sección "Recomendaciones" (`Empieza gratis`, a media home) también
+pasa a `Ir al panel` en logado, mismo criterio que el banner del pie: es un
+CTA de alta y a un logado no le sirve, esté en el plan que esté. No se tocaron
+los otros dos CTA de la home que sí quedan igual a propósito — el campo de
+dominio del hero (`Analiza gratis`, ligado a escribir un dominio y no a "darse
+de alta" en sí) y el enlace "Ver cómo funciona" — porque decidir qué le pasa a
+ese campo para un logado es una pregunta de producto más grande (¿crea un
+proyecto? ¿redirige?) que no se ha hecho.
+
+Y el chip del cajón móvil: el fundador señaló que la línea del email quedaba
+pegada a la insignia de plan. `.lp-user-chip` gana algo de relleno propio y la
+insignia un `margin-top` mayor, ambos con ámbito a esta cabecera — el chip del
+sidebar de consola no se toca porque su espaciado ya estaba aprobado y el
+problema no era suyo.
+
 ### Pendiente / roto conocido
 
 - ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado

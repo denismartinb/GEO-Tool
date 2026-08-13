@@ -192,9 +192,15 @@ export function LandingPage() {
                   </div>
                 ))}
               </div>
-              <button className="btn btn-primary mt24" onClick={goToSignup}>
-                Empieza gratis <Icon name="arrRight" size={15} />
-              </button>
+              {user ? (
+                <Link href="/dashboard" className="btn btn-primary mt24">
+                  Ir al panel <Icon name="arrRight" size={15} />
+                </Link>
+              ) : (
+                <button className="btn btn-primary mt24" onClick={goToSignup}>
+                  Empieza gratis <Icon name="arrRight" size={15} />
+                </button>
+              )}
             </div>
 
             {/* mock rec card */}

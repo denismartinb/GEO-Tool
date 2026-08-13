@@ -5109,11 +5109,17 @@ a.notif-row:hover {
    so the chip reads as a control against the nav's own background (the
    sidebar's ground already separates it there), and an ellipsis budget so a
    long address can't push the nav wide. */
-.lp-user-chip { border: 1px solid var(--line); max-width: 260px; }
+.lp-user-chip { border: 1px solid var(--line); max-width: 260px; padding: 9px 10px; }
 .lp-user-chip .lp-user-chip-email {
   font-size: 12.5px; font-weight: 650; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Founder feedback (2026-08-13): the email line read as stuck to the plan
+   badge below it in the drawer's narrower box. `.sb-plan-badge`'s own
+   margin-top (3px, tuned for the sidebar's tighter row) wasn't enough once
+   this chip's own padding grew, so it's widened here rather than in the
+   shared rule — the sidebar's spacing was already approved and unrelated. */
+.lp-user-chip .sb-plan-badge { margin-top: 5px; }
 /* In the drawer it is the full-width bottom action, in place of the two CTAs. */
 .lp-mobnav-ctas .lp-user-chip { max-width: none; }
 
