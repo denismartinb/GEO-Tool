@@ -6465,6 +6465,42 @@ es el mismo dato que el artículo (ADR 0026, "ningún visual es decorativo").
 **Descubribilidad:** SSOT del blog, fixture del self-check y journey del
 piloto, los tres en este PR — lo exige el guardián de §62.
 
+---
+
+## 69. Una prop mal puesta en MDX no rompe nada: simplemente no pinta (SEO-POS-1, S5, 2026-08-13)
+
+**Qué pasó.** El piloto de #395 dio `PILOT FAIL` en las tres anchuras sobre
+`blog-que-es-una-auditoria-geo`. La pantalla cargaba bien —sale ✅ en la tabla—
+pero fallaba la aserción de enlazado interno: `.blog-related a` no existía.
+
+**La causa.** `RelatedPosts` recibe `cluster` y `currentSlug`. El artículo le
+pasaba `slug`. Con `cluster` indefinido, `getPostsByCluster(undefined)` devuelve
+lista vacía y el componente hace `return null`: sin bloque "Sigue leyendo", sin
+enlaces internos, **y sin un solo error**.
+
+**Por qué no lo cogió nada antes del piloto.** MDX no pasa por `tsc`, así que
+una prop equivocada no rompe la build. Y `article-recipes.test.ts` cuenta
+apariciones de componentes, no comprueba sus props — `<RelatedPosts />` contaba
+como presente estuviera bien llamado o no. Es la misma forma que §62 (journey
+que falta) y §66 (afirmación que caduca): un fallo de cableado que ninguna
+comprobación miraba, y que sólo se ve en el despliegue real.
+
+**El arreglo, y por qué no basta con comprobar que la llamada exista.** El
+piloto exige que **haya** un enlace en `.blog-related`. Un artículo de
+`playbooks` que pasara `cluster="medicion"` renderizaría enlaces al cluster
+equivocado y pasaría el piloto igual — el enlazado interno estaría mal y
+nadie se enteraría, porque la regla de `content-strategy.md` §4.3 es enlazar a
+**hermanos del propio cluster**, no a cualquier sitio. Así que el test nuevo no
+comprueba que la llamada esté: comprueba que **el cluster que declara coincida
+con el del artículo en `BLOG_POSTS`**. Verificado en las dos direcciones
+—prop ausente y cluster equivocado— antes de darlo por bueno.
+
+**Lección general, ya vista tres veces esta semana:** en las superficies de
+contenido, el compilador no cubre casi nada. Lo que no esté atado a la SSOT con
+un test se desincroniza en silencio, y el síntoma no es un error sino una
+ausencia — un bloque que no aparece, una página que nadie visita, una
+afirmación que dejó de ser cierta.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

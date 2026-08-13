@@ -283,3 +283,38 @@ describe("el detector de composición funciona", () => {
     expect(countComponent("<StatGrid><Stat /></StatGrid>", "Stat")).toBe(1);
   });
 });
+
+/**
+ * SEO-POS-1 Fase C, S5 (log §69): `RelatedPosts` recibe `cluster` y
+ * `currentSlug`. `que-es-una-auditoria-geo` se publicó pasándole `slug`, y el
+ * componente devolvió `null` — sin bloque "Sigue leyendo", sin enlaces
+ * internos, y **sin ningún error**: MDX no se typechequea, así que una prop
+ * equivocada no rompe la build, simplemente no pinta nada.
+ *
+ * Lo cogió el piloto, que sí comprueba `.blog-related a` sobre el despliegue
+ * real. Pero el piloto solo exige que **exista** un enlace: un artículo de
+ * `playbooks` que pasara `cluster="medicion"` enlazaría al cluster equivocado
+ * y pasaría igual, tanto el piloto como cualquier comprobación ingenua. Por
+ * eso este test no mira que la llamada esté, sino que **el cluster que declara
+ * coincida con el del propio artículo** en `BLOG_POSTS`.
+ */
+describe("cada artículo enlaza a su propio cluster", () => {
+  for (const post of BLOG_POSTS) {
+    it(`RelatedPosts recibe cluster y currentSlug correctos: ${post.slug}`, () => {
+      const source = readArticle(post.slug);
+      if (!source) return;
+
+      const call = source.match(/<RelatedPosts([^>]*)\/>/);
+      expect(call, `${post.slug} no renderiza <RelatedPosts />`).not.toBeNull();
+
+      const props = call?.[1] ?? "";
+      expect(
+        props,
+        `${post.slug}: RelatedPosts necesita cluster="${post.cluster}". Sin él el ` +
+          "componente devuelve null y el artículo se queda sin enlazado interno, " +
+          "sin que nada falle en build ni en tests."
+      ).toContain(`cluster="${post.cluster}"`);
+      expect(props, `${post.slug}: RelatedPosts necesita currentSlug`).toContain("currentSlug");
+    });
+  }
+});
