@@ -6470,6 +6470,96 @@ visibilidad en motores generativos. Incluirla habría sido un error de categorí
 que además diluye la página justo para el lector que llega buscando eso. **Una
 fila del plan no es una orden de publicar**: el plan se escribió con la
 información de entonces, y comprobarla antes de ejecutar es parte del encargo.
+## 69. Las seis dimensiones sí, los pesos no: dónde está la línea (SEO-POS-1, S5, 2026-08-13)
+
+**Pieza.** `/blog/que-es-una-auditoria-geo`, cluster `playbooks`. Cubre el
+cluster de keywords nº 5 del plan y enlaza la feature real de auditoría web.
+
+**Primera versión, y por qué se corrigió.** El borrador inicial publicaba **los
+pesos reales** de `lib/web-audit/page-checks.ts` — datos estructurados 15,
+formato de respuesta 15, metadatos 15, frescura 15, indexabilidad 20,
+citabilidad 20 — con el argumento de que una puntuación cuyo reparto no se
+enseña es un número que hay que creerse. El fundador lo revisó y decidió lo
+contrario: publicar las seis dimensiones y sus umbrales de comportamiento, pero
+no el reparto de puntos exacto entre ellas — es metodología del producto, y
+enseñarla entera se la regala a cualquier competidor en una tarde sin que el
+lector gane nada que no tuviera ya con las seis dimensiones nombradas.
+
+**Dónde queda la línea, en la práctica.** Se publican los **umbrales de
+comportamiento** — título 15-70 caracteres, descripción 50-160, frescura
+180/540 días, 300 palabras visibles, un solo `<h1>`, dos `<h2>` mínimo — porque
+son buenas prácticas verificables por cualquiera con el código fuente delante,
+no una ventaja competitiva. No se publica el **reparto de puntos** entre
+dimensiones ni entre sub-comprobaciones, ni en el texto ni en la portada: la
+primera versión de la imagen codificaba el peso real en la anchura de cada
+barra, así que se rehízo con las seis barras iguales antes de publicar.
+
+**Lo que separa esta pieza de un post de checklist cualquiera:** la sección
+sobre la página sin fecha. Puntuar la frescura como cero cuando no se encuentra
+ninguna fecha convierte una *ausencia de dato* en un *veredicto negativo*, así
+que esa dimensión se excluye del cálculo y el resto se reescala a 100 — sin
+citar el número de puntos que se excluyen. Es una decisión de método real del
+producto, no una opinión, y explicarla demuestra criterio en vez de afirmarlo.
+Se generaliza en el artículo a la regla que ya rige `global-score.ts`: un
+componente sin valor se excluye de la media y se dice, nunca se sustituye por
+cero.
+
+**Declara dónde acaba, y eso es lo que la hace citable.** Una auditoría técnica
+dice si tu página *puede* ser citada, no si *lo es*. Sin esa frase el artículo
+vendería la auditoría como si fuera la medición entera — exactamente el reclamo
+que PRICING-TRUTH-1 obligó a retirar del producto. Con ella, el CTA es honesto:
+arregla lo técnico primero porque es lo barato y lo determinista, pero no
+confundas haberlo arreglado con estar apareciendo.
+
+**Encuadre de marketing aplicado (§67):** la comparación SEO vs GEO va en tabla
+y la ventaja no se reparte — la tabla existe para mostrar que son disciplinas
+distintas, no para conceder terreno. El único bloque que "concede" es el de
+dónde acaba la auditoría, y concede sobre nuestro propio producto, no a favor
+de un competidor.
+
+**Portada.** SVG dibujado en el repo y rasterizado a WebP (§47: un `og:image`
+en SVG deja la tarjeta social en blanco). Seis barras de igual anchura, cada
+una con su propia marca de comprobación — deliberadamente sin variar tamaños
+entre ellas, por el mismo motivo que el texto no reparte puntos.
+
+**Descubribilidad:** SSOT del blog, fixture del self-check y journey del
+piloto, los tres en este PR — lo exige el guardián de §62.
+
+---
+
+## 70. Una prop mal puesta en MDX no rompe nada: simplemente no pinta (SEO-POS-1, S5, 2026-08-13)
+
+**Qué pasó.** El piloto de #395 dio `PILOT FAIL` en las tres anchuras sobre
+`blog-que-es-una-auditoria-geo`. La pantalla cargaba bien —sale ✅ en la tabla—
+pero fallaba la aserción de enlazado interno: `.blog-related a` no existía.
+
+**La causa.** `RelatedPosts` recibe `cluster` y `currentSlug`. El artículo le
+pasaba `slug`. Con `cluster` indefinido, `getPostsByCluster(undefined)` devuelve
+lista vacía y el componente hace `return null`: sin bloque "Sigue leyendo", sin
+enlaces internos, **y sin un solo error**.
+
+**Por qué no lo cogió nada antes del piloto.** MDX no pasa por `tsc`, así que
+una prop equivocada no rompe la build. Y `article-recipes.test.ts` cuenta
+apariciones de componentes, no comprueba sus props — `<RelatedPosts />` contaba
+como presente estuviera bien llamado o no. Es la misma forma que §62 (journey
+que falta) y §66 (afirmación que caduca): un fallo de cableado que ninguna
+comprobación miraba, y que sólo se ve en el despliegue real.
+
+**El arreglo, y por qué no basta con comprobar que la llamada exista.** El
+piloto exige que **haya** un enlace en `.blog-related`. Un artículo de
+`playbooks` que pasara `cluster="medicion"` renderizaría enlaces al cluster
+equivocado y pasaría el piloto igual — el enlazado interno estaría mal y
+nadie se enteraría, porque la regla de `content-strategy.md` §4.3 es enlazar a
+**hermanos del propio cluster**, no a cualquier sitio. Así que el test nuevo no
+comprueba que la llamada esté: comprueba que **el cluster que declara coincida
+con el del artículo en `BLOG_POSTS`**. Verificado en las dos direcciones
+—prop ausente y cluster equivocado— antes de darlo por bueno.
+
+**Lección general, ya vista tres veces esta semana:** en las superficies de
+contenido, el compilador no cubre casi nada. Lo que no esté atado a la SSOT con
+un test se desincroniza en silencio, y el síntoma no es un error sino una
+ausencia — un bloque que no aparece, una página que nadie visita, una
+afirmación que dejó de ser cierta.
 
 ## Cómo mantener este documento
 
