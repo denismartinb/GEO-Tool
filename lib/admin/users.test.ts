@@ -167,8 +167,8 @@ describe("listOperatorUsers", () => {
       profiles: [{ id: "u1", email: "a@example.com", created_at: daysAgo(5), current_plan: "pro", trial_ends_at: null, stripe_subscription_id: "sub_1" }],
       authUsers: [],
       projects: [
-        { id: "p1", owner_user_id: "u1", is_archived: false, recurring_scans_enabled: true, auto_web_audit_enabled: true, engine_gemini_enabled: true, engine_claude_enabled: true, engine_openai_enabled: true },
-        { id: "p2", owner_user_id: "u1", is_archived: false, recurring_scans_enabled: false, auto_web_audit_enabled: false, engine_gemini_enabled: true, engine_claude_enabled: true, engine_openai_enabled: true }
+        { id: "p1", owner_user_id: "u1", is_archived: false, recurring_scans_enabled: true, auto_technical_audit_enabled: true, auto_coverage_audit_enabled: true, engine_gemini_enabled: true, engine_claude_enabled: true, engine_openai_enabled: true },
+        { id: "p2", owner_user_id: "u1", is_archived: false, recurring_scans_enabled: false, auto_technical_audit_enabled: false, auto_coverage_audit_enabled: false, engine_gemini_enabled: true, engine_claude_enabled: true, engine_openai_enabled: true }
       ],
       prompts: [{ project_id: "p1" }]
     });
@@ -185,7 +185,7 @@ describe("listOperatorUsers", () => {
       profiles: [{ id: "u1", email: "a@example.com", created_at: daysAgo(5), current_plan: "free", trial_ends_at: null, stripe_subscription_id: null }],
       authUsers: [],
       projects: [
-        { id: "p1", owner_user_id: "u1", is_archived: false, recurring_scans_enabled: true, auto_web_audit_enabled: false, engine_gemini_enabled: true, engine_claude_enabled: true, engine_openai_enabled: true }
+        { id: "p1", owner_user_id: "u1", is_archived: false, recurring_scans_enabled: true, auto_technical_audit_enabled: false, auto_coverage_audit_enabled: false, engine_gemini_enabled: true, engine_claude_enabled: true, engine_openai_enabled: true }
       ],
       prompts: [{ project_id: "p1" }]
     });
@@ -212,14 +212,16 @@ function fakeDetailService(options: {
         // `eq()` sirve a la vez a la consulta de detalle (`.order()`) y a la de
         // automatismos, que se resuelve con un `await` directo — ver el mismo
         // apaño en `fakeListService`.
-        return {
-          select: () => ({
-            eq: () =>
-              Object.assign(Promise.resolve({ data: options.projects ?? [], error: null }), {
-                order: () => Promise.resolve({ data: options.projects ?? [], error: null })
-              })
-          })
-        };
+        // Tres formas caen aquí: la de detalle (`.eq().order()`) y la de
+        // automatismos, que desde la ficha va acotada por dueño y encadena
+        // `.eq().eq()` antes de resolverse.
+        const projectsResult = { data: options.projects ?? [], error: null };
+        const chain = () =>
+          Object.assign(Promise.resolve(projectsResult), {
+            order: () => Promise.resolve(projectsResult),
+            eq: () => Promise.resolve(projectsResult)
+          });
+        return { select: () => ({ eq: chain }) };
       }
       if (table === "project_prompts") {
         return {
@@ -290,7 +292,7 @@ describe("getOperatorUserDetail", () => {
           is_archived: false,
           owner_user_id: "u1",
           recurring_scans_enabled: true,
-          auto_web_audit_enabled: true,
+          auto_technical_audit_enabled: true, auto_coverage_audit_enabled: true,
           engine_gemini_enabled: true,
           engine_claude_enabled: true,
           engine_openai_enabled: true
@@ -304,7 +306,7 @@ describe("getOperatorUserDetail", () => {
     expect(detail?.projects[0].automation).toMatchObject({
       recurringScansEnabled: true,
       recurringScansEffective: true,
-      autoWebAuditEnabled: true,
+      coverageAuditEnabled: true,
       promptCount: 2
     });
     expect(detail?.automation).toMatchObject({ recurringActive: 1, auditActive: 1, totalProjects: 1 });

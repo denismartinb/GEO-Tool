@@ -1,5 +1,31 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadAutomationSnapshot } from "./automation";
+
+/**
+ * Guarda estática, y no es teórica: la primera implementación de esta fase leía
+ * `auto_web_audit_enabled`, la columna que la migración 0031 retiró
+ * explícitamente ("do not reintroduce reads of it"). Su default sigue siendo
+ * `true` y ya nadie la escribe, así que /admin habría pintado "auditoría
+ * activada, con coste" en casi todas las cuentas cuando la realidad es que
+ * está apagada en casi todas — una métrica inventada, justo lo que el módulo
+ * dice impedir. Lo cazó la QA antes de mergear; esto impide que vuelva.
+ */
+describe("columnas de auditoría leídas", () => {
+  const source = readFileSync(join(process.cwd(), "lib/admin/automation.ts"), "utf8");
+
+  it("no vuelve a leer la columna retirada por la migración 0031", () => {
+    const selectLine = source.split("\n").find((line) => line.includes("recurring_scans_enabled"));
+    expect(selectLine).toBeDefined();
+    expect(selectLine).not.toContain("auto_web_audit_enabled");
+  });
+
+  it("lee las dos mitades que sí están vivas", () => {
+    expect(source).toContain("auto_technical_audit_enabled");
+    expect(source).toContain("auto_coverage_audit_enabled");
+  });
+});
 
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -59,9 +85,9 @@ describe("loadAutomationSnapshot", () => {
   it("aggregates active/total per owner across their projects", async () => {
     const service = fakeService({
       projects: [
-        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: true, auto_web_audit_enabled: true, ...ALL_ENGINES },
-        { id: "p2", owner_user_id: "u1", recurring_scans_enabled: false, auto_web_audit_enabled: true, ...ALL_ENGINES },
-        { id: "p3", owner_user_id: "u1", recurring_scans_enabled: false, auto_web_audit_enabled: false, ...ALL_ENGINES }
+        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: true, auto_technical_audit_enabled: true, auto_coverage_audit_enabled: true, ...ALL_ENGINES },
+        { id: "p2", owner_user_id: "u1", recurring_scans_enabled: false, auto_technical_audit_enabled: true, auto_coverage_audit_enabled: true, ...ALL_ENGINES },
+        { id: "p3", owner_user_id: "u1", recurring_scans_enabled: false, auto_technical_audit_enabled: false, auto_coverage_audit_enabled: false, ...ALL_ENGINES }
       ],
       prompts: [{ project_id: "p1" }, { project_id: "p1" }, { project_id: "p2" }]
     });
@@ -76,7 +102,7 @@ describe("loadAutomationSnapshot", () => {
   it("counts a Free owner's enabled recurring scan as inert, not active", async () => {
     const service = fakeService({
       projects: [
-        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: true, auto_web_audit_enabled: false, ...ALL_ENGINES }
+        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: true, auto_technical_audit_enabled: false, auto_coverage_audit_enabled: false, ...ALL_ENGINES }
       ],
       prompts: [{ project_id: "p1" }]
     });
@@ -118,7 +144,7 @@ describe("loadAutomationSnapshot", () => {
           id: "p1",
           owner_user_id: "u1",
           recurring_scans_enabled: false,
-          auto_web_audit_enabled: false,
+          auto_technical_audit_enabled: false, auto_coverage_audit_enabled: false,
           engine_gemini_enabled: null,
           engine_claude_enabled: null,
           engine_openai_enabled: false
@@ -132,10 +158,56 @@ describe("loadAutomationSnapshot", () => {
     expect(snapshot.byProject.get("p1")?.engines).toEqual(["gemini", "claude"]);
   });
 
+  it("counts the two audit halves separately — only coverage spends LLM", async () => {
+    const service = fakeService({
+      projects: [
+        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: false, auto_technical_audit_enabled: true, auto_coverage_audit_enabled: false, ...ALL_ENGINES }
+      ],
+      prompts: [{ project_id: "p1" }]
+    });
+
+    const snapshot = await loadAutomationSnapshot(service as never, new Map([["u1", "pro"]]));
+
+    // La técnica activada no cuenta como "auditoría con coste".
+    expect(snapshot.byOwner.get("u1")).toMatchObject({ auditActive: 0, technicalAuditActive: 1 });
+    expect(snapshot.byProject.get("p1")).toMatchObject({
+      technicalAuditEnabled: true,
+      coverageAuditEnabled: false
+    });
+  });
+
+  it("degrades the account provenance to 'no_medido' when any project includes coverage cost", async () => {
+    const service = fakeService({
+      projects: [
+        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: true, auto_technical_audit_enabled: false, auto_coverage_audit_enabled: false, ...ALL_ENGINES },
+        { id: "p2", owner_user_id: "u1", recurring_scans_enabled: true, auto_technical_audit_enabled: false, auto_coverage_audit_enabled: true, ...ALL_ENGINES }
+      ],
+      prompts: [{ project_id: "p1" }, { project_id: "p2" }]
+    });
+
+    const snapshot = await loadAutomationSnapshot(service as never, new Map([["u1", "pro"]]));
+
+    // Un total no puede presentarse como más fiable que su peor sumando.
+    expect(snapshot.byOwner.get("u1")?.provenance).toBe("no_medido");
+  });
+
+  it("keeps the account provenance at 'estimado' when no coverage audit is involved", async () => {
+    const service = fakeService({
+      projects: [
+        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: true, auto_technical_audit_enabled: true, auto_coverage_audit_enabled: false, ...ALL_ENGINES }
+      ],
+      prompts: [{ project_id: "p1" }]
+    });
+
+    const snapshot = await loadAutomationSnapshot(service as never, new Map([["u1", "pro"]]));
+
+    expect(snapshot.byOwner.get("u1")?.provenance).toBe("estimado");
+  });
+
   it("still reports automation state when the prompt count is unreadable", async () => {
     const service = fakeService({
       projects: [
-        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: true, auto_web_audit_enabled: true, ...ALL_ENGINES }
+        { id: "p1", owner_user_id: "u1", recurring_scans_enabled: true, auto_technical_audit_enabled: true, auto_coverage_audit_enabled: true, ...ALL_ENGINES }
       ],
       promptsError: "boom"
     });

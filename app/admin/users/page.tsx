@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireOperator } from "@/lib/admin/operator";
 import { getOperatorUserDetail, listOperatorUsers, type AdminUserRow, type AdminUserStatus } from "@/lib/admin/users";
-import { formatUsd, provenanceLabel } from "@/lib/admin/cost-model";
+import { formatUsd, provenanceLabel, type CostProvenance } from "@/lib/admin/cost-model";
 import type { AccountAutomation, ProjectAutomation } from "@/lib/admin/automation";
 import { relativeTime } from "@/lib/notifications/render";
 
@@ -64,6 +64,16 @@ function AutomationCell({ automation, kind }: { automation: AccountAutomation | 
   );
 }
 
+/** Nunca una cifra desnuda: el coste sale siempre con su procedencia al lado. */
+function Cost({ usd, provenance }: { usd: number; provenance: CostProvenance }) {
+  return (
+    <span className="adm-cost">
+      {formatUsd(usd)}
+      <span className="adm-cost-tag">{provenanceLabel(provenance)}</span>
+    </span>
+  );
+}
+
 function ProjectAutomationLine({ automation }: { automation: ProjectAutomation | null }) {
   if (!automation) return <span className="adm-dim">sin dato de automatismos</span>;
 
@@ -71,7 +81,9 @@ function ProjectAutomationLine({ automation }: { automation: ProjectAutomation |
   if (automation.recurringScansEffective) bits.push("escaneo recurrente");
   else if (automation.recurringScansEnabled) bits.push("recurrente sin efecto (Free)");
   else bits.push("sin recurrente");
-  bits.push(automation.autoWebAuditEnabled ? "auditoría auto" : "sin auditoría auto");
+  // Las dos mitades por separado: sólo la de cobertura gasta LLM.
+  bits.push(automation.coverageAuditEnabled ? "auditoría IA" : "sin auditoría IA");
+  bits.push(automation.technicalAuditEnabled ? "auditoría técnica ($0)" : "sin auditoría técnica");
 
   return (
     <>
@@ -115,6 +127,11 @@ export default async function AdminUsersPage({
   const paidCount = users.filter((row) => row.status === "paid").length;
   const estimatedMrr = users.filter((row) => row.status === "paid").reduce((sum, row) => sum + row.planPrice, 0);
   const estimatedLlmMonthlyUsd = users.reduce((sum, row) => sum + (row.automation?.monthlyUsd ?? 0), 0);
+  // El pie del KPI no puede ser una constante: si alguna cuenta aporta coste de
+  // cobertura (sin medir), el total tampoco está medido.
+  const llmCostProvenance: CostProvenance = users.some((row) => row.automation?.provenance === "no_medido")
+    ? "no_medido"
+    : "estimado";
 
   const detail = params.u ? await getOperatorUserDetail(service, params.u) : null;
 
@@ -163,7 +180,9 @@ export default async function AdminUsersPage({
           <dt>Coste LLM/mes</dt>
           <dd>{automationAvailability === "ok" ? formatUsd(estimatedLlmMonthlyUsd) : "—"}</dd>
           <span className="adm-kpi-foot">
-            {automationAvailability === "ok" ? "estimado, no facturado" : "sin dato"}
+            {automationAvailability === "ok"
+              ? `${provenanceLabel(llmCostProvenance)}, no facturado`
+              : "sin dato"}
           </span>
         </div>
       </dl>
@@ -233,7 +252,11 @@ export default async function AdminUsersPage({
                     <AutomationCell automation={row.automation} kind="audit" />
                   </td>
                   <td className="adm-num">
-                    {row.automation ? formatUsd(row.automation.monthlyUsd) : <span className="adm-dim">sin dato</span>}
+                    {row.automation ? (
+                      <Cost usd={row.automation.monthlyUsd} provenance={row.automation.provenance} />
+                    ) : (
+                      <span className="adm-dim">sin dato</span>
+                    )}
                   </td>
                   <td>{row.lastSignInAt ? relativeTime(row.lastSignInAt) : "—"}</td>
                 </tr>

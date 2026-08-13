@@ -88,9 +88,20 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   never substitutes for what Stripe actually billed. This is the same "no
   fake metrics" rule as the rest of CLAUDE.md, applied to a screen whose
   entire audience already trusts every other number on it.
+- **Check which column is still live before reading it.** `/admin` reads
+  columns owned by other subsystems, and some are retired without being
+  dropped — `auto_web_audit_enabled` (0030) still exists, still defaults to
+  `true`, and is read by nothing since 0031 replaced it with the two audit
+  halves. Reading it shipped a screen that would have claimed "auto-audit on,
+  costing money" for nearly every account while the truth is off for nearly
+  all of them (caught by `qa` on PR #394 before merge, §65). A column that
+  exists is not a column that means anything: read the migration that last
+  touched it, and match the fail direction the live code uses
+  (`=== true` for the halves — they fail closed).
 - **A per-project setting may not be rendered as a per-account boolean.** The
-  automation toggles (`recurring_scans_enabled`, `auto_web_audit_enabled`, the
-  audit halves, the engine switches) live on `projects`. An account with
+  automation toggles (`recurring_scans_enabled`, the two audit halves
+  `auto_technical_audit_enabled`/`auto_coverage_audit_enabled`, the engine
+  switches) live on `projects`. An account with
   several domains can hold them in conflict, so the account-level view shows a
   declared aggregate (`active/total`) and the real switch is read per project.
   A single checkbox per user is false the moment two projects disagree

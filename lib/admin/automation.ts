@@ -4,6 +4,7 @@ import type { createServiceClient } from "@/lib/supabase/service";
 import {
   estimateProjectMonthlyCost,
   recurringScansAreEffective,
+  type CostProvenance,
   type EngineId,
   type ProjectCostEstimate
 } from "@/lib/admin/cost-model";
@@ -38,13 +39,26 @@ export type ProjectAutomation = {
   projectId: string;
   recurringScansEnabled: boolean;
   /**
+   * Las DOS mitades de auditoría (migración 0031), no el `auto_web_audit_enabled`
+   * de la 0030: esa columna está **retirada**. Sigue en la tabla porque
+   * borrarla es un cambio destructivo con su propia aprobación, pero ya no la
+   * lee ningún camino y su default sigue siendo `true`, así que leerla habría
+   * pintado "auditoría activada, con coste" en casi todas las cuentas cuando la
+   * realidad es que está apagada en casi todas. Lo cazó la QA de este PR antes
+   * de mergear (log §65).
+   *
+   * Sólo la mitad de COBERTURA cuesta dinero ($0,28/auditoría, sin medir); la
+   * técnica es $0 por diseño.
+   */
+  technicalAuditEnabled: boolean;
+  coverageAuditEnabled: boolean;
+  /**
    * `true` sólo si el escaneo recurrente además SURTE EFECTO. El barrido
    * descarta los proyectos de plan Free (`skipped_plan_ineligible` en
    * `lib/scan/cron.ts`), así que un Free con el interruptor puesto no se
    * escanea nunca — y la pantalla tiene que decir eso, no repetir el booleano.
    */
   recurringScansEffective: boolean;
-  autoWebAuditEnabled: boolean;
   promptCount: number;
   engines: EngineId[];
   cost: ProjectCostEstimate;
@@ -53,12 +67,24 @@ export type ProjectAutomation = {
 export type AccountAutomation = {
   /** Proyectos activos con escaneo recurrente EFECTIVO, sobre el total de activos. */
   recurringActive: number;
-  /** Proyectos activos con auditoría automática, sobre el total de activos. */
+  /**
+   * Proyectos activos con la auditoría de COBERTURA activada, sobre el total.
+   * Es la mitad que gasta LLM; la técnica se cuenta aparte porque cuesta $0 y
+   * mezclarlas haría que la columna de coste no se pudiera explicar.
+   */
   auditActive: number;
+  /** Proyectos con la mitad TÉCNICA activada (coste $0 por diseño). */
+  technicalAuditActive: number;
   totalProjects: number;
   /** Proyectos con el recurrente puesto pero inerte por ser plan Free. */
   recurringInertOnFree: number;
   monthlyUsd: number;
+  /**
+   * Lo peor que hay dentro de `monthlyUsd`. Sin esto no había de dónde sacar la
+   * etiqueta en la tabla ni en el KPI, y las cifras salían desnudas —
+   * contradiciendo la propia regla que esta fase escribió. Lo cazó la QA.
+   */
+  provenance: CostProvenance;
   availability: AutomationAvailability;
 };
 
@@ -96,17 +122,28 @@ function enginesFromRow(row: Record<string, unknown> | undefined): EngineId[] {
  */
 export async function loadAutomationSnapshot(
   service: ServiceClient,
-  planIdByOwnerId: Map<string, string>
+  planIdByOwnerId: Map<string, string>,
+  /**
+   * Acota la lectura a un dueño. La ficha de un usuario no necesita el estado
+   * de todos los proyectos de la plataforma, y sin esto cada clic en una fila
+   * leía el conjunto entero — un coste que crece con el total de proyectos para
+   * una pantalla que sólo enseña los de uno (señalado por la QA de este PR).
+   */
+  ownerUserId?: string
 ): Promise<AutomationSnapshot> {
   let projects: Array<Record<string, unknown>> = [];
 
   try {
-    const { data, error } = await service
+    let query = service
       .from("projects")
       .select(
-        "id, owner_user_id, recurring_scans_enabled, auto_web_audit_enabled, engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled"
+        "id, owner_user_id, recurring_scans_enabled, auto_technical_audit_enabled, auto_coverage_audit_enabled, engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled"
       )
       .eq("is_archived", false);
+
+    if (ownerUserId) query = query.eq("owner_user_id", ownerUserId);
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("[geo:admin] automation columns unreadable — showing 'sin dato' instead of a guess", {
@@ -134,7 +171,11 @@ export async function loadAutomationSnapshot(
     const planId = planIdByOwnerId.get(ownerId) ?? "pro";
 
     const recurringScansEnabled = project.recurring_scans_enabled === true;
-    const autoWebAuditEnabled = project.auto_web_audit_enabled !== false;
+    // `=== true`, no `!== false`: la 0031 declara que estas dos columnas leen
+    // FALLANDO CERRADO (default `false` = "no gastes"), al revés que la 0030.
+    // Es la misma comparación que hace el código vivo en `audit-job-runner.ts`.
+    const technicalAuditEnabled = project.auto_technical_audit_enabled === true;
+    const coverageAuditEnabled = project.auto_coverage_audit_enabled === true;
     const engines = enginesFromRow(project);
     const promptCount = promptCountByProject.get(projectId) ?? 0;
     const recurringScansEffective = recurringScansAreEffective(planId, recurringScansEnabled);
@@ -144,14 +185,15 @@ export async function loadAutomationSnapshot(
       promptCount,
       engines,
       recurringScansEnabled,
-      coverageAuditEnabled: autoWebAuditEnabled
+      coverageAuditEnabled
     });
 
     byProject.set(projectId, {
       projectId,
       recurringScansEnabled,
       recurringScansEffective,
-      autoWebAuditEnabled,
+      technicalAuditEnabled,
+      coverageAuditEnabled,
       promptCount,
       engines,
       cost
@@ -160,17 +202,22 @@ export async function loadAutomationSnapshot(
     const account = byOwner.get(ownerId) ?? {
       recurringActive: 0,
       auditActive: 0,
+      technicalAuditActive: 0,
       totalProjects: 0,
       recurringInertOnFree: 0,
       monthlyUsd: 0,
+      provenance: "estimado" as CostProvenance,
       availability: "ok" as AutomationAvailability
     };
 
     account.totalProjects += 1;
     if (recurringScansEffective) account.recurringActive += 1;
     if (recurringScansEnabled && !recurringScansEffective) account.recurringInertOnFree += 1;
-    if (autoWebAuditEnabled) account.auditActive += 1;
+    if (coverageAuditEnabled) account.auditActive += 1;
+    if (technicalAuditEnabled) account.technicalAuditActive += 1;
     account.monthlyUsd += cost.monthlyUsd;
+    // El total no puede ser más fiable que su peor sumando.
+    if (cost.provenance === "no_medido") account.provenance = "no_medido";
 
     byOwner.set(ownerId, account);
   }

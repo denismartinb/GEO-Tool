@@ -6294,6 +6294,39 @@ formulario en esta fase. Ver el estado repartido entre proyectos es lo que
 permite decidir qué cambiar; y separar el ver del tocar deja la parte sin riesgo
 entregada mientras la arriesgada espera su propio Task Intake.
 
+**Lo que encontró la QA, y por qué importa más que el arreglo.** El gate previo
+al Human Gate devolvió **BLOCKED** con un fallo que contradecía exactamente lo
+que esta fase decía defender: el código leía `auto_web_audit_enabled`, la
+columna que la migración 0031 **retiró** con un comentario explícito («*do not
+reintroduce reads of it*»). Sigue en la tabla porque borrarla es un cambio
+destructivo con su propia aprobación, y sigue con el default `true` de la 0030,
+pero ya no la escribe nadie. Resultado: la pantalla habría afirmado «auditoría
+automática activada, con coste» en **casi todas las cuentas**, cuando la
+realidad —tras el barrido manual del fundador del 2026-08-09— es que está
+apagada en casi todas. Una métrica inventada, en la fase cuyo argumento entero
+era no inventar ninguna.
+
+Lo relevante no es el despiste, es qué tipo de error es: **una columna que
+existe no es una columna que signifique algo**. El esquema no distingue viva de
+retirada, y el `select` no falla — devuelve un `true` perfectamente plausible.
+Sólo lo dice el comentario de la migración que la jubiló. De ahí el invariante
+nuevo en `.claude/rules/admin.md` (leer la migración que tocó por última vez la
+columna, y copiar la dirección de fallo del código vivo) y la guarda estática en
+`automation.test.ts`, que lee el propio fuente y rompe si la columna retirada
+vuelve al `select`. Los tests anteriores no lo cazaron porque sus *fixtures*
+copiaban la misma columna equivocada: reproducían el error en vez de medirlo.
+
+La segunda mitad del hallazgo fue más simple y del mismo signo: el coste salía
+**desnudo** en la celda de la tabla y en el KPI, sin su etiqueta de procedencia,
+contradiciendo la regla que esta misma fase acababa de escribir. La causa no era
+la plantilla sino el modelo: `AccountAutomation` no tenía campo `provenance`, así
+que no había de dónde sacar la etiqueta. Ahora lo tiene, y se degrada al peor
+sumando de la cuenta.
+
+Corregido también, por señalarlo la QA: la ficha de un usuario cargaba los
+automatismos de **todos** los proyectos de la plataforma para enseñar los de uno;
+ahora la consulta va acotada por dueño.
+
 ### Pendiente / roto conocido
 
 - **2b (escribir los interruptores) sin empezar.** Hoy sólo los escribe el

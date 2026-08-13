@@ -204,14 +204,18 @@ export async function listOperatorUsers(service: ServiceClient): Promise<AdminUs
       lastSignInById.get(profile.id) ?? null,
       projectCountByOwner.get(profile.id) ?? 0,
       scanCountByOwner.get(profile.id) ?? 0,
+      // Una cuenta sin proyectos no aparece en el agregado: se le da el cero
+      // explícito, que no es lo mismo que "sin dato" (eso es `null`).
       automation.availability === "ok"
         ? automation.byOwner.get(profile.id) ?? {
             recurringActive: 0,
             auditActive: 0,
+            technicalAuditActive: 0,
             totalProjects: 0,
             recurringInertOnFree: 0,
             monthlyUsd: 0,
-            availability: "ok"
+            provenance: "estimado" as const,
+            availability: "ok" as const
           }
         : null
     )
@@ -271,9 +275,12 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
     }
   }
 
+  // Acotado a este dueño: la ficha no necesita el estado de todos los
+  // proyectos de la plataforma (señalado por la QA de ADMIN-CONSOLE-2a).
   const automation = await loadAutomationSnapshot(
     service,
-    new Map([[userId, profile.current_plan ?? "free"]])
+    new Map([[userId, profile.current_plan ?? "free"]]),
+    userId
   );
 
   const row = toRow(
