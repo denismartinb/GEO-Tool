@@ -40,7 +40,7 @@ export default async function GlosarioTerminoPage({ params }: { params: Promise<
   const paragraphs = entry.longDefinition.split("\n\n");
 
   return (
-    <BlogPageShell>
+    <BlogPageShell activeHref="/glosario">
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },

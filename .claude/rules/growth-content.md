@@ -165,7 +165,7 @@ Estas reglas conviven con las de honestidad de arriba y **no las derogan**. El
 hecho comprobable no se recorta nunca; lo que se decide aquí es el orden, el
 espacio y el contexto (fundador, 2026-08-12: *"no nos podemos permitir que
 dejes a la competencia mejor en las comparativas […] transmite que casi siempre
-Genscore es la mejor opción"*; log §65).
+Genscore es la mejor opción"*; log §67).
 
 - **Ninguna ventaja del competidor se lista suelta.** Va con el contexto que
   dice a quién le sirve de verdad, y ese contexto tiene que ser tan cierto como

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
-import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PublicHeader } from "@/components/marketing/public-header";
 import { ProcessFlow } from "@/components/blog/process-flow";
 import { contentMetadata } from "@/lib/seo/metadata";
 
@@ -12,12 +12,6 @@ export const metadata: Metadata = contentMetadata({
     "Qué es el GEO (Generative Engine Optimization), en qué se diferencia del SEO y cómo se mide la visibilidad de tu marca en respuestas de IA: GEO Score, tasa de mención, cuota de citas y más, explicados con ejemplos de GenScore.",
   path: "/geo"
 });
-
-const NAV_LINKS = [
-  { href: "/geo", label: "Qué es GEO" },
-  { href: "/pricing", label: "Precios" },
-  { href: "/blog", label: "Blog" }
-];
 
 /**
  * Illustrative example values for the GEO Score panel mock. Weights are the
@@ -150,23 +144,7 @@ export default function GeoExplainerPage() {
     <div className="lp">
       {/* NAV */}
       <div className="lp-nav-wrap">
-        <nav className="lp-nav">
-          <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...NAV_LINKS]} />
-          <Link href="/" className="lp-logo">
-            <BrandLogo size={22} />
-          </Link>
-          <div className="lp-nav-links">
-            {NAV_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className={l.href === "/geo" ? "active" : ""}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
-          <div className="lp-nav-right">
-            <Link href="/login" className="btn btn-ghost btn-sm">Iniciar sesión</Link>
-            <Link href="/signup" className="btn btn-primary btn-sm">Prueba gratis</Link>
-          </div>
-        </nav>
+        <PublicHeader activeHref="/geo" />
       </div>
 
       {/* HERO */}

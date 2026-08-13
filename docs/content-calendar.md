@@ -186,7 +186,7 @@ Tres decisiones de honestidad, las tres con test
    son datos que un comprador verifica en dos clics, y esconderlos es el error
    que PRICING-TRUTH-1 obligó a retirar del producto.
 3. **El encuadre es de marketing, no de arbitraje** (revisión del fundador,
-   2026-08-12; log §65). La primera versión abría admitiendo que la escribe un
+   2026-08-12; log §67). La primera versión abría admitiendo que la escribe un
    competidor y dedicaba un bloque destacado a "cuándo NO deberías cambiar";
    ambas cosas concedían gratis. El hecho comprobable no se recorta, pero el
    orden, el espacio y el contexto se deciden a favor de Genscore.
