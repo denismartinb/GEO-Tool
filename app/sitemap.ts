@@ -39,7 +39,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/comparativas", lastModified: "2026-08-03" },
   { path: "/comparativas/genscore-vs-otterly", lastModified: "2026-08-11" },
   { path: "/comparativas/genscore-vs-peec-ai", lastModified: "2026-08-11" },
-  { path: "/comparativas/mejores-herramientas-geo-en-espanol", lastModified: "2026-08-11" },
+  { path: "/comparativas/mejores-herramientas-geo-en-espanol", lastModified: "2026-08-12" },
   { path: "/comparativas/genscore-vs-profound", lastModified: "2026-08-11" },
   { path: "/privacidad", lastModified: "2026-07-19" },
   { path: "/cookies", lastModified: "2026-07-12" },
