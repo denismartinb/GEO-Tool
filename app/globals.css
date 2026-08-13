@@ -6327,6 +6327,13 @@ select.set-field {
   .art-stats:has(> :nth-child(2):last-child) {
     grid-template-columns: repeat(2, minmax(148px, 300px)); justify-content: center;
   }
+  /* Cinco tarjetas caen 4+1 con `auto-fit` a 1280 px y la quinta queda
+     colgando sola (hallazgo del piloto, PR #396, al pasar el pilar del GEO
+     Score a cinco componentes). Con tres columnas quedan 3+2, que se lee como
+     un bloque en vez de como un descuadre. */
+  .art-stats:has(> :nth-child(5):last-child) {
+    grid-template-columns: repeat(3, minmax(148px, 1fr));
+  }
 }
 .art-stat { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; padding: 17px 18px; box-shadow: var(--brand-shadow-card); }
 .art-stat-n {
