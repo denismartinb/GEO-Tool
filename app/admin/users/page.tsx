@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireOperator } from "@/lib/admin/operator";
 import { getOperatorUserDetail, listOperatorUsers, type AdminUserRow, type AdminUserStatus } from "@/lib/admin/users";
+import { formatUsd, provenanceLabel } from "@/lib/admin/cost-model";
+import type { AccountAutomation, ProjectAutomation } from "@/lib/admin/automation";
 import { relativeTime } from "@/lib/notifications/render";
 
 export const metadata: Metadata = { title: "Usuarios — Consola de operador" };
@@ -35,6 +37,52 @@ function currency(value: number): string {
   return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
 }
 
+/**
+ * ADMIN-CONSOLE-2a. Un agregado `activos/total`, nunca un booleano por
+ * usuario: esos interruptores viven en `projects`, así que una cuenta con
+ * cinco dominios puede tenerlos mezclados y una sola casilla mentiría en
+ * cuanto dos discreparan.
+ */
+function AutomationCell({ automation, kind }: { automation: AccountAutomation | null; kind: "recurring" | "audit" }) {
+  if (!automation) return <span className="adm-dim">sin dato</span>;
+  if (automation.totalProjects === 0) return <span className="adm-dim">—</span>;
+
+  const active = kind === "recurring" ? automation.recurringActive : automation.auditActive;
+  const inert = kind === "recurring" ? automation.recurringInertOnFree : 0;
+
+  return (
+    <span className="adm-frac">
+      <span className={active > 0 ? "adm-frac-on" : "adm-frac-off"}>{active}</span>
+      <span className="adm-frac-sep">/</span>
+      <span className="adm-frac-total">{automation.totalProjects}</span>
+      {inert > 0 ? (
+        <span className="adm-inert" title="El barrido descarta los proyectos de plan Free, así que el interruptor no surte efecto">
+          {inert} sin efecto
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function ProjectAutomationLine({ automation }: { automation: ProjectAutomation | null }) {
+  if (!automation) return <span className="adm-dim">sin dato de automatismos</span>;
+
+  const bits: string[] = [];
+  if (automation.recurringScansEffective) bits.push("escaneo recurrente");
+  else if (automation.recurringScansEnabled) bits.push("recurrente sin efecto (Free)");
+  else bits.push("sin recurrente");
+  bits.push(automation.autoWebAuditEnabled ? "auditoría auto" : "sin auditoría auto");
+
+  return (
+    <>
+      <span>{bits.join(" · ")}</span>
+      <span className="adm-cost-basis">
+        {automation.cost.basis} · {formatUsd(automation.cost.monthlyUsd)}/mes ({provenanceLabel(automation.cost.provenance)})
+      </span>
+    </>
+  );
+}
+
 function buildQuery(base: { q?: string; status?: string; u?: string }): string {
   const params = new URLSearchParams();
   if (base.q) params.set("q", base.q);
@@ -52,7 +100,7 @@ export default async function AdminUsersPage({
   const params = await searchParams;
   const { service } = await requireOperator("/admin/users");
 
-  const { users, authUsersTruncated } = await listOperatorUsers(service);
+  const { users, authUsersTruncated, automationAvailability } = await listOperatorUsers(service);
 
   const search = params.q?.trim().toLowerCase() ?? "";
   const statusFilter = (params.status as AdminUserStatus | undefined) ?? "all";
@@ -66,6 +114,7 @@ export default async function AdminUsersPage({
   const trialCount = users.filter((row) => row.status === "trial").length;
   const paidCount = users.filter((row) => row.status === "paid").length;
   const estimatedMrr = users.filter((row) => row.status === "paid").reduce((sum, row) => sum + row.planPrice, 0);
+  const estimatedLlmMonthlyUsd = users.reduce((sum, row) => sum + (row.automation?.monthlyUsd ?? 0), 0);
 
   const detail = params.u ? await getOperatorUserDetail(service, params.u) : null;
 
@@ -77,6 +126,14 @@ export default async function AdminUsersPage({
           <p className="adm-sub">{users.length} cuentas · sólo lectura</p>
         </div>
       </div>
+
+      {automationAvailability === "unmigrated" ? (
+        <p className="adm-note">
+          No se pudieron leer los automatismos (escaneo recurrente y auditoría automática): probablemente falte
+          aplicar una migración en Supabase. Las columnas muestran «sin dato» en vez de un cero que parecería una
+          respuesta.
+        </p>
+      ) : null}
 
       {authUsersTruncated ? (
         <p className="adm-note">
@@ -101,6 +158,13 @@ export default async function AdminUsersPage({
         <div className="adm-kpi">
           <dt>MRR estimado</dt>
           <dd>{currency(estimatedMrr)}</dd>
+        </div>
+        <div className="adm-kpi">
+          <dt>Coste LLM/mes</dt>
+          <dd>{automationAvailability === "ok" ? formatUsd(estimatedLlmMonthlyUsd) : "—"}</dd>
+          <span className="adm-kpi-foot">
+            {automationAvailability === "ok" ? "estimado, no facturado" : "sin dato"}
+          </span>
         </div>
       </dl>
 
@@ -141,6 +205,9 @@ export default async function AdminUsersPage({
                 <th>Estado</th>
                 <th className="adm-num">Dominios</th>
                 <th className="adm-num">Escaneos 30d</th>
+                <th>Recurrente</th>
+                <th>Auditoría</th>
+                <th className="adm-num">Coste/mes</th>
                 <th>Último acceso</th>
               </tr>
             </thead>
@@ -159,6 +226,15 @@ export default async function AdminUsersPage({
                   </td>
                   <td className="adm-num">{row.projectCount}</td>
                   <td className="adm-num">{row.scanCount30d}</td>
+                  <td>
+                    <AutomationCell automation={row.automation} kind="recurring" />
+                  </td>
+                  <td>
+                    <AutomationCell automation={row.automation} kind="audit" />
+                  </td>
+                  <td className="adm-num">
+                    {row.automation ? formatUsd(row.automation.monthlyUsd) : <span className="adm-dim">sin dato</span>}
+                  </td>
                   <td>{row.lastSignInAt ? relativeTime(row.lastSignInAt) : "—"}</td>
                 </tr>
               ))}
@@ -207,19 +283,33 @@ export default async function AdminUsersPage({
                   <p style={{ fontSize: 12.5, color: "var(--ink-4)", margin: 0 }}>Sin dominios creados.</p>
                 ) : (
                   detail.projects.map((project) => (
-                    <div className="adm-proj" key={project.id}>
-                      <span className="adm-proj-d">
-                        {project.domain}
-                        {project.isArchived ? " (archivado)" : ""}
-                      </span>
-                      <span className="adm-proj-s">
-                        {project.latestScan
-                          ? `${project.latestScan.status} · ${formatShortDate(project.latestScan.createdAt)}`
-                          : "sin escaneos"}
-                      </span>
+                    <div className="adm-proj-block" key={project.id}>
+                      <div className="adm-proj">
+                        <span className="adm-proj-d">
+                          {project.domain}
+                          {project.isArchived ? " (archivado)" : ""}
+                        </span>
+                        <span className="adm-proj-s">
+                          {project.latestScan
+                            ? `${project.latestScan.status} · ${formatShortDate(project.latestScan.createdAt)}`
+                            : "sin escaneos"}
+                        </span>
+                      </div>
+                      {/* El interruptor real vive por proyecto; el agregado de la
+                          tabla sólo resume esto. Archivado = el barrido no lo toca. */}
+                      {project.isArchived ? null : (
+                        <div className="adm-proj-auto">
+                          <ProjectAutomationLine automation={project.automation} />
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
+                <p className="adm-cost-note">
+                  El coste es una <strong>estimación</strong>, no lo facturado: sale de las tarifas por llamada de
+                  <code> docs/llm-cost-analysis-2026-08.md</code> §7 (generación medida, extracción estimada, cobertura
+                  de auditoría sin medir) por los prompts y motores activos de cada dominio.
+                </p>
               </div>
             </div>
           </div>

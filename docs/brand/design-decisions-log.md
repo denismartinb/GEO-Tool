@@ -6247,6 +6247,70 @@ restrict`, interruptores que son por proyecto y no por usuario, y el
 
 ---
 
+## 65. Los automatismos y su coste, vistos por cuenta sin mentir sobre ninguno de los dos (ADMIN-CONSOLE-2a, 2026-08-12)
+
+**Estado: implementada.** Task Intake de 12 puntos aprobado por el fundador
+(«Sí»). Primera mitad de lo que pidió el 12-08: *ver* por usuario si tiene
+escaneo y auditoría automáticos y cuánto cuesta. La otra mitad —*modificarlos*—
+y el borrado permanente quedan fuera a propósito, cada uno con su fase.
+
+**El problema de fondo: lo que pidió no existe con esa forma.** Los
+interruptores (`recurring_scans_enabled` 0008, `auto_web_audit_enabled` 0030)
+cuelgan de `projects`, no de la cuenta. Una casilla por usuario sería falsa en
+cuanto dos de sus dominios discreparan, que es el caso normal en cuanto alguien
+tiene más de uno. Así que la tabla muestra un **agregado declarado**
+(`activos/total`) y el interruptor real se lee por proyecto en la ficha. No es
+una traducción cosmética de la petición: es la única forma de que la columna
+sea cierta.
+
+**Tres cosas que la pantalla dice y que un agregado ingenuo se habría comido:**
+
+1. **«Sin efecto (Free)».** `runRecurringScanSweep` descarta los proyectos de
+   plan Free antes de escanearlos (`skipped_plan_ineligible`), así que un Free
+   con el interruptor puesto **no se escanea nunca**. Contarlo como activo
+   habría hecho creer que hay trabajo —y coste— donde no hay ninguno; se cuenta
+   aparte y su coste mensual es 0.
+2. **«Sin dato» en vez de cero.** Las migraciones de este repo se aplican a
+   mano, y una columna que PostgREST no conoce hace fallar el `select`
+   **entero**. Por eso los automatismos viven en `lib/admin/automation.ts` con
+   su **propia consulta**: una migración pendiente deja una columna sin dato en
+   vez de dejar `/admin` en blanco. Mismo remedio que ya usa `/debug` con las
+   mitades de auditoría, y misma dirección de fallo que exige
+   `.claude/rules/scan.md` — sólo que aquí falla hacia *desconocido*, nunca
+   hacia un valor: en una pantalla de sólo lectura, un «desactivado» inventado
+   es peor que un hueco, porque parece una respuesta.
+3. **La procedencia viaja pegada a la cifra.** `lib/admin/cost-model.ts` copia
+   las tarifas de `docs/llm-cost-analysis-2026-08.md` §7 **con su etiqueta**:
+   la generación está medida, la extracción es una estimación de tarifas
+   públicas, y la cobertura de auditoría no está medida en absoluto. El coste
+   agregado no puede presentarse como más fiable que su parte más floja, así
+   que incluir la auditoría lo degrada a «sin medir» — y hay un test que lo
+   impone. Un número redondo sin etiqueta habría sido exactamente la métrica
+   falsa que CLAUDE.md prohíbe, en la pantalla cuyo público se fía de todos los
+   demás números que hay en ella.
+
+**Cero escrituras, y es una decisión, no una limitación.** No hay ni un
+formulario en esta fase. Ver el estado repartido entre proyectos es lo que
+permite decidir qué cambiar; y separar el ver del tocar deja la parte sin riesgo
+entregada mientras la arriesgada espera su propio Task Intake.
+
+### Pendiente / roto conocido
+
+- **2b (escribir los interruptores) sin empezar.** Hoy sólo los escribe el
+  dueño (`setRecurringScans` usa `requireUser()` + `.eq("owner_user_id", …)`);
+  desde `/admin` sería service-role saltándose ese scoping. Escalada real, con
+  su Task Intake.
+- **2c (borrado permanente con selección múltiple) sin empezar**, y sigue en la
+  lista de prohibidos de CLAUDE.md. Motivos y restricciones en
+  `docs/design-reference/admin-console-1/README.md`.
+- **El coste de la auditoría de cobertura sigue sin medirse** (§7 lo marca «no
+  medido», peor caso ~8 prompts). Mientras siga así, cualquier total que la
+  incluya arrastra esa etiqueta.
+- **Sin piloto agéntico**, igual que la Fase 1 y por la misma razón: el piloto
+  no puede completar un desafío AAL2. Verificación manual.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

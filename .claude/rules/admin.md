@@ -88,6 +88,32 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   never substitutes for what Stripe actually billed. This is the same "no
   fake metrics" rule as the rest of CLAUDE.md, applied to a screen whose
   entire audience already trusts every other number on it.
+- **A per-project setting may not be rendered as a per-account boolean.** The
+  automation toggles (`recurring_scans_enabled`, `auto_web_audit_enabled`, the
+  audit halves, the engine switches) live on `projects`. An account with
+  several domains can hold them in conflict, so the account-level view shows a
+  declared aggregate (`active/total`) and the real switch is read per project.
+  A single checkbox per user is false the moment two projects disagree
+  (`docs/brand/design-decisions-log.md` §65).
+- **An enabled switch that the backend ignores must be shown as ignored.** The
+  recurring sweep drops Free-plan projects (`skipped_plan_ineligible`,
+  `lib/scan/cron.ts`), so a Free project with the toggle on never scans.
+  Counting it as active invents work, and any cost derived from it invents
+  spend — it is counted separately and costs zero (§65).
+- **Reads added to `/admin` go in their own query, and fail toward "unknown".**
+  Migrations here are applied by hand, and a column PostgREST does not know
+  fails the ENTIRE select — riding along in the main query turns a pending
+  migration into a blank screen instead of one empty column. Same remedy
+  `/debug` already uses for the audit halves. Unlike the scan path, this
+  screen fails toward *no data*, never toward a value: on a read-only console
+  a fabricated "disabled" is worse than a gap, because it looks like an answer
+  (§65).
+- **A cost figure travels with its provenance, always.** `lib/admin/cost-model.ts`
+  copies the rates from `docs/llm-cost-analysis-2026-08.md` §7 and carries
+  whether each is measured, estimated, or unmeasured; a total can never be
+  presented as more reliable than its weakest part. If those rates change in
+  the analysis, they change here — this file is a declared copy, not a second
+  source of truth (§65).
 - **Never cap a read by row count without saying so on screen.** Same
   principle as `.claude/rules/scan.md`'s "never cap the work by row count":
   `auth.admin.listUsers()`'s single-page fetch has a real ceiling
