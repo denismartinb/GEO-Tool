@@ -16,6 +16,9 @@ import { verifyEnrollment, regenerateEnrollment } from "./actions";
  * the SAME pending factor the person already scanned into their app instead
  * of silently asking them to re-scan a new one.
  */
+/** Etiqueta que verá el operador en su app de autenticación. */
+const TOTP_FRIENDLY_NAME = "GenScore admin";
+
 export default async function MfaEnrollPage({
   searchParams
 }: {
@@ -41,7 +44,18 @@ export default async function MfaEnrollPage({
   let enrollError: string | null = null;
 
   if (!pending) {
-    const { data: enrolled, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+    // Con nombre, no en blanco. Sin él, la entrada aparece sin etiqueta en la
+    // app de autenticación, y quien acumule varios intentos no puede
+    // distinguir cuál es la buena — pasó el 2026-08-13: el código "inválido"
+    // que arrancó el bloqueo salió, con toda probabilidad, de una entrada
+    // muerta de un intento anterior. Es constante a propósito: el flujo de
+    // arriba nunca llama a `enroll()` teniendo ya un factor (verificado
+    // redirige al desafío, pendiente se reutiliza), así que no puede chocar
+    // consigo mismo.
+    const { data: enrolled, error } = await supabase.auth.mfa.enroll({
+      factorType: "totp",
+      friendlyName: TOTP_FRIENDLY_NAME
+    });
     if (error || !enrolled) {
       console.error("[geo:admin:mfa] failed to start TOTP enrollment", { message: error?.message });
       // Un mensaje que sólo dice "recarga" es inútil cuando recargar no arregla
