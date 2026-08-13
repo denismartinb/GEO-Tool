@@ -6247,6 +6247,86 @@ restrict`, interruptores que son por proyecto y no por usuario, y el
 
 ---
 
+## 65. La cabecera pública reconoce a quien ya entró (GENSCORE-HEADER-2, 2026-08-12)
+
+**Estado: implementada.** Continuación directa de §63. El fundador, ya logado,
+volvió a una página pública y se encontró «Iniciar sesión / Prueba gratis»:
+*«no debería ver estos botones, debería ver un estado de logado»*. La primera
+propuesta fue un botón único «Ir al panel»; la rechazó pidiendo *«algo más
+currado, más personalizado»* y señalando el chip de cuenta del menú lateral de
+consola (avatar con iniciales + email + insignia de plan).
+
+**No es un parecido, es el mismo chip.** `PublicHeader` renderiza las mismas
+clases que `components/sidebar.tsx` (`.user-chip`, `.avatar`,
+`.sb-plan-badge`), y las dos partes derivadas —iniciales e «¿hay insignia?»—
+salen de `lib/account-chip.ts`, que ahora usan **las dos** superficies.
+Repetir `email.slice(0, 2)` en el segundo llamador es exactamente cómo «el
+mismo chip» se convierte en dos chips distintos al cabo de unos meses. La
+regla de que **Free no pinta insignia** (decisión del fundador, 2026-07-31) se
+hereda de ahí en vez de volver a decidirse.
+
+**La decisión de fondo: las páginas públicas siguen siendo estáticas.** Las
+~45 superficies de marketing se pre-generan, y eso es el producto de SEO-POS-1
+y GROWTH-2/3. Leer la sesión en el servidor dentro de la cabecera compartida
+las habría sacado a todas del pre-renderizado —`lib/supabase/server.ts` usa
+`cookies()`, que basta para volver dinámica cualquier ruta que lo toque—, así
+que la cabecera lo pregunta **desde el cliente** a un endpoint nuevo y mínimo
+(`app/api/me/route.ts`) y las páginas no se mueven. Verificado en el build:
+`/`, `/pricing`, `/geo`, `/blog/*`, `/comparativas/*`, `/glosario/*`, `/docs/*`
+y las legales siguen marcadas `○`.
+
+**El coste, declarado en vez de escondido:** mientras la respuesta no llega, la
+cabecera pinta los CTA de anónimo. Quien está logado los ve un instante antes
+de que aparezca su chip. Es deliberado y va en la dirección correcta: el
+visitante anónimo —prácticamente todo el tráfico de marketing, y la razón de
+que el CTA exista— acierta sin parpadeo, y el parpadeo lo sufre el caso raro.
+La alternativa (no pintar nada hasta saberlo) retrasa el CTA para todos por
+proteger a la minoría.
+
+**El endpoint no aplica la caducidad de la prueba, sólo la lee.** `getPlanForUser`
+resuelve el plan pasando por `applyTrialExpiry`, que **escribe** (degrada a
+Free con el cliente de servicio) y **manda el email de «prueba terminada»**.
+Ese camino es correcto en la consola y ahí se queda. Colgarlo de `/api/me`
+—alcanzable desde cada página estática de marketing, es decir mucho más
+tráfico que la consola— habría hecho que una visita al blog mandara un email a
+un cliente. Así que se extrajo el predicado puro `isTrialElapsed` de dentro de
+`applyTrialExpiry` y ambos lo comparten: el endpoint resuelve el plan
+**efectivo** (una prueba caducada se pinta como Free, la insignia no miente) sin
+escribir ni enviar nada. Un test lo fija afirmando que ni el cliente de
+servicio ni `sendTrialEndedEmail` se llaman. La extracción evita la otra
+trampa: una segunda copia de «¿se acabó la prueba?» acabaría divergiendo de la
+que de verdad cierra el grifo.
+
+`isTrialElapsed` es un predicado booleano **a propósito, no un type guard**:
+que devuelva `false` significa «la prueba sigue viva», nunca «no hay fila», y
+declararlo `row is TrialFields` hacía que TypeScript estrechara la rama falsa a
+`never`. Lo cazó `tsc`, no una revisión.
+
+**Alcance del endpoint:** devuelve email, `planId` y `planName`, y nada más.
+Lee tres columnas de `profiles` con el cliente del usuario (RLS, sin atajo de
+servicio); un test fija esa lista exacta, porque ampliarla amplía lo que
+pueden filtrar unas páginas públicas. Responde **200 con `user: null`** para
+anónimo en vez de 401: es el caso esperado en una página de marketing y un 401
+en cada carga sería ruido en la consola del navegador. Si la petición falla, la
+cabecera se queda con los CTA de anónimo — nunca una cabecera rota.
+
+### Pendiente / roto conocido
+
+- **La franja promocional de la home (`7 días de Pro · Sin tarjeta`) se le
+  sigue enseñando a quien ya está logado**, incluido un cliente de plan
+  Agencia. Es el mismo fallo que esta fase corrige, en otro elemento, y se ha
+  dejado fuera a propósito: esconderla no es obvio, porque para un logado en
+  plan **Free** sigue siendo una oferta legítima y para uno de pago es un
+  sinsentido. Esa distinción es una decisión comercial del fundador, no del
+  agente. Recomendación: ocultarla sólo en planes de pago.
+- **El chip no se ha visto con una sesión real de Supabase**: este entorno no
+  tiene credenciales, así que la lógica del endpoint la cubren tests unitarios
+  y el pintado se verificó interceptando la respuesta de `/api/me` en el
+  navegador (agencia, free, email largo, anónimo, en escritorio y en el cajón
+  móvil). El extremo a extremo lo tiene que ver el piloto.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

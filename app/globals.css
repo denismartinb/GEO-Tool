@@ -5103,6 +5103,20 @@ a.notif-row:hover {
 .lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line-soft); }
 .lp-mobnav-ctas .lp-cta, .lp-mobnav-ctas .lp-cta-soft { width: 100%; }
 
+/* GENSCORE-HEADER-2 — the logged-in state of the public header reuses the
+   console sidebar's chip (.user-chip/.avatar/.sb-plan-badge) rather than a
+   lookalike, so these only add what the marketing bar needs on top: a border
+   so the chip reads as a control against the nav's own background (the
+   sidebar's ground already separates it there), and an ellipsis budget so a
+   long address can't push the nav wide. */
+.lp-user-chip { border: 1px solid var(--line); max-width: 260px; }
+.lp-user-chip .lp-user-chip-email {
+  font-size: 12.5px; font-weight: 650; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* In the drawer it is the full-width bottom action, in place of the two CTAs. */
+.lp-mobnav-ctas .lp-user-chip { max-width: none; }
+
 .lp-trust { padding: 40px 0 8px; text-align: center; }
 .lp-trust .cap { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
 .lp-logos { display: flex; align-items: center; justify-content: center; gap: 44px; flex-wrap: wrap; margin-top: 22px; opacity: .62; }
