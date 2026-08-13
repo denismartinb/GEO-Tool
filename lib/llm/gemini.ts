@@ -7,6 +7,19 @@ import { ExtractionError } from "@/lib/llm/extraction-errors";
 import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
 import { delay, fetchWithTimeout } from "@/lib/llm/http";
 import {
+  GEMINI_API_URL,
+  GeminiConfigError,
+  GeminiTimeoutError,
+  fetchGeminiWithRetry,
+  generateGeminiJson,
+  generateGroundedGeminiJson,
+  getGeminiApiError,
+  getGeminiModel,
+  parseLenientJson,
+  toIncidentError,
+  GEMINI_CALL_TIMEOUT_MS
+} from "@/lib/llm/gemini-client";
+import {
   EXTRACTION_CALL_TIMEOUT_MS,
   EXTRACTION_MAX_ATTEMPTS,
   EXTRACTION_RETRY_BASE_DELAY_MS,
@@ -17,136 +30,18 @@ import {
 } from "@/lib/scan/constants";
 import { reportLlmIncident } from "@/lib/llm/llm-incident";
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-// Pinned per docs/adr/0009-gemini-2.5-flash-model-pin.md — gemini-2.0-flash-001
-// was shut down by Google on 2026-06-01. gemini-2.5-flash is the recommended
-// replacement and has its own cutover date of 2026-10-16 to watch.
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.5-flash.";
+// Fase R5: el transporte se fue a `gemini-client.ts`, pero estas dos clases
+// eran exports publicos de ESTE modulo. Se reexportan para que el slice no
+// cambie ni un solo sitio de llamada; migrar los imports es trabajo del
+// siguiente, cuando las nueve funciones de producto salgan de aqui.
+export { GeminiConfigError, GeminiTimeoutError };
+
+// La espera fija del ÚNICO reintento de la generación por prompt del escaneo.
+// No sube al cliente: el resto de llamadas usa el backoff exponencial con
+// jitter de `fetchGeminiWithRetry`, y esta ruta conserva su reintento simple
+// a propósito (LLM-RESILIENCE-1 no la tocó).
 const RATE_LIMIT_RETRY_DELAY_MS = 1500;
 
-/**
- * Hard per-call timeout shared by every direct Gemini `fetch` in this file:
- * `generateGeminiVisibilityAnswer` (one call per prompt in the scan executor,
- * `lib/scan/executor.ts`, dispatched concurrently inside the ~60s Vercel
- * `maxDuration` per docs/adr/0003-sync-scan-execution-and-maxduration.md) and
- * `generateGeminiJson` (the on-demand helper behind add-prompts generation,
- * competitor suggestions and the recommendation rewrite action). None of the
- * on-demand callers' routes set an explicit `maxDuration`, so without this
- * AbortController-based bound a stalled Gemini response hangs the calling
- * server action forever instead of surfacing as an error — exactly the "Mejorar
- * redaccion con IA" button getting stuck with no feedback.
- *
- * 20s ceiling: generous enough that normal Gemini latency (typically a few
- * seconds) never hits it, while bounding how long a single stuck call can
- * block progress. For the scan executor specifically, the 60s budget is a
- * *typical-case* target, not a guarantee: a pathological run where every
- * prompt times out (and retries once, see PROMPT_RETRY_MAX_TOTAL_ATTEMPTS) can
- * still exceed 60s. That worst case is bounded instead by
- * `SCAN_RUNNING_TIMEOUT_SECONDS` + reconciliation's auto-retry
- * (docs/scan-lifecycle.md), not by this per-call timeout alone. A timeout here
- * surfaces as `GeminiTimeoutError`, which every caller treats as a normal
- * recoverable failure (never a crash, never a fake success).
- */
-const GEMINI_CALL_TIMEOUT_MS = 20_000;
-
-/**
- * Thrown when a Gemini API call is aborted after `GEMINI_CALL_TIMEOUT_MS`.
- * Treated as a recoverable per-prompt error by the scan executor — same
- * handling as an HTTP failure or empty response.
- */
-export class GeminiTimeoutError extends Error {
-  constructor(message = "Gemini API request timed out.") {
-    super(message);
-    this.name = "GeminiTimeoutError";
-  }
-}
-
-/**
- * `fetch` wrapped with a hard AbortController-based timeout. Throws
- * `GeminiTimeoutError` if the request does not complete within `timeoutMs`,
- * instead of letting the call hang for the rest of the run budget or
- * surfacing a raw `AbortError`.
- */
-
-/**
- * Thrown for misconfiguration (missing API key, invalid model id) that
- * affects every request equally — retrying or skipping to the next prompt
- * cannot help, so callers should treat this as fatal for the whole run.
- */
-export class GeminiConfigError extends Error {}
-
-/**
- * LLM-RESILIENCE-1: the retrying HTTP path for every Gemini call that is NOT
- * the scan's per-prompt generation.
- *
- * Those calls — the wizard's suggestions, the web audit's grounded content
- * call, the recommendation rewrite — used a bare `fetchWithTimeout` and threw
- * on the first non-OK response. Only `generateGeminiVisibilityAnswer` retried,
- * and only once, on a fixed 1.5s wait. That asymmetry is why the 2026-08-09
- * Gemini 429 spike emptied the onboarding wizard on the first click while the
- * scan running at the same time survived it: same provider, same minute, one
- * of them backed off and the other did not. It is the same shape of gap
- * `docs/adr/0029` found between generation and extraction, one layer up, and
- * the fix is the same machinery — bounded attempts, exponential backoff with
- * full jitter, and a provider-sent `Retry-After` honored but clamped.
- *
- * Throws a categorized `ExtractionError`, which is what lets a caller tell
- * "out of quota" (worth alerting the operator about) apart from "the model
- * returned nonsense" (noise). `categorizeHttpStatus` already treats 400/401/403
- * as `config` and never retries them, so a wrong model id still fails fast.
- */
-async function fetchGeminiWithRetry(endpoint: string, requestBody: string): Promise<Response> {
-  return fetchExtractionWithRetry(
-    endpoint,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: requestBody
-    },
-    {
-      timeoutMs: GEMINI_CALL_TIMEOUT_MS,
-      maxAttempts: LLM_CALL_MAX_ATTEMPTS,
-      baseDelayMs: LLM_CALL_RETRY_BASE_DELAY_MS,
-      maxDelayMs: LLM_CALL_RETRY_MAX_DELAY_MS,
-      describeStatus: getGeminiApiError,
-      timeoutMessage: "Gemini API request timed out.",
-      transportMessage: "Gemini request failed before reaching the provider."
-    }
-  );
-}
-
-/**
- * Normalizes anything thrown on a Gemini path into the categorized error
- * `reportLlmIncident` can read.
- *
- * `GeminiConfigError` predates the category vocabulary and is thrown for a
- * missing key or an invalid model id — exactly what `config` means — so it is
- * mapped rather than falling through to `unknown` and silently never alerting.
- */
-function toIncidentError(error: unknown): unknown {
-  if (error instanceof GeminiConfigError) return new ExtractionError("config", error.message);
-  if (error instanceof GeminiTimeoutError) return new ExtractionError("timeout", error.message);
-  return error;
-}
-
-function getGeminiModel() {
-  const configuredValue = process.env.GEMINI_MODEL;
-  const configuredModel = configuredValue === undefined ? DEFAULT_GEMINI_MODEL : configuredValue.trim();
-  const model = configuredModel.startsWith("models/") ? configuredModel.slice("models/".length) : configuredModel;
-
-  if (!/^gemini-[a-z0-9][a-z0-9._-]*$/i.test(model)) {
-    throw new GeminiConfigError(GEMINI_MODEL_ERROR);
-  }
-
-  return model;
-}
-
-function getGeminiApiError(status: number) {
-  if (status === 429) return "Gemini API quota or rate limit reached.";
-  if (status === 400) return "Gemini API rejected the request. Check GEMINI_MODEL and request configuration.";
-  return `Gemini API request failed with status ${status}.`;
-}
 
 export type GeminiVisibilityResponse = {
   text: string;
@@ -510,37 +405,6 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
   };
 }
 
-async function generateGeminiJson(promptBlock: string): Promise<unknown> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new ExtractionError("config", "Missing GEMINI_API_KEY");
-
-  const model = getGeminiModel();
-  const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
-
-  const response = await fetchGeminiWithRetry(
-    endpoint,
-    JSON.stringify({
-      contents: [{ parts: [{ text: promptBlock }] }],
-      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-      generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
-    })
-  );
-
-  const data = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-
-  const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
-  if (!text) {
-    throw new ExtractionError("empty", "Gemini suggestion returned empty JSON.");
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new ExtractionError("invalid_json", "Gemini suggestion returned invalid JSON.");
-  }
-}
 
 function normalizeDomain(value: string): string {
   return value
@@ -552,57 +416,6 @@ function normalizeDomain(value: string): string {
     .trim();
 }
 
-/**
- * Extracts JSON from a Gemini response that could NOT be requested with
- * `responseMimeType: "application/json"` — the API rejects that option when
- * combined with `tools: [{ google_search: {} }]` (400), so grounded calls
- * ask for JSON via instruction text only. Search-grounded responses
- * sometimes wrap the JSON in a ```json fence despite being told not to.
- */
-function parseLenientJson(text: string): unknown {
-  const trimmed = text.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = (fenced ? fenced[1] : trimmed).trim();
-  return JSON.parse(candidate);
-}
-
-/**
- * Like generateGeminiJson, but with google_search grounding enabled — used
- * where the model needs real-world lookup (e.g. finding actual competitor
- * names/domains) rather than reasoning over given context alone. See
- * parseLenientJson for why this can't use responseMimeType: "application/json".
- */
-async function generateGroundedGeminiJson(promptBlock: string): Promise<unknown> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
-
-  const model = getGeminiModel();
-  const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
-
-  const response = await fetchGeminiWithRetry(
-    endpoint,
-    JSON.stringify({
-      contents: [{ parts: [{ text: promptBlock }] }],
-      tools: [{ google_search: {} }],
-      generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
-    })
-  );
-
-  const data = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-
-  const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
-  if (!text) {
-    throw new ExtractionError("empty", "Gemini suggestion returned empty JSON.");
-  }
-
-  try {
-    return parseLenientJson(text);
-  } catch {
-    throw new ExtractionError("invalid_json", "Gemini suggestion returned invalid JSON.");
-  }
-}
 
 export type BusinessProfile = {
   whatItSells: string;
