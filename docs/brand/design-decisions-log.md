@@ -7135,6 +7135,103 @@ enrolamiento desde cero**, no sólo el camino feliz de una cuenta ya configurada
 
 ---
 
+## 70. El contrato de entorno deja de ser sólo prosa (PRELAUNCH-HARDENING-1 Fase R4, 2026-08-13)
+
+Primer slice del refactor desde R1/R2 (§43). `docs/environment-contract.md`
+describe cada variable desde hace meses y es una **buena** especificación; lo
+que no tenía es forma de fallar. Una variable ausente, mal escrita, o puesta a
+medias no rompe nada visible: se degrada en silencio y reaparece semanas
+después como «el escaneo recurrente hace menos de lo que debería».
+
+### El fallo que justifica la fase entera
+
+Buscando qué validar, apareció esto en `lib/scan/cron.ts`:
+
+```
+Number(process.env.MAX_SWEEP_CHAIN_INVOCATIONS ?? 20)
+```
+
+Con un valor no numérico eso da `NaN`. Cien líneas más abajo, la condición que
+decide si el barrido recurrente encadena es
+`chainIndex + 1 < maxChainInvocations`, y **toda comparación contra `NaN` es
+`false`**. O sea: una errata en esa variable deja el barrido en **un solo
+disparo en vez de veinte**, sin lanzar, sin loguear, y con toda la pinta de
+estar funcionando. Lo mismo en `MAX_PROJECTS_PER_CRON_RUN` (`slice(0, NaN)` no
+devuelve ningún proyecto) y en `MAX_PROJECTS_PER_DIGEST_RUN`.
+
+Y la variable **no estaba en el contrato**, pese a multiplicar el gasto de LLM
+por disparo (`MAX_SWEEP_CHAIN_INVOCATIONS × MAX_PROJECTS_PER_CRON_RUN`). Nadie
+la echaba de menos porque nada la echaba de menos. `VERCEL_ENV` tampoco estaba.
+
+### Lo que se ha hecho
+
+- **`lib/env-schema.ts`** — las 34 variables que el producto lee, en zod. Es
+  **puro**: no lee `process.env`, no tiene efectos y no importa `server-only`,
+  para que lo puedan usar el accesor, un script de node suelto y los tests.
+- **`lib/env.ts`** — el accesor de servidor, con `import "server-only"` en la
+  primera línea. En Next, un `process.env.X` que no empiece por `NEXT_PUBLIC_`
+  no se inyecta en el bundle de cliente: se queda en `undefined`. No filtra
+  nada, pero **degrada en silencio**, que es el fallo que esta fase persigue.
+  Con `server-only` ese import rompe el build con un mensaje que lo explica.
+  Es perezoso a propósito: un `throw` al importar reventaría `next build`
+  entero por una variable que sólo necesita una ruta de cron.
+- **Las reglas condicionales**, que son el corazón. Casi nada aquí es
+  obligatorio a secas y casi todo lo es *en función de otra cosa*:
+  `OPENAI_MODEL` sólo si hay `OPENAI_API_KEY` (y sin default, a propósito),
+  `CRON_SECRET` sólo con el cron encendido, la clave de cada motor declarado en
+  `LLM_SCAN_PROVIDERS`, y Stripe entero o nada — a medias se puede abrir un
+  checkout que ningún webhook confirma. Ese «en función de» no estaba escrito
+  en ningún sitio ejecutable.
+- **`pnpm run check:env`** — el informe. Es la mitad visible: lo que arregla
+  algo no es el esquema, es que alguien pueda ver **antes de desplegar** que su
+  `OPENAI_API_KEY` está puesta y su `OPENAI_MODEL` no. Nunca imprime un valor:
+  puede correr en un log de CI.
+- **`tests/env-drift.test.ts`** — el guardián. El esquema sólo vale como fuente
+  de verdad si contiene TODAS las variables que se leen; una nueva sin declarar
+  no la valida nadie, y encima ahora existe un módulo que aparenta cubrirlas
+  todas. Es el mismo patrón que `fixture-drift.test.ts`.
+
+### Dos cosas que aprendió el propio guardián, nada más nacer
+
+1. **Cazó un `process.env.X` en un comentario mío.** Grepea texto a propósito
+   —lo que importa es qué está escrito, no qué se ejecuta—, así que un nombre
+   de variable inventado dentro de un comentario es indistinguible de uno real.
+   Se reescribió el comentario, no el test.
+2. **Su comprobación de huérfanas estaba mal planteada, y falló a la primera.**
+   Adoptar el accesor **elimina** el `process.env.X` de ese sitio, que es
+   exactamente el objetivo de la fase — así que migrar una variable la
+   convertía en «huérfana» y el test castigaba la migración que existe para
+   acompañar. Ahora cuenta las dos vías, cruda y accesor.
+
+### Alcance, dicho en voz alta
+
+**Son 34 variables, no 55.** El diagnóstico del plan (riesgo 7) dijo 55 y esa
+cifra sale de contar el contrato entero, que incluye las siete `PILOT_*` del
+arnés, las cinco de Sentry y alguna que ya nadie lee. Las que **el producto**
+lee en `app/`, `lib/`, `components/` y `middleware.ts` son 34, en 156 sitios.
+Las del piloto quedan fuera a propósito: no son configuración de producto y su
+sitio es `docs/agentic-user-pilot.md`.
+
+**No se han migrado los 156 sitios de lectura.** Se han migrado tres: los del
+`NaN`, que son donde había un fallo real. El resto sigue leyendo `process.env`
+directamente y eso es correcto de momento — lo que impide que el módulo se
+quede en decorado no es la adopción masiva sino el test de deriva, que es
+barato y ya está puesto. Migrar el resto es trabajo de otro slice, y no urge.
+
+**La única desviación de «comportamiento idéntico»** es el `NaN` → valor por
+defecto. Va declarada en el código y tiene su test. Se cae al defecto en vez de
+lanzar porque, en una ruta de cron, lanzar mata el barrido entero por una
+errata; caer al defecto lo deja corriendo como estaba diseñado, y que no sea
+silencioso es trabajo de `check:env`. Donde el contrato documenta una semántica
+permisiva —`CRON_SCANS_ENABLED` es `"true"` o no-op— el esquema la respeta en
+vez de «arreglarla»: volver estricto un flag apagaría cosas en producción.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R4);
+`docs/environment-contract.md` (dos filas nuevas); §43 (R1 y R2);
+`docs/adr/0016` (de dónde sale el encadenado del barrido).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
