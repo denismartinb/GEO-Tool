@@ -6319,11 +6319,17 @@ cabecera se queda con los CTA de anónimo — nunca una cabecera rota.
   plan **Free** sigue siendo una oferta legítima y para uno de pago es un
   sinsentido. Esa distinción es una decisión comercial del fundador, no del
   agente. Recomendación: ocultarla sólo en planes de pago.
-- **El chip no se ha visto con una sesión real de Supabase**: este entorno no
-  tiene credenciales, así que la lógica del endpoint la cubren tests unitarios
-  y el pintado se verificó interceptando la respuesta de `/api/me` en el
-  navegador (agencia, free, email largo, anónimo, en escritorio y en el cajón
-  móvil). El extremo a extremo lo tiene que ver el piloto.
+- ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado
+  el 2026-08-12**. El entorno del agente no tiene credenciales, así que la
+  lógica del endpoint la cubren tests unitarios y el pintado se verificó
+  interceptando la respuesta de `/api/me` (agencia, free, email largo,
+  anónimo, escritorio y cajón móvil). El extremo a extremo lo cerró **el
+  propio fundador** sobre el preview del PR #393, con su sesión: el chip sale
+  en el cajón móvil de `/blog` con sus iniciales, su email y la insignia
+  «Agencia». Queda anotado porque es el único camino que ni los tests ni el
+  piloto podían cubrir aquí: el piloto entra con la cuenta de piloto, cuyo
+  plan no tiene por qué pintar insignia, así que **una insignia de pago sobre
+  una sesión real sólo la podía ver alguien con una cuenta de pago**.
 
 ---
 
