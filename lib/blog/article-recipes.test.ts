@@ -283,3 +283,65 @@ describe("el detector de composición funciona", () => {
     expect(countComponent("<StatGrid><Stat /></StatGrid>", "Stat")).toBe(1);
   });
 });
+
+/**
+ * SEO-POS-1 Fase C, S5 (log §70): `RelatedPosts` recibe `cluster` y
+ * `currentSlug`. `que-es-una-auditoria-geo` se publicó pasándole `slug`, y el
+ * componente devolvió `null` — sin bloque "Sigue leyendo", sin enlaces
+ * internos, y **sin ningún error**: MDX no se typechequea, así que una prop
+ * equivocada no rompe la build, simplemente no pinta nada.
+ *
+ * Lo cogió el piloto, que sí comprueba `.blog-related a` sobre el despliegue
+ * real. Pero el piloto solo exige que **exista** un enlace: un artículo de
+ * `playbooks` que pasara `cluster="medicion"` enlazaría al cluster equivocado
+ * y pasaría igual, tanto el piloto como cualquier comprobación ingenua. Por
+ * eso este test no mira que la llamada esté, sino que **el cluster que declara
+ * coincida con el del propio artículo** en `BLOG_POSTS`.
+ */
+describe("cada artículo enlaza a su propio cluster", () => {
+  for (const post of BLOG_POSTS) {
+    it(`RelatedPosts recibe cluster y currentSlug correctos: ${post.slug}`, () => {
+      const source = readArticle(post.slug);
+      if (!source) return;
+
+      const call = source.match(/<RelatedPosts([^>]*)\/>/);
+      expect(call, `${post.slug} no renderiza <RelatedPosts />`).not.toBeNull();
+
+      const props = call?.[1] ?? "";
+      expect(
+        props,
+        `${post.slug}: RelatedPosts necesita cluster="${post.cluster}". Sin él el ` +
+          "componente devuelve null y el artículo se queda sin enlazado interno, " +
+          "sin que nada falle en build ni en tests."
+      ).toContain(`cluster="${post.cluster}"`);
+      expect(props, `${post.slug}: RelatedPosts necesita currentSlug`).toContain("currentSlug");
+    });
+  }
+});
+
+/**
+ * SEO-POS-1 Fase C, S5, revisión (log §69): el borrador de
+ * que-es-una-auditoria-geo publicaba el reparto de puntos real de
+ * `lib/web-audit/page-checks.ts` (15/15/15/15/20/20). El fundador decidió
+ * que eso es metodología del producto, no buena práctica pública, y pidió
+ * quitarlo — dimensiones y umbrales de comportamiento sí, reparto de puntos
+ * no.
+ *
+ * Nada impedía que una sesión futura, al tocar este artículo o al copiar su
+ * patrón para uno nuevo, reintrodujera "— 15 puntos" en un título de sección.
+ * No hay compilador que lo pille: es MDX, y el número encajaría con
+ * naturalidad al lado de cada dimensión. Este test es la memoria que una
+ * revisión de founder necesita para no perderse en el siguiente refresco.
+ */
+describe("que-es-una-auditoria-geo no publica el reparto de puntos del producto", () => {
+  const source = readArticle("que-es-una-auditoria-geo");
+
+  it("ninguna sección lleva un recuento de puntos en el título", () => {
+    expect(source).not.toMatch(/—\s*\d+\s*puntos/i);
+  });
+
+  it("no afirma un total sobre 100 ni un subtotal parcial como 85", () => {
+    expect(source).not.toMatch(/\bsobre\s+100\b/i);
+    expect(source).not.toMatch(/\b85\s*puntos\b/i);
+  });
+});

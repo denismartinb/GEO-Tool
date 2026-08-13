@@ -228,6 +228,25 @@ results.push(
     expectedExit: 1
   })
 );
+// Los dos fallos que el fundador encontró a ojo el 2026-08-11, DESPUÉS de que
+// el piloto pasara (log §55): un CTA duplicado en el hero y un CTA gris sobre
+// azul en el cajón móvil. Ninguno rompía nada, así que nada falló — la captura
+// del primero existe y lo enseña. Estos dos casos son lo que impide que la
+// próxima vez vuelva a depender de que alguien mire la foto.
+results.push(
+  await runCase({
+    label: "duplicated-CTA fixture (same control twice in one section) → PILOT FAIL",
+    breakMode: "duplicate",
+    expectedExit: 1
+  })
+);
+results.push(
+  await runCase({
+    label: "low-contrast fixture (grey CTA text on blue) → PILOT FAIL",
+    breakMode: "contrast",
+    expectedExit: 1
+  })
+);
 
 const allPassed = results.every(Boolean);
 console.log(allPassed ? "\nPilot harness self-check PASSED" : "\nPilot harness self-check FAILED");

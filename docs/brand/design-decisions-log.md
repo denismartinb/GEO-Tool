@@ -5613,6 +5613,421 @@ misma familia.
   se retira.
 - **Sin piloto agéntico todavía**: mismo estado que la 52 — el interruptor
   vive en `/debug` y esta fase no se ha visto en un preview.
+## 54. La landing deja de ser una aplicación y el CSS de consola deja de viajar a /blog (PRELAUNCH-HARDENING-1 Fase V, V4+V5, 2026-08-10)
+
+Los dos únicos slices de la Fase V que cambian aspecto, y por eso iban aparte
+con su propia pasada de piloto. Medido, no estimado.
+
+### V4 — la landing y `/pricing` pasan a servidor
+
+Las dos páginas comerciales eran `"use client"` **enteras** por muy poco: la
+landing por un campo con estado y su marcador tecleado; `/pricing` por el
+acordeón de preguntas. A cuenta de eso viajaban al navegador seis secciones de
+markup que no cambian nunca, las tres tarjetas de plan y la matriz de
+comparación.
+
+Lo que sostenía el `"use client"` no era el estado, era `router.push`: nueve
+botones que sólo navegaban. Ahora son `<Link>`. El aspecto no cambia —las
+clases (`.lp-cta`, `.lp-nav-btn`, `.btn`) declaran su propio
+`display: inline-flex`, `a { text-decoration: none }` es global, y `.lp-cta-soft`
+ya se usaba sobre un `<a>` en ese mismo hero— y se gana lo que un botón no
+daba: abrir en pestaña nueva, ver el destino al pasar por encima y, en el logo
+de `/pricing`, existir para el teclado (era un `<div onClick>` con
+`cursor: pointer`).
+
+Queda de cliente lo que de verdad reacciona: `HeroDomainField`, `PricingFaq`,
+el cajón de navegación en móvil y el tour.
+
+**Hallazgo de propina:** la landing importaba `Gauge`, `Sparkline`, `Delta` e
+`InfoTip` y **no usaba ninguno**. Dos de ellos son componentes de cliente, así
+que se empaquetaban y se enviaban para nada. Sobraban desde que el tour
+sustituyó a la captura estática del hero (§40) y el linter no los ve porque son
+imports usados… en el sentido de que TypeScript los da por consumidos hasta que
+no lo están.
+
+**Medido:** el JS de cliente de toda la aplicación baja de **1.974.481 a
+1.879.500 bytes (−93 KB, −4,8 %)**, y el texto de la landing —«Recomendaciones
+que se convierten en trabajo hecho», la cita de Beltway, las preguntas de
+precios— desaparece de los chunks de cliente: ahora sólo existe en el HTML que
+sirve el servidor.
+
+**Lo que NO se hizo, y por qué**, porque el slice aprobado decía «landing
+server + tour diferido»: el tour **no** se difiere. Diferirlo de verdad exige
+`ssr: false`, y eso cambia cuatro cosas a la vez: mete salto de layout donde
+hoy no lo hay, retrasa el LCP en vez de adelantarlo (el lienzo del hero *es* el
+elemento grande), deja al piloto sin su prueba de contenido
+(`.ptour--hero .pt-stage` dejaría de existir en el HTML) y toca una zona con
+invariantes propios (`.claude/rules/onboarding.md`: no arranca hasta verse
+entero, la pista del botón, altura constante). Cambiar el aspecto para ganar
+algo sin medir es justo lo contrario de esta fase. Queda propuesto como slice
+propio.
+
+### V5 — `app/console.css`
+
+`globals.css` eran 303 KB servidos en toda página, la mayoría selectores que
+sólo pinta la consola. Ahora hay una segunda hoja que importa
+`app/dashboard/layout.tsx`.
+
+**Se movieron 16 secciones, no las 25 que el análisis marcó como de consola.**
+Las nueve que faltan no se quedaron por prudencia vaga sino por una razón
+concreta: `console.css` se carga *después* de `globals.css`, y `globals.css` no
+está por capas. Hay secciones posteriores que sobrescriben a propósito reglas
+de consola anteriores —MOBILE-1, el layout de consola en móvil, es el caso
+gordo—; traerse las de arriba las pondría por delante de quien debía ganarles.
+Se detectaron **16 solapes** de ese tipo y sus secciones se quedaron donde
+estaban.
+
+**Dos veces se equivocó el clasificador, y las dos importan:**
+
+1. Siguiendo el cierre de imports desde las rutas públicas dio por «sólo
+   consola» el **sistema de artículos del blog** (`.art-*`) — sus clases se
+   aplican desde `lib/` y desde imports relativos que no seguía. Un error hacia
+   el lado peligroso: habría dejado el blog sin estilo.
+2. Corregido con una regla tosca —«si la clase aparece en cualquier fichero
+   fuera de `app/dashboard/**`, se queda»—, esa regla deja fuera cosas que sí
+   son de consola: la pantalla de notificaciones y la campana, cuyas clases se
+   escriben desde `components/`. Se aceptó perder esos ~4 KB. Un guardián que
+   puede quitarle el estilo a una página pública no vale aunque acierte casi
+   siempre, y la versión fina es exactamente la que ya falló.
+
+La regla tosca vive ahora en `tests/console-css-scope.test.ts`, que además
+comprueba que la consola siga importando la hoja. Sin eso, el ahorro se evapora
+en el primer PR que escriba una clase compartida ahí y nadie se entera: no
+falla nada, la página simplemente se ve mal.
+
+**Medido:** el CSS de las páginas públicas baja de **211.298 a 198.514 bytes**
+minificado. Los 12.784 bytes se mueven exactos a la hoja de consola, que carga
+lo mismo que antes.
+
+**Pendiente:** los ~33 KB restantes exigen ordenar la cascada primero
+(`@layer`, o mover MOBILE-1 entero). Es un cambio de quién gana en cada empate
+de especificidad, no una limpieza — su propia fase, con su propia pasada de
+piloto.
+
+### Y de camino, cuatro controles que mentían
+
+Salieron de la propia revisión del PR y el fundador pidió arreglarlos. No son
+rendimiento: son cosas que la interfaz decía y el producto no cumplía.
+
+**El campo del hero tiraba lo que escribías.** La portada te invita a escribir
+tu dominio, pulsabas «Analiza gratis», y llegabas al registro sin rastro de él;
+después el asistente te lo volvía a pedir. Un campo que no sirve para nada es
+teatro. Ahora se guarda en `localStorage` y el asistente lo recoge y lo
+consume. `localStorage` y no la URL porque entre el hero y el asistente hay una
+confirmación por correo: el dato tiene que sobrevivir a salir del navegador y
+volver. Coste declarado: si escribes en el móvil y confirmas en el portátil, se
+pierde — igual que antes.
+
+Al hacerlo apareció **un tercer duplicado del mismo tipo que R1**: había dos
+`isValidDomain`, una en `onboarding-wizard.tsx` y otra en
+`lib/projects/project-form.ts`, **y no eran la misma función** — la del
+asistente es un regex estricto, la del servidor es laxa a propósito
+(«rechaza lo absurdo, deja pasar lo raro»). Si el hero hubiera usado la laxa,
+guardaría dominios que el asistente rechaza acto seguido. Ahora la estricta
+vive una sola vez como `isWellFormedDomain`, con la diferencia entre ambas
+escrita al lado para que nadie las fusione por parecerse.
+
+**Tres botones que no hacían nada:**
+
+- «Generar solución», en la tarjeta de ejemplo de la landing: la recomendación
+  que ilustra es inventada, así que no hay nada que generar. Pasa a `<span>`
+  con `aria-hidden`: es el dibujo de un botón y ahora lo es también para un
+  lector de pantalla.
+- «Hablar con ventas» y el CTA del **plan Agencia** en `/pricing`: éstos sí
+  debían llevar a algún sitio. El propio producto ya dice a dónde
+  (`billing/actions.ts`: *«Este plan no se contrata online. Escríbenos a
+  soporte@genscore.es»*), así que el único plan que **exige** hablar con
+  alguien era el único sin forma de hacerlo. Ahora son `mailto:` con asunto.
+
+La dirección de soporte estaba escrita a mano en cinco sitios, dos de ellos con
+nombres distintos para la misma cadena (`SUPPORT_EMAIL` y `SALES_EMAIL`). No
+son dos canales: es el mismo buzón. Pasa a `lib/support.ts`.
+
+### Y un agujero en la puerta que montó la Fase 0
+
+Al comprobar el estado del PR apareció que **`ci.yml` no corrió sobre la cabeza
+de la rama**. Se disparó con el `opened` del PR (`f8b6148`) y **no** con los
+`push` siguientes, mientras otras ramas la ejecutaban con normalidad esos mismos
+minutos. Es decir: los commits que empujas a un PR ya abierto pueden llegar al
+Human Gate **sin puerta y sin que nada lo diga** — justo la forma de fallo que
+la Fase 0 existía para eliminar, sólo que un nivel más arriba.
+
+**Corrección, unas horas después.** La primera versión de esta entrada decía que
+los eventos `synchronize` de esta rama «sencillamente no aparecen». Es falso, y
+la forma real es peor: **es intermitente**. En la misma rama y la misma tarde,
+tres pushes (`3bdc8ae`, `47b2d39`, `1257700`) no dispararon nada y dos
+(`bf95b9b`, `fda1a2b`) sí. Un fallo sistemático se nota y se arregla; uno
+intermitente deja creer que la puerta está puesta cuando la mitad de las veces
+no lo está.
+
+La causa sigue sin diagnosticar. Lo que sí se ha hecho es que sea
+**recuperable**: `ci.yml` acepta ahora `workflow_dispatch`, y con él se verificó
+la cabeza real. Un evento perdido se puede reponer a mano; una puerta que sólo
+puede dispararla ese evento perdido, no.
+
+**Regalo de esa duplicidad**: `bf95b9b` corrió dos veces —una por
+`pull_request`, otra por el dispatch— y salió **verde una y roja la otra**. El
+mismo commit. Era el flake de `lib/llm/extraction-fetch.test.ts`: el backoff usa
+*full jitter* (`Math.random() * 10.000`) y el caso del plazo afirma que la
+espera no cabe en 50 ms, cosa que una de cada ~200 veces no se cumple. Se fija
+el sorteo en ese test. Los casos vecinos de `computeRetryDelayMs` ya inyectaban
+`random: () => 1`; ése se había quedado sin hacerlo porque llama al helper de
+más arriba, que no expone ese punto de inyección. Un rojo espurio en la puerta
+enseña a ignorar los rojos.
+
+Queda anotado como pendiente de la Fase Q: entender por qué se pierden esos
+eventos, y si hace falta, dejar de depender de ellos.
+
+### Dos regresiones visibles que el piloto no podía ver (2026-08-11)
+
+Las encontró el fundador mirando el preview en el móvil. Las dos son de V4 y
+las dos son mías; ninguna la podía cazar el piloto, y eso es lo instructivo.
+
+**Los botones del hero salían por duplicado.** Al mover «Analiza gratis» dentro
+de `HeroDomainField` —tenía que guardar el dominio escrito antes de navegar, y
+eso sólo puede hacerlo la isla de cliente— no borré el bloque
+`.lp-hero-actions` que se había quedado en `landing-page.tsx`. Dos pares de
+botones idénticos, uno debajo del otro. El piloto no lo vio porque su
+`ContentExpectation` comprueba que el contenido esté, no que esté **una sola
+vez**; y ningún aserto mide cuántos `.lp-cta` hay.
+
+**Los CTA del cajón móvil perdieron su color.** «Prueba gratis» quedó con el
+texto gris sobre su fondo azul. La causa es más interesante que el síntoma:
+esos dos controles pasaron de `<button onClick={router.push}>` a `<Link>`, y
+`.lp-mobnav a` —escrita cuando dentro del cajón sólo había enlaces de
+navegación— tiene especificidad `(0,1,1)` y le gana a `.lp-cta` `(0,1,0)`. Le
+imponía color, tamaño y relleno.
+
+**La corrección que importa no es el CSS, es el razonamiento.** El cuerpo del
+PR afirmaba que los nueve botones convertidos serían «visualmente idénticos por
+construcción, porque todas las clases declaran su propio `display`». Eso cubría
+los estilos **propios** del elemento y pasaba por alto los que **sólo se
+activan al cambiar de etiqueta**: una regla `.ancestro a` no existía para ese
+botón hasta que el botón se volvió un enlace. Queda como invariante en
+`.claude/rules/styles.md`, con el barrido concreto que había que haber hecho.
+
+Se revisaron de paso los otros ocho enlaces convertidos: sólo el cajón móvil
+tiene una regla de ese tipo (`.lp-nav-links a` y `.lp-footer .links a` alcanzan
+únicamente a enlaces que ya lo eran, y `/pricing` no tiene ninguna).
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase V; regla de ruta
+nueva `.claude/rules/styles.md`; invariante nuevo en
+`.claude/rules/onboarding.md`; §40 (el tour del hero y sus invariantes); §42
+(la Fase 0, que montó esta puerta); §43 (los duplicados de la Fase R, de los
+que éste es el tercero).
+
+---
+
+## 55. El piloto aprende a contar y a leer un color (PRELAUNCH-HARDENING-1 Fase Q5b, 2026-08-11)
+
+El fundador abrió el despliegue de la Fase V y encontró dos fallos a simple
+vista, **después** de que el piloto hubiera corrido y de que yo reportara que
+había pasado:
+
+1. **El CTA del hero salía dos veces.** Al mover el campo de dominio a una isla
+   de cliente (`components/landing/hero-domain-field.tsx`) se llevó consigo los
+   botones, y el bloque `.lp-hero-actions` original se quedó donde estaba.
+2. **El CTA del cajón móvil salía gris sobre azul.** `.lp-mobnav a` (0,1,1) le
+   gana a `.lp-cta` (0,1,0) y le impone su color. Eso ya está escrito como
+   invariante en `.claude/rules/styles.md` desde el mismo día.
+
+Lo que importa no es que se colaran, sino **por qué el piloto no los vio**, que
+son tres causas distintas y sólo una es «mirar mejor».
+
+### Causa 1 — la captura existía y nadie la abrió
+
+La foto de `/` con los dos botones estaba en el artefacto. Yo leí la tabla de
+✅ del workflow y la di por veredicto. El CLAUDE.md ya dice que no lo es —el
+arnés sólo sabe de fallos mecánicos y el juicio es del agente—, así que esto no
+era un hueco de herramienta sino de proceso.
+
+Arreglado como proceso, que es gratis: `.claude/agents/ux-pilot.md` gana una
+sección («The workflow's green tick is NOT the verdict») que obliga a enumerar
+las pantallas que toca el PR, abrir todas sus capturas en las tres anchuras y
+**decir cuántas y cuáles** en el informe, en una línea nueva y obligatoria del
+formato («Capturas abiertas»). Sin esa línea el veredicto es INCONCLUSIVE. La
+pregunta 5 del Human Gate la pide también. Una afirmación que nadie puede
+comprobar —«miré las capturas»— se sustituye por una lista de ficheros.
+
+### Causa 2 — de 560 capturas, ninguna tenía el cajón abierto
+
+Esta no se arregla mirando más fuerte: el cajón sólo existe por debajo de
+900 px y sólo después de un clic, así que **no había nada que mirar**. Un hueco
+de cobertura, no de atención.
+
+`tests/pilot/journeys/landing.spec.ts` (nuevo) cubre `/` y `/pricing` —que
+tampoco se visitaba— y, en la anchura móvil, abre el cajón, comprueba que sus
+enlaces se ven, lo juzga abierto y lo cierra por su propia X. En tablet y
+escritorio se **salta ruidosamente** en vez de pasar en silencio: un test que no
+comprueba nada y reporta verde es exactamente lo que produjo este incidente.
+
+### Causa 3 — el arnés no contaba nada ni leía ningún color
+
+Los dos fallos son mecánicos: una máquina sabe contar y sabe calcular un
+contraste. `tests/pilot/support/page-audit.ts` (nuevo) añade dos chequeos a
+cada captura:
+
+- **Controles duplicados.** Dos controles idénticos —misma etiqueta, mismo
+  nombre accesible, mismas clases, mismo destino— dentro de un mismo *landmark*.
+  Se agrupa por el `section`/`nav`/`header` más cercano, **no por padre común**:
+  las dos copias del hero vivían en contenedores hermanos, así que una regla de
+  «mismo padre» habría pasado por encima del único fallo para el que existe.
+  Quedan exentas las repeticiones dentro de listas y tablas, o de **dos o más
+  hermanos con la misma forma**: eso es una lista, no un duplicado (el umbral
+  empezó en tres y estaba mal — ver «Lo que encontró la primera pasada real»
+  más abajo).
+- **Contraste.** Texto de un control por debajo de AA (4.5:1, o 3:1 en texto
+  grande) contra su propio fondo. Se **salta lo que no puede juzgar con
+  honestidad** en vez de adivinar: un control desactivado (ahí el poco contraste
+  es el mensaje), un degradado o una imagen de fondo, y cualquier
+  semitransparencia. Un chequeo que adivina acaba silenciado por lista blanca en
+  una semana.
+
+Las dos listas blancas (`DUPLICATE_ALLOW_LIST`, `CONTRAST_ALLOW_LIST`) **nacen
+vacías** a propósito: una lista blanca que empieza poblada es una lista que
+nadie auditó nunca. Y siguen vacías: los dos chequeos se corrieron contra la
+landing y `/pricing` **reales** —`next build` + `next start` en local, tres
+anchuras, con el cajón abierto en móvil— antes de subir nada, y no hay ni un
+solo hallazgo que silenciar.
+
+Esa misma pasada encontró un **falso positivo** y lo corrigió antes de que
+existiera: el punto de paso del tour (`button.pt-dot.is-on`, 8 px, sin texto
+ninguno, con `aria-label="Paso 1 de 8"`) reportaba 3,46:1 de tinta oscura sobre
+azul. Una ratio de contraste para un carácter que no se dibuja. El contraste
+mide **texto**, así que un control sin texto renderizado queda fuera: los
+iconos son territorio de WCAG 1.4.11, otra medición que este chequeo no hace y
+no va a fingir que hace.
+
+Y se comprobó que los dos chequeos **disparan contra el DOM real**, no sólo
+contra el fixture: reproduciendo las dos regresiones sobre la landing servida
+en local —clonando el bloque de acciones del hero, e inyectando el color que
+`.lp-mobnav a` imponía— saltan los dos, el duplicado con las dos copias
+localizadas y el contraste con **1,07:1**. Ese número corrige de paso lo que yo
+había escrito de memoria (~2,5:1): el gris #6b7280 y el azul #2563eb tienen
+casi la misma luminancia, así que el fallo era bastante peor de lo que parecía
+al describirlo.
+
+El reparto es el mismo que ya usa `pilot-selfcheck-checks.mjs`: **medir** en el
+navegador (`journey.ts`, que necesita estilos calculados), **juzgar** en
+funciones puras con 18 tests unitarios en los dos sentidos. Y `auditControls`
+se exporta suelta para poder correr los dos chequeos contra un estado
+*abierto*, que es donde vivía el segundo fallo.
+
+Y, porque una puerta que no puede fallar no es una puerta, el self-check gana
+dos casos rotos más (`PILOT_FIXTURE_BREAK=duplicate` y `=contrast`, con los
+colores reales del incidente: #6b7280 sobre #2563eb, que medido da 1,07:1 — casi la misma luminancia, no los ~2,5 que sugiere el aspecto). Son seis casos
+ahora, dos de ellos con esta forma exacta.
+
+### Lo que encontró la primera pasada real, que es el punto
+
+Los chequeos corrieron contra el despliegue de verdad y devolvieron doce
+fallos. Ninguno era de la Fase V: eran deuda que llevaba ahí meses, invisible
+porque nadie la medía. Uno de los cuatro era **mío**.
+
+**El falso positivo (mío, arreglado).** El detector contó como duplicado las
+dos tarjetas `.cm2-emg` de Competidores, cada una con su botón «Seguir». Es una
+lista legítima que daba la casualidad de tener dos elementos, y mi exención
+pedía **tres** hermanos iguales. Dos es la lectura honesta: lo que separa una
+lista de una duplicación no es cuántas copias hay, sino si sus **contenedores
+coinciden**. El coste, dicho en voz alta: una duplicación que deje dos
+contenedores *idénticos* ya no se ve. El fallo del hero no tiene esa forma
+(`.lp-hero-form` junto a `.lp-hero-actions`: mismos botones, envoltorios
+distintos), y la alternativa —saltar en cada lista de dos tarjetas del
+producto— es la que consigue que el chequeo acabe en una lista blanca en una
+semana. Verificado midiendo: con el umbral en dos, la lista de dos tarjetas
+calla y la regresión del hero **sigue saltando**. Y el fixture sano lleva ahora
+una lista de dos tarjetas iguales cuyo único trabajo es no aparecer nunca en
+los hallazgos, para que la exención no se pueda romper en silencio.
+
+**Los tres defectos reales (arreglados).** Los tres eran un token demasiado
+claro, y los tres siguen el precedente que ya estaba escrito en el propio
+`globals.css` desde el PR #312 (donde el piloto encontró lo mismo en
+`.blog-post-meta`):
+
+| Dónde | Antes | Ratio | Ahora | Ratio |
+|---|---|---|---|---|
+| `.legal-updated` (enlace «Blog» de las pilares) | `--ink-4` | 2,63:1 | `--ink-3` | 4,76:1 |
+| `.seg button` (filtros de Recomendaciones) | `--ink-3` | **4,44:1** | `--ink-2` | 7,50:1 |
+| `.notif-tab` (pestaña inactiva de Notificaciones) | `--brand-ink-4` | 2,58:1 | `--brand-ink-3` | 5,43:1 |
+
+**Y el cuarto, en la segunda pasada: la misma familia otra vez.** Con esos tres
+arreglados, el piloto bajó de 12 fallos a 3, y los 3 eran un único control:
+`<a class="btn btn-primary">Prueba gratis</a>` al final de
+`/blog/como-elegir-competidores-analisis-geo`, en **1,58:1** — índigo oscuro
+(`--accent-ink`) sobre índigo (`--accent`). El botón no se leía.
+
+La causa es *literalmente* la de la regresión del cajón móvil que abre esta
+sección: `.blog-body a` tiene especificidad (0,1,1) y `.btn-primary` (0,1,0),
+así que la regla del ancestro le impone a un botón el color de un enlace de
+prosa. La regla se escribió cuando dentro de un artículo sólo había enlaces —
+igual que `.lp-mobnav a`. Dos instancias distintas de un mismo patrón, en dos
+zonas que no se parecen en nada, encontradas con una semana de diferencia: eso
+es lo que convierte el invariante de `.claude/rules/styles.md` en algo que hay
+que barrer, no en la anécdota de un PR.
+
+Arreglado excluyendo los botones —`.blog-body a:not(.btn)` y
+`.legal-body a:not(.btn)`— en vez de parchear cada variante. Es lo que la regla
+siempre quiso decir (va de enlaces de prosa) y deja cubiertas las variantes que
+todavía no existen. La misma trampa estaba armada en
+`/comparativas/mejores-herramientas-geo-en-espanol`, que tiene otro
+`.btn.btn-primary` dentro de un `.legal-body`; el arreglo estructural la
+desactiva de paso.
+
+El de los filtros deja una lección propia: `--ink-3` pasa AA sobre blanco (4,76:1)
+y **no** pasa sobre `--surface-sunk` (4,44:1). Un token que aprueba sobre un
+fondo no aprueba sobre otro, y a ojo esos 6 centésimos no existen. Es
+exactamente el tipo de fallo que una persona no encuentra mirando una captura.
+En los dos casos de pestañas la jerarquía la sigue marcando el estado activo,
+que además del color cambia fondo (y sombra, en `.seg`).
+
+### Y un tercer aprendizaje que no venía en el plan: el techo de tiempo
+
+La pasada de `16a07ea` salió **`cancelled` a los 20,1 minutos**, con
+`timeout-minutes: 20`. No fue una anomalía de esta rama: mirando las pasadas de
+esos días, todas iban en **16-17 minutos**, o sea tres minutos de margen para
+cualquiera. El recorrido crece en cada fase, y ese día ganó de golpe `/` y
+`/pricing` con el cajón móvil, un tercer proyecto, y todas las pantallas que
+dejaron de estar vacías al sembrarse los datos de la cuenta piloto.
+
+Lo peligroso no es el minuto de más: **GitHub etiqueta un timeout como
+`cancelled`**, que se lee como «alguien lo paró a mano» y no como «la puerta no
+llegó a correr». Es la misma trampa que el ✅ del workflow, con otra palabra. El
+techo sube a 30 y queda escrito en el propio workflow y en los límites
+conocidos de `docs/agentic-user-pilot.md`: un piloto que no termina es
+INCONCLUSIVE, nunca un pase.
+
+> **El techo de 30 queda superseded por §65** (PR #389, 2026-08-12), que llegó
+> a `main` en paralelo con el mismo diagnóstico desde otro PR y va más lejos:
+> sube a **35** con margen medido (el barrido de #388 tardó 19m04s, o sea 56
+> segundos de margen) y, sobre todo, **añade un paso `cancelled()`** que publica
+> un INCONCLUSIVE cuando el job muere antes de juzgar. Eso es lo que faltaba
+> aquí: yo subí el techo pero dejé que una pasada cortada siguiera pareciendo un
+> aprobado si el comentario de PASS ya se había publicado. Al resolver el
+> conflicto se tomó su versión entera. Lo que sí sobrevive de esta sección es lo
+> de abajo, que §65 no cubre: el commit que sube el techo **no construía**, así
+> que ninguno de los dos arreglos podía ejercitarse.
+
+Y subir ese techo destapó **el mismo bucle del 2026-08-05, en el escalón de al
+lado**: el commit que lo subía sólo tocaba `.github/` y `docs/`, así que
+`vercel-should-build.sh` lo saltó —correctamente, según su lista— y no hubo
+build, ni preview, ni pasada. El arreglo del timeout no se podía ejercitar. La
+excepción de `tests/pilot/**` existía exactamente por este argumento («el
+piloto sólo corre contra un preview»), pero el **workflow** del piloto se lo
+tragaba el `.github/*` genérico. Ahora `.github/workflows/ux-pilot.yml`
+construye, y sólo ése: los demás workflows corren por `push`/`pull_request` y
+no necesitan un preview. La prueba que afirmaba lo contrario está invertida a
+propósito, con el motivo escrito dentro, porque era una suposición que costó
+una pasada.
+
+**Lo que esto NO arregla, dicho en voz alta.** Se cierran dos agujeros, no la
+clase. El motivo de abrir las capturas sigue siendo todo lo que nadie ha
+pensado en afirmar todavía; por eso la causa 1 se arregla en el proceso y no se
+declara resuelta por las causas 2 y 3.
+
+**Trazabilidad.** §54 (la fase donde entraron los dos fallos); §49 (el
+self-check y por qué sus casos rotos son el contrato);
+`.claude/rules/styles.md` (la regla de `<button>` → `<a>`, escrita el mismo
+día); `docs/agentic-user-pilot.md`.
 
 ---
 
@@ -6244,6 +6659,589 @@ restrict`, interruptores que son por proyecto y no por usuario, y el
 - **Perder el dispositivo TOTP deja fuera de `/admin` sin más salida que el
   panel de Supabase** (retirar el factor a mano) — coste aceptado y
   documentado en `docs/environment-contract.md`.
+
+---
+## 65. Una pasada del piloto que publicó PASS sin llegar a juzgar nada (2026-08-12)
+
+**Qué pasó.** El piloto de PR #388 publicó un `PILOT PASS` completo —53
+pantallas, tres anchuras, todo verde— y el run terminó en `cancelled`. Los dos
+hechos son ciertos a la vez, y esa combinación es peor que un fallo limpio.
+
+**La secuencia, del API de Actions:**
+
+| Paso | Resultado |
+|---|---|
+| 9. Run the pilot | éxito, **19 min 04 s** |
+| 10. Upload screenshots | éxito |
+| 11. Publish evidence branch | éxito |
+| 12. Post the verdict on the PR | **cancelado** |
+| 13. Fail the check unless the pilot passed | **saltado** |
+
+`timeout-minutes` era 20. El job arrancó a las 01:20:04 y murió a las 01:40:07:
+veinte minutos exactos. El barrido cabía por **56 segundos**.
+
+**Por qué importa más de lo que parece.** El paso 13 es el único que convierte
+un FAIL o un INCONCLUSIVE en check rojo, y GitHub lo salta en un job cancelado
+—sólo ejecuta lo que lleva `cancelled()` o `always()`—. Es decir: si el barrido
+llega a cruzar el tope, el resultado no es "el piloto falló", es **"el piloto no
+juzgó"**, y sobre la superficie de checks eso no se distingue de un verde a
+menos que alguien abra el run paso a paso. Aquí el comentario de PASS incluso
+llegó a publicarse un segundo antes de morir, así que el hilo del PR quedó
+diciendo que todo estaba bien.
+
+**El tope estaba condenado a cruzarse.** El barrido crece con cada pieza de
+contenido: cada comparativa, cada artículo y cada término de glosario añade una
+pantalla × tres anchuras. Un tope pegado al tiempo real de la última pasada no
+es un margen, es una cuenta atrás.
+
+**Arreglo, en dos partes:**
+
+1. `timeout-minutes` de 20 a 35. No es "por si acaso": el margen medido era de
+   56 segundos sobre una pasada que crece sola.
+2. Un paso nuevo con `if: cancelled()` que publica su propio comentario
+   diciendo que la pasada no llegó a juzgar y que un PASS anterior de esa misma
+   pasada no cuenta. Es la única forma de que la cancelación se vea desde el
+   hilo del PR sin abrir el run.
+
+**La regla, que ya estaba escrita para otra parte del sistema:** una garantía
+que no se puede ver fallar no es una garantía (`.claude/rules/scan.md`, sobre
+`fetch` sin comprobar `response.ok`). Valía igual para el propio piloto y
+nadie lo había aplicado ahí.
+
+**Lo que este incidente NO fue.** El barrido de #388 sí se ejecutó entero y sí
+vio la pantalla nueva; su PASS es real en cuanto al contenido. Lo que no hubo
+fue puerta. Se distingue porque los pasos 9 a 11 constan en éxito — pero eso
+hay que ir a mirarlo, que es justo el trabajo que este arreglo elimina.
+## 66. "Alternativas a X" escrito por X+1 (SEO-POS-1, S3, 2026-08-12)
+
+**El problema del formato.** Buscar "alternativas a Otterly" devuelve una
+página tras otra publicada por una herramienta rival: ZipTie, Nightwatch,
+ZeroRank, GetCito y media docena más, todas explicando por qué deberías
+irte de Otterly y quedarte con ellas. La nuestra es exactamente lo mismo. El
+formato no tiene una versión neutral disponible — lo que sí tiene es una
+versión que lo admite.
+
+**Decisión 1: decirlo en el primer bloque, antes que nada.** El `KeyTakeaway`
+de apertura dice que esta página la escribe un competidor, igual que las otras
+diez, y que la única defensa del lector es exigir que cada afirmación sea
+comprobable. Es contraintuitivo como copy de venta y es lo correcto: sin eso,
+la página pide una confianza que no se ha ganado, y con eso puede pedir algo
+mejor —que la juzguen por sus datos—.
+
+**Decisión 2: `tradeoff` es un campo obligatorio del tipo, no un párrafo
+opcional.** Cada alternativa declara qué NO resuelve. El de Genscore nombra
+Perplexity, Copilot y la ausencia de desglose por país, que es precisamente lo
+que Otterly sí hace, y un test lo exige **por nombre** — no "que tenga
+contrapartida", sino que mencione esas dos cosas. Un listicle de competidor no
+se sesga mintiendo, se sesga olvidando; un test de longitud mínima no habría
+cogido un `tradeoff` que dijera "es una herramienta joven".
+
+**Decisión 3: una sección "cuándo NO deberías cambiar".** Cambiar de
+herramienta reinicia el histórico —las series no se migran entre proveedores— y
+la comparación temporal es justo lo que hace útil a una herramienta GEO. Es la
+recomendación que nadie que venda esto escribe, y es verdad.
+
+**Decisión 4: la página empieza reconociendo en qué es mejor Otterly**, con
+cuatro puntos concretos (usuarios ilimitados a 29 $, 50+ mercados, Perplexity y
+Copilot, la entrada de pago más barata). Mismo criterio que §61: las victorias
+del competidor se marcan. Aquí además es útil — si tu problema es meter a doce
+personas por 29 $, la respuesta correcta es quedarte, y la página lo dice.
+
+**Estructura: por límite, no por ranking.** Quien busca "alternativas a X" ya
+conoce X y ha chocado con algo concreto. Un ranking obliga a declarar un ganador
+global que no existe y empuja a pagar el triple por resolver un problema que no
+se tenía. Los cuatro límites (tope de prompts, motores como add-on, diagnóstico
+sin ejecución, idioma) son la espina dorsal de la página, y dos tests garantizan
+que cada límite tenga al menos una alternativa y que ninguna alternativa apunte
+a un límite inexistente.
+
+**Precios: ninguno de Otterly es de fuente primaria.** `otterly.ai/pricing`
+está bloqueado por el proxy de egress, la misma limitación que ya tuvo Peec AI.
+Se publican porque dos agregadores independientes coinciden y porque cuadran
+con lo investigado el 2026-08-02 para la comparativa 1:1 — y la página dice
+exactamente eso, en vez de presentarlos como verificados. Semrush y Ahrefs se
+describen por estructura de coste (módulo + suite) sin cifra cerrada, porque
+las fuentes públicas se contradicen entre sí.
+
+**Descubribilidad:** cinco SSOT actualizadas en el mismo PR — índice de
+`/comparativas`, `llms.txt`, `sitemap`, journey del piloto y fixture del
+self-check. Las dos últimas ya no son opcionales: las exige el guardián que
+dejó §62.
+
+---
+
+## 67. El árbitro y el director de marketing (SEO-POS-1, S3, revisión, 2026-08-12)
+
+**Origen.** El fundador, sobre la primera versión de `alternativas-a-otterly`:
+*"El tono concede mucho. En general tienes que tener un rol de director de
+marketing de Genscore. Por tanto no nos podemos permitir que dejes a la
+competencia mejor en las comparativas. Di cosas buenas pero que en general
+transmita que casi siempre Genscore es la mejor opción."*
+
+**Tenía razón, y el diagnóstico es de rol, no de frases sueltas.** §61 corrigió
+un sesgo *contra* Genscore en la tabla de una comparativa y la lección se
+generalizó mal: pasé de "no esconder las victorias del competidor" a arbitrar
+la categoría. Una página escrita desde el arbitraje no es neutral, es
+neutral-a-nuestra-costa — el competidor no publica la suya con ese criterio, así
+que la asimetría la pagamos enteros nosotros.
+
+**Las cuatro cosas concretas que concedían, y qué se hizo:**
+
+1. **El bloque de apertura decía "esto lo escribe un competidor, no te fíes del
+   todo".** Era cierto y era un regalo: invita a descontar todo lo que viene
+   después, incluido lo verificable. Sustituido por un `KeyTakeaway` que
+   posiciona: cuáles son los cuatro límites de Otterly y cuántos resuelve
+   Genscore.
+2. **Cuatro ventajas de Otterly enumeradas a pelo, arriba del todo.** Se leía
+   como "Otterly gana" aunque tres de las cuatro le sean irrelevantes a un
+   lector español con un dominio. Ahora `OTTERLY_STRENGTHS` es
+   `{claim, context}`: la ventaja entera, y al lado a quién le sirve. "Usuarios
+   ilimitados por 29 $" seguido de "con quince prompts incluidos" es la misma
+   verdad, situada.
+3. **Un `Verdict` titulado "Cuándo NO deberías cambiar"**, con el mismo peso
+   visual que el nuestro. Publicidad del competidor pagada por nosotros. La
+   cautela real —cambiar reinicia el histórico— se mantiene, en párrafo normal
+   y girada hacia lo que de verdad implica: empieza ya donde te vas a quedar, y
+   el plan gratuito no caduca justamente para poder acumular en paralelo.
+4. **Las FAQ preguntaban "¿Es Otterly una mala herramienta?"**, que nos ponía a
+   defenderlo, y "¿por qué fiarte de un competidor?", que nos ponía a
+   desacreditarnos. Sustituidas por las búsquedas reales —"¿cuál es la mejor
+   alternativa?", "¿la más barata?", "¿puedo probar sin dejar Otterly?"— que
+   admiten respuesta verdadera y favorable.
+
+**Lo que NO se tocó, y por qué se dijo en voz alta antes de empezar.** Que hoy
+no ejecutamos Perplexity ni Copilot, y que no hay desglose por país, siguen
+escritos, con test que los exige **por nombre**. No es escrúpulo: es que un
+comprador los verifica en dos clics, y que ese es exactamente el error que
+PRICING-TRUTH-1 obligó a retirar del producto (`docs/launch-plan.md` Fase 2).
+Delante de un competidor se paga más caro que en la propia web. Lo que cambia
+es que se declaran situados —junto a los tres motores que sí cubrimos en todos
+los planes de pago— y no como titular.
+
+**La regla, ya en `.claude/rules/growth-content.md`:** el hecho comprobable no
+se recorta nunca; el orden, el espacio y el contexto son decisión de marketing
+y se toman a nuestro favor. Las dos mitades son la misma política, no un
+equilibrio entre dos.
+
+**Pendiente.** Las otras tres comparativas (`genscore-vs-otterly`,
+`genscore-vs-peec-ai`, `genscore-vs-profound`) se escribieron con el criterio
+anterior. No se tocan en este PR —son cuatro pantallas y su propio slice— pero
+quedan marcadas para una pasada con este mismo encuadre.
+
+---
+
+## 68. Una exclusividad nuestra caducó sin que nada avisara (SEO-POS-1, S4, 2026-08-12)
+
+**Encargo.** Refrescar el pilar `/comparativas/mejores-herramientas-geo-en-espanol`
+añadiendo los tres rivales del mercado español que listaba el plan: CreceRank,
+TrendSights y Mentio. La investigación previa dejó dos, no tres.
+
+**CreceRank entra, y es la incorporación que importa.** Es la única competencia
+directa que reclama explícitamente nuestra misma casilla: *"diseñada desde el
+día uno para el mercado hispanohablante"*, prompts en español, competidores
+regionales y fuentes en dominios locales (.es, .mx, .ar, .cl, .co), desde unos
+29 $/mes. Cubre ChatGPT, Perplexity y AI Overviews — un conjunto de motores
+**distinto**, no menor: nosotros ejecutamos Gemini y Claude, que ella no lista,
+y no ejecutamos Perplexity ni AI Overviews.
+
+**Y su existencia rompió una afirmación nuestra ya publicada.** La FAQ de esa
+página decía, sobre el idioma, *"**solo Genscore**, de forma nativa"*. Era
+cierto cuando se escribió y dejó de serlo el día que CreceRank entró en la
+lista. Nadie lo habría notado: la afirmación vivía en una cadena de texto de
+`page.tsx` y la lista de herramientas vive en `mejores-herramientas-geo.ts`.
+
+**Por qué esto es peor que un dato desactualizado cualquiera.** Una
+exclusividad es la afirmación que más rápido caduca de una comparativa y la que
+más caro sale: el lector la desmiente en un clic, y al hacerlo se lleva por
+delante la credibilidad de toda la página, incluidas las partes correctas. En
+una comparativa —donde el lector ya sabe que la escribe una parte interesada—
+es exactamente el error que no te puedes permitir.
+
+**Arreglo:** la respuesta ahora dice "dos de las ocho" y diferencia por lo que
+sigue siendo cierto (motores cubiertos, generación de la solución, escaneo
+gratuito permanente). Y un test ata la afirmación a los datos: si más de una
+herramienta de `TOOLS` declara español, la página no puede contener "solo
+Genscore". Un segundo test comprueba que el recuento del titular coincida con
+el número real de herramientas.
+
+**El test estuvo roto primero, y eso también es la lección.** La primera
+versión filtraba con `/^s[íi]\b/i`. En ASCII, "í" no es carácter de palabra, así
+que `\b` no casa tras ella: el filtro salía vacío, el test se saltaba solo y
+pasó en verde con "solo Genscore" reinsertado a propósito para comprobarlo.
+Corregido a `/^s[íi](\W|$)/i`, más una aserción que falla si el filtro se
+vuelve a quedar vacío. **Un guardián que no puede fallar es peor que ninguno**,
+porque además da por cubierto el hueco — la misma regla que §64 aplicó al
+piloto, encontrada aquí sólo porque se verificó el caso negativo.
+
+**Mentio entra sin cifra de precio.** Las fuentes públicas dan importes
+inverosímiles (24 €/año) y además confunden el producto con GetMentioned, que
+es otra herramienta. Mismo criterio que Profound en §58: sin fuente fiable, no
+se afirma un precio.
+
+**TrendSights NO entra, aunque el plan la pedía.** No es una herramienta GEO:
+es monitorización de medios —TV, radio, prensa, redes, podcasts, streaming— con
+análisis de sentimiento e influencers. Mide notoriedad en medios, no
+visibilidad en motores generativos. Incluirla habría sido un error de categoría
+que además diluye la página justo para el lector que llega buscando eso. **Una
+fila del plan no es una orden de publicar**: el plan se escribió con la
+información de entonces, y comprobarla antes de ejecutar es parte del encargo.
+## 69. Las seis dimensiones sí, los pesos no: dónde está la línea (SEO-POS-1, S5, 2026-08-13)
+
+**Pieza.** `/blog/que-es-una-auditoria-geo`, cluster `playbooks`. Cubre el
+cluster de keywords nº 5 del plan y enlaza la feature real de auditoría web.
+
+**Primera versión, y por qué se corrigió.** El borrador inicial publicaba **los
+pesos reales** de `lib/web-audit/page-checks.ts` — datos estructurados 15,
+formato de respuesta 15, metadatos 15, frescura 15, indexabilidad 20,
+citabilidad 20 — con el argumento de que una puntuación cuyo reparto no se
+enseña es un número que hay que creerse. El fundador lo revisó y decidió lo
+contrario: publicar las seis dimensiones y sus umbrales de comportamiento, pero
+no el reparto de puntos exacto entre ellas — es metodología del producto, y
+enseñarla entera se la regala a cualquier competidor en una tarde sin que el
+lector gane nada que no tuviera ya con las seis dimensiones nombradas.
+
+**Dónde queda la línea, en la práctica.** Se publican los **umbrales de
+comportamiento** — título 15-70 caracteres, descripción 50-160, frescura
+180/540 días, 300 palabras visibles, un solo `<h1>`, dos `<h2>` mínimo — porque
+son buenas prácticas verificables por cualquiera con el código fuente delante,
+no una ventaja competitiva. No se publica el **reparto de puntos** entre
+dimensiones ni entre sub-comprobaciones, ni en el texto ni en la portada: la
+primera versión de la imagen codificaba el peso real en la anchura de cada
+barra, así que se rehízo con las seis barras iguales antes de publicar.
+
+**Lo que separa esta pieza de un post de checklist cualquiera:** la sección
+sobre la página sin fecha. Puntuar la frescura como cero cuando no se encuentra
+ninguna fecha convierte una *ausencia de dato* en un *veredicto negativo*, así
+que esa dimensión se excluye del cálculo y el resto se reescala a 100 — sin
+citar el número de puntos que se excluyen. Es una decisión de método real del
+producto, no una opinión, y explicarla demuestra criterio en vez de afirmarlo.
+Se generaliza en el artículo a la regla que ya rige `global-score.ts`: un
+componente sin valor se excluye de la media y se dice, nunca se sustituye por
+cero.
+
+**Declara dónde acaba, y eso es lo que la hace citable.** Una auditoría técnica
+dice si tu página *puede* ser citada, no si *lo es*. Sin esa frase el artículo
+vendería la auditoría como si fuera la medición entera — exactamente el reclamo
+que PRICING-TRUTH-1 obligó a retirar del producto. Con ella, el CTA es honesto:
+arregla lo técnico primero porque es lo barato y lo determinista, pero no
+confundas haberlo arreglado con estar apareciendo.
+
+**Encuadre de marketing aplicado (§67):** la comparación SEO vs GEO va en tabla
+y la ventaja no se reparte — la tabla existe para mostrar que son disciplinas
+distintas, no para conceder terreno. El único bloque que "concede" es el de
+dónde acaba la auditoría, y concede sobre nuestro propio producto, no a favor
+de un competidor.
+
+**Portada.** SVG dibujado en el repo y rasterizado a WebP (§47: un `og:image`
+en SVG deja la tarjeta social en blanco). Seis barras de igual anchura, cada
+una con su propia marca de comprobación — deliberadamente sin variar tamaños
+entre ellas, por el mismo motivo que el texto no reparte puntos.
+
+**Descubribilidad:** SSOT del blog, fixture del self-check y journey del
+piloto, los tres en este PR — lo exige el guardián de §62.
+
+---
+
+## 70. Una prop mal puesta en MDX no rompe nada: simplemente no pinta (SEO-POS-1, S5, 2026-08-13)
+
+**Qué pasó.** El piloto de #395 dio `PILOT FAIL` en las tres anchuras sobre
+`blog-que-es-una-auditoria-geo`. La pantalla cargaba bien —sale ✅ en la tabla—
+pero fallaba la aserción de enlazado interno: `.blog-related a` no existía.
+
+**La causa.** `RelatedPosts` recibe `cluster` y `currentSlug`. El artículo le
+pasaba `slug`. Con `cluster` indefinido, `getPostsByCluster(undefined)` devuelve
+lista vacía y el componente hace `return null`: sin bloque "Sigue leyendo", sin
+enlaces internos, **y sin un solo error**.
+
+**Por qué no lo cogió nada antes del piloto.** MDX no pasa por `tsc`, así que
+una prop equivocada no rompe la build. Y `article-recipes.test.ts` cuenta
+apariciones de componentes, no comprueba sus props — `<RelatedPosts />` contaba
+como presente estuviera bien llamado o no. Es la misma forma que §62 (journey
+que falta) y §66 (afirmación que caduca): un fallo de cableado que ninguna
+comprobación miraba, y que sólo se ve en el despliegue real.
+
+**El arreglo, y por qué no basta con comprobar que la llamada exista.** El
+piloto exige que **haya** un enlace en `.blog-related`. Un artículo de
+`playbooks` que pasara `cluster="medicion"` renderizaría enlaces al cluster
+equivocado y pasaría el piloto igual — el enlazado interno estaría mal y
+nadie se enteraría, porque la regla de `content-strategy.md` §4.3 es enlazar a
+**hermanos del propio cluster**, no a cualquier sitio. Así que el test nuevo no
+comprueba que la llamada esté: comprueba que **el cluster que declara coincida
+con el del artículo en `BLOG_POSTS`**. Verificado en las dos direcciones
+—prop ausente y cluster equivocado— antes de darlo por bueno.
+
+**Lección general, ya vista tres veces esta semana:** en las superficies de
+contenido, el compilador no cubre casi nada. Lo que no esté atado a la SSOT con
+un test se desincroniza en silencio, y el síntoma no es un error sino una
+ausencia — un bloque que no aparece, una página que nadie visita, una
+afirmación que dejó de ser cierta.
+
+## 71. Los automatismos y su coste, vistos por cuenta sin mentir sobre ninguno de los dos (ADMIN-CONSOLE-2a, 2026-08-12)
+
+**Estado: implementada.** Task Intake de 12 puntos aprobado por el fundador
+(«Sí»). Primera mitad de lo que pidió el 12-08: *ver* por usuario si tiene
+escaneo y auditoría automáticos y cuánto cuesta. La otra mitad —*modificarlos*—
+y el borrado permanente quedan fuera a propósito, cada uno con su fase.
+
+**El problema de fondo: lo que pidió no existe con esa forma.** Los
+interruptores (`recurring_scans_enabled` 0008, `auto_web_audit_enabled` 0030)
+cuelgan de `projects`, no de la cuenta. Una casilla por usuario sería falsa en
+cuanto dos de sus dominios discreparan, que es el caso normal en cuanto alguien
+tiene más de uno. Así que la tabla muestra un **agregado declarado**
+(`activos/total`) y el interruptor real se lee por proyecto en la ficha. No es
+una traducción cosmética de la petición: es la única forma de que la columna
+sea cierta.
+
+**Tres cosas que la pantalla dice y que un agregado ingenuo se habría comido:**
+
+1. **«Sin efecto (Free)».** `runRecurringScanSweep` descarta los proyectos de
+   plan Free antes de escanearlos (`skipped_plan_ineligible`), así que un Free
+   con el interruptor puesto **no se escanea nunca**. Contarlo como activo
+   habría hecho creer que hay trabajo —y coste— donde no hay ninguno; se cuenta
+   aparte y su coste mensual es 0.
+2. **«Sin dato» en vez de cero.** Las migraciones de este repo se aplican a
+   mano, y una columna que PostgREST no conoce hace fallar el `select`
+   **entero**. Por eso los automatismos viven en `lib/admin/automation.ts` con
+   su **propia consulta**: una migración pendiente deja una columna sin dato en
+   vez de dejar `/admin` en blanco. Mismo remedio que ya usa `/debug` con las
+   mitades de auditoría, y misma dirección de fallo que exige
+   `.claude/rules/scan.md` — sólo que aquí falla hacia *desconocido*, nunca
+   hacia un valor: en una pantalla de sólo lectura, un «desactivado» inventado
+   es peor que un hueco, porque parece una respuesta.
+3. **La procedencia viaja pegada a la cifra.** `lib/admin/cost-model.ts` copia
+   las tarifas de `docs/llm-cost-analysis-2026-08.md` §7 **con su etiqueta**:
+   la generación está medida, la extracción es una estimación de tarifas
+   públicas, y la cobertura de auditoría no está medida en absoluto. El coste
+   agregado no puede presentarse como más fiable que su parte más floja, así
+   que incluir la auditoría lo degrada a «sin medir» — y hay un test que lo
+   impone. Un número redondo sin etiqueta habría sido exactamente la métrica
+   falsa que CLAUDE.md prohíbe, en la pantalla cuyo público se fía de todos los
+   demás números que hay en ella.
+
+**Cero escrituras, y es una decisión, no una limitación.** No hay ni un
+formulario en esta fase. Ver el estado repartido entre proyectos es lo que
+permite decidir qué cambiar; y separar el ver del tocar deja la parte sin riesgo
+entregada mientras la arriesgada espera su propio Task Intake.
+
+**Lo que encontró la QA, y por qué importa más que el arreglo.** El gate previo
+al Human Gate devolvió **BLOCKED** con un fallo que contradecía exactamente lo
+que esta fase decía defender: el código leía `auto_web_audit_enabled`, la
+columna que la migración 0031 **retiró** con un comentario explícito («*do not
+reintroduce reads of it*»). Sigue en la tabla porque borrarla es un cambio
+destructivo con su propia aprobación, y sigue con el default `true` de la 0030,
+pero ya no la escribe nadie. Resultado: la pantalla habría afirmado «auditoría
+automática activada, con coste» en **casi todas las cuentas**, cuando la
+realidad —tras el barrido manual del fundador del 2026-08-09— es que está
+apagada en casi todas. Una métrica inventada, en la fase cuyo argumento entero
+era no inventar ninguna.
+
+Lo relevante no es el despiste, es qué tipo de error es: **una columna que
+existe no es una columna que signifique algo**. El esquema no distingue viva de
+retirada, y el `select` no falla — devuelve un `true` perfectamente plausible.
+Sólo lo dice el comentario de la migración que la jubiló. De ahí el invariante
+nuevo en `.claude/rules/admin.md` (leer la migración que tocó por última vez la
+columna, y copiar la dirección de fallo del código vivo) y la guarda estática en
+`automation.test.ts`, que lee el propio fuente y rompe si la columna retirada
+vuelve al `select`. Los tests anteriores no lo cazaron porque sus *fixtures*
+copiaban la misma columna equivocada: reproducían el error en vez de medirlo.
+
+La segunda mitad del hallazgo fue más simple y del mismo signo: el coste salía
+**desnudo** en la celda de la tabla y en el KPI, sin su etiqueta de procedencia,
+contradiciendo la regla que esta misma fase acababa de escribir. La causa no era
+la plantilla sino el modelo: `AccountAutomation` no tenía campo `provenance`, así
+que no había de dónde sacar la etiqueta. Ahora lo tiene, y se degrada al peor
+sumando de la cuenta.
+
+Corregido también, por señalarlo la QA: la ficha de un usuario cargaba los
+automatismos de **todos** los proyectos de la plataforma para enseñar los de uno;
+ahora la consulta va acotada por dueño.
+
+### Pendiente / roto conocido
+
+- **2b (escribir los interruptores) sin empezar.** Hoy sólo los escribe el
+  dueño (`setRecurringScans` usa `requireUser()` + `.eq("owner_user_id", …)`);
+  desde `/admin` sería service-role saltándose ese scoping. Escalada real, con
+  su Task Intake.
+- **2c (borrado permanente con selección múltiple) sin empezar**, y sigue en la
+  lista de prohibidos de CLAUDE.md. Motivos y restricciones en
+  `docs/design-reference/admin-console-1/README.md`.
+- **El coste de la auditoría de cobertura sigue sin medirse** (§7 lo marca «no
+  medido», peor caso ~8 prompts). Mientras siga así, cualquier total que la
+  incluya arrastra esa etiqueta.
+- **Sin piloto agéntico**, igual que la Fase 1 y por la misma razón: el piloto
+  no puede completar un desafío AAL2. Verificación manual.
+
+---
+
+## 72. El arranque de MFA buscaba el factor pendiente donde no puede estar (ADMIN-CONSOLE-1, corrección, 2026-08-13)
+
+**Estado: corregido.** Encontrado por el fundador en producción, intentando
+activar el doble factor por primera vez: `/mfa/enroll` respondía *«No se pudo
+generar el código»* y no había forma de avanzar.
+
+**El fallo.** `supabase.auth.mfa.listFactors()` devuelve
+`{ all, totp, phone, webauthn }`, y `auth-js` **sólo copia a `totp` los
+factores verificados** (`GoTrueClient._listFactors`:
+`if (factor.status === 'verified') data[factor.factor_type].push(factor)`). Un
+enrolamiento a medias existe únicamente en `all`.
+
+La primera versión buscaba el factor pendiente en `.totp`, donde **no puede
+estar nunca**. Consecuencias encadenadas:
+
+1. No lo encontraba jamás, así que llamaba a `enroll()` en cada visita.
+2. En cuanto quedaba un factor sin verificar, el servidor respondía
+   `A factor with the friendly name "" for this user already exists`.
+3. La salida de emergencia («generar uno nuevo») tampoco se pintaba, porque
+   se renderizaba sólo si se había encontrado ese pendiente.
+
+Resultado: **`/admin` inalcanzable de forma permanente** para cualquiera que
+empezara un enrolamiento y no lo terminara — que es exactamente lo que pasa la
+primera vez que alguien abre la pantalla y no completa el código a la primera.
+La regla de ruta ya decía «un código erróneo debe volver a desafiar el MISMO
+factor pendiente»; el código nunca lo hizo.
+
+**Lo que más duele: el compilador lo había avisado.** Comparar
+`status === "unverified"` sobre `data.totp` produce
+*«types '"verified"' and '"unverified"' have no overlap»* — TypeScript decía
+literalmente que ese `find` no podía encontrar nada, porque el tipo de `totp`
+ya declara que sólo hay verificados. Se silenció con un cast a
+`Array<{ id: string; status: string }>` para que compilara. **Un error de tipos
+que se calla con una aserción es una hipótesis descartada sin mirarla.**
+
+**El arreglo,** en `lib/admin/mfa-factors.ts` como función pura y con tests:
+lee de `all` filtrando por `factor_type`, y trata cualquier estado que no sea
+`verified` como pendiente (reutilizar siempre es más seguro que crear otro,
+porque crear otro es lo que bloquea la cuenta). Los tests construyen la
+respuesta con la MISMA regla que aplica `auth-js` — un fixture que metiera un
+factor sin verificar en `totp` estaría inventando una respuesta imposible, y es
+esa fantasía la que dejó pasar el bug. `requireOperator()` sigue leyendo
+`.totp` a propósito, con su comentario: allí la pregunta es «¿hay uno
+verificado?», que es justo lo que `totp` contiene.
+
+**De paso,** el mensaje de error decía «recarga la página» en un caso donde
+recargar no arreglaba nada. Ahora nombra lo accionable (retirar el factor
+pendiente desde Supabase, o revisar que el TOTP esté habilitado) sin exponer el
+mensaje crudo del proveedor.
+
+### Lo que este incidente dice del proceso
+
+Ni la QA ni el piloto lo habrían cazado: la QA revisó dos veces esta zona y no
+lo vio porque el código *parecía* manejar el caso pendiente, y el piloto no
+puede entrar en `/admin` por diseño. Sólo aparece con una cuenta real que
+empieza a enrolar y no termina. Es el argumento más fuerte hasta ahora para que
+la verificación manual del fundador sobre `/admin` incluya **el primer
+enrolamiento desde cero**, no sólo el camino feliz de una cuenta ya configurada
+— que es lo que se verificó en §64 (con otra cuenta, ya enrolada).
+
+---
+
+## 70. El contrato de entorno deja de ser sólo prosa (PRELAUNCH-HARDENING-1 Fase R4, 2026-08-13)
+
+Primer slice del refactor desde R1/R2 (§43). `docs/environment-contract.md`
+describe cada variable desde hace meses y es una **buena** especificación; lo
+que no tenía es forma de fallar. Una variable ausente, mal escrita, o puesta a
+medias no rompe nada visible: se degrada en silencio y reaparece semanas
+después como «el escaneo recurrente hace menos de lo que debería».
+
+### El fallo que justifica la fase entera
+
+Buscando qué validar, apareció esto en `lib/scan/cron.ts`:
+
+```
+Number(process.env.MAX_SWEEP_CHAIN_INVOCATIONS ?? 20)
+```
+
+Con un valor no numérico eso da `NaN`. Cien líneas más abajo, la condición que
+decide si el barrido recurrente encadena es
+`chainIndex + 1 < maxChainInvocations`, y **toda comparación contra `NaN` es
+`false`**. O sea: una errata en esa variable deja el barrido en **un solo
+disparo en vez de veinte**, sin lanzar, sin loguear, y con toda la pinta de
+estar funcionando. Lo mismo en `MAX_PROJECTS_PER_CRON_RUN` (`slice(0, NaN)` no
+devuelve ningún proyecto) y en `MAX_PROJECTS_PER_DIGEST_RUN`.
+
+Y la variable **no estaba en el contrato**, pese a multiplicar el gasto de LLM
+por disparo (`MAX_SWEEP_CHAIN_INVOCATIONS × MAX_PROJECTS_PER_CRON_RUN`). Nadie
+la echaba de menos porque nada la echaba de menos. `VERCEL_ENV` tampoco estaba.
+
+### Lo que se ha hecho
+
+- **`lib/env-schema.ts`** — las 34 variables que el producto lee, en zod. Es
+  **puro**: no lee `process.env`, no tiene efectos y no importa `server-only`,
+  para que lo puedan usar el accesor, un script de node suelto y los tests.
+- **`lib/env.ts`** — el accesor de servidor, con `import "server-only"` en la
+  primera línea. En Next, un `process.env.X` que no empiece por `NEXT_PUBLIC_`
+  no se inyecta en el bundle de cliente: se queda en `undefined`. No filtra
+  nada, pero **degrada en silencio**, que es el fallo que esta fase persigue.
+  Con `server-only` ese import rompe el build con un mensaje que lo explica.
+  Es perezoso a propósito: un `throw` al importar reventaría `next build`
+  entero por una variable que sólo necesita una ruta de cron.
+- **Las reglas condicionales**, que son el corazón. Casi nada aquí es
+  obligatorio a secas y casi todo lo es *en función de otra cosa*:
+  `OPENAI_MODEL` sólo si hay `OPENAI_API_KEY` (y sin default, a propósito),
+  `CRON_SECRET` sólo con el cron encendido, la clave de cada motor declarado en
+  `LLM_SCAN_PROVIDERS`, y Stripe entero o nada — a medias se puede abrir un
+  checkout que ningún webhook confirma. Ese «en función de» no estaba escrito
+  en ningún sitio ejecutable.
+- **`pnpm run check:env`** — el informe. Es la mitad visible: lo que arregla
+  algo no es el esquema, es que alguien pueda ver **antes de desplegar** que su
+  `OPENAI_API_KEY` está puesta y su `OPENAI_MODEL` no. Nunca imprime un valor:
+  puede correr en un log de CI.
+- **`tests/env-drift.test.ts`** — el guardián. El esquema sólo vale como fuente
+  de verdad si contiene TODAS las variables que se leen; una nueva sin declarar
+  no la valida nadie, y encima ahora existe un módulo que aparenta cubrirlas
+  todas. Es el mismo patrón que `fixture-drift.test.ts`.
+
+### Dos cosas que aprendió el propio guardián, nada más nacer
+
+1. **Cazó un `process.env.X` en un comentario mío.** Grepea texto a propósito
+   —lo que importa es qué está escrito, no qué se ejecuta—, así que un nombre
+   de variable inventado dentro de un comentario es indistinguible de uno real.
+   Se reescribió el comentario, no el test.
+2. **Su comprobación de huérfanas estaba mal planteada, y falló a la primera.**
+   Adoptar el accesor **elimina** la lectura cruda de ese sitio, que es
+   exactamente el objetivo de la fase — así que migrar una variable la
+   convertía en «huérfana» y el test castigaba la migración que existe para
+   acompañar. Ahora cuenta las dos vías, cruda y accesor.
+3. **Estaba ciego a los ficheros sin trackear, que es justo cuando hace
+   falta.** `git grep` sólo mira lo ya trackeado, así que un fichero NUEVO con
+   una variable nueva era invisible para él hasta después de commitearlo. Lo
+   pagó el primer push: el test pasó en local —`lib/env.ts` aún sin trackear,
+   con otro nombre inventado en un comentario— y CI lo cazó al instante.
+   Añadido `--untracked`, y verificado creando un fichero nuevo sin commitear
+   con una variable sin declarar: ahora sí lo tumba.
+
+La regla que sale de 1 y 3, y que hubo que aprender dos veces el mismo día:
+**al documentar, se cita una variable que exista de verdad, nunca un `FOO` de
+ejemplo.** Para un guardián que mira texto, un nombre inventado en un
+comentario es indistinguible de uno real — y ésa es la propiedad que lo hace
+útil, no un defecto que convenga quitarle.
+
+### Alcance, dicho en voz alta
+
+**Son 34 variables, no 55.** El diagnóstico del plan (riesgo 7) dijo 55 y esa
+cifra sale de contar el contrato entero, que incluye las siete `PILOT_*` del
+arnés, las cinco de Sentry y alguna que ya nadie lee. Las que **el producto**
+lee en `app/`, `lib/`, `components/` y `middleware.ts` son 34, en 156 sitios.
+Las del piloto quedan fuera a propósito: no son configuración de producto y su
+sitio es `docs/agentic-user-pilot.md`.
+
+**No se han migrado los 156 sitios de lectura.** Se han migrado tres: los del
+`NaN`, que son donde había un fallo real. El resto sigue leyendo `process.env`
+directamente y eso es correcto de momento — lo que impide que el módulo se
+quede en decorado no es la adopción masiva sino el test de deriva, que es
+barato y ya está puesto. Migrar el resto es trabajo de otro slice, y no urge.
+
+**La única desviación de «comportamiento idéntico»** es el `NaN` → valor por
+defecto. Va declarada en el código y tiene su test. Se cae al defecto en vez de
+lanzar porque, en una ruta de cron, lanzar mata el barrido entero por una
+errata; caer al defecto lo deja corriendo como estaba diseñado, y que no sea
+silencioso es trabajo de `check:env`. Donde el contrato documenta una semántica
+permisiva —`CRON_SCANS_ENABLED` es `"true"` o no-op— el esquema la respeta en
+vez de «arreglarla»: volver estricto un flag apagaría cosas en producción.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R4);
+`docs/environment-contract.md` (dos filas nuevas); §43 (R1 y R2);
+`docs/adr/0016` (de dónde sale el encadenado del barrido).
 
 ---
 

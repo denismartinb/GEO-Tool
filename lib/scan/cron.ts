@@ -6,6 +6,7 @@ import { createPendingScanRunForCron } from "@/lib/scan/run-creation";
 import { executePendingScan, getSiteUrl } from "@/lib/scan/executor";
 import { ProjectActionError } from "@/lib/scan/types";
 import type { createServiceClient } from "@/lib/supabase/service";
+import { serverEnv } from "@/lib/env";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_BUDGET_MS = 45_000;
@@ -21,8 +22,18 @@ const DEFAULT_MAX_PROJECTS_PER_RUN = 5;
  */
 const DEFAULT_MAX_SWEEP_CHAIN_INVOCATIONS = 20;
 
+/**
+ * PRELAUNCH-HARDENING-1 Fase R4. Antes era
+ * `Number(process.env.MAX_SWEEP_CHAIN_INVOCATIONS ?? 20)`, y con un valor no
+ * numérico eso daba `NaN`. Abajo, la condición que decide si el barrido
+ * encadena es `chainIndex + 1 < maxChainInvocations`; toda comparación contra
+ * `NaN` es `false`, así que el barrido recurrente **dejaba de encadenar del
+ * todo** —un disparo en vez de veinte— sin un error y sin un log. El esquema
+ * cae al valor por defecto en vez de propagar `NaN`, y `pnpm run check:env`
+ * reporta el valor descartado antes de desplegarlo.
+ */
 export function resolveMaxSweepChainInvocations(): number {
-  return Number(process.env.MAX_SWEEP_CHAIN_INVOCATIONS ?? DEFAULT_MAX_SWEEP_CHAIN_INVOCATIONS);
+  return serverEnv().MAX_SWEEP_CHAIN_INVOCATIONS;
 }
 
 /**
@@ -214,7 +225,10 @@ async function triggerSweepContinuation({ chainIndex }: { chainIndex: number }):
  */
 export async function runDailyCronScan({
   service,
-  maxProjects = Number(process.env.MAX_PROJECTS_PER_CRON_RUN ?? DEFAULT_MAX_PROJECTS_PER_RUN),
+  // Mismo motivo que `resolveMaxSweepChainInvocations` arriba (Fase R4): un
+  // valor no numérico daba `NaN`, y `slice(0, NaN)` no devuelve ningún
+  // proyecto — el barrido corría sin escanear nada.
+  maxProjects = serverEnv().MAX_PROJECTS_PER_CRON_RUN,
   chainIndex = 0,
   scheduleContinuation = true,
   maxChainInvocations = resolveMaxSweepChainInvocations()

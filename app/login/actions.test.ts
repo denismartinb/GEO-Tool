@@ -67,14 +67,28 @@ describe("login", () => {
     expect(decodeURIComponent(url)).toContain("todavía no está confirmado");
   });
 
-  it("passes through other Supabase error messages unchanged", async () => {
+  it("maps the invalid_credentials error code to a safe Spanish message", async () => {
     signInWithPassword.mockResolvedValue({ error: { code: "invalid_credentials", message: "Invalid login credentials" } });
 
     await expect(
       login(formData({ email: "user@example.com", password: "wrong" }))
     ).rejects.toThrow(/^REDIRECT:\/login\?error=/);
 
-    expect(decodeURIComponent(calledRedirectUrl())).toContain("Invalid login credentials");
+    const url = calledRedirectUrl();
+    expect(url).not.toContain("Invalid+login+credentials");
+    expect(decodeURIComponent(url)).toContain("Email o contraseña incorrectos");
+  });
+
+  it("never surfaces a raw/unmapped Supabase error message, falling back to a generic Spanish message", async () => {
+    signInWithPassword.mockResolvedValue({ error: { code: "some_unmapped_code", message: "Some raw provider detail" } });
+
+    await expect(
+      login(formData({ email: "user@example.com", password: "wrong" }))
+    ).rejects.toThrow(/^REDIRECT:\/login\?error=/);
+
+    const url = calledRedirectUrl();
+    expect(url).not.toContain("Some+raw+provider+detail");
+    expect(decodeURIComponent(url)).toContain("No se pudo iniciar sesión");
   });
 });
 
