@@ -59,6 +59,21 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   CLAUDE.md's Task Intake Protocol applies in full to `/admin`, same as any
   other auth/server-action surface. Do not add a mutating action here as a
   drive-by.
+- **`listFactors().data.totp` holds ONLY verified factors — a half-finished
+  enrolment lives in `data.all`.** `auth-js` filters on
+  `status === 'verified'`. Looking for a pending factor in `.totp` finds
+  nothing, ever, so the page re-`enroll()`s, hits
+  `A factor with the friendly name "" ... already exists`, and locks the
+  operator out of `/admin` permanently — with the "generate a new one" escape
+  hatch invisible too, because it renders only when a pending factor was
+  found. Read pending factors through `lib/admin/mfa-factors.ts`;
+  `requireOperator()` reads `.totp` deliberately, because there the question
+  really is "is one verified?" (`docs/brand/design-decisions-log.md` §66).
+- **Never silence a type error here with a cast.** That bug shipped because
+  TypeScript said `'"verified"' and '"unverified"' have no overlap` — it had
+  the answer — and the fix was an `as` assertion instead of a question. In
+  this directory a type error is a hypothesis to check, not noise to quiet
+  (§66).
 - **A TOTP secret is shown at most once.** `supabase.auth.mfa.enroll()`
   never returns a factor's `qr_code`/`secret` a second time. A wrong code on
   `/mfa/enroll` must re-challenge the SAME pending (`unverified`) factor —

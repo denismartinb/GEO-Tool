@@ -6344,6 +6344,68 @@ ahora la consulta va acotada por dueño.
 
 ---
 
+## 66. El arranque de MFA buscaba el factor pendiente donde no puede estar (ADMIN-CONSOLE-1, corrección, 2026-08-13)
+
+**Estado: corregido.** Encontrado por el fundador en producción, intentando
+activar el doble factor por primera vez: `/mfa/enroll` respondía *«No se pudo
+generar el código»* y no había forma de avanzar.
+
+**El fallo.** `supabase.auth.mfa.listFactors()` devuelve
+`{ all, totp, phone, webauthn }`, y `auth-js` **sólo copia a `totp` los
+factores verificados** (`GoTrueClient._listFactors`:
+`if (factor.status === 'verified') data[factor.factor_type].push(factor)`). Un
+enrolamiento a medias existe únicamente en `all`.
+
+La primera versión buscaba el factor pendiente en `.totp`, donde **no puede
+estar nunca**. Consecuencias encadenadas:
+
+1. No lo encontraba jamás, así que llamaba a `enroll()` en cada visita.
+2. En cuanto quedaba un factor sin verificar, el servidor respondía
+   `A factor with the friendly name "" for this user already exists`.
+3. La salida de emergencia («generar uno nuevo») tampoco se pintaba, porque
+   se renderizaba sólo si se había encontrado ese pendiente.
+
+Resultado: **`/admin` inalcanzable de forma permanente** para cualquiera que
+empezara un enrolamiento y no lo terminara — que es exactamente lo que pasa la
+primera vez que alguien abre la pantalla y no completa el código a la primera.
+La regla de ruta ya decía «un código erróneo debe volver a desafiar el MISMO
+factor pendiente»; el código nunca lo hizo.
+
+**Lo que más duele: el compilador lo había avisado.** Comparar
+`status === "unverified"` sobre `data.totp` produce
+*«types '"verified"' and '"unverified"' have no overlap»* — TypeScript decía
+literalmente que ese `find` no podía encontrar nada, porque el tipo de `totp`
+ya declara que sólo hay verificados. Se silenció con un cast a
+`Array<{ id: string; status: string }>` para que compilara. **Un error de tipos
+que se calla con una aserción es una hipótesis descartada sin mirarla.**
+
+**El arreglo,** en `lib/admin/mfa-factors.ts` como función pura y con tests:
+lee de `all` filtrando por `factor_type`, y trata cualquier estado que no sea
+`verified` como pendiente (reutilizar siempre es más seguro que crear otro,
+porque crear otro es lo que bloquea la cuenta). Los tests construyen la
+respuesta con la MISMA regla que aplica `auth-js` — un fixture que metiera un
+factor sin verificar en `totp` estaría inventando una respuesta imposible, y es
+esa fantasía la que dejó pasar el bug. `requireOperator()` sigue leyendo
+`.totp` a propósito, con su comentario: allí la pregunta es «¿hay uno
+verificado?», que es justo lo que `totp` contiene.
+
+**De paso,** el mensaje de error decía «recarga la página» en un caso donde
+recargar no arreglaba nada. Ahora nombra lo accionable (retirar el factor
+pendiente desde Supabase, o revisar que el TOTP esté habilitado) sin exponer el
+mensaje crudo del proveedor.
+
+### Lo que este incidente dice del proceso
+
+Ni la QA ni el piloto lo habrían cazado: la QA revisó dos veces esta zona y no
+lo vio porque el código *parecía* manejar el caso pendiente, y el piloto no
+puede entrar en `/admin` por diseño. Sólo aparece con una cuenta real que
+empieza a enrolar y no termina. Es el argumento más fuerte hasta ahora para que
+la verificación manual del fundador sobre `/admin` incluya **el primer
+enrolamiento desde cero**, no sólo el camino feliz de una cuenta ya configurada
+— que es lo que se verificó en §64 (con otra cuenta, ya enrolada).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
