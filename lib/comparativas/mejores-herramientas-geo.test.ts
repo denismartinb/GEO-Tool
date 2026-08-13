@@ -42,7 +42,7 @@ describe("TOOLS (mejores-herramientas-geo)", () => {
 });
 
 /**
- * SEO-POS-1 Fase C, S4 (log §66). Esta página afirmaba "**solo Genscore**"
+ * SEO-POS-1 Fase C, S4 (log §68). Esta página afirmaba "**solo Genscore**"
  * tiene interfaz en español. Era cierto cuando se escribió y dejó de serlo el
  * día que CreceRank entró en la lista — sin que nada avisara, porque la
  * afirmación vivía en una cadena de texto y la lista vivía en otro fichero.

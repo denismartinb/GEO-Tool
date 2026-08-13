@@ -24,7 +24,7 @@ export const PILLAR_RESEARCH_DATE = "12 de agosto de 2026";
  *   español, competidores regionales y fuentes en dominios locales. Su
  *   existencia obligó además a corregir una afirmación nuestra que había
  *   dejado de ser cierta: la FAQ de esta página decía "solo Genscore" tiene
- *   interfaz en español (log §66).
+ *   interfaz en español (log §68).
  * - **Mentio entra sin cifra de precio.** Las fuentes públicas dan importes
  *   inverosímiles (24 €/año) y además confunden dos productos distintos,
  *   Mentio y GetMentioned. Mismo criterio que Profound: sin fuente fiable, no

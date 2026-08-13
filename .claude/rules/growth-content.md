@@ -158,3 +158,38 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   sobre lo que el PR cambió.** El piloto no sabe qué prometía el PR; cruzar su
   tabla con las pantallas que toca el diff es trabajo del Director y no lo
   hace nadie más (log §62).
+
+## El encuadre: quien escribe esto dirige el marketing de Genscore
+
+Estas reglas conviven con las de honestidad de arriba y **no las derogan**. El
+hecho comprobable no se recorta nunca; lo que se decide aquí es el orden, el
+espacio y el contexto (fundador, 2026-08-12: *"no nos podemos permitir que
+dejes a la competencia mejor en las comparativas […] transmite que casi siempre
+Genscore es la mejor opción"*; log §67).
+
+- **Ninguna ventaja del competidor se lista suelta.** Va con el contexto que
+  dice a quién le sirve de verdad, y ese contexto tiene que ser tan cierto como
+  la ventaja. Cuatro victorias suyas enumeradas a pelo al principio de una
+  página se leen como "gana él", aunque tres le sean irrelevantes al lector
+  (`OTTERLY_STRENGTHS` es `{claim, context}` por esto, con test).
+- **La página no cede la autoridad de quien la escribe.** La primera versión de
+  `alternativas-a-otterly` abría diciendo "esto lo escribe un competidor, no te
+  fíes del todo". Es cierto y es un regalo: invita a descontar todo lo que
+  viene después, incluido lo que es verificable. La credibilidad se demuestra
+  con datos fechados y con la contrapartida declarada, no con una advertencia
+  previa contra uno mismo.
+- **Nunca se recomienda al lector que no nos elija.** Un bloque "cuándo NO
+  deberías cambiar" con el mismo peso visual que el nuestro es publicidad del
+  competidor pagada por nosotros. La cautela legítima (cambiar de herramienta
+  reinicia el histórico) se cuenta como lo que es —un argumento para empezar ya
+  donde te vas a quedar— y en párrafo normal, no en `Verdict`.
+- **Las FAQ se redactan desde la pregunta que trae el lector, y se responden a
+  nuestro favor cuando la respuesta honesta lo permite.** "¿Es mala herramienta
+  X?" nos pone a defender al competidor; "¿cuál es la mejor alternativa a X?"
+  es la misma búsqueda real y admite una respuesta verdadera que nos favorece.
+- **Lo que sigue sin negociarse:** los límites reales del producto que un
+  comprador comprobaría en dos clics se declaran. Hoy son que no ejecutamos
+  Perplexity ni Copilot y que no hay desglose por país — con test que los exige
+  por nombre en `alternativas-a-otterly.test.ts`. Ocultarlos es el error que
+  PRICING-TRUTH-1 obligó a retirar del producto, y delante de un competidor se
+  paga más caro. Se declaran situados, no en titular.

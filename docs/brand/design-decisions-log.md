@@ -6246,10 +6246,176 @@ restrict`, interruptores que son por proyecto y no por usuario, y el
   documentado en `docs/environment-contract.md`.
 
 ---
+## 65. Una pasada del piloto que publicó PASS sin llegar a juzgar nada (2026-08-12)
+
+**Qué pasó.** El piloto de PR #388 publicó un `PILOT PASS` completo —53
+pantallas, tres anchuras, todo verde— y el run terminó en `cancelled`. Los dos
+hechos son ciertos a la vez, y esa combinación es peor que un fallo limpio.
+
+**La secuencia, del API de Actions:**
+
+| Paso | Resultado |
+|---|---|
+| 9. Run the pilot | éxito, **19 min 04 s** |
+| 10. Upload screenshots | éxito |
+| 11. Publish evidence branch | éxito |
+| 12. Post the verdict on the PR | **cancelado** |
+| 13. Fail the check unless the pilot passed | **saltado** |
+
+`timeout-minutes` era 20. El job arrancó a las 01:20:04 y murió a las 01:40:07:
+veinte minutos exactos. El barrido cabía por **56 segundos**.
+
+**Por qué importa más de lo que parece.** El paso 13 es el único que convierte
+un FAIL o un INCONCLUSIVE en check rojo, y GitHub lo salta en un job cancelado
+—sólo ejecuta lo que lleva `cancelled()` o `always()`—. Es decir: si el barrido
+llega a cruzar el tope, el resultado no es "el piloto falló", es **"el piloto no
+juzgó"**, y sobre la superficie de checks eso no se distingue de un verde a
+menos que alguien abra el run paso a paso. Aquí el comentario de PASS incluso
+llegó a publicarse un segundo antes de morir, así que el hilo del PR quedó
+diciendo que todo estaba bien.
+
+**El tope estaba condenado a cruzarse.** El barrido crece con cada pieza de
+contenido: cada comparativa, cada artículo y cada término de glosario añade una
+pantalla × tres anchuras. Un tope pegado al tiempo real de la última pasada no
+es un margen, es una cuenta atrás.
+
+**Arreglo, en dos partes:**
+
+1. `timeout-minutes` de 20 a 35. No es "por si acaso": el margen medido era de
+   56 segundos sobre una pasada que crece sola.
+2. Un paso nuevo con `if: cancelled()` que publica su propio comentario
+   diciendo que la pasada no llegó a juzgar y que un PASS anterior de esa misma
+   pasada no cuenta. Es la única forma de que la cancelación se vea desde el
+   hilo del PR sin abrir el run.
+
+**La regla, que ya estaba escrita para otra parte del sistema:** una garantía
+que no se puede ver fallar no es una garantía (`.claude/rules/scan.md`, sobre
+`fetch` sin comprobar `response.ok`). Valía igual para el propio piloto y
+nadie lo había aplicado ahí.
+
+**Lo que este incidente NO fue.** El barrido de #388 sí se ejecutó entero y sí
+vio la pantalla nueva; su PASS es real en cuanto al contenido. Lo que no hubo
+fue puerta. Se distingue porque los pasos 9 a 11 constan en éxito — pero eso
+hay que ir a mirarlo, que es justo el trabajo que este arreglo elimina.
+## 66. "Alternativas a X" escrito por X+1 (SEO-POS-1, S3, 2026-08-12)
+
+**El problema del formato.** Buscar "alternativas a Otterly" devuelve una
+página tras otra publicada por una herramienta rival: ZipTie, Nightwatch,
+ZeroRank, GetCito y media docena más, todas explicando por qué deberías
+irte de Otterly y quedarte con ellas. La nuestra es exactamente lo mismo. El
+formato no tiene una versión neutral disponible — lo que sí tiene es una
+versión que lo admite.
+
+**Decisión 1: decirlo en el primer bloque, antes que nada.** El `KeyTakeaway`
+de apertura dice que esta página la escribe un competidor, igual que las otras
+diez, y que la única defensa del lector es exigir que cada afirmación sea
+comprobable. Es contraintuitivo como copy de venta y es lo correcto: sin eso,
+la página pide una confianza que no se ha ganado, y con eso puede pedir algo
+mejor —que la juzguen por sus datos—.
+
+**Decisión 2: `tradeoff` es un campo obligatorio del tipo, no un párrafo
+opcional.** Cada alternativa declara qué NO resuelve. El de Genscore nombra
+Perplexity, Copilot y la ausencia de desglose por país, que es precisamente lo
+que Otterly sí hace, y un test lo exige **por nombre** — no "que tenga
+contrapartida", sino que mencione esas dos cosas. Un listicle de competidor no
+se sesga mintiendo, se sesga olvidando; un test de longitud mínima no habría
+cogido un `tradeoff` que dijera "es una herramienta joven".
+
+**Decisión 3: una sección "cuándo NO deberías cambiar".** Cambiar de
+herramienta reinicia el histórico —las series no se migran entre proveedores— y
+la comparación temporal es justo lo que hace útil a una herramienta GEO. Es la
+recomendación que nadie que venda esto escribe, y es verdad.
+
+**Decisión 4: la página empieza reconociendo en qué es mejor Otterly**, con
+cuatro puntos concretos (usuarios ilimitados a 29 $, 50+ mercados, Perplexity y
+Copilot, la entrada de pago más barata). Mismo criterio que §61: las victorias
+del competidor se marcan. Aquí además es útil — si tu problema es meter a doce
+personas por 29 $, la respuesta correcta es quedarte, y la página lo dice.
+
+**Estructura: por límite, no por ranking.** Quien busca "alternativas a X" ya
+conoce X y ha chocado con algo concreto. Un ranking obliga a declarar un ganador
+global que no existe y empuja a pagar el triple por resolver un problema que no
+se tenía. Los cuatro límites (tope de prompts, motores como add-on, diagnóstico
+sin ejecución, idioma) son la espina dorsal de la página, y dos tests garantizan
+que cada límite tenga al menos una alternativa y que ninguna alternativa apunte
+a un límite inexistente.
+
+**Precios: ninguno de Otterly es de fuente primaria.** `otterly.ai/pricing`
+está bloqueado por el proxy de egress, la misma limitación que ya tuvo Peec AI.
+Se publican porque dos agregadores independientes coinciden y porque cuadran
+con lo investigado el 2026-08-02 para la comparativa 1:1 — y la página dice
+exactamente eso, en vez de presentarlos como verificados. Semrush y Ahrefs se
+describen por estructura de coste (módulo + suite) sin cifra cerrada, porque
+las fuentes públicas se contradicen entre sí.
+
+**Descubribilidad:** cinco SSOT actualizadas en el mismo PR — índice de
+`/comparativas`, `llms.txt`, `sitemap`, journey del piloto y fixture del
+self-check. Las dos últimas ya no son opcionales: las exige el guardián que
+dejó §62.
 
 ---
 
-## 66. Una exclusividad nuestra caducó sin que nada avisara (SEO-POS-1, S4, 2026-08-12)
+## 67. El árbitro y el director de marketing (SEO-POS-1, S3, revisión, 2026-08-12)
+
+**Origen.** El fundador, sobre la primera versión de `alternativas-a-otterly`:
+*"El tono concede mucho. En general tienes que tener un rol de director de
+marketing de Genscore. Por tanto no nos podemos permitir que dejes a la
+competencia mejor en las comparativas. Di cosas buenas pero que en general
+transmita que casi siempre Genscore es la mejor opción."*
+
+**Tenía razón, y el diagnóstico es de rol, no de frases sueltas.** §61 corrigió
+un sesgo *contra* Genscore en la tabla de una comparativa y la lección se
+generalizó mal: pasé de "no esconder las victorias del competidor" a arbitrar
+la categoría. Una página escrita desde el arbitraje no es neutral, es
+neutral-a-nuestra-costa — el competidor no publica la suya con ese criterio, así
+que la asimetría la pagamos enteros nosotros.
+
+**Las cuatro cosas concretas que concedían, y qué se hizo:**
+
+1. **El bloque de apertura decía "esto lo escribe un competidor, no te fíes del
+   todo".** Era cierto y era un regalo: invita a descontar todo lo que viene
+   después, incluido lo verificable. Sustituido por un `KeyTakeaway` que
+   posiciona: cuáles son los cuatro límites de Otterly y cuántos resuelve
+   Genscore.
+2. **Cuatro ventajas de Otterly enumeradas a pelo, arriba del todo.** Se leía
+   como "Otterly gana" aunque tres de las cuatro le sean irrelevantes a un
+   lector español con un dominio. Ahora `OTTERLY_STRENGTHS` es
+   `{claim, context}`: la ventaja entera, y al lado a quién le sirve. "Usuarios
+   ilimitados por 29 $" seguido de "con quince prompts incluidos" es la misma
+   verdad, situada.
+3. **Un `Verdict` titulado "Cuándo NO deberías cambiar"**, con el mismo peso
+   visual que el nuestro. Publicidad del competidor pagada por nosotros. La
+   cautela real —cambiar reinicia el histórico— se mantiene, en párrafo normal
+   y girada hacia lo que de verdad implica: empieza ya donde te vas a quedar, y
+   el plan gratuito no caduca justamente para poder acumular en paralelo.
+4. **Las FAQ preguntaban "¿Es Otterly una mala herramienta?"**, que nos ponía a
+   defenderlo, y "¿por qué fiarte de un competidor?", que nos ponía a
+   desacreditarnos. Sustituidas por las búsquedas reales —"¿cuál es la mejor
+   alternativa?", "¿la más barata?", "¿puedo probar sin dejar Otterly?"— que
+   admiten respuesta verdadera y favorable.
+
+**Lo que NO se tocó, y por qué se dijo en voz alta antes de empezar.** Que hoy
+no ejecutamos Perplexity ni Copilot, y que no hay desglose por país, siguen
+escritos, con test que los exige **por nombre**. No es escrúpulo: es que un
+comprador los verifica en dos clics, y que ese es exactamente el error que
+PRICING-TRUTH-1 obligó a retirar del producto (`docs/launch-plan.md` Fase 2).
+Delante de un competidor se paga más caro que en la propia web. Lo que cambia
+es que se declaran situados —junto a los tres motores que sí cubrimos en todos
+los planes de pago— y no como titular.
+
+**La regla, ya en `.claude/rules/growth-content.md`:** el hecho comprobable no
+se recorta nunca; el orden, el espacio y el contexto son decisión de marketing
+y se toman a nuestro favor. Las dos mitades son la misma política, no un
+equilibrio entre dos.
+
+**Pendiente.** Las otras tres comparativas (`genscore-vs-otterly`,
+`genscore-vs-peec-ai`, `genscore-vs-profound`) se escribieron con el criterio
+anterior. No se tocan en este PR —son cuatro pantallas y su propio slice— pero
+quedan marcadas para una pasada con este mismo encuadre.
+
+---
+
+## 68. Una exclusividad nuestra caducó sin que nada avisara (SEO-POS-1, S4, 2026-08-12)
 
 **Encargo.** Refrescar el pilar `/comparativas/mejores-herramientas-geo-en-espanol`
 añadiendo los tres rivales del mercado español que listaba el plan: CreceRank,

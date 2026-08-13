@@ -5,6 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 
 const EMAIL_NOT_CONFIRMED_ERROR =
   "Tu email todavía no está confirmado. Revisa tu bandeja de entrada y haz clic en el enlace que te enviamos.";
+const INVALID_CREDENTIALS_ERROR = "Email o contraseña incorrectos.";
+const GENERIC_LOGIN_ERROR = "No se pudo iniciar sesión. Inténtalo de nuevo.";
+
+const LOGIN_ERROR_MESSAGES: Record<string, string> = {
+  email_not_confirmed: EMAIL_NOT_CONFIRMED_ERROR,
+  invalid_credentials: INVALID_CREDENTIALS_ERROR
+};
 
 export async function login(formData: FormData) {
   const email = String(formData.get("email") ?? "");
@@ -14,7 +21,7 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    const message = error.code === "email_not_confirmed" ? EMAIL_NOT_CONFIRMED_ERROR : error.message;
+    const message = LOGIN_ERROR_MESSAGES[error.code ?? ""] ?? GENERIC_LOGIN_ERROR;
     redirect(`/login?error=${encodeURIComponent(message)}`);
   }
 

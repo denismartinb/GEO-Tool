@@ -77,6 +77,7 @@ const PUBLIC_PAGES = new Map([
   ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"],
   ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"],
   ["/comparativas/genscore-vs-profound", "Genscore vs Profound — Genscore"],
+  ["/comparativas/alternativas-a-otterly", "Alternativas a Otterly en 2026 — Genscore"],
   ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — Genscore"]
 ]);
 
