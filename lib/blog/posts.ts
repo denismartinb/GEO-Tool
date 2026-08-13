@@ -178,6 +178,17 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "playbooks"
   },
   {
+    slug: "que-es-una-auditoria-geo",
+    title: "Qué es una auditoría GEO (y el checklist para hacerla tú mismo)",
+    description:
+      "Una auditoría SEO pregunta si puedes posicionar; una GEO, si te pueden citar. Las seis dimensiones que se revisan, con sus pesos reales sobre 100, y un checklist de trece puntos para pasarlo a mano.",
+    datePublished: "2026-08-13",
+    coverIcon: "check",
+    coverImage: "/blog/que-es-una-auditoria-geo/cover.webp",
+    primaryKeyword: "qué es una auditoría geo",
+    cluster: "playbooks"
+  },
+  {
     slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
     title: "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude",
     description:

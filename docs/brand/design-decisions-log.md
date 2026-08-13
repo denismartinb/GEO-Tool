@@ -6413,6 +6413,58 @@ equilibrio entre dos.
 anterior. No se tocan en este PR —son cuatro pantallas y su propio slice— pero
 quedan marcadas para una pasada con este mismo encuadre.
 
+---
+
+## 68. Publicar los pesos de la auditoría, no solo el resultado (SEO-POS-1, S5, 2026-08-13)
+
+**Pieza.** `/blog/que-es-una-auditoria-geo`, cluster `playbooks`. Cubre el
+cluster de keywords nº 5 del plan y enlaza la feature real de auditoría web.
+
+**La decisión de fondo: publicar el desglose.** El artículo no da una lista
+genérica de buenas prácticas — publica **los pesos reales** de
+`lib/web-audit/page-checks.ts`: datos estructurados 15, formato de respuesta
+15, metadatos 15, frescura 15, indexabilidad 20, citabilidad 20, con los
+umbrales exactos de cada sub-comprobación (título 15-70 caracteres, descripción
+50-160, frescura 180/540 días, 300 palabras visibles, un solo `<h1>`, dos
+`<h2>` mínimo).
+
+Enseñarlos tiene un coste evidente —cualquiera puede replicar la comprobación
+sin pagarnos— y se asume a propósito. Una puntuación cuyo reparto no se enseña
+es un número que hay que creerse, y el argumento entero de esta categoría es
+que el cliente deje de creerse números. Además, lo que se puede replicar a mano
+es la auditoría de **una** página; el producto la pasa sobre la web entera y la
+cruza con la medición en motores, que es donde está el trabajo real.
+
+**Lo que separa esta pieza de un post de checklist cualquiera:** la sección
+sobre la página sin fecha. Puntuar 0 de frescura cuando no se encuentra ninguna
+fecha convierte una *ausencia de dato* en un *veredicto negativo*, así que el
+score se calcula sobre los 85 puntos restantes y se reescala a 100. Es una
+decisión de método real del producto, no una opinión, y explicarla demuestra
+criterio en vez de afirmarlo. Se generaliza en el artículo a la regla que ya
+rige `global-score.ts`: un componente sin valor se excluye de la media y se
+dice, nunca se sustituye por cero.
+
+**Declara dónde acaba, y eso es lo que la hace citable.** Una auditoría técnica
+dice si tu página *puede* ser citada, no si *lo es*. Sin esa frase el artículo
+vendería la auditoría como si fuera la medición entera — exactamente el reclamo
+que PRICING-TRUTH-1 obligó a retirar del producto. Con ella, el CTA es honesto:
+arregla lo técnico primero porque es lo barato y lo determinista, pero no
+confundas haberlo arreglado con estar apareciendo.
+
+**Encuadre de marketing aplicado (§67):** la comparación SEO vs GEO va en tabla
+y la ventaja no se reparte — la tabla existe para mostrar que son disciplinas
+distintas, no para conceder terreno. El único bloque que "concede" es el de
+dónde acaba la auditoría, y concede sobre nuestro propio producto, no a favor
+de un competidor.
+
+**Portada.** SVG dibujado en el repo y rasterizado a WebP (§47: un `og:image`
+en SVG deja la tarjeta social en blanco). No es decorativa: la anchura de cada
+barra es proporcional a los puntos reales de esa dimensión, así que la imagen
+es el mismo dato que el artículo (ADR 0026, "ningún visual es decorativo").
+
+**Descubribilidad:** SSOT del blog, fixture del self-check y journey del
+piloto, los tres en este PR — lo exige el guardián de §62.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

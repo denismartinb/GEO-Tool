@@ -40,7 +40,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "como-conseguir-que-chatgpt-te-cite": "playbooks",
   "geo-para-ecommerce": "sectores",
   "geo-para-saas-b2b": "sectores",
-  "geo-para-agencias": "sectores"
+  "geo-para-agencias": "sectores",
+  "que-es-una-auditoria-geo": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

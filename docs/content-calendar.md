@@ -131,7 +131,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S2 | Alternativas a Profound en español | 2 — Alternativas | `comparativas` | ✅ Publicado | #(este) |
 | S3 | Alternativas a Otterly (formato listicle) | 2 — Alternativas | `comparativas` | ✅ Publicado | #(este) |
 | S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Trendsights, Mentio) | 3 — Herramientas | `comparativas` | 🔲 Pendiente | — |
-| S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | 🔲 Pendiente | — |
+| S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | ✅ Publicado | #(este) |
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | 🔲 Pendiente | — |
 | S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
 | S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | 🔲 Pendiente | — |
@@ -199,6 +199,33 @@ porque cuadran con lo investigado el 2026-08-02 para la comparativa 1:1 — no
 porque se hayan verificado en origen, y la página lo dice. Semrush y Ahrefs se
 describen por estructura de coste (módulo + suite), sin cifra cerrada, porque
 las fuentes públicas se contradicen entre sí.
+
+**S5 — hecho (2026-08-13).** `/blog/que-es-una-auditoria-geo`, cluster
+`playbooks`. La pieza publica **los pesos reales** de la auditoría técnica
+(`lib/web-audit/page-checks.ts`), no una lista genérica de buenas prácticas:
+datos estructurados 15, formato de respuesta 15, metadatos 15, frescura 15,
+indexabilidad 20 y citabilidad 20, con los umbrales exactos de cada
+sub-comprobación (título 15-70 caracteres, descripción 50-160, frescura
+180/540 días, 300 palabras visibles). Publicar el desglose es la decisión de
+fondo: una puntuación cuyo reparto no se enseña es un número que hay que
+creerse, y es justo lo que esta página reprocha implícitamente al resto de la
+categoría.
+
+**Lo que la diferencia de un post de checklist cualquiera** es la sección
+sobre la página sin fecha: puntuar 0 de frescura cuando no se encuentra
+ninguna fecha convierte una ausencia de dato en un veredicto negativo, así que
+el score se calcula sobre los 85 puntos restantes y se reescala. Es una
+decisión de método real del producto, y explicarla demuestra criterio en vez
+de afirmarlo.
+
+**Y declara dónde acaba:** una auditoría técnica dice si tu página *puede* ser
+citada, no si *lo es*. Esa segunda pregunta solo se responde preguntando a los
+motores. Sin esa frase, el artículo vendería la auditoría como si fuera la
+medición entera.
+
+Portada dibujada en SVG y rasterizada a WebP (§47: un `og:image` en SVG deja la
+tarjeta social en blanco). No es decorativa: la anchura de cada barra es
+proporcional a los puntos reales de esa dimensión.
 
 ---
 

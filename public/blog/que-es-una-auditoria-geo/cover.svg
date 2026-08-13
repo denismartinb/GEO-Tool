@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Las seis dimensiones de una auditoría GEO, con la anchura de cada barra proporcional a sus puntos reales sobre 100: datos estructurados 15, formato de respuesta 15, metadatos 15, frescura 15, indexabilidad 20 y citabilidad 20">
+  <defs>
+    <linearGradient id="bgAudit" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowAuditA" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowAuditB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bar15" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#4f7bff"/>
+    </linearGradient>
+    <linearGradient id="bar20" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#09c5d6"/>
+      <stop offset="1" stop-color="#5de6f2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgAudit)"/>
+  <circle cx="150" cy="150" r="220" fill="url(#glowAuditA)"/>
+  <circle cx="1060" cy="150" r="210" fill="url(#glowAuditB)"/>
+
+  <!-- Silueta de página auditada, a la izquierda. Sin texto, por el mismo
+       motivo que ecommerce/cover.svg y saas-b2b/cover.svg: una portada con
+       copy se queda desincronizada del artículo en cuanto se reescribe una
+       línea, y además obliga a mantener la tipografía dentro del SVG. -->
+  <rect x="96" y="62" width="188" height="176" rx="10" fill="#0d1830" stroke="#1e3a6b" stroke-width="2"/>
+  <rect x="120" y="90" width="112" height="12" rx="6" fill="#3b62b8"/>
+  <rect x="120" y="118" width="140" height="7" rx="3.5" fill="#1e3a6b"/>
+  <rect x="120" y="134" width="126" height="7" rx="3.5" fill="#1e3a6b"/>
+  <rect x="120" y="150" width="134" height="7" rx="3.5" fill="#1e3a6b"/>
+  <rect x="120" y="176" width="60" height="34" rx="6" fill="#0f2547" stroke="#2b4d8f" stroke-width="1.5"/>
+  <rect x="188" y="176" width="60" height="34" rx="6" fill="#0f2547" stroke="#2b4d8f" stroke-width="1.5"/>
+
+  <!-- Marca de comprobación sobre la página. -->
+  <circle cx="284" cy="238" r="27" fill="#0b1a33" stroke="#09c5d6" stroke-width="3"/>
+  <path d="M272 238 l8 9 l16 -19" fill="none" stroke="#5de6f2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Las seis dimensiones. La anchura de cada barra es proporcional a sus
+       puntos reales sobre 100 (lib/web-audit/page-checks.ts): 15/15/15/15 en
+       azul y 20/20 en cian. 1 punto = 21 px. No es decorativo: es el reparto
+       que el artículo publica. -->
+  <g>
+    <rect x="392" y="52" width="315" height="20" rx="10" fill="url(#bar15)"/>
+    <rect x="392" y="52" width="672" height="20" rx="10" fill="#ffffff" fill-opacity=".05"/>
+
+    <rect x="392" y="88" width="315" height="20" rx="10" fill="url(#bar15)"/>
+    <rect x="392" y="88" width="672" height="20" rx="10" fill="#ffffff" fill-opacity=".05"/>
+
+    <rect x="392" y="124" width="315" height="20" rx="10" fill="url(#bar15)"/>
+    <rect x="392" y="124" width="672" height="20" rx="10" fill="#ffffff" fill-opacity=".05"/>
+
+    <rect x="392" y="160" width="315" height="20" rx="10" fill="url(#bar15)"/>
+    <rect x="392" y="160" width="672" height="20" rx="10" fill="#ffffff" fill-opacity=".05"/>
+
+    <rect x="392" y="196" width="420" height="20" rx="10" fill="url(#bar20)"/>
+    <rect x="392" y="196" width="672" height="20" rx="10" fill="#ffffff" fill-opacity=".05"/>
+
+    <rect x="392" y="232" width="420" height="20" rx="10" fill="url(#bar20)"/>
+    <rect x="392" y="232" width="672" height="20" rx="10" fill="#ffffff" fill-opacity=".05"/>
+  </g>
+
+  <!-- Tope de los 100 puntos. -->
+  <line x1="1064" y1="42" x2="1064" y2="262" stroke="#2b4d8f" stroke-width="2" stroke-dasharray="5 6"/>
+</svg>
