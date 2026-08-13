@@ -6096,6 +6096,20 @@ fuera del lienzo (`y=796` con el lienzo a 760) y en vertical sólo desaparece el
 de más abajo. Es el motivo por el que un PASS no cierra la fase: la tabla dice
 que la página cargó, no que se lea.
 
+**El 404 de la consola, segunda versión: sobrio no es descuidado.** La primera
+reutilizaba `EmptyState` —borde discontinuo— con un botón suelto debajo y el
+resto de la pantalla en blanco. El fundador la probó y fue directo: «parece un
+botón mal maquetado» (2026-08-13). Tenía razón, y el fallo era de lenguaje: el
+borde discontinuo de `EmptyState` significa *contenido que todavía no está*
+(«aún no has escaneado», «no hay competidores»), y aquí no falta contenido —
+la ruta no existe. Ahora es un bloque centrado en el área de contenido, con las
+piezas de la propia consola (`.btn`, `Icon`, los tokens de tinta) y **sin
+caja**: en una pantalla por lo demás vacía, una caja alrededor de un mensaje
+corto es justamente lo que lo hacía parecer un widget a medio maquetar. De
+paso se corrigió una incoherencia entre etiqueta y destino: el botón decía
+«Volver a mis dominios» y apuntaba a `/dashboard`, que redirige al proyecto más
+reciente, no a la lista. Ahora son dos salidas y cada una dice a dónde va.
+
 **Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
 testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
 unitario y no puede tenerlo hoy**. La verificación real es el `ux-pilot`

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * NOT-FOUND-ROCKET-1. El 404 de dentro de la consola.
@@ -12,21 +12,43 @@ import { EmptyState } from "@/components/empty-state";
  * marketing a alguien con sesión iniciada; con la escena del cohete a pantalla
  * completa y un botón «Prueba gratis» pasaba de raro a absurdo.
  *
- * Deliberadamente sobrio: se renderiza dentro de `app/dashboard/layout.tsx`,
- * así que el menú lateral, la barra superior y la campana siguen ahí — que es
- * justo lo que alguien necesita para salir de aquí. La salida apunta a
- * `/dashboard`, que redirige al proyecto más reciente.
+ * Sobrio, no descuidado (fundador, 2026-08-13: «parece un botón mal
+ * maquetado»). La primera versión reutilizaba `EmptyState` y su borde
+ * discontinuo, que es el lenguaje de **contenido que todavía no está** —
+ * "aún no has escaneado", "no hay competidores" — y aquí no falta contenido:
+ * la ruta no existe. Con un botón suelto debajo y el resto de la pantalla en
+ * blanco, leía como una maqueta a medias.
+ *
+ * Ahora es un bloque centrado en el área de contenido, con las piezas de la
+ * propia consola (`.btn`, `Icon`, los tokens de tinta) y sin caja: en una
+ * pantalla por lo demás vacía, una caja alrededor de un mensaje corto es
+ * justamente lo que lo hacía parecer un widget roto.
+ *
+ * El cohete no entra aquí a propósito. Quien ve esta pantalla ya es cliente y
+ * está trabajando; la escena es una primera impresión para quien llega de
+ * fuera (`.claude/rules/mission-rocket.md`).
  */
 export default function DashboardNotFound() {
   return (
-    <div className="max-w-[560px]">
-      <EmptyState
-        title="Esta pantalla no existe"
-        description="El enlace que has seguido apunta a un dominio, un escaneo o una sección que ya no está disponible — puede que se archivara o se borrara."
-      />
-      <div className="mt-4">
-        <Link href="/dashboard" className="btn btn-primary btn-sm">
-          Volver a mis dominios
+    <div className="nfc">
+      <div className="nfc-glyph" aria-hidden="true">
+        <Icon name="target" size={22} />
+      </div>
+
+      <p className="nfc-kicker">Error 404</p>
+      <h1 className="nfc-title">Esta pantalla no existe</h1>
+      <p className="nfc-sub">
+        El enlace que has seguido apunta a un dominio, un escaneo o una sección que ya no
+        está disponible. Puede que se archivara, se borrara, o que la dirección esté mal
+        escrita.
+      </p>
+
+      <div className="nfc-actions">
+        <Link href="/dashboard/projects" className="btn btn-primary">
+          Ver mis dominios
+        </Link>
+        <Link href="/dashboard" className="btn btn-ghost">
+          Ir al último dominio
         </Link>
       </div>
     </div>

@@ -7807,3 +7807,52 @@ select.set-field {
   .nf-thrust { opacity: .95; }
   .nf-btn { transition: none; }
 }
+
+/* ============================================================================
+   NOT-FOUND-ROCKET-1 — el 404 de dentro de la consola.
+
+   Sobrio, no descuidado: la primera versión reutilizaba `EmptyState`, cuyo
+   borde discontinuo es el lenguaje de "contenido que todavía no está", y con
+   un botón suelto debajo leía como una maqueta a medias (fundador,
+   2026-08-13). Sin caja a propósito — en una pantalla por lo demás vacía, una
+   caja alrededor de un mensaje corto es lo que lo hace parecer un widget roto.
+   ========================================================================== */
+
+.nfc {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  /* Centrado en lo que queda de pantalla bajo la cabecera de la consola, no
+     pegado arriba: es una pantalla sin contenido, y el vacío se reparte. */
+  min-height: min(560px, 68vh); justify-content: center;
+  max-width: 30rem; margin: 0 auto; padding: 24px 20px;
+}
+
+.nfc-glyph {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px;
+  background: var(--accent-soft); color: var(--accent-ink); margin-bottom: 18px;
+}
+
+.nfc-kicker {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-4); margin: 0 0 8px;
+}
+
+.nfc-title {
+  font-family: var(--font-display), system-ui, sans-serif; font-weight: 700;
+  letter-spacing: -.025em; font-size: 26px; line-height: 1.15; color: var(--ink);
+  margin: 0 0 10px; text-wrap: balance;
+}
+
+.nfc-sub {
+  margin: 0 0 26px; color: var(--ink-3); font-size: 14.5px; line-height: 1.6;
+  max-width: 42ch;
+}
+
+.nfc-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+@media (max-width: 560px) {
+  .nfc { min-height: 62vh; padding: 20px 16px; }
+  .nfc-title { font-size: 23px; }
+  .nfc-actions { width: 100%; }
+  .nfc-actions .btn { flex: 1 1 100%; }
+}
