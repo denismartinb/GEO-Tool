@@ -399,7 +399,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Navegación pública (cabecera) | — *(sin regla propia todavía)* | **GENSCORE-HEADER-1 (2026-08-11)** | log §1, §63 |
 | Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **LLM-RESILIENCE-1 Fases A+B (2026-08-09)** | log §45 · ADR 0029 |
 | Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase 0 (2026-08-09)** · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` |
-| Consola de operador | `admin.md` | **ADMIN-CONSOLE-2a (2026-08-12)** · ADMIN-CONSOLE-1 Fase 1 (2026-08-11) | log §64, §65 · `docs/design-reference/admin-console-1/` |
+| Consola de operador | `admin.md` | **ADMIN-CONSOLE-2a (2026-08-12)** · corrección del arranque de MFA (2026-08-13, §66) · ADMIN-CONSOLE-1 Fase 1 (2026-08-11) | log §64, §65, §66 · `docs/design-reference/admin-console-1/` |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
 irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
