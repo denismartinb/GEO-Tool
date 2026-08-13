@@ -5613,6 +5613,421 @@ misma familia.
   se retira.
 - **Sin piloto agéntico todavía**: mismo estado que la 52 — el interruptor
   vive en `/debug` y esta fase no se ha visto en un preview.
+## 54. La landing deja de ser una aplicación y el CSS de consola deja de viajar a /blog (PRELAUNCH-HARDENING-1 Fase V, V4+V5, 2026-08-10)
+
+Los dos únicos slices de la Fase V que cambian aspecto, y por eso iban aparte
+con su propia pasada de piloto. Medido, no estimado.
+
+### V4 — la landing y `/pricing` pasan a servidor
+
+Las dos páginas comerciales eran `"use client"` **enteras** por muy poco: la
+landing por un campo con estado y su marcador tecleado; `/pricing` por el
+acordeón de preguntas. A cuenta de eso viajaban al navegador seis secciones de
+markup que no cambian nunca, las tres tarjetas de plan y la matriz de
+comparación.
+
+Lo que sostenía el `"use client"` no era el estado, era `router.push`: nueve
+botones que sólo navegaban. Ahora son `<Link>`. El aspecto no cambia —las
+clases (`.lp-cta`, `.lp-nav-btn`, `.btn`) declaran su propio
+`display: inline-flex`, `a { text-decoration: none }` es global, y `.lp-cta-soft`
+ya se usaba sobre un `<a>` en ese mismo hero— y se gana lo que un botón no
+daba: abrir en pestaña nueva, ver el destino al pasar por encima y, en el logo
+de `/pricing`, existir para el teclado (era un `<div onClick>` con
+`cursor: pointer`).
+
+Queda de cliente lo que de verdad reacciona: `HeroDomainField`, `PricingFaq`,
+el cajón de navegación en móvil y el tour.
+
+**Hallazgo de propina:** la landing importaba `Gauge`, `Sparkline`, `Delta` e
+`InfoTip` y **no usaba ninguno**. Dos de ellos son componentes de cliente, así
+que se empaquetaban y se enviaban para nada. Sobraban desde que el tour
+sustituyó a la captura estática del hero (§40) y el linter no los ve porque son
+imports usados… en el sentido de que TypeScript los da por consumidos hasta que
+no lo están.
+
+**Medido:** el JS de cliente de toda la aplicación baja de **1.974.481 a
+1.879.500 bytes (−93 KB, −4,8 %)**, y el texto de la landing —«Recomendaciones
+que se convierten en trabajo hecho», la cita de Beltway, las preguntas de
+precios— desaparece de los chunks de cliente: ahora sólo existe en el HTML que
+sirve el servidor.
+
+**Lo que NO se hizo, y por qué**, porque el slice aprobado decía «landing
+server + tour diferido»: el tour **no** se difiere. Diferirlo de verdad exige
+`ssr: false`, y eso cambia cuatro cosas a la vez: mete salto de layout donde
+hoy no lo hay, retrasa el LCP en vez de adelantarlo (el lienzo del hero *es* el
+elemento grande), deja al piloto sin su prueba de contenido
+(`.ptour--hero .pt-stage` dejaría de existir en el HTML) y toca una zona con
+invariantes propios (`.claude/rules/onboarding.md`: no arranca hasta verse
+entero, la pista del botón, altura constante). Cambiar el aspecto para ganar
+algo sin medir es justo lo contrario de esta fase. Queda propuesto como slice
+propio.
+
+### V5 — `app/console.css`
+
+`globals.css` eran 303 KB servidos en toda página, la mayoría selectores que
+sólo pinta la consola. Ahora hay una segunda hoja que importa
+`app/dashboard/layout.tsx`.
+
+**Se movieron 16 secciones, no las 25 que el análisis marcó como de consola.**
+Las nueve que faltan no se quedaron por prudencia vaga sino por una razón
+concreta: `console.css` se carga *después* de `globals.css`, y `globals.css` no
+está por capas. Hay secciones posteriores que sobrescriben a propósito reglas
+de consola anteriores —MOBILE-1, el layout de consola en móvil, es el caso
+gordo—; traerse las de arriba las pondría por delante de quien debía ganarles.
+Se detectaron **16 solapes** de ese tipo y sus secciones se quedaron donde
+estaban.
+
+**Dos veces se equivocó el clasificador, y las dos importan:**
+
+1. Siguiendo el cierre de imports desde las rutas públicas dio por «sólo
+   consola» el **sistema de artículos del blog** (`.art-*`) — sus clases se
+   aplican desde `lib/` y desde imports relativos que no seguía. Un error hacia
+   el lado peligroso: habría dejado el blog sin estilo.
+2. Corregido con una regla tosca —«si la clase aparece en cualquier fichero
+   fuera de `app/dashboard/**`, se queda»—, esa regla deja fuera cosas que sí
+   son de consola: la pantalla de notificaciones y la campana, cuyas clases se
+   escriben desde `components/`. Se aceptó perder esos ~4 KB. Un guardián que
+   puede quitarle el estilo a una página pública no vale aunque acierte casi
+   siempre, y la versión fina es exactamente la que ya falló.
+
+La regla tosca vive ahora en `tests/console-css-scope.test.ts`, que además
+comprueba que la consola siga importando la hoja. Sin eso, el ahorro se evapora
+en el primer PR que escriba una clase compartida ahí y nadie se entera: no
+falla nada, la página simplemente se ve mal.
+
+**Medido:** el CSS de las páginas públicas baja de **211.298 a 198.514 bytes**
+minificado. Los 12.784 bytes se mueven exactos a la hoja de consola, que carga
+lo mismo que antes.
+
+**Pendiente:** los ~33 KB restantes exigen ordenar la cascada primero
+(`@layer`, o mover MOBILE-1 entero). Es un cambio de quién gana en cada empate
+de especificidad, no una limpieza — su propia fase, con su propia pasada de
+piloto.
+
+### Y de camino, cuatro controles que mentían
+
+Salieron de la propia revisión del PR y el fundador pidió arreglarlos. No son
+rendimiento: son cosas que la interfaz decía y el producto no cumplía.
+
+**El campo del hero tiraba lo que escribías.** La portada te invita a escribir
+tu dominio, pulsabas «Analiza gratis», y llegabas al registro sin rastro de él;
+después el asistente te lo volvía a pedir. Un campo que no sirve para nada es
+teatro. Ahora se guarda en `localStorage` y el asistente lo recoge y lo
+consume. `localStorage` y no la URL porque entre el hero y el asistente hay una
+confirmación por correo: el dato tiene que sobrevivir a salir del navegador y
+volver. Coste declarado: si escribes en el móvil y confirmas en el portátil, se
+pierde — igual que antes.
+
+Al hacerlo apareció **un tercer duplicado del mismo tipo que R1**: había dos
+`isValidDomain`, una en `onboarding-wizard.tsx` y otra en
+`lib/projects/project-form.ts`, **y no eran la misma función** — la del
+asistente es un regex estricto, la del servidor es laxa a propósito
+(«rechaza lo absurdo, deja pasar lo raro»). Si el hero hubiera usado la laxa,
+guardaría dominios que el asistente rechaza acto seguido. Ahora la estricta
+vive una sola vez como `isWellFormedDomain`, con la diferencia entre ambas
+escrita al lado para que nadie las fusione por parecerse.
+
+**Tres botones que no hacían nada:**
+
+- «Generar solución», en la tarjeta de ejemplo de la landing: la recomendación
+  que ilustra es inventada, así que no hay nada que generar. Pasa a `<span>`
+  con `aria-hidden`: es el dibujo de un botón y ahora lo es también para un
+  lector de pantalla.
+- «Hablar con ventas» y el CTA del **plan Agencia** en `/pricing`: éstos sí
+  debían llevar a algún sitio. El propio producto ya dice a dónde
+  (`billing/actions.ts`: *«Este plan no se contrata online. Escríbenos a
+  soporte@genscore.es»*), así que el único plan que **exige** hablar con
+  alguien era el único sin forma de hacerlo. Ahora son `mailto:` con asunto.
+
+La dirección de soporte estaba escrita a mano en cinco sitios, dos de ellos con
+nombres distintos para la misma cadena (`SUPPORT_EMAIL` y `SALES_EMAIL`). No
+son dos canales: es el mismo buzón. Pasa a `lib/support.ts`.
+
+### Y un agujero en la puerta que montó la Fase 0
+
+Al comprobar el estado del PR apareció que **`ci.yml` no corrió sobre la cabeza
+de la rama**. Se disparó con el `opened` del PR (`f8b6148`) y **no** con los
+`push` siguientes, mientras otras ramas la ejecutaban con normalidad esos mismos
+minutos. Es decir: los commits que empujas a un PR ya abierto pueden llegar al
+Human Gate **sin puerta y sin que nada lo diga** — justo la forma de fallo que
+la Fase 0 existía para eliminar, sólo que un nivel más arriba.
+
+**Corrección, unas horas después.** La primera versión de esta entrada decía que
+los eventos `synchronize` de esta rama «sencillamente no aparecen». Es falso, y
+la forma real es peor: **es intermitente**. En la misma rama y la misma tarde,
+tres pushes (`3bdc8ae`, `47b2d39`, `1257700`) no dispararon nada y dos
+(`bf95b9b`, `fda1a2b`) sí. Un fallo sistemático se nota y se arregla; uno
+intermitente deja creer que la puerta está puesta cuando la mitad de las veces
+no lo está.
+
+La causa sigue sin diagnosticar. Lo que sí se ha hecho es que sea
+**recuperable**: `ci.yml` acepta ahora `workflow_dispatch`, y con él se verificó
+la cabeza real. Un evento perdido se puede reponer a mano; una puerta que sólo
+puede dispararla ese evento perdido, no.
+
+**Regalo de esa duplicidad**: `bf95b9b` corrió dos veces —una por
+`pull_request`, otra por el dispatch— y salió **verde una y roja la otra**. El
+mismo commit. Era el flake de `lib/llm/extraction-fetch.test.ts`: el backoff usa
+*full jitter* (`Math.random() * 10.000`) y el caso del plazo afirma que la
+espera no cabe en 50 ms, cosa que una de cada ~200 veces no se cumple. Se fija
+el sorteo en ese test. Los casos vecinos de `computeRetryDelayMs` ya inyectaban
+`random: () => 1`; ése se había quedado sin hacerlo porque llama al helper de
+más arriba, que no expone ese punto de inyección. Un rojo espurio en la puerta
+enseña a ignorar los rojos.
+
+Queda anotado como pendiente de la Fase Q: entender por qué se pierden esos
+eventos, y si hace falta, dejar de depender de ellos.
+
+### Dos regresiones visibles que el piloto no podía ver (2026-08-11)
+
+Las encontró el fundador mirando el preview en el móvil. Las dos son de V4 y
+las dos son mías; ninguna la podía cazar el piloto, y eso es lo instructivo.
+
+**Los botones del hero salían por duplicado.** Al mover «Analiza gratis» dentro
+de `HeroDomainField` —tenía que guardar el dominio escrito antes de navegar, y
+eso sólo puede hacerlo la isla de cliente— no borré el bloque
+`.lp-hero-actions` que se había quedado en `landing-page.tsx`. Dos pares de
+botones idénticos, uno debajo del otro. El piloto no lo vio porque su
+`ContentExpectation` comprueba que el contenido esté, no que esté **una sola
+vez**; y ningún aserto mide cuántos `.lp-cta` hay.
+
+**Los CTA del cajón móvil perdieron su color.** «Prueba gratis» quedó con el
+texto gris sobre su fondo azul. La causa es más interesante que el síntoma:
+esos dos controles pasaron de `<button onClick={router.push}>` a `<Link>`, y
+`.lp-mobnav a` —escrita cuando dentro del cajón sólo había enlaces de
+navegación— tiene especificidad `(0,1,1)` y le gana a `.lp-cta` `(0,1,0)`. Le
+imponía color, tamaño y relleno.
+
+**La corrección que importa no es el CSS, es el razonamiento.** El cuerpo del
+PR afirmaba que los nueve botones convertidos serían «visualmente idénticos por
+construcción, porque todas las clases declaran su propio `display`». Eso cubría
+los estilos **propios** del elemento y pasaba por alto los que **sólo se
+activan al cambiar de etiqueta**: una regla `.ancestro a` no existía para ese
+botón hasta que el botón se volvió un enlace. Queda como invariante en
+`.claude/rules/styles.md`, con el barrido concreto que había que haber hecho.
+
+Se revisaron de paso los otros ocho enlaces convertidos: sólo el cajón móvil
+tiene una regla de ese tipo (`.lp-nav-links a` y `.lp-footer .links a` alcanzan
+únicamente a enlaces que ya lo eran, y `/pricing` no tiene ninguna).
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase V; regla de ruta
+nueva `.claude/rules/styles.md`; invariante nuevo en
+`.claude/rules/onboarding.md`; §40 (el tour del hero y sus invariantes); §42
+(la Fase 0, que montó esta puerta); §43 (los duplicados de la Fase R, de los
+que éste es el tercero).
+
+---
+
+## 55. El piloto aprende a contar y a leer un color (PRELAUNCH-HARDENING-1 Fase Q5b, 2026-08-11)
+
+El fundador abrió el despliegue de la Fase V y encontró dos fallos a simple
+vista, **después** de que el piloto hubiera corrido y de que yo reportara que
+había pasado:
+
+1. **El CTA del hero salía dos veces.** Al mover el campo de dominio a una isla
+   de cliente (`components/landing/hero-domain-field.tsx`) se llevó consigo los
+   botones, y el bloque `.lp-hero-actions` original se quedó donde estaba.
+2. **El CTA del cajón móvil salía gris sobre azul.** `.lp-mobnav a` (0,1,1) le
+   gana a `.lp-cta` (0,1,0) y le impone su color. Eso ya está escrito como
+   invariante en `.claude/rules/styles.md` desde el mismo día.
+
+Lo que importa no es que se colaran, sino **por qué el piloto no los vio**, que
+son tres causas distintas y sólo una es «mirar mejor».
+
+### Causa 1 — la captura existía y nadie la abrió
+
+La foto de `/` con los dos botones estaba en el artefacto. Yo leí la tabla de
+✅ del workflow y la di por veredicto. El CLAUDE.md ya dice que no lo es —el
+arnés sólo sabe de fallos mecánicos y el juicio es del agente—, así que esto no
+era un hueco de herramienta sino de proceso.
+
+Arreglado como proceso, que es gratis: `.claude/agents/ux-pilot.md` gana una
+sección («The workflow's green tick is NOT the verdict») que obliga a enumerar
+las pantallas que toca el PR, abrir todas sus capturas en las tres anchuras y
+**decir cuántas y cuáles** en el informe, en una línea nueva y obligatoria del
+formato («Capturas abiertas»). Sin esa línea el veredicto es INCONCLUSIVE. La
+pregunta 5 del Human Gate la pide también. Una afirmación que nadie puede
+comprobar —«miré las capturas»— se sustituye por una lista de ficheros.
+
+### Causa 2 — de 560 capturas, ninguna tenía el cajón abierto
+
+Esta no se arregla mirando más fuerte: el cajón sólo existe por debajo de
+900 px y sólo después de un clic, así que **no había nada que mirar**. Un hueco
+de cobertura, no de atención.
+
+`tests/pilot/journeys/landing.spec.ts` (nuevo) cubre `/` y `/pricing` —que
+tampoco se visitaba— y, en la anchura móvil, abre el cajón, comprueba que sus
+enlaces se ven, lo juzga abierto y lo cierra por su propia X. En tablet y
+escritorio se **salta ruidosamente** en vez de pasar en silencio: un test que no
+comprueba nada y reporta verde es exactamente lo que produjo este incidente.
+
+### Causa 3 — el arnés no contaba nada ni leía ningún color
+
+Los dos fallos son mecánicos: una máquina sabe contar y sabe calcular un
+contraste. `tests/pilot/support/page-audit.ts` (nuevo) añade dos chequeos a
+cada captura:
+
+- **Controles duplicados.** Dos controles idénticos —misma etiqueta, mismo
+  nombre accesible, mismas clases, mismo destino— dentro de un mismo *landmark*.
+  Se agrupa por el `section`/`nav`/`header` más cercano, **no por padre común**:
+  las dos copias del hero vivían en contenedores hermanos, así que una regla de
+  «mismo padre» habría pasado por encima del único fallo para el que existe.
+  Quedan exentas las repeticiones dentro de listas y tablas, o de **dos o más
+  hermanos con la misma forma**: eso es una lista, no un duplicado (el umbral
+  empezó en tres y estaba mal — ver «Lo que encontró la primera pasada real»
+  más abajo).
+- **Contraste.** Texto de un control por debajo de AA (4.5:1, o 3:1 en texto
+  grande) contra su propio fondo. Se **salta lo que no puede juzgar con
+  honestidad** en vez de adivinar: un control desactivado (ahí el poco contraste
+  es el mensaje), un degradado o una imagen de fondo, y cualquier
+  semitransparencia. Un chequeo que adivina acaba silenciado por lista blanca en
+  una semana.
+
+Las dos listas blancas (`DUPLICATE_ALLOW_LIST`, `CONTRAST_ALLOW_LIST`) **nacen
+vacías** a propósito: una lista blanca que empieza poblada es una lista que
+nadie auditó nunca. Y siguen vacías: los dos chequeos se corrieron contra la
+landing y `/pricing` **reales** —`next build` + `next start` en local, tres
+anchuras, con el cajón abierto en móvil— antes de subir nada, y no hay ni un
+solo hallazgo que silenciar.
+
+Esa misma pasada encontró un **falso positivo** y lo corrigió antes de que
+existiera: el punto de paso del tour (`button.pt-dot.is-on`, 8 px, sin texto
+ninguno, con `aria-label="Paso 1 de 8"`) reportaba 3,46:1 de tinta oscura sobre
+azul. Una ratio de contraste para un carácter que no se dibuja. El contraste
+mide **texto**, así que un control sin texto renderizado queda fuera: los
+iconos son territorio de WCAG 1.4.11, otra medición que este chequeo no hace y
+no va a fingir que hace.
+
+Y se comprobó que los dos chequeos **disparan contra el DOM real**, no sólo
+contra el fixture: reproduciendo las dos regresiones sobre la landing servida
+en local —clonando el bloque de acciones del hero, e inyectando el color que
+`.lp-mobnav a` imponía— saltan los dos, el duplicado con las dos copias
+localizadas y el contraste con **1,07:1**. Ese número corrige de paso lo que yo
+había escrito de memoria (~2,5:1): el gris #6b7280 y el azul #2563eb tienen
+casi la misma luminancia, así que el fallo era bastante peor de lo que parecía
+al describirlo.
+
+El reparto es el mismo que ya usa `pilot-selfcheck-checks.mjs`: **medir** en el
+navegador (`journey.ts`, que necesita estilos calculados), **juzgar** en
+funciones puras con 18 tests unitarios en los dos sentidos. Y `auditControls`
+se exporta suelta para poder correr los dos chequeos contra un estado
+*abierto*, que es donde vivía el segundo fallo.
+
+Y, porque una puerta que no puede fallar no es una puerta, el self-check gana
+dos casos rotos más (`PILOT_FIXTURE_BREAK=duplicate` y `=contrast`, con los
+colores reales del incidente: #6b7280 sobre #2563eb, que medido da 1,07:1 — casi la misma luminancia, no los ~2,5 que sugiere el aspecto). Son seis casos
+ahora, dos de ellos con esta forma exacta.
+
+### Lo que encontró la primera pasada real, que es el punto
+
+Los chequeos corrieron contra el despliegue de verdad y devolvieron doce
+fallos. Ninguno era de la Fase V: eran deuda que llevaba ahí meses, invisible
+porque nadie la medía. Uno de los cuatro era **mío**.
+
+**El falso positivo (mío, arreglado).** El detector contó como duplicado las
+dos tarjetas `.cm2-emg` de Competidores, cada una con su botón «Seguir». Es una
+lista legítima que daba la casualidad de tener dos elementos, y mi exención
+pedía **tres** hermanos iguales. Dos es la lectura honesta: lo que separa una
+lista de una duplicación no es cuántas copias hay, sino si sus **contenedores
+coinciden**. El coste, dicho en voz alta: una duplicación que deje dos
+contenedores *idénticos* ya no se ve. El fallo del hero no tiene esa forma
+(`.lp-hero-form` junto a `.lp-hero-actions`: mismos botones, envoltorios
+distintos), y la alternativa —saltar en cada lista de dos tarjetas del
+producto— es la que consigue que el chequeo acabe en una lista blanca en una
+semana. Verificado midiendo: con el umbral en dos, la lista de dos tarjetas
+calla y la regresión del hero **sigue saltando**. Y el fixture sano lleva ahora
+una lista de dos tarjetas iguales cuyo único trabajo es no aparecer nunca en
+los hallazgos, para que la exención no se pueda romper en silencio.
+
+**Los tres defectos reales (arreglados).** Los tres eran un token demasiado
+claro, y los tres siguen el precedente que ya estaba escrito en el propio
+`globals.css` desde el PR #312 (donde el piloto encontró lo mismo en
+`.blog-post-meta`):
+
+| Dónde | Antes | Ratio | Ahora | Ratio |
+|---|---|---|---|---|
+| `.legal-updated` (enlace «Blog» de las pilares) | `--ink-4` | 2,63:1 | `--ink-3` | 4,76:1 |
+| `.seg button` (filtros de Recomendaciones) | `--ink-3` | **4,44:1** | `--ink-2` | 7,50:1 |
+| `.notif-tab` (pestaña inactiva de Notificaciones) | `--brand-ink-4` | 2,58:1 | `--brand-ink-3` | 5,43:1 |
+
+**Y el cuarto, en la segunda pasada: la misma familia otra vez.** Con esos tres
+arreglados, el piloto bajó de 12 fallos a 3, y los 3 eran un único control:
+`<a class="btn btn-primary">Prueba gratis</a>` al final de
+`/blog/como-elegir-competidores-analisis-geo`, en **1,58:1** — índigo oscuro
+(`--accent-ink`) sobre índigo (`--accent`). El botón no se leía.
+
+La causa es *literalmente* la de la regresión del cajón móvil que abre esta
+sección: `.blog-body a` tiene especificidad (0,1,1) y `.btn-primary` (0,1,0),
+así que la regla del ancestro le impone a un botón el color de un enlace de
+prosa. La regla se escribió cuando dentro de un artículo sólo había enlaces —
+igual que `.lp-mobnav a`. Dos instancias distintas de un mismo patrón, en dos
+zonas que no se parecen en nada, encontradas con una semana de diferencia: eso
+es lo que convierte el invariante de `.claude/rules/styles.md` en algo que hay
+que barrer, no en la anécdota de un PR.
+
+Arreglado excluyendo los botones —`.blog-body a:not(.btn)` y
+`.legal-body a:not(.btn)`— en vez de parchear cada variante. Es lo que la regla
+siempre quiso decir (va de enlaces de prosa) y deja cubiertas las variantes que
+todavía no existen. La misma trampa estaba armada en
+`/comparativas/mejores-herramientas-geo-en-espanol`, que tiene otro
+`.btn.btn-primary` dentro de un `.legal-body`; el arreglo estructural la
+desactiva de paso.
+
+El de los filtros deja una lección propia: `--ink-3` pasa AA sobre blanco (4,76:1)
+y **no** pasa sobre `--surface-sunk` (4,44:1). Un token que aprueba sobre un
+fondo no aprueba sobre otro, y a ojo esos 6 centésimos no existen. Es
+exactamente el tipo de fallo que una persona no encuentra mirando una captura.
+En los dos casos de pestañas la jerarquía la sigue marcando el estado activo,
+que además del color cambia fondo (y sombra, en `.seg`).
+
+### Y un tercer aprendizaje que no venía en el plan: el techo de tiempo
+
+La pasada de `16a07ea` salió **`cancelled` a los 20,1 minutos**, con
+`timeout-minutes: 20`. No fue una anomalía de esta rama: mirando las pasadas de
+esos días, todas iban en **16-17 minutos**, o sea tres minutos de margen para
+cualquiera. El recorrido crece en cada fase, y ese día ganó de golpe `/` y
+`/pricing` con el cajón móvil, un tercer proyecto, y todas las pantallas que
+dejaron de estar vacías al sembrarse los datos de la cuenta piloto.
+
+Lo peligroso no es el minuto de más: **GitHub etiqueta un timeout como
+`cancelled`**, que se lee como «alguien lo paró a mano» y no como «la puerta no
+llegó a correr». Es la misma trampa que el ✅ del workflow, con otra palabra. El
+techo sube a 30 y queda escrito en el propio workflow y en los límites
+conocidos de `docs/agentic-user-pilot.md`: un piloto que no termina es
+INCONCLUSIVE, nunca un pase.
+
+> **El techo de 30 queda superseded por §65** (PR #389, 2026-08-12), que llegó
+> a `main` en paralelo con el mismo diagnóstico desde otro PR y va más lejos:
+> sube a **35** con margen medido (el barrido de #388 tardó 19m04s, o sea 56
+> segundos de margen) y, sobre todo, **añade un paso `cancelled()`** que publica
+> un INCONCLUSIVE cuando el job muere antes de juzgar. Eso es lo que faltaba
+> aquí: yo subí el techo pero dejé que una pasada cortada siguiera pareciendo un
+> aprobado si el comentario de PASS ya se había publicado. Al resolver el
+> conflicto se tomó su versión entera. Lo que sí sobrevive de esta sección es lo
+> de abajo, que §65 no cubre: el commit que sube el techo **no construía**, así
+> que ninguno de los dos arreglos podía ejercitarse.
+
+Y subir ese techo destapó **el mismo bucle del 2026-08-05, en el escalón de al
+lado**: el commit que lo subía sólo tocaba `.github/` y `docs/`, así que
+`vercel-should-build.sh` lo saltó —correctamente, según su lista— y no hubo
+build, ni preview, ni pasada. El arreglo del timeout no se podía ejercitar. La
+excepción de `tests/pilot/**` existía exactamente por este argumento («el
+piloto sólo corre contra un preview»), pero el **workflow** del piloto se lo
+tragaba el `.github/*` genérico. Ahora `.github/workflows/ux-pilot.yml`
+construye, y sólo ése: los demás workflows corren por `push`/`pull_request` y
+no necesitan un preview. La prueba que afirmaba lo contrario está invertida a
+propósito, con el motivo escrito dentro, porque era una suposición que costó
+una pasada.
+
+**Lo que esto NO arregla, dicho en voz alta.** Se cierran dos agujeros, no la
+clase. El motivo de abrir las capturas sigue siendo todo lo que nadie ha
+pensado en afirmar todavía; por eso la causa 1 se arregla en el proceso y no se
+declara resuelta por las causas 2 y 3.
+
+**Trazabilidad.** §54 (la fase donde entraron los dos fallos); §49 (el
+self-check y por qué sus casos rotos son el contrato);
+`.claude/rules/styles.md` (la regla de `<button>` → `<a>`, escrita el mismo
+día); `docs/agentic-user-pilot.md`.
 
 ---
 

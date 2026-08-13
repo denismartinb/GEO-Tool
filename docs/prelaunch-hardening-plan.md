@@ -6,13 +6,20 @@ una con su Human Gate.
 **Progreso (2026-08-09):**
 
 - **Fase 0 ✅ hecha** — log §42, mergeada en #366.
-- **Fase V 🟡 parcial** — V0a, V1, V2, V3, V6, V7 y V8 hechos y mergeados en
-  #366. **V4 y V5 sin empezar**: son los únicos slices que cambian el aspecto
-  del producto y necesitan su propia pasada de piloto. V9/V10/V11 siguen
-  fuera (migración, cifra publicada, superficie de auth).
+- **Fase V 🟢 completa (V0–V8)** — V0a, V1, V2, V3, V6, V7 y V8 en #366;
+  **V4 y V5 hechos** (log §54): la landing y `/pricing` pasan a servidor
+  (−93 KB de JS de cliente) y nace `app/console.css` (−12,8 KB de CSS en toda
+  página pública). Dos cosas quedaron fuera **a propósito y documentadas**: el
+  tour NO se difiere (ver §54: `ssr: false` mete salto de layout, retrasa el
+  LCP y choca con `.claude/rules/onboarding.md`) y quedan ~33 KB de CSS de
+  consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
+  (migración, cifra publicada, superficie de auth).
 - **Fase R 🟡 en curso** — R1 y R2 hechos (log §43). Quedan R3–R8.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
-  evidencia se sube de verdad (log §49). El resto de Q5 y las demás Q siguen
+  evidencia se sube de verdad (log §49), y **Q5b está hecho** (log §55): el
+  arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
+  `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
+  nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
   pendientes.
 - **Fases P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
   su aprobación propia de excepción de escritura del piloto, como UX-PILOT-2/3.
@@ -213,11 +220,39 @@ forma medible.*
   evidencia no captura nada, porque el propio self-check limpia `.pilot/` entre
   casos.
 
+  **Nuevo, 2026-08-10:** `ci.yml` **se dispara de forma intermitente en los
+  `push` a un PR ya abierto** — tres pushes sin y dos con, misma rama y misma
+  tarde (log §54, sección final). Se le añadió `workflow_dispatch` para poder
+  reponerlo a mano, pero falta entender por qué se pierden esos eventos
+  `synchronize`. Intermitente es peor que roto: deja creer que la puerta está
+  puesta cuando la mitad de las veces no lo está.
+
   **Estado (2026-08-10): el caso sano vuelve a pasar y la evidencia se sube**
   (log §49). Quedan de Q5, sin empezar: `ContentExpectation` en
   `second-project.spec.ts`, el `pr_number` del workflow de escritura, la
   pérdida intermitente de sesión, y la conversación de devolverlo a puerta
   de PR.
+
+- **Q5b · El piloto aprende a contar y a leer un color** ✅ **hecho
+  (2026-08-11, log §55).** Fase propia, abierta porque el fundador encontró a
+  ojo dos fallos visibles en el despliegue de la Fase V **después** de que el
+  piloto corriera: el CTA del hero duplicado y el CTA del cajón móvil en gris
+  sobre azul. Tres causas distintas, arregladas en tres sitios distintos:
+  1. **Proceso** — la captura del duplicado existía y nadie la abrió. El ✅ del
+     workflow no es el veredicto; `.claude/agents/ux-pilot.md` obliga ahora a
+     enumerar y **nombrar** las capturas abiertas, y la pregunta 5 del Human
+     Gate las pide.
+  2. **Cobertura** — de 560 capturas, ninguna tenía el cajón móvil abierto.
+     `tests/pilot/journeys/landing.spec.ts` cubre `/` y `/pricing` y abre el
+     cajón en la anchura móvil (saltándose ruidosamente las otras dos).
+  3. **Arnés** — `tests/pilot/support/page-audit.ts` añade detección de
+     controles duplicados y comprobación de contraste AA, con 18 tests
+     unitarios y dos casos rotos nuevos en el self-check (`duplicate`,
+     `contrast`), que pasa a tener seis.
+
+  Lo que **no** cierra, dicho en el propio log: la clase entera. Se tapan dos
+  agujeros; abrir las capturas sigue siendo obligatorio porque el motivo de
+  mirarlas es todo lo que nadie ha pensado en afirmar todavía.
 
 ### Fase P — PILOTO E2E EXTREMO A EXTREMO (lo que pediste, con nombre y guardas)
 

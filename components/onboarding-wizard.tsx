@@ -9,7 +9,8 @@ import { Icon } from "@/components/ui/icon";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { sanitizePromptLineText } from "@/lib/projects/project-form";
+import { isWellFormedDomain, sanitizePromptLineText } from "@/lib/projects/project-form";
+import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 
 const DEFAULT_PROMPT_CAP = 10;
 const GENERATE_MORE_BATCH_SIZE = 5;
@@ -71,17 +72,6 @@ const wizardSteps = [
 ];
 
 type Competitor = { name: string; domain: string };
-
-function isValidDomain(value: string) {
-  const domain = value
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "");
-
-  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain);
-}
 
 // Banderitas mini (mismas que onboarding.jsx) — solo los códigos definidos en
 // la referencia; el resto cae al fallback "us" igual que `F[code] || F.us`.
@@ -340,8 +330,24 @@ export function OnboardingWizard({
   const [isGeneratingMore, startGenerateMoreTransition] = useTransition();
   const [generateMoreError, setGenerateMoreError] = useState<string | null>(null);
 
+  /**
+   * Recoge el dominio que la persona escribió en el hero de la landing.
+   *
+   * Hasta hoy ese campo se tiraba: escribías tu dominio en la portada, te
+   * registrabas, y el asistente te lo volvía a pedir como si no lo hubieras
+   * dicho. Se lee una sola vez al montar y se consume, para que un segundo
+   * dominio en la misma cuenta no nazca relleno con el primero.
+   *
+   * En un efecto y no en el estado inicial porque `localStorage` no existe en
+   * el servidor: leerlo durante el render rompería la hidratación.
+   */
+  useEffect(() => {
+    const pending = takePendingDomain();
+    if (pending) setDomain((current) => (current ? current : pending));
+  }, []);
+
   const domainHasValue = domain.trim().length > 0;
-  const domainIsValid = isValidDomain(domain);
+  const domainIsValid = isWellFormedDomain(domain);
   const typedPlaceholder = useTypewriter(TYPE_SAMPLES, !isDomainFocused && domain === "");
   const selectedCountry = useMemo(
     () => COUNTRIES.find((option) => option.code === country) ?? COUNTRIES[0],

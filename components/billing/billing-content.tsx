@@ -3,9 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { getUsageSummary } from "@/lib/billing";
 import { PlanBillingSection } from "@/components/billing/plan-billing-section";
 import { CheckoutSuccessPoller } from "@/components/billing/checkout-success-poller";
-
-/** Single place the support address is written, so it cannot drift. */
-const SUPPORT_EMAIL = "soporte@genscore.es";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 /**
  * CONSOLE-REDESIGN-1: this is the "Plan" section of the single settings page.

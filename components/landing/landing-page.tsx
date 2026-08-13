@@ -1,18 +1,11 @@
-"use client";
-
-import { useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { DotMeter } from "@/components/ui/dot-meter";
-import { Gauge } from "@/components/ui/gauge";
-import { Sparkline } from "@/components/ui/sparkline";
-import { Delta } from "@/components/ui/delta";
-import { InfoTip } from "@/components/ui/info-tip";
-import { useTypewriter } from "@/components/ui/use-typewriter";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
+import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 
 const FEATURES: Array<{ icon: string; t: string; d: string }> = [
@@ -45,16 +38,25 @@ function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon
   );
 }
 
-const HERO_DOMAIN_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
-
+/**
+ * La landing es un **componente de servidor** (PRELAUNCH-HARDENING-1 Fase V,
+ * V4). Lo era todo de cliente por un solo campo con estado, y con ello se
+ * llevaba al navegador seis secciones de markup que no cambian nunca.
+ *
+ * Lo que queda de cliente, y por qué:
+ * - `HeroDomainField` — el campo del hero: estado y marcador tecleado.
+ * - `MarketingMobileNav` — el cajón de navegación en móvil: abre y cierra.
+ * - `ProductTour` — el tour del hero, que es una animación.
+ *
+ * Todo lo demás navega con `<Link>` en vez de con `router.push`, que es lo que
+ * obligaba a que la página entera fuera de cliente. El aspecto no cambia: las
+ * clases (`.lp-cta`, `.lp-nav-btn`, `.btn`) son todas de clase y declaran su
+ * propio `display: inline-flex`, y `a { text-decoration: none }` es global —
+ * de hecho `.lp-cta-soft` ya se usaba sobre un `<a>` en este mismo hero.
+ * Se gana además lo que un botón no daba: abrir en pestaña nueva y ver el
+ * destino al pasar por encima.
+ */
 export function LandingPage() {
-  const router = useRouter();
-  const [domain, setDomain] = useState("");
-  const [isDomainFocused, setIsDomainFocused] = useState(false);
-  const typedPlaceholder = useTypewriter(HERO_DOMAIN_SAMPLES, !isDomainFocused && domain === "");
-
-  const goToSignup = () => router.push("/signup");
-  const goToLogin = () => router.push("/login");
 
   return (
     <div className="lp">
@@ -72,32 +74,13 @@ export function LandingPage() {
             Descubre si los motores de IA mencionan tu marca, frente a quién pierdes y exactamente
             qué cambiar primero. Análisis claro, acciones que puedes ejecutar.
           </p>
+          {/* Las llamadas a la acción viven DENTRO de `HeroDomainField`, no
+              aquí: «Analiza gratis» tiene que guardar el dominio escrito antes
+              de navegar, y eso sólo puede hacerlo la isla de cliente. Tenerlas
+              también aquí las pintaba dos veces (hallazgo del fundador sobre el
+              preview de #379, 2026-08-11). */}
           <div className="lp-hero-form">
-            <div className="lp-field">
-              <Icon name="globe" size={18} className="lp-field-ico" />
-              <input
-                className="lp-field-input"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && goToSignup()}
-                onFocus={() => setIsDomainFocused(true)}
-                onBlur={() => setIsDomainFocused(false)}
-                placeholder={isDomainFocused || domain ? "Escribe tu sitio web" : ""}
-                spellCheck={false}
-              />
-              {!isDomainFocused && !domain && (
-                <span className="lp-field-ghost" aria-hidden="true">
-                  {typedPlaceholder}
-                  <span className="type-caret" />
-                </span>
-              )}
-            </div>
-            <div className="lp-hero-actions">
-              <button className="lp-cta" onClick={goToSignup}>
-                Analiza gratis <Icon name="arrRight" size={16} />
-              </button>
-              <a className="lp-cta-soft" href="#como">Ver cómo funciona</a>
-            </div>
+            <HeroDomainField />
           </div>
         </div>
 
@@ -181,9 +164,9 @@ export function LandingPage() {
                   </div>
                 ))}
               </div>
-              <button className="btn btn-primary mt24" onClick={goToSignup}>
+              <Link className="btn btn-primary mt24" href="/signup">
                 Empieza gratis <Icon name="arrRight" size={15} />
-              </button>
+              </Link>
             </div>
 
             {/* mock rec card */}
@@ -211,9 +194,15 @@ export function LandingPage() {
                 </div>
                 <div className="ev-quote">…las opciones más recomendadas son <span className="mk">Orbit</span> y <span className="mk">Quanta</span>, con onboarding sólido…</div>
               </div>
-              <button className="btn btn-soft btn-sm mt12" style={{ width: "100%" }}>
+              {/* Es el dibujo de un botón dentro de una tarjeta de ejemplo, no
+                  un control: la recomendación que ilustra es inventada, así que
+                  no hay nada que generar. Se pinta como `<span>` para que un
+                  lector de pantalla no lo anuncie como pulsable y el teclado no
+                  se pare en él. El aspecto no cambia: `.btn` declara su propio
+                  `display: inline-flex`. */}
+              <span className="btn btn-soft btn-sm mt12" style={{ width: "100%" }} aria-hidden="true">
                 <Icon name="sparkles" size={13} />Generar solución
-              </button>
+              </span>
             </div>
           </div>
         </div>
@@ -248,10 +237,10 @@ export function LandingPage() {
               <h2>Descubre tu visibilidad en IA hoy</h2>
               <p>Introduce tu dominio y obtén tu primer informe en minutos. Gratis.</p>
               <div className="row">
-                <button className="btn btn-white btn-lg" onClick={goToSignup}>
+                <Link className="btn btn-white btn-lg" href="/signup">
                   Prueba gratis <Icon name="arrRight" size={16} />
-                </button>
-                <button className="btn btn-onaccent btn-lg" onClick={goToLogin}>Iniciar sesión</button>
+                </Link>
+                <Link className="btn btn-onaccent btn-lg" href="/login">Iniciar sesión</Link>
               </div>
             </div>
           </div>

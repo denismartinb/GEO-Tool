@@ -16,6 +16,7 @@ function response(status: number, headers: Record<string, string> = {}) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("fetchExtractionWithRetry", () => {
@@ -99,6 +100,15 @@ describe("fetchExtractionWithRetry", () => {
   it("does not sleep past the deadline before a retry", async () => {
     const fetchMock = vi.fn().mockResolvedValue(response(429));
     vi.stubGlobal("fetch", fetchMock);
+    // El backoff es *full jitter* — `Math.random() * 10.000` — y este caso
+    // afirma que la espera NO cabe en los 50 ms que quedan de presupuesto. Sin
+    // fijar el sorteo, una de cada ~200 ejecuciones saca un retraso menor que
+    // esos 50 ms, el reintento sí cabe, y el test falla sin que nada esté roto.
+    // Pasó en CI el 2026-08-10 sobre código que no lo tocaba. Un rojo espurio
+    // en la puerta enseña a ignorar los rojos, que es peor que no tener puerta.
+    // Se fija al máximo (10 s) porque es lo que el test quiere decir: cuando el
+    // backoff calculado no cabe, no se reintenta.
+    vi.spyOn(Math, "random").mockReturnValue(1);
 
     await expect(
       fetchExtractionWithRetry(
