@@ -2,6 +2,7 @@ import "server-only";
 
 import type { createServiceClient } from "@/lib/supabase/service";
 import { PLANS } from "@/app/pricing/plans-data";
+import { loadAutomationSnapshot, type AccountAutomation, type ProjectAutomation } from "@/lib/admin/automation";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -19,6 +20,12 @@ export type AdminUserRow = {
   trialEndsAt: string | null;
   projectCount: number;
   scanCount30d: number;
+  /**
+   * ADMIN-CONSOLE-2a. `null` cuando los automatismos no se pudieron leer
+   * (migración pendiente) — la pantalla muestra "sin dato", nunca un cero que
+   * parecería una respuesta.
+   */
+  automation: AccountAutomation | null;
 };
 
 export type AdminUsersPage = {
@@ -31,6 +38,11 @@ export type AdminUsersPage = {
    * count": an invisible truncation reads as complete when it isn't.
    */
   authUsersTruncated: boolean;
+  /**
+   * ADMIN-CONSOLE-2a. `"unmigrated"` cuando las columnas de automatismos no se
+   * pudieron leer — la pantalla lo dice en vez de pintar ceros.
+   */
+  automationAvailability: "ok" | "unmigrated";
 };
 
 export type AdminUserProject = {
@@ -40,6 +52,8 @@ export type AdminUserProject = {
   createdAt: string;
   isArchived: boolean;
   latestScan: { status: string; createdAt: string } | null;
+  /** ADMIN-CONSOLE-2a. `null` si no se pudo leer, o si el proyecto está archivado (el barrido no lo toca). */
+  automation: ProjectAutomation | null;
 };
 
 export type AdminUserDetail = AdminUserRow & {
@@ -96,7 +110,8 @@ function toRow(
   },
   lastSignInAt: string | null,
   projectCount: number,
-  scanCount30d: number
+  scanCount30d: number,
+  automation: AccountAutomation | null = null
 ): AdminUserRow {
   const planId = profile.current_plan ?? "free";
   return {
@@ -110,7 +125,8 @@ function toRow(
     status: deriveStatus(profile),
     trialEndsAt: profile.trial_ends_at ?? null,
     projectCount,
-    scanCount30d
+    scanCount30d,
+    automation
   };
 }
 
@@ -174,16 +190,38 @@ export async function listOperatorUsers(service: ServiceClient): Promise<AdminUs
     scanCountByOwner.set(owner, (scanCountByOwner.get(owner) ?? 0) + 1);
   }
 
+  // ADMIN-CONSOLE-2a. Después de `profiles` porque necesita el plan de cada
+  // dueño para saber si su escaneo recurrente surte efecto — el barrido
+  // descarta los proyectos Free.
+  const planIdByOwnerId = new Map(
+    (profilesResult.data ?? []).map((profile) => [profile.id, profile.current_plan ?? "free"])
+  );
+  const automation = await loadAutomationSnapshot(service, planIdByOwnerId);
+
   const users = (profilesResult.data ?? []).map((profile) =>
     toRow(
       profile,
       lastSignInById.get(profile.id) ?? null,
       projectCountByOwner.get(profile.id) ?? 0,
-      scanCountByOwner.get(profile.id) ?? 0
+      scanCountByOwner.get(profile.id) ?? 0,
+      // Una cuenta sin proyectos no aparece en el agregado: se le da el cero
+      // explícito, que no es lo mismo que "sin dato" (eso es `null`).
+      automation.availability === "ok"
+        ? automation.byOwner.get(profile.id) ?? {
+            recurringActive: 0,
+            auditActive: 0,
+            technicalAuditActive: 0,
+            totalProjects: 0,
+            recurringInertOnFree: 0,
+            monthlyUsd: 0,
+            provenance: "estimado" as const,
+            availability: "ok" as const
+          }
+        : null
     )
   );
 
-  return { users, authUsersTruncated };
+  return { users, authUsersTruncated, automationAvailability: automation.availability };
 }
 
 export async function getOperatorUserDetail(service: ServiceClient, userId: string): Promise<AdminUserDetail | null> {
@@ -237,11 +275,20 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
     }
   }
 
+  // Acotado a este dueño: la ficha no necesita el estado de todos los
+  // proyectos de la plataforma (señalado por la QA de ADMIN-CONSOLE-2a).
+  const automation = await loadAutomationSnapshot(
+    service,
+    new Map([[userId, profile.current_plan ?? "free"]]),
+    userId
+  );
+
   const row = toRow(
     profile,
     authResult.data?.user?.last_sign_in_at ?? null,
     projects.filter((project) => !project.is_archived).length,
-    scanCount30d
+    scanCount30d,
+    automation.availability === "ok" ? automation.byOwner.get(userId) ?? null : null
   );
 
   return {
@@ -254,7 +301,8 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
       domain: project.domain,
       createdAt: project.created_at,
       isArchived: project.is_archived,
-      latestScan: latestScanByProject.get(project.id) ?? null
+      latestScan: latestScanByProject.get(project.id) ?? null,
+      automation: automation.byProject.get(project.id) ?? null
     }))
   };
 }

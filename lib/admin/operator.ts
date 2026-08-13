@@ -112,8 +112,13 @@ export async function requireOperator(next: string = "/admin"): Promise<Operator
     return { user, service: createServiceClient() };
   }
 
+  // Aquí `data.totp` SÍ es lo que se quiere: `auth-js` lo filtra a factores
+  // verificados, que es exactamente la pregunta ("¿puede pasar al desafío?").
+  // No lo cambies a `all` por simetría con `/mfa/enroll`, que busca lo
+  // contrario — el pendiente — y por eso sí tiene que leer `all`
+  // (`lib/admin/mfa-factors.ts`).
   const { data: factors } = await supabase.auth.mfa.listFactors();
-  const hasVerifiedTotp = (factors?.totp ?? []).some((factor) => factor.status === "verified");
+  const hasVerifiedTotp = (factors?.totp ?? []).length > 0;
 
   redirect(hasVerifiedTotp ? `/mfa/challenge?next=${encodeURIComponent(next)}` : "/mfa/enroll");
 }

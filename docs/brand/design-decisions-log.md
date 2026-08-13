@@ -6561,6 +6561,165 @@ un test se desincroniza en silencio, y el síntoma no es un error sino una
 ausencia — un bloque que no aparece, una página que nadie visita, una
 afirmación que dejó de ser cierta.
 
+## 71. Los automatismos y su coste, vistos por cuenta sin mentir sobre ninguno de los dos (ADMIN-CONSOLE-2a, 2026-08-12)
+
+**Estado: implementada.** Task Intake de 12 puntos aprobado por el fundador
+(«Sí»). Primera mitad de lo que pidió el 12-08: *ver* por usuario si tiene
+escaneo y auditoría automáticos y cuánto cuesta. La otra mitad —*modificarlos*—
+y el borrado permanente quedan fuera a propósito, cada uno con su fase.
+
+**El problema de fondo: lo que pidió no existe con esa forma.** Los
+interruptores (`recurring_scans_enabled` 0008, `auto_web_audit_enabled` 0030)
+cuelgan de `projects`, no de la cuenta. Una casilla por usuario sería falsa en
+cuanto dos de sus dominios discreparan, que es el caso normal en cuanto alguien
+tiene más de uno. Así que la tabla muestra un **agregado declarado**
+(`activos/total`) y el interruptor real se lee por proyecto en la ficha. No es
+una traducción cosmética de la petición: es la única forma de que la columna
+sea cierta.
+
+**Tres cosas que la pantalla dice y que un agregado ingenuo se habría comido:**
+
+1. **«Sin efecto (Free)».** `runRecurringScanSweep` descarta los proyectos de
+   plan Free antes de escanearlos (`skipped_plan_ineligible`), así que un Free
+   con el interruptor puesto **no se escanea nunca**. Contarlo como activo
+   habría hecho creer que hay trabajo —y coste— donde no hay ninguno; se cuenta
+   aparte y su coste mensual es 0.
+2. **«Sin dato» en vez de cero.** Las migraciones de este repo se aplican a
+   mano, y una columna que PostgREST no conoce hace fallar el `select`
+   **entero**. Por eso los automatismos viven en `lib/admin/automation.ts` con
+   su **propia consulta**: una migración pendiente deja una columna sin dato en
+   vez de dejar `/admin` en blanco. Mismo remedio que ya usa `/debug` con las
+   mitades de auditoría, y misma dirección de fallo que exige
+   `.claude/rules/scan.md` — sólo que aquí falla hacia *desconocido*, nunca
+   hacia un valor: en una pantalla de sólo lectura, un «desactivado» inventado
+   es peor que un hueco, porque parece una respuesta.
+3. **La procedencia viaja pegada a la cifra.** `lib/admin/cost-model.ts` copia
+   las tarifas de `docs/llm-cost-analysis-2026-08.md` §7 **con su etiqueta**:
+   la generación está medida, la extracción es una estimación de tarifas
+   públicas, y la cobertura de auditoría no está medida en absoluto. El coste
+   agregado no puede presentarse como más fiable que su parte más floja, así
+   que incluir la auditoría lo degrada a «sin medir» — y hay un test que lo
+   impone. Un número redondo sin etiqueta habría sido exactamente la métrica
+   falsa que CLAUDE.md prohíbe, en la pantalla cuyo público se fía de todos los
+   demás números que hay en ella.
+
+**Cero escrituras, y es una decisión, no una limitación.** No hay ni un
+formulario en esta fase. Ver el estado repartido entre proyectos es lo que
+permite decidir qué cambiar; y separar el ver del tocar deja la parte sin riesgo
+entregada mientras la arriesgada espera su propio Task Intake.
+
+**Lo que encontró la QA, y por qué importa más que el arreglo.** El gate previo
+al Human Gate devolvió **BLOCKED** con un fallo que contradecía exactamente lo
+que esta fase decía defender: el código leía `auto_web_audit_enabled`, la
+columna que la migración 0031 **retiró** con un comentario explícito («*do not
+reintroduce reads of it*»). Sigue en la tabla porque borrarla es un cambio
+destructivo con su propia aprobación, y sigue con el default `true` de la 0030,
+pero ya no la escribe nadie. Resultado: la pantalla habría afirmado «auditoría
+automática activada, con coste» en **casi todas las cuentas**, cuando la
+realidad —tras el barrido manual del fundador del 2026-08-09— es que está
+apagada en casi todas. Una métrica inventada, en la fase cuyo argumento entero
+era no inventar ninguna.
+
+Lo relevante no es el despiste, es qué tipo de error es: **una columna que
+existe no es una columna que signifique algo**. El esquema no distingue viva de
+retirada, y el `select` no falla — devuelve un `true` perfectamente plausible.
+Sólo lo dice el comentario de la migración que la jubiló. De ahí el invariante
+nuevo en `.claude/rules/admin.md` (leer la migración que tocó por última vez la
+columna, y copiar la dirección de fallo del código vivo) y la guarda estática en
+`automation.test.ts`, que lee el propio fuente y rompe si la columna retirada
+vuelve al `select`. Los tests anteriores no lo cazaron porque sus *fixtures*
+copiaban la misma columna equivocada: reproducían el error en vez de medirlo.
+
+La segunda mitad del hallazgo fue más simple y del mismo signo: el coste salía
+**desnudo** en la celda de la tabla y en el KPI, sin su etiqueta de procedencia,
+contradiciendo la regla que esta misma fase acababa de escribir. La causa no era
+la plantilla sino el modelo: `AccountAutomation` no tenía campo `provenance`, así
+que no había de dónde sacar la etiqueta. Ahora lo tiene, y se degrada al peor
+sumando de la cuenta.
+
+Corregido también, por señalarlo la QA: la ficha de un usuario cargaba los
+automatismos de **todos** los proyectos de la plataforma para enseñar los de uno;
+ahora la consulta va acotada por dueño.
+
+### Pendiente / roto conocido
+
+- **2b (escribir los interruptores) sin empezar.** Hoy sólo los escribe el
+  dueño (`setRecurringScans` usa `requireUser()` + `.eq("owner_user_id", …)`);
+  desde `/admin` sería service-role saltándose ese scoping. Escalada real, con
+  su Task Intake.
+- **2c (borrado permanente con selección múltiple) sin empezar**, y sigue en la
+  lista de prohibidos de CLAUDE.md. Motivos y restricciones en
+  `docs/design-reference/admin-console-1/README.md`.
+- **El coste de la auditoría de cobertura sigue sin medirse** (§7 lo marca «no
+  medido», peor caso ~8 prompts). Mientras siga así, cualquier total que la
+  incluya arrastra esa etiqueta.
+- **Sin piloto agéntico**, igual que la Fase 1 y por la misma razón: el piloto
+  no puede completar un desafío AAL2. Verificación manual.
+
+---
+
+## 72. El arranque de MFA buscaba el factor pendiente donde no puede estar (ADMIN-CONSOLE-1, corrección, 2026-08-13)
+
+**Estado: corregido.** Encontrado por el fundador en producción, intentando
+activar el doble factor por primera vez: `/mfa/enroll` respondía *«No se pudo
+generar el código»* y no había forma de avanzar.
+
+**El fallo.** `supabase.auth.mfa.listFactors()` devuelve
+`{ all, totp, phone, webauthn }`, y `auth-js` **sólo copia a `totp` los
+factores verificados** (`GoTrueClient._listFactors`:
+`if (factor.status === 'verified') data[factor.factor_type].push(factor)`). Un
+enrolamiento a medias existe únicamente en `all`.
+
+La primera versión buscaba el factor pendiente en `.totp`, donde **no puede
+estar nunca**. Consecuencias encadenadas:
+
+1. No lo encontraba jamás, así que llamaba a `enroll()` en cada visita.
+2. En cuanto quedaba un factor sin verificar, el servidor respondía
+   `A factor with the friendly name "" for this user already exists`.
+3. La salida de emergencia («generar uno nuevo») tampoco se pintaba, porque
+   se renderizaba sólo si se había encontrado ese pendiente.
+
+Resultado: **`/admin` inalcanzable de forma permanente** para cualquiera que
+empezara un enrolamiento y no lo terminara — que es exactamente lo que pasa la
+primera vez que alguien abre la pantalla y no completa el código a la primera.
+La regla de ruta ya decía «un código erróneo debe volver a desafiar el MISMO
+factor pendiente»; el código nunca lo hizo.
+
+**Lo que más duele: el compilador lo había avisado.** Comparar
+`status === "unverified"` sobre `data.totp` produce
+*«types '"verified"' and '"unverified"' have no overlap»* — TypeScript decía
+literalmente que ese `find` no podía encontrar nada, porque el tipo de `totp`
+ya declara que sólo hay verificados. Se silenció con un cast a
+`Array<{ id: string; status: string }>` para que compilara. **Un error de tipos
+que se calla con una aserción es una hipótesis descartada sin mirarla.**
+
+**El arreglo,** en `lib/admin/mfa-factors.ts` como función pura y con tests:
+lee de `all` filtrando por `factor_type`, y trata cualquier estado que no sea
+`verified` como pendiente (reutilizar siempre es más seguro que crear otro,
+porque crear otro es lo que bloquea la cuenta). Los tests construyen la
+respuesta con la MISMA regla que aplica `auth-js` — un fixture que metiera un
+factor sin verificar en `totp` estaría inventando una respuesta imposible, y es
+esa fantasía la que dejó pasar el bug. `requireOperator()` sigue leyendo
+`.totp` a propósito, con su comentario: allí la pregunta es «¿hay uno
+verificado?», que es justo lo que `totp` contiene.
+
+**De paso,** el mensaje de error decía «recarga la página» en un caso donde
+recargar no arreglaba nada. Ahora nombra lo accionable (retirar el factor
+pendiente desde Supabase, o revisar que el TOTP esté habilitado) sin exponer el
+mensaje crudo del proveedor.
+
+### Lo que este incidente dice del proceso
+
+Ni la QA ni el piloto lo habrían cazado: la QA revisó dos veces esta zona y no
+lo vio porque el código *parecía* manejar el caso pendiente, y el piloto no
+puede entrar en `/admin` por diseño. Sólo aparece con una cuenta real que
+empieza a enrolar y no termina. Es el argumento más fuerte hasta ahora para que
+la verificación manual del fundador sobre `/admin` incluya **el primer
+enrolamiento desde cero**, no sólo el camino feliz de una cuenta ya configurada
+— que es lo que se verificó en §64 (con otra cuenta, ya enrolada).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
