@@ -6121,6 +6121,17 @@ sigue alrededor para poder salir. Sigue siendo de lectura pura: navega a una
 URL y mira. Lo que un humano tuvo que cazar una vez, lo mira una máquina a
 partir de ahora.
 
+**El piloto pasó y aun así no publicó nada.** La pasada de `f1d5451` corrió los
+172 tests, imprimió `Verdict: PILOT PASS` y el job murió en el minuto 20:
+`timeout-minutes: 20` en `ux-pilot.yml` contra 19,3 min de tests. El check quedó
+en `cancelled`, sin comentario y sin evidencia subida — y a efectos del Human
+Gate **un piloto que no publica es un piloto que no ha corrido**, aunque el
+veredicto exista dentro del log. El margen llevaba tiempo siendo mínimo y los
+tres tests nuevos de esta fase (×3 anchuras, ~55 s) lo agotaron. Se sube a 30 en
+el mismo PR que lo agotó, en vez de dejar la trampa armada para el siguiente que
+añada un journey. Lo que **no** se arregló, y queda anotado: nada avisa cuando
+la pasada se acerca al tope; el aviso es que un día no publique.
+
 **Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
 testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
 unitario y no puede tenerlo hoy**. La verificación real es el `ux-pilot`

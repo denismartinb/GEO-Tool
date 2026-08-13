@@ -37,7 +37,15 @@ jobs:
       github.event.deployment_status.state == 'success' &&
       github.event.deployment.environment == 'Preview'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 30, no 20 (NOT-FOUND-ROCKET-1, 2026-08-13). Con 20 la pasada del PR #391
+    # tardó 19.3 min en los tests, imprimió "Verdict: PILOT PASS" y el job murió
+    # en el minuto 20 — ANTES de publicar el comentario y subir la evidencia.
+    # El check quedó en `cancelled` y el veredicto sólo existía dentro del log:
+    # a efectos del Human Gate, un piloto que no publica es un piloto que no ha
+    # corrido. El margen llevaba tiempo siendo mínimo y tres tests nuevos lo
+    # agotaron; el tope se sube en el mismo PR que lo agotó en vez de dejar la
+    # trampa armada para el siguiente que añada un journey.
+    timeout-minutes: 30
 
     steps:
       - name: Check out the deployed commit
