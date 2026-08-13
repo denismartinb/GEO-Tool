@@ -7198,10 +7198,23 @@ la echaba de menos porque nada la echaba de menos. `VERCEL_ENV` tampoco estaba.
    de variable inventado dentro de un comentario es indistinguible de uno real.
    Se reescribió el comentario, no el test.
 2. **Su comprobación de huérfanas estaba mal planteada, y falló a la primera.**
-   Adoptar el accesor **elimina** el `process.env.X` de ese sitio, que es
+   Adoptar el accesor **elimina** la lectura cruda de ese sitio, que es
    exactamente el objetivo de la fase — así que migrar una variable la
    convertía en «huérfana» y el test castigaba la migración que existe para
    acompañar. Ahora cuenta las dos vías, cruda y accesor.
+3. **Estaba ciego a los ficheros sin trackear, que es justo cuando hace
+   falta.** `git grep` sólo mira lo ya trackeado, así que un fichero NUEVO con
+   una variable nueva era invisible para él hasta después de commitearlo. Lo
+   pagó el primer push: el test pasó en local —`lib/env.ts` aún sin trackear,
+   con otro nombre inventado en un comentario— y CI lo cazó al instante.
+   Añadido `--untracked`, y verificado creando un fichero nuevo sin commitear
+   con una variable sin declarar: ahora sí lo tumba.
+
+La regla que sale de 1 y 3, y que hubo que aprender dos veces el mismo día:
+**al documentar, se cita una variable que exista de verdad, nunca un `FOO` de
+ejemplo.** Para un guardián que mira texto, un nombre inventado en un
+comentario es indistinguible de uno real — y ésa es la propiedad que lo hace
+útil, no un defecto que convenga quitarle.
 
 ### Alcance, dicho en voz alta
 

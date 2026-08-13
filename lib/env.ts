@@ -6,9 +6,9 @@ import { checkEnvRules, envSchema, ENV_CONSEQUENCE, type Env, type EnvProblem } 
  * PRELAUNCH-HARDENING-1 Fase R4 — el acceso de servidor al entorno, tipado.
  *
  * `import "server-only"` es la primera línea a propósito. Este módulo lee
- * secretos, y en Next un `process.env.LO_QUE_SEA` que no empiece por
- * `NEXT_PUBLIC_` no se inyecta en el bundle de cliente: se queda en
- * `undefined`. O sea que importarlo desde un componente de cliente no filtra
+ * secretos, y en Next una variable que no empiece por `NEXT_PUBLIC_` —
+ * `GEMINI_API_KEY`, por ejemplo— no se inyecta en el bundle de cliente: se
+ * queda en `undefined`. O sea que importarlo desde un componente de cliente no filtra
  * nada, pero **degrada en silencio** — exactamente el fallo que esta fase
  * persigue. Con `server-only`, ese import rompe el build con un mensaje que
  * dice lo que pasa. La regla de la casa aplicada al módulo que la implementa.

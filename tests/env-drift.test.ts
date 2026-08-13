@@ -19,7 +19,11 @@ import { DECLARED_ENV_VARS, ENV_CONSEQUENCE } from "@/lib/env-schema";
  * porque nada la echaba de menos.
  *
  * Comprobación de TEXTO sobre el código fuente, a propósito: lo que interesa
- * es qué `process.env.X` existen escritos, no cuáles se ejecutan.
+ * es qué lecturas existen escritas, no cuáles se ejecutan. El precio de eso es
+ * que un nombre de variable **inventado dentro de un comentario** es
+ * indistinguible de uno real, así que la regla al documentar es citar siempre
+ * una variable que exista de verdad en vez de un `FOO` de ejemplo. Ha hecho
+ * falta decirlo dos veces en el mismo día.
  */
 
 const PRODUCT_PATHS = ["app", "lib", "components", "middleware.ts"];
@@ -36,10 +40,19 @@ const NOT_PRODUCT_CONFIG: Record<string, string> = {
   NODE_ENV: "la inyecta el runtime, no es configuración del producto"
 };
 
-/** `git grep` respeta .gitignore, así que no entra en node_modules ni en .next
- *  sin tener que enumerar exclusiones que caducan. */
+/**
+ * `git grep` respeta .gitignore, así que no entra en node_modules ni en .next
+ * sin tener que enumerar exclusiones que caducan.
+ *
+ * **`--untracked` no es opcional.** Sin ella, `git grep` sólo mira ficheros ya
+ * trackeados, así que un fichero NUEVO con una variable nueva es invisible
+ * para este test hasta después de commitearlo — o sea, ciego justo en el
+ * momento para el que existe. Pasó al escribir la propia fase: `lib/env.ts`
+ * llevaba un nombre de variable inventado en un comentario, el test pasó en
+ * local (fichero sin trackear) y CI lo cazó en el primer push.
+ */
 function grepProductSource(pattern: string): string[] {
-  const output = execFileSync("git", ["grep", "-hoE", pattern, "--", ...PRODUCT_PATHS], {
+  const output = execFileSync("git", ["grep", "--untracked", "-hoE", pattern, "--", ...PRODUCT_PATHS], {
     encoding: "utf8"
   });
   return output.split("\n").map((line) => line.trim()).filter(Boolean);
