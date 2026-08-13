@@ -5265,7 +5265,14 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .docs-content li { margin-bottom: 6px; line-height: 1.6; }
 .docs-table-wrap { overflow-x: auto; margin: 0 0 24px; }
 .docs-content table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
-.docs-content th, .docs-content td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+/* `white-space: nowrap` valía para la tabla de planes —celdas de dos palabras—
+   y dejaba ilegible la de metodología, cuya segunda columna es prosa: a 1280 px
+   las frases se salían del contenedor y el lector veía "…y la que más m" con un
+   scroll horizontal que nadie busca en un párrafo (visto en las capturas del
+   piloto, 2026-08-13). Las celdas envuelven; el `min-width` de la tabla sigue
+   dando scroll en móvil, que es donde de verdad hace falta. */
+.docs-content th, .docs-content td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.docs-content th { white-space: nowrap; }
 .docs-content th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .docs-index-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px; }
 .docs-index-card { display: block; border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; background: var(--surface); }
