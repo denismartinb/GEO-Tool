@@ -59,6 +59,21 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   CLAUDE.md's Task Intake Protocol applies in full to `/admin`, same as any
   other auth/server-action surface. Do not add a mutating action here as a
   drive-by.
+- **`listFactors().data.totp` holds ONLY verified factors — a half-finished
+  enrolment lives in `data.all`.** `auth-js` filters on
+  `status === 'verified'`. Looking for a pending factor in `.totp` finds
+  nothing, ever, so the page re-`enroll()`s, hits
+  `A factor with the friendly name "" ... already exists`, and locks the
+  operator out of `/admin` permanently — with the "generate a new one" escape
+  hatch invisible too, because it renders only when a pending factor was
+  found. Read pending factors through `lib/admin/mfa-factors.ts`;
+  `requireOperator()` reads `.totp` deliberately, because there the question
+  really is "is one verified?" (`docs/brand/design-decisions-log.md` §72).
+- **Never silence a type error here with a cast.** That bug shipped because
+  TypeScript said `'"verified"' and '"unverified"' have no overlap` — it had
+  the answer — and the fix was an `as` assertion instead of a question. In
+  this directory a type error is a hypothesis to check, not noise to quiet
+  (§72).
 - **A TOTP secret is shown at most once.** `supabase.auth.mfa.enroll()`
   never returns a factor's `qr_code`/`secret` a second time. A wrong code on
   `/mfa/enroll` must re-challenge the SAME pending (`unverified`) factor —
@@ -88,6 +103,43 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   never substitutes for what Stripe actually billed. This is the same "no
   fake metrics" rule as the rest of CLAUDE.md, applied to a screen whose
   entire audience already trusts every other number on it.
+- **Check which column is still live before reading it.** `/admin` reads
+  columns owned by other subsystems, and some are retired without being
+  dropped — `auto_web_audit_enabled` (0030) still exists, still defaults to
+  `true`, and is read by nothing since 0031 replaced it with the two audit
+  halves. Reading it shipped a screen that would have claimed "auto-audit on,
+  costing money" for nearly every account while the truth is off for nearly
+  all of them (caught by `qa` on PR #394 before merge, §71). A column that
+  exists is not a column that means anything: read the migration that last
+  touched it, and match the fail direction the live code uses
+  (`=== true` for the halves — they fail closed).
+- **A per-project setting may not be rendered as a per-account boolean.** The
+  automation toggles (`recurring_scans_enabled`, the two audit halves
+  `auto_technical_audit_enabled`/`auto_coverage_audit_enabled`, the engine
+  switches) live on `projects`. An account with
+  several domains can hold them in conflict, so the account-level view shows a
+  declared aggregate (`active/total`) and the real switch is read per project.
+  A single checkbox per user is false the moment two projects disagree
+  (`docs/brand/design-decisions-log.md` §71).
+- **An enabled switch that the backend ignores must be shown as ignored.** The
+  recurring sweep drops Free-plan projects (`skipped_plan_ineligible`,
+  `lib/scan/cron.ts`), so a Free project with the toggle on never scans.
+  Counting it as active invents work, and any cost derived from it invents
+  spend — it is counted separately and costs zero (§71).
+- **Reads added to `/admin` go in their own query, and fail toward "unknown".**
+  Migrations here are applied by hand, and a column PostgREST does not know
+  fails the ENTIRE select — riding along in the main query turns a pending
+  migration into a blank screen instead of one empty column. Same remedy
+  `/debug` already uses for the audit halves. Unlike the scan path, this
+  screen fails toward *no data*, never toward a value: on a read-only console
+  a fabricated "disabled" is worse than a gap, because it looks like an answer
+  (§71).
+- **A cost figure travels with its provenance, always.** `lib/admin/cost-model.ts`
+  copies the rates from `docs/llm-cost-analysis-2026-08.md` §7 and carries
+  whether each is measured, estimated, or unmeasured; a total can never be
+  presented as more reliable than its weakest part. If those rates change in
+  the analysis, they change here — this file is a declared copy, not a second
+  source of truth (§71).
 - **Never cap a read by row count without saying so on screen.** Same
   principle as `.claude/rules/scan.md`'s "never cap the work by row count":
   `auth.admin.listUsers()`'s single-page fetch has a real ceiling

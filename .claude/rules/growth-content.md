@@ -33,10 +33,10 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   propia metodología sin que nada falle, porque es prosa en un MDX. El test
   importa la constante real y la contrasta con lo publicado, de forma que el
   cambio de código y el refresco del artículo caen en el mismo PR o no cae
-  ninguno (`lib/blog/metricas-geo.test.ts`; log §71). El caso que lo motivó:
+  ninguno (`lib/blog/metricas-geo.test.ts`; log §73). El caso que lo motivó:
   `/blog/que-es-el-geo-score` llevaba ocho días publicando los pesos de
   GEO Score v2 mientras `/docs/metodologia/geo-score` publicaba los de v4 —
-  el sitio contradiciéndose a sí mismo a un enlace de distancia (log §72).
+  el sitio contradiciéndose a sí mismo a un enlace de distancia (log §74).
 
 ## Imágenes
 
@@ -50,7 +50,7 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   fundador. Cuatro artículos estuvieron así: portada correcta en `/blog`, en la
   tarjeta social y en el schema, y degradado en su propia cabecera, porque los
   tests de portada miraban `BLOG_POSTS` y el disco, nunca el MDX
-  (`covers.test.ts`, "el artículo enseña la portada que declara"; log §71).
+  (`covers.test.ts`, "el artículo enseña la portada que declara"; log §73).
 
 ## Redacción
 
@@ -172,7 +172,7 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   no da 404, simplemente no se mira, y eso no tiene síntoma. El cluster va con
   el slug y se compara también, porque uno equivocado cambia en silencio lo que
   el piloto espera de la página pilar (`fixture-drift.test.ts`, "todo artículo
-  publicado lo pilota alguien"; log §71).
+  publicado lo pilota alguien"; log §73).
 - **Publicar una comparativa incluye su journey de piloto y su entrada de
   fixture, en el mismo PR.** A diferencia del blog, las comparativas no se
   pilotan con un bucle: cada una es una página a mano y un `test(...)` a mano,

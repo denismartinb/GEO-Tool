@@ -245,13 +245,13 @@ corrigió y documentó.
 artículo publica constantes del producto (`MIN_RESPONSES_FOR_BAND`,
 `DEFAULT_SCORE_WINDOW_SIZE`, qué motores tienen grounding), así que caducaría
 solo si el código cambiara. El test las importa y las contrasta contra el
-texto. Detalle: log §71.
+texto. Detalle: log §73.
 
 **Arrastra un refresco obligado:** `/blog/que-es-el-geo-score` seguía
 publicando los cuatro componentes y los pesos de GEO Score **v2**, superados
 por GEO-SCORE-V4 el 2026-08-05 — mientras `/docs/metodologia/geo-score` ya
 publicaba los cinco. Actualizado en este mismo PR, con `dateUpdated` (primer
-uso real del campo, T-c). Detalle: log §72.
+uso real del campo, T-c). Detalle: log §74.
 
 **Y dos fallos de descubribilidad**, del mismo patrón que §62: S1 nunca lo
 había abierto el piloto (estaba en el fixture y no en el journey) y cuatro
