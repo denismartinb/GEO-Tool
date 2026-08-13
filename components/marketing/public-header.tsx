@@ -1,55 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { Icon } from "@/components/ui/icon";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { avatarInitials, showsPlanBadge } from "@/lib/account-chip";
+import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
 
 type NavItem = { anchor: string; label: string } | { href: string; label: string };
 
-type HeaderUser = { email: string; planId: string; planName: string };
-
-/**
- * GENSCORE-HEADER-2 — who is looking at this marketing page, asked from the
- * client so the ~45 public pages stay statically prerendered (see the comment
- * in `app/api/me/route.ts` for why that matters).
- *
- * `null` means "anonymous, or not resolved yet", and the header renders the
- * signup/login CTAs for both. That optimism is the deliberate half of the
- * trade: anonymous visitors — practically all marketing traffic, and the
- * entire reason the CTA exists — get the right thing with no flicker, while a
- * logged-in visitor sees the buttons for the moment it takes to answer. The
- * alternative (render nothing until resolved) delays the CTA for everyone to
- * spare the rare case.
- */
-function useHeaderUser(): HeaderUser | null {
-  const [user, setUser] = useState<HeaderUser | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (active && data?.user) setUser(data.user as HeaderUser);
-      })
-      .catch(() => {
-        // A marketing page must render with or without this. Failing here just
-        // leaves the logged-out CTAs up, which is the pre-GENSCORE-HEADER-2
-        // behaviour — never a broken header.
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return user;
-}
-
 /** The console sidebar's account chip, reused verbatim on the public header. Links to the console, which is what a returning logged-in visitor actually wants from a marketing page. */
-function AccountChip({ user, onNavigate }: { user: HeaderUser; onNavigate?: () => void }) {
+function AccountChip({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
   return (
     <Link href="/dashboard" className="user-chip lp-user-chip" onClick={onNavigate}>
       <div className="avatar">{avatarInitials(user.email)}</div>
@@ -100,7 +62,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   const pathname = usePathname();
   const router = useRouter();
   const isHome = pathname === "/";
-  const user = useHeaderUser();
+  const user = useSessionUser();
 
   const goToLogin = () => router.push("/login");
   const goToSignup = () => router.push("/signup");

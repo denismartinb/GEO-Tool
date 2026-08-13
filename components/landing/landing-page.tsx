@@ -14,6 +14,8 @@ import { useTypewriter } from "@/components/ui/use-typewriter";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
+import { showsPromoStrip } from "@/lib/account-chip";
+import { useSessionUser } from "@/lib/use-session-user";
 
 const FEATURES: Array<{ icon: string; t: string; d: string }> = [
   { icon: "search", t: "¿Apareces en la IA?", d: "Mide en qué porcentaje de respuestas de IA te mencionan y te citan como fuente, prompt a prompt." },
@@ -52,6 +54,7 @@ export function LandingPage() {
   const [domain, setDomain] = useState("");
   const [isDomainFocused, setIsDomainFocused] = useState(false);
   const typedPlaceholder = useTypewriter(HERO_DOMAIN_SAMPLES, !isDomainFocused && domain === "");
+  const user = useSessionUser();
 
   const goToSignup = () => router.push("/signup");
   const goToLogin = () => router.push("/login");
@@ -61,7 +64,15 @@ export function LandingPage() {
       {/* HERO — nav + promo strip integrated into the same gradient ground
           (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
       <header className="lp-hero lp-hero--home" id="producto">
-        <div className="lp-promo">7 días de Pro · Sin tarjeta</div>
+        {/* GENSCORE-HEADER-3 (fundador, 2026-08-12): "la franja de 7 días
+            tiene que salir a usuarios no logados o plan free". Es una oferta
+            de alta, así que a quien ya paga le sobra — pero a un logado en
+            Free le sigue sirviendo, y por eso no basta con "ocultar si hay
+            sesión". `showsPromoStrip` es la misma pregunta que la insignia de
+            plan, invertida, y vive junto a ella. */}
+        {showsPromoStrip(user?.planId) && (
+          <div className="lp-promo">7 días de Pro · Sin tarjeta</div>
+        )}
         <PublicHeader hero />
 
         <div className="lp-hero-content">

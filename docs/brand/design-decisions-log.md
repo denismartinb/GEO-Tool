@@ -6310,15 +6310,42 @@ anónimo en vez de 401: es el caso esperado en una página de marketing y un 401
 en cada carga sería ruido en la consola del navegador. Si la petición falla, la
 cabecera se queda con los CTA de anónimo — nunca una cabecera rota.
 
+**Addendum GENSCORE-HEADER-3 — la franja de la home (fundador, 2026-08-12).**
+Se entregó en este mismo PR, no en uno posterior. Al ver el chip funcionando,
+el agente dejó declarado que la franja `7 días de Pro · Sin tarjeta` de la home
+le seguía saliendo a un cliente de Agencia — el mismo fallo que §65 corrige, en
+otro elemento— y **no la tocó**, porque la regla correcta no era obvia y la
+decisión es comercial. El fundador la fijó: *«tiene que salir a usuarios no
+logados o plan free»*.
+
+- **Por eso no valía «ocultar si hay sesión».** Es una oferta de alta: a quien
+  paga le sobra, pero a un logado en **Free** le sigue sirviendo. El corte no
+  es logado/anónimo, es de pago/no de pago.
+- **`showsPromoStrip` vive junto a `showsPlanBadge`** en `lib/account-chip.ts`
+  y un test fija que son **exactamente inversas** para todo plan resuelto: son
+  la misma pregunta vista por los dos lados, y si un día discrepan es que una
+  superficie considera de pago a una cuenta que la otra considera gratuita.
+- **`undefined` (anónimo, o identidad aún sin resolver) muestra la franja**,
+  misma optimismo que la cabecera: el visitante para el que está escrita la ve
+  sin parpadeo, y el cliente de pago la ve el instante que tarda la respuesta.
+- **Una sola petición para los dos consumidores.** La franja vive fuera de la
+  cabecera, así que dos `useEffect` independientes habrían hecho dos viajes a
+  `/api/me` en la página más visitada del sitio. El hook pasó a
+  `lib/use-session-user.ts` con una promesa compartida a nivel de módulo;
+  verificado en local que la home hace **una** llamada con los dos montados.
+  El ámbito de módulo también evita servir una identidad rancia: toda
+  transición de sesión (login, logout) es una carga completa de página.
+
 ### Pendiente / roto conocido
 
-- **La franja promocional de la home (`7 días de Pro · Sin tarjeta`) se le
-  sigue enseñando a quien ya está logado**, incluido un cliente de plan
-  Agencia. Es el mismo fallo que esta fase corrige, en otro elemento, y se ha
-  dejado fuera a propósito: esconderla no es obvio, porque para un logado en
-  plan **Free** sigue siendo una oferta legítima y para uno de pago es un
-  sinsentido. Esa distinción es una decisión comercial del fundador, no del
-  agente. Recomendación: ocultarla sólo en planes de pago.
+- **El banner del pie de la home** («Descubre tu visibilidad en IA hoy», con
+  «Prueba gratis» e «Iniciar sesión») **sigue saliendo igual a quien ya está
+  logado** — lo encontró el `ux-pilot` al juzgar las capturas de este PR, no
+  el agente. Es el mismo fallo en un tercer sitio, y **no lo cubre la regla de
+  la franja**: «Iniciar sesión» no le sirve a ningún logado, ni siquiera a uno
+  en Free, así que el corte aquí no es de pago/no de pago sino
+  logado/anónimo — y queda por decidir qué lo sustituye para un logado en Free
+  (¿mejorar plan? ¿ir al panel? ¿nada?). Pendiente de decisión del fundador.
 - ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado
   el 2026-08-12**. El entorno del agente no tiene credenciales, así que la
   lógica del endpoint la cubren tests unitarios y el pintado se verificó
