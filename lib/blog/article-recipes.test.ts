@@ -318,3 +318,30 @@ describe("cada artículo enlaza a su propio cluster", () => {
     });
   }
 });
+
+/**
+ * SEO-POS-1 Fase C, S5, revisión (log §68): el borrador de
+ * que-es-una-auditoria-geo publicaba el reparto de puntos real de
+ * `lib/web-audit/page-checks.ts` (15/15/15/15/20/20). El fundador decidió
+ * que eso es metodología del producto, no buena práctica pública, y pidió
+ * quitarlo — dimensiones y umbrales de comportamiento sí, reparto de puntos
+ * no.
+ *
+ * Nada impedía que una sesión futura, al tocar este artículo o al copiar su
+ * patrón para uno nuevo, reintrodujera "— 15 puntos" en un título de sección.
+ * No hay compilador que lo pille: es MDX, y el número encajaría con
+ * naturalidad al lado de cada dimensión. Este test es la memoria que una
+ * revisión de founder necesita para no perderse en el siguiente refresco.
+ */
+describe("que-es-una-auditoria-geo no publica el reparto de puntos del producto", () => {
+  const source = readArticle("que-es-una-auditoria-geo");
+
+  it("ninguna sección lleva un recuento de puntos en el título", () => {
+    expect(source).not.toMatch(/—\s*\d+\s*puntos/i);
+  });
+
+  it("no afirma un total sobre 100 ni un subtotal parcial como 85", () => {
+    expect(source).not.toMatch(/\bsobre\s+100\b/i);
+    expect(source).not.toMatch(/\b85\s*puntos\b/i);
+  });
+});

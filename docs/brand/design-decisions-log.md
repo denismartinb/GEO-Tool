@@ -6415,34 +6415,39 @@ quedan marcadas para una pasada con este mismo encuadre.
 
 ---
 
-## 68. Publicar los pesos de la auditoría, no solo el resultado (SEO-POS-1, S5, 2026-08-13)
+## 68. Las seis dimensiones sí, los pesos no: dónde está la línea (SEO-POS-1, S5, 2026-08-13)
 
 **Pieza.** `/blog/que-es-una-auditoria-geo`, cluster `playbooks`. Cubre el
 cluster de keywords nº 5 del plan y enlaza la feature real de auditoría web.
 
-**La decisión de fondo: publicar el desglose.** El artículo no da una lista
-genérica de buenas prácticas — publica **los pesos reales** de
-`lib/web-audit/page-checks.ts`: datos estructurados 15, formato de respuesta
-15, metadatos 15, frescura 15, indexabilidad 20, citabilidad 20, con los
-umbrales exactos de cada sub-comprobación (título 15-70 caracteres, descripción
-50-160, frescura 180/540 días, 300 palabras visibles, un solo `<h1>`, dos
-`<h2>` mínimo).
+**Primera versión, y por qué se corrigió.** El borrador inicial publicaba **los
+pesos reales** de `lib/web-audit/page-checks.ts` — datos estructurados 15,
+formato de respuesta 15, metadatos 15, frescura 15, indexabilidad 20,
+citabilidad 20 — con el argumento de que una puntuación cuyo reparto no se
+enseña es un número que hay que creerse. El fundador lo revisó y decidió lo
+contrario: publicar las seis dimensiones y sus umbrales de comportamiento, pero
+no el reparto de puntos exacto entre ellas — es metodología del producto, y
+enseñarla entera se la regala a cualquier competidor en una tarde sin que el
+lector gane nada que no tuviera ya con las seis dimensiones nombradas.
 
-Enseñarlos tiene un coste evidente —cualquiera puede replicar la comprobación
-sin pagarnos— y se asume a propósito. Una puntuación cuyo reparto no se enseña
-es un número que hay que creerse, y el argumento entero de esta categoría es
-que el cliente deje de creerse números. Además, lo que se puede replicar a mano
-es la auditoría de **una** página; el producto la pasa sobre la web entera y la
-cruza con la medición en motores, que es donde está el trabajo real.
+**Dónde queda la línea, en la práctica.** Se publican los **umbrales de
+comportamiento** — título 15-70 caracteres, descripción 50-160, frescura
+180/540 días, 300 palabras visibles, un solo `<h1>`, dos `<h2>` mínimo — porque
+son buenas prácticas verificables por cualquiera con el código fuente delante,
+no una ventaja competitiva. No se publica el **reparto de puntos** entre
+dimensiones ni entre sub-comprobaciones, ni en el texto ni en la portada: la
+primera versión de la imagen codificaba el peso real en la anchura de cada
+barra, así que se rehízo con las seis barras iguales antes de publicar.
 
 **Lo que separa esta pieza de un post de checklist cualquiera:** la sección
-sobre la página sin fecha. Puntuar 0 de frescura cuando no se encuentra ninguna
-fecha convierte una *ausencia de dato* en un *veredicto negativo*, así que el
-score se calcula sobre los 85 puntos restantes y se reescala a 100. Es una
-decisión de método real del producto, no una opinión, y explicarla demuestra
-criterio en vez de afirmarlo. Se generaliza en el artículo a la regla que ya
-rige `global-score.ts`: un componente sin valor se excluye de la media y se
-dice, nunca se sustituye por cero.
+sobre la página sin fecha. Puntuar la frescura como cero cuando no se encuentra
+ninguna fecha convierte una *ausencia de dato* en un *veredicto negativo*, así
+que esa dimensión se excluye del cálculo y el resto se reescala a 100 — sin
+citar el número de puntos que se excluyen. Es una decisión de método real del
+producto, no una opinión, y explicarla demuestra criterio en vez de afirmarlo.
+Se generaliza en el artículo a la regla que ya rige `global-score.ts`: un
+componente sin valor se excluye de la media y se dice, nunca se sustituye por
+cero.
 
 **Declara dónde acaba, y eso es lo que la hace citable.** Una auditoría técnica
 dice si tu página *puede* ser citada, no si *lo es*. Sin esa frase el artículo
@@ -6458,9 +6463,9 @@ dónde acaba la auditoría, y concede sobre nuestro propio producto, no a favor
 de un competidor.
 
 **Portada.** SVG dibujado en el repo y rasterizado a WebP (§47: un `og:image`
-en SVG deja la tarjeta social en blanco). No es decorativa: la anchura de cada
-barra es proporcional a los puntos reales de esa dimensión, así que la imagen
-es el mismo dato que el artículo (ADR 0026, "ningún visual es decorativo").
+en SVG deja la tarjeta social en blanco). Seis barras de igual anchura, cada
+una con su propia marca de comprobación — deliberadamente sin variar tamaños
+entre ellas, por el mismo motivo que el texto no reparte puntos.
 
 **Descubribilidad:** SSOT del blog, fixture del self-check y journey del
 piloto, los tres en este PR — lo exige el guardián de §62.

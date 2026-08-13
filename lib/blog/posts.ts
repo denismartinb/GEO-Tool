@@ -181,7 +181,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "que-es-una-auditoria-geo",
     title: "Qué es una auditoría GEO (y el checklist para hacerla tú mismo)",
     description:
-      "Una auditoría SEO pregunta si puedes posicionar; una GEO, si te pueden citar. Las seis dimensiones que se revisan, con sus pesos reales sobre 100, y un checklist de trece puntos para pasarlo a mano.",
+      "Una auditoría SEO pregunta si puedes posicionar; una GEO, si te pueden citar. Las seis dimensiones que se revisan, con sus umbrales exactos, y un checklist de trece puntos para pasarlo a mano.",
     datePublished: "2026-08-13",
     coverIcon: "check",
     coverImage: "/blog/que-es-una-auditoria-geo/cover.webp",

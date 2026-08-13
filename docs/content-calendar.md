@@ -201,22 +201,21 @@ describen por estructura de coste (módulo + suite), sin cifra cerrada, porque
 las fuentes públicas se contradicen entre sí.
 
 **S5 — hecho (2026-08-13).** `/blog/que-es-una-auditoria-geo`, cluster
-`playbooks`. La pieza publica **los pesos reales** de la auditoría técnica
-(`lib/web-audit/page-checks.ts`), no una lista genérica de buenas prácticas:
-datos estructurados 15, formato de respuesta 15, metadatos 15, frescura 15,
-indexabilidad 20 y citabilidad 20, con los umbrales exactos de cada
-sub-comprobación (título 15-70 caracteres, descripción 50-160, frescura
-180/540 días, 300 palabras visibles). Publicar el desglose es la decisión de
-fondo: una puntuación cuyo reparto no se enseña es un número que hay que
-creerse, y es justo lo que esta página reprocha implícitamente al resto de la
-categoría.
+`playbooks`. Publica las **seis dimensiones** de la auditoría técnica
+(`lib/web-audit/page-checks.ts`) con sus umbrales exactos de comportamiento
+—título 15-70 caracteres, descripción 50-160, frescura 180/540 días, 300
+palabras visibles, un solo `<h1>`, dos `<h2>` mínimo— pero **no el reparto de
+puntos entre ellas**: el borrador inicial sí los publicaba y el fundador
+decidió lo contrario, porque es metodología del producto y regalarla no le da
+al lector nada que no tuviera ya con las seis dimensiones nombradas. Detalle de
+la corrección: log §68.
 
 **Lo que la diferencia de un post de checklist cualquiera** es la sección
-sobre la página sin fecha: puntuar 0 de frescura cuando no se encuentra
-ninguna fecha convierte una ausencia de dato en un veredicto negativo, así que
-el score se calcula sobre los 85 puntos restantes y se reescala. Es una
-decisión de método real del producto, y explicarla demuestra criterio en vez
-de afirmarlo.
+sobre la página sin fecha: puntuar la frescura como cero cuando no se
+encuentra ninguna fecha convierte una ausencia de dato en un veredicto
+negativo, así que esa dimensión se excluye del cálculo y el resto se reescala.
+Es una decisión de método real del producto, y explicarla demuestra criterio
+en vez de afirmarlo.
 
 **Y declara dónde acaba:** una auditoría técnica dice si tu página *puede* ser
 citada, no si *lo es*. Esa segunda pregunta solo se responde preguntando a los

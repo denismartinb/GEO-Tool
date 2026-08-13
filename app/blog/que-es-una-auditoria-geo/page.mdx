@@ -126,11 +126,12 @@ encuentra pronto y con forma de respuesta.
 
 ## Las seis dimensiones de una auditoría GEO
 
-Esto no es una lista genérica: son las seis que audita Genscore, con el reparto
-de puntos real sobre 100. Las publicamos con sus pesos porque una puntuación
-cuyo desglose no se enseña es un número que hay que creerse.
+Esto no es una lista genérica: son las seis que audita Genscore, en el orden
+en que conviene mirarlas. No publicamos el reparto de puntos exacto entre
+ellas —es parte de la metodología del producto— pero sí cada umbral concreto,
+para que puedas comprobar tu propia página sin necesidad de esa cifra.
 
-<NumberedSection n={1} title="Datos estructurados — 15 puntos">
+<NumberedSection n={1} title="Datos estructurados">
 
 Si la página lleva JSON-LD con un tipo que el motor reconozca: `Article`,
 `NewsArticle`, `BlogPosting`, `FAQPage`, `HowTo`, `Product`, `Organization` o
@@ -138,13 +139,13 @@ Si la página lleva JSON-LD con un tipo que el motor reconozca: `Article`,
 "un producto con precio". Sin esto, el modelo tiene que inferir de qué va tu
 página; con esto, se lo estás diciendo.
 
-Es todo o nada: los 15 puntos se dan si hay al menos un tipo reconocido.
+Es todo o nada: basta con que haya al menos un tipo reconocido.
 
 </NumberedSection>
 
-<NumberedSection n={2} title="Formato de respuesta — 15 puntos">
+<NumberedSection n={2} title="Formato de respuesta">
 
-Tres cosas de 5 puntos cada una, y son las que más gente falla:
+Tres comprobaciones, y son las que más gente falla:
 
 - **Un solo `<h1>`.** Ni cero ni tres. Un `<h1>` es la declaración de qué
   trata la página; varios son ninguna.
@@ -155,9 +156,9 @@ Tres cosas de 5 puntos cada una, y son las que más gente falla:
 
 </NumberedSection>
 
-<NumberedSection n={3} title="Metadatos — 15 puntos">
+<NumberedSection n={3} title="Metadatos">
 
-Otros tres de 5, con umbrales concretos en vez de "que estén bien puestos":
+Otras tres, con umbrales concretos en vez de "que estén bien puestos":
 
 - **`<title>` entre 15 y 70 caracteres.** Menos no describe; más se corta.
 - **`meta description` entre 50 y 160.**
@@ -165,26 +166,26 @@ Otros tres de 5, con umbrales concretos en vez de "que estén bien puestos":
 
 </NumberedSection>
 
-<NumberedSection n={4} title="Frescura — 15 puntos">
+<NumberedSection n={4} title="Frescura">
 
 Se busca una fecha discernible en la página (en el JSON-LD, principalmente) y
 se mide su antigüedad:
 
-- **Hasta 180 días: reciente**, 15 puntos.
-- **Entre 180 y 540 días: envejeciendo**, 8 puntos.
-- **Más de 540 días: obsoleta**, 0 puntos.
+- **Hasta 180 días: reciente.**
+- **Entre 180 y 540 días: envejeciendo.**
+- **Más de 540 días: obsoleta.**
 
 </NumberedSection>
 
-<NumberedSection n={5} title="Indexabilidad — 20 puntos">
+<NumberedSection n={5} title="Indexabilidad">
 
 Si el motor puede llegar y quedarse con la versión correcta:
 
-- **Canonical presente y apuntando a tu propio dominio** — 5 puntos. Un
-  canonical hacia fuera regala la atribución.
-- **Sin `noindex`** — 10 puntos. Es el peso individual más alto de toda la
-  auditoría, y con razón: es el único fallo que anula todo lo demás.
-- **`hreflang` presente** — 5 puntos.
+- **Canonical presente y apuntando a tu propio dominio.** Un canonical hacia
+  fuera regala la atribución.
+- **Sin `noindex`.** Es el fallo que más pesa de toda la auditoría, y con
+  razón: es el único que anula todo lo demás.
+- **`hreflang` presente**, si publicas en más de un idioma o región.
 
 </NumberedSection>
 
@@ -198,16 +199,15 @@ tiene dónde apoyarse.
 
 </QuickAction>
 
-<NumberedSection n={6} title="Citabilidad — 20 puntos">
+<NumberedSection n={6} title="Citabilidad">
 
 Si hay algo que merezca la pena citar, y en un formato del que se pueda
 extraer:
 
-- **Al menos una lista o una tabla** (`<ul>`, `<ol>` o `<table>`) — 10 puntos.
-  Un muro de prosa obliga al modelo a resumir; una lista se puede citar tal
-  cual.
-- **Al menos 300 palabras visibles** — 10 puntos. No es un objetivo de
-  longitud: es un filtro para descartar páginas casi vacías.
+- **Al menos una lista o una tabla** (`<ul>`, `<ol>` o `<table>`). Un muro de
+  prosa obliga al modelo a resumir; una lista se puede citar tal cual.
+- **Al menos 300 palabras visibles.** No es un objetivo de longitud: es un
+  filtro para descartar páginas casi vacías.
 
 </NumberedSection>
 
@@ -217,12 +217,12 @@ Aquí hay una decisión de método que merece explicarse, porque es donde una
 auditoría mal construida miente sin querer.
 
 ¿Qué haces con una página en la que **no encuentras ninguna fecha**? La opción
-fácil es darle 0 de los 15 puntos de frescura. Y está mal: una página sin fecha
-discernible no es una página obsoleta, es una página sobre la que no sabes
-nada. Puntuarla como si fuera de 2019 convierte una ausencia de dato en un
-veredicto negativo.
+fácil es puntuar la frescura como si fuera cero. Y está mal: una página sin
+fecha discernible no es una página obsoleta, es una página sobre la que no
+sabes nada. Puntuarla como si fuera de 2019 convierte una ausencia de dato en
+un veredicto negativo.
 
-Lo correcto es sacarla del cálculo: puntuar sobre los 85 puntos restantes y
+Lo correcto es sacarla del cálculo: puntuar sobre las dimensiones restantes y
 reescalar el resultado a 100. Así la página no es premiada por no tener fecha,
 pero tampoco es castigada por algo que no se ha medido.
 
@@ -273,8 +273,9 @@ Dos motivos para volver, y el segundo es el que se olvida:
 
 - **Cuando cambies la página.** Obvio.
 - **Aunque no cambies nada.** La frescura corre sola: una página que hoy
-  puntúa 15 pasa a 8 a los seis meses sin que tú hagas nada, y a 0 al año y
-  medio. Tu puntuación baja mientras tú no miras.
+  puntúa como reciente pasa a "envejeciendo" a los seis meses sin que tú hagas
+  nada, y a "obsoleta" al año y medio. Tu puntuación baja mientras tú no
+  miras.
 
 Hay una ventaja práctica: estas seis comprobaciones son **deterministas**. Son
 escaneos sobre el HTML, no consultas a un modelo, así que repetirlas no cuesta
@@ -298,7 +299,7 @@ depende solo de ti. Pero no confundas haberlo arreglado con estar apareciendo.
 
 <ArticleCta
   title="Pásale esta auditoría a tu web entera, no a una página"
-  text="Genscore audita las seis dimensiones página a página y te dice cuántos puntos ganas con cada arreglo. Escaneo gratuito, sin tarjeta."
+  text="Genscore audita las seis dimensiones página a página y te dice qué arreglar primero. Escaneo gratuito, sin tarjeta."
 />
 
 <AuthorBio />
