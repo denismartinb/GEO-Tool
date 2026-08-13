@@ -42,6 +42,27 @@ describe("honestidad de motores en el cuerpo de los artículos", () => {
   }
 });
 
+/** Páginas de `/docs`, recorriendo el árbol (hay secciones anidadas). */
+function docsPages(): { label: string; text: string }[] {
+  const base = join(process.cwd(), "app", "docs");
+  const out: { label: string; text: string }[] = [];
+  const walk = (dir: string, prefix: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const here = join(dir, entry.name);
+      const file = join(here, "page.tsx");
+      if (existsSync(file)) out.push({ label: `docs${prefix}/${entry.name}`, text: readFileSync(file, "utf8") });
+      walk(here, `${prefix}/${entry.name}`);
+    }
+  };
+  if (existsSync(base)) {
+    const index = join(base, "page.tsx");
+    if (existsSync(index)) out.push({ label: "docs", text: readFileSync(index, "utf8") });
+    walk(base, "");
+  }
+  return out;
+}
+
 /**
  * SEO-POS-1 S6, revisión del fundador (2026-08-13, log §75):
  *
@@ -62,10 +83,11 @@ describe("honestidad de motores en el cuerpo de los artículos", () => {
  * porque no es verificable desde fuera; sólo enseña el índice de nuestras
  * decisiones internas.
  *
- * Este test cubre las tres superficies que los habían publicado —artículos,
- * glosario y comparativas— porque el error se propagó copiando la cabecera de
- * la pieza anterior: cinco artículos lo tenían, y tres de ellos con la fórmula
- * v2 ya retirada encima.
+ * Cubre las cuatro superficies de contenido público —artículos, glosario,
+ * `/docs` y comparativas— porque el error se propagó copiando la cabecera de la
+ * pieza anterior: cinco artículos lo tenían, tres de ellos con la fórmula v2 ya
+ * retirada encima, y la tabla de pesos seguía además en la metodología
+ * publicada, que es justo donde los artículos mandaban al lector a buscarla.
  */
 const CONTENT_SOURCES: { label: string; text: string }[] = [
   ...BLOG_POSTS.map((post) => ({
@@ -77,6 +99,10 @@ const CONTENT_SOURCES: { label: string; text: string }[] = [
     // Sólo la prosa publicada: `slug`/`href` no son texto de cara al lector.
     text: GLOSSARY_TERMS.map((t) => `${t.definition}\n${t.longDefinition}\n${t.relatedLinks.map((l) => l.label).join("\n")}`).join("\n")
   },
+  // `/docs` entró el 2026-08-13 con la decisión de retirar los pesos también
+  // de la metodología publicada (log §75): era la única superficie que aún los
+  // enseñaba, y la que los artículos enlazaban.
+  ...docsPages(),
   ...(existsSync(join(process.cwd(), "lib", "comparativas"))
     ? readdirSync(join(process.cwd(), "lib", "comparativas"))
         .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))

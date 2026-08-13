@@ -26,16 +26,19 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   propio real.
 - **Un peso no es un valor medido** (log §13). No presentar un parámetro de
   configuración del score como si fuera un resultado observado.
-
 - **Ni los pesos del compuesto ni los códigos ADR se publican** (fundador,
   2026-08-13; log §75). Los pesos son configuración del producto: se publica el
   **orden de importancia** ("la presencia es la que más manda"), nunca el
   reparto. Un `ADR-00NN` como fuente de una cifra no acredita nada fuera —el
   lector no puede abrir ese documento— y sí publica el índice de nuestras
   decisiones internas; en su lugar, "Metodología de GenScore" o la evidencia
-  real. Lo cubre `article-honesty.test.ts` sobre artículos, glosario y
-  comparativas. `ProductMock` conserva `weight` en el fuente **sin pintarlo**:
-  es lo que hace verificable el número del gauge.
+  real. **Tampoco en `/docs`**: la metodología publicada se quedó sin la tabla
+  de pesos el mismo día, por decisión expresa del fundador — si el reparto no
+  se publica, no se publica en ninguna parte, y menos en la página a la que los
+  artículos mandan al lector a buscarlo. Lo cubre `article-honesty.test.ts`
+  sobre las cuatro superficies (artículos, glosario, `/docs` y comparativas).
+  `ProductMock` conserva `weight` en el fuente **sin pintarlo**: es lo que hace
+  verificable el número del gauge.
 - **Una cifra del producto publicada en prosa se ata al código con un test.**
   Un artículo que dice "diez respuestas mínimo" o "Claude no busca en la web"
   caduca solo: cambia la constante y el texto pasa a mentir sobre nuestra

@@ -24,50 +24,53 @@ export default function GeoScoreMethodologyPage() {
         ]}
       />
       <h1>{page.title}</h1>
-      <p className="docs-updated">Actualizado el 5 de agosto de 2026 — versión de score: geo-score-v4</p>
+      <p className="docs-updated">Actualizado el 13 de agosto de 2026 — versión de score: geo-score-v4</p>
 
       <p>
-        El GEO Score (0-100) combina cinco componentes, cada uno con su propio peso. No es una media
-        simple: cada componente mide algo distinto, y si uno no se puede calcular en un escaneo concreto, se
-        descarta y el resto de pesos se reajusta — nunca se rellena con un valor inventado.
+        El GEO Score (0-100) combina cinco componentes. No es una media simple: cada uno mide algo
+        distinto y entra en el número con distinta importancia, y si uno no se puede calcular en un escaneo
+        concreto, se descarta y el resto se reajusta — nunca se rellena con un valor inventado.
       </p>
 
       <h2>Los cinco componentes</h2>
+      <p>
+        Van en orden de importancia dentro del número, de más a menos. Ese orden no es arbitrario: reproduce
+        cómo se razona un análisis de visibilidad — primero si estás en la conversación, después con qué
+        protagonismo, después cómo te va frente al conjunto, y por último si hay evidencia real detrás.
+      </p>
       <div className="docs-table-wrap">
       <table>
         <tbody>
           <tr>
             <th>Componente</th>
-            <th>Peso</th>
             <th>Qué mide</th>
           </tr>
           <tr>
             <td>Presencia</td>
-            <td>32%</td>
-            <td>¿Aparece tu marca en la respuesta, sí o no? La señal más fundamental.</td>
+            <td>
+              ¿Aparece tu marca en la respuesta, sí o no? La señal más fundamental, y la que más manda en el
+              número: sin mención no hay nada que interpretar.
+            </td>
           </tr>
           <tr>
             <td>Prominencia</td>
-            <td>20%</td>
             <td>Cuando aparece, ¿lo hace pronto y con protagonismo, o como una mención tardía?</td>
           </tr>
           <tr>
             <td>Cuota de voz</td>
-            <td>16%</td>
             <td>De toda la atención que la IA reparte entre marcas mencionadas, cuánta es tuya.</td>
           </tr>
           <tr>
             <td>Autoridad</td>
-            <td>12%</td>
             <td>¿Esa presencia está respaldada por una cita o fuente real, o es solo una mención suelta?</td>
           </tr>
           <tr>
             <td>Diagnóstico técnico</td>
-            <td>20%</td>
             <td>
               La salud técnica de tu web para los motores de IA. Se mide sin IA de por medio, así que el
-              mismo sitio da siempre el mismo número. Si tu web no se puede leer bien, ninguna otra mejora
-              funciona — por eso pesa dentro del score y no al lado.
+              mismo sitio da siempre el mismo número — es el único de los cinco que no depende de lo que
+              conteste un modelo. Si tu web no se puede leer bien, ninguna otra mejora funciona: por eso
+              entra dentro del score y no al lado.
             </td>
           </tr>
         </tbody>
@@ -77,8 +80,8 @@ export default function GeoScoreMethodologyPage() {
       <h2>Qué pasa cuando falta un componente</h2>
       <p>
         La <strong>prominencia</strong> solo existe cuando la marca aparece mencionada — si no aparece en
-        ningún prompt del escaneo, ese componente se retira del cálculo y los pesos restantes se
-        renormalizan proporcionalmente entre los que quedan. La{" "}
+        ningún prompt del escaneo, ese componente se retira del cálculo y lo que le correspondía se reparte
+        proporcionalmente entre los que quedan. La{" "}
         <strong>cuota de voz</strong> sigue la misma regla: si ni tu marca ni ningún competidor rastreado
         aparece mencionado en todo el escaneo, no hay voz que repartir — se descarta en vez de asumir un
         100 por defecto para una marca invisible en un mercado vacío.

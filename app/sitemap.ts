@@ -6,6 +6,17 @@ import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
 const SITE_URL = "https://www.genscore.es";
 const DOCS_LAST_MODIFIED = "2026-08-02";
 /**
+ * Excepciones por página, cuando una sola doc cambia de verdad. Sin esto había
+ * que elegir entre dejar rancia la que cambió o subir la fecha de las cinco —
+ * y lo segundo le dice al rastreador que cambiaron todas, que es la señal de
+ * frescura falsa que este fichero existe para no dar (mismo razonamiento que
+ * `PILLAR_LAST_MODIFIED`, SEO-POS-1 T15).
+ */
+const DOCS_LAST_MODIFIED_BY_SLUG: Record<string, string> = {
+  // Se retiró la tabla de pesos del compuesto (log §75).
+  "metodologia/geo-score": "2026-08-13"
+};
+/**
  * GROWTH-2 Fase 2.6b: fecha del último cambio real en las entradas del
  * glosario. 2026-08-13: se retiró de `geo-score` y `citacion-en-ia` el reparto
  * de pesos del compuesto (log §75). Debe seguir a
@@ -68,7 +79,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const docsRoutes = DOCS_NAV.flatMap((section) =>
     section.pages.map((page) => ({
       url: `${SITE_URL}/docs/${page.slug}`,
-      lastModified: new Date(DOCS_LAST_MODIFIED)
+      lastModified: new Date(DOCS_LAST_MODIFIED_BY_SLUG[page.slug] ?? DOCS_LAST_MODIFIED)
     }))
   );
 

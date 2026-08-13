@@ -6886,20 +6886,36 @@ la que más manda, porque sin mención no hay nada que interpretar" le sirve par
 decidir; un 32 % no.
 
 **El guardián** (`article-honesty.test.ts`, "el contenido público no publica
-configuración interna del producto") barre las tres superficies —artículos,
-glosario y comparativas— buscando códigos ADR y porcentajes presentados como
+configuración interna del producto") barre las cuatro superficies —artículos,
+glosario, `/docs` y comparativas— buscando códigos ADR y porcentajes presentados como
 peso. Exige vocabulario del compuesto alrededor del porcentaje: la primera
 versión marcaba una afirmación legítima sobre un competidor ("aumenta el peso
 de la página … hasta en un 98 %"), y un guardián con falsos positivos se
 desactiva a la primera.
 
-**Queda una superficie fuera, y es deliberado:**
-`/docs/metodologia/geo-score` publica la tabla completa de pesos y es la página
-a la que los artículos enlazan como "metodología publicada". No es un artículo,
-así que no entra en la instrucción literal, y retirarla es una decisión de
-producto distinta —esa página existe para ser la transparencia del método—.
-Pendiente de decisión del fundador; mientras siga ahí, el dato sigue siendo
-público en un clic.
+**La metodología publicada entró después, y por decisión expresa.**
+`/docs/metodologia/geo-score` no es un artículo, así que no caía dentro de la
+instrucción literal — pero era la página a la que los propios artículos
+mandaban al lector a buscar el detalle, con la tabla de pesos entera. Se
+preguntó al fundador con las dos alternativas y su coste, y eligió retirarlos
+también: **si el reparto no se publica, no se publica en ninguna parte.**
+
+Lo que esa página conserva: los cinco componentes, qué mide cada uno, el orden
+de importancia, qué ocurre cuando falta un dato, la ventana de la mediana, las
+etiquetas de confianza y las franjas. Lo que pierde: la columna de porcentajes.
+Y con ella, la promesa de "metodología **completa**" en los enlaces que
+apuntaban ahí — reescrita en el pilar y en el glosario, porque un enlace que
+promete el cálculo entero y lleva a una página sin él es una decepción que se
+paga en credibilidad.
+
+**La fecha, en los tres sitios donde vive.** Cambiar el contenido obligó a
+subir la fecha visible de la página, la del glosario (dos entradas tocadas) y
+las dos del sitemap. El sitemap tenía **una sola fecha para las cinco docs**,
+así que subirla habría dicho que cambiaron todas: ahora admite excepciones por
+página, igual que `PILLAR_LAST_MODIFIED` hace por cluster desde T15. Y un test
+obliga a que la fecha del glosario coincida en la página y en el sitemap: dos
+fechas distintas para el mismo contenido son una señal de frescura que se
+contradice a sí misma, peor que no dar ninguna.
 
 ---
 

@@ -52,11 +52,11 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     slug: "geo-score",
     term: "GEO Score",
     definition:
-      "La métrica compuesta de Genscore (0-100) que resume cómo aparece una marca en respuestas de IA, combinando presencia, prominencia, cuota de voz, autoridad y preparación técnica. Metodología completa en la documentación.",
+      "La métrica compuesta de Genscore (0-100) que resume cómo aparece una marca en respuestas de IA, combinando presencia, prominencia, cuota de voz, autoridad y preparación técnica. Cómo se compone, en la documentación.",
     longDefinition:
       "El GEO Score es la métrica compuesta que usa Genscore para resumir, en un único número de 0 a 100, cómo aparece una marca en las respuestas de motores generativos de IA.\n\nSe calcula combinando cinco señales, cada una con su propia importancia dentro del total: presencia — si la IA menciona la marca, y la que más manda, porque sin mención no hay nada que interpretar; prominencia — en qué posición aparece dentro de la respuesta; cuota de voz — qué parte de la atención se reparte hacia la marca frente a sus competidores; autoridad — si la IA cita alguna página del dominio como fuente; y preparación técnica — si la web se puede leer y extraer, la única de las cinco que se mide sin preguntar a ningún modelo.\n\nUn único escaneo no basta para que el número sea fiable: el GEO Score gana confianza cuantos más resultados reales se hayan extraído de los motores de IA, y Genscore solo lo marca como \"confianza alta\" a partir de un volumen mínimo de resultados completamente procesados. Con pocos datos, el número existe pero se etiqueta como poco fiable en vez de presentarse como definitivo.\n\nNo es una cifra estática: cambia con cada escaneo, porque las respuestas de los motores generativos cambian con el tiempo, con el propio contenido de la marca y con lo que hacen sus competidores.",
     relatedLinks: [
-      { href: "/docs/metodologia/geo-score", label: "Documentación: metodología completa del GEO Score" },
+      { href: "/docs/metodologia/geo-score", label: "Documentación: cómo se compone el GEO Score" },
       { href: "/blog/que-es-el-geo-score", label: "Artículo: qué es el GEO Score y cómo se calcula" },
       { href: "/glosario/cuota-de-voz-en-ia", label: "Glosario: cuota de voz en IA" },
       { href: "/glosario/citacion-en-ia", label: "Glosario: citación en IA" }

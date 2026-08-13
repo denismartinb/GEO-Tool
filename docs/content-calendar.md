@@ -258,7 +258,10 @@ del producto, como pesos reales para un cálculo o estos códigos ADR"*. Los pes
 del GEO Score y los códigos ADR salen de **todo** el contenido publicado —seis
 superficies los tenían, y tres con la fórmula v2 ya retirada encima— y se
 sustituyen por el orden de importancia y por fuentes verificables desde fuera.
-Supersede en parte a §74. Detalle y alcance: log §75.
+**Incluida `/docs/metodologia/geo-score`**, por decisión expresa del fundador
+al preguntársele: no es un artículo, pero era la página a la que los artículos
+mandaban a buscar el detalle. Supersede en parte a §74. Detalle y alcance:
+log §75.
 
 **Y dos fallos de descubribilidad**, del mismo patrón que §62: S1 nunca lo
 había abierto el piloto (estaba en el fixture y no en el journey) y cuatro
