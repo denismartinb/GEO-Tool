@@ -168,7 +168,10 @@ test("el cajón móvil de la cabecera pública se abre y muestra el estado de se
   // email y el plan de la cuenta piloto pueden cambiar, la existencia del
   // chip no.
   await expect(drawer.getByTestId("account-chip")).toBeVisible();
-  await expect(drawer.getByRole("link", { name: /Prueba gratis/i })).toHaveCount(0);
+  // `button`, no `link`: los CTA del cajón son <button onClick>, así que
+  // preguntar por un enlace llamado "Prueba gratis" da cero SIEMPRE y la
+  // aserción no podría fallar nunca — que es peor que no tenerla.
+  await expect(drawer.getByRole("button", { name: /Prueba gratis/i })).toHaveCount(0);
 
   await captureInteraction(page, testInfo, "geo-mobile-drawer-open");
 });
