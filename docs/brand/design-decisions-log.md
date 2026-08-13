@@ -6110,15 +6110,24 @@ paso se corrigió una incoherencia entre etiqueta y destino: el botón decía
 «Volver a mis dominios» y apuntaba a `/dashboard`, que redirige al proyecto más
 reciente, no a la lista. Ahora son dos salidas y cada una dice a dónde va.
 
+**El 404 de la consola pasa a estar pilotado.** Se dijo que quedaba para una
+fase futura, y duró lo que tardó el fundador en encontrar el defecto que el
+piloto no podía ver. El journey vive en `core-flow.spec.ts` y no en
+`public-pages.spec.ts` porque necesita sesión: sin ella `requireUser()` redirige
+a /login y no se ve nada. Visita un id de proyecto inexistente y comprueba las
+tres cosas que importan — que sale la pantalla sobria, que **no** sale la de
+marketing (`.nf-scene` a cero, ningún «Prueba gratis») y que el menú lateral
+sigue alrededor para poder salir. Sigue siendo de lectura pura: navega a una
+URL y mira. Lo que un humano tuvo que cazar una vez, lo mira una máquina a
+partir de ahora.
+
 **Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
 testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
 unitario y no puede tenerlo hoy**. La verificación real es el `ux-pilot`
 (`tests/pilot/journeys/public-pages.spec.ts`), que comprueba el 404 real, el
 `noindex`, y que lo que se pinta es la escena y no un placeholder — anclado a
-`.nf-scene` y al titular, no a "la página cargó". El 404 **de dentro de la
-consola no lo cubre el piloto**: exigiría un journey autenticado sobre un id
-inexistente y eso queda para una fase futura. Verificarlo a mano en el Human
-Gate.
+`.nf-scene` y al titular, no a "la página cargó". El 404 de dentro de la consola sí acabó
+cubierto, en `core-flow.spec.ts` — ver arriba.
 
 ## Cómo mantener este documento
 

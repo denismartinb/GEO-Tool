@@ -376,3 +376,54 @@ test("citations KPI tooltip and row expand actually work, not just render their 
   await searchInput.fill("");
   await expect(filterCount, "clearing the search did not hide the result count again").toBeHidden();
 });
+
+/**
+ * NOT-FOUND-ROCKET-1. El 404 de dentro de la consola
+ * (`app/dashboard/not-found.tsx`).
+ *
+ * Existe porque `app/not-found.tsx` es el `not-found` **raíz** y sin un
+ * `not-found` propio de la consola recogía también los `notFound()` de
+ * `lib/project-workspace.ts`: alguien con la sesión abierta se encontraba la
+ * cabecera de marketing y, tras el rediseño, la escena del cohete a pantalla
+ * completa con un «Prueba gratis».
+ *
+ * Se pilota aquí y no en `public-pages.spec.ts` porque **necesita sesión**: sin
+ * ella, `requireUser()` redirige a /login y no se llega a ver nada. Y se pilota
+ * en vez de dejarlo a verificación manual porque la primera versión de esta
+ * pantalla la encontró el fundador, no el piloto (log §63): reutilizaba
+ * `EmptyState` y leía como un botón mal maquetado. Lo que un humano tuvo que
+ * cazar una vez, lo mira una máquina a partir de ahora.
+ *
+ * SCOPE GUARD: sigue siendo estrictamente de lectura — navega a una URL con un
+ * id que no existe y mira lo que se pinta. No crea, no borra, no escribe.
+ */
+const MISSING_PROJECT_ID = "00000000-0000-4000-8000-000000000000";
+
+test("un proyecto que no existe da el 404 de la consola, no el de marketing", async ({
+  page
+}, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    `/dashboard/projects/${MISSING_PROJECT_ID}`,
+    "console-not-found",
+    {
+      describedAs: "el 404 sobrio de la consola, con su glifo y sus dos salidas",
+      anyOf: [{ selector: ".nfc" }, { text: /esta pantalla no existe/i }]
+    },
+    // El documento responde 404 porque el proyecto no existe: es el
+    // comportamiento correcto, no un fallo de red.
+    { expectDocumentStatus: 404 }
+  );
+  assertPageIsHealthy(findings);
+
+  // Lo que de verdad se está protegiendo: que a alguien con sesión NO se le
+  // sirva la pantalla de marketing.
+  await expect(page.locator(".nf-scene")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /prueba gratis/i })).toHaveCount(0);
+
+  // La consola sigue alrededor: el menú lateral es lo que permite salir de
+  // aquí sin usar el botón de atrás del navegador.
+  await expect(page.locator("aside.sb")).toBeVisible();
+  await expect(page.locator(".nfc-actions a").first()).toBeVisible();
+});
