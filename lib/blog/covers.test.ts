@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BLOG_POSTS } from "./posts";
@@ -55,6 +55,36 @@ describe("todo artículo publicado tiene portada propia", () => {
         existsSync(join(process.cwd(), "public", rel)),
         `${post.slug} apunta a ${post.coverImage} pero ese fichero no existe en public/`
       ).toBe(true);
+    });
+  }
+});
+
+/**
+ * SEO-POS-1 S6 (log §71): tener la portada declarada no es lo mismo que
+ * enseñarla. `BlogCover` sólo pinta la imagen si recibe `image`; sin esa prop
+ * cae al degradado con icono — el respaldo que existe para los artículos SIN
+ * portada, y que el fundador describió como "un icono de algo que no carga
+ * bien".
+ *
+ * Cuatro artículos estaban justo así: con `coverImage` declarado (y por tanto
+ * con portada correcta en `/blog`, en la tarjeta social y en el schema) y con
+ * el degradado en su propia cabecera. Los tests de arriba no lo veían porque
+ * miran `BLOG_POSTS` y el disco, no el MDX; y como los cuatro se escribieron
+ * copiando la cabecera del anterior, el fallo se propagaba solo.
+ */
+describe("el artículo enseña la portada que declara", () => {
+  for (const post of BLOG_POSTS.filter((p) => p.coverImage)) {
+    it(`pasa image a BlogCover: ${post.slug}`, () => {
+      const source = readFileSync(join(process.cwd(), "app", "blog", post.slug, "page.mdx"), "utf8");
+      const call = source.match(/<BlogCover[^>]*\/>/)?.[0] ?? "";
+
+      expect(call, `${post.slug} no renderiza <BlogCover />`).not.toBe("");
+      expect(
+        call,
+        `${post.slug} declara coverImage pero no se lo pasa a BlogCover, así que la ` +
+          "cabecera pinta el degradado con icono en vez de la portada real."
+      ).toContain("image={post.coverImage}");
+      expect(call, `${post.slug}: una portada real necesita alt`).toContain("alt=");
     });
   }
 });

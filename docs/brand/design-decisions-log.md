@@ -6561,6 +6561,118 @@ un test se desincroniza en silencio, y el síntoma no es un error sino una
 ausencia — un bloque que no aparece, una página que nadie visita, una
 afirmación que dejó de ser cierta.
 
+## 71. Publicar los números del producto obliga a atarlos al código (SEO-POS-1, S6, 2026-08-13)
+
+**Pieza.** `/blog/metricas-geo-que-medir` — "Métricas GEO: qué medir y qué no",
+cluster `medicion`. Cubre el cluster de keywords nº 6 del plan ("métricas GEO",
+"share of voice en IA", "tasa de citación"), la última capa informacional donde
+el mercado en castellano sigue teniendo hueco.
+
+**El ángulo, y por qué no es otro post de definiciones.** La pieza se estructura
+alrededor de una idea que casi nadie escribe: **la unidad de observación es la
+respuesta, no el prompt**. Veinte prompts en tres motores son sesenta
+observaciones, y casi todos los errores de medición del sector salen de
+equivocar ese denominador. A partir de ahí, cinco métricas (tasa de mención,
+cuota de voz, posición cuando apareces, tasa de citación de tu dominio,
+preparación técnica) y las trampas de cada una.
+
+**La sección que la hace citable** es la de la posición. Reproduce el hallazgo
+de ADR 0026 con su tabla: un escaneo simulado en el que **las ocho entidades
+aparecen siempre segundas**, y donde la "posición media" —la que promedia como
+último puesto cada respuesta en la que no sales— las ordena de 5,50 a 8,65. Esa
+métrica está midiendo frecuencia de aparición y llamándolo posición, y de ahí
+salen las dos consecuencias que descolocan a cualquiera que mire un panel: la
+marca seguida sale favorecida por construcción (el conjunto de prompts se elige
+a su alrededor), y el mejor valor posible deja de ser 1. Es un error real que
+este producto cometió, corrigió y documentó — publicarlo demuestra criterio en
+vez de afirmarlo, igual que la página sin fecha en §69.
+
+**Qué sí se publica y qué no, aplicando la línea de §69.** Los umbrales de
+lectura sí: diez respuestas mínimo antes de una franja o un delta
+(`MIN_RESPONSES_FOR_BAND`), ventana de tres escaneos para la mediana
+(`DEFAULT_SCORE_WINDOW_SIZE`), el incidente real de los 44 puntos con tres
+respuestas. Los pesos del compuesto **ya son públicos** en
+`/docs/metodologia/geo-score` desde GEO-SCORE-V4, así que el artículo enlaza
+allí en vez de reabrir la discusión.
+
+**El test que sostiene todo esto** (`lib/blog/metricas-geo.test.ts`) es la parte
+reutilizable. Un artículo que publica constantes del producto **caduca solo**:
+si `MIN_RESPONSES_FOR_BAND` pasa a 15 o Claude gana grounding real, el texto
+pasa a mentir sobre nuestra propia metodología y nada falla — es prosa en un
+MDX. El test importa las constantes reales y las contrasta contra las cifras
+publicadas y contra `ENGINE_META.claude.grounded`, así que el cambio de código
+y el refresco del artículo caen en el mismo PR o no cae ninguno.
+
+**Dos fallos de descubribilidad encontrados de camino, los dos del mismo
+patrón que §62 y §70:**
+
+1. **`como-saber-si-tu-marca-aparece-en-chatgpt` (S1) nunca lo abrió el
+   piloto.** Se añadió al fixture del self-check y no al mapa del journey — son
+   dos listas a mano en dos ficheros, y el guardián que existía sólo cubría la
+   primera. Un post ausente del journey no da 404: simplemente no se mira. Tres
+   días de `PILOT PASS` sobre un artículo que nadie había visto. Arreglado, y
+   ahora `fixture-drift.test.ts` contrasta el mapa del spec contra `BLOG_POSTS`
+   comparando **también el cluster**, no sólo el slug.
+2. **Cuatro artículos declaraban portada y enseñaban el degradado.**
+   `BlogCover` sólo pinta la imagen si recibe `image`, y cuatro MDX
+   —`que-es-el-geo-score`, `como-conseguir-que-chatgpt-te-cite`,
+   `como-saber-si-tu-marca-aparece-en-chatgpt`, `que-es-una-auditoria-geo`— no
+   se la pasaban. Su portada salía bien en `/blog`, en la tarjeta social y en
+   el schema, y en su propia cabecera salía el respaldo que existe para los
+   artículos *sin* portada: justo "el icono de algo que no carga bien" que
+   originó `covers.test.ts`. Los tests de portada miraban `BLOG_POSTS` y el
+   disco, nunca el MDX. Corregidos los cuatro, con test nuevo.
+
+**Portada.** SVG en el repo, rasterizado a WebP (§47). No es decorativa: a la
+izquierda la muestra —puntos que son respuestas, unas con mención y otras
+sin— y a la derecha las cinco métricas que salen de ella, **cuatro dibujadas
+con su margen de error y la quinta sin él**, porque la preparación técnica es
+la única determinista. La asimetría es la tesis del artículo.
+
+---
+
+## 72. El pilar del GEO Score llevaba ocho días publicando una fórmula retirada (SEO-POS-1, S6, 2026-08-13)
+
+**Qué pasaba.** GEO-SCORE-V4 (ADR 0033, 2026-08-05) añadió el componente
+técnico con peso .20 y reescaló los otros cuatro a .32/.20/.16/.12.
+`/docs/metodologia/geo-score` se actualizó en aquel PR. El artículo pilar del
+blog, `/blog/que-es-el-geo-score`, no: seguía publicando "cuatro señales" con
+los pesos de v2 (.40/.25/.20/.15) citando ADR-0015 como fuente. **El sitio se
+contradecía a sí mismo sobre su propia metodología**, en las dos páginas que
+más tráfico informacional traen sobre ella.
+
+No lo cazó nadie porque no había nada que lo cazara: el reparto de pesos vivía
+escrito a mano en tres sitios (código, docs, MDX) y sólo dos se movieron.
+
+**Por qué se arregla en el PR de S6 y no en uno aparte.** El artículo nuevo
+nombra las cinco señales. Publicarlo dejando el pilar en cuatro no habría sido
+"una fase de más": habría sido publicar a sabiendas dos versiones distintas de
+la misma metodología a un enlace de distancia.
+
+**Qué se cambió.** Las cinco señales en el resumen, la tabla y la maqueta
+—cuyo gauge se recalculó, porque `article-recipes.test.ts` exige que el número
+sea la media ponderada real de las filas que enseña—, los pesos vigentes en el
+`StatGrid` citando ADR-0033, y un párrafo nuevo sobre por qué la señal técnica
+va dentro del compuesto (es una condición: una web que los motores no pueden
+leer no puede beneficiarse de ninguna otra mejora) y qué compra que sea
+determinista (una quinta parte menos de varianza en el número de cabecera).
+
+**Primer uso real de `dateUpdated`** (la tubería llegó en la Fase T-c y no la
+había estrenado nadie): el artículo muestra "Actualizado el 13 de agosto de
+2026", lo emite en `Article.dateModified` y en `og:modified_time`. El test que
+exigía que *ningún* post tuviera `dateUpdated` se sustituye por una lista de
+refrescos documentados — conserva lo que protegía de verdad (que nadie suba una
+fecha sin tocar el artículo, `content-strategy.md` §4.4) y deja de bloquear el
+caso para el que se construyó el campo.
+
+**La regla que queda:** los pesos del GeoScore están publicados en tres sitios
+y sólo uno es la verdad. `lib/blog/metricas-geo.test.ts` ata ahora el MDX al
+`TECHNICAL_WEIGHT` real y comprueba que los otros cuatro conserven sus
+proporciones v3 exactas al dividir por `1 − w`, que es la misma comprobación
+que ADR 0033 §1 hace en su propia tabla.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

@@ -22,10 +22,11 @@ export const post = getBlogPost("que-es-el-geo-score");
 export const metadata = blogPostMetadata(post);
 
 export const mockRows = [
-  { label: "Presencia", hint: "¿La IA nombra tu marca?", value: 78, tone: "blue" },
-  { label: "Prominencia", hint: "¿Apareces primero o de pasada?", value: 61, tone: "blue2" },
-  { label: "Posición competitiva", hint: "¿Cómo te va frente al conjunto?", value: 66, tone: "cyan" },
-  { label: "Autoridad", hint: "¿La IA cita tu web como fuente?", value: 44, tone: "warm" }
+  { label: "Presencia", hint: "¿La IA nombra tu marca?", value: 78, weight: 32, tone: "blue" },
+  { label: "Prominencia", hint: "¿Apareces primero o de pasada?", value: 61, weight: 20, tone: "blue2" },
+  { label: "Posición competitiva", hint: "¿Cómo te va frente al conjunto?", value: 66, weight: 16, tone: "cyan" },
+  { label: "Autoridad", hint: "¿La IA cita tu web como fuente?", value: 44, weight: 12, tone: "warm" },
+  { label: "Preparación técnica", hint: "¿Puede un motor leer tu web?", value: 70, weight: 20, tone: "cyan" }
 ];
 
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
@@ -34,7 +35,7 @@ export const mockRows = [
 
 <BlogPageShell>
 
-<BlogCover icon={post.coverIcon} compact priority />
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
 
 # {post.title}
 
@@ -44,7 +45,7 @@ export const mockRows = [
 
 <KeyTakeaway>
 
-El GEO Score es **una media ponderada de cuatro señales**, de 0 a 100: cuánto apareces, con qué protagonismo, cómo estás frente a tus competidores y si hay una fuente real detrás. No es un porcentaje de menciones — es un diagnóstico, no un contador.
+El GEO Score es **una media ponderada de cinco señales**, de 0 a 100: cuánto apareces, con qué protagonismo, cómo estás frente a tus competidores, si hay una fuente real detrás y si tu web es legible para un motor. No es un porcentaje de menciones — es un diagnóstico, no un contador.
 
 </KeyTakeaway>
 
@@ -52,29 +53,32 @@ El GEO Score es **una media ponderada de cuatro señales**, de 0 a 100: cuánto 
 
 La primera pregunta que se hace cualquiera al empezar con <a href="/glosario/geo">GEO</a> es simple: *¿aparece mi marca cuando alguien le pregunta a ChatGPT, Gemini o Claude sobre mi categoría?* Es una pregunta binaria — sí o no — y responde a lo que en GenScore llamamos **presencia**.
 
-Pero un analista de visibilidad de marca nunca se conforma con un sí o un no. Las siguientes preguntas que hace son: *¿en qué posición aparece respecto a mis competidores? ¿cómo salgo parado frente a ellos en conjunto? ¿esa mención está respaldada por una cita real, o es solo una opinión genérica del modelo?* El GEO Score existe para responder a las cuatro a la vez, en un solo número.
+Pero un analista de visibilidad de marca nunca se conforma con un sí o un no. Las siguientes preguntas que hace son: *¿en qué posición aparece respecto a mis competidores? ¿cómo salgo parado frente a ellos en conjunto? ¿esa mención está respaldada por una cita real, o es solo una opinión genérica del modelo? ¿y puede siquiera un motor leer mi web para extraer algo de ella?* El GEO Score existe para responder a las cinco a la vez, en un solo número.
 
 <Figure
   label="Figura 1."
-  caption="Las cuatro señales de un escaneo y el número que resulta al combinarlas. Datos de ejemplo; la estructura y las etiquetas son las reales del producto."
+  caption="Las cinco señales de un escaneo y el número que resulta al combinarlas. Datos de ejemplo; la estructura y las etiquetas son las reales del producto."
 >
-  <ProductMock score={66} rows={mockRows} />
+  <ProductMock score={67} rows={mockRows} />
 </Figure>
 
-Fíjate en algo de la figura: **ninguna de las cuatro señales vale 66**. El número final no es ninguna de ellas, sino lo que sale al pesarlas. Por eso una marca puede tener una presencia alta y aun así un GEO Score mediocre — si nadie la cita, esa presencia no está respaldada por nada.
+Fíjate en algo de la figura: **ninguna de las cinco señales vale 67**. El número final no es ninguna de ellas, sino lo que sale al pesarlas. Por eso una marca puede tener una presencia alta y aun así un GEO Score mediocre — si nadie la cita, esa presencia no está respaldada por nada.
 
 ## Cuánto pesa cada señal
 
 <StatGrid label="Pesos de cada señal dentro del GEO Score">
-  <Stat value="40%" label="Presencia — la tasa de mención" source="ADR-0015 · GEO Score v2" tone="blue" />
-  <Stat value="25%" label="Prominencia — tu puesto medio" source="ADR-0015 · GEO Score v2" tone="blue" />
-  <Stat value="20%" label="Posición competitiva del conjunto" source="ADR-0015 · GEO Score v2" tone="cyan" />
-  <Stat value="15%" label="Autoridad — citación de tu dominio" source="ADR-0015 · GEO Score v2" tone="warm" />
+  <Stat value="32%" label="Presencia — la tasa de mención" source="ADR-0033 · GEO Score v4" tone="blue" />
+  <Stat value="20%" label="Prominencia — tu puesto cuando apareces" source="ADR-0033 · GEO Score v4" tone="blue" />
+  <Stat value="16%" label="Posición competitiva del conjunto" source="ADR-0033 · GEO Score v4" tone="cyan" />
+  <Stat value="12%" label="Autoridad — citación de tu dominio" source="ADR-0033 · GEO Score v4" tone="warm" />
+  <Stat value="20%" label="Preparación técnica de tu web" source="ADR-0033 · GEO Score v4" tone="cyan" />
 </StatGrid>
 
 El orden de los pesos no es arbitrario: refleja cómo razona un analista real — primero "¿estamos en la conversación?", después "¿con qué protagonismo?", después "¿cómo estamos en conjunto frente a la competencia?", y por último "¿hay evidencia real detrás?".
 
-## Los cuatro componentes, en detalle
+La quinta señal, la **preparación técnica**, entró en agosto de 2026 y es distinta de las otras cuatro en dos sentidos. Va dentro y no al lado porque es una condición: una web que los motores no pueden leer limpiamente no puede beneficiarse de ninguna otra mejora GEO. Y es la única **determinista** del grupo — se calcula con comprobaciones sobre tu HTML, sin preguntar a ningún modelo, así que la misma web da siempre el mismo número. Eso tiene un efecto medible sobre el conjunto: darle una quinta parte del peso reduce en esa misma proporción cuánto mueve el ruido de los motores a tu puntuación. Las proporciones **relativas** de las otras cuatro no cambiaron al añadirla: se reescalaron todas por igual.
+
+## Los cinco componentes, en detalle
 
 <CompareTable>
 
@@ -84,6 +88,7 @@ El orden de los pesos no es arbitrario: refleja cómo razona un analista real �
 | **Prominencia** | Posición media frente a competidores | No solo si apareces, sino si apareces primero o como una idea tardía |
 | **Posición competitiva** | Presión competitiva general del escaneo | Cómo te va frente a la competencia en conjunto, no solo prompt a prompt |
 | **Autoridad** | Tasa de citación de tu propio dominio | Si esa presencia está respaldada por una fuente real, no solo por una opinión del modelo |
+| **Preparación técnica** | Auditoría de tu web, sin LLM de por medio | Si un motor puede leer tu página, extraer una respuesta de ella y atribuírtela |
 
 </CompareTable>
 
@@ -91,7 +96,7 @@ Puedes profundizar en cada una en el <a href="/glosario">glosario</a>, y ver el 
 
 ## Qué pasa cuando falta un dato
 
-No todos los escaneos tienen los cuatro componentes disponibles — la prominencia, por ejemplo, solo se puede calcular cuando hay datos de posición válidos. Cuando un componente falta, GenScore **no le pone un cero**: eso penalizaría injustamente sin motivo. Lo descarta del cálculo y reparte su peso proporcionalmente entre los demás.
+No todos los escaneos tienen los cinco componentes disponibles — la prominencia, por ejemplo, solo se puede calcular cuando hay datos de posición válidos. Cuando un componente falta, GenScore **no le pone un cero**: eso penalizaría injustamente sin motivo. Lo descarta del cálculo y reparte su peso proporcionalmente entre los demás.
 
 Si eso ocurre, la confianza del resultado baja de alta a media, para dejar claro que el número se apoya en menos señales de lo habitual. Es la diferencia entre "no lo sabemos" y "es cero", y confundirlas es una de las formas más fáciles de mentir con una métrica.
 
@@ -109,7 +114,9 @@ Si eso ocurre, la confianza del resultado baja de alta a media, para dejar claro
 
 ## Por qué esto importa
 
-Un GEO Score de 72 significa: *combinando cuánto apareces, con qué protagonismo, cómo estás frente a tus competidores y si hay una fuente real detrás, tu marca saca un 72 sobre 100*. Es la diferencia entre un contador y un diagnóstico — y, sobre todo, te dice **cuál de las cuatro palancas tocar primero**.
+Un GEO Score de 72 significa: *combinando cuánto apareces, con qué protagonismo, cómo estás frente a tus competidores, si hay una fuente real detrás y si tu web es legible para un motor, tu marca saca un 72 sobre 100*. Es la diferencia entre un contador y un diagnóstico — y, sobre todo, te dice **cuál de las cinco palancas tocar primero**.
+
+Si quieres el detalle de cada señal por separado —cómo se calcula, cuántas respuestas hacen falta para que signifique algo y cuáles de las métricas que circulan por ahí engañan—, lo tienes en <a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>.
 
 <AuthorBio>
 

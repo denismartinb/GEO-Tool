@@ -128,13 +128,39 @@ describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
     expect(og?.modifiedTime).toBe("2026-08-10");
   });
 
-  it("ningún post real inventa un dateUpdated sin un refresco de verdad", () => {
-    // No hay todavía ningún refresco real (content-strategy.md §4.4: "nunca
-    // solo la fecha") — este test documenta el estado esperado hoy y falla en
-    // cuanto alguien ponga una fecha ahí sin que el cuerpo del artículo
-    // también cambie, porque entonces habría que revisarlo a mano.
-    for (const post of BLOG_POSTS) {
-      expect(post.dateUpdated, `${post.slug} tiene dateUpdated sin refresco conocido`).toBeUndefined();
+  /**
+   * Refrescos reales, con su justificación. Hasta el 2026-08-13 este test
+   * exigía que NINGÚN post tuviera `dateUpdated`: no había ocurrido ningún
+   * refresco todavía y la tubería estaba recién puesta (T-c). El primero llegó
+   * con S6 y la lista sustituye a la prohibición, conservando lo que el test
+   * protegía de verdad — que nadie suba una fecha sin tocar el artículo
+   * (content-strategy.md §4.4: "nunca solo la fecha").
+   *
+   * Añadir una entrada aquí es parte del PR que hace el refresco, no un
+   * trámite posterior: si el cuerpo del artículo no cambió, no es un refresco.
+   */
+  const REFRESCOS_REALES: Record<string, string> = {
+    "que-es-el-geo-score":
+      "GEO-SCORE-V4 (ADR 0033) añadió el componente técnico y reescaló los pesos; " +
+      "el artículo seguía publicando los cuatro de v2. Refrescado en SEO-POS-1 S6, log §72."
+  };
+
+  it("todo dateUpdated corresponde a un refresco documentado", () => {
+    const sinJustificar = BLOG_POSTS.filter((post) => post.dateUpdated && !REFRESCOS_REALES[post.slug]).map(
+      (post) => post.slug
+    );
+    expect(
+      sinJustificar,
+      `estos posts declaran dateUpdated sin refresco documentado: ${sinJustificar.join(", ")}. ` +
+        "Un refresco cambia un dato, un ejemplo o una sección — nunca solo la fecha."
+    ).toEqual([]);
+  });
+
+  it("no se documenta un refresco de un post que no lo declara", () => {
+    for (const slug of Object.keys(REFRESCOS_REALES)) {
+      const post = BLOG_POSTS.find((p) => p.slug === slug);
+      expect(post, `${slug} está documentado como refrescado pero no existe`).toBeTruthy();
+      expect(post?.dateUpdated, `${slug} está documentado como refrescado pero no declara dateUpdated`).toBeTruthy();
     }
   });
 });

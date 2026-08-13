@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Un conjunto de respuestas de IA, unas con mención de la marca y otras sin ella, y las cinco métricas que se derivan de él: cuatro dibujadas con su margen de error y la quinta, la preparación técnica, sin margen porque es determinista">
+  <defs>
+    <linearGradient id="bgMetrics" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowMetricsA" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowMetricsB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="barMetrics" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#09c5d6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgMetrics)"/>
+  <circle cx="170" cy="150" r="230" fill="url(#glowMetricsA)"/>
+  <circle cx="1040" cy="150" r="215" fill="url(#glowMetricsB)"/>
+
+  <!-- La muestra: cada punto es UNA respuesta (prompt × motor), no un prompt.
+       Los rellenos son las respuestas que mencionan la marca. Es el
+       denominador del que salen las cuatro métricas medidas de la derecha, y
+       la primera afirmación del artículo. Sin texto, por el mismo motivo que
+       las portadas de auditoría y de sectores: una portada con copy se
+       desincroniza del artículo en cuanto se reescribe una línea. -->
+  <g>
+    <rect x="72" y="66" width="252" height="168" rx="12" fill="#0d1830" stroke="#1e3a6b" stroke-width="2"/>
+    <g fill="#2f4d8c">
+      <circle cx="108" cy="102" r="9"/><circle cx="144" cy="102" r="9"/><circle cx="180" cy="102" r="9"/>
+      <circle cx="216" cy="102" r="9"/><circle cx="252" cy="102" r="9"/><circle cx="288" cy="102" r="9"/>
+      <circle cx="108" cy="150" r="9"/><circle cx="144" cy="150" r="9"/><circle cx="180" cy="150" r="9"/>
+      <circle cx="216" cy="150" r="9"/><circle cx="252" cy="150" r="9"/><circle cx="288" cy="150" r="9"/>
+      <circle cx="108" cy="198" r="9"/><circle cx="144" cy="198" r="9"/><circle cx="180" cy="198" r="9"/>
+      <circle cx="216" cy="198" r="9"/><circle cx="252" cy="198" r="9"/><circle cx="288" cy="198" r="9"/>
+    </g>
+    <g fill="#5de6f2">
+      <circle cx="144" cy="102" r="9"/><circle cx="252" cy="102" r="9"/>
+      <circle cx="108" cy="150" r="9"/><circle cx="216" cy="150" r="9"/><circle cx="288" cy="150" r="9"/>
+      <circle cx="180" cy="198" r="9"/><circle cx="252" cy="198" r="9"/>
+    </g>
+  </g>
+
+  <!-- Flecha: de la muestra salen las métricas, no al revés. -->
+  <path d="M348 150 h44" stroke="#2b4d8f" stroke-width="3" stroke-linecap="round"/>
+  <path d="M382 141 l11 9 l-11 9" fill="none" stroke="#2b4d8f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Las cinco métricas. Las cuatro primeras se miden sobre respuestas de
+       LLM y llevan bigote de margen; la quinta (preparación técnica) es
+       determinista y por eso se dibuja sin él. Las alturas son ilustrativas:
+       lo que la imagen afirma es la ASIMETRÍA entre las cuatro con margen y
+       la quinta sin él, que es la tesis del artículo. -->
+  <line x1="424" y1="252" x2="1128" y2="252" stroke="#1e3a6b" stroke-width="2"/>
+
+  <g>
+    <rect x="440" y="117" width="90" height="133" rx="8" fill="url(#barMetrics)"/>
+    <line x1="485" y1="97" x2="485" y2="137" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="471" y1="97" x2="499" y2="97" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="471" y1="137" x2="499" y2="137" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+
+    <rect x="570" y="146" width="90" height="104" rx="8" fill="url(#barMetrics)"/>
+    <line x1="615" y1="122" x2="615" y2="170" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="601" y1="122" x2="629" y2="122" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="601" y1="170" x2="629" y2="170" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+
+    <rect x="700" y="138" width="90" height="112" rx="8" fill="url(#barMetrics)"/>
+    <line x1="745" y1="116" x2="745" y2="160" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="731" y1="116" x2="759" y2="116" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="731" y1="160" x2="759" y2="160" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+
+    <rect x="830" y="175" width="90" height="75" rx="8" fill="url(#barMetrics)"/>
+    <line x1="875" y1="149" x2="875" y2="201" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="861" y1="149" x2="889" y2="149" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="861" y1="201" x2="889" y2="201" stroke="#9fd4ff" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Sin bigote, y con contorno sólido: la única que no se estima. -->
+    <rect x="960" y="131" width="90" height="119" rx="8" fill="url(#barMetrics)"/>
+    <rect x="956" y="127" width="98" height="127" rx="10" fill="none" stroke="#5de6f2" stroke-width="2.5"/>
+    <line x1="960" y1="131" x2="1050" y2="131" stroke="#eaf7ff" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

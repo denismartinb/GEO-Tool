@@ -41,7 +41,14 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "geo-para-ecommerce": "sectores",
   "geo-para-saas-b2b": "sectores",
   "geo-para-agencias": "sectores",
-  "que-es-una-auditoria-geo": "playbooks"
+  "que-es-una-auditoria-geo": "playbooks",
+  // S1 se publicó el 2026-08-10 y esta lista se quedó atrás: el piloto llevaba
+  // tres días sin abrirlo nunca. Lo mismo que le pasó a `geo-para-ecommerce` y
+  // a `/comparativas/genscore-vs-profound` (log §62). Ahora hay test
+  // (fixture-drift.test.ts) que contrasta este mapa contra BLOG_POSTS.
+  "como-saber-si-tu-marca-aparece-en-chatgpt": "playbooks",
+  // SEO-POS-1 Fase C, S6 (2026-08-13).
+  "metricas-geo-que-medir": "medicion"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

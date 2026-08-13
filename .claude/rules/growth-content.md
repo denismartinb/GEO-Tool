@@ -27,12 +27,30 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 - **Un peso no es un valor medido** (log §13). No presentar un parámetro de
   configuración del score como si fuera un resultado observado.
 
+- **Una cifra del producto publicada en prosa se ata al código con un test.**
+  Un artículo que dice "diez respuestas mínimo" o "Claude no busca en la web"
+  caduca solo: cambia la constante y el texto pasa a mentir sobre nuestra
+  propia metodología sin que nada falle, porque es prosa en un MDX. El test
+  importa la constante real y la contrasta con lo publicado, de forma que el
+  cambio de código y el refresco del artículo caen en el mismo PR o no cae
+  ninguno (`lib/blog/metricas-geo.test.ts`; log §71). El caso que lo motivó:
+  `/blog/que-es-el-geo-score` llevaba ocho días publicando los pesos de
+  GEO Score v2 mientras `/docs/metodologia/geo-score` publicaba los de v4 —
+  el sitio contradiciéndose a sí mismo a un enlace de distancia (log §72).
+
 ## Imágenes
 
 - **Ningún visual es decorativo: todos son evidencia** (ADR 0026
   `article-imagery-policy`). Cada imagen es una captura que prueba la
   afirmación, un ejemplo enmarcado del patrón que se enseña, o una tarjeta de
   dato con su fuente. Si una imagen no prueba nada, no va.
+- **Declarar la portada no es enseñarla.** `BlogCover` sólo pinta la imagen si
+  recibe `image`; sin esa prop cae al degradado con icono, que es el respaldo
+  de los artículos *sin* portada — "un icono de algo que no carga bien", el
+  fundador. Cuatro artículos estuvieron así: portada correcta en `/blog`, en la
+  tarjeta social y en el schema, y degradado en su propia cabecera, porque los
+  tests de portada miraban `BLOG_POSTS` y el disco, nunca el MDX
+  (`covers.test.ts`, "el artículo enseña la portada que declara"; log §71).
 
 ## Redacción
 
@@ -146,6 +164,15 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - **El índice del blog no publica un recuento de artículos.** Con pocos
   subraya lo pequeño que es el catálogo y con muchos no ayuda a elegir qué
   leer (fundador, 2026-08-11; log §61).
+- **Publicar un artículo del blog incluye sus DOS listas del piloto: el
+  fixture (`BLOG_SLUGS`) y el mapa del journey (`BLOG_POSTS_BY_CLUSTER`).** Son
+  dos ficheros distintos mantenidos a mano y sólo el primero tenía guardián,
+  así que `como-saber-si-tu-marca-aparece-en-chatgpt` (S1) pasó tres días con
+  `PILOT PASS` sin que el piloto lo abriera nunca: un post ausente del journey
+  no da 404, simplemente no se mira, y eso no tiene síntoma. El cluster va con
+  el slug y se compara también, porque uno equivocado cambia en silencio lo que
+  el piloto espera de la página pilar (`fixture-drift.test.ts`, "todo artículo
+  publicado lo pilota alguien"; log §71).
 - **Publicar una comparativa incluye su journey de piloto y su entrada de
   fixture, en el mismo PR.** A diferencia del blog, las comparativas no se
   pilotan con un bucle: cada una es una página a mano y un `test(...)` a mano,

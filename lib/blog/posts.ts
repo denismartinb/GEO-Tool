@@ -103,6 +103,12 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "La metodología detrás del GEO Score de GenScore: qué mide, cómo se combina presencia, prominencia, posición competitiva y autoridad, y por qué importa para saber cómo aparece tu marca en respuestas de IA.",
     datePublished: "2026-07-12",
+    // Refresco real (SEO-POS-1 S6, log §72): el artículo publicaba los cuatro
+    // componentes y los pesos de GEO Score v2 (.40/.25/.20/.15) — superados
+    // por GEO-SCORE-V4 (ADR 0033, 2026-08-05), que añadió el componente
+    // técnico y reescaló el resto. `/docs/metodologia/geo-score` ya publicaba
+    // los pesos nuevos, así que el sitio se contradecía a sí mismo.
+    dateUpdated: "2026-08-13",
     coverIcon: "trendUp",
     coverImage: "/blog/que-es-el-geo-score/cover.webp",
     primaryKeyword: "geo score",
@@ -187,6 +193,19 @@ export const BLOG_POSTS: BlogPost[] = [
     coverImage: "/blog/que-es-una-auditoria-geo/cover.webp",
     primaryKeyword: "qué es una auditoría geo",
     cluster: "playbooks"
+  },
+  {
+    slug: "metricas-geo-que-medir",
+    title: "Métricas GEO: qué medir y qué no",
+    description:
+      "Cinco métricas dicen de verdad cómo aparece tu marca en las respuestas de IA, y tres de las más repetidas engañan. Con los umbrales reales: cuántas respuestas hacen falta antes de leer un número.",
+    metaDescription:
+      "Qué métricas GEO miden de verdad tu visibilidad en IA (mención, cuota de voz, posición, citación) y cuáles engañan.",
+    datePublished: "2026-08-13",
+    coverIcon: "trendUp",
+    coverImage: "/blog/metricas-geo-que-medir/cover.webp",
+    primaryKeyword: "métricas geo",
+    cluster: "medicion"
   },
   {
     slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
