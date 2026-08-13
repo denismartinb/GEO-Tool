@@ -10,12 +10,32 @@ import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
 
 type NavItem = { anchor: string; label: string } | { href: string; label: string };
 
-/** The console sidebar's account chip, reused verbatim on the public header. Links to the console, which is what a returning logged-in visitor actually wants from a marketing page. */
+/**
+ * The console sidebar's account chip, reused verbatim on the public header.
+ * Links to the console, which is what a returning logged-in visitor actually
+ * wants from a marketing page.
+ *
+ * The accessible name is spelled out rather than left to the visual parts: the
+ * avatar is two letters with no meaning read aloud, and the plan badge is a
+ * crown glyph plus a bare word ("Agencia") that says nothing about being a
+ * plan. `data-testid` is what lets the pilot's interaction sweep assert on the
+ * chip instead of cropping pixels out of a screenshot (ux-pilot, 2026-08-12).
+ */
 function AccountChip({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
+  const planSuffix = showsPlanBadge(user.planId) ? `, plan ${user.planName}` : "";
+
   return (
-    <Link href="/dashboard" className="user-chip lp-user-chip" onClick={onNavigate}>
-      <div className="avatar">{avatarInitials(user.email)}</div>
-      <div style={{ minWidth: 0 }}>
+    <Link
+      href="/dashboard"
+      className="user-chip lp-user-chip"
+      onClick={onNavigate}
+      data-testid="account-chip"
+      aria-label={`Ir al panel. Cuenta: ${user.email}${planSuffix}`}
+    >
+      <div className="avatar" aria-hidden="true">
+        {avatarInitials(user.email)}
+      </div>
+      <div style={{ minWidth: 0 }} aria-hidden="true">
         <div className="lp-user-chip-email">{user.email}</div>
         {showsPlanBadge(user.planId) && (
           <span className="sb-plan-badge">

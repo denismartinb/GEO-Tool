@@ -255,16 +255,35 @@ export function LandingPage() {
         <div className="lp-inner">
           <div className="lp-ctaband">
             <div className="onb-aurora" style={{ opacity: 0.25 }}><div className="blob blob-2" /><div className="blob blob-3" /></div>
-            <div style={{ position: "relative", zIndex: 2 }}>
-              <h2>Descubre tu visibilidad en IA hoy</h2>
-              <p>Introduce tu dominio y obtén tu primer informe en minutos. Gratis.</p>
-              <div className="row">
-                <button className="btn btn-white btn-lg" onClick={goToSignup}>
-                  Prueba gratis <Icon name="arrRight" size={16} />
-                </button>
-                <button className="btn btn-onaccent btn-lg" onClick={goToLogin}>Iniciar sesión</button>
+            {/* GENSCORE-HEADER-3: a quien ya entró no se le ofrece darse de
+                alta. Aquí el corte NO es el de la franja (de pago / no de
+                pago): «Iniciar sesión» no le sirve a ningún logado, y
+                «Prueba gratis» a un logado en Free tampoco —ya la tiene—, así
+                que el corte es logado / anónimo. El titular y el subtítulo
+                cambian con los botones: «obtén tu primer informe» le habla a
+                quien no tiene ninguno. */}
+            {user ? (
+              <div style={{ position: "relative", zIndex: 2 }}>
+                <h2>Continúa donde lo dejaste</h2>
+                <p>Vuelve a tu panel para ver cómo va la visibilidad de tus dominios.</p>
+                <div className="row">
+                  <Link href="/dashboard" className="btn btn-white btn-lg">
+                    Ir al panel <Icon name="arrRight" size={16} />
+                  </Link>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ position: "relative", zIndex: 2 }}>
+                <h2>Descubre tu visibilidad en IA hoy</h2>
+                <p>Introduce tu dominio y obtén tu primer informe en minutos. Gratis.</p>
+                <div className="row">
+                  <button className="btn btn-white btn-lg" onClick={goToSignup}>
+                    Prueba gratis <Icon name="arrRight" size={16} />
+                  </button>
+                  <button className="btn btn-onaccent btn-lg" onClick={goToLogin}>Iniciar sesión</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>

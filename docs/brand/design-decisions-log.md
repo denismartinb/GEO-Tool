@@ -6336,16 +6336,43 @@ logados o plan free»*.
   El ámbito de módulo también evita servir una identidad rancia: toda
   transición de sesión (login, logout) es una carga completa de página.
 
+**El banner del pie, y por qué su regla NO es la de la franja.** El `ux-pilot`,
+juzgando las capturas de este PR, encontró el tercer sitio: el banner del pie de
+la home («Descubre tu visibilidad en IA hoy», con «Prueba gratis» e «Iniciar
+sesión») seguía igual para un logado. El fundador pidió meterlo en este mismo
+PR. **Aquí el corte es logado/anónimo, no de pago/no de pago**, y la diferencia
+es sustantiva: «Iniciar sesión» no le sirve a *ningún* logado, y «Prueba
+gratis» a uno en Free tampoco —ya la tiene—, mientras que la franja sí le sigue
+sirviendo a ese mismo usuario porque ofrece algo que no tiene (Pro, 7 días).
+Dos elementos parecidos con dos reglas distintas, y colapsarlas habría dejado
+un botón sin sentido en una de las dos.
+
+**Cambia el texto, no sólo los botones.** «Introduce tu dominio y obtén tu
+primer informe en minutos» le habla a quien no tiene ninguno; dejarlo con un
+botón nuevo debajo habría sido media corrección. Para un logado: «Continúa
+donde lo dejaste» + un único «Ir al panel». Sin cifras ni promesas nuevas
+(CLAUDE.md, "no fake metrics").
+
+**El chip pasa a tener nombre accesible y `data-testid`.** El avatar son dos
+letras que leídas en voz alta no significan nada y la insignia era un glifo de
+corona más una palabra suelta («Agencia») que no dice que sea un plan: ahora
+las partes visuales van `aria-hidden` y el enlace lleva el nombre completo
+(«Ir al panel. Cuenta: … , plan …»). El `data-testid` es lo que permite
+afirmar sobre el chip sin recortar píxeles de una captura.
+
+**Y el piloto pasa a abrir el cajón móvil de una página pública.** Su barrido
+de interacción sólo abría menús de consola, así que el cajón de la cabecera
+pública no se fotografiaba nunca — por eso GENSCORE-HEADER-2 se llevó un PASS
+sin que nadie hubiera visto el chip en 375 ni en 768, y quien lo verificó fue
+el fundador con su teléfono. Eso es precisamente lo que el piloto existe para
+no delegar, y es además el sitio donde ya se coló un fallo real (el CTA
+duplicado que corrigió §63). El test nuevo se salta solo por encima de 900px,
+donde `.lp-burger` no existe, y afirma por `data-testid` en vez de por texto:
+el email y el plan de la cuenta piloto pueden cambiar, la existencia del chip
+no.
+
 ### Pendiente / roto conocido
 
-- **El banner del pie de la home** («Descubre tu visibilidad en IA hoy», con
-  «Prueba gratis» e «Iniciar sesión») **sigue saliendo igual a quien ya está
-  logado** — lo encontró el `ux-pilot` al juzgar las capturas de este PR, no
-  el agente. Es el mismo fallo en un tercer sitio, y **no lo cubre la regla de
-  la franja**: «Iniciar sesión» no le sirve a ningún logado, ni siquiera a uno
-  en Free, así que el corte aquí no es de pago/no de pago sino
-  logado/anónimo — y queda por decidir qué lo sustituye para un logado en Free
-  (¿mejorar plan? ¿ir al panel? ¿nada?). Pendiente de decisión del fundador.
 - ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado
   el 2026-08-12**. El entorno del agente no tiene credenciales, así que la
   lógica del endpoint la cubren tests unitarios y el pintado se verificó
