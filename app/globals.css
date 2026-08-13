@@ -5110,8 +5110,11 @@ a.notif-row:hover {
    the chip reads as a control against the nav's own background without a
    hard edge, and an ellipsis budget so a long address can't push the nav
    wide. Founder, 2026-08-13: "gris suave de fondo sin borde" — swapped the
-   1px border for this fill rather than stacking both. */
-.lp-user-chip { background: var(--surface-2); max-width: 260px; }
+   1px border for this fill rather than stacking both. `--surface-2`
+   (#fbfbfd) read as barely-there against the nav's own white, so it moved to
+   `--canvas` (#f6f7f9) — one step darker on the same neutral scale, still a
+   named token rather than a one-off value invented for this component. */
+.lp-user-chip { background: var(--canvas); max-width: 260px; }
 /* `.user-chip.lp-user-chip` (both real classes on the element, not a
    specificity trick) — needed because `.lp-mobnav a` (one class + the tag,
    0,1,1) otherwise beats a bare `.lp-user-chip` (0,1,0) and silently forces

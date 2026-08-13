@@ -6414,6 +6414,14 @@ en su lugar un fondo gris suave. `--surface-2` (el mismo token que ya usa
 "activo"/hover del chip y su estado en reposo comparten familia de color en
 vez de inventar un segundo gris que conviva mal con el primero.
 
+**Cuarto addendum — un punto más oscuro, y merge directo (2026-08-13).**
+`--surface-2` (#fbfbfd) quedaba casi invisible contra el blanco de la nav; se
+sube un peldaño en la misma escala de neutros a `--canvas` (#f6f7f9) —
+sigue siendo un token con nombre, no un valor suelto inventado para este
+componente. El fundador pidió mergear directamente con este cambio, sin
+otra vuelta de piloto: era un ajuste de un valor de color sobre un chip ya
+verificado tres veces por el `ux-pilot` en su forma y contenido.
+
 ### Pendiente / roto conocido
 
 - ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado
