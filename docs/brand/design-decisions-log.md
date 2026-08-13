@@ -6407,6 +6407,13 @@ clases reales que ya lleva el elemento, no un truco), que gana sin depender
 del orden de aparición en el fichero. Sigue sin tocar el chip del sidebar de
 consola.
 
+**Tercer addendum — borde fuera, gris suave dentro (2026-08-13).** El
+fundador pidió, ya con el espaciado correcto, quitar el borde de 1px y poner
+en su lugar un fondo gris suave. `--surface-2` (el mismo token que ya usa
+`.user-chip:hover` en el sidebar) en vez de un gris nuevo — así el estado
+"activo"/hover del chip y su estado en reposo comparten familia de color en
+vez de inventar un segundo gris que conviva mal con el primero.
+
 ### Pendiente / roto conocido
 
 - ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado

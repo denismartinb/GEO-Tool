@@ -5105,11 +5105,13 @@ a.notif-row:hover {
 
 /* GENSCORE-HEADER-2 — the logged-in state of the public header reuses the
    console sidebar's chip (.user-chip/.avatar/.sb-plan-badge) rather than a
-   lookalike, so these only add what the marketing bar needs on top: a border
-   so the chip reads as a control against the nav's own background (the
-   sidebar's ground already separates it there), and an ellipsis budget so a
-   long address can't push the nav wide. */
-.lp-user-chip { border: 1px solid var(--line); max-width: 260px; }
+   lookalike, so these only add what the marketing bar needs on top: a soft
+   fill (--surface-2, the same token the sidebar's own hover state uses) so
+   the chip reads as a control against the nav's own background without a
+   hard edge, and an ellipsis budget so a long address can't push the nav
+   wide. Founder, 2026-08-13: "gris suave de fondo sin borde" — swapped the
+   1px border for this fill rather than stacking both. */
+.lp-user-chip { background: var(--surface-2); max-width: 260px; }
 /* `.user-chip.lp-user-chip` (both real classes on the element, not a
    specificity trick) — needed because `.lp-mobnav a` (one class + the tag,
    0,1,1) otherwise beats a bare `.lp-user-chip` (0,1,0) and silently forces
