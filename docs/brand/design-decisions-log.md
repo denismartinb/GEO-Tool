@@ -7245,6 +7245,197 @@ vez de «arreglarla»: volver estricto un flag apagaría cosas en producción.
 
 ---
 
+## 65. La cabecera pública reconoce a quien ya entró (GENSCORE-HEADER-2, 2026-08-12)
+
+**Estado: implementada.** Continuación directa de §63. El fundador, ya logado,
+volvió a una página pública y se encontró «Iniciar sesión / Prueba gratis»:
+*«no debería ver estos botones, debería ver un estado de logado»*. La primera
+propuesta fue un botón único «Ir al panel»; la rechazó pidiendo *«algo más
+currado, más personalizado»* y señalando el chip de cuenta del menú lateral de
+consola (avatar con iniciales + email + insignia de plan).
+
+**No es un parecido, es el mismo chip.** `PublicHeader` renderiza las mismas
+clases que `components/sidebar.tsx` (`.user-chip`, `.avatar`,
+`.sb-plan-badge`), y las dos partes derivadas —iniciales e «¿hay insignia?»—
+salen de `lib/account-chip.ts`, que ahora usan **las dos** superficies.
+Repetir `email.slice(0, 2)` en el segundo llamador es exactamente cómo «el
+mismo chip» se convierte en dos chips distintos al cabo de unos meses. La
+regla de que **Free no pinta insignia** (decisión del fundador, 2026-07-31) se
+hereda de ahí en vez de volver a decidirse.
+
+**La decisión de fondo: las páginas públicas siguen siendo estáticas.** Las
+~45 superficies de marketing se pre-generan, y eso es el producto de SEO-POS-1
+y GROWTH-2/3. Leer la sesión en el servidor dentro de la cabecera compartida
+las habría sacado a todas del pre-renderizado —`lib/supabase/server.ts` usa
+`cookies()`, que basta para volver dinámica cualquier ruta que lo toque—, así
+que la cabecera lo pregunta **desde el cliente** a un endpoint nuevo y mínimo
+(`app/api/me/route.ts`) y las páginas no se mueven. Verificado en el build:
+`/`, `/pricing`, `/geo`, `/blog/*`, `/comparativas/*`, `/glosario/*`, `/docs/*`
+y las legales siguen marcadas `○`.
+
+**El coste, declarado en vez de escondido:** mientras la respuesta no llega, la
+cabecera pinta los CTA de anónimo. Quien está logado los ve un instante antes
+de que aparezca su chip. Es deliberado y va en la dirección correcta: el
+visitante anónimo —prácticamente todo el tráfico de marketing, y la razón de
+que el CTA exista— acierta sin parpadeo, y el parpadeo lo sufre el caso raro.
+La alternativa (no pintar nada hasta saberlo) retrasa el CTA para todos por
+proteger a la minoría.
+
+**El endpoint no aplica la caducidad de la prueba, sólo la lee.** `getPlanForUser`
+resuelve el plan pasando por `applyTrialExpiry`, que **escribe** (degrada a
+Free con el cliente de servicio) y **manda el email de «prueba terminada»**.
+Ese camino es correcto en la consola y ahí se queda. Colgarlo de `/api/me`
+—alcanzable desde cada página estática de marketing, es decir mucho más
+tráfico que la consola— habría hecho que una visita al blog mandara un email a
+un cliente. Así que se extrajo el predicado puro `isTrialElapsed` de dentro de
+`applyTrialExpiry` y ambos lo comparten: el endpoint resuelve el plan
+**efectivo** (una prueba caducada se pinta como Free, la insignia no miente) sin
+escribir ni enviar nada. Un test lo fija afirmando que ni el cliente de
+servicio ni `sendTrialEndedEmail` se llaman. La extracción evita la otra
+trampa: una segunda copia de «¿se acabó la prueba?» acabaría divergiendo de la
+que de verdad cierra el grifo.
+
+`isTrialElapsed` es un predicado booleano **a propósito, no un type guard**:
+que devuelva `false` significa «la prueba sigue viva», nunca «no hay fila», y
+declararlo `row is TrialFields` hacía que TypeScript estrechara la rama falsa a
+`never`. Lo cazó `tsc`, no una revisión.
+
+**Alcance del endpoint:** devuelve email, `planId` y `planName`, y nada más.
+Lee tres columnas de `profiles` con el cliente del usuario (RLS, sin atajo de
+servicio); un test fija esa lista exacta, porque ampliarla amplía lo que
+pueden filtrar unas páginas públicas. Responde **200 con `user: null`** para
+anónimo en vez de 401: es el caso esperado en una página de marketing y un 401
+en cada carga sería ruido en la consola del navegador. Si la petición falla, la
+cabecera se queda con los CTA de anónimo — nunca una cabecera rota.
+
+**Addendum GENSCORE-HEADER-3 — la franja de la home (fundador, 2026-08-12).**
+Se entregó en este mismo PR, no en uno posterior. Al ver el chip funcionando,
+el agente dejó declarado que la franja `7 días de Pro · Sin tarjeta` de la home
+le seguía saliendo a un cliente de Agencia — el mismo fallo que §65 corrige, en
+otro elemento— y **no la tocó**, porque la regla correcta no era obvia y la
+decisión es comercial. El fundador la fijó: *«tiene que salir a usuarios no
+logados o plan free»*.
+
+- **Por eso no valía «ocultar si hay sesión».** Es una oferta de alta: a quien
+  paga le sobra, pero a un logado en **Free** le sigue sirviendo. El corte no
+  es logado/anónimo, es de pago/no de pago.
+- **`showsPromoStrip` vive junto a `showsPlanBadge`** en `lib/account-chip.ts`
+  y un test fija que son **exactamente inversas** para todo plan resuelto: son
+  la misma pregunta vista por los dos lados, y si un día discrepan es que una
+  superficie considera de pago a una cuenta que la otra considera gratuita.
+- **`undefined` (anónimo, o identidad aún sin resolver) muestra la franja**,
+  misma optimismo que la cabecera: el visitante para el que está escrita la ve
+  sin parpadeo, y el cliente de pago la ve el instante que tarda la respuesta.
+- **Una sola petición para los dos consumidores.** La franja vive fuera de la
+  cabecera, así que dos `useEffect` independientes habrían hecho dos viajes a
+  `/api/me` en la página más visitada del sitio. El hook pasó a
+  `lib/use-session-user.ts` con una promesa compartida a nivel de módulo;
+  verificado en local que la home hace **una** llamada con los dos montados.
+  El ámbito de módulo también evita servir una identidad rancia: toda
+  transición de sesión (login, logout) es una carga completa de página.
+
+**El banner del pie, y por qué su regla NO es la de la franja.** El `ux-pilot`,
+juzgando las capturas de este PR, encontró el tercer sitio: el banner del pie de
+la home («Descubre tu visibilidad en IA hoy», con «Prueba gratis» e «Iniciar
+sesión») seguía igual para un logado. El fundador pidió meterlo en este mismo
+PR. **Aquí el corte es logado/anónimo, no de pago/no de pago**, y la diferencia
+es sustantiva: «Iniciar sesión» no le sirve a *ningún* logado, y «Prueba
+gratis» a uno en Free tampoco —ya la tiene—, mientras que la franja sí le sigue
+sirviendo a ese mismo usuario porque ofrece algo que no tiene (Pro, 7 días).
+Dos elementos parecidos con dos reglas distintas, y colapsarlas habría dejado
+un botón sin sentido en una de las dos.
+
+**Cambia el texto, no sólo los botones.** «Introduce tu dominio y obtén tu
+primer informe en minutos» le habla a quien no tiene ninguno; dejarlo con un
+botón nuevo debajo habría sido media corrección. Para un logado: «Continúa
+donde lo dejaste» + un único «Ir al panel». Sin cifras ni promesas nuevas
+(CLAUDE.md, "no fake metrics").
+
+**El chip pasa a tener nombre accesible y `data-testid`.** El avatar son dos
+letras que leídas en voz alta no significan nada y la insignia era un glifo de
+corona más una palabra suelta («Agencia») que no dice que sea un plan: ahora
+las partes visuales van `aria-hidden` y el enlace lleva el nombre completo
+(«Ir al panel. Cuenta: … , plan …»). El `data-testid` es lo que permite
+afirmar sobre el chip sin recortar píxeles de una captura.
+
+**Y el piloto pasa a abrir el cajón móvil de una página pública.** Su barrido
+de interacción sólo abría menús de consola, así que el cajón de la cabecera
+pública no se fotografiaba nunca — por eso GENSCORE-HEADER-2 se llevó un PASS
+sin que nadie hubiera visto el chip en 375 ni en 768, y quien lo verificó fue
+el fundador con su teléfono. Eso es precisamente lo que el piloto existe para
+no delegar, y es además el sitio donde ya se coló un fallo real (el CTA
+duplicado que corrigió §63). El test nuevo se salta solo por encima de 900px,
+donde `.lp-burger` no existe, y afirma por `data-testid` en vez de por texto:
+el email y el plan de la cuenta piloto pueden cambiar, la existencia del chip
+no.
+
+**Addendum — dos ajustes tras probarlo el fundador en su móvil (2026-08-13).**
+El CTA de la sección "Recomendaciones" (`Empieza gratis`, a media home) también
+pasa a `Ir al panel` en logado, mismo criterio que el banner del pie: es un
+CTA de alta y a un logado no le sirve, esté en el plan que esté. No se tocaron
+los otros dos CTA de la home que sí quedan igual a propósito — el campo de
+dominio del hero (`Analiza gratis`, ligado a escribir un dominio y no a "darse
+de alta" en sí) y el enlace "Ver cómo funciona" — porque decidir qué le pasa a
+ese campo para un logado es una pregunta de producto más grande (¿crea un
+proyecto? ¿redirige?) que no se ha hecho.
+
+Y el chip del cajón móvil: el fundador señaló que la línea del email quedaba
+pegada a la insignia de plan. `.lp-user-chip` gana algo de relleno propio y la
+insignia un `margin-top` mayor, ambos con ámbito a esta cabecera — el chip del
+sidebar de consola no se toca porque su espaciado ya estaba aprobado y el
+problema no era suyo.
+
+**Segundo addendum — más aire, sin cambiar el diseño (2026-08-13).** Antes de
+este ajuste se le enseñaron tres alternativas de avatar en un artefacto
+(círculo sólido, degradado, squircle con anillo); el fundador las vio y pidió
+**quedarse con el actual** — solo con más espacio entre elementos.
+
+**Ese primer intento no hizo nada, y el fundador lo pidió tres veces antes de
+que se detectara por qué.** `.lp-user-chip { padding: 13px 14px; }` se subía
+correctamente en el código, pero el elemento es un `<a>` dentro de
+`.lp-mobnav`, y `.lp-mobnav a { padding: 0 10px; }` (clase + etiqueta,
+especificidad 0,1,1) le ganaba en cascada a un `.lp-user-chip` a secas (una
+sola clase, 0,1,0) — sin relación funcional entre ambas reglas, solo una
+coincidencia de selector. El `padding` computado real era `0px` arriba/abajo
+pese a que el fichero decía `13px`. Se encontró leyendo el **valor
+computado** en un navegador real (`getComputedStyle`), no releyendo el CSS —
+la fuente ya "decía" lo correcto, así que releerla no habría encontrado nada.
+Arreglado subiendo la especificidad con `.user-chip.lp-user-chip` (las dos
+clases reales que ya lleva el elemento, no un truco), que gana sin depender
+del orden de aparición en el fichero. Sigue sin tocar el chip del sidebar de
+consola.
+
+**Tercer addendum — borde fuera, gris suave dentro (2026-08-13).** El
+fundador pidió, ya con el espaciado correcto, quitar el borde de 1px y poner
+en su lugar un fondo gris suave. `--surface-2` (el mismo token que ya usa
+`.user-chip:hover` en el sidebar) en vez de un gris nuevo — así el estado
+"activo"/hover del chip y su estado en reposo comparten familia de color en
+vez de inventar un segundo gris que conviva mal con el primero.
+
+**Cuarto addendum — un punto más oscuro, y merge directo (2026-08-13).**
+`--surface-2` (#fbfbfd) quedaba casi invisible contra el blanco de la nav; se
+sube un peldaño en la misma escala de neutros a `--canvas` (#f6f7f9) —
+sigue siendo un token con nombre, no un valor suelto inventado para este
+componente. El fundador pidió mergear directamente con este cambio, sin
+otra vuelta de piloto: era un ajuste de un valor de color sobre un chip ya
+verificado tres veces por el `ux-pilot` en su forma y contenido.
+
+### Pendiente / roto conocido
+
+- ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado
+  el 2026-08-12**. El entorno del agente no tiene credenciales, así que la
+  lógica del endpoint la cubren tests unitarios y el pintado se verificó
+  interceptando la respuesta de `/api/me` (agencia, free, email largo,
+  anónimo, escritorio y cajón móvil). El extremo a extremo lo cerró **el
+  propio fundador** sobre el preview del PR #393, con su sesión: el chip sale
+  en el cajón móvil de `/blog` con sus iniciales, su email y la insignia
+  «Agencia». Queda anotado porque es el único camino que ni los tests ni el
+  piloto podían cubrir aquí: el piloto entra con la cuenta de piloto, cuyo
+  plan no tiene por qué pintar insignia, así que **una insignia de pago sobre
+  una sesión real sólo la podía ver alguien con una cuenta de pago**.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

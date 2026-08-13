@@ -4617,6 +4617,37 @@ a.notif-row:hover {
 .lp-mobnav .lp-cta-soft, .lp-mobnav .lp-cta-soft:hover { color: var(--brand-blue); }
 .lp-mobnav .lp-cta-soft:hover { background: rgba(37,99,235,.14); }
 
+/* GENSCORE-HEADER-2 — the logged-in state of the public header reuses the
+   console sidebar's chip (.user-chip/.avatar/.sb-plan-badge) rather than a
+   lookalike, so these only add what the marketing bar needs on top: a soft
+   fill (--surface-2, the same token the sidebar's own hover state uses) so
+   the chip reads as a control against the nav's own background without a
+   hard edge, and an ellipsis budget so a long address can't push the nav
+   wide. Founder, 2026-08-13: "gris suave de fondo sin borde" — swapped the
+   1px border for this fill rather than stacking both. `--surface-2`
+   (#fbfbfd) read as barely-there against the nav's own white, so it moved to
+   `--canvas` (#f6f7f9) — one step darker on the same neutral scale, still a
+   named token rather than a one-off value invented for this component. */
+.lp-user-chip { background: var(--canvas); max-width: 260px; }
+/* Same `.lp-mobnav a` (0,1,1) beats a bare class (0,1,0) fight as the CTA fix
+   just above — this is the second instance `.claude/rules/styles.md` already
+   warns about. `.user-chip.lp-user-chip` (both real classes on the element,
+   not a specificity trick) is what wins here, because unlike `.lp-cta` above
+   this chip is never rendered outside `.lp-user-chip`, so qualifying on its
+   own two classes is simpler than a `.lp-mobnav .foo` ancestor rule. That's
+   why a previous pass "increased" this padding and the rendered box didn't
+   move at all — the value was being set, then immediately overridden by a
+   rule earlier in this file with nothing to do with this component. Verified
+   by reading the *computed* padding in a real browser, not just the source. */
+.user-chip.lp-user-chip { padding: 13px 14px; gap: 13px; }
+.lp-user-chip .lp-user-chip-email {
+  font-size: 12.5px; font-weight: 650; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lp-user-chip .sb-plan-badge { margin-top: 7px; }
+/* In the drawer it is the full-width bottom action, in place of the two CTAs. */
+.lp-mobnav-ctas .lp-user-chip { max-width: none; }
+
 .lp-trust { padding: 40px 0 8px; text-align: center; }
 .lp-trust .cap { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
 .lp-logos { display: flex; align-items: center; justify-content: center; gap: 44px; flex-wrap: wrap; margin-top: 22px; opacity: .62; }

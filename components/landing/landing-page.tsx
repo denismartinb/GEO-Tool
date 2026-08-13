@@ -6,6 +6,7 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
+import { PromoStrip, RecommendationsCta, HomeCtaBand } from "@/components/landing/session-ctas";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 
 const FEATURES: Array<{ icon: string; t: string; d: string }> = [
@@ -57,13 +58,18 @@ function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon
  * destino al pasar por encima.
  */
 export function LandingPage() {
-
   return (
     <div className="lp">
       {/* HERO — nav + promo strip integrated into the same gradient ground
           (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
       <header className="lp-hero lp-hero--home" id="producto">
-        <div className="lp-promo">7 días de Pro · Sin tarjeta</div>
+        {/* GENSCORE-HEADER-3 (fundador, 2026-08-12): "la franja de 7 días
+            tiene que salir a usuarios no logados o plan free". Es una oferta
+            de alta, así que a quien ya paga le sobra — pero a un logado en
+            Free le sigue sirviendo, y por eso no basta con "ocultar si hay
+            sesión". `showsPromoStrip` es la misma pregunta que la insignia de
+            plan, invertida, y vive junto a ella. */}
+        <PromoStrip />
         <PublicHeader hero />
 
         <div className="lp-hero-content">
@@ -164,9 +170,7 @@ export function LandingPage() {
                   </div>
                 ))}
               </div>
-              <Link className="btn btn-primary mt24" href="/signup">
-                Empieza gratis <Icon name="arrRight" size={15} />
-              </Link>
+              <RecommendationsCta />
             </div>
 
             {/* mock rec card */}
@@ -233,16 +237,14 @@ export function LandingPage() {
         <div className="lp-inner">
           <div className="lp-ctaband">
             <div className="onb-aurora" style={{ opacity: 0.25 }}><div className="blob blob-2" /><div className="blob blob-3" /></div>
-            <div style={{ position: "relative", zIndex: 2 }}>
-              <h2>Descubre tu visibilidad en IA hoy</h2>
-              <p>Introduce tu dominio y obtén tu primer informe en minutos. Gratis.</p>
-              <div className="row">
-                <Link className="btn btn-white btn-lg" href="/signup">
-                  Prueba gratis <Icon name="arrRight" size={16} />
-                </Link>
-                <Link className="btn btn-onaccent btn-lg" href="/login">Iniciar sesión</Link>
-              </div>
-            </div>
+            {/* GENSCORE-HEADER-3: a quien ya entró no se le ofrece darse de
+                alta. Aquí el corte NO es el de la franja (de pago / no de
+                pago): "Iniciar sesión" no le sirve a ningún logado, y
+                "Prueba gratis" a un logado en Free tampoco —ya la tiene—, así
+                que el corte es logado / anónimo. El titular y el subtítulo
+                cambian con los botones: "obtén tu primer informe" le habla a
+                quien no tiene ninguno. */}
+            <HomeCtaBand />
           </div>
         </div>
       </section>
