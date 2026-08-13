@@ -40,7 +40,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "como-conseguir-que-chatgpt-te-cite": "playbooks",
   "geo-para-ecommerce": "sectores",
   "geo-para-saas-b2b": "sectores",
-  "geo-para-agencias": "sectores"
+  "geo-para-agencias": "sectores",
+  "que-es-una-auditoria-geo": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
@@ -193,6 +194,28 @@ test("/comparativas/genscore-vs-peec-ai renders and has its own canonical", asyn
   );
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/comparativas/genscore-vs-peec-ai");
+});
+
+test("/comparativas/genscore-vs-profound renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/genscore-vs-profound",
+    "comparativas-genscore-vs-profound"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/genscore-vs-profound");
+});
+
+test("/comparativas/alternativas-a-otterly renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/alternativas-a-otterly",
+    "comparativas-alternativas-a-otterly"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/alternativas-a-otterly");
 });
 
 test("/comparativas renders and has its own canonical", async ({ page }, testInfo) => {

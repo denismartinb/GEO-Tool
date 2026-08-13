@@ -6,6 +6,7 @@ import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import { PromptsClient } from "./prompts-client";
 import { AddPromptsButton } from "./add-prompts-button";
@@ -316,7 +317,7 @@ export default async function PromptsPage({
           </div>
         )}
         {activeRun && !hasCompletedRun ? (
-          <ScanInProgress activeRun={activeRun} />
+          <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
         ) : !hasActivePrompts ? (
           <div
             className="card"

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Las seis dimensiones de una auditoría GEO: datos estructurados, formato de respuesta, metadatos, frescura, indexabilidad y citabilidad, cada una marcada como comprobada">
+  <defs>
+    <linearGradient id="bgAudit" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowAuditA" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowAuditB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="barAudit" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#09c5d6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgAudit)"/>
+  <circle cx="150" cy="150" r="220" fill="url(#glowAuditA)"/>
+  <circle cx="1060" cy="150" r="210" fill="url(#glowAuditB)"/>
+
+  <!-- Silueta de página auditada, a la izquierda. Sin texto, por el mismo
+       motivo que ecommerce/cover.svg y saas-b2b/cover.svg: una portada con
+       copy se queda desincronizada del artículo en cuanto se reescribe una
+       línea, y además obliga a mantener la tipografía dentro del SVG. -->
+  <rect x="96" y="62" width="188" height="176" rx="10" fill="#0d1830" stroke="#1e3a6b" stroke-width="2"/>
+  <rect x="120" y="90" width="112" height="12" rx="6" fill="#3b62b8"/>
+  <rect x="120" y="118" width="140" height="7" rx="3.5" fill="#1e3a6b"/>
+  <rect x="120" y="134" width="126" height="7" rx="3.5" fill="#1e3a6b"/>
+  <rect x="120" y="150" width="134" height="7" rx="3.5" fill="#1e3a6b"/>
+  <rect x="120" y="176" width="60" height="34" rx="6" fill="#0f2547" stroke="#2b4d8f" stroke-width="1.5"/>
+  <rect x="188" y="176" width="60" height="34" rx="6" fill="#0f2547" stroke="#2b4d8f" stroke-width="1.5"/>
+
+  <!-- Marca de comprobación sobre la página. -->
+  <circle cx="284" cy="238" r="27" fill="#0b1a33" stroke="#09c5d6" stroke-width="3"/>
+  <path d="M272 238 l8 9 l16 -19" fill="none" stroke="#5de6f2" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Las seis dimensiones, cada una con una marca de comprobación propia.
+       Deliberadamente sin variar anchuras entre barras: el reparto de puntos
+       real es parte de la metodología del producto y el artículo no lo
+       publica, así que la imagen tampoco puede insinuarlo por proporción. -->
+  <g>
+    <rect x="392" y="52" width="672" height="20" rx="10" fill="url(#barAudit)"/>
+    <circle cx="1084" cy="62" r="14" fill="#0b1a33" stroke="#5de6f2" stroke-width="2.5"/>
+    <path d="M1078 62 l4 4.5 l8 -9.5" fill="none" stroke="#5de6f2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="392" y="88" width="672" height="20" rx="10" fill="url(#barAudit)"/>
+    <circle cx="1084" cy="98" r="14" fill="#0b1a33" stroke="#5de6f2" stroke-width="2.5"/>
+    <path d="M1078 98 l4 4.5 l8 -9.5" fill="none" stroke="#5de6f2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="392" y="124" width="672" height="20" rx="10" fill="url(#barAudit)"/>
+    <circle cx="1084" cy="134" r="14" fill="#0b1a33" stroke="#5de6f2" stroke-width="2.5"/>
+    <path d="M1078 134 l4 4.5 l8 -9.5" fill="none" stroke="#5de6f2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="392" y="160" width="672" height="20" rx="10" fill="url(#barAudit)"/>
+    <circle cx="1084" cy="170" r="14" fill="#0b1a33" stroke="#5de6f2" stroke-width="2.5"/>
+    <path d="M1078 170 l4 4.5 l8 -9.5" fill="none" stroke="#5de6f2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="392" y="196" width="672" height="20" rx="10" fill="url(#barAudit)"/>
+    <circle cx="1084" cy="206" r="14" fill="#0b1a33" stroke="#5de6f2" stroke-width="2.5"/>
+    <path d="M1078 206 l4 4.5 l8 -9.5" fill="none" stroke="#5de6f2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="392" y="232" width="672" height="20" rx="10" fill="url(#barAudit)"/>
+    <circle cx="1084" cy="242" r="14" fill="#0b1a33" stroke="#5de6f2" stroke-width="2.5"/>
+    <path d="M1078 242 l4 4.5 l8 -9.5" fill="none" stroke="#5de6f2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { DotMeter } from "@/components/ui/dot-meter";
-import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
@@ -57,14 +57,6 @@ function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon
  * destino al pasar por encima.
  */
 export function LandingPage() {
-  const NAV_LINKS = [
-    { href: "#producto", label: "Producto" },
-    { href: "#como", label: "Cómo funciona" },
-    { href: "#recomendaciones", label: "Recomendaciones" },
-    { href: "/geo", label: "Qué es GEO" },
-    { href: "/pricing", label: "Precios" },
-    { href: "/blog", label: "Blog" }
-  ];
 
   return (
     <div className="lp">
@@ -72,34 +64,7 @@ export function LandingPage() {
           (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
       <header className="lp-hero lp-hero--home" id="producto">
         <div className="lp-promo">7 días de Pro · Sin tarjeta</div>
-        <nav className="lp-nav lp-nav--hero">
-          <div className="lp-logo">
-            <BrandLogo size={22} />
-          </div>
-          <div className="lp-nav-links">
-            <a href="#producto">Producto</a>
-            <a href="#como">Cómo funciona</a>
-            <a href="#recomendaciones">Recomendaciones</a>
-            <Link href="/geo">Qué es GEO</Link>
-            <Link href="/pricing">Precios</Link>
-            <Link href="/blog">Blog</Link>
-          </div>
-          <div className="lp-nav-right">
-            <Link className="lp-nav-btn" href="/login">Iniciar sesión</Link>
-            <Link className="lp-nav-btn lp-nav-btn--primary" href="/signup">Prueba gratis</Link>
-          </div>
-          <MarketingMobileNav
-            links={NAV_LINKS}
-            twoLine
-            fromRight
-            ctas={
-              <>
-                <Link className="lp-cta-soft" href="/login">Iniciar sesión</Link>
-                <Link className="lp-cta" href="/signup">Prueba gratis</Link>
-              </>
-            }
-          />
-        </nav>
+        <PublicHeader hero />
 
         <div className="lp-hero-content">
           <h1 className="lp-h1">

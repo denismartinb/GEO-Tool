@@ -108,3 +108,88 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de
   marketing (log §47).
+
+## Comparativas y el sistema de bloques del blog
+
+- **`/comparativas/*` usa el mismo sistema de bloques que el blog, no
+  `legal-body`.** Hasta COMPARATIVAS-DESIGN-1 (2026-08-11) cada comparativa
+  nueva copiaba fielmente la primera (`genscore-vs-otterly`, GROWTH-2 Fase
+  2.4), construida antes de que existiera el sistema de bloques del blog
+  (GROWTH-3 Fase 3.1) — cuatro páginas arrastrando la misma clase que usan
+  `/privacidad`/`/terminos`/`/cookies` sin que nadie lo hubiera decidido así
+  (log §59). `KeyTakeaway` para el resumen, `CompareTable`+`Pill` para la
+  tabla ("Gana aquí" en la celda donde gana el competidor — mismo patrón que
+  `llms-txt-guia-practica.mdx`), `ArticleCta` real al final.
+- **Las dos secciones "Cuándo elegir X" llevan el mismo peso visual.** Ambas
+  van en `Verdict`, con su propia etiqueta. La primera versión (log §59) puso
+  `Verdict` solo en la del competidor y dejó la de Genscore como `<h2>`+`<p>`,
+  razonando que `Verdict` era para admisiones honestas y no para argumentos de
+  venta. El efecto real fue el contrario del buscado: el caso del competidor
+  quedaba destacado en bloque y el nuestro en texto plano, así que la página
+  se leía como si Genscore perdiera incluso donde no perdía (fundador,
+  2026-08-11; log §60). La honestidad la sostienen la tabla —con su "Gana
+  aquí" en las filas reales— y el propio texto, no la asimetría tipográfica.
+- **Una fila solo se marca como victoria del competidor si es un beneficio
+  para quien compra.** Levantar más dinero no lo es: no mejora ningún
+  resultado del cliente y corta en las dos direcciones (respaldo, pero también
+  presión por rentabilizar la ronda). La fila de financiación de
+  `genscore-vs-profound` estaba marcada como victoria y era conceder un punto
+  que no es un punto (log §60). Las victorias legítimas son capacidades que el
+  comprador nota: cobertura multi-país, usuarios incluidos, número de motores,
+  reseñas públicas acumuladas.
+- **La tabla comparativa marca las victorias de los DOS lados.** Marcar solo
+  las del competidor no es más honesto: hace que la página se lea como si
+  Genscore perdiera en todo aunque el reparto real de filas esté a nuestro
+  favor, porque las únicas insignias visibles al escanear están en su columna
+  (fundador, 2026-08-11; log §61). Lo fijan dos tests por comparativa: que
+  haya victorias en ambos lados y que ninguna fila esté marcada para los dos.
+- **El índice del blog no publica un recuento de artículos.** Con pocos
+  subraya lo pequeño que es el catálogo y con muchos no ayuda a elegir qué
+  leer (fundador, 2026-08-11; log §61).
+- **Publicar una comparativa incluye su journey de piloto y su entrada de
+  fixture, en el mismo PR.** A diferencia del blog, las comparativas no se
+  pilotan con un bucle: cada una es una página a mano y un `test(...)` a mano,
+  así que olvidar la mitad no rompe nada visible. `genscore-vs-profound` se
+  publicó sin ninguna de las dos y acumuló **dos `PILOT PASS` sin que el
+  piloto llegara a abrirla** — incluido el del PR que la rediseñaba (log §62).
+  Lo fijan los dos tests de `tests/pilot/fixtures/fixture-drift.test.ts` que
+  contrastan `COMPARATIVAS` contra el spec y contra el fixture.
+- **Un `PILOT PASS` es la lista de lo que el piloto vio, no una afirmación
+  sobre lo que el PR cambió.** El piloto no sabe qué prometía el PR; cruzar su
+  tabla con las pantallas que toca el diff es trabajo del Director y no lo
+  hace nadie más (log §62).
+
+## El encuadre: quien escribe esto dirige el marketing de Genscore
+
+Estas reglas conviven con las de honestidad de arriba y **no las derogan**. El
+hecho comprobable no se recorta nunca; lo que se decide aquí es el orden, el
+espacio y el contexto (fundador, 2026-08-12: *"no nos podemos permitir que
+dejes a la competencia mejor en las comparativas […] transmite que casi siempre
+Genscore es la mejor opción"*; log §67).
+
+- **Ninguna ventaja del competidor se lista suelta.** Va con el contexto que
+  dice a quién le sirve de verdad, y ese contexto tiene que ser tan cierto como
+  la ventaja. Cuatro victorias suyas enumeradas a pelo al principio de una
+  página se leen como "gana él", aunque tres le sean irrelevantes al lector
+  (`OTTERLY_STRENGTHS` es `{claim, context}` por esto, con test).
+- **La página no cede la autoridad de quien la escribe.** La primera versión de
+  `alternativas-a-otterly` abría diciendo "esto lo escribe un competidor, no te
+  fíes del todo". Es cierto y es un regalo: invita a descontar todo lo que
+  viene después, incluido lo que es verificable. La credibilidad se demuestra
+  con datos fechados y con la contrapartida declarada, no con una advertencia
+  previa contra uno mismo.
+- **Nunca se recomienda al lector que no nos elija.** Un bloque "cuándo NO
+  deberías cambiar" con el mismo peso visual que el nuestro es publicidad del
+  competidor pagada por nosotros. La cautela legítima (cambiar de herramienta
+  reinicia el histórico) se cuenta como lo que es —un argumento para empezar ya
+  donde te vas a quedar— y en párrafo normal, no en `Verdict`.
+- **Las FAQ se redactan desde la pregunta que trae el lector, y se responden a
+  nuestro favor cuando la respuesta honesta lo permite.** "¿Es mala herramienta
+  X?" nos pone a defender al competidor; "¿cuál es la mejor alternativa a X?"
+  es la misma búsqueda real y admite una respuesta verdadera que nos favorece.
+- **Lo que sigue sin negociarse:** los límites reales del producto que un
+  comprador comprobaría en dos clics se declaran. Hoy son que no ejecutamos
+  Perplexity ni Copilot y que no hay desglose por país — con test que los exige
+  por nombre en `alternativas-a-otterly.test.ts`. Ocultarlos es el error que
+  PRICING-TRUTH-1 obligó a retirar del producto, y delante de un competidor se
+  paga más caro. Se declaran situados, no en titular.

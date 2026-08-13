@@ -60,7 +60,9 @@ const BLOG_SLUGS = [
   "geo-para-saas-b2b",
   "geo-para-agencias",
   // SEO-POS-1 Fase C, C1 (2026-08-10).
-  "como-saber-si-tu-marca-aparece-en-chatgpt"
+  "como-saber-si-tu-marca-aparece-en-chatgpt",
+  // SEO-POS-1 Fase C, S5 (2026-08-13).
+  "que-es-una-auditoria-geo"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
@@ -76,6 +78,8 @@ const PUBLIC_PAGES = new Map([
   ["/comparativas", "Comparativas — Genscore"],
   ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"],
   ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"],
+  ["/comparativas/genscore-vs-profound", "Genscore vs Profound — Genscore"],
+  ["/comparativas/alternativas-a-otterly", "Alternativas a Otterly en 2026 — Genscore"],
   ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — Genscore"]
 ]);
 

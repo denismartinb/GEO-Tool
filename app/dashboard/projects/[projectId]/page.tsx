@@ -11,9 +11,13 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
+import { ScanMissionBand } from "@/components/scan-mission-band";
+import { shouldShowMissionBand } from "@/lib/scan/mission-beats";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
+import { WEB_AUDIT_JOB_TYPE } from "@/lib/web-audit/audit-job";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import {
   computeJointPotentialPoints,
@@ -222,31 +226,45 @@ export default async function ProjectDetailPage({
   // Reconciliation itself is decided from the already-fetched `runs` below
   // instead of running unconditionally on every render
   // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
-  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, name, domain, brand, country, language, created_at")
-      .eq("id", projectId)
-      .eq("is_archived", false)
-      .single(),
-    supabase
-      .from("project_prompts")
-      .select("id, prompt_text, category, is_active")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("project_competitors")
-      .select("id, name, domain, is_active")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("scan_runs")
-      .select(RUNS_SELECT)
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-  ]);
+  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }, { count: activeAuditJobCount }] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, name, domain, brand, country, language, created_at")
+        .eq("id", projectId)
+        .eq("is_archived", false)
+        .single(),
+      supabase
+        .from("project_prompts")
+        .select("id, prompt_text, category, is_active")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("project_competitors")
+        .select("id, name, domain, is_active")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("scan_runs")
+        .select(RUNS_SELECT)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
+      // ONBOARDING-ROCKET-1: existence-only check, no progress detail — the
+      // coverage-map read that produces a real "N de M temas" count lives in
+      // the web-audit page and stays there for this phase (see
+      // components/scan-mission-band.tsx). Same signal both `ScanStatePill`
+      // (below) and `ScanMissionBand` need, read once via the user's own RLS
+      // (`jobs_select_owner`), not service-role.
+      supabase
+        .from("jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("job_type", WEB_AUDIT_JOB_TYPE)
+        .in("status", ["pending", "running", "retrying"])
+    ]);
+  const hasActiveAuditJob = (activeAuditJobCount ?? 0) > 0;
 
   if (!project) notFound();
 
@@ -270,6 +288,12 @@ export default async function ProjectDetailPage({
   const latestRun = runs?.[0];
   const latestCompletedRun = runs?.find((r) => r.status === "completed");
   const completedRunsCount = runs?.filter((r) => r.status === "completed").length ?? 0;
+  // ONBOARDING-ROCKET-1: the mission is a first-impression, not a product
+  // state — it spends itself once per domain. Zero completed runs is exactly
+  // the condition `hasData` already gates the whole empty-state overlay on
+  // (see `hasData` below), so this needs no new column: a project's second
+  // scan onward always falls straight to `ScanInProgressLive`.
+  const isFirstScan = completedRunsCount === 0;
   const latestFailedRun = latestRun?.status === "failed" ? latestRun : null;
   const rawActiveRun = runs?.find((r) => r.status === "pending" || r.status === "running");
   // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
@@ -279,7 +303,17 @@ export default async function ProjectDetailPage({
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
-  const successMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
+  const rawSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
+  /**
+   * SCAN-STATES-2: `scan_started` is suppressed while the first-scan mission
+   * owns the screen. Its text ("Dominio creado. Tu primer escaneo se está
+   * ejecutando — sigue el progreso aquí") is the mission's own rail said
+   * twice, stacked above a full-bleed scene as a second surface — which is
+   * exactly the "banner flotando encima" the founder asked to remove
+   * (2026-08-10). Every other feedback message still shows: this drops one
+   * redundant sentence, not the mechanism.
+   */
+  const successMessage = rawSuccessMessage && !(feedback.success === "scan_started" && isFirstScan && activeRun) ? rawSuccessMessage : null;
 
   /* ---- queries that require a completed run ---- */
   const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =
@@ -733,6 +767,7 @@ export default async function ProjectDetailPage({
                     .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
                 : null
             }
+            auditing={hasActiveAuditJob}
           />
         </div>
       </div>
@@ -763,6 +798,18 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
+          {/* ONBOARDING-ROCKET-1 traspaso: the compact half of the first-scan
+              mission, shown while the first audit runs behind the score.
+
+              This asked for `isFirstScan` until 2026-08-11 and therefore NEVER
+              RENDERED: `isFirstScan` is zero completed runs, and this branch
+              requires one. The condition is the scan's aftermath, not its
+              absence — see `shouldShowMissionBand`, where it now lives with
+              tests. It still cannot overlap `ScanMissionRocket`, which only
+              renders in the `!hasData` branch. */}
+          {shouldShowMissionBand({ completedRunsCount, hasActiveAuditJob }) && (
+            <ScanMissionBand projectId={projectId} />
+          )}
           {/* 1 · Executive summary / insight banner */}
           <div className="ov2-insight">
             <div className="ov2-insight-ico">
@@ -1399,8 +1446,16 @@ export default async function ProjectDetailPage({
       ) : (
         /* ===== EMPTY STATE ===== */
         activeRun ? (
-          /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
-          <ScanInProgressLive projectId={projectId} initial={activeRun} />
+          isFirstScan ? (
+            /* ONBOARDING-ROCKET-1 — spent once per domain; every scan after
+               this project's first falls to the plain shared bar below.
+               SCAN-STATES-2 routes it through FirstScanTakeover so the rail's
+               figures are resolved the same way here as in every section. */
+            <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+          ) : (
+            /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
+            <ScanInProgressLive projectId={projectId} initial={activeRun} />
+          )
         ) : prompts?.length ? (
           /* Estado B — Listo para lanzar */
           <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>

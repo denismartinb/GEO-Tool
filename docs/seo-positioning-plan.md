@@ -35,9 +35,10 @@ de la mayoría de sitios de este tamaño. Pero la auditoría de hoy encuentra
 3. **`/glosario` y `/comparativas` están huérfanas de navegación** — 21 URLs
    sin flujo de enlazado interno desde ninguna nav ni footer.
 
-Además, **Search Console probablemente no está verificada**
-(`GOOGLE_SITE_VERIFICATION` sin configurar) — sin ella no hay medición de
-nada de lo demás.
+Además, **Search Console no estaba verificada** cuando se escribió esta
+auditoría — sin ella no hay medición de nada de lo demás. **Resuelto el
+2026-08-11:** el fundador dio de alta la propiedad (tipo Dominio, verificada
+por DNS). Queda enviar el sitemap; ver Fase M.
 
 ## 2. Auditoría técnica — estado y gaps priorizados
 
@@ -59,9 +60,9 @@ nada de lo demás.
 | # | Gap | Evidencia | Arreglo |
 |---|-----|-----------|---------|
 | T1 | Home y `/pricing` sin metadata (título "Genscore", sin canonical, sin descripción) | `app/page.tsx:1` y `app/pricing/page.tsx:1` son `"use client"` | Dividir en page server + componente cliente; título/descripción con la keyword primaria de cada una |
-| T2 | Verificar Search Console y enviar sitemap | `GOOGLE_SITE_VERIFICATION` sin configurar (`app/layout.tsx:71`); runbook pendiente en `docs/environment-contract.md:279` | Tarea del fundador (5 min): verificar propiedad URL-prefix `https://www.genscore.es` + enviar sitemap. Sin esto no se puede medir nada del resto del plan |
+| T2 | Verificar Search Console y enviar sitemap | Runbook en `docs/environment-contract.md` | ✅ **Hecho (2026-08-11).** Propiedad verificada (tipo Dominio, por DNS — `GOOGLE_SITE_VERIFICATION` resultó innecesaria) + sitemap enviado y leído: «Correcto», 47 páginas descubiertas |
 | T3 | `/glosario`, `/comparativas` y `/docs` huérfanas de nav/footer | `app/page.tsx:78-83,304-311`, `blog-page-shell.tsx`, `docs-page-shell.tsx` | Añadir un bloque "Recursos" al footer de los 4 shells (landing, blog, docs, legal) con las 4 superficies de contenido |
-| T4 | www/apex sin redirect verificable en el repo | Sin `redirects()` en `next.config.ts` ni en `vercel.json` | Verificar en Vercel que `genscore.es` → 308 → `www.genscore.es`; documentar el resultado en `environment-contract.md` |
+| T4 | www/apex sin redirect verificable en el repo | Sin `redirects()` en `next.config.ts` ni en `vercel.json` — se resuelve en la configuración de Vercel, no en código | ✅ **Confirmado por el fundador (2026-08-11):** `genscore.es` redirige a `www.genscore.es` |
 
 ### 2.3 Gaps P1 — pierden CTR, señales o PageRank
 
@@ -166,16 +167,37 @@ siempre. Un push por iteración pilotable (BUILD-BUDGET-1).
 
 ### Fase M — Medición primero (fundador, sin código, ~30 min)
 
-- [ ] Verificar Search Console (`GOOGLE_SITE_VERIFICATION`, runbook en
-      `docs/environment-contract.md`) y enviar `sitemap.xml`. **T2**
-- [ ] Alta en **Bing Webmaster Tools** (importa la propiedad de GSC en 2
-      clics) y enviar el mismo sitemap — es el índice que usa ChatGPT.
-- [ ] Comprobar en Vercel que `genscore.es` hace 308 a `www.genscore.es`. **T4**
+- [x] **Search Console verificada (2026-08-11).** Propiedad de tipo **Dominio**
+      (`genscore.es`), verificada por DNS — cubre apex, `www` y cualquier
+      subdominio de una vez, así que **no hace falta una segunda propiedad para
+      `www`** ni la variable `GOOGLE_SITE_VERIFICATION` (esa solo sirve para el
+      método de etiqueta HTML). Detalle y cómo distinguir el tipo de propiedad:
+      `docs/environment-contract.md`. **T2 parcialmente cerrado.**
+- [x] **Sitemap enviado y leído (2026-08-11).** Estado «Correcto» en Search
+      Console, **47 páginas descubiertas** — coincide con lo que genera
+      `app/sitemap.ts`, así que Google está viendo el inventario completo, no
+      un subconjunto. **T2 cerrado.**
+- [x] **Redirect apex → www confirmado (2026-08-11)** por el fundador en el
+      navegador. **T4 cerrado.** No es verificable desde el entorno de los
+      agentes: el proxy de salida bloquea genscore.es (comprobado el mismo
+      día), así que esta comprobación es siempre manual — una sesión no puede
+      cerrarla por su cuenta ni dar por hecho el resultado.
+- [x] **Bing Webmaster Tools dado de alta y sitemap enviado (2026-08-11).**
+      Estado «Success», **47 URLs descubiertas, 0 errores, 0 avisos** — el
+      mismo número que Google, señal de que ambos índices ven el inventario
+      completo y coincidente. Importa porque es el índice que consulta
+      ChatGPT: para el objetivo GEO pesa tanto como Google.
 - [ ] (Ya disponible) Panel PostHog: canal de adquisición organic/referral
       para tener la línea base de tráfico único antes del plan.
 
-Sin esta fase, el resto del plan no se puede evaluar. No bloquea empezar la
-Fase T en paralelo.
+**✅ FASE M CERRADA (2026-08-11).** Google y Bing verificados, ambos leyendo
+el sitemap con 47 URLs y sin errores, redirect apex→www confirmado. Ya hay
+dónde medir todo lo demás.
+
+**Nota de expectativas:** aunque todo esté bien configurado, Search Console y
+Bing tardan días en mostrar datos — un panel vacío al día siguiente no
+significa que algo esté mal. La primera lectura útil del bucle de §5 no será
+inmediata.
 
 ### Fase T — Deuda técnica SEO (agentes, 2-3 PRs pequeños)
 
@@ -219,10 +241,10 @@ pieza sigue siendo un PR con brief de `seo-geo-research`, redacción de
 | Orden | Pieza | Cluster kw | Capa |
 |---|---|---|---|
 | C1 | ✅ **Hecho (2026-08-10)** — "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude" (título corregido: la redacción original de esta fila decía "…y Perplexity", que no es un motor soportado hoy — se habría publicado el mismo reclamo falso que PRICING-TRUTH-1 retiró del producto). CTA al escaneo gratuito real. Detalle: `docs/content-calendar.md`, log §50 | 1 | B/playbooks |
-| C2 | "Alternativas a Profound en español" | 2 | C/comparativas |
-| C3 | "Alternativas a Otterly" (la comparativa 1:1 ya existe; esta es el formato listicle) | 2 | C/comparativas |
-| C4 | Refresco + ampliación de "Mejores herramientas GEO en español" (añadir CreceRank, Trendsights, Mentio — los rivales reales del mercado ES; honestidad como siempre: filas donde ganan ellos) | 3 | C/comparativas |
-| C5 | "Qué es una auditoría GEO (con checklist)" — enlaza la feature real de auditoría web | 5 | B/playbooks |
+| C2 | ✅ **Hecho (2026-08-10)** — `/comparativas/genscore-vs-profound`. Precio de Profound sin cifra fija a propósito: su web ya no lo publica y las fuentes de terceros se contradicen. Detalle: `docs/content-calendar.md`, log §58 | 2 | C/comparativas |
+| C3 | ✅ **Hecho (2026-08-12)** — `/comparativas/alternativas-a-otterly`. Organizada por el límite que empuja a buscar alternativa (tope de prompts, motores como add-on, ejecución, idioma), no por ranking. Reencuadrada tras revisión del fundador (log §67): posiciona en vez de arbitrar, cada ventaja del competidor va con el contexto de a quién le sirve, y cada alternativa —Genscore incluida— declara dónde no llega, con test que exige por nombre nuestros límites reales. Detalle: `docs/content-calendar.md`, log §66 y §67 | 2 | C/comparativas |
+| C4 | ✅ **Hecho (2026-08-12)** — pilar de 6 a 8 herramientas. Entran CreceRank (competencia directa en castellano, obligó a corregir un "solo Genscore" que había dejado de ser cierto) y Mentio (sin cifra de precio: las fuentes lo confunden con GetMentioned). **TrendSights descartada**: es monitorización de medios, no GEO. Detalle: `docs/content-calendar.md`, log §68 | 3 | C/comparativas |
+| C5 | ✅ **Hecho (2026-08-13)** — `/blog/que-es-una-auditoria-geo`. Publica las seis dimensiones de `page-checks.ts` con sus umbrales exactos, sin el reparto de puntos (revisión del fundador: es metodología, no buena práctica), un checklist de 13 puntos ejecutable a mano sobre el código fuente, y declara dónde acaba una auditoría técnica. Detalle: `docs/content-calendar.md`, log §69 | 5 | B/playbooks |
 | C6 | "Métricas GEO: qué medir y qué no" — refuerza el pilar medicion; define vocabulario citable | 6 | B/medicion |
 | C7 | "Cómo aparecer en Perplexity" | 7 | B/playbooks |
 | C8 | "Cómo medir en GA4 el tráfico que llega desde ChatGPT" | 8 | B/medicion |
@@ -295,6 +317,18 @@ GSC acumule datos; el tráfico referral desde IA es hoy ~1% del total del
 mercado (aunque convierte ~4x mejor — el argumento B2B, no el de volumen); la
 ventana de los clusters 1-3 puede cerrarse antes si CreceRank/Trendsights
 aceleran.
+
+---
+
+## 5.1 Trabajo relacionado, fuera de las fases numeradas
+
+**COMPARATIVAS-DESIGN-1 — ✅ hecho (2026-08-11).** Task Intake propio, aprobado
+por el fundador tras revisar el preview de S2. No estaba en el plan original:
+surgió de una pregunta directa sobre por qué `/comparativas` se veía más
+plana que el resto del sitio. Las 4 páginas de comparativas migraron de
+`legal-body` (la clase de las páginas legales) al mismo sistema de bloques
+que usa el blog — `KeyTakeaway`, `CompareTable`+`Pill`, `Verdict`, `ArticleCta`
+real. Sin cambios de dato. Detalle: log §59.
 
 ---
 

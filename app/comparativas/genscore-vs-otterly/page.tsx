@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { KeyTakeaway, Verdict, CompareTable, Pill, ArticleCta } from "@/components/blog/article";
 import { COMPARISON_ROWS, OTTERLY_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-otterly";
 import { contentMetadata } from "@/lib/seo/metadata";
 
@@ -29,7 +30,7 @@ function itemListSchema() {
 
 export default function GenscoreVsOtterlyPage() {
   return (
-    <BlogPageShell>
+    <BlogPageShell activeHref="/comparativas">
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },
@@ -43,16 +44,16 @@ export default function GenscoreVsOtterlyPage() {
         Datos de Otterly consultados el {OTTERLY_RESEARCH_DATE} en fuentes públicas de terceros —
         confírmalos en otterly.ai antes de decidir, los precios cambian.
       </p>
-      <div className="legal-body">
-        <p>
-          <strong>En dos frases:</strong> Otterly cubre nominalmente más motores y más mercados, y no
-          tiene competencia real en castellano ni en el bucle de acción — solo monitoriza y audita. Genscore
-          empieza gratis, cubre los tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin
-          coste extra por añadirlos, y convierte lo que detecta en acciones concretas, no solo en un informe.
-        </p>
+      <div className="blog-body">
+        <KeyTakeaway label="En dos frases">
+          Otterly cubre nominalmente más motores y más mercados, y no tiene competencia real en
+          castellano ni en el bucle de acción — solo monitoriza y audita. Genscore empieza gratis, cubre
+          los tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin coste extra por
+          añadirlos, y convierte lo que detecta en acciones concretas, no solo en un informe.
+        </KeyTakeaway>
 
         <h2>Comparativa</h2>
-        <div className="cmp-table-wrap">
+        <CompareTable>
           <table>
             <tbody>
               <tr>
@@ -63,29 +64,43 @@ export default function GenscoreVsOtterlyPage() {
               {COMPARISON_ROWS.map((row) => (
                 <tr key={row.label}>
                   <td>{row.label}</td>
-                  <td>{row.genscore}</td>
-                  <td>{row.otterlyWins ? <strong>{row.otterly}</strong> : row.otterly}</td>
+                  <td>
+                    {row.genscoreWins ? (
+                      <>
+                        <Pill tone="si">Gana aquí</Pill> {row.genscore}
+                      </>
+                    ) : (
+                      row.genscore
+                    )}
+                  </td>
+                  <td>
+                    {row.otterlyWins ? (
+                      <>
+                        <Pill tone="si">Gana aquí</Pill> {row.otterly}
+                      </>
+                    ) : (
+                      row.otterly
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </CompareTable>
 
-        <h2>Cuándo elegir Otterly</h2>
-        <p>
+        <Verdict title="Cuándo elegir Otterly" badge="Cuándo elegir el competidor">
           Si necesitas seguimiento en decenas de mercados a la vez, cobertura nominal de seis motores
           (aunque dos sean add-ons de pago), o ya trabajas en inglés y no te importa que el producto no
           tenga versión en castellano, Otterly es una opción real y más madura en volumen de mercados.
-        </p>
+        </Verdict>
 
-        <h2>Cuándo elegir Genscore</h2>
-        <p>
+        <Verdict title="Cuándo elegir Genscore" badge="Cuándo elegir Genscore">
           Si operas en España o LATAM y quieres el producto y el soporte en tu idioma, si quieres empezar
           sin tarjeta y sin pagar por motores que no vas a usar, o si lo que necesitas no es solo saber que
           tienes un problema de visibilidad sino que te digan qué hacer al respecto (recomendaciones con
           evidencia y un generador de soluciones listas para publicar), Genscore está construido
           específicamente para eso.
-        </p>
+        </Verdict>
 
         <h2>Metodología</h2>
         <p>
@@ -94,6 +109,11 @@ export default function GenscoreVsOtterlyPage() {
           de terceros consultadas en la fecha indicada arriba — no de acceso directo a su plataforma. Si
           detectas un dato desactualizado, dínoslo y lo corregimos.
         </p>
+
+        <ArticleCta
+          title="¿Cuánto te cuesta de verdad no saberlo?"
+          text="Lanza tu escaneo gratuito y compara tu visibilidad real, sin pagar add-ons por motor. Sin tarjeta."
+        />
       </div>
     </BlogPageShell>
   );

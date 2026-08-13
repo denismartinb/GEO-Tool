@@ -42,6 +42,40 @@ custom SMTP provider in `Authentication → Settings → SMTP Settings` — Rese
 (already used for `lib/email/transactional.ts`) supports SMTP relay and is
 the natural choice here.
 
+### Operator console (ADMIN-CONSOLE-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `ADMIN_USER_IDS` | No (`/admin` is unreachable — 404 for everyone — until set) | Vercel (not local) | comma-separated `auth.users.id` UUIDs, e.g. `7f2a9c14-3e88-4d51-9a02-6c7f1d4ab8e1` |
+
+`/admin` and `/mfa/*` gate on this allow-list, checked against the caller's
+own verified session (`lib/admin/operator.ts`) — never against email, which a
+user can change themselves from Ajustes. Reading it requires no service role;
+the privileged reads inside `/admin` (all accounts' `profiles`, `last_sign_in_at`
+via `auth.admin.listUsers`) do, and only `requireOperator()` ever constructs
+that client.
+
+**Adding this variable in Vercel is not enough on its own — the deployment has
+to be REBUILT to pick it up, and a plain "Redeploy" of an unchanged commit does
+not rebuild.** `vercel.json`'s `ignoreCommand`
+(`scripts/vercel-should-build.sh`) skips any deployment whose diff against the
+last successful one is empty, which is exactly the case for a same-commit
+redeploy: Vercel marks it "Ignored" and keeps serving the previous build, still
+without the variable. Confirmed live on 2026-08-11 — `/admin` kept returning
+404 through two redeploys for this reason, not because of a wrong UUID. Get a
+real build by pushing a commit that touches a build-affecting path, or by
+temporarily clearing the Ignored Build Step in Project Settings → Git. The same
+applies to **every** server-side variable in this document, not just this one;
+it is written here because this is where it first cost an hour.
+
+Being on this list is necessary but not sufficient: `/admin` also requires an
+`aal2` (TOTP) session, enrolled once at `/mfa/enroll` — see
+`.claude/rules/admin.md` for the full gate and
+`docs/brand/design-decisions-log.md` for why (ADMIN-CONSOLE-1). Losing the
+authenticator device locks the operator out of `/admin` until the factor is
+removed from the Supabase dashboard (`Authentication → Users → <account> →
+MFA`) — worth doing once, calmly, before this is the only way in.
+
 ### Gemini
 
 | Variable | Required | Where | Expected shape |
@@ -276,12 +310,46 @@ Igual que Sentry/PostHog: opcional por diseño. `app/layout.tsx` solo añade el
 `Metadata` de Next) — sin la variable, la etiqueta no se renderiza y nada se
 rompe.
 
-**Runbook — dar de alta la propiedad en Search Console (fundador, ~3 minutos):**
+**ESTADO REAL (2026-08-11): la propiedad ya está verificada, y es de tipo
+Dominio (`genscore.es`), no de prefijo de URL.** El fundador la dio de alta
+directamente así, verificándola por DNS. Consecuencias, que contradicen el
+runbook original de abajo y por eso se anotan aquí arriba:
+
+- **`GOOGLE_SITE_VERIFICATION` no hace falta y no está configurada.** Esa
+  variable solo sirve para el método de verificación por etiqueta HTML. Con
+  verificación DNS el `<meta>` no pinta nada. **No la configures "por si
+  acaso": no arregla nada y sugiere a la siguiente sesión que falta algo.**
+- **No hace falta una segunda propiedad para `www`.** Una propiedad de tipo
+  Dominio cubre el apex, `www`, cualquier subdominio y http/https a la vez —
+  así que cubre `https://www.genscore.es`, que es donde vive todo el contenido
+  (canonicals, sitemap, `robots.txt`, `llms.txt`). Esto era el riesgo real que
+  había que descartar: una propiedad de *prefijo* sobre `https://genscore.es`
+  (sin www) no habría mostrado **ningún** dato, en silencio, para siempre.
+- **Cómo distinguir el tipo de un vistazo** en el selector de propiedades: las
+  de tipo Dominio salen sin protocolo (`genscore.es`); las de prefijo salen
+  con él (`https://…/`).
+- **Sitemap enviado y leído el mismo día:** estado «Correcto», **47 páginas
+  descubiertas**, que es exactamente lo que genera `app/sitemap.ts` — o sea que
+  Google ve el inventario completo, no un subconjunto. Si algún día esa cifra
+  baja sin que se hayan retirado URLs, es señal de que algo del sitemap se ha
+  roto.
+- **Redirect apex → www confirmado el mismo día** (`genscore.es` →
+  `www.genscore.es`). Se resuelve en la configuración de Vercel, no en código:
+  no hay `redirects()` en `next.config.ts` ni en `vercel.json`, y no debería
+  añadirse uno. **No es verificable desde el entorno de los agentes** — el
+  proxy de salida bloquea genscore.es — así que es comprobación manual y una
+  sesión no puede darla por hecha.
+
+**Runbook histórico — dar de alta la propiedad por prefijo de URL.** Se
+conserva porque describe el método de etiqueta HTML, que es el que usa
+`GOOGLE_SITE_VERIFICATION`; **no es lo que se hizo** (ver estado real arriba).
 
 1. Entra en [Google Search Console](https://search.google.com/search-console)
    con la cuenta de Google del negocio.
-2. "Añadir propiedad" → tipo **prefijo de URL** → `https://www.genscore.es`
-   (no uses el tipo "dominio", que exige verificación DNS y es más lento).
+2. "Añadir propiedad" → tipo **prefijo de URL** → `https://www.genscore.es`.
+   (El runbook original desaconsejaba el tipo "dominio" por exigir DNS y ser
+   más lento. En la práctica el fundador lo hizo por dominio sin problema, y
+   el resultado es mejor: una sola propiedad cubre apex y www.)
 3. Elige el método **etiqueta HTML**. Search Console muestra algo como:
    `<meta name="google-site-verification" content="AbC123..." />`.
 4. Copia **solo el valor de `content`** (el string `AbC123...`, sin comillas).
@@ -295,7 +363,10 @@ rompe.
 7. Una vez verificado, en Search Console → Sitemaps, envía
    `https://www.genscore.es/sitemap.xml`.
 
-**Runbook — Bing Webmaster Tools (opcional, recomendado):**
+**Runbook — Bing Webmaster Tools — ✅ HECHO (2026-08-11):** propiedad dada de
+alta y sitemap enviado. Estado «Success», 47 URLs descubiertas, 0 errores, 0
+avisos — el mismo recuento que Google, así que ambos índices ven el inventario
+completo y coincidente. Pasos, por si hay que rehacerlo:
 
 1. Entra en [Bing Webmaster Tools](https://www.bing.com/webmasters) con una
    cuenta Microsoft.

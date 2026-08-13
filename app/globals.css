@@ -3886,6 +3886,319 @@ a.notif-row:hover {
 }
 
 /* ============================================================
+   ONBOARDING-ROCKET-1 — first-scan mission (components/scan-mission-rocket.tsx,
+   components/scan-mission-band.tsx). Reference:
+   docs/design-reference/scan-states-1/rev4-cohete-vivo.html.
+
+   rev.4 (2026-08-10) replaced rev.3's staging after the founder saw it in
+   production on a phone: "el cohete está parado, da la sensación de que la
+   página está parada". The rocket was never the problem — the frozen
+   environment was. A rocket in orbit moves; it is the camera that makes it
+   look still. So every beat now carries continuous ambient motion, and the
+   scene, not the vehicle, is what sells it.
+
+   THE DATA RULE, unchanged and load-bearing: only the ascent altitude
+   (`.mrk-glide`'s transform) and the órbita ring fraction encode real data.
+   Stars, clouds, smoke, steam, packets and Earth are decoration and must
+   never read as progress — an invented indicator is exactly the fake
+   progress CLAUDE.md forbids.
+
+   Everything animates on transform/opacity only (compositor-friendly, no
+   layout, no animated filters) because this screen stays open for minutes on
+   a phone. Under `prefers-reduced-motion` every scene rests on a calm,
+   COMPLETE still: elements that only exist mid-flight (steam, sparks,
+   packets, thruster blips) are hidden rather than frozen mid-air, which is
+   what stops the still from looking broken.
+   ============================================================ */
+/* ---- rev.5 shell: the sky IS the page ----------------------------------
+   rev.4's scene sat in a 420px card with empty margin either side, which the
+   founder saw on a phone and called out: "es un pequeño marco, dejando mucho
+   espacio a los lados". The canvas now bleeds edge to edge and the green
+   "Dominio creado" banner is gone as a block — its content moved into
+   `.mrk-rail`, welded to the seam between the product chrome and the sky,
+   because the domain existing is true for the whole mission while the beat
+   underneath keeps changing.
+
+   Full-bleed inside a padded page container: the negative margins undo the
+   dashboard's own gutter without needing the page to know about this
+   component. */
+.mrk-full {
+  position: relative;
+  /* Sit flush against the sticky header. `.page` puts 26px (22px ≤1000px) of
+     top padding above every screen, which under a full-bleed scene reads as a
+     stray light strip between the chrome and the sky — the founder circled it
+     on a phone, 2026-08-11. Pulled up by exactly that padding rather than
+     removing it from `.page`, which every other screen depends on. */
+  margin-top: -26px;
+  margin-inline: calc(50% - 50vw);
+  width: 100vw;
+  max-width: 100vw;
+  overflow: hidden;
+  background: linear-gradient(180deg, #FDFEFF 0%, #E7EEFA 100%);
+  transition: background .8s ease;
+}
+/* Órbita and entrega are in space: the whole page follows the mission out of
+   the atmosphere rather than keeping a daylit frame around a night scene. */
+.mrk-full.night { background: linear-gradient(180deg, #04070F 0%, #14293F 100%); }
+
+.mrk-rail {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px 14px;
+  flex-wrap: wrap;
+  /* Asymmetric on purpose: the band now sits flush under the sticky header
+     (see `.mrk-full`'s negative top margin), so without extra room above, the
+     domain line reads as glued to the chrome — founder, 2026-08-11. The air
+     goes INSIDE the dark band; reopening the gap above it would bring back the
+     stray light strip this replaced. */
+  padding: 16px clamp(14px, 4vw, 40px) 10px;
+  font-size: 12.5px; color: var(--ink-3);
+  border-bottom: 1px solid rgba(11, 20, 38, .06);
+}
+.mrk-full.night .mrk-rail { color: #8FA6C4; border-bottom-color: rgba(255, 255, 255, .07); }
+/* `min-width: 0` alone was not enough: the label wrapped INSIDE the flex item
+   and collided with the facts on a 375px screen. It stays on one line and
+   truncates; the facts drop to their own line rather than being squeezed. */
+.mrk-rail-left {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-width: 0; flex: 1 1 auto;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mrk-rail-left b { color: var(--ink); font-weight: 700; }
+.mrk-full.night .mrk-rail-left b { color: #EAF1FF; }
+.mrk-rail-tick {
+  flex: 0 0 auto; width: 16px; height: 16px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--brand-green, #12A150); color: #fff;
+}
+.mrk-rail-right {
+  flex: 0 0 auto; font-family: var(--mono), ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+  opacity: .85;
+}
+@media (max-width: 600px) {
+  /* Below this the two halves cannot share a line without one of them lying
+     about its width. The facts take their own row, still legible. */
+  .mrk-rail-left { flex-basis: 100%; }
+  .mrk-rail-right { font-size: 10px; }
+}
+
+.mrk-canvas {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: min(78svh, 620px);
+  padding-bottom: clamp(26px, 5vw, 44px);
+}
+/* No horizontal padding: the scenes are drawn to bleed, and a gutter here was
+   what left the pad's ground band inset from the viewport edges. */
+.mrk-scene-slot { display: grid; place-items: center; padding: clamp(16px, 4vw, 30px) 0 0; }
+.mrk-sky { display: block; width: 100%; max-width: 560px; height: auto; }
+
+/* The pad scenes' ground: a full-bleed band flush under the scene, because
+   inside the SVG it was locked to the scene's ratio and stopped short of the
+   viewport edges. `.mrk-pad-wrap` is only as wide as the scene; the band
+   escapes it to 100vw. */
+.mrk-pad-wrap { position: relative; width: 100%; }
+.mrk-pad-wrap .mrk-sky { max-width: none; }
+.mrk-ground {
+  width: 100%; height: clamp(46px, 13vw, 86px);
+  background: #D3DEF0;
+  border-top: 1.4px solid #B3C2DC;
+}
+.mrk-pad-wrap.lit .mrk-ground { background: #C4D3EA; border-top-color: #A2B5D3; }
+@media (min-width: 960px) {
+  .mrk-pad-wrap { max-width: none; }
+}
+.mrk-copy { text-align: center; padding: 0 20px; max-width: 560px; margin: 0 auto; }
+.mrk-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--brand-blue); }
+.mrk-full.night .mrk-eyebrow { color: var(--brand-cyan); }
+.mrk-title {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: clamp(30px, 8vw, 46px); font-weight: 800; letter-spacing: -.04em;
+  margin: 6px 0 0; line-height: 1.05;
+}
+.mrk-unit { font-size: clamp(15px, 3.4vw, 19px); font-weight: 700; color: var(--ink-2); margin: 4px 0 0; letter-spacing: -.01em; }
+.mrk-sub { font-size: 14.5px; line-height: 1.6; color: var(--ink-3); margin: 10px 0 0; }
+.mrk-joke { font-size: 12.5px; color: var(--ink-4); font-style: italic; margin: 8px 0 0; }
+.mrk-full.night .mrk-title { color: #FFFFFF; }
+.mrk-full.night .mrk-unit { color: #C6D6EE; }
+.mrk-full.night .mrk-sub { color: #9DB2CE; }
+.mrk-full.night .mrk-joke { color: #6F86A4; }
+
+/* Desktop is not a stretched phone: the composition splits, copy left and
+   vehicle right, and what the extra width buys is more sky — in órbita the
+   Earth's limb finally spans the viewport, which is the only scale that shot
+   works at. */
+@media (min-width: 960px) {
+  .mrk-canvas {
+    grid-template-rows: none;
+    grid-template-columns: 44% 56%;
+    align-items: center;
+    min-height: min(80svh, 700px);
+    padding: 0 clamp(28px, 5vw, 72px) clamp(20px, 3vw, 40px);
+  }
+  /* The scene spans the WHOLE canvas and the copy floats over it, rather than
+     the scene being penned into the right column. Without this the Earth's
+     limb stopped dead at the column boundary — a straight cut across the one
+     shot the wide viewport exists to serve. */
+  .mrk-scene-slot {
+    position: absolute; inset: 0; padding: 0;
+    display: grid; place-items: center;
+    pointer-events: none;
+  }
+  .mrk-sky { max-width: none; width: 100%; height: 100%; }
+  .mrk-copy {
+    position: relative; z-index: 1;
+    grid-column: 1; text-align: left; margin: 0; padding: 0; max-width: 30ch;
+  }
+  .mrk-title { font-size: clamp(48px, 5vw, 76px); }
+  .mrk-unit { font-size: clamp(20px, 1.8vw, 26px); }
+  .mrk-sub { font-size: 16px; }
+}
+
+/* A beat change swaps the whole scene (the sky itself travels from day to
+   night across the mission), so the new one fades in rather than hard-cutting. */
+.mrk-scene { animation: mrkSceneIn .5s ease-out both; }
+
+/* ---- motion system. Seamless wraps duplicate their content at exactly
+   +400px (x) or −280px (y), which is the viewBox span in that axis. ---- */
+@keyframes mrkSceneIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mrkDriftX { to { transform: translateX(-400px); } }
+@keyframes mrkFall { to { transform: translateY(280px); } }
+@keyframes mrkTwinkle { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes mrkFlick { from { transform: scaleY(.86) scaleX(1.04); } to { transform: scaleY(1.1) scaleX(.94); } }
+@keyframes mrkPuff { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 14% { opacity: .55; } 100% { transform: translate(-10px, -30px) scale(1.5); opacity: 0; } }
+@keyframes mrkSmokeL { 0% { transform: translate(0, 0) scale(.4); opacity: 0; } 10% { opacity: .75; } 100% { transform: translate(-52px, -12px) scale(1.9); opacity: 0; } }
+@keyframes mrkSmokeR { 0% { transform: translate(0, 0) scale(.4); opacity: 0; } 10% { opacity: .75; } 100% { transform: translate(52px, -12px) scale(1.9); opacity: 0; } }
+@keyframes mrkShake { 0% { transform: translate(0, 0); } 25% { transform: translate(.6px, -.4px); } 50% { transform: translate(-.5px, .4px); } 75% { transform: translate(.4px, .5px); } 100% { transform: translate(0, 0); } }
+@keyframes mrkGlow { 0%, 100% { opacity: .4; } 50% { opacity: .9; } }
+@keyframes mrkSpark { 0% { transform: translate(0, 0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+@keyframes mrkBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes mrkSway { 0%, 100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
+@keyframes mrkPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: 1; } 82% { opacity: 1; } 100% { transform: translateX(112px); opacity: 0; } }
+@keyframes mrkThrust { 0%, 84%, 100% { opacity: 0; } 88%, 93% { opacity: .85; } }
+@keyframes mrkShoot { 0%, 86% { opacity: 0; transform: translate(0, 0); } 88% { opacity: .9; } 93%, 100% { opacity: 0; transform: translate(130px, 64px); } }
+@keyframes mrkBreathe { 0%, 100% { transform: scale(1); opacity: .3; } 50% { transform: scale(1.06); opacity: .75; } }
+@keyframes mrkConverge { 0% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } 18% { opacity: .9; } 100% { transform: translate(0, 0) scale(.3); opacity: 0; } }
+@keyframes mrkSpin { to { transform: rotate(360deg); } }
+@keyframes mrkBeacon { 0%, 68%, 100% { opacity: .15; } 76%, 86% { opacity: 1; } }
+@keyframes mrkWinPulse { 0%, 100% { opacity: 0; } 50% { opacity: .55; } }
+@keyframes mrkRingPop { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+
+/* shared */
+.mrk-tw { animation: mrkTwinkle 3.4s ease-in-out infinite; }
+.mrk-tw.s2 { animation-duration: 4.6s; animation-delay: -1.2s; }
+.mrk-tw.s3 { animation-duration: 2.8s; animation-delay: -2s; }
+.mrk-flame { transform-origin: center top; transform-box: fill-box; animation: mrkFlick .16s steps(2, end) infinite alternate; fill: var(--brand-blue-2); }
+.mrk-flame.f2 { animation-duration: .13s; fill: var(--brand-cyan); }
+.mrk-flame.f3 { animation-duration: .19s; }
+.mrk-hull { fill: var(--brand-ink); }
+.mrk-hull-shade { fill: #1B2B45; }
+.mrk-hull-dark { fill: #122036; }
+.mrk-hull-dark-shade { fill: #22385A; }
+.mrk-window { fill: var(--brand-canvas); }
+.mrk-fin { fill: var(--brand-blue); }
+.mrk-nozzle { fill: var(--brand-ink-2); }
+.mrk-beacon { animation: mrkBeacon 3.8s linear infinite; }
+.mrk-winpulse { animation: mrkWinPulse 3.6s ease-in-out infinite; }
+
+/* rampa */
+.mrk-clouds-slow { animation: mrkDriftX 74s linear infinite; }
+.mrk-clouds-slower { animation: mrkDriftX 118s linear infinite; }
+.mrk-puff { transform-box: fill-box; transform-origin: center; animation: mrkPuff 5.2s ease-out infinite; }
+
+/* ignición */
+.mrk-shake { animation: mrkShake .18s steps(2, end) infinite; }
+.mrk-glow { animation: mrkGlow .5s steps(2, end) infinite; }
+.mrk-smoke-l { transform-box: fill-box; transform-origin: center; animation: mrkSmokeL 2.8s ease-out infinite; }
+.mrk-smoke-r { transform-box: fill-box; transform-origin: center; animation: mrkSmokeR 2.8s ease-out infinite; }
+.mrk-spark { animation: mrkSpark 1.3s ease-out infinite; }
+
+/* ascenso — .mrk-glide is the ONLY altitude carrier and stays bound to done/total */
+.mrk-glide { transition: transform .6s cubic-bezier(.22, .8, .28, 1); }
+.mrk-fall-near { animation: mrkFall 3.4s linear infinite; }
+.mrk-fall-far { animation: mrkFall 7.5s linear infinite; }
+.mrk-fall-lines { animation: mrkFall 1.15s linear infinite; }
+.mrk-sway { transform-box: fill-box; transform-origin: center; animation: mrkSway 5.2s ease-in-out infinite; }
+
+/* órbita */
+.mrk-stars-1 { animation: mrkDriftX 70s linear infinite; }
+.mrk-stars-2 { animation: mrkDriftX 115s linear infinite; }
+.mrk-earthspin { animation: mrkDriftX 130s linear infinite; }
+.mrk-bob { animation: mrkBob 6s ease-in-out infinite; }
+.mrk-bob.d2 { animation-duration: 7s; animation-delay: -2.4s; }
+.mrk-packet { animation: mrkPacket 2.6s linear infinite; }
+.mrk-packet.p2 { animation-delay: .85s; }
+.mrk-packet.p3 { animation-delay: 1.7s; }
+.mrk-thrust { animation: mrkThrust 6.5s linear infinite; }
+.mrk-thrust.t2 { animation-delay: -3.1s; }
+.mrk-shoot { animation: mrkShoot 13s linear infinite; }
+.mrk-spin { transform-box: fill-box; transform-origin: center; animation: mrkSpin 1.4s linear infinite; }
+.mrk-ring-track { stroke: #22395C; }
+.mrk-ring-fill { stroke: var(--brand-blue-2); stroke-linecap: round; transition: stroke-dashoffset .5s ease-out; }
+.mrk-ringpop { animation: mrkRingPop 3.2s ease-in-out infinite; }
+
+/* ---- SCAN-STATES-3: reentrada (components/reentry-mission.tsx) ----
+   Reuses the mission shell (.mrk-full/.mrk-canvas/.mrk-rail) — same beat, same
+   language. Only the scene and the ticker are new. */
+@keyframes rntFall { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
+@keyframes rntHeat { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes rntEmber { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-74px); opacity: 0; } }
+@keyframes rntShield { 0%, 100% { opacity: .5; } 50% { opacity: .95; } }
+@keyframes rntTickIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* The craft drifts rather than plummets: a fall fast enough to read as a fall
+   would loop visibly every second across a beat that lasts minutes. */
+.rnt-craft { animation: rntFall 7s ease-in-out infinite; }
+.rnt-glow { transform-box: fill-box; transform-origin: center; animation: rntHeat 2.4s ease-in-out infinite; }
+.rnt-shield { animation: rntShield 1.8s ease-in-out infinite; }
+.rnt-trail { opacity: .8; }
+.rnt-embers circle { animation: rntEmber 2.8s linear infinite; }
+
+/* The ticker is the only element that changes on a human timescale, so it is
+   the one that keeps a multi-minute wait from reading as frozen. */
+.rnt-tick { margin: 14px 0 0; animation: rntTickIn .45s ease-out both; }
+.rnt-tick-t { font-size: clamp(17px, 4.4vw, 21px); font-weight: 800; letter-spacing: -.02em; color: #EAF1FF; margin: 0; }
+.rnt-tick-d { font-size: 13.5px; line-height: 1.55; color: #9DB2CE; margin: 5px 0 0; }
+@media (min-width: 960px) {
+  .rnt-tick-t { font-size: 24px; }
+  .rnt-tick-d { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Embers only exist mid-flight; frozen they read as stray dots. */
+  .rnt-embers circle { opacity: 0 !important; }
+}
+
+/* entrega */
+.mrk-breathe { transform-box: fill-box; transform-origin: center; animation: mrkBreathe 3.2s ease-in-out infinite; }
+.mrk-converge { animation: mrkConverge 2.4s ease-in infinite; }
+.mrk-converge.c2 { animation-delay: .6s; }
+.mrk-converge.c3 { animation-delay: 1.2s; }
+.mrk-converge.c4 { animation-delay: 1.8s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mrk-wrap *, .mrk-wrap { animation: none !important; transition: none !important; }
+  /* Hidden, not frozen: these only exist mid-flight, so a stopped frame of
+     them reads as a rendering bug rather than as a still scene. */
+  .mrk-puff, .mrk-spark, .mrk-shoot, .mrk-thrust, .mrk-converge,
+  .mrk-packet.p2, .mrk-packet.p3 { opacity: 0 !important; }
+}
+
+/* The compact half of the mission — Visión general only, post-traspaso. */
+.mba-band {
+  display: flex; align-items: center; gap: 11px; margin-bottom: 16px; padding: 12px 14px;
+  background: var(--brand-blue-soft); border: 1px solid var(--brand-blue-soft-2); border-radius: var(--r-lg);
+  text-decoration: none; color: inherit;
+}
+.mba-band:hover { border-color: var(--brand-blue); }
+.mba-ico { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px; background: var(--brand-surface); color: var(--brand-blue); display: grid; place-items: center; }
+.mba-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mba-t { font-size: 13px; font-weight: 700; color: var(--ink); }
+.mba-s { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+.mba-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 999px; background: var(--brand-blue); animation: pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .mba-dot { animation: none; }
+}
+
+/* ============================================================
    Scan in progress — pixel-perfect "LoadingState" container
    (copied literally from design reference styles.css lines 471-490,
    /tmp/geo_design/geo-suite/project/styles.css — see components/scan-in-progress.tsx)
@@ -4174,10 +4487,13 @@ a.notif-row:hover {
   font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .lp-mobnav a:hover { background: var(--surface-2); color: var(--ink); }
 @keyframes lpMobnavIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-/* Homepage hero nav has the burger on the right (.lp-nav--hero .lp-burger) —
-   the drawer should slide in from that same side. /geo, /pricing, /blog
-   keep the burger on the left and don't pass `fromRight`, so they keep
-   the default left-slide .lp-mobnav above untouched. */
+/* GENSCORE-HEADER-1 (2026-08-12): every public header's burger sits on the
+   right (.lp-burger { margin-left: auto } above) and `PublicHeader` always
+   passes `fromRight` to MarketingMobileNav, so the drawer always slides in
+   from that side — founder: "el menú tiene que salir siempre desde la
+   derecha". The plain left-slide .lp-mobnav keyframe below stays as
+   MarketingMobileNav's default for any future caller that doesn't opt into
+   `fromRight`; nothing in the app uses that default today. */
 .lp-mobnav--right { left: auto; right: 0; box-shadow: -20px 0 60px rgba(15,23,41,.20); animation-name: lpMobnavInRight; }
 @keyframes lpMobnavInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -4361,6 +4677,8 @@ a.notif-row:hover {
    chequeo de contraste del piloto (Fase Q5b, log §55) sobre el enlace «Blog»
    de las páginas pilar del blog, que usa esta clase. */
 .legal-updated { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
+.legal-subnav { display: flex; align-items: center; gap: 16px; margin-top: 18px; }
+.legal-subnav-current { font-size: 12.5px; font-weight: 650; color: var(--ink-3); white-space: nowrap; }
 .legal-body { max-width: 760px; }
 .legal-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
 .legal-body h2:first-child { margin-top: 0; }
@@ -4368,30 +4686,12 @@ a.notif-row:hover {
 .legal-body ul { margin: 0 0 14px; padding-left: 20px; }
 .legal-body li { font-size: 14.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 6px; }
 
-/* GROWTH-2 Fase 2.4: comparison table on /comparativas/*. Self-contained
-   (not reused from .docs-table-wrap/.tbl-wrap) — this branch predates the
-   /docs sidebar CSS from Fase 2.3, and .tbl-wrap pairs with a .tbl class
-   this table doesn't use. QA (PR #292) caught the table rendering with zero
-   styling and no horizontal-scroll safety net before this was added. */
-.cmp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 0 24px; }
-.cmp-table-wrap table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
-.cmp-table-wrap th, .cmp-table-wrap td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
-.cmp-table-wrap th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 /* GROWTH-2 Fase 2.8: without card boundaries, 6 consecutive tool profiles
    (h3 + 2-3 paragraphs each) read as one continuous wall of prose instead of
    6 distinct entities (pilot finding on the tools pillar). */
 .tool-profile-card { padding: 18px 20px; margin: 0 0 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
 .tool-profile-card h3 { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
 .tool-profile-card p:last-child { margin-bottom: 0; }
-/* Below ~640px the table's 560px min-width forces horizontal scroll — without
-   a hint, the pilot found columns just read as cut off mid-word rather than
-   "scroll for more" (Fase 2.8, PILOT FAIL on the 4-column tools pillar).
-   CSS-only so it applies to every .cmp-table-wrap, not just the page that
-   surfaced it. */
-@media (max-width: 640px) {
-  .cmp-table-wrap { position: relative; }
-  .cmp-table-wrap::before { content: "Desliza para ver todas las columnas →"; display: block; font-size: 12px; color: var(--ink-3); margin-bottom: 6px; }
-}
 .legal-body strong { color: var(--ink); font-weight: 650; }
 /* `:not(.btn)` no es cosmético. Esta regla —especificidad (0,1,1)— le gana a
    `.btn-primary` (0,1,0), así que a un `<a class="btn btn-primary">` metido en
@@ -4532,7 +4832,7 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   .lp-burger {
     display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; min-width: 44px; min-height: 44px;
     border-radius: 9px; background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
-    margin-left: -6px;
+    margin-left: auto;
   }
   .lp-burger:hover { background: var(--surface-2); }
   /* Logo reads oversized once the nav collapses to just burger + wordmark
@@ -4549,10 +4849,11 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
      they end up cramped against each other. Stack them full-width instead. */
   .lp-ctaband .row { flex-direction: column; align-items: stretch; gap: 14px; }
   .lp-ctaband .row .btn { width: 100%; }
-  /* Homepage hero nav only (.lp-nav--hero) — /geo and /pricing don't carry
-     this modifier, so their .lp-nav-right keeps its existing behavior. */
-  .lp-nav--hero .lp-nav-right { display: none; }
-  .lp-nav--hero .lp-burger { margin-left: auto; }
+  /* GENSCORE-HEADER-1: unified across every public surface, not just the
+     home hero — the desktop login/signup pair is now redundant at this
+     width because every mobile drawer carries its own CTAs (`ctas` prop on
+     MarketingMobileNav), so showing both was a duplicate, not a fallback. */
+  .lp-nav-right { display: none; }
   .lp-hero--home .lp-hero-content { padding-top: 8px; }
   .lp-promo { font-size: 11.5px; padding: 7px 14px; }
 }
@@ -4682,6 +4983,10 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 @media (max-width: 1000px) {
   .page {
     padding: 22px 20px 80px;
+  }
+  /* Keep the full-bleed mission flush with the header at this breakpoint too. */
+  .mrk-full {
+    margin-top: -22px;
   }
 }
 
@@ -5582,8 +5887,11 @@ select.set-field {
 }
 .art-tablewrap tbody tr:last-child td { border-bottom: 0; }
 .art-tablewrap td strong { color: var(--ink); }
-/* Misma pista de scroll que .cmp-table-wrap: sin ella, en móvil las columnas
-   se leen como cortadas en vez de como deslizables (PILOT FAIL, PR #306). */
+/* Sin esta pista, en móvil las columnas se leen como cortadas en vez de
+   como deslizables (PILOT FAIL, PR #306). COMPARATIVAS-DESIGN-1 (2026-08-11)
+   retiró la variante paralela .cmp-table-wrap que /comparativas/* usaba
+   antes de migrar a este mismo componente — la pista ya la cubre esta
+   regla, no hacía falta una segunda. */
 @media (max-width: 640px) {
   .art-tablewrap { position: relative; }
   .art-tablewrap::before {

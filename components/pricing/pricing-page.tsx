@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
-import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PublicHeader } from "@/components/marketing/public-header";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { supportMailto } from "@/lib/support";
@@ -138,29 +138,7 @@ export function PricingPage() {
     <div className="lp">
       {/* NAV */}
       <div className="lp-nav-wrap">
-        <nav className="lp-nav">
-          <MarketingMobileNav
-            links={[
-              { href: "/#producto", label: "Producto" },
-              { href: "/#como", label: "Cómo funciona" },
-              { href: "/pricing", label: "Precios" },
-              { href: "/blog", label: "Blog" }
-            ]}
-          />
-          <Link className="lp-logo" href="/" aria-label="Inicio de GenScore">
-            <BrandLogo size={22} />
-          </Link>
-          <div className="lp-nav-links">
-            <Link href="/#producto">Producto</Link>
-            <Link href="/#como">Cómo funciona</Link>
-            <Link className="active" href="/pricing">Precios</Link>
-            <Link href="/blog">Blog</Link>
-          </div>
-          <div className="lp-nav-right">
-            <Link className="btn btn-ghost btn-sm" href="/login">Iniciar sesión</Link>
-            <Link className="btn btn-primary btn-sm" href="/signup?plan=free">Prueba gratis</Link>
-          </div>
-        </nav>
+        <PublicHeader activeHref="/pricing" />
       </div>
 
       {/* HERO */}
