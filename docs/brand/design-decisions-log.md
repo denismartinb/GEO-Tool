@@ -6085,6 +6085,17 @@ anchura**. Un `PILOT FAIL` por una aserción trivial dejó la pantalla del PR si
 mirar. El test que produce las capturas va ahora primero, para que un fallo de
 detalle no borre la evidencia visual.
 
+**Dos mejoras plegadas después de mirar las capturas, no de leer la tabla.**
+El piloto dio `PILOT PASS` con la 404 en verde en las tres anchuras, y aun así
+la pantalla tenía dos defectos que ninguna checklist detecta porque ninguna
+mide "se entiende": en horizontal la estela sólida terminaba *dentro* del
+lienzo y su extremo se veía flotando a media pantalla, como si el rastro
+empezara de la nada; en vertical, ocultar los dos tramos de abajo dejaba un
+fragmento corto y desconectado bajo el cohete. Ahora el primer tramo arranca
+fuera del lienzo (`y=796` con el lienzo a 760) y en vertical sólo desaparece el
+de más abajo. Es el motivo por el que un PASS no cierra la fase: la tabla dice
+que la página cargó, no que se lea.
+
 **Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
 testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
 unitario y no puede tenerlo hoy**. La verificación real es el `ux-pilot`

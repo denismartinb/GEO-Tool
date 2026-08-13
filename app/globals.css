@@ -7785,7 +7785,11 @@ select.set-field {
    tramos bajos de la estela desaparecen porque cruzaban el titular. */
 @media (max-width: 640px) {
   .nf-mission { transform: translate(-240px, -197px) scale(.74); }
-  .nf-live.lo, .nf-live.mid { display: none; }
+  /* Sólo desaparece el tramo de más abajo. Ocultando también el de en medio,
+     lo que quedaba era un fragmento corto y desconectado flotando bajo el
+     cohete; con el tramo medio, la estela vuelve a leerse como una sola
+     trayectoria y su extremo se disuelve bajo el velo. */
+  .nf-live.lo { display: none; }
   .nf-copy { padding: 0 20px 26px; }
   .nf-kicker { font-size: 10.5px; letter-spacing: .1em; }
   .nf-title { font-size: clamp(29px, 8vw, 36px); }

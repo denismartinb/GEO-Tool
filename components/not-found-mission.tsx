@@ -210,11 +210,14 @@ function MissionScene() {
       <circle cx="600" cy="2060" r="1456" fill="url(#nf-earth)" />
 
       <g className="nf-mission">
-        {/* Lo que sí voló. Va en tres tramos porque en vertical los dos de
-            abajo se ocultan: enteros, cruzaban el titular. */}
+        {/* Lo que sí voló. Va en tres tramos porque en vertical el de más
+            abajo se oculta: entero, cruzaba el titular. El primero arranca
+            FUERA del lienzo (y=796 > 760) a propósito: terminado dentro, su
+            extremo se veía flotando a media pantalla como si la estela
+            empezara de la nada. */}
         <path
           className="nf-live lo"
-          d="M596 716 C 646 668, 676 640, 706 604"
+          d="M548 796 C 620 704, 668 650, 706 604"
           fill="none"
           stroke="#4f7bff"
           strokeWidth="3.6"
