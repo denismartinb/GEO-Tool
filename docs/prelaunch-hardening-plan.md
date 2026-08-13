@@ -14,7 +14,10 @@ una con su Human Gate.
   LCP y choca con `.claude/rules/onboarding.md`) y quedan ~33 KB de CSS de
   consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
   (migración, cifra publicada, superficie de auth).
-- **Fase R 🟡 en curso** — R1 y R2 hechos (log §43). Quedan R3–R8.
+- **Fase R 🟡 en curso** — R1, R2 (log §43) y **R4 hechos** (log §70). Quedan
+  R3, R5–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
+  en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
   evidencia se sube de verdad (log §49), y **Q5b está hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
@@ -147,8 +150,12 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   (timeout, retry, headers, clases de error). `openai.ts` y `claude.ts`
   difieren hoy en una línea; cada motor nuevo (Perplexity está en el
   roadmap) hoy triplicaría la copia.
-- **R3 · Tipos generados de Supabase** (1 PR): `supabase gen types` +
-  adopción en los 47 call-sites de `.from()`. Es la palanca de tipado más
+- **R3 · Tipos generados de Supabase** (¿1 PR? — ver aviso): `supabase gen types` +
+  adopción en los call-sites de `.from()`. **Medido el 2026-08-13: son 269, no
+  47.** El codegen es barato; lo caro es la adopción, así que R3 no es "un PR
+  mecánico" sino el slice más grande de la fase y necesita decidir antes cómo
+  se trocea (por dominio, o sólo donde hoy hay `as unknown as`). Los 14
+  `as unknown as` sí estaban bien contados. Es la palanca de tipado más
   rentable del repo y es codegen, no reescritura. Borra `lib/types.ts`
   (muerto) y debería eliminar la mayoría de los 14 `as unknown as`.
 - **R4 · `lib/env.ts` validado con zod** (1 PR): las 55 vars, con
