@@ -130,7 +130,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S1 | Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude | 1 — Verificación | `playbooks` | ✅ Publicado | #(este) |
 | S2 | Alternativas a Profound en español | 2 — Alternativas | `comparativas` | ✅ Publicado | #(este) |
 | S3 | Alternativas a Otterly (formato listicle) | 2 — Alternativas | `comparativas` | ✅ Publicado | #(este) |
-| S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Trendsights, Mentio) | 3 — Herramientas | `comparativas` | 🔲 Pendiente | — |
+| S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Mentio; TrendSights descartada) | 3 — Herramientas | `comparativas` | ✅ Publicado | #(este) |
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | ✅ Publicado | #(este) |
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | 🔲 Pendiente | — |
 | S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
@@ -208,7 +208,7 @@ palabras visibles, un solo `<h1>`, dos `<h2>` mínimo— pero **no el reparto de
 puntos entre ellas**: el borrador inicial sí los publicaba y el fundador
 decidió lo contrario, porque es metodología del producto y regalarla no le da
 al lector nada que no tuviera ya con las seis dimensiones nombradas. Detalle de
-la corrección: log §68.
+la corrección: log §69.
 
 **Lo que la diferencia de un post de checklist cualquiera** es la sección
 sobre la página sin fecha: puntuar la frescura como cero cuando no se

@@ -6415,7 +6415,62 @@ quedan marcadas para una pasada con este mismo encuadre.
 
 ---
 
-## 68. Las seis dimensiones sí, los pesos no: dónde está la línea (SEO-POS-1, S5, 2026-08-13)
+## 68. Una exclusividad nuestra caducó sin que nada avisara (SEO-POS-1, S4, 2026-08-12)
+
+**Encargo.** Refrescar el pilar `/comparativas/mejores-herramientas-geo-en-espanol`
+añadiendo los tres rivales del mercado español que listaba el plan: CreceRank,
+TrendSights y Mentio. La investigación previa dejó dos, no tres.
+
+**CreceRank entra, y es la incorporación que importa.** Es la única competencia
+directa que reclama explícitamente nuestra misma casilla: *"diseñada desde el
+día uno para el mercado hispanohablante"*, prompts en español, competidores
+regionales y fuentes en dominios locales (.es, .mx, .ar, .cl, .co), desde unos
+29 $/mes. Cubre ChatGPT, Perplexity y AI Overviews — un conjunto de motores
+**distinto**, no menor: nosotros ejecutamos Gemini y Claude, que ella no lista,
+y no ejecutamos Perplexity ni AI Overviews.
+
+**Y su existencia rompió una afirmación nuestra ya publicada.** La FAQ de esa
+página decía, sobre el idioma, *"**solo Genscore**, de forma nativa"*. Era
+cierto cuando se escribió y dejó de serlo el día que CreceRank entró en la
+lista. Nadie lo habría notado: la afirmación vivía en una cadena de texto de
+`page.tsx` y la lista de herramientas vive en `mejores-herramientas-geo.ts`.
+
+**Por qué esto es peor que un dato desactualizado cualquiera.** Una
+exclusividad es la afirmación que más rápido caduca de una comparativa y la que
+más caro sale: el lector la desmiente en un clic, y al hacerlo se lleva por
+delante la credibilidad de toda la página, incluidas las partes correctas. En
+una comparativa —donde el lector ya sabe que la escribe una parte interesada—
+es exactamente el error que no te puedes permitir.
+
+**Arreglo:** la respuesta ahora dice "dos de las ocho" y diferencia por lo que
+sigue siendo cierto (motores cubiertos, generación de la solución, escaneo
+gratuito permanente). Y un test ata la afirmación a los datos: si más de una
+herramienta de `TOOLS` declara español, la página no puede contener "solo
+Genscore". Un segundo test comprueba que el recuento del titular coincida con
+el número real de herramientas.
+
+**El test estuvo roto primero, y eso también es la lección.** La primera
+versión filtraba con `/^s[íi]\b/i`. En ASCII, "í" no es carácter de palabra, así
+que `\b` no casa tras ella: el filtro salía vacío, el test se saltaba solo y
+pasó en verde con "solo Genscore" reinsertado a propósito para comprobarlo.
+Corregido a `/^s[íi](\W|$)/i`, más una aserción que falla si el filtro se
+vuelve a quedar vacío. **Un guardián que no puede fallar es peor que ninguno**,
+porque además da por cubierto el hueco — la misma regla que §64 aplicó al
+piloto, encontrada aquí sólo porque se verificó el caso negativo.
+
+**Mentio entra sin cifra de precio.** Las fuentes públicas dan importes
+inverosímiles (24 €/año) y además confunden el producto con GetMentioned, que
+es otra herramienta. Mismo criterio que Profound en §58: sin fuente fiable, no
+se afirma un precio.
+
+**TrendSights NO entra, aunque el plan la pedía.** No es una herramienta GEO:
+es monitorización de medios —TV, radio, prensa, redes, podcasts, streaming— con
+análisis de sentimiento e influencers. Mide notoriedad en medios, no
+visibilidad en motores generativos. Incluirla habría sido un error de categoría
+que además diluye la página justo para el lector que llega buscando eso. **Una
+fila del plan no es una orden de publicar**: el plan se escribió con la
+información de entonces, y comprobarla antes de ejecutar es parte del encargo.
+## 69. Las seis dimensiones sí, los pesos no: dónde está la línea (SEO-POS-1, S5, 2026-08-13)
 
 **Pieza.** `/blog/que-es-una-auditoria-geo`, cluster `playbooks`. Cubre el
 cluster de keywords nº 5 del plan y enlaza la feature real de auditoría web.
@@ -6472,7 +6527,7 @@ piloto, los tres en este PR — lo exige el guardián de §62.
 
 ---
 
-## 69. Una prop mal puesta en MDX no rompe nada: simplemente no pinta (SEO-POS-1, S5, 2026-08-13)
+## 70. Una prop mal puesta en MDX no rompe nada: simplemente no pinta (SEO-POS-1, S5, 2026-08-13)
 
 **Qué pasó.** El piloto de #395 dio `PILOT FAIL` en las tres anchuras sobre
 `blog-que-es-una-auditoria-geo`. La pantalla cargaba bien —sale ✅ en la tabla—

@@ -285,7 +285,7 @@ describe("el detector de composición funciona", () => {
 });
 
 /**
- * SEO-POS-1 Fase C, S5 (log §69): `RelatedPosts` recibe `cluster` y
+ * SEO-POS-1 Fase C, S5 (log §70): `RelatedPosts` recibe `cluster` y
  * `currentSlug`. `que-es-una-auditoria-geo` se publicó pasándole `slug`, y el
  * componente devolvió `null` — sin bloque "Sigue leyendo", sin enlaces
  * internos, y **sin ningún error**: MDX no se typechequea, así que una prop
@@ -320,7 +320,7 @@ describe("cada artículo enlaza a su propio cluster", () => {
 });
 
 /**
- * SEO-POS-1 Fase C, S5, revisión (log §68): el borrador de
+ * SEO-POS-1 Fase C, S5, revisión (log §69): el borrador de
  * que-es-una-auditoria-geo publicaba el reparto de puntos real de
  * `lib/web-audit/page-checks.ts` (15/15/15/15/20/20). El fundador decidió
  * que eso es metodología del producto, no buena práctica pública, y pidió
