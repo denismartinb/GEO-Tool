@@ -4986,10 +4986,13 @@ a.notif-row:hover {
   font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .lp-mobnav a:hover { background: var(--surface-2); color: var(--ink); }
 @keyframes lpMobnavIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-/* Homepage hero nav has the burger on the right (.lp-nav--hero .lp-burger) —
-   the drawer should slide in from that same side. /geo, /pricing, /blog
-   keep the burger on the left and don't pass `fromRight`, so they keep
-   the default left-slide .lp-mobnav above untouched. */
+/* GENSCORE-HEADER-1 (2026-08-12): every public header's burger sits on the
+   right (.lp-burger { margin-left: auto } above) and `PublicHeader` always
+   passes `fromRight` to MarketingMobileNav, so the drawer always slides in
+   from that side — founder: "el menú tiene que salir siempre desde la
+   derecha". The plain left-slide .lp-mobnav keyframe below stays as
+   MarketingMobileNav's default for any future caller that doesn't opt into
+   `fromRight`; nothing in the app uses that default today. */
 .lp-mobnav--right { left: auto; right: 0; box-shadow: -20px 0 60px rgba(15,23,41,.20); animation-name: lpMobnavInRight; }
 @keyframes lpMobnavInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -5156,6 +5159,8 @@ a.notif-row:hover {
 .lp-footer .copy { font-size: 12.5px; color: var(--ink-4); margin-top: 18px; }
 
 .legal-updated { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+.legal-subnav { display: flex; align-items: center; gap: 16px; margin-top: 18px; }
+.legal-subnav-current { font-size: 12.5px; font-weight: 650; color: var(--ink-3); white-space: nowrap; }
 .legal-body { max-width: 760px; }
 .legal-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
 .legal-body h2:first-child { margin-top: 0; }
@@ -5297,7 +5302,7 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   .lp-burger {
     display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; min-width: 44px; min-height: 44px;
     border-radius: 9px; background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
-    margin-left: -6px;
+    margin-left: auto;
   }
   .lp-burger:hover { background: var(--surface-2); }
   /* Logo reads oversized once the nav collapses to just burger + wordmark
@@ -5314,10 +5319,11 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
      they end up cramped against each other. Stack them full-width instead. */
   .lp-ctaband .row { flex-direction: column; align-items: stretch; gap: 14px; }
   .lp-ctaband .row .btn { width: 100%; }
-  /* Homepage hero nav only (.lp-nav--hero) — /geo and /pricing don't carry
-     this modifier, so their .lp-nav-right keeps its existing behavior. */
-  .lp-nav--hero .lp-nav-right { display: none; }
-  .lp-nav--hero .lp-burger { margin-left: auto; }
+  /* GENSCORE-HEADER-1: unified across every public surface, not just the
+     home hero — the desktop login/signup pair is now redundant at this
+     width because every mobile drawer carries its own CTAs (`ctas` prop on
+     MarketingMobileNav), so showing both was a duplicate, not a fallback. */
+  .lp-nav-right { display: none; }
   .lp-hero--home .lp-hero-content { padding-top: 8px; }
   .lp-promo { font-size: 11.5px; padding: 7px 14px; }
 }

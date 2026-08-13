@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
+import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
 import { NextResponse } from "next/server";
 
 const AUTH_CALLBACK_ERROR = "No se pudo completar el inicio de sesión. Inténtalo de nuevo.";
@@ -57,6 +58,12 @@ export async function GET(request: Request) {
 
   if (data.user?.email && isFreshSignup(data.user)) {
     await sendWelcomeEmail(data.user.email);
+    const method = data.user.app_metadata?.provider === "google" ? "google" : "password";
+    await sendNewSignupOpsAlert(
+      supabase,
+      { id: data.user.id, email: data.user.email, created_at: data.user.created_at },
+      method
+    );
   }
 
   return NextResponse.redirect(new URL(next, url.origin));

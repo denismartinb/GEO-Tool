@@ -4,10 +4,20 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
+import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
 
 const EMAIL_RATE_LIMIT_ERROR =
   "Se han enviado demasiados emails de confirmación en poco tiempo. Espera unos minutos e inténtalo de nuevo.";
 const PASSWORD_MISMATCH_ERROR = "Las contraseñas no coinciden.";
+const USER_ALREADY_EXISTS_ERROR = "Ya existe una cuenta con ese email. Inicia sesión en su lugar.";
+const WEAK_PASSWORD_ERROR = "La contraseña es demasiado débil. Elige una más segura.";
+const GENERIC_SIGNUP_ERROR = "No se pudo crear la cuenta. Inténtalo de nuevo.";
+
+const SIGNUP_ERROR_MESSAGES: Record<string, string> = {
+  over_email_send_rate_limit: EMAIL_RATE_LIMIT_ERROR,
+  user_already_exists: USER_ALREADY_EXISTS_ERROR,
+  weak_password: WEAK_PASSWORD_ERROR
+};
 
 const signupSchema = z.object({
   email: z.string().email(),
@@ -44,7 +54,7 @@ export async function signup(formData: FormData) {
     // window trips this, and the raw message ("email rate limit exceeded")
     // would otherwise leak straight to the UI (docs/environment-contract.md
     // has the custom-SMTP recommendation before enabling "Confirm email").
-    const message = error.code === "over_email_send_rate_limit" ? EMAIL_RATE_LIMIT_ERROR : error.message;
+    const message = SIGNUP_ERROR_MESSAGES[error.code ?? ""] ?? GENERIC_SIGNUP_ERROR;
     redirect(`/signup?error=${encodeURIComponent(message)}`);
   }
 
@@ -62,6 +72,9 @@ export async function signup(formData: FormData) {
   }
 
   await sendWelcomeEmail(parsed.data.email);
+  if (data.user) {
+    await sendNewSignupOpsAlert(supabase, { id: data.user.id, email: parsed.data.email, created_at: data.user.created_at }, "password");
+  }
 
   redirect("/dashboard");
 }

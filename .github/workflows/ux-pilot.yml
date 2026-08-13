@@ -42,7 +42,7 @@ jobs:
     # barrido crece con cada pieza de contenido —53 pantallas x 3 anchuras a
     # esa fecha—, así que un tope pegado al tiempo real de la pasada estaba
     # garantizado que se cruzara. No se sube "por si acaso": se sube porque el
-    # margen medido era de 56 segundos (log §64).
+    # margen medido era de 56 segundos (log §65).
     timeout-minutes: 35
 
     steps:
@@ -226,7 +226,7 @@ jobs:
       # cancelado deja su propio comentario diciendo que el veredicto anterior,
       # si lo hay, no pasó por la puerta. Es la misma regla que ya rige el
       # código de escaneo: una garantía que no se puede ver fallar no es una
-      # garantía (log §64).
+      # garantía (log §65).
       - name: Announce a run that was cut off before it could gate
         if: cancelled() && steps.pr.outputs.number != ''
         env:
