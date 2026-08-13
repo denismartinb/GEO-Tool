@@ -6387,6 +6387,14 @@ insignia un `margin-top` mayor, ambos con ámbito a esta cabecera — el chip de
 sidebar de consola no se toca porque su espaciado ya estaba aprobado y el
 problema no era suyo.
 
+**Segundo addendum — más aire, sin cambiar el diseño (2026-08-13).** Antes de
+este ajuste se le enseñaron tres alternativas de avatar en un artefacto
+(círculo sólido, degradado, squircle con anillo); el fundador las vio y pidió
+**quedarse con el actual** — solo con más espacio entre elementos. Aumenta el
+`gap` avatar↔texto, el `padding` del propio `.lp-user-chip` y el `margin-top`
+de la insignia respecto al primer ajuste de espaciado — sigue sin tocar el
+chip del sidebar de consola.
+
 ### Pendiente / roto conocido
 
 - ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado
