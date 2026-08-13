@@ -53,7 +53,7 @@ comprobaciones de abajo salen de leer el esquema y el código actuales, y
 cambian el diseño de ambas.
 
 > **Estado (2026-08-12):** la mitad de lectura de la petición B está
-> **implementada** en ADMIN-CONSOLE-2a (log §65): la tabla muestra el agregado
+> **implementada** en ADMIN-CONSOLE-2a (log §71): la tabla muestra el agregado
 > `activos/total` de escaneo recurrente y auditoría automática, marca los
 > recurrentes inertes por plan Free, y calcula el coste estimado con su
 > procedencia. Lo que sigue pendiente es **modificarlos** (2b) y el **borrado
