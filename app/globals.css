@@ -5109,19 +5109,20 @@ a.notif-row:hover {
    so the chip reads as a control against the nav's own background (the
    sidebar's ground already separates it there), and an ellipsis budget so a
    long address can't push the nav wide. */
-.lp-user-chip {
-  border: 1px solid var(--line); max-width: 260px;
-  padding: 13px 14px; gap: 13px;
-}
+.lp-user-chip { border: 1px solid var(--line); max-width: 260px; }
+/* `.user-chip.lp-user-chip` (both real classes on the element, not a
+   specificity trick) — needed because `.lp-mobnav a` (one class + the tag,
+   0,1,1) otherwise beats a bare `.lp-user-chip` (0,1,0) and silently forces
+   padding back to `0 10px` inside the drawer. That's why the previous pass
+   "increased" this padding and the rendered box didn't move at all — the
+   value was being set, then immediately overridden by a rule earlier in this
+   file that has nothing to do with this component. Verified this time by
+   reading the *computed* padding in a real browser, not just the source. */
+.user-chip.lp-user-chip { padding: 13px 14px; gap: 13px; }
 .lp-user-chip .lp-user-chip-email {
   font-size: 12.5px; font-weight: 650; color: var(--ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Founder feedback (2026-08-13, second pass): keep the current avatar/chip
-   design, just give it more air overall — not a redesign, a spacing pass.
-   `gap` above widens avatar↔text; this widens email↔badge. Both scoped to
-   `.lp-user-chip`, not the shared `.user-chip`/`.sb-plan-badge` rules: the
-   console sidebar's already-approved spacing stays untouched. */
 .lp-user-chip .sb-plan-badge { margin-top: 7px; }
 /* In the drawer it is the full-width bottom action, in place of the two CTAs. */
 .lp-mobnav-ctas .lp-user-chip { max-width: none; }

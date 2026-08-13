@@ -6390,10 +6390,22 @@ problema no era suyo.
 **Segundo addendum — más aire, sin cambiar el diseño (2026-08-13).** Antes de
 este ajuste se le enseñaron tres alternativas de avatar en un artefacto
 (círculo sólido, degradado, squircle con anillo); el fundador las vio y pidió
-**quedarse con el actual** — solo con más espacio entre elementos. Aumenta el
-`gap` avatar↔texto, el `padding` del propio `.lp-user-chip` y el `margin-top`
-de la insignia respecto al primer ajuste de espaciado — sigue sin tocar el
-chip del sidebar de consola.
+**quedarse con el actual** — solo con más espacio entre elementos.
+
+**Ese primer intento no hizo nada, y el fundador lo pidió tres veces antes de
+que se detectara por qué.** `.lp-user-chip { padding: 13px 14px; }` se subía
+correctamente en el código, pero el elemento es un `<a>` dentro de
+`.lp-mobnav`, y `.lp-mobnav a { padding: 0 10px; }` (clase + etiqueta,
+especificidad 0,1,1) le ganaba en cascada a un `.lp-user-chip` a secas (una
+sola clase, 0,1,0) — sin relación funcional entre ambas reglas, solo una
+coincidencia de selector. El `padding` computado real era `0px` arriba/abajo
+pese a que el fichero decía `13px`. Se encontró leyendo el **valor
+computado** en un navegador real (`getComputedStyle`), no releyendo el CSS —
+la fuente ya "decía" lo correcto, así que releerla no habría encontrado nada.
+Arreglado subiendo la especificidad con `.user-chip.lp-user-chip` (las dos
+clases reales que ya lleva el elemento, no un truco), que gana sin depender
+del orden de aparición en el fichero. Sigue sin tocar el chip del sidebar de
+consola.
 
 ### Pendiente / roto conocido
 
