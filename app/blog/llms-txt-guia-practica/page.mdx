@@ -44,10 +44,11 @@ export const faqItems = [
 ];
 
 export const mockRows = [
-  { label: "Presencia", hint: "¿La IA nombra tu marca?", value: 80, weight: 40, tone: "blue" },
-  { label: "Prominencia", hint: "¿Apareces al principio o de pasada?", value: 64, weight: 25, tone: "blue2" },
-  { label: "Cuota de voz", hint: "¿Cuántas menciones son tuyas?", value: 55, weight: 20, tone: "cyan" },
-  { label: "Autoridad", hint: "¿La IA cita tu web como fuente?", value: 40, weight: 15, tone: "warm" }
+  { label: "Presencia", hint: "¿La IA nombra tu marca?", value: 80, weight: 32, tone: "blue" },
+  { label: "Prominencia", hint: "¿Apareces al principio o de pasada?", value: 64, weight: 20, tone: "blue2" },
+  { label: "Cuota de voz", hint: "¿Cuántas menciones son tuyas?", value: 55, weight: 16, tone: "cyan" },
+  { label: "Autoridad", hint: "¿La IA cita tu web como fuente?", value: 40, weight: 12, tone: "warm" },
+  { label: "Preparación técnica", hint: "¿Puede un motor leer tu web?", value: 70, weight: 20, tone: "cyan" }
 ];
 
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
@@ -90,10 +91,10 @@ Eso no significa que sea inútil — significa que no deberías esperar un cambi
 
 <Figure
   label="Figura 1."
-  caption="La señal que llms.txt pretende mover — la autoridad, es decir, si la IA cita tu dominio como fuente — pesa un 15% del GEO Score. Datos de ejemplo; los pesos son los reales de ADR-0015."
+  caption="La señal que llms.txt pretende mover es la autoridad: si la IA cita tu dominio como fuente. Es una de las cinco del GEO Score, y ni la que más pesa ni la única que hay que mover. Datos de ejemplo; la estructura es la del producto."
 >
   <ProductMock
-    score={65}
+    score={66}
     rows={mockRows}
     highlight={3}
     annotation="Esto es lo que llms.txt pretende mover"

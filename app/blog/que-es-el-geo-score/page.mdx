@@ -64,19 +64,18 @@ Pero un analista de visibilidad de marca nunca se conforma con un sí o un no. L
 
 Fíjate en algo de la figura: **ninguna de las cinco señales vale 67**. El número final no es ninguna de ellas, sino lo que sale al pesarlas. Por eso una marca puede tener una presencia alta y aun así un GEO Score mediocre — si nadie la cita, esa presencia no está respaldada por nada.
 
-## Cuánto pesa cada señal
+## No todas pesan lo mismo
 
-<StatGrid label="Pesos de cada señal dentro del GEO Score">
-  <Stat value="32%" label="Presencia — la tasa de mención" source="ADR-0033 · GEO Score v4" tone="blue" />
-  <Stat value="20%" label="Prominencia — tu puesto cuando apareces" source="ADR-0033 · GEO Score v4" tone="blue" />
-  <Stat value="16%" label="Posición competitiva del conjunto" source="ADR-0033 · GEO Score v4" tone="cyan" />
-  <Stat value="12%" label="Autoridad — citación de tu dominio" source="ADR-0033 · GEO Score v4" tone="warm" />
-  <Stat value="20%" label="Preparación técnica de tu web" source="ADR-0033 · GEO Score v4" tone="cyan" />
+Las cinco señales no entran en el número a partes iguales, y el orden no es arbitrario: refleja cómo razona un analista real — primero "¿estamos en la conversación?", después "¿con qué protagonismo?", después "¿cómo estamos en conjunto frente a la competencia?", y por último "¿hay evidencia real detrás?". La presencia es la que más manda, porque sin mención no hay nada que interpretar.
+
+<StatGrid label="La forma del GEO Score">
+  <Stat value="5" label="Señales distintas que se combinan en un solo número" source="Metodología de GenScore" tone="blue" />
+  <Stat value="0-100" label="Escala del resultado, no un porcentaje de menciones" source="Metodología de GenScore" tone="cyan" />
+  <Stat value="2" label="De las cinco dependen de a qué competidores sigas" source="Metodología de GenScore" tone="warm" />
+  <Stat value="1" label="Es determinista: la preparación técnica de tu web" source="Metodología de GenScore" tone="cyan" />
 </StatGrid>
 
-El orden de los pesos no es arbitrario: refleja cómo razona un analista real — primero "¿estamos en la conversación?", después "¿con qué protagonismo?", después "¿cómo estamos en conjunto frente a la competencia?", y por último "¿hay evidencia real detrás?".
-
-La quinta señal, la **preparación técnica**, entró en agosto de 2026 y es distinta de las otras cuatro en dos sentidos. Va dentro y no al lado porque es una condición: una web que los motores no pueden leer limpiamente no puede beneficiarse de ninguna otra mejora GEO. Y es la única **determinista** del grupo — se calcula con comprobaciones sobre tu HTML, sin preguntar a ningún modelo, así que la misma web da siempre el mismo número. Eso tiene un efecto medible sobre el conjunto: darle una quinta parte del peso reduce en esa misma proporción cuánto mueve el ruido de los motores a tu puntuación. Las proporciones **relativas** de las otras cuatro no cambiaron al añadirla: se reescalaron todas por igual.
+La quinta señal, la **preparación técnica**, entró en agosto de 2026 y es distinta de las otras cuatro en dos sentidos. Va dentro y no al lado porque es una condición: una web que los motores no pueden leer limpiamente no puede beneficiarse de ninguna otra mejora GEO. Y es la única **determinista** del grupo — se calcula con comprobaciones sobre tu HTML, sin preguntar a ningún modelo, así que la misma web da siempre el mismo número. Eso tiene un efecto que se nota: cuanto más pesa lo determinista, menos mueve tu puntuación el ruido propio de los motores. Al añadirla, las proporciones **relativas** de las otras cuatro no cambiaron: se reescalaron todas por igual.
 
 ## Los cinco componentes, en detalle
 

@@ -79,41 +79,39 @@ describe("qué motores pueden citar, según el código", () => {
 });
 
 /**
- * GEO-SCORE-V4 (ADR 0033) añadió el componente técnico el 2026-08-05 y
- * reescaló los otros cuatro. `/docs/metodologia/geo-score` se actualizó; el
- * artículo pilar del blog no, y siguió publicando los pesos de v2
- * (.40/.25/.20/.15) durante ocho días — el sitio contradiciéndose a sí mismo
- * sobre su propia metodología. Refrescado en este mismo PR (log §72); esto
- * impide que vuelva a quedarse atrás en silencio.
+ * Decisión del fundador, 2026-08-13 (log §75): *"no quiero exponer cosas tan
+ * concretas del producto, como pesos reales para un cálculo"*. Los pesos del
+ * compuesto y los códigos ADR salen de todo el contenido público.
+ *
+ * Esto **sustituye** al bloque anterior de este fichero, que exigía justo lo
+ * contrario: que el pilar publicara los pesos vigentes leídos de
+ * `run-scoring.ts`. Aquel test resolvía un problema real —el artículo llevaba
+ * ocho días publicando la fórmula v2, retirada (log §74)— y la decisión nueva
+ * lo resuelve mejor: lo que no se publica no se puede quedar rancio.
+ *
+ * Lo que sí se conserva es la garantía que hacía falta de verdad: el número
+ * del gauge sigue siendo la media ponderada real de las filas que la maqueta
+ * enseña (`article-recipes.test.ts`), porque los pesos siguen en el fuente del
+ * MDX aunque `ProductMock` ya no los pinte.
  */
-describe("el pilar del GEO Score publica los pesos vigentes", () => {
-  const RUN_SCORING = readFileSync(join(process.cwd(), "lib", "scoring", "run-scoring.ts"), "utf8");
-  const technicalWeight = Number(RUN_SCORING.match(/const TECHNICAL_WEIGHT = ([\d.]+);/)?.[1]);
-  const pesos = statValues(PILAR).map((v) => Number(v.replace("%", "")));
-
-  it("lee el peso técnico real del código", () => {
-    expect(technicalWeight, "no se pudo leer TECHNICAL_WEIGHT de lib/scoring/run-scoring.ts").toBeGreaterThan(0);
-  });
-
-  it("son cinco pesos y suman 100", () => {
-    expect(pesos).toHaveLength(5);
-    expect(pesos.reduce((a, b) => a + b, 0)).toBe(100);
-  });
-
-  it("el peso técnico publicado es el del código", () => {
-    expect(pesos[4]).toBe(Math.round(technicalWeight * 100));
-  });
-
-  it("los otros cuatro conservan sus proporciones v3 exactas (ADR 0033 §1)", () => {
-    const escala = 1 - technicalWeight;
-    expect(pesos.slice(0, 4).map((p) => Math.round(p / escala))).toEqual([40, 25, 20, 15]);
-  });
-
-  it("ya no cita ADR-0015 como fuente de los pesos vigentes", () => {
+describe("el pilar del GEO Score no publica el reparto de pesos", () => {
+  it("ninguna cifra de su rejilla es un porcentaje", () => {
+    const porcentajes = statValues(PILAR).filter((v) => v.includes("%"));
     expect(
-      PILAR,
-      "los pesos de ADR-0015 (v2) están superados por ADR-0033 (v4): citarlos como " +
-        "fuente del reparto actual publica una metodología que el producto ya no usa"
-    ).not.toContain("ADR-0015");
+      porcentajes,
+      `el pilar publica ${porcentajes.join(", ")} en su StatGrid. Un porcentaje ahí ` +
+        "es el reparto de pesos, que es configuración interna del producto."
+    ).toEqual([]);
+  });
+
+  it("los pesos siguen en el fuente para que el gauge sea verificable, pero no se renderizan", () => {
+    expect(PILAR, "mockRows necesita sus pesos: es lo que hace comprobable el número del gauge").toMatch(
+      /weight:\s*\d+/
+    );
+    const mock = readFileSync(join(process.cwd(), "components", "blog", "article", "figure.tsx"), "utf8");
+    expect(
+      mock,
+      "ProductMock volvería a pintar «peso N%» y el reparto sería público otra vez"
+    ).not.toMatch(/peso \{?row\.weight/);
   });
 });

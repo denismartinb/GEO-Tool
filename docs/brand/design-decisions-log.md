@@ -6832,6 +6832,77 @@ que ADR 0033 §1 hace en su propia tabla.
 
 ---
 
+## 75. Los pesos y los códigos ADR salen del contenido público (SEO-POS-1, S6, revisión del fundador, 2026-08-13)
+
+**La decisión.** Fundador, revisando S6: *"En general no quiero exponer cosas
+tan concretas del producto, como pesos reales para un cálculo o estos códigos
+ADR-0024 · capa de fiabilidad. Revísalo y elimínalos de todos los artículos"*.
+
+**Supersede en parte a §74**, que doce horas antes había hecho lo contrario:
+refrescar el pilar del GEO Score para que publicara los pesos vigentes en vez
+de los retirados. El problema que §74 resolvía era real —el artículo llevaba
+ocho días publicando la fórmula v2— pero esta decisión lo resuelve mejor: **lo
+que no se publica no se puede quedar rancio.**
+
+**Son dos cosas distintas y conviene no confundirlas:**
+
+- **Los pesos del compuesto** son configuración del producto. Quien los tiene
+  puede reproducir la métrica sin haberla construido, y al lector no le dicen
+  nada que no le diga ya el orden de importancia. Misma línea que §69 trazó
+  para el reparto de puntos de la auditoría: dimensiones y umbrales de
+  comportamiento sí, reparto exacto no.
+- **Los códigos ADR** son peor que innecesarios: son la referencia interna de
+  un documento que el lector no puede abrir, así que como "fuente" de una cifra
+  no acreditan nada — sólo publican el índice de nuestras decisiones internas.
+  Sustituidos por fuentes que sí significan algo fuera: "Metodología de
+  GenScore", o la evidencia real (un incidente fechado, datos de ejemplo
+  declarados como tales).
+
+**Alcance real, que resultó ser mayor que un artículo.** El error se había
+propagado copiando la cabecera de la pieza anterior:
+
+| Superficie | Qué publicaba |
+|---|---|
+| `que-es-el-geo-score` | los cinco pesos v4 + 5 códigos ADR |
+| `metricas-geo-que-medir` | 4 códigos ADR + el peso técnico como "−20 % de varianza" |
+| `como-elegir-competidores-analisis-geo` | 25 % / 20 % / 45 % + 3 códigos ADR, **con la fórmula v2 ya retirada** |
+| `como-elegir-prompts-monitorizar-marca-ia` | 40 % / 25 % y "suman el 65 % de tu GEO Score", **v2** |
+| `llms-txt-guia-practica` | "la autoridad pesa un 15 % del GEO Score… los pesos reales de ADR-0015", **v2** |
+| `/glosario/geo-score` | los cuatro pesos v2 en prosa, y "cuatro señales" |
+
+Tres de las seis, además, llevaban meses publicando una fórmula que el producto
+ya no usa. Retirar el dato arregla las dos cosas de una vez.
+
+**Lo que se conserva, y por qué importa.** `ProductMock` deja de pintar
+`peso N%`, pero **el peso sigue en el fuente del MDX**: es lo que hace
+verificable el número del gauge (`article-recipes.test.ts` comprueba que sea la
+media ponderada real de las filas que la figura enseña, un error que ya se
+coló dos veces). El fuente de un artículo no es una superficie pública; la
+página sí.
+
+**Lo que sustituye a los pesos en el texto** no es un hueco: es el **orden de
+importancia**, que es lo único que el lector podía accionar. "La presencia es
+la que más manda, porque sin mención no hay nada que interpretar" le sirve para
+decidir; un 32 % no.
+
+**El guardián** (`article-honesty.test.ts`, "el contenido público no publica
+configuración interna del producto") barre las tres superficies —artículos,
+glosario y comparativas— buscando códigos ADR y porcentajes presentados como
+peso. Exige vocabulario del compuesto alrededor del porcentaje: la primera
+versión marcaba una afirmación legítima sobre un competidor ("aumenta el peso
+de la página … hasta en un 98 %"), y un guardián con falsos positivos se
+desactiva a la primera.
+
+**Queda una superficie fuera, y es deliberado:**
+`/docs/metodologia/geo-score` publica la tabla completa de pesos y es la página
+a la que los artículos enlazan como "metodología publicada". No es un artículo,
+así que no entra en la instrucción literal, y retirarla es una decisión de
+producto distinta —esa página existe para ser la transparencia del método—.
+Pendiente de decisión del fundador; mientras siga ahí, el dato sigue siendo
+público en un clic.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

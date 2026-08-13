@@ -253,6 +253,13 @@ por GEO-SCORE-V4 el 2026-08-05 — mientras `/docs/metodologia/geo-score` ya
 publicaba los cinco. Actualizado en este mismo PR, con `dateUpdated` (primer
 uso real del campo, T-c). Detalle: log §74.
 
+**Revisión del fundador (2026-08-13):** *"no quiero exponer cosas tan concretas
+del producto, como pesos reales para un cálculo o estos códigos ADR"*. Los pesos
+del GEO Score y los códigos ADR salen de **todo** el contenido publicado —seis
+superficies los tenían, y tres con la fórmula v2 ya retirada encima— y se
+sustituyen por el orden de importancia y por fuentes verificables desde fuera.
+Supersede en parte a §74. Detalle y alcance: log §75.
+
 **Y dos fallos de descubribilidad**, del mismo patrón que §62: S1 nunca lo
 había abierto el piloto (estaba en el fixture y no en el journey) y cuatro
 artículos declaraban portada pero renderizaban el degradado con icono en su
