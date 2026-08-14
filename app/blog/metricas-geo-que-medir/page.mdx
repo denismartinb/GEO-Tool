@@ -1,0 +1,328 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  Figure,
+  ShareOfVoice,
+  Stat,
+  StatGrid,
+  Verdict,
+  AuthorBio,
+  ArticleCta,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("metricas-geo-que-medir");
+
+export const metadata = blogPostMetadata(post);
+
+export const sovBrands = [
+  { name: "Tu marca", value: 34, you: true },
+  { name: "Competidor A", value: 41 },
+  { name: "Competidor B", value: 18 },
+  { name: "Competidor C", value: 7 }
+];
+
+export const faqItems = [
+  {
+    question: "¿Qué métricas GEO hay que medir?",
+    answer:
+      "Cinco, y ninguna sustituye a las otras: la tasa de mención (en qué porcentaje de respuestas aparece tu marca), la cuota de voz (qué parte de las menciones totales son tuyas frente a los competidores que sigues), la posición cuando te mencionan (tu puesto medio contando solo las respuestas donde apareces), la tasa de citación de tu propio dominio (en qué porcentaje de respuestas con búsqueda web el motor cita tu web como fuente) y la preparación técnica de tu sitio. Todo lo demás suele ser una de ellas con otro nombre, o una métrica que engaña."
+  },
+  {
+    question: "¿Qué es la cuota de voz en IA?",
+    answer:
+      "Es el porcentaje de menciones que te corresponde a ti sobre el total de menciones de tu marca más las de los competidores que estás siguiendo. Responde a \"¿de todas las veces que la IA nombra a alguien de mi categoría, cuántas me nombra a mí?\". Depende de a quién sigas: la misma marca tiene una cuota distinta con tres competidores que con diez, así que solo es comparable consigo misma a lo largo del tiempo, nunca entre proyectos con conjuntos distintos."
+  },
+  {
+    question: "¿Cuántas respuestas hacen falta para que una métrica GEO signifique algo?",
+    answer:
+      "La unidad no es el prompt, es la respuesta: veinte prompts en tres motores son sesenta respuestas. Es aritmética simple — con diez observaciones, una sola vale diez puntos de porcentaje, así que un número calculado sobre esa base no sostiene ninguna interpretación cualitativa. Con menos de una decena de respuestas, mira el número pero no le pongas etiqueta ni lo compares con el anterior."
+  },
+  {
+    question: "¿Se puede medir la posición en ChatGPT como una posición en Google?",
+    answer:
+      "No, y tratar de hacerlo produce la métrica GEO peor entendida que existe. En Google hay un ranking estable para una consulta; en una respuesta generativa solo existe un orden dentro de esa respuesta concreta, y en la mayoría de respuestas tu marca no aparece. Si esas ausencias se promedian como si fueran un puesto malo, el resultado ordena por frecuencia de aparición y lo etiqueta como posición. La forma correcta es medir el puesto solo sobre las respuestas donde apareces, y leerlo siempre junto a la tasa de mención."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Medir GEO es medir **varias cosas distintas** sobre las respuestas de ChatGPT,
+Gemini y Claude: con qué frecuencia te nombran (**tasa de mención**), qué parte
+de la conversación ocupas frente a tus competidores (**cuota de voz**), en qué
+puesto apareces **cuando apareces**, si alguna respuesta **cita tu dominio**, y
+si tu web es **legible para un motor**. Casi todo lo demás es una de esas
+con otro nombre — o una de las tres trampas de más abajo: la captura suelta, la
+"posición media" que promedia las veces que no sales, y cualquier cifra
+calculada sobre un puñado de respuestas.
+
+</KeyTakeaway>
+
+## Antes de la primera métrica: cuál es la unidad
+
+Casi todos los errores de medición en GEO vienen del denominador, así que
+conviene fijarlo antes que nada: **la unidad de observación es la respuesta, no
+el prompt.**
+
+Veinte prompts lanzados a tres motores no son veinte observaciones: son
+sesenta. La misma pregunta contestada por Gemini y por Claude son dos
+respuestas distintas, que pueden nombrar a marcas distintas, y mezclarlas en un
+único "20 prompts" tira por la borda dos tercios de la información. Cuando
+leas cualquier porcentaje de este artículo —tuyo o de una herramienta—, la
+primera pregunta es siempre la misma: *¿sobre cuántas respuestas?*
+
+## Las métricas que sí significan algo
+
+<CompareTable>
+
+| Métrica | Responde a | Se calcula sobre | El error habitual |
+| --- | --- | --- | --- |
+| **Tasa de mención** | ¿Me nombra la IA? | Todas las respuestas del escaneo | Contarla sobre prompts en vez de sobre respuestas |
+| **Cuota de voz** | De todas las marcas que nombra, ¿cuántas veces yo? | Menciones tuyas + de los competidores que sigues | Compararla entre proyectos con competidores distintos |
+| **Posición cuando apareces** | Cuando salgo, ¿salgo el primero? | Solo las respuestas donde apareces | Promediar también las respuestas donde no sales |
+| **Tasa de citación** | ¿Enlaza el motor mi web como fuente? | Solo respuestas de motores que buscan en la web | Contar cualquier cita, sea de quien sea |
+| **Preparación técnica** | ¿Puede un motor leerme y extraerme? | Tu propio HTML, sin preguntar a ningún modelo | Confundirla con estar apareciendo |
+
+</CompareTable>
+
+### 1. Tasa de mención: la que no puedes saltarte
+
+El porcentaje de respuestas en las que aparece tu marca. Es la primera porque
+sin ella ninguna otra tiene sentido: una cuota de voz del 100 % sobre una única
+mención no es liderazgo, es una anécdota.
+
+Un matiz que cambia el número más de lo que parece: una mención tiene que estar
+**verificada contra el texto de la respuesta**, no dada por buena porque un
+modelo diga que mencionó tu marca. Y tiene que reconocer cómo te llama la gente
+de verdad — si sigues "Mozilla" y el motor recomienda "Firefox", una medición
+ingenua cuenta cero.
+
+### 2. Cuota de voz: siempre relativa a alguien
+
+Tus menciones divididas entre tus menciones más las de los competidores que
+estás siguiendo. Responde a la pregunta que de verdad importa en una categoría:
+de todas las veces que la IA recomienda a alguien, ¿cuántas me recomienda a mí?
+
+<Figure
+  label="Figura 1."
+  caption="Cuota de voz sobre un conjunto de tres competidores seguidos. Datos de ejemplo: la estructura es la del producto. Cambiar el conjunto de competidores cambia el número sin que cambie nada en el mercado — por eso la cuota solo se compara consigo misma en el tiempo."
+>
+  <ShareOfVoice brands={sovBrands} total="sobre 60 respuestas" />
+</Figure>
+
+De ahí se sigue la trampa: **la cuota de voz depende de a quién sigas**. Añade
+dos competidores grandes y tu cuota baja sin que tú hayas empeorado.
+Compararla con la de otra empresa, que sigue a otras marcas, no significa nada.
+Por eso elegir bien el conjunto no es un trámite de configuración, sino parte
+de la medición: lo tratamos aparte en <a href="/blog/como-elegir-competidores-analisis-geo">cómo seleccionar los competidores de un análisis GEO</a>.
+
+### 3. Posición cuando apareces: la métrica peor entendida del sector
+
+Aquí está el error más caro, y es tan común que merece verse en números.
+
+La tentación es calcular una "posición media" como en SEO. Pero en una
+respuesta generativa, en la mayoría de las respuestas tu marca sencillamente no
+está. ¿Qué puesto le pones a una ausencia? Si se le asigna el último —lo que
+parece razonable y es lo que hacían nuestras primeras versiones—, ocurre esto:
+
+<Figure
+  label="Figura 2."
+  caption="Escaneo simulado con ocho entidades, construido para que TODAS aparezcan siempre en segundo puesto cuando aparecen. La columna «posición media» —la que promedia también las respuestas donde la entidad no sale— las ordena de mejor a peor, aunque ninguna esté por delante de ninguna. Está midiendo la frecuencia de aparición y llamándolo posición."
+>
+
+| Entidad | Aparece en | Puesto real cuando aparece | «Posición media» |
+| --- | --- | --- | --- |
+| Entidad A | 10 de 20 | 2.º | 5,50 |
+| Entidad B | 5 de 20 | 2.º | 7,25 |
+| Entidad C | 4 de 20 | 2.º | 7,60 |
+| Entidad D | 2 de 20 | 2.º | 8,30 |
+| Entidad E | 1 de 20 | 2.º | 8,65 |
+
+</Figure>
+
+Dos consecuencias, y la segunda es la que descoloca a cualquiera que mire el
+panel:
+
+- **La marca seguida sale favorecida por construcción.** El conjunto de prompts
+  se elige alrededor de tu marca, así que apareces más veces que competidores
+  elegidos como contraste, así que te comes menos penalizaciones. Tu propia
+  marca puede acabar "por encima" de líderes del mercado sin ganarles en nada.
+- **El mejor valor posible deja de ser 1.** Una marca listada siempre la
+  primera, pero presente en la mitad de las respuestas, promedia 5,0 con ocho
+  entidades en juego. Un 6,50 no significa "sexta" y no se puede leer sin saber
+  también la tasa de mención — momento en el cual la posición media ya no está
+  aportando nada.
+
+Lo correcto es medir el puesto **solo sobre las respuestas donde apareces**, y
+publicarlo siempre al lado de la tasa de mención, que lleva la otra mitad de la
+historia. Un 1,0 quiere decir "siempre el primero de la lista, las veces que
+salgo". Cuántas veces salgo es la otra columna.
+
+### 4. Tasa de citación: de tu dominio, y solo donde puede haberla
+
+Una mención y una cita no son lo mismo. Que el modelo te nombre significa que
+te tiene en su cabeza; que enlace tu web como fuente significa que la respuesta
+se apoya en algo tuyo y el lector puede llegar hasta ti. Lo desarrollamos en
+<a href="/glosario/citacion-en-ia">la entrada de glosario sobre citación en IA</a>.
+
+Dos reglas que casi ninguna herramienta explicita:
+
+- **Cuenta tu dominio, no cualquier cita.** Una respuesta que cita a un
+  comparador o a un periódico está citada, pero no te está citando a ti.
+- **Solo cuenta donde puede haber citas.** Un motor que contesta sin buscar en
+  la web no cita nunca, por construcción. Meter esas respuestas en el
+  denominador no mide tu autoridad: le pone un techo, con ceros que no
+  significan "no te ha citado" sino "aquí no podía citar nadie". Cuentan para
+  mención y para cuota de voz, no para citación — y si una herramienta no te
+  dice cuáles de sus motores buscan de verdad, su tasa de citación no es
+  comparable con ninguna otra.
+
+### 5. Preparación técnica: la única que no depende de la IA
+
+Las cuatro anteriores miden lo que hacen los motores. Esta mide lo que haces
+tú: si tu página es legible, extraíble y atribuible. Es la única **determinista**
+del grupo —se calcula con comprobaciones sobre tu HTML, sin preguntarle nada a
+ningún modelo, así que la misma web da siempre el mismo número— y por eso es la
+única que puedes mover con seguridad antes de ver moverse a las demás. Tienes
+las seis dimensiones que la componen, con sus umbrales, en <a href="/blog/que-es-una-auditoria-geo">qué es una auditoría GEO</a>.
+
+## ¿Cuántas respuestas hacen falta para leer un número?
+
+<StatGrid label="Cuánto pesa una sola respuesta según el tamaño de tu muestra">
+  <Stat value="33 pts" label="Lo que mueve UNA respuesta si mides un prompt en tres motores" source="Aritmética de la muestra" tone="warm" />
+  <Stat value="10 pts" label="Lo que mueve UNA respuesta con diez observaciones detrás" source="Aritmética de la muestra" tone="blue" />
+  <Stat value="1,7 pts" label="Lo que mueve UNA respuesta con sesenta: veinte prompts en tres motores" source="Aritmética de la muestra" tone="cyan" />
+</StatGrid>
+
+No es una precaución teórica. Con tres respuestas en total, que una sola pase
+de no nombrarte a nombrarte mueve la métrica un tercio de golpe, sin que haya
+cambiado nada en el mercado ni en tu web. Quien mire esa subida y la celebre
+está leyendo ruido; quien mire la bajada equivalente y reaccione, peor todavía.
+
+El otro motivo para no leer números pequeños es más sutil. Tres de tres
+menciones es un 100 %, y el intervalo de confianza de manual sobre esa cifra
+tiene anchura **cero**: "100 %, sin margen de error", a partir de tres tiradas
+de moneda. Cualquier medición honesta necesita un intervalo que no colapse en
+los extremos, y necesita decir cuántas observaciones lo sostienen.
+
+## Una foto no es una tendencia
+
+Aunque midas con muestra suficiente, queda una fuente de variación que ninguna
+fórmula elimina: los motores buscan en vivo. Dos escaneos idénticos ven
+internets distintos, porque lo que devuelve una búsqueda cambia entre una
+llamada y la siguiente.
+
+Contra eso, la respuesta no es una fórmula mejor: es **dejar de tratar una
+observación como la respuesta**. Lo que se lee es la tendencia sobre varias
+mediciones seguidas, no la última foto — y con la mediana, no con la media,
+porque una medición anómala —un proveedor teniendo una mala hora— arrastra una
+media y apenas mueve una mediana.
+
+Con una condición estricta, que es donde se cae la mayoría: solo se comparan
+entre sí mediciones que midan lo mismo. Cambiar el conjunto de prompts, los
+motores o la forma de puntuar rompe la serie, y encadenar números que ya no son
+comparables es peor que no tener serie.
+
+Tiene un coste, y hay que decirlo: una mejora real tarda un par de mediciones
+en reflejarse del todo. A cambio, lo que ves moverse se mueve de verdad.
+
+## Qué no medir
+
+<Checklist tone="evitar" items={[
+  "No trates una captura de una conversación con ChatGPT como una medición: es una observación de una tirada, en una cuenta con su propio historial.",
+  "Nunca leas una «posición media» que promedie las respuestas donde no apareces: ordena por frecuencia y la llama posición.",
+  "No compares tu cuota de voz con la de otra empresa: cada una se calcula sobre su propio conjunto de competidores.",
+  "No cuentes como citación tuya cualquier fuente citada en la respuesta, ni metas en el denominador motores que responden sin buscar.",
+  "Nunca saques un veredicto ni un «has subido X» de menos de una decena de respuestas.",
+  "No restes dos escaneos que no miden lo mismo: distinto número de prompts, distintos motores o distinta versión de la fórmula.",
+  "No conviertas el sentimiento en tu métrica principal (abajo, por qué)."
+]} />
+
+## ¿Y el sentimiento?
+
+Es útil, pero **no como titular**. El sentimiento es una métrica de segundo
+orden: solo existe donde ya hay una mención, así que una marca invisible luce un
+sentimiento inmejorable —no hay ninguna respuesta hablando mal de ella—.
+Presentado como cifra principal engaña; como filtro para ir a leer las
+respuestas negativas concretas, es excelente. Ese es el sitio que le
+corresponde.
+
+## Y todas juntas, ¿en un solo número?
+
+Sí, y es lo que hace un índice como el <a href="/blog/que-es-el-geo-score">GEO Score</a>:
+resumirlas para poder seguir la evolución de un vistazo. Pero un índice no
+sustituye a las métricas de debajo, las ordena — sube porque han subido ellas,
+nunca al revés.
+
+Lo que sí conviene exigirle a cualquier índice, sea el nuestro o el de otra
+herramienta: **que cuando una de sus señales no se pueda medir, lo diga en vez
+de rellenarla con un cero.**
+
+<Verdict title="La regla que gobierna todas las demás" badge="Método">
+
+Un dato que no se ha podido medir se excluye y se dice; nunca se sustituye por
+cero. Un cero es una afirmación —"lo medimos y salió lo peor posible"— y usarlo
+para decir "no lo sabemos" es la forma más fácil de mentir con una métrica sin
+haber falseado ni un solo dato.
+
+</Verdict>
+
+## Si solo vas a mirar una cosa
+
+<QuickAction>
+
+Mira la **tasa de mención junto al número de respuestas** que la sostienen. Es
+la única pareja que no se puede malinterpretar: dice si estás en la
+conversación y con cuánta evidencia lo estás diciendo. Cuando esa pareja sea
+sólida —una decena de respuestas como mínimo, mejor varias decenas—, pasa a la
+cuota de voz y a la posición. Antes de eso, cualquier lectura más fina es ruido
+bien presentado.
+
+</QuickAction>
+
+Y si estás montando la medición desde cero, el orden es el inverso al de la
+curiosidad: primero el conjunto de preguntas, porque ninguna métrica es mejor
+que los prompts sobre los que se calcula. Eso lo cubrimos en <a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los prompts para monitorizar tu marca</a>,
+y el resto de la metodología vive en el <a href="/blog/medicion">pilar de medición</a>.
+
+<ArticleCta
+  title="Mídelas sobre tu marca, no sobre una captura"
+  text="Genscore lanza tu conjunto de prompts en ChatGPT, Gemini y Claude, y te devuelve estas métricas con el número de respuestas que las sostienen detrás. Escaneo gratuito, sin tarjeta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
+
+</BlogPageShell>

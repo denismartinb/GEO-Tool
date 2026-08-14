@@ -7245,7 +7245,495 @@ vez de «arreglarla»: volver estricto un flag apagaría cosas en producción.
 
 ---
 
-## 71. El cliente de Gemini sale de las nueve funcionalidades que lo tapaban (PRELAUNCH-HARDENING-1 Fase R5, primera mitad, 2026-08-13)
+## 65. La cabecera pública reconoce a quien ya entró (GENSCORE-HEADER-2, 2026-08-12)
+
+**Estado: implementada.** Continuación directa de §63. El fundador, ya logado,
+volvió a una página pública y se encontró «Iniciar sesión / Prueba gratis»:
+*«no debería ver estos botones, debería ver un estado de logado»*. La primera
+propuesta fue un botón único «Ir al panel»; la rechazó pidiendo *«algo más
+currado, más personalizado»* y señalando el chip de cuenta del menú lateral de
+consola (avatar con iniciales + email + insignia de plan).
+
+**No es un parecido, es el mismo chip.** `PublicHeader` renderiza las mismas
+clases que `components/sidebar.tsx` (`.user-chip`, `.avatar`,
+`.sb-plan-badge`), y las dos partes derivadas —iniciales e «¿hay insignia?»—
+salen de `lib/account-chip.ts`, que ahora usan **las dos** superficies.
+Repetir `email.slice(0, 2)` en el segundo llamador es exactamente cómo «el
+mismo chip» se convierte en dos chips distintos al cabo de unos meses. La
+regla de que **Free no pinta insignia** (decisión del fundador, 2026-07-31) se
+hereda de ahí en vez de volver a decidirse.
+
+**La decisión de fondo: las páginas públicas siguen siendo estáticas.** Las
+~45 superficies de marketing se pre-generan, y eso es el producto de SEO-POS-1
+y GROWTH-2/3. Leer la sesión en el servidor dentro de la cabecera compartida
+las habría sacado a todas del pre-renderizado —`lib/supabase/server.ts` usa
+`cookies()`, que basta para volver dinámica cualquier ruta que lo toque—, así
+que la cabecera lo pregunta **desde el cliente** a un endpoint nuevo y mínimo
+(`app/api/me/route.ts`) y las páginas no se mueven. Verificado en el build:
+`/`, `/pricing`, `/geo`, `/blog/*`, `/comparativas/*`, `/glosario/*`, `/docs/*`
+y las legales siguen marcadas `○`.
+
+**El coste, declarado en vez de escondido:** mientras la respuesta no llega, la
+cabecera pinta los CTA de anónimo. Quien está logado los ve un instante antes
+de que aparezca su chip. Es deliberado y va en la dirección correcta: el
+visitante anónimo —prácticamente todo el tráfico de marketing, y la razón de
+que el CTA exista— acierta sin parpadeo, y el parpadeo lo sufre el caso raro.
+La alternativa (no pintar nada hasta saberlo) retrasa el CTA para todos por
+proteger a la minoría.
+
+**El endpoint no aplica la caducidad de la prueba, sólo la lee.** `getPlanForUser`
+resuelve el plan pasando por `applyTrialExpiry`, que **escribe** (degrada a
+Free con el cliente de servicio) y **manda el email de «prueba terminada»**.
+Ese camino es correcto en la consola y ahí se queda. Colgarlo de `/api/me`
+—alcanzable desde cada página estática de marketing, es decir mucho más
+tráfico que la consola— habría hecho que una visita al blog mandara un email a
+un cliente. Así que se extrajo el predicado puro `isTrialElapsed` de dentro de
+`applyTrialExpiry` y ambos lo comparten: el endpoint resuelve el plan
+**efectivo** (una prueba caducada se pinta como Free, la insignia no miente) sin
+escribir ni enviar nada. Un test lo fija afirmando que ni el cliente de
+servicio ni `sendTrialEndedEmail` se llaman. La extracción evita la otra
+trampa: una segunda copia de «¿se acabó la prueba?» acabaría divergiendo de la
+que de verdad cierra el grifo.
+
+`isTrialElapsed` es un predicado booleano **a propósito, no un type guard**:
+que devuelva `false` significa «la prueba sigue viva», nunca «no hay fila», y
+declararlo `row is TrialFields` hacía que TypeScript estrechara la rama falsa a
+`never`. Lo cazó `tsc`, no una revisión.
+
+**Alcance del endpoint:** devuelve email, `planId` y `planName`, y nada más.
+Lee tres columnas de `profiles` con el cliente del usuario (RLS, sin atajo de
+servicio); un test fija esa lista exacta, porque ampliarla amplía lo que
+pueden filtrar unas páginas públicas. Responde **200 con `user: null`** para
+anónimo en vez de 401: es el caso esperado en una página de marketing y un 401
+en cada carga sería ruido en la consola del navegador. Si la petición falla, la
+cabecera se queda con los CTA de anónimo — nunca una cabecera rota.
+
+**Addendum GENSCORE-HEADER-3 — la franja de la home (fundador, 2026-08-12).**
+Se entregó en este mismo PR, no en uno posterior. Al ver el chip funcionando,
+el agente dejó declarado que la franja `7 días de Pro · Sin tarjeta` de la home
+le seguía saliendo a un cliente de Agencia — el mismo fallo que §65 corrige, en
+otro elemento— y **no la tocó**, porque la regla correcta no era obvia y la
+decisión es comercial. El fundador la fijó: *«tiene que salir a usuarios no
+logados o plan free»*.
+
+- **Por eso no valía «ocultar si hay sesión».** Es una oferta de alta: a quien
+  paga le sobra, pero a un logado en **Free** le sigue sirviendo. El corte no
+  es logado/anónimo, es de pago/no de pago.
+- **`showsPromoStrip` vive junto a `showsPlanBadge`** en `lib/account-chip.ts`
+  y un test fija que son **exactamente inversas** para todo plan resuelto: son
+  la misma pregunta vista por los dos lados, y si un día discrepan es que una
+  superficie considera de pago a una cuenta que la otra considera gratuita.
+- **`undefined` (anónimo, o identidad aún sin resolver) muestra la franja**,
+  misma optimismo que la cabecera: el visitante para el que está escrita la ve
+  sin parpadeo, y el cliente de pago la ve el instante que tarda la respuesta.
+- **Una sola petición para los dos consumidores.** La franja vive fuera de la
+  cabecera, así que dos `useEffect` independientes habrían hecho dos viajes a
+  `/api/me` en la página más visitada del sitio. El hook pasó a
+  `lib/use-session-user.ts` con una promesa compartida a nivel de módulo;
+  verificado en local que la home hace **una** llamada con los dos montados.
+  El ámbito de módulo también evita servir una identidad rancia: toda
+  transición de sesión (login, logout) es una carga completa de página.
+
+**El banner del pie, y por qué su regla NO es la de la franja.** El `ux-pilot`,
+juzgando las capturas de este PR, encontró el tercer sitio: el banner del pie de
+la home («Descubre tu visibilidad en IA hoy», con «Prueba gratis» e «Iniciar
+sesión») seguía igual para un logado. El fundador pidió meterlo en este mismo
+PR. **Aquí el corte es logado/anónimo, no de pago/no de pago**, y la diferencia
+es sustantiva: «Iniciar sesión» no le sirve a *ningún* logado, y «Prueba
+gratis» a uno en Free tampoco —ya la tiene—, mientras que la franja sí le sigue
+sirviendo a ese mismo usuario porque ofrece algo que no tiene (Pro, 7 días).
+Dos elementos parecidos con dos reglas distintas, y colapsarlas habría dejado
+un botón sin sentido en una de las dos.
+
+**Cambia el texto, no sólo los botones.** «Introduce tu dominio y obtén tu
+primer informe en minutos» le habla a quien no tiene ninguno; dejarlo con un
+botón nuevo debajo habría sido media corrección. Para un logado: «Continúa
+donde lo dejaste» + un único «Ir al panel». Sin cifras ni promesas nuevas
+(CLAUDE.md, "no fake metrics").
+
+**El chip pasa a tener nombre accesible y `data-testid`.** El avatar son dos
+letras que leídas en voz alta no significan nada y la insignia era un glifo de
+corona más una palabra suelta («Agencia») que no dice que sea un plan: ahora
+las partes visuales van `aria-hidden` y el enlace lleva el nombre completo
+(«Ir al panel. Cuenta: … , plan …»). El `data-testid` es lo que permite
+afirmar sobre el chip sin recortar píxeles de una captura.
+
+**Y el piloto pasa a abrir el cajón móvil de una página pública.** Su barrido
+de interacción sólo abría menús de consola, así que el cajón de la cabecera
+pública no se fotografiaba nunca — por eso GENSCORE-HEADER-2 se llevó un PASS
+sin que nadie hubiera visto el chip en 375 ni en 768, y quien lo verificó fue
+el fundador con su teléfono. Eso es precisamente lo que el piloto existe para
+no delegar, y es además el sitio donde ya se coló un fallo real (el CTA
+duplicado que corrigió §63). El test nuevo se salta solo por encima de 900px,
+donde `.lp-burger` no existe, y afirma por `data-testid` en vez de por texto:
+el email y el plan de la cuenta piloto pueden cambiar, la existencia del chip
+no.
+
+**Addendum — dos ajustes tras probarlo el fundador en su móvil (2026-08-13).**
+El CTA de la sección "Recomendaciones" (`Empieza gratis`, a media home) también
+pasa a `Ir al panel` en logado, mismo criterio que el banner del pie: es un
+CTA de alta y a un logado no le sirve, esté en el plan que esté. No se tocaron
+los otros dos CTA de la home que sí quedan igual a propósito — el campo de
+dominio del hero (`Analiza gratis`, ligado a escribir un dominio y no a "darse
+de alta" en sí) y el enlace "Ver cómo funciona" — porque decidir qué le pasa a
+ese campo para un logado es una pregunta de producto más grande (¿crea un
+proyecto? ¿redirige?) que no se ha hecho.
+
+Y el chip del cajón móvil: el fundador señaló que la línea del email quedaba
+pegada a la insignia de plan. `.lp-user-chip` gana algo de relleno propio y la
+insignia un `margin-top` mayor, ambos con ámbito a esta cabecera — el chip del
+sidebar de consola no se toca porque su espaciado ya estaba aprobado y el
+problema no era suyo.
+
+**Segundo addendum — más aire, sin cambiar el diseño (2026-08-13).** Antes de
+este ajuste se le enseñaron tres alternativas de avatar en un artefacto
+(círculo sólido, degradado, squircle con anillo); el fundador las vio y pidió
+**quedarse con el actual** — solo con más espacio entre elementos.
+
+**Ese primer intento no hizo nada, y el fundador lo pidió tres veces antes de
+que se detectara por qué.** `.lp-user-chip { padding: 13px 14px; }` se subía
+correctamente en el código, pero el elemento es un `<a>` dentro de
+`.lp-mobnav`, y `.lp-mobnav a { padding: 0 10px; }` (clase + etiqueta,
+especificidad 0,1,1) le ganaba en cascada a un `.lp-user-chip` a secas (una
+sola clase, 0,1,0) — sin relación funcional entre ambas reglas, solo una
+coincidencia de selector. El `padding` computado real era `0px` arriba/abajo
+pese a que el fichero decía `13px`. Se encontró leyendo el **valor
+computado** en un navegador real (`getComputedStyle`), no releyendo el CSS —
+la fuente ya "decía" lo correcto, así que releerla no habría encontrado nada.
+Arreglado subiendo la especificidad con `.user-chip.lp-user-chip` (las dos
+clases reales que ya lleva el elemento, no un truco), que gana sin depender
+del orden de aparición en el fichero. Sigue sin tocar el chip del sidebar de
+consola.
+
+**Tercer addendum — borde fuera, gris suave dentro (2026-08-13).** El
+fundador pidió, ya con el espaciado correcto, quitar el borde de 1px y poner
+en su lugar un fondo gris suave. `--surface-2` (el mismo token que ya usa
+`.user-chip:hover` en el sidebar) en vez de un gris nuevo — así el estado
+"activo"/hover del chip y su estado en reposo comparten familia de color en
+vez de inventar un segundo gris que conviva mal con el primero.
+
+**Cuarto addendum — un punto más oscuro, y merge directo (2026-08-13).**
+`--surface-2` (#fbfbfd) quedaba casi invisible contra el blanco de la nav; se
+sube un peldaño en la misma escala de neutros a `--canvas` (#f6f7f9) —
+sigue siendo un token con nombre, no un valor suelto inventado para este
+componente. El fundador pidió mergear directamente con este cambio, sin
+otra vuelta de piloto: era un ajuste de un valor de color sobre un chip ya
+verificado tres veces por el `ux-pilot` en su forma y contenido.
+
+### Pendiente / roto conocido
+
+- ~~**El chip no se ha visto con una sesión real de Supabase**~~ — **cerrado
+  el 2026-08-12**. El entorno del agente no tiene credenciales, así que la
+  lógica del endpoint la cubren tests unitarios y el pintado se verificó
+  interceptando la respuesta de `/api/me` (agencia, free, email largo,
+  anónimo, escritorio y cajón móvil). El extremo a extremo lo cerró **el
+  propio fundador** sobre el preview del PR #393, con su sesión: el chip sale
+  en el cajón móvil de `/blog` con sus iniciales, su email y la insignia
+  «Agencia». Queda anotado porque es el único camino que ni los tests ni el
+  piloto podían cubrir aquí: el piloto entra con la cuenta de piloto, cuyo
+  plan no tiene por qué pintar insignia, así que **una insignia de pago sobre
+  una sesión real sólo la podía ver alguien con una cuenta de pago**.
+
+---
+
+## 73. Publicar los números del producto obliga a atarlos al código (SEO-POS-1, S6, 2026-08-13)
+
+**Pieza.** `/blog/metricas-geo-que-medir` — "Métricas GEO: qué medir y qué no",
+cluster `medicion`. Cubre el cluster de keywords nº 6 del plan ("métricas GEO",
+"share of voice en IA", "tasa de citación"), la última capa informacional donde
+el mercado en castellano sigue teniendo hueco.
+
+**El ángulo, y por qué no es otro post de definiciones.** La pieza se estructura
+alrededor de una idea que casi nadie escribe: **la unidad de observación es la
+respuesta, no el prompt**. Veinte prompts en tres motores son sesenta
+observaciones, y casi todos los errores de medición del sector salen de
+equivocar ese denominador. A partir de ahí, cinco métricas (tasa de mención,
+cuota de voz, posición cuando apareces, tasa de citación de tu dominio,
+preparación técnica) y las trampas de cada una.
+
+**La sección que la hace citable** es la de la posición. Reproduce el hallazgo
+de ADR 0026 con su tabla: un escaneo simulado en el que **las ocho entidades
+aparecen siempre segundas**, y donde la "posición media" —la que promedia como
+último puesto cada respuesta en la que no sales— las ordena de 5,50 a 8,65. Esa
+métrica está midiendo frecuencia de aparición y llamándolo posición, y de ahí
+salen las dos consecuencias que descolocan a cualquiera que mire un panel: la
+marca seguida sale favorecida por construcción (el conjunto de prompts se elige
+a su alrededor), y el mejor valor posible deja de ser 1. Es un error real que
+este producto cometió, corrigió y documentó — publicarlo demuestra criterio en
+vez de afirmarlo, igual que la página sin fecha en §69.
+
+**Qué sí se publica y qué no, aplicando la línea de §69.** Los umbrales de
+lectura sí: diez respuestas mínimo antes de una franja o un delta
+(`MIN_RESPONSES_FOR_BAND`), ventana de tres escaneos para la mediana
+(`DEFAULT_SCORE_WINDOW_SIZE`), el incidente real de los 44 puntos con tres
+respuestas. Los pesos del compuesto **ya son públicos** en
+`/docs/metodologia/geo-score` desde GEO-SCORE-V4, así que el artículo enlaza
+allí en vez de reabrir la discusión.
+
+**El test que sostiene todo esto** (`lib/blog/metricas-geo.test.ts`) es la parte
+reutilizable. Un artículo que publica constantes del producto **caduca solo**:
+si `MIN_RESPONSES_FOR_BAND` pasa a 15 o Claude gana grounding real, el texto
+pasa a mentir sobre nuestra propia metodología y nada falla — es prosa en un
+MDX. El test importa las constantes reales y las contrasta contra las cifras
+publicadas y contra `ENGINE_META.claude.grounded`, así que el cambio de código
+y el refresco del artículo caen en el mismo PR o no cae ninguno.
+
+**Dos fallos de descubribilidad encontrados de camino, los dos del mismo
+patrón que §62 y §70:**
+
+1. **`como-saber-si-tu-marca-aparece-en-chatgpt` (S1) nunca lo abrió el
+   piloto.** Se añadió al fixture del self-check y no al mapa del journey — son
+   dos listas a mano en dos ficheros, y el guardián que existía sólo cubría la
+   primera. Un post ausente del journey no da 404: simplemente no se mira. Tres
+   días de `PILOT PASS` sobre un artículo que nadie había visto. Arreglado, y
+   ahora `fixture-drift.test.ts` contrasta el mapa del spec contra `BLOG_POSTS`
+   comparando **también el cluster**, no sólo el slug.
+2. **Cuatro artículos declaraban portada y enseñaban el degradado.**
+   `BlogCover` sólo pinta la imagen si recibe `image`, y cuatro MDX
+   —`que-es-el-geo-score`, `como-conseguir-que-chatgpt-te-cite`,
+   `como-saber-si-tu-marca-aparece-en-chatgpt`, `que-es-una-auditoria-geo`— no
+   se la pasaban. Su portada salía bien en `/blog`, en la tarjeta social y en
+   el schema, y en su propia cabecera salía el respaldo que existe para los
+   artículos *sin* portada: justo "el icono de algo que no carga bien" que
+   originó `covers.test.ts`. Los tests de portada miraban `BLOG_POSTS` y el
+   disco, nunca el MDX. Corregidos los cuatro, con test nuevo.
+
+**Portada.** SVG en el repo, rasterizado a WebP (§47). No es decorativa: a la
+izquierda la muestra —puntos que son respuestas, unas con mención y otras
+sin— y a la derecha las cinco métricas que salen de ella, **cuatro dibujadas
+con su margen de error y la quinta sin él**, porque la preparación técnica es
+la única determinista. La asimetría es la tesis del artículo.
+
+---
+
+## 74. El pilar del GEO Score llevaba ocho días publicando una fórmula retirada (SEO-POS-1, S6, 2026-08-13)
+
+**Qué pasaba.** GEO-SCORE-V4 (ADR 0033, 2026-08-05) añadió el componente
+técnico con peso .20 y reescaló los otros cuatro a .32/.20/.16/.12.
+`/docs/metodologia/geo-score` se actualizó en aquel PR. El artículo pilar del
+blog, `/blog/que-es-el-geo-score`, no: seguía publicando "cuatro señales" con
+los pesos de v2 (.40/.25/.20/.15) citando ADR-0015 como fuente. **El sitio se
+contradecía a sí mismo sobre su propia metodología**, en las dos páginas que
+más tráfico informacional traen sobre ella.
+
+No lo cazó nadie porque no había nada que lo cazara: el reparto de pesos vivía
+escrito a mano en tres sitios (código, docs, MDX) y sólo dos se movieron.
+
+**Por qué se arregla en el PR de S6 y no en uno aparte.** El artículo nuevo
+nombra las cinco señales. Publicarlo dejando el pilar en cuatro no habría sido
+"una fase de más": habría sido publicar a sabiendas dos versiones distintas de
+la misma metodología a un enlace de distancia.
+
+**Qué se cambió.** Las cinco señales en el resumen, la tabla y la maqueta
+—cuyo gauge se recalculó, porque `article-recipes.test.ts` exige que el número
+sea la media ponderada real de las filas que enseña—, los pesos vigentes en el
+`StatGrid` citando ADR-0033, y un párrafo nuevo sobre por qué la señal técnica
+va dentro del compuesto (es una condición: una web que los motores no pueden
+leer no puede beneficiarse de ninguna otra mejora) y qué compra que sea
+determinista (una quinta parte menos de varianza en el número de cabecera).
+
+**Primer uso real de `dateUpdated`** (la tubería llegó en la Fase T-c y no la
+había estrenado nadie): el artículo muestra "Actualizado el 13 de agosto de
+2026", lo emite en `Article.dateModified` y en `og:modified_time`. El test que
+exigía que *ningún* post tuviera `dateUpdated` se sustituye por una lista de
+refrescos documentados — conserva lo que protegía de verdad (que nadie suba una
+fecha sin tocar el artículo, `content-strategy.md` §4.4) y deja de bloquear el
+caso para el que se construyó el campo.
+
+**La regla que queda:** los pesos del GeoScore están publicados en tres sitios
+y sólo uno es la verdad. `lib/blog/metricas-geo.test.ts` ata ahora el MDX al
+`TECHNICAL_WEIGHT` real y comprueba que los otros cuatro conserven sus
+proporciones v3 exactas al dividir por `1 − w`, que es la misma comprobación
+que ADR 0033 §1 hace en su propia tabla.
+
+---
+
+## 75. Los pesos y los códigos ADR salen del contenido público (SEO-POS-1, S6, revisión del fundador, 2026-08-13)
+
+**La decisión.** Fundador, revisando S6: *"En general no quiero exponer cosas
+tan concretas del producto, como pesos reales para un cálculo o estos códigos
+ADR-0024 · capa de fiabilidad. Revísalo y elimínalos de todos los artículos"*.
+
+**Supersede en parte a §74**, que doce horas antes había hecho lo contrario:
+refrescar el pilar del GEO Score para que publicara los pesos vigentes en vez
+de los retirados. El problema que §74 resolvía era real —el artículo llevaba
+ocho días publicando la fórmula v2— pero esta decisión lo resuelve mejor: **lo
+que no se publica no se puede quedar rancio.**
+
+**Son dos cosas distintas y conviene no confundirlas:**
+
+- **Los pesos del compuesto** son configuración del producto. Quien los tiene
+  puede reproducir la métrica sin haberla construido, y al lector no le dicen
+  nada que no le diga ya el orden de importancia. Misma línea que §69 trazó
+  para el reparto de puntos de la auditoría: dimensiones y umbrales de
+  comportamiento sí, reparto exacto no.
+- **Los códigos ADR** son peor que innecesarios: son la referencia interna de
+  un documento que el lector no puede abrir, así que como "fuente" de una cifra
+  no acreditan nada — sólo publican el índice de nuestras decisiones internas.
+  Sustituidos por fuentes que sí significan algo fuera: "Metodología de
+  GenScore", o la evidencia real (un incidente fechado, datos de ejemplo
+  declarados como tales).
+
+**Alcance real, que resultó ser mayor que un artículo.** El error se había
+propagado copiando la cabecera de la pieza anterior:
+
+| Superficie | Qué publicaba |
+|---|---|
+| `que-es-el-geo-score` | los cinco pesos v4 + 5 códigos ADR |
+| `metricas-geo-que-medir` | 4 códigos ADR + el peso técnico como "−20 % de varianza" |
+| `como-elegir-competidores-analisis-geo` | 25 % / 20 % / 45 % + 3 códigos ADR, **con la fórmula v2 ya retirada** |
+| `como-elegir-prompts-monitorizar-marca-ia` | 40 % / 25 % y "suman el 65 % de tu GEO Score", **v2** |
+| `llms-txt-guia-practica` | "la autoridad pesa un 15 % del GEO Score… los pesos reales de ADR-0015", **v2** |
+| `/glosario/geo-score` | los cuatro pesos v2 en prosa, y "cuatro señales" |
+
+Tres de las seis, además, llevaban meses publicando una fórmula que el producto
+ya no usa. Retirar el dato arregla las dos cosas de una vez.
+
+**Lo que se conserva, y por qué importa.** `ProductMock` deja de pintar
+`peso N%`, pero **el peso sigue en el fuente del MDX**: es lo que hace
+verificable el número del gauge (`article-recipes.test.ts` comprueba que sea la
+media ponderada real de las filas que la figura enseña, un error que ya se
+coló dos veces). El fuente de un artículo no es una superficie pública; la
+página sí.
+
+**Lo que sustituye a los pesos en el texto** no es un hueco: es el **orden de
+importancia**, que es lo único que el lector podía accionar. "La presencia es
+la que más manda, porque sin mención no hay nada que interpretar" le sirve para
+decidir; un 32 % no.
+
+**El guardián** (`article-honesty.test.ts`, "el contenido público no publica
+configuración interna del producto") barre las cuatro superficies —artículos,
+glosario, `/docs` y comparativas— buscando códigos ADR y porcentajes presentados como
+peso. Exige vocabulario del compuesto alrededor del porcentaje: la primera
+versión marcaba una afirmación legítima sobre un competidor ("aumenta el peso
+de la página … hasta en un 98 %"), y un guardián con falsos positivos se
+desactiva a la primera.
+
+**La metodología publicada entró después, y por decisión expresa.**
+`/docs/metodologia/geo-score` no es un artículo, así que no caía dentro de la
+instrucción literal — pero era la página a la que los propios artículos
+mandaban al lector a buscar el detalle, con la tabla de pesos entera. Se
+preguntó al fundador con las dos alternativas y su coste, y eligió retirarlos
+también: **si el reparto no se publica, no se publica en ninguna parte.**
+
+Lo que esa página conserva: los cinco componentes, qué mide cada uno, el orden
+de importancia, qué ocurre cuando falta un dato, la ventana de la mediana, las
+etiquetas de confianza y las franjas. Lo que pierde: la columna de porcentajes.
+Y con ella, la promesa de "metodología **completa**" en los enlaces que
+apuntaban ahí — reescrita en el pilar y en el glosario, porque un enlace que
+promete el cálculo entero y lleva a una página sin él es una decepción que se
+paga en credibilidad.
+
+**La fecha, en los tres sitios donde vive.** Cambiar el contenido obligó a
+subir la fecha visible de la página, la del glosario (dos entradas tocadas) y
+las dos del sitemap. El sitemap tenía **una sola fecha para las cinco docs**,
+así que subirla habría dicho que cambiaron todas: ahora admite excepciones por
+página, igual que `PILLAR_LAST_MODIFIED` hace por cluster desde T15. Y un test
+obliga a que la fecha del glosario coincida en la página y en el sitemap: dos
+fechas distintas para el mismo contenido son una señal de frescura que se
+contradice a sí misma, peor que no dar ninguna.
+
+---
+
+## 76. Segunda pasada: fuera también la mecánica, no solo los pesos (SEO-POS-1, S6, revisión del fundador, 2026-08-13)
+
+**Qué pasó.** §75 retiró los pesos y los códigos ADR. El fundador volvió a
+revisar y encontró, viva en el pilar, la frase *"una media ponderada de cinco
+señales"*:
+
+> *"No digas cosas concretas de ninguna parte del producto. Por favor, ya lo
+> dije en la última revisión. […] Además de desvelar cómo se calcula la métrica
+> principal le resta valor, lo simplifica demasiado. Revisa de nuevo los
+> artículos que digan cosas de Genscore y haz que las afirmaciones sean más
+> etéreas, más genéricas."*
+
+Tenía razón en las dos mitades, y la segunda es la que la primera pasada no vio.
+Yo había leído "no publiques los parámetros" cuando lo que había que leer era
+**"no publiques la máquina"**. Quitar los pesos y dejar "es una media ponderada
+de cinco señales que se descartan y renormalizan" es quitar las cifras de la
+receta y dejar la receta.
+
+**El argumento de valor, que es el que me faltaba.** Una métrica que se explica
+entera en una frase parece que se puede reproducir en una tarde. El trabajo real
+—qué se mide, contra qué se compara, cuándo un dato no vale, cómo se estabiliza
+entre ejecuciones— desaparece detrás de "es una media ponderada". Publicar la
+mecánica no es solo regalar la ventaja: es **abaratar el producto delante del
+comprador**.
+
+**La línea que queda, y esta vez enunciada de forma que se pueda aplicar sin
+preguntar:**
+
+> **El contenido explica el problema y el criterio. No explica nuestra
+> máquina.** Qué mira el producto, sí. Cuántas piezas tiene, cómo las combina,
+> con qué umbrales decide y qué hace cuando falta una, no.
+
+**Qué se reescribió, superficie a superficie:**
+
+| Superficie | Qué decía | Qué dice |
+|---|---|---|
+| `que-es-el-geo-score` | "una media ponderada de cinco señales" | "la puntuación con la que GenScore resume cómo de bien te está yendo" |
+| — su título | "…y cómo se calcula" | "…y qué mide" |
+| `metricas-geo-que-medir` | "en Genscore ese umbral son diez respuestas", "la mediana de los últimos tres escaneos comparables", el incidente de los 44 puntos | la aritmética de la muestra, que es cierta para cualquiera, y "la tendencia sobre varias mediciones comparables" |
+| — sus cifras destacadas | umbrales nuestros | cuánto mueve **una** respuesta según el tamaño de la muestra (33 / 10 / 1,7 puntos) |
+| `/docs/metodologia/geo-score` | "combina cinco componentes", renormalización, "20 resultados", "entre 2 y 19", "umbrales 70 y 40" | qué mira, en qué orden importa, y que lo que no se puede medir se declara |
+| `/glosario/geo-score` | "se calcula combinando cinco señales, cada una con…" | "resume varias señales que no significan lo mismo por separado" |
+| `/geo` (landing) | **el desglose entero: `80×40% + 64×25% + … = 65 puntos`** | "Datos de ejemplo. Tu panel muestra tus cifras reales." |
+
+**La landing era lo peor de todo y no la miraba nadie.** `/geo` es la página
+comercial más vista del sitio y publicaba la fórmula completa con multiplicación
+y suma a la vista — además con los pesos de v2, retirados hacía una semana, y
+enseñando cuatro componentes cuando el producto tiene cinco. No es un artículo,
+así que ni el guardián de §75 ni ninguna otra comprobación la cubrían. Corregida
+y cubierta con test.
+
+**El patrón que se repite, y es el que hay que recordar:** cuando una revisión
+del fundador señala una superficie, el trabajo no es arreglar esa superficie —
+es buscar la misma clase de error en todas las demás. Las dos veces que no lo
+hice, la segunda pasada encontró más de lo que había arreglado la primera.
+
+**Lo que conservan los tests:** `article-honesty.test.ts` añade un detector de
+mecánica (media ponderada, recuento de señales, "se calcula combinando",
+renormalización, "mediana de tus tres últimos") sobre las cuatro superficies, y
+`metricas-geo.test.ts` —que en su v1 exigía justo lo contrario, atar el texto a
+las constantes— pasa a exigir que esas constantes **no** aparezcan. El fichero
+guarda las dos versiones en su cabecera a propósito: la v1 era un buen
+mecanismo sobre una premisa equivocada, y eso es más útil de recordar que la
+regla sola.
+
+---
+
+## 77. La metodología no se podía leer en un móvil (2026-08-13)
+
+**El fallo.** El fundador abrió `/docs/metodologia/geo-score` en el móvil y
+mandó la captura: **todos los párrafos cortados por la derecha**, sin scroll de
+página con el que alcanzar el texto que faltaba.
+
+**La causa, que no está donde parece.** En móvil `.docs-layout` es un flex en
+columna con `align-items: flex-start`, así que la columna de contenido se
+dimensiona por su hijo más ancho — y su hijo más ancho era la tabla, con
+`min-width: 480px`. En una pantalla de 375 px eso hacía que **cada párrafo
+midiera 480**, y lo que sobraba quedaba fuera de la ventana. El eje afectado es
+el transversal, así que el `min-width: 0` que ya tenía la columna no servía de
+nada: hacía falta `align-self: stretch`.
+
+Con eso, la columna mide lo que la pantalla y la tabla hace su propio scroll
+dentro de `.docs-table-wrap`, que es exactamente para lo que existe.
+
+**Lo segundo, del mismo día:** `white-space: nowrap` en todas las celdas de las
+tablas de `/docs`. Valía para la de planes —celdas de dos palabras— y dejaba
+ilegible la de metodología en cuanto su segunda columna pasó a ser prosa: a
+1280 px las frases se salían de la caja y el lector veía *"…y la que más m"*.
+Ahora las celdas envuelven y sólo las cabeceras conservan el `nowrap`.
+
+**Lo que esto dice del piloto, otra vez.** Las dos pasadas anteriores dieron
+`PILOT PASS` con `docs-metodologia/geo-score` en ✅ a las tres anchuras, y las
+dos veces era correcto: la página **cargaba** bien. Un texto cortado no es un
+fallo de carga. Es el mismo límite que ya está escrito en el histórico —el
+`PASS` es la lista de lo que el piloto vio, no un juicio sobre lo que se ve— y
+la única defensa real sigue siendo mirar las capturas. Esta la encontró el
+fundador antes que yo, mirando su propio móvil
+
+## 78. El cliente de Gemini sale de las nueve funcionalidades que lo tapaban (PRELAUNCH-HARDENING-1 Fase R5, primera mitad, 2026-08-13)
 
 `lib/llm/gemini.ts` tenía **1.278 líneas** y era dos cosas a la vez: el cliente
 HTTP de un proveedor y **nueve funcionalidades de producto** —el escaneo, la
@@ -7296,6 +7784,10 @@ propio código y aquí, para decidirlo aparte.
 **Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R5); §70 (R4 y su
 accesor); §43 (R1 y R2); log §56 y `.claude/rules/gemini.md` (de dónde sale el
 `fetch` con reintentos que se mueve intacto).
+
+---
+
+## Cómo mantener este documento
 
 ---
 

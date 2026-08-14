@@ -132,7 +132,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S3 | Alternativas a Otterly (formato listicle) | 2 — Alternativas | `comparativas` | ✅ Publicado | #(este) |
 | S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Mentio; TrendSights descartada) | 3 — Herramientas | `comparativas` | ✅ Publicado | #(este) |
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | ✅ Publicado | #(este) |
-| S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | 🔲 Pendiente | — |
+| S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | ✅ Publicado | #(este) |
 | S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
 | S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | 🔲 Pendiente | — |
 | S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
@@ -223,8 +223,58 @@ motores. Sin esa frase, el artículo vendería la auditoría como si fuera la
 medición entera.
 
 Portada dibujada en SVG y rasterizada a WebP (§47: un `og:image` en SVG deja la
-tarjeta social en blanco). No es decorativa: la anchura de cada barra es
-proporcional a los puntos reales de esa dimensión.
+tarjeta social en blanco). No es decorativa: seis barras de igual anchura, una
+por dimensión — deliberadamente sin variar tamaños, por el mismo motivo que el
+texto no reparte puntos.
+
+**S6 — hecho (2026-08-13).** `/blog/metricas-geo-que-medir`, cluster
+`medicion`. El eje no son definiciones sino **el denominador**: la unidad de
+observación es la respuesta, no el prompt (veinte prompts en tres motores son
+sesenta observaciones), y de equivocar eso salen casi todos los errores de
+medición del sector. Sobre esa base, las cinco métricas que significan algo
+—tasa de mención, cuota de voz, posición cuando apareces, tasa de citación de
+tu dominio, preparación técnica— y la trampa concreta de cada una.
+
+**La sección que la diferencia** reproduce el hallazgo de ADR 0026 con su
+tabla: ocho entidades que aparecen *siempre segundas* quedan ordenadas de 5,50
+a 8,65 por una "posición media" que promedia las no-menciones. Esa métrica mide
+frecuencia y la llama posición — un error real que este producto cometió,
+corrigió y documentó.
+
+**Con test que la mantiene viva** (`lib/blog/metricas-geo.test.ts`): el
+artículo publica constantes del producto (`MIN_RESPONSES_FOR_BAND`,
+`DEFAULT_SCORE_WINDOW_SIZE`, qué motores tienen grounding), así que caducaría
+solo si el código cambiara. El test las importa y las contrasta contra el
+texto. Detalle: log §73.
+
+**Arrastra un refresco obligado:** `/blog/que-es-el-geo-score` seguía
+publicando los cuatro componentes y los pesos de GEO Score **v2**, superados
+por GEO-SCORE-V4 el 2026-08-05 — mientras `/docs/metodologia/geo-score` ya
+publicaba los cinco. Actualizado en este mismo PR, con `dateUpdated` (primer
+uso real del campo, T-c). Detalle: log §74.
+
+**Revisión del fundador (2026-08-13):** *"no quiero exponer cosas tan concretas
+del producto, como pesos reales para un cálculo o estos códigos ADR"*. Los pesos
+del GEO Score y los códigos ADR salen de **todo** el contenido publicado —seis
+superficies los tenían, y tres con la fórmula v2 ya retirada encima— y se
+sustituyen por el orden de importancia y por fuentes verificables desde fuera.
+**Incluida `/docs/metodologia/geo-score`**, por decisión expresa del fundador
+al preguntársele: no es un artículo, pero era la página a la que los artículos
+mandaban a buscar el detalle. Supersede en parte a §74. Detalle y alcance:
+log §75.
+
+**Segunda pasada, mismo día (log §76):** la primera quitó los parámetros y dejó
+la mecánica —"una media ponderada de cinco señales", la renormalización, los
+umbrales—. El fundador lo señaló: además de desvelar el cálculo, **abarata la
+métrica**. La línea definitiva es *el contenido explica el problema y el
+criterio, no nuestra máquina*. Reescritos el pilar (retitulado "…y qué mide"),
+el artículo de métricas, la doc de metodología, el glosario y **la landing
+`/geo`**, que publicaba el desglose aritmético completo con los pesos de v2.
+
+**Y dos fallos de descubribilidad**, del mismo patrón que §62: S1 nunca lo
+había abierto el piloto (estaba en el fixture y no en el journey) y cuatro
+artículos declaraban portada pero renderizaban el degradado con icono en su
+propia cabecera. Los dos corregidos, los dos con test nuevo.
 
 ---
 

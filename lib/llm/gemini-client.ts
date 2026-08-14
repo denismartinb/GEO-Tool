@@ -76,7 +76,7 @@ export function getGeminiModel() {
   // valor. Lo cazó `gemini.test.ts`, que cambia GEMINI_MODEL entre casos, y la
   // regla de la fase es que si un slice necesita cambiar un test es que no era
   // un refactor. Adoptar el accesor aquí es una decisión propia, no un efecto
-  // colateral de mover código de sitio (log §71).
+  // colateral de mover código de sitio (log §78).
   const configuredValue = process.env.GEMINI_MODEL;
   const configuredModel = configuredValue === undefined ? DEFAULT_GEMINI_MODEL : configuredValue.trim();
   const model = configuredModel.startsWith("models/") ? configuredModel.slice("models/".length) : configuredModel;
@@ -204,7 +204,7 @@ export function parseLenientJson(text: string): unknown {
  * distintos para el mismo fallo, y quien los captura los trata distinto. Se
  * deja como está porque este slice es un refactor y unificarlo cambiaría qué
  * error ve un caller en producción. Queda anotado para decidirlo aparte
- * (log §71).
+ * (log §78).
  */
 export async function generateGroundedGeminiJson(promptBlock: string): Promise<unknown> {
   const apiKey = process.env.GEMINI_API_KEY;

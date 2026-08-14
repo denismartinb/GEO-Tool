@@ -97,6 +97,55 @@ const specSource = readFileSync(
   "utf8"
 );
 
+/**
+ * SEO-POS-1 Fase C, S6 (log §71): el mismo agujero que el bloque de
+ * comparativas de abajo, pero en el blog — y ya había cobrado una pieza.
+ *
+ * El bloque de arriba comprueba que el **fixture** sirva todos los posts, pero
+ * no que el **journey** los visite: son dos listas distintas, en dos ficheros
+ * distintos, mantenidas a mano. `como-saber-si-tu-marca-aparece-en-chatgpt`
+ * (S1, 2026-08-10) se añadió al fixture y no al spec, así que el piloto pasó en
+ * verde tres días sin haber abierto nunca ese artículo. Un post que el journey
+ * no conoce no recibe un 404 —el fixture lo sirve— simplemente no se mira, que
+ * es peor: no hay ningún síntoma.
+ *
+ * El cluster se compara además del slug porque el spec lo usa para derivar qué
+ * clusters están vacíos: un cluster equivocado no rompe la navegación, cambia
+ * en silencio lo que el piloto espera ver en la página pilar.
+ */
+function specBlogClusterMap(): Record<string, string> {
+  const block = specSource.match(/const BLOG_POSTS_BY_CLUSTER: Record<string, string> = \{([\s\S]*?)\n\};/);
+  if (!block) throw new Error("No se encontró BLOG_POSTS_BY_CLUSTER en public-pages.spec.ts");
+
+  const withoutComments = block[1].replace(/\/\/[^\n]*/g, "");
+  return Object.fromEntries([...withoutComments.matchAll(/"([^"]+)":\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]));
+}
+
+describe("todo artículo publicado lo pilota alguien", () => {
+  it("cada post de BLOG_POSTS está en el journey, con su cluster real", () => {
+    const spec = specBlogClusterMap();
+
+    const missing = BLOG_POSTS.filter((post) => !(post.slug in spec)).map((post) => post.slug);
+    const wrongCluster = BLOG_POSTS.filter((post) => post.slug in spec && spec[post.slug] !== post.cluster).map(
+      (post) => `${post.slug}: el spec dice "${spec[post.slug]}" y el post es "${post.cluster}"`
+    );
+    const extra = Object.keys(spec).filter((slug) => !BLOG_POSTS.some((post) => post.slug === slug));
+
+    expect(
+      { missing, wrongCluster, extra },
+      "BLOG_POSTS_BY_CLUSTER en tests/pilot/journeys/public-pages.spec.ts no coincide con BLOG_POSTS.\n" +
+        `Sin journey (el piloto no los abre nunca): ${missing.join(", ") || "(ninguno)"}\n` +
+        `Con cluster equivocado: ${wrongCluster.join(" · ") || "(ninguno)"}\n` +
+        `Sobran en el spec (recibirían 404): ${extra.join(", ") || "(ninguno)"}\n\n` +
+        "Añádelo en el mismo PR que publica el artículo."
+    ).toEqual({ missing: [], wrongCluster: [], extra: [] });
+  });
+
+  it("el lector del mapa del spec funciona — no devuelve vacío en silencio", () => {
+    expect(Object.keys(specBlogClusterMap()).length).toBeGreaterThan(5);
+  });
+});
+
 describe("toda comparativa publicada la pilota alguien", () => {
   it("cada ruta de COMPARATIVAS tiene su journey en public-pages.spec.ts", () => {
     const missing = COMPARATIVAS.map((c) => c.path).filter((path) => !specSource.includes(`"${path}"`));

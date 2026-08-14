@@ -3,9 +3,50 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/ui/brand-logo";
+import { Icon } from "@/components/ui/icon";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { avatarInitials, showsPlanBadge } from "@/lib/account-chip";
+import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
 
 type NavItem = { anchor: string; label: string } | { href: string; label: string };
+
+/**
+ * The console sidebar's account chip, reused verbatim on the public header.
+ * Links to the console, which is what a returning logged-in visitor actually
+ * wants from a marketing page.
+ *
+ * The accessible name is spelled out rather than left to the visual parts: the
+ * avatar is two letters with no meaning read aloud, and the plan badge is a
+ * crown glyph plus a bare word ("Agencia") that says nothing about being a
+ * plan. `data-testid` is what lets the pilot's interaction sweep assert on the
+ * chip instead of cropping pixels out of a screenshot (ux-pilot, 2026-08-12).
+ */
+function AccountChip({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
+  const planSuffix = showsPlanBadge(user.planId) ? `, plan ${user.planName}` : "";
+
+  return (
+    <Link
+      href="/dashboard"
+      className="user-chip lp-user-chip"
+      onClick={onNavigate}
+      data-testid="account-chip"
+      aria-label={`Ir al panel. Cuenta: ${user.email}${planSuffix}`}
+    >
+      <div className="avatar" aria-hidden="true">
+        {avatarInitials(user.email)}
+      </div>
+      <div style={{ minWidth: 0 }} aria-hidden="true">
+        <div className="lp-user-chip-email">{user.email}</div>
+        {showsPlanBadge(user.planId) && (
+          <span className="sb-plan-badge">
+            <Icon name="crown" size={10} />
+            {user.planName}
+          </span>
+        )}
+      </div>
+    </Link>
+  );
+}
 
 /**
  * Single source of truth for the public-site nav links, shared by every
@@ -41,6 +82,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   const pathname = usePathname();
   const router = useRouter();
   const isHome = pathname === "/";
+  const user = useSessionUser();
 
   const goToLogin = () => router.push("/login");
   const goToSignup = () => router.push("/signup");
@@ -70,7 +112,9 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
         )}
       </div>
       <div className="lp-nav-right">
-        {hero ? (
+        {user ? (
+          <AccountChip user={user} />
+        ) : hero ? (
           <>
             <button type="button" className="lp-nav-btn" onClick={goToLogin}>
               Iniciar sesión
@@ -95,14 +139,18 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
         twoLine={hero}
         fromRight
         ctas={
-          <>
-            <button type="button" className="lp-cta-soft" onClick={goToLogin}>
-              Iniciar sesión
-            </button>
-            <button type="button" className="lp-cta" onClick={goToSignup}>
-              Prueba gratis
-            </button>
-          </>
+          user ? (
+            <AccountChip user={user} />
+          ) : (
+            <>
+              <button type="button" className="lp-cta-soft" onClick={goToLogin}>
+                Iniciar sesión
+              </button>
+              <button type="button" className="lp-cta" onClick={goToSignup}>
+                Prueba gratis
+              </button>
+            </>
+          )
         }
       />
     </nav>

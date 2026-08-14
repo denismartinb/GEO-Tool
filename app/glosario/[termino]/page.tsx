@@ -8,8 +8,15 @@ import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
-/** GROWTH-2 Fase 2.6b — same fixed-date convention as app/sitemap.ts. */
-const GLOSSARY_LAST_MODIFIED = "2026-08-02";
+/**
+ * GROWTH-2 Fase 2.6b — same fixed-date convention as app/sitemap.ts.
+ *
+ * Se sube cuando cambia el CONTENIDO de alguna entrada, nunca sola
+ * (`content-strategy.md` §4.4: "un refresco cambia un dato, un ejemplo o una
+ * sección — nunca solo la fecha"). Último cambio: 2026-08-13, al retirar de
+ * `geo-score` y `citacion-en-ia` el reparto de pesos del compuesto (log §75).
+ */
+const GLOSSARY_LAST_MODIFIED = "2026-08-13";
 
 export function generateStaticParams() {
   return GLOSSARY_TERMS.map((t) => ({ termino: t.slug }));

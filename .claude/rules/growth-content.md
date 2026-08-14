@@ -26,6 +26,42 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   propio real.
 - **Un peso no es un valor medido** (log §13). No presentar un parámetro de
   configuración del score como si fuera un resultado observado.
+- **El contenido explica el problema y el criterio; no explica nuestra
+  máquina** (fundador, 2026-08-13; log §76). Qué mira el producto, sí. Cuántas
+  piezas tiene, cómo las combina, con qué umbrales decide y qué hace cuando
+  falta una, no. La primera pasada de esta regla quitó los pesos y dejó "una
+  media ponderada de cinco señales", que es quitar las cifras de la receta y
+  dejar la receta. El motivo no es sólo competitivo: una métrica que se explica
+  entera en una frase parece reproducible en una tarde, y eso **abarata el
+  producto delante del comprador**. Lo vigila `article-honesty.test.ts`
+  (detector de mecánica) sobre artículos, glosario, `/docs` y comparativas — y
+  `metricas-geo.test.ts` cubre además la landing `/geo`, que no es contenido y
+  publicaba la fórmula entera.
+- **Ni los pesos del compuesto ni los códigos ADR se publican** (fundador,
+  2026-08-13; log §75). Los pesos son configuración del producto: se publica el
+  **orden de importancia** ("la presencia es la que más manda"), nunca el
+  reparto. Un `ADR-00NN` como fuente de una cifra no acredita nada fuera —el
+  lector no puede abrir ese documento— y sí publica el índice de nuestras
+  decisiones internas; en su lugar, "Metodología de GenScore" o la evidencia
+  real. **Tampoco en `/docs`**: la metodología publicada se quedó sin la tabla
+  de pesos el mismo día, por decisión expresa del fundador — si el reparto no
+  se publica, no se publica en ninguna parte, y menos en la página a la que los
+  artículos mandan al lector a buscarlo. Lo cubre `article-honesty.test.ts`
+  sobre las cuatro superficies (artículos, glosario, `/docs` y comparativas).
+  `ProductMock` conserva `weight` en el fuente **sin pintarlo**: es lo que hace
+  verificable el número del gauge.
+- **Si una cifra del producto llega a publicarse, se ata al código con un
+  test.** Regla de segunda línea: la primera es no publicarla. Cuando una pieza
+  sí depende de un dato nuestro —los umbrales de comportamiento de la auditoría,
+  por ejemplo, que sí se publican porque el lector los usa sobre su propia
+  web— el test importa la constante real y la contrasta con el texto, para que
+  el cambio de código y el refresco del artículo caigan en el mismo PR. Prosa
+  en un MDX no la mira ningún compilador. El caso que lo motivó:
+  `/blog/que-es-el-geo-score` llevó ocho días publicando los pesos de GEO Score
+  v2 mientras `/docs/metodologia/geo-score` publicaba los de v4 — el sitio
+  contradiciéndose a un enlace de distancia (log §74). La solución definitiva
+  fue mejor: retirar el dato, porque **lo que no se publica no se queda
+  rancio** (log §75).
 
 ## Imágenes
 
@@ -33,6 +69,13 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   `article-imagery-policy`). Cada imagen es una captura que prueba la
   afirmación, un ejemplo enmarcado del patrón que se enseña, o una tarjeta de
   dato con su fuente. Si una imagen no prueba nada, no va.
+- **Declarar la portada no es enseñarla.** `BlogCover` sólo pinta la imagen si
+  recibe `image`; sin esa prop cae al degradado con icono, que es el respaldo
+  de los artículos *sin* portada — "un icono de algo que no carga bien", el
+  fundador. Cuatro artículos estuvieron así: portada correcta en `/blog`, en la
+  tarjeta social y en el schema, y degradado en su propia cabecera, porque los
+  tests de portada miraban `BLOG_POSTS` y el disco, nunca el MDX
+  (`covers.test.ts`, "el artículo enseña la portada que declara"; log §73).
 
 ## Redacción
 
@@ -146,6 +189,15 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - **El índice del blog no publica un recuento de artículos.** Con pocos
   subraya lo pequeño que es el catálogo y con muchos no ayuda a elegir qué
   leer (fundador, 2026-08-11; log §61).
+- **Publicar un artículo del blog incluye sus DOS listas del piloto: el
+  fixture (`BLOG_SLUGS`) y el mapa del journey (`BLOG_POSTS_BY_CLUSTER`).** Son
+  dos ficheros distintos mantenidos a mano y sólo el primero tenía guardián,
+  así que `como-saber-si-tu-marca-aparece-en-chatgpt` (S1) pasó tres días con
+  `PILOT PASS` sin que el piloto lo abriera nunca: un post ausente del journey
+  no da 404, simplemente no se mira, y eso no tiene síntoma. El cluster va con
+  el slug y se compara también, porque uno equivocado cambia en silencio lo que
+  el piloto espera de la página pilar (`fixture-drift.test.ts`, "todo artículo
+  publicado lo pilota alguien"; log §73).
 - **Publicar una comparativa incluye su journey de piloto y su entrada de
   fixture, en el mismo PR.** A diferencia del blog, las comparativas no se
   pilotan con un bucle: cada una es una página a mano y un `test(...)` a mano,
