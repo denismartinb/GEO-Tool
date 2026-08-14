@@ -35,7 +35,7 @@ export const faqItems = [
   {
     question: "¿Qué métricas GEO hay que medir?",
     answer:
-      "Cinco: la tasa de mención (en qué porcentaje de respuestas aparece tu marca), la cuota de voz (qué parte de las menciones totales son tuyas frente a los competidores que sigues), la posición cuando te mencionan (tu puesto medio contando solo las respuestas donde apareces), la tasa de citación de tu propio dominio (en qué porcentaje de respuestas con búsqueda web el motor cita tu web como fuente) y la preparación técnica de tu sitio. Todo lo demás es una de estas cinco con otro nombre, o una métrica que engaña."
+      "Cinco, y ninguna sustituye a las otras: la tasa de mención (en qué porcentaje de respuestas aparece tu marca), la cuota de voz (qué parte de las menciones totales son tuyas frente a los competidores que sigues), la posición cuando te mencionan (tu puesto medio contando solo las respuestas donde apareces), la tasa de citación de tu propio dominio (en qué porcentaje de respuestas con búsqueda web el motor cita tu web como fuente) y la preparación técnica de tu sitio. Todo lo demás suele ser una de ellas con otro nombre, o una métrica que engaña."
   },
   {
     question: "¿Qué es la cuota de voz en IA?",
@@ -45,7 +45,7 @@ export const faqItems = [
   {
     question: "¿Cuántas respuestas hacen falta para que una métrica GEO signifique algo?",
     answer:
-      "La unidad no es el prompt, es la respuesta: veinte prompts en tres motores son sesenta respuestas. Por debajo de diez respuestas una sola de ellas mueve la tasa de mención diez puntos o más, así que un número calculado sobre esa base no sostiene ninguna interpretación cualitativa. En Genscore ese umbral son diez respuestas, y por debajo se muestra el número pero no la franja ni la comparación con el escaneo anterior."
+      "La unidad no es el prompt, es la respuesta: veinte prompts en tres motores son sesenta respuestas. Es aritmética simple — con diez observaciones, una sola vale diez puntos de porcentaje, así que un número calculado sobre esa base no sostiene ninguna interpretación cualitativa. Con menos de una decena de respuestas, mira el número pero no le pongas etiqueta ni lo compares con el anterior."
   },
   {
     question: "¿Se puede medir la posición en ChatGPT como una posición en Google?",
@@ -72,14 +72,14 @@ export const faqItems = [
 
 <KeyTakeaway>
 
-Medir GEO es medir **cinco cosas distintas** sobre las respuestas de ChatGPT,
+Medir GEO es medir **varias cosas distintas** sobre las respuestas de ChatGPT,
 Gemini y Claude: con qué frecuencia te nombran (**tasa de mención**), qué parte
 de la conversación ocupas frente a tus competidores (**cuota de voz**), en qué
 puesto apareces **cuando apareces**, si alguna respuesta **cita tu dominio**, y
-si tu web es **legible para un motor**. Casi todo lo demás es una de esas cinco
+si tu web es **legible para un motor**. Casi todo lo demás es una de esas
 con otro nombre — o una de las tres trampas de más abajo: la captura suelta, la
 "posición media" que promedia las veces que no sales, y cualquier cifra
-calculada sobre menos de diez respuestas.
+calculada sobre un puñado de respuestas.
 
 </KeyTakeaway>
 
@@ -96,7 +96,7 @@ respuestas distintas, que pueden nombrar a marcas distintas, y mezclarlas en un
 leas cualquier porcentaje de este artículo —tuyo o de una herramienta—, la
 primera pregunta es siempre la misma: *¿sobre cuántas respuestas?*
 
-## Las cinco métricas que sí significan algo
+## Las métricas que sí significan algo
 
 <CompareTable>
 
@@ -194,12 +194,13 @@ Dos reglas que casi ninguna herramienta explicita:
 
 - **Cuenta tu dominio, no cualquier cita.** Una respuesta que cita a un
   comparador o a un periódico está citada, pero no te está citando a ti.
-- **Solo cuenta donde puede haber citas.** Un motor que responde sin buscar en
-  la web no cita nunca, por construcción. En Genscore, Gemini y ChatGPT se
-  ejecutan con búsqueda real y Claude no, así que las respuestas de Claude se
-  excluyen del denominador de citación —siguen contando para mención y cuota de
-  voz— en lugar de arrastrar la métrica hacia abajo con ceros que no significan
-  "no te ha citado", sino "aquí no podía citar nadie".
+- **Solo cuenta donde puede haber citas.** Un motor que contesta sin buscar en
+  la web no cita nunca, por construcción. Meter esas respuestas en el
+  denominador no mide tu autoridad: le pone un techo, con ceros que no
+  significan "no te ha citado" sino "aquí no podía citar nadie". Cuentan para
+  mención y para cuota de voz, no para citación — y si una herramienta no te
+  dice cuáles de sus motores buscan de verdad, su tasa de citación no es
+  comparable con ninguna otra.
 
 ### 5. Preparación técnica: la única que no depende de la IA
 
@@ -212,18 +213,16 @@ las seis dimensiones que la componen, con sus umbrales, en <a href="/blog/que-es
 
 ## ¿Cuántas respuestas hacen falta para leer un número?
 
-<StatGrid label="Umbrales de lectura de las métricas de un escaneo">
-  <Stat value="10" label="Respuestas mínimas antes de publicar una franja o un «vs. escaneo anterior»" source="Metodología de GenScore" tone="blue" />
-  <Stat value="≥10 pts" label="Puntos de tasa de mención que mueve UNA sola respuesta cuando hay menos de diez" source="Metodología de GenScore" tone="warm" />
-  <Stat value="3" label="Escaneos comparables sobre los que se toma la mediana del score" source="Metodología de GenScore" tone="cyan" />
-  <Stat value="44" label="Puntos que se movió un escaneo real de tres respuestas, sin que su dueño tocara nada" source="Incidente de agosto de 2026" tone="blue" />
+<StatGrid label="Cuánto pesa una sola respuesta según el tamaño de tu muestra">
+  <Stat value="33 pts" label="Lo que mueve UNA respuesta si mides un prompt en tres motores" source="Aritmética de la muestra" tone="warm" />
+  <Stat value="10 pts" label="Lo que mueve UNA respuesta con diez observaciones detrás" source="Aritmética de la muestra" tone="blue" />
+  <Stat value="1,7 pts" label="Lo que mueve UNA respuesta con sesenta: veinte prompts en tres motores" source="Aritmética de la muestra" tone="cyan" />
 </StatGrid>
 
-El caso que nos obligó a poner ese suelo es real y es de agosto de 2026: un
-proyecto con **un prompt** medido en tres motores —tres respuestas en total—
-se movió **44 puntos** entre dos escaneos consecutivos sin que su dueño tocara
-nada. No había ningún fallo: con tres respuestas, que una pase de no
-mencionarte a mencionarte vale un tercio de la métrica.
+No es una precaución teórica. Con tres respuestas en total, que una sola pase
+de no nombrarte a nombrarte mueve la métrica un tercio de golpe, sin que haya
+cambiado nada en el mercado ni en tu web. Quien mire esa subida y la celebre
+está leyendo ruido; quien mire la bajada equivalente y reaccione, peor todavía.
 
 El otro motivo para no leer números pequeños es más sutil. Tres de tres
 menciones es un 100 %, y el intervalo de confianza de manual sobre esa cifra
@@ -239,16 +238,18 @@ internets distintos, porque lo que devuelve una búsqueda cambia entre una
 llamada y la siguiente.
 
 Contra eso, la respuesta no es una fórmula mejor: es **dejar de tratar una
-observación como la respuesta**. Nuestro número de cabecera es la **mediana de
-los últimos tres escaneos comparables**, no el último. Mediana y no media,
-porque un escaneo anómalo —un proveedor teniendo una mala hora— arrastra una
-media y no mueve una mediana. Y "comparables" en un sentido estricto: nunca se
-mezclan escaneos calculados con fórmulas distintas ni con muestras de tamaños
-incomparables, porque eso blanquearía justo la incomparabilidad que la métrica
-existe para señalar.
+observación como la respuesta**. Lo que se lee es la tendencia sobre varias
+mediciones seguidas, no la última foto — y con la mediana, no con la media,
+porque una medición anómala —un proveedor teniendo una mala hora— arrastra una
+media y apenas mueve una mediana.
 
-Tiene un coste, y hay que decirlo: un cambio real tarda dos escaneos en
-reflejarse del todo. A cambio, lo que ves moverse se mueve de verdad.
+Con una condición estricta, que es donde se cae la mayoría: solo se comparan
+entre sí mediciones que midan lo mismo. Cambiar el conjunto de prompts, los
+motores o la forma de puntuar rompe la serie, y encadenar números que ya no son
+comparables es peor que no tener serie.
+
+Tiene un coste, y hay que decirlo: una mejora real tarda un par de mediciones
+en reflejarse del todo. A cambio, lo que ves moverse se mueve de verdad.
 
 ## Qué no medir
 
@@ -257,29 +258,30 @@ reflejarse del todo. A cambio, lo que ves moverse se mueve de verdad.
   "Nunca leas una «posición media» que promedie las respuestas donde no apareces: ordena por frecuencia y la llama posición.",
   "No compares tu cuota de voz con la de otra empresa: cada una se calcula sobre su propio conjunto de competidores.",
   "No cuentes como citación tuya cualquier fuente citada en la respuesta, ni metas en el denominador motores que responden sin buscar.",
-  "Nunca publiques una franja, un veredicto o un «has subido X» con menos de diez respuestas detrás.",
+  "Nunca saques un veredicto ni un «has subido X» de menos de una decena de respuestas.",
   "No restes dos escaneos que no miden lo mismo: distinto número de prompts, distintos motores o distinta versión de la fórmula.",
   "No conviertas el sentimiento en tu métrica principal (abajo, por qué)."
 ]} />
 
 ## ¿Y el sentimiento?
 
-Se registra en cada respuesta y es útil para leerlas, pero **no entra en el GEO
-Score**, y esa decisión es deliberada. El sentimiento es una métrica de segundo
-orden: solo existe donde ya hay una mención, así que una marca invisible tiene
-un sentimiento inmejorable —no hay ninguna respuesta hablando mal de ella—.
-Como titular es engañoso; como filtro para ir a leer las respuestas negativas
-concretas, es excelente. Ese es el sitio que le corresponde.
+Es útil, pero **no como titular**. El sentimiento es una métrica de segundo
+orden: solo existe donde ya hay una mención, así que una marca invisible luce un
+sentimiento inmejorable —no hay ninguna respuesta hablando mal de ella—.
+Presentado como cifra principal engaña; como filtro para ir a leer las
+respuestas negativas concretas, es excelente. Ese es el sitio que le
+corresponde.
 
-## Cómo se combinan las cinco en un solo número
+## Y todas juntas, ¿en un solo número?
 
-Las cinco entran en el GEO Score con distinta importancia — la presencia manda
-sobre las demás, porque sin mención no hay nada que interpretar. Qué mide cada
-una y en qué orden razonarlas está en <a href="/blog/que-es-el-geo-score">qué es el GEO Score y cómo se calcula</a>
-y en la <a href="/docs/metodologia/geo-score">metodología</a>. Lo que importa
-para este artículo es lo que ocurre cuando falta un componente: no se le pone
-un cero. Se descarta del cálculo, se reparte su peso entre los demás y baja la
-confianza declarada del resultado.
+Sí, y es lo que hace un índice como el <a href="/blog/que-es-el-geo-score">GEO Score</a>:
+resumirlas para poder seguir la evolución de un vistazo. Pero un índice no
+sustituye a las métricas de debajo, las ordena — sube porque han subido ellas,
+nunca al revés.
+
+Lo que sí conviene exigirle a cualquier índice, sea el nuestro o el de otra
+herramienta: **que cuando una de sus señales no se pueda medir, lo diga en vez
+de rellenarla con un cero.**
 
 <Verdict title="La regla que gobierna todas las demás" badge="Método">
 
@@ -297,9 +299,9 @@ haber falseado ni un solo dato.
 Mira la **tasa de mención junto al número de respuestas** que la sostienen. Es
 la única pareja que no se puede malinterpretar: dice si estás en la
 conversación y con cuánta evidencia lo estás diciendo. Cuando esa pareja sea
-sólida —diez respuestas como mínimo, mejor varias decenas—, pasa a la cuota de
-voz y a la posición. Antes de eso, cualquier lectura más fina es ruido bien
-presentado.
+sólida —una decena de respuestas como mínimo, mejor varias decenas—, pasa a la
+cuota de voz y a la posición. Antes de eso, cualquier lectura más fina es ruido
+bien presentado.
 
 </QuickAction>
 
@@ -309,8 +311,8 @@ que los prompts sobre los que se calcula. Eso lo cubrimos en <a href="/blog/como
 y el resto de la metodología vive en el <a href="/blog/medicion">pilar de medición</a>.
 
 <ArticleCta
-  title="Mide las cinco sobre tu marca, no sobre una captura"
-  text="Genscore lanza tu conjunto de prompts en ChatGPT, Gemini y Claude, y te devuelve las cinco métricas con el número de respuestas que las sostienen. Escaneo gratuito, sin tarjeta."
+  title="Mídelas sobre tu marca, no sobre una captura"
+  text="Genscore lanza tu conjunto de prompts en ChatGPT, Gemini y Claude, y te devuelve estas métricas con el número de respuestas que las sostienen detrás. Escaneo gratuito, sin tarjeta."
 />
 
 <AuthorBio>

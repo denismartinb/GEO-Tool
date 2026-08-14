@@ -5255,7 +5255,17 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .docs-side a { display: block; font-size: 14px; color: var(--ink-2); padding: 6px 10px; border-radius: var(--r-sm); }
 .docs-side a:hover { background: var(--surface-2); color: var(--ink); }
 .docs-side a.active { background: var(--surface-2); color: var(--accent); font-weight: 600; }
-.docs-content { max-width: 720px; min-width: 0; }
+/* `align-self: stretch` no es cosmético: en móvil `.docs-layout` es un flex en
+   columna con `align-items: flex-start`, así que la columna de contenido se
+   dimensiona por su hijo más ancho — la tabla, con `min-width: 480px`. En una
+   pantalla de 375 px eso hacía que TODOS los párrafos midieran 480 y quedaran
+   cortados por la derecha, sin scroll de página con el que alcanzarlos: la
+   documentación de metodología era ilegible en el móvil (fundador,
+   2026-08-13). `min-width: 0` no lo arregla porque el eje afectado es el
+   transversal. Con `stretch`, la columna mide lo que la pantalla y la tabla
+   hace su propio scroll dentro de `.docs-table-wrap`, que es para lo que
+   existe. */
+.docs-content { max-width: 720px; min-width: 0; align-self: stretch; }
 .docs-content h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 8px; }
 .docs-content .docs-updated { font-size: 13px; color: var(--ink-4); margin: 0 0 28px; }
 .docs-content h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 32px 0 12px; }

@@ -263,6 +263,14 @@ al preguntársele: no es un artículo, pero era la página a la que los artícul
 mandaban a buscar el detalle. Supersede en parte a §74. Detalle y alcance:
 log §75.
 
+**Segunda pasada, mismo día (log §76):** la primera quitó los parámetros y dejó
+la mecánica —"una media ponderada de cinco señales", la renormalización, los
+umbrales—. El fundador lo señaló: además de desvelar el cálculo, **abarata la
+métrica**. La línea definitiva es *el contenido explica el problema y el
+criterio, no nuestra máquina*. Reescritos el pilar (retitulado "…y qué mide"),
+el artículo de métricas, la doc de metodología, el glosario y **la landing
+`/geo`**, que publicaba el desglose aritmético completo con los pesos de v2.
+
 **Y dos fallos de descubribilidad**, del mismo patrón que §62: S1 nunca lo
 había abierto el piloto (estaba en el fixture y no en el journey) y cuatro
 artículos declaraban portada pero renderizaban el degradado con icono en su

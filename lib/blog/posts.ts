@@ -41,7 +41,7 @@ export const BLOG_CLUSTERS: BlogCluster[] = [
     title: "Metodología y medición",
     description: "Cómo se mide la visibilidad de una marca en IA: GEO Score, prompts, competidores.",
     pillarIntro:
-      "Medir GEO bien no es tan simple como lanzar una pregunta a ChatGPT y ver si sale tu marca. Una consulta aislada no representa la realidad: cada cliente pregunta con palabras distintas para el mismo problema, y las respuestas de un motor generativo cambian con el tiempo. Medirlo con rigor exige un conjunto de prompts que representen de verdad cómo pregunta tu cliente, un grupo de competidores elegido con criterio, y una métrica compuesta que combine varias señales en vez de una sola.\n\nEsta sección reúne los artículos sobre esa metodología: qué es el GEO Score de Genscore y cómo se calcula, cómo elegir los prompts correctos para monitorizar tu marca, y cómo seleccionar los competidores adecuados para que la comparación tenga sentido. Es la base técnica antes de pasar a los playbooks de ejecución."
+      "Medir GEO bien no es tan simple como lanzar una pregunta a ChatGPT y ver si sale tu marca. Una consulta aislada no representa la realidad: cada cliente pregunta con palabras distintas para el mismo problema, y las respuestas de un motor generativo cambian con el tiempo. Medirlo con rigor exige un conjunto de prompts que representen de verdad cómo pregunta tu cliente, un grupo de competidores elegido con criterio, y una métrica que resuma varias señales a la vez en vez de fiarlo todo a una.\n\nEsta sección reúne los artículos sobre esa metodología: qué es el GEO Score de Genscore y qué mide, cómo elegir los prompts correctos para monitorizar tu marca, y cómo seleccionar los competidores adecuados para que la comparación tenga sentido. Es la base técnica antes de pasar a los playbooks de ejecución."
   },
   {
     key: "playbooks",
@@ -99,9 +99,9 @@ export type BlogPost = {
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "que-es-el-geo-score",
-    title: "Qué es el GEO Score y cómo se calcula",
+    title: "Qué es el GEO Score y qué mide",
     description:
-      "La metodología detrás del GEO Score de GenScore: qué mide, cómo se combina presencia, prominencia, posición competitiva y autoridad, y por qué importa para saber cómo aparece tu marca en respuestas de IA.",
+      "Qué mide el GEO Score de GenScore —presencia, prominencia, posición competitiva, autoridad y preparación técnica— y cómo leerlo sin engañarte para saber cómo aparece tu marca en respuestas de IA.",
     datePublished: "2026-07-12",
     // Refresco real (SEO-POS-1 S6, log §72): el artículo publicaba los cuatro
     // componentes y los pesos de GEO Score v2 (.40/.25/.20/.15) — superados

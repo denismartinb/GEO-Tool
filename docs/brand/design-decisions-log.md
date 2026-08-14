@@ -6919,6 +6919,106 @@ contradice a sí misma, peor que no dar ninguna.
 
 ---
 
+## 76. Segunda pasada: fuera también la mecánica, no solo los pesos (SEO-POS-1, S6, revisión del fundador, 2026-08-13)
+
+**Qué pasó.** §75 retiró los pesos y los códigos ADR. El fundador volvió a
+revisar y encontró, viva en el pilar, la frase *"una media ponderada de cinco
+señales"*:
+
+> *"No digas cosas concretas de ninguna parte del producto. Por favor, ya lo
+> dije en la última revisión. […] Además de desvelar cómo se calcula la métrica
+> principal le resta valor, lo simplifica demasiado. Revisa de nuevo los
+> artículos que digan cosas de Genscore y haz que las afirmaciones sean más
+> etéreas, más genéricas."*
+
+Tenía razón en las dos mitades, y la segunda es la que la primera pasada no vio.
+Yo había leído "no publiques los parámetros" cuando lo que había que leer era
+**"no publiques la máquina"**. Quitar los pesos y dejar "es una media ponderada
+de cinco señales que se descartan y renormalizan" es quitar las cifras de la
+receta y dejar la receta.
+
+**El argumento de valor, que es el que me faltaba.** Una métrica que se explica
+entera en una frase parece que se puede reproducir en una tarde. El trabajo real
+—qué se mide, contra qué se compara, cuándo un dato no vale, cómo se estabiliza
+entre ejecuciones— desaparece detrás de "es una media ponderada". Publicar la
+mecánica no es solo regalar la ventaja: es **abaratar el producto delante del
+comprador**.
+
+**La línea que queda, y esta vez enunciada de forma que se pueda aplicar sin
+preguntar:**
+
+> **El contenido explica el problema y el criterio. No explica nuestra
+> máquina.** Qué mira el producto, sí. Cuántas piezas tiene, cómo las combina,
+> con qué umbrales decide y qué hace cuando falta una, no.
+
+**Qué se reescribió, superficie a superficie:**
+
+| Superficie | Qué decía | Qué dice |
+|---|---|---|
+| `que-es-el-geo-score` | "una media ponderada de cinco señales" | "la puntuación con la que GenScore resume cómo de bien te está yendo" |
+| — su título | "…y cómo se calcula" | "…y qué mide" |
+| `metricas-geo-que-medir` | "en Genscore ese umbral son diez respuestas", "la mediana de los últimos tres escaneos comparables", el incidente de los 44 puntos | la aritmética de la muestra, que es cierta para cualquiera, y "la tendencia sobre varias mediciones comparables" |
+| — sus cifras destacadas | umbrales nuestros | cuánto mueve **una** respuesta según el tamaño de la muestra (33 / 10 / 1,7 puntos) |
+| `/docs/metodologia/geo-score` | "combina cinco componentes", renormalización, "20 resultados", "entre 2 y 19", "umbrales 70 y 40" | qué mira, en qué orden importa, y que lo que no se puede medir se declara |
+| `/glosario/geo-score` | "se calcula combinando cinco señales, cada una con…" | "resume varias señales que no significan lo mismo por separado" |
+| `/geo` (landing) | **el desglose entero: `80×40% + 64×25% + … = 65 puntos`** | "Datos de ejemplo. Tu panel muestra tus cifras reales." |
+
+**La landing era lo peor de todo y no la miraba nadie.** `/geo` es la página
+comercial más vista del sitio y publicaba la fórmula completa con multiplicación
+y suma a la vista — además con los pesos de v2, retirados hacía una semana, y
+enseñando cuatro componentes cuando el producto tiene cinco. No es un artículo,
+así que ni el guardián de §75 ni ninguna otra comprobación la cubrían. Corregida
+y cubierta con test.
+
+**El patrón que se repite, y es el que hay que recordar:** cuando una revisión
+del fundador señala una superficie, el trabajo no es arreglar esa superficie —
+es buscar la misma clase de error en todas las demás. Las dos veces que no lo
+hice, la segunda pasada encontró más de lo que había arreglado la primera.
+
+**Lo que conservan los tests:** `article-honesty.test.ts` añade un detector de
+mecánica (media ponderada, recuento de señales, "se calcula combinando",
+renormalización, "mediana de tus tres últimos") sobre las cuatro superficies, y
+`metricas-geo.test.ts` —que en su v1 exigía justo lo contrario, atar el texto a
+las constantes— pasa a exigir que esas constantes **no** aparezcan. El fichero
+guarda las dos versiones en su cabecera a propósito: la v1 era un buen
+mecanismo sobre una premisa equivocada, y eso es más útil de recordar que la
+regla sola.
+
+---
+
+## 77. La metodología no se podía leer en un móvil (2026-08-13)
+
+**El fallo.** El fundador abrió `/docs/metodologia/geo-score` en el móvil y
+mandó la captura: **todos los párrafos cortados por la derecha**, sin scroll de
+página con el que alcanzar el texto que faltaba.
+
+**La causa, que no está donde parece.** En móvil `.docs-layout` es un flex en
+columna con `align-items: flex-start`, así que la columna de contenido se
+dimensiona por su hijo más ancho — y su hijo más ancho era la tabla, con
+`min-width: 480px`. En una pantalla de 375 px eso hacía que **cada párrafo
+midiera 480**, y lo que sobraba quedaba fuera de la ventana. El eje afectado es
+el transversal, así que el `min-width: 0` que ya tenía la columna no servía de
+nada: hacía falta `align-self: stretch`.
+
+Con eso, la columna mide lo que la pantalla y la tabla hace su propio scroll
+dentro de `.docs-table-wrap`, que es exactamente para lo que existe.
+
+**Lo segundo, del mismo día:** `white-space: nowrap` en todas las celdas de las
+tablas de `/docs`. Valía para la de planes —celdas de dos palabras— y dejaba
+ilegible la de metodología en cuanto su segunda columna pasó a ser prosa: a
+1280 px las frases se salían de la caja y el lector veía *"…y la que más m"*.
+Ahora las celdas envuelven y sólo las cabeceras conservan el `nowrap`.
+
+**Lo que esto dice del piloto, otra vez.** Las dos pasadas anteriores dieron
+`PILOT PASS` con `docs-metodologia/geo-score` en ✅ a las tres anchuras, y las
+dos veces era correcto: la página **cargaba** bien. Un texto cortado no es un
+fallo de carga. Es el mismo límite que ya está escrito en el histórico —el
+`PASS` es la lista de lo que el piloto vio, no un juicio sobre lo que se ve— y
+la única defensa real sigue siendo mirar las capturas. Esta la encontró el
+fundador antes que yo, mirando su propio móvil.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

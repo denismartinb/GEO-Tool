@@ -26,6 +26,17 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   propio real.
 - **Un peso no es un valor medido** (log §13). No presentar un parámetro de
   configuración del score como si fuera un resultado observado.
+- **El contenido explica el problema y el criterio; no explica nuestra
+  máquina** (fundador, 2026-08-13; log §76). Qué mira el producto, sí. Cuántas
+  piezas tiene, cómo las combina, con qué umbrales decide y qué hace cuando
+  falta una, no. La primera pasada de esta regla quitó los pesos y dejó "una
+  media ponderada de cinco señales", que es quitar las cifras de la receta y
+  dejar la receta. El motivo no es sólo competitivo: una métrica que se explica
+  entera en una frase parece reproducible en una tarde, y eso **abarata el
+  producto delante del comprador**. Lo vigila `article-honesty.test.ts`
+  (detector de mecánica) sobre artículos, glosario, `/docs` y comparativas — y
+  `metricas-geo.test.ts` cubre además la landing `/geo`, que no es contenido y
+  publicaba la fórmula entera.
 - **Ni los pesos del compuesto ni los códigos ADR se publican** (fundador,
   2026-08-13; log §75). Los pesos son configuración del producto: se publica el
   **orden de importancia** ("la presencia es la que más manda"), nunca el
@@ -39,16 +50,18 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   sobre las cuatro superficies (artículos, glosario, `/docs` y comparativas).
   `ProductMock` conserva `weight` en el fuente **sin pintarlo**: es lo que hace
   verificable el número del gauge.
-- **Una cifra del producto publicada en prosa se ata al código con un test.**
-  Un artículo que dice "diez respuestas mínimo" o "Claude no busca en la web"
-  caduca solo: cambia la constante y el texto pasa a mentir sobre nuestra
-  propia metodología sin que nada falle, porque es prosa en un MDX. El test
-  importa la constante real y la contrasta con lo publicado, de forma que el
-  cambio de código y el refresco del artículo caen en el mismo PR o no cae
-  ninguno (`lib/blog/metricas-geo.test.ts`; log §73). El caso que lo motivó:
-  `/blog/que-es-el-geo-score` llevaba ocho días publicando los pesos de
-  GEO Score v2 mientras `/docs/metodologia/geo-score` publicaba los de v4 —
-  el sitio contradiciéndose a sí mismo a un enlace de distancia (log §74).
+- **Si una cifra del producto llega a publicarse, se ata al código con un
+  test.** Regla de segunda línea: la primera es no publicarla. Cuando una pieza
+  sí depende de un dato nuestro —los umbrales de comportamiento de la auditoría,
+  por ejemplo, que sí se publican porque el lector los usa sobre su propia
+  web— el test importa la constante real y la contrasta con el texto, para que
+  el cambio de código y el refresco del artículo caigan en el mismo PR. Prosa
+  en un MDX no la mira ningún compilador. El caso que lo motivó:
+  `/blog/que-es-el-geo-score` llevó ocho días publicando los pesos de GEO Score
+  v2 mientras `/docs/metodologia/geo-score` publicaba los de v4 — el sitio
+  contradiciéndose a un enlace de distancia (log §74). La solución definitiva
+  fue mejor: retirar el dato, porque **lo que no se publica no se queda
+  rancio** (log §75).
 
 ## Imágenes
 

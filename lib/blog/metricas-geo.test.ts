@@ -1,27 +1,28 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ENGINE_META } from "@/lib/scan/engine-meta";
-import { MIN_RESPONSES_FOR_BAND } from "@/lib/scoring/score-reliability";
-import { DEFAULT_SCORE_WINDOW_SIZE } from "@/lib/scoring/score-window";
 
 /**
- * SEO-POS-1 Fase C, S6 (log §71) — el artículo de métricas publica NÚMEROS DEL
- * PRODUCTO, no buenas prácticas genéricas: el suelo de respuestas antes de
- * publicar una franja, el tamaño de la ventana de la mediana, el peso del
- * único componente determinista, y qué motores pueden citar y cuáles no.
+ * SEO-POS-1 Fase C, S6 — invariantes del artículo de métricas y de su pilar.
  *
- * Esa es justo la razón por la que la pieza vale algo — y también por la que
- * caduca sola. Si `MIN_RESPONSES_FOR_BAND` pasa a 15, o Claude gana grounding
- * real, el artículo pasa a afirmar algo falso sobre nuestra propia metodología
- * sin que nada falle: es prosa en un MDX, no hay compilador que la mire. Estos
- * tests atan el texto publicado a las constantes reales, así que el cambio de
- * código y el refresco del artículo ocurren en el mismo PR o no ocurre
- * ninguno de los dos.
+ * **Este fichero cambió de sentido dos veces el mismo día, las dos por una
+ * revisión del fundador. Merece la pena que quede escrito, porque la primera
+ * versión era razonable y aun así partía de una premisa equivocada.**
  *
- * Mismo criterio que `alternativas-a-otterly.test.ts` y que el bloque de S5 en
- * `article-recipes.test.ts`: una regla de honestidad que no es un test no
- * existe.
+ * v1 (log §73): el artículo publicaba constantes del producto —el suelo de
+ * respuestas, el tamaño de la ventana, qué motores llevan búsqueda— y el test
+ * las importaba del código para que el texto y el producto no se separaran.
+ * Buen mecanismo, premisa equivocada.
+ *
+ * v2 (log §75 y §76): esas constantes **no se publican**. Los pesos, los
+ * umbrales y la mecánica del compuesto son configuración del producto;
+ * contarlos, además de regalarlos, abarata la métrica — "una media ponderada
+ * de cinco señales" hace que un trabajo de meses parezca una tarde de hoja de
+ * cálculo. Lo que se publica es el criterio, no la máquina.
+ *
+ * Así que el test ya no ata el texto a las constantes: **comprueba que no
+ * estén**. La red general vive en `article-honesty.test.ts`; aquí quedan las
+ * afirmaciones propias de estas tres páginas.
  */
 
 function readArticle(slug: string): string {
@@ -36,72 +37,62 @@ function statValues(source: string): string[] {
   return [...source.matchAll(/<Stat\s+value="([^"]+)"/g)].map((m) => m[1]);
 }
 
-describe("las cifras del artículo de métricas salen del código, no de la memoria", () => {
-  it("el suelo de respuestas que publica es MIN_RESPONSES_FOR_BAND", () => {
-    expect(statValues(METRICAS)).toContain(String(MIN_RESPONSES_FOR_BAND));
-
-    // El cuerpo lo escribe en letra ("diez respuestas"), así que el número no
-    // basta: si la constante deja de ser 10, esta comprobación falla y obliga
-    // a releer la prosa, que es justo lo que se quiere.
+describe("el artículo de métricas enseña criterio, no configuración", () => {
+  it("no atribuye a Genscore un umbral concreto de respuestas", () => {
     expect(
-      MIN_RESPONSES_FOR_BAND,
-      "el artículo dice «diez respuestas» en tres sitios en prosa. Si el umbral " +
-        "cambia, reescríbelos en el mismo PR y actualiza este test."
-    ).toBe(10);
-    expect(METRICAS).toContain("menos de diez respuestas");
+      METRICAS,
+      "el umbral con el que decidimos publicar una franja es configuración del producto: " +
+        "el artículo explica la aritmética de la muestra, que es cierta para cualquiera"
+    ).not.toMatch(/en Genscore ese umbral/i);
   });
 
-  it("el tamaño de la ventana que publica es DEFAULT_SCORE_WINDOW_SIZE", () => {
-    expect(statValues(METRICAS)).toContain(String(DEFAULT_SCORE_WINDOW_SIZE));
+  it("no describe por dentro el motor de cada proveedor", () => {
+    expect(
+      METRICAS,
+      "qué motor ejecutamos con búsqueda web y cuál no es configuración nuestra. El " +
+        "artículo dice lo que el lector necesita: un motor que no busca no puede citar."
+    ).not.toMatch(/En Genscore, Gemini y ChatGPT/i);
   });
 
-  it("no promete una posición media al estilo de Google: la mide solo cuando apareces", () => {
+  it("mantiene la afirmación que lo diferencia: la posición se mide solo donde apareces", () => {
     expect(METRICAS).toMatch(/solo sobre las respuestas donde apareces/i);
   });
-});
 
-/**
- * El párrafo que saca a Claude del denominador de citación es correcto sólo
- * mientras Claude corra sin búsqueda web. `ENGINE_META.grounded` es la copia
- * declarada de `GROUNDED_PROVIDERS` (lib/scoring/run-scoring.ts lo dice
- * explícitamente y pide actualizar las dos), así que sirve de ancla.
- */
-describe("qué motores pueden citar, según el código", () => {
-  it("Gemini y ChatGPT buscan; Claude no — que es lo que afirma el artículo", () => {
-    expect(ENGINE_META.gemini.grounded).toBe(true);
-    expect(ENGINE_META.openai.grounded).toBe(true);
-    expect(
-      ENGINE_META.claude.grounded,
-      "si Claude gana grounding real, el artículo de métricas deja de ser cierto: " +
-        "hay que reescribir la sección de tasa de citación en ese mismo PR"
-    ).toBe(false);
+  it("sus cifras destacadas se apoyan en algo que el lector puede comprobar", () => {
+    const fuentes = [...METRICAS.matchAll(/<Stat[^>]*source="([^"]+)"/g)].map((m) => m[1]);
+    expect(fuentes.length).toBeGreaterThan(0);
+    for (const fuente of fuentes) {
+      expect(
+        fuente,
+        `"${fuente}" no vale como fuente de una cifra destacada: tiene que remitir a algo ` +
+          "verificable (aritmética, datos de ejemplo declarados), no a nuestra metodología interna"
+      ).not.toMatch(/Metodolog[íi]a de GenScore/i);
+    }
   });
 });
 
 /**
- * Decisión del fundador, 2026-08-13 (log §75): *"no quiero exponer cosas tan
- * concretas del producto, como pesos reales para un cálculo"*. Los pesos del
- * compuesto y los códigos ADR salen de todo el contenido público.
- *
- * Esto **sustituye** al bloque anterior de este fichero, que exigía justo lo
- * contrario: que el pilar publicara los pesos vigentes leídos de
- * `run-scoring.ts`. Aquel test resolvía un problema real —el artículo llevaba
- * ocho días publicando la fórmula v2, retirada (log §74)— y la decisión nueva
- * lo resuelve mejor: lo que no se publica no se puede quedar rancio.
- *
- * Lo que sí se conserva es la garantía que hacía falta de verdad: el número
- * del gauge sigue siendo la media ponderada real de las filas que la maqueta
- * enseña (`article-recipes.test.ts`), porque los pesos siguen en el fuente del
- * MDX aunque `ProductMock` ya no los pinte.
+ * El pilar publicaba los pesos (log §74, retirados en §75) y después seguía
+ * definiendo el GEO Score como "una media ponderada de cinco señales" (§76).
+ * Se comprueban las dos cosas aquí porque es el artículo al que apuntan todos
+ * los demás cuando hablan de la métrica: si se relaja, se relaja el sitio
+ * entero.
  */
-describe("el pilar del GEO Score no publica el reparto de pesos", () => {
-  it("ninguna cifra de su rejilla es un porcentaje", () => {
+describe("el pilar del GEO Score no publica ni el reparto ni la mecánica", () => {
+  it("ninguna cifra de su rejilla es un porcentaje de la fórmula", () => {
     const porcentajes = statValues(PILAR).filter((v) => v.includes("%"));
     expect(
       porcentajes,
-      `el pilar publica ${porcentajes.join(", ")} en su StatGrid. Un porcentaje ahí ` +
-        "es el reparto de pesos, que es configuración interna del producto."
+      `el pilar publica ${porcentajes.join(", ")} en su StatGrid. Un porcentaje ahí es el ` +
+        "reparto de pesos, que es configuración interna del producto."
     ).toEqual([]);
+  });
+
+  it("no define la métrica por su aritmética", () => {
+    expect(PILAR).not.toMatch(/media ponderada/i);
+    expect(PILAR, "el recuento de señales es parte de la fórmula, no del valor para el lector").not.toMatch(
+      /(cinco|cuatro)\s+(señales|componentes)/i
+    );
   });
 
   it("los pesos siguen en el fuente para que el gauge sea verificable, pero no se renderizan", () => {
@@ -113,5 +104,28 @@ describe("el pilar del GEO Score no publica el reparto de pesos", () => {
       mock,
       "ProductMock volvería a pintar «peso N%» y el reparto sería público otra vez"
     ).not.toMatch(/peso \{?row\.weight/);
+  });
+});
+
+/**
+ * La landing comercial es la superficie más vista del sitio y publicaba, hasta
+ * esta revisión, el desglose aritmético entero ("80×40% + 64×25% + … = 65
+ * puntos") con los pesos de una versión ya retirada. No es un artículo, así
+ * que ningún guardián de contenido la miraba.
+ */
+describe("la landing de GEO no publica la aritmética del score", () => {
+  const GEO = readFileSync(join(process.cwd(), "app", "geo", "page.tsx"), "utf8");
+
+  it("no pinta el peso de cada componente", () => {
+    expect(GEO).not.toMatch(/peso \{c\.weight\}/);
+  });
+
+  it("no publica la suma ponderada como pie de la maqueta", () => {
+    expect(GEO, "el desglose `valor×peso = puntos` es la fórmula entera").not.toMatch(/c\.value\}×\$\{c\.weight/);
+  });
+
+  it("conserva los pesos en el fuente: el medidor tiene que cuadrar con sus barras", () => {
+    expect(GEO).toMatch(/weight: \d+/);
+    expect(GEO).toMatch(/sum \+ \(c\.value \* c\.weight\) \/ 100/);
   });
 });

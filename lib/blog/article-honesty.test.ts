@@ -140,6 +140,37 @@ export function publicaUnPeso(text: string): string[] {
   return patrones.flatMap((p) => [...text.matchAll(p)].map((m) => m[0].trim()));
 }
 
+/**
+ * Segunda revisión del fundador (2026-08-13, log §76), después de encontrar
+ * "una media ponderada de cinco señales" viva en el pilar:
+ *
+ * > *"No digas cosas concretas de ninguna parte del producto. […] Además de
+ * > desvelar cómo se calcula la métrica principal le resta valor, lo
+ * > simplifica demasiado. […] haz que las afirmaciones sean más etéreas, más
+ * > genéricas."*
+ *
+ * La primera pasada quitó los pesos y los códigos ADR, pero dejó la
+ * **mecánica**: cuántas señales son, que es una media ponderada, que se
+ * renormaliza al faltar una, y los umbrales exactos con los que decidimos qué
+ * publicar. Eso sigue siendo el interior de la máquina — y, como dice el
+ * fundador, contarlo abarata la métrica: un número que se explica en una
+ * frase parece que se puede reproducir en una tarde.
+ *
+ * La línea que queda: **el contenido explica el problema y el criterio; no
+ * explica nuestra máquina.** Qué mira el producto, sí. Cómo lo combina y con
+ * qué umbrales, no.
+ */
+export function publicaLaMecanica(text: string): string[] {
+  const patrones = [
+    /media ponderada/gi,
+    /\b(cinco|cuatro)\s+(se\u00f1ales|componentes)/gi,
+    /se calcula combinando/gi,
+    /(renormaliz|se reparte su peso|reparte su peso proporcionalmente)/gi,
+    /mediana de (tus|los) (tres|\d+)/gi
+  ];
+  return patrones.flatMap((p) => [...text.matchAll(p)].map((m) => m[0].trim()));
+}
+
 describe("el contenido público no publica configuración interna del producto", () => {
   it("hay superficies que auditar", () => {
     expect(CONTENT_SOURCES.length).toBeGreaterThan(10);
@@ -152,6 +183,14 @@ describe("el contenido público no publica configuración interna del producto",
         `${source.label} cita un ADR de cara al lector. Es la referencia interna de un ` +
           'documento que no puede abrir: como fuente, usa "Metodología de GenScore" o ' +
           "la evidencia real (un incidente fechado, datos de ejemplo declarados)."
+      ).toEqual([]);
+    });
+
+    it(`no explica la mecánica del compuesto: ${source.label}`, () => {
+      expect(
+        publicaLaMecanica(source.text),
+        `${source.label} explica cómo se construye la métrica por dentro. Decisión del ` +
+          "fundador (log §76): el contenido dice QUÉ mira el producto, no cómo lo combina."
       ).toEqual([]);
     });
 
@@ -170,6 +209,14 @@ describe("los detectores de configuración interna funcionan", () => {
     expect(citaCodigoAdr("fuente: ADR-0024 · capa")).toEqual(["ADR-0024"]);
     expect(citaCodigoAdr("ver ADR 0033 para el detalle")).toEqual(["ADR 0033"]);
     expect(citaCodigoAdr("no hay ninguno aquí")).toEqual([]);
+  });
+
+  it("detecta la mecánica del compuesto y deja pasar la prosa normal", () => {
+    expect(publicaLaMecanica("es una media ponderada de cinco señales").length).toBe(2);
+    expect(publicaLaMecanica("se calcula combinando cuatro componentes").length).toBe(2);
+    expect(publicaLaMecanica("la mediana de tus tres últimos escaneos").length).toBe(1);
+    expect(publicaLaMecanica("resume varias señales en un solo número")).toEqual([]);
+    expect(publicaLaMecanica("mira si te nombran y con qué protagonismo")).toEqual([]);
   });
 
   it("distingue un peso publicado de un porcentaje legítimo", () => {
