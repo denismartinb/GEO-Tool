@@ -8056,6 +8056,52 @@ esto no cambia qué se calcula ni qué se pinta).
 
 ---
 
+## 84. Visión general dejaba de ser la excepción, y dos ficheros muertos se van (PRELAUNCH-HARDENING-1 Fases R7 y R8, 2026-08-14)
+
+**Qué se decidió.**
+
+1. **Visión general usa `requireActiveProject`** como las otras seis pantallas
+   de proyecto, en vez de repetir a mano el `select` + `is_archived` +
+   `notFound()`.
+2. **`getLLMScanProviders` se importa de `lib/scan/providers.ts`**, que es donde
+   vive, y el reexport de cortesía del ejecutor **se borra** porque ya no lo usa
+   nadie.
+3. **Se borran `lib/supabase/client.ts` (8 líneas) y `lib/types.ts` (29)**: cero
+   importadores, comprobado por ruta de import y no por nombre.
+
+**El detalle que importa del punto 1.** `requireActiveProject` **entra dentro
+del `Promise.all` existente**, no delante. Es una promesa como las otras cuatro,
+así que la Visión general sigue haciendo un solo viaje en paralelo — nada de
+serializar una consulta más antes del lote, que sería deshacer parte de la Fase
+V. De paso desaparece un `created_at` que la página seleccionaba y no leía
+nadie.
+
+**Por qué el punto 2 no es cosmético.** El único importador de
+`getLLMScanProviders` fuera de `lib/scan/` era esa misma página, y lo cogía del
+**ejecutor** — o sea que una pantalla arrastraba el grafo entero del ejecutor
+(LLM, scoring, recomendaciones, notificaciones, auditoría) para pintar dos
+nombres de motor en una línea. `providers.ts` existe desde SAMPLING-1
+precisamente para eso, y su docblock decía «el ejecutor lo reexporta para no
+tocar sitios de llamada»: era cierto y ya no hace falta.
+
+### Dos cosas que el plan pedía y NO se han hecho, con motivo
+
+- **«Unificar `setRecurringScans`/`setAutoWebAudit`»**: `setAutoWebAudit` **ya
+  no existe** — lo retiró WEB-AUDIT-AUTO-SPLIT-1 cuando la migración 0031 jubiló
+  su columna, y su sustituto es `setAutoAuditHalf`. Además, el comentario de
+  `actions.ts` dice explícitamente que la forma de espejo entre las dos es
+  **deliberada** («los interruptores viven uno al lado del otro en /debug y
+  quien los lea no debería tener que aprender tres comportamientos»).
+  Unificarlas sería contradecir una decisión escrita para cumplir una línea de
+  un plan que se quedó vieja.
+- **Partir `WebAuditPage`** (~1.070 líneas de orquestación de datos): toca
+  lógica, no presentación, y no cabe en el mismo PR que la mudanza de §83.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R7, R8); §83 (la
+mudanza de componentes); `lib/scan/providers.ts` (SAMPLING-1, por qué existe).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
