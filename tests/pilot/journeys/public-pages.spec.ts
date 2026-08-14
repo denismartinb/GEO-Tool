@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { assertPageIsHealthy, visitAsUser } from "../support/journey";
+import { assertPageIsHealthy, captureInteraction, visitAsUser } from "../support/journey";
 
 /**
  * GROWTH-2 Fase 2.1 read-only journey over the new public/SEO surfaces:
@@ -139,6 +139,49 @@ test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/geo", "geo");
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/geo");
+});
+
+/**
+ * GENSCORE-HEADER-3, a petición del `ux-pilot` (2026-08-12). El barrido de
+ * interacción sólo abre menús en pantallas de consola, así que **el cajón
+ * móvil de la cabecera pública no se fotografiaba nunca**: cuando
+ * GENSCORE-HEADER-2 metió el chip de cuenta ahí dentro, el piloto dio PASS sin
+ * haberlo visto en 375 ni en 768, y quien lo verificó fue el fundador con su
+ * teléfono. Eso es exactamente lo que el piloto existe para no delegar.
+ *
+ * Es también el sitio donde ya se coló un fallo real: el CTA duplicado que
+ * §63 tuvo que corregir vivía justo aquí.
+ *
+ * Sólo corre por debajo de 900px, que es donde `.lp-burger` existe: por encima
+ * el cajón no está en el DOM y el test no tendría nada que abrir.
+ */
+test("el cajón móvil de la cabecera pública se abre y muestra el estado de sesión", async ({
+  page
+}, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/geo", "geo-mobile-drawer-source");
+  assertPageIsHealthy(findings);
+
+  const burger = page.locator(".lp-burger");
+  if (!(await burger.isVisible().catch(() => false))) {
+    test.skip(true, "El cajón sólo existe por debajo de 900px — en escritorio no hay nada que abrir.");
+    return;
+  }
+
+  await burger.click();
+  const drawer = page.locator(".lp-mobnav");
+  await expect(drawer).toBeVisible();
+
+  // El piloto entra con sesión, así que aquí abajo va el chip de cuenta y NO
+  // los CTA de alta. Se afirma por `data-testid` en vez de por texto: el
+  // email y el plan de la cuenta piloto pueden cambiar, la existencia del
+  // chip no.
+  await expect(drawer.getByTestId("account-chip")).toBeVisible();
+  // `button`, no `link`: los CTA del cajón son <button onClick>, así que
+  // preguntar por un enlace llamado "Prueba gratis" da cero SIEMPRE y la
+  // aserción no podría fallar nunca — que es peor que no tenerla.
+  await expect(drawer.getByRole("button", { name: /Prueba gratis/i })).toHaveCount(0);
+
+  await captureInteraction(page, testInfo, "geo-mobile-drawer-open");
 });
 
 test("/privacidad renders and has its own canonical", async ({ page }, testInfo) => {

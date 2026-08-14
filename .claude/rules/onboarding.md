@@ -67,6 +67,15 @@ obedecerá igual.
   semanal en starter) y la auditoría usa los pesos reales de
   `docs/design-reference/web-audit-issues-1/`. Si esa cadencia o esos pesos
   cambian, el texto del tour cambia con ellos.
+- **El dominio del hero llega al asistente, y se consume al leerlo.** La
+  portada invitaba a escribir un dominio y lo tiraba: te registrabas y el
+  asistente te lo volvía a pedir. Va por `localStorage`
+  (`lib/onboarding/pending-domain.ts`) porque entre medias hay una
+  confirmación por correo y el dato tiene que sobrevivir a salir del navegador
+  y volver. Se borra al leerlo: si se quedara, el segundo dominio de la cuenta
+  nacería relleno con el primero. Y sólo se guarda lo que el asistente
+  aceptaría —`isWellFormedDomain`, la misma función que habilita su botón, no
+  una copia— porque arrastrar basura es peor que no arrastrar nada (log §54).
 - **El «ya visto» va en `localStorage`, no en el esquema.** Una migración está
   prohibida sin aprobación explícita del fundador (CLAUDE.md). El coste
   asumido y declarado: el popup reaparece en un navegador nuevo.

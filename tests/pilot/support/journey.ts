@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 import { redact } from "./env";
+import { findDuplicateControls, findLowContrastControls, type ControlSnapshot } from "./page-audit";
 
 const SCREENS_DIR = ".pilot/screens";
 const FINDINGS_PATH = ".pilot/findings.jsonl";
@@ -89,6 +90,21 @@ export interface PageFindings {
    */
   headerInteractiveControls: string[];
   /**
+   * Identical interactive controls repeated inside one landmark — see
+   * `findDuplicateControls`. Exists because the landing hero shipped its CTA
+   * twice on 2026-08-11 and the capture that shows it went unjudged.
+   */
+  duplicateControls: string[];
+  /**
+   * Interactive controls whose text fails WCAG AA against their own
+   * background — see `findLowContrastControls`. Exists because the same PR
+   * turned the drawer's CTA grey-on-blue and nothing in the harness read a
+   * colour.
+   */
+  lowContrastControls: string[];
+  /** How many visible controls the two checks above were computed from. */
+  controlsInspected: number;
+  /**
    * El popup de bienvenida estaba abierto al llegar y se cerró antes de mirar
    * nada. Se registra en vez de silenciarse: si empieza a salir en pantallas
    * donde no debería, esto es lo que lo delata.
@@ -129,6 +145,183 @@ async function findOverflowCulprits(page: Page, viewportWidth: number): Promise<
     }
     return results;
   }, viewportWidth);
+}
+
+/**
+ * Ceiling on how many controls are measured per page. A pathological list
+ * would otherwise put thousands of records through the serialization boundary
+ * for no extra signal — the checks that consume this look for repeats and for
+ * unreadable text, and both show up in the first few hundred.
+ */
+const MAX_CONTROLS_INSPECTED = 400;
+
+/**
+ * Measures every visible interactive control on the page: what it is, where it
+ * sits, and what colour it renders in. The JUDGING lives in `page-audit.ts` as
+ * pure functions — this half only exists because a computed style cannot be
+ * read outside a browser.
+ *
+ * Runs at the same moment as the screenshot, so a failure and its evidence
+ * describe the same frame.
+ */
+async function collectControlSnapshots(page: Page): Promise<ControlSnapshot[]> {
+  return page.evaluate((limit) => {
+    const SELECTOR = 'button, a[href], input[type="submit"], input[type="button"], [role="button"]';
+    const LANDMARKS = 'section, header, footer, main, aside, nav, form, dialog, [role="dialog"]';
+
+    function describeElement(el: Element): string {
+      const cls =
+        typeof el.className === "string" && el.className.trim()
+          ? `.${el.className.trim().split(/\s+/).join(".")}`
+          : "";
+      return `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}${cls}`;
+    }
+
+    function parseColor(value: string): [number, number, number, number] | null {
+      const match = value.match(/rgba?\(([^)]+)\)/);
+      if (!match) return null;
+      const parts = match[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+      if (parts.length < 3 || parts.slice(0, 3).some((n) => !Number.isFinite(n))) return null;
+      const alpha = parts.length >= 4 && Number.isFinite(parts[3]) ? parts[3] : 1;
+      return [parts[0], parts[1], parts[2], alpha];
+    }
+
+    /**
+     * First fully opaque background found walking up from the element, or null
+     * when it cannot be resolved honestly: a gradient or image anywhere in the
+     * chain, a semi-transparent layer, or transparency all the way to the root.
+     * Null means "not judged" — never "fine".
+     */
+    function resolveBackground(el: Element): string | null {
+      let node: Element | null = el;
+      while (node) {
+        const style = getComputedStyle(node);
+        if (style.backgroundImage && style.backgroundImage !== "none") return null;
+        const colour = parseColor(style.backgroundColor);
+        if (colour) {
+          if (colour[3] === 1) return `${colour[0]},${colour[1]},${colour[2]}`;
+          if (colour[3] > 0) return null;
+        }
+        node = node.parentElement;
+      }
+      return null;
+    }
+
+    /**
+     * True when the control sits inside a list, a table row, or a run of at
+     * least TWO identically shaped siblings. A card list with one "Seguir"
+     * button per card is not a duplicated control, it is a list.
+     *
+     * The threshold was three on the first pass and it was wrong: the pilot's
+     * very first real run flagged the two `.cm2-emg` suggestion cards on
+     * Competidores, a list that happened to have exactly two items. Two is
+     * the honest reading — what separates a list from a duplication bug is
+     * not how many copies there are but whether their containers MATCH.
+     *
+     * The cost, stated rather than glossed: a duplication bug that leaves two
+     * *identically shaped* containers behind is now invisible to this check.
+     * The bug it was written for is not that shape (`.lp-hero-form` next to
+     * `.lp-hero-actions` — same buttons, different wrappers), and the
+     * alternative is firing on every two-item card list in the product, which
+     * gets the whole check allow-listed into silence inside a week.
+     */
+    function inRepeatedStructure(el: Element, landmark: Element | null): boolean {
+      let node: Element | null = el;
+      while (node && node !== landmark) {
+        if (/^(li|tr|td|th|option)$/.test(node.tagName.toLowerCase())) return true;
+        const role = node.getAttribute("role");
+        if (role === "listitem" || role === "row" || role === "gridcell") return true;
+        const parent: Element | null = node.parentElement;
+        if (parent) {
+          const shape = `${node.tagName}|${typeof node.className === "string" ? node.className : ""}`;
+          let alike = 0;
+          for (const sibling of parent.children) {
+            const siblingShape = `${sibling.tagName}|${
+              typeof sibling.className === "string" ? sibling.className : ""
+            }`;
+            if (siblingShape === shape) alike += 1;
+          }
+          if (alike >= 2) return true;
+        }
+        node = parent;
+      }
+      return false;
+    }
+
+    const landmarkIds = new Map<Element, string>();
+    const snapshots = [];
+
+    for (const el of document.querySelectorAll(SELECTOR)) {
+      if (snapshots.length >= limit) break;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      const style = getComputedStyle(el);
+      if (style.visibility === "hidden" || style.display === "none") continue;
+
+      const landmark = el.closest(LANDMARKS);
+      let group = "(document)";
+      if (landmark) {
+        let id = landmarkIds.get(landmark);
+        if (!id) {
+          id = `#${landmarkIds.size + 1} ${describeElement(landmark)}`;
+          landmarkIds.set(landmark, id);
+        }
+        group = id;
+      }
+
+      const colour = parseColor(style.color);
+      const text = (el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
+      const name = (el.getAttribute("aria-label") ?? "").trim().replace(/\s+/g, " ").slice(0, 60) || text;
+
+      snapshots.push({
+        describe: `${describeElement(el)}${name ? ` "${name}"` : ""}`,
+        group,
+        tag: el.tagName.toLowerCase(),
+        name,
+        text,
+        classes: typeof el.className === "string" ? el.className.trim() : "",
+        href: el.getAttribute("href") ?? "",
+        inRepeatedStructure: inRepeatedStructure(el, landmark),
+        disabled:
+          el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true",
+        fontSizePx: Number.parseFloat(style.fontSize) || 16,
+        bold: Number(style.fontWeight) >= 700 || style.fontWeight === "bold",
+        // Semi-transparent text would have to be blended against the same
+        // background to be judged; skip it rather than report a wrong ratio.
+        color: colour && colour[3] === 1 ? `${colour[0]},${colour[1]},${colour[2]}` : "",
+        background: resolveBackground(el)
+      });
+    }
+
+    return snapshots;
+  }, MAX_CONTROLS_INSPECTED);
+}
+
+/** The two mechanical control checks, as measured on the page's CURRENT state. */
+export interface ControlAudit {
+  duplicateControls: string[];
+  lowContrastControls: string[];
+  controlsInspected: number;
+}
+
+/**
+ * Runs the duplicate and contrast checks against whatever is on screen right
+ * now. `visitAsUser` calls it on load; a journey calls it directly after
+ * opening something a page load can never show.
+ *
+ * That second use is not decoration. On 2026-08-11 the drawer CTA shipped
+ * grey-on-blue and stayed invisible to 560 captures, because **not one of
+ * them had the drawer open** — it only exists below 900px and only after a
+ * click. A check that only ever runs on the closed state cannot see a defect
+ * that only exists in the open one.
+ */
+export async function auditControls(page: Page): Promise<ControlAudit> {
+  const controls = await collectControlSnapshots(page);
+  return {
+    duplicateControls: findDuplicateControls(controls),
+    lowContrastControls: findLowContrastControls(controls),
+    controlsInspected: controls.length
+  };
 }
 
 function slug(text: string): string {
@@ -395,6 +588,12 @@ export async function visitAsUser(
       });
     });
 
+    // Same reason as the culprits below: `captureFullContent` resizes the
+    // viewport, and both of these checks are viewport-dependent — the drawer
+    // CTA regression only exists below 900px, and a responsive layout can
+    // legitimately show one control at one width and two at another.
+    const controlAudit = await auditControls(page);
+
     // Culprits are measured BEFORE the capture, while the viewport is still
     // the one under test — captureFullContent resizes it and puts it back.
     const overflowCulprits = horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [];
@@ -420,6 +619,7 @@ export async function visitAsUser(
       renderedRealContent,
       expectedContent: expectation?.describedAs ?? null,
       headerInteractiveControls,
+      ...controlAudit,
       dismissedWelcomeTour,
       ...capture
     };
@@ -435,6 +635,32 @@ export async function visitAsUser(
     page.off("console", onConsole);
     page.off("response", onResponse);
   }
+}
+
+/**
+ * Fails on the two mechanical control defects — a control that renders twice,
+ * and a control nobody can read. Separate from `assertPageIsHealthy` so a
+ * journey can also apply it to an OPEN state (a drawer, a modal), which is the
+ * only place some of these defects exist.
+ */
+export function assertControlsAreHealthy(label: string, viewport: string, audit: ControlAudit): void {
+  expect(
+    audit.duplicateControls,
+    `${label} @ ${viewport}: the same control renders more than once inside one landmark. ` +
+      `Real incident (2026-08-11): moving the landing hero's CTA into a client island left the ` +
+      `original behind, so "Analiza gratis" shipped twice — the capture showed it plainly and ` +
+      `nothing failed, because nothing counted. If a repeat is intentional, add it to ` +
+      `DUPLICATE_ALLOW_LIST in tests/pilot/support/page-audit.ts with the reason.`
+  ).toEqual([]);
+
+  expect(
+    audit.lowContrastControls,
+    `${label} @ ${viewport}: interactive text below WCAG AA against its own background. ` +
+      `Real incident (2026-08-11): the mobile drawer's CTA turned grey-on-blue when its element ` +
+      `changed from <button> to <a>, because .lp-mobnav a (0,1,1) beats .lp-cta (0,1,0) — see ` +
+      `.claude/rules/styles.md. If a value is deliberate, add it to CONTRAST_ALLOW_LIST in ` +
+      `tests/pilot/support/page-audit.ts with the reason.`
+  ).toEqual([]);
 }
 
 /**
@@ -473,6 +699,8 @@ export function assertPageIsHealthy(findings: PageFindings): void {
       `(badges/pills only) — docs/brand/design-decisions-log.md §3. Found interactive ` +
       `control(s) inside .ov-sticky-header, which belong in the page body instead.`
   ).toEqual([]);
+
+  assertControlsAreHealthy(findings.label, findings.viewport, findings);
 
   // Deliberately the LAST assertion: the ones above describe a broken screen,
   // this one describes a screen the pilot never got to judge. Both fail the

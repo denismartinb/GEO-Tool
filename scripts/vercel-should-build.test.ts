@@ -110,7 +110,9 @@ describe("vercel-should-build", () => {
     expect(
       decideFor([
         ".claude/rules/scoring.md",
-        ".github/workflows/ux-pilot.yml",
+        // Cualquier workflow MENOS el del piloto: los demás corren por
+        // `push`/`pull_request` y no necesitan un preview para ejercitarse.
+        ".github/workflows/ci.yml",
         "tests/adr-numbering.test.ts"
       ]).code
     ).toBe(SKIP);
@@ -126,6 +128,23 @@ describe("vercel-should-build", () => {
     ]);
     expect(code).toBe(BUILD);
     expect(output).toContain("tests/pilot/support/explore.ts");
+  });
+
+  it("builds when the pilot's own WORKFLOW changes — same argument, one level over", () => {
+    // Esta prueba invierte a propósito lo que este mismo fichero afirmaba
+    // antes (`.github/workflows/ux-pilot.yml` iba en la lista de saltables).
+    // Se cambió porque la suposición costó una pasada: el 2026-08-11 el piloto
+    // se agotó a los 20 min, el commit que subía el techo a 30 sólo tocaba
+    // `.github/` y `docs/`, no hubo build, no hubo preview, y el arreglo del
+    // timeout no se pudo ejercitar (log §55). Un workflow que SÓLO se dispara
+    // con `deployment_status` necesita un deployment igual que lo necesita el
+    // código del piloto.
+    const { code, output } = decideFor([
+      "docs/agentic-user-pilot.md",
+      ".github/workflows/ux-pilot.yml"
+    ]);
+    expect(code).toBe(BUILD);
+    expect(output).toContain(".github/workflows/ux-pilot.yml");
   });
 
   it("skips root-level prose such as CLAUDE.md", () => {

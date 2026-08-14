@@ -8,6 +8,7 @@ import { BrandLogo } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
 import { useTour } from "@/components/tour-provider";
 import { FaviconImg } from "@/components/ui/favicon-img";
+import { avatarInitials as deriveAvatarInitials, showsPlanBadge } from "@/lib/account-chip";
 
 type WorkspaceProject = {
   id: string;
@@ -94,7 +95,7 @@ export function Sidebar({
     return 0;
   }
 
-  const avatarInitials = userEmail.slice(0, 2).toUpperCase();
+  const avatarInitials = deriveAvatarInitials(userEmail);
 
   return (
     <>
@@ -250,7 +251,7 @@ export function Sidebar({
             >
               {userEmail}
             </div>
-            {planId !== "free" && (
+            {showsPlanBadge(planId) && (
               <span className="sb-plan-badge">
                 <Icon name="crown" size={10} />
                 {planName}

@@ -1,3 +1,7 @@
+// PRELAUNCH-HARDENING-1 Fase V (V5). Las hojas que sólo pinta la consola
+// entran por aquí, no por `globals.css`: así no viajan a /blog ni a la
+// landing. Ver la cabecera de `app/console.css` para qué se movió y qué no.
+import "@/app/console.css";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";

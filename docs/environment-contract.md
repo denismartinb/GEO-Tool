@@ -151,6 +151,8 @@ See `docs/adr/0003-sync-scan-execution-and-maxduration.md`.
 | `CRON_SECRET` | Yes, once `CRON_SCANS_ENABLED=true` | Vercel | random secret string; Vercel sends it as `Authorization: Bearer <CRON_SECRET>` to `/api/cron/weekly-scans` |
 | `CRON_SCANS_ENABLED` | No (defaults to disabled) | Vercel | `true` to enable; any other value (or unset) is a no-op kill switch |
 | `MAX_PROJECTS_PER_CRON_RUN` | No (defaults to `5`) | Vercel | positive integer |
+| `MAX_SWEEP_CHAIN_INVOCATIONS` | No (defaults to `20`) | Vercel | positive integer — cuántas veces puede encadenarse el barrido en un mismo disparo de cron (`docs/adr/0016`). El trabajo total por disparo es `MAX_SWEEP_CHAIN_INVOCATIONS × MAX_PROJECTS_PER_CRON_RUN`, así que **multiplica gasto de LLM**. Faltaba en este contrato hasta PRELAUNCH-HARDENING-1 Fase R4; lo detectó `tests/env-drift.test.ts` |
+| `VERCEL_ENV` | La inyecta Vercel | — | `production` \| `preview` \| `development`. No se configura a mano; se documenta porque el código la lee |
 
 The cron only ever processes projects with `projects.recurring_scans_enabled = true`
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).

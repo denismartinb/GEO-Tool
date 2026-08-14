@@ -22,6 +22,14 @@ on:
   push:
     branches:
       - main
+  # A demanda. No es comodidad: el 2026-08-10, en una misma rama y en la misma
+  # tarde, tres pushes (`3bdc8ae`, `47b2d39`, `1257700`) **no dispararon** esta
+  # comprobación y dos (`bf95b9b`, `fda1a2b`) sí. Es intermitente, no
+  # sistemático, y eso lo empeora: la cabeza de un PR puede llegar al Human
+  # Gate sin puerta y sin que nada lo diga, unas veces sí y otras no. Un evento
+  # perdido es recuperable; una puerta que sólo puede dispararla ese evento
+  # perdido, no.
+  workflow_dispatch:
 
 permissions:
   contents: read
