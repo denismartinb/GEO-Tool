@@ -8006,7 +8006,103 @@ lo contrario: allí los tests mockeaban la ruta).
 
 ---
 
-## 83. La analítica mide el efecto, no la causa (SEO-POS-1, S8, 2026-08-14)
+## 83. Auditoría web: catorce componentes salen de la página, y el compilador no era suficiente para demostrarlo (PRELAUNCH-HARDENING-1 Fase R7, primer trozo, 2026-08-14)
+
+**Qué se decidió.** Los componentes de presentación de
+`app/dashboard/projects/[projectId]/web-audit/page.tsx` se van a
+`web-audit/_components/`, en seis módulos por tema:
+
+| Módulo | Qué contiene |
+|---|---|
+| `format.tsx` | `formatDate` |
+| `issue-rows.tsx` | `CHECK_META`, `SEVERITY_META`, `IssueRow`, `PassingRow`, `CheckDot` |
+| `score-tiles.tsx` | `scoreColor`, `ScoreGauge`, `ScoreRing`, `MiniBar`, `SubScoreTile`, `LockedSubScoreTile` |
+| `page-audit-row.tsx` | `PAGE_SKIP_LABELS`, `freshnessLabel`, `PageAuditRow` |
+| `bot-access-card.tsx` | `BOT_ENGINE_LABELS`, `describeSitemap`, `BotAccessCard` |
+| `trend-chart.tsx` | `TrendChartPoint`, `TrendPointMarker`, `TrendChart` |
+
+La página pasa de **1.933 a 1.137 líneas**. Todos son componentes de servidor y
+puros: reciben datos ya calculados y devuelven marcado.
+
+### Lo que esta fase enseña, y no es la extracción
+
+Las fases R anteriores se demostraban con los tests: 2.278 casos, ninguno
+editado. **Aquí eso no demuestra nada** — la pantalla de Auditoría web no tiene
+tests de render, así que el suite verde es compatible con haber roto el marcado
+entero. Y `tsc` tampoco basta: compila igual de bien un componente al que le
+falta una fila.
+
+Así que la comprobación fue otra: **normalizar el fichero original y la suma de
+los siete resultantes —quitando imports y comentarios— y comparar los
+multiconjuntos de líneas**. Cero líneas sólo en el original, cero sólo en el
+nuevo. Es lo más fuerte que se puede afirmar sin navegador, y deja al
+`ux-pilot` la parte que sí necesita ojos.
+
+**Esa comprobación encontró un fallo real que `tsc` y el lint dejaron pasar.**
+Dos de los rangos que copié se solapaban, así que `TrendChartPoint` y
+`TrendPointMarker` acabaron **duplicados** dentro de `bot-access-card.tsx`.
+Compila —declaraciones sin usar en un módulo son legales—, pasa el lint, y
+habría llegado a producción como código muerto en una zona que acabábamos de
+tocar «para dejarla más limpia». La lección: en un refactor de UI, la prueba de
+equivalencia es un paso propio, no un corolario de que el build pase.
+
+**Lo que NO se ha tocado.** Ni una línea de marcado, ni una clase CSS, ni un
+texto. El `WebAuditPage` sigue con ~1.070 líneas de orquestación de datos:
+partirlo es otro trozo, y toca lógica, no presentación.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R7);
+`.claude/rules/web-audit.md` (los invariantes de la zona, ninguno afectado:
+esto no cambia qué se calcula ni qué se pinta).
+
+---
+
+## 84. Visión general dejaba de ser la excepción, y dos ficheros muertos se van (PRELAUNCH-HARDENING-1 Fases R7 y R8, 2026-08-14)
+
+**Qué se decidió.**
+
+1. **Visión general usa `requireActiveProject`** como las otras seis pantallas
+   de proyecto, en vez de repetir a mano el `select` + `is_archived` +
+   `notFound()`.
+2. **`getLLMScanProviders` se importa de `lib/scan/providers.ts`**, que es donde
+   vive, y el reexport de cortesía del ejecutor **se borra** porque ya no lo usa
+   nadie.
+3. **Se borran `lib/supabase/client.ts` (8 líneas) y `lib/types.ts` (29)**: cero
+   importadores, comprobado por ruta de import y no por nombre.
+
+**El detalle que importa del punto 1.** `requireActiveProject` **entra dentro
+del `Promise.all` existente**, no delante. Es una promesa como las otras cuatro,
+así que la Visión general sigue haciendo un solo viaje en paralelo — nada de
+serializar una consulta más antes del lote, que sería deshacer parte de la Fase
+V. De paso desaparece un `created_at` que la página seleccionaba y no leía
+nadie.
+
+**Por qué el punto 2 no es cosmético.** El único importador de
+`getLLMScanProviders` fuera de `lib/scan/` era esa misma página, y lo cogía del
+**ejecutor** — o sea que una pantalla arrastraba el grafo entero del ejecutor
+(LLM, scoring, recomendaciones, notificaciones, auditoría) para pintar dos
+nombres de motor en una línea. `providers.ts` existe desde SAMPLING-1
+precisamente para eso, y su docblock decía «el ejecutor lo reexporta para no
+tocar sitios de llamada»: era cierto y ya no hace falta.
+
+### Dos cosas que el plan pedía y NO se han hecho, con motivo
+
+- **«Unificar `setRecurringScans`/`setAutoWebAudit`»**: `setAutoWebAudit` **ya
+  no existe** — lo retiró WEB-AUDIT-AUTO-SPLIT-1 cuando la migración 0031 jubiló
+  su columna, y su sustituto es `setAutoAuditHalf`. Además, el comentario de
+  `actions.ts` dice explícitamente que la forma de espejo entre las dos es
+  **deliberada** («los interruptores viven uno al lado del otro en /debug y
+  quien los lea no debería tener que aprender tres comportamientos»).
+  Unificarlas sería contradecir una decisión escrita para cumplir una línea de
+  un plan que se quedó vieja.
+- **Partir `WebAuditPage`** (~1.070 líneas de orquestación de datos): toca
+  lógica, no presentación, y no cabe en el mismo PR que la mudanza de §83.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R7, R8); §83 (la
+mudanza de componentes); `lib/scan/providers.ts` (SAMPLING-1, por qué existe).
+
+---
+
+## 85. La analítica mide el efecto, no la causa (SEO-POS-1, S8, 2026-08-14)
 
 **Qué se publica.** `/blog/como-medir-trafico-chatgpt-ga4`, cluster `medicion`.
 Cubre el cluster de keywords nº 8 del plan ("medir tráfico desde ChatGPT en
@@ -8095,7 +8191,7 @@ recupere**. Es el fallo de `/docs/metodologia` del §77 otra vez, un nivel más
 adentro, y el remedio ya existía a diez líneas de distancia: `.art-tablewrap`
 resolvió exactamente esto para las tablas sueltas en la PR #306, deslizamiento
 más pista *"Desliza para ver todas las columnas →"*. Lo que faltaba era que una
-tabla **dentro de una figura** pudiera pedirlo: `<Figure wide>` (log §83).
+tabla **dentro de una figura** pudiera pedirlo: `<Figure wide>` (log §85).
 
 **Por qué esto es un test y no una nota.** Se coló en dos PRs seguidos, y en
 los dos el síntoma fue invisible: la página carga limpia, el piloto la marca ✅
@@ -8196,13 +8292,31 @@ desde el mapa de zonas de CLAUDE.md, que apunta a «log §54» desde dos filas
 distintas y a dos secciones distintas — o sea que la referencia ya no resuelve
 en el documento que la siguiente sesión lee primero.
 
-Esta entrada pasa a **§83**, con todas sus referencias. Las siete heredadas
+Esta entrada pasa a **§85**, con todas sus referencias. Las siete heredadas
 quedan **congeladas como deuda declarada**, no arregladas aquí: renumerar una
 sección ya mergeada rompe las referencias publicadas que la apuntan —el coste
 que `adr-numbering.test.ts` documenta haber pagado con `0026`— y siete
 secciones merecen su propia pasada deliberada, no ir de propina en un PR de
 contenido donde nadie las revisaría. La lista sólo puede encoger y su línea
 base está fijada literalmente, como `COVER_DEBT`.
+
+**Y volvió a pasar cuarenta minutos después, en este mismo PR.** Esta entrada
+era §78, pasó a §83 al fusionar R5/R6 — y R7/R8 reclamó §83 y §84 antes de que
+esta rama llegara al Human Gate, así que acabó en **§85**, con dos merges y dos
+renumerados en dos horas. La segunda vez sí produjo conflicto de git, porque
+los dos bloques cayeron exactamente en el mismo punto; la primera no, que es el
+caso peligroso.
+
+Eso deja claro el **límite del guardián, que su propio comentario ya declara**:
+sólo ve una rama, así que no puede impedir que dos ramas corran a por el mismo
+número libre — sólo garantiza que la que mergee segunda se entere. Con varias
+sesiones agénticas mergeando el mismo día, un número al final del fichero es
+estructuralmente una carrera, y la única solución que la ganaría de verdad es
+no numerar al escribir: un identificador estable (fecha + slug) o asignar el
+número al mergear. **No se hace aquí** — cambia el esquema de referencia de
+todo el histórico y de las decenas de `log §NN` repartidas por el repositorio,
+así que es su propia fase. Queda escrito para que la siguiente sesión que se
+tropiece no vuelva a diagnosticarlo desde cero.
 
 **Arreglo encontrado de camino.** La fecha del pilar `medicion` en el sitemap
 seguía en el 2026-08-03: S6 publicó `metricas-geo-que-medir` sin tocarla,

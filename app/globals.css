@@ -5831,7 +5831,7 @@ select.set-field {
    el fallo del §77, esta vez dentro de una figura. Mismo remedio y misma
    pista que `.art-tablewrap`, que ya lo resolvió para las tablas sueltas.
    El `min-width` es lo que hace que la tabla se deslice en vez de aplastar
-   sus columnas hasta ser ilegibles. Encontrado por el piloto en S8 (log §83). */
+   sus columnas hasta ser ilegibles. Encontrado por el piloto en S8 (log §85). */
 .art-frame-wide { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
 .art-frame-wide table { min-width: 480px; margin-bottom: 0; }
 @media (max-width: 640px) {
@@ -5949,7 +5949,7 @@ select.set-field {
 /* `<CodeBlock wrap>`: un valor único que el lector copia entero. El salto es
    blando —no entra ningún `\n` en el portapapeles—, así que se ve completo y
    se pega en una sola línea. `break-all` porque la cadena no tiene espacios
-   por los que partir (log §83). */
+   por los que partir (log §85). */
 .art-code-wrap pre { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
 
 /* --- Tabla comparativa --------------------------------------------------- */

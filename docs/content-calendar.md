@@ -329,13 +329,13 @@ y su tamaño de muestra.
    como expresión y el test importa ese mismo valor: ya no hay dos versiones que
    puedan diferir.
 
-Detalle de los cuatro: log §83.
+Detalle de los cuatro: log §85.
 
 **Fuentes:** el proxy de salida bloquea `support.google.com` y casi toda la
 cobertura del anuncio, así que nada está verificado contra fuente primaria —
 se triangularon fuentes secundarias coincidentes el 2026-08-14 y el artículo
 publica esa fecha. Misma limitación declarada que con los precios de Otterly.
-Detalle: log §83.
+Detalle: log §85.
 
 ---
 

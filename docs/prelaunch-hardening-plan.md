@@ -21,7 +21,11 @@ una con su Human Gate.
   a sus módulos dueños y `gemini.ts` pasa de 1.278 a 303 líneas), y **el primer
   trozo de R6** (log §81: `processPromptJob` sale del ejecutor, 1.523 → 1.167
   líneas; log §82: se rompe la dependencia de medio repositorio sobre
-  `lib/scan/`, y **R6 queda cerrada**). Quedan R3 y R7–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  `lib/scan/`, y **R6 queda cerrada**), **R7 casi entera** (log §83: los 14
+  componentes de Auditoría web salen de la página; log §84: Visión general deja
+  de ser la excepción) y **el grueso de R8** (log §84: dos ficheros muertos
+  borrados). Quedan R3, partir `WebAuditPage`, y los dos huérfanos restantes de
+  R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
@@ -198,13 +202,26 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   externos quedan 5, todos dependencias legítimas de dominio, y **`lib/llm/**`
   ya no importa nada de `lib/scan`**.
 - **R7 · Páginas** (2 PRs): extraer los ~24 componentes inline de
-  `web-audit/page.tsx` a `web-audit/_components/`; Overview pasa a usar
-  `requireActiveProject` como todas las demás páginas (hoy es la única con
-  ownership check artesanal junto a un `createServiceClient()`); arreglar el
-  import de `getLLMScanProviders` desde `executor` cuando existe
-  `providers.ts` justo para eso; unificar `setRecurringScans`/`setAutoWebAudit`.
-- **R8 · Limpieza de muertos** (1 PR pequeño): `lib/supabase/client.ts` (0
-  importadores — confirmar que es intencional que no haya cliente browser),
+  `web-audit/page.tsx` a `web-audit/_components/` — **hecho** (log §83): 14
+  componentes en 6 módulos, la página de 1.933 a 1.137 líneas. Aviso para el
+  resto de R7: **aquí los tests no demuestran nada** (esa pantalla no tiene
+  tests de render) y `tsc` tampoco — la prueba es comparar los multiconjuntos
+  de líneas del original contra la suma de los resultantes, y eso cazó un
+  bloque duplicado que compilaba y pasaba el lint. **Overview a
+  `requireActiveProject` y el import de `getLLMScanProviders` desde
+  `providers.ts`: hechos** (log §84) — `requireActiveProject` entra DENTRO del
+  `Promise.all` existente, no delante, para no serializar una consulta más; y
+  el reexport de cortesía del ejecutor se borra por muerto. Dos correcciones al
+  plan: Overview no tenía «ownership check artesanal junto a un
+  `createServiceClient()`» (ese cliente es para `reconcileStuckScanRuns` y es
+  legítimo), y **`setAutoWebAudit` ya no existe** — lo retiró
+  WEB-AUDIT-AUTO-SPLIT-1, su sustituto es `setAutoAuditHalf`, y el comentario
+  de `actions.ts` dice que la forma de espejo entre ambos es deliberada. Queda
+  partir `WebAuditPage` (~1.070 líneas de orquestación de datos), que toca
+  lógica y no presentación.
+- **R8 · Limpieza de muertos** (1 PR pequeño): **`lib/supabase/client.ts` y
+  `lib/types.ts` borrados** (log §84) — cero importadores, comprobado por ruta
+  de import y no por nombre. Quedan
   `lib/web-audit/action-plan.ts` (huérfano shipped: decidir re-conectar o
   retirar con nota en el ROADMAP), `updateProfileName` huérfano (log §38).
 

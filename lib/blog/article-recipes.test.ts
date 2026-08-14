@@ -347,7 +347,7 @@ describe("que-es-una-auditoria-geo no publica el reparto de puntos del producto"
 });
 
 /**
- * SEO-POS-1 S8 (log §83) — una figura con tabla dentro tiene que declararse
+ * SEO-POS-1 S8 (log §85) — una figura con tabla dentro tiene que declararse
  * `wide`.
  *
  * `.art-frame` nace con `overflow: hidden`, que es lo correcto para un

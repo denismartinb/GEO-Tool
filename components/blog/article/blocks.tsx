@@ -198,7 +198,7 @@ export function CodeBlock({
    * copiar lo que no se ve, y la pista "Desliza →" sólo sale bajo 640 px, así
    * que en escritorio la cadena aparecía cortada sin nada que dijera que había
    * más. El ajuste es **visual**: un salto blando no mete ningún `\n` en el
-   * portapapeles, así que lo que se pega sigue siendo una sola línea (log §83).
+   * portapapeles, así que lo que se pega sigue siendo una sola línea (log §85).
    */
   wrap?: boolean;
   children: ReactNode;

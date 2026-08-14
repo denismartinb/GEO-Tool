@@ -21,7 +21,7 @@ import type { ReactNode } from "react";
  * vez. Lo encontró el piloto de S8: en 375 px, la última columna de las dos
  * figuras nuevas —la que lleva la conclusión— no existía, y la de S6 llevaba
  * dos días igual. Con `wide`, el marco desliza y anuncia que desliza, igual
- * que `.art-tablewrap` (log §83).
+ * que `.art-tablewrap` (log §85).
  */
 export function Figure({
   label,

@@ -45,12 +45,6 @@ import { gapPendingKey, gapResolvedKey, scanCompletedKey, scanFailedKey } from "
 // caller.
 type PreviousRecommendationRowWithTitle = PreviousRecommendationRow & { title: string };
 
-// Provider resolution moved to lib/scan/providers.ts (SAMPLING-1) so
-// run-creation.ts can size the sampling from the same engine count this
-// module executes with, without importing the executor's whole dependency
-// graph. Re-exported here so existing call sites keep working unchanged.
-export { getLLMScanProviders, type LLMScanProvider } from "@/lib/scan/providers";
-
 /**
  * Recomputes `scan_runs.successful_prompts`/`failed_prompts` from the actual
  * `jobs` rows (SCAN-CHAIN-1) rather than threading a delta count through

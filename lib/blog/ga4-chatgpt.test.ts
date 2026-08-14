@@ -63,7 +63,7 @@ const PROSE = ARTICLE.replace(/\s+/g, " ");
  * expresión (`{GA4_AI_SOURCE_REGEX}`) y el test importa ese mismo valor. Ya no
  * hay dos versiones que puedan diferir. Lo que sí queda por comprobar es que el
  * artículo siga renderizándola desde la constante y no vuelva a incrustar un
- * literal — es la única forma de que el fallo vuelva (log §83).
+ * literal — es la única forma de que el fallo vuelva (log §85).
  */
 function publishedSourceRegex(): string {
   return GA4_AI_SOURCE_REGEX;
@@ -129,7 +129,7 @@ describe("la expresión regular que el artículo le pide al lector que pegue en 
 
   it("va en un bloque que ajusta, porque el lector tiene que copiarla entera", () => {
     // No se puede copiar lo que no se ve, y la pista "Desliza →" sólo sale bajo
-    // 640 px: en escritorio la cadena aparecía cortada y sin aviso (log §83).
+    // 640 px: en escritorio la cadena aparecía cortada y sin aviso (log §85).
     expect(ARTICLE).toMatch(/<CodeBlock\s+wrap\b/);
   });
 });
