@@ -8006,6 +8006,56 @@ lo contrario: allí los tests mockeaban la ruta).
 
 ---
 
+## 83. Auditoría web: catorce componentes salen de la página, y el compilador no era suficiente para demostrarlo (PRELAUNCH-HARDENING-1 Fase R7, primer trozo, 2026-08-14)
+
+**Qué se decidió.** Los componentes de presentación de
+`app/dashboard/projects/[projectId]/web-audit/page.tsx` se van a
+`web-audit/_components/`, en seis módulos por tema:
+
+| Módulo | Qué contiene |
+|---|---|
+| `format.tsx` | `formatDate` |
+| `issue-rows.tsx` | `CHECK_META`, `SEVERITY_META`, `IssueRow`, `PassingRow`, `CheckDot` |
+| `score-tiles.tsx` | `scoreColor`, `ScoreGauge`, `ScoreRing`, `MiniBar`, `SubScoreTile`, `LockedSubScoreTile` |
+| `page-audit-row.tsx` | `PAGE_SKIP_LABELS`, `freshnessLabel`, `PageAuditRow` |
+| `bot-access-card.tsx` | `BOT_ENGINE_LABELS`, `describeSitemap`, `BotAccessCard` |
+| `trend-chart.tsx` | `TrendChartPoint`, `TrendPointMarker`, `TrendChart` |
+
+La página pasa de **1.933 a 1.137 líneas**. Todos son componentes de servidor y
+puros: reciben datos ya calculados y devuelven marcado.
+
+### Lo que esta fase enseña, y no es la extracción
+
+Las fases R anteriores se demostraban con los tests: 2.278 casos, ninguno
+editado. **Aquí eso no demuestra nada** — la pantalla de Auditoría web no tiene
+tests de render, así que el suite verde es compatible con haber roto el marcado
+entero. Y `tsc` tampoco basta: compila igual de bien un componente al que le
+falta una fila.
+
+Así que la comprobación fue otra: **normalizar el fichero original y la suma de
+los siete resultantes —quitando imports y comentarios— y comparar los
+multiconjuntos de líneas**. Cero líneas sólo en el original, cero sólo en el
+nuevo. Es lo más fuerte que se puede afirmar sin navegador, y deja al
+`ux-pilot` la parte que sí necesita ojos.
+
+**Esa comprobación encontró un fallo real que `tsc` y el lint dejaron pasar.**
+Dos de los rangos que copié se solapaban, así que `TrendChartPoint` y
+`TrendPointMarker` acabaron **duplicados** dentro de `bot-access-card.tsx`.
+Compila —declaraciones sin usar en un módulo son legales—, pasa el lint, y
+habría llegado a producción como código muerto en una zona que acabábamos de
+tocar «para dejarla más limpia». La lección: en un refactor de UI, la prueba de
+equivalencia es un paso propio, no un corolario de que el build pase.
+
+**Lo que NO se ha tocado.** Ni una línea de marcado, ni una clase CSS, ni un
+texto. El `WebAuditPage` sigue con ~1.070 líneas de orquestación de datos:
+partirlo es otro trozo, y toca lógica, no presentación.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R7);
+`.claude/rules/web-audit.md` (los invariantes de la zona, ninguno afectado:
+esto no cambia qué se calcula ni qué se pinta).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

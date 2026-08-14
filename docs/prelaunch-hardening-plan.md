@@ -21,7 +21,9 @@ una con su Human Gate.
   a sus módulos dueños y `gemini.ts` pasa de 1.278 a 303 líneas), y **el primer
   trozo de R6** (log §81: `processPromptJob` sale del ejecutor, 1.523 → 1.167
   líneas; log §82: se rompe la dependencia de medio repositorio sobre
-  `lib/scan/`, y **R6 queda cerrada**). Quedan R3 y R7–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  `lib/scan/`, y **R6 queda cerrada**) y **el primer trozo de R7** (log §83:
+  los 14 componentes de Auditoría web salen de la página). Quedan R3, el resto
+  de R7 y R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
@@ -198,7 +200,12 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   externos quedan 5, todos dependencias legítimas de dominio, y **`lib/llm/**`
   ya no importa nada de `lib/scan`**.
 - **R7 · Páginas** (2 PRs): extraer los ~24 componentes inline de
-  `web-audit/page.tsx` a `web-audit/_components/`; Overview pasa a usar
+  `web-audit/page.tsx` a `web-audit/_components/` — **hecho** (log §83): 14
+  componentes en 6 módulos, la página de 1.933 a 1.137 líneas. Aviso para el
+  resto de R7: **aquí los tests no demuestran nada** (esa pantalla no tiene
+  tests de render) y `tsc` tampoco — la prueba es comparar los multiconjuntos
+  de líneas del original contra la suma de los resultantes, y eso cazó un
+  bloque duplicado que compilaba y pasaba el lint; Overview pasa a usar
   `requireActiveProject` como todas las demás páginas (hoy es la única con
   ownership check artesanal junto a un `createServiceClient()`); arreglar el
   import de `getLLMScanProviders` desde `executor` cuando existe
