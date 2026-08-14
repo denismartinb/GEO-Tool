@@ -16,10 +16,10 @@ una con su Human Gate.
   (migración, cifra publicada, superficie de auth).
 - **Fase R 🟡 en curso** — R1, R2 (log §43), **R4** (log §70) y **la primera
   mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`)
-  y **el primer trozo de la segunda** (log §79: los tipos compartidos por los
-  tres motores salen a `lib/llm/contracts.ts`, así que OpenAI y Claude dejan de
-  depender del cliente de Gemini). Quedan R3, el reparto de las nueve
-  funcionalidades a sus módulos dueños, y R6–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  y **R5 entera** (log §79: los tipos compartidos salen a
+  `lib/llm/contracts.ts`; log §80: las cinco funcionalidades de producto se van
+  a sus módulos dueños y `gemini.ts` pasa de 1.278 a 303 líneas). Quedan R3 y
+  R6–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
@@ -172,7 +172,11 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   **Aviso medido**: el reparto no es mecánico. `BusinessProfile` lo usan nueve
   módulos y dos son los otros motores, así que hay un paso previo obligatorio —
   los tipos compartidos a un módulo neutral (`lib/llm/contracts.ts`, log §79) —
-  sin el cual la mudanza nace con ciclos.
+  sin el cual la mudanza nace con ciclos. **Hecho** (log §80): 1.278 → 303
+  líneas, y `gemini.ts` se queda con lo que sí es el motor Gemini, el mismo
+  contenido que `openai.ts` y `claude.ts`. El barril de reexports **se queda a
+  propósito**: seis tests mockean `@/lib/llm/gemini`, así que esa ruta de
+  import es el punto de inyección del suite, no deuda.
 - **R6 · Descargar `lib/scan/executor.ts`** (1–2 PRs): extraer
   `processPromptJob` (L91–418) a `lib/scan/prompt-job.ts`; mover
   `scan/types.ts` + `scan/constants.ts` a `lib/domain/` (rompe las 6

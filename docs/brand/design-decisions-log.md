@@ -7836,6 +7836,68 @@ sigue siendo el siguiente trozo, y ahora sale sin ciclos.
 
 ---
 
+## 80. Las nueve funcionalidades salen del cliente de Gemini, y la costura que las tapaba resulta ser la que mockean seis tests (PRELAUNCH-HARDENING-1 Fase R5, segunda mitad, 2026-08-14)
+
+**Qué se decidió.** Las funcionalidades de producto que vivían dentro de
+`lib/llm/gemini.ts` se van a sus módulos dueños:
+
+| Función | De | A |
+|---|---|---|
+| `auditDomainContent` (+ sus dos tipos) | `lib/llm/gemini.ts` | `lib/web-audit/audit-domain-content.ts` |
+| `inferBusinessProfile`, `inferBrandAliases` | idem | `lib/projects/infer-business-profile.ts` |
+| `suggestCompetitors` (+ `SuggestedCompetitor`) | idem | `lib/competitors/competitor-suggestions-llm.ts` |
+| `suggestPrompts`, `generateAddedPrompts` | idem | `lib/projects/prompt-suggestions-llm.ts` |
+| `rewriteRecommendation` | idem | `lib/recommendations/recommendation-rewrite-llm.ts` |
+
+Se quedan en `gemini.ts` las dos que sí son el motor Gemini —
+`generateGeminiVisibilityAnswer` y `extractGeminiStructuredData`—, que es
+exactamente lo que contienen `lib/llm/openai.ts` y `lib/llm/claude.ts`. El
+fichero pasa de **1.278 líneas a 303**, y el mayor de los ocho módulos de la
+capa se queda en 303.
+
+**Por qué importa más de lo que parece.** No es sólo tamaño: cada una de esas
+funciones tiene una regla de ruta que se inyecta sola al tocar su zona
+(`.claude/rules/web-audit.md`, `competitors.md`, `recommendations.md`).
+Mientras vivían en `lib/llm/gemini.ts`, la regla que se inyectaba era la de
+Gemini y la de su zona no llegaba nunca. Estaban gobernadas por el fichero en
+el que se escribieron, no por el dominio al que pertenecen.
+
+### Lo que se descubrió por el camino: la ruta de import es infraestructura
+
+`lib/llm/gemini.ts` reexporta todo lo que se ha ido, y **eso no es un apaño
+transitorio**. Seis ficheros de test hacen `vi.mock("@/lib/llm/gemini", …)`:
+`business-profile.test.ts`, `add-prompts.test.ts`, `extraction.test.ts`,
+`executor.test.ts`, `domain-coverage.test.ts` y
+`rewrite-recommendation.test.ts`. Esa ruta de import es la costura por la que
+el suite entero sustituye al proveedor. Cambiar los sitios de llamada para que
+apunten al módulo nuevo dejaría esos seis mocks apuntando a un módulo que ya no
+provee nada, y el arreglo sería reescribir tests — que es justo lo que la regla
+de la fase prohíbe («si un slice necesita cambiar un test, es que no era un
+refactor»).
+
+O sea que aquí el barril no es deuda: es el punto de inyección. Quitarlo es una
+decisión de **estrategia de tests** (mockear el cliente HTTP en vez del módulo,
+o inyectar la dependencia), no un efecto colateral de mover código de sitio.
+Queda anotado en el propio `gemini.ts` para que una sesión futura no lo
+«limpie» sin darse cuenta de lo que sostiene.
+
+### Un hallazgo menor, no arreglado
+
+`rewriteRecommendation` no llama a `reportLlmIncident` — es la única de las
+cinco que degrada sin reportar. Se ha movido tal cual, con el hueco intacto: es
+un cambio de comportamiento y no cabe en un refactor. Está en la línea de lo que
+`.claude/rules/gemini.md` ya dice («un `catch` que descarta la causa es un bug»)
+y merece su propio slice.
+
+**Cómo se demuestra que es un refactor.** 2.278 tests, los mismos que antes de
+empezar R5 y sin editar ninguno. Cero cambios en sitios de llamada. Ningún
+export público desaparece.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R5); §78 (el
+transporte); §79 (los tipos compartidos, el paso que hizo posible éste).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
