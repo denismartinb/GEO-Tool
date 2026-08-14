@@ -6,7 +6,7 @@ import {
   LLM_CALL_MAX_ATTEMPTS,
   LLM_CALL_RETRY_BASE_DELAY_MS,
   LLM_CALL_RETRY_MAX_DELAY_MS
-} from "@/lib/scan/constants";
+} from "@/lib/llm/constants";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R5 (primera mitad) — el transporte de Gemini,

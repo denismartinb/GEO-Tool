@@ -22,3 +22,16 @@ export const requireUser = cache(async function requireUser() {
 
   return { supabase, user };
 });
+
+/**
+ * Lo que `requireUser` devuelve: el cliente de Supabase ya autenticado y el
+ * usuario. Es el argumento que atraviesa casi toda la capa de servidor.
+ *
+ * PRELAUNCH-HARDENING-1 Fase R6 (2/2): estaba definido en
+ * `lib/scan/types.ts`, y de ahí lo importaban diecisiete módulos que no tienen
+ * nada que ver con el escaneo — competidores, alias de marca, facturación,
+ * auditoría web, recomendaciones. Era el grueso de la dependencia de medio
+ * repositorio sobre `lib/scan/`, y ni siquiera es un tipo de escaneo: es el
+ * tipo de retorno de la función de esta misma línea (log §82).
+ */
+export type AuthenticatedContext = Awaited<ReturnType<typeof requireUser>>;

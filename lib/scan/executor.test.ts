@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { FINALIZE_LOCK_LEASE_MS, PROMPT_RETRY_DELAY_MS, SCAN_INVOCATION_WORK_BUDGET_MS } from "@/lib/scan/constants";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";

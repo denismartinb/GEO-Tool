@@ -23,7 +23,7 @@ import {
   EXTRACTION_MAX_ATTEMPTS,
   EXTRACTION_RETRY_BASE_DELAY_MS,
   EXTRACTION_RETRY_MAX_DELAY_MS
-} from "@/lib/scan/constants";
+} from "@/lib/llm/constants";
 import {
   auditDomainContent,
   type DomainAuditInput,

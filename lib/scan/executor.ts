@@ -28,7 +28,8 @@ import {
 } from "@/lib/scan/constants";
 import { computeStaggerDelaysMs } from "@/lib/scan/pacing";
 import { triggerScanContinuation } from "@/lib/scan/continuation";
-import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/lib/scan/types";
+import { ProjectActionError, type JobRow } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";

@@ -9,7 +9,7 @@ import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 import { getActionErrorCode } from "@/lib/scan/errors";
 import { launchScan } from "@/lib/scan/launch";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 export type { AddPromptsMode };
 
