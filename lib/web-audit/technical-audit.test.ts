@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { selectCandidateUrls, runTechnicalAuditCore, MAX_AUDIT_PAGES, TECH_AUDIT_TOTAL_BUDGET_MS } from "./technical-audit";
 import * as fetchPageModule from "./fetch-page";
 import * as robotsModule from "./robots";

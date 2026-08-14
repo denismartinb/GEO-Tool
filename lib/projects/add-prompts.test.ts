@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { ProjectActionError } from "@/lib/scan/types";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 

@@ -7731,7 +7731,278 @@ dos veces era correcto: la página **cargaba** bien. Un texto cortado no es un
 fallo de carga. Es el mismo límite que ya está escrito en el histórico —el
 `PASS` es la lista de lo que el piloto vio, no un juicio sobre lo que se ve— y
 la única defensa real sigue siendo mirar las capturas. Esta la encontró el
-fundador antes que yo, mirando su propio móvil.
+fundador antes que yo, mirando su propio móvil
+
+## 78. El cliente de Gemini sale de las nueve funcionalidades que lo tapaban (PRELAUNCH-HARDENING-1 Fase R5, primera mitad, 2026-08-13)
+
+`lib/llm/gemini.ts` tenía **1.278 líneas** y era dos cosas a la vez: el cliente
+HTTP de un proveedor y **nueve funcionalidades de producto** —el escaneo, la
+auditoría web, la extracción, el perfil de negocio, los alias de marca, los
+competidores sugeridos, dos generadores de prompts y la reescritura de
+recomendaciones—. Cada una de esas nueve tiene su módulo dueño en otro sitio.
+
+Este slice mueve **sólo el transporte** a `lib/llm/gemini-client.ts` (231
+líneas): la URL, el modelo fijado y su validación, los mensajes de error por
+estado, el `fetch` con reintentos de LLM-RESILIENCE-1, el mapeo a error
+categorizado, y las dos formas de pedir JSON (normal y con *grounding*).
+`gemini.ts` baja a 1.084 y **no cambia ni un export público**: reexporta
+`GeminiTimeoutError` y `GeminiConfigError`, así que ningún sitio de llamada se
+entera. Repartir las nueve funcionalidades es el siguiente slice, y sale mucho
+más pequeño ahora que cada una depende de un cliente limpio en vez del fichero
+entero.
+
+Lo que R2 ya unificó (`delay`, `fetchWithTimeout`, compartidos con OpenAI y
+Claude) sigue donde estaba; esto es lo que es específico de Gemini.
+
+### Lo que enseñó el intento de usar el accesor de R4
+
+Aproveché el traslado para leer `GEMINI_MODEL` y `GEMINI_API_KEY` por
+`serverEnv()`, el accesor tipado que acababa de entrar en R4. Parecía la
+continuación natural de la fase anterior. **No lo es, y el test lo cazó al
+instante**: `serverEnv()` cachea el entorno en el primer acceso, así que
+enrutar por él una variable que hoy se lee fresca en cada llamada cambia
+*cuándo* se observa un valor. `gemini.test.ts` cambia `GEMINI_MODEL` entre
+casos y falló con un tipo de error que no era el esperado.
+
+La regla de la fase es explícita —«si un slice necesita cambiar un test, es que
+no era un refactor y se para»— así que se revirtió, no se tocó el test. Queda
+como invariante para todos los sitios de adopción que faltan: **adoptar
+`serverEnv()` es una decisión propia con su propio análisis, nunca un efecto
+colateral de mover código de sitio.** El accesor cachea a propósito (una
+función serverless tiene el entorno fijo), pero eso lo hace inadecuado
+justamente donde algo espera releer.
+
+### Una inconsistencia conservada, no arreglada
+
+Ante la MISMA condición —falta `GEMINI_API_KEY`— `generateGeminiJson` lanza
+`ExtractionError("config", …)` y `generateGroundedGeminiJson` lanza
+`GeminiConfigError`. Dos tipos distintos para el mismo fallo, y quien los
+captura los trata distinto. Se deja como está porque esto es un refactor y
+unificarlo cambiaría qué error ve un caller en producción. Queda anotado en el
+propio código y aquí, para decidirlo aparte.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R5); §70 (R4 y su
+accesor); §43 (R1 y R2); log §56 y `.claude/rules/gemini.md` (de dónde sale el
+`fetch` con reintentos que se mueve intacto).
+
+---
+
+## 79. Los tres motores compartían una forma de respuesta que vivía dentro de uno de ellos (PRELAUNCH-HARDENING-1 Fase R5, segunda mitad, primer trozo, 2026-08-14)
+
+**Qué se decidió.** Los cuatro tipos que cruzan la capa de LLM
+—`GeminiVisibilityResponse`, `GeminiStructuredExtractionResponse`,
+`BusinessProfile`, `HomepageEvidenceInput`— y la función pura
+`otherBrandsRelevanceHint` salen de `lib/llm/gemini.ts` a un módulo neutral,
+`lib/llm/contracts.ts`. `lib/llm/openai.ts` y `lib/llm/claude.ts` dejan de
+importar del cliente de Gemini.
+
+**Por qué, y por qué antes de mover las nueve funciones.** La segunda mitad de
+R5 —repartir las nueve funcionalidades de producto a sus módulos dueños— parecía
+mecánica y no lo era. `BusinessProfile` lo usan nueve módulos, y dos de ellos
+son **los otros dos motores**: `openai.ts` y `claude.ts` abrían con
+
+```ts
+import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, … } from "@/lib/llm/gemini";
+```
+
+Eso no es una casualidad de imports: los tres motores devuelven la misma forma
+de respuesta —es exactamente lo que permite que `lib/scan/executor.ts` los trate
+igual— y esa forma estaba definida dentro de uno de los tres. El cliente de un
+proveedor era dependencia de sus dos competidores. Mientras eso siguiera así,
+cualquier mudanza dentro de `gemini.ts` arrastraba a OpenAI y a Claude, y la
+segunda mitad de R5 nacía con ciclos garantizados. Primero se le da casa neutral
+a lo compartido; luego se reparte lo que no lo es.
+
+**Lo que NO se hizo, y por qué.** `GeminiVisibilityResponse` describe la
+respuesta de los tres motores, no la de Gemini: el nombre miente. Renombrarlo
+toca ~15 ficheros por un motivo puramente cosmético, así que se conserva tal
+cual y queda anotado aquí y en el propio módulo. Un refactor que además renombra
+deja de poder demostrarse por los tests.
+
+**Cómo se demuestra que es un refactor.** `gemini.ts` reexporta los cinco
+símbolos, así que ningún sitio de llamada estaba obligado a cambiar —
+`gemini.test.ts` importa `otherBrandsRelevanceHint` de ahí y no se ha tocado.
+Los importadores que sí se movieron a `contracts.ts` (los dos motores, el
+executor, extracción, competidores, perfil de negocio, prompts) son cambios de
+ruta de import, no de código. 2.278 tests, los mismos que antes y sin editar
+ninguno.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R5); §78 (la
+primera mitad, el transporte); la regla de la fase —«si un slice necesita
+cambiar un test, es que no era un refactor»— es la que impidió renombrar aquí.
+
+**Pendiente.** El reparto de las nueve funcionalidades a sus módulos dueños
+sigue siendo el siguiente trozo, y ahora sale sin ciclos.
+
+---
+
+## 80. Las nueve funcionalidades salen del cliente de Gemini, y la costura que las tapaba resulta ser la que mockean seis tests (PRELAUNCH-HARDENING-1 Fase R5, segunda mitad, 2026-08-14)
+
+**Qué se decidió.** Las funcionalidades de producto que vivían dentro de
+`lib/llm/gemini.ts` se van a sus módulos dueños:
+
+| Función | De | A |
+|---|---|---|
+| `auditDomainContent` (+ sus dos tipos) | `lib/llm/gemini.ts` | `lib/web-audit/audit-domain-content.ts` |
+| `inferBusinessProfile`, `inferBrandAliases` | idem | `lib/projects/infer-business-profile.ts` |
+| `suggestCompetitors` (+ `SuggestedCompetitor`) | idem | `lib/competitors/competitor-suggestions-llm.ts` |
+| `suggestPrompts`, `generateAddedPrompts` | idem | `lib/projects/prompt-suggestions-llm.ts` |
+| `rewriteRecommendation` | idem | `lib/recommendations/recommendation-rewrite-llm.ts` |
+
+Se quedan en `gemini.ts` las dos que sí son el motor Gemini —
+`generateGeminiVisibilityAnswer` y `extractGeminiStructuredData`—, que es
+exactamente lo que contienen `lib/llm/openai.ts` y `lib/llm/claude.ts`. El
+fichero pasa de **1.278 líneas a 303**, y el mayor de los ocho módulos de la
+capa se queda en 303.
+
+**Por qué importa más de lo que parece.** No es sólo tamaño: cada una de esas
+funciones tiene una regla de ruta que se inyecta sola al tocar su zona
+(`.claude/rules/web-audit.md`, `competitors.md`, `recommendations.md`).
+Mientras vivían en `lib/llm/gemini.ts`, la regla que se inyectaba era la de
+Gemini y la de su zona no llegaba nunca. Estaban gobernadas por el fichero en
+el que se escribieron, no por el dominio al que pertenecen.
+
+### Lo que se descubrió por el camino: la ruta de import es infraestructura
+
+`lib/llm/gemini.ts` reexporta todo lo que se ha ido, y **eso no es un apaño
+transitorio**. Seis ficheros de test hacen `vi.mock("@/lib/llm/gemini", …)`:
+`business-profile.test.ts`, `add-prompts.test.ts`, `extraction.test.ts`,
+`executor.test.ts`, `domain-coverage.test.ts` y
+`rewrite-recommendation.test.ts`. Esa ruta de import es la costura por la que
+el suite entero sustituye al proveedor. Cambiar los sitios de llamada para que
+apunten al módulo nuevo dejaría esos seis mocks apuntando a un módulo que ya no
+provee nada, y el arreglo sería reescribir tests — que es justo lo que la regla
+de la fase prohíbe («si un slice necesita cambiar un test, es que no era un
+refactor»).
+
+O sea que aquí el barril no es deuda: es el punto de inyección. Quitarlo es una
+decisión de **estrategia de tests** (mockear el cliente HTTP en vez del módulo,
+o inyectar la dependencia), no un efecto colateral de mover código de sitio.
+Queda anotado en el propio `gemini.ts` para que una sesión futura no lo
+«limpie» sin darse cuenta de lo que sostiene.
+
+### Un hallazgo menor, no arreglado
+
+`rewriteRecommendation` no llama a `reportLlmIncident` — es la única de las
+cinco que degrada sin reportar. Se ha movido tal cual, con el hueco intacto: es
+un cambio de comportamiento y no cabe en un refactor. Está en la línea de lo que
+`.claude/rules/gemini.md` ya dice («un `catch` que descarta la causa es un bug»)
+y merece su propio slice.
+
+**Cómo se demuestra que es un refactor.** 2.278 tests, los mismos que antes de
+empezar R5 y sin editar ninguno. Cero cambios en sitios de llamada. Ningún
+export público desaparece.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R5); §78 (el
+transporte); §79 (los tipos compartidos, el paso que hizo posible éste).
+
+---
+
+## 81. El ejecutor del escaneo mezclaba la campaña con el trabajo de un solo prompt (PRELAUNCH-HARDENING-1 Fase R6, primer trozo, 2026-08-14)
+
+**Qué se decidió.** `processPromptJob` —con `callProvider` y sus dos tipos de
+resultado— sale de `lib/scan/executor.ts` a `lib/scan/prompt-job.ts`. El
+ejecutor pasa de **1.523 a 1.167 líneas**.
+
+**Por qué.** El fichero operaba en dos niveles a la vez. Por un lado la
+campaña: reclamar lotes de jobs, repartir el presupuesto de la invocación,
+finalizar la ronda, puntuar, notificar. Por otro **el trabajo de un prompt**:
+las transiciones de estado del job, una llamada por motor con sus rondas de
+reintento compartidas, la inserción de un resultado por motor que responde, el
+registro. Lo segundo es exactamente lo que se abre cuando hay que depurar por
+qué un prompt concreto falló, y estaba enterrado en medio de lo primero.
+
+**Lo que se conserva, dicho explícitamente**, porque `.claude/rules/scan.md`
+aplica entera y esto es una mudanza: el reintento acotado por rondas, el
+criterio de que un motor mal configurado no tumba a los que funcionan, y que el
+job tiene éxito si al menos un motor produce resultado.
+
+**Un duplicado que muere de paso.** `executor.ts` definía su propio `delay`,
+idéntico carácter por carácter al de `lib/llm/http.ts` (que nació en R2
+precisamente para dejar de tener tres copias de esto). Ahora los dos módulos
+usan el de `http.ts`.
+
+**Los mocks siguen funcionando sin tocarlos, y por qué.** `executor.test.ts`
+mockea `@/lib/llm/gemini`, `@/lib/llm/claude` y `@/lib/llm/openai`. Esos mocks
+son de registro de módulos, no del importador, así que siguen aplicando aunque
+ahora quien importe a los tres motores sea `prompt-job.ts` y no el ejecutor.
+Es la diferencia con el caso de §80 —allí lo mockeado era el módulo del que
+salía el código, aquí lo que se mockea son sus dependencias— y merece quedar
+escrito porque de fuera parecen el mismo problema.
+
+**Cómo se demuestra que es un refactor.** 2.278 tests, los mismos, sin editar
+ninguno. `executor.test.ts` tiene 45 casos y todos pasan sin cambios.
+
+**Pendiente de R6.** Mover `lib/scan/types.ts` y `lib/scan/constants.ts` a
+`lib/domain/`. Medido: **26 ficheros fuera de `lib/scan/` los importan**, nueve
+de ellos tests, y entre ellos está `lib/llm/gemini-client.ts` — o sea que hoy
+el transporte de un proveedor de LLM depende del módulo de escaneo. La
+inversión es real y vale la pena, pero es un slice propio: un shim de
+reexports en `lib/scan/` no rompería nada, porque la dependencia seguiría
+existiendo a través del shim.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R6);
+`.claude/rules/scan.md` (los invariantes que la mudanza conserva); §80 (el
+caso de mocking que NO es éste).
+
+---
+
+## 82. La dependencia de medio repositorio sobre `lib/scan/` eran tres símbolos, no dos ficheros (PRELAUNCH-HARDENING-1 Fase R6, segunda mitad, 2026-08-14)
+
+**Qué decía el plan.** «Mover `scan/types.ts` + `scan/constants.ts` a
+`lib/domain/` (rompe las 6 dependencias mutuas sobre `lib/scan`)». Dos cifras
+mal y, lo importante, **la solución equivocada**.
+
+**Lo que había de verdad.** 26 ficheros fuera de `lib/scan/` importaban de esos
+dos módulos. Al mirar *qué* importaba cada uno, toda la dependencia se reduce a:
+
+| Símbolo | Importadores externos | Dónde vive ahora |
+|---|---|---|
+| `AuthenticatedContext` | 17 | `lib/auth.ts` |
+| 8 constantes de llamada a LLM (`EXTRACTION_CALL_TIMEOUT_MS`, `EXTRACTION_MAX_ATTEMPTS`, `EXTRACTION_RETRY_BASE_DELAY_MS`, `EXTRACTION_RETRY_MAX_DELAY_MS`, `LLM_CALL_MAX_ATTEMPTS`, `LLM_CALL_RETRY_BASE_DELAY_MS`, `LLM_CALL_RETRY_MAX_DELAY_MS`, `LLM_INCIDENT_DEDUPE_MINUTES`) | 7 | `lib/llm/constants.ts` |
+| `ProjectActionError` | 2 (ambos tests) | se queda en `lib/scan/types.ts` |
+
+**Por qué mover los ficheros enteros habría sido peor que no hacer nada.**
+`lib/scan/constants.ts` tiene 466 líneas y el 95% es ciclo de vida del escaneo:
+leases, timeouts de reconciliación, resúmenes de error, topes de reintento
+automático. Llevarlo a `lib/domain/` habría metido todo eso en un módulo
+«neutral» por culpa de ocho vecinas — y no habría roto ninguna dependencia,
+sólo cambiado su nombre. Y `AuthenticatedContext` no es un tipo de escaneo en
+absoluto: es `Awaited<ReturnType<typeof requireUser>>`, o sea el tipo de
+retorno de una función de `lib/auth.ts`. Estaba en el sitio equivocado desde el
+principio; diecisiete módulos —facturación, competidores, alias de marca,
+auditoría web, recomendaciones— importaban del escaneo por eso y sólo por eso.
+
+**El resultado medido.** De 26 ficheros externos quedan 5, y los cinco son
+dependencias legítimas de dominio, no de capas: `MAX_REAL_SCAN_PROMPTS` (un
+tope de escaneo que lee el alta de prompts), `EXTRACTION_VERSION` (una versión
+de escaneo que lee la puntuación) y `ProjectActionError` en dos tests. Y lo que
+importa de verdad: **`lib/llm/**` ya no importa nada de `lib/scan`**. La capa
+de LLM no tiene por qué saber que existe un escaneo; el escaneo sí sabe que
+llama a LLMs.
+
+**`lib/domain/` no hace falta.** Se descarta como destino: cada símbolo tenía
+un dueño natural, y un módulo llamado «domain» habría sido el sitio donde
+acaban las cosas que nadie quiso clasificar.
+
+**Lo que se conserva a propósito.** `EXTRACTION_CONCURRENCY` acota cuántas filas
+procesa una pasada del escaneo, no cómo se comporta una llamada: es del escaneo
+y se queda. `ProjectActionError` tiene vocabulario de escaneo
+(`active_run_exists`, `scan_failed`, `no_engines_enabled`) y diez de sus doce
+usuarios están en `lib/scan/`: se queda. El barril `lib/scan/scan-runner.ts`
+sigue reexportando los ocho símbolos movidos, para no cambiar su superficie
+pública y no tocar `scan-runner.test.ts`.
+
+**Sobre tocar ficheros de test.** Nueve de los 23 ficheros cambiados son tests,
+y en todos el cambio es **la ruta de un import**: ni una aserción, ni un mock,
+ni un caso. La regla de la fase —«si un slice necesita cambiar un test, es que
+no era un refactor»— apunta a cambios de expectativa, y aquí no hay ninguno:
+2.278 tests, los mismos de siempre. Dicho explícitamente porque la distinción
+es fina y la próxima sesión merece saber dónde se puso la raya.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R6); §81 (el
+primer trozo); §80 (el caso en el que el barril SÍ había que conservarlo, por
+lo contrario: allí los tests mockeaban la ruta).
 
 ---
 

@@ -92,6 +92,29 @@ worse than no rule, because a future session will obey it anyway.
   makes that figure a lie (`docs/adr/0029`, Fase C). Counters must be measured
   from real rows; a split between stages may be a presentation convention, but
   no number under it may be invented.
+- **El trabajo de UN prompt vive en `lib/scan/prompt-job.ts`, no en el
+  ejecutor.** `executor.ts` opera la campaña —reclamar lotes, presupuesto de la
+  invocación, finalizar, puntuar, notificar— y `prompt-job.ts` opera un job:
+  transiciones de estado, una llamada por motor con reintentos compartidos,
+  inserción de resultados y registro. Estaban en el mismo fichero de 1.523
+  líneas, y lo segundo es justo lo que se abre para depurar por qué falló un
+  prompt concreto (log §81). Trabajo nuevo por prompt va ahí; trabajo nuevo por
+  campaña, en el ejecutor — y en ambos casos se presupuesta contra la
+  invocación, no contra sí mismo.
+- **`lib/scan/` es una feature, no el vocabulario común del repositorio.** Si un
+  símbolo de aquí lo importan módulos que no escanean —facturación, auditoría
+  web, competidores— casi siempre es que está en el sitio equivocado, no que la
+  dependencia sea legítima. `AuthenticatedContext` vivía en `scan/types.ts` y lo
+  importaban diecisiete módulos ajenos, siendo como es el tipo de retorno de
+  `requireUser` (`lib/auth.ts`); las constantes de UNA llamada a un LLM vivían
+  en `scan/constants.ts` y hacían que el transporte de un proveedor dependiera
+  del escaneo (`lib/llm/constants.ts`, log §82). La dirección correcta es
+  siempre la misma: **el escaneo sabe que llama a LLMs; la capa de LLM no tiene
+  por qué saber que existe un escaneo.** Antes de añadir un símbolo a
+  `scan/types.ts` o `scan/constants.ts`, preguntar quién más va a importarlo. Y
+  la salida NO es un módulo `lib/domain/` genérico: cada símbolo tiene un dueño
+  natural, y un cajón llamado «domain» es donde acaban las cosas que nadie
+  quiso clasificar.
 - **Terminal states stay terminal, and progress must bump `updated_at`.** Any
   path that defers work instead of finishing it must write to `scan_runs` so
   `reconcileStuckScanRuns` can tell a deferring run from a stalled one

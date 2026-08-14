@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { addBrandAliasCore, removeBrandAliasCore } from "./manage-brand-aliases";
 
 type SupabaseClient = AuthenticatedContext["supabase"];

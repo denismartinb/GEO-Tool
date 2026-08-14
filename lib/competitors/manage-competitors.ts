@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { normalizeDomain } from "@/lib/domains/brand-domain";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 /**
  * Core logic behind competitor management (COMP-REDESIGN-1) — alta/edición/
