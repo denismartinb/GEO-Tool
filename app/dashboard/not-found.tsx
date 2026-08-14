@@ -19,6 +19,13 @@ import { Icon } from "@/components/ui/icon";
  * la ruta no existe. Con un botón suelto debajo y el resto de la pantalla en
  * blanco, leía como una maqueta a medias.
  *
+ * «Ver mis dominios» apunta a `/dashboard/domains`, no a `/dashboard/projects`.
+ * Esta última es la pantalla de gestión pre-DOMAINS-REDESIGN-1 (archivar /
+ * restaurar) — sigue viva porque `/dashboard/projects` archiva de verdad, pero
+ * ya no es la puerta de entrada de la consola. `/dashboard/domains` sí lo es
+ * desde esa fase: es donde alguien perdido debe aterrizar (fundador,
+ * 2026-08-13, probando el preview).
+ *
  * Ahora es un bloque centrado en el área de contenido, con las piezas de la
  * propia consola (`.btn`, `Icon`, los tokens de tinta) y sin caja: en una
  * pantalla por lo demás vacía, una caja alrededor de un mensaje corto es
@@ -44,7 +51,7 @@ export default function DashboardNotFound() {
       </p>
 
       <div className="nfc-actions">
-        <Link href="/dashboard/projects" className="btn btn-primary">
+        <Link href="/dashboard/domains" className="btn btn-primary">
           Ver mis dominios
         </Link>
         <Link href="/dashboard" className="btn btn-ghost">

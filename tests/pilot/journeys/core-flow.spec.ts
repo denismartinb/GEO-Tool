@@ -425,5 +425,14 @@ test("un proyecto que no existe da el 404 de la consola, no el de marketing", as
   // La consola sigue alrededor: el menú lateral es lo que permite salir de
   // aquí sin usar el botón de atrás del navegador.
   await expect(page.locator("aside.sb")).toBeVisible();
-  await expect(page.locator(".nfc-actions a").first()).toBeVisible();
+
+  // "Ver mis dominios" tiene que llevar a la puerta de entrada real de la
+  // consola. El fundador cazó a mano que apuntaba a /dashboard/projects
+  // (la pantalla de archivar/restaurar de antes de DOMAINS-REDESIGN-1, no la
+  // actual) probando el preview — el propio test sólo comprobaba visibilidad,
+  // no destino, y por eso no lo vio venir (2026-08-13).
+  await expect(page.getByRole("link", { name: /ver mis dominios/i })).toHaveAttribute(
+    "href",
+    "/dashboard/domains"
+  );
 });

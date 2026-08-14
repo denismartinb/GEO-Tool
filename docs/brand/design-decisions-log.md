@@ -6132,6 +6132,17 @@ el mismo PR que lo agotó, en vez de dejar la trampa armada para el siguiente qu
 añada un journey. Lo que **no** se arregló, y queda anotado: nada avisa cuando
 la pasada se acerca al tope; el aviso es que un día no publique.
 
+**«Ver mis dominios» apuntaba a la pantalla equivocada, y lo cazó el fundador
+probando el preview, no el piloto.** El botón llevaba a `/dashboard/projects`
+—la pantalla de archivar/restaurar de antes de DOMAINS-REDESIGN-1— en vez de a
+`/dashboard/domains`, la puerta de entrada real de la consola desde esa fase.
+El test del piloto sólo comprobaba que el primer enlace del bloque fuera
+visible, nunca a dónde apuntaba, así que una etiqueta correcta con un destino
+equivocado le pasó por delante sin que nada lo marcara. Corregido el enlace y
+reforzado el test: ahora asevera el `href` de «Ver mis dominios» por su nombre
+accesible, no por posición. La lección, otra vez: un checklist que sólo mira
+"¿está ahí?" no ve "¿lleva a donde dice?".
+
 **Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
 testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
 unitario y no puede tenerlo hoy**. La verificación real es el `ux-pilot`
