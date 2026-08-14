@@ -133,7 +133,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Mentio; TrendSights descartada) | 3 — Herramientas | `comparativas` | ✅ Publicado | #(este) |
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | ✅ Publicado | #(este) |
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | ✅ Publicado | #(este) |
-| S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
+| S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | ✅ Publicado | #(este) |
 | S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | 🔲 Pendiente | — |
 | S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
 | S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
@@ -275,6 +275,24 @@ el artículo de métricas, la doc de metodología, el glosario y **la landing
 había abierto el piloto (estaba en el fixture y no en el journey) y cuatro
 artículos declaraban portada pero renderizaban el degradado con icono en su
 propia cabecera. Los dos corregidos, los dos con test nuevo.
+
+**S7 — hecho (2026-08-14).** `/blog/como-aparecer-en-perplexity`, cluster
+`playbooks`. Task Intake previo: el borrador inicial iba a anunciar Perplexity
+"próximamente disponible" en Genscore, y el fundador lo frenó — no hay fecha ni
+decisión de producto real detrás, y decirlo habría repetido el mismo error que
+PRICING-TRUTH-1 ya corrigió (`docs/launch-plan.md:361-378`). Investigación de
+código previa a escribir (motor nuevo = migración de esquema + ADR de scoring +
+subir el cap de motores de los planes, las tres cosas en Forbidden Without
+Explicit Approval) confirmó que comprometer una fecha sin esa decisión habría
+sido publicidad sin base. El fundador eligió "S7 sin la promesa".
+
+La pieza trata Perplexity como **tema de mercado**, no como feature: qué lo
+diferencia de Google y de un chat conversacional (respuestas con cita numerada
+anclada a cada afirmación, no solo mención), qué mueve de verdad que te cite, y
+un `Verdict` explícito de que Genscore no lo mide hoy, sin fecha. Añadido a
+`ALLOWED_TO_MENTION_PERPLEXITY` con la justificación en el propio test — es el
+único slug de esa lista, porque es el único artículo cuyo propósito es hablar
+de ese motor.
 
 ---
 
