@@ -305,6 +305,13 @@ compila, que captura los seis asistentes que el texto nombra, que no captura
 puntos van escapados. Además exige que toda cifra de tercero lleve su `source`
 y su tamaño de muestra.
 
+**Arreglo que salió de mirar las capturas del piloto** (no de su tabla, que dio
+✅ en las tres anchuras): en 375 px las dos figuras nuevas perdían su última
+columna —la que lleva la conclusión— y la Figura 2 de `metricas-geo-que-medir`
+llevaba dos días igual desde S6. `.art-frame` recorta en vez de deslizar, que
+es correcto para un SVG y pésimo para una tabla. Nuevo `<Figure wide>`, con
+test que lo exige en cualquier figura que contenga una tabla. Detalle: log §78.
+
 **Fuentes:** el proxy de salida bloquea `support.google.com` y casi toda la
 cobertura del anuncio, así que nada está verificado contra fuente primaria —
 se triangularon fuentes secundarias coincidentes el 2026-08-14 y el artículo

@@ -345,3 +345,55 @@ describe("que-es-una-auditoria-geo no publica el reparto de puntos del producto"
     expect(source).not.toMatch(/\b85\s*puntos\b/i);
   });
 });
+
+/**
+ * SEO-POS-1 S8 (log §78) — una figura con tabla dentro tiene que declararse
+ * `wide`.
+ *
+ * `.art-frame` nace con `overflow: hidden`, que es lo correcto para un
+ * `ProductMock` o un SVG y lo peor posible para una tabla: la columna que no
+ * cabe **desaparece sin dejar forma de alcanzarla**. Es el fallo de
+ * `/docs/metodologia` del §77, esta vez dentro de una figura, y es
+ * completamente invisible en revisión — la página carga limpia, el piloto la
+ * marca ✅ en las tres anchuras, y la columna que falta suele ser justo la que
+ * lleva la conclusión de la figura.
+ *
+ * Se descubrió mirando las capturas de S8, con las dos figuras nuevas
+ * recortadas en 375 px y la Figura 2 de `metricas-geo-que-medir` llevando dos
+ * días igual. Que se colara en dos PRs seguidos es la razón de que esto sea un
+ * test y no una nota en la regla de ruta.
+ */
+describe("las figuras con tabla dentro se declaran wide", () => {
+  /** Bloques `<Figure …> … </Figure>` de un MDX, con su etiqueta de apertura. */
+  function figures(source: string): { open: string; body: string }[] {
+    return [...source.matchAll(/<Figure\b([\s\S]*?)>([\s\S]*?)<\/Figure>/g)].map((m) => ({
+      open: m[1],
+      body: m[2]
+    }));
+  }
+
+  /** Una tabla de markdown se reconoce por su fila separadora (`| --- | --- |`). */
+  function hasMarkdownTable(body: string): boolean {
+    return /^\s*\|[\s|:-]*-{3,}[\s|:-]*\|\s*$/m.test(body);
+  }
+
+  for (const post of BLOG_POSTS) {
+    it(`ninguna figura con tabla se queda sin scroll: ${post.slug}`, () => {
+      const offenders = figures(readArticle(post.slug))
+        .filter((f) => hasMarkdownTable(f.body) && !/\bwide\b/.test(f.open))
+        .map((f) => f.open.replace(/\s+/g, " ").trim().slice(0, 80));
+      expect(
+        offenders,
+        `${post.slug}: figura con tabla y sin \`wide\`. En móvil la última columna se ` +
+          "pierde y no hay gesto que la recupere — el marco recorta, no desliza."
+      ).toEqual([]);
+    });
+  }
+
+  it("el detector distingue una figura con tabla de una sin ella", () => {
+    const conTabla = '<Figure label="F1." caption="c">\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n\n</Figure>';
+    const sinTabla = '<Figure label="F2." caption="c">\n  <ShareOfVoice brands={x} total="y" />\n</Figure>';
+    expect(figures(conTabla).map((f) => hasMarkdownTable(f.body))).toEqual([true]);
+    expect(figures(sinTabla).map((f) => hasMarkdownTable(f.body))).toEqual([false]);
+  });
+});

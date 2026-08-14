@@ -91,6 +91,14 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   `article-imagery-policy`). Cada imagen es una captura que prueba la
   afirmación, un ejemplo enmarcado del patrón que se enseña, o una tarjeta de
   dato con su fuente. Si una imagen no prueba nada, no va.
+- **Una figura cuyo contenido es una tabla se declara `<Figure wide>`.**
+  `.art-frame` nace con `overflow: hidden` —correcto para un `ProductMock` o un
+  SVG, pésimo para una tabla: la columna que no cabe desaparece sin dejar gesto
+  que la recupere, y suele ser la que lleva la conclusión de la figura. Es el
+  fallo de `/docs/metodologia` del §77 un nivel más adentro. Se coló en dos PRs
+  seguidos porque no tiene síntoma —la página carga limpia y el piloto la marca
+  ✅— así que lo vigila `article-recipes.test.ts`, que busca la fila separadora
+  de una tabla dentro de un `<Figure>` y exige `wide` (log §78).
 - **Declarar la portada no es enseñarla.** `BlogCover` sólo pinta la imagen si
   recibe `image`; sin esa prop cae al degradado con icono, que es el respaldo
   de los artículos *sin* portada — "un icono de algo que no carga bien", el

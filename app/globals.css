@@ -5825,6 +5825,22 @@ select.set-field {
   position: relative; background: var(--brand-surface); border: 1px solid var(--line);
   border-radius: 14px; padding: 26px; box-shadow: var(--brand-shadow-card); overflow: hidden;
 }
+/* Figura cuyo contenido es una tabla (`<Figure wide>`). El `overflow: hidden`
+   de arriba recorta bien un degradado contra el radio del borde y recorta
+   fatal una tabla: lo que no cabe se pierde y no hay gesto que lo devuelva —
+   el fallo del §77, esta vez dentro de una figura. Mismo remedio y misma
+   pista que `.art-tablewrap`, que ya lo resolvió para las tablas sueltas.
+   El `min-width` es lo que hace que la tabla se deslice en vez de aplastar
+   sus columnas hasta ser ilegibles. Encontrado por el piloto en S8 (log §78). */
+.art-frame-wide { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.art-frame-wide table { min-width: 480px; margin-bottom: 0; }
+@media (max-width: 640px) {
+  .art-frame-wide::before {
+    content: "Desliza para ver todas las columnas →"; display: block;
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--ink-3);
+    margin-bottom: 12px;
+  }
+}
 .art-caption {
   font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; line-height: 1.55;
   color: var(--ink-3); margin-top: 11px; display: flex; gap: 8px;

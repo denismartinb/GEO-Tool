@@ -7806,6 +7806,40 @@ cambia cómo hay que leer una caída del canal— y la fecha de despliegue ampli
 (junio de 2026) se cuenta como "a lo largo de junio", no con un día concreto
 que no se pudo confirmar.
 
+**Lo que encontró el piloto, y que su propia tabla decía que estaba bien.** La
+pasada dio `PILOT PASS` con `blog-como-medir-trafico-chatgpt-ga4` en ✅ a las
+tres anchuras. Al abrir las capturas —que es lo que el Human Gate pide desde
+§55 y lo que la tabla nunca sustituye— en 375 px **las dos figuras nuevas
+estaban recortadas y les faltaba la última columna**: la de la Figura 1 es
+"Dónde acaba", cuya última fila («Respuesta leída sin hacer clic» → *en ningún
+sitio*) es literalmente la conclusión de la figura, y la de la Figura 2 es "Lo
+que enseña el canal", que es todo el argumento. La **Figura 2 de
+`metricas-geo-que-medir` llevaba dos días igual**, publicada en S6.
+
+**La causa es una línea de CSS que hace lo correcto para otro contenido.**
+`.art-frame` nace con `overflow: hidden`, que es lo que quieres para un
+`ProductMock` o un SVG —recortar un degradado contra el radio del borde— y lo
+peor posible para una tabla: lo que no cabe desaparece **sin dejar gesto que lo
+recupere**. Es el fallo de `/docs/metodologia` del §77 otra vez, un nivel más
+adentro, y el remedio ya existía a diez líneas de distancia: `.art-tablewrap`
+resolvió exactamente esto para las tablas sueltas en la PR #306, deslizamiento
+más pista *"Desliza para ver todas las columnas →"*. Lo que faltaba era que una
+tabla **dentro de una figura** pudiera pedirlo: `<Figure wide>` (log §78).
+
+**Por qué esto es un test y no una nota.** Se coló en dos PRs seguidos, y en
+los dos el síntoma fue invisible: la página carga limpia, el piloto la marca ✅
+porque no hay error que detectar, y la columna que falta suele ser justo la que
+lleva la conclusión. `article-recipes.test.ts` recorre ahora todos los
+artículos, detecta la fila separadora de una tabla de markdown dentro de un
+`<Figure>` y exige `wide` — con su caso negativo, porque una guarda que no
+puede fallar no es una guarda.
+
+**Y lo que esto vuelve a decir del piloto**, tercera vez en el histórico
+(§62, §77): **un `PILOT PASS` es la lista de lo que el piloto vio, no un juicio
+sobre lo que se ve.** Una tabla recortada no es un fallo de carga. La única
+defensa sigue siendo abrir las capturas — aquí las abrió el Director antes del
+Human Gate, que es donde toca, en vez del fundador en su móvil.
+
 **Arreglo encontrado de camino.** La fecha del pilar `medicion` en el sitemap
 seguía en el 2026-08-03: S6 publicó `metricas-geo-que-medir` sin tocarla,
 aunque la página pilar lista los artículos de su cluster y por tanto cambió de
