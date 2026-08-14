@@ -2,7 +2,8 @@ import "server-only";
 
 import { after } from "next/server";
 import { resolvePlan } from "@/lib/billing";
-import { generateGeminiVisibilityAnswer, GeminiConfigError, type GeminiVisibilityResponse } from "@/lib/llm/gemini";
+import { generateGeminiVisibilityAnswer, GeminiConfigError } from "@/lib/llm/gemini";
+import type { GeminiVisibilityResponse } from "@/lib/llm/contracts";
 import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/claude";
 import { generateOpenAIVisibilityAnswer, OpenAIConfigError } from "@/lib/llm/openai";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";

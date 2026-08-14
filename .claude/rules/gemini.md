@@ -44,6 +44,16 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   looks identical from the browser whether the provider was down or the domain
   is one the model knows nothing about. User-facing copy says what is certain
   and what to do next; the diagnosis goes to the operator (log §56).
+- **Lo que comparten los tres motores no vive dentro de uno de ellos.** La
+  forma de respuesta de un prompt (`GeminiVisibilityResponse`), la de la
+  extracción, `BusinessProfile` y `otherBrandsRelevanceHint` los usan Gemini,
+  OpenAI y Claude por igual — es lo que permite que `lib/scan/executor.ts` los
+  trate igual. Vivían dentro de `lib/llm/gemini.ts`, así que el cliente de un
+  proveedor era dependencia de sus dos competidores y cualquier mudanza dentro
+  de él arrastraba a los otros dos. Van en `lib/llm/contracts.ts`, que no lee
+  entorno ni llama a nadie (log §79). Motor nuevo o contrato nuevo → ahí. El
+  nombre `Gemini…` de dos de esos tipos es histórico y miente a propósito:
+  renombrarlo toca ~15 ficheros y es una decisión aparte, no un efecto colateral.
 - **Scans must complete or fail safely.** A run must never hang silently; honor
   the lifecycle state machine in `docs/scan-lifecycle.md` and the timeout
   decision in `docs/adr/0003-sync-scan-execution-and-maxduration.md`.

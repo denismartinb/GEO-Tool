@@ -1,11 +1,18 @@
 import "server-only";
 import { z } from "zod";
-import { extractionOutputSchema, type ExtractionOutput } from "@/lib/extraction/schema";
+import { extractionOutputSchema } from "@/lib/extraction/schema";
 import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-categories";
 import { isBrandDomain } from "@/lib/domains/brand-domain";
 import { ExtractionError } from "@/lib/llm/extraction-errors";
 import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
 import { delay, fetchWithTimeout } from "@/lib/llm/http";
+import {
+  otherBrandsRelevanceHint,
+  type BusinessProfile,
+  type GeminiStructuredExtractionResponse,
+  type GeminiVisibilityResponse,
+  type HomepageEvidenceInput
+} from "@/lib/llm/contracts";
 import {
   GEMINI_API_URL,
   GeminiConfigError,
@@ -36,32 +43,24 @@ import { reportLlmIncident } from "@/lib/llm/llm-incident";
 // siguiente, cuando las nueve funciones de producto salgan de aqui.
 export { GeminiConfigError, GeminiTimeoutError };
 
+// Fase R5 (2/2): los tipos que comparten los tres motores viven ahora en
+// `lib/llm/contracts.ts`. Se reexportan por la misma razón que las dos clases
+// de arriba: ningún sitio de llamada tiene por qué enterarse de que el fichero
+// se ha partido, y `gemini.test.ts` importa `otherBrandsRelevanceHint` de aquí.
+export { otherBrandsRelevanceHint };
+export type {
+  BusinessProfile,
+  GeminiStructuredExtractionResponse,
+  GeminiVisibilityResponse,
+  HomepageEvidenceInput
+};
+
 // La espera fija del ÚNICO reintento de la generación por prompt del escaneo.
 // No sube al cliente: el resto de llamadas usa el backoff exponencial con
 // jitter de `fetchGeminiWithRetry`, y esta ruta conserva su reintento simple
 // a propósito (LLM-RESILIENCE-1 no la tocó).
 const RATE_LIMIT_RETRY_DELAY_MS = 1500;
 
-
-export type GeminiVisibilityResponse = {
-  text: string;
-  model: string;
-  tokensIn: number | null;
-  tokensOut: number | null;
-  totalTokens: number | null;
-  /**
-   * Google Search grounding sources returned by Gemini when the
-   * `google_search` tool is enabled, per
-   * docs/adr/0004-gemini-search-grounding.md. Absent/empty when the model
-   * did not ground its answer in a search result.
-   */
-  groundingChunks?: Array<{ uri: string; title?: string }>;
-};
-
-export type GeminiStructuredExtractionResponse = {
-  data: ExtractionOutput;
-  model: string;
-};
 
 export async function generateGeminiVisibilityAnswer(input: {
   prompt: string;
@@ -282,21 +281,6 @@ export async function auditDomainContent(input: DomainAuditInput): Promise<Domai
   };
 }
 
-/**
- * EMERGING-BRANDS-GROUNDING-1: same additive-`profile` pattern already used
- * by generateAddedPrompts (COMPETITOR-GROUNDING-2, docs/adr/0022) — grounds
- * "other_brands_mentioned" in the project's real business profile so a
- * browser project (Mozilla) doesn't surface retail noise (AliExpress,
- * Carrefour...) just because a grounded search answer happened to cite an
- * unrelated shopping page. Returns "" when no profile is cached yet, which
- * keeps the instruction — and therefore extraction behavior — identical to
- * before this change.
- */
-export function otherBrandsRelevanceHint(profile?: BusinessProfile): string {
-  if (!profile) return "";
-  return ` Only include names that are plausible competitors or alternatives for a business in this category (sector: ${profile.sector}; what it sells: ${profile.whatItSells}) — exclude any brand from a clearly different industry or category even if it is genuinely present in the text (e.g. a general marketplace or retailer cited as unrelated context is not a competitor of a ${profile.subSector || profile.sector} business).`;
-}
-
 export async function extractGeminiStructuredData(input: {
   brand: string;
   competitors: string[];
@@ -417,18 +401,6 @@ function normalizeDomain(value: string): string {
 }
 
 
-export type BusinessProfile = {
-  whatItSells: string;
-  sector: string;
-  subSector: string;
-  businessModel: "b2b" | "b2c" | "both" | "unknown";
-  targetCustomer: string;
-  geographicScope: string;
-  sizeEstimate: string;
-  /** "low" means Gemini itself judged the evidence insufficient to profile this business — callers must not use a low-confidence profile to suggest competitors/prompts unless the user supplied their own description. */
-  confidence: "low" | "medium" | "high";
-};
-
 const businessProfileResponseSchema = z.object({
   what_it_sells: z.string(),
   sector: z.string(),
@@ -439,10 +411,6 @@ const businessProfileResponseSchema = z.object({
   size_estimate: z.string(),
   confidence: z.enum(["low", "medium", "high"])
 });
-
-export type HomepageEvidenceInput =
-  | { status: "ok"; title: string; description: string; headings: string[]; excerpt: string }
-  | { status: "unavailable" };
 
 /**
  * Turns homepage evidence (+ optional user-provided description) into a

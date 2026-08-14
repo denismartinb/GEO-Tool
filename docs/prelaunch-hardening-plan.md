@@ -15,9 +15,11 @@ una con su Human Gate.
   consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
   (migración, cifra publicada, superficie de auth).
 - **Fase R 🟡 en curso** — R1, R2 (log §43), **R4** (log §70) y **la primera
-  mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`).
-  Quedan R3, la segunda mitad de R5 (repartir las nueve funcionalidades a sus
-  módulos dueños), y R6–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`)
+  y **el primer trozo de la segunda** (log §79: los tipos compartidos por los
+  tres motores salen a `lib/llm/contracts.ts`, así que OpenAI y Claude dejan de
+  depender del cliente de Gemini). Quedan R3, el reparto de las nueve
+  funcionalidades a sus módulos dueños, y R6–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
@@ -167,6 +169,10 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   (transporte, sobre R2) + los 8 usos de producto repartidos a sus módulos
   dueños (`suggestCompetitors` → `lib/competitors/`, `suggestPrompts` →
   `lib/projects/`, `rewriteRecommendation` → `lib/recommendations/`, etc.).
+  **Aviso medido**: el reparto no es mecánico. `BusinessProfile` lo usan nueve
+  módulos y dos son los otros motores, así que hay un paso previo obligatorio —
+  los tipos compartidos a un módulo neutral (`lib/llm/contracts.ts`, log §79) —
+  sin el cual la mudanza nace con ciclos.
 - **R6 · Descargar `lib/scan/executor.ts`** (1–2 PRs): extraer
   `processPromptJob` (L91–418) a `lib/scan/prompt-job.ts`; mover
   `scan/types.ts` + `scan/constants.ts` a `lib/domain/` (rompe las 6

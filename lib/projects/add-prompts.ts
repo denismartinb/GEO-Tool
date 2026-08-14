@@ -2,7 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 import { getPlanForUser } from "@/lib/billing";
-import { generateAddedPrompts, type AddPromptsMode, type BusinessProfile, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
+import { generateAddedPrompts, type AddPromptsMode, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
+import type { BusinessProfile } from "@/lib/llm/contracts";
 import { resolveAndCacheBusinessProfile } from "@/lib/projects/business-profile";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
