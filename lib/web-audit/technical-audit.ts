@@ -4,7 +4,7 @@ import { z } from "zod";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import { type createServiceClient } from "@/lib/supabase/service";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { rescoreRunWithTechnicalSnapshot } from "@/lib/scoring/rescore-run";
 import { checkSnapshotRateLimit, DEFAULT_SNAPSHOT_RATE_LIMIT } from "@/lib/web-audit/snapshot-rate-limit";

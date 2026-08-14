@@ -13,7 +13,7 @@ import {
 } from "@/lib/web-audit/audit-job";
 import { sendWebAuditFailedAlertEmail } from "@/lib/email/transactional";
 import { type createServiceClient } from "@/lib/supabase/service";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 /**
  * AUDIT-AFTER-SCAN-1 — the backend half: run the full web audit (coverage +

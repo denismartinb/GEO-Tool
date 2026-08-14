@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { removeAliasFromList, validateNewAlias } from "@/lib/brand-aliases/normalize-aliases";
 
 /**

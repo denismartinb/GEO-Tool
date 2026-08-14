@@ -5,7 +5,7 @@ import { normalizeDomain } from "@/lib/domains/brand-domain";
 import type { SuggestedCompetitor } from "@/lib/llm/gemini";
 import type { BusinessProfile } from "@/lib/llm/contracts";
 import { resolveAndCacheBusinessProfile } from "@/lib/projects/business-profile";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 /**
  * COMPETITOR-SUGGESTIONS-1 — "Competidores sugeridos" on the Competitors page.

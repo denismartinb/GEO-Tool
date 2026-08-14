@@ -7,7 +7,7 @@ import {
   EXTRACTION_MAX_ATTEMPTS,
   EXTRACTION_RETRY_BASE_DELAY_MS,
   EXTRACTION_RETRY_MAX_DELAY_MS
-} from "@/lib/scan/constants";
+} from "@/lib/llm/constants";
 import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/contracts";
 import { delay, fetchWithTimeout } from "@/lib/llm/http";
 

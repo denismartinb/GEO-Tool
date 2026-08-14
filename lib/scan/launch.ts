@@ -1,7 +1,7 @@
 import "server-only";
 
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/constants";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { createPendingScanRun } from "@/lib/scan/run-creation";
 import { executePendingScan } from "@/lib/scan/executor";
 import { ensureBrandAliasesDerived } from "@/lib/projects/ensure-brand-aliases";

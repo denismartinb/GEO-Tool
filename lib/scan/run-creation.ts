@@ -4,7 +4,8 @@ import { resolvePlan } from "@/lib/billing";
 import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
 import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
 import { computeSampleCount } from "@/lib/scan/sampling";
-import { ProjectActionError, type AuthenticatedContext } from "@/lib/scan/types";
+import { ProjectActionError } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 
 type CopyForwardResultRow = {

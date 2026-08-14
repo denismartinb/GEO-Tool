@@ -7947,6 +7947,65 @@ caso de mocking que NO es éste).
 
 ---
 
+## 82. La dependencia de medio repositorio sobre `lib/scan/` eran tres símbolos, no dos ficheros (PRELAUNCH-HARDENING-1 Fase R6, segunda mitad, 2026-08-14)
+
+**Qué decía el plan.** «Mover `scan/types.ts` + `scan/constants.ts` a
+`lib/domain/` (rompe las 6 dependencias mutuas sobre `lib/scan`)». Dos cifras
+mal y, lo importante, **la solución equivocada**.
+
+**Lo que había de verdad.** 26 ficheros fuera de `lib/scan/` importaban de esos
+dos módulos. Al mirar *qué* importaba cada uno, toda la dependencia se reduce a:
+
+| Símbolo | Importadores externos | Dónde vive ahora |
+|---|---|---|
+| `AuthenticatedContext` | 17 | `lib/auth.ts` |
+| 8 constantes de llamada a LLM (`EXTRACTION_CALL_TIMEOUT_MS`, `EXTRACTION_MAX_ATTEMPTS`, `EXTRACTION_RETRY_BASE_DELAY_MS`, `EXTRACTION_RETRY_MAX_DELAY_MS`, `LLM_CALL_MAX_ATTEMPTS`, `LLM_CALL_RETRY_BASE_DELAY_MS`, `LLM_CALL_RETRY_MAX_DELAY_MS`, `LLM_INCIDENT_DEDUPE_MINUTES`) | 7 | `lib/llm/constants.ts` |
+| `ProjectActionError` | 2 (ambos tests) | se queda en `lib/scan/types.ts` |
+
+**Por qué mover los ficheros enteros habría sido peor que no hacer nada.**
+`lib/scan/constants.ts` tiene 466 líneas y el 95% es ciclo de vida del escaneo:
+leases, timeouts de reconciliación, resúmenes de error, topes de reintento
+automático. Llevarlo a `lib/domain/` habría metido todo eso en un módulo
+«neutral» por culpa de ocho vecinas — y no habría roto ninguna dependencia,
+sólo cambiado su nombre. Y `AuthenticatedContext` no es un tipo de escaneo en
+absoluto: es `Awaited<ReturnType<typeof requireUser>>`, o sea el tipo de
+retorno de una función de `lib/auth.ts`. Estaba en el sitio equivocado desde el
+principio; diecisiete módulos —facturación, competidores, alias de marca,
+auditoría web, recomendaciones— importaban del escaneo por eso y sólo por eso.
+
+**El resultado medido.** De 26 ficheros externos quedan 5, y los cinco son
+dependencias legítimas de dominio, no de capas: `MAX_REAL_SCAN_PROMPTS` (un
+tope de escaneo que lee el alta de prompts), `EXTRACTION_VERSION` (una versión
+de escaneo que lee la puntuación) y `ProjectActionError` en dos tests. Y lo que
+importa de verdad: **`lib/llm/**` ya no importa nada de `lib/scan`**. La capa
+de LLM no tiene por qué saber que existe un escaneo; el escaneo sí sabe que
+llama a LLMs.
+
+**`lib/domain/` no hace falta.** Se descarta como destino: cada símbolo tenía
+un dueño natural, y un módulo llamado «domain» habría sido el sitio donde
+acaban las cosas que nadie quiso clasificar.
+
+**Lo que se conserva a propósito.** `EXTRACTION_CONCURRENCY` acota cuántas filas
+procesa una pasada del escaneo, no cómo se comporta una llamada: es del escaneo
+y se queda. `ProjectActionError` tiene vocabulario de escaneo
+(`active_run_exists`, `scan_failed`, `no_engines_enabled`) y diez de sus doce
+usuarios están en `lib/scan/`: se queda. El barril `lib/scan/scan-runner.ts`
+sigue reexportando los ocho símbolos movidos, para no cambiar su superficie
+pública y no tocar `scan-runner.test.ts`.
+
+**Sobre tocar ficheros de test.** Nueve de los 23 ficheros cambiados son tests,
+y en todos el cambio es **la ruta de un import**: ni una aserción, ni un mock,
+ni un caso. La regla de la fase —«si un slice necesita cambiar un test, es que
+no era un refactor»— apunta a cambios de expectativa, y aquí no hay ninguno:
+2.278 tests, los mismos de siempre. Dicho explícitamente porque la distinción
+es fina y la próxima sesión merece saber dónde se puso la raya.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R6); §81 (el
+primer trozo); §80 (el caso en el que el barril SÍ había que conservarlo, por
+lo contrario: allí los tests mockeaban la ruta).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

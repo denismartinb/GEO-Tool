@@ -6,7 +6,7 @@ import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-va
 import { checkGenerationRateLimit } from "@/lib/recommendations/generation-rate-limit";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { sanitizeField } from "@/lib/text/sanitize";
 
 /**

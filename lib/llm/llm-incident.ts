@@ -2,7 +2,7 @@ import "server-only";
 
 import { isOpsAlertConfigured, sendLlmIncidentAlertEmail } from "@/lib/email/transactional";
 import { categorizeExtractionError, type ExtractionErrorCategory } from "@/lib/llm/extraction-errors";
-import { LLM_INCIDENT_DEDUPE_MINUTES } from "@/lib/scan/constants";
+import { LLM_INCIDENT_DEDUPE_MINUTES } from "@/lib/llm/constants";
 
 /**
  * LLM-RESILIENCE-1 (Task Intake approved 2026-08-09) — the operator alert for
