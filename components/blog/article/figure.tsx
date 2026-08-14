@@ -168,7 +168,19 @@ export type MockRow = {
   hint: string;
   /** 0-100. */
   value: number;
-  /** Peso del componente dentro del GEO Score, si aplica. */
+  /**
+   * Peso del componente dentro del GEO Score, si aplica. **No se pinta.**
+   *
+   * Se conserva porque es lo que hace verificable el número del gauge:
+   * `article-recipes.test.ts` comprueba que el score declarado sea la media
+   * ponderada real de las filas que la figura enseña, y sin el peso esa
+   * comprobación se quedaría sin datos y una maqueta podría contradecirse a sí
+   * misma a la vista del lector (ya pasó dos veces).
+   *
+   * Dejó de renderizarse el 2026-08-13 por decisión del fundador: los pesos son
+   * configuración interna del producto y no se publican (log §75). El dato vive
+   * en el fuente del artículo, que no es una superficie pública.
+   */
   weight?: number;
   tone?: "blue" | "blue2" | "cyan" | "warm";
 };
@@ -239,9 +251,7 @@ export function ProductMock({
                   {row.label}
                   <em>{row.hint}</em>
                 </span>
-                <span className="art-row-v">
-                  {row.value}%{row.weight !== undefined && <small>peso {row.weight}%</small>}
-                </span>
+                <span className="art-row-v">{row.value}%</span>
               </div>
               <div className="art-track">
                 <div className={`art-fill art-tone-bg-${row.tone ?? "blue"}`} style={{ width: `${row.value}%` }} />

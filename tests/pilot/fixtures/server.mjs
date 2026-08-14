@@ -62,7 +62,9 @@ const BLOG_SLUGS = [
   // SEO-POS-1 Fase C, C1 (2026-08-10).
   "como-saber-si-tu-marca-aparece-en-chatgpt",
   // SEO-POS-1 Fase C, S5 (2026-08-13).
-  "que-es-una-auditoria-geo"
+  "que-es-una-auditoria-geo",
+  // SEO-POS-1 Fase C, S6 (2026-08-13).
+  "metricas-geo-que-medir"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

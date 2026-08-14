@@ -7436,6 +7436,305 @@ verificado tres veces por el `ux-pilot` en su forma y contenido.
 
 ---
 
+## 73. Publicar los números del producto obliga a atarlos al código (SEO-POS-1, S6, 2026-08-13)
+
+**Pieza.** `/blog/metricas-geo-que-medir` — "Métricas GEO: qué medir y qué no",
+cluster `medicion`. Cubre el cluster de keywords nº 6 del plan ("métricas GEO",
+"share of voice en IA", "tasa de citación"), la última capa informacional donde
+el mercado en castellano sigue teniendo hueco.
+
+**El ángulo, y por qué no es otro post de definiciones.** La pieza se estructura
+alrededor de una idea que casi nadie escribe: **la unidad de observación es la
+respuesta, no el prompt**. Veinte prompts en tres motores son sesenta
+observaciones, y casi todos los errores de medición del sector salen de
+equivocar ese denominador. A partir de ahí, cinco métricas (tasa de mención,
+cuota de voz, posición cuando apareces, tasa de citación de tu dominio,
+preparación técnica) y las trampas de cada una.
+
+**La sección que la hace citable** es la de la posición. Reproduce el hallazgo
+de ADR 0026 con su tabla: un escaneo simulado en el que **las ocho entidades
+aparecen siempre segundas**, y donde la "posición media" —la que promedia como
+último puesto cada respuesta en la que no sales— las ordena de 5,50 a 8,65. Esa
+métrica está midiendo frecuencia de aparición y llamándolo posición, y de ahí
+salen las dos consecuencias que descolocan a cualquiera que mire un panel: la
+marca seguida sale favorecida por construcción (el conjunto de prompts se elige
+a su alrededor), y el mejor valor posible deja de ser 1. Es un error real que
+este producto cometió, corrigió y documentó — publicarlo demuestra criterio en
+vez de afirmarlo, igual que la página sin fecha en §69.
+
+**Qué sí se publica y qué no, aplicando la línea de §69.** Los umbrales de
+lectura sí: diez respuestas mínimo antes de una franja o un delta
+(`MIN_RESPONSES_FOR_BAND`), ventana de tres escaneos para la mediana
+(`DEFAULT_SCORE_WINDOW_SIZE`), el incidente real de los 44 puntos con tres
+respuestas. Los pesos del compuesto **ya son públicos** en
+`/docs/metodologia/geo-score` desde GEO-SCORE-V4, así que el artículo enlaza
+allí en vez de reabrir la discusión.
+
+**El test que sostiene todo esto** (`lib/blog/metricas-geo.test.ts`) es la parte
+reutilizable. Un artículo que publica constantes del producto **caduca solo**:
+si `MIN_RESPONSES_FOR_BAND` pasa a 15 o Claude gana grounding real, el texto
+pasa a mentir sobre nuestra propia metodología y nada falla — es prosa en un
+MDX. El test importa las constantes reales y las contrasta contra las cifras
+publicadas y contra `ENGINE_META.claude.grounded`, así que el cambio de código
+y el refresco del artículo caen en el mismo PR o no cae ninguno.
+
+**Dos fallos de descubribilidad encontrados de camino, los dos del mismo
+patrón que §62 y §70:**
+
+1. **`como-saber-si-tu-marca-aparece-en-chatgpt` (S1) nunca lo abrió el
+   piloto.** Se añadió al fixture del self-check y no al mapa del journey — son
+   dos listas a mano en dos ficheros, y el guardián que existía sólo cubría la
+   primera. Un post ausente del journey no da 404: simplemente no se mira. Tres
+   días de `PILOT PASS` sobre un artículo que nadie había visto. Arreglado, y
+   ahora `fixture-drift.test.ts` contrasta el mapa del spec contra `BLOG_POSTS`
+   comparando **también el cluster**, no sólo el slug.
+2. **Cuatro artículos declaraban portada y enseñaban el degradado.**
+   `BlogCover` sólo pinta la imagen si recibe `image`, y cuatro MDX
+   —`que-es-el-geo-score`, `como-conseguir-que-chatgpt-te-cite`,
+   `como-saber-si-tu-marca-aparece-en-chatgpt`, `que-es-una-auditoria-geo`— no
+   se la pasaban. Su portada salía bien en `/blog`, en la tarjeta social y en
+   el schema, y en su propia cabecera salía el respaldo que existe para los
+   artículos *sin* portada: justo "el icono de algo que no carga bien" que
+   originó `covers.test.ts`. Los tests de portada miraban `BLOG_POSTS` y el
+   disco, nunca el MDX. Corregidos los cuatro, con test nuevo.
+
+**Portada.** SVG en el repo, rasterizado a WebP (§47). No es decorativa: a la
+izquierda la muestra —puntos que son respuestas, unas con mención y otras
+sin— y a la derecha las cinco métricas que salen de ella, **cuatro dibujadas
+con su margen de error y la quinta sin él**, porque la preparación técnica es
+la única determinista. La asimetría es la tesis del artículo.
+
+---
+
+## 74. El pilar del GEO Score llevaba ocho días publicando una fórmula retirada (SEO-POS-1, S6, 2026-08-13)
+
+**Qué pasaba.** GEO-SCORE-V4 (ADR 0033, 2026-08-05) añadió el componente
+técnico con peso .20 y reescaló los otros cuatro a .32/.20/.16/.12.
+`/docs/metodologia/geo-score` se actualizó en aquel PR. El artículo pilar del
+blog, `/blog/que-es-el-geo-score`, no: seguía publicando "cuatro señales" con
+los pesos de v2 (.40/.25/.20/.15) citando ADR-0015 como fuente. **El sitio se
+contradecía a sí mismo sobre su propia metodología**, en las dos páginas que
+más tráfico informacional traen sobre ella.
+
+No lo cazó nadie porque no había nada que lo cazara: el reparto de pesos vivía
+escrito a mano en tres sitios (código, docs, MDX) y sólo dos se movieron.
+
+**Por qué se arregla en el PR de S6 y no en uno aparte.** El artículo nuevo
+nombra las cinco señales. Publicarlo dejando el pilar en cuatro no habría sido
+"una fase de más": habría sido publicar a sabiendas dos versiones distintas de
+la misma metodología a un enlace de distancia.
+
+**Qué se cambió.** Las cinco señales en el resumen, la tabla y la maqueta
+—cuyo gauge se recalculó, porque `article-recipes.test.ts` exige que el número
+sea la media ponderada real de las filas que enseña—, los pesos vigentes en el
+`StatGrid` citando ADR-0033, y un párrafo nuevo sobre por qué la señal técnica
+va dentro del compuesto (es una condición: una web que los motores no pueden
+leer no puede beneficiarse de ninguna otra mejora) y qué compra que sea
+determinista (una quinta parte menos de varianza en el número de cabecera).
+
+**Primer uso real de `dateUpdated`** (la tubería llegó en la Fase T-c y no la
+había estrenado nadie): el artículo muestra "Actualizado el 13 de agosto de
+2026", lo emite en `Article.dateModified` y en `og:modified_time`. El test que
+exigía que *ningún* post tuviera `dateUpdated` se sustituye por una lista de
+refrescos documentados — conserva lo que protegía de verdad (que nadie suba una
+fecha sin tocar el artículo, `content-strategy.md` §4.4) y deja de bloquear el
+caso para el que se construyó el campo.
+
+**La regla que queda:** los pesos del GeoScore están publicados en tres sitios
+y sólo uno es la verdad. `lib/blog/metricas-geo.test.ts` ata ahora el MDX al
+`TECHNICAL_WEIGHT` real y comprueba que los otros cuatro conserven sus
+proporciones v3 exactas al dividir por `1 − w`, que es la misma comprobación
+que ADR 0033 §1 hace en su propia tabla.
+
+---
+
+## 75. Los pesos y los códigos ADR salen del contenido público (SEO-POS-1, S6, revisión del fundador, 2026-08-13)
+
+**La decisión.** Fundador, revisando S6: *"En general no quiero exponer cosas
+tan concretas del producto, como pesos reales para un cálculo o estos códigos
+ADR-0024 · capa de fiabilidad. Revísalo y elimínalos de todos los artículos"*.
+
+**Supersede en parte a §74**, que doce horas antes había hecho lo contrario:
+refrescar el pilar del GEO Score para que publicara los pesos vigentes en vez
+de los retirados. El problema que §74 resolvía era real —el artículo llevaba
+ocho días publicando la fórmula v2— pero esta decisión lo resuelve mejor: **lo
+que no se publica no se puede quedar rancio.**
+
+**Son dos cosas distintas y conviene no confundirlas:**
+
+- **Los pesos del compuesto** son configuración del producto. Quien los tiene
+  puede reproducir la métrica sin haberla construido, y al lector no le dicen
+  nada que no le diga ya el orden de importancia. Misma línea que §69 trazó
+  para el reparto de puntos de la auditoría: dimensiones y umbrales de
+  comportamiento sí, reparto exacto no.
+- **Los códigos ADR** son peor que innecesarios: son la referencia interna de
+  un documento que el lector no puede abrir, así que como "fuente" de una cifra
+  no acreditan nada — sólo publican el índice de nuestras decisiones internas.
+  Sustituidos por fuentes que sí significan algo fuera: "Metodología de
+  GenScore", o la evidencia real (un incidente fechado, datos de ejemplo
+  declarados como tales).
+
+**Alcance real, que resultó ser mayor que un artículo.** El error se había
+propagado copiando la cabecera de la pieza anterior:
+
+| Superficie | Qué publicaba |
+|---|---|
+| `que-es-el-geo-score` | los cinco pesos v4 + 5 códigos ADR |
+| `metricas-geo-que-medir` | 4 códigos ADR + el peso técnico como "−20 % de varianza" |
+| `como-elegir-competidores-analisis-geo` | 25 % / 20 % / 45 % + 3 códigos ADR, **con la fórmula v2 ya retirada** |
+| `como-elegir-prompts-monitorizar-marca-ia` | 40 % / 25 % y "suman el 65 % de tu GEO Score", **v2** |
+| `llms-txt-guia-practica` | "la autoridad pesa un 15 % del GEO Score… los pesos reales de ADR-0015", **v2** |
+| `/glosario/geo-score` | los cuatro pesos v2 en prosa, y "cuatro señales" |
+
+Tres de las seis, además, llevaban meses publicando una fórmula que el producto
+ya no usa. Retirar el dato arregla las dos cosas de una vez.
+
+**Lo que se conserva, y por qué importa.** `ProductMock` deja de pintar
+`peso N%`, pero **el peso sigue en el fuente del MDX**: es lo que hace
+verificable el número del gauge (`article-recipes.test.ts` comprueba que sea la
+media ponderada real de las filas que la figura enseña, un error que ya se
+coló dos veces). El fuente de un artículo no es una superficie pública; la
+página sí.
+
+**Lo que sustituye a los pesos en el texto** no es un hueco: es el **orden de
+importancia**, que es lo único que el lector podía accionar. "La presencia es
+la que más manda, porque sin mención no hay nada que interpretar" le sirve para
+decidir; un 32 % no.
+
+**El guardián** (`article-honesty.test.ts`, "el contenido público no publica
+configuración interna del producto") barre las cuatro superficies —artículos,
+glosario, `/docs` y comparativas— buscando códigos ADR y porcentajes presentados como
+peso. Exige vocabulario del compuesto alrededor del porcentaje: la primera
+versión marcaba una afirmación legítima sobre un competidor ("aumenta el peso
+de la página … hasta en un 98 %"), y un guardián con falsos positivos se
+desactiva a la primera.
+
+**La metodología publicada entró después, y por decisión expresa.**
+`/docs/metodologia/geo-score` no es un artículo, así que no caía dentro de la
+instrucción literal — pero era la página a la que los propios artículos
+mandaban al lector a buscar el detalle, con la tabla de pesos entera. Se
+preguntó al fundador con las dos alternativas y su coste, y eligió retirarlos
+también: **si el reparto no se publica, no se publica en ninguna parte.**
+
+Lo que esa página conserva: los cinco componentes, qué mide cada uno, el orden
+de importancia, qué ocurre cuando falta un dato, la ventana de la mediana, las
+etiquetas de confianza y las franjas. Lo que pierde: la columna de porcentajes.
+Y con ella, la promesa de "metodología **completa**" en los enlaces que
+apuntaban ahí — reescrita en el pilar y en el glosario, porque un enlace que
+promete el cálculo entero y lleva a una página sin él es una decepción que se
+paga en credibilidad.
+
+**La fecha, en los tres sitios donde vive.** Cambiar el contenido obligó a
+subir la fecha visible de la página, la del glosario (dos entradas tocadas) y
+las dos del sitemap. El sitemap tenía **una sola fecha para las cinco docs**,
+así que subirla habría dicho que cambiaron todas: ahora admite excepciones por
+página, igual que `PILLAR_LAST_MODIFIED` hace por cluster desde T15. Y un test
+obliga a que la fecha del glosario coincida en la página y en el sitemap: dos
+fechas distintas para el mismo contenido son una señal de frescura que se
+contradice a sí misma, peor que no dar ninguna.
+
+---
+
+## 76. Segunda pasada: fuera también la mecánica, no solo los pesos (SEO-POS-1, S6, revisión del fundador, 2026-08-13)
+
+**Qué pasó.** §75 retiró los pesos y los códigos ADR. El fundador volvió a
+revisar y encontró, viva en el pilar, la frase *"una media ponderada de cinco
+señales"*:
+
+> *"No digas cosas concretas de ninguna parte del producto. Por favor, ya lo
+> dije en la última revisión. […] Además de desvelar cómo se calcula la métrica
+> principal le resta valor, lo simplifica demasiado. Revisa de nuevo los
+> artículos que digan cosas de Genscore y haz que las afirmaciones sean más
+> etéreas, más genéricas."*
+
+Tenía razón en las dos mitades, y la segunda es la que la primera pasada no vio.
+Yo había leído "no publiques los parámetros" cuando lo que había que leer era
+**"no publiques la máquina"**. Quitar los pesos y dejar "es una media ponderada
+de cinco señales que se descartan y renormalizan" es quitar las cifras de la
+receta y dejar la receta.
+
+**El argumento de valor, que es el que me faltaba.** Una métrica que se explica
+entera en una frase parece que se puede reproducir en una tarde. El trabajo real
+—qué se mide, contra qué se compara, cuándo un dato no vale, cómo se estabiliza
+entre ejecuciones— desaparece detrás de "es una media ponderada". Publicar la
+mecánica no es solo regalar la ventaja: es **abaratar el producto delante del
+comprador**.
+
+**La línea que queda, y esta vez enunciada de forma que se pueda aplicar sin
+preguntar:**
+
+> **El contenido explica el problema y el criterio. No explica nuestra
+> máquina.** Qué mira el producto, sí. Cuántas piezas tiene, cómo las combina,
+> con qué umbrales decide y qué hace cuando falta una, no.
+
+**Qué se reescribió, superficie a superficie:**
+
+| Superficie | Qué decía | Qué dice |
+|---|---|---|
+| `que-es-el-geo-score` | "una media ponderada de cinco señales" | "la puntuación con la que GenScore resume cómo de bien te está yendo" |
+| — su título | "…y cómo se calcula" | "…y qué mide" |
+| `metricas-geo-que-medir` | "en Genscore ese umbral son diez respuestas", "la mediana de los últimos tres escaneos comparables", el incidente de los 44 puntos | la aritmética de la muestra, que es cierta para cualquiera, y "la tendencia sobre varias mediciones comparables" |
+| — sus cifras destacadas | umbrales nuestros | cuánto mueve **una** respuesta según el tamaño de la muestra (33 / 10 / 1,7 puntos) |
+| `/docs/metodologia/geo-score` | "combina cinco componentes", renormalización, "20 resultados", "entre 2 y 19", "umbrales 70 y 40" | qué mira, en qué orden importa, y que lo que no se puede medir se declara |
+| `/glosario/geo-score` | "se calcula combinando cinco señales, cada una con…" | "resume varias señales que no significan lo mismo por separado" |
+| `/geo` (landing) | **el desglose entero: `80×40% + 64×25% + … = 65 puntos`** | "Datos de ejemplo. Tu panel muestra tus cifras reales." |
+
+**La landing era lo peor de todo y no la miraba nadie.** `/geo` es la página
+comercial más vista del sitio y publicaba la fórmula completa con multiplicación
+y suma a la vista — además con los pesos de v2, retirados hacía una semana, y
+enseñando cuatro componentes cuando el producto tiene cinco. No es un artículo,
+así que ni el guardián de §75 ni ninguna otra comprobación la cubrían. Corregida
+y cubierta con test.
+
+**El patrón que se repite, y es el que hay que recordar:** cuando una revisión
+del fundador señala una superficie, el trabajo no es arreglar esa superficie —
+es buscar la misma clase de error en todas las demás. Las dos veces que no lo
+hice, la segunda pasada encontró más de lo que había arreglado la primera.
+
+**Lo que conservan los tests:** `article-honesty.test.ts` añade un detector de
+mecánica (media ponderada, recuento de señales, "se calcula combinando",
+renormalización, "mediana de tus tres últimos") sobre las cuatro superficies, y
+`metricas-geo.test.ts` —que en su v1 exigía justo lo contrario, atar el texto a
+las constantes— pasa a exigir que esas constantes **no** aparezcan. El fichero
+guarda las dos versiones en su cabecera a propósito: la v1 era un buen
+mecanismo sobre una premisa equivocada, y eso es más útil de recordar que la
+regla sola.
+
+---
+
+## 77. La metodología no se podía leer en un móvil (2026-08-13)
+
+**El fallo.** El fundador abrió `/docs/metodologia/geo-score` en el móvil y
+mandó la captura: **todos los párrafos cortados por la derecha**, sin scroll de
+página con el que alcanzar el texto que faltaba.
+
+**La causa, que no está donde parece.** En móvil `.docs-layout` es un flex en
+columna con `align-items: flex-start`, así que la columna de contenido se
+dimensiona por su hijo más ancho — y su hijo más ancho era la tabla, con
+`min-width: 480px`. En una pantalla de 375 px eso hacía que **cada párrafo
+midiera 480**, y lo que sobraba quedaba fuera de la ventana. El eje afectado es
+el transversal, así que el `min-width: 0` que ya tenía la columna no servía de
+nada: hacía falta `align-self: stretch`.
+
+Con eso, la columna mide lo que la pantalla y la tabla hace su propio scroll
+dentro de `.docs-table-wrap`, que es exactamente para lo que existe.
+
+**Lo segundo, del mismo día:** `white-space: nowrap` en todas las celdas de las
+tablas de `/docs`. Valía para la de planes —celdas de dos palabras— y dejaba
+ilegible la de metodología en cuanto su segunda columna pasó a ser prosa: a
+1280 px las frases se salían de la caja y el lector veía *"…y la que más m"*.
+Ahora las celdas envuelven y sólo las cabeceras conservan el `nowrap`.
+
+**Lo que esto dice del piloto, otra vez.** Las dos pasadas anteriores dieron
+`PILOT PASS` con `docs-metodologia/geo-score` en ✅ a las tres anchuras, y las
+dos veces era correcto: la página **cargaba** bien. Un texto cortado no es un
+fallo de carga. Es el mismo límite que ya está escrito en el histórico —el
+`PASS` es la lista de lo que el piloto vio, no un juicio sobre lo que se ve— y
+la única defensa real sigue siendo mirar las capturas. Esta la encontró el
+fundador antes que yo, mirando su propio móvil.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

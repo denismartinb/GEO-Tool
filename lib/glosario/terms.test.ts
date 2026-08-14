@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { GLOSSARY_TERMS } from "./terms";
 
@@ -61,5 +63,32 @@ describe("GLOSSARY_TERMS", () => {
         expect(forbidden.test(link.label.trim()), `${t.slug} -> "${link.label}"`).toBe(false);
       }
     }
+  });
+});
+
+/**
+ * La fecha de "Última actualización" del glosario vive escrita a mano en dos
+ * sitios: la página del término (lo que ve el lector) y el sitemap (lo que ve
+ * el rastreador). El 2026-08-13, al retirar los pesos del compuesto de dos
+ * entradas (log §75), había que subir las dos — y nada obligaba a ello.
+ *
+ * Dos fechas distintas para el mismo contenido son una señal de frescura que
+ * se contradice a sí misma, que es peor que no dar ninguna.
+ */
+describe("la fecha del glosario es la misma para el lector y para el rastreador", () => {
+  const leer = (rel: string) => readFileSync(join(process.cwd(), rel), "utf8");
+  const fecha = (src: string) => src.match(/GLOSSARY_LAST_MODIFIED = "([\d-]+)"/)?.[1];
+
+  it("coinciden", () => {
+    const enPagina = fecha(leer("app/glosario/[termino]/page.tsx"));
+    const enSitemap = fecha(leer("app/sitemap.ts"));
+
+    expect(enPagina, "no se pudo leer la fecha de app/glosario/[termino]/page.tsx").toBeTruthy();
+    expect(enSitemap, "no se pudo leer la fecha de app/sitemap.ts").toBeTruthy();
+    expect(
+      enSitemap,
+      `la página dice ${enPagina} y el sitemap ${enSitemap}. Al tocar una entrada del ` +
+        "glosario se suben las dos, en el mismo PR."
+    ).toBe(enPagina);
   });
 });
