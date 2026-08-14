@@ -12,8 +12,11 @@ import type { Plan } from "@/app/pricing/plans-data";
  * executor from run-creation just to read an env var would drag the whole
  * LLM/scoring/recommendations graph into job creation.
  *
- * `lib/scan/executor.ts` re-exports `getLLMScanProviders` and
- * `LLMScanProvider` so existing call sites keep working unchanged.
+ * Se importa DESDE AQUÍ, no desde el ejecutor. `executor.ts` lo reexportó
+ * durante SAMPLING-1 para no tocar sitios de llamada, y el único que quedaba
+ * fuera de `lib/scan/` era la Visión general — que arrastraba el grafo entero
+ * del ejecutor a una página para pintar dos nombres de motor
+ * (PRELAUNCH-HARDENING-1 Fase R7, log §84).
  */
 
 export type LLMScanProvider = "gemini" | "claude" | "openai";
