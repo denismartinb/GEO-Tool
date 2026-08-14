@@ -8318,6 +8318,21 @@ todo el histórico y de las decenas de `log §NN` repartidas por el repositorio,
 así que es su propia fase. Queda escrito para que la siguiente sesión que se
 tropiece no vuelva a diagnosticarlo desde cero.
 
+**Y un apunte de herramienta, porque me equivoqué tres veces con él.** Para
+saber si una rama conflictúa con `main` usé
+`git merge-tree $(git merge-base …) HEAD origin/main | grep -c "^<<<<<<<"`.
+Devolvió **0 las tres veces, y las tres se equivocó**: el formato antiguo de
+`merge-tree` no emite marcadores de conflicto, así que ese `grep` no puede
+encontrarlos nunca — un cero ahí no significa "no hay conflicto", significa
+"esta comprobación no mide lo que crees". Con ella se le dijo al fundador "sin
+conflictos" dos veces sobre ramas que sí lo tenían. Lo fiable es **intentar el
+merge** (`git merge --no-commit --no-ff`, y `git merge --abort` si no
+interesaba) o mirar `mergeable_state` en la API de GitHub, que acertó las tres.
+Es la misma forma del fallo que este PR persigue en el artículo y en el test de
+la expresión regular: **un indicador que parece verificar algo y mira otra
+cosa** — con la agravante de que aquí el falso negativo era silencioso y salía
+en verde.
+
 **Arreglo encontrado de camino.** La fecha del pilar `medicion` en el sitemap
 seguía en el 2026-08-03: S6 publicó `metricas-geo-que-medir` sin tocarla,
 aunque la página pilar lista los artículos de su cluster y por tanto cambió de
