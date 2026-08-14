@@ -92,6 +92,15 @@ worse than no rule, because a future session will obey it anyway.
   makes that figure a lie (`docs/adr/0029`, Fase C). Counters must be measured
   from real rows; a split between stages may be a presentation convention, but
   no number under it may be invented.
+- **El trabajo de UN prompt vive en `lib/scan/prompt-job.ts`, no en el
+  ejecutor.** `executor.ts` opera la campaña —reclamar lotes, presupuesto de la
+  invocación, finalizar, puntuar, notificar— y `prompt-job.ts` opera un job:
+  transiciones de estado, una llamada por motor con reintentos compartidos,
+  inserción de resultados y registro. Estaban en el mismo fichero de 1.523
+  líneas, y lo segundo es justo lo que se abre para depurar por qué falló un
+  prompt concreto (log §81). Trabajo nuevo por prompt va ahí; trabajo nuevo por
+  campaña, en el ejecutor — y en ambos casos se presupuesta contra la
+  invocación, no contra sí mismo.
 - **Terminal states stay terminal, and progress must bump `updated_at`.** Any
   path that defers work instead of finishing it must write to `scan_runs` so
   `reconcileStuckScanRuns` can tell a deferring run from a stalled one

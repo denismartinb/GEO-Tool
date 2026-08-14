@@ -18,8 +18,10 @@ una con su Human Gate.
   mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`)
   y **R5 entera** (log §79: los tipos compartidos salen a
   `lib/llm/contracts.ts`; log §80: las cinco funcionalidades de producto se van
-  a sus módulos dueños y `gemini.ts` pasa de 1.278 a 303 líneas). Quedan R3 y
-  R6–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  a sus módulos dueños y `gemini.ts` pasa de 1.278 a 303 líneas), y **el primer
+  trozo de R6** (log §81: `processPromptJob` sale del ejecutor, 1.523 → 1.167
+  líneas). Quedan R3, la mudanza de `scan/types.ts` y `scan/constants.ts` a
+  `lib/domain/`, y R7–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
@@ -182,7 +184,15 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   `scan/types.ts` + `scan/constants.ts` a `lib/domain/` (rompe las 6
   dependencias mutuas sobre `lib/scan`); `web-audit/types.ts` para los 2
   ciclos solo-tipo. La regla de ruta `scan.md` aplica entera: son mudanzas,
-  no cambios de lógica.
+  no cambios de lógica. **`processPromptJob` hecho** (log §81): 1.523 → 1.167
+  líneas, y de paso muere el `delay` duplicado que R2 ya había unificado en
+  `lib/llm/http.ts`. **Corrección medida sobre la mudanza a `lib/domain/`**:
+  no son 6 dependencias, son **26 ficheros fuera de `lib/scan/`** (nueve de
+  ellos tests) los que importan `scan/types.ts` o `scan/constants.ts`, y entre
+  ellos `lib/llm/gemini-client.ts` — el transporte de un proveedor de LLM
+  depende hoy del módulo de escaneo. La inversión merece la pena y es un slice
+  propio; ojo con la tentación del shim de reexports en `lib/scan/`, que no
+  rompería la dependencia, sólo la escondería.
 - **R7 · Páginas** (2 PRs): extraer los ~24 componentes inline de
   `web-audit/page.tsx` a `web-audit/_components/`; Overview pasa a usar
   `requireActiveProject` como todas las demás páginas (hoy es la única con

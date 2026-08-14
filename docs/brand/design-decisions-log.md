@@ -7898,6 +7898,55 @@ transporte); §79 (los tipos compartidos, el paso que hizo posible éste).
 
 ---
 
+## 81. El ejecutor del escaneo mezclaba la campaña con el trabajo de un solo prompt (PRELAUNCH-HARDENING-1 Fase R6, primer trozo, 2026-08-14)
+
+**Qué se decidió.** `processPromptJob` —con `callProvider` y sus dos tipos de
+resultado— sale de `lib/scan/executor.ts` a `lib/scan/prompt-job.ts`. El
+ejecutor pasa de **1.523 a 1.167 líneas**.
+
+**Por qué.** El fichero operaba en dos niveles a la vez. Por un lado la
+campaña: reclamar lotes de jobs, repartir el presupuesto de la invocación,
+finalizar la ronda, puntuar, notificar. Por otro **el trabajo de un prompt**:
+las transiciones de estado del job, una llamada por motor con sus rondas de
+reintento compartidas, la inserción de un resultado por motor que responde, el
+registro. Lo segundo es exactamente lo que se abre cuando hay que depurar por
+qué un prompt concreto falló, y estaba enterrado en medio de lo primero.
+
+**Lo que se conserva, dicho explícitamente**, porque `.claude/rules/scan.md`
+aplica entera y esto es una mudanza: el reintento acotado por rondas, el
+criterio de que un motor mal configurado no tumba a los que funcionan, y que el
+job tiene éxito si al menos un motor produce resultado.
+
+**Un duplicado que muere de paso.** `executor.ts` definía su propio `delay`,
+idéntico carácter por carácter al de `lib/llm/http.ts` (que nació en R2
+precisamente para dejar de tener tres copias de esto). Ahora los dos módulos
+usan el de `http.ts`.
+
+**Los mocks siguen funcionando sin tocarlos, y por qué.** `executor.test.ts`
+mockea `@/lib/llm/gemini`, `@/lib/llm/claude` y `@/lib/llm/openai`. Esos mocks
+son de registro de módulos, no del importador, así que siguen aplicando aunque
+ahora quien importe a los tres motores sea `prompt-job.ts` y no el ejecutor.
+Es la diferencia con el caso de §80 —allí lo mockeado era el módulo del que
+salía el código, aquí lo que se mockea son sus dependencias— y merece quedar
+escrito porque de fuera parecen el mismo problema.
+
+**Cómo se demuestra que es un refactor.** 2.278 tests, los mismos, sin editar
+ninguno. `executor.test.ts` tiene 45 casos y todos pasan sin cambios.
+
+**Pendiente de R6.** Mover `lib/scan/types.ts` y `lib/scan/constants.ts` a
+`lib/domain/`. Medido: **26 ficheros fuera de `lib/scan/` los importan**, nueve
+de ellos tests, y entre ellos está `lib/llm/gemini-client.ts` — o sea que hoy
+el transporte de un proveedor de LLM depende del módulo de escaneo. La
+inversión es real y vale la pena, pero es un slice propio: un shim de
+reexports en `lib/scan/` no rompería nada, porque la dependencia seguiría
+existiendo a través del shim.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R6);
+`.claude/rules/scan.md` (los invariantes que la mudanza conserva); §80 (el
+caso de mocking que NO es éste).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
