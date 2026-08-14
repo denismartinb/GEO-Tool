@@ -305,12 +305,31 @@ compila, que captura los seis asistentes que el texto nombra, que no captura
 puntos van escapados. Además exige que toda cifra de tercero lleve su `source`
 y su tamaño de muestra.
 
-**Arreglo que salió de mirar las capturas del piloto** (no de su tabla, que dio
-✅ en las tres anchuras): en 375 px las dos figuras nuevas perdían su última
-columna —la que lleva la conclusión— y la Figura 2 de `metricas-geo-que-medir`
-llevaba dos días igual desde S6. `.art-frame` recorta en vez de deslizar, que
-es correcto para un SVG y pésimo para una tabla. Nuevo `<Figure wide>`, con
-test que lo exige en cualquier figura que contenga una tabla. Detalle: log §78.
+**Tres arreglos que salieron de mirar las capturas del piloto**, no de su tabla
+—que dio ✅ en las tres anchuras las dos veces:
+
+1. **Figuras recortadas en 375 px** (las dos nuevas y la de S6, que llevaba dos
+   días así): perdían su última columna, que en las tres es la que lleva la
+   conclusión. `.art-frame` recorta en vez de deslizar — correcto para un SVG,
+   pésimo para una tabla. Nuevo `<Figure wide>`, con test que lo exige en
+   cualquier figura que contenga una tabla.
+2. **La expresión regular aparecía cortada en escritorio y sin aviso**, porque
+   la pista de deslizar sólo existe bajo 640 px. Es el único entregable
+   ejecutable del artículo y no se puede copiar lo que no se ve: nuevo
+   `<CodeBlock wrap>`, ajuste visual que no mete saltos en el portapapeles.
+3. **La portada se leía como un bloque gris roto** en la tira de 96 px del
+   artículo, que sólo enseña el tercio central de la altura. Recompuesta dentro
+   de esa banda y con el gris pizarra pasado a azul en familia.
+4. **Y el peor, encontrado al verificar el anterior: MDX se comía las barras
+   invertidas de la expresión regular.** El fichero decía `chatgpt\.com` y el
+   lector copiaba `chatgpt.com`, con cada punto como comodín. El test lo
+   aprobaba —tenía un caso llamado "escapa los puntos"— porque leía el MDX del
+   disco, o sea el lado de antes de la transformación que rompía el dato. La
+   expresión pasa a vivir en `lib/blog/ga4-source-regex.ts`, el MDX la renderiza
+   como expresión y el test importa ese mismo valor: ya no hay dos versiones que
+   puedan diferir.
+
+Detalle de los cuatro: log §78.
 
 **Fuentes:** el proxy de salida bloquea `support.google.com` y casi toda la
 cobertura del anuncio, así que nada está verificado contra fuente primaria —

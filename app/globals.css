@@ -5943,7 +5943,14 @@ select.set-field {
   .art-code-h::after {
     content: "Desliza →"; flex: none; white-space: nowrap; color: var(--ink-3); opacity: .8;
   }
+  /* Si el bloque ajusta, no desliza: la pista sobraría y además mentiría. */
+  .art-code-wrap .art-code-h::after { content: none; }
 }
+/* `<CodeBlock wrap>`: un valor único que el lector copia entero. El salto es
+   blando —no entra ningún `\n` en el portapapeles—, así que se ve completo y
+   se pega en una sola línea. `break-all` porque la cadena no tiene espacios
+   por los que partir (log §78). */
+.art-code-wrap pre { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
 
 /* --- Tabla comparativa --------------------------------------------------- */
 .art-tablewrap {

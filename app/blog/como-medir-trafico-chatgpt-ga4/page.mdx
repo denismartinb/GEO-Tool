@@ -19,6 +19,7 @@ import {
   PostMeta
 } from "@/components/blog/article";
 import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+import { GA4_AI_SOURCE_REGEX } from "@/lib/blog/ga4-source-regex";
 
 export const post = getBlogPost("como-medir-trafico-chatgpt-ga4");
 
@@ -195,9 +196,7 @@ Es diez minutos de trabajo y resuelve las dos primeras carencias. En
 **Administrar → Configuración de datos → Grupos de canales**, crea un grupo
 nuevo con una condición sobre **Fuente**, «coincide con la expresión regular»:
 
-<CodeBlock title="Condición de fuente para el canal «Tráfico de IA»">
-chatgpt\.com|chat\.openai\.com|openai\.com|perplexity\.ai|claude\.ai|gemini\.google\.com|copilot\.microsoft\.com|deepseek\.com|grok\.com|meta\.ai|you\.com
-</CodeBlock>
+<CodeBlock wrap title="Condición de fuente para el canal «Tráfico de IA»">{GA4_AI_SOURCE_REGEX}</CodeBlock>
 
 Tres cosas que conviene saber antes de pegarla:
 

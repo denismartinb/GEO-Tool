@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BLOG_POSTS, getMetaDescription, getSeoTitle } from "./posts";
+import { GA4_AI_SOURCE_HOSTS, GA4_AI_SOURCE_REGEX } from "./ga4-source-regex";
 
 /**
  * SEO-POS-1 Fase C, S8 — invariantes de `/blog/como-medir-trafico-chatgpt-ga4`.
@@ -47,25 +48,29 @@ const POST = BLOG_POSTS.find((p) => p.slug === SLUG);
 const PROSE = ARTICLE.replace(/\s+/g, " ");
 
 /**
- * La expresión regular tal y como se publica, extraída del `CodeBlock` — no
- * copiada aquí a mano. Copiarla haría que el test siguiera pasando con el
- * artículo publicando otra cosa, que es exactamente el fallo que persigue.
+ * **Este bloque se reescribió entero, y merece quedar explicado.**
+ *
+ * La v1 extraía la expresión del `<CodeBlock>` del MDX y la comprobaba. Sonaba
+ * bien —leer lo publicado en vez de una copia— y era una **garantía falsa**:
+ * MDX trata el texto suelto de un hijo JSX como texto con escapes, así que se
+ * comía todas las barras invertidas. El fichero decía `chatgpt\.com`, el test
+ * leía `chatgpt\.com` y le daba el visto bueno, y el lector copiaba
+ * `chatgpt.com` con cada punto convertido en comodín. El test miraba el lado
+ * de antes de la transformación que rompía el dato.
+ *
+ * La v2 no hace más lista la comprobación: **quita la transformación**. La
+ * expresión vive en `lib/blog/ga4-source-regex.ts`, el MDX la renderiza como
+ * expresión (`{GA4_AI_SOURCE_REGEX}`) y el test importa ese mismo valor. Ya no
+ * hay dos versiones que puedan diferir. Lo que sí queda por comprobar es que el
+ * artículo siga renderizándola desde la constante y no vuelva a incrustar un
+ * literal — es la única forma de que el fallo vuelva (log §78).
  */
 function publishedSourceRegex(): string {
-  const block = ARTICLE.match(/<CodeBlock[^>]*>\s*([\s\S]*?)\s*<\/CodeBlock>/);
-  expect(block, "el artículo ya no publica ningún CodeBlock con la expresión de fuente").toBeTruthy();
-  return (block?.[1] ?? "").trim();
+  return GA4_AI_SOURCE_REGEX;
 }
 
 /** Dominios de asistente que el artículo nombra en su prosa como fuentes a capturar. */
-const MUST_MATCH = [
-  "chatgpt.com",
-  "chat.openai.com",
-  "perplexity.ai",
-  "claude.ai",
-  "gemini.google.com",
-  "copilot.microsoft.com"
-];
+const MUST_MATCH = GA4_AI_SOURCE_HOSTS;
 
 describe("la expresión regular que el artículo le pide al lector que pegue en GA4", () => {
   it("compila", () => {
@@ -100,6 +105,32 @@ describe("la expresión regular que el artículo le pide al lector que pegue en 
       unescaped,
       "un punto sin escapar en GA4 casa con cualquier carácter: `claude.ai` marcaría también `claudexai`"
     ).toEqual([]);
+  });
+
+  it("la trata como comodín si pierde el escapado (el detector no es decorativo)", () => {
+    // El caso negativo, con el valor exacto que MDX producía: sin barras, cada
+    // punto casa con cualquier carácter y `claude.ai` marcaría `claudexai`.
+    const desescapada = GA4_AI_SOURCE_REGEX.replace(/\\/g, "");
+    expect(new RegExp(desescapada).test("claudexai")).toBe(true);
+    expect(new RegExp(GA4_AI_SOURCE_REGEX).test("claudexai")).toBe(false);
+  });
+
+  it("el artículo la renderiza desde la constante, no como texto suelto", () => {
+    // Ésta es la comprobación que faltaba y por la que el fallo pasó: como
+    // texto dentro del `<CodeBlock>`, MDX se come las barras invertidas y lo
+    // que copia el lector no es lo que dice el fichero.
+    expect(
+      ARTICLE,
+      "el CodeBlock volvió a llevar un literal: MDX se comerá las barras invertidas y " +
+        "el lector copiará una expresión con cada punto como comodín"
+    ).toMatch(/<CodeBlock[^>]*>\{GA4_AI_SOURCE_REGEX\}<\/CodeBlock>/);
+    expect(ARTICLE).toMatch(/import \{ GA4_AI_SOURCE_REGEX \} from "@\/lib\/blog\/ga4-source-regex"/);
+  });
+
+  it("va en un bloque que ajusta, porque el lector tiene que copiarla entera", () => {
+    // No se puede copiar lo que no se ve, y la pista "Desliza →" sólo sale bajo
+    // 640 px: en escritorio la cadena aparecía cortada y sin aviso (log §78).
+    expect(ARTICLE).toMatch(/<CodeBlock\s+wrap\b/);
   });
 });
 

@@ -61,6 +61,16 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   además tenía que **no** capturar `google` — recogerlo se habría comido el
   canal orgánico entero del lector, convirtiendo el consejo publicado en un
   daño (`ga4-chatgpt.test.ts`; log §78).
+- **Si lo publicado pasa por una transformación, el test mira el lado de
+  después — o se quita la transformación.** MDX trata el texto suelto de un
+  hijo JSX como texto con escapes, así que se come las barras invertidas sin
+  avisar: `chatgpt\.com` se publicó como `chatgpt.com`, con cada punto como
+  comodín, mientras un test llamado *"escapa los puntos"* pasaba en verde
+  porque leía el MDX del disco. **Un guardián que mira el lado equivocado de
+  una transformación es peor que ninguno**, porque apaga la sospecha. El
+  remedio elegido no fue una comprobación más lista sino eliminar la diferencia:
+  el valor vive en un módulo TS, el MDX lo renderiza como expresión y el test
+  importa ese mismo valor (`lib/blog/ga4-source-regex.ts`; log §78).
 - **Una cifra de terceros va con su fuente y con su tamaño de muestra, o no
   va.** El `source` del `<Stat>` es cómo este proyecto cumple la regla de
   arriba: sin él la cifra se lee como nuestra. Y un porcentaje ajeno sin
@@ -99,6 +109,23 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   seguidos porque no tiene síntoma —la página carga limpia y el piloto la marca
   ✅— así que lo vigila `article-recipes.test.ts`, que busca la fila separadora
   de una tabla dentro de un `<Figure>` y exige `wide` (log §78).
+- **La portada se juzga en la tira de 96 px, no en el lienzo donde se dibuja.**
+  En el artículo va en `.blog-cover-compact` —96 px de alto a todo el ancho, con
+  `object-fit: cover`—, o sea una tira de ~11,7:1 sobre un lienzo de 4:1: sólo
+  se ve **el tercio central de la altura**. Todo lo que importe tiene que caber
+  ahí, y ningún elemento puede quedar cortado en un rectángulo plano sin
+  principio ni final: eso se lee como una imagen rota, no como una decisión
+  (§73). La portada de S8 tenía las barras apoyadas fuera de la banda y en gris
+  pizarra, el único color fuera de la familia, y en escritorio era exactamente
+  eso. Antes de dar una portada por buena, renderízala en 1124×96 con
+  `object-fit: cover` y mírala (log §78).
+- **Un valor que el lector tiene que copiar entero va en `<CodeBlock wrap>`.**
+  Para código de verdad, deslizar es correcto: partir la línea cambia lo que
+  dice. Para una cadena única y sin espacios —una expresión regular, una
+  clave— deslizar es lo contrario de lo que hace falta, porque **no se puede
+  copiar lo que no se ve** y la pista "Desliza →" sólo aparece bajo 640 px, así
+  que en escritorio se ve cortada y sin aviso. El ajuste es visual: un salto
+  blando no mete ningún `\n` en el portapapeles (log §78).
 - **Declarar la portada no es enseñarla.** `BlogCover` sólo pinta la imagen si
   recibe `image`; sin esa prop cae al degradado con icono, que es el respaldo
   de los artículos *sin* portada — "un icono de algo que no carga bien", el

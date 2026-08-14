@@ -7840,6 +7840,74 @@ sobre lo que se ve.** Una tabla recortada no es un fallo de carga. La única
 defensa sigue siendo abrir las capturas — aquí las abrió el Director antes del
 Human Gate, que es donde toca, en vez del fundador en su móvil.
 
+**Segunda pasada de capturas, ahora en escritorio, dos cosas más.** El arreglo
+de las figuras se verificó y de paso salieron los dos fallos que sólo se ven a
+1280 px, los dos invisibles en móvil:
+
+**1. La cadena que el lector tiene que copiar aparecía cortada, y en
+escritorio sin nada que dijera que había más.** La expresión de fuente son ~200
+caracteres sin espacios; `.art-code pre` desliza, pero la pista *"Desliza →"*
+sólo existe bajo 640 px (PR #309, pensada para móvil). Así que en la anchura en
+la que de verdad se configura un GA4, la cadena terminaba en
+`…gemini.google.com|c` y nada indicaba que continuara. **No se puede copiar lo
+que no se ve**, y esa cadena es el único entregable ejecutable del artículo.
+`<CodeBlock wrap>` la ajusta en varias líneas visuales en vez de deslizarla —
+para código de verdad partir una línea cambiaría lo que dice, pero esto es un
+valor único, y **el salto blando no mete ningún `\n` en el portapapeles**, así
+que se ve entera y se pega en una sola línea. Con la pista de deslizar apagada
+cuando ajusta, porque ahí mentiría.
+
+**2. La portada se leía como un bloque gris roto.** En el artículo la portada
+va en una caja de **96 px de alto a todo el ancho** (`.blog-cover-compact`) con
+`object-fit: cover`, o sea una tira de ~11,7:1 sobre una imagen de 4:1: se ve
+la banda central, un tercio de la altura. La composición tenía las barras
+apoyadas en una base a `y=244` con la más alta empezando en `y=76`, así que de
+las tres barras la banda visible sólo cortaba **un rectángulo gris opaco sin
+principio ni final** — y el gris pizarra, único color fuera de la familia
+azul/cian del resto, remataba el efecto de "algo que no ha cargado" (§73, las
+palabras del fundador). Recompuesta: rejilla y barras dentro de la banda
+central (base a `y=202`, unidad de 12 px), y el gris a un azul apagado en
+familia. La jerarquía —Directo mucho más alta que el canal de asistentes—
+sobrevive al recorte, que era justo lo que la portada tenía que demostrar.
+
+**La regla que sale de esto y que no estaba escrita en ninguna parte:** una
+portada de artículo se juzga en la tira de 96 px, no en el lienzo de 1200×300
+donde se dibuja. Las portadas de S5 y S6 sufren el mismo recorte —se comprobó
+mirándolas— y sobreviven por suerte, porque toda su composición es del mismo
+color y sin elementos que el corte convierta en un bloque plano.
+
+**Y al verificar ese arreglo apareció el peor de todos: el test daba una
+garantía falsa.** Al medir sobre el HTML del build qué texto se lleva el lector
+al portapapeles, salió esto: **MDX se había comido todas las barras
+invertidas**. El fichero decía `chatgpt\.com|claude\.ai|…` y lo que se
+renderizaba era `chatgpt.com|claude.ai|…`, con **cada punto convertido en
+comodín** — la expresión que el artículo le pide al lector que pegue en su
+propiedad de GA4 marcaría también un `claudexai`. MDX trata el texto suelto de
+un hijo JSX como texto con escapes; no hay aviso de ninguna clase.
+
+Lo grave no es el fallo, que es un despiste de sintaxis. Lo grave es que
+`ga4-chatgpt.test.ts` **lo aprobaba**, y con un test dedicado a exactamente
+eso: tenía un caso llamado *"escapa los puntos, para que no actúen como
+comodín"* que pasaba en verde mientras el lector recibía la versión sin
+escapar. Leía el MDX del disco, o sea **el lado de antes de la transformación
+que rompía el dato**. Un guardián que mira el lado equivocado de una
+transformación no es un guardián: es una garantía falsa, y eso es peor que no
+tener ninguna, porque apaga la sospecha.
+
+El arreglo no es una comprobación más lista: **quita la transformación**. La
+expresión vive en `lib/blog/ga4-source-regex.ts`, el MDX la renderiza como
+expresión (`{GA4_AI_SOURCE_REGEX}`) y el test importa ese mismo valor, así que
+ya no existen dos versiones que puedan diferir. Quedan tres casos nuevos: que
+el artículo la renderice desde la constante y no vuelva a incrustar un literal
+—la única forma de que el fallo vuelva—, que vaya en un bloque que ajusta, y el
+caso negativo con el valor exacto que MDX producía, para probar que el detector
+de escapado distingue de verdad.
+
+**La lección, que es más general que este artículo:** cuando lo publicado pasa
+por una transformación (MDX, un compilador, un serializador), el test tiene que
+mirar **el lado de después**, o eliminar la transformación. Aquí se eligió lo
+segundo, que es lo único que no depende de acordarse.
+
 **Arreglo encontrado de camino.** La fecha del pilar `medicion` en el sitemap
 seguía en el 2026-08-03: S6 publicó `metricas-geo-que-medir` sin tocarla,
 aunque la página pilar lista los artículos de su cluster y por tanto cambió de
