@@ -91,6 +91,21 @@ Consecuencias, y son reglas:
   No es un respaldo: no reintroducir lecturas. Se dejó porque tirar una columna
   es un cambio destructivo con su propia aprobación.
 
+### Los componentes de presentación viven en `_components/`, no en `page.tsx`
+
+`page.tsx` orquesta datos; los catorce componentes que pintan filas, anillos,
+tarjetas y el gráfico de tendencia viven en
+`app/dashboard/projects/[projectId]/web-audit/_components/` (log §83).
+Componente nuevo de esta pantalla → ahí.
+
+Y una regla sobre cómo se demuestra un cambio en esta zona: **esta pantalla no
+tiene tests de render**, así que un suite verde es compatible con haberla roto
+entera, y `tsc` compila igual de bien un componente al que le falta una fila.
+Cualquier mudanza de marcado aquí se demuestra comparando el contenido antes y
+después —línea a línea, sin imports ni comentarios— además de pasar el piloto.
+Esa comparación cazó un bloque duplicado que el compilador y el lint dejaron
+pasar (log §83).
+
 ## Excepción registrada: la auditoría automática tras escaneo
 
 `lib/web-audit/audit-job-runner.ts` (AUDIT-AFTER-SCAN-1, ADR 0027) llama a los
