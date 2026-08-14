@@ -7731,7 +7731,63 @@ dos veces era correcto: la página **cargaba** bien. Un texto cortado no es un
 fallo de carga. Es el mismo límite que ya está escrito en el histórico —el
 `PASS` es la lista de lo que el piloto vio, no un juicio sobre lo que se ve— y
 la única defensa real sigue siendo mirar las capturas. Esta la encontró el
-fundador antes que yo, mirando su propio móvil.
+fundador antes que yo, mirando su propio móvil
+
+## 78. El cliente de Gemini sale de las nueve funcionalidades que lo tapaban (PRELAUNCH-HARDENING-1 Fase R5, primera mitad, 2026-08-13)
+
+`lib/llm/gemini.ts` tenía **1.278 líneas** y era dos cosas a la vez: el cliente
+HTTP de un proveedor y **nueve funcionalidades de producto** —el escaneo, la
+auditoría web, la extracción, el perfil de negocio, los alias de marca, los
+competidores sugeridos, dos generadores de prompts y la reescritura de
+recomendaciones—. Cada una de esas nueve tiene su módulo dueño en otro sitio.
+
+Este slice mueve **sólo el transporte** a `lib/llm/gemini-client.ts` (231
+líneas): la URL, el modelo fijado y su validación, los mensajes de error por
+estado, el `fetch` con reintentos de LLM-RESILIENCE-1, el mapeo a error
+categorizado, y las dos formas de pedir JSON (normal y con *grounding*).
+`gemini.ts` baja a 1.084 y **no cambia ni un export público**: reexporta
+`GeminiTimeoutError` y `GeminiConfigError`, así que ningún sitio de llamada se
+entera. Repartir las nueve funcionalidades es el siguiente slice, y sale mucho
+más pequeño ahora que cada una depende de un cliente limpio en vez del fichero
+entero.
+
+Lo que R2 ya unificó (`delay`, `fetchWithTimeout`, compartidos con OpenAI y
+Claude) sigue donde estaba; esto es lo que es específico de Gemini.
+
+### Lo que enseñó el intento de usar el accesor de R4
+
+Aproveché el traslado para leer `GEMINI_MODEL` y `GEMINI_API_KEY` por
+`serverEnv()`, el accesor tipado que acababa de entrar en R4. Parecía la
+continuación natural de la fase anterior. **No lo es, y el test lo cazó al
+instante**: `serverEnv()` cachea el entorno en el primer acceso, así que
+enrutar por él una variable que hoy se lee fresca en cada llamada cambia
+*cuándo* se observa un valor. `gemini.test.ts` cambia `GEMINI_MODEL` entre
+casos y falló con un tipo de error que no era el esperado.
+
+La regla de la fase es explícita —«si un slice necesita cambiar un test, es que
+no era un refactor y se para»— así que se revirtió, no se tocó el test. Queda
+como invariante para todos los sitios de adopción que faltan: **adoptar
+`serverEnv()` es una decisión propia con su propio análisis, nunca un efecto
+colateral de mover código de sitio.** El accesor cachea a propósito (una
+función serverless tiene el entorno fijo), pero eso lo hace inadecuado
+justamente donde algo espera releer.
+
+### Una inconsistencia conservada, no arreglada
+
+Ante la MISMA condición —falta `GEMINI_API_KEY`— `generateGeminiJson` lanza
+`ExtractionError("config", …)` y `generateGroundedGeminiJson` lanza
+`GeminiConfigError`. Dos tipos distintos para el mismo fallo, y quien los
+captura los trata distinto. Se deja como está porque esto es un refactor y
+unificarlo cambiaría qué error ve un caller en producción. Queda anotado en el
+propio código y aquí, para decidirlo aparte.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R5); §70 (R4 y su
+accesor); §43 (R1 y R2); log §56 y `.claude/rules/gemini.md` (de dónde sale el
+`fetch` con reintentos que se mueve intacto).
+
+---
+
+## Cómo mantener este documento
 
 ---
 

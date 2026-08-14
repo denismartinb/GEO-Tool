@@ -14,8 +14,10 @@ una con su Human Gate.
   LCP y choca con `.claude/rules/onboarding.md`) y quedan ~33 KB de CSS de
   consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
   (migración, cifra publicada, superficie de auth).
-- **Fase R 🟡 en curso** — R1, R2 (log §43) y **R4 hechos** (log §70). Quedan
-  R3, R5–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+- **Fase R 🟡 en curso** — R1, R2 (log §43), **R4** (log §70) y **la primera
+  mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`).
+  Quedan R3, la segunda mitad de R5 (repartir las nueve funcionalidades a sus
+  módulos dueños), y R6–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
