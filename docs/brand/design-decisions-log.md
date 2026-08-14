@@ -8006,7 +8006,7 @@ lo contrario: allí los tests mockeaban la ruta).
 
 ---
 
-## 78. La analítica mide el efecto, no la causa (SEO-POS-1, S8, 2026-08-14)
+## 83. La analítica mide el efecto, no la causa (SEO-POS-1, S8, 2026-08-14)
 
 **Qué se publica.** `/blog/como-medir-trafico-chatgpt-ga4`, cluster `medicion`.
 Cubre el cluster de keywords nº 8 del plan ("medir tráfico desde ChatGPT en
@@ -8095,7 +8095,7 @@ recupere**. Es el fallo de `/docs/metodologia` del §77 otra vez, un nivel más
 adentro, y el remedio ya existía a diez líneas de distancia: `.art-tablewrap`
 resolvió exactamente esto para las tablas sueltas en la PR #306, deslizamiento
 más pista *"Desliza para ver todas las columnas →"*. Lo que faltaba era que una
-tabla **dentro de una figura** pudiera pedirlo: `<Figure wide>` (log §78).
+tabla **dentro de una figura** pudiera pedirlo: `<Figure wide>` (log §83).
 
 **Por qué esto es un test y no una nota.** Se coló en dos PRs seguidos, y en
 los dos el síntoma fue invisible: la página carga limpia, el piloto la marca ✅
@@ -8178,6 +8178,31 @@ de escapado distingue de verdad.
 por una transformación (MDX, un compilador, un serializador), el test tiene que
 mirar **el lado de después**, o eliminar la transformación. Aquí se eligió lo
 segundo, que es lo único que no depende de acordarse.
+
+**Y un hallazgo del check-in previo al Human Gate: la numeración de este
+documento estaba rota, siete veces.** Esta entrada nació como §78 mientras
+PRELAUNCH-HARDENING-1 R5/R6 mergeaba §78 a §82 en `main`. Las dos ramas eran
+correctas por separado —cada una calculó `max + 1` sobre su propia base, que
+envejece en cuanto la otra mergea— y **git no para nada**: los dos bloques son
+apéndices adyacentes al final del mismo fichero, así que se mezclan sin un solo
+marcador de conflicto y el resultado tiene dos §78 sin que chille nadie. Se
+cogió comprobando la mergeabilidad a mano; a mano no es un mecanismo.
+
+Al escribir el guardián (`tests/log-numbering.test.ts`, calcado de
+`adr-numbering.test.ts`, que resolvió esto mismo para `docs/adr/`) resultó que
+**ya había siete colisiones en `main`**: §33, §36, §39, §54, §55, §65 y §70,
+desde principios de agosto, una cada pocos días. Dos de ellas son visibles
+desde el mapa de zonas de CLAUDE.md, que apunta a «log §54» desde dos filas
+distintas y a dos secciones distintas — o sea que la referencia ya no resuelve
+en el documento que la siguiente sesión lee primero.
+
+Esta entrada pasa a **§83**, con todas sus referencias. Las siete heredadas
+quedan **congeladas como deuda declarada**, no arregladas aquí: renumerar una
+sección ya mergeada rompe las referencias publicadas que la apuntan —el coste
+que `adr-numbering.test.ts` documenta haber pagado con `0026`— y siete
+secciones merecen su propia pasada deliberada, no ir de propina en un PR de
+contenido donde nadie las revisaría. La lista sólo puede encoger y su línea
+base está fijada literalmente, como `COVER_DEBT`.
 
 **Arreglo encontrado de camino.** La fecha del pilar `medicion` en el sitemap
 seguía en el 2026-08-03: S6 publicó `metricas-geo-que-medir` sin tocarla,

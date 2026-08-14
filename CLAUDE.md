@@ -399,7 +399,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
 | Auditoría web | `web-audit.md` | **SCAN-STATES-3 (2026-08-11)** · WEB-AUDIT-AUTO-SPLIT-1 (2026-08-09) · WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038) · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30, §52, §57 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | **SCORE-WINDOW-1 (2026-08-05, ADR 0036)** · GEO-SCORE-V4 (ADR 0033) · GEO-SCORE-CALIBRATION-1 sigue propuesta y bloqueada por datos (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031/0032/0033/0036 · log §8b, §20, §23, §29, §31 |
-| Blog y contenido | `growth-content.md` | **SEO-POS-1 Fase C, S8 (2026-08-14)** · S6 (2026-08-13) · COMPARATIVAS-DESIGN-1 (2026-08-11) · SEO-POS-1 Fase T-b (2026-08-09) | log §12, §13, §14, §19, §46, §47, §58–§61, §66–§70, §73–§78 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
+| Blog y contenido | `growth-content.md` | **SEO-POS-1 Fase C, S8 (2026-08-14)** · S6 (2026-08-13) · COMPARATIVAS-DESIGN-1 (2026-08-11) · SEO-POS-1 Fase T-b (2026-08-09) | log §12, §13, §14, §19, §46, §47, §58–§61, §66–§70, §73–§77, §83 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
 | Escaneo (pipeline) | `scan.md` | **ENGINE-DEBUG-TOGGLE-1 (2026-08-10)** · SAMPLING-DEBUG-TOGGLE-1 (2026-08-09) · SCAN-DRIVE-1 (2026-08-07, ADR 0037) · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | log §53, §54 · `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
 | Dominios y depuración | — *(sin regla propia todavía)* | **DOMAINS-CLIENT-DELETE-1 (2026-08-09)** · DOMAINS-ACTIVE-COOKIE-1 (2026-08-07) · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39, §41 · `docs/design-reference/domains-redesign-1/` |
 | Visión general | — *(sin regla propia todavía)* | **SCAN-STATES-2 (2026-08-10)** · ONBOARDING-ROCKET-1 Fase 1 (2026-08-08) | log §4, §6, §8b, §55, §56 |
@@ -449,6 +449,16 @@ posterior:
    es peor que ninguna, porque una sesión futura la obedecerá igual.
 3. **Mapa de zonas** — actualizar la celda "Última fase cerrada" de la zona en
    la tabla de arriba. Si la zona no existía, añadir su fila.
+
+**El número de sección del histórico es un identificador, no un contador.**
+Antes de mergear, comprueba que el tuyo no lo haya reclamado otra rama
+mientras tanto: varias sesiones calculan `max + 1` sobre bases que envejecen, y
+**git no lo para** —dos apéndices al final del mismo fichero se mezclan sin un
+solo marcador de conflicto—, así que el resultado tiene dos §NN en silencio.
+Había siete colisiones así antes de que nadie lo mirara (log §83). Lo vigila
+`tests/log-numbering.test.ts`; si salta, renumera la sección que **no** esté en
+`main` y con ella **todas** sus referencias (`grep -rn "§NN"`), que es la mitad
+que se olvida.
 
 Lo hace **el agente**, no el fundador. Documentación que depende de que un
 humano se acuerde es documentación que se pudre.

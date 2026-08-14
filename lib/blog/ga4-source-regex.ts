@@ -15,7 +15,7 @@
  * Como constante de TypeScript, el mismo valor que se renderiza es el que
  * importa el test, y esa clase de fallo deja de ser posible. Se comprobó sobre
  * el HTML del build que el texto que llega al portapapeles es exactamente
- * este (log §78).
+ * este (log §83).
  */
 export const GA4_AI_SOURCE_REGEX =
   "chatgpt\\.com|chat\\.openai\\.com|openai\\.com|perplexity\\.ai|claude\\.ai|gemini\\.google\\.com|copilot\\.microsoft\\.com|deepseek\\.com|grok\\.com|meta\\.ai|you\\.com";
