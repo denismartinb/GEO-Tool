@@ -1,7 +1,8 @@
 import "server-only";
 import { z } from "zod";
 import { fetchPageSafely } from "@/lib/web-audit/fetch-page";
-import { inferBrandAliases, inferBusinessProfile, type BusinessProfile } from "@/lib/llm/gemini";
+import { inferBrandAliases, inferBusinessProfile } from "@/lib/llm/gemini";
+import type { BusinessProfile } from "@/lib/llm/contracts";
 import { selectVerifiableAliases } from "@/lib/projects/brand-aliases";
 import { type AuthenticatedContext } from "@/lib/scan/types";
 

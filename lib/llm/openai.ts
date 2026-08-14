@@ -8,7 +8,7 @@ import {
   EXTRACTION_RETRY_BASE_DELAY_MS,
   EXTRACTION_RETRY_MAX_DELAY_MS
 } from "@/lib/scan/constants";
-import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/gemini";
+import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/contracts";
 import { delay, fetchWithTimeout } from "@/lib/llm/http";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
