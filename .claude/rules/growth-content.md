@@ -50,6 +50,28 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   sobre las cuatro superficies (artículos, glosario, `/docs` y comparativas).
   `ProductMock` conserva `weight` en el fuente **sin pintarlo**: es lo que hace
   verificable el número del gauge.
+- **Lo que el artículo le pide al lector que ejecute se ata con un test, y el
+  test lo extrae del artículo.** Una expresión regular, un fragmento de
+  configuración o un comando publicados son lo único ejecutable de una pieza —
+  y prosa dentro de un MDX no la compila nadie. El test la saca del bloque
+  publicado (nunca una copia: una copia sigue verde con el artículo diciendo
+  otra cosa) y comprueba que hace lo que el texto promete dos párrafos más
+  arriba. Un fallo así se descubre en la cuenta del lector, no en la nuestra.
+  El caso: la expresión de fuente de `como-medir-trafico-chatgpt-ga4`, que
+  además tenía que **no** capturar `google` — recogerlo se habría comido el
+  canal orgánico entero del lector, convirtiendo el consejo publicado en un
+  daño (`ga4-chatgpt.test.ts`; log §78).
+- **Una cifra de terceros va con su fuente y con su tamaño de muestra, o no
+  va.** El `source` del `<Stat>` es cómo este proyecto cumple la regla de
+  arriba: sin él la cifra se lee como nuestra. Y un porcentaje ajeno sin
+  denominador es la misma trampa que el artículo de métricas denuncia, cometida
+  por nosotros. Cuando además viene de un único estudio, el texto dice que lo
+  utilizable es el orden de magnitud, no el decimal (log §78).
+- **Un allow-list de motores cubre el cuerpo, nunca la metadata.** El permiso
+  para nombrar Perplexity en un artículo existe para temas de mercado —cómo lo
+  clasifica GA4, una comparativa— y no se extiende al `<title>`, a la
+  descripción ni al CTA, donde sigue mordiendo la regla de que no se nombran
+  motores que el producto no ejecuta (log §78).
 - **Si una cifra del producto llega a publicarse, se ata al código con un
   test.** Regla de segunda línea: la primera es no publicarla. Cuando una pieza
   sí depende de un dato nuestro —los umbrales de comportamiento de la auditoría,

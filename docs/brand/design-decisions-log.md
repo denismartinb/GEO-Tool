@@ -7735,6 +7735,86 @@ fundador antes que yo, mirando su propio móvil.
 
 ---
 
+## 78. La analítica mide el efecto, no la causa (SEO-POS-1, S8, 2026-08-14)
+
+**Qué se publica.** `/blog/como-medir-trafico-chatgpt-ga4`, cluster `medicion`.
+Cubre el cluster de keywords nº 8 del plan ("medir tráfico desde ChatGPT en
+GA4", canal «Asistente de IA»), el último hueco de la capa de medición.
+
+**Por qué esta pieza es distinta de las siete anteriores de la cola.** Es la
+primera cuyo contenido **no depende de nada nuestro**: todo lo que afirma es
+sobre un producto de Google y sobre un estudio ajeno. En S5 y S6 el riesgo era
+publicar de más —umbrales, pesos, mecánica— y las reglas que salieron de ahí
+(§69, §75, §76) no aplican aquí. El riesgo cambia de sitio: **publicamos algo
+que el lector va a ejecutar**, una expresión regular que le pedimos que pegue en
+su propia propiedad de GA4. Prosa dentro de un MDX no la mira ningún
+compilador, así que una expresión que no compile, o que no case con los
+dominios que el propio artículo nombra dos párrafos más arriba, es un fallo que
+se descubre en la cuenta del lector y no en la nuestra.
+`lib/blog/ga4-chatgpt.test.ts` la **extrae del `CodeBlock`** —no la copia— y
+comprueba que compila, que captura los seis asistentes que el texto nombra, que
+**no** captura `google`/`bing` (recogerlos haría que el grupo personalizado se
+comiera el canal orgánico entero: el consejo publicado sería activamente
+dañino) y que todos los puntos van escapados.
+
+**Lo que diferencia el artículo de las veinte guías de "cómo medir ChatGPT en
+GA4" que ya existen.** Todas explican dónde está el canal nuevo. Ninguna dice
+que el canal **se mueve sin que se mueva el tráfico**: la proporción de visitas
+que trasladan el referente cambia sola con cada versión de una aplicación, así
+que dos meses idénticos en tráfico real dan lecturas distintas. Es exactamente
+la trampa de la «posición media» de §73 con otro disfraz —un número que varía
+por motivos que no tienen que ver con lo que dice medir— y el artículo la
+enseña con una figura de dos filas, declarada como aritmética de ejemplo, no
+como medición.
+
+**Y declara su techo, que es el argumento comercial honesto.** Una marca que
+ChatGPT recomienda a diario ante gente que no hace clic, y una marca que no
+sale nunca, producen el mismo informe de adquisición: cero. GA4 cuenta visitas;
+no puede decir si saliste en la respuesta. Ese es el puente al producto y no
+hace falta exagerarlo — es una limitación estructural, no un defecto de
+configuración.
+
+**Perplexity entra en el allow-list de `article-honesty.test.ts`, y es el
+primero.** El test prohíbe nombrarlo en el cuerpo de un artículo desde S1,
+cuando el borrador del plan estuvo a punto de titular una pieza con un motor
+que no ejecutamos. Aquí el motivo es legítimo y estaba previsto por el propio
+diseño del test: una de las tres conclusiones del artículo **es** que el canal
+«Asistente de IA» no incluye Perplexity y sus visitas se quedan en Referencia.
+Omitirlo sería esconderle al lector la mitad de la respuesta para proteger una
+ambigüedad que el artículo no crea — la metadata no lo menciona (regla de
+`.claude/rules/growth-content.md`) y el CTA nombra los tres motores que sí
+ejecutamos, las dos cosas con test.
+
+**Las cifras de terceros van con su denominador o no van.** Las tres del
+`StatGrid` (28 % de visitas desde la web con referente, 6 % desde la aplicación
+de escritorio, 71 % que acaban en Directo) son de un **único** estudio ajeno
+sobre 41,2 millones de sesiones, y el artículo lo dice en el `source` de cada
+`<Stat>`, en la prosa y en la nota de fuentes: lo utilizable es el orden de
+magnitud, no el decimal. El mecanismo de debajo —el sistema operativo no
+traslada el referente al abrir un enlace desde una aplicación nativa— no
+depende del estudio y sí es verificable, y es lo que sostiene el argumento.
+
+**Limitación del entorno, declarada.** El proxy de salida de los agentes
+bloquea `support.google.com` y la mayoría de la cobertura del anuncio, así que
+**ninguna de las afirmaciones sobre GA4 está verificada contra la fuente
+primaria**: se triangularon con varias fuentes secundarias que coinciden entre
+sí, consultadas el 2026-08-14, y el artículo publica esa fecha para que el
+lector sepa de cuándo es. Misma limitación que ya se declaró con los precios de
+Otterly (§66) y de Peec AI. Dos consecuencias asumidas: la lista de asistentes
+que reconoce Google **no es pública** —lo dice el propio artículo, porque
+cambia cómo hay que leer una caída del canal— y la fecha de despliegue amplio
+(junio de 2026) se cuenta como "a lo largo de junio", no con un día concreto
+que no se pudo confirmar.
+
+**Arreglo encontrado de camino.** La fecha del pilar `medicion` en el sitemap
+seguía en el 2026-08-03: S6 publicó `metricas-geo-que-medir` sin tocarla,
+aunque la página pilar lista los artículos de su cluster y por tanto cambió de
+verdad ese día. Corregida al 2026-08-14. Es el mismo rancio que T15 vino a
+arreglar, reaparecido por el sitio de siempre — una fecha manual que nadie
+recuerda que existe hasta que alguien la mira.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

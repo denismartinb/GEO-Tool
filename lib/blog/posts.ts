@@ -208,6 +208,19 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "medicion"
   },
   {
+    slug: "como-medir-trafico-chatgpt-ga4",
+    title: "Cómo medir en GA4 el tráfico que llega desde ChatGPT",
+    description:
+      "GA4 ya trae un canal propio para asistentes de IA desde mayo de 2026. Qué ve, qué deja fuera, y por qué lo que enseña es un suelo con un multiplicador desconocido, no el total.",
+    metaDescription:
+      "Cómo ver en GA4 el tráfico que llega desde ChatGPT con el canal «Asistente de IA», qué se queda en Directo y cómo recuperarlo.",
+    datePublished: "2026-08-14",
+    coverIcon: "trendUp",
+    coverImage: "/blog/como-medir-trafico-chatgpt-ga4/cover.webp",
+    primaryKeyword: "medir tráfico chatgpt ga4",
+    cluster: "medicion"
+  },
+  {
     slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
     title: "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude",
     description:

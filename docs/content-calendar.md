@@ -134,7 +134,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | ✅ Publicado | #(este) |
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | ✅ Publicado | #(este) |
 | S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
-| S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | 🔲 Pendiente | — |
+| S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | ✅ Publicado | #(este) |
 | S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
 | S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
 
@@ -275,6 +275,41 @@ el artículo de métricas, la doc de metodología, el glosario y **la landing
 había abierto el piloto (estaba en el fixture y no en el journey) y cuatro
 artículos declaraban portada pero renderizaban el degradado con icono en su
 propia cabecera. Los dos corregidos, los dos con test nuevo.
+
+**S8 — hecho (2026-08-14).** `/blog/como-medir-trafico-chatgpt-ga4`, cluster
+`medicion`. Cierra el último hueco de la capa de medición: qué enseña el canal
+«Asistente de IA» que GA4 estrenó el 13 de mayo de 2026, dónde se mira, y las
+tres cosas que **no** cuenta — Perplexity se queda en Referencia, los AI
+Overviews de Google van a Búsqueda orgánica, y la lista de asistentes
+reconocidos no es pública.
+
+**Lo que la diferencia de las veinte guías que ya existen sobre esto:** todas
+explican dónde está el canal nuevo; ninguna dice que **el canal se mueve sin
+que se mueva el tráfico**. Solo ve las visitas que traen referente, y la
+proporción que lo trae cambia sola con cada versión de una aplicación, así que
+dos meses idénticos en tráfico real dan lecturas distintas. Es la trampa de la
+«posición media» de S6 con otro disfraz, y va con su figura de aritmética
+declarada como ejemplo.
+
+**Primera entrada del allow-list de Perplexity** (`article-honesty.test.ts`),
+prevista por el propio diseño del test: aquí Perplexity no aparece como motor
+nuestro sino como la fuente de tráfico que el lector no encuentra donde
+debería. La metadata no lo nombra y el CTA nombra los tres motores que sí
+ejecutamos — las dos cosas con test.
+
+**Test propio** (`lib/blog/ga4-chatgpt.test.ts`): el artículo publica una
+expresión regular para que el lector la pegue en su GA4, y prosa dentro de un
+MDX no la compila nadie. El test la **extrae del `CodeBlock`** y comprueba que
+compila, que captura los seis asistentes que el texto nombra, que no captura
+`google`/`bing` (recogerlos se comería el canal orgánico entero) y que los
+puntos van escapados. Además exige que toda cifra de tercero lleve su `source`
+y su tamaño de muestra.
+
+**Fuentes:** el proxy de salida bloquea `support.google.com` y casi toda la
+cobertura del anuncio, así que nada está verificado contra fuente primaria —
+se triangularon fuentes secundarias coincidentes el 2026-08-14 y el artículo
+publica esa fecha. Misma limitación declarada que con los precios de Otterly.
+Detalle: log §78.
 
 ---
 
