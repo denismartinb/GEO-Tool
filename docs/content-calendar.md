@@ -136,7 +136,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | ✅ Publicado | #(este) |
 | S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | ✅ Publicado | #401 |
 | S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
-| S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
+| S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | ✅ Publicado | #(este) |
 
 **S1 — hecho (2026-08-10).** Título corregido respecto al que proponía
 `seo-positioning-plan.md` §4: el borrador original decía "…en ChatGPT, Gemini
@@ -354,6 +354,30 @@ cobertura del anuncio, así que nada está verificado contra fuente primaria —
 se triangularon fuentes secundarias coincidentes el 2026-08-14 y el artículo
 publica esa fecha. Misma limitación declarada que con los precios de Otterly.
 Detalle: log §85.
+
+**S10 — hecho (2026-08-15).** Cinco términos nuevos en `/glosario`, capa de
+medición: tasa de mención, prominencia, mención verificada, variabilidad de
+las respuestas de IA y LLMO. No son sinónimos sueltos de los 15 ya
+publicados — cada uno cierra un error de cálculo concreto que S6
+(`/blog/metricas-geo-que-medir`) ya había nombrado en prosa pero que no tenía
+su propia entrada canónica a la que enlazar: prominencia explica por qué
+promediar posición incluyendo las no-menciones invierte el ranking (el mismo
+hallazgo de ADR 0026 que S6 reproduce con tabla), mención verificada distingue
+confirmar contra el texto real de la respuesta frente a preguntarle al modelo
+por su propio trabajo, y variabilidad explica por qué una sola consulta nunca
+es una medición fiable.
+
+`longDefinition` de cada término entre 150 y 300 palabras y ≥3
+`relatedLinks` reales (cruzados entre sí, hacia glosario existente y hacia
+`/blog/metricas-geo-que-medir`), verificado por `lib/glosario/terms.test.ts`.
+Pasa también el guardián de honestidad (`article-honesty.test.ts`): ninguna
+entrada cita un código ADR, publica un peso del compuesto ni explica la
+mecánica de cálculo del GEO Score — LLMO, por ejemplo, se queda en "es un
+término alternativo a GEO, mismo objetivo, sin reparto ni fórmula que contar".
+`GLOSSARY_LAST_MODIFIED` actualizado en `app/glosario/[termino]/page.tsx` y
+`app/sitemap.ts` (2026-08-13 → 2026-08-15), con su test de consistencia entre
+ambos ficheros. `/glosario/page.tsx` es dinámico sobre `GLOSSARY_TERMS`, así
+que las cinco entradas aparecen en el índice sin tocar esa página.
 
 ---
 
