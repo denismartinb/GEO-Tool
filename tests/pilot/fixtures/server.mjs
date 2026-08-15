@@ -78,17 +78,17 @@ const BLOG_SLUGS = [
 // publicHtml — the journey now asserts on cluster headings and internal
 // "Sigue leyendo" links that a one-size-fits-all title+paragraph can't carry.
 const PUBLIC_PAGES = new Map([
-  ["/geo", "GEO — Genscore"],
-  ["/privacidad", "Privacidad — Genscore"],
-  ["/cookies", "Cookies — Genscore"],
-  ["/terminos", "Términos — Genscore"],
-  ["/glosario", "Glosario GEO — Genscore"],
-  ["/comparativas", "Comparativas — Genscore"],
-  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"],
-  ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"],
-  ["/comparativas/genscore-vs-profound", "Genscore vs Profound — Genscore"],
-  ["/comparativas/alternativas-a-otterly", "Alternativas a Otterly en 2026 — Genscore"],
-  ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — Genscore"]
+  ["/geo", "GEO — GenScore"],
+  ["/privacidad", "Privacidad — GenScore"],
+  ["/cookies", "Cookies — GenScore"],
+  ["/terminos", "Términos — GenScore"],
+  ["/glosario", "Glosario GEO — GenScore"],
+  ["/comparativas", "Comparativas — GenScore"],
+  ["/comparativas/genscore-vs-otterly", "GenScore vs Otterly — GenScore"],
+  ["/comparativas/genscore-vs-peec-ai", "GenScore vs Peec AI — GenScore"],
+  ["/comparativas/genscore-vs-profound", "GenScore vs Profound — GenScore"],
+  ["/comparativas/alternativas-a-otterly", "Alternativas a Otterly en 2026 — GenScore"],
+  ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — GenScore"]
 ]);
 
 // GROWTH-2 Fase 2.6b (tests/pilot/journeys/public-pages.spec.ts): the two
@@ -105,7 +105,7 @@ function glosarioTerminoHtml(slug) {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/glosario/${slug}">
-<title>¿Qué es ${slug}? — Glosario GEO — Genscore</title>
+<title>¿Qué es ${slug}? — Glosario GEO — GenScore</title>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>¿Qué es ${slug}?</h1><p>contenido</p><div class="glossary-related"><h2>Sigue explorando</h2><ul><li><a href="/glosario/${related}">${related}</a></li></ul></div>${overflow}</body></html>`;
 }
@@ -411,9 +411,9 @@ function blogIndexHtml() {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/blog">
-<title>Blog — Genscore</title>
+<title>Blog — GenScore</title>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
-</head><body><h1>Blog — Genscore</h1>${sections}${overflow}</body></html>`;
+</head><body><h1>Blog — GenScore</h1>${sections}${overflow}</body></html>`;
 }
 
 function blogPostHtml(slug) {
@@ -429,9 +429,9 @@ function blogPostHtml(slug) {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/blog/${slug}">
-<title>${slug} — Genscore</title>
+<title>${slug} — GenScore</title>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
-</head><body><h1>${slug} — Genscore</h1><p>contenido</p>${related}${overflow}</body></html>`;
+</head><body><h1>${slug} — GenScore</h1><p>contenido</p>${related}${overflow}</body></html>`;
 }
 
 // GROWTH-2 Fase 2.9 (B1b): the 4 clusters each get a pillar page at
@@ -451,14 +451,14 @@ function blogPillarHtml(key) {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/blog/${key}">
-<title>${key} — Blog — Genscore</title>
+<title>${key} — Blog — GenScore</title>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>${key}</h1>${body}${overflow}</body></html>`;
 }
 
 function feedXml() {
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel><title>Genscore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
+<rss version="2.0"><channel><title>GenScore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
 }
 
 function loginPage() {
@@ -761,7 +761,7 @@ function landingPage() {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/">
-<title>Genscore — visibilidad de marca en motores de IA</title>
+<title>GenScore — visibilidad de marca en motores de IA</title>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}.pt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin:2px}.pt-dot.is-on{background:#333}${MOBNAV_STYLE}</style>
 </head><body>
 <nav class="lp-nav"><button type="button" class="lp-burger" aria-label="Abrir menú">≡</button></nav>
@@ -794,7 +794,7 @@ function pricingPage() {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/pricing">
-<title>Precios — Genscore</title>
+<title>Precios — GenScore</title>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}${MOBNAV_STYLE}</style>
 </head><body>
 <nav class="lp-nav"><button type="button" class="lp-burger" aria-label="Abrir menú">≡</button></nav>
@@ -987,13 +987,13 @@ const server = createServer((request, response) => {
 
   if (path === "/docs") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    response.end(docsPage(path, "Documentación — Genscore"));
+    response.end(docsPage(path, "Documentación — GenScore"));
     return;
   }
 
   if (DOCS_SLUGS.some((slug) => path === `/docs/${slug}`)) {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    response.end(docsPage(path, `${path.slice(6)} — Genscore`));
+    response.end(docsPage(path, `${path.slice(6)} — GenScore`));
     return;
   }
 

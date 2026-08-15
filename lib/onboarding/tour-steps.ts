@@ -46,7 +46,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     n: 3,
     from: 9000,
     to: 15500,
-    sub: "Tu <b>GeoScore</b> mide la capacidad de tu web y tu marca para aparecer de forma optimizada en los motores de IA."
+    sub: "Tu <b>GEO Score</b> mide la capacidad de tu web y tu marca para aparecer de forma optimizada en los motores de IA."
   },
   {
     n: 4,

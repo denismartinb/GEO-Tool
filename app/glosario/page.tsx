@@ -9,7 +9,7 @@ import { contentMetadata } from "@/lib/seo/metadata";
 const SITE_URL = "https://www.genscore.es";
 
 export const metadata: Metadata = contentMetadata({
-  title: "Glosario GEO — Genscore",
+  title: "Glosario GEO — GenScore",
   description:
     "Los términos clave de GEO (Generative Engine Optimization) explicados en una frase: GEO, AEO, GEO Score, cuota de voz en IA, llms.txt, grounding y más.",
   path: "/glosario"
@@ -27,7 +27,7 @@ export default function GlosarioPage() {
         ]}
       />
       <DefinedTermSetSchema
-        name="Glosario GEO de Genscore"
+        name="Glosario GEO de GenScore"
         terms={sortedTerms.map((t) => ({
           term: t.term,
           description: t.definition,

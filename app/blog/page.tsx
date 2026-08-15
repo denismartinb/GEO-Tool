@@ -7,7 +7,7 @@ import { BLOG_CLUSTERS, getPostsByCluster } from "@/lib/blog/posts";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = contentMetadata({
-  title: "Blog — Genscore",
+  title: "Blog — GenScore",
   description:
     "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA.",
   path: "/blog",
@@ -53,7 +53,7 @@ export default function BlogIndexPage() {
         <div className="blog-cluster-head">
           <h2>Comparativas</h2>
           <p>
-            Genscore frente a las otras herramientas de visibilidad en IA, comparado de forma honesta —
+            GenScore frente a las otras herramientas de visibilidad en IA, comparado de forma honesta —
             con las filas donde gana cada una.{" "}
             <Link href="/comparativas">Ver las comparativas</Link>
           </p>
