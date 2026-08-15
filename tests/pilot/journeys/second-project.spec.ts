@@ -22,6 +22,19 @@ import { exploreInteractions } from "../support/explore";
  *
  * SCOPE GUARD — read-only, exactly as core-flow.spec.ts: navigate by URL,
  * assert on what renders, never launch a scan or write anything.
+ *
+ * PRELAUNCH-HARDENING-1 Fase Q5 (2026-08-15): **las dos pantallas declaran
+ * `ContentExpectation`**, que es lo único que las separa de pasar en verde
+ * sobre dos proyectos vacíos. Sin ella este journey afirmaba «se ven bien en
+ * otro proyecto» cuando lo único comprobado era que la ruta respondía 200 — el
+ * mismo fallo del 2026-08-02 que hizo nacer `ContentExpectation`: un rediseño
+ * entero de Auditoría web pasó con ✅ en tres anchuras porque la cuenta del
+ * piloto no tenía datos y todas las capturas enseñaban un estado vacío.
+ *
+ * Que este journey en concreto lo arrastrara es peor que la media: existe
+ * justamente para alcanzar formas de datos que el proyecto principal no puede
+ * producir, así que un proyecto secundario sin datos es exactamente el caso
+ * que más fácil pasaba desapercibido.
  */
 
 test.describe.configure({ mode: "serial" });
@@ -55,7 +68,10 @@ test("the position screens render on other projects, not just the primary one", 
   for (const [index, id] of secondary.entries()) {
     const tag = `p${index + 2}`;
 
-    const overview = await visitAsUser(page, testInfo, `/dashboard/projects/${id}`, `${tag}-overview`);
+    const overview = await visitAsUser(page, testInfo, `/dashboard/projects/${id}`, `${tag}-overview`, {
+      describedAs: "la puntuación GEO del último escaneo de este otro proyecto",
+      anyOf: [{ text: /puntuación geo/i }, { text: /tasa de mención/i }]
+    });
     assertPageIsHealthy(overview);
     await exploreInteractions(page, testInfo, `${tag}-overview`);
 
@@ -63,7 +79,11 @@ test("the position screens render on other projects, not just the primary one", 
       page,
       testInfo,
       `/dashboard/projects/${id}/competitors`,
-      `${tag}-competitors`
+      `${tag}-competitors`,
+      {
+        describedAs: "la tabla de competidores con datos del escaneo de este otro proyecto",
+        anyOf: [{ selector: ".tbl" }, { text: /cuota de voz|share of voice/i }]
+      }
     );
     assertPageIsHealthy(competitors);
     await exploreInteractions(page, testInfo, `${tag}-competitors`);
