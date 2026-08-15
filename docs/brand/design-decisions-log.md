@@ -8985,9 +8985,39 @@ shells de marketing y ninguno añade un `<Link>` de pie a mano.
 en ningún sitio del sistema y el criterio de aceptación exige que un dominio
 inválido no habilite el envío.
 
+### El CTA muerto que ninguna aserción podía cazar
+
+La primera versión deshabilitaba el botón hasta tener un dominio válido. Suena
+correcto y en pantalla era lo contrario: **el CTA principal —lo único que la
+página existe para que pulses— recibía al visitante gris y apagado**, antes de
+que hubiera hecho nada mal. Eso no se lee como «escribe algo primero», se lee
+como «esto está roto», y estaba en la primera pantalla del embudo de captación.
+
+**El piloto lo dio por PASS, y no es un fallo del piloto.**
+`tests/pilot/support/page-audit.ts` salta los controles deshabilitados al medir
+contraste (`if (control.disabled) continue;`) porque **WCAG los exime de AA**:
+mecánicamente la página era impecable. Es el caso puro de lo que el cuarto
+criterio del piloto existe para juzgar —«¿esto es bueno, no sólo correcto?»— y
+de por qué el veredicto no es la tabla de ✅ sino la lista de capturas que
+alguien abrió. Se encontró mirando la captura de móvil, donde el botón gris
+ocupa el centro de la primera pantalla.
+
+**El arreglo no fue pintar mejor el estado deshabilitado, fue quitarlo.** El
+botón siempre invita; al pulsarlo sin un dominio válido devuelve el foco al
+campo y enseña una pista concreta (`.fc-hint`, `--brand-neg` sobre fondo claro,
+4,6:1). Es además la política que el hero de la landing ya tenía escrita y
+justificada: bloquear el alta es peor que arrastrar un dato de menos.
+
+`.lp-cta:disabled` se queda en `globals.css` aunque ninguna pantalla lo use, y
+**en azul atenuado, nunca en gris**: el día que alguien lo necesite, sin esa
+regla heredaría el azul a plena fuerza y parecería pulsable. Al estar exento de
+AA, no lo vigila ningún test — sólo el ojo.
+
 **Trazabilidad.** Task Intake FREE-CHECKER-1 (2026-08-15, sin PR propio —
 generado en la conversación, no committeado como documento aparte);
-`docs/seo-positioning-plan.md` Fase P; `docs/llm-cost-analysis-2026-08.md`.
+`docs/seo-positioning-plan.md` Fase P; `docs/llm-cost-analysis-2026-08.md`;
+`tests/pilot/support/page-audit.ts` (la exención que hace este fallo invisible);
+§55 (Q5b, cuando el chequeo de contraste entró en el piloto).
 
 ---
 

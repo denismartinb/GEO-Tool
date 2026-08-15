@@ -4583,6 +4583,11 @@ a.notif-row:hover {
 .lp-field-ghost .type-caret { background: var(--brand-blue); }
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+/* Pista del comprobador gratuito cuando lo escrito no es un dominio
+   (FREE-CHECKER-1, log §94). `--brand-neg` sobre fondo claro, no `--ink-4`:
+   es un mensaje que hay que leer, no una nota al pie. */
+.fc-hint { font-size: 13px; color: var(--brand-neg); margin: 11px 0 0; text-align: center; }
+.fc-hint strong { font-weight: 650; }
 .lp-cta {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
@@ -4590,8 +4595,15 @@ a.notif-row:hover {
   white-space: nowrap; transition: background .13s;
 }
 .lp-cta:hover { background: #1d4ed8; color: #fff; }
-.lp-cta:disabled { background: var(--ink-4); border-color: var(--ink-4); cursor: not-allowed; }
-.lp-cta:disabled:hover { background: var(--ink-4); }
+/* Un `.lp-cta` deshabilitado sigue siendo AZUL, atenuado — nunca gris. En gris
+   deja de leerse como "el botón, todavía no" y pasa a leerse como "algo se ha
+   roto", que en un CTA de portada es el peor mensaje posible. Ninguna pantalla
+   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §94); vive aquí para que
+   el día que alguien lo necesite no herede el azul a plena fuerza y parezca
+   pulsable. Los controles deshabilitados están exentos de contraste AA, así
+   que el barrido del piloto los salta: esto no lo vigila nadie salvo el ojo. */
+.lp-cta:disabled { background: #93b0f2; border-color: #93b0f2; cursor: not-allowed; }
+.lp-cta:disabled:hover { background: #93b0f2; }
 .lp-cta-soft {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
