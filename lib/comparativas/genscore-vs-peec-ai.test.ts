@@ -6,7 +6,7 @@ describe("COMPARISON_ROWS (genscore-vs-peec-ai)", () => {
     expect(COMPARISON_ROWS.length).toBeGreaterThan(0);
   });
 
-  it("every row has non-empty Genscore and Peec AI values", () => {
+  it("every row has non-empty GenScore and Peec AI values", () => {
     for (const row of COMPARISON_ROWS) {
       expect(row.label.length).toBeGreaterThan(0);
       expect(row.genscore.length).toBeGreaterThan(0);

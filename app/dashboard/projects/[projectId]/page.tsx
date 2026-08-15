@@ -1081,7 +1081,7 @@ export default async function ProjectDetailPage({
           </div>
 
           {/* Desglose del GEO Score (GEO-SCORE-V4, ADR 0033 §7): stated
-              obligation, not polish — "wherever the GeoScore is shown, its
+              obligation, not polish — "wherever the GEO Score is shown, its
               component breakdown must be visible", so "subió porque
               arreglaste la web" and "subió porque las IAs te citan más" son
               distinguibles. Placed right under the gauge, full width, its

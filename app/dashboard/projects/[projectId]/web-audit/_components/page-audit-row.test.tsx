@@ -18,7 +18,7 @@ import { PageAuditRow, freshnessLabel } from "./page-audit-row";
  * donde una advertencia no se ejecuta.
  */
 
-const fixContext: PageFixContext = { projectName: "Genscore", domainNormalized: "genscore.es" };
+const fixContext: PageFixContext = { projectName: "GenScore", domainNormalized: "genscore.es" };
 
 function check(overrides: Partial<PageCheckResult> = {}): PageCheckResult {
   return {

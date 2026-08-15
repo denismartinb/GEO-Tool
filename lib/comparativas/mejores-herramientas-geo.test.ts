@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { TOOLS } from "./mejores-herramientas-geo";
 
 describe("TOOLS (mejores-herramientas-geo)", () => {
-  it("has at least 4 tools, including Genscore", () => {
+  it("has at least 4 tools, including GenScore", () => {
     expect(TOOLS.length).toBeGreaterThanOrEqual(4);
     expect(TOOLS.some((t) => t.slug === "genscore")).toBe(true);
   });
@@ -36,13 +36,13 @@ describe("TOOLS (mejores-herramientas-geo)", () => {
     expect(TOOLS.filter((t) => t.comparisonHref).length).toBeGreaterThanOrEqual(2);
   });
 
-  it("Genscore itself has no comparisonHref (it doesn't compare against itself)", () => {
+  it("GenScore itself has no comparisonHref (it doesn't compare against itself)", () => {
     expect(TOOLS.find((t) => t.slug === "genscore")?.comparisonHref).toBeUndefined();
   });
 });
 
 /**
- * SEO-POS-1 Fase C, S4 (log §68). Esta página afirmaba "**solo Genscore**"
+ * SEO-POS-1 Fase C, S4 (log §68). Esta página afirmaba "**solo GenScore**"
  * tiene interfaz en español. Era cierto cuando se escribió y dejó de serlo el
  * día que CreceRank entró en la lista — sin que nada avisara, porque la
  * afirmación vivía en una cadena de texto y la lista vivía en otro fichero.
@@ -62,7 +62,7 @@ describe("la página no afirma exclusividades que sus propios datos desmienten",
   // `\W` y no `\b`: "í" no es carácter de palabra en ASCII, así que `/^s[íi]\b/`
   // no casa con "Sí, nativo…" ni con "Sí — producto…". La primera versión de
   // este test usaba `\b`, dejaba `speaksSpanish` vacío y se saltaba solo: pasó
-  // en verde con "solo Genscore" reinsertado a propósito. Un guardián que no
+  // en verde con "solo GenScore" reinsertado a propósito. Un guardián que no
   // puede fallar es peor que ninguno, porque además da por cubierto el hueco.
   const speaksSpanish = TOOLS.filter((t) => /^s[íi](\W|$)/i.test(t.spanishSupport.trim()));
 
@@ -75,16 +75,16 @@ describe("la página no afirma exclusividades que sus propios datos desmienten",
     ).toContain("genscore");
   });
 
-  it("si más de una herramienta habla español, la página no dice 'solo Genscore'", () => {
+  it("si más de una herramienta habla español, la página no dice 'solo GenScore'", () => {
     expect(speaksSpanish.length, "el filtro se quedó vacío y el test se saltaría solo").toBeGreaterThan(0);
     if (speaksSpanish.length <= 1) return;
 
     expect(
       pageSource,
       `${speaksSpanish.length} herramientas de la lista declaran soporte de español ` +
-        `(${speaksSpanish.map((t) => t.name).join(", ")}), así que "solo Genscore" es falso. ` +
+        `(${speaksSpanish.map((t) => t.name).join(", ")}), así que "solo GenScore" es falso. ` +
         "Reescribe la afirmación en el mismo PR que añade la herramienta."
-    ).not.toMatch(/[Ss]olo Genscore/);
+    ).not.toMatch(/[Ss]olo GenScore/);
   });
 
   it("el recuento del titular coincide con el número real de herramientas", () => {

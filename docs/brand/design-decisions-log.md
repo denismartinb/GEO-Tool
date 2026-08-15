@@ -8749,6 +8749,200 @@ configuración, no código, y ningún test de este repo puede verla.
 (cadena de lotes) y ADR 0016 (cadena del barrido); §89 (Q1).
 
 ---
+---
+
+## 91. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
+
+**Origen.** El fundador pidió un plan de entidad tras ver que "GenScore" compite
+en buscadores con varios homónimos públicos —un GenScore de bioinformática,
+otro de salud mental, otro de trust scoring B2B, y Genscore Navarra—. El censo
+previo destapó algo más barato de arreglar y más urgente que cualquier página
+nueva: **el repositorio usaba las cuatro grafías a la vez.**
+
+| | Grafía A | Grafía B |
+|---|---|---|
+| Marca | `Genscore` — 179 | `GenScore` — 114 |
+| Métrica | `GEO Score` — 99 | `GeoScore` — 53 |
+
+Ninguna de las dos inconsistencias rompía nada, y por eso llevaban meses ahí.
+Peor: `.claude/rules/growth-content.md` decía *"el nombre público es
+**Genscore**"* mientras `CLAUDE.md` decía `GenScore`, así que la regla que una
+sesión futura leería antes de escribir apuntaba a la grafía que el fundador
+acabó descartando.
+
+**Decisiones (fundador, 2026-08-13).** Marca `GenScore`, métrica `GEO Score`,
+disciplina `GEO`.
+
+`GeoScore` se descartó por un motivo concreto y no por gusto: *geo* se lee como
+geografía —el significado dominante de esa raíz— y mete a la métrica a competir
+con geolocalización. En mayúsculas es un acrónimo, y refuerza la categoría que
+el resto del plan intenta ganar.
+
+**Lo que NO se tocó, y por qué.** URLs y slugs (`/glosario/geo-score`,
+`/comparativas/genscore-vs-otterly`), el dominio `genscore.es`, y los
+identificadores de código. Cambiar una URL ya indexada por coherencia
+tipográfica es tirar a la basura el histórico de Search Console de esa página,
+y renombrar identificadores no aporta nada a la resolución de la entidad.
+
+**El error que costó la primera pasada, porque es la lección reutilizable.** El
+censo se hizo con `\bGeoScore\b` —delimitadores de palabra— y confirmó que
+sólo había prosa. El reemplazo se aplicó **sin** ellos. Resultado:
+`availableGeoScoreComponents` se convirtió en `availableGEO ScoreComponents`,
+la build dejó de compilar y 45 tests del ejecutor de escaneo cayeron de golpe
+con un error de mocking que no se parecía en nada a la causa. Verificar con una
+expresión y aplicar con otra es exactamente el tipo de discrepancia que no se
+ve al leer el diff. Se revirtió entero y se rehizo con `\b`.
+
+**Guardián: `lib/brand/naming.test.ts`.** Tres comprobaciones —ningún
+`Genscore`, ningún `GeoScore`, ningún identificador partido por un reemplazo
+sin `\b`— verificadas fallando en las tres direcciones antes de fiarse de
+ellas. Dos detalles que costaron una iteración cada uno:
+
+- **Se excluye a sí mismo.** El fichero cita las grafías retiradas en su propia
+  explicación; sin la exclusión, la única forma de dejarlo verde sería borrar
+  el motivo por el que existe.
+- **Barre por directorios, no por globs.** La primera versión pasaba
+  `app/**/*.ts` como pathspec de `git grep` y no cubría lo que parecía cubrir.
+  Se descubrió porque el conteo del test no cuadraba con un `grep` a mano —
+  un guardián que barre menos de lo que dice es peor que ninguno, porque
+  además da el hueco por cubierto.
+
+**Nota operativa:** `git grep` sólo ve ficheros versionados, así que este test
+puede pasar en local sobre un fichero recién creado y fallar en cuanto se hace
+`git add`. Es aceptable —nada llega a un PR sin versionar— pero conviene
+saberlo antes de perseguir un falso verde.
+
+## 93. El único módulo cuyo fallo no se puede deshacer ya tiene tests (PRELAUNCH-HARDENING-1 Fase Q2, 2026-08-15)
+
+**Qué se decidió.** `lib/email/transactional.ts` —765 líneas, trece funciones de
+envío, **cero tests**— pasa a tener 19. De 2.443 a 2.462.
+
+**Por qué éste antes que los demás huecos.** Un despliegue malo se revierte; un
+correo enviado, no. Es el único módulo del repositorio cuyo fallo **aterriza en
+la bandeja de un cliente** y no hay forma de recogerlo.
+
+### Qué se fija, y qué NO
+
+Se fija **a quién va cada cosa**, **cuándo no se manda nada**, y que **nada de
+esto pueda tumbar el flujo al que va enganchado**.
+
+**No se fija el maquetado**, a propósito: el HTML de un correo se retoca a
+menudo y clavarlo en un test sólo produce rojos que nadie lee — la variante
+email del mismo razonamiento de §87 sobre no fijar clases CSS. Del cuerpo se
+comprueba lo que sí sería un fallo: que el dato prometido esté, y que lo que
+viene de fuera vaya escapado.
+
+### El invariante caro
+
+`.claude/rules/scan.md` ya lo decía —«las alertas de operador nunca van al
+cliente»— y hasta hoy no lo comprobaba nadie. Las cuatro alertas de operador
+tienen ahora su test de destinatario, y una de ellas merece mención aparte:
+**`sendNewSignupOpsAlertEmail` RECIBE la dirección del cliente como dato del
+cuerpo**. Confundir ese dato con el destinatario le mandaría al recién
+registrado un aviso interno sobre sí mismo. Hay un test que separa las dos
+cosas explícitamente.
+
+Y sin `OPS_ALERT_EMAIL` **no se manda a nadie**: caer al cliente «para que no se
+pierda» sería exactamente el fallo que la regla prohíbe.
+
+### Una regresión de 2026-08-05, ahora cubierta
+
+`isOpsAlertConfigured` comprobaba sólo la dirección. Estaba configurada,
+devolvía `true`, y `sendEmail` no-opeaba después en `if (!resend) return` sin
+decir nada — dos puertas silenciosas en serie, la forma de fallo que ADR 0029
+existe para quitar. El arreglo ya estaba; lo que faltaba era el test que impide
+volver atrás.
+
+### Lo que se comprueba del contenido
+
+- El aviso de bajada publica **las dos puntuaciones reales** y su diferencia.
+- El error del proveedor va **escapado**: viene de fuera (Gemini, Supabase,
+  fetch) y se interpola en HTML, así que sin escapar una alerta sobre un fallo
+  se convierte en un vector de inyección hacia la bandeja del propio operador.
+- Cada correo sale como **documento HTML completo**, no como fragmento — los
+  clientes de webmail sólo aplican lo que encuentran en un `<head>` de verdad.
+- Sale desde la **dirección verificada**, no desde una inventada.
+
+**Los tests se probaron rotos.** Tres mutaciones: mandar una alerta de operador
+al cliente (2 rojos), devolver `isOpsAlertConfigured` a mirar sólo el destino
+(1), y dejar de escapar el `<` (1).
+
+**Lo que sigue sin cubrir.** Que el correo **se vea bien** en Gmail, Outlook y
+Apple Mail. Eso no lo puede ver ningún test de este repo y sigue siendo
+comprobación manual.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q2);
+`.claude/rules/scan.md` («las alertas de operador nunca van al cliente»);
+ADR 0029; §87 (por qué no se fija el maquetado).
+
+---
+
+## 92. La frontera de autenticación, y una guarda que cubre el fichero que nadie ha escrito todavía (PRELAUNCH-HARDENING-1 Fase Q4, 2026-08-15)
+
+**Qué se decidió.** 22 tests para `middleware.ts`, `lib/auth.ts` y —lo más
+importante— una **guarda estructural** sobre todo uso del rol de servicio en
+`app/`. De 2.462 a 2.484.
+
+### La guarda es lo que de verdad aporta
+
+`createServiceClient()` **salta RLS**. El plan pedía tests de «los 7 sitios de
+`app/` que lo usan»; medidos, son **12**, y los doce establecen identidad
+correctamente. O sea que doce tests unitarios habrían salido verdes el primer
+día y no habrían protegido de nada.
+
+El riesgo no son esos doce: es **el decimotercero**, el que alguien añada dentro
+de tres meses copiando el patrón a medias. Por eso
+`tests/service-role-identity.test.ts` comprueba una propiedad de **todo el
+directorio** —cada fichero de `app/` que use el rol de servicio tiene que
+establecer identidad de una de cuatro formas conocidas (`requireUser`,
+`requireActiveProject`, `isAuthorizedInternalRequest`, la firma de Stripe)— así
+que un fichero nuevo entra en el alcance solo. Mismo patrón que
+`env-drift.test.ts` y `console-css-scope.test.ts`.
+
+Se verificó creando un fichero sin guarda en `app/`: rojo, con el mensaje que
+explica qué falta. Usa `git grep --untracked` a propósito, para que un fichero
+recién escrito y aún sin commitear también cuente — que es justo cuando hace
+falta (misma lección que §70).
+
+**Lo que la guarda NO demuestra, dicho claro:** que la comprobación sea
+*correcta*. Ve que el fichero establece identidad, no que la aplique al dato que
+toca. Eso sigue siendo revisión humana y `data-guardian`.
+
+### Del middleware, lo importante es lo que NO hace
+
+No es una puerta: su propio comentario lo dice, y aun así es exactamente el
+sitio donde alguien metería un control de acceso creyendo que ayuda. Hay un test
+que fija que **sin sesión responde igual** —`NextResponse.next()`, ni redirect
+ni 401— junto al que fija que sí refresca la sesión. Y otro sobre el matcher:
+sin las exclusiones, este middleware —que abre un cliente de Supabase y verifica
+un JWT— correría en cada imagen y cada bundle.
+
+### Dos veces en que el test estaba mal, no el código
+
+1. **La memoización de `requireUser` no se puede testear**, y queda anotado en
+   el propio fichero para que nadie lo reintente: `React.cache()` sólo memoiza
+   dentro del ámbito de una petición de React, así que desde un test de node
+   tres llamadas producen tres viajes y `toHaveBeenCalledTimes(1)` falla contra
+   código correcto.
+2. **El matcher del middleware hay que anclarlo.** Next lo hace por su cuenta;
+   sin `^…$` el patrón casa en cualquier punto de la ruta y las exclusiones
+   parecen no funcionar.
+
+Las dos se descubrieron viendo el test en rojo antes de dar nada por bueno.
+
+**Los tests se probaron rotos.** Un fichero sin guarda en `app/` (1 rojo), la
+cookie dejando de validar el uuid (1), y el matcher dejando de excluir estáticos
+(1).
+
+**`lib/account-role.ts` se deja sin tests a propósito**: son diez líneas que
+devuelven `"admin"` constante porque no hay equipos ni RBAC. Un test ahí
+afirmaría que una constante es esa constante.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q4);
+`.claude/rules/supabase.md` («no service-role shortcuts en flujos de usuario»);
+§70 (por qué `--untracked`); §93 (Q2).
+
+---
 
 ## 91. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
 

@@ -32,16 +32,16 @@ export const BLOG_CLUSTERS: BlogCluster[] = [
   {
     key: "fundamentos",
     title: "Fundamentos GEO",
-    description: "Qué es GEO, en qué se diferencia del SEO, y por qué existe Genscore.",
+    description: "Qué es GEO, en qué se diferencia del SEO, y por qué existe GenScore.",
     pillarIntro:
-      "GEO (Generative Engine Optimization) parte de un cambio simple de constatar pero profundo en sus consecuencias: cada vez más gente pregunta directamente a ChatGPT, Gemini o Claude en vez de buscar en Google, y esos motores no devuelven una lista de enlaces — elaboran una respuesta y recomiendan marcas por su nombre. Puedes tener un SEO excelente y aun así ser invisible en esa respuesta, porque es una señal distinta: no se mide con un ranking, sino con si el modelo te menciona, en qué posición, y si respalda esa mención con una fuente real.\n\nEsta sección reúne los artículos que explican esos fundamentos desde cero: qué es el GEO exactamente y en qué se diferencia del SEO clásico, y cómo se compara Genscore con otras herramientas GEO que ya existen. Si es la primera vez que oyes hablar de esto, empieza aquí antes de pasar a la sección de Metodología y medición."
+      "GEO (Generative Engine Optimization) parte de un cambio simple de constatar pero profundo en sus consecuencias: cada vez más gente pregunta directamente a ChatGPT, Gemini o Claude en vez de buscar en Google, y esos motores no devuelven una lista de enlaces — elaboran una respuesta y recomiendan marcas por su nombre. Puedes tener un SEO excelente y aun así ser invisible en esa respuesta, porque es una señal distinta: no se mide con un ranking, sino con si el modelo te menciona, en qué posición, y si respalda esa mención con una fuente real.\n\nEsta sección reúne los artículos que explican esos fundamentos desde cero: qué es el GEO exactamente y en qué se diferencia del SEO clásico, y cómo se compara GenScore con otras herramientas GEO que ya existen. Si es la primera vez que oyes hablar de esto, empieza aquí antes de pasar a la sección de Metodología y medición."
   },
   {
     key: "medicion",
     title: "Metodología y medición",
     description: "Cómo se mide la visibilidad de una marca en IA: GEO Score, prompts, competidores.",
     pillarIntro:
-      "Medir GEO bien no es tan simple como lanzar una pregunta a ChatGPT y ver si sale tu marca. Una consulta aislada no representa la realidad: cada cliente pregunta con palabras distintas para el mismo problema, y las respuestas de un motor generativo cambian con el tiempo. Medirlo con rigor exige un conjunto de prompts que representen de verdad cómo pregunta tu cliente, un grupo de competidores elegido con criterio, y una métrica que resuma varias señales a la vez en vez de fiarlo todo a una.\n\nEsta sección reúne los artículos sobre esa metodología: qué es el GEO Score de Genscore y qué mide, cómo elegir los prompts correctos para monitorizar tu marca, y cómo seleccionar los competidores adecuados para que la comparación tenga sentido. Es la base técnica antes de pasar a los playbooks de ejecución."
+      "Medir GEO bien no es tan simple como lanzar una pregunta a ChatGPT y ver si sale tu marca. Una consulta aislada no representa la realidad: cada cliente pregunta con palabras distintas para el mismo problema, y las respuestas de un motor generativo cambian con el tiempo. Medirlo con rigor exige un conjunto de prompts que representen de verdad cómo pregunta tu cliente, un grupo de competidores elegido con criterio, y una métrica que resuma varias señales a la vez en vez de fiarlo todo a una.\n\nEsta sección reúne los artículos sobre esa metodología: qué es el GEO Score de GenScore y qué mide, cómo elegir los prompts correctos para monitorizar tu marca, y cómo seleccionar los competidores adecuados para que la comparación tenga sentido. Es la base técnica antes de pasar a los playbooks de ejecución."
   },
   {
     key: "playbooks",
@@ -211,7 +211,7 @@ export const BLOG_POSTS: BlogPost[] = [
     slug: "como-aparecer-en-perplexity",
     title: "Cómo aparecer en Perplexity (y en qué se diferencia de otros motores)",
     description:
-      "Perplexity ancla cada afirmación a una cita numerada, no solo te menciona. Qué hacer distinto: estructura citable, datos con procedencia, frescura, y por qué esto queda fuera de lo que Genscore mide hoy.",
+      "Perplexity ancla cada afirmación a una cita numerada, no solo te menciona. Qué hacer distinto: estructura citable, datos con procedencia, frescura, y por qué esto queda fuera de lo que GenScore mide hoy.",
     metaDescription:
       "Cómo aparecer en Perplexity: por qué es distinto de Google y de ChatGPT, y qué mueve de verdad que te cite.",
     datePublished: "2026-08-14",
@@ -324,7 +324,7 @@ export function getMetaDescription(post: BlogPost): string {
  */
 export function blogPostMetadata(post: BlogPost) {
   return contentMetadata({
-    title: `${getSeoTitle(post)} — Genscore`,
+    title: `${getSeoTitle(post)} — GenScore`,
     description: getMetaDescription(post),
     path: `/blog/${post.slug}`,
     image: post.coverImage,

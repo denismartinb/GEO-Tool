@@ -25,7 +25,7 @@ describe("contentMetadata", () => {
     const og = meta.openGraph;
     expect(og?.title).toBe("Título");
     expect(og?.url).toBe(`${SITE_URL}/ruta`);
-    expect(og && "siteName" in og ? og.siteName : undefined).toBe("Genscore");
+    expect(og && "siteName" in og ? og.siteName : undefined).toBe("GenScore");
     expect(og?.images).toBeTruthy();
     expect(og?.locale).toBe("es_ES");
   });
@@ -74,7 +74,7 @@ describe("blogPostMetadata", () => {
     for (const post of BLOG_POSTS) {
       const meta = blogPostMetadata(post);
       expect(meta.alternates?.canonical).toBe(`${SITE_URL}/blog/${post.slug}`);
-      expect(String(meta.title)).not.toBe("Genscore");
+      expect(String(meta.title)).not.toBe("GenScore");
       titles.add(String(meta.title));
     }
     // Títulos duplicados = canibalización entre artículos.

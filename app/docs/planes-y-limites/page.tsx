@@ -10,7 +10,7 @@ const SLUG = "planes-y-limites";
 const page = getDocPage(SLUG)!;
 
 export const metadata: Metadata = contentMetadata({
-  title: `${page.title} — Genscore`,
+  title: `${page.title} — GenScore`,
   description: page.description,
   path: `/docs/${SLUG}`
 });
@@ -29,7 +29,7 @@ export default function PlanesYLimitesPage() {
       <p className="docs-updated">Actualizado el 2 de agosto de 2026</p>
 
       <p>
-        Genscore cobra por cuánto monitorizas — dominios, prompts y motores de IA — no por número de
+        GenScore cobra por cuánto monitorizas — dominios, prompts y motores de IA — no por número de
         usuarios. Los usuarios son ilimitados desde el plan Starter.
       </p>
 
