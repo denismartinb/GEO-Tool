@@ -15,8 +15,15 @@ import type { createServiceClient } from "@/lib/supabase/service";
  * - **Por dominio.** Impide que recomprobar el mismo sitio en bucle queme el
  *   techo del día para todos los demás.
  * - **Techo global diario.** El único que acota el gasto de verdad. Convierte
- *   un riesgo abierto en una factura conocida: a ~0,006 $ por comprobación con
- *   Gemini, 300/día son ~1,80 $/día. Sin él, los otros dos son teatro.
+ *   un riesgo abierto en una factura conocida: a **~0,016 $ por comprobación**
+ *   —generación en ChatGPT ($0,0117, con la tarifa de `web_search` dentro),
+ *   extracción ($0,0004) y el perfil más la pregunta en Gemini ($0,004)— 300
+ *   al día son **~4,80 $/día, ~145 $/mes en el peor caso absoluto**. Sin él,
+ *   los otros dos son teatro.
+ *
+ *   Ese peor caso sólo ocurre si el techo se agota TODOS los días. Bajarlo es
+ *   cambiar una constante, y por eso el número vive aquí y con su aritmética
+ *   escrita: para que quien lo suba vea lo que está firmando.
  *
  * **Los tres fallan CERRADO.** Si la consulta de conteo falla, no se comprueba.
  * Es la dirección contraria a `sampling_enabled` (migración 0032, que falla

@@ -9163,6 +9163,57 @@ justificada: bloquear el alta es peor que arrastrar un dato de menos.
 regla heredaría el azul a plena fuerza y parecería pulsable. Al estar exento de
 AA, no lo vigila ningún test — sólo el ojo.
 
+### El motor decide el titular, y el titular decidió el motor
+
+La fase B se aprobó con **Gemini** por coste (0,002 $ contra 0,0117 $ por
+llamada). Al ir a escribir el copy apareció la consecuencia que esa decisión
+arrastraba y que no estaba sobre la mesa al tomarla: **si la comprobación
+pregunta a Gemini, el titular no puede decir ChatGPT**, y la página entera
+existe por la consulta "¿aparece mi marca en ChatGPT?".
+
+La salida propuesta fue reencuadrar la página a "la IA" y quedarse con Gemini.
+El fundador eligió la contraria (2026-08-15): **ChatGPT como motor**, pagando
+la diferencia, *"maximiza el posicionamiento de ChatGPT en todo el artículo si
+eso es lo que más visitas nos va a traer"*. Es la lectura correcta del
+trade-off: los ~90 $/mes de diferencia recortaban la factura y tiraban la
+palabra clave que justifica la página. El coste del techo pasa de ~1,80 $/día
+a **~4,80 $/día** (~145 $/mes en el peor caso absoluto), escrito en el test del
+límite para que subirlo no sea silencioso.
+
+**El perfil y la derivación de la pregunta se quedan en Gemini**: son pasos
+internos que el visitante no ve, así que ahí el motor barato no cuesta nada ni
+en honestidad ni en posicionamiento.
+
+### Por qué esto NO canibaliza al artículo S1
+
+`/blog/como-saber-si-tu-marca-aparece-en-chatgpt` ya tiene
+`primaryKeyword: "cómo saber si mi marca aparece en chatgpt"`. Dos URLs propias
+peleando por una consulta es que Google elija una y ninguna rinda como habría
+rendido una sola.
+
+No ocurre porque **la intención es distinta**: S1 es informacional (una guía de
+tres métodos, para quien quiere entenderlo) y el comprobador es transaccional
+(para quien no quiere leer nada). Misma keyword raíz, SERP distinta, y se
+enlazan entre sí en vez de competir. Por eso se descartó también la idea de
+hacer tres páginas —una por motor—: habría canibalizado a S1, dos de las tres
+habrían sido falsas mientras el motor no fuera el del titular, y "aparece mi
+marca en Gemini" no tiene búsquedas.
+
+**Los tres motores aparecen, cada uno donde es cierto**: ChatGPT manda porque
+es lo que ejecuta la comprobación gratuita; Gemini y Claude viven en el escalón
+de pago y en las FAQ, porque es ahí donde el producto los ejecuta de verdad.
+Nombrarlos no es relleno de densidad —la regla de `growth-content.md` dice que
+la densidad es un techo, no un objetivo—: es que una página sobre visibilidad
+en IA que sólo nombrara uno describiría mal lo que se vende.
+
+### `/gratis` entra en el guardián de honestidad
+
+`article-honesty.test.ts` cubría cuatro superficies y esta nació fuera. Es la
+primera página pública dirigida a alguien **sin cuenta**, así que es donde más
+caro sale publicar un peso del compuesto o un código ADR. Se añadió al crearla,
+no cuando se le escapara algo, y se verificó metiendo un `ADR 0033` de mentira
+para ver el test en rojo.
+
 **Trazabilidad.** Task Intake FREE-CHECKER-1 (2026-08-15, sin PR propio —
 generado en la conversación, no committeado como documento aparte);
 `docs/seo-positioning-plan.md` Fase P; `docs/llm-cost-analysis-2026-08.md`;

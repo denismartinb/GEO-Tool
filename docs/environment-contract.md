@@ -179,6 +179,11 @@ Los tres límites (por IP, por dominio y el techo global diario) viven en códig
 no en el entorno: `DEFAULT_PUBLIC_CHECK_LIMITS`. El que acota el gasto de verdad
 es el techo global — ver el comentario de cabecera de ese módulo.
 
+**El comprobador usa `OPENAI_API_KEY`** (motor ChatGPT, decisión del fundador
+2026-08-15), que ya existe para el escaneo. El perfil del negocio y la
+derivación de la pregunta siguen en `GEMINI_API_KEY`. A ~0,016 $ por
+comprobación y 300/día de techo, el peor caso absoluto son ~4,80 $/día.
+
 ### Auditoría web automática tras cada escaneo (AUDIT-AFTER-SCAN-1)
 
 | Variable | Required | Where | Expected shape |

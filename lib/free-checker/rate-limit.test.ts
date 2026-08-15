@@ -186,10 +186,16 @@ describe("checkPublicCheckLimits", () => {
   });
 
   it("el techo por defecto acota el gasto a una cifra conocida", async () => {
-    // ~0,006 $ por comprobación con Gemini. Si alguien sube este número sin
-    // querer, este test dice en voz alta cuánto cuesta.
+    // ~0,016 $ por comprobación con ChatGPT como motor (generación $0,0117 +
+    // extracción $0,0004 + perfil y pregunta en Gemini $0,004). Este test
+    // existe para que subir el techo no sea silencioso: dice en voz alta
+    // cuánto se está firmando.
     expect(DEFAULT_PUBLIC_CHECK_LIMITS.globalPerDay).toBe(300);
-    const maxDailySpendUsd = DEFAULT_PUBLIC_CHECK_LIMITS.globalPerDay * 0.006;
-    expect(maxDailySpendUsd).toBeLessThan(2);
+    const COST_PER_CHECK_USD = 0.016;
+    const maxDailySpendUsd = DEFAULT_PUBLIC_CHECK_LIMITS.globalPerDay * COST_PER_CHECK_USD;
+    expect(maxDailySpendUsd).toBeCloseTo(4.8, 1);
+    // Un mes entero agotando el techo cada día. Si esta cota deja de
+    // cumplirse, alguien ha subido el techo sin mirar la factura.
+    expect(maxDailySpendUsd * 30).toBeLessThan(150);
   });
 });

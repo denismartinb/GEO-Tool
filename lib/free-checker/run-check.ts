@@ -27,8 +27,26 @@ import { deriveBrandFromDomain } from "@/lib/projects/project-form";
  * de aquí sería una métrica inventada.
  */
 
-/** El motor de la comprobación gratuita. Hoy Gemini (decisión del fundador, 2026-08-15). */
-export const PUBLIC_CHECK_ENGINE = "gemini" as const;
+/**
+ * El motor de la comprobación gratuita: **ChatGPT** (decisión del fundador,
+ * 2026-08-15, revisando la de Gemini unas horas antes).
+ *
+ * Cuesta 5,5× más por llamada ($0,0117 contra $0,0020, medidos en
+ * `docs/llm-cost-analysis-2026-08.md` — el 86% es la tarifa de `web_search`,
+ * no el modelo). Lo que se compra con esa diferencia es que la página pueda
+ * llamarse por su nombre: **"¿te menciona ChatGPT?" es la consulta que la
+ * gente escribe**, y preguntándole a Gemini el titular habría sido un reclamo
+ * falso. El ahorro estaba en el eje equivocado — recortaba la factura y tiraba
+ * la palabra clave que justifica la página entera.
+ *
+ * El perfil del negocio y la derivación de la pregunta siguen en Gemini a
+ * propósito: son pasos internos que el visitante nunca ve, así que ahí el
+ * motor barato no cuesta nada en honestidad ni en posicionamiento.
+ */
+export const PUBLIC_CHECK_ENGINE = "openai" as const;
+
+/** Cómo se nombra el motor ANTE EL VISITANTE. Nunca "openai" ni "gpt-4o-mini". */
+export const PUBLIC_CHECK_ENGINE_LABEL = "ChatGPT";
 
 /** País e idioma por defecto: el mercado del producto. */
 export const PUBLIC_CHECK_COUNTRY = "es";
