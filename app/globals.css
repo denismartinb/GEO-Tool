@@ -4855,6 +4855,20 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .docs-content p { margin: 0 0 14px; line-height: 1.65; color: var(--ink-2); }
 .docs-content ul, .docs-content ol { margin: 0 0 14px; padding-left: 22px; color: var(--ink-2); }
 .docs-content li { margin-bottom: 6px; line-height: 1.6; }
+/* SEO-POS-1 Fase E, E4 (log §97). `/docs` llevaba desde GROWTH-2 sin ninguna
+   regla de enlace propia, así que sus enlaces caían al `a { color: inherit;
+   text-decoration: none }` global: gris, sin subrayado e indistinguibles de la
+   prosa. «Metodología completa en GEO Score» y «ver Planes y límites» son
+   enlaces desde el primer día y nadie podía saberlo. Mismo remedio y mismo
+   token que `.legal-body a` y `.blog-body a`, que sí lo tenían — la excepción
+   era `/docs`, no la regla.
+   `:not(.btn)` por la lección de V4/§55: una regla de enlace por ancestro le
+   gana en especificidad a la clase de un botón y le impone su color. Aquí hoy
+   no hay botones, y por eso mismo se escribe ya: cubre la variante que aún no
+   existe. */
+.docs-content p a:not(.btn),
+.docs-content li a:not(.btn),
+.docs-content td a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 .docs-table-wrap { overflow-x: auto; margin: 0 0 24px; }
 .docs-content table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
 /* `white-space: nowrap` valía para la tabla de planes —celdas de dos palabras—
@@ -5910,6 +5924,21 @@ select.set-field {
   position: absolute; top: -13px; left: 10px; display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
   color: #fff; background: var(--brand-blue); padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+  max-width: calc(100% - 20px);
+}
+/* Por debajo de 640px la insignia flotante deja de caber: con `nowrap` y
+   posición absoluta, una anotación larga se salía del contenedor y quedaba
+   cortada a media palabra (fundador, 2026-08-15, en /que-es-genscore a 375px;
+   log §96). El barrido del piloto no lo cazó porque el recorte ocurre DENTRO
+   de la tarjeta y su comprobación es de desbordamiento de página.
+   Aquí pasa a ser una línea normal encima de la fila: cabe siempre, no tapa
+   nada, y no depende de que quien la escriba acierte con la longitud. */
+@media (max-width: 640px) {
+  .art-anno-lbl {
+    position: static; max-width: 100%; white-space: normal;
+    display: flex; width: fit-content; margin-bottom: 7px; line-height: 1.35;
+  }
+  .art-anno-lbl svg { display: none; }
 }
 .art-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 5px; }
 .art-row-l { font-size: 13.5px; font-weight: 650; color: var(--ink); }

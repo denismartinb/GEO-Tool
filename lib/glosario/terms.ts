@@ -1,3 +1,11 @@
+import { SITE_ORIGIN } from "@/lib/brand/canonical-definition";
+import {
+  GEO_SCORE_ALTERNATE_PATHS,
+  GEO_SCORE_CANONICAL_URL,
+  GEO_SCORE_DEFINITION,
+  GEO_SCORE_TERM_ID
+} from "@/lib/brand/geo-score-definition";
+
 /**
  * Single source of truth for /glosario entries (GROWTH-2 Fase 2.4, capa D).
  * First slice: 15 terms. Sorted alphabetically on the page, not in this
@@ -18,6 +26,18 @@ export type GlossaryTerm = {
   definition: string;
   longDefinition: string;
   relatedLinks: { href: string; label: string }[];
+  /**
+   * SEO-POS-1 Fase E, E4. Sólo para los términos que el sitio explica en más
+   * de una URL. Declara el nodo compartido de schema.org: el mismo `@id` desde
+   * todas las superficies, la `url` del documento de referencia y las demás
+   * como `sameAs`. Sin esto, tres páginas sobre el mismo término son tres
+   * conceptos parecidos para un motor, y las señales se reparten entre ellas
+   * (`lib/brand/geo-score-definition.ts`).
+   *
+   * Ausente en la inmensa mayoría de términos, que viven en una sola URL y no
+   * necesitan desambiguar nada.
+   */
+  canonicalNode?: { termId: string; url: string; sameAs: readonly string[] };
 };
 
 export const GLOSSARY_TERMS: GlossaryTerm[] = [
@@ -51,8 +71,10 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "geo-score",
     term: "GEO Score",
-    definition:
-      "La métrica de GenScore (0-100) que resume cómo aparece una marca en respuestas de IA: si la mencionan, con qué protagonismo, cómo sale frente a su competencia, si hay una fuente real detrás y si su web puede ser citada.",
+    // E4: la definición corta ya no se escribe aquí — se importa, para que
+    // esta entrada, el schema de `/docs/metodologia/geo-score` y la metadata
+    // de esa página digan literalmente lo mismo.
+    definition: GEO_SCORE_DEFINITION,
     longDefinition:
       "El GEO Score es la métrica compuesta que usa GenScore para resumir, en un único número de 0 a 100, cómo aparece una marca en las respuestas de motores generativos de IA.\n\nResume varias señales que no significan lo mismo por separado: si la IA menciona la marca —lo primero, porque sin mención no hay nada que interpretar—, en qué posición aparece dentro de la respuesta, qué parte de la atención se lleva frente a sus competidores, si el motor cita alguna página del dominio como fuente, y si la web está preparada para que un motor la lea y la extraiga.\n\nUn único escaneo no basta para que el número sea fiable: el GEO Score gana confianza cuantos más resultados reales se hayan extraído de los motores de IA, y GenScore solo lo marca como \"confianza alta\" a partir de un volumen mínimo de resultados completamente procesados. Con pocos datos, el número existe pero se etiqueta como poco fiable en vez de presentarse como definitivo.\n\nNo es una cifra estática: cambia con cada escaneo, porque las respuestas de los motores generativos cambian con el tiempo, con el propio contenido de la marca y con lo que hacen sus competidores.",
     relatedLinks: [
@@ -60,7 +82,12 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       { href: "/blog/que-es-el-geo-score", label: "Artículo: qué es el GEO Score y qué mide" },
       { href: "/glosario/cuota-de-voz-en-ia", label: "Glosario: cuota de voz en IA" },
       { href: "/glosario/citacion-en-ia", label: "Glosario: citación en IA" }
-    ]
+    ],
+    canonicalNode: {
+      termId: GEO_SCORE_TERM_ID,
+      url: GEO_SCORE_CANONICAL_URL,
+      sameAs: GEO_SCORE_ALTERNATE_PATHS.map((path) => `${SITE_ORIGIN}${path}`)
+    }
   },
   {
     slug: "cuota-de-voz-en-ia",

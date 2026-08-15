@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LandingPage } from "@/components/landing/landing-page";
+import { SoftwareApplicationSchema } from "@/components/seo/software-application-schema";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 /**
@@ -22,6 +23,19 @@ export const metadata: Metadata = contentMetadata({
   path: ""
 });
 
+/**
+ * SEO-POS-1 Fase E, E3. La home declaraba sólo el `Organization` del layout
+ * raíz: una empresa llamada GenScore, sin decir en ninguna parte legible por
+ * máquina qué producto es ni de qué categoría. El `SoftwareApplication` estaba
+ * únicamente en `/que-es-genscore`, que es la página correcta para explicarlo
+ * a una persona y la peor de las dos para que un motor lo lea, porque es la
+ * que menos autoridad acumula.
+ */
 export default function Page() {
-  return <LandingPage />;
+  return (
+    <>
+      <SoftwareApplicationSchema />
+      <LandingPage />
+    </>
+  );
 }
