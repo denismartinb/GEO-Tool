@@ -76,19 +76,18 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
  * `.lp-hero`/`.lp-nav-wrap` background untouched (that scoping is
  * deliberate — see app/globals.css around `.lp-nav--hero`).
  *
- * header-consistency-public-private, 2026-08-15 (founder-approved after
- * judging a burger-left/logo-centered spike on the real preview): the drawer
- * opens from the left (MarketingMobileNav's default — `fromRight` is no
- * longer passed) and the mobile burger sits at the left with the logo
- * centered, matching WorkspaceTopbar's anatomy (`.hdr-burger` left /
- * `.hdr-brand-mobile` centered). This SUPERSEDES the 2026-08-12 "el menú
- * siempre sale desde la derecha" decision (GENSCORE-HEADER-1,
- * design-decisions-log §63) — the founder confirmed the new side reads
- * better; the log entry closing this out is still pending the full B1 pass
- * (drawer chassis shared with the console sidebar) landing on this same PR.
- * `.lp-mobnav--right` stays in globals.css unused, same as it was before.
- * The drawer's own brand row (`brand` prop below) is new in this same pass —
- * see MarketingMobileNav and the `.lp-mobnav-brand` rule in globals.css.
+ * header-consistency-public-private, 2026-08-15 (founder-approved on the
+ * real preview, in two steps: first the burger-left/logo-centered side, then
+ * the full shared-chassis pass below): the drawer opens from the left
+ * (MarketingMobileNav's default — `fromRight` is no longer passed) and the
+ * mobile burger sits at the left with the logo centered, matching
+ * WorkspaceTopbar's anatomy (`.hdr-burger` left / `.hdr-brand-mobile`
+ * centered). This SUPERSEDES the 2026-08-12 "el menú siempre sale desde la
+ * derecha" decision (GENSCORE-HEADER-1, design-decisions-log §63) — closed
+ * out in §101, same PR. `.lp-mobnav--right` stays in globals.css unused,
+ * same as it was before. The drawer's own brand row (`brand` prop below) is
+ * new in this same pass — see MarketingMobileNav and the `.lp-mobnav-brand`
+ * rule in globals.css.
  */
 export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; activeHref?: string }) {
   const pathname = usePathname();

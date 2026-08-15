@@ -4499,6 +4499,18 @@ a.notif-row:hover {
   padding: 0 16px 0 18px;
   border-bottom: 1px solid var(--line-soft);
 }
+/* `.lp-mobnav a` below (font/padding/hover meant for the link list) also
+   matches the brand-row logo link, since it's still an `<a>` inside
+   `.lp-mobnav` — the same specificity trap `.claude/rules/styles.md`
+   already documents twice for this file (`.lp-cta`, `.lp-user-chip`). A
+   single-descendant override (`.lp-mobnav-brand a`) ties `.lp-mobnav a` on
+   specificity (one class + one type each) and loses on source order, so
+   this qualifies on the link's own class too — same fix pattern as
+   `.user-chip.lp-user-chip` elsewhere in this file. Undoes the parts that
+   don't belong on a logo (padding, radius, hover pill); centering and
+   touch-target sizing are fine to inherit. */
+.lp-mobnav-brand .lp-mobnav-brandmark { padding: 0; border-radius: 0; }
+.lp-mobnav-brand .lp-mobnav-brandmark:hover { background: none; }
 .lp-mobnav-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 16px 16px; }
 .lp-mobnav-close { width: 44px; height: 44px; border-radius: 9px; margin-left: auto;
   display: grid; place-items: center; background: none; border: 1px solid transparent; color: var(--ink-3); }
@@ -4509,12 +4521,13 @@ a.notif-row:hover {
 @keyframes lpMobnavIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 /* GENSCORE-HEADER-1 (2026-08-12) had every public header's burger on the
    right, `PublicHeader` always passing `fromRight` to MarketingMobileNav so
-   the drawer matched. SPIKE, pending founder sign-off
-   (header-consistency-public-private, 2026-08-15): `PublicHeader` no longer
-   passes `fromRight`, so the drawer uses the plain left-slide `.lp-mobnav`
-   above by default, matching the console sidebar's drawer side. `.lp-mobnav--right`
-   stays defined — MarketingMobileNav still supports it for any caller that
-   opts in — but nothing in the app calls it today. */
+   the drawer matched. header-consistency-public-private (2026-08-15,
+   founder-confirmed on the real preview, design-decisions-log §101
+   supersedes §63): `PublicHeader` no longer passes `fromRight`, so the
+   drawer uses the plain left-slide `.lp-mobnav` above by default, matching
+   the console sidebar's drawer side. `.lp-mobnav--right` stays defined —
+   MarketingMobileNav still supports it for any caller that opts in — but
+   nothing in the app calls it today. */
 .lp-mobnav--right { left: auto; right: 0; box-shadow: -20px 0 60px rgba(15,23,41,.20); animation-name: lpMobnavInRight; }
 @keyframes lpMobnavInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
