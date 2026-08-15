@@ -8,7 +8,7 @@ export default defineConfig({
     // se testean renderizándolos de verdad con `react-dom/server`, y eso
     // necesita ficheros con JSX. Sin dependencias nuevas: `react-dom` ya
     // estaba, y `environment: "node"` basta porque `renderToStaticMarkup` no
-    // toca el DOM (log §85).
+    // toca el DOM (log §87).
     include: ["**/*.test.ts", "**/*.test.tsx"],
     exclude: ["node_modules/**", ".claude/worktrees/**"]
   },

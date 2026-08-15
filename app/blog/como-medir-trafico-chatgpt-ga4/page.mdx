@@ -1,0 +1,306 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  QuickAction,
+  Checklist,
+  CodeBlock,
+  CompareTable,
+  Figure,
+  Stat,
+  StatGrid,
+  Verdict,
+  AuthorBio,
+  ArticleCta,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+import { GA4_AI_SOURCE_REGEX } from "@/lib/blog/ga4-source-regex";
+
+export const post = getBlogPost("como-medir-trafico-chatgpt-ga4");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cómo veo en GA4 el tráfico que llega desde ChatGPT?",
+    answer:
+      "Desde mayo de 2026 no hay que configurar nada para lo básico: GA4 trae un canal propio, «Asistente de IA», en el grupo de canales predeterminado. Se ve en Informes → Adquisición → Adquisición de tráfico, cambiando la dimensión a «Grupo de canales predeterminado de la sesión». Ahí caen las sesiones cuyo referente GA4 reconoce como un asistente. Para ver el resto —Perplexity, y cualquier asistente que la lista de Google no reconozca— hace falta un grupo de canales personalizado con una expresión regular sobre la fuente."
+  },
+  {
+    question: "¿Por qué el tráfico de ChatGPT aparece como «Directo» en GA4?",
+    answer:
+      "Porque la mayoría de esas visitas llegan sin referente. Cuando el enlace se abre desde una aplicación nativa o desde un navegador embebido, el sistema operativo no traslada el referente al navegador: no es una decisión del proveedor ni algo que se arregle configurando GA4. Sin referente, GA4 no tiene con qué clasificar la sesión y la manda a Directo. Un análisis de terceros sobre 41,2 millones de sesiones sitúa en un 71 % la proporción de visitas de ChatGPT que acaban ahí."
+  },
+  {
+    question: "¿Aparecen los AI Overviews de Google en el canal de asistentes de IA?",
+    answer:
+      "No. Un clic desde un AI Overview o desde el Modo IA de Google llega con un referente de google.com/search, así que GA4 lo clasifica como Búsqueda orgánica, igual que un clic desde los diez enlaces azules. No hay forma de separarlos dentro de GA4: la superficie de IA con más alcance de todas es, en tu informe de canales, tráfico orgánico normal."
+  },
+  {
+    question: "¿Sirve GA4 para saber si la IA menciona mi marca?",
+    answer:
+      "No, y es la confusión más cara de este tema. GA4 cuenta visitas: solo ve a quien hizo clic. La mayoría de respuestas generativas se resuelven dentro del chat sin que nadie salga a ninguna web, así que una marca recomendada a diario a gente que no hace clic tiene el mismo GA4 que una marca invisible. La analítica mide la consecuencia; si lo que quieres saber es si te nombran, hay que preguntárselo a los motores."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Desde mayo de 2026, GA4 trae un canal propio para el tráfico de asistentes de
+IA y **no hay que configurar nada** para empezar a verlo. Lo que sí hay que
+saber es qué no está contando: **Perplexity se queda en Referencia**, los **AI
+Overviews de Google cuentan como orgánico**, y —lo más importante— el canal
+solo ve las visitas que llegan **con referente**, que son minoría. Lo que
+midas ahí es un **suelo con un multiplicador desconocido**, no el total. Y aun
+con la medición perfecta, sigue contando clics, no menciones.
+
+</KeyTakeaway>
+
+## Lo que cambió: GA4 ya tiene un canal para esto
+
+Hasta la primavera de 2026, medir esto era trabajo manual: cada analista se
+montaba su propia expresión regular con los dominios que se le ocurrían y la
+actualizaba cuando se acordaba. El **13 de mayo de 2026**, Google añadió a la
+documentación de Analytics un canal nuevo en el grupo de canales
+predeterminado —**«Asistente de IA»**— y lo desplegó de forma amplia a lo
+largo de junio.
+
+Funciona así: cuando GA4 detecta un referente que reconoce como asistente,
+asigna a la sesión el medio `ai-assistant` y la campaña `(ai-assistant)`, y la
+agrupa bajo ese canal. No hay que tocar nada en la propiedad.
+
+Dónde mirarlo, en tres pasos:
+
+1. **Informes → Adquisición → Adquisición de tráfico.**
+2. Cambia la dimensión principal a **«Grupo de canales predeterminado de la
+   sesión»**.
+3. Busca la fila **«Asistente de IA»**. Si quieres el desglose por asistente,
+   cambia la dimensión a **«Fuente de la sesión»** y filtra por `chatgpt.com`,
+   `gemini.google.com` o `claude.ai`.
+
+Dos avisos antes de sacar conclusiones de esa fila:
+
+- **No es retroactivo.** Las sesiones que ya se registraron como Referencia o
+  como Directo se quedan donde estaban. Cualquier comparación contra un
+  periodo anterior al despliegue en tu propiedad enseña un crecimiento que es
+  puramente contable.
+- **La lista de asistentes reconocidos no es pública.** La entrada de Google
+  nombra ChatGPT, Gemini y Claude *como ejemplos*; recopilaciones de terceros
+  de la documentación viva añaden DeepSeek, Copilot y Grok. Sin lista
+  publicada, una caída del canal no se puede distinguir de un asistente que
+  dejó de reconocerse.
+
+## Las tres cosas que ese canal no te está contando
+
+### 1. Perplexity no está dentro
+
+Perplexity envía un referente `perplexity.ai`, que GA4 clasifica como
+Referencia normal, junto a los blogs y los agregadores. Es una ausencia
+llamativa porque, de todas las fuentes de tráfico de IA, es de las que llegan
+con más intención de compra. Si tu informe de asistentes está vacío pero tienes
+Referencia con vida, mira ahí antes de concluir nada.
+
+### 2. Los AI Overviews de Google no cuentan como IA
+
+Un clic desde un <a href="/glosario/ai-overviews">AI Overview</a> o desde el
+Modo IA llega con un referente de `google.com/search`. Para GA4 eso es
+Búsqueda orgánica, indistinguible de un clic en un resultado azul. La
+superficie de IA con más alcance del mundo es, en tu informe de canales,
+tráfico orgánico corriente — y no hay ajuste que lo separe.
+
+### 3. El agujero grande: el referente que nunca llega
+
+Este es el que invalida las lecturas, no los dos anteriores.
+
+<StatGrid label="Con qué frecuencia llega el referente en una visita desde ChatGPT">
+  <Stat value="28 %" label="Visitas desde la web de ChatGPT que trasladan el referente" source="Attrifast, análisis de 41,2 M de sesiones (2026)" tone="blue" />
+  <Stat value="6 %" label="Visitas desde la aplicación de escritorio que lo trasladan" source="Attrifast, análisis de 41,2 M de sesiones (2026)" tone="warm" />
+  <Stat value="71 %" label="Visitas de ChatGPT que acaban clasificadas como «Directo» en GA4" source="Attrifast, análisis de 41,2 M de sesiones (2026)" tone="neg" />
+</StatGrid>
+
+Son cifras de un tercero, de un único estudio, y así hay que leerlas: lo
+utilizable es el orden de magnitud, no el decimal. Pero el mecanismo detrás no
+depende del estudio y sí es verificable: cuando un enlace se abre desde una
+aplicación nativa o desde un navegador embebido, el sistema operativo no
+traslada el referente. **No es una decisión de OpenAI ni un ajuste que puedas
+cambiar**, y por eso no hay configuración de GA4 que lo arregle.
+
+<Figure
+  wide
+  label="Figura 1."
+  caption="Dónde acaba cada visita según cómo se produjo el clic. La última fila es la mayoritaria en cualquier respuesta generativa, y es la única que no aparece en ningún informe de analítica del mundo."
+>
+
+| Cómo llega la visita | Lo que recibe GA4 | Dónde acaba |
+| --- | --- | --- |
+| Web de ChatGPT, con referente | `chatgpt.com` + medio `ai-assistant` | Asistente de IA |
+| Aplicación de ChatGPT o navegador embebido | Nada | **Directo** |
+| Enlace que trae `utm_source=chatgpt.com` | La UTM, aunque no haya referente | Fuente `chatgpt.com` |
+| Clic desde Perplexity | `perplexity.ai` | Referencia |
+| Clic desde un AI Overview o el Modo IA | `google` / `organic` | Búsqueda orgánica |
+| **Respuesta leída sin hacer clic** | Nada | **En ningún sitio** |
+
+</Figure>
+
+## Por qué esto rompe las tendencias, no solo los totales
+
+Que el canal enseñe menos de lo real sería tolerable si enseñara *siempre la
+misma fracción*. No la enseña: la proporción de visitas que trasladan el
+referente cambia sola, con cada versión de una aplicación y con cada navegador
+embebido nuevo. Y cuando el multiplicador se mueve, el canal se mueve con él.
+
+<Figure
+  wide
+  label="Figura 2."
+  caption="Ejemplo construido con cifras redondas para enseñar la aritmética, no una medición. Dos meses idénticos en tráfico real: el canal sube un 60 % porque cambió la proporción de visitas que trasladan el referente, no porque llegara una sola visita más."
+>
+
+| Mes | Visitas reales desde ChatGPT | Traen referente | Lo que enseña el canal |
+| --- | --- | --- | --- |
+| Mayo | 1.000 | 25 % | 250 |
+| Junio | 1.000 | 40 % | 400 |
+
+</Figure>
+
+Es la misma trampa que describimos en <a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>
+con la «posición media»: un número que se mueve por motivos que no tienen nada
+que ver con lo que dice medir. La defensa también es la misma — leer la cifra
+junto a lo que la sostiene, y desconfiar de cualquier salto que no venga
+acompañado de una explicación de por qué habría cambiado el mundo.
+
+## Qué sí puedes hacer hoy
+
+### Un grupo de canales personalizado que recoja lo que el predeterminado deja fuera
+
+Es diez minutos de trabajo y resuelve las dos primeras carencias. En
+**Administrar → Configuración de datos → Grupos de canales**, crea un grupo
+nuevo con una condición sobre **Fuente**, «coincide con la expresión regular»:
+
+<CodeBlock wrap title="Condición de fuente para el canal «Tráfico de IA»">{GA4_AI_SOURCE_REGEX}</CodeBlock>
+
+Tres cosas que conviene saber antes de pegarla:
+
+- **GA4 no ancla la expresión**, así que casa por coincidencia parcial: `you\.com`
+  también marcaría un `paratiyou.com` si alguna vez te enlaza. Si tienes
+  referentes raros, ánclala.
+- **Se lee sobre datos históricos.** Un grupo personalizado reagrupa lo que ya
+  tenías registrado, así que el día que lo creas puedes mirar hacia atrás — al
+  contrario que el canal predeterminado, que empieza a contar cuando llega.
+- **Filtra por fuente, no por medio.** Es lo que hace que recoja tanto las
+  sesiones con referente como las que solo traen la UTM.
+
+### Rescatar parte de lo que cae en Directo
+
+ChatGPT añade `utm_source=chatgpt.com` a parte de los enlaces que muestra. Esa
+etiqueta viaja dentro de la URL, así que **sobrevive a la pérdida del
+referente**: es la única señal que sigue en pie cuando la visita llega desde
+una aplicación. No lo recupera todo —solo llega en los enlaces que la traen—,
+pero es la diferencia entre rescatar una parte del Directo y no rescatar nada.
+Por eso el filtro va por fuente: la UTM alimenta esa misma dimensión.
+
+### Mirar Search Console aparte
+
+Para la parte de Google, GA4 no te va a servir: los AI Overviews viven dentro
+de Búsqueda orgánica. Search Console es donde tiene sentido buscar movimientos
+de impresiones sin clics, que es la huella que deja una respuesta que se lee
+sin salir del buscador.
+
+## Qué no hacer con estos informes
+
+<Checklist tone="evitar" items={[
+  "No leas el canal «Asistente de IA» como «el tráfico de IA que recibo»: es el tráfico de IA que llegó con un referente reconocido.",
+  "No compares ese canal contra periodos anteriores a su despliegue: no es retroactivo y el crecimiento que verás es contable, no real.",
+  "No atribuyas todo el Directo a la IA, ni des por perdido su contenido: contiene tráfico de IA, y también todo lo que siempre contuvo.",
+  "No busques los AI Overviews en el informe de canales: están dentro de Búsqueda orgánica y no hay ajuste que los separe.",
+  "No saques un veredicto de un canal recién estrenado con un puñado de sesiones detrás.",
+  "No presentes «visitas desde ChatGPT» como una medida de tu visibilidad en IA: es la punta visible, y la parte de abajo no está en GA4."
+]} />
+
+## El techo: la analítica mide consecuencias, no menciones
+
+Supongamos que haces todo lo anterior perfecto. Sigues teniendo un problema
+estructural, y no es de configuración.
+
+Una respuesta generativa **resuelve la mayoría de las consultas dentro del
+chat**. El usuario pregunta, lee la recomendación y sigue con su vida; el clic
+es la excepción, no la norma. Así que la analítica no está midiendo una parte
+representativa de tu visibilidad en IA: está midiendo la minoría que además
+hizo clic, y la mide tarde, cuando ya ocurrió todo lo interesante.
+
+<Verdict title="Dos marcas con el mismo GA4 y situaciones opuestas" badge="Método">
+
+Una marca a la que ChatGPT recomienda todos los días ante gente que no hace
+clic, y una marca a la que no nombra nunca, producen exactamente el mismo
+informe de adquisición: cero. GA4 puede decirte cuántos llegaron; no puede
+decirte si saliste en la respuesta. Son dos preguntas distintas, y la segunda
+solo se responde preguntándoles a los motores.
+
+</Verdict>
+
+Es exactamente la razón por la que existen las herramientas de monitorización
+en IA, y también el orden correcto de trabajo: la <a href="/glosario/citacion-en-ia">citación</a>
+y la mención van primero, porque son la causa; el tráfico va después, porque es
+el efecto. Si solo miras el efecto, te enteras de que has desaparecido de una
+categoría meses después de haber desaparecido.
+
+## Si solo vas a hacer una cosa
+
+<QuickAction>
+
+Crea el grupo de canales personalizado con la expresión de arriba y **míralo al
+lado de Directo, no en lugar de Directo**. Esa pareja es la lectura honesta:
+una columna que sabes que está incompleta y otra que sabes que la contiene en
+parte. Anota la fecha en que lo creaste y no compares hacia atrás por encima de
+ella. Y trátalo por lo que es —un indicador de retraso—, no como tu medida de
+visibilidad en IA.
+
+</QuickAction>
+
+Si lo que quieres es esa medida de visibilidad, el sitio por donde empezar es
+<a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo saber si tu marca aparece en ChatGPT, Gemini y Claude</a>,
+y el resto de la metodología está en el <a href="/blog/medicion">pilar de medición</a>.
+
+**Fuentes y fechas.** Todo lo referido a GA4 en este artículo está consultado
+el **14 de agosto de 2026** sobre la documentación de Google Analytics y la
+cobertura del anuncio del 13 de mayo de 2026. Las cifras de traslado del
+referente proceden de un análisis publicado por Attrifast sobre 41,2 millones
+de sesiones; son de un tercero y de un único estudio, y aquí se usan por el
+orden de magnitud. Las interfaces de GA4 cambian de nombre a menudo: si un menú
+no está donde lo decimos, el concepto sigue siendo el mismo.
+
+<ArticleCta
+  title="El clic es el final de la historia, no el principio"
+  text="Genscore lanza tu conjunto de preguntas en ChatGPT, Gemini y Claude y te dice si te nombran, en qué puesto y con qué fuente — la parte que tu analítica no puede ver. Escaneo gratuito, sin tarjeta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
+
+</BlogPageShell>

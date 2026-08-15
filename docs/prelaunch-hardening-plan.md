@@ -24,7 +24,7 @@ una con su Human Gate.
   `lib/scan/`, y **R6 queda cerrada**), **R7 casi entera** (log §83: los 14
   componentes de Auditoría web salen de la página; log §84: Visión general deja
   de ser la excepción) y **el grueso de R8** (log §84: dos ficheros muertos
-  borrados) y **46 tests de render para Auditoría web** (log §85), los primeros
+  borrados) y **46 tests de render para Auditoría web** (log §87), los primeros
   del repositorio. **R3 queda descartada como está escrita** tras su Task Intake
   del 2026-08-14 (ver R3 abajo). Quedan partir `WebAuditPage` y los dos
   huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
@@ -221,7 +221,7 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   de `actions.ts` dice que la forma de espejo entre ambos es deliberada. Queda
   partir `WebAuditPage` (~1.070 líneas de orquestación de datos), que toca
   lógica y no presentación — y desde el 2026-08-14 ya no parte de cero: los seis
-  módulos de `_components/` tienen **46 tests de render** (log §85), los primeros
+  módulos de `_components/` tienen **46 tests de render** (log §87), los primeros
   del repositorio, con `renderToStaticMarkup` y sin dependencias nuevas.
   **R3 queda descartada como está escrita** tras su Task Intake (2026-08-14): no
   son 47 sitios sino 292, los tipos generados no se adoptan sitio a sitio sino

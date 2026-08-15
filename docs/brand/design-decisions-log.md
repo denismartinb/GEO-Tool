@@ -8102,7 +8102,420 @@ mudanza de componentes); `lib/scan/providers.ts` (SAMPLING-1, por qué existe).
 
 ---
 
-## 85. Auditoría web deja de ser una pantalla que nadie puede demostrar (PRELAUNCH-HARDENING-1, 2026-08-14)
+## 85. La analítica mide el efecto, no la causa (SEO-POS-1, S8, 2026-08-14)
+
+**Qué se publica.** `/blog/como-medir-trafico-chatgpt-ga4`, cluster `medicion`.
+Cubre el cluster de keywords nº 8 del plan ("medir tráfico desde ChatGPT en
+GA4", canal «Asistente de IA»), el último hueco de la capa de medición.
+
+**Por qué esta pieza es distinta de las siete anteriores de la cola.** Es la
+primera cuyo contenido **no depende de nada nuestro**: todo lo que afirma es
+sobre un producto de Google y sobre un estudio ajeno. En S5 y S6 el riesgo era
+publicar de más —umbrales, pesos, mecánica— y las reglas que salieron de ahí
+(§69, §75, §76) no aplican aquí. El riesgo cambia de sitio: **publicamos algo
+que el lector va a ejecutar**, una expresión regular que le pedimos que pegue en
+su propia propiedad de GA4. Prosa dentro de un MDX no la mira ningún
+compilador, así que una expresión que no compile, o que no case con los
+dominios que el propio artículo nombra dos párrafos más arriba, es un fallo que
+se descubre en la cuenta del lector y no en la nuestra.
+`lib/blog/ga4-chatgpt.test.ts` la **extrae del `CodeBlock`** —no la copia— y
+comprueba que compila, que captura los seis asistentes que el texto nombra, que
+**no** captura `google`/`bing` (recogerlos haría que el grupo personalizado se
+comiera el canal orgánico entero: el consejo publicado sería activamente
+dañino) y que todos los puntos van escapados.
+
+**Lo que diferencia el artículo de las veinte guías de "cómo medir ChatGPT en
+GA4" que ya existen.** Todas explican dónde está el canal nuevo. Ninguna dice
+que el canal **se mueve sin que se mueva el tráfico**: la proporción de visitas
+que trasladan el referente cambia sola con cada versión de una aplicación, así
+que dos meses idénticos en tráfico real dan lecturas distintas. Es exactamente
+la trampa de la «posición media» de §73 con otro disfraz —un número que varía
+por motivos que no tienen que ver con lo que dice medir— y el artículo la
+enseña con una figura de dos filas, declarada como aritmética de ejemplo, no
+como medición.
+
+**Y declara su techo, que es el argumento comercial honesto.** Una marca que
+ChatGPT recomienda a diario ante gente que no hace clic, y una marca que no
+sale nunca, producen el mismo informe de adquisición: cero. GA4 cuenta visitas;
+no puede decir si saliste en la respuesta. Ese es el puente al producto y no
+hace falta exagerarlo — es una limitación estructural, no un defecto de
+configuración.
+
+**Perplexity entra en el allow-list de `article-honesty.test.ts`, y es el
+primero.** El test prohíbe nombrarlo en el cuerpo de un artículo desde S1,
+cuando el borrador del plan estuvo a punto de titular una pieza con un motor
+que no ejecutamos. Aquí el motivo es legítimo y estaba previsto por el propio
+diseño del test: una de las tres conclusiones del artículo **es** que el canal
+«Asistente de IA» no incluye Perplexity y sus visitas se quedan en Referencia.
+Omitirlo sería esconderle al lector la mitad de la respuesta para proteger una
+ambigüedad que el artículo no crea — la metadata no lo menciona (regla de
+`.claude/rules/growth-content.md`) y el CTA nombra los tres motores que sí
+ejecutamos, las dos cosas con test.
+
+**Las cifras de terceros van con su denominador o no van.** Las tres del
+`StatGrid` (28 % de visitas desde la web con referente, 6 % desde la aplicación
+de escritorio, 71 % que acaban en Directo) son de un **único** estudio ajeno
+sobre 41,2 millones de sesiones, y el artículo lo dice en el `source` de cada
+`<Stat>`, en la prosa y en la nota de fuentes: lo utilizable es el orden de
+magnitud, no el decimal. El mecanismo de debajo —el sistema operativo no
+traslada el referente al abrir un enlace desde una aplicación nativa— no
+depende del estudio y sí es verificable, y es lo que sostiene el argumento.
+
+**Limitación del entorno, declarada.** El proxy de salida de los agentes
+bloquea `support.google.com` y la mayoría de la cobertura del anuncio, así que
+**ninguna de las afirmaciones sobre GA4 está verificada contra la fuente
+primaria**: se triangularon con varias fuentes secundarias que coinciden entre
+sí, consultadas el 2026-08-14, y el artículo publica esa fecha para que el
+lector sepa de cuándo es. Misma limitación que ya se declaró con los precios de
+Otterly (§66) y de Peec AI. Dos consecuencias asumidas: la lista de asistentes
+que reconoce Google **no es pública** —lo dice el propio artículo, porque
+cambia cómo hay que leer una caída del canal— y la fecha de despliegue amplio
+(junio de 2026) se cuenta como "a lo largo de junio", no con un día concreto
+que no se pudo confirmar.
+
+**Lo que encontró el piloto, y que su propia tabla decía que estaba bien.** La
+pasada dio `PILOT PASS` con `blog-como-medir-trafico-chatgpt-ga4` en ✅ a las
+tres anchuras. Al abrir las capturas —que es lo que el Human Gate pide desde
+§55 y lo que la tabla nunca sustituye— en 375 px **las dos figuras nuevas
+estaban recortadas y les faltaba la última columna**: la de la Figura 1 es
+"Dónde acaba", cuya última fila («Respuesta leída sin hacer clic» → *en ningún
+sitio*) es literalmente la conclusión de la figura, y la de la Figura 2 es "Lo
+que enseña el canal", que es todo el argumento. La **Figura 2 de
+`metricas-geo-que-medir` llevaba dos días igual**, publicada en S6.
+
+**La causa es una línea de CSS que hace lo correcto para otro contenido.**
+`.art-frame` nace con `overflow: hidden`, que es lo que quieres para un
+`ProductMock` o un SVG —recortar un degradado contra el radio del borde— y lo
+peor posible para una tabla: lo que no cabe desaparece **sin dejar gesto que lo
+recupere**. Es el fallo de `/docs/metodologia` del §77 otra vez, un nivel más
+adentro, y el remedio ya existía a diez líneas de distancia: `.art-tablewrap`
+resolvió exactamente esto para las tablas sueltas en la PR #306, deslizamiento
+más pista *"Desliza para ver todas las columnas →"*. Lo que faltaba era que una
+tabla **dentro de una figura** pudiera pedirlo: `<Figure wide>` (log §85).
+
+**Por qué esto es un test y no una nota.** Se coló en dos PRs seguidos, y en
+los dos el síntoma fue invisible: la página carga limpia, el piloto la marca ✅
+porque no hay error que detectar, y la columna que falta suele ser justo la que
+lleva la conclusión. `article-recipes.test.ts` recorre ahora todos los
+artículos, detecta la fila separadora de una tabla de markdown dentro de un
+`<Figure>` y exige `wide` — con su caso negativo, porque una guarda que no
+puede fallar no es una guarda.
+
+**Y lo que esto vuelve a decir del piloto**, tercera vez en el histórico
+(§62, §77): **un `PILOT PASS` es la lista de lo que el piloto vio, no un juicio
+sobre lo que se ve.** Una tabla recortada no es un fallo de carga. La única
+defensa sigue siendo abrir las capturas — aquí las abrió el Director antes del
+Human Gate, que es donde toca, en vez del fundador en su móvil.
+
+**Segunda pasada de capturas, ahora en escritorio, dos cosas más.** El arreglo
+de las figuras se verificó y de paso salieron los dos fallos que sólo se ven a
+1280 px, los dos invisibles en móvil:
+
+**1. La cadena que el lector tiene que copiar aparecía cortada, y en
+escritorio sin nada que dijera que había más.** La expresión de fuente son ~200
+caracteres sin espacios; `.art-code pre` desliza, pero la pista *"Desliza →"*
+sólo existe bajo 640 px (PR #309, pensada para móvil). Así que en la anchura en
+la que de verdad se configura un GA4, la cadena terminaba en
+`…gemini.google.com|c` y nada indicaba que continuara. **No se puede copiar lo
+que no se ve**, y esa cadena es el único entregable ejecutable del artículo.
+`<CodeBlock wrap>` la ajusta en varias líneas visuales en vez de deslizarla —
+para código de verdad partir una línea cambiaría lo que dice, pero esto es un
+valor único, y **el salto blando no mete ningún `\n` en el portapapeles**, así
+que se ve entera y se pega en una sola línea. Con la pista de deslizar apagada
+cuando ajusta, porque ahí mentiría.
+
+**2. La portada se leía como un bloque gris roto.** En el artículo la portada
+va en una caja de **96 px de alto a todo el ancho** (`.blog-cover-compact`) con
+`object-fit: cover`, o sea una tira de ~11,7:1 sobre una imagen de 4:1: se ve
+la banda central, un tercio de la altura. La composición tenía las barras
+apoyadas en una base a `y=244` con la más alta empezando en `y=76`, así que de
+las tres barras la banda visible sólo cortaba **un rectángulo gris opaco sin
+principio ni final** — y el gris pizarra, único color fuera de la familia
+azul/cian del resto, remataba el efecto de "algo que no ha cargado" (§73, las
+palabras del fundador). Recompuesta: rejilla y barras dentro de la banda
+central (base a `y=202`, unidad de 12 px), y el gris a un azul apagado en
+familia. La jerarquía —Directo mucho más alta que el canal de asistentes—
+sobrevive al recorte, que era justo lo que la portada tenía que demostrar.
+
+**La regla que sale de esto y que no estaba escrita en ninguna parte:** una
+portada de artículo se juzga en la tira de 96 px, no en el lienzo de 1200×300
+donde se dibuja. Las portadas de S5 y S6 sufren el mismo recorte —se comprobó
+mirándolas— y sobreviven por suerte, porque toda su composición es del mismo
+color y sin elementos que el corte convierta en un bloque plano.
+
+**Y al verificar ese arreglo apareció el peor de todos: el test daba una
+garantía falsa.** Al medir sobre el HTML del build qué texto se lleva el lector
+al portapapeles, salió esto: **MDX se había comido todas las barras
+invertidas**. El fichero decía `chatgpt\.com|claude\.ai|…` y lo que se
+renderizaba era `chatgpt.com|claude.ai|…`, con **cada punto convertido en
+comodín** — la expresión que el artículo le pide al lector que pegue en su
+propiedad de GA4 marcaría también un `claudexai`. MDX trata el texto suelto de
+un hijo JSX como texto con escapes; no hay aviso de ninguna clase.
+
+Lo grave no es el fallo, que es un despiste de sintaxis. Lo grave es que
+`ga4-chatgpt.test.ts` **lo aprobaba**, y con un test dedicado a exactamente
+eso: tenía un caso llamado *"escapa los puntos, para que no actúen como
+comodín"* que pasaba en verde mientras el lector recibía la versión sin
+escapar. Leía el MDX del disco, o sea **el lado de antes de la transformación
+que rompía el dato**. Un guardián que mira el lado equivocado de una
+transformación no es un guardián: es una garantía falsa, y eso es peor que no
+tener ninguna, porque apaga la sospecha.
+
+El arreglo no es una comprobación más lista: **quita la transformación**. La
+expresión vive en `lib/blog/ga4-source-regex.ts`, el MDX la renderiza como
+expresión (`{GA4_AI_SOURCE_REGEX}`) y el test importa ese mismo valor, así que
+ya no existen dos versiones que puedan diferir. Quedan tres casos nuevos: que
+el artículo la renderice desde la constante y no vuelva a incrustar un literal
+—la única forma de que el fallo vuelva—, que vaya en un bloque que ajusta, y el
+caso negativo con el valor exacto que MDX producía, para probar que el detector
+de escapado distingue de verdad.
+
+**La lección, que es más general que este artículo:** cuando lo publicado pasa
+por una transformación (MDX, un compilador, un serializador), el test tiene que
+mirar **el lado de después**, o eliminar la transformación. Aquí se eligió lo
+segundo, que es lo único que no depende de acordarse.
+
+**Y un hallazgo del check-in previo al Human Gate: la numeración de este
+documento estaba rota, siete veces.** Esta entrada nació como §78 mientras
+PRELAUNCH-HARDENING-1 R5/R6 mergeaba §78 a §82 en `main`. Las dos ramas eran
+correctas por separado —cada una calculó `max + 1` sobre su propia base, que
+envejece en cuanto la otra mergea— y **git no para nada**: los dos bloques son
+apéndices adyacentes al final del mismo fichero, así que se mezclan sin un solo
+marcador de conflicto y el resultado tiene dos §78 sin que chille nadie. Se
+cogió comprobando la mergeabilidad a mano; a mano no es un mecanismo.
+
+Al escribir el guardián (`tests/log-numbering.test.ts`, calcado de
+`adr-numbering.test.ts`, que resolvió esto mismo para `docs/adr/`) resultó que
+**ya había siete colisiones en `main`**: §33, §36, §39, §54, §55, §65 y §70,
+desde principios de agosto, una cada pocos días. Dos de ellas son visibles
+desde el mapa de zonas de CLAUDE.md, que apunta a «log §54» desde dos filas
+distintas y a dos secciones distintas — o sea que la referencia ya no resuelve
+en el documento que la siguiente sesión lee primero.
+
+Esta entrada pasa a **§85**, con todas sus referencias. Las siete heredadas
+quedan **congeladas como deuda declarada**, no arregladas aquí: renumerar una
+sección ya mergeada rompe las referencias publicadas que la apuntan —el coste
+que `adr-numbering.test.ts` documenta haber pagado con `0026`— y siete
+secciones merecen su propia pasada deliberada, no ir de propina en un PR de
+contenido donde nadie las revisaría. La lista sólo puede encoger y su línea
+base está fijada literalmente, como `COVER_DEBT`.
+
+**Y volvió a pasar cuarenta minutos después, en este mismo PR.** Esta entrada
+era §78, pasó a §83 al fusionar R5/R6 — y R7/R8 reclamó §83 y §84 antes de que
+esta rama llegara al Human Gate, así que acabó en **§85**, con dos merges y dos
+renumerados en dos horas. La segunda vez sí produjo conflicto de git, porque
+los dos bloques cayeron exactamente en el mismo punto; la primera no, que es el
+caso peligroso.
+
+Eso deja claro el **límite del guardián, que su propio comentario ya declara**:
+sólo ve una rama, así que no puede impedir que dos ramas corran a por el mismo
+número libre — sólo garantiza que la que mergee segunda se entere. Con varias
+sesiones agénticas mergeando el mismo día, un número al final del fichero es
+estructuralmente una carrera, y la única solución que la ganaría de verdad es
+no numerar al escribir: un identificador estable (fecha + slug) o asignar el
+número al mergear. **No se hace aquí** — cambia el esquema de referencia de
+todo el histórico y de las decenas de `log §NN` repartidas por el repositorio,
+así que es su propia fase. Queda escrito para que la siguiente sesión que se
+tropiece no vuelva a diagnosticarlo desde cero.
+
+**Y un apunte de herramienta, porque me equivoqué tres veces con él.** Para
+saber si una rama conflictúa con `main` usé
+`git merge-tree $(git merge-base …) HEAD origin/main | grep -c "^<<<<<<<"`.
+Devolvió **0 las tres veces, y las tres se equivocó**: el formato antiguo de
+`merge-tree` no emite marcadores de conflicto, así que ese `grep` no puede
+encontrarlos nunca — un cero ahí no significa "no hay conflicto", significa
+"esta comprobación no mide lo que crees". Con ella se le dijo al fundador "sin
+conflictos" dos veces sobre ramas que sí lo tenían. Lo fiable es **intentar el
+merge** (`git merge --no-commit --no-ff`, y `git merge --abort` si no
+interesaba) o mirar `mergeable_state` en la API de GitHub, que acertó las tres.
+Es la misma forma del fallo que este PR persigue en el artículo y en el test de
+la expresión regular: **un indicador que parece verificar algo y mira otra
+cosa** — con la agravante de que aquí el falso negativo era silencioso y salía
+en verde.
+
+**Arreglo encontrado de camino.** La fecha del pilar `medicion` en el sitemap
+seguía en el 2026-08-03: S6 publicó `metricas-geo-que-medir` sin tocarla,
+aunque la página pilar lista los artículos de su cluster y por tanto cambió de
+verdad ese día. Corregida al 2026-08-14. Es el mismo rancio que T15 vino a
+arreglar, reaparecido por el sitio de siempre — una fecha manual que nadie
+recuerda que existe hasta que alguien la mira.
+
+---
+
+## 86. La única pantalla de Genscore que no parecía de Genscore (NOT-FOUND-ROCKET-1, 2026-08-12)
+
+**Qué pasaba.** La 404 pública (`app/not-found.tsx`, SEO-POS-1 T7) era correcta
+y fea: un `<h1>` y tres listas de enlaces heredadas de `BlogPageShell`, sin
+jerarquía, sin aire y con los títulos de los clusters pegados a sus
+descripciones. Cumplía su trabajo técnico —devolvía 404, llevaba `noindex,
+follow`, enlazaba a lo publicado— y ese es justo el motivo por el que llevaba
+meses así: nada estaba roto. Lo reportó el fundador desde un móvil.
+
+**Qué se decidió.** Se plantearon tres maquetas completas y navegables (no
+bocetos), las tres en `docs/design-reference/not-found-rocket-1/concepts.html`:
+«Fuera de trayectoria» (el cohete del primer escaneo, oscura), «Sin resultados
+que citar» (la URL fallida como consulta y la navegación como lista de fuentes
+citables) y «Falta un segmento» (el anillo del logo con un segmento apagado,
+tipográfica). El fundador eligió la primera. Las otras dos se conservan en el
+mismo fichero: son el registro de qué se consideró, igual que un ADR superado
+no se borra.
+
+**La cabecera es blanca.** Instrucción explícita del fundador: la cabecera del
+sitio no cambia por estar en un 404. Eso obliga a un corte duro entre la nav
+blanca y el cuerpo oscuro, y obliga a algo menos evidente — `.lp-nav-wrap` es
+translúcida con `backdrop-filter`, así que sobre un cuerpo oscuro y con scroll
+dejaba ver el oscuro a través. En esta ruta, y sólo en esta, es opaca.
+
+**Por qué la escena no está centrada bajo el texto.** La primera versión puso
+el copy centrado sobre una escena a sangre y el cohete le pasaba por detrás del
+titular. No es un problema de capas: en una pantalla panorámica quedan ~170 px
+libres por encima del bloque de texto, y no caben un titular y una nave en el
+mismo eje. La composición final reparte por ejes — misión a la derecha y texto
+a la izquierda en horizontal; misión arriba y texto abajo en vertical, donde
+además se encoge, sube y pierde los dos tramos bajos de la estela, que cruzaban
+el titular. La escena sigue ocupando toda la pantalla, que era la petición.
+
+**Lo que se descubrió por el camino, y que no era el encargo.**
+`app/not-found.tsx` es el `not-found` **raíz** y no había ningún otro en el
+repo, así que recogía también los `notFound()` de la consola:
+`lib/project-workspace.ts` (que convierte las seis pantallas de un proyecto
+inexistente en un 404), la página de proyecto y la de un run. Ya antes de esta
+fase eso le enseñaba la cabecera de marketing a alguien con la sesión abierta;
+con el cohete a pantalla completa y un «Prueba gratis» pasaba de raro a
+absurdo. De ahí `app/dashboard/not-found.tsx`, deliberadamente sobrio y
+renderizado dentro del layout de la consola, con el menú lateral intacto.
+
+**Lo que no se hizo, y por qué.** No se tocó `BlogPageShell`. Encierra su
+contenido en `.lp-inner` (max-width 1180 px), que es exactamente lo que impide
+una escena a sangre, y lo comparten blog, legales y pricing: ampliarlo por una
+pantalla habría puesto tres superficies en riesgo. La 404 lleva su propio
+shell, siguiendo el precedente ya escrito en el repo (`blog-page-shell.tsx` es
+a su vez copia deliberada de `legal-page-shell.tsx`). **La deuda, declarada:
+son tres copias de la misma barra de navegación. Si aparece una cuarta, toca
+extraerla.** El nuevo shell se registró en `marketing-content-links.test.ts`,
+que es lo que impide que una superficie con pie público se olvide de las cuatro
+capas de contenido.
+
+**El aviso de los dos cohetes.** A petición del fundador, `.claude/rules/
+mission-rocket.md` cubre a la vez `components/scan-mission-rocket.tsx`,
+`lib/scan/mission-beats.ts` y `components/not-found-mission.tsx`: toques el que
+toques, la regla se inyecta sola y recuerda que hay otro. No comparten código a
+propósito —el del escaneo está atado al estado de un run real y el de la 404 es
+estático y sin datos—, y esa separación es exactamente lo que hace necesario el
+aviso. El invariante duro: en el escaneo el movimiento codifica progreso real;
+en la 404 no puede haber ni barra, ni anillo, ni contador, porque no habría
+nada verdadero que contar.
+
+**El pie era ilegible y lo vio el fundador antes que nadie.** `.nf-page`
+pintaba de oscuro el contenedor entero para que el sobre-scroll no enseñara
+blanco, y el pie de marketing vive dentro de ese contenedor sin fondo propio:
+quedaba con su texto en tinta sobre fondo oscuro. Ahora sólo la ventana de la
+misión es oscura y la página sigue siendo blanca, que es lo que deja el pie
+exactamente igual que en el resto del sitio (fundador, 2026-08-12).
+
+**El harness no podía pilotar una 404, y eso no era culpa de la pantalla.**
+`visitAsUser` marca como fallo cualquier respuesta ≥400 de primera parte, así
+que el piloto reportaba `first-party requests failed` por el único
+comportamiento que una página de error está obligada a tener: responder 404.
+Se añadió `VisitOptions.expectDocumentStatus`, deliberadamente estrecho —exime
+**una** respuesta, la del documento de la ruta visitada, y sólo con el código
+declarado. Un 500 en esa ruta, o un 404 de un subrecurso (un CSS que no carga,
+una imagen rota) siguen tumbando la pasada. Tampoco debilita la garantía de que
+la ruta responde 404: eso lo asevera su propio test con `page.request.get`,
+aparte. Sin este cambio ninguna página de error del producto podría pilotarse
+jamás, hoy ni en el futuro.
+
+**Dos metas `robots`, y las dos legítimas.** La primera pasada del piloto falló
+en las tres anchuras por una aserción propia: `meta[name="robots"]` resuelve a
+**dos** elementos en esta página. Next añade la suya (`noindex`) a toda página
+`not-found` y `app/not-found.tsx` declara la nuestra (`noindex, follow`) desde
+SEO-POS-1 (T7). Es preexistente, no lo introdujo esta fase, y no se corrigió
+retirando ninguna: no se contradicen —ninguna dice `nofollow`, así que el
+resultado efectivo es `noindex, follow`—, quitar la nuestra sería un cambio de
+SEO ajeno a este PR y la de Next no está en nuestra mano. Lo que sí cambió es
+la aserción: en vez de mirar la primera meta, comprueba que **ninguna** de las
+que haya deje la página indexable. Con `.first()` el test habría pasado aunque
+una segunda dijera `index`.
+
+**Y una lección de orden, no de contenido.** `public-pages.spec.ts` corre en
+modo `serial`, así que aquel fallo de cabeceras se llevó por delante el test
+que pinta la pantalla: la 404 no apareció en la tabla del piloto **en ninguna
+anchura**. Un `PILOT FAIL` por una aserción trivial dejó la pantalla del PR sin
+mirar. El test que produce las capturas va ahora primero, para que un fallo de
+detalle no borre la evidencia visual.
+
+**Dos mejoras plegadas después de mirar las capturas, no de leer la tabla.**
+El piloto dio `PILOT PASS` con la 404 en verde en las tres anchuras, y aun así
+la pantalla tenía dos defectos que ninguna checklist detecta porque ninguna
+mide "se entiende": en horizontal la estela sólida terminaba *dentro* del
+lienzo y su extremo se veía flotando a media pantalla, como si el rastro
+empezara de la nada; en vertical, ocultar los dos tramos de abajo dejaba un
+fragmento corto y desconectado bajo el cohete. Ahora el primer tramo arranca
+fuera del lienzo (`y=796` con el lienzo a 760) y en vertical sólo desaparece el
+de más abajo. Es el motivo por el que un PASS no cierra la fase: la tabla dice
+que la página cargó, no que se lea.
+
+**El 404 de la consola, segunda versión: sobrio no es descuidado.** La primera
+reutilizaba `EmptyState` —borde discontinuo— con un botón suelto debajo y el
+resto de la pantalla en blanco. El fundador la probó y fue directo: «parece un
+botón mal maquetado» (2026-08-13). Tenía razón, y el fallo era de lenguaje: el
+borde discontinuo de `EmptyState` significa *contenido que todavía no está*
+(«aún no has escaneado», «no hay competidores»), y aquí no falta contenido —
+la ruta no existe. Ahora es un bloque centrado en el área de contenido, con las
+piezas de la propia consola (`.btn`, `Icon`, los tokens de tinta) y **sin
+caja**: en una pantalla por lo demás vacía, una caja alrededor de un mensaje
+corto es justamente lo que lo hacía parecer un widget a medio maquetar. De
+paso se corrigió una incoherencia entre etiqueta y destino: el botón decía
+«Volver a mis dominios» y apuntaba a `/dashboard`, que redirige al proyecto más
+reciente, no a la lista. Ahora son dos salidas y cada una dice a dónde va.
+
+**El 404 de la consola pasa a estar pilotado.** Se dijo que quedaba para una
+fase futura, y duró lo que tardó el fundador en encontrar el defecto que el
+piloto no podía ver. El journey vive en `core-flow.spec.ts` y no en
+`public-pages.spec.ts` porque necesita sesión: sin ella `requireUser()` redirige
+a /login y no se ve nada. Visita un id de proyecto inexistente y comprueba las
+tres cosas que importan — que sale la pantalla sobria, que **no** sale la de
+marketing (`.nf-scene` a cero, ningún «Prueba gratis») y que el menú lateral
+sigue alrededor para poder salir. Sigue siendo de lectura pura: navega a una
+URL y mira. Lo que un humano tuvo que cazar una vez, lo mira una máquina a
+partir de ahora.
+
+**El piloto pasó y aun así no publicó nada.** La pasada de `f1d5451` corrió los
+172 tests, imprimió `Verdict: PILOT PASS` y el job murió en el minuto 20:
+`timeout-minutes: 20` en `ux-pilot.yml` contra 19,3 min de tests. El check quedó
+en `cancelled`, sin comentario y sin evidencia subida — y a efectos del Human
+Gate **un piloto que no publica es un piloto que no ha corrido**, aunque el
+veredicto exista dentro del log. El margen llevaba tiempo siendo mínimo y los
+tres tests nuevos de esta fase (×3 anchuras, ~55 s) lo agotaron. Se sube a 30 en
+el mismo PR que lo agotó, en vez de dejar la trampa armada para el siguiente que
+añada un journey. Lo que **no** se arregló, y queda anotado: nada avisa cuando
+la pasada se acerca al tope; el aviso es que un día no publique.
+
+**«Ver mis dominios» apuntaba a la pantalla equivocada, y lo cazó el fundador
+probando el preview, no el piloto.** El botón llevaba a `/dashboard/projects`
+—la pantalla de archivar/restaurar de antes de DOMAINS-REDESIGN-1— en vez de a
+`/dashboard/domains`, la puerta de entrada real de la consola desde esa fase.
+El test del piloto sólo comprobaba que el primer enlace del bloque fuera
+visible, nunca a dónde apuntaba, así que una etiqueta correcta con un destino
+equivocado le pasó por delante sin que nada lo marcara. Corregido el enlace y
+reforzado el test: ahora asevera el `href` de «Ver mis dominios» por su nombre
+accesible, no por posición. La lección, otra vez: un checklist que sólo mira
+"¿está ahí?" no ve "¿lleva a donde dice?".
+
+**Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
+testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
+unitario y no puede tenerlo hoy**. *(La segunda mitad de esa frase queda
+`superseded por §87`, del mismo día: sí se puede, con `renderToStaticMarkup` y
+sin testing-library — `react-dom` ya estaba. Lo que sigue siendo cierto es que
+esta pantalla en concreto no lo tiene.)* La verificación real es el `ux-pilot`
+(`tests/pilot/journeys/public-pages.spec.ts`), que comprueba el 404 real, el
+`noindex`, y que lo que se pinta es la escena y no un placeholder — anclado a
+`.nf-scene` y al titular, no a "la página cargó". El 404 de dentro de la consola sí acabó
+cubierto, en `core-flow.spec.ts` — ver arriba.
+
+---
+
+## 87. Auditoría web deja de ser una pantalla que nadie puede demostrar (PRELAUNCH-HARDENING-1, 2026-08-14)
 
 **Qué se decidió.** Los seis módulos de
 `web-audit/_components/` pasan a tener tests de render de verdad: **46 casos
@@ -8166,7 +8579,13 @@ quedaba de R7 y ahora tiene, por fin, algo debajo que lo sostenga.
 
 **Trazabilidad.** §83 (la mudanza que dejó el hueco al descubierto); el informe
 de Task Intake de R3 (2026-08-14), donde esto se recomendó en lugar de los
-tipos generados de Supabase; `.claude/rules/web-audit.md`.
+tipos generados de Supabase; `.claude/rules/web-audit.md`. Y **§86**, que el
+mismo día afirmó que «el repo no tiene testing-library ni un solo `.test.tsx`,
+así que esta pantalla no tiene test unitario **y no puede tenerlo hoy**»: la
+segunda mitad de esa frase queda superseded aquí — sin testing-library también
+se puede, porque `renderToStaticMarkup` no la necesita. Las dos ramas se
+escribieron a la vez y se cruzaron al mergear; se deja anotado en ambas en vez
+de reescribir la de allí.
 
 ---
 

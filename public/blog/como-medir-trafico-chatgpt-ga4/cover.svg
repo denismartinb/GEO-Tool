@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Ochenta y cuatro respuestas de IA representadas como puntos: solo doce producen un clic y llegan a la analítica; el resto se resuelve dentro del chat y no aparece en ningún informe. Esos doce clics se reparten en tres barras de altura desigual, con la mayor —Directo— muy por encima de la del canal de asistentes de IA">
+  <defs>
+    <linearGradient id="bgGa4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowGa4A" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowGa4B" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".3"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="dotOn" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </radialGradient>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity=".9"/>
+    </linearGradient>
+    <linearGradient id="barDirect" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#20365c"/>
+      <stop offset="1" stop-color="#33517f"/>
+    </linearGradient>
+    <linearGradient id="barAI" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#09c5d6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgGa4)"/>
+  <circle cx="200" cy="150" r="240" fill="url(#glowGa4A)"/>
+  <circle cx="900" cy="160" r="230" fill="url(#glowGa4B)"/>
+
+  <!-- La muestra: 84 respuestas. Encendidas, las 12 que produjeron un clic. -->
+  <circle cx="72" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="98" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="124" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="150" cy="96" r="5" fill="url(#dotOn)"/>
+  <circle cx="176" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="202" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="228" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="254" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="280" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="306" cy="96" r="5" fill="url(#dotOn)"/>
+  <circle cx="332" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="358" cy="96" r="4.5" fill="#294470"/>
+  <circle cx="72" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="98" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="124" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="150" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="176" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="202" cy="115" r="5" fill="url(#dotOn)"/>
+  <circle cx="228" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="254" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="280" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="306" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="332" cy="115" r="5" fill="url(#dotOn)"/>
+  <circle cx="358" cy="115" r="4.5" fill="#294470"/>
+  <circle cx="72" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="98" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="124" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="150" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="176" cy="134" r="5" fill="url(#dotOn)"/>
+  <circle cx="202" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="228" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="254" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="280" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="306" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="332" cy="134" r="4.5" fill="#294470"/>
+  <circle cx="358" cy="134" r="5" fill="url(#dotOn)"/>
+  <circle cx="72" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="98" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="124" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="150" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="176" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="202" cy="153" r="5" fill="url(#dotOn)"/>
+  <circle cx="228" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="254" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="280" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="306" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="332" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="358" cy="153" r="4.5" fill="#294470"/>
+  <circle cx="72" cy="172" r="5" fill="url(#dotOn)"/>
+  <circle cx="98" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="124" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="150" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="176" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="202" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="228" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="254" cy="172" r="5" fill="url(#dotOn)"/>
+  <circle cx="280" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="306" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="332" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="358" cy="172" r="4.5" fill="#294470"/>
+  <circle cx="72" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="98" cy="191" r="5" fill="url(#dotOn)"/>
+  <circle cx="124" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="150" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="176" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="202" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="228" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="254" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="280" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="306" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="332" cy="191" r="5" fill="url(#dotOn)"/>
+  <circle cx="358" cy="191" r="4.5" fill="#294470"/>
+  <circle cx="72" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="98" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="124" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="150" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="176" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="202" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="228" cy="210" r="5" fill="url(#dotOn)"/>
+  <circle cx="254" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="280" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="306" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="332" cy="210" r="4.5" fill="#294470"/>
+  <circle cx="358" cy="210" r="4.5" fill="#294470"/>
+
+  <!-- Sólo los clics llegan a la analítica. -->
+  <path d="M150 96 C355 96, 355 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M306 96 C433 96, 433 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M202 115 C381 115, 381 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M332 115 C446 115, 446 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M176 134 C368 134, 368 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M358 134 C459 134, 459 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M202 153 C381 153, 381 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M72 172 C316 172, 316 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M254 172 C407 172, 407 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M98 191 C329 191, 329 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M332 191 C446 191, 446 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <path d="M228 210 C394 210, 394 152, 560 152" fill="none" stroke="url(#flow)" stroke-width="1.6" opacity=".55"/>
+  <circle cx="560" cy="152" r="7" fill="#09c5d6"/>
+  <circle cx="560" cy="152" r="16" fill="none" stroke="#09c5d6" stroke-opacity=".35" stroke-width="1.5"/>
+
+  <!-- Y ahí se reparten: la barra alta es Directo, no el canal de asistentes. -->
+  <path d="M560 152 C666.5 152, 666.5 106, 773 106" fill="none" stroke="url(#flow)" stroke-width="6.8" opacity=".5"/>
+  <path d="M560 152 C716.5 152, 716.5 166, 873 166" fill="none" stroke="url(#flow)" stroke-width="3.3" opacity=".5"/>
+  <path d="M560 152 C766.5 152, 766.5 190, 973 190" fill="none" stroke="url(#flow)" stroke-width="1.9" opacity=".5"/>
+  <line x1="720" y1="202" x2="1030" y2="202" stroke="#1d3157" stroke-width="2"/>
+  <rect x="742" y="106" width="62" height="96" rx="6" fill="url(#barDirect)"/>
+  <rect x="842" y="166" width="62" height="36" rx="6" fill="url(#barAI)"/>
+  <rect x="942" y="190" width="62" height="12" rx="6" fill="#0e7490"/>
+</svg>

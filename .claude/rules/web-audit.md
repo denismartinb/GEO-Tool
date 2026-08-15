@@ -99,7 +99,7 @@ tarjetas y el gráfico de tendencia viven en
 Componente nuevo de esta pantalla → ahí.
 
 **Cada uno de esos módulos tiene tests de render, y un componente nuevo también
-los lleva** (log §85). Se renderiza de verdad con `renderToStaticMarkup` — sin
+los lleva** (log §87). Se renderiza de verdad con `renderToStaticMarkup` — sin
 dependencias nuevas: `react-dom` ya estaba y no toca el DOM, así que
 `environment: "node"` basta. Se asegura el **contenido** (el número que sale es
 el que entra, el alcance se pluraliza, un dato ausente se ve ausente), nunca el

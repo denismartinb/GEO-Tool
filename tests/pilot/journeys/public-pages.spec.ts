@@ -48,7 +48,11 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // (fixture-drift.test.ts) que contrasta este mapa contra BLOG_POSTS.
   "como-saber-si-tu-marca-aparece-en-chatgpt": "playbooks",
   // SEO-POS-1 Fase C, S6 (2026-08-13).
-  "metricas-geo-que-medir": "medicion"
+  "metricas-geo-que-medir": "medicion",
+  // SEO-POS-1 Fase C, S7 (2026-08-14).
+  "como-aparecer-en-perplexity": "playbooks",
+  // SEO-POS-1 Fase C, S8 (2026-08-14).
+  "como-medir-trafico-chatgpt-ga4": "medicion"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
@@ -347,4 +351,94 @@ test("/feed.xml responds with a valid RSS 2.0 document", async ({ page }) => {
   const body = await response.text();
   expect(body, "/feed.xml no contiene el elemento <rss>").toContain('<rss version="2.0">');
   expect(body, "/feed.xml no enlaza ningún post del blog").toContain(`${SITE_URL}/blog/`);
+});
+
+/**
+ * NOT-FOUND-ROCKET-1. La 404 pública dejó de ser una lista de enlaces y pasó a
+ * ser una pantalla con escena a sangre completa
+ * (`docs/design-reference/not-found-rocket-1/`).
+ *
+ * Las dos mitades que se comprueban aquí son distintas y las dos importan: que
+ * la respuesta siga siendo un 404 de verdad —lo que hace que un buscador no la
+ * trate como contenido— y que lo que se pinta sea la escena y no un
+ * placeholder. La `ContentExpectation` ancla a la escena Y al titular: sin ella
+ * esto certificaría "la página cargó", que es exactamente el pase vacío que
+ * costó la Auditoría web el 2026-08-02.
+ */
+const MISSING_PATH = "/esta-ruta-no-existe-nunca-jamas";
+
+/**
+ * El orden importa: el test que PINTA la pantalla va primero porque este spec
+ * corre en modo `serial`, así que un fallo en las cabeceras se llevaría por
+ * delante las capturas y la 404 no aparecería en la tabla del piloto — que es
+ * exactamente lo que pasó en la primera pasada de este PR.
+ */
+test("la 404 pública pinta la misión, no un texto suelto", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    MISSING_PATH,
+    "not-found-mission",
+    {
+      describedAs: "la escena del cohete y el titular de la 404, no un estado vacío",
+      anyOf: [{ selector: ".nf-scene" }, { text: /no está en el mapa/i }]
+    },
+    // El documento responde 404 porque es una 404: sin declararlo, el harness
+    // lo cuenta como "first-party request failed" y esta pantalla no puede
+    // pilotarse nunca. Un 404 de un subrecurso sigue tumbando la pasada.
+    { expectDocumentStatus: 404 }
+  );
+  assertPageIsHealthy(findings);
+
+  // El cohete y el destino inexistente son la pantalla. Si el recorte de
+  // `slice` se los come en una anchura, esto lo dice en esa anchura.
+  await expect(page.locator(".nf-flight")).toBeVisible();
+  await expect(page.locator(".nf-target")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /no está en el mapa/i })).toBeVisible();
+
+  // La cabecera es la blanca del sitio: una instrucción explícita del fundador,
+  // no un accidente de contraste.
+  await expect(page.locator(".nf-page .lp-nav-wrap")).toBeVisible();
+
+  // La escena ocupa el ancho completo, no una columna con márgenes.
+  const stage = await page.locator(".nf-stage").boundingBox();
+  const width = page.viewportSize()?.width ?? 0;
+  expect(stage?.width ?? 0, "la escena no llega a los bordes").toBeGreaterThanOrEqual(width - 1);
+
+  // Las salidas tienen que existir: una 404 que no lleva a ningún sitio es la
+  // que teníamos antes de SEO-POS-1 (T7).
+  await expect(page.locator(".nf-rail a").first()).toBeVisible();
+});
+
+test("una URL inexistente responde 404 de verdad y no se indexa", async ({ page }) => {
+  const response = await page.request.get(MISSING_PATH);
+  expect(response.status(), `${MISSING_PATH} no respondió 404`).toBe(404);
+
+  await page.goto(MISSING_PATH, { waitUntil: "domcontentloaded" });
+
+  /**
+   * Hay DOS `<meta name="robots">` en esta página y las dos son legítimas: Next
+   * añade la suya (`noindex`) a toda página `not-found`, y `app/not-found.tsx`
+   * declara la nuestra (`noindex, follow`) desde SEO-POS-1 (T7). No se
+   * contradicen —ninguna dice `nofollow`, así que el resultado efectivo es
+   * `noindex, follow`— y por eso la duplicidad se deja como está en vez de
+   * quitar una: retirar la nuestra sería un cambio de SEO, y retirar la de Next
+   * no está en nuestra mano.
+   *
+   * Lo que se comprueba, entonces, no es "hay una meta" sino la garantía real:
+   * que NINGUNA de las que haya deje esto indexable. Con `.first()` el test
+   * pasaría aunque una segunda meta dijera `index`, que es el fallo que de
+   * verdad importaría.
+   */
+  const robots = await page.locator('meta[name="robots"]').evaluateAll((els) =>
+    els.map((el) => el.getAttribute("content") ?? "")
+  );
+  expect(robots.length, "la 404 no declara ninguna meta robots").toBeGreaterThan(0);
+  for (const content of robots) {
+    expect(content, `una meta robots de la 404 no dice noindex: "${content}"`).toContain("noindex");
+  }
+  expect(
+    robots.some((c) => c.includes("follow") && !c.includes("nofollow")),
+    "ninguna meta robots declara follow: la 404 dejaría de repartir sus enlaces"
+  ).toBe(true);
 });

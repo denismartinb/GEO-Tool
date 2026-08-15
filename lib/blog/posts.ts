@@ -208,6 +208,32 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "medicion"
   },
   {
+    slug: "como-aparecer-en-perplexity",
+    title: "Cómo aparecer en Perplexity (y en qué se diferencia de otros motores)",
+    description:
+      "Perplexity ancla cada afirmación a una cita numerada, no solo te menciona. Qué hacer distinto: estructura citable, datos con procedencia, frescura, y por qué esto queda fuera de lo que Genscore mide hoy.",
+    metaDescription:
+      "Cómo aparecer en Perplexity: por qué es distinto de Google y de ChatGPT, y qué mueve de verdad que te cite.",
+    datePublished: "2026-08-14",
+    coverIcon: "search",
+    coverImage: "/blog/como-aparecer-en-perplexity/cover.webp",
+    primaryKeyword: "cómo aparecer en perplexity",
+    cluster: "playbooks"
+  },
+  {
+    slug: "como-medir-trafico-chatgpt-ga4",
+    title: "Cómo medir en GA4 el tráfico que llega desde ChatGPT",
+    description:
+      "GA4 ya trae un canal propio para asistentes de IA desde mayo de 2026. Qué ve, qué deja fuera, y por qué lo que enseña es un suelo con un multiplicador desconocido, no el total.",
+    metaDescription:
+      "Cómo ver en GA4 el tráfico que llega desde ChatGPT con el canal «Asistente de IA», qué se queda en Directo y cómo recuperarlo.",
+    datePublished: "2026-08-14",
+    coverIcon: "trendUp",
+    coverImage: "/blog/como-medir-trafico-chatgpt-ga4/cover.webp",
+    primaryKeyword: "medir tráfico chatgpt ga4",
+    cluster: "medicion"
+  },
+  {
     slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
     title: "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude",
     description:
