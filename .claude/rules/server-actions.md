@@ -29,7 +29,7 @@ by `core-flow`, `frontend`, and `data-guardian`.
   operator-scoped write (ADMIN-CONSOLE-2b) could call the exact same check
   instead of re-deriving it; two independent implementations of "does this
   project qualify" drift apart silently the first time one of them is edited
-  (`docs/brand/design-decisions-log.md` §97).
+  (`docs/brand/design-decisions-log.md` §98).
 - **El desenlace se DEVUELVE, no se decide con `redirect()`.** Una action que
   ramifica con `redirect` no es testeable: `redirect` lanza, así que un test
   sólo puede afirmar «lanzó algo», nunca *qué* decidió. Por eso la lógica vive

@@ -8944,8 +8944,6 @@ afirmaría que una constante es esa constante.
 
 ---
 
----
-
 ## 94. La definición canónica vive en una constante, no en seis párrafos parecidos (SEO-POS-1 Fase E, E2, 2026-08-15)
 
 **Qué se publica.** `/que-es-genscore`: qué es el producto, qué mide, cómo
@@ -9096,7 +9094,73 @@ cubren lo que pasa dentro de un contenedor con `overflow` recortado.
 
 ---
 
-## 97. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
+## 97. Q5: un test que podía mentir, una hipótesis sin datos y una puerta invisible (PRELAUNCH-HARDENING-1, 2026-08-15)
+
+**Qué se decidió.** Se cierra lo que quedaba de Q5. Tres cosas distintas, y las
+tres tenían la misma forma: **algo que parecía verificado y no lo estaba**.
+
+### 1. `second-project.spec.ts` podía pasar en verde sobre proyectos vacíos
+
+Ya no: sus dos pantallas declaran `ContentExpectation`. Sin ella, este journey
+afirmaba «se ven bien en otro proyecto» cuando lo único comprobado era que la
+ruta respondía 200 — el fallo del 2026-08-02 que hizo nacer
+`ContentExpectation`, y que aquí era **peor que la media**: este journey existe
+justamente para alcanzar formas de datos que el proyecto principal no puede
+producir, así que un proyecto secundario sin datos es el caso que más fácil
+pasaba desapercibido.
+
+### 2. La pérdida de sesión se instrumenta, NO se parchea
+
+El 2026-08-09 una pasada perdió la sesión en la última anchura y **no se ha
+reproducido desde entonces** (§42). La hipótesis —el `storageState` único
+compartido por las tres anchuras secuenciales— **sigue sin probarse**, y
+parchear una hipótesis sin datos es cómo se arregla el síntoma equivocado.
+
+Lo que había hasta hoy cuando saltaba era `session was rejected — landed on
+<url>`, que no permite diagnosticar nada. Ahora el fallo dice **qué cookies de
+sesión tenía el contexto en ese instante**, y eso separa dos fallos con dos
+arreglos distintos: llegar **sin** cookies (el `storageState` no se aplicó) o
+**con ellas caducadas** (la sesión expiró a mitad de pasada).
+
+**Nombres, nunca valores.** Una cookie de sesión de Supabase *es* la sesión:
+volcar su valor al log de un run sería regalar la cuenta del piloto. Para
+diagnosticar hace falta saber si estaban, no qué contenían.
+
+### 3. La ausencia de CI deja de ser invisible
+
+`ci.yml` se dispara de forma intermitente en los push a un PR abierto (§54), y
+el `workflow_dispatch` de rescate sólo sirve si alguien se da cuenta. Ahí está
+el problema real: **un piloto verde se ve; un CI que no existe, no.** El
+2026-08-15 estuvo a punto de mergearse un PR cuya única señal era el comentario
+del piloto — se cazó mirando los checks uno a uno, que no es un método.
+
+El comentario del piloto añade ahora un aviso cuando no existe ninguna ejecución
+de CI para ese commit. Todo el bloque va con `|| true`: **este aviso jamás puede
+tumbar la publicación del veredicto**, que es lo que de verdad importa de ese
+paso.
+
+**Lo que esto NO es, dicho claro: no es la puerta.** La puerta de verdad es una
+*required status check* en la protección de rama — un ajuste del repositorio,
+no código, y por tanto **del fundador**. Esto sólo hace que la ausencia se vea
+donde él ya mira.
+
+### Un punto del plan que ya estaba hecho
+
+Q5 pedía tipar `pr_number` como string en `ux-pilot-write.yml` por el bug de
+coerción 289 → `"289.0"`. **Ya estaba**, con su comentario explicando el
+incidente. Es el sexto punto de este plan que al medirlo resulta estar
+desactualizado; queda anotado por si a alguien le sirve el patrón: **este plan
+se escribió de una vez y el código siguió moviéndose.**
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q5); §42 (la
+pérdida de sesión y el `retries: 0`); §54 (la intermitencia de CI); §55
+(`ContentExpectation` y por qué existe).
+
+---
+
+---
+
+## 98. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
 
 **Estado: implementada.** Task Intake de 12 puntos aprobado. Segunda mitad de
 la petición del 12-08: además de *ver* los automatismos (2a, §71), `/admin`
@@ -9167,7 +9231,7 @@ mismo diseño se propuso evitar. Añadido a ambos `.update()`.
 - **Sin piloto agéntico**, misma razón que Fase 1 y 2a: no puede completar un
   desafío AAL2. Verificación manual.
 
-## 98. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
+## 99. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
 
 **Estado: implementada.** Petición directa del fundador sobre lo que acababa
 de mergearse en 2b, no un Task Intake de 12 puntos — pero uno de los tres
@@ -9175,7 +9239,7 @@ cambios contradecía un invariante que ese mismo PR había escrito, así que se
 paró a preguntar antes de tocar código en vez de implementarlo en silencio.
 
 **El campo de motivo se elimina, con la pérdida asumida explícitamente.**
-§97 documentó "no hay tabla de auditoría; el email ES el registro" y
+§98 documentó "no hay tabla de auditoría; el email ES el registro" y
 `.claude/rules/admin.md` lo convirtió en regla: "Every write from `/admin`
 needs a required reason". Quitar la caja de texto no es sólo un cambio de
 CSS — rompe ese invariante. Se preguntó directamente: compacto-pero-
@@ -9341,7 +9405,7 @@ subir (no sólo razonados):
   arnés. Verificación manual de las tres capturas (375/768/1280) pendiente
   del fundador.
 - El gap de lectura de 2a (`auto_coverage_audit_enabled` por debajo de Pro en
-  `lib/admin/automation.ts`) sigue sin tocar, como en §97.
+  `lib/admin/automation.ts`) sigue sin tocar, como en §98.
 
 ---
 

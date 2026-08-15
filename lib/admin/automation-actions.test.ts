@@ -135,7 +135,7 @@ describe("setRecurringScansAsOperator", () => {
         change: "Escaneo recurrente → activado"
       })
     );
-    // El motivo se retiró explícitamente (ADMIN-CONSOLE-UX-1, §98): el email
+    // El motivo se retiró explícitamente (ADMIN-CONSOLE-UX-1, §99): el email
     // ya no lo lleva porque el formulario ya no lo pide.
     expect(sendAdminAutomationChangeAlertEmail.mock.calls[0][0]).not.toHaveProperty("reason");
   });

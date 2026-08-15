@@ -164,7 +164,7 @@ export function UsersTable({
                   </td>
                   <td>{row.lastSignInAt ? relativeTime(row.lastSignInAt) : "—"}</td>
                 </tr>
-                {/* Acordeón en el sitio (ADMIN-CONSOLE-UX-1, §98): el detalle
+                {/* Acordeón en el sitio (ADMIN-CONSOLE-UX-1, §99): el detalle
                     baja justo bajo la fila tocada. .adm-detail-sticky ancla
                     el contenido al borde visible de .adm-table-wrap (100cqi)
                     en vez de al ancho de esta fila de 760px+ — si no, sólo se
