@@ -67,10 +67,10 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   no audit-log table for this (no migration approved), so the email genuinely
   IS the record of the action — not a nice-to-have alert alongside one. A
   write action with no alert call is missing the only accountability this
-  surface has (`docs/brand/design-decisions-log.md` §91). It records who, which
+  surface has (`docs/brand/design-decisions-log.md` §94). It records who, which
   account, which project, and what changed — **not why**: the required-reason
   field was removed in ADMIN-CONSOLE-UX-1, an explicit founder decision made
-  aware of the trade-off (§92). Do not reintroduce a reason requirement as a
+  aware of the trade-off (§95). Do not reintroduce a reason requirement as a
   drive-by "consistency" fix; the founder chose to drop it once already.
 - **An operator-scoped write may never have a precondition weaker than the
   owner-scoped action it mirrors.** Import the shared check from
@@ -78,7 +78,7 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   precondition lives) — never re-derive it. And check whether the toggle
   being enabled actually has an effect for that account's plan before
   writing: `/admin` already shipped one class of this bug twice
-  (recurring scans on Free, §71; coverage audit below Pro, §91) — the pattern
+  (recurring scans on Free, §71; coverage audit below Pro, §94) — the pattern
   is checked once per toggle now, but a new toggle added later needs the same
   question asked of it explicitly, not assumed answered.
 - **`listFactors().data.totp` holds ONLY verified factors — a half-finished
@@ -178,7 +178,7 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   `requireOperator("/admin/users")` as its first line, for the same reason
   every other action here does: a server action is a callable endpoint
   independent of whatever called it, page or client component alike
-  (`docs/brand/design-decisions-log.md` §92).
+  (`docs/brand/design-decisions-log.md` §95).
 - **Presentation helpers shared between the server page and a Client
   Component must not import anything `server-only`.** `app/admin/users/
   shared.tsx` holds `UserDetailPanel` and friends precisely because they
@@ -190,6 +190,6 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   formatting with nothing sensitive in it lives in `lib/admin/
   cost-format.ts` instead, with no `server-only` guard; the actual rate
   constants and `estimateProjectMonthlyCost` stay behind the guard in
-  `cost-model.ts` (§92). If a future admin screen needs the same split,
+  `cost-model.ts` (§95). If a future admin screen needs the same split,
   this is the pattern — split the presentation-safe half out, don't remove
   the guard from the file that has real internal numbers in it.

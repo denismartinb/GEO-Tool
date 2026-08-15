@@ -289,7 +289,7 @@
    * porque `.adm-table` fuerza min-width 760px— y, en el caso de respaldo,
    * suelto a ancho de página. Un móvil de 375px da contenedores muy
    * distintos según el caso; un `@media` no puede distinguirlos porque
-   * ambos ocurren al mismo ancho de viewport (log §92).
+   * ambos ocurren al mismo ancho de viewport (log §95).
    */
   container-type: inline-size;
 }

@@ -8944,7 +8944,7 @@ afirmaría que una constante es esa constante.
 
 ---
 
-## 91. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
+## 94. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
 
 **Estado: implementada.** Task Intake de 12 puntos aprobado. Segunda mitad de
 la petición del 12-08: además de *ver* los automatismos (2a, §71), `/admin`
@@ -9015,7 +9015,7 @@ mismo diseño se propuso evitar. Añadido a ambos `.update()`.
 - **Sin piloto agéntico**, misma razón que Fase 1 y 2a: no puede completar un
   desafío AAL2. Verificación manual.
 
-## 92. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
+## 95. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
 
 **Estado: implementada.** Petición directa del fundador sobre lo que acababa
 de mergearse en 2b, no un Task Intake de 12 puntos — pero uno de los tres
@@ -9023,7 +9023,7 @@ cambios contradecía un invariante que ese mismo PR había escrito, así que se
 paró a preguntar antes de tocar código en vez de implementarlo en silencio.
 
 **El campo de motivo se elimina, con la pérdida asumida explícitamente.**
-§91 documentó "no hay tabla de auditoría; el email ES el registro" y
+§94 documentó "no hay tabla de auditoría; el email ES el registro" y
 `.claude/rules/admin.md` lo convirtió en regla: "Every write from `/admin`
 needs a required reason". Quitar la caja de texto no es sólo un cambio de
 CSS — rompe ese invariante. Se preguntó directamente: compacto-pero-
@@ -9156,7 +9156,7 @@ importándolas de donde siempre.
   arnés. Verificación manual de las tres capturas (375/768/1280) pendiente
   del fundador.
 - El gap de lectura de 2a (`auto_coverage_audit_enabled` por debajo de Pro en
-  `lib/admin/automation.ts`) sigue sin tocar, como en §91.
+  `lib/admin/automation.ts`) sigue sin tocar, como en §94.
 
 ---
 
