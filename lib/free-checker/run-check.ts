@@ -47,8 +47,27 @@ export type PublicCheckError =
   | "engine_unavailable"
   /** Se obtuvo respuesta pero no se pudo interpretar. */
   | "extraction_failed"
+  /** No quedaba invocación para el siguiente paso. Ver `PUBLIC_CHECK_STEP_BUDGET_MS`. */
+  | "budget_exhausted"
   /** Configuración del servidor. Nunca es culpa del visitante. */
   | "config";
+
+/**
+ * Lo que hay que reservar antes de EMPEZAR un paso que llama a un LLM.
+ *
+ * `GEMINI_CALL_TIMEOUT_MS` son 20 s y esta comprobación encadena cuatro
+ * llamadas (perfil, pregunta, generación, extracción): 80 s de peor caso
+ * dentro de una función con `maxDuration = 60`. Sin presupuesto, la
+ * comprobación lenta no devuelve un error — la mata Vercel a los 60 s con un
+ * 504 sin cuerpo, **con el dinero ya gastado** y el visitante mirando una
+ * página rota.
+ *
+ * La regla es de `.claude/rules/scan.md` y se aplica igual aquí: se calcula un
+ * deadline absoluto al entrar y se pregunta **antes** de cada paso si su peor
+ * caso entero cabe, nunca después si ya se pasó. Un paso que arranca a
+ * segundo 45 y puede durar 20 es el fallo que ADR 0037 documenta.
+ */
+export const PUBLIC_CHECK_STEP_BUDGET_MS = 21_000;
 
 export type PublicCheckOutcome =
   | {
@@ -112,16 +131,33 @@ export type PublicCheckDeps = {
     rawResponseText: string,
     brand: string
   ) => T;
+  /** Inyectable para poder probar el presupuesto sin esperar de verdad. */
+  now?: () => number;
+};
+
+export type RunPublicCheckOptions = {
+  /**
+   * Instante absoluto (epoch ms) a partir del cual ya no se empieza nada.
+   * Lo calcula quien llama, UNA vez, contra su propia invocación.
+   */
+  deadlineAt?: number;
 };
 
 export async function runPublicCheck(
   domain: string,
-  deps: PublicCheckDeps
+  deps: PublicCheckDeps,
+  options: RunPublicCheckOptions = {}
 ): Promise<PublicCheckOutcome> {
+  const now = deps.now ?? Date.now;
+  /** ¿Cabe entero el peor caso del siguiente paso? Se pregunta ANTES, no después. */
+  const hasRoomForNextStep = (): boolean =>
+    options.deadlineAt === undefined || now() + PUBLIC_CHECK_STEP_BUDGET_MS <= options.deadlineAt;
   // 1. Leer la portada y perfilar el negocio. Sin esto no hay pregunta que
   //    hacer: preguntar por una categoría inventada devolvería una respuesta
   //    real sobre un mercado que no es el del visitante, que es peor que no
   //    responder.
+  if (!hasRoomForNextStep()) return { status: "failed", error: "budget_exhausted" };
+
   let context: { status: string; profile?: BusinessProfile | null };
   try {
     context = await deps.resolveBusinessContext({
@@ -146,6 +182,8 @@ export async function runPublicCheck(
 
   // 2. Derivar UNA pregunta. `limit: 1` no es un recorte cosmético: es lo que
   //    mantiene la comprobación en ~1 llamada de generación en vez de diez.
+  if (!hasRoomForNextStep()) return { status: "failed", error: "budget_exhausted" };
+
   let prompt: string;
   try {
     const suggestions = await deps.suggestPrompts({
@@ -165,6 +203,8 @@ export async function runPublicCheck(
 
   // 3. Preguntar. La llamada es CIEGA A LA MARCA (ADR 0007): el motor no sabe
   //    a quién estamos midiendo, así que no puede complacernos nombrándolo.
+  if (!hasRoomForNextStep()) return { status: "failed", error: "budget_exhausted" };
+
   let answer: string;
   try {
     const generated = await deps.generateAnswer({
@@ -181,6 +221,8 @@ export async function runPublicCheck(
   // 4. Extraer y VERIFICAR. `competitors: []` a propósito: no rastreamos a
   //    nadie, así que todo lo que nombre la IA sale por `other_brands_mentioned`
   //    — que es justo "quién apareció en tu lugar".
+  if (!hasRoomForNextStep()) return { status: "failed", error: "budget_exhausted" };
+
   try {
     const extracted = await deps.extract({
       brand,

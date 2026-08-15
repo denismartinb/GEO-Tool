@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { PUBLIC_CHECK_ENGINE, type PublicCheckDeps, runPublicCheck } from "./run-check";
+import {
+  PUBLIC_CHECK_ENGINE,
+  PUBLIC_CHECK_STEP_BUDGET_MS,
+  type PublicCheckDeps,
+  runPublicCheck
+} from "./run-check";
 
 /**
  * FREE-CHECKER-1 Fase B2.
@@ -213,6 +218,56 @@ describe("runPublicCheck", () => {
       })
     );
     expect(result).toEqual({ status: "failed", error: "extraction_failed" });
+  });
+
+  describe("presupuesto de la invocación", () => {
+    // Cuatro llamadas de hasta 20 s dentro de una función con maxDuration=60.
+    // Sin esto, la comprobación lenta no devuelve un error: la mata Vercel con
+    // un 504 sin cuerpo, con el dinero ya gastado.
+
+    it("no empieza NADA si no cabe el primer paso", async () => {
+      const resolveBusinessContext = vi.fn(async () => ({ status: "identified", profile: PROFILE }));
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({ resolveBusinessContext, now: () => 1_000 }),
+        { deadlineAt: 1_000 + PUBLIC_CHECK_STEP_BUDGET_MS - 1 }
+      );
+      expect(result).toEqual({ status: "failed", error: "budget_exhausted" });
+      expect(resolveBusinessContext).not.toHaveBeenCalled();
+    });
+
+    it("pregunta ANTES de cada paso si cabe entero, no después si ya se pasó", async () => {
+      // El reloj avanza 15 s por consulta: los dos primeros pasos caben, el
+      // tercero (la generación) ya no. Sin la guarda previa arrancaría igual y
+      // se comería 20 s que no tiene — el fallo de ADR 0037.
+      let clock = 0;
+      const now = () => {
+        clock += 15_000;
+        return clock;
+      };
+      const generateAnswer = vi.fn(async () => ({ text: "no debería llegar aquí" }));
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({ now, generateAnswer }),
+        { deadlineAt: 50_000 }
+      );
+      expect(result).toEqual({ status: "failed", error: "budget_exhausted" });
+      expect(generateAnswer).not.toHaveBeenCalled();
+    });
+
+    it("sin deadline no se limita nada: el presupuesto es opt-in de quien llama", async () => {
+      // Los tests y cualquier llamada fuera de una función serverless no tienen
+      // por qué inventarse un límite.
+      const result = await runPublicCheck("tallerdeideas.es", deps());
+      expect(result.status).toBe("completed");
+    });
+
+    it("deja margen real bajo maxDuration=60", () => {
+      // 21 s por paso contra 20 s de timeout de Gemini: un segundo de holgura
+      // para que la guarda no apruebe un paso que va a morir justo en el borde.
+      expect(PUBLIC_CHECK_STEP_BUDGET_MS).toBeGreaterThan(20_000);
+      expect(PUBLIC_CHECK_STEP_BUDGET_MS).toBeLessThan(60_000);
+    });
   });
 
   it("los errores son categorías de este repositorio, no mensajes del proveedor", async () => {
