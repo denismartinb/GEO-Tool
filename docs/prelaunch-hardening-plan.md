@@ -33,7 +33,7 @@ una con su Human Gate.
 - **Fase Q 🟡 en curso** — **Q1 hecho** (log §89: `createProjectCore` y 18
   tests para el alta de un dominio, que no tenía ninguno), **Q3 hecho** (log
   §90: 28 tests del cableado de las cuatro rutas que sostienen el escaneo
-  recurrente), **Q2 hecho** (log §91: 19 tests de los correos transaccionales —
+  recurrente), **Q2 hecho** (log §93: 19 tests de los correos transaccionales —
   el único módulo cuyo fallo llega a la bandeja de un cliente y no se puede
   deshacer) y **Q4 hecho** (log §92: la frontera de auth, y una guarda
   estructural que cubre el uso de rol de servicio que nadie ha escrito
@@ -269,7 +269,7 @@ forma medible.*
   redirección, mismo orden de comprobación) porque **no había tests previos que
   demostraran la equivalencia** y tenía que ser legible a ojo. Cubre la lógica
   del alta, no el recorrido por navegador — eso sigue descubierto (§88).
-- **Q2 · Emails transaccionales** ✅ **hecho (2026-08-15, log §91)**: 19 tests.
+- **Q2 · Emails transaccionales** ✅ **hecho (2026-08-15, log §93)**: 19 tests.
   Fijan **a quién va cada cosa** (las cuatro alertas de operador, y en especial
   `sendNewSignupOpsAlertEmail`, que recibe el correo del cliente como DATO del
   cuerpo), **cuándo no se manda nada** (sin `OPS_ALERT_EMAIL` no se cae al
