@@ -39,7 +39,7 @@ una con su Human Gate.
   estructural que cubre el uso de rol de servicio que nadie ha escrito
   todavía), el self-check del
   piloto vuelve a estar verde y su evidencia se sube de verdad (log §49), y
-  **Q5 cerrada** (log §94) y **Q5b hecho** (log §55): el
+  **Q5 cerrada** (log §97) y **Q5b hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
   `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
   nombrar las capturas que abrió. **Q1–Q5 y Q5b están todas hechas: no queda
@@ -299,7 +299,7 @@ forma medible.*
   a propósito (diez líneas que devuelven una constante). **Sigue sin cubrir**
   que la comprobación sea *correcta* en cada sitio: la guarda ve que hay
   identidad, no que se aplique al dato que se toca.
-- **Q5 · Arreglos del arnés del piloto** ✅ **hecho (2026-08-15, log §94)**
+- **Q5 · Arreglos del arnés del piloto** ✅ **hecho (2026-08-15, log §97)**
   (baratos, de alto retorno):
   `ContentExpectation` en `second-project.spec.ts` (hoy pasa sobre proyectos
   vacíos); el input `pr_number` de `ux-pilot-write.yml` tipado como string
@@ -326,7 +326,7 @@ forma medible.*
   `synchronize`. Intermitente es peor que roto: deja creer que la puerta está
   puesta cuando la mitad de las veces no lo está.
 
-  **Estado (2026-08-15): Q5 cerrada** (log §94). `ContentExpectation` en
+  **Estado (2026-08-15): Q5 cerrada** (log §97). `ContentExpectation` en
   `second-project.spec.ts` —que hasta hoy podía pasar en verde sobre proyectos
   vacíos—; la pérdida intermitente de sesión **instrumentada, no parcheada**
   (el fallo dice ahora qué cookies había, lo que separa «el `storageState` no se
