@@ -9179,6 +9179,28 @@ verificaron rompiéndolas a propósito antes de dar la fase por buena: reponer u
 por **ruta**, no por menciones: un artículo que hable del GEO Score no compite
 por el término, una URL dedicada sí.
 
+### El guardián de E1 saltó, y tenía media razón
+
+CI tumbó el primer commit: `naming.test.ts` marcó como identificador partido
+el título de un test de esta misma fase, *"tres URLs, no tres GEO Scores"*. Es
+castellano correcto —el plural de la métrica— y el barrido lo leía como daño
+porque la `s` es una letra pegada a `GEO Score`. Segundo falso positivo del
+mismo guardián en tres días, después de `QueEsGenScorePage` (§94), y la regla
+sigue siendo la de entonces: **un guardián con falsos positivos se acaba
+desactivando**, así que se afina en vez de reescribir la prosa que lo
+molestaba. El `git grep` queda igual de amplio —POSIX ERE no tiene lookahead—
+y la exención se aplica en JS: una `s` y sólo una, seguida de algo que no sea
+letra. Verificado con tres sondas: `availableGEO ScoreComponents` sigue rojo,
+`GEO Scoresx` sigue rojo, `tres GEO Scores.` pasa.
+
+Lo interesante es **por qué no lo cogió el local**, porque el propio guardián lo
+tenía documentado desde E1: `git grep` sólo ve ficheros versionados, y la línea
+culpable estaba en un fichero recién creado sin `git add`. La suite pasó verde,
+después se hizo `git add -A`, y el commit salió con el fallo dentro. No hace
+falta arreglar nada de eso — hace falta invertir el orden: **`pnpm test`
+después de `git add`, no antes**, siempre que la suite tenga guardas que se
+apoyen en el índice de git.
+
 **Queda declarado como pendiente, no arreglado:** el layout raíz sigue con
 `title: "GenScore"` y `description: "Espacio de visibilidad de marca en motores
 de IA"`, que es una cuarta redacción de lo mismo y actúa de respaldo para
