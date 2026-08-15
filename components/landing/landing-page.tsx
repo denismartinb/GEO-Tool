@@ -7,7 +7,7 @@ import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { PromoStrip, RecommendationsCta, HomeCtaBand } from "@/components/landing/session-ctas";
-import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
 
 const FEATURES: Array<{ icon: string; t: string; d: string }> = [
   { icon: "search", t: "¿Apareces en la IA?", d: "Mide en qué porcentaje de respuestas de IA te mencionan y te citan como fuente, prompt a prompt." },
@@ -262,6 +262,11 @@ export function LandingPage() {
               <a href="#recomendaciones">Recomendaciones</a>
               <Link href="/geo">Qué es GEO</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
+                <Link key={l.href} href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
+              {MARKETING_ENTITY_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>

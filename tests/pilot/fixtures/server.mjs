@@ -79,6 +79,7 @@ const BLOG_SLUGS = [
 // "Sigue leyendo" links that a one-size-fits-all title+paragraph can't carry.
 const PUBLIC_PAGES = new Map([
   ["/geo", "GEO — GenScore"],
+  ["/que-es-genscore", "Qué es GenScore — GenScore"],
   ["/privacidad", "Privacidad — GenScore"],
   ["/cookies", "Cookies — GenScore"],
   ["/terminos", "Términos — GenScore"],

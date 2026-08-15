@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { DOCS_NAV } from "@/lib/docs/nav";
 
@@ -72,6 +72,11 @@ export function DocsPageShell({
               <Link href="/geo">Qué es GEO</Link>
               <Link href="/pricing">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
+                <Link key={l.href} href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
+              {MARKETING_ENTITY_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>

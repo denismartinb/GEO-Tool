@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
 
 /**
  * Cross-nav between the three legal docs. Not part of the unified
@@ -68,6 +68,11 @@ export function LegalPageShell({
               <Link href="/#como">Cómo funciona</Link>
               <Link href="/pricing">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
+                <Link key={l.href} href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
+              {MARKETING_ENTITY_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>
