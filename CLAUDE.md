@@ -406,6 +406,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |
+| Correos transaccionales | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase Q2: primeros tests (2026-08-15, log §91)** | log §91 · `lib/email/transactional.ts` |
 | Onboarding (tour) | `onboarding.md` | **ONBOARDING-TOUR-1 Fase A (2026-08-08)** | log §40 · `docs/design-reference/onboarding-tour-1/` |
 | Ajustes de cuenta | — *(sin regla propia todavía)* | **CONSOLE-REDESIGN-1 Fase A (2026-08-06)** | log §38 · `docs/design-reference/console-redesign-1/` |
 | Navegación pública (cabecera) | — *(sin regla propia todavía)* | **GENSCORE-HEADER-2 (2026-08-12)** · GENSCORE-HEADER-1 (2026-08-11) | log §1, §63, §65 |
