@@ -8751,7 +8751,7 @@ configuración, no código, y ningún test de este repo puede verla.
 ---
 ---
 
-## 91. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
+## 93. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
 
 **Origen.** El fundador pidió un plan de entidad tras ver que "GenScore" compite
 en buscadores con varios homónimos públicos —un GenScore de bioinformática,
@@ -8943,6 +8943,63 @@ afirmaría que una constante es esa constante.
 §70 (por qué `--untracked`); §91 (Q2).
 
 ---
+
+---
+
+## 94. La definición canónica vive en una constante, no en seis párrafos parecidos (SEO-POS-1 Fase E, E2, 2026-08-15)
+
+**Qué se publica.** `/que-es-genscore`: qué es el producto, qué mide, cómo
+funciona en cuatro pasos, en qué se diferencia del SEO, para quién es, y una
+sección de desambiguación.
+
+**La decisión de fondo: la definición es una constante compartida.** Vive en
+`lib/brand/canonical-definition.ts` y la importan la metadata de la página, el
+`KeyTakeaway` de apertura, la FAQ y el `SoftwareApplication` del schema. No es
+una preferencia de estilo: el objetivo entero de la fase es que un motor
+encuentre **la misma descripción estable** en varios sitios en vez de seis
+redacciones que se parecen, y eso una cadena compartida lo garantiza mientras
+que seis párrafos escritos a mano divergen al primer refresco.
+
+**Corrección al consejo externo que originó la fase.** Proponía una definición
+canónica que decía "ChatGPT, Gemini, Claude, **Perplexity y Google AI
+Overviews**", y recomendaba repetirla *literalmente* en home, /about,
+documentación y pie. Dos de esos cinco motores no los ejecutamos. Aplicarlo
+habría sembrado el mismo reclamo falso que PRICING-TRUTH-1 retiró del producto,
+multiplicado por las superficies más vistas del sitio y en la cadena que más se
+repite. `canonical-definition.test.ts` lo impone: la definición debe nombrar
+los tres que sí ejecutamos y ninguno de los seis que no.
+
+**Un test que parece de estilo y no lo es:** la definición tiene que empezar
+por *"GenScore es una plataforma de Generative Engine Optimization"*. Una
+definición de entidad que abre por el beneficio ("Mide tu visibilidad en IA…")
+no declara categoría, y la categoría es justo lo que desambigua frente a los
+otros GenScore.
+
+**Enlazado: una segunda lista compartida, no un `<Link>` a mano.**
+`MARKETING_CONTENT_LINKS` está fijada por test a las cuatro capas de
+`content-strategy.md` §2 por igualdad exacta, así que la página de entidad no
+cabía ahí sin romper esa semántica. Pero añadirla a mano en los seis pies es
+exactamente la desincronización de uno en uno que §46 documentó. Solución:
+`MARKETING_ENTITY_LINKS`, misma mecánica y mismo test por shell. Una fuente
+primaria sin enlaces entrantes del propio dominio es una declaración que nadie
+respalda.
+
+**La sección de desambiguación, y por qué se queda corta a propósito.** Nombra
+las categorías de los otros GenScore —bioinformática, salud mental, riesgo
+entre empresas, una entidad local— sin enlazarlos. Enlazarlos les daría señal;
+no mencionarlos deja el trabajo de desambiguación entero a los motores. El
+punto medio es afirmar con fuerza qué SÍ es esto, que es lo que de verdad
+resuelve la entidad, y despachar el resto en un bloque corto.
+
+**Schema sin `aggregateRating`.** No hay reseñas públicas acumuladas. Un rating
+inventado en schema es dato falso con el agravante de que Google penaliza el
+marcado inventado cuando lo detecta.
+
+**Nota de numeración:** esta fase se llevó por delante un §91 duplicado. E1 y
+la Fase Q2 de PRELAUNCH-HARDENING-1 mergearon con cuatro minutos de diferencia
+y ambas reclamaron el mismo número; E1 cedió por haber llegado después y pasó
+a §93. Lo cazó `tests/log-numbering.test.ts`, que ya existe precisamente por la
+racha de colisiones de esta misma semana.
 
 ## Cómo mantener este documento
 
