@@ -286,7 +286,7 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 
 ## La entidad: un solo nodo, no seis descripciones parecidas
 
-Trazable a log §91 (E1), §94 (E2) y §97 (E3+E4). El objetivo de la Fase E es
+Trazable a log §91 (E1), §94 (E2) y §100 (E3+E4). El objetivo de la Fase E es
 que "GenScore" y "GEO Score" resuelvan a **nuestra** entidad; el fallo que
 persigue no rompe nada, así que sólo lo cogen constantes compartidas y tests.
 
@@ -304,7 +304,7 @@ persigue no rompe nada, así que sólo lo cogen constantes compartidas y tests.
   veces.** `publisher: { "@id": ORGANIZATION_ID }`, no un `Organization`
   incrustado: dos nodos con el mismo nombre y sin identificador común son dos
   entidades para un parser, y la página que existe para desambiguar la marca
-  estaba fabricando ambigüedad ella sola (§97).
+  estaba fabricando ambigüedad ella sola (§100).
 - **Un schema que aparece en más de una página va en un componente
   compartido.** Dos declaraciones a mano del mismo producto divergen al primer
   cambio de posicionamiento, y el síntoma es el sitio describiéndose de dos
@@ -314,7 +314,7 @@ persigue no rompe nada, así que sólo lo cogen constantes compartidas y tests.
   referencia, el resto como `sameAs`. Es el equivalente semántico de un
   canonical sin desindexar URLs que ya reciben tráfico. La canónica del GEO
   Score es `/docs/metodologia/geo-score` porque ya lo era por enlazado interno;
-  cambiarla contradiría la señal más fuerte que tenemos (§97).
+  cambiarla contradiría la señal más fuerte que tenemos (§100).
 - **Publicar una URL dedicada a un término ya explicado incluye añadirla a su
   lista de alternativas.** Si no, vuelve a competir por el término sin
   declararse el mismo concepto — sin 404 y sin error.

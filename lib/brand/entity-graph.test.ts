@@ -17,7 +17,7 @@ import {
 } from "./geo-score-definition";
 
 /**
- * SEO-POS-1 Fase E, E3 + E4 (log §97) — el grafo de entidades del sitio.
+ * SEO-POS-1 Fase E, E3 + E4 (log §100) — el grafo de entidades del sitio.
  *
  * **Qué protege, y por qué hace falta un test para esto.** El JSON-LD es el
  * caso extremo de la clase de fallo que esta zona lleva todo el plan

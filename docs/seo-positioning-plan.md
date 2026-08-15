@@ -280,14 +280,14 @@ geografía y mete a la métrica a competir con geolocalización.
 |---|---|
 | **E1 — Una sola grafía** | ✅ **Hecho (2026-08-13)** — 179 `Genscore` y 53 `GeoScore` unificados en copy de usuario. URLs, slugs, dominio e identificadores intactos a propósito. Guardián en `lib/brand/naming.test.ts`. Detalle: log §91 |
 | **E2 — `/que-es-genscore`** | ✅ **Hecho (2026-08-15)** — definición canónica en `lib/brand/canonical-definition.ts`, importada por metadata, página, FAQ y schema para que sea literalmente la misma cadena en todas. Nombra los tres motores que ejecutamos, con test que rechaza los que no. Enlazada desde los seis pies vía `MARKETING_ENTITY_LINKS`. Detalle: log §94 |
-| **E3 — `SoftwareApplication` en la home** | ✅ **Hecho (2026-08-15)** — el schema pasa a un componente compartido que montan la home y `/que-es-genscore`, así que las dos declaran el mismo producto y no dos copias que divergen. Con `@id` estables: `publisher` referencia al `Organization` del layout en vez de incrustar una segunda copia con el mismo nombre. Sigue sin `sameAs` ni `aggregateRating` inventados. Detalle: log §97 |
-| **E4 — Canonicalizar el GEO Score** | ✅ **Hecho (2026-08-15)** — sin crear una cuarta URL ni desindexar ninguna de las tres: definición corta compartida (`GEO_SCORE_DEFINITION`) y un `@id` común que emiten glosario y metodología, con la `url` de la canónica y las otras como `sameAs`. Canónica es `/docs/metodologia/geo-score`, que ya lo era de hecho por enlazado interno. Guardián contra una cuarta URL en `lib/brand/entity-graph.test.ts`. Detalle: log §97 |
+| **E3 — `SoftwareApplication` en la home** | ✅ **Hecho (2026-08-15)** — el schema pasa a un componente compartido que montan la home y `/que-es-genscore`, así que las dos declaran el mismo producto y no dos copias que divergen. Con `@id` estables: `publisher` referencia al `Organization` del layout en vez de incrustar una segunda copia con el mismo nombre. Sigue sin `sameAs` ni `aggregateRating` inventados. Detalle: log §100 |
+| **E4 — Canonicalizar el GEO Score** | ✅ **Hecho (2026-08-15)** — sin crear una cuarta URL ni desindexar ninguna de las tres: definición corta compartida (`GEO_SCORE_DEFINITION`) y un `@id` común que emiten glosario y metodología, con la `url` de la canónica y las otras como `sameAs`. Canónica es `/docs/metodologia/geo-score`, que ya lo era de hecho por enlazado interno. Guardián contra una cuarta URL en `lib/brand/entity-graph.test.ts`. Detalle: log §100 |
 
 **✅ FASE E CERRADA (2026-08-15).** Lo que queda del plan SEO-POS-1 es Fase P
 (free checker, sin aprobar) y Fase A (autoridad/off-site), que es trabajo del
 fundador. Pendiente declarado y no arreglado: el `title`/`description` del
 layout raíz siguen siendo una cuarta redacción de lo que es GenScore, y actúan
-de respaldo para toda página sin metadata propia (log §97).
+de respaldo para toda página sin metadata propia (log §100).
 
 ### Fase P — Free checker "¿Aparece tu marca en ChatGPT?" ⚠️ (requiere su propio Task Intake)
 
