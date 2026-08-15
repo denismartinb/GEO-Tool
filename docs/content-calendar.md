@@ -135,7 +135,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | ✅ Publicado | #(este) |
 | S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | ✅ Publicado | #(este) |
 | S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | ✅ Publicado | #401 |
-| S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
+| S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | ✅ Publicado | #(este) |
 | S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
 
 **S1 — hecho (2026-08-10).** Título corregido respecto al que proponía
@@ -354,6 +354,24 @@ cobertura del anuncio, así que nada está verificado contra fuente primaria —
 se triangularon fuentes secundarias coincidentes el 2026-08-14 y el artículo
 publica esa fecha. Misma limitación declarada que con los precios de Otterly.
 Detalle: log §85.
+
+**S9 — hecho (2026-08-15).** `/blog/como-hacer-que-chatgpt-recomiende-tu-negocio`,
+cluster `playbooks`. El eje: una pregunta local ("¿qué dentista en Chamberí
+atiende urgencias el domingo?") sólo puede tener dos o tres respuestas
+posibles, a diferencia de una pregunta genérica de categoría — así que un
+negocio pequeño no compite contra el mercado entero, compite contra dos o tres
+negocios reales de su zona. Cuatro palancas reales: datos consistentes
+(nombre/dirección/teléfono) en toda la web, reseñas genuinas y recientes
+(un motor que busca en tiempo real pesa más lo reciente), contenido propio
+con la misma especificidad que la pregunta del cliente, y presencia
+selectiva en directorios/prensa real de la zona — nunca comprada, con
+`Checklist tone="evitar"` que lo dice explícito.
+
+Ninguna cifra de terceros sin fuente: no hay un dato fiable y verificado de
+cuánto pesa cada señal para un motor generativo en preguntas locales, así que
+el artículo se queda en el criterio observable (qué mira un motor que busca
+en la web) y no inventa un porcentaje. Mismo principio de honestidad que ya
+rigió S6/S7.
 
 ---
 

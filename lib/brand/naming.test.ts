@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
 
 /**
- * SEO-POS-1 Fase E, E1 (log §71) — una sola grafía para la marca y para la
+ * SEO-POS-1 Fase E, E1 (log §91) — una sola grafía para la marca y para la
  * métrica.
  *
  * **Por qué existe.** Antes de esta fase el repositorio usaba las cuatro
@@ -81,7 +81,7 @@ describe("una sola grafía de marca y métrica en copy de usuario", () => {
     const hits = gitGrep("\\bGenscore\\b");
     expect(
       hits,
-      "La marca se escribe `GenScore`, con S mayúscula (log §71). Estas líneas usan la " +
+      "La marca se escribe `GenScore`, con S mayúscula (log §91). Estas líneas usan la " +
         "grafía retirada:\n" +
         hits.join("\n")
     ).toEqual([]);
@@ -91,7 +91,7 @@ describe("una sola grafía de marca y métrica en copy de usuario", () => {
     const hits = gitGrep("\\bGeoScore\\b");
     expect(
       hits,
-      "La métrica se escribe `GEO Score`, con GEO en mayúsculas y separado (log §71). " +
+      "La métrica se escribe `GEO Score`, con GEO en mayúsculas y separado (log §91). " +
         "`GeoScore` se lee como geografía y compite con geolocalización. Estas líneas " +
         "usan la grafía retirada:\n" +
         hits.join("\n")

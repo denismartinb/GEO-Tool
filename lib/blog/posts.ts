@@ -234,6 +234,19 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "medicion"
   },
   {
+    slug: "como-hacer-que-chatgpt-recomiende-tu-negocio",
+    title: "Cómo hacer que ChatGPT recomiende tu negocio (guía para pymes)",
+    description:
+      "Un negocio local compite por dos o tres puestos, no por veinte. Qué mueve de verdad esa recomendación: datos consistentes, reseñas recientes, contenido específico — y qué atajos no funcionan.",
+    metaDescription:
+      "Cómo hacer que ChatGPT recomiende tu negocio local: datos consistentes, reseñas recientes y contenido específico, sin atajos.",
+    datePublished: "2026-08-15",
+    coverIcon: "target",
+    coverImage: "/blog/como-hacer-que-chatgpt-recomiende-tu-negocio/cover.webp",
+    primaryKeyword: "cómo hacer que chatgpt recomiende mi negocio",
+    cluster: "playbooks"
+  },
+  {
     slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
     title: "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude",
     description:
