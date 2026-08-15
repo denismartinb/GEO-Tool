@@ -8589,6 +8589,109 @@ de reescribir la de allí.
 
 ---
 
+## 88. Tres trabajos que el fundador descarta, escritos para que no resuciten (2026-08-15)
+
+**Qué se decidió.** El fundador descarta tres cosas. Se registran aquí porque
+**dos de ellas no vivían en ningún documento**: eran peticiones suyas en
+conversación, y una petición que sólo existe en un chat vuelve a aparecer sola
+en la siguiente sesión que lea el histórico.
+
+1. **P1 · UX-PILOT-4, el journey de alta completa.** Necesitaba su propia
+   aprobación de excepción de escritura del piloto y no la tendrá. Anotado
+   también en `docs/prelaunch-hardening-plan.md` §Fase P.
+2. **El rediseño de la arquitectura del blog.** El fundador lo pidió el
+   2026-08-14 —*«hay que revisar la arquitectura y diseño del blog. Ahora mismo
+   es demasiado plano y sin ningún tipo de jerarquía de info ni organización»*—
+   y lo retira el 15.
+3. **Los estados del gráfico de panorámica competitiva.** Pedido el mismo día
+   —*«sí merece la pena revisar ese gráfico en sus diferentes estados en un
+   artefacto»*— y retirado igual.
+
+**La consecuencia del primero, dicha en voz alta.** Sin P1, **el flujo de alta
+completo (registro → dominio nuevo → primer escaneo → Overview con datos) sigue
+sin recorrerlo ningún test automatizado de principio a fin**. Es el riesgo #3
+del diagnóstico de PRELAUNCH-HARDENING-1 y se queda abierto **a propósito**, no
+por olvido. Lo que sí lo cubre en parte es Q1 (`createProjectCore` y sus tests):
+la lógica de creación, no el recorrido por navegador.
+
+**Lo que NO cambia.** Los invariantes de la panorámica siguen vigentes tal cual
+en `.claude/rules/competitors.md` (§36, PANORAMA-EMPTY-1): descartar el
+rediseño no descarta las reglas de sus cuatro estados. Y el blog sigue con su
+estrategia de contenido intacta; lo retirado es sólo repensar su jerarquía
+visual.
+
+---
+
+## 89. El alta de un dominio no tenía tests porque no podía tenerlos (PRELAUNCH-HARDENING-1 Fase Q1, 2026-08-15)
+
+**Qué se decidió.** `createProject` se parte en `createProjectCore`
+(`lib/projects/create-project.ts`) + una action que sólo traduce. **18 tests
+nuevos**, de 2.383 a 2.401.
+
+**Por qué importaba más que cualquier fichero largo.** Son ~210 líneas que
+ejecutan el Core Target Flow entero —dominio → competidores sugeridos → prompts
+sugeridos → primer escaneo— y no tenían **ni una sola aserción**. Es lo que hace
+un cliente nuevo en su primer minuto. Deuda anotada en ADR 0022 y riesgo #8 del
+plan.
+
+### El hallazgo: no era descuido, era imposible
+
+Todo el control de flujo de esa función eran `redirect()`, y en Next `redirect`
+**lanza**. No había desenlace observable: no se podía comprobar «¿qué pasa si el
+dominio ya existe archivado?» sin un navegador. Un test que sólo puede afirmar
+«lanzó algo» no es un test.
+
+Por eso lo que cambia **no es la lógica sino cómo se comunica el desenlace**: el
+núcleo devuelve un resultado discriminado y la action lo traduce a
+`revalidatePath` + `redirect`. La traducción es **una tabla** —una variante, una
+redirección, en el mismo orden de comprobación que antes—, y eso es lo que hace
+verificable que la extracción no cambió comportamiento: aquí no había tests
+previos que lo demostraran, así que la correspondencia tenía que ser legible a
+ojo.
+
+### Lo que los tests fijan, y por qué esas cosas
+
+No son tests de cobertura, son las decisiones que un cliente nota:
+
+- **Una consulta de duplicados que falla no significa «no hay duplicado»** —
+  tratarla así crearía el segundo proyecto del mismo dominio.
+- **Un dominio archivado se distingue de uno activo**: son dos mensajes
+  distintos porque son dos situaciones distintas.
+- **Sin prompts no se pide un escaneo.** Pedirlo crearía una fila condenada, y
+  decir «escaneo iniciado» sería un escaneo falso (CLAUDE.md).
+- **Un 429 en la mitad de competidores no tumba el alta ni la otra mitad** — el
+  fallo real del 2026-08-09, una llamada caída y la otra no.
+- **Sin perfil de negocio no se sugiere nada**, nunca el modo ciego por dominio
+  que ADR 0020 eliminó.
+- **Un fallo al derivar alias de marca no bloquea el alta**
+  (GEO-SCORE-BRAND-IDENTITY-1).
+
+### Una dirección de fallo que estaba y ahora está fijada
+
+Si el conteo de proyectos activos falla, **se deja pasar el alta**. Negarle el
+alta a alguien por un error transitorio nuestro es peor que aceptar un proyecto
+de más. Ya era el comportamiento del código; ahora hay un test que impide
+invertirlo sin querer.
+
+**Los tests se probaron rotos.** Tres mutaciones del núcleo —tratar el fallo de
+búsqueda como «no hay duplicado», crear escaneo sin prompts, y confundir
+archivado con activo—, cada una tumbó exactamente su test.
+
+**`VERCEL_ENV` no entra en el núcleo.** Los defaults baratos de preview siguen
+decidiéndose en la action y llegan como `extraProjectColumns`, así que el
+núcleo escribe lo que le pasan y nada por su cuenta. Hay un test para eso: es
+la variable que el fundador fue explícito en que no debe tocar producción
+(2026-08-11).
+
+**Lo que sigue sin cubrir.** Esto testea la **lógica** del alta, no el recorrido
+por navegador. El flujo de principio a fin —registro incluido— sigue sin test
+E2E, y con P1 descartado (§88) se queda así a propósito.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q1); ADR 0022;
+`.claude/rules/server-actions.md`; §88 (el descarte de P1 y su consecuencia).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
