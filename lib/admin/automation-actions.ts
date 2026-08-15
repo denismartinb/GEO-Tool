@@ -96,7 +96,7 @@ async function notifyAdminAutomationChange(input: {
   try {
     await sendAdminAutomationChangeAlertEmail({
       operatorEmail: input.operatorEmail,
-      targetUserEmail: input.targetUserEmail ?? input.project.owner_user_id,
+      targetUserEmail: input.targetUserEmail ?? "(sin email — perfil no encontrado)",
       targetUserId: input.project.owner_user_id,
       domain: input.project.domain,
       projectId: input.project.id,
@@ -154,6 +154,7 @@ export async function setRecurringScansAsOperator(formData: FormData) {
     .from("projects")
     .update({ recurring_scans_enabled: enabled })
     .eq("id", projectId)
+    .eq("is_archived", false)
     .select("id")
     .maybeSingle();
 
@@ -209,6 +210,7 @@ export async function setAutoAuditHalfAsOperator(formData: FormData) {
     .from("projects")
     .update({ [column]: enabled })
     .eq("id", projectId)
+    .eq("is_archived", false)
     .select("id")
     .maybeSingle();
 

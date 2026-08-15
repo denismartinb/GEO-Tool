@@ -37,18 +37,18 @@ function fakeService(options: {
           }),
           update: (patch: Row) => {
             updates.push({ table, patch });
-            return {
-              eq: () => ({
-                select: () => ({
-                  maybeSingle: () =>
-                    Promise.resolve(
-                      options.updateFails
-                        ? { data: null, error: { message: "boom" } }
-                        : { data: { id: (options.project as Row)?.id }, error: null }
-                    )
-                })
+            const chain = {
+              eq: () => chain,
+              select: () => ({
+                maybeSingle: () =>
+                  Promise.resolve(
+                    options.updateFails
+                      ? { data: null, error: { message: "boom" } }
+                      : { data: { id: (options.project as Row)?.id }, error: null }
+                  )
               })
             };
+            return chain;
           }
         };
       }
@@ -161,7 +161,7 @@ describe("setRecurringScansAsOperator", () => {
     expect(service.updates).toEqual([{ table: "projects", patch: { recurring_scans_enabled: false } }]);
   });
 
-  it("refuses a project that doesn't exist or is archived", async () => {
+  it("refuses a project that doesn't exist", async () => {
     const service = fakeService({ project: null });
     requireOperatorMock.mockResolvedValue({ user: { id: "op", email: "op@example.com" }, service });
     const { setRecurringScansAsOperator } = await import("./automation-actions");
@@ -169,6 +169,18 @@ describe("setRecurringScansAsOperator", () => {
     await expect(
       setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "motivo válido" }))
     ).rejects.toThrow("admin_error=project_not_found");
+  });
+
+  it("refuses an archived project", async () => {
+    const service = fakeService({ project: { ...PROJECT, is_archived: true }, owner: OWNER_PRO, completedRun: { id: "run-1" } });
+    requireOperatorMock.mockResolvedValue({ user: { id: "op", email: "op@example.com" }, service });
+    const { setRecurringScansAsOperator } = await import("./automation-actions");
+
+    await expect(
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "motivo válido" }))
+    ).rejects.toThrow("admin_error=project_not_found");
+
+    expect(service.updates).toHaveLength(0);
   });
 
   it("never sends the alert email when the write itself fails", async () => {
@@ -181,6 +193,35 @@ describe("setRecurringScansAsOperator", () => {
     ).rejects.toThrow("admin_error=recurring_update_failed");
 
     expect(sendAdminAutomationChangeAlertEmail).not.toHaveBeenCalled();
+  });
+
+  it("still redirects to success when the alert email itself throws", async () => {
+    const service = fakeService({ project: PROJECT, owner: OWNER_PRO, completedRun: { id: "run-1" } });
+    requireOperatorMock.mockResolvedValue({ user: { id: "op", email: "op@example.com" }, service });
+    sendAdminAutomationChangeAlertEmail.mockRejectedValueOnce(new Error("smtp down"));
+    const { setRecurringScansAsOperator } = await import("./automation-actions");
+
+    await expect(
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "motivo válido" }))
+    ).rejects.toThrow("REDIRECT:/admin/users?u=u1&admin_success=recurring_enabled");
+
+    expect(service.updates).toEqual([{ table: "projects", patch: { recurring_scans_enabled: true } }]);
+  });
+
+  it("never puts a raw UUID in the email's targetUserEmail field when the owner profile can't be found", async () => {
+    // Uses the technical audit half (never plan-gated) so the missing-profile
+    // fallback ?? "free" on the recurring-scans path doesn't mask this case.
+    const service = fakeService({ project: PROJECT, owner: null });
+    requireOperatorMock.mockResolvedValue({ user: { id: "op", email: "op@example.com" }, service });
+    const { setAutoAuditHalfAsOperator } = await import("./automation-actions");
+
+    await expect(
+      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "technical", reason: "motivo válido" }))
+    ).rejects.toThrow("admin_success=audit_technical_enabled");
+
+    const call = sendAdminAutomationChangeAlertEmail.mock.calls[0][0];
+    expect(call.targetUserEmail).not.toBe(PROJECT.owner_user_id);
+    expect(call.targetUserEmail).toContain("no encontrado");
   });
 });
 

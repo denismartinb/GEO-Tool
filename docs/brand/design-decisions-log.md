@@ -7835,6 +7835,19 @@ prometía `docs/design-reference/admin-console-1/README.md` desde el
 desde `/debug`. Extraer su lógica a un módulo con test (`automation-toggles.
 test.ts`) las deja cubiertas por primera vez, de rebote.
 
+**Dos hallazgos de la QA de este mismo PR, corregidos antes del Human Gate.**
+El email de aviso tenía el mismo defecto que ya se había corregido una vez en
+el camino principal (UUID pasado como si fuera un email), pero escondido en la
+rama de fallback: si `loadOwnerProfile` no encuentra fila en `profiles` (perfil
+huérfano), `targetUserEmail` caía a `project.owner_user_id`, un UUID, en el
+único registro que existe de la escritura. Ahora cae a un marcador de texto no
+confundible con un email (`"(sin email — perfil no encontrado)"`), nunca al
+UUID. Y los dos `.update()` finales no repetían `is_archived = false` que sí
+lleva el camino del dueño (`app/dashboard/projects/[projectId]/actions.ts`) —
+un archivado entre la lectura (`loadProjectForWrite`) y la escritura habría
+pasado por el operador y nunca por el dueño, exactamente la asimetría que este
+mismo diseño se propuso evitar. Añadido a ambos `.update()`.
+
 ### Pendiente / roto conocido
 
 - **El gap de lectura de 2a con `auto_coverage_audit_enabled` por debajo de
