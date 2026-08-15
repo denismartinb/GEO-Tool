@@ -27,13 +27,13 @@ una con su Human Gate.
   borrados) y **46 tests de render para Auditoría web** (log §87), los primeros
   del repositorio. **R3 queda descartada como está escrita** tras su Task Intake
   del 2026-08-14 (ver R3 abajo). Quedan partir `WebAuditPage` y los dos
-  huérfanos restantes de R8. **Q1 en curso desde el 2026-08-15**, por delante
-  de lo que queda de R: un fichero largo es higiene, `createProject` sin un
-  solo test es el flujo de alta. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
-- **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
-  evidencia se sube de verdad (log §49), y **Q5b está hecho** (log §55): el
+- **Fase Q 🟡 en curso** — **Q1 hecho** (log §89: `createProjectCore` y 18
+  tests para el alta de un dominio, que no tenía ninguno), el self-check del
+  piloto vuelve a estar verde y su evidencia se sube de verdad (log §49), y
+  **Q5b está hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
   `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
   nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
@@ -254,9 +254,15 @@ forma medible.*
 
 ### Fase Q — QA TÉCNICO (huecos de test, por riesgo de lanzamiento)
 
-- **Q1 · `createProject` → `createProjectCore` + tests**: es EL flujo de
-  lanzamiento (alta de dominio) y son ~210 líneas sin ningún test (deuda
-  anotada en ADR 0022). La extracción sigue el patrón `*Core` ya establecido.
+- **Q1 · `createProject` → `createProjectCore` + tests** ✅ **hecho
+  (2026-08-15, log §89)**: 18 tests, de 2.383 a 2.401. **Hallazgo**: no tenía
+  tests porque no podía tenerlos — todo su control de flujo eran `redirect()`,
+  que en Next lanza, así que no había desenlace observable. El núcleo devuelve
+  ahora un resultado discriminado y la action lo traduce a
+  `revalidatePath` + `redirect`; la traducción es una tabla (una variante, una
+  redirección, mismo orden de comprobación) porque **no había tests previos que
+  demostraran la equivalencia** y tenía que ser legible a ojo. Cubre la lógica
+  del alta, no el recorrido por navegador — eso sigue descubierto (§88).
 - **Q2 · Emails transaccionales**: tests de `lib/email/transactional.ts` y
   `resend.ts` (render de los 8+ emails, destinatarios, la regla "alertas de
   operador nunca al cliente" de `scan.md`).

@@ -6,11 +6,11 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { generateAddedPrompts, suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
-import type { BusinessProfile } from "@/lib/llm/contracts";
 import { reportLlmIncident } from "@/lib/llm/llm-incident";
-import { deriveBrandAliases, resolveBusinessContext } from "@/lib/projects/business-profile";
+import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { createPendingScanRun, ENABLE_SYNC_SCAN_EXECUTION, getActionErrorCode } from "@/lib/scan/scan-runner";
+import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
+import { createProjectCore } from "@/lib/projects/create-project";
 import {
   cleanDomain,
   deriveBrandFromDomain,
@@ -244,161 +244,33 @@ export async function createProject(formData: FormData) {
     redirect(`/dashboard/projects/new?error=${parsedForm.error}`);
   }
 
-  const { domain, country, brand, name, language } = parsedForm.value;
+  // Fase Q1: toda la lógica vive en `createProjectCore` y devuelve un
+  // resultado; lo único que queda aquí es traducirlo a revalidaciones y a un
+  // destino. La traducción es una tabla —una variante, un `redirect`— y ése es
+  // el punto: mientras el desenlace se decidía con `redirect()`, que lanza, no
+  // había forma de observarlo desde un test.
+  const result = await createProjectCore({
+    input: parsedForm.value,
+    plan,
+    supabase,
+    user,
+    extraProjectColumns: previewTestingDefaults()
+  });
 
-  const { count: activeProjectCount, error: activeProjectsError } = await supabase
-    .from("projects")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_user_id", user.id)
-    .eq("is_archived", false);
-
-  if (!activeProjectsError && (activeProjectCount ?? 0) >= plan.caps.projects) {
+  if (result.status === "project_limit_reached") {
     redirect("/dashboard/projects/new?error=project_limit_reached");
   }
-
-  const { data: existingProject, error: existingProjectError } = await supabase
-    .from("projects")
-    .select("id, is_archived")
-    .eq("owner_user_id", user.id)
-    .eq("domain", domain)
-    .eq("country", country)
-    .eq("language", language)
-    .maybeSingle();
-
-  if (existingProjectError) {
+  if (result.status === "lookup_failed" || result.status === "insert_failed") {
     redirect("/dashboard/projects/new?error=project_creation_failed");
   }
-
-  if (existingProject?.is_archived) {
+  if (result.status === "already_archived") {
     redirect("/dashboard/projects/new?error=project_already_archived");
   }
-
-  if (existingProject) {
+  if (result.status === "already_active") {
     redirect("/dashboard/projects/new?error=project_already_active");
   }
 
-  // Competitors and prompts are suggested by the system (real Gemini) when the
-  // user does not provide them explicitly (e.g. wizard was skipped or
-  // submitted empty). No fake fallbacks: if Gemini yields nothing, we persist
-  // nothing and surface an honest state. Both suggestions now require a
-  // business profile (see resolveBusinessContext) — computed once here and
-  // reused for whichever of the two is actually missing, instead of guessing
-  // from the domain string (docs/adr/0020-grounded-business-profile.md).
-  let initialCompetitors = parsedForm.value.initialCompetitors;
-  let initialPrompts = parsedForm.value.initialPrompts;
-  // COMPETITOR-GROUNDING-2 (docs/adr/0022): persisted below alongside the
-  // new project row when this fallback path actually computed one — the
-  // common wizard-filled path never reaches here, so most new projects still
-  // get their profile lazily on first "Añadir prompts" use instead
-  // (lib/projects/add-prompts.ts). Never required; null is a normal state.
-  let resolvedBusinessProfile: BusinessProfile | null = null;
-
-  if (!initialCompetitors.length || !initialPrompts.length) {
-    const context = await resolveBusinessContext({
-      domain,
-      country,
-      language,
-      userDescription: parsedForm.value.businessDescription
-    }).catch(() => ({ status: "unidentified" }) as const);
-
-    if (context.status === "identified") {
-      resolvedBusinessProfile = context.profile;
-      if (!initialCompetitors.length) {
-        try {
-          const suggested = await suggestCompetitors({
-            brand,
-            domain,
-            country,
-            language,
-            profile: context.profile,
-            limit: MAX_INITIAL_COMPETITORS
-          });
-          initialCompetitors = suggested.slice(0, MAX_INITIAL_COMPETITORS);
-        } catch {
-          initialCompetitors = [];
-        }
-      }
-
-      if (!initialPrompts.length) {
-        try {
-          const suggested = await suggestPrompts({
-            brand,
-            domain,
-            country,
-            language,
-            profile: context.profile,
-            limit: MAX_INITIAL_PROMPTS
-          });
-          initialPrompts = suggested.slice(0, MAX_INITIAL_PROMPTS).map((prompt, index) => ({
-            prompt_text: prompt.text,
-            category: prompt.category,
-            sort_order: index
-          }));
-        } catch {
-          initialPrompts = [];
-        }
-      }
-    }
-  }
-
-  // GEO-SCORE-BRAND-IDENTITY-1: derived at creation so the very first scan
-  // already measures the brand correctly. A brand whose product carries the
-  // recognizable name (Mozilla/Firefox) is otherwise scored as absent from
-  // answers that recommend it — see docs/geo-score-variability-2026-08.md.
-  // Never blocks creation: deriveBrandAliases swallows its own failures and
-  // returns [], which is also the correct value for most brands.
-  const derivedBrandAliases = await deriveBrandAliases({ brand, domain }).catch(() => [] as string[]);
-
-  const { data, error } = await supabase
-    .from("projects")
-    .insert({
-      owner_user_id: user.id,
-      name,
-      domain,
-      brand,
-      country,
-      language,
-      business_profile: resolvedBusinessProfile,
-      brand_aliases: derivedBrandAliases,
-      ...previewTestingDefaults()
-    })
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    redirect("/dashboard/projects/new?error=project_creation_failed");
-  }
-
-  let setupError = false;
-
-  if (initialPrompts.length) {
-    const { error: promptInsertError } = await supabase.from("project_prompts").insert(
-      initialPrompts.map((prompt) => ({
-        project_id: data.id,
-        prompt_text: prompt.prompt_text,
-        category: prompt.category,
-        sort_order: prompt.sort_order
-      }))
-    );
-
-    if (promptInsertError) {
-      setupError = true;
-    }
-  }
-
-  if (initialCompetitors.length) {
-    const { error: competitorInsertError } = await supabase.from("project_competitors").insert(
-      initialCompetitors.map((competitor) => ({
-        project_id: data.id,
-        name: competitor.name,
-        domain: competitor.domain
-      }))
-    );
-
-    if (competitorInsertError) {
-      setupError = true;
-    }
-  }
+  const { projectId, outcome } = result;
 
   // Revalidates the shared dashboard layout (Sidebar's project list, driven
   // by getWorkspaceCounters()) — without this, a newly created project stays
@@ -407,40 +279,25 @@ export async function createProject(formData: FormData) {
   // is correctly persisted and visible on /dashboard/projects.
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/projects");
-  revalidatePath(`/dashboard/projects/${data.id}`);
+  revalidatePath(`/dashboard/projects/${projectId}`);
 
-  // Without at least one active prompt there is nothing to scan. Surface an
-  // honest state instead of pretending a scan started.
-  if (!initialPrompts.length) {
-    redirect(`/dashboard/projects/${data.id}?success=project_created&error=suggestions_unavailable`);
+  if (outcome.kind === "no_prompts") {
+    redirect(`/dashboard/projects/${projectId}?success=project_created&error=suggestions_unavailable`);
   }
 
-  // Create the pending scan run (fast, no Gemini calls) and land the user on
-  // Visión general immediately. Execution itself is driven from that page's
-  // `AutoExecuteScan` so the user sees the real "scan in progress" UI instead
-  // of waiting on this request.
-  //
-  // DOMAINS-REDESIGN-1 moved this target from Escaneos. The two have to change
-  // together: the driver is mounted on exactly one page, and this redirect
-  // decides which page a brand-new project's first scan gets driven from. If
-  // they ever disagree, the first scan of every new customer stalls in
-  // `pending` until the daily cron rescues it — silently, since nothing here
-  // fails.
-  try {
-    await createPendingScanRun({ projectId: data.id, supabase, user });
-  } catch (scanError) {
-    revalidatePath(`/dashboard/projects/${data.id}`);
-    redirect(`/dashboard/projects/${data.id}?success=project_created&error=${encodeURIComponent(getActionErrorCode(scanError))}`);
+  if (outcome.kind === "scan_failed") {
+    revalidatePath(`/dashboard/projects/${projectId}`);
+    redirect(`/dashboard/projects/${projectId}?success=project_created&error=${encodeURIComponent(outcome.errorCode)}`);
   }
 
-  revalidatePath(`/dashboard/projects/${data.id}`);
+  revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath("/dashboard/domains");
 
-  if (setupError) {
-    redirect(`/dashboard/projects/${data.id}?success=project_created&error=project_setup_partial`);
+  if (outcome.kind === "setup_partial") {
+    redirect(`/dashboard/projects/${projectId}?success=project_created&error=project_setup_partial`);
   }
 
-  redirect(`/dashboard/projects/${data.id}?success=${ENABLE_SYNC_SCAN_EXECUTION ? "scan_started" : "scan_pending"}`);
+  redirect(`/dashboard/projects/${projectId}?success=${ENABLE_SYNC_SCAN_EXECUTION ? "scan_started" : "scan_pending"}`);
 }
 
 export async function archiveProject(formData: FormData) {
