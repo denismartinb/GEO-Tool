@@ -16,7 +16,7 @@ const SITE_URL = "https://www.genscore.es";
  * sección — nunca solo la fecha"). Último cambio: 2026-08-13, al retirar de
  * `geo-score` y `citacion-en-ia` el reparto de pesos del compuesto (log §75).
  */
-const GLOSSARY_LAST_MODIFIED = "2026-08-13";
+const GLOSSARY_LAST_MODIFIED = "2026-08-15";
 
 export function generateStaticParams() {
   return GLOSSARY_TERMS.map((t) => ({ termino: t.slug }));
