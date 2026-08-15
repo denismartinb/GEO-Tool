@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
  * GROWTH-3 Fase 3.1 — evidencia visual.
  *
  * `Figure` es el contenedor de TODO lo visual de un artículo: marco, pie y
- * fuente. `ProductMock` es la maqueta del panel de Genscore, construida en
+ * fuente. `ProductMock` es la maqueta del panel de GenScore, construida en
  * SVG/CSS con datos de ejemplo — nunca una captura de la cuenta piloto (ver
  * `docs/adr/0028-article-imagery-policy.md`).
  */

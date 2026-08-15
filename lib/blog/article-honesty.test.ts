@@ -7,12 +7,12 @@ import { GLOSSARY_TERMS } from "../glosario/terms";
 /**
  * SEO-POS-1 (S1, log §49). El propio borrador del plan proponía titular la
  * primera pieza de la Fase C "…en ChatGPT, Gemini y Perplexity" — Perplexity
- * no es un motor que Genscore ejecute hoy (`docs/launch-plan.md` Fase 8:
+ * no es un motor que GenScore ejecute hoy (`docs/launch-plan.md` Fase 8:
  * Gemini, Claude, ChatGPT; Perplexity "sin fecha, fuera de alcance"). Se
  * corrigió antes de publicar, pero solo porque alguien releyó el título con
  * cuidado. Este test es la red que no depende de que eso vuelva a pasar.
  *
- * No es una prohibición absoluta: una pieza que compare Genscore con la
+ * No es una prohibición absoluta: una pieza que compare GenScore con la
  * competencia, o que hable de "cómo aparecer en Perplexity" como tema de
  * mercado (S7 de `docs/content-calendar.md`), tiene motivo legítimo para
  * nombrarlo. Por eso es un allow-list explícito, no un blanket ban — y **solo
@@ -23,7 +23,7 @@ import { GLOSSARY_TERMS } from "../glosario/terms";
 const ALLOWED_TO_MENTION_PERPLEXITY = new Set<string>([
   // SEO-POS-1 Fase C, S7 (2026-08-14): el artículo es justo "cómo aparecer en
   // Perplexity" como tema de mercado — mencionar el motor es el propósito de
-  // la pieza, no un desliz. Declara explícitamente, con Verdict, que Genscore
+  // la pieza, no un desliz. Declara explícitamente, con Verdict, que GenScore
   // no lo mide hoy y sin comprometer fecha (Task Intake del fundador: "S7 sin
   // la promesa" — se descartó anunciar una fecha de soporte sin decisión de
   // producto real detrás).
@@ -31,7 +31,7 @@ const ALLOWED_TO_MENTION_PERPLEXITY = new Set<string>([
   // S8 (2026-08-14). El artículo va sobre cómo clasifica GA4 el tráfico de
   // asistentes, y una de sus tres conclusiones ES que el canal "Asistente de
   // IA" **no incluye Perplexity**: sus visitas se quedan en Referencia. Ahí
-  // Perplexity no aparece como motor de Genscore sino como una fuente de
+  // Perplexity no aparece como motor de GenScore sino como una fuente de
   // tráfico que el lector tiene en su propio informe y no encuentra donde
   // debería. Omitirlo sería esconderle al lector la mitad de la respuesta para
   // proteger una ambigüedad sobre nuestros motores que el artículo no crea:
@@ -50,7 +50,7 @@ describe("honestidad de motores en el cuerpo de los artículos", () => {
   for (const post of BLOG_POSTS) {
     if (ALLOWED_TO_MENTION_PERPLEXITY.has(post.slug)) continue;
 
-    it(`${post.slug} no nombra Perplexity como motor de Genscore`, () => {
+    it(`${post.slug} no nombra Perplexity como motor de GenScore`, () => {
       const source = readArticle(post.slug);
       expect(
         source,

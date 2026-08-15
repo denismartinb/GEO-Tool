@@ -1,7 +1,7 @@
 /**
  * Pure presentation logic for the GEO Score component breakdown
  * (GEO-SCORE-V4, ADR 0033 §7 — the component breakdown is a stated
- * obligation, not polish: "wherever the GeoScore is shown, its component
+ * obligation, not polish: "wherever the GEO Score is shown, its component
  * breakdown must be visible", so that "subió porque arreglaste la web" and
  * "subió porque las IAs te citan más" stay distinguishable).
  *

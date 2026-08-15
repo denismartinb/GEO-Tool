@@ -25,17 +25,17 @@ export const COMPARATIVAS = [
   },
   {
     path: "/comparativas/genscore-vs-otterly",
-    title: "Genscore vs Otterly",
+    title: "GenScore vs Otterly",
     note: "comparativa honesta, incluidas las filas donde gana Otterly."
   },
   {
     path: "/comparativas/genscore-vs-peec-ai",
-    title: "Genscore vs Peec AI",
+    title: "GenScore vs Peec AI",
     note: "comparativa honesta, incluidas las filas donde gana Peec AI."
   },
   {
     path: "/comparativas/genscore-vs-profound",
-    title: "Genscore vs Profound",
+    title: "GenScore vs Profound",
     note: "comparativa honesta, incluidas las filas donde gana Profound."
   },
   {

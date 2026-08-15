@@ -256,6 +256,26 @@ valiendo) — se reordenan, no se tiran. Los 3 posts con enlazado interno
 deficiente (T14) se arreglan como los "refrescos" de la cadencia semanal.
 Cadencia: la ya aprobada (§5 de `content-strategy.md`), sin cambios.
 
+### Fase E — Entidad: ganar el nombre "GenScore" (aprobada 2026-08-13)
+
+Hueco que este plan no cubría en su primera versión: tenía clusters de keywords
+y deuda técnica, pero nada sobre **resolución de entidad**. "GenScore" compite
+en buscadores con varios homónimos públicos —bioinformática, salud mental,
+trust scoring B2B, Genscore Navarra—, y eso es un problema distinto del
+posicionamiento por consulta: no se gana escribiendo más, se gana siendo
+inequívoco.
+
+**Decisiones de marca del fundador (2026-08-13):** marca `GenScore`, métrica
+`GEO Score`, disciplina `GEO`. `GeoScore` se descartó porque *geo* se lee como
+geografía y mete a la métrica a competir con geolocalización.
+
+| Slice | Estado |
+|---|---|
+| **E1 — Una sola grafía** | ✅ **Hecho (2026-08-13)** — 179 `Genscore` y 53 `GeoScore` unificados en copy de usuario. URLs, slugs, dominio e identificadores intactos a propósito. Guardián en `lib/brand/naming.test.ts`. Detalle: log §91 |
+| **E2 — `/que-es-genscore`** | Pendiente. Página de entidad con la definición canónica: qué es, qué mide, cómo funciona, en qué se diferencia del SEO, para quién. **Con los tres motores que sí ejecutamos** (ChatGPT, Gemini, Claude) — no los cinco que sugería el consejo externo que originó la fase |
+| **E3 — `SoftwareApplication` en la home** | Pendiente. Junto al `Organization` que ya existe. Sin `sameAs` inventados: el schema actual es mínimo a propósito porque no hay perfiles reales que citar |
+| **E4 — Canonicalizar el GEO Score** | Pendiente. Ya existen **tres** URLs para el concepto (`/glosario/geo-score`, `/docs/metodologia/geo-score`, `/blog/que-es-el-geo-score`). El problema no es que falte una cuarta, es que ninguna está declarada canónica y Google reparte señales entre ellas |
+
 ### Fase P — Free checker "¿Aparece tu marca en ChatGPT?" ⚠️ (requiere su propio Task Intake)
 
 La oportunidad nº 1 de la investigación y el patrón de mayor conversión

@@ -2,7 +2,7 @@
  * GROWTH-2 Fase 2.8 (calendar row C3) — datos del pilar
  * /comparativas/mejores-herramientas-geo-en-espanol.
  *
- * Genscore, Otterly y Peec AI reutilizan exactamente los datos ya
+ * GenScore, Otterly y Peec AI reutilizan exactamente los datos ya
  * investigados y publicados en genscore-vs-otterly.ts / genscore-vs-peec-ai.ts
  * — no se reescriben cifras a mano aquí. Profound, Scrunch AI y AthenaHQ son
  * nuevos: investigados por seo-geo-research (2026-08-03), con la misma
@@ -23,7 +23,7 @@ export const PILLAR_RESEARCH_DATE = "12 de agosto de 2026";
  *   "diseñada desde el día uno para el mercado hispanohablante", prompts en
  *   español, competidores regionales y fuentes en dominios locales. Su
  *   existencia obligó además a corregir una afirmación nuestra que había
- *   dejado de ser cierta: la FAQ de esta página decía "solo Genscore" tiene
+ *   dejado de ser cierta: la FAQ de esta página decía "solo GenScore" tiene
  *   interfaz en español (log §68).
  * - **Mentio entra sin cifra de precio.** Las fuentes públicas dan importes
  *   inverosímiles (24 €/año) y además confunden dos productos distintos,
@@ -59,7 +59,7 @@ export type ToolProfile = {
 export const TOOLS: ToolProfile[] = [
   {
     slug: "genscore",
-    name: "Genscore",
+    name: "GenScore",
     url: "https://www.genscore.es",
     oneLiner:
       "Mide y mejora cómo aparece tu marca en respuestas de ChatGPT, Gemini y Claude, con plan gratuito permanente.",
@@ -90,13 +90,13 @@ export const TOOLS: ToolProfile[] = [
     oneLiner:
       "Monitorización de visibilidad en IA construida para el mercado hispanohablante: prompts en español, competidores regionales y fuentes en dominios locales (.es, .mx, .ar, .cl, .co).",
     distinctiveFeature:
-      "Es la otra herramienta de esta lista pensada para el mercado en español desde el principio, con foco declarado en LATAM. Cubre ChatGPT, Perplexity y AI Overviews, un conjunto de motores distinto del de Genscore: nosotros ejecutamos Gemini y Claude, que ella no lista, y no ejecutamos Perplexity ni AI Overviews.",
+      "Es la otra herramienta de esta lista pensada para el mercado en español desde el principio, con foco declarado en LATAM. Cubre ChatGPT, Perplexity y AI Overviews, un conjunto de motores distinto del de GenScore: nosotros ejecutamos Gemini y Claude, que ella no lista, y no ejecutamos Perplexity ni AI Overviews.",
     pricingNote: "Desde unos 29 $/mes según su comunicación pública — sin plan gratuito permanente. Confírmalo en crecerank.com.",
     spanishSupport: "Sí — producto en español, con foco declarado en LATAM.",
     bestFor:
       "Equipos con foco en LATAM que necesiten seguimiento por dominios locales país a país y prioricen la cobertura de Perplexity y AI Overviews sobre la de Gemini y Claude.",
     context:
-      "Es la comparación más directa de esta lista para un equipo hispanohablante, así que conviene mirar dos cosas concretas antes de decidir. La primera es el conjunto de motores: la elección real es Perplexity y AI Overviews (CreceRank) frente a Gemini y Claude (Genscore), y depende de dónde pregunten tus clientes, no de cuál suena mejor. La segunda es dónde te deja cada una: CreceRank prioriza accionables en español, y Genscore además redacta el borrador — FAQ, datos estructurados y briefs — desde el plan Pro. Y para probarlo, Genscore es la única de las dos con escaneo gratuito permanente y sin tarjeta."
+      "Es la comparación más directa de esta lista para un equipo hispanohablante, así que conviene mirar dos cosas concretas antes de decidir. La primera es el conjunto de motores: la elección real es Perplexity y AI Overviews (CreceRank) frente a Gemini y Claude (GenScore), y depende de dónde pregunten tus clientes, no de cuál suena mejor. La segunda es dónde te deja cada una: CreceRank prioriza accionables en español, y GenScore además redacta el borrador — FAQ, datos estructurados y briefs — desde el plan Pro. Y para probarlo, GenScore es la única de las dos con escaneo gratuito permanente y sin tarjeta."
   },
   {
     slug: "mentio",
@@ -105,14 +105,14 @@ export const TOOLS: ToolProfile[] = [
     oneLiner:
       "Monitorización de menciones de marca y producto en asistentes de IA (ChatGPT, Claude, Gemini), con análisis de frecuencia y posición dentro de la respuesta.",
     distinctiveFeature:
-      "Cubre los mismos tres motores que Genscore, lo que la convierte en la comparación más limpia de esta lista en cuanto a cobertura: la diferencia no está en qué mide, sino en qué haces después con lo medido.",
+      "Cubre los mismos tres motores que GenScore, lo que la convierte en la comparación más limpia de esta lista en cuanto a cobertura: la diferencia no está en qué mide, sino en qué haces después con lo medido.",
     pricingNote:
       "Sin cifra fiable. Las fuentes públicas de terceros dan importes inverosímiles y confunden el producto con GetMentioned, que es otra herramienta distinta. Confírmalo en su web antes de comparar.",
     spanishSupport: "No confirmado — documentación observada en inglés.",
     bestFor:
       "Equipos que quieran seguir menciones en los tres motores principales y no necesiten que la herramienta proponga ni redacte la solución.",
     context:
-      "Al cubrir ChatGPT, Claude y Gemini —los mismos tres que Genscore— la elección se reduce a lo que pasa después del informe. Mentio se detiene en la medición: cuántas veces te mencionan y en qué posición dentro de la respuesta. Genscore continúa hacia la recomendación con evidencia y el generador de soluciones, y lo hace en castellano. Antes de compararlas por precio, ten en cuenta que el suyo no está publicado de forma fiable en ninguna fuente que hayamos podido verificar."
+      "Al cubrir ChatGPT, Claude y Gemini —los mismos tres que GenScore— la elección se reduce a lo que pasa después del informe. Mentio se detiene en la medición: cuántas veces te mencionan y en qué posición dentro de la respuesta. GenScore continúa hacia la recomendación con evidencia y el generador de soluciones, y lo hace en castellano. Antes de compararlas por precio, ten en cuenta que el suyo no está publicado de forma fiable en ninguna fuente que hayamos podido verificar."
   },
   {
     slug: "peec-ai",

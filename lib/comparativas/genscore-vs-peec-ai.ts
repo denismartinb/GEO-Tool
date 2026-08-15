@@ -1,5 +1,5 @@
 /**
- * GROWTH-2 Fase 2.6c — datos de la comparativa Genscore vs Peec AI.
+ * GROWTH-2 Fase 2.6c — datos de la comparativa GenScore vs Peec AI.
  *
  * Fuente de los datos de Peec AI: `seo-geo-research` (2026-08-03) — búsqueda
  * agregada de reseñas y páginas de precios independientes; peec.ai/pricing y
@@ -8,7 +8,7 @@
  * discreparon en cifras exactas (qué motores incluye el plan base, coste
  * exacto de motores adicionales, duración del trial) — esas cifras NO se
  * publican como hechos, solo lo que dos o más fuentes independientes
- * corroboran. Los precios y límites de Genscore vienen de
+ * corroboran. Los precios y límites de GenScore vienen de
  * app/pricing/plans-data.ts, la misma fuente que usa /pricing.
  */
 export const PEEC_RESEARCH_DATE = "3 de agosto de 2026";

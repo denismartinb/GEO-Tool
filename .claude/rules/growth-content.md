@@ -139,8 +139,24 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 - La densidad de palabra clave es un **techo, no un objetivo** (§4.2).
 - Copy de cara al usuario en castellano; código, identificadores, comentarios y
   commits en inglés.
-- El nombre público es **Genscore**. "GEO Studio" es el nombre interno del repo
-  y "Lumira" está retirado — no reintroducir ninguno en copy de usuario.
+- **La marca se escribe `GenScore`. La métrica se escribe `GEO Score`. La
+  disciplina, `GEO`.** Sin excepciones en copy de usuario (fundador,
+  2026-08-13; log §71). Antes de esa decisión el repositorio usaba las cuatro
+  grafías a la vez —179 `Genscore` contra 114 `GenScore`, 53 `GeoScore` contra
+  99 `GEO Score`— y para un motor que intenta resolver la entidad "GenScore"
+  frente a sus homónimos (bioinformática, salud mental, trust scoring B2B,
+  Genscore Navarra) eso es ruido gratis. `naming.test.ts` lo impone.
+  - **`GeoScore` se descartó a propósito**: *geo* se lee como geografía, que es
+    el significado dominante de esa raíz, y mete a la métrica a competir con
+    geolocalización. En mayúsculas es un acrónimo y refuerza la categoría que
+    el plan SEO intenta ganar.
+  - **Lo que NO cambia:** URLs y slugs (`/glosario/geo-score`,
+    `/comparativas/genscore-vs-otterly`), el dominio `genscore.es`, e
+    identificadores de código (`geoScore`, `GEO_SCORE`,
+    `availableGeoScoreComponents`). Cambiar una URL ya indexada por coherencia
+    tipográfica es tirar señal a la basura.
+- "GEO Studio" es el nombre interno del repo y "Lumira" está retirado — no
+  reintroducir ninguno en copy de usuario.
 
 ## Si esto lo escribe la sesión semanal automática
 

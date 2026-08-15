@@ -24,7 +24,7 @@ function priceOf(planName: string): number {
 describe("metadata de la home", () => {
   it("tiene título propio, no el genérico del layout raíz", () => {
     expect(homeMetadata.title).toBeTruthy();
-    expect(homeMetadata.title).not.toBe("Genscore");
+    expect(homeMetadata.title).not.toBe("GenScore");
   });
 
   it("declara su canonical absoluto", () => {
@@ -45,7 +45,7 @@ describe("metadata de la home", () => {
 describe("metadata de /pricing", () => {
   it("tiene título propio y canonical absoluto", () => {
     expect(pricingMetadata.title).toBeTruthy();
-    expect(pricingMetadata.title).not.toBe("Genscore");
+    expect(pricingMetadata.title).not.toBe("GenScore");
     expect(pricingMetadata.alternates?.canonical).toBe(
       "https://www.genscore.es/pricing"
     );

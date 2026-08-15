@@ -9,7 +9,7 @@ const SLUG = "empezar/primer-escaneo";
 const page = getDocPage(SLUG)!;
 
 export const metadata: Metadata = contentMetadata({
-  title: `${page.title} — Genscore`,
+  title: `${page.title} — GenScore`,
   description: page.description,
   path: `/docs/${SLUG}`
 });
@@ -28,7 +28,7 @@ export default function PrimerEscaneoPage() {
       <p className="docs-updated">Actualizado el 2 de agosto de 2026</p>
 
       <p>
-        Registrar un dominio en Genscore dispara una secuencia fija de pasos, siempre en el mismo orden.
+        Registrar un dominio en GenScore dispara una secuencia fija de pasos, siempre en el mismo orden.
         No hay configuración manual obligatoria antes del primer resultado: el sistema sugiere competidores
         y prompts, y tú los ajustas si hace falta.
       </p>
@@ -46,7 +46,7 @@ export default function PrimerEscaneoPage() {
           prompts; los planes de pago, más (ver <Link href="/docs/planes-y-limites">Planes y límites</Link>).
         </li>
         <li>
-          <strong>Primer escaneo.</strong> Genscore lanza cada prompt contra los motores de IA de tu plan y
+          <strong>Primer escaneo.</strong> GenScore lanza cada prompt contra los motores de IA de tu plan y
           extrae si tu marca aparece, en qué posición y con qué citas.
         </li>
         <li>

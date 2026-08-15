@@ -11,7 +11,7 @@ import { NotFoundMission } from "@/components/not-found-mission";
  * llaman a `notFound()` de verdad— caía en la página por defecto de Next: sin
  * marca, sin navegación y sin un solo enlace de vuelta al sitio. Eso quedó
  * resuelto; lo que esta fase arregla es que la pantalla no parecía de
- * Genscore.
+ * GenScore.
  *
  * `noindex` a propósito, sin cambios: un 404 ya devuelve el estado correcto,
  * pero la etiqueta evita que una variante enlazada desde fuera se quede
@@ -24,7 +24,7 @@ import { NotFoundMission } from "@/components/not-found-mission";
  * `app/dashboard/not-found.tsx`.
  */
 export const metadata: Metadata = {
-  title: "Página no encontrada — Genscore",
+  title: "Página no encontrada — GenScore",
   robots: { index: false, follow: true }
 };
 

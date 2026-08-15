@@ -38,12 +38,12 @@ function statValues(source: string): string[] {
 }
 
 describe("el artículo de métricas enseña criterio, no configuración", () => {
-  it("no atribuye a Genscore un umbral concreto de respuestas", () => {
+  it("no atribuye a GenScore un umbral concreto de respuestas", () => {
     expect(
       METRICAS,
       "el umbral con el que decidimos publicar una franja es configuración del producto: " +
         "el artículo explica la aritmética de la muestra, que es cierta para cualquiera"
-    ).not.toMatch(/en Genscore ese umbral/i);
+    ).not.toMatch(/en GenScore ese umbral/i);
   });
 
   it("no describe por dentro el motor de cada proveedor", () => {
@@ -51,7 +51,7 @@ describe("el artículo de métricas enseña criterio, no configuración", () => 
       METRICAS,
       "qué motor ejecutamos con búsqueda web y cuál no es configuración nuestra. El " +
         "artículo dice lo que el lector necesita: un motor que no busca no puede citar."
-    ).not.toMatch(/En Genscore, Gemini y ChatGPT/i);
+    ).not.toMatch(/En GenScore, Gemini y ChatGPT/i);
   });
 
   it("mantiene la afirmación que lo diferencia: la posición se mide solo donde apareces", () => {

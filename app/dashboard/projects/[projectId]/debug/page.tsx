@@ -600,7 +600,7 @@ export default async function RunsPage({
       {/* WEB-AUDIT-AUTO-SPLIT-1 — dos interruptores, no uno. Las dos mitades de
           la auditoría tienen coste opuesto (ADR 0035): la cobertura son
           llamadas a Gemini por prompt, la técnica no gasta LLM y alimenta un
-          componente del GeoScore (ADR 0033). Con un solo control, apagar el
+          componente del GEO Score (ADR 0033). Con un solo control, apagar el
           gasto obligaba a perder también la nota. Contexto medido:
           docs/llm-cost-analysis-2026-08.md. */}
       <div className="card dbg-switch">
@@ -656,7 +656,7 @@ export default async function RunsPage({
             ) : (
               <>
                 No gasta IA: sólo descarga y revisa páginas del propio dominio. Su nota es un
-                componente del GeoScore, así que apagarla lo congela en el valor de la última
+                componente del GEO Score, así que apagarla lo congela en el valor de la última
                 auditoría.
               </>
             )}

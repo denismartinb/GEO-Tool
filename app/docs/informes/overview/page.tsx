@@ -9,7 +9,7 @@ const SLUG = "informes/overview";
 const page = getDocPage(SLUG)!;
 
 export const metadata: Metadata = contentMetadata({
-  title: `${page.title} — Genscore`,
+  title: `${page.title} — GenScore`,
   description: page.description,
   path: `/docs/${SLUG}`
 });
@@ -61,7 +61,7 @@ export default function OverviewReportPage() {
 
       <h2>Posicionamiento por motores de IA</h2>
       <p>
-        Genscore no consulta un único modelo. Este bloque desglosa tu posición media por motor (Gemini,
+        GenScore no consulta un único modelo. Este bloque desglosa tu posición media por motor (Gemini,
         Claude, ChatGPT según tu plan) — el número de motores incluidos depende de tu plan, ver{" "}
         <Link href="/docs/planes-y-limites">Planes y límites</Link>.
       </p>
