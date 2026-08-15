@@ -8944,6 +8944,156 @@ afirmaría que una constante es esa constante.
 
 ---
 
+---
+
+## 94. La definición canónica vive en una constante, no en seis párrafos parecidos (SEO-POS-1 Fase E, E2, 2026-08-15)
+
+**Qué se publica.** `/que-es-genscore`: qué es el producto, qué mide, cómo
+funciona en cuatro pasos, en qué se diferencia del SEO, para quién es, y una
+sección de desambiguación.
+
+**La decisión de fondo: la definición es una constante compartida.** Vive en
+`lib/brand/canonical-definition.ts` y la importan la metadata de la página, el
+`KeyTakeaway` de apertura, la FAQ y el `SoftwareApplication` del schema. No es
+una preferencia de estilo: el objetivo entero de la fase es que un motor
+encuentre **la misma descripción estable** en varios sitios en vez de seis
+redacciones que se parecen, y eso una cadena compartida lo garantiza mientras
+que seis párrafos escritos a mano divergen al primer refresco.
+
+**Corrección al consejo externo que originó la fase.** Proponía una definición
+canónica que decía "ChatGPT, Gemini, Claude, **Perplexity y Google AI
+Overviews**", y recomendaba repetirla *literalmente* en home, /about,
+documentación y pie. Dos de esos cinco motores no los ejecutamos. Aplicarlo
+habría sembrado el mismo reclamo falso que PRICING-TRUTH-1 retiró del producto,
+multiplicado por las superficies más vistas del sitio y en la cadena que más se
+repite. `canonical-definition.test.ts` lo impone: la definición debe nombrar
+los tres que sí ejecutamos y ninguno de los seis que no.
+
+**Un test que parece de estilo y no lo es:** la definición tiene que empezar
+por *"GenScore es una plataforma de Generative Engine Optimization"*. Una
+definición de entidad que abre por el beneficio ("Mide tu visibilidad en IA…")
+no declara categoría, y la categoría es justo lo que desambigua frente a los
+otros GenScore.
+
+**Enlazado: una segunda lista compartida, no un `<Link>` a mano.**
+`MARKETING_CONTENT_LINKS` está fijada por test a las cuatro capas de
+`content-strategy.md` §2 por igualdad exacta, así que la página de entidad no
+cabía ahí sin romper esa semántica. Pero añadirla a mano en los seis pies es
+exactamente la desincronización de uno en uno que §46 documentó. Solución:
+`MARKETING_ENTITY_LINKS`, misma mecánica y mismo test por shell. Una fuente
+primaria sin enlaces entrantes del propio dominio es una declaración que nadie
+respalda.
+
+**La sección de desambiguación, y por qué se queda corta a propósito.** Nombra
+las categorías de los otros GenScore —bioinformática, salud mental, riesgo
+entre empresas, una entidad local— sin enlazarlos. Enlazarlos les daría señal;
+no mencionarlos deja el trabajo de desambiguación entero a los motores. El
+punto medio es afirmar con fuerza qué SÍ es esto, que es lo que de verdad
+resuelve la entidad, y despachar el resto en un bloque corto.
+
+**Schema sin `aggregateRating`.** No hay reseñas públicas acumuladas. Un rating
+inventado en schema es dato falso con el agravante de que Google penaliza el
+marcado inventado cuando lo detecta.
+
+**Nota de numeración:** esta fase se llevó por delante un §91 duplicado. E1 y
+la Fase Q2 de PRELAUNCH-HARDENING-1 mergearon con cuatro minutos de diferencia
+y ambas reclamaron el mismo número; E1 cedió por haber llegado después y pasó
+a §93. Lo cazó `tests/log-numbering.test.ts`, que ya existe precisamente por la
+racha de colisiones de esta misma semana.
+
+---
+
+## 95. El bloque que pedía no ser confundido no construía marca (SEO-POS-1 Fase E, E2, revisión, 2026-08-15)
+
+**Origen.** El fundador, sobre el preview de `/que-es-genscore`: *"Está muy
+pegado el título a la card. Ese bloque de desambiguación no me gusta, no es
+elegante para construir marca. Revísalo y enriquécelo en texto e imagen real de
+producto como si fueras un experto en marketing digital."*
+
+**Lo del bloque de desambiguación tenía razón, y el diagnóstico es de postura.**
+La página dedicaba un `Verdict` destacado —recuadro naranja, etiqueta
+"DESAMBIGUACIÓN"— a explicar que existen otros GenScore y que éste no es
+aquéllos. Es información correcta y su efecto es el contrario del buscado: lo
+primero que un bloque así comunica es *hay confusión sobre quiénes somos*, y lo
+segundo es que nos preocupa. **Una marca no se construye pidiendo que no la
+confundan.** El competidor no dedica un recuadro a explicar que no es otro.
+
+**Qué se hizo con la función que ese bloque sí cumplía.** La desambiguación
+para motores no se pierde: sigue en la FAQ —que alimenta el `FAQPage` schema—
+reescrita para afirmar en vez de disculparse. Antes empezaba por *"Sí, el
+nombre lo comparten…"*; ahora la pregunta es *"¿Dónde está GenScore y quién lo
+hace?"* y la respuesta abre declarando qué somos y dónde, y despacha los
+homónimos en una subordinada. Mismo trabajo de entidad, sin el bloque que
+resta.
+
+**Enriquecimiento: evidencia de producto, no más prosa.** La página explicaba
+el producto sin enseñarlo. Ahora lleva tres figuras, todas maquetas del
+lenguaje visual real:
+
+1. **`AnswerPair`** con dos respuestas a la misma pregunta —una donde no
+   apareces y otra donde apareces citado—. Es el "aha" de la categoría entera y
+   estaba contado sólo con palabras.
+2. **`PromptSet`** con cuatro prompts de intención distinta (categoría,
+   competencia, precio, caso de uso), porque "cubre varias intenciones" es
+   abstracto hasta que se ven cuatro seguidos.
+3. **`ProductMock`** del panel de GEO Score con sus cinco componentes, y
+   **`RecommendationSample`** con una recomendación real —prioridad, confianza y
+   el porqué—, que es lo que separa a GenScore de las herramientas que se
+   detienen en el diagnóstico.
+
+**Espaciado.** El `h1` iba pegado a la tarjeta de la definición porque esta
+página no tenía la línea que las comparativas sí llevan bajo el título. Se
+añade, y de paso hace trabajo de posicionamiento: *"La plataforma GEO que mide
+si las IA recomiendan tu marca — y qué hacer cuando no lo hacen."*
+
+**Un guardián que faltaba, descubierto al añadir la maqueta.**
+`article-recipes.test.ts` comprueba que el número del gauge sea la media
+ponderada real de las barras dibujadas, pero **sólo sobre
+`app/blog/<slug>/page.mdx`**. Esta página es un `.tsx` fuera del blog, así que
+la maqueta más visible del sitio era justo la que nadie verificaba —y el
+comentario de `MockRow` deja constancia de que una maqueta ya se contradijo a
+sí misma dos veces. `product-mock.test.ts` cubre el hueco: cinco componentes,
+pesos que suman 100, y gauge = media ponderada exacta (66). Verificado fallando
+al declarar 82.
+
+**Lo que no se tocó:** la definición canónica, que sigue siendo la misma cadena
+compartida por metadata, página, FAQ y schema (§94).
+
+---
+
+## 96. Una insignia `nowrap` cortada a media palabra, y por qué el piloto la dio por buena (SEO-POS-1 Fase E, E2, 2026-08-15)
+
+**Qué vio el fundador.** En `/que-es-genscore` a 375 px, la insignia azul que
+anota la fila destacada del panel de GEO Score se salía de la tarjeta y quedaba
+cortada: *"El componente más bajo es donde está el trabajo: te me…"*.
+
+**Causa inmediata: mal uso del componente, no fallo del componente.**
+`.art-anno-lbl` es `position: absolute` + `white-space: nowrap`, o sea una
+**insignia**, no un párrafo. La única otra anotación del repositorio tiene 38
+caracteres (`llms-txt-guia-practica`); la que se escribió aquí tenía ~90. La
+frase se movió al pie de figura, que sí tiene sitio, y la insignia quedó en
+"Aquí está el trabajo".
+
+**Pero la causa de fondo es que nada lo impedía.** Un componente cuyo uso
+correcto depende de que quien escribe acierte con la longitud del texto va a
+fallar otra vez. Por debajo de 640 px la insignia deja de ser flotante y pasa a
+ser una línea normal encima de la fila: cabe siempre, no tapa nada y no depende
+del acierto de nadie. Se oculta además su chevron, que apunta a la fila cuando
+flota y no significa nada cuando no.
+
+**Lo importante: el piloto había dado PASS sobre esa misma pantalla, en esa
+misma anchura.** No es un fallo del piloto, es su alcance real —
+`assertPageIsHealthy` detecta **desbordamiento de página**, y aquí el recorte
+ocurre DENTRO de la tarjeta, que sigue midiendo lo que debe. Es exactamente lo
+que avisa el propio informe del piloto en cada pasada: *"esto no sustituye el
+juicio visual"*. La captura existía y enseñaba el corte; nadie la abrió.
+
+Es la tercera vez esta semana que un fallo visual real convive con un `PILOT
+PASS` legítimo (§55 el CTA duplicado, §62 la pantalla nunca visitada, ésta). El
+patrón común no es que el piloto falle, sino que **su verde responde a "ninguna
+aserción saltó", no a "esto se ve bien"** — y las aserciones mecánicas no
+cubren lo que pasa dentro de un contenedor con `overflow` recortado.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

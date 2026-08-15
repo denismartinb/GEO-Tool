@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MARKETING_CONTENT_LINKS } from "./marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "./marketing-content-links";
 
 /**
  * SEO-POS-1 (T3). El fallo que este test impide repetir: `/glosario` y
@@ -113,4 +113,37 @@ describe("descubrimiento del feed RSS", () => {
       "el enlace al feed no usa .link-mini y heredaría el color del contenedor"
     ).toBe(true);
   });
+});
+
+/**
+ * SEO-POS-1 Fase E, E2 (log §92). `MARKETING_ENTITY_LINKS` resuelve el mismo
+ * problema que la lista de contenido —enlace entrante desde todos los pies sin
+ * seis copias que se desincronizan— así que necesita la misma protección. Se
+ * comprueba aparte y no ampliando el test de arriba porque aquél fija las
+ * cuatro capas de `content-strategy.md` §2 por igualdad exacta, y la página de
+ * entidad no es una capa de contenido.
+ */
+describe("MARKETING_ENTITY_LINKS", () => {
+  it("contiene la página de entidad", () => {
+    expect(MARKETING_ENTITY_LINKS.map((l) => l.href)).toContain("/que-es-genscore");
+  });
+
+  it("apunta solo a rutas que existen de verdad", () => {
+    for (const link of MARKETING_ENTITY_LINKS) {
+      expect(
+        existsSync(join(process.cwd(), "app", link.href.replace(/^\//, ""), "page.tsx")),
+        `${link.href} no tiene page.tsx`
+      ).toBe(true);
+    }
+  });
+
+  for (const shell of MARKETING_SHELLS) {
+    it(`${shell} renderiza la lista de entidad en su pie`, () => {
+      expect(
+        footerBlockOf(shell).includes("MARKETING_ENTITY_LINKS"),
+        `${shell} no usa MARKETING_ENTITY_LINKS en el pie, así que la página de entidad ` +
+          "pierde su enlace entrante desde esa superficie"
+      ).toBe(true);
+    });
+  }
 });
