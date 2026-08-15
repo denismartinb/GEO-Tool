@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Dos barras apiladas del mismo ancho. En la primera, el segmento iluminado —las citas a directorios y fichas en resultados locales en general— ocupa una franja estrecha en el extremo derecho. En la segunda, la de las consultas de recomendación, ese mismo segmento es tres veces más ancho. El resto de cada barra queda en un tono apagado y sin subdividir.">
+  <defs>
+    <linearGradient id="bgS9" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowS9a" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".4"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowS9b" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hot" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#09c5d6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgS9)"/>
+  <circle cx="240" cy="150" r="250" fill="url(#glowS9a)"/>
+  <circle cx="980" cy="150" r="235" fill="url(#glowS9b)"/>
+
+  <rect x="130" y="110" width="799" height="34" rx="8" fill="#1e3157"/>
+  <rect x="929" y="110" width="141" height="34" rx="8" fill="url(#hot)"/>
+
+  <rect x="130" y="158" width="508" height="34" rx="8" fill="#1e3157"/>
+  <rect x="638" y="158" width="432" height="34" rx="8" fill="url(#hot)"/>
+
+  <path d="M612 149 L612 153" stroke="#09c5d6" stroke-width="2" stroke-opacity=".55" stroke-dasharray="4 4"/>
+  <path d="M607 148 L612 155 L617 148 Z" fill="#09c5d6" fill-opacity=".8"/>
+</svg>

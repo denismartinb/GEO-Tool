@@ -208,6 +208,19 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "medicion"
   },
   {
+    slug: "como-hacer-que-chatgpt-recomiende-tu-negocio",
+    title: "Cómo hacer que ChatGPT recomiende tu negocio (si eres una pyme local)",
+    description:
+      "Para un negocio local, la mayor parte del trabajo no está en tu web: en las preguntas de recomendación, las citas se van a fichas, directorios y reseñas. Las cuatro palancas por orden de rendimiento, y el techo que nadie puede saltarse.",
+    metaDescription:
+      "Cómo hacer que ChatGPT recomiende tu negocio local: fichas, reseñas y coherencia de datos pesan más que tu web.",
+    datePublished: "2026-08-15",
+    coverIcon: "target",
+    coverImage: "/blog/como-hacer-que-chatgpt-recomiende-tu-negocio/cover.webp",
+    primaryKeyword: "cómo hacer que chatgpt recomiende mi negocio",
+    cluster: "playbooks"
+  },
+  {
     slug: "como-medir-trafico-chatgpt-ga4",
     title: "Cómo medir en GA4 el tráfico que llega desde ChatGPT",
     description:

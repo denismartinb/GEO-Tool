@@ -8342,6 +8342,60 @@ recuerda que existe hasta que alguien la mira.
 
 ---
 
+## 86. Para una pyme, el trabajo no está en su web (SEO-POS-1, S9, 2026-08-15)
+
+**Qué se publica.** `/blog/como-hacer-que-chatgpt-recomiende-tu-negocio`,
+cluster `playbooks`. Cubre el cluster de keywords nº 4 del plan (pyme/local) y
+abre la cola sectorial local.
+
+**El ángulo, que es lo que la separa de las veinte guías que ya ocupan esta
+keyword.** Todas dicen «optimiza tu web y completa tu ficha». Ninguna cuenta la
+asimetría medible que hay debajo: en resultados locales en general, la web del
+propio negocio es el 58 % de las fuentes citadas y los directorios el 15 %;
+pero **en consultas subjetivas —«el mejor», «recomiéndame», que es exactamente
+como se le pregunta a una IA antes de gastar dinero— los directorios saltan al
+46 %**. O sea que *las consultas que más te importan son justo aquellas en las
+que tu web menos pesa*. De ahí sale el orden de las cuatro palancas del
+artículo: fichas, reseñas y coherencia de datos **antes** que la página propia,
+que es lo contrario del instinto de cualquiera que venga del SEO.
+
+**La portada dibuja esa tesis y nada más**: dos barras del mismo ancho con el
+segmento de directorios iluminado, que triplica de la primera a la segunda. Se
+compuso **dentro de la banda central** y se juzgó en la tira de 96 px antes de
+darla por buena — la regla que salió de §85, aplicada por primera vez desde que
+existe. En la primera versión la segunda barra se cortaba cinco píxeles por
+abajo; sin mirar la tira no se habría visto.
+
+**Lo que la figura NO hace, y es la decisión de honestidad de la pieza:** de la
+columna subjetiva sólo se conoce el peso de los directorios. El borrador podía
+haber repartido el 54 % restante entre «web» y «menciones» para que la tabla
+quedara simétrica y bonita — habría sido **fabricar el dato más visible del
+artículo**. Esas celdas van con guion, y `pyme-local.test.ts` lo exige.
+
+**El riesgo de esta pieza no era publicar de más: era prometer.** La keyword la
+ocupan hoy páginas que garantizan resultados, y un borrador así se desliza solo
+hacia el mismo sitio; basta con que un refresco futuro suavice un «no se puede
+garantizar». Por eso el guardián vigila **lo que el artículo se niega a decir**:
+que OpenAI no ha publicado cómo elige los negocios locales, que nadie puede
+garantizar una recomendación, que no hay dónde comprar el sitio, y un detector
+del vocabulario de promesa («aparecerás en ChatGPT», «te posicionamos en la
+IA», «en N días»). Es la primera vez que un test de contenido persigue una
+ausencia en vez de una presencia.
+
+**Todas las cifras son de terceros**, atribuidas en el `source` de cada una
+—BrightLocal, *Local Consumer Review Survey 2026*— y con la frase «ninguna
+cifra es medición propia» exigida por test. Misma limitación de siempre: el
+proxy de salida bloquea las fuentes primarias, así que se triangularon fuentes
+secundarias coincidentes y el artículo publica la fecha de consulta.
+
+**Contexto de proceso, no del contenido.** Al preparar esta pieza se descubrió
+que **S7 no estaba pendiente sino abierta**: el PR #400 («cómo aparecer en
+Perplexity, sin promesa de fecha») lleva desde el 2026-08-14 esperando, y el
+calendario seguía marcándola 🔲. Un ledger que dice «pendiente» de algo que ya
+tiene PR es el mismo fallo que T16 corrigió en la capa A. Corregido aquí.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

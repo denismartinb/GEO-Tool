@@ -1,0 +1,288 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  Figure,
+  Stat,
+  StatGrid,
+  Verdict,
+  AuthorBio,
+  ArticleCta,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-hacer-que-chatgpt-recomiende-tu-negocio");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cómo hago que ChatGPT recomiende mi negocio?",
+    answer:
+      "No hay un botón ni un ajuste: ChatGPT no indexa tu web como un buscador, sino que se apoya en lo que encuentra publicado sobre ti en otros sitios. Para un negocio local, el trabajo que más pesa está fuera de tu página — la ficha de Google Business, la de Bing Places, los directorios de tu sector y las reseñas. Tu web importa, pero es la parte que ya controlas y la que menos se cita en las preguntas de recomendación."
+  },
+  {
+    question: "¿Por qué ChatGPT recomienda a mi competencia y a mí no?",
+    answer:
+      "Lo más habitual no es que tu negocio sea peor, sino que hay menos escrito sobre él en los sitios donde el modelo mira. Un competidor con ficha completa, reseñas recientes y presencia en dos o tres directorios de su sector le da al modelo material con el que responder; un negocio con web impecable y nada más, no. Antes de rehacer nada, comprueba qué encuentra la IA sobre ti hoy."
+  },
+  {
+    question: "¿Sirve de algo optimizar la ficha de Google si la pregunta se hace en ChatGPT?",
+    answer:
+      "Sí, aunque no por la vía que parece. ChatGPT no consulta tu ficha de Google en directo, pero los datos que publicas ahí —categoría, dirección, horarios, descripción, reseñas— acaban replicados y citados por directorios, agregadores y prensa local, que son fuentes que el modelo sí lee. La ficha es donde se define la versión oficial de tu negocio, y esa versión es la que se propaga."
+  },
+  {
+    question: "¿Puedo garantizar que la IA me recomiende?",
+    answer:
+      "No, y quien lo prometa está vendiendo algo que no puede cumplir. OpenAI no ha publicado cómo elige los negocios locales que recomienda, las respuestas varían entre ejecuciones, y en tu categoría cabe un número corto de nombres. Lo que sí se puede hacer es aumentar la cantidad y la coherencia del material publicado sobre ti, y medir si la aguja se mueve."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Si tienes un negocio local, **la mayor parte del trabajo no está en tu web**.
+El instinto del SEO dice «optimiza tu página», pero cuando alguien le pide a
+una IA *«el mejor X cerca de Y»* —que es como se pregunta de verdad— las
+fuentes que sostienen la respuesta se desplazan hacia **fichas, directorios y
+reseñas**. Y ahí está la asimetría que casi nadie cuenta: **las consultas que
+más te importan son justo aquellas en las que tu web menos pesa.**
+
+</KeyTakeaway>
+
+## Primero, la pregunta que de verdad te hacen
+
+Nadie escribe en ChatGPT «fisioterapeuta Chamberí». Escribe *«busco un
+fisioterapeuta por Chamberí que trate lesiones de running, ¿cuál me
+recomiendas?»*. Esa diferencia no es de estilo: cambia de dónde sale la
+respuesta.
+
+Una consulta **objetiva** —un horario, una dirección, un teléfono— se resuelve
+con datos, y la web del negocio suele bastar. Una consulta **subjetiva** —«el
+mejor», «recomiéndame», «cuál me conviene»— obliga al modelo a apoyarse en
+opiniones y comparaciones de terceros, porque tu web no es una fuente creíble
+sobre si eres el mejor. Y la consulta subjetiva es exactamente la que hace
+alguien a punto de gastarse el dinero.
+
+<Figure
+  wide
+  label="Figura 1."
+  caption="Reparto de las fuentes que ChatGPT cita en resultados locales, según análisis de terceros recogidos en 2026: la columna general frente a la de consultas subjetivas. La fila de directorios es la que se mueve, y triplica su peso justo en el tipo de pregunta que precede a una compra."
+>
+
+| Tipo de fuente | En resultados locales en general | En consultas subjetivas |
+| --- | --- | --- |
+| Web del propio negocio | 58 % | — |
+| Menciones en otros sitios | 27 % | — |
+| **Directorios y fichas** | **15 %** | **46 %** |
+
+</Figure>
+
+La lectura práctica: si tu plan entero es «mejorar mi web», estás trabajando
+sobre la mitad del problema que menos se mueve — y ninguna sobre la que sí.
+
+<StatGrid label="Qué tan grande es esto ya, y quién lo comprueba">
+  <Stat value="45 %" label="Consumidores que usan herramientas de IA para descubrir negocios locales, frente al 6 % del año anterior" source="BrightLocal, Local Consumer Review Survey 2026" tone="blue" />
+  <Stat value="31 %" label="Que usaron ChatGPT en concreto para pedir una recomendación de negocio en el último año" source="BrightLocal, Local Consumer Review Survey 2026" tone="cyan" />
+  <Stat value="88 %" label="Usuarios de IA que verifican la fuente antes de actuar sobre una recomendación" source="BrightLocal, Local Consumer Review Survey 2026" tone="warm" />
+</StatGrid>
+
+Ese último número es el más útil de los tres y el que menos se cita: **la
+recomendación de la IA no cierra la venta, abre la comprobación.** Alguien te
+va a buscar después. Lo que encuentre entonces —una ficha a medias, una reseña
+sin contestar, una dirección que no cuadra— decide tanto como la mención.
+
+## Las cuatro palancas, en orden de lo que rinde
+
+<NumberedSection n={1} title="Las fichas, antes que la web">
+
+Antes de tocar una línea de tu página: **la ficha de Google Business, la de
+Bing Places y las de los directorios de tu sector**. Completas, con categoría
+correcta, horarios de verdad, fotos y una descripción que diga a qué te
+dedicas con las palabras que usa un cliente.
+
+Que ChatGPT no consulte tu ficha de Google en directo no la hace irrelevante,
+y aquí se confunde mucha gente. La ficha es **donde se define la versión
+oficial de tu negocio**, y esa versión se replica en agregadores, directorios y
+prensa local — que sí son fuentes que el modelo lee. Estás alimentando la
+cadena, no el eslabón final.
+
+Bing Places merece mención aparte por un motivo concreto: **ChatGPT busca en
+la web a través de Bing**. Es el índice que consulta cuando necesita
+comprobar algo, y es de los pocos sitios donde una hora de trabajo tiene un
+efecto directo y verificable.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Las reseñas: cantidad, frescura y que se vean">
+
+Las reseñas no son decoración de la ficha: son el material con el que una
+respuesta subjetiva se construye. Un modelo al que le piden «el mejor» necesita
+algo que leer que diga por qué, y eso lo escriben tus clientes, no tú.
+
+Tres cosas importan y sólo una es obvia:
+
+- **El volumen**, sí, pero menos de lo que se cree.
+- **La frescura.** Treinta reseñas del año pasado pesan menos que ocho de este
+  mes. Un negocio sin reseñas recientes se lee como un negocio del que ya no
+  habla nadie.
+- **Que estén visibles.** En plataformas con filtro automático —Yelp es el caso
+  clásico— una parte de las reseñas acaba en la sección de «no recomendadas» y
+  deja de contar para casi todo. Merece la pena mirar cuántas tuyas están ahí
+  antes de pedir más.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Que los datos digan lo mismo en todas partes">
+
+Nombre, dirección y teléfono idénticos en cada sitio donde apareces. Sin
+variantes creativas, sin «S.L.» en unos y no en otros, sin dos teléfonos
+distintos según el directorio.
+
+No es una manía de SEO antiguo: cuando las fuentes se contradicen, el modelo
+—como cualquiera— **tiene menos confianza en la entidad**, y una entidad
+borrosa es más fácil de omitir que de nombrar. Es el trabajo menos vistoso de
+esta lista y probablemente el que peor está en tu negocio ahora mismo.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Y ahora sí, tu web">
+
+Tu web no gana la recomendación, pero pierde la comprobación posterior — la de
+ese 88 % que va a verificar. Lo que hay que asegurar es corto:
+
+- Que la dirección, el teléfono y los horarios estén en **texto**, no dentro de
+  una imagen ni cargados por JavaScript después.
+- Que se entienda **a qué te dedicas y dónde** en las primeras líneas, sin
+  bajar.
+- Que exista una página por servicio real, en vez de una sola que lo mezcle
+  todo.
+
+Lo que hace que un contenido sea citable en general —estructura, datos
+propios, atribución— lo tratamos aparte en <a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que ChatGPT cite tu web</a>.
+Aquí basta con no estorbar.
+
+</NumberedSection>
+
+## Lo que no funciona
+
+<Checklist tone="evitar" items={[
+  "No pidas reseñas a cambio de algo: las plataformas lo detectan, y una tanda de reseñas idénticas en una semana hace más daño que bien.",
+  "No abras fichas duplicadas «por si acaso»: dos fichas del mismo negocio se reparten las señales y se contradicen entre sí.",
+  "No metas tu ciudad cuarenta veces en la web: eso era SEO de hace quince años y hoy sólo consigue que el texto se lea como spam.",
+  "No pagues por «aparecer en ChatGPT»: nadie puede colocarte ahí, porque no hay dónde comprar el sitio.",
+  "No juzgues nada preguntándole una vez a ChatGPT: te responde distinto en dos ejecuciones seguidas, y tu propia cuenta arrastra tu historial.",
+  "No dejes sin contestar las reseñas malas: la respuesta es texto público que también se lee, y es tu única versión de los hechos."
+]} />
+
+## Si sólo vas a hacer una cosa esta semana
+
+<QuickAction>
+
+Abre tu ficha de Google Business y la de Bing Places, y **compáralas línea a
+línea con lo que pone en tu web**: nombre exacto, dirección exacta, teléfono
+exacto, categoría, horarios. Corrige lo que no cuadre. Es una hora de trabajo
+aburrido, no requiere contratar a nadie, y es el único punto de esta lista que
+está enteramente en tu mano.
+
+</QuickAction>
+
+## Y si te queda una segunda
+
+<QuickAction label="Acción rápida 2">
+
+Busca los **dos o tres directorios de tu sector** —el colegio profesional, el
+agregador de reservas, el listado sectorial de tu ciudad— y comprueba si estás,
+y si lo que dicen de ti sigue siendo cierto. En categorías pequeñas o pueblos,
+esos listados son una parte desproporcionada de lo que la IA tiene para leer:
+si no estás, sencillamente no hay material del que salir.
+
+</QuickAction>
+
+## El techo, dicho antes de que te lo venda alguien
+
+<Verdict title="Nadie puede garantizarte una recomendación" badge="Método">
+
+**OpenAI no ha publicado cómo elige los negocios locales que recomienda.**
+Nadie de fuera lo sabe, y quien afirme que sí lo sabe está describiendo una
+suposición. Súmale que las respuestas varían entre ejecuciones y que en una
+recomendación caben dos o tres nombres, no veinte.
+
+Lo que sí se puede hacer es aumentar la cantidad, la frescura y la coherencia
+de lo que hay publicado sobre ti, y después **medir si algo se mueve**. Eso es
+trabajo de posicionamiento; lo otro es una promesa.
+
+</Verdict>
+
+Y hay una parte que no controlas y conviene asumir sin dramatismo: **lo que
+dicen de ti lo escriben otros**. Puedes influir en que haya más material y en
+que sea reciente y coherente; no puedes redactarlo. La palanca real es dar
+motivos para que lo que se escriba sea bueno — que es, con otro nombre, el
+negocio de siempre.
+
+## Cómo saber si está funcionando
+
+Antes de cambiar nada, mira de dónde partes; si no, dentro de tres meses no
+sabrás si mejoraste o si el modelo tuvo un buen día. Lo primero es comprobar
+qué contesta hoy la IA cuando le preguntan por tu categoría y tu zona, con las
+palabras de tu cliente y no con las tuyas — eso lo cubrimos paso a paso en
+<a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo saber si tu marca aparece en ChatGPT, Gemini y Claude</a>.
+
+Dos avisos para no engañarte con lo que veas:
+
+- **Una consulta no es una medición.** Pregunta lo mismo varias veces y en
+  varios motores antes de sacar conclusiones; el resto de la metodología está
+  en <a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>.
+- **El tráfico llega tarde y llega incompleto.** La mayoría de estas
+  recomendaciones se leen sin que nadie haga clic, así que tu analítica verá
+  una fracción pequeña y con retraso.
+
+El resto de guías de ejecución están en el <a href="/blog/playbooks">pilar de playbooks</a>.
+
+**Fuentes y fechas.** Los porcentajes de uso de IA para descubrir negocios
+locales y de verificación posterior proceden de la *Local Consumer Review
+Survey 2026* de BrightLocal; el reparto de fuentes citadas en resultados
+locales, de análisis de terceros publicados en 2026. Todo consultado el **15 de
+agosto de 2026**, y ninguna cifra es medición propia. Las integraciones de
+reserva dentro de ChatGPT (Yelp, OpenTable, Resy) se anunciaron en agosto de
+2026 y de momento afectan sobre todo a restauración.
+
+<ArticleCta
+  title="Empieza por saber qué contesta hoy la IA sobre tu categoría"
+  text="Genscore lanza las preguntas que hacen tus clientes en ChatGPT, Gemini y Claude, y te dice si te nombran a ti o a tu competencia, en qué puesto y con qué fuente detrás. Escaneo gratuito, sin tarjeta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

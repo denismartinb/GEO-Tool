@@ -133,9 +133,9 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Mentio; TrendSights descartada) | 3 — Herramientas | `comparativas` | ✅ Publicado | #(este) |
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | ✅ Publicado | #(este) |
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | ✅ Publicado | #(este) |
-| S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
+| S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🟡 En curso | #400 |
 | S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | ✅ Publicado | #(este) |
-| S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
+| S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | ✅ Publicado | #(este) |
 | S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
 
 **S1 — hecho (2026-08-10).** Título corregido respecto al que proponía
@@ -336,6 +336,39 @@ cobertura del anuncio, así que nada está verificado contra fuente primaria —
 se triangularon fuentes secundarias coincidentes el 2026-08-14 y el artículo
 publica esa fecha. Misma limitación declarada que con los precios de Otterly.
 Detalle: log §85.
+
+**S9 — hecho (2026-08-15).** `/blog/como-hacer-que-chatgpt-recomiende-tu-negocio`,
+cluster `playbooks`. Cubre el cluster de keywords nº 4 y abre la cola sectorial
+local.
+
+**El ángulo que la separa de las veinte guías que ya ocupan esta keyword:** en
+resultados locales en general la web del propio negocio es el 58 % de las
+fuentes citadas y los directorios el 15 %, pero **en consultas subjetivas —«el
+mejor», «recomiéndame», que es como se pregunta antes de gastar— los
+directorios saltan al 46 %**. O sea que las consultas que más importan a una
+pyme son justo aquellas en las que su web menos pesa. De ahí el orden de las
+cuatro palancas: fichas, reseñas y coherencia de datos antes que la página
+propia, al revés del instinto de cualquiera que venga del SEO.
+
+**El riesgo aquí no era publicar de más sino prometer**, porque esa keyword la
+ocupan páginas que garantizan resultados. `pyme-local.test.ts` vigila **lo que
+el artículo se niega a decir**: que OpenAI no ha publicado cómo elige los
+negocios locales, que nadie puede garantizar una recomendación, que no hay
+dónde comprar el sitio, y un detector del vocabulario de promesa. Primera vez
+que un test de contenido persigue una ausencia.
+
+**Y lo que la figura no hace:** de la columna subjetiva sólo se conoce el peso
+de los directorios, así que las otras dos celdas van con guion en vez de
+repartir el 54 % restante para que la tabla quede simétrica. Con test.
+
+Todas las cifras son de BrightLocal (*Local Consumer Review Survey 2026*),
+atribuidas una a una, consultadas el 2026-08-15 y con «ninguna cifra es
+medición propia» exigido por test. Detalle: log §86.
+
+**Corrección de ledger, de camino:** S7 figuraba 🔲 Pendiente y en realidad
+tiene **PR #400 abierto** desde el 2026-08-14. Pasa a 🟡 En curso. Mismo fallo
+que T16 corrigió en la capa A — un ledger que dice «pendiente» de algo que ya
+tiene PR hace que la siguiente sesión lo reescriba.
 
 ---
 
