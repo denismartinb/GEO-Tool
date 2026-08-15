@@ -246,15 +246,22 @@ pieza sigue siendo un PR con brief de `seo-geo-research`, redacción de
 | C4 | ✅ **Hecho (2026-08-12)** — pilar de 6 a 8 herramientas. Entran CreceRank (competencia directa en castellano, obligó a corregir un "solo Genscore" que había dejado de ser cierto) y Mentio (sin cifra de precio: las fuentes lo confunden con GetMentioned). **TrendSights descartada**: es monitorización de medios, no GEO. Detalle: `docs/content-calendar.md`, log §68 | 3 | C/comparativas |
 | C5 | ✅ **Hecho (2026-08-13)** — `/blog/que-es-una-auditoria-geo`. Publica las seis dimensiones de `page-checks.ts` con sus umbrales exactos, sin el reparto de puntos (revisión del fundador: es metodología, no buena práctica), un checklist de 13 puntos ejecutable a mano sobre el código fuente, y declara dónde acaba una auditoría técnica. Detalle: `docs/content-calendar.md`, log §69 | 5 | B/playbooks |
 | C6 | ✅ **Hecho (2026-08-13)** — `/blog/metricas-geo-que-medir`. Se organiza alrededor del denominador (la unidad es la respuesta, no el prompt) y publica la tabla de ADR 0026: ocho entidades que aparecen siempre segundas, ordenadas de 5,50 a 8,65 por una "posición media" que promedia las no-menciones. Con test que ata las constantes publicadas al código (`metricas-geo.test.ts`). Arrastra el refresco del pilar `que-es-el-geo-score`, que seguía en los pesos de GEO Score v2. Detalle: `docs/content-calendar.md`, log §73 y §74 | 6 | B/medicion |
-| C7 | "Cómo aparecer en Perplexity" | 7 | B/playbooks |
+| C7 | ✅ **Hecho (2026-08-15)** — `/blog/como-aparecer-en-perplexity`, **sin promesa de fecha**. El encargo original pedía anunciar Perplexity "próximamente disponible" en Genscore; no lo está ni tiene fecha (`docs/launch-plan.md` Fase 8), así que se habría publicado el mismo reclamo falso que PRICING-TRUTH-1 retiró del producto. Investigado con un Task Intake propio (agente `Explore`, solo lectura) antes de escribir una sola línea; el artículo trata Perplexity como tema de mercado, con un `Verdict` explícito de "fuera del alcance de Genscore hoy". Detalle: `docs/content-calendar.md`, log §85 | 7 | B/playbooks |
 | C8 | ✅ **Hecho (2026-08-14)** — `/blog/como-medir-trafico-chatgpt-ga4`. Cierra la capa de medición. El eje no es "dónde está el canal nuevo de GA4" (eso lo cuentan veinte guías) sino que **ese canal se mueve sin que se mueva el tráfico**: sólo ve las visitas que traen referente y esa proporción cambia sola. Con las tres ausencias declaradas —Perplexity en Referencia, AI Overviews en orgánico, lista de asistentes no pública— y el techo dicho en voz alta: GA4 cuenta clics, no menciones. Test que extrae del artículo la expresión regular publicada y comprueba que compila y captura lo que el texto promete. Detalle: `docs/content-calendar.md`, log §85 | 8 | B/medicion |
-| C9 | "Cómo hacer que ChatGPT recomiende tu negocio" (pyme; abre la cola sectorial local) | 4 | B/playbooks |
-| C10 | Glosario: +5 términos de la capa de medición ("share of voice en IA" ya existe; añadir p. ej. "auditoría GEO", "AI Mode", "answer engine", "cita de fuente", "brand monitoring en IA") | 6/9 | D/glosario |
+| C9 | ✅ **Hecho (2026-08-15)** — `/blog/como-hacer-que-chatgpt-recomiende-tu-negocio` (pyme; abre la cola sectorial local). El eje: una pregunta local ("¿qué dentista en Chamberí atiende urgencias el domingo?") solo admite dos o tres respuestas, no el mercado entero — cuatro palancas reales (datos consistentes, reseñas recientes, contenido específico, presencia selectiva en directorios) con `Checklist tone="evitar"` explícito contra comprar reseñas. Detalle: `docs/content-calendar.md` | 4 | B/playbooks |
+| C10 | ✅ **Hecho (2026-08-15)** — 5 términos nuevos en `/glosario`, capa de medición: tasa de mención, prominencia, mención verificada, variabilidad de las respuestas de IA, LLMO. Cada uno cierra un error de cálculo concreto que C6 ya nombraba en prosa (promediar posición sobre no-menciones, dar por buena una mención sin verificarla contra el texto real) sin tener su propia entrada canónica. Detalle: `docs/content-calendar.md` | 6/9 | D/glosario |
 
 Las W4-W6 pendientes del calendario actual encajan (W4≈C6, W5 y W6 siguen
 valiendo) — se reordenan, no se tiran. Los 3 posts con enlazado interno
 deficiente (T14) se arreglan como los "refrescos" de la cadencia semanal.
 Cadencia: la ya aprobada (§5 de `content-strategy.md`), sin cambios.
+
+**✅ FASE C CERRADA (2026-08-15).** Las 10 piezas priorizadas (C1-C10) están
+publicadas en `main`. Lo que queda del plan SEO-POS-1 es Fase P (free
+checker, sin aprobar, requiere su propio Task Intake), Fase E (entidad —
+ver abajo, en curso) y Fase A (autoridad/off-site — Reddit, YouTube,
+directorios, EUIPO), que es trabajo del fundador con material que los
+agentes preparan.
 
 ### Fase E — Entidad: ganar el nombre "GenScore" (aprobada 2026-08-13)
 

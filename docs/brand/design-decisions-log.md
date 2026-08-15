@@ -8812,7 +8812,7 @@ puede pasar en local sobre un fichero recién creado y fallar en cuanto se hace
 `git add`. Es aceptable —nada llega a un PR sin versionar— pero conviene
 saberlo antes de perseguir un falso verde.
 
-## 91. El único módulo cuyo fallo no se puede deshacer ya tiene tests (PRELAUNCH-HARDENING-1 Fase Q2, 2026-08-15)
+## 93. El único módulo cuyo fallo no se puede deshacer ya tiene tests (PRELAUNCH-HARDENING-1 Fase Q2, 2026-08-15)
 
 **Qué se decidió.** `lib/email/transactional.ts` —765 líneas, trece funciones de
 envío, **cero tests**— pasa a tener 19. De 2.443 a 2.462.
@@ -8940,7 +8940,7 @@ afirmaría que una constante es esa constante.
 
 **Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q4);
 `.claude/rules/supabase.md` («no service-role shortcuts en flujos de usuario»);
-§70 (por qué `--untracked`); §91 (Q2).
+§70 (por qué `--untracked`); §93 (Q2).
 
 ---
 
