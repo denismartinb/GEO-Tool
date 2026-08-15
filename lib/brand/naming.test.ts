@@ -111,9 +111,25 @@ describe("una sola grafía de marca y métrica en copy de usuario", () => {
    * **espacio** inyectado en medio de un símbolo, y el espacio sólo puede
    * venir de `GEO Score`. Un guardián con falsos positivos se acaba
    * desactivando, que es la forma más cara de no tener guardián.
+   *
+   * **Segundo falso positivo, 2026-08-15 (E4):** el plural en prosa. «tres
+   * URLs, no tres GEO Scores» es castellano correcto y el barrido lo leía
+   * como un símbolo partido, porque la `s` es una letra pegada. El `git grep`
+   * queda igual de amplio —POSIX ERE no tiene lookahead— y la excepción se
+   * aplica en JS sobre cada línea. Es una exención de una letra concreta en
+   * una posición concreta: `GEO Scoresx` sigue saltando.
+   *
+   * **Por qué no lo cogió el local:** `git grep` sólo ve ficheros versionados
+   * (ver `gitGrep`), y la línea culpable estaba en un fichero recién creado y
+   * sin `git add`. La suite pasó en verde, se hizo `git add -A`, y el commit
+   * salió con el fallo dentro. La lección no es del guardián sino del orden:
+   * **`pnpm test` después de `git add`, no antes.**
    */
   it("ningún identificador quedó partido por un renombrado sin delimitadores", () => {
-    const hits = gitGrep("[A-Za-z_]GEO Score|GEO Score[A-Za-z_]");
+    const PLURAL_IN_PROSE = /GEO Scores(?![A-Za-z_])/g;
+    const hits = gitGrep("[A-Za-z_]GEO Score|GEO Score[A-Za-z_]").filter((line) =>
+      /[A-Za-z_]GEO Score|GEO Score[A-Za-z_]/.test(line.replace(PLURAL_IN_PROSE, "GEO Score"))
+    );
     expect(
       hits,
       "Una grafía nueva quedó pegada a otro token, señal de un reemplazo sin `\\b` " +

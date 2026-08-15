@@ -55,11 +55,19 @@ export default async function GlosarioTerminoPage({ params }: { params: Promise<
           { name: entry.term, url: `${SITE_URL}/glosario/${entry.slug}` }
         ]}
       />
+      {/*
+        SEO-POS-1 Fase E, E4: un término explicado en varias URLs emite el nodo
+        compartido —mismo `@id`, `url` del documento de referencia, el resto
+        como `sameAs`— en vez de una definición suelta más. Sólo `geo-score` lo
+        tiene hoy; los demás viven en una sola URL y no desambiguan nada.
+      */}
       <DefinedTermSchema
         term={entry.term}
         description={entry.definition}
-        url={`${SITE_URL}/glosario/${entry.slug}`}
+        url={entry.canonicalNode?.url ?? `${SITE_URL}/glosario/${entry.slug}`}
         inDefinedTermSetUrl={`${SITE_URL}/glosario`}
+        id={entry.canonicalNode?.termId}
+        sameAs={entry.canonicalNode?.sameAs}
       />
       <p className="legal-updated">
         <Link href="/glosario">Glosario GEO</Link>

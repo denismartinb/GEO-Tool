@@ -9409,6 +9409,151 @@ subir (no sólo razonados):
 
 ---
 
+## 100. Tres URLs para el mismo GEO Score, y una home que no decía qué producto es (SEO-POS-1 Fase E, E3 + E4, 2026-08-15)
+
+Cierra la Fase E. Las dos filas que quedaban del plan eran distintas de las dos
+primeras: E1 (§91) y E2 (§94) escribían cosas —una grafía, una página—, y estas
+dos sólo **declaran** lo que ya existía. Ninguna de las dos añade una línea de
+copy visible salvo un bloque de enlaces, y aun así son las que más directamente
+atacan el problema que abrió la fase: que "GenScore" y "GEO Score" resuelvan a
+una entidad nuestra y no a un parecido.
+
+### E3 — el producto estaba declarado en la página con menos autoridad del sitio
+
+`/que-es-genscore` emitía un `SoftwareApplication` completo. La home no: sólo
+heredaba el `Organization` del layout raíz, o sea "existe una empresa llamada
+GenScore", sin decir en ningún formato legible por máquina **qué producto es**
+ni de qué categoría. Justo al revés de como se acumula la autoridad: la home es
+la que recibe los enlaces y las búsquedas de marca, y la página de entidad
+nació hace dos días.
+
+El arreglo obvio —copiar el bloque— era el equivocado, y por el motivo de
+siempre en esta zona: dos declaraciones a mano del mismo producto divergen al
+primer cambio de posicionamiento, y el síntoma sería el sitio describiéndose de
+dos formas distintas exactamente donde un motor lo lee para decidir qué somos.
+Así que el schema pasa a `components/seo/software-application-schema.tsx` y las
+dos páginas montan **el mismo componente**. Es el argumento de E2 (la
+definición en una constante) un nivel más arriba.
+
+Al moverlo salió un fallo que llevaba dentro desde E2 y que nadie había mirado:
+el `publisher` incrustaba su propio `{"@type":"Organization","name":"GenScore"}`.
+Eso es un **segundo** nodo llamado igual que el del layout, sin nada que los
+una — para un parser, dos entidades que casualmente comparten nombre. La página
+que existe para desambiguar la marca estaba fabricando una ambigüedad más, en
+formato legible por máquina. Ahora hay `@id` estables
+(`…/#organization`, `…/#software`) y `publisher` es una **referencia**, no una
+copia: montar el nodo en dos páginas crea dos menciones del mismo producto, no
+dos productos.
+
+### E4 — canonicalizar un concepto sin tirar dos URLs a la basura
+
+El sitio explica el GEO Score en tres sitios publicados: la metodología en
+`/docs`, la entrada del glosario y el artículo del blog. La tentación es
+fusionarlas o cruzarles un `rel=canonical`; las dos cosas serían tirar señal,
+porque sirven a intenciones distintas y las tres reciben tráfico. El problema
+real era más pequeño: **ninguna decía ser la de referencia**, y cada una
+definía el término con sus propias palabras.
+
+Se arregla con dos piezas y ninguna página nueva. Una cadena compartida
+(`GEO_SCORE_DEFINITION`), que ahora usan la entrada del glosario, la metadata
+de la metodología y su schema — antes eran tres redacciones parecidas. Y un
+`@id` común (`…/#geo-score`) que emiten el glosario y la metodología, con la
+`url` del documento de referencia y las otras dos como `sameAs`: un solo nodo
+con tres documentos en vez de tres conceptos que se parecen. Es el equivalente
+semántico de un canonical sin desindexar nada.
+
+**Canónica es la metodología, y no fue una elección de gusto:** ya lo era de
+hecho. Seis artículos y `/docs/informes/overview` mandan ahí al lector cuando
+quieren decir "el criterio completo está aquí", y es la única de las tres que
+se mantiene al día con el algoritmo real. Declarar canónica a otra habría
+contradicho el enlazado interno, que es la señal más fuerte que tenemos.
+
+Lo que faltaba era la dirección contraria: la metodología no devolvía a
+ninguna de las dos. Ahora cierra con un bloque que dice explícitamente cuál
+manda si algo se contradice.
+
+De paso salió podredumbre: la `description` de esa página —su meta description,
+la del documento que esta fase declara canónico— prometía "los cuatro
+componentes, sus pesos". Son **cinco** desde GEO-SCORE-V4 (ADR 0033) y los
+pesos se retiraron de todas las superficies el 2026-08-13 (§75). Llevaba así
+diez días, apuntando a contenido que la propia página ya no tiene.
+
+### Por qué esto necesita tests y no basta con hacerlo bien
+
+El JSON-LD es el caso extremo del fallo sin síntoma que esta zona lleva todo el
+plan encontrando. Un `@id` mal escrito, un `publisher` colgando de un nodo
+inexistente, una cuarta página sobre el GEO Score publicada sin declararse
+parte del concepto: nada de eso rompe una página, ni sale en el piloto, ni lo
+nota un lector. Simplemente el motor lee dos entidades donde hay una — el
+problema que la fase entera venía a quitar, reintroducido en silencio.
+
+`lib/brand/entity-graph.test.ts` cubre las dos mitades, y las dos guardas se
+verificaron rompiéndolas a propósito antes de dar la fase por buena: reponer un
+`Organization` incrustado en el `publisher` la pone roja, y crear una página
+`/geo-score-nuevo` la pone roja nombrándola. El barrido de la cuarta URL busca
+por **ruta**, no por menciones: un artículo que hable del GEO Score no compite
+por el término, una URL dedicada sí.
+
+### El guardián de E1 saltó, y tenía media razón
+
+CI tumbó el primer commit: `naming.test.ts` marcó como identificador partido
+el título de un test de esta misma fase, *"tres URLs, no tres GEO Scores"*. Es
+castellano correcto —el plural de la métrica— y el barrido lo leía como daño
+porque la `s` es una letra pegada a `GEO Score`. Segundo falso positivo del
+mismo guardián en tres días, después de `QueEsGenScorePage` (§94), y la regla
+sigue siendo la de entonces: **un guardián con falsos positivos se acaba
+desactivando**, así que se afina en vez de reescribir la prosa que lo
+molestaba. El `git grep` queda igual de amplio —POSIX ERE no tiene lookahead—
+y la exención se aplica en JS: una `s` y sólo una, seguida de algo que no sea
+letra. Verificado con tres sondas: `availableGEO ScoreComponents` sigue rojo,
+`GEO Scoresx` sigue rojo, `tres GEO Scores.` pasa.
+
+Lo interesante es **por qué no lo cogió el local**, porque el propio guardián lo
+tenía documentado desde E1: `git grep` sólo ve ficheros versionados, y la línea
+culpable estaba en un fichero recién creado sin `git add`. La suite pasó verde,
+después se hizo `git add -A`, y el commit salió con el fallo dentro. No hace
+falta arreglar nada de eso — hace falta invertir el orden: **`pnpm test`
+después de `git add`, no antes**, siempre que la suite tenga guardas que se
+apoyen en el índice de git.
+
+### Y al abrir las capturas: `/docs` llevaba dos meses sin enlaces visibles
+
+El piloto dio `PILOT PASS` en las 65 pantallas × 3 anchuras, dos veces. Abrir
+las capturas de las pantallas que toca el diff —`docs-metodologia-geo-score` en
+375, 768 y 1280, `docs-index`, `glosario-geo-score`, `blog-que-es-el-geo-score`
+y `landing`— enseñó que el bloque de enlaces recién añadido renderizaba en gris
+y sin subrayado, exactamente igual que la prosa de al lado.
+
+No era del bloque. `globals.css` tiene `a { color: inherit; text-decoration:
+none }` como base, y `.legal-body a` y `.blog-body a` lo compensan cada uno en
+lo suyo — **`.docs-content` nunca tuvo regla de enlace**. Así que desde
+GROWTH-2, *todos* los enlaces de la documentación son texto muerto a la vista:
+"Metodología completa en GEO Score" y "ver Planes y límites" en
+`/docs/informes/overview` llevaban dos meses siendo enlaces que nadie podía
+saber que lo eran. La cuarta vez esta semana que un fallo visual real convive
+con un verde legítimo (§55, §62, §96, ésta), y la primera en que el fallo era
+**más viejo que el PR que lo destapa**.
+
+Se arregla con la regla que faltaba, con el mismo token que las otras dos
+superficies y con `:not(.btn)` desde el principio, que es la lección de §54/§55:
+una regla de enlace por ancestro le gana en especificidad a la clase de un
+botón. Hoy no hay botones en `/docs`; se escribe así para cubrir el que
+aparezca.
+
+Es además el arreglo que la propia E4 necesitaba: la fase se apoya en enlazado
+interno explícito entre las tres URLs, y un enlace que no parece un enlace no
+enlaza a nadie.
+
+**Queda declarado como pendiente, no arreglado:** el layout raíz sigue con
+`title: "GenScore"` y `description: "Espacio de visibilidad de marca en motores
+de IA"`, que es una cuarta redacción de lo mismo y actúa de respaldo para
+cualquier página sin metadata propia. La home ya no la usa —tiene la suya desde
+T1— así que el impacto es menor que el que se ha arreglado aquí, pero tocarla
+cambia el respaldo de todo el sitio a la vez y merece su propia pasada.
+
+---
+
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
