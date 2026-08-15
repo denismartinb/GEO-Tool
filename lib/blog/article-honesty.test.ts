@@ -21,6 +21,13 @@ import { GLOSSARY_TERMS } from "../glosario/terms";
  * `article-recipes.test.ts`.
  */
 const ALLOWED_TO_MENTION_PERPLEXITY = new Set<string>([
+  // SEO-POS-1 Fase C, S7 (2026-08-14): el artículo es justo "cómo aparecer en
+  // Perplexity" como tema de mercado — mencionar el motor es el propósito de
+  // la pieza, no un desliz. Declara explícitamente, con Verdict, que Genscore
+  // no lo mide hoy y sin comprometer fecha (Task Intake del fundador: "S7 sin
+  // la promesa" — se descartó anunciar una fecha de soporte sin decisión de
+  // producto real detrás).
+  "como-aparecer-en-perplexity",
   // S8 (2026-08-14). El artículo va sobre cómo clasifica GA4 el tráfico de
   // asistentes, y una de sus tres conclusiones ES que el canal "Asistente de
   // IA" **no incluye Perplexity**: sus visitas se quedan en Referencia. Ahí

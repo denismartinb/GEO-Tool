@@ -43,6 +43,13 @@ jobs:
     # esa fecha—, así que un tope pegado al tiempo real de la pasada estaba
     # garantizado que se cruzara. No se sube "por si acaso": se sube porque el
     # margen medido era de 56 segundos (log §65).
+    #
+    # PR #391 (NOT-FOUND-ROCKET-1) chocó con el mismo síntoma un día antes,
+    # de forma independiente: 20 min contra 19.3 min de tests, mismo efecto
+    # (verdict impreso en el log, job cancelado antes de publicar). Confirma
+    # que el tope pegado al tiempo real de la pasada es una fuente de fallos
+    # recurrente, no un caso aislado — motivo de más para que 35 no sea el
+    # último ajuste que haga falta.
     timeout-minutes: 35
 
     steps:

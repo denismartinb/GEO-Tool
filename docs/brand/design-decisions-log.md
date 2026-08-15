@@ -8342,7 +8342,254 @@ recuerda que existe hasta que alguien la mira.
 
 ---
 
-## 86. Para una pyme, el trabajo no está en su web (SEO-POS-1, S9, 2026-08-15)
+## 86. La única pantalla de Genscore que no parecía de Genscore (NOT-FOUND-ROCKET-1, 2026-08-12)
+
+**Qué pasaba.** La 404 pública (`app/not-found.tsx`, SEO-POS-1 T7) era correcta
+y fea: un `<h1>` y tres listas de enlaces heredadas de `BlogPageShell`, sin
+jerarquía, sin aire y con los títulos de los clusters pegados a sus
+descripciones. Cumplía su trabajo técnico —devolvía 404, llevaba `noindex,
+follow`, enlazaba a lo publicado— y ese es justo el motivo por el que llevaba
+meses así: nada estaba roto. Lo reportó el fundador desde un móvil.
+
+**Qué se decidió.** Se plantearon tres maquetas completas y navegables (no
+bocetos), las tres en `docs/design-reference/not-found-rocket-1/concepts.html`:
+«Fuera de trayectoria» (el cohete del primer escaneo, oscura), «Sin resultados
+que citar» (la URL fallida como consulta y la navegación como lista de fuentes
+citables) y «Falta un segmento» (el anillo del logo con un segmento apagado,
+tipográfica). El fundador eligió la primera. Las otras dos se conservan en el
+mismo fichero: son el registro de qué se consideró, igual que un ADR superado
+no se borra.
+
+**La cabecera es blanca.** Instrucción explícita del fundador: la cabecera del
+sitio no cambia por estar en un 404. Eso obliga a un corte duro entre la nav
+blanca y el cuerpo oscuro, y obliga a algo menos evidente — `.lp-nav-wrap` es
+translúcida con `backdrop-filter`, así que sobre un cuerpo oscuro y con scroll
+dejaba ver el oscuro a través. En esta ruta, y sólo en esta, es opaca.
+
+**Por qué la escena no está centrada bajo el texto.** La primera versión puso
+el copy centrado sobre una escena a sangre y el cohete le pasaba por detrás del
+titular. No es un problema de capas: en una pantalla panorámica quedan ~170 px
+libres por encima del bloque de texto, y no caben un titular y una nave en el
+mismo eje. La composición final reparte por ejes — misión a la derecha y texto
+a la izquierda en horizontal; misión arriba y texto abajo en vertical, donde
+además se encoge, sube y pierde los dos tramos bajos de la estela, que cruzaban
+el titular. La escena sigue ocupando toda la pantalla, que era la petición.
+
+**Lo que se descubrió por el camino, y que no era el encargo.**
+`app/not-found.tsx` es el `not-found` **raíz** y no había ningún otro en el
+repo, así que recogía también los `notFound()` de la consola:
+`lib/project-workspace.ts` (que convierte las seis pantallas de un proyecto
+inexistente en un 404), la página de proyecto y la de un run. Ya antes de esta
+fase eso le enseñaba la cabecera de marketing a alguien con la sesión abierta;
+con el cohete a pantalla completa y un «Prueba gratis» pasaba de raro a
+absurdo. De ahí `app/dashboard/not-found.tsx`, deliberadamente sobrio y
+renderizado dentro del layout de la consola, con el menú lateral intacto.
+
+**Lo que no se hizo, y por qué.** No se tocó `BlogPageShell`. Encierra su
+contenido en `.lp-inner` (max-width 1180 px), que es exactamente lo que impide
+una escena a sangre, y lo comparten blog, legales y pricing: ampliarlo por una
+pantalla habría puesto tres superficies en riesgo. La 404 lleva su propio
+shell, siguiendo el precedente ya escrito en el repo (`blog-page-shell.tsx` es
+a su vez copia deliberada de `legal-page-shell.tsx`). **La deuda, declarada:
+son tres copias de la misma barra de navegación. Si aparece una cuarta, toca
+extraerla.** El nuevo shell se registró en `marketing-content-links.test.ts`,
+que es lo que impide que una superficie con pie público se olvide de las cuatro
+capas de contenido.
+
+**El aviso de los dos cohetes.** A petición del fundador, `.claude/rules/
+mission-rocket.md` cubre a la vez `components/scan-mission-rocket.tsx`,
+`lib/scan/mission-beats.ts` y `components/not-found-mission.tsx`: toques el que
+toques, la regla se inyecta sola y recuerda que hay otro. No comparten código a
+propósito —el del escaneo está atado al estado de un run real y el de la 404 es
+estático y sin datos—, y esa separación es exactamente lo que hace necesario el
+aviso. El invariante duro: en el escaneo el movimiento codifica progreso real;
+en la 404 no puede haber ni barra, ni anillo, ni contador, porque no habría
+nada verdadero que contar.
+
+**El pie era ilegible y lo vio el fundador antes que nadie.** `.nf-page`
+pintaba de oscuro el contenedor entero para que el sobre-scroll no enseñara
+blanco, y el pie de marketing vive dentro de ese contenedor sin fondo propio:
+quedaba con su texto en tinta sobre fondo oscuro. Ahora sólo la ventana de la
+misión es oscura y la página sigue siendo blanca, que es lo que deja el pie
+exactamente igual que en el resto del sitio (fundador, 2026-08-12).
+
+**El harness no podía pilotar una 404, y eso no era culpa de la pantalla.**
+`visitAsUser` marca como fallo cualquier respuesta ≥400 de primera parte, así
+que el piloto reportaba `first-party requests failed` por el único
+comportamiento que una página de error está obligada a tener: responder 404.
+Se añadió `VisitOptions.expectDocumentStatus`, deliberadamente estrecho —exime
+**una** respuesta, la del documento de la ruta visitada, y sólo con el código
+declarado. Un 500 en esa ruta, o un 404 de un subrecurso (un CSS que no carga,
+una imagen rota) siguen tumbando la pasada. Tampoco debilita la garantía de que
+la ruta responde 404: eso lo asevera su propio test con `page.request.get`,
+aparte. Sin este cambio ninguna página de error del producto podría pilotarse
+jamás, hoy ni en el futuro.
+
+**Dos metas `robots`, y las dos legítimas.** La primera pasada del piloto falló
+en las tres anchuras por una aserción propia: `meta[name="robots"]` resuelve a
+**dos** elementos en esta página. Next añade la suya (`noindex`) a toda página
+`not-found` y `app/not-found.tsx` declara la nuestra (`noindex, follow`) desde
+SEO-POS-1 (T7). Es preexistente, no lo introdujo esta fase, y no se corrigió
+retirando ninguna: no se contradicen —ninguna dice `nofollow`, así que el
+resultado efectivo es `noindex, follow`—, quitar la nuestra sería un cambio de
+SEO ajeno a este PR y la de Next no está en nuestra mano. Lo que sí cambió es
+la aserción: en vez de mirar la primera meta, comprueba que **ninguna** de las
+que haya deje la página indexable. Con `.first()` el test habría pasado aunque
+una segunda dijera `index`.
+
+**Y una lección de orden, no de contenido.** `public-pages.spec.ts` corre en
+modo `serial`, así que aquel fallo de cabeceras se llevó por delante el test
+que pinta la pantalla: la 404 no apareció en la tabla del piloto **en ninguna
+anchura**. Un `PILOT FAIL` por una aserción trivial dejó la pantalla del PR sin
+mirar. El test que produce las capturas va ahora primero, para que un fallo de
+detalle no borre la evidencia visual.
+
+**Dos mejoras plegadas después de mirar las capturas, no de leer la tabla.**
+El piloto dio `PILOT PASS` con la 404 en verde en las tres anchuras, y aun así
+la pantalla tenía dos defectos que ninguna checklist detecta porque ninguna
+mide "se entiende": en horizontal la estela sólida terminaba *dentro* del
+lienzo y su extremo se veía flotando a media pantalla, como si el rastro
+empezara de la nada; en vertical, ocultar los dos tramos de abajo dejaba un
+fragmento corto y desconectado bajo el cohete. Ahora el primer tramo arranca
+fuera del lienzo (`y=796` con el lienzo a 760) y en vertical sólo desaparece el
+de más abajo. Es el motivo por el que un PASS no cierra la fase: la tabla dice
+que la página cargó, no que se lea.
+
+**El 404 de la consola, segunda versión: sobrio no es descuidado.** La primera
+reutilizaba `EmptyState` —borde discontinuo— con un botón suelto debajo y el
+resto de la pantalla en blanco. El fundador la probó y fue directo: «parece un
+botón mal maquetado» (2026-08-13). Tenía razón, y el fallo era de lenguaje: el
+borde discontinuo de `EmptyState` significa *contenido que todavía no está*
+(«aún no has escaneado», «no hay competidores»), y aquí no falta contenido —
+la ruta no existe. Ahora es un bloque centrado en el área de contenido, con las
+piezas de la propia consola (`.btn`, `Icon`, los tokens de tinta) y **sin
+caja**: en una pantalla por lo demás vacía, una caja alrededor de un mensaje
+corto es justamente lo que lo hacía parecer un widget a medio maquetar. De
+paso se corrigió una incoherencia entre etiqueta y destino: el botón decía
+«Volver a mis dominios» y apuntaba a `/dashboard`, que redirige al proyecto más
+reciente, no a la lista. Ahora son dos salidas y cada una dice a dónde va.
+
+**El 404 de la consola pasa a estar pilotado.** Se dijo que quedaba para una
+fase futura, y duró lo que tardó el fundador en encontrar el defecto que el
+piloto no podía ver. El journey vive en `core-flow.spec.ts` y no en
+`public-pages.spec.ts` porque necesita sesión: sin ella `requireUser()` redirige
+a /login y no se ve nada. Visita un id de proyecto inexistente y comprueba las
+tres cosas que importan — que sale la pantalla sobria, que **no** sale la de
+marketing (`.nf-scene` a cero, ningún «Prueba gratis») y que el menú lateral
+sigue alrededor para poder salir. Sigue siendo de lectura pura: navega a una
+URL y mira. Lo que un humano tuvo que cazar una vez, lo mira una máquina a
+partir de ahora.
+
+**El piloto pasó y aun así no publicó nada.** La pasada de `f1d5451` corrió los
+172 tests, imprimió `Verdict: PILOT PASS` y el job murió en el minuto 20:
+`timeout-minutes: 20` en `ux-pilot.yml` contra 19,3 min de tests. El check quedó
+en `cancelled`, sin comentario y sin evidencia subida — y a efectos del Human
+Gate **un piloto que no publica es un piloto que no ha corrido**, aunque el
+veredicto exista dentro del log. El margen llevaba tiempo siendo mínimo y los
+tres tests nuevos de esta fase (×3 anchuras, ~55 s) lo agotaron. Se sube a 30 en
+el mismo PR que lo agotó, en vez de dejar la trampa armada para el siguiente que
+añada un journey. Lo que **no** se arregló, y queda anotado: nada avisa cuando
+la pasada se acerca al tope; el aviso es que un día no publique.
+
+**«Ver mis dominios» apuntaba a la pantalla equivocada, y lo cazó el fundador
+probando el preview, no el piloto.** El botón llevaba a `/dashboard/projects`
+—la pantalla de archivar/restaurar de antes de DOMAINS-REDESIGN-1— en vez de a
+`/dashboard/domains`, la puerta de entrada real de la consola desde esa fase.
+El test del piloto sólo comprobaba que el primer enlace del bloque fuera
+visible, nunca a dónde apuntaba, así que una etiqueta correcta con un destino
+equivocado le pasó por delante sin que nada lo marcara. Corregido el enlace y
+reforzado el test: ahora asevera el `href` de «Ver mis dominios» por su nombre
+accesible, no por posición. La lección, otra vez: un checklist que sólo mira
+"¿está ahí?" no ve "¿lleva a donde dice?".
+
+**Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
+testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
+unitario y no puede tenerlo hoy**. *(La segunda mitad de esa frase queda
+`superseded por §87`, del mismo día: sí se puede, con `renderToStaticMarkup` y
+sin testing-library — `react-dom` ya estaba. Lo que sigue siendo cierto es que
+esta pantalla en concreto no lo tiene.)* La verificación real es el `ux-pilot`
+(`tests/pilot/journeys/public-pages.spec.ts`), que comprueba el 404 real, el
+`noindex`, y que lo que se pinta es la escena y no un placeholder — anclado a
+`.nf-scene` y al titular, no a "la página cargó". El 404 de dentro de la consola sí acabó
+cubierto, en `core-flow.spec.ts` — ver arriba.
+
+---
+
+## 87. Auditoría web deja de ser una pantalla que nadie puede demostrar (PRELAUNCH-HARDENING-1, 2026-08-14)
+
+**Qué se decidió.** Los seis módulos de
+`web-audit/_components/` pasan a tener tests de render de verdad: **46 casos
+nuevos**, de 2.278 a 2.324. Son los primeros tests de render del repositorio.
+
+**Por qué justo aquí.** §83 movió catorce componentes de esa pantalla y los
+2.278 tests pasaron en verde **sin que ni uno mirase el marcado**, porque no
+existía ninguno que lo hiciera. Lo único que demostró la equivalencia fue una
+comparación de líneas hecha a mano, que no se ejecuta en CI y no protege al
+cambio siguiente. Una pantalla que sólo se puede verificar mirando capturas es
+una pantalla que se rompe entre pasada y pasada del piloto.
+
+### Cero dependencias nuevas, y por qué era posible
+
+`renderToStaticMarkup` viene con `react-dom`, que ya estaba, y no toca el DOM —
+así que `environment: "node"` sigue valiendo y no hacen falta jsdom ni una
+biblioteca de testing. Lo único que cambia en la configuración es que
+`vitest.config.ts` ahora incluye `**/*.test.tsx`.
+
+Que esto sea posible es **consecuencia directa de §83**: los componentes son
+puros y síncronos precisamente porque se extrajeron. Dentro de un `page.tsx`
+asíncrono de 1.933 líneas no había forma de llamarlos.
+
+### Qué aseguran y qué no
+
+Aseguran **contenido**: que el número que sale es el que entra, que el alcance
+se pluraliza, que un dato ausente se ve como ausente. **No aseguran aspecto** —
+eso sigue siendo del `ux-pilot`, y los dos juntos son la cobertura. Un test que
+fijara clases CSS convertiría cualquier retoque visual en un test rojo sin
+proteger nada.
+
+### Lo que cubren y no estaba cubierto
+
+- **El fallo de producción del 2026-07-12.** `page-checks.ts` avisa en un
+  comentario de que una fila anterior a WEB-AUDIT-R3 no tiene `indexability` y
+  de que leerla sin comprobar «took the whole page down». Ese aviso vivía en
+  prosa, que es el sitio exacto donde una advertencia no se ejecuta. Ahora hay
+  un test que renderiza esa fila antigua, y quitando la guarda se pone rojo.
+- **`TrendChart`, el componente que nadie ha visto nunca.** No aparece en
+  ninguna de las 22 capturas del piloto de la PR #404: el gráfico necesita
+  historial y la cuenta del piloto tiene una sola auditoría. Se movió de
+  fichero sin que lo mirara ni un test ni un ojo. Estos tests son lo único que
+  lo mira.
+- **«No lo hemos podido comprobar» ≠ «no existe»** (`describeSitemap`), que es
+  el invariante «ningún número de relleno» aplicado a una etiqueta.
+- **`LockedSubScoreTile`**: que un plan sin cobertura no se lea como «todavía
+  no auditado» — una afirmación falsa sobre la cuenta del cliente
+  (WEB-AUDIT-TECH-ALL-PLANS-1).
+
+### Los tests se probaron rotos antes de darlos por buenos
+
+Un test que no puede fallar no es cobertura, es decoración. Tres mutaciones
+deliberadas, cada una en rojo la que le tocaba: quitar la pluralización, quitar
+la guarda de `indexability`, y una aserción mía mal escrita (`min-width:0`
+contiene la subcadena `width:`) que el propio arnés destapó en la primera
+pasada.
+
+**Pendiente.** Los tests cubren los componentes, no `WebAuditPage` — que sigue
+con ~1.070 líneas de orquestación de datos sin cubrir. Partirlo era lo que
+quedaba de R7 y ahora tiene, por fin, algo debajo que lo sostenga.
+
+**Trazabilidad.** §83 (la mudanza que dejó el hueco al descubierto); el informe
+de Task Intake de R3 (2026-08-14), donde esto se recomendó en lugar de los
+tipos generados de Supabase; `.claude/rules/web-audit.md`. Y **§86**, que el
+mismo día afirmó que «el repo no tiene testing-library ni un solo `.test.tsx`,
+así que esta pantalla no tiene test unitario **y no puede tenerlo hoy**»: la
+segunda mitad de esa frase queda superseded aquí — sin testing-library también
+se puede, porque `renderToStaticMarkup` no la necesita. Las dos ramas se
+escribieron a la vez y se cruzaron al mergear; se deja anotado en ambas en vez
+de reescribir la de allí.
+
+---
+
+## 88. Para una pyme, el trabajo no está en su web (SEO-POS-1, S9, 2026-08-15)
 
 **Qué se publica.** `/blog/como-hacer-que-chatgpt-recomiende-tu-negocio`,
 cluster `playbooks`. Cubre el cluster de keywords nº 4 del plan (pyme/local) y
@@ -8387,6 +8634,19 @@ ausencia en vez de una presencia.
 cifra es medición propia» exigida por test. Misma limitación de siempre: el
 proxy de salida bloquea las fuentes primarias, así que se triangularon fuentes
 secundarias coincidentes y el artículo publica la fecha de consulta.
+
+**Y una lección sobre resolver conflictos en masa.** Al fusionar `main` (que
+para entonces traía S7, la 404 y los tests de render) los cuatro conflictos
+eran del mismo tipo trivial —dos ramas añadiendo una entrada a la misma lista—
+así que se resolvieron con un script que conservaba las dos mitades. En tres de
+los cuatro ficheros funcionó; en `lib/blog/posts.ts` **fusionó los dos objetos
+en uno**: las claves de S7 y las de S9 quedaron dentro del mismo `{}`, las
+segundas ganaron por duplicado y **el artículo de S7 desapareció del array sin
+que nada fallara al compilar**. Lo cogió `fixture-drift.test.ts`, que compara
+las listas del piloto contra `BLOG_POSTS` y vio un slug en el fixture que ya no
+existía en el producto. La regla: *un conflicto entre listas de objetos no se
+resuelve concatenando texto* — y si se hace, la red que lo caza es un test que
+contrasta dos fuentes que deberían decir lo mismo.
 
 **Contexto de proceso, no del contenido.** Al preparar esta pieza se descubrió
 que **S7 no estaba pendiente sino abierta**: el PR #400 («cómo aparecer en

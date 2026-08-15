@@ -1,18 +1,27 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { BlogPageShell } from "@/components/blog/blog-page-shell";
-import { BLOG_CLUSTERS } from "@/lib/blog/posts";
-import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
+import { NotFoundMission } from "@/components/not-found-mission";
 
 /**
- * SEO-POS-1 (T7). Hasta ahora el repo no tenía `not-found.tsx`, así que
- * cualquier URL inexistente —y `/blog/<cluster>` y `/glosario/<termino>`
- * llaman a `notFound()` de verdad— caía en la página por defecto de Next: sin
- * marca, sin navegación y sin un solo enlace de vuelta al sitio.
+ * NOT-FOUND-ROCKET-1. La 404 pública pasa a ser «Fuera de trayectoria»
+ * (`components/not-found-mission.tsx`, diseño en
+ * `docs/design-reference/not-found-rocket-1/`).
  *
- * `noindex` a propósito: un 404 ya devuelve el estado correcto, pero la
- * etiqueta evita que una variante enlazada desde fuera se quede rondando en el
- * índice.
+ * Antes, SEO-POS-1 (T7): hasta entonces el repo no tenía `not-found.tsx`, así
+ * que cualquier URL inexistente —y `/blog/<cluster>` y `/glosario/<termino>`
+ * llaman a `notFound()` de verdad— caía en la página por defecto de Next: sin
+ * marca, sin navegación y sin un solo enlace de vuelta al sitio. Eso quedó
+ * resuelto; lo que esta fase arregla es que la pantalla no parecía de
+ * Genscore.
+ *
+ * `noindex` a propósito, sin cambios: un 404 ya devuelve el estado correcto,
+ * pero la etiqueta evita que una variante enlazada desde fuera se quede
+ * rondando en el índice.
+ *
+ * Este fichero es el `not-found` **raíz**, así que también recogía los
+ * `notFound()` de la consola (`lib/project-workspace.ts`, las páginas de
+ * proyecto y de run). Enseñarle el cohete y un «Prueba gratis» a alguien que
+ * ya ha iniciado sesión no tiene sentido, así que la consola tiene el suyo en
+ * `app/dashboard/not-found.tsx`.
  */
 export const metadata: Metadata = {
   title: "Página no encontrada — Genscore",
@@ -20,38 +29,5 @@ export const metadata: Metadata = {
 };
 
 export default function NotFound() {
-  return (
-    <BlogPageShell>
-      <h1 className="lp-h2">Esta página no existe</h1>
-      <p className="lp-sub">
-        El enlace que has seguido apunta a una dirección que no está publicada, o
-        el contenido ha cambiado de sitio. Desde aquí puedes seguir a lo que sí
-        existe.
-      </p>
-
-      <h2 className="lp-h3">Empieza por aquí</h2>
-      <ul>
-        {MARKETING_CONTENT_LINKS.map((l) => (
-          <li key={l.href}>
-            <Link href={l.href}>{l.label}</Link>
-          </li>
-        ))}
-        <li>
-          <Link href="/geo">Qué es el GEO</Link>
-        </li>
-        <li>
-          <Link href="/pricing">Precios</Link>
-        </li>
-      </ul>
-
-      <h2 className="lp-h3">Temas del blog</h2>
-      <ul>
-        {BLOG_CLUSTERS.map((cluster) => (
-          <li key={cluster.key}>
-            <Link href={`/blog/${cluster.key}`}>{cluster.title}</Link>: {cluster.description}
-          </li>
-        ))}
-      </ul>
-    </BlogPageShell>
-  );
+  return <NotFoundMission />;
 }

@@ -81,12 +81,12 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   nadie puede garantizar, que no hay dónde comprar el sitio— y detecta el
   vocabulario de promesa («aparecerás en…», «te posicionamos en…», «en N
   días»). Es la única forma de que un límite sobreviva a la siguiente
-  reescritura (log §86).
+  reescritura (log §88).
 - **Una tabla no se completa para que quede simétrica.** Si las fuentes
   publican una celda y no las otras, las otras van con guion. El borrador de la
   figura de S9 podía repartir el 54 % restante entre «web» y «menciones» y
   habría quedado más bonita — fabricando el dato más visible del artículo. Con
-  test, porque la tentación reaparece en cada refresco (log §86).
+  test, porque la tentación reaparece en cada refresco (log §88).
 - **Una cifra de terceros va con su fuente y con su tamaño de muestra, o no
   va.** El `source` del `<Stat>` es cómo este proyecto cumple la regla de
   arriba: sin él la cifra se lee como nuestra. Y un porcentaje ajeno sin

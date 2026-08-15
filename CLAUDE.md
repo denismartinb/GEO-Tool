@@ -397,10 +397,10 @@ fase" (ver "Cierre de fase" más abajo).
 |---|---|---|---|
 | Competidores | `competitors.md` | **PANORAMA-EMPTY-1 (2026-08-07)** | log §10, §11, §15, §36 · ADR 0011/0018/0020/0022 |
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
-| Auditoría web | `web-audit.md` | **PRELAUNCH-HARDENING-1 Fase R7 (2026-08-14, log §83)** · SCAN-STATES-3 (2026-08-11) · WEB-AUDIT-AUTO-SPLIT-1 (2026-08-09) · WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038) · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30, §52, §57, §83 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
+| Auditoría web | `web-audit.md` | **PRELAUNCH-HARDENING-1: tests de render (2026-08-14, log §87)** · Fase R7 (2026-08-14, log §83) · SCAN-STATES-3 (2026-08-11) · WEB-AUDIT-AUTO-SPLIT-1 (2026-08-09) · WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038) · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30, §52, §57, §83, §87 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | **SCORE-WINDOW-1 (2026-08-05, ADR 0036)** · GEO-SCORE-V4 (ADR 0033) · GEO-SCORE-CALIBRATION-1 sigue propuesta y bloqueada por datos (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031/0032/0033/0036 · log §8b, §20, §23, §29, §31 |
-| Blog y contenido | `growth-content.md` | **SEO-POS-1 Fase C, S9 (2026-08-15)** · S8 (2026-08-14) · S6 (2026-08-13) · COMPARATIVAS-DESIGN-1 (2026-08-11) · SEO-POS-1 Fase T-b (2026-08-09) | log §12, §13, §14, §19, §46, §47, §58–§61, §66–§70, §73–§77, §85, §86 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
-| Escaneo (pipeline) | `scan.md` | **PRELAUNCH-HARDENING-1 Fase R6 (2026-08-14, log §81/§82)** · ENGINE-DEBUG-TOGGLE-1 (2026-08-10) · SAMPLING-DEBUG-TOGGLE-1 (2026-08-09) · SCAN-DRIVE-1 (2026-08-07, ADR 0037) · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | log §53, §54, §81, §82 · `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
+| Blog y contenido | `growth-content.md` | **SEO-POS-1 Fase C, S9 (2026-08-15)** · S8 (2026-08-14) · S6 (2026-08-13) · COMPARATIVAS-DESIGN-1 (2026-08-11) · SEO-POS-1 Fase T-b (2026-08-09) | log §12, §13, §14, §19, §46, §47, §58–§61, §66–§70, §73–§77, §85, §86, §88 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
+| Escaneo (pipeline) | `scan.md` · `mission-rocket.md` | **PRELAUNCH-HARDENING-1 Fase R6 (2026-08-14, log §81/§82)** · ENGINE-DEBUG-TOGGLE-1 (2026-08-10) · SAMPLING-DEBUG-TOGGLE-1 (2026-08-09) · SCAN-DRIVE-1 (2026-08-07, ADR 0037) · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | log §53, §54, §81, §82 · `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
 | Dominios y depuración | — *(sin regla propia todavía)* | **DOMAINS-CLIENT-DELETE-1 (2026-08-09)** · DOMAINS-ACTIVE-COOKIE-1 (2026-08-07) · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39, §41 · `docs/design-reference/domains-redesign-1/` |
 | Visión general | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase R7 2/2 (2026-08-14, log §84)** · SCAN-STATES-2 (2026-08-10) · ONBOARDING-ROCKET-1 Fase 1 (2026-08-08) | log §4, §6, §8b, §55, §56, §84 |
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
@@ -575,6 +575,7 @@ todavía. Detalle y diagnóstico en log §44.
 | `scoring.md` | `lib/scoring/**` |
 | `growth-content.md` | `app/{blog,comparativas,docs,glosario}/**`, `lib/{blog,comparativas,docs,glosario}/**` |
 | `onboarding.md` | `components/product-tour.tsx`, `components/tour-provider.tsx`, `lib/onboarding/**` |
+| `mission-rocket.md` | `components/scan-mission-rocket.tsx`, `components/not-found-mission.tsx`, `lib/scan/mission-beats.ts` |
 | `styles.md` | `app/globals.css`, `app/console.css` |
 | `admin.md` | `app/admin/**`, `app/mfa/**`, `lib/admin/**` |
 

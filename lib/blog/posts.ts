@@ -208,6 +208,19 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "medicion"
   },
   {
+    slug: "como-aparecer-en-perplexity",
+    title: "Cómo aparecer en Perplexity (y en qué se diferencia de otros motores)",
+    description:
+      "Perplexity ancla cada afirmación a una cita numerada, no solo te menciona. Qué hacer distinto: estructura citable, datos con procedencia, frescura, y por qué esto queda fuera de lo que Genscore mide hoy.",
+    metaDescription:
+      "Cómo aparecer en Perplexity: por qué es distinto de Google y de ChatGPT, y qué mueve de verdad que te cite.",
+    datePublished: "2026-08-14",
+    coverIcon: "search",
+    coverImage: "/blog/como-aparecer-en-perplexity/cover.webp",
+    primaryKeyword: "cómo aparecer en perplexity",
+    cluster: "playbooks"
+  },
+  {
     slug: "como-hacer-que-chatgpt-recomiende-tu-negocio",
     title: "Cómo hacer que ChatGPT recomiende tu negocio (si eres una pyme local)",
     description:
