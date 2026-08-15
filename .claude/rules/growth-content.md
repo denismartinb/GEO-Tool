@@ -234,7 +234,10 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   porque `requireActiveProject` está memoizada por petición; si alguna vez deja
   de estarlo, esto pasa a ser una consulta más por navegación
   (`lib/seo/console-metadata.ts`, log §101). Las rutas que sólo redirigen
-  quedan fuera: nunca pintan una pestaña.
+  quedan fuera: nunca pintan una pestaña. Lo vigila el propio piloto —
+  `assertPageIsHealthy` falla si el `<title>` es exactamente «GenScore»—, porque
+  un título **no sale en una captura** y su verde no dice nada sobre él si nadie
+  se lo pregunta (log §101).
 - **El `title` del layout raíz no se convierte en `{ default, template }` sin
   limpiar antes los 33 títulos públicos que ya escriben «— GenScore» a mano.**
   La plantilla se lo añadiría otra vez a todos («Blog — GenScore — GenScore»), y

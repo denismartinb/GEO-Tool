@@ -9611,6 +9611,28 @@ sin valor de búsqueda —`/login`, `/signup`, el 404—, que un rastreador sí
 alcanza. Estas están detrás de `requireUser`: añadirlo aparentaría una
 protección que ya da la autenticación.
 
+### El piloto no podía ver esto, así que se le enseñó a mirarlo
+
+La primera pasada dio `PILOT PASS` en las 65 pantallas, y **ese verde no decía
+absolutamente nada sobre este PR**: el piloto juzga capturas, y un `<title>` no
+sale en una captura. Es el caso límite de la regla que esta zona lleva toda la
+semana repitiendo —§55, §62, §96, §100— llevada al extremo: no es que el
+piloto mirase y se le pasara, es que **el cambio era invisible para él por
+construcción**. Aceptar ese verde habría sido reportar como verificado algo que
+nadie comprobó.
+
+Así que `visitAsUser` registra ahora el `<title>` y `assertPageIsHealthy` falla
+cuando es exactamente «GenScore» —la marca a secas, o sea el respaldo del
+layout raíz. Exactamente, no «empieza por»: «GenScore vs Otterly …» es un
+título legítimo y frecuente.
+
+Vale para las 65 pantallas de cada pasada, no sólo para las quince de este PR,
+y es lo que impide que esto vuelva a pasar sin que nadie se entere. Que hicieran
+falta meses y una fase entera para que alguien mirase el sitio donde se veía el
+fallo es el argumento de por qué se añade al arnés y no se deja en un test
+unitario: el unitario comprueba que la función devuelve la cadena, no que la
+pantalla la sirva.
+
 **Hallazgo suelto, no arreglado:** `/dashboard/projects` y `/dashboard/domains`
 tienen las dos el mismo `<h1>`, «Dominios». La primera no está enlazada desde
 la navegación desde DOMAINS-REDESIGN-1. Sus pestañas salen iguales porque el
