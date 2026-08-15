@@ -219,5 +219,71 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       { href: "/glosario/aeo", label: "Glosario: AEO (Answer Engine Optimization)" },
       { href: "/glosario/geo", label: "Glosario: qué es el GEO" }
     ]
+  },
+  {
+    slug: "tasa-de-mencion",
+    term: "Tasa de mención (Mention Rate)",
+    definition:
+      "El porcentaje de respuestas de un motor generativo en las que aparece nombrada una marca, sobre el total de respuestas evaluadas. Es la señal más básica de visibilidad en IA: sin mención, ninguna otra métrica tiene sentido.",
+    longDefinition:
+      "La tasa de mención es el porcentaje de respuestas de un motor generativo en las que aparece nombrada una marca, sobre el total de respuestas evaluadas para un conjunto de prompts. Es la primera pregunta de cualquier análisis de visibilidad en IA — sin mención no hay nada más que interpretar — y por eso suele ser también la más citada y la peor calculada.\n\nEl error más común es contarla sobre prompts en vez de sobre respuestas. Un mismo prompt lanzado a tres motores generativos produce tres respuestas distintas, que pueden nombrar marcas distintas; tratarlas como una sola observación reduce a un tercio la información real disponible y hace que el porcentaje resultante no signifique lo que parece significar.\n\nEl segundo error es dar por buena una mención porque el propio modelo afirma haberla incluido, en vez de comprobarla contra el texto literal de la respuesta — la distinción que separa una mención de una mención verificada. Y el tercero es leer la tasa de mención sola: dice si una marca está en la conversación, pero no en qué posición aparece cuando lo hace, ni si esa mención está respaldada por una fuente real. Esas dos preguntas las responden la prominencia y la citación, respectivamente.",
+    relatedLinks: [
+      { href: "/glosario/prominencia", label: "Glosario: prominencia (posición cuando se menciona)" },
+      { href: "/glosario/mencion-verificada", label: "Glosario: mención verificada" },
+      { href: "/glosario/citacion-en-ia", label: "Glosario: citación en IA" },
+      { href: "/blog/metricas-geo-que-medir", label: "Artículo: métricas GEO, qué medir y qué no" }
+    ]
+  },
+  {
+    slug: "prominencia",
+    term: "Prominencia (posición cuando se menciona)",
+    definition:
+      "El puesto en el que aparece una marca dentro de una respuesta de IA, calculado solo sobre las respuestas donde la marca fue mencionada — nunca promediando también las respuestas donde no apareció.",
+    longDefinition:
+      "La prominencia mide el puesto en el que aparece una marca dentro de una respuesta de IA — si se nombra primero, con protagonismo, o al final, casi de pasada — calculado únicamente sobre las respuestas donde esa marca fue mencionada.\n\nEsa última condición no es un detalle técnico, es la que separa una medición útil de una engañosa. Una forma habitual de calcularla en el sector consiste en tratar cada respuesta donde la marca no aparece como si fuera un \"último puesto\" y promediarlo junto con las posiciones reales. El resultado ordena las marcas por frecuencia de aparición, no por posición — una marca que aparece pocas veces pero siempre la primera puede acabar por debajo de otra que aparece mucho pero casi siempre de pasada, simplemente porque arrastra menos \"últimos puestos\" ficticios.\n\nLa forma correcta es la contraria: medir el puesto solo sobre las respuestas donde la marca sí apareció, y leer ese número siempre junto a la tasa de mención — la otra mitad de la historia. Un puesto excelente sobre una sola mención no dice mucho; un puesto excelente sostenido sobre muchas menciones sí. Las dos cifras juntas cuentan lo que ninguna de las dos cuenta por separado: con qué frecuencia y con qué protagonismo aparece una marca cuando lo hace.",
+    relatedLinks: [
+      { href: "/glosario/tasa-de-mencion", label: "Glosario: tasa de mención" },
+      { href: "/glosario/cuota-de-voz-en-ia", label: "Glosario: cuota de voz en IA" },
+      { href: "/blog/metricas-geo-que-medir", label: "Artículo: métricas GEO, qué medir y qué no" }
+    ]
+  },
+  {
+    slug: "mencion-verificada",
+    term: "Mención verificada",
+    definition:
+      "Una mención de marca confirmada contra el texto real de la respuesta de un motor generativo, en vez de aceptada porque el propio modelo afirma haberla incluido — dos cosas que no siempre coinciden.",
+    longDefinition:
+      "Una mención verificada es una mención de marca que se ha confirmado contra el texto literal de la respuesta de un motor generativo, en vez de darse por buena porque el propio modelo, al que se le pregunta después si mencionó una marca, responde que sí. Son dos comprobaciones distintas, y no siempre coinciden.\n\nPedirle a un modelo que describa su propia respuesta es pedirle una segunda generación de texto, con su propio margen de error — puede afirmar que mencionó una marca que en realidad no aparece en ningún sitio del texto original, o al revés, pasar por alto una mención real. La única forma fiable de saberlo es leer la respuesta tal cual se generó y buscar en ella, no preguntarle al modelo por su propio trabajo.\n\nHay un segundo matiz que la verificación tiene que resolver: reconocer cómo llama la gente de verdad a una marca. Si una empresa es conocida internamente como \"Mozilla\" pero el motor generativo recomienda \"Firefox\" — su producto más conocido —, una verificación ingenua que solo busque la palabra \"Mozilla\" cuenta esa respuesta como una no-mención, cuando en realidad la marca sí apareció, bajo el nombre por el que la reconoce el público. Verificar bien exige contemplar esos alias reales, no solo el nombre legal de la empresa.",
+    relatedLinks: [
+      { href: "/glosario/tasa-de-mencion", label: "Glosario: tasa de mención" },
+      { href: "/glosario/grounding", label: "Glosario: qué es el grounding" },
+      { href: "/blog/como-saber-si-tu-marca-aparece-en-chatgpt", label: "Artículo: cómo saber si tu marca aparece en ChatGPT, Gemini y Claude" }
+    ]
+  },
+  {
+    slug: "variabilidad-respuestas-ia",
+    term: "Variabilidad de las respuestas de IA",
+    definition:
+      "El hecho de que dos consultas idénticas a un motor generativo pueden producir respuestas distintas, porque muchos motores buscan información en tiempo real y no son deterministas. Afecta directamente a cualquier medición de visibilidad en IA.",
+    longDefinition:
+      "La variabilidad de las respuestas de IA es el hecho de que la misma pregunta, hecha dos veces al mismo motor generativo, puede producir respuestas distintas — mencionar marcas distintas, en orden distinto, citando fuentes distintas — sin que nada haya cambiado del lado de quien pregunta.\n\nLa causa principal es que muchos motores generativos buscan información en la web en el momento de responder, en vez de limitarse a lo que aprendieron durante su entrenamiento. Eso significa que dos ejecuciones idénticas pueden encontrar literalmente un internet distinto: un resultado de búsqueda que cambió de posición, una página que se actualizó entre medias, una fuente que apareció o desapareció del índice. A eso se suma que el propio proceso de generación de texto tiene un componente no determinista.\n\nLa consecuencia práctica es que una sola observación —una captura, una pregunta suelta hecha una vez— no es una medición fiable de nada: es una fotografía de una tirada concreta, con su propio margen de error. Leer cualquier cifra de visibilidad en IA con seriedad exige mirar la tendencia a lo largo de varias mediciones comparables entre sí, no el resultado de una sola consulta — el mismo motivo por el que una encuesta con una persona no sirve para nada y una con mil sí empieza a decir algo real.",
+    relatedLinks: [
+      { href: "/glosario/prompt-tracking", label: "Glosario: prompt tracking" },
+      { href: "/glosario/grounding", label: "Glosario: qué es el grounding" },
+      { href: "/blog/metricas-geo-que-medir", label: "Artículo: métricas GEO, qué medir y qué no" }
+    ]
+  },
+  {
+    slug: "llmo",
+    term: "LLMO (Large Language Model Optimization)",
+    definition:
+      "Término alternativo a GEO, centrado explícitamente en optimizar contenido para que los propios modelos de lenguaje —no solo los buscadores construidos sobre ellos— lo encuentren, lo entiendan y lo citen al responder.",
+    longDefinition:
+      "LLMO (Large Language Model Optimization) es un término alternativo a GEO que pone el énfasis explícitamente en el modelo de lenguaje en sí — que un contenido esté escrito y estructurado de forma que un modelo pueda leerlo, entenderlo y citarlo al construir una respuesta — más que en la categoría más amplia de \"motores generativos\" que engloba GEO.\n\nEn la práctica, la frontera entre GEO, AEO y LLMO es más terminológica que operativa: los tres persiguen el mismo objetivo — ser una fuente que un sistema automatizado use al responder, en vez de limitarse a enlazarla — y comparten casi todas las mismas prácticas: respuestas directas y verificables, estructura clara, datos con procedencia. No existe un consenso único en el sector sobre cuál de los tres términos es \"el correcto\"; distintos equipos de marketing y distintas herramientas usan uno u otro según de dónde vengan, sin que eso cambie el trabajo real que hay que hacer.\n\nQuien busca \"LLMO\" suele estar buscando exactamente lo mismo que quien busca \"GEO\": cómo hacer que ChatGPT, Gemini o Claude lo mencionen y lo citen. La etiqueta importa menos que entender que se trata de optimizar para un lector que no es una persona haciendo clic en un enlace, sino un modelo que decide, en el momento de responder, qué fuentes usar y cuáles ignorar.",
+    relatedLinks: [
+      { href: "/glosario/geo", label: "Glosario: qué es el GEO" },
+      { href: "/glosario/aeo", label: "Glosario: AEO (Answer Engine Optimization)" },
+      { href: "/blog/que-es-geo-generative-engine-optimization", label: "Artículo: qué es el GEO y en qué se diferencia del SEO" }
+    ]
   }
 ];

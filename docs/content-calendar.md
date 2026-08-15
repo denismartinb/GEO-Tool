@@ -133,10 +133,10 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Mentio; TrendSights descartada) | 3 — Herramientas | `comparativas` | ✅ Publicado | #(este) |
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | ✅ Publicado | #(este) |
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | ✅ Publicado | #(este) |
-| S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
-| S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | 🔲 Pendiente | — |
-| S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
-| S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
+| S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | ✅ Publicado | #(este) |
+| S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | ✅ Publicado | #401 |
+| S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | ✅ Publicado | #409 |
+| S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | ✅ Publicado | #(este) |
 
 **S1 — hecho (2026-08-10).** Título corregido respecto al que proponía
 `seo-positioning-plan.md` §4: el borrador original decía "…en ChatGPT, Gemini
@@ -275,6 +275,130 @@ el artículo de métricas, la doc de metodología, el glosario y **la landing
 había abierto el piloto (estaba en el fixture y no en el journey) y cuatro
 artículos declaraban portada pero renderizaban el degradado con icono en su
 propia cabecera. Los dos corregidos, los dos con test nuevo.
+
+**S7 — hecho (2026-08-14).** `/blog/como-aparecer-en-perplexity`, cluster
+`playbooks`. Task Intake previo: el borrador inicial iba a anunciar Perplexity
+"próximamente disponible" en Genscore, y el fundador lo frenó — no hay fecha ni
+decisión de producto real detrás, y decirlo habría repetido el mismo error que
+PRICING-TRUTH-1 ya corrigió (`docs/launch-plan.md:361-378`). Investigación de
+código previa a escribir (motor nuevo = migración de esquema + ADR de scoring +
+subir el cap de motores de los planes, las tres cosas en Forbidden Without
+Explicit Approval) confirmó que comprometer una fecha sin esa decisión habría
+sido publicidad sin base. El fundador eligió "S7 sin la promesa".
+
+La pieza trata Perplexity como **tema de mercado**, no como feature: qué lo
+diferencia de Google y de un chat conversacional (respuestas con cita numerada
+anclada a cada afirmación, no solo mención), qué mueve de verdad que te cite, y
+un `Verdict` explícito de que Genscore no lo mide hoy, sin fecha. Añadido a
+`ALLOWED_TO_MENTION_PERPLEXITY` con la justificación en el propio test — es el
+único slug de esa lista cuando se escribió — el segundo lo añadió S8, ver
+abajo.
+
+**S8 — hecho (2026-08-14).** `/blog/como-medir-trafico-chatgpt-ga4`, cluster
+`medicion`. Cierra el último hueco de la capa de medición: qué enseña el canal
+«Asistente de IA» que GA4 estrenó el 13 de mayo de 2026, dónde se mira, y las
+tres cosas que **no** cuenta — Perplexity se queda en Referencia, los AI
+Overviews de Google van a Búsqueda orgánica, y la lista de asistentes
+reconocidos no es pública.
+
+**Lo que la diferencia de las veinte guías que ya existen sobre esto:** todas
+explican dónde está el canal nuevo; ninguna dice que **el canal se mueve sin
+que se mueva el tráfico**. Solo ve las visitas que traen referente, y la
+proporción que lo trae cambia sola con cada versión de una aplicación, así que
+dos meses idénticos en tráfico real dan lecturas distintas. Es la trampa de la
+«posición media» de S6 con otro disfraz, y va con su figura de aritmética
+declarada como ejemplo.
+
+**Primera entrada del allow-list de Perplexity** (`article-honesty.test.ts`),
+prevista por el propio diseño del test: aquí Perplexity no aparece como motor
+nuestro sino como la fuente de tráfico que el lector no encuentra donde
+debería. La metadata no lo nombra y el CTA nombra los tres motores que sí
+ejecutamos — las dos cosas con test.
+
+**Test propio** (`lib/blog/ga4-chatgpt.test.ts`): el artículo publica una
+expresión regular para que el lector la pegue en su GA4, y prosa dentro de un
+MDX no la compila nadie. El test la **extrae del `CodeBlock`** y comprueba que
+compila, que captura los seis asistentes que el texto nombra, que no captura
+`google`/`bing` (recogerlos se comería el canal orgánico entero) y que los
+puntos van escapados. Además exige que toda cifra de tercero lleve su `source`
+y su tamaño de muestra.
+
+**Tres arreglos que salieron de mirar las capturas del piloto**, no de su tabla
+—que dio ✅ en las tres anchuras las dos veces:
+
+1. **Figuras recortadas en 375 px** (las dos nuevas y la de S6, que llevaba dos
+   días así): perdían su última columna, que en las tres es la que lleva la
+   conclusión. `.art-frame` recorta en vez de deslizar — correcto para un SVG,
+   pésimo para una tabla. Nuevo `<Figure wide>`, con test que lo exige en
+   cualquier figura que contenga una tabla.
+2. **La expresión regular aparecía cortada en escritorio y sin aviso**, porque
+   la pista de deslizar sólo existe bajo 640 px. Es el único entregable
+   ejecutable del artículo y no se puede copiar lo que no se ve: nuevo
+   `<CodeBlock wrap>`, ajuste visual que no mete saltos en el portapapeles.
+3. **La portada se leía como un bloque gris roto** en la tira de 96 px del
+   artículo, que sólo enseña el tercio central de la altura. Recompuesta dentro
+   de esa banda y con el gris pizarra pasado a azul en familia.
+4. **Y el peor, encontrado al verificar el anterior: MDX se comía las barras
+   invertidas de la expresión regular.** El fichero decía `chatgpt\.com` y el
+   lector copiaba `chatgpt.com`, con cada punto como comodín. El test lo
+   aprobaba —tenía un caso llamado "escapa los puntos"— porque leía el MDX del
+   disco, o sea el lado de antes de la transformación que rompía el dato. La
+   expresión pasa a vivir en `lib/blog/ga4-source-regex.ts`, el MDX la renderiza
+   como expresión y el test importa ese mismo valor: ya no hay dos versiones que
+   puedan diferir.
+
+Detalle de los cuatro: log §85.
+
+**Fuentes:** el proxy de salida bloquea `support.google.com` y casi toda la
+cobertura del anuncio, así que nada está verificado contra fuente primaria —
+se triangularon fuentes secundarias coincidentes el 2026-08-14 y el artículo
+publica esa fecha. Misma limitación declarada que con los precios de Otterly.
+Detalle: log §85.
+
+**S9 — hecho (2026-08-15).** `/blog/como-hacer-que-chatgpt-recomiende-tu-negocio`,
+cluster `playbooks`. El eje: una pregunta local ("¿qué dentista en Chamberí
+atiende urgencias el domingo?") sólo puede tener dos o tres respuestas
+posibles, a diferencia de una pregunta genérica de categoría — así que un
+negocio pequeño no compite contra el mercado entero, compite contra dos o tres
+negocios reales de su zona. Cuatro palancas reales: datos consistentes
+(nombre/dirección/teléfono) en toda la web, reseñas genuinas y recientes
+(un motor que busca en tiempo real pesa más lo reciente), contenido propio
+con la misma especificidad que la pregunta del cliente, y presencia
+selectiva en directorios/prensa real de la zona — nunca comprada, con
+`Checklist tone="evitar"` que lo dice explícito.
+
+Ninguna cifra de terceros sin fuente: no hay un dato fiable y verificado de
+cuánto pesa cada señal para un motor generativo en preguntas locales, así que
+el artículo se queda en el criterio observable (qué mira un motor que busca
+en la web) y no inventa un porcentaje. Mismo principio de honestidad que ya
+rigió S6/S7.
+
+**S10 — hecho (2026-08-15).** Cinco términos nuevos en `/glosario`, capa de
+medición: tasa de mención, prominencia, mención verificada, variabilidad de
+las respuestas de IA y LLMO. No son sinónimos sueltos de los 15 ya
+publicados — cada uno cierra un error de cálculo concreto que S6
+(`/blog/metricas-geo-que-medir`) ya había nombrado en prosa pero que no tenía
+su propia entrada canónica a la que enlazar: prominencia explica por qué
+promediar posición incluyendo las no-menciones invierte el ranking (el mismo
+hallazgo de ADR 0026 que S6 reproduce con tabla), mención verificada distingue
+confirmar contra el texto real de la respuesta frente a preguntarle al modelo
+por su propio trabajo, y variabilidad explica por qué una sola consulta nunca
+es una medición fiable.
+
+`longDefinition` de cada término entre 150 y 300 palabras y ≥3
+`relatedLinks` reales (cruzados entre sí, hacia glosario existente y hacia
+`/blog/metricas-geo-que-medir`), verificado por `lib/glosario/terms.test.ts`.
+Pasa también el guardián de honestidad (`article-honesty.test.ts`): ninguna
+entrada cita un código ADR, publica un peso del compuesto ni explica la
+mecánica de cálculo del GEO Score — LLMO, por ejemplo, se queda en "es un
+término alternativo a GEO, mismo objetivo, sin reparto ni fórmula que contar".
+`GLOSSARY_LAST_MODIFIED` actualizado en `app/glosario/[termino]/page.tsx` y
+`app/sitemap.ts` (2026-08-13 → 2026-08-15), con su test de consistencia entre
+ambos ficheros. `/glosario/page.tsx` es dinámico sobre `GLOSSARY_TERMS`, así
+que las cinco entradas aparecen en el índice sin tocar esa página.
+
+Con S9 y S10 mergeados se cierra la cola completa de 10 piezas de
+SEO-POS-1 Fase C.
 
 ---
 

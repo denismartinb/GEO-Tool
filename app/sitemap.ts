@@ -24,7 +24,7 @@ const DOCS_LAST_MODIFIED_BY_SLUG: Record<string, string> = {
  * que se le enseña al lector — dos fechas distintas para el mismo contenido
  * son una señal de frescura que se contradice a sí misma.
  */
-const GLOSSARY_LAST_MODIFIED = "2026-08-13";
+const GLOSSARY_LAST_MODIFIED = "2026-08-15";
 /**
  * GROWTH-2 Fase 2.9: date each `/blog/<cluster>` pillar page got its real
  * `pillarIntro` and started shipping to the sitemap. Per cluster, not a
@@ -35,7 +35,11 @@ const GLOSSARY_LAST_MODIFIED = "2026-08-13";
  */
 const PILLAR_LAST_MODIFIED: Record<BlogCluster["key"], string> = {
   fundamentos: "2026-08-03",
-  medicion: "2026-08-03",
+  // 2026-08-14 (S8): la página pilar lista los artículos de su cluster, así
+  // que publicar uno nuevo la cambia de verdad. S6 añadió `metricas-geo-que-
+  // medir` sin tocar esta fecha y la dejó anunciando una frescura de once días
+  // antes — el mismo tipo de rancio que T15 vino a corregir.
+  medicion: "2026-08-14",
   playbooks: "2026-08-03",
   sectores: "2026-08-05"
 };

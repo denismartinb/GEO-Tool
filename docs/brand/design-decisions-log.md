@@ -7787,7 +7787,970 @@ accesor); §43 (R1 y R2); log §56 y `.claude/rules/gemini.md` (de dónde sale e
 
 ---
 
-## 79. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
+## 79. Los tres motores compartían una forma de respuesta que vivía dentro de uno de ellos (PRELAUNCH-HARDENING-1 Fase R5, segunda mitad, primer trozo, 2026-08-14)
+
+**Qué se decidió.** Los cuatro tipos que cruzan la capa de LLM
+—`GeminiVisibilityResponse`, `GeminiStructuredExtractionResponse`,
+`BusinessProfile`, `HomepageEvidenceInput`— y la función pura
+`otherBrandsRelevanceHint` salen de `lib/llm/gemini.ts` a un módulo neutral,
+`lib/llm/contracts.ts`. `lib/llm/openai.ts` y `lib/llm/claude.ts` dejan de
+importar del cliente de Gemini.
+
+**Por qué, y por qué antes de mover las nueve funciones.** La segunda mitad de
+R5 —repartir las nueve funcionalidades de producto a sus módulos dueños— parecía
+mecánica y no lo era. `BusinessProfile` lo usan nueve módulos, y dos de ellos
+son **los otros dos motores**: `openai.ts` y `claude.ts` abrían con
+
+```ts
+import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, … } from "@/lib/llm/gemini";
+```
+
+Eso no es una casualidad de imports: los tres motores devuelven la misma forma
+de respuesta —es exactamente lo que permite que `lib/scan/executor.ts` los trate
+igual— y esa forma estaba definida dentro de uno de los tres. El cliente de un
+proveedor era dependencia de sus dos competidores. Mientras eso siguiera así,
+cualquier mudanza dentro de `gemini.ts` arrastraba a OpenAI y a Claude, y la
+segunda mitad de R5 nacía con ciclos garantizados. Primero se le da casa neutral
+a lo compartido; luego se reparte lo que no lo es.
+
+**Lo que NO se hizo, y por qué.** `GeminiVisibilityResponse` describe la
+respuesta de los tres motores, no la de Gemini: el nombre miente. Renombrarlo
+toca ~15 ficheros por un motivo puramente cosmético, así que se conserva tal
+cual y queda anotado aquí y en el propio módulo. Un refactor que además renombra
+deja de poder demostrarse por los tests.
+
+**Cómo se demuestra que es un refactor.** `gemini.ts` reexporta los cinco
+símbolos, así que ningún sitio de llamada estaba obligado a cambiar —
+`gemini.test.ts` importa `otherBrandsRelevanceHint` de ahí y no se ha tocado.
+Los importadores que sí se movieron a `contracts.ts` (los dos motores, el
+executor, extracción, competidores, perfil de negocio, prompts) son cambios de
+ruta de import, no de código. 2.278 tests, los mismos que antes y sin editar
+ninguno.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R5); §78 (la
+primera mitad, el transporte); la regla de la fase —«si un slice necesita
+cambiar un test, es que no era un refactor»— es la que impidió renombrar aquí.
+
+**Pendiente.** El reparto de las nueve funcionalidades a sus módulos dueños
+sigue siendo el siguiente trozo, y ahora sale sin ciclos.
+
+---
+
+## 80. Las nueve funcionalidades salen del cliente de Gemini, y la costura que las tapaba resulta ser la que mockean seis tests (PRELAUNCH-HARDENING-1 Fase R5, segunda mitad, 2026-08-14)
+
+**Qué se decidió.** Las funcionalidades de producto que vivían dentro de
+`lib/llm/gemini.ts` se van a sus módulos dueños:
+
+| Función | De | A |
+|---|---|---|
+| `auditDomainContent` (+ sus dos tipos) | `lib/llm/gemini.ts` | `lib/web-audit/audit-domain-content.ts` |
+| `inferBusinessProfile`, `inferBrandAliases` | idem | `lib/projects/infer-business-profile.ts` |
+| `suggestCompetitors` (+ `SuggestedCompetitor`) | idem | `lib/competitors/competitor-suggestions-llm.ts` |
+| `suggestPrompts`, `generateAddedPrompts` | idem | `lib/projects/prompt-suggestions-llm.ts` |
+| `rewriteRecommendation` | idem | `lib/recommendations/recommendation-rewrite-llm.ts` |
+
+Se quedan en `gemini.ts` las dos que sí son el motor Gemini —
+`generateGeminiVisibilityAnswer` y `extractGeminiStructuredData`—, que es
+exactamente lo que contienen `lib/llm/openai.ts` y `lib/llm/claude.ts`. El
+fichero pasa de **1.278 líneas a 303**, y el mayor de los ocho módulos de la
+capa se queda en 303.
+
+**Por qué importa más de lo que parece.** No es sólo tamaño: cada una de esas
+funciones tiene una regla de ruta que se inyecta sola al tocar su zona
+(`.claude/rules/web-audit.md`, `competitors.md`, `recommendations.md`).
+Mientras vivían en `lib/llm/gemini.ts`, la regla que se inyectaba era la de
+Gemini y la de su zona no llegaba nunca. Estaban gobernadas por el fichero en
+el que se escribieron, no por el dominio al que pertenecen.
+
+### Lo que se descubrió por el camino: la ruta de import es infraestructura
+
+`lib/llm/gemini.ts` reexporta todo lo que se ha ido, y **eso no es un apaño
+transitorio**. Seis ficheros de test hacen `vi.mock("@/lib/llm/gemini", …)`:
+`business-profile.test.ts`, `add-prompts.test.ts`, `extraction.test.ts`,
+`executor.test.ts`, `domain-coverage.test.ts` y
+`rewrite-recommendation.test.ts`. Esa ruta de import es la costura por la que
+el suite entero sustituye al proveedor. Cambiar los sitios de llamada para que
+apunten al módulo nuevo dejaría esos seis mocks apuntando a un módulo que ya no
+provee nada, y el arreglo sería reescribir tests — que es justo lo que la regla
+de la fase prohíbe («si un slice necesita cambiar un test, es que no era un
+refactor»).
+
+O sea que aquí el barril no es deuda: es el punto de inyección. Quitarlo es una
+decisión de **estrategia de tests** (mockear el cliente HTTP en vez del módulo,
+o inyectar la dependencia), no un efecto colateral de mover código de sitio.
+Queda anotado en el propio `gemini.ts` para que una sesión futura no lo
+«limpie» sin darse cuenta de lo que sostiene.
+
+### Un hallazgo menor, no arreglado
+
+`rewriteRecommendation` no llama a `reportLlmIncident` — es la única de las
+cinco que degrada sin reportar. Se ha movido tal cual, con el hueco intacto: es
+un cambio de comportamiento y no cabe en un refactor. Está en la línea de lo que
+`.claude/rules/gemini.md` ya dice («un `catch` que descarta la causa es un bug»)
+y merece su propio slice.
+
+**Cómo se demuestra que es un refactor.** 2.278 tests, los mismos que antes de
+empezar R5 y sin editar ninguno. Cero cambios en sitios de llamada. Ningún
+export público desaparece.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R5); §78 (el
+transporte); §79 (los tipos compartidos, el paso que hizo posible éste).
+
+---
+
+## 81. El ejecutor del escaneo mezclaba la campaña con el trabajo de un solo prompt (PRELAUNCH-HARDENING-1 Fase R6, primer trozo, 2026-08-14)
+
+**Qué se decidió.** `processPromptJob` —con `callProvider` y sus dos tipos de
+resultado— sale de `lib/scan/executor.ts` a `lib/scan/prompt-job.ts`. El
+ejecutor pasa de **1.523 a 1.167 líneas**.
+
+**Por qué.** El fichero operaba en dos niveles a la vez. Por un lado la
+campaña: reclamar lotes de jobs, repartir el presupuesto de la invocación,
+finalizar la ronda, puntuar, notificar. Por otro **el trabajo de un prompt**:
+las transiciones de estado del job, una llamada por motor con sus rondas de
+reintento compartidas, la inserción de un resultado por motor que responde, el
+registro. Lo segundo es exactamente lo que se abre cuando hay que depurar por
+qué un prompt concreto falló, y estaba enterrado en medio de lo primero.
+
+**Lo que se conserva, dicho explícitamente**, porque `.claude/rules/scan.md`
+aplica entera y esto es una mudanza: el reintento acotado por rondas, el
+criterio de que un motor mal configurado no tumba a los que funcionan, y que el
+job tiene éxito si al menos un motor produce resultado.
+
+**Un duplicado que muere de paso.** `executor.ts` definía su propio `delay`,
+idéntico carácter por carácter al de `lib/llm/http.ts` (que nació en R2
+precisamente para dejar de tener tres copias de esto). Ahora los dos módulos
+usan el de `http.ts`.
+
+**Los mocks siguen funcionando sin tocarlos, y por qué.** `executor.test.ts`
+mockea `@/lib/llm/gemini`, `@/lib/llm/claude` y `@/lib/llm/openai`. Esos mocks
+son de registro de módulos, no del importador, así que siguen aplicando aunque
+ahora quien importe a los tres motores sea `prompt-job.ts` y no el ejecutor.
+Es la diferencia con el caso de §80 —allí lo mockeado era el módulo del que
+salía el código, aquí lo que se mockea son sus dependencias— y merece quedar
+escrito porque de fuera parecen el mismo problema.
+
+**Cómo se demuestra que es un refactor.** 2.278 tests, los mismos, sin editar
+ninguno. `executor.test.ts` tiene 45 casos y todos pasan sin cambios.
+
+**Pendiente de R6.** Mover `lib/scan/types.ts` y `lib/scan/constants.ts` a
+`lib/domain/`. Medido: **26 ficheros fuera de `lib/scan/` los importan**, nueve
+de ellos tests, y entre ellos está `lib/llm/gemini-client.ts` — o sea que hoy
+el transporte de un proveedor de LLM depende del módulo de escaneo. La
+inversión es real y vale la pena, pero es un slice propio: un shim de
+reexports en `lib/scan/` no rompería nada, porque la dependencia seguiría
+existiendo a través del shim.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R6);
+`.claude/rules/scan.md` (los invariantes que la mudanza conserva); §80 (el
+caso de mocking que NO es éste).
+
+---
+
+## 82. La dependencia de medio repositorio sobre `lib/scan/` eran tres símbolos, no dos ficheros (PRELAUNCH-HARDENING-1 Fase R6, segunda mitad, 2026-08-14)
+
+**Qué decía el plan.** «Mover `scan/types.ts` + `scan/constants.ts` a
+`lib/domain/` (rompe las 6 dependencias mutuas sobre `lib/scan`)». Dos cifras
+mal y, lo importante, **la solución equivocada**.
+
+**Lo que había de verdad.** 26 ficheros fuera de `lib/scan/` importaban de esos
+dos módulos. Al mirar *qué* importaba cada uno, toda la dependencia se reduce a:
+
+| Símbolo | Importadores externos | Dónde vive ahora |
+|---|---|---|
+| `AuthenticatedContext` | 17 | `lib/auth.ts` |
+| 8 constantes de llamada a LLM (`EXTRACTION_CALL_TIMEOUT_MS`, `EXTRACTION_MAX_ATTEMPTS`, `EXTRACTION_RETRY_BASE_DELAY_MS`, `EXTRACTION_RETRY_MAX_DELAY_MS`, `LLM_CALL_MAX_ATTEMPTS`, `LLM_CALL_RETRY_BASE_DELAY_MS`, `LLM_CALL_RETRY_MAX_DELAY_MS`, `LLM_INCIDENT_DEDUPE_MINUTES`) | 7 | `lib/llm/constants.ts` |
+| `ProjectActionError` | 2 (ambos tests) | se queda en `lib/scan/types.ts` |
+
+**Por qué mover los ficheros enteros habría sido peor que no hacer nada.**
+`lib/scan/constants.ts` tiene 466 líneas y el 95% es ciclo de vida del escaneo:
+leases, timeouts de reconciliación, resúmenes de error, topes de reintento
+automático. Llevarlo a `lib/domain/` habría metido todo eso en un módulo
+«neutral» por culpa de ocho vecinas — y no habría roto ninguna dependencia,
+sólo cambiado su nombre. Y `AuthenticatedContext` no es un tipo de escaneo en
+absoluto: es `Awaited<ReturnType<typeof requireUser>>`, o sea el tipo de
+retorno de una función de `lib/auth.ts`. Estaba en el sitio equivocado desde el
+principio; diecisiete módulos —facturación, competidores, alias de marca,
+auditoría web, recomendaciones— importaban del escaneo por eso y sólo por eso.
+
+**El resultado medido.** De 26 ficheros externos quedan 5, y los cinco son
+dependencias legítimas de dominio, no de capas: `MAX_REAL_SCAN_PROMPTS` (un
+tope de escaneo que lee el alta de prompts), `EXTRACTION_VERSION` (una versión
+de escaneo que lee la puntuación) y `ProjectActionError` en dos tests. Y lo que
+importa de verdad: **`lib/llm/**` ya no importa nada de `lib/scan`**. La capa
+de LLM no tiene por qué saber que existe un escaneo; el escaneo sí sabe que
+llama a LLMs.
+
+**`lib/domain/` no hace falta.** Se descarta como destino: cada símbolo tenía
+un dueño natural, y un módulo llamado «domain» habría sido el sitio donde
+acaban las cosas que nadie quiso clasificar.
+
+**Lo que se conserva a propósito.** `EXTRACTION_CONCURRENCY` acota cuántas filas
+procesa una pasada del escaneo, no cómo se comporta una llamada: es del escaneo
+y se queda. `ProjectActionError` tiene vocabulario de escaneo
+(`active_run_exists`, `scan_failed`, `no_engines_enabled`) y diez de sus doce
+usuarios están en `lib/scan/`: se queda. El barril `lib/scan/scan-runner.ts`
+sigue reexportando los ocho símbolos movidos, para no cambiar su superficie
+pública y no tocar `scan-runner.test.ts`.
+
+**Sobre tocar ficheros de test.** Nueve de los 23 ficheros cambiados son tests,
+y en todos el cambio es **la ruta de un import**: ni una aserción, ni un mock,
+ni un caso. La regla de la fase —«si un slice necesita cambiar un test, es que
+no era un refactor»— apunta a cambios de expectativa, y aquí no hay ninguno:
+2.278 tests, los mismos de siempre. Dicho explícitamente porque la distinción
+es fina y la próxima sesión merece saber dónde se puso la raya.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R6); §81 (el
+primer trozo); §80 (el caso en el que el barril SÍ había que conservarlo, por
+lo contrario: allí los tests mockeaban la ruta).
+
+---
+
+## 83. Auditoría web: catorce componentes salen de la página, y el compilador no era suficiente para demostrarlo (PRELAUNCH-HARDENING-1 Fase R7, primer trozo, 2026-08-14)
+
+**Qué se decidió.** Los componentes de presentación de
+`app/dashboard/projects/[projectId]/web-audit/page.tsx` se van a
+`web-audit/_components/`, en seis módulos por tema:
+
+| Módulo | Qué contiene |
+|---|---|
+| `format.tsx` | `formatDate` |
+| `issue-rows.tsx` | `CHECK_META`, `SEVERITY_META`, `IssueRow`, `PassingRow`, `CheckDot` |
+| `score-tiles.tsx` | `scoreColor`, `ScoreGauge`, `ScoreRing`, `MiniBar`, `SubScoreTile`, `LockedSubScoreTile` |
+| `page-audit-row.tsx` | `PAGE_SKIP_LABELS`, `freshnessLabel`, `PageAuditRow` |
+| `bot-access-card.tsx` | `BOT_ENGINE_LABELS`, `describeSitemap`, `BotAccessCard` |
+| `trend-chart.tsx` | `TrendChartPoint`, `TrendPointMarker`, `TrendChart` |
+
+La página pasa de **1.933 a 1.137 líneas**. Todos son componentes de servidor y
+puros: reciben datos ya calculados y devuelven marcado.
+
+### Lo que esta fase enseña, y no es la extracción
+
+Las fases R anteriores se demostraban con los tests: 2.278 casos, ninguno
+editado. **Aquí eso no demuestra nada** — la pantalla de Auditoría web no tiene
+tests de render, así que el suite verde es compatible con haber roto el marcado
+entero. Y `tsc` tampoco basta: compila igual de bien un componente al que le
+falta una fila.
+
+Así que la comprobación fue otra: **normalizar el fichero original y la suma de
+los siete resultantes —quitando imports y comentarios— y comparar los
+multiconjuntos de líneas**. Cero líneas sólo en el original, cero sólo en el
+nuevo. Es lo más fuerte que se puede afirmar sin navegador, y deja al
+`ux-pilot` la parte que sí necesita ojos.
+
+**Esa comprobación encontró un fallo real que `tsc` y el lint dejaron pasar.**
+Dos de los rangos que copié se solapaban, así que `TrendChartPoint` y
+`TrendPointMarker` acabaron **duplicados** dentro de `bot-access-card.tsx`.
+Compila —declaraciones sin usar en un módulo son legales—, pasa el lint, y
+habría llegado a producción como código muerto en una zona que acabábamos de
+tocar «para dejarla más limpia». La lección: en un refactor de UI, la prueba de
+equivalencia es un paso propio, no un corolario de que el build pase.
+
+**Lo que NO se ha tocado.** Ni una línea de marcado, ni una clase CSS, ni un
+texto. El `WebAuditPage` sigue con ~1.070 líneas de orquestación de datos:
+partirlo es otro trozo, y toca lógica, no presentación.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R7);
+`.claude/rules/web-audit.md` (los invariantes de la zona, ninguno afectado:
+esto no cambia qué se calcula ni qué se pinta).
+
+---
+
+## 84. Visión general dejaba de ser la excepción, y dos ficheros muertos se van (PRELAUNCH-HARDENING-1 Fases R7 y R8, 2026-08-14)
+
+**Qué se decidió.**
+
+1. **Visión general usa `requireActiveProject`** como las otras seis pantallas
+   de proyecto, en vez de repetir a mano el `select` + `is_archived` +
+   `notFound()`.
+2. **`getLLMScanProviders` se importa de `lib/scan/providers.ts`**, que es donde
+   vive, y el reexport de cortesía del ejecutor **se borra** porque ya no lo usa
+   nadie.
+3. **Se borran `lib/supabase/client.ts` (8 líneas) y `lib/types.ts` (29)**: cero
+   importadores, comprobado por ruta de import y no por nombre.
+
+**El detalle que importa del punto 1.** `requireActiveProject` **entra dentro
+del `Promise.all` existente**, no delante. Es una promesa como las otras cuatro,
+así que la Visión general sigue haciendo un solo viaje en paralelo — nada de
+serializar una consulta más antes del lote, que sería deshacer parte de la Fase
+V. De paso desaparece un `created_at` que la página seleccionaba y no leía
+nadie.
+
+**Por qué el punto 2 no es cosmético.** El único importador de
+`getLLMScanProviders` fuera de `lib/scan/` era esa misma página, y lo cogía del
+**ejecutor** — o sea que una pantalla arrastraba el grafo entero del ejecutor
+(LLM, scoring, recomendaciones, notificaciones, auditoría) para pintar dos
+nombres de motor en una línea. `providers.ts` existe desde SAMPLING-1
+precisamente para eso, y su docblock decía «el ejecutor lo reexporta para no
+tocar sitios de llamada»: era cierto y ya no hace falta.
+
+### Dos cosas que el plan pedía y NO se han hecho, con motivo
+
+- **«Unificar `setRecurringScans`/`setAutoWebAudit`»**: `setAutoWebAudit` **ya
+  no existe** — lo retiró WEB-AUDIT-AUTO-SPLIT-1 cuando la migración 0031 jubiló
+  su columna, y su sustituto es `setAutoAuditHalf`. Además, el comentario de
+  `actions.ts` dice explícitamente que la forma de espejo entre las dos es
+  **deliberada** («los interruptores viven uno al lado del otro en /debug y
+  quien los lea no debería tener que aprender tres comportamientos»).
+  Unificarlas sería contradecir una decisión escrita para cumplir una línea de
+  un plan que se quedó vieja.
+- **Partir `WebAuditPage`** (~1.070 líneas de orquestación de datos): toca
+  lógica, no presentación, y no cabe en el mismo PR que la mudanza de §83.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R7, R8); §83 (la
+mudanza de componentes); `lib/scan/providers.ts` (SAMPLING-1, por qué existe).
+
+---
+
+## 85. La analítica mide el efecto, no la causa (SEO-POS-1, S8, 2026-08-14)
+
+**Qué se publica.** `/blog/como-medir-trafico-chatgpt-ga4`, cluster `medicion`.
+Cubre el cluster de keywords nº 8 del plan ("medir tráfico desde ChatGPT en
+GA4", canal «Asistente de IA»), el último hueco de la capa de medición.
+
+**Por qué esta pieza es distinta de las siete anteriores de la cola.** Es la
+primera cuyo contenido **no depende de nada nuestro**: todo lo que afirma es
+sobre un producto de Google y sobre un estudio ajeno. En S5 y S6 el riesgo era
+publicar de más —umbrales, pesos, mecánica— y las reglas que salieron de ahí
+(§69, §75, §76) no aplican aquí. El riesgo cambia de sitio: **publicamos algo
+que el lector va a ejecutar**, una expresión regular que le pedimos que pegue en
+su propia propiedad de GA4. Prosa dentro de un MDX no la mira ningún
+compilador, así que una expresión que no compile, o que no case con los
+dominios que el propio artículo nombra dos párrafos más arriba, es un fallo que
+se descubre en la cuenta del lector y no en la nuestra.
+`lib/blog/ga4-chatgpt.test.ts` la **extrae del `CodeBlock`** —no la copia— y
+comprueba que compila, que captura los seis asistentes que el texto nombra, que
+**no** captura `google`/`bing` (recogerlos haría que el grupo personalizado se
+comiera el canal orgánico entero: el consejo publicado sería activamente
+dañino) y que todos los puntos van escapados.
+
+**Lo que diferencia el artículo de las veinte guías de "cómo medir ChatGPT en
+GA4" que ya existen.** Todas explican dónde está el canal nuevo. Ninguna dice
+que el canal **se mueve sin que se mueva el tráfico**: la proporción de visitas
+que trasladan el referente cambia sola con cada versión de una aplicación, así
+que dos meses idénticos en tráfico real dan lecturas distintas. Es exactamente
+la trampa de la «posición media» de §73 con otro disfraz —un número que varía
+por motivos que no tienen que ver con lo que dice medir— y el artículo la
+enseña con una figura de dos filas, declarada como aritmética de ejemplo, no
+como medición.
+
+**Y declara su techo, que es el argumento comercial honesto.** Una marca que
+ChatGPT recomienda a diario ante gente que no hace clic, y una marca que no
+sale nunca, producen el mismo informe de adquisición: cero. GA4 cuenta visitas;
+no puede decir si saliste en la respuesta. Ese es el puente al producto y no
+hace falta exagerarlo — es una limitación estructural, no un defecto de
+configuración.
+
+**Perplexity entra en el allow-list de `article-honesty.test.ts`, y es el
+primero.** El test prohíbe nombrarlo en el cuerpo de un artículo desde S1,
+cuando el borrador del plan estuvo a punto de titular una pieza con un motor
+que no ejecutamos. Aquí el motivo es legítimo y estaba previsto por el propio
+diseño del test: una de las tres conclusiones del artículo **es** que el canal
+«Asistente de IA» no incluye Perplexity y sus visitas se quedan en Referencia.
+Omitirlo sería esconderle al lector la mitad de la respuesta para proteger una
+ambigüedad que el artículo no crea — la metadata no lo menciona (regla de
+`.claude/rules/growth-content.md`) y el CTA nombra los tres motores que sí
+ejecutamos, las dos cosas con test.
+
+**Las cifras de terceros van con su denominador o no van.** Las tres del
+`StatGrid` (28 % de visitas desde la web con referente, 6 % desde la aplicación
+de escritorio, 71 % que acaban en Directo) son de un **único** estudio ajeno
+sobre 41,2 millones de sesiones, y el artículo lo dice en el `source` de cada
+`<Stat>`, en la prosa y en la nota de fuentes: lo utilizable es el orden de
+magnitud, no el decimal. El mecanismo de debajo —el sistema operativo no
+traslada el referente al abrir un enlace desde una aplicación nativa— no
+depende del estudio y sí es verificable, y es lo que sostiene el argumento.
+
+**Limitación del entorno, declarada.** El proxy de salida de los agentes
+bloquea `support.google.com` y la mayoría de la cobertura del anuncio, así que
+**ninguna de las afirmaciones sobre GA4 está verificada contra la fuente
+primaria**: se triangularon con varias fuentes secundarias que coinciden entre
+sí, consultadas el 2026-08-14, y el artículo publica esa fecha para que el
+lector sepa de cuándo es. Misma limitación que ya se declaró con los precios de
+Otterly (§66) y de Peec AI. Dos consecuencias asumidas: la lista de asistentes
+que reconoce Google **no es pública** —lo dice el propio artículo, porque
+cambia cómo hay que leer una caída del canal— y la fecha de despliegue amplio
+(junio de 2026) se cuenta como "a lo largo de junio", no con un día concreto
+que no se pudo confirmar.
+
+**Lo que encontró el piloto, y que su propia tabla decía que estaba bien.** La
+pasada dio `PILOT PASS` con `blog-como-medir-trafico-chatgpt-ga4` en ✅ a las
+tres anchuras. Al abrir las capturas —que es lo que el Human Gate pide desde
+§55 y lo que la tabla nunca sustituye— en 375 px **las dos figuras nuevas
+estaban recortadas y les faltaba la última columna**: la de la Figura 1 es
+"Dónde acaba", cuya última fila («Respuesta leída sin hacer clic» → *en ningún
+sitio*) es literalmente la conclusión de la figura, y la de la Figura 2 es "Lo
+que enseña el canal", que es todo el argumento. La **Figura 2 de
+`metricas-geo-que-medir` llevaba dos días igual**, publicada en S6.
+
+**La causa es una línea de CSS que hace lo correcto para otro contenido.**
+`.art-frame` nace con `overflow: hidden`, que es lo que quieres para un
+`ProductMock` o un SVG —recortar un degradado contra el radio del borde— y lo
+peor posible para una tabla: lo que no cabe desaparece **sin dejar gesto que lo
+recupere**. Es el fallo de `/docs/metodologia` del §77 otra vez, un nivel más
+adentro, y el remedio ya existía a diez líneas de distancia: `.art-tablewrap`
+resolvió exactamente esto para las tablas sueltas en la PR #306, deslizamiento
+más pista *"Desliza para ver todas las columnas →"*. Lo que faltaba era que una
+tabla **dentro de una figura** pudiera pedirlo: `<Figure wide>` (log §85).
+
+**Por qué esto es un test y no una nota.** Se coló en dos PRs seguidos, y en
+los dos el síntoma fue invisible: la página carga limpia, el piloto la marca ✅
+porque no hay error que detectar, y la columna que falta suele ser justo la que
+lleva la conclusión. `article-recipes.test.ts` recorre ahora todos los
+artículos, detecta la fila separadora de una tabla de markdown dentro de un
+`<Figure>` y exige `wide` — con su caso negativo, porque una guarda que no
+puede fallar no es una guarda.
+
+**Y lo que esto vuelve a decir del piloto**, tercera vez en el histórico
+(§62, §77): **un `PILOT PASS` es la lista de lo que el piloto vio, no un juicio
+sobre lo que se ve.** Una tabla recortada no es un fallo de carga. La única
+defensa sigue siendo abrir las capturas — aquí las abrió el Director antes del
+Human Gate, que es donde toca, en vez del fundador en su móvil.
+
+**Segunda pasada de capturas, ahora en escritorio, dos cosas más.** El arreglo
+de las figuras se verificó y de paso salieron los dos fallos que sólo se ven a
+1280 px, los dos invisibles en móvil:
+
+**1. La cadena que el lector tiene que copiar aparecía cortada, y en
+escritorio sin nada que dijera que había más.** La expresión de fuente son ~200
+caracteres sin espacios; `.art-code pre` desliza, pero la pista *"Desliza →"*
+sólo existe bajo 640 px (PR #309, pensada para móvil). Así que en la anchura en
+la que de verdad se configura un GA4, la cadena terminaba en
+`…gemini.google.com|c` y nada indicaba que continuara. **No se puede copiar lo
+que no se ve**, y esa cadena es el único entregable ejecutable del artículo.
+`<CodeBlock wrap>` la ajusta en varias líneas visuales en vez de deslizarla —
+para código de verdad partir una línea cambiaría lo que dice, pero esto es un
+valor único, y **el salto blando no mete ningún `\n` en el portapapeles**, así
+que se ve entera y se pega en una sola línea. Con la pista de deslizar apagada
+cuando ajusta, porque ahí mentiría.
+
+**2. La portada se leía como un bloque gris roto.** En el artículo la portada
+va en una caja de **96 px de alto a todo el ancho** (`.blog-cover-compact`) con
+`object-fit: cover`, o sea una tira de ~11,7:1 sobre una imagen de 4:1: se ve
+la banda central, un tercio de la altura. La composición tenía las barras
+apoyadas en una base a `y=244` con la más alta empezando en `y=76`, así que de
+las tres barras la banda visible sólo cortaba **un rectángulo gris opaco sin
+principio ni final** — y el gris pizarra, único color fuera de la familia
+azul/cian del resto, remataba el efecto de "algo que no ha cargado" (§73, las
+palabras del fundador). Recompuesta: rejilla y barras dentro de la banda
+central (base a `y=202`, unidad de 12 px), y el gris a un azul apagado en
+familia. La jerarquía —Directo mucho más alta que el canal de asistentes—
+sobrevive al recorte, que era justo lo que la portada tenía que demostrar.
+
+**La regla que sale de esto y que no estaba escrita en ninguna parte:** una
+portada de artículo se juzga en la tira de 96 px, no en el lienzo de 1200×300
+donde se dibuja. Las portadas de S5 y S6 sufren el mismo recorte —se comprobó
+mirándolas— y sobreviven por suerte, porque toda su composición es del mismo
+color y sin elementos que el corte convierta en un bloque plano.
+
+**Y al verificar ese arreglo apareció el peor de todos: el test daba una
+garantía falsa.** Al medir sobre el HTML del build qué texto se lleva el lector
+al portapapeles, salió esto: **MDX se había comido todas las barras
+invertidas**. El fichero decía `chatgpt\.com|claude\.ai|…` y lo que se
+renderizaba era `chatgpt.com|claude.ai|…`, con **cada punto convertido en
+comodín** — la expresión que el artículo le pide al lector que pegue en su
+propiedad de GA4 marcaría también un `claudexai`. MDX trata el texto suelto de
+un hijo JSX como texto con escapes; no hay aviso de ninguna clase.
+
+Lo grave no es el fallo, que es un despiste de sintaxis. Lo grave es que
+`ga4-chatgpt.test.ts` **lo aprobaba**, y con un test dedicado a exactamente
+eso: tenía un caso llamado *"escapa los puntos, para que no actúen como
+comodín"* que pasaba en verde mientras el lector recibía la versión sin
+escapar. Leía el MDX del disco, o sea **el lado de antes de la transformación
+que rompía el dato**. Un guardián que mira el lado equivocado de una
+transformación no es un guardián: es una garantía falsa, y eso es peor que no
+tener ninguna, porque apaga la sospecha.
+
+El arreglo no es una comprobación más lista: **quita la transformación**. La
+expresión vive en `lib/blog/ga4-source-regex.ts`, el MDX la renderiza como
+expresión (`{GA4_AI_SOURCE_REGEX}`) y el test importa ese mismo valor, así que
+ya no existen dos versiones que puedan diferir. Quedan tres casos nuevos: que
+el artículo la renderice desde la constante y no vuelva a incrustar un literal
+—la única forma de que el fallo vuelva—, que vaya en un bloque que ajusta, y el
+caso negativo con el valor exacto que MDX producía, para probar que el detector
+de escapado distingue de verdad.
+
+**La lección, que es más general que este artículo:** cuando lo publicado pasa
+por una transformación (MDX, un compilador, un serializador), el test tiene que
+mirar **el lado de después**, o eliminar la transformación. Aquí se eligió lo
+segundo, que es lo único que no depende de acordarse.
+
+**Y un hallazgo del check-in previo al Human Gate: la numeración de este
+documento estaba rota, siete veces.** Esta entrada nació como §78 mientras
+PRELAUNCH-HARDENING-1 R5/R6 mergeaba §78 a §82 en `main`. Las dos ramas eran
+correctas por separado —cada una calculó `max + 1` sobre su propia base, que
+envejece en cuanto la otra mergea— y **git no para nada**: los dos bloques son
+apéndices adyacentes al final del mismo fichero, así que se mezclan sin un solo
+marcador de conflicto y el resultado tiene dos §78 sin que chille nadie. Se
+cogió comprobando la mergeabilidad a mano; a mano no es un mecanismo.
+
+Al escribir el guardián (`tests/log-numbering.test.ts`, calcado de
+`adr-numbering.test.ts`, que resolvió esto mismo para `docs/adr/`) resultó que
+**ya había siete colisiones en `main`**: §33, §36, §39, §54, §55, §65 y §70,
+desde principios de agosto, una cada pocos días. Dos de ellas son visibles
+desde el mapa de zonas de CLAUDE.md, que apunta a «log §54» desde dos filas
+distintas y a dos secciones distintas — o sea que la referencia ya no resuelve
+en el documento que la siguiente sesión lee primero.
+
+Esta entrada pasa a **§85**, con todas sus referencias. Las siete heredadas
+quedan **congeladas como deuda declarada**, no arregladas aquí: renumerar una
+sección ya mergeada rompe las referencias publicadas que la apuntan —el coste
+que `adr-numbering.test.ts` documenta haber pagado con `0026`— y siete
+secciones merecen su propia pasada deliberada, no ir de propina en un PR de
+contenido donde nadie las revisaría. La lista sólo puede encoger y su línea
+base está fijada literalmente, como `COVER_DEBT`.
+
+**Y volvió a pasar cuarenta minutos después, en este mismo PR.** Esta entrada
+era §78, pasó a §83 al fusionar R5/R6 — y R7/R8 reclamó §83 y §84 antes de que
+esta rama llegara al Human Gate, así que acabó en **§85**, con dos merges y dos
+renumerados en dos horas. La segunda vez sí produjo conflicto de git, porque
+los dos bloques cayeron exactamente en el mismo punto; la primera no, que es el
+caso peligroso.
+
+Eso deja claro el **límite del guardián, que su propio comentario ya declara**:
+sólo ve una rama, así que no puede impedir que dos ramas corran a por el mismo
+número libre — sólo garantiza que la que mergee segunda se entere. Con varias
+sesiones agénticas mergeando el mismo día, un número al final del fichero es
+estructuralmente una carrera, y la única solución que la ganaría de verdad es
+no numerar al escribir: un identificador estable (fecha + slug) o asignar el
+número al mergear. **No se hace aquí** — cambia el esquema de referencia de
+todo el histórico y de las decenas de `log §NN` repartidas por el repositorio,
+así que es su propia fase. Queda escrito para que la siguiente sesión que se
+tropiece no vuelva a diagnosticarlo desde cero.
+
+**Y un apunte de herramienta, porque me equivoqué tres veces con él.** Para
+saber si una rama conflictúa con `main` usé
+`git merge-tree $(git merge-base …) HEAD origin/main | grep -c "^<<<<<<<"`.
+Devolvió **0 las tres veces, y las tres se equivocó**: el formato antiguo de
+`merge-tree` no emite marcadores de conflicto, así que ese `grep` no puede
+encontrarlos nunca — un cero ahí no significa "no hay conflicto", significa
+"esta comprobación no mide lo que crees". Con ella se le dijo al fundador "sin
+conflictos" dos veces sobre ramas que sí lo tenían. Lo fiable es **intentar el
+merge** (`git merge --no-commit --no-ff`, y `git merge --abort` si no
+interesaba) o mirar `mergeable_state` en la API de GitHub, que acertó las tres.
+Es la misma forma del fallo que este PR persigue en el artículo y en el test de
+la expresión regular: **un indicador que parece verificar algo y mira otra
+cosa** — con la agravante de que aquí el falso negativo era silencioso y salía
+en verde.
+
+**Arreglo encontrado de camino.** La fecha del pilar `medicion` en el sitemap
+seguía en el 2026-08-03: S6 publicó `metricas-geo-que-medir` sin tocarla,
+aunque la página pilar lista los artículos de su cluster y por tanto cambió de
+verdad ese día. Corregida al 2026-08-14. Es el mismo rancio que T15 vino a
+arreglar, reaparecido por el sitio de siempre — una fecha manual que nadie
+recuerda que existe hasta que alguien la mira.
+
+---
+
+## 86. La única pantalla de Genscore que no parecía de Genscore (NOT-FOUND-ROCKET-1, 2026-08-12)
+
+**Qué pasaba.** La 404 pública (`app/not-found.tsx`, SEO-POS-1 T7) era correcta
+y fea: un `<h1>` y tres listas de enlaces heredadas de `BlogPageShell`, sin
+jerarquía, sin aire y con los títulos de los clusters pegados a sus
+descripciones. Cumplía su trabajo técnico —devolvía 404, llevaba `noindex,
+follow`, enlazaba a lo publicado— y ese es justo el motivo por el que llevaba
+meses así: nada estaba roto. Lo reportó el fundador desde un móvil.
+
+**Qué se decidió.** Se plantearon tres maquetas completas y navegables (no
+bocetos), las tres en `docs/design-reference/not-found-rocket-1/concepts.html`:
+«Fuera de trayectoria» (el cohete del primer escaneo, oscura), «Sin resultados
+que citar» (la URL fallida como consulta y la navegación como lista de fuentes
+citables) y «Falta un segmento» (el anillo del logo con un segmento apagado,
+tipográfica). El fundador eligió la primera. Las otras dos se conservan en el
+mismo fichero: son el registro de qué se consideró, igual que un ADR superado
+no se borra.
+
+**La cabecera es blanca.** Instrucción explícita del fundador: la cabecera del
+sitio no cambia por estar en un 404. Eso obliga a un corte duro entre la nav
+blanca y el cuerpo oscuro, y obliga a algo menos evidente — `.lp-nav-wrap` es
+translúcida con `backdrop-filter`, así que sobre un cuerpo oscuro y con scroll
+dejaba ver el oscuro a través. En esta ruta, y sólo en esta, es opaca.
+
+**Por qué la escena no está centrada bajo el texto.** La primera versión puso
+el copy centrado sobre una escena a sangre y el cohete le pasaba por detrás del
+titular. No es un problema de capas: en una pantalla panorámica quedan ~170 px
+libres por encima del bloque de texto, y no caben un titular y una nave en el
+mismo eje. La composición final reparte por ejes — misión a la derecha y texto
+a la izquierda en horizontal; misión arriba y texto abajo en vertical, donde
+además se encoge, sube y pierde los dos tramos bajos de la estela, que cruzaban
+el titular. La escena sigue ocupando toda la pantalla, que era la petición.
+
+**Lo que se descubrió por el camino, y que no era el encargo.**
+`app/not-found.tsx` es el `not-found` **raíz** y no había ningún otro en el
+repo, así que recogía también los `notFound()` de la consola:
+`lib/project-workspace.ts` (que convierte las seis pantallas de un proyecto
+inexistente en un 404), la página de proyecto y la de un run. Ya antes de esta
+fase eso le enseñaba la cabecera de marketing a alguien con la sesión abierta;
+con el cohete a pantalla completa y un «Prueba gratis» pasaba de raro a
+absurdo. De ahí `app/dashboard/not-found.tsx`, deliberadamente sobrio y
+renderizado dentro del layout de la consola, con el menú lateral intacto.
+
+**Lo que no se hizo, y por qué.** No se tocó `BlogPageShell`. Encierra su
+contenido en `.lp-inner` (max-width 1180 px), que es exactamente lo que impide
+una escena a sangre, y lo comparten blog, legales y pricing: ampliarlo por una
+pantalla habría puesto tres superficies en riesgo. La 404 lleva su propio
+shell, siguiendo el precedente ya escrito en el repo (`blog-page-shell.tsx` es
+a su vez copia deliberada de `legal-page-shell.tsx`). **La deuda, declarada:
+son tres copias de la misma barra de navegación. Si aparece una cuarta, toca
+extraerla.** El nuevo shell se registró en `marketing-content-links.test.ts`,
+que es lo que impide que una superficie con pie público se olvide de las cuatro
+capas de contenido.
+
+**El aviso de los dos cohetes.** A petición del fundador, `.claude/rules/
+mission-rocket.md` cubre a la vez `components/scan-mission-rocket.tsx`,
+`lib/scan/mission-beats.ts` y `components/not-found-mission.tsx`: toques el que
+toques, la regla se inyecta sola y recuerda que hay otro. No comparten código a
+propósito —el del escaneo está atado al estado de un run real y el de la 404 es
+estático y sin datos—, y esa separación es exactamente lo que hace necesario el
+aviso. El invariante duro: en el escaneo el movimiento codifica progreso real;
+en la 404 no puede haber ni barra, ni anillo, ni contador, porque no habría
+nada verdadero que contar.
+
+**El pie era ilegible y lo vio el fundador antes que nadie.** `.nf-page`
+pintaba de oscuro el contenedor entero para que el sobre-scroll no enseñara
+blanco, y el pie de marketing vive dentro de ese contenedor sin fondo propio:
+quedaba con su texto en tinta sobre fondo oscuro. Ahora sólo la ventana de la
+misión es oscura y la página sigue siendo blanca, que es lo que deja el pie
+exactamente igual que en el resto del sitio (fundador, 2026-08-12).
+
+**El harness no podía pilotar una 404, y eso no era culpa de la pantalla.**
+`visitAsUser` marca como fallo cualquier respuesta ≥400 de primera parte, así
+que el piloto reportaba `first-party requests failed` por el único
+comportamiento que una página de error está obligada a tener: responder 404.
+Se añadió `VisitOptions.expectDocumentStatus`, deliberadamente estrecho —exime
+**una** respuesta, la del documento de la ruta visitada, y sólo con el código
+declarado. Un 500 en esa ruta, o un 404 de un subrecurso (un CSS que no carga,
+una imagen rota) siguen tumbando la pasada. Tampoco debilita la garantía de que
+la ruta responde 404: eso lo asevera su propio test con `page.request.get`,
+aparte. Sin este cambio ninguna página de error del producto podría pilotarse
+jamás, hoy ni en el futuro.
+
+**Dos metas `robots`, y las dos legítimas.** La primera pasada del piloto falló
+en las tres anchuras por una aserción propia: `meta[name="robots"]` resuelve a
+**dos** elementos en esta página. Next añade la suya (`noindex`) a toda página
+`not-found` y `app/not-found.tsx` declara la nuestra (`noindex, follow`) desde
+SEO-POS-1 (T7). Es preexistente, no lo introdujo esta fase, y no se corrigió
+retirando ninguna: no se contradicen —ninguna dice `nofollow`, así que el
+resultado efectivo es `noindex, follow`—, quitar la nuestra sería un cambio de
+SEO ajeno a este PR y la de Next no está en nuestra mano. Lo que sí cambió es
+la aserción: en vez de mirar la primera meta, comprueba que **ninguna** de las
+que haya deje la página indexable. Con `.first()` el test habría pasado aunque
+una segunda dijera `index`.
+
+**Y una lección de orden, no de contenido.** `public-pages.spec.ts` corre en
+modo `serial`, así que aquel fallo de cabeceras se llevó por delante el test
+que pinta la pantalla: la 404 no apareció en la tabla del piloto **en ninguna
+anchura**. Un `PILOT FAIL` por una aserción trivial dejó la pantalla del PR sin
+mirar. El test que produce las capturas va ahora primero, para que un fallo de
+detalle no borre la evidencia visual.
+
+**Dos mejoras plegadas después de mirar las capturas, no de leer la tabla.**
+El piloto dio `PILOT PASS` con la 404 en verde en las tres anchuras, y aun así
+la pantalla tenía dos defectos que ninguna checklist detecta porque ninguna
+mide "se entiende": en horizontal la estela sólida terminaba *dentro* del
+lienzo y su extremo se veía flotando a media pantalla, como si el rastro
+empezara de la nada; en vertical, ocultar los dos tramos de abajo dejaba un
+fragmento corto y desconectado bajo el cohete. Ahora el primer tramo arranca
+fuera del lienzo (`y=796` con el lienzo a 760) y en vertical sólo desaparece el
+de más abajo. Es el motivo por el que un PASS no cierra la fase: la tabla dice
+que la página cargó, no que se lea.
+
+**El 404 de la consola, segunda versión: sobrio no es descuidado.** La primera
+reutilizaba `EmptyState` —borde discontinuo— con un botón suelto debajo y el
+resto de la pantalla en blanco. El fundador la probó y fue directo: «parece un
+botón mal maquetado» (2026-08-13). Tenía razón, y el fallo era de lenguaje: el
+borde discontinuo de `EmptyState` significa *contenido que todavía no está*
+(«aún no has escaneado», «no hay competidores»), y aquí no falta contenido —
+la ruta no existe. Ahora es un bloque centrado en el área de contenido, con las
+piezas de la propia consola (`.btn`, `Icon`, los tokens de tinta) y **sin
+caja**: en una pantalla por lo demás vacía, una caja alrededor de un mensaje
+corto es justamente lo que lo hacía parecer un widget a medio maquetar. De
+paso se corrigió una incoherencia entre etiqueta y destino: el botón decía
+«Volver a mis dominios» y apuntaba a `/dashboard`, que redirige al proyecto más
+reciente, no a la lista. Ahora son dos salidas y cada una dice a dónde va.
+
+**El 404 de la consola pasa a estar pilotado.** Se dijo que quedaba para una
+fase futura, y duró lo que tardó el fundador en encontrar el defecto que el
+piloto no podía ver. El journey vive en `core-flow.spec.ts` y no en
+`public-pages.spec.ts` porque necesita sesión: sin ella `requireUser()` redirige
+a /login y no se ve nada. Visita un id de proyecto inexistente y comprueba las
+tres cosas que importan — que sale la pantalla sobria, que **no** sale la de
+marketing (`.nf-scene` a cero, ningún «Prueba gratis») y que el menú lateral
+sigue alrededor para poder salir. Sigue siendo de lectura pura: navega a una
+URL y mira. Lo que un humano tuvo que cazar una vez, lo mira una máquina a
+partir de ahora.
+
+**El piloto pasó y aun así no publicó nada.** La pasada de `f1d5451` corrió los
+172 tests, imprimió `Verdict: PILOT PASS` y el job murió en el minuto 20:
+`timeout-minutes: 20` en `ux-pilot.yml` contra 19,3 min de tests. El check quedó
+en `cancelled`, sin comentario y sin evidencia subida — y a efectos del Human
+Gate **un piloto que no publica es un piloto que no ha corrido**, aunque el
+veredicto exista dentro del log. El margen llevaba tiempo siendo mínimo y los
+tres tests nuevos de esta fase (×3 anchuras, ~55 s) lo agotaron. Se sube a 30 en
+el mismo PR que lo agotó, en vez de dejar la trampa armada para el siguiente que
+añada un journey. Lo que **no** se arregló, y queda anotado: nada avisa cuando
+la pasada se acerca al tope; el aviso es que un día no publique.
+
+**«Ver mis dominios» apuntaba a la pantalla equivocada, y lo cazó el fundador
+probando el preview, no el piloto.** El botón llevaba a `/dashboard/projects`
+—la pantalla de archivar/restaurar de antes de DOMAINS-REDESIGN-1— en vez de a
+`/dashboard/domains`, la puerta de entrada real de la consola desde esa fase.
+El test del piloto sólo comprobaba que el primer enlace del bloque fuera
+visible, nunca a dónde apuntaba, así que una etiqueta correcta con un destino
+equivocado le pasó por delante sin que nada lo marcara. Corregido el enlace y
+reforzado el test: ahora asevera el `href` de «Ver mis dominios» por su nombre
+accesible, no por posición. La lección, otra vez: un checklist que sólo mira
+"¿está ahí?" no ve "¿lleva a donde dice?".
+
+**Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
+testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
+unitario y no puede tenerlo hoy**. *(La segunda mitad de esa frase queda
+`superseded por §87`, del mismo día: sí se puede, con `renderToStaticMarkup` y
+sin testing-library — `react-dom` ya estaba. Lo que sigue siendo cierto es que
+esta pantalla en concreto no lo tiene.)* La verificación real es el `ux-pilot`
+(`tests/pilot/journeys/public-pages.spec.ts`), que comprueba el 404 real, el
+`noindex`, y que lo que se pinta es la escena y no un placeholder — anclado a
+`.nf-scene` y al titular, no a "la página cargó". El 404 de dentro de la consola sí acabó
+cubierto, en `core-flow.spec.ts` — ver arriba.
+
+---
+
+## 87. Auditoría web deja de ser una pantalla que nadie puede demostrar (PRELAUNCH-HARDENING-1, 2026-08-14)
+
+**Qué se decidió.** Los seis módulos de
+`web-audit/_components/` pasan a tener tests de render de verdad: **46 casos
+nuevos**, de 2.278 a 2.324. Son los primeros tests de render del repositorio.
+
+**Por qué justo aquí.** §83 movió catorce componentes de esa pantalla y los
+2.278 tests pasaron en verde **sin que ni uno mirase el marcado**, porque no
+existía ninguno que lo hiciera. Lo único que demostró la equivalencia fue una
+comparación de líneas hecha a mano, que no se ejecuta en CI y no protege al
+cambio siguiente. Una pantalla que sólo se puede verificar mirando capturas es
+una pantalla que se rompe entre pasada y pasada del piloto.
+
+### Cero dependencias nuevas, y por qué era posible
+
+`renderToStaticMarkup` viene con `react-dom`, que ya estaba, y no toca el DOM —
+así que `environment: "node"` sigue valiendo y no hacen falta jsdom ni una
+biblioteca de testing. Lo único que cambia en la configuración es que
+`vitest.config.ts` ahora incluye `**/*.test.tsx`.
+
+Que esto sea posible es **consecuencia directa de §83**: los componentes son
+puros y síncronos precisamente porque se extrajeron. Dentro de un `page.tsx`
+asíncrono de 1.933 líneas no había forma de llamarlos.
+
+### Qué aseguran y qué no
+
+Aseguran **contenido**: que el número que sale es el que entra, que el alcance
+se pluraliza, que un dato ausente se ve como ausente. **No aseguran aspecto** —
+eso sigue siendo del `ux-pilot`, y los dos juntos son la cobertura. Un test que
+fijara clases CSS convertiría cualquier retoque visual en un test rojo sin
+proteger nada.
+
+### Lo que cubren y no estaba cubierto
+
+- **El fallo de producción del 2026-07-12.** `page-checks.ts` avisa en un
+  comentario de que una fila anterior a WEB-AUDIT-R3 no tiene `indexability` y
+  de que leerla sin comprobar «took the whole page down». Ese aviso vivía en
+  prosa, que es el sitio exacto donde una advertencia no se ejecuta. Ahora hay
+  un test que renderiza esa fila antigua, y quitando la guarda se pone rojo.
+- **`TrendChart`, el componente que nadie ha visto nunca.** No aparece en
+  ninguna de las 22 capturas del piloto de la PR #404: el gráfico necesita
+  historial y la cuenta del piloto tiene una sola auditoría. Se movió de
+  fichero sin que lo mirara ni un test ni un ojo. Estos tests son lo único que
+  lo mira.
+- **«No lo hemos podido comprobar» ≠ «no existe»** (`describeSitemap`), que es
+  el invariante «ningún número de relleno» aplicado a una etiqueta.
+- **`LockedSubScoreTile`**: que un plan sin cobertura no se lea como «todavía
+  no auditado» — una afirmación falsa sobre la cuenta del cliente
+  (WEB-AUDIT-TECH-ALL-PLANS-1).
+
+### Los tests se probaron rotos antes de darlos por buenos
+
+Un test que no puede fallar no es cobertura, es decoración. Tres mutaciones
+deliberadas, cada una en rojo la que le tocaba: quitar la pluralización, quitar
+la guarda de `indexability`, y una aserción mía mal escrita (`min-width:0`
+contiene la subcadena `width:`) que el propio arnés destapó en la primera
+pasada.
+
+**Pendiente.** Los tests cubren los componentes, no `WebAuditPage` — que sigue
+con ~1.070 líneas de orquestación de datos sin cubrir. Partirlo era lo que
+quedaba de R7 y ahora tiene, por fin, algo debajo que lo sostenga.
+
+**Trazabilidad.** §83 (la mudanza que dejó el hueco al descubierto); el informe
+de Task Intake de R3 (2026-08-14), donde esto se recomendó en lugar de los
+tipos generados de Supabase; `.claude/rules/web-audit.md`. Y **§86**, que el
+mismo día afirmó que «el repo no tiene testing-library ni un solo `.test.tsx`,
+así que esta pantalla no tiene test unitario **y no puede tenerlo hoy**»: la
+segunda mitad de esa frase queda superseded aquí — sin testing-library también
+se puede, porque `renderToStaticMarkup` no la necesita. Las dos ramas se
+escribieron a la vez y se cruzaron al mergear; se deja anotado en ambas en vez
+de reescribir la de allí.
+
+---
+
+## 88. Tres trabajos que el fundador descarta, escritos para que no resuciten (2026-08-15)
+
+**Qué se decidió.** El fundador descarta tres cosas. Se registran aquí porque
+**dos de ellas no vivían en ningún documento**: eran peticiones suyas en
+conversación, y una petición que sólo existe en un chat vuelve a aparecer sola
+en la siguiente sesión que lea el histórico.
+
+1. **P1 · UX-PILOT-4, el journey de alta completa.** Necesitaba su propia
+   aprobación de excepción de escritura del piloto y no la tendrá. Anotado
+   también en `docs/prelaunch-hardening-plan.md` §Fase P.
+2. **El rediseño de la arquitectura del blog.** El fundador lo pidió el
+   2026-08-14 —*«hay que revisar la arquitectura y diseño del blog. Ahora mismo
+   es demasiado plano y sin ningún tipo de jerarquía de info ni organización»*—
+   y lo retira el 15.
+3. **Los estados del gráfico de panorámica competitiva.** Pedido el mismo día
+   —*«sí merece la pena revisar ese gráfico en sus diferentes estados en un
+   artefacto»*— y retirado igual.
+
+**La consecuencia del primero, dicha en voz alta.** Sin P1, **el flujo de alta
+completo (registro → dominio nuevo → primer escaneo → Overview con datos) sigue
+sin recorrerlo ningún test automatizado de principio a fin**. Es el riesgo #3
+del diagnóstico de PRELAUNCH-HARDENING-1 y se queda abierto **a propósito**, no
+por olvido. Lo que sí lo cubre en parte es Q1 (`createProjectCore` y sus tests):
+la lógica de creación, no el recorrido por navegador.
+
+**Lo que NO cambia.** Los invariantes de la panorámica siguen vigentes tal cual
+en `.claude/rules/competitors.md` (§36, PANORAMA-EMPTY-1): descartar el
+rediseño no descarta las reglas de sus cuatro estados. Y el blog sigue con su
+estrategia de contenido intacta; lo retirado es sólo repensar su jerarquía
+visual.
+
+---
+
+## 89. El alta de un dominio no tenía tests porque no podía tenerlos (PRELAUNCH-HARDENING-1 Fase Q1, 2026-08-15)
+
+**Qué se decidió.** `createProject` se parte en `createProjectCore`
+(`lib/projects/create-project.ts`) + una action que sólo traduce. **18 tests
+nuevos**, de 2.383 a 2.401.
+
+**Por qué importaba más que cualquier fichero largo.** Son ~210 líneas que
+ejecutan el Core Target Flow entero —dominio → competidores sugeridos → prompts
+sugeridos → primer escaneo— y no tenían **ni una sola aserción**. Es lo que hace
+un cliente nuevo en su primer minuto. Deuda anotada en ADR 0022 y riesgo #8 del
+plan.
+
+### El hallazgo: no era descuido, era imposible
+
+Todo el control de flujo de esa función eran `redirect()`, y en Next `redirect`
+**lanza**. No había desenlace observable: no se podía comprobar «¿qué pasa si el
+dominio ya existe archivado?» sin un navegador. Un test que sólo puede afirmar
+«lanzó algo» no es un test.
+
+Por eso lo que cambia **no es la lógica sino cómo se comunica el desenlace**: el
+núcleo devuelve un resultado discriminado y la action lo traduce a
+`revalidatePath` + `redirect`. La traducción es **una tabla** —una variante, una
+redirección, en el mismo orden de comprobación que antes—, y eso es lo que hace
+verificable que la extracción no cambió comportamiento: aquí no había tests
+previos que lo demostraran, así que la correspondencia tenía que ser legible a
+ojo.
+
+### Lo que los tests fijan, y por qué esas cosas
+
+No son tests de cobertura, son las decisiones que un cliente nota:
+
+- **Una consulta de duplicados que falla no significa «no hay duplicado»** —
+  tratarla así crearía el segundo proyecto del mismo dominio.
+- **Un dominio archivado se distingue de uno activo**: son dos mensajes
+  distintos porque son dos situaciones distintas.
+- **Sin prompts no se pide un escaneo.** Pedirlo crearía una fila condenada, y
+  decir «escaneo iniciado» sería un escaneo falso (CLAUDE.md).
+- **Un 429 en la mitad de competidores no tumba el alta ni la otra mitad** — el
+  fallo real del 2026-08-09, una llamada caída y la otra no.
+- **Sin perfil de negocio no se sugiere nada**, nunca el modo ciego por dominio
+  que ADR 0020 eliminó.
+- **Un fallo al derivar alias de marca no bloquea el alta**
+  (GEO-SCORE-BRAND-IDENTITY-1).
+
+### Una dirección de fallo que estaba y ahora está fijada
+
+Si el conteo de proyectos activos falla, **se deja pasar el alta**. Negarle el
+alta a alguien por un error transitorio nuestro es peor que aceptar un proyecto
+de más. Ya era el comportamiento del código; ahora hay un test que impide
+invertirlo sin querer.
+
+**Los tests se probaron rotos.** Tres mutaciones del núcleo —tratar el fallo de
+búsqueda como «no hay duplicado», crear escaneo sin prompts, y confundir
+archivado con activo—, cada una tumbó exactamente su test.
+
+**`VERCEL_ENV` no entra en el núcleo.** Los defaults baratos de preview siguen
+decidiéndose en la action y llegan como `extraProjectColumns`, así que el
+núcleo escribe lo que le pasan y nada por su cuenta. Hay un test para eso: es
+la variable que el fundador fue explícito en que no debe tocar producción
+(2026-08-11).
+
+**Lo que sigue sin cubrir.** Esto testea la **lógica** del alta, no el recorrido
+por navegador. El flujo de principio a fin —registro incluido— sigue sin test
+E2E, y con P1 descartado (§88) se queda así a propósito.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q1); ADR 0022;
+`.claude/rules/server-actions.md`; §88 (el descarte de P1 y su consecuencia).
+
+---
+
+## 90. Las cuatro rutas que sostienen el escaneo recurrente no tenían quién vigilara su cableado (PRELAUNCH-HARDENING-1 Fase Q3, 2026-08-15)
+
+**Qué se decidió.** Tests de ruta para `cron/weekly-scans`,
+`cron/weekly-digest`, `cron/sweep-continue` y `scan/continue`. **28 tests
+nuevos**, de 2.401 a 2.429.
+
+**Por qué el cableado y no la lógica.** La lógica de dentro —`runDailyCronScan`,
+`runWeeklyDigest`, `executePendingScan`— ya estaba testeada, y
+`isAuthorizedInternalRequest` también. Lo que no tenía detector era la costura:
+**que la ruta llame de verdad a la comprobación, que lea SU variable y no otra,
+y que el interruptor apague de verdad**. Una regresión ahí no falla
+ruidosamente — apaga el escaneo recurrente y en producción no se nota hasta
+días después, cuando alguien pregunta por qué su puntuación no se mueve.
+
+### Lo que se fija, y por qué cada cosa
+
+- **Fail-closed sin secreto configurado.** Sin `CRON_SECRET` no entra nadie, ni
+  siquiera quien no manda cabecera. Una ruta que se abre sola cuando falta su
+  variable es una ruta abierta el día que alguien despliega sin ella.
+- **Cruce de secretos.** `SCAN_CONTINUE_SECRET` no abre los crons y `CRON_SECRET`
+  no abre las continuaciones. Son dos variables distintas a propósito y
+  confundirlas es una regresión silenciosa: seguiría funcionando en local, donde
+  suelen estar las dos.
+- **Un interruptor ausente cuenta como apagado.** La comparación es `=== "true"`,
+  así que una variable sin definir o con `"TRUE"` cae en apagado — la dirección
+  de fallo correcta para algo que gasta LLM.
+- **El interruptor del resumen semanal es independiente del de los escaneos.**
+  Ese endpoint **escribe a clientes**; encender los escaneos no puede encender
+  los correos.
+- **Apagar el cron detiene también una cadena ya en vuelo** — un apagado que no
+  apaga lo que ya está corriendo no es un apagado.
+- **El tope de la cadena se rechaza, no se recorta**, y sigue al cap configurado
+  en vez de a un número fijo. Un `chainIndex` fuera de rango es un error de
+  cableado o una petición manipulada; recortarlo lo escondería.
+- **Ningún error crudo de Postgres llega a la respuesta**, en las cuatro.
+
+### Una rareza que los tests ahora explican en vez de esconder
+
+`scan/continue` responde **200 con `ok:false`** cuando el lote falla, no 500. Es
+deliberado: el estado del fallo ya lo persiste `executePendingScan` sobre el
+propio run, que es donde lo miran el usuario y el reconciliador. Un 500
+invitaría a que quien despacha reintentara, y reintentar un lote que ya falló y
+ya quedó registrado es gastar llamadas a LLM por nada. Estaba en un comentario;
+ahora hay un test que lo sostiene.
+
+**Los tests se probaron rotos.** Tres mutaciones: romper el interruptor de los
+escaneos (2 rojos), quitar el tope de la cadena (2 rojos), y hacer que
+`scan/continue` leyera `CRON_SECRET` en vez del suyo (4 rojos).
+
+**Lo que sigue sin cubrir.** Esto prueba el cableado de cada ruta por separado,
+no que Vercel las llame con la cadencia de `vercel.json`. Esa parte sigue siendo
+configuración, no código, y ningún test de este repo puede verla.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q3); ADR 0014
+(cadena de lotes) y ADR 0016 (cadena del barrido); §89 (Q1).
+
+---
+
+## 91. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
 
 **Estado: implementada.** Task Intake de 12 puntos aprobado. Segunda mitad de
 la petición del 12-08: además de *ver* los automatismos (2a, §71), `/admin`
@@ -7858,7 +8821,7 @@ mismo diseño se propuso evitar. Añadido a ambos `.update()`.
 - **Sin piloto agéntico**, misma razón que Fase 1 y 2a: no puede completar un
   desafío AAL2. Verificación manual.
 
-## 80. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
+## 92. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
 
 **Estado: implementada.** Petición directa del fundador sobre lo que acababa
 de mergearse en 2b, no un Task Intake de 12 puntos — pero uno de los tres
@@ -7866,7 +8829,7 @@ cambios contradecía un invariante que ese mismo PR había escrito, así que se
 paró a preguntar antes de tocar código en vez de implementarlo en silencio.
 
 **El campo de motivo se elimina, con la pérdida asumida explícitamente.**
-§79 documentó "no hay tabla de auditoría; el email ES el registro" y
+§91 documentó "no hay tabla de auditoría; el email ES el registro" y
 `.claude/rules/admin.md` lo convirtió en regla: "Every write from `/admin`
 needs a required reason". Quitar la caja de texto no es sólo un cambio de
 CSS — rompe ese invariante. Se preguntó directamente: compacto-pero-
@@ -7999,7 +8962,7 @@ importándolas de donde siempre.
   arnés. Verificación manual de las tres capturas (375/768/1280) pendiente
   del fundador.
 - El gap de lectura de 2a (`auto_coverage_audit_enabled` por debajo de Pro en
-  `lib/admin/automation.ts`) sigue sin tocar, como en §79.
+  `lib/admin/automation.ts`) sigue sin tocar, como en §91.
 
 ---
 

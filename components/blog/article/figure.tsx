@@ -9,19 +9,34 @@ import type { ReactNode } from "react";
  * `docs/adr/0028-article-imagery-policy.md`).
  */
 
-/** Marco + pie de figura. `label` numera la figura; `caption` explica qué se está viendo y de dónde salen los datos. */
+/**
+ * Marco + pie de figura. `label` numera la figura; `caption` explica qué se
+ * está viendo y de dónde salen los datos.
+ *
+ * `wide` es obligatorio cuando el contenido es una tabla. `.art-frame` nace
+ * con `overflow: hidden`, que es lo correcto para un `ProductMock` o un SVG
+ * —recortar un degradado contra el radio del borde— y es exactamente lo
+ * incorrecto para una tabla: la parte que no cabe **desaparece sin dejar
+ * forma de alcanzarla**, que es el fallo de `/docs/metodologia` del §77 otra
+ * vez. Lo encontró el piloto de S8: en 375 px, la última columna de las dos
+ * figuras nuevas —la que lleva la conclusión— no existía, y la de S6 llevaba
+ * dos días igual. Con `wide`, el marco desliza y anuncia que desliza, igual
+ * que `.art-tablewrap` (log §85).
+ */
 export function Figure({
   label,
   caption,
+  wide = false,
   children
 }: {
   label: string;
   caption: string;
+  wide?: boolean;
   children: ReactNode;
 }) {
   return (
     <figure className="art-figure">
-      <div className="art-frame">{children}</div>
+      <div className={wide ? "art-frame art-frame-wide" : "art-frame"}>{children}</div>
       <figcaption className="art-caption">
         <b>{label}</b>
         <span>{caption}</span>

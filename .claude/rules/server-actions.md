@@ -29,4 +29,12 @@ by `core-flow`, `frontend`, and `data-guardian`.
   operator-scoped write (ADMIN-CONSOLE-2b) could call the exact same check
   instead of re-deriving it; two independent implementations of "does this
   project qualify" drift apart silently the first time one of them is edited
-  (`docs/brand/design-decisions-log.md` §79).
+  (`docs/brand/design-decisions-log.md` §91).
+- **El desenlace se DEVUELVE, no se decide con `redirect()`.** Una action que
+  ramifica con `redirect` no es testeable: `redirect` lanza, así que un test
+  sólo puede afirmar «lanzó algo», nunca *qué* decidió. Por eso la lógica vive
+  en un `*Core` que devuelve un resultado discriminado y la action se limita a
+  traducirlo a `revalidatePath` + `redirect`. No es preferencia de estilo: es
+  la razón por la que `createProject` pasó meses ejecutando el Core Target Flow
+  sin una sola aserción (log §89, ADR 0022). La traducción debe ser una tabla —
+  una variante, una redirección— y no interpretar nada.

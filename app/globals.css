@@ -5825,6 +5825,22 @@ select.set-field {
   position: relative; background: var(--brand-surface); border: 1px solid var(--line);
   border-radius: 14px; padding: 26px; box-shadow: var(--brand-shadow-card); overflow: hidden;
 }
+/* Figura cuyo contenido es una tabla (`<Figure wide>`). El `overflow: hidden`
+   de arriba recorta bien un degradado contra el radio del borde y recorta
+   fatal una tabla: lo que no cabe se pierde y no hay gesto que lo devuelva —
+   el fallo del §77, esta vez dentro de una figura. Mismo remedio y misma
+   pista que `.art-tablewrap`, que ya lo resolvió para las tablas sueltas.
+   El `min-width` es lo que hace que la tabla se deslice en vez de aplastar
+   sus columnas hasta ser ilegibles. Encontrado por el piloto en S8 (log §85). */
+.art-frame-wide { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.art-frame-wide table { min-width: 480px; margin-bottom: 0; }
+@media (max-width: 640px) {
+  .art-frame-wide::before {
+    content: "Desliza para ver todas las columnas →"; display: block;
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--ink-3);
+    margin-bottom: 12px;
+  }
+}
 .art-caption {
   font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; line-height: 1.55;
   color: var(--ink-3); margin-top: 11px; display: flex; gap: 8px;
@@ -5927,7 +5943,14 @@ select.set-field {
   .art-code-h::after {
     content: "Desliza →"; flex: none; white-space: nowrap; color: var(--ink-3); opacity: .8;
   }
+  /* Si el bloque ajusta, no desliza: la pista sobraría y además mentiría. */
+  .art-code-wrap .art-code-h::after { content: none; }
 }
+/* `<CodeBlock wrap>`: un valor único que el lector copia entero. El salto es
+   blando —no entra ningún `\n` en el portapapeles—, así que se ve completo y
+   se pega en una sola línea. `break-all` porque la cadena no tiene espacios
+   por los que partir (log §85). */
+.art-code-wrap pre { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
 
 /* --- Tabla comparativa --------------------------------------------------- */
 .art-tablewrap {
@@ -6960,4 +6983,200 @@ select.set-field {
   .pt-ripple.is-go { animation: none; }
   .pt-rec, .pt-auditrow { transition: none; }
   .ptour-scrim, .ptour--modal { animation: none; }
+}
+
+/* ============================================================================
+   NOT-FOUND-ROCKET-1 — la 404 pública, «Fuera de trayectoria».
+   Diseño aprobado: docs/design-reference/not-found-rocket-1/
+
+   Todo va prefijado `nf-` y anidado bajo `.nf-page`: el diseño usa nombres que
+   en este fichero ya significan otra cosa (`stage`, `copy`, `rail`, `title`) y
+   se pisarían en ambos sentidos. Mismo motivo por el que el tour usa `pt-`.
+   ========================================================================== */
+
+/* Sólo la ventana de la misión es oscura; la página sigue siendo blanca, que
+   es lo que deja el pie con su fondo y su tinta de siempre. Pintar `.nf-page`
+   de oscuro dejaba el pie con texto en tinta sobre fondo oscuro, ilegible
+   (fundador, 2026-08-12). */
+.nf-page { background: #fff; }
+
+/* La ventana: nav + escena, sin el pie. Con el pie dentro, la escena perdía
+   los ~200px que mide y dejaba de ocupar la pantalla. */
+.nf-viewport { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+
+/* La nav del sitio es translúcida con blur (`.lp-nav-wrap`). Sobre un cuerpo
+   oscuro eso deja ver el oscuro al hacer scroll, así que aquí —y sólo aquí—
+   es opaca. */
+.nf-page .lp-nav-wrap { background: #fff; backdrop-filter: none; }
+
+.nf-stage {
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: flex-start; background: #081223;
+}
+.nf-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.nf-glow {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(58% 50% at 74% 26%, rgba(37,99,235,.34), transparent 64%),
+    radial-gradient(70% 40% at 30% 98%, rgba(9,197,214,.12), transparent 62%);
+}
+.nf-veil {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to right,
+    #081223 6%, rgba(8,18,35,.9) 32%, rgba(8,18,35,.34) 56%, rgba(8,18,35,0) 76%);
+}
+
+.nf-copy {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start;
+  text-align: left; max-width: min(52%, 33rem); padding: 0 24px 0 clamp(26px, 5vw, 74px);
+}
+.nf-kicker {
+  display: inline-flex; align-items: center; gap: 9px; margin: 0 0 14px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: #8fb8ff;
+}
+.nf-kicker i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--brand-cyan);
+  box-shadow: 0 0 0 0 rgba(9,197,214,.6); animation: nf-pulse 2.6s ease-out infinite;
+}
+@keyframes nf-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(9,197,214,.55); }
+  70%, 100% { box-shadow: 0 0 0 9px rgba(9,197,214,0); }
+}
+.nf-title {
+  font-family: var(--font-display), system-ui, sans-serif; font-weight: 800;
+  letter-spacing: -.035em; line-height: 1.02; margin: 0 0 14px; color: #fff;
+  font-size: clamp(30px, 4.4vw, 52px); text-wrap: balance;
+}
+.nf-sub { margin: 0 0 24px; color: #c3d2ec; font-size: clamp(14.5px, 1.4vw, 17px); max-width: 46ch; line-height: 1.55; }
+
+.nf-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.nf-btn {
+  font-weight: 650; font-size: 14.5px; padding: 12px 22px; border-radius: 11px;
+  transition: transform .15s ease, background .15s ease;
+}
+.nf-btn-solid { background: var(--brand-blue); color: #fff; box-shadow: 0 14px 34px -14px rgba(37,99,235,.95); }
+.nf-btn-solid:hover { background: #3b74f2; transform: translateY(-1px); }
+.nf-btn-ghost { border: 1px solid rgba(160,190,255,.36); color: #dbe6fb; }
+.nf-btn-ghost:hover { background: rgba(146,178,255,.12); }
+
+.nf-rail { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; font-size: 13.5px; color: #8ba2c6; }
+.nf-rail span {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+}
+.nf-rail a { color: #cfdcf7; border-bottom: 1px solid rgba(146,178,255,.32); padding-bottom: 1px; }
+.nf-rail a:hover { color: #fff; border-bottom-color: #7fe3ec; }
+
+.nf-target-label { font-family: var(--font-mono), ui-monospace, monospace; font-size: 14px; letter-spacing: .16em; }
+
+/* Movimiento. Todo CSS y todo ambiente: nada de esto codifica un dato, al
+   revés que la altitud del cohete en el primer escaneo. */
+@keyframes nf-drift { to { transform: translateX(-1200px); } }
+.nf-stars-near { animation: nf-drift 96s linear infinite; }
+.nf-stars-far { animation: nf-drift 168s linear infinite; }
+@keyframes nf-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+.nf-flight { animation: nf-bob 7.5s ease-in-out infinite; }
+@keyframes nf-blip { 0%, 72%, 100% { opacity: 0; } 80%, 88% { opacity: .95; } }
+.nf-thrust { animation: nf-blip 4.4s ease-in-out infinite; }
+.nf-thrust.t2 { animation-delay: -2.2s; }
+@keyframes nf-march { to { stroke-dashoffset: -52; } }
+.nf-live { animation: nf-march 1.9s linear infinite; }
+@keyframes nf-fade { 0%, 100% { opacity: .34; } 50% { opacity: .74; } }
+.nf-lost { animation: nf-fade 3.4s ease-in-out infinite; }
+@keyframes nf-target { 0%, 100% { opacity: .28; } 50% { opacity: .9; } }
+.nf-target { animation: nf-target 3s ease-in-out infinite; }
+
+/* Tablet: el reparto pasa a ser vertical, pero cabe más escena que en un
+   móvil, así que la misión se recoloca menos. */
+@media (max-width: 900px) {
+  .nf-stage { align-items: flex-end; justify-content: center; }
+  .nf-veil {
+    background: linear-gradient(to top,
+      #081223 5%, rgba(8,18,35,.95) 30%, rgba(8,18,35,.42) 56%, rgba(8,18,35,0) 78%);
+  }
+  .nf-mission { transform-origin: 830px 400px; transform: translate(-215px, -110px) scale(.86); }
+  .nf-copy {
+    max-width: none; align-items: center; text-align: center;
+    padding: 0 24px clamp(24px, 4vw, 44px);
+  }
+  .nf-cta, .nf-rail { justify-content: center; }
+  .nf-title { font-size: clamp(30px, 5vw, 42px); }
+}
+
+/* Móvil: el copy ocupa casi la mitad del alto y el recorte de `slice` pasa a
+   ser lateral, así que la misión se encoge, sube y se centra — y los dos
+   tramos bajos de la estela desaparecen porque cruzaban el titular. */
+@media (max-width: 640px) {
+  .nf-mission { transform: translate(-240px, -197px) scale(.74); }
+  /* Sólo desaparece el tramo de más abajo. Ocultando también el de en medio,
+     lo que quedaba era un fragmento corto y desconectado flotando bajo el
+     cohete; con el tramo medio, la estela vuelve a leerse como una sola
+     trayectoria y su extremo se disuelve bajo el velo. */
+  .nf-live.lo { display: none; }
+  .nf-copy { padding: 0 20px 26px; }
+  .nf-kicker { font-size: 10.5px; letter-spacing: .1em; }
+  .nf-title { font-size: clamp(29px, 8vw, 36px); }
+  .nf-sub { font-size: 15px; margin-bottom: 20px; }
+  .nf-cta { margin-bottom: 18px; }
+  .nf-btn { flex: 1 1 130px; text-align: center; padding: 12px 16px; }
+}
+
+/* Igual que el tour: no es una degradación, es el contrato. La escena queda
+   quieta en un fotograma legible — el cohete en ruta, la estela cortada y el
+   destino marcado siguen contando lo mismo sin moverse. */
+@media (prefers-reduced-motion: reduce) {
+  .nf-stars-near, .nf-stars-far, .nf-flight, .nf-thrust,
+  .nf-live, .nf-lost, .nf-target, .nf-kicker i { animation: none; }
+  .nf-thrust { opacity: .95; }
+  .nf-btn { transition: none; }
+}
+
+/* ============================================================================
+   NOT-FOUND-ROCKET-1 — el 404 de dentro de la consola.
+
+   Sobrio, no descuidado: la primera versión reutilizaba `EmptyState`, cuyo
+   borde discontinuo es el lenguaje de "contenido que todavía no está", y con
+   un botón suelto debajo leía como una maqueta a medias (fundador,
+   2026-08-13). Sin caja a propósito — en una pantalla por lo demás vacía, una
+   caja alrededor de un mensaje corto es lo que lo hace parecer un widget roto.
+   ========================================================================== */
+
+.nfc {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  /* Centrado en lo que queda de pantalla bajo la cabecera de la consola, no
+     pegado arriba: es una pantalla sin contenido, y el vacío se reparte. */
+  min-height: min(560px, 68vh); justify-content: center;
+  max-width: 30rem; margin: 0 auto; padding: 24px 20px;
+}
+
+.nfc-glyph {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px;
+  background: var(--accent-soft); color: var(--accent-ink); margin-bottom: 18px;
+}
+
+.nfc-kicker {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-4); margin: 0 0 8px;
+}
+
+.nfc-title {
+  font-family: var(--font-display), system-ui, sans-serif; font-weight: 700;
+  letter-spacing: -.025em; font-size: 26px; line-height: 1.15; color: var(--ink);
+  margin: 0 0 10px; text-wrap: balance;
+}
+
+.nfc-sub {
+  margin: 0 0 26px; color: var(--ink-3); font-size: 14.5px; line-height: 1.6;
+  max-width: 42ch;
+}
+
+.nfc-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+@media (max-width: 560px) {
+  .nfc { min-height: 62vh; padding: 20px 16px; }
+  .nfc-title { font-size: 23px; }
+  .nfc-actions { width: 100%; }
+  .nfc-actions .btn { flex: 1 1 100%; }
 }

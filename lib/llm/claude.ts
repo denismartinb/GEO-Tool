@@ -7,8 +7,8 @@ import {
   EXTRACTION_MAX_ATTEMPTS,
   EXTRACTION_RETRY_BASE_DELAY_MS,
   EXTRACTION_RETRY_MAX_DELAY_MS
-} from "@/lib/scan/constants";
-import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/gemini";
+} from "@/lib/llm/constants";
+import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/contracts";
 import { delay, fetchWithTimeout } from "@/lib/llm/http";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";

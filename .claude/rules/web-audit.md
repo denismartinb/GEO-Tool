@@ -91,6 +91,34 @@ Consecuencias, y son reglas:
   No es un respaldo: no reintroducir lecturas. Se dejó porque tirar una columna
   es un cambio destructivo con su propia aprobación.
 
+### Los componentes de presentación viven en `_components/`, no en `page.tsx`
+
+`page.tsx` orquesta datos; los catorce componentes que pintan filas, anillos,
+tarjetas y el gráfico de tendencia viven en
+`app/dashboard/projects/[projectId]/web-audit/_components/` (log §83).
+Componente nuevo de esta pantalla → ahí.
+
+**Cada uno de esos módulos tiene tests de render, y un componente nuevo también
+los lleva** (log §87). Se renderiza de verdad con `renderToStaticMarkup` — sin
+dependencias nuevas: `react-dom` ya estaba y no toca el DOM, así que
+`environment: "node"` basta. Se asegura el **contenido** (el número que sale es
+el que entra, el alcance se pluraliza, un dato ausente se ve ausente), nunca el
+aspecto: fijar clases CSS pondría rojo cualquier retoque visual sin proteger
+nada. El aspecto es del `ux-pilot`, y los dos juntos son la cobertura.
+
+Dos cosas que esos tests existen para no volver a perder: **una fila persistida
+antes de WEB-AUDIT-R3 no tiene `indexability` ni `citability`**, y leerlas sin
+comprobar tumbó la pantalla entera en producción el 2026-07-12 — el aviso vivía
+sólo en un comentario de `page-checks.ts`, que es donde una advertencia no se
+ejecuta; y **`TrendChart` no aparece en ninguna captura del piloto** porque
+necesita historial de auditorías que la cuenta del piloto no tiene, así que sus
+tests son lo único que lo mira.
+
+Aun así, para una **mudanza** de marcado la comparación línea a línea sigue
+haciendo falta además de los tests: éstos aseguran afirmaciones concretas, no
+que no se haya perdido nada por el camino. Esa comparación cazó un bloque
+duplicado que el compilador y el lint dejaron pasar (log §83).
+
 ## Excepción registrada: la auditoría automática tras escaneo
 
 `lib/web-audit/audit-job-runner.ts` (AUDIT-AFTER-SCAN-1, ADR 0027) llama a los

@@ -480,13 +480,46 @@ export async function dismissWelcomeTour(page: Page): Promise<boolean> {
   return true;
 }
 
+/**
+ * Lo que una ruta puede declarar sobre sí misma antes de visitarla.
+ *
+ * Hoy sólo una cosa, y existe porque el harness no podía pilotar una 404
+ * NUNCA (NOT-FOUND-ROCKET-1, 2026-08-12): `onResponse` marca como fallo
+ * cualquier respuesta ≥400 de primera parte, y en una página de error el
+ * documento principal DEBE responder ≥400. El piloto reportaba
+ * "first-party requests failed" por el único comportamiento que esa pantalla
+ * está obligada a tener.
+ *
+ * Es deliberadamente estrecho: exime **una** respuesta, la del documento de
+ * la ruta visitada, y **sólo** con el código declarado. Un 500 en esa misma
+ * ruta, o un 404 de un subrecurso —un CSS que no carga, una imagen rota—
+ * siguen tumbando la pasada, que es justo lo que esta comprobación existe
+ * para detectar. Y no debilita la garantía de que la ruta responde 404: eso
+ * lo asevera su propio test con `page.request.get`, aparte de esto.
+ */
+export interface VisitOptions {
+  /** El documento de esta ruta responde con este código, y eso es correcto. */
+  expectDocumentStatus?: number;
+}
+
 export async function visitAsUser(
   page: Page,
   testInfo: TestInfo,
   path: string,
   label: string,
-  expectation?: ContentExpectation
+  expectation?: ContentExpectation,
+  options?: VisitOptions
 ): Promise<PageFindings> {
+  const expectedDocStatus = options?.expectDocumentStatus;
+  const visitedPath = path.split("?")[0].split("#")[0];
+  /** ¿Es esta respuesta la del documento de la propia ruta que se visita? */
+  const isVisitedDocument = (url: string): boolean => {
+    try {
+      return new URL(url).pathname.replace(/\/$/, "") === visitedPath.replace(/\/$/, "");
+    } catch {
+      return false;
+    }
+  };
   const consoleErrors: string[] = [];
   const failedRequests: string[] = [];
   const thirdPartyFailures: string[] = [];
@@ -503,12 +536,26 @@ export async function visitAsUser(
     const sourceUrl = message.location()?.url ?? "";
     const text = sourceUrl ? `${message.text()} (${sourceUrl})` : message.text();
     if (IGNORED_CONSOLE_PATTERNS.some((pattern) => pattern.test(text))) return;
+    // Chromium también registra el status del documento como error de consola
+    // ("Failed to load resource: ... 404"). Es el mismo hecho ya eximido
+    // arriba, no un segundo problema: filtrarlo aquí evita que una sola 404
+    // esperada cuente dos veces.
+    if (
+      expectedDocStatus !== undefined &&
+      text.includes(String(expectedDocStatus)) &&
+      isVisitedDocument(sourceUrl)
+    ) {
+      return;
+    }
     consoleErrors.push(redact(text));
   };
 
   const onResponse = (response: { status: () => number; url: () => string }) => {
     const status = response.status();
     if (status < 400) return;
+    if (expectedDocStatus !== undefined && status === expectedDocStatus && isVisitedDocument(response.url())) {
+      return;
+    }
     const entry = `${status} ${redact(response.url())}`;
     if (THIRD_PARTY_HOSTS.test(response.url())) thirdPartyFailures.push(entry);
     else failedRequests.push(entry);

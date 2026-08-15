@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { requireActiveProject } from "@/lib/project-workspace";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { EmptyState } from "@/components/empty-state";
@@ -40,7 +40,7 @@ import {
   readWindowRun
 } from "@/lib/scoring/score-window";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
-import { getLLMScanProviders } from "@/lib/scan/executor";
+import { getLLMScanProviders } from "@/lib/scan/providers";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -226,14 +226,9 @@ export default async function ProjectDetailPage({
   // Reconciliation itself is decided from the already-fetched `runs` below
   // instead of running unconditionally on every render
   // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
-  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }, { count: activeAuditJobCount }] =
+  const [project, { data: prompts }, { data: competitors }, { data: runsData }, { count: activeAuditJobCount }] =
     await Promise.all([
-      supabase
-        .from("projects")
-        .select("id, name, domain, brand, country, language, created_at")
-        .eq("id", projectId)
-        .eq("is_archived", false)
-        .single(),
+      requireActiveProject(projectId),
       supabase
         .from("project_prompts")
         .select("id, prompt_text, category, is_active")
@@ -265,8 +260,6 @@ export default async function ProjectDetailPage({
         .in("status", ["pending", "running", "retrying"])
     ]);
   const hasActiveAuditJob = (activeAuditJobCount ?? 0) > 0;
-
-  if (!project) notFound();
 
   let runs = runsData;
   if (scanRunsNeedReconciliation(runs)) {

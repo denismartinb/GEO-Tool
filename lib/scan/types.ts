@@ -1,5 +1,3 @@
-import type { requireUser } from "@/lib/auth";
-
 export type ProjectActionErrorCode =
   | "active_run_exists"
   | "free_plan_scan_limit_reached"
@@ -35,7 +33,6 @@ export type RunErrorDisplay = {
   kind: RunErrorDisplayKind;
 };
 
-export type AuthenticatedContext = Awaited<ReturnType<typeof requireUser>>;
 
 export type JobRow = {
   id: string;

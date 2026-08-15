@@ -15,19 +15,36 @@ una con su Human Gate.
   consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
   (migración, cifra publicada, superficie de auth).
 - **Fase R 🟡 en curso** — R1, R2 (log §43), **R4** (log §70) y **la primera
-  mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`).
-  Quedan R3, la segunda mitad de R5 (repartir las nueve funcionalidades a sus
-  módulos dueños), y R6–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`)
+  y **R5 entera** (log §79: los tipos compartidos salen a
+  `lib/llm/contracts.ts`; log §80: las cinco funcionalidades de producto se van
+  a sus módulos dueños y `gemini.ts` pasa de 1.278 a 303 líneas), y **el primer
+  trozo de R6** (log §81: `processPromptJob` sale del ejecutor, 1.523 → 1.167
+  líneas; log §82: se rompe la dependencia de medio repositorio sobre
+  `lib/scan/`, y **R6 queda cerrada**), **R7 casi entera** (log §83: los 14
+  componentes de Auditoría web salen de la página; log §84: Visión general deja
+  de ser la excepción) y **el grueso de R8** (log §84: dos ficheros muertos
+  borrados) y **46 tests de render para Auditoría web** (log §87), los primeros
+  del repositorio. **R3 queda descartada como está escrita** tras su Task Intake
+  del 2026-08-14 (ver R3 abajo). Quedan partir `WebAuditPage` y los dos
+  huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
-- **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
-  evidencia se sube de verdad (log §49), y **Q5b está hecho** (log §55): el
+- **Fase Q 🟡 en curso** — **Q1 hecho** (log §89: `createProjectCore` y 18
+  tests para el alta de un dominio, que no tenía ninguno), **Q3 hecho** (log
+  §90: 28 tests del cableado de las cuatro rutas que sostienen el escaneo
+  recurrente), el self-check del
+  piloto vuelve a estar verde y su evidencia se sube de verdad (log §49), y
+  **Q5b está hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
   `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
   nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
   pendientes.
-- **Fases P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
-  su aprobación propia de excepción de escritura del piloto, como UX-PILOT-2/3.
+- **Fase P ⛔ P1 descartado (2026-08-15, fundador; log §88)** — no tendrá la
+  aprobación de excepción de escritura que necesitaba. **Consecuencia asumida:
+  el riesgo #3 del diagnóstico —el flujo de alta sin ningún test de principio a
+  fin— se queda abierto a propósito.** P2–P4 siguen pendientes.
+- **Fase A** — pendiente: son decisiones del fundador, no trabajo de agente.
 
 **Origen:** petición del fundador (2026-08-09): antes de lanzar GenScore al
 mercado, plantear (1) un plan de refactorización y revisión de arquitectura
@@ -167,20 +184,64 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   (transporte, sobre R2) + los 8 usos de producto repartidos a sus módulos
   dueños (`suggestCompetitors` → `lib/competitors/`, `suggestPrompts` →
   `lib/projects/`, `rewriteRecommendation` → `lib/recommendations/`, etc.).
+  **Aviso medido**: el reparto no es mecánico. `BusinessProfile` lo usan nueve
+  módulos y dos son los otros motores, así que hay un paso previo obligatorio —
+  los tipos compartidos a un módulo neutral (`lib/llm/contracts.ts`, log §79) —
+  sin el cual la mudanza nace con ciclos. **Hecho** (log §80): 1.278 → 303
+  líneas, y `gemini.ts` se queda con lo que sí es el motor Gemini, el mismo
+  contenido que `openai.ts` y `claude.ts`. El barril de reexports **se queda a
+  propósito**: seis tests mockean `@/lib/llm/gemini`, así que esa ruta de
+  import es el punto de inyección del suite, no deuda.
 - **R6 · Descargar `lib/scan/executor.ts`** (1–2 PRs): extraer
   `processPromptJob` (L91–418) a `lib/scan/prompt-job.ts`; mover
   `scan/types.ts` + `scan/constants.ts` a `lib/domain/` (rompe las 6
   dependencias mutuas sobre `lib/scan`); `web-audit/types.ts` para los 2
   ciclos solo-tipo. La regla de ruta `scan.md` aplica entera: son mudanzas,
-  no cambios de lógica.
+  no cambios de lógica. **Hecha entera.** `processPromptJob` (log §81): 1.523 → 1.167
+  líneas, y de paso muere el `delay` duplicado que R2 ya había unificado en
+  `lib/llm/http.ts`. **`lib/domain/` se descarta como destino** (log §82): no
+  eran 6 dependencias sino 26 ficheros, y al mirar QUÉ importaba cada uno la
+  dependencia entera resultó ser tres símbolos —`AuthenticatedContext` (17
+  importadores, y es el tipo de retorno de `requireUser`, no un tipo de
+  escaneo), ocho constantes de llamada a LLM, y `ProjectActionError`. Cada uno
+  se fue a su dueño natural (`lib/auth.ts`, `lib/llm/constants.ts`) y el
+  tercero se queda porque su vocabulario SÍ es de escaneo. Mover los dos
+  ficheros enteros habría llevado 466 líneas de ciclo de vida del escaneo a un
+  módulo «neutral» sin romper ninguna dependencia. Resultado: de 26 ficheros
+  externos quedan 5, todos dependencias legítimas de dominio, y **`lib/llm/**`
+  ya no importa nada de `lib/scan`**.
 - **R7 · Páginas** (2 PRs): extraer los ~24 componentes inline de
-  `web-audit/page.tsx` a `web-audit/_components/`; Overview pasa a usar
-  `requireActiveProject` como todas las demás páginas (hoy es la única con
-  ownership check artesanal junto a un `createServiceClient()`); arreglar el
-  import de `getLLMScanProviders` desde `executor` cuando existe
-  `providers.ts` justo para eso; unificar `setRecurringScans`/`setAutoWebAudit`.
-- **R8 · Limpieza de muertos** (1 PR pequeño): `lib/supabase/client.ts` (0
-  importadores — confirmar que es intencional que no haya cliente browser),
+  `web-audit/page.tsx` a `web-audit/_components/` — **hecho** (log §83): 14
+  componentes en 6 módulos, la página de 1.933 a 1.137 líneas. Aviso para el
+  resto de R7: **aquí los tests no demuestran nada** (esa pantalla no tiene
+  tests de render) y `tsc` tampoco — la prueba es comparar los multiconjuntos
+  de líneas del original contra la suma de los resultantes, y eso cazó un
+  bloque duplicado que compilaba y pasaba el lint. **Overview a
+  `requireActiveProject` y el import de `getLLMScanProviders` desde
+  `providers.ts`: hechos** (log §84) — `requireActiveProject` entra DENTRO del
+  `Promise.all` existente, no delante, para no serializar una consulta más; y
+  el reexport de cortesía del ejecutor se borra por muerto. Dos correcciones al
+  plan: Overview no tenía «ownership check artesanal junto a un
+  `createServiceClient()`» (ese cliente es para `reconcileStuckScanRuns` y es
+  legítimo), y **`setAutoWebAudit` ya no existe** — lo retiró
+  WEB-AUDIT-AUTO-SPLIT-1, su sustituto es `setAutoAuditHalf`, y el comentario
+  de `actions.ts` dice que la forma de espejo entre ambos es deliberada. Queda
+  partir `WebAuditPage` (~1.070 líneas de orquestación de datos), que toca
+  lógica y no presentación — y desde el 2026-08-14 ya no parte de cero: los seis
+  módulos de `_components/` tienen **46 tests de render** (log §87), los primeros
+  del repositorio, con `renderToStaticMarkup` y sin dependencias nuevas.
+  **R3 queda descartada como está escrita** tras su Task Intake (2026-08-14): no
+  son 47 sitios sino 292, los tipos generados no se adoptan sitio a sitio sino
+  tipando el cliente entero, `gen types` necesita credenciales de base de datos
+  que ni CI ni una sesión de agente tienen, y —lo decisivo— las migraciones de
+  este repo se aplican **a mano**, así que un fichero de tipos generado
+  afirmaría con confianza de compilador que una columna existe durante la
+  ventana en la que todavía no se ha pegado el SQL. Además su justificación
+  estaba del revés: en las columnas JSONB donde se concentran los
+  `as unknown as`, `gen types` emite `Json` y empeora lo que hay.
+- **R8 · Limpieza de muertos** (1 PR pequeño): **`lib/supabase/client.ts` y
+  `lib/types.ts` borrados** (log §84) — cero importadores, comprobado por ruta
+  de import y no por nombre. Quedan
   `lib/web-audit/action-plan.ts` (huérfano shipped: decidir re-conectar o
   retirar con nota en el ROADMAP), `updateProfileName` huérfano (log §38).
 
@@ -195,17 +256,26 @@ forma medible.*
 
 ### Fase Q — QA TÉCNICO (huecos de test, por riesgo de lanzamiento)
 
-- **Q1 · `createProject` → `createProjectCore` + tests**: es EL flujo de
-  lanzamiento (alta de dominio) y son ~210 líneas sin ningún test (deuda
-  anotada en ADR 0022). La extracción sigue el patrón `*Core` ya establecido.
+- **Q1 · `createProject` → `createProjectCore` + tests** ✅ **hecho
+  (2026-08-15, log §89)**: 18 tests, de 2.383 a 2.401. **Hallazgo**: no tenía
+  tests porque no podía tenerlos — todo su control de flujo eran `redirect()`,
+  que en Next lanza, así que no había desenlace observable. El núcleo devuelve
+  ahora un resultado discriminado y la action lo traduce a
+  `revalidatePath` + `redirect`; la traducción es una tabla (una variante, una
+  redirección, mismo orden de comprobación) porque **no había tests previos que
+  demostraran la equivalencia** y tenía que ser legible a ojo. Cubre la lógica
+  del alta, no el recorrido por navegador — eso sigue descubierto (§88).
 - **Q2 · Emails transaccionales**: tests de `lib/email/transactional.ts` y
   `resend.ts` (render de los 8+ emails, destinatarios, la regla "alertas de
   operador nunca al cliente" de `scan.md`).
-- **Q3 · Rutas cron y de continuación**: tests a nivel de ruta (auth, kill
-  switch, límites de chainIndex) para `weekly-scans`, `weekly-digest`,
-  `sweep-continue`, `scan/continue` — la lógica interna ya está testeada; lo
-  que no hay es detector de una regresión de cableado que apagaría todo el
-  escaneo recurrente tras el lanzamiento.
+- **Q3 · Rutas cron y de continuación** ✅ **hecho (2026-08-15, log §90)**: 28
+  tests, de 2.401 a 2.429, para `weekly-scans`, `weekly-digest`,
+  `sweep-continue` y `scan/continue`. Cubren lo que no cubría nadie: fail-closed
+  sin secreto, que ninguna ruta acepte el secreto de la otra, que un interruptor
+  ausente cuente como apagado, que apagar el cron detenga una cadena en vuelo,
+  que el tope de `chainIndex` se rechace en vez de recortarse, y que ningún
+  error crudo de Postgres llegue a la respuesta. **Sigue sin cubrir** que Vercel
+  las llame con la cadencia de `vercel.json`: eso es configuración, no código.
 - **Q4 · Frontera auth/tenancy**: tests de `middleware.ts`, `lib/auth.ts`,
   `lib/account-role.ts` y de los 7 sitios de `app/` que usan
   `createServiceClient()` (que el ownership manual que RLS no cubre esté
@@ -272,7 +342,18 @@ el bootstrap ni espera al primer escaneo). Propongo formalizarlo como
 **UX-PILOT-4 (journey cold-start)**, tercera excepción de escritura, con las
 mismas guardas estructurales que las dos ya aprobadas:
 
-- **P1 · UX-PILOT-4 — journey de alta completa** (`--journeys coldstart`,
+- **P1 · UX-PILOT-4 — journey de alta completa** — ❌ **DESCARTADO por el
+  fundador (2026-08-15).** Necesitaba su propia aprobación de excepción de
+  escritura del piloto y no la tendrá. Consecuencia declarada, para que nadie
+  la redescubra: **el flujo de alta completo (registro → dominio nuevo →
+  primer escaneo → Overview con datos) sigue sin recorrerlo ningún test
+  automatizado de principio a fin** — es el riesgo #3 del diagnóstico y se
+  queda abierto a propósito. Lo que sí lo cubre en parte, desde Q1, son los
+  tests de `createProjectCore`: la lógica de creación, no el recorrido por
+  navegador. La descripción original se conserva abajo por si alguna vez se
+  reabre.
+
+  *(descripción original, sin efecto)* (`--journeys coldstart`,
   `workflow_dispatch` only, jamás por deploy):
   1. Crea un proyecto nuevo sobre un **segundo dominio reservado**
      (`PILOT_COLDSTART_DOMAIN`, dominio público estable tipo `wikipedia.org`,

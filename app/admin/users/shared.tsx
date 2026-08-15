@@ -133,7 +133,7 @@ export function ProjectAutomationLine({ automation }: { automation: ProjectAutom
  * ADMIN-CONSOLE-2b. Un formulario por interruptor, no uno compartido: cada
  * uno actúa sobre un proyecto y una columna distintos, y "activé el
  * recurrente" no debe poder confundirse con "activé la auditoría de
- * cobertura" al enviar. Desde ADMIN-CONSOLE-UX-1 (§80) ya no lleva campo de
+ * cobertura" al enviar. Desde ADMIN-CONSOLE-UX-1 (§92) ya no lleva campo de
  * motivo — decisión explícita del fundador; el email de aviso sigue siendo
  * el registro de quién/qué/cuándo, sin el porqué.
  */

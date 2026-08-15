@@ -24,7 +24,7 @@ import { AUDIT_HALF_COLUMN, checkRecurringScansPrecondition } from "@/lib/projec
  *    qué proyecto y qué cambió. No hay tabla de auditoría nueva (sin
  *    migración aprobada); el email ES el registro — desde ADMIN-CONSOLE-UX-1
  *    (2026-08-15) ya no pide motivo, decisión explícita del fundador
- *    (`docs/brand/design-decisions-log.md` §80): el registro deja de
+ *    (`docs/brand/design-decisions-log.md` §92): el registro deja de
  *    explicar el porqué, pero sigue siendo el único rastro del quién/qué/cuándo.
  * 3. Nunca se activa un interruptor que el backend va a ignorar. El
  *    recurrente en Free no escanea nunca (`skipped_plan_ineligible`,

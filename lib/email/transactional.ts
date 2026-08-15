@@ -772,7 +772,7 @@ export async function sendNewSignupOpsAlertEmail(input: {
  * adicional a ella (docs/design-reference/admin-console-1/README.md).
  * Registra quién, qué cuenta, qué proyecto y qué cambió — desde
  * ADMIN-CONSOLE-UX-1 ya no lleva motivo (decisión explícita del fundador,
- * `docs/brand/design-decisions-log.md` §80): el registro deja de explicar
+ * `docs/brand/design-decisions-log.md` §92): el registro deja de explicar
  * el porqué, pero sigue siendo el único rastro del quién/qué/cuándo.
  *
  * Va a `OPS_ALERT_EMAIL`, nunca al cliente: es una escritura que hace GenScore
