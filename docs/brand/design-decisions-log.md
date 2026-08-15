@@ -8692,6 +8692,64 @@ E2E, y con P1 descartado (§88) se queda así a propósito.
 
 ---
 
+## 90. Las cuatro rutas que sostienen el escaneo recurrente no tenían quién vigilara su cableado (PRELAUNCH-HARDENING-1 Fase Q3, 2026-08-15)
+
+**Qué se decidió.** Tests de ruta para `cron/weekly-scans`,
+`cron/weekly-digest`, `cron/sweep-continue` y `scan/continue`. **28 tests
+nuevos**, de 2.401 a 2.429.
+
+**Por qué el cableado y no la lógica.** La lógica de dentro —`runDailyCronScan`,
+`runWeeklyDigest`, `executePendingScan`— ya estaba testeada, y
+`isAuthorizedInternalRequest` también. Lo que no tenía detector era la costura:
+**que la ruta llame de verdad a la comprobación, que lea SU variable y no otra,
+y que el interruptor apague de verdad**. Una regresión ahí no falla
+ruidosamente — apaga el escaneo recurrente y en producción no se nota hasta
+días después, cuando alguien pregunta por qué su puntuación no se mueve.
+
+### Lo que se fija, y por qué cada cosa
+
+- **Fail-closed sin secreto configurado.** Sin `CRON_SECRET` no entra nadie, ni
+  siquiera quien no manda cabecera. Una ruta que se abre sola cuando falta su
+  variable es una ruta abierta el día que alguien despliega sin ella.
+- **Cruce de secretos.** `SCAN_CONTINUE_SECRET` no abre los crons y `CRON_SECRET`
+  no abre las continuaciones. Son dos variables distintas a propósito y
+  confundirlas es una regresión silenciosa: seguiría funcionando en local, donde
+  suelen estar las dos.
+- **Un interruptor ausente cuenta como apagado.** La comparación es `=== "true"`,
+  así que una variable sin definir o con `"TRUE"` cae en apagado — la dirección
+  de fallo correcta para algo que gasta LLM.
+- **El interruptor del resumen semanal es independiente del de los escaneos.**
+  Ese endpoint **escribe a clientes**; encender los escaneos no puede encender
+  los correos.
+- **Apagar el cron detiene también una cadena ya en vuelo** — un apagado que no
+  apaga lo que ya está corriendo no es un apagado.
+- **El tope de la cadena se rechaza, no se recorta**, y sigue al cap configurado
+  en vez de a un número fijo. Un `chainIndex` fuera de rango es un error de
+  cableado o una petición manipulada; recortarlo lo escondería.
+- **Ningún error crudo de Postgres llega a la respuesta**, en las cuatro.
+
+### Una rareza que los tests ahora explican en vez de esconder
+
+`scan/continue` responde **200 con `ok:false`** cuando el lote falla, no 500. Es
+deliberado: el estado del fallo ya lo persiste `executePendingScan` sobre el
+propio run, que es donde lo miran el usuario y el reconciliador. Un 500
+invitaría a que quien despacha reintentara, y reintentar un lote que ya falló y
+ya quedó registrado es gastar llamadas a LLM por nada. Estaba en un comentario;
+ahora hay un test que lo sostiene.
+
+**Los tests se probaron rotos.** Tres mutaciones: romper el interruptor de los
+escaneos (2 rojos), quitar el tope de la cadena (2 rojos), y hacer que
+`scan/continue` leyera `CRON_SECRET` en vez del suyo (4 rojos).
+
+**Lo que sigue sin cubrir.** Esto prueba el cableado de cada ruta por separado,
+no que Vercel las llame con la cadencia de `vercel.json`. Esa parte sigue siendo
+configuración, no código, y ningún test de este repo puede verla.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q3); ADR 0014
+(cadena de lotes) y ADR 0016 (cadena del barrido); §89 (Q1).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
