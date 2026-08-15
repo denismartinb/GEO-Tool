@@ -4487,13 +4487,14 @@ a.notif-row:hover {
   font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .lp-mobnav a:hover { background: var(--surface-2); color: var(--ink); }
 @keyframes lpMobnavIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-/* GENSCORE-HEADER-1 (2026-08-12): every public header's burger sits on the
-   right (.lp-burger { margin-left: auto } above) and `PublicHeader` always
-   passes `fromRight` to MarketingMobileNav, so the drawer always slides in
-   from that side — founder: "el menú tiene que salir siempre desde la
-   derecha". The plain left-slide .lp-mobnav keyframe below stays as
-   MarketingMobileNav's default for any future caller that doesn't opt into
-   `fromRight`; nothing in the app uses that default today. */
+/* GENSCORE-HEADER-1 (2026-08-12) had every public header's burger on the
+   right, `PublicHeader` always passing `fromRight` to MarketingMobileNav so
+   the drawer matched. SPIKE, pending founder sign-off
+   (header-consistency-public-private, 2026-08-15): `PublicHeader` no longer
+   passes `fromRight`, so the drawer uses the plain left-slide `.lp-mobnav`
+   above by default, matching the console sidebar's drawer side. `.lp-mobnav--right`
+   stays defined — MarketingMobileNav still supports it for any caller that
+   opts in — but nothing in the app calls it today. */
 .lp-mobnav--right { left: auto; right: 0; box-shadow: -20px 0 60px rgba(15,23,41,.20); animation-name: lpMobnavInRight; }
 @keyframes lpMobnavInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -4876,13 +4877,24 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   .lp-h1 { font-size: 42px; }
   .lp-h2 { font-size: 30px; }
   .lp-nav-links { display: none; }
-  .lp-nav { padding-left: 14px; gap: 6px; }
+  /* SPIKE, pending founder sign-off (header-consistency-public-private,
+     2026-08-15): burger moves to the left and the logo centers, matching
+     WorkspaceTopbar's mobile anatomy (.hdr-burger left / .hdr-brand-mobile
+     centered) instead of the previous logo-left/burger-right split. Scoped
+     to `.lp-nav >` direct children — the landing hero's browserframe mockup
+     also renders its own decorative `.lp-logo` deeper in the tree, and an
+     unscoped `.lp-logo` rule here would pull that one out of flow too. */
+  .lp-nav { padding-left: 14px; padding-right: 14px; gap: 6px; position: relative; }
   .lp-burger {
     display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; min-width: 44px; min-height: 44px;
     border-radius: 9px; background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
-    margin-left: auto;
+    order: -1;
   }
   .lp-burger:hover { background: var(--surface-2); }
+  .lp-nav > .lp-logo {
+    position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin: auto;
+    width: max-content; height: max-content;
+  }
   /* Logo reads oversized once the nav collapses to just burger + wordmark
      (founder feedback) — drop it a couple of px alongside the rest of the
      mobile nav layout. width:auto lets the intrinsic viewBox ratio rescale
