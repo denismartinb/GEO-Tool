@@ -4507,8 +4507,14 @@ a.notif-row:hover {
 .lp-h1 .grad { background: linear-gradient(100deg, #4f46e5, #7c3aed 55%, #0d9488); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .lp-lead { font-size: 18.5px; line-height: 1.6; color: var(--ink-2); margin: 22px auto 0; max-width: 600px; font-weight: 450; }
 .lp-hero-form { max-width: 540px; margin: 30px auto 0; }
-.lp-hero-note { font-size: 13px; color: var(--ink-4); margin-top: 13px; display: flex; align-items: center; justify-content: center; gap: 16px; }
-.lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; }
+.lp-hero-note { font-size: 13px; color: var(--ink-4); margin-top: 13px; display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+/* `nowrap` para que la fila envuelva por ITEMS y no por palabras. Sin él, a
+   375 px cada nota se parte por dentro ("Respuesta real de / ChatGPT") y tres
+   notas se leen como seis fragmentos sueltos. Se vio en la captura del piloto
+   del preview, no en ninguna aserción: no hay desbordamiento que medir, sólo
+   una fila desordenada (FREE-CHECKER-1, log §97). */
+.lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+@media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
 
 .lp-shot { position: relative; z-index: 2; max-width: 1060px; margin: 54px auto 0; }
 .browserframe { border-radius: 14px; border: 1px solid var(--line-strong); background: #fff; box-shadow: 0 30px 80px rgba(16,24,40,.18), 0 8px 24px rgba(16,24,40,.08); overflow: hidden; }
