@@ -8750,6 +8750,56 @@ configuración, no código, y ningún test de este repo puede verla.
 
 ---
 
+## 91. El artículo de pymes se publicó sin su techo, y sin nada que lo vigilara (SEO-POS-1, S9, 2026-08-15)
+
+**Qué se corrige.** `/blog/como-hacer-que-chatgpt-recomiende-tu-negocio` (S9,
+PR #409) salió a producción honesto pero **sin declarar su límite**, y sin test
+propio. Se le añade un `Verdict` con el techo y
+`lib/blog/pyme-local.test.ts` para que ese techo sobreviva a la siguiente
+reescritura.
+
+**Por qué importa en esta pieza y no en otras.** Su keyword —«cómo hacer que
+ChatGPT recomiende mi negocio»— la ocupan hoy páginas que **garantizan
+resultados**. Un texto que enumera cuatro palancas de mejora se desliza solo
+hacia ese registro: no hace falta mala fe, basta con que un refresco futuro
+borre o suavice una frase. Es exactamente el reclamo que `PRICING-TRUTH-1`
+obligó a retirar del producto, sólo que en contenido.
+
+**Lo que faltaba, en concreto.** La versión publicada decía «nada de esto se
+compra ni se fuerza; se construye» —un techo implícito y bien escrito— pero no
+decía las tres cosas que el lector de esa búsqueda necesita oír: que **OpenAI
+no ha publicado cómo elige** los negocios locales que recomienda, que por tanto
+**nadie puede garantizar** una recomendación, y que **no hay dónde comprar ese
+sitio**. Sin eso, un lector al que le están vendiendo «aparecer en ChatGPT» no
+tiene con qué contrastar. Se añade también que una sola consulta no mide nada,
+enlazando a S1.
+
+**El guardián persigue una ausencia, y es el primero del repositorio que lo
+hace.** Los demás tests de contenido comprueban que algo esté —una fuente, un
+denominador, una portada—. Éste comprueba que **el límite siga estando y que la
+promesa siga sin estar**: exige las frases del techo y detecta el vocabulario
+de las páginas que prometen («aparecerás en…», «te posicionamos en…», «en N
+días»). Verificado en las dos direcciones: al suavizar el título del `Verdict`,
+el test falla.
+
+**Y el motivo por el que esto es una corrección y no parte de S9.** Hubo dos
+versiones de S9 escritas en paralelo por dos sesiones distintas. Se mergeó la
+otra (#409); ésta llevaba el techo y el test, y se quedó sin mergear. Al
+comprobar qué había en `main` se dio por hecho que el artículo publicado era el
+propio —coincidían slug y tema— y sólo al ejecutar el test contra él se vio que
+no: 196 líneas frente a 288, otras secciones, otro enfoque. **Asumir en vez de
+mirar**, el mismo error que ese día se cometió antes con S7, que también se dio
+por pendiente cuando llevaba un PR abierto desde la víspera. La lección no es
+sobre git: antes de afirmar el estado de algo, mirarlo.
+
+**Lo que NO se hace aquí:** sustituir el artículo publicado por el otro. El
+tema está cubierto y reemplazar el trabajo de otra sesión por gusto propio no
+se justifica. La asimetría de datos que traía la versión no mergeada —el peso
+de los directorios triplicándose en consultas de recomendación— queda sin
+publicar; si algún día se refresca la pieza, está en la rama.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

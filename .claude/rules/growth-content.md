@@ -71,6 +71,16 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   remedio elegido no fue una comprobación más lista sino eliminar la diferencia:
   el valor vive en un módulo TS, el MDX lo renderiza como expresión y el test
   importa ese mismo valor (`lib/blog/ga4-source-regex.ts`; log §85).
+- **Cuando la keyword la ocupan páginas que prometen, el guardián persigue una
+  ausencia, no una presencia.** «Cómo hacer que ChatGPT recomiende tu negocio»
+  la ocupan hoy páginas que garantizan resultados, y un artículo que enumera
+  palancas de mejora se desliza solo hacia ese registro — no hace falta mala
+  fe, basta con que un refresco borre una frase. `pyme-local.test.ts` exige que
+  sigan ahí las frases del techo (quién no ha publicado qué, que nadie puede
+  garantizar, que no hay dónde comprar el sitio) y detecta el vocabulario de
+  promesa. Es el primer test de contenido que comprueba que **algo siga sin
+  estar**; los demás comprueban que algo esté. Un límite implícito no sobrevive
+  a la siguiente reescritura (log §91).
 - **Una cifra de terceros va con su fuente y con su tamaño de muestra, o no
   va.** El `source` del `<Stat>` es cómo este proyecto cumple la regla de
   arriba: sin él la cifra se lee como nuestra. Y un porcentaje ajeno sin
