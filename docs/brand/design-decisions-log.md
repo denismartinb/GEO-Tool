@@ -9554,6 +9554,73 @@ cambia el respaldo de todo el sitio a la vez y merece su propia pasada.
 ---
 
 
+## 101. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
+
+**De dónde viene.** Al cerrar la Fase E dejé apuntado que el `title` y el
+`description` del layout raíz seguían siendo una redacción propia de qué es
+GenScore, "que actúa de respaldo para toda página sin metadata propia". El
+fundador pidió el Task Intake, y **investigarlo desmontó mi propio encuadre**.
+
+**Lo que resultó ser falso.** Lo vendí como riesgo de posicionamiento. No lo
+es. Las 26 rutas sin metadata propia son **todas privadas** —21 de
+`/dashboard`, `/admin`, `/debug` y las dos de `/mfa`—, todas en el `disallow`
+de `robots.ts`. Ninguna página pública hereda ese respaldo. El impacto en
+buscadores de cambiarlo es cero. Lo que escribí era literalmente cierto y
+engañoso a la vez, porque omitía cuáles eran esas páginas: la clase de frase
+que suena a hallazgo y no lo es.
+
+**Lo que sí existía.** Las pantallas de consola compartían literalmente la
+misma pestaña, «GenScore». Quien trabaja con dos o tres dominios abiertos —el
+caso normal de una agencia, que es un plan que vendemos— veía seis pestañas
+idénticas. Es UX de consola, no SEO, y es el único coste que alguien pagaba.
+
+**Segunda corrección, ya implementando.** De las 26, **diez sólo redirigen**:
+`/dashboard`, los cinco `/dashboard/settings/*` que sobreviven por los enlaces
+de correos antiguos, `/dashboard/billing`, `runs`, `/debug` y `/admin`. Una
+redirección nunca llega a pintar una pestaña, así que darle título es código
+muerto. Las pantallas reales eran **quince**, no 26 — y el guardián las
+distingue en vez de obligar a escribir algo inútil, porque un test que exige
+código muerto es un test que alguien acaba desactivando.
+
+**La decisión que hace que esto sirva de algo.** Un título estático por
+pantalla NO resuelve el problema declarado: con tres proyectos abiertos,
+«Visión general — GenScore» sigue siendo tres pestañas iguales. Las ocho
+pantallas de proyecto usan `generateMetadata` y meten el dominio: «Visión
+general · acme.com». **Y va delante de la marca, no detrás**, porque una
+pestaña estrecha recorta por la derecha — lo que distingue tiene que
+sobrevivir al recorte.
+
+Eso sale gratis por una decisión anterior: `requireActiveProject` está
+memoizada con `React.cache()` por petición desde PRELAUNCH-HARDENING-1 Fase V
+(§54), y Next ejecuta `generateMetadata` y la página en el mismo render. Sin
+esa memoización habría sido una consulta extra por navegación y no habría
+compensado.
+
+**Lo que se dejó fuera, y por qué no es pereza.** `title: { default, template:
+"%s — GenScore" }` en el layout raíz es la solución elegante y hoy es una
+trampa: hay **33 títulos públicos que ya escriben «— GenScore» a mano**, así
+que la plantilla los dejaría en «Blog — GenScore — GenScore». Hacerlo bien
+exige quitar el sufijo de los 33, y eso toca el `<title>` de todas las páginas
+indexadas — otra clase de riesgo por completo, y su propia fase si alguna vez
+compensa. Queda escrito en `console-metadata.ts` para que la siguiente sesión
+no lo descubra rompiéndolo.
+
+Tampoco se añadió `robots: { index: false }`. La regla de
+`.claude/rules/growth-content.md` que lo pide habla de pantallas **públicas**
+sin valor de búsqueda —`/login`, `/signup`, el 404—, que un rastreador sí
+alcanza. Estas están detrás de `requireUser`: añadirlo aparentaría una
+protección que ya da la autenticación.
+
+**Hallazgo suelto, no arreglado:** `/dashboard/projects` y `/dashboard/domains`
+tienen las dos el mismo `<h1>`, «Dominios». La primera no está enlazada desde
+la navegación desde DOMAINS-REDESIGN-1. Sus pestañas salen iguales porque el
+producto las llama igual, no por un fallo de esta fase; renombrar una pantalla
+es decisión de producto y necesita su propia pasada.
+
+**El `description` raíz** pasa a `CANONICAL_DEFINITION`, la misma cadena de la
+Fase E. Se unifica porque una descripción divergente envejece sola, no porque
+nadie la lea — que es justo lo que no hace nadie.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

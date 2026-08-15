@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { after } from "next/server";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -41,6 +42,7 @@ import {
   type IssueSeverity
 } from "@/lib/web-audit/issues";
 import { buildPageFixes, type PageFixContext } from "@/lib/web-audit/page-fixes";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { PageFixBlock } from "./page-fix-block";
 import { LlmsTxtBlock } from "./llms-txt-block";
 import { SitemapStepsBlock } from "./sitemap-steps-block";
@@ -63,6 +65,19 @@ export const maxDuration = 60;
 // that explicitly so a lower score never reads as a silent regression. Purely
 // a display cutoff — self-expiring the moment a project re-audits.
 const TECHNICAL_CRITERIA_EXPANDED_AT = new Date("2026-07-13T00:00:00Z");
+
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Auditoría web", async () => (await requireActiveProject(projectId)).domain);
+}
 
 export default async function WebAuditPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -8,6 +9,8 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
 import { executeScan } from "../../actions";
+import { requireActiveProject } from "@/lib/project-workspace";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 
 const statusLabels: Record<string, string> = {
   pending: "pendiente",
@@ -20,6 +23,19 @@ const statusLabels: Record<string, string> = {
 
 function formatStatus(status: string) {
   return statusLabels[status] ?? status;
+}
+
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Detalle del escaneo", async () => (await requireActiveProject(projectId)).domain);
 }
 
 export default async function RunDetailPage({

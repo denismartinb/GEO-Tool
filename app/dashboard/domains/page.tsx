@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { Gauge } from "@/components/ui/gauge";
@@ -10,6 +11,7 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { requireUser } from "@/lib/auth";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { ACTIVE_PROJECT_COOKIE, resolveSelectedProject } from "@/lib/active-project-cookie";
+import { consoleMetadata } from "@/lib/seo/console-metadata";
 import { DeleteDomainButton } from "@/app/dashboard/projects/[projectId]/debug/delete-domain-button";
 
 /**
@@ -110,6 +112,9 @@ function DomainFavicon({
     />
   );
 }
+
+// ROOT-METADATA-1: pestaña propia. Ver `lib/seo/console-metadata.ts`.
+export const metadata: Metadata = consoleMetadata("Dominios");
 
 export default async function DomainsPage({
   searchParams

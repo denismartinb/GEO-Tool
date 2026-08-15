@@ -220,10 +220,25 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   derivó hasta listar la mitad del contenido publicado sin que nada avisara — y
   es el fichero sobre el que el producto publica una guía
   (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §47).
-- **Una pantalla sin valor de búsqueda lleva `robots: { index: false, follow:
-  true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
+- **Una pantalla PÚBLICA sin valor de búsqueda lleva `robots: { index: false,
+  follow: true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de
-  marketing (log §47).
+  marketing (log §47). **No se extiende a las pantallas privadas**: detrás de
+  `requireUser` un rastreador no llega ni siguiendo un enlace, así que ahí el
+  `robots` aparentaría una protección que ya da la autenticación (log §101).
+- **Toda pantalla privada declara su propio `<title>`, y la de un proyecto lleva
+  el dominio delante de la marca.** Sin `metadata` propia hereda el
+  `title: "GenScore"` del layout raíz — así llegaron a ser quince pantallas con
+  la misma pestaña, indistinguibles con dos dominios abiertos. El dominio va
+  delante porque una pestaña estrecha recorta por la derecha. Sale gratis
+  porque `requireActiveProject` está memoizada por petición; si alguna vez deja
+  de estarlo, esto pasa a ser una consulta más por navegación
+  (`lib/seo/console-metadata.ts`, log §101). Las rutas que sólo redirigen
+  quedan fuera: nunca pintan una pestaña.
+- **El `title` del layout raíz no se convierte en `{ default, template }` sin
+  limpiar antes los 33 títulos públicos que ya escriben «— GenScore» a mano.**
+  La plantilla se lo añadiría otra vez a todos («Blog — GenScore — GenScore»), y
+  arreglarlo toca el `<title>` de todas las páginas indexadas (log §101).
 
 ## Comparativas y el sistema de bloques del blog
 
