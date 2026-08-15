@@ -9,7 +9,7 @@ import type { BotAccessReport } from "@/lib/web-audit/robots";
  * audit snapshot already carries into a short, severity-ordered list of
  * technical problems — plus its mirror, the checks that already pass. Pure
  * function, no I/O, deliberately NOT marked `import "server-only"` (same
- * rationale as opportunity-matrix.ts / action-plan.ts / global-score.ts:
+ * rationale as opportunity-matrix.ts / global-score.ts:
  * importable from Vitest and from the server page alike).
  *
  * Scope boundary: this module covers ONLY technical problems — the ones a

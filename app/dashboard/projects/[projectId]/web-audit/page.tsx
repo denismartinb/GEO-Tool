@@ -374,10 +374,14 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   const heroScore = canAuditCoverage ? globalScore.score : (technicalSnapshot?.readiness_score ?? null);
 
   // WEB-AUDIT-ISSUES-1 fase 2 (founder-approved 2026-08-02): el Plan de
-  // acción (competitor extraction, join con `recommendations`, buildActionPlan
+  // acción (competitor extraction, join con `recommendations`, `buildActionPlan`
   // y su expansor) se retiró de esta pantalla entero — "no tiene sentido
   // aquí, debe estar en la página de recomendaciones". `grouped` sigue
   // haciendo falta para "Lo que ya funciona" y la pista de la tarjeta hero.
+  //
+  // Su módulo (`lib/web-audit/action-plan.ts`) sobrevivió once días sin un solo
+  // importador antes de borrarse en PRELAUNCH-HARDENING-1 Fase R8-b (log §98);
+  // la spec queda marcada como retirada. Si vuelve, va en Recomendaciones.
   const grouped: Record<TopicOutcome, ClassifiedTopic[]> = {
     performing: [],
     invisible: [],
