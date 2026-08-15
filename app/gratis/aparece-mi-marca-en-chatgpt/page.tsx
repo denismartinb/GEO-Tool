@@ -82,16 +82,20 @@ export default function FreeCheckerPage() {
       />
       <FaqPageSchema items={FAQ_ITEMS} />
 
-      <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto" }}>
-        <h1 className="lp-h1" style={{ fontSize: 42 }}>
-          ¿Aparece tu marca cuando alguien le pregunta a ChatGPT?
-        </h1>
-        <p className="lp-lead">
-          Escribe tu dominio y te lo comprobamos ahora, gratis y sin registro: le hacemos a ChatGPT
-          una pregunta real de tu categoría y te enseñamos su respuesta, si te menciona y qué
-          competidores nombra en tu lugar.
-        </p>
-        <FreeCheckerForm />
+      <FreeCheckerForm
+        heading={
+          <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 26px" }}>
+            <h1 className="lp-h1" style={{ fontSize: 42 }}>
+              ¿Aparece tu marca cuando alguien le pregunta a ChatGPT?
+            </h1>
+            <p className="lp-lead">
+              Escribe tu dominio y te lo comprobamos ahora, gratis y sin registro: le hacemos a
+              ChatGPT una pregunta real de tu categoría y te enseñamos su respuesta, si te menciona
+              y qué competidores nombra en tu lugar.
+            </p>
+          </div>
+        }
+      >
         <div className="lp-hero-note" style={{ justifyContent: "center" }}>
           <span>
             <Icon name="check" size={14} className="text-[var(--pos)]" />
@@ -106,64 +110,67 @@ export default function FreeCheckerPage() {
             Respuesta real de ChatGPT
           </span>
         </div>
-      </div>
 
-      <div style={{ maxWidth: 640, margin: "56px auto 0" }}>
-        <KeyTakeaway label="Qué comprobamos exactamente">
-          Le lanzamos a ChatGPT una pregunta que un cliente tuyo haría de verdad, y leemos su
-          respuesta literal buscando tu marca. Verás la pregunta que hicimos, la respuesta completa,
-          si ChatGPT te nombró o no, y las marcas que sí nombró. Nada de esto está guardado de
-          antes: es una llamada en vivo en el momento en que pulsas el botón.
-        </KeyTakeaway>
-      </div>
+        <div style={{ maxWidth: 640, margin: "56px auto 0" }}>
+          <KeyTakeaway label="Qué comprobamos exactamente">
+            Le lanzamos a ChatGPT una pregunta que un cliente tuyo haría de verdad, y leemos su
+            respuesta literal buscando tu marca. Verás la pregunta que hicimos, la respuesta
+            completa, si ChatGPT te nombró o no, y las marcas que sí nombró. Nada de esto está
+            guardado de antes: es una llamada en vivo en el momento en que pulsas el botón.
+          </KeyTakeaway>
+        </div>
 
-      <div className="legal-body" style={{ maxWidth: 640, margin: "48px auto 0" }}>
-        <h2>Por qué importa aparecer en ChatGPT</h2>
-        <p>
-          Cuando alguien le pregunta a ChatGPT por una recomendación, la respuesta nombra dos o tres
-          marcas y la decisión se toma ahí, sin que el usuario visite ninguna web. Si tu marca no
-          está entre esas dos o tres, no has perdido una posición en una lista: no has entrado en la
-          conversación. Y a diferencia de un buscador, no hay una página de resultados donde
-          aparezcas más abajo.
-        </p>
+        <div className="legal-body" style={{ maxWidth: 640, margin: "48px auto 0" }}>
+          <h2>Por qué importa aparecer en ChatGPT</h2>
+          <p>
+            Cuando alguien le pregunta a ChatGPT por una recomendación, la respuesta nombra dos o
+            tres marcas y la decisión se toma ahí, sin que el usuario visite ninguna web. Si tu
+            marca no está entre esas dos o tres, no has perdido una posición en una lista: no has
+            entrado en la conversación. Y a diferencia de un buscador, no hay una página de
+            resultados donde aparezcas más abajo.
+          </p>
 
-        <h2>Si ChatGPT no te menciona en esta comprobación</h2>
-        <p>
-          No es un veredicto. Las respuestas de un motor generativo cambian de una ejecución a otra
-          —buscan en tiempo real y no son deterministas—, así que una consulta suelta es una muestra
-          con su propio margen de error. Lo que sí te dice, y es accionable, es qué marcas ocupan
-          hoy ese hueco en tu categoría.
-        </p>
-        <p>
-          Para saber si te mencionan <em>de verdad</em> hace falta repetir un conjunto de preguntas
-          en el tiempo. Eso es lo que hace el escaneo del plan Free al crear una cuenta: diez
-          preguntas reales de tu categoría, y no solo en ChatGPT — también en{" "}
-          <strong>Gemini</strong> y <strong>Claude</strong>, que son los otros dos motores que
-          GenScore ejecuta. Cada motor responde distinto, y aparecer en uno no significa aparecer en
-          los tres.
-        </p>
+          <h2>Si ChatGPT no te menciona en esta comprobación</h2>
+          <p>
+            No es un veredicto. Las respuestas de un motor generativo cambian de una ejecución a
+            otra —buscan en tiempo real y no son deterministas—, así que una consulta suelta es una
+            muestra con su propio margen de error. Lo que sí te dice, y es accionable, es qué marcas
+            ocupan hoy ese hueco en tu categoría.
+          </p>
+          <p>
+            Para saber si te mencionan <em>de verdad</em> hace falta repetir un conjunto de
+            preguntas en el tiempo. Eso es lo que hace el escaneo del plan Free al crear una cuenta:
+            diez preguntas reales de tu categoría, y no solo en ChatGPT — también en{" "}
+            <strong>Gemini</strong> y <strong>Claude</strong>, que son los otros dos motores que
+            GenScore ejecuta. Cada motor responde distinto, y aparecer en uno no significa aparecer
+            en los tres.
+          </p>
 
-        <h2>Preguntas frecuentes</h2>
-        {FAQ_ITEMS.map((item) => (
-          <div key={item.question}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: "22px 0 8px" }}>{item.question}</h3>
-            <p>{item.answer}</p>
-          </div>
-        ))}
+          <h2>Preguntas frecuentes</h2>
+          {FAQ_ITEMS.map((item) => (
+            <div key={item.question}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "22px 0 8px" }}>
+                {item.question}
+              </h3>
+              <p>{item.answer}</p>
+            </div>
+          ))}
 
-        <h2>Sigue leyendo</h2>
-        <p>
-          Si prefieres entender el método antes de probarlo, la guía completa está en{" "}
-          <Link href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">
-            cómo saber si tu marca aparece en ChatGPT, Gemini y Claude
-          </Link>
-          . Y si lo que quieres es que te mencionen más,{" "}
-          <Link href="/blog/como-conseguir-que-chatgpt-te-cite">
-            cómo conseguir que ChatGPT te cite
-          </Link>{" "}
-          explica qué mueve esa aguja de verdad.
-        </p>
-      </div>
+          <h2>Sigue leyendo</h2>
+          <p>
+            Si prefieres entender el método antes de probarlo, la guía completa está en{" "}
+            <Link href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">
+              cómo saber si tu marca aparece en ChatGPT, Gemini y Claude
+            </Link>
+            . Y si lo que quieres es que te mencionen más,{" "}
+            <Link href="/blog/como-conseguir-que-chatgpt-te-cite">
+              cómo conseguir que ChatGPT te cite
+            </Link>{" "}
+            explica qué mueve esa aguja de verdad.
+          </p>
+        </div>
+      </FreeCheckerForm>
+
     </BlogPageShell>
   );
 }

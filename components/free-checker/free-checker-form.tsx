@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 import { PENDING_DOMAIN_KEY } from "@/lib/onboarding/pending-domain";
+import { PUBLIC_CHECK_MESSAGES, type PublicCheckResponse } from "@/lib/free-checker/api-contract";
+import { FreeCheckerResult } from "@/components/free-checker/free-checker-result";
 
 /**
- * FREE-CHECKER-1 Fase A. Mismo mecanismo de arrastre que `HeroDomainField`
- * (localStorage, mismo validador importado, no una copia).
+ * FREE-CHECKER-1 — el formulario y los cuatro estados de la comprobación.
  *
  * **El botón nunca se pinta deshabilitado**, y no es un descuido. La primera
  * versión lo deshabilitaba hasta tener un dominio válido, que suena correcto y
@@ -20,29 +21,56 @@ import { PENDING_DOMAIN_KEY } from "@/lib/onboarding/pending-domain";
  * es justo el fallo que ninguna aserción podía cazar y sólo aparece al mirar
  * la captura (log §97).
  *
- * En su lugar el botón siempre invita, y al pulsarlo sin un dominio válido
- * devuelve el foco al campo con una pista concreta. Es además lo que ya hace
- * el hero de la landing, por el mismo motivo declarado allí: bloquear el alta
- * es peor que arrastrar un dato de menos.
+ * **La espera enseña la pregunta, no una barra falsa.** Una llamada real con
+ * búsqueda tarda entre 10 y 25 segundos, así que la espera existe y hay que
+ * usarla: se dice qué se está haciendo en cada momento, con pasos que
+ * corresponden a trabajo real. Un porcentaje inventado sería exactamente el
+ * "fake progress" que la constitución prohíbe.
  *
- * Cero llamadas LLM, cero escritura en base de datos.
+ * **`degraded` cae al comportamiento de la Fase A**: guarda el dominio y
+ * lleva al registro. Ocurre cuando se agota el techo del día o falta
+ * configuración, y el visitante ve una página que funciona en vez de una rota.
+ *
+ * **Cuando hay resultado, la página ES el resultado.** Por eso este componente
+ * recibe la cabecera y el contenido de venta como `props` y deja de pintarlos
+ * en cuanto hay algo que enseñar: todo ese copy —"qué comprobamos", "por qué
+ * importa", las FAQ— existe para convencerte de hacer una cosa que acabas de
+ * hacer, y dejarlo debajo del veredicto convierte la respuesta en un anuncio
+ * con un dato encima. Sigue renderizándose en servidor (llega como JSX, no se
+ * duplica en el cliente); lo único que decide el cliente es si se ve.
  */
-export function FreeCheckerForm() {
+
+type State =
+  | { kind: "idle" }
+  | { kind: "invalid" }
+  | { kind: "checking" }
+  | { kind: "done"; response: PublicCheckResponse };
+
+/** Pasos de la espera. Cada uno es trabajo real, en el orden en que ocurre. */
+const WAIT_STEPS = [
+  "Leyendo tu web",
+  "Escribiendo la pregunta de tu categoría",
+  "Preguntando a ChatGPT",
+  "Comprobando su respuesta palabra por palabra"
+];
+
+export function FreeCheckerForm({
+  heading,
+  children
+}: {
+  /** H1 + entradilla. Se retiran cuando hay resultado. */
+  heading?: React.ReactNode;
+  /** Copy de venta. Se retira cuando hay resultado. */
+  children?: React.ReactNode;
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [domain, setDomain] = useState("");
-  const [showHint, setShowHint] = useState(false);
+  const [state, setState] = useState<State>({ kind: "idle" });
+  const [step, setStep] = useState(0);
 
-  function start() {
-    const candidate = cleanDomain(domain);
-
-    if (!isWellFormedDomain(candidate)) {
-      setShowHint(true);
-      inputRef.current?.focus();
-      return;
-    }
-
-    setShowHint(false);
+  /** Guarda el dominio para el asistente y va al registro. El camino de la Fase A. */
+  function goToSignup(candidate: string) {
     try {
       window.localStorage.setItem(PENDING_DOMAIN_KEY, candidate);
     } catch {
@@ -52,37 +80,111 @@ export function FreeCheckerForm() {
     router.push("/signup");
   }
 
+  async function start() {
+    const candidate = cleanDomain(domain);
+    if (!isWellFormedDomain(candidate)) {
+      setState({ kind: "invalid" });
+      inputRef.current?.focus();
+      return;
+    }
+
+    setState({ kind: "checking" });
+    setStep(0);
+    // Los pasos avanzan con el tiempo porque el servidor no informa por
+    // etapas: es UNA petición. No se afirma progreso medido, se describe lo
+    // que está ocurriendo — por eso no hay porcentaje ni barra.
+    const ticker = setInterval(() => setStep((s) => Math.min(s + 1, WAIT_STEPS.length - 1)), 6000);
+
+    try {
+      const res = await fetch("/api/gratis/comprobar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: candidate })
+      });
+      const response = (await res.json()) as PublicCheckResponse;
+
+      // El techo del día o un fallo de configuración: no se le cuenta al
+      // visitante, se le lleva por el camino que sí funciona.
+      if (
+        response.status === "degraded" &&
+        (response.reason === "global_ceiling_reached" || response.reason === "limit_check_failed")
+      ) {
+        goToSignup(candidate);
+        return;
+      }
+      setState({ kind: "done", response });
+    } catch {
+      setState({ kind: "done", response: { status: "failed", error: "engine_unavailable" } });
+    } finally {
+      clearInterval(ticker);
+    }
+  }
+
+  if (state.kind === "checking") {
+    return (
+      <div className="fc-wait" role="status" aria-live="polite">
+        <span className="fc-wait-lbl">Comprobando en ChatGPT</span>
+        <ul className="fc-steps">
+          {WAIT_STEPS.map((label, i) => (
+            <li key={label} className={i < step ? "done" : i === step ? "live" : ""}>
+              <span className="fc-dot" aria-hidden="true" />
+              {label}
+            </li>
+          ))}
+        </ul>
+        <p className="fc-wait-note">Tarda unos segundos porque de verdad le estamos preguntando.</p>
+      </div>
+    );
+  }
+
+  if (state.kind === "done") {
+    return (
+      <FreeCheckerResult
+        response={state.response}
+        domain={cleanDomain(domain)}
+        onRetry={() => setState({ kind: "idle" })}
+        onSignup={() => goToSignup(cleanDomain(domain))}
+      />
+    );
+  }
+
   return (
-    <div className="lp-hero-form">
-      <div className="lp-field">
-        <Icon name="globe" size={18} className="lp-field-ico" />
-        <input
-          ref={inputRef}
-          className="lp-field-input"
-          value={domain}
-          onChange={(e) => {
-            setDomain(e.target.value);
-            if (showHint) setShowHint(false);
-          }}
-          onKeyDown={(e) => e.key === "Enter" && start()}
-          placeholder="tudominio.com"
-          spellCheck={false}
-          aria-label="Tu dominio"
-          aria-describedby={showHint ? "fc-hint" : undefined}
-        />
+    <>
+      {heading}
+      <div className="lp-hero-form">
+        <div className="lp-field">
+          <Icon name="globe" size={18} className="lp-field-ico" />
+          <input
+            ref={inputRef}
+            className="lp-field-input"
+            value={domain}
+            onChange={(e) => {
+              setDomain(e.target.value);
+              if (state.kind === "invalid") setState({ kind: "idle" });
+            }}
+            onKeyDown={(e) => e.key === "Enter" && start()}
+            placeholder="tudominio.com"
+            spellCheck={false}
+            aria-label="Tu dominio"
+            aria-describedby={state.kind === "invalid" ? "fc-hint" : undefined}
+          />
+        </div>
+        <div className="lp-hero-actions">
+          <button type="button" className="lp-cta" onClick={start}>
+            Comprobar mi marca <Icon name="arrRight" size={16} />
+          </button>
+        </div>
+        {/* `role="alert"` para que un lector de pantalla anuncie la pista: sin
+            él, quien no ve el campo sólo percibe que no ha pasado nada. */}
+        {state.kind === "invalid" && (
+          <p className="fc-hint" id="fc-hint" role="alert">
+            Escribe un dominio completo, como <strong>tudominio.com</strong>.
+          </p>
+        )}
       </div>
-      <div className="lp-hero-actions">
-        <button type="button" className="lp-cta" onClick={start}>
-          Comprobar mi marca <Icon name="arrRight" size={16} />
-        </button>
-      </div>
-      {/* `role="alert"` para que un lector de pantalla anuncie la pista: sin
-          él, quien no ve el campo sólo percibe que no ha pasado nada. */}
-      {showHint && (
-        <p className="fc-hint" id="fc-hint" role="alert">
-          Escribe un dominio completo, como <strong>tudominio.com</strong>.
-        </p>
-      )}
-    </div>
+      {children}
+    </>
   );
 }
+
+export { PUBLIC_CHECK_MESSAGES };

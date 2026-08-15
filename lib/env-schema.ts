@@ -96,6 +96,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   ANTHROPIC_MODEL: "se usa el modelo por defecto fijado en código",
   OPENAI_API_KEY: "si OpenAI está en LLM_SCAN_PROVIDERS, sus llamadas fallan",
   OPENAI_MODEL: "OBLIGATORIA si hay OPENAI_API_KEY — no hay modelo por defecto a propósito",
+  PUBLIC_CHECK_IP_SALT:
+    "el comprobador gratuito anónimo deja de comprobar y cae a captar el dominio — a propósito: sin sal, hashear la IP no la protege",
   LLM_SCAN_PROVIDERS: "el escaneo cae a Gemini en solitario",
   LLM_SCAN_PROVIDER: "legacy: sólo se lee si LLM_SCAN_PROVIDERS no está",
   ENABLE_SYNC_SCAN_EXECUTION: "el escaneo síncrono no se ejecuta",
@@ -141,6 +143,7 @@ export const envSchema = z.object({
   ANTHROPIC_MODEL: optionalText,
   OPENAI_API_KEY: optionalText,
   OPENAI_MODEL: optionalText,
+  PUBLIC_CHECK_IP_SALT: optionalText,
   LLM_SCAN_PROVIDERS: optionalText,
   LLM_SCAN_PROVIDER: optionalText,
 

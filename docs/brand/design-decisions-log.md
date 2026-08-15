@@ -9206,6 +9206,47 @@ Nombrarlos no es relleno de densidad —la regla de `growth-content.md` dice que
 la densidad es un techo, no un objetivo—: es que una página sobre visibilidad
 en IA que sólo nombrara uno describiría mal lo que se vende.
 
+### Cuando hay resultado, la página ES el resultado
+
+La primera versión metía el veredicto **dentro** de la página de venta: debajo
+seguían "qué comprobamos exactamente", "por qué importa aparecer en ChatGPT" y
+las cinco FAQ, y arriba el H1 seguía invitando a escribir el dominio. Todo ese
+copy existe para convencerte de hacer una cosa que **acabas de hacer**, así que
+dejarlo ahí convierte la respuesta en un anuncio con un dato encima.
+
+El arreglo no fue CSS: el componente de cliente recibe la cabecera y el copy
+como `props` y deja de pintarlos en cuanto hay algo que enseñar. Siguen
+renderizándose en servidor —llegan como JSX, no se duplican en el cliente—; lo
+único que decide el cliente es si se ven.
+
+**Dos remates que sólo aparecen mirando la pantalla**, no en ninguna aserción:
+la página se encogía de la portada larga a la espera corta y el pie subía
+dejando un hueco gris, para volver a bajar al llegar el resultado —tres saltos
+de maquetación en veinte segundos, justo donde el visitante está esperando y
+mirando—, resuelto con `min-height` en los dos estados. Y `citedOwnDomain` se
+recogía y no se pintaba: es la señal más fuerte que puede dar una consulta —que
+el motor fuera a leer TU web en vez de nombrarte de memoria— y estaba tirándose.
+Se enseña sólo cuando es verdad, nunca en negativo: "no te citó" con una sola
+consulta sería el mismo veredicto prematuro que el aviso de variabilidad
+desmonta.
+
+### La guarda del rol de servicio tuvo que aprender un caso nuevo
+
+`tests/service-role-identity.test.ts` (§92) exige que todo uso de
+`createServiceClient()` en `app/` establezca identidad. La ruta del comprobador
+la usa y **no tiene identidad que establecer**: su visitante no tiene cuenta,
+que es el producto entero de esa página. Su propio mensaje de error avisaba de
+la tentación — *"añádela a IDENTITY_GATES a conciencia, no para poner el test en
+verde"*.
+
+Añadir una quinta puerta de identidad habría sido mentir, porque no hay
+ninguna. Lo que de verdad hace segura esa ruta no es una identidad sino **la
+tabla que toca**: `public_checks` no tiene datos de cliente ni clave foránea a
+nada que un cliente posea. Así que la excepción se comprueba **por tabla**, no
+por nombre de fichero: si alguien añade mañana un `.from("projects")` ahí, el
+test se pone rojo igual — que es exactamente lo que una excepción por nombre no
+habría hecho. Verificado rompiéndolo.
+
 ### `/gratis` entra en el guardián de honestidad
 
 `article-honesty.test.ts` cubría cuatro superficies y esta nació fuera. Es la

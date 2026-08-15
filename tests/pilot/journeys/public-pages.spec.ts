@@ -154,10 +154,15 @@ test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
 });
 
 /**
- * FREE-CHECKER-1 Fase A. Estrictamente de lectura, como el resto de este
- * fichero: visita la página y comprueba que carga, nunca escribe el campo de
- * dominio ni pulsa el botón — eso navegaría a /signup, fuera del guard de
- * "solo lectura" de este journey.
+ * FREE-CHECKER-1. Estrictamente de lectura, como el resto de este fichero:
+ * visita la página y comprueba que carga, **nunca pulsa el botón**.
+ *
+ * Y desde la Fase B eso ya no es sólo una convención de alcance: pulsarlo
+ * lanzaría una comprobación real contra ChatGPT, o sea **gastaría dinero y
+ * consumiría una de las tres comprobaciones diarias de la IP del runner** en
+ * cada pasada del piloto, en cada deploy de preview. El journey de escritura
+ * (`--journeys write`) es el único sitio donde eso podría plantearse, y hoy no
+ * está planteado.
  */
 test("/gratis/aparece-mi-marca-en-chatgpt renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/gratis/aparece-mi-marca-en-chatgpt", "free-checker", {
