@@ -14,8 +14,18 @@ una con su Human Gate.
   LCP y choca con `.claude/rules/onboarding.md`) y quedan ~33 KB de CSS de
   consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
   (migración, cifra publicada, superficie de auth).
-- **Fase R 🟡 en curso** — R1, R2 (log §43) y **R4 hechos** (log §70). Quedan
-  R3, R5–R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+- **Fase R 🟡 en curso** — R1, R2 (log §43), **R4** (log §70) y **la primera
+  mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`)
+  y **R5 entera** (log §79: los tipos compartidos salen a
+  `lib/llm/contracts.ts`; log §80: las cinco funcionalidades de producto se van
+  a sus módulos dueños y `gemini.ts` pasa de 1.278 a 303 líneas), y **el primer
+  trozo de R6** (log §81: `processPromptJob` sale del ejecutor, 1.523 → 1.167
+  líneas; log §82: se rompe la dependencia de medio repositorio sobre
+  `lib/scan/`, y **R6 queda cerrada**), **R7 casi entera** (log §83: los 14
+  componentes de Auditoría web salen de la página; log §84: Visión general deja
+  de ser la excepción) y **el grueso de R8** (log §84: dos ficheros muertos
+  borrados). Quedan R3, partir `WebAuditPage`, y los dos huérfanos restantes de
+  R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
@@ -165,20 +175,53 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   (transporte, sobre R2) + los 8 usos de producto repartidos a sus módulos
   dueños (`suggestCompetitors` → `lib/competitors/`, `suggestPrompts` →
   `lib/projects/`, `rewriteRecommendation` → `lib/recommendations/`, etc.).
+  **Aviso medido**: el reparto no es mecánico. `BusinessProfile` lo usan nueve
+  módulos y dos son los otros motores, así que hay un paso previo obligatorio —
+  los tipos compartidos a un módulo neutral (`lib/llm/contracts.ts`, log §79) —
+  sin el cual la mudanza nace con ciclos. **Hecho** (log §80): 1.278 → 303
+  líneas, y `gemini.ts` se queda con lo que sí es el motor Gemini, el mismo
+  contenido que `openai.ts` y `claude.ts`. El barril de reexports **se queda a
+  propósito**: seis tests mockean `@/lib/llm/gemini`, así que esa ruta de
+  import es el punto de inyección del suite, no deuda.
 - **R6 · Descargar `lib/scan/executor.ts`** (1–2 PRs): extraer
   `processPromptJob` (L91–418) a `lib/scan/prompt-job.ts`; mover
   `scan/types.ts` + `scan/constants.ts` a `lib/domain/` (rompe las 6
   dependencias mutuas sobre `lib/scan`); `web-audit/types.ts` para los 2
   ciclos solo-tipo. La regla de ruta `scan.md` aplica entera: son mudanzas,
-  no cambios de lógica.
+  no cambios de lógica. **Hecha entera.** `processPromptJob` (log §81): 1.523 → 1.167
+  líneas, y de paso muere el `delay` duplicado que R2 ya había unificado en
+  `lib/llm/http.ts`. **`lib/domain/` se descarta como destino** (log §82): no
+  eran 6 dependencias sino 26 ficheros, y al mirar QUÉ importaba cada uno la
+  dependencia entera resultó ser tres símbolos —`AuthenticatedContext` (17
+  importadores, y es el tipo de retorno de `requireUser`, no un tipo de
+  escaneo), ocho constantes de llamada a LLM, y `ProjectActionError`. Cada uno
+  se fue a su dueño natural (`lib/auth.ts`, `lib/llm/constants.ts`) y el
+  tercero se queda porque su vocabulario SÍ es de escaneo. Mover los dos
+  ficheros enteros habría llevado 466 líneas de ciclo de vida del escaneo a un
+  módulo «neutral» sin romper ninguna dependencia. Resultado: de 26 ficheros
+  externos quedan 5, todos dependencias legítimas de dominio, y **`lib/llm/**`
+  ya no importa nada de `lib/scan`**.
 - **R7 · Páginas** (2 PRs): extraer los ~24 componentes inline de
-  `web-audit/page.tsx` a `web-audit/_components/`; Overview pasa a usar
-  `requireActiveProject` como todas las demás páginas (hoy es la única con
-  ownership check artesanal junto a un `createServiceClient()`); arreglar el
-  import de `getLLMScanProviders` desde `executor` cuando existe
-  `providers.ts` justo para eso; unificar `setRecurringScans`/`setAutoWebAudit`.
-- **R8 · Limpieza de muertos** (1 PR pequeño): `lib/supabase/client.ts` (0
-  importadores — confirmar que es intencional que no haya cliente browser),
+  `web-audit/page.tsx` a `web-audit/_components/` — **hecho** (log §83): 14
+  componentes en 6 módulos, la página de 1.933 a 1.137 líneas. Aviso para el
+  resto de R7: **aquí los tests no demuestran nada** (esa pantalla no tiene
+  tests de render) y `tsc` tampoco — la prueba es comparar los multiconjuntos
+  de líneas del original contra la suma de los resultantes, y eso cazó un
+  bloque duplicado que compilaba y pasaba el lint. **Overview a
+  `requireActiveProject` y el import de `getLLMScanProviders` desde
+  `providers.ts`: hechos** (log §84) — `requireActiveProject` entra DENTRO del
+  `Promise.all` existente, no delante, para no serializar una consulta más; y
+  el reexport de cortesía del ejecutor se borra por muerto. Dos correcciones al
+  plan: Overview no tenía «ownership check artesanal junto a un
+  `createServiceClient()`» (ese cliente es para `reconcileStuckScanRuns` y es
+  legítimo), y **`setAutoWebAudit` ya no existe** — lo retiró
+  WEB-AUDIT-AUTO-SPLIT-1, su sustituto es `setAutoAuditHalf`, y el comentario
+  de `actions.ts` dice que la forma de espejo entre ambos es deliberada. Queda
+  partir `WebAuditPage` (~1.070 líneas de orquestación de datos), que toca
+  lógica y no presentación.
+- **R8 · Limpieza de muertos** (1 PR pequeño): **`lib/supabase/client.ts` y
+  `lib/types.ts` borrados** (log §84) — cero importadores, comprobado por ruta
+  de import y no por nombre. Quedan
   `lib/web-audit/action-plan.ts` (huérfano shipped: decidir re-conectar o
   retirar con nota en el ROADMAP), `updateProfileName` huérfano (log §38).
 

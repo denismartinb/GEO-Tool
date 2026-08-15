@@ -35,7 +35,11 @@ const GLOSSARY_LAST_MODIFIED = "2026-08-13";
  */
 const PILLAR_LAST_MODIFIED: Record<BlogCluster["key"], string> = {
   fundamentos: "2026-08-03",
-  medicion: "2026-08-03",
+  // 2026-08-14 (S8): la página pilar lista los artículos de su cluster, así
+  // que publicar uno nuevo la cambia de verdad. S6 añadió `metricas-geo-que-
+  // medir` sin tocar esta fecha y la dejó anunciando una frescura de once días
+  // antes — el mismo tipo de rancio que T15 vino a corregir.
+  medicion: "2026-08-14",
   playbooks: "2026-08-03",
   sectores: "2026-08-05"
 };

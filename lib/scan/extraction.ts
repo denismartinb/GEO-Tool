@@ -1,6 +1,7 @@
 import "server-only";
 
-import { extractGeminiStructuredData, type BusinessProfile } from "@/lib/llm/gemini";
+import { extractGeminiStructuredData } from "@/lib/llm/gemini";
+import type { BusinessProfile } from "@/lib/llm/contracts";
 import { extractClaudeStructuredData } from "@/lib/llm/claude";
 import { extractOpenAIStructuredData } from "@/lib/llm/openai";
 import { parsePersistedBusinessProfile } from "@/lib/projects/business-profile";

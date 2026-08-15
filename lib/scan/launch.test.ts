@@ -17,7 +17,7 @@ vi.mock("@/lib/scan/constants", () => ({
 }));
 
 import { launchScan } from "@/lib/scan/launch";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 const supabase = {} as AuthenticatedContext["supabase"];
 const user = { id: "user-1" } as AuthenticatedContext["user"];

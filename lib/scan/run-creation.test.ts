@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { MAX_PROMPT_SAMPLES } from "@/lib/scan/sampling";
 
 vi.mock("@/lib/scan/reconciliation", () => ({

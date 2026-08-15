@@ -134,7 +134,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | ✅ Publicado | #(este) |
 | S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | ✅ Publicado | #(este) |
 | S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | ✅ Publicado | #(este) |
-| S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | 🔲 Pendiente | — |
+| S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | ✅ Publicado | #401 |
 | S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
 | S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
 
@@ -291,8 +291,69 @@ diferencia de Google y de un chat conversacional (respuestas con cita numerada
 anclada a cada afirmación, no solo mención), qué mueve de verdad que te cite, y
 un `Verdict` explícito de que Genscore no lo mide hoy, sin fecha. Añadido a
 `ALLOWED_TO_MENTION_PERPLEXITY` con la justificación en el propio test — es el
-único slug de esa lista, porque es el único artículo cuyo propósito es hablar
-de ese motor.
+único slug de esa lista cuando se escribió — el segundo lo añadió S8, ver
+abajo.
+
+**S8 — hecho (2026-08-14).** `/blog/como-medir-trafico-chatgpt-ga4`, cluster
+`medicion`. Cierra el último hueco de la capa de medición: qué enseña el canal
+«Asistente de IA» que GA4 estrenó el 13 de mayo de 2026, dónde se mira, y las
+tres cosas que **no** cuenta — Perplexity se queda en Referencia, los AI
+Overviews de Google van a Búsqueda orgánica, y la lista de asistentes
+reconocidos no es pública.
+
+**Lo que la diferencia de las veinte guías que ya existen sobre esto:** todas
+explican dónde está el canal nuevo; ninguna dice que **el canal se mueve sin
+que se mueva el tráfico**. Solo ve las visitas que traen referente, y la
+proporción que lo trae cambia sola con cada versión de una aplicación, así que
+dos meses idénticos en tráfico real dan lecturas distintas. Es la trampa de la
+«posición media» de S6 con otro disfraz, y va con su figura de aritmética
+declarada como ejemplo.
+
+**Primera entrada del allow-list de Perplexity** (`article-honesty.test.ts`),
+prevista por el propio diseño del test: aquí Perplexity no aparece como motor
+nuestro sino como la fuente de tráfico que el lector no encuentra donde
+debería. La metadata no lo nombra y el CTA nombra los tres motores que sí
+ejecutamos — las dos cosas con test.
+
+**Test propio** (`lib/blog/ga4-chatgpt.test.ts`): el artículo publica una
+expresión regular para que el lector la pegue en su GA4, y prosa dentro de un
+MDX no la compila nadie. El test la **extrae del `CodeBlock`** y comprueba que
+compila, que captura los seis asistentes que el texto nombra, que no captura
+`google`/`bing` (recogerlos se comería el canal orgánico entero) y que los
+puntos van escapados. Además exige que toda cifra de tercero lleve su `source`
+y su tamaño de muestra.
+
+**Tres arreglos que salieron de mirar las capturas del piloto**, no de su tabla
+—que dio ✅ en las tres anchuras las dos veces:
+
+1. **Figuras recortadas en 375 px** (las dos nuevas y la de S6, que llevaba dos
+   días así): perdían su última columna, que en las tres es la que lleva la
+   conclusión. `.art-frame` recorta en vez de deslizar — correcto para un SVG,
+   pésimo para una tabla. Nuevo `<Figure wide>`, con test que lo exige en
+   cualquier figura que contenga una tabla.
+2. **La expresión regular aparecía cortada en escritorio y sin aviso**, porque
+   la pista de deslizar sólo existe bajo 640 px. Es el único entregable
+   ejecutable del artículo y no se puede copiar lo que no se ve: nuevo
+   `<CodeBlock wrap>`, ajuste visual que no mete saltos en el portapapeles.
+3. **La portada se leía como un bloque gris roto** en la tira de 96 px del
+   artículo, que sólo enseña el tercio central de la altura. Recompuesta dentro
+   de esa banda y con el gris pizarra pasado a azul en familia.
+4. **Y el peor, encontrado al verificar el anterior: MDX se comía las barras
+   invertidas de la expresión regular.** El fichero decía `chatgpt\.com` y el
+   lector copiaba `chatgpt.com`, con cada punto como comodín. El test lo
+   aprobaba —tenía un caso llamado "escapa los puntos"— porque leía el MDX del
+   disco, o sea el lado de antes de la transformación que rompía el dato. La
+   expresión pasa a vivir en `lib/blog/ga4-source-regex.ts`, el MDX la renderiza
+   como expresión y el test importa ese mismo valor: ya no hay dos versiones que
+   puedan diferir.
+
+Detalle de los cuatro: log §85.
+
+**Fuentes:** el proxy de salida bloquea `support.google.com` y casi toda la
+cobertura del anuncio, así que nada está verificado contra fuente primaria —
+se triangularon fuentes secundarias coincidentes el 2026-08-14 y el artículo
+publica esa fecha. Misma limitación declarada que con los precios de Otterly.
+Detalle: log §85.
 
 ---
 

@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 const DEFAULT_PLAN_ID: Plan["id"] = "pro";
 

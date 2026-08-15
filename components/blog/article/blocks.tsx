@@ -182,9 +182,29 @@ export function Pill({ tone, children }: { tone: "si" | "no" | "neutral"; childr
 }
 
 /** Bloque de código con cabecera de nombre de fichero. */
-export function CodeBlock({ title, children }: { title: string; children: ReactNode }) {
+export function CodeBlock({
+  title,
+  wrap = false,
+  children
+}: {
+  title: string;
+  /**
+   * Ajusta el contenido en varias líneas visuales en vez de deslizarlo.
+   *
+   * Para código de verdad, deslizar es correcto: partir una línea de código
+   * cambia lo que dice. Para un valor **único y sin espacios que el lector
+   * tiene que copiar entero** —la expresión de fuente de GA4 de S8, 200
+   * caracteres— deslizar es lo contrario de lo que hace falta: no se puede
+   * copiar lo que no se ve, y la pista "Desliza →" sólo sale bajo 640 px, así
+   * que en escritorio la cadena aparecía cortada sin nada que dijera que había
+   * más. El ajuste es **visual**: un salto blando no mete ningún `\n` en el
+   * portapapeles, así que lo que se pega sigue siendo una sola línea (log §85).
+   */
+  wrap?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <div className="art-code">
+    <div className={wrap ? "art-code art-code-wrap" : "art-code"}>
       <div className="art-code-h">{title}</div>
       <pre>{children}</pre>
     </div>

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import type { createServiceClient } from "@/lib/supabase/service";
 
 const rewriteRecommendationMock = vi.fn();
