@@ -67,7 +67,7 @@ const FONT_STACK = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica
 // to never hit this; a full-width banner does).
 const HEADER_ROW = `
   <tr><td style="background:#FFFFFF;font-size:0;line-height:0;">
-    <img src="https://www.genscore.es/brand/genscore-email-header.png" width="600" height="120" alt="Genscore — Generative Engine Optimization" style="display:block;border:0;outline:none;width:100%;max-width:600px;height:auto;color:#0B1426;font-family:${FONT_STACK};font-size:14px;font-weight:700;">
+    <img src="https://www.genscore.es/brand/genscore-email-header.png" width="600" height="120" alt="GenScore — Generative Engine Optimization" style="display:block;border:0;outline:none;width:100%;max-width:600px;height:auto;color:#0B1426;font-family:${FONT_STACK};font-size:14px;font-weight:700;">
   </td></tr>
   <tr><td style="background:#2563EB;height:3px;line-height:3px;font-size:0;">&nbsp;</td></tr>`;
 

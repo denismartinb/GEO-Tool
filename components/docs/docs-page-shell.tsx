@@ -80,7 +80,7 @@ export function DocsPageShell({
               <Link href="/terminos">Términos</Link>
             </div>
           </div>
-          <div className="copy">© 2026 Genscore · Generative Engine Optimization para empresas y agencias.</div>
+          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
       </footer>
     </div>

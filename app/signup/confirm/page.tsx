@@ -10,7 +10,7 @@ import type { Metadata } from "next";
  * los enlaces de la página sí deben seguir repartiendo autoridad.
  */
 export const metadata: Metadata = {
-  title: "Confirma tu correo — Genscore",
+  title: "Confirma tu correo — GenScore",
   robots: { index: false, follow: true }
 };
 

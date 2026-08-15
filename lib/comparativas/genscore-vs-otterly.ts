@@ -1,10 +1,10 @@
 /**
- * GROWTH-2 Fase 2.4 — datos de la comparativa Genscore vs Otterly.
+ * GROWTH-2 Fase 2.4 — datos de la comparativa GenScore vs Otterly.
  *
  * Fuente de los datos de Otterly: información pública de terceros (reseñas
  * y páginas de precios independientes) consultada el 2 de agosto de 2026 —
  * ver la nota de fecha en la propia página. Los precios y límites de
- * Genscore vienen de app/pricing/plans-data.ts, la misma fuente que usa
+ * GenScore vienen de app/pricing/plans-data.ts, la misma fuente que usa
  * /pricing — no se reescriben a mano.
  */
 export const OTTERLY_RESEARCH_DATE = "2 de agosto de 2026";

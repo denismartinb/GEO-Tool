@@ -47,8 +47,8 @@ function input(overrides: Partial<NormalizedProjectInput> = {}): NormalizedProje
   return {
     domain: "genscore.es",
     country: "ES",
-    brand: "Genscore",
-    name: "Genscore",
+    brand: "GenScore",
+    name: "GenScore",
     language: "es",
     initialPrompts: [{ prompt_text: "¿mejor herramienta GEO?", category: "General", sort_order: 0 }],
     initialCompetitors: [{ name: "Otterly", domain: "otterly.ai" }],

@@ -1,10 +1,10 @@
 /**
- * SEO-POS-1 Fase C, S2 — datos de la comparativa Genscore vs Profound.
+ * SEO-POS-1 Fase C, S2 — datos de la comparativa GenScore vs Profound.
  *
  * Fuente de los datos de Profound: información pública de terceros (reseñas,
  * cobertura de prensa de su financiación, agregadores de reviews) consultada
  * el 10 de agosto de 2026 — ver la nota de fecha en la propia página. Los
- * precios y límites de Genscore vienen de app/pricing/plans-data.ts, la misma
+ * precios y límites de GenScore vienen de app/pricing/plans-data.ts, la misma
  * fuente que usa /pricing — no se reescriben a mano.
  *
  * **El precio de Profound no se declara con una cifra fija a propósito.**

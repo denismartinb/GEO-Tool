@@ -1,5 +1,5 @@
 /**
- * Genscore brand logo v3 (BRAND-5a).
+ * GenScore brand logo v3 (BRAND-5a).
  *
  * Reconstructed from the final approved brand pack (flat colors matching
  * the design tokens — no gradients). Light and dark variants ship their own
@@ -46,7 +46,7 @@ export function BrandLogo({ size = 22, onDark = false }: BrandProps) {
   // ships fused into the same compound path as the wordmark in the source
   // pack (barely visible, but the viewBox included its vertical space) — it
   // was making the logo render undersized (size maps to the full viewBox
-  // height) and, at small sizes, an illegible smear under "Genscore".
+  // height) and, at small sizes, an illegible smear under "GenScore".
   const vb = onDark ? "0 0 1119 254" : "0 0 1111 254";
   const ink = onDark ? INK_ON_DARK : INK;
   const [, , vbW, vbH] = vb.split(" ").map(Number);
@@ -56,7 +56,7 @@ export function BrandLogo({ size = 22, onDark = false }: BrandProps) {
       height={size}
       width={(size * vbW) / vbH}
       role="img"
-      aria-label="Genscore"
+      aria-label="GenScore"
     >
       {onDark ? (
         <>

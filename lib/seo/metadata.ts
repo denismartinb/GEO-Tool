@@ -7,7 +7,7 @@ import type { Metadata } from "next";
  *
  * 1. Hasta 2026-08-09 ninguna página de contenido declaraba Open Graph propio,
  *    así que los 10 artículos, las comparativas, los docs y las 16 páginas de
- *    glosario se compartían todos con el mismo título «Genscore» y la misma
+ *    glosario se compartían todos con el mismo título «GenScore» y la misma
  *    imagen genérica. Las portadas reales ya existían en `public/blog/**` sin
  *    usarse para esto.
  * 2. **En Next.js el `openGraph` de una página REEMPLAZA el del layout raíz; no
@@ -20,7 +20,7 @@ import type { Metadata } from "next";
  */
 
 export const SITE_URL = "https://www.genscore.es";
-export const SITE_NAME = "Genscore";
+export const SITE_NAME = "GenScore";
 
 /** Imagen de marca por defecto, la misma del layout raíz. Sus medidas se conocen. */
 export const DEFAULT_OG_IMAGE = { url: "/brand/genscore-og.png", width: 1200, height: 630 };

@@ -15,7 +15,7 @@
  * el 2026-08-02 en `genscore-vs-otterly.ts`. Aun así se tratan como
  * orientativas y la página lo dice: son escalones de precio, no un contrato.
  *
- * Los datos de Genscore vienen de `app/pricing/plans-data.ts`, la misma fuente
+ * Los datos de GenScore vienen de `app/pricing/plans-data.ts`, la misma fuente
  * que usa /pricing — no se reescriben a mano.
  */
 export const RESEARCH_DATE = "12 de agosto de 2026";
@@ -50,22 +50,22 @@ export const OTTERLY_STRENGTHS: { claim: string; context: string }[] = [
   {
     claim: "Usuarios ilimitados ya en el plan de 29 $/mes.",
     context:
-      "Con quince prompts incluidos. Es decir: todo el equipo puede entrar a mirar la misma muestra de quince consultas. En Genscore los usuarios ilimitados llegan desde Starter, pero el plan gratuito ya escanea de verdad y sin caducidad."
+      "Con quince prompts incluidos. Es decir: todo el equipo puede entrar a mirar la misma muestra de quince consultas. En GenScore los usuarios ilimitados llegan desde Starter, pero el plan gratuito ya escanea de verdad y sin caducidad."
   },
   {
     claim: "Seguimiento en más de 50 mercados.",
     context:
-      "Ventaja real si vendes en varios países a la vez. Si operas en España, o en España y un par de mercados LATAM con la misma web, es cobertura que pagas y no usas: el GEO Score de Genscore es por dominio, que es exactamente la unidad que necesitas cuando el dominio es uno."
+      "Ventaja real si vendes en varios países a la vez. Si operas en España, o en España y un par de mercados LATAM con la misma web, es cobertura que pagas y no usas: el GEO Score de GenScore es por dominio, que es exactamente la unidad que necesitas cuando el dominio es uno."
   },
   {
     claim: "Cobertura nominal de hasta 6 motores, incluidos Perplexity y Microsoft Copilot.",
     context:
-      "Genscore ejecuta ChatGPT, Gemini y Claude —los tres donde tus clientes preguntan hoy— y los tres en todos los planes de pago, sin add-ons. En Otterly, Gemini y Google AI Mode se cobran aparte en todos los niveles, así que la cobertura amplia se paga dos veces: en el plan y en el complemento."
+      "GenScore ejecuta ChatGPT, Gemini y Claude —los tres donde tus clientes preguntan hoy— y los tres en todos los planes de pago, sin add-ons. En Otterly, Gemini y Google AI Mode se cobran aparte en todos los niveles, así que la cobertura amplia se paga dos veces: en el plan y en el complemento."
   },
   {
     claim: "El precio de entrada de pago más bajo de la categoría.",
     context:
-      "De pago. Genscore empieza en cero, sin tarjeta y sin fecha de caducidad, así que la comparación de entrada no es 29 $ contra 45 €: es 29 $ contra poder medir antes de decidir si pagas."
+      "De pago. GenScore empieza en cero, sin tarjeta y sin fecha de caducidad, así que la comparación de entrada no es 29 $ contra 45 €: es 29 $ contra poder medir antes de decidir si pagas."
   }
 ];
 
@@ -132,7 +132,7 @@ export type Alternative = {
 export const ALTERNATIVES: Alternative[] = [
   {
     slug: "genscore",
-    name: "Genscore",
+    name: "GenScore",
     url: "https://www.genscore.es",
     solves: ["prompts", "action", "espanol"],
     oneLiner:
