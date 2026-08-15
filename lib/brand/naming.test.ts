@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
 
 /**
- * SEO-POS-1 Fase E, E1 (log §93) — una sola grafía para la marca y para la
+ * SEO-POS-1 Fase E, E1 (log §91) — una sola grafía para la marca y para la
  * métrica.
  *
  * **Por qué existe.** Antes de esta fase el repositorio usaba las cuatro
@@ -81,7 +81,7 @@ describe("una sola grafía de marca y métrica en copy de usuario", () => {
     const hits = gitGrep("\\bGenscore\\b");
     expect(
       hits,
-      "La marca se escribe `GenScore`, con S mayúscula (log §93). Estas líneas usan la " +
+      "La marca se escribe `GenScore`, con S mayúscula (log §91). Estas líneas usan la " +
         "grafía retirada:\n" +
         hits.join("\n")
     ).toEqual([]);
@@ -91,7 +91,7 @@ describe("una sola grafía de marca y métrica en copy de usuario", () => {
     const hits = gitGrep("\\bGeoScore\\b");
     expect(
       hits,
-      "La métrica se escribe `GEO Score`, con GEO en mayúsculas y separado (log §93). " +
+      "La métrica se escribe `GEO Score`, con GEO en mayúsculas y separado (log §91). " +
         "`GeoScore` se lee como geografía y compite con geolocalización. Estas líneas " +
         "usan la grafía retirada:\n" +
         hits.join("\n")
@@ -103,9 +103,17 @@ describe("una sola grafía de marca y métrica en copy de usuario", () => {
    * delimitadores de palabra que parta un identificador. Se comprueba aparte
    * porque el síntoma es una build rota, no una grafía incorrecta, y conviene
    * que el mensaje diga cuál de las dos cosas ha pasado.
+   *
+   * **Sólo busca `GEO Score`, no `GenScore`.** La primera versión buscaba las
+   * dos y marcaba `QueEsGenScorePage` —un identificador PascalCase
+   * perfectamente normal— como si fuera daño. `GenScore` pegado a letras es lo
+   * corriente en un identificador y no puede romper nada; el fallo real es un
+   * **espacio** inyectado en medio de un símbolo, y el espacio sólo puede
+   * venir de `GEO Score`. Un guardián con falsos positivos se acaba
+   * desactivando, que es la forma más cara de no tener guardián.
    */
   it("ningún identificador quedó partido por un renombrado sin delimitadores", () => {
-    const hits = gitGrep("[A-Za-z_](GEO Score|GenScore)|(GEO Score|GenScore)[A-Za-z_]");
+    const hits = gitGrep("[A-Za-z_]GEO Score|GEO Score[A-Za-z_]");
     expect(
       hits,
       "Una grafía nueva quedó pegada a otro token, señal de un reemplazo sin `\\b` " +

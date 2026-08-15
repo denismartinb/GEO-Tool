@@ -3,8 +3,9 @@
  *
  * **Por qué existe como constante y no como prosa suelta.** El objetivo de la
  * Fase E es que "GenScore" resuelva a nuestra entidad y no a los otros
- * GenScore públicos (bioinformática, salud mental, trust scoring B2B, Genscore
- * Navarra). Para eso los motores necesitan encontrar **la misma descripción
+ * productos que comparten el nombre en sectores distintos (bioinformática,
+ * salud mental, evaluación de riesgo entre empresas, alguna entidad local sin
+ * relación con ninguno). Para eso los motores necesitan encontrar **la misma descripción
  * estable** en varios sitios —la página de entidad, el schema de la home,
  * `llms.txt`— y no seis redacciones distintas que se parecen. Una cadena
  * compartida es lo único que garantiza eso; seis párrafos escritos a mano

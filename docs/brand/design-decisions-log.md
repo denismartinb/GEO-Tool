@@ -8751,7 +8751,7 @@ configuración, no código, y ningún test de este repo puede verla.
 ---
 ---
 
-## 93. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
+## 91. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
 
 **Origen.** El fundador pidió un plan de entidad tras ver que "GenScore" compite
 en buscadores con varios homónimos públicos —un GenScore de bioinformática,
@@ -8812,7 +8812,7 @@ puede pasar en local sobre un fichero recién creado y fallar en cuanto se hace
 `git add`. Es aceptable —nada llega a un PR sin versionar— pero conviene
 saberlo antes de perseguir un falso verde.
 
-## 91. El único módulo cuyo fallo no se puede deshacer ya tiene tests (PRELAUNCH-HARDENING-1 Fase Q2, 2026-08-15)
+## 93. El único módulo cuyo fallo no se puede deshacer ya tiene tests (PRELAUNCH-HARDENING-1 Fase Q2, 2026-08-15)
 
 **Qué se decidió.** `lib/email/transactional.ts` —765 líneas, trece funciones de
 envío, **cero tests**— pasa a tener 19. De 2.443 a 2.462.
