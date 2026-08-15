@@ -1,7 +1,7 @@
 # NOT-FOUND-ROCKET-1 — «Fuera de trayectoria»
 
 **Estado: implementado.** Fase cerrada el 2026-08-12 — ver
-`docs/brand/design-decisions-log.md` §63 y `.claude/rules/mission-rocket.md`.
+`docs/brand/design-decisions-log.md` §86 y `.claude/rules/mission-rocket.md`.
 La implementación vive en `components/not-found-mission.tsx` y en el bloque
 `nf-` de `app/globals.css`.
 

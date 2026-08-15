@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BLOG_POSTS } from "./posts";
+import { BLOG_CLUSTERS, BLOG_POSTS } from "./posts";
 import { GLOSSARY_TERMS } from "../glosario/terms";
 import { DOCS_NAV } from "../docs/nav";
 
@@ -43,6 +43,13 @@ const VALID_ROUTES = new Set<string>([
   "/",
   ...staticRoutesFromFilesystem(APP),
   ...BLOG_POSTS.map((p) => `/blog/${p.slug}`),
+  // Páginas pilar de cluster (`app/blog/[cluster]`): segmento dinámico, así
+  // que el barrido del sistema de ficheros no las ve. Mismo filtro que
+  // `app/sitemap.ts`: un cluster sin `pillarIntro` no tiene página publicada y
+  // enlazarlo sí sería un enlace roto. Sin esto, un artículo que enlaza a su
+  // propio pilar —lo que exige content-strategy.md §4.3— fallaba este test
+  // (SEO-POS-1 S6).
+  ...BLOG_CLUSTERS.filter((c) => c.pillarIntro).map((c) => `/blog/${c.key}`),
   ...GLOSSARY_TERMS.map((t) => `/glosario/${t.slug}`),
   ...DOCS_NAV.flatMap((s) => s.pages.map((p) => `/docs/${p.slug}`))
 ]);

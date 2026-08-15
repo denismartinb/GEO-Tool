@@ -13,7 +13,7 @@ porque una sesión futura la obedecerá igual.
   aquí por qué divergen a partir de ahora. Es una petición explícita del
   fundador (2026-08-12) al aprobar NOT-FOUND-ROCKET-1, y no es cosmética: el
   cohete es lo primero que ve alguien que crea un dominio, así que dos cohetes
-  distintos leen como dos productos (`docs/brand/design-decisions-log.md` §63).
+  distintos leen como dos productos (`docs/brand/design-decisions-log.md` §86).
 - **No comparten código a propósito, y por eso hace falta el aviso.** El del
   escaneo está atado al estado de un run real —`computeMissionBeat`, sondeo
   cada 3 s, cinco beats— y el de la 404 es estático, sin datos y sin sesión.

@@ -152,7 +152,12 @@ deploys, no las garantías.
 (`ux-pilot.yml` se dispara con `deployment_status` y nada más), así que saltar
 el build de un cambio en el propio piloto lo deja imposible de ejercitar
 (pasó el 2026-08-05: un arreglo del barrido se desplegó «Ignored» y ningún
-piloto lo probó). Mismo argumento que ya protegía a `scripts/`. Compara contra el
+piloto lo probó). Mismo argumento que ya protegía a `scripts/`, y **desde el
+2026-08-11 también `.github/workflows/ux-pilot.yml`**, que el `.github/*`
+genérico se tragaba: el commit que subía su `timeout-minutes` no construyó, así
+que el arreglo del timeout no se pudo ejercitar — el mismo bucle un escalón más
+allá (log §55). Sólo ese workflow; los demás corren por `push`/`pull_request` y
+no necesitan preview. Compara contra el
 último deploy con éxito de la rama, no contra `HEAD^`, y **nunca salta
 producción**. Ahorra minutos de build y pasadas de piloto, no deployments: el
 tope diario se aplica al crear el deployment, aguas arriba del build (medido en
@@ -301,6 +306,13 @@ Human Gate is always manual. It asks:
 3. Did validation pass? Did tests pass?
 4. Did Claude QA accept?
 5. **Did the agentic user pilot pass, and what did it leave unverified?**
+   **¿Cuántas capturas se abrieron y cuáles?** El ✅ del workflow no es el
+   veredicto: sólo dice que las aserciones que existen no saltaron. El
+   2026-08-11 se reportó «piloto pasado» leyendo esa tabla, y el fundador
+   encontró a ojo un CTA duplicado en el hero —cuya captura existía y lo
+   enseñaba— y un CTA gris sobre azul en el cajón móvil, que ninguna de las 560
+   capturas tenía abierto (log §55). Sin la lista de ficheros abiertos, el
+   veredicto es INCONCLUSIVE.
 6. **What did the pilot propose improving, and what was folded in already?**
 7. Are there product risks?
 8. **¿Se cerró la fase documentalmente en este mismo PR?** — histórico, regla
@@ -385,19 +397,23 @@ fase" (ver "Cierre de fase" más abajo).
 |---|---|---|---|
 | Competidores | `competitors.md` | **PANORAMA-EMPTY-1 (2026-08-07)** | log §10, §11, §15, §36 · ADR 0011/0018/0020/0022 |
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
-| Auditoría web | `web-audit.md` | **SCAN-STATES-3 (2026-08-11)** · WEB-AUDIT-AUTO-SPLIT-1 (2026-08-09) · WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038) · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30, §52, §57 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
+| Auditoría web | `web-audit.md` | **PRELAUNCH-HARDENING-1 Fase R7 (2026-08-14, log §83)** · SCAN-STATES-3 (2026-08-11) · WEB-AUDIT-AUTO-SPLIT-1 (2026-08-09) · WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038) · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30, §52, §57, §83 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | **SCORE-WINDOW-1 (2026-08-05, ADR 0036)** · GEO-SCORE-V4 (ADR 0033) · GEO-SCORE-CALIBRATION-1 sigue propuesta y bloqueada por datos (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031/0032/0033/0036 · log §8b, §20, §23, §29, §31 |
-| Blog y contenido | `growth-content.md` | **NOT-FOUND-ROCKET-1 (2026-08-12)** · COMPARATIVAS-DESIGN-1 (2026-08-11) · SEO-POS-1 Fase T-b (2026-08-09) · GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19, §46, §47, §58–§61, §63 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
-| Escaneo (pipeline) | `scan.md` · `mission-rocket.md` | **ENGINE-DEBUG-TOGGLE-1 (2026-08-10)** · SAMPLING-DEBUG-TOGGLE-1 (2026-08-09) · SCAN-DRIVE-1 (2026-08-07, ADR 0037) · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | log §53, §54 · `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
+| Blog y contenido | `growth-content.md` | **SEO-POS-1 Fase C, S8 (2026-08-14)** · S6 (2026-08-13) · COMPARATIVAS-DESIGN-1 (2026-08-11) · SEO-POS-1 Fase T-b (2026-08-09) | log §12, §13, §14, §19, §46, §47, §58–§61, §66–§70, §73–§77, §85, §86 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
+| Escaneo (pipeline) | `scan.md` · `mission-rocket.md` | **PRELAUNCH-HARDENING-1 Fase R6 (2026-08-14, log §81/§82)** · ENGINE-DEBUG-TOGGLE-1 (2026-08-10) · SAMPLING-DEBUG-TOGGLE-1 (2026-08-09) · SCAN-DRIVE-1 (2026-08-07, ADR 0037) · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | log §53, §54, §81, §82 · `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
 | Dominios y depuración | — *(sin regla propia todavía)* | **DOMAINS-CLIENT-DELETE-1 (2026-08-09)** · DOMAINS-ACTIVE-COOKIE-1 (2026-08-07) · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39, §41 · `docs/design-reference/domains-redesign-1/` |
-| Visión general | — *(sin regla propia todavía)* | **SCAN-STATES-2 (2026-08-10)** · ONBOARDING-ROCKET-1 Fase 1 (2026-08-08) | log §4, §6, §8b, §55, §56 |
+| Visión general | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase R7 2/2 (2026-08-14, log §84)** · SCAN-STATES-2 (2026-08-10) · ONBOARDING-ROCKET-1 Fase 1 (2026-08-08) | log §4, §6, §8b, §55, §56, §84 |
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |
 | Onboarding (tour) | `onboarding.md` | **ONBOARDING-TOUR-1 Fase A (2026-08-08)** | log §40 · `docs/design-reference/onboarding-tour-1/` |
 | Ajustes de cuenta | — *(sin regla propia todavía)* | **CONSOLE-REDESIGN-1 Fase A (2026-08-06)** | log §38 · `docs/design-reference/console-redesign-1/` |
-| Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **LLM-RESILIENCE-1 Fases A+B (2026-08-09)** | log §45 · ADR 0029 |
-| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase 0 (2026-08-09)** · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` |
+| Navegación pública (cabecera) | — *(sin regla propia todavía)* | **GENSCORE-HEADER-2 (2026-08-12)** · GENSCORE-HEADER-1 (2026-08-11) | log §1, §63, §65 |
+| Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **PRELAUNCH-HARDENING-1 Fase R5 (2026-08-14, log §78/§79/§80)** · LLM-RESILIENCE-1 Fases A+B (2026-08-09) | log §45, §78–§80 · ADR 0029 |
+| Rendimiento (velocidad de carga) | `styles.md` | **PRELAUNCH-HARDENING-1 Fase V: V4+V5 (2026-08-10)** · V0a/V1/V2/V3/V6/V7/V8 (2026-08-09) | log §54 · `docs/prelaunch-hardening-plan.md` §Fase V |
+| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase Q5b (2026-08-11)** · Fase 0 (2026-08-09) · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42, §49, §55, §65 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` · `docs/agentic-user-pilot.md` |
+| Autenticación (login/registro/recuperación) | — *(sin regla propia todavía)* | **AUTH-ERRORS-ES-1 (2026-08-12)** | ADR 0039 |
+| Consola de operador | `admin.md` | **ADMIN-CONSOLE-2a (2026-08-12)** · corrección del arranque de MFA (2026-08-13, §72) · ADMIN-CONSOLE-1 Fase 1 (2026-08-11) | log §64, §71, §72 · `docs/design-reference/admin-console-1/` |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
 irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
@@ -433,6 +449,16 @@ posterior:
    es peor que ninguna, porque una sesión futura la obedecerá igual.
 3. **Mapa de zonas** — actualizar la celda "Última fase cerrada" de la zona en
    la tabla de arriba. Si la zona no existía, añadir su fila.
+
+**El número de sección del histórico es un identificador, no un contador.**
+Antes de mergear, comprueba que el tuyo no lo haya reclamado otra rama
+mientras tanto: varias sesiones calculan `max + 1` sobre bases que envejecen, y
+**git no lo para** —dos apéndices al final del mismo fichero se mezclan sin un
+solo marcador de conflicto—, así que el resultado tiene dos §NN en silencio.
+Había siete colisiones así antes de que nadie lo mirara (log §85). Lo vigila
+`tests/log-numbering.test.ts`; si salta, renumera la sección que **no** esté en
+`main` y con ella **todas** sus referencias (`grep -rn "§NN"`), que es la mitad
+que se olvida.
 
 Lo hace **el agente**, no el fundador. Documentación que depende de que un
 humano se acuerde es documentación que se pudre.
@@ -550,6 +576,8 @@ todavía. Detalle y diagnóstico en log §44.
 | `growth-content.md` | `app/{blog,comparativas,docs,glosario}/**`, `lib/{blog,comparativas,docs,glosario}/**` |
 | `onboarding.md` | `components/product-tour.tsx`, `components/tour-provider.tsx`, `lib/onboarding/**` |
 | `mission-rocket.md` | `components/scan-mission-rocket.tsx`, `components/not-found-mission.tsx`, `lib/scan/mission-beats.ts` |
+| `styles.md` | `app/globals.css`, `app/console.css` |
+| `admin.md` | `app/admin/**`, `app/mfa/**`, `lib/admin/**` |
 
 ### Documentation (`docs/`)
 

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateOpenAIVisibilityAnswer, extractOpenAIStructuredData, OpenAIConfigError, OpenAITimeoutError } from "./openai";
 import type { BusinessProfile } from "./gemini";
-import { EXTRACTION_MAX_ATTEMPTS } from "@/lib/scan/constants";
+import { EXTRACTION_MAX_ATTEMPTS } from "@/lib/llm/constants";
 
 const ORIGINAL_ENV = { ...process.env };
 

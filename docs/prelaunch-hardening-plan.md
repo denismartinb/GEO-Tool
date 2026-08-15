@@ -6,13 +6,33 @@ una con su Human Gate.
 **Progreso (2026-08-09):**
 
 - **Fase 0 ✅ hecha** — log §42, mergeada en #366.
-- **Fase V 🟡 parcial** — V0a, V1, V2, V3, V6, V7 y V8 hechos y mergeados en
-  #366. **V4 y V5 sin empezar**: son los únicos slices que cambian el aspecto
-  del producto y necesitan su propia pasada de piloto. V9/V10/V11 siguen
-  fuera (migración, cifra publicada, superficie de auth).
-- **Fase R 🟡 en curso** — R1 y R2 hechos (log §43). Quedan R3–R8.
+- **Fase V 🟢 completa (V0–V8)** — V0a, V1, V2, V3, V6, V7 y V8 en #366;
+  **V4 y V5 hechos** (log §54): la landing y `/pricing` pasan a servidor
+  (−93 KB de JS de cliente) y nace `app/console.css` (−12,8 KB de CSS en toda
+  página pública). Dos cosas quedaron fuera **a propósito y documentadas**: el
+  tour NO se difiere (ver §54: `ssr: false` mete salto de layout, retrasa el
+  LCP y choca con `.claude/rules/onboarding.md`) y quedan ~33 KB de CSS de
+  consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
+  (migración, cifra publicada, superficie de auth).
+- **Fase R 🟡 en curso** — R1, R2 (log §43), **R4** (log §70) y **la primera
+  mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`)
+  y **R5 entera** (log §79: los tipos compartidos salen a
+  `lib/llm/contracts.ts`; log §80: las cinco funcionalidades de producto se van
+  a sus módulos dueños y `gemini.ts` pasa de 1.278 a 303 líneas), y **el primer
+  trozo de R6** (log §81: `processPromptJob` sale del ejecutor, 1.523 → 1.167
+  líneas; log §82: se rompe la dependencia de medio repositorio sobre
+  `lib/scan/`, y **R6 queda cerrada**), **R7 casi entera** (log §83: los 14
+  componentes de Auditoría web salen de la página; log §84: Visión general deja
+  de ser la excepción) y **el grueso de R8** (log §84: dos ficheros muertos
+  borrados). Quedan R3, partir `WebAuditPage`, y los dos huérfanos restantes de
+  R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
+  en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
-  evidencia se sube de verdad (log §49). El resto de Q5 y las demás Q siguen
+  evidencia se sube de verdad (log §49), y **Q5b está hecho** (log §55): el
+  arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
+  `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
+  nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
   pendientes.
 - **Fases P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
   su aprobación propia de excepción de escritura del piloto, como UX-PILOT-2/3.
@@ -140,8 +160,12 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   (timeout, retry, headers, clases de error). `openai.ts` y `claude.ts`
   difieren hoy en una línea; cada motor nuevo (Perplexity está en el
   roadmap) hoy triplicaría la copia.
-- **R3 · Tipos generados de Supabase** (1 PR): `supabase gen types` +
-  adopción en los 47 call-sites de `.from()`. Es la palanca de tipado más
+- **R3 · Tipos generados de Supabase** (¿1 PR? — ver aviso): `supabase gen types` +
+  adopción en los call-sites de `.from()`. **Medido el 2026-08-13: son 269, no
+  47.** El codegen es barato; lo caro es la adopción, así que R3 no es "un PR
+  mecánico" sino el slice más grande de la fase y necesita decidir antes cómo
+  se trocea (por dominio, o sólo donde hoy hay `as unknown as`). Los 14
+  `as unknown as` sí estaban bien contados. Es la palanca de tipado más
   rentable del repo y es codegen, no reescritura. Borra `lib/types.ts`
   (muerto) y debería eliminar la mayoría de los 14 `as unknown as`.
 - **R4 · `lib/env.ts` validado con zod** (1 PR): las 55 vars, con
@@ -151,20 +175,53 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   (transporte, sobre R2) + los 8 usos de producto repartidos a sus módulos
   dueños (`suggestCompetitors` → `lib/competitors/`, `suggestPrompts` →
   `lib/projects/`, `rewriteRecommendation` → `lib/recommendations/`, etc.).
+  **Aviso medido**: el reparto no es mecánico. `BusinessProfile` lo usan nueve
+  módulos y dos son los otros motores, así que hay un paso previo obligatorio —
+  los tipos compartidos a un módulo neutral (`lib/llm/contracts.ts`, log §79) —
+  sin el cual la mudanza nace con ciclos. **Hecho** (log §80): 1.278 → 303
+  líneas, y `gemini.ts` se queda con lo que sí es el motor Gemini, el mismo
+  contenido que `openai.ts` y `claude.ts`. El barril de reexports **se queda a
+  propósito**: seis tests mockean `@/lib/llm/gemini`, así que esa ruta de
+  import es el punto de inyección del suite, no deuda.
 - **R6 · Descargar `lib/scan/executor.ts`** (1–2 PRs): extraer
   `processPromptJob` (L91–418) a `lib/scan/prompt-job.ts`; mover
   `scan/types.ts` + `scan/constants.ts` a `lib/domain/` (rompe las 6
   dependencias mutuas sobre `lib/scan`); `web-audit/types.ts` para los 2
   ciclos solo-tipo. La regla de ruta `scan.md` aplica entera: son mudanzas,
-  no cambios de lógica.
+  no cambios de lógica. **Hecha entera.** `processPromptJob` (log §81): 1.523 → 1.167
+  líneas, y de paso muere el `delay` duplicado que R2 ya había unificado en
+  `lib/llm/http.ts`. **`lib/domain/` se descarta como destino** (log §82): no
+  eran 6 dependencias sino 26 ficheros, y al mirar QUÉ importaba cada uno la
+  dependencia entera resultó ser tres símbolos —`AuthenticatedContext` (17
+  importadores, y es el tipo de retorno de `requireUser`, no un tipo de
+  escaneo), ocho constantes de llamada a LLM, y `ProjectActionError`. Cada uno
+  se fue a su dueño natural (`lib/auth.ts`, `lib/llm/constants.ts`) y el
+  tercero se queda porque su vocabulario SÍ es de escaneo. Mover los dos
+  ficheros enteros habría llevado 466 líneas de ciclo de vida del escaneo a un
+  módulo «neutral» sin romper ninguna dependencia. Resultado: de 26 ficheros
+  externos quedan 5, todos dependencias legítimas de dominio, y **`lib/llm/**`
+  ya no importa nada de `lib/scan`**.
 - **R7 · Páginas** (2 PRs): extraer los ~24 componentes inline de
-  `web-audit/page.tsx` a `web-audit/_components/`; Overview pasa a usar
-  `requireActiveProject` como todas las demás páginas (hoy es la única con
-  ownership check artesanal junto a un `createServiceClient()`); arreglar el
-  import de `getLLMScanProviders` desde `executor` cuando existe
-  `providers.ts` justo para eso; unificar `setRecurringScans`/`setAutoWebAudit`.
-- **R8 · Limpieza de muertos** (1 PR pequeño): `lib/supabase/client.ts` (0
-  importadores — confirmar que es intencional que no haya cliente browser),
+  `web-audit/page.tsx` a `web-audit/_components/` — **hecho** (log §83): 14
+  componentes en 6 módulos, la página de 1.933 a 1.137 líneas. Aviso para el
+  resto de R7: **aquí los tests no demuestran nada** (esa pantalla no tiene
+  tests de render) y `tsc` tampoco — la prueba es comparar los multiconjuntos
+  de líneas del original contra la suma de los resultantes, y eso cazó un
+  bloque duplicado que compilaba y pasaba el lint. **Overview a
+  `requireActiveProject` y el import de `getLLMScanProviders` desde
+  `providers.ts`: hechos** (log §84) — `requireActiveProject` entra DENTRO del
+  `Promise.all` existente, no delante, para no serializar una consulta más; y
+  el reexport de cortesía del ejecutor se borra por muerto. Dos correcciones al
+  plan: Overview no tenía «ownership check artesanal junto a un
+  `createServiceClient()`» (ese cliente es para `reconcileStuckScanRuns` y es
+  legítimo), y **`setAutoWebAudit` ya no existe** — lo retiró
+  WEB-AUDIT-AUTO-SPLIT-1, su sustituto es `setAutoAuditHalf`, y el comentario
+  de `actions.ts` dice que la forma de espejo entre ambos es deliberada. Queda
+  partir `WebAuditPage` (~1.070 líneas de orquestación de datos), que toca
+  lógica y no presentación.
+- **R8 · Limpieza de muertos** (1 PR pequeño): **`lib/supabase/client.ts` y
+  `lib/types.ts` borrados** (log §84) — cero importadores, comprobado por ruta
+  de import y no por nombre. Quedan
   `lib/web-audit/action-plan.ts` (huérfano shipped: decidir re-conectar o
   retirar con nota en el ROADMAP), `updateProfileName` huérfano (log §38).
 
@@ -213,11 +270,39 @@ forma medible.*
   evidencia no captura nada, porque el propio self-check limpia `.pilot/` entre
   casos.
 
+  **Nuevo, 2026-08-10:** `ci.yml` **se dispara de forma intermitente en los
+  `push` a un PR ya abierto** — tres pushes sin y dos con, misma rama y misma
+  tarde (log §54, sección final). Se le añadió `workflow_dispatch` para poder
+  reponerlo a mano, pero falta entender por qué se pierden esos eventos
+  `synchronize`. Intermitente es peor que roto: deja creer que la puerta está
+  puesta cuando la mitad de las veces no lo está.
+
   **Estado (2026-08-10): el caso sano vuelve a pasar y la evidencia se sube**
   (log §49). Quedan de Q5, sin empezar: `ContentExpectation` en
   `second-project.spec.ts`, el `pr_number` del workflow de escritura, la
   pérdida intermitente de sesión, y la conversación de devolverlo a puerta
   de PR.
+
+- **Q5b · El piloto aprende a contar y a leer un color** ✅ **hecho
+  (2026-08-11, log §55).** Fase propia, abierta porque el fundador encontró a
+  ojo dos fallos visibles en el despliegue de la Fase V **después** de que el
+  piloto corriera: el CTA del hero duplicado y el CTA del cajón móvil en gris
+  sobre azul. Tres causas distintas, arregladas en tres sitios distintos:
+  1. **Proceso** — la captura del duplicado existía y nadie la abrió. El ✅ del
+     workflow no es el veredicto; `.claude/agents/ux-pilot.md` obliga ahora a
+     enumerar y **nombrar** las capturas abiertas, y la pregunta 5 del Human
+     Gate las pide.
+  2. **Cobertura** — de 560 capturas, ninguna tenía el cajón móvil abierto.
+     `tests/pilot/journeys/landing.spec.ts` cubre `/` y `/pricing` y abre el
+     cajón en la anchura móvil (saltándose ruidosamente las otras dos).
+  3. **Arnés** — `tests/pilot/support/page-audit.ts` añade detección de
+     controles duplicados y comprobación de contraste AA, con 18 tests
+     unitarios y dos casos rotos nuevos en el self-check (`duplicate`,
+     `contrast`), que pasa a tener seis.
+
+  Lo que **no** cierra, dicho en el propio log: la clase entera. Se tapan dos
+  agujeros; abrir las capturas sigue siendo obligatorio porque el motivo de
+  mirarlas es todo lo que nadie ha pensado en afirmar todavía.
 
 ### Fase P — PILOTO E2E EXTREMO A EXTREMO (lo que pediste, con nombre y guardas)
 

@@ -75,6 +75,27 @@ export function isValidDomain(domain: string): boolean {
 }
 
 /**
+ * Comprobación ESTRICTA de forma, sobre el valor ya limpio por `cleanDomain`.
+ *
+ * No es la misma que `isValidDomain` de arriba y no debe fusionarse con ella:
+ * aquélla es la última verja del servidor y es deliberadamente laxa —rechaza
+ * lo absurdo y deja pasar lo raro, porque negarle el alta a un dominio real es
+ * peor que aceptar uno dudoso—. Ésta es la que decide si una interfaz habilita
+ * el botón «Continuar», y ahí sí conviene ser exigente.
+ *
+ * Vive aquí porque estaba escrita a mano dentro de `onboarding-wizard.tsx` y
+ * el hero de la landing necesitaba la misma regla para decidir qué dominio
+ * merece arrastrarse hasta el asistente (log §50). Con dos copias, el hero
+ * podía guardar algo que el asistente rechazaba acto seguido.
+ */
+export function isWellFormedDomain(value: string): boolean {
+  const domain = cleanDomain(value);
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(
+    domain
+  );
+}
+
+/**
  * Collapses any embedded line breaks in free-text prompt input to a single
  * space. Prompts are transported to the server as newline-joined lines
  * (see parseInitialPrompts below); a prompt whose own text contains a "\n"

@@ -77,6 +77,14 @@ while IFS= read -r file; do
     # deployed "Ignored", no preview, no pilot run, no way to know if the fix
     # worked. Unit tests under tests/ that run in CI are unaffected.
     tests/pilot/*) run "${file} changes the pilot, which needs a preview to run against" ;;
+    # El mismo argumento otra vez, ahora sobre el propio workflow del piloto,
+    # que el `.github/*` de abajo se tragaba. Pasó el 2026-08-11 (log §55):
+    # la pasada se agotó a los 20 min, el commit que subía el techo a 30 sólo
+    # tocaba `.github/` y `docs/`, no hubo build, no hubo deployment y por
+    # tanto el arreglo del timeout no se pudo ejercitar — el mismo bucle que
+    # el del 2026-08-05 con el barrido. Los demás workflows sí se saltan:
+    # corren por `push`/`pull_request` y no necesitan un preview.
+    .github/workflows/ux-pilot.yml) run "${file} changes the pilot workflow, which only ever runs against a preview" ;;
     docs/* | .claude/* | .github/* | tests/* | agents/*) ;;
     # Root-level prose only (CLAUDE.md, README.md, PRD.md…). A nested .md may
     # be routed content — pageExtensions in next.config.ts includes "md".

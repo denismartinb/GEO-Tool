@@ -12,7 +12,8 @@
     "pilot": "node scripts/pilot.mjs",
     "pilot:selfcheck": "node scripts/pilot-selfcheck.mjs",
     "bench:extraction": "NODE_OPTIONS=--conditions=react-server tsx scripts/extraction-bench.ts",
-    "validate": "pnpm run build && pnpm run typecheck && pnpm run lint"
+    "validate": "pnpm run build && pnpm run typecheck && pnpm run lint",
+    "check:env": "node --experimental-strip-types scripts/check-env.mjs"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",

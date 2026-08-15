@@ -1,0 +1,469 @@
+/*
+ * ADMIN-CONSOLE-1. Classes are prefixed `adm-` and scoped under `.adm-shell`
+ * because the dashboard already owns generic names this screen would
+ * otherwise collide with both ways (`.card`, `.badge`, `.chip`, `.pill`) —
+ * same convention as `.ptour` in the onboarding tour
+ * (.claude/rules/onboarding.md).
+ */
+
+.adm-shell {
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.adm-opbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 24px;
+  background: var(--brand-ink);
+  color: var(--brand-ink-on-dark);
+  font-size: 13.5px;
+}
+
+.adm-opbar-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-opbar-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--brand-warm);
+  color: #1b1206;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.adm-opbar-links {
+  display: flex;
+  gap: 16px;
+  font-size: 12.5px;
+}
+
+.adm-opbar-links a {
+  color: var(--brand-ink-on-dark);
+  opacity: 0.82;
+  text-decoration: none;
+}
+
+.adm-opbar-links a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.adm-main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+.adm-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.adm-h1 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.adm-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+
+.adm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.adm-kpi {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 13px 15px;
+}
+
+.adm-kpi dt {
+  font-size: 11px;
+  color: var(--ink-4);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.adm-kpi dd {
+  margin: 5px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.adm-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.adm-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.adm-chip.adm-chip-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.adm-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.adm-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+  font-size: 13px;
+}
+
+.adm-table th,
+.adm-table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+
+.adm-table thead th {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 700;
+  background: var(--surface-2);
+}
+
+.adm-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.adm-table tbody tr.adm-row-selected {
+  background: var(--accent-soft);
+}
+
+.adm-table a {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.adm-table a:hover {
+  text-decoration: underline;
+}
+
+.adm-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.adm-em {
+  font-weight: 650;
+}
+
+.adm-uid {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-4);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 450;
+}
+
+.adm-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 640;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.adm-pill-trial { background: #fff3de; color: #92600a; border-color: #f4dcae; }
+.adm-pill-trial_expired { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
+.adm-pill-paid { background: var(--brand-pos-soft); color: var(--brand-pos); border-color: #b9e5cd; }
+.adm-pill-free { background: var(--surface-2); color: var(--ink-3); border-color: var(--line); }
+
+/* ADMIN-CONSOLE-2a — automatismos y coste */
+
+.adm-kpi-foot {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  font-weight: 600;
+}
+
+.adm-dim {
+  color: var(--ink-4);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.adm-frac {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-frac-on { font-weight: 700; color: var(--brand-pos); }
+.adm-frac-off { font-weight: 700; color: var(--ink-4); }
+.adm-frac-sep { color: var(--ink-4); }
+.adm-frac-total { color: var(--ink-3); }
+
+.adm-inert {
+  margin-left: 7px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: #92600a;
+  background: #fff3de;
+  border: 1px solid #f4dcae;
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.adm-proj-block {
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line-soft);
+}
+
+.adm-proj-block:last-of-type {
+  border-bottom: 0;
+}
+
+.adm-proj-block .adm-proj {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.adm-proj-auto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.adm-cost {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.adm-cost-tag {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.adm-cost-basis {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-cost-note {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-4);
+  border-top: 1px solid var(--line-soft);
+  padding-top: 10px;
+}
+
+.adm-cost-note code {
+  font-size: 10.5px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.adm-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 13.5px;
+}
+
+.adm-drawer {
+  margin-top: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  overflow: hidden;
+}
+
+.adm-drawer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.adm-drawer-top h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.adm-drawer-cols {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0;
+}
+
+.adm-drawer-cols > div {
+  padding: 18px 20px;
+}
+
+.adm-drawer-cols > div:first-child {
+  border-right: 1px solid var(--line);
+}
+
+.adm-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  font-size: 13px;
+  margin: 0;
+}
+
+.adm-dl dt {
+  color: var(--ink-4);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+.adm-dl dd {
+  margin: 0;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.adm-mini-title {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.adm-proj {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 12.5px;
+}
+
+.adm-proj:last-of-type {
+  border-bottom: 0;
+}
+
+.adm-proj-d {
+  font-weight: 600;
+}
+
+.adm-proj-s {
+  color: var(--ink-4);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.adm-close {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+
+.adm-close:hover {
+  text-decoration: underline;
+}
+
+.adm-note {
+  border-left: 3px solid var(--brand-warm);
+  background: #fff8e9;
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-bottom: 16px;
+}
+
+@media (max-width: 760px) {
+  .adm-drawer-cols {
+    grid-template-columns: 1fr;
+  }
+  .adm-drawer-cols > div:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
