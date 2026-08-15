@@ -48,7 +48,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // (fixture-drift.test.ts) que contrasta este mapa contra BLOG_POSTS.
   "como-saber-si-tu-marca-aparece-en-chatgpt": "playbooks",
   // SEO-POS-1 Fase C, S6 (2026-08-13).
-  "metricas-geo-que-medir": "medicion"
+  "metricas-geo-que-medir": "medicion",
+  // SEO-POS-1 Fase C, S8 (2026-08-14).
+  "como-medir-trafico-chatgpt-ga4": "medicion"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

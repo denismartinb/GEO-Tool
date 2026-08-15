@@ -20,7 +20,20 @@ import { GLOSSARY_TERMS } from "../glosario/terms";
  * el mismo PR que la justifica, igual que `PENDING_CONVERSION` en
  * `article-recipes.test.ts`.
  */
-const ALLOWED_TO_MENTION_PERPLEXITY = new Set<string>([]);
+const ALLOWED_TO_MENTION_PERPLEXITY = new Set<string>([
+  // S8 (2026-08-14). El artículo va sobre cómo clasifica GA4 el tráfico de
+  // asistentes, y una de sus tres conclusiones ES que el canal "Asistente de
+  // IA" **no incluye Perplexity**: sus visitas se quedan en Referencia. Ahí
+  // Perplexity no aparece como motor de Genscore sino como una fuente de
+  // tráfico que el lector tiene en su propio informe y no encuentra donde
+  // debería. Omitirlo sería esconderle al lector la mitad de la respuesta para
+  // proteger una ambigüedad sobre nuestros motores que el artículo no crea:
+  // el CTA nombra los tres que ejecutamos (ChatGPT, Gemini y Claude) y la
+  // metadata no lo menciona, que es donde la regla de motores muerde
+  // (`.claude/rules/growth-content.md`, "La metadata no nombra motores que el
+  // producto no ejecuta").
+  "como-medir-trafico-chatgpt-ga4"
+]);
 
 function readArticle(slug: string): string {
   return readFileSync(join(process.cwd(), "app", "blog", slug, "page.mdx"), "utf8");
