@@ -8750,6 +8750,71 @@ configuración, no código, y ningún test de este repo puede verla.
 
 ---
 
+## 91. El único módulo cuyo fallo no se puede deshacer ya tiene tests (PRELAUNCH-HARDENING-1 Fase Q2, 2026-08-15)
+
+**Qué se decidió.** `lib/email/transactional.ts` —765 líneas, trece funciones de
+envío, **cero tests**— pasa a tener 19. De 2.443 a 2.462.
+
+**Por qué éste antes que los demás huecos.** Un despliegue malo se revierte; un
+correo enviado, no. Es el único módulo del repositorio cuyo fallo **aterriza en
+la bandeja de un cliente** y no hay forma de recogerlo.
+
+### Qué se fija, y qué NO
+
+Se fija **a quién va cada cosa**, **cuándo no se manda nada**, y que **nada de
+esto pueda tumbar el flujo al que va enganchado**.
+
+**No se fija el maquetado**, a propósito: el HTML de un correo se retoca a
+menudo y clavarlo en un test sólo produce rojos que nadie lee — la variante
+email del mismo razonamiento de §87 sobre no fijar clases CSS. Del cuerpo se
+comprueba lo que sí sería un fallo: que el dato prometido esté, y que lo que
+viene de fuera vaya escapado.
+
+### El invariante caro
+
+`.claude/rules/scan.md` ya lo decía —«las alertas de operador nunca van al
+cliente»— y hasta hoy no lo comprobaba nadie. Las cuatro alertas de operador
+tienen ahora su test de destinatario, y una de ellas merece mención aparte:
+**`sendNewSignupOpsAlertEmail` RECIBE la dirección del cliente como dato del
+cuerpo**. Confundir ese dato con el destinatario le mandaría al recién
+registrado un aviso interno sobre sí mismo. Hay un test que separa las dos
+cosas explícitamente.
+
+Y sin `OPS_ALERT_EMAIL` **no se manda a nadie**: caer al cliente «para que no se
+pierda» sería exactamente el fallo que la regla prohíbe.
+
+### Una regresión de 2026-08-05, ahora cubierta
+
+`isOpsAlertConfigured` comprobaba sólo la dirección. Estaba configurada,
+devolvía `true`, y `sendEmail` no-opeaba después en `if (!resend) return` sin
+decir nada — dos puertas silenciosas en serie, la forma de fallo que ADR 0029
+existe para quitar. El arreglo ya estaba; lo que faltaba era el test que impide
+volver atrás.
+
+### Lo que se comprueba del contenido
+
+- El aviso de bajada publica **las dos puntuaciones reales** y su diferencia.
+- El error del proveedor va **escapado**: viene de fuera (Gemini, Supabase,
+  fetch) y se interpola en HTML, así que sin escapar una alerta sobre un fallo
+  se convierte en un vector de inyección hacia la bandeja del propio operador.
+- Cada correo sale como **documento HTML completo**, no como fragmento — los
+  clientes de webmail sólo aplican lo que encuentran en un `<head>` de verdad.
+- Sale desde la **dirección verificada**, no desde una inventada.
+
+**Los tests se probaron rotos.** Tres mutaciones: mandar una alerta de operador
+al cliente (2 rojos), devolver `isOpsAlertConfigured` a mirar sólo el destino
+(1), y dejar de escapar el `<` (1).
+
+**Lo que sigue sin cubrir.** Que el correo **se vea bien** en Gmail, Outlook y
+Apple Mail. Eso no lo puede ver ningún test de este repo y sigue siendo
+comprobación manual.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q2);
+`.claude/rules/scan.md` («las alertas de operador nunca van al cliente»);
+ADR 0029; §87 (por qué no se fija el maquetado).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
