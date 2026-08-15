@@ -472,17 +472,24 @@ export default async function AdminUsersPage({
                   {row.id === params.u ? (
                     <tr className="adm-detail-row">
                       <td colSpan={9} className="adm-detail-cell">
-                        {detail ? (
-                          <UserDetailPanel
-                            detail={detail}
-                            q={params.q}
-                            status={params.status}
-                            adminSuccess={params.admin_success}
-                            adminError={params.admin_error}
-                          />
-                        ) : (
-                          <p className="adm-empty">Esa cuenta ya no existe.</p>
-                        )}
+                        {/* .adm-detail-sticky ancla el contenido al borde
+                            visible de .adm-table-wrap y lo dimensiona a su
+                            ancho real (100cqi), no al de esta fila de 760px+
+                            — si no, el detalle sólo se leía desplazando la
+                            tabla, cortado a los lados en móvil. */}
+                        <div className="adm-detail-sticky">
+                          {detail ? (
+                            <UserDetailPanel
+                              detail={detail}
+                              q={params.q}
+                              status={params.status}
+                              adminSuccess={params.admin_success}
+                              adminError={params.admin_error}
+                            />
+                          ) : (
+                            <p className="adm-empty">Esa cuenta ya no existe.</p>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ) : null}

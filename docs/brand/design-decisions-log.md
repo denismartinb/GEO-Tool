@@ -7928,6 +7928,26 @@ inline-size`): ahora colapsa según el ancho real del contenedor que lo aloja,
 no el del viewport, y las tres columnas sí aparecen en el caso normal en
 móvil.
 
+**Segunda corrección, el mismo día: la ficha en sí era ilegible en un móvil
+real.** Capturas del fundador desde su teléfono lo mostraron directamente —
+el piloto no lo pudo ver porque no tiene AAL2 para `/admin`. La celda del
+acordeón es parte de una fila de `.adm-table` (min-width 760px): dejar su
+contenido a `white-space: normal` arregló que el texto no se rompiera en una
+sola línea eterna, pero no arregló que ese texto sólo se leyera desplazando
+la tabla horizontalmente — la ficha entera quedaba a 760px+ de ancho, cortada
+por ambos lados en cualquier pantalla de teléfono real. Los números cortos
+del resto de la tabla toleran ese desplazamiento (siempre lo toleraron, es un
+trade-off ya aceptado); una ficha pensada para leerse, no. Corregido sin
+partir la tabla en dos: `.adm-table-wrap` ya lleva `container-type:
+inline-size` (para el fix anterior), así que su ancho real y visible —el del
+contenedor, no el de la fila que desborda dentro de él— se puede consultar
+con la unidad `cqi`. El contenido de la celda vive ahora en
+`.adm-detail-sticky`: `position: sticky; left: 0` lo fija al borde visible
+según se desplaza la tabla, y `width: 100cqi` lo dimensiona al ancho real del
+contenedor. Resultado: la ficha se ve entera y a ancho de pantalla sin que el
+operador tenga que desplazar nada, aunque la fila que la contiene siga siendo
+más ancha que la pantalla.
+
 ### Pendiente / roto conocido
 
 - Sigue sin piloto agéntico, misma razón que toda la zona: AAL2 bloquea el

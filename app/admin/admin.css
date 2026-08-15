@@ -155,6 +155,14 @@
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--surface);
+  /*
+   * ADMIN-CONSOLE-UX-1, corrección tras el fundador. Deja consultar el ancho
+   * REAL de este contenedor (visible, sin importar cuánto se haya desplazado
+   * su tabla hija) vía `cqi` — ver `.adm-detail-sticky` más abajo. El propio
+   * `.adm-table-wrap` ya se dimensiona por su padre (`.adm-main`), no por la
+   * tabla que desborda dentro de él, así que esto no cambia su tamaño.
+   */
+  container-type: inline-size;
 }
 
 .adm-table {
@@ -405,11 +413,19 @@
  * ADMIN-CONSOLE-UX-1. La ficha se abre en acordeón justo bajo la fila que se
  * toca, no como tarjeta fija tras toda la tabla — en móvil eso obligaba a
  * bajar siempre la misma distancia sin importar qué fila se hubiera abierto.
- * La celda vive dentro del mismo contenedor con scroll horizontal que la
- * tabla (min-width: 760px arriba), así que el contenido se ve al desplazar
- * igual que el resto de la fila; `white-space: normal` deshace el `nowrap`
- * general de `.adm-table td`, que rompería el texto del detalle en una sola
- * línea larguísima.
+ *
+ * Corrección (mismo día, capturas del fundador): la celda es parte de la
+ * fila de una tabla con `min-width: 760px` — sin arreglar, su contenido
+ * quedaba a ESA anchura y sólo se leía desplazando horizontalmente, mitad
+ * cortado a cada lado, en cualquier móvil real. Los números cortos del resto
+ * de la tabla toleran ese desplazamiento; una ficha para leer, no. La celda
+ * en sí se deja a 760px+ (no se puede evitar, es parte de la fila), pero su
+ * contenido va en `.adm-detail-sticky`: `position: sticky; left: 0` lo fija
+ * al borde visible según se desplaza la tabla, y `width: 100cqi` lo dimensiona
+ * al ancho REAL de `.adm-table-wrap` (gracias a su `container-type` de
+ * arriba) en vez de al de la fila que desborda dentro de él. Resultado: la
+ * ficha se ve entera, a ancho de pantalla, sin desplazamiento propio, aunque
+ * la fila que la contiene sí sea más ancha que la pantalla.
  */
 .adm-detail-row td {
   padding: 0;
@@ -417,11 +433,19 @@
 
 .adm-detail-cell {
   white-space: normal;
+  padding: 0;
+}
+
+.adm-detail-sticky {
+  position: sticky;
+  left: 0;
+  width: 100cqi;
+  box-sizing: border-box;
   background: var(--surface-2);
   padding: 12px;
 }
 
-.adm-detail-cell .adm-drawer {
+.adm-detail-sticky .adm-drawer {
   box-shadow: none;
 }
 
