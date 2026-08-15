@@ -282,16 +282,6 @@
 .adm-proj-block {
   padding: 9px 0;
   border-bottom: 1px dashed var(--line-soft);
-  /*
-   * ADMIN-CONSOLE-UX-1. `.adm-proj-write` decide sus columnas por el ancho
-   * de ESTE contenedor, no por el del viewport: el mismo componente
-   * (`UserDetailPanel`) se renderiza dentro de la celda de la tabla —ancha,
-   * porque `.adm-table` fuerza min-width 760px— y, en el caso de respaldo,
-   * suelto a ancho de página. Un móvil de 375px da contenedores muy
-   * distintos según el caso; un `@media` no puede distinguirlos porque
-   * ambos ocurren al mismo ancho de viewport (log §95).
-   */
-  container-type: inline-size;
 }
 
 .adm-proj-block:last-of-type {
@@ -334,11 +324,19 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ADMIN-CONSOLE-2b / ADMIN-CONSOLE-UX-1 — escritura por proyecto, en columnas */
-
+/*
+ * ADMIN-CONSOLE-2b / ADMIN-CONSOLE-UX-1 — escritura por proyecto, en columnas.
+ * `auto-fit` con `minmax()` colapsa por sí solo según el ancho REAL
+ * disponible, sin ninguna consulta condicional (`@media`/`@container`) que
+ * mantener — el primer intento usaba una `@container`, correcta en
+ * aislamiento pero sin poder verificarse contra el preview real del
+ * fundador; esto es intrínsecamente correcto por especificación, en
+ * cualquier navegador, sin depender de qué construya el ancho del
+ * contenedor.
+ */
 .adm-proj-write {
   display: grid;
-  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px 14px;
   margin-top: 8px;
   padding-top: 8px;
@@ -364,12 +362,6 @@
   font-size: 11.5px;
   padding: 5px 12px;
   white-space: nowrap;
-}
-
-@container (max-width: 420px) {
-  .adm-proj-write {
-    grid-template-columns: 1fr;
-  }
 }
 
 .adm-toggle-btn-off {
@@ -431,7 +423,19 @@
   padding: 0;
 }
 
-.adm-detail-cell {
+/*
+ * Segunda corrección, mismo día: `.adm-table th, .adm-table td` (más abajo en
+ * este mismo fichero) pone `white-space: nowrap` con especificidad
+ * elemento+clase (0,1,1). `.adm-detail-cell` de una sola clase (0,1,0) nunca
+ * podía ganarle, así que el `white-space: normal` de más arriba no llegó a
+ * aplicarse nunca — el texto seguía sin partirse en una sola línea
+ * interminable, y esa línea sin partir empujaba el ancho de todo lo que
+ * colgaba de esta celda (incluidas las columnas de `.adm-proj-write`, que
+ * por eso tampoco colapsaban a una). Capturas del fundador desde su móvil lo
+ * confirmaron. `.adm-table .adm-detail-cell` iguala la especificidad de la
+ * regla que había que vencer.
+ */
+.adm-table .adm-detail-cell {
   white-space: normal;
   padding: 0;
 }

@@ -9150,6 +9150,39 @@ Las dos funciones —sin nada sensible, sólo formato— pasan a
 re-exporta para no romper a `automation.ts` ni a `page.tsx`, que siguen
 importándolas de donde siempre.
 
+**Cuarta corrección, el mismo día: el arreglo de la ficha ilegible (la
+"Segunda corrección" de arriba) nunca había llegado a aplicarse.** Nueva
+captura del fundador desde su móvil mostró el mismo texto cortado que se
+había dado por corregido, y además los tres interruptores por proyecto sin
+verse uno bajo otro. Diagnosticado con un HTML mínimo cargado en Chromium
+local (sin acceso a `/admin` real, que exige AAL2) reproduciendo la misma
+estructura CSS: `.adm-table th, .adm-table td { white-space: nowrap }` —
+regla que ya existía para las celdas normales de la tabla— tiene
+especificidad elemento+clase (0,1,1); `.adm-detail-cell { white-space: normal
+}` de una sola clase (0,1,0) nunca pudo ganarle, source order aparte. El
+`white-space: normal` de la "Segunda corrección" jamás se aplicó. Con el
+texto sin partir, la línea de coste (`.adm-cost-basis`) medía su ancho
+íntegro sin saltos, y ESE ancho —no el ancho real disponible— es el que
+`.adm-proj-block` (y por tanto `.adm-proj-write`) heredaba; con la
+`@container` de la corrección anterior evaluando ese ancho inflado, nunca
+veía menos de 420px y nunca colapsaba a una columna. Las dos cosas que el
+fundador reportó como fallos distintos eran el mismo bug.
+
+Dos arreglos, verificados con Chromium local en 375/768/1280px antes de
+subir (no sólo razonados):
+
+- **La especificidad**: `.adm-detail-cell` pasa a `.adm-table
+  .adm-detail-cell` (0,2,0), que gana sin depender del orden de las reglas
+  en el fichero.
+- **La `@container` de las columnas se sustituye por `grid-template-columns:
+  repeat(auto-fit, minmax(140px, 1fr))`.** Correcta en aislamiento la
+  primera vez, pero dependía de un ancho de contenedor que otro bug (el de
+  arriba) podía inflar; `auto-fit` resuelve el número de columnas de forma
+  intrínseca contra el ancho real en cada reflow, sin una condición
+  explícita que pueda quedar evaluando el número equivocado. Confirmado:
+  1 columna a 375px, 2 a 768px, 3 a 1280px, sin desbordamiento horizontal en
+  ninguno.
+
 ### Pendiente / roto conocido
 
 - Sigue sin piloto agéntico, misma razón que toda la zona: AAL2 bloquea el
