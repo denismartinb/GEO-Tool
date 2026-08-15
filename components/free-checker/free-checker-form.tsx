@@ -18,7 +18,7 @@ import { PENDING_DOMAIN_KEY } from "@/lib/onboarding/pending-domain";
  * primero". El piloto lo dio por bueno porque su chequeo de contraste salta
  * los controles deshabilitados (correcto según WCAG: quedan exentos), así que
  * es justo el fallo que ninguna aserción podía cazar y sólo aparece al mirar
- * la captura (log §94).
+ * la captura (log §97).
  *
  * En su lugar el botón siempre invita, y al pulsarlo sin un dominio válido
  * devuelve el foco al campo con una pista concreta. Es además lo que ya hace

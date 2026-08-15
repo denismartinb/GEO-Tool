@@ -279,7 +279,7 @@ geografía y mete a la métrica a competir con geolocalización.
 | Slice | Estado |
 |---|---|
 | **E1 — Una sola grafía** | ✅ **Hecho (2026-08-13)** — 179 `Genscore` y 53 `GeoScore` unificados en copy de usuario. URLs, slugs, dominio e identificadores intactos a propósito. Guardián en `lib/brand/naming.test.ts`. Detalle: log §91 |
-| **E2 — `/que-es-genscore`** | Pendiente. Página de entidad con la definición canónica: qué es, qué mide, cómo funciona, en qué se diferencia del SEO, para quién. **Con los tres motores que sí ejecutamos** (ChatGPT, Gemini, Claude) — no los cinco que sugería el consejo externo que originó la fase |
+| **E2 — `/que-es-genscore`** | ✅ **Hecho (2026-08-15)** — definición canónica en `lib/brand/canonical-definition.ts`, importada por metadata, página, FAQ y schema para que sea literalmente la misma cadena en todas. Nombra los tres motores que ejecutamos, con test que rechaza los que no. Enlazada desde los seis pies vía `MARKETING_ENTITY_LINKS`. Detalle: log §94 |
 | **E3 — `SoftwareApplication` en la home** | Pendiente. Junto al `Organization` que ya existe. Sin `sameAs` inventados: el schema actual es mínimo a propósito porque no hay perfiles reales que citar |
 | **E4 — Canonicalizar el GEO Score** | Pendiente. Ya existen **tres** URLs para el concepto (`/glosario/geo-score`, `/docs/metodologia/geo-score`, `/blog/que-es-el-geo-score`). El problema no es que falte una cuarta, es que ninguna está declarada canónica y Google reparte señales entre ellas |
 
@@ -299,7 +299,7 @@ limiting inexistente hoy, punto de esquema/RLS que exige aprobación aparte)
 dividió la fase en tres decisiones separadas. El fundador aprobó **solo la
 primera**:
 
-- **Fase A — ✅ Hecha (2026-08-15, log §94).** `/gratis/aparece-mi-marca-en-chatgpt`:
+- **Fase A — ✅ Hecha (2026-08-15, log §97).** `/gratis/aparece-mi-marca-en-chatgpt`:
   capta el dominio (mismo arrastre que el hero de la landing) y lo lleva al
   registro real. Cero llamadas LLM, cero escritura en base de datos, cero
   esquema. Sirve para medir demanda real antes de gastar en la máquina de

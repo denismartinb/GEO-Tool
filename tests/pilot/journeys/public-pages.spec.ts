@@ -141,6 +141,12 @@ for (const slug of BLOG_POSTS) {
   });
 }
 
+test("/que-es-genscore renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/que-es-genscore", "que-es-genscore");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/que-es-genscore");
+});
+
 test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/geo", "geo");
   assertPageIsHealthy(findings);

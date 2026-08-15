@@ -4584,7 +4584,7 @@ a.notif-row:hover {
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 /* Pista del comprobador gratuito cuando lo escrito no es un dominio
-   (FREE-CHECKER-1, log §94). `--brand-neg` sobre fondo claro, no `--ink-4`:
+   (FREE-CHECKER-1, log §97). `--brand-neg` sobre fondo claro, no `--ink-4`:
    es un mensaje que hay que leer, no una nota al pie. */
 .fc-hint { font-size: 13px; color: var(--brand-neg); margin: 11px 0 0; text-align: center; }
 .fc-hint strong { font-weight: 650; }
@@ -4598,7 +4598,7 @@ a.notif-row:hover {
 /* Un `.lp-cta` deshabilitado sigue siendo AZUL, atenuado — nunca gris. En gris
    deja de leerse como "el botón, todavía no" y pasa a leerse como "algo se ha
    roto", que en un CTA de portada es el peor mensaje posible. Ninguna pantalla
-   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §94); vive aquí para que
+   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §97); vive aquí para que
    el día que alguien lo necesite no herede el azul a plena fuerza y parezca
    pulsable. Los controles deshabilitados están exentos de contraste AA, así
    que el barrido del piloto los salta: esto no lo vigila nadie salvo el ojo. */
@@ -5885,6 +5885,21 @@ select.set-field {
   position: absolute; top: -13px; left: 10px; display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
   color: #fff; background: var(--brand-blue); padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+  max-width: calc(100% - 20px);
+}
+/* Por debajo de 640px la insignia flotante deja de caber: con `nowrap` y
+   posición absoluta, una anotación larga se salía del contenedor y quedaba
+   cortada a media palabra (fundador, 2026-08-15, en /que-es-genscore a 375px;
+   log §96). El barrido del piloto no lo cazó porque el recorte ocurre DENTRO
+   de la tarjeta y su comprobación es de desbordamiento de página.
+   Aquí pasa a ser una línea normal encima de la fila: cabe siempre, no tapa
+   nada, y no depende de que quien la escriba acierte con la longitud. */
+@media (max-width: 640px) {
+  .art-anno-lbl {
+    position: static; max-width: 100%; white-space: normal;
+    display: flex; width: fit-content; margin-bottom: 7px; line-height: 1.35;
+  }
+  .art-anno-lbl svg { display: none; }
 }
 .art-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 5px; }
 .art-row-l { font-size: 13.5px; font-weight: 650; color: var(--ink); }
