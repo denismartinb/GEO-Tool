@@ -1960,7 +1960,7 @@ describe("executePendingScan — an abandoned prompt claim is recoverable", () =
               eq: () => ({
                 single: () =>
                   Promise.resolve({
-                    data: { id: PROJECT_ID, domain: "genscore.es", brand: "Genscore", country: "ES", language: "es" },
+                    data: { id: PROJECT_ID, domain: "genscore.es", brand: "GenScore", country: "ES", language: "es" },
                     error: null
                   })
               })

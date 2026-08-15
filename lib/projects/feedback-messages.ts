@@ -59,7 +59,7 @@ export const feedbackSuccessMessages: Record<string, string> = {
   audit_technical_enabled:
     "Auditoría técnica activada. Se revisará la salud técnica de la web tras cada escaneo (no gasta IA).",
   audit_technical_disabled:
-    "Auditoría técnica desactivada. Deja de actualizarse su componente del GeoScore en los próximos escaneos.",
+    "Auditoría técnica desactivada. Deja de actualizarse su componente del GEO Score en los próximos escaneos.",
   // SAMPLING-DEBUG-TOGGLE-1: apagarlo deja el próximo escaneo en una sola
   // pasada por su set de prompts, sin intentar llegar a 50 respuestas.
   sampling_enabled: "Suelo de muestreo activado. Los próximos escaneos repetirán su set de prompts hasta llegar a 50 respuestas.",

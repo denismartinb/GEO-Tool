@@ -9,9 +9,9 @@ const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/genscore-vs-otterly`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "Genscore vs Otterly: comparativa de herramientas de visibilidad en IA — Genscore",
+  title: "GenScore vs Otterly: comparativa de herramientas de visibilidad en IA — GenScore",
   description:
-    "Genscore frente a Otterly: precio de entrada, motores de IA cubiertos, cobertura multi-país, idioma y bucle de acción. Comparativa honesta, con lo que cada una hace mejor.",
+    "GenScore frente a Otterly: precio de entrada, motores de IA cubiertos, cobertura multi-país, idioma y bucle de acción. Comparativa honesta, con lo que cada una hace mejor.",
   path: "/comparativas/genscore-vs-otterly"
 });
 
@@ -19,9 +19,9 @@ function itemListSchema() {
   const json = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: "Genscore vs Otterly",
+    name: "GenScore vs Otterly",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Genscore", url: SITE_URL },
+      { "@type": "ListItem", position: 1, name: "GenScore", url: SITE_URL },
       { "@type": "ListItem", position: 2, name: "Otterly", url: "https://otterly.ai" }
     ]
   };
@@ -35,11 +35,11 @@ export default function GenscoreVsOtterlyPage() {
         items={[
           { name: "Inicio", url: SITE_URL },
           { name: "Comparativas", url: `${SITE_URL}/comparativas` },
-          { name: "Genscore vs Otterly", url: PAGE_URL }
+          { name: "GenScore vs Otterly", url: PAGE_URL }
         ]}
       />
       {itemListSchema()}
-      <h1 className="lp-h2">Genscore vs Otterly</h1>
+      <h1 className="lp-h2">GenScore vs Otterly</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
         Datos de Otterly consultados el {OTTERLY_RESEARCH_DATE} en fuentes públicas de terceros —
         confírmalos en otterly.ai antes de decidir, los precios cambian.
@@ -47,7 +47,7 @@ export default function GenscoreVsOtterlyPage() {
       <div className="blog-body">
         <KeyTakeaway label="En dos frases">
           Otterly cubre nominalmente más motores y más mercados, y no tiene competencia real en
-          castellano ni en el bucle de acción — solo monitoriza y audita. Genscore empieza gratis, cubre
+          castellano ni en el bucle de acción — solo monitoriza y audita. GenScore empieza gratis, cubre
           los tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin coste extra por
           añadirlos, y convierte lo que detecta en acciones concretas, no solo en un informe.
         </KeyTakeaway>
@@ -58,7 +58,7 @@ export default function GenscoreVsOtterlyPage() {
             <tbody>
               <tr>
                 <th>Criterio</th>
-                <th>Genscore</th>
+                <th>GenScore</th>
                 <th>Otterly</th>
               </tr>
               {COMPARISON_ROWS.map((row) => (
@@ -94,17 +94,17 @@ export default function GenscoreVsOtterlyPage() {
           tenga versión en castellano, Otterly es una opción real y más madura en volumen de mercados.
         </Verdict>
 
-        <Verdict title="Cuándo elegir Genscore" badge="Cuándo elegir Genscore">
+        <Verdict title="Cuándo elegir GenScore" badge="Cuándo elegir GenScore">
           Si operas en España o LATAM y quieres el producto y el soporte en tu idioma, si quieres empezar
           sin tarjeta y sin pagar por motores que no vas a usar, o si lo que necesitas no es solo saber que
           tienes un problema de visibilidad sino que te digan qué hacer al respecto (recomendaciones con
-          evidencia y un generador de soluciones listas para publicar), Genscore está construido
+          evidencia y un generador de soluciones listas para publicar), GenScore está construido
           específicamente para eso.
         </Verdict>
 
         <h2>Metodología</h2>
         <p>
-          Los datos de Genscore vienen directamente de los planes reales del producto (la misma fuente que
+          Los datos de GenScore vienen directamente de los planes reales del producto (la misma fuente que
           usa la página de Precios). Los datos de Otterly proceden de reseñas y páginas de precios públicas
           de terceros consultadas en la fecha indicada arriba — no de acceso directo a su plataforma. Si
           detectas un dato desactualizado, dínoslo y lo corregimos.

@@ -32,7 +32,7 @@ export async function generateMetadata({
   if (!entry) return {};
   return {
     ...contentMetadata({
-      title: `¿Qué es ${entry.term}? — Glosario GEO — Genscore`,
+      title: `¿Qué es ${entry.term}? — Glosario GEO — GenScore`,
       description: entry.definition,
       path: `/glosario/${entry.slug}`
     })

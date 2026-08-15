@@ -9,7 +9,7 @@ export function OrganizationSchema() {
   const json = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Genscore",
+    name: "GenScore",
     url: "https://www.genscore.es",
     logo: "https://www.genscore.es/brand/genscore-tile.svg"
   };

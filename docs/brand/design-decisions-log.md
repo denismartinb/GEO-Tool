@@ -8589,6 +8589,69 @@ de reescribir la de allí.
 
 ---
 
+---
+
+## 88. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
+
+**Origen.** El fundador pidió un plan de entidad tras ver que "GenScore" compite
+en buscadores con varios homónimos públicos —un GenScore de bioinformática,
+otro de salud mental, otro de trust scoring B2B, y Genscore Navarra—. El censo
+previo destapó algo más barato de arreglar y más urgente que cualquier página
+nueva: **el repositorio usaba las cuatro grafías a la vez.**
+
+| | Grafía A | Grafía B |
+|---|---|---|
+| Marca | `Genscore` — 179 | `GenScore` — 114 |
+| Métrica | `GEO Score` — 99 | `GeoScore` — 53 |
+
+Ninguna de las dos inconsistencias rompía nada, y por eso llevaban meses ahí.
+Peor: `.claude/rules/growth-content.md` decía *"el nombre público es
+**Genscore**"* mientras `CLAUDE.md` decía `GenScore`, así que la regla que una
+sesión futura leería antes de escribir apuntaba a la grafía que el fundador
+acabó descartando.
+
+**Decisiones (fundador, 2026-08-13).** Marca `GenScore`, métrica `GEO Score`,
+disciplina `GEO`.
+
+`GeoScore` se descartó por un motivo concreto y no por gusto: *geo* se lee como
+geografía —el significado dominante de esa raíz— y mete a la métrica a competir
+con geolocalización. En mayúsculas es un acrónimo, y refuerza la categoría que
+el resto del plan intenta ganar.
+
+**Lo que NO se tocó, y por qué.** URLs y slugs (`/glosario/geo-score`,
+`/comparativas/genscore-vs-otterly`), el dominio `genscore.es`, y los
+identificadores de código. Cambiar una URL ya indexada por coherencia
+tipográfica es tirar a la basura el histórico de Search Console de esa página,
+y renombrar identificadores no aporta nada a la resolución de la entidad.
+
+**El error que costó la primera pasada, porque es la lección reutilizable.** El
+censo se hizo con `\bGeoScore\b` —delimitadores de palabra— y confirmó que
+sólo había prosa. El reemplazo se aplicó **sin** ellos. Resultado:
+`availableGeoScoreComponents` se convirtió en `availableGEO ScoreComponents`,
+la build dejó de compilar y 45 tests del ejecutor de escaneo cayeron de golpe
+con un error de mocking que no se parecía en nada a la causa. Verificar con una
+expresión y aplicar con otra es exactamente el tipo de discrepancia que no se
+ve al leer el diff. Se revirtió entero y se rehizo con `\b`.
+
+**Guardián: `lib/brand/naming.test.ts`.** Tres comprobaciones —ningún
+`Genscore`, ningún `GeoScore`, ningún identificador partido por un reemplazo
+sin `\b`— verificadas fallando en las tres direcciones antes de fiarse de
+ellas. Dos detalles que costaron una iteración cada uno:
+
+- **Se excluye a sí mismo.** El fichero cita las grafías retiradas en su propia
+  explicación; sin la exclusión, la única forma de dejarlo verde sería borrar
+  el motivo por el que existe.
+- **Barre por directorios, no por globs.** La primera versión pasaba
+  `app/**/*.ts` como pathspec de `git grep` y no cubría lo que parecía cubrir.
+  Se descubrió porque el conteo del test no cuadraba con un `grep` a mano —
+  un guardián que barre menos de lo que dice es peor que ninguno, porque
+  además da el hueco por cubierto.
+
+**Nota operativa:** `git grep` sólo ve ficheros versionados, así que este test
+puede pasar en local sobre un fichero recién creado y fallar en cuanto se hace
+`git add`. Es aceptable —nada llega a un PR sin versionar— pero conviene
+saberlo antes de perseguir un falso verde.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

@@ -78,7 +78,7 @@ test("blog index renders and has its own canonical", async ({ page }, testInfo) 
   const findings = await visitAsUser(page, testInfo, "/blog", "blog-index");
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/blog");
-  await expect(page).toHaveTitle(/— Genscore$/);
+  await expect(page).toHaveTitle(/— GenScore$/);
   // GROWTH-2 Fase 2.5: the index groups posts into clusters instead of one
   // flat list — every cluster heading must render, even the still-empty
   // ones (which should show their "Próximamente" placeholder, not vanish).
@@ -132,7 +132,7 @@ for (const slug of BLOG_POSTS) {
     const findings = await visitAsUser(page, testInfo, `/blog/${slug}`, `blog-${slug}`);
     assertPageIsHealthy(findings);
     await assertCanonical(page, `/blog/${slug}`);
-    await expect(page).toHaveTitle(/— Genscore$/);
+    await expect(page).toHaveTitle(/— GenScore$/);
     // GROWTH-2 Fase 2.5: every post must link to at least one sibling in its
     // cluster — the internal-linking rule in docs/content-strategy.md §4.3.
     await expect(page.locator(".blog-related a").first()).toBeVisible();

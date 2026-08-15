@@ -395,7 +395,7 @@ export function ProductTour({
       setStyle("[data-pt=scanbar]", "width", `${(p2 * 100).toFixed(1)}%`);
       setText("[data-pt=scannum]", `${Math.round(p2 * 30)} / 30`);
 
-      // ---------- 3 — el GeoScore ----------
+      // ---------- 3 — el GEO Score ----------
       const score3 = Math.round(seg(t, 9200, 11400) * 48);
       setText("[data-pt=score3]", String(score3));
       setGauge("[data-pt=fill3]", score3 / 100, 92, 10);
@@ -768,7 +768,7 @@ export function ProductTour({
             </div>
           </section>
 
-          {/* 3 — el GeoScore */}
+          {/* 3 — el GEO Score */}
           <section className={`pt-act${stepIdx === 2 ? " is-on" : ""}`} data-act="3">
             <p className="pt-h">Visión general</p>
             <p className="pt-hsub">Señales reales · último escaneo hoy</p>
@@ -836,7 +836,7 @@ export function ProductTour({
 
           {/* 4 — escaneo continuo */}
           <section className={`pt-act${stepIdx === 3 ? " is-on" : ""}`} data-act="4">
-            <p className="pt-h">Evolución de tu GeoScore</p>
+            <p className="pt-h">Evolución de tu GEO Score</p>
             <p className="pt-hsub">Un punto por escaneo · automático</p>
             <div className="pt-card pt-fill pt-chartwrap">
               <div className="pt-trendhead">
@@ -844,7 +844,7 @@ export function ProductTour({
                   <div className="pt-trendv" data-pt="trendv">
                     31<span>/ 100</span>
                   </div>
-                  <div className="pt-trendl">GeoScore actual</div>
+                  <div className="pt-trendl">GEO Score actual</div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                   <span className="pt-badge pt-badge-pos" data-pt="trenddelta" style={{ opacity: 0 }}>

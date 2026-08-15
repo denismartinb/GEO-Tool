@@ -11,9 +11,9 @@ const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/mejores-herramientas-geo-en-espanol`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "Las mejores herramientas GEO en 2026 (y cuál elegir según tu caso) — Genscore",
+  title: "Las mejores herramientas GEO en 2026 (y cuál elegir según tu caso) — GenScore",
   description:
-    "Genscore, CreceRank, Otterly, Peec AI, Profound, Mentio, Scrunch AI y AthenaHQ comparadas: qué hace cada una, para quién es, y cuál elegir según tus motores, tu presupuesto y tu idioma.",
+    "GenScore, CreceRank, Otterly, Peec AI, Profound, Mentio, Scrunch AI y AthenaHQ comparadas: qué hace cada una, para quién es, y cuál elegir según tus motores, tu presupuesto y tu idioma.",
   path: "/comparativas/mejores-herramientas-geo-en-espanol"
 });
 
@@ -26,12 +26,12 @@ const faqItems = [
   {
     question: "¿Cuál es la más barata para empezar?",
     answer:
-      "Genscore, y es la única de las ocho con plan gratuito permanente y sin tarjeta: puedes escanear antes de decidir si pagas algo. Entre las de pago, Otterly y CreceRank arrancan alrededor de 29 $/mes, aunque en Otterly Gemini y Google AI Mode son add-ons con coste extra sobre ese precio base, así que ese número no es el que acabas pagando si necesitas esos motores."
+      "GenScore, y es la única de las ocho con plan gratuito permanente y sin tarjeta: puedes escanear antes de decidir si pagas algo. Entre las de pago, Otterly y CreceRank arrancan alrededor de 29 $/mes, aunque en Otterly Gemini y Google AI Mode son add-ons con coste extra sobre ese precio base, así que ese número no es el que acabas pagando si necesitas esos motores."
   },
   {
     question: "¿Alguna de estas herramientas tiene interfaz en español?",
     answer:
-      "Dos de las ocho: Genscore y CreceRank. Otterly confirma interfaz en inglés, y para Peec AI, Profound, Scrunch AI, AthenaHQ y Mentio no se ha podido confirmar soporte de español — la documentación pública que hemos consultado está en inglés. Entre las dos que sí lo tienen, la diferencia está en los motores y en dónde te dejan: Genscore ejecuta Gemini y Claude además de ChatGPT, y es la única de las dos que genera el borrador de la solución además de medir, con escaneo gratuito permanente para probarlo sin tarjeta."
+      "Dos de las ocho: GenScore y CreceRank. Otterly confirma interfaz en inglés, y para Peec AI, Profound, Scrunch AI, AthenaHQ y Mentio no se ha podido confirmar soporte de español — la documentación pública que hemos consultado está en inglés. Entre las dos que sí lo tienen, la diferencia está en los motores y en dónde te dejan: GenScore ejecuta Gemini y Claude además de ChatGPT, y es la única de las dos que genera el borrador de la solución además de medir, con escaneo gratuito permanente para probarlo sin tarjeta."
   }
 ];
 
@@ -65,7 +65,7 @@ export default function MejoresHerramientasGeoPage() {
 
       <h1 className="lp-h2">Las mejores herramientas GEO en 2026</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
-        Datos consultados el {PILLAR_RESEARCH_DATE}. Genscore, Otterly y Peec AI tienen su propia
+        Datos consultados el {PILLAR_RESEARCH_DATE}. GenScore, Otterly y Peec AI tienen su propia
         comparativa detallada, enlazada más abajo; CreceRank, Mentio, Profound, Scrunch AI y AthenaHQ se
         tratan con menos profundidad porque sus páginas oficiales de precios no se pudieron consultar de
         forma directa — ver metodología al final.
@@ -129,7 +129,7 @@ export default function MejoresHerramientasGeoPage() {
             {t.context && <p>{t.context}</p>}
             {t.comparisonHref && (
               <p>
-                <Link href={t.comparisonHref}>Ver la comparativa completa Genscore vs {t.name}</Link>
+                <Link href={t.comparisonHref}>Ver la comparativa completa GenScore vs {t.name}</Link>
               </p>
             )}
           </div>
@@ -137,14 +137,14 @@ export default function MejoresHerramientasGeoPage() {
 
         <h2>Si trabajas en español, la decisión se reduce a dos</h2>
         <p>
-          De las ocho, solo <strong>Genscore y CreceRank</strong> son productos en castellano. Las otras
+          De las ocho, solo <strong>GenScore y CreceRank</strong> son productos en castellano. Las otras
           seis obligan a que alguien de tu equipo traduzca un panel en inglés todos los días,
           normalmente la misma persona que escribe el contenido. Así que para un equipo hispanohablante
           la comparación real es entre dos, y se decide en dos preguntas concretas:
         </p>
         <ul>
           <li>
-            <strong>¿Dónde preguntan tus clientes?</strong> Genscore ejecuta ChatGPT, Gemini y Claude —
+            <strong>¿Dónde preguntan tus clientes?</strong> GenScore ejecuta ChatGPT, Gemini y Claude —
             los tres en todos los planes de pago, sin add-ons. CreceRank cubre ChatGPT, Perplexity y AI
             Overviews. No es &ldquo;cuál cubre más&rdquo;, son conjuntos distintos: si tu tráfico viene
             de asistentes conversacionales, el nuestro; si te juegas la partida en resultados de Google
@@ -152,13 +152,13 @@ export default function MejoresHerramientasGeoPage() {
           </li>
           <li>
             <strong>¿Qué haces con el informe?</strong> Aquí la diferencia no es de matiz. CreceRank
-            prioriza accionables; Genscore además <strong>redacta el borrador</strong> — FAQ, datos
+            prioriza accionables; GenScore además <strong>redacta el borrador</strong> — FAQ, datos
             estructurados y briefs — desde el plan Pro. Es el punto donde se detienen las ocho
             herramientas de esta lista menos una.
           </li>
         </ul>
         <p>
-          Y hay una tercera diferencia que no necesita argumentación: <strong>Genscore es la única de
+          Y hay una tercera diferencia que no necesita argumentación: <strong>GenScore es la única de
           las ocho con escaneo gratuito permanente y sin tarjeta</strong>. Puedes comprobar las dos
           respuestas de arriba con tus propios prompts, sobre tu propio dominio, antes de pagar nada a
           nadie.
@@ -208,7 +208,7 @@ export default function MejoresHerramientasGeoPage() {
 
         <h2>Metodología</h2>
         <p>
-          Los datos de Genscore vienen directamente de los planes reales del producto (la misma fuente
+          Los datos de GenScore vienen directamente de los planes reales del producto (la misma fuente
           que usa la página de <Link href="/pricing">Precios</Link>). Los datos de Otterly y Peec AI
           proceden de sus respectivas comparativas dedicadas, enlazadas arriba, con su propia
           investigación y fecha de consulta. Los de CreceRank, Mentio, Profound, Scrunch AI y AthenaHQ proceden de una
@@ -220,7 +220,7 @@ export default function MejoresHerramientasGeoPage() {
 
         <ArticleCta
           title="¿Quieres ver tu GEO Score real antes de decidir?"
-          text="Lanza tu escaneo gratuito con Genscore y compara con datos propios, no solo con esta tabla. Sin tarjeta."
+          text="Lanza tu escaneo gratuito con GenScore y compara con datos propios, no solo con esta tabla. Sin tarjeta."
         />
       </div>
     </BlogPageShell>

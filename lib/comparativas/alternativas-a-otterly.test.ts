@@ -33,15 +33,15 @@ describe("alternativas-a-otterly", () => {
    * que se olvide de hacerlo (mismo criterio que log §61 sobre marcar las
    * victorias de los dos lados).
    */
-  it("toda alternativa declara su contrapartida, Genscore incluida", () => {
+  it("toda alternativa declara su contrapartida, GenScore incluida", () => {
     for (const alt of ALTERNATIVES) {
       expect(alt.tradeoff.length, `${alt.name}: sin contrapartida declarada`).toBeGreaterThan(40);
     }
   });
 
-  it("la contrapartida de Genscore nombra los límites reales del producto", () => {
+  it("la contrapartida de GenScore nombra los límites reales del producto", () => {
     const genscore = ALTERNATIVES.find((a) => a.slug === "genscore");
-    expect(genscore, "Genscore debe aparecer en la lista").toBeDefined();
+    expect(genscore, "GenScore debe aparecer en la lista").toBeDefined();
 
     // Perplexity y Copilot no son motores soportados (docs/launch-plan.md Fase
     // 8) y el GEO Score no se desglosa por país. Son justo las dos cosas que
@@ -80,7 +80,7 @@ describe("alternativas-a-otterly", () => {
   });
 
   /**
-   * Genscore no se coloca la primera por ser nuestra: se coloca donde le toca
+   * GenScore no se coloca la primera por ser nuestra: se coloca donde le toca
    * por los motivos que resuelve. Pero sí se impone que NO sea la única — una
    * página de alternativas con una sola alternativa real es un anuncio con
    * otro nombre.

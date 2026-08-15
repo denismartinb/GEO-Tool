@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
  * valor de búsqueda, enlazado desde los shells de marketing.
  */
 export const metadata: Metadata = {
-  title: "Recuperar contraseña — Genscore",
+  title: "Recuperar contraseña — GenScore",
   robots: { index: false, follow: true }
 };
 
