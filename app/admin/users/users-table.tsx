@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { fetchOperatorUserDetail } from "@/lib/admin/user-detail-action";
 import type { AdminUserDetail, AdminUserRow } from "@/lib/admin/users";
 import { relativeTime } from "@/lib/notifications/render";
@@ -35,11 +35,17 @@ import {
  * cambio de URL dispare por sí mismo una nueva petición al servidor.
  *
  * Los filtros (buscador, chips de estado) siguen siendo navegación real —
- * ésos sí necesitan una lista nueva del servidor — así que cuando cambian,
- * `initialSelectedId`/`initialDetail` llegan con una identidad de objeto
- * nueva y el `useEffect` de abajo resincroniza el estado local con lo que
- * mandó el servidor, incluyendo el caso de venir de un redirect de una de
- * las escrituras (activar/desactivar un automatismo).
+ * ésos sí necesitan una lista nueva del servidor. `page.tsx` le pasa a este
+ * componente una `key` derivada de TODOS los searchParams relevantes
+ * (`q`+`status`+`u`+`admin_success`+`admin_error`), así que cualquier
+ * navegación real (filtro cambiado, o el redirect de un formulario de
+ * automatismo) cambia esa `key` y React remonta el componente entero desde
+ * cero — sin necesidad de un `useEffect` comparando identidades de props,
+ * que tenía un caso roto: pasar de una URL sin `u` a otra URL sin `u`
+ * (p. ej. cambiar de filtro sin ninguna cuenta seleccionada) daba
+ * `initialSelectedId === null` en ambas, así que nunca se detectaba como
+ * cambio y el acordeón se quedaba abierto con la fila que se hubiera tocado
+ * antes en el cliente — encontrado por QA antes del Human Gate.
  */
 export function UsersTable({
   users,
@@ -65,19 +71,6 @@ export function UsersTable({
   const [adminSuccess, setAdminSuccess] = useState<string | undefined>(initialAdminSuccess);
   const [adminError, setAdminError] = useState<string | undefined>(initialAdminError);
   const [, startTransition] = useTransition();
-
-  // Resincroniza con lo que mandó el servidor cada vez que llega una
-  // identidad nueva de estas props — es decir, en cada navegación real
-  // (filtro cambiado, o redirect de un formulario de automatismo). Un clic
-  // de fila puramente local no cambia estas props, así que no dispara esto.
-  useEffect(() => {
-    setSelectedId(initialSelectedId);
-    setAdminSuccess(initialAdminSuccess);
-    setAdminError(initialAdminError);
-    if (initialSelectedId) {
-      setDetailCache((prev) => ({ ...prev, [initialSelectedId]: initialDetail }));
-    }
-  }, [initialSelectedId, initialDetail, initialAdminSuccess, initialAdminError]);
 
   function selectUser(userId: string) {
     setSelectedId(userId);

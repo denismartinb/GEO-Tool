@@ -118,6 +118,12 @@ export default async function AdminUsersPage({
       </div>
 
       <UsersTable
+        // Fuerza un remount completo en cada navegación real (filtro
+        // cambiado, o redirect de un formulario de automatismo) — incluye
+        // los cinco searchParams porque cualquiera de ellos puede cambiar
+        // sin que otro lo haga (p. ej. `u` pasa de ausente a ausente al
+        // cambiar sólo de filtro, ver el comentario en users-table.tsx).
+        key={`${params.q ?? ""}|${params.status ?? ""}|${params.u ?? ""}|${params.admin_success ?? ""}|${params.admin_error ?? ""}`}
         users={filtered}
         q={params.q}
         status={params.status}
