@@ -7914,6 +7914,20 @@ ya colapsaba a una por debajo de 760px de **viewport** — eso sigue
 funcionando igual, porque `@media` responde al viewport real del navegador,
 no al ancho del contenedor con scroll.
 
+**Corrección de la propia QA de este PR, antes del Human Gate: el `@media`
+de las columnas no podía funcionar donde más importaba.** `.adm-proj-write`
+se colapsaba a una columna por debajo de 480px de **viewport** — pero
+`UserDetailPanel` se renderiza en dos contextos de ancho muy distinto al
+mismo viewport real: dentro de la celda de la tabla (ancha, porque
+`.adm-table` fuerza `min-width: 760px`) y, en el caso de respaldo, suelto a
+ancho de página. A 375px de viewport ambos casos colapsaban igual, aunque el
+primero tenía ~700px reales disponibles — exactamente el caso normal
+(acordeón en línea), y exactamente el móvil para el que se pidió el cambio.
+Cambiado a `@container` sobre `.adm-proj-block` (`container-type:
+inline-size`): ahora colapsa según el ancho real del contenedor que lo aloja,
+no el del viewport, y las tres columnas sí aparecen en el caso normal en
+móvil.
+
 ### Pendiente / roto conocido
 
 - Sigue sin piloto agéntico, misma razón que toda la zona: AAL2 bloquea el
