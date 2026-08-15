@@ -4484,7 +4484,7 @@ a.notif-row:hover {
 .lp-mobnav {
   position: fixed; top: 0; left: 0; bottom: 0; width: var(--drawer-w); max-width: 86vw; z-index: 320;
   background: #fff; box-shadow: 20px 0 60px rgba(15,23,41,.20); display: flex; flex-direction: column;
-  padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  padding-top: env(safe-area-inset-top); padding-bottom: calc(16px + env(safe-area-inset-bottom));
   animation: lpMobnavIn var(--drawer-anim);
 }
 /* header-consistency-public-private, 2026-08-15: the panel used to be one
@@ -4622,7 +4622,7 @@ a.notif-row:hover {
 /* Pinned to the bottom of the drawer (margin-top: auto in the flex column)
    instead of following right after the links — founder feedback: the CTAs
    read as more prominent anchored low, like Semrush's mobile menu. */
-.lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding: 14px 16px 0; border-top: 1px solid var(--line-soft); }
 .lp-mobnav-ctas .lp-cta, .lp-mobnav-ctas .lp-cta-soft { width: 100%; }
 
 /* Los dos CTA del cajón pasaron de `<button onClick={router.push}>` a `<Link>`
