@@ -30,7 +30,7 @@ una con su Human Gate.
   huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
-- **Fase Q 🟡 en curso** — **Q1 hecho** (log §89: `createProjectCore` y 18
+- **Fase Q ✅ cerrada (2026-08-15)** — **Q1 hecho** (log §89: `createProjectCore` y 18
   tests para el alta de un dominio, que no tenía ninguno), **Q3 hecho** (log
   §90: 28 tests del cableado de las cuatro rutas que sostienen el escaneo
   recurrente), **Q2 hecho** (log §93: 19 tests de los correos transaccionales —
@@ -39,11 +39,11 @@ una con su Human Gate.
   estructural que cubre el uso de rol de servicio que nadie ha escrito
   todavía), el self-check del
   piloto vuelve a estar verde y su evidencia se sube de verdad (log §49), y
-  **Q5b está hecho** (log §55): el
+  **Q5 cerrada** (log §97) y **Q5b hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
   `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
-  nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
-  pendientes.
+  nombrar las capturas que abrió. **Q1–Q5 y Q5b están todas hechas: no queda
+  nada abierto en Fase Q.**
 - **Fase P ⛔ P1 descartado (2026-08-15, fundador; log §88)** — no tendrá la
   aprobación de excepción de escritura que necesitaba. **Consecuencia asumida:
   el riesgo #3 del diagnóstico —el flujo de alta sin ningún test de principio a
@@ -299,7 +299,8 @@ forma medible.*
   a propósito (diez líneas que devuelven una constante). **Sigue sin cubrir**
   que la comprobación sea *correcta* en cada sitio: la guarda ve que hay
   identidad, no que se aplique al dato que se toca.
-- **Q5 · Arreglos del arnés del piloto** (baratos, de alto retorno):
+- **Q5 · Arreglos del arnés del piloto** ✅ **hecho (2026-08-15, log §97)**
+  (baratos, de alto retorno):
   `ContentExpectation` en `second-project.spec.ts` (hoy pasa sobre proyectos
   vacíos); el input `pr_number` de `ux-pilot-write.yml` tipado como string
   (bug de coerción 289→"289.0"); **la pérdida intermitente de sesión en la
@@ -325,11 +326,19 @@ forma medible.*
   `synchronize`. Intermitente es peor que roto: deja creer que la puerta está
   puesta cuando la mitad de las veces no lo está.
 
-  **Estado (2026-08-10): el caso sano vuelve a pasar y la evidencia se sube**
-  (log §49). Quedan de Q5, sin empezar: `ContentExpectation` en
-  `second-project.spec.ts`, el `pr_number` del workflow de escritura, la
-  pérdida intermitente de sesión, y la conversación de devolverlo a puerta
-  de PR.
+  **Estado (2026-08-15): Q5 cerrada** (log §97). `ContentExpectation` en
+  `second-project.spec.ts` —que hasta hoy podía pasar en verde sobre proyectos
+  vacíos—; la pérdida intermitente de sesión **instrumentada, no parcheada**
+  (el fallo dice ahora qué cookies había, lo que separa «el `storageState` no se
+  aplicó» de «la sesión caducó a mitad»); y la ausencia de CI hecha visible en
+  el comentario del piloto. El `pr_number` **ya estaba tipado como string** —
+  sexto punto del plan que al medirlo resulta estar hecho. El self-check y la
+  subida de su evidencia se arreglaron antes, en log §49.
+
+  **Lo que sigue abierto y NO es código:** la puerta de verdad contra la
+  intermitencia de `ci.yml` es una *required status check* en la protección de
+  rama. Es un ajuste del repositorio y es decisión del fundador; el aviso del
+  piloto sólo hace que la ausencia se vea.
 
 - **Q5b · El piloto aprende a contar y a leer un color** ✅ **hecho
   (2026-08-11, log §55).** Fase propia, abierta porque el fundador encontró a

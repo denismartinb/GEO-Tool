@@ -67,6 +67,11 @@ export interface PageFindings {
   failedRequests: string[];
   thirdPartyFailures: string[];
   bouncedToLogin: boolean;
+  /**
+   * Sólo se rellena cuando `bouncedToLogin` es true: qué cookies de sesión
+   * tenía el contexto EN ESE INSTANTE, por nombre. Ver `describeAuthState`.
+   */
+  authDiagnostics: string | null;
   screenshot: string;
   /**
    * null when the journey declared no expectation for this screen; true/false
@@ -645,6 +650,10 @@ export async function visitAsUser(
     // the one under test — captureFullContent resizes it and puts it back.
     const overflowCulprits = horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [];
 
+    // Sólo cuando hay rebote: leer cookies en cada visita sana es coste sin
+    // información.
+    const authDiagnostics = bouncedToLogin ? await describeAuthState(page) : null;
+
     const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
     mkdirSync(SCREENS_DIR, { recursive: true });
     const capture = await captureFullContent(page, screenshot);
@@ -662,6 +671,7 @@ export async function visitAsUser(
       failedRequests,
       thirdPartyFailures,
       bouncedToLogin,
+      authDiagnostics,
       screenshot,
       renderedRealContent,
       expectedContent: expectation?.describedAs ?? null,
@@ -715,10 +725,56 @@ export function assertControlsAreHealthy(label: string, viewport: string, audit:
  * catch. Kept separate from `visitAsUser` so a journey can record a page
  * without asserting on it (useful for intermediate navigation steps).
  */
+/**
+ * PRELAUNCH-HARDENING-1 Fase Q5 — instrumentación de la pérdida de sesión.
+ *
+ * El 2026-08-09 una pasada del piloto perdió la sesión en la última anchura y
+ * **no se ha vuelto a reproducir en las pasadas posteriores sobre el mismo
+ * código** (log §42). Con `retries: 0` deliberado, un rojo espurio en la puerta
+ * enseña a ignorar los rojos, así que hace falta cerrarlo — pero la hipótesis
+ * (el `storageState` único compartido por las tres anchuras secuenciales) **no
+ * está probada**, y parchear una hipótesis sin datos es cómo se arregla el
+ * síntoma equivocado. Lo primero es que, cuando vuelva a pasar, el fallo diga
+ * algo.
+ *
+ * **Nombres, nunca valores.** Una cookie de sesión de Supabase ES la sesión:
+ * volcar su valor al log de un run público sería regalar la cuenta del piloto.
+ * Lo que se necesita para diagnosticar es si las cookies estaban, no qué
+ * contenían.
+ */
+async function describeAuthState(page: Page): Promise<string> {
+  try {
+    const cookies = await page.context().cookies();
+    if (cookies.length === 0) return "el contexto no tenía NINGUNA cookie";
+
+    const authCookies = cookies.filter((cookie) => /^sb-|supabase/i.test(cookie.name));
+    const nowSeconds = Date.now() / 1000;
+    const described = authCookies.map((cookie) => {
+      const expiry =
+        cookie.expires && cookie.expires > 0
+          ? cookie.expires < nowSeconds
+            ? "CADUCADA"
+            : `caduca en ${Math.round((cookie.expires - nowSeconds) / 60)} min`
+          : "de sesión";
+      return `${cookie.name} (${expiry})`;
+    });
+
+    return authCookies.length === 0
+      ? `${cookies.length} cookie(s) en el contexto, ninguna de sesión de Supabase`
+      : `cookies de sesión presentes: ${described.join(", ")}`;
+  } catch (error) {
+    return `no se pudo leer el estado de cookies: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
 export function assertPageIsHealthy(findings: PageFindings): void {
   expect(
     findings.bouncedToLogin,
-    `${findings.label}: session was rejected — landed on ${findings.finalUrl}`
+    `${findings.label} @ ${findings.viewport}: session was rejected — landed on ${findings.finalUrl}\n` +
+      `Estado de sesión en ese instante: ${findings.authDiagnostics ?? "(sin diagnóstico)"}\n` +
+      "Si esto es la pérdida intermitente de sesión de log §42, ESTA línea es el dato que faltaba: " +
+      "dice si el contexto llegó sin cookies (el `storageState` no se aplicó) o con ellas caducadas " +
+      "(la sesión expiró a mitad de pasada). Son dos fallos distintos con dos arreglos distintos."
   ).toBe(false);
 
   expect(
