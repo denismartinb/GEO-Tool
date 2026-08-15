@@ -4834,6 +4834,20 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .docs-content p { margin: 0 0 14px; line-height: 1.65; color: var(--ink-2); }
 .docs-content ul, .docs-content ol { margin: 0 0 14px; padding-left: 22px; color: var(--ink-2); }
 .docs-content li { margin-bottom: 6px; line-height: 1.6; }
+/* SEO-POS-1 Fase E, E4 (log §97). `/docs` llevaba desde GROWTH-2 sin ninguna
+   regla de enlace propia, así que sus enlaces caían al `a { color: inherit;
+   text-decoration: none }` global: gris, sin subrayado e indistinguibles de la
+   prosa. «Metodología completa en GEO Score» y «ver Planes y límites» son
+   enlaces desde el primer día y nadie podía saberlo. Mismo remedio y mismo
+   token que `.legal-body a` y `.blog-body a`, que sí lo tenían — la excepción
+   era `/docs`, no la regla.
+   `:not(.btn)` por la lección de V4/§55: una regla de enlace por ancestro le
+   gana en especificidad a la clase de un botón y le impone su color. Aquí hoy
+   no hay botones, y por eso mismo se escribe ya: cubre la variante que aún no
+   existe. */
+.docs-content p a:not(.btn),
+.docs-content li a:not(.btn),
+.docs-content td a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 .docs-table-wrap { overflow-x: auto; margin: 0 0 24px; }
 .docs-content table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
 /* `white-space: nowrap` valía para la tabla de planes —celdas de dos palabras—

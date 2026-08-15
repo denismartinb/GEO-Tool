@@ -159,6 +159,13 @@ export default function GeoScoreMethodologyPage() {
         buscarlas. Con los tres enlazados en las dos direcciones, la relación
         entre las tres URLs es explícita también para quien no lee schema.
       */}
+      {/*
+        `glossary-related` reutilizada a propósito fuera de `/glosario`: es el
+        bloque de "sigue explorando" del sitio —separador arriba, lista de
+        enlaces— y aquí cumple exactamente ese papel. Su `h2` lo gana
+        `.docs-content h2`, que va después en la hoja, así que el titular
+        conserva el tamaño de los demás de esta página.
+      */}
       <div className="glossary-related">
         <h2>Esta misma métrica, explicada de otras formas</h2>
         <p>Esta página es la referencia: si algo se contradice, manda lo que diga aquí.</p>

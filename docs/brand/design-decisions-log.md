@@ -9201,6 +9201,34 @@ falta arreglar nada de eso — hace falta invertir el orden: **`pnpm test`
 después de `git add`, no antes**, siempre que la suite tenga guardas que se
 apoyen en el índice de git.
 
+### Y al abrir las capturas: `/docs` llevaba dos meses sin enlaces visibles
+
+El piloto dio `PILOT PASS` en las 65 pantallas × 3 anchuras, dos veces. Abrir
+las capturas de las pantallas que toca el diff —`docs-metodologia-geo-score` en
+375, 768 y 1280, `docs-index`, `glosario-geo-score`, `blog-que-es-el-geo-score`
+y `landing`— enseñó que el bloque de enlaces recién añadido renderizaba en gris
+y sin subrayado, exactamente igual que la prosa de al lado.
+
+No era del bloque. `globals.css` tiene `a { color: inherit; text-decoration:
+none }` como base, y `.legal-body a` y `.blog-body a` lo compensan cada uno en
+lo suyo — **`.docs-content` nunca tuvo regla de enlace**. Así que desde
+GROWTH-2, *todos* los enlaces de la documentación son texto muerto a la vista:
+"Metodología completa en GEO Score" y "ver Planes y límites" en
+`/docs/informes/overview` llevaban dos meses siendo enlaces que nadie podía
+saber que lo eran. La cuarta vez esta semana que un fallo visual real convive
+con un verde legítimo (§55, §62, §96, ésta), y la primera en que el fallo era
+**más viejo que el PR que lo destapa**.
+
+Se arregla con la regla que faltaba, con el mismo token que las otras dos
+superficies y con `:not(.btn)` desde el principio, que es la lección de §54/§55:
+una regla de enlace por ancestro le gana en especificidad a la clase de un
+botón. Hoy no hay botones en `/docs`; se escribe así para cubrir el que
+aparezca.
+
+Es además el arreglo que la propia E4 necesitaba: la fase se apoya en enlazado
+interno explícito entre las tres URLs, y un enlace que no parece un enlace no
+enlaza a nadie.
+
 **Queda declarado como pendiente, no arreglado:** el layout raíz sigue con
 `title: "GenScore"` y `description: "Espacio de visibilidad de marca en motores
 de IA"`, que es una cuarta redacción de lo mismo y actúa de respaldo para
