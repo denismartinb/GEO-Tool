@@ -8504,11 +8504,88 @@ accesible, no por posición. La lección, otra vez: un checklist que sólo mira
 
 **Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
 testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
-unitario y no puede tenerlo hoy**. La verificación real es el `ux-pilot`
+unitario y no puede tenerlo hoy**. *(La segunda mitad de esa frase queda
+`superseded por §87`, del mismo día: sí se puede, con `renderToStaticMarkup` y
+sin testing-library — `react-dom` ya estaba. Lo que sigue siendo cierto es que
+esta pantalla en concreto no lo tiene.)* La verificación real es el `ux-pilot`
 (`tests/pilot/journeys/public-pages.spec.ts`), que comprueba el 404 real, el
 `noindex`, y que lo que se pinta es la escena y no un placeholder — anclado a
 `.nf-scene` y al titular, no a "la página cargó". El 404 de dentro de la consola sí acabó
 cubierto, en `core-flow.spec.ts` — ver arriba.
+
+---
+
+## 87. Auditoría web deja de ser una pantalla que nadie puede demostrar (PRELAUNCH-HARDENING-1, 2026-08-14)
+
+**Qué se decidió.** Los seis módulos de
+`web-audit/_components/` pasan a tener tests de render de verdad: **46 casos
+nuevos**, de 2.278 a 2.324. Son los primeros tests de render del repositorio.
+
+**Por qué justo aquí.** §83 movió catorce componentes de esa pantalla y los
+2.278 tests pasaron en verde **sin que ni uno mirase el marcado**, porque no
+existía ninguno que lo hiciera. Lo único que demostró la equivalencia fue una
+comparación de líneas hecha a mano, que no se ejecuta en CI y no protege al
+cambio siguiente. Una pantalla que sólo se puede verificar mirando capturas es
+una pantalla que se rompe entre pasada y pasada del piloto.
+
+### Cero dependencias nuevas, y por qué era posible
+
+`renderToStaticMarkup` viene con `react-dom`, que ya estaba, y no toca el DOM —
+así que `environment: "node"` sigue valiendo y no hacen falta jsdom ni una
+biblioteca de testing. Lo único que cambia en la configuración es que
+`vitest.config.ts` ahora incluye `**/*.test.tsx`.
+
+Que esto sea posible es **consecuencia directa de §83**: los componentes son
+puros y síncronos precisamente porque se extrajeron. Dentro de un `page.tsx`
+asíncrono de 1.933 líneas no había forma de llamarlos.
+
+### Qué aseguran y qué no
+
+Aseguran **contenido**: que el número que sale es el que entra, que el alcance
+se pluraliza, que un dato ausente se ve como ausente. **No aseguran aspecto** —
+eso sigue siendo del `ux-pilot`, y los dos juntos son la cobertura. Un test que
+fijara clases CSS convertiría cualquier retoque visual en un test rojo sin
+proteger nada.
+
+### Lo que cubren y no estaba cubierto
+
+- **El fallo de producción del 2026-07-12.** `page-checks.ts` avisa en un
+  comentario de que una fila anterior a WEB-AUDIT-R3 no tiene `indexability` y
+  de que leerla sin comprobar «took the whole page down». Ese aviso vivía en
+  prosa, que es el sitio exacto donde una advertencia no se ejecuta. Ahora hay
+  un test que renderiza esa fila antigua, y quitando la guarda se pone rojo.
+- **`TrendChart`, el componente que nadie ha visto nunca.** No aparece en
+  ninguna de las 22 capturas del piloto de la PR #404: el gráfico necesita
+  historial y la cuenta del piloto tiene una sola auditoría. Se movió de
+  fichero sin que lo mirara ni un test ni un ojo. Estos tests son lo único que
+  lo mira.
+- **«No lo hemos podido comprobar» ≠ «no existe»** (`describeSitemap`), que es
+  el invariante «ningún número de relleno» aplicado a una etiqueta.
+- **`LockedSubScoreTile`**: que un plan sin cobertura no se lea como «todavía
+  no auditado» — una afirmación falsa sobre la cuenta del cliente
+  (WEB-AUDIT-TECH-ALL-PLANS-1).
+
+### Los tests se probaron rotos antes de darlos por buenos
+
+Un test que no puede fallar no es cobertura, es decoración. Tres mutaciones
+deliberadas, cada una en rojo la que le tocaba: quitar la pluralización, quitar
+la guarda de `indexability`, y una aserción mía mal escrita (`min-width:0`
+contiene la subcadena `width:`) que el propio arnés destapó en la primera
+pasada.
+
+**Pendiente.** Los tests cubren los componentes, no `WebAuditPage` — que sigue
+con ~1.070 líneas de orquestación de datos sin cubrir. Partirlo era lo que
+quedaba de R7 y ahora tiene, por fin, algo debajo que lo sostenga.
+
+**Trazabilidad.** §83 (la mudanza que dejó el hueco al descubierto); el informe
+de Task Intake de R3 (2026-08-14), donde esto se recomendó en lugar de los
+tipos generados de Supabase; `.claude/rules/web-audit.md`. Y **§86**, que el
+mismo día afirmó que «el repo no tiene testing-library ni un solo `.test.tsx`,
+así que esta pantalla no tiene test unitario **y no puede tenerlo hoy**»: la
+segunda mitad de esa frase queda superseded aquí — sin testing-library también
+se puede, porque `renderToStaticMarkup` no la necesita. Las dos ramas se
+escribieron a la vez y se cruzaron al mergear; se deja anotado en ambas en vez
+de reescribir la de allí.
 
 ---
 
