@@ -85,6 +85,16 @@ cambian el diseño de ambas.
 **B. Ver y modificar por usuario el escaneo y la auditoría automáticos, con su
 coste.**
 
+> **Estado (2026-08-13):** implementada por completo en ADMIN-CONSOLE-2b
+> (log §79): la lectura (2a) y ahora la escritura, con motivo obligatorio y
+> aviso por email en cada cambio, reutilizando las mismas precondiciones que
+> ya corren en `/debug`. Gap descubierto al construirla y NO corregido aquí:
+> la lectura de 2a no comprueba que la mitad de auditoría de cobertura exige
+> Pro+ (`plan_required` en `audit-job-runner.ts`), así que un proyecto por
+> debajo de Pro con esa columna ya en `true` se muestra como "activo, con
+> coste" aunque el backend lo salte — mismo defecto que la columna retirada
+> de §71, en `lib/admin/automation.ts`, sin tocar todavía.
+
 - **Esos interruptores son POR PROYECTO, no por usuario.**
   `recurring_scans_enabled` (migración 0008, por defecto `false`),
   `auto_web_audit_enabled` (0030, por defecto `true`) y las dos mitades de

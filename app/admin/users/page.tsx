@@ -4,7 +4,29 @@ import { requireOperator } from "@/lib/admin/operator";
 import { getOperatorUserDetail, listOperatorUsers, type AdminUserRow, type AdminUserStatus } from "@/lib/admin/users";
 import { formatUsd, provenanceLabel, type CostProvenance } from "@/lib/admin/cost-model";
 import type { AccountAutomation, ProjectAutomation } from "@/lib/admin/automation";
+import { setAutoAuditHalfAsOperator, setRecurringScansAsOperator } from "@/lib/admin/automation-actions";
 import { relativeTime } from "@/lib/notifications/render";
+
+const ADMIN_ERROR_MESSAGES: Record<string, string> = {
+  invalid_input: "Datos inválidos. El motivo es obligatorio (mínimo 5 caracteres).",
+  project_not_found: "Ese dominio no existe o está archivado.",
+  recurring_free_plan_ineffective:
+    "Este dominio es Free: el barrido descarta los proyectos Free, así que activar el recurrente no tendría efecto.",
+  recurring_requires_completed_scan: "Hace falta al menos un escaneo completado antes de activar el recurrente.",
+  recurring_update_failed: "No se pudo guardar el cambio del escaneo recurrente.",
+  coverage_plan_ineffective:
+    "La auditoría de cobertura sólo corre en Pro o superior: activarla aquí no tendría efecto.",
+  auto_audit_update_failed: "No se pudo guardar el cambio de la auditoría automática."
+};
+
+const ADMIN_SUCCESS_MESSAGES: Record<string, string> = {
+  recurring_enabled: "Escaneo recurrente activado.",
+  recurring_disabled: "Escaneo recurrente desactivado.",
+  audit_technical_enabled: "Auditoría técnica activada.",
+  audit_technical_disabled: "Auditoría técnica desactivada.",
+  audit_coverage_enabled: "Auditoría de cobertura IA activada.",
+  audit_coverage_disabled: "Auditoría de cobertura IA desactivada."
+};
 
 export const metadata: Metadata = { title: "Usuarios — Consola de operador" };
 
@@ -95,6 +117,53 @@ function ProjectAutomationLine({ automation }: { automation: ProjectAutomation |
   );
 }
 
+/**
+ * ADMIN-CONSOLE-2b. Un formulario por interruptor, no uno compartido: cada
+ * uno lleva su propio motivo, porque "activé el recurrente" y "activé la
+ * auditoría de cobertura" no son la misma decisión ni deben compartir un
+ * único campo de texto que obligue a explicar dos cosas a la vez.
+ */
+function AutomationToggleForm({
+  action,
+  projectId,
+  half,
+  enabled,
+  label,
+  q,
+  status
+}: {
+  action: (formData: FormData) => Promise<void>;
+  projectId: string;
+  half?: "technical" | "coverage";
+  enabled: boolean;
+  label: string;
+  q?: string;
+  status?: string;
+}) {
+  return (
+    <form action={action} className="adm-toggle-form">
+      <input type="hidden" name="projectId" value={projectId} />
+      <input type="hidden" name="enabled" value={String(!enabled)} />
+      {half ? <input type="hidden" name="half" value={half} /> : null}
+      {q ? <input type="hidden" name="q" value={q} /> : null}
+      {status ? <input type="hidden" name="status" value={status} /> : null}
+      <span className={`adm-toggle-label ${enabled ? "adm-toggle-on" : "adm-toggle-off"}`}>{label}</span>
+      <input
+        type="text"
+        name="reason"
+        placeholder="Motivo del cambio (obligatorio)"
+        required
+        minLength={5}
+        maxLength={500}
+        className="field adm-toggle-reason"
+      />
+      <button type="submit" className={`btn ${enabled ? "adm-toggle-btn-off" : "btn-primary"}`}>
+        {enabled ? "Desactivar" : "Activar"}
+      </button>
+    </form>
+  );
+}
+
 function buildQuery(base: { q?: string; status?: string; u?: string }): string {
   const params = new URLSearchParams();
   if (base.q) params.set("q", base.q);
@@ -107,7 +176,7 @@ function buildQuery(base: { q?: string; status?: string; u?: string }): string {
 export default async function AdminUsersPage({
   searchParams
 }: {
-  searchParams: Promise<{ q?: string; status?: string; u?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; u?: string; admin_success?: string; admin_error?: string }>;
 }) {
   const params = await searchParams;
   const { service } = await requireOperator("/admin/users");
@@ -278,6 +347,16 @@ export default async function AdminUsersPage({
                 Cerrar ✕
               </Link>
             </div>
+            {params.admin_success ? (
+              <p className="feedback success" style={{ margin: "14px 20px 0" }}>
+                {ADMIN_SUCCESS_MESSAGES[params.admin_success] ?? "Cambio guardado."}
+              </p>
+            ) : null}
+            {params.admin_error ? (
+              <p className="feedback error" style={{ margin: "14px 20px 0" }}>
+                {ADMIN_ERROR_MESSAGES[params.admin_error] ?? "No se pudo completar el cambio."}
+              </p>
+            ) : null}
             <div className="adm-drawer-cols">
               <div>
                 <p className="adm-mini-title">Cuenta</p>
@@ -325,6 +404,39 @@ export default async function AdminUsersPage({
                           <ProjectAutomationLine automation={project.automation} />
                         </div>
                       )}
+                      {/* Escritura: ADMIN-CONSOLE-2b. Sin dato de automatismos no
+                          hay estado actual que invertir con seguridad, así que no
+                          se ofrece el control — mismo criterio que la lectura. */}
+                      {!project.isArchived && project.automation ? (
+                        <div className="adm-proj-write">
+                          <AutomationToggleForm
+                            action={setRecurringScansAsOperator}
+                            projectId={project.id}
+                            enabled={project.automation.recurringScansEnabled}
+                            label="Recurrente"
+                            q={params.q}
+                            status={params.status}
+                          />
+                          <AutomationToggleForm
+                            action={setAutoAuditHalfAsOperator}
+                            half="technical"
+                            projectId={project.id}
+                            enabled={project.automation.technicalAuditEnabled}
+                            label="Auditoría técnica"
+                            q={params.q}
+                            status={params.status}
+                          />
+                          <AutomationToggleForm
+                            action={setAutoAuditHalfAsOperator}
+                            half="coverage"
+                            projectId={project.id}
+                            enabled={project.automation.coverageAuditEnabled}
+                            label="Auditoría IA"
+                            q={params.q}
+                            status={params.status}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   ))
                 )}

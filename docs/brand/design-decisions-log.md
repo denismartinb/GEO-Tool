@@ -7787,6 +7787,66 @@ accesor); §43 (R1 y R2); log §56 y `.claude/rules/gemini.md` (de dónde sale e
 
 ---
 
+## 79. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
+
+**Estado: implementada.** Task Intake de 12 puntos aprobado. Segunda mitad de
+la petición del 12-08: además de *ver* los automatismos (2a, §71), `/admin`
+puede ahora *cambiarlos* — el interruptor de escaneo recurrente y las dos
+mitades de auditoría automática, por proyecto, desde la ficha de cada usuario.
+
+**El invariante que ordenó todo el diseño: el operador nunca tiene un atajo
+que el propio dueño no tiene.** Las precondiciones no se reescribieron para
+`/admin` — se **extrajeron** de `setRecurringScans`/`setAutoAuditHalf`
+(`app/dashboard/projects/[projectId]/actions.ts`) a
+`lib/projects/automation-toggles.ts`, y las dos acciones (la del dueño, con
+RLS, y la del operador, con service-role) llaman a la misma función. Activar
+el recurrente sigue exigiendo un escaneo completado; escribir la mitad de
+auditoría sigue distinguiendo columna-sin-migrar de fallo real. Un solo sitio
+que mantener, dos llamadores.
+
+**Un tercer caso de "on + coste, pero no hace nada", detectado antes de
+escribir el código, no después.** 2a ya había aprendido con la QA bloqueada de
+§71 que un interruptor activo que el backend ignora es una métrica inventada.
+Al diseñar la escritura apareció una tercera instancia de la misma familia:
+`lib/web-audit/audit-job-runner.ts` salta la mitad de **cobertura** con
+`plan_required` por debajo de Pro (`docs/adr/0035`), exactamente como el
+barrido salta el recurrente en Free. La acción de escritura rechaza activar
+cobertura en un proyecto sin Pro **antes** de tocar la base de datos, con el
+mismo criterio que ya aplicaba al recurrente en Free.
+
+**Gap declarado, no arreglado aquí.** El descubrimiento anterior expone que la
+vista de **sólo lectura** de 2a no comprueba esta condición: un proyecto Free
+con `auto_coverage_audit_enabled=true` en la base (nadie ha podido escribirlo
+hasta esta fase, pero pudo quedar así de antes) se mostraría como "auditoría
+IA activa, con coste" en `/admin/users`, igual de falso que la columna
+retirada de §71. No se corrige en este PR — tocar el agregado de lectura de
+2a es un concern distinto y `lib/admin/automation.ts` no está en el alcance
+aprobado de 2b. Queda anotado para una fase de un solo párrafo.
+
+**El registro es el email, no una tabla nueva.** Cada escritura exige un
+motivo (mínimo 5 caracteres, rechazado antes de tocar la base) y manda
+`sendAdminAutomationChangeAlertEmail` a `OPS_ALERT_EMAIL` con quién, qué
+cuenta, qué proyecto, qué cambió y el motivo íntegro. Es exactamente lo que
+prometía `docs/design-reference/admin-console-1/README.md` desde el
+12-08: sin migración aprobada, el email ES la auditoría de la acción.
+
+**Lo que la extracción demostró sin querer:** `setRecurringScans`/
+`setAutoAuditHalf` no tenían test propio — vivían sólo comprobadas a mano
+desde `/debug`. Extraer su lógica a un módulo con test (`automation-toggles.
+test.ts`) las deja cubiertas por primera vez, de rebote.
+
+### Pendiente / roto conocido
+
+- **El gap de lectura de 2a con `auto_coverage_audit_enabled` por debajo de
+  Pro**, descrito arriba — necesita su propio cambio, pequeño, en
+  `lib/admin/automation.ts`.
+- **2c (selección múltiple y borrado permanente) sigue sin empezar**, y sigue
+  prohibido sin aprobación explícita (CLAUDE.md).
+- **Sin piloto agéntico**, misma razón que Fase 1 y 2a: no puede completar un
+  desafío AAL2. Verificación manual.
+
+---
+
 ## Cómo mantener este documento
 
 ---

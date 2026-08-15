@@ -54,11 +54,30 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   `service.auth.admin.listUsers()`). Never construct `createServiceClient()`
   directly inside an `/admin` page or action — go through the gate so a
   future edit can't accidentally skip it.
-- **Fase 1 is read-only. Any write beyond MFA enrollment itself (changing a
-  plan, editing a project, touching billing) needs its own Task Intake** —
-  CLAUDE.md's Task Intake Protocol applies in full to `/admin`, same as any
-  other auth/server-action surface. Do not add a mutating action here as a
-  drive-by.
+- **The only writes `/admin` may make are the ones with an approved Task
+  Intake.** As of ADMIN-CONSOLE-2b that is: MFA enrollment, and the three
+  automation toggles (`recurring_scans_enabled`, the two audit halves) via
+  `lib/admin/automation-actions.ts`. Changing a plan, editing a project's
+  other fields, touching billing, or anything else still needs its own Task
+  Intake — CLAUDE.md's protocol applies in full here, same as any other
+  auth/server-action surface. Do not add a mutating action as a drive-by, and
+  do not extend an approved write's scope past what its intake covered
+  (e.g. adding a new column to an existing toggle action) without a fresh one.
+- **Every write from `/admin` needs a required reason and an email to
+  `OPS_ALERT_EMAIL`.** There is no audit-log table for this (no migration
+  approved), so the email genuinely IS the record of the action — not a nice-
+  to-have alert alongside one. A write action with no reason field or no
+  alert call is missing the only accountability this surface has
+  (`docs/brand/design-decisions-log.md` §79).
+- **An operator-scoped write may never have a precondition weaker than the
+  owner-scoped action it mirrors.** Import the shared check from
+  `lib/projects/automation-toggles.ts` (or wherever the owner action's
+  precondition lives) — never re-derive it. And check whether the toggle
+  being enabled actually has an effect for that account's plan before
+  writing: `/admin` already shipped one class of this bug twice
+  (recurring scans on Free, §71; coverage audit below Pro, §79) — the pattern
+  is checked once per toggle now, but a new toggle added later needs the same
+  question asked of it explicitly, not assumed answered.
 - **`listFactors().data.totp` holds ONLY verified factors — a half-finished
   enrolment lives in `data.all`.** `auth-js` filters on
   `status === 'verified'`. Looking for a pending factor in `.totp` finds
