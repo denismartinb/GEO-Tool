@@ -9556,7 +9556,114 @@ cambia el respaldo de todo el sitio a la vez y merece su propia pasada.
 
 ---
 
-## 101. Dos trozos de código que la documentación juraba vivos (PRELAUNCH-HARDENING-1 Fase R8, 2026-08-15)
+## 101. La cabecera pública adopta el chasis de la consola (HEADER-CONSISTENCY-1, 2026-08-15)
+
+**Estado: implementada.** El fundador notó, comparando capturas de la zona
+pública y de la consola, que el menú móvil de cada una se despliega de un lado
+distinto y con medidas distintas — "que parecen dos productos". Pidió primero
+un artefacto con alternativas (igualar sólo medidas / compartir chasis con
+contenido propio / cabecera única con huecos); eligió la de chasis compartido,
+pero **corrigió sobre la marcha una parte del análisis inicial**: la primera
+propuesta reconstruía las dos direcciones posibles (`.lp-mobnav` a la derecha
+por §63, `.sb` a la izquierda) como igual de legítimas y proponía conservarlas
+por separado. El fundador señaló que dos lados en el mismo producto no es un
+patrón — Material Design y las guías de Apple sitúan el cajón de navegación en
+el borde de inicio, y lo que de verdad no tiene precedente es que la web y la
+consola de un mismo producto abran cada una hacia un lado distinto.
+
+**La decisión de fondo: se unifica a la izquierda, y manda la consola.** No es
+un empate resuelto por convención — `.sb` **es** la barra lateral de
+escritorio deslizándose, así que su lado no es una preferencia de móvil, es la
+continuidad de una estructura que ya existe en escritorio. La pública sí podía
+moverse sin romper nada propio, así que se movió ella.
+
+**Esto SUPERSEDE la decisión de §63** ("el menú tiene que salir siempre desde
+la derecha", GENSCORE-HEADER-1, 2026-08-11) para la zona pública. La regla
+pasa a ser: **el cajón de navegación abre desde la izquierda en las dos
+zonas**, con la hamburguesa a la izquierda y el logo centrado — la misma
+anatomía que `WorkspaceTopbar` ya tenía aprobada desde el 24 de julio (§3).
+
+**El proceso fue iterativo a propósito, con verificación real en cada paso —
+no una maqueta dibujada:**
+1. Un *spike* aislado (sólo lado del burger + logo centrado en `PublicHeader`,
+   nada más) se probó primero en local con Playwright a 375px, se corrigió un
+   bug de scoping encontrado en la propia prueba (un selector `.lp-logo` sin
+   acotar capturaba también el logo decorativo del mockup del navegador en el
+   hero), y se subió a un preview real de Vercel antes de pedirle opinión al
+   fundador — nunca se le pidió juzgar un dibujo.
+2. Confirmado el lado en real, se implementó el chasis compartido completo:
+   tokens `--drawer-w` (288px) y `--drawer-anim` (.24s) en `:root`, compartidos
+   por `.lp-mobnav` (antes 280px/.24s) y `.sb` (antes 290px/.26s); barra móvil
+   pública 72px→52px (`--header-h`, que la consola ya usaba); burger
+   44×44/radio 10 en las dos zonas; botón de cerrar 44×44 explícito en las dos
+   (antes 38px pública / 34px consola, ambos con `min-*` disimulando la
+   diferencia real); y una fila de marca nueva en el cajón público
+   (`.lp-mobnav-brand`, logo + X) que antes no existía — sólo tenía la X
+   suelta en su propia fila — igualando `.sb-brand` de la consola.
+3. **Efecto colateral encontrado y corregido en el mismo PR:** `BrandLogo`
+   nunca aplicó ninguna clase a su propio `<svg>`, así que la regla
+   `.lp-logo .brand-logo-svg { height: 19px }` que llevaba meses en el CSS
+   nunca hizo nada — la barra pública en móvil renderizaba siempre el logo de
+   escritorio (22px) sin recortar. Se corrigió apuntando al elemento real
+   (`.lp-nav > .lp-logo svg`, sin necesidad de clase, acotado a hijo directo
+   por la misma razón que el spike) y fijando 20px, el valor real que ya
+   usaba `WorkspaceTopbar` por prop. La misma clase muerta existe en
+   `.sb-brand .brand-logo-svg` (consola) — no se tocó, porque el valor que
+   pretendía fijar (19px) nunca se aplicó y el prop real (22px) ya coincide
+   con el que ahora usa el cajón público, así que no hay nada roto que
+   arreglar ahí.
+4. **Regresión real encontrada por el fundador en el segundo preview, no por
+   ningún test:** al partir `.lp-mobnav` en fila de marca + cuerpo scrollable,
+   el padding lateral de 16px que antes llevaba el panel entero se quedó sólo
+   en `.lp-mobnav-body`; `.lp-mobnav-ctas` (los botones de Iniciar
+   sesión/Prueba gratis) es un hermano fuera de ese cuerpo y se quedó sin
+   ningún margen lateral propio, pegado a los bordes del cajón. El padding
+   inferior del panel también había pasado de un mínimo fijo de 16px a sólo
+   `env(safe-area-inset-bottom)`, que en la mayoría de dispositivos vale 0.
+   Corregido dándole a `.lp-mobnav-ctas` su propio `padding: 14px 16px 0` y
+   devolviendo al panel un mínimo de `calc(16px + env(safe-area-inset-bottom))`
+   — verificado de nuevo en local a 375×650 (una altura más ajustada que la
+   ventana completa) antes de volver a subir.
+
+**Qué queda igual a propósito:**
+- **Escritorio no cambia en ninguna zona.** La consola no tiene logo en su
+  topbar de escritorio (sólo en la barra lateral fija); la pública sí, en
+  línea con los enlaces. Son anatomías de escritorio distintas por diseño —
+  unificar eso no es lo que se pidió, y contradiría BRAND-5b sin motivo nuevo.
+- **La tipografía de las filas del menú no se tocó** (`.nav-item`, consola,
+  13.5px/550 · `.lp-mobnav a`, pública, 15px/600). `.nav-item` es compartido
+  con la barra lateral de escritorio completa, no sólo con el cajón móvil —
+  tocarlo ahí es un riesgo mucho mayor que el que justifica 1.5px de
+  diferencia, y las filas de cada zona ya difieren en algo más real que el
+  tamaño: la consola lleva icono + contador, la pública no.
+
+**Pendiente, sin decidir — no es parte de esta fase:** el chip de cuenta
+(`AccountChip`, compartido entre las dos zonas desde §65) sigue llevando a
+sitios distintos según de dónde se abra — `/dashboard` desde la cabecera
+pública, `/dashboard/settings` desde el pie del cajón de consola. Puede ser
+intencional (entrar vs. gestionar la cuenta) o puede ser el mismo tipo de
+accidente que esta fase corrigió en el lado del cajón. Señalado, no resuelto.
+
+**Validación:** `pnpm test` (2539/2539) y `pnpm run validate` en verde tras
+cada commit; verificación visual local con Playwright en cada paso antes de
+subir (no sólo en CI); el barrido de interacción automático del piloto
+(`ux-pilot-result`, CI) pasó las ~64 pantallas en los cuatro despliegues de
+este PR — recordatorio propio: eso confirma que nada se rompió, no sustituye
+el juicio visual que exige `docs/agentic-user-pilot.md`, que corre aparte
+antes del Human Gate.
+
+**Trazabilidad.** Supersede §63 (GENSCORE-HEADER-1) en cuanto al lado del
+cajón público; conserva intacto el resto de esa fase (los siete enlaces
+unificados, el `activeHref`, el CTA único a `/signup`). Construye sobre §3
+(anatomía de `WorkspaceTopbar`, aprobada 2026-07-24) y §65 (`AccountChip`
+compartido). `docs/agentic-user-pilot.md` sigue pendiente de correr como
+juicio visual formal antes del Human Gate de este PR.
+
+---
+
+---
+
+## 102. Dos trozos de código que la documentación juraba vivos (PRELAUNCH-HARDENING-1 Fase R8, 2026-08-15)
 
 **Qué se decidió.** Se borran los dos huérfanos que quedaban de la Fase R.
 Ninguno de los dos era código muerto por descuido, y ahí está lo interesante:
@@ -9612,6 +9719,9 @@ leyera sin ese aviso la implementaría otra vez.
 `docs/specs/web-audit/ROADMAP.md` fila 3 y «Fase A».
 
 ---
+
+---
+
 
 ## Cómo mantener este documento
 

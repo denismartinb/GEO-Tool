@@ -312,7 +312,7 @@ su spec: fila del `ROADMAP.md`, entrada del `README.md` y cabecera del
 tests— sobrevivió once días sin un solo importador porque el ROADMAP seguía
 diciendo «✅ Implementada»: un módulo huérfano lo encuentra cualquiera, pero un
 módulo huérfano *que la spec jura entregado* se lee como «esto se usa desde
-algún sitio que no encuentro» (log §101).
+algún sitio que no encuentro» (log §102).
 
 Y la spec **no se borra**, se marca retirada en cabecera, como hace `docs/adr/`
 con lo superseded: el diseño que describe suele ser justo la decisión que se
