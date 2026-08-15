@@ -180,7 +180,7 @@ export default function QueEsGenScorePage() {
 
         <Figure
           label="Figura 2."
-          caption="El GEO Score y sus cinco componentes. El número nunca va solo: si no puedes ver de qué se compone, no puedes actuar sobre él."
+          caption="El GEO Score y sus cinco componentes. El número nunca va solo: si no puedes ver de qué se compone, no puedes actuar sobre él. Aquí el punto flojo es Autoridad — te mencionan, pero no citan tu web."
         >
           <ProductMock
             score={66}
@@ -192,7 +192,7 @@ export default function QueEsGenScorePage() {
               { label: "Preparación técnica", hint: "¿Puede un motor leer y extraer tu web?", value: 70, weight: 20, tone: "cyan" }
             ]}
             highlight={3}
-            annotation="El componente más bajo es donde está el trabajo: te mencionan, pero no te citan."
+            annotation="Aquí está el trabajo"
           />
         </Figure>
 

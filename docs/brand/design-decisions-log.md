@@ -9059,6 +9059,41 @@ al declarar 82.
 **Lo que no se tocó:** la definición canónica, que sigue siendo la misma cadena
 compartida por metadata, página, FAQ y schema (§94).
 
+---
+
+## 96. Una insignia `nowrap` cortada a media palabra, y por qué el piloto la dio por buena (SEO-POS-1 Fase E, E2, 2026-08-15)
+
+**Qué vio el fundador.** En `/que-es-genscore` a 375 px, la insignia azul que
+anota la fila destacada del panel de GEO Score se salía de la tarjeta y quedaba
+cortada: *"El componente más bajo es donde está el trabajo: te me…"*.
+
+**Causa inmediata: mal uso del componente, no fallo del componente.**
+`.art-anno-lbl` es `position: absolute` + `white-space: nowrap`, o sea una
+**insignia**, no un párrafo. La única otra anotación del repositorio tiene 38
+caracteres (`llms-txt-guia-practica`); la que se escribió aquí tenía ~90. La
+frase se movió al pie de figura, que sí tiene sitio, y la insignia quedó en
+"Aquí está el trabajo".
+
+**Pero la causa de fondo es que nada lo impedía.** Un componente cuyo uso
+correcto depende de que quien escribe acierte con la longitud del texto va a
+fallar otra vez. Por debajo de 640 px la insignia deja de ser flotante y pasa a
+ser una línea normal encima de la fila: cabe siempre, no tapa nada y no depende
+del acierto de nadie. Se oculta además su chevron, que apunta a la fila cuando
+flota y no significa nada cuando no.
+
+**Lo importante: el piloto había dado PASS sobre esa misma pantalla, en esa
+misma anchura.** No es un fallo del piloto, es su alcance real —
+`assertPageIsHealthy` detecta **desbordamiento de página**, y aquí el recorte
+ocurre DENTRO de la tarjeta, que sigue midiendo lo que debe. Es exactamente lo
+que avisa el propio informe del piloto en cada pasada: *"esto no sustituye el
+juicio visual"*. La captura existía y enseñaba el corte; nadie la abrió.
+
+Es la tercera vez esta semana que un fallo visual real convive con un `PILOT
+PASS` legítimo (§55 el CTA duplicado, §62 la pantalla nunca visitada, ésta). El
+patrón común no es que el piloto falle, sino que **su verde responde a "ninguna
+aserción saltó", no a "esto se ve bien"** — y las aserciones mecánicas no
+cubren lo que pasa dentro de un contenedor con `overflow` recortado.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
