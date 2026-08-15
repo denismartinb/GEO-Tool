@@ -8589,6 +8589,39 @@ de reescribir la de allí.
 
 ---
 
+## 88. Tres trabajos que el fundador descarta, escritos para que no resuciten (2026-08-15)
+
+**Qué se decidió.** El fundador descarta tres cosas. Se registran aquí porque
+**dos de ellas no vivían en ningún documento**: eran peticiones suyas en
+conversación, y una petición que sólo existe en un chat vuelve a aparecer sola
+en la siguiente sesión que lea el histórico.
+
+1. **P1 · UX-PILOT-4, el journey de alta completa.** Necesitaba su propia
+   aprobación de excepción de escritura del piloto y no la tendrá. Anotado
+   también en `docs/prelaunch-hardening-plan.md` §Fase P.
+2. **El rediseño de la arquitectura del blog.** El fundador lo pidió el
+   2026-08-14 —*«hay que revisar la arquitectura y diseño del blog. Ahora mismo
+   es demasiado plano y sin ningún tipo de jerarquía de info ni organización»*—
+   y lo retira el 15.
+3. **Los estados del gráfico de panorámica competitiva.** Pedido el mismo día
+   —*«sí merece la pena revisar ese gráfico en sus diferentes estados en un
+   artefacto»*— y retirado igual.
+
+**La consecuencia del primero, dicha en voz alta.** Sin P1, **el flujo de alta
+completo (registro → dominio nuevo → primer escaneo → Overview con datos) sigue
+sin recorrerlo ningún test automatizado de principio a fin**. Es el riesgo #3
+del diagnóstico de PRELAUNCH-HARDENING-1 y se queda abierto **a propósito**, no
+por olvido. Lo que sí lo cubre en parte es Q1 (`createProjectCore` y sus tests):
+la lógica de creación, no el recorrido por navegador.
+
+**Lo que NO cambia.** Los invariantes de la panorámica siguen vigentes tal cual
+en `.claude/rules/competitors.md` (§36, PANORAMA-EMPTY-1): descartar el
+rediseño no descarta las reglas de sus cuatro estados. Y el blog sigue con su
+estrategia de contenido intacta; lo retirado es sólo repensar su jerarquía
+visual.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

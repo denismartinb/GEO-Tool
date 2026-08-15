@@ -27,7 +27,9 @@ una con su Human Gate.
   borrados) y **46 tests de render para Auditoría web** (log §87), los primeros
   del repositorio. **R3 queda descartada como está escrita** tras su Task Intake
   del 2026-08-14 (ver R3 abajo). Quedan partir `WebAuditPage` y los dos
-  huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  huérfanos restantes de R8. **Q1 en curso desde el 2026-08-15**, por delante
+  de lo que queda de R: un fichero largo es higiene, `createProject` sin un
+  solo test es el flujo de alta. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
@@ -36,8 +38,11 @@ una con su Human Gate.
   `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
   nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
   pendientes.
-- **Fases P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
-  su aprobación propia de excepción de escritura del piloto, como UX-PILOT-2/3.
+- **Fase P ⛔ P1 descartado (2026-08-15, fundador; log §88)** — no tendrá la
+  aprobación de excepción de escritura que necesitaba. **Consecuencia asumida:
+  el riesgo #3 del diagnóstico —el flujo de alta sin ningún test de principio a
+  fin— se queda abierto a propósito.** P2–P4 siguen pendientes.
+- **Fase A** — pendiente: son decisiones del fundador, no trabajo de agente.
 
 **Origen:** petición del fundador (2026-08-09): antes de lanzar GenScore al
 mercado, plantear (1) un plan de refactorización y revisión de arquitectura
@@ -326,7 +331,18 @@ el bootstrap ni espera al primer escaneo). Propongo formalizarlo como
 **UX-PILOT-4 (journey cold-start)**, tercera excepción de escritura, con las
 mismas guardas estructurales que las dos ya aprobadas:
 
-- **P1 · UX-PILOT-4 — journey de alta completa** (`--journeys coldstart`,
+- **P1 · UX-PILOT-4 — journey de alta completa** — ❌ **DESCARTADO por el
+  fundador (2026-08-15).** Necesitaba su propia aprobación de excepción de
+  escritura del piloto y no la tendrá. Consecuencia declarada, para que nadie
+  la redescubra: **el flujo de alta completo (registro → dominio nuevo →
+  primer escaneo → Overview con datos) sigue sin recorrerlo ningún test
+  automatizado de principio a fin** — es el riesgo #3 del diagnóstico y se
+  queda abierto a propósito. Lo que sí lo cubre en parte, desde Q1, son los
+  tests de `createProjectCore`: la lógica de creación, no el recorrido por
+  navegador. La descripción original se conserva abajo por si alguna vez se
+  reabre.
+
+  *(descripción original, sin efecto)* (`--journeys coldstart`,
   `workflow_dispatch` only, jamás por deploy):
   1. Crea un proyecto nuevo sobre un **segundo dominio reservado**
      (`PILOT_COLDSTART_DOMAIN`, dominio público estable tipo `wikipedia.org`,
