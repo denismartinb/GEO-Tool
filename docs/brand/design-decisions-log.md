@@ -8944,7 +8944,7 @@ afirmaría que una constante es esa constante.
 
 ---
 
-## 93. Q5: un test que podía mentir, una hipótesis sin datos y una puerta invisible (PRELAUNCH-HARDENING-1, 2026-08-15)
+## 94. Q5: un test que podía mentir, una hipótesis sin datos y una puerta invisible (PRELAUNCH-HARDENING-1, 2026-08-15)
 
 **Qué se decidió.** Se cierra lo que quedaba de Q5. Tres cosas distintas, y las
 tres tenían la misma forma: **algo que parecía verificado y no lo estaba**.
