@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { requireOperatorCandidate } from "@/lib/admin/operator";
 import { safeAdminNext } from "@/lib/admin/safe-next";
+import { consoleMetadata } from "@/lib/seo/console-metadata";
 import { verifyChallenge } from "./actions";
 
 /**
@@ -9,6 +11,9 @@ import { verifyChallenge } from "./actions";
  * Reached from `requireOperator()` whenever a verified TOTP factor already
  * exists but the current session predates it (or predates today's login).
  */
+// ROOT-METADATA-1: pestaña propia. Ver `lib/seo/console-metadata.ts`.
+export const metadata: Metadata = consoleMetadata("Verificación en dos pasos");
+
 export default async function MfaChallengePage({
   searchParams
 }: {

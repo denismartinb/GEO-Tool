@@ -115,6 +115,16 @@ export interface PageFindings {
    * donde no debería, esto es lo que lo delata.
    */
   dismissedWelcomeTour: boolean;
+  /**
+   * El `<title>` del documento — ROOT-METADATA-1 (log §101).
+   *
+   * El piloto juzga capturas, y un título NO sale en una captura: es la clase
+   * de cosa sobre la que su verde no dice absolutamente nada. Quince pantallas
+   * de consola compartieron la misma pestaña «GenScore» durante meses con
+   * `PILOT PASS` en todas las pasadas, porque nadie estaba mirando el único
+   * sitio donde se veía.
+   */
+  documentTitle: string;
   /** Real content height, including inside the shell's inner scroll container. */
   contentHeight: number;
   /** Viewport height the screenshot was taken at. */
@@ -678,6 +688,7 @@ export async function visitAsUser(
       headerInteractiveControls,
       ...controlAudit,
       dismissedWelcomeTour,
+      documentTitle: await page.title().catch(() => ""),
       ...capture
     };
 
@@ -802,6 +813,20 @@ export function assertPageIsHealthy(findings: PageFindings): void {
       `(badges/pills only) — docs/brand/design-decisions-log.md §3. Found interactive ` +
       `control(s) inside .ov-sticky-header, which belong in the page body instead.`
   ).toEqual([]);
+
+  // ROOT-METADATA-1 (log §101). Una pantalla sin `metadata` propia hereda el
+  // `title` del layout raíz, que es la marca a secas. No rompe nada, no se ve
+  // en la captura y no lo nota nadie — así llegaron a ser quince pantallas
+  // indistinguibles entre sí. Comparar contra la marca exacta es a propósito:
+  // un título que EMPIEZA por «GenScore» puede ser legítimo
+  // («GenScore vs Otterly …»); el fallo es que sea sólo eso.
+  expect(
+    findings.documentTitle.trim(),
+    `${findings.label} @ ${findings.viewport}: la pestaña dice sólo «GenScore», así que esta ` +
+      "pantalla no declara `metadata` propia y hereda la del layout raíz. Con dos pantallas " +
+      "abiertas son dos pestañas idénticas. Añade `consoleMetadata(\"…\")` o " +
+      "`generateMetadata` con `projectScreenMetadata` (`lib/seo/console-metadata.ts`)."
+  ).not.toBe("GenScore");
 
   assertControlsAreHealthy(findings.label, findings.viewport, findings);
 

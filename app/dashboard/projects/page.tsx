@@ -1,5 +1,7 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
+import { consoleMetadata } from "@/lib/seo/console-metadata";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
@@ -63,6 +65,9 @@ function ProjectCard({ project }: { project: Project }) {
     </Card>
   );
 }
+
+// ROOT-METADATA-1: pestaña propia. Ver `lib/seo/console-metadata.ts`.
+export const metadata: Metadata = consoleMetadata("Dominios");
 
 export default async function ProjectsPage({
   searchParams

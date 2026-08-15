@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { getUsageSummary } from "@/lib/billing";
+import { consoleMetadata } from "@/lib/seo/console-metadata";
 import { createProject, generateMorePrompts, suggestProjectSetup } from "../actions";
 
 // COMPETITOR-GROUNDING-1: suggestProjectSetup/createProject now fetch the
@@ -8,6 +10,9 @@ import { createProject, generateMorePrompts, suggestProjectSetup } from "../acti
 // past the Vercel Hobby plan's 10s default (docs/environment-contract.md),
 // same reasoning as the scan route's maxDuration (ADR 0003).
 export const maxDuration = 60;
+
+// ROOT-METADATA-1: pestaña propia. Ver `lib/seo/console-metadata.ts`.
+export const metadata: Metadata = consoleMetadata("Nuevo dominio");
 
 export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;

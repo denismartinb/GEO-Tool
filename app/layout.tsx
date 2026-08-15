@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, Bricolage_Grotesque, Figtree, JetBrains_Mono } from "next/font/google";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
+import { CANONICAL_DEFINITION } from "@/lib/brand/canonical-definition";
 
 // TODO(BRAND-5b): Hanken Grotesk is the outgoing UI typeface (BRAND-5,
 // docs/brand/brand-guidelines.md). It stays until 5b repaints the UI onto
@@ -62,10 +63,23 @@ const mono = JetBrains_Mono({
   display: "swap"
 });
 
+// ROOT-METADATA-1. El `description` de aquí era una redacción propia más de
+// qué es GenScore —la quinta— y pasa a ser la canónica, la misma cadena que
+// usan `/que-es-genscore`, su FAQ y el `SoftwareApplication` (Fase E, log
+// §100). No tiene efecto en buscadores: desde esta fase ninguna página
+// **pública** hereda este respaldo, y las que lo heredaban eran todas de
+// consola, detrás de autenticación y en el `disallow` de `robots.ts`. Se
+// unifica porque una descripción divergente envejece sola, no porque nadie la
+// lea.
+//
+// El `title` sigue siendo la marca a secas: es el respaldo de una página sin
+// título propio, y ahí lo correcto es el nombre. Convertirlo en
+// `{ default, template }` es la solución elegante y hoy rompería 33 títulos
+// públicos que ya escriben «— GenScore» a mano — ver `console-metadata.ts`.
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.genscore.es"),
   title: "GenScore",
-  description: "Espacio de visibilidad de marca en motores de IA",
+  description: CANONICAL_DEFINITION,
   icons: {
     icon: [
       { url: "/brand/favicon-16.png", sizes: "16x16", type: "image/png" },
@@ -76,7 +90,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "GenScore",
-    description: "Espacio de visibilidad de marca en motores de IA",
+    description: CANONICAL_DEFINITION,
     url: "https://www.genscore.es",
     siteName: "GenScore",
     images: [{ url: "/brand/genscore-og.png", width: 1200, height: 630 }],
@@ -86,7 +100,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "GenScore",
-    description: "Espacio de visibilidad de marca en motores de IA",
+    description: CANONICAL_DEFINITION,
     images: ["/brand/genscore-og.png"]
   },
   // GROWTH-2 Fase 2.1: Search Console ownership verification. Mirrors the
