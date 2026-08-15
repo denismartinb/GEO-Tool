@@ -92,25 +92,13 @@ beforeEach(() => {
 });
 
 describe("setRecurringScansAsOperator", () => {
-  it("rejects an empty reason before touching the database", async () => {
-    const service = fakeService({ project: PROJECT, owner: OWNER_PRO });
-    requireOperatorMock.mockResolvedValue({ user: { id: "op", email: "op@example.com" }, service });
-    const { setRecurringScansAsOperator } = await import("./automation-actions");
-
-    await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "" }))
-    ).rejects.toThrow("REDIRECT:/admin/users?admin_error=invalid_input");
-
-    expect(service.updates).toHaveLength(0);
-  });
-
   it("refuses to enable on a Free-plan project — the sweep would ignore it", async () => {
     const service = fakeService({ project: PROJECT, owner: OWNER_FREE });
     requireOperatorMock.mockResolvedValue({ user: { id: "op", email: "op@example.com" }, service });
     const { setRecurringScansAsOperator } = await import("./automation-actions");
 
     await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "porque sí, de sobra" }))
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true" }))
     ).rejects.toThrow("admin_error=recurring_free_plan_ineffective");
 
     expect(service.updates).toHaveLength(0);
@@ -123,19 +111,19 @@ describe("setRecurringScansAsOperator", () => {
     const { setRecurringScansAsOperator } = await import("./automation-actions");
 
     await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "activar recurrente" }))
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true" }))
     ).rejects.toThrow("admin_error=recurring_requires_completed_scan");
 
     expect(service.updates).toHaveLength(0);
   });
 
-  it("enables for a Pro project with a completed scan, and sends the alert email with the reason", async () => {
+  it("enables for a Pro project with a completed scan, and sends the alert email", async () => {
     const service = fakeService({ project: PROJECT, owner: OWNER_PRO, completedRun: { id: "run-1" } });
     requireOperatorMock.mockResolvedValue({ user: { id: "op", email: "op@example.com" }, service });
     const { setRecurringScansAsOperator } = await import("./automation-actions");
 
     await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "cliente lo pidió por soporte" }))
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true" }))
     ).rejects.toThrow("REDIRECT:/admin/users?u=u1&admin_success=recurring_enabled");
 
     expect(service.updates).toEqual([{ table: "projects", patch: { recurring_scans_enabled: true } }]);
@@ -144,9 +132,12 @@ describe("setRecurringScansAsOperator", () => {
         operatorEmail: "op@example.com",
         targetUserEmail: "owner@example.com",
         targetUserId: "u1",
-        reason: "cliente lo pidió por soporte"
+        change: "Escaneo recurrente → activado"
       })
     );
+    // El motivo se retiró explícitamente (ADMIN-CONSOLE-UX-1, §80): el email
+    // ya no lo lleva porque el formulario ya no lo pide.
+    expect(sendAdminAutomationChangeAlertEmail.mock.calls[0][0]).not.toHaveProperty("reason");
   });
 
   it("disabling never checks the completed-scan precondition", async () => {
@@ -155,7 +146,7 @@ describe("setRecurringScansAsOperator", () => {
     const { setRecurringScansAsOperator } = await import("./automation-actions");
 
     await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "false", reason: "cliente lo pidió" }))
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "false" }))
     ).rejects.toThrow("admin_success=recurring_disabled");
 
     expect(service.updates).toEqual([{ table: "projects", patch: { recurring_scans_enabled: false } }]);
@@ -167,7 +158,7 @@ describe("setRecurringScansAsOperator", () => {
     const { setRecurringScansAsOperator } = await import("./automation-actions");
 
     await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "motivo válido" }))
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true" }))
     ).rejects.toThrow("admin_error=project_not_found");
   });
 
@@ -177,7 +168,7 @@ describe("setRecurringScansAsOperator", () => {
     const { setRecurringScansAsOperator } = await import("./automation-actions");
 
     await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "motivo válido" }))
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true" }))
     ).rejects.toThrow("admin_error=project_not_found");
 
     expect(service.updates).toHaveLength(0);
@@ -189,7 +180,7 @@ describe("setRecurringScansAsOperator", () => {
     const { setRecurringScansAsOperator } = await import("./automation-actions");
 
     await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "motivo válido" }))
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true" }))
     ).rejects.toThrow("admin_error=recurring_update_failed");
 
     expect(sendAdminAutomationChangeAlertEmail).not.toHaveBeenCalled();
@@ -202,7 +193,7 @@ describe("setRecurringScansAsOperator", () => {
     const { setRecurringScansAsOperator } = await import("./automation-actions");
 
     await expect(
-      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", reason: "motivo válido" }))
+      setRecurringScansAsOperator(formData({ projectId: PROJECT_ID, enabled: "true" }))
     ).rejects.toThrow("REDIRECT:/admin/users?u=u1&admin_success=recurring_enabled");
 
     expect(service.updates).toEqual([{ table: "projects", patch: { recurring_scans_enabled: true } }]);
@@ -216,7 +207,7 @@ describe("setRecurringScansAsOperator", () => {
     const { setAutoAuditHalfAsOperator } = await import("./automation-actions");
 
     await expect(
-      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "technical", reason: "motivo válido" }))
+      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "technical" }))
     ).rejects.toThrow("admin_success=audit_technical_enabled");
 
     const call = sendAdminAutomationChangeAlertEmail.mock.calls[0][0];
@@ -232,7 +223,7 @@ describe("setAutoAuditHalfAsOperator", () => {
     const { setAutoAuditHalfAsOperator } = await import("./automation-actions");
 
     await expect(
-      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "technical", reason: "motivo válido" }))
+      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "technical" }))
     ).rejects.toThrow("admin_success=audit_technical_enabled");
 
     expect(service.updates).toEqual([{ table: "projects", patch: { auto_technical_audit_enabled: true } }]);
@@ -244,7 +235,7 @@ describe("setAutoAuditHalfAsOperator", () => {
     const { setAutoAuditHalfAsOperator } = await import("./automation-actions");
 
     await expect(
-      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "coverage", reason: "motivo válido" }))
+      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "coverage" }))
     ).rejects.toThrow("admin_error=coverage_plan_ineffective");
 
     expect(service.updates).toHaveLength(0);
@@ -256,7 +247,7 @@ describe("setAutoAuditHalfAsOperator", () => {
     const { setAutoAuditHalfAsOperator } = await import("./automation-actions");
 
     await expect(
-      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "coverage", reason: "motivo válido" }))
+      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "coverage" }))
     ).rejects.toThrow("admin_success=audit_coverage_enabled");
 
     expect(service.updates).toEqual([{ table: "projects", patch: { auto_coverage_audit_enabled: true } }]);
@@ -268,7 +259,7 @@ describe("setAutoAuditHalfAsOperator", () => {
     const { setAutoAuditHalfAsOperator } = await import("./automation-actions");
 
     await expect(
-      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "false", half: "coverage", reason: "motivo válido" }))
+      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "false", half: "coverage" }))
     ).rejects.toThrow("admin_success=audit_coverage_disabled");
   });
 
@@ -278,7 +269,7 @@ describe("setAutoAuditHalfAsOperator", () => {
     const { setAutoAuditHalfAsOperator } = await import("./automation-actions");
 
     await expect(
-      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "bogus", reason: "motivo válido" }))
+      setAutoAuditHalfAsOperator(formData({ projectId: PROJECT_ID, enabled: "true", half: "bogus" }))
     ).rejects.toThrow("admin_error=invalid_input");
   });
 });

@@ -20,9 +20,12 @@ import { AUDIT_HALF_COLUMN, checkRecurringScansPrecondition } from "@/lib/projec
  *    para la auditoría) son las MISMAS que corren en
  *    `app/dashboard/projects/[projectId]/actions.ts`, importadas de
  *    `lib/projects/automation-toggles.ts` — no reescritas.
- * 2. Cada escritura exige un motivo, y cada escritura manda un email a
- *    OPS_ALERT_EMAIL. No hay tabla de auditoría nueva (sin migración
- *    aprobada); el email ES el registro.
+ * 2. Cada escritura manda un email a OPS_ALERT_EMAIL con quién, qué cuenta,
+ *    qué proyecto y qué cambió. No hay tabla de auditoría nueva (sin
+ *    migración aprobada); el email ES el registro — desde ADMIN-CONSOLE-UX-1
+ *    (2026-08-15) ya no pide motivo, decisión explícita del fundador
+ *    (`docs/brand/design-decisions-log.md` §80): el registro deja de
+ *    explicar el porqué, pero sigue siendo el único rastro del quién/qué/cuándo.
  * 3. Nunca se activa un interruptor que el backend va a ignorar. El
  *    recurrente en Free no escanea nunca (`skipped_plan_ineligible`,
  *    `lib/scan/cron.ts`); la mitad de cobertura por debajo de Pro tampoco
@@ -32,16 +35,9 @@ import { AUDIT_HALF_COLUMN, checkRecurringScansPrecondition } from "@/lib/projec
  *    escribir, no se documenta después.
  */
 
-const reasonSchema = z
-  .string()
-  .trim()
-  .min(5, "El motivo es obligatorio y debe explicar el cambio (mínimo 5 caracteres).")
-  .max(500);
-
 const toggleSchema = z.object({
   projectId: z.string().uuid(),
   enabled: z.enum(["true", "false"]),
-  reason: reasonSchema,
   q: z.string().optional(),
   status: z.string().optional()
 });
@@ -91,7 +87,6 @@ async function notifyAdminAutomationChange(input: {
   targetUserEmail: string | null;
   project: ProjectForWrite;
   change: string;
-  reason: string;
 }): Promise<void> {
   try {
     await sendAdminAutomationChangeAlertEmail({
@@ -101,7 +96,6 @@ async function notifyAdminAutomationChange(input: {
       domain: input.project.domain,
       projectId: input.project.id,
       change: input.change,
-      reason: input.reason,
       changedAt: new Date()
     });
   } catch (error) {
@@ -120,7 +114,6 @@ export async function setRecurringScansAsOperator(formData: FormData) {
   const parsed = toggleSchema.safeParse({
     projectId: formData.get("projectId"),
     enabled: formData.get("enabled"),
-    reason: formData.get("reason"),
     q: formData.get("q") ?? undefined,
     status: formData.get("status") ?? undefined
   });
@@ -129,7 +122,7 @@ export async function setRecurringScansAsOperator(formData: FormData) {
     redirect(adminUsersUrl(null, { admin_error: "invalid_input" }));
   }
 
-  const { projectId, reason, q, status } = parsed.data;
+  const { projectId, q, status } = parsed.data;
   const enabled = parsed.data.enabled === "true";
 
   const project = await loadProjectForWrite(service, projectId);
@@ -166,8 +159,7 @@ export async function setRecurringScansAsOperator(formData: FormData) {
     operatorEmail: user.email ?? user.id,
     targetUserEmail: owner?.email ?? null,
     project,
-    change: `Escaneo recurrente → ${enabled ? "activado" : "desactivado"}`,
-    reason
+    change: `Escaneo recurrente → ${enabled ? "activado" : "desactivado"}`
   });
 
   redirect(
@@ -181,7 +173,6 @@ export async function setAutoAuditHalfAsOperator(formData: FormData) {
   const parsed = auditHalfToggleSchema.safeParse({
     projectId: formData.get("projectId"),
     enabled: formData.get("enabled"),
-    reason: formData.get("reason"),
     half: formData.get("half"),
     q: formData.get("q") ?? undefined,
     status: formData.get("status") ?? undefined
@@ -191,7 +182,7 @@ export async function setAutoAuditHalfAsOperator(formData: FormData) {
     redirect(adminUsersUrl(null, { admin_error: "invalid_input" }));
   }
 
-  const { projectId, reason, half, q, status } = parsed.data;
+  const { projectId, half, q, status } = parsed.data;
   const enabled = parsed.data.enabled === "true";
 
   const project = await loadProjectForWrite(service, projectId);
@@ -222,8 +213,7 @@ export async function setAutoAuditHalfAsOperator(formData: FormData) {
     operatorEmail: user.email ?? user.id,
     targetUserEmail: owner?.email ?? null,
     project,
-    change: `Auditoría automática (${half === "technical" ? "técnica" : "cobertura IA"}) → ${enabled ? "activada" : "desactivada"}`,
-    reason
+    change: `Auditoría automática (${half === "technical" ? "técnica" : "cobertura IA"}) → ${enabled ? "activada" : "desactivada"}`
   });
 
   redirect(

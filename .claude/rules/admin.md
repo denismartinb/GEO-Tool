@@ -63,12 +63,15 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   auth/server-action surface. Do not add a mutating action as a drive-by, and
   do not extend an approved write's scope past what its intake covered
   (e.g. adding a new column to an existing toggle action) without a fresh one.
-- **Every write from `/admin` needs a required reason and an email to
-  `OPS_ALERT_EMAIL`.** There is no audit-log table for this (no migration
-  approved), so the email genuinely IS the record of the action — not a nice-
-  to-have alert alongside one. A write action with no reason field or no
-  alert call is missing the only accountability this surface has
-  (`docs/brand/design-decisions-log.md` §79).
+- **Every write from `/admin` needs an email to `OPS_ALERT_EMAIL`.** There is
+  no audit-log table for this (no migration approved), so the email genuinely
+  IS the record of the action — not a nice-to-have alert alongside one. A
+  write action with no alert call is missing the only accountability this
+  surface has (`docs/brand/design-decisions-log.md` §79). It records who, which
+  account, which project, and what changed — **not why**: the required-reason
+  field was removed in ADMIN-CONSOLE-UX-1, an explicit founder decision made
+  aware of the trade-off (§80). Do not reintroduce a reason requirement as a
+  drive-by "consistency" fix; the founder chose to drop it once already.
 - **An operator-scoped write may never have a precondition weaker than the
   owner-scoped action it mirrors.** Import the shared check from
   `lib/projects/automation-toggles.ts` (or wherever the owner action's

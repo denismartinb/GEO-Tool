@@ -7858,9 +7858,69 @@ mismo diseño se propuso evitar. Añadido a ambos `.update()`.
 - **Sin piloto agéntico**, misma razón que Fase 1 y 2a: no puede completar un
   desafío AAL2. Verificación manual.
 
----
+## 80. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
 
-## Cómo mantener este documento
+**Estado: implementada.** Petición directa del fundador sobre lo que acababa
+de mergearse en 2b, no un Task Intake de 12 puntos — pero uno de los tres
+cambios contradecía un invariante que ese mismo PR había escrito, así que se
+paró a preguntar antes de tocar código en vez de implementarlo en silencio.
+
+**El campo de motivo se elimina, con la pérdida asumida explícitamente.**
+§79 documentó "no hay tabla de auditoría; el email ES el registro" y
+`.claude/rules/admin.md` lo convirtió en regla: "Every write from `/admin`
+needs a required reason". Quitar la caja de texto no es sólo un cambio de
+CSS — rompe ese invariante. Se preguntó directamente: compacto-pero-
+obligatorio (un diálogo al pulsar) frente a eliminarlo del todo, explicando
+que la segunda opción deja las escrituras de operador sin ningún rastro de
+**por qué** se tocó el proyecto de un cliente. El fundador eligió eliminarlo
+del todo, informado del coste. Lo que **no** se eliminó: el email a
+`OPS_ALERT_EMAIL` sigue disparándose en cada escritura con operador, cuenta
+afectada, dominio, proyecto, qué cambió y cuándo — el registro pierde el
+**porqué**, no el **quién/qué/cuándo**. `sendAdminAutomationChangeAlertEmail`
+ya no acepta `reason` en su firma; no quedó como parámetro opcional sin uso.
+
+**Interruptores en columnas.** `.adm-proj-write` pasa de `flex-direction:
+column` (tres formularios apilados, cada uno con su propia caja de motivo) a
+un grid de tres columnas — ahora cabe porque cada formulario es sólo una
+etiqueta y un botón, no una fila con un campo de texto de 160px mínimo. Se
+apila a una columna por debajo de 480px para no comprimir el botón contra el
+texto en un móvil estrecho.
+
+**La ficha se abre en acordeón, no como tarjeta fija.** Antes,
+`{params.u ? <div className="adm-drawer">…</div> : null}` se renderizaba
+DESPUÉS de toda la tabla, sin importar qué fila se hubiera tocado — abrir la
+fila 2 de una lista de 80 usuarios significaba bajar la distancia entera de
+la tabla para verla, y volver a subir para comparar con la fila. Ahora el
+detalle se inserta como una fila más (`<tr><td colSpan={9}>`) inmediatamente
+después de la fila seleccionada, dentro del mismo `<tbody>` — se extrajo el
+contenido a `UserDetailPanel` para no duplicarlo entre este caso y el de
+abajo. **Caso borde declarado, no ignorado:** si la fila seleccionada no está
+en la página filtrada actual (un buscador o un filtro de estado la deja
+fuera, o no queda ninguna fila), no hay dónde anclar la fila-acordeón — para
+ese caso, y sólo para ése, se mantiene el render de abajo
+(`.adm-drawer-standalone`), condicionado a
+`params.u && !filtered.some((row) => row.id === params.u)`.
+
+**La celda del acordeón vive dentro del mismo contenedor con scroll
+horizontal que la tabla** (`.adm-table` tiene `min-width: 760px`), en vez de
+extraerla a un contenedor de ancho completo — habría exigido convertir la
+tabla entera a un grid de `<div>` para que el detalle escapara esa anchura
+mínima, mucho más alcance del que pedía esta iteración. La tabla ya obliga a
+desplazamiento horizontal en 375px hoy; anidar el acordeón en el mismo
+contenedor extiende ese trade-off ya aceptado, no introduce uno nuevo. Dentro
+de la celda, `white-space: normal` deshace el `nowrap` general de
+`.adm-table td`, y el grid de dos columnas del detalle (`.adm-drawer-cols`)
+ya colapsaba a una por debajo de 760px de **viewport** — eso sigue
+funcionando igual, porque `@media` responde al viewport real del navegador,
+no al ancho del contenedor con scroll.
+
+### Pendiente / roto conocido
+
+- Sigue sin piloto agéntico, misma razón que toda la zona: AAL2 bloquea el
+  arnés. Verificación manual de las tres capturas (375/768/1280) pendiente
+  del fundador.
+- El gap de lectura de 2a (`auto_coverage_audit_enabled` por debajo de Pro en
+  `lib/admin/automation.ts`) sigue sin tocar, como en §79.
 
 ---
 

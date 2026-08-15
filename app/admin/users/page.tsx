@@ -1,14 +1,21 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import type { Metadata } from "next";
 import { requireOperator } from "@/lib/admin/operator";
-import { getOperatorUserDetail, listOperatorUsers, type AdminUserRow, type AdminUserStatus } from "@/lib/admin/users";
+import {
+  getOperatorUserDetail,
+  listOperatorUsers,
+  type AdminUserDetail,
+  type AdminUserRow,
+  type AdminUserStatus
+} from "@/lib/admin/users";
 import { formatUsd, provenanceLabel, type CostProvenance } from "@/lib/admin/cost-model";
 import type { AccountAutomation, ProjectAutomation } from "@/lib/admin/automation";
 import { setAutoAuditHalfAsOperator, setRecurringScansAsOperator } from "@/lib/admin/automation-actions";
 import { relativeTime } from "@/lib/notifications/render";
 
 const ADMIN_ERROR_MESSAGES: Record<string, string> = {
-  invalid_input: "Datos inválidos. El motivo es obligatorio (mínimo 5 caracteres).",
+  invalid_input: "Datos inválidos.",
   project_not_found: "Ese dominio no existe o está archivado.",
   recurring_free_plan_ineffective:
     "Este dominio es Free: el barrido descarta los proyectos Free, así que activar el recurrente no tendría efecto.",
@@ -119,9 +126,11 @@ function ProjectAutomationLine({ automation }: { automation: ProjectAutomation |
 
 /**
  * ADMIN-CONSOLE-2b. Un formulario por interruptor, no uno compartido: cada
- * uno lleva su propio motivo, porque "activé el recurrente" y "activé la
- * auditoría de cobertura" no son la misma decisión ni deben compartir un
- * único campo de texto que obligue a explicar dos cosas a la vez.
+ * uno actúa sobre un proyecto y una columna distintos, y "activé el
+ * recurrente" no debe poder confundirse con "activé la auditoría de
+ * cobertura" al enviar. Desde ADMIN-CONSOLE-UX-1 (§80) ya no lleva campo de
+ * motivo — decisión explícita del fundador; el email de aviso sigue siendo
+ * el registro de quién/qué/cuándo, sin el porqué.
  */
 function AutomationToggleForm({
   action,
@@ -148,19 +157,146 @@ function AutomationToggleForm({
       {q ? <input type="hidden" name="q" value={q} /> : null}
       {status ? <input type="hidden" name="status" value={status} /> : null}
       <span className={`adm-toggle-label ${enabled ? "adm-toggle-on" : "adm-toggle-off"}`}>{label}</span>
-      <input
-        type="text"
-        name="reason"
-        placeholder="Motivo del cambio (obligatorio)"
-        required
-        minLength={5}
-        maxLength={500}
-        className="field adm-toggle-reason"
-      />
       <button type="submit" className={`btn ${enabled ? "adm-toggle-btn-off" : "btn-primary"}`}>
         {enabled ? "Desactivar" : "Activar"}
       </button>
     </form>
+  );
+}
+
+/**
+ * Contenido de la ficha de una cuenta, extraído para poder renderizarlo tanto
+ * en línea bajo la fila seleccionada (el caso normal) como en el hueco de
+ * abajo cuando esa fila no está en la página filtrada actual (ver el llamador).
+ * ADMIN-CONSOLE-UX-1 (§80): antes vivía como una tarjeta fija tras toda la
+ * tabla, que en móvil obligaba a bajar siempre la misma distancia sin
+ * importar qué fila se hubiera tocado.
+ */
+function UserDetailPanel({
+  detail,
+  q,
+  status,
+  adminSuccess,
+  adminError
+}: {
+  detail: AdminUserDetail;
+  q?: string;
+  status?: string;
+  adminSuccess?: string;
+  adminError?: string;
+}) {
+  return (
+    <div className="adm-drawer">
+      <div className="adm-drawer-top">
+        <div>
+          <h2>{detail.email}</h2>
+          <span className="adm-uid">{detail.id}</span>
+        </div>
+        <Link href={buildQuery({ q, status })} className="adm-close">
+          Cerrar ✕
+        </Link>
+      </div>
+      {adminSuccess ? (
+        <p className="feedback success" style={{ margin: "14px 20px 0" }}>
+          {ADMIN_SUCCESS_MESSAGES[adminSuccess] ?? "Cambio guardado."}
+        </p>
+      ) : null}
+      {adminError ? (
+        <p className="feedback error" style={{ margin: "14px 20px 0" }}>
+          {ADMIN_ERROR_MESSAGES[adminError] ?? "No se pudo completar el cambio."}
+        </p>
+      ) : null}
+      <div className="adm-drawer-cols">
+        <div>
+          <p className="adm-mini-title">Cuenta</p>
+          <dl className="adm-dl">
+            <dt>Alta</dt>
+            <dd>{formatFullDate(detail.createdAt)}</dd>
+            <dt>Último acceso</dt>
+            <dd>{detail.lastSignInAt ? formatFullDate(detail.lastSignInAt) : "Nunca"}</dd>
+            <dt>Plan</dt>
+            <dd>{detail.planLabel}</dd>
+            <dt>Estado</dt>
+            <dd>{STATUS_LABEL[detail.status](detail)}</dd>
+            <dt>Cliente Stripe</dt>
+            <dd>{detail.stripeCustomerId ?? "—"}</dd>
+            {detail.cancelAt ? (
+              <>
+                <dt>Cancela el</dt>
+                <dd>{formatFullDate(detail.cancelAt)}</dd>
+              </>
+            ) : null}
+          </dl>
+        </div>
+        <div>
+          <p className="adm-mini-title">Dominios y actividad</p>
+          {detail.projects.length === 0 ? (
+            <p style={{ fontSize: 12.5, color: "var(--ink-4)", margin: 0 }}>Sin dominios creados.</p>
+          ) : (
+            detail.projects.map((project) => (
+              <div className="adm-proj-block" key={project.id}>
+                <div className="adm-proj">
+                  <span className="adm-proj-d">
+                    {project.domain}
+                    {project.isArchived ? " (archivado)" : ""}
+                  </span>
+                  <span className="adm-proj-s">
+                    {project.latestScan
+                      ? `${project.latestScan.status} · ${formatShortDate(project.latestScan.createdAt)}`
+                      : "sin escaneos"}
+                  </span>
+                </div>
+                {/* El interruptor real vive por proyecto; el agregado de la
+                    tabla sólo resume esto. Archivado = el barrido no lo toca. */}
+                {project.isArchived ? null : (
+                  <div className="adm-proj-auto">
+                    <ProjectAutomationLine automation={project.automation} />
+                  </div>
+                )}
+                {/* Escritura: ADMIN-CONSOLE-2b. Sin dato de automatismos no
+                    hay estado actual que invertir con seguridad, así que no
+                    se ofrece el control — mismo criterio que la lectura. */}
+                {!project.isArchived && project.automation ? (
+                  <div className="adm-proj-write">
+                    <AutomationToggleForm
+                      action={setRecurringScansAsOperator}
+                      projectId={project.id}
+                      enabled={project.automation.recurringScansEnabled}
+                      label="Recurrente"
+                      q={q}
+                      status={status}
+                    />
+                    <AutomationToggleForm
+                      action={setAutoAuditHalfAsOperator}
+                      half="technical"
+                      projectId={project.id}
+                      enabled={project.automation.technicalAuditEnabled}
+                      label="Auditoría técnica"
+                      q={q}
+                      status={status}
+                    />
+                    <AutomationToggleForm
+                      action={setAutoAuditHalfAsOperator}
+                      half="coverage"
+                      projectId={project.id}
+                      enabled={project.automation.coverageAuditEnabled}
+                      label="Auditoría IA"
+                      q={q}
+                      status={status}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ))
+          )}
+          <p className="adm-cost-note">
+            El coste es una <strong>estimación</strong>, no lo facturado: sale de las tarifas por llamada de
+            <code> docs/llm-cost-analysis-2026-08.md</code> §7 (generación medida, extracción estimada, cobertura
+            de auditoría sin medir) por los prompts y motores activos de cada dominio.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -301,156 +437,79 @@ export default async function AdminUsersPage({
             </thead>
             <tbody>
               {filtered.map((row) => (
-                <tr key={row.id} className={row.id === params.u ? "adm-row-selected" : undefined}>
-                  <td>
-                    <Link href={buildQuery({ q: params.q, status: params.status, u: row.id })}>
-                      <span className="adm-em">{row.email}</span>
-                      <span className="adm-uid">{row.id}</span>
-                    </Link>
-                  </td>
-                  <td>{formatShortDate(row.createdAt)}</td>
-                  <td>
-                    <span className={`adm-pill adm-pill-${row.status}`}>{STATUS_LABEL[row.status](row)}</span>
-                  </td>
-                  <td className="adm-num">{row.projectCount}</td>
-                  <td className="adm-num">{row.scanCount30d}</td>
-                  <td>
-                    <AutomationCell automation={row.automation} kind="recurring" />
-                  </td>
-                  <td>
-                    <AutomationCell automation={row.automation} kind="audit" />
-                  </td>
-                  <td className="adm-num">
-                    {row.automation ? (
-                      <Cost usd={row.automation.monthlyUsd} provenance={row.automation.provenance} />
-                    ) : (
-                      <span className="adm-dim">sin dato</span>
-                    )}
-                  </td>
-                  <td>{row.lastSignInAt ? relativeTime(row.lastSignInAt) : "—"}</td>
-                </tr>
+                <Fragment key={row.id}>
+                  <tr className={row.id === params.u ? "adm-row-selected" : undefined}>
+                    <td>
+                      <Link href={buildQuery({ q: params.q, status: params.status, u: row.id })}>
+                        <span className="adm-em">{row.email}</span>
+                        <span className="adm-uid">{row.id}</span>
+                      </Link>
+                    </td>
+                    <td>{formatShortDate(row.createdAt)}</td>
+                    <td>
+                      <span className={`adm-pill adm-pill-${row.status}`}>{STATUS_LABEL[row.status](row)}</span>
+                    </td>
+                    <td className="adm-num">{row.projectCount}</td>
+                    <td className="adm-num">{row.scanCount30d}</td>
+                    <td>
+                      <AutomationCell automation={row.automation} kind="recurring" />
+                    </td>
+                    <td>
+                      <AutomationCell automation={row.automation} kind="audit" />
+                    </td>
+                    <td className="adm-num">
+                      {row.automation ? (
+                        <Cost usd={row.automation.monthlyUsd} provenance={row.automation.provenance} />
+                      ) : (
+                        <span className="adm-dim">sin dato</span>
+                      )}
+                    </td>
+                    <td>{row.lastSignInAt ? relativeTime(row.lastSignInAt) : "—"}</td>
+                  </tr>
+                  {/* Acordeón en el sitio: el detalle baja justo bajo la fila
+                      tocada, sea cual sea su posición en la tabla — no una
+                      tarjeta fija tras toda la lista (ADMIN-CONSOLE-UX-1, §80). */}
+                  {row.id === params.u ? (
+                    <tr className="adm-detail-row">
+                      <td colSpan={9} className="adm-detail-cell">
+                        {detail ? (
+                          <UserDetailPanel
+                            detail={detail}
+                            q={params.q}
+                            status={params.status}
+                            adminSuccess={params.admin_success}
+                            adminError={params.admin_error}
+                          />
+                        ) : (
+                          <p className="adm-empty">Esa cuenta ya no existe.</p>
+                        )}
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
       )}
 
-      {params.u ? (
-        detail ? (
-          <div className="adm-drawer">
-            <div className="adm-drawer-top">
-              <div>
-                <h2>{detail.email}</h2>
-                <span className="adm-uid">{detail.id}</span>
-              </div>
-              <Link href={buildQuery({ q: params.q, status: params.status })} className="adm-close">
-                Cerrar ✕
-              </Link>
-            </div>
-            {params.admin_success ? (
-              <p className="feedback success" style={{ margin: "14px 20px 0" }}>
-                {ADMIN_SUCCESS_MESSAGES[params.admin_success] ?? "Cambio guardado."}
-              </p>
-            ) : null}
-            {params.admin_error ? (
-              <p className="feedback error" style={{ margin: "14px 20px 0" }}>
-                {ADMIN_ERROR_MESSAGES[params.admin_error] ?? "No se pudo completar el cambio."}
-              </p>
-            ) : null}
-            <div className="adm-drawer-cols">
-              <div>
-                <p className="adm-mini-title">Cuenta</p>
-                <dl className="adm-dl">
-                  <dt>Alta</dt>
-                  <dd>{formatFullDate(detail.createdAt)}</dd>
-                  <dt>Último acceso</dt>
-                  <dd>{detail.lastSignInAt ? formatFullDate(detail.lastSignInAt) : "Nunca"}</dd>
-                  <dt>Plan</dt>
-                  <dd>{detail.planLabel}</dd>
-                  <dt>Estado</dt>
-                  <dd>{STATUS_LABEL[detail.status](detail)}</dd>
-                  <dt>Cliente Stripe</dt>
-                  <dd>{detail.stripeCustomerId ?? "—"}</dd>
-                  {detail.cancelAt ? (
-                    <>
-                      <dt>Cancela el</dt>
-                      <dd>{formatFullDate(detail.cancelAt)}</dd>
-                    </>
-                  ) : null}
-                </dl>
-              </div>
-              <div>
-                <p className="adm-mini-title">Dominios y actividad</p>
-                {detail.projects.length === 0 ? (
-                  <p style={{ fontSize: 12.5, color: "var(--ink-4)", margin: 0 }}>Sin dominios creados.</p>
-                ) : (
-                  detail.projects.map((project) => (
-                    <div className="adm-proj-block" key={project.id}>
-                      <div className="adm-proj">
-                        <span className="adm-proj-d">
-                          {project.domain}
-                          {project.isArchived ? " (archivado)" : ""}
-                        </span>
-                        <span className="adm-proj-s">
-                          {project.latestScan
-                            ? `${project.latestScan.status} · ${formatShortDate(project.latestScan.createdAt)}`
-                            : "sin escaneos"}
-                        </span>
-                      </div>
-                      {/* El interruptor real vive por proyecto; el agregado de la
-                          tabla sólo resume esto. Archivado = el barrido no lo toca. */}
-                      {project.isArchived ? null : (
-                        <div className="adm-proj-auto">
-                          <ProjectAutomationLine automation={project.automation} />
-                        </div>
-                      )}
-                      {/* Escritura: ADMIN-CONSOLE-2b. Sin dato de automatismos no
-                          hay estado actual que invertir con seguridad, así que no
-                          se ofrece el control — mismo criterio que la lectura. */}
-                      {!project.isArchived && project.automation ? (
-                        <div className="adm-proj-write">
-                          <AutomationToggleForm
-                            action={setRecurringScansAsOperator}
-                            projectId={project.id}
-                            enabled={project.automation.recurringScansEnabled}
-                            label="Recurrente"
-                            q={params.q}
-                            status={params.status}
-                          />
-                          <AutomationToggleForm
-                            action={setAutoAuditHalfAsOperator}
-                            half="technical"
-                            projectId={project.id}
-                            enabled={project.automation.technicalAuditEnabled}
-                            label="Auditoría técnica"
-                            q={params.q}
-                            status={params.status}
-                          />
-                          <AutomationToggleForm
-                            action={setAutoAuditHalfAsOperator}
-                            half="coverage"
-                            projectId={project.id}
-                            enabled={project.automation.coverageAuditEnabled}
-                            label="Auditoría IA"
-                            q={params.q}
-                            status={params.status}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  ))
-                )}
-                <p className="adm-cost-note">
-                  El coste es una <strong>estimación</strong>, no lo facturado: sale de las tarifas por llamada de
-                  <code> docs/llm-cost-analysis-2026-08.md</code> §7 (generación medida, extracción estimada, cobertura
-                  de auditoría sin medir) por los prompts y motores activos de cada dominio.
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="adm-empty">Esa cuenta ya no existe.</p>
-        )
+      {/* Sólo cuando la fila tocada no está en la página filtrada actual
+          (búsqueda/filtro la deja fuera, o la lista está vacía) — el caso
+          normal ya se pintó en línea, justo bajo su fila, arriba. */}
+      {params.u && !filtered.some((row) => row.id === params.u) ? (
+        <div className="adm-drawer-standalone">
+          {detail ? (
+            <UserDetailPanel
+              detail={detail}
+              q={params.q}
+              status={params.status}
+              adminSuccess={params.admin_success}
+              adminError={params.admin_error}
+            />
+          ) : (
+            <p className="adm-empty">Esa cuenta ya no existe.</p>
+          )}
+        </div>
       ) : null}
     </main>
   );

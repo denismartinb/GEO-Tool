@@ -770,9 +770,13 @@ export async function sendNewSignupOpsAlertEmail(input: {
  * auditoría automática). Es el registro completo — no hay tabla nueva para
  * esto, así que este email ES la auditoría de la acción, no un aviso
  * adicional a ella (docs/design-reference/admin-console-1/README.md).
+ * Registra quién, qué cuenta, qué proyecto y qué cambió — desde
+ * ADMIN-CONSOLE-UX-1 ya no lleva motivo (decisión explícita del fundador,
+ * `docs/brand/design-decisions-log.md` §80): el registro deja de explicar
+ * el porqué, pero sigue siendo el único rastro del quién/qué/cuándo.
  *
  * Va a `OPS_ALERT_EMAIL`, nunca al cliente: es una escritura que hace GenScore
- * sobre su cuenta, y el motivo que la justifica es interno.
+ * sobre su cuenta.
  */
 export async function sendAdminAutomationChangeAlertEmail(input: {
   operatorEmail: string;
@@ -781,7 +785,6 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
   domain: string;
   projectId: string;
   change: string;
-  reason: string;
   changedAt: Date;
 }): Promise<void> {
   const to = getOpsAlertAddress();
@@ -812,10 +815,6 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
         ${rowsHtml}
       </table>
-      <p style="margin:18px 0 0;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5B6B82;">Motivo</p>
-      <p style="margin:6px 0 0;padding:12px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:10px;font-size:13px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(
-        input.reason
-      )}</p>
     `,
       {
         footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",

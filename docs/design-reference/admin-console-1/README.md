@@ -88,7 +88,10 @@ coste.**
 > **Estado (2026-08-13):** implementada por completo en ADMIN-CONSOLE-2b
 > (log §79): la lectura (2a) y ahora la escritura, con motivo obligatorio y
 > aviso por email en cada cambio, reutilizando las mismas precondiciones que
-> ya corren en `/debug`. Gap descubierto al construirla y NO corregido aquí:
+> ya corren en `/debug`. **Actualización (2026-08-15, ADMIN-CONSOLE-UX-1, log
+> §80):** el motivo se quitó, decisión explícita del fundador — el email
+> sigue siendo el registro (quién/qué/cuándo), sin el porqué. Gap descubierto
+> al construirla y NO corregido aquí:
 > la lectura de 2a no comprueba que la mitad de auditoría de cobertura exige
 > Pro+ (`plan_required` en `audit-job-runner.ts`), así que un proyecto por
 > debajo de Pro con esa columna ya en `true` se muestra como "activo, con
