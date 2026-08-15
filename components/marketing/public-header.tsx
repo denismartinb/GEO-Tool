@@ -76,15 +76,19 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
  * `.lp-hero`/`.lp-nav-wrap` background untouched (that scoping is
  * deliberate — see app/globals.css around `.lp-nav--hero`).
  *
- * SPIKE, pending founder sign-off (header-consistency-public-private,
- * 2026-08-15): the drawer now opens from the left (MarketingMobileNav's
- * default — `fromRight` is no longer passed) and the mobile burger sits at
- * the left with the logo centered, matching WorkspaceTopbar's anatomy
- * (`.hdr-burger` left / `.hdr-brand-mobile` centered). This SUPERSEDES the
- * 2026-08-12 "el menú siempre sale desde la derecha" decision (GENSCORE-HEADER-1,
- * design-decisions-log §63) — not silently: it's a live preview for the
- * founder to judge before either decision is written back to that log.
+ * header-consistency-public-private, 2026-08-15 (founder-approved after
+ * judging a burger-left/logo-centered spike on the real preview): the drawer
+ * opens from the left (MarketingMobileNav's default — `fromRight` is no
+ * longer passed) and the mobile burger sits at the left with the logo
+ * centered, matching WorkspaceTopbar's anatomy (`.hdr-burger` left /
+ * `.hdr-brand-mobile` centered). This SUPERSEDES the 2026-08-12 "el menú
+ * siempre sale desde la derecha" decision (GENSCORE-HEADER-1,
+ * design-decisions-log §63) — the founder confirmed the new side reads
+ * better; the log entry closing this out is still pending the full B1 pass
+ * (drawer chassis shared with the console sidebar) landing on this same PR.
  * `.lp-mobnav--right` stays in globals.css unused, same as it was before.
+ * The drawer's own brand row (`brand` prop below) is new in this same pass —
+ * see MarketingMobileNav and the `.lp-mobnav-brand` rule in globals.css.
  */
 export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; activeHref?: string }) {
   const pathname = usePathname();
@@ -145,6 +149,11 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
       <MarketingMobileNav
         links={links}
         twoLine={hero}
+        brand={
+          <Link href="/" className="lp-mobnav-brandmark" aria-label="Genscore">
+            <BrandLogo size={22} />
+          </Link>
+        }
         ctas={
           user ? (
             <AccountChip user={user} />

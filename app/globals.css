@@ -26,6 +26,12 @@
   --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
   --sidebar-w: 248px;
   --header-h: 52px;
+  /* Shared mobile-drawer chassis (header-consistency-public-private,
+     2026-08-15) — both the console sidebar drawer (.sb) and the public
+     header drawer (.lp-mobnav) read these, so a future change to one
+     changes both instead of drifting apart again. */
+  --drawer-w: 288px;
+  --drawer-anim: .24s cubic-bezier(.4, 0, .2, 1);
   color-scheme: light;
 
   /* ============================================================
@@ -4476,12 +4482,26 @@ a.notif-row:hover {
 .lp-burger { display: none; }
 .lp-mobnav-scrim { position: fixed; inset: 0; background: rgba(15,23,41,.44); z-index: 310; animation: scrimIn .2s ease forwards; }
 .lp-mobnav {
-  position: fixed; top: 0; left: 0; bottom: 0; width: 280px; max-width: 86vw; z-index: 320;
-  background: #fff; box-shadow: 20px 0 60px rgba(15,23,41,.20); display: flex; flex-direction: column; gap: 2px;
-  padding: calc(16px + env(safe-area-inset-top)) 16px 16px; animation: lpMobnavIn .24s cubic-bezier(.4,0,.2,1);
+  position: fixed; top: 0; left: 0; bottom: 0; width: var(--drawer-w); max-width: 86vw; z-index: 320;
+  background: #fff; box-shadow: 20px 0 60px rgba(15,23,41,.20); display: flex; flex-direction: column;
+  padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  animation: lpMobnavIn var(--drawer-anim);
 }
-.lp-mobnav-close { align-self: flex-end; width: 38px; height: 38px; min-width: 44px; min-height: 44px; border-radius: 9px;
-  display: grid; place-items: center; background: none; border: 1px solid transparent; color: var(--ink-3); margin-bottom: 6px; }
+/* header-consistency-public-private, 2026-08-15: the panel used to be one
+   uniformly-padded column with the close button as its own top row. It now
+   has a dedicated brand row — same height as the app bar (--header-h),
+   matching the console sidebar drawer's `.sb-brand` — with the scrollable
+   link list as a separate middle section, so the two drawers share a real
+   header instead of just a close button floating at the top. */
+.lp-mobnav-brand {
+  height: var(--header-h); flex: 0 0 auto;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px 0 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.lp-mobnav-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 16px 16px; }
+.lp-mobnav-close { width: 44px; height: 44px; border-radius: 9px; margin-left: auto;
+  display: grid; place-items: center; background: none; border: 1px solid transparent; color: var(--ink-3); }
 .lp-mobnav-close:hover { background: var(--surface-2); border-color: var(--line); }
 .lp-mobnav a { min-height: 44px; display: flex; align-items: center; padding: 0 10px; border-radius: 8px;
   font-size: 15px; font-weight: 600; color: var(--ink-2); }
@@ -4877,17 +4897,21 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   .lp-h1 { font-size: 42px; }
   .lp-h2 { font-size: 30px; }
   .lp-nav-links { display: none; }
-  /* SPIKE, pending founder sign-off (header-consistency-public-private,
-     2026-08-15): burger moves to the left and the logo centers, matching
-     WorkspaceTopbar's mobile anatomy (.hdr-burger left / .hdr-brand-mobile
-     centered) instead of the previous logo-left/burger-right split. Scoped
-     to `.lp-nav >` direct children — the landing hero's browserframe mockup
-     also renders its own decorative `.lp-logo` deeper in the tree, and an
-     unscoped `.lp-logo` rule here would pull that one out of flow too. */
-  .lp-nav { padding-left: 14px; padding-right: 14px; gap: 6px; position: relative; }
+  /* header-consistency-public-private, 2026-08-15 (founder-approved after
+     the burger-left/logo-centered spike): burger moves to the left and the
+     logo centers, matching WorkspaceTopbar's mobile anatomy (.hdr-burger
+     left / .hdr-brand-mobile centered) instead of the previous
+     logo-left/burger-right split (GENSCORE-HEADER-1, superseded). The bar
+     also now shares --header-h (52px) with the console instead of its own
+     72px, and the burger matches .hdr-burger's 44×44 / radius 10 exactly.
+     Scoped to `.lp-nav >` direct children throughout — the landing hero's
+     browserframe mockup also renders its own decorative `.lp-logo` deeper
+     in the tree, and an unscoped rule here would pull that one out of flow
+     too (caught while spiking this, see git history). */
+  .lp-nav { height: var(--header-h); padding: 0 14px; gap: 6px; position: relative; }
   .lp-burger {
-    display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; min-width: 44px; min-height: 44px;
-    border-radius: 9px; background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
+    display: grid; place-items: center; flex: 0 0 auto; width: 44px; height: 44px;
+    border-radius: var(--r-md); background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
     order: -1;
   }
   .lp-burger:hover { background: var(--surface-2); }
@@ -4895,11 +4919,13 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin: auto;
     width: max-content; height: max-content;
   }
-  /* Logo reads oversized once the nav collapses to just burger + wordmark
-     (founder feedback) — drop it a couple of px alongside the rest of the
-     mobile nav layout. width:auto lets the intrinsic viewBox ratio rescale
-     it instead of stretching at the desktop-computed pixel width. */
-  .lp-logo .brand-logo-svg { height: 19px; width: auto; }
+  /* `BrandLogo` never applied a `.brand-logo-svg` class to its own <svg> —
+     the old `.lp-logo .brand-logo-svg { height: 19px }` here never matched
+     anything, so the mobile bar was actually rendering the desktop 22px
+     logo untouched. Fixed as part of this pass: target the real element
+     (no class needed, `.lp-logo` wraps exactly one <svg>) and match
+     WorkspaceTopbar's mobile logo (`<BrandLogo size={20} />`) for real. */
+  .lp-nav > .lp-logo svg { height: 20px; width: auto; }
   /* .lp-hero has no side padding of its own (relies on centered max-width
      content) — without this, .lp-hero-content's heading/lead text runs flush
      to the viewport edge below 900px. */
@@ -5056,17 +5082,20 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     grid-template-columns: 1fr;
   }
 
-  /* --- Sidebar as overlay drawer --- */
+  /* --- Sidebar as overlay drawer ---
+     Width and transition share --drawer-w / --drawer-anim with the public
+     header's .lp-mobnav (header-consistency-public-private, 2026-08-15) —
+     was 290px / 0.26s here vs 280px / 0.24s there. */
   .sb {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    width: 290px;
+    width: var(--drawer-w);
     max-width: 86vw;
     z-index: 320;
     transform: translateX(-100%);
-    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform var(--drawer-anim);
     box-shadow: 20px 0 60px rgba(15, 23, 41, 0.20);
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
@@ -5084,10 +5113,8 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     display: grid;
     place-items: center;
     margin-left: auto;
-    width: 34px;
-    height: 34px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 44px;
+    height: 44px;
     border-radius: 9px;
     background: none;
     border: 1px solid transparent;
