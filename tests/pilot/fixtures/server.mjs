@@ -65,6 +65,8 @@ const BLOG_SLUGS = [
   "que-es-una-auditoria-geo",
   // SEO-POS-1 Fase C, S6 (2026-08-13).
   "metricas-geo-que-medir",
+  // SEO-POS-1 Fase C, S7 (2026-08-14).
+  "como-aparecer-en-perplexity",
   // SEO-POS-1 Fase C, S8 (2026-08-14).
   "como-medir-trafico-chatgpt-ga4"
 ];

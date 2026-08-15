@@ -49,6 +49,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "como-saber-si-tu-marca-aparece-en-chatgpt": "playbooks",
   // SEO-POS-1 Fase C, S6 (2026-08-13).
   "metricas-geo-que-medir": "medicion",
+  // SEO-POS-1 Fase C, S7 (2026-08-14).
+  "como-aparecer-en-perplexity": "playbooks",
   // SEO-POS-1 Fase C, S8 (2026-08-14).
   "como-medir-trafico-chatgpt-ga4": "medicion"
 };
