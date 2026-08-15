@@ -4,7 +4,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["**/*.test.ts"],
+    // `.tsx` desde PRELAUNCH-HARDENING-1 R7: los componentes de Auditoría web
+    // se testean renderizándolos de verdad con `react-dom/server`, y eso
+    // necesita ficheros con JSX. Sin dependencias nuevas: `react-dom` ya
+    // estaba, y `environment: "node"` basta porque `renderToStaticMarkup` no
+    // toca el DOM (log §85).
+    include: ["**/*.test.ts", "**/*.test.tsx"],
     exclude: ["node_modules/**", ".claude/worktrees/**"]
   },
   resolve: {

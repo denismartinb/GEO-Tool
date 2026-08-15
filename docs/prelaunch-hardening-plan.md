@@ -24,8 +24,10 @@ una con su Human Gate.
   `lib/scan/`, y **R6 queda cerrada**), **R7 casi entera** (log §83: los 14
   componentes de Auditoría web salen de la página; log §84: Visión general deja
   de ser la excepción) y **el grueso de R8** (log §84: dos ficheros muertos
-  borrados). Quedan R3, partir `WebAuditPage`, y los dos huérfanos restantes de
-  R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  borrados) y **46 tests de render para Auditoría web** (log §85), los primeros
+  del repositorio. **R3 queda descartada como está escrita** tras su Task Intake
+  del 2026-08-14 (ver R3 abajo). Quedan partir `WebAuditPage` y los dos
+  huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
@@ -218,7 +220,18 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   WEB-AUDIT-AUTO-SPLIT-1, su sustituto es `setAutoAuditHalf`, y el comentario
   de `actions.ts` dice que la forma de espejo entre ambos es deliberada. Queda
   partir `WebAuditPage` (~1.070 líneas de orquestación de datos), que toca
-  lógica y no presentación.
+  lógica y no presentación — y desde el 2026-08-14 ya no parte de cero: los seis
+  módulos de `_components/` tienen **46 tests de render** (log §85), los primeros
+  del repositorio, con `renderToStaticMarkup` y sin dependencias nuevas.
+  **R3 queda descartada como está escrita** tras su Task Intake (2026-08-14): no
+  son 47 sitios sino 292, los tipos generados no se adoptan sitio a sitio sino
+  tipando el cliente entero, `gen types` necesita credenciales de base de datos
+  que ni CI ni una sesión de agente tienen, y —lo decisivo— las migraciones de
+  este repo se aplican **a mano**, así que un fichero de tipos generado
+  afirmaría con confianza de compilador que una columna existe durante la
+  ventana en la que todavía no se ha pegado el SQL. Además su justificación
+  estaba del revés: en las columnas JSONB donde se concentran los
+  `as unknown as`, `gen types` emite `Json` y empeora lo que hay.
 - **R8 · Limpieza de muertos** (1 PR pequeño): **`lib/supabase/client.ts` y
   `lib/types.ts` borrados** (log §84) — cero importadores, comprobado por ruta
   de import y no por nombre. Quedan
