@@ -74,9 +74,20 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
  * `hero` mirrors the home hero repaint (BRAND-5b): transparent nav bar and
  * a two-line burger glyph. Every other public page keeps its own
  * `.lp-hero`/`.lp-nav-wrap` background untouched (that scoping is
- * deliberate — see app/globals.css around `.lp-nav--hero`). The drawer
- * itself always slides from the right (founder, 2026-08-12: "el menú tiene
- * que salir siempre desde la derecha") — that part isn't hero-only.
+ * deliberate — see app/globals.css around `.lp-nav--hero`).
+ *
+ * header-consistency-public-private, 2026-08-15 (founder-approved on the
+ * real preview, in two steps: first the burger-left/logo-centered side, then
+ * the full shared-chassis pass below): the drawer opens from the left
+ * (MarketingMobileNav's default — `fromRight` is no longer passed) and the
+ * mobile burger sits at the left with the logo centered, matching
+ * WorkspaceTopbar's anatomy (`.hdr-burger` left / `.hdr-brand-mobile`
+ * centered). This SUPERSEDES the 2026-08-12 "el menú siempre sale desde la
+ * derecha" decision (GENSCORE-HEADER-1, design-decisions-log §63) — closed
+ * out in §101, same PR. `.lp-mobnav--right` stays in globals.css unused,
+ * same as it was before. The drawer's own brand row (`brand` prop below) is
+ * new in this same pass — see MarketingMobileNav and the `.lp-mobnav-brand`
+ * rule in globals.css.
  */
 export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; activeHref?: string }) {
   const pathname = usePathname();
@@ -137,7 +148,11 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
       <MarketingMobileNav
         links={links}
         twoLine={hero}
-        fromRight
+        brand={
+          <Link href="/" className="lp-mobnav-brandmark">
+            <BrandLogo size={22} />
+          </Link>
+        }
         ctas={
           user ? (
             <AccountChip user={user} />
