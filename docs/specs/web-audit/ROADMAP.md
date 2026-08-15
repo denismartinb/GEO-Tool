@@ -10,7 +10,7 @@ orden — el orden lo fija la columna `#`.
 | 1 | Sección + matriz de oportunidad + tendencia | WEB-AUDIT-1 | `phase-1-section-and-matrix.md` | ✅ Implementada (PR #170) + fixes de móvil | Ninguno (solo datos ya persistidos) | Human Gate |
 | 2 | Calidad de detección de cobertura | WEB-AUDIT-DQ | `phase-dq-coverage-quality.md` | ✅ Implementada (query por palabras clave en vez de pregunta literal) | Core de DOMAIN-COVERAGE-1; sin schema | Human Gate |
 | 2.5 | Auditoría encadenada por lotes | WEB-AUDIT-CHAIN | `phase-chain-batched-audits.md` | ✅ Implementada (cubre todos los prompts activos, no solo 6) | Modelo de persistencia (running→completed); sin schema nuevo | Human Gate |
-| 3 | Plan de acción + huecos con competidor | WEB-AUDIT-ACTION | `phase-action-plan.md` | ⛔ **Retirada (2026-08-04, PR #289; código borrado 2026-08-15, log §98)** — *"no tiene sentido aquí, debe estar en la página de recomendaciones"* | — | Petición directa del fundador |
+| 3 | Plan de acción + huecos con competidor | WEB-AUDIT-ACTION | `phase-action-plan.md` | ⛔ **Retirada (2026-08-04, PR #289; código borrado 2026-08-15, log §101)** — *"no tiene sentido aquí, debe estar en la página de recomendaciones"* | — | Petición directa del fundador |
 | 4 | Auditoría técnica (páginas + bots IA) | WEB-AUDIT-2 | `phase-2-technical-audit.md` | ✅ Implementada (PR #197) — migración 0018 aplicada manualmente | Fetch acotado (adyacente a "crawler") + migración 0018 | Human Gate |
 | 5 | Generador de briefs de contenido con IA | WEB-AUDIT-BRIEF | `phase-brief-generator.md` | Propuesta | Gemini runtime + migración (generation_type) | **Aprobación explícita + Task Intake + data-guardian** |
 | 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | ⚠️ Parcial — ver fila 6a | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
@@ -56,7 +56,7 @@ huecos señalados en producción, tratados como fases separadas:
   al terminar el escaneo, antes de que exista ninguna auditoría de dominio —
   ver cabecera de `coverage-overlay.ts`). Se sintetizaba el texto de "qué hacer"
   en `synthesizedGuidance`, dentro de `lib/web-audit/action-plan.ts`; ese módulo
-  se retiró de la pantalla en PR #289 y se borró en log §98, así que **hoy esas
+  se retiró de la pantalla en PR #289 y se borró en log §101, así que **hoy esas
   tres clasificaciones se muestran sin ninguna guía de qué hacer**. Queda
   anotado como hueco real, no como fase entregada: si se resuelve, el sitio es
   Recomendaciones, que es donde el fundador dijo que pertenecía.

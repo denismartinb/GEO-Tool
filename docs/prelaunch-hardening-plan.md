@@ -243,7 +243,7 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   ventana en la que todavía no se ha pegado el SQL. Además su justificación
   estaba del revés: en las columnas JSONB donde se concentran los
   `as unknown as`, `gen types` emite `Json` y empeora lo que hay.
-- **R8 · Limpieza de muertos** ✅ **cerrada (2026-08-15, log §98)**:
+- **R8 · Limpieza de muertos** ✅ **cerrada (2026-08-15, log §101)**:
   **`lib/supabase/client.ts` y `lib/types.ts` borrados** (log §84) — cero
   importadores, comprobado por ruta de import y no por nombre. **R8-a:
   `updateProfileName` borrado** — lo dejó sin llamadores CONSOLE-REDESIGN-1
