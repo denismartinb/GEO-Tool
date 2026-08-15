@@ -303,3 +303,24 @@ fallo).
 nunca texto de error crudo — misma convención que el ejecutor de escaneos con
 `getSanitizedScanError`. El detalle crudo va al `console.error` y al email del
 operador, que no son superficies de usuario (data-guardian R2).
+
+### Retirar una fase se cierra igual que entregarla
+
+Si un PR quita una funcionalidad de esta pantalla, **en ese mismo PR** se toca
+su spec: fila del `ROADMAP.md`, entrada del `README.md` y cabecera del
+`phase-*.md`. No es papeleo. `lib/web-audit/action-plan.ts` —176 líneas y 17
+tests— sobrevivió once días sin un solo importador porque el ROADMAP seguía
+diciendo «✅ Implementada»: un módulo huérfano lo encuentra cualquiera, pero un
+módulo huérfano *que la spec jura entregado* se lee como «esto se usa desde
+algún sitio que no encuentro» (log §102).
+
+Y la spec **no se borra**, se marca retirada en cabecera, como hace `docs/adr/`
+con lo superseded: el diseño que describe suele ser justo la decisión que se
+revirtió, y quien la lea sin ese aviso la implementará otra vez.
+
+**Lo que la retirada se llevó por delante se anota como hueco abierto, no se
+calla.** Al quitar el plan de acción desapareció el único texto de «qué hacer»
+que tenían `content_gap`, `open_opportunity` y `unverified_cited` —el motor de
+recomendaciones no las cubre, porque corre al terminar el escaneo y antes de que
+exista ninguna auditoría— y ese hueco pasó once días sin figurar en ningún
+sitio. Una fase retirada deja el ROADMAP diciendo qué dejó de funcionar.

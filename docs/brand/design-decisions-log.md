@@ -9158,6 +9158,9 @@ pérdida de sesión y el `retries: 0`); §54 (la intermitencia de CI); §55
 
 ---
 
+
+---
+
 ---
 
 ## 98. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
@@ -9655,6 +9658,67 @@ unificados, el `activeHref`, el CTA único a `/signup`). Construye sobre §3
 (anatomía de `WorkspaceTopbar`, aprobada 2026-07-24) y §65 (`AccountChip`
 compartido). `docs/agentic-user-pilot.md` sigue pendiente de correr como
 juicio visual formal antes del Human Gate de este PR.
+
+---
+
+---
+
+## 102. Dos trozos de código que la documentación juraba vivos (PRELAUNCH-HARDENING-1 Fase R8, 2026-08-15)
+
+**Qué se decidió.** Se borran los dos huérfanos que quedaban de la Fase R.
+Ninguno de los dos era código muerto por descuido, y ahí está lo interesante:
+los dos **sobrevivieron porque un documento decía que estaban en uso**.
+
+### 1. `updateProfileName` — superseded y no retirado
+
+CONSOLE-REDESIGN-1 (2026-08-06) fusionó las cuatro pantallas de ajustes en una
+sola, y con ellas los formularios: el nombre pasó a guardarse en `saveAccount`,
+junto a los datos de la organización. La action vieja se quedó exportada, sin
+llamadores y **sin un solo test** —sus dos vecinas del mismo fichero,
+`changePassword` y `deleteAccount`, sí están vivas y sí tienen tests—, que es
+exactamente la forma que tiene el código muerto de no parecerlo: rodeado de
+código vivo, en un fichero que se abre a menudo.
+
+### 2. `action-plan.ts` — retirado del producto, «✅ Implementada» en la spec
+
+176 líneas y 17 tests, sin un solo importador desde el 2026-08-04. No se
+desconectó por accidente: lo retiraste tú en el PR #289, con la frase escrita en
+el propio commit —*«no tiene sentido aquí, debe estar en la página de
+recomendaciones»*— y el `page.tsx` conservaba el comentario explicando qué se
+había quitado.
+
+Lo que nadie tocó fue la documentación. `docs/specs/web-audit/ROADMAP.md` siguió
+once días diciendo **«fase 3 · ✅ Implementada»** de una pantalla que ya no
+existía, y su `README.md` la listaba como entregada. Un módulo sin importadores
+lo encuentra cualquiera; un módulo sin importadores **que la spec jura
+entregado** se lee como «esto se usa desde algún sitio que no encuentro» y
+sobrevive indefinidamente.
+
+**La lección, que es de proceso y no de código:** retirar una funcionalidad
+tiene el mismo requisito de cierre que entregarla. Si el PR que la quita de la
+pantalla no toca su spec, la deuda no queda documentada — queda *contradicha*.
+
+### Lo que este borrado deja peor, dicho en voz alta
+
+`synthesizedGuidance` era lo único que ponía texto de «qué hacer» en las
+clasificaciones `content_gap`, `open_opportunity` y `unverified_cited`, porque
+el motor de recomendaciones no las cubre (corre al terminar el escaneo, antes de
+que exista ninguna auditoría). Al retirar la tarjeta, ese texto dejó de verse el
+2026-08-04; borrar el módulo hoy no quita nada más, pero **el hueco es real y
+llevaba once días sin estar anotado en ninguna parte**. Queda escrito en el
+ROADMAP como hueco abierto, ya no como fase entregada. Si se resuelve, el sitio
+es Recomendaciones.
+
+La spec `phase-action-plan.md` **no se borra**: se marca retirada en cabecera,
+igual que `docs/adr/` marca lo superseded. El diseño de una tarjeta dentro de
+Auditoría web es justo la decisión que se revirtió, y una sesión futura que la
+leyera sin ese aviso la implementaría otra vez.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R8); PR #289
+(la retirada original); log §38 (CONSOLE-REDESIGN-1);
+`docs/specs/web-audit/ROADMAP.md` fila 3 y «Fase A».
+
+---
 
 ---
 

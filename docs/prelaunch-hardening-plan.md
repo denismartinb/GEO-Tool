@@ -243,11 +243,17 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   ventana en la que todavía no se ha pegado el SQL. Además su justificación
   estaba del revés: en las columnas JSONB donde se concentran los
   `as unknown as`, `gen types` emite `Json` y empeora lo que hay.
-- **R8 · Limpieza de muertos** (1 PR pequeño): **`lib/supabase/client.ts` y
-  `lib/types.ts` borrados** (log §84) — cero importadores, comprobado por ruta
-  de import y no por nombre. Quedan
-  `lib/web-audit/action-plan.ts` (huérfano shipped: decidir re-conectar o
-  retirar con nota en el ROADMAP), `updateProfileName` huérfano (log §38).
+- **R8 · Limpieza de muertos** ✅ **cerrada (2026-08-15, log §102)**:
+  **`lib/supabase/client.ts` y `lib/types.ts` borrados** (log §84) — cero
+  importadores, comprobado por ruta de import y no por nombre. **R8-a:
+  `updateProfileName` borrado** — lo dejó sin llamadores CONSOLE-REDESIGN-1
+  (log §38) y ningún test lo cubría. **R8-b: `lib/web-audit/action-plan.ts` y
+  sus 17 tests borrados**, decisión del fundador (2026-08-15) sobre las dos
+  salidas que planteaba este punto: se retira, no se re-conecta. No era un
+  huérfano por descuido —lo sacó de la pantalla el PR #289 el 2026-08-04— sino
+  un módulo que sobrevivió porque **la spec seguía diciendo «✅ Implementada»**;
+  el ROADMAP queda corregido y la fase A que dependía de él vuelve a figurar
+  como hueco abierto, no como entregada.
 
 *Explícitamente fuera de la Fase R:* consolidar los 3 workflows
 `ux-pilot*.yml` (672 líneas casi duplicadas) — deseable, pero tocar el
