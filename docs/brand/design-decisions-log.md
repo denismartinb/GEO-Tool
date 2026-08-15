@@ -7948,6 +7948,51 @@ contenedor. Resultado: la ficha se ve entera y a ancho de pantalla sin que el
 operador tenga que desplazar nada, aunque la fila que la contiene siga siendo
 más ancha que la pantalla.
 
+**Tercera corrección, el mismo día: seleccionar una cuenta ejecutaba toda la
+página otra vez.** El fundador lo notó directamente: cada clic en una fila se
+sentía como una recarga completa. La causa era real, no sólo percibida —
+`AdminUsersPage` es un Server Component que lee `searchParams`, así que
+navegar a `?u=<id>` volvía a ejecutar la función entera, incluida
+`listOperatorUsers()` (la lista completa de cuentas, el KPI, el coste
+agregado — nada de lo cual depende de qué cuenta esté seleccionada), sólo
+para traer el detalle de una. Sin `loading.tsx` ni un límite de `<Suspense>`
+alrededor, tampoco había ninguna señal visual mientras tanto: la página se
+quedaba congelada y luego cambiaba de golpe, con scroll al inicio incluido
+(comportamiento por defecto de la navegación de Next).
+
+**La selección de cuenta deja de ser un `searchParam` que dispara
+renderizado de servidor y pasa a ser estado de cliente.** Nuevos ficheros:
+`lib/admin/user-detail-action.ts` (server action de sólo lectura,
+`fetchOperatorUserDetail`, con la misma puerta `requireOperator()` de
+siempre dentro de la propia acción — nunca delegada en quien la llama);
+`app/admin/users/shared.tsx` (las piezas de presentación que antes vivían en
+`page.tsx` — `UserDetailPanel`, `AutomationToggleForm`, `STATUS_LABEL`, los
+formateadores — sin nada server-only, así que sirven tanto al Server
+Component como al nuevo Client Component); `app/admin/users/users-table.tsx`
+(`"use client"`, el nuevo dueño de la tabla y el acordeón). Al pulsar una
+fila: `fetchOperatorUserDetail` corre dentro de una transición y sólo la
+ficha cambia — la tabla ni se vuelve a pedir ni se vuelve a montar. La URL
+se sincroniza con `window.history.replaceState` directamente, sin pasar por
+el router de Next, para que la cuenta seleccionada siga siendo enlazable sin
+que ese cambio de URL dispare por sí mismo una petición al servidor.
+`page.tsx` conserva la carga inicial (deep link a `?u=...`, recarga real) y
+sigue siendo el único que hace el fetch completo de la lista. Los filtros
+(buscador, chips de estado) y el envío de un formulario de automatismo
+siguen siendo navegación real de servidor — eso sí necesita datos nuevos —
+y un `useEffect` en `UsersTable` resincroniza el estado local cuando esas
+props cambian de identidad.
+
+**Efecto colateral, no accidental: `formatUsd`/`provenanceLabel` se separan
+de `lib/admin/cost-model.ts`.** Ese fichero lleva `import "server-only"`
+porque calcula el coste a partir de tarifas internas; `shared.tsx` sólo
+necesitaba las dos funciones de formato, sin las tarifas, pero importar
+cualquier cosa de un módulo `server-only` desde un fichero que un Client
+Component importa rompe el build (Next lo rechaza explícitamente, correcto).
+Las dos funciones —sin nada sensible, sólo formato— pasan a
+`lib/admin/cost-format.ts`, sin `server-only`; `cost-model.ts` las
+re-exporta para no romper a `automation.ts` ni a `page.tsx`, que siguen
+importándolas de donde siempre.
+
 ### Pendiente / roto conocido
 
 - Sigue sin piloto agéntico, misma razón que toda la zona: AAL2 bloquea el

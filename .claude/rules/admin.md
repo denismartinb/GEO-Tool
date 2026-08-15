@@ -168,3 +168,28 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   (`AUTH_USERS_FETCH_CAP`), and hitting it must set `authUsersTruncated` and
   render a visible note — not silently show `lastSignInAt` as missing with no
   explanation.
+- **A read a Client Component calls directly still goes through
+  `requireOperator()` inside the action, same as a write.** `/admin/users`
+  has a Client Component (`users-table.tsx`, ADMIN-CONSOLE-UX-1) that calls
+  `fetchOperatorUserDetail` (`lib/admin/user-detail-action.ts`) via
+  `useTransition` instead of navigating — this exists specifically so
+  selecting an account doesn't re-run the whole page server-side just to
+  fetch one detail. It is still a `"use server"` action, and it still calls
+  `requireOperator("/admin/users")` as its first line, for the same reason
+  every other action here does: a server action is a callable endpoint
+  independent of whatever called it, page or client component alike
+  (`docs/brand/design-decisions-log.md` §80).
+- **Presentation helpers shared between the server page and a Client
+  Component must not import anything `server-only`.** `app/admin/users/
+  shared.tsx` holds `UserDetailPanel` and friends precisely because they
+  have to render from both `page.tsx` (server) and `users-table.tsx`
+  (client) — importing `formatUsd`/`provenanceLabel` from
+  `lib/admin/cost-model.ts` (which starts with `import "server-only"`
+  because it also computes cost from internal rates) broke the client build
+  the moment `shared.tsx` was imported by a `"use client"` file. Pure
+  formatting with nothing sensitive in it lives in `lib/admin/
+  cost-format.ts` instead, with no `server-only` guard; the actual rate
+  constants and `estimateProjectMonthlyCost` stay behind the guard in
+  `cost-model.ts` (§80). If a future admin screen needs the same split,
+  this is the pattern — split the presentation-safe half out, don't remove
+  the guard from the file that has real internal numbers in it.
