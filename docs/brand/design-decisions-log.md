@@ -8815,6 +8815,73 @@ ADR 0029; §87 (por qué no se fija el maquetado).
 
 ---
 
+## 92. La frontera de autenticación, y una guarda que cubre el fichero que nadie ha escrito todavía (PRELAUNCH-HARDENING-1 Fase Q4, 2026-08-15)
+
+**Qué se decidió.** 22 tests para `middleware.ts`, `lib/auth.ts` y —lo más
+importante— una **guarda estructural** sobre todo uso del rol de servicio en
+`app/`. De 2.462 a 2.484.
+
+### La guarda es lo que de verdad aporta
+
+`createServiceClient()` **salta RLS**. El plan pedía tests de «los 7 sitios de
+`app/` que lo usan»; medidos, son **12**, y los doce establecen identidad
+correctamente. O sea que doce tests unitarios habrían salido verdes el primer
+día y no habrían protegido de nada.
+
+El riesgo no son esos doce: es **el decimotercero**, el que alguien añada dentro
+de tres meses copiando el patrón a medias. Por eso
+`tests/service-role-identity.test.ts` comprueba una propiedad de **todo el
+directorio** —cada fichero de `app/` que use el rol de servicio tiene que
+establecer identidad de una de cuatro formas conocidas (`requireUser`,
+`requireActiveProject`, `isAuthorizedInternalRequest`, la firma de Stripe)— así
+que un fichero nuevo entra en el alcance solo. Mismo patrón que
+`env-drift.test.ts` y `console-css-scope.test.ts`.
+
+Se verificó creando un fichero sin guarda en `app/`: rojo, con el mensaje que
+explica qué falta. Usa `git grep --untracked` a propósito, para que un fichero
+recién escrito y aún sin commitear también cuente — que es justo cuando hace
+falta (misma lección que §70).
+
+**Lo que la guarda NO demuestra, dicho claro:** que la comprobación sea
+*correcta*. Ve que el fichero establece identidad, no que la aplique al dato que
+toca. Eso sigue siendo revisión humana y `data-guardian`.
+
+### Del middleware, lo importante es lo que NO hace
+
+No es una puerta: su propio comentario lo dice, y aun así es exactamente el
+sitio donde alguien metería un control de acceso creyendo que ayuda. Hay un test
+que fija que **sin sesión responde igual** —`NextResponse.next()`, ni redirect
+ni 401— junto al que fija que sí refresca la sesión. Y otro sobre el matcher:
+sin las exclusiones, este middleware —que abre un cliente de Supabase y verifica
+un JWT— correría en cada imagen y cada bundle.
+
+### Dos veces en que el test estaba mal, no el código
+
+1. **La memoización de `requireUser` no se puede testear**, y queda anotado en
+   el propio fichero para que nadie lo reintente: `React.cache()` sólo memoiza
+   dentro del ámbito de una petición de React, así que desde un test de node
+   tres llamadas producen tres viajes y `toHaveBeenCalledTimes(1)` falla contra
+   código correcto.
+2. **El matcher del middleware hay que anclarlo.** Next lo hace por su cuenta;
+   sin `^…$` el patrón casa en cualquier punto de la ruta y las exclusiones
+   parecen no funcionar.
+
+Las dos se descubrieron viendo el test en rojo antes de dar nada por bueno.
+
+**Los tests se probaron rotos.** Un fichero sin guarda en `app/` (1 rojo), la
+cookie dejando de validar el uuid (1), y el matcher dejando de excluir estáticos
+(1).
+
+**`lib/account-role.ts` se deja sin tests a propósito**: son diez líneas que
+devuelven `"admin"` constante porque no hay equipos ni RBAC. Un test ahí
+afirmaría que una constante es esa constante.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q4);
+`.claude/rules/supabase.md` («no service-role shortcuts en flujos de usuario»);
+§70 (por qué `--untracked`); §91 (Q2).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

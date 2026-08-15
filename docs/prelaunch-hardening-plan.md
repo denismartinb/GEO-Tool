@@ -35,7 +35,9 @@ una con su Human Gate.
   §90: 28 tests del cableado de las cuatro rutas que sostienen el escaneo
   recurrente), **Q2 hecho** (log §91: 19 tests de los correos transaccionales —
   el único módulo cuyo fallo llega a la bandeja de un cliente y no se puede
-  deshacer), el self-check del
+  deshacer) y **Q4 hecho** (log §92: la frontera de auth, y una guarda
+  estructural que cubre el uso de rol de servicio que nadie ha escrito
+  todavía), el self-check del
   piloto vuelve a estar verde y su evidencia se sube de verdad (log §49), y
   **Q5b está hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
@@ -285,10 +287,18 @@ forma medible.*
   que el tope de `chainIndex` se rechace en vez de recortarse, y que ningún
   error crudo de Postgres llegue a la respuesta. **Sigue sin cubrir** que Vercel
   las llame con la cadencia de `vercel.json`: eso es configuración, no código.
-- **Q4 · Frontera auth/tenancy**: tests de `middleware.ts`, `lib/auth.ts`,
-  `lib/account-role.ts` y de los 7 sitios de `app/` que usan
-  `createServiceClient()` (que el ownership manual que RLS no cubre esté
-  efectivamente comprobado en cada uno).
+- **Q4 · Frontera auth/tenancy** ✅ **hecho (2026-08-15, log §92)**: 22 tests.
+  **Corrección medida**: no son 7 sitios de `app/` con `createServiceClient()`,
+  son **12**, y los doce ya establecían identidad — o sea que doce tests
+  unitarios habrían salido verdes el primer día sin proteger de nada. Lo que se
+  hizo en su lugar es una **guarda estructural**
+  (`tests/service-role-identity.test.ts`): cada fichero de `app/` que salte RLS
+  tiene que establecer identidad de una de cuatro formas conocidas, y un fichero
+  nuevo entra en el alcance solo. Verificada creando uno sin guarda. `middleware`
+  y `requireUser` tienen tests propios; `lib/account-role.ts` se deja sin ellos
+  a propósito (diez líneas que devuelven una constante). **Sigue sin cubrir**
+  que la comprobación sea *correcta* en cada sitio: la guarda ve que hay
+  identidad, no que se aplique al dato que se toca.
 - **Q5 · Arreglos del arnés del piloto** (baratos, de alto retorno):
   `ContentExpectation` en `second-project.spec.ts` (hoy pasa sobre proyectos
   vacíos); el input `pr_number` de `ux-pilot-write.yml` tipado como string
