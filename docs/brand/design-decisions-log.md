@@ -8944,6 +8944,53 @@ afirmaría que una constante es esa constante.
 
 ---
 
+## 94. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
+
+**Qué se decidió.** `/gratis/aparece-mi-marca-en-chatgpt`, primera pieza de la
+Fase P de `docs/seo-positioning-plan.md` (comprobador gratuito público).
+Task Intake propio, aprobado por el fundador solo para esta fase — las otras
+dos preguntas del Task Intake (autorización de esquema/RLS para una
+comprobación real, y Gemini vs. ChatGPT como motor) siguen sin respuesta y
+bloquean cualquier fase posterior.
+
+**Por qué esta fase y no la comprobación real.** El coste real medido
+(`docs/llm-cost-analysis-2026-08.md`) de una comprobación anónima de 3
+prompts es ~0,016 $ — la mitad de un escaneo Free completo — y hoy no existe
+en el repositorio ningún primitivo para limitar a un visitante sin cuenta:
+sin rate-limit por IP, sin Redis, sin captcha. 1.000 consultas/día costarían
+32× el gasto LLM actual del producto, y 500/día agotarían el tramo gratuito
+de grounding de Gemini que comparten los clientes de pago. Cualquier versión
+que llame a un LLM de verdad necesita una tabla nueva (migración), una
+política RLS nueva o escritura por service-role en una ruta anónima — las
+tres prohibidas sin aprobación explícita del fundador (CLAUDE.md), y esa
+aprobación no se ha pedido todavía.
+
+**Lo que sí se decidió: medir demanda antes de construir la máquina.** La
+página capta el dominio con el mismo mecanismo que ya usa el hero de la
+landing (`lib/onboarding/pending-domain.ts`, sin modificarlo — arrastre por
+`localStorage`, se consume al leerlo) y lleva al registro real, donde el
+asistente lo recoge y lanza el escaneo real del plan Free. Cero llamadas LLM,
+cero escritura en base de datos, cero esquema nuevo.
+
+**Honestidad del copy, no solo del backend.** La página dice explícitamente
+que no es un resultado instantáneo — es el escaneo real del plan Free (10
+prompts, 1 motor) — porque prometer una comprobación inmediata y entregar un
+registro habría sido el mismo "fake scan" que CLAUDE.md prohíbe, solo que en
+la página de captación en vez de en el producto.
+
+**Reutiliza el shell de blog, no un layout nuevo.** `BlogPageShell`, el mismo
+que usan `/glosario` y `/comparativas` — `growth-content.md` fija cinco
+shells de marketing y ninguno añade un `<Link>` de pie a mano.
+`.lp-cta:disabled` es el único CSS nuevo: el botón no existía deshabilitado
+en ningún sitio del sistema y el criterio de aceptación exige que un dominio
+inválido no habilite el envío.
+
+**Trazabilidad.** Task Intake FREE-CHECKER-1 (2026-08-15, sin PR propio —
+generado en la conversación, no committeado como documento aparte);
+`docs/seo-positioning-plan.md` Fase P; `docs/llm-cost-analysis-2026-08.md`.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

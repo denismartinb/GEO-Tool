@@ -4590,6 +4590,8 @@ a.notif-row:hover {
   white-space: nowrap; transition: background .13s;
 }
 .lp-cta:hover { background: #1d4ed8; color: #fff; }
+.lp-cta:disabled { background: var(--ink-4); border-color: var(--ink-4); cursor: not-allowed; }
+.lp-cta:disabled:hover { background: var(--ink-4); }
 .lp-cta-soft {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;

@@ -148,6 +148,21 @@ test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
 });
 
 /**
+ * FREE-CHECKER-1 Fase A. Estrictamente de lectura, como el resto de este
+ * fichero: visita la página y comprueba que carga, nunca escribe el campo de
+ * dominio ni pulsa el botón — eso navegaría a /signup, fuera del guard de
+ * "solo lectura" de este journey.
+ */
+test("/gratis/aparece-mi-marca-en-chatgpt renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/gratis/aparece-mi-marca-en-chatgpt", "free-checker", {
+    describedAs: "el formulario de dominio y la explicación de qué obtiene el visitante",
+    anyOf: [{ selector: ".lp-hero-form" }]
+  });
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/gratis/aparece-mi-marca-en-chatgpt");
+});
+
+/**
  * GENSCORE-HEADER-3, a petición del `ux-pilot` (2026-08-12). El barrido de
  * interacción sólo abre menús en pantallas de consola, así que **el cajón
  * móvil de la cabecera pública no se fotografiaba nunca**: cuando
