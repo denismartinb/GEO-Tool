@@ -1,0 +1,196 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  AnswerSample,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-hacer-que-chatgpt-recomiende-tu-negocio");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cómo hago que ChatGPT recomiende mi negocio?",
+    answer:
+      "No hay un truco que fuerce una recomendación. Lo que sí puedes controlar es que tu negocio tenga los datos correctos y consistentes en todo internet (nombre, dirección, teléfono), reseñas reales y recientes, y contenido propio que responda con especificidad la pregunta exacta que hace tu cliente — todo eso es lo que un motor generativo encuentra cuando busca para responder."
+  },
+  {
+    question: "¿Sirve de algo tener muchas reseñas si son antiguas?",
+    answer:
+      "Menos de lo que parece. Un motor que busca en tiempo real da más peso a lo reciente, igual que un cliente desconfía de una reseña de hace tres años. Diez reseñas de los últimos meses pesan más que cien de hace dos años."
+  },
+  {
+    question: "¿Necesito estar en Google Business Profile?",
+    answer:
+      "Es la fuente más citada para negocios locales — los motores generativos que buscan en la web la encuentran con facilidad, y es gratis. No tenerlo completo (horario, categoría, fotos, dirección exacta) es la forma más fácil de quedarte fuera antes de empezar."
+  },
+  {
+    question: "¿Puedo comprar reseñas o listados en directorios para acelerar esto?",
+    answer:
+      "No, y por dos motivos: es fácil de detectar (patrones de fecha y redacción idénticos), y si funciona a corto plazo, construye una reputación falsa que se cae en cuanto un cliente real la contradice en público. Es exactamente el atajo que este artículo pide evitar."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Un negocio local no compite por "el mejor restaurante del mundo", compite por
+"el mejor japonés cerca de Malasaña que abra domingo". Esa especificidad es tu
+ventaja: un motor generativo que responde a una pregunta así solo puede
+nombrar dos o tres negocios, y decide con lo que encuentra buscando —
+consistencia de tus datos, reseñas reales y recientes, y contenido propio que
+responda esa pregunta exacta. Nada de esto se compra ni se fuerza; se
+construye.
+
+</KeyTakeaway>
+
+## Por qué la pregunta de un cliente local es distinta
+
+Cuando alguien le pregunta a una IA por una categoría genérica —"herramientas
+de gestión de proyectos"— compite con marcas globales que llevan años
+construyendo autoridad. Cuando le pregunta por algo local —"un dentista en
+Chamberí que atienda urgencias este fin de semana"—, el terreno de juego
+cambia por completo: la respuesta tiene que ser específica de esa zona, de esa
+franja horaria, de ese servicio, y ahí una marca global no tiene ninguna
+ventaja sobre ti.
+
+<CompareTable>
+
+| | Pregunta genérica | Pregunta local |
+|---|---|---|
+| **Ejemplo** | "¿Cuál es el mejor CRM?" | "¿Qué clínica dental en Chamberí atiende urgencias el domingo?" |
+| **Quién compite** | Marcas con presencia global | Los negocios que de verdad operan en esa zona |
+| **Qué decide la respuesta** | Autoridad de dominio, cobertura de contenido | Datos correctos, reseñas recientes, coincidencia exacta con la necesidad |
+| **Cuántos nombra la respuesta** | Puede citar varias alternativas | Casi siempre dos o tres, con un ganador claro |
+
+</CompareTable>
+
+Esa última fila es la que más importa: en una pregunta local, salir en la
+respuesta no es una entre veinte opciones — es una entre dos o tres. Compite
+menos gente de la que crees, y eso hace que cada mejora concreta pese más.
+
+## Qué mueve de verdad la recomendación
+
+<NumberedSection n={1} title="Que tus datos digan lo mismo en todas partes">
+
+Nombre, dirección y teléfono tienen que coincidir exactamente entre tu web, tu
+perfil de Google Business, y cualquier directorio donde aparezcas. Una
+dirección con el número de piso en un sitio y sin él en otro no es un detalle
+menor: es la diferencia entre que un motor confíe en el dato y lo descarte por
+inconsistente.
+
+<QuickAction>Busca tu negocio en tres sitios distintos (tu web, Google, un directorio del sector) y compara letra por letra nombre, dirección y teléfono.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Reseñas reales, y sobre todo recientes">
+
+Un motor que busca en tiempo real da más peso a lo reciente que a lo
+acumulado. Diez reseñas genuinas de los últimos meses cuentan más que cien de
+hace dos años — igual que a un cliente le pasaría exactamente lo mismo mirando
+las mismas reseñas.
+
+<QuickAction>Pide una reseña a tus últimos cinco clientes satisfechos, sin ofrecer nada a cambio: pedirlo es legítimo, comprarlo no.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Contenido propio que responda la pregunta exacta">
+
+No una página genérica de "servicios", sino una que responda la pregunta con
+la misma especificidad con la que la hace el cliente: qué problema resuelves,
+en qué zona, con qué disponibilidad, a qué precio orientativo. Cuanto más se
+parezca tu página a la respuesta que querrías leer, más fácil se la pones al
+motor.
+
+<QuickAction>Escribe una página o sección que responda directamente a la pregunta más específica que te hace un cliente nuevo — con el mismo nivel de detalle que le darías en persona.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Presencia donde ya se habla de tu categoría en tu zona">
+
+Directorios locales, prensa de barrio, asociaciones de comercio, foros de tu
+sector: son sitios que un motor generativo puede encontrar al buscar, y que
+además contrastan tu propia información. Sé selectivo — un directorio real de
+tu ciudad o gremio aporta; un listado genérico sin ningún filtro de calidad,
+no.
+
+<QuickAction>Busca "[tu categoría] + [tu zona]" y anota qué tres sitios aparecen una y otra vez — esos son los que vale la pena perseguir.</QuickAction>
+
+</NumberedSection>
+
+<Figure
+  label="Figura 1."
+  caption="Cómo se ve una respuesta a una pregunta local: nombra dos negocios concretos, con el motivo de cada recomendación. Ejemplo ilustrativo del formato, no una respuesta real capturada."
+>
+  <AnswerSample
+    verdict="Respuesta a una pregunta local"
+    text="Para una urgencia dental el domingo en Chamberí, Clínica Ejemplo Norte abre de 10 a 14h y tiene buena valoración reciente en atención de urgencias; Clínica Ejemplo Centro está algo más lejos pero con disponibilidad toda la tarde."
+    source="ejemplo-clinica.com/urgencias-domingo"
+  />
+</Figure>
+
+## Errores que restan, no que suman
+
+<Checklist
+  tone="evitar"
+  items={[
+    "No compres reseñas ni listados en directorios: se detecta con facilidad y la reputación falsa se cae en cuanto un cliente real la contradice.",
+    "No repitas el nombre de tu ciudad o barrio como si fuera una palabra clave a machacar: la especificidad se demuestra respondiendo bien, no repitiendo el nombre del lugar.",
+    "No dejes tus datos de contacto distintos entre tu web y tus perfiles — esa inconsistencia pesa más de lo que parece.",
+    "No copies la página de servicios de otro negocio de tu sector: una página genérica no responde ninguna pregunta específica de verdad."
+  ]}
+/>
+
+## La base es la misma que en cualquier otro motor
+
+Todo lo anterior es el mismo criterio que ya explicamos para <a href="/blog/como-conseguir-que-chatgpt-te-cite">conseguir que ChatGPT te cite</a> —
+claridad, verificabilidad, autoridad — aplicado a una escala donde compites con
+dos o tres negocios reales, no con toda una categoría global. Y si vendes a
+otras empresas en vez de a consumidores locales, el mismo criterio cambia de
+forma: lo tratamos en <a href="/blog/geo-para-saas-b2b">GEO para SaaS B2B</a>.
+
+<ArticleCta
+  title="¿Sabes si tu negocio aparece cuando alguien pregunta por tu categoría?"
+  text="Genscore mide con escaneos reales si tu marca aparece en ChatGPT, Gemini y Claude para las preguntas que hacen tus clientes. Escaneo gratuito, sin tarjeta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>
