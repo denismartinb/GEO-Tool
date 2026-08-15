@@ -23,7 +23,12 @@ const MARKETING_SHELLS = [
   "components/pricing/pricing-page.tsx",
   "components/blog/blog-page-shell.tsx",
   "components/docs/docs-page-shell.tsx",
-  "components/legal-page-shell.tsx"
+  "components/legal-page-shell.tsx",
+  // NOT-FOUND-ROCKET-1: la 404 pública tiene su propio shell (no reutiliza
+  // BlogPageShell porque `.lp-inner` impide la escena a sangre), así que es
+  // una superficie más con pie público — justo la clase de sitio donde se
+  // olvidan las cuatro capas de contenido.
+  "components/not-found-mission.tsx"
 ];
 
 describe("MARKETING_CONTENT_LINKS", () => {
