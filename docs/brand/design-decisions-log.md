@@ -8589,6 +8589,361 @@ de reescribir la de allí.
 
 ---
 
+## 88. Tres trabajos que el fundador descarta, escritos para que no resuciten (2026-08-15)
+
+**Qué se decidió.** El fundador descarta tres cosas. Se registran aquí porque
+**dos de ellas no vivían en ningún documento**: eran peticiones suyas en
+conversación, y una petición que sólo existe en un chat vuelve a aparecer sola
+en la siguiente sesión que lea el histórico.
+
+1. **P1 · UX-PILOT-4, el journey de alta completa.** Necesitaba su propia
+   aprobación de excepción de escritura del piloto y no la tendrá. Anotado
+   también en `docs/prelaunch-hardening-plan.md` §Fase P.
+2. **El rediseño de la arquitectura del blog.** El fundador lo pidió el
+   2026-08-14 —*«hay que revisar la arquitectura y diseño del blog. Ahora mismo
+   es demasiado plano y sin ningún tipo de jerarquía de info ni organización»*—
+   y lo retira el 15.
+3. **Los estados del gráfico de panorámica competitiva.** Pedido el mismo día
+   —*«sí merece la pena revisar ese gráfico en sus diferentes estados en un
+   artefacto»*— y retirado igual.
+
+**La consecuencia del primero, dicha en voz alta.** Sin P1, **el flujo de alta
+completo (registro → dominio nuevo → primer escaneo → Overview con datos) sigue
+sin recorrerlo ningún test automatizado de principio a fin**. Es el riesgo #3
+del diagnóstico de PRELAUNCH-HARDENING-1 y se queda abierto **a propósito**, no
+por olvido. Lo que sí lo cubre en parte es Q1 (`createProjectCore` y sus tests):
+la lógica de creación, no el recorrido por navegador.
+
+**Lo que NO cambia.** Los invariantes de la panorámica siguen vigentes tal cual
+en `.claude/rules/competitors.md` (§36, PANORAMA-EMPTY-1): descartar el
+rediseño no descarta las reglas de sus cuatro estados. Y el blog sigue con su
+estrategia de contenido intacta; lo retirado es sólo repensar su jerarquía
+visual.
+
+---
+
+## 89. El alta de un dominio no tenía tests porque no podía tenerlos (PRELAUNCH-HARDENING-1 Fase Q1, 2026-08-15)
+
+**Qué se decidió.** `createProject` se parte en `createProjectCore`
+(`lib/projects/create-project.ts`) + una action que sólo traduce. **18 tests
+nuevos**, de 2.383 a 2.401.
+
+**Por qué importaba más que cualquier fichero largo.** Son ~210 líneas que
+ejecutan el Core Target Flow entero —dominio → competidores sugeridos → prompts
+sugeridos → primer escaneo— y no tenían **ni una sola aserción**. Es lo que hace
+un cliente nuevo en su primer minuto. Deuda anotada en ADR 0022 y riesgo #8 del
+plan.
+
+### El hallazgo: no era descuido, era imposible
+
+Todo el control de flujo de esa función eran `redirect()`, y en Next `redirect`
+**lanza**. No había desenlace observable: no se podía comprobar «¿qué pasa si el
+dominio ya existe archivado?» sin un navegador. Un test que sólo puede afirmar
+«lanzó algo» no es un test.
+
+Por eso lo que cambia **no es la lógica sino cómo se comunica el desenlace**: el
+núcleo devuelve un resultado discriminado y la action lo traduce a
+`revalidatePath` + `redirect`. La traducción es **una tabla** —una variante, una
+redirección, en el mismo orden de comprobación que antes—, y eso es lo que hace
+verificable que la extracción no cambió comportamiento: aquí no había tests
+previos que lo demostraran, así que la correspondencia tenía que ser legible a
+ojo.
+
+### Lo que los tests fijan, y por qué esas cosas
+
+No son tests de cobertura, son las decisiones que un cliente nota:
+
+- **Una consulta de duplicados que falla no significa «no hay duplicado»** —
+  tratarla así crearía el segundo proyecto del mismo dominio.
+- **Un dominio archivado se distingue de uno activo**: son dos mensajes
+  distintos porque son dos situaciones distintas.
+- **Sin prompts no se pide un escaneo.** Pedirlo crearía una fila condenada, y
+  decir «escaneo iniciado» sería un escaneo falso (CLAUDE.md).
+- **Un 429 en la mitad de competidores no tumba el alta ni la otra mitad** — el
+  fallo real del 2026-08-09, una llamada caída y la otra no.
+- **Sin perfil de negocio no se sugiere nada**, nunca el modo ciego por dominio
+  que ADR 0020 eliminó.
+- **Un fallo al derivar alias de marca no bloquea el alta**
+  (GEO-SCORE-BRAND-IDENTITY-1).
+
+### Una dirección de fallo que estaba y ahora está fijada
+
+Si el conteo de proyectos activos falla, **se deja pasar el alta**. Negarle el
+alta a alguien por un error transitorio nuestro es peor que aceptar un proyecto
+de más. Ya era el comportamiento del código; ahora hay un test que impide
+invertirlo sin querer.
+
+**Los tests se probaron rotos.** Tres mutaciones del núcleo —tratar el fallo de
+búsqueda como «no hay duplicado», crear escaneo sin prompts, y confundir
+archivado con activo—, cada una tumbó exactamente su test.
+
+**`VERCEL_ENV` no entra en el núcleo.** Los defaults baratos de preview siguen
+decidiéndose en la action y llegan como `extraProjectColumns`, así que el
+núcleo escribe lo que le pasan y nada por su cuenta. Hay un test para eso: es
+la variable que el fundador fue explícito en que no debe tocar producción
+(2026-08-11).
+
+**Lo que sigue sin cubrir.** Esto testea la **lógica** del alta, no el recorrido
+por navegador. El flujo de principio a fin —registro incluido— sigue sin test
+E2E, y con P1 descartado (§88) se queda así a propósito.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q1); ADR 0022;
+`.claude/rules/server-actions.md`; §88 (el descarte de P1 y su consecuencia).
+
+---
+
+## 90. Las cuatro rutas que sostienen el escaneo recurrente no tenían quién vigilara su cableado (PRELAUNCH-HARDENING-1 Fase Q3, 2026-08-15)
+
+**Qué se decidió.** Tests de ruta para `cron/weekly-scans`,
+`cron/weekly-digest`, `cron/sweep-continue` y `scan/continue`. **28 tests
+nuevos**, de 2.401 a 2.429.
+
+**Por qué el cableado y no la lógica.** La lógica de dentro —`runDailyCronScan`,
+`runWeeklyDigest`, `executePendingScan`— ya estaba testeada, y
+`isAuthorizedInternalRequest` también. Lo que no tenía detector era la costura:
+**que la ruta llame de verdad a la comprobación, que lea SU variable y no otra,
+y que el interruptor apague de verdad**. Una regresión ahí no falla
+ruidosamente — apaga el escaneo recurrente y en producción no se nota hasta
+días después, cuando alguien pregunta por qué su puntuación no se mueve.
+
+### Lo que se fija, y por qué cada cosa
+
+- **Fail-closed sin secreto configurado.** Sin `CRON_SECRET` no entra nadie, ni
+  siquiera quien no manda cabecera. Una ruta que se abre sola cuando falta su
+  variable es una ruta abierta el día que alguien despliega sin ella.
+- **Cruce de secretos.** `SCAN_CONTINUE_SECRET` no abre los crons y `CRON_SECRET`
+  no abre las continuaciones. Son dos variables distintas a propósito y
+  confundirlas es una regresión silenciosa: seguiría funcionando en local, donde
+  suelen estar las dos.
+- **Un interruptor ausente cuenta como apagado.** La comparación es `=== "true"`,
+  así que una variable sin definir o con `"TRUE"` cae en apagado — la dirección
+  de fallo correcta para algo que gasta LLM.
+- **El interruptor del resumen semanal es independiente del de los escaneos.**
+  Ese endpoint **escribe a clientes**; encender los escaneos no puede encender
+  los correos.
+- **Apagar el cron detiene también una cadena ya en vuelo** — un apagado que no
+  apaga lo que ya está corriendo no es un apagado.
+- **El tope de la cadena se rechaza, no se recorta**, y sigue al cap configurado
+  en vez de a un número fijo. Un `chainIndex` fuera de rango es un error de
+  cableado o una petición manipulada; recortarlo lo escondería.
+- **Ningún error crudo de Postgres llega a la respuesta**, en las cuatro.
+
+### Una rareza que los tests ahora explican en vez de esconder
+
+`scan/continue` responde **200 con `ok:false`** cuando el lote falla, no 500. Es
+deliberado: el estado del fallo ya lo persiste `executePendingScan` sobre el
+propio run, que es donde lo miran el usuario y el reconciliador. Un 500
+invitaría a que quien despacha reintentara, y reintentar un lote que ya falló y
+ya quedó registrado es gastar llamadas a LLM por nada. Estaba en un comentario;
+ahora hay un test que lo sostiene.
+
+**Los tests se probaron rotos.** Tres mutaciones: romper el interruptor de los
+escaneos (2 rojos), quitar el tope de la cadena (2 rojos), y hacer que
+`scan/continue` leyera `CRON_SECRET` en vez del suyo (4 rojos).
+
+**Lo que sigue sin cubrir.** Esto prueba el cableado de cada ruta por separado,
+no que Vercel las llame con la cadencia de `vercel.json`. Esa parte sigue siendo
+configuración, no código, y ningún test de este repo puede verla.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q3); ADR 0014
+(cadena de lotes) y ADR 0016 (cadena del barrido); §89 (Q1).
+
+---
+---
+
+## 91. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
+
+**Origen.** El fundador pidió un plan de entidad tras ver que "GenScore" compite
+en buscadores con varios homónimos públicos —un GenScore de bioinformática,
+otro de salud mental, otro de trust scoring B2B, y Genscore Navarra—. El censo
+previo destapó algo más barato de arreglar y más urgente que cualquier página
+nueva: **el repositorio usaba las cuatro grafías a la vez.**
+
+| | Grafía A | Grafía B |
+|---|---|---|
+| Marca | `Genscore` — 179 | `GenScore` — 114 |
+| Métrica | `GEO Score` — 99 | `GeoScore` — 53 |
+
+Ninguna de las dos inconsistencias rompía nada, y por eso llevaban meses ahí.
+Peor: `.claude/rules/growth-content.md` decía *"el nombre público es
+**Genscore**"* mientras `CLAUDE.md` decía `GenScore`, así que la regla que una
+sesión futura leería antes de escribir apuntaba a la grafía que el fundador
+acabó descartando.
+
+**Decisiones (fundador, 2026-08-13).** Marca `GenScore`, métrica `GEO Score`,
+disciplina `GEO`.
+
+`GeoScore` se descartó por un motivo concreto y no por gusto: *geo* se lee como
+geografía —el significado dominante de esa raíz— y mete a la métrica a competir
+con geolocalización. En mayúsculas es un acrónimo, y refuerza la categoría que
+el resto del plan intenta ganar.
+
+**Lo que NO se tocó, y por qué.** URLs y slugs (`/glosario/geo-score`,
+`/comparativas/genscore-vs-otterly`), el dominio `genscore.es`, y los
+identificadores de código. Cambiar una URL ya indexada por coherencia
+tipográfica es tirar a la basura el histórico de Search Console de esa página,
+y renombrar identificadores no aporta nada a la resolución de la entidad.
+
+**El error que costó la primera pasada, porque es la lección reutilizable.** El
+censo se hizo con `\bGeoScore\b` —delimitadores de palabra— y confirmó que
+sólo había prosa. El reemplazo se aplicó **sin** ellos. Resultado:
+`availableGeoScoreComponents` se convirtió en `availableGEO ScoreComponents`,
+la build dejó de compilar y 45 tests del ejecutor de escaneo cayeron de golpe
+con un error de mocking que no se parecía en nada a la causa. Verificar con una
+expresión y aplicar con otra es exactamente el tipo de discrepancia que no se
+ve al leer el diff. Se revirtió entero y se rehizo con `\b`.
+
+**Guardián: `lib/brand/naming.test.ts`.** Tres comprobaciones —ningún
+`Genscore`, ningún `GeoScore`, ningún identificador partido por un reemplazo
+sin `\b`— verificadas fallando en las tres direcciones antes de fiarse de
+ellas. Dos detalles que costaron una iteración cada uno:
+
+- **Se excluye a sí mismo.** El fichero cita las grafías retiradas en su propia
+  explicación; sin la exclusión, la única forma de dejarlo verde sería borrar
+  el motivo por el que existe.
+- **Barre por directorios, no por globs.** La primera versión pasaba
+  `app/**/*.ts` como pathspec de `git grep` y no cubría lo que parecía cubrir.
+  Se descubrió porque el conteo del test no cuadraba con un `grep` a mano —
+  un guardián que barre menos de lo que dice es peor que ninguno, porque
+  además da el hueco por cubierto.
+
+**Nota operativa:** `git grep` sólo ve ficheros versionados, así que este test
+puede pasar en local sobre un fichero recién creado y fallar en cuanto se hace
+`git add`. Es aceptable —nada llega a un PR sin versionar— pero conviene
+saberlo antes de perseguir un falso verde.
+
+## 93. El único módulo cuyo fallo no se puede deshacer ya tiene tests (PRELAUNCH-HARDENING-1 Fase Q2, 2026-08-15)
+
+**Qué se decidió.** `lib/email/transactional.ts` —765 líneas, trece funciones de
+envío, **cero tests**— pasa a tener 19. De 2.443 a 2.462.
+
+**Por qué éste antes que los demás huecos.** Un despliegue malo se revierte; un
+correo enviado, no. Es el único módulo del repositorio cuyo fallo **aterriza en
+la bandeja de un cliente** y no hay forma de recogerlo.
+
+### Qué se fija, y qué NO
+
+Se fija **a quién va cada cosa**, **cuándo no se manda nada**, y que **nada de
+esto pueda tumbar el flujo al que va enganchado**.
+
+**No se fija el maquetado**, a propósito: el HTML de un correo se retoca a
+menudo y clavarlo en un test sólo produce rojos que nadie lee — la variante
+email del mismo razonamiento de §87 sobre no fijar clases CSS. Del cuerpo se
+comprueba lo que sí sería un fallo: que el dato prometido esté, y que lo que
+viene de fuera vaya escapado.
+
+### El invariante caro
+
+`.claude/rules/scan.md` ya lo decía —«las alertas de operador nunca van al
+cliente»— y hasta hoy no lo comprobaba nadie. Las cuatro alertas de operador
+tienen ahora su test de destinatario, y una de ellas merece mención aparte:
+**`sendNewSignupOpsAlertEmail` RECIBE la dirección del cliente como dato del
+cuerpo**. Confundir ese dato con el destinatario le mandaría al recién
+registrado un aviso interno sobre sí mismo. Hay un test que separa las dos
+cosas explícitamente.
+
+Y sin `OPS_ALERT_EMAIL` **no se manda a nadie**: caer al cliente «para que no se
+pierda» sería exactamente el fallo que la regla prohíbe.
+
+### Una regresión de 2026-08-05, ahora cubierta
+
+`isOpsAlertConfigured` comprobaba sólo la dirección. Estaba configurada,
+devolvía `true`, y `sendEmail` no-opeaba después en `if (!resend) return` sin
+decir nada — dos puertas silenciosas en serie, la forma de fallo que ADR 0029
+existe para quitar. El arreglo ya estaba; lo que faltaba era el test que impide
+volver atrás.
+
+### Lo que se comprueba del contenido
+
+- El aviso de bajada publica **las dos puntuaciones reales** y su diferencia.
+- El error del proveedor va **escapado**: viene de fuera (Gemini, Supabase,
+  fetch) y se interpola en HTML, así que sin escapar una alerta sobre un fallo
+  se convierte en un vector de inyección hacia la bandeja del propio operador.
+- Cada correo sale como **documento HTML completo**, no como fragmento — los
+  clientes de webmail sólo aplican lo que encuentran en un `<head>` de verdad.
+- Sale desde la **dirección verificada**, no desde una inventada.
+
+**Los tests se probaron rotos.** Tres mutaciones: mandar una alerta de operador
+al cliente (2 rojos), devolver `isOpsAlertConfigured` a mirar sólo el destino
+(1), y dejar de escapar el `<` (1).
+
+**Lo que sigue sin cubrir.** Que el correo **se vea bien** en Gmail, Outlook y
+Apple Mail. Eso no lo puede ver ningún test de este repo y sigue siendo
+comprobación manual.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q2);
+`.claude/rules/scan.md` («las alertas de operador nunca van al cliente»);
+ADR 0029; §87 (por qué no se fija el maquetado).
+
+---
+
+## 92. La frontera de autenticación, y una guarda que cubre el fichero que nadie ha escrito todavía (PRELAUNCH-HARDENING-1 Fase Q4, 2026-08-15)
+
+**Qué se decidió.** 22 tests para `middleware.ts`, `lib/auth.ts` y —lo más
+importante— una **guarda estructural** sobre todo uso del rol de servicio en
+`app/`. De 2.462 a 2.484.
+
+### La guarda es lo que de verdad aporta
+
+`createServiceClient()` **salta RLS**. El plan pedía tests de «los 7 sitios de
+`app/` que lo usan»; medidos, son **12**, y los doce establecen identidad
+correctamente. O sea que doce tests unitarios habrían salido verdes el primer
+día y no habrían protegido de nada.
+
+El riesgo no son esos doce: es **el decimotercero**, el que alguien añada dentro
+de tres meses copiando el patrón a medias. Por eso
+`tests/service-role-identity.test.ts` comprueba una propiedad de **todo el
+directorio** —cada fichero de `app/` que use el rol de servicio tiene que
+establecer identidad de una de cuatro formas conocidas (`requireUser`,
+`requireActiveProject`, `isAuthorizedInternalRequest`, la firma de Stripe)— así
+que un fichero nuevo entra en el alcance solo. Mismo patrón que
+`env-drift.test.ts` y `console-css-scope.test.ts`.
+
+Se verificó creando un fichero sin guarda en `app/`: rojo, con el mensaje que
+explica qué falta. Usa `git grep --untracked` a propósito, para que un fichero
+recién escrito y aún sin commitear también cuente — que es justo cuando hace
+falta (misma lección que §70).
+
+**Lo que la guarda NO demuestra, dicho claro:** que la comprobación sea
+*correcta*. Ve que el fichero establece identidad, no que la aplique al dato que
+toca. Eso sigue siendo revisión humana y `data-guardian`.
+
+### Del middleware, lo importante es lo que NO hace
+
+No es una puerta: su propio comentario lo dice, y aun así es exactamente el
+sitio donde alguien metería un control de acceso creyendo que ayuda. Hay un test
+que fija que **sin sesión responde igual** —`NextResponse.next()`, ni redirect
+ni 401— junto al que fija que sí refresca la sesión. Y otro sobre el matcher:
+sin las exclusiones, este middleware —que abre un cliente de Supabase y verifica
+un JWT— correría en cada imagen y cada bundle.
+
+### Dos veces en que el test estaba mal, no el código
+
+1. **La memoización de `requireUser` no se puede testear**, y queda anotado en
+   el propio fichero para que nadie lo reintente: `React.cache()` sólo memoiza
+   dentro del ámbito de una petición de React, así que desde un test de node
+   tres llamadas producen tres viajes y `toHaveBeenCalledTimes(1)` falla contra
+   código correcto.
+2. **El matcher del middleware hay que anclarlo.** Next lo hace por su cuenta;
+   sin `^…$` el patrón casa en cualquier punto de la ruta y las exclusiones
+   parecen no funcionar.
+
+Las dos se descubrieron viendo el test en rojo antes de dar nada por bueno.
+
+**Los tests se probaron rotos.** Un fichero sin guarda en `app/` (1 rojo), la
+cookie dejando de validar el uuid (1), y el matcher dejando de excluir estáticos
+(1).
+
+**`lib/account-role.ts` se deja sin tests a propósito**: son diez líneas que
+devuelven `"admin"` constante porque no hay equipos ni RBAC. Un test ahí
+afirmaría que una constante es esa constante.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q4);
+`.claude/rules/supabase.md` («no service-role shortcuts en flujos de usuario»);
+§70 (por qué `--untracked`); §93 (Q2).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

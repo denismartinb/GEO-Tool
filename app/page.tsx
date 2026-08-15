@@ -4,7 +4,7 @@ import { contentMetadata } from "@/lib/seo/metadata";
 
 /**
  * SEO-POS-1 (T1). La home era un componente cliente entero, así que no podía
- * exportar `metadata`: heredaba el título genérico "Genscore" del layout raíz,
+ * exportar `metadata`: heredaba el título genérico "GenScore" del layout raíz,
  * sin descripción propia y sin canonical, siendo la URL comercial más
  * importante del sitio y estando en el sitemap. La página pasa a ser un
  * componente de servidor que solo aporta metadata y monta el mismo árbol de

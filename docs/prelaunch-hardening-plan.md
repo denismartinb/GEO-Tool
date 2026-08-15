@@ -30,14 +30,25 @@ una con su Human Gate.
   huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
-- **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
-  evidencia se sube de verdad (log §49), y **Q5b está hecho** (log §55): el
+- **Fase Q 🟡 en curso** — **Q1 hecho** (log §89: `createProjectCore` y 18
+  tests para el alta de un dominio, que no tenía ninguno), **Q3 hecho** (log
+  §90: 28 tests del cableado de las cuatro rutas que sostienen el escaneo
+  recurrente), **Q2 hecho** (log §93: 19 tests de los correos transaccionales —
+  el único módulo cuyo fallo llega a la bandeja de un cliente y no se puede
+  deshacer) y **Q4 hecho** (log §92: la frontera de auth, y una guarda
+  estructural que cubre el uso de rol de servicio que nadie ha escrito
+  todavía), el self-check del
+  piloto vuelve a estar verde y su evidencia se sube de verdad (log §49), y
+  **Q5b está hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
   `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
   nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
   pendientes.
-- **Fases P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
-  su aprobación propia de excepción de escritura del piloto, como UX-PILOT-2/3.
+- **Fase P ⛔ P1 descartado (2026-08-15, fundador; log §88)** — no tendrá la
+  aprobación de excepción de escritura que necesitaba. **Consecuencia asumida:
+  el riesgo #3 del diagnóstico —el flujo de alta sin ningún test de principio a
+  fin— se queda abierto a propósito.** P2–P4 siguen pendientes.
+- **Fase A** — pendiente: son decisiones del fundador, no trabajo de agente.
 
 **Origen:** petición del fundador (2026-08-09): antes de lanzar GenScore al
 mercado, plantear (1) un plan de refactorización y revisión de arquitectura
@@ -249,21 +260,45 @@ forma medible.*
 
 ### Fase Q — QA TÉCNICO (huecos de test, por riesgo de lanzamiento)
 
-- **Q1 · `createProject` → `createProjectCore` + tests**: es EL flujo de
-  lanzamiento (alta de dominio) y son ~210 líneas sin ningún test (deuda
-  anotada en ADR 0022). La extracción sigue el patrón `*Core` ya establecido.
-- **Q2 · Emails transaccionales**: tests de `lib/email/transactional.ts` y
-  `resend.ts` (render de los 8+ emails, destinatarios, la regla "alertas de
-  operador nunca al cliente" de `scan.md`).
-- **Q3 · Rutas cron y de continuación**: tests a nivel de ruta (auth, kill
-  switch, límites de chainIndex) para `weekly-scans`, `weekly-digest`,
-  `sweep-continue`, `scan/continue` — la lógica interna ya está testeada; lo
-  que no hay es detector de una regresión de cableado que apagaría todo el
-  escaneo recurrente tras el lanzamiento.
-- **Q4 · Frontera auth/tenancy**: tests de `middleware.ts`, `lib/auth.ts`,
-  `lib/account-role.ts` y de los 7 sitios de `app/` que usan
-  `createServiceClient()` (que el ownership manual que RLS no cubre esté
-  efectivamente comprobado en cada uno).
+- **Q1 · `createProject` → `createProjectCore` + tests** ✅ **hecho
+  (2026-08-15, log §89)**: 18 tests, de 2.383 a 2.401. **Hallazgo**: no tenía
+  tests porque no podía tenerlos — todo su control de flujo eran `redirect()`,
+  que en Next lanza, así que no había desenlace observable. El núcleo devuelve
+  ahora un resultado discriminado y la action lo traduce a
+  `revalidatePath` + `redirect`; la traducción es una tabla (una variante, una
+  redirección, mismo orden de comprobación) porque **no había tests previos que
+  demostraran la equivalencia** y tenía que ser legible a ojo. Cubre la lógica
+  del alta, no el recorrido por navegador — eso sigue descubierto (§88).
+- **Q2 · Emails transaccionales** ✅ **hecho (2026-08-15, log §93)**: 19 tests.
+  Fijan **a quién va cada cosa** (las cuatro alertas de operador, y en especial
+  `sendNewSignupOpsAlertEmail`, que recibe el correo del cliente como DATO del
+  cuerpo), **cuándo no se manda nada** (sin `OPS_ALERT_EMAIL` no se cae al
+  cliente; sin transporte se no-opea sin reventar) y que **un correo roto no
+  tumbe el flujo al que va enganchado**. Cubren también la regresión de
+  `isOpsAlertConfigured` del 2026-08-05 y el escapado del error del proveedor.
+  **No se fija el maquetado a propósito** — se retoca a menudo y clavarlo sólo
+  produce rojos que nadie lee. **Sigue sin cubrir** que el correo se vea bien en
+  Gmail/Outlook/Apple Mail: eso es comprobación manual.
+- **Q3 · Rutas cron y de continuación** ✅ **hecho (2026-08-15, log §90)**: 28
+  tests, de 2.401 a 2.429, para `weekly-scans`, `weekly-digest`,
+  `sweep-continue` y `scan/continue`. Cubren lo que no cubría nadie: fail-closed
+  sin secreto, que ninguna ruta acepte el secreto de la otra, que un interruptor
+  ausente cuente como apagado, que apagar el cron detenga una cadena en vuelo,
+  que el tope de `chainIndex` se rechace en vez de recortarse, y que ningún
+  error crudo de Postgres llegue a la respuesta. **Sigue sin cubrir** que Vercel
+  las llame con la cadencia de `vercel.json`: eso es configuración, no código.
+- **Q4 · Frontera auth/tenancy** ✅ **hecho (2026-08-15, log §92)**: 22 tests.
+  **Corrección medida**: no son 7 sitios de `app/` con `createServiceClient()`,
+  son **12**, y los doce ya establecían identidad — o sea que doce tests
+  unitarios habrían salido verdes el primer día sin proteger de nada. Lo que se
+  hizo en su lugar es una **guarda estructural**
+  (`tests/service-role-identity.test.ts`): cada fichero de `app/` que salte RLS
+  tiene que establecer identidad de una de cuatro formas conocidas, y un fichero
+  nuevo entra en el alcance solo. Verificada creando uno sin guarda. `middleware`
+  y `requireUser` tienen tests propios; `lib/account-role.ts` se deja sin ellos
+  a propósito (diez líneas que devuelven una constante). **Sigue sin cubrir**
+  que la comprobación sea *correcta* en cada sitio: la guarda ve que hay
+  identidad, no que se aplique al dato que se toca.
 - **Q5 · Arreglos del arnés del piloto** (baratos, de alto retorno):
   `ContentExpectation` en `second-project.spec.ts` (hoy pasa sobre proyectos
   vacíos); el input `pr_number` de `ux-pilot-write.yml` tipado como string
@@ -326,7 +361,18 @@ el bootstrap ni espera al primer escaneo). Propongo formalizarlo como
 **UX-PILOT-4 (journey cold-start)**, tercera excepción de escritura, con las
 mismas guardas estructurales que las dos ya aprobadas:
 
-- **P1 · UX-PILOT-4 — journey de alta completa** (`--journeys coldstart`,
+- **P1 · UX-PILOT-4 — journey de alta completa** — ❌ **DESCARTADO por el
+  fundador (2026-08-15).** Necesitaba su propia aprobación de excepción de
+  escritura del piloto y no la tendrá. Consecuencia declarada, para que nadie
+  la redescubra: **el flujo de alta completo (registro → dominio nuevo →
+  primer escaneo → Overview con datos) sigue sin recorrerlo ningún test
+  automatizado de principio a fin** — es el riesgo #3 del diagnóstico y se
+  queda abierto a propósito. Lo que sí lo cubre en parte, desde Q1, son los
+  tests de `createProjectCore`: la lógica de creación, no el recorrido por
+  navegador. La descripción original se conserva abajo por si alguna vez se
+  reabre.
+
+  *(descripción original, sin efecto)* (`--journeys coldstart`,
   `workflow_dispatch` only, jamás por deploy):
   1. Crea un proyecto nuevo sobre un **segundo dominio reservado**
      (`PILOT_COLDSTART_DOMAIN`, dominio público estable tipo `wikipedia.org`,

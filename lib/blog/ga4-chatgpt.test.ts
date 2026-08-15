@@ -135,7 +135,7 @@ describe("la expresión regular que el artículo le pide al lector que pegue en 
 });
 
 describe("las cifras de terceros van atribuidas", () => {
-  it("todo <Stat> declara su fuente y ninguna se presenta como dato de Genscore", () => {
+  it("todo <Stat> declara su fuente y ninguna se presenta como dato de GenScore", () => {
     const stats = [...ARTICLE.matchAll(/<Stat\s+([^>]*?)\/>/g)].map((m) => m[1]);
     expect(stats.length, "el artículo ya no publica cifras en StatGrid").toBeGreaterThan(0);
     for (const attrs of stats) {
@@ -143,8 +143,8 @@ describe("las cifras de terceros van atribuidas", () => {
       expect(source, `un <Stat> sin fuente: ${attrs}`).not.toBe("");
       expect(
         source,
-        `"${source}" atribuye a Genscore una cifra que no hemos medido nosotros`
-      ).not.toMatch(/Genscore/i);
+        `"${source}" atribuye a GenScore una cifra que no hemos medido nosotros`
+      ).not.toMatch(/GenScore/i);
     }
   });
 
@@ -176,7 +176,7 @@ describe("los límites del artículo se mantienen", () => {
     }
   });
 
-  it("el CTA nombra los tres motores que Genscore sí ejecuta", () => {
+  it("el CTA nombra los tres motores que GenScore sí ejecuta", () => {
     const cta = PROSE.match(/<ArticleCta.*?\/>/)?.[0] ?? "";
     expect(cta).toMatch(/ChatGPT, Gemini y Claude/);
     expect(cta, "el CTA no puede insinuar cobertura que no tenemos").not.toMatch(/Perplexity/i);

@@ -64,7 +64,7 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.genscore.es"),
-  title: "Genscore",
+  title: "GenScore",
   description: "Espacio de visibilidad de marca en motores de IA",
   icons: {
     icon: [
@@ -75,17 +75,17 @@ export const metadata: Metadata = {
     apple: [{ url: "/brand/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
   },
   openGraph: {
-    title: "Genscore",
+    title: "GenScore",
     description: "Espacio de visibilidad de marca en motores de IA",
     url: "https://www.genscore.es",
-    siteName: "Genscore",
+    siteName: "GenScore",
     images: [{ url: "/brand/genscore-og.png", width: 1200, height: 630 }],
     locale: "es_ES",
     type: "website"
   },
   twitter: {
     card: "summary_large_image",
-    title: "Genscore",
+    title: "GenScore",
     description: "Espacio de visibilidad de marca en motores de IA",
     images: ["/brand/genscore-og.png"]
   },

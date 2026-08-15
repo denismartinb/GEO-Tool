@@ -25,7 +25,7 @@ export async function generateMetadata({
   if (!cluster) return {};
   return {
     ...contentMetadata({
-      title: `${cluster.title} — Blog — Genscore`,
+      title: `${cluster.title} — Blog — GenScore`,
       description: cluster.description,
       path: `/blog/${cluster.key}`,
       rss: true

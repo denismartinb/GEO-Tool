@@ -29,7 +29,7 @@ export const DOCS_NAV: DocSection[] = [
         slug: "empezar/primer-escaneo",
         title: "Tu primer escaneo",
         description:
-          "Qué pasa cuando registras un dominio en Genscore: de la creación del proyecto al primer GEO Score, paso a paso."
+          "Qué pasa cuando registras un dominio en GenScore: de la creación del proyecto al primer GEO Score, paso a paso."
       }
     ]
   },
@@ -62,7 +62,7 @@ export const DOCS_NAV: DocSection[] = [
         slug: "planes-y-limites",
         title: "Planes y límites",
         description:
-          "Dominios, prompts y motores de IA incluidos en cada plan de Genscore, y qué cambia al subir de plan."
+          "Dominios, prompts y motores de IA incluidos en cada plan de GenScore, y qué cambia al subir de plan."
       }
     ]
   }

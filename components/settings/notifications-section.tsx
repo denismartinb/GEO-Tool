@@ -29,7 +29,7 @@ const ROWS: { key: NotificationKey; persisted: NotificationPreferenceKey; title:
     key: "visibility",
     persisted: "notify_score_drop_alert",
     title: "Cambios de visibilidad",
-    desc: "Si tu GeoScore se mueve de forma significativa"
+    desc: "Si tu GEO Score se mueve de forma significativa"
   },
   {
     key: "weekly",
