@@ -150,7 +150,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
         links={links}
         twoLine={hero}
         brand={
-          <Link href="/" className="lp-mobnav-brandmark" aria-label="Genscore">
+          <Link href="/" className="lp-mobnav-brandmark">
             <BrandLogo size={22} />
           </Link>
         }
