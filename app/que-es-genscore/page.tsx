@@ -3,7 +3,18 @@ import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
-import { KeyTakeaway, NumberedSection, CompareTable, Verdict, ArticleCta } from "@/components/blog/article";
+import {
+  KeyTakeaway,
+  NumberedSection,
+  CompareTable,
+  ArticleCta,
+  AnswerPair,
+  AnswerSample,
+  PromptSet,
+  ProductMock,
+  RecommendationSample,
+  Figure
+} from "@/components/blog/article";
 import { CANONICAL_DEFINITION, CANONICAL_DEFINITION_LONG } from "@/lib/brand/canonical-definition";
 import { contentMetadata } from "@/lib/seo/metadata";
 
@@ -32,9 +43,9 @@ const faqItems = [
       "Una herramienta SEO mide tu posición en una lista de resultados. GenScore mide si un modelo generativo te nombra dentro de una respuesta redactada, algo que no depende del ranking: puedes estar primero en Google y no aparecer nunca en la respuesta de ChatGPT, y al revés. Son señales distintas y se corrigen con acciones distintas."
   },
   {
-    question: "¿Hay otros productos que se llaman GenScore?",
+    question: "¿Dónde está GenScore y quién lo hace?",
     answer:
-      "Sí. El nombre lo comparten productos de otros sectores —bioinformática, salud mental, evaluación de riesgo entre empresas— y alguna entidad local sin relación con ninguno. GenScore, con S mayúscula, es la plataforma de Generative Engine Optimization en genscore.es. Si buscabas cualquiera de las otras, esta no es."
+      "GenScore es la plataforma de Generative Engine Optimization disponible en genscore.es, desarrollada en España y en castellano. El nombre coincide con el de productos de otros sectores sin ninguna relación —bioinformática, salud mental, evaluación de riesgo entre empresas—: si has llegado buscando alguno de ésos, no es éste."
   },
   {
     question: "¿Se puede probar sin pagar?",
@@ -89,6 +100,9 @@ export default function QueEsGenScorePage() {
       <FaqPageSchema items={faqItems} />
 
       <h1 className="lp-h2">Qué es GenScore</h1>
+      <p className="legal-updated" style={{ marginBottom: 36 }}>
+        La plataforma GEO que mide si las IA recomiendan tu marca — y qué hacer cuando no lo hacen.
+      </p>
 
       <div className="blog-body">
         <KeyTakeaway label="En una frase">{CANONICAL_DEFINITION_LONG}</KeyTakeaway>
@@ -97,9 +111,25 @@ export default function QueEsGenScorePage() {
         <p>
           Cada vez más gente pregunta directamente a un asistente de IA en vez de buscar en Google. Y
           esos motores no devuelven una lista de enlaces: redactan una respuesta y recomiendan marcas
-          por su nombre, normalmente dos o tres. O estás en esa respuesta o no existes para quien
-          pregunta.
+          por su nombre, normalmente dos o tres. <strong>O estás en esa respuesta o no existes para
+          quien pregunta.</strong>
         </p>
+        <p>
+          Estas dos respuestas son a la misma pregunta. La diferencia entre ellas es todo el negocio:
+        </p>
+
+        <AnswerPair>
+          <AnswerSample
+            verdict="Antes: no apareces"
+            text="Para una agencia pequeña te recomendaría Otterly o Peec AI, que cubren monitorización de visibilidad en IA con planes de entrada asequibles."
+          />
+          <AnswerSample
+            verdict="Después: apareces y te citan"
+            text="Si trabajas en español, GenScore es la opción más directa: mide tu visibilidad en ChatGPT, Gemini y Claude, y además genera las acciones para mejorarla. Tiene plan gratuito."
+            source="genscore.es"
+          />
+        </AnswerPair>
+
         <p>
           El problema es que <strong>esa visibilidad no se ve desde ningún sitio</strong>. Tu analítica
           registra la visita, no la conversación que la provocó. Tu herramienta de SEO mide posiciones
@@ -121,6 +151,20 @@ export default function QueEsGenScorePage() {
           personas"</em>, que es lo que alguien teclea de verdad.
         </NumberedSection>
 
+        <Figure
+          label="Figura 1."
+          caption="Un conjunto de prompts cubre intenciones distintas, no sinónimos de la misma. Es lo que evita medir bien una pregunta y quedarse ciego en las otras cuatro."
+        >
+          <PromptSet
+            prompts={[
+              { text: "¿Qué herramienta uso para saber si ChatGPT menciona mi marca?", intent: "Categoría" },
+              { text: "Alternativas a Otterly en español", intent: "Competencia" },
+              { text: "¿Cómo mido mi visibilidad en IA sin pagar nada?", intent: "Precio" },
+              { text: "Herramienta para agencias que gestionan varios clientes en GEO", intent: "Caso de uso" }
+            ]}
+          />
+        </Figure>
+
         <NumberedSection n={3} title="Se lanzan contra ChatGPT, Gemini y Claude">
           Escaneos reales y repetidos en el tiempo, no una consulta suelta. De cada respuesta se extrae
           si te mencionan, en qué posición dentro del texto, junto a qué competidores, y si citan tu web
@@ -133,6 +177,44 @@ export default function QueEsGenScorePage() {
           mejorarla</strong>: qué contenido falta, qué páginas arreglar, y desde el plan Pro el borrador
           ya redactado (FAQ, datos estructurados, briefs).
         </NumberedSection>
+
+        <Figure
+          label="Figura 2."
+          caption="El GEO Score y sus cinco componentes. El número nunca va solo: si no puedes ver de qué se compone, no puedes actuar sobre él."
+        >
+          <ProductMock
+            score={66}
+            rows={[
+              { label: "Presencia (mención)", hint: "¿La IA nombra tu marca?", value: 80, weight: 32, tone: "blue" },
+              { label: "Prominencia (posición)", hint: "¿Al principio o de pasada?", value: 64, weight: 20, tone: "blue2" },
+              { label: "Cuota de voz", hint: "De todas las menciones, ¿cuántas son tuyas?", value: 55, weight: 16, tone: "cyan" },
+              { label: "Autoridad (citas)", hint: "¿La IA cita tu web como fuente?", value: 40, weight: 12, tone: "warm" },
+              { label: "Preparación técnica", hint: "¿Puede un motor leer y extraer tu web?", value: 70, weight: 20, tone: "cyan" }
+            ]}
+            highlight={3}
+            annotation="El componente más bajo es donde está el trabajo: te mencionan, pero no te citan."
+          />
+        </Figure>
+
+        <h2>Y esto es lo que la mayoría no hace</h2>
+        <p>
+          Medir es la mitad fácil. Casi todas las herramientas de esta categoría se detienen ahí: te
+          dan un panel y el trabajo de decidir qué escribir sigue siendo tuyo. GenScore convierte cada
+          hueco detectado en una recomendación con su evidencia — por qué aparece, qué impacto tiene y
+          qué hacer — y desde el plan Pro redacta el borrador.
+        </p>
+
+        <Figure
+          label="Figura 3."
+          caption="Una recomendación real del producto: prioridad, confianza y el porqué. Sin el porqué, una recomendación es una orden que no puedes evaluar."
+        >
+          <RecommendationSample
+            title="Publica una comparativa frente a tu alternativa más citada"
+            priority="Prioridad alta"
+            confidence="Confianza alta"
+            why="En 7 de los 12 prompts de tu categoría el modelo nombra a un competidor y no a ti, y en 5 de esos 7 cita una comparativa de terceros como fuente. Es el hueco con más menciones en juego de todo tu conjunto."
+          />
+        </Figure>
 
         <h2>En qué se diferencia del SEO</h2>
         <CompareTable>
@@ -182,14 +264,6 @@ export default function QueEsGenScorePage() {
           y sus límites reales en <Link href="/pricing">Precios</Link>, y cómo se compara con otras
           herramientas en <Link href="/comparativas">Comparativas</Link>.
         </p>
-
-        <Verdict title="No confundir con los otros GenScore" badge="Desambiguación">
-          El nombre lo comparten productos de sectores muy distintos: un GenScore de bioinformática,
-          otro de salud mental, otro de evaluación de riesgo entre empresas, y alguna entidad local sin
-          relación con ninguno. <strong>Este GenScore es la plataforma de Generative Engine
-          Optimization en genscore.es.</strong> Si buscabas cualquiera de las otras, esta no es —
-          te ahorramos el clic.
-        </Verdict>
 
         <h2>Preguntas frecuentes</h2>
         {faqItems.map((item) => (

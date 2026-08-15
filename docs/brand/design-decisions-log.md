@@ -9001,6 +9001,64 @@ y ambas reclamaron el mismo número; E1 cedió por haber llegado después y pas�
 a §93. Lo cazó `tests/log-numbering.test.ts`, que ya existe precisamente por la
 racha de colisiones de esta misma semana.
 
+---
+
+## 95. El bloque que pedía no ser confundido no construía marca (SEO-POS-1 Fase E, E2, revisión, 2026-08-15)
+
+**Origen.** El fundador, sobre el preview de `/que-es-genscore`: *"Está muy
+pegado el título a la card. Ese bloque de desambiguación no me gusta, no es
+elegante para construir marca. Revísalo y enriquécelo en texto e imagen real de
+producto como si fueras un experto en marketing digital."*
+
+**Lo del bloque de desambiguación tenía razón, y el diagnóstico es de postura.**
+La página dedicaba un `Verdict` destacado —recuadro naranja, etiqueta
+"DESAMBIGUACIÓN"— a explicar que existen otros GenScore y que éste no es
+aquéllos. Es información correcta y su efecto es el contrario del buscado: lo
+primero que un bloque así comunica es *hay confusión sobre quiénes somos*, y lo
+segundo es que nos preocupa. **Una marca no se construye pidiendo que no la
+confundan.** El competidor no dedica un recuadro a explicar que no es otro.
+
+**Qué se hizo con la función que ese bloque sí cumplía.** La desambiguación
+para motores no se pierde: sigue en la FAQ —que alimenta el `FAQPage` schema—
+reescrita para afirmar en vez de disculparse. Antes empezaba por *"Sí, el
+nombre lo comparten…"*; ahora la pregunta es *"¿Dónde está GenScore y quién lo
+hace?"* y la respuesta abre declarando qué somos y dónde, y despacha los
+homónimos en una subordinada. Mismo trabajo de entidad, sin el bloque que
+resta.
+
+**Enriquecimiento: evidencia de producto, no más prosa.** La página explicaba
+el producto sin enseñarlo. Ahora lleva tres figuras, todas maquetas del
+lenguaje visual real:
+
+1. **`AnswerPair`** con dos respuestas a la misma pregunta —una donde no
+   apareces y otra donde apareces citado—. Es el "aha" de la categoría entera y
+   estaba contado sólo con palabras.
+2. **`PromptSet`** con cuatro prompts de intención distinta (categoría,
+   competencia, precio, caso de uso), porque "cubre varias intenciones" es
+   abstracto hasta que se ven cuatro seguidos.
+3. **`ProductMock`** del panel de GEO Score con sus cinco componentes, y
+   **`RecommendationSample`** con una recomendación real —prioridad, confianza y
+   el porqué—, que es lo que separa a GenScore de las herramientas que se
+   detienen en el diagnóstico.
+
+**Espaciado.** El `h1` iba pegado a la tarjeta de la definición porque esta
+página no tenía la línea que las comparativas sí llevan bajo el título. Se
+añade, y de paso hace trabajo de posicionamiento: *"La plataforma GEO que mide
+si las IA recomiendan tu marca — y qué hacer cuando no lo hacen."*
+
+**Un guardián que faltaba, descubierto al añadir la maqueta.**
+`article-recipes.test.ts` comprueba que el número del gauge sea la media
+ponderada real de las barras dibujadas, pero **sólo sobre
+`app/blog/<slug>/page.mdx`**. Esta página es un `.tsx` fuera del blog, así que
+la maqueta más visible del sitio era justo la que nadie verificaba —y el
+comentario de `MockRow` deja constancia de que una maqueta ya se contradijo a
+sí misma dos veces. `product-mock.test.ts` cubre el hueco: cinco componentes,
+pesos que suman 100, y gauge = media ponderada exacta (66). Verificado fallando
+al declarar 82.
+
+**Lo que no se tocó:** la definición canónica, que sigue siendo la misma cadena
+compartida por metadata, página, FAQ y schema (§94).
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
