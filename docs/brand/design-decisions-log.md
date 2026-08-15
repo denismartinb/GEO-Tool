@@ -9217,6 +9217,400 @@ leyera sin ese aviso la implementaría otra vez.
 
 ---
 
+## 98. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
+
+**Estado: implementada.** Task Intake de 12 puntos aprobado. Segunda mitad de
+la petición del 12-08: además de *ver* los automatismos (2a, §71), `/admin`
+puede ahora *cambiarlos* — el interruptor de escaneo recurrente y las dos
+mitades de auditoría automática, por proyecto, desde la ficha de cada usuario.
+
+**El invariante que ordenó todo el diseño: el operador nunca tiene un atajo
+que el propio dueño no tiene.** Las precondiciones no se reescribieron para
+`/admin` — se **extrajeron** de `setRecurringScans`/`setAutoAuditHalf`
+(`app/dashboard/projects/[projectId]/actions.ts`) a
+`lib/projects/automation-toggles.ts`, y las dos acciones (la del dueño, con
+RLS, y la del operador, con service-role) llaman a la misma función. Activar
+el recurrente sigue exigiendo un escaneo completado; escribir la mitad de
+auditoría sigue distinguiendo columna-sin-migrar de fallo real. Un solo sitio
+que mantener, dos llamadores.
+
+**Un tercer caso de "on + coste, pero no hace nada", detectado antes de
+escribir el código, no después.** 2a ya había aprendido con la QA bloqueada de
+§71 que un interruptor activo que el backend ignora es una métrica inventada.
+Al diseñar la escritura apareció una tercera instancia de la misma familia:
+`lib/web-audit/audit-job-runner.ts` salta la mitad de **cobertura** con
+`plan_required` por debajo de Pro (`docs/adr/0035`), exactamente como el
+barrido salta el recurrente en Free. La acción de escritura rechaza activar
+cobertura en un proyecto sin Pro **antes** de tocar la base de datos, con el
+mismo criterio que ya aplicaba al recurrente en Free.
+
+**Gap declarado, no arreglado aquí.** El descubrimiento anterior expone que la
+vista de **sólo lectura** de 2a no comprueba esta condición: un proyecto Free
+con `auto_coverage_audit_enabled=true` en la base (nadie ha podido escribirlo
+hasta esta fase, pero pudo quedar así de antes) se mostraría como "auditoría
+IA activa, con coste" en `/admin/users`, igual de falso que la columna
+retirada de §71. No se corrige en este PR — tocar el agregado de lectura de
+2a es un concern distinto y `lib/admin/automation.ts` no está en el alcance
+aprobado de 2b. Queda anotado para una fase de un solo párrafo.
+
+**El registro es el email, no una tabla nueva.** Cada escritura exige un
+motivo (mínimo 5 caracteres, rechazado antes de tocar la base) y manda
+`sendAdminAutomationChangeAlertEmail` a `OPS_ALERT_EMAIL` con quién, qué
+cuenta, qué proyecto, qué cambió y el motivo íntegro. Es exactamente lo que
+prometía `docs/design-reference/admin-console-1/README.md` desde el
+12-08: sin migración aprobada, el email ES la auditoría de la acción.
+
+**Lo que la extracción demostró sin querer:** `setRecurringScans`/
+`setAutoAuditHalf` no tenían test propio — vivían sólo comprobadas a mano
+desde `/debug`. Extraer su lógica a un módulo con test (`automation-toggles.
+test.ts`) las deja cubiertas por primera vez, de rebote.
+
+**Dos hallazgos de la QA de este mismo PR, corregidos antes del Human Gate.**
+El email de aviso tenía el mismo defecto que ya se había corregido una vez en
+el camino principal (UUID pasado como si fuera un email), pero escondido en la
+rama de fallback: si `loadOwnerProfile` no encuentra fila en `profiles` (perfil
+huérfano), `targetUserEmail` caía a `project.owner_user_id`, un UUID, en el
+único registro que existe de la escritura. Ahora cae a un marcador de texto no
+confundible con un email (`"(sin email — perfil no encontrado)"`), nunca al
+UUID. Y los dos `.update()` finales no repetían `is_archived = false` que sí
+lleva el camino del dueño (`app/dashboard/projects/[projectId]/actions.ts`) —
+un archivado entre la lectura (`loadProjectForWrite`) y la escritura habría
+pasado por el operador y nunca por el dueño, exactamente la asimetría que este
+mismo diseño se propuso evitar. Añadido a ambos `.update()`.
+
+### Pendiente / roto conocido
+
+- **El gap de lectura de 2a con `auto_coverage_audit_enabled` por debajo de
+  Pro**, descrito arriba — necesita su propio cambio, pequeño, en
+  `lib/admin/automation.ts`.
+- **2c (selección múltiple y borrado permanente) sigue sin empezar**, y sigue
+  prohibido sin aprobación explícita (CLAUDE.md).
+- **Sin piloto agéntico**, misma razón que Fase 1 y 2a: no puede completar un
+  desafío AAL2. Verificación manual.
+
+## 99. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
+
+**Estado: implementada.** Petición directa del fundador sobre lo que acababa
+de mergearse en 2b, no un Task Intake de 12 puntos — pero uno de los tres
+cambios contradecía un invariante que ese mismo PR había escrito, así que se
+paró a preguntar antes de tocar código en vez de implementarlo en silencio.
+
+**El campo de motivo se elimina, con la pérdida asumida explícitamente.**
+§98 documentó "no hay tabla de auditoría; el email ES el registro" y
+`.claude/rules/admin.md` lo convirtió en regla: "Every write from `/admin`
+needs a required reason". Quitar la caja de texto no es sólo un cambio de
+CSS — rompe ese invariante. Se preguntó directamente: compacto-pero-
+obligatorio (un diálogo al pulsar) frente a eliminarlo del todo, explicando
+que la segunda opción deja las escrituras de operador sin ningún rastro de
+**por qué** se tocó el proyecto de un cliente. El fundador eligió eliminarlo
+del todo, informado del coste. Lo que **no** se eliminó: el email a
+`OPS_ALERT_EMAIL` sigue disparándose en cada escritura con operador, cuenta
+afectada, dominio, proyecto, qué cambió y cuándo — el registro pierde el
+**porqué**, no el **quién/qué/cuándo**. `sendAdminAutomationChangeAlertEmail`
+ya no acepta `reason` en su firma; no quedó como parámetro opcional sin uso.
+
+**Interruptores en columnas.** `.adm-proj-write` pasa de `flex-direction:
+column` (tres formularios apilados, cada uno con su propia caja de motivo) a
+un grid de tres columnas — ahora cabe porque cada formulario es sólo una
+etiqueta y un botón, no una fila con un campo de texto de 160px mínimo. Se
+apila a una columna por debajo de 480px para no comprimir el botón contra el
+texto en un móvil estrecho.
+
+**La ficha se abre en acordeón, no como tarjeta fija.** Antes,
+`{params.u ? <div className="adm-drawer">…</div> : null}` se renderizaba
+DESPUÉS de toda la tabla, sin importar qué fila se hubiera tocado — abrir la
+fila 2 de una lista de 80 usuarios significaba bajar la distancia entera de
+la tabla para verla, y volver a subir para comparar con la fila. Ahora el
+detalle se inserta como una fila más (`<tr><td colSpan={9}>`) inmediatamente
+después de la fila seleccionada, dentro del mismo `<tbody>` — se extrajo el
+contenido a `UserDetailPanel` para no duplicarlo entre este caso y el de
+abajo. **Caso borde declarado, no ignorado:** si la fila seleccionada no está
+en la página filtrada actual (un buscador o un filtro de estado la deja
+fuera, o no queda ninguna fila), no hay dónde anclar la fila-acordeón — para
+ese caso, y sólo para ése, se mantiene el render de abajo
+(`.adm-drawer-standalone`), condicionado a
+`params.u && !filtered.some((row) => row.id === params.u)`.
+
+**La celda del acordeón vive dentro del mismo contenedor con scroll
+horizontal que la tabla** (`.adm-table` tiene `min-width: 760px`), en vez de
+extraerla a un contenedor de ancho completo — habría exigido convertir la
+tabla entera a un grid de `<div>` para que el detalle escapara esa anchura
+mínima, mucho más alcance del que pedía esta iteración. La tabla ya obliga a
+desplazamiento horizontal en 375px hoy; anidar el acordeón en el mismo
+contenedor extiende ese trade-off ya aceptado, no introduce uno nuevo. Dentro
+de la celda, `white-space: normal` deshace el `nowrap` general de
+`.adm-table td`, y el grid de dos columnas del detalle (`.adm-drawer-cols`)
+ya colapsaba a una por debajo de 760px de **viewport** — eso sigue
+funcionando igual, porque `@media` responde al viewport real del navegador,
+no al ancho del contenedor con scroll.
+
+**Corrección de la propia QA de este PR, antes del Human Gate: el `@media`
+de las columnas no podía funcionar donde más importaba.** `.adm-proj-write`
+se colapsaba a una columna por debajo de 480px de **viewport** — pero
+`UserDetailPanel` se renderiza en dos contextos de ancho muy distinto al
+mismo viewport real: dentro de la celda de la tabla (ancha, porque
+`.adm-table` fuerza `min-width: 760px`) y, en el caso de respaldo, suelto a
+ancho de página. A 375px de viewport ambos casos colapsaban igual, aunque el
+primero tenía ~700px reales disponibles — exactamente el caso normal
+(acordeón en línea), y exactamente el móvil para el que se pidió el cambio.
+Cambiado a `@container` sobre `.adm-proj-block` (`container-type:
+inline-size`): ahora colapsa según el ancho real del contenedor que lo aloja,
+no el del viewport, y las tres columnas sí aparecen en el caso normal en
+móvil.
+
+**Segunda corrección, el mismo día: la ficha en sí era ilegible en un móvil
+real.** Capturas del fundador desde su teléfono lo mostraron directamente —
+el piloto no lo pudo ver porque no tiene AAL2 para `/admin`. La celda del
+acordeón es parte de una fila de `.adm-table` (min-width 760px): dejar su
+contenido a `white-space: normal` arregló que el texto no se rompiera en una
+sola línea eterna, pero no arregló que ese texto sólo se leyera desplazando
+la tabla horizontalmente — la ficha entera quedaba a 760px+ de ancho, cortada
+por ambos lados en cualquier pantalla de teléfono real. Los números cortos
+del resto de la tabla toleran ese desplazamiento (siempre lo toleraron, es un
+trade-off ya aceptado); una ficha pensada para leerse, no. Corregido sin
+partir la tabla en dos: `.adm-table-wrap` ya lleva `container-type:
+inline-size` (para el fix anterior), así que su ancho real y visible —el del
+contenedor, no el de la fila que desborda dentro de él— se puede consultar
+con la unidad `cqi`. El contenido de la celda vive ahora en
+`.adm-detail-sticky`: `position: sticky; left: 0` lo fija al borde visible
+según se desplaza la tabla, y `width: 100cqi` lo dimensiona al ancho real del
+contenedor. Resultado: la ficha se ve entera y a ancho de pantalla sin que el
+operador tenga que desplazar nada, aunque la fila que la contiene siga siendo
+más ancha que la pantalla.
+
+**Tercera corrección, el mismo día: seleccionar una cuenta ejecutaba toda la
+página otra vez.** El fundador lo notó directamente: cada clic en una fila se
+sentía como una recarga completa. La causa era real, no sólo percibida —
+`AdminUsersPage` es un Server Component que lee `searchParams`, así que
+navegar a `?u=<id>` volvía a ejecutar la función entera, incluida
+`listOperatorUsers()` (la lista completa de cuentas, el KPI, el coste
+agregado — nada de lo cual depende de qué cuenta esté seleccionada), sólo
+para traer el detalle de una. Sin `loading.tsx` ni un límite de `<Suspense>`
+alrededor, tampoco había ninguna señal visual mientras tanto: la página se
+quedaba congelada y luego cambiaba de golpe, con scroll al inicio incluido
+(comportamiento por defecto de la navegación de Next).
+
+**La selección de cuenta deja de ser un `searchParam` que dispara
+renderizado de servidor y pasa a ser estado de cliente.** Nuevos ficheros:
+`lib/admin/user-detail-action.ts` (server action de sólo lectura,
+`fetchOperatorUserDetail`, con la misma puerta `requireOperator()` de
+siempre dentro de la propia acción — nunca delegada en quien la llama);
+`app/admin/users/shared.tsx` (las piezas de presentación que antes vivían en
+`page.tsx` — `UserDetailPanel`, `AutomationToggleForm`, `STATUS_LABEL`, los
+formateadores — sin nada server-only, así que sirven tanto al Server
+Component como al nuevo Client Component); `app/admin/users/users-table.tsx`
+(`"use client"`, el nuevo dueño de la tabla y el acordeón). Al pulsar una
+fila: `fetchOperatorUserDetail` corre dentro de una transición y sólo la
+ficha cambia — la tabla ni se vuelve a pedir ni se vuelve a montar. La URL
+se sincroniza con `window.history.replaceState` directamente, sin pasar por
+el router de Next, para que la cuenta seleccionada siga siendo enlazable sin
+que ese cambio de URL dispare por sí mismo una petición al servidor.
+`page.tsx` conserva la carga inicial (deep link a `?u=...`, recarga real) y
+sigue siendo el único que hace el fetch completo de la lista. Los filtros
+(buscador, chips de estado) y el envío de un formulario de automatismo
+siguen siendo navegación real de servidor — eso sí necesita datos nuevos —
+y un `useEffect` en `UsersTable` resincroniza el estado local cuando esas
+props cambian de identidad.
+
+**Efecto colateral, no accidental: `formatUsd`/`provenanceLabel` se separan
+de `lib/admin/cost-model.ts`.** Ese fichero lleva `import "server-only"`
+porque calcula el coste a partir de tarifas internas; `shared.tsx` sólo
+necesitaba las dos funciones de formato, sin las tarifas, pero importar
+cualquier cosa de un módulo `server-only` desde un fichero que un Client
+Component importa rompe el build (Next lo rechaza explícitamente, correcto).
+Las dos funciones —sin nada sensible, sólo formato— pasan a
+`lib/admin/cost-format.ts`, sin `server-only`; `cost-model.ts` las
+re-exporta para no romper a `automation.ts` ni a `page.tsx`, que siguen
+importándolas de donde siempre.
+
+**Cuarta corrección, el mismo día: el arreglo de la ficha ilegible (la
+"Segunda corrección" de arriba) nunca había llegado a aplicarse.** Nueva
+captura del fundador desde su móvil mostró el mismo texto cortado que se
+había dado por corregido, y además los tres interruptores por proyecto sin
+verse uno bajo otro. Diagnosticado con un HTML mínimo cargado en Chromium
+local (sin acceso a `/admin` real, que exige AAL2) reproduciendo la misma
+estructura CSS: `.adm-table th, .adm-table td { white-space: nowrap }` —
+regla que ya existía para las celdas normales de la tabla— tiene
+especificidad elemento+clase (0,1,1); `.adm-detail-cell { white-space: normal
+}` de una sola clase (0,1,0) nunca pudo ganarle, source order aparte. El
+`white-space: normal` de la "Segunda corrección" jamás se aplicó. Con el
+texto sin partir, la línea de coste (`.adm-cost-basis`) medía su ancho
+íntegro sin saltos, y ESE ancho —no el ancho real disponible— es el que
+`.adm-proj-block` (y por tanto `.adm-proj-write`) heredaba; con la
+`@container` de la corrección anterior evaluando ese ancho inflado, nunca
+veía menos de 420px y nunca colapsaba a una columna. Las dos cosas que el
+fundador reportó como fallos distintos eran el mismo bug.
+
+Dos arreglos, verificados con Chromium local en 375/768/1280px antes de
+subir (no sólo razonados):
+
+- **La especificidad**: `.adm-detail-cell` pasa a `.adm-table
+  .adm-detail-cell` (0,2,0), que gana sin depender del orden de las reglas
+  en el fichero.
+- **La `@container` de las columnas se sustituye por `grid-template-columns:
+  repeat(auto-fit, minmax(140px, 1fr))`.** Correcta en aislamiento la
+  primera vez, pero dependía de un ancho de contenedor que otro bug (el de
+  arriba) podía inflar; `auto-fit` resuelve el número de columnas de forma
+  intrínseca contra el ancho real en cada reflow, sin una condición
+  explícita que pueda quedar evaluando el número equivocado. Confirmado:
+  1 columna a 375px, 2 a 768px, 3 a 1280px, sin desbordamiento horizontal en
+  ninguno.
+
+### Pendiente / roto conocido
+
+- Sigue sin piloto agéntico, misma razón que toda la zona: AAL2 bloquea el
+  arnés. Verificación manual de las tres capturas (375/768/1280) pendiente
+  del fundador.
+- El gap de lectura de 2a (`auto_coverage_audit_enabled` por debajo de Pro en
+  `lib/admin/automation.ts`) sigue sin tocar, como en §98.
+
+---
+
+## 100. Tres URLs para el mismo GEO Score, y una home que no decía qué producto es (SEO-POS-1 Fase E, E3 + E4, 2026-08-15)
+
+Cierra la Fase E. Las dos filas que quedaban del plan eran distintas de las dos
+primeras: E1 (§91) y E2 (§94) escribían cosas —una grafía, una página—, y estas
+dos sólo **declaran** lo que ya existía. Ninguna de las dos añade una línea de
+copy visible salvo un bloque de enlaces, y aun así son las que más directamente
+atacan el problema que abrió la fase: que "GenScore" y "GEO Score" resuelvan a
+una entidad nuestra y no a un parecido.
+
+### E3 — el producto estaba declarado en la página con menos autoridad del sitio
+
+`/que-es-genscore` emitía un `SoftwareApplication` completo. La home no: sólo
+heredaba el `Organization` del layout raíz, o sea "existe una empresa llamada
+GenScore", sin decir en ningún formato legible por máquina **qué producto es**
+ni de qué categoría. Justo al revés de como se acumula la autoridad: la home es
+la que recibe los enlaces y las búsquedas de marca, y la página de entidad
+nació hace dos días.
+
+El arreglo obvio —copiar el bloque— era el equivocado, y por el motivo de
+siempre en esta zona: dos declaraciones a mano del mismo producto divergen al
+primer cambio de posicionamiento, y el síntoma sería el sitio describiéndose de
+dos formas distintas exactamente donde un motor lo lee para decidir qué somos.
+Así que el schema pasa a `components/seo/software-application-schema.tsx` y las
+dos páginas montan **el mismo componente**. Es el argumento de E2 (la
+definición en una constante) un nivel más arriba.
+
+Al moverlo salió un fallo que llevaba dentro desde E2 y que nadie había mirado:
+el `publisher` incrustaba su propio `{"@type":"Organization","name":"GenScore"}`.
+Eso es un **segundo** nodo llamado igual que el del layout, sin nada que los
+una — para un parser, dos entidades que casualmente comparten nombre. La página
+que existe para desambiguar la marca estaba fabricando una ambigüedad más, en
+formato legible por máquina. Ahora hay `@id` estables
+(`…/#organization`, `…/#software`) y `publisher` es una **referencia**, no una
+copia: montar el nodo en dos páginas crea dos menciones del mismo producto, no
+dos productos.
+
+### E4 — canonicalizar un concepto sin tirar dos URLs a la basura
+
+El sitio explica el GEO Score en tres sitios publicados: la metodología en
+`/docs`, la entrada del glosario y el artículo del blog. La tentación es
+fusionarlas o cruzarles un `rel=canonical`; las dos cosas serían tirar señal,
+porque sirven a intenciones distintas y las tres reciben tráfico. El problema
+real era más pequeño: **ninguna decía ser la de referencia**, y cada una
+definía el término con sus propias palabras.
+
+Se arregla con dos piezas y ninguna página nueva. Una cadena compartida
+(`GEO_SCORE_DEFINITION`), que ahora usan la entrada del glosario, la metadata
+de la metodología y su schema — antes eran tres redacciones parecidas. Y un
+`@id` común (`…/#geo-score`) que emiten el glosario y la metodología, con la
+`url` del documento de referencia y las otras dos como `sameAs`: un solo nodo
+con tres documentos en vez de tres conceptos que se parecen. Es el equivalente
+semántico de un canonical sin desindexar nada.
+
+**Canónica es la metodología, y no fue una elección de gusto:** ya lo era de
+hecho. Seis artículos y `/docs/informes/overview` mandan ahí al lector cuando
+quieren decir "el criterio completo está aquí", y es la única de las tres que
+se mantiene al día con el algoritmo real. Declarar canónica a otra habría
+contradicho el enlazado interno, que es la señal más fuerte que tenemos.
+
+Lo que faltaba era la dirección contraria: la metodología no devolvía a
+ninguna de las dos. Ahora cierra con un bloque que dice explícitamente cuál
+manda si algo se contradice.
+
+De paso salió podredumbre: la `description` de esa página —su meta description,
+la del documento que esta fase declara canónico— prometía "los cuatro
+componentes, sus pesos". Son **cinco** desde GEO-SCORE-V4 (ADR 0033) y los
+pesos se retiraron de todas las superficies el 2026-08-13 (§75). Llevaba así
+diez días, apuntando a contenido que la propia página ya no tiene.
+
+### Por qué esto necesita tests y no basta con hacerlo bien
+
+El JSON-LD es el caso extremo del fallo sin síntoma que esta zona lleva todo el
+plan encontrando. Un `@id` mal escrito, un `publisher` colgando de un nodo
+inexistente, una cuarta página sobre el GEO Score publicada sin declararse
+parte del concepto: nada de eso rompe una página, ni sale en el piloto, ni lo
+nota un lector. Simplemente el motor lee dos entidades donde hay una — el
+problema que la fase entera venía a quitar, reintroducido en silencio.
+
+`lib/brand/entity-graph.test.ts` cubre las dos mitades, y las dos guardas se
+verificaron rompiéndolas a propósito antes de dar la fase por buena: reponer un
+`Organization` incrustado en el `publisher` la pone roja, y crear una página
+`/geo-score-nuevo` la pone roja nombrándola. El barrido de la cuarta URL busca
+por **ruta**, no por menciones: un artículo que hable del GEO Score no compite
+por el término, una URL dedicada sí.
+
+### El guardián de E1 saltó, y tenía media razón
+
+CI tumbó el primer commit: `naming.test.ts` marcó como identificador partido
+el título de un test de esta misma fase, *"tres URLs, no tres GEO Scores"*. Es
+castellano correcto —el plural de la métrica— y el barrido lo leía como daño
+porque la `s` es una letra pegada a `GEO Score`. Segundo falso positivo del
+mismo guardián en tres días, después de `QueEsGenScorePage` (§94), y la regla
+sigue siendo la de entonces: **un guardián con falsos positivos se acaba
+desactivando**, así que se afina en vez de reescribir la prosa que lo
+molestaba. El `git grep` queda igual de amplio —POSIX ERE no tiene lookahead—
+y la exención se aplica en JS: una `s` y sólo una, seguida de algo que no sea
+letra. Verificado con tres sondas: `availableGEO ScoreComponents` sigue rojo,
+`GEO Scoresx` sigue rojo, `tres GEO Scores.` pasa.
+
+Lo interesante es **por qué no lo cogió el local**, porque el propio guardián lo
+tenía documentado desde E1: `git grep` sólo ve ficheros versionados, y la línea
+culpable estaba en un fichero recién creado sin `git add`. La suite pasó verde,
+después se hizo `git add -A`, y el commit salió con el fallo dentro. No hace
+falta arreglar nada de eso — hace falta invertir el orden: **`pnpm test`
+después de `git add`, no antes**, siempre que la suite tenga guardas que se
+apoyen en el índice de git.
+
+### Y al abrir las capturas: `/docs` llevaba dos meses sin enlaces visibles
+
+El piloto dio `PILOT PASS` en las 65 pantallas × 3 anchuras, dos veces. Abrir
+las capturas de las pantallas que toca el diff —`docs-metodologia-geo-score` en
+375, 768 y 1280, `docs-index`, `glosario-geo-score`, `blog-que-es-el-geo-score`
+y `landing`— enseñó que el bloque de enlaces recién añadido renderizaba en gris
+y sin subrayado, exactamente igual que la prosa de al lado.
+
+No era del bloque. `globals.css` tiene `a { color: inherit; text-decoration:
+none }` como base, y `.legal-body a` y `.blog-body a` lo compensan cada uno en
+lo suyo — **`.docs-content` nunca tuvo regla de enlace**. Así que desde
+GROWTH-2, *todos* los enlaces de la documentación son texto muerto a la vista:
+"Metodología completa en GEO Score" y "ver Planes y límites" en
+`/docs/informes/overview` llevaban dos meses siendo enlaces que nadie podía
+saber que lo eran. La cuarta vez esta semana que un fallo visual real convive
+con un verde legítimo (§55, §62, §96, ésta), y la primera en que el fallo era
+**más viejo que el PR que lo destapa**.
+
+Se arregla con la regla que faltaba, con el mismo token que las otras dos
+superficies y con `:not(.btn)` desde el principio, que es la lección de §54/§55:
+una regla de enlace por ancestro le gana en especificidad a la clase de un
+botón. Hoy no hay botones en `/docs`; se escribe así para cubrir el que
+aparezca.
+
+Es además el arreglo que la propia E4 necesitaba: la fase se apoya en enlazado
+interno explícito entre las tres URLs, y un enlace que no parece un enlace no
+enlaza a nadie.
+
+**Queda declarado como pendiente, no arreglado:** el layout raíz sigue con
+`title: "GenScore"` y `description: "Espacio de visibilidad de marca en motores
+de IA"`, que es una cuarta redacción de lo mismo y actúa de respaldo para
+cualquier página sin metadata propia. La home ya no la usa —tiene la suya desde
+T1— así que el impacto es menor que el que se ha arreglado aquí, pero tocarla
+cambia el respaldo de todo el sitio a la vez y merece su propia pasada.
+
+---
+
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

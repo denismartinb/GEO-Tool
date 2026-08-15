@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { SoftwareApplicationSchema } from "@/components/seo/software-application-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import {
   KeyTakeaway,
@@ -54,39 +55,6 @@ const faqItems = [
   }
 ];
 
-/**
- * SoftwareApplication de la propia página de entidad. El `Organization` global
- * vive en el layout raíz; aquí se declara el **producto**, y `isPartOf` /
- * `publisher` los enlaza para que no queden como dos entidades sueltas que
- * casualmente comparten nombre.
- *
- * Sin `aggregateRating` ni `review`: no tenemos reseñas públicas acumuladas, y
- * un rating inventado en schema es exactamente la clase de dato falso que
- * CLAUDE.md prohíbe — con el agravante de que Google penaliza el marcado
- * inventado cuando lo detecta.
- */
-function softwareApplicationSchema() {
-  const json = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "GenScore",
-    url: SITE_URL,
-    applicationCategory: "BusinessApplication",
-    applicationSubCategory: "Generative Engine Optimization",
-    operatingSystem: "Web",
-    inLanguage: "es",
-    description: CANONICAL_DEFINITION_LONG,
-    publisher: { "@type": "Organization", name: "GenScore", url: SITE_URL },
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "EUR",
-      description: "Plan gratuito permanente, sin tarjeta."
-    }
-  };
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }} />;
-}
-
 export default function QueEsGenScorePage() {
   return (
     <BlogPageShell>
@@ -96,7 +64,7 @@ export default function QueEsGenScorePage() {
           { name: "Qué es GenScore", url: PAGE_URL }
         ]}
       />
-      {softwareApplicationSchema()}
+      <SoftwareApplicationSchema />
       <FaqPageSchema items={faqItems} />
 
       <h1 className="lp-h2">Qué es GenScore</h1>
