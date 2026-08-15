@@ -31,7 +31,9 @@ una con su Human Gate.
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q 🟡 en curso** — **Q1 hecho** (log §89: `createProjectCore` y 18
-  tests para el alta de un dominio, que no tenía ninguno), el self-check del
+  tests para el alta de un dominio, que no tenía ninguno), **Q3 hecho** (log
+  §90: 28 tests del cableado de las cuatro rutas que sostienen el escaneo
+  recurrente), el self-check del
   piloto vuelve a estar verde y su evidencia se sube de verdad (log §49), y
   **Q5b está hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
@@ -266,11 +268,14 @@ forma medible.*
 - **Q2 · Emails transaccionales**: tests de `lib/email/transactional.ts` y
   `resend.ts` (render de los 8+ emails, destinatarios, la regla "alertas de
   operador nunca al cliente" de `scan.md`).
-- **Q3 · Rutas cron y de continuación**: tests a nivel de ruta (auth, kill
-  switch, límites de chainIndex) para `weekly-scans`, `weekly-digest`,
-  `sweep-continue`, `scan/continue` — la lógica interna ya está testeada; lo
-  que no hay es detector de una regresión de cableado que apagaría todo el
-  escaneo recurrente tras el lanzamiento.
+- **Q3 · Rutas cron y de continuación** ✅ **hecho (2026-08-15, log §90)**: 28
+  tests, de 2.401 a 2.429, para `weekly-scans`, `weekly-digest`,
+  `sweep-continue` y `scan/continue`. Cubren lo que no cubría nadie: fail-closed
+  sin secreto, que ninguna ruta acepte el secreto de la otra, que un interruptor
+  ausente cuente como apagado, que apagar el cron detenga una cadena en vuelo,
+  que el tope de `chainIndex` se rechace en vez de recortarse, y que ningún
+  error crudo de Postgres llegue a la respuesta. **Sigue sin cubrir** que Vercel
+  las llame con la cadencia de `vercel.json`: eso es configuración, no código.
 - **Q4 · Frontera auth/tenancy**: tests de `middleware.ts`, `lib/auth.ts`,
   `lib/account-role.ts` y de los 7 sitios de `app/` que usan
   `createServiceClient()` (que el ownership manual que RLS no cubre esté
