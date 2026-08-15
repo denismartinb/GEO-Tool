@@ -1,6 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { DocsPageShell } from "@/components/docs/docs-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { DefinedTermSchema } from "@/components/seo/defined-term-schema";
+import { SITE_ORIGIN } from "@/lib/brand/canonical-definition";
+import {
+  GEO_SCORE_ALTERNATE_PATHS,
+  GEO_SCORE_CANONICAL_URL,
+  GEO_SCORE_DEFINITION,
+  GEO_SCORE_TERM_ID
+} from "@/lib/brand/geo-score-definition";
 import { getDocPage } from "@/lib/docs/nav";
 import { contentMetadata } from "@/lib/seo/metadata";
 
@@ -22,6 +31,22 @@ export default function GeoScoreMethodologyPage() {
           { name: "Docs", url: "https://www.genscore.es/docs" },
           { name: page.title, url: `https://www.genscore.es/docs/${SLUG}` }
         ]}
+      />
+      {/*
+        SEO-POS-1 Fase E, E4. Esta página es el documento de referencia del
+        término, y aquí lo declara: mismo `@id` que emiten el glosario y el
+        artículo, `url` apuntando a sí misma, las otras dos como `sameAs`. Ya
+        era la canónica de hecho —seis artículos y `/docs/informes/overview`
+        mandan aquí al lector— pero nada lo decía en un formato que un motor
+        pudiera leer, así que las tres URLs competían por el mismo término.
+      */}
+      <DefinedTermSchema
+        term="GEO Score"
+        description={GEO_SCORE_DEFINITION}
+        url={GEO_SCORE_CANONICAL_URL}
+        inDefinedTermSetUrl={`${SITE_ORIGIN}/glosario`}
+        id={GEO_SCORE_TERM_ID}
+        sameAs={GEO_SCORE_ALTERNATE_PATHS.map((path) => `${SITE_ORIGIN}${path}`)}
       />
       <h1>{page.title}</h1>
       <p className="docs-updated">Actualizado el 13 de agosto de 2026</p>
@@ -126,6 +151,28 @@ export default function GeoScoreMethodologyPage() {
         para que un número suelto signifique algo de un vistazo. La franja solo se publica cuando la muestra
         da para sostenerla: con pocas respuestas verás el número, pero no la etiqueta.
       </p>
+
+      {/*
+        E4: el enlazado que faltaba en la dirección que faltaba. El glosario y
+        el artículo ya mandaban aquí; esta página no devolvía a ninguno de los
+        dos, así que el lector que quería la versión corta o la guía tenía que
+        buscarlas. Con los tres enlazados en las dos direcciones, la relación
+        entre las tres URLs es explícita también para quien no lee schema.
+      */}
+      <div className="glossary-related">
+        <h2>Esta misma métrica, explicada de otras formas</h2>
+        <p>Esta página es la referencia: si algo se contradice, manda lo que diga aquí.</p>
+        <ul>
+          <li>
+            <Link href="/glosario/geo-score">Glosario: el GEO Score en una definición corta</Link>
+          </li>
+          <li>
+            <Link href="/blog/que-es-el-geo-score">
+              Artículo: qué es el GEO Score y cómo leerlo sin engañarte
+            </Link>
+          </li>
+        </ul>
+      </div>
     </DocsPageShell>
   );
 }

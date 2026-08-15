@@ -9094,6 +9094,98 @@ patrón común no es que el piloto falle, sino que **su verde responde a "ningun
 aserción saltó", no a "esto se ve bien"** — y las aserciones mecánicas no
 cubren lo que pasa dentro de un contenedor con `overflow` recortado.
 
+## 97. Tres URLs para el mismo GEO Score, y una home que no decía qué producto es (SEO-POS-1 Fase E, E3 + E4, 2026-08-15)
+
+Cierra la Fase E. Las dos filas que quedaban del plan eran distintas de las dos
+primeras: E1 (§91) y E2 (§94) escribían cosas —una grafía, una página—, y estas
+dos sólo **declaran** lo que ya existía. Ninguna de las dos añade una línea de
+copy visible salvo un bloque de enlaces, y aun así son las que más directamente
+atacan el problema que abrió la fase: que "GenScore" y "GEO Score" resuelvan a
+una entidad nuestra y no a un parecido.
+
+### E3 — el producto estaba declarado en la página con menos autoridad del sitio
+
+`/que-es-genscore` emitía un `SoftwareApplication` completo. La home no: sólo
+heredaba el `Organization` del layout raíz, o sea "existe una empresa llamada
+GenScore", sin decir en ningún formato legible por máquina **qué producto es**
+ni de qué categoría. Justo al revés de como se acumula la autoridad: la home es
+la que recibe los enlaces y las búsquedas de marca, y la página de entidad
+nació hace dos días.
+
+El arreglo obvio —copiar el bloque— era el equivocado, y por el motivo de
+siempre en esta zona: dos declaraciones a mano del mismo producto divergen al
+primer cambio de posicionamiento, y el síntoma sería el sitio describiéndose de
+dos formas distintas exactamente donde un motor lo lee para decidir qué somos.
+Así que el schema pasa a `components/seo/software-application-schema.tsx` y las
+dos páginas montan **el mismo componente**. Es el argumento de E2 (la
+definición en una constante) un nivel más arriba.
+
+Al moverlo salió un fallo que llevaba dentro desde E2 y que nadie había mirado:
+el `publisher` incrustaba su propio `{"@type":"Organization","name":"GenScore"}`.
+Eso es un **segundo** nodo llamado igual que el del layout, sin nada que los
+una — para un parser, dos entidades que casualmente comparten nombre. La página
+que existe para desambiguar la marca estaba fabricando una ambigüedad más, en
+formato legible por máquina. Ahora hay `@id` estables
+(`…/#organization`, `…/#software`) y `publisher` es una **referencia**, no una
+copia: montar el nodo en dos páginas crea dos menciones del mismo producto, no
+dos productos.
+
+### E4 — canonicalizar un concepto sin tirar dos URLs a la basura
+
+El sitio explica el GEO Score en tres sitios publicados: la metodología en
+`/docs`, la entrada del glosario y el artículo del blog. La tentación es
+fusionarlas o cruzarles un `rel=canonical`; las dos cosas serían tirar señal,
+porque sirven a intenciones distintas y las tres reciben tráfico. El problema
+real era más pequeño: **ninguna decía ser la de referencia**, y cada una
+definía el término con sus propias palabras.
+
+Se arregla con dos piezas y ninguna página nueva. Una cadena compartida
+(`GEO_SCORE_DEFINITION`), que ahora usan la entrada del glosario, la metadata
+de la metodología y su schema — antes eran tres redacciones parecidas. Y un
+`@id` común (`…/#geo-score`) que emiten el glosario y la metodología, con la
+`url` del documento de referencia y las otras dos como `sameAs`: un solo nodo
+con tres documentos en vez de tres conceptos que se parecen. Es el equivalente
+semántico de un canonical sin desindexar nada.
+
+**Canónica es la metodología, y no fue una elección de gusto:** ya lo era de
+hecho. Seis artículos y `/docs/informes/overview` mandan ahí al lector cuando
+quieren decir "el criterio completo está aquí", y es la única de las tres que
+se mantiene al día con el algoritmo real. Declarar canónica a otra habría
+contradicho el enlazado interno, que es la señal más fuerte que tenemos.
+
+Lo que faltaba era la dirección contraria: la metodología no devolvía a
+ninguna de las dos. Ahora cierra con un bloque que dice explícitamente cuál
+manda si algo se contradice.
+
+De paso salió podredumbre: la `description` de esa página —su meta description,
+la del documento que esta fase declara canónico— prometía "los cuatro
+componentes, sus pesos". Son **cinco** desde GEO-SCORE-V4 (ADR 0033) y los
+pesos se retiraron de todas las superficies el 2026-08-13 (§75). Llevaba así
+diez días, apuntando a contenido que la propia página ya no tiene.
+
+### Por qué esto necesita tests y no basta con hacerlo bien
+
+El JSON-LD es el caso extremo del fallo sin síntoma que esta zona lleva todo el
+plan encontrando. Un `@id` mal escrito, un `publisher` colgando de un nodo
+inexistente, una cuarta página sobre el GEO Score publicada sin declararse
+parte del concepto: nada de eso rompe una página, ni sale en el piloto, ni lo
+nota un lector. Simplemente el motor lee dos entidades donde hay una — el
+problema que la fase entera venía a quitar, reintroducido en silencio.
+
+`lib/brand/entity-graph.test.ts` cubre las dos mitades, y las dos guardas se
+verificaron rompiéndolas a propósito antes de dar la fase por buena: reponer un
+`Organization` incrustado en el `publisher` la pone roja, y crear una página
+`/geo-score-nuevo` la pone roja nombrándola. El barrido de la cuarta URL busca
+por **ruta**, no por menciones: un artículo que hable del GEO Score no compite
+por el término, una URL dedicada sí.
+
+**Queda declarado como pendiente, no arreglado:** el layout raíz sigue con
+`title: "GenScore"` y `description: "Espacio de visibilidad de marca en motores
+de IA"`, que es una cuarta redacción de lo mismo y actúa de respaldo para
+cualquier página sin metadata propia. La home ya no la usa —tiene la suya desde
+T1— así que el impacto es menor que el que se ha arreglado aquí, pero tocarla
+cambia el respaldo de todo el sitio a la vez y merece su propia pasada.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

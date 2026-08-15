@@ -284,6 +284,42 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   tabla con las pantallas que toca el diff es trabajo del Director y no lo
   hace nadie más (log §62).
 
+## La entidad: un solo nodo, no seis descripciones parecidas
+
+Trazable a log §91 (E1), §94 (E2) y §97 (E3+E4). El objetivo de la Fase E es
+que "GenScore" y "GEO Score" resuelvan a **nuestra** entidad; el fallo que
+persigue no rompe nada, así que sólo lo cogen constantes compartidas y tests.
+
+- **La descripción de GenScore se importa, no se redacta.**
+  `lib/brand/canonical-definition.ts` es la única fuente: metadata, apertura de
+  `/que-es-genscore`, FAQ y `SoftwareApplication` usan literalmente la misma
+  cadena. Seis párrafos escritos a mano que dicen casi lo mismo son seis
+  descripciones distintas para un motor.
+- **La definición sólo nombra motores que el producto ejecuta** (hoy ChatGPT,
+  Gemini y Claude). Lo impone `canonical-definition.test.ts`, y no es una regla
+  de estilo: el consejo externo que originó la fase proponía cinco motores, y
+  eso habría multiplicado por todas las superficies el reclamo falso que
+  PRICING-TRUTH-1 obligó a retirar del producto.
+- **Un nodo de schema.org se referencia por `@id`, nunca se incrusta dos
+  veces.** `publisher: { "@id": ORGANIZATION_ID }`, no un `Organization`
+  incrustado: dos nodos con el mismo nombre y sin identificador común son dos
+  entidades para un parser, y la página que existe para desambiguar la marca
+  estaba fabricando ambigüedad ella sola (§97).
+- **Un schema que aparece en más de una página va en un componente
+  compartido.** Dos declaraciones a mano del mismo producto divergen al primer
+  cambio de posicionamiento, y el síntoma es el sitio describiéndose de dos
+  formas justo donde un motor lo lee.
+- **Un término explicado en varias URLs se canonicaliza por `@id`, no
+  fusionando páginas.** Mismo `@id` desde todas, `url` del documento de
+  referencia, el resto como `sameAs`. Es el equivalente semántico de un
+  canonical sin desindexar URLs que ya reciben tráfico. La canónica del GEO
+  Score es `/docs/metodologia/geo-score` porque ya lo era por enlazado interno;
+  cambiarla contradiría la señal más fuerte que tenemos (§97).
+- **Publicar una URL dedicada a un término ya explicado incluye añadirla a su
+  lista de alternativas.** Si no, vuelve a competir por el término sin
+  declararse el mismo concepto — sin 404 y sin error.
+  `lib/brand/entity-graph.test.ts` barre por ruta y lo bloquea.
+
 ## El encuadre: quien escribe esto dirige el marketing de Genscore
 
 Estas reglas conviven con las de honestidad de arriba y **no las derogan**. El
