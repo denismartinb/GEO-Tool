@@ -1,4 +1,8 @@
 import "server-only";
+import { formatUsd, provenanceLabel, type CostProvenance } from "@/lib/admin/cost-format";
+
+export { formatUsd, provenanceLabel };
+export type { CostProvenance };
 
 /**
  * ADMIN-CONSOLE-2a. Coste estimado por proyecto para la consola de operador.
@@ -14,8 +18,6 @@ import "server-only";
  * Si esas tarifas cambian en el análisis, cambian aquí: este fichero no es una
  * segunda fuente de verdad, es una copia declarada de la primera.
  */
-
-export type CostProvenance = "medido" | "estimado" | "no_medido";
 
 export type EngineId = "gemini" | "claude" | "openai";
 
@@ -115,22 +117,4 @@ export function estimateProjectMonthlyCost(input: ProjectCostInput): ProjectCost
   if (input.coverageAuditEnabled) basisParts.push("incluye cobertura IA (no medida)");
 
   return { perScanUsd, monthlyUsd, provenance, basis: basisParts.join(" · ") };
-}
-
-export function formatUsd(value: number): string {
-  if (value === 0) return "$0";
-  if (value < 0.01) return "<$0,01";
-  return `$${value.toFixed(2).replace(".", ",")}`;
-}
-
-/** Etiqueta corta para acompañar SIEMPRE a la cifra — nunca se muestra un coste desnudo. */
-export function provenanceLabel(provenance: CostProvenance): string {
-  switch (provenance) {
-    case "medido":
-      return "medido";
-    case "estimado":
-      return "estimado";
-    case "no_medido":
-      return "sin medir";
-  }
 }
