@@ -313,23 +313,26 @@ export default async function ProjectDetailPage({
     : null;
   const rawSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
   /**
-   * SCAN-STATES-2: `scan_started` is suppressed while the first-scan mission
-   * owns the screen. Its text ("Dominio creado. Tu primer escaneo se está
-   * ejecutando — sigue el progreso aquí") is the mission's own rail said
-   * twice, stacked above a full-bleed scene as a second surface — which is
-   * exactly the "banner flotando encima" the founder asked to remove
-   * (2026-08-10). Every other feedback message still shows: this drops one
-   * redundant sentence, not the mechanism.
+   * SCAN-STATES-2: `scan_started` is suppressed unconditionally. Its text
+   * ("Dominio creado. Tu primer escaneo se está ejecutando — sigue el
+   * progreso aquí") is the mission's own rail said twice, stacked above a
+   * full-bleed scene as a second surface — exactly the "banner flotando
+   * encima" the founder asked to remove (2026-08-10). Every other feedback
+   * message still shows: this drops one redundant sentence, not the
+   * mechanism.
    *
-   * Gated on `activeRun` alone, not `isFirstScan && activeRun`: the
-   * `?success=scan_started` param survives in the URL after the run finishes,
-   * and `ScanProgressPoller` calls `router.refresh()` the moment the run goes
-   * terminal — at which point `activeRun` is gone AND `isFirstScan` has
-   * already flipped to false (there's now 1 completed run), so the old guard
-   * stopped applying and the stale "se está ejecutando" text resurfaced next
-   * to the finished score with no user action at all.
+   * This key is fired ONLY from the first-scan creation redirect
+   * (`app/dashboard/projects/actions.ts`), so it is never valid to show as a
+   * banner: while the run is active the mission already says it, and once
+   * the run finishes the text is simply false. A first attempt gated this on
+   * `activeRun`/`isFirstScan` and got the direction backwards — it hid the
+   * message after completion but let it show *while the mission itself was
+   * on screen*, which is the one moment SCAN-STATES-2 explicitly banned
+   * (log §105, corrected same day after the founder caught it live). There
+   * is no state in which this key should ever render, so it is suppressed
+   * outright rather than gated on a run's transient status.
    */
-  const successMessage = rawSuccessMessage && !(feedback.success === "scan_started" && !activeRun) ? rawSuccessMessage : null;
+  const successMessage = rawSuccessMessage && feedback.success !== "scan_started" ? rawSuccessMessage : null;
 
   /* ---- queries that require a completed run ---- */
   const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =
