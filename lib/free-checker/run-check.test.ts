@@ -162,12 +162,54 @@ describe("runPublicCheck", () => {
     expect(result.citedDomains).toEqual(["blog.tallerdeideas.es", "otra.com"]);
   });
 
+  describe("no todo fallo del paso 1 es culpa de su web (2026-08-16)", () => {
+    // Los tres motivos de `unidentified` compartían mensaje: "no hemos podido
+    // leer tu web, comprueba que la página carga". Dos de los tres son
+    // nuestros, y mandar a alguien a revisar un sitio que carga perfectamente
+    // es decirle una causa que el código no puede saber.
+
+    it("sólo la portada ilegible se le atribuye a su web", async () => {
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({
+          resolveBusinessContext: async () => ({ status: "unidentified", reason: "homepage_unreadable" })
+        })
+      );
+      expect(result).toEqual({
+        status: "failed",
+        error: "site_unreachable",
+        detail: "homepage_unreadable"
+      });
+    });
+
+    it("un fallo NUESTRO no le manda a revisar su web", async () => {
+      for (const reason of ["profile_failed", "profile_low_confidence"]) {
+        const result = await runPublicCheck(
+          "tallerdeideas.es",
+          deps({ resolveBusinessContext: async () => ({ status: "unidentified", reason }) })
+        );
+        expect(result).toEqual({ status: "failed", error: "profile_unclear", detail: reason });
+      }
+    });
+
+    it("este camino NO lanza, así que su causa tiene que salir igual", async () => {
+      // El agujero de la primera pasada de instrumentación: el `catch` no ve
+      // este camino, y `error_category` volvía a quedarse mudo.
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({ resolveBusinessContext: async () => ({ status: "unidentified" }) })
+      );
+      if (result.status !== "failed") throw new Error("esperaba failed");
+      expect(result.detail).toBe("unknown");
+    });
+  });
+
   it("una web ilegible es un error declarado, no una comprobación a medias", async () => {
     const unreachable = await runPublicCheck(
       "tallerdeideas.es",
       deps({ resolveBusinessContext: async () => ({ status: "unidentified" }) })
     );
-    expect(unreachable).toMatchObject({ status: "failed", error: "site_unreachable" });
+    expect(unreachable).toMatchObject({ status: "failed", error: "profile_unclear" });
 
     const threw = await runPublicCheck(
       "tallerdeideas.es",

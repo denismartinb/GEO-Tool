@@ -10553,6 +10553,40 @@ ningún caso es una puntuación: el producto exige diez respuestas antes de
 llamar fiable a un número. Toca el esquema de extracción compartido con el
 escaneo, así que necesita su propio Task Intake.
 
+### Fase C-bis (2026-08-16): el segundo fallo real, y el agujero que dejó la primera instrumentación
+
+Segunda ejecución del fundador: **"No hemos podido leer tu web"** —
+`site_unreachable`, un paso antes que la vez anterior. Dos cosas mal, y la
+primera es mía.
+
+**El agujero.** `resolveBusinessContext` **nunca lanza**: colapsa tres motivos
+distintos en un único `{status: "unidentified"}`. La instrumentación de la
+mañana metió la causa en los `catch`, y este camino no pasa por ninguno — así
+que `error_category` volvió a quedarse en `site_unreachable` a secas, sin causa,
+que es exactamente el fallo que esa instrumentación existía para eliminar. Una
+categorización que sólo cubre las excepciones no cubre el código que devuelve
+sus errores en vez de lanzarlos.
+
+**Y lo que se le decía al visitante era falso dos veces de cada tres.** Los tres
+motivos son: la portada no se pudo leer, el modelo no devolvió perfil, o el
+modelo devolvió uno que él mismo marca poco fiable. **Sólo el primero es su
+web.** A los otros dos se les enseñaba *"comprueba que el dominio es correcto y
+que la página carga"* sobre un sitio que carga perfectamente — una causa que el
+código no puede saber (`.claude/rules/gemini.md`). `BusinessContextResult` gana
+un `reason` **obligatorio, no opcional**: opcional habría dejado que un retorno
+futuro se olvidara de decir por qué, y este fallo consiste precisamente en no
+saber por qué. El comprobador ramifica sobre él y estrena `profile_unclear`, con
+un mensaje que dice lo que es cierto y **no manda a nadie a revisar su web**.
+
+**Tercera cosa, de la captura y no del código.** Al fallar, la pantalla retiraba
+la página entera y dejaba un panel de error solo en medio de un blanco: se lee
+como una web rota, no como un intento que no salió. La página se retira cuando
+hay un resultado que la sustituya; un fallo no lo es. Se queda el contenido, se
+va el titular —que invita a escribir un dominio donde ya no hay campo.
+
+**Sigue sin diagnosticarse** la causa raíz del `extraction_failed` de la mañana:
+esta segunda ejecución ni llegó al paso 4.
+
 **Trazabilidad.** Task Intake FREE-CHECKER-1 (2026-08-15, sin PR propio —
 generado en la conversación, no committeado como documento aparte); Task Intake
 Fase C (2026-08-16, aprobado en sesión); `docs/seo-positioning-plan.md` Fase P;

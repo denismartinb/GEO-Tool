@@ -51,6 +51,12 @@ export type PublicCheckResponse =
 export const PUBLIC_CHECK_MESSAGES: Record<PublicCheckError | PublicCheckDenial, string> = {
   site_unreachable:
     "No hemos podido leer tu web, así que no sabemos por qué categoría preguntar. Comprueba que el dominio es correcto y que la página carga.",
+  // Deliberadamente NO manda a revisar la web: aquí la web se leyó bien y el
+  // que no supo fue nuestro modelo. El mensaje dice lo que es cierto y da la
+  // salida real —probar otro dominio o crear la cuenta—, sin prometer que
+  // reintentar lo arregle, porque a menudo no lo hace.
+  profile_unclear:
+    "Hemos leído tu web pero no hemos sabido decir con seguridad a qué se dedica, y preguntar por una categoría equivocada daría un resultado sobre un mercado que no es el tuyo. No es un fallo de tu web.",
   engine_unavailable:
     "ChatGPT no ha respondido esta vez. No es culpa de tu web — inténtalo de nuevo en un momento.",
   extraction_failed:

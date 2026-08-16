@@ -138,13 +138,23 @@ export function FreeCheckerForm({
   }
 
   if (state.kind === "done") {
+    // La página sólo se retira cuando hay algo que la sustituya. Un fallo NO es
+    // un resultado: retirarla también dejaba al visitante con un panel de error
+    // solo en medio de una pantalla en blanco, que se lee como una web rota en
+    // vez de como un intento que no salió (fundador, 2026-08-16, sobre un
+    // `site_unreachable` real). El titular sí se va —invita a escribir un
+    // dominio en un sitio donde ya no hay campo—, pero el contenido se queda.
+    const failed = state.response.status !== "completed";
     return (
-      <FreeCheckerResult
-        response={state.response}
-        domain={cleanDomain(domain)}
-        onRetry={() => setState({ kind: "idle" })}
-        onSignup={() => goToSignup(cleanDomain(domain))}
-      />
+      <>
+        <FreeCheckerResult
+          response={state.response}
+          domain={cleanDomain(domain)}
+          onRetry={() => setState({ kind: "idle" })}
+          onSignup={() => goToSignup(cleanDomain(domain))}
+        />
+        {failed && children}
+      </>
     );
   }
 

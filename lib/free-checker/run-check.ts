@@ -60,8 +60,16 @@ export const PUBLIC_CHECK_LANGUAGE = "es";
  * lee un desconocido.
  */
 export type PublicCheckError =
-  /** No se pudo leer la portada y sin ella no hay ni marca ni pregunta. */
+  /** No se pudo leer la portada y sin ella no hay ni marca ni pregunta. **Su web.** */
   | "site_unreachable"
+  /**
+   * La web se leyó, pero no se pudo saber a qué se dedica con seguridad
+   * suficiente para preguntar por su categoría. **Nuestro, no suyo** — y por
+   * eso no comparte mensaje con `site_unreachable`, que le manda a revisar un
+   * sitio que funciona (`.claude/rules/gemini.md`, «nunca le digas al usuario
+   * una causa que el código no puede saber»).
+   */
+  | "profile_unclear"
   /** La IA no devolvió respuesta utilizable. */
   | "engine_unavailable"
   /** Se obtuvo respuesta pero no se pudo interpretar. */
@@ -187,7 +195,7 @@ export type PublicCheckDeps = {
     domain: string;
     country: string;
     language: string;
-  }) => Promise<{ status: string; profile?: BusinessProfile | null }>;
+  }) => Promise<{ status: string; profile?: BusinessProfile | null; reason?: string }>;
   suggestPrompts: (input: {
     brand: string;
     domain: string;
@@ -252,7 +260,7 @@ export async function runPublicCheck(
   //    responder.
   if (!hasRoomForNextStep()) return { status: "failed", error: "budget_exhausted" };
 
-  let context: { status: string; profile?: BusinessProfile | null };
+  let context: { status: string; profile?: BusinessProfile | null; reason?: string };
   try {
     context = await deps.resolveBusinessContext({
       domain,
@@ -265,7 +273,22 @@ export async function runPublicCheck(
 
   const profile = context.profile;
   if (context.status === "unidentified" || !profile) {
-    return { status: "failed", error: "site_unreachable" };
+    // Este camino NO lanza: `resolveBusinessContext` colapsa tres motivos muy
+    // distintos en un solo `unidentified`, así que el `catch` de arriba no lo
+    // ve. Fue el agujero que dejó la primera pasada de instrumentación: la
+    // segunda ejecución real del fundador falló justo aquí y `error_category`
+    // volvió a decir sólo `site_unreachable`, sin causa (2026-08-16).
+    //
+    // Y sólo UNO de los tres motivos es su web. Los otros dos son nuestros, y
+    // mandarle a revisar un sitio que carga perfectamente es decirle una causa
+    // que el código no puede saber.
+    const reason = typeof context.reason === "string" ? context.reason : "unknown";
+    const isTheirSite = reason === "homepage_unreadable";
+    return {
+      status: "failed",
+      error: isTheirSite ? "site_unreachable" : "profile_unclear",
+      detail: reason.replace(/[^a-z_]/g, "").slice(0, 40) || "unknown"
+    };
   }
 
   // La marca sale del dominio. Es una aproximación declarada: el asistente de
