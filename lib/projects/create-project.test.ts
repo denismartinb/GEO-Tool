@@ -62,12 +62,14 @@ type FakeOpts = {
   existing?: Row | null;
   existingError?: boolean;
   insertFails?: boolean;
+  restoreFails?: boolean;
   promptInsertFails?: boolean;
   competitorInsertFails?: boolean;
 };
 
 function makeFakeSupabase(opts: FakeOpts = {}) {
   const inserted: Record<string, Row[]> = { projects: [], project_prompts: [], project_competitors: [] };
+  const updated: { table: string; values: Row }[] = [];
 
   const client = {
     from(table: string) {
@@ -105,6 +107,25 @@ function makeFakeSupabase(opts: FakeOpts = {}) {
           };
           return chain;
         },
+        /**
+         * DOMAINS-ARCHIVE-RETIRE-1: reactivar un dominio archivado. Registra lo
+         * actualizado en vez de tragarse la llamada, para poder afirmar que lo
+         * que se escribe es `is_archived: false` y no otra cosa.
+         */
+        update(values: Row) {
+          const chain = {
+            eq(_c: string, _v: unknown) {
+              return chain;
+            },
+            then(resolve: (v: unknown) => unknown) {
+              updated.push({ table, values });
+              return Promise.resolve({
+                error: opts.restoreFails ? { message: "restore failed" } : null
+              }).then(resolve);
+            }
+          };
+          return chain;
+        },
         insert(rows: Row | Row[]) {
           const list = Array.isArray(rows) ? rows : [rows];
           inserted[table] = [...(inserted[table] ?? []), ...list];
@@ -128,13 +149,14 @@ function makeFakeSupabase(opts: FakeOpts = {}) {
     }
   };
 
-  return { client: client as unknown as SupabaseClient, inserted };
+  return { client: client as unknown as SupabaseClient, inserted, updated };
 }
 
 function run(opts: FakeOpts = {}, values = input(), plan: Plan = PLAN) {
-  const { client, inserted } = makeFakeSupabase(opts);
+  const { client, inserted, updated } = makeFakeSupabase(opts);
   return {
     inserted,
+    updated,
     result: createProjectCore({ input: values, plan, supabase: client, user: USER })
   };
 }
@@ -170,11 +192,43 @@ describe("createProjectCore · guardas antes de crear nada", () => {
     expect((await result).status).toBe("created");
   });
 
-  it("distingue un dominio ya activo de uno archivado", async () => {
+  /**
+   * DOMAINS-ARCHIVE-RETIRE-1 (log §104): archivado y activo dejan de tratarse
+   * igual. Un dominio ya activo sigue siendo un duplicado y se rechaza; uno
+   * archivado se **reactiva**, porque desde que se retiró la pantalla de
+   * archivados esta es la única forma que tiene el cliente de recuperarlo.
+   */
+  it("un dominio ya activo se rechaza; uno archivado se reactiva", async () => {
     const active = await run({ existing: { id: "x", is_archived: false } }).result;
     const archived = await run({ existing: { id: "x", is_archived: true } }).result;
     expect(active.status).toBe("already_active");
-    expect(archived.status).toBe("already_archived");
+    expect(archived.status).toBe("restored");
+    expect(archived).toMatchObject({ projectId: "x" });
+  });
+
+  it("al reactivar escribe `is_archived: false` y nada más", async () => {
+    const { updated, result } = run({ existing: { id: "x", is_archived: true } });
+    await result;
+    // La aserción va sobre lo escrito, no sobre el status: un `update` que
+    // tocara otra columna —o que escribiera en otra tabla— devolvería el mismo
+    // `restored` y nadie se enteraría.
+    expect(updated).toEqual([{ table: "projects", values: { is_archived: false } }]);
+  });
+
+  it("si la reactivación falla NO se dice que salió bien", async () => {
+    const { result } = run({ existing: { id: "x", is_archived: true }, restoreFails: true });
+    expect((await result).status).toBe("restore_failed");
+  });
+
+  /**
+   * El orden importa y es el que ya estaba: el tope del plan se comprueba
+   * ANTES de mirar duplicados, así que reactivar no es una puerta trasera para
+   * saltárselo. Un cliente en Free con su cupo lleno no recupera un archivado
+   * volviendo a añadirlo — se le dice que no cabe, igual que con uno nuevo.
+   */
+  it("reactivar respeta el tope del plan", async () => {
+    const { result } = run({ activeProjectCount: 99, existing: { id: "x", is_archived: true } });
+    expect((await result).status).toBe("project_limit_reached");
   });
 
   /**

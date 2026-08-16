@@ -48,7 +48,14 @@ export type CreateProjectResult =
   | { status: "project_limit_reached" }
   /** La consulta de duplicados falló. Se trata como fallo de creación, no como "no hay duplicado". */
   | { status: "lookup_failed" }
-  | { status: "already_archived" }
+  /**
+   * El dominio existía archivado y se ha reactivado en vez de crearse de nuevo
+   * — DOMAINS-ARCHIVE-RETIRE-1 (log §104). No es un error: es la única salida
+   * que le queda al cliente desde que se retiró la pantalla de archivados.
+   */
+  | { status: "restored"; projectId: string }
+  /** La reactivación falló; el proyecto sigue archivado y sin forma de volver. */
+  | { status: "restore_failed" }
   | { status: "already_active" }
   | { status: "insert_failed" }
   | { status: "created"; projectId: string; outcome: CreatedProjectOutcome };
@@ -170,8 +177,31 @@ export async function createProjectCore(input: {
     return { status: "lookup_failed" };
   }
 
+  /**
+   * DOMAINS-ARCHIVE-RETIRE-1 (log §104): un dominio archivado se **reactiva**
+   * al volver a añadirlo, en vez de rechazar el alta.
+   *
+   * Antes esto devolvía `already_archived` y la pantalla decía «Restáuralo
+   * para continuar», lo cual funcionaba porque existía una pantalla de
+   * archivados. Al retirarla, esa rama se convertía en un callejón sin salida
+   * perfecto: bajar de plan archiva dominios, no había dónde restaurarlos, y
+   * volver a crearlos chocaba con la fila archivada. El cliente quedaba
+   * encerrado con un mensaje que le pedía usar algo que ya no existe.
+   *
+   * Reactivar en vez de rechazar es lo que hace que «vuelve a añadirlo» —lo
+   * que ahora promete el modal de bajada de plan— sea verdad. Y respeta el
+   * tope del plan: la comprobación de `project_limit_reached` de arriba ya ha
+   * corrido, así que sólo se reactiva si hay hueco.
+   */
   if (existingProject?.is_archived) {
-    return { status: "already_archived" };
+    const { error: restoreError } = await supabase
+      .from("projects")
+      .update({ is_archived: false })
+      .eq("id", existingProject.id)
+      .eq("owner_user_id", user.id);
+
+    if (restoreError) return { status: "restore_failed" };
+    return { status: "restored", projectId: existingProject.id };
   }
 
   if (existingProject) {

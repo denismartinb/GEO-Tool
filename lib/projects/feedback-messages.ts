@@ -42,6 +42,12 @@ export const feedbackErrorMessages: Record<string, string> = {
 
 export const feedbackSuccessMessages: Record<string, string> = {
   project_created: "Dominio creado. Revisa los prompts y competidores antes de lanzar el primer escaneo.",
+  // DOMAINS-ARCHIVE-RETIRE-1 (log §104). Este dominio ya existía —se retiró
+  // al bajar de plan— y volver a añadirlo lo reactiva con todo lo suyo. Dice
+  // "reactivado" y no "creado" porque son dos cosas distintas y el usuario se
+  // va a encontrar sus prompts, sus competidores y su histórico ahí dentro.
+  project_restored:
+    "Dominio reactivado. Vuelve a estar en tu espacio de trabajo con sus prompts, competidores y escaneos anteriores.",
   scan_started: "Dominio creado. Tu primer escaneo se está ejecutando — sigue el progreso aquí.",
   scan_completed: "Escaneo completado. Los resultados ya están disponibles en esta visión general.",
   scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno.",
