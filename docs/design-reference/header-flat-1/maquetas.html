@@ -1,0 +1,416 @@
+<title>Que la consola respire</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ground: #FBFBFD; --surface: #FFFFFF; --sunk: #F4F5F8; --line: #E3E6ED;
+    --line-soft: #EDEFF4; --ink: #0B1426; --ink-2: #3A4459; --ink-3: #646D82;
+    --accent: #2563EB; --accent-soft: #EAF0FE; --accent-ink: #1D4ED8;
+    --warm: #B45309; --warm-soft: #FDF3E3; --ok: #0F766E; --ok-soft: #E7F4F2;
+    --on-accent: #FFFFFF;
+    --shadow: 0 1px 2px rgba(11,20,38,.04), 0 12px 32px rgba(11,20,38,.06);
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #090F1C; --surface: #111A2C; --sunk: #16203552; --line: #24304A;
+      --line-soft: #1B2539; --ink: #EDF1F8; --ink-2: #B6C0D4; --ink-3: #8C97AE;
+      --accent: #7DA5FF; --accent-soft: #17233E; --accent-ink: #A8C3FF;
+      --warm: #F0B354; --warm-soft: #2A2115; --ok: #5DC9B8; --ok-soft: #12261F;
+      --on-accent: #0A1120;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #090F1C; --surface: #111A2C; --sunk: #16203552; --line: #24304A;
+    --line-soft: #1B2539; --ink: #EDF1F8; --ink-2: #B6C0D4; --ink-3: #8C97AE;
+    --accent: #7DA5FF; --accent-soft: #17233E; --accent-ink: #A8C3FF;
+    --warm: #F0B354; --warm-soft: #2A2115; --ok: #5DC9B8; --ok-soft: #12261F;
+    --on-accent: #0A1120;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.28);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans);
+    font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 56px 24px 96px; }
+  .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3); margin: 0 0 18px; }
+  h1 { font-size: clamp(34px, 6.2vw, 52px); line-height: 1.04; letter-spacing: -.035em;
+    font-weight: 800; margin: 0; text-wrap: balance; }
+  .standfirst { font-size: clamp(17px, 2.4vw, 19.5px); line-height: 1.55; color: var(--ink-2);
+    max-width: 62ch; margin: 20px 0 0; }
+  .masthead-meta { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; gap: 8px 28px; font-family: var(--mono);
+    font-size: 12px; color: var(--ink-3); }
+  .masthead-meta b { color: var(--ink-2); font-weight: 500; }
+  section { margin-top: 64px; }
+  h2 { font-size: clamp(23px, 3.4vw, 28px); letter-spacing: -.024em; line-height: 1.2;
+    font-weight: 750; margin: 0 0 6px; text-wrap: balance; }
+  .sec-num { font-family: var(--mono); font-size: 12px; letter-spacing: .1em;
+    color: var(--accent); display: block; margin-bottom: 10px; }
+  h3 { font-size: 17px; letter-spacing: -.012em; font-weight: 700; margin: 34px 0 6px; }
+  p { margin: 14px 0 0; max-width: 68ch; }
+  p.lede { color: var(--ink-2); }
+  strong { font-weight: 660; }
+  code { font-family: var(--mono); font-size: .875em; background: var(--sunk);
+    border: 1px solid var(--line-soft); border-radius: 4px; padding: 1px 5px;
+    color: var(--ink-2); white-space: nowrap; }
+  ul { margin: 14px 0 0; padding-left: 20px; max-width: 66ch; }
+  li { margin: 7px 0; } li::marker { color: var(--ink-3); }
+  s { color: var(--ink-3); }
+
+  .shot-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px;
+    margin-bottom: 10px; }
+  .shot-label .nm { font-size: 14px; font-weight: 700; }
+  .px { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
+    font-variant-numeric: tabular-nums; }
+  .tag { font-family: var(--mono); font-size: 10px; letter-spacing: .07em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
+  .tag.now { background: var(--sunk); color: var(--ink-3); border: 1px solid var(--line); }
+  .tag.new { background: var(--accent-soft); color: var(--accent-ink);
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); }
+  .tag.warn { background: var(--warm-soft); color: var(--warm);
+    border: 1px solid color-mix(in srgb, var(--warm) 26%, transparent); }
+
+  .row { display: flex; flex-wrap: wrap; gap: 26px; margin-top: 22px; }
+  .col { flex: 0 0 auto; }
+  /* 1:1 phone frames — light only, like the product */
+  .ph { width: 375px; height: 480px; position: relative; overflow: hidden;
+    border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+    font-family: var(--sans); color: #0f1729; background: #fff; }
+  .ph * { box-sizing: border-box; }
+  .bar { position: absolute; inset: 0 0 auto 0; height: 52px; display: flex;
+    align-items: center; padding: 0 10px; z-index: 3; }
+  .bar.solid { background: #fff; border-bottom: 1px solid #e8eaef; }
+  .bar.glass { background: rgba(255,255,255,.82); backdrop-filter: blur(10px) saturate(1.4);
+    border-bottom: 1px solid #eef0f4; }
+  .bar.flat { background: transparent; border-bottom: 1px solid transparent; }
+  .bg { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center;
+    color: #475067; flex: 0 0 auto; }
+  .ctr { position: absolute; inset: 0 0 1px 0; display: flex; align-items: center;
+    justify-content: center; pointer-events: none; }
+  .bell-box { width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid #e7eaf0;
+    background: #fff; color: #5b6b82; display: grid; place-items: center; flex: 0 0 auto; }
+  .bell-bare { width: 44px; height: 44px; border-radius: 10px; color: #5b6b82;
+    display: grid; place-items: center; flex: 0 0 auto; }
+  .page { position: absolute; inset: 52px 0 0 0; overflow: hidden; }
+  .page.canvas { background: #f6f7f9; }
+  .page.hero { background: linear-gradient(180deg,#eef2ff 0%, #f4f6ff 42%, #fafbff 100%); }
+  .banner { background: linear-gradient(90deg,#eef1fe,#f2f4fe); border-bottom: 1px solid #e3e7fb;
+    padding: 12px 14px; }
+  .banner b { font-size: 12.5px; color: #0f1729; }
+  .banner p { margin: 2px 0 0; font-size: 12px; color: #475067; line-height: 1.45; max-width: none; }
+  .pgh { padding: 14px; }
+  .ttl { font-size: 12px; color: #6b7385; }
+  .nm2 { font-size: 17px; font-weight: 750; margin-top: 2px; }
+  .card { margin-top: 12px; border: 1px solid #e8eaef; border-radius: 12px; background: #fff;
+    padding: 14px; }
+  .ghost { height: 10px; border-radius: 5px; background: #e8eaef; margin-bottom: 8px; }
+  .ghost.w60 { width: 60%; } .ghost.w35 { width: 35%; } .ghost.w80 { width: 80%; }
+  .h1m { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05;
+    text-align: center; margin: 22px 14px 0; }
+  .h1m i { color: #2563eb; font-style: normal; }
+  .leadm { font-size: 13.5px; color: #475067; text-align: center; margin: 12px 22px 0;
+    line-height: 1.5; }
+  .field { margin: 16px 14px 0; height: 44px; border-radius: 999px; border: 1px solid #dfe3ea;
+    background: #fff; display: flex; align-items: center; padding: 0 16px; font-size: 13px;
+    color: #98a0b0; }
+  .logo { display: inline-flex; align-items: center; gap: 2px; }
+  .logo .wm { font-size: 16.5px; font-weight: 800; letter-spacing: -.025em; line-height: 1; }
+  .logo .wm b { color: #0f1729; font-weight: 800; }
+  .logo .wm i { color: #2563eb; font-style: normal; font-weight: 800; }
+  .cap { margin-top: 10px; }
+
+  .table-scroll { overflow-x: auto; margin-top: 26px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; }
+  th, td { text-align: left; vertical-align: top; padding: 11px 16px;
+    border-bottom: 1px solid var(--line-soft); }
+  thead th { font-family: var(--mono); font-size: 11px; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-3); font-weight: 500; background: var(--sunk);
+    border-bottom: 1px solid var(--line); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.dim { font-weight: 620; font-size: 14.5px; width: 26%; }
+  td.val { font-family: var(--mono); font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
+
+  .callout { margin-top: 30px; border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 18px 22px; border-radius: 0 8px 8px 0; }
+  .callout.warn { border-left-color: var(--warm); background: var(--warm-soft); }
+  .callout h3 { margin: 0 0 8px; font-size: 16px; }
+  .callout p { margin: 0; max-width: 64ch; }
+  .callout p + p { margin-top: 12px; }
+  .ask { margin-top: 44px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--surface); padding: 26px; box-shadow: var(--shadow); }
+  .ask h2 { font-size: 22px; }
+  .ask ol { padding-left: 22px; margin: 16px 0 0; max-width: 66ch; }
+  .ask li { margin: 10px 0; }
+  .closing { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-weight: 660; }
+  @media (max-width: 640px) { .wrap { padding: 40px 18px 72px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Genscore · Consola · Propuesta</p>
+    <h1>Que la consola respire</h1>
+    <p class="standfirst">
+      Lo que señalaste no es una impresión: la cabecera pública es <strong>plana y se funde con la
+      página</strong>, y la de consola es <strong>una barra blanca despegada</strong> con un borde
+      más marcado y una hamburguesa más pesada. Hay un motivo técnico detrás, y determina hasta
+      dónde podemos copiar esa sensación.
+    </p>
+    <div class="masthead-meta">
+      <span><b>Fecha</b> 15 ago 2026</span>
+      <span><b>Base</b> main @ 0f68da68</span>
+      <span><b>Foco</b> móvil, 375 px</span>
+      <span><b>Estado</b> propuesta, sin implementar</span>
+    </div>
+  </header>
+
+  <section>
+    <span class="sec-num">01 — Lo que has visto</span>
+    <h2>Las dos, a tamaño real, y qué las separa</h2>
+    <p class="lede">
+      A 375&nbsp;px, con el mismo contenido que hay hoy en producción. Las dos barras miden
+      52&nbsp;px y llevan el logo centrado — eso ya está igualado. Lo que cambia es todo lo demás.
+    </p>
+
+    <div class="row">
+      <div class="col">
+        <div class="shot-label"><span class="nm">Pública (portada)</span><span class="tag now">actual</span></div>
+        <div class="ph">
+          <div class="page hero">
+            <div class="h1m">Que la IA <i>hable</i><br><i>de tu marca</i></div>
+            <div class="leadm">Descubre si los motores de IA mencionan tu marca, frente a quién pierdes y exactamente qué cambiar primero.</div>
+            <div class="field">tudominio.com</div>
+          </div>
+          <div class="bar flat">
+            <span class="bg">
+              <svg width="22" height="22" viewBox="0 0 24 24" stroke="#3A4459" stroke-width="1.7" stroke-linecap="round"><path d="M4 8h16M4 16h16"/></svg>
+            </span>
+            <span class="ctr"><span class="logo">
+              <svg width="20" height="20" viewBox="0 0 24 24"><path d="M21.2 12.2a9 9 0 1 1-2.9-6.6" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/><path d="M21.2 12.2h-7.4" fill="none" stroke="#0f1729" stroke-width="3" stroke-linecap="round"/><circle cx="19.6" cy="4.6" r="2.7" fill="#FFB020"/></svg>
+              <span class="wm"><b>en</b><i>score</i></span></span></span>
+          </div>
+        </div>
+        <p class="px cap">sin fondo · sin borde · hamburguesa de 2 rayas · <b>no es pegajosa</b></p>
+      </div>
+
+      <div class="col">
+        <div class="shot-label"><span class="nm">Consola</span><span class="tag now">actual</span></div>
+        <div class="ph">
+          <div class="page canvas">
+            <div class="banner">
+              <b>Tu análisis de hoy no se repetirá.</b>
+              <p>Activa el seguimiento diario para ver cómo evoluciona tu visibilidad.</p>
+            </div>
+            <div class="pgh">
+              <div class="ttl">Visión general</div>
+              <div class="nm2">Genscore</div>
+              <div class="card"><div class="ghost w35"></div><div class="ghost w80"></div><div class="ghost w60"></div></div>
+            </div>
+          </div>
+          <div class="bar solid">
+            <span class="bg">
+              <svg width="20" height="20" viewBox="0 0 24 24" stroke="#475067" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </span>
+            <span class="ctr"><span class="logo">
+              <svg width="20" height="20" viewBox="0 0 24 24"><path d="M21.2 12.2a9 9 0 1 1-2.9-6.6" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/><path d="M21.2 12.2h-7.4" fill="none" stroke="#0f1729" stroke-width="3" stroke-linecap="round"/><circle cx="19.6" cy="4.6" r="2.7" fill="#FFB020"/></svg>
+              <span class="wm"><b>en</b><i>score</i></span></span></span>
+            <span style="margin-left:auto" class="bell-box">
+              <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 8a4 4 0 0 1 8 0c0 4 1.5 5 1.5 5h-11S6 12 6 8z"/><path d="M8.5 16a1.8 1.8 0 0 0 3 0"/></svg>
+            </span>
+          </div>
+        </div>
+        <p class="px cap">blanco sólido · borde #e8eaef · 3 rayas · campana en caja · <b>pegajosa</b></p>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Rasgo</th><th>Pública (portada)</th><th>Consola</th></tr></thead>
+        <tbody>
+          <tr><td class="dim">Fondo</td><td class="val">ninguno — se ve el degradado del hero</td><td class="val">blanco sólido</td></tr>
+          <tr><td class="dim">Borde inferior</td><td class="val">ninguno</td><td class="val">1px #e8eaef (el tono marcado)</td></tr>
+          <tr><td class="dim">Hamburguesa</td><td class="val">2 rayas · <code>M4 8h16 M4 16h16</code></td><td class="val">3 rayas · <code>M3 6h18 M3 12h18 M3 18h18</code></td></tr>
+          <tr><td class="dim">Campana</td><td class="val">no hay</td><td class="val">caja de 32px con borde 1.5px</td></tr>
+          <tr><td class="dim">Comportamiento</td><td class="val">se va con el scroll</td><td class="val">pegajosa, siempre visible</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">02 — La restricción</span>
+    <h2>La portada puede ser plana porque se va; la consola no puede irse</h2>
+    <p class="lede">
+      Ésta es la razón de fondo, y conviene tenerla clara antes de decidir: la cabecera de la
+      portada no lleva fondo <strong>porque no es pegajosa</strong>. Se desplaza con el hero y
+      desaparece. Nada llega a pasar por debajo de ella, así que no necesita taparlo.
+    </p>
+    <p>
+      La de consola es <code>position: sticky</code>: se queda arriba mientras lees la Visión
+      general. Si le quitamos el fondo tal cual, el número grande del GEO Score y las tarjetas
+      pasarían por debajo del logo y de la hamburguesa. <strong>No es un capricho de diseño, es lo
+      que impide copiar la portada literalmente.</strong>
+    </p>
+    <div class="callout">
+      <h3>Pero sí hay una forma de tener las dos cosas</h3>
+      <p>
+        Una cabecera <strong>que empieza plana y sólo se materializa al hacer scroll</strong>:
+        transparente mientras estás arriba del todo —que es cuando abres la pantalla y cuando la
+        juzgas—, y con fondo translúcido y desenfoque en cuanto hay contenido debajo. Es el patrón
+        de la propia web pública en <code>/pricing</code> y <code>/blog</code>, sólo que allí el
+        fondo está siempre puesto.
+      </p>
+      <p>
+        Cuesta un detector de scroll en la cabecera de consola. A cambio, la primera impresión —la
+        que tú estás comparando— pasa a ser exactamente la de la portada.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">03 — La propuesta</span>
+    <h2>Tres cambios, y así queda</h2>
+    <p class="lede">
+      Hamburguesa de dos rayas, campana sin caja, y cabecera que se funde arriba y se materializa al
+      bajar. Debajo, los dos estados a tamaño real.
+    </p>
+
+    <div class="row">
+      <div class="col">
+        <div class="shot-label"><span class="nm">Consola · arriba del todo</span><span class="tag new">propuesta</span></div>
+        <div class="ph">
+          <div class="page canvas">
+            <div class="banner">
+              <b>Tu análisis de hoy no se repetirá.</b>
+              <p>Activa el seguimiento diario para ver cómo evoluciona tu visibilidad.</p>
+            </div>
+            <div class="pgh">
+              <div class="ttl">Visión general</div>
+              <div class="nm2">Genscore</div>
+              <div class="card"><div class="ghost w35"></div><div class="ghost w80"></div><div class="ghost w60"></div></div>
+            </div>
+          </div>
+          <div class="bar flat">
+            <span class="bg">
+              <svg width="22" height="22" viewBox="0 0 24 24" stroke="#3A4459" stroke-width="1.7" stroke-linecap="round"><path d="M4 8h16M4 16h16"/></svg>
+            </span>
+            <span class="ctr"><span class="logo">
+              <svg width="20" height="20" viewBox="0 0 24 24"><path d="M21.2 12.2a9 9 0 1 1-2.9-6.6" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/><path d="M21.2 12.2h-7.4" fill="none" stroke="#0f1729" stroke-width="3" stroke-linecap="round"/><circle cx="19.6" cy="4.6" r="2.7" fill="#FFB020"/></svg>
+              <span class="wm"><b>en</b><i>score</i></span></span></span>
+            <span style="margin-left:auto" class="bell-bare">
+              <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 8a4 4 0 0 1 8 0c0 4 1.5 5 1.5 5h-11S6 12 6 8z"/><path d="M8.5 16a1.8 1.8 0 0 0 3 0"/></svg>
+            </span>
+          </div>
+        </div>
+        <p class="px cap">sin fondo · sin borde · 2 rayas · campana sin caja</p>
+      </div>
+
+      <div class="col">
+        <div class="shot-label"><span class="nm">Consola · tras hacer scroll</span><span class="tag new">propuesta</span></div>
+        <div class="ph">
+          <div class="page canvas">
+            <div class="pgh" style="padding-top:6px">
+              <div class="card" style="margin-top:0"><div class="ghost w35"></div><div class="ghost w80"></div></div>
+              <div class="card"><div class="ghost w60"></div><div class="ghost w80"></div><div class="ghost w35"></div></div>
+              <div class="card"><div class="ghost w80"></div><div class="ghost w60"></div></div>
+            </div>
+          </div>
+          <div class="bar glass">
+            <span class="bg">
+              <svg width="22" height="22" viewBox="0 0 24 24" stroke="#3A4459" stroke-width="1.7" stroke-linecap="round"><path d="M4 8h16M4 16h16"/></svg>
+            </span>
+            <span class="ctr"><span class="logo">
+              <svg width="20" height="20" viewBox="0 0 24 24"><path d="M21.2 12.2a9 9 0 1 1-2.9-6.6" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/><path d="M21.2 12.2h-7.4" fill="none" stroke="#0f1729" stroke-width="3" stroke-linecap="round"/><circle cx="19.6" cy="4.6" r="2.7" fill="#FFB020"/></svg>
+              <span class="wm"><b>en</b><i>score</i></span></span></span>
+            <span style="margin-left:auto" class="bell-bare">
+              <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 8a4 4 0 0 1 8 0c0 4 1.5 5 1.5 5h-11S6 12 6 8z"/><path d="M8.5 16a1.8 1.8 0 0 0 3 0"/></svg>
+            </span>
+          </div>
+        </div>
+        <p class="px cap">blanco 82% + blur(10px) · borde #eef0f4 (suave)</p>
+      </div>
+    </div>
+
+    <h3>Qué cambia, pieza por pieza</h3>
+    <ul>
+      <li><strong>Hamburguesa:</strong> pasa del icono de 3 rayas al de 2 (<code>menu2</code>), que ya existe y sólo usaba la portada. Es el cambio que más adelgaza la esquina izquierda.</li>
+      <li><strong>Campana:</strong> pierde la caja de 32&nbsp;px con borde y queda como icono suelto de 44&nbsp;px — mismo tamaño táctil que la hamburguesa, simetría a los dos lados.</li>
+      <li><strong>Fondo y borde:</strong> nada arriba del todo; blanco al 82% con desenfoque y borde suave en cuanto hay contenido debajo.</li>
+      <li><strong>El banner lila no se toca.</strong> Es el aviso de seguimiento diario, no la cabecera — pero al desaparecer la barra blanca deja de haber dos bandas apiladas, que es parte de lo que hace la consola más pesada que la portada.</li>
+    </ul>
+
+    <div class="callout warn">
+      <h3>Lo que no me convence del todo, dicho antes de que lo veas</h3>
+      <p>
+        Con la cabecera transparente, el logo y la hamburguesa quedan sobre el lila del banner en
+        vez de sobre blanco. En la maqueta se lee bien, pero <strong>es contraste sobre un fondo que
+        no controlamos del todo</strong>: si mañana ese aviso cambia de color, la cabecera hereda el
+        problema. La alternativa segura es dejar el fondo translúcido siempre puesto (el estado de
+        la derecha, permanente) — se pierde algo de la sensación de portada, pero no depende de qué
+        haya debajo.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num">04 — El resto de la web</span>
+    <h2>Ojo: la portada no es «la pública», es la excepción</h2>
+    <p class="lede">
+      Esto es lo más importante que he encontrado preparando la propuesta. Lo que estás comparando
+      es la <strong>portada</strong>, y la portada es la única superficie pública con ese
+      tratamiento. <code>/pricing</code>, <code>/blog</code>, <code>/geo</code>, comparativas,
+      glosario y las legales llevan <strong>barra blanca pegajosa con borde y hamburguesa de tres
+      rayas</strong> — es decir, se parecen a la consola de hoy, no a la portada.
+    </p>
+    <p>
+      Eso fue deliberado (§63): la unificación de aquella fase fue de contenido y de comportamiento
+      del menú, <em>no</em> del fondo del hero, que es un repintado acotado a la portada a propósito.
+      Así que hay dos formas de entender lo que me pides:
+    </p>
+    <ul>
+      <li><strong>Sólo la consola</strong> adopta el tratamiento de la portada. Rápido, pero deja la web pública partida en dos: portada plana, resto con barra blanca — y la consola parecida a la portada pero no a <code>/pricing</code>.</li>
+      <li><strong>Todas</strong> adoptan el tratamiento de la portada: consola, <code>/pricing</code>, <code>/blog</code> y el resto. Es más trabajo y toca superficies que hoy funcionan, pero es lo único que deja el producto entero con una sola cara.</li>
+    </ul>
+    <p>
+      Mi recomendación es la segunda, <strong>pero por fases</strong>: primero la consola —que es lo
+      que te chirría— y las páginas públicas después, con su propia pasada. Empezar por todo a la
+      vez es un PR grande tocando quince pantallas y siete superficies públicas.
+    </p>
+  </section>
+
+  <section>
+    <span class="sec-num">05 — Pendiente de antes</span>
+    <h2>El escritorio sigue esperando</h2>
+    <p class="lede">
+      Lo que te propuse en el artefacto anterior no se cae, sólo baja de prioridad: en escritorio la
+      consola no tiene marca en su cabecera (vive en la barra lateral) y la pública mide
+      <strong>101&nbsp;px con sesión iniciada</strong> por un chip de cuenta que hereda un relleno
+      pensado para el cajón móvil.
+    </p>
+    <p>
+      Sigue mereciendo la pena, pero es otra conversación y otro PR. Si lo de arriba es lo que
+      querías, lo aparcamos y volvemos luego.
+    </p>
+  </section>
+
+  <section class="ask">
+    <span class="sec-num">06 — Qué decides</span>
+    <h2>Recomiendo empezar por la consola, en un PR pequeño</h2>
+    <p>
+      Los tres cambios de §03 son CSS y un cambio de icono, más un detector de scroll. Sin migración,
+      sin tocar navegación, sin tocar escritorio. Verificable en preview en una tarde y fácil de
+      revertir si al verlo en tu móvil no te convence.
+    </p>
+    <h3>Cuatro preguntas</h3>
+    <ol>
+      <li><strong>¿Apruebas los tres cambios</strong> de §03 — hamburguesa de 2 rayas, campana sin caja, cabecera que se funde arriba?</li>
+      <li><strong>¿Transparente arriba, o translúcida siempre?</strong> La primera se parece más a la portada; la segunda no depende del color de lo que haya debajo (ver el aviso de §03).</li>
+      <li><strong>¿Llevamos esto también a <code>/pricing</code>, <code>/blog</code> y el resto</strong> en una segunda fase, o dejamos la portada como única superficie plana?</li>
+      <li><strong>¿El escritorio (§05) lo aparcamos</strong> hasta cerrar esto?</li>
+    </ol>
+    <p class="closing">¿Apruebas este plan? No implementaré nada hasta que lo confirmes.</p>
+  </section>
+</div>

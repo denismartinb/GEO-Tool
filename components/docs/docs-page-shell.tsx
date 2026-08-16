@@ -25,9 +25,7 @@ export function DocsPageShell({
 }) {
   return (
     <div className="lp">
-      <div className="lp-nav-wrap">
-        <PublicHeader />
-      </div>
+      <PublicHeader />
 
       <BreadcrumbSchema
         items={[
