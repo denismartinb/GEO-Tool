@@ -9723,7 +9723,7 @@ leyera sin ese aviso la implementaría otra vez.
 ---
 
 
-## 101. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
+## 103. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
 
 **De dónde viene.** Al cerrar la Fase E dejé apuntado que el `title` y el
 `description` del layout raíz seguían siendo una redacción propia de qué es
@@ -9811,6 +9811,72 @@ es decisión de producto y necesita su propia pasada.
 **El `description` raíz** pasa a `CANONICAL_DEFINITION`, la misma cadena de la
 Fase E. Se unifica porque una descripción divergente envejece sola, no porque
 nadie la lea — que es justo lo que no hace nadie.
+
+## 104. Retirar los dominios archivados, y la promesa que llevaba meses siendo falsa (DOMAINS-ARCHIVE-RETIRE-1, 2026-08-15)
+
+**Cómo se llegó aquí.** ROOT-METADATA-1 (§103) puso pestaña propia a cada
+pantalla de consola, y al mirar los títulos reales del despliegue salió que
+`/dashboard/projects` y `/dashboard/domains` devolvían la misma: «Dominios —
+GenScore». No era un fallo de los títulos — es que **el producto llamaba igual
+a dos pantallas**, y una llevaba fuera del menú desde DOMAINS-REDESIGN-1. El
+fundador pidió retirar la vieja.
+
+**Lo que apareció al ir a retirarla.** Esa pantalla tenía dos mitades. La de
+arriba duplicaba `/dashboard/domains`. La de abajo, «Dominios archivados», era
+el **único** sitio del producto donde se veían y se restauraban los archivados
+— y los archivados no son un caso raro: **bajar de plan archiva dominios**
+(`changePlan`). Retirarla a secas dejaba a un cliente que baja de plan sin sus
+dominios y sin forma de recuperarlos.
+
+Se le planteó al fundador con dos salidas, y eligió la de retirarlo todo
+asumiendo la pérdida.
+
+### La promesa falsa
+
+Al redactar el aviso apareció lo importante. El modal de bajada de plan decía,
+literalmente, en el momento en que el cliente elige qué dominios sacrificar:
+
+> «Archivar es reversible: podrás restaurarlos cuando quieras desde
+> "Dominios", sin perder su configuración ni sus escaneos.»
+
+**Ya era falsa antes de esta fase.** Desde «Dominios» no se podía restaurar
+nada: restaurar vivía en `/dashboard/projects`, fuera del menú. Alguien
+escribió la promesa dando por hecho que la capacidad estaría en la rejilla
+nueva, y nunca se construyó. Nadie lo notó porque una promesa falsa **no rompe
+nada**: la pantalla carga, el piloto la marca ✅, y el cliente sólo lo descubre
+el día que intenta recuperar su dominio. El mismo fallo sin síntoma de siempre,
+con la diferencia de que éste se cobra en una pantalla de facturación — que es
+justo lo que PRICING-TRUTH-1 obligó a limpiar del resto del producto.
+
+### El callejón sin salida que la retirada creaba
+
+Y aún había una vuelta más, encontrada leyendo `createProjectCore` antes de
+tocar nada. Sin pantalla de archivados, el cliente que quisiera su dominio de
+vuelta intentaría **volver a añadirlo** — y el alta lo rechazaba con
+`already_archived`, cuyo mensaje era *«Restáuralo para continuar»*. Un bucle
+cerrado: sin sitio donde restaurar, sin poder crear, y un mensaje que le manda
+usar algo que ya no existe.
+
+Por eso la retirada trae **reactivación al volver a añadir**: un dominio
+archivado se desarchiva en vez de rechazar el alta, con sus prompts, sus
+competidores y su histórico. No es alcance añadido, es lo que hace que la
+retirada no sea una trampa — y lo que convierte «vuelve a añadirlo» en una
+frase verdadera. Respeta el tope del plan porque la comprobación de cupo ya
+corre antes: reactivar no es una puerta trasera para saltárselo.
+
+### Lo que queda declarado y no arreglado
+
+`changePlan` sigue archivando filas: es facturación y tocarlo necesita
+aprobación aparte. O sea que las filas archivadas siguen existiendo,
+invisibles. Recuperar una sigue siendo posible —volviendo a añadir el dominio—
+pero si el cliente no lo intenta, nada del producto le dice que están ahí.
+
+**El guardián que sale de aquí no es de redacción, es de coherencia**
+(`change-plan-copy.test.ts`): si el modal vuelve a nombrar restaurar, o si
+`createProjectCore` deja de reactivar, salta. Lo segundo importa más que lo
+primero — el día que alguien revierta esa rama por parecer rara, el modal pasa
+a mentir y el cliente vuelve a quedarse encerrado, y ninguna de las dos cosas
+tiene síntoma.
 
 ## Cómo mantener este documento
 
