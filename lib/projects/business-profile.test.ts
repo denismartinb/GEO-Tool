@@ -75,7 +75,7 @@ describe("resolveBusinessContext", () => {
 
     // The reason is required, not decorative: this is the ONLY one of the three
     // that is genuinely about the visitor's own site, and the free checker's
-    // copy branches on exactly that (log §110, Fase C-bis).
+    // copy branches on exactly that (log §111, Fase C-bis).
     expect(result).toEqual({ status: "unidentified", reason: "homepage_unreadable" });
     expect(inferBusinessProfileMock).not.toHaveBeenCalled();
   });

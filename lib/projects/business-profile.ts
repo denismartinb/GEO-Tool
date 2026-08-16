@@ -174,7 +174,7 @@ export async function resolveAndCacheBusinessProfile(input: {
  * de los tres no tienen NADA que ver con su web. Decirle a alguien que su sitio
  * está roto cuando lo que falló fue nuestro modelo es exactamente lo que
  * `.claude/rules/gemini.md` prohíbe: «nunca le digas al usuario una causa que
- * el código no puede saber» (FREE-CHECKER-1 Fase C-bis, log §110).
+ * el código no puede saber» (FREE-CHECKER-1 Fase C-bis, log §111).
  */
 export type BusinessContextUnidentifiedReason =
   /** No se pudo leer la portada y no había descripción del usuario. Esto SÍ es su web. */

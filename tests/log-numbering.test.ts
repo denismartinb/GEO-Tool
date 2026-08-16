@@ -82,17 +82,18 @@ describe("numeración del histórico de decisiones", () => {
       .filter(([numero, lista]) => lista.length > 1 && !DUPLICADOS_HEREDADOS.has(numero))
       .map(([numero, lista]) => `§${numero}: ${lista.map((t) => t.slice(0, 60)).join("  +  ")}`);
 
-    // El mensaje dice el siguiente número libre, porque el fallo se arregla
-    // renumerando y buscarlo a mano es justo el paso que se salta quien provocó
-    // la colisión. Renumerar la sección que NO está en main, y con ella TODAS
-    // sus referencias (`grep -rn "§NN"`), que es la mitad que se olvida.
-    const maximo = Math.max(...secciones.map((s) => s.numero));
+    // `pnpm run fix:log-numbering` hace exactamente esto a mano: renumera la
+    // sección que NO está en `origin/main` y actualiza sus referencias — pero
+    // sólo en las líneas que esta rama añadió, nunca en las de la otra sección
+    // (scripts/fix-log-numbering-core.ts, log §110). Si el autofix devuelve una
+    // colisión "que necesita una decisión humana", es que las dos secciones ya
+    // están en `main` (dos PRs ajenos chocaron entre sí) y hay que renumerar a
+    // mano la que mergeó después.
     expect(
       duplicados,
       duplicados.length > 0
         ? `Dos secciones del histórico comparten número:\n${duplicados.join("\n")}\n` +
-            `Renumera la que NO esté en main — el siguiente libre es §${maximo + 1} — y ` +
-            `actualiza sus referencias (grep -rn "§NN" excluyendo node_modules y .next).`
+            `Ejecuta \`git fetch origin main && pnpm run fix:log-numbering\`.`
         : ""
     ).toEqual([]);
   });
