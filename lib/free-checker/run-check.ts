@@ -1,4 +1,5 @@
 import type { BusinessProfile } from "@/lib/llm/contracts";
+import { ExtractionError } from "@/lib/llm/extraction-errors";
 import { deriveBrandFromDomain } from "@/lib/projects/project-form";
 
 /**
@@ -87,6 +88,34 @@ export type PublicCheckError =
  */
 export const PUBLIC_CHECK_STEP_BUDGET_MS = 21_000;
 
+/**
+ * Una etiqueta corta y **escrita por este repositorio** que dice por qué falló
+ * un paso. Nunca el mensaje del proveedor: la regla es la misma que persiste
+ * `category: message` en el escaneo (`.claude/rules/gemini.md`, "sanitize all
+ * errors"), y aquí importa el doble porque el visitante es un desconocido.
+ *
+ * Existe porque la primera versión de este fichero tenía cinco `catch {}` que
+ * tiraban la causa entera. El 2026-08-15, en la primera ejecución real contra
+ * producción, la comprobación devolvió `extraction_failed` y **no había forma
+ * de saber si era un 400 del proveedor, un JSON roto, un timeout o un fallo de
+ * esquema** — cinco causas que se arreglan de cinco maneras distintas. Un
+ * `catch` que descarta la causa es un fallo, no un estilo
+ * (`.claude/rules/gemini.md`).
+ *
+ * Lo que se conserva es sólo el nombre de la clase o la categoría del
+ * `ExtractionError` —`quota`, `timeout`, `http`, `empty`, `invalid_json`,
+ * `schema`, `config`—, saneado a letras. Nada de eso lo escribió un proveedor.
+ */
+export function describeCause(error: unknown): string {
+  const raw =
+    error instanceof ExtractionError
+      ? error.category
+      : error instanceof Error && error.name
+        ? error.name
+        : "unknown";
+  return raw.replace(/[^A-Za-z_]/g, "").slice(0, 40) || "unknown";
+}
+
 export type PublicCheckOutcome =
   | {
       status: "completed";
@@ -107,8 +136,43 @@ export type PublicCheckOutcome =
       citedDomains: string[];
       /** Si alguna cita es del dominio del visitante. */
       citedOwnDomain: boolean;
+      /**
+       * Sólo cuando la comprobación salió adelante **por el motor de reserva**:
+       * la causa por la que el principal no pudo. Va al operador, nunca al
+       * visitante — que se haya recuperado no significa que no haya nada roto,
+       * y una degradación silenciosa es justo lo que hizo que los 429 de
+       * OpenAI corrieran cuatro días sin que nadie se enterara
+       * (`docs/adr/0029`).
+       */
+      detail?: string;
     }
-  | { status: "failed"; error: PublicCheckError };
+  | {
+      status: "failed";
+      error: PublicCheckError;
+      /** Ver `describeCause`. Sólo para el operador: nunca sale en la respuesta HTTP. */
+      detail?: string;
+    };
+
+/**
+ * Una extracción estructurada. Misma firma que
+ * `extractGeminiStructuredData` / `extractOpenAIStructuredData` para que
+ * cualquiera de las dos encaje sin adaptador.
+ */
+export type PublicCheckExtractor = (input: {
+  brand: string;
+  competitors: string[];
+  rawResponseText: string;
+  promptText: string;
+  profile?: BusinessProfile;
+  /** Presupuesto absoluto del bucle de reintentos del proveedor. Ver más abajo. */
+  deadlineAt?: number;
+}) => Promise<{
+  data: {
+    brand: { mentioned: boolean; position: number | null };
+    citations: Array<{ domain: string | null }>;
+    other_brands_mentioned: string[];
+  };
+}>;
 
 /** Las dependencias se inyectan para poder testar sin red ni claves. */
 export type PublicCheckDeps = {
@@ -130,19 +194,24 @@ export type PublicCheckDeps = {
     country: string;
     language: string;
   }) => Promise<{ text: string }>;
-  extract: (input: {
-    brand: string;
-    competitors: string[];
-    rawResponseText: string;
-    promptText: string;
-    profile?: BusinessProfile;
-  }) => Promise<{
-    data: {
-      brand: { mentioned: boolean; position: number | null };
-      citations: Array<{ domain: string | null }>;
-      other_brands_mentioned: string[];
-    };
-  }>;
+  extract: PublicCheckExtractor;
+  /**
+   * Motor de reserva para la extracción, y **sólo** para la extracción.
+   *
+   * No afloja ninguna promesa de la página: lo que el visitante ve —la
+   * pregunta y la respuesta literal— lo sigue produciendo ChatGPT. Leer esa
+   * respuesta y devolver el JSON estructurado es un paso interno que el
+   * visitante nunca ve, exactamente igual que el perfil del negocio y la
+   * derivación de la pregunta, que ya van por Gemini a propósito (ver
+   * `PUBLIC_CHECK_ENGINE`). Un fallo ahí tiraba a la basura una llamada con
+   * búsqueda ya pagada y le enseñaba "no hemos podido interpretarla" a alguien
+   * cuya respuesta estaba entera y correcta en memoria.
+   *
+   * La causa del primer fallo **se conserva y se reporta igualmente** aunque
+   * la reserva funcione: recuperarse en silencio de un proveedor roto es cómo
+   * se pierden cuatro días (`docs/adr/0029`).
+   */
+  extractFallback?: PublicCheckExtractor;
   /** Verifica la mención contra el texto crudo. Se inyecta para poder probar que se llama. */
   verify: <T extends { brand: { mentioned: boolean; position: number | null } }>(
     data: T,
@@ -183,8 +252,8 @@ export async function runPublicCheck(
       country: PUBLIC_CHECK_COUNTRY,
       language: PUBLIC_CHECK_LANGUAGE
     });
-  } catch {
-    return { status: "failed", error: "site_unreachable" };
+  } catch (error) {
+    return { status: "failed", error: "site_unreachable", detail: describeCause(error) };
   }
 
   const profile = context.profile;
@@ -213,10 +282,10 @@ export async function runPublicCheck(
       limit: 1
     });
     const first = suggestions[0]?.text?.trim();
-    if (!first) return { status: "failed", error: "engine_unavailable" };
+    if (!first) return { status: "failed", error: "engine_unavailable", detail: "no_prompt" };
     prompt = first;
-  } catch {
-    return { status: "failed", error: "engine_unavailable" };
+  } catch (error) {
+    return { status: "failed", error: "engine_unavailable", detail: describeCause(error) };
   }
 
   // 3. Preguntar. La llamada es CIEGA A LA MARCA (ADR 0007): el motor no sabe
@@ -231,9 +300,9 @@ export async function runPublicCheck(
       language: PUBLIC_CHECK_LANGUAGE
     });
     answer = generated.text?.trim() ?? "";
-    if (!answer) return { status: "failed", error: "engine_unavailable" };
-  } catch {
-    return { status: "failed", error: "engine_unavailable" };
+    if (!answer) return { status: "failed", error: "engine_unavailable", detail: "empty_answer" };
+  } catch (error) {
+    return { status: "failed", error: "engine_unavailable", detail: describeCause(error) };
   }
 
   // 4. Extraer y VERIFICAR. `competitors: []` a propósito: no rastreamos a
@@ -241,15 +310,50 @@ export async function runPublicCheck(
   //    — que es justo "quién apareció en tu lugar".
   if (!hasRoomForNextStep()) return { status: "failed", error: "budget_exhausted" };
 
-  try {
-    const extracted = await deps.extract({
-      brand,
-      competitors: [],
-      rawResponseText: answer,
-      promptText: prompt,
-      profile
-    });
+  const extractionArgs = {
+    brand,
+    competitors: [],
+    rawResponseText: answer,
+    promptText: prompt,
+    profile,
+    // El bucle de reintentos del proveedor (3 intentos de hasta 20 s) NO cabe
+    // en lo que queda de invocación, y sin este deadline no lo sabe: arrancaba
+    // un segundo intento mientras quedara un milisegundo y se pasaba de los
+    // 60 s de `maxDuration`, o sea un 504 sin cuerpo con el dinero gastado. Se
+    // le resta un presupuesto de paso entero porque el helper sólo garantiza
+    // "no EMPIEZO un intento pasado el deadline": hay que dejarle sitio para
+    // terminar el que sí empiece (`.claude/rules/scan.md`, presupuestar contra
+    // la invocación; `docs/adr/0037`).
+    deadlineAt:
+      options.deadlineAt === undefined
+        ? undefined
+        : options.deadlineAt - PUBLIC_CHECK_STEP_BUDGET_MS
+  };
 
+  let extracted: Awaited<ReturnType<PublicCheckExtractor>>;
+  /** Se arrastra hasta el final aunque la reserva funcione. Ver `extractFallback`. */
+  let detail: string | undefined;
+
+  try {
+    extracted = await deps.extract(extractionArgs);
+  } catch (error) {
+    const cause = describeCause(error);
+    if (!deps.extractFallback || !hasRoomForNextStep()) {
+      return { status: "failed", error: "extraction_failed", detail: cause };
+    }
+    try {
+      extracted = await deps.extractFallback(extractionArgs);
+      detail = `fallback:${cause}`;
+    } catch (fallbackError) {
+      return {
+        status: "failed",
+        error: "extraction_failed",
+        detail: `${cause}+${describeCause(fallbackError)}`
+      };
+    }
+  }
+
+  try {
     // Sin esto, una mención la decide el modelo hablando de su propio trabajo.
     const verified = deps.verify(extracted.data, answer, brand);
 
@@ -267,9 +371,10 @@ export async function runPublicCheck(
       brandPosition: verified.brand.mentioned ? verified.brand.position : null,
       otherBrands: verified.other_brands_mentioned.filter((n) => n?.trim()),
       citedDomains,
-      citedOwnDomain: citedDomains.some((d) => d === domain || d.endsWith(`.${domain}`))
+      citedOwnDomain: citedDomains.some((d) => d === domain || d.endsWith(`.${domain}`)),
+      ...(detail ? { detail } : {})
     };
-  } catch {
-    return { status: "failed", error: "extraction_failed" };
+  } catch (error) {
+    return { status: "failed", error: "extraction_failed", detail: describeCause(error) };
   }
 }

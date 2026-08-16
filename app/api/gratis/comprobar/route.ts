@@ -5,6 +5,7 @@ import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import { suggestPrompts } from "@/lib/projects/prompt-suggestions-llm";
 import { generateOpenAIVisibilityAnswer, extractOpenAIStructuredData } from "@/lib/llm/openai";
+import { extractGeminiStructuredData } from "@/lib/llm/gemini";
 import { verifyExtractedMentions } from "@/lib/scan/extraction";
 import {
   checkPublicCheckLimits,
@@ -119,11 +120,24 @@ export async function POST(request: Request) {
       suggestPrompts,
       generateAnswer: generateOpenAIVisibilityAnswer,
       extract: extractOpenAIStructuredData,
+      // Leer la respuesta de ChatGPT es un paso interno. Ver `extractFallback`.
+      extractFallback: extractGeminiStructuredData,
       verify: (data, rawResponseText, brand) =>
         verifyExtractedMentions(data as never, rawResponseText, brand) as never
     },
     { deadlineAt: startedAt + INVOCATION_BUDGET_MS }
   );
+
+  // La causa, saneada y escrita por este repositorio, va a los dos sitios donde
+  // un operador la busca: el log de ejecución y la propia fila. Se escribe
+  // TAMBIÉN cuando la comprobación salió adelante por el motor de reserva —
+  // recuperarse en silencio de un proveedor roto es cómo los 429 de OpenAI
+  // corrieron cuatro días sin que nadie se enterara (`docs/adr/0029`).
+  if (outcome.detail) {
+    console.error(
+      `${LOG_PREFIX} ${outcome.status} domain=${domain} error=${outcome.status === "failed" ? outcome.error : "none"} cause=${outcome.detail}`
+    );
+  }
 
   // Cerrar la fila. Un fallo aquí deja `pending`, que sigue contando para el
   // techo — la dirección segura.
@@ -131,12 +145,21 @@ export async function POST(request: Request) {
     .from("public_checks")
     .update(
       outcome.status === "completed"
-        ? { status: "completed", brand_mentioned: outcome.brandMentioned }
-        : { status: "failed", error_category: outcome.error }
+        ? {
+            status: "completed",
+            brand_mentioned: outcome.brandMentioned,
+            error_category: outcome.detail ?? null
+          }
+        : {
+            status: "failed",
+            error_category: outcome.detail ? `${outcome.error}:${outcome.detail}` : outcome.error
+          }
     )
     .eq("id", inserted.id)
     .then(undefined, () => console.error(`${LOG_PREFIX} close_row_failed`));
 
+  // `detail` no sale de aquí: es diagnóstico de servidor y lo lee un
+  // desconocido (`.claude/rules/gemini.md`, "sanitize all errors").
   if (outcome.status !== "completed") {
     return json({ status: "failed", error: outcome.error });
   }

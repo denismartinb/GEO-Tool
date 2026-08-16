@@ -9255,11 +9255,68 @@ caro sale publicar un peso del compuesto o un código ADR. Se añadió al crearl
 no cuando se le escapara algo, y se verificó metiendo un `ADR 0033` de mentira
 para ver el test en rojo.
 
+### Addendum (2026-08-15, misma tarde): la primera ejecución real falló, y lo grave no fue el fallo
+
+El fundador probó el comprobador en su móvil nada más configurarse la variable
+y la migración. Resultado: **"Hemos recibido la respuesta pero no hemos podido
+interpretarla"** — `extraction_failed`. Lo que ese mensaje demuestra que SÍ
+funcionaba: la sal, la tabla, los tres límites, la lectura de la portada, la
+derivación de la pregunta y **la llamada real a ChatGPT**. Falló el último paso,
+el que lee esa respuesta y devuelve JSON estructurado.
+
+**Lo grave no fue el fallo, fue que no se podía diagnosticar.** El fichero tenía
+cinco `catch {}` que tiraban la causa entera, así que `extraction_failed` podía
+ser un 400 del proveedor, un JSON roto, un timeout, un fallo de esquema o una
+respuesta vacía — cinco cosas que se arreglan de cinco maneras distintas, y
+ninguna forma de saber cuál. Es literalmente la regla que ya estaba escrita:
+*"un `catch` que descarta la causa es un fallo, no un estilo"*
+(`.claude/rules/gemini.md`). Ahora cada paso guarda una etiqueta corta escrita
+por este repositorio —la categoría del `ExtractionError` (`quota`, `timeout`,
+`http`, `empty`, `invalid_json`, `schema`, `config`) o el nombre de la clase,
+saneado a letras— que va al log de ejecución y a `error_category` de la fila.
+**Nunca sale en la respuesta HTTP**: la lee un desconocido.
+
+**Segundo fallo, encontrado leyendo y no ejecutando: el presupuesto no llegaba
+al proveedor.** `extractOpenAIStructuredData` acepta un `deadlineAt` y la
+comprobación no se lo pasaba, así que su bucle de reintentos (3 intentos de
+hasta 20 s) arrancaba uno nuevo mientras quedara un milisegundo — hasta 60 s de
+extracción dentro de una función con `maxDuration = 60`, o sea un 504 sin cuerpo
+con el dinero ya gastado. Se le pasa el deadline de la invocación **menos un
+presupuesto de paso entero**, porque el helper sólo promete "no EMPIEZO un
+intento pasado el deadline" y hay que dejarle sitio para terminar el que sí
+empiece (`.claude/rules/scan.md`; `docs/adr/0037`).
+
+**Y un motor de reserva para la extracción, sólo para la extracción.** Tirar a
+la basura una llamada con búsqueda ya pagada —cuya respuesta estaba entera y
+correcta en memoria— porque el lector falló era perder el resultado teniéndolo
+delante. Leer la respuesta es un paso interno que el visitante no ve, igual que
+el perfil del negocio y la derivación de la pregunta, que ya iban por Gemini a
+propósito; **lo que el visitante ve —la pregunta y la respuesta literal— lo
+sigue produciendo ChatGPT**, así que el titular de la página sigue siendo
+cierto. La reserva está acotada por el mismo presupuesto: si no cabe, no
+arranca.
+
+**Recuperarse no borra el incidente.** Cuando la reserva salva la comprobación,
+la causa del primer fallo se guarda igual (`fallback:config`) en una fila con
+`status = 'completed'`. Una degradación silenciosa es exactamente cómo los 429
+de OpenAI corrieron cuatro días sin que nadie se enterara (`docs/adr/0029`).
+
+**Lo que este addendum NO resuelve, dicho explícitamente.** La causa raíz del
+fallo de OpenAI sigue **sin diagnosticar**: se ha hecho diagnosticable, no se ha
+diagnosticado. Se sabrá con la primera ejecución después de este cambio,
+mirando `error_category`. Y hay un antecedente que apunta ahí: §54 dejó anotado
+"conocido y no resuelto: los 400 de OpenAI del 5-08 (`Check OPENAI_MODEL`)",
+que es el mensaje exacto de `getOpenAIApiError(400)` y sigue sin tocarse. Si la
+categoría que aparezca es `config`, el mismo fallo lleva diez días vivo también
+en el escaneo, y ahí no hay reserva que lo tape — sería su propia fase.
+
 **Trazabilidad.** Task Intake FREE-CHECKER-1 (2026-08-15, sin PR propio —
 generado en la conversación, no committeado como documento aparte);
 `docs/seo-positioning-plan.md` Fase P; `docs/llm-cost-analysis-2026-08.md`;
 `tests/pilot/support/page-audit.ts` (la exención que hace este fallo invisible);
-§55 (Q5b, cuando el chequeo de contraste entró en el piloto).
+§55 (Q5b, cuando el chequeo de contraste entró en el piloto); §54 (los 400 de
+OpenAI, conocidos y sin resolver); `docs/adr/0029` (categorizar y avisar);
+`docs/adr/0037` (presupuestar contra la invocación).
 
 ---
 
