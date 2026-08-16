@@ -10327,6 +10327,59 @@ refresco silencioso que expuso el caso "ya terminado").
 
 ---
 
+## 111. Se retira la banda «Revisando tu web» de Visión general — dos avisos del mismo hecho en la misma pantalla (2026-08-16)
+
+**El problema, señalado por el fundador con una captura.** Mientras la
+auditoría técnica del primer escaneo corre, Visión general mostraba **dos**
+señales simultáneas del mismo hecho: la pastilla «Auditando…» del
+sticky-header (`ScanStatePill`) y, justo debajo, la tarjeta clicable «Revisando
+tu web / La auditoría técnica sigue en marcha. No hace falta que esperes
+aquí» (`ScanMissionBand`, ONBOARDING-ROCKET-1). Un tercer sitio —la pantalla
+de Auditoría web— ya cuenta la misma historia con la escena completa del
+cohete en reentrada (`ReentryMission`, SCAN-STATES-3). El fundador: *«tampoco
+hace falta, la auditoría web tiene su propio estado de escaneando con el
+cohete en reentrada»*.
+
+**Por qué esto NO es el mismo bug que §110.** El banner de §110 era stale —
+afirmaba algo falso tras terminar el escaneo. `ScanMissionBand` no mentía
+nunca: su condición (`shouldShowMissionBand`, exactamente 1 escaneo completado
+y una auditoría activa) era correcta y tenía tests. El problema no era
+veracidad, era **redundancia entre dos superficies a la vez visibles en la
+misma pantalla** — se preguntó explícitamente al fundador el alcance antes de
+tocar nada, porque quitar un componente probado y diseñado a propósito no es
+lo mismo que corregir un dato falso.
+
+**Qué se decidió.** Se retira la banda entera de Visión general y se deja de
+pasarle `auditing` a su `ScanStatePill` — la pastilla vuelve a mostrar solo
+`Escaneando…`/`Analizando…`/`Escaneado <fecha>` ahí, igual que en Prompts,
+Competidores, Citas y Recomendaciones (ninguna de esas pantallas pasó nunca
+`auditing`; Visión general era la única excepción). La pastilla «Auditando…»
+de Auditoría web (`app/dashboard/projects/[projectId]/web-audit/page.tsx`) NO
+se toca — ahí es la propia pantalla afirmando su propio estado, no una segunda
+voz sobre el mismo hecho.
+
+**Lo que esto deja sin dueño, dicho en voz alta.** Con la banda fuera, Visión
+general no vuelve a mencionar la auditoría mientras corre — ni pastilla ni
+tarjeta. Quien quiera saber que está en marcha tiene que entrar a Auditoría
+web y ver el cohete en reentrada o la pastilla propia de esa pantalla. Es la
+elección explícita del fundador entre las opciones planteadas, no un olvido.
+
+**Código muerto retirado en el mismo PR**, no dejado atrás para una sesión
+futura que se pregunte si sigue en uso: `components/scan-mission-band.tsx`
+entero, `shouldShowMissionBand` y sus 4 tests en
+`lib/scan/mission-beats.ts`/`.test.ts`, la consulta a `jobs` que sólo existía
+para alimentar la banda y la pastilla de Visión general
+(`activeAuditJobCount`/`hasActiveAuditJob` en `page.tsx`), y el CSS `.mba-*`
+de `app/globals.css`.
+
+**Trazabilidad.** ONBOARDING-ROCKET-1 (`docs/design-reference/scan-states-1/rev3-cohete-secuencia.html`,
+sección "La misión suelta la pantalla a mitad" — su diseño queda superseded
+por esta retirada, no borrado del artefacto histórico); SCAN-STATES-3
+(`ReentryMission`, `docs/design-reference/scan-states-1/rev6-reentrada.html`);
+DOMAINS-REDESIGN-1 (`ScanStatePill`, log §26).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
