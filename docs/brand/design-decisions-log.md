@@ -10380,6 +10380,68 @@ DOMAINS-REDESIGN-1 (`ScanStatePill`, log §26).
 
 ---
 
+## 110. El autofix que arregla lo que llevaba una semana arreglándose a mano (LOG-NUMBERING-AUTOFIX-1, 2026-08-16)
+
+**Qué se decidió.** `pnpm run fix:log-numbering` — un script que hace, sin
+manos, los cinco pasos que este histórico llevaba repitiendo a mano desde que
+`tests/log-numbering.test.ts` empezó a cazar colisiones: mergear, renumerar la
+cabecera, mover la sección al final, y actualizar SUS referencias sin tocar las
+de la otra sección.
+
+### Lo que costaba de verdad no era detectar, era decidir sin equivocarse
+
+El identificador es un ordinal en un fichero append-only: dos ramas calculan
+`max + 1` sobre bases que envejecen, y git mezcla los dos apéndices sin un solo
+marcador de conflicto. **Siete colisiones en dos días** (2026-08-15 y 16), la
+mayoría entre esta misma rama y `main`, y una vez —§107, HEADER-FLAT-1 contra
+SEO-POS-1 Fase A— **entre dos PRs ajenos, ninguno mío**, ya mergeados los dos
+cuando colisionaron entre sí. El test siempre las cazó; el coste era el arreglo,
+y recaía siempre en quien mergeaba segundo.
+
+### El criterio que decide, y por qué es seguro dejarlo en manos de un script
+
+De las dos secciones que comparten número, la que ya está publicada en
+`origin/main` —mismo número, mismo título— se queda donde está; la que no está
+en `main` se renumera al siguiente libre. Es el mismo criterio que el mensaje
+del test ya recomendaba a mano, hecho determinista.
+
+**Cuando no puede decidir, no adivina.** Si las dos secciones YA están en
+`main` —el caso HEADER-FLAT-1/SEO-POS-1— ninguna es "la nueva", y el script
+imprime el hallazgo y sale en rojo sin tocar nada. Esa vez se resolvió a mano,
+dentro del PR #429, comprobando en `git log` cuál de los dos PRs mergeó
+después.
+
+### El alcance de las referencias, que es donde vivía el riesgo real
+
+Sólo toca `§N` en líneas que el `git diff` contra `origin/main` marca como
+AÑADIDAS por esta rama (o ficheros que no existen en `main`, donde se tocan
+todas). Nunca una línea que ya estaba en `main` sin cambios — es lo que impide
+corromper una referencia legítima a la sección que se queda. 26 tests cubren
+las funciones puras y cuatro escenarios de punta a punta sobre un repo git de
+verdad, siguiendo el mismo patrón que `vercel-should-build.test.ts`.
+
+**Un bug real, cazado por los propios tests antes de mergear:** con dos
+secciones compartiendo número, `applyRenumber` buscaba sólo por número y cogía
+la primera que encontraba — a veces la que había que CONSERVAR, no la que había
+que mover. Lo delató el test de integración del caso común, que hizo falta
+depurar contra un repo temporal real para ver qué renumeraba de verdad. Ahora
+busca por número Y título.
+
+### Lo que NO arregla, dicho claro
+
+Las siete colisiones heredadas (§33, §36, §39, §54, §55, §65, §70) siguen sin
+tocar — congeladas a propósito porque renumerarlas rompería referencias ya
+publicadas; merecen su propia pasada deliberada. Y la colisión "ya dentro de
+main entre dos PRs ajenos" sigue necesitando una decisión humana: el script no
+puede saber cuál mergeó después sin que se lo digan.
+
+**Trazabilidad.** `scripts/fix-log-numbering-core.ts`;
+`scripts/fix-log-numbering-core.test.ts`; `tests/log-numbering.test.ts`; §108
+(CI-REDUNDANCY-1, la misma tarde); §109 (HEADER-FLAT-1, la sección renumerada
+en el ejemplo).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
