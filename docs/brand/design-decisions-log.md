@@ -10279,51 +10279,6 @@ unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de
 
 ---
 
-## 110. El aviso verde de «tu primer escaneo se está ejecutando» reaparecía ya terminado el escaneo (2026-08-16)
-
-**El problema, reportado por el fundador con una captura del móvil.** En
-Visión general, el banner de éxito `scan_started` («Dominio creado. Tu primer
-escaneo se está ejecutando — sigue el progreso aquí») aparecía **a la vez** que
-la puntuación GEO ya calculada y la etiqueta «Escaneado 16 ago 2026» — es
-decir, después de que el escaneo hubiera terminado. Nadie recargó nada a mano.
-
-**La causa.** SCAN-STATES-2 (§56) ya había decidido ocultar este banner
-mientras la misión del cohete ocupa la pantalla, con la condición
-`isFirstScan && activeRun`. Pero `?success=scan_started` se queda en la URL
-después del redirect inicial, y `ScanProgressPoller` dispara un
-`router.refresh()` en cuanto el run pasa a estado terminal, sin acción del
-usuario. En ese refresh `activeRun` ya no existe **y** `isFirstScan` ya ha
-pasado a `false` (hay 1 escaneo completado), así que la condición de ocultado
-deja de cumplirse y el texto stale —que sigue diciendo «se está ejecutando»—
-vuelve a mostrarse, ahora contradiciendo los datos reales que tiene debajo.
-
-**Primer intento, y por qué se quedó a medias.** Se cambió la condición de
-ocultado a depender sólo de `activeRun` (`!activeRun` ⇒ ocultar), razonando
-que `isFirstScan` era redundante en el momento del redirect. Es la mitad
-correcta del argumento y la mitad equivocada del código: `!activeRun` oculta
-el banner **después** de terminar, pero lo deja pasar **mientras** `activeRun`
-es verdadero — es decir, mientras la misión del cohete está en pantalla, que es
-el caso exacto que SCAN-STATES-2 prohibió en primer lugar. El fundador lo cazó
-en el acto, con una captura del banner flotando sobre el cohete en plena
-órbita: la condición había quedado invertida respecto a la intención.
-
-**Qué se decidió, de verdad.** Esta clave sólo la dispara la creación de
-proyecto (`app/dashboard/projects/actions.ts`), así que no existe ningún
-momento en el que mostrarla sea correcto: mientras el escaneo corre, la misión
-ya dice lo mismo; en cuanto termina, el texto es falso. Se suprime sin
-condición (`feedback.success !== "scan_started"`), no se «gatea» contra
-ningún estado del run.
-
-**No se revisaron el resto de claves de `feedbackSuccessMessages`** porque
-ninguna comparte el patrón: o describen un hecho estable que no caduca
-(«Escaneo completado», los toggles de `/debug`), o no dependen de un estado
-transitorio que el propio poller invalida en segundo plano. `scan_started` es
-la única clave que nunca debía renderizarse como banner.
-
-**Trazabilidad.** §56 (SCAN-STATES-2, decisión de ocultado original — la razón
-de fondo no cambia, sólo la condición de código que la implementaba);
-`components/scan-progress-poller.tsx` (el `router.refresh()` que dispara el
-refresco silencioso que expuso el caso "ya terminado").
 
 ---
 
@@ -10340,7 +10295,7 @@ cohete en reentrada (`ReentryMission`, SCAN-STATES-3). El fundador: *«tampoco
 hace falta, la auditoría web tiene su propio estado de escaneando con el
 cohete en reentrada»*.
 
-**Por qué esto NO es el mismo bug que §110.** El banner de §110 era stale —
+**Por qué esto NO es el mismo bug que §112.** El banner de §112 era stale —
 afirmaba algo falso tras terminar el escaneo. `ScanMissionBand` no mentía
 nunca: su condición (`shouldShowMissionBand`, exactamente 1 escaneo completado
 y una auditoría activa) era correcta y tenía tests. El problema no era
@@ -10439,6 +10394,56 @@ puede saber cuál mergeó después sin que se lo digan.
 `scripts/fix-log-numbering-core.test.ts`; `tests/log-numbering.test.ts`; §108
 (CI-REDUNDANCY-1, la misma tarde); §109 (HEADER-FLAT-1, la sección renumerada
 en el ejemplo).
+
+---
+
+---
+
+## 112. El aviso verde de «tu primer escaneo se está ejecutando» reaparecía ya terminado el escaneo (2026-08-16)
+
+**El problema, reportado por el fundador con una captura del móvil.** En
+Visión general, el banner de éxito `scan_started` («Dominio creado. Tu primer
+escaneo se está ejecutando — sigue el progreso aquí») aparecía **a la vez** que
+la puntuación GEO ya calculada y la etiqueta «Escaneado 16 ago 2026» — es
+decir, después de que el escaneo hubiera terminado. Nadie recargó nada a mano.
+
+**La causa.** SCAN-STATES-2 (§56) ya había decidido ocultar este banner
+mientras la misión del cohete ocupa la pantalla, con la condición
+`isFirstScan && activeRun`. Pero `?success=scan_started` se queda en la URL
+después del redirect inicial, y `ScanProgressPoller` dispara un
+`router.refresh()` en cuanto el run pasa a estado terminal, sin acción del
+usuario. En ese refresh `activeRun` ya no existe **y** `isFirstScan` ya ha
+pasado a `false` (hay 1 escaneo completado), así que la condición de ocultado
+deja de cumplirse y el texto stale —que sigue diciendo «se está ejecutando»—
+vuelve a mostrarse, ahora contradiciendo los datos reales que tiene debajo.
+
+**Primer intento, y por qué se quedó a medias.** Se cambió la condición de
+ocultado a depender sólo de `activeRun` (`!activeRun` ⇒ ocultar), razonando
+que `isFirstScan` era redundante en el momento del redirect. Es la mitad
+correcta del argumento y la mitad equivocada del código: `!activeRun` oculta
+el banner **después** de terminar, pero lo deja pasar **mientras** `activeRun`
+es verdadero — es decir, mientras la misión del cohete está en pantalla, que es
+el caso exacto que SCAN-STATES-2 prohibió en primer lugar. El fundador lo cazó
+en el acto, con una captura del banner flotando sobre el cohete en plena
+órbita: la condición había quedado invertida respecto a la intención.
+
+**Qué se decidió, de verdad.** Esta clave sólo la dispara la creación de
+proyecto (`app/dashboard/projects/actions.ts`), así que no existe ningún
+momento en el que mostrarla sea correcto: mientras el escaneo corre, la misión
+ya dice lo mismo; en cuanto termina, el texto es falso. Se suprime sin
+condición (`feedback.success !== "scan_started"`), no se «gatea» contra
+ningún estado del run.
+
+**No se revisaron el resto de claves de `feedbackSuccessMessages`** porque
+ninguna comparte el patrón: o describen un hecho estable que no caduca
+(«Escaneo completado», los toggles de `/debug`), o no dependen de un estado
+transitorio que el propio poller invalida en segundo plano. `scan_started` es
+la única clave que nunca debía renderizarse como banner.
+
+**Trazabilidad.** §56 (SCAN-STATES-2, decisión de ocultado original — la razón
+de fondo no cambia, sólo la condición de código que la implementaba);
+`components/scan-progress-poller.tsx` (el `router.refresh()` que dispara el
+refresco silencioso que expuso el caso "ya terminado").
 
 ---
 
