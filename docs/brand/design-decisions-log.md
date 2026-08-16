@@ -10051,6 +10051,69 @@ ADR 0033/0035 (la puerta y la cifra principal).
 
 ---
 
+## 107. El único documento pensado para copiarse fuera (SEO-POS-1 Fase A, 2026-08-16)
+
+Fase A es la capa que el plan siempre asignó al fundador: Reddit, YouTube,
+directorios, nota de prensa. Los agentes preparan el material; publicar y
+conversar no es una fase de código. Esto es el material:
+`docs/off-site-authority-kit.md`.
+
+**Por qué hacía falta y no es "más contenido".** Todo lo construido en este
+plan —blog, docs, comparativas, la entidad de la Fase E— vive **en nuestro
+dominio**. Un motor que sólo encuentra a una marca hablando de sí misma tiene
+poco con lo que corroborarla, y la investigación de content-strategy §3 dice
+que la mayoría de las citas generativas vienen de medios ganados que no son de
+primer nivel. Sin esta capa las otras rinden a medias.
+
+### Lo que hace distinto a este documento
+
+Es **lo único del repositorio pensado para copiarse y pegarse fuera**: en una
+ficha de G2, en la descripción de un vídeo, en un hilo. Y lo de fuera no se
+refresca solo. El día que cambie un precio, el sitio se actualiza en el mismo
+PR y una ficha de G2 de hace ocho meses no — y nadie lo va a notar, porque ni
+el piloto ni el compilador ni Search Console miran ahí.
+
+Por eso el kit no es prosa suelta: `tests/off-site-kit.test.ts` contrasta su
+tabla de planes contra `plans-data.ts` fila a fila, exige que la definición de
+marca sea **literalmente** `CANONICAL_DEFINITION` —no una versión parecida, que
+es justo lo que la Fase E existe para eliminar— y exige que sigan declarados
+los tres límites que un comprador comprueba en dos clics. Verificado
+rompiéndolo: subir Starter de 45 a 49 € pone el test rojo nombrando el plan.
+
+Es la regla de "si una cifra del producto llega a publicarse, se ata al código
+con un test" (§75) un escalón más lejos: aquí la cifra ni siquiera vive en
+nuestro dominio.
+
+### Las dos decisiones de criterio
+
+**Reddit se plantea por el riesgo, no por la oportunidad.** El fallo caro no es
+que no funcione: es un baneo y el nombre asociado a spam en un sitio que los
+motores citan mucho — peor que no estar, porque toda la Fase E va de que
+"GenScore" resuelva a algo bueno. De ahí las reglas: responder sin enlazar es
+la norma, declarar quién eres al nombrar el producto, y no recomendarnos donde
+no encajamos. La advertencia previa contra uno mismo sigue prohibida (§67);
+declarar el conflicto de interés no es lo mismo que invitar a descontar todo lo
+que viene después.
+
+**La nota de prensa se declara bloqueada, no pendiente.** Depende del
+Observatorio, que no está aprobado. Dejar preparada la plantilla habría sido
+crear un molde que invita a rellenarse con números que nadie ha medido — la
+definición exacta de métrica falsa, y en el formato donde más caro sale. Se
+escribirá **desde** el primer estudio real.
+
+### El bucle que vuelve al código
+
+`organization-schema.tsx` no declara `sameAs` porque hoy no hay ningún perfil
+real que citar (§100). En cuanto existan LinkedIn, YouTube y las fichas, esas
+URLs son `sameAs` legítimos y añadirlas es el refuerzo de entidad más barato
+que queda. **Nunca al revés**: no se declara el `sameAs` de un perfil que aún
+no existe.
+
+**Lo que esta fase NO cierra:** nada se ha publicado. El kit es material; las
+cinco acciones siguen abiertas y son del fundador.
+
+---
+
 
 ## Cómo mantener este documento
 
