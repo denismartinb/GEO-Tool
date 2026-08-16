@@ -9723,7 +9723,7 @@ leyera sin ese aviso la implementaría otra vez.
 ---
 
 
-## 104. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
+## 103. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
 
 **De dónde viene.** Al cerrar la Fase E dejé apuntado que el `title` y el
 `description` del layout raíz seguían siendo una redacción propia de qué es
@@ -9812,7 +9812,158 @@ es decisión de producto y necesita su propia pasada.
 Fase E. Se unifica porque una descripción divergente envejece sola, no porque
 nadie la lea — que es justo lo que no hace nadie.
 
-## 103. Una cabecera plana para cada zona (HEADER-FLAT-1, 2026-08-15)
+## 104. Retirar los dominios archivados, y la promesa que llevaba meses siendo falsa (DOMAINS-ARCHIVE-RETIRE-1, 2026-08-15)
+
+**Cómo se llegó aquí.** ROOT-METADATA-1 (§103) puso pestaña propia a cada
+pantalla de consola, y al mirar los títulos reales del despliegue salió que
+`/dashboard/projects` y `/dashboard/domains` devolvían la misma: «Dominios —
+GenScore». No era un fallo de los títulos — es que **el producto llamaba igual
+a dos pantallas**, y una llevaba fuera del menú desde DOMAINS-REDESIGN-1. El
+fundador pidió retirar la vieja.
+
+**Lo que apareció al ir a retirarla.** Esa pantalla tenía dos mitades. La de
+arriba duplicaba `/dashboard/domains`. La de abajo, «Dominios archivados», era
+el **único** sitio del producto donde se veían y se restauraban los archivados
+— y los archivados no son un caso raro: **bajar de plan archiva dominios**
+(`changePlan`). Retirarla a secas dejaba a un cliente que baja de plan sin sus
+dominios y sin forma de recuperarlos.
+
+Se le planteó al fundador con dos salidas, y eligió la de retirarlo todo
+asumiendo la pérdida.
+
+### La promesa falsa
+
+Al redactar el aviso apareció lo importante. El modal de bajada de plan decía,
+literalmente, en el momento en que el cliente elige qué dominios sacrificar:
+
+> «Archivar es reversible: podrás restaurarlos cuando quieras desde
+> "Dominios", sin perder su configuración ni sus escaneos.»
+
+**Ya era falsa antes de esta fase.** Desde «Dominios» no se podía restaurar
+nada: restaurar vivía en `/dashboard/projects`, fuera del menú. Alguien
+escribió la promesa dando por hecho que la capacidad estaría en la rejilla
+nueva, y nunca se construyó. Nadie lo notó porque una promesa falsa **no rompe
+nada**: la pantalla carga, el piloto la marca ✅, y el cliente sólo lo descubre
+el día que intenta recuperar su dominio. El mismo fallo sin síntoma de siempre,
+con la diferencia de que éste se cobra en una pantalla de facturación — que es
+justo lo que PRICING-TRUTH-1 obligó a limpiar del resto del producto.
+
+### El callejón sin salida que la retirada creaba
+
+Y aún había una vuelta más, encontrada leyendo `createProjectCore` antes de
+tocar nada. Sin pantalla de archivados, el cliente que quisiera su dominio de
+vuelta intentaría **volver a añadirlo** — y el alta lo rechazaba con
+`already_archived`, cuyo mensaje era *«Restáuralo para continuar»*. Un bucle
+cerrado: sin sitio donde restaurar, sin poder crear, y un mensaje que le manda
+usar algo que ya no existe.
+
+Por eso la retirada trae **reactivación al volver a añadir**: un dominio
+archivado se desarchiva en vez de rechazar el alta, con sus prompts, sus
+competidores y su histórico. No es alcance añadido, es lo que hace que la
+retirada no sea una trampa — y lo que convierte «vuelve a añadirlo» en una
+frase verdadera. Respeta el tope del plan porque la comprobación de cupo ya
+corre antes: reactivar no es una puerta trasera para saltárselo.
+
+### Lo que queda declarado y no arreglado
+
+`changePlan` sigue archivando filas: es facturación y tocarlo necesita
+aprobación aparte. O sea que las filas archivadas siguen existiendo,
+invisibles. Recuperar una sigue siendo posible —volviendo a añadir el dominio—
+pero si el cliente no lo intenta, nada del producto le dice que están ahí.
+
+### Y el piloto se cayó, por lo que la retirada no arreglaba sola
+
+`PILOT FAIL` en las tres anchuras del journey de segundo proyecto, con un error
+que no se parece en nada a su causa: *"Execution context was destroyed, most
+likely because of a navigation"*. Suena a fallo de red; era una ruta que había
+cambiado de sitio.
+
+`discoverProjectIds` entraba por `/dashboard/projects` con
+`waitUntil: "domcontentloaded"`. Sobre una redirección, esa espera resuelve
+sobre el documento intermedio, el navegador se lleva la página por delante, y
+el `evaluateAll` de la línea siguiente revienta. **Es la lección general, no la
+anécdota: apuntar el piloto a una redirección con `domcontentloaded` es un
+fallo latente en cualquier ruta que un día se retire.**
+
+Al reapuntarlo a `/dashboard/domains` apareció lo segundo: la rejilla usa **dos
+formas de enlace** —el dominio activo va a su pantalla, los demás a un cambio
+de activo (`?active=<id>`)— y quedarse con la primera devuelve un solo
+proyecto. El journey se habría **saltado en silencio**, que es exactamente lo
+que existe para impedir. Mismo arreglo en `write-guard`, donde el fallo habría
+sido peor: concluir que el proyecto de escritura no existe y crear un segundo.
+
+De paso, la prueba que visitaba esa ruta pasa de comprobar una lista a
+comprobar **la redirección**, con su `finalUrl`. Era el único sitio de la suite
+que la tocaba, y una redirección rota da 404 a quien tenga el marcador sin que
+nada más lo note. El fixture del self-check la sirve también como redirección,
+por el mismo motivo por el que existe el fixture.
+
+**El guardián que sale de aquí no es de redacción, es de coherencia**
+(`change-plan-copy.test.ts`): si el modal vuelve a nombrar restaurar, o si
+`createProjectCore` deja de reactivar, salta. Lo segundo importa más que lo
+primero — el día que alguien revierta esa rama por parecer rara, el modal pasa
+a mentir y el cliente vuelve a quedarse encerrado, y ninguna de las dos cosas
+tiene síntoma.
+
+## 105. Un workflow que nunca funcionó ni un día, y 1.603 ejecuciones en rojo (CODEX-BUILD-FIX-1, 2026-08-16)
+
+**El síntoma.** `codex-build.yml` fallaba en **cada push**, incluidos los de
+`main`. Salió al revisar el estado de los PRs de esta semana y quedó apuntado
+como "anterior a esto y ajeno al PR" tres veces seguidas, que es exactamente lo
+que le pasa a un rojo permanente: se menciona y no se toca.
+
+**La causa, y por qué el error no se parece a ella.** Los dos últimos pasos
+tenían `if: … && secrets.CODEX_AGENT_TOKEN == ''`. **`secrets` no es un
+contexto disponible en el `if:` de un paso** — sólo lo son `github`, `needs`,
+`strategy`, `matrix`, `job`, `runner`, `env`, `vars`, `steps` e `inputs`.
+GitHub rechaza el fichero **entero** y crea un run fallido con **cero jobs**,
+cuyo `name` es la ruta del fichero en vez del `name:` declarado, y cuyo evento
+es `push` aunque el workflow **no tenga trigger de push**. Nada de eso se lee
+como "el YAML es inválido": se lee como un workflow raro que falla.
+
+Las tres pistas juntas son el diagnóstico, y ninguna sirve sola:
+
+- `jobs: 0` — no llegó a planificar nada;
+- `name: .github/workflows/codex-build.yml` — no llegó a leer el `name:`;
+- `event: push` — se está atribuyendo al push que lo hizo fallar, no a un
+  disparador real.
+
+**Cuánto llevaba así.** Desde el 2026-08-02, colado dentro de un PR de blog
+(GROWTH-2 Fase 2.5). **1.603 ejecuciones, el 100% en rojo, ninguna con un solo
+job.** No es que se rompiera: nunca funcionó.
+
+**Por qué merecía arreglarse aunque el workflow no haga nada.** Es un
+*placeholder* declarado —todos sus pasos escriben en `$GITHUB_STEP_SUMMARY` y
+nada más (`docs/agentic-delivery-pipeline.md`: *"guardrails and placeholders,
+not autonomous agent runners"*)— así que el arreglo no habilita ninguna
+capacidad. Lo que arregla es otra cosa: **un rojo permanente en cada push
+entrena a todo el mundo a ignorar la lista de checks**, y esa lista es donde
+tiene que verse un fallo de verdad. Esta misma semana `ci.yml` no se disparó
+solo dos veces y hubo que lanzarlo a mano — en una lista donde algo siempre
+está rojo por defecto, eso se pasa por alto sin esfuerzo.
+
+**El arreglo.** El secreto se expone en `env:` a nivel de job y los pasos
+comprueban `env.CODEX_AGENT_TOKEN`. Cuatro líneas. Con el fichero válido, el
+workflow deja de dispararse en push —no tiene ese trigger— y sólo corre donde
+siempre quiso: `issues` y `workflow_dispatch`.
+
+**Lo vigila `tests/workflow-contexts.test.ts`**, verificado en las dos
+direcciones. Barre sólo `secrets` en `if:` a propósito: es el error real y el
+que no avisa, y ampliarlo a otros contextos metería falsos positivos en un
+guardián que entonces alguien acabaría desactivando (§94).
+
+**Queda declarado y NO hecho: este workflow no hace nada.** Ni siquiera con el
+secreto puesto — sus dos ramas escriben un resumen y terminan. Borrarlo entero
+es defendible y hay precedente directo (`claude-qa.yml` y
+`scripts/run-claude-qa.py`, borrados en PRELAUNCH-HARDENING-1 Fase 0 por
+llevar meses declarados superseded). No se ha hecho aquí porque el encargo era
+arreglarlo, y borrar una pieza del andamiaje agéntico documentado es una
+decisión de producto, no una limpieza. Si se borra, se van con él la fila del
+mapa de zonas y las menciones de `docs/agentic-delivery-pipeline.md`.
+
+---
+
+## 106. Una cabecera plana para cada zona (HEADER-FLAT-1, 2026-08-15)
 
 **Estado: implementada.** Continuación directa de §101, pedida por el fundador
 con dos capturas de móvil y una frase muy precisa: *«en la consola la cabecera
@@ -9912,6 +10063,8 @@ falsos**, en vez de editarlos para que parezca que acerté.
 **Trazabilidad.** Continúa §101 (que unificó el chasis del cajón) y §63 (que
 unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de
 `html { overflow-x: hidden }` en `app/globals.css`, GROWTH-2 Fase 2.1 (PR #286).
+
+---
 
 ---
 
