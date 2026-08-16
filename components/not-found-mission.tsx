@@ -54,7 +54,7 @@ export function NotFoundMission() {
       <div className="nf-viewport">
         <div className="lp-nav-wrap">
           <nav className="lp-nav">
-            <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...NAV_LINKS]} />
+            <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...NAV_LINKS]} twoLine />
             <Link href="/" className="lp-logo">
               <BrandLogo size={22} />
             </Link>

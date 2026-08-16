@@ -149,9 +149,7 @@ export default function GeoExplainerPage() {
   return (
     <div className="lp">
       {/* NAV */}
-      <div className="lp-nav-wrap">
-        <PublicHeader activeHref="/geo" />
-      </div>
+      <PublicHeader activeHref="/geo" />
 
       {/* HERO */}
       <header className="lp-hero gx-hero">

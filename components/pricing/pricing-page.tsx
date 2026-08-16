@@ -137,9 +137,7 @@ export function PricingPage() {
   return (
     <div className="lp">
       {/* NAV */}
-      <div className="lp-nav-wrap">
-        <PublicHeader activeHref="/pricing" />
-      </div>
+      <PublicHeader activeHref="/pricing" />
 
       {/* HERO */}
       <header className="lp-hero price-hero">
