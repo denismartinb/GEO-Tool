@@ -42,15 +42,30 @@ test("dashboard home renders for a logged-in user", async ({ page }, testInfo) =
   await exploreInteractions(page, testInfo, "dashboard");
 });
 
-test("projects list renders at least one project", async ({ page }, testInfo) => {
-  const findings = await visitAsUser(page, testInfo, "/dashboard/projects", "projects-list");
+/**
+ * DOMAINS-ARCHIVE-RETIRE-1 (log §104): `/dashboard/projects` ya no es una
+ * pantalla, es la redirección que mantiene vivos los marcadores y enlaces que
+ * apuntaban a ella. Esta prueba pasó de comprobar una lista a comprobar la
+ * redirección — y merece existir: era el único sitio donde se ejercitaba esa
+ * ruta, y una redirección rota da 404 a quien tenga el marcador, sin que nada
+ * más en la suite lo note.
+ */
+test("la ruta retirada de proyectos sigue llevando a Dominios", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/dashboard/projects", "projects-legacy-redirect");
   assertPageIsHealthy(findings);
+
+  expect(
+    findings.finalUrl,
+    "`/dashboard/projects` debería redirigir a `/dashboard/domains`. Si se ha quedado " +
+      "sirviendo una pantalla, ha vuelto la duplicada que retiró DOMAINS-ARCHIVE-RETIRE-1; " +
+      "si da 404, se han roto los marcadores de todos los clientes que la tuvieran guardada."
+  ).toContain("/dashboard/domains");
 
   await expect(
     page.locator('a[href^="/dashboard/projects/"]').first(),
     "pilot account shows no project — seed it before trusting this run"
   ).toBeVisible();
-  await exploreInteractions(page, testInfo, "projects-list");
+  await exploreInteractions(page, testInfo, "projects-legacy-redirect");
 });
 
 test("project overview renders real scan data", async ({ page }, testInfo) => {

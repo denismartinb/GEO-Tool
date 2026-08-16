@@ -9871,6 +9871,33 @@ aprobación aparte. O sea que las filas archivadas siguen existiendo,
 invisibles. Recuperar una sigue siendo posible —volviendo a añadir el dominio—
 pero si el cliente no lo intenta, nada del producto le dice que están ahí.
 
+### Y el piloto se cayó, por lo que la retirada no arreglaba sola
+
+`PILOT FAIL` en las tres anchuras del journey de segundo proyecto, con un error
+que no se parece en nada a su causa: *"Execution context was destroyed, most
+likely because of a navigation"*. Suena a fallo de red; era una ruta que había
+cambiado de sitio.
+
+`discoverProjectIds` entraba por `/dashboard/projects` con
+`waitUntil: "domcontentloaded"`. Sobre una redirección, esa espera resuelve
+sobre el documento intermedio, el navegador se lleva la página por delante, y
+el `evaluateAll` de la línea siguiente revienta. **Es la lección general, no la
+anécdota: apuntar el piloto a una redirección con `domcontentloaded` es un
+fallo latente en cualquier ruta que un día se retire.**
+
+Al reapuntarlo a `/dashboard/domains` apareció lo segundo: la rejilla usa **dos
+formas de enlace** —el dominio activo va a su pantalla, los demás a un cambio
+de activo (`?active=<id>`)— y quedarse con la primera devuelve un solo
+proyecto. El journey se habría **saltado en silencio**, que es exactamente lo
+que existe para impedir. Mismo arreglo en `write-guard`, donde el fallo habría
+sido peor: concluir que el proyecto de escritura no existe y crear un segundo.
+
+De paso, la prueba que visitaba esa ruta pasa de comprobar una lista a
+comprobar **la redirección**, con su `finalUrl`. Era el único sitio de la suite
+que la tocaba, y una redirección rota da 404 a quien tenga el marcador sin que
+nada más lo note. El fixture del self-check la sirve también como redirección,
+por el mismo motivo por el que existe el fixture.
+
 **El guardián que sale de aquí no es de redacción, es de coherencia**
 (`change-plan-copy.test.ts`): si el modal vuelve a nombrar restaurar, o si
 `createProjectCore` deja de reactivar, salta. Lo segundo importa más que lo

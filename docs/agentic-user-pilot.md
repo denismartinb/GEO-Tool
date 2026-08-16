@@ -228,7 +228,7 @@ defensively).
 
 The pilot account must be **seeded**: it needs at least one project that already
 has completed scans. A pilot pointed at an empty account reports FAIL on the
-projects-list journey, which is correct but useless.
+journey de la rejilla de dominios, which is correct but useless.
 
 ## What the harness checks mechanically
 

@@ -995,16 +995,35 @@ export async function resolveProjectId(page: Page): Promise<string> {
  * casuísticas"*).
  */
 export async function discoverProjectIds(page: Page): Promise<string[]> {
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
+  /**
+   * `/dashboard/domains`, no `/dashboard/projects` — DOMAINS-ARCHIVE-RETIRE-1
+   * (log §104). Esa ruta pasó a ser una redirección, y apuntar el piloto a una
+   * redirección con `waitUntil: "domcontentloaded"` es un fallo con nombre
+   * propio: la espera resuelve sobre el documento intermedio, el navegador se
+   * lleva la página por delante y el `evaluateAll` de abajo revienta con
+   * *"Execution context was destroyed"*. Tumbó las tres anchuras del journey
+   * de segundo proyecto y NO se parece en nada a su causa — parece un fallo de
+   * red, no una ruta que ha cambiado de sitio.
+   */
+  await page.goto("/dashboard/domains", { waitUntil: "domcontentloaded" });
 
+  /**
+   * Dos formas de enlace, y hacen falta las dos: la rejilla enlaza el dominio
+   * **activo** a su pantalla (`/dashboard/projects/<id>`) y los demás a un
+   * cambio de activo (`/dashboard/domains?active=<id>`). Quedarse sólo con la
+   * primera devolvería un único proyecto y el journey se saltaría en silencio
+   * — que es justo lo que este journey existe para impedir.
+   */
   const hrefs = await page
-    .locator('a[href^="/dashboard/projects/"]')
+    .locator('a[href^="/dashboard/projects/"], a[href^="/dashboard/domains?active="]')
     .filter({ hasNotText: /nuevo|new/i })
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href") ?? ""));
 
   const ids: string[] = [];
   for (const href of hrefs) {
-    const id = href.match(/\/dashboard\/projects\/([^/?#]+)/)?.[1];
+    const id =
+      href.match(/\/dashboard\/projects\/([^/?#]+)/)?.[1] ??
+      href.match(/\/dashboard\/domains\?active=([^&#]+)/)?.[1];
     // "new" is the create route, not a project; the list also links each
     // project from several places, so the same id shows up more than once.
     if (!id || id === "new" || ids.includes(id)) continue;

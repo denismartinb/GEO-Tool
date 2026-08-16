@@ -90,7 +90,7 @@ test("opening the bell clears the header dot and needs no button", async ({ page
 
   // And it stays read across a full navigation — the write really landed,
   // rather than the dot being hidden client-side until the next load.
-  await visitAsUser(page, testInfo, "/dashboard/projects", "notifications-after-navigate");
+  await visitAsUser(page, testInfo, "/dashboard/domains", "notifications-after-navigate");
   const back = await visitAsUser(page, testInfo, "/dashboard", "notifications-bell-returned");
   assertPageIsHealthy(back);
   await expect(
