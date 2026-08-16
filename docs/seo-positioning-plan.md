@@ -303,19 +303,34 @@ C1 cumple el papel con CTA al plan Free real.
 ### Fase A — Autoridad y off-site (fundador, con material preparado por agentes)
 
 Del análisis de citas (§3.4). Los agentes preparan el material; publicar y
-conversar es del fundador (`content-strategy.md` §3 ya lo asigna así):
+conversar es del fundador (`content-strategy.md` §3 ya lo asigna así).
 
+**✅ Material preparado (2026-08-16): `docs/off-site-authority-kit.md`.** Copy
+campo a campo para cada superficie, plantillas de respuesta, dos guiones de
+vídeo y las reglas de lo que no se puede decir. Atado al código por
+`tests/off-site-kit.test.ts`: precios, topes, motores y la definición canónica
+se comprueban contra `plans-data.ts` y `canonical-definition.ts`, porque es el
+único documento del repo pensado para copiarse **fuera**, donde nadie va a
+notar que envejeció. Detalle: log §106.
+
+- [x] **Material listo** — kit completo, con guardián.
 - [ ] **Reddit**: presencia útil (no spam) en r/SEO_espanol e hilos de
-      herramientas — es la fuente nº 1 de citas de Perplexity.
+      herramientas — es la fuente nº 1 de citas de Perplexity. *Plantillas en
+      §4 del kit.*
 - [ ] **YouTube**: 2-3 vídeos cortos ("cómo saber si ChatGPT te menciona") —
-      fuente nº 1 de AI Overviews.
-- [ ] **Nota de prensa de datos propios** cuando el Observatorio (capa E,
-      aprobación aparte) genere el primer estudio: "qué marcas españolas cita
-      ChatGPT en [sector]". Es el arma que ninguna agencia ES tiene.
-- [ ] Directorios B2B (G2/Capterra) y perfiles (LinkedIn) — ya listado en §3
-      de content-strategy.
-- [ ] EUIPO pendiente de Fase 0 del launch-plan: recomendable antes de
-      invertir en difusión pagada del nombre.
+      fuente nº 1 de AI Overviews. *Dos guiones en §5.*
+- [ ] Directorios B2B (G2/Capterra) y perfiles (LinkedIn). *Copy en §6.*
+- [ ] **Nota de prensa de datos propios**: **bloqueada**, no aplazada.
+      Depende del Observatorio (capa E, sin aprobar); escribir la plantilla
+      antes sería un molde invitando a rellenarse con números que nadie ha
+      medido. Se escribe **desde** el primer estudio real, no antes.
+- [ ] EUIPO pendiente de Fase 0 del launch-plan: no bloquea nada del kit
+      —son medios ganados— pero sí conviene antes de difusión **pagada** del
+      nombre.
+- [ ] **Vuelta al código:** en cuanto existan LinkedIn, YouTube y las fichas,
+      sus URLs son `sameAs` legítimos del `Organization` (hoy vacío a
+      propósito, log §100). PR de tres líneas por perfil, nunca antes de que
+      el perfil exista.
 
 ### Coordinación con la sesión de performance
 
