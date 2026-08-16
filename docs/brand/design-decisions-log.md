@@ -10049,7 +10049,134 @@ ADR 0033/0035 (la puerta y la cifra principal).
 
 ---
 
-## 107. Una cabecera plana para cada zona (HEADER-FLAT-1, 2026-08-15)
+
+---
+
+
+---
+
+---
+
+## 107. El único documento pensado para copiarse fuera (SEO-POS-1 Fase A, 2026-08-16)
+
+Fase A es la capa que el plan siempre asignó al fundador: Reddit, YouTube,
+directorios, nota de prensa. Los agentes preparan el material; publicar y
+conversar no es una fase de código. Esto es el material:
+`docs/off-site-authority-kit.md`.
+
+**Por qué hacía falta y no es "más contenido".** Todo lo construido en este
+plan —blog, docs, comparativas, la entidad de la Fase E— vive **en nuestro
+dominio**. Un motor que sólo encuentra a una marca hablando de sí misma tiene
+poco con lo que corroborarla, y la investigación de content-strategy §3 dice
+que la mayoría de las citas generativas vienen de medios ganados que no son de
+primer nivel. Sin esta capa las otras rinden a medias.
+
+### Lo que hace distinto a este documento
+
+Es **lo único del repositorio pensado para copiarse y pegarse fuera**: en una
+ficha de G2, en la descripción de un vídeo, en un hilo. Y lo de fuera no se
+refresca solo. El día que cambie un precio, el sitio se actualiza en el mismo
+PR y una ficha de G2 de hace ocho meses no — y nadie lo va a notar, porque ni
+el piloto ni el compilador ni Search Console miran ahí.
+
+Por eso el kit no es prosa suelta: `tests/off-site-kit.test.ts` contrasta su
+tabla de planes contra `plans-data.ts` fila a fila, exige que la definición de
+marca sea **literalmente** `CANONICAL_DEFINITION` —no una versión parecida, que
+es justo lo que la Fase E existe para eliminar— y exige que sigan declarados
+los tres límites que un comprador comprueba en dos clics. Verificado
+rompiéndolo: subir Starter de 45 a 49 € pone el test rojo nombrando el plan.
+
+Es la regla de "si una cifra del producto llega a publicarse, se ata al código
+con un test" (§75) un escalón más lejos: aquí la cifra ni siquiera vive en
+nuestro dominio.
+
+### Las dos decisiones de criterio
+
+**Reddit se plantea por el riesgo, no por la oportunidad.** El fallo caro no es
+que no funcione: es un baneo y el nombre asociado a spam en un sitio que los
+motores citan mucho — peor que no estar, porque toda la Fase E va de que
+"GenScore" resuelva a algo bueno. De ahí las reglas: responder sin enlazar es
+la norma, declarar quién eres al nombrar el producto, y no recomendarnos donde
+no encajamos. La advertencia previa contra uno mismo sigue prohibida (§67);
+declarar el conflicto de interés no es lo mismo que invitar a descontar todo lo
+que viene después.
+
+**La nota de prensa se declara bloqueada, no pendiente.** Depende del
+Observatorio, que no está aprobado. Dejar preparada la plantilla habría sido
+crear un molde que invita a rellenarse con números que nadie ha medido — la
+definición exacta de métrica falsa, y en el formato donde más caro sale. Se
+escribirá **desde** el primer estudio real.
+
+### El bucle que vuelve al código
+
+`organization-schema.tsx` no declara `sameAs` porque hoy no hay ningún perfil
+real que citar (§100). En cuanto existan LinkedIn, YouTube y las fichas, esas
+URLs son `sameAs` legítimos y añadirlas es el refuerzo de entidad más barato
+que queda. **Nunca al revés**: no se declara el `sameAs` de un perfil que aún
+no existe.
+
+**Lo que esta fase NO cierra:** nada se ha publicado. El kit es material; las
+cinco acciones siguen abiertas y son del fundador.
+
+---
+
+## 108. La puerta de CI deja de depender de un evento que se pierde (CI-REDUNDANCY-1, 2026-08-16)
+
+**Qué se decidió.** `ci.yml` pasa a dispararse también por `push`, no sólo por
+`pull_request`. Dos disparadores independientes para la misma puerta.
+
+### El problema no era que CI fallase: era que no existía
+
+`pull_request` se pierde. Está medido dos veces: el 2026-08-10, misma rama y
+misma tarde, **tres pushes no dispararon la comprobación y dos sí** (§54); y el
+2026-08-16, **dos veces seguidas en el PR #427** — y al reponerlo a mano
+apareció un fallo real (la grafía `Genscore`, prohibida por `naming.test.ts`)
+que llevaba una hora invisible.
+
+**La ausencia de un check no se ve; un check rojo sí.** Ése es el fallo entero.
+Un PR llegaba al Human Gate sin que se hubiera ejecutado un solo test, con la
+lista de checks enseñando un piloto en verde, y nada decía que faltaba nada. El
+aviso de Q5 (§97) hizo que se viera; esto hace que casi no ocurra.
+
+### Por qué NO se colapsan los dos disparadores en uno
+
+Un push a una rama con PR abierto dispara ahora `push` **y**
+`pull_request:synchronize`: dos runs del mismo job. La tentación es unificar el
+grupo de `concurrency` para que sólo sobreviva uno, y **es exactamente lo que no
+se debe hacer**: con `cancel-in-progress`, uno cancelaría al otro, y un run
+cancelado no cuenta como superado. La redundancia se convertiría en un fallo
+intermitente — peor que el problema original.
+
+Se paga un run duplicado por push (~90 s). Barato al lado de los ~20 minutos que
+cuesta la pasada del piloto, que sí corre siempre.
+
+### `pilot-evidence/**` queda fuera, y no es un detalle
+
+Esas ramas no llevan `package.json`: `pnpm install --frozen-lockfile` falla ahí
+**siempre**. Un check rojo por diseño es justo el mecanismo por el que 1.603
+ejecuciones en rojo pasaron cuatro meses desapercibidas (§105) — entrena a todo
+el mundo a no mirar la lista.
+
+### Lo que esto NO es, y sigue pendiente del fundador
+
+**No es la puerta.** Que el check exista no impide mergear con él en rojo. La
+puerta es una *required status check* en la protección de rama de `main`, que es
+un ajuste del repositorio y **no vive en este repositorio**: no se puede activar
+desde el código ni desde las herramientas de un agente. Queda dicho por tercera
+vez, ahora con el trabajo de código ya hecho al lado: lo único que falta es
+marcar una casilla.
+
+`tests/ci-triggers.test.ts` impide que la redundancia se borre «por limpieza»:
+un futuro lector verá dos disparadores para lo mismo y el test le explicará, en
+el mensaje del fallo, por qué están los dos.
+
+**Trazabilidad.** §54 (la primera medición de la intermitencia); §97 (el aviso
+de ausencia de CI, Fase Q5); §105 (el coste de un rojo permanente);
+`.github/workflows/ci.yml`.
+
+---
+
+## 109. Una cabecera plana para cada zona (HEADER-FLAT-1, 2026-08-15)
 
 **Estado: implementada.** Continuación directa de §101, pedida por el fundador
 con dos capturas de móvil y una frase muy precisa: *«en la consola la cabecera
@@ -10151,75 +10278,6 @@ unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de
 `html { overflow-x: hidden }` en `app/globals.css`, GROWTH-2 Fase 2.1 (PR #286).
 
 ---
-
-
----
-
----
-
-## 107. El único documento pensado para copiarse fuera (SEO-POS-1 Fase A, 2026-08-16)
-
-Fase A es la capa que el plan siempre asignó al fundador: Reddit, YouTube,
-directorios, nota de prensa. Los agentes preparan el material; publicar y
-conversar no es una fase de código. Esto es el material:
-`docs/off-site-authority-kit.md`.
-
-**Por qué hacía falta y no es "más contenido".** Todo lo construido en este
-plan —blog, docs, comparativas, la entidad de la Fase E— vive **en nuestro
-dominio**. Un motor que sólo encuentra a una marca hablando de sí misma tiene
-poco con lo que corroborarla, y la investigación de content-strategy §3 dice
-que la mayoría de las citas generativas vienen de medios ganados que no son de
-primer nivel. Sin esta capa las otras rinden a medias.
-
-### Lo que hace distinto a este documento
-
-Es **lo único del repositorio pensado para copiarse y pegarse fuera**: en una
-ficha de G2, en la descripción de un vídeo, en un hilo. Y lo de fuera no se
-refresca solo. El día que cambie un precio, el sitio se actualiza en el mismo
-PR y una ficha de G2 de hace ocho meses no — y nadie lo va a notar, porque ni
-el piloto ni el compilador ni Search Console miran ahí.
-
-Por eso el kit no es prosa suelta: `tests/off-site-kit.test.ts` contrasta su
-tabla de planes contra `plans-data.ts` fila a fila, exige que la definición de
-marca sea **literalmente** `CANONICAL_DEFINITION` —no una versión parecida, que
-es justo lo que la Fase E existe para eliminar— y exige que sigan declarados
-los tres límites que un comprador comprueba en dos clics. Verificado
-rompiéndolo: subir Starter de 45 a 49 € pone el test rojo nombrando el plan.
-
-Es la regla de "si una cifra del producto llega a publicarse, se ata al código
-con un test" (§75) un escalón más lejos: aquí la cifra ni siquiera vive en
-nuestro dominio.
-
-### Las dos decisiones de criterio
-
-**Reddit se plantea por el riesgo, no por la oportunidad.** El fallo caro no es
-que no funcione: es un baneo y el nombre asociado a spam en un sitio que los
-motores citan mucho — peor que no estar, porque toda la Fase E va de que
-"GenScore" resuelva a algo bueno. De ahí las reglas: responder sin enlazar es
-la norma, declarar quién eres al nombrar el producto, y no recomendarnos donde
-no encajamos. La advertencia previa contra uno mismo sigue prohibida (§67);
-declarar el conflicto de interés no es lo mismo que invitar a descontar todo lo
-que viene después.
-
-**La nota de prensa se declara bloqueada, no pendiente.** Depende del
-Observatorio, que no está aprobado. Dejar preparada la plantilla habría sido
-crear un molde que invita a rellenarse con números que nadie ha medido — la
-definición exacta de métrica falsa, y en el formato donde más caro sale. Se
-escribirá **desde** el primer estudio real.
-
-### El bucle que vuelve al código
-
-`organization-schema.tsx` no declara `sameAs` porque hoy no hay ningún perfil
-real que citar (§100). En cuanto existan LinkedIn, YouTube y las fichas, esas
-URLs son `sameAs` legítimos y añadirlas es el refuerzo de entidad más barato
-que queda. **Nunca al revés**: no se declara el `sameAs` de un perfil que aún
-no existe.
-
-**Lo que esta fase NO cierra:** nada se ha publicado. El kit es material; las
-cinco acciones siguen abiertas y son del fundador.
-
----
-
 
 ## Cómo mantener este documento
 

@@ -25,7 +25,7 @@ corriendo en local, no estimadas a ojo:
 ## Lo que el artefacto dice y el código acabó desmintiendo
 
 Dos avisos del documento resultaron **falsos al implementarlo**, y se conservan
-aquí a propósito en vez de editarlos, porque el histórico (§107) los cita como
+aquí a propósito en vez de editarlos, porque el histórico (§109) los cita como
 ejemplo de suposición corregida por medición:
 
 - El artefacto avisa de que dejar la cabecera de consola transparente arriesga

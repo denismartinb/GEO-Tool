@@ -77,7 +77,7 @@ test("project overview renders real scan data", async ({ page }, testInfo) => {
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "overview");
 
-  // HEADER-FLAT-1 (log §107): la cabecera de consola nace plana y se vuelve
+  // HEADER-FLAT-1 (log §109): la cabecera de consola nace plana y se vuelve
   // cristal al desplazar. Sin este paso el estado de cristal NO tenía ni una
   // captura en toda la evidencia — 309 imágenes y ninguna del estado que la
   // fase introduce — así que el piloto devolvió INCONCLUSIVE con razón.
