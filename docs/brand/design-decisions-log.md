@@ -9310,13 +9310,73 @@ que es el mensaje exacto de `getOpenAIApiError(400)` y sigue sin tocarse. Si la
 categoría que aparezca es `config`, el mismo fallo lleva diez días vivo también
 en el escaneo, y ahí no hay reserva que lo tape — sería su propia fase.
 
+### Fase C (2026-08-16): la primera comprobación que salió bien enseñaba tres datos que no existían
+
+Task Intake aprobado por el fundador el mismo día, sobre una captura suya del
+resultado real. El comprobador funcionó —el motor de reserva no llegó a hacer
+falta— y lo que llegó a pantalla tenía **tres afirmaciones sin dato debajo**.
+Vale la pena el detalle, porque las tres son la misma clase de error: convertir
+la ausencia de un dato en la apariencia de uno.
+
+1. **La lista numeraba el índice de un array.** El encabezado decía "Quién sí
+   apareció, **en el orden en que ChatGPT los nombró**" y pintaba `1..10`. Pero
+   `other_brands_mentioned` es `string[]`: el extractor no devuelve posición
+   para esas marcas, y el prompt tampoco se la pide. El componente numeraba
+   `i + 1`. Ahora son etiquetas sin número, con el orden desmentido en el
+   propio bloque.
+
+2. **"Movistar en el puesto 1" era un 1 estructural, no medido.** La
+   comprobación pasa `competitors: []` a propósito (es lo que hace que todo
+   salga por `other_brands_mentioned`), así que la marca es la **única entidad
+   que el extractor rankea** y su `position` vale 1 siempre que aparezca. En la
+   respuesta que lo destapó, ChatGPT nombraba a Orange antes que a Movistar.
+   `brandPosition` **se ha eliminado de `PublicCheckResponse`**, no ocultado en
+   la pantalla: un campo que llega al navegador y depende de que nadie lo pinte
+   es un campo que vuelve.
+
+3. **Netflix no compite con Movistar.** La lista mezclaba a Orange, Yoigo y
+   MÁSMÓVIL con SkyShowtime, DAZN, Netflix, Prime Video, Disney+ y HBO Max —
+   plataformas que van *dentro* de los paquetes. `otherBrandsRelevanceHint` no
+   basta, y no hay dato hoy para separarlas, así que lo que se ha quitado es
+   **nuestra interpretación**: ya no se llaman competidores ni "quién apareció
+   en tu lugar", y el bloque dice explícitamente que alguna puede no ser
+   competencia.
+
+**Y la respuesta se lee.** Llegaba en markdown y se pintaba en crudo dentro de
+un `<blockquote>` con `white-space: pre-wrap`: un muro con URLs enteras a la
+vista. `lib/free-checker/answer-markdown.ts` es un parser propio y mínimo
+—párrafos, listas, negritas, enlaces— que **devuelve datos, no HTML**. No
+existe ninguna ruta a `dangerouslySetInnerHTML`, así que la inyección no es
+algo que haya que acordarse de evitar: es imposible por construcción. Los
+enlaces se validan por protocolo (`http`/`https`; cualquier otro degrada a
+texto) y salen con `rel="nofollow noopener noreferrer"`. La URL se conserva tal
+cual, `?utm_source=openai` incluido: es la respuesta literal, y limpiarla sería
+enseñar algo distinto de lo que se recibió en la pantalla cuyo argumento entero
+es que enseña lo que se recibió.
+
+**Fase D, propuesta y sin aprobar.** Lo que la Fase C deja sobre la mesa, con
+su coste medido: la generación cuesta $0,0117 (74% del total, y es el fee de
+búsqueda) y **la extracción $0,00036 — el 2%**. Pedirle más a esa llamada es
+prácticamente gratis. Cabrían ahí: posiciones reales para las demás marcas (lo
+que devolvería un ranking honesto), el dominio de cada una (→ logo por favicon)
+y un "¿es de tu categoría?" que arregla el fallo 3 de verdad. Y **sin coste
+ninguno**: las fuentes que el motor consultó ya vienen en la respuesta como
+`groundingChunks` y `runPublicCheck` las tira al quedarse sólo con
+`generated.text`. Es el dato más accionable de la pantalla —de dónde saca
+ChatGPT lo que dice de tu categoría— y está pagado. Lo que **no** cabe en
+ningún caso es una puntuación: el producto exige diez respuestas antes de
+llamar fiable a un número. Toca el esquema de extracción compartido con el
+escaneo, así que necesita su propio Task Intake.
+
 **Trazabilidad.** Task Intake FREE-CHECKER-1 (2026-08-15, sin PR propio —
-generado en la conversación, no committeado como documento aparte);
-`docs/seo-positioning-plan.md` Fase P; `docs/llm-cost-analysis-2026-08.md`;
-`tests/pilot/support/page-audit.ts` (la exención que hace este fallo invisible);
-§55 (Q5b, cuando el chequeo de contraste entró en el piloto); §54 (los 400 de
-OpenAI, conocidos y sin resolver); `docs/adr/0029` (categorizar y avisar);
-`docs/adr/0037` (presupuestar contra la invocación).
+generado en la conversación, no committeado como documento aparte); Task Intake
+Fase C (2026-08-16, aprobado en sesión); `docs/seo-positioning-plan.md` Fase P;
+`docs/llm-cost-analysis-2026-08.md` (los costes de arriba);
+`tests/pilot/support/page-audit.ts` (la exención que hace este fallo
+invisible); §55 (Q5b, cuando el chequeo de contraste entró en el piloto); §54
+(los 400 de OpenAI, conocidos y sin resolver); `docs/adr/0029` (categorizar y
+avisar); `docs/adr/0037` (presupuestar contra la invocación);
+`.claude/rules/styles.md` (`a:not(.btn)` en la regla de ancestro).
 
 ---
 

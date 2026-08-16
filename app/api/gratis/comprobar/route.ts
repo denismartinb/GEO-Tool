@@ -171,7 +171,9 @@ export async function POST(request: Request) {
     engineLabel: PUBLIC_CHECK_ENGINE_LABEL,
     answer: outcome.answer,
     brandMentioned: outcome.brandMentioned,
-    brandPosition: outcome.brandPosition,
+    // `outcome.brandPosition` NO se reenvía: con `competitors: []` vale 1
+    // siempre que la marca aparezca, así que es un 1 sin conjunto contra el que
+    // rankear. Ver `PublicCheckResponse`.
     otherBrands: outcome.otherBrands,
     citedOwnDomain: outcome.citedOwnDomain
   });

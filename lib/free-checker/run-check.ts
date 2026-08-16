@@ -128,7 +128,14 @@ export type PublicCheckOutcome =
       answer: string;
       /** Verificada contra el texto literal, no afirmada por el modelo. */
       brandMentioned: boolean;
-      /** Puesto dentro de la respuesta. `null` si no apareció. */
+      /**
+       * Lo que el extractor dijo del puesto. **No sale al navegador** y no
+       * debe: con `competitors: []` la marca es la única entidad rankeada, así
+       * que esto vale 1 siempre que aparezca — un puesto sin conjunto contra el
+       * que rankear (`PublicCheckResponse`, Fase C). Se conserva aquí porque es
+       * el registro fiel de lo que devolvió el modelo, y porque la Fase D
+       * necesita compararlo con las posiciones reales cuando existan.
+       */
       brandPosition: number | null;
       /** Quién SÍ apareció, en el orden en que la IA los nombró. */
       otherBrands: string[];

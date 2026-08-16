@@ -1,5 +1,6 @@
 "use client";
 
+import { AnswerMarkdown } from "@/components/free-checker/answer-markdown";
 import { PUBLIC_CHECK_MESSAGES, type PublicCheckResponse } from "@/lib/free-checker/api-contract";
 
 /**
@@ -20,6 +21,20 @@ import { PUBLIC_CHECK_MESSAGES, type PublicCheckResponse } from "@/lib/free-chec
  *   separa un dato de un susto vendido como dato.
  * - **Ningún análisis de los competidores** más allá de a quién nombró. Su
  *   estrategia o su cuota exigirían datos que en esta consulta no existen.
+ * - **Ningún puesto, ni para la marca ni para las demás** (Fase C, 2026-08-16).
+ *   Aquí `competitors` va vacío a propósito, así que la única entidad que el
+ *   extractor rankea es la propia marca: su `position` vale 1 SIEMPRE que
+ *   aparezca, diga lo que diga el resto de la respuesta. Se enseñó como
+ *   "Movistar en el puesto 1" en una respuesta que nombraba a Orange antes —
+ *   un dato que parecía medido y no lo estaba. Y `other_brands_mentioned` es
+ *   una lista de nombres **sin posición**: numerarla 1..N era numerar el índice
+ *   de un array. Un puesto real exige un conjunto contra el que rankear, y eso
+ *   es la Fase D, no un ajuste de copy.
+ * - **Las demás marcas no se llaman "competidores".** El motor nombra lo que
+ *   hay en la respuesta, y en la primera ejecución real eso incluyó a Netflix,
+ *   HBO Max y DAZN junto a Orange y Yoigo: plataformas incluidas en los
+ *   paquetes, no rivales del operador. Llamarlas competencia era una
+ *   interpretación nuestra sobre un dato que no la sostiene.
  *
  * El aviso de variabilidad va en bloque destacado, no en letra pequeña: es
  * parte del resultado, no una nota legal.
@@ -55,8 +70,7 @@ export function FreeCheckerResult({
     );
   }
 
-  const { brand, prompt, engineLabel, answer, brandMentioned, brandPosition, otherBrands } =
-    response;
+  const { brand, prompt, engineLabel, answer, brandMentioned, otherBrands } = response;
   const { citedOwnDomain } = response;
 
   return (
@@ -64,7 +78,7 @@ export function FreeCheckerResult({
       <span className="fc-lbl fc-lbl-blue">Resultado de esta consulta</span>
       <h2 className="fc-verdict">
         {brandMentioned
-          ? `${engineLabel} nombró a ${brand}${brandPosition ? ` en el puesto ${brandPosition}` : ""}.`
+          ? `${engineLabel} sí nombró a ${brand} en esta respuesta.`
           : otherBrands.length > 0
             ? `${engineLabel} nombró ${otherBrands.length === 1 ? "otra marca" : `${otherBrands.length} marcas`}. Ninguna era ${brand}.`
             : `${engineLabel} no nombró a ${brand} en esta respuesta.`}
@@ -77,22 +91,29 @@ export function FreeCheckerResult({
 
       <div className="fc-panel">
         <span className="fc-lbl">Respuesta completa de {engineLabel}</span>
-        <blockquote className="fc-answer">{answer}</blockquote>
+        <AnswerMarkdown text={answer} />
       </div>
 
+      {/* Sin números y sin la palabra "competidores": ver la cabecera. Se pintan
+          como etiquetas, no como una lista ordenada, porque una lista numerada
+          se lee como un ranking aunque el número no esté — y aquí no hay
+          ranking que enseñar. */}
       {otherBrands.length > 0 && (
         <div className="fc-panel">
           <span className="fc-lbl">
-            Quién sí apareció, en el orden en que {engineLabel} los nombró
+            {brandMentioned
+              ? `Las demás marcas que ${engineLabel} nombró`
+              : `Las marcas que ${engineLabel} sí nombró`}
           </span>
-          <ol className="fc-rivals">
+          <ul className="fc-rivals">
             {otherBrands.map((name, i) => (
-              <li key={`${name}-${i}`}>
-                <span className="fc-rival-n">{i + 1}</span>
-                <span className="fc-rival-name">{name}</span>
-              </li>
+              <li key={`${name}-${i}`}>{name}</li>
             ))}
-          </ol>
+          </ul>
+          <p className="fc-rivals-note">
+            Tal cual las nombró, sin orden. Alguna puede no ser competencia tuya: son todas las
+            marcas que aparecen en la respuesta, no una selección nuestra.
+          </p>
         </div>
       )}
 

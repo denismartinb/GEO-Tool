@@ -4638,17 +4638,38 @@ a.notif-row:hover {
 .fc-panel p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
 .fc-panel-warn { border-left: 3px solid var(--warn); border-radius: 0 11px 11px 0; }
 .fc-prompt { font-weight: 600; color: var(--ink) !important; }
+/* La respuesta del motor, ya renderizada (FREE-CHECKER-1 Fase C). Sin
+   `white-space: pre-wrap`: los saltos los pone ahora la maquetación, y
+   conservarlo dejaría un hueco por cada salto del markdown original. */
 .fc-answer {
   margin: 0; border-left: 3px solid var(--brand-cyan); padding: 2px 0 2px 14px;
-  font-size: 14px; line-height: 1.7; color: var(--ink-2); white-space: pre-wrap;
+  font-size: 14px; line-height: 1.7; color: var(--ink-2);
 }
-.fc-rivals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-.fc-rivals li { display: flex; align-items: center; gap: 11px; }
-.fc-rival-n {
-  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; font-weight: 700;
-  color: var(--ink-4); font-variant-numeric: tabular-nums; width: 16px; flex: none;
+.fc-answer-p { margin: 0 0 11px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+.fc-answer-p:last-child { margin-bottom: 0; }
+.fc-answer-h {
+  margin: 16px 0 7px; font-size: 14.5px; font-weight: 700; color: var(--ink); line-height: 1.45;
 }
-.fc-rival-name { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.fc-answer-h:first-child { margin-top: 0; }
+.fc-answer-ul { margin: 0 0 11px; padding-left: 18px; }
+.fc-answer-ul li { font-size: 14px; line-height: 1.65; color: var(--ink-2); margin-bottom: 4px; }
+/* `a:not(.btn)` por la regla de styles.md: una regla de ancestro sobre `a`
+   secuestra cualquier botón que algún día se pinte aquí dentro. Hoy no hay
+   ninguno; la exclusión es lo que impide que el día que lo haya salga con el
+   color y el relleno de un enlace de prosa. */
+.fc-answer a:not(.btn) {
+  color: var(--brand-blue); text-decoration: underline; text-underline-offset: 2px;
+  text-decoration-thickness: 1px; overflow-wrap: anywhere;
+}
+.fc-answer a:not(.btn):hover { color: #1d4ed8; }
+
+/* Etiquetas, no lista ordenada: no hay ranking que enseñar (Fase C, log §97). */
+.fc-rivals { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.fc-rivals li {
+  font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+}
+.fc-rivals-note { margin: 12px 0 0 !important; font-size: 12.5px !important; color: var(--ink-4) !important; }
 .fc-upsell {
   border: 1px solid var(--line); border-radius: 13px; padding: 22px 24px; margin-top: 22px;
   background: var(--surface-2);

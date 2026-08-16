@@ -26,7 +26,15 @@ export type PublicCheckResponse =
       engineLabel: string;
       answer: string;
       brandMentioned: boolean;
-      brandPosition: number | null;
+      /**
+       * **No hay `brandPosition` a propósito, y quitarlo del contrato es el
+       * punto** (Fase C, 2026-08-16). La comprobación pasa `competitors: []`,
+       * así que la única entidad que el extractor rankea es la propia marca y
+       * su `position` vale 1 siempre que aparezca. Se publicó como "en el
+       * puesto 1" sobre una respuesta que nombraba a Orange antes que a
+       * Movistar. Mientras el dato no exista, no puede llegar al navegador:
+       * dejarlo en la respuesta y confiar en que nadie lo pinte es cómo vuelve.
+       */
       otherBrands: string[];
       citedOwnDomain: boolean;
     }
