@@ -27,7 +27,7 @@ import { NOT_COVERED_NOTE } from "@/lib/web-audit/coverage-map";
 
 const PROJECT: WebAuditProject = {
   id: "11111111-1111-1111-1111-111111111111",
-  name: "Genscore",
+  name: "GenScore",
   domain: "genscore.es"
 };
 
@@ -459,6 +459,6 @@ describe("una pantalla sin datos no inventa ninguno", () => {
 
     expect(data.llmsPublishSteps.length).toBeGreaterThan(0);
     expect(data.sitemapFixSteps.length).toBeGreaterThan(0);
-    expect(data.fixContext).toEqual({ projectName: "Genscore", domainNormalized: "genscore.es" });
+    expect(data.fixContext).toEqual({ projectName: "GenScore", domainNormalized: "genscore.es" });
   });
 });
