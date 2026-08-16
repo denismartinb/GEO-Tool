@@ -116,7 +116,7 @@ export interface PageFindings {
    */
   dismissedWelcomeTour: boolean;
   /**
-   * El `<title>` del documento — ROOT-METADATA-1 (log §101).
+   * El `<title>` del documento — ROOT-METADATA-1 (log §104).
    *
    * El piloto juzga capturas, y un título NO sale en una captura: es la clase
    * de cosa sobre la que su verde no dice absolutamente nada. Quince pantallas
@@ -814,7 +814,7 @@ export function assertPageIsHealthy(findings: PageFindings): void {
       `control(s) inside .ov-sticky-header, which belong in the page body instead.`
   ).toEqual([]);
 
-  // ROOT-METADATA-1 (log §101). Una pantalla sin `metadata` propia hereda el
+  // ROOT-METADATA-1 (log §104). Una pantalla sin `metadata` propia hereda el
   // `title` del layout raíz, que es la marca a secas. No rompe nada, no se ve
   // en la captura y no lo nota nadie — así llegaron a ser quince pantallas
   // indistinguibles entre sí. Comparar contra la marca exacta es a propósito:

@@ -9723,7 +9723,7 @@ leyera sin ese aviso la implementaría otra vez.
 ---
 
 
-## 101. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
+## 104. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
 
 **De dónde viene.** Al cerrar la Fase E dejé apuntado que el `title` y el
 `description` del layout raíz seguían siendo una redacción propia de qué es
