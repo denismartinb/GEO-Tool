@@ -40,3 +40,28 @@ export const CANONICAL_DEFINITION_LONG =
 
 /** Categoría de producto, en los términos de schema.org. */
 export const APPLICATION_CATEGORY = "BusinessApplication";
+
+/**
+ * Identificadores del grafo de entidades (`@id` de schema.org) — SEO-POS-1
+ * Fase E, E3.
+ *
+ * **Por qué hacen falta.** Antes de E3 el sitio emitía dos nodos
+ * `Organization` distintos que se llamaban igual: el del layout raíz y el que
+ * `/que-es-genscore` incrustaba como `publisher` de su `SoftwareApplication`.
+ * Sin `@id` no hay forma de saber que son el mismo, así que la página que
+ * existe para desambiguar la marca estaba **creando** una ambigüedad más — la
+ * misma clase de ruido que la Fase E entera intenta quitar, sólo que puesta
+ * por nosotros y en formato legible por máquina.
+ *
+ * Con `@id`, `publisher` deja de ser una copia del nodo y pasa a ser una
+ * referencia a él: un solo `Organization`, un solo `SoftwareApplication`, y
+ * cuantas páginas quieran declararlos sin multiplicarlos.
+ *
+ * Los identificadores son URIs con fragmento sobre el dominio propio, que es
+ * la convención habitual: no son URLs navegables ni tienen que serlo, sólo
+ * tienen que ser estables. **Cambiarlos rompe la unión**, así que no se tocan
+ * por estética.
+ */
+export const SITE_ORIGIN = "https://www.genscore.es";
+export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
+export const SOFTWARE_APPLICATION_ID = `${SITE_ORIGIN}/#software`;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { after } from "next/server";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -24,7 +25,8 @@ import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/samp
 import { WEB_AUDIT_JOB_TYPE, WEB_AUDIT_STALE_LOCK_MS } from "@/lib/web-audit/audit-job";
 import { ReentryMission } from "@/components/reentry-mission";
 import { deriveAuditPillState, isWebAuditJobDue } from "@/lib/web-audit/audit-liveness";
-import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
+import { triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
+import { loadWebAuditPageData } from "@/lib/web-audit/page-data";
 import { WebAuditProvider } from "./web-audit-context";
 import { WebAuditDriveNotice } from "./web-audit-drive-notice";
 import { AuditTabsProvider, AuditTabBar, AuditTabPanel } from "./audit-tabs";
@@ -41,6 +43,7 @@ import {
   type IssueSeverity
 } from "@/lib/web-audit/issues";
 import { buildPageFixes, type PageFixContext } from "@/lib/web-audit/page-fixes";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { PageFixBlock } from "./page-fix-block";
 import { LlmsTxtBlock } from "./llms-txt-block";
 import { SitemapStepsBlock } from "./sitemap-steps-block";
@@ -64,333 +67,55 @@ export const maxDuration = 60;
 // a display cutoff — self-expiring the moment a project re-audits.
 const TECHNICAL_CRITERIA_EXPANDED_AT = new Date("2026-07-13T00:00:00Z");
 
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Auditoría web", async () => (await requireActiveProject(projectId)).domain);
+}
 export default async function WebAuditPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
-  // Two capabilities, not one (WEB-AUDIT-TECH-ALL-PLANS-1, founder-approved
-  // 2026-08-05). Coverage (DOMAIN-COVERAGE-1) still reads the raw plan
-  // column directly via isProOrAbove, never getPlanForUser/resolvePlan
-  // (route rule, .claude/rules/web-audit.md) — it runs batched Gemini
-  // grounding calls and stays genuinely Pro-only. The technical half (pure
-  // fetch + regex, zero LLM — lib/web-audit/technical-audit.ts) is now
-  // available on every plan: GEO-SCORE-V4 (docs/adr/0033) made
-  // `readiness_score` a real .20 GEO Score component, so gating it made the
-  // headline metric measure a different number of signals depending on plan.
+  const {
+    canAuditCoverage,
+    hasCompletedScan,
+    technicalSnapshot,
+    currentTechnicalReport,
+    technicalScoreDelta,
+    analyzedPagesCount,
+    summary,
+    grouped,
+    trend,
+    latestMap,
+    auditedScanDate,
+    coverageDelta,
+    surfacingDelta,
+    globalScore,
+    heroScore,
+    activeCampaignProgress,
+    auditPillState,
+    auditIsRunning,
+    shouldDispatchAudit,
+    llmsTxtFile,
+    llmsPublishSteps,
+    sitemapFixSteps,
+    fixContext
+  } = await loadWebAuditPageData({ supabase, userId: user.id, project });
 
-  // Always true today. Kept as a named capability rather than inlining
-  // `true` at every call site so a future plan tier ever needs to gate it
-  // again, there is one place to flip. Declarado aquí arriba (antes iba junto
-  // a `canAuditCoverage`) porque el lote de abajo lo necesita y, a diferencia
-  // de aquél, no depende de `profileRow`.
-  const canAuditTechnical = true;
-
-  // Las cinco lecturas independientes de esta pantalla, en paralelo
-  // (PRELAUNCH-HARDENING-1 Fase V, V7). Estaban encadenadas una tras otra
-  // aunque ninguna consume el resultado de la anterior: el usuario pagaba la
-  // suma de cinco viajes a Supabase en vez del más lento de los cinco. Lo que
-  // sí depende de algo (el `jobs` de abajo necesita `latestRunRow`) sigue
-  // detrás, que es exactamente donde tiene que estar.
-  const [
-    { data: profileRow },
-    { data: latestRunRow },
-    { data: historyRows },
-    { data: technicalHistoryRows },
-    { data: activeCampaignRow }
-  ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("current_plan")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("scan_runs")
-      .select("id, finished_at, created_at")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("generated_solutions")
-      .select("sanitized_content, created_at")
-      .eq("project_id", projectId)
-      .eq("generation_type", "domain_coverage")
-      .is("recommendation_id", null)
-      .eq("status", "completed")
-      .eq("is_sanitized", true)
-      .order("created_at", { ascending: false })
-      .limit(12),
-    canAuditTechnical
-    ? supabase
-        .from("web_audit_snapshots")
-        .select("readiness_score, pages, bots, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(8)
-    : { data: [] },
-    supabase
-      .from("generated_solutions")
-      .select("sanitized_content, updated_at")
-      .eq("project_id", projectId)
-      .eq("generation_type", "domain_coverage")
-      .is("recommendation_id", null)
-      .eq("status", "running")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-  ]);
-
-  const canAuditCoverage = isProOrAbove(profileRow?.current_plan as string | undefined);
-
-
-
-
-
-  // WEB-AUDIT-2: technical-audit snapshots, most recent first. Rendered
-  // as-is — this page never re-triggers the audit itself, only the button
-  // does (lib/web-audit/technical-audit.ts owns the cache/rate-limit rules).
-  //
-  // WEB-AUDIT-ISSUES-1 fase 2 (founder-approved 2026-08-02): widened from
-  // a single row to the last 8 — the "Problemas" tab's críticos/avisos
-  // mini-trend and the readiness-score delta both need more than the latest
-  // snapshot, which nothing on this page loaded before this phase.
-  //
-  // WEB-AUDIT-TECH-ALL-PLANS-1: queried for every plan now — this used to be
-  // skipped entirely under `!canAudit` (the old single Pro gate), which made
-  // a non-Pro project's technical snapshot null by construction even on a
-  // project that had one. `canAuditTechnical` is always true; the ternary
-  // stays so a future gate has one line to change, not this query's shape.
-
-  const technicalHistory = (technicalHistoryRows ?? []) as Array<{
-    readiness_score: number | null;
-    pages: PageAuditEntry[];
-    bots: BotAccessReport;
-    created_at: string;
-  }>;
-  const technicalSnapshot = technicalHistory[0] ?? null;
-
-  // Pure aggregation (lib/web-audit/issues.ts, WEB-AUDIT-ISSUES-1 fase 1) run
-  // over each loaded snapshot — cheap, no I/O, no new query per point.
-  // The chronological critical/warning series this used to build fed the two
-  // sparklines beside the Críticos/Avisos counts; both were removed in the
-  // founder review of 2026-08-03, so the series went with them rather than
-  // being left computed and unread on every render.
-  const technicalReportsNewestFirst = technicalHistory.map((snap) => ({
-    createdAt: snap.created_at,
-    report: buildTechnicalIssuesReport(snap.pages, snap.bots)
-  }));
-  const currentTechnicalReport: TechnicalIssuesReport | null = technicalReportsNewestFirst[0]?.report ?? null;
-  const previousTechnicalReport: TechnicalIssuesReport | null = technicalReportsNewestFirst[1]?.report ?? null;
-  const technicalScoreDelta =
-    currentTechnicalReport?.actualReadinessScore != null && previousTechnicalReport?.actualReadinessScore != null
-      ? currentTechnicalReport.actualReadinessScore - previousTechnicalReport.actualReadinessScore
-      : null;
-
-  // WEB-AUDIT-CHAIN: detect a campaign left "running" for the current scan
-  // (from a previous batch, whether the user is still on this page or came
-  // back after navigating away/closing the tab) so the audit button can
-  // resume driving it automatically — same shape as AutoExecuteScan resuming
-  // a pending/running scan_run on Escaneos. Read server-side, not from any
-  // client-only state, so it survives a full page reload.
-
-  const activeCampaignMap = parseCoverageMap(activeCampaignRow?.sanitized_content ?? null);
-  const hasActiveCampaign = Boolean(
-    activeCampaignMap && latestRunRow && activeCampaignMap.scanId === latestRunRow.id
-  );
-
-  // WEB-AUDIT-DRIVE-1: the audit job for this run, read through RLS
-  // (`jobs_select_owner`) rather than the service client — this is a render
-  // path and the owner is entitled to its own job's state.
-  //
-  // Two things depend on it, and neither could be answered from the campaign
-  // row alone: whether the pill may claim the audit is moving, and whether
-  // anything is owed that opening this page should wake up.
-  const { data: auditJobRow } = latestRunRow
-    ? await supabase
-        .from("jobs")
-        .select("status, next_attempt_at, locked_at")
-        .eq("project_id", projectId)
-        .eq("run_id", latestRunRow.id)
-        .eq("job_type", WEB_AUDIT_JOB_TYPE)
-        .maybeSingle()
-    : { data: null };
-
-  /* SCAN-STATES-3: is an audit actually moving right now? Read off the job
-     row this page already fetches — no extra query. Deliberately NOT
-     `auditPillState`, which is gated on `canAuditCoverage`: the technical
-     half runs on every plan, so a Free project's first audit is real work
-     and deserves the beat as much as a Pro one's. */
-  const auditIsRunning = ["pending", "running", "retrying"].includes(String(auditJobRow?.status ?? ""));
-
-  const auditPillState = deriveAuditPillState({
-    campaignUpdatedAt: hasActiveCampaign ? activeCampaignRow?.updated_at : null,
-    jobStatus: auditJobRow?.status
-  });
-
-  // Wake the worker when this project has an audit owed to it. Until now the
-  // only things that could start one were the `after()` dispatch at the end of
-  // a scan and the 07:00 daily cron, so a lost dispatch meant the screen sat
-  // on "Auditando…" until the next morning — and on a preview deployment,
-  // where Vercel runs no crons at all, forever (2026-08-07).
-  //
-  // Safe to fire on a render: the worker claims jobs with the same atomic
-  // conditional UPDATE the scan batches use, so a duplicate dispatch is a
-  // no-op rather than a second audit, and the predicate only passes for a job
-  // that is genuinely due or genuinely abandoned. Fire-and-forget via
-  // `after()`, so the page's own response is never held up by it.
-  if (
-    auditJobRow &&
-    isAutoWebAuditEnabled() &&
-    isWebAuditJobDue({
-      status: auditJobRow.status as string,
-      nextAttemptAt: auditJobRow.next_attempt_at as string | null,
-      lockedAt: auditJobRow.locked_at as string | null,
-      staleLockMs: WEB_AUDIT_STALE_LOCK_MS
-    })
-  ) {
+  // El loader DECIDE si hay una auditoría vencida a la que despertar; actuar es
+  // de esta pantalla (PRELAUNCH-HARDENING-1 Fase R7-b, log §106). Fire-and-forget
+  // con `after()`, así que la respuesta de la página nunca espera por esto.
+  if (shouldDispatchAudit) {
     after(() => triggerWebAuditRun());
   }
-  let activeCampaignProgress: { covered: number; total: number } | null = null;
-  if (hasActiveCampaign && activeCampaignMap) {
-    const { count: activePromptCount } = await supabase
-      .from("project_prompts")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .eq("is_active", true);
-    activeCampaignProgress = {
-      covered: activeCampaignMap.topics.length,
-      total: activePromptCount ?? activeCampaignMap.topics.length
-    };
-  }
-
-  const maps = ((historyRows ?? []) as Array<{ sanitized_content: string | null }>)
-    .map((row) => parseCoverageMap(row.sanitized_content))
-    .filter((m): m is NonNullable<typeof m> => m !== null);
-
-  const scanIds = Array.from(new Set(maps.map((m) => m.scanId)));
-
-  const { data: resultRows } =
-    scanIds.length > 0
-      ? await supabase
-          .from("scan_prompt_results")
-          .select("id, prompt_id, run_id, extracted_json, provider, mentioned_competitors_count")
-          .eq("project_id", projectId)
-          .in("run_id", scanIds)
-          .eq("status", "completed")
-      : { data: [] };
-
-  const resultsByScanId = new Map<string, PromptResultLite[]>();
-  for (const row of (resultRows ?? []) as Array<PromptResultLite & { run_id: string }>) {
-    const list = resultsByScanId.get(row.run_id) ?? [];
-    list.push(row);
-    resultsByScanId.set(row.run_id, list);
-  }
-
-  const latestMap = maps.length > 0 ? maps.reduce((a, b) => (a.generatedAt > b.generatedAt ? a : b)) : null;
-
-  // WEB-AUDIT-R6 phase 2: citation is classified over a fixed window of
-  // recent scans, not just the latest one (see opportunity-matrix.ts) — the
-  // same deduped candidates list drives both this current summary and every
-  // historical trend point (buildCoverageTrend), so they stay consistent.
-  const citationWindowCandidates = buildCitationWindowCandidates(maps, resultsByScanId);
-  const summary = latestMap
-    ? buildWebAuditSummary({ coverage: latestMap, citationWindowCandidates, projectDomain: project.domain })
-    : null;
-  const trend = buildCoverageTrend({ maps, resultsByScanId, projectDomain: project.domain });
-
-  // Brand + domain for the copyable fixes (fase 3b). `project.domain` is
-  // already the normalized host used everywhere else on this page.
-  const fixContext: PageFixContext = { projectName: project.name, domainNormalized: project.domain };
-
-  // Fase 3a: the llms.txt the user can publish, built from the latest coverage
-  // campaign. Null when no campaign has ever produced a verified page — the
-  // builder refuses to emit a file that would be nothing but placeholders.
-  const llmsTxtFile = buildLlmsTxt({
-    brand: project.name,
-    domainNormalized: project.domain,
-    coverage: latestMap
-  });
-  const llmsPublishSteps = publishSteps(project.domain);
-  const sitemapFixSteps = sitemapSteps(project.domain);
-
-  const auditedScan = latestMap ? maps.find((m) => m.scanId === latestMap.scanId) : null;
-  const auditedScanDate = auditedScan?.scanId === latestRunRow?.id ? latestRunRow?.finished_at ?? latestRunRow?.created_at : null;
-
-  // WEB-AUDIT-R6 phase 1 (geo-strategy methodology review 2026-07-17):
-  // coverage/citation are both sampled fresh per scan from Gemini's Google
-  // Search grounding — a noisy sensor. With a small denominator, a single
-  // sampling flip swings the percentage by double digits; showing that swing
-  // as a bare "+17 pt" delta reads as precision the sample doesn't support.
-  // A delta is only shown when BOTH the current and previous point clear
-  // SMALL_SAMPLE_THRESHOLD (isDeltaTrustworthy) — never fabricated, never
-  // silently rounded away, just withheld when the comparison itself would be
-  // noise. The tile itself still always shows the real fraction (n/N).
-  const previousPoint = trend.length >= 2 ? trend[trend.length - 2] : null;
-
-  const previousCoveragePct = previousPoint?.coveragePct ?? null;
-  const coverageDeltaTrustworthy =
-    previousPoint !== null && isDeltaTrustworthy(summary?.conclusiveCount ?? 0, previousPoint.conclusiveCount);
-  const coverageDelta =
-    coverageDeltaTrustworthy &&
-    summary?.coveragePct !== null &&
-    summary?.coveragePct !== undefined &&
-    previousCoveragePct !== null
-      ? summary.coveragePct - previousCoveragePct
-      : null;
-
-  const previousSurfacingPct = previousPoint?.surfacingPct ?? null;
-  const surfacingDeltaTrustworthy =
-    previousPoint !== null && isDeltaTrustworthy(summary?.coveredCount ?? 0, previousPoint.coveredCount);
-  const surfacingDelta =
-    surfacingDeltaTrustworthy &&
-    summary?.surfacingPct !== null &&
-    summary?.surfacingPct !== undefined &&
-    previousSurfacingPct !== null
-      ? summary.surfacingPct - previousSurfacingPct
-      : null;
-
-  // WEB-AUDIT-R1: the hero's composite score — plain mean of the real signals
-  // available (see lib/web-audit/global-score.ts). Its breakdown renders right
-  // next to it, so the composite is never a black box; a component that has
-  // never been computed (e.g. technical audit not yet run) is excluded, not
-  // faked as 0.
-  const globalScore = buildGlobalScore({
-    coveragePct: summary?.coveragePct ?? null,
-    surfacingPct: summary?.surfacingPct ?? null,
-    technicalScore: technicalSnapshot?.readiness_score ?? null
-  });
-
-  // WEB-AUDIT-TECH-ALL-PLANS-1 (Director's call, 2026-08-05): a non-Pro
-  // account can never populate coverage/surfacing, so `globalScore.score`
-  // would silently equal the technical score anyway (mean of one value is
-  // itself) — the actual problem was never the number, it was the caption
-  // ("Media de 1 señal disponible… audita el resto para completarla"), which
-  // reads as "not run yet" when the true fact is "not included in your
-  // plan". Rather than keep the composite framing with a patched caption,
-  // the non-Pro headline IS the technical score — one named signal, not a
-  // same-valued disguised average. Pro's composite is untouched.
-  const heroScore = canAuditCoverage ? globalScore.score : (technicalSnapshot?.readiness_score ?? null);
-
-  // WEB-AUDIT-ISSUES-1 fase 2 (founder-approved 2026-08-02): el Plan de
-  // acción (competitor extraction, join con `recommendations`, buildActionPlan
-  // y su expansor) se retiró de esta pantalla entero — "no tiene sentido
-  // aquí, debe estar en la página de recomendaciones". `grouped` sigue
-  // haciendo falta para "Lo que ya funciona" y la pista de la tarjeta hero.
-  const grouped: Record<TopicOutcome, ClassifiedTopic[]> = {
-    performing: [],
-    invisible: [],
-    content_gap: [],
-    open_opportunity: [],
-    unverified_cited: [],
-    inconclusive: []
-  };
-  for (const topic of summary?.topics ?? []) {
-    grouped[topic.outcome].push(topic);
-  }
-
-  const analyzedPagesCount = technicalSnapshot ? technicalSnapshot.pages.filter((p) => p.status === "analyzed").length : 0;
 
   return (
     <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAuditCoverage}>
@@ -559,7 +284,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           told per-signal instead, inside the tiles/sections that need it
           (LockedSubScoreTile, the coverage-only Evolución/Historial blocks
           that stay empty by construction for a non-Pro project). */}
-      {!latestRunRow ? (
+      {!hasCompletedScan ? (
         <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
           <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
             Todavía no hay ningún escaneo completado

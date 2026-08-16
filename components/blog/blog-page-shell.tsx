@@ -22,9 +22,7 @@ export function BlogPageShell({
 }) {
   return (
     <div className="lp">
-      <div className="lp-nav-wrap">
-        <PublicHeader activeHref={activeHref} />
-      </div>
+      <PublicHeader activeHref={activeHref} />
 
       <section className="lp-section">
         <div className="lp-inner">{children}</div>

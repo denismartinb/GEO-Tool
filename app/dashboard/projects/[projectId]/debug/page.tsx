@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
@@ -27,6 +28,7 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { deriveRunAuditStatus, type RunAuditStatus } from "@/lib/web-audit/run-audit-status";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { setAutoAuditHalf, setEngineEnabled, setRecurringScans, setSamplingEnabled } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 
@@ -149,6 +151,19 @@ function formatDurationSeconds(
 }
 
 /* ---- Page ---- */
+
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Diagnóstico", async () => (await requireActiveProject(projectId)).domain);
+}
 
 export default async function RunsPage({
   params,

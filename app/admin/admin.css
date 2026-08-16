@@ -155,6 +155,14 @@
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--surface);
+  /*
+   * ADMIN-CONSOLE-UX-1, corrección tras el fundador. Deja consultar el ancho
+   * REAL de este contenedor (visible, sin importar cuánto se haya desplazado
+   * su tabla hija) vía `cqi` — ver `.adm-detail-sticky` más abajo. El propio
+   * `.adm-table-wrap` ya se dimensiona por su padre (`.adm-main`), no por la
+   * tabla que desborda dentro de él, así que esto no cambia su tamaño.
+   */
+  container-type: inline-size;
 }
 
 .adm-table {
@@ -316,6 +324,52 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * ADMIN-CONSOLE-2b / ADMIN-CONSOLE-UX-1 — escritura por proyecto, en columnas.
+ * `auto-fit` con `minmax()` colapsa por sí solo según el ancho REAL
+ * disponible, sin ninguna consulta condicional (`@media`/`@container`) que
+ * mantener — el primer intento usaba una `@container`, correcta en
+ * aislamiento pero sin poder verificarse contra el preview real del
+ * fundador; esto es intrínsecamente correcto por especificación, en
+ * cualquier navegador, sin depender de qué construya el ancho del
+ * contenedor.
+ */
+.adm-proj-write {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.adm-toggle-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.adm-toggle-label {
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.adm-toggle-on { color: var(--brand-pos); }
+.adm-toggle-off { color: var(--ink-4); }
+
+.adm-toggle-form .btn {
+  font-size: 11.5px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.adm-toggle-btn-off {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
 .adm-cost-note {
   margin: 14px 0 0;
   font-size: 11.5px;
@@ -340,12 +394,68 @@
 }
 
 .adm-drawer {
-  margin-top: 18px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--sh-1);
   overflow: hidden;
+}
+
+/*
+ * ADMIN-CONSOLE-UX-1. La ficha se abre en acordeón justo bajo la fila que se
+ * toca, no como tarjeta fija tras toda la tabla — en móvil eso obligaba a
+ * bajar siempre la misma distancia sin importar qué fila se hubiera abierto.
+ *
+ * Corrección (mismo día, capturas del fundador): la celda es parte de la
+ * fila de una tabla con `min-width: 760px` — sin arreglar, su contenido
+ * quedaba a ESA anchura y sólo se leía desplazando horizontalmente, mitad
+ * cortado a cada lado, en cualquier móvil real. Los números cortos del resto
+ * de la tabla toleran ese desplazamiento; una ficha para leer, no. La celda
+ * en sí se deja a 760px+ (no se puede evitar, es parte de la fila), pero su
+ * contenido va en `.adm-detail-sticky`: `position: sticky; left: 0` lo fija
+ * al borde visible según se desplaza la tabla, y `width: 100cqi` lo dimensiona
+ * al ancho REAL de `.adm-table-wrap` (gracias a su `container-type` de
+ * arriba) en vez de al de la fila que desborda dentro de él. Resultado: la
+ * ficha se ve entera, a ancho de pantalla, sin desplazamiento propio, aunque
+ * la fila que la contiene sí sea más ancha que la pantalla.
+ */
+.adm-detail-row td {
+  padding: 0;
+}
+
+/*
+ * Segunda corrección, mismo día: `.adm-table th, .adm-table td` (más abajo en
+ * este mismo fichero) pone `white-space: nowrap` con especificidad
+ * elemento+clase (0,1,1). `.adm-detail-cell` de una sola clase (0,1,0) nunca
+ * podía ganarle, así que el `white-space: normal` de más arriba no llegó a
+ * aplicarse nunca — el texto seguía sin partirse en una sola línea
+ * interminable, y esa línea sin partir empujaba el ancho de todo lo que
+ * colgaba de esta celda (incluidas las columnas de `.adm-proj-write`, que
+ * por eso tampoco colapsaban a una). Capturas del fundador desde su móvil lo
+ * confirmaron. `.adm-table .adm-detail-cell` iguala la especificidad de la
+ * regla que había que vencer.
+ */
+.adm-table .adm-detail-cell {
+  white-space: normal;
+  padding: 0;
+}
+
+.adm-detail-sticky {
+  position: sticky;
+  left: 0;
+  width: 100cqi;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  padding: 12px;
+}
+
+.adm-detail-sticky .adm-drawer {
+  box-shadow: none;
+}
+
+/* Sólo cuando la fila seleccionada no está en la página filtrada actual. */
+.adm-drawer-standalone {
+  margin-top: 18px;
 }
 
 .adm-drawer-top {

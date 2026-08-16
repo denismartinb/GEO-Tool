@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { requireOperatorCandidate } from "@/lib/admin/operator";
 import { selectTotpFactors } from "@/lib/admin/mfa-factors";
+import { consoleMetadata } from "@/lib/seo/console-metadata";
 import { verifyEnrollment, regenerateEnrollment } from "./actions";
 
 /**
@@ -18,6 +20,9 @@ import { verifyEnrollment, regenerateEnrollment } from "./actions";
  */
 /** Etiqueta que verá el operador en su app de autenticación. */
 const TOTP_FRIENDLY_NAME = "GenScore admin";
+
+// ROOT-METADATA-1: pestaña propia. Ver `lib/seo/console-metadata.ts`.
+export const metadata: Metadata = consoleMetadata("Configurar verificación en dos pasos");
 
 export default async function MfaEnrollPage({
   searchParams

@@ -26,6 +26,12 @@
   --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
   --sidebar-w: 248px;
   --header-h: 52px;
+  /* Shared mobile-drawer chassis (header-consistency-public-private,
+     2026-08-15) — both the console sidebar drawer (.sb) and the public
+     header drawer (.lp-mobnav) read these, so a future change to one
+     changes both instead of drifting apart again. */
+  --drawer-w: 288px;
+  --drawer-anim: .24s cubic-bezier(.4, 0, .2, 1);
   color-scheme: light;
 
   /* ============================================================
@@ -312,15 +318,28 @@ a {
   min-height: 0;
 }
 
+/* HEADER-FLAT-1 (2026-08-15): plana arriba del todo, cristal al desplazar —
+   el tratamiento de la portada pública, traído a la consola. El fondo no
+   existe para tapar contenido (la cabecera no solapa nada: `.dash-content` es
+   quien scrollea y es su hermana) sino para darle un canto al contenido que
+   sube, que sin él se recorta contra un borde invisible. Ver
+   `components/console-header.tsx`. */
 .dash-header {
   position: relative;
   height: var(--header-h);
-  border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid transparent;
+  background: transparent;
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 0 22px;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.dash-header.is-scrolled {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom-color: var(--line-soft);
 }
 
 /* Mobile-only header controls, hidden on desktop */
@@ -3510,22 +3529,26 @@ textarea.add-prompts-text-input {
 }
 
 /* Bell icon button */
+/* HEADER-FLAT-1 (2026-08-15): sin caja. Sobre una cabecera plana, un botón
+   con borde y fondo propio era lo único que seguía pareciendo un control
+   pegado encima. Queda como icono suelto con la misma huella que
+   `.hdr-burger`, para que los dos extremos de la barra pesen igual. */
 .header-bell {
   position: relative;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1.5px solid var(--brand-line);
-  background: var(--brand-surface);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: none;
   color: var(--brand-ink-3);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .header-bell:hover {
-  background: var(--brand-canvas);
+  background: var(--surface-2);
   color: var(--brand-ink-2);
 }
 
@@ -4462,7 +4485,24 @@ a.notif-row:hover {
 .lp { background: #fff; color: var(--ink); }
 .lp-inner { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
 
-.lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.82); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line-soft); }
+/* HEADER-FLAT-1 (2026-08-15): una sola cabecera para toda la zona pública, y
+   plana siempre. Antes cada superficie envolvía a mano `PublicHeader` en este
+   div —seis copias— y la portada no lo hacía en absoluto, que es de donde
+   salía la diferencia que el fundador vio: portada plana, resto con barra
+   blanca. Ahora el envoltorio lo pone el propio `PublicHeader`.
+
+   **No hay estado "al desplazar" a propósito, y esto merece explicación**
+   porque parece un olvido. Se implementó y se retiró tras medirlo: este
+   `sticky` NO funciona hoy — `html { overflow-x: hidden }` (arriba, puesto
+   para contener el desbordamiento de 3px que encontró el piloto en GROWTH-2
+   Fase 2.1) convierte al documento en contenedor de scroll y desactiva el
+   pegado. Medido en local sobre `main` antes de tocar nada: tras desplazar
+   500px, `.lp-nav-wrap` está en `y: -500` a 375 y a 1280 px. Es decir, la
+   cabecera pública se va con la página en las siete superficies, así que un
+   fondo "al desplazar" no se vería jamás. Si algún día se quita ese
+   `overflow-x`, ESTE es el sitio donde añadirlo — y entonces habrá que
+   comprobar antes que el desbordamiento de 3px no vuelve. */
+.lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: transparent; border-bottom: 1px solid transparent; }
 .lp-nav { max-width: 1180px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
 .lp-logo { display: flex; align-items: center; gap: 10px; }
 .lp-nav-links { display: flex; align-items: center; gap: 4px; margin-left: 22px; }
@@ -4476,24 +4516,52 @@ a.notif-row:hover {
 .lp-burger { display: none; }
 .lp-mobnav-scrim { position: fixed; inset: 0; background: rgba(15,23,41,.44); z-index: 310; animation: scrimIn .2s ease forwards; }
 .lp-mobnav {
-  position: fixed; top: 0; left: 0; bottom: 0; width: 280px; max-width: 86vw; z-index: 320;
-  background: #fff; box-shadow: 20px 0 60px rgba(15,23,41,.20); display: flex; flex-direction: column; gap: 2px;
-  padding: calc(16px + env(safe-area-inset-top)) 16px 16px; animation: lpMobnavIn .24s cubic-bezier(.4,0,.2,1);
+  position: fixed; top: 0; left: 0; bottom: 0; width: var(--drawer-w); max-width: 86vw; z-index: 320;
+  background: #fff; box-shadow: 20px 0 60px rgba(15,23,41,.20); display: flex; flex-direction: column;
+  padding-top: env(safe-area-inset-top); padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  animation: lpMobnavIn var(--drawer-anim);
 }
-.lp-mobnav-close { align-self: flex-end; width: 38px; height: 38px; min-width: 44px; min-height: 44px; border-radius: 9px;
-  display: grid; place-items: center; background: none; border: 1px solid transparent; color: var(--ink-3); margin-bottom: 6px; }
+/* header-consistency-public-private, 2026-08-15: the panel used to be one
+   uniformly-padded column with the close button as its own top row. It now
+   has a dedicated brand row — same height as the app bar (--header-h),
+   matching the console sidebar drawer's `.sb-brand` — with the scrollable
+   link list as a separate middle section, so the two drawers share a real
+   header instead of just a close button floating at the top. */
+.lp-mobnav-brand {
+  height: var(--header-h); flex: 0 0 auto;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px 0 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+/* `.lp-mobnav a` below (font/padding/hover meant for the link list) also
+   matches the brand-row logo link, since it's still an `<a>` inside
+   `.lp-mobnav` — the same specificity trap `.claude/rules/styles.md`
+   already documents twice for this file (`.lp-cta`, `.lp-user-chip`). A
+   single-descendant override (`.lp-mobnav-brand a`) ties `.lp-mobnav a` on
+   specificity (one class + one type each) and loses on source order, so
+   this qualifies on the link's own class too — same fix pattern as
+   `.user-chip.lp-user-chip` elsewhere in this file. Undoes the parts that
+   don't belong on a logo (padding, radius, hover pill); centering and
+   touch-target sizing are fine to inherit. */
+.lp-mobnav-brand .lp-mobnav-brandmark { padding: 0; border-radius: 0; }
+.lp-mobnav-brand .lp-mobnav-brandmark:hover { background: none; }
+.lp-mobnav-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 16px 16px; }
+.lp-mobnav-close { width: 44px; height: 44px; border-radius: 9px; margin-left: auto;
+  display: grid; place-items: center; background: none; border: 1px solid transparent; color: var(--ink-3); }
 .lp-mobnav-close:hover { background: var(--surface-2); border-color: var(--line); }
 .lp-mobnav a { min-height: 44px; display: flex; align-items: center; padding: 0 10px; border-radius: 8px;
   font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .lp-mobnav a:hover { background: var(--surface-2); color: var(--ink); }
 @keyframes lpMobnavIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-/* GENSCORE-HEADER-1 (2026-08-12): every public header's burger sits on the
-   right (.lp-burger { margin-left: auto } above) and `PublicHeader` always
-   passes `fromRight` to MarketingMobileNav, so the drawer always slides in
-   from that side — founder: "el menú tiene que salir siempre desde la
-   derecha". The plain left-slide .lp-mobnav keyframe below stays as
-   MarketingMobileNav's default for any future caller that doesn't opt into
-   `fromRight`; nothing in the app uses that default today. */
+/* GENSCORE-HEADER-1 (2026-08-12) had every public header's burger on the
+   right, `PublicHeader` always passing `fromRight` to MarketingMobileNav so
+   the drawer matched. header-consistency-public-private (2026-08-15,
+   founder-confirmed on the real preview, design-decisions-log §101
+   supersedes §63): `PublicHeader` no longer passes `fromRight`, so the
+   drawer uses the plain left-slide `.lp-mobnav` above by default, matching
+   the console sidebar's drawer side. `.lp-mobnav--right` stays defined —
+   MarketingMobileNav still supports it for any caller that opts in — but
+   nothing in the app calls it today. */
 .lp-mobnav--right { left: auto; right: 0; box-shadow: -20px 0 60px rgba(15,23,41,.20); animation-name: lpMobnavInRight; }
 @keyframes lpMobnavInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -4512,7 +4580,7 @@ a.notif-row:hover {
    375 px cada nota se parte por dentro ("Respuesta real de / ChatGPT") y tres
    notas se leen como seis fragmentos sueltos. Se vio en la captura del piloto
    del preview, no en ninguna aserción: no hay desbordamiento que medir, sólo
-   una fila desordenada (FREE-CHECKER-1, log §97). */
+   una fila desordenada (FREE-CHECKER-1, log §110). */
 .lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 @media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
 
@@ -4590,12 +4658,12 @@ a.notif-row:hover {
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 /* Pista del comprobador gratuito cuando lo escrito no es un dominio
-   (FREE-CHECKER-1, log §97). `--brand-neg` sobre fondo claro, no `--ink-4`:
+   (FREE-CHECKER-1, log §110). `--brand-neg` sobre fondo claro, no `--ink-4`:
    es un mensaje que hay que leer, no una nota al pie. */
 .fc-hint { font-size: 13px; color: var(--brand-neg); margin: 11px 0 0; text-align: center; }
 .fc-hint strong { font-weight: 650; }
 
-/* --- Comprobador gratuito: espera y resultado (FREE-CHECKER-1, log §97) ---
+/* --- Comprobador gratuito: espera y resultado (FREE-CHECKER-1, log §110) ---
    Todo prefijado `fc-` porque estas clases conviven con el sistema de la
    landing en la MISMA página, y nombres genéricos (`panel`, `answer`,
    `rivals`) ya existen o existirán en globals.css — la regla de styles.md
@@ -4663,7 +4731,7 @@ a.notif-row:hover {
 }
 .fc-answer a:not(.btn):hover { color: #1d4ed8; }
 
-/* Etiquetas, no lista ordenada: no hay ranking que enseñar (Fase C, log §97). */
+/* Etiquetas, no lista ordenada: no hay ranking que enseñar (Fase C, log §110). */
 .fc-rivals { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
 .fc-rivals li {
   font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--surface-2);
@@ -4691,7 +4759,7 @@ a.notif-row:hover {
 /* Un `.lp-cta` deshabilitado sigue siendo AZUL, atenuado — nunca gris. En gris
    deja de leerse como "el botón, todavía no" y pasa a leerse como "algo se ha
    roto", que en un CTA de portada es el peor mensaje posible. Ninguna pantalla
-   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §97); vive aquí para que
+   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §110); vive aquí para que
    el día que alguien lo necesite no herede el azul a plena fuerza y parezca
    pulsable. Los controles deshabilitados están exentos de contraste AA, así
    que el barrido del piloto los salta: esto no lo vigila nadie salvo el ojo. */
@@ -4708,7 +4776,7 @@ a.notif-row:hover {
 /* Pinned to the bottom of the drawer (margin-top: auto in the flex column)
    instead of following right after the links — founder feedback: the CTAs
    read as more prominent anchored low, like Semrush's mobile menu. */
-.lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding: 14px 16px 0; border-top: 1px solid var(--line-soft); }
 .lp-mobnav-ctas .lp-cta, .lp-mobnav-ctas .lp-cta-soft { width: 100%; }
 
 /* Los dos CTA del cajón pasaron de `<button onClick={router.push}>` a `<Link>`
@@ -4941,6 +5009,20 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .docs-content p { margin: 0 0 14px; line-height: 1.65; color: var(--ink-2); }
 .docs-content ul, .docs-content ol { margin: 0 0 14px; padding-left: 22px; color: var(--ink-2); }
 .docs-content li { margin-bottom: 6px; line-height: 1.6; }
+/* SEO-POS-1 Fase E, E4 (log §97). `/docs` llevaba desde GROWTH-2 sin ninguna
+   regla de enlace propia, así que sus enlaces caían al `a { color: inherit;
+   text-decoration: none }` global: gris, sin subrayado e indistinguibles de la
+   prosa. «Metodología completa en GEO Score» y «ver Planes y límites» son
+   enlaces desde el primer día y nadie podía saberlo. Mismo remedio y mismo
+   token que `.legal-body a` y `.blog-body a`, que sí lo tenían — la excepción
+   era `/docs`, no la regla.
+   `:not(.btn)` por la lección de V4/§55: una regla de enlace por ancestro le
+   gana en especificidad a la clase de un botón y le impone su color. Aquí hoy
+   no hay botones, y por eso mismo se escribe ya: cubre la variante que aún no
+   existe. */
+.docs-content p a:not(.btn),
+.docs-content li a:not(.btn),
+.docs-content td a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 .docs-table-wrap { overflow-x: auto; margin: 0 0 24px; }
 .docs-content table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
 /* `white-space: nowrap` valía para la tabla de planes —celdas de dos palabras—
@@ -4983,18 +5065,35 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   .lp-h1 { font-size: 42px; }
   .lp-h2 { font-size: 30px; }
   .lp-nav-links { display: none; }
-  .lp-nav { padding-left: 14px; gap: 6px; }
+  /* header-consistency-public-private, 2026-08-15 (founder-approved after
+     the burger-left/logo-centered spike): burger moves to the left and the
+     logo centers, matching WorkspaceTopbar's mobile anatomy (.hdr-burger
+     left / .hdr-brand-mobile centered) instead of the previous
+     logo-left/burger-right split (GENSCORE-HEADER-1, superseded). The bar
+     also now shares --header-h (52px) with the console instead of its own
+     72px, and the burger matches .hdr-burger's 44×44 / radius 10 exactly.
+     Scoped to `.lp-nav >` direct children throughout — the landing hero's
+     browserframe mockup also renders its own decorative `.lp-logo` deeper
+     in the tree, and an unscoped rule here would pull that one out of flow
+     too (caught while spiking this, see git history). */
+  .lp-nav { height: var(--header-h); padding: 0 14px; gap: 6px; position: relative; }
   .lp-burger {
-    display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; min-width: 44px; min-height: 44px;
-    border-radius: 9px; background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
-    margin-left: auto;
+    display: grid; place-items: center; flex: 0 0 auto; width: 44px; height: 44px;
+    border-radius: var(--r-md); background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
+    order: -1;
   }
   .lp-burger:hover { background: var(--surface-2); }
-  /* Logo reads oversized once the nav collapses to just burger + wordmark
-     (founder feedback) — drop it a couple of px alongside the rest of the
-     mobile nav layout. width:auto lets the intrinsic viewBox ratio rescale
-     it instead of stretching at the desktop-computed pixel width. */
-  .lp-logo .brand-logo-svg { height: 19px; width: auto; }
+  .lp-nav > .lp-logo {
+    position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin: auto;
+    width: max-content; height: max-content;
+  }
+  /* `BrandLogo` never applied a `.brand-logo-svg` class to its own <svg> —
+     the old `.lp-logo .brand-logo-svg { height: 19px }` here never matched
+     anything, so the mobile bar was actually rendering the desktop 22px
+     logo untouched. Fixed as part of this pass: target the real element
+     (no class needed, `.lp-logo` wraps exactly one <svg>) and match
+     WorkspaceTopbar's mobile logo (`<BrandLogo size={20} />`) for real. */
+  .lp-nav > .lp-logo svg { height: 20px; width: auto; }
   /* .lp-hero has no side padding of its own (relies on centered max-width
      content) — without this, .lp-hero-content's heading/lead text runs flush
      to the viewport edge below 900px. */
@@ -5151,24 +5250,41 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     grid-template-columns: 1fr;
   }
 
-  /* --- Sidebar as overlay drawer --- */
+  /* --- Sidebar as overlay drawer ---
+     Width and transition share --drawer-w / --drawer-anim with the public
+     header's .lp-mobnav (header-consistency-public-private, 2026-08-15) —
+     was 290px / 0.26s here vs 280px / 0.24s there.
+
+     HEADER-FLAT-1 (2026-08-15): la sombra va en `.shell.mobnav-open .sb`, no
+     aquí. Estando el cajón cerrado (`translateX(-100%)`, fuera de pantalla)
+     su sombra seguía proyectándose 20px hacia dentro con 60px de difuminado
+     y, al estar en `z-index: 320` contra el 30 de la cabecera, pintaba por
+     encima de todo el borde izquierdo. Con la cabecera opaca pasaba
+     inadvertida; al volverse plana el fundador la vio ("la parte izquierda
+     como un pequeño degradado más oscuro"). Medido muestreando píxeles a lo
+     ancho de la cabecera: el borde izquierdo era rgb(218,220,223) contra el
+     rgb(246,247,249) del lienzo, una caída de 28 niveles que se disolvía
+     hacia los 120px. La sombra existe para despegar el cajón de la página
+     CUANDO ESTÁ ABIERTO; con el cajón fuera de pantalla es un residuo, no una
+     decisión de diseño. Con este cambio el borde mide 246,247,249 de un
+     extremo al otro. */
   .sb {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    width: 290px;
+    width: var(--drawer-w);
     max-width: 86vw;
     z-index: 320;
     transform: translateX(-100%);
-    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 20px 0 60px rgba(15, 23, 41, 0.20);
+    transition: transform var(--drawer-anim);
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
 
   .shell.mobnav-open .sb {
     transform: none;
+    box-shadow: 20px 0 60px rgba(15, 23, 41, 0.20);
   }
 
   .sb-collapse {
@@ -5179,10 +5295,8 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     display: grid;
     place-items: center;
     margin-left: auto;
-    width: 34px;
-    height: 34px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 44px;
+    height: 44px;
     border-radius: 9px;
     background: none;
     border: 1px solid transparent;
@@ -5218,6 +5332,10 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   }
 
   /* --- Compact header --- */
+  /* HEADER-FLAT-1: sin `background` propio aquí — el blanco sólido que había
+     es justo lo que hacía que la barra se leyera despegada de la página. El
+     estado plano/cristal lo decide `.dash-header` / `.dash-header.is-scrolled`
+     de más arriba, igual en las dos anchuras. */
   .dash-header {
     position: sticky;
     top: 0;
@@ -5225,7 +5343,11 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     height: calc(var(--header-h) + env(safe-area-inset-top));
     padding: env(safe-area-inset-top) 10px 0;
     gap: 6px;
-    background: var(--surface);
+  }
+
+  .header-bell {
+    width: 44px;
+    height: 44px;
   }
 
   .hdr-burger {
@@ -7126,10 +7248,11 @@ select.set-field {
    los ~200px que mide y dejaba de ocupar la pantalla. */
 .nf-viewport { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 
-/* La nav del sitio es translúcida con blur (`.lp-nav-wrap`). Sobre un cuerpo
-   oscuro eso deja ver el oscuro al hacer scroll, así que aquí —y sólo aquí—
-   es opaca. */
-.nf-page .lp-nav-wrap { background: #fff; backdrop-filter: none; }
+/* Desde HEADER-FLAT-1 la nav del sitio es transparente en toda la zona
+   pública. Sobre el cuerpo oscuro de la 404 eso deja ver el oscuro por
+   detrás, así que aquí —y sólo aquí— es opaca. Gana por especificidad:
+   `.nf-page .lp-nav-wrap` es (0,2,0) contra el (0,1,0) de `.lp-nav-wrap`. */
+.nf-page .lp-nav-wrap { background: #fff; backdrop-filter: none; border-bottom-color: var(--line-soft); }
 
 .nf-stage {
   position: relative; flex: 1; min-height: 0; overflow: hidden;

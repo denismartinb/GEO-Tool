@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
@@ -25,6 +26,7 @@ import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 
 /* ---- Helpers ---- */
 
@@ -117,6 +119,19 @@ function isSameOrSubdomain(domain: string, root: string): boolean {
 }
 
 /* ---- Page ---- */
+
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Competidores", async () => (await requireActiveProject(projectId)).domain);
+}
 
 export default async function CompetitorsPage({
   params

@@ -67,6 +67,11 @@ export interface PageFindings {
   failedRequests: string[];
   thirdPartyFailures: string[];
   bouncedToLogin: boolean;
+  /**
+   * Sólo se rellena cuando `bouncedToLogin` es true: qué cookies de sesión
+   * tenía el contexto EN ESE INSTANTE, por nombre. Ver `describeAuthState`.
+   */
+  authDiagnostics: string | null;
   screenshot: string;
   /**
    * null when the journey declared no expectation for this screen; true/false
@@ -110,6 +115,16 @@ export interface PageFindings {
    * donde no debería, esto es lo que lo delata.
    */
   dismissedWelcomeTour: boolean;
+  /**
+   * El `<title>` del documento — ROOT-METADATA-1 (log §103).
+   *
+   * El piloto juzga capturas, y un título NO sale en una captura: es la clase
+   * de cosa sobre la que su verde no dice absolutamente nada. Quince pantallas
+   * de consola compartieron la misma pestaña «GenScore» durante meses con
+   * `PILOT PASS` en todas las pasadas, porque nadie estaba mirando el único
+   * sitio donde se veía.
+   */
+  documentTitle: string;
   /** Real content height, including inside the shell's inner scroll container. */
   contentHeight: number;
   /** Viewport height the screenshot was taken at. */
@@ -645,6 +660,10 @@ export async function visitAsUser(
     // the one under test — captureFullContent resizes it and puts it back.
     const overflowCulprits = horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [];
 
+    // Sólo cuando hay rebote: leer cookies en cada visita sana es coste sin
+    // información.
+    const authDiagnostics = bouncedToLogin ? await describeAuthState(page) : null;
+
     const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
     mkdirSync(SCREENS_DIR, { recursive: true });
     const capture = await captureFullContent(page, screenshot);
@@ -662,12 +681,14 @@ export async function visitAsUser(
       failedRequests,
       thirdPartyFailures,
       bouncedToLogin,
+      authDiagnostics,
       screenshot,
       renderedRealContent,
       expectedContent: expectation?.describedAs ?? null,
       headerInteractiveControls,
       ...controlAudit,
       dismissedWelcomeTour,
+      documentTitle: await page.title().catch(() => ""),
       ...capture
     };
 
@@ -715,10 +736,56 @@ export function assertControlsAreHealthy(label: string, viewport: string, audit:
  * catch. Kept separate from `visitAsUser` so a journey can record a page
  * without asserting on it (useful for intermediate navigation steps).
  */
+/**
+ * PRELAUNCH-HARDENING-1 Fase Q5 — instrumentación de la pérdida de sesión.
+ *
+ * El 2026-08-09 una pasada del piloto perdió la sesión en la última anchura y
+ * **no se ha vuelto a reproducir en las pasadas posteriores sobre el mismo
+ * código** (log §42). Con `retries: 0` deliberado, un rojo espurio en la puerta
+ * enseña a ignorar los rojos, así que hace falta cerrarlo — pero la hipótesis
+ * (el `storageState` único compartido por las tres anchuras secuenciales) **no
+ * está probada**, y parchear una hipótesis sin datos es cómo se arregla el
+ * síntoma equivocado. Lo primero es que, cuando vuelva a pasar, el fallo diga
+ * algo.
+ *
+ * **Nombres, nunca valores.** Una cookie de sesión de Supabase ES la sesión:
+ * volcar su valor al log de un run público sería regalar la cuenta del piloto.
+ * Lo que se necesita para diagnosticar es si las cookies estaban, no qué
+ * contenían.
+ */
+async function describeAuthState(page: Page): Promise<string> {
+  try {
+    const cookies = await page.context().cookies();
+    if (cookies.length === 0) return "el contexto no tenía NINGUNA cookie";
+
+    const authCookies = cookies.filter((cookie) => /^sb-|supabase/i.test(cookie.name));
+    const nowSeconds = Date.now() / 1000;
+    const described = authCookies.map((cookie) => {
+      const expiry =
+        cookie.expires && cookie.expires > 0
+          ? cookie.expires < nowSeconds
+            ? "CADUCADA"
+            : `caduca en ${Math.round((cookie.expires - nowSeconds) / 60)} min`
+          : "de sesión";
+      return `${cookie.name} (${expiry})`;
+    });
+
+    return authCookies.length === 0
+      ? `${cookies.length} cookie(s) en el contexto, ninguna de sesión de Supabase`
+      : `cookies de sesión presentes: ${described.join(", ")}`;
+  } catch (error) {
+    return `no se pudo leer el estado de cookies: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
 export function assertPageIsHealthy(findings: PageFindings): void {
   expect(
     findings.bouncedToLogin,
-    `${findings.label}: session was rejected — landed on ${findings.finalUrl}`
+    `${findings.label} @ ${findings.viewport}: session was rejected — landed on ${findings.finalUrl}\n` +
+      `Estado de sesión en ese instante: ${findings.authDiagnostics ?? "(sin diagnóstico)"}\n` +
+      "Si esto es la pérdida intermitente de sesión de log §42, ESTA línea es el dato que faltaba: " +
+      "dice si el contexto llegó sin cookies (el `storageState` no se aplicó) o con ellas caducadas " +
+      "(la sesión expiró a mitad de pasada). Son dos fallos distintos con dos arreglos distintos."
   ).toBe(false);
 
   expect(
@@ -746,6 +813,20 @@ export function assertPageIsHealthy(findings: PageFindings): void {
       `(badges/pills only) — docs/brand/design-decisions-log.md §3. Found interactive ` +
       `control(s) inside .ov-sticky-header, which belong in the page body instead.`
   ).toEqual([]);
+
+  // ROOT-METADATA-1 (log §103). Una pantalla sin `metadata` propia hereda el
+  // `title` del layout raíz, que es la marca a secas. No rompe nada, no se ve
+  // en la captura y no lo nota nadie — así llegaron a ser quince pantallas
+  // indistinguibles entre sí. Comparar contra la marca exacta es a propósito:
+  // un título que EMPIEZA por «GenScore» puede ser legítimo
+  // («GenScore vs Otterly …»); el fallo es que sea sólo eso.
+  expect(
+    findings.documentTitle.trim(),
+    `${findings.label} @ ${findings.viewport}: la pestaña dice sólo «GenScore», así que esta ` +
+      "pantalla no declara `metadata` propia y hereda la del layout raíz. Con dos pantallas " +
+      "abiertas son dos pestañas idénticas. Añade `consoleMetadata(\"…\")` o " +
+      "`generateMetadata` con `projectScreenMetadata` (`lib/seo/console-metadata.ts`)."
+  ).not.toBe("GenScore");
 
   assertControlsAreHealthy(findings.label, findings.viewport, findings);
 
@@ -914,16 +995,35 @@ export async function resolveProjectId(page: Page): Promise<string> {
  * casuísticas"*).
  */
 export async function discoverProjectIds(page: Page): Promise<string[]> {
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
+  /**
+   * `/dashboard/domains`, no `/dashboard/projects` — DOMAINS-ARCHIVE-RETIRE-1
+   * (log §104). Esa ruta pasó a ser una redirección, y apuntar el piloto a una
+   * redirección con `waitUntil: "domcontentloaded"` es un fallo con nombre
+   * propio: la espera resuelve sobre el documento intermedio, el navegador se
+   * lleva la página por delante y el `evaluateAll` de abajo revienta con
+   * *"Execution context was destroyed"*. Tumbó las tres anchuras del journey
+   * de segundo proyecto y NO se parece en nada a su causa — parece un fallo de
+   * red, no una ruta que ha cambiado de sitio.
+   */
+  await page.goto("/dashboard/domains", { waitUntil: "domcontentloaded" });
 
+  /**
+   * Dos formas de enlace, y hacen falta las dos: la rejilla enlaza el dominio
+   * **activo** a su pantalla (`/dashboard/projects/<id>`) y los demás a un
+   * cambio de activo (`/dashboard/domains?active=<id>`). Quedarse sólo con la
+   * primera devolvería un único proyecto y el journey se saltaría en silencio
+   * — que es justo lo que este journey existe para impedir.
+   */
   const hrefs = await page
-    .locator('a[href^="/dashboard/projects/"]')
+    .locator('a[href^="/dashboard/projects/"], a[href^="/dashboard/domains?active="]')
     .filter({ hasNotText: /nuevo|new/i })
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href") ?? ""));
 
   const ids: string[] = [];
   for (const href of hrefs) {
-    const id = href.match(/\/dashboard\/projects\/([^/?#]+)/)?.[1];
+    const id =
+      href.match(/\/dashboard\/projects\/([^/?#]+)/)?.[1] ??
+      href.match(/\/dashboard\/domains\?active=([^&#]+)/)?.[1];
     // "new" is the create route, not a project; the list also links each
     // project from several places, so the same id shows up more than once.
     if (!id || id === "new" || ids.includes(id)) continue;

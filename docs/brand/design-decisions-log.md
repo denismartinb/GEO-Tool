@@ -8944,8 +8944,6 @@ afirmaría que una constante es esa constante.
 
 ---
 
----
-
 ## 94. La definición canónica vive en una constante, no en seis párrafos parecidos (SEO-POS-1 Fase E, E2, 2026-08-15)
 
 **Qué se publica.** `/que-es-genscore`: qué es el producto, qué mide, cómo
@@ -9094,7 +9092,1194 @@ patrón común no es que el piloto falle, sino que **su verde responde a "ningun
 aserción saltó", no a "esto se ve bien"** — y las aserciones mecánicas no
 cubren lo que pasa dentro de un contenedor con `overflow` recortado.
 
-## 97. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
+---
+
+## 97. Q5: un test que podía mentir, una hipótesis sin datos y una puerta invisible (PRELAUNCH-HARDENING-1, 2026-08-15)
+
+**Qué se decidió.** Se cierra lo que quedaba de Q5. Tres cosas distintas, y las
+tres tenían la misma forma: **algo que parecía verificado y no lo estaba**.
+
+### 1. `second-project.spec.ts` podía pasar en verde sobre proyectos vacíos
+
+Ya no: sus dos pantallas declaran `ContentExpectation`. Sin ella, este journey
+afirmaba «se ven bien en otro proyecto» cuando lo único comprobado era que la
+ruta respondía 200 — el fallo del 2026-08-02 que hizo nacer
+`ContentExpectation`, y que aquí era **peor que la media**: este journey existe
+justamente para alcanzar formas de datos que el proyecto principal no puede
+producir, así que un proyecto secundario sin datos es el caso que más fácil
+pasaba desapercibido.
+
+### 2. La pérdida de sesión se instrumenta, NO se parchea
+
+El 2026-08-09 una pasada perdió la sesión en la última anchura y **no se ha
+reproducido desde entonces** (§42). La hipótesis —el `storageState` único
+compartido por las tres anchuras secuenciales— **sigue sin probarse**, y
+parchear una hipótesis sin datos es cómo se arregla el síntoma equivocado.
+
+Lo que había hasta hoy cuando saltaba era `session was rejected — landed on
+<url>`, que no permite diagnosticar nada. Ahora el fallo dice **qué cookies de
+sesión tenía el contexto en ese instante**, y eso separa dos fallos con dos
+arreglos distintos: llegar **sin** cookies (el `storageState` no se aplicó) o
+**con ellas caducadas** (la sesión expiró a mitad de pasada).
+
+**Nombres, nunca valores.** Una cookie de sesión de Supabase *es* la sesión:
+volcar su valor al log de un run sería regalar la cuenta del piloto. Para
+diagnosticar hace falta saber si estaban, no qué contenían.
+
+### 3. La ausencia de CI deja de ser invisible
+
+`ci.yml` se dispara de forma intermitente en los push a un PR abierto (§54), y
+el `workflow_dispatch` de rescate sólo sirve si alguien se da cuenta. Ahí está
+el problema real: **un piloto verde se ve; un CI que no existe, no.** El
+2026-08-15 estuvo a punto de mergearse un PR cuya única señal era el comentario
+del piloto — se cazó mirando los checks uno a uno, que no es un método.
+
+El comentario del piloto añade ahora un aviso cuando no existe ninguna ejecución
+de CI para ese commit. Todo el bloque va con `|| true`: **este aviso jamás puede
+tumbar la publicación del veredicto**, que es lo que de verdad importa de ese
+paso.
+
+**Lo que esto NO es, dicho claro: no es la puerta.** La puerta de verdad es una
+*required status check* en la protección de rama — un ajuste del repositorio,
+no código, y por tanto **del fundador**. Esto sólo hace que la ausencia se vea
+donde él ya mira.
+
+### Un punto del plan que ya estaba hecho
+
+Q5 pedía tipar `pr_number` como string en `ux-pilot-write.yml` por el bug de
+coerción 289 → `"289.0"`. **Ya estaba**, con su comentario explicando el
+incidente. Es el sexto punto de este plan que al medirlo resulta estar
+desactualizado; queda anotado por si a alguien le sirve el patrón: **este plan
+se escribió de una vez y el código siguió moviéndose.**
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q5); §42 (la
+pérdida de sesión y el `retries: 0`); §54 (la intermitencia de CI); §55
+(`ContentExpectation` y por qué existe).
+
+---
+
+
+---
+
+---
+
+## 98. Escribir sobre el proyecto de un cliente sin darle al operador un atajo que el dueño no tiene (ADMIN-CONSOLE-2b, 2026-08-13)
+
+**Estado: implementada.** Task Intake de 12 puntos aprobado. Segunda mitad de
+la petición del 12-08: además de *ver* los automatismos (2a, §71), `/admin`
+puede ahora *cambiarlos* — el interruptor de escaneo recurrente y las dos
+mitades de auditoría automática, por proyecto, desde la ficha de cada usuario.
+
+**El invariante que ordenó todo el diseño: el operador nunca tiene un atajo
+que el propio dueño no tiene.** Las precondiciones no se reescribieron para
+`/admin` — se **extrajeron** de `setRecurringScans`/`setAutoAuditHalf`
+(`app/dashboard/projects/[projectId]/actions.ts`) a
+`lib/projects/automation-toggles.ts`, y las dos acciones (la del dueño, con
+RLS, y la del operador, con service-role) llaman a la misma función. Activar
+el recurrente sigue exigiendo un escaneo completado; escribir la mitad de
+auditoría sigue distinguiendo columna-sin-migrar de fallo real. Un solo sitio
+que mantener, dos llamadores.
+
+**Un tercer caso de "on + coste, pero no hace nada", detectado antes de
+escribir el código, no después.** 2a ya había aprendido con la QA bloqueada de
+§71 que un interruptor activo que el backend ignora es una métrica inventada.
+Al diseñar la escritura apareció una tercera instancia de la misma familia:
+`lib/web-audit/audit-job-runner.ts` salta la mitad de **cobertura** con
+`plan_required` por debajo de Pro (`docs/adr/0035`), exactamente como el
+barrido salta el recurrente en Free. La acción de escritura rechaza activar
+cobertura en un proyecto sin Pro **antes** de tocar la base de datos, con el
+mismo criterio que ya aplicaba al recurrente en Free.
+
+**Gap declarado, no arreglado aquí.** El descubrimiento anterior expone que la
+vista de **sólo lectura** de 2a no comprueba esta condición: un proyecto Free
+con `auto_coverage_audit_enabled=true` en la base (nadie ha podido escribirlo
+hasta esta fase, pero pudo quedar así de antes) se mostraría como "auditoría
+IA activa, con coste" en `/admin/users`, igual de falso que la columna
+retirada de §71. No se corrige en este PR — tocar el agregado de lectura de
+2a es un concern distinto y `lib/admin/automation.ts` no está en el alcance
+aprobado de 2b. Queda anotado para una fase de un solo párrafo.
+
+**El registro es el email, no una tabla nueva.** Cada escritura exige un
+motivo (mínimo 5 caracteres, rechazado antes de tocar la base) y manda
+`sendAdminAutomationChangeAlertEmail` a `OPS_ALERT_EMAIL` con quién, qué
+cuenta, qué proyecto, qué cambió y el motivo íntegro. Es exactamente lo que
+prometía `docs/design-reference/admin-console-1/README.md` desde el
+12-08: sin migración aprobada, el email ES la auditoría de la acción.
+
+**Lo que la extracción demostró sin querer:** `setRecurringScans`/
+`setAutoAuditHalf` no tenían test propio — vivían sólo comprobadas a mano
+desde `/debug`. Extraer su lógica a un módulo con test (`automation-toggles.
+test.ts`) las deja cubiertas por primera vez, de rebote.
+
+**Dos hallazgos de la QA de este mismo PR, corregidos antes del Human Gate.**
+El email de aviso tenía el mismo defecto que ya se había corregido una vez en
+el camino principal (UUID pasado como si fuera un email), pero escondido en la
+rama de fallback: si `loadOwnerProfile` no encuentra fila en `profiles` (perfil
+huérfano), `targetUserEmail` caía a `project.owner_user_id`, un UUID, en el
+único registro que existe de la escritura. Ahora cae a un marcador de texto no
+confundible con un email (`"(sin email — perfil no encontrado)"`), nunca al
+UUID. Y los dos `.update()` finales no repetían `is_archived = false` que sí
+lleva el camino del dueño (`app/dashboard/projects/[projectId]/actions.ts`) —
+un archivado entre la lectura (`loadProjectForWrite`) y la escritura habría
+pasado por el operador y nunca por el dueño, exactamente la asimetría que este
+mismo diseño se propuso evitar. Añadido a ambos `.update()`.
+
+### Pendiente / roto conocido
+
+- **El gap de lectura de 2a con `auto_coverage_audit_enabled` por debajo de
+  Pro**, descrito arriba — necesita su propio cambio, pequeño, en
+  `lib/admin/automation.ts`.
+- **2c (selección múltiple y borrado permanente) sigue sin empezar**, y sigue
+  prohibido sin aprobación explícita (CLAUDE.md).
+- **Sin piloto agéntico**, misma razón que Fase 1 y 2a: no puede completar un
+  desafío AAL2. Verificación manual.
+
+## 99. Quitar el motivo obligatorio, interruptores en columnas, ficha en acordeón (ADMIN-CONSOLE-UX-1, 2026-08-15)
+
+**Estado: implementada.** Petición directa del fundador sobre lo que acababa
+de mergearse en 2b, no un Task Intake de 12 puntos — pero uno de los tres
+cambios contradecía un invariante que ese mismo PR había escrito, así que se
+paró a preguntar antes de tocar código en vez de implementarlo en silencio.
+
+**El campo de motivo se elimina, con la pérdida asumida explícitamente.**
+§98 documentó "no hay tabla de auditoría; el email ES el registro" y
+`.claude/rules/admin.md` lo convirtió en regla: "Every write from `/admin`
+needs a required reason". Quitar la caja de texto no es sólo un cambio de
+CSS — rompe ese invariante. Se preguntó directamente: compacto-pero-
+obligatorio (un diálogo al pulsar) frente a eliminarlo del todo, explicando
+que la segunda opción deja las escrituras de operador sin ningún rastro de
+**por qué** se tocó el proyecto de un cliente. El fundador eligió eliminarlo
+del todo, informado del coste. Lo que **no** se eliminó: el email a
+`OPS_ALERT_EMAIL` sigue disparándose en cada escritura con operador, cuenta
+afectada, dominio, proyecto, qué cambió y cuándo — el registro pierde el
+**porqué**, no el **quién/qué/cuándo**. `sendAdminAutomationChangeAlertEmail`
+ya no acepta `reason` en su firma; no quedó como parámetro opcional sin uso.
+
+**Interruptores en columnas.** `.adm-proj-write` pasa de `flex-direction:
+column` (tres formularios apilados, cada uno con su propia caja de motivo) a
+un grid de tres columnas — ahora cabe porque cada formulario es sólo una
+etiqueta y un botón, no una fila con un campo de texto de 160px mínimo. Se
+apila a una columna por debajo de 480px para no comprimir el botón contra el
+texto en un móvil estrecho.
+
+**La ficha se abre en acordeón, no como tarjeta fija.** Antes,
+`{params.u ? <div className="adm-drawer">…</div> : null}` se renderizaba
+DESPUÉS de toda la tabla, sin importar qué fila se hubiera tocado — abrir la
+fila 2 de una lista de 80 usuarios significaba bajar la distancia entera de
+la tabla para verla, y volver a subir para comparar con la fila. Ahora el
+detalle se inserta como una fila más (`<tr><td colSpan={9}>`) inmediatamente
+después de la fila seleccionada, dentro del mismo `<tbody>` — se extrajo el
+contenido a `UserDetailPanel` para no duplicarlo entre este caso y el de
+abajo. **Caso borde declarado, no ignorado:** si la fila seleccionada no está
+en la página filtrada actual (un buscador o un filtro de estado la deja
+fuera, o no queda ninguna fila), no hay dónde anclar la fila-acordeón — para
+ese caso, y sólo para ése, se mantiene el render de abajo
+(`.adm-drawer-standalone`), condicionado a
+`params.u && !filtered.some((row) => row.id === params.u)`.
+
+**La celda del acordeón vive dentro del mismo contenedor con scroll
+horizontal que la tabla** (`.adm-table` tiene `min-width: 760px`), en vez de
+extraerla a un contenedor de ancho completo — habría exigido convertir la
+tabla entera a un grid de `<div>` para que el detalle escapara esa anchura
+mínima, mucho más alcance del que pedía esta iteración. La tabla ya obliga a
+desplazamiento horizontal en 375px hoy; anidar el acordeón en el mismo
+contenedor extiende ese trade-off ya aceptado, no introduce uno nuevo. Dentro
+de la celda, `white-space: normal` deshace el `nowrap` general de
+`.adm-table td`, y el grid de dos columnas del detalle (`.adm-drawer-cols`)
+ya colapsaba a una por debajo de 760px de **viewport** — eso sigue
+funcionando igual, porque `@media` responde al viewport real del navegador,
+no al ancho del contenedor con scroll.
+
+**Corrección de la propia QA de este PR, antes del Human Gate: el `@media`
+de las columnas no podía funcionar donde más importaba.** `.adm-proj-write`
+se colapsaba a una columna por debajo de 480px de **viewport** — pero
+`UserDetailPanel` se renderiza en dos contextos de ancho muy distinto al
+mismo viewport real: dentro de la celda de la tabla (ancha, porque
+`.adm-table` fuerza `min-width: 760px`) y, en el caso de respaldo, suelto a
+ancho de página. A 375px de viewport ambos casos colapsaban igual, aunque el
+primero tenía ~700px reales disponibles — exactamente el caso normal
+(acordeón en línea), y exactamente el móvil para el que se pidió el cambio.
+Cambiado a `@container` sobre `.adm-proj-block` (`container-type:
+inline-size`): ahora colapsa según el ancho real del contenedor que lo aloja,
+no el del viewport, y las tres columnas sí aparecen en el caso normal en
+móvil.
+
+**Segunda corrección, el mismo día: la ficha en sí era ilegible en un móvil
+real.** Capturas del fundador desde su teléfono lo mostraron directamente —
+el piloto no lo pudo ver porque no tiene AAL2 para `/admin`. La celda del
+acordeón es parte de una fila de `.adm-table` (min-width 760px): dejar su
+contenido a `white-space: normal` arregló que el texto no se rompiera en una
+sola línea eterna, pero no arregló que ese texto sólo se leyera desplazando
+la tabla horizontalmente — la ficha entera quedaba a 760px+ de ancho, cortada
+por ambos lados en cualquier pantalla de teléfono real. Los números cortos
+del resto de la tabla toleran ese desplazamiento (siempre lo toleraron, es un
+trade-off ya aceptado); una ficha pensada para leerse, no. Corregido sin
+partir la tabla en dos: `.adm-table-wrap` ya lleva `container-type:
+inline-size` (para el fix anterior), así que su ancho real y visible —el del
+contenedor, no el de la fila que desborda dentro de él— se puede consultar
+con la unidad `cqi`. El contenido de la celda vive ahora en
+`.adm-detail-sticky`: `position: sticky; left: 0` lo fija al borde visible
+según se desplaza la tabla, y `width: 100cqi` lo dimensiona al ancho real del
+contenedor. Resultado: la ficha se ve entera y a ancho de pantalla sin que el
+operador tenga que desplazar nada, aunque la fila que la contiene siga siendo
+más ancha que la pantalla.
+
+**Tercera corrección, el mismo día: seleccionar una cuenta ejecutaba toda la
+página otra vez.** El fundador lo notó directamente: cada clic en una fila se
+sentía como una recarga completa. La causa era real, no sólo percibida —
+`AdminUsersPage` es un Server Component que lee `searchParams`, así que
+navegar a `?u=<id>` volvía a ejecutar la función entera, incluida
+`listOperatorUsers()` (la lista completa de cuentas, el KPI, el coste
+agregado — nada de lo cual depende de qué cuenta esté seleccionada), sólo
+para traer el detalle de una. Sin `loading.tsx` ni un límite de `<Suspense>`
+alrededor, tampoco había ninguna señal visual mientras tanto: la página se
+quedaba congelada y luego cambiaba de golpe, con scroll al inicio incluido
+(comportamiento por defecto de la navegación de Next).
+
+**La selección de cuenta deja de ser un `searchParam` que dispara
+renderizado de servidor y pasa a ser estado de cliente.** Nuevos ficheros:
+`lib/admin/user-detail-action.ts` (server action de sólo lectura,
+`fetchOperatorUserDetail`, con la misma puerta `requireOperator()` de
+siempre dentro de la propia acción — nunca delegada en quien la llama);
+`app/admin/users/shared.tsx` (las piezas de presentación que antes vivían en
+`page.tsx` — `UserDetailPanel`, `AutomationToggleForm`, `STATUS_LABEL`, los
+formateadores — sin nada server-only, así que sirven tanto al Server
+Component como al nuevo Client Component); `app/admin/users/users-table.tsx`
+(`"use client"`, el nuevo dueño de la tabla y el acordeón). Al pulsar una
+fila: `fetchOperatorUserDetail` corre dentro de una transición y sólo la
+ficha cambia — la tabla ni se vuelve a pedir ni se vuelve a montar. La URL
+se sincroniza con `window.history.replaceState` directamente, sin pasar por
+el router de Next, para que la cuenta seleccionada siga siendo enlazable sin
+que ese cambio de URL dispare por sí mismo una petición al servidor.
+`page.tsx` conserva la carga inicial (deep link a `?u=...`, recarga real) y
+sigue siendo el único que hace el fetch completo de la lista. Los filtros
+(buscador, chips de estado) y el envío de un formulario de automatismo
+siguen siendo navegación real de servidor — eso sí necesita datos nuevos —
+y un `useEffect` en `UsersTable` resincroniza el estado local cuando esas
+props cambian de identidad.
+
+**Efecto colateral, no accidental: `formatUsd`/`provenanceLabel` se separan
+de `lib/admin/cost-model.ts`.** Ese fichero lleva `import "server-only"`
+porque calcula el coste a partir de tarifas internas; `shared.tsx` sólo
+necesitaba las dos funciones de formato, sin las tarifas, pero importar
+cualquier cosa de un módulo `server-only` desde un fichero que un Client
+Component importa rompe el build (Next lo rechaza explícitamente, correcto).
+Las dos funciones —sin nada sensible, sólo formato— pasan a
+`lib/admin/cost-format.ts`, sin `server-only`; `cost-model.ts` las
+re-exporta para no romper a `automation.ts` ni a `page.tsx`, que siguen
+importándolas de donde siempre.
+
+**Cuarta corrección, el mismo día: el arreglo de la ficha ilegible (la
+"Segunda corrección" de arriba) nunca había llegado a aplicarse.** Nueva
+captura del fundador desde su móvil mostró el mismo texto cortado que se
+había dado por corregido, y además los tres interruptores por proyecto sin
+verse uno bajo otro. Diagnosticado con un HTML mínimo cargado en Chromium
+local (sin acceso a `/admin` real, que exige AAL2) reproduciendo la misma
+estructura CSS: `.adm-table th, .adm-table td { white-space: nowrap }` —
+regla que ya existía para las celdas normales de la tabla— tiene
+especificidad elemento+clase (0,1,1); `.adm-detail-cell { white-space: normal
+}` de una sola clase (0,1,0) nunca pudo ganarle, source order aparte. El
+`white-space: normal` de la "Segunda corrección" jamás se aplicó. Con el
+texto sin partir, la línea de coste (`.adm-cost-basis`) medía su ancho
+íntegro sin saltos, y ESE ancho —no el ancho real disponible— es el que
+`.adm-proj-block` (y por tanto `.adm-proj-write`) heredaba; con la
+`@container` de la corrección anterior evaluando ese ancho inflado, nunca
+veía menos de 420px y nunca colapsaba a una columna. Las dos cosas que el
+fundador reportó como fallos distintos eran el mismo bug.
+
+Dos arreglos, verificados con Chromium local en 375/768/1280px antes de
+subir (no sólo razonados):
+
+- **La especificidad**: `.adm-detail-cell` pasa a `.adm-table
+  .adm-detail-cell` (0,2,0), que gana sin depender del orden de las reglas
+  en el fichero.
+- **La `@container` de las columnas se sustituye por `grid-template-columns:
+  repeat(auto-fit, minmax(140px, 1fr))`.** Correcta en aislamiento la
+  primera vez, pero dependía de un ancho de contenedor que otro bug (el de
+  arriba) podía inflar; `auto-fit` resuelve el número de columnas de forma
+  intrínseca contra el ancho real en cada reflow, sin una condición
+  explícita que pueda quedar evaluando el número equivocado. Confirmado:
+  1 columna a 375px, 2 a 768px, 3 a 1280px, sin desbordamiento horizontal en
+  ninguno.
+
+### Pendiente / roto conocido
+
+- Sigue sin piloto agéntico, misma razón que toda la zona: AAL2 bloquea el
+  arnés. Verificación manual de las tres capturas (375/768/1280) pendiente
+  del fundador.
+- El gap de lectura de 2a (`auto_coverage_audit_enabled` por debajo de Pro en
+  `lib/admin/automation.ts`) sigue sin tocar, como en §98.
+
+---
+
+## 100. Tres URLs para el mismo GEO Score, y una home que no decía qué producto es (SEO-POS-1 Fase E, E3 + E4, 2026-08-15)
+
+Cierra la Fase E. Las dos filas que quedaban del plan eran distintas de las dos
+primeras: E1 (§91) y E2 (§94) escribían cosas —una grafía, una página—, y estas
+dos sólo **declaran** lo que ya existía. Ninguna de las dos añade una línea de
+copy visible salvo un bloque de enlaces, y aun así son las que más directamente
+atacan el problema que abrió la fase: que "GenScore" y "GEO Score" resuelvan a
+una entidad nuestra y no a un parecido.
+
+### E3 — el producto estaba declarado en la página con menos autoridad del sitio
+
+`/que-es-genscore` emitía un `SoftwareApplication` completo. La home no: sólo
+heredaba el `Organization` del layout raíz, o sea "existe una empresa llamada
+GenScore", sin decir en ningún formato legible por máquina **qué producto es**
+ni de qué categoría. Justo al revés de como se acumula la autoridad: la home es
+la que recibe los enlaces y las búsquedas de marca, y la página de entidad
+nació hace dos días.
+
+El arreglo obvio —copiar el bloque— era el equivocado, y por el motivo de
+siempre en esta zona: dos declaraciones a mano del mismo producto divergen al
+primer cambio de posicionamiento, y el síntoma sería el sitio describiéndose de
+dos formas distintas exactamente donde un motor lo lee para decidir qué somos.
+Así que el schema pasa a `components/seo/software-application-schema.tsx` y las
+dos páginas montan **el mismo componente**. Es el argumento de E2 (la
+definición en una constante) un nivel más arriba.
+
+Al moverlo salió un fallo que llevaba dentro desde E2 y que nadie había mirado:
+el `publisher` incrustaba su propio `{"@type":"Organization","name":"GenScore"}`.
+Eso es un **segundo** nodo llamado igual que el del layout, sin nada que los
+una — para un parser, dos entidades que casualmente comparten nombre. La página
+que existe para desambiguar la marca estaba fabricando una ambigüedad más, en
+formato legible por máquina. Ahora hay `@id` estables
+(`…/#organization`, `…/#software`) y `publisher` es una **referencia**, no una
+copia: montar el nodo en dos páginas crea dos menciones del mismo producto, no
+dos productos.
+
+### E4 — canonicalizar un concepto sin tirar dos URLs a la basura
+
+El sitio explica el GEO Score en tres sitios publicados: la metodología en
+`/docs`, la entrada del glosario y el artículo del blog. La tentación es
+fusionarlas o cruzarles un `rel=canonical`; las dos cosas serían tirar señal,
+porque sirven a intenciones distintas y las tres reciben tráfico. El problema
+real era más pequeño: **ninguna decía ser la de referencia**, y cada una
+definía el término con sus propias palabras.
+
+Se arregla con dos piezas y ninguna página nueva. Una cadena compartida
+(`GEO_SCORE_DEFINITION`), que ahora usan la entrada del glosario, la metadata
+de la metodología y su schema — antes eran tres redacciones parecidas. Y un
+`@id` común (`…/#geo-score`) que emiten el glosario y la metodología, con la
+`url` del documento de referencia y las otras dos como `sameAs`: un solo nodo
+con tres documentos en vez de tres conceptos que se parecen. Es el equivalente
+semántico de un canonical sin desindexar nada.
+
+**Canónica es la metodología, y no fue una elección de gusto:** ya lo era de
+hecho. Seis artículos y `/docs/informes/overview` mandan ahí al lector cuando
+quieren decir "el criterio completo está aquí", y es la única de las tres que
+se mantiene al día con el algoritmo real. Declarar canónica a otra habría
+contradicho el enlazado interno, que es la señal más fuerte que tenemos.
+
+Lo que faltaba era la dirección contraria: la metodología no devolvía a
+ninguna de las dos. Ahora cierra con un bloque que dice explícitamente cuál
+manda si algo se contradice.
+
+De paso salió podredumbre: la `description` de esa página —su meta description,
+la del documento que esta fase declara canónico— prometía "los cuatro
+componentes, sus pesos". Son **cinco** desde GEO-SCORE-V4 (ADR 0033) y los
+pesos se retiraron de todas las superficies el 2026-08-13 (§75). Llevaba así
+diez días, apuntando a contenido que la propia página ya no tiene.
+
+### Por qué esto necesita tests y no basta con hacerlo bien
+
+El JSON-LD es el caso extremo del fallo sin síntoma que esta zona lleva todo el
+plan encontrando. Un `@id` mal escrito, un `publisher` colgando de un nodo
+inexistente, una cuarta página sobre el GEO Score publicada sin declararse
+parte del concepto: nada de eso rompe una página, ni sale en el piloto, ni lo
+nota un lector. Simplemente el motor lee dos entidades donde hay una — el
+problema que la fase entera venía a quitar, reintroducido en silencio.
+
+`lib/brand/entity-graph.test.ts` cubre las dos mitades, y las dos guardas se
+verificaron rompiéndolas a propósito antes de dar la fase por buena: reponer un
+`Organization` incrustado en el `publisher` la pone roja, y crear una página
+`/geo-score-nuevo` la pone roja nombrándola. El barrido de la cuarta URL busca
+por **ruta**, no por menciones: un artículo que hable del GEO Score no compite
+por el término, una URL dedicada sí.
+
+### El guardián de E1 saltó, y tenía media razón
+
+CI tumbó el primer commit: `naming.test.ts` marcó como identificador partido
+el título de un test de esta misma fase, *"tres URLs, no tres GEO Scores"*. Es
+castellano correcto —el plural de la métrica— y el barrido lo leía como daño
+porque la `s` es una letra pegada a `GEO Score`. Segundo falso positivo del
+mismo guardián en tres días, después de `QueEsGenScorePage` (§94), y la regla
+sigue siendo la de entonces: **un guardián con falsos positivos se acaba
+desactivando**, así que se afina en vez de reescribir la prosa que lo
+molestaba. El `git grep` queda igual de amplio —POSIX ERE no tiene lookahead—
+y la exención se aplica en JS: una `s` y sólo una, seguida de algo que no sea
+letra. Verificado con tres sondas: `availableGEO ScoreComponents` sigue rojo,
+`GEO Scoresx` sigue rojo, `tres GEO Scores.` pasa.
+
+Lo interesante es **por qué no lo cogió el local**, porque el propio guardián lo
+tenía documentado desde E1: `git grep` sólo ve ficheros versionados, y la línea
+culpable estaba en un fichero recién creado sin `git add`. La suite pasó verde,
+después se hizo `git add -A`, y el commit salió con el fallo dentro. No hace
+falta arreglar nada de eso — hace falta invertir el orden: **`pnpm test`
+después de `git add`, no antes**, siempre que la suite tenga guardas que se
+apoyen en el índice de git.
+
+### Y al abrir las capturas: `/docs` llevaba dos meses sin enlaces visibles
+
+El piloto dio `PILOT PASS` en las 65 pantallas × 3 anchuras, dos veces. Abrir
+las capturas de las pantallas que toca el diff —`docs-metodologia-geo-score` en
+375, 768 y 1280, `docs-index`, `glosario-geo-score`, `blog-que-es-el-geo-score`
+y `landing`— enseñó que el bloque de enlaces recién añadido renderizaba en gris
+y sin subrayado, exactamente igual que la prosa de al lado.
+
+No era del bloque. `globals.css` tiene `a { color: inherit; text-decoration:
+none }` como base, y `.legal-body a` y `.blog-body a` lo compensan cada uno en
+lo suyo — **`.docs-content` nunca tuvo regla de enlace**. Así que desde
+GROWTH-2, *todos* los enlaces de la documentación son texto muerto a la vista:
+"Metodología completa en GEO Score" y "ver Planes y límites" en
+`/docs/informes/overview` llevaban dos meses siendo enlaces que nadie podía
+saber que lo eran. La cuarta vez esta semana que un fallo visual real convive
+con un verde legítimo (§55, §62, §96, ésta), y la primera en que el fallo era
+**más viejo que el PR que lo destapa**.
+
+Se arregla con la regla que faltaba, con el mismo token que las otras dos
+superficies y con `:not(.btn)` desde el principio, que es la lección de §54/§55:
+una regla de enlace por ancestro le gana en especificidad a la clase de un
+botón. Hoy no hay botones en `/docs`; se escribe así para cubrir el que
+aparezca.
+
+Es además el arreglo que la propia E4 necesitaba: la fase se apoya en enlazado
+interno explícito entre las tres URLs, y un enlace que no parece un enlace no
+enlaza a nadie.
+
+**Queda declarado como pendiente, no arreglado:** el layout raíz sigue con
+`title: "GenScore"` y `description: "Espacio de visibilidad de marca en motores
+de IA"`, que es una cuarta redacción de lo mismo y actúa de respaldo para
+cualquier página sin metadata propia. La home ya no la usa —tiene la suya desde
+T1— así que el impacto es menor que el que se ha arreglado aquí, pero tocarla
+cambia el respaldo de todo el sitio a la vez y merece su propia pasada.
+
+---
+
+## 101. La cabecera pública adopta el chasis de la consola (HEADER-CONSISTENCY-1, 2026-08-15)
+
+**Estado: implementada.** El fundador notó, comparando capturas de la zona
+pública y de la consola, que el menú móvil de cada una se despliega de un lado
+distinto y con medidas distintas — "que parecen dos productos". Pidió primero
+un artefacto con alternativas (igualar sólo medidas / compartir chasis con
+contenido propio / cabecera única con huecos); eligió la de chasis compartido,
+pero **corrigió sobre la marcha una parte del análisis inicial**: la primera
+propuesta reconstruía las dos direcciones posibles (`.lp-mobnav` a la derecha
+por §63, `.sb` a la izquierda) como igual de legítimas y proponía conservarlas
+por separado. El fundador señaló que dos lados en el mismo producto no es un
+patrón — Material Design y las guías de Apple sitúan el cajón de navegación en
+el borde de inicio, y lo que de verdad no tiene precedente es que la web y la
+consola de un mismo producto abran cada una hacia un lado distinto.
+
+**La decisión de fondo: se unifica a la izquierda, y manda la consola.** No es
+un empate resuelto por convención — `.sb` **es** la barra lateral de
+escritorio deslizándose, así que su lado no es una preferencia de móvil, es la
+continuidad de una estructura que ya existe en escritorio. La pública sí podía
+moverse sin romper nada propio, así que se movió ella.
+
+**Esto SUPERSEDE la decisión de §63** ("el menú tiene que salir siempre desde
+la derecha", GENSCORE-HEADER-1, 2026-08-11) para la zona pública. La regla
+pasa a ser: **el cajón de navegación abre desde la izquierda en las dos
+zonas**, con la hamburguesa a la izquierda y el logo centrado — la misma
+anatomía que `WorkspaceTopbar` ya tenía aprobada desde el 24 de julio (§3).
+
+**El proceso fue iterativo a propósito, con verificación real en cada paso —
+no una maqueta dibujada:**
+1. Un *spike* aislado (sólo lado del burger + logo centrado en `PublicHeader`,
+   nada más) se probó primero en local con Playwright a 375px, se corrigió un
+   bug de scoping encontrado en la propia prueba (un selector `.lp-logo` sin
+   acotar capturaba también el logo decorativo del mockup del navegador en el
+   hero), y se subió a un preview real de Vercel antes de pedirle opinión al
+   fundador — nunca se le pidió juzgar un dibujo.
+2. Confirmado el lado en real, se implementó el chasis compartido completo:
+   tokens `--drawer-w` (288px) y `--drawer-anim` (.24s) en `:root`, compartidos
+   por `.lp-mobnav` (antes 280px/.24s) y `.sb` (antes 290px/.26s); barra móvil
+   pública 72px→52px (`--header-h`, que la consola ya usaba); burger
+   44×44/radio 10 en las dos zonas; botón de cerrar 44×44 explícito en las dos
+   (antes 38px pública / 34px consola, ambos con `min-*` disimulando la
+   diferencia real); y una fila de marca nueva en el cajón público
+   (`.lp-mobnav-brand`, logo + X) que antes no existía — sólo tenía la X
+   suelta en su propia fila — igualando `.sb-brand` de la consola.
+3. **Efecto colateral encontrado y corregido en el mismo PR:** `BrandLogo`
+   nunca aplicó ninguna clase a su propio `<svg>`, así que la regla
+   `.lp-logo .brand-logo-svg { height: 19px }` que llevaba meses en el CSS
+   nunca hizo nada — la barra pública en móvil renderizaba siempre el logo de
+   escritorio (22px) sin recortar. Se corrigió apuntando al elemento real
+   (`.lp-nav > .lp-logo svg`, sin necesidad de clase, acotado a hijo directo
+   por la misma razón que el spike) y fijando 20px, el valor real que ya
+   usaba `WorkspaceTopbar` por prop. La misma clase muerta existe en
+   `.sb-brand .brand-logo-svg` (consola) — no se tocó, porque el valor que
+   pretendía fijar (19px) nunca se aplicó y el prop real (22px) ya coincide
+   con el que ahora usa el cajón público, así que no hay nada roto que
+   arreglar ahí.
+4. **Regresión real encontrada por el fundador en el segundo preview, no por
+   ningún test:** al partir `.lp-mobnav` en fila de marca + cuerpo scrollable,
+   el padding lateral de 16px que antes llevaba el panel entero se quedó sólo
+   en `.lp-mobnav-body`; `.lp-mobnav-ctas` (los botones de Iniciar
+   sesión/Prueba gratis) es un hermano fuera de ese cuerpo y se quedó sin
+   ningún margen lateral propio, pegado a los bordes del cajón. El padding
+   inferior del panel también había pasado de un mínimo fijo de 16px a sólo
+   `env(safe-area-inset-bottom)`, que en la mayoría de dispositivos vale 0.
+   Corregido dándole a `.lp-mobnav-ctas` su propio `padding: 14px 16px 0` y
+   devolviendo al panel un mínimo de `calc(16px + env(safe-area-inset-bottom))`
+   — verificado de nuevo en local a 375×650 (una altura más ajustada que la
+   ventana completa) antes de volver a subir.
+
+**Qué queda igual a propósito:**
+- **Escritorio no cambia en ninguna zona.** La consola no tiene logo en su
+  topbar de escritorio (sólo en la barra lateral fija); la pública sí, en
+  línea con los enlaces. Son anatomías de escritorio distintas por diseño —
+  unificar eso no es lo que se pidió, y contradiría BRAND-5b sin motivo nuevo.
+- **La tipografía de las filas del menú no se tocó** (`.nav-item`, consola,
+  13.5px/550 · `.lp-mobnav a`, pública, 15px/600). `.nav-item` es compartido
+  con la barra lateral de escritorio completa, no sólo con el cajón móvil —
+  tocarlo ahí es un riesgo mucho mayor que el que justifica 1.5px de
+  diferencia, y las filas de cada zona ya difieren en algo más real que el
+  tamaño: la consola lleva icono + contador, la pública no.
+
+**Pendiente, sin decidir — no es parte de esta fase:** el chip de cuenta
+(`AccountChip`, compartido entre las dos zonas desde §65) sigue llevando a
+sitios distintos según de dónde se abra — `/dashboard` desde la cabecera
+pública, `/dashboard/settings` desde el pie del cajón de consola. Puede ser
+intencional (entrar vs. gestionar la cuenta) o puede ser el mismo tipo de
+accidente que esta fase corrigió en el lado del cajón. Señalado, no resuelto.
+
+**Validación:** `pnpm test` (2539/2539) y `pnpm run validate` en verde tras
+cada commit; verificación visual local con Playwright en cada paso antes de
+subir (no sólo en CI); el barrido de interacción automático del piloto
+(`ux-pilot-result`, CI) pasó las ~64 pantallas en los cuatro despliegues de
+este PR — recordatorio propio: eso confirma que nada se rompió, no sustituye
+el juicio visual que exige `docs/agentic-user-pilot.md`, que corre aparte
+antes del Human Gate.
+
+**Trazabilidad.** Supersede §63 (GENSCORE-HEADER-1) en cuanto al lado del
+cajón público; conserva intacto el resto de esa fase (los siete enlaces
+unificados, el `activeHref`, el CTA único a `/signup`). Construye sobre §3
+(anatomía de `WorkspaceTopbar`, aprobada 2026-07-24) y §65 (`AccountChip`
+compartido). `docs/agentic-user-pilot.md` sigue pendiente de correr como
+juicio visual formal antes del Human Gate de este PR.
+
+---
+
+---
+
+## 102. Dos trozos de código que la documentación juraba vivos (PRELAUNCH-HARDENING-1 Fase R8, 2026-08-15)
+
+**Qué se decidió.** Se borran los dos huérfanos que quedaban de la Fase R.
+Ninguno de los dos era código muerto por descuido, y ahí está lo interesante:
+los dos **sobrevivieron porque un documento decía que estaban en uso**.
+
+### 1. `updateProfileName` — superseded y no retirado
+
+CONSOLE-REDESIGN-1 (2026-08-06) fusionó las cuatro pantallas de ajustes en una
+sola, y con ellas los formularios: el nombre pasó a guardarse en `saveAccount`,
+junto a los datos de la organización. La action vieja se quedó exportada, sin
+llamadores y **sin un solo test** —sus dos vecinas del mismo fichero,
+`changePassword` y `deleteAccount`, sí están vivas y sí tienen tests—, que es
+exactamente la forma que tiene el código muerto de no parecerlo: rodeado de
+código vivo, en un fichero que se abre a menudo.
+
+### 2. `action-plan.ts` — retirado del producto, «✅ Implementada» en la spec
+
+176 líneas y 17 tests, sin un solo importador desde el 2026-08-04. No se
+desconectó por accidente: lo retiraste tú en el PR #289, con la frase escrita en
+el propio commit —*«no tiene sentido aquí, debe estar en la página de
+recomendaciones»*— y el `page.tsx` conservaba el comentario explicando qué se
+había quitado.
+
+Lo que nadie tocó fue la documentación. `docs/specs/web-audit/ROADMAP.md` siguió
+once días diciendo **«fase 3 · ✅ Implementada»** de una pantalla que ya no
+existía, y su `README.md` la listaba como entregada. Un módulo sin importadores
+lo encuentra cualquiera; un módulo sin importadores **que la spec jura
+entregado** se lee como «esto se usa desde algún sitio que no encuentro» y
+sobrevive indefinidamente.
+
+**La lección, que es de proceso y no de código:** retirar una funcionalidad
+tiene el mismo requisito de cierre que entregarla. Si el PR que la quita de la
+pantalla no toca su spec, la deuda no queda documentada — queda *contradicha*.
+
+### Lo que este borrado deja peor, dicho en voz alta
+
+`synthesizedGuidance` era lo único que ponía texto de «qué hacer» en las
+clasificaciones `content_gap`, `open_opportunity` y `unverified_cited`, porque
+el motor de recomendaciones no las cubre (corre al terminar el escaneo, antes de
+que exista ninguna auditoría). Al retirar la tarjeta, ese texto dejó de verse el
+2026-08-04; borrar el módulo hoy no quita nada más, pero **el hueco es real y
+llevaba once días sin estar anotado en ninguna parte**. Queda escrito en el
+ROADMAP como hueco abierto, ya no como fase entregada. Si se resuelve, el sitio
+es Recomendaciones.
+
+La spec `phase-action-plan.md` **no se borra**: se marca retirada en cabecera,
+igual que `docs/adr/` marca lo superseded. El diseño de una tarjeta dentro de
+Auditoría web es justo la decisión que se revirtió, y una sesión futura que la
+leyera sin ese aviso la implementaría otra vez.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R8); PR #289
+(la retirada original); log §38 (CONSOLE-REDESIGN-1);
+`docs/specs/web-audit/ROADMAP.md` fila 3 y «Fase A».
+
+---
+
+
+---
+
+---
+
+
+## 103. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
+
+**De dónde viene.** Al cerrar la Fase E dejé apuntado que el `title` y el
+`description` del layout raíz seguían siendo una redacción propia de qué es
+GenScore, "que actúa de respaldo para toda página sin metadata propia". El
+fundador pidió el Task Intake, y **investigarlo desmontó mi propio encuadre**.
+
+**Lo que resultó ser falso.** Lo vendí como riesgo de posicionamiento. No lo
+es. Las 26 rutas sin metadata propia son **todas privadas** —21 de
+`/dashboard`, `/admin`, `/debug` y las dos de `/mfa`—, todas en el `disallow`
+de `robots.ts`. Ninguna página pública hereda ese respaldo. El impacto en
+buscadores de cambiarlo es cero. Lo que escribí era literalmente cierto y
+engañoso a la vez, porque omitía cuáles eran esas páginas: la clase de frase
+que suena a hallazgo y no lo es.
+
+**Lo que sí existía.** Las pantallas de consola compartían literalmente la
+misma pestaña, «GenScore». Quien trabaja con dos o tres dominios abiertos —el
+caso normal de una agencia, que es un plan que vendemos— veía seis pestañas
+idénticas. Es UX de consola, no SEO, y es el único coste que alguien pagaba.
+
+**Segunda corrección, ya implementando.** De las 26, **diez sólo redirigen**:
+`/dashboard`, los cinco `/dashboard/settings/*` que sobreviven por los enlaces
+de correos antiguos, `/dashboard/billing`, `runs`, `/debug` y `/admin`. Una
+redirección nunca llega a pintar una pestaña, así que darle título es código
+muerto. Las pantallas reales eran **quince**, no 26 — y el guardián las
+distingue en vez de obligar a escribir algo inútil, porque un test que exige
+código muerto es un test que alguien acaba desactivando.
+
+**La decisión que hace que esto sirva de algo.** Un título estático por
+pantalla NO resuelve el problema declarado: con tres proyectos abiertos,
+«Visión general — GenScore» sigue siendo tres pestañas iguales. Las ocho
+pantallas de proyecto usan `generateMetadata` y meten el dominio: «Visión
+general · acme.com». **Y va delante de la marca, no detrás**, porque una
+pestaña estrecha recorta por la derecha — lo que distingue tiene que
+sobrevivir al recorte.
+
+Eso sale gratis por una decisión anterior: `requireActiveProject` está
+memoizada con `React.cache()` por petición desde PRELAUNCH-HARDENING-1 Fase V
+(§54), y Next ejecuta `generateMetadata` y la página en el mismo render. Sin
+esa memoización habría sido una consulta extra por navegación y no habría
+compensado.
+
+**Lo que se dejó fuera, y por qué no es pereza.** `title: { default, template:
+"%s — GenScore" }` en el layout raíz es la solución elegante y hoy es una
+trampa: hay **33 títulos públicos que ya escriben «— GenScore» a mano**, así
+que la plantilla los dejaría en «Blog — GenScore — GenScore». Hacerlo bien
+exige quitar el sufijo de los 33, y eso toca el `<title>` de todas las páginas
+indexadas — otra clase de riesgo por completo, y su propia fase si alguna vez
+compensa. Queda escrito en `console-metadata.ts` para que la siguiente sesión
+no lo descubra rompiéndolo.
+
+Tampoco se añadió `robots: { index: false }`. La regla de
+`.claude/rules/growth-content.md` que lo pide habla de pantallas **públicas**
+sin valor de búsqueda —`/login`, `/signup`, el 404—, que un rastreador sí
+alcanza. Estas están detrás de `requireUser`: añadirlo aparentaría una
+protección que ya da la autenticación.
+
+### El piloto no podía ver esto, así que se le enseñó a mirarlo
+
+La primera pasada dio `PILOT PASS` en las 65 pantallas, y **ese verde no decía
+absolutamente nada sobre este PR**: el piloto juzga capturas, y un `<title>` no
+sale en una captura. Es el caso límite de la regla que esta zona lleva toda la
+semana repitiendo —§55, §62, §96, §100— llevada al extremo: no es que el
+piloto mirase y se le pasara, es que **el cambio era invisible para él por
+construcción**. Aceptar ese verde habría sido reportar como verificado algo que
+nadie comprobó.
+
+Así que `visitAsUser` registra ahora el `<title>` y `assertPageIsHealthy` falla
+cuando es exactamente «GenScore» —la marca a secas, o sea el respaldo del
+layout raíz. Exactamente, no «empieza por»: «GenScore vs Otterly …» es un
+título legítimo y frecuente.
+
+Vale para las 65 pantallas de cada pasada, no sólo para las quince de este PR,
+y es lo que impide que esto vuelva a pasar sin que nadie se entere. Que hicieran
+falta meses y una fase entera para que alguien mirase el sitio donde se veía el
+fallo es el argumento de por qué se añade al arnés y no se deja en un test
+unitario: el unitario comprueba que la función devuelve la cadena, no que la
+pantalla la sirva.
+
+**Hallazgo suelto, no arreglado:** `/dashboard/projects` y `/dashboard/domains`
+tienen las dos el mismo `<h1>`, «Dominios». La primera no está enlazada desde
+la navegación desde DOMAINS-REDESIGN-1. Sus pestañas salen iguales porque el
+producto las llama igual, no por un fallo de esta fase; renombrar una pantalla
+es decisión de producto y necesita su propia pasada.
+
+**El `description` raíz** pasa a `CANONICAL_DEFINITION`, la misma cadena de la
+Fase E. Se unifica porque una descripción divergente envejece sola, no porque
+nadie la lea — que es justo lo que no hace nadie.
+
+## 104. Retirar los dominios archivados, y la promesa que llevaba meses siendo falsa (DOMAINS-ARCHIVE-RETIRE-1, 2026-08-15)
+
+**Cómo se llegó aquí.** ROOT-METADATA-1 (§103) puso pestaña propia a cada
+pantalla de consola, y al mirar los títulos reales del despliegue salió que
+`/dashboard/projects` y `/dashboard/domains` devolvían la misma: «Dominios —
+GenScore». No era un fallo de los títulos — es que **el producto llamaba igual
+a dos pantallas**, y una llevaba fuera del menú desde DOMAINS-REDESIGN-1. El
+fundador pidió retirar la vieja.
+
+**Lo que apareció al ir a retirarla.** Esa pantalla tenía dos mitades. La de
+arriba duplicaba `/dashboard/domains`. La de abajo, «Dominios archivados», era
+el **único** sitio del producto donde se veían y se restauraban los archivados
+— y los archivados no son un caso raro: **bajar de plan archiva dominios**
+(`changePlan`). Retirarla a secas dejaba a un cliente que baja de plan sin sus
+dominios y sin forma de recuperarlos.
+
+Se le planteó al fundador con dos salidas, y eligió la de retirarlo todo
+asumiendo la pérdida.
+
+### La promesa falsa
+
+Al redactar el aviso apareció lo importante. El modal de bajada de plan decía,
+literalmente, en el momento en que el cliente elige qué dominios sacrificar:
+
+> «Archivar es reversible: podrás restaurarlos cuando quieras desde
+> "Dominios", sin perder su configuración ni sus escaneos.»
+
+**Ya era falsa antes de esta fase.** Desde «Dominios» no se podía restaurar
+nada: restaurar vivía en `/dashboard/projects`, fuera del menú. Alguien
+escribió la promesa dando por hecho que la capacidad estaría en la rejilla
+nueva, y nunca se construyó. Nadie lo notó porque una promesa falsa **no rompe
+nada**: la pantalla carga, el piloto la marca ✅, y el cliente sólo lo descubre
+el día que intenta recuperar su dominio. El mismo fallo sin síntoma de siempre,
+con la diferencia de que éste se cobra en una pantalla de facturación — que es
+justo lo que PRICING-TRUTH-1 obligó a limpiar del resto del producto.
+
+### El callejón sin salida que la retirada creaba
+
+Y aún había una vuelta más, encontrada leyendo `createProjectCore` antes de
+tocar nada. Sin pantalla de archivados, el cliente que quisiera su dominio de
+vuelta intentaría **volver a añadirlo** — y el alta lo rechazaba con
+`already_archived`, cuyo mensaje era *«Restáuralo para continuar»*. Un bucle
+cerrado: sin sitio donde restaurar, sin poder crear, y un mensaje que le manda
+usar algo que ya no existe.
+
+Por eso la retirada trae **reactivación al volver a añadir**: un dominio
+archivado se desarchiva en vez de rechazar el alta, con sus prompts, sus
+competidores y su histórico. No es alcance añadido, es lo que hace que la
+retirada no sea una trampa — y lo que convierte «vuelve a añadirlo» en una
+frase verdadera. Respeta el tope del plan porque la comprobación de cupo ya
+corre antes: reactivar no es una puerta trasera para saltárselo.
+
+### Lo que queda declarado y no arreglado
+
+`changePlan` sigue archivando filas: es facturación y tocarlo necesita
+aprobación aparte. O sea que las filas archivadas siguen existiendo,
+invisibles. Recuperar una sigue siendo posible —volviendo a añadir el dominio—
+pero si el cliente no lo intenta, nada del producto le dice que están ahí.
+
+### Y el piloto se cayó, por lo que la retirada no arreglaba sola
+
+`PILOT FAIL` en las tres anchuras del journey de segundo proyecto, con un error
+que no se parece en nada a su causa: *"Execution context was destroyed, most
+likely because of a navigation"*. Suena a fallo de red; era una ruta que había
+cambiado de sitio.
+
+`discoverProjectIds` entraba por `/dashboard/projects` con
+`waitUntil: "domcontentloaded"`. Sobre una redirección, esa espera resuelve
+sobre el documento intermedio, el navegador se lleva la página por delante, y
+el `evaluateAll` de la línea siguiente revienta. **Es la lección general, no la
+anécdota: apuntar el piloto a una redirección con `domcontentloaded` es un
+fallo latente en cualquier ruta que un día se retire.**
+
+Al reapuntarlo a `/dashboard/domains` apareció lo segundo: la rejilla usa **dos
+formas de enlace** —el dominio activo va a su pantalla, los demás a un cambio
+de activo (`?active=<id>`)— y quedarse con la primera devuelve un solo
+proyecto. El journey se habría **saltado en silencio**, que es exactamente lo
+que existe para impedir. Mismo arreglo en `write-guard`, donde el fallo habría
+sido peor: concluir que el proyecto de escritura no existe y crear un segundo.
+
+De paso, la prueba que visitaba esa ruta pasa de comprobar una lista a
+comprobar **la redirección**, con su `finalUrl`. Era el único sitio de la suite
+que la tocaba, y una redirección rota da 404 a quien tenga el marcador sin que
+nada más lo note. El fixture del self-check la sirve también como redirección,
+por el mismo motivo por el que existe el fixture.
+
+**El guardián que sale de aquí no es de redacción, es de coherencia**
+(`change-plan-copy.test.ts`): si el modal vuelve a nombrar restaurar, o si
+`createProjectCore` deja de reactivar, salta. Lo segundo importa más que lo
+primero — el día que alguien revierta esa rama por parecer rara, el modal pasa
+a mentir y el cliente vuelve a quedarse encerrado, y ninguna de las dos cosas
+tiene síntoma.
+
+## 105. Un workflow que nunca funcionó ni un día, y 1.603 ejecuciones en rojo (CODEX-BUILD-FIX-1, 2026-08-16)
+
+**El síntoma.** `codex-build.yml` fallaba en **cada push**, incluidos los de
+`main`. Salió al revisar el estado de los PRs de esta semana y quedó apuntado
+como "anterior a esto y ajeno al PR" tres veces seguidas, que es exactamente lo
+que le pasa a un rojo permanente: se menciona y no se toca.
+
+**La causa, y por qué el error no se parece a ella.** Los dos últimos pasos
+tenían `if: … && secrets.CODEX_AGENT_TOKEN == ''`. **`secrets` no es un
+contexto disponible en el `if:` de un paso** — sólo lo son `github`, `needs`,
+`strategy`, `matrix`, `job`, `runner`, `env`, `vars`, `steps` e `inputs`.
+GitHub rechaza el fichero **entero** y crea un run fallido con **cero jobs**,
+cuyo `name` es la ruta del fichero en vez del `name:` declarado, y cuyo evento
+es `push` aunque el workflow **no tenga trigger de push**. Nada de eso se lee
+como "el YAML es inválido": se lee como un workflow raro que falla.
+
+Las tres pistas juntas son el diagnóstico, y ninguna sirve sola:
+
+- `jobs: 0` — no llegó a planificar nada;
+- `name: .github/workflows/codex-build.yml` — no llegó a leer el `name:`;
+- `event: push` — se está atribuyendo al push que lo hizo fallar, no a un
+  disparador real.
+
+**Cuánto llevaba así.** Desde el 2026-08-02, colado dentro de un PR de blog
+(GROWTH-2 Fase 2.5). **1.603 ejecuciones, el 100% en rojo, ninguna con un solo
+job.** No es que se rompiera: nunca funcionó.
+
+**Por qué merecía arreglarse aunque el workflow no haga nada.** Es un
+*placeholder* declarado —todos sus pasos escriben en `$GITHUB_STEP_SUMMARY` y
+nada más (`docs/agentic-delivery-pipeline.md`: *"guardrails and placeholders,
+not autonomous agent runners"*)— así que el arreglo no habilita ninguna
+capacidad. Lo que arregla es otra cosa: **un rojo permanente en cada push
+entrena a todo el mundo a ignorar la lista de checks**, y esa lista es donde
+tiene que verse un fallo de verdad. Esta misma semana `ci.yml` no se disparó
+solo dos veces y hubo que lanzarlo a mano — en una lista donde algo siempre
+está rojo por defecto, eso se pasa por alto sin esfuerzo.
+
+**El arreglo.** El secreto se expone en `env:` a nivel de job y los pasos
+comprueban `env.CODEX_AGENT_TOKEN`. Cuatro líneas. Con el fichero válido, el
+workflow deja de dispararse en push —no tiene ese trigger— y sólo corre donde
+siempre quiso: `issues` y `workflow_dispatch`.
+
+**Lo vigila `tests/workflow-contexts.test.ts`**, verificado en las dos
+direcciones. Barre sólo `secrets` en `if:` a propósito: es el error real y el
+que no avisa, y ampliarlo a otros contextos metería falsos positivos en un
+guardián que entonces alguien acabaría desactivando (§94).
+
+**Queda declarado y NO hecho: este workflow no hace nada.** Ni siquiera con el
+secreto puesto — sus dos ramas escriben un resumen y terminan. Borrarlo entero
+es defendible y hay precedente directo (`claude-qa.yml` y
+`scripts/run-claude-qa.py`, borrados en PRELAUNCH-HARDENING-1 Fase 0 por
+llevar meses declarados superseded). No se ha hecho aquí porque el encargo era
+arreglarlo, y borrar una pieza del andamiaje agéntico documentado es una
+decisión de producto, no una limpieza. Si se borra, se van con él la fila del
+mapa de zonas y las menciones de `docs/agentic-delivery-pipeline.md`.
+
+---
+
+## 106. La orquestación de Auditoría web, fuera de su pantalla y por fin verificable (PRELAUNCH-HARDENING-1 Fase R7-b, 2026-08-16)
+
+**Qué se decidió.** Las ~330 líneas que deciden qué enseña Auditoría web salen
+de `page.tsx` a `lib/web-audit/page-data.ts`, con **26 tests** que son lo
+primero que ha mirado nunca esa lógica. La pantalla se queda en 860 líneas y
+`return (…)`.
+
+### El diagnóstico del plan estaba mal, y medirlo cambió el corte
+
+El plan decía «partir `WebAuditPage`, ~1.070 líneas de orquestación de datos».
+Medido: de sus 1.156 líneas, **~330 son orquestación y ~740 son JSX**. Partir
+por tamaño habría movido 740 líneas de maquetado a cambio de nada verificable,
+con el riesgo de mudanza que R7 ya cobró una vez (§83, el bloque duplicado que
+el compilador y el lint dejaron pasar).
+
+**El tamaño nunca fue el problema; la testabilidad sí.** Ocho consultas,
+cuarenta y dos valores derivados y un efecto secundario, soldados al JSX que los
+pinta: la única forma de observar cualquiera de esas decisiones era abrir un
+navegador. Mismo diagnóstico que Q1 hizo con `createProject` (§89) y misma cura.
+
+### El punto delicado: un efecto secundario dentro de la lógica
+
+En la línea 268 vivía `after(() => triggerWebAuditRun())` — abrir la pantalla
+despierta al worker si hay una auditoría vencida (ADR 0038). Llevárselo al
+módulo lo habría dejado tan poco testeable como estaba; dejarlo en la pantalla
+sin más separaba la decisión de la acción sin criterio.
+
+**El loader DEVUELVE `shouldDispatchAudit` y la pantalla actúa.** Es lo que
+`.claude/rules/server-actions.md` ya exigía para las actions, por el mismo
+motivo, y compra una garantía concreta que antes no existía: **un job en
+`retrying` con el backoff aún corriendo no dispara nada.** Ese backoff llega a
+10 horas y cada despacho de más son llamadas reales de Gemini.
+
+### Lo que las mutaciones enseñaron
+
+Se probaron cuatro cambios deliberados para ver si los tests mordían. Tres
+murieron a la primera. **La cuarta —`heroScore` siempre el compuesto—
+sobrevivió**, y el motivo no era un test flojo: en una cuenta free recién creada
+el compuesto ES la nota técnica (media de un solo valor), exactamente lo que
+dice el comentario de esa línea. Las dos ramas sólo se distinguen en **una
+cuenta que bajó de plan**, con cobertura persistida de cuando era Pro. Ese caso
+se añadió y la mutación murió.
+
+Sin la pasada de mutación, esa aserción habría quedado como decorado: verde,
+extensa, y sin discriminar nada.
+
+### Dos cosas que se aprendieron equivocándose
+
+- **`technicalScoreDelta` no sale de `readiness_score`.** Se escribió el test
+  variando esa columna, dio 0, y el código tenía razón: el delta compara
+  `actualReadinessScore`, recalculado desde los `pageScore` con los criterios de
+  hoy. La columna guarda lo que valía con los de entonces, y compararlas
+  resucitaría la regresión fantasma que WEB-AUDIT-R3 y
+  `TECHNICAL_CRITERIA_EXPANDED_AT` existen para explicar. Queda fijado por test.
+- **El barrido de variables consumidas por el JSX se dejó una.** El `grep` no
+  cogía las desestructuradas, así que `latestRunRow` no apareció en la lista de
+  22 y sí se usaba. Lo cazó el typecheck. Se expone como `hasCompletedScan`
+  —booleano, no la fila— porque la pantalla sólo preguntaba `!latestRunRow`, y
+  devolver la fila entera invitaría a leer campos que el módulo ya usó para
+  derivar `auditedScanDate`: dos fuentes para el mismo hecho.
+
+### La comprobación que de verdad prueba que esto fue un refactor
+
+Comparación de multiconjunto de líneas del `return`: **743 líneas antes, 743
+después, y una sola diferencia** — el renombrado de `latestRunRow` a
+`hasCompletedScan`. Ni un test existente cambió. La única normalización es un
+`?? null` en `auditedScanDate`, inobservable: sin escaneo la expresión original
+devolvía `undefined` bajo un tipo que prometía `string | null`, y su único
+consumidor lo usa como condición de verdad.
+
+**Lo que esto NO cubre, dicho claro:** que el JSX pinte estos valores donde
+debe. Eso es del `ux-pilot` y de los tests de render de `_components/` (§87).
+Los tres juntos son la cobertura de esta pantalla; ninguno solo lo es.
+
+**Con esto la Fase R queda cerrada entera.**
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R7);
+`.claude/rules/web-audit.md`; §83 y §87 (R7, componentes y tests de render);
+§89 (el mismo corte en `createProject`); ADR 0038 (el despacho desde el render);
+ADR 0033/0035 (la puerta y la cifra principal).
+
+---
+
+
+---
+
+
+---
+
+---
+
+## 107. El único documento pensado para copiarse fuera (SEO-POS-1 Fase A, 2026-08-16)
+
+Fase A es la capa que el plan siempre asignó al fundador: Reddit, YouTube,
+directorios, nota de prensa. Los agentes preparan el material; publicar y
+conversar no es una fase de código. Esto es el material:
+`docs/off-site-authority-kit.md`.
+
+**Por qué hacía falta y no es "más contenido".** Todo lo construido en este
+plan —blog, docs, comparativas, la entidad de la Fase E— vive **en nuestro
+dominio**. Un motor que sólo encuentra a una marca hablando de sí misma tiene
+poco con lo que corroborarla, y la investigación de content-strategy §3 dice
+que la mayoría de las citas generativas vienen de medios ganados que no son de
+primer nivel. Sin esta capa las otras rinden a medias.
+
+### Lo que hace distinto a este documento
+
+Es **lo único del repositorio pensado para copiarse y pegarse fuera**: en una
+ficha de G2, en la descripción de un vídeo, en un hilo. Y lo de fuera no se
+refresca solo. El día que cambie un precio, el sitio se actualiza en el mismo
+PR y una ficha de G2 de hace ocho meses no — y nadie lo va a notar, porque ni
+el piloto ni el compilador ni Search Console miran ahí.
+
+Por eso el kit no es prosa suelta: `tests/off-site-kit.test.ts` contrasta su
+tabla de planes contra `plans-data.ts` fila a fila, exige que la definición de
+marca sea **literalmente** `CANONICAL_DEFINITION` —no una versión parecida, que
+es justo lo que la Fase E existe para eliminar— y exige que sigan declarados
+los tres límites que un comprador comprueba en dos clics. Verificado
+rompiéndolo: subir Starter de 45 a 49 € pone el test rojo nombrando el plan.
+
+Es la regla de "si una cifra del producto llega a publicarse, se ata al código
+con un test" (§75) un escalón más lejos: aquí la cifra ni siquiera vive en
+nuestro dominio.
+
+### Las dos decisiones de criterio
+
+**Reddit se plantea por el riesgo, no por la oportunidad.** El fallo caro no es
+que no funcione: es un baneo y el nombre asociado a spam en un sitio que los
+motores citan mucho — peor que no estar, porque toda la Fase E va de que
+"GenScore" resuelva a algo bueno. De ahí las reglas: responder sin enlazar es
+la norma, declarar quién eres al nombrar el producto, y no recomendarnos donde
+no encajamos. La advertencia previa contra uno mismo sigue prohibida (§67);
+declarar el conflicto de interés no es lo mismo que invitar a descontar todo lo
+que viene después.
+
+**La nota de prensa se declara bloqueada, no pendiente.** Depende del
+Observatorio, que no está aprobado. Dejar preparada la plantilla habría sido
+crear un molde que invita a rellenarse con números que nadie ha medido — la
+definición exacta de métrica falsa, y en el formato donde más caro sale. Se
+escribirá **desde** el primer estudio real.
+
+### El bucle que vuelve al código
+
+`organization-schema.tsx` no declara `sameAs` porque hoy no hay ningún perfil
+real que citar (§100). En cuanto existan LinkedIn, YouTube y las fichas, esas
+URLs son `sameAs` legítimos y añadirlas es el refuerzo de entidad más barato
+que queda. **Nunca al revés**: no se declara el `sameAs` de un perfil que aún
+no existe.
+
+**Lo que esta fase NO cierra:** nada se ha publicado. El kit es material; las
+cinco acciones siguen abiertas y son del fundador.
+
+---
+
+## 108. La puerta de CI deja de depender de un evento que se pierde (CI-REDUNDANCY-1, 2026-08-16)
+
+**Qué se decidió.** `ci.yml` pasa a dispararse también por `push`, no sólo por
+`pull_request`. Dos disparadores independientes para la misma puerta.
+
+### El problema no era que CI fallase: era que no existía
+
+`pull_request` se pierde. Está medido dos veces: el 2026-08-10, misma rama y
+misma tarde, **tres pushes no dispararon la comprobación y dos sí** (§54); y el
+2026-08-16, **dos veces seguidas en el PR #427** — y al reponerlo a mano
+apareció un fallo real (la grafía `Genscore`, prohibida por `naming.test.ts`)
+que llevaba una hora invisible.
+
+**La ausencia de un check no se ve; un check rojo sí.** Ése es el fallo entero.
+Un PR llegaba al Human Gate sin que se hubiera ejecutado un solo test, con la
+lista de checks enseñando un piloto en verde, y nada decía que faltaba nada. El
+aviso de Q5 (§97) hizo que se viera; esto hace que casi no ocurra.
+
+### Por qué NO se colapsan los dos disparadores en uno
+
+Un push a una rama con PR abierto dispara ahora `push` **y**
+`pull_request:synchronize`: dos runs del mismo job. La tentación es unificar el
+grupo de `concurrency` para que sólo sobreviva uno, y **es exactamente lo que no
+se debe hacer**: con `cancel-in-progress`, uno cancelaría al otro, y un run
+cancelado no cuenta como superado. La redundancia se convertiría en un fallo
+intermitente — peor que el problema original.
+
+Se paga un run duplicado por push (~90 s). Barato al lado de los ~20 minutos que
+cuesta la pasada del piloto, que sí corre siempre.
+
+### `pilot-evidence/**` queda fuera, y no es un detalle
+
+Esas ramas no llevan `package.json`: `pnpm install --frozen-lockfile` falla ahí
+**siempre**. Un check rojo por diseño es justo el mecanismo por el que 1.603
+ejecuciones en rojo pasaron cuatro meses desapercibidas (§105) — entrena a todo
+el mundo a no mirar la lista.
+
+### Lo que esto NO es, y sigue pendiente del fundador
+
+**No es la puerta.** Que el check exista no impide mergear con él en rojo. La
+puerta es una *required status check* en la protección de rama de `main`, que es
+un ajuste del repositorio y **no vive en este repositorio**: no se puede activar
+desde el código ni desde las herramientas de un agente. Queda dicho por tercera
+vez, ahora con el trabajo de código ya hecho al lado: lo único que falta es
+marcar una casilla.
+
+`tests/ci-triggers.test.ts` impide que la redundancia se borre «por limpieza»:
+un futuro lector verá dos disparadores para lo mismo y el test le explicará, en
+el mensaje del fallo, por qué están los dos.
+
+**Trazabilidad.** §54 (la primera medición de la intermitencia); §97 (el aviso
+de ausencia de CI, Fase Q5); §105 (el coste de un rojo permanente);
+`.github/workflows/ci.yml`.
+
+---
+
+## 109. Una cabecera plana para cada zona (HEADER-FLAT-1, 2026-08-15)
+
+**Estado: implementada.** Continuación directa de §101, pedida por el fundador
+con dos capturas de móvil y una frase muy precisa: *«en la consola la cabecera
+tiene como un degradado a oscuro en la izquierda y la hamburguesa es de tres
+rayas. En la pública la cabecera es plana, fundiéndose más con la página y la
+hamburguesa es más minimalista»*. Al concretar el alcance lo amplió él mismo:
+*«hacemos una cabecera para toda la consola y la otra para toda la zona de
+marketing»*.
+
+**Lo primero que hubo que corregir fue mi propio análisis.** El informe inicial
+daba por hecho que hablaba de escritorio y proponía subir la marca a una barra
+de ancho completo. No era eso: hablaba de móvil, y de tratamiento, no de
+estructura.
+
+**Qué se ha hecho, en las dos zonas:**
+
+- **La cabecera nace plana** —sin fondo ni borde— en vez de barra blanca sólida
+  con borde `--line`. En la consola aparece un fondo de cristal translúcido al
+  desplazar; en la pública no aparece nunca (ver abajo, no es un olvido).
+- **Hamburguesa de dos rayas** (`menu2`) en todas partes. Ese glifo ya existía
+  pero sólo lo usaba la portada; la consola y el resto de superficies públicas
+  llevaban el de tres.
+- **La campana pierde su caja.** Era un botón de 32&nbsp;px con borde de
+  1,5&nbsp;px y fondo blanco propio: sobre una cabecera plana, lo único que
+  seguía pareciendo un control pegado encima. Queda como icono suelto con la
+  misma huella que la hamburguesa, para que los dos extremos pesen igual.
+- **`PublicHeader` pone ahora su propio `.lp-nav-wrap`.** Antes lo envolvían a
+  mano **cinco ficheros de shell** (`blog-page-shell`, `legal-page-shell`,
+  `docs-page-shell`, `pricing-page`, `app/geo/page`) que entre ellos cubren las
+  siete superficies públicas —comparativas y glosario comparten el shell del
+  blog— y la
+  portada no lo hacía en absoluto — de ahí salía exactamente la diferencia que
+  el fundador veía. Es el mismo patrón que §63 aplicó a los enlaces: la
+  duplicación se elimina moviendo la responsabilidad al componente.
+
+**Dos hallazgos que cambiaron el diseño a mitad de camino, ambos medidos y no
+supuestos:**
+
+1. **La cabecera de consola no solapa nada.** Yo había avisado al fundador de
+   que dejarla transparente arriesgaba que el contenido se leyera por debajo, y
+   de que el logo quedaría sobre el aviso lila. **Las dos cosas eran falsas:**
+   `.shell` es `overflow:hidden` a `100dvh` y quien scrollea es `.dash-content`,
+   que es *hermana* de la cabecera. Nada pasa nunca por debajo. El detector de
+   scroll se conserva, pero por otra razón — sin borde, el contenido que sube se
+   recorta contra un canto invisible y parece cortado; el fondo al desplazar
+   existe para darle ese canto, no para tapar.
+2. **El `sticky` de la cabecera pública lleva roto desde antes de esta fase.**
+   Se implementó el mismo estado de cristal para la zona pública y, al medirlo,
+   no aparecía nunca. Comprobado con `git stash` **sobre `main` sin tocar**:
+   tras desplazar 500&nbsp;px, `.lp-nav-wrap` está en `y: -500` tanto a 375
+   como a 1280&nbsp;px. La causa es `html { overflow-x: hidden }`, puesto en
+   GROWTH-2 Fase 2.1 para contener un desbordamiento de 3&nbsp;px: convierte el
+   documento en contenedor de scroll y desactiva el pegado de sus
+   descendientes. **No se ha arreglado aquí a propósito** — quitar esa guarda
+   puede devolver el desbordamiento y es su propia fase, con su propia pasada
+   de piloto. Lo que sí se hizo fue **retirar el código muerto**: un estado que
+   no puede verse nunca es peor que no tenerlo, porque la siguiente sesión lo
+   dará por funcionando. Queda escrito en el CSS dónde volver a añadirlo si esa
+   guarda desaparece.
+
+**Lo que NO cambia:**
+
+- **El escritorio de la consola sigue sin marca en su cabecera** (vive en la
+  barra lateral) y la pública sigue midiendo 101&nbsp;px con sesión iniciada por
+  un chip que hereda el relleno del cajón móvil. Las dos cosas se midieron y se
+  documentaron en el artefacto de esta fase, y las dos quedan **pendientes a
+  propósito**: son estructura, no tratamiento, y el fundador acotó esto último.
+- **La portada se comporta igual que siempre:** su cabecera vive dentro de
+  `.lp-hero` (`overflow:hidden`), así que se marcha con el hero. Ahora las otras
+  seis se marchan también, pero porque el `sticky` no funciona en ninguna, no
+  porque se haya decidido.
+- La 404 (`.nf-page`) mantiene su cabecera opaca: sobre su cuerpo oscuro ni el
+  estado plano ni el de cristal sirven.
+
+**Addendum (fundador, mismo día): fuera la sombra del cajón cerrado.** Al ver
+el preview señaló *«la parte izquierda como un pequeño degradado más
+oscuro»* y —esto es lo valioso— no pidió quitarlo: pidió entender por qué
+estaba y si aportaba. Era la sombra del cajón lateral: cerrado vive fuera de
+pantalla (`translateX(-100%)`) pero conservaba `box-shadow: 20px 0 60px` y,
+con `z-index: 320` contra el 30 de la cabecera, la proyectaba sobre todo el
+borde izquierdo. Medido muestreando píxeles a lo ancho de la cabecera: borde
+en `rgb(218,220,223)` contra `rgb(246,247,249)` de lienzo, 28 niveles de
+caída. **No lo trajo esta fase**: con la cabecera blanca la caída era de 29
+niveles, idéntica; lo único que cambió es que el conjunto es ahora 9 niveles
+más oscuro y deja de disimularla. La sombra existe para despegar el cajón
+*cuando está abierto*, así que pasa a `.shell.mobnav-open .sb`. Verificado en
+las dos direcciones: cerrado, el borde mide `246,247,249` de extremo a
+extremo; abierto, la sombra reaparece en `rgb(222,223,225)` junto al panel.
+
+**Diseño aprobado:** `docs/design-reference/header-flat-1/`. El fundador lo
+aprobó sobre ese artefacto antes de escribir código, así que se commitea con
+la fase — un enlace de chat no lo puede abrir ni CI ni una sesión futura, y la
+mitad de fidelidad de diseño del piloto se quedaría sin referencia. Su README
+deja anotados **los dos avisos del artefacto que la implementación demostró
+falsos**, en vez de editarlos para que parezca que acerté.
+
+**Trazabilidad.** Continúa §101 (que unificó el chasis del cajón) y §63 (que
+unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de
+`html { overflow-x: hidden }` en `app/globals.css`, GROWTH-2 Fase 2.1 (PR #286).
+
+---
+
+## 110. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
 
 **Qué se decidió.** `/gratis/aparece-mi-marca-en-chatgpt`, primera pieza de la
 Fase P de `docs/seo-positioning-plan.md` (comprobador gratuito público).

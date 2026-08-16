@@ -220,10 +220,28 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   derivó hasta listar la mitad del contenido publicado sin que nada avisara — y
   es el fichero sobre el que el producto publica una guía
   (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §47).
-- **Una pantalla sin valor de búsqueda lleva `robots: { index: false, follow:
-  true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
+- **Una pantalla PÚBLICA sin valor de búsqueda lleva `robots: { index: false,
+  follow: true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de
-  marketing (log §47).
+  marketing (log §47). **No se extiende a las pantallas privadas**: detrás de
+  `requireUser` un rastreador no llega ni siguiendo un enlace, así que ahí el
+  `robots` aparentaría una protección que ya da la autenticación (log §103).
+- **Toda pantalla privada declara su propio `<title>`, y la de un proyecto lleva
+  el dominio delante de la marca.** Sin `metadata` propia hereda el
+  `title: "GenScore"` del layout raíz — así llegaron a ser quince pantallas con
+  la misma pestaña, indistinguibles con dos dominios abiertos. El dominio va
+  delante porque una pestaña estrecha recorta por la derecha. Sale gratis
+  porque `requireActiveProject` está memoizada por petición; si alguna vez deja
+  de estarlo, esto pasa a ser una consulta más por navegación
+  (`lib/seo/console-metadata.ts`, log §103). Las rutas que sólo redirigen
+  quedan fuera: nunca pintan una pestaña. Lo vigila el propio piloto —
+  `assertPageIsHealthy` falla si el `<title>` es exactamente «GenScore»—, porque
+  un título **no sale en una captura** y su verde no dice nada sobre él si nadie
+  se lo pregunta (log §103).
+- **El `title` del layout raíz no se convierte en `{ default, template }` sin
+  limpiar antes los 33 títulos públicos que ya escriben «— GenScore» a mano.**
+  La plantilla se lo añadiría otra vez a todos («Blog — GenScore — GenScore»), y
+  arreglarlo toca el `<title>` de todas las páginas indexadas (log §103).
 
 ## Comparativas y el sistema de bloques del blog
 
@@ -283,6 +301,42 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   sobre lo que el PR cambió.** El piloto no sabe qué prometía el PR; cruzar su
   tabla con las pantallas que toca el diff es trabajo del Director y no lo
   hace nadie más (log §62).
+
+## La entidad: un solo nodo, no seis descripciones parecidas
+
+Trazable a log §91 (E1), §94 (E2) y §100 (E3+E4). El objetivo de la Fase E es
+que "GenScore" y "GEO Score" resuelvan a **nuestra** entidad; el fallo que
+persigue no rompe nada, así que sólo lo cogen constantes compartidas y tests.
+
+- **La descripción de GenScore se importa, no se redacta.**
+  `lib/brand/canonical-definition.ts` es la única fuente: metadata, apertura de
+  `/que-es-genscore`, FAQ y `SoftwareApplication` usan literalmente la misma
+  cadena. Seis párrafos escritos a mano que dicen casi lo mismo son seis
+  descripciones distintas para un motor.
+- **La definición sólo nombra motores que el producto ejecuta** (hoy ChatGPT,
+  Gemini y Claude). Lo impone `canonical-definition.test.ts`, y no es una regla
+  de estilo: el consejo externo que originó la fase proponía cinco motores, y
+  eso habría multiplicado por todas las superficies el reclamo falso que
+  PRICING-TRUTH-1 obligó a retirar del producto.
+- **Un nodo de schema.org se referencia por `@id`, nunca se incrusta dos
+  veces.** `publisher: { "@id": ORGANIZATION_ID }`, no un `Organization`
+  incrustado: dos nodos con el mismo nombre y sin identificador común son dos
+  entidades para un parser, y la página que existe para desambiguar la marca
+  estaba fabricando ambigüedad ella sola (§100).
+- **Un schema que aparece en más de una página va en un componente
+  compartido.** Dos declaraciones a mano del mismo producto divergen al primer
+  cambio de posicionamiento, y el síntoma es el sitio describiéndose de dos
+  formas justo donde un motor lo lee.
+- **Un término explicado en varias URLs se canonicaliza por `@id`, no
+  fusionando páginas.** Mismo `@id` desde todas, `url` del documento de
+  referencia, el resto como `sameAs`. Es el equivalente semántico de un
+  canonical sin desindexar URLs que ya reciben tráfico. La canónica del GEO
+  Score es `/docs/metodologia/geo-score` porque ya lo era por enlazado interno;
+  cambiarla contradiría la señal más fuerte que tenemos (§100).
+- **Publicar una URL dedicada a un término ya explicado incluye añadirla a su
+  lista de alternativas.** Si no, vuelve a competir por el término sin
+  declararse el mismo concepto — sin 404 y sin error.
+  `lib/brand/entity-graph.test.ts` barre por ruta y lo bloquea.
 
 ## El encuadre: quien escribe esto dirige el marketing de Genscore
 

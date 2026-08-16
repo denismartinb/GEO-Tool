@@ -263,8 +263,18 @@ export async function createProject(formData: FormData) {
   if (result.status === "lookup_failed" || result.status === "insert_failed") {
     redirect("/dashboard/projects/new?error=project_creation_failed");
   }
-  if (result.status === "already_archived") {
-    redirect("/dashboard/projects/new?error=project_already_archived");
+  // DOMAINS-ARCHIVE-RETIRE-1 (log §104): un dominio archivado se reactiva al
+  // volver a añadirlo. Se revalida la navegación —vuelve a aparecer en la
+  // barra lateral y en la rejilla— y se aterriza en él con su propio aviso: no
+  // es un alta nueva y decir «creado» sería mentir sobre lo que acaba de pasar.
+  if (result.status === "restored") {
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/dashboard/domains");
+    revalidatePath(`/dashboard/projects/${result.projectId}`);
+    redirect(`/dashboard/projects/${result.projectId}?success=project_restored`);
+  }
+  if (result.status === "restore_failed") {
+    redirect("/dashboard/projects/new?error=project_restore_failed");
   }
   if (result.status === "already_active") {
     redirect("/dashboard/projects/new?error=project_already_active");
@@ -300,33 +310,6 @@ export async function createProject(formData: FormData) {
   redirect(`/dashboard/projects/${projectId}?success=${ENABLE_SYNC_SCAN_EXECUTION ? "scan_started" : "scan_pending"}`);
 }
 
-export async function archiveProject(formData: FormData) {
-  const parsedProjectId = z.string().uuid().safeParse(String(formData.get("projectId") ?? ""));
-  if (!parsedProjectId.success) {
-    redirect("/dashboard/projects?error=invalid_project_id");
-  }
-
-  const projectId = parsedProjectId.data;
-  const { supabase, user } = await requireUser();
-
-  const { data, error } = await supabase
-    .from("projects")
-    .update({ is_archived: true })
-    .eq("id", projectId)
-    .eq("owner_user_id", user.id)
-    .eq("is_archived", false)
-    .select("id")
-    .maybeSingle();
-
-  if (error || !data) {
-    redirect("/dashboard/projects?error=project_archive_failed");
-  }
-
-  revalidatePath("/dashboard", "layout");
-  revalidatePath("/dashboard/projects");
-  redirect("/dashboard/projects?success=project_archived");
-}
-
 export type DeleteProjectResult = { success: true } | { success: false; error: string };
 
 /**
@@ -360,29 +343,3 @@ export async function deleteProject(projectId: string): Promise<DeleteProjectRes
   return { success: true };
 }
 
-export async function restoreProject(formData: FormData) {
-  const parsedProjectId = z.string().uuid().safeParse(String(formData.get("projectId") ?? ""));
-  if (!parsedProjectId.success) {
-    redirect("/dashboard/projects?error=project_restore_failed");
-  }
-
-  const projectId = parsedProjectId.data;
-  const { supabase, user } = await requireUser();
-
-  const { data, error } = await supabase
-    .from("projects")
-    .update({ is_archived: false })
-    .eq("id", projectId)
-    .eq("owner_user_id", user.id)
-    .eq("is_archived", true)
-    .select("id")
-    .maybeSingle();
-
-  if (error || !data) {
-    redirect("/dashboard/projects?error=project_restore_failed");
-  }
-
-  revalidatePath("/dashboard", "layout");
-  revalidatePath("/dashboard/projects");
-  redirect("/dashboard/projects?success=project_restored");
-}

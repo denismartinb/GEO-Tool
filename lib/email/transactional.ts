@@ -763,3 +763,63 @@ export async function sendNewSignupOpsAlertEmail(input: {
     )
   );
 }
+
+/**
+ * ADMIN-CONSOLE-2b: aviso al operador en cada escritura que hace `/admin`
+ * sobre el proyecto de un cliente (interruptor de escaneo recurrente o de
+ * auditoría automática). Es el registro completo — no hay tabla nueva para
+ * esto, así que este email ES la auditoría de la acción, no un aviso
+ * adicional a ella (docs/design-reference/admin-console-1/README.md).
+ * Registra quién, qué cuenta, qué proyecto y qué cambió — desde
+ * ADMIN-CONSOLE-UX-1 ya no lleva motivo (decisión explícita del fundador,
+ * `docs/brand/design-decisions-log.md` §99): el registro deja de explicar
+ * el porqué, pero sigue siendo el único rastro del quién/qué/cuándo.
+ *
+ * Va a `OPS_ALERT_EMAIL`, nunca al cliente: es una escritura que hace GenScore
+ * sobre su cuenta.
+ */
+export async function sendAdminAutomationChangeAlertEmail(input: {
+  operatorEmail: string;
+  targetUserEmail: string;
+  targetUserId: string;
+  domain: string;
+  projectId: string;
+  change: string;
+  changedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const rowsHtml = [
+    dataRow("Operador", input.operatorEmail),
+    dataRow("Cuenta afectada", `${input.targetUserEmail} (${input.targetUserId})`),
+    dataRow("Dominio", input.domain),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Cambio", input.change),
+    dataRow("Fecha", input.changedAt.toISOString())
+  ].join("");
+
+  await sendEmail(
+    to,
+    `[GenScore] /admin cambió un automatismo — ${input.domain}`,
+    wrap(
+      `
+      ${eyebrow("Acción de operador · sólo equipo GenScore")}
+      ${heading("Un automatismo cambió desde /admin")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `${input.operatorEmail} cambió ${input.change} en ${input.domain}`
+      }
+    )
+  );
+}

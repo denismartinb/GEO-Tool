@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { getUsageSummary } from "@/lib/billing";
@@ -10,6 +11,7 @@ import { SettingsIndex } from "@/components/settings/settings-index";
 import { buildSettingsIndex } from "@/lib/settings/index-entries";
 import { BillingContent } from "@/components/billing/billing-content";
 import { readBillingDetails, readCompanyDetails } from "@/lib/settings/company-details";
+import { consoleMetadata } from "@/lib/seo/console-metadata";
 
 /**
  * CONSOLE-REDESIGN-1 — the four account screens folded into one route.
@@ -22,6 +24,9 @@ import { readBillingDetails, readCompanyDetails } from "@/lib/settings/company-d
  *
  * Approved design: docs/design-reference/console-redesign-1/.
  */
+// ROOT-METADATA-1: pestaña propia. Ver `lib/seo/console-metadata.ts`.
+export const metadata: Metadata = consoleMetadata("Ajustes");
+
 export default async function SettingsPage({
   searchParams
 }: {

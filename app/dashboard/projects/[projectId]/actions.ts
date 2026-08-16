@@ -7,6 +7,11 @@ import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
 import {
+  AUDIT_HALF_COLUMN,
+  checkRecurringScansPrecondition,
+  isMissingColumnError
+} from "@/lib/projects/automation-toggles";
+import {
   rewriteRecommendationCore,
   rewriteRecommendationInputSchema,
   type RewriteRecommendationResult
@@ -323,21 +328,8 @@ export async function setRecurringScans(formData: FormData) {
   const { supabase, user } = await requireUser();
 
   if (enabled) {
-    const { data: completedRun, error: completedRunError } = await supabase
-      .from("scan_runs")
-      .select("id")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .limit(1)
-      .maybeSingle();
-
-    if (completedRunError) {
-      redirect(`/dashboard/projects/${projectId}/debug?error=unexpected_error`);
-    }
-
-    if (!completedRun) {
-      redirect(`/dashboard/projects/${projectId}/debug?error=recurring_requires_completed_scan`);
-    }
+    const check = await checkRecurringScansPrecondition(supabase, projectId);
+    if (!check.ok) redirect(`/dashboard/projects/${projectId}/debug?error=${check.reason}`);
   }
 
   const { data, error } = await supabase
@@ -385,12 +377,6 @@ const auditHalfSchema = recurringScansSchema.extend({
   half: z.enum(["technical", "coverage"])
 });
 
-/** Which column each half writes, and which copy the redirect announces. */
-const AUDIT_HALF_COLUMN = {
-  technical: "auto_technical_audit_enabled",
-  coverage: "auto_coverage_audit_enabled"
-} as const;
-
 export async function setAutoAuditHalf(formData: FormData) {
   const parsed = auditHalfSchema.safeParse({
     projectId: formData.get("projectId"),
@@ -416,15 +402,12 @@ export async function setAutoAuditHalf(formData: FormData) {
     .maybeSingle();
 
   if (error || !data) {
-    // `42703` = undefined_column, `PGRST204` = la columna no está en el caché de
-    // esquema de PostgREST. Las dos significan lo mismo para quien está delante:
-    // falta aplicar la migración. Decir "vuelve a intentarlo" ahí es mandar al
-    // operador a repetir algo que no puede funcionar (reportado por el fundador
-    // el 2026-08-05, desde su móvil).
-    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    // Decir "vuelve a intentarlo" ante una migración pendiente es mandar al
+    // operador a repetir algo que no puede funcionar (reportado por el
+    // fundador el 2026-08-05, desde su móvil) — de ahí el mensaje distinto.
     redirect(
       `/dashboard/projects/${projectId}/debug?error=${
-        missingColumn ? "auto_audit_migration_pending" : "auto_audit_update_failed"
+        isMissingColumnError(error) ? "auto_audit_migration_pending" : "auto_audit_update_failed"
       }`
     );
   }

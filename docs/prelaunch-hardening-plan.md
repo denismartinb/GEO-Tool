@@ -14,7 +14,7 @@ una con su Human Gate.
   LCP y choca con `.claude/rules/onboarding.md`) y quedan ~33 KB de CSS de
   consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
   (migración, cifra publicada, superficie de auth).
-- **Fase R 🟡 en curso** — R1, R2 (log §43), **R4** (log §70) y **la primera
+- **Fase R ✅ cerrada (2026-08-16)** — R1, R2 (log §43), **R4** (log §70) y **la primera
   mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`)
   y **R5 entera** (log §79: los tipos compartidos salen a
   `lib/llm/contracts.ts`; log §80: las cinco funcionalidades de producto se van
@@ -26,11 +26,13 @@ una con su Human Gate.
   de ser la excepción) y **el grueso de R8** (log §84: dos ficheros muertos
   borrados) y **46 tests de render para Auditoría web** (log §87), los primeros
   del repositorio. **R3 queda descartada como está escrita** tras su Task Intake
-  del 2026-08-14 (ver R3 abajo). Quedan partir `WebAuditPage` y los dos
-  huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  del 2026-08-14 (ver R3 abajo). **R8 cerrada** (log §102: los dos huérfanos
+  borrados) y **R7-b cerrada** (log §106: la orquestación de Auditoría web sale
+  a `lib/web-audit/page-data.ts` con 26 tests, los primeros que miran esa
+  lógica). **No queda nada abierto en Fase R.** R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
-- **Fase Q 🟡 en curso** — **Q1 hecho** (log §89: `createProjectCore` y 18
+- **Fase Q ✅ cerrada (2026-08-15)** — **Q1 hecho** (log §89: `createProjectCore` y 18
   tests para el alta de un dominio, que no tenía ninguno), **Q3 hecho** (log
   §90: 28 tests del cableado de las cuatro rutas que sostienen el escaneo
   recurrente), **Q2 hecho** (log §93: 19 tests de los correos transaccionales —
@@ -39,11 +41,11 @@ una con su Human Gate.
   estructural que cubre el uso de rol de servicio que nadie ha escrito
   todavía), el self-check del
   piloto vuelve a estar verde y su evidencia se sube de verdad (log §49), y
-  **Q5b está hecho** (log §55): el
+  **Q5 cerrada** (log §97) y **Q5b hecho** (log §55): el
   arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
   `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
-  nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
-  pendientes.
+  nombrar las capturas que abrió. **Q1–Q5 y Q5b están todas hechas: no queda
+  nada abierto en Fase Q.**
 - **Fase P ⛔ P1 descartado (2026-08-15, fundador; log §88)** — no tendrá la
   aprobación de excepción de escritura que necesitaba. **Consecuencia asumida:
   el riesgo #3 del diagnóstico —el flujo de alta sin ningún test de principio a
@@ -214,7 +216,7 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   módulo «neutral» sin romper ninguna dependencia. Resultado: de 26 ficheros
   externos quedan 5, todos dependencias legítimas de dominio, y **`lib/llm/**`
   ya no importa nada de `lib/scan`**.
-- **R7 · Páginas** (2 PRs): extraer los ~24 componentes inline de
+- **R7 · Páginas** ✅ **cerrada (2026-08-16)** (2 PRs): extraer los ~24 componentes inline de
   `web-audit/page.tsx` a `web-audit/_components/` — **hecho** (log §83): 14
   componentes en 6 módulos, la página de 1.933 a 1.137 líneas. Aviso para el
   resto de R7: **aquí los tests no demuestran nada** (esa pantalla no tiene
@@ -243,11 +245,30 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   ventana en la que todavía no se ha pegado el SQL. Además su justificación
   estaba del revés: en las columnas JSONB donde se concentran los
   `as unknown as`, `gen types` emite `Json` y empeora lo que hay.
-- **R8 · Limpieza de muertos** (1 PR pequeño): **`lib/supabase/client.ts` y
-  `lib/types.ts` borrados** (log §84) — cero importadores, comprobado por ruta
-  de import y no por nombre. Quedan
-  `lib/web-audit/action-plan.ts` (huérfano shipped: decidir re-conectar o
-  retirar con nota en el ROADMAP), `updateProfileName` huérfano (log §38).
+
+  **R7-b cerrada (2026-08-16, log §106): la orquestación, no el JSX.** Medido
+  antes de cortar, el plan estaba mal: de las 1.156 líneas restantes **~330 son
+  orquestación y ~740 son JSX**, así que partir por tamaño habría movido
+  maquetado a cambio de nada verificable. El corte real fue sacar las consultas
+  y los valores derivados a `lib/web-audit/page-data.ts` con **26 tests** — los
+  primeros que miran esa lógica — y dejar la pantalla en `return (…)`. El punto
+  delicado era el `after(() => triggerWebAuditRun())` de la línea 268: el loader
+  **devuelve** `shouldDispatchAudit` y la pantalla actúa, que es lo que permite
+  fijar por test que un job en `retrying` con el backoff corriendo no dispara
+  llamadas de Gemini. Prueba de que fue refactor: multiconjunto de líneas del
+  `return` idéntico (743 = 743) salvo un renombrado, y ni un test existente
+  tocado.
+- **R8 · Limpieza de muertos** ✅ **cerrada (2026-08-15, log §102)**:
+  **`lib/supabase/client.ts` y `lib/types.ts` borrados** (log §84) — cero
+  importadores, comprobado por ruta de import y no por nombre. **R8-a:
+  `updateProfileName` borrado** — lo dejó sin llamadores CONSOLE-REDESIGN-1
+  (log §38) y ningún test lo cubría. **R8-b: `lib/web-audit/action-plan.ts` y
+  sus 17 tests borrados**, decisión del fundador (2026-08-15) sobre las dos
+  salidas que planteaba este punto: se retira, no se re-conecta. No era un
+  huérfano por descuido —lo sacó de la pantalla el PR #289 el 2026-08-04— sino
+  un módulo que sobrevivió porque **la spec seguía diciendo «✅ Implementada»**;
+  el ROADMAP queda corregido y la fase A que dependía de él vuelve a figurar
+  como hueco abierto, no como entregada.
 
 *Explícitamente fuera de la Fase R:* consolidar los 3 workflows
 `ux-pilot*.yml` (672 líneas casi duplicadas) — deseable, pero tocar el
@@ -299,7 +320,8 @@ forma medible.*
   a propósito (diez líneas que devuelven una constante). **Sigue sin cubrir**
   que la comprobación sea *correcta* en cada sitio: la guarda ve que hay
   identidad, no que se aplique al dato que se toca.
-- **Q5 · Arreglos del arnés del piloto** (baratos, de alto retorno):
+- **Q5 · Arreglos del arnés del piloto** ✅ **hecho (2026-08-15, log §97)**
+  (baratos, de alto retorno):
   `ContentExpectation` en `second-project.spec.ts` (hoy pasa sobre proyectos
   vacíos); el input `pr_number` de `ux-pilot-write.yml` tipado como string
   (bug de coerción 289→"289.0"); **la pérdida intermitente de sesión en la
@@ -325,11 +347,19 @@ forma medible.*
   `synchronize`. Intermitente es peor que roto: deja creer que la puerta está
   puesta cuando la mitad de las veces no lo está.
 
-  **Estado (2026-08-10): el caso sano vuelve a pasar y la evidencia se sube**
-  (log §49). Quedan de Q5, sin empezar: `ContentExpectation` en
-  `second-project.spec.ts`, el `pr_number` del workflow de escritura, la
-  pérdida intermitente de sesión, y la conversación de devolverlo a puerta
-  de PR.
+  **Estado (2026-08-15): Q5 cerrada** (log §97). `ContentExpectation` en
+  `second-project.spec.ts` —que hasta hoy podía pasar en verde sobre proyectos
+  vacíos—; la pérdida intermitente de sesión **instrumentada, no parcheada**
+  (el fallo dice ahora qué cookies había, lo que separa «el `storageState` no se
+  aplicó» de «la sesión caducó a mitad»); y la ausencia de CI hecha visible en
+  el comentario del piloto. El `pr_number` **ya estaba tipado como string** —
+  sexto punto del plan que al medirlo resulta estar hecho. El self-check y la
+  subida de su evidencia se arreglaron antes, en log §49.
+
+  **Lo que sigue abierto y NO es código:** la puerta de verdad contra la
+  intermitencia de `ci.yml` es una *required status check* en la protección de
+  rama. Es un ajuste del repositorio y es decisión del fundador; el aviso del
+  piloto sólo hace que la ausencia se vea.
 
 - **Q5b · El piloto aprende a contar y a leer un color** ✅ **hecho
   (2026-08-11, log §55).** Fase propia, abierta porque el fundador encontró a

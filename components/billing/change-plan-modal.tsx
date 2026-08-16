@@ -417,10 +417,10 @@ export function ChangePlanModal({
                 <div className="cp-diff">
                   <div className="cp-diff-h">
                     <Icon name="alertCircle" size={14} />
-                    Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para archivar (tienes{" "}
+                    Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para retirar (tienes{" "}
                     {activeProjects.length}, {target.name} permite {target.caps.projects})
                   </div>
-                  <ul className="cp-diff-list" role="group" aria-label="Dominios a archivar">
+                  <ul className="cp-diff-list" role="group" aria-label="Dominios a retirar">
                     {activeProjects.map((project) => {
                       const checked = archiveIds.has(project.id);
                       const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
@@ -453,8 +453,9 @@ export function ChangePlanModal({
                   <p className="cp-pror-note" style={{ marginTop: 10 }}>
                     <Icon name="info" size={14} />
                     <span>
-                      Archivar es reversible: podrás restaurarlos cuando quieras desde "Dominios", sin perder su
-                      configuración ni sus escaneos.
+                      Los dominios que elijas dejan de monitorizarse y salen de tu espacio de trabajo. Para
+                      recuperar uno, vuelve a añadirlo desde &laquo;Nuevo dominio&raquo;: se reactiva con sus
+                      prompts, sus competidores y sus escaneos anteriores.
                     </span>
                   </p>
                 </div>
@@ -491,16 +492,16 @@ export function ChangePlanModal({
                 <Icon name="info" size={14} />
                 <span>
                   Tienes <b>{activeProjects.length}</b> dominios activos y tu plan <b>{current.name}</b> permite{" "}
-                  <b>{current.caps.projects}</b>. Elige {requiredArchiveCount} para archivar — el resto sigue
+                  <b>{current.caps.projects}</b>. Elige {requiredArchiveCount} para retirar — el resto sigue
                   monitorizándose sin cambios.
                 </span>
               </div>
               <div className="cp-diff">
                 <div className="cp-diff-h">
                   <Icon name="alertCircle" size={14} />
-                  Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para archivar
+                  Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para retirar
                 </div>
-                <ul className="cp-diff-list" role="group" aria-label="Dominios a archivar">
+                <ul className="cp-diff-list" role="group" aria-label="Dominios a retirar">
                   {activeProjects.map((project) => {
                     const checked = archiveIds.has(project.id);
                     const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
@@ -533,8 +534,9 @@ export function ChangePlanModal({
                 <p className="cp-pror-note" style={{ marginTop: 10 }}>
                   <Icon name="info" size={14} />
                   <span>
-                    Archivar es reversible: podrás restaurarlos cuando quieras desde "Dominios", sin perder su
-                    configuración ni sus escaneos.
+                    Los dominios que elijas dejan de monitorizarse y salen de tu espacio de trabajo. Para
+                    recuperar uno, vuelve a añadirlo desde &laquo;Nuevo dominio&raquo;: se reactiva con sus
+                    prompts, sus competidores y sus escaneos anteriores.
                   </span>
                 </p>
               </div>
@@ -553,7 +555,7 @@ export function ChangePlanModal({
                 disabled={isPending || !archiveSelectionComplete}
                 onClick={handleConfirmDowngrade}
               >
-                {isPending ? "Guardando…" : "Confirmar archivado"}
+                {isPending ? "Guardando…" : "Confirmar retirada"}
               </Button>
             </div>
           </>

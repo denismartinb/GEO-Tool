@@ -10,6 +10,7 @@ import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
 
 type NavItem = { anchor: string; label: string } | { href: string; label: string };
 
+
 /**
  * The console sidebar's account chip, reused verbatim on the public header.
  * Links to the console, which is what a returning logged-in visitor actually
@@ -71,12 +72,33 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * `hero` mirrors the home hero repaint (BRAND-5b): transparent nav bar and
- * a two-line burger glyph. Every other public page keeps its own
- * `.lp-hero`/`.lp-nav-wrap` background untouched (that scoping is
- * deliberate — see app/globals.css around `.lp-nav--hero`). The drawer
- * itself always slides from the right (founder, 2026-08-12: "el menú tiene
- * que salir siempre desde la derecha") — that part isn't hero-only.
+ * `hero` mirrors the home hero repaint (BRAND-5b). Hasta HEADER-FLAT-1
+ * también decidía el fondo de la barra, y cada superficie no-portada
+ * conservaba el suyo; eso ya no es así — ver el párrafo de HEADER-FLAT-1
+ * abajo, que es lo que manda hoy sobre el fondo.
+ *
+ * header-consistency-public-private, 2026-08-15 (founder-approved on the
+ * real preview, in two steps: first the burger-left/logo-centered side, then
+ * the full shared-chassis pass below): the drawer opens from the left
+ * (MarketingMobileNav's default — `fromRight` is no longer passed) and the
+ * mobile burger sits at the left with the logo centered, matching
+ * WorkspaceTopbar's anatomy (`.hdr-burger` left / `.hdr-brand-mobile`
+ * centered). This SUPERSEDES the 2026-08-12 "el menú siempre sale desde la
+ * derecha" decision (GENSCORE-HEADER-1, design-decisions-log §63) — closed
+ * out in §101, same PR. `.lp-mobnav--right` stays in globals.css unused,
+ * same as it was before. The drawer's own brand row (`brand` prop below) is
+ * new in this same pass — see MarketingMobileNav and the `.lp-mobnav-brand`
+ * rule in globals.css.
+ *
+ * HEADER-FLAT-1 (2026-08-15): este componente pone ahora su propio
+ * `.lp-nav-wrap`. Antes lo envolvían a mano las seis superficies y la portada
+ * no lo hacía en absoluto — de ahí la diferencia que el fundador señaló:
+ * portada plana, resto con barra blanca. Ahora las siete son planas, y el
+ * glifo de dos rayas (`twoLine`, que sólo usaba la portada) es el de todas.
+ *
+ * `hero` ya no controla el fondo — lo controla el wrap, igual para todas — y
+ * queda sólo para lo que siempre fue suyo: el relleno y la tipografía del
+ * hero de portada (`.lp-nav--hero`, BRAND-5b).
  */
 export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; activeHref?: string }) {
   const pathname = usePathname();
@@ -94,7 +116,8 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   );
 
   return (
-    <nav className={hero ? "lp-nav lp-nav--hero" : "lp-nav"}>
+    <div className="lp-nav-wrap">
+      <nav className={hero ? "lp-nav lp-nav--hero" : "lp-nav"}>
       <Link href="/" className="lp-logo">
         <BrandLogo size={22} />
       </Link>
@@ -136,8 +159,12 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
       </div>
       <MarketingMobileNav
         links={links}
-        twoLine={hero}
-        fromRight
+        twoLine
+        brand={
+          <Link href="/" className="lp-mobnav-brandmark">
+            <BrandLogo size={22} />
+          </Link>
+        }
         ctas={
           user ? (
             <AccountChip user={user} />
@@ -154,5 +181,6 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
         }
       />
     </nav>
+    </div>
   );
 }

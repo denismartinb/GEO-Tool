@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
@@ -9,6 +10,7 @@ import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recomme
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 
 /**
@@ -41,6 +43,19 @@ function parseCoverageMap(raw: string | null): { scanId: string; topics: DomainC
 // so a slow call gets killed by the platform before that timeout can ever
 // surface a clean, user-visible error.
 export const maxDuration = 60;
+
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Recomendaciones", async () => (await requireActiveProject(projectId)).domain);
+}
 
 export default async function RecommendationsPage({
   params,

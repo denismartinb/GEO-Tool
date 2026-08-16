@@ -11,7 +11,7 @@
  * there is no score (`score: null`) — never a fake 0 or placeholder.
  *
  * Pure function over plain data (no I/O, no "server-only"), importable from
- * Vitest — same rationale as opportunity-matrix.ts / action-plan.ts.
+ * Vitest — same rationale as opportunity-matrix.ts.
  */
 
 export type GlobalScoreComponentKey = "content" | "surfacing" | "technical";

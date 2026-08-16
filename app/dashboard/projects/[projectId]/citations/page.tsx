@@ -1,8 +1,10 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
@@ -21,6 +23,19 @@ type CitationScoreDetails = {
   citation_score_any_domain?: number;
   citation_by_provider?: Record<string, { total: number; citation_found_count: number }>;
 };
+
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Páginas citadas", async () => (await requireActiveProject(projectId)).domain);
+}
 
 export default async function CitationsPage({
   params

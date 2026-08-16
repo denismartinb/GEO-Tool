@@ -29,6 +29,10 @@ const SITE_URL = "https://www.genscore.es";
 
 const AUTHED_PAGES = new Map([
   ["/dashboard", "Panel"],
+  // DOMAINS-ARCHIVE-RETIRE-1 (log §104): retirada en producción. El fixture la
+  // sirve como redirección para que el self-check ejercite lo mismo que el
+  // piloto se encuentra — un fixture que sirviera la pantalla vieja dejaría de
+  // probar la ruta que de verdad existe.
   ["/dashboard/projects", "Proyectos"],
   [`/dashboard/projects/${PROJECT_ID}`, "Visión general"],
   [`/dashboard/projects/${PROJECT_ID}/prompts`, "Prompts"],
@@ -475,13 +479,6 @@ function loginPage() {
   );
 }
 
-function projectsPage() {
-  return html(
-    "Proyectos",
-    `<a href="/dashboard/projects/${PROJECT_ID}">Proyecto de prueba</a>`
-  );
-}
-
 /**
  * Minimal stand-ins for the "this screen has real data" anchors each read-only
  * journey declares via `ContentExpectation` (tests/pilot/support/journey.ts).
@@ -598,7 +595,6 @@ function screenBody(path) {
 function isAuthenticated(request) {
   return (request.headers.cookie ?? "").includes(`${SESSION_COOKIE}=1`);
 }
-
 
 // ---------------------------------------------------------------------------
 // Páginas que el caso SANO del self-check necesita (log §44). Sin ellas el
@@ -1027,6 +1023,16 @@ const server = createServer((request, response) => {
       response.end();
       return;
     }
+    // DOMAINS-ARCHIVE-RETIRE-1 (log §104): la pantalla se retiró y la ruta
+    // sobrevive como redirección. El fixture la reproduce para que el
+    // self-check ejercite la misma forma que el piloto encuentra en producción
+    // — y porque es lo que hizo saltar el journey de segundo proyecto: esperar
+    // `domcontentloaded` sobre una redirección deja el contexto muriéndose.
+    if (path === "/dashboard/projects") {
+      response.writeHead(307, { Location: "/dashboard/domains" });
+      response.end();
+      return;
+    }
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     // El popup de bienvenida sólo en /dashboard, que es donde aterriza un
     // primer login de verdad y donde el journey lo busca — entrar por la
@@ -1039,11 +1045,7 @@ const server = createServer((request, response) => {
       path === "/dashboard/notifications"
         ? notificationsPage()
         : screenBody(path) + welcome;
-    response.end(
-      path === "/dashboard/projects"
-        ? projectsPage()
-        : html(AUTHED_PAGES.get(path) ?? "", body)
-    );
+    response.end(html(AUTHED_PAGES.get(path) ?? "", body));
     return;
   }
 

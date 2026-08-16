@@ -54,11 +54,33 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   `service.auth.admin.listUsers()`). Never construct `createServiceClient()`
   directly inside an `/admin` page or action — go through the gate so a
   future edit can't accidentally skip it.
-- **Fase 1 is read-only. Any write beyond MFA enrollment itself (changing a
-  plan, editing a project, touching billing) needs its own Task Intake** —
-  CLAUDE.md's Task Intake Protocol applies in full to `/admin`, same as any
-  other auth/server-action surface. Do not add a mutating action here as a
-  drive-by.
+- **The only writes `/admin` may make are the ones with an approved Task
+  Intake.** As of ADMIN-CONSOLE-2b that is: MFA enrollment, and the three
+  automation toggles (`recurring_scans_enabled`, the two audit halves) via
+  `lib/admin/automation-actions.ts`. Changing a plan, editing a project's
+  other fields, touching billing, or anything else still needs its own Task
+  Intake — CLAUDE.md's protocol applies in full here, same as any other
+  auth/server-action surface. Do not add a mutating action as a drive-by, and
+  do not extend an approved write's scope past what its intake covered
+  (e.g. adding a new column to an existing toggle action) without a fresh one.
+- **Every write from `/admin` needs an email to `OPS_ALERT_EMAIL`.** There is
+  no audit-log table for this (no migration approved), so the email genuinely
+  IS the record of the action — not a nice-to-have alert alongside one. A
+  write action with no alert call is missing the only accountability this
+  surface has (`docs/brand/design-decisions-log.md` §98). It records who, which
+  account, which project, and what changed — **not why**: the required-reason
+  field was removed in ADMIN-CONSOLE-UX-1, an explicit founder decision made
+  aware of the trade-off (§99). Do not reintroduce a reason requirement as a
+  drive-by "consistency" fix; the founder chose to drop it once already.
+- **An operator-scoped write may never have a precondition weaker than the
+  owner-scoped action it mirrors.** Import the shared check from
+  `lib/projects/automation-toggles.ts` (or wherever the owner action's
+  precondition lives) — never re-derive it. And check whether the toggle
+  being enabled actually has an effect for that account's plan before
+  writing: `/admin` already shipped one class of this bug twice
+  (recurring scans on Free, §71; coverage audit below Pro, §98) — the pattern
+  is checked once per toggle now, but a new toggle added later needs the same
+  question asked of it explicitly, not assumed answered.
 - **`listFactors().data.totp` holds ONLY verified factors — a half-finished
   enrolment lives in `data.all`.** `auth-js` filters on
   `status === 'verified'`. Looking for a pending factor in `.totp` finds
@@ -146,3 +168,28 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   (`AUTH_USERS_FETCH_CAP`), and hitting it must set `authUsersTruncated` and
   render a visible note — not silently show `lastSignInAt` as missing with no
   explanation.
+- **A read a Client Component calls directly still goes through
+  `requireOperator()` inside the action, same as a write.** `/admin/users`
+  has a Client Component (`users-table.tsx`, ADMIN-CONSOLE-UX-1) that calls
+  `fetchOperatorUserDetail` (`lib/admin/user-detail-action.ts`) via
+  `useTransition` instead of navigating — this exists specifically so
+  selecting an account doesn't re-run the whole page server-side just to
+  fetch one detail. It is still a `"use server"` action, and it still calls
+  `requireOperator("/admin/users")` as its first line, for the same reason
+  every other action here does: a server action is a callable endpoint
+  independent of whatever called it, page or client component alike
+  (`docs/brand/design-decisions-log.md` §99).
+- **Presentation helpers shared between the server page and a Client
+  Component must not import anything `server-only`.** `app/admin/users/
+  shared.tsx` holds `UserDetailPanel` and friends precisely because they
+  have to render from both `page.tsx` (server) and `users-table.tsx`
+  (client) — importing `formatUsd`/`provenanceLabel` from
+  `lib/admin/cost-model.ts` (which starts with `import "server-only"`
+  because it also computes cost from internal rates) broke the client build
+  the moment `shared.tsx` was imported by a `"use client"` file. Pure
+  formatting with nothing sensitive in it lives in `lib/admin/
+  cost-format.ts` instead, with no `server-only` guard; the actual rate
+  constants and `estimateProjectMonthlyCost` stay behind the guard in
+  `cost-model.ts` (§99). If a future admin screen needs the same split,
+  this is the pattern — split the presentation-safe half out, don't remove
+  the guard from the file that has real internal numbers in it.

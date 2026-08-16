@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { getNotificationsPageData } from "@/lib/project-workspace";
+import { consoleMetadata } from "@/lib/seo/console-metadata";
 import { NotificationsPageClient } from "@/components/notifications-page-client";
+
+// ROOT-METADATA-1: pestaña propia. Ver `lib/seo/console-metadata.ts`.
+export const metadata: Metadata = consoleMetadata("Notificaciones");
 
 export default async function NotificationsPage() {
   const { projects, notifications } = await getNotificationsPageData();
