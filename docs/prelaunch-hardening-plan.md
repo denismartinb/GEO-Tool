@@ -27,7 +27,7 @@ una con su Human Gate.
   borrados) y **46 tests de render para Auditoría web** (log §87), los primeros
   del repositorio. **R3 queda descartada como está escrita** tras su Task Intake
   del 2026-08-14 (ver R3 abajo). **R8 cerrada** (log §102: los dos huérfanos
-  borrados) y **R7-b cerrada** (log §105: la orquestación de Auditoría web sale
+  borrados) y **R7-b cerrada** (log §106: la orquestación de Auditoría web sale
   a `lib/web-audit/page-data.ts` con 26 tests, los primeros que miran esa
   lógica). **No queda nada abierto en Fase R.** R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
@@ -246,7 +246,7 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   estaba del revés: en las columnas JSONB donde se concentran los
   `as unknown as`, `gen types` emite `Json` y empeora lo que hay.
 
-  **R7-b cerrada (2026-08-16, log §105): la orquestación, no el JSX.** Medido
+  **R7-b cerrada (2026-08-16, log §106): la orquestación, no el JSX.** Medido
   antes de cortar, el plan estaba mal: de las 1.156 líneas restantes **~330 son
   orquestación y ~740 son JSX**, así que partir por tamaño habría movido
   maquetado a cambio de nada verificable. El corte real fue sacar las consultas

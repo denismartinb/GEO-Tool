@@ -111,7 +111,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   } = await loadWebAuditPageData({ supabase, userId: user.id, project });
 
   // El loader DECIDE si hay una auditoría vencida a la que despertar; actuar es
-  // de esta pantalla (PRELAUNCH-HARDENING-1 Fase R7-b, log §105). Fire-and-forget
+  // de esta pantalla (PRELAUNCH-HARDENING-1 Fase R7-b, log §106). Fire-and-forget
   // con `after()`, así que la respuesta de la página nunca espera por esto.
   if (shouldDispatchAudit) {
     after(() => triggerWebAuditRun());

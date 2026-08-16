@@ -327,7 +327,7 @@ sitio. Una fase retirada deja el ROADMAP diciendo qué dejó de funcionar.
 
 ### La orquestación de datos vive en `page-data.ts`, no en `page.tsx`
 
-Desde R7-b (log §105) la pantalla es `return (…)` y nada más: las consultas y los
+Desde R7-b (log §106) la pantalla es `return (…)` y nada más: las consultas y los
 valores derivados están en `lib/web-audit/page-data.ts`, que devuelve un
 view-model tipado. Dato nuevo de esta pantalla → se calcula ahí, con su test.
 
