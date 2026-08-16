@@ -311,7 +311,7 @@ vídeo y las reglas de lo que no se puede decir. Atado al código por
 `tests/off-site-kit.test.ts`: precios, topes, motores y la definición canónica
 se comprueban contra `plans-data.ts` y `canonical-definition.ts`, porque es el
 único documento del repo pensado para copiarse **fuera**, donde nadie va a
-notar que envejeció. Detalle: log §106.
+notar que envejeció. Detalle: log §107.
 
 - [x] **Material listo** — kit completo, con guardián.
 - [ ] **Reddit**: presencia útil (no spam) en r/SEO_espanol e hilos de

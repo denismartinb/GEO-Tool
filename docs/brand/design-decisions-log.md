@@ -9720,6 +9720,9 @@ leyera sin ese aviso la implementaría otra vez.
 
 ---
 
+
+---
+
 ---
 
 
@@ -9961,7 +9964,94 @@ arreglarlo, y borrar una pieza del andamiaje agéntico documentado es una
 decisión de producto, no una limpieza. Si se borra, se van con él la fila del
 mapa de zonas y las menciones de `docs/agentic-delivery-pipeline.md`.
 
-## 106. El único documento pensado para copiarse fuera (SEO-POS-1 Fase A, 2026-08-16)
+---
+
+## 106. La orquestación de Auditoría web, fuera de su pantalla y por fin verificable (PRELAUNCH-HARDENING-1 Fase R7-b, 2026-08-16)
+
+**Qué se decidió.** Las ~330 líneas que deciden qué enseña Auditoría web salen
+de `page.tsx` a `lib/web-audit/page-data.ts`, con **26 tests** que son lo
+primero que ha mirado nunca esa lógica. La pantalla se queda en 860 líneas y
+`return (…)`.
+
+### El diagnóstico del plan estaba mal, y medirlo cambió el corte
+
+El plan decía «partir `WebAuditPage`, ~1.070 líneas de orquestación de datos».
+Medido: de sus 1.156 líneas, **~330 son orquestación y ~740 son JSX**. Partir
+por tamaño habría movido 740 líneas de maquetado a cambio de nada verificable,
+con el riesgo de mudanza que R7 ya cobró una vez (§83, el bloque duplicado que
+el compilador y el lint dejaron pasar).
+
+**El tamaño nunca fue el problema; la testabilidad sí.** Ocho consultas,
+cuarenta y dos valores derivados y un efecto secundario, soldados al JSX que los
+pinta: la única forma de observar cualquiera de esas decisiones era abrir un
+navegador. Mismo diagnóstico que Q1 hizo con `createProject` (§89) y misma cura.
+
+### El punto delicado: un efecto secundario dentro de la lógica
+
+En la línea 268 vivía `after(() => triggerWebAuditRun())` — abrir la pantalla
+despierta al worker si hay una auditoría vencida (ADR 0038). Llevárselo al
+módulo lo habría dejado tan poco testeable como estaba; dejarlo en la pantalla
+sin más separaba la decisión de la acción sin criterio.
+
+**El loader DEVUELVE `shouldDispatchAudit` y la pantalla actúa.** Es lo que
+`.claude/rules/server-actions.md` ya exigía para las actions, por el mismo
+motivo, y compra una garantía concreta que antes no existía: **un job en
+`retrying` con el backoff aún corriendo no dispara nada.** Ese backoff llega a
+10 horas y cada despacho de más son llamadas reales de Gemini.
+
+### Lo que las mutaciones enseñaron
+
+Se probaron cuatro cambios deliberados para ver si los tests mordían. Tres
+murieron a la primera. **La cuarta —`heroScore` siempre el compuesto—
+sobrevivió**, y el motivo no era un test flojo: en una cuenta free recién creada
+el compuesto ES la nota técnica (media de un solo valor), exactamente lo que
+dice el comentario de esa línea. Las dos ramas sólo se distinguen en **una
+cuenta que bajó de plan**, con cobertura persistida de cuando era Pro. Ese caso
+se añadió y la mutación murió.
+
+Sin la pasada de mutación, esa aserción habría quedado como decorado: verde,
+extensa, y sin discriminar nada.
+
+### Dos cosas que se aprendieron equivocándose
+
+- **`technicalScoreDelta` no sale de `readiness_score`.** Se escribió el test
+  variando esa columna, dio 0, y el código tenía razón: el delta compara
+  `actualReadinessScore`, recalculado desde los `pageScore` con los criterios de
+  hoy. La columna guarda lo que valía con los de entonces, y compararlas
+  resucitaría la regresión fantasma que WEB-AUDIT-R3 y
+  `TECHNICAL_CRITERIA_EXPANDED_AT` existen para explicar. Queda fijado por test.
+- **El barrido de variables consumidas por el JSX se dejó una.** El `grep` no
+  cogía las desestructuradas, así que `latestRunRow` no apareció en la lista de
+  22 y sí se usaba. Lo cazó el typecheck. Se expone como `hasCompletedScan`
+  —booleano, no la fila— porque la pantalla sólo preguntaba `!latestRunRow`, y
+  devolver la fila entera invitaría a leer campos que el módulo ya usó para
+  derivar `auditedScanDate`: dos fuentes para el mismo hecho.
+
+### La comprobación que de verdad prueba que esto fue un refactor
+
+Comparación de multiconjunto de líneas del `return`: **743 líneas antes, 743
+después, y una sola diferencia** — el renombrado de `latestRunRow` a
+`hasCompletedScan`. Ni un test existente cambió. La única normalización es un
+`?? null` en `auditedScanDate`, inobservable: sin escaneo la expresión original
+devolvía `undefined` bajo un tipo que prometía `string | null`, y su único
+consumidor lo usa como condición de verdad.
+
+**Lo que esto NO cubre, dicho claro:** que el JSX pinte estos valores donde
+debe. Eso es del `ux-pilot` y de los tests de render de `_components/` (§87).
+Los tres juntos son la cobertura de esta pantalla; ninguno solo lo es.
+
+**Con esto la Fase R queda cerrada entera.**
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase R (R7);
+`.claude/rules/web-audit.md`; §83 y §87 (R7, componentes y tests de render);
+§89 (el mismo corte en `createProject`); ADR 0038 (el despacho desde el render);
+ADR 0033/0035 (la puerta y la cifra principal).
+
+---
+
+---
+
+## 107. El único documento pensado para copiarse fuera (SEO-POS-1 Fase A, 2026-08-16)
 
 Fase A es la capa que el plan siempre asignó al fundador: Reddit, YouTube,
 directorios, nota de prensa. Los agentes preparan el material; publicar y
@@ -10021,6 +10111,9 @@ no existe.
 
 **Lo que esta fase NO cierra:** nada se ha publicado. El kit es material; las
 cinco acciones siguen abiertas y son del fundador.
+
+---
+
 
 ## Cómo mantener este documento
 
