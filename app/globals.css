@@ -5146,7 +5146,21 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   /* --- Sidebar as overlay drawer ---
      Width and transition share --drawer-w / --drawer-anim with the public
      header's .lp-mobnav (header-consistency-public-private, 2026-08-15) —
-     was 290px / 0.26s here vs 280px / 0.24s there. */
+     was 290px / 0.26s here vs 280px / 0.24s there.
+
+     HEADER-FLAT-1 (2026-08-15): la sombra va en `.shell.mobnav-open .sb`, no
+     aquí. Estando el cajón cerrado (`translateX(-100%)`, fuera de pantalla)
+     su sombra seguía proyectándose 20px hacia dentro con 60px de difuminado
+     y, al estar en `z-index: 320` contra el 30 de la cabecera, pintaba por
+     encima de todo el borde izquierdo. Con la cabecera opaca pasaba
+     inadvertida; al volverse plana el fundador la vio ("la parte izquierda
+     como un pequeño degradado más oscuro"). Medido muestreando píxeles a lo
+     ancho de la cabecera: el borde izquierdo era rgb(218,220,223) contra el
+     rgb(246,247,249) del lienzo, una caída de 28 niveles que se disolvía
+     hacia los 120px. La sombra existe para despegar el cajón de la página
+     CUANDO ESTÁ ABIERTO; con el cajón fuera de pantalla es un residuo, no una
+     decisión de diseño. Con este cambio el borde mide 246,247,249 de un
+     extremo al otro. */
   .sb {
     position: fixed;
     top: 0;
@@ -5157,13 +5171,13 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     z-index: 320;
     transform: translateX(-100%);
     transition: transform var(--drawer-anim);
-    box-shadow: 20px 0 60px rgba(15, 23, 41, 0.20);
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
 
   .shell.mobnav-open .sb {
     transform: none;
+    box-shadow: 20px 0 60px rgba(15, 23, 41, 0.20);
   }
 
   .sb-collapse {

@@ -9887,6 +9887,21 @@ supuestos:**
 - La 404 (`.nf-page`) mantiene su cabecera opaca: sobre su cuerpo oscuro ni el
   estado plano ni el de cristal sirven.
 
+**Addendum (fundador, mismo día): fuera la sombra del cajón cerrado.** Al ver
+el preview señaló *«la parte izquierda como un pequeño degradado más
+oscuro»* y —esto es lo valioso— no pidió quitarlo: pidió entender por qué
+estaba y si aportaba. Era la sombra del cajón lateral: cerrado vive fuera de
+pantalla (`translateX(-100%)`) pero conservaba `box-shadow: 20px 0 60px` y,
+con `z-index: 320` contra el 30 de la cabecera, la proyectaba sobre todo el
+borde izquierdo. Medido muestreando píxeles a lo ancho de la cabecera: borde
+en `rgb(218,220,223)` contra `rgb(246,247,249)` de lienzo, 28 niveles de
+caída. **No lo trajo esta fase**: con la cabecera blanca la caída era de 29
+niveles, idéntica; lo único que cambió es que el conjunto es ahora 9 niveles
+más oscuro y deja de disimularla. La sombra existe para despegar el cajón
+*cuando está abierto*, así que pasa a `.shell.mobnav-open .sb`. Verificado en
+las dos direcciones: cerrado, el borde mide `246,247,249` de extremo a
+extremo; abierto, la sombra reaparece en `rgb(222,223,225)` junto al panel.
+
 **Diseño aprobado:** `docs/design-reference/header-flat-1/`. El fundador lo
 aprobó sobre ese artefacto antes de escribir código, así que se commitea con
 la fase — un enlace de chat no lo puede abrir ni CI ni una sesión futura, y la
