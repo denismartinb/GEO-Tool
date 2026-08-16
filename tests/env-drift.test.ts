@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { inspectEnv } from "@/lib/env-schema";
 import { DECLARED_ENV_VARS, ENV_CONSEQUENCE } from "@/lib/env-schema";
 
 /**
@@ -120,5 +121,40 @@ describe("el esquema de entorno sigue al código", () => {
       "Falta su línea en ENV_CONSEQUENCE — la frase que se imprime cuando esa " +
         "variable falla, y que evita tener que abrir el contrato para entender el error."
     ).toEqual([]);
+  });
+});
+
+/**
+ * FREE-CHECKER-1. El comprobador es la única funcionalidad del producto que
+ * degrada **sin síntoma**: sin sal la página carga, capta el dominio y lleva
+ * al registro, así que a la vista funciona — y no comprueba nada.
+ *
+ * Un `console.error` en un log efímero no es un diagnóstico
+ * (`.claude/rules/scan.md`). Lo que hace falta es que se vea antes de
+ * desplegar, en el informe que alguien mira.
+ */
+describe("el comprobador gratuito avisa cuando no va a comprobar", () => {
+  const base = {
+    NEXT_PUBLIC_SUPABASE_URL: "https://x.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon"
+  };
+
+  it("sin sal, el informe lo dice — y explica que la página parecerá funcionar", () => {
+    const { problems } = inspectEnv(base);
+    const salt = problems.find((p) => p.variable === "PUBLIC_CHECK_IP_SALT");
+    expect(salt, "sin sal no hubo ningún aviso: la degradación vuelve a ser invisible").toBeDefined();
+    expect(salt?.message).toMatch(/parece funcionar/i);
+  });
+
+  it("es AVISO, no error: sin comprobador el resto del producto funciona entero", () => {
+    // Si esto pasara a "error", `check:env` fallaría para todo el mundo que no
+    // usa el comprobador — castigar a quien no lo usa no arregla nada.
+    const { problems } = inspectEnv(base);
+    expect(problems.find((p) => p.variable === "PUBLIC_CHECK_IP_SALT")?.severity).toBe("warning");
+  });
+
+  it("con sal, no avisa de nada", () => {
+    const { problems } = inspectEnv({ ...base, PUBLIC_CHECK_IP_SALT: "una-sal-larga" });
+    expect(problems.find((p) => p.variable === "PUBLIC_CHECK_IP_SALT")).toBeUndefined();
   });
 });

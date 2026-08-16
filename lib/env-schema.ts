@@ -260,6 +260,24 @@ export function checkEnvRules(env: Env, raw: RawEnv = {}): EnvProblem[] {
     add("STRIPE_*", "error", `Stripe está configurado a medias: faltan ${missing.join(", ")}. Un checkout que ningún webhook confirma deja al cliente pagando sin plan.`);
   }
 
+  // El comprobador gratuito degrada EN SILENCIO sin sal: la página sigue
+  // cargando y sigue captando el dominio, así que a la vista funciona — y no
+  // comprueba nada. Es el fallo exacto que `.claude/rules/scan.md` prohíbe
+  // dejar invisible ("a failure the operator can fix must reach the
+  // operator"): la única señal en producción sería un `console.error` en un
+  // log efímero, que no es un diagnóstico.
+  //
+  // Aviso y no error a propósito: sin esta variable el resto del producto
+  // funciona entero, así que romper el arranque castigaría a quien no usa el
+  // comprobador. Lo que hace falta no es parar, es que se vea.
+  if (!env.PUBLIC_CHECK_IP_SALT) {
+    add(
+      "PUBLIC_CHECK_IP_SALT",
+      "warning",
+      "El comprobador gratuito no comprobará: sin sal no se puede hashear la IP, así que degrada a captar el dominio y llevar al registro. La página parece funcionar."
+    );
+  }
+
   // Avisos: nada se rompe, pero el operador debería saberlo.
   if (!env.OPS_ALERT_EMAIL) {
     add("OPS_ALERT_EMAIL", "warning", "Sin buzón de operador: los avisos de fallo de LLM no llegan a nadie.");
