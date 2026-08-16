@@ -10,6 +10,7 @@ import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
 
 type NavItem = { anchor: string; label: string } | { href: string; label: string };
 
+
 /**
  * The console sidebar's account chip, reused verbatim on the public header.
  * Links to the console, which is what a returning logged-in visitor actually
@@ -88,6 +89,16 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
  * same as it was before. The drawer's own brand row (`brand` prop below) is
  * new in this same pass — see MarketingMobileNav and the `.lp-mobnav-brand`
  * rule in globals.css.
+ *
+ * HEADER-FLAT-1 (2026-08-15): este componente pone ahora su propio
+ * `.lp-nav-wrap`. Antes lo envolvían a mano las seis superficies y la portada
+ * no lo hacía en absoluto — de ahí la diferencia que el fundador señaló:
+ * portada plana, resto con barra blanca. Ahora las siete son planas, y el
+ * glifo de dos rayas (`twoLine`, que sólo usaba la portada) es el de todas.
+ *
+ * `hero` ya no controla el fondo — lo controla el wrap, igual para todas — y
+ * queda sólo para lo que siempre fue suyo: el relleno y la tipografía del
+ * hero de portada (`.lp-nav--hero`, BRAND-5b).
  */
 export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; activeHref?: string }) {
   const pathname = usePathname();
@@ -105,7 +116,8 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   );
 
   return (
-    <nav className={hero ? "lp-nav lp-nav--hero" : "lp-nav"}>
+    <div className="lp-nav-wrap">
+      <nav className={hero ? "lp-nav lp-nav--hero" : "lp-nav"}>
       <Link href="/" className="lp-logo">
         <BrandLogo size={22} />
       </Link>
@@ -147,7 +159,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
       </div>
       <MarketingMobileNav
         links={links}
-        twoLine={hero}
+        twoLine
         brand={
           <Link href="/" className="lp-mobnav-brandmark">
             <BrandLogo size={22} />
@@ -169,5 +181,6 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
         }
       />
     </nav>
+    </div>
   );
 }

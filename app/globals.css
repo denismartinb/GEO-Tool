@@ -318,15 +318,28 @@ a {
   min-height: 0;
 }
 
+/* HEADER-FLAT-1 (2026-08-15): plana arriba del todo, cristal al desplazar —
+   el tratamiento de la portada pública, traído a la consola. El fondo no
+   existe para tapar contenido (la cabecera no solapa nada: `.dash-content` es
+   quien scrollea y es su hermana) sino para darle un canto al contenido que
+   sube, que sin él se recorta contra un borde invisible. Ver
+   `components/console-header.tsx`. */
 .dash-header {
   position: relative;
   height: var(--header-h);
-  border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid transparent;
+  background: transparent;
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 0 22px;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.dash-header.is-scrolled {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom-color: var(--line-soft);
 }
 
 /* Mobile-only header controls, hidden on desktop */
@@ -3516,22 +3529,26 @@ textarea.add-prompts-text-input {
 }
 
 /* Bell icon button */
+/* HEADER-FLAT-1 (2026-08-15): sin caja. Sobre una cabecera plana, un botón
+   con borde y fondo propio era lo único que seguía pareciendo un control
+   pegado encima. Queda como icono suelto con la misma huella que
+   `.hdr-burger`, para que los dos extremos de la barra pesen igual. */
 .header-bell {
   position: relative;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1.5px solid var(--brand-line);
-  background: var(--brand-surface);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: none;
   color: var(--brand-ink-3);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .header-bell:hover {
-  background: var(--brand-canvas);
+  background: var(--surface-2);
   color: var(--brand-ink-2);
 }
 
@@ -4468,7 +4485,24 @@ a.notif-row:hover {
 .lp { background: #fff; color: var(--ink); }
 .lp-inner { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
 
-.lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.82); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line-soft); }
+/* HEADER-FLAT-1 (2026-08-15): una sola cabecera para toda la zona pública, y
+   plana siempre. Antes cada superficie envolvía a mano `PublicHeader` en este
+   div —seis copias— y la portada no lo hacía en absoluto, que es de donde
+   salía la diferencia que el fundador vio: portada plana, resto con barra
+   blanca. Ahora el envoltorio lo pone el propio `PublicHeader`.
+
+   **No hay estado "al desplazar" a propósito, y esto merece explicación**
+   porque parece un olvido. Se implementó y se retiró tras medirlo: este
+   `sticky` NO funciona hoy — `html { overflow-x: hidden }` (arriba, puesto
+   para contener el desbordamiento de 3px que encontró el piloto en GROWTH-2
+   Fase 2.1) convierte al documento en contenedor de scroll y desactiva el
+   pegado. Medido en local sobre `main` antes de tocar nada: tras desplazar
+   500px, `.lp-nav-wrap` está en `y: -500` a 375 y a 1280 px. Es decir, la
+   cabecera pública se va con la página en las siete superficies, así que un
+   fondo "al desplazar" no se vería jamás. Si algún día se quita ese
+   `overflow-x`, ESTE es el sitio donde añadirlo — y entonces habrá que
+   comprobar antes que el desbordamiento de 3px no vuelve. */
+.lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: transparent; border-bottom: 1px solid transparent; }
 .lp-nav { max-width: 1180px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
 .lp-logo { display: flex; align-items: center; gap: 10px; }
 .lp-nav-links { display: flex; align-items: center; gap: 4px; margin-left: 22px; }
@@ -5177,6 +5211,10 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   }
 
   /* --- Compact header --- */
+  /* HEADER-FLAT-1: sin `background` propio aquí — el blanco sólido que había
+     es justo lo que hacía que la barra se leyera despegada de la página. El
+     estado plano/cristal lo decide `.dash-header` / `.dash-header.is-scrolled`
+     de más arriba, igual en las dos anchuras. */
   .dash-header {
     position: sticky;
     top: 0;
@@ -5184,7 +5222,11 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     height: calc(var(--header-h) + env(safe-area-inset-top));
     padding: env(safe-area-inset-top) 10px 0;
     gap: 6px;
-    background: var(--surface);
+  }
+
+  .header-bell {
+    width: 44px;
+    height: 44px;
   }
 
   .hdr-burger {
@@ -7085,10 +7127,13 @@ select.set-field {
    los ~200px que mide y dejaba de ocupar la pantalla. */
 .nf-viewport { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 
-/* La nav del sitio es translúcida con blur (`.lp-nav-wrap`). Sobre un cuerpo
-   oscuro eso deja ver el oscuro al hacer scroll, así que aquí —y sólo aquí—
-   es opaca. */
-.nf-page .lp-nav-wrap { background: #fff; backdrop-filter: none; }
+/* Desde HEADER-FLAT-1 la nav del sitio nace transparente y sólo se vuelve
+   cristal al desplazar (`.lp-nav-wrap` / `.is-scrolled`). Sobre el cuerpo
+   oscuro de la 404 ninguno de los dos estados vale —el transparente deja ver
+   el oscuro y el cristal también—, así que aquí, y sólo aquí, es opaca desde
+   el primer píxel. Gana por orden de aparición: misma especificidad (0,2,0)
+   que `.lp-nav-wrap.is-scrolled`, declarada después. */
+.nf-page .lp-nav-wrap { background: #fff; backdrop-filter: none; border-bottom-color: var(--line-soft); }
 
 .nf-stage {
   position: relative; flex: 1; min-height: 0; overflow: hidden;
