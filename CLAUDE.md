@@ -409,7 +409,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Correos transaccionales | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase Q2: primeros tests (2026-08-15, log §93)** | log §93 · `lib/email/transactional.ts` |
 | Onboarding (tour) | `onboarding.md` | **ONBOARDING-TOUR-1 Fase A (2026-08-08)** | log §40 · `docs/design-reference/onboarding-tour-1/` |
 | Ajustes de cuenta | — *(sin regla propia todavía)* | **CONSOLE-REDESIGN-1 Fase A (2026-08-06)** | log §38 · `docs/design-reference/console-redesign-1/` |
-| Navegación pública (cabecera) | — *(sin regla propia todavía)* | **HEADER-CONSISTENCY-1 (2026-08-15)** · GENSCORE-HEADER-2 (2026-08-12) · GENSCORE-HEADER-1 (2026-08-11) | log §1, §63, §65, §101 |
+| Navegación pública (cabecera) | — *(sin regla propia todavía)* | **HEADER-FLAT-1 (2026-08-15)** · HEADER-CONSISTENCY-1 (2026-08-15) · GENSCORE-HEADER-2 (2026-08-12) · GENSCORE-HEADER-1 (2026-08-11) | log §1, §63, §65, §101, §102 |
 | Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **PRELAUNCH-HARDENING-1 Fase R5 (2026-08-14, log §78/§79/§80)** · LLM-RESILIENCE-1 Fases A+B (2026-08-09) | log §45, §78–§80 · ADR 0029 |
 | Rendimiento (velocidad de carga) | `styles.md` | **PRELAUNCH-HARDENING-1 Fase V: V4+V5 (2026-08-10)** · V0a/V1/V2/V3/V6/V7/V8 (2026-08-09) | log §54 · `docs/prelaunch-hardening-plan.md` §Fase V |
 | Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase Q5 (2026-08-15, log §97)** · Fase Q5b (2026-08-11) · Fase 0 (2026-08-09) · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42, §49, §55, §65, §97 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` · `docs/agentic-user-pilot.md` |

@@ -6,6 +6,7 @@ import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
+import { ConsoleHeader } from "@/components/console-header";
 import { NotificationBell } from "@/components/notification-bell";
 import { DataMaturityBanner } from "@/components/data-maturity-banner";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         signOutAction={signOut}
       />
       <div className="dash-main">
-        <header className="dash-header">
+        <ConsoleHeader>
           <WorkspaceTopbar
             projects={projects ?? []}
             latestScanStatusByProject={latestScanStatusByProject}
@@ -59,7 +60,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </Button>
             </form>
           </div>
-        </header>
+        </ConsoleHeader>
         <DataMaturityBanner dataMaturityByProject={dataMaturityByProject} />
         <main className="dash-content">{children}</main>
       </div>

@@ -49,7 +49,10 @@ export function WorkspaceTopbar({
         onClick={() => setMobileNavOpen(true)}
         ref={navTriggerRef}
       >
-        <Icon name="menu" size={20} />
+        {/* HEADER-FLAT-1 (2026-08-15): el glifo de dos rayas (`menu2`), que
+            hasta ahora sólo usaba la portada pública. Es el cambio que más
+            adelgaza la esquina izquierda sobre una cabecera plana. */}
+        <Icon name="menu2" size={22} />
       </button>
 
       {/* Mobile-only: clean centered brand logo. */}

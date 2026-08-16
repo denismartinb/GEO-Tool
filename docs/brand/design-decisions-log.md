@@ -9659,6 +9659,85 @@ juicio visual formal antes del Human Gate de este PR.
 ---
 
 
+## 102. Una cabecera plana para cada zona (HEADER-FLAT-1, 2026-08-15)
+
+**Estado: implementada.** Continuación directa de §101, pedida por el fundador
+con dos capturas de móvil y una frase muy precisa: *«en la consola la cabecera
+tiene como un degradado a oscuro en la izquierda y la hamburguesa es de tres
+rayas. En la pública la cabecera es plana, fundiéndose más con la página y la
+hamburguesa es más minimalista»*. Al concretar el alcance lo amplió él mismo:
+*«hacemos una cabecera para toda la consola y la otra para toda la zona de
+marketing»*.
+
+**Lo primero que hubo que corregir fue mi propio análisis.** El informe inicial
+daba por hecho que hablaba de escritorio y proponía subir la marca a una barra
+de ancho completo. No era eso: hablaba de móvil, y de tratamiento, no de
+estructura.
+
+**Qué se ha hecho, en las dos zonas:**
+
+- **La cabecera nace plana** —sin fondo ni borde— en vez de barra blanca sólida
+  con borde `--line`. En la consola aparece un fondo de cristal translúcido al
+  desplazar; en la pública no aparece nunca (ver abajo, no es un olvido).
+- **Hamburguesa de dos rayas** (`menu2`) en todas partes. Ese glifo ya existía
+  pero sólo lo usaba la portada; la consola y las seis superficies públicas
+  restantes llevaban el de tres.
+- **La campana pierde su caja.** Era un botón de 32&nbsp;px con borde de
+  1,5&nbsp;px y fondo blanco propio: sobre una cabecera plana, lo único que
+  seguía pareciendo un control pegado encima. Queda como icono suelto con la
+  misma huella que la hamburguesa, para que los dos extremos pesen igual.
+- **`PublicHeader` pone ahora su propio `.lp-nav-wrap`.** Antes lo envolvían a
+  mano seis superficies (`blog`, `legal`, `docs`, `pricing`, `/geo`) y la
+  portada no lo hacía en absoluto — de ahí salía exactamente la diferencia que
+  el fundador veía. Es el mismo patrón que §63 aplicó a los enlaces: la
+  duplicación se elimina moviendo la responsabilidad al componente.
+
+**Dos hallazgos que cambiaron el diseño a mitad de camino, ambos medidos y no
+supuestos:**
+
+1. **La cabecera de consola no solapa nada.** Yo había avisado al fundador de
+   que dejarla transparente arriesgaba que el contenido se leyera por debajo, y
+   de que el logo quedaría sobre el aviso lila. **Las dos cosas eran falsas:**
+   `.shell` es `overflow:hidden` a `100dvh` y quien scrollea es `.dash-content`,
+   que es *hermana* de la cabecera. Nada pasa nunca por debajo. El detector de
+   scroll se conserva, pero por otra razón — sin borde, el contenido que sube se
+   recorta contra un canto invisible y parece cortado; el fondo al desplazar
+   existe para darle ese canto, no para tapar.
+2. **El `sticky` de la cabecera pública lleva roto desde antes de esta fase.**
+   Se implementó el mismo estado de cristal para la zona pública y, al medirlo,
+   no aparecía nunca. Comprobado con `git stash` **sobre `main` sin tocar**:
+   tras desplazar 500&nbsp;px, `.lp-nav-wrap` está en `y: -500` tanto a 375
+   como a 1280&nbsp;px. La causa es `html { overflow-x: hidden }`, puesto en
+   GROWTH-2 Fase 2.1 para contener un desbordamiento de 3&nbsp;px: convierte el
+   documento en contenedor de scroll y desactiva el pegado de sus
+   descendientes. **No se ha arreglado aquí a propósito** — quitar esa guarda
+   puede devolver el desbordamiento y es su propia fase, con su propia pasada
+   de piloto. Lo que sí se hizo fue **retirar el código muerto**: un estado que
+   no puede verse nunca es peor que no tenerlo, porque la siguiente sesión lo
+   dará por funcionando. Queda escrito en el CSS dónde volver a añadirlo si esa
+   guarda desaparece.
+
+**Lo que NO cambia:**
+
+- **El escritorio de la consola sigue sin marca en su cabecera** (vive en la
+  barra lateral) y la pública sigue midiendo 101&nbsp;px con sesión iniciada por
+  un chip que hereda el relleno del cajón móvil. Las dos cosas se midieron y se
+  documentaron en el artefacto de esta fase, y las dos quedan **pendientes a
+  propósito**: son estructura, no tratamiento, y el fundador acotó esto último.
+- **La portada se comporta igual que siempre:** su cabecera vive dentro de
+  `.lp-hero` (`overflow:hidden`), así que se marcha con el hero. Ahora las otras
+  seis se marchan también, pero porque el `sticky` no funciona en ninguna, no
+  porque se haya decidido.
+- La 404 (`.nf-page`) mantiene su cabecera opaca: sobre su cuerpo oscuro ni el
+  estado plano ni el de cristal sirven.
+
+**Trazabilidad.** Continúa §101 (que unificó el chasis del cajón) y §63 (que
+unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de
+`html { overflow-x: hidden }` en `app/globals.css`, GROWTH-2 Fase 2.1 (PR #286).
+
+---
+
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
