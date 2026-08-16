@@ -9905,6 +9905,62 @@ primero — el día que alguien revierta esa rama por parecer rara, el modal pas
 a mentir y el cliente vuelve a quedarse encerrado, y ninguna de las dos cosas
 tiene síntoma.
 
+## 105. Un workflow que nunca funcionó ni un día, y 1.603 ejecuciones en rojo (CODEX-BUILD-FIX-1, 2026-08-16)
+
+**El síntoma.** `codex-build.yml` fallaba en **cada push**, incluidos los de
+`main`. Salió al revisar el estado de los PRs de esta semana y quedó apuntado
+como "anterior a esto y ajeno al PR" tres veces seguidas, que es exactamente lo
+que le pasa a un rojo permanente: se menciona y no se toca.
+
+**La causa, y por qué el error no se parece a ella.** Los dos últimos pasos
+tenían `if: … && secrets.CODEX_AGENT_TOKEN == ''`. **`secrets` no es un
+contexto disponible en el `if:` de un paso** — sólo lo son `github`, `needs`,
+`strategy`, `matrix`, `job`, `runner`, `env`, `vars`, `steps` e `inputs`.
+GitHub rechaza el fichero **entero** y crea un run fallido con **cero jobs**,
+cuyo `name` es la ruta del fichero en vez del `name:` declarado, y cuyo evento
+es `push` aunque el workflow **no tenga trigger de push**. Nada de eso se lee
+como "el YAML es inválido": se lee como un workflow raro que falla.
+
+Las tres pistas juntas son el diagnóstico, y ninguna sirve sola:
+
+- `jobs: 0` — no llegó a planificar nada;
+- `name: .github/workflows/codex-build.yml` — no llegó a leer el `name:`;
+- `event: push` — se está atribuyendo al push que lo hizo fallar, no a un
+  disparador real.
+
+**Cuánto llevaba así.** Desde el 2026-08-02, colado dentro de un PR de blog
+(GROWTH-2 Fase 2.5). **1.603 ejecuciones, el 100% en rojo, ninguna con un solo
+job.** No es que se rompiera: nunca funcionó.
+
+**Por qué merecía arreglarse aunque el workflow no haga nada.** Es un
+*placeholder* declarado —todos sus pasos escriben en `$GITHUB_STEP_SUMMARY` y
+nada más (`docs/agentic-delivery-pipeline.md`: *"guardrails and placeholders,
+not autonomous agent runners"*)— así que el arreglo no habilita ninguna
+capacidad. Lo que arregla es otra cosa: **un rojo permanente en cada push
+entrena a todo el mundo a ignorar la lista de checks**, y esa lista es donde
+tiene que verse un fallo de verdad. Esta misma semana `ci.yml` no se disparó
+solo dos veces y hubo que lanzarlo a mano — en una lista donde algo siempre
+está rojo por defecto, eso se pasa por alto sin esfuerzo.
+
+**El arreglo.** El secreto se expone en `env:` a nivel de job y los pasos
+comprueban `env.CODEX_AGENT_TOKEN`. Cuatro líneas. Con el fichero válido, el
+workflow deja de dispararse en push —no tiene ese trigger— y sólo corre donde
+siempre quiso: `issues` y `workflow_dispatch`.
+
+**Lo vigila `tests/workflow-contexts.test.ts`**, verificado en las dos
+direcciones. Barre sólo `secrets` en `if:` a propósito: es el error real y el
+que no avisa, y ampliarlo a otros contextos metería falsos positivos en un
+guardián que entonces alguien acabaría desactivando (§94).
+
+**Queda declarado y NO hecho: este workflow no hace nada.** Ni siquiera con el
+secreto puesto — sus dos ramas escriben un resumen y terminan. Borrarlo entero
+es defendible y hay precedente directo (`claude-qa.yml` y
+`scripts/run-claude-qa.py`, borrados en PRELAUNCH-HARDENING-1 Fase 0 por
+llevar meses declarados superseded). No se ha hecho aquí porque el encargo era
+arreglarlo, y borrar una pieza del andamiaje agéntico documentado es una
+decisión de producto, no una limpieza. Si se borra, se van con él la fila del
+mapa de zonas y las menciones de `docs/agentic-delivery-pipeline.md`.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
