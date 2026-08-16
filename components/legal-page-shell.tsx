@@ -29,9 +29,7 @@ export function LegalPageShell({
 }) {
   return (
     <div className="lp">
-      <div className="lp-nav-wrap">
-        <PublicHeader />
-      </div>
+      <PublicHeader />
 
       <section className="lp-section" style={{ paddingBottom: 0 }}>
         <div className="lp-inner">
