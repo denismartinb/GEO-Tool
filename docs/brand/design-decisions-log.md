@@ -9905,6 +9905,44 @@ primero — el día que alguien revierta esa rama por parecer rara, el modal pas
 a mentir y el cliente vuelve a quedarse encerrado, y ninguna de las dos cosas
 tiene síntoma.
 
+## 105. El aviso verde de «tu primer escaneo se está ejecutando» reaparecía ya terminado el escaneo (2026-08-16)
+
+**El problema, reportado por el fundador con una captura del móvil.** En
+Visión general, el banner de éxito `scan_started` («Dominio creado. Tu primer
+escaneo se está ejecutando — sigue el progreso aquí») aparecía **a la vez** que
+la puntuación GEO ya calculada y la etiqueta «Escaneado 16 ago 2026» — es
+decir, después de que el escaneo hubiera terminado. Nadie recargó nada a mano.
+
+**La causa.** SCAN-STATES-2 (§56) ya había decidido ocultar este banner
+mientras la misión del cohete ocupa la pantalla, con la condición
+`isFirstScan && activeRun`. Pero `?success=scan_started` se queda en la URL
+después del redirect inicial, y `ScanProgressPoller` dispara un
+`router.refresh()` en cuanto el run pasa a estado terminal, sin acción del
+usuario. En ese refresh `activeRun` ya no existe **y** `isFirstScan` ya ha
+pasado a `false` (hay 1 escaneo completado), así que la condición de ocultado
+deja de cumplirse y el texto stale —que sigue diciendo «se está ejecutando»—
+vuelve a mostrarse, ahora contradiciendo los datos reales que tiene debajo.
+
+**Qué se decidió.** El banner `scan_started` sólo puede ser cierto mientras
+`activeRun` existe; la comprobación de `isFirstScan` es redundante en el
+momento del redirect (esta clave sólo la dispara la creación de proyecto,
+`app/dashboard/projects/actions.ts`) y es precisamente lo que se vuelve falso
+primero. Se cambia la condición de ocultado a depender sólo de `activeRun`
+(`app/dashboard/projects/[projectId]/page.tsx`): el banner queda oculto tanto
+mientras la misión ocupa la pantalla como después de que el escaneo termine,
+en vez de reaparecer solo minutos más tarde.
+
+**No se revisaron el resto de claves de `feedbackSuccessMessages`** porque
+ninguna comparte el patrón: o describen un hecho estable que no caduca
+(«Escaneo completado», los toggles de `/debug`), o no dependen de un estado
+transitorio que el propio poller invalida en segundo plano. `scan_started` es
+la única cuya veracidad caduca sola.
+
+**Trazabilidad.** §56 (SCAN-STATES-2, decisión de ocultado original, ahora
+corregida — no sustituida: la razón de ocultar durante la misión sigue en
+pie); `components/scan-progress-poller.tsx` (el `router.refresh()` que dispara
+el refresco silencioso).
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

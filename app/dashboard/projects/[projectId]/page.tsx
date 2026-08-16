@@ -320,8 +320,16 @@ export default async function ProjectDetailPage({
    * exactly the "banner flotando encima" the founder asked to remove
    * (2026-08-10). Every other feedback message still shows: this drops one
    * redundant sentence, not the mechanism.
+   *
+   * Gated on `activeRun` alone, not `isFirstScan && activeRun`: the
+   * `?success=scan_started` param survives in the URL after the run finishes,
+   * and `ScanProgressPoller` calls `router.refresh()` the moment the run goes
+   * terminal — at which point `activeRun` is gone AND `isFirstScan` has
+   * already flipped to false (there's now 1 completed run), so the old guard
+   * stopped applying and the stale "se está ejecutando" text resurfaced next
+   * to the finished score with no user action at all.
    */
-  const successMessage = rawSuccessMessage && !(feedback.success === "scan_started" && isFirstScan && activeRun) ? rawSuccessMessage : null;
+  const successMessage = rawSuccessMessage && !(feedback.success === "scan_started" && !activeRun) ? rawSuccessMessage : null;
 
   /* ---- queries that require a completed run ---- */
   const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =
