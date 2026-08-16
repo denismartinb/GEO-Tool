@@ -14,7 +14,7 @@ una con su Human Gate.
   LCP y choca con `.claude/rules/onboarding.md`) y quedan ~33 KB de CSS de
   consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
   (migración, cifra publicada, superficie de auth).
-- **Fase R 🟡 en curso** — R1, R2 (log §43), **R4** (log §70) y **la primera
+- **Fase R ✅ cerrada (2026-08-16)** — R1, R2 (log §43), **R4** (log §70) y **la primera
   mitad de R5** (log §78: el transporte de Gemini sale a `gemini-client.ts`)
   y **R5 entera** (log §79: los tipos compartidos salen a
   `lib/llm/contracts.ts`; log §80: las cinco funcionalidades de producto se van
@@ -26,8 +26,10 @@ una con su Human Gate.
   de ser la excepción) y **el grueso de R8** (log §84: dos ficheros muertos
   borrados) y **46 tests de render para Auditoría web** (log §87), los primeros
   del repositorio. **R3 queda descartada como está escrita** tras su Task Intake
-  del 2026-08-14 (ver R3 abajo). Quedan partir `WebAuditPage` y los dos
-  huérfanos restantes de R8. R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
+  del 2026-08-14 (ver R3 abajo). **R8 cerrada** (log §102: los dos huérfanos
+  borrados) y **R7-b cerrada** (log §105: la orquestación de Auditoría web sale
+  a `lib/web-audit/page-data.ts` con 26 tests, los primeros que miran esa
+  lógica). **No queda nada abierto en Fase R.** R4 destapó un fallo real: `Number(process.env.X ?? default)` daba
   `NaN` en tres sitios, y en el barrido recurrente eso lo dejaba en un disparo
   en vez de veinte, en silencio.
 - **Fase Q ✅ cerrada (2026-08-15)** — **Q1 hecho** (log §89: `createProjectCore` y 18
@@ -214,7 +216,7 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   módulo «neutral» sin romper ninguna dependencia. Resultado: de 26 ficheros
   externos quedan 5, todos dependencias legítimas de dominio, y **`lib/llm/**`
   ya no importa nada de `lib/scan`**.
-- **R7 · Páginas** (2 PRs): extraer los ~24 componentes inline de
+- **R7 · Páginas** ✅ **cerrada (2026-08-16)** (2 PRs): extraer los ~24 componentes inline de
   `web-audit/page.tsx` a `web-audit/_components/` — **hecho** (log §83): 14
   componentes en 6 módulos, la página de 1.933 a 1.137 líneas. Aviso para el
   resto de R7: **aquí los tests no demuestran nada** (esa pantalla no tiene
@@ -243,6 +245,19 @@ Cada slice es un PR independiente y mecánico. Orden propuesto:
   ventana en la que todavía no se ha pegado el SQL. Además su justificación
   estaba del revés: en las columnas JSONB donde se concentran los
   `as unknown as`, `gen types` emite `Json` y empeora lo que hay.
+
+  **R7-b cerrada (2026-08-16, log §105): la orquestación, no el JSX.** Medido
+  antes de cortar, el plan estaba mal: de las 1.156 líneas restantes **~330 son
+  orquestación y ~740 son JSX**, así que partir por tamaño habría movido
+  maquetado a cambio de nada verificable. El corte real fue sacar las consultas
+  y los valores derivados a `lib/web-audit/page-data.ts` con **26 tests** — los
+  primeros que miran esa lógica — y dejar la pantalla en `return (…)`. El punto
+  delicado era el `after(() => triggerWebAuditRun())` de la línea 268: el loader
+  **devuelve** `shouldDispatchAudit` y la pantalla actúa, que es lo que permite
+  fijar por test que un job en `retrying` con el backoff corriendo no dispara
+  llamadas de Gemini. Prueba de que fue refactor: multiconjunto de líneas del
+  `return` idéntico (743 = 743) salvo un renombrado, y ni un test existente
+  tocado.
 - **R8 · Limpieza de muertos** ✅ **cerrada (2026-08-15, log §102)**:
   **`lib/supabase/client.ts` y `lib/types.ts` borrados** (log §84) — cero
   importadores, comprobado por ruta de import y no por nombre. **R8-a:

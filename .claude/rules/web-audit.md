@@ -324,3 +324,29 @@ que tenían `content_gap`, `open_opportunity` y `unverified_cited` —el motor d
 recomendaciones no las cubre, porque corre al terminar el escaneo y antes de que
 exista ninguna auditoría— y ese hueco pasó once días sin figurar en ningún
 sitio. Una fase retirada deja el ROADMAP diciendo qué dejó de funcionar.
+
+### La orquestación de datos vive en `page-data.ts`, no en `page.tsx`
+
+Desde R7-b (log §105) la pantalla es `return (…)` y nada más: las consultas y los
+valores derivados están en `lib/web-audit/page-data.ts`, que devuelve un
+view-model tipado. Dato nuevo de esta pantalla → se calcula ahí, con su test.
+
+**El loader recibe el cliente de Supabase ya autenticado, no lo pide.** La
+autenticación se queda en la pantalla y entra resuelta, igual que
+`createProjectCore` recibe su `AuthenticatedContext` (log §89). Es lo que
+permite ejercitarlo con un doble en Vitest, que es justo lo que no se podía
+hacer antes.
+
+**Y NO despacha el worker: devuelve la decisión.** `shouldDispatchAudit` sale
+del loader y el `after(() => triggerWebAuditRun())` se queda en la pantalla.
+Mismo motivo que `.claude/rules/server-actions.md` da para las actions —un
+efecto secundario dentro de la lógica no se puede afirmar, sólo observar que
+ocurrió algo— y aquí compra una garantía concreta: que un job en `retrying` con
+el backoff corriendo **no** dispara nada. El backoff llega a 10 h y cada
+despacho de más son llamadas reales de Gemini.
+
+**El delta técnico compara notas RECALCULADAS, no la columna `readiness_score`.**
+`buildTechnicalIssuesReport` recalcula desde los `pageScore` con los criterios de
+hoy; la columna guarda lo que valía con los de entonces. Hacerlo leer la columna
+resucitaría la regresión fantasma que WEB-AUDIT-R3 y
+`TECHNICAL_CRITERIA_EXPANDED_AT` existen para explicar. Está fijado por test.
