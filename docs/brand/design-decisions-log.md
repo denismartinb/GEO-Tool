@@ -9833,14 +9833,17 @@ estructura.
   con borde `--line`. En la consola aparece un fondo de cristal translúcido al
   desplazar; en la pública no aparece nunca (ver abajo, no es un olvido).
 - **Hamburguesa de dos rayas** (`menu2`) en todas partes. Ese glifo ya existía
-  pero sólo lo usaba la portada; la consola y las seis superficies públicas
-  restantes llevaban el de tres.
+  pero sólo lo usaba la portada; la consola y el resto de superficies públicas
+  llevaban el de tres.
 - **La campana pierde su caja.** Era un botón de 32&nbsp;px con borde de
   1,5&nbsp;px y fondo blanco propio: sobre una cabecera plana, lo único que
   seguía pareciendo un control pegado encima. Queda como icono suelto con la
   misma huella que la hamburguesa, para que los dos extremos pesen igual.
 - **`PublicHeader` pone ahora su propio `.lp-nav-wrap`.** Antes lo envolvían a
-  mano seis superficies (`blog`, `legal`, `docs`, `pricing`, `/geo`) y la
+  mano **cinco ficheros de shell** (`blog-page-shell`, `legal-page-shell`,
+  `docs-page-shell`, `pricing-page`, `app/geo/page`) que entre ellos cubren las
+  siete superficies públicas —comparativas y glosario comparten el shell del
+  blog— y la
   portada no lo hacía en absoluto — de ahí salía exactamente la diferencia que
   el fundador veía. Es el mismo patrón que §63 aplicó a los enlaces: la
   duplicación se elimina moviendo la responsabilidad al componente.
@@ -9883,6 +9886,13 @@ supuestos:**
   porque se haya decidido.
 - La 404 (`.nf-page`) mantiene su cabecera opaca: sobre su cuerpo oscuro ni el
   estado plano ni el de cristal sirven.
+
+**Diseño aprobado:** `docs/design-reference/header-flat-1/`. El fundador lo
+aprobó sobre ese artefacto antes de escribir código, así que se commitea con
+la fase — un enlace de chat no lo puede abrir ni CI ni una sesión futura, y la
+mitad de fidelidad de diseño del piloto se quedaría sin referencia. Su README
+deja anotados **los dos avisos del artefacto que la implementación demostró
+falsos**, en vez de editarlos para que parezca que acerté.
 
 **Trazabilidad.** Continúa §101 (que unificó el chasis del cajón) y §63 (que
 unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de

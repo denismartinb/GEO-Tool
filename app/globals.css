@@ -7127,12 +7127,10 @@ select.set-field {
    los ~200px que mide y dejaba de ocupar la pantalla. */
 .nf-viewport { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 
-/* Desde HEADER-FLAT-1 la nav del sitio nace transparente y sólo se vuelve
-   cristal al desplazar (`.lp-nav-wrap` / `.is-scrolled`). Sobre el cuerpo
-   oscuro de la 404 ninguno de los dos estados vale —el transparente deja ver
-   el oscuro y el cristal también—, así que aquí, y sólo aquí, es opaca desde
-   el primer píxel. Gana por orden de aparición: misma especificidad (0,2,0)
-   que `.lp-nav-wrap.is-scrolled`, declarada después. */
+/* Desde HEADER-FLAT-1 la nav del sitio es transparente en toda la zona
+   pública. Sobre el cuerpo oscuro de la 404 eso deja ver el oscuro por
+   detrás, así que aquí —y sólo aquí— es opaca. Gana por especificidad:
+   `.nf-page .lp-nav-wrap` es (0,2,0) contra el (0,1,0) de `.lp-nav-wrap`. */
 .nf-page .lp-nav-wrap { background: #fff; backdrop-filter: none; border-bottom-color: var(--line-soft); }
 
 .nf-stage {

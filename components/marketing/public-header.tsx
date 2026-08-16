@@ -72,10 +72,10 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * `hero` mirrors the home hero repaint (BRAND-5b): transparent nav bar and
- * a two-line burger glyph. Every other public page keeps its own
- * `.lp-hero`/`.lp-nav-wrap` background untouched (that scoping is
- * deliberate — see app/globals.css around `.lp-nav--hero`).
+ * `hero` mirrors the home hero repaint (BRAND-5b). Hasta HEADER-FLAT-1
+ * también decidía el fondo de la barra, y cada superficie no-portada
+ * conservaba el suyo; eso ya no es así — ver el párrafo de HEADER-FLAT-1
+ * abajo, que es lo que manda hoy sobre el fondo.
  *
  * header-consistency-public-private, 2026-08-15 (founder-approved on the
  * real preview, in two steps: first the burger-left/logo-centered side, then
