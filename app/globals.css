@@ -96,7 +96,13 @@ body {
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overscroll-behavior-y: none;
+  /* `none` (not just `contain`) disables Chrome-on-macOS's trackpad
+     two-finger scroll gesture entirely — a documented Chrome/macOS
+     interaction, not a bug in this stylesheet (Interop 2025 tracked it,
+     https://issues.chromium.org/issues/41453796). `contain` still stops the
+     rubber-band bounce from chaining into browser back/forward navigation,
+     which is what this rule is for, without disabling the gesture. */
+  overscroll-behavior-y: contain;
   overflow-x: hidden;
 }
 
