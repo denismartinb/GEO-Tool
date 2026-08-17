@@ -10789,7 +10789,7 @@ etiqueta + número suelto («88/100»), sin ninguna otra señal visual.
 
 1. **Cabecera hermana, alineada arriba Y abajo.** `.ov2-gauge-block` envuelve
    la tarjeta con una segunda copia externa de «Puntuación GEO»
-   (`.ov2-gauge-sec-lbl`), oculta por defecto. A partir de 900px se muestra
+   (`.ov2-gauge-sec-lbl`), oculta por defecto. A partir de 760px se muestra
    la externa y se oculta la interna — nunca las dos a la vez — así que las
    dos columnas de la fila de cabecera comparten el mismo patrón de
    etiqueta y arrancan en la misma línea. `.ov2-hero` pasa de `align-items:
@@ -10797,16 +10797,33 @@ etiqueta + número suelto («88/100»), sin ninguna otra señal visual.
    explícitamente a petición del fundador: quería la alineación arriba Y
    abajo, no sólo arriba) — la tarjeta de la puntuación crece para llenar la
    altura de la fila, y `justify-content: center` en su interior evita que
-   eso lea como aire muerto en un escaneo sin sparkline. Por debajo de 900px
+   eso lea como aire muerto en un escaneo sin sparkline. Por debajo de 760px
    el DOM y el CSS no cambian: la tarjeta sigue llevando su etiqueta interna
-   exactamente como antes. **900px, no 1200px:** primer intento sólo lo
-   aplicó a partir de 1200px; el fundador pidió expresamente extenderlo a
-   tablet (768–1199px) al ver que ahí las dos tarjetas van apiladas, sin
-   ningún borde compartido con el que alinearse — la maqueta original nunca
-   cubrió ese rango. `.ov2-scope` sigue tope en 640px en todo ese tramo (no
-   forma parte de esta petición), así que la columna de la puntuación es más
-   estrecha ahí (`minmax(220px, 260px)`) que en escritorio
-   (`minmax(320px, 390px)`, ensanchada de vuelta a partir de 1200px).
+   exactamente como antes.
+
+   **Primer intento, y por qué se corrigió en el mismo PR.** La primera
+   versión lo aplicó a partir de 1200px; el fundador pidió expresamente
+   extenderlo a tablet, y esta sesión preguntó "¿768–1199px?" asumiendo que
+   coincidía con el paso de 900px que ya existía para `.ov2-scope`/
+   `.ov2-kpi-car` — sin comprobar que 768 < 900. La segunda versión movió
+   todo el bloque de la cabecera a ese mismo `@media (min-width: 900px)`, y
+   la captura del piloto en 768px (la anchura real de "Tablet" en
+   `docs/agentic-user-pilot.md`, la que de verdad se mira) salió idéntica a
+   la de antes del PR: 768px nunca llega a activar una condición de 900px.
+   La versión final vive en su **propio** `@media (min-width: 760px)`,
+   separado del paso de 900px — reutilizando el mismo corte al que `.sb`
+   deja de ser un cajón y pasa a columna estática (`.shell` le da entonces
+   una columna fija de `--sidebar-w`), para que "la cabecera va a dos columnas"
+   y "la barra lateral es una columna fija" empiecen a la misma anchura.
+   `.ov2-scope` NO se ensancha en este paso — sigue en su tope móvil de
+   460px hasta el paso de 900px, sin tocar — así que la columna de la
+   puntuación es más estrecha aquí (`minmax(190px, 230px)`) que a partir de
+   900px (`minmax(220px, 260px)`) y que en escritorio
+   (`minmax(320px, 390px)` desde 1200px). `.ov2-kpi-car` tampoco cambia de
+   comportamiento en este tramo — sigue siendo el carrusel horizontal móvil,
+   con su propio cambio a rejilla de 2 columnas intacto en su sitio original
+   (900px) — meterlo en rejilla dentro de una columna aún más estrecha
+   arriesgaba envolver las etiquetas de los KPI sin que nadie lo comprobara.
 2. **Desglose a 2/3, motores sube.** `.ov2-score-row` agrupa «Desglose del
    GEO Score» y «Posicionamiento por motores de IA» en una fila 2fr/1fr
    propia, independiente de `.ov2-cols` (que ahora arranca directamente en
@@ -10827,11 +10844,11 @@ etiqueta + número suelto («88/100»), sin ninguna otra señal visual.
    medidor caben igual de bien a 375px y no dependen del ancho extra que
    trae la fila 2/3, así que aplica a todas las anchuras.
 
-**Qué NO cambia.** Por debajo de 900px (móvil) la cabecera es pixel-idéntica
+**Qué NO cambia.** Por debajo de 760px (móvil) la cabecera es pixel-idéntica
 a la de antes de este PR; por debajo de 1200px, «Desglose del GEO Score» y
 «Posicionamiento por motores de IA» siguen apilados en el mismo orden que ya
 tenían. Sólo los puntos 1 y 2 llevan guarda de anchura explícita — distinta
-entre ambos (900px la cabecera, 1200px el desglose+motores) porque cada uno
+entre ambos (760px la cabecera, 1200px el desglose+motores) porque cada uno
 resuelve un problema visible en un rango distinto — y el punto 3 es un
 cambio de contenido de fila, no de layout, así que no necesitaba ninguna.
 
