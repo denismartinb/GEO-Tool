@@ -154,6 +154,26 @@ test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
 });
 
 /**
+ * FREE-CHECKER-1. Estrictamente de lectura, como el resto de este fichero:
+ * visita la página y comprueba que carga, **nunca pulsa el botón**.
+ *
+ * Y desde la Fase B eso ya no es sólo una convención de alcance: pulsarlo
+ * lanzaría una comprobación real contra ChatGPT, o sea **gastaría dinero y
+ * consumiría una de las tres comprobaciones diarias de la IP del runner** en
+ * cada pasada del piloto, en cada deploy de preview. El journey de escritura
+ * (`--journeys write`) es el único sitio donde eso podría plantearse, y hoy no
+ * está planteado.
+ */
+test("/gratis/aparece-mi-marca-en-chatgpt renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/gratis/aparece-mi-marca-en-chatgpt", "free-checker", {
+    describedAs: "el formulario de dominio y la explicación de qué obtiene el visitante",
+    anyOf: [{ selector: ".lp-hero-form" }]
+  });
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/gratis/aparece-mi-marca-en-chatgpt");
+});
+
+/**
  * GENSCORE-HEADER-3, a petición del `ux-pilot` (2026-08-12). El barrido de
  * interacción sólo abre menús en pantallas de consola, así que **el cajón
  * móvil de la cabecera pública no se fotografiaba nunca**: cuando

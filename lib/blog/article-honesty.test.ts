@@ -103,11 +103,17 @@ function docsPages(): { label: string; text: string }[] {
  * porque no es verificable desde fuera; sólo enseña el índice de nuestras
  * decisiones internas.
  *
- * Cubre las cuatro superficies de contenido público —artículos, glosario,
- * `/docs` y comparativas— porque el error se propagó copiando la cabecera de la
- * pieza anterior: cinco artículos lo tenían, tres de ellos con la fórmula v2 ya
- * retirada encima, y la tabla de pesos seguía además en la metodología
- * publicada, que es justo donde los artículos mandaban al lector a buscarla.
+ * Cubre las cinco superficies de contenido público —artículos, glosario,
+ * `/docs`, comparativas y las páginas de `/gratis`— porque el error se propagó
+ * copiando la cabecera de la pieza anterior: cinco artículos lo tenían, tres de
+ * ellos con la fórmula v2 ya retirada encima, y la tabla de pesos seguía además
+ * en la metodología publicada, que es justo donde los artículos mandaban al
+ * lector a buscarla.
+ *
+ * `/gratis` entró con FREE-CHECKER-1: es una superficie pública NUEVA, la
+ * primera que se dirige a alguien sin cuenta, y nació fuera de esta lista. Una
+ * superficie que nadie vigila es exactamente cómo llegaron aquí las otras
+ * cuatro — se añade al crearla, no cuando se le escape algo.
  */
 const CONTENT_SOURCES: { label: string; text: string }[] = [
   ...BLOG_POSTS.map((post) => ({
@@ -129,6 +135,21 @@ const CONTENT_SOURCES: { label: string; text: string }[] = [
         .map((f) => ({
           label: `lib/comparativas/${f}`,
           text: readFileSync(join(process.cwd(), "lib", "comparativas", f), "utf8")
+        }))
+    : []),
+  // FREE-CHECKER-1: las páginas públicas de `/gratis`. Se leen enteras (TSX
+  // incluido) a propósito: el comentario de cabecera de un fichero de producto
+  // sí puede citar un ADR —es documentación interna— pero el copy no, y
+  // separar ambos aquí exigiría un parser. Preferimos el falso positivo: si
+  // salta, se reescribe el comentario, que es barato.
+  ...(existsSync(join(process.cwd(), "app", "gratis"))
+    ? readdirSync(join(process.cwd(), "app", "gratis"), { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => join(process.cwd(), "app", "gratis", e.name, "page.tsx"))
+        .filter((f) => existsSync(f))
+        .map((f) => ({
+          label: `app/gratis/${f.split("/").slice(-2)[0]}`,
+          text: readFileSync(f, "utf8")
         }))
     : [])
 ];

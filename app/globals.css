@@ -4559,8 +4559,14 @@ a.notif-row:hover {
 .lp-h1 .grad { background: linear-gradient(100deg, #4f46e5, #7c3aed 55%, #0d9488); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .lp-lead { font-size: 18.5px; line-height: 1.6; color: var(--ink-2); margin: 22px auto 0; max-width: 600px; font-weight: 450; }
 .lp-hero-form { max-width: 540px; margin: 30px auto 0; }
-.lp-hero-note { font-size: 13px; color: var(--ink-4); margin-top: 13px; display: flex; align-items: center; justify-content: center; gap: 16px; }
-.lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; }
+.lp-hero-note { font-size: 13px; color: var(--ink-4); margin-top: 13px; display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+/* `nowrap` para que la fila envuelva por ITEMS y no por palabras. Sin él, a
+   375 px cada nota se parte por dentro ("Respuesta real de / ChatGPT") y tres
+   notas se leen como seis fragmentos sueltos. Se vio en la captura del piloto
+   del preview, no en ninguna aserción: no hay desbordamiento que medir, sólo
+   una fila desordenada (FREE-CHECKER-1, log §111). */
+.lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+@media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
 
 .lp-shot { position: relative; z-index: 2; max-width: 1060px; margin: 54px auto 0; }
 .browserframe { border-radius: 14px; border: 1px solid var(--line-strong); background: #fff; box-shadow: 0 30px 80px rgba(16,24,40,.18), 0 8px 24px rgba(16,24,40,.08); overflow: hidden; }
@@ -4635,6 +4641,98 @@ a.notif-row:hover {
 .lp-field-ghost .type-caret { background: var(--brand-blue); }
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+/* Pista del comprobador gratuito cuando lo escrito no es un dominio
+   (FREE-CHECKER-1, log §111). `--brand-neg` sobre fondo claro, no `--ink-4`:
+   es un mensaje que hay que leer, no una nota al pie. */
+.fc-hint { font-size: 13px; color: var(--brand-neg); margin: 11px 0 0; text-align: center; }
+.fc-hint strong { font-weight: 650; }
+
+/* --- Comprobador gratuito: espera y resultado (FREE-CHECKER-1, log §111) ---
+   Todo prefijado `fc-` porque estas clases conviven con el sistema de la
+   landing en la MISMA página, y nombres genéricos (`panel`, `answer`,
+   `rivals`) ya existen o existirán en globals.css — la regla de styles.md
+   sobre pisarse en ambos sentidos. */
+/* `min-height` para que la página no se encoja al pasar de la portada larga a
+   la espera corta: sin ella el pie sube de golpe, deja un hueco gris debajo y
+   vuelve a bajar al llegar el resultado. Tres saltos de maquetación en veinte
+   segundos, en la única pantalla donde el visitante está esperando y mirando. */
+.fc-wait { max-width: 460px; margin: 26px auto 0; text-align: left; min-height: 340px; }
+.fc-wait-lbl {
+  display: block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--brand-blue);
+  margin-bottom: 14px; text-align: center;
+}
+.fc-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.fc-steps li { display: flex; align-items: center; gap: 11px; font-size: 14px; color: var(--ink-4); }
+.fc-steps li.done { color: var(--ink-2); }
+.fc-steps li.live { color: var(--ink); font-weight: 600; }
+.fc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: none; }
+.fc-steps li.done .fc-dot { background: var(--brand-pos); }
+.fc-steps li.live .fc-dot { background: var(--brand-blue); box-shadow: 0 0 0 4px var(--brand-blue-soft); }
+.fc-wait-note { font-size: 12.5px; color: var(--ink-4); text-align: center; margin: 18px 0 0; }
+
+.fc-result { max-width: 620px; margin: 24px auto 0; text-align: left; min-height: 340px; }
+.fc-lbl {
+  display: block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 8px;
+}
+.fc-lbl-blue { color: var(--brand-blue); }
+.fc-lbl-pos { color: var(--brand-pos); }
+.fc-verdict {
+  font-size: 23px; font-weight: 750; letter-spacing: -.02em; line-height: 1.25;
+  color: var(--ink); margin: 6px 0 20px; text-wrap: balance;
+}
+.fc-panel {
+  border: 1px solid var(--line); border-radius: 11px; background: var(--brand-surface);
+  padding: 16px 18px; margin-bottom: 14px; box-shadow: var(--brand-shadow-card);
+}
+.fc-panel p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+.fc-panel-warn { border-left: 3px solid var(--warn); border-radius: 0 11px 11px 0; }
+.fc-prompt { font-weight: 600; color: var(--ink) !important; }
+/* La respuesta del motor, ya renderizada (FREE-CHECKER-1 Fase C). Sin
+   `white-space: pre-wrap`: los saltos los pone ahora la maquetación, y
+   conservarlo dejaría un hueco por cada salto del markdown original. */
+.fc-answer {
+  margin: 0; border-left: 3px solid var(--brand-cyan); padding: 2px 0 2px 14px;
+  font-size: 14px; line-height: 1.7; color: var(--ink-2);
+}
+.fc-answer-p { margin: 0 0 11px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+.fc-answer-p:last-child { margin-bottom: 0; }
+.fc-answer-h {
+  margin: 16px 0 7px; font-size: 14.5px; font-weight: 700; color: var(--ink); line-height: 1.45;
+}
+.fc-answer-h:first-child { margin-top: 0; }
+.fc-answer-ul { margin: 0 0 11px; padding-left: 18px; }
+.fc-answer-ul li { font-size: 14px; line-height: 1.65; color: var(--ink-2); margin-bottom: 4px; }
+/* `a:not(.btn)` por la regla de styles.md: una regla de ancestro sobre `a`
+   secuestra cualquier botón que algún día se pinte aquí dentro. Hoy no hay
+   ninguno; la exclusión es lo que impide que el día que lo haya salga con el
+   color y el relleno de un enlace de prosa. */
+.fc-answer a:not(.btn) {
+  color: var(--brand-blue); text-decoration: underline; text-underline-offset: 2px;
+  text-decoration-thickness: 1px; overflow-wrap: anywhere;
+}
+.fc-answer a:not(.btn):hover { color: #1d4ed8; }
+
+/* Etiquetas, no lista ordenada: no hay ranking que enseñar (Fase C, log §111). */
+.fc-rivals { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.fc-rivals li {
+  font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+}
+.fc-rivals-note { margin: 12px 0 0 !important; font-size: 12.5px !important; color: var(--ink-4) !important; }
+.fc-upsell {
+  border: 1px solid var(--line); border-radius: 13px; padding: 22px 24px; margin-top: 22px;
+  background: var(--surface-2);
+}
+.fc-upsell h3 { font-size: 17px; font-weight: 750; letter-spacing: -.015em; color: var(--ink); margin: 0 0 13px; }
+.fc-upsell ul { margin: 0 0 18px; padding-left: 19px; }
+.fc-upsell li { font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+@media (max-width: 560px) {
+  .fc-verdict { font-size: 20px; }
+  .fc-upsell { padding: 18px 17px; }
+}
 .lp-cta {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
@@ -4642,6 +4740,15 @@ a.notif-row:hover {
   white-space: nowrap; transition: background .13s;
 }
 .lp-cta:hover { background: #1d4ed8; color: #fff; }
+/* Un `.lp-cta` deshabilitado sigue siendo AZUL, atenuado — nunca gris. En gris
+   deja de leerse como "el botón, todavía no" y pasa a leerse como "algo se ha
+   roto", que en un CTA de portada es el peor mensaje posible. Ninguna pantalla
+   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §111); vive aquí para que
+   el día que alguien lo necesite no herede el azul a plena fuerza y parezca
+   pulsable. Los controles deshabilitados están exentos de contraste AA, así
+   que el barrido del piloto los salta: esto no lo vigila nadie salvo el ojo. */
+.lp-cta:disabled { background: #93b0f2; border-color: #93b0f2; cursor: not-allowed; }
+.lp-cta:disabled:hover { background: #93b0f2; }
 .lp-cta-soft {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;

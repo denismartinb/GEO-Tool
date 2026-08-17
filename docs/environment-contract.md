@@ -158,6 +158,32 @@ The cron only ever processes projects with `projects.recurring_scans_enabled = t
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
 
+### Comprobador gratuito anónimo (FREE-CHECKER-1 Fase B)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `PUBLIC_CHECK_IP_SALT` | **Yes**, o el comprobador no arranca | Vercel | cadena aleatoria larga, p. ej. `openssl rand -hex 32` |
+
+**Sin esta variable el comprobador falla al arrancar, a propósito.** La IP del
+visitante se guarda como `sha256(ip + salt)` y nunca en claro: es dato personal
+y sólo necesitamos contarla. Un sha256 de una IP **sin** salt no protege nada —
+son 4.000 millones de entradas precomputables, o sea guardar la IP con pasos
+extra—, así que `hashIp()` lanza en vez de degradar en silencio a algo que
+parece anónimo y no lo es (`lib/free-checker/rate-limit.ts`).
+
+**Rotarla retira todos los hashes viejos de golpe**, que es justo la propiedad
+que la hace útil. El coste, declarado: rotar resetea la ventana por IP de todo
+el mundo. Es el precio correcto por no llevar un registro de quién miró.
+
+Los tres límites (por IP, por dominio y el techo global diario) viven en código,
+no en el entorno: `DEFAULT_PUBLIC_CHECK_LIMITS`. El que acota el gasto de verdad
+es el techo global — ver el comentario de cabecera de ese módulo.
+
+**El comprobador usa `OPENAI_API_KEY`** (motor ChatGPT, decisión del fundador
+2026-08-15), que ya existe para el escaneo. El perfil del negocio y la
+derivación de la pregunta siguen en `GEMINI_API_KEY`. A ~0,016 $ por
+comprobación y 300/día de techo, el peor caso absoluto son ~4,80 $/día.
+
 ### Auditoría web automática tras cada escaneo (AUDIT-AFTER-SCAN-1)
 
 | Variable | Required | Where | Expected shape |

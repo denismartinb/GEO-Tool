@@ -92,7 +92,7 @@ async function fillMissingSetup(
     country: input.country,
     language: input.language,
     userDescription: input.businessDescription
-  }).catch(() => ({ status: "unidentified" }) as const);
+  }).catch(() => ({ status: "unidentified", reason: "profile_failed" }) as const);
 
   if (context.status !== "identified") {
     return { initialCompetitors, initialPrompts, businessProfile };

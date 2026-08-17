@@ -143,7 +143,7 @@ export async function resolveAndCacheBusinessProfile(input: {
     domain: input.domain,
     country: input.country,
     language: input.language
-  }).catch(() => ({ status: "unidentified" }) as const);
+  }).catch(() => ({ status: "unidentified", reason: "profile_failed" }) as const);
 
   if (context.status === "unidentified") return null;
 
@@ -167,7 +167,26 @@ export async function resolveAndCacheBusinessProfile(input: {
   return context.profile;
 }
 
-export type BusinessContextResult = { status: "identified"; profile: BusinessProfile } | { status: "unidentified" };
+/**
+ * POR QUÉ no se pudo identificar el negocio. Obligatorio, no opcional: los tres
+ * motivos se le enseñaban al visitante del comprobador gratuito con el mismo
+ * mensaje —"no hemos podido leer tu web, comprueba que la página carga"— y dos
+ * de los tres no tienen NADA que ver con su web. Decirle a alguien que su sitio
+ * está roto cuando lo que falló fue nuestro modelo es exactamente lo que
+ * `.claude/rules/gemini.md` prohíbe: «nunca le digas al usuario una causa que
+ * el código no puede saber» (FREE-CHECKER-1 Fase C-bis, log §111).
+ */
+export type BusinessContextUnidentifiedReason =
+  /** No se pudo leer la portada y no había descripción del usuario. Esto SÍ es su web. */
+  | "homepage_unreadable"
+  /** Se leyó la web, pero el modelo no devolvió perfil (o la llamada falló). Es nuestro. */
+  | "profile_failed"
+  /** El modelo devolvió un perfil que él mismo marca poco fiable. Es nuestro. */
+  | "profile_low_confidence";
+
+export type BusinessContextResult =
+  | { status: "identified"; profile: BusinessProfile }
+  | { status: "unidentified"; reason: BusinessContextUnidentifiedReason };
 
 /**
  * Orchestrates evidence -> profile for the onboarding suggestion flow.
@@ -189,7 +208,7 @@ export async function resolveBusinessContext(input: {
   const evidence = await fetchHomepageEvidence(input.domain);
 
   if (evidence.status === "unavailable" && !hasUserDescription) {
-    return { status: "unidentified" };
+    return { status: "unidentified", reason: "homepage_unreadable" };
   }
 
   const profile = await inferBusinessProfile({
@@ -200,8 +219,10 @@ export async function resolveBusinessContext(input: {
     userDescription: input.userDescription
   }).catch(() => null);
 
-  if (!profile) return { status: "unidentified" };
-  if (profile.confidence === "low" && !hasUserDescription) return { status: "unidentified" };
+  if (!profile) return { status: "unidentified", reason: "profile_failed" };
+  if (profile.confidence === "low" && !hasUserDescription) {
+    return { status: "unidentified", reason: "profile_low_confidence" };
+  }
 
   return { status: "identified", profile };
 }

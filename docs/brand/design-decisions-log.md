@@ -10447,6 +10447,330 @@ refresco silencioso que expuso el caso "ya terminado").
 
 ---
 
+---
+
+---
+
+## 111. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
+
+**Qué se decidió.** `/gratis/aparece-mi-marca-en-chatgpt`, primera pieza de la
+Fase P de `docs/seo-positioning-plan.md` (comprobador gratuito público).
+Task Intake propio, aprobado por el fundador solo para esta fase — las otras
+dos preguntas del Task Intake (autorización de esquema/RLS para una
+comprobación real, y Gemini vs. ChatGPT como motor) siguen sin respuesta y
+bloquean cualquier fase posterior.
+
+**Por qué esta fase y no la comprobación real.** El coste real medido
+(`docs/llm-cost-analysis-2026-08.md`) de una comprobación anónima de 3
+prompts es ~0,016 $ — la mitad de un escaneo Free completo — y hoy no existe
+en el repositorio ningún primitivo para limitar a un visitante sin cuenta:
+sin rate-limit por IP, sin Redis, sin captcha. 1.000 consultas/día costarían
+32× el gasto LLM actual del producto, y 500/día agotarían el tramo gratuito
+de grounding de Gemini que comparten los clientes de pago. Cualquier versión
+que llame a un LLM de verdad necesita una tabla nueva (migración), una
+política RLS nueva o escritura por service-role en una ruta anónima — las
+tres prohibidas sin aprobación explícita del fundador (CLAUDE.md), y esa
+aprobación no se ha pedido todavía.
+
+**Lo que sí se decidió: medir demanda antes de construir la máquina.** La
+página capta el dominio con el mismo mecanismo que ya usa el hero de la
+landing (`lib/onboarding/pending-domain.ts`, sin modificarlo — arrastre por
+`localStorage`, se consume al leerlo) y lleva al registro real, donde el
+asistente lo recoge y lanza el escaneo real del plan Free. Cero llamadas LLM,
+cero escritura en base de datos, cero esquema nuevo.
+
+**Honestidad del copy, no solo del backend.** La página dice explícitamente
+que no es un resultado instantáneo — es el escaneo real del plan Free (10
+prompts, 1 motor) — porque prometer una comprobación inmediata y entregar un
+registro habría sido el mismo "fake scan" que CLAUDE.md prohíbe, solo que en
+la página de captación en vez de en el producto.
+
+**Reutiliza el shell de blog, no un layout nuevo.** `BlogPageShell`, el mismo
+que usan `/glosario` y `/comparativas` — `growth-content.md` fija cinco
+shells de marketing y ninguno añade un `<Link>` de pie a mano.
+`.lp-cta:disabled` es el único CSS nuevo: el botón no existía deshabilitado
+en ningún sitio del sistema y el criterio de aceptación exige que un dominio
+inválido no habilite el envío.
+
+### El CTA muerto que ninguna aserción podía cazar
+
+La primera versión deshabilitaba el botón hasta tener un dominio válido. Suena
+correcto y en pantalla era lo contrario: **el CTA principal —lo único que la
+página existe para que pulses— recibía al visitante gris y apagado**, antes de
+que hubiera hecho nada mal. Eso no se lee como «escribe algo primero», se lee
+como «esto está roto», y estaba en la primera pantalla del embudo de captación.
+
+**El piloto lo dio por PASS, y no es un fallo del piloto.**
+`tests/pilot/support/page-audit.ts` salta los controles deshabilitados al medir
+contraste (`if (control.disabled) continue;`) porque **WCAG los exime de AA**:
+mecánicamente la página era impecable. Es el caso puro de lo que el cuarto
+criterio del piloto existe para juzgar —«¿esto es bueno, no sólo correcto?»— y
+de por qué el veredicto no es la tabla de ✅ sino la lista de capturas que
+alguien abrió. Se encontró mirando la captura de móvil, donde el botón gris
+ocupa el centro de la primera pantalla.
+
+**El arreglo no fue pintar mejor el estado deshabilitado, fue quitarlo.** El
+botón siempre invita; al pulsarlo sin un dominio válido devuelve el foco al
+campo y enseña una pista concreta (`.fc-hint`, `--brand-neg` sobre fondo claro,
+4,6:1). Es además la política que el hero de la landing ya tenía escrita y
+justificada: bloquear el alta es peor que arrastrar un dato de menos.
+
+`.lp-cta:disabled` se queda en `globals.css` aunque ninguna pantalla lo use, y
+**en azul atenuado, nunca en gris**: el día que alguien lo necesite, sin esa
+regla heredaría el azul a plena fuerza y parecería pulsable. Al estar exento de
+AA, no lo vigila ningún test — sólo el ojo.
+
+### El motor decide el titular, y el titular decidió el motor
+
+La fase B se aprobó con **Gemini** por coste (0,002 $ contra 0,0117 $ por
+llamada). Al ir a escribir el copy apareció la consecuencia que esa decisión
+arrastraba y que no estaba sobre la mesa al tomarla: **si la comprobación
+pregunta a Gemini, el titular no puede decir ChatGPT**, y la página entera
+existe por la consulta "¿aparece mi marca en ChatGPT?".
+
+La salida propuesta fue reencuadrar la página a "la IA" y quedarse con Gemini.
+El fundador eligió la contraria (2026-08-15): **ChatGPT como motor**, pagando
+la diferencia, *"maximiza el posicionamiento de ChatGPT en todo el artículo si
+eso es lo que más visitas nos va a traer"*. Es la lectura correcta del
+trade-off: los ~90 $/mes de diferencia recortaban la factura y tiraban la
+palabra clave que justifica la página. El coste del techo pasa de ~1,80 $/día
+a **~4,80 $/día** (~145 $/mes en el peor caso absoluto), escrito en el test del
+límite para que subirlo no sea silencioso.
+
+**El perfil y la derivación de la pregunta se quedan en Gemini**: son pasos
+internos que el visitante no ve, así que ahí el motor barato no cuesta nada ni
+en honestidad ni en posicionamiento.
+
+### Por qué esto NO canibaliza al artículo S1
+
+`/blog/como-saber-si-tu-marca-aparece-en-chatgpt` ya tiene
+`primaryKeyword: "cómo saber si mi marca aparece en chatgpt"`. Dos URLs propias
+peleando por una consulta es que Google elija una y ninguna rinda como habría
+rendido una sola.
+
+No ocurre porque **la intención es distinta**: S1 es informacional (una guía de
+tres métodos, para quien quiere entenderlo) y el comprobador es transaccional
+(para quien no quiere leer nada). Misma keyword raíz, SERP distinta, y se
+enlazan entre sí en vez de competir. Por eso se descartó también la idea de
+hacer tres páginas —una por motor—: habría canibalizado a S1, dos de las tres
+habrían sido falsas mientras el motor no fuera el del titular, y "aparece mi
+marca en Gemini" no tiene búsquedas.
+
+**Los tres motores aparecen, cada uno donde es cierto**: ChatGPT manda porque
+es lo que ejecuta la comprobación gratuita; Gemini y Claude viven en el escalón
+de pago y en las FAQ, porque es ahí donde el producto los ejecuta de verdad.
+Nombrarlos no es relleno de densidad —la regla de `growth-content.md` dice que
+la densidad es un techo, no un objetivo—: es que una página sobre visibilidad
+en IA que sólo nombrara uno describiría mal lo que se vende.
+
+### Cuando hay resultado, la página ES el resultado
+
+La primera versión metía el veredicto **dentro** de la página de venta: debajo
+seguían "qué comprobamos exactamente", "por qué importa aparecer en ChatGPT" y
+las cinco FAQ, y arriba el H1 seguía invitando a escribir el dominio. Todo ese
+copy existe para convencerte de hacer una cosa que **acabas de hacer**, así que
+dejarlo ahí convierte la respuesta en un anuncio con un dato encima.
+
+El arreglo no fue CSS: el componente de cliente recibe la cabecera y el copy
+como `props` y deja de pintarlos en cuanto hay algo que enseñar. Siguen
+renderizándose en servidor —llegan como JSX, no se duplican en el cliente—; lo
+único que decide el cliente es si se ven.
+
+**Dos remates que sólo aparecen mirando la pantalla**, no en ninguna aserción:
+la página se encogía de la portada larga a la espera corta y el pie subía
+dejando un hueco gris, para volver a bajar al llegar el resultado —tres saltos
+de maquetación en veinte segundos, justo donde el visitante está esperando y
+mirando—, resuelto con `min-height` en los dos estados. Y `citedOwnDomain` se
+recogía y no se pintaba: es la señal más fuerte que puede dar una consulta —que
+el motor fuera a leer TU web en vez de nombrarte de memoria— y estaba tirándose.
+Se enseña sólo cuando es verdad, nunca en negativo: "no te citó" con una sola
+consulta sería el mismo veredicto prematuro que el aviso de variabilidad
+desmonta.
+
+### La guarda del rol de servicio tuvo que aprender un caso nuevo
+
+`tests/service-role-identity.test.ts` (§92) exige que todo uso de
+`createServiceClient()` en `app/` establezca identidad. La ruta del comprobador
+la usa y **no tiene identidad que establecer**: su visitante no tiene cuenta,
+que es el producto entero de esa página. Su propio mensaje de error avisaba de
+la tentación — *"añádela a IDENTITY_GATES a conciencia, no para poner el test en
+verde"*.
+
+Añadir una quinta puerta de identidad habría sido mentir, porque no hay
+ninguna. Lo que de verdad hace segura esa ruta no es una identidad sino **la
+tabla que toca**: `public_checks` no tiene datos de cliente ni clave foránea a
+nada que un cliente posea. Así que la excepción se comprueba **por tabla**, no
+por nombre de fichero: si alguien añade mañana un `.from("projects")` ahí, el
+test se pone rojo igual — que es exactamente lo que una excepción por nombre no
+habría hecho. Verificado rompiéndolo.
+
+### `/gratis` entra en el guardián de honestidad
+
+`article-honesty.test.ts` cubría cuatro superficies y esta nació fuera. Es la
+primera página pública dirigida a alguien **sin cuenta**, así que es donde más
+caro sale publicar un peso del compuesto o un código ADR. Se añadió al crearla,
+no cuando se le escapara algo, y se verificó metiendo un `ADR 0033` de mentira
+para ver el test en rojo.
+
+### Addendum (2026-08-15, misma tarde): la primera ejecución real falló, y lo grave no fue el fallo
+
+El fundador probó el comprobador en su móvil nada más configurarse la variable
+y la migración. Resultado: **"Hemos recibido la respuesta pero no hemos podido
+interpretarla"** — `extraction_failed`. Lo que ese mensaje demuestra que SÍ
+funcionaba: la sal, la tabla, los tres límites, la lectura de la portada, la
+derivación de la pregunta y **la llamada real a ChatGPT**. Falló el último paso,
+el que lee esa respuesta y devuelve JSON estructurado.
+
+**Lo grave no fue el fallo, fue que no se podía diagnosticar.** El fichero tenía
+cinco `catch {}` que tiraban la causa entera, así que `extraction_failed` podía
+ser un 400 del proveedor, un JSON roto, un timeout, un fallo de esquema o una
+respuesta vacía — cinco cosas que se arreglan de cinco maneras distintas, y
+ninguna forma de saber cuál. Es literalmente la regla que ya estaba escrita:
+*"un `catch` que descarta la causa es un fallo, no un estilo"*
+(`.claude/rules/gemini.md`). Ahora cada paso guarda una etiqueta corta escrita
+por este repositorio —la categoría del `ExtractionError` (`quota`, `timeout`,
+`http`, `empty`, `invalid_json`, `schema`, `config`) o el nombre de la clase,
+saneado a letras— que va al log de ejecución y a `error_category` de la fila.
+**Nunca sale en la respuesta HTTP**: la lee un desconocido.
+
+**Segundo fallo, encontrado leyendo y no ejecutando: el presupuesto no llegaba
+al proveedor.** `extractOpenAIStructuredData` acepta un `deadlineAt` y la
+comprobación no se lo pasaba, así que su bucle de reintentos (3 intentos de
+hasta 20 s) arrancaba uno nuevo mientras quedara un milisegundo — hasta 60 s de
+extracción dentro de una función con `maxDuration = 60`, o sea un 504 sin cuerpo
+con el dinero ya gastado. Se le pasa el deadline de la invocación **menos un
+presupuesto de paso entero**, porque el helper sólo promete "no EMPIEZO un
+intento pasado el deadline" y hay que dejarle sitio para terminar el que sí
+empiece (`.claude/rules/scan.md`; `docs/adr/0037`).
+
+**Y un motor de reserva para la extracción, sólo para la extracción.** Tirar a
+la basura una llamada con búsqueda ya pagada —cuya respuesta estaba entera y
+correcta en memoria— porque el lector falló era perder el resultado teniéndolo
+delante. Leer la respuesta es un paso interno que el visitante no ve, igual que
+el perfil del negocio y la derivación de la pregunta, que ya iban por Gemini a
+propósito; **lo que el visitante ve —la pregunta y la respuesta literal— lo
+sigue produciendo ChatGPT**, así que el titular de la página sigue siendo
+cierto. La reserva está acotada por el mismo presupuesto: si no cabe, no
+arranca.
+
+**Recuperarse no borra el incidente.** Cuando la reserva salva la comprobación,
+la causa del primer fallo se guarda igual (`fallback:config`) en una fila con
+`status = 'completed'`. Una degradación silenciosa es exactamente cómo los 429
+de OpenAI corrieron cuatro días sin que nadie se enterara (`docs/adr/0029`).
+
+**Lo que este addendum NO resuelve, dicho explícitamente.** La causa raíz del
+fallo de OpenAI sigue **sin diagnosticar**: se ha hecho diagnosticable, no se ha
+diagnosticado. Se sabrá con la primera ejecución después de este cambio,
+mirando `error_category`. Y hay un antecedente que apunta ahí: §54 dejó anotado
+"conocido y no resuelto: los 400 de OpenAI del 5-08 (`Check OPENAI_MODEL`)",
+que es el mensaje exacto de `getOpenAIApiError(400)` y sigue sin tocarse. Si la
+categoría que aparezca es `config`, el mismo fallo lleva diez días vivo también
+en el escaneo, y ahí no hay reserva que lo tape — sería su propia fase.
+
+### Fase C (2026-08-16): la primera comprobación que salió bien enseñaba tres datos que no existían
+
+Task Intake aprobado por el fundador el mismo día, sobre una captura suya del
+resultado real. El comprobador funcionó —el motor de reserva no llegó a hacer
+falta— y lo que llegó a pantalla tenía **tres afirmaciones sin dato debajo**.
+Vale la pena el detalle, porque las tres son la misma clase de error: convertir
+la ausencia de un dato en la apariencia de uno.
+
+1. **La lista numeraba el índice de un array.** El encabezado decía "Quién sí
+   apareció, **en el orden en que ChatGPT los nombró**" y pintaba `1..10`. Pero
+   `other_brands_mentioned` es `string[]`: el extractor no devuelve posición
+   para esas marcas, y el prompt tampoco se la pide. El componente numeraba
+   `i + 1`. Ahora son etiquetas sin número, con el orden desmentido en el
+   propio bloque.
+
+2. **"Movistar en el puesto 1" era un 1 estructural, no medido.** La
+   comprobación pasa `competitors: []` a propósito (es lo que hace que todo
+   salga por `other_brands_mentioned`), así que la marca es la **única entidad
+   que el extractor rankea** y su `position` vale 1 siempre que aparezca. En la
+   respuesta que lo destapó, ChatGPT nombraba a Orange antes que a Movistar.
+   `brandPosition` **se ha eliminado de `PublicCheckResponse`**, no ocultado en
+   la pantalla: un campo que llega al navegador y depende de que nadie lo pinte
+   es un campo que vuelve.
+
+3. **Netflix no compite con Movistar.** La lista mezclaba a Orange, Yoigo y
+   MÁSMÓVIL con SkyShowtime, DAZN, Netflix, Prime Video, Disney+ y HBO Max —
+   plataformas que van *dentro* de los paquetes. `otherBrandsRelevanceHint` no
+   basta, y no hay dato hoy para separarlas, así que lo que se ha quitado es
+   **nuestra interpretación**: ya no se llaman competidores ni "quién apareció
+   en tu lugar", y el bloque dice explícitamente que alguna puede no ser
+   competencia.
+
+**Y la respuesta se lee.** Llegaba en markdown y se pintaba en crudo dentro de
+un `<blockquote>` con `white-space: pre-wrap`: un muro con URLs enteras a la
+vista. `lib/free-checker/answer-markdown.ts` es un parser propio y mínimo
+—párrafos, listas, negritas, enlaces— que **devuelve datos, no HTML**. No
+existe ninguna ruta a `dangerouslySetInnerHTML`, así que la inyección no es
+algo que haya que acordarse de evitar: es imposible por construcción. Los
+enlaces se validan por protocolo (`http`/`https`; cualquier otro degrada a
+texto) y salen con `rel="nofollow noopener noreferrer"`. La URL se conserva tal
+cual, `?utm_source=openai` incluido: es la respuesta literal, y limpiarla sería
+enseñar algo distinto de lo que se recibió en la pantalla cuyo argumento entero
+es que enseña lo que se recibió.
+
+**Fase D, propuesta y sin aprobar.** Lo que la Fase C deja sobre la mesa, con
+su coste medido: la generación cuesta $0,0117 (74% del total, y es el fee de
+búsqueda) y **la extracción $0,00036 — el 2%**. Pedirle más a esa llamada es
+prácticamente gratis. Cabrían ahí: posiciones reales para las demás marcas (lo
+que devolvería un ranking honesto), el dominio de cada una (→ logo por favicon)
+y un "¿es de tu categoría?" que arregla el fallo 3 de verdad. Y **sin coste
+ninguno**: las fuentes que el motor consultó ya vienen en la respuesta como
+`groundingChunks` y `runPublicCheck` las tira al quedarse sólo con
+`generated.text`. Es el dato más accionable de la pantalla —de dónde saca
+ChatGPT lo que dice de tu categoría— y está pagado. Lo que **no** cabe en
+ningún caso es una puntuación: el producto exige diez respuestas antes de
+llamar fiable a un número. Toca el esquema de extracción compartido con el
+escaneo, así que necesita su propio Task Intake.
+
+### Fase C-bis (2026-08-16): el segundo fallo real, y el agujero que dejó la primera instrumentación
+
+Segunda ejecución del fundador: **"No hemos podido leer tu web"** —
+`site_unreachable`, un paso antes que la vez anterior. Dos cosas mal, y la
+primera es mía.
+
+**El agujero.** `resolveBusinessContext` **nunca lanza**: colapsa tres motivos
+distintos en un único `{status: "unidentified"}`. La instrumentación de la
+mañana metió la causa en los `catch`, y este camino no pasa por ninguno — así
+que `error_category` volvió a quedarse en `site_unreachable` a secas, sin causa,
+que es exactamente el fallo que esa instrumentación existía para eliminar. Una
+categorización que sólo cubre las excepciones no cubre el código que devuelve
+sus errores en vez de lanzarlos.
+
+**Y lo que se le decía al visitante era falso dos veces de cada tres.** Los tres
+motivos son: la portada no se pudo leer, el modelo no devolvió perfil, o el
+modelo devolvió uno que él mismo marca poco fiable. **Sólo el primero es su
+web.** A los otros dos se les enseñaba *"comprueba que el dominio es correcto y
+que la página carga"* sobre un sitio que carga perfectamente — una causa que el
+código no puede saber (`.claude/rules/gemini.md`). `BusinessContextResult` gana
+un `reason` **obligatorio, no opcional**: opcional habría dejado que un retorno
+futuro se olvidara de decir por qué, y este fallo consiste precisamente en no
+saber por qué. El comprobador ramifica sobre él y estrena `profile_unclear`, con
+un mensaje que dice lo que es cierto y **no manda a nadie a revisar su web**.
+
+**Tercera cosa, de la captura y no del código.** Al fallar, la pantalla retiraba
+la página entera y dejaba un panel de error solo en medio de un blanco: se lee
+como una web rota, no como un intento que no salió. La página se retira cuando
+hay un resultado que la sustituya; un fallo no lo es. Se queda el contenido, se
+va el titular —que invita a escribir un dominio donde ya no hay campo.
+
+**Sigue sin diagnosticarse** la causa raíz del `extraction_failed` de la mañana:
+esta segunda ejecución ni llegó al paso 4.
+
+**Trazabilidad.** Task Intake FREE-CHECKER-1 (2026-08-15, sin PR propio —
+generado en la conversación, no committeado como documento aparte); Task Intake
+Fase C (2026-08-16, aprobado en sesión); `docs/seo-positioning-plan.md` Fase P;
+`docs/llm-cost-analysis-2026-08.md` (los costes de arriba);
+`tests/pilot/support/page-audit.ts` (la exención que hace este fallo
+invisible); §55 (Q5b, cuando el chequeo de contraste entró en el piloto); §54
+(los 400 de OpenAI, conocidos y sin resolver); `docs/adr/0029` (categorizar y
+avisar); `docs/adr/0037` (presupuestar contra la invocación);
+`.claude/rules/styles.md` (`a:not(.btn)` en la regla de ancestro).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
