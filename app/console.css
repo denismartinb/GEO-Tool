@@ -785,7 +785,6 @@
    titular de la pestaña Problemas. `color-mix` reutiliza --pos-ink en vez de
    inventar un hex nuevo, mismo patrón que .art-rec-pri. */
 .tech-potential {
-  position: relative;
   display: flex;
   gap: 14px;
   align-items: flex-start;
@@ -794,22 +793,8 @@
   background: linear-gradient(135deg, var(--pos-soft), var(--surface) 130%);
   border: 1px solid color-mix(in srgb, var(--pos-ink) 16%, transparent);
   box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 24px color-mix(in srgb, var(--pos-ink) 12%, transparent);
-  overflow: hidden;
-}
-.tech-potential::after {
-  content: "";
-  position: absolute;
-  top: -46px;
-  right: -46px;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--pos-ink) 14%, transparent);
-  pointer-events: none;
 }
 .tech-potential-badge {
-  position: relative;
-  z-index: 1;
   flex: 0 0 auto;
   width: 38px;
   height: 38px;
@@ -820,7 +805,7 @@
   place-items: center;
   box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 10px color-mix(in srgb, var(--pos-ink) 18%, transparent);
 }
-.tech-potential-body { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.tech-potential-body { flex: 1; min-width: 0; }
 .tech-potential-label {
   font-size: 11px;
   font-weight: 750;
