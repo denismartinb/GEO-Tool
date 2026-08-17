@@ -129,21 +129,32 @@ La confianza se mide sobre los resultados **limpios** (extraídos y sin
 `extraction_error`), de forma proporcional:
 
 ```ts
-if (extractionCoverage < CLEAN_COVERAGE_FLOOR) confidence = "low";      // < 80% util
+if (extractionCoverage < CLEAN_COVERAGE_FLOOR) confidence = "low";      // < 80% útil
 else if (cleanResultsCount >= 20) confidence = "high";
-else if (cleanResultsCount >= 2) confidence = "medium";
+else if (totalResults >= MIN_RESPONSES_FOR_BAND) confidence = "medium"; // ver nota
 ```
 
-El suelo del 80% que el ADR original pretendía pasa a ser real. Los umbrales de
-tamaño de muestra (≥20 alto, 2–19 medio) no cambian: la decisión de 2026-07
-sobre fiabilidad estadística sigue en pie.
+El suelo del 80% que el ADR original pretendía pasa a ser real.
+
+**Nota de reconciliación (RECS-REDESIGN-1, mergeada 2026-08-17).** Esta
+revisión se escribió en una rama que partió de antes de
+**GEO-SCORE-RELIABILITY-1 (ADR 0024, 2026-08-03)**, que subió el umbral de
+`medium` de `>= 2` a `>= MIN_RESPONSES_FOR_BAND` (10) resultados — sin verlo,
+porque la rama nunca llegó a fusionarse hasta ahora. El umbral de arriba usa
+ya la versión de ADR 0024 (por tamaño de muestra TOTAL, no de resultados
+limpios): el suelo del 80% que sí introduce esta revisión sigue aplicando a
+`"low"`/`"high"`, y el gate de tamaño de muestra de ADR 0024 sigue aplicando a
+`"medium"` — son dos protecciones ortogonales, no una sustituyendo a la otra.
 
 ### Consecuencias
 
-- Una corrida con fallos aislados de extracción vuelve a poder cuantificarse.
-  Un escaneo de 20 respuestas aguanta hasta 4 filas malas antes de caer a baja.
-- Sigue habiendo suelo: por debajo del 80% util, la confianza es baja y no se
-  muestra ninguna cifra. La protección contra la falsa precisión se conserva.
+- Una corrida con fallos aislados de extracción vuelve a poder cuantificarse,
+  siempre que además tenga las respuestas suficientes para no ser ya "low" por
+  tamaño de muestra (ADR 0024). Un escaneo de 20 respuestas aguanta hasta 4
+  filas malas antes de caer a baja.
+- Sigue habiendo suelo: por debajo del 80% útil, la confianza es baja y no se
+  muestra ninguna cifra. La protección contra la falsa precisión se conserva,
+  igual que el suelo de `MIN_RESPONSES_FOR_BAND` de ADR 0024.
 - Se persiste `clean_results_count` en `details_json`, junto a los ya
   existentes `extracted_results_count` y `extraction_error_count`, para que la
   diferencia sea auditable desde el propio escaneo.

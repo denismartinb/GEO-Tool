@@ -424,22 +424,32 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
   });
 
   it("survives an isolated extraction failure instead of collapsing to low (ADR 0015 rev. 2026-08-04)", () => {
-    // 4 of 5 usable = 80%, exactly the floor. Before this revision a single bad
-    // row rated the run identically to a run where NOTHING extracted, and that
-    // erased the potential-points figure from every recommendation on screen.
-    const missing = computeRunScoresFromResults(
-      [
-        row({ id: "1", extracted_json: null }),
-        row({ id: "2" }),
-        row({ id: "3" }),
-        row({ id: "4" }),
-        row({ id: "5" })
-      ],
-      PROJECT_DOMAIN
-    );
+    // MIN_RESPONSES_FOR_BAND (10) rows, 1 bad = 90% clean, above the 80%
+    // floor AND above the ADR 0024 sample-size gate for "medium". Before this
+    // revision a single bad row rated the run identically to a run where
+    // NOTHING extracted, and that erased the potential-points figure from
+    // every recommendation on screen.
+    const missingRows = Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) => row({ id: String(i) }));
+    missingRows[0] = row({ id: "0", extracted_json: null });
+    const missing = computeRunScoresFromResults(missingRows, PROJECT_DOMAIN);
     expect(missing.confidence).toBe("medium");
 
-    const errored = computeRunScoresFromResults(
+    const erroredRows = Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) => row({ id: String(i) }));
+    erroredRows[0] = row({ id: "0", extraction_error: "boom" });
+    const errored = computeRunScoresFromResults(erroredRows, PROJECT_DOMAIN);
+    expect(errored.confidence).toBe("medium");
+    // An errored row is NOT clean, even though its extracted_json parsed.
+    expect(errored.details_json.extraction_error_count).toBe(1);
+    expect(errored.details_json.clean_results_count).toBe(MIN_RESPONSES_FOR_BAND - 1);
+    expect(errored.details_json.extracted_results_count).toBe(MIN_RESPONSES_FOR_BAND);
+  });
+
+  it("stays low on an isolated extraction failure when the run is too small for the medium sample-size floor (ADR 0024)", () => {
+    // 4 of 5 usable = 80%, exactly the ADR 0015 clean-coverage floor — but
+    // only 5 total responses, below MIN_RESPONSES_FOR_BAND (10). The two
+    // floors are independent: clearing one does not exempt a run from the
+    // other.
+    const result = computeRunScoresFromResults(
       [
         row({ id: "1", extraction_error: "boom" }),
         row({ id: "2" }),
@@ -449,11 +459,8 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
       ],
       PROJECT_DOMAIN
     );
-    expect(errored.confidence).toBe("medium");
-    // An errored row is NOT clean, even though its extracted_json parsed.
-    expect(errored.details_json.extraction_error_count).toBe(1);
-    expect(errored.details_json.clean_results_count).toBe(4);
-    expect(errored.details_json.extracted_results_count).toBe(5);
+    expect(result.confidence).toBe("low");
+    expect(result.details_json.clean_results_count).toBe(4);
   });
 
   it("is high with >=20 results and full extraction coverage (>=0.8) — ADR 0015", () => {

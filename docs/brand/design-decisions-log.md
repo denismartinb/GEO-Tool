@@ -10451,7 +10451,7 @@ refresco silencioso que expuso el caso "ya terminado").
 
 ---
 
-## 111. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
+## 114. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
 
 **Qué se decidió.** `/gratis/aparece-mi-marca-en-chatgpt`, primera pieza de la
 Fase P de `docs/seo-positioning-plan.md` (comprobador gratuito público).
