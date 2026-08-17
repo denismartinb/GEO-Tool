@@ -34,7 +34,12 @@ export type SessionUser = { email: string; planId: string; planName: string };
  */
 const SESSION_CACHE_KEY = "gs_session_user_hint";
 
-function readCachedSessionUser(): SessionUser | null {
+/** Exported for `use-session-user.test.ts` — the hook itself needs a DOM/React
+ *  render harness this repo doesn't carry (`vitest.config.ts` runs `environment:
+ *  "node"` on purpose), but this cache layer is plain logic against
+ *  `sessionStorage` and is exactly what the QA pass on
+ *  pro-badge-alignment-flickering-v4brfv flagged as untested. */
+export function readCachedSessionUser(): SessionUser | null {
   try {
     const raw = sessionStorage.getItem(SESSION_CACHE_KEY);
     return raw ? (JSON.parse(raw) as SessionUser) : null;
@@ -43,7 +48,7 @@ function readCachedSessionUser(): SessionUser | null {
   }
 }
 
-function writeCachedSessionUser(user: SessionUser | null): void {
+export function writeCachedSessionUser(user: SessionUser | null): void {
   try {
     if (user) sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(user));
     else sessionStorage.removeItem(SESSION_CACHE_KEY);
