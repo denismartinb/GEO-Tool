@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   APPLICATION_CATEGORY,
+  BRAND_PROFILES,
   CANONICAL_DEFINITION_LONG,
   ORGANIZATION_ID,
   SITE_ORIGIN,
@@ -75,6 +76,33 @@ describe("E3 — la home y la página de entidad declaran EL MISMO producto", ()
   it("el Organization del layout expone el `@id` al que se apunta", () => {
     const org = read("components", "seo", "organization-schema.tsx");
     expect(org).toContain('"@id": ORGANIZATION_ID');
+  });
+
+  /**
+   * SEO-POS-1 Fase A (log §107). `sameAs` deja de estar vacío en cuanto existe
+   * un perfil real. Lo que se fija aquí no es cuántos hay —eso crece— sino que
+   * cada uno sea una URL absoluta y ajena: un `sameAs` apuntando a nuestro
+   * propio dominio no corrobora nada, y uno relativo no resuelve.
+   */
+  it("los perfiles externos son URLs absolutas y fuera de nuestro dominio", () => {
+    for (const profile of BRAND_PROFILES) {
+      expect(profile.startsWith("https://"), `\`${profile}\` debería ser una URL absoluta`).toBe(true);
+      expect(
+        profile.startsWith(SITE_ORIGIN),
+        `\`${profile}\` apunta a nuestro propio dominio. Un \`sameAs\` existe para dar al motor ` +
+          "una corroboración de FUERA; apuntarnos a nosotros mismos no aporta ninguna."
+      ).toBe(false);
+    }
+    expect(new Set(BRAND_PROFILES).size, "hay perfiles repetidos").toBe(BRAND_PROFILES.length);
+  });
+
+  it("el schema sólo emite `sameAs` si hay perfiles, en vez de un array vacío", () => {
+    const org = read("components", "seo", "organization-schema.tsx");
+    expect(
+      org,
+      "Un `sameAs: []` no dice «todavía ninguno», dice «ninguno» — que es una afirmación " +
+        "distinta y falsa en cuanto exista el primer perfil."
+    ).toContain("BRAND_PROFILES.length > 0");
   });
 
   it("los identificadores son URIs estables sobre el dominio propio", () => {

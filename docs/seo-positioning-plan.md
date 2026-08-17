@@ -319,7 +319,9 @@ notar que envejeció. Detalle: log §107.
       §4 del kit.*
 - [ ] **YouTube**: 2-3 vídeos cortos ("cómo saber si ChatGPT te menciona") —
       fuente nº 1 de AI Overviews. *Dos guiones en §5.*
-- [ ] Directorios B2B (G2/Capterra) y perfiles (LinkedIn). *Copy en §6.*
+- [x] **LinkedIn publicada (2026-08-16)** y añadida a `BRAND_PROFILES`, así
+      que el `Organization` ya emite su primer `sameAs` real.
+- [ ] Directorios B2B (G2/Capterra). *Copy en §6.*
 - [ ] **Nota de prensa de datos propios**: **bloqueada**, no aplazada.
       Depende del Observatorio (capa E, sin aprobar); escribir la plantilla
       antes sería un molde invitando a rellenarse con números que nadie ha
@@ -327,10 +329,9 @@ notar que envejeció. Detalle: log §107.
 - [ ] EUIPO pendiente de Fase 0 del launch-plan: no bloquea nada del kit
       —son medios ganados— pero sí conviene antes de difusión **pagada** del
       nombre.
-- [ ] **Vuelta al código:** en cuanto existan LinkedIn, YouTube y las fichas,
-      sus URLs son `sameAs` legítimos del `Organization` (hoy vacío a
-      propósito, log §100). PR de tres líneas por perfil, nunca antes de que
-      el perfil exista.
+- [ ] **Vuelta al código:** `BRAND_PROFILES` ya no está vacío. Cada perfil
+      nuevo (G2, Capterra, YouTube) se añade ahí en cuanto exista — nunca
+      antes, porque un `sameAs` a un perfil inexistente apunta a un 404.
 
 ### Coordinación con la sesión de performance
 

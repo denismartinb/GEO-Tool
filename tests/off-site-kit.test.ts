@@ -93,6 +93,26 @@ describe("lo que el kit dice de la marca es lo que dice el producto", () => {
     expect(kit).toMatch(/desglose por país/i);
   });
 
+  /**
+   * El error real que apareció en la primera versión de la página de LinkedIn
+   * (2026-08-16): «Calcula tu GEO Score a partir de menciones, cuota de voz,
+   * **sentimiento**, fuentes citadas y una auditoría técnica». El sentimiento
+   * se mide y se enseña, pero **no es un componente del compuesto** — son
+   * cinco y ése no está (`lib/scoring/run-scoring.ts`). Y de paso el listado
+   * se dejaba fuera la prominencia, que sí lo es.
+   *
+   * Es una afirmación falsa sobre nuestra propia metodología, en el formato
+   * donde más caro sale: una ficha externa que nadie va a corregir. El kit
+   * tiene que seguir avisando.
+   */
+  it("avisa de que el sentimiento NO es un componente del GEO Score", () => {
+    expect(
+      /sentimiento/i.test(kit) && /no es un componente del GEO Score/i.test(kit),
+      "El kit tiene que seguir avisando de que el sentimiento se mide pero no entra en el " +
+        "compuesto. Sin ese aviso vuelve a colarse en una ficha externa, como ya pasó."
+    ).toBe(true);
+  });
+
   it("no promete la nota de prensa como si el dato existiera", () => {
     // El Observatorio no está aprobado. Una plantilla de nota de prensa aquí
     // sería un molde invitando a rellenarse con números que nadie ha medido.

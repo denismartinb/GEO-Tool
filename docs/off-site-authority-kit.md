@@ -174,9 +174,9 @@ sale de §2.**
 - **Descripción corta (≤160 car.):**
   > GenScore mide si ChatGPT, Gemini y Claude mencionan y citan tu marca al
   > responder en tu mercado, y convierte cada hallazgo en acciones concretas.
-- **Descripción larga:** la definición canónica de §2 + los dos párrafos de
-  `/que-es-genscore`. No reescribirla: el objetivo de la Fase E es que sea
-  **literalmente la misma cadena** en todas partes.
+- **Descripción larga:** empieza por la definición canónica de §2 **literal**
+  (el objetivo de la Fase E es que sea la misma cadena en todas partes) y sigue
+  con el bloque de §6.1.
 - **Precio de partida:** 0 € (plan gratuito permanente, sin tarjeta).
 - **Idiomas:** castellano.
 - **Limitaciones declaradas:** las tres de §3.
@@ -185,12 +185,48 @@ sale de §2.**
 lleva `aggregateRating` justamente porque no hay reseñas reales (log §100);
 fabricarlas fuera sería el mismo dato falso, y además G2 las retira.
 
+### 6.1 Qué hace GenScore — el bloque reutilizable
+
+Sirve para la descripción larga de G2, Capterra y el «Sobre nosotros» de
+LinkedIn. **Los cinco puntos son los cinco componentes reales del GEO Score**,
+en su orden de importancia publicado (`lib/scoring/run-scoring.ts`,
+`/docs/metodologia/geo-score`). Ni se añade uno que no esté ni se quita uno que
+sí:
+
+> - Lanza contra ChatGPT, Gemini y Claude las preguntas que hacen tus clientes
+>   de verdad, no tu nombre de marca.
+> - Mide **si te mencionan** — sin mención no hay nada que interpretar—, **con
+>   qué protagonismo** apareces dentro de la respuesta, **qué cuota de voz**
+>   tienes frente a tus competidores, **si citan tu web** como fuente, y la
+>   **salud técnica de tu sitio** para que un motor pueda leerlo y atribuirte
+>   lo que dice.
+> - Detecta qué competidores están apareciendo, y en qué preguntas concretas.
+> - Convierte cada hallazgo en acciones concretas, priorizadas.
+>
+> Para agencias que gestionan este canal a sus clientes, y para marcas que ya
+> invierten en posicionamiento y no saben qué pasa con ellas dentro de una
+> respuesta de IA.
+
+**Cuidado con «sentimiento».** GenScore **sí** mide el sentimiento de cada
+respuesta y lo enseña, pero **no es un componente del GEO Score**: el compuesto
+son los cinco de arriba y nada más. Decir que el score se calcula «a partir de
+… sentimiento …» es falso sobre nuestra propia metodología, y en una ficha
+externa nadie lo va a corregir. Si se quiere nombrar, va aparte: *"además mide
+el tono con el que te nombran"*.
+
 ### LinkedIn (página de empresa)
 
-- **Tagline:** `La plataforma GEO que mide si las IA recomiendan tu marca`
-  (la misma que el subtítulo de `/que-es-genscore`).
-- **Sobre nosotros:** definición canónica de §2, entera.
+- **Tagline (≤120 car.):**
+  > Mide si la IA recomienda tu marca. GEO Score, competidores y acciones para
+  > posicionarte en ChatGPT, Gemini y Claude.
+- **Sobre nosotros:** definición canónica de §2 + el bloque de §6.1.
 - **Sitio web:** `https://www.genscore.es`
+- **Sector:** Desarrollo de software.
+
+**El orden de los motores es ChatGPT, Gemini, Claude** — el mismo que la
+definición canónica y que `SUPPORTED_ENGINES`. No es capricho: ChatGPT es el
+que busca la gente, así que va primero en cualquier texto donde el lector
+escanee.
 
 ---
 
@@ -235,7 +271,8 @@ existe.
 |---|---|
 | Reddit | Material listo. Publicar: fundador |
 | YouTube (2 vídeos) | Guiones listos. Grabar: fundador |
-| G2 / Capterra / LinkedIn | Copy listo. Alta: fundador |
+| LinkedIn | ✅ **Publicada (2026-08-16)** y ya en `sameAs` |
+| G2 / Capterra | Copy listo. Alta: fundador |
 | Nota de prensa | **Bloqueada** — depende del Observatorio (sin aprobar) |
 | EUIPO | Pendiente del fundador; sólo bloquea difusión pagada |
-| `sameAs` en el schema | Pendiente de que existan los perfiles |
+| `sameAs` en el schema | ✅ LinkedIn dentro (`BRAND_PROFILES`). Pendientes G2, Capterra, YouTube |

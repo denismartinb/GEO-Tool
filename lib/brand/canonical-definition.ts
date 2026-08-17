@@ -65,3 +65,23 @@ export const APPLICATION_CATEGORY = "BusinessApplication";
 export const SITE_ORIGIN = "https://www.genscore.es";
 export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 export const SOFTWARE_APPLICATION_ID = `${SITE_ORIGIN}/#software`;
+
+/**
+ * Perfiles externos reales de la marca — SEO-POS-1 Fase A (log §107, §8 del
+ * kit off-site).
+ *
+ * **Sólo perfiles que existen.** Esta lista estuvo vacía a propósito desde
+ * GROWTH-2: `sameAs` es una afirmación sobre el mundo, y declarar un perfil que
+ * no existe es el mismo dato falso que una métrica inventada, con el agravante
+ * de que apunta a un 404 (log §100). Se añade una URL **cuando el perfil ya
+ * está publicado**, nunca antes ni "para cuando lo cree".
+ *
+ * **Para qué sirve.** Es la corroboración externa que el sitio no tenía: un
+ * motor que sólo encuentra a una marca hablando de sí misma en su propio
+ * dominio tiene poco con lo que resolver la entidad frente a los otros
+ * GenScore públicos. Cada perfil real que se añada aquí es la señal más barata
+ * que le queda a la Fase E.
+ *
+ * Pendientes de que el fundador los cree: G2, Capterra, YouTube.
+ */
+export const BRAND_PROFILES: readonly string[] = ["https://www.linkedin.com/company/genscore/"];
