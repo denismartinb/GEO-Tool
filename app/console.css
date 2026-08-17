@@ -335,7 +335,14 @@
     align-items: stretch;
     margin-top: 16px;
   }
-  .ov2-gauge-block { display: flex; flex-direction: column; }
+  /* `min-width: 0` on both grid items, same as every other `.ov2-*` column
+     pair in this file (`.ov2-main`/`.ov2-rail`, `.ov2-score-main`/
+     `.ov2-score-side`): `minmax(0, 1fr)` on the TRACK bounds the column,
+     but without this the KPI carousel's own intrinsic content width still
+     wins as the grid ITEM's automatic minimum, and the hero row renders
+     wider than `.ov2-scope` — the third KPI card was found overflowing
+     past the page's own right edge in the pilot's tablet capture. */
+  .ov2-gauge-block { display: flex; flex-direction: column; min-width: 0; }
   .ov2-gauge-sec-lbl { display: flex; margin: 0 2px 10px; }
   /* The internal label is only hidden here, not removed from the DOM below
      760px — see the OV-DESKTOP-2 note above `.ov2-gauge-sec-lbl`. */
@@ -355,7 +362,7 @@
   }
   .ov2-gauge-block .ov2-gauge-card .ov2-gauge-ring { align-self: center; }
   .ov2-gauge-block .ov2-gauge-card .ov2-gauge-info { flex: 0 0 auto; width: 100%; }
-  .ov2-hero-kpis { display: flex; flex-direction: column; }
+  .ov2-hero-kpis { display: flex; flex-direction: column; min-width: 0; }
   .ov2-hero-kpis .ov2-sec-lbl { margin: 0 2px 10px; }
   .ov2-hero-kpis .ov2-kpi-car { flex: 1; }
   .ov2-hero-kpis .ov2-kpi { display: flex; flex-direction: column; justify-content: center; }
