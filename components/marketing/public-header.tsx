@@ -36,7 +36,7 @@ function AccountChip({ user, onNavigate }: { user: SessionUser; onNavigate?: () 
       <div className="avatar" aria-hidden="true">
         {avatarInitials(user.email)}
       </div>
-      <div style={{ minWidth: 0 }} aria-hidden="true">
+      <div className="lp-user-chip-identity" aria-hidden="true">
         <div className="lp-user-chip-email">{user.email}</div>
         {showsPlanBadge(user.planId) && (
           <span className="sb-plan-badge">

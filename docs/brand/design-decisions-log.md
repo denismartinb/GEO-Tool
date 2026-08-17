@@ -10816,6 +10816,74 @@ corrige).
 
 ---
 
+## 115. Cabecera pública: badge Pro desalineado bajo el email, y flicker de "Iniciar sesión" en cada recarga (pro-badge-alignment-flickering-v4brfv, 2026-08-17)
+
+**Origen.** El fundador reportó dos cosas con una captura de la portada en
+escritorio, ya logado: (1) en el chip de cuenta de la cabecera pública, el
+badge "Pro" salía apilado debajo del email y alineado a la izquierda, muy
+por debajo del ancho real del email, leyendo como desalineado; (2) al
+recargar cualquier página pública, la cabecera muestra brevemente "Iniciar
+sesión" / "Prueba gratis" antes de reemplazarlos por el chip de cuenta — un
+flicker que ocurre en cada recarga, no sólo la primera vez.
+
+**Causa (badge).** `AccountChip` (`components/marketing/public-header.tsx`)
+metía el email y el badge como dos hijos de bloque sueltos dentro de un
+`<div>` sin `display: flex`; el badge (`.sb-plan-badge`, `inline-flex`)
+caía por tanto en una línea nueva bajo el email en vez de a su lado. Es la
+misma clase que usa el chip de la barra lateral de consola
+(`components/sidebar.tsx`, previo a GENSCORE-HEADER-2, §65), donde apilar sí
+tiene sentido porque esa barra mide ~240px; la cabecera pública tiene todo
+el ancho del nav para trabajar y no tenía motivo para heredar el apilado.
+
+**Causa (flicker).** `useSessionUser` (`lib/use-session-user.ts`,
+GENSCORE-HEADER-2, §65) arranca siempre en `null` ("anónimo o sin resolver
+todavía") y pide `/api/me` en un `useEffect` — una decisión deliberada y
+documentada para no retrasar el CTA de conversión al visitante anónimo, que
+es la inmensa mayoría del tráfico. El coste declarado de esa decisión era
+que un visitante ya logado ve el estado anónimo "por el momento que tarda en
+responder" — pero ese momento se repetía en CADA recarga, y el fundador lo
+señaló como molesto, no como breve.
+
+**Arreglo (badge).** El contenedor de email+badge pasa a
+`.lp-user-chip-identity` (`display: flex; align-items: center; gap: 8px;
+min-width: 0`), con el email en `flex` normal (su propio `min-width: 0` deja
+que el `text-overflow: ellipsis` existente gane) y el badge en `flex: 0 0
+auto` para que nunca se comprima. `.sb-plan-badge` base sigue con
+`margin-top: 3px` para el uso apilado del sidebar; el contexto
+`.lp-user-chip .sb-plan-badge` lo pone a `0` porque en una fila centrada ese
+margen ya no tiene sentido. El chip de la barra lateral no se toca — sigue
+apilado, que es correcto para su ancho.
+
+**Arreglo (flicker).** No se toca la decisión de GENSCORE-HEADER-2 de
+arrancar optimista para el anónimo — seguiría siendo peor retrasar el CTA
+para el 100% de los visitantes por evitar un flicker que sólo ve quien ya
+tiene cuenta. En vez de eso, `useSessionUser` recuerda la última identidad
+resuelta en `sessionStorage` (`gs_session_user_hint`) y la relee en un
+`useLayoutEffect` — no en el inicializador de `useState`, que también
+corre durante la hidratación y tiene que devolver exactamente el marcado
+anónimo que sirvió el servidor o React marca un mismatch de hidratación (el
+mismo flash que esto quiere quitar). Un `useLayoutEffect` compromete su
+`setState` antes de que el navegador pinte, así que la identidad cacheada
+sustituye al fotograma anónimo de forma invisible en vez de después de un
+flash visible. `fetchSessionUser()` sigue siendo la única fuente de verdad:
+corre siempre, y su resultado sobrescribe la caché (y el estado) aunque
+diga `null` — una sesión caducada entre recargas se corrige, no se queda
+pegada al último valor bueno.
+
+**Pendiente / roto conocido, no tocado en este PR.** El primer login de la
+sesión del navegador (sin nada aún en `sessionStorage`) sigue viendo el
+flicker original — no hay forma de evitarlo sin una llamada síncrona antes
+del primer pintado, que es justo lo que GENSCORE-HEADER-2 descartó por el
+coste en TTFB de las ~45 páginas estáticas. Lo que cambia es que a partir de
+la segunda recarga en la misma pestaña, no vuelve a pasar.
+
+**Trazabilidad.** Captura del fundador (portada, escritorio, 2026-08-17);
+§65 (GENSCORE-HEADER-2, `lib/use-session-user.ts`, el trade-off
+anónimo-optimista que esto no revierte); `components/sidebar.tsx` (el chip
+apilado que esto deja intacto).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
