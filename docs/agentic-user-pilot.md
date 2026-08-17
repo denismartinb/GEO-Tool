@@ -407,9 +407,12 @@ Three coverage gaps compounded it, all now closed:
    never grew past the viewport — and Playwright's `fullPage` measures the
    document. Every dashboard screenshot the pilot had ever produced was the top
    fold only, indistinguishable from a complete one. Fixed by
-   `expandInnerScroller` (`tests/pilot/support/journey.ts`), which neutralises
-   the clipping on the real scroller before capturing and restores it after.
-   Verified: 375×500 → 375×1233 on an equivalent shell.
+   `captureFullContent` (`tests/pilot/support/journey.ts`), which grows the
+   *viewport* to the measured content height and lets the app lay itself out
+   honestly at that size, then restores it — rather than stripping the
+   shell's `overflow: hidden`, which would capture a layout the product never
+   renders. Bounded by `MAX_CAPTURE_HEIGHT` so a runaway list produces a
+   truncated (and flagged) capture instead of an unreadable PNG.
 2. **The interaction sweep never reached the screen's own controls.** It caps
    at `PILOT_MAX_INTERACTIONS` (default 4) per screen, its allow-list excludes
    filter tabs, and the destructive-text guard refuses anything matching stems

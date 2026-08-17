@@ -222,7 +222,7 @@ you write a verdict.
    and *everything below the first screen is unverified* — say so and mark the
    criteria that live down there as not verified. The dashboard shell scrolls
    in an inner container, so `fullPage` silently captured only the top fold
-   until this was fixed (`expandInnerScroller`, `tests/pilot/support/journey.ts`).
+   until this was fixed (`captureFullContent`, `tests/pilot/support/journey.ts`).
    If it ever regresses, this check is what catches it.
 
 3. **The interaction sweep does NOT cover the screen.** It stops at
