@@ -13,12 +13,9 @@ import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
-import { ScanMissionBand } from "@/components/scan-mission-band";
-import { shouldShowMissionBand } from "@/lib/scan/mission-beats";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
-import { WEB_AUDIT_JOB_TYPE } from "@/lib/web-audit/audit-job";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import {
   computeJointPotentialPoints,
@@ -241,7 +238,7 @@ export default async function ProjectDetailPage({
   // Reconciliation itself is decided from the already-fetched `runs` below
   // instead of running unconditionally on every render
   // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
-  const [project, { data: prompts }, { data: competitors }, { data: runsData }, { count: activeAuditJobCount }] =
+  const [project, { data: prompts }, { data: competitors }, { data: runsData }] =
     await Promise.all([
       requireActiveProject(projectId),
       supabase
@@ -260,21 +257,8 @@ export default async function ProjectDetailPage({
         .from("scan_runs")
         .select(RUNS_SELECT)
         .eq("project_id", projectId)
-        .order("created_at", { ascending: false }),
-      // ONBOARDING-ROCKET-1: existence-only check, no progress detail — the
-      // coverage-map read that produces a real "N de M temas" count lives in
-      // the web-audit page and stays there for this phase (see
-      // components/scan-mission-band.tsx). Same signal both `ScanStatePill`
-      // (below) and `ScanMissionBand` need, read once via the user's own RLS
-      // (`jobs_select_owner`), not service-role.
-      supabase
-        .from("jobs")
-        .select("id", { count: "exact", head: true })
-        .eq("project_id", projectId)
-        .eq("job_type", WEB_AUDIT_JOB_TYPE)
-        .in("status", ["pending", "running", "retrying"])
+        .order("created_at", { ascending: false })
     ]);
-  const hasActiveAuditJob = (activeAuditJobCount ?? 0) > 0;
 
   let runs = runsData;
   if (scanRunsNeedReconciliation(runs)) {
@@ -313,15 +297,26 @@ export default async function ProjectDetailPage({
     : null;
   const rawSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
   /**
-   * SCAN-STATES-2: `scan_started` is suppressed while the first-scan mission
-   * owns the screen. Its text ("Dominio creado. Tu primer escaneo se está
-   * ejecutando — sigue el progreso aquí") is the mission's own rail said
-   * twice, stacked above a full-bleed scene as a second surface — which is
-   * exactly the "banner flotando encima" the founder asked to remove
-   * (2026-08-10). Every other feedback message still shows: this drops one
-   * redundant sentence, not the mechanism.
+   * SCAN-STATES-2: `scan_started` is suppressed unconditionally. Its text
+   * ("Dominio creado. Tu primer escaneo se está ejecutando — sigue el
+   * progreso aquí") is the mission's own rail said twice, stacked above a
+   * full-bleed scene as a second surface — exactly the "banner flotando
+   * encima" the founder asked to remove (2026-08-10). Every other feedback
+   * message still shows: this drops one redundant sentence, not the
+   * mechanism.
+   *
+   * This key is fired ONLY from the first-scan creation redirect
+   * (`app/dashboard/projects/actions.ts`), so it is never valid to show as a
+   * banner: while the run is active the mission already says it, and once
+   * the run finishes the text is simply false. A first attempt gated this on
+   * `activeRun`/`isFirstScan` and got the direction backwards — it hid the
+   * message after completion but let it show *while the mission itself was
+   * on screen*, which is the one moment SCAN-STATES-2 explicitly banned
+   * (log §105, corrected same day after the founder caught it live). There
+   * is no state in which this key should ever render, so it is suppressed
+   * outright rather than gated on a run's transient status.
    */
-  const successMessage = rawSuccessMessage && !(feedback.success === "scan_started" && isFirstScan && activeRun) ? rawSuccessMessage : null;
+  const successMessage = rawSuccessMessage && feedback.success !== "scan_started" ? rawSuccessMessage : null;
 
   /* ---- queries that require a completed run ---- */
   const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =
@@ -775,7 +770,6 @@ export default async function ProjectDetailPage({
                     .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
                 : null
             }
-            auditing={hasActiveAuditJob}
           />
         </div>
       </div>
@@ -806,18 +800,6 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
-          {/* ONBOARDING-ROCKET-1 traspaso: the compact half of the first-scan
-              mission, shown while the first audit runs behind the score.
-
-              This asked for `isFirstScan` until 2026-08-11 and therefore NEVER
-              RENDERED: `isFirstScan` is zero completed runs, and this branch
-              requires one. The condition is the scan's aftermath, not its
-              absence — see `shouldShowMissionBand`, where it now lives with
-              tests. It still cannot overlap `ScanMissionRocket`, which only
-              renders in the `!hasData` branch. */}
-          {shouldShowMissionBand({ completedRunsCount, hasActiveAuditJob }) && (
-            <ScanMissionBand projectId={projectId} />
-          )}
           {/* 1 · Executive summary / insight banner */}
           <div className="ov2-insight">
             <div className="ov2-insight-ico">
