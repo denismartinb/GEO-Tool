@@ -40,7 +40,10 @@ function AccountChip({ user, onNavigate }: { user: SessionUser; onNavigate?: () 
         <div className="lp-user-chip-email">{user.email}</div>
         {showsPlanBadge(user.planId) && (
           <span className="sb-plan-badge">
-            <Icon name="crown" size={10} />
+            {/* ux-pilot, pro-badge-alignment-flickering-v4brfv: 12px instead of
+                the sidebar's 10px — this chip's own mobile-drawer capture is
+                where the glyph sat closest to the legibility floor. */}
+            <Icon name="crown" size={12} />
             {user.planName}
           </span>
         )}
