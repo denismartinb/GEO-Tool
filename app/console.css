@@ -279,12 +279,26 @@
    KPI card clipped by the mobile carousel. Every rule below lives inside
    a min-width query, so <900px stays byte-identical to what shipped —
    verified by diffing a static render of this page at 390px with and
-   without this block. The four structural wrappers added in page.tsx
-   (.ov2-hero, .ov2-hero-kpis, .ov2-cols, .ov2-main/.ov2-rail) default to
-   `display: contents` so they have zero effect on the mobile flow and
-   only become grid containers at the desktop breakpoints.
+   without this block. The structural wrappers added in page.tsx
+   (.ov2-hero, .ov2-hero-kpis, .ov2-cols, .ov2-main/.ov2-rail, and — added by
+   OV-DESKTOP-2 below — .ov2-gauge-block, .ov2-score-row/.ov2-score-main/
+   .ov2-score-side) default to `display: contents` so they have zero effect
+   on the mobile flow and only become grid/flex containers at the desktop
+   breakpoints.
    ============================================================ */
-.ov2-hero, .ov2-hero-kpis, .ov2-cols, .ov2-main, .ov2-rail { display: contents; }
+.ov2-hero, .ov2-hero-kpis, .ov2-cols, .ov2-main, .ov2-rail,
+.ov2-gauge-block, .ov2-score-row, .ov2-score-main, .ov2-score-side { display: contents; }
+
+/* OV-DESKTOP-2 (founder-approved, this PR): the gauge card's own internal
+   label duplicates the section-label pattern every other hero column uses
+   ("Indicadores clave" sits above its card as a `.ov2-sec-lbl`, while
+   "Puntuación GEO" sat inside the card as a smaller inline label) — the two
+   hero cards read as misaligned because one column's heading is external
+   and the other's is internal. `.ov2-gauge-sec-lbl` is a second, external
+   copy of the same text, hidden below 1200px so mobile/tablet keep the
+   original inline label untouched; at desktop the external one takes over
+   and the internal one is hidden, never both at once. */
+.ov2-gauge-sec-lbl { display: none; }
 
 /* Tablet / small laptop: still one column, just not phone-width */
 @media (min-width: 900px) {
@@ -320,7 +334,12 @@
     align-items: start;
     margin-top: 16px;
   }
-  .ov2-hero > .ov2-gauge-card {
+  .ov2-gauge-block { display: flex; flex-direction: column; }
+  .ov2-gauge-sec-lbl { display: flex; margin: 0 2px 10px; }
+  /* The internal label is only hidden here, not removed from the DOM below
+     1200px — see the OV-DESKTOP-2 note above `.ov2-gauge-sec-lbl`. */
+  .ov2-gauge-block .ov2-gauge-lbl { display: none; }
+  .ov2-gauge-block .ov2-gauge-card {
     margin-top: 0;
     flex-direction: column;
     align-items: flex-start;
@@ -328,14 +347,30 @@
     gap: 16px;
     padding: 24px 26px;
   }
-  .ov2-hero > .ov2-gauge-card .ov2-gauge-ring { align-self: center; }
-  .ov2-hero > .ov2-gauge-card .ov2-gauge-info { flex: 0 0 auto; width: 100%; }
+  .ov2-gauge-block .ov2-gauge-card .ov2-gauge-ring { align-self: center; }
+  .ov2-gauge-block .ov2-gauge-card .ov2-gauge-info { flex: 0 0 auto; width: 100%; }
   .ov2-hero-kpis { display: flex; flex-direction: column; }
   .ov2-hero-kpis .ov2-sec-lbl { margin: 0 2px 10px; }
   .ov2-hero-kpis .ov2-kpi-car { flex: 1; }
   .ov2-hero-kpis .ov2-kpi { display: flex; flex-direction: column; justify-content: center; }
 
-  /* Analysis column (engines + panorama) + sticky action rail (oportunidades) */
+  /* Desglose del GEO Score (2/3) + Posicionamiento por motores de IA (1/3),
+     side by side instead of the breakdown running full width with the
+     engines buried further down the analysis column (OV-DESKTOP-2). */
+  .ov2-score-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+  }
+  .ov2-score-main, .ov2-score-side { display: block; min-width: 0; }
+
+  /* Breakdown meter: extra width goes to the bar, not the label column,
+     matching the same tradeoff the engine bars make below. */
+  .ov2-brow-meter { flex: 0 0 150px; }
+  .ov2-brow-meter .track { height: 8px; }
+
+  /* Analysis column (panorama) + sticky action rail (oportunidades) */
   .ov2-cols {
     display: grid;
     grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);

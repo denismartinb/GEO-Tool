@@ -10451,7 +10451,7 @@ refresco silencioso que expuso el caso "ya terminado").
 
 ---
 
-## 111. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
+## 113. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
 
 **Qué se decidió.** `/gratis/aparece-mi-marca-en-chatgpt`, primera pieza de la
 Fase P de `docs/seo-positioning-plan.md` (comprobador gratuito público).
@@ -10768,6 +10768,71 @@ invisible); §55 (Q5b, cuando el chequeo de contraste entró en el piloto); §54
 (los 400 de OpenAI, conocidos y sin resolver); `docs/adr/0029` (categorizar y
 avisar); `docs/adr/0037` (presupuestar contra la invocación);
 `.claude/rules/styles.md` (`a:not(.btn)` en la regla de ancestro).
+
+---
+
+## 114. Visión general en escritorio: cabecera de la puntuación GEO alineada, desglose y motores lado a lado (OV-DESKTOP-2, 2026-08-17)
+
+**El problema, señalado por el fundador con una captura de escritorio.** En
+la fila de cabecera de Visión general, la tarjeta de la puntuación GEO
+llevaba su título («Puntuación GEO») dentro de la propia tarjeta, mientras
+la columna de al lado («Indicadores clave») lo lleva fuera, como etiqueta de
+sección — así que las dos tarjetas arrancaban a alturas distintas y leían
+como desalineadas. Más abajo, «Desglose del GEO Score» ocupaba el ancho
+completo de la pantalla y «Posicionamiento por motores de IA» quedaba
+enterrado varias secciones después, dentro de la columna de análisis —
+mucho protagonismo para una tabla de texto plano, y una sección relacionada
+fuera de vista sin bajar la página. Las cinco filas del desglose eran
+etiqueta + número suelto («88/100»), sin ninguna otra señal visual.
+
+**Qué se decidió — sólo escritorio (≥1200px), con guardas explícitas en el
+tramo inferior.**
+
+1. **Cabecera hermana.** `.ov2-gauge-block` envuelve la tarjeta con una
+   segunda copia externa de «Puntuación GEO» (`.ov2-gauge-sec-lbl`),
+   oculta por defecto. A partir de 1200px se muestra la externa y se oculta
+   la interna — nunca las dos a la vez — así que las dos columnas de la fila
+   de cabecera comparten el mismo patrón de etiqueta y arrancan en la misma
+   línea. Por debajo de 1200px el DOM y el CSS no cambian: la tarjeta sigue
+   llevando su etiqueta interna exactamente como antes.
+2. **Desglose a 2/3, motores sube.** `.ov2-score-row` agrupa «Desglose del
+   GEO Score» y «Posicionamiento por motores de IA» en una fila 2fr/1fr
+   propia, independiente de `.ov2-cols` (que ahora arranca directamente en
+   Panorámica competitiva). Por debajo de 1200px `.ov2-score-row` es
+   `display: contents`: el orden en el DOM no cambia, porque Posicionamiento
+   ya seguía inmediatamente a Desglose antes de este cambio — sólo el
+   escritorio gana la disposición lado a lado.
+3. **Filas con icono y medidor.** Cada fila del desglose suma un icono (del
+   sistema compartido `components/ui/icon.tsx` — `eye`/`crown`/`resonance`/
+   `shield`/`bolt`; nunca un SVG nuevo) y sustituye el número suelto por una
+   barra horizontal junto a la cifra. El tono (verde/azul/ámbar) reutiliza
+   `getBandTone`, el mismo umbral 70/40 que ya colorea la banda de la
+   puntuación general — no se inventa una segunda escala de color para esta
+   fila. «No disponible» dibuja una barra discontinua y vacía en vez de una
+   barra sólida al 0%: una barra sólida vacía se confundiría con Presencia o
+   Autoridad en 0, que es un valor medido real en esta misma tarjeta, no una
+   ausencia de dato. Este punto no se limitó a escritorio — el icono y el
+   medidor caben igual de bien a 375px y no dependen del ancho extra que
+   trae la fila 2/3, así que aplica a todas las anchuras.
+
+**Qué NO cambia.** Por debajo de 1200px, la disposición, el orden de
+secciones y el contenido de la cabecera son pixel-idénticos a los de antes
+de este PR — sólo los puntos 1 y 2 llevan guarda de anchura explícita, y el
+punto 3 es un cambio de contenido de fila, no de layout, así que no
+necesitaba una.
+
+**Aprobación.** Maqueta Antes/Después mostrada como Artifact y aprobada por
+el fundador en la misma conversación antes de implementar, sustituyendo al
+Task Intake Report formal para este cambio de un único PR y una sola
+pantalla.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/page.tsx` (JSX);
+`app/globals.css`, `app/console.css` (`.ov2-brow*`, `.ov2-gauge-block`,
+`.ov2-gauge-sec-lbl`, `.ov2-score-row`/`.ov2-score-main`/`.ov2-score-side`);
+`app/dashboard/projects/[projectId]/geo-score-breakdown.ts` (campo `icon` en
+`GEO_SCORE_COMPONENT_META`); §4 (OV-DESKTOP-1, la fila de cabecera y la
+columna de análisis original que este PR reordena, no sustituye en su
+mecanismo `display: contents`).
 
 ---
 

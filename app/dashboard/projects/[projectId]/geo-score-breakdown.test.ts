@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { GEO_SCORE_COMPONENT_META, parseEngineCoverage, translateDroppedComponentReason } from "./geo-score-breakdown";
 
 describe("GEO_SCORE_COMPONENT_META", () => {
-  it("has a Spanish label and hint for all five GEO-SCORE-V4 components", () => {
+  it("has a Spanish label, hint, and icon for all five GEO-SCORE-V4 components", () => {
     for (const key of ["presence", "prominence", "standing", "authority", "technical"] as const) {
       expect(GEO_SCORE_COMPONENT_META[key].label.length).toBeGreaterThan(0);
       expect(GEO_SCORE_COMPONENT_META[key].hint.length).toBeGreaterThan(0);
+      expect(GEO_SCORE_COMPONENT_META[key].icon.length).toBeGreaterThan(0);
     }
   });
 });
