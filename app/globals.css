@@ -7440,9 +7440,16 @@ select.set-field {
   --accent-ink: var(--brand-blue);
   --accent-ring: var(--brand-blue-soft-2);
   --pos-soft: var(--brand-pos-soft);
-  --pos-ink: var(--brand-pos);
+  /* NOT var(--brand-pos) (#15915a): that's the vivid accent for borders/icons,
+     and text at this size/weight measures 3.60:1 on --pos-soft — below the
+     4.5:1 AA minimum (caught by the pilot's contrast check on the "resueltas
+     recientemente" button). #0d6b41 is the same darkened ink token :root
+     already uses for text-on-pos-soft elsewhere in the app (`.claude/rules/
+     styles.md`: a token verified on one background isn't verified on
+     another). */
+  --pos-ink: #0d6b41;
   --neg-soft: var(--brand-neg-soft);
-  --neg-ink: var(--brand-neg);
+  --neg-ink: #a51f2c;
   max-width: 460px;
   margin: 0 auto;
 }
