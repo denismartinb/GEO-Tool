@@ -305,7 +305,7 @@ limiting inexistente hoy, punto de esquema/RLS que exige aprobación aparte)
 dividió la fase en tres decisiones separadas. El fundador aprobó **solo la
 primera**:
 
-- **Fase A — ✅ Hecha (2026-08-15, log §111).** `/gratis/aparece-mi-marca-en-chatgpt`:
+- **Fase A — ✅ Hecha (2026-08-15, log §113).** `/gratis/aparece-mi-marca-en-chatgpt`:
   capta el dominio (mismo arrastre que el hero de la landing) y lo lleva al
   registro real. Cero llamadas LLM, cero escritura en base de datos, cero
   esquema. Sirve para medir demanda real antes de gastar en la máquina de
