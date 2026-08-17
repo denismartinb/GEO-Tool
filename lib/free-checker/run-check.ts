@@ -124,6 +124,45 @@ export function describeCause(error: unknown): string {
   return raw.replace(/[^A-Za-z_]/g, "").slice(0, 40) || "unknown";
 }
 
+/**
+ * Dominio de una URL de fuente, en minúsculas y sin `www.`. Duplica la misma
+ * lógica de `extractDomain` en `lib/scan/extraction.ts` a propósito en vez de
+ * importarla: esa función no está exportada, y `lib/scan/**` es una feature
+ * del escaneo, no vocabulario común del repositorio
+ * (`.claude/rules/scan.md`) — este fichero ya declara en su cabecera que no
+ * importa nada de ahí.
+ */
+function extractSourceDomain(uri: string): string | null {
+  try {
+    const hostname = new URL(uri).hostname.toLowerCase();
+    return hostname.startsWith("www.") ? hostname.slice("www.".length) : hostname;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Deduplica `groundingChunks` por dominio, conservando la primera URL y
+ * título con los que ChatGPT citó cada uno. A diferencia de
+ * `lib/scan/extraction.ts::buildGroundedCitations`, no hace falta resolver
+ * redirecciones: las `url_citation` de OpenAI ya son el destino final, nunca
+ * un wrapper de Google (`lib/llm/openai.ts`, comentario de
+ * `generateOpenAIVisibilityAnswer`).
+ */
+function dedupeSourcesByDomain(
+  chunks: Array<{ uri: string; title?: string }> | undefined
+): Array<{ domain: string; url: string; title: string | null }> {
+  const seen = new Set<string>();
+  const sources: Array<{ domain: string; url: string; title: string | null }> = [];
+  for (const chunk of chunks ?? []) {
+    const domain = extractSourceDomain(chunk.uri);
+    if (!domain || seen.has(domain)) continue;
+    seen.add(domain);
+    sources.push({ domain, url: chunk.uri, title: chunk.title?.trim() || null });
+  }
+  return sources;
+}
+
 export type PublicCheckOutcome =
   | {
       status: "completed";
@@ -151,6 +190,17 @@ export type PublicCheckOutcome =
       citedDomains: string[];
       /** Si alguna cita es del dominio del visitante. */
       citedOwnDomain: boolean;
+      /**
+       * FREE-CHECKER-1 Fase D1 — las fuentes REALES que ChatGPT consultó con
+       * `web_search` para construir esta respuesta (`groundingChunks`), no lo
+       * que el extractor cree haber visto citado en el texto. Coste **cero**:
+       * el dato ya llegaba en la llamada de generación y `deps.generateAnswer`
+       * lo tiraba antes de este cambio. Deduplicado por dominio, en el orden
+       * en que ChatGPT las citó primero. Deliberadamente un campo aparte de
+       * `citedDomains`/`citedOwnDomain` — ésos siguen viniendo de lo que el
+       * extractor dice haber leído en el texto (Fase B) y no se tocan aquí.
+       */
+      sources: Array<{ domain: string; url: string; title: string | null }>;
       /**
        * Sólo cuando la comprobación salió adelante **por el motor de reserva**:
        * la causa por la que el principal no pudo. Va al operador, nunca al
@@ -208,7 +258,16 @@ export type PublicCheckDeps = {
     prompt: string;
     country: string;
     language: string;
-  }) => Promise<{ text: string }>;
+  }) => Promise<{
+    text: string;
+    /**
+     * Fase D1: mismo campo que ya devuelve `generateOpenAIVisibilityAnswer`
+     * (`GeminiVisibilityResponse.groundingChunks`) — se declara aquí para que
+     * el tipo de la dependencia lo deje pasar. Opcional porque los tests
+     * inyectan un `generateAnswer` sin él.
+     */
+    groundingChunks?: Array<{ uri: string; title?: string }>;
+  }>;
   extract: PublicCheckExtractor;
   /**
    * Motor de reserva para la extracción, y **sólo** para la extracción.
@@ -323,6 +382,7 @@ export async function runPublicCheck(
   if (!hasRoomForNextStep()) return { status: "failed", error: "budget_exhausted" };
 
   let answer: string;
+  let sources: Array<{ domain: string; url: string; title: string | null }>;
   try {
     const generated = await deps.generateAnswer({
       prompt,
@@ -331,6 +391,9 @@ export async function runPublicCheck(
     });
     answer = generated.text?.trim() ?? "";
     if (!answer) return { status: "failed", error: "engine_unavailable", detail: "empty_answer" };
+    // Fase D1: antes de este cambio, `generated.groundingChunks` se tiraba
+    // aquí mismo — el dato ya estaba pagado y nunca llegaba al visitante.
+    sources = dedupeSourcesByDomain(generated.groundingChunks);
   } catch (error) {
     return { status: "failed", error: "engine_unavailable", detail: describeCause(error) };
   }
@@ -402,6 +465,7 @@ export async function runPublicCheck(
       otherBrands: verified.other_brands_mentioned.filter((n) => n?.trim()),
       citedDomains,
       citedOwnDomain: citedDomains.some((d) => d === domain || d.endsWith(`.${domain}`)),
+      sources,
       ...(detail ? { detail } : {})
     };
   } catch (error) {

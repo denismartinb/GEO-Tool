@@ -10451,7 +10451,7 @@ refresco silencioso que expuso el caso "ya terminado").
 
 ---
 
-## 111. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
+## 113. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
 
 **Qué se decidió.** `/gratis/aparece-mi-marca-en-chatgpt`, primera pieza de la
 Fase P de `docs/seo-positioning-plan.md` (comprobador gratuito público).
@@ -10768,6 +10768,63 @@ invisible); §55 (Q5b, cuando el chequeo de contraste entró en el piloto); §54
 (los 400 de OpenAI, conocidos y sin resolver); `docs/adr/0029` (categorizar y
 avisar); `docs/adr/0037` (presupuestar contra la invocación);
 `.claude/rules/styles.md` (`a:not(.btn)` en la regla de ancestro).
+
+### Fase D1 (2026-08-17): las fuentes reales, coste cero
+
+Task Intake propio aprobado por el fundador en sesión, sobre el mismo dato ya
+identificado en el cierre de Fase C-bis: `generateOpenAIVisibilityAnswer`
+devuelve `groundingChunks` —las páginas reales que `web_search` consultó,
+metadata del propio proveedor— y `runPublicCheck` se quedaba sólo con
+`generated.text`, tirando el resto. El dato ya estaba pagado dentro del coste
+de la llamada de generación ($0,0117); enseñarlo no añade ni una llamada.
+
+**Deliberadamente un campo aparte de `citedDomains`/`citedOwnDomain`, no un
+reemplazo.** Esos dos siguen viniendo de lo que el extractor CREE haber leído
+en el texto de la respuesta (Fase B) — una segunda llamada de LLM sin acceso a
+la metadata real, reconstruyendo desde markdown lo que la primera llamada ya
+sabía con certeza. `sources` es la metadata real. Casi siempre van a coincidir;
+fusionarlos en un único indicador habría escondido el caso en que no
+coinciden, que es precisamente cuando más interesa saber cuál de los dos se
+equivocó. La pantalla los enseña por separado: la lista completa bajo "De
+dónde sacó ChatGPT esta respuesta", y el aviso "Además, citó tu web" se deja
+intacto con su fuente original.
+
+**Deduplicado por dominio, no por URL.** Varias citas al mismo sitio son una
+sola fila; se conserva la primera URL y título con los que apareció, porque el
+enlace tiene que llevar a algún sitio concreto y cualquiera de las citas del
+mismo dominio sirve igual de bien. La extracción de dominio (`new URL(uri)
+.hostname`, sin `www.`) duplica a propósito la de
+`lib/scan/extraction.ts::extractDomain` en vez de importarla: esa función no
+está exportada, y `lib/scan/**` es una feature del escaneo, no vocabulario
+común (`.claude/rules/scan.md`) — este fichero ya declaraba en su cabecera que
+no importa nada de ahí. A diferencia del escaneo con Gemini, no hace falta
+resolver redirecciones: las `url_citation` de OpenAI ya son el destino final
+(`lib/llm/openai.ts`), así que no hay una llamada de red extra por cita.
+
+**Lo que NO se ha tocado, explícitamente.** `brandPosition` sigue fuera del
+contrato HTTP (Fase C). La categoría de cada marca sigue sin decidirse (el
+caso Netflix/Orange de Fase C). Ninguno de los dos entra en D1: ambos exigen
+tocar `extractionOutputSchema`, compartido con los tres motores del escaneo, y
+D1 se aprobó explícitamente sin tocarlo — quedan como Fase D2/D3, sin aprobar.
+
+**Colisión de numeración heredada, no causada por esta fase.** Al preparar
+este cierre, §111 estaba reclamado dos veces en `main`: por esta misma sección
+(FREE-CHECKER-1, mergeada 2026-08-17T12:00:50+02:00) y por "Se retira la banda
+«Revisando tu web»" (PR #428, mergeada 2026-08-17T11:53:08+02:00, ocho minutos
+antes). Ninguna de las dos ramas vio a la otra: `pnpm run fix:log-numbering`
+sólo compara la copia local contra `origin/main`, y las dos ya estaban en
+`main` cuando esta sesión empezó a trabajar sobre él. El propio autofix se
+niega a decidir en este caso —"ninguna de las dos ramas es claramente la
+nueva"— y pide mirar `git log --format='%h %cI %s' origin/main` para ver cuál
+mergeó después. Renumerada a mano la que llegó más tarde (ésta, FREE-CHECKER-1)
+a **§113**, dejando §111 y §112 (ambas de "Visión general") como estaban.
+
+**Trazabilidad.** Task Intake Fase D1 (2026-08-17, aprobado en sesión);
+`lib/llm/contracts.ts` (`GeminiVisibilityResponse.groundingChunks`);
+`lib/llm/openai.ts` (por qué las `url_citation` no necesitan resolución de
+redirecciones); `lib/scan/extraction.ts` (`buildGroundedCitations`,
+`extractDomain` — el patrón que se duplica a propósito);
+`docs/llm-cost-analysis-2026-08.md`.
 
 ---
 

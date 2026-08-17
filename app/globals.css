@@ -4564,7 +4564,7 @@ a.notif-row:hover {
    375 px cada nota se parte por dentro ("Respuesta real de / ChatGPT") y tres
    notas se leen como seis fragmentos sueltos. Se vio en la captura del piloto
    del preview, no en ninguna aserción: no hay desbordamiento que medir, sólo
-   una fila desordenada (FREE-CHECKER-1, log §111). */
+   una fila desordenada (FREE-CHECKER-1, log §113). */
 .lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 @media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
 
@@ -4642,12 +4642,12 @@ a.notif-row:hover {
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 /* Pista del comprobador gratuito cuando lo escrito no es un dominio
-   (FREE-CHECKER-1, log §111). `--brand-neg` sobre fondo claro, no `--ink-4`:
+   (FREE-CHECKER-1, log §113). `--brand-neg` sobre fondo claro, no `--ink-4`:
    es un mensaje que hay que leer, no una nota al pie. */
 .fc-hint { font-size: 13px; color: var(--brand-neg); margin: 11px 0 0; text-align: center; }
 .fc-hint strong { font-weight: 650; }
 
-/* --- Comprobador gratuito: espera y resultado (FREE-CHECKER-1, log §111) ---
+/* --- Comprobador gratuito: espera y resultado (FREE-CHECKER-1, log §113) ---
    Todo prefijado `fc-` porque estas clases conviven con el sistema de la
    landing en la MISMA página, y nombres genéricos (`panel`, `answer`,
    `rivals`) ya existen o existirán en globals.css — la regla de styles.md
@@ -4715,7 +4715,28 @@ a.notif-row:hover {
 }
 .fc-answer a:not(.btn):hover { color: #1d4ed8; }
 
-/* Etiquetas, no lista ordenada: no hay ranking que enseñar (Fase C, log §111). */
+/* Las fuentes reales del proveedor (FREE-CHECKER-1 Fase D1, log §113).
+   Vertical, no en línea como `.fc-rivals`: aquí cada fila es un enlace
+   pinchable, y envolver enlaces en una tira horizontal los hace difíciles de
+   acertar con el dedo. */
+.fc-sources { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.fc-sources li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* `a:not(.btn)` por la misma regla que `.fc-answer a` arriba: una lista de
+   enlaces es justo donde un botón futuro quedaría secuestrado sin la
+   exclusión (`.claude/rules/styles.md`). */
+.fc-sources a:not(.btn) {
+  font-size: 14px; font-weight: 600; color: var(--brand-blue); text-decoration: underline;
+  text-underline-offset: 2px; text-decoration-thickness: 1px; overflow-wrap: anywhere;
+}
+.fc-sources a:not(.btn):hover { color: #1d4ed8; }
+.fc-source-own {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--brand-pos);
+  background: color-mix(in srgb, var(--brand-pos) 12%, transparent);
+  border-radius: 999px; padding: 3px 8px; flex: none;
+}
+
+/* Etiquetas, no lista ordenada: no hay ranking que enseñar (Fase C, log §113). */
 .fc-rivals { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
 .fc-rivals li {
   font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--surface-2);
@@ -4743,7 +4764,7 @@ a.notif-row:hover {
 /* Un `.lp-cta` deshabilitado sigue siendo AZUL, atenuado — nunca gris. En gris
    deja de leerse como "el botón, todavía no" y pasa a leerse como "algo se ha
    roto", que en un CTA de portada es el peor mensaje posible. Ninguna pantalla
-   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §111); vive aquí para que
+   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §113); vive aquí para que
    el día que alguien lo necesite no herede el azul a plena fuerza y parezca
    pulsable. Los controles deshabilitados están exentos de contraste AA, así
    que el barrido del piloto los salta: esto no lo vigila nadie salvo el ojo. */
