@@ -7519,13 +7519,23 @@ select.set-field {
 @media (min-width: 560px) {
   .rec2-pillars { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+/* Columna, con la cifra anclada abajo: las etiquetas no miden todas lo mismo
+   —"CUOTA DE VOZ" parte en dos líneas donde "PRESENCIA" cabe en una— y sin
+   esto el 0 del pilar que envuelve queda por debajo del de sus vecinos. Se vio
+   en la captura de tablet (768px) del piloto sobre `e21ffc5d`. Las tarjetas ya
+   miden igual (el grid es `stretch`), así que basta con empujar el bloque de
+   la cifra al fondo: alinea sin reservar altura fija, que en escritorio —donde
+   ninguna etiqueta envuelve— sería hueco muerto. */
 .rec2-pillar {
   background: var(--surface-sunk);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   padding: 9px 10px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
+.rec2-pillar .rec2-pillar-v { margin-top: auto; }
 .rec2-pillar-n {
   font-size: 9.5px;
   font-weight: 800;
