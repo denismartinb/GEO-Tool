@@ -300,7 +300,14 @@
    and the internal one is hidden, never both at once. */
 .ov2-gauge-sec-lbl { display: none; }
 
-/* Tablet / small laptop: still one column, just not phone-width */
+/* Tablet / small laptop: still one column, just not phone-width — except
+   the hero band, which goes two-column here too (OV-DESKTOP-2b,
+   founder-requested: the stacked gauge card and KPI block had no shared
+   edge to align, so "align top and bottom" only means something once
+   they're side by side). `.ov2-scope` stays capped at 640px through this
+   whole range (unchanged, not part of this request), so the gauge column
+   is narrower here than at ≥1200px — widened back in that query below,
+   once more room exists. */
 @media (min-width: 900px) {
   .ov2-scope { max-width: 640px; }
 
@@ -311,6 +318,48 @@
     overflow: visible;
   }
   .ov2-kpi { width: auto; }
+
+  /* Hero band: score card on the left, the KPIs as a 2x2 block on the
+     right instead of stacked full-width under the gauge. */
+  .ov2-hero {
+    display: grid;
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    gap: 16px;
+    /* `stretch`, not `start` (OV-DESKTOP-2b): the founder asked for the two
+       hero cards to align top AND bottom, not just top. Without it a
+       low-sample run with no sparkline leaves the gauge card shorter than
+       the KPI block, with visible empty space below it —
+       `.ov2-gauge-block .ov2-gauge-card`'s `justify-content: center`
+       (below) is what keeps the extra height from reading as dead space:
+       the ring+info group centers inside the taller card instead of
+       sitting stranded at the top of it. */
+    align-items: stretch;
+    margin-top: 16px;
+  }
+  .ov2-gauge-block { display: flex; flex-direction: column; }
+  .ov2-gauge-sec-lbl { display: flex; margin: 0 2px 10px; }
+  /* The internal label is only hidden here, not removed from the DOM below
+     900px — see the OV-DESKTOP-2 note above `.ov2-gauge-sec-lbl`. */
+  .ov2-gauge-block .ov2-gauge-lbl { display: none; }
+  .ov2-gauge-block .ov2-gauge-card {
+    /* Grows to fill `.ov2-gauge-block`'s stretched height, so the card's own
+       border/background reaches the same bottom edge as the KPI block on
+       the right — mirrors `.ov2-hero-kpis .ov2-kpi-car { flex: 1; }` below,
+       which already does the same thing for the taller-gauge case. */
+    flex: 1;
+    margin-top: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px 22px;
+  }
+  .ov2-gauge-block .ov2-gauge-card .ov2-gauge-ring { align-self: center; }
+  .ov2-gauge-block .ov2-gauge-card .ov2-gauge-info { flex: 0 0 auto; width: 100%; }
+  .ov2-hero-kpis { display: flex; flex-direction: column; }
+  .ov2-hero-kpis .ov2-sec-lbl { margin: 0 2px 10px; }
+  .ov2-hero-kpis .ov2-kpi-car { flex: 1; }
+  .ov2-hero-kpis .ov2-kpi { display: flex; flex-direction: column; justify-content: center; }
 }
 
 /* Desktop: two-column console */
@@ -320,39 +369,12 @@
   .ov2-insight { padding: 17px 20px; }
   .ov2-insight-txt { font-size: 14px; max-width: 92ch; }
 
-  /* Hero band: score card on the left, the 4 KPIs as a 2x2 block on the
-     right instead of stacked full-width under the gauge. */
-  .ov2-hero {
-    display: grid;
-    grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
-    gap: 18px;
-    /* `start`, not `stretch`: the score card used to be padded out to the
-       KPI block's height by its sparkline. With the trend line withheld on
-       low-sample runs (GEO-SCORE-RELIABILITY-1) that stretch turned into a
-       tall card holding a gauge and a lot of air. Sizing to content keeps it
-       tidy in both states instead of only in the one that has a trend. */
-    align-items: start;
-    margin-top: 16px;
-  }
-  .ov2-gauge-block { display: flex; flex-direction: column; }
-  .ov2-gauge-sec-lbl { display: flex; margin: 0 2px 10px; }
-  /* The internal label is only hidden here, not removed from the DOM below
-     1200px — see the OV-DESKTOP-2 note above `.ov2-gauge-sec-lbl`. */
-  .ov2-gauge-block .ov2-gauge-lbl { display: none; }
-  .ov2-gauge-block .ov2-gauge-card {
-    margin-top: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 16px;
-    padding: 24px 26px;
-  }
-  .ov2-gauge-block .ov2-gauge-card .ov2-gauge-ring { align-self: center; }
-  .ov2-gauge-block .ov2-gauge-card .ov2-gauge-info { flex: 0 0 auto; width: 100%; }
-  .ov2-hero-kpis { display: flex; flex-direction: column; }
-  .ov2-hero-kpis .ov2-sec-lbl { margin: 0 2px 10px; }
-  .ov2-hero-kpis .ov2-kpi-car { flex: 1; }
-  .ov2-hero-kpis .ov2-kpi { display: flex; flex-direction: column; justify-content: center; }
+  /* More room than the 900px step above (`.ov2-scope` is no longer capped
+     at 640px) — the gauge column and its card padding widen back out;
+     everything else about the hero band (stretch, flex, the hidden inline
+     label) already applies from the 900px query and doesn't need repeating. */
+  .ov2-hero { grid-template-columns: minmax(320px, 390px) minmax(0, 1fr); gap: 18px; }
+  .ov2-gauge-block .ov2-gauge-card { padding: 24px 26px; }
 
   /* Desglose del GEO Score (2/3) + Posicionamiento por motores de IA (1/3),
      side by side instead of the breakdown running full width with the

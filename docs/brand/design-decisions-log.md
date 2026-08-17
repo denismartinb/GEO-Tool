@@ -10785,16 +10785,28 @@ mucho protagonismo para una tabla de texto plano, y una sección relacionada
 fuera de vista sin bajar la página. Las cinco filas del desglose eran
 etiqueta + número suelto («88/100»), sin ninguna otra señal visual.
 
-**Qué se decidió — sólo escritorio (≥1200px), con guardas explícitas en el
-tramo inferior.**
+**Qué se decidió, con guardas explícitas en el tramo inferior.**
 
-1. **Cabecera hermana.** `.ov2-gauge-block` envuelve la tarjeta con una
-   segunda copia externa de «Puntuación GEO» (`.ov2-gauge-sec-lbl`),
-   oculta por defecto. A partir de 1200px se muestra la externa y se oculta
-   la interna — nunca las dos a la vez — así que las dos columnas de la fila
-   de cabecera comparten el mismo patrón de etiqueta y arrancan en la misma
-   línea. Por debajo de 1200px el DOM y el CSS no cambian: la tarjeta sigue
-   llevando su etiqueta interna exactamente como antes.
+1. **Cabecera hermana, alineada arriba Y abajo.** `.ov2-gauge-block` envuelve
+   la tarjeta con una segunda copia externa de «Puntuación GEO»
+   (`.ov2-gauge-sec-lbl`), oculta por defecto. A partir de 900px se muestra
+   la externa y se oculta la interna — nunca las dos a la vez — así que las
+   dos columnas de la fila de cabecera comparten el mismo patrón de
+   etiqueta y arrancan en la misma línea. `.ov2-hero` pasa de `align-items:
+   start` a `stretch` (revirtiendo la decisión original de OV-DESKTOP-1,
+   explícitamente a petición del fundador: quería la alineación arriba Y
+   abajo, no sólo arriba) — la tarjeta de la puntuación crece para llenar la
+   altura de la fila, y `justify-content: center` en su interior evita que
+   eso lea como aire muerto en un escaneo sin sparkline. Por debajo de 900px
+   el DOM y el CSS no cambian: la tarjeta sigue llevando su etiqueta interna
+   exactamente como antes. **900px, no 1200px:** primer intento sólo lo
+   aplicó a partir de 1200px; el fundador pidió expresamente extenderlo a
+   tablet (768–1199px) al ver que ahí las dos tarjetas van apiladas, sin
+   ningún borde compartido con el que alinearse — la maqueta original nunca
+   cubrió ese rango. `.ov2-scope` sigue tope en 640px en todo ese tramo (no
+   forma parte de esta petición), así que la columna de la puntuación es más
+   estrecha ahí (`minmax(220px, 260px)`) que en escritorio
+   (`minmax(320px, 390px)`, ensanchada de vuelta a partir de 1200px).
 2. **Desglose a 2/3, motores sube.** `.ov2-score-row` agrupa «Desglose del
    GEO Score» y «Posicionamiento por motores de IA» en una fila 2fr/1fr
    propia, independiente de `.ov2-cols` (que ahora arranca directamente en
@@ -10815,11 +10827,13 @@ tramo inferior.**
    medidor caben igual de bien a 375px y no dependen del ancho extra que
    trae la fila 2/3, así que aplica a todas las anchuras.
 
-**Qué NO cambia.** Por debajo de 1200px, la disposición, el orden de
-secciones y el contenido de la cabecera son pixel-idénticos a los de antes
-de este PR — sólo los puntos 1 y 2 llevan guarda de anchura explícita, y el
-punto 3 es un cambio de contenido de fila, no de layout, así que no
-necesitaba una.
+**Qué NO cambia.** Por debajo de 900px (móvil) la cabecera es pixel-idéntica
+a la de antes de este PR; por debajo de 1200px, «Desglose del GEO Score» y
+«Posicionamiento por motores de IA» siguen apilados en el mismo orden que ya
+tenían. Sólo los puntos 1 y 2 llevan guarda de anchura explícita — distinta
+entre ambos (900px la cabecera, 1200px el desglose+motores) porque cada uno
+resuelve un problema visible en un rango distinto — y el punto 3 es un
+cambio de contenido de fila, no de layout, así que no necesitaba ninguna.
 
 **Aprobación.** Maqueta Antes/Después mostrada como Artifact y aprobada por
 el fundador en la misma conversación antes de implementar, sustituyendo al
