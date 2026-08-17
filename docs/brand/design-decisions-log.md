@@ -10451,7 +10451,7 @@ refresco silencioso que expuso el caso "ya terminado").
 
 ---
 
-## 114. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
+## 113. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
 
 **Qué se decidió.** `/gratis/aparece-mi-marca-en-chatgpt`, primera pieza de la
 Fase P de `docs/seo-positioning-plan.md` (comprobador gratuito público).
@@ -10771,9 +10771,7 @@ avisar); `docs/adr/0037` (presupuestar contra la invocación);
 
 ---
 
----
-
-## 113. Rediseño de Recomendaciones — "copiloto GEO" (RECS-REDESIGN-1, fase 1, 2026-08-03)
+## 115. Rediseño de Recomendaciones — "copiloto GEO" (RECS-REDESIGN-1, fase 1, 2026-08-03)
 
 **Contexto.** Investigación previa sobre tres guías de optimización para
 motores generativos (Semrush, 2026) y un teardown completo de la pantalla
@@ -10826,6 +10824,51 @@ propia. Fase 3: chip de pilar por acción (mapeo regla→pilar).
 **Roto conocido, no tocado aquí.** Los tokens `--p-high/--p-med/--p-low` de
 §4 siguen sin definirse en ningún `:root`; afectan a `.rec-card-preview` del
 Overview antiguo, fuera del alcance de esta fase.
+
+---
+
+## 114. Páginas citadas: la tarjeta de Impacto se quedaba recortada cuando no había donut que ponerle al lado (2026-08-17)
+
+**Origen.** El fundador reportó, con captura de un escaneo real de
+vodafone.es en escritorio, que la pantalla de Páginas citadas "parece mal
+maquetada": la tarjeta "Impacto de N citas" terminaba muy por debajo del
+ancho de la tira de KPIs y de la lista de abajo, dejando un hueco en blanco
+a su derecha, en vez de ocupar el ancho completo de la columna.
+
+**Causa.** `.cit2-dist` (`app/globals.css`) reserva desde 900px una rejilla
+de dos columnas fija (`1.35fr` para `ImpactBar`, `1fr` para `SourceDonut`) —
+decisión de CITATIONS-REDESIGN-1 (§8) para que las dos tarjetas lean como
+una sola sección en vez de dos apiladas. Pero `SourceDonut` devuelve `null`
+en cuanto no hay ninguna fuente clasificada (`classifiedTotal === 0`), algo
+nada raro: la mayoría de dominios reales caen en "Otras webs", ya
+documentado en §8 como long tail sin reconocer. Sin el segundo hijo en el
+DOM, la rejilla seguía reservando su segunda columna vacía, y `ImpactBar`
+sólo ocupaba la primera — la tarjeta se veía recortada con espacio muerto al
+lado, exactamente lo que enseñaba la captura.
+
+**Arreglo.** `CitationsClient` calcula ahora si `SourceDonut` va a pintar
+algo (`hasClassifiedSourceType`, mismo criterio que el early-return interno
+del propio componente) y añade el modificador `.cit2-dist-solo` cuando no —
+ese modificador colapsa la rejilla a una sola columna (`minmax(0, 1fr)`)
+sólo para ese caso, así que `ImpactBar` ocupa el ancho completo en vez de
+dejar un hueco donde iría el donut. El caso con donut clasificado no cambia.
+Reproducido y verificado visualmente (Playwright, 1920/1440px, con y sin
+datos de tipo de fuente) antes y después del fix — sin entorno de Supabase
+real disponible en esta sesión, así que la verificación fue contra una ruta
+de desarrollo desechable que montaba `CitationsClient` con props de mock
+imitando el escaneo reportado; la ruta no se ha committeado.
+
+**Pendiente / roto conocido, no tocado en este PR.** `.cit2-page` (topes
+1200px/1280px, mismo mecanismo que `.ov2-scope`/`.pr2-scope`) vive dentro de
+`.page` (`app/globals.css`, tope fijo de 1320px, sin las media queries de
+escritorio de BRAND-5b) — la inconsistencia de ancho ya documentada en §4
+("Pendiente/roto conocido") sigue sin corregir para esta zona; no formaba
+parte del bug reportado y una sesión que la toque debe hacerlo aparte.
+
+**Trazabilidad.** Captura del fundador (vodafone.es, 2026-08-17); §8
+(CITATIONS-REDESIGN-1, origen de `.cit2-dist` y de la exclusión de "Otras
+webs" del donut); §4 (la inconsistencia `.page`/`.ov2-scope` que esto no
+corrige).
 
 ---
 

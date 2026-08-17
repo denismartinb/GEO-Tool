@@ -19,7 +19,7 @@ import { FreeCheckerResult } from "@/components/free-checker/free-checker-result
  * primero". El piloto lo dio por bueno porque su chequeo de contraste salta
  * los controles deshabilitados (correcto según WCAG: quedan exentos), así que
  * es justo el fallo que ninguna aserción podía cazar y sólo aparece al mirar
- * la captura (log §114).
+ * la captura (log §113).
  *
  * **La espera enseña la pregunta, no una barra falsa.** Una llamada real con
  * búsqueda tarda entre 10 y 25 segundos, así que la espera existe y hay que

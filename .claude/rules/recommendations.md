@@ -40,7 +40,7 @@ paths:
 - `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario
   antes de cualquier escritura con service-role (patrón data-guardian C5).
 
-## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §113)
+## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 
 - **Repintado de zona en `.rec2-scope`**, mismo mecanismo que `.ov2-scope`/
   `.cm2-scope`: reapunta los nombres de variable que sus descendientes ya leen,
