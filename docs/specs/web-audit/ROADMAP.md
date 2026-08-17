@@ -10,24 +10,56 @@ orden — el orden lo fija la columna `#`.
 | 1 | Sección + matriz de oportunidad + tendencia | WEB-AUDIT-1 | `phase-1-section-and-matrix.md` | ✅ Implementada (PR #170) + fixes de móvil | Ninguno (solo datos ya persistidos) | Human Gate |
 | 2 | Calidad de detección de cobertura | WEB-AUDIT-DQ | `phase-dq-coverage-quality.md` | ✅ Implementada (query por palabras clave en vez de pregunta literal) | Core de DOMAIN-COVERAGE-1; sin schema | Human Gate |
 | 2.5 | Auditoría encadenada por lotes | WEB-AUDIT-CHAIN | `phase-chain-batched-audits.md` | ✅ Implementada (cubre todos los prompts activos, no solo 6) | Modelo de persistencia (running→completed); sin schema nuevo | Human Gate |
-| 3 | Plan de acción + huecos con competidor | WEB-AUDIT-ACTION | `phase-action-plan.md` | ✅ Implementada | Ninguno (solo datos ya persistidos) | Human Gate |
+| 3 | Plan de acción + huecos con competidor | WEB-AUDIT-ACTION | `phase-action-plan.md` | ⛔ **Retirada (2026-08-04, PR #289; código borrado 2026-08-15, log §102)** — *"no tiene sentido aquí, debe estar en la página de recomendaciones"* | — | Petición directa del fundador |
 | 4 | Auditoría técnica (páginas + bots IA) | WEB-AUDIT-2 | `phase-2-technical-audit.md` | ✅ Implementada (PR #197) — migración 0018 aplicada manualmente | Fetch acotado (adyacente a "crawler") + migración 0018 | Human Gate |
 | 5 | Generador de briefs de contenido con IA | WEB-AUDIT-BRIEF | `phase-brief-generator.md` | Propuesta | Gemini runtime + migración (generation_type) | **Aprobación explícita + Task Intake + data-guardian** |
-| 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | Diseñada | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
+| 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | ⚠️ Parcial — ver fila 6a | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
+| 6a | Auditoría automática tras cada escaneo | AUDIT-AFTER-SCAN-1 | ADR 0027 · log §18 | ✅ Implementada (PR #322) — migración 0027 aplicada 2026-08-04 | Cron adicional + rol de servicio en ambos núcleos | Aprobada por el fundador 2026-08-04 |
+| 6b | La auditoría, visible en Escaneos | AUDIT-IN-RUNS-1 | log §22 | ✅ Implementada (2026-08-05) | Ninguno (sólo datos ya persistidos) | Human Gate |
+| 6c | Fuera el botón «Auditar ahora» | AUDIT-NO-BUTTON-1 | log §25 | ✅ Implementada (2026-08-05) | Ninguno | Petición directa del fundador |
+
+### Fila 6 — qué se implementó y qué no (2026-08-04)
+
+`phase-3-daily-audit.md` juntaba dos cosas que resultaron ser separables:
+refrescar la auditoría sin intervención humana, y **avisar de regresiones**
+cuando el refresco muestra una caída. AUDIT-AFTER-SCAN-1 (fila 6a) implementó
+la primera y **no** la segunda.
+
+También cambió el mecanismo respecto a lo diseñado, y conviene no leer la
+spec antigua como si describiera el código: en vez de un barrido diario que
+busca proyectos candidatos (`recurring_scans_enabled`, orden por antigüedad,
+`MAX_PROJECTS_PER_RUN`), la auditoría es **una fila en `jobs` encolada por el
+propio escaneo al completarse**, con reintentos con backoff heredados de esa
+tabla. El cron diario sigue existiendo, pero como red de seguridad de la cola,
+no como el disparador. Motivo: el disparo por evento audita el escaneo que
+acaba de terminar, y una cola durable convierte un despacho perdido en un
+retraso en vez de en una auditoría que nunca ocurre.
+
+**Fila 6 cerrada (2026-08-05).** La segunda mitad la implementó
+WEB-AUDIT-ALERTS-1 (log §27): los avisos de regresión existen y salen por la
+campana. Con dos desviaciones respecto a lo diseñado, ambas justificadas allí:
+van seis tipos y no cuatro (`sitemap_lost` y `page_unreachable` se añaden
+porque son la misma clase de fallo silencioso y no cuestan una consulta más),
+y **sí hay migración** — la spec prometía "sin esquema" cuando la campana
+derivaba sus items al vuelo, y NOTIF-SERVER-1a puso un `CHECK` sobre
+`notifications.type`, así que un tipo nuevo es hoy exactamente una línea de
+DDL (`0029`).
 
 ## Cabos sueltos post-ACTION (no numerados, siguen el mismo Human Gate)
 
 Tras fusionar la fase 3 (ACTION) y la explicación mención-vs-cita, quedaron dos
 huecos señalados en producción, tratados como fases separadas:
 
-- **Fase A — ✅ Implementada.** `content_gap`/`open_opportunity`/`unverified_cited`
-  no tienen ningún tipo de recomendación en el motor (`recommendation-engine.ts`
-  genera recomendaciones al terminar el escaneo, antes de que exista ninguna
-  auditoría de dominio — ver cabecera de `coverage-overlay.ts`). Se sintetiza el
-  texto de "qué hacer" directamente en `lib/web-audit/action-plan.ts`
-  (`synthesizedGuidance`) a partir de datos ya cargados, marcado visualmente
-  como "Sugerencia" — nunca como una recomendación real/trackeable — para no
-  fingir progreso.
+- **Fase A — ⛔ retirada con la fase 3, y el hueco vuelve a estar abierto.**
+  `content_gap`/`open_opportunity`/`unverified_cited` no tienen ningún tipo de
+  recomendación en el motor (`recommendation-engine.ts` genera recomendaciones
+  al terminar el escaneo, antes de que exista ninguna auditoría de dominio —
+  ver cabecera de `coverage-overlay.ts`). Se sintetizaba el texto de "qué hacer"
+  en `synthesizedGuidance`, dentro de `lib/web-audit/action-plan.ts`; ese módulo
+  se retiró de la pantalla en PR #289 y se borró en log §102, así que **hoy esas
+  tres clasificaciones se muestran sin ninguna guía de qué hacer**. Queda
+  anotado como hueco real, no como fase entregada: si se resuelve, el sitio es
+  Recomendaciones, que es donde el fundador dijo que pertenecía.
 - **Fase B — pendiente, requiere geo-strategy.** Que la propia clasificación
   "Hueco de contenido" tenga en cuenta `brand_mentioned` cambia la taxonomía de
   la matriz (KPIs, cuadrantes, tendencia, plan de acción a la vez) — no es un

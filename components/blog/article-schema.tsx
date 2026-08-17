@@ -8,12 +8,15 @@ export function ArticleSchema({
   description,
   slug,
   datePublished,
+  dateUpdated,
   coverImage
 }: {
   title: string;
   description: string;
   slug: string;
   datePublished: string;
+  /** SEO-POS-1 (T9). Sin actualizaciones reales, cae a `datePublished` — igual que antes de que este prop existiera. */
+  dateUpdated?: string;
   coverImage?: string;
 }) {
   const json = {
@@ -23,7 +26,7 @@ export function ArticleSchema({
     description,
     url: `https://www.genscore.es/blog/${slug}`,
     datePublished,
-    dateModified: datePublished,
+    dateModified: dateUpdated ?? datePublished,
     author: { "@type": "Organization", name: "GenScore" },
     publisher: { "@type": "Organization", name: "GenScore" },
     ...(coverImage ? { image: `https://www.genscore.es${coverImage}` } : {})

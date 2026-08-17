@@ -54,7 +54,24 @@ becomes terminal (`failed` or `completed`).
 
 A project's active prompts (up to its plan's cap — Free 10, Starter 25, Pro
 100, Agency 300, see `app/pricing/plans-data.ts`) all get a real `scan_prompt`
-job when a run is created (`lib/scan/run-creation.ts`). `executePendingScan`
+job when a run is created (`lib/scan/run-creation.ts`).
+
+**One job per (prompt, sample)** since SAMPLING-1 (ADR 0030): when
+`prompts × engines` falls short of the response floor
+(`MIN_RESPONSES_PER_RUN`, `lib/scan/sampling.ts`), the run repeats its prompt
+set and each repetition gets its own jobs, carrying `sample_index` in
+`payload_json`. Two consequences worth stating here, because both are easy to
+get wrong from elsewhere in the lifecycle:
+
+- `scan_runs.total_prompts` counts **jobs**, not distinct prompts — every
+  progress figure divides `successful_prompts + failed_prompts` (job counts)
+  by it. The distinct prompt count is `total_prompts / sample_count`.
+- The unit of work is `(run, prompt, engine, sample)`. `processPromptJob`'s
+  "does a result already exist" check is scoped to `sample_index`; without
+  that scope every repetition after the first would find sample 0's rows and
+  complete without making a call.
+
+`executePendingScan`
 does **not** try to process all of them in one invocation: it atomically
 claims up to `MAX_REAL_SCAN_PROMPTS` (10) still-`pending` jobs per call —
 enough to fit comfortably inside the ~60s Vercel `maxDuration` budget
@@ -63,25 +80,40 @@ terminal, atomically claims the run's `scan_finalize` job as a single-owner
 gate and runs structured extraction, scoring, and recommendations exactly
 once, then marks the run `completed`.
 
-There are **two ways the remaining batches get driven**, chosen by
-`executePendingScan`'s `scheduleContinuation` flag:
+The remaining batches are driven **two ways at once**, and this is deliberate
+(SCAN-DRIVE-1, `docs/adr/0037`):
 
-- **Foreground (default for the manual "Lanzar escaneo" / onboarding path):**
-  the `autoExecutePendingScan` server action loops `executePendingScan`
-  (`scheduleContinuation: false`) batch after batch within one request's
-  ~40s budget, then returns the run's status; the `AutoExecuteScan` client
-  component re-invokes it until the run is terminal. This drives the whole
-  campaign through the **authenticated user session**, so it needs neither the
-  continuation secret nor a reachable self-URL — it works on preview deploys
-  and behind Vercel deployment protection, where a server-to-server self-fetch
-  would be blocked.
-- **Background (the daily cron / a browser-closed continuation):**
-  `executePendingScan` (default `scheduleContinuation: true`) schedules, via
-  Next.js's `after()` (fire-and-forget), a POST to `/api/scan/continue` that
-  runs the next batch in its own fresh invocation. This requires
-  `SCAN_CONTINUE_SECRET` and a reachable deployment URL (see
-  `docs/environment-contract.md`); if that dispatch is lost, the run simply
-  stalls until the timeout + auto-retry below picks it up.
+- **Background (always on):** every `executePendingScan` invocation that claims
+  work and leaves work behind schedules, via Next.js's `after()`
+  (fire-and-forget), a POST to `/api/scan/continue` that runs the next batch in
+  its own fresh invocation. This requires `SCAN_CONTINUE_SECRET` and a
+  reachable deployment URL (see `docs/environment-contract.md`); if that
+  dispatch is lost, the run stalls until the timeout + auto-retry below picks
+  it up.
+- **Foreground (an accelerator, not the engine):** on the manual "Lanzar
+  escaneo" / onboarding path the `autoExecutePendingScan` server action also
+  loops `executePendingScan` batch after batch for as long as a whole
+  worst-case invocation still fits in the request (`canStartAnotherScanInvocation`,
+  `lib/scan/drive-budget.ts`), then returns the run's status; the
+  `AutoExecuteScan` client component re-invokes it until the run is terminal.
+  It goes through the **authenticated user session**, so it needs neither the
+  continuation secret nor a reachable self-URL — it still works on preview
+  deploys and behind Vercel deployment protection, where a server-to-server
+  self-fetch is blocked.
+
+**The background chain used to be suppressed on the foreground path** (the
+flag `scheduleContinuation: false`), on the reasoning that the driver loops the
+batches itself. That made a browser tab the only thing in the system asking for
+the next batch — and a phone that locks its screen suspends it. On 2026-08-07 a
+31-prompt scan of genscore.es failed twice that way, 50 real answers generated
+and discarded, every unfinished job left `pending` with nothing able to claim
+it. Two drivers racing is safe by construction: the claim below is atomic, so a
+job is only ever processed by whichever invocation's UPDATE commits first.
+Never re-introduce a mode where the only driver lives in a browser.
+
+A batch is long enough to be killed mid-flight, so a claimed `scan_prompt` job
+is held under a lease (`PROMPT_LOCK_LEASE_MS`, 90s) exactly like the finalize
+job — see "Lock leases" below.
 
 See `docs/adr/0014-batched-self-chaining-scan-execution.md` for the full
 design and its rationale (why this, instead of an async worker or raising
@@ -165,6 +197,115 @@ convergence/termination guarantees and capacity math.
 
 ---
 
+## Structured extraction (EXTRACTION-RELIABILITY-1)
+
+Extraction is not a postscript to a run — it is what produces
+`extracted_json`, and therefore everything the product scores and displays. A
+row holding a real engine answer that nothing extracted is invisible to the
+entire product, so the lifecycle treats it as unfinished work, not as a
+detail.
+
+**Extraction runs per batch, plus a final sweep.** Each batch extracts the
+rows it just generated, in the same invocation; the finalize batch runs one
+more pass to catch anything an earlier pass could not reach. Before
+EXTRACTION-RELIABILITY-1 it ran exactly once, at finalize, capped at 20 rows
+(`MAX_EXTRACTION_RESULTS`) — a cap sized when a run was a single batch and
+never revisited after SCAN-CHAIN-1 made campaigns span many. Everything past
+the 20th row was silently discarded: on a 30-row run that was a third of the
+answers, on a 300-row Pro run 93%. See `docs/adr/0029`.
+
+**A pass is bounded by rate and time, never by row count.**
+`EXTRACTION_CONCURRENCY` (4) bounds in-flight calls. The time bound is
+`SCAN_INVOCATION_WORK_BUDGET_MS` (45s) and it belongs to the **whole
+invocation**, not to each pass: `executePendingScan` computes one absolute
+deadline at entry and threads it into every extraction pass it runs, so
+generation, the batch pass and the finalize sweep all draw from the same
+budget. Rows a pass cannot reach stay eligible for the next invocation. A
+per-pass budget instead of a shared one is what killed a real scan in preview
+— see `docs/adr/0029`, Addendum.
+
+**A finalize claim is leased, not permanent.** Because extraction now runs
+inside the finalize step, that step is long enough to be killed mid-flight, and
+a killed invocation cannot release the `scan_finalize` job it claimed. Nothing
+else recovers a `jobs` row — `reconcileStuckScanRuns` only touches
+`scan_runs` — so a job whose `locked_at` is older than
+`FINALIZE_LOCK_LEASE_MS` (90s) may be taken over by another invocation, via the
+same atomic claim the prompt batches use. Without this, one killed invocation
+stranded the campaign permanently.
+
+### Lock leases (both job kinds)
+
+The same argument applies to `scan_prompt` jobs and was simply never extended
+to them until SCAN-DRIVE-1 (`docs/adr/0037`): a batch spends tens of seconds on
+concurrent provider calls, so its invocation is the *most* likely one to be
+killed, and an abandoned `running` job means the campaign can never observe
+"every prompt job terminal" — finalize becomes unreachable while the run still
+looks alive. A `scan_prompt` job whose `locked_at` is older than
+`PROMPT_LOCK_LEASE_MS` (90s) may therefore be reclaimed by another invocation.
+
+Reclaiming is bounded: a stale job with no attempts left
+(`attempt_count >= max_attempts`) is marked `failed` with a self-authored error
+rather than reclaimed, so a job that reliably kills its invocation becomes
+terminal instead of being retried forever.
+
+**Per-call retries.** Every extraction call goes through
+`fetchExtractionWithRetry` (`lib/llm/extraction-fetch.ts`):
+`EXTRACTION_CALL_TIMEOUT_MS` (20s) per attempt, `EXTRACTION_MAX_ATTEMPTS` (3)
+with exponential backoff plus full jitter, honoring a clamped `Retry-After`.
+429 and 5xx are retryable; 400/401/403 are not (the key or model id is wrong,
+and retrying only burns budget the remaining rows need). Before this phase,
+extraction on all three providers had neither a timeout nor a retry while
+generation had both — which is why every observed provider outage killed
+extraction and left generation working.
+
+**Failures are categorized and sanitized.** `extraction_error` stores
+`category: message`, where category is one of `quota | timeout | http | empty
+| invalid_json | schema | config | unknown`. Only messages this codebase
+authored are ever persisted; anything else is flattened to
+`unknown: Extraction failed.`. Query a provider outage with
+`extraction_error LIKE 'quota:%'`.
+
+**A row that failed extraction is not re-attempted within the run.** It has
+already spent its bounded retries and carries a truthful error. Re-queueing it
+every pass would let one systematic failure consume the whole budget and
+starve rows nothing has looked at yet.
+
+**What the user sees while it runs (Fase C).** The progress screen
+(`components/scan-in-progress.tsx`) covers **both** stages: generation over the
+first half of the bar, extraction over the second, each with its own measured
+counter. It never reaches 100% while the run is in flight. Before Fase C it
+measured generation only, so from Fase A onwards it pinned at "100% · X de X"
+for the whole extraction stretch — with the project section behind the overlay,
+which reads as a hung scan. The analysis denominator is counted from the rows
+that exist rather than derived from `prompts × engines × samples`, because that
+arithmetic already changed once (SAMPLING-1, ADR 0030). `withAnalysisProgress`
+(`lib/scan/active-run-progress.ts`) is the single place that computes it for
+the five screens that render the component and for the 3s poll endpoint.
+
+**A run that loses data alerts the operator (Fase B).** After a run reaches a
+terminal state, `checkAndSendScanHealthAlert` (`lib/scan/scan-health-alert.ts`)
+evaluates its rows and emails `OPS_ALERT_EMAIL` when something actionable
+happened: a `quota:` or `config:` extraction error (no threshold — neither
+heals on its own), an engine that answered prompts but extracted nothing at
+all, or a run that ended `failed` with its auto-retry already spent. Isolated
+model noise (`schema`, `invalid_json`, `empty`, `timeout`) deliberately does
+NOT alert — it self-corrects on the next scan and there is nothing to fix —
+but it still counts toward the engine-down check. Deduped on (engine, reason)
+across **every** project for `SCAN_HEALTH_ALERT_DEDUPE_HOURS` (24h), because
+the daily cron would otherwise turn one incident into one email per project.
+Fail-soft: an alert can never sink a scan. See `docs/adr/0029`, Fase B.
+
+**Finalize defers rather than completing over a hole.** If
+`countUnprocessedExtractionRows` is non-zero at finalize, the `scan_finalize`
+job is released back to `pending`, progress counters are refreshed (bumping
+`updated_at`, so the reconciliation pass does not mistake a deferring run for
+a stalled one) and a continuation is scheduled. Termination is guaranteed:
+every pass either extracts a row or records an error on it, and both take that
+row out of the unprocessed set. A genuine stall is still caught by the
+timeout + auto-retry below.
+
+---
+
 ## Timeout detection and auto-retry (`reconcileStuckScanRuns`)
 
 A run in `running` state whose `updated_at` is older than
@@ -193,8 +334,11 @@ becomes terminal (`failed`) on the next pass instead of remaining
 timeout, `reconcileStuckScanRuns` counts prior timeout-failed runs for the
 same project within `SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS` (24h). If that count
 is below `SCAN_TIMEOUT_AUTO_RETRY_CAP` (1), a fresh `pending` run is created
-automatically (`trigger_source: "cron"`) — the user doesn't need to retry
-manually. If the cap is reached, the row is marked with a
+automatically (`trigger_source: "cron"`) **and started** — a continuation is
+dispatched for it, because nothing else on the server executes a `pending` run
+and leaving it for "whatever drives scans" meant leaving it for a browser tab
+that had already stopped (SCAN-DRIVE-1, `docs/adr/0037`). A retry nobody starts
+is not a retry. If the cap is reached, the row is marked with a
 `"scan_timeout_retry_exhausted"` / `"scan_pending_timeout_retry_exhausted"`
 `error_summary` instead, and the user sees a calmer message inviting a
 manual retry, without entering an unbounded auto-retry loop.
@@ -239,7 +383,15 @@ the underlying configuration and launches a new scan manually.
 3. **No silent hangs.** If the execution process dies (Vercel timeout, OOM,
    crash), `reconcileStuckScanRuns` eventually corrects the DB row to
    `failed` (with auto-retry, see above).
-4. **No user-facing cancel today.** There is no cancel-scan action or button.
+4. **No mute rows.** A run may not be marked `completed` while it holds an
+   engine answer that nothing has tried to extract. Either the row carries
+   `extracted_json` at the current `EXTRACTION_VERSION`, or it carries a
+   categorized `extraction_error` explaining why not. Completing over such a
+   gap publishes a score computed from a fraction of the run's own data and
+   calls it done — which is exactly what happened before
+   EXTRACTION-RELIABILITY-1 (`docs/adr/0029`). Enforced in `executePendingScan`
+   via `countUnprocessedExtractionRows`.
+5. **No user-facing cancel today.** There is no cancel-scan action or button.
    A user blocked by a stuck `pending`/`running` run relies on the timeout +
    auto-retry mechanism above, not on cancelling it themselves. Adding a
    cancel action is tracked as a future phase (see

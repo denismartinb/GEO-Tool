@@ -67,7 +67,7 @@ const FONT_STACK = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica
 // to never hit this; a full-width banner does).
 const HEADER_ROW = `
   <tr><td style="background:#FFFFFF;font-size:0;line-height:0;">
-    <img src="https://www.genscore.es/brand/genscore-email-header.png" width="600" height="120" alt="Genscore — Generative Engine Optimization" style="display:block;border:0;outline:none;width:100%;max-width:600px;height:auto;color:#0B1426;font-family:${FONT_STACK};font-size:14px;font-weight:700;">
+    <img src="https://www.genscore.es/brand/genscore-email-header.png" width="600" height="120" alt="GenScore — Generative Engine Optimization" style="display:block;border:0;outline:none;width:100%;max-width:600px;height:auto;color:#0B1426;font-family:${FONT_STACK};font-size:14px;font-weight:700;">
   </td></tr>
   <tr><td style="background:#2563EB;height:3px;line-height:3px;font-size:0;">&nbsp;</td></tr>`;
 
@@ -455,6 +455,371 @@ export async function sendAccountDeletedEmail(to: string): Promise<void> {
       )}
     `,
       { preheader: "Confirmamos que tu cuenta y tus datos se han eliminado de forma permanente." }
+    )
+  );
+}
+
+/**
+ * Operator alert address for backend failures nobody else can act on
+ * (AUDIT-AFTER-SCAN-1). Inert when unset, same as RESEND_API_KEY: an
+ * unconfigured alert channel must never turn into a crash on a code path
+ * whose whole job is handling a failure gracefully.
+ */
+/**
+ * True only when an operator alert can ACTUALLY be delivered — which needs
+ * both a destination (`OPS_ALERT_EMAIL`) and a transport (`RESEND_API_KEY`).
+ *
+ * Checking only the address was not enough, and the gap cost a failed
+ * verification of the very phase that introduced it (2026-08-05): the
+ * address was configured, this returned true, and `sendEmail` then no-opped
+ * on `if (!resend) return` without a word. Two silent gates in series is
+ * exactly the shape of failure ADR 0029 exists to remove, so the probe has
+ * to cover the whole path it claims to have checked.
+ */
+export function isOpsAlertConfigured(): boolean {
+  return getOpsAlertAddress() !== null && getResendClient() !== null;
+}
+
+function getOpsAlertAddress(): string | null {
+  const raw = process.env.OPS_ALERT_EMAIL?.trim();
+  return raw ? raw : null;
+}
+
+/**
+ * The raw provider error is interpolated into HTML below. It originates
+ * upstream (Gemini, Supabase, fetch) and is not ours, so it is escaped — an
+ * alert about a failure must not become an injection vector into the
+ * operator's own inbox.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * AUDIT-AFTER-SCAN-1: the post-scan web audit exhausted its retry budget.
+ *
+ * Goes to the OPERATOR, never to the customer. The customer never asked for
+ * this audit (it is automatic), and the failure is backend trouble they
+ * cannot act on — mailing them would be noise about someone else's problem.
+ *
+ * Deliberately plain and dense rather than brand-wrapped: the reader is
+ * debugging, and wants the project, the run, the attempt count and the real
+ * error above the fold.
+ */
+export async function sendWebAuditFailedAlertEmail(input: {
+  domain: string;
+  projectId: string;
+  runId: string;
+  attempts: number;
+  windowMinutes: number;
+  lastError: string;
+  failedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const hours = (input.windowMinutes / 60).toFixed(1);
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 12px 4px 0;color:#5B6B82;font-size:13px;white-space:nowrap;">${label}</td>` +
+    `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
+
+  await sendEmail(
+    to,
+    `[GenScore] Auditoría web automática fallida — ${input.domain}`,
+    `<!doctype html><html><head><meta charset="utf-8"></head>
+     <body style="margin:0;padding:24px;background:#FFFFFF;font-family:${FONT_STACK};color:#0B1426;">
+       <h1 style="margin:0 0 6px;font-size:17px;">Auditoría web automática fallida</h1>
+       <p style="margin:0 0 18px;font-size:13.5px;color:#5B6B82;">
+         Se agotaron los ${input.attempts} intentos a lo largo de ~${hours} h. El escaneo sí se completó;
+         lo que no se ha actualizado es la auditoría web de este proyecto.
+       </p>
+       <table role="presentation" cellpadding="0" cellspacing="0">
+         ${row("Dominio", input.domain)}
+         ${row("Proyecto", input.projectId)}
+         ${row("Escaneo", input.runId)}
+         ${row("Fallo definitivo", input.failedAt.toISOString())}
+       </table>
+       <p style="margin:18px 0 6px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5B6B82;">Último error</p>
+       <pre style="margin:0;padding:12px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:10px;font-size:12.5px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(
+         input.lastError
+       )}</pre>
+     </body></html>`
+  );
+}
+
+/**
+ * Alerts the operator that a scan could not produce complete data
+ * (EXTRACTION-RELIABILITY-1 Fase B, docs/adr/0029).
+ *
+ * Goes to the OPERATOR, never to the customer — same reasoning as
+ * `sendWebAuditFailedAlertEmail` above. An exhausted API account or a dead
+ * engine is backend trouble the customer cannot act on, and telling them
+ * their data is incomplete without being able to fix it is noise about
+ * someone else's problem.
+ *
+ * This exists because the failure it reports was invisible for four days:
+ * OpenAI extraction returned HTTP 429 on every call from 2026-08-01 while
+ * the product kept marking every scan "Completado", and Claude had failed
+ * the same way in June without anyone noticing either. The subject line
+ * leads with the engine and the reason precisely so the inbox itself
+ * answers "what do I have to go fix".
+ *
+ * Brand-wrapped (BRAND-5c system) since 2026-08-07: the reader is still
+ * debugging, so every field from the plain version stays, but the same
+ * `wrap()`/`eyebrow()`/`heading()` shell as the other transactional emails
+ * replaces the ad-hoc bare-bones HTML — this one landed in the founder's own
+ * inbox looking unbranded next to the other eight.
+ */
+export async function sendScanHealthAlertEmail(input: {
+  engine: string;
+  reason: string;
+  headline: string;
+  detail: string;
+  domain: string;
+  projectId: string;
+  runId: string;
+  affectedRows: number;
+  totalRows: number;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const rowsHtml = [
+    dataRow("Motor", input.engine),
+    dataRow("Causa", input.reason),
+    input.totalRows > 0
+      ? dataRow("Filas afectadas", `${input.affectedRows} de ${input.totalRows}`)
+      : dataRow("Filas", "ninguna: el motor no llegó a responder"),
+    dataRow("Dominio", input.domain),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Escaneo", input.runId),
+    dataRow("Detectado", input.detectedAt.toISOString())
+  ].join("");
+
+  await sendEmail(
+    to,
+    `[GenScore] Escaneo incompleto — ${input.engine}: ${input.reason}`,
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading(input.headline)}
+      ${paragraph(input.detail)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext(
+        "Sólo se envía un aviso por motor y causa cada 24 h, aunque el problema afecte a varios proyectos. El resto queda registrado en <code>scan_prompt_results.extraction_error</code>."
+      )}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: input.headline
+      }
+    )
+  );
+}
+
+/**
+ * LLM-RESILIENCE-1: an actionable LLM failure that happened OUTSIDE a scan run
+ * — the onboarding wizard, the web audit's content call, a recommendation
+ * rewrite. `sendScanHealthAlertEmail` cannot cover these: it reports on a
+ * finished run's rows, and these paths produce none.
+ *
+ * Operator address, never the customer's, same rule as every other alert here:
+ * the customer cannot top up our Gemini account.
+ *
+ * The dedupe note in the footer says "por instancia" on purpose rather than
+ * borrowing the scan alert's flat "sólo se envía un aviso cada 24h" — the
+ * store behind it is per-process (see `lib/llm/llm-incident.ts`), so promising
+ * global deduplication in the email itself would be a claim the code does not
+ * keep.
+ */
+export async function sendLlmIncidentAlertEmail(input: {
+  surfaceLabel: string;
+  provider: string;
+  category: string;
+  headline: string;
+  detail: string;
+  domain: string;
+  projectId: string;
+  dedupeMinutes: number;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const rowsHtml = [
+    dataRow("Proceso", input.surfaceLabel),
+    dataRow("Motor", input.provider),
+    dataRow("Causa", input.category),
+    dataRow("Dominio", input.domain),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Detectado", input.detectedAt.toISOString())
+  ].join("");
+
+  await sendEmail(
+    to,
+    `[GenScore] Fallo de ${input.provider} fuera del escaneo — ${input.category}`,
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading(input.headline)}
+      ${paragraph(input.detail)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext(
+        `Se envía como máximo un aviso por proceso, motor y causa cada ${input.dedupeMinutes} min y por instancia de servidor, así que un apagón amplio puede repetirlo. A diferencia del aviso de escaneo, este fallo no deja fila en la base de datos: el email es el único registro.`
+      )}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: input.headline
+      }
+    )
+  );
+}
+
+/**
+ * ADMIN-CONSOLE-1: informational alert to the operator every time a new
+ * account becomes usable — a password signup with an immediate session
+ * (`app/signup/actions.ts`), a password signup confirmed via the email link,
+ * or a Google OAuth signup (both land in `app/auth/callback/route.ts`,
+ * which is also `sendWelcomeEmail`'s second call site — same "new account,
+ * real session" definition, no separate detection logic to keep in sync).
+ *
+ * Goes to the OPERATOR (`OPS_ALERT_EMAIL`), never re-uses a customer-facing
+ * template: this is about the account, not for the account.
+ *
+ * Known gap, stated rather than hidden: a signup that requires email
+ * confirmation and never confirms never reaches either call site, so it
+ * never generates this alert either — seeing those would need a Supabase
+ * database webhook on `auth.users`, which is infrastructure outside this
+ * repo and its own Task Intake.
+ */
+export async function sendNewSignupOpsAlertEmail(input: {
+  email: string;
+  userId: string;
+  method: "password" | "google";
+  planId: string;
+  trialEndsAt: string | null;
+  createdAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const methodLabel = input.method === "google" ? "Google OAuth" : "Email y contraseña";
+  const planLabel = input.trialEndsAt
+    ? `${input.planId} · prueba hasta ${new Date(input.trialEndsAt).toISOString().slice(0, 10)}`
+    : input.planId;
+
+  const rowsHtml = [
+    dataRow("Email", input.email),
+    dataRow("user_id", input.userId),
+    dataRow("Método", methodLabel),
+    dataRow("Plan", planLabel),
+    dataRow("Alta", input.createdAt.toISOString())
+  ].join("");
+
+  await sendEmail(
+    to,
+    `[GenScore] Alta nueva — ${input.email}`,
+    wrap(
+      `
+      ${eyebrow("Alta nueva · sólo equipo GenScore")}
+      ${heading("Nueva cuenta activa")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext("Aviso automático por cada cuenta que llega a tener una sesión real — no cubre altas que nunca confirman el email.")}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `Nueva cuenta: ${input.email}`
+      }
+    )
+  );
+}
+
+/**
+ * ADMIN-CONSOLE-2b: aviso al operador en cada escritura que hace `/admin`
+ * sobre el proyecto de un cliente (interruptor de escaneo recurrente o de
+ * auditoría automática). Es el registro completo — no hay tabla nueva para
+ * esto, así que este email ES la auditoría de la acción, no un aviso
+ * adicional a ella (docs/design-reference/admin-console-1/README.md).
+ * Registra quién, qué cuenta, qué proyecto y qué cambió — desde
+ * ADMIN-CONSOLE-UX-1 ya no lleva motivo (decisión explícita del fundador,
+ * `docs/brand/design-decisions-log.md` §99): el registro deja de explicar
+ * el porqué, pero sigue siendo el único rastro del quién/qué/cuándo.
+ *
+ * Va a `OPS_ALERT_EMAIL`, nunca al cliente: es una escritura que hace GenScore
+ * sobre su cuenta.
+ */
+export async function sendAdminAutomationChangeAlertEmail(input: {
+  operatorEmail: string;
+  targetUserEmail: string;
+  targetUserId: string;
+  domain: string;
+  projectId: string;
+  change: string;
+  changedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const rowsHtml = [
+    dataRow("Operador", input.operatorEmail),
+    dataRow("Cuenta afectada", `${input.targetUserEmail} (${input.targetUserId})`),
+    dataRow("Dominio", input.domain),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Cambio", input.change),
+    dataRow("Fecha", input.changedAt.toISOString())
+  ].join("");
+
+  await sendEmail(
+    to,
+    `[GenScore] /admin cambió un automatismo — ${input.domain}`,
+    wrap(
+      `
+      ${eyebrow("Acción de operador · sólo equipo GenScore")}
+      ${heading("Un automatismo cambió desde /admin")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `${input.operatorEmail} cambió ${input.change} en ${input.domain}`
+      }
     )
   );
 }

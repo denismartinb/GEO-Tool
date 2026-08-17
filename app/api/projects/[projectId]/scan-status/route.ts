@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 
 export const dynamic = "force-dynamic";
 
@@ -40,5 +41,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pro
     .limit(1)
     .maybeSingle();
 
-  return NextResponse.json({ run: run ?? null });
+  if (!run) return NextResponse.json({ run: null });
+
+  // EXTRACTION-RELIABILITY-1 Fase C: the analysis-stage counters travel with
+  // the poll, so the bar keeps moving after generation is done instead of
+  // sitting at 100% while extraction works.
+  const withProgress = await withAnalysisProgress(supabase, parsed.data.projectId, run);
+
+  return NextResponse.json({ run: withProgress });
 }

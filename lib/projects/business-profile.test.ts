@@ -12,7 +12,9 @@ vi.mock("@/lib/llm/gemini", () => ({
   inferBusinessProfile: (input: unknown) => inferBusinessProfileMock(input)
 }));
 
-const { fetchHomepageEvidence, resolveBusinessContext } = await import("./business-profile");
+const { fetchHomepageEvidence, resolveBusinessContext, resolveAndCacheBusinessProfile } = await import(
+  "./business-profile"
+);
 
 function analyzedHtml(html: string): PageFetchResult {
   return { status: "analyzed", html, finalUrl: "https://example.com/" };
@@ -71,7 +73,10 @@ describe("resolveBusinessContext", () => {
 
     const result = await resolveBusinessContext({ domain: "nobody-home.com", country: "ES", language: "es" });
 
-    expect(result).toEqual({ status: "unidentified" });
+    // The reason is required, not decorative: this is the ONLY one of the three
+    // that is genuinely about the visitor's own site, and the free checker's
+    // copy branches on exactly that (log §111, Fase C-bis).
+    expect(result).toEqual({ status: "unidentified", reason: "homepage_unreadable" });
     expect(inferBusinessProfileMock).not.toHaveBeenCalled();
   });
 
@@ -110,7 +115,9 @@ describe("resolveBusinessContext", () => {
 
     const result = await resolveBusinessContext({ domain: "unclear.com", country: "ES", language: "es" });
 
-    expect(result).toEqual({ status: "unidentified" });
+    // The homepage was read fine — telling this visitor to check that their
+    // page loads would be a diagnosis the code cannot support.
+    expect(result).toEqual({ status: "unidentified", reason: "profile_low_confidence" });
   });
 
   it("accepts a low-confidence profile when the user supplied their own description", async () => {
@@ -145,6 +152,126 @@ describe("resolveBusinessContext", () => {
 
     const result = await resolveBusinessContext({ domain: "flaky.com", country: "ES", language: "es" });
 
-    expect(result).toEqual({ status: "unidentified" });
+    expect(result).toEqual({ status: "unidentified", reason: "profile_failed" });
+  });
+});
+
+/**
+ * COMPETITOR-GROUNDING-2 / COMPETITOR-SUGGESTIONS-1: the lazy
+ * compute-and-cache helper is shared by prompt generation and competitor
+ * suggestion, so its behaviour is pinned here rather than through either
+ * caller.
+ */
+describe("resolveAndCacheBusinessProfile", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const PROFILE = {
+    whatItSells: "CRM software",
+    sector: "software",
+    subSector: "CRM",
+    businessModel: "b2b" as const,
+    targetCustomer: "pymes",
+    geographicScope: "ES",
+    sizeEstimate: "small",
+    confidence: "high" as const
+  };
+
+  function fakeSupabase(options: { updateError?: { message: string } | null } = {}) {
+    const updates: Array<Record<string, unknown>> = [];
+    const builder: Record<string, unknown> = {};
+    for (const m of ["update", "eq"]) {
+      builder[m] = vi.fn((...args: unknown[]) => {
+        if (m === "update") updates.push(args[0] as Record<string, unknown>);
+        return builder;
+      });
+    }
+    builder.then = (resolve: (v: unknown) => unknown) => resolve({ error: options.updateError ?? null });
+    return { client: { from: vi.fn(() => builder) } as never, updates };
+  }
+
+  const baseArgs = {
+    projectId: "project-1",
+    ownerUserId: "user-1",
+    domain: "example.com",
+    country: "ES",
+    language: "es"
+  };
+
+  it("returns the cached profile without resolving or writing anything", async () => {
+    const { client, updates } = fakeSupabase();
+
+    const result = await resolveAndCacheBusinessProfile({
+      ...baseArgs,
+      existingProfile: PROFILE,
+      supabase: client
+    });
+
+    expect(result).toEqual(PROFILE);
+    expect(fetchPageSafelyMock).not.toHaveBeenCalled();
+    expect(updates).toHaveLength(0);
+  });
+
+  it("ignores a malformed cached value and resolves afresh", async () => {
+    fetchPageSafelyMock.mockResolvedValue(analyzedHtml("<title>CRM</title>"));
+    inferBusinessProfileMock.mockResolvedValue(PROFILE);
+    const { client, updates } = fakeSupabase();
+
+    const result = await resolveAndCacheBusinessProfile({
+      ...baseArgs,
+      existingProfile: { garbage: true },
+      supabase: client
+    });
+
+    expect(result).toEqual(PROFILE);
+    expect(updates).toHaveLength(1);
+  });
+
+  it("resolves and persists when nothing is cached yet", async () => {
+    fetchPageSafelyMock.mockResolvedValue(analyzedHtml("<title>CRM</title>"));
+    inferBusinessProfileMock.mockResolvedValue(PROFILE);
+    const { client, updates } = fakeSupabase();
+
+    const result = await resolveAndCacheBusinessProfile({
+      ...baseArgs,
+      existingProfile: null,
+      supabase: client
+    });
+
+    expect(result).toEqual(PROFILE);
+    expect(updates).toEqual([{ business_profile: PROFILE }]);
+  });
+
+  it("returns null without writing when the business cannot be identified", async () => {
+    fetchPageSafelyMock.mockResolvedValue(analyzedHtml("<title>CRM</title>"));
+    inferBusinessProfileMock.mockResolvedValue(null);
+    const { client, updates } = fakeSupabase();
+
+    const result = await resolveAndCacheBusinessProfile({
+      ...baseArgs,
+      existingProfile: null,
+      supabase: client
+    });
+
+    expect(result).toBeNull();
+    expect(updates).toHaveLength(0);
+  });
+
+  it("still returns the freshly-resolved profile when the best-effort cache write fails", async () => {
+    fetchPageSafelyMock.mockResolvedValue(analyzedHtml("<title>CRM</title>"));
+    inferBusinessProfileMock.mockResolvedValue(PROFILE);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { client } = fakeSupabase({ updateError: { message: "write denied" } });
+
+    const result = await resolveAndCacheBusinessProfile({
+      ...baseArgs,
+      existingProfile: null,
+      supabase: client
+    });
+
+    expect(result).toEqual(PROFILE);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

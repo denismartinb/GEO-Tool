@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 /**
  * "Marcar como hecho / descartar" (Fase RECS-3): the user manually marks a

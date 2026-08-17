@@ -1,0 +1,104 @@
+name: CI
+
+# The unit tests, the typechecker and the linter, on every pull request.
+#
+# Until PRELAUNCH-HARDENING-1 Fase 0 this did not exist: `pnpm test` ran only
+# where a session happened to run it by hand, so the ~1.800 Vitest cases were
+# advisory — a PR that broke every one of them still showed a green tick and
+# could reach the Human Gate. The only automated per-PR signals were the Vercel
+# build and the agentic pilot, and neither one runs a single unit test.
+#
+# Deliberately NOT running `pnpm run build` (i.e. not the whole `validate`
+# script): Vercel already builds a preview for every push that touches product
+# code, so a second `next build` here would double the slowest step of CI and
+# buy no new signal. The paths `scripts/vercel-should-build.sh` skips
+# (`docs/`, `.claude/`, `.github/`, `tests/` except `tests/pilot/`, `agents/`,
+# root prose) are all paths that cannot break a Next.js build. `tsc --noEmit`
+# is meanwhile *broader* than the build's own check, because tsconfig includes
+# the test files that `next build` never compiles.
+
+on:
+  pull_request:
+
+  # **Dos disparadores independientes para la misma puerta, a propósito.**
+  #
+  # `pull_request` se pierde. Medido: el 2026-08-10, misma rama y misma tarde,
+  # tres pushes (`3bdc8ae`, `47b2d39`, `1257700`) NO dispararon esta
+  # comprobación y dos (`bf95b9b`, `fda1a2b`) sí; y el 2026-08-16 se perdió
+  # **dos veces seguidas** en el PR #427 — una de ellas escondía un fallo real
+  # que sólo apareció al lanzarlo a mano. Es intermitente, no sistemático, y
+  # eso lo empeora: la cabeza de un PR llega al Human Gate sin puerta y sin que
+  # nada lo diga, unas veces sí y otras no.
+  #
+  # `push` cubre exactamente ese hueco. No hace la puerta más estricta —hace
+  # que exista— y por eso NO se colapsan los dos en uno solo: si compartieran
+  # grupo de `concurrency`, uno cancelaría al otro y un run cancelado cuenta
+  # como no superado. Se paga un run duplicado por push (~90 s) a cambio de que
+  # perder un evento deje de significar «sin tests». Barato al lado de los ~20
+  # min que cuesta la pasada del piloto que sí corre siempre.
+  #
+  # **Esto sigue sin ser la puerta.** La puerta es una *required status check*
+  # en la protección de rama de `main`, que es un ajuste del repositorio y no
+  # código (log §97). Sin ella, esto sólo consigue que el check exista casi
+  # siempre; con ella, que además impida mergear.
+  push:
+    branches-ignore:
+      # Las ramas de evidencia del piloto no son código: no llevan
+      # `package.json`, así que `pnpm install --frozen-lockfile` falla ahí
+      # seguro. Un rojo permanente por diseño es justo lo que entrena a
+      # ignorar la lista de checks (log §105).
+      - "pilot-evidence/**"
+
+  # A demanda, para reponer a mano lo que se haya perdido pese a lo anterior.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per PR (or per branch on push). A second push supersedes the first
+  # instead of queueing behind it — CI minutes are a real budget here
+  # (BUILD-BUDGET-1).
+  #
+  # Los dos disparadores caen en grupos DISTINTOS (`ci-123` para el PR,
+  # `ci-refs/heads/rama` para el push) y eso es deliberado: unificarlos haría
+  # que uno cancelase al otro, y un run cancelado no cuenta como superado —
+  # convertiría la redundancia que arriba se busca en un fallo intermitente.
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: tests · typecheck · lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Three separate steps on purpose: when this check goes red, the step
+      # name in the Actions UI already says which of the three broke, without
+      # opening the log.
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint

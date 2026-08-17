@@ -26,6 +26,12 @@
   --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
   --sidebar-w: 248px;
   --header-h: 52px;
+  /* Shared mobile-drawer chassis (header-consistency-public-private,
+     2026-08-15) — both the console sidebar drawer (.sb) and the public
+     header drawer (.lp-mobnav) read these, so a future change to one
+     changes both instead of drifting apart again. */
+  --drawer-w: 288px;
+  --drawer-anim: .24s cubic-bezier(.4, 0, .2, 1);
   color-scheme: light;
 
   /* ============================================================
@@ -312,15 +318,28 @@ a {
   min-height: 0;
 }
 
+/* HEADER-FLAT-1 (2026-08-15): plana arriba del todo, cristal al desplazar —
+   el tratamiento de la portada pública, traído a la consola. El fondo no
+   existe para tapar contenido (la cabecera no solapa nada: `.dash-content` es
+   quien scrollea y es su hermana) sino para darle un canto al contenido que
+   sube, que sin él se recorta contra un borde invisible. Ver
+   `components/console-header.tsx`. */
 .dash-header {
   position: relative;
   height: var(--header-h);
-  border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid transparent;
+  background: transparent;
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 0 22px;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.dash-header.is-scrolled {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom-color: var(--line-soft);
 }
 
 /* Mobile-only header controls, hidden on desktop */
@@ -675,61 +694,6 @@ a {
 .badge-outline { background: transparent; border: 1px solid var(--line); color: var(--ink-2); }
 
 /* ============================================================
-   Overview — executive summary banner
-   ============================================================ */
-.summary {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 16px 18px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--r-lg);
-}
-.summary-ico {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--r-sm);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.summary-txt {
-  font-size: 14px;
-  line-height: 1.75;
-  color: var(--ink-2);
-}
-.summary-txt b { color: var(--ink); font-weight: 700; }
-.hl-pos { color: var(--pos-ink); font-weight: 700; }
-.hl-neg { color: var(--neg-ink); font-weight: 700; }
-
-/* ============================================================
-   Overview — section header
-   ============================================================ */
-.section-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin: 30px 0 14px;
-  flex-wrap: wrap;
-}
-.section-title {
-  font-size: 15px;
-  font-weight: 750;
-  color: var(--ink);
-  letter-spacing: -0.01em;
-}
-.section-desc {
-  font-size: 12.5px;
-  color: var(--ink-3);
-  font-weight: 500;
-}
-.section-head .right { margin-left: auto; }
-
-/* ============================================================
    Overview — gauge
    ============================================================ */
 .gauge-wrap {
@@ -745,6 +709,14 @@ a {
   text-align: center;
   padding-top: 10px;
 }
+/* Half-circle variant (Gauge variant="semi"): the box is cropped to the top
+   half, so the reading sits on the arc's open baseline instead of the
+   vertical centre it would otherwise share with the stroke. The exact
+   bottom padding is set inline by the component (it depends on `stroke`). */
+.gauge-wrap.gauge-semi .gauge-center {
+  align-items: flex-end;
+  padding-top: 0;
+}
 .gauge-num {
   font-size: 32px;
   font-weight: 800;
@@ -758,70 +730,6 @@ a {
   font-weight: 600;
   margin-top: 2px;
 }
-
-/* ============================================================
-   Overview — hero-v2 card
-   ============================================================ */
-.hero-v2 {
-  display: flex;
-  gap: 0;
-  align-items: stretch;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-.hv-gauge {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 28px 24px;
-  gap: 14px;
-}
-.hv-divider {
-  width: 1px;
-  background: var(--line-soft);
-  margin: 18px 0;
-  flex-shrink: 0;
-}
-.hv-compose {
-  flex: 1;
-  padding: 28px 26px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-}
-.hv-trend {
-  flex: 0 0 auto;
-  padding: 28px 26px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 200px;
-}
-.hv-block-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--ink-4);
-  margin-bottom: 14px;
-}
-.compose-row {
-  margin-bottom: 12px;
-}
-.compose-row:last-child { margin-bottom: 0; }
-.compose-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 5px;
-}
-.compose-l { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
-.compose-v { font-size: 12.5px; font-weight: 750; color: var(--ink); }
 
 /* ============================================================
    Overview — 4 wide metric cards
@@ -910,6 +818,66 @@ a {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+}
+
+/* Systemic fix (2026-08-03), not a fifth one-off patch.
+ *
+ * The default bubble above is `position: absolute; left: 0; width: 220px`,
+ * anchored to the trigger's own 14×14px box. `visibility: hidden` does NOT
+ * remove it from layout — a trigger placed anywhere past ~155px from its
+ * row's right edge overflows a 375px viewport for real, permanently, with
+ * no hover needed, whether or not anyone ever notices (the overflow was
+ * invisible to every check until 2026-08-03, when journey.ts started
+ * measuring the element that actually clips instead of the document — see
+ * its SHELL_CLIPPING_CLASSES comment). Found FOUR real, independent
+ * instances this way in one day: `.cit2-kpis` (patched 2026-08-01, before
+ * the class of bug had a name), `.cit2-split-key` and `.wa2-diag-title`
+ * (patched earlier today), `.cm2-pos-list-hd` (Competitors, COMP-REDESIGN-1,
+ * PR #285 — not this PR's own code, exposed by the same fix). Four bespoke
+ * classes reinventing the same three lines is how the fourth one shipped
+ * unpatched in the first place.
+ *
+ * `.info-tip-anchor` is the ONE reusable mechanism going forward: apply it
+ * to whatever element should own the tooltip's safe width — normally the
+ * immediate label/heading row wrapping the trigger, not a whole card, so the
+ * bubble reads as attached to that row rather than floating under
+ * unrelated content below it. The three prior one-off classes are folded
+ * into this same selector list rather than left as separate copies of an
+ * identical rule.
+ *
+ * This does not make overflow provably impossible in every future layout —
+ * a pure-CSS tooltip with no JS cannot know the viewport's remaining width
+ * at the trigger's exact position, so a wrapper wider than the viewport can
+ * still overflow. It removes the actual failure mode behind all four real
+ * cases (a fixed-width bubble anchored to a small trigger with no positioned
+ * ancestor to constrain it) and gives every future InfoTip call site one
+ * documented class to reach for instead of a fifth bespoke override.
+ */
+.info-tip-anchor,
+.cit2-kpis,
+.cit2-split-key,
+.wa2-diag-title,
+.cm2-pos-list-hd {
+  position: relative;
+}
+.info-tip-anchor .info-tip,
+.cit2-kpis .info-tip,
+.cit2-split-key .info-tip,
+.wa2-diag-title .info-tip,
+.cm2-pos-list-hd .info-tip {
+  position: static;
+}
+.info-tip-anchor .info-tip-bubble,
+.cit2-kpis .info-tip-bubble,
+.cit2-split-key .info-tip-bubble,
+.wa2-diag-title .info-tip-bubble,
+.cm2-pos-list-hd .info-tip-bubble {
+  top: 100%;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  margin-top: 6px;
 }
 .stat-value {
   font-size: 32px;
@@ -1021,92 +989,6 @@ a {
 .ie-dot.on-l { background: var(--accent); }
 
 /* ============================================================
-   Overview — share-of-voice bar
-   ============================================================ */
-.sov-bar {
-  flex: 1;
-  min-width: 48px;
-  height: 6px;
-  background: var(--surface-sunk);
-  border-radius: 99px;
-  overflow: hidden;
-}
-.sov-fill {
-  height: 100%;
-  border-radius: 99px;
-}
-
-/* ============================================================
-   Overview — 2/1 grid
-   ============================================================ */
-.grid-2-1 {
-  display: grid;
-  grid-template-columns: 1.35fr 1fr;
-  gap: 12px;
-}
-
-/* ============================================================
-   Overview — table
-   ============================================================ */
-.tbl {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-.tbl th {
-  padding: 8px 14px;
-  text-align: left;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--ink-4);
-  border-bottom: 1px solid var(--line-soft);
-}
-.tbl th.num { text-align: right; }
-.tbl td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--line-soft);
-  vertical-align: middle;
-}
-.tbl td.num { text-align: right; }
-.tbl tr:last-child td { border-bottom: none; }
-.tbl .you { background: var(--accent-soft); }
-.tbl .hoverable:hover { background: var(--surface-2); cursor: pointer; }
-
-/* Wide tables (Prompts) scroll inside their card on small screens instead of
-   stretching the whole page horizontally. min-width keeps the columns legible
-   while the wrapper provides the scroll. */
-.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.tbl-wrap .tbl { min-width: 680px; }
-
-/* entity cell */
-.ent { display: flex; align-items: center; gap: 9px; }
-.ent .nm { font-size: 13px; font-weight: 650; color: var(--ink); }
-.ent .dm { font-size: 11px; color: var(--ink-4); font-family: var(--mono); }
-.ent-link svg {
-  margin-left: auto;
-  opacity: 0;
-  transition: opacity 0.12s ease, transform 0.12s ease;
-  color: var(--ink-4);
-}
-.tbl .hoverable:hover .ent-link svg {
-  opacity: 1;
-  transform: translateX(2px);
-}
-.fav {
-  display: grid;
-  place-items: center;
-  border-radius: 7px;
-  font-size: 11px;
-  font-weight: 800;
-  color: #fff;
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-}
-
-/* ============================================================
    Overview — recommendation preview cards
    ============================================================ */
 .recs-3col {
@@ -1163,43 +1045,6 @@ a {
 .rmetric .v { display: flex; align-items: center; }
 
 /* ============================================================
-   Overview — section empty state
-   ============================================================ */
-.section-empty {
-  padding: 28px 20px;
-  text-align: center;
-  background: var(--surface-2);
-  border-radius: var(--r-md);
-  border: 1px dashed var(--line);
-}
-.section-empty-title {
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--ink-3);
-  margin-bottom: 4px;
-}
-.section-empty-desc {
-  font-size: 12px;
-  color: var(--ink-4);
-  line-height: 1.6;
-}
-
-/* ============================================================
-   Overview — "why this matters" callout
-   ============================================================ */
-.why-callout {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 12px 14px;
-  background: var(--accent-soft);
-  border-radius: var(--r-md);
-  margin-top: 16px;
-}
-.why-t { font-size: 12px; font-weight: 700; color: var(--accent-ink); margin-bottom: 3px; }
-.why-b { font-size: 11.5px; color: var(--ink-2); line-height: 1.5; }
-
-/* ============================================================
    BRAND-5b — Overview redesign (Task Intake approved 2026-07-23):
    insight banner, KPI carousel, engine bars, unified competitive
    panorama, oportunidades summary. All-new `.ov2-*` classes —
@@ -1224,7 +1069,12 @@ a {
    (none of which are edited here) automatically repaint in v3 colors
    for any instance rendered inside this wrapper, while every other
    page keeps reading the unmodified `:root` values. */
-.ov2-scope {
+/* CONSOLE-REDESIGN-1 reuses this remap for Ajustes (`.set-scope`) rather than
+   inventing a second mechanism, as the design log §2 requires. The two share
+   the token block below; only `.ov2-scope` gets Overview's 460px column, which
+   is why the width rule stays on its own selector further down. */
+.ov2-scope,
+.set-scope {
   font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ink: var(--brand-ink);
   --ink-2: var(--brand-ink-2);
@@ -1244,7 +1094,8 @@ a {
 .ov2-scope .card,
 .ov2-scope .ov2-insight,
 .ov2-scope .ov2-kpi,
-.ov2-scope .ov2-opps {
+.ov2-scope .ov2-opps,
+.set-scope .card {
   box-shadow: var(--brand-shadow-card);
 }
 /* Gauge component's inner number is a shared component (not an ov2 class), so
@@ -1392,6 +1243,25 @@ a {
   margin: 3px 0 6px;
 }
 .ov2-pm-val small { font-size: 14px; color: var(--ink-4); font-weight: 700; }
+/* PANORAMA-EMPTY-1. "No apareciste en este escaneo" replaces the number in
+   this same slot when the brand itself was never named — the sentence must
+   not inherit the giant display-font digit styling meant for "5 / 7", or it
+   renders as an oversized, badly-wrapped headline. */
+.ov2-pm-val-text {
+  display: block;
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: normal;
+  color: var(--ink-3);
+}
+/* The bars are always the true top 5, not "your" top 5 — this caption keeps
+   the headline number above (your standing) and the bars below (who's
+   actually top 5) from being read as the same claim (founder, 2026-08-07). */
+.ov2-pm-bars-lbl {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4); margin: 10px 0 4px;
+}
 .ov2-posbars { display: flex; align-items: flex-end; gap: 9px; height: 60px; padding: 0 2px; margin: 6px 0 26px; }
 .ov2-posbars .b { flex: 1; border-radius: 6px 6px 0 0; position: relative; background: var(--line); min-height: 6px; }
 .ov2-posbars .b.you { background: var(--brand-blue); }
@@ -1403,7 +1273,28 @@ a {
 .ov2-cmp-row { display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-bottom: 1px solid var(--line-soft); }
 .ov2-cmp-row:last-child { border-bottom: none; }
 .ov2-cmp-row.you { background: var(--brand-blue-soft); }
-.ov2-cmp-n { width: 16px; font-size: 12px; font-weight: 750; color: var(--ink-3); text-align: center; flex: 0 0 auto; }
+/* PANORAMA-EMPTY-1. When the brand falls outside the real top 5, its row is
+   still appended so "dónde estoy" never disappears — but an unexplained gap
+   at rank 6 reads as a missing row, not a skip (founder, 2026-08-07). Three
+   dots mark it as a deliberate break, not a broken list. */
+.ov2-cmp-gap { display: flex; justify-content: center; align-items: center; gap: 4px; padding: 7px 0; }
+.ov2-cmp-gap span { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-4); }
+/* PANORAMA-PARITY-1. The leading `.ov2-cmp-n` rank digit is gone: the standing
+   now sits at the end of the row as an ordinal, the same shape Competidores
+   reached after the founder twice failed to see it on the left (log §15).
+   Header columns reuse the value classes so their widths track the rows'
+   automatically at both breakpoints; only the type is overridden. */
+.ov2-cmp-hd {
+  display: flex; align-items: flex-end; gap: 11px; padding: 11px 15px 7px;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.ov2-cmp-hd-nm { flex: 1; min-width: 0; }
+.ov2-cmp-hd .ov2-cmp-sov,
+.ov2-cmp-hd .ov2-cmp-sc {
+  font: inherit; font-size: 9.5px; letter-spacing: .08em; color: var(--ink-4); text-align: right;
+}
 .ov2-cmp-fav {
   width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto;
   object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
@@ -1423,7 +1314,11 @@ a {
   font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
   font-size: 13px; font-weight: 800; flex: 0 0 auto; width: 52px; text-align: right; color: var(--ink);
 }
-.ov2-cmp-sc small { font-size: 9.5px; color: var(--ink-4); font-weight: 700; }
+/* The ordinal's "º" is NOT a <small>: at 9.5px and --ink-4 it floated off the
+   digit and read as a degree sign or a stray dot ("1°"), which is exactly the
+   "a bullet, not a standing" failure §15 spent two rounds on. It carries the
+   digit's own size and weight, as on Competidores. The old `.ov2-cmp-sc small`
+   rule existed for the raw mean's superscript and left with it. */
 
 /* 6 · Oportunidades (light card, matches prototype) */
 .ov2-opps { overflow: hidden; }
@@ -1464,120 +1359,6 @@ a {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   margin: 4px 13px 14px; height: 40px; border-radius: 11px;
   background: var(--brand-blue); color: #fff; font-size: 13px; font-weight: 700;
-}
-
-/* ============================================================
-   OV-DESKTOP-1 — Overview desktop layout (Task Intake approved
-   2026-07-30, see docs/brand/design-decisions-log.md §4). BRAND-5b
-   shipped `.ov2-scope` as a fixed 460px phone-width column with no
-   min-width query at all, so desktop rendered the same single narrow
-   column centered in the page (~62% dead space at 1512px) with the 4th
-   KPI card clipped by the mobile carousel. Every rule below lives inside
-   a min-width query, so <900px stays byte-identical to what shipped —
-   verified by diffing a static render of this page at 390px with and
-   without this block. The four structural wrappers added in page.tsx
-   (.ov2-hero, .ov2-hero-kpis, .ov2-cols, .ov2-main/.ov2-rail) default to
-   `display: contents` so they have zero effect on the mobile flow and
-   only become grid containers at the desktop breakpoints.
-   ============================================================ */
-.ov2-hero, .ov2-hero-kpis, .ov2-cols, .ov2-main, .ov2-rail { display: contents; }
-
-/* Tablet / small laptop: still one column, just not phone-width */
-@media (min-width: 900px) {
-  .ov2-scope { max-width: 640px; }
-
-  .ov2-kpi-car {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    overflow: visible;
-  }
-  .ov2-kpi { width: auto; }
-}
-
-/* Desktop: two-column console */
-@media (min-width: 1200px) {
-  .ov2-scope { max-width: 1200px; }
-
-  .ov2-insight { padding: 17px 20px; }
-  .ov2-insight-txt { font-size: 14px; max-width: 92ch; }
-
-  /* Hero band: score card on the left, the 4 KPIs as a 2x2 block on the
-     right instead of stacked full-width under the gauge. */
-  .ov2-hero {
-    display: grid;
-    grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
-    gap: 18px;
-    align-items: stretch;
-    margin-top: 16px;
-  }
-  .ov2-hero > .ov2-gauge-card {
-    margin-top: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 16px;
-    padding: 24px 26px;
-  }
-  .ov2-hero > .ov2-gauge-card .ov2-gauge-ring { align-self: center; }
-  .ov2-hero > .ov2-gauge-card .ov2-gauge-info { flex: 0 0 auto; width: 100%; }
-  .ov2-hero-kpis { display: flex; flex-direction: column; }
-  .ov2-hero-kpis .ov2-sec-lbl { margin: 0 2px 10px; }
-  .ov2-hero-kpis .ov2-kpi-car { flex: 1; }
-  .ov2-hero-kpis .ov2-kpi { display: flex; flex-direction: column; justify-content: center; }
-
-  /* Analysis column (engines + panorama) + sticky action rail (oportunidades) */
-  .ov2-cols {
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-    margin-top: 4px;
-  }
-  .ov2-main, .ov2-rail { display: block; min-width: 0; }
-  .ov2-main > .ov2-sec-lbl:first-child,
-  .ov2-rail > .ov2-sec-lbl:first-child { margin-top: 26px; }
-  /* 60px clears the sticky page header (.ov-sticky-header) while the rail
-     follows the (usually taller) analysis column during scroll. */
-  .ov2-rail { position: sticky; top: 60px; }
-
-  /* Engine bars: extra width goes to label room, not to bar stretch */
-  .ov2-engbar { margin-bottom: 17px; }
-  .ov2-engbar .nm { width: 118px; font-size: 13px; }
-  .ov2-engbar .track { height: 9px; }
-  .ov2-engbar .v { font-size: 13.5px; width: 40px; }
-
-  /* Panorama: readable proportions at the ~700px analysis-column width */
-  .ov2-posbars { height: 86px; margin: 10px 0 30px; gap: 12px; }
-  .ov2-posbars .b span { font-size: 10.5px; }
-  .ov2-pm-val { font-size: 26px; }
-  .ov2-cmp-row { padding: 14px 18px; gap: 14px; }
-  .ov2-cmp-fav, .ov2-cmp-row .fav { width: 30px !important; height: 30px !important; border-radius: 9px; }
-  .ov2-cmp-nm .t { font-size: 13.5px; }
-  .ov2-cmp-sov { width: 132px; }
-  .ov2-cmp-sov .pct { font-size: 10.5px; }
-  .ov2-cmp-sc { font-size: 14px; width: 62px; }
-
-  /* Oportunidades reads as a rail card, not a full-width strip. The
-     narrower column would truncate more titles than the phone layout
-     does, so rail items wrap to a 2nd line instead of a harder ellipsis. */
-  .ov2-opps-hero { padding: 18px 18px 16px; }
-  .ov2-opp { padding: 12px 13px; align-items: flex-start; }
-  .ov2-opp-dot { margin-top: 5px; }
-  .ov2-opp-t { white-space: normal; line-height: 1.4; align-items: flex-start; }
-  .ov2-opp-t span {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-  .ov2-opp-quick { margin-top: 2px; }
-  .ov2-opp-r { padding-top: 1px; }
-}
-
-/* Wide desktop: a little more breathing room, no new structure */
-@media (min-width: 1600px) {
-  .ov2-scope { max-width: 1280px; }
 }
 
 /* ============================================================
@@ -1772,91 +1553,370 @@ a {
 }
 
 /* ============================================================
-   PROMPTS-DESKTOP-1 — Prompts desktop layout (Task Intake approved
-   2026-07-30, see docs/brand/design-decisions-log.md). Same bug as
-   OV-DESKTOP-1: PROMPTS-REDESIGN-1 shipped `.pr2-page` as a fixed 460px
-   phone-width column with no desktop media query. Unlike Overview,
-   Prompts has no clipped element (no carousel) — the only problem is
-   dead space and each prompt row wrapping to 2 lines when width is
-   available, so the fix here is column width + row breathing room only,
-   no structural JSX wrappers needed (this page is a single list, not
-   several distinct widgets). Every rule lives inside a min-width query —
-   verified byte-identical below 900px against the current mobile render.
+   Competitors — v3 restyle (COMP-REDESIGN-1)
 
-   PROMPTS-DESKTOP-2 follow-up (Task Intake approved 2026-07-30, founder:
-   "debe ocupar el mismo ancho que la pantalla principal ... para tener
-   consistencia"): the 900/1200/1600px column caps below were originally
-   900/1000px, independently tuned for this page — the founder asked for
-   the *same* width as `.ov2-scope` (Overview) instead, so the console
-   reads as one consistent system rather than two similarly-but-not-quite
-   matching columns. Changed to match `.ov2-scope` exactly (640/1200/
-   1280px). Unifying the *other* console pages (Competitors, Citations,
-   Recommendations, Web Audit, Runs — still on the older `.page`/1320px
-   system) to this same width is explicitly out of scope here; it needs
-   its own decision on which width the whole console converges to.
+   Same rollout mechanism as `.ov2-scope`/`.pr2-scope`
+   (docs/brand/design-decisions-log.md §2): a wrapper that re-points the
+   SAME custom-property names its descendants already consume, so shared
+   components (.card, .badge-pos/-neg) repaint in v3 colors only inside
+   this subtree. Same responsive column widths as Overview/Prompts
+   (460/640/1200/1280px) so the console reads as one system — see
+   PROMPTS-DESKTOP-2's note that unifying the *other* console pages to
+   this width was explicitly deferred; this phase does it for Competitors.
    ============================================================ */
+.cm2-scope {
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
+  --line: var(--brand-line);
+  --line-soft: var(--brand-line-soft);
+  --accent: var(--brand-blue);
+  --accent-soft: var(--brand-blue-soft);
+  --accent-ink: var(--brand-blue);
+  --accent-ring: var(--brand-blue-soft-2);
+  --pos-soft: var(--brand-pos-soft);
+  --pos-ink: var(--brand-pos);
+  --neg-soft: var(--brand-neg-soft);
+  --neg-ink: var(--brand-neg);
+  /* Sequential intensity scale for the engine × brand matrix (Paso C),
+     derived from --brand-blue as the top step — a deliberate 6-step scale
+     kept as named tokens instead of scattered hex literals. */
+  --cm2-h0: #f4f6fa;
+  --cm2-h0-ink: var(--brand-ink-4);
+  --cm2-h1: #e3ecfd;
+  --cm2-h1-ink: #1e4fb8;
+  --cm2-h2: #c3d8fb;
+  --cm2-h2-ink: #1a4494;
+  --cm2-h3: #8fb6f6;
+  --cm2-h3-ink: #0f2f6e;
+  --cm2-h4: #4f8bef;
+  --cm2-h5: var(--brand-blue);
+}
+.cm2-scope .card { box-shadow: var(--brand-shadow-card); }
+.cm2-scope .gauge-num {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+}
+.cm2-page { max-width: 460px; margin: 0 auto; }
+
 @media (min-width: 900px) {
-  .pr2-page { max-width: 640px; }
+  .cm2-page { max-width: 640px; }
 }
 @media (min-width: 1200px) {
-  .pr2-page { max-width: 1200px; }
-  /* Same cap pattern as `.pr-search` (Citations toolbar) — an unbounded
-     search input just stretches awkwardly next to a small button. */
-  .pr2-search { max-width: 360px; }
+  .cm2-page { max-width: 1200px; }
 }
 @media (min-width: 1600px) {
-  .pr2-page { max-width: 1280px; }
+  .cm2-page { max-width: 1280px; }
 }
 
-/* ============================================================
-   PROMPTS-DESKTOP-3 — visibility rail + search/add-prompts relocated into
-   the list header (Task Intake approved 2026-07-31). At ≥1200px the
-   "Visibilidad del conjunto" card gets its own 360px rail instead of
-   stacking full-width above the topic list, and the search + "Añadir
-   prompts" move from the standalone toolbar into the list card's own
-   header (.pr2-listhead) — search so it isn't left next to a wide empty
-   gap once max-width:360px (above) stops it from stretching to fill the
-   toolbar, add-prompts so the toolbar row doesn't stay around empty once
-   it has nothing else in it (founder: more compact). Same
-   `display: contents` mechanism as OV-DESKTOP-1's
-   `.ov2-cols`/`.ov2-main`/`.ov2-rail` — zero effect below 1200px,
-   .pr2-rail is placed via explicit grid-column rather than DOM order so
-   mobile/tablet keep the card's original position (above the list, not
-   after it).
-   ============================================================ */
-.pr2-cols, .pr2-main, .pr2-rail { display: contents; }
+/* 1 · Insight banner — same visual language as .ov2-insight/.pr2-insight */
+.cm2-insight {
+  display: flex; gap: 12px; align-items: flex-start; padding: 15px 16px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, .07), rgba(37, 99, 235, .03));
+  border: 1px solid rgba(37, 99, 235, .16);
+  border-radius: 14px;
+}
+.cm2-insight-ico {
+  flex: 0 0 auto; width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 9px; background: var(--brand-blue); color: #fff;
+}
+.cm2-insight-txt { font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.cm2-insight-txt b { color: var(--ink); font-weight: 750; }
+.cm2-insight-txt .neg { color: var(--brand-neg); font-weight: 750; }
 
-@media (min-width: 1200px) {
-  /* Both toolbar controls move into .pr2-listhead at this width — hide the
-     whole row instead of leaving it empty (founder: more compact). */
-  .pr2-toolbar { display: none; }
-  .pr2-search-listhead { display: flex; }
-  .pr2-add-listhead { display: inline-flex; }
+/* 2 · Section label — same convention as .pr2-sec-lbl */
+.cm2-sec-lbl {
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+  margin: 20px 0 9px; display: flex; justify-content: space-between; align-items: center;
+}
+.cm2-sec-lbl .more {
+  color: var(--brand-blue); font-weight: 700; text-transform: none; letter-spacing: 0;
+  font-family: var(--font-body), "Figtree", sans-serif; font-size: 11.5px;
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+/* "Gestionar" lives on the section label, not the page header — the sticky
+   header is fixed as título + fecha + marca/dominio on every console screen
+   (docs/brand/design-decisions-log.md §3.2). */
+.cm2-manage-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  font-family: var(--font-body), "Figtree", sans-serif; font-size: 11.5px; font-weight: 700;
+  text-transform: none; letter-spacing: 0; line-height: 1.4;
+  padding: 4px 10px; border-radius: 8px; white-space: nowrap;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer;
+}
+.cm2-manage-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
+.cm2-manage-btn svg { flex: 0 0 auto; display: block; }
 
-  .pr2-cols {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    gap: 20px;
-    align-items: start;
-    /* .pr2-toolbar (with its own 14px margin-top) is hidden at this width,
-       so .pr2-cols now follows the insight banner directly — replace that
-       spacing here instead of leaving it too tight. */
-    margin-top: 16px;
+/* 3 · Podium — replaces the 5-column table (was the only page in the
+   console needing horizontal scroll on mobile). One row component,
+   progressive column reveal by breakpoint instead of a second layout. */
+/* Grid, not flex: the approved design puts the SoV bar UNDER the name on the
+   phone column but as its OWN column between "Cita" and the percentage on
+   desktop. One DOM order + two grid templates gives both exactly, where a
+   flex row could only ever produce one of them (the bar had to be nested
+   inside the name block, which pinned it under the name at every width). */
+.cm2-rank {
+  display: grid;
+  grid-template-columns: 16px 26px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 11px; row-gap: 7px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--line-soft); cursor: pointer;
+}
+.cm2-rank > .cm2-rank-n { grid-column: 1; grid-row: 1 / span 2; }
+.cm2-rank > .cm2-rank-fav,
+.cm2-rank > .cm2-rank-fav-img { grid-column: 2; grid-row: 1 / span 2; }
+.cm2-rank > .cm2-rank-main { grid-column: 3; grid-row: 1; }
+.cm2-rank > .cm2-rank-bar-wrap { grid-column: 3; grid-row: 2; }
+.cm2-rank > .cm2-rank-r { grid-column: 4; grid-row: 1 / span 2; }
+.cm2-rank:last-child { border-bottom: none; }
+.cm2-rank:hover { background: var(--surface-2); }
+.cm2-rank.you { background: var(--brand-blue-soft); cursor: default; }
+.cm2-rank.you:hover { background: var(--brand-blue-soft); }
+.cm2-rank-n {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 15px; font-weight: 800; color: var(--ink-4);
+  width: 16px; text-align: center; flex: 0 0 auto; font-variant-numeric: tabular-nums;
+}
+.cm2-rank.you .cm2-rank-n { color: var(--brand-blue); }
+.cm2-rank-fav {
+  width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto; display: grid; place-items: center;
+  color: #fff; font-size: 11.5px; font-weight: 750;
+}
+/* Real favicon (lib/domains/favicon.ts) — same treatment as Overview's
+   .ov2-cmp-fav, falls back to .cm2-rank-fav (initial letter) when the
+   domain is missing. */
+.cm2-rank-fav-img {
+  width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto;
+  object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+}
+.cm2-rank-main { min-width: 0; }
+.cm2-rank-nm { font-size: 13px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cm2-rank-nm-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cm2-rank-dm { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm2-rank-you-tag {
+  font-size: 9.5px; font-weight: 750; color: var(--brand-blue); background: var(--brand-blue-soft-2);
+  padding: 1px 6px; border-radius: 999px; flex: 0 0 auto;
+}
+.cm2-rank-bar { height: 6px; border-radius: 99px; background: var(--surface-sunk); overflow: hidden; }
+.cm2-rank-bar i { display: block; height: 100%; border-radius: 99px; }
+.cm2-rank-r { flex: 0 0 auto; text-align: right; }
+.cm2-rank-sov {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.cm2-rank-sov small { font-size: 10px; font-weight: 700; color: var(--ink-4); margin-left: 1px; }
+.cm2-delta { font-size: 10.5px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cm2-delta.up { color: var(--pos); }
+.cm2-delta.dn { color: var(--brand-neg); }
+.cm2-delta.fl { color: var(--ink-4); }
+/* Extra columns (mención/cita) revealed at tablet+, hidden on the phone-width column. */
+.cm2-rank-extra { display: none; text-align: center; }
+.cm2-rank-extra .v { font-size: 13px; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--ink); }
+.cm2-rank-extra .l { font-size: 9.5px; color: var(--ink-4); font-weight: 600; margin-top: 1px; }
+@media (min-width: 900px) {
+  /* Everything collapses onto a single row: name · mención · cita · bar · %,
+     the desktop composition of the approved design. */
+  .cm2-rank {
+    grid-template-columns: 16px 26px minmax(0, 200px) 58px 58px minmax(70px, 1fr) 62px;
+    row-gap: 0;
   }
-  .pr2-main, .pr2-rail { display: block; min-width: 0; }
-  /* grid-row:1 on both is required, not decorative: .pr2-rail (column 2)
-     comes before .pr2-main (column 1) in the DOM, and CSS Grid's sparse
-     auto-placement only moves its cursor forward — placing .pr2-rail at
-     row 1/col 2 first pushes the column-1 cursor position past .pr2-main's
-     column, so without an explicit row it gets auto-placed onto row 2
-     instead of sitting beside the rail. Reproduced and confirmed against
-     the live component (not just this file) before adding this. */
-  .pr2-main { grid-column: 1; grid-row: 1; }
-  .pr2-rail { grid-column: 2; grid-row: 1; }
-  /* 60px clears the sticky page header (.ov-sticky-header), same offset
-     as .ov2-rail on Overview. */
-  .pr2-rail { position: sticky; top: 60px; }
-  .pr2-rail .pr2-split { margin-top: 0; }
+  .cm2-rank > .cm2-rank-n,
+  .cm2-rank > .cm2-rank-fav,
+  .cm2-rank > .cm2-rank-fav-img,
+  .cm2-rank > .cm2-rank-main,
+  .cm2-rank > .cm2-rank-r { grid-row: 1; }
+  /* Explicit classes rather than :nth-of-type — every cell here is a div, so
+     type-based counting would drift the moment a cell is added or reordered. */
+  .cm2-rank-extra { display: block; grid-row: 1; }
+  .cm2-rank > .cm2-rank-extra.men { grid-column: 4; }
+  .cm2-rank > .cm2-rank-extra.cit { grid-column: 5; }
+  .cm2-rank > .cm2-rank-bar-wrap { grid-column: 6; grid-row: 1; }
+  .cm2-rank > .cm2-rank-r { grid-column: 7; }
+}
+
+/* 4 · Brecha de prompts — segmented control over the 5 gap categories */
+.cm2-segs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 13px 0; scrollbar-width: none; }
+.cm2-segs::-webkit-scrollbar { display: none; }
+.cm2-seg {
+  flex: 0 0 auto; padding: 6px 11px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--surface); cursor: pointer; text-align: left; font-family: inherit;
+}
+.cm2-seg.on { border-color: var(--brand-blue); background: var(--brand-blue-soft); }
+.cm2-seg .v {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 15px; font-weight: 800; color: var(--ink); line-height: 1; font-variant-numeric: tabular-nums;
+}
+.cm2-seg.on .v { color: var(--brand-blue); }
+.cm2-seg .k { font-size: 10px; color: var(--ink-3); font-weight: 650; margin-top: 3px; white-space: nowrap; }
+.cm2-gapbar { display: flex; height: 9px; border-radius: 99px; overflow: hidden; margin: 13px 13px 0; background: var(--surface-sunk); }
+.cm2-gapbar i { display: block; height: 100%; }
+.cm2-gaplegend { display: flex; flex-wrap: wrap; gap: 10px 14px; padding: 9px 13px 12px; }
+.cm2-gaplegend span { font-size: 10.5px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.cm2-gaplegend .d { width: 7px; height: 7px; border-radius: 2.5px; flex: 0 0 auto; }
+
+.cm2-prow { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-top: 1px solid var(--line-soft); cursor: pointer; }
+.cm2-prow:hover { background: var(--surface-2); }
+.cm2-prow-main { flex: 1; min-width: 0; }
+.cm2-prow-q { font-size: 12.5px; font-weight: 600; color: var(--ink); line-height: 1.4; }
+.cm2-prow-m { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; align-items: center; }
+.cm2-chip {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+  background: var(--surface-sunk); color: var(--ink-3); border: 1px solid var(--line);
+}
+.cm2-chip-neg { background: var(--neg-soft); color: var(--brand-neg); border-color: transparent; }
+.cm2-chip-eng { color: #fff; border-color: transparent; }
+.cm2-prow-empty { padding: 24px 13px; text-align: center; color: var(--ink-4); font-size: 12.5px; }
+.cm2-prow-more {
+  padding: 11px 13px; border-top: 1px solid var(--line-soft); text-align: center;
+  color: var(--brand-blue); font-size: 12px; font-weight: 700; cursor: pointer; background: none; border-left: none;
+  border-right: none; border-bottom: none; width: 100%; font-family: inherit;
+}
+
+/* 5 · Presencia por motor — engine × brand matrix */
+.cm2-mx { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cm2-mx th {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-4); font-weight: 500; padding: 9px 6px; text-align: center;
+}
+.cm2-mx th:first-child { text-align: left; padding-left: 13px; }
+.cm2-mx td { padding: 5px 6px; text-align: center; border-top: 1px solid var(--line-soft); }
+.cm2-mx td:first-child { text-align: left; padding-left: 13px; font-size: 12px; font-weight: 650; color: var(--ink); white-space: nowrap; }
+.cm2-mx tr.you td:first-child { color: var(--brand-blue); }
+.cm2-mxc { display: block; border-radius: 7px; padding: 7px 0; font-weight: 750; font-size: 12px; font-variant-numeric: tabular-nums; }
+.cm2-mxc.h0 { background: var(--cm2-h0); color: var(--cm2-h0-ink); }
+.cm2-mxc.h1 { background: var(--cm2-h1); color: var(--cm2-h1-ink); }
+.cm2-mxc.h2 { background: var(--cm2-h2); color: var(--cm2-h2-ink); }
+.cm2-mxc.h3 { background: var(--cm2-h3); color: var(--cm2-h3-ink); }
+.cm2-mxc.h4 { background: var(--cm2-h4); color: #fff; }
+.cm2-mxc.h5 { background: var(--cm2-h5); color: #fff; }
+
+/* 6 · Terreno por tema */
+.cm2-tp { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid var(--line-soft); }
+.cm2-tp:first-child { border-top: none; }
+.cm2-tp-nm { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 650; color: var(--ink); }
+.cm2-tp-nm i { display: block; font-style: normal; font-size: 10.5px; color: var(--ink-4); font-weight: 500; margin-top: 2px; }
+.cm2-tp-bars { flex: 0 0 90px; display: grid; gap: 3px; }
+.cm2-tp-b { height: 7px; border-radius: 99px; background: var(--surface-sunk); overflow: hidden; }
+.cm2-tp-b i { display: block; height: 100%; border-radius: 99px; }
+.cm2-tp-v { flex: 0 0 44px; text-align: right; font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cm2-tp-v.dn { color: var(--brand-neg); }
+.cm2-tp-v.up { color: var(--pos); }
+
+/* 7 · Competidores sugeridos (COMPETITOR-SUGGESTIONS-1).
+   Row layout is shared with the block this replaced ("Marcas que aparecen y
+   no sigues"), which is why the class prefix stays .cm2-emg. */
+.cm2-emg { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid var(--line-soft); }
+.cm2-emg:first-child { border-top: none; }
+.cm2-emg-intro { padding: 11px 13px 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+.cm2-emg-main { flex: 1; min-width: 0; }
+.cm2-emg-meta { font-size: 11px; color: var(--ink-3); }
+.cm2-emg-err { font-size: 11px; color: var(--brand-neg); margin-top: 4px; line-height: 1.45; }
+/* inline-flex + nowrap keeps "+ Seguir" on ONE line with the glyph optically
+   centered against the label — as a plain inline button the icon wrapped to
+   its own line and sat off-centre (founder feedback). */
+.cm2-btn-mini {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 8px; line-height: 1.4;
+  border: 1px solid rgba(37, 99, 235, .3); background: var(--brand-blue-soft); color: var(--brand-blue);
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.cm2-btn-mini svg { flex: 0 0 auto; display: block; }
+.cm2-btn-mini:disabled { opacity: .55; cursor: default; }
+
+/* Suggestion states: the grounded lookup is fetched after paint, so the block
+   is on screen from the first render and needs a real loading/empty/error
+   presence rather than collapsing to nothing. */
+.cm2-sug-skel { padding: 11px 13px 13px; }
+.cm2-sug-skel-txt { display: block; font-size: 11px; color: var(--ink-4); font-weight: 600; margin-bottom: 10px; }
+.cm2-sug-skel-row { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+.cm2-sug-skel-fav { width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto; }
+.cm2-sug-skel-bar { height: 9px; border-radius: 99px; flex: 1; }
+.cm2-sug-skel-fav,
+.cm2-sug-skel-bar { background: var(--surface-sunk); animation: cm2SugPulse 1.3s ease-in-out infinite; }
+@keyframes cm2SugPulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+.cm2-sug-msg { padding: 12px 13px; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+.cm2-sug-msg.cm2-emg-err { color: var(--brand-neg); margin-top: 0; }
+.cm2-sug-foot { padding: 11px 13px; border-top: 1px solid var(--line-soft); display: flex; }
+@media (prefers-reduced-motion: reduce) {
+  .cm2-sug-skel-fav,
+  .cm2-sug-skel-bar { animation: none; }
+}
+
+/* 7b · Evolución de la posición media + ranked list of current standings.
+   Stacked on phones, chart-beside-list once there's room. */
+.cm2-pos-card { padding: 16px 16px 10px; }
+.cm2-pos-chart { min-width: 0; }
+.cm2-pos-list { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+/* This header no longer carries an InfoTip: right-aligned, its bubble opened
+   off-screen and rendered clipped, so the founder cut it (log §15). The shared
+   `.info-tip-anchor` rule still lists `.cm2-pos-list-hd` — harmless, and left
+   alone rather than editing a selector other zones depend on.
+
+   One label per column, each over the data it names (founder, 2026-08-04: "que
+   se relacione con el dato"). A single right-aligned heading named the
+   percentages by position, leaving the position column unlabelled and its
+   digits reading as bullets. Header and rows share the same three columns;
+   flex-end because the labels are shorter than the row text. */
+.cm2-pos-list-hd,
+.cm2-pos-row { display: flex; align-items: center; gap: 9px; }
+.cm2-pos-list-hd {
+  align-items: flex-end;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4); margin-bottom: 6px;
+}
+.cm2-pos-hd-nm { flex: 1; min-width: 0; }
+.cm2-pos-row { padding: 5px 0; }
+/* Last column and the heaviest: the position is what this block is for, and on
+   the left as a small grey digit the founder read straight past it. */
+.cm2-pos-n {
+  flex: 0 0 40px; text-align: right; font-size: 12px; font-weight: 750;
+  color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.cm2-pos-row.you .cm2-pos-n { color: var(--brand-blue); }
+.cm2-pos-nm {
+  flex: 1; min-width: 0; font-size: 12.5px; font-weight: 650; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cm2-pos-row.you .cm2-pos-nm { color: var(--brand-blue); }
+/* The mean-rank value ("2,18º") used to live here. Removed with the switch to
+   a plain 1..N ranking (log §15): a mean is almost never 1,00, so the column
+   read as "nobody is in first place". The mention rate takes its place at the
+   end of the row, which is also what breaks ties in the order. */
+.cm2-pos-rate {
+  flex: 0 0 46px; text-align: right; font-size: 11.5px; color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+/* The header reuses the value classes to stay column-aligned, so it must not
+   inherit their tabular-figure sizing for its own uppercase label. */
+.cm2-pos-list-hd .cm2-pos-rate,
+.cm2-pos-list-hd .cm2-pos-n {
+  font: inherit; font-size: 9.5px; letter-spacing: .08em; color: var(--ink-4);
+}
+@media (min-width: 900px) {
+  .cm2-pos-card { display: flex; align-items: flex-start; gap: 18px; }
+  .cm2-pos-chart { flex: 1; min-width: 0; }
+  /* 250px, not 210: three columns now (marca · mención · puesto), and the brand
+     names need what is left after the two fixed numeric ones. */
+  .cm2-pos-list { flex: 0 0 250px; margin-top: 0; padding-top: 0; border-top: none; }
+  /* Before the chart exists the list is the whole card, so the fixed 210px
+     column would leave two thirds of the width empty next to it. */
+  .cm2-pos-card.list-only { display: block; }
+  .cm2-pos-card.list-only .cm2-pos-list { flex: none; }
+}
+
+/* 8 · Desktop layout — main column + sticky rail, same `display: contents`
+   default-off mechanism as .ov2-cols/.pr2-cols (zero effect below 1200px). */
+.cm2-cols, .cm2-main, .cm2-rail { display: contents; }
+@media (min-width: 1200px) {
+  .cm2-cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; margin-top: 16px; }
+  .cm2-main, .cm2-rail { display: block; min-width: 0; }
+  .cm2-main { grid-column: 1; grid-row: 1; }
+  .cm2-rail { grid-column: 2; grid-row: 1; position: sticky; top: 60px; }
 }
 
 /* ============================================================
@@ -1939,15 +1999,11 @@ a {
    corners. */
 .cit2-kpis { position: relative; display: flex; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); margin-top: 4px; }
 /* The KPI tooltips anchor to the STRIP, not to their own 14px trigger, and
-   open downward. Two reasons, both caught from the pilot's interaction
-   captures rather than from reading the CSS:
-   1. Upward + a clipped parent cut the bubble in half (see above).
-   2. The bubble is a fixed 220px; anchored to the trigger, the last KPI's
-      bubble ran past the right edge on a 375px viewport, which would have
-      introduced horizontal overflow the moment a user hovered it.
-   Spanning the strip (left:0/right:0) is immune to both at every width. */
-.cit2-kpis .info-tip { position: static; }
-.cit2-kpis .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
+   open downward — first caught from the pilot's interaction captures
+   (2026-08-02: a clipped parent cut the bubble in half; also the origin of
+   the overflow bug the shared `.info-tip-anchor` rule near the base
+   `.info-tip` definition now documents and fixes for `.cit2-kpis` and every
+   other known/future call site in one place, not just this one. */
 .cit2-kpis > div { flex: 1 1 0; min-width: 0; padding: 10px 12px; border-right: 1px solid var(--line-soft); }
 .cit2-kpis > div:last-child { border-right: 0; }
 .cit2-k { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--ink-4); line-height: 1.35; }
@@ -2010,9 +2066,12 @@ a {
 .s-oth { background: var(--cit-oth); }
 .s-comp { background: var(--cit-comp); }
 .s-neu { background: var(--cit-neu); }
-.cit2-split-key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
+.cit2-split-key { position: relative; display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
 .cit2-split-key span { display: inline-flex; align-items: center; gap: 5px; }
 .cit2-split-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+/* Tooltip overflow fix for this row folded into the shared `.info-tip-anchor`
+   rule near the base `.info-tip` definition (2026-08-03) — see that comment
+   for the full incident history (this was the second of four real cases). */
 
 /* Source-type donut */
 .cit2-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
@@ -2267,20 +2326,6 @@ a {
 .sb-plan-badge svg { flex: 0 0 auto; }
 
 /* ============================================================
-   Overview — responsive tweaks
-   ============================================================ */
-@media (max-width: 1100px) {
-  .grid-2-1 { grid-template-columns: 1fr; }
-  .metrics-2col { grid-template-columns: 1fr; }
-  .recs-3col { grid-template-columns: 1fr 1fr; }
-  .hero-v2 { flex-direction: column; }
-  .hv-divider { width: auto; height: 1px; margin: 0 18px; }
-}
-@media (max-width: 720px) {
-  .recs-3col { grid-template-columns: 1fr; }
-}
-
-/* ============================================================
    LUMIRA-4: Escaneos + Competidores
    ============================================================ */
 
@@ -2467,14 +2512,18 @@ a {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   border-radius: var(--r-xs);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--ink-4);
+  /* --ink-3, no --ink-4: en .dm2-hero (fondo con tinte azul claro) el gris más
+     claro quedaba casi invisible sin hover — hallazgo del ux-pilot en
+     DOMAINS-CLIENT-DELETE-1. 32px de lado (antes 28) da algo más de área de
+     toque en móvil. */
+  color: var(--ink-3);
   transition: background .13s, color .13s, border-color .13s;
 }
 .dom-delete-btn:hover {
@@ -3162,45 +3211,6 @@ textarea.add-prompts-text-input {
 }
 
 /* ============================================================
-   LUMIRA-10: Recommendations — expanded layout
-   ============================================================ */
-
-.rec-evidence-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 4px;
-}
-@media (max-width: 700px) {
-  .rec-evidence-grid {
-    grid-template-columns: 1fr;
-  }
-}
-.rec-evidence-col {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.rec-evidence-col-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--ink-4);
-  margin-bottom: 4px;
-}
-.rec-snippet {
-  font-size: 12.5px;
-  color: var(--ink-2);
-  line-height: 1.55;
-  font-style: italic;
-  padding: 8px 10px 8px 12px;
-  border-left: 3px solid var(--accent);
-  background: #f5f6ff;
-  border-radius: 0 6px 6px 0;
-}
-
-/* ============================================================
    LUMIRA-8: Prompts Topics + enriched drawer
    ============================================================ */
 
@@ -3519,22 +3529,26 @@ textarea.add-prompts-text-input {
 }
 
 /* Bell icon button */
+/* HEADER-FLAT-1 (2026-08-15): sin caja. Sobre una cabecera plana, un botón
+   con borde y fondo propio era lo único que seguía pareciendo un control
+   pegado encima. Queda como icono suelto con la misma huella que
+   `.hdr-burger`, para que los dos extremos de la barra pesen igual. */
 .header-bell {
   position: relative;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1.5px solid var(--brand-line);
-  background: var(--brand-surface);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: none;
   color: var(--brand-ink-3);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .header-bell:hover {
-  background: var(--brand-canvas);
+  background: var(--surface-2);
   color: var(--brand-ink-2);
 }
 
@@ -3579,7 +3593,6 @@ textarea.add-prompts-text-input {
 .notif-panel-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   padding: 14px 16px 10px;
 }
@@ -3590,20 +3603,6 @@ textarea.add-prompts-text-input {
   font-weight: 800;
   color: var(--brand-ink);
   letter-spacing: -0.005em;
-}
-
-.notif-mark-read {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--brand-blue);
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.notif-mark-read:hover {
-  text-decoration: underline;
 }
 
 .notif-tabs {
@@ -3618,7 +3617,11 @@ textarea.add-prompts-text-input {
   border: none;
   font-size: 12px;
   font-weight: 700;
-  color: var(--brand-ink-4);
+  /* `--brand-ink-4` (#98a2b3) da 2.58:1 sobre blanco; `--brand-ink-3` da
+     5.43:1. La pestaña activa se sigue distinguiendo por `.active`, que pone
+     azul de marca y fondo (chequeo de contraste del piloto, Fase Q5b,
+     log §55). */
+  color: var(--brand-ink-3);
   padding: 5px 10px;
   border-radius: 999px;
   cursor: pointer;
@@ -3775,7 +3778,6 @@ textarea.add-prompts-text-input {
 .notif-page-head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: 12px;
   padding: 18px 22px 14px;
 }
@@ -3788,20 +3790,6 @@ textarea.add-prompts-text-input {
   margin: 0;
 }
 
-.notif-page-mark-read {
-  background: none;
-  border: none;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--brand-blue);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.notif-page-mark-read:hover {
-  text-decoration: underline;
-}
-
 .notif-page-card .notif-tabs {
   padding: 0 22px 12px;
 }
@@ -3811,9 +3799,43 @@ textarea.add-prompts-text-input {
 }
 
 .notif-page-empty {
-  padding: 40px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Enough vertical presence that the card reads as an answer rather than as
+     a page that stopped loading — the empty "No leídas" tab is the common
+     state once notifications mark themselves read (log §28). */
+  padding: 56px 22px 64px;
   text-align: center;
-  font-size: 13px;
+}
+
+.notif-page-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  /* Same soft-tint pairing the notification rows already use
+     (.notif-icon-blue), not a new colour invented for one empty state. */
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
+}
+
+.notif-page-empty-title {
+  margin: 0;
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand-ink);
+}
+
+.notif-page-empty-body {
+  margin: 5px 0 0;
+  max-width: 34ch;
+  font-size: 12.5px;
+  line-height: 1.5;
   color: var(--brand-ink-4);
 }
 
@@ -3884,6 +3906,303 @@ a.notif-row:hover {
   color: var(--brand-ink-3);
   margin: 5px 0 0;
   line-height: 1.5;
+}
+
+/* ============================================================
+   ONBOARDING-ROCKET-1 — first-scan mission (components/scan-mission-rocket.tsx,
+   components/scan-mission-band.tsx). Reference:
+   docs/design-reference/scan-states-1/rev4-cohete-vivo.html.
+
+   rev.4 (2026-08-10) replaced rev.3's staging after the founder saw it in
+   production on a phone: "el cohete está parado, da la sensación de que la
+   página está parada". The rocket was never the problem — the frozen
+   environment was. A rocket in orbit moves; it is the camera that makes it
+   look still. So every beat now carries continuous ambient motion, and the
+   scene, not the vehicle, is what sells it.
+
+   THE DATA RULE, unchanged and load-bearing: only the ascent altitude
+   (`.mrk-glide`'s transform) and the órbita ring fraction encode real data.
+   Stars, clouds, smoke, steam, packets and Earth are decoration and must
+   never read as progress — an invented indicator is exactly the fake
+   progress CLAUDE.md forbids.
+
+   Everything animates on transform/opacity only (compositor-friendly, no
+   layout, no animated filters) because this screen stays open for minutes on
+   a phone. Under `prefers-reduced-motion` every scene rests on a calm,
+   COMPLETE still: elements that only exist mid-flight (steam, sparks,
+   packets, thruster blips) are hidden rather than frozen mid-air, which is
+   what stops the still from looking broken.
+   ============================================================ */
+/* ---- rev.5 shell: the sky IS the page ----------------------------------
+   rev.4's scene sat in a 420px card with empty margin either side, which the
+   founder saw on a phone and called out: "es un pequeño marco, dejando mucho
+   espacio a los lados". The canvas now bleeds edge to edge and the green
+   "Dominio creado" banner is gone as a block — its content moved into
+   `.mrk-rail`, welded to the seam between the product chrome and the sky,
+   because the domain existing is true for the whole mission while the beat
+   underneath keeps changing.
+
+   Full-bleed inside a padded page container: the negative margins undo the
+   dashboard's own gutter without needing the page to know about this
+   component. */
+.mrk-full {
+  position: relative;
+  /* Sit flush against the sticky header. `.page` puts 26px (22px ≤1000px) of
+     top padding above every screen, which under a full-bleed scene reads as a
+     stray light strip between the chrome and the sky — the founder circled it
+     on a phone, 2026-08-11. Pulled up by exactly that padding rather than
+     removing it from `.page`, which every other screen depends on. */
+  margin-top: -26px;
+  margin-inline: calc(50% - 50vw);
+  width: 100vw;
+  max-width: 100vw;
+  overflow: hidden;
+  background: linear-gradient(180deg, #FDFEFF 0%, #E7EEFA 100%);
+  transition: background .8s ease;
+}
+/* Órbita and entrega are in space: the whole page follows the mission out of
+   the atmosphere rather than keeping a daylit frame around a night scene. */
+.mrk-full.night { background: linear-gradient(180deg, #04070F 0%, #14293F 100%); }
+
+.mrk-rail {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px 14px;
+  flex-wrap: wrap;
+  /* Asymmetric on purpose: the band now sits flush under the sticky header
+     (see `.mrk-full`'s negative top margin), so without extra room above, the
+     domain line reads as glued to the chrome — founder, 2026-08-11. The air
+     goes INSIDE the dark band; reopening the gap above it would bring back the
+     stray light strip this replaced. */
+  padding: 16px clamp(14px, 4vw, 40px) 10px;
+  font-size: 12.5px; color: var(--ink-3);
+  border-bottom: 1px solid rgba(11, 20, 38, .06);
+}
+.mrk-full.night .mrk-rail { color: #8FA6C4; border-bottom-color: rgba(255, 255, 255, .07); }
+/* `min-width: 0` alone was not enough: the label wrapped INSIDE the flex item
+   and collided with the facts on a 375px screen. It stays on one line and
+   truncates; the facts drop to their own line rather than being squeezed. */
+.mrk-rail-left {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-width: 0; flex: 1 1 auto;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mrk-rail-left b { color: var(--ink); font-weight: 700; }
+.mrk-full.night .mrk-rail-left b { color: #EAF1FF; }
+.mrk-rail-tick {
+  flex: 0 0 auto; width: 16px; height: 16px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--brand-green, #12A150); color: #fff;
+}
+.mrk-rail-right {
+  flex: 0 0 auto; font-family: var(--mono), ui-monospace, monospace;
+  font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+  opacity: .85;
+}
+@media (max-width: 600px) {
+  /* Below this the two halves cannot share a line without one of them lying
+     about its width. The facts take their own row, still legible. */
+  .mrk-rail-left { flex-basis: 100%; }
+  .mrk-rail-right { font-size: 10px; }
+}
+
+.mrk-canvas {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: min(78svh, 620px);
+  padding-bottom: clamp(26px, 5vw, 44px);
+}
+/* No horizontal padding: the scenes are drawn to bleed, and a gutter here was
+   what left the pad's ground band inset from the viewport edges. */
+.mrk-scene-slot { display: grid; place-items: center; padding: clamp(16px, 4vw, 30px) 0 0; }
+.mrk-sky { display: block; width: 100%; max-width: 560px; height: auto; }
+
+/* The pad scenes' ground: a full-bleed band flush under the scene, because
+   inside the SVG it was locked to the scene's ratio and stopped short of the
+   viewport edges. `.mrk-pad-wrap` is only as wide as the scene; the band
+   escapes it to 100vw. */
+.mrk-pad-wrap { position: relative; width: 100%; }
+.mrk-pad-wrap .mrk-sky { max-width: none; }
+.mrk-ground {
+  width: 100%; height: clamp(46px, 13vw, 86px);
+  background: #D3DEF0;
+  border-top: 1.4px solid #B3C2DC;
+}
+.mrk-pad-wrap.lit .mrk-ground { background: #C4D3EA; border-top-color: #A2B5D3; }
+@media (min-width: 960px) {
+  .mrk-pad-wrap { max-width: none; }
+}
+.mrk-copy { text-align: center; padding: 0 20px; max-width: 560px; margin: 0 auto; }
+.mrk-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--brand-blue); }
+.mrk-full.night .mrk-eyebrow { color: var(--brand-cyan); }
+.mrk-title {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: clamp(30px, 8vw, 46px); font-weight: 800; letter-spacing: -.04em;
+  margin: 6px 0 0; line-height: 1.05;
+}
+.mrk-unit { font-size: clamp(15px, 3.4vw, 19px); font-weight: 700; color: var(--ink-2); margin: 4px 0 0; letter-spacing: -.01em; }
+.mrk-sub { font-size: 14.5px; line-height: 1.6; color: var(--ink-3); margin: 10px 0 0; }
+.mrk-joke { font-size: 12.5px; color: var(--ink-4); font-style: italic; margin: 8px 0 0; }
+.mrk-full.night .mrk-title { color: #FFFFFF; }
+.mrk-full.night .mrk-unit { color: #C6D6EE; }
+.mrk-full.night .mrk-sub { color: #9DB2CE; }
+.mrk-full.night .mrk-joke { color: #6F86A4; }
+
+/* Desktop is not a stretched phone: the composition splits, copy left and
+   vehicle right, and what the extra width buys is more sky — in órbita the
+   Earth's limb finally spans the viewport, which is the only scale that shot
+   works at. */
+@media (min-width: 960px) {
+  .mrk-canvas {
+    grid-template-rows: none;
+    grid-template-columns: 44% 56%;
+    align-items: center;
+    min-height: min(80svh, 700px);
+    padding: 0 clamp(28px, 5vw, 72px) clamp(20px, 3vw, 40px);
+  }
+  /* The scene spans the WHOLE canvas and the copy floats over it, rather than
+     the scene being penned into the right column. Without this the Earth's
+     limb stopped dead at the column boundary — a straight cut across the one
+     shot the wide viewport exists to serve. */
+  .mrk-scene-slot {
+    position: absolute; inset: 0; padding: 0;
+    display: grid; place-items: center;
+    pointer-events: none;
+  }
+  .mrk-sky { max-width: none; width: 100%; height: 100%; }
+  .mrk-copy {
+    position: relative; z-index: 1;
+    grid-column: 1; text-align: left; margin: 0; padding: 0; max-width: 30ch;
+  }
+  .mrk-title { font-size: clamp(48px, 5vw, 76px); }
+  .mrk-unit { font-size: clamp(20px, 1.8vw, 26px); }
+  .mrk-sub { font-size: 16px; }
+}
+
+/* A beat change swaps the whole scene (the sky itself travels from day to
+   night across the mission), so the new one fades in rather than hard-cutting. */
+.mrk-scene { animation: mrkSceneIn .5s ease-out both; }
+
+/* ---- motion system. Seamless wraps duplicate their content at exactly
+   +400px (x) or −280px (y), which is the viewBox span in that axis. ---- */
+@keyframes mrkSceneIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mrkDriftX { to { transform: translateX(-400px); } }
+@keyframes mrkFall { to { transform: translateY(280px); } }
+@keyframes mrkTwinkle { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes mrkFlick { from { transform: scaleY(.86) scaleX(1.04); } to { transform: scaleY(1.1) scaleX(.94); } }
+@keyframes mrkPuff { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 14% { opacity: .55; } 100% { transform: translate(-10px, -30px) scale(1.5); opacity: 0; } }
+@keyframes mrkSmokeL { 0% { transform: translate(0, 0) scale(.4); opacity: 0; } 10% { opacity: .75; } 100% { transform: translate(-52px, -12px) scale(1.9); opacity: 0; } }
+@keyframes mrkSmokeR { 0% { transform: translate(0, 0) scale(.4); opacity: 0; } 10% { opacity: .75; } 100% { transform: translate(52px, -12px) scale(1.9); opacity: 0; } }
+@keyframes mrkShake { 0% { transform: translate(0, 0); } 25% { transform: translate(.6px, -.4px); } 50% { transform: translate(-.5px, .4px); } 75% { transform: translate(.4px, .5px); } 100% { transform: translate(0, 0); } }
+@keyframes mrkGlow { 0%, 100% { opacity: .4; } 50% { opacity: .9; } }
+@keyframes mrkSpark { 0% { transform: translate(0, 0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+@keyframes mrkBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes mrkSway { 0%, 100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
+@keyframes mrkPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: 1; } 82% { opacity: 1; } 100% { transform: translateX(112px); opacity: 0; } }
+@keyframes mrkThrust { 0%, 84%, 100% { opacity: 0; } 88%, 93% { opacity: .85; } }
+@keyframes mrkShoot { 0%, 86% { opacity: 0; transform: translate(0, 0); } 88% { opacity: .9; } 93%, 100% { opacity: 0; transform: translate(130px, 64px); } }
+@keyframes mrkBreathe { 0%, 100% { transform: scale(1); opacity: .3; } 50% { transform: scale(1.06); opacity: .75; } }
+@keyframes mrkConverge { 0% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } 18% { opacity: .9; } 100% { transform: translate(0, 0) scale(.3); opacity: 0; } }
+@keyframes mrkSpin { to { transform: rotate(360deg); } }
+@keyframes mrkBeacon { 0%, 68%, 100% { opacity: .15; } 76%, 86% { opacity: 1; } }
+@keyframes mrkWinPulse { 0%, 100% { opacity: 0; } 50% { opacity: .55; } }
+@keyframes mrkRingPop { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+
+/* shared */
+.mrk-tw { animation: mrkTwinkle 3.4s ease-in-out infinite; }
+.mrk-tw.s2 { animation-duration: 4.6s; animation-delay: -1.2s; }
+.mrk-tw.s3 { animation-duration: 2.8s; animation-delay: -2s; }
+.mrk-flame { transform-origin: center top; transform-box: fill-box; animation: mrkFlick .16s steps(2, end) infinite alternate; fill: var(--brand-blue-2); }
+.mrk-flame.f2 { animation-duration: .13s; fill: var(--brand-cyan); }
+.mrk-flame.f3 { animation-duration: .19s; }
+.mrk-hull { fill: var(--brand-ink); }
+.mrk-hull-shade { fill: #1B2B45; }
+.mrk-hull-dark { fill: #122036; }
+.mrk-hull-dark-shade { fill: #22385A; }
+.mrk-window { fill: var(--brand-canvas); }
+.mrk-fin { fill: var(--brand-blue); }
+.mrk-nozzle { fill: var(--brand-ink-2); }
+.mrk-beacon { animation: mrkBeacon 3.8s linear infinite; }
+.mrk-winpulse { animation: mrkWinPulse 3.6s ease-in-out infinite; }
+
+/* rampa */
+.mrk-clouds-slow { animation: mrkDriftX 74s linear infinite; }
+.mrk-clouds-slower { animation: mrkDriftX 118s linear infinite; }
+.mrk-puff { transform-box: fill-box; transform-origin: center; animation: mrkPuff 5.2s ease-out infinite; }
+
+/* ignición */
+.mrk-shake { animation: mrkShake .18s steps(2, end) infinite; }
+.mrk-glow { animation: mrkGlow .5s steps(2, end) infinite; }
+.mrk-smoke-l { transform-box: fill-box; transform-origin: center; animation: mrkSmokeL 2.8s ease-out infinite; }
+.mrk-smoke-r { transform-box: fill-box; transform-origin: center; animation: mrkSmokeR 2.8s ease-out infinite; }
+.mrk-spark { animation: mrkSpark 1.3s ease-out infinite; }
+
+/* ascenso — .mrk-glide is the ONLY altitude carrier and stays bound to done/total */
+.mrk-glide { transition: transform .6s cubic-bezier(.22, .8, .28, 1); }
+.mrk-fall-near { animation: mrkFall 3.4s linear infinite; }
+.mrk-fall-far { animation: mrkFall 7.5s linear infinite; }
+.mrk-fall-lines { animation: mrkFall 1.15s linear infinite; }
+.mrk-sway { transform-box: fill-box; transform-origin: center; animation: mrkSway 5.2s ease-in-out infinite; }
+
+/* órbita */
+.mrk-stars-1 { animation: mrkDriftX 70s linear infinite; }
+.mrk-stars-2 { animation: mrkDriftX 115s linear infinite; }
+.mrk-earthspin { animation: mrkDriftX 130s linear infinite; }
+.mrk-bob { animation: mrkBob 6s ease-in-out infinite; }
+.mrk-bob.d2 { animation-duration: 7s; animation-delay: -2.4s; }
+.mrk-packet { animation: mrkPacket 2.6s linear infinite; }
+.mrk-packet.p2 { animation-delay: .85s; }
+.mrk-packet.p3 { animation-delay: 1.7s; }
+.mrk-thrust { animation: mrkThrust 6.5s linear infinite; }
+.mrk-thrust.t2 { animation-delay: -3.1s; }
+.mrk-shoot { animation: mrkShoot 13s linear infinite; }
+.mrk-spin { transform-box: fill-box; transform-origin: center; animation: mrkSpin 1.4s linear infinite; }
+.mrk-ring-track { stroke: #22395C; }
+.mrk-ring-fill { stroke: var(--brand-blue-2); stroke-linecap: round; transition: stroke-dashoffset .5s ease-out; }
+.mrk-ringpop { animation: mrkRingPop 3.2s ease-in-out infinite; }
+
+/* ---- SCAN-STATES-3: reentrada (components/reentry-mission.tsx) ----
+   Reuses the mission shell (.mrk-full/.mrk-canvas/.mrk-rail) — same beat, same
+   language. Only the scene and the ticker are new. */
+@keyframes rntFall { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
+@keyframes rntHeat { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes rntEmber { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-74px); opacity: 0; } }
+@keyframes rntShield { 0%, 100% { opacity: .5; } 50% { opacity: .95; } }
+@keyframes rntTickIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* The craft drifts rather than plummets: a fall fast enough to read as a fall
+   would loop visibly every second across a beat that lasts minutes. */
+.rnt-craft { animation: rntFall 7s ease-in-out infinite; }
+.rnt-glow { transform-box: fill-box; transform-origin: center; animation: rntHeat 2.4s ease-in-out infinite; }
+.rnt-shield { animation: rntShield 1.8s ease-in-out infinite; }
+.rnt-trail { opacity: .8; }
+.rnt-embers circle { animation: rntEmber 2.8s linear infinite; }
+
+/* The ticker is the only element that changes on a human timescale, so it is
+   the one that keeps a multi-minute wait from reading as frozen. */
+.rnt-tick { margin: 14px 0 0; animation: rntTickIn .45s ease-out both; }
+.rnt-tick-t { font-size: clamp(17px, 4.4vw, 21px); font-weight: 800; letter-spacing: -.02em; color: #EAF1FF; margin: 0; }
+.rnt-tick-d { font-size: 13.5px; line-height: 1.55; color: #9DB2CE; margin: 5px 0 0; }
+@media (min-width: 960px) {
+  .rnt-tick-t { font-size: 24px; }
+  .rnt-tick-d { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Embers only exist mid-flight; frozen they read as stray dots. */
+  .rnt-embers circle { opacity: 0 !important; }
+}
+
+/* entrega */
+.mrk-breathe { transform-box: fill-box; transform-origin: center; animation: mrkBreathe 3.2s ease-in-out infinite; }
+.mrk-converge { animation: mrkConverge 2.4s ease-in infinite; }
+.mrk-converge.c2 { animation-delay: .6s; }
+.mrk-converge.c3 { animation-delay: 1.2s; }
+.mrk-converge.c4 { animation-delay: 1.8s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mrk-wrap *, .mrk-wrap { animation: none !important; transition: none !important; }
+  /* Hidden, not frozen: these only exist mid-flight, so a stopped frame of
+     them reads as a rendering bug rather than as a still scene. */
+  .mrk-puff, .mrk-spark, .mrk-shoot, .mrk-thrust, .mrk-converge,
+  .mrk-packet.p2, .mrk-packet.p3 { opacity: 0 !important; }
 }
 
 /* ============================================================
@@ -4150,7 +4469,24 @@ a.notif-row:hover {
 .lp { background: #fff; color: var(--ink); }
 .lp-inner { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
 
-.lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.82); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line-soft); }
+/* HEADER-FLAT-1 (2026-08-15): una sola cabecera para toda la zona pública, y
+   plana siempre. Antes cada superficie envolvía a mano `PublicHeader` en este
+   div —seis copias— y la portada no lo hacía en absoluto, que es de donde
+   salía la diferencia que el fundador vio: portada plana, resto con barra
+   blanca. Ahora el envoltorio lo pone el propio `PublicHeader`.
+
+   **No hay estado "al desplazar" a propósito, y esto merece explicación**
+   porque parece un olvido. Se implementó y se retiró tras medirlo: este
+   `sticky` NO funciona hoy — `html { overflow-x: hidden }` (arriba, puesto
+   para contener el desbordamiento de 3px que encontró el piloto en GROWTH-2
+   Fase 2.1) convierte al documento en contenedor de scroll y desactiva el
+   pegado. Medido en local sobre `main` antes de tocar nada: tras desplazar
+   500px, `.lp-nav-wrap` está en `y: -500` a 375 y a 1280 px. Es decir, la
+   cabecera pública se va con la página en las siete superficies, así que un
+   fondo "al desplazar" no se vería jamás. Si algún día se quita ese
+   `overflow-x`, ESTE es el sitio donde añadirlo — y entonces habrá que
+   comprobar antes que el desbordamiento de 3px no vuelve. */
+.lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: transparent; border-bottom: 1px solid transparent; }
 .lp-nav { max-width: 1180px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
 .lp-logo { display: flex; align-items: center; gap: 10px; }
 .lp-nav-links { display: flex; align-items: center; gap: 4px; margin-left: 22px; }
@@ -4164,21 +4500,52 @@ a.notif-row:hover {
 .lp-burger { display: none; }
 .lp-mobnav-scrim { position: fixed; inset: 0; background: rgba(15,23,41,.44); z-index: 310; animation: scrimIn .2s ease forwards; }
 .lp-mobnav {
-  position: fixed; top: 0; left: 0; bottom: 0; width: 280px; max-width: 86vw; z-index: 320;
-  background: #fff; box-shadow: 20px 0 60px rgba(15,23,41,.20); display: flex; flex-direction: column; gap: 2px;
-  padding: calc(16px + env(safe-area-inset-top)) 16px 16px; animation: lpMobnavIn .24s cubic-bezier(.4,0,.2,1);
+  position: fixed; top: 0; left: 0; bottom: 0; width: var(--drawer-w); max-width: 86vw; z-index: 320;
+  background: #fff; box-shadow: 20px 0 60px rgba(15,23,41,.20); display: flex; flex-direction: column;
+  padding-top: env(safe-area-inset-top); padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  animation: lpMobnavIn var(--drawer-anim);
 }
-.lp-mobnav-close { align-self: flex-end; width: 38px; height: 38px; min-width: 44px; min-height: 44px; border-radius: 9px;
-  display: grid; place-items: center; background: none; border: 1px solid transparent; color: var(--ink-3); margin-bottom: 6px; }
+/* header-consistency-public-private, 2026-08-15: the panel used to be one
+   uniformly-padded column with the close button as its own top row. It now
+   has a dedicated brand row — same height as the app bar (--header-h),
+   matching the console sidebar drawer's `.sb-brand` — with the scrollable
+   link list as a separate middle section, so the two drawers share a real
+   header instead of just a close button floating at the top. */
+.lp-mobnav-brand {
+  height: var(--header-h); flex: 0 0 auto;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px 0 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+/* `.lp-mobnav a` below (font/padding/hover meant for the link list) also
+   matches the brand-row logo link, since it's still an `<a>` inside
+   `.lp-mobnav` — the same specificity trap `.claude/rules/styles.md`
+   already documents twice for this file (`.lp-cta`, `.lp-user-chip`). A
+   single-descendant override (`.lp-mobnav-brand a`) ties `.lp-mobnav a` on
+   specificity (one class + one type each) and loses on source order, so
+   this qualifies on the link's own class too — same fix pattern as
+   `.user-chip.lp-user-chip` elsewhere in this file. Undoes the parts that
+   don't belong on a logo (padding, radius, hover pill); centering and
+   touch-target sizing are fine to inherit. */
+.lp-mobnav-brand .lp-mobnav-brandmark { padding: 0; border-radius: 0; }
+.lp-mobnav-brand .lp-mobnav-brandmark:hover { background: none; }
+.lp-mobnav-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 16px 16px; }
+.lp-mobnav-close { width: 44px; height: 44px; border-radius: 9px; margin-left: auto;
+  display: grid; place-items: center; background: none; border: 1px solid transparent; color: var(--ink-3); }
 .lp-mobnav-close:hover { background: var(--surface-2); border-color: var(--line); }
 .lp-mobnav a { min-height: 44px; display: flex; align-items: center; padding: 0 10px; border-radius: 8px;
   font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .lp-mobnav a:hover { background: var(--surface-2); color: var(--ink); }
 @keyframes lpMobnavIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-/* Homepage hero nav has the burger on the right (.lp-nav--hero .lp-burger) —
-   the drawer should slide in from that same side. /geo, /pricing, /blog
-   keep the burger on the left and don't pass `fromRight`, so they keep
-   the default left-slide .lp-mobnav above untouched. */
+/* GENSCORE-HEADER-1 (2026-08-12) had every public header's burger on the
+   right, `PublicHeader` always passing `fromRight` to MarketingMobileNav so
+   the drawer matched. header-consistency-public-private (2026-08-15,
+   founder-confirmed on the real preview, design-decisions-log §101
+   supersedes §63): `PublicHeader` no longer passes `fromRight`, so the
+   drawer uses the plain left-slide `.lp-mobnav` above by default, matching
+   the console sidebar's drawer side. `.lp-mobnav--right` stays defined —
+   MarketingMobileNav still supports it for any caller that opts in — but
+   nothing in the app calls it today. */
 .lp-mobnav--right { left: auto; right: 0; box-shadow: -20px 0 60px rgba(15,23,41,.20); animation-name: lpMobnavInRight; }
 @keyframes lpMobnavInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -4192,8 +4559,14 @@ a.notif-row:hover {
 .lp-h1 .grad { background: linear-gradient(100deg, #4f46e5, #7c3aed 55%, #0d9488); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .lp-lead { font-size: 18.5px; line-height: 1.6; color: var(--ink-2); margin: 22px auto 0; max-width: 600px; font-weight: 450; }
 .lp-hero-form { max-width: 540px; margin: 30px auto 0; }
-.lp-hero-note { font-size: 13px; color: var(--ink-4); margin-top: 13px; display: flex; align-items: center; justify-content: center; gap: 16px; }
-.lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; }
+.lp-hero-note { font-size: 13px; color: var(--ink-4); margin-top: 13px; display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+/* `nowrap` para que la fila envuelva por ITEMS y no por palabras. Sin él, a
+   375 px cada nota se parte por dentro ("Respuesta real de / ChatGPT") y tres
+   notas se leen como seis fragmentos sueltos. Se vio en la captura del piloto
+   del preview, no en ninguna aserción: no hay desbordamiento que medir, sólo
+   una fila desordenada (FREE-CHECKER-1, log §111). */
+.lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+@media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
 
 .lp-shot { position: relative; z-index: 2; max-width: 1060px; margin: 54px auto 0; }
 .browserframe { border-radius: 14px; border: 1px solid var(--line-strong); background: #fff; box-shadow: 0 30px 80px rgba(16,24,40,.18), 0 8px 24px rgba(16,24,40,.08); overflow: hidden; }
@@ -4268,6 +4641,98 @@ a.notif-row:hover {
 .lp-field-ghost .type-caret { background: var(--brand-blue); }
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+/* Pista del comprobador gratuito cuando lo escrito no es un dominio
+   (FREE-CHECKER-1, log §111). `--brand-neg` sobre fondo claro, no `--ink-4`:
+   es un mensaje que hay que leer, no una nota al pie. */
+.fc-hint { font-size: 13px; color: var(--brand-neg); margin: 11px 0 0; text-align: center; }
+.fc-hint strong { font-weight: 650; }
+
+/* --- Comprobador gratuito: espera y resultado (FREE-CHECKER-1, log §111) ---
+   Todo prefijado `fc-` porque estas clases conviven con el sistema de la
+   landing en la MISMA página, y nombres genéricos (`panel`, `answer`,
+   `rivals`) ya existen o existirán en globals.css — la regla de styles.md
+   sobre pisarse en ambos sentidos. */
+/* `min-height` para que la página no se encoja al pasar de la portada larga a
+   la espera corta: sin ella el pie sube de golpe, deja un hueco gris debajo y
+   vuelve a bajar al llegar el resultado. Tres saltos de maquetación en veinte
+   segundos, en la única pantalla donde el visitante está esperando y mirando. */
+.fc-wait { max-width: 460px; margin: 26px auto 0; text-align: left; min-height: 340px; }
+.fc-wait-lbl {
+  display: block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--brand-blue);
+  margin-bottom: 14px; text-align: center;
+}
+.fc-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.fc-steps li { display: flex; align-items: center; gap: 11px; font-size: 14px; color: var(--ink-4); }
+.fc-steps li.done { color: var(--ink-2); }
+.fc-steps li.live { color: var(--ink); font-weight: 600; }
+.fc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: none; }
+.fc-steps li.done .fc-dot { background: var(--brand-pos); }
+.fc-steps li.live .fc-dot { background: var(--brand-blue); box-shadow: 0 0 0 4px var(--brand-blue-soft); }
+.fc-wait-note { font-size: 12.5px; color: var(--ink-4); text-align: center; margin: 18px 0 0; }
+
+.fc-result { max-width: 620px; margin: 24px auto 0; text-align: left; min-height: 340px; }
+.fc-lbl {
+  display: block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+  margin-bottom: 8px;
+}
+.fc-lbl-blue { color: var(--brand-blue); }
+.fc-lbl-pos { color: var(--brand-pos); }
+.fc-verdict {
+  font-size: 23px; font-weight: 750; letter-spacing: -.02em; line-height: 1.25;
+  color: var(--ink); margin: 6px 0 20px; text-wrap: balance;
+}
+.fc-panel {
+  border: 1px solid var(--line); border-radius: 11px; background: var(--brand-surface);
+  padding: 16px 18px; margin-bottom: 14px; box-shadow: var(--brand-shadow-card);
+}
+.fc-panel p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+.fc-panel-warn { border-left: 3px solid var(--warn); border-radius: 0 11px 11px 0; }
+.fc-prompt { font-weight: 600; color: var(--ink) !important; }
+/* La respuesta del motor, ya renderizada (FREE-CHECKER-1 Fase C). Sin
+   `white-space: pre-wrap`: los saltos los pone ahora la maquetación, y
+   conservarlo dejaría un hueco por cada salto del markdown original. */
+.fc-answer {
+  margin: 0; border-left: 3px solid var(--brand-cyan); padding: 2px 0 2px 14px;
+  font-size: 14px; line-height: 1.7; color: var(--ink-2);
+}
+.fc-answer-p { margin: 0 0 11px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+.fc-answer-p:last-child { margin-bottom: 0; }
+.fc-answer-h {
+  margin: 16px 0 7px; font-size: 14.5px; font-weight: 700; color: var(--ink); line-height: 1.45;
+}
+.fc-answer-h:first-child { margin-top: 0; }
+.fc-answer-ul { margin: 0 0 11px; padding-left: 18px; }
+.fc-answer-ul li { font-size: 14px; line-height: 1.65; color: var(--ink-2); margin-bottom: 4px; }
+/* `a:not(.btn)` por la regla de styles.md: una regla de ancestro sobre `a`
+   secuestra cualquier botón que algún día se pinte aquí dentro. Hoy no hay
+   ninguno; la exclusión es lo que impide que el día que lo haya salga con el
+   color y el relleno de un enlace de prosa. */
+.fc-answer a:not(.btn) {
+  color: var(--brand-blue); text-decoration: underline; text-underline-offset: 2px;
+  text-decoration-thickness: 1px; overflow-wrap: anywhere;
+}
+.fc-answer a:not(.btn):hover { color: #1d4ed8; }
+
+/* Etiquetas, no lista ordenada: no hay ranking que enseñar (Fase C, log §111). */
+.fc-rivals { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
+.fc-rivals li {
+  font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+}
+.fc-rivals-note { margin: 12px 0 0 !important; font-size: 12.5px !important; color: var(--ink-4) !important; }
+.fc-upsell {
+  border: 1px solid var(--line); border-radius: 13px; padding: 22px 24px; margin-top: 22px;
+  background: var(--surface-2);
+}
+.fc-upsell h3 { font-size: 17px; font-weight: 750; letter-spacing: -.015em; color: var(--ink); margin: 0 0 13px; }
+.fc-upsell ul { margin: 0 0 18px; padding-left: 19px; }
+.fc-upsell li { font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+@media (max-width: 560px) {
+  .fc-verdict { font-size: 20px; }
+  .fc-upsell { padding: 18px 17px; }
+}
 .lp-cta {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
@@ -4275,6 +4740,15 @@ a.notif-row:hover {
   white-space: nowrap; transition: background .13s;
 }
 .lp-cta:hover { background: #1d4ed8; color: #fff; }
+/* Un `.lp-cta` deshabilitado sigue siendo AZUL, atenuado — nunca gris. En gris
+   deja de leerse como "el botón, todavía no" y pasa a leerse como "algo se ha
+   roto", que en un CTA de portada es el peor mensaje posible. Ninguna pantalla
+   lo usa hoy (FREE-CHECKER-1 quitó el único caso, log §111); vive aquí para que
+   el día que alguien lo necesite no herede el azul a plena fuerza y parezca
+   pulsable. Los controles deshabilitados están exentos de contraste AA, así
+   que el barrido del piloto los salta: esto no lo vigila nadie salvo el ojo. */
+.lp-cta:disabled { background: #93b0f2; border-color: #93b0f2; cursor: not-allowed; }
+.lp-cta:disabled:hover { background: #93b0f2; }
 .lp-cta-soft {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
@@ -4286,8 +4760,52 @@ a.notif-row:hover {
 /* Pinned to the bottom of the drawer (margin-top: auto in the flex column)
    instead of following right after the links — founder feedback: the CTAs
    read as more prominent anchored low, like Semrush's mobile menu. */
-.lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding: 14px 16px 0; border-top: 1px solid var(--line-soft); }
 .lp-mobnav-ctas .lp-cta, .lp-mobnav-ctas .lp-cta-soft { width: 100%; }
+
+/* Los dos CTA del cajón pasaron de `<button onClick={router.push}>` a `<Link>`
+   en V4, y `.lp-mobnav a` de más arriba se los tragó: se escribió cuando aquí
+   dentro sólo había enlaces de navegación, y con `(0,1,1)` le gana a `.lp-cta`
+   `(0,1,0)` — así que les imponía su color, su tamaño y su relleno. El
+   resultado era texto gris sobre el azul de «Prueba gratis» (hallazgo del
+   fundador sobre el preview de #379, 2026-08-11).
+   Se les devuelve lo suyo con un selector que sí gana. */
+.lp-mobnav .lp-cta, .lp-mobnav .lp-cta-soft { font-size: 14.5px; padding: 0 20px; justify-content: center; }
+.lp-mobnav .lp-cta, .lp-mobnav .lp-cta:hover { color: #fff; }
+.lp-mobnav .lp-cta:hover { background: #1d4ed8; }
+.lp-mobnav .lp-cta-soft, .lp-mobnav .lp-cta-soft:hover { color: var(--brand-blue); }
+.lp-mobnav .lp-cta-soft:hover { background: rgba(37,99,235,.14); }
+
+/* GENSCORE-HEADER-2 — the logged-in state of the public header reuses the
+   console sidebar's chip (.user-chip/.avatar/.sb-plan-badge) rather than a
+   lookalike, so these only add what the marketing bar needs on top: a soft
+   fill (--surface-2, the same token the sidebar's own hover state uses) so
+   the chip reads as a control against the nav's own background without a
+   hard edge, and an ellipsis budget so a long address can't push the nav
+   wide. Founder, 2026-08-13: "gris suave de fondo sin borde" — swapped the
+   1px border for this fill rather than stacking both. `--surface-2`
+   (#fbfbfd) read as barely-there against the nav's own white, so it moved to
+   `--canvas` (#f6f7f9) — one step darker on the same neutral scale, still a
+   named token rather than a one-off value invented for this component. */
+.lp-user-chip { background: var(--canvas); max-width: 260px; }
+/* Same `.lp-mobnav a` (0,1,1) beats a bare class (0,1,0) fight as the CTA fix
+   just above — this is the second instance `.claude/rules/styles.md` already
+   warns about. `.user-chip.lp-user-chip` (both real classes on the element,
+   not a specificity trick) is what wins here, because unlike `.lp-cta` above
+   this chip is never rendered outside `.lp-user-chip`, so qualifying on its
+   own two classes is simpler than a `.lp-mobnav .foo` ancestor rule. That's
+   why a previous pass "increased" this padding and the rendered box didn't
+   move at all — the value was being set, then immediately overridden by a
+   rule earlier in this file with nothing to do with this component. Verified
+   by reading the *computed* padding in a real browser, not just the source. */
+.user-chip.lp-user-chip { padding: 13px 14px; gap: 13px; }
+.lp-user-chip .lp-user-chip-email {
+  font-size: 12.5px; font-weight: 650; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lp-user-chip .sb-plan-badge { margin-top: 7px; }
+/* In the drawer it is the full-width bottom action, in place of the two CTAs. */
+.lp-mobnav-ctas .lp-user-chip { max-width: none; }
 
 .lp-trust { padding: 40px 0 8px; text-align: center; }
 .lp-trust .cap { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
@@ -4344,7 +4862,13 @@ a.notif-row:hover {
 .lp-footer .links a:hover { color: var(--ink); }
 .lp-footer .copy { font-size: 12.5px; color: var(--ink-4); margin-top: 18px; }
 
-.legal-updated { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+/* Mismo caso y misma corrección que `.blog-post-meta` abajo: `--ink-4`
+   (#98a0b0) da 2.63:1 sobre blanco, `--ink-3` da 4.76:1. Aquí lo cogió el
+   chequeo de contraste del piloto (Fase Q5b, log §55) sobre el enlace «Blog»
+   de las páginas pilar del blog, que usa esta clase. */
+.legal-updated { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
+.legal-subnav { display: flex; align-items: center; gap: 16px; margin-top: 18px; }
+.legal-subnav-current { font-size: 12.5px; font-weight: 650; color: var(--ink-3); white-space: nowrap; }
 .legal-body { max-width: 760px; }
 .legal-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
 .legal-body h2:first-child { margin-top: 0; }
@@ -4352,40 +4876,61 @@ a.notif-row:hover {
 .legal-body ul { margin: 0 0 14px; padding-left: 20px; }
 .legal-body li { font-size: 14.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 6px; }
 
-/* GROWTH-2 Fase 2.4: comparison table on /comparativas/*. Self-contained
-   (not reused from .docs-table-wrap/.tbl-wrap) — this branch predates the
-   /docs sidebar CSS from Fase 2.3, and .tbl-wrap pairs with a .tbl class
-   this table doesn't use. QA (PR #292) caught the table rendering with zero
-   styling and no horizontal-scroll safety net before this was added. */
-.cmp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 0 24px; }
-.cmp-table-wrap table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
-.cmp-table-wrap th, .cmp-table-wrap td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
-.cmp-table-wrap th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
+/* GROWTH-2 Fase 2.8: without card boundaries, 6 consecutive tool profiles
+   (h3 + 2-3 paragraphs each) read as one continuous wall of prose instead of
+   6 distinct entities (pilot finding on the tools pillar). */
+.tool-profile-card { padding: 18px 20px; margin: 0 0 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.tool-profile-card h3 { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
+.tool-profile-card p:last-child { margin-bottom: 0; }
 .legal-body strong { color: var(--ink); font-weight: 650; }
-.legal-body a { color: var(--accent-ink); font-weight: 600; }
+/* `:not(.btn)` no es cosmético. Esta regla —especificidad (0,1,1)— le gana a
+   `.btn-primary` (0,1,0), así que a un `<a class="btn btn-primary">` metido en
+   el cuerpo de un artículo le imponía el color de enlace de prosa: `--accent-ink`
+   (#3730a3) SOBRE `--accent` (#4f46e5), o sea 1.58:1. Índigo oscuro sobre
+   índigo: el CTA no se leía. Lo cogió el chequeo de contraste del piloto en
+   `/blog/como-elegir-competidores-analisis-geo` (log §55) y es la MISMA familia
+   que `.lp-mobnav a` contra `.lp-cta` (ver `.claude/rules/styles.md`): una
+   regla `.ancestro a` escrita cuando ahí dentro sólo había enlaces.
+   Se excluyen los botones en vez de parchear cada variante, que es lo que la
+   regla siempre quiso decir —esto va de enlaces de prosa— y deja cubiertas las
+   variantes que aún no existen. */
+.legal-body a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 
 .blog-body { max-width: 760px; }
 .blog-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
 .blog-body h2:first-child { margin-top: 0; }
 .blog-body h3 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin: 28px 0 10px; }
 .blog-body p { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin: 0 0 16px; }
-.blog-body ul, .blog-body ol { margin: 0 0 16px; padding-left: 20px; }
+.blog-body ul { list-style: disc outside; margin: 0 0 16px; padding-left: 20px; }
+.blog-body ol { list-style: decimal outside; margin: 0 0 16px; padding-left: 20px; }
 .blog-body li { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin-bottom: 8px; }
 .blog-body strong { color: var(--ink); font-weight: 650; }
-.blog-body a { color: var(--accent-ink); font-weight: 600; }
+/* Mismo caso y mismo motivo que `.legal-body a:not(.btn)` arriba. */
+.blog-body a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 .blog-body blockquote { border-left: 3px solid var(--line); padding-left: 16px; margin: 0 0 16px; color: var(--ink-3); font-style: italic; }
+.blog-body pre { overflow-x: auto; margin: 0 0 16px; padding: 14px 16px; border-radius: var(--r-md); background: var(--surface-2); font-size: 13px; line-height: 1.6; }
+.blog-body pre code { background: none; padding: 0; }
+.blog-body :not(pre) > code { background: var(--surface-2); padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
 .blog-body table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 13.5px; }
 .blog-body th, .blog-body td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .blog-body th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .blog-body td { color: var(--ink-2); line-height: 1.6; }
 .blog-body table strong { white-space: nowrap; }
-.blog-post-meta { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+/* `--ink-4` (#98a0b0) da 2.63:1 sobre blanco — por debajo del 4.5:1 que pide
+   AA para texto normal. `--ink-3` da 4.76:1. La fecha, además, ahora tiene
+   más protagonismo visual que antes (34px de aire debajo), así que merece
+   leerse bien. Hallazgo del ux-pilot, PR #312. */
+.blog-post-meta { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
 .blog-cta { margin-top: 40px; padding: 24px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-align: center; }
 .blog-cta p { margin-bottom: 14px; }
 .blog-related { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
 .blog-related h2 { font-size: 16px; font-weight: 700; margin: 0 0 10px; }
 .blog-related ul { margin: 0; padding-left: 20px; }
 .blog-related li { font-size: 14.5px; margin-bottom: 6px; }
+.glossary-related { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
+.glossary-related h2 { font-size: 16px; font-weight: 700; margin: 0 0 10px; }
+.glossary-related ul { margin: 0; padding-left: 20px; }
+.glossary-related li { font-size: 14.5px; margin-bottom: 6px; }
 .blog-index-card { display: block; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); margin-bottom: 20px; overflow: hidden; }
 .blog-index-card:hover { border-color: var(--accent); }
 .blog-index-card-body { padding: 20px; }
@@ -4401,6 +4946,22 @@ a.notif-row:hover {
 
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }
+
+/* --- Ritmo de la cabecera de artículo ------------------------------------
+   El ritmo vertical iba justo al revés de como se necesita: 84px de hueco
+   muerto encima de la portada (el padding de .lp-section) y CERO separación
+   entre portada, título, fecha y el primer bloque, que quedaban pegados unos
+   a otros. Se recorta arriba y se reparte abajo, que es donde el lector lo
+   necesita al empezar a leer.
+
+   Las reglas van acotadas al artículo a propósito: `.blog-cover-compact`
+   solo se usa aquí (el índice y los hubs usan la portada normal dentro de
+   una tarjeta), y `.blog-post-meta` sí se comparte con las tarjetas del
+   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`. */
+.lp-inner > .blog-cover-compact:first-child { margin-top: -36px; border-radius: var(--r-md); }
+.blog-cover-compact { margin-bottom: 24px; }
+.blog-cover-compact + h1 { margin: 0 0 14px; line-height: 1.22; }
+h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
 
@@ -4414,7 +4975,17 @@ a.notif-row:hover {
 .docs-side a { display: block; font-size: 14px; color: var(--ink-2); padding: 6px 10px; border-radius: var(--r-sm); }
 .docs-side a:hover { background: var(--surface-2); color: var(--ink); }
 .docs-side a.active { background: var(--surface-2); color: var(--accent); font-weight: 600; }
-.docs-content { max-width: 720px; min-width: 0; }
+/* `align-self: stretch` no es cosmético: en móvil `.docs-layout` es un flex en
+   columna con `align-items: flex-start`, así que la columna de contenido se
+   dimensiona por su hijo más ancho — la tabla, con `min-width: 480px`. En una
+   pantalla de 375 px eso hacía que TODOS los párrafos midieran 480 y quedaran
+   cortados por la derecha, sin scroll de página con el que alcanzarlos: la
+   documentación de metodología era ilegible en el móvil (fundador,
+   2026-08-13). `min-width: 0` no lo arregla porque el eje afectado es el
+   transversal. Con `stretch`, la columna mide lo que la pantalla y la tabla
+   hace su propio scroll dentro de `.docs-table-wrap`, que es para lo que
+   existe. */
+.docs-content { max-width: 720px; min-width: 0; align-self: stretch; }
 .docs-content h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 8px; }
 .docs-content .docs-updated { font-size: 13px; color: var(--ink-4); margin: 0 0 28px; }
 .docs-content h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 32px 0 12px; }
@@ -4422,9 +4993,30 @@ a.notif-row:hover {
 .docs-content p { margin: 0 0 14px; line-height: 1.65; color: var(--ink-2); }
 .docs-content ul, .docs-content ol { margin: 0 0 14px; padding-left: 22px; color: var(--ink-2); }
 .docs-content li { margin-bottom: 6px; line-height: 1.6; }
+/* SEO-POS-1 Fase E, E4 (log §97). `/docs` llevaba desde GROWTH-2 sin ninguna
+   regla de enlace propia, así que sus enlaces caían al `a { color: inherit;
+   text-decoration: none }` global: gris, sin subrayado e indistinguibles de la
+   prosa. «Metodología completa en GEO Score» y «ver Planes y límites» son
+   enlaces desde el primer día y nadie podía saberlo. Mismo remedio y mismo
+   token que `.legal-body a` y `.blog-body a`, que sí lo tenían — la excepción
+   era `/docs`, no la regla.
+   `:not(.btn)` por la lección de V4/§55: una regla de enlace por ancestro le
+   gana en especificidad a la clase de un botón y le impone su color. Aquí hoy
+   no hay botones, y por eso mismo se escribe ya: cubre la variante que aún no
+   existe. */
+.docs-content p a:not(.btn),
+.docs-content li a:not(.btn),
+.docs-content td a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 .docs-table-wrap { overflow-x: auto; margin: 0 0 24px; }
 .docs-content table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
-.docs-content th, .docs-content td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+/* `white-space: nowrap` valía para la tabla de planes —celdas de dos palabras—
+   y dejaba ilegible la de metodología, cuya segunda columna es prosa: a 1280 px
+   las frases se salían del contenedor y el lector veía "…y la que más m" con un
+   scroll horizontal que nadie busca en un párrafo (visto en las capturas del
+   piloto, 2026-08-13). Las celdas envuelven; el `min-width` de la tabla sigue
+   dando scroll en móvil, que es donde de verdad hace falta. */
+.docs-content th, .docs-content td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.docs-content th { white-space: nowrap; }
 .docs-content th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .docs-index-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px; }
 .docs-index-card { display: block; border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; background: var(--surface); }
@@ -4439,17 +5031,6 @@ a.notif-row:hover {
   .docs-index-grid { grid-template-columns: 1fr 1fr; }
 }
 
-.geo-breakdown { display: flex; flex-direction: column; gap: 14px; margin: 20px 0 28px; padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
-.geo-breakdown-row { display: grid; grid-template-columns: 1fr; gap: 6px; }
-.geo-breakdown-label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.geo-breakdown-bar-wrap { height: 8px; border-radius: 4px; background: var(--surface-sunk); overflow: hidden; }
-.geo-breakdown-bar { height: 100%; border-radius: 4px; }
-.geo-breakdown-weight { font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
-
-@media (min-width: 560px) {
-  .geo-breakdown-row { grid-template-columns: 180px 1fr 44px; align-items: center; gap: 12px; }
-  .geo-breakdown-weight { text-align: right; }
-}
 
 .process-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 28px; padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
 .process-flow-step-wrap { display: flex; align-items: center; gap: 8px; }
@@ -4468,18 +5049,35 @@ a.notif-row:hover {
   .lp-h1 { font-size: 42px; }
   .lp-h2 { font-size: 30px; }
   .lp-nav-links { display: none; }
-  .lp-nav { padding-left: 14px; gap: 6px; }
+  /* header-consistency-public-private, 2026-08-15 (founder-approved after
+     the burger-left/logo-centered spike): burger moves to the left and the
+     logo centers, matching WorkspaceTopbar's mobile anatomy (.hdr-burger
+     left / .hdr-brand-mobile centered) instead of the previous
+     logo-left/burger-right split (GENSCORE-HEADER-1, superseded). The bar
+     also now shares --header-h (52px) with the console instead of its own
+     72px, and the burger matches .hdr-burger's 44×44 / radius 10 exactly.
+     Scoped to `.lp-nav >` direct children throughout — the landing hero's
+     browserframe mockup also renders its own decorative `.lp-logo` deeper
+     in the tree, and an unscoped rule here would pull that one out of flow
+     too (caught while spiking this, see git history). */
+  .lp-nav { height: var(--header-h); padding: 0 14px; gap: 6px; position: relative; }
   .lp-burger {
-    display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; min-width: 44px; min-height: 44px;
-    border-radius: 9px; background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
-    margin-left: -6px;
+    display: grid; place-items: center; flex: 0 0 auto; width: 44px; height: 44px;
+    border-radius: var(--r-md); background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
+    order: -1;
   }
   .lp-burger:hover { background: var(--surface-2); }
-  /* Logo reads oversized once the nav collapses to just burger + wordmark
-     (founder feedback) — drop it a couple of px alongside the rest of the
-     mobile nav layout. width:auto lets the intrinsic viewBox ratio rescale
-     it instead of stretching at the desktop-computed pixel width. */
-  .lp-logo .brand-logo-svg { height: 19px; width: auto; }
+  .lp-nav > .lp-logo {
+    position: absolute; left: 0; right: 0; top: 0; bottom: 0; margin: auto;
+    width: max-content; height: max-content;
+  }
+  /* `BrandLogo` never applied a `.brand-logo-svg` class to its own <svg> —
+     the old `.lp-logo .brand-logo-svg { height: 19px }` here never matched
+     anything, so the mobile bar was actually rendering the desktop 22px
+     logo untouched. Fixed as part of this pass: target the real element
+     (no class needed, `.lp-logo` wraps exactly one <svg>) and match
+     WorkspaceTopbar's mobile logo (`<BrandLogo size={20} />`) for real. */
+  .lp-nav > .lp-logo svg { height: 20px; width: auto; }
   /* .lp-hero has no side padding of its own (relies on centered max-width
      content) — without this, .lp-hero-content's heading/lead text runs flush
      to the viewport edge below 900px. */
@@ -4489,10 +5087,11 @@ a.notif-row:hover {
      they end up cramped against each other. Stack them full-width instead. */
   .lp-ctaband .row { flex-direction: column; align-items: stretch; gap: 14px; }
   .lp-ctaband .row .btn { width: 100%; }
-  /* Homepage hero nav only (.lp-nav--hero) — /geo and /pricing don't carry
-     this modifier, so their .lp-nav-right keeps its existing behavior. */
-  .lp-nav--hero .lp-nav-right { display: none; }
-  .lp-nav--hero .lp-burger { margin-left: auto; }
+  /* GENSCORE-HEADER-1: unified across every public surface, not just the
+     home hero — the desktop login/signup pair is now redundant at this
+     width because every mobile drawer carries its own CTAs (`ctas` prop on
+     MarketingMobileNav), so showing both was a duplicate, not a fallback. */
+  .lp-nav-right { display: none; }
   .lp-hero--home .lp-hero-content { padding-top: 8px; }
   .lp-promo { font-size: 11.5px; padding: 7px 14px; }
 }
@@ -4623,6 +5222,10 @@ a.notif-row:hover {
   .page {
     padding: 22px 20px 80px;
   }
+  /* Keep the full-bleed mission flush with the header at this breakpoint too. */
+  .mrk-full {
+    margin-top: -22px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -4631,24 +5234,41 @@ a.notif-row:hover {
     grid-template-columns: 1fr;
   }
 
-  /* --- Sidebar as overlay drawer --- */
+  /* --- Sidebar as overlay drawer ---
+     Width and transition share --drawer-w / --drawer-anim with the public
+     header's .lp-mobnav (header-consistency-public-private, 2026-08-15) —
+     was 290px / 0.26s here vs 280px / 0.24s there.
+
+     HEADER-FLAT-1 (2026-08-15): la sombra va en `.shell.mobnav-open .sb`, no
+     aquí. Estando el cajón cerrado (`translateX(-100%)`, fuera de pantalla)
+     su sombra seguía proyectándose 20px hacia dentro con 60px de difuminado
+     y, al estar en `z-index: 320` contra el 30 de la cabecera, pintaba por
+     encima de todo el borde izquierdo. Con la cabecera opaca pasaba
+     inadvertida; al volverse plana el fundador la vio ("la parte izquierda
+     como un pequeño degradado más oscuro"). Medido muestreando píxeles a lo
+     ancho de la cabecera: el borde izquierdo era rgb(218,220,223) contra el
+     rgb(246,247,249) del lienzo, una caída de 28 niveles que se disolvía
+     hacia los 120px. La sombra existe para despegar el cajón de la página
+     CUANDO ESTÁ ABIERTO; con el cajón fuera de pantalla es un residuo, no una
+     decisión de diseño. Con este cambio el borde mide 246,247,249 de un
+     extremo al otro. */
   .sb {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    width: 290px;
+    width: var(--drawer-w);
     max-width: 86vw;
     z-index: 320;
     transform: translateX(-100%);
-    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 20px 0 60px rgba(15, 23, 41, 0.20);
+    transition: transform var(--drawer-anim);
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
 
   .shell.mobnav-open .sb {
     transform: none;
+    box-shadow: 20px 0 60px rgba(15, 23, 41, 0.20);
   }
 
   .sb-collapse {
@@ -4659,10 +5279,8 @@ a.notif-row:hover {
     display: grid;
     place-items: center;
     margin-left: auto;
-    width: 34px;
-    height: 34px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 44px;
+    height: 44px;
     border-radius: 9px;
     background: none;
     border: 1px solid transparent;
@@ -4698,6 +5316,10 @@ a.notif-row:hover {
   }
 
   /* --- Compact header --- */
+  /* HEADER-FLAT-1: sin `background` propio aquí — el blanco sólido que había
+     es justo lo que hacía que la barra se leyera despegada de la página. El
+     estado plano/cristal lo decide `.dash-header` / `.dash-header.is-scrolled`
+     de más arriba, igual en las dos anchuras. */
   .dash-header {
     position: sticky;
     top: 0;
@@ -4705,7 +5327,11 @@ a.notif-row:hover {
     height: calc(var(--header-h) + env(safe-area-inset-top));
     padding: env(safe-area-inset-top) 10px 0;
     gap: 6px;
-    background: var(--surface);
+  }
+
+  .header-bell {
+    width: 44px;
+    height: 44px;
   }
 
   .hdr-burger {
@@ -4843,61 +5469,121 @@ a.notif-row:hover {
 }
 
 /* ============================================================
-   Ajustes de cuenta — tabs, formularios, equipo, switch
+   Ajustes de cuenta — CONSOLE-REDESIGN-1: one page, three sections.
+   The tab bar (.set-tabs/.set-tab) was removed with the four routes it
+   navigated between. Approved design:
+   docs/design-reference/console-redesign-1/.
    ============================================================ */
-.set-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--line);
-  margin: 4px 0 22px;
-  overflow-x: auto;
+.set-page { max-width: 900px; }
+.set-pane { display: flex; flex-direction: column; gap: 12px; }
+
+/* Cabecera de pantalla de CUENTA — mismo patrón que Dominios (log §32):
+   kicker + titular grande + pastilla de estado. */
+.set-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.set-kicker { font-size: 12.5px; font-weight: 500; color: var(--ink-4); margin: 0 0 2px; }
+.set-title {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800; font-size: 26px; letter-spacing: -.035em; line-height: 1.1; margin: 0;
+}
+.set-pill {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); border-radius: 999px; padding: 6px 12px; margin-top: 5px;
 }
 
-.set-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 40px;
-  padding: 0 14px;
-  border: none;
-  background: none;
-  font-size: 13.5px;
-  font-weight: 650;
-  color: var(--ink-3);
-  cursor: pointer;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color .14s;
+.set-two { display: grid; grid-template-columns: 186px 1fr; gap: 34px; align-items: start; }
+.set-col { min-width: 0; }
+
+/* El índice lleva estado, no sólo enlaces — con tres entradas, una columna que
+   sólo navegase no se ganaría su sitio. */
+.set-idx { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; }
+.set-ie { display: block; padding: 9px 12px; border-left: 2px solid var(--line); line-height: 1.25; }
+.set-ie b { display: block; font-size: 12.5px; font-weight: 650; color: var(--ink-3); }
+.set-ie span {
+  display: block; font-size: 11px; color: var(--ink-4); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.set-ie:hover b { color: var(--ink); }
+.set-ie.on { border-left-color: var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; }
+.set-ie.on b { color: var(--accent); }
+
+.set-sech {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-size: 16px; font-weight: 750; letter-spacing: -.022em; margin: 0 0 10px;
+  scroll-margin-top: 18px;
+}
+.set-sech.sp { margin-top: 30px; }
+
+.set-idrow {
+  display: flex; align-items: center; gap: 14px;
+  padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line-soft);
+}
+.set-idname { font-size: 15px; font-weight: 700; letter-spacing: -.015em; }
+.set-idmail {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11.5px; color: var(--ink-4); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis;
 }
 
-.set-tab .ico { color: var(--ink-4); }
-.set-tab:hover { color: var(--ink); }
-.set-tab.on { color: var(--accent-ink); border-bottom-color: var(--accent); }
-.set-tab.on .ico { color: var(--accent); }
-
-.set-pane { display: flex; flex-direction: column; gap: 14px; max-width: 920px; }
-
-.set-profile-head {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
+/* REGLA DE FORMA (docs/brand/brand-guidelines.md): redondo es una persona,
+   squircle es un dominio. Tinta plana, sin degradado — hallazgo de BRAND-4. */
 .set-avatar-lg {
-  width: 58px; height: 58px; border-radius: 999px;
-  background: linear-gradient(135deg, #8b8df5, #4f46e5); color: #fff;
-  display: grid; place-items: center; font-weight: 750; font-size: 21px; flex: 0 0 auto;
+  width: 44px; height: 44px; border-radius: 999px;
+  background: var(--accent-ring); color: var(--accent);
+  display: grid; place-items: center; font-weight: 700; font-size: 15px; flex: 0 0 auto;
 }
 
-.set-org-logo {
-  width: 58px; height: 58px; border-radius: var(--r-lg);
-  background: linear-gradient(135deg, #34507a, #0f1729); color: #fff;
-  display: grid; place-items: center; font-weight: 800; font-size: 24px; flex: 0 0 auto;
+/* Plegable de empresa — cerrado por defecto. */
+.set-fold { border: 1px solid var(--line); border-radius: 11px; margin-top: 16px; overflow: hidden; }
+.set-fold-h {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 12px 14px; font-size: 13px; background: none; border: 0;
+  font-family: inherit; text-align: left; cursor: pointer; color: inherit;
 }
+.set-fold-h:hover { background: var(--surface-sunk); }
+.set-caret {
+  width: 0; height: 0; flex: 0 0 auto;
+  border-left: 5px solid var(--ink-4); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+}
+.set-caret.open {
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--accent); border-bottom: 0;
+}
+.set-fold-t { font-weight: 650; color: var(--ink); }
+.set-fold-d { color: var(--ink-4); font-size: 12px; margin-left: auto; }
+.set-fold-b { padding: 14px; border-top: 1px solid var(--line-soft); }
+
+/* Los dos acordeones gemelos («empresa» y «facturación») van juntos y con su
+   propio aire respecto al formulario de arriba. */
+.set-folds { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.set-folds .set-fold { margin-top: 0; }
+
+/* La caja de seguridad iba ahogada: una fila de una línea dentro del padding
+   por defecto (fundador, 2026-08-06, «da más aire a la caja de seguridad»). */
+.set-col > .card { margin-bottom: 12px; }
+.set-security .card-body { padding: 24px 20px; }
+.set-security .set-row { padding: 2px 0; }
+.set-security .set-password-form { padding-top: 20px; margin-top: 18px; border-top: 1px solid var(--line-soft); }
+
+.set-quiet {
+  font-size: 12px; color: var(--ink-4); line-height: 1.5;
+  margin: 14px 0 0; padding-top: 13px; border-top: 1px solid var(--line-soft);
+}
+
+
+/* Borrado de cuenta: último bloque de la página, fuera del índice y en tono
+   bajo. A una acción irreversible se llega bajando, no de un clic. */
+.set-end {
+  margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap;
+}
+.set-end-t { font-size: 13.5px; font-weight: 650; color: var(--ink-2); }
+.set-end-d { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; line-height: 1.5; max-width: 46ch; }
+.set-end-btn { color: var(--neg-ink); border-color: rgba(210, 59, 72, .25); }
+.set-end-btn:hover { background: var(--neg-soft); }
 
 .set-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px; }
 .set-form-grid .field-label { font-size: 13px; color: var(--ink-2); }
@@ -4925,12 +5611,6 @@ select.set-field {
 .set-hint b { color: var(--ink-3); font-weight: 700; }
 .set-actions { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
 
-.set-role-pill {
-  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px;
-  border-radius: var(--r-pill); font-size: 12px; font-weight: 700;
-  background: var(--accent-soft); color: var(--accent-ink);
-}
-.set-role-pill.ghost { background: var(--surface-sunk); color: var(--ink-3); }
 
 .set-row { display: flex; align-items: center; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--line-soft); }
 .set-row.last { border-bottom: none; }
@@ -4981,7 +5661,13 @@ select.set-field {
 .set-member .seg button { height: 26px; font-size: 12px; }
 
 .seg { display: inline-flex; background: var(--surface-sunk); border-radius: var(--r-sm); padding: 3px; gap: 2px; }
-.seg button { height: 28px; padding: 0 12px; border-radius: var(--r-xs); border: none; background: transparent; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; white-space: nowrap; }
+/* `--ink-3` sobre blanco da 4.76:1, pero estas pastillas van sobre
+   `--surface-sunk` (#f6f7f9) y ahí se quedan en 4.44:1 — por debajo de AA por
+   un pelo. `--ink-2` da 7.50:1. La jerarquía frente a la pestaña activa la
+   sigue marcando `.on`, que además del color pone fondo blanco y sombra
+   (chequeo de contraste del piloto, Fase Q5b, log §55). Un token que pasa
+   sobre blanco no pasa automáticamente sobre un fondo hundido. */
+.seg button { height: 28px; padding: 0 12px; border-radius: var(--r-xs); border: none; background: transparent; font-size: 12.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
 .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--sh-1); }
 .filters { overflow-x: auto; }
 
@@ -4995,6 +5681,19 @@ select.set-field {
   .set-form-grid { grid-template-columns: 1fr; }
   .set-invite { flex-direction: column; }
   .set-invite-bar { width: 100%; }
+}
+
+/* CONSOLE-REDESIGN-1 — móvil es un solo scroll. El índice desaparece entero:
+   ni pastillas, ni pestañas, ni ningún elemento pegajoso propio de la página.
+   El argumento de esta pantalla es «una página», y meter navegación por
+   secciones en el viewport más pequeño la contradice (fundador, 2026-08-06).
+   Se corta en el mismo 899px que el shell, no en 720. */
+@media (max-width: 899px) {
+  .set-two { grid-template-columns: 1fr; gap: 0; }
+  .set-idx { display: none; }
+  .set-title { font-size: 24px; }
+  .set-end { flex-direction: column; gap: 14px; }
+  .set-end .btn { width: 100%; }
 }
 
 /* --- Chip de plan elegido en el registro --- */
@@ -5044,6 +5743,22 @@ select.set-field {
 .cp-flag.cur { background: var(--ink); color: #fff; }
 .cp-flag.rec { background: var(--accent); color: #fff; }
 .cp-plan.has-flag { margin-top: 4px; }
+
+/* CONSOLE-REDESIGN-1: Agencia ocupa la misma celda de la rejilla que un plan,
+   pero no es un radio — no tiene precio self-serve en Stripe, así que se le da
+   una salida real en vez de una selección que apagaba «Continuar». */
+.cp-sales {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+  padding: 15px 16px; border-radius: var(--r-lg);
+  border: 1.5px dashed var(--line-strong); background: var(--surface-2);
+}
+.cp-sales-t { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+.cp-sales-d { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-top: 4px; line-height: 1.4; }
+.cp-sales-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--accent);
+}
+.cp-sales-cta:hover { text-decoration: underline; }
 
 .cp-confirm-head { display: flex; align-items: center; gap: 12px; padding: 4px 0 18px; }
 .cp-confirm-badge { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 750; }
@@ -5132,44 +5847,9 @@ select.set-field {
 
 
 /* ============================================================
-   Auditoría web — collapsed detail rows (WEB-AUDIT-R1)
-   Native <details>/<summary> rows: zero-JS expand/collapse for
-   the per-topic and per-page lists, chevron rotates when open.
-   ============================================================ */
-.wa-details {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
-.wa-details > summary {
-  list-style: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  min-width: 0;
-}
-.wa-details > summary::-webkit-details-marker { display: none; }
-.wa-details > summary:hover { background: var(--surface-2); border-radius: 10px; }
-.wa-details .wa-chev {
-  flex-shrink: 0;
-  margin-left: auto;
-  color: var(--ink-4);
-  transition: transform 0.15s ease;
-}
-.wa-details[open] > summary .wa-chev { transform: rotate(180deg); }
-.wa-details > .wa-details-body {
-  padding: 2px 12px 12px;
-  border-top: 1px solid var(--line-soft);
-  margin-top: 0;
-  padding-top: 10px;
-}
-
-/* ============================================================
    GEO explainer page (/geo) — reuses the .lp-* marketing system.
    Classes use a .gx- prefix to avoid colliding with the dashboard
-   Overview (.gauge-*, .compose-*) and blog (.geo-breakdown) classes.
+   Overview (.gauge-*, .compose-*) and blog (.art-*) classes.
    ============================================================ */
 .gx-hero { padding: 84px 0 72px; }
 .gx-hero-actions { display: flex; justify-content: center; gap: 12px; margin-top: 30px; flex-wrap: wrap; }
@@ -5268,6 +5948,1468 @@ select.set-field {
     font-size: 16px;
   }
 }
+
+/* ==========================================================================
+   GROWTH-3 Fase 3.1 — Sistema de diseño de artículos (.art-*)
+   --------------------------------------------------------------------------
+   Librería de composición para artículos del blog. Namespaced con `art-`
+   a propósito: PR #292 nos costó una colisión de clases entre ramas, y este
+   bloque introduce ~15 clases nuevas de golpe.
+
+   Principio rector (docs/brand/article-design-system.md): ningún bloque de
+   estos es decorativo. Cada uno codifica algo verdadero del contenido —
+   una respuesta, un veredicto, un paso de una secuencia, una cifra con su
+   fuente. Un bloque usado por estética y no por estructura es un bug.
+
+   Tokens: los de marca ya existentes (--brand-*). Cero colores nuevos.
+   Tema: claro únicamente, como el resto del sitio.
+   ========================================================================== */
+
+.art-tone-blue { color: var(--brand-blue); }
+.art-tone-cyan { color: var(--brand-cyan); }
+.art-tone-warm { color: var(--brand-warm); }
+.art-tone-pos { color: var(--brand-pos); }
+.art-tone-neg { color: var(--brand-neg); }
+.art-tone-bg-blue { background: var(--brand-blue); }
+.art-tone-bg-blue2 { background: var(--brand-blue-2); }
+.art-tone-bg-cyan { background: var(--brand-cyan); }
+.art-tone-bg-warm { background: var(--brand-warm); }
+
+/* --- Respuesta rápida ---------------------------------------------------- */
+.art-takeaway {
+  background: var(--brand-surface); border: 1px solid var(--line);
+  border-left: 3px solid var(--brand-blue); border-radius: 12px;
+  padding: 22px 24px; margin: 0 0 34px; box-shadow: var(--brand-shadow-card);
+}
+.art-takeaway-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--brand-blue); margin-bottom: 9px;
+}
+.art-takeaway p { margin: 0; color: var(--ink); font-size: 17px; line-height: 1.65; }
+
+/* --- Veredicto ----------------------------------------------------------- */
+.art-verdict {
+  display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: start;
+  background: rgba(255, 176, 32, .13); border: 1px solid rgba(255, 176, 32, .42);
+  border-radius: 12px; padding: 20px 22px; margin: 30px 0;
+}
+.art-verdict-badge {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--brand-ink);
+  background: var(--brand-warm); padding: 5px 9px; border-radius: 5px; white-space: nowrap;
+}
+.art-verdict-body h4 {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 750; margin: 0 0 5px; color: var(--ink);
+}
+.art-verdict-body p { margin: 0; font-size: 15px; color: var(--ink-2); }
+@media (max-width: 560px) {
+  .art-verdict { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* --- Sección numerada + acción rápida ------------------------------------ */
+.art-numsec { margin: 44px 0; }
+.art-numsec-h { display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: baseline; margin-bottom: 13px; }
+.art-numsec-n {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 15px; font-weight: 800; color: var(--brand-blue); background: var(--brand-blue-soft);
+  width: 31px; height: 31px; border-radius: 8px; display: grid; place-items: center; transform: translateY(3px);
+}
+.art-numsec-h h3 { margin: 0; font-size: 20px; font-weight: 750; letter-spacing: -.01em; color: var(--ink); }
+.art-quick {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px;
+  padding: 14px 17px; margin: 17px 0 0;
+}
+.art-quick-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--brand-pos);
+  background: var(--brand-pos-soft); padding: 4px 8px; border-radius: 5px; white-space: nowrap;
+}
+.art-quick-body p { margin: 0; font-size: 14.8px; }
+@media (max-width: 560px) {
+  .art-quick { grid-template-columns: 1fr; gap: 9px; }
+  .art-quick-lbl { justify-self: start; }
+}
+
+/* --- Figura + marco ------------------------------------------------------ */
+.art-figure { margin: 34px 0; }
+.art-frame {
+  position: relative; background: var(--brand-surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 26px; box-shadow: var(--brand-shadow-card); overflow: hidden;
+}
+/* Figura cuyo contenido es una tabla (`<Figure wide>`). El `overflow: hidden`
+   de arriba recorta bien un degradado contra el radio del borde y recorta
+   fatal una tabla: lo que no cabe se pierde y no hay gesto que lo devuelva —
+   el fallo del §77, esta vez dentro de una figura. Mismo remedio y misma
+   pista que `.art-tablewrap`, que ya lo resolvió para las tablas sueltas.
+   El `min-width` es lo que hace que la tabla se deslice en vez de aplastar
+   sus columnas hasta ser ilegibles. Encontrado por el piloto en S8 (log §85). */
+.art-frame-wide { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.art-frame-wide table { min-width: 480px; margin-bottom: 0; }
+@media (max-width: 640px) {
+  .art-frame-wide::before {
+    content: "Desliza para ver todas las columnas →"; display: block;
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--ink-3);
+    margin-bottom: 12px;
+  }
+}
+.art-caption {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; line-height: 1.55;
+  color: var(--ink-3); margin-top: 11px; display: flex; gap: 8px;
+}
+.art-caption b { color: var(--ink-2); font-weight: 700; white-space: nowrap; }
+
+/* --- Maqueta del panel de producto --------------------------------------- */
+.art-mock { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+@media (max-width: 640px) { .art-mock { grid-template-columns: 1fr; gap: 20px; } }
+.art-gauge { position: relative; width: 132px; height: 132px; justify-self: center; }
+.art-gauge-val { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.art-gauge-num {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.art-gauge-cap {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-4); margin-top: 3px;
+}
+.art-rows { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+.art-row { position: relative; }
+.art-row-hl {
+  border: 2px solid var(--brand-blue); border-radius: 9px; padding: 10px 12px;
+  margin: 22px -12px 0; box-shadow: 0 0 0 4px var(--brand-blue-soft);
+}
+.art-anno-lbl {
+  position: absolute; top: -13px; left: 10px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  color: #fff; background: var(--brand-blue); padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+  max-width: calc(100% - 20px);
+}
+/* Por debajo de 640px la insignia flotante deja de caber: con `nowrap` y
+   posición absoluta, una anotación larga se salía del contenedor y quedaba
+   cortada a media palabra (fundador, 2026-08-15, en /que-es-genscore a 375px;
+   log §96). El barrido del piloto no lo cazó porque el recorte ocurre DENTRO
+   de la tarjeta y su comprobación es de desbordamiento de página.
+   Aquí pasa a ser una línea normal encima de la fila: cabe siempre, no tapa
+   nada, y no depende de que quien la escriba acierte con la longitud. */
+@media (max-width: 640px) {
+  .art-anno-lbl {
+    position: static; max-width: 100%; white-space: normal;
+    display: flex; width: fit-content; margin-bottom: 7px; line-height: 1.35;
+  }
+  .art-anno-lbl svg { display: none; }
+}
+.art-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 5px; }
+.art-row-l { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+.art-row-l em { display: block; font-style: normal; font-size: 11.5px; font-weight: 400; color: var(--ink-4); margin-top: 1px; }
+.art-row-v {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink);
+}
+.art-row-v small { color: var(--ink-4); font-weight: 400; margin-left: 6px; }
+.art-track { height: 7px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 99px; overflow: hidden; }
+.art-fill { height: 100%; border-radius: 99px; }
+
+/* --- Cifras destacadas --------------------------------------------------- */
+.art-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 13px; margin: 30px 0; }
+/* Con solo dos tarjetas, `auto-fit` las estira a media columna cada una y el
+   bloque se lee suelto en pantallas anchas (hallazgo del ux-pilot, PR #310).
+   `auto-fill` sobre un ancho máximo las deja del tamaño que les toca. */
+@media (min-width: 900px) {
+  .art-stats:has(> :nth-child(2):last-child) {
+    grid-template-columns: repeat(2, minmax(148px, 300px)); justify-content: center;
+  }
+  /* Cinco tarjetas caen 4+1 con `auto-fit` a 1280 px y la quinta queda
+     colgando sola (hallazgo del piloto, PR #396, al pasar el pilar del GEO
+     Score a cinco componentes). Con tres columnas quedan 3+2, que se lee como
+     un bloque en vez de como un descuadre. */
+  .art-stats:has(> :nth-child(5):last-child) {
+    grid-template-columns: repeat(3, minmax(148px, 1fr));
+  }
+}
+.art-stat { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; padding: 17px 18px; box-shadow: var(--brand-shadow-card); }
+.art-stat-n {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 31px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.art-stat-l { font-size: 13px; color: var(--ink-2); margin-top: 7px; line-height: 1.45; }
+.art-stat-src {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; color: var(--ink-4);
+  margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line-soft);
+}
+
+/* --- Cita ---------------------------------------------------------------- */
+.art-pull {
+  border-left: 3px solid var(--brand-cyan); background: rgba(9, 197, 214, .07);
+  border-radius: 0 11px 11px 0; padding: 19px 24px; margin: 30px 0;
+}
+.art-pull-text {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 19px; font-weight: 600; line-height: 1.45; color: var(--ink);
+  margin: 0 0 10px; letter-spacing: -.01em;
+}
+/* MDX envuelve el contenido en bloque en su propio <p>: hereda, no duplica. */
+.art-pull-text p { margin: 0; font: inherit; color: inherit; letter-spacing: inherit; }
+.art-pull cite { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; font-style: normal; color: var(--ink-3); }
+
+/* --- Bloque de código ---------------------------------------------------- */
+.art-code { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; overflow: hidden; margin: 24px 0; box-shadow: var(--brand-shadow-card); }
+.art-code-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 9px 15px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--ink-3);
+}
+.art-code pre {
+  margin: 0; padding: 17px 19px; overflow-x: auto;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.8px; line-height: 1.75; color: var(--ink-2);
+}
+/* Mismo problema que .art-tablewrap resolvió en la PR #306: en móvil el código
+   se lee como cortado en vez de como deslizable. El pilot lo señaló también
+   aquí (PR #309), así que la pista va en los dos sitios, no solo en la tabla. */
+@media (max-width: 640px) {
+  .art-code-h::after {
+    content: "Desliza →"; flex: none; white-space: nowrap; color: var(--ink-3); opacity: .8;
+  }
+  /* Si el bloque ajusta, no desliza: la pista sobraría y además mentiría. */
+  .art-code-wrap .art-code-h::after { content: none; }
+}
+/* `<CodeBlock wrap>`: un valor único que el lector copia entero. El salto es
+   blando —no entra ningún `\n` en el portapapeles—, así que se ve completo y
+   se pega en una sola línea. `break-all` porque la cadena no tiene espacios
+   por los que partir (log §85). */
+.art-code-wrap pre { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
+
+/* --- Tabla comparativa --------------------------------------------------- */
+.art-tablewrap {
+  overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 26px 0;
+  border: 1px solid var(--line); border-radius: 11px; background: var(--brand-surface); box-shadow: var(--brand-shadow-card);
+}
+.art-tablewrap table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14px; margin: 0; }
+.art-tablewrap th, .art-tablewrap td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; color: var(--ink-2); }
+.art-tablewrap thead th {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3); background: var(--surface-2); font-weight: 700;
+}
+.art-tablewrap tbody tr:last-child td { border-bottom: 0; }
+.art-tablewrap td strong { color: var(--ink); }
+/* Sin esta pista, en móvil las columnas se leen como cortadas en vez de
+   como deslizables (PILOT FAIL, PR #306). COMPARATIVAS-DESIGN-1 (2026-08-11)
+   retiró la variante paralela .cmp-table-wrap que /comparativas/* usaba
+   antes de migrar a este mismo componente — la pista ya la cubre esta
+   regla, no hacía falta una segunda. */
+@media (max-width: 640px) {
+  .art-tablewrap { position: relative; }
+  .art-tablewrap::before {
+    content: "Desliza para ver todas las columnas →"; display: block;
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--ink-3);
+    padding: 9px 14px 0;
+  }
+}
+.art-pill { display: inline-block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.art-pill-no { background: var(--brand-neg-soft); color: var(--brand-neg); }
+.art-pill-si { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.art-pill-neutral { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+
+/* --- Maqueta de cuota de voz --------------------------------------------- */
+.art-sov { display: flex; flex-direction: column; gap: 11px; }
+.art-sov-h {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3); padding-bottom: 4px; border-bottom: 1px solid var(--line);
+}
+.art-sov-total { text-transform: none; letter-spacing: 0; }
+.art-sov-row { display: grid; grid-template-columns: minmax(88px, 132px) 1fr auto; gap: 12px; align-items: center; }
+.art-sov-n { font-size: 13.5px; color: var(--ink-2); display: flex; flex-direction: column; }
+.art-sov-n em {
+  font-style: normal; font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-blue);
+}
+.art-sov-track { height: 9px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.art-sov-fill { height: 100%; border-radius: 5px; background: var(--line-strong, var(--ink-3)); opacity: .45; }
+.art-sov-you .art-sov-n { color: var(--ink); font-weight: 700; }
+.art-sov-you .art-sov-fill { background: var(--brand-blue); opacity: 1; }
+.art-sov-v {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.5px;
+  color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.art-sov-you .art-sov-v { color: var(--brand-blue); font-weight: 700; }
+@media (max-width: 480px) {
+  .art-sov-row { grid-template-columns: 1fr auto; }
+  .art-sov-track { grid-column: 1 / -1; }
+}
+
+/* --- Maqueta de respuesta generativa (mención vs citación) ---------------- */
+.art-ans-pair { display: grid; gap: 13px; }
+/* En dos columnas el hueco tiene que separar dos textos largos, no dos
+   tarjetas apiladas: 13px se queda corto ahí (mejora del ux-pilot, PR #311). */
+@media (min-width: 700px) { .art-ans-pair { grid-template-columns: 1fr 1fr; gap: 20px; } }
+.art-ans {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 15px 16px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.art-ans-cited { background: var(--brand-surface); border-color: var(--brand-pos); }
+.art-ans-h {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.art-ans-cited .art-ans-h { color: var(--brand-pos); }
+.art-ans-body { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+.art-ans-src, .art-ans-nosrc {
+  display: flex; align-items: center; gap: 7px; margin-top: auto; padding-top: 9px;
+  border-top: 1px dashed var(--line); font-size: 12.5px;
+}
+.art-ans-src { color: var(--brand-pos); font-weight: 600; }
+.art-ans-nosrc { color: var(--ink-3); font-style: italic; }
+
+/* --- Maqueta de recomendación -------------------------------------------- */
+.art-rec {
+  padding: 16px 17px; border-radius: 10px;
+  background: var(--brand-surface); border: 1px solid var(--line); box-shadow: var(--brand-shadow-card);
+}
+.art-rec-h { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 11px; }
+.art-rec-pri, .art-rec-conf {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+}
+/* No hay `--brand-warm-soft` en la paleta; se compone del token real con
+   `color-mix` en vez de inventar un hex nuevo (regla: cero colores nuevos). */
+.art-rec-pri { background: color-mix(in srgb, var(--brand-warm) 18%, transparent); color: var(--ink); }
+.art-rec-conf { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+.art-rec-t {
+  margin: 0 0 7px; font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 700; color: var(--ink);
+}
+.art-rec-why { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+
+/* --- Maqueta de conjunto de prompts -------------------------------------- */
+.art-prompts { display: flex; flex-direction: column; gap: 9px; }
+.art-prompt-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px;
+}
+.art-prompt-q { font-size: 14px; color: var(--ink-2); font-style: italic; }
+.art-prompt-i {
+  flex: none; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--brand-blue);
+  background: var(--brand-blue-soft, var(--brand-surface)); border-radius: 5px; padding: 3px 8px;
+}
+
+/* --- Checklist ----------------------------------------------------------- */
+.art-check { list-style: none; padding: 0; margin: 22px 0; display: flex; flex-direction: column; gap: 8px; }
+.art-check li {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  padding: 12px 15px; background: var(--brand-surface); border: 1px solid var(--line);
+  border-radius: 9px; margin: 0; font-size: 14.8px; color: var(--ink-2);
+}
+.art-check li svg { margin-top: 3px; }
+/* El color del icono es semántico, no decorativo: verde = hazlo, rojo = evítalo. */
+.art-check-hacer li svg { color: var(--brand-pos); }
+.art-check-evitar li svg { color: var(--brand-neg); }
+
+/* --- Bio de autor -------------------------------------------------------- */
+.art-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(140deg, var(--brand-blue), var(--brand-cyan));
+  display: grid; place-items: center; color: #fff;
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-weight: 800; font-size: 18px;
+}
+.art-bio {
+  display: grid; grid-template-columns: auto 1fr; gap: 17px; background: var(--brand-surface);
+  border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin: 42px 0 0;
+  box-shadow: var(--brand-shadow-card);
+}
+.art-bio h4 { font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-size: 16px; font-weight: 750; margin: 0 0 5px; color: var(--ink); }
+.art-bio p { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.6; }
+
+/* --- CTA de cierre ------------------------------------------------------- */
+.art-cta {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, var(--brand-ink), #152a4d);
+  border-radius: 15px; padding: 34px; margin: 44px 0 0; text-align: center;
+}
+.art-cta-glow {
+  position: absolute; width: 340px; height: 340px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, .5), transparent 68%);
+  top: -150px; right: -90px; pointer-events: none;
+}
+.art-cta-body { position: relative; z-index: 2; }
+.art-cta h3 {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  color: #fff; font-size: 23px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 8px;
+}
+.art-cta p { color: rgba(255, 255, 255, .72); margin: 0 0 20px; font-size: 15px; }
+.art-btn {
+  display: inline-block; background: #fff; color: var(--brand-ink); font-weight: 700;
+  font-size: 15px; padding: 12px 24px; border-radius: 9px; border: 0; text-decoration: none;
+}
+.art-btn:hover { background: #f0f3f9; }
+
+/* ============================================================
+   DOMAINS-REDESIGN-1 — «Dominios» (.dm2-*)
+
+   Rev. 2 (2026-08-05): rediseño pixel-perfect contra el mockup que aprobó el
+   fundador, `docs/design-reference/domains-redesign-1/dominios-rev2-aprobado.png`.
+   La rev. 1 (`pantalla-dominios.html`) queda superada — el fichero se
+   actualiza en el mismo PR para que la referencia no mienta.
+
+   Los colores NO son los del mockup: son los tokens de marca v3
+   (`--brand-*`, docs/brand/brand-guidelines.md §2), por petición explícita del
+   fundador. El mockup fija estructura, proporción y jerarquía; la paleta la
+   fija la marca.
+
+   Mismo mecanismo de despliegue que .ov2-scope/.cm2-scope (log §2): un
+   envoltorio que reapunta los MISMOS nombres de variables que sus
+   descendientes ya consumen, de modo que `.card`, `.badge-*`, `Gauge` y
+   `Delta` se repintan en v3 sólo dentro de este subárbol.
+   ============================================================ */
+.dm2-page {
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
+  --line: var(--brand-line);
+  --line-soft: var(--brand-line-soft);
+  --accent: var(--brand-blue);
+  --accent-soft: var(--brand-blue-soft);
+  --accent-ink: var(--brand-blue);
+  --accent-ring: var(--brand-blue-soft-2);
+  --pos-soft: var(--brand-pos-soft);
+  --pos-ink: var(--brand-pos);
+  --neg-soft: var(--brand-neg-soft);
+  --neg-ink: var(--brand-neg);
+  max-width: 460px;
+  margin: 0 auto;
+}
+@media (min-width: 900px)  { .dm2-page { max-width: 640px; } }
+@media (min-width: 1200px) { .dm2-page { max-width: 1200px; } }
+@media (min-width: 1600px) { .dm2-page { max-width: 1280px; } }
+
+/* ---- Cabecera de la pantalla ----
+   Bloque de título propio, no el `.ov-sticky-header` de 15px de las pantallas
+   de proyecto (log §3). Aquel describe UN proyecto — kicker + nombre + dominio
+   —; ésta es de cuenta y su contexto es el espacio de trabajo entero. El
+   mockup lo resuelve con un titular grande, y es lo que se implementa. */
+.dm2-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.dm2-kicker {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-ink-4);
+  margin-bottom: 2px;
+}
+.dm2-title-row { display: flex; align-items: center; gap: 10px; }
+.dm2-title {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: -.035em;
+  line-height: 1.1;
+  color: var(--brand-ink);
+}
+.dm2-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--brand-ink-3);
+  background: var(--surface-sunk);
+  border-radius: 999px;
+  padding: 4px 11px;
+  white-space: nowrap;
+}
+/* Pastilla de estado agregado. Sólo aparece con algo en curso: en reposo no
+   hay una fecha única de cuenta que poner ahí (ver computeAccountScanState). */
+.dm2-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--brand-blue);
+  background: var(--brand-blue-soft);
+  border-radius: 999px;
+  padding: 7px 13px;
+  margin-top: 6px;
+}
+.dm2-state .dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--brand-blue);
+  flex: 0 0 auto;
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
+@keyframes dm2Pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ---- Portada del dominio seleccionado ---- */
+.dm2-hero {
+  display: block;
+  position: relative;
+  border: 2px solid var(--brand-blue);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, .05), rgba(37, 99, 235, .015));
+  padding: 22px;
+  margin-bottom: 26px;
+  transition: box-shadow .18s ease;
+}
+.dm2-hero:hover { box-shadow: 0 8px 28px rgba(37, 99, 235, .14); }
+.dm2-hero-top { display: flex; align-items: flex-start; gap: 15px; }
+.dm2-fav {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  object-fit: cover;
+  background: var(--brand-surface);
+  box-shadow: inset 0 0 0 1px rgba(11, 20, 38, .08), 0 2px 8px rgba(11, 20, 38, .10);
+}
+.dm2-fav-letter {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+.dm2-id { flex: 1; min-width: 0; }
+.dm2-name {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+  color: var(--brand-ink);
+}
+.dm2-dom {
+  font-size: 13px;
+  color: var(--brand-ink-3);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dm2-dom .sep { color: var(--brand-ink-4); margin: 0 5px; }
+.dm2-last {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--brand-ink-3);
+}
+.dm2-last svg { color: var(--brand-ink-4); flex: 0 0 auto; }
+
+/* La píldora de la esquina. «Seleccionado» (dm2-flag-sel) se quitó
+   (fundador, 2026-08-05): la tarjeta ya es la única con borde azul, así que
+   el texto sólo repetía lo que la forma ya decía — y quitarla acorta la
+   tarjeta sin perder información. Sólo queda «En progreso»/«Auditando»,
+   condicionada a que haya algo corriendo. */
+/* margin-right deja hueco al botón de borrar (.dom-delete-btn, esquina
+   superior derecha de .dm2-hero) para que la píldora "En progreso"/
+   "Auditando" nunca se le meta debajo (DOMAINS-CLIENT-DELETE-1). */
+.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; margin-right: 38px; }
+.dm2-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+.dm2-flag-run { background: var(--brand-blue-soft); color: var(--brand-blue); }
+.dm2-flag-run .dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--brand-blue);
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
+
+/* Gauge + explicación, en fila. El texto no es relleno: es lo único de la
+   pantalla que dice QUÉ mide el número, y sin él la puntuación es un dato
+   suelto para quien entra por primera vez. */
+.dm2-score { display: flex; align-items: center; gap: 18px; margin: 22px 0 24px; flex-wrap: wrap; }
+.dm2-score .gauge-wrap { flex: 0 0 auto; }
+/* El semicírculo mide `size/2 + stroke/2` de alto, y ahí dentro cabe el
+   numeral MÁS la leyenda, que parte en dos líneas («PUNTUACIÓN / GEO»). Con
+   132/14 la suma daba exactamente el alto de la caja y el número se salía por
+   encima del arco — visible en las capturas del piloto a los tres tamaños,
+   2026-08-05. El gauge se agranda y el numeral baja: el arco manda sobre el
+   número, no al revés.
+
+   El hueco vertical entre la curva y el numeral es, matemáticamente,
+   `radio - alto_del_numeral` — el punto más alto del arco cae siempre a
+   `stroke / 2` del borde superior de la caja, sea cual sea el tamaño, así que
+   agrandar el radio (sin tocar el grosor del trazo) es lo único que separa el
+   uno del otro. `size` sube de 124 a 140 para eso (fundador, 2026-08-05:
+   "separa un poco el gauge de la cifra"); `stroke` se queda en 12 para que el
+   trazo no adelgace. Prop del componente, en app/dashboard/domains/page.tsx —
+   no hay nada que cambiar aquí en font-size. */
+.dm2-hero .gauge-num {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -.04em;
+  color: var(--brand-ink);
+}
+.dm2-hero .gauge-cap {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--brand-ink-4);
+  margin-top: 3px;
+  max-width: 72px;
+  line-height: 1.25;
+}
+.dm2-score-copy {
+  flex: 1;
+  min-width: 160px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--brand-ink-3);
+}
+.dm2-score-empty {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: -.04em;
+  color: var(--brand-ink-4);
+}
+
+.dm2-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  background: var(--brand-blue);
+  color: #fff;
+  border-radius: 12px;
+  padding: 13px 18px;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.dm2-hero:hover .dm2-open { background: #1d51c7; }
+.dm2-open svg { position: absolute; right: 18px; }
+
+/* ---- Rejilla de los demás dominios ---- */
+.dm2-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (min-width: 1200px) { .dm2-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.dm2-card {
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
+  border-radius: 14px;
+  box-shadow: var(--brand-shadow-card);
+  padding: 16px;
+  transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.dm2-card:hover {
+  border-color: var(--brand-blue-soft-2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(11, 20, 38, .09);
+}
+.dm2-card-top { display: flex; align-items: center; gap: 10px; }
+.dm2-card-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  color: var(--brand-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dm2-card-dom {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--brand-ink-4);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dm2-card-foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+.dm2-card-score {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -.035em;
+  line-height: 1;
+  color: var(--brand-ink);
+}
+.dm2-card-chip {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+.dm2-chip-fresh { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.dm2-chip-stale { background: var(--surface-sunk); color: var(--brand-ink-3); }
+.dm2-chip-run {
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dm2-chip-run .dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--brand-blue);
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
+
+/* Una celda más de la rejilla, del mismo tamaño que un dominio: fuera de ella
+   se convertía en una banda punteada a todo lo ancho bajo una fila coja
+   (corregido tras leer la captura del piloto, 2026-08-05). */
+.dm2-add {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 22px 16px;
+  text-align: center;
+  border: 1.5px dashed var(--brand-blue-soft-2);
+  border-radius: 14px;
+  background: rgba(37, 99, 235, .035);
+  transition: border-color .16s ease, background .16s ease;
+}
+.dm2-add:hover { border-color: var(--brand-blue); background: var(--brand-blue-soft); }
+.dm2-add-pl {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
+  display: grid;
+  place-items: center;
+}
+.dm2-add-t { font-size: 13.5px; font-weight: 700; color: var(--brand-blue); }
+.dm2-add-sub { font-size: 12px; color: var(--brand-ink-4); line-height: 1.4; }
+
+.dm2-archived { margin-top: 20px; font-size: 12.5px; color: var(--brand-ink-4); }
+
+.dm2-empty { padding: 48px 40px; text-align: center; display: grid; justify-items: center; gap: 10px; }
+.dm2-empty-ico {
+  width: 48px; height: 48px; border-radius: 999px;
+  background: var(--surface-sunk);
+  display: grid; place-items: center;
+  color: var(--brand-ink-3);
+}
+.dm2-empty-t {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800; font-size: 17px; letter-spacing: -.02em; color: var(--brand-ink);
+}
+.dm2-empty-d { font-size: 13.5px; color: var(--brand-ink-3); max-width: 380px; line-height: 1.6; margin-bottom: 8px; }
+
+@media (max-width: 560px) {
+  /* Escala general más pequeña y más aire entre bloques (fundador,
+     2026-08-05: "haz todo más pequeño, con más aire"). El contenido encoge;
+     los paddings y los huecos NO bajan en la misma proporción, que es
+     justamente lo que produce el aire. */
+  .dm2-title { font-size: 22px; }
+  .dm2-head { margin-bottom: 20px; }
+  .dm2-hero { padding: 18px; border-radius: 16px; margin-bottom: 22px; }
+  .dm2-hero-top { gap: 13px; flex-wrap: wrap; }
+  .dm2-fav { width: 46px !important; height: 46px !important; border-radius: 13px !important; }
+  .dm2-name { font-size: 18px; }
+  .dm2-dom { font-size: 12px; overflow: visible; text-overflow: clip; }
+  .dm2-last { margin-top: 7px; font-size: 12px; }
+  /* Las píldoras bajan a su propia fila: compartiendo fila con la identidad le
+     robaban el ancho — el dominio salía «xataka.co…» y «Último escaneo» partía
+     en tres líneas (capturas del piloto a 375px). */
+  /* margin-right:0 — en desktop reserva hueco para .dom-delete-btn (esquina
+     superior derecha de .dm2-hero), pero aquí las píldoras ya bajan a su
+     propia fila a width:100%, así que ese margen las desbordaba 34px fuera
+     de la tarjeta cada vez que había un escaneo/auditoría en curso a esta
+     anchura (QA, DOMAINS-CLIENT-DELETE-1). */
+  .dm2-flags { flex-direction: row; order: 3; width: 100%; justify-content: flex-start; margin-top: 3px; margin-right: 0; }
+  .dm2-flag { font-size: 11.5px; padding: 6px 11px; }
+  .dm2-score { gap: 14px; margin: 20px 0 22px; }
+  .dm2-score-copy { font-size: 12.5px; min-width: 130px; }
+  .dm2-open { padding: 12px 16px; font-size: 14px; }
+  .dm2-grid { gap: 12px; }
+  .dm2-card { padding: 14px; }
+  .dm2-card-top { gap: 9px; }
+  .dm2-card .dm2-fav { width: 34px !important; height: 34px !important; border-radius: 10px !important; }
+  .dm2-card-name { font-size: 13px; }
+  .dm2-card-dom { font-size: 10.5px; }
+  .dm2-card-foot { margin-top: 16px; }
+  .dm2-card-score { font-size: 19px; }
+  .dm2-card-chip { font-size: 10px; padding: 4px 8px; }
+}
+
+/* ============================================================================
+   ONBOARDING-TOUR-1 — tour «Aprende cómo funciona»
+   (components/product-tour.tsx · docs/design-reference/onboarding-tour-1/)
+
+   Dos variantes de la MISMA pieza, intercambiadas por modificador:
+   `.ptour--hero`  → integrado en el hero de la landing, dentro de
+                     `.browserframe` (reutiliza el cromo ya aprobado, log §1).
+   `.ptour--modal` → popup de bienvenida en la consola.
+
+   Todo va prefijado `pt-` y anidado bajo `.ptour` a propósito: el prototipo
+   usaba nombres genéricos (.card, .badge, .nav, .dot, .chip, .field…) que ya
+   existen en este fichero y se pisarían en ambos sentidos.
+
+   La animación no vive aquí. Se deriva de un único reloj en JS y se escribe
+   por refs sobre el DOM; este bloque sólo define el aspecto y las
+   transiciones de estado. Ver el README de la referencia de diseño.
+   ============================================================================ */
+
+.ptour {
+  --pt-canvas: var(--canvas);
+  --pt-surface: var(--surface);
+  --pt-line: var(--line);
+  --pt-blue: var(--brand-blue);
+  --pt-blue-2: var(--brand-blue-2);
+  --pt-blue-soft: var(--brand-blue-soft);
+  --pt-warn-soft: #fff4e0;
+  --pt-warn-ink: #93610b;
+  color: var(--ink);
+  /* El hero de la landing centra su texto y el tour lo heredaba: el
+     mini-producto entero salía centrado, títulos de pantalla incluidos.
+     La consola no tiene ese problema, pero la regla vale para las dos. */
+  text-align: left;
+}
+
+/* --- Cabecera: título fijo, subtítulo que explica lo de abajo ------------- */
+.pt-head { padding: 13px 22px 0; }
+.pt-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--pt-blue); background: var(--pt-blue-soft);
+  padding: 3px 9px; border-radius: 999px; margin-bottom: 9px;
+}
+.pt-title {
+  font-size: 19px; font-weight: 800; letter-spacing: -.025em; margin: 0; color: var(--ink);
+  text-wrap: balance;
+}
+/* El subtítulo es la única línea que cambia entre pasos, y sus ocho textos
+   tienen longitudes muy distintas: si el contenedor creciera con cada uno, la
+   pieza daría un salto de altura al avanzar. Los ocho se apilan en la misma
+   celda de rejilla y sólo uno es visible, así que la altura del contenedor es
+   siempre la del más alto — sin medir nada en JS y correcto a cualquier ancho,
+   con cualquier tipografía y en cualquier idioma. */
+.pt-sub {
+  margin: 0; padding: 4px 22px 10px;
+  font-size: 13px; line-height: 1.45; color: var(--ink-3);
+  display: grid;
+}
+.pt-sub > span { grid-area: 1 / 1; }
+.pt-sub > span[aria-hidden="true"] { visibility: hidden; pointer-events: none; }
+.pt-sub b { color: var(--ink-2); font-weight: 700; }
+
+/* --- Lienzo -------------------------------------------------------------- */
+/* La proporción del lienzo es el grueso de la altura del tour: a 375 px se
+   llevaba 466 de 690 (fundador, 2026-08-07: «sobra mucho espacio arriba y
+   abajo... damos más visibilidad a los botones»). Se aprieta hasta donde el
+   contenido aguanta sin recortarse — comprobado en los ocho pasos y a
+   375/768/1280 px, que es la única forma de saberlo. */
+.pt-stage {
+  position: relative;
+  margin: 0 22px;
+  aspect-ratio: 2.3 / 1;
+  background: var(--pt-canvas);
+  border: 1px solid var(--pt-line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: flex;
+  user-select: none;
+}
+.ptour--hero .pt-stage { margin: 0; border: none; border-radius: 0; }
+
+.pt-side {
+  width: 23%; min-width: 118px; flex: 0 0 auto;
+  background: var(--pt-surface); border-right: 1px solid var(--pt-line);
+  padding: 8px 7px; display: flex; flex-direction: column; gap: 1px;
+}
+.pt-sbrand {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 6px 8px; font-size: 11px; font-weight: 800; letter-spacing: -.02em;
+}
+.pt-sdot {
+  width: 13px; height: 13px; border-radius: 4px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--pt-blue-2), var(--pt-blue));
+}
+.pt-slabel {
+  font-size: 8.5px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-4); padding: 6px 6px 3px;
+}
+.pt-nav {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; border-radius: var(--r-sm);
+  font-size: 10px; font-weight: 600; color: var(--ink-2);
+  transition: background .18s, color .18s;
+}
+.pt-nav i { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 3px; background: currentColor; opacity: .36; }
+.pt-nav.is-on { background: var(--pt-blue-soft); color: var(--pt-blue); font-weight: 750; }
+.pt-nav.is-on i { opacity: .85; }
+
+.pt-main { flex: 1 1 auto; position: relative; min-width: 0; }
+/* El contenido llena el lienzo: una tarjeta pequeña flotando en un lienzo
+   medio vacío se lee como una maqueta a medio hacer, no como una pantalla. */
+.pt-act {
+  position: absolute; inset: 0; padding: 11px 13px; opacity: 0;
+  transition: opacity .26s ease;
+  display: flex; flex-direction: column;
+}
+.pt-act.is-on { opacity: 1; }
+.pt-card { background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: var(--r-md); padding: 9px 10px; }
+.pt-card.pt-fill { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.pt-card.pt-fill.pt-center { justify-content: center; }
+.pt-recs.pt-fill { flex: 1 1 auto; justify-content: center; }
+.pt-genstack { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+.pt-h { font-size: 11.5px; font-weight: 800; letter-spacing: -.015em; color: var(--ink); margin: 0 0 1px; }
+.pt-hsub { font-size: 9.5px; color: var(--ink-4); margin: 0 0 9px; }
+
+.pt-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; }
+.pt-badge-pos { background: var(--pos-soft); color: var(--pos); }
+.pt-badge-mid { background: var(--pt-blue-soft); color: var(--pt-blue); }
+.pt-badge-warn { background: var(--pt-warn-soft); color: var(--pt-warn-ink); }
+
+/* ---------- Paso 1 — dominio, competidores y prompts ---------- */
+.pt-field {
+  height: 28px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  background: var(--pt-surface); display: flex; align-items: center; gap: 7px; padding: 0 10px;
+  font-size: 11px; color: var(--ink); transition: border-color .2s, box-shadow .2s;
+}
+.pt-field.is-focus { border-color: var(--pt-blue); box-shadow: 0 0 0 3px var(--pt-blue-soft); }
+.pt-fico { width: 11px; height: 11px; border-radius: 999px; border: 1.5px solid var(--ink-4); flex: 0 0 auto; }
+.pt-caret { display: inline-block; width: 1.5px; height: 12px; background: var(--pt-blue); vertical-align: -2px; }
+.pt-load {
+  display: flex; align-items: center; gap: 7px; margin-top: 8px;
+  font-size: 9.5px; font-weight: 650; color: var(--ink-3); transition: color .25s;
+}
+.pt-load.is-done { color: var(--pos); }
+.pt-load .pt-ok { display: none; }
+.pt-load.is-done .pt-ok { display: inline; }
+.pt-load.is-done .pt-spin { display: none; }
+
+/* Los prompts pesan más que los competidores: son la parte que el usuario no
+   sabe escribir y la que explica de dónde sale todo lo demás. */
+.pt-2col { display: grid; grid-template-columns: 0.78fr 1.22fr; gap: 8px; margin-top: 8px; flex: 1 1 auto; min-height: 0; align-items: start; }
+.pt-collabel { font-size: 8px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px; }
+.pt-chip {
+  font-size: 9px; font-weight: 650; padding: 2px 7px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--pt-line); color: var(--ink-3);
+  display: inline-block; margin: 0 3px 3px 0;
+}
+.pt-prompts {
+  background: var(--pt-blue-soft); border: 1px solid rgba(37, 99, 235, .20);
+  border-radius: var(--r-sm); padding: 6px 8px;
+}
+.pt-prompts .pt-collabel { color: var(--pt-blue); }
+.pt-pline {
+  font-size: 9.5px; font-weight: 600; color: var(--ink-2);
+  padding: 2px 0 2px 12px; position: relative;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pt-pline::before {
+  content: ""; position: absolute; left: 2px; top: 8px;
+  width: 4px; height: 4px; border-radius: 999px; background: var(--pt-blue);
+}
+.pt-pmore { font-size: 8.5px; font-weight: 650; color: var(--pt-blue); padding: 3px 0 0 12px; opacity: .85; }
+
+/* ---------- Paso 2 — escaneo ---------- */
+.pt-engines { display: flex; gap: 6px; }
+.pt-eng {
+  flex: 1; display: flex; align-items: center; gap: 5px; padding: 6px 7px;
+  border: 1px solid var(--pt-line); border-radius: var(--r-sm); background: var(--pt-surface);
+  font-size: 9.5px; font-weight: 700; color: var(--ink-2);
+  transition: border-color .25s, background .25s;
+}
+.pt-bulb { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 auto; }
+.pt-tick { margin-left: auto; color: var(--pos); opacity: 0; transition: opacity .25s; }
+.pt-eng.is-done { border-color: rgba(21, 145, 90, .35); background: rgba(21, 145, 90, .05); }
+.pt-eng.is-done .pt-tick { opacity: 1; }
+.pt-bar { height: 6px; border-radius: 999px; background: var(--pt-canvas); overflow: hidden; margin-top: 11px; }
+.pt-bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--pt-blue-2), var(--pt-blue)); }
+.pt-barcap { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--ink-4); margin-top: 5px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Pasos 3 y 8 — el gauge ---------- */
+.pt-hero { display: flex; gap: 13px; align-items: center; }
+.pt-gwrap { position: relative; flex: 0 0 auto; }
+.pt-gcenter { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.pt-gnum { font-size: 20px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.pt-gcap { font-size: 8.5px; color: var(--ink-4); font-weight: 650; margin-top: 2px; }
+.pt-compose { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pt-ctop { display: flex; justify-content: space-between; font-size: 9.5px; }
+.pt-cl { color: var(--ink-3); font-weight: 600; }
+.pt-cv { color: var(--ink); font-weight: 750; font-variant-numeric: tabular-nums; }
+.pt-sov { height: 5px; border-radius: 999px; background: var(--pt-canvas); overflow: hidden; margin-top: 3px; }
+.pt-sovfill { display: block; height: 100%; border-radius: 999px; }
+.pt-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 11px; }
+.pt-kpi { border: 1px solid var(--pt-line); border-radius: var(--r-sm); padding: 6px 8px; }
+.pt-kpil { font-size: 8px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); }
+.pt-kpiv { font-size: 15px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.pt-kpiv span { font-size: 10px; font-weight: 700; color: var(--ink-3); }
+
+/* ---------- Pasos 4 y 8 — la gráfica de tendencia ---------- */
+.pt-chartwrap { position: relative; }
+.pt-chartbox { flex: 1 1 auto; min-height: 64px; position: relative; }
+.pt-chartbox > svg { display: block; width: 100%; height: 100%; }
+.pt-chartfoot { display: flex; justify-content: space-between; font-size: 8.5px; color: var(--ink-4); margin-top: 4px; }
+.pt-charttip {
+  position: absolute; z-index: 6; background: var(--ink); color: #fff;
+  font-size: 9.5px; font-weight: 650; padding: 4px 8px; border-radius: 6px; white-space: nowrap;
+  transform: translate(-50%, -150%); pointer-events: none;
+  opacity: 0; transition: opacity .2s;
+}
+.pt-charttip.is-on { opacity: 1; }
+.pt-trendhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.pt-trendv { font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.pt-trendv span { font-size: 11px; font-weight: 700; color: var(--ink-4); margin-left: 2px; }
+.pt-trendl { font-size: 8.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
+.pt-deltarow { display: flex; align-items: center; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
+
+/* ---------- Pasos 5 y 6 — recomendaciones ---------- */
+.pt-recs { display: flex; flex-direction: column; gap: 6px; }
+.pt-rec {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: var(--r-md);
+  padding: 7px 9px;
+  transition: transform .35s cubic-bezier(.2, .8, .3, 1), box-shadow .35s, opacity .35s, border-color .35s;
+}
+.pt-rec.is-focus { transform: scale(1.025); border-color: rgba(37, 99, 235, .42); box-shadow: 0 6px 20px rgba(37, 99, 235, .14); }
+.pt-rec.is-dim { opacity: .38; transform: scale(.985); }
+.pt-recpri {
+  width: 22px; height: 22px; flex: 0 0 auto; border-radius: 6px;
+  display: grid; place-items: center; font-size: 10px; font-weight: 800;
+  background: var(--pt-blue-soft); color: var(--pt-blue);
+}
+.pt-recbody { flex: 1 1 auto; min-width: 0; }
+.pt-rect { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.pt-recd { display: block; font-size: 9px; color: var(--ink-4); margin-top: 1px; }
+.pt-recd b { color: var(--pt-blue); font-weight: 750; }
+.pt-reccta {
+  margin-left: auto; flex: 0 0 auto;
+  font-size: 9.5px; font-weight: 700; color: #fff; background: var(--pt-blue);
+  border: 1px solid var(--pt-blue); border-radius: 999px; padding: 4px 11px;
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: transform .16s, background .2s, color .2s, border-color .2s;
+}
+.pt-reccta.pt-ghost { background: var(--pt-surface); color: var(--pt-blue); }
+.pt-reccta.is-press { transform: scale(.94); }
+.pt-reccta.is-busy { background: var(--pt-surface); color: var(--ink-4); border-color: var(--line-strong); }
+.pt-spin {
+  width: 9px; height: 9px; border-radius: 999px; flex: 0 0 auto; display: inline-block;
+  border: 1.5px solid var(--line-strong); border-right-color: var(--pt-blue);
+  animation: ptSpin .8s linear infinite;
+}
+@keyframes ptSpin { to { transform: rotate(360deg); } }
+
+.pt-gen { margin-top: 8px; border: 1px solid var(--pt-line); border-radius: var(--r-md); background: var(--pt-surface); overflow: hidden; }
+.pt-genhead {
+  display: flex; align-items: center; gap: 7px; padding: 5px 9px;
+  border-bottom: 1px solid var(--line-soft); background: var(--surface-2);
+  font-size: 8.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4);
+}
+.pt-genbody { padding: 7px 9px; display: flex; flex-direction: column; gap: 5px; transition: filter .3s; }
+.pt-qaq { font-size: 9.5px; font-weight: 750; color: var(--ink); }
+.pt-qaa { font-size: 9px; color: var(--ink-3); line-height: 1.4; }
+.pt-genfoot { display: flex; align-items: center; gap: 6px; padding: 0 9px 7px; }
+.pt-minibtn {
+  font-size: 9.5px; font-weight: 700; border-radius: 999px; padding: 4px 10px;
+  border: 1px solid var(--line-strong); background: var(--pt-surface); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: transform .16s, background .2s, color .2s, border-color .2s;
+}
+.pt-minibtn.pt-primary { background: var(--pt-blue); border-color: var(--pt-blue); color: #fff; }
+.pt-minibtn.is-press { transform: scale(.94); }
+.pt-minibtn.is-done { background: var(--pos-soft); border-color: transparent; color: var(--pos); }
+
+/* ---------- Paso 7 — auditoría técnica ---------- */
+.pt-audittop { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
+.pt-auditlist { display: flex; flex-direction: column; gap: 5px; }
+.pt-auditrow {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--pt-line); border-radius: var(--r-sm); padding: 5px 8px;
+  background: var(--pt-surface); transition: border-color .3s, box-shadow .3s;
+}
+.pt-auditrow.is-focus { border-color: rgba(255, 176, 32, .55); box-shadow: 0 4px 14px rgba(255, 176, 32, .16); }
+.pt-auditico {
+  width: 16px; height: 16px; flex: 0 0 auto; border-radius: 5px;
+  display: grid; place-items: center; font-size: 9px; font-weight: 800;
+  background: var(--pt-warn-soft); color: var(--pt-warn-ink);
+}
+.pt-auditbody { flex: 1 1 auto; min-width: 0; }
+.pt-auditt { display: block; font-size: 9.5px; font-weight: 700; color: var(--ink); }
+.pt-auditd { display: block; font-size: 8.5px; color: var(--ink-4); }
+.pt-auditpt { margin-left: auto; flex: 0 0 auto; font-size: 9.5px; font-weight: 800; color: var(--pos); font-variant-numeric: tabular-nums; }
+
+/* --- Cursor -------------------------------------------------------------- */
+.pt-cursor {
+  position: absolute; z-index: 20; width: 20px; height: 20px;
+  margin: -2px 0 0 -2px; pointer-events: none;
+  filter: drop-shadow(0 3px 6px rgba(16, 24, 40, .32));
+  will-change: transform;
+}
+.pt-ripple {
+  position: absolute; z-index: 19; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px;
+  border-radius: 999px; border: 2px solid var(--pt-blue); opacity: 0; pointer-events: none;
+}
+.pt-ripple.is-go { animation: ptRipple .45s cubic-bezier(.2, .8, .3, 1); }
+@keyframes ptRipple {
+  from { opacity: .9; transform: scale(.35); }
+  to { opacity: 0; transform: scale(2.4); }
+}
+
+/* --- Pie: puntos + ¿Qué es el GEO? + Atrás / Siguiente ------------------- */
+.pt-foot {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 22px 12px; margin-top: 8px; border-top: 1px solid var(--line-soft);
+}
+.ptour--hero .pt-foot { border-top: none; margin-top: 9px; }
+.pt-dots { display: flex; gap: 5px; }
+.pt-dot {
+  width: 15px; height: 4px; border-radius: 999px; background: var(--line-strong);
+  border: none; padding: 0; cursor: pointer; transition: background .2s, width .25s;
+}
+.pt-dot:hover { background: var(--ink-4); }
+.pt-dot.is-on { background: var(--pt-blue); width: 24px; }
+.pt-dot:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 3px; }
+.pt-sp { margin-left: auto; }
+.pt-lnk {
+  background: none; border: none; font: inherit; font-size: 12.5px; font-weight: 650;
+  color: var(--ink-4); cursor: pointer; padding: 7px 4px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.pt-lnk:hover { color: var(--ink-2); }
+.pt-btn {
+  height: 32px; padding: 0 14px; border-radius: var(--r-sm); font: inherit;
+  font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--line-strong); background: var(--pt-surface); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.pt-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.pt-btn:disabled { opacity: .4; cursor: default; }
+.pt-btn.pt-primary { background: var(--pt-blue); border-color: var(--pt-blue); color: #fff; }
+.pt-btn.pt-primary:hover { background: #1d4fd0; color: #fff; }
+.pt-arrow { display: inline-block; }
+
+/* Pista del paso 1 (fundador, 2026-08-07; log §33).
+   El halo trae la mirada desde el lienzo que acaba de pararse; la flecha dice
+   hacia dónde. En bucle hasta que se pulsa el botón, no un número fijo de
+   ciclos (fundador, 2026-08-07): la pista existe para conseguir ese clic, así
+   que mientras no llegue no ha terminado su trabajo. Ni el ratón por encima ni
+   el foco la apagan — sólo el clic. */
+.pt-btn.pt-primary.pt-hint { animation: ptHintHalo 1.6s ease-out infinite; }
+.pt-btn.pt-primary.pt-hint .pt-arrow { animation: ptHintArrow 1.6s ease-in-out infinite; }
+
+@keyframes ptHintHalo {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, .45); }
+  70%  { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+@keyframes ptHintArrow {
+  0%, 60%, 100% { transform: translateX(0); }
+  30%           { transform: translateX(5px); }
+}
+
+/* Con el movimiento desactivado el tour entero se queda quieto — es el
+   contrato, no una degradación —, así que la pista no puede depender de
+   moverse. El anillo estático dice lo mismo: éste es el siguiente paso. */
+@media (prefers-reduced-motion: reduce) {
+  .pt-btn.pt-primary.pt-hint,
+  .pt-btn.pt-primary.pt-hint .pt-arrow { animation: none; }
+  .pt-btn.pt-primary.pt-hint { box-shadow: 0 0 0 3px var(--pt-blue-soft); }
+}
+.pt-lnk:focus-visible, .pt-btn:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 2px; border-radius: 6px; }
+
+/* --- Variante hero: dentro del .browserframe de la landing --------------- */
+/* El tour está dibujado a una densidad fija, pensada para un lienzo de ~715px
+   (el ancho del popup). El `.lp-shot` de la landing mide 1060px, y a ese ancho
+   el mini-producto se ve diminuto y flotando en su tarjeta. Se acota el marco
+   en vez de reescalar cuarenta tamaños de letra: mantiene la densidad exacta
+   del diseño aprobado y sigue leyéndose como un hero. */
+.ptour--hero .pt-frame { max-width: 860px; margin-inline: auto; }
+.ptour--hero .pt-head { display: none; }
+.ptour--hero .pt-sub {
+  text-align: center; max-width: 62ch; margin: 0 auto; padding: 0 22px 14px;
+  font-size: 14px;
+}
+
+/* --- Variante popup: el modal de la consola ------------------------------ */
+.ptour-scrim {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(15, 23, 41, .58);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px 16px; overflow-y: auto;
+  animation: ptScrimIn .2s ease;
+}
+@keyframes ptScrimIn { from { opacity: 0; } to { opacity: 1; } }
+.ptour--modal {
+  width: 100%; max-width: 760px; margin: auto;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-xl); box-shadow: var(--sh-pop);
+  overflow: hidden; position: relative;
+  animation: ptModalIn .26s cubic-bezier(.2, .8, .3, 1);
+}
+@keyframes ptModalIn {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+.pt-close {
+  position: absolute; top: 12px; right: 12px; z-index: 5;
+  width: 30px; height: 30px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-3);
+  display: grid; place-items: center; cursor: pointer;
+}
+.pt-close:hover { background: var(--surface-2); color: var(--ink); }
+.pt-close:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .pt-head { padding: 14px 14px 0; }
+  .pt-sub { padding: 6px 14px 10px; }
+  .ptour--hero .pt-sub { padding: 0 14px 12px; }
+  .pt-stage { margin: 0 14px; }
+  .pt-foot { padding: 12px 14px 14px; }
+  .pt-title { font-size: 17px; }
+  .ptour-scrim { padding: 10px 8px; }
+}
+
+/* Por debajo de 560px el mini-menú no cabe: encogerlo deja el contenido
+   ilegible. Se retira y el lienzo se hace más alto — que es además la forma
+   real de la consola en móvil, donde el sidebar vive en un cajón. El cursor
+   deja de señalar el menú y señala el título de cada pantalla. */
+@media (max-width: 560px) {
+  /* El marco iba a sangre mientras el párrafo del hero respira 24 px a cada
+     lado, así que el tour parecía «pegado» a los bordes (fundador, 2026-08-07:
+     «un pelín más estrecho... alineado con el párrafo de texto»). Se alinea con
+     `.lp-lead`, que es el texto justo encima. */
+  .lp-shot { padding-inline: 24px; }
+
+  .pt-side { display: none; }
+  .pt-stage { aspect-ratio: 1 / 1; }
+  .pt-2col { grid-template-columns: 1fr; gap: 6px; }
+  .pt-hero { flex-direction: column; align-items: stretch; gap: 9px; }
+  .pt-gwrap { align-self: center; }
+  .pt-kpis { display: none; }
+  .pt-engines { flex-wrap: wrap; }
+  .pt-eng { flex: 1 1 44%; }
+  .pt-audittop { justify-content: center; }
+  /* Puntos + enlace + Atrás + Siguiente en una fila desbordaban el viewport
+     (medido a 375px). Los puntos bajan a su propia línea. */
+  .pt-foot { flex-wrap: wrap; justify-content: flex-end; }
+  .pt-sp { display: none; }
+  .pt-dots { order: 3; width: 100%; justify-content: center; margin-top: 8px; }
+  .pt-btn { padding: 0 12px; }
+  /* Con los puntos en su propia línea, el enlace se va al extremo izquierdo de
+     la fila de botones — que es donde el fundador lo marcó. */
+  .pt-lnk { font-size: 12px; padding: 7px 0; margin-right: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-spin { animation: none; }
+  .pt-ripple.is-go { animation: none; }
+  .pt-rec, .pt-auditrow { transition: none; }
+  .ptour-scrim, .ptour--modal { animation: none; }
+}
+
+/* ============================================================================
+   NOT-FOUND-ROCKET-1 — la 404 pública, «Fuera de trayectoria».
+   Diseño aprobado: docs/design-reference/not-found-rocket-1/
+
+   Todo va prefijado `nf-` y anidado bajo `.nf-page`: el diseño usa nombres que
+   en este fichero ya significan otra cosa (`stage`, `copy`, `rail`, `title`) y
+   se pisarían en ambos sentidos. Mismo motivo por el que el tour usa `pt-`.
+   ========================================================================== */
+
+/* Sólo la ventana de la misión es oscura; la página sigue siendo blanca, que
+   es lo que deja el pie con su fondo y su tinta de siempre. Pintar `.nf-page`
+   de oscuro dejaba el pie con texto en tinta sobre fondo oscuro, ilegible
+   (fundador, 2026-08-12). */
+.nf-page { background: #fff; }
+
+/* La ventana: nav + escena, sin el pie. Con el pie dentro, la escena perdía
+   los ~200px que mide y dejaba de ocupar la pantalla. */
+.nf-viewport { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+
+/* Desde HEADER-FLAT-1 la nav del sitio es transparente en toda la zona
+   pública. Sobre el cuerpo oscuro de la 404 eso deja ver el oscuro por
+   detrás, así que aquí —y sólo aquí— es opaca. Gana por especificidad:
+   `.nf-page .lp-nav-wrap` es (0,2,0) contra el (0,1,0) de `.lp-nav-wrap`. */
+.nf-page .lp-nav-wrap { background: #fff; backdrop-filter: none; border-bottom-color: var(--line-soft); }
+
+.nf-stage {
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: flex-start; background: #081223;
+}
+.nf-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.nf-glow {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(58% 50% at 74% 26%, rgba(37,99,235,.34), transparent 64%),
+    radial-gradient(70% 40% at 30% 98%, rgba(9,197,214,.12), transparent 62%);
+}
+.nf-veil {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to right,
+    #081223 6%, rgba(8,18,35,.9) 32%, rgba(8,18,35,.34) 56%, rgba(8,18,35,0) 76%);
+}
+
+.nf-copy {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start;
+  text-align: left; max-width: min(52%, 33rem); padding: 0 24px 0 clamp(26px, 5vw, 74px);
+}
+.nf-kicker {
+  display: inline-flex; align-items: center; gap: 9px; margin: 0 0 14px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: #8fb8ff;
+}
+.nf-kicker i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--brand-cyan);
+  box-shadow: 0 0 0 0 rgba(9,197,214,.6); animation: nf-pulse 2.6s ease-out infinite;
+}
+@keyframes nf-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(9,197,214,.55); }
+  70%, 100% { box-shadow: 0 0 0 9px rgba(9,197,214,0); }
+}
+.nf-title {
+  font-family: var(--font-display), system-ui, sans-serif; font-weight: 800;
+  letter-spacing: -.035em; line-height: 1.02; margin: 0 0 14px; color: #fff;
+  font-size: clamp(30px, 4.4vw, 52px); text-wrap: balance;
+}
+.nf-sub { margin: 0 0 24px; color: #c3d2ec; font-size: clamp(14.5px, 1.4vw, 17px); max-width: 46ch; line-height: 1.55; }
+
+.nf-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.nf-btn {
+  font-weight: 650; font-size: 14.5px; padding: 12px 22px; border-radius: 11px;
+  transition: transform .15s ease, background .15s ease;
+}
+.nf-btn-solid { background: var(--brand-blue); color: #fff; box-shadow: 0 14px 34px -14px rgba(37,99,235,.95); }
+.nf-btn-solid:hover { background: #3b74f2; transform: translateY(-1px); }
+.nf-btn-ghost { border: 1px solid rgba(160,190,255,.36); color: #dbe6fb; }
+.nf-btn-ghost:hover { background: rgba(146,178,255,.12); }
+
+.nf-rail { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; font-size: 13.5px; color: #8ba2c6; }
+.nf-rail span {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+}
+.nf-rail a { color: #cfdcf7; border-bottom: 1px solid rgba(146,178,255,.32); padding-bottom: 1px; }
+.nf-rail a:hover { color: #fff; border-bottom-color: #7fe3ec; }
+
+.nf-target-label { font-family: var(--font-mono), ui-monospace, monospace; font-size: 14px; letter-spacing: .16em; }
+
+/* Movimiento. Todo CSS y todo ambiente: nada de esto codifica un dato, al
+   revés que la altitud del cohete en el primer escaneo. */
+@keyframes nf-drift { to { transform: translateX(-1200px); } }
+.nf-stars-near { animation: nf-drift 96s linear infinite; }
+.nf-stars-far { animation: nf-drift 168s linear infinite; }
+@keyframes nf-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+.nf-flight { animation: nf-bob 7.5s ease-in-out infinite; }
+@keyframes nf-blip { 0%, 72%, 100% { opacity: 0; } 80%, 88% { opacity: .95; } }
+.nf-thrust { animation: nf-blip 4.4s ease-in-out infinite; }
+.nf-thrust.t2 { animation-delay: -2.2s; }
+@keyframes nf-march { to { stroke-dashoffset: -52; } }
+.nf-live { animation: nf-march 1.9s linear infinite; }
+@keyframes nf-fade { 0%, 100% { opacity: .34; } 50% { opacity: .74; } }
+.nf-lost { animation: nf-fade 3.4s ease-in-out infinite; }
+@keyframes nf-target { 0%, 100% { opacity: .28; } 50% { opacity: .9; } }
+.nf-target { animation: nf-target 3s ease-in-out infinite; }
+
+/* Tablet: el reparto pasa a ser vertical, pero cabe más escena que en un
+   móvil, así que la misión se recoloca menos. */
+@media (max-width: 900px) {
+  .nf-stage { align-items: flex-end; justify-content: center; }
+  .nf-veil {
+    background: linear-gradient(to top,
+      #081223 5%, rgba(8,18,35,.95) 30%, rgba(8,18,35,.42) 56%, rgba(8,18,35,0) 78%);
+  }
+  .nf-mission { transform-origin: 830px 400px; transform: translate(-215px, -110px) scale(.86); }
+  .nf-copy {
+    max-width: none; align-items: center; text-align: center;
+    padding: 0 24px clamp(24px, 4vw, 44px);
+  }
+  .nf-cta, .nf-rail { justify-content: center; }
+  .nf-title { font-size: clamp(30px, 5vw, 42px); }
+}
+
+/* Móvil: el copy ocupa casi la mitad del alto y el recorte de `slice` pasa a
+   ser lateral, así que la misión se encoge, sube y se centra — y los dos
+   tramos bajos de la estela desaparecen porque cruzaban el titular. */
+@media (max-width: 640px) {
+  .nf-mission { transform: translate(-240px, -197px) scale(.74); }
+  /* Sólo desaparece el tramo de más abajo. Ocultando también el de en medio,
+     lo que quedaba era un fragmento corto y desconectado flotando bajo el
+     cohete; con el tramo medio, la estela vuelve a leerse como una sola
+     trayectoria y su extremo se disuelve bajo el velo. */
+  .nf-live.lo { display: none; }
+  .nf-copy { padding: 0 20px 26px; }
+  .nf-kicker { font-size: 10.5px; letter-spacing: .1em; }
+  .nf-title { font-size: clamp(29px, 8vw, 36px); }
+  .nf-sub { font-size: 15px; margin-bottom: 20px; }
+  .nf-cta { margin-bottom: 18px; }
+  .nf-btn { flex: 1 1 130px; text-align: center; padding: 12px 16px; }
+}
+
+/* Igual que el tour: no es una degradación, es el contrato. La escena queda
+   quieta en un fotograma legible — el cohete en ruta, la estela cortada y el
+   destino marcado siguen contando lo mismo sin moverse. */
+@media (prefers-reduced-motion: reduce) {
+  .nf-stars-near, .nf-stars-far, .nf-flight, .nf-thrust,
+  .nf-live, .nf-lost, .nf-target, .nf-kicker i { animation: none; }
+  .nf-thrust { opacity: .95; }
+  .nf-btn { transition: none; }
+}
+
+/* ============================================================================
+   NOT-FOUND-ROCKET-1 — el 404 de dentro de la consola.
+
+   Sobrio, no descuidado: la primera versión reutilizaba `EmptyState`, cuyo
+   borde discontinuo es el lenguaje de "contenido que todavía no está", y con
+   un botón suelto debajo leía como una maqueta a medias (fundador,
+   2026-08-13). Sin caja a propósito — en una pantalla por lo demás vacía, una
+   caja alrededor de un mensaje corto es lo que lo hace parecer un widget roto.
+   ========================================================================== */
+
+.nfc {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  /* Centrado en lo que queda de pantalla bajo la cabecera de la consola, no
+     pegado arriba: es una pantalla sin contenido, y el vacío se reparte. */
+  min-height: min(560px, 68vh); justify-content: center;
+  max-width: 30rem; margin: 0 auto; padding: 24px 20px;
+}
+
+.nfc-glyph {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px;
+  background: var(--accent-soft); color: var(--accent-ink); margin-bottom: 18px;
+}
+
+.nfc-kicker {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-4); margin: 0 0 8px;
+}
+
+.nfc-title {
+  font-family: var(--font-display), system-ui, sans-serif; font-weight: 700;
+  letter-spacing: -.025em; font-size: 26px; line-height: 1.15; color: var(--ink);
+  margin: 0 0 10px; text-wrap: balance;
+}
+
+.nfc-sub {
+  margin: 0 0 26px; color: var(--ink-3); font-size: 14.5px; line-height: 1.6;
+  max-width: 42ch;
+}
+
+.nfc-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+@media (max-width: 560px) {
+  .nfc { min-height: 62vh; padding: 20px 16px; }
+  .nfc-title { font-size: 23px; }
+  .nfc-actions { width: 100%; }
+  .nfc-actions .btn { flex: 1 1 100%; }
+}
+
 
 /* ============================================================
    Recomendaciones — v3 restyle (RECS-REDESIGN-1)

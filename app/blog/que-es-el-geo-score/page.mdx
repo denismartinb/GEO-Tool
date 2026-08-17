@@ -3,86 +3,129 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
-import { GeoScoreBreakdown } from "@/components/blog/geo-score-breakdown";
-import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  CompareTable,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  ProductMock,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("que-es-el-geo-score");
 
-export const metadata = {
-  title: `${getSeoTitle(post)} — Genscore`,
-  description: getMetaDescription(post),
-  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
-};
+export const metadata = blogPostMetadata(post);
 
-<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} />
+export const mockRows = [
+  { label: "Presencia", hint: "¿La IA nombra tu marca?", value: 78, weight: 32, tone: "blue" },
+  { label: "Prominencia", hint: "¿Apareces primero o de pasada?", value: 61, weight: 20, tone: "blue2" },
+  { label: "Posición competitiva", hint: "¿Cómo te va frente al conjunto?", value: 66, weight: 16, tone: "cyan" },
+  { label: "Autoridad", hint: "¿La IA cita tu web como fuente?", value: 44, weight: 12, tone: "warm" },
+  { label: "Preparación técnica", hint: "¿Puede un motor leer tu web?", value: 70, weight: 20, tone: "cyan" }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
 
 <BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
 
 <BlogPageShell>
 
-<BlogCover icon={post.coverIcon} compact />
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
 
 # {post.title}
 
-<p className="blog-post-meta">12 de julio de 2026</p>
+<PostMeta post={post} />
 
 <div className="blog-body">
 
+<KeyTakeaway>
+
+El GEO Score es la puntuación de 0 a 100 con la que GenScore resume **cómo de bien te está yendo en las respuestas de IA**: si te nombran, con qué protagonismo, cómo sales frente a tu competencia, si hay una fuente real detrás y si tu web puede ser citada. No es un porcentaje de menciones — es un diagnóstico, no un contador.
+
+</KeyTakeaway>
+
 ## Por qué "¿me menciona la IA?" no es suficiente
 
-La primera pregunta que se hace cualquiera al empezar con GEO
-(Generative Engine Optimization) es simple: *¿aparece mi marca cuando alguien
-le pregunta a ChatGPT, Gemini o Claude sobre mi categoría?* Es una pregunta
-binaria — sí o no — y responde a lo que en GenScore llamamos **presencia**.
+La primera pregunta que se hace cualquiera al empezar con <a href="/glosario/geo">GEO</a> es simple: *¿aparece mi marca cuando alguien le pregunta a ChatGPT, Gemini o Claude sobre mi categoría?* Es una pregunta binaria — sí o no — y responde a lo que en GenScore llamamos **presencia**.
 
-Pero un analista de visibilidad de marca nunca se conforma con un sí o un no.
-Las siguientes preguntas que hace son: *¿en qué posición aparece respecto a
-mis competidores? ¿cómo salgo parado frente a ellos en conjunto? ¿esa mención
-está respaldada por una cita o fuente real, o es solo una opinión genérica
-del modelo?* El GEO Score de GenScore existe para responder a las cuatro a
-la vez, en un solo número de 0 a 100.
+Pero un analista de visibilidad de marca nunca se conforma con un sí o un no. Las siguientes preguntas que hace son: *¿en qué posición aparece respecto a mis competidores? ¿cómo salgo parado frente a ellos en conjunto? ¿esa mención está respaldada por una cita real, o es solo una opinión genérica del modelo? ¿y puede siquiera un motor leer mi web para extraer algo de ella?* El GEO Score existe para responder a todas a la vez, en un solo número.
 
-## Los cuatro componentes
+<Figure
+  label="Figura 1."
+  caption="El panel del GEO Score, tal y como lo ves en tu Visión general. Datos de ejemplo; la estructura y las etiquetas son las reales del producto."
+>
+  <ProductMock score={67} rows={mockRows} />
+</Figure>
 
-El GEO Score es una media ponderada de cuatro señales, cada una normalizada
-a una escala de 0 a 100 donde más alto es siempre mejor:
+Fíjate en algo de la figura: **el número de arriba no es ninguna de las señales de abajo**. Por eso una marca puede tener una presencia alta y aun así un GEO Score mediocre — si nadie la cita, esa presencia no está respaldada por nada.
 
-| Componente | De dónde sale | Peso | Qué mide |
-|---|---|---|---|
-| **Presencia** | Tasa de mención (% de prompts donde aparece tu marca) | 40% | Lo más fundamental: si la marca nunca aparece, el resto no importa |
-| **Prominencia** | Posición media de tu marca frente a competidores | 25% | No solo si apareces, sino si apareces primero o como una idea tardía |
-| **Posición competitiva** | Presión competitiva general del run | 20% | Cómo te va frente a la competencia en conjunto, no solo prompt a prompt |
-| **Autoridad** | Tasa de citación de tu propio dominio | 15% | Si esa presencia está respaldada por una fuente real, no solo por una opinión del modelo |
+## No todas las señales pesan lo mismo
 
-<GeoScoreBreakdown />
+No entran en el número a partes iguales, y el criterio no es arbitrario: refleja cómo razona un analista real — primero "¿estamos en la conversación?", después "¿con qué protagonismo?", después "¿cómo estamos en conjunto frente a la competencia?", y por último "¿hay evidencia real detrás?". Estar presente es lo que más manda, porque sin mención no hay nada que interpretar.
 
-El orden de los pesos no es arbitrario: refleja cómo razona un analista real
-— primero "¿estamos en la conversación?", después "¿con qué protagonismo?",
-después "¿cómo estamos en conjunto frente a la competencia?", y por último
-"¿hay evidencia real detrás?".
+<StatGrid label="Dónde se mide tu GEO Score">
+  <Stat value="0-100" label="La escala del resultado, no un porcentaje de menciones" source="GenScore" tone="blue" />
+  <Stat value="3" label="Motores en los que se mide: ChatGPT, Gemini y Claude" source="GenScore · planes y límites" tone="cyan" />
+  <Stat value="A diario" label="Con qué frecuencia se vuelve a medir en los planes de pago" source="GenScore · planes y límites" tone="warm" />
+</StatGrid>
+
+La **preparación técnica** entró más tarde que las demás y es distinta en dos sentidos. Va dentro del número y no al lado porque es una condición: una web que los motores no pueden leer limpiamente no puede beneficiarse de ninguna otra mejora GEO. Y es la única que no depende de lo que conteste un modelo — se comprueba sobre tu propia web, así que el mismo sitio da siempre el mismo resultado. Eso es lo que la hace la palanca por la que conviene empezar: es la parte que controlas tú entera.
+
+## Qué mira, en detalle
+
+<CompareTable>
+
+| Componente | De dónde sale | Qué mide |
+|---|---|---|
+| **Presencia** | Tasa de mención: en qué parte de las respuestas apareces | Lo más fundamental: si la marca nunca aparece, el resto no importa |
+| **Prominencia** | Posición media frente a competidores | No solo si apareces, sino si apareces primero o como una idea tardía |
+| **Posición competitiva** | Presión competitiva general del escaneo | Cómo te va frente a la competencia en conjunto, no solo prompt a prompt |
+| **Autoridad** | Tasa de citación de tu propio dominio | Si esa presencia está respaldada por una fuente real, no solo por una opinión del modelo |
+| **Preparación técnica** | Auditoría de tu web, sin LLM de por medio | Si un motor puede leer tu página, extraer una respuesta de ella y atribuírtela |
+
+</CompareTable>
+
+Puedes profundizar en cada una en el <a href="/glosario">glosario</a>. El criterio completo con el que se leen —y la referencia que manda si algo aquí se queda atrás— está en la <a href="/docs/metodologia/geo-score">metodología del GEO Score</a>.
 
 ## Qué pasa cuando falta un dato
 
-No todos los escaneos tienen los cuatro componentes disponibles — por
-ejemplo, la prominencia solo se puede calcular cuando hay datos de posición
-válidos para ese prompt. Cuando un componente no está disponible, GenScore
-no le pone un cero (eso penalizaría injustamente sin motivo): lo **descarta**
-del cálculo y reparte su peso proporcionalmente entre los demás. Si eso
-ocurre, la confianza del resultado se marca como media en vez de alta, para
-dejar claro que el número se apoya en menos señales de lo habitual.
+No todos los escaneos permiten medirlo todo — la prominencia, por ejemplo, solo existe cuando hay menciones que ordenar. Cuando una señal no se puede medir, GenScore **no le pone un cero**: eso penalizaría injustamente sin motivo. La deja fuera y lo dice.
+
+Si eso ocurre, la confianza declarada del resultado baja, para dejar claro que el número se apoya en menos señales de lo habitual. Es la diferencia entre "no lo sabemos" y "es cero", y confundirlas es una de las formas más fáciles de mentir con una métrica.
+
+## Cómo leer tu número sin engañarte
+
+<Checklist
+  tone="evitar"
+  items={[
+    "No lo leas como un porcentaje de menciones: un 72 no significa que aparezcas en el 72% de las respuestas.",
+    "No compares tu número con el de otra marca de otro sector: los prompts y los competidores son distintos, así que no miden lo mismo.",
+    "No saques conclusiones de un único escaneo. Las respuestas generativas varían entre ejecuciones; lo que importa es la tendencia.",
+    "No persigas el número por el número: sube porque mejoran las señales de debajo, nunca al revés."
+  ]}
+/>
 
 ## Por qué esto importa
 
-Un GEO Score de 72 no significa "te mencionan en el 72% de las respuestas".
-Significa: *combinando cuánto apareces, con qué protagonismo, cómo estás
-frente a tus competidores y si hay una fuente real detrás, tu marca saca un
-72 sobre 100*. Es la diferencia entre un contador y un diagnóstico.
+Un GEO Score de 72 significa: *mirando a la vez cuánto apareces, con qué protagonismo, cómo estás frente a tus competidores, si hay una fuente real detrás y si tu web es legible para un motor, tu marca saca un 72 sobre 100*. Es la diferencia entre un contador y un diagnóstico — y, sobre todo, te dice **qué palanca tocar primero**.
 
-<div className="blog-cta">
-<p>¿Quieres ver el GEO Score real de tu marca?</p>
-<a href="/signup" className="btn btn-primary">Prueba gratis</a>
-</div>
+Si quieres el detalle de cada señal por separado —qué mide, cuántas respuestas hacen falta para que signifique algo y cuáles de las métricas que circulan por ahí engañan—, lo tienes en <a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>.
 
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Quieres ver el GEO Score real de tu marca?"
+  text="Mídelo en minutos con escaneos reales. Gratis, sin tarjeta."
+/>
 
 <RelatedPosts cluster="medicion" currentSlug={post.slug} />
 

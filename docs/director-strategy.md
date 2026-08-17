@@ -674,8 +674,11 @@ adding granular per-asset types would be a schema migration (separate approval).
 
 Claude QA is run by the `qa` specialist subagent (`.claude/agents/qa.md`),
 invoked by the Director from the main session. **GitHub Actions and the
-Anthropic API key are NOT used for QA.** The `scripts/run-claude-qa.py` script
-and `.github/workflows/claude-qa.yml` are superseded.
+Anthropic API key are NOT used for QA.** `scripts/run-claude-qa.py` and
+`.github/workflows/claude-qa.yml` were **deleted** in PRELAUNCH-HARDENING-1
+Fase 0 (2026-08-09) after months of being declared superseded here and in
+CLAUDE.md while still armed. The QA *handoff* (`claude-qa-handoff.yml` and the
+two `*-claude-qa-handoff.sh` scripts) is unaffected and still required.
 
 ---
 

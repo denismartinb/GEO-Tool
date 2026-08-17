@@ -54,7 +54,6 @@ type Progress = { covered: number; total: number } | null;
 interface WebAuditRunnerState {
   isPending: boolean;
   error: string | null;
-  notice: string | null;
   progress: Progress;
   drive: () => void;
 }
@@ -62,22 +61,42 @@ interface WebAuditRunnerState {
 const WebAuditRunnerContext = createContext<WebAuditRunnerState | null>(null);
 
 /**
- * Shared driver for the coverage-audit campaign, scoped to one web-audit
- * page render. The trigger button appears in two places (sticky header, and
- * the empty-state card) — before this Provider, each was its own component
- * instance with independent useState, so clicking one left the other frozen
- * on "Auditar ahora" while a campaign was visibly running (founder report:
- * top button didn't show loading when the card button was clicked). Lifting
- * the drive loop here means every consumer reads/drives the same state.
+ * Drives an unfinished coverage campaign to completion when the page mounts.
+ *
+ * **It has no consumers, and that is not an oversight.** This began as shared
+ * state for the two "Auditar ahora" buttons (each had its own useState, so
+ * clicking one left the other frozen mid-campaign). Both buttons are gone —
+ * AUDIT-NO-BUTTON-1 — and so is the status pill that briefly replaced them,
+ * so nothing reads `isPending` / `progress` / `error` today.
+ *
+ * What survives is the effect at the bottom: a campaign parked mid-flight
+ * finishes when someone opens the page, instead of waiting for the queue's
+ * next turn. It costs no extra Gemini (it is the same work the backend would
+ * do) and it is what let the screen self-heal on 2026-08-04 while the queue
+ * was draining slowly.
+ *
+ * So: **do not delete this because it looks unused.** The in-flight state is
+ * genuinely dead weight and could be trimmed; the mount effect is load-bearing
+ * and invisible on purpose — the sticky header renders its own "Auditando"
+ * pill from server data while it runs.
  */
 export function WebAuditProvider({
   projectId,
   autoStart,
-  canAudit,
+  canAudit: canAuditCoverage,
   children
 }: {
   projectId: string;
   autoStart?: Progress;
+  /**
+   * Named `canAudit` at the call site historically, but this has only ever
+   * meant "can drive the coverage campaign" — the coverage half stays
+   * Pro-only (WEB-AUDIT-TECH-ALL-PLANS-1, 2026-08-05); the technical half is
+   * not gated at all and this component never drove it directly anyway (it
+   * only piggybacks a technical re-check onto a coverage batch below).
+   * Destructured under its real name so nothing inside this file has to
+   * remember the distinction.
+   */
   canAudit: boolean;
   children: ReactNode;
 }) {
@@ -85,14 +104,13 @@ export function WebAuditProvider({
   // Founder-reported stuck screen: a campaign started while the account was
   // Pro, then the plan lapsed (e.g. downgraded via the new Stripe billing
   // flow) before it finished. Auto-resuming would call a server action that
-  // immediately fails the Pro gate — a single silent failure nothing here
-  // renders, since the only consumer that reads this context (RunAuditButton)
-  // bails out before mounting when !canAudit. Never start a doomed call;
+  // immediately fails the Pro gate — a single silent failure nothing renders
+  // (nothing consumes this context any more; see the header). Never start a
+  // doomed call;
   // page.tsx now shows an explicit "plan changed mid-campaign" message using
   // the same server-computed `autoStart` snapshot instead.
-  const [isPending, setIsPending] = useState(canAudit && Boolean(autoStart));
+  const [isPending, setIsPending] = useState(canAuditCoverage && Boolean(autoStart));
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [progress, setProgress] = useState<Progress>(autoStart ?? null);
   const abortedRef = useRef(false);
   const firedRef = useRef(false);
@@ -105,7 +123,6 @@ export function WebAuditProvider({
 
   async function drive() {
     setError(null);
-    setNotice(null);
     setIsPending(true);
     let consecutiveFailures = 0;
 
@@ -122,7 +139,7 @@ export function WebAuditProvider({
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
             setError(
               progress
-                ? `Se ha interrumpido la conexión, pero tu progreso está guardado (${progress.covered}/${progress.total} temas). Pulsa «Auditar ahora» para continuar.`
+                ? `Se ha interrumpido la conexión, pero tu progreso está guardado (${progress.covered}/${progress.total} temas). La auditoría continuará sola.`
                 : "No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos."
             );
             return;
@@ -142,11 +159,13 @@ export function WebAuditProvider({
         setProgress({ covered: result.coverage.topics.length, total: result.totalPrompts });
 
         if (result.status === "completed") {
-          setNotice(
-            result.cached
-              ? "Ya tenías la auditoría más reciente de este escaneo. Vuelve a lanzar un escaneo para auditar datos nuevos."
-              : "Auditoría actualizada."
-          );
+          // No "done" notice: the `router.refresh()` below re-renders the
+          // button with `upToDate` true, and its "Auditoría actualizada" pill
+          // IS the confirmation (founder review 2026-08-04 — a toast saying
+          // the same thing next to the pill was just noise). `result.cached`
+          // stops being interesting for the same reason: "nothing changed
+          // because you were already current" is now visible BEFORE the
+          // click, as a disabled button.
           // WEB-AUDIT-R2 (founder-approved 2026-07-12): "Auditar ahora" now
           // also refreshes technical health, in the same click — coverage and
           // technical share the same "auditoría web" mental model going
@@ -179,7 +198,7 @@ export function WebAuditProvider({
   }
 
   useEffect(() => {
-    if (!canAudit || !autoStart || firedRef.current) return;
+    if (!canAuditCoverage || !autoStart || firedRef.current) return;
     firedRef.current = true;
     void drive();
     // Deliberately fires once on mount only (autoStart is the server-provided
@@ -188,7 +207,7 @@ export function WebAuditProvider({
   }, []);
 
   return (
-    <WebAuditRunnerContext.Provider value={{ isPending, error, notice, progress, drive }}>
+    <WebAuditRunnerContext.Provider value={{ isPending, error, progress, drive }}>
       {children}
     </WebAuditRunnerContext.Provider>
   );

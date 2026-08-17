@@ -1,0 +1,67 @@
+---
+description: Invariantes de la zona de Recomendaciones (generación, puntos potenciales, cobertura de dominio).
+paths:
+  - "app/dashboard/projects/*/recommendations/**"
+  - "lib/recommendations/**"
+---
+
+# Recomendaciones — invariantes
+
+## Puntos potenciales
+
+- **Se calculan por recomputación contrafactual del score real**, nunca por el
+  atajo `porcentaje × peso del componente` (**ADR 0017**, que rechazó
+  explícitamente esa fórmula por dos motivos: ignora la renormalización de
+  pesos de ADR 0015, y atribuye mal qué componente mueve cada tipo de
+  recomendación — `increase_brand_prominence` no toca `presence` en absoluto).
+- El contrafactual parte de `affected_prompt_ids` **reales y persistidos**. Sin
+  ellos no hay cifra: se omite el número, no se estima.
+
+## Honestidad
+
+- **Nada de recomendaciones falsas** (lista de prohibido de `CLAUDE.md`). Una
+  recomendación existe porque hay evidencia persistida que la respalda.
+- **El texto narrativo de Gemini nunca es hecho verificado.** Se renderiza con
+  el aviso de "interpretación de la IA" ya existente.
+- Si una recomendación no puede calcular su impacto, se muestra sin impacto —
+  nunca con un valor de relleno.
+
+## Cobertura de dominio
+
+- **Matching de dominio propio fail-closed**: normalizar (quitar esquema, `www.`,
+  ruta) y comparar por límite de etiqueta, de forma que `evilacme.com` nunca
+  case con `acme.com`. Misma semántica que `lib/scoring/run-scoring.ts` y
+  `lib/web-audit/**` — si cambia en un sitio, cambia en los tres (ADR 0019).
+- Los límites de generación son **contadores de gasto real**, no decoración:
+  respetar el presupuesto por proyecto y día con su `generation_type` propio.
+
+## Escrituras
+
+- `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario
+  antes de cualquier escritura con service-role (patrón data-guardian C5).
+
+## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §113)
+
+- **Repintado de zona en `.rec2-scope`**, mismo mecanismo que `.ov2-scope`/
+  `.cm2-scope`: reapunta los nombres de variable que sus descendientes ya leen,
+  nunca toca `:root`. La cabecera de la pantalla (kicker + nombre de proyecto +
+  `ScanStatePill`) va FUERA de `.rec2-scope` — sangra a los bordes con márgenes
+  negativos y quedaría recortada dentro de la columna centrada de 460px.
+- **Todo el motor emite `first_step`.** Un diagnóstico sin una primera acción
+  concreta y acotada es lo que hacía inservibles las listas de referencia
+  (Semrush, Otterly.AI) que motivaron el rediseño — no se añade un tipo de
+  recomendación nuevo sin decidir su primer paso.
+- **El hueco de fuentes se divide por familia** (`pursue_comparator_sources`,
+  `pursue_community_sources`, `pursue_media_sources`), reutilizando el
+  clasificador de Páginas citadas. Las fuentes enciclopédicas quedan **fuera a
+  propósito**: no se puede pedir a un usuario que entre en Wikipedia. Los tres
+  tipos comparten la misma mutación contrafactual `authority` que el tipo
+  original — sin lógica de scoring nueva.
+- **"Alta prioridad" es un único criterio absoluto** (impacto × confianza),
+  compartido entre la badge de la tarjeta y el filtro. No debe volver a existir
+  un segundo criterio posicional (`priority_rank <= N`) conviviendo con él en
+  la misma pantalla.
+- **`activeRun` nunca oculta recomendaciones ya existentes.** El overlay a
+  pantalla completa (`FirstScanTakeover`) sólo sustituye la pantalla cuando NO
+  hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
+  `ScanStatePill` del sticky-header, nunca tapando el backlog.

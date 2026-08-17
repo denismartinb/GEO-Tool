@@ -1,10 +1,15 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { PromptsClient } from "./prompts-client";
 import { AddPromptsButton } from "./add-prompts-button";
 
@@ -22,6 +27,20 @@ export type ResultRow = {
   extraction_error: string | null;
   category: string | null;
   provider: string | null;
+  /** SAMPLING-1 (ADR 0030): which repetition of this (prompt, engine) the row is. Null on rows written before migration 0028 — which is sample 0. */
+  sample_index: number | null;
+  /**
+   * Brand string and alias set as they were AT SCAN TIME (ADR 0025) — the
+   * ones `verifyMention` actually matched this row's `display_name_found`
+   * against. Used only to show WHICH known name a mention matched (Fase
+   * −1c); never to decide mentioned/not-mentioned, which already happened at
+   * scan time. Deliberately the snapshot, not the project's CURRENT
+   * brand_aliases: aliases can change after a scan, and using today's list
+   * to explain yesterday's verdict would attribute a match to a name that
+   * didn't exist yet when the row was scored.
+   */
+  brand_snapshot: string | null;
+  brand_aliases_snapshot: string[] | null;
 };
 
 export type TopicGroup = {
@@ -44,6 +63,19 @@ function parseExt(raw: unknown): ExtractedJson {
 
 function normKey(name: string): string {
   return name.trim().toLowerCase();
+}
+
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Prompts", async () => (await requireActiveProject(projectId)).domain);
 }
 
 export default async function PromptsPage({
@@ -98,7 +130,11 @@ export default async function PromptsPage({
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
 
   // 2. Prompts configurados (para category + is_active)
   const { data: projectPrompts } = await supabase
@@ -112,7 +148,7 @@ export default async function PromptsPage({
     ? await supabase
         .from("scan_prompt_results")
         .select(
-          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider"
+          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider, sample_index, brand_snapshot, brand_aliases_snapshot"
         )
         .eq("project_id", projectId)
         .eq("run_id", latestRun.id)
@@ -244,25 +280,19 @@ export default async function PromptsPage({
           </div>
         </div>
         <div className="ov-sticky-right">
-          {latestRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado{" "}
-              {new Date(
-                latestRun.finished_at ?? latestRun.created_at
-              ).toLocaleDateString("es-ES", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                timeZone: "Europe/Madrid",
-              })}
-            </span>
-          )}
-          {activeRun && latestRun ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
+          <ScanStatePill
+            activeRun={activeRun}
+            lastScanLabel={
+              latestRun
+                ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "Europe/Madrid"
+                  })
+                : null
+            }
+          />
         </div>
       </header>
 
@@ -302,7 +332,7 @@ export default async function PromptsPage({
           </div>
         )}
         {activeRun && !hasCompletedRun ? (
-          <ScanInProgress activeRun={activeRun} />
+          <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
         ) : !hasActivePrompts ? (
           <div
             className="card"

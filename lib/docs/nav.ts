@@ -1,3 +1,5 @@
+import { GEO_SCORE_DEFINITION } from "@/lib/brand/geo-score-definition";
+
 /**
  * Single source of truth for the /docs sidebar and breadcrumb trail
  * (GROWTH-2 Fase 2.3) — mirrors the pattern already used by
@@ -29,7 +31,7 @@ export const DOCS_NAV: DocSection[] = [
         slug: "empezar/primer-escaneo",
         title: "Tu primer escaneo",
         description:
-          "Qué pasa cuando registras un dominio en Genscore: de la creación del proyecto al primer GEO Score, paso a paso."
+          "Qué pasa cuando registras un dominio en GenScore: de la creación del proyecto al primer GEO Score, paso a paso."
       }
     ]
   },
@@ -50,8 +52,13 @@ export const DOCS_NAV: DocSection[] = [
       {
         slug: "metodologia/geo-score",
         title: "GEO Score",
-        description:
-          "Cómo se calcula el GEO Score: los cuatro componentes, sus pesos, y por qué algunos escaneos son de confianza \"media\" en vez de \"alta\"."
+        // SEO-POS-1 Fase E, E4: la descripción es la definición compartida.
+        // La anterior estaba rancia en las dos mitades — hablaba de "los cuatro
+        // componentes" (son cinco desde GEO-SCORE-V4, ADR 0033) y prometía "sus
+        // pesos", que se retiraron de todas las superficies el 2026-08-13 (log
+        // §75). Era además la meta description del documento que esta fase
+        // declara canónico para el término.
+        description: GEO_SCORE_DEFINITION
       }
     ]
   },
@@ -62,7 +69,7 @@ export const DOCS_NAV: DocSection[] = [
         slug: "planes-y-limites",
         title: "Planes y límites",
         description:
-          "Dominios, prompts y motores de IA incluidos en cada plan de Genscore, y qué cambia al subir de plan."
+          "Dominios, prompts y motores de IA incluidos en cada plan de GenScore, y qué cambia al subir de plan."
       }
     ]
   }

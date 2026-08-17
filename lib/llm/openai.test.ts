@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateOpenAIVisibilityAnswer, extractOpenAIStructuredData, OpenAIConfigError, OpenAITimeoutError } from "./openai";
+import type { BusinessProfile } from "./gemini";
+import { EXTRACTION_MAX_ATTEMPTS } from "@/lib/llm/constants";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -263,10 +265,16 @@ describe("extractOpenAIStructuredData", () => {
     };
   }
 
-  it("throws OpenAIConfigError when OPENAI_API_KEY is missing", async () => {
+  // EXTRACTION-RELIABILITY-1: at the extraction stage a missing key is a
+  // per-row failure to record, not the run-level abort a missing key during
+  // generation triggers — so it surfaces as a categorized ExtractionError.
+  it("throws a config-categorized ExtractionError when OPENAI_API_KEY is missing", async () => {
     delete process.env.OPENAI_API_KEY;
 
-    await expect(extractOpenAIStructuredData(extractionInput())).rejects.toBeInstanceOf(OpenAIConfigError);
+    await expect(extractOpenAIStructuredData(extractionInput())).rejects.toMatchObject({
+      name: "ExtractionError",
+      category: "config"
+    });
   });
 
   it("parses a valid JSON extraction response", async () => {
@@ -303,11 +311,50 @@ describe("extractOpenAIStructuredData", () => {
     await expect(extractOpenAIStructuredData(extractionInput())).rejects.toThrow("schema validation");
   });
 
-  it("throws on non-ok HTTP status", async () => {
-    const fetchMock = mockFetchOnce({ error: {} }, 429);
+  // The regression this phase exists to prevent: OpenAI extraction returned
+  // 429 on every call from 2026-08-01 and the old bare `fetch` gave up on the
+  // first one, so ~1/3 of every scan's answers died silently for four days.
+  // Extraction now retries with backoff, exactly like generation always did.
+  it("retries a 429 with backoff before giving up, and reports it as quota", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429, headers: new Headers(), json: async () => ({}) });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(extractOpenAIStructuredData(extractionInput())).rejects.toThrow("quota or rate limit");
+    await expect(extractOpenAIStructuredData(extractionInput())).rejects.toMatchObject({
+      name: "ExtractionError",
+      category: "quota"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(EXTRACTION_MAX_ATTEMPTS);
+  });
+
+  it("succeeds when a retried 429 is followed by a good response", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 429, headers: new Headers(), json: async () => ({}) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: async () => responsesApiResult(JSON.stringify(validExtractionJson()))
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractOpenAIStructuredData(extractionInput());
+
+    expect(result.data.brand.mentioned).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  // A 400/401 is never fixed by retrying — it means the key or the model id
+  // is wrong (the class of failure behind the pinned-model 404 in ADR 0002).
+  it("does not retry a config-level 400 and categorizes it as config", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 400, headers: new Headers(), json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(extractOpenAIStructuredData(extractionInput())).rejects.toMatchObject({
+      name: "ExtractionError",
+      category: "config"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("MENTION-VERIFY-1: instructs the model that topical relevance is not a mention, and requests display_name_found per competitor", async () => {
@@ -323,5 +370,29 @@ describe("extractOpenAIStructuredData", () => {
     expect(promptText).toMatch(/topical relevance is not a mention/i);
     expect(promptText).toMatch(/EXACT substring of the response text/i);
     expect(promptText).toContain('"display_name_found": string|null');
+  });
+
+  it("EMERGING-BRANDS-GROUNDING-1: includes a sector-relevance hint in other_brands_mentioned instructions when a profile is provided", async () => {
+    const profile: BusinessProfile = {
+      whatItSells: "a web browser",
+      sector: "software",
+      subSector: "web browsers",
+      businessModel: "b2c",
+      targetCustomer: "general internet users",
+      geographicScope: "global",
+      sizeEstimate: "large",
+      confidence: "high"
+    };
+    const fetchMock = mockFetchOnce(responsesApiResult(JSON.stringify(validExtractionJson())));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await extractOpenAIStructuredData({ ...extractionInput(), profile });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.input as string;
+
+    expect(promptText).toMatch(/plausible competitors or alternatives/i);
+    expect(promptText).toContain("sector: software");
   });
 });

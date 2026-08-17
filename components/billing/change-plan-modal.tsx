@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { SUPPORT_EMAIL } from "@/lib/support";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
@@ -110,11 +111,14 @@ export function ChangePlanModal({
   // PRICING-TRUTH-1) — only Starter<->Pro can be deep-linked into the
   // Portal's plan-switch flow.
   const paidToPaidSelfServe = paidToPaidBlocked && target.id !== "agency";
-  // Agency always needs sales regardless of subscription/trial state — a
-  // trialing or Free account selecting Agency shows the same message rather
-  // than routing into Checkout (isSelfServeTarget already excludes it) or
-  // silently doing nothing.
-  const agencyNeedsSales = target.id === "agency" && target.id !== currentId;
+  // CONSOLE-REDESIGN-1: Agency is no longer a selectable radio. It used to be
+  // one, so you could pick it and then find "Continuar" switched off with two
+  // different explanations on screen ("Disponible muy pronto" at the foot,
+  // "escríbenos a soporte" in the note) — a dead end that let someone choose
+  // something they could not have. It now renders as its own cell with a real
+  // way out (SUPPORT_EMAIL), and `sel` can never hold it.
+  const agencyPlan = PLANS.find((p) => p.id === "agency")!;
+  const selectablePlans = PLANS.filter((p) => p.id !== "agency");
 
   const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
 
@@ -142,8 +146,6 @@ export function ChangePlanModal({
     "Selecciona un plan distinto al actual."
   ) : paidToPaidSelfServe ? (
     "Se gestiona en el portal seguro de Stripe."
-  ) : agencyNeedsSales ? (
-    "Disponible muy pronto."
   ) : requiresCheckout ? (
     "Se abre el pago seguro de Stripe."
   ) : (
@@ -226,7 +228,7 @@ export function ChangePlanModal({
           <>
             <div className="cp-body">
               <div className="cp-plans" role="radiogroup" aria-label="Elegir plan">
-                {PLANS.map((p) => {
+                {selectablePlans.map((p) => {
                   const isCur = p.id === currentId;
                   const isSel = p.id === sel;
                   const flag = isCur ? "cur" : p.recommended ? "rec" : null;
@@ -264,6 +266,21 @@ export function ChangePlanModal({
                     </button>
                   );
                 })}
+
+                {/* Same cell of the grid, but not a radio: Agencia has no
+                    self-serve Stripe price (PRICING-TRUTH-1), so it gets a way
+                    out instead of a selection that leads nowhere. */}
+                <div className="cp-sales">
+                  <div>
+                    <div className="cp-sales-t">{agencyPlan.name}</div>
+                    <div className="cp-sales-d">{agencyPlan.tagline}</div>
+                    <PlanMeterChips plan={agencyPlan} />
+                  </div>
+                  <a className="cp-sales-cta" href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Plan Agencia")}`}>
+                    Hablar con ventas
+                    <Icon name="arrRight" size={14} />
+                  </a>
+                </div>
               </div>
               {paidToPaidSelfServe && (
                 <p className="cp-pror-note" style={{ marginTop: 14 }}>
@@ -271,15 +288,6 @@ export function ChangePlanModal({
                   <span>
                     Cambiar entre {current.name} y {target.name} se gestiona en el portal seguro de Stripe, donde
                     también puedes cancelar o ver tus facturas.
-                  </span>
-                </p>
-              )}
-              {agencyNeedsSales && (
-                <p className="cp-pror-note" style={{ marginTop: 14 }}>
-                  <Icon name="info" size={14} />
-                  <span>
-                    Cambiar a {target.name} estará disponible muy pronto. Mientras tanto, escríbenos a{" "}
-                    <b>soporte@genscore.es</b>.
                   </span>
                 </p>
               )}
@@ -296,7 +304,7 @@ export function ChangePlanModal({
               </Button>
               <Button
                 type="button"
-                disabled={isSame || isPending || agencyNeedsSales}
+                disabled={isSame || isPending}
                 onClick={paidToPaidSelfServe ? handleGoToPortal : () => setStep("confirm")}
               >
                 {paidToPaidSelfServe ? (isPending ? "Abriendo portal…" : "Ir al portal de Stripe") : "Continuar"}
@@ -409,10 +417,10 @@ export function ChangePlanModal({
                 <div className="cp-diff">
                   <div className="cp-diff-h">
                     <Icon name="alertCircle" size={14} />
-                    Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para archivar (tienes{" "}
+                    Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para retirar (tienes{" "}
                     {activeProjects.length}, {target.name} permite {target.caps.projects})
                   </div>
-                  <ul className="cp-diff-list" role="group" aria-label="Dominios a archivar">
+                  <ul className="cp-diff-list" role="group" aria-label="Dominios a retirar">
                     {activeProjects.map((project) => {
                       const checked = archiveIds.has(project.id);
                       const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
@@ -445,8 +453,9 @@ export function ChangePlanModal({
                   <p className="cp-pror-note" style={{ marginTop: 10 }}>
                     <Icon name="info" size={14} />
                     <span>
-                      Archivar es reversible: podrás restaurarlos cuando quieras desde "Dominios", sin perder su
-                      configuración ni sus escaneos.
+                      Los dominios que elijas dejan de monitorizarse y salen de tu espacio de trabajo. Para
+                      recuperar uno, vuelve a añadirlo desde &laquo;Nuevo dominio&raquo;: se reactiva con sus
+                      prompts, sus competidores y sus escaneos anteriores.
                     </span>
                   </p>
                 </div>
@@ -483,16 +492,16 @@ export function ChangePlanModal({
                 <Icon name="info" size={14} />
                 <span>
                   Tienes <b>{activeProjects.length}</b> dominios activos y tu plan <b>{current.name}</b> permite{" "}
-                  <b>{current.caps.projects}</b>. Elige {requiredArchiveCount} para archivar — el resto sigue
+                  <b>{current.caps.projects}</b>. Elige {requiredArchiveCount} para retirar — el resto sigue
                   monitorizándose sin cambios.
                 </span>
               </div>
               <div className="cp-diff">
                 <div className="cp-diff-h">
                   <Icon name="alertCircle" size={14} />
-                  Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para archivar
+                  Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para retirar
                 </div>
-                <ul className="cp-diff-list" role="group" aria-label="Dominios a archivar">
+                <ul className="cp-diff-list" role="group" aria-label="Dominios a retirar">
                   {activeProjects.map((project) => {
                     const checked = archiveIds.has(project.id);
                     const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
@@ -525,8 +534,9 @@ export function ChangePlanModal({
                 <p className="cp-pror-note" style={{ marginTop: 10 }}>
                   <Icon name="info" size={14} />
                   <span>
-                    Archivar es reversible: podrás restaurarlos cuando quieras desde "Dominios", sin perder su
-                    configuración ni sus escaneos.
+                    Los dominios que elijas dejan de monitorizarse y salen de tu espacio de trabajo. Para
+                    recuperar uno, vuelve a añadirlo desde &laquo;Nuevo dominio&raquo;: se reactiva con sus
+                    prompts, sus competidores y sus escaneos anteriores.
                   </span>
                 </p>
               </div>
@@ -545,7 +555,7 @@ export function ChangePlanModal({
                 disabled={isPending || !archiveSelectionComplete}
                 onClick={handleConfirmDowngrade}
               >
-                {isPending ? "Guardando…" : "Confirmar archivado"}
+                {isPending ? "Guardando…" : "Confirmar retirada"}
               </Button>
             </div>
           </>

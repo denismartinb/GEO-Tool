@@ -1,28 +1,71 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
-import { CompetitorRow } from "./competitor-row";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
+import { PodiumRow } from "./podium-row";
+import { ManageCompetitorsPanel } from "./manage-competitors-panel";
+import { ManageBrandAliasesPanel } from "./manage-brand-aliases-panel";
+import { PromptGapSection } from "./prompt-gap-section";
+import { SuggestedCompetitorsSection } from "./suggested-competitors-section";
 import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
-import { computeEntityEngineBreakdown, type EntityEngineBreakdown } from "@/lib/competitors/engine-share";
+import { ScanStatePill } from "@/components/scan-state-pill";
+import {
+  computeEntityEngineBreakdown,
+  filterComparableEngines,
+  type EntityEngineBreakdown
+} from "@/lib/competitors/engine-share";
+import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
+import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
+import { computeSovDeltas } from "@/lib/competitors/sov-delta";
+import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-window";
+import { rankLatestPositions } from "@/lib/competitors/latest-positions";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { FaviconImg } from "@/components/ui/favicon-img";
+import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 
 /* ---- Helpers ---- */
 
-const COMPETITOR_COLORS = ["#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563", "#c47e12"];
+// Two-scale ranking palette by rank, replacing the old rainbow
+// COMPETITOR_COLORS (docs/brand/brand-guidelines.md §1: the brand blue is
+// reserved for "you"). Matches the approved design proposal exactly: the
+// favicon uses a richer, more saturated step that fades to neutral gray
+// past the top 2 rivals (keeps attention on the real threats), while the
+// SoV bar uses a separate, lighter step of the same scale so bars read as
+// a secondary signal, never competing visually with the brand's own bar.
+const RANK_FAV_COLORS = ["#0f2f6e", "#1a4494", "#5b6b82", "#5b6b82", "#98a2b3"];
+const RANK_BAR_COLORS = ["#4f8bef", "#8fb6f6", "#c3d8fb", "#c3d8fb", "#e3ecfd"];
+
+/**
+ * Series identity for the position trend chart. Deliberately NOT
+ * RANK_BAR_COLORS: that is a sequential blue ramp, correct for rank bars where
+ * lightness encodes order, and wrong as categorical identity — reused on the
+ * trend chart it produced eight lines in eight shades of one hue, which is
+ * what made the chart unreadable (founder, 2026-08-03).
+ *
+ * Distinct hues, validated for colour-vision deficiency: worst adjacent pair
+ * separates by ΔE 11.4 under protanopia against the light surface. Direct
+ * end-of-line labels carry identity as well, so colour is never the only cue.
+ */
+const TREND_SERIES_COLORS = ["#2563eb", "#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"];
 
 export type CompetitorRowData = {
   id: string;
   name: string;
   domain: string;
-  color: string;
+  favColor: string;
+  barColor: string;
   initial: string;
   mentions: number;
   sov: number;
   mentionRate: number;
   citationRate: number;
   promptCount: number; // unique runs where seen
+  deltaPoints: number | null;
   // ENGINES-VALUE-3: per-engine mention breakdown, only rendered when it
   // has >= 2 entries (see docs/specs/engines-value-3.md Paso C).
   engineBreakdown: EntityEngineBreakdown[];
@@ -39,10 +82,9 @@ function parseExt(raw: unknown): ExtractedJson {
   return raw as ExtractedJson;
 }
 
-type BrandPositionRankingEntry = {
+type BrandPositionRankingEntry = PersistedRankingEntry & {
   name: string;
   is_brand: boolean;
-  avg_position: number;
   mention_count: number;
 };
 
@@ -78,6 +120,19 @@ function isSameOrSubdomain(domain: string, root: string): boolean {
 
 /* ---- Page ---- */
 
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Competidores", async () => (await requireActiveProject(projectId)).domain);
+}
+
 export default async function CompetitorsPage({
   params
 }: {
@@ -87,33 +142,51 @@ export default async function CompetitorsPage({
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
-  /* 1. Configured competitors + all completed runs + recent runs (for activeRun detection) */
-  const [{ data: competitors }, { data: allRuns }, { data: recentRuns }] = await Promise.all([
-    supabase
-      .from("project_competitors")
-      .select("id, name, domain, is_active, created_at")
-      .eq("project_id", projectId)
-      .order("is_active", { ascending: false })
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("scan_runs")
-      .select("id, status, created_at, finished_at")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("scan_runs")
-      .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-      .limit(5)
-  ]);
+  /* 1. Configured competitors + all completed runs + recent runs (for activeRun detection) + active prompts (for topic map) + the project's own brand-identity alias list (Fase −1c) */
+  const [{ data: competitors }, { data: allRuns }, { data: recentRuns }, { data: projectPrompts }, { data: brandAliasesRow }] =
+    await Promise.all([
+      supabase
+        .from("project_competitors")
+        .select("id, name, domain, is_active, created_at")
+        .eq("project_id", projectId)
+        .order("is_active", { ascending: false })
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("scan_runs")
+        .select("id, status, created_at, finished_at")
+        .eq("project_id", projectId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("scan_runs")
+        .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase.from("project_prompts").select("id, category").eq("project_id", projectId).eq("is_active", true),
+      // requireActiveProject doesn't select brand_aliases (docs/geo-score-
+      // variability-2026-08.md §3, Fase −1c), so it's fetched separately here
+      // rather than widening that shared helper's select outside this
+      // phase's ownership. RLS already scopes this to the owner
+      // (projects_select_owner, supabase/migrations/0002_v0_rls.sql).
+      supabase.from("projects").select("brand_aliases").eq("id", projectId).maybeSingle()
+    ]);
+  const brandAliases = (brandAliasesRow?.brand_aliases as string[] | null) ?? [];
 
   const configuredCompetitors = competitors ?? [];
+  const activeCompetitors = configuredCompetitors.filter((c) => c.is_active);
+  const inactiveCompetitors = configuredCompetitors.filter((c) => !c.is_active);
   const completedRuns = allRuns ?? [];
   const completedRunIds = completedRuns.map((r) => r.id);
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
   const latestCompletedRun = completedRuns[0] ?? null;
+  const previousCompletedRun = completedRuns[1] ?? null;
+
+  const promptCategoryMap = new Map((projectPrompts ?? []).map((p) => [p.id, p.category as string | null]));
 
   /* 2. Prompt results across ALL completed runs + per-run brand position scores */
   const [{ data: allResults }, { data: runScores }] =
@@ -121,7 +194,7 @@ export default async function CompetitorsPage({
       ? await Promise.all([
           supabase
             .from("scan_prompt_results")
-            .select("extracted_json, run_id, provider")
+            .select("extracted_json, run_id, provider, prompt_id, prompt_text_snapshot")
             .eq("project_id", projectId)
             .eq("status", "completed")
             .in("run_id", completedRunIds),
@@ -227,9 +300,19 @@ export default async function CompetitorsPage({
     isEntityMentioned: (ext) => Boolean(ext.brand?.mentioned)
   });
 
+  // COMP-REDESIGN-1: scan-over-scan delta, a deliberately separate metric
+  // from the cumulative SoV above — see lib/competitors/sov-delta.ts header.
+  const sovDeltas = latestCompletedRun
+    ? computeSovDeltas({
+        rows: results.map((r) => ({ runId: r.run_id as string, extracted_json: r.extracted_json })),
+        latestRunId: latestCompletedRun.id,
+        previousRunId: previousCompletedRun?.id ?? null,
+        trackedCompetitors: configuredCompetitors
+      })
+    : null;
+
   // Build competitor rows
-  const competitorRows: CompetitorRowData[] = configuredCompetitors
-    .filter((c) => c.is_active)
+  const competitorRows: CompetitorRowData[] = activeCompetitors
     .map((c, i) => {
       const key = normKey(c.name);
       const mentions = competitorMentionMap.get(key) ?? 0;
@@ -251,13 +334,15 @@ export default async function CompetitorsPage({
         id: c.id,
         name: c.name,
         domain: c.domain,
-        color: COMPETITOR_COLORS[i % COMPETITOR_COLORS.length],
+        favColor: RANK_FAV_COLORS[i % RANK_FAV_COLORS.length],
+        barColor: RANK_BAR_COLORS[i % RANK_BAR_COLORS.length],
         initial: getInitial(c.name),
         mentions,
         sov,
         mentionRate,
         citationRate,
         promptCount,
+        deltaPoints: sovDeltas?.competitors.get(key)?.deltaPoints ?? null,
         engineBreakdown
       };
     })
@@ -288,7 +373,40 @@ export default async function CompetitorsPage({
     return { strongest, weakest, points };
   })();
 
-  /* Position trend: brand + active competitors' avg_position across completed runs */
+  /* COMP-REDESIGN-1: brecha de prompts (latest completed run only — see
+     lib/competitors/prompt-gap.ts header for why). */
+  const promptGapSummary =
+    latestCompletedRun && activeCompetitors.length > 0
+      ? computePromptGapSummary({
+          rows: results
+            .filter((r) => r.run_id === latestCompletedRun.id)
+            .map((r) => ({
+              id: `${r.prompt_id}-${r.provider ?? "gemini"}`,
+              promptId: r.prompt_id as string | null,
+              promptText: (r.prompt_text_snapshot as string | null) ?? "",
+              topic: r.prompt_id ? promptCategoryMap.get(r.prompt_id as string) ?? null : null,
+              provider: r.provider as string | null,
+              extracted_json: r.extracted_json
+            })),
+          activeCompetitors
+        })
+      : null;
+
+  /* COMP-REDESIGN-1: terreno por tema (cumulative, same population as the podium/matrix). */
+  const topicComparison =
+    activeCompetitors.length > 0
+      ? computeTopicComparison({
+          rows: results.map((r) => ({ promptId: r.prompt_id as string | null, extracted_json: r.extracted_json })),
+          promptCategoryMap,
+          activeCompetitors
+        })
+      : [];
+
+  /* Position trend: brand + active competitors' rank WHEN MENTIONED across
+     completed runs (geo-score-v3, docs/adr/0026). A scan where an entity was
+     never mentioned contributes null, which the chart draws as a gap — the
+     pre-v3 field folded those into an N+1 penalty and drew a continuous line
+     through positions nobody ever occupied. */
   const rankingByRun = new Map<string, BrandPositionRankingEntry[]>();
   for (const rs of runScores ?? []) {
     rankingByRun.set(rs.run_id as string, parseBrandPositionRanking(rs.details_json));
@@ -299,476 +417,553 @@ export default async function CompetitorsPage({
   );
 
   const trendSeries: TrendSeries[] = [
-    { key: "brand", label: project.brand, color: "var(--accent)", isBrand: true },
-    ...competitorRows.map((c) => ({ key: c.id, label: c.name, color: c.color }))
+    { key: "brand", label: project.brand, color: TREND_SERIES_COLORS[0], isBrand: true },
+    ...competitorRows.map((c, i) => ({
+      key: c.id,
+      label: c.name,
+      color: TREND_SERIES_COLORS[(i + 1) % TREND_SERIES_COLORS.length]
+    }))
   ];
 
   const trendData: TrendPoint[] = runsAsc.map((run) => {
     const ranking = rankingByRun.get(run.id) ?? [];
     const values: Record<string, number | null> = {};
     const brandEntry = ranking.find((r) => r.is_brand);
-    values.brand = brandEntry ? brandEntry.avg_position : null;
+    values.brand = readPosition(brandEntry);
     for (const c of competitorRows) {
       const entry = ranking.find((r) => !r.is_brand && normKey(r.name) === normKey(c.name));
-      values[c.id] = entry ? entry.avg_position : null;
+      values[c.id] = readPosition(entry);
     }
     return { date: run.finished_at ?? run.created_at, values };
   });
 
-  const validTrendPoints = trendData.filter((d) => d.values.brand != null).length;
-  const hasTrendData = validTrendPoints >= 2;
+  /* What the chart actually draws: informative scans only, most recent window.
+     See lib/competitors/trend-window.ts for both defects this fixes. Kept
+     separate from `trendData` on purpose — the "último escaneo" list below
+     must stay anchored to the real latest run, not to the last point that
+     happened to survive this window, or its heading would be a lie. */
+  const chartTrendData = selectTrendWindow({ points: trendData });
 
-  const trendPositionValues = trendData
+  // Counted over the visible window, so the countdown copy and the chart can
+  // never disagree about how much position data there is.
+  const validTrendPoints = chartTrendData.filter((d) => d.values.brand != null).length;
+  const hasTrendData = validTrendPoints >= MIN_TREND_POINTS;
+
+  const trendPositionValues = chartTrendData
     .flatMap((d) => Object.values(d.values))
     .filter((v): v is number => v != null);
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
 
-  // With more than 3 completed scans there's enough trend history to be worth
-  // surfacing before the static table.
-  const chartAboveTable = completedRuns.length > 3;
+  const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
 
-  const competitorTableSection =
-    configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
-      <>
-        <div className="section-head">
-          <div className="section-title">Panorámica competitiva · cuota de voz en IA</div>
-          <div className="section-desc">
-            Basado en{" "}
-            <b style={{ color: "var(--ink-2)" }}>
-              {completedRuns.length} {completedRuns.length === 1 ? "escaneo completado" : "escaneos completados"}
-            </b>{" "}
-            · {totalResultsCount} prompts analizados
-          </div>
-        </div>
+  // Engine columns worth showing — see filterComparableEngines
+  // (lib/competitors/engine-share.ts) for the rule and its tests.
+  const matrixEngines = filterComparableEngines({
+    brandBreakdown: brandEngineBreakdown,
+    competitorBreakdowns: competitorRows.map((c) => c.engineBreakdown)
+  });
 
-        <div className="card">
-          <div style={{ padding: "6px 6px 4px", overflowX: "auto" }}>
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Marca</th>
-                  <th className="num">Mención</th>
-                  <th className="num">Cita</th>
-                  <th>Cuota de voz en IA</th>
-                  <th className="num">Prompts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Brand (you) row — always first */}
-                <tr className="you">
-                  <td>
-                    <div className="ent">
-                      <span
-                        className="fav"
-                        style={{ background: "var(--accent)" }}
-                      >
-                        {getInitial(project.brand)}
-                      </span>
-                      <div>
-                        <div className="nm">
-                          {project.brand}
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: "var(--accent)",
-                              fontWeight: 700,
-                              marginLeft: 6
-                            }}
-                          >
-                            Tú
-                          </span>
-                        </div>
-                        <div className="dm">{project.domain}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="num">
-                    <b className="tnum">{brandMentionRate}%</b>
-                  </td>
-                  <td className="num">
-                    <b className="tnum">{brandCitationRate}%</b>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div className="sov-bar comp-tbl-sov">
-                        <div
-                          className="sov-fill"
-                          style={{
-                            width: `${(brandSov / maxSov) * 100}%`,
-                            background: "var(--accent)"
-                          }}
-                        />
-                      </div>
-                      <span
-                        className="tnum"
-                        style={{ fontSize: 12, fontWeight: 700, width: 34, textAlign: "right" }}
-                      >
-                        {brandSov}%
-                      </span>
-                    </div>
-                    {brandEngineBreakdown.length >= 2 && (
-                      <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 4 }}>
-                        {brandEngineBreakdown.map((e, idx) => (
-                          <span key={e.provider}>
-                            {idx > 0 && " · "}
-                            {getEngineMeta(e.provider).label} {e.mentionRate}%
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </td>
-                  <td className="num">
-                    <span className="tnum" style={{ color: "var(--ink-2)" }}>
-                      {brandMentions}
-                    </span>
-                  </td>
-                </tr>
+  // Latest standing per entity, read from the same run_scores ranking the
+  // trend chart plots — surfaced as a compact ranked list beside the chart so
+  // the current standing is legible without reading a line's endpoint.
+  //
+  // The ordering and the 1..N ranking live in `rankLatestPositions`
+  // (PANORAMA-PARITY-1): the Overview's panorama shows this same list, and
+  // when each screen ordered it for itself they disagreed on ties. Everything
+  // this block used to explain about ties, means and mention rate now lives in
+  // that module's header, next to the code it justifies.
+  const latestRunRanking = latestCompletedRun ? (rankingByRun.get(latestCompletedRun.id) ?? []) : [];
+  const latestPositions = rankLatestPositions({
+    entities: [
+      { key: "brand", label: project.brand, isBrand: true },
+      ...competitorRows.map((c) => ({ key: c.id, label: c.name, isBrand: false }))
+    ],
+    ranking: latestRunRanking
+  });
 
-                {/* Competitor rows */}
-                {competitorRows.map((c) => (
-                  <CompetitorRow key={c.id} projectId={projectId} row={c} maxSov={maxSov} />
-                ))}
-
-                {/* If no active competitors */}
-                {competitorRows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      style={{ textAlign: "center", padding: "28px 20px", color: "var(--ink-4)", fontSize: 13 }}
-                    >
-                      No hay competidores activos configurados.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footnote */}
-          <div
-            style={{
-              padding: "10px 16px",
-              borderTop: "1px solid var(--line-soft)",
-              fontSize: 11.5,
-              color: "var(--ink-4)",
-              lineHeight: 1.5
-            }}
-          >
-            <b>Mención</b>: % de prompts donde aparece la marca.{" "}
-            <b>Cita</b>: % de prompts donde el dominio es fuente citada.{" "}
-            <b>Cuota de voz</b>: menciones propias / (menciones marca + Σ menciones competidores).{" "}
-            <b>Prompts</b>: total de respuestas donde se menciona al competidor.
-          </div>
-
-          {/* ENGINES-VALUE-3 Paso D: gap insight for the leading competitor */}
-          {topCompetitorGap && (
-            <div
-              style={{
-                borderTop: "1px solid var(--line-soft)",
-                padding: "12px 16px",
-                fontSize: 12.5,
-                color: "var(--ink-3)",
-                lineHeight: 1.5
-              }}
-            >
-              <b style={{ color: "var(--ink)" }}>{topCompetitor.name}</b> concentra su presencia en{" "}
-              <b style={{ color: "var(--ink)" }}>{getEngineMeta(topCompetitorGap.strongest.provider).label}</b>{" "}
-              ({topCompetitorGap.strongest.mentionRate}%) mucho más que en{" "}
-              <b style={{ color: "var(--ink)" }}>{getEngineMeta(topCompetitorGap.weakest.provider).label}</b>{" "}
-              ({topCompetitorGap.weakest.mentionRate}%) — ahí es donde compite menos y es tu mejor
-              oportunidad de defensa.
-            </div>
-          )}
-        </div>
-
-        {/* No detections */}
-        {competitorRows.every((c) => c.mentions === 0) && (
-          <div
-            className="section-empty"
-            style={{ marginTop: 14 }}
-          >
-            <div className="section-empty-title">
-              Ningún competidor fue mencionado en los escaneos analizados
-            </div>
-            <div className="section-empty-desc">
-              Revisa si los prompts son suficientemente comparativos o ajusta la lista de
-              competidores en el onboarding.
-            </div>
-          </div>
-        )}
-      </>
-    ) : null;
-
-  const positionTrendSection =
-    configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
-      <div style={{ marginTop: chartAboveTable ? 0 : 24 }}>
-        <div className="section-head">
-          <div className="section-title">Evolución de la posición media</div>
-          <div className="section-desc">
-            Posición media en el ranking de marcas mencionadas por escaneo · #1 es la mejor posición
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "16px 16px 8px" }}>
-          {hasTrendData ? (
-            <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
-          ) : (
-            <div style={{ padding: "32px 20px", textAlign: "center" }}>
-              <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-                Disponible a partir de 2 escaneos completados con datos de posición.
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    ) : null;
+  // COMPETITOR-SUGGESTIONS-1: unlike the emerging-brands block it replaced,
+  // this is unconditional — it derives from the business profile, not from
+  // scan output, so it has something to say even before the first scan and
+  // never appears/disappears depending on what the last run happened to
+  // extract (founder, 2026-08-03).
+  const suggestedCompetitorsBlock = (
+    <>
+      <div className="cm2-sec-lbl">Competidores sugeridos</div>
+      <SuggestedCompetitorsSection projectId={projectId} />
+    </>
+  );
 
   return (
-    <div className="page">
-      {/* Sticky header */}
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Competidores</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span
-                style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}
-              >
-                {project.name}
-              </span>
-              <span className="badge badge-neutral">
-                {configuredCompetitors.filter((c) => c.is_active).length} competidores
-              </span>
+    <div className="cm2-scope">
+      <div className="page cm2-page">
+        {/* Sticky header */}
+        <div className="ov-sticky-header">
+          <div className="ov-sticky-left">
+            <div>
+              <p className="kicker" style={{ marginBottom: 2 }}>Competidores</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}
+                >
+                  {project.name}
+                </span>
+                <span className="badge badge-neutral">
+                  {activeCompetitors.length} {activeCompetitors.length === 1 ? "competidor" : "competidores"}
+                </span>
+              </div>
             </div>
           </div>
+          <div className="ov-sticky-right">
+            <ScanStatePill
+              activeRun={activeRun}
+              lastScanLabel={
+                latestCompletedRun
+                  ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                      .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                  : null
+              }
+            />
+          </div>
         </div>
-        <div className="ov-sticky-right">
-          {latestCompletedRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
-            </span>
-          )}
-          {activeRun && completedRuns.length > 0 ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
-        </div>
-      </div>
 
-      {activeRun && completedRuns.length === 0 ? (
-        <ScanInProgress activeRun={activeRun} />
-      ) : (
-      <>
-      {/* Summary banner */}
-      <div className="summary mt8">
-        <div className="summary-ico">
-          <Icon name="competitors" size={20} />
+        {activeRun && completedRuns.length === 0 ? (
+          <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+        ) : (
+        <>
+        {/* Summary / insight banner */}
+        <div className="cm2-insight mt8">
+          <div className="cm2-insight-ico" aria-hidden="true">
+            <Icon name="users" size={15} />
+          </div>
+          <div className="cm2-insight-txt">
+            {!hasData ? (
+              <>
+                Sin datos de competencia todavía.{" "}
+                <Link href={`/dashboard/projects/${projectId}`} style={{ color: "var(--brand-blue)", fontWeight: 700 }}>
+                  Lanza el primer escaneo
+                </Link>{" "}
+                para ver cómo aparece tu marca frente a la competencia.
+              </>
+            ) : (
+              <>
+                <b>{project.brand}</b> aparece en{" "}
+                <span className={brandMentionRate >= 50 ? "" : "neg"}>
+                  <b>{brandMentionRate}% de los prompts</b>
+                </span>
+                {" "}analizados
+                {totalResultsCount > 0 && <> ({totalResultsCount} prompts en total)</>}.
+                {topCompetitor && topCompetitor.sov > brandSov ? (
+                  <>
+                    {" "}Tu competidor más fuerte es <b>{topCompetitor.name}</b>, con{" "}
+                    <span className="neg"><b>{topCompetitor.sov}% de cuota de voz</b></span>
+                    {promptGapSummary && promptGapSummary.counts.absent > 0 ? (
+                      <>
+                        {" "}y te desplaza en{" "}
+                        <span className="neg"><b>{promptGapSummary.counts.absent} de {promptGapSummary.totalPrompts} prompts</b></span>
+                        {" "}del último escaneo.
+                      </>
+                    ) : (
+                      "."
+                    )}
+                    {topCompetitorGap && (
+                      <>
+                        {" "}Su punto débil es <b>{getEngineMeta(topCompetitorGap.weakest.provider).label}</b>
+                        {" "}({topCompetitorGap.weakest.mentionRate}% frente a tu{" "}
+                        {brandEngineBreakdown.find((e) => e.provider === topCompetitorGap.weakest.provider)?.mentionRate ?? 0}%).
+                      </>
+                    )}
+                  </>
+                ) : topCompetitor ? (
+                  <>
+                    {" "}Lideras con <span style={{ color: "var(--pos)", fontWeight: 700 }}>{brandSov}% de cuota de voz</span>.
+                  </>
+                ) : null}
+              </>
+            )}
+          </div>
         </div>
-        <p className="summary-txt">
-          {!hasData ? (
-            <>
-              Sin datos de competencia todavía.{" "}
+
+        {/* Identidad de marca (Fase −1c, docs/geo-score-variability-2026-08.md
+            §3): `brand_aliases` already decides whether an AI answer counts
+            as a mention of the brand (verifyMention, ADR 0021/0025) — this is
+            the first UI that lets the owner see, add or remove them, closing
+            the "unmitigated" risk ADR 0025 shipped with. "Gestionar" sits on
+            the section label, same rule as "Cuota de voz en IA" below
+            (docs/brand/design-decisions-log.md §3.2/§10). Shown unconditionally
+            here (not gated on hasData/hasCompetitiveData): alias identity is a
+            project-level setting independent of whether a scan has run yet. */}
+        {/* id targeted by the Overview's GEO Score breakdown link (Task 3,
+            follow-up to Fase −1c): a user who lands here from "¿La IA
+            recomienda un producto tuyo...?" needs to arrive AT this section,
+            not just at the top of a long page. */}
+        <div id="identidad-de-marca" className="cm2-sec-lbl" style={{ scrollMarginTop: 80 }}>
+          Identidad de marca
+          <ManageBrandAliasesPanel projectId={projectId} brand={project.brand} aliases={brandAliases} />
+        </div>
+        <div className="card" style={{ padding: "14px 16px" }}>
+          <p style={{ fontSize: 12.5, color: "var(--ink-3)", lineHeight: 1.6, margin: 0 }}>
+            {brandAliases.length > 0 ? (
+              <>
+                Además de <b>{project.brand}</b>, una respuesta de IA también cuenta como mención de tu marca cuando
+                nombra: {brandAliases.map((alias, i) => (
+                  <span key={alias}>
+                    {i > 0 ? ", " : ""}
+                    <b>{alias}</b>
+                  </span>
+                ))}
+                .
+              </>
+            ) : (
+              <>
+                Hoy solo cuenta como mención una respuesta que nombre literalmente <b>{project.brand}</b>. Si la IA
+                recomienda un producto tuyo sin nombrar a la empresa —por ejemplo &ldquo;Firefox&rdquo; en vez de
+                &ldquo;Mozilla&rdquo;—, esa respuesta no se cuenta a menos que añadas ese nombre como alias.
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* Empty: no competitors configured */}
+        {activeCompetitors.length === 0 ? (
+          <div style={{ marginTop: 14 }}>
+            <div className="cm2-sec-lbl">Panorámica competitiva</div>
+            <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "999px",
+                  background: "var(--surface-sunk)",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "var(--ink-3)",
+                  margin: "0 auto 16px"
+                }}
+              >
+                <Icon name="competitors" size={22} />
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
+                No hay competidores configurados
+              </div>
+              <div
+                style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
+              >
+                Usa &ldquo;Gestionar&rdquo; arriba para añadir el primer competidor y ver el análisis
+                comparativo de cuota de voz en IA.
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Empty: competitors configured but no completed runs */}
+        {activeCompetitors.length > 0 && completedRuns.length === 0 ? (
+          <div style={{ marginTop: 14 }}>
+            <div className="cm2-sec-lbl">Panorámica competitiva · cuota de voz en IA</div>
+            <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "999px",
+                  background: "var(--surface-sunk)",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "var(--ink-3)",
+                  margin: "0 auto 16px"
+                }}
+              >
+                <Icon name="resonance" size={22} />
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
+                Sin datos de competencia todavía
+              </div>
+              <div
+                style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
+              >
+                Las menciones y la cuota de voz de tus competidores aparecerán aquí tras completar el
+                primer escaneo real con Gemini.
+              </div>
               <Link
                 href={`/dashboard/projects/${projectId}`}
-                style={{ color: "var(--accent)", fontWeight: 700 }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontSize: 13,
+                  fontWeight: 650,
+                  color: "var(--brand-blue)"
+                }}
               >
-                Lanza el primer escaneo
-              </Link>{" "}
-              para ver cómo aparece tu marca frente a la competencia.
-            </>
-          ) : (
-            <>
-              <b>{project.brand}</b> aparece en{" "}
-              <b className={brandMentionRate >= 50 ? "" : "hl-neg"}>
-                {brandMentionRate}% de los prompts
-              </b>
-              {" "}analizados
-              {totalResultsCount > 0 && <> ({totalResultsCount} prompts en total)</>}.
-              {topCompetitor && topCompetitor.sov > brandSov ? (
+                <Icon name="play" size={13} />
+                Lanzar escaneo desde visión general
+              </Link>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Suggestions stand alone whenever there is no full competitive
+            picture yet — the case where "who should I even be tracking?" is
+            the most useful thing this screen can answer. */}
+        {!hasCompetitiveData ? (
+          <div style={{ marginTop: 20 }}>{suggestedCompetitorsBlock}</div>
+        ) : null}
+
+        {hasCompetitiveData ? (
+          <div className="cm2-cols">
+            <div className="cm2-main">
+              {/* Podium. "Gestionar" lives here, NOT in the sticky header —
+                  docs/brand/design-decisions-log.md §3.2 fixes that header as
+                  título + fecha + marca/dominio only, identical across every
+                  console screen; hanging a page-specific action off it broke
+                  that contract (founder feedback). */}
+              <div className="cm2-sec-lbl">
+                Cuota de voz en IA
+                <ManageCompetitorsPanel
+                  projectId={projectId}
+                  activeCompetitors={activeCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
+                  inactiveCompetitors={inactiveCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
+                />
+              </div>
+              <div className="card">
+                <div className="cm2-rank you">
+                  <span className="cm2-rank-n">1</span>
+                  <FaviconImg
+                    domain={project.domain}
+                    cssSize={26}
+                    className="cm2-rank-fav-img"
+                    fallback={
+                      <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
+                        {getInitial(project.brand)}
+                      </span>
+                    }
+                  />
+                  <div className="cm2-rank-main">
+                    <div className="cm2-rank-nm">
+                      <span className="cm2-rank-nm-txt">{project.brand}</span>
+                      <span className="cm2-rank-you-tag">Tú</span>
+                    </div>
+                    <div className="cm2-rank-dm">{project.domain}</div>
+                  </div>
+                  <div className="cm2-rank-extra men">
+                    <div className="v">{brandMentionRate}%</div>
+                    <div className="l">Mención</div>
+                  </div>
+                  <div className="cm2-rank-extra cit">
+                    <div className="v">{brandCitationRate}%</div>
+                    <div className="l">Cita</div>
+                  </div>
+                  <div className="cm2-rank-bar-wrap">
+                    <div className="cm2-rank-bar">
+                      <div style={{ width: `${(brandSov / maxSov) * 100}%`, background: "var(--brand-blue)", height: "100%", borderRadius: 99 }} />
+                    </div>
+                  </div>
+                  <div className="cm2-rank-r">
+                    <div className="cm2-rank-sov">
+                      {brandSov}
+                      <small>%</small>
+                    </div>
+                    {sovDeltas?.brand.deltaPoints != null ? (
+                      <div className={`cm2-delta ${sovDeltas.brand.deltaPoints > 0 ? "up" : sovDeltas.brand.deltaPoints < 0 ? "dn" : "fl"}`}>
+                        {sovDeltas.brand.deltaPoints > 0 ? "▲" : sovDeltas.brand.deltaPoints < 0 ? "▼" : "—"}{" "}
+                        {Math.abs(sovDeltas.brand.deltaPoints)} pt{Math.abs(sovDeltas.brand.deltaPoints) === 1 ? "" : "s"}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                {competitorRows.map((c, i) => (
+                  <PodiumRow key={c.id} projectId={projectId} row={c} rank={i + 2} maxSov={maxSov} />
+                ))}
+              </div>
+
+              {/* No detections */}
+              {competitorRows.every((c) => c.mentions === 0) && (
+                <div className="section-empty" style={{ marginTop: 14 }}>
+                  <div className="section-empty-title">
+                    Ningún competidor fue mencionado en los escaneos analizados
+                  </div>
+                  <div className="section-empty-desc">
+                    Revisa si los prompts son suficientemente comparativos o ajusta la lista de
+                    competidores con &ldquo;Gestionar&rdquo;.
+                  </div>
+                </div>
+              )}
+
+              {/* Evolución de la posición media — sits directly under the
+                  share-of-voice podium (founder feedback: it was buried at the
+                  bottom of the desktop rail). The ranked list repeats the
+                  chart's endpoint as a readable number, so "who is ahead right
+                  now" doesn't require tracing a line.
+
+                  The CHART waits for enough scans; the LIST does not. A trend
+                  needs history, but "who is ahead right now" is answerable from
+                  the very first scan, and hiding it until the fourth threw away
+                  real data the user already had (founder, 2026-08-04: "la tabla
+                  sí debe salir desde el primer escaneo, solo se oculta el
+                  gráfico").
+
+                  What is never rendered is an empty shell: no section label and
+                  no card unless at least one of the two has something real to
+                  say. An earlier version explained the wait honestly and the
+                  founder still cut it — a block that only ever says "not yet"
+                  is noise on every visit, and better wording did not fix that.
+
+                  The label tracks what is actually below it, so it never
+                  promises an evolution the card is not showing. */}
+              {hasTrendData || latestPositions.length > 0 ? (
                 <>
-                  {" "}Tu competidor más fuerte es{" "}
-                  <b>{topCompetitor.name}</b> con{" "}
-                  <span className="hl-neg">{topCompetitor.sov}% de cuota de voz</span>.
-                </>
-              ) : topCompetitor ? (
-                <>
-                  {" "}Lideras con <span style={{ color: "var(--pos-ink)", fontWeight: 700 }}>{brandSov}% de cuota de voz</span>.
+                  <div className="cm2-sec-lbl">
+                    {hasTrendData ? "Evolución del puesto cuando apareces" : "Puesto en el último escaneo"}
+                  </div>
+                  <div className={`card cm2-pos-card${hasTrendData ? "" : " list-only"}`}>
+                    {hasTrendData ? (
+                      <div className="cm2-pos-chart">
+                        <PositionTrendChart series={trendSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
+                      </div>
+                    ) : null}
+                    {latestPositions.length > 0 ? (
+                      <div className="cm2-pos-list">
+                        {/* The position is the point of this block, so it is the
+                            last column and the heaviest — the founder looked
+                            for it on the right and did not see it on the left
+                            ("me gusta más que la columna de puesto [vaya] a la
+                            derecha, no la había visto", 2026-08-04). Each label
+                            sits over its own column; a single heading used to
+                            name the wrong one. No InfoTip: right-aligned its
+                            bubble opens off-screen and renders clipped. */}
+                        <div className="cm2-pos-list-hd">
+                          <span className="cm2-pos-hd-nm">Último escaneo</span>
+                          <span className="cm2-pos-rate">Mención</span>
+                          <span className="cm2-pos-n">Puesto</span>
+                        </div>
+                        {latestPositions.map((entry) => (
+                          <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
+                            <span className="cm2-pos-nm">{entry.label}</span>
+                            {/* Also the tiebreaker for the order, so a shared
+                                mean rank never resolves invisibly. */}
+                            <span className="cm2-pos-rate">
+                              {entry.mentionRate != null ? `${Math.round(entry.mentionRate)}%` : ""}
+                            </span>
+                            {/* Ordinal, not a row number: "3º" is a standing,
+                                "3" is a bullet. */}
+                            <span className="cm2-pos-n">{entry.rank}º</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </>
               ) : null}
-            </>
-          )}
-        </p>
-      </div>
 
-      {/* Empty: no competitors configured */}
-      {configuredCompetitors.length === 0 ? (
-        <div style={{ marginTop: 14 }}>
-          <div className="section-head">
-            <div className="section-title">Panorámica competitiva</div>
-          </div>
-          <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: "999px",
-                background: "var(--surface-sunk)",
-                display: "grid",
-                placeItems: "center",
-                color: "var(--ink-3)",
-                margin: "0 auto 16px"
-              }}
-            >
-              <Icon name="competitors" size={22} />
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
-              No hay competidores configurados
-            </div>
-            <div
-              style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
-            >
-              Añade competidores durante el onboarding para ver el análisis comparativo de cuota de
-              voz en IA.
-            </div>
-            <Link
-              href={`/dashboard/projects/${projectId}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                fontSize: 13,
-                fontWeight: 650,
-                color: "var(--accent)"
-              }}
-            >
-              Volver a visión general
-              <Icon name="arrRight" size={13} />
-            </Link>
-          </div>
-        </div>
-      ) : null}
+              {/* Brecha de prompts */}
+              {promptGapSummary && (
+                <>
+                  <div className="cm2-sec-lbl">
+                    Brecha de prompts
+                    <span style={{ fontWeight: 600, color: "var(--ink-4)" }}>{promptGapSummary.totalPrompts} prompts</span>
+                  </div>
+                  <PromptGapSection projectId={projectId} summary={promptGapSummary} />
+                </>
+              )}
 
-      {/* Empty: competitors configured but no completed runs */}
-      {configuredCompetitors.length > 0 && completedRuns.length === 0 ? (
-        <div style={{ marginTop: 14 }}>
-          <div className="section-head">
-            <div className="section-title">Panorámica competitiva · cuota de voz en IA</div>
-          </div>
-          <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: "999px",
-                background: "var(--surface-sunk)",
-                display: "grid",
-                placeItems: "center",
-                color: "var(--ink-3)",
-                margin: "0 auto 16px"
-              }}
-            >
-              <Icon name="resonance" size={22} />
+              {/* Presencia por motor. Columns come from `matrixEngines`, which
+                  drops any engine nobody was mentioned in — an all-zero column
+                  is dead space, not a comparison (founder feedback). Needs >= 2
+                  surviving columns to still be a comparison at all. */}
+              {matrixEngines.length >= 2 ? (
+                <>
+                  <div className="cm2-sec-lbl">Presencia por motor · tasa de mención</div>
+                  <div className="card" style={{ paddingBottom: 6, overflowX: "auto" }}>
+                    <table className="cm2-mx">
+                      <thead>
+                        <tr>
+                          <th>Marca</th>
+                          {matrixEngines.map((e) => (
+                            <th key={e.provider}>{getEngineMeta(e.provider).label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="you">
+                          <td>{project.brand}</td>
+                          {matrixEngines.map((e) => (
+                            <td key={e.provider}>
+                              <span className={`cm2-mxc h${Math.min(5, Math.floor(e.mentionRate / 17))}`}>{e.mentionRate}</span>
+                            </td>
+                          ))}
+                        </tr>
+                        {competitorRows.map((c) => (
+                          <tr key={c.id}>
+                            <td>{c.name}</td>
+                            {matrixEngines.map((brandE) => {
+                              const match = c.engineBreakdown.find((e) => e.provider === brandE.provider);
+                              const rate = match?.mentionRate ?? 0;
+                              return (
+                                <td key={brandE.provider}>
+                                  <span className={`cm2-mxc h${Math.min(5, Math.floor(rate / 17))}`}>{rate}</span>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : null}
             </div>
-            <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
-              Sin datos de competencia todavía
-            </div>
-            <div
-              style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
-            >
-              Las menciones y la cuota de voz de tus competidores aparecerán aquí tras completar el
-              primer escaneo real con Gemini.
-            </div>
-            <Link
-              href={`/dashboard/projects/${projectId}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                fontSize: 13,
-                fontWeight: 650,
-                color: "var(--accent)"
-              }}
-            >
-              <Icon name="play" size={13} />
-              Lanzar escaneo desde visión general
-            </Link>
-          </div>
-        </div>
-      ) : null}
 
-      {/* Competitive table + position trend chart — chart leads once there's
-          enough scan history (>3 completed scans), table leads otherwise */}
-      {chartAboveTable ? (
-        <>
-          {positionTrendSection}
-          <div style={{ marginTop: 24 }}>{competitorTableSection}</div>
+            <div className="cm2-rail">
+              {/* Terreno por tema */}
+              {topicComparison.length > 0 && (
+                <>
+                  <div className="cm2-sec-lbl">Terreno por tema</div>
+                  <div className="card">
+                    {topicComparison.slice(0, 8).map((t) => (
+                      <div className="cm2-tp" key={t.topic}>
+                        <div className="cm2-tp-nm">
+                          {t.topic}
+                          {/* gap < 0 only happens when leaderRate > 0, which only happens when
+                              leaderName is set (lib/competitors/topic-comparison.ts) — safe to
+                              interpolate leaderName directly in that branch. */}
+                          <i>{t.gap > 0 ? "Lideras tú" : t.gap < 0 ? `Lidera ${t.leaderName}` : "Empate"}</i>
+                        </div>
+                        <div className="cm2-tp-bars">
+                          <div className="cm2-tp-b">
+                            <div style={{ width: `${t.brandRate}%`, background: "var(--brand-blue)", height: "100%", borderRadius: 99 }} />
+                          </div>
+                          <div className="cm2-tp-b">
+                            <div style={{ width: `${t.leaderRate}%`, background: "var(--ink-4)", height: "100%", borderRadius: 99 }} />
+                          </div>
+                        </div>
+                        <div className={`cm2-tp-v ${t.gap > 0 ? "up" : t.gap < 0 ? "dn" : ""}`}>
+                          {t.gap > 0 ? "+" : ""}
+                          {t.gap}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="cm2-gaplegend">
+                      <span>
+                        <span className="d" style={{ background: "var(--brand-blue)" }} />
+                        Tu marca
+                      </span>
+                      <span>
+                        <span className="d" style={{ background: "var(--ink-4)" }} />
+                        Competidor
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Competidores sugeridos */}
+              {suggestedCompetitorsBlock}
+            </div>
+          </div>
+        ) : null}
         </>
-      ) : (
-        <>
-          {competitorTableSection}
-          {positionTrendSection}
-        </>
-      )}
-
-      {/* Footer links */}
-      <div
-        style={{
-          display: "flex",
-          gap: 20,
-          marginTop: 28,
-          paddingTop: 18,
-          borderTop: "1px solid var(--line-soft)",
-          flexWrap: "wrap"
-        }}
-      >
-        <Link
-          href={`/dashboard/projects/${projectId}`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 13,
-            color: "var(--ink-3)",
-            fontWeight: 600
-          }}
-        >
-          <Icon name="overview" size={13} />
-          Visión general
-        </Link>
-        <Link
-          href={`/dashboard/projects/${projectId}/runs`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 13,
-            color: "var(--ink-3)",
-            fontWeight: 600
-          }}
-        >
-          <Icon name="runs" size={13} />
-          Historial de escaneos
-        </Link>
-        <Link
-          href={`/dashboard/projects/${projectId}/prompts`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 13,
-            color: "var(--ink-3)",
-            fontWeight: 600
-          }}
-        >
-          <Icon name="prompts" size={13} />
-          Prompts
-        </Link>
+        )}
       </div>
-      </>
-      )}
     </div>
   );
 }

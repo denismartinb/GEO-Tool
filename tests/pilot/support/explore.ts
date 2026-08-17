@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import type { Page, TestInfo } from "@playwright/test";
 import { redact } from "./env";
+import { attachmentName } from "./journey";
 
 /**
  * Generic interaction explorer (UX-PILOT-1c).
@@ -64,7 +65,24 @@ const SCREENS_DIR = ".pilot/screens";
  */
 const EXPLORABLE = [
   "[aria-expanded]",
+  // A toggle button, by definition — the attribute exists to say "this control
+  // has an on/off state I am reporting". The chart's legend chips are these,
+  // and they went unswept through two rounds of pilot evidence because the
+  // list only matched `aria-expanded` (found 2026-08-03). The form/submit and
+  // destructive-name guards below still apply to everything matched here.
+  "[aria-pressed]",
   ".info-tip",
+  // Generic ARIA tab role, not a bespoke .cit2-tab-style class: this is what
+  // actually caught PR #289's real coverage gap (2026-08-03) — the
+  // Problemas/Correcto/Páginas AuditTabBar on Auditoría web uses `role="tab"`
+  // (app/dashboard/projects/[projectId]/web-audit/audit-tabs.tsx), and
+  // nothing in this list matched it, so a full ux-pilot design-fidelity
+  // review had to report "Correcto y Páginas nunca vistas con datos reales"
+  // as an open gap rather than a verified pass — on the very PR that
+  // introduced those two tabs. A pure client-side setState toggle (verified:
+  // no form, no network call, no destructive label) is exactly the "local
+  // in-page state" category this list exists for.
+  "[role='tab']",
   ".cit2-tab",
   ".cit2-rowmain",
   ".cit2-opp-row",
@@ -125,18 +143,16 @@ function slug(text: string): string {
 }
 
 /**
- * Playwright derives an attachment's on-disk filename from its NAME, so an
- * unbounded name crashes the run with ENAMETOOLONG once the accessible name of
- * the control is a full paragraph — which is exactly what an InfoTip's
- * explanatory text is (the web-audit global-score tip is ~230 chars, and its
- * output path also carries the test title and a hash). The screenshot path
- * itself was already bounded via slug(); this bounds the label that becomes
- * the copy destination. Truncated with an ellipsis so the report still reads
- * naturally instead of stopping mid-word.
+ * Human-readable label for an interaction finding — feeds both the JSONL
+ * record and `testInfo.attach()`'s attachment name. Both branches (not just
+ * the textContent fallback) must be capped at 60 chars: an uncapped
+ * aria-label on a long descriptive control (e.g. a methodology tooltip) made
+ * it into the attachment name uncapped, and Playwright's own attachment-copy
+ * step has no length guard of its own — ENAMETOOLONG on the destination
+ * path, first seen on the web-audit screen (2026-08-02/03 pilot runs).
  */
-function attachName(text: string, limit = 70): string {
-  const clean = text.replace(/\s+/g, " ").trim();
-  return clean.length > limit ? `${clean.slice(0, limit - 1)}…` : clean;
+export function deriveControlLabel(ariaLabel: string | null, textContent: string | null, fallback: string): string {
+  return (ariaLabel ?? "").trim().slice(0, 60) || (textContent ?? "").trim().slice(0, 60) || fallback;
 }
 
 function record(finding: InteractionFinding): void {
@@ -202,11 +218,23 @@ async function refuseReason(el: import("@playwright/test").Locator): Promise<str
       isSubmit: node.tagName === "BUTTON" && (button.type === "submit" || !button.type),
       href: anchor?.getAttribute("href") ?? null,
       disabled: node.hasAttribute("disabled") || node.getAttribute("aria-disabled") === "true",
+      isNotificationBell: node.matches(".header-bell"),
       name: `${node.textContent ?? ""} ${node.getAttribute("aria-label") ?? ""}`.trim()
     };
   });
 
   if (info.disabled) return "disabled";
+  // The bell is the one control here whose click WRITES: since NOTIF-AUTOREAD-1
+  // (log §28) opening it marks the account's notifications read. The sweep hits
+  // it on ~14 screens × 3 viewports, so it was destroying the very state the
+  // dedicated journey exists to observe — `notifications.spec.ts` found nothing
+  // unread on every run and annotated itself unverifiable, structurally, not by
+  // bad luck (ux-pilot, 2026-08-05). Refusing it here costs nothing: that
+  // journey exercises the bell far better than a blind sweep click, and this
+  // also drops the write from ~42 per run back to one.
+  if (info.isNotificationBell) {
+    return "notification bell — opening it marks notifications read (see notifications.spec.ts)";
+  }
   if (info.inForm) return "inside a form — could write to Supabase";
   if (info.isSubmit) return "submit button — could write to Supabase";
   // A same-page anchor (#hash) is fine; anything else navigates away and would
@@ -260,10 +288,11 @@ export async function exploreInteractions(
       const el = candidates.nth(i);
       if (!(await el.isVisible().catch(() => false))) continue;
 
-      const control =
-        (await el.getAttribute("aria-label")) ||
-        ((await el.textContent()) ?? "").trim().slice(0, 60) ||
-        `${screen} control #${i + 1}`;
+      const control = deriveControlLabel(
+        await el.getAttribute("aria-label"),
+        await el.textContent(),
+        `${screen} control #${i + 1}`
+      );
 
       const refusal = await refuseReason(el).catch(() => "could not inspect element");
       if (refusal) {
@@ -307,7 +336,7 @@ export async function exploreInteractions(
         // its timeout. The page-level captures (visitAsUser) stay fullPage —
         // those are for judging the whole screen.
         await page.screenshot({ path: screenshot });
-        await testInfo.attach(`${screen} → ${attachName(control)} (${testInfo.project.name})`, {
+        await testInfo.attach(attachmentName(`${screen} → ${control} (${testInfo.project.name})`), {
           path: screenshot,
           contentType: "image/png"
         });

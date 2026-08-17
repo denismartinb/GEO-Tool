@@ -6,7 +6,8 @@ import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-va
 import { checkGenerationRateLimit } from "@/lib/recommendations/generation-rate-limit";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
+import { sanitizeField } from "@/lib/text/sanitize";
 
 /**
  * Core business logic for "Mejorar redacción con IA" (the on-demand AI rewrite
@@ -134,28 +135,6 @@ function withTimeout<T>(promise: PromiseLike<T>, stage: string): Promise<T> {
       }
     );
   });
-}
-
-/**
- * Server-side sanitization gate for untrusted LLM output (0005 invariant: this
- * content can be copied/exported to the user's own site, so it is only ever
- * marked renderable after trusted code cleans it). Strips HTML tags and control
- * characters, collapses whitespace, and caps length. Returns null if either
- * field is empty after cleaning, so an empty rewrite is never persisted as a
- * "completed" solution.
- */
-function sanitizeField(input: string, maxLen: number): string {
-  let stripped = "";
-  for (const ch of input) {
-    const code = ch.codePointAt(0) ?? 0;
-    // Replace C0 control chars and DEL with a space; keep everything else.
-    stripped += code < 0x20 || code === 0x7f ? " " : ch;
-  }
-  return stripped
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLen);
 }
 
 /**

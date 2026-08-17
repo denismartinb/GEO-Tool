@@ -1,0 +1,102 @@
+name: Avisar al fundador
+
+# POR QUÉ EXISTE. El 2026-08-06 se descubrió, tras varias horas de avisos que
+# nunca llegaron, que **un comentario escrito por el agente no genera email**.
+# El motivo es simple y no tiene vuelta: las herramientas MCP de GitHub
+# comentan autenticadas con la cuenta del fundador, y GitHub nunca notifica a
+# nadie de su propia actividad.
+#
+# La evidencia, medida sobre el PR #351: de once comentarios, los cinco
+# firmados por `denismartinb` no produjeron ningún email; los seis firmados
+# por `github-actions[bot]` sí. El emisor es lo único que cambia.
+#
+# Ese día el único canal que funcionaba era la creación de un PR nuevo — lo
+# que obligaba a abrir un PR cada vez que había que avisar de algo. Este
+# workflow cierra ese agujero: permite avisar sobre un PR que YA existe,
+# publicando el comentario como `github-actions[bot]`, que es un emisor
+# distinto del fundador y por tanto sí dispara el email nativo de GitHub.
+#
+# LO QUE NO HACE: no mergea, no aprueba, no toca `main`, no cambia el estado
+# de ningún PR. Sólo escribe un comentario. El Human Gate sigue siendo manual
+# (CLAUDE.md).
+#
+# POR QUÉ `workflow_dispatch` Y NADA MÁS. No lleva `schedule:` a propósito:
+# `CLAUDE.md` prohíbe los planificadores en segundo plano sin aprobación
+# explícita, y un aviso que se dispara solo es exactamente eso. Aquí alguien
+# —persona o agente— tiene que pulsar el botón, y ese acto queda registrado en
+# el historial de Actions.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Número del PR sobre el que avisar
+        required: true
+      titulo:
+        description: Primera línea del aviso (lo que se lee en el asunto del email)
+        required: true
+      cuerpo:
+        description: Resto del mensaje. Usa \n para separar líneas.
+        required: false
+        default: ""
+
+permissions:
+  # Sólo lo justo para comentar. Sin `contents: write`: este workflow nunca
+  # escribe en el repositorio.
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: avisar-fundador-${{ github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar que el PR existe y sigue abierto
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          # Avisar sobre un PR cerrado o mergeado es ruido: el fundador
+          # recibiría un "listo para revisar" de algo que ya no lo está. Se
+          # falla en vez de comentar, para que el error sea visible.
+          estado="$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json state --jq .state)"
+          if [ "$estado" != "OPEN" ]; then
+            echo "El PR #${PR} está en estado ${estado}, no OPEN. No se avisa." >&2
+            exit 1
+          fi
+          echo "estado=$estado" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar el aviso
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.inputs.pr_number }}
+          TITULO: ${{ github.event.inputs.titulo }}
+          CUERPO: ${{ github.event.inputs.cuerpo }}
+        run: |
+          set -euo pipefail
+          {
+            printf '%s\n' "$TITULO"
+            if [ -n "$CUERPO" ]; then
+              printf '\n'
+              # Las entradas de workflow_dispatch son de una sola línea, así
+              # que `\n` literal es la única forma de mandar varias.
+              printf '%b\n' "$CUERPO"
+            fi
+            printf '\n---\n'
+            printf '_Enviado por el workflow `avisar-fundador`. Lo firma `github-actions[bot]` a propósito: un comentario firmado por tu propia cuenta no genera email._\n'
+          } > aviso.md
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file aviso.md
+
+      - name: Resumen
+        run: |
+          {
+            echo "## Aviso enviado"
+            echo
+            echo "- PR: #${{ github.event.inputs.pr_number }}"
+            echo "- Emisor: github-actions[bot] (por eso genera email)"
+          } >> "$GITHUB_STEP_SUMMARY"

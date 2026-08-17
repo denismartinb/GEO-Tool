@@ -1,0 +1,191 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  NumberedSection,
+  QuickAction,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  AnswerSample,
+  AnswerPair,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-saber-si-tu-marca-aparece-en-chatgpt");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cómo sé si ChatGPT, Gemini o Claude mencionan mi marca?",
+    answer:
+      "De tres formas: preguntándoles tú mismo con prompts que representen cómo pregunta de verdad tu cliente, revisando si tu analítica ya diferencia el tráfico que llega desde asistentes de IA, o usando una herramienta que lo compruebe de forma sistemática y repetida en el tiempo, como GenScore."
+  },
+  {
+    question: "¿Aparecer en ChatGPT es lo mismo que aparecer en Google?",
+    answer:
+      "No. Google indexa páginas y las ordena; un motor generativo hace grounding — busca una fuente en el momento de responder y decide si te nombra y si te cita — y ese proceso es distinto en cada motor. Estar bien posicionado en Google no garantiza aparecer en una respuesta de ChatGPT, y al revés."
+  },
+  {
+    question: "¿Basta con preguntarle una vez a ChatGPT para saberlo?",
+    answer:
+      "No de forma fiable. La misma pregunta puede dar una respuesta distinta de una ejecución a otra, y una marca puede aparecer con mucha frecuencia para un prompt y casi nunca para otro que pregunta algo muy parecido. Por eso una comprobación real necesita varios prompts y varias repeticiones, no una consulta suelta."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Hay tres formas reales de comprobarlo, de menos a más fiable: preguntar tú mismo a cada motor con prompts representativos (gratis, manual, no queda registro); revisar si tu analítica ya diferencia el tráfico que llega desde un asistente de IA (gratis, indirecto, no te dice si te *nombran*, solo si alguien hizo clic); y usar una herramienta que lance muchos prompts contra varios motores de forma repetida y lo deje medido en el tiempo. Las dos primeras te dan una foto suelta; la tercera es la única que te dice si algo está cambiando.
+
+</KeyTakeaway>
+
+## Por qué "le he preguntado a ChatGPT y no salgo" no es una respuesta
+
+Es la comprobación más habitual, y la menos fiable. Un motor generativo no
+devuelve siempre la misma respuesta a la misma pregunta — varía con el
+momento, con el contexto de la conversación y con la propia naturaleza
+probabilística del modelo. Preguntar una vez y sacar una conclusión es como
+juzgar tu posición en Google mirando un solo resultado de búsqueda un solo
+día: puede que tengas razón, pero no lo sabes con la muestra que acabas de
+usar.
+
+<Figure
+  label="Figura 1."
+  caption="Dos ejecuciones de un prompt casi idéntico, en el mismo motor. Texto ilustrativo — no es la respuesta real de ningún motor."
+>
+  <AnswerPair>
+    <AnswerSample
+      verdict="Prompt A — te menciona"
+      text="Para gestionar reservas online, herramientas como Tu Marca son una opción habitual entre negocios de tu tamaño."
+    />
+    <AnswerSample
+      verdict="Prompt B — no te menciona"
+      text="Hay varias plataformas de gestión de reservas en el mercado, cada una con sus propias integraciones y precio."
+    />
+  </AnswerPair>
+</Figure>
+
+La diferencia entre los dos prompts es mínima, pero el resultado no. Esto es
+justo lo que hace que una sola pregunta no sirva de diagnóstico: necesitas un
+conjunto de prompts que representen de verdad cómo pregunta tu cliente —lo
+explicamos con más detalle en
+<a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los
+prompts correctos para monitorizar tu marca en IA</a>— y repetirlos varias
+veces, no uno suelto.
+
+## Tres formas de comprobarlo, de menos a más sistemática
+
+<NumberedSection n={1} title="Pregúntale tú mismo a cada motor, con varios prompts">
+
+Abre ChatGPT, Gemini y Claude por separado y hazles la pregunta que haría de
+verdad un cliente tuyo — no "¿conoces mi marca?", sino algo como "¿qué
+herramienta me recomiendas para [tu categoría]?". Repite el mismo prompt 3-4
+veces en cada motor, en sesiones nuevas cada vez (una conversación con
+contexto previo contamina el resultado). Anota si te nombran, en qué
+posición dentro de la respuesta, y si citan tu web como fuente o solo
+mencionan tu nombre.
+
+<QuickAction>Escribe 3 prompts reales de tu categoría y pruébalos en los tres motores, 3 veces cada uno. Son 27 comprobaciones — tediosas a mano, pero es la línea de partida más honesta que existe.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Revisa si tu analítica diferencia el tráfico que llega desde un asistente de IA">
+
+Este método no te dice si te *mencionan* — solo si alguien que llegó desde un
+asistente de IA acabó haciendo clic hasta tu web, que es una señal más
+indirecta y más escasa. Varias plataformas de analítica han empezado a
+separar ese origen del resto del tráfico de referencia; merece la pena
+revisar los informes de canal/origen de la tuya y buscar si aparece algo
+identificado como IA o asistente conversacional. Es una señal complementaria,
+nunca la principal: un motor puede citarte y mencionar tu web sin que nadie
+llegue a hacer clic en esa sesión.
+
+<QuickAction>Abre el informe de canales de tu analítica y busca si hay tráfico ya identificado como procedente de un asistente de IA. Si no lo ves, no significa que no exista — puede que tu herramienta aún no lo separe.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Usa una herramienta que lo compruebe de forma sistemática y repetida">
+
+Preguntar a mano no escala más allá de un puñado de prompts, y no queda
+registro para saber si algo mejora o empeora con el tiempo. GenScore lanza
+un conjunto de prompts reales de tu categoría contra Gemini, ChatGPT y
+Claude, y mide —motor a motor— tu tasa de mención, si citan tu web como
+<a href="/glosario/citacion-en-ia">fuente</a>, y con qué sentimiento hablan
+de tu marca. Puedes ver esa comparación por motor directamente en tu
+Overview, sin tener que adivinar. El escaneo gratuito hace exactamente esto una vez, sin tarjeta.
+
+<QuickAction>Lanza tu escaneo gratuito y mira la comparativa por motor en tu Overview — te dice en qué motor te va peor sin que tengas que probarlo a mano.</QuickAction>
+
+</NumberedSection>
+
+## Mención y citación no son lo mismo
+
+Un motor puede nombrarte sin citarte, y esa diferencia importa: una mención
+es que te nombre entre varias opciones; una citación es que además señale tu
+web como la fuente de una afirmación concreta. Solo la segunda te trae
+autoridad real y, potencialmente, tráfico. Tienes la definición completa —y
+por qué solo una de las dos cuenta como respaldo real— en nuestro glosario,
+en <a href="/glosario/citacion-en-ia">qué es una citación en respuestas de
+IA</a>. Si quieres ir más allá de saber si te citan y trabajar en que te
+citen más, la guía práctica es
+<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que ChatGPT
+te cite</a>.
+
+## Preguntas frecuentes
+
+**¿Cómo sé si ChatGPT, Gemini o Claude mencionan mi marca?** De tres formas:
+preguntándoles tú mismo con prompts que representen cómo pregunta de verdad
+tu cliente, revisando si tu analítica ya diferencia el tráfico que llega
+desde asistentes de IA, o usando una herramienta que lo compruebe de forma
+sistemática y repetida en el tiempo, como GenScore.
+
+**¿Aparecer en ChatGPT es lo mismo que aparecer en Google?** No. Google
+indexa páginas y las ordena; un motor generativo hace *grounding* — busca
+una fuente en el momento de responder y decide si te nombra y si te cita —
+y ese proceso es distinto en cada motor. Estar bien posicionado en Google no
+garantiza aparecer en una respuesta de ChatGPT, y al revés.
+
+**¿Basta con preguntarle una vez a ChatGPT para saberlo?** No de forma
+fiable. La misma pregunta puede dar una respuesta distinta de una ejecución
+a otra, y una marca puede aparecer con mucha frecuencia para un prompt y
+casi nunca para otro que pregunta algo muy parecido. Por eso una comprobación
+real necesita varios prompts y varias repeticiones, no una consulta suelta.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Sabes de verdad si ChatGPT, Gemini y Claude te mencionan?"
+  text="Lanza un escaneo gratuito y mira la comparativa por motor, sin adivinar. Sin tarjeta."
+/>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>

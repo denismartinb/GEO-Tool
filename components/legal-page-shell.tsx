@@ -1,8 +1,15 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
-import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PublicHeader } from "@/components/marketing/public-header";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
 
+/**
+ * Cross-nav between the three legal docs. Not part of the unified
+ * PublicHeader (GENSCORE-HEADER-1) — Privacidad/Cookies/Términos aren't
+ * public nav items — but /cookies has no other in-page link on legal pages,
+ * so it stays as a lightweight secondary row under the shared header.
+ */
 const LEGAL_NAV_LINKS = [
   { href: "/privacidad", label: "Privacidad" },
   { href: "/cookies", label: "Cookies" },
@@ -22,34 +29,25 @@ export function LegalPageShell({
 }) {
   return (
     <div className="lp">
-      <div className="lp-nav-wrap">
-        <nav className="lp-nav">
-          <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...LEGAL_NAV_LINKS]} />
-          <Link href="/" className="lp-logo">
-            <BrandLogo size={22} />
-          </Link>
-          <div className="lp-nav-links">
-            {LEGAL_NAV_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className={l.href === activeHref ? "active" : ""}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
-          <div className="lp-nav-right">
-            <Link href="/login" className="btn btn-ghost btn-sm">
-              Iniciar sesión
-            </Link>
-            <Link href="/signup?plan=free" className="btn btn-primary btn-sm">
-              Prueba gratis
-            </Link>
-          </div>
-        </nav>
-      </div>
+      <PublicHeader />
 
       <section className="lp-section" style={{ paddingBottom: 0 }}>
         <div className="lp-inner">
           <h1 className="lp-h2">{title}</h1>
           <p className="legal-updated">Última actualización: {updated}</p>
+          <div className="legal-subnav">
+            {LEGAL_NAV_LINKS.map((l) =>
+              l.href === activeHref ? (
+                <span key={l.href} className="legal-subnav-current">
+                  {l.label}
+                </span>
+              ) : (
+                <Link key={l.href} href={l.href} className="link-mini">
+                  {l.label}
+                </Link>
+              )
+            )}
+          </div>
         </div>
       </section>
 
@@ -67,6 +65,16 @@ export function LegalPageShell({
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
               <Link href="/pricing">Precios</Link>
+              {MARKETING_CONTENT_LINKS.map((l) => (
+                <Link key={l.href} href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
+              {MARKETING_ENTITY_LINKS.map((l) => (
+                <Link key={l.href} href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
             </div>

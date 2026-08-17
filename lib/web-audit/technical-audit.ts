@@ -1,19 +1,22 @@
 import "server-only";
 
 import { z } from "zod";
-import { isProOrAbove } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
+import { type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import { type createServiceClient } from "@/lib/supabase/service";
-import { type AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
+import { rescoreRunWithTechnicalSnapshot } from "@/lib/scoring/rescore-run";
 import { checkSnapshotRateLimit, DEFAULT_SNAPSHOT_RATE_LIMIT } from "@/lib/web-audit/snapshot-rate-limit";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { fetchPageSafely, isAllowedAuditHost, type PageFetchStatus } from "@/lib/web-audit/fetch-page";
 import { buildPageCheckResult, type PageCheckResult } from "@/lib/web-audit/page-checks";
 import { buildBotAccessReport, type BotAccessReport } from "@/lib/web-audit/robots";
+import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-alerts";
+import { sanitizeField } from "@/lib/text/sanitize";
 
 /**
- * "Auditar salud técnica GEO" (WEB-AUDIT-2): a Pro+-gated, deterministic
+ * "Auditar salud técnica GEO" (WEB-AUDIT-2): a deterministic
  * (no-LLM) technical audit of up to MAX_AUDIT_PAGES own-domain pages the
  * product already knows about, plus AI-bot access (robots.txt / llms.txt).
  * Lives on the "Auditoría web" page, sibling to domain-coverage.ts's
@@ -21,7 +24,9 @@ import { buildBotAccessReport, type BotAccessReport } from "@/lib/web-audit/robo
  *
  * 1. Ownership proven with the user-context (RLS-scoped) client before any
  *    service-role write.
- * 2. Pro-plan gate reads `profiles.current_plan` directly via isProOrAbove.
+ * 2. NOT Pro-gated (WEB-AUDIT-TECH-ALL-PLANS-1, docs/adr/0035): this half
+ *    costs no LLM calls, and gating it made the GEO Score measure a
+ *    different number of components per plan (docs/adr/0033).
  * 3. Cache check runs BEFORE the rate-limit check (data-guardian R4): a cache
  *    hit returns immediately, so repeated legitimate cache hits never
  *    consume rate-limit budget.
@@ -69,10 +74,20 @@ export type TechnicalAuditSnapshot = {
 
 export type TechnicalAuditResult =
   | { success: true; snapshot: TechnicalAuditSnapshot; cached: boolean }
-  | { success: false; error: string };
+  | {
+      success: false;
+      error: string;
+      /**
+       * Machine-readable classification of `error`, so a caller that must
+       * decide whether retrying could ever help (AUDIT-AFTER-SCAN-1's backend
+       * runner) never has to match on Spanish prose. Required, not optional:
+       * a new failure path that forgets to classify itself should fail the
+       * typecheck, not default to "retry forever". See audit-failure.ts.
+       */
+      reason: AuditFailureReason;
+    };
 
 const GENERIC_FAILURE = "No se ha podido auditar la salud técnica de tu web en este momento. Inténtalo de nuevo en unos minutos.";
-const PLAN_REQUIRED_FAILURE = "Auditar la salud técnica de tu web está disponible a partir del plan Pro.";
 const RATE_LIMIT_FAILURE =
   "Has alcanzado el límite de auditorías técnicas para este proyecto por hoy. Vuelve a intentarlo más tarde.";
 const NO_SCAN_FAILURE = "Necesitas al menos un escaneo completado antes de auditar la salud técnica de tu web.";
@@ -115,19 +130,6 @@ function normalizeDomain(value: string): string {
     .replace(/^https?:\/\//, "")
     .replace(/^www\./, "")
     .replace(/\/.*$/, "");
-}
-
-function sanitizeField(input: string, maxLen: number): string {
-  let stripped = "";
-  for (const ch of input) {
-    const code = ch.codePointAt(0) ?? 0;
-    stripped += code < 0x20 || code === 0x7f ? " " : ch;
-  }
-  return stripped
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLen);
 }
 
 /** Strips hash and query so `/pricing`, `/pricing?utm=x`, and `/pricing#top` dedupe to one candidate. */
@@ -268,12 +270,22 @@ export async function runTechnicalAuditCore({
   projectId,
   supabase,
   service,
-  user
+  user,
+  trigger = "manual"
 }: {
   projectId: string;
   supabase: AuthenticatedContext["supabase"];
   service: ReturnType<typeof createServiceClient>;
-  user: AuthenticatedContext["user"];
+  /** See the same parameter on `auditDomainCoverageCore` — only `.id` is read. */
+  user: Pick<AuthenticatedContext["user"], "id">;
+  /**
+   * `"automatic"` = the post-scan backend runner (AUDIT-AFTER-SCAN-1), which
+   * skips the 5/day snapshot rate limit for the reasons documented on
+   * `auditDomainCoverageCore`. The 24h cache check above still runs first and
+   * still short-circuits, so an automatic run right after a scan that already
+   * has a fresh snapshot for the SAME run costs nothing.
+   */
+  trigger?: "manual" | "automatic";
 }): Promise<TechnicalAuditResult> {
   try {
     const { data: projectRaw, error: projectError } = await withTimeout(
@@ -282,19 +294,24 @@ export async function runTechnicalAuditCore({
     );
     const project = projectRaw as unknown as ProjectRow | null;
     if (projectError || !project) {
-      return { success: false, error: feedbackErrorMessages.project_not_found };
+      return { success: false, error: feedbackErrorMessages.project_not_found, reason: "project_not_found" };
     }
     if (project.is_archived) {
-      return { success: false, error: feedbackErrorMessages.project_archived };
+      return { success: false, error: feedbackErrorMessages.project_archived, reason: "project_archived" };
     }
 
-    const { data: profileRaw } = await withTimeout(
-      supabase.from("profiles").select("current_plan").eq("id", user.id).maybeSingle(),
-      "load_plan"
-    );
-    if (!isProOrAbove((profileRaw as { current_plan?: string } | null)?.current_plan)) {
-      return { success: false, error: PLAN_REQUIRED_FAILURE };
-    }
+    // WEB-AUDIT-TECH-ALL-PLANS-1 (founder-approved 2026-08-05): the technical
+    // audit is NO LONGER Pro-gated. Coverage still is — it runs batched Gemini
+    // calls — but this half is pure fetch + regex with zero LLM spend
+    // (lib/web-audit/page-checks.ts), so the commercial argument for gating it
+    // never applied to cost.
+    //
+    // What forced the change is GEO-SCORE-V4 (docs/adr/0033): `readiness_score`
+    // is now a component of the GEO Score worth .20. Gating it meant the
+    // headline metric measured a different number of components depending on
+    // the plan — a free project's score silently renormalised to the old
+    // four-component scale. A metric that means something different per plan is
+    // not a metric. See docs/adr/0035.
 
     const { data: latestRunRaw } = await withTimeout(
       supabase
@@ -309,7 +326,7 @@ export async function runTechnicalAuditCore({
     );
     const scanId = (latestRunRaw as { id: string } | null)?.id ?? null;
     if (!scanId) {
-      return { success: false, error: NO_SCAN_FAILURE };
+      return { success: false, error: NO_SCAN_FAILURE, reason: "no_scan" };
     }
 
     // Cache check BEFORE the rate-limit check (data-guardian R4): a fresh
@@ -318,7 +335,11 @@ export async function runTechnicalAuditCore({
     const { data: latestSnapshotRaw } = await withTimeout(
       service
         .from("web_audit_snapshots")
-        .select("scan_id, readiness_score, pages, bots, created_at")
+        // `id` is not used by the cache check — it is the previous-audit side
+        // of the regression comparison at the bottom of this function
+        // (WEB-AUDIT-ALERTS-1), read here rather than in a second query
+        // because this row IS the previous audit.
+        .select("id, scan_id, readiness_score, pages, bots, created_at")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -326,6 +347,7 @@ export async function runTechnicalAuditCore({
       "load_latest_snapshot"
     );
     const latestSnapshot = latestSnapshotRaw as {
+      id: string;
       scan_id: string | null;
       readiness_score: number | null;
       pages: PageAuditEntry[];
@@ -349,21 +371,24 @@ export async function runTechnicalAuditCore({
       }
     }
 
-    const rateLimit = await checkSnapshotRateLimit(service, projectId, { config: DEFAULT_SNAPSHOT_RATE_LIMIT });
-    if (!rateLimit.allowed) {
-      console.warn(`${LOG_PREFIX} rate_limited`, { project_id: projectId });
-      return {
-        success: false,
-        error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_FAILURE
-      };
+    if (trigger === "manual") {
+      const rateLimit = await checkSnapshotRateLimit(service, projectId, { config: DEFAULT_SNAPSHOT_RATE_LIMIT });
+      if (!rateLimit.allowed) {
+        console.warn(`${LOG_PREFIX} rate_limited`, { project_id: projectId });
+        return {
+          success: false,
+          error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_FAILURE,
+          reason: rateLimit.reason === "rate_limit_exceeded" ? "rate_limited" : "generic"
+        };
+      }
     }
 
-    const { data: projectDomainRaw } = await withTimeout(
-      supabase.from("projects").select("domain").eq("id", projectId).maybeSingle(),
-      "load_domain"
-    );
-    const domain = (projectDomainRaw as { domain: string } | null)?.domain ?? project.domain;
-    const projectDomainNormalized = normalizeDomain(domain);
+    // `project.domain` comes from the ownership-scoped query at the top of
+    // this function. A second read of the same column — filtered only by id —
+    // used to sit here; harmless on the user path but an unscoped read under
+    // the service role on the automatic one, and redundant either way
+    // (data-guardian R4, AUDIT-AFTER-SCAN-1).
+    const projectDomainNormalized = normalizeDomain(project.domain);
     const homepageUrl = `https://${projectDomainNormalized}/`;
 
     // Coverage-map candidate source: verified pages from the latest
@@ -445,20 +470,69 @@ export async function runTechnicalAuditCore({
 
     // Persist unconditionally (invariant 4): every consumed rate-limit unit
     // leaves a row, even a run where every candidate was skipped.
-    const { error: persistError } = await withTimeout(
-      service.from("web_audit_snapshots").insert({
-        project_id: projectId,
-        scan_id: scanId,
-        source: "manual",
-        readiness_score: readinessScore,
-        pages: sanitizedPages,
-        bots
-      }),
+    const { data: insertedRaw, error: persistError } = await withTimeout(
+      service
+        .from("web_audit_snapshots")
+        .insert({
+          project_id: projectId,
+          scan_id: scanId,
+          source: "manual",
+          readiness_score: readinessScore,
+          pages: sanitizedPages,
+          bots
+        })
+        // The new row's id discriminates every regression notice emitted
+        // below, so a retried invocation cannot notify twice for one audit.
+        .select("id")
+        .maybeSingle(),
       "persist_snapshot"
     );
     if (persistError) {
       console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId });
-      return { success: false, error: GENERIC_FAILURE };
+      return { success: false, error: GENERIC_FAILURE, reason: "generic" };
+    }
+    const snapshotId = (insertedRaw as { id: string } | null)?.id ?? null;
+
+    // WEB-AUDIT-ALERTS-1 — tell the owner what got WORSE since the previous
+    // audit. Strictly after the insert (the notice must describe a durable
+    // row) and strictly fail-soft: emitAuditRegressionNotifications never
+    // throws, so an audit that ran and persisted is still a success even if
+    // the bell stays empty.
+    //
+    // Placed in the core rather than in the job runner, so it covers every
+    // way this audit can be reached. As of AUDIT-NO-BUTTON-1 (log §25) that
+    // is only the automatic post-scan path — "Auditar ahora" is gone — but
+    // the emission deliberately does not assume it: the `trigger` distinction
+    // still exists below for the rate limit, and a notice about a regression
+    // is worth sending whoever asked for the audit. The transition rule
+    // (regressions.ts) is what bounds the volume, not the caller.
+    await emitAuditRegressionNotifications({
+      service,
+      projectId,
+      ownerUserId: user.id,
+      projectDomain: projectDomainNormalized,
+      snapshotId,
+      previousSnapshot: latestSnapshot ? { pages: latestSnapshot.pages, bots: latestSnapshot.bots } : null,
+      currentSnapshot: { pages: sanitizedPages, bots }
+    });
+
+    // GEO-SCORE-V4 (docs/adr/0033): this snapshot is the technical component
+    // of the run it was triggered by, so the run's composite is re-resolved
+    // against it now. Fail-soft on purpose and by precedent (the score-drop
+    // alert below the scan's own scoring uses the same reasoning): a scoring
+    // correction must never turn a successful, already-persisted audit into a
+    // failed one. If this throws, the snapshot still stands and the run keeps
+    // the score it already had.
+    if (scanId) {
+      try {
+        await rescoreRunWithTechnicalSnapshot({ service, projectId, runId: scanId });
+      } catch (rescoreError) {
+        console.error(`${LOG_PREFIX} rescore_failed`, {
+          project_id: projectId,
+          scan_id: scanId,
+          error: rescoreError instanceof Error ? rescoreError.message : "unknown"
+        });
+      }
     }
 
     console.info(`${LOG_PREFIX} completed`, {
@@ -483,6 +557,6 @@ export async function runTechnicalAuditCore({
         error_name: error instanceof Error ? error.name : "unknown"
       });
     }
-    return { success: false, error: GENERIC_FAILURE };
+    return { success: false, error: GENERIC_FAILURE, reason: "generic" };
   }
 }

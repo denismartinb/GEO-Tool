@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { selectCandidateUrls, runTechnicalAuditCore, MAX_AUDIT_PAGES, TECH_AUDIT_TOTAL_BUDGET_MS } from "./technical-audit";
 import * as fetchPageModule from "./fetch-page";
 import * as robotsModule from "./robots";
@@ -99,30 +99,64 @@ describe("selectCandidateUrls", () => {
 type ServiceClient = ReturnType<typeof createServiceClient>;
 type Supabase = AuthenticatedContext["supabase"];
 
-function makeBuilder(result: { data: unknown; error: unknown }) {
+type Result = { data: unknown; error: unknown };
+
+/**
+ * `listResult` is what awaiting the builder resolves to, `result` what
+ * `.maybeSingle()` does. The same table is read both ways now — the
+ * regression-alert pass (WEB-AUDIT-ALERTS-1) reads coverage-map HISTORY off
+ * `generated_solutions`, which the candidate-selection path above reads a
+ * single row from — so one shared shape could no longer serve both.
+ */
+function makeBuilder(result: Result, listResult: Result) {
   const builder: Record<string, unknown> = {
     eq: () => builder,
     is: () => builder,
+    in: () => builder,
     gte: () => builder,
     order: () => builder,
     limit: () => builder,
     maybeSingle: () => Promise.resolve(result),
-    then: (resolve: (v: typeof result) => unknown) => Promise.resolve(result).then(resolve)
+    then: (resolve: (v: Result) => unknown) => Promise.resolve(listResult).then(resolve)
   };
   return builder;
 }
 
-type TableConfig = { select?: { data: unknown; error: unknown }; insertError?: unknown; onInsert?: (payload: unknown) => void };
+type TableConfig = {
+  select?: Result;
+  selectList?: Result;
+  insertError?: unknown;
+  /** Row handed back by `insert(...).select("id").maybeSingle()`. */
+  insertedRow?: unknown;
+  onInsert?: (payload: unknown) => void;
+  onUpsert?: (payload: unknown) => void;
+};
 
 function makeClient(tables: Record<string, TableConfig>) {
   return {
     from(table: string) {
       const config = tables[table] ?? {};
       return {
-        select: vi.fn(() => makeBuilder(config.select ?? { data: null, error: null })),
+        select: vi.fn(() =>
+          makeBuilder(config.select ?? { data: null, error: null }, config.selectList ?? config.select ?? { data: [], error: null })
+        ),
         insert: vi.fn((payload: unknown) => {
           config.onInsert?.(payload);
-          return Promise.resolve({ error: config.insertError ?? null });
+          const error = config.insertError ?? null;
+          // Both shapes: awaited directly (older callers) and
+          // `.select(...).maybeSingle()` (the snapshot insert, which needs
+          // the new row's id to key its regression notices).
+          return Object.assign(Promise.resolve({ error }), {
+            select: () => ({
+              maybeSingle: () => Promise.resolve({ data: error ? null : (config.insertedRow ?? { id: "snapshot-new" }), error })
+            })
+          });
+        }),
+        // lib/notifications/emit.ts writes through upsert. Present so a test
+        // client never makes emission throw for a reason production wouldn't.
+        upsert: vi.fn((payload: unknown) => {
+          config.onUpsert?.(payload);
+          return Promise.resolve({ error: null });
         })
       };
     }
@@ -135,8 +169,9 @@ function baseTables(overrides: Record<string, TableConfig> = {}): Record<string,
     profiles: { select: { data: { current_plan: "pro" }, error: null } },
     scan_runs: { select: { data: { id: "scan-1" }, error: null } },
     web_audit_snapshots: { select: { data: null, error: null } },
-    generated_solutions: { select: { data: null, error: null } },
+    generated_solutions: { select: { data: null, error: null }, selectList: { data: [], error: null } },
     scan_prompt_results: { select: { data: [], error: null } },
+    notifications: {},
     ...overrides
   };
 }
@@ -255,7 +290,8 @@ describe("runTechnicalAuditCore", () => {
             })
           },
           error: null
-        }
+        },
+        selectList: { data: [], error: null }
       }
     });
     let insertedPayload: unknown = null;
@@ -282,7 +318,10 @@ describe("runTechnicalAuditCore", () => {
     dateNowSpy.mockRestore();
   });
 
-  it("returns the Pro-required message for a non-Pro plan without touching the rate limiter", async () => {
+  it("audits a non-Pro plan instead of refusing it (docs/adr/0035)", async () => {
+    // The technical half costs no LLM calls, and its score is a component of
+    // the GEO Score (docs/adr/0033). Gating it made the headline metric
+    // measure a different number of components per plan.
     const tables = baseTables({ profiles: { select: { data: { current_plan: "starter" }, error: null } } });
     const supabase = makeClient(tables) as unknown as Supabase;
     const service = makeClient(tables) as unknown as ServiceClient;
@@ -294,10 +333,22 @@ describe("runTechnicalAuditCore", () => {
       user: { id: "user-1" } as AuthenticatedContext["user"]
     });
 
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("Pro");
-    expect(mockedCheckSnapshotRateLimit).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+  });
+
+  it("audits a free plan too — the floor, not just the tier below Pro", async () => {
+    const tables = baseTables({ profiles: { select: { data: { current_plan: "free" }, error: null } } });
+    const supabase = makeClient(tables) as unknown as Supabase;
+    const service = makeClient(tables) as unknown as ServiceClient;
+
+    const result = await runTechnicalAuditCore({
+      projectId: "project-1",
+      supabase,
+      service,
+      user: { id: "user-1" } as AuthenticatedContext["user"]
+    });
+
+    expect(result.success).toBe(true);
   });
 
   it("returns a blocking message and persists nothing when the rate limit is exceeded", async () => {

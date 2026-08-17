@@ -42,6 +42,40 @@ custom SMTP provider in `Authentication → Settings → SMTP Settings` — Rese
 (already used for `lib/email/transactional.ts`) supports SMTP relay and is
 the natural choice here.
 
+### Operator console (ADMIN-CONSOLE-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `ADMIN_USER_IDS` | No (`/admin` is unreachable — 404 for everyone — until set) | Vercel (not local) | comma-separated `auth.users.id` UUIDs, e.g. `7f2a9c14-3e88-4d51-9a02-6c7f1d4ab8e1` |
+
+`/admin` and `/mfa/*` gate on this allow-list, checked against the caller's
+own verified session (`lib/admin/operator.ts`) — never against email, which a
+user can change themselves from Ajustes. Reading it requires no service role;
+the privileged reads inside `/admin` (all accounts' `profiles`, `last_sign_in_at`
+via `auth.admin.listUsers`) do, and only `requireOperator()` ever constructs
+that client.
+
+**Adding this variable in Vercel is not enough on its own — the deployment has
+to be REBUILT to pick it up, and a plain "Redeploy" of an unchanged commit does
+not rebuild.** `vercel.json`'s `ignoreCommand`
+(`scripts/vercel-should-build.sh`) skips any deployment whose diff against the
+last successful one is empty, which is exactly the case for a same-commit
+redeploy: Vercel marks it "Ignored" and keeps serving the previous build, still
+without the variable. Confirmed live on 2026-08-11 — `/admin` kept returning
+404 through two redeploys for this reason, not because of a wrong UUID. Get a
+real build by pushing a commit that touches a build-affecting path, or by
+temporarily clearing the Ignored Build Step in Project Settings → Git. The same
+applies to **every** server-side variable in this document, not just this one;
+it is written here because this is where it first cost an hour.
+
+Being on this list is necessary but not sufficient: `/admin` also requires an
+`aal2` (TOTP) session, enrolled once at `/mfa/enroll` — see
+`.claude/rules/admin.md` for the full gate and
+`docs/brand/design-decisions-log.md` for why (ADMIN-CONSOLE-1). Losing the
+authenticator device locks the operator out of `/admin` until the factor is
+removed from the Supabase dashboard (`Authentication → Users → <account> →
+MFA`) — worth doing once, calmly, before this is the only way in.
+
 ### Gemini
 
 | Variable | Required | Where | Expected shape |
@@ -117,10 +151,95 @@ See `docs/adr/0003-sync-scan-execution-and-maxduration.md`.
 | `CRON_SECRET` | Yes, once `CRON_SCANS_ENABLED=true` | Vercel | random secret string; Vercel sends it as `Authorization: Bearer <CRON_SECRET>` to `/api/cron/weekly-scans` |
 | `CRON_SCANS_ENABLED` | No (defaults to disabled) | Vercel | `true` to enable; any other value (or unset) is a no-op kill switch |
 | `MAX_PROJECTS_PER_CRON_RUN` | No (defaults to `5`) | Vercel | positive integer |
+| `MAX_SWEEP_CHAIN_INVOCATIONS` | No (defaults to `20`) | Vercel | positive integer — cuántas veces puede encadenarse el barrido en un mismo disparo de cron (`docs/adr/0016`). El trabajo total por disparo es `MAX_SWEEP_CHAIN_INVOCATIONS × MAX_PROJECTS_PER_CRON_RUN`, así que **multiplica gasto de LLM**. Faltaba en este contrato hasta PRELAUNCH-HARDENING-1 Fase R4; lo detectó `tests/env-drift.test.ts` |
+| `VERCEL_ENV` | La inyecta Vercel | — | `production` \| `preview` \| `development`. No se configura a mano; se documenta porque el código la lee |
 
 The cron only ever processes projects with `projects.recurring_scans_enabled = true`
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
+
+### Comprobador gratuito anónimo (FREE-CHECKER-1 Fase B)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `PUBLIC_CHECK_IP_SALT` | **Yes**, o el comprobador no arranca | Vercel | cadena aleatoria larga, p. ej. `openssl rand -hex 32` |
+
+**Sin esta variable el comprobador falla al arrancar, a propósito.** La IP del
+visitante se guarda como `sha256(ip + salt)` y nunca en claro: es dato personal
+y sólo necesitamos contarla. Un sha256 de una IP **sin** salt no protege nada —
+son 4.000 millones de entradas precomputables, o sea guardar la IP con pasos
+extra—, así que `hashIp()` lanza en vez de degradar en silencio a algo que
+parece anónimo y no lo es (`lib/free-checker/rate-limit.ts`).
+
+**Rotarla retira todos los hashes viejos de golpe**, que es justo la propiedad
+que la hace útil. El coste, declarado: rotar resetea la ventana por IP de todo
+el mundo. Es el precio correcto por no llevar un registro de quién miró.
+
+Los tres límites (por IP, por dominio y el techo global diario) viven en código,
+no en el entorno: `DEFAULT_PUBLIC_CHECK_LIMITS`. El que acota el gasto de verdad
+es el techo global — ver el comentario de cabecera de ese módulo.
+
+**El comprobador usa `OPENAI_API_KEY`** (motor ChatGPT, decisión del fundador
+2026-08-15), que ya existe para el escaneo. El perfil del negocio y la
+derivación de la pregunta siguen en `GEMINI_API_KEY`. A ~0,016 $ por
+comprobación y 300/día de techo, el peor caso absoluto son ~4,80 $/día.
+
+### Auditoría web automática tras cada escaneo (AUDIT-AFTER-SCAN-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `AUTO_WEB_AUDIT_ENABLED` | No (defaults to **enabled**) | Vercel | `false` to disable account-wide; anything else (including unset) leaves it on |
+| `OPS_ALERT_EMAIL` | No (alerts are silently skipped when unset) | Vercel | operator inbox, e.g. `alerts@genscore.es` |
+
+**Since DOMAINS-REDESIGN-1 (migration 0030) this is the OUTER switch, not the
+only one.** Each project also carries `projects.auto_web_audit_enabled`
+(default `true`), toggled from the internal `/debug` screen so the founder can
+stop spending Gemini grounding calls on one domain without redeploying. Env off
+wins over any column value. Both are enforced in the same place —
+`enqueueWebAuditJob` — because two paths enqueue audits (the scan executor
+inline, and `backfillMissingWebAuditJobs` on the daily cron) and a gate on only
+one of them gets undone by the other.
+
+Unlike every other kill switch in this document, this one defaults to **on**:
+the whole point of the phase is that the audit happens without anyone asking,
+and a feature that needs a variable set in three environments before it does
+anything is a feature that gets found broken later. `false` is the escape
+hatch for cost — each automatic audit spends real Gemini grounding calls.
+
+Reuses `CRON_SECRET` for both entry points: Vercel's daily cron (`GET
+/api/cron/run-audit`, `0 7 * * *` — an hour after the scan sweep, so the
+day's automatic scans have already queued their audits) and the worker's own
+`POST` self-chain. No new secret.
+
+`OPS_ALERT_EMAIL` receives the failure alert when a queued audit exhausts its
+six attempts (~12.5 h of backoff). It goes to the **operator**, never to the
+customer: the audit is automatic, so the user never asked for it and cannot
+act on the backend failure. Requires `RESEND_API_KEY` like every other email.
+
+The same address also receives the **scan-health alert**
+(EXTRACTION-RELIABILITY-1 Fase B, `docs/adr/0029`): a provider out of quota, a
+provider rejecting the key or model id, an engine that answered prompts but
+extracted nothing, or a run that failed with its auto-retry already spent.
+Deduped on (engine, reason) across every project for 24 h, so one exhausted
+API account is one email rather than one per project per daily sweep. Also
+operator-only, and for the same reason.
+
+**This variable was not configured at all when Fase B shipped** (founder,
+2026-08-04), which means the web-audit alert above had been inert since the day
+it was written. An unset alert channel swallowing an alert is the same class of
+silent failure this whole ADR exists to remove, so
+`checkAndSendScanHealthAlert` now emits a loud `console.error` when it has
+findings and no address to send them to. The alert still cannot be delivered —
+only setting the variable fixes that — but it stops being invisible. **Set it
+in both Production and Preview**, and note that it needs `RESEND_API_KEY` too:
+without that, `sendEmail` is a no-op for every email in the product.
+
+That second requirement is not theoretical. On 2026-08-05 the Fase B
+verification failed with no email and no log, because `OPS_ALERT_EMAIL` was
+configured but `RESEND_API_KEY` was not — the address probe passed and
+`sendEmail` then returned on `if (!resend) return`. Two silent gates in
+series. `isOpsAlertConfigured` now requires both, so the "not deliverable"
+log fires when either is missing.
 
 ### Weekly digest email (ALERTS-1 Fase 6b)
 
@@ -146,17 +265,27 @@ toggle at `/dashboard/settings/notifications`).
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
-| `SCAN_CONTINUE_SECRET` | Yes, for campaigns with more active prompts than `MAX_REAL_SCAN_PROMPTS` | Vercel + local `.env.local` | random secret string; `executePendingScan` sends it as `Authorization: Bearer <SCAN_CONTINUE_SECRET>` to `/api/scan/continue` |
+| `SCAN_CONTINUE_SECRET` | **Yes** for campaigns with more active prompts than `MAX_REAL_SCAN_PROMPTS` — including every manual "Lanzar escaneo" | Vercel + local `.env.local` | random secret string; `executePendingScan` sends it as `Authorization: Bearer <SCAN_CONTINUE_SECRET>` to `/api/scan/continue` |
 | `NEXT_PUBLIC_SITE_URL` | No (falls back to `https://${VERCEL_URL}`, then `http://localhost:3000`) | Vercel | `https://<production-domain>` — set explicitly on Preview deploys if self-continuation needs to target the deploy's own URL rather than a stale `VERCEL_URL` |
 
 A project whose plan allows more active prompts than fit in one execution
 batch (`MAX_REAL_SCAN_PROMPTS=10`) has its scan split across multiple
 batches, each its own `executePendingScan` invocation. Without
 `SCAN_CONTINUE_SECRET` set, the first batch still runs (and its results are
-real), but the campaign stalls after it — no continuation can be dispatched,
-and the run only progresses further once `reconcileStuckScanRuns` notices no
-progress and auto-retries (docs/scan-lifecycle.md). See
+real), but no continuation can be dispatched — the campaign then advances only
+while a browser tab is awake on one of the project's screens, and stalls the
+moment that stops, until `reconcileStuckScanRuns` fails it as stuck
+(docs/scan-lifecycle.md). See
 `docs/adr/0014-batched-self-chaining-scan-execution.md`.
+
+**This variable got materially more load-bearing in SCAN-DRIVE-1**
+(`docs/adr/0037`). It used to matter only for the cron/browser-closed path,
+because the manual path drove its own batches from the client and deliberately
+skipped the continuation. That client loop turned out to be a browser tab a
+locked phone suspends, which failed a real 31-prompt scan twice. The background
+chain is now always scheduled, so on production this secret is what stands
+between "the scan finishes on its own" and "the scan finishes only if the user
+keeps looking at it".
 
 ### Google sign-in (AUTH-GOOGLE-1)
 
@@ -209,12 +338,46 @@ Igual que Sentry/PostHog: opcional por diseño. `app/layout.tsx` solo añade el
 `Metadata` de Next) — sin la variable, la etiqueta no se renderiza y nada se
 rompe.
 
-**Runbook — dar de alta la propiedad en Search Console (fundador, ~3 minutos):**
+**ESTADO REAL (2026-08-11): la propiedad ya está verificada, y es de tipo
+Dominio (`genscore.es`), no de prefijo de URL.** El fundador la dio de alta
+directamente así, verificándola por DNS. Consecuencias, que contradicen el
+runbook original de abajo y por eso se anotan aquí arriba:
+
+- **`GOOGLE_SITE_VERIFICATION` no hace falta y no está configurada.** Esa
+  variable solo sirve para el método de verificación por etiqueta HTML. Con
+  verificación DNS el `<meta>` no pinta nada. **No la configures "por si
+  acaso": no arregla nada y sugiere a la siguiente sesión que falta algo.**
+- **No hace falta una segunda propiedad para `www`.** Una propiedad de tipo
+  Dominio cubre el apex, `www`, cualquier subdominio y http/https a la vez —
+  así que cubre `https://www.genscore.es`, que es donde vive todo el contenido
+  (canonicals, sitemap, `robots.txt`, `llms.txt`). Esto era el riesgo real que
+  había que descartar: una propiedad de *prefijo* sobre `https://genscore.es`
+  (sin www) no habría mostrado **ningún** dato, en silencio, para siempre.
+- **Cómo distinguir el tipo de un vistazo** en el selector de propiedades: las
+  de tipo Dominio salen sin protocolo (`genscore.es`); las de prefijo salen
+  con él (`https://…/`).
+- **Sitemap enviado y leído el mismo día:** estado «Correcto», **47 páginas
+  descubiertas**, que es exactamente lo que genera `app/sitemap.ts` — o sea que
+  Google ve el inventario completo, no un subconjunto. Si algún día esa cifra
+  baja sin que se hayan retirado URLs, es señal de que algo del sitemap se ha
+  roto.
+- **Redirect apex → www confirmado el mismo día** (`genscore.es` →
+  `www.genscore.es`). Se resuelve en la configuración de Vercel, no en código:
+  no hay `redirects()` en `next.config.ts` ni en `vercel.json`, y no debería
+  añadirse uno. **No es verificable desde el entorno de los agentes** — el
+  proxy de salida bloquea genscore.es — así que es comprobación manual y una
+  sesión no puede darla por hecha.
+
+**Runbook histórico — dar de alta la propiedad por prefijo de URL.** Se
+conserva porque describe el método de etiqueta HTML, que es el que usa
+`GOOGLE_SITE_VERIFICATION`; **no es lo que se hizo** (ver estado real arriba).
 
 1. Entra en [Google Search Console](https://search.google.com/search-console)
    con la cuenta de Google del negocio.
-2. "Añadir propiedad" → tipo **prefijo de URL** → `https://www.genscore.es`
-   (no uses el tipo "dominio", que exige verificación DNS y es más lento).
+2. "Añadir propiedad" → tipo **prefijo de URL** → `https://www.genscore.es`.
+   (El runbook original desaconsejaba el tipo "dominio" por exigir DNS y ser
+   más lento. En la práctica el fundador lo hizo por dominio sin problema, y
+   el resultado es mejor: una sola propiedad cubre apex y www.)
 3. Elige el método **etiqueta HTML**. Search Console muestra algo como:
    `<meta name="google-site-verification" content="AbC123..." />`.
 4. Copia **solo el valor de `content`** (el string `AbC123...`, sin comillas).
@@ -228,7 +391,10 @@ rompe.
 7. Una vez verificado, en Search Console → Sitemaps, envía
    `https://www.genscore.es/sitemap.xml`.
 
-**Runbook — Bing Webmaster Tools (opcional, recomendado):**
+**Runbook — Bing Webmaster Tools — ✅ HECHO (2026-08-11):** propiedad dada de
+alta y sitemap enviado. Estado «Success», 47 URLs descubiertas, 0 errores, 0
+avisos — el mismo recuento que Google, así que ambos índices ven el inventario
+completo y coincidente. Pasos, por si hay que rehacerlo:
 
 1. Entra en [Bing Webmaster Tools](https://www.bing.com/webmasters) con una
    cuenta Microsoft.
@@ -304,8 +470,124 @@ for the payment-failed email to fire.
   trip crosses the Atlantic (docs/architecture-audit-2026-07.md, finding 1.4).
   If the Supabase project is ever migrated to a different region, update this
   value to match.
+- **ignoreCommand**: `vercel.json` runs `scripts/vercel-should-build.sh`, which
+  skips the build when a push touched nothing outside internal documentation
+  (`docs/`, `.claude/`, `.github/`, `tests/`, `agents/` and the root `.md`
+  files). Exit `0` means skip, any other code means build, and every uncertain
+  path in the script ends in "build". **When in doubt, deploy**: Vercel reading
+  a failure as `0` would turn it into a silently missing deployment.
+  - **It compares against the last *successful deployment* of the branch**
+    (`VERCEL_GIT_PREVIOUS_SHA`), not `HEAD^`. A push of three commits is one
+    deployment, so `HEAD^` would only see the last of them and a branch whose
+    final commit is documentation could skip a build its earlier commits
+    needed — leaving the preview on stale code, and the pilot judging a screen
+    that is not the commit's. That limitation was called out as follow-up work
+    when the inline command shipped (PR #323) and is what BUILD-BUDGET-1
+    Fase 1 closed (PR #325). Vercel clones shallow, so the script deepens the
+    clone to reach that SHA and builds if it cannot.
+  - **Production is never skipped**, whatever changed. A production deploy that
+    silently does not happen is a much worse trade than one wasted build — see
+    the stale-production incident below.
+  - **The safe list is literal directories, never patterns, and that is
+    load-bearing.** Every blog article in this product is
+    `app/blog/<slug>/page.mdx`, so the obvious first draft — excluding `*.md`,
+    or its one-character neighbour `*.mdx` — would have stopped publishing new
+    articles with every check still green. `scripts/vercel-should-build.test.ts`
+    pins both directions of the exit contract and asserts that a change under
+    `app/`, `lib/`, `components/`, `public/` or `supabase/` — including a
+    nested `.mdx` — always builds.
+  - **What it does not do, measured rather than assumed:** it does nothing for
+    the Hobby plan's `api-deployments-free-per-day` limit. Tested directly on
+    2026-08-04 — commit `da8736a` touches only `docs/`, so the rule should
+    have skipped it, and it was rejected with the same rate-limit error as
+    every other push. **The limit is applied when the deployment is created,
+    upstream of the build step where `ignoreCommand` runs**, so a build this
+    rule would have skipped never gets far enough to skip. This saves build
+    minutes and nothing else.
+  - **What it does not buy, and this was measured:** it does not free a slot
+    against a daily deployment cap. Tested 2026-08-04 — a `docs/`-only commit
+    the rule should have skipped was rejected with the same rate-limit error as
+    every other push, because **the cap is applied when the deployment is
+    created, upstream of the build step where `ignoreCommand` runs**. What it
+    saves is build minutes and the `ux-pilot` run that a successful preview
+    deployment would have triggered, not deployments.
+- **Deployment rate limit (Hobby — historical since 2026-08-04).** The account
+  moved to **Vercel Pro on 2026-08-04**, so this no longer binds; it is kept
+  because the failure mode is unmistakable if it ever returns.
+  `api-deployments-free-per-day` rejects
+  every new deployment for 24 hours once the account passes 100. Pushing again
+  does not clear it: it consumes another attempt against the same counter.
+  Observed 2026-08-04 — a retrigger commit failed identically, minutes after
+  an unrelated PR's already-queued build completed successfully, so a
+  succeeding build is **not** evidence the window has reopened. Nor does the
+  `ignoreCommand` above help: the limit gates deployment creation, not the
+  build. The only real fix is Vercel Pro, which `docs/launch-plan.md` already
+  lists as a blocker for a separate reason (Hobby forbids commercial use).
 - For smoke testing a non-main branch: change Production Branch in Vercel
   settings, push a commit to trigger a deploy, then revert after the smoke.
+  **Reverting is not optional.** While it points elsewhere, merging to `main`
+  produces no production deploy at all — silently. Preview deploys keep working
+  the whole time, so everything looks healthy.
+
+### Merging to `main` does not guarantee a production deploy — check it
+
+Verified on 2026-08-04, and it cost a founder test session: AUDIT-AFTER-SCAN-1
+was merged, the founder ran a scan against `genscore.es`, nothing was audited,
+and the queue table was empty. Nothing had failed — **production was still
+serving `148f6bc`, eight commits behind `main`**, so the deployed bundle did
+not contain the enqueue call. There is no error anywhere in that story: the
+code simply was not running.
+
+Confirm the deploy landed before concluding anything about behaviour in
+production:
+
+```bash
+# What production is actually serving, newest first
+curl -s "https://api.github.com/repos/denismartinb/GEO-Tool/deployments?environment=Production&per_page=3" \
+  | python3 -c "import sys,json;[print(d['created_at'], d['sha'][:8]) for d in json.load(sys.stdin)]"
+
+# How far ahead main is of that sha
+git log --oneline <sha-from-above>..origin/main
+```
+
+A visual tell is often faster: pick something the last merge changed on screen
+and look for it. In this incident the Auditoría web tabs still read «Plan de
+acción · Salud técnica · Evolución», the layout PR #289 had already replaced
+with «Problemas · Correcto · Páginas» — one glance would have said "old code"
+before any SQL was run.
+
+Two causes seen so far, in the order worth checking:
+
+1. **Production Branch points somewhere other than `main`** (Vercel → Settings
+   → Environments → Production → Branch Tracking), typically left over from the
+   non-main smoke procedure above. This is the one that produces *zero*
+   production deployments while previews continue normally. **This was the
+   actual cause on 2026-08-04.**
+2. **The daily deployment cap on the free plan**
+   (`api-deployments-free-per-day`, >100/day, resets after 24 h). Vercel does
+   not retry a build it refused, so a merge that lands inside that window never
+   deploys even after the cap lifts — it needs a new push or a manual Redeploy.
+
+**How to tell the two apart in one look:** a cap rejection leaves a trace — a
+failed deployment and a `vercel[bot]` comment carrying the error. A misrouted
+Production Branch leaves **nothing at all**: query the deployments API for the
+merge commit and you get zero records, because Vercel never attempted a build.
+On 2026-08-04 that distinction cost several hours, because the cap was
+genuinely exhausted earlier the same day and made a convincing false lead —
+including one wrong conclusion in each direction before the "zero records"
+signal settled it.
+
+Two corollaries worth stating, both learned the same day:
+
+- **Upgrading the plan does not retroactively deploy anything.** Fixing the
+  cause only means the *next* push deploys. Two merges to `main` landed between
+  the cap lifting and the branch setting being corrected, and neither ever
+  built. Something has to trigger a fresh build afterwards.
+- **The `ignoreCommand` does not save deployment quota.** Measured directly
+  (PR #323): a commit touching only `docs/` was rejected with the same
+  `api-deployments-free-per-day` error as any other push, so Vercel evaluates
+  the cap *before* running the ignore command. It saves build minutes and
+  noise, not quota.
 
 ---
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EXTRACTION_VERSION } from "@/lib/scan/constants";
+import { MIN_RESPONSES_FOR_BAND } from "@/lib/scoring/score-reliability";
 import {
   computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
@@ -464,23 +465,34 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
     expect(result.details_json.total_results).toBe(20);
   });
 
-  it("is medium with 5..19 fully-extracted results (was high before geo-score-v2 — ADR 0015)", () => {
-    const results = Array.from({ length: 5 }, (_, i) => row({ id: String(i) }));
+  it("is medium from MIN_RESPONSES_FOR_BAND up to 19 fully-extracted results", () => {
+    for (const size of [MIN_RESPONSES_FOR_BAND, 19]) {
+      const results = Array.from({ length: size }, (_, i) => row({ id: String(i) }));
 
-    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+      const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
-    expect(result.confidence).toBe("medium");
+      expect(result.confidence).toBe("medium");
+    }
   });
 
-  it("is medium with >=2 and <5 fully-extracted results", () => {
-    const results = [row({ id: "1" }), row({ id: "2" })];
+  it("is low below MIN_RESPONSES_FOR_BAND even with perfect extraction (GEO-SCORE-RELIABILITY-1)", () => {
+    // Previously 2..4 results were "medium" and 5..19 were "medium" too, so a
+    // 2-response run and a 19-response run were presented identically. Below
+    // MIN_RESPONSES_FOR_BAND a single AI answer moves the mention rate by
+    // >=10 points, which no amount of extraction quality compensates for —
+    // the limit is the sample, not the parsing.
+    for (const size of [2, 3, 5, MIN_RESPONSES_FOR_BAND - 1]) {
+      const results = Array.from({ length: size }, (_, i) => row({ id: String(i) }));
 
-    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+      const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
-    expect(result.confidence).toBe("medium");
+      expect(result.confidence).toBe("low");
+      expect(result.details_json.extraction_error_count).toBe(0);
+      expect(result.details_json.extracted_results_count).toBe(size);
+    }
   });
 
-  it("is low with a single fully-extracted result (below the medium threshold of 2)", () => {
+  it("is low with a single fully-extracted result", () => {
     const results = [row({ id: "1" })];
 
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
@@ -577,10 +589,12 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
     expect(result.details_json.brand_position).toBeUndefined();
   });
 
-  it("computes avg_position with dense ranking and penalizes not-mentioned entities with N+1", () => {
-    // N = 1 brand + 1 competitor = 2 tracked entities -> penalized position = 3
-    // Prompt 1: brand mentioned at 1, competitor not mentioned -> competitor gets 3
-    // Prompt 2: competitor mentioned at 1, brand not mentioned -> brand gets 3
+  it("averages rank over ONLY the prompts where the entity was mentioned (geo-score-v3)", () => {
+    // Prompt 1: brand at rank 1, competitor absent.
+    // Prompt 2: competitor at rank 1, brand absent.
+    // Each was mentioned exactly once, at rank 1 -> both 1.0 when mentioned.
+    // The pre-v3 figure folded the N+1 penalty in and reported 2 for both,
+    // which said nothing about rank and everything about frequency.
     const results = [
       positionRow({
         id: "1",
@@ -598,43 +612,113 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
     const brandPosition = result.details_json.brand_position as {
       prompts_with_position_data: number;
       total_entities: number;
-      ranking: Array<{ name: string; is_brand: boolean; avg_position: number; mention_count: number }>;
-      brand_avg_position: number | null;
+      ranking: Array<{
+        name: string;
+        is_brand: boolean;
+        avg_position_when_mentioned: number | null;
+        mention_count: number;
+        prompt_count: number;
+        mention_rate: number;
+        avg_position_penalized: number;
+      }>;
+      brand_avg_position_when_mentioned: number | null;
+      brand_mention_count: number;
       confidence: "low" | "high";
     };
 
     expect(brandPosition.prompts_with_position_data).toBe(2);
     expect(brandPosition.total_entities).toBe(2);
-    // brand: (1 + 3) / 2 = 2; competitor: (3 + 1) / 2 = 2 -> tied, both 2
-    expect(brandPosition.brand_avg_position).toBe(2);
-    const brandEntry = brandPosition.ranking.find((e) => e.is_brand);
-    const competitorEntry = brandPosition.ranking.find((e) => !e.is_brand);
-    expect(brandEntry).toMatchObject({ name: "MiMarca", avg_position: 2, mention_count: 1 });
-    expect(competitorEntry).toMatchObject({ name: "Competitor", avg_position: 2, mention_count: 1 });
-    // confidence is high: prompts_with_position_data (2) >= total_results (2)
+    expect(brandPosition.brand_avg_position_when_mentioned).toBe(1);
+    expect(brandPosition.brand_mention_count).toBe(1);
+
+    const brandEntry = brandPosition.ranking.find((e) => e.is_brand)!;
+    const competitorEntry = brandPosition.ranking.find((e) => !e.is_brand)!;
+    expect(brandEntry).toMatchObject({
+      name: "MiMarca",
+      avg_position_when_mentioned: 1,
+      mention_count: 1,
+      prompt_count: 2,
+      mention_rate: 50
+    });
+    expect(competitorEntry).toMatchObject({ name: "Competitor", avg_position_when_mentioned: 1, mention_rate: 50 });
+
+    // The retained pre-v3 figure still shows the blend: (1 + 3) / 2 = 2 each.
+    expect(brandEntry.avg_position_penalized).toBe(2);
+    expect(competitorEntry.avg_position_penalized).toBe(2);
     expect(brandPosition.confidence).toBe("high");
   });
 
-  it("treats a non-null position with mentioned: false as not-mentioned (defensive normalization)", () => {
-    // Gemini contradiction: mentioned: false but position: 1. Must be ignored
-    // and treated as not-mentioned (penalized position N+1 = 2).
+  it("separates rank from frequency — the defect that motivated v3", () => {
+    // Every entity ranks 2nd whenever it appears. Only how OFTEN they appear
+    // differs. v3 must report an identical rank for all of them and carry the
+    // difference in mention_rate; the pre-v3 figure spread them apart and
+    // presented that spread as if it were a ranking.
+    const appearances: Record<string, number> = { MiMarca: 8, Rival1: 4, Rival2: 2, Rival3: 1 };
+    const results = Array.from({ length: 8 }, (_, i) =>
+      positionRow({
+        id: `p${i}`,
+        brand: { mentioned: i < appearances.MiMarca, position: i < appearances.MiMarca ? 2 : null },
+        competitors: ["Rival1", "Rival2", "Rival3"].map((name) => ({
+          name,
+          mentioned: i < appearances[name],
+          position: i < appearances[name] ? 2 : null
+        }))
+      })
+    );
+
+    const ranking = (
+      computeRunScoresFromResults(results, PROJECT_DOMAIN).details_json.brand_position as {
+        ranking: Array<{ avg_position_when_mentioned: number | null; mention_rate: number; avg_position_penalized: number }>;
+      }
+    ).ranking;
+
+    for (const entry of ranking) expect(entry.avg_position_when_mentioned).toBe(2);
+    expect(ranking.map((e) => e.mention_rate).sort((a, b) => b - a)).toEqual([100, 50, 25, 12.5]);
+
+    const penalized = ranking.map((e) => e.avg_position_penalized);
+    expect(Math.max(...penalized)).toBeGreaterThan(Math.min(...penalized));
+  });
+
+  it("gives a never-mentioned entity no rank at all, and sorts it last", () => {
     const results = [
       positionRow({
         id: "1",
-        brand: { mentioned: false, position: 1 },
-        competitors: []
+        brand: { mentioned: true, position: 3 },
+        competitors: [
+          { name: "Visible", mentioned: true, position: 1 },
+          { name: "Ausente", mentioned: false, position: null }
+        ]
       })
     ];
 
-    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
-    const brandPosition = result.details_json.brand_position as {
-      ranking: Array<{ name: string; avg_position: number; mention_count: number }>;
-      brand_avg_position: number | null;
+    const ranking = (
+      computeRunScoresFromResults(results, PROJECT_DOMAIN).details_json.brand_position as {
+        ranking: Array<{ name: string; avg_position_when_mentioned: number | null }>;
+      }
+    ).ranking;
+
+    expect(ranking.map((e) => e.name)).toEqual(["Visible", "MiMarca", "Ausente"]);
+    expect(ranking[2].avg_position_when_mentioned).toBeNull();
+  });
+
+  it("treats a non-null position with mentioned: false as not-mentioned (defensive normalization)", () => {
+    // Gemini contradiction: mentioned: false but position: 1. Must be ignored.
+    // Under v3 that means NO rank at all, not a penalized one.
+    const results = [positionRow({ id: "1", brand: { mentioned: false, position: 1 }, competitors: [] })];
+
+    const brandPosition = computeRunScoresFromResults(results, PROJECT_DOMAIN).details_json.brand_position as {
+      ranking: Array<{ avg_position_when_mentioned: number | null; mention_count: number; avg_position_penalized: number }>;
+      brand_avg_position_when_mentioned: number | null;
+      brand_mention_count: number;
     };
 
-    // total_entities = 1 (brand only) -> penalized position = 2
-    expect(brandPosition.brand_avg_position).toBe(2);
-    expect(brandPosition.ranking[0]).toMatchObject({ avg_position: 2, mention_count: 0 });
+    expect(brandPosition.brand_avg_position_when_mentioned).toBeNull();
+    expect(brandPosition.brand_mention_count).toBe(0);
+    expect(brandPosition.ranking[0]).toMatchObject({
+      avg_position_when_mentioned: null,
+      mention_count: 0,
+      avg_position_penalized: 2
+    });
   });
 
   it("returns confidence: low when prompts_with_position_data < total_results", () => {
@@ -672,7 +756,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.formulas_used).toMatchObject({
-      brand_position: expect.stringContaining("avg_position(entity)")
+      brand_position: expect.stringContaining("avg_position_when_mentioned(entity)")
     });
     expect(
       (result.details_json.assumptions as string[]).some((a) => a.includes("brand_position"))
@@ -768,7 +852,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     };
 
     expect(geoScore).toBeDefined();
-    expect(geoScore.composite_version).toBe("geo-score-v2");
+    expect(geoScore.composite_version).toBe("geo-score-v4");
     expect(geoScore.inputs_used).toEqual(["presence", "prominence", "standing", "authority"]);
     expect(geoScore.components.presence).toMatchObject({ value: 100, weight: 0.4 });
     expect(geoScore.components.prominence).toMatchObject({ value: 100, weight: 0.25 });
@@ -859,10 +943,10 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     ).toBe(true);
 
     const geoScore = result.details_json.geo_score as { composite_version: string; formula: string };
-    expect(geoScore.composite_version).toBe("geo-score-v2");
+    expect(geoScore.composite_version).toBe("geo-score-v4");
     expect(geoScore.formula).toContain("standing = share of voice");
     expect(geoScore.formula).toContain("standing_v1");
-    expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position-1)/total_entities)*100");
+    expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100");
   });
 
   it("standing is real share of voice, with the v1 value retained as standing_v1 (ADR 0015)", () => {
@@ -1002,15 +1086,20 @@ describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/00
   });
 
   it("still computes prominence/standing from the well-extracted rows when one row's extraction simply never completed (extraction_version stuck at the DB default 'v1', extracted_json null) — a single transient extraction failure must not blank out an otherwise-good run", () => {
+    // MIN_RESPONSES_FOR_BAND well-extracted rows so prominence clears its own
+    // sample gate (geo-score-v3) and this test keeps measuring what it is
+    // about: the extraction_version guard, not the mention count.
     const results = [
-      trackedRow({
-        id: "1",
-        brand_mentioned: true,
-        mentioned_competitors_count: 1,
-        brand: { mentioned: true, position: 1 },
-        competitors: [{ name: "Competitor", mentioned: true, position: 2 }],
-        extraction_version: EXTRACTION_VERSION
-      }),
+      ...Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) =>
+        trackedRow({
+          id: `ok-${i}`,
+          brand_mentioned: true,
+          mentioned_competitors_count: 1,
+          brand: { mentioned: true, position: 1 },
+          competitors: [{ name: "Competitor", mentioned: true, position: 2 }],
+          extraction_version: EXTRACTION_VERSION
+        })
+      ),
       // Simulates lib/scan/extraction.ts's failure path: extraction_version
       // stays at the schema default ('v1', migration 0001) because the
       // success branch that advances it to EXTRACTION_VERSION never ran.
@@ -1035,16 +1124,16 @@ describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/00
   });
 
   it("computes normally when every row's extraction_version matches the current EXTRACTION_VERSION", () => {
-    const results = [
+    const results = Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) =>
       trackedRow({
-        id: "1",
+        id: `r-${i}`,
         brand_mentioned: true,
         mentioned_competitors_count: 0,
         brand: { mentioned: true, position: 1 },
         competitors: [{ name: "Competitor", mentioned: false, position: null }],
         extraction_version: EXTRACTION_VERSION
       })
-    ];
+    );
 
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
     const geoScore = result.details_json.geo_score as { components: Record<string, { value: number | null }> };
@@ -1057,15 +1146,15 @@ describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/00
     // Backward compatibility: callers that don't pass extraction_version
     // (e.g. not-yet-updated tests or call sites) get the pre-SCAN-TRACKED-SET-1
     // behavior, not a spurious drop.
-    const results = [
+    const results = Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) =>
       trackedRow({
-        id: "1",
+        id: `r-${i}`,
         brand_mentioned: true,
         brand: { mentioned: true, position: 1 },
         competitors: [{ name: "Competitor", mentioned: false, position: null }]
         // extraction_version omitted entirely
       })
-    ];
+    );
 
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
     const geoScore = result.details_json.geo_score as { components: Record<string, { value: number | null }> };
@@ -1129,11 +1218,17 @@ describe("isQuantifiableRecommendationType", () => {
 });
 
 describe("computeRecommendationPotentialPoints", () => {
-  // 10 fully-extracted, error-free rows -> confidence "medium" (2..19 clean
-  // results), so every scenario below clears the confidence gate on its own
-  // merits and isolates the counterfactual math being tested.
+  // Fully-extracted, error-free rows -> confidence "medium"
+  // (MIN_RESPONSES_FOR_BAND..19 clean results), so every scenario below
+  // clears the confidence gate on its own merits and isolates the
+  // counterfactual math being tested.
+  //
+  // MIN_RESPONSES_FOR_BAND of them mention the brand, which is also what
+  // prominence needs before it is scored at all (geo-score-v3) — otherwise
+  // an increase_brand_prominence counterfactual moves a component that isn't
+  // in the composite and correctly yields zero points.
   function baseline(): ReturnType<typeof row>[] {
-    const mentioned = Array.from({ length: 5 }, (_, i) =>
+    const mentioned = Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) =>
       row({
         brand_snapshot: "MiMarca",
         id: `mentioned-${i}`,
@@ -1298,9 +1393,12 @@ describe("computeRecommendationPotentialPoints", () => {
 });
 
 describe("computeJointPotentialPoints", () => {
+  // 8 mentioned + the two gap rows below = MIN_RESPONSES_FOR_BAND rows, so
+  // the run clears the confidence gate and these tests exercise the union/
+  // overlap math rather than the gate (which has its own tests above).
   function baseline(): ReturnType<typeof row>[] {
     return [
-      ...Array.from({ length: 5 }, (_, i) =>
+      ...Array.from({ length: MIN_RESPONSES_FOR_BAND - 2 }, (_, i) =>
         row({
         brand_snapshot: "MiMarca",
           id: `mentioned-${i}`,
@@ -1396,5 +1494,173 @@ describe("computeJointPotentialPoints", () => {
       { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] }
     ]);
     expect(result).toBeNull();
+  });
+});
+
+describe("geo_score v4 — the technical component (docs/adr/0033)", () => {
+  function positionRow(overrides: {
+    id: string;
+    brand?: { mentioned: boolean; position: number | null };
+    competitors?: Array<{ name: string; mentioned: boolean; position: number | null }>;
+    brand_mentioned?: boolean;
+    citation_found?: boolean;
+    citations?: unknown[];
+  }): ScoreInputRow {
+    return row({
+      id: overrides.id,
+      brand_snapshot: "MiMarca",
+      brand_mentioned: overrides.brand_mentioned ?? false,
+      citation_found: overrides.citation_found ?? false,
+      mentioned_competitors_count: (overrides.competitors ?? []).filter((c) => c.mentioned).length,
+      extraction_version: EXTRACTION_VERSION,
+      extracted_json: {
+        brand: overrides.brand ?? { mentioned: false, position: null },
+        competitors: overrides.competitors ?? [],
+        citations: overrides.citations ?? []
+      }
+    });
+  }
+
+  const technical = (value: number) => ({
+    value,
+    snapshot_id: "snapshot-1",
+    captured_at: "2026-08-05T11:00:00.000Z",
+    source: "this_run" as const,
+    age_days: 0
+  });
+
+  /** 20 clean rows, brand mentioned and own-domain cited everywhere. */
+  function perfectRun() {
+    return Array.from({ length: 20 }, (_, i) =>
+      positionRow({
+        id: String(i),
+        brand_mentioned: true,
+        citation_found: true,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }],
+        citations: [ownDomainCitation()]
+      })
+    );
+  }
+
+  it("renormalizes to EXACTLY the v3 weights when no audit is available", () => {
+    // The load-bearing property of this phase: v4 is strictly ADDITIVE. A
+    // project with no technical audit must score identically to what v3 gave
+    // it, so nobody's historical number moves because of a weight change.
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, { technical: null });
+    const geoScore = result.details_json.geo_score as {
+      components: Record<string, { value: number | null; weight: number }>;
+      inputs_used: string[];
+    };
+
+    expect(geoScore.components.presence.weight).toBe(0.4);
+    expect(geoScore.components.prominence.weight).toBe(0.25);
+    expect(geoScore.components.standing.weight).toBe(0.2);
+    expect(geoScore.components.authority.weight).toBe(0.15);
+    expect(geoScore.inputs_used).not.toContain("technical");
+  });
+
+  it("produces the identical score with and without the option object", () => {
+    const withoutOptions = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN);
+    const withNullTechnical = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, { technical: null });
+
+    expect((withNullTechnical.details_json.geo_score as { score: number }).score).toBe(
+      (withoutOptions.details_json.geo_score as { score: number }).score
+    );
+  });
+
+  it("applies the v4 weights when the audit is present", () => {
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, { technical: technical(50) });
+    const geoScore = result.details_json.geo_score as {
+      score: number;
+      inputs_used: string[];
+      components: Record<string, { value: number | null; weight: number }>;
+    };
+
+    expect(geoScore.inputs_used).toContain("technical");
+    expect(geoScore.components.technical).toMatchObject({ value: 50, weight: 0.2 });
+    expect(geoScore.components.presence.weight).toBe(0.32);
+    expect(geoScore.components.prominence.weight).toBe(0.2);
+    expect(geoScore.components.standing.weight).toBe(0.16);
+    expect(geoScore.components.authority.weight).toBe(0.12);
+
+    // Everything else is 100, technical is 50: 100*0.8 + 50*0.2 = 90.
+    expect(geoScore.score).toBeCloseTo(90, 5);
+  });
+
+  it("records which snapshot the score was computed against", () => {
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, { technical: technical(64) });
+    const geoScore = result.details_json.geo_score as {
+      technical_snapshot: { snapshot_id: string; source: string; age_days: number } | null;
+    };
+
+    expect(geoScore.technical_snapshot).toMatchObject({ snapshot_id: "snapshot-1", source: "this_run", age_days: 0 });
+  });
+
+  it("carries the resolver's reason when the component is dropped", () => {
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, {
+      technical: null,
+      technicalReason: "no technical audit has been recorded for this project yet (docs/adr/0027)"
+    });
+    const geoScore = result.details_json.geo_score as {
+      components: Record<string, { value: number | null; weight: number; reason?: string }>;
+    };
+
+    expect(geoScore.components.technical.value).toBeNull();
+    expect(geoScore.components.technical.weight).toBe(0);
+    expect(geoScore.components.technical.reason).toContain("no technical audit has been recorded");
+  });
+
+  it("damps run-to-run movement by exactly the technical weight — the reason it earns real weight", () => {
+    // The stability claim of docs/adr/0033, asserted rather than argued.
+    // `technical` is deterministic (no LLM in lib/web-audit/page-checks.ts),
+    // so a swing in the LLM-measured components reaches the composite scaled
+    // by (1 - technical_weight).
+    const mentioned = (i: number) =>
+      positionRow({
+        id: String(i),
+        brand_mentioned: true,
+        citation_found: true,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }],
+        citations: [ownDomainCitation()]
+      });
+    const notMentioned = (i: number) =>
+      positionRow({
+        id: String(i),
+        brand_mentioned: false,
+        citation_found: false,
+        brand: { mentioned: false, position: null },
+        competitors: [{ name: "Competitor", mentioned: true, position: 1 }],
+        citations: []
+      });
+
+    const good = Array.from({ length: 20 }, (_, i) => mentioned(i));
+    const worse = [...Array.from({ length: 10 }, (_, i) => mentioned(i)), ...Array.from({ length: 10 }, (_, i) => notMentioned(i + 10))];
+
+    const scoreOf = (rows: typeof good, tech: ReturnType<typeof technical> | null) =>
+      (computeRunScoresFromResults(rows, PROJECT_DOMAIN, { technical: tech }).details_json.geo_score as { score: number }).score;
+
+    const swingWithoutTechnical = scoreOf(good, null) - scoreOf(worse, null);
+    // Same site, same readiness score on both runs — only the AI answers moved.
+    const swingWithTechnical = scoreOf(good, technical(70)) - scoreOf(worse, technical(70));
+
+    expect(swingWithoutTechnical).toBeGreaterThan(0);
+    expect(swingWithTechnical).toBeCloseTo(swingWithoutTechnical * 0.8, 5);
+  });
+
+  it("persists the engine-coverage verdict alongside the score (Fase B)", () => {
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, {
+      engineCoverage: {
+        status: "partial",
+        expected: ["gemini", "openai"],
+        observed: ["gemini"],
+        missing: ["openai"],
+        unexpected: []
+      }
+    });
+    const geoScore = result.details_json.geo_score as { engine_coverage: { status: string; missing: string[] } | null };
+
+    expect(geoScore.engine_coverage).toMatchObject({ status: "partial", missing: ["openai"] });
   });
 });

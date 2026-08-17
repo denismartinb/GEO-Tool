@@ -19,17 +19,27 @@ import "server-only";
 // scan-runner.test.ts keep importing from `@/lib/scan/scan-runner` unchanged.
 // New code may import from the specific modules above instead.
 
+// R6 (2/2): los mandos de UNA llamada a un LLM viven en `lib/llm/constants.ts`.
+// El barril los sigue exponiendo para no cambiar su superficie pública.
+export {
+  EXTRACTION_CALL_TIMEOUT_MS,
+  EXTRACTION_MAX_ATTEMPTS,
+  EXTRACTION_RETRY_BASE_DELAY_MS,
+  EXTRACTION_RETRY_MAX_DELAY_MS
+} from "@/lib/llm/constants";
 export {
   ALL_RECOVERABLE_ERROR_SUMMARIES,
   ENABLE_SYNC_SCAN_EXECUTION,
+  EXTRACTION_CONCURRENCY,
   EXTRACTION_VERSION,
-  MAX_EXTRACTION_RESULTS,
+  FINALIZE_LOCK_LEASE_MS,
   MAX_REAL_SCAN_PROMPTS,
   PROMPT_RETRY_DELAY_MS,
   PROMPT_RETRY_MAX_TOTAL_ATTEMPTS,
   RECONCILE_LOG_PREFIX,
   RECOVERABLE_ERROR_SUMMARIES,
   RETRY_EXHAUSTED_ERROR_SUMMARIES,
+  SCAN_INVOCATION_WORK_BUDGET_MS,
   SCAN_NO_RESULTS_ERROR_SUMMARY,
   SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY,
   SCAN_PENDING_TIMEOUT_ERROR_SUMMARY,
@@ -42,9 +52,9 @@ export {
   SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS,
   TIMEOUT_ERROR_SUMMARIES
 } from "@/lib/scan/constants";
+export type { AuthenticatedContext } from "@/lib/auth";
 export {
   ProjectActionError,
-  type AuthenticatedContext,
   type JobRow,
   type ProjectActionErrorCode,
   type RunErrorDisplay,

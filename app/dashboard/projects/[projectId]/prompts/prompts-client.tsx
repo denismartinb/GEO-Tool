@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { PromptDrawer } from "@/components/prompts/prompt-drawer";
+import { citationsLabel, sampleCountOf } from "@/lib/scan/sample-display";
 import { Icon } from "@/components/ui/icon";
 import { Gauge } from "@/components/ui/gauge";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
@@ -37,6 +38,8 @@ type PromptGroup = {
   key: string;
   promptText: string | null;
   engines: ResultRow[];
+  sampleCount: number;
+  responseCount: number;
   brandMentioned: boolean;
   citationsTotal: number;
   competitorsCount: number;
@@ -123,8 +126,17 @@ function EngineChipsWithGaps({
   engines: ResultRow[];
   allProviders: string[];
 }) {
-  const byProvider = new Map(engines.map((r) => [normalizeProvider(r.provider), r]));
-  const mentioning = allProviders.filter((p) => byProvider.get(p)?.brand_mentioned === true);
+  // Aggregated per engine, not last-row-wins. Since SAMPLING-1 (ADR 0030) a
+  // run can hold several samples of the same (prompt, engine), so building a
+  // Map keyed by provider would keep whichever sample happened to come last
+  // and show a mention chip decided by row order — with 2 samples where
+  // Gemini named the brand once, the chip was a coin flip. "This engine
+  // named the brand in at least one of its answers" is both stable and the
+  // same rule the row's own `brandMentioned` already uses across engines.
+  const mentioningProviders = new Set(
+    engines.filter((r) => r.brand_mentioned).map((r) => normalizeProvider(r.provider))
+  );
+  const mentioning = allProviders.filter((p) => mentioningProviders.has(p));
   // Fragment, not a wrapper div: `.pr2-prow-engs` is itself the flex
   // container, and an inner flex box would trap the pills in a non-wrapping
   // line. Rendering nothing when no engine mentioned the brand also lets
@@ -166,6 +178,12 @@ function groupByPrompt(rows: ResultRow[]): PromptGroup[] {
       promptText: engines[0].prompt_text_snapshot,
       engines,
       brandMentioned: engines.some((r) => r.brand_mentioned),
+      // SAMPLING-SURFACE-1: the sum spans every sample, so it silently
+      // rescales with the repetition count. `citationsLabel` names the
+      // denominator when there is more than one sample; the figure itself is
+      // unchanged.
+      sampleCount: sampleCountOf(engines),
+      responseCount: engines.length,
       citationsTotal: engines.reduce((sum, r) => sum + (r.citations_count ?? 0), 0),
       competitorsCount: mentionedCompetitorsUnion(engines),
       sentimentDominant: dominantSentiment(engines),
@@ -202,7 +220,8 @@ function PromptRow({
             {sentimentLabel(group.sentimentDominant)}
           </span>
           <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
-            {group.competitorsCount} competidores · {group.citationsTotal} citas
+            {group.competitorsCount} competidores ·{" "}
+            {citationsLabel(group.citationsTotal, group.responseCount, group.sampleCount)}
           </span>
         </div>
       </div>

@@ -1,5 +1,17 @@
 # WEB-AUDIT-ACTION — Plan de acción + huecos con competidor
 
+> ## ⛔ FASE RETIRADA — no implementar desde esta spec
+>
+> Se construyó y se entregó, y el fundador la retiró de la pantalla el
+> 2026-08-04 en el PR #289: *"no tiene sentido aquí, debe estar en la página de
+> recomendaciones"*. El módulo `lib/web-audit/action-plan.ts` y su test se
+> borraron el 2026-08-15 (log §102) tras once días sin un solo importador.
+>
+> **Esta spec se conserva como registro de lo que fue, no como trabajo
+> pendiente.** Si alguna vez se retoma la idea, el sitio es Recomendaciones y
+> necesita su propio Task Intake: el diseño de abajo asume una tarjeta dentro de
+> Auditoría web, que es justamente la decisión que se revirtió.
+
 **Gate:** Human Gate normal. No toca schema, ni Gemini, ni fetch, ni ninguna
 zona de la lista prohibida — lee **solo datos ya persistidos**. Un PR.
 

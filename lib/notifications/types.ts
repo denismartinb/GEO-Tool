@@ -65,6 +65,44 @@ export type NotificationPayloadByType = {
     daysLeft: number;
     trialEndsAt: string;
   };
+  /**
+   * WEB-AUDIT-ALERTS-1 — audit-to-audit regressions (migration 0029), all
+   * derived by comparing the two most recent audits of a project
+   * (lib/web-audit/regressions.ts). Every one carries the snapshot it was
+   * detected on: it is the dedupe key's discriminator, and it is what lets a
+   * future reader tie a notice back to the exact audit that produced it.
+   */
+  coverage_dropped: {
+    /**
+     * The scan whose coverage map this was detected on — NOT a snapshot id.
+     * The coverage half of an audit is a per-scan artifact that a repeated
+     * technical audit does not regenerate, so keying it by snapshot would
+     * re-notify the same regression on every re-audit of the same scan.
+     */
+    scanId: string;
+    /** Topics that went from conclusively covered to conclusively not covered. */
+    count: number;
+    /** Up to 3 of those topics' labels, for the body copy. */
+    sampleTopics: string[];
+  };
+  surfacing_dropped: {
+    scanId: string;
+    /** Topics that went from `performing` to `invisible`. */
+    count: number;
+    sampleTopics: string[];
+  };
+  llms_txt_lost: {
+    snapshotId: string;
+  };
+  sitemap_lost: {
+    snapshotId: string;
+  };
+  page_unreachable: {
+    snapshotId: string;
+    /** Pages analyzed in the previous audit that did not answer in this one. */
+    count: number;
+    sampleUrls: string[];
+  };
 };
 
 export type NotificationType = keyof NotificationPayloadByType;

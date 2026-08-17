@@ -1,11 +1,17 @@
 import Link from "next/link";
+import { after } from "next/server";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { InfoTip } from "@/components/ui/info-tip";
+import { Gauge } from "@/components/ui/gauge";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
+import { buildLlmsTxt, publishSteps, type LlmsTxtResult, type PublishStep } from "@/lib/web-audit/llms-txt";
+import { sitemapSteps, type SitemapStep } from "@/lib/web-audit/sitemap";
 import {
   buildWebAuditSummary,
   buildCitationWindowCandidates,
@@ -16,33 +22,37 @@ import {
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
-import {
-  buildActionPlan,
-  extractMentionedCompetitors,
-  mergeCompetitorNames,
-  type ActionItem,
-  type ActionItemKind
-} from "@/lib/web-audit/action-plan";
-import { parseGeneratedSolution, type GeneratedSolution } from "@/lib/recommendations/generated-solution";
-import { RunAuditButton } from "./run-audit-button";
-import { RunTechnicalAuditButton } from "./run-technical-audit-button";
+import { WEB_AUDIT_JOB_TYPE, WEB_AUDIT_STALE_LOCK_MS } from "@/lib/web-audit/audit-job";
+import { ReentryMission } from "@/components/reentry-mission";
+import { deriveAuditPillState, isWebAuditJobDue } from "@/lib/web-audit/audit-liveness";
+import { triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
+import { loadWebAuditPageData } from "@/lib/web-audit/page-data";
 import { WebAuditProvider } from "./web-audit-context";
-import {
-  AuditTabsProvider,
-  AuditTabBar,
-  AuditTabPanel,
-  GoToTabButton,
-  QuadrantButton,
-  ActionFilterBar,
-  ActionRowVisibility,
-  PlanExpander,
-  type ActionFilterId,
-  type ActionFilterCount
-} from "./audit-tabs";
-import { RecCard, type Recommendation } from "../recommendations/recommendations-client";
+import { WebAuditDriveNotice } from "./web-audit-drive-notice";
+import { AuditTabsProvider, AuditTabBar, AuditTabPanel } from "./audit-tabs";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
 import { buildPageCheckGuidance } from "@/lib/web-audit/page-checks";
+import {
+  buildTechnicalIssuesReport,
+  failingPageChecks,
+  type TechnicalIssue,
+  type TechnicalIssuesReport,
+  type TechnicalPassingCheck,
+  type IssueCheckKey,
+  type IssueSeverity
+} from "@/lib/web-audit/issues";
+import { buildPageFixes, type PageFixContext } from "@/lib/web-audit/page-fixes";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
+import { PageFixBlock } from "./page-fix-block";
+import { LlmsTxtBlock } from "./llms-txt-block";
+import { SitemapStepsBlock } from "./sitemap-steps-block";
+import { formatDate } from "./_components/format";
+import { IssueRow, PassingRow } from "./_components/issue-rows";
+import { ScoreGauge, SubScoreTile, LockedSubScoreTile, MiniBar } from "./_components/score-tiles";
+import { PageAuditRow } from "./_components/page-audit-row";
+import { BotAccessCard } from "./_components/bot-access-card";
+import { TrendChart } from "./_components/trend-chart";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -57,1038 +67,58 @@ export const maxDuration = 60;
 // a display cutoff — self-expiring the moment a project re-audits.
 const TECHNICAL_CRITERIA_EXPANDED_AT = new Date("2026-07-13T00:00:00Z");
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("es-ES", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Europe/Madrid"
-  });
-}
-
-const ACTION_KIND_META: Record<ActionItemKind, { label: string; badgeClass: string }> = {
-  optimize: { label: "Optimizar página existente", badgeClass: "badge-warn" },
-  create_competing: { label: "Crear contenido — compite un rival", badgeClass: "badge-neg" },
-  create_open: { label: "Crear contenido — oportunidad abierta", badgeClass: "badge-neutral" },
-  capture: { label: "Formalizar página propia", badgeClass: "badge-neutral" }
-};
-
-/**
- * Which real filter value(s) a Plan de acción row should stay visible under
- * (WEB-AUDIT-R5). content_gap/open_opportunity rows (create_competing/
- * create_open) also match the matrix's combined "no_content" quadrant.
- * create_competing/create_open/capture additionally match the chip row's
- * broader "create_content" grouping (founder-approved 2026-07-18) — all
- * three mean "publish a page", only `optimize` means editing an existing one.
- */
-function visibilityMatches(kind: ActionItemKind): ActionFilterId[] {
-  if (kind === "create_competing" || kind === "create_open") return [kind, "no_content", "create_content"];
-  if (kind === "capture") return [kind, "create_content"];
-  return [kind];
-}
-
-// Display names for the AI-bot user agents tracked by robots.ts — the
-// UA token stays visible alongside it (badges), since that's what actually
-// appears in a robots.txt file and what the founder would go verify.
-const BOT_ENGINE_LABELS: Record<BotAgent, string> = {
-  GPTBot: "OpenAI (ChatGPT)",
-  "OAI-SearchBot": "OpenAI (búsqueda)",
-  "Google-Extended": "Google (Gemini)",
-  PerplexityBot: "Perplexity",
-  ClaudeBot: "Anthropic (Claude)",
-  "anthropic-ai": "Anthropic (legado)",
-  Bingbot: "Microsoft (Copilot/Bing)"
-};
-
-const PAGE_SKIP_LABELS: Record<Exclude<PageAuditEntry["status"], "analyzed">, string> = {
-  skipped_offsite: "Descartada: fuera del dominio verificado",
-  // Distinct from skipped_offsite (WEB-AUDIT-2 bug report, 2026-07-11): a page
-  // whose hostname genuinely IS the audited domain but whose DNS resolution
-  // couldn't be verified safe (lookup error/timeout, or a resolved private
-  // address) — never the same thing as "not your domain". Check the Vercel
-  // function logs (lib/web-audit/fetch-page.ts's dns_lookup_failed /
-  // dns_resolved_unsafe_ip lines) for the actual reason.
-  skipped_unsafe_ip: "Descartada: no se ha podido verificar de forma segura la IP de este dominio",
-  skipped_not_html: "Descartada: la respuesta no es HTML",
-  skipped_timeout: "Descartada: tiempo de carga agotado",
-  skipped_error: "Descartada: no se ha podido cargar",
-  skipped_budget: "Sin comprobar: límite de tiempo de la auditoría"
-};
-
-function freshnessLabel(status: "fresh" | "aging" | "stale" | "unknown"): string {
-  switch (status) {
-    case "fresh":
-      return "Actualizada";
-    case "aging":
-      return "Empieza a desactualizarse";
-    case "stale":
-      return "Desactualizada";
-    default:
-      return "Sin fecha detectada";
-  }
-}
-
-function CheckDot({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: ok ? "var(--ink-2)" : "var(--ink-4)" }}>
-      <Icon name={ok ? "check" : "x"} size={11} />
-      {label}
-    </span>
-  );
-}
-
-/** Shared semantic color for any 0-100 score (gauge, rings, mini bars): red <40, amber 40-69, green ≥70. */
-function scoreColor(score: number | null): string {
-  if (score === null) return "var(--ink-4)";
-  return score < 40 ? "var(--neg-ink)" : score < 70 ? "var(--warn)" : "var(--pos)";
-}
-
-/** Gauge ring for the hero's global "Preparación GEO" score. */
-function ScoreGauge({ score }: { score: number | null }) {
-  const size = 116;
-  const stroke = 10;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const pct = score ?? 0;
-  const color = scoreColor(score);
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      role="img"
-      aria-label={score === null ? "Preparación GEO sin datos" : `Preparación GEO ${score} de 100`}
-      style={{ flexShrink: 0 }}
-    >
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line-soft)" strokeWidth={stroke} />
-      {score !== null && (
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={`${(pct / 100) * c} ${c}`}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      )}
-      <text
-        x="50%"
-        y="47%"
-        textAnchor="middle"
-        dominantBaseline="central"
-        style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-.02em", fill: "var(--ink)", fontVariantNumeric: "tabular-nums" }}
-      >
-        {score === null ? "—" : score}
-      </text>
-      <text x="50%" y="66%" textAnchor="middle" style={{ fontSize: 10.5, fontWeight: 600, fill: "var(--ink-4)" }}>
-        / 100
-      </text>
-    </svg>
-  );
-}
-
-/** Small Lighthouse-style score ring for per-page rows in Salud técnica (WEB-AUDIT-R4). `label` names WHICH page the ring belongs to — QA report: a screen reader tabbing the page list heard the same generic phrase on every ring. */
-function ScoreRing({ score, label }: { score: number; label: string }) {
-  const size = 38;
-  const stroke = 4;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const color = scoreColor(score);
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      role="img"
-      aria-label={`Salud técnica de ${label}: ${score} de 100`}
-      style={{ flexShrink: 0 }}
-    >
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line-soft)" strokeWidth={stroke} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={`${(score / 100) * c} ${c}`}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-      <text
-        x="50%"
-        y="50%"
-        textAnchor="middle"
-        dominantBaseline="central"
-        style={{ fontSize: 11.5, fontWeight: 800, fill: "var(--ink)", fontVariantNumeric: "tabular-nums" }}
-      >
-        {score}
-      </text>
-    </svg>
-  );
-}
-
-/**
- * Tiny trend sparkline for a hero sub-score tile (WEB-AUDIT-R4). Values are
- * the same real per-audit percentages the Evolución chart plots — null points
- * (an audit where that rate couldn't be computed) are skipped, exactly like
- * TrendChart's pathFor. Rendered only with ≥2 real points; anything less has
- * no trend to show.
- */
-function Sparkline({ values, color }: { values: Array<number | null>; color: string }) {
-  const W = 64;
-  const H = 22;
-  const pad = 2;
-  const points = values
-    .map((v, i) => ({ v, i }))
-    .filter((p): p is { v: number; i: number } => p.v !== null);
-  if (points.length < 2) return null;
-  const stepX = values.length > 1 ? (W - pad * 2) / (values.length - 1) : 0;
-  const yFor = (pct: number) => H - pad - (pct / 100) * (H - pad * 2);
-  const d = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${pad + p.i * stepX} ${yFor(p.v)}`).join(" ");
-  const last = points[points.length - 1];
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" style={{ flexShrink: 0 }}>
-      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={pad + last.i * stepX} cy={yFor(last.v)} r={2.5} fill={color} />
-    </svg>
-  );
-}
-
-/** 4px progress bar under a hero tile / history row (WEB-AUDIT-R4). */
-function MiniBar({ pct, color }: { pct: number; color: string }) {
-  return (
-    <div style={{ height: 4, borderRadius: 999, background: "var(--line-soft)", overflow: "hidden" }}>
-      <div style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: "100%", borderRadius: 999, background: color }} />
-    </div>
-  );
-}
-
-function SubScoreTile({
-  label,
-  value,
-  hint,
-  delta,
-  pct,
-  sparkValues,
-  sparkColor
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
 }: {
-  label: string;
-  value: string;
-  hint: string;
-  /** null also when the delta exists but isn't trustworthy enough to show — see isDeltaTrustworthy. */
-  delta: number | null;
-  /** 0-100 fill for the tile's progress bar; null → no bar (signal never computed). */
-  pct: number | null;
-  /** Per-audit history for the sparkline — same series the Evolución chart plots. */
-  sparkValues?: Array<number | null>;
-  sparkColor?: string;
-}) {
-  return (
-    <div style={{ padding: "9px 11px", background: "var(--surface-2)", borderRadius: 10, minWidth: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)", flex: 1, minWidth: 0 }}>
-          {label}
-        </div>
-        {sparkValues && <Sparkline values={sparkValues} color={sparkColor ?? "var(--accent)"} />}
-      </div>
-      <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.01em", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
-        {value}
-        {delta !== null && delta !== 0 && (
-          <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 600 }}>
-            <Delta value={delta} suffix=" pt" />
-          </span>
-        )}
-      </div>
-      {pct !== null && (
-        <div style={{ marginTop: 6 }}>
-          <MiniBar pct={pct} color={scoreColor(pct)} />
-        </div>
-      )}
-      <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: pct !== null ? 5 : 2 }}>{hint}</div>
-    </div>
-  );
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Auditoría web", async () => (await requireActiveProject(projectId)).domain);
 }
-
-function PageAuditRow({ page }: { page: PageAuditEntry }) {
-  let path: string;
-  try {
-    path = new URL(page.url).pathname || "/";
-  } catch {
-    path = page.url;
-  }
-
-  if (page.status !== "analyzed" || !page.check) {
-    const skipLabel = page.status === "analyzed" ? PAGE_SKIP_LABELS.skipped_error : PAGE_SKIP_LABELS[page.status];
-    return (
-      <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink-3)", overflowWrap: "anywhere" }}>{path}</span>
-          <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{page.contextLabel}</span>
-        </div>
-        <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "4px 0 0" }}>{skipLabel}</p>
-      </div>
-    );
-  }
-
-  const { check } = page;
-  const guidance = buildPageCheckGuidance(check);
-  // Collapsed by default (WEB-AUDIT-R1): 10 pages × up to 7 guidance bullets
-  // was the page's biggest wall of text. The summary row keeps the verdict
-  // (score + failing-check count); the how-to-fix detail is one tap away.
-  const failingCount = guidance.length;
-  return (
-    <details className="wa-details">
-      <summary>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink)", overflowWrap: "anywhere" }}>{path}</div>
-          <div style={{ fontSize: 10.5, color: "var(--ink-4)" }}>
-            {page.contextLabel}
-            {failingCount > 0 ? ` · ${failingCount} ${failingCount === 1 ? "mejora pendiente" : "mejoras pendientes"}` : " · todo en orden"}
-          </div>
-        </div>
-        {/* Lighthouse-style ring instead of a flat neutral badge (WEB-AUDIT-R4):
-            same semantic thresholds as the hero gauge, so a failing page reads
-            red at a glance without opening it. */}
-        <ScoreRing score={check.pageScore} label={path} />
-        <span className="wa-chev">
-          <Icon name="chevDown" size={14} />
-        </span>
-      </summary>
-      <div className="wa-details-body">
-        {/* LEGACY SNAPSHOTS: `check` is a persisted JSONB row; a snapshot
-            taken before R3 has NO indexability/citability objects and no
-            metadata.ogOk (production crash 2026-07-12 on exactly this render:
-            "Cannot read properties of undefined (reading 'noindex')"). The
-            R3 dots render only when their sub-check was actually measured —
-            an old snapshot shows the original 4 dots until re-audited (the
-            "criterios ampliados" note above the cards already tells the
-            founder to re-audit). Same rationale as buildPageCheckGuidance's
-            legacy guards. */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          <CheckDot ok={check.structuredData.pass} label="Datos estructurados" />
-          <CheckDot
-            ok={check.answerFormat.hasOneH1 && check.answerFormat.hasTwoH2 && check.answerFormat.hasAnswerFirstIntro}
-            label="Formato respuesta-primero"
-          />
-          <CheckDot
-            ok={check.metadata.titleOk && check.metadata.descriptionOk && check.metadata.ogOk !== false}
-            label={check.metadata.ogOk === undefined ? "Metadatos" : "Metadatos + Open Graph"}
-          />
-          <CheckDot ok={check.freshness.status === "fresh"} label={freshnessLabel(check.freshness.status)} />
-          {/* WEB-AUDIT-R3 (founder-approved 2026-07-12): indexing + citability signals. */}
-          {check.indexability && (
-            <>
-              <CheckDot ok={!check.indexability.noindex} label="Indexable" />
-              <CheckDot ok={check.indexability.canonicalOk} label="Canonical propio" />
-              {/* hreflang is never shown as a hard failure elsewhere (guidance
-                  text is conditional — a single-market page genuinely has none
-                  to add) but the dot itself stays a simple presence signal,
-                  consistent with every other dot on this row. */}
-              <CheckDot ok={check.indexability.hreflangPresent} label="Hreflang" />
-            </>
-          )}
-          {check.citability && (
-            <>
-              <CheckDot ok={check.citability.hasListOrTable} label="Listas o tablas" />
-              <CheckDot ok={check.citability.contentOk} label="Contenido sustancial" />
-            </>
-          )}
-        </div>
-        {/* `!= null` (loose), not `!== null`: legacy PageAuditEntry rows lack
-            fetchMs/htmlBytes entirely (undefined), which `!== null` would let
-            through as "Tiempo de respuesta: undefined ms". */}
-        {(page.fetchMs != null || page.htmlBytes != null) && (
-          <p style={{ fontSize: 10.5, color: "var(--ink-4)", margin: "8px 0 0" }}>
-            {page.fetchMs != null && `Tiempo de respuesta: ${page.fetchMs} ms`}
-            {page.fetchMs != null && page.htmlBytes != null && " · "}
-            {page.htmlBytes != null && `Tamaño HTML: ${(page.htmlBytes / 1024).toFixed(1)} KB`}
-          </p>
-        )}
-        {/* Deterministic "qué hacer" per failing sub-check (no LLM — see
-            buildPageCheckGuidance), reviewed with geo-strategy 2026-07-11:
-            founder report was that seeing red X's with no explanation left no
-            idea what to actually do. An AI-generated draft (rewritten title/
-            description/intro) is a separate, larger feature explicitly parked
-            for its own Task Intake — this is only the deterministic half. */}
-        {guidance.length > 0 && (
-          <ul
-            style={{
-              fontSize: 11.5,
-              color: "var(--ink-3)",
-              lineHeight: 1.5,
-              margin: "8px 0 0",
-              paddingLeft: 18,
-              listStyleType: "disc",
-              listStylePosition: "outside",
-              display: "flex",
-              flexDirection: "column",
-              gap: 4
-            }}
-          >
-            {guidance.map((line, i) => (
-              <li key={i} style={{ display: "list-item" }}>{line}</li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </details>
-  );
-}
-
-function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: string }) {
-  return (
-    <div className="card">
-      <div style={{ padding: "13px 16px 0" }}>
-        <div style={{ fontSize: 13.5, fontWeight: 750 }}>Acceso de bots de IA</div>
-        <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-          Qué motores de IA puede rastrear tu robots.txt. Comprobado {formatDate(checkedAt)}.
-        </div>
-      </div>
-      <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {!bots.robotsFound && (
-          <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "0 0 4px" }}>
-            No se ha encontrado robots.txt — se asume acceso permitido por defecto.
-          </p>
-        )}
-        {bots.bots.map((bot) => (
-          <div
-            key={bot.agent}
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}
-          >
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>{BOT_ENGINE_LABELS[bot.agent]}</div>
-              <div style={{ fontSize: 10.5, color: "var(--ink-4)", fontFamily: "var(--mono)" }}>{bot.agent}</div>
-            </div>
-            <span className={`badge ${bot.allowed ? "badge-pos" : "badge-neg"}`}>{bot.allowed ? "Permitido" : "Bloqueado"}</span>
-          </div>
-        ))}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
-          <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>llms.txt</div>
-          <span className={`badge ${bots.llmsTxtFound ? "badge-pos" : "badge-outline"}`}>
-            {bots.llmsTxtFound ? `Encontrado (${bots.llmsTxtBytes} bytes)` : "No encontrado"}
-          </span>
-        </div>
-        {/* WEB-AUDIT-R3: sitemap.xml reachability — same presence-only check as llms.txt, no XML parsing. */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
-          <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>sitemap.xml</div>
-          <span className={`badge ${bots.sitemapFound ? "badge-pos" : "badge-outline"}`}>
-            {bots.sitemapFound ? "Encontrado" : "No encontrado"}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// WEB-AUDIT-R5: a matched recommendation now embeds its own interactive
-// RecCard (see ActionPlanRow) instead of deep-linking out — this only ever
-// points at the generic Recomendaciones page, for topics with no matching
-// recommendation type in the engine at all.
-function genericRecommendationsHref(projectId: string): string {
-  return `/dashboard/projects/${projectId}/recommendations`;
-}
-
-// Number chip tone per action kind (WEB-AUDIT-R4) — the priority order reads
-// as a colored sequence (amber optimize → red competing → neutral) instead
-// of a flat grey list.
-const NUMBER_TONE: Record<ActionItemKind, { bg: string; fg: string }> = {
-  optimize: { bg: "var(--warn-soft)", fg: "var(--warn-ink)" },
-  create_competing: { bg: "var(--neg-soft)", fg: "var(--neg-ink)" },
-  create_open: { bg: "var(--surface-2)", fg: "var(--ink-3)" },
-  capture: { bg: "var(--accent-soft)", fg: "var(--accent-ink)" }
-};
-
-function ActionNumberChip({ index, kind }: { index: number; kind: ActionItemKind }) {
-  const tone = NUMBER_TONE[kind];
-  return (
-    <div
-      style={{
-        flexShrink: 0,
-        width: 22,
-        height: 22,
-        borderRadius: "50%",
-        background: tone.bg,
-        color: tone.fg,
-        fontSize: 11,
-        fontWeight: 750,
-        display: "grid",
-        placeItems: "center"
-      }}
-    >
-      {index}
-    </div>
-  );
-}
-
-/**
- * One row of the Plan de acción (WEB-AUDIT-R5, self-contained per founder
- * request 2026-07-16). When a real recommendation matches this topic (only
- * add_citation_block/increase_brand_visibility ever can — see the query in
- * the page component), embed the SAME interactive `RecCard` used on the
- * Recomendaciones page: its own evidence, "Generar propuesta con IA", and
- * "Marcar como hecho" all work right here, no navigation required. When no
- * real recommendation matches (content_gap/open_opportunity/unverified_cited
- * have no matching type in the engine yet), keep the synthesized
- * "Sugerencia" box — plain text and a generic link, never a fake button on
- * something that isn't a trackable recommendation.
- *
- * The number chip + kind badge sit in a header ABOVE the content box in
- * BOTH cases (founder report 2026-07-17: with the chip sitting beside the
- * box only for the synthesized case, `RecCard` — which owns its own full-
- * width border and can't have a sibling merged into it — rendered visibly
- * narrower and offset from the synthesized box next to it). Keeping the
- * chip entirely outside either box means the box itself is always the row's
- * full available width, whichever branch renders.
- */
-function ActionPlanRow({
-  item,
-  index,
-  projectId,
-  recommendation
-}: {
-  item: ActionItem;
-  index: number;
-  projectId: string;
-  recommendation: Recommendation | null;
-}) {
-  const meta = ACTION_KIND_META[item.kind];
-
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-        <ActionNumberChip index={index} kind={item.kind} />
-        <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
-        {/* The topic text only needs to appear here for the synthesized case
-            — a matched recommendation's own title (inside RecCard) already
-            names the topic, repeating it in the header would be redundant. */}
-        {!recommendation && (
-          <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)", minWidth: 0, overflowWrap: "anywhere" }}>
-            {item.topic}
-          </span>
-        )}
-      </div>
-      {recommendation ? (
-        <RecCard rec={recommendation} projectId={projectId} />
-      ) : (
-        <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
-          <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "0 0 6px" }}>{item.rationale}</p>
-          {item.competitors.length > 0 && (
-            <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "0 0 6px" }}>
-              La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{item.competitors.join(", ")}</strong>
-            </p>
-          )}
-          <Link href={genericRecommendationsHref(projectId)} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
-            Ver recomendaciones →
-          </Link>
-        </div>
-      )}
-    </div>
-  );
-}
-
-type TrendChartPoint = {
-  generatedAt: string;
-  coveragePct: number | null;
-  surfacingPct: number | null;
-  conclusiveCount: number;
-  coveredCount: number;
-};
-
-/**
- * A hollow (stroke-only) point marker instead of the usual filled dot when
- * that point's sample is small (WEB-AUDIT-R6 phase 1, geo-strategy review
- * 2026-07-17) — a visual cue, per point along the whole series, that a swing
- * around a hollow marker is more likely sampling noise than real movement.
- * The legend below the chart spells this out in words too, never relying on
- * the shape alone.
- */
-function TrendPointMarker({ cx, cy, color, isLast, isSmallSample }: { cx: number; cy: number; color: string; isLast: boolean; isSmallSample: boolean }) {
-  const r = isLast ? 4 : 3;
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={r}
-      fill={isSmallSample ? "var(--surface)" : color}
-      stroke={color}
-      strokeWidth={isSmallSample ? 1.5 : 2}
-    />
-  );
-}
-
-function TrendChart({ points }: { points: TrendChartPoint[] }) {
-  const W = 440;
-  const H = 190;
-  const padL = 42;
-  const padR = 12;
-  const top = 18;
-  const bottom = 170;
-  const stepX = points.length > 1 ? (W - padL - padR) / (points.length - 1) : 0;
-  const yFor = (pct: number) => bottom - (pct / 100) * (bottom - top);
-  const xFor = (i: number) => padL + i * stepX;
-
-  function pathFor(key: "coveragePct" | "surfacingPct"): string | null {
-    const coords: string[] = [];
-    points.forEach((p, i) => {
-      const v = p[key];
-      if (v === null) return;
-      coords.push(`${i === 0 || coords.length === 0 ? "M" : "L"} ${xFor(i)} ${yFor(v)}`);
-    });
-    return coords.length > 0 ? coords.join(" ") : null;
-  }
-
-  const covPath = pathFor("coveragePct");
-  const surPath = pathFor("surfacingPct");
-  const lastCovIdx = [...points].map((p, i) => ({ p, i })).reverse().find(({ p }) => p.coveragePct !== null)?.i;
-  const lastSurIdx = [...points].map((p, i) => ({ p, i })).reverse().find(({ p }) => p.surfacingPct !== null)?.i;
-
-  const ariaLabel = `Cobertura ${points[0]?.coveragePct ?? "sin dato"}% a ${lastCovIdx !== undefined ? points[lastCovIdx].coveragePct : "sin dato"}%; implementación ${points[0]?.surfacingPct ?? "sin dato"}% a ${lastSurIdx !== undefined ? points[lastSurIdx].surfacingPct : "sin dato"}% en ${points.length} auditorías.`;
-
-  // Consecutive audits over the same scan share a calendar date — render each
-  // date label once (founder screenshot: "9 jul 2026 · 9 jul 20…" repeated,
-  // truncated, on the x-axis).
-  const xLabels = points.map((p) => formatDate(p.generatedAt));
-
-  return (
-    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel}>
-      <g stroke="var(--line-soft)" strokeWidth={1}>
-        {[0, 25, 50, 75, 100].map((pct) => (
-          <line key={pct} x1={padL} y1={yFor(pct)} x2={W - padR} y2={yFor(pct)} />
-        ))}
-      </g>
-      <g fontSize={10} fill="var(--ink-4)" textAnchor="end">
-        {[100, 75, 50, 25, 0].map((pct) => (
-          <text key={pct} x={padL - 6} y={yFor(pct) + 3}>
-            {pct}%
-          </text>
-        ))}
-      </g>
-      <g fontSize={10} fill="var(--ink-4)" textAnchor="middle">
-        {points.map((p, i) => {
-          if (i > 0 && xLabels[i] === xLabels[i - 1]) return null;
-          return (
-            <text key={p.generatedAt} x={xFor(i)} y={H - 4}>
-              {xLabels[i]}
-            </text>
-          );
-        })}
-      </g>
-      {covPath && <path d={covPath} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-      {surPath && <path d={surPath} fill="none" stroke="var(--pos)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-      {points.map((p, i) =>
-        p.coveragePct !== null ? (
-          <TrendPointMarker
-            key={`cov-${p.generatedAt}`}
-            cx={xFor(i)}
-            cy={yFor(p.coveragePct)}
-            color="var(--accent)"
-            isLast={i === lastCovIdx}
-            isSmallSample={p.conclusiveCount < SMALL_SAMPLE_THRESHOLD}
-          />
-        ) : null
-      )}
-      {points.map((p, i) =>
-        p.surfacingPct !== null ? (
-          <TrendPointMarker
-            key={`sur-${p.generatedAt}`}
-            cx={xFor(i)}
-            cy={yFor(p.surfacingPct)}
-            color="var(--pos)"
-            isLast={i === lastSurIdx}
-            isSmallSample={p.coveredCount < SMALL_SAMPLE_THRESHOLD}
-          />
-        ) : null
-      )}
-    </svg>
-  );
-}
-
 export default async function WebAuditPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
-  // Pro+-gated (DOMAIN-COVERAGE-1): read the raw plan column directly via
-  // isProOrAbove, never via getPlanForUser/resolvePlan.
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("current_plan")
-    .eq("id", user.id)
-    .maybeSingle();
-  const canAudit = isProOrAbove(profileRow?.current_plan as string | undefined);
+  const {
+    canAuditCoverage,
+    hasCompletedScan,
+    technicalSnapshot,
+    currentTechnicalReport,
+    technicalScoreDelta,
+    analyzedPagesCount,
+    summary,
+    grouped,
+    trend,
+    latestMap,
+    auditedScanDate,
+    coverageDelta,
+    surfacingDelta,
+    globalScore,
+    heroScore,
+    activeCampaignProgress,
+    auditPillState,
+    auditIsRunning,
+    shouldDispatchAudit,
+    llmsTxtFile,
+    llmsPublishSteps,
+    sitemapFixSteps,
+    fixContext
+  } = await loadWebAuditPageData({ supabase, userId: user.id, project });
 
-  const { data: latestRunRow } = await supabase
-    .from("scan_runs")
-    .select("id, finished_at, created_at")
-    .eq("project_id", projectId)
-    .eq("status", "completed")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: historyRows } = await supabase
-    .from("generated_solutions")
-    .select("sanitized_content, created_at")
-    .eq("project_id", projectId)
-    .eq("generation_type", "domain_coverage")
-    .is("recommendation_id", null)
-    .eq("status", "completed")
-    .eq("is_sanitized", true)
-    .order("created_at", { ascending: false })
-    .limit(12);
-
-  // WEB-AUDIT-2: latest technical-audit snapshot, if any. Rendered as-is —
-  // this page never re-triggers the audit itself, only the button does
-  // (lib/web-audit/technical-audit.ts owns the cache/rate-limit rules).
-  const { data: technicalSnapshotRow } = canAudit
-    ? await supabase
-        .from("web_audit_snapshots")
-        .select("readiness_score, pages, bots, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null };
-  const technicalSnapshot = technicalSnapshotRow as {
-    readiness_score: number | null;
-    pages: PageAuditEntry[];
-    bots: BotAccessReport;
-    created_at: string;
-  } | null;
-
-  // WEB-AUDIT-CHAIN: detect a campaign left "running" for the current scan
-  // (from a previous batch, whether the user is still on this page or came
-  // back after navigating away/closing the tab) so the audit button can
-  // resume driving it automatically — same shape as AutoExecuteScan resuming
-  // a pending/running scan_run on Escaneos. Read server-side, not from any
-  // client-only state, so it survives a full page reload.
-  const { data: activeCampaignRow } = await supabase
-    .from("generated_solutions")
-    .select("sanitized_content")
-    .eq("project_id", projectId)
-    .eq("generation_type", "domain_coverage")
-    .is("recommendation_id", null)
-    .eq("status", "running")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const activeCampaignMap = parseCoverageMap(activeCampaignRow?.sanitized_content ?? null);
-  const hasActiveCampaign = Boolean(
-    activeCampaignMap && latestRunRow && activeCampaignMap.scanId === latestRunRow.id
-  );
-  let activeCampaignProgress: { covered: number; total: number } | null = null;
-  if (hasActiveCampaign && activeCampaignMap) {
-    const { count: activePromptCount } = await supabase
-      .from("project_prompts")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .eq("is_active", true);
-    activeCampaignProgress = {
-      covered: activeCampaignMap.topics.length,
-      total: activePromptCount ?? activeCampaignMap.topics.length
-    };
+  // El loader DECIDE si hay una auditoría vencida a la que despertar; actuar es
+  // de esta pantalla (PRELAUNCH-HARDENING-1 Fase R7-b, log §106). Fire-and-forget
+  // con `after()`, así que la respuesta de la página nunca espera por esto.
+  if (shouldDispatchAudit) {
+    after(() => triggerWebAuditRun());
   }
-
-  const maps = ((historyRows ?? []) as Array<{ sanitized_content: string | null }>)
-    .map((row) => parseCoverageMap(row.sanitized_content))
-    .filter((m): m is NonNullable<typeof m> => m !== null);
-
-  const scanIds = Array.from(new Set(maps.map((m) => m.scanId)));
-
-  const { data: resultRows } =
-    scanIds.length > 0
-      ? await supabase
-          .from("scan_prompt_results")
-          .select("id, prompt_id, run_id, extracted_json, provider, mentioned_competitors_count")
-          .eq("project_id", projectId)
-          .in("run_id", scanIds)
-          .eq("status", "completed")
-      : { data: [] };
-
-  const resultsByScanId = new Map<string, PromptResultLite[]>();
-  for (const row of (resultRows ?? []) as Array<PromptResultLite & { run_id: string }>) {
-    const list = resultsByScanId.get(row.run_id) ?? [];
-    list.push(row);
-    resultsByScanId.set(row.run_id, list);
-  }
-
-  const latestMap = maps.length > 0 ? maps.reduce((a, b) => (a.generatedAt > b.generatedAt ? a : b)) : null;
-
-  // WEB-AUDIT-R6 phase 2: citation is classified over a fixed window of
-  // recent scans, not just the latest one (see opportunity-matrix.ts) — the
-  // same deduped candidates list drives both this current summary and every
-  // historical trend point (buildCoverageTrend), so they stay consistent.
-  const citationWindowCandidates = buildCitationWindowCandidates(maps, resultsByScanId);
-  const summary = latestMap
-    ? buildWebAuditSummary({ coverage: latestMap, citationWindowCandidates, projectDomain: project.domain })
-    : null;
-  const trend = buildCoverageTrend({ maps, resultsByScanId, projectDomain: project.domain });
-
-  const auditedScan = latestMap ? maps.find((m) => m.scanId === latestMap.scanId) : null;
-  const auditedScanDate = auditedScan?.scanId === latestRunRow?.id ? latestRunRow?.finished_at ?? latestRunRow?.created_at : null;
-
-  // WEB-AUDIT-R6 phase 1 (geo-strategy methodology review 2026-07-17):
-  // coverage/citation are both sampled fresh per scan from Gemini's Google
-  // Search grounding — a noisy sensor. With a small denominator, a single
-  // sampling flip swings the percentage by double digits; showing that swing
-  // as a bare "+17 pt" delta reads as precision the sample doesn't support.
-  // A delta is only shown when BOTH the current and previous point clear
-  // SMALL_SAMPLE_THRESHOLD (isDeltaTrustworthy) — never fabricated, never
-  // silently rounded away, just withheld when the comparison itself would be
-  // noise. The tile itself still always shows the real fraction (n/N).
-  const previousPoint = trend.length >= 2 ? trend[trend.length - 2] : null;
-
-  const previousCoveragePct = previousPoint?.coveragePct ?? null;
-  const coverageDeltaTrustworthy =
-    previousPoint !== null && isDeltaTrustworthy(summary?.conclusiveCount ?? 0, previousPoint.conclusiveCount);
-  const coverageDelta =
-    coverageDeltaTrustworthy &&
-    summary?.coveragePct !== null &&
-    summary?.coveragePct !== undefined &&
-    previousCoveragePct !== null
-      ? summary.coveragePct - previousCoveragePct
-      : null;
-
-  const previousSurfacingPct = previousPoint?.surfacingPct ?? null;
-  const surfacingDeltaTrustworthy =
-    previousPoint !== null && isDeltaTrustworthy(summary?.coveredCount ?? 0, previousPoint.coveredCount);
-  const surfacingDelta =
-    surfacingDeltaTrustworthy &&
-    summary?.surfacingPct !== null &&
-    summary?.surfacingPct !== undefined &&
-    previousSurfacingPct !== null
-      ? summary.surfacingPct - previousSurfacingPct
-      : null;
-
-  // WEB-AUDIT-R1: the hero's composite score — plain mean of the real signals
-  // available (see lib/web-audit/global-score.ts). Its breakdown renders right
-  // next to it, so the composite is never a black box; a component that has
-  // never been computed (e.g. technical audit not yet run) is excluded, not
-  // faked as 0.
-  const globalScore = buildGlobalScore({
-    coveragePct: summary?.coveragePct ?? null,
-    surfacingPct: summary?.surfacingPct ?? null,
-    technicalScore: technicalSnapshot?.readiness_score ?? null
-  });
-
-  // WEB-AUDIT-ACTION: competitor names the AI actually mentioned per topic,
-  // and a deep-link to the matching `add_citation_block` recommendation when
-  // one exists — both read straight from data this page already loads for
-  // `latestMap.scanId`, no new Gemini calls, no schema. `resultIdToPromptId`
-  // mirrors the join lib/recommendations/coverage-overlay.ts already
-  // establishes for the same recommendation type.
-  //
-  // A prompt can have more than one result row (one per LLM provider the
-  // project scans with, e.g. Gemini + Claude) — collect every row's
-  // extraction per promptId first, then merge, instead of overwriting with
-  // whichever row happens to be iterated last (production bug: a name from
-  // a DIFFERENT provider's row than the one actually shown was leaking into
-  // the resolved list).
-  const latestScanResultRows = ((resultRows ?? []) as Array<PromptResultLite & { id: string; run_id: string }>).filter(
-    (row) => latestMap && row.run_id === latestMap.scanId
-  );
-  const competitorListsByPromptId = new Map<string, string[][]>();
-  for (const row of latestScanResultRows) {
-    if (!row.prompt_id) continue;
-    const lists = competitorListsByPromptId.get(row.prompt_id) ?? [];
-    lists.push(extractMentionedCompetitors(row.extracted_json));
-    competitorListsByPromptId.set(row.prompt_id, lists);
-  }
-  const competitorsByPromptId = new Map<string, string[]>();
-  for (const [promptId, lists] of competitorListsByPromptId) {
-    competitorsByPromptId.set(promptId, mergeCompetitorNames(lists));
-  }
-
-  // Only these two recommendation types anchor their evidence to a single
-  // scan_prompt_results row (dedupeKey: `<type>:${result.id}` in
-  // recommendation-engine.ts) — every other type is aggregate/run-wide
-  // (e.g. close_competitor_gap groups multiple prompts by competitor name)
-  // and can't be joined back to one specific topic. content_gap/
-  // unverified_cited topics genuinely have no matching recommendation yet;
-  // that's a real gap in the engine's rule set, not a bug in this join.
-  //
-  // WEB-AUDIT-R5 (founder-approved 2026-07-16): the Plan de acción now embeds
-  // the SAME interactive RecCard the Recomendaciones page renders — "Generar
-  // propuesta con IA" and "Marcar como hecho" work in place, so the query
-  // widened from {id, title, description} to every column RecCard reads.
-  //
-  // Bug fix (founder report 2026-07-18): "Ver recomendación" stopped
-  // rendering inline. Root cause — lib/scan/executor.ts supersedes every
-  // OTHER run's "active" recommendations project-wide the instant any new
-  // scan completes (exactly one run ever holds "active" at a time), but the
-  // domain-coverage audit behind `latestMap` is a separate, manually
-  // triggered action that can lag behind the latest scan (see
-  // `auditedScanDate`'s own scanId-mismatch guard just above, which already
-  // anticipated this). Filtering matchedRecs by `run_id = latestMap.scanId`
-  // silently returned nothing whenever the two fell out of sync — a very
-  // common state, not an edge case — so every row fell back to the plain
-  // link. `status = "active"` alone is the correct, staleness-proof filter;
-  // the evidence's scan_prompt_results id is resolved to a promptId via a
-  // query scoped to each recommendation's own `run_id`, never assumed to
-  // equal `latestMap.scanId`.
-  const { data: matchedRecs } = latestMap
-    ? await supabase
-        .from("recommendations")
-        .select(
-          "id, run_id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open"
-        )
-        .eq("project_id", projectId)
-        .in("recommendation_type", ["add_citation_block", "increase_brand_visibility"])
-        .eq("status", "active")
-    : { data: [] };
-
-  type MatchedRecRow = {
-    id: string;
-    run_id: string;
-    priority_rank: number;
-    title: string;
-    description: string;
-    recommendation_type: string;
-    impact: string;
-    effort: string;
-    confidence: string;
-    status: string;
-    source_type: string;
-    evidence_json: unknown;
-    consecutive_runs_open: number | null;
-  };
-
-  const matchedRecRows = (matchedRecs ?? []) as MatchedRecRow[];
-  const matchedRecRunIds = Array.from(new Set(matchedRecRows.map((r) => r.run_id)));
-  const { data: recResultRows } =
-    matchedRecRunIds.length > 0
-      ? await supabase
-          .from("scan_prompt_results")
-          .select("id, prompt_id")
-          .eq("project_id", projectId)
-          .in("run_id", matchedRecRunIds)
-      : { data: [] };
-  const resultIdToPromptIdForRecs = new Map<string, string>();
-  for (const row of (recResultRows ?? []) as Array<{ id: string; prompt_id: string | null }>) {
-    if (row.prompt_id) resultIdToPromptIdForRecs.set(row.id, row.prompt_id);
-  }
-
-  // Founder report: "Ver recomendación →" sent the founder to a
-  // decontextualized Recomendaciones page with no explanation of the
-  // problem or the fix right where they were looking. A matched real
-  // recommendation now renders inline via RecCard instead of a link.
-  // `coverageOverlay` is intentionally left null here — computing it needs
-  // the same coverage-overlay join lib/recommendations/coverage-overlay.ts
-  // performs, out of scope for this first cut; RecCard renders its normal
-  // (non-enriched) state without it, never a fake one.
-  const recommendationByPromptId = new Map<string, Recommendation>();
-  for (const rec of matchedRecRows) {
-    const evidence = rec.evidence_json as { affected_prompt_details?: Array<{ id: string }> } | null;
-    const resultId = evidence?.affected_prompt_details?.[0]?.id;
-    if (!resultId) continue;
-    const promptId = resultIdToPromptIdForRecs.get(resultId);
-    if (!promptId || recommendationByPromptId.has(promptId)) continue;
-    recommendationByPromptId.set(promptId, {
-      id: rec.id,
-      priority_rank: rec.priority_rank,
-      title: rec.title,
-      description: rec.description,
-      recommendation_type: rec.recommendation_type,
-      impact: rec.impact,
-      effort: rec.effort,
-      confidence: rec.confidence,
-      status: rec.status,
-      source_type: rec.source_type,
-      evidence_json: rec.evidence_json as Recommendation["evidence_json"],
-      consecutive_runs_open: rec.consecutive_runs_open ?? undefined,
-      solution: null,
-      coverageOverlay: null
-    });
-  }
-
-  // Same pattern recommendations/page.tsx uses to attach the latest
-  // sanitized AI-generated solution (if any) — the embedded RecCard needs it
-  // to show "Propuesta generada" instead of the "Generar propuesta" button.
-  const matchedRecIds = Array.from(recommendationByPromptId.values()).map((r) => r.id);
-  if (matchedRecIds.length > 0) {
-    const { data: solutionRows } = await supabase
-      .from("generated_solutions")
-      .select("recommendation_id, sanitized_content, created_at")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .eq("is_sanitized", true)
-      .in("recommendation_id", matchedRecIds)
-      .order("created_at", { ascending: false });
-
-    const solutionByRecId = new Map<string, GeneratedSolution>();
-    for (const row of (solutionRows ?? []) as Array<{ recommendation_id: string; sanitized_content: string | null }>) {
-      // Newest-first order means the first row seen per recommendation wins.
-      if (solutionByRecId.has(row.recommendation_id) || !row.sanitized_content) continue;
-      const parsed = parseGeneratedSolution(row.sanitized_content);
-      if (parsed) solutionByRecId.set(row.recommendation_id, parsed);
-    }
-    for (const rec of recommendationByPromptId.values()) {
-      rec.solution = solutionByRecId.get(rec.id) ?? null;
-    }
-  }
-
-  const recommendationIdByPromptId = new Map<string, string>();
-  for (const [promptId, rec] of recommendationByPromptId) {
-    recommendationIdByPromptId.set(promptId, rec.id);
-  }
-
-  // Full prioritized list — every actionable topic, not just a top-N slice
-  // (WEB-AUDIT-R1). The Resumen tab shows the top 3 expanded and folds the
-  // rest behind a native "Ver todas" expander.
-  const actionPlan = summary
-    ? buildActionPlan({
-        summary,
-        competitorsByPromptId,
-        recommendationIdByPromptId,
-        limit: summary.topics.length
-      })
-    : [];
-  const topActions = actionPlan.slice(0, 3);
-  const restActions = actionPlan.slice(3);
-
-  const grouped: Record<TopicOutcome, ClassifiedTopic[]> = {
-    performing: [],
-    invisible: [],
-    content_gap: [],
-    open_opportunity: [],
-    unverified_cited: [],
-    inconclusive: []
-  };
-  for (const topic of summary?.topics ?? []) {
-    grouped[topic.outcome].push(topic);
-  }
-
-  // WEB-AUDIT-R5: filter chips above the Plan de acción, driven by the same
-  // ActionItemKind the matrix quadrants target — replaces the old per-outcome
-  // topic filter that lived in the removed "Contenido" tab.
-  //
-  // Simplified to 3 chips (founder-approved 2026-07-18): Todas / Optimizar
-  // página / Crear contenido. create_competing, create_open and capture all
-  // collapse into the single "Crear contenido" chip — from the founder's
-  // perspective all three mean "publish a page" (only optimize means editing
-  // an existing one); each row still shows its own more specific badge
-  // (ACTION_KIND_META) so the distinction isn't lost, just not exposed as
-  // three separate top-level filters. The matrix quadrants keep their
-  // original per-kind precision untouched (visibilityMatches).
-  const countsByKind: Record<ActionItemKind, number> = { optimize: 0, create_competing: 0, create_open: 0, capture: 0 };
-  for (const item of actionPlan) countsByKind[item.kind] += 1;
-  const createContentCount = countsByKind.create_competing + countsByKind.create_open + countsByKind.capture;
-  const actionFilterOptions: ActionFilterCount[] = [
-    { id: "all", label: "Todas", count: actionPlan.length },
-    ...(countsByKind.optimize > 0 ? [{ id: "optimize" as ActionFilterId, label: "Optimizar página", count: countsByKind.optimize }] : []),
-    ...(createContentCount > 0 ? [{ id: "create_content" as ActionFilterId, label: "Crear contenido", count: createContentCount }] : [])
-  ];
-
-  const analyzedPagesCount = technicalSnapshot ? technicalSnapshot.pages.filter((p) => p.status === "analyzed").length : 0;
-  const allowedBotsCount = technicalSnapshot ? technicalSnapshot.bots.bots.filter((b) => b.allowed).length : 0;
 
   return (
-    <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAudit}>
+    <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAuditCoverage}>
     <div className="page">
       {/* Sticky header */}
       <div className="ov-sticky-header">
@@ -1105,51 +135,125 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               {/* Was hardcoded unconditionally — read as "your account is
                   Pro" sitting right next to a "Disponible en plan Pro"
                   button when it wasn't (founder report: contradictory at a
-                  glance after a plan downgrade). Now reflects the actual
-                  gate this page enforces below. */}
-              {canAudit && <span className="badge badge-accent" style={{ fontSize: 10 }}>PRO</span>}
+                  glance after a plan downgrade). Reflects `canAuditCoverage`
+                  specifically (WEB-AUDIT-TECH-ALL-PLANS-1): coverage is the
+                  one half of this page that's still actually Pro-only, so
+                  this is the one badge that still means something by plan —
+                  the technical panels below render for every plan now. */}
+              {canAuditCoverage && <span className="badge badge-accent" style={{ fontSize: 10 }}>PRO</span>}
             </div>
           </div>
         </div>
+        {/* WEB-AUDIT-ISSUES-1 fase 2 (founder-approved 2026-08-02): the
+            sticky header is shared chrome across every console page
+            (docs/brand/design-decisions-log.md §3) — "el contexto vive
+            entero en el sticky-header... título de sección + pill de fecha".
+            Citations and Prompts, the two other v3-repainted pages, only put
+            passive badges/status pills here, never an action button. The
+            real "Auditar ahora" button moved into the page body below,
+            leaving this side purely informational. (That button is gone
+            entirely since AUDIT-NO-BUTTON-1; the body now holds only the
+            audit's state.) */}
         <div className="ov-sticky-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {latestMap && (
+          {/* Two lengths, not one. `.ov-sticky-right` is `flex-shrink: 0`, so
+              whatever sits here keeps its intrinsic width — fine for the short
+              pills Citations/Overview put here, but this is prose, and at
+              375px the full sentence claimed ~340px of a 375px header. The
+              left block (`flex: 1; min-width: 0`) collapsed to ~25px and its
+              "Auditoría web" kicker painted straight over this text. Caught by
+              reading the pilot's own mobile capture of PR #289 — no console
+              error, no failed request and no overflow signal fired, because
+              nothing overflowed: two elements simply shared the same pixels.
+              The compact form keeps the audit date on mobile (it is the only
+              place in the page that shows audit freshness) while fitting. */}
+          {latestMap ? (
             <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
-              Última auditoría: {formatDate(latestMap.generatedAt)}
-              {auditedScanDate ? ` · sobre el escaneo del ${formatDate(auditedScanDate)}` : ""}
+              <span className="wa2-hdr-audit-full">
+                Última auditoría: {formatDate(latestMap.generatedAt)}
+                {auditedScanDate ? ` · sobre el escaneo del ${formatDate(auditedScanDate)}` : ""}
+              </span>
+              <span className="wa2-hdr-audit-compact">Auditada {formatDate(latestMap.generatedAt)}</span>
+            </span>
+          ) : (
+            // WEB-AUDIT-TECH-ALL-PLANS-1: `latestMap` only ever exists for a
+            // coverage campaign, so a non-Pro project (which never has one)
+            // used to show no date here at all — even with a real, fresh
+            // technical snapshot. That reads as "never audited", which is
+            // false. Falls back to the technical snapshot's own date; still
+            // nothing when neither exists.
+            technicalSnapshot && (
+              <span style={{ fontSize: 11, color: "var(--ink-4)" }}>Auditada {formatDate(technicalSnapshot.created_at)}</span>
+            )
+          )}
+          {/* DOMAINS-REDESIGN-1: era un `.scan-status`, que el CSS oculta bajo
+              el breakpoint móvil — el mismo fallo que §26 arregló para el
+              escaneo y dejó anotado como pendiente para la auditoría. La
+              pastilla compartida lo hace visible también en móvil y unifica el
+              vocabulario de estado de toda la consola. Gate renombrado a
+              `canAuditCoverage` por WEB-AUDIT-TECH-ALL-PLANS-1 (ADR 0035):
+              este chip anuncia la campaña de COBERTURA, que sigue siendo Pro
+              — la auditoría técnica corre en todos los planes y no tiene
+              campaña que anunciar aquí. */}
+          {/* WEB-AUDIT-DRIVE-1: the pill used to render off `status='running'`
+              alone, with no notion of when that row last moved — so a campaign
+              whose driver stopped 13 minutes earlier said "Auditando…"
+              indefinitely (2026-08-07). `auditPillState` is the same claim
+              measured against the clock and against the job's own status. */}
+          {canAuditCoverage && auditPillState === "auditing" && <ScanStatePill auditing />}
+          {canAuditCoverage && auditPillState === "pending" && (
+            <span className="badge" style={{ fontSize: 11 }}>
+              Auditoría pendiente
             </span>
           )}
-          <RunAuditButton canAudit={canAudit} />
         </div>
       </div>
+
+      {/* WEB-AUDIT-ISSUES-1 fase 2: v3 repaint + the founder-approved
+          640/1200/1280px console width standard (CITATIONS-REDESIGN-1,
+          docs/brand/design-decisions-log.md §5), same mechanism as
+          .ov2-scope/.cit2-scope — re-points the shared token names so every
+          unedited `.card`/badge/etc. inside repaints automatically. Wraps
+          everything below the sticky header, which stays on the shared
+          chrome untouched, matching this repo's established nesting. */}
+      <div className="wa2-scope wa2-page">
+
+      {/* AUDIT-NO-BUTTON-1 (founder, 2026-08-05): here lived the page's one
+          "Auditar ahora" button, and briefly after it a status pill. Both are
+          gone. The audit has run on its own after every scan since
+          AUDIT-AFTER-SCAN-1, so the button asked for work already done; and
+          once the pill carried the date too, it repeated what the sticky
+          header above already says ("dejamos solo la info de la cabecera").
+          The header states the audit date, whether it covers the newest scan,
+          and shows its own "Auditando" pill while a campaign runs — there was
+          nothing left for a second element to add. */}
 
       {/* A campaign can be left "running" server-side while the account's
           plan lapses mid-audit (e.g. downgraded via Stripe billing) — the
           banner must never promise "seguirá por donde se quedó" when it
           genuinely can't: WebAuditProvider won't auto-resume without
-          canAudit, and the button that would show any driving state is
-          hidden entirely under the plan gate. Founder report: the old
+          canAuditCoverage, and the button that would show any driving state
+          is hidden entirely under the plan gate. Founder report: the old
           unconditional version left the page looking permanently stuck with
-          no error, no explanation. */}
-      {activeCampaignProgress &&
-        (canAudit ? (
-          <div className="firstscan-banner">
-            <div className="fb-ico">
-              <Icon name="search" size={18} />
-              <span className="fb-spin"></span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div className="fb-t">Auditoría en curso</div>
-              <div className="fb-d">
-                Llevamos {activeCampaignProgress.covered} de {activeCampaignProgress.total} temas. Puedes navegar a
-                otras páginas — al volver aquí, seguirá por donde se quedó.
-              </div>
-            </div>
-            <span className="st-chip st-scanning">
-              <span className="d" />
-              Auditando
-            </span>
-          </div>
-        ) : (
+          no error, no explanation. This banner is about the COVERAGE
+          campaign specifically — the technical half never had a "campaign"
+          to pause, so WEB-AUDIT-TECH-ALL-PLANS-1 leaves this whole block
+          keyed on canAuditCoverage unchanged. */}
+      {/* Sólo la variante de plan pausado. La de "Auditoría en curso" se
+          retiró (founder review 2026-08-04): mientras se audita, el propio
+          botón ya lleva el spinner y el conteo de temas en vivo, así que el
+          banner repetía la misma información en tres líneas más una pastilla
+          — "todo el resto es liar la experiencia". Esta variante NO es
+          redundante: cuando el plan decae a mitad de auditoría el botón
+          desaparece entero bajo el gate, y entonces este banner es lo único
+          que explica por qué la página parece atascada. */}
+      {/* WEB-AUDIT-DRIVE-1: the coverage driver's own failures, which had no
+          renderer at all until this phase — see the component. Placed above
+          the plan-lapsed banner because the two are mutually exclusive in
+          practice (that one only shows when the driver never starts) and this
+          one is about work that did start and then stopped. */}
+      <WebAuditDriveNotice />
+
+      {activeCampaignProgress && !canAuditCoverage && (
           <div className="firstscan-banner">
             <div className="fb-ico">
               <Icon name="search" size={18} />
@@ -1166,23 +270,21 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               Ver planes
             </Link>
           </div>
-        ))}
+        )}
 
-      {/* Gated / empty states */}
-      {!canAudit ? (
-        <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
-          <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
-            Disponible en el plan Pro
-          </div>
-          <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
-            Auditar la cobertura y la implementación de tu web es una función del plan Pro. Compara lo que publicas
-            con lo que la IA realmente cita en sus respuestas.
-          </p>
-          <Link href="/dashboard/settings/billing" className="btn btn-primary btn-sm">
-            Ver planes
-          </Link>
-        </div>
-      ) : !latestRunRow ? (
+      {/* Gated / empty states. WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05): the
+          old single `!canAudit` branch blanked out the ENTIRE page —
+          technical panels included — for any non-Pro account. That was
+          exactly the asymmetry GEO-SCORE-V4 (docs/adr/0033) turned into a
+          scoring bug, not just a UX one: `readiness_score` is a real .20 GEO
+          Score component, so a plan that can never see it structurally
+          scored on four signals instead of five. The ladder below now gates
+          on real data only — a completed scan, then either kind of audit
+          result — never on plan. The plan-specific "not included" fact is
+          told per-signal instead, inside the tiles/sections that need it
+          (LockedSubScoreTile, the coverage-only Evolución/Historial blocks
+          that stay empty by construction for a non-Pro project). */}
+      {!hasCompletedScan ? (
         <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
           <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
             Todavía no hay ningún escaneo completado
@@ -1194,27 +296,36 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             Ir a la visión general
           </Link>
         </div>
-      ) : !summary ? (
+      ) : !summary && !technicalSnapshot && auditIsRunning ? (
+        /* SCAN-STATES-3: the mission's sixth beat. Only here, and only when
+           there is nothing to hide — this page does NOT take the screen over
+           while a re-audit runs, so a project with previous results keeps
+           reading them. First audit only, same rule the rocket follows. */
+        <ReentryMission domain={project.domain} />
+      ) : !summary && !technicalSnapshot ? (
+        // Neither signal exists yet for THIS account — true empty state,
+        // reachable on any plan (e.g. right after a scan finishes, before
+        // the async post-scan audit job has run). Copy branches on
+        // canAuditCoverage because the two plans are waiting on different
+        // things: a Pro account is waiting on ITS OWN next audit; a non-Pro
+        // account will only ever get the technical half, so telling it
+        // "hasta 5 auditorías al día" would describe a feature it can't use.
         <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
           <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
             Todavía no has auditado tu web
           </div>
-          <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
-            Tu dominio visto como lo ve la IA: la auditoría comprueba, tema a tema, si tu dominio publica contenido
-            que Google encuentra, y lo cruza con las citas de tu último escaneo.
-          </p>
-          <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginBottom: 16 }}>Hasta 5 auditorías al día por proyecto.</p>
-          {/* Both RunAuditButton instances on this page share one campaign
-              driver via WebAuditProvider, so this can't race the header
-              button into a second concurrent loop. It's still hidden while a
-              campaign is active because the "en curso" banner above already
-              covers that state — showing a second button here would be
-              redundant, not unsafe. */}
-          {!hasActiveCampaign && (
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <RunAuditButton canAudit={canAudit} />
-            </div>
+          {canAuditCoverage ? (
+            <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
+              Tu dominio visto como lo ve la IA: la auditoría comprueba, tema a tema, si tu dominio publica contenido
+              que Google encuentra, y lo cruza con las citas de tu último escaneo.
+            </p>
+          ) : (
+            <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
+              La salud técnica de tu web se audita sola tras cada escaneo — vuelve en unos minutos. Comparar lo que
+              publicas con lo que la IA cita en sus respuestas es una función del plan Pro.
+            </p>
           )}
+          <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginBottom: 16 }}>Hasta 5 auditorías al día por proyecto.</p>
         </div>
       ) : (
         <AuditTabsProvider>
@@ -1223,45 +334,87 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               scores, counts) with no hierarchy. */}
           <div className="card" style={{ marginTop: 14, padding: "16px 18px" }}>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 20 }}>
-              <ScoreGauge score={globalScore.score} />
-              <div style={{ flex: 1, minWidth: 240 }}>
-                <div style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
+              {/* Title ABOVE the dial, like the mockup's "Salud del sitio"
+                  (founder review 2026-08-03: "el gauge inicial necesita un
+                  título"). It used to sit over the tiles, which left the big
+                  number unlabelled and made it read as competing with the
+                  "Salud técnica" tile below rather than summarising it. */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <div className="wa2-diag-title" style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
                   Diagnóstico general
-                  <InfoTip text="Media simple de tus señales disponibles: cobertura de temas, temas implementados (citados por la IA) y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media." />
+                  {/* Qué te aporta, no cómo se calcula (founder review
+                      2026-08-04). La versión anterior describía la aritmética
+                      —"media simple de tus señales disponibles… no cuenta
+                      como 0"— que es exactamente lo que un usuario no
+                      necesita saber para decidir qué hacer, y además ocupaba
+                      once líneas que tapaban el propio gauge. El desglose
+                      sigue visible al lado, en los tres tiles. */}
+                  <InfoTip text="Lo preparada que está tu web para que la IA te cite como fuente. Sube al cubrir los temas que te importan, al conseguir que la IA te mencione en ellos y al dejar tus páginas legibles para los motores." />
                 </div>
-                {globalScore.includedCount < 3 && (
+                {/* WEB-AUDIT-TECH-ALL-PLANS-1: `heroScore` (computed above)
+                    is the composite for a Pro account, same as before, and
+                    the technical score alone for a non-Pro one — see its own
+                    comment for why that's the honest headline rather than a
+                    same-valued 1-of-3 average with a misleading caption. */}
+                <ScoreGauge score={heroScore} />
+              </div>
+              <div style={{ flex: 1, minWidth: 240 }}>
+                {/* Caption above the tiles: for a non-Pro account this is
+                    always shown (coverage/surfacing can never be computed —
+                    that's a plan fact, not a "not run yet" one); for Pro it
+                    only shows below 3 signals, same as before
+                    WEB-AUDIT-TECH-ALL-PLANS-1. */}
+                {(!canAuditCoverage || globalScore.includedCount < 3) && (
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "2px 0 10px" }}>
-                    Media de {globalScore.includedCount} {globalScore.includedCount === 1 ? "señal disponible" : "señales disponibles"} — audita el resto para completarla.
+                    {!canAuditCoverage
+                      ? "Tu salud técnica — el contenido propio y lo que la IA cita se destapan en el plan Pro."
+                      : `Media de ${globalScore.includedCount} ${globalScore.includedCount === 1 ? "señal disponible" : "señales disponibles"} — audita el resto para completarla.`}
                   </div>
                 )}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: globalScore.includedCount < 3 ? 0 : 10 }}>
-                  {/* Sparklines plot the same real per-audit series as the
-                      Evolución chart, in the same series colors (accent =
-                      cobertura, pos = implementación). The técnica tile has
-                      no history loaded (only the latest snapshot) — no
-                      sparkline rather than a fake flat line. */}
-                  <SubScoreTile
-                    label="Contenido"
-                    value={summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
-                    hint="temas con contenido propio verificado"
-                    delta={coverageDelta}
-                    pct={summary.coveragePct}
-                    sparkValues={trend.map((p) => p.coveragePct)}
-                    sparkColor="var(--accent)"
-                  />
-                  <SubScoreTile
-                    label="Implementado"
-                    value={summary.surfacingPct === null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
-                    hint={
-                      summary.surfacingPct !== null && grouped.invisible.length > 0
-                        ? `palanca rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema aún sin citar" : "temas aún sin citar"}`
-                        : "de tus temas con contenido, cuántos cita la IA"
-                    }
-                    delta={surfacingDelta}
-                    pct={summary.surfacingPct}
-                    sparkValues={trend.map((p) => p.surfacingPct)}
-                    sparkColor="var(--pos)"
-                  />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: !canAuditCoverage || globalScore.includedCount < 3 ? 0 : 10 }}>
+                  {/* Sin sparklines. Se probaron con 4 auditorías reales
+                      (founder review 2026-08-04) y a 64×22px no se leen: "no
+                      aportan mucho porque se ven muy pequeñas". Es además
+                      información duplicada — el gráfico de Evolución, justo
+                      debajo, dibuja exactamente la misma serie con ejes y
+                      fechas. */}
+                  {/* Contenido/Implementado: coverage stays Pro-only, and
+                      `summary` is always null on a non-Pro account (no
+                      coverage campaign ever runs) — locked, never "—", per
+                      WEB-AUDIT-TECH-ALL-PLANS-1 (see LockedSubScoreTile). On
+                      Pro, `summary` can ALSO be null transiently (a scan just
+                      completed technical-first, coverage not through yet —
+                      the structural fix that let this hero render at all
+                      without a coverage summary), so this branch keeps its
+                      own null-safety instead of assuming the old ladder's
+                      guarantee. */}
+                  {canAuditCoverage ? (
+                    <>
+                      <SubScoreTile
+                        label="Contenido"
+                        value={summary?.coveragePct == null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
+                        hint="Temas con contenido propio verificado"
+                        delta={coverageDelta}
+                        pct={summary?.coveragePct ?? null}
+                      />
+                      <SubScoreTile
+                        label="Implementado"
+                        value={summary?.surfacingPct == null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
+                        hint={
+                          summary?.surfacingPct != null && grouped.invisible.length > 0
+                            ? `Palanca rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema aún sin citar" : "temas aún sin citar"}`
+                            : "De tus temas con contenido, cuántos cita la IA"
+                        }
+                        delta={surfacingDelta}
+                        pct={summary?.surfacingPct ?? null}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <LockedSubScoreTile label="Contenido" hint="Temas con contenido propio verificado por la IA" />
+                      <LockedSubScoreTile label="Implementado" hint="Cuánto de ese contenido cita la IA en sus respuestas" />
+                    </>
+                  )}
                   <SubScoreTile
                     label="Salud técnica"
                     value={
@@ -1273,8 +426,8 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     }
                     hint={
                       technicalSnapshot
-                        ? `media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"}`
-                        : "lánzala desde la pestaña Salud técnica"
+                        ? `Media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"}`
+                        : "Se audita sola tras cada escaneo"
                     }
                     delta={null}
                     pct={technicalSnapshot?.readiness_score ?? null}
@@ -1284,78 +437,212 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             </div>
           </div>
 
+          {/* Evolución: subida aquí desde el pie de "Problemas" (founder
+              review 2026-08-03: "subiría el gráfico de evolución de auditorías
+              y lo pondría precisamente debajo de la primera caja"). Al vivir
+              fuera del sistema de pestañas, la lectura pasa a ser: dónde
+              estás (hero) → hacia dónde vas (esto) → qué hacer (pestañas).
+              Umbral subido de 2 a 4 auditorías (founder-approved 2026-08-04,
+              tras verlo en el preview): con dos puntos el gráfico dibuja una
+              recta que se lee como tendencia sin serlo — el mismo criterio
+              que ya aplican las sparklines de los tiles, y que pesa más aquí
+              porque este bloque pasó a la posición más visible de la página.
+              Sigue sin haber placeholder "necesitas más datos": desaparece
+              entero. El Historial en tabla se queda en Problemas con umbral
+              2 — es una tabla, no una línea: dos filas se leen perfectamente
+              y son justo lo que da contexto mientras el gráfico no aparece. */}
+          {trend.length >= 4 && (
+            <div className="card" style={{ marginTop: 12 }}>
+              <div style={{ padding: "13px 16px 0" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 750 }}>Evolución entre auditorías</div>
+                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                  Cobertura e implementación a lo largo de los últimos escaneos.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 14, fontSize: 11, color: "var(--ink-3)", fontWeight: 600, padding: "10px 16px 0" }}>
+                <span>
+                  <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--accent)" }} />
+                  Cobertura de temas
+                </span>
+                <span>
+                  <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--pos)" }} />
+                  Tasa de implementación
+                </span>
+              </div>
+              <div style={{ padding: "12px 16px 14px" }}>
+                <TrendChart points={trend} />
+              </div>
+            </div>
+          )}
+
           <AuditTabBar />
 
           {/* ─── Resumen ─── */}
-          <AuditTabPanel id="resumen">
-            {/* Plan de acción — the first actionable thing after the verdict,
-                closing the "¿y ahora qué hago?" the matrix on its own leaves
-                open (WEB-AUDIT-ACTION), the protagonist of the default tab
-                (WEB-AUDIT-R1) and now fully self-contained (WEB-AUDIT-R5,
-                founder-approved 2026-07-16): a matched real recommendation
-                embeds its own interactive RecCard right here — Generar
-                propuesta / Marcar como hecho work in place, no navigation
-                required. `id="action-plan"` is the matrix's scroll target
-                (audit-tabs.tsx). "Ver todas las acciones" only appears while
-                filter === "all" (founder-approved 2026-07-17) — with a
-                specific filter active, every matching row is already shown
-                directly; see PlanExpander. */}
-            <div className="card" style={{ marginTop: 12 }} id="action-plan">
-              <div style={{ padding: "13px 16px 0" }}>
-                <div style={{ fontSize: 13.5, fontWeight: 750 }}>Plan de acción</div>
-                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                  Las acciones de mayor palanca según la matriz, de más a menos urgentes.
-                </div>
-              </div>
-              <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                {actionPlan.length > 0 ? (
-                  <>
-                    <ActionFilterBar options={actionFilterOptions} />
-                    <PlanExpander
-                      totalCount={actionPlan.length}
-                      restCount={restActions.length}
-                      top={topActions.map((item, i) => (
-                        <ActionRowVisibility key={item.promptId} matches={visibilityMatches(item.kind)}>
-                          <ActionPlanRow
-                            item={item}
-                            index={i + 1}
-                            projectId={projectId}
-                            recommendation={recommendationByPromptId.get(item.promptId) ?? null}
-                          />
-                        </ActionRowVisibility>
-                      ))}
-                      rest={restActions.map((item, i) => (
-                        <ActionRowVisibility key={item.promptId} matches={visibilityMatches(item.kind)}>
-                          <ActionPlanRow
-                            item={item}
-                            index={i + 4}
-                            projectId={projectId}
-                            recommendation={recommendationByPromptId.get(item.promptId) ?? null}
-                          />
-                        </ActionRowVisibility>
-                      ))}
-                    />
-                  </>
-                ) : (
-                  <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
-                    Tu contenido propio está rindiendo — nada urgente que crear ahora.
-                  </p>
+          <AuditTabPanel id="problemas">
+            {/* Salud técnica GEO — la lista de problemas (WEB-AUDIT-ISSUES-1
+                fase 2, founder-approved 2026-08-02): "una auditoría web es
+                para encontrar problemas técnicos" fue la lectura del
+                fundador sobre los mockups, así que esta lista —no el antiguo
+                resumen de una línea— abre ahora la pestaña. Cada fila sale
+                de los checks reales por página/bot de lib/web-audit/issues.ts,
+                ordenados por severidad; el delta de puntos de cada una es la
+                ganancia exacta de score al arreglar solo ESE check (ver la
+                cabecera de ese módulo para el porqué es exacto, no una
+                estimación). */}
+            {currentTechnicalReport ? (
+              <>
+                {currentTechnicalReport.totalPointPotential > 0 && (
+                  <div
+                    className="card"
+                    style={{ marginTop: 12, padding: "14px 16px", background: "var(--pos-soft)", border: "1px solid transparent" }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".03em", color: "var(--pos-ink)", textTransform: "uppercase" }}>
+                      Si arreglas los {currentTechnicalReport.issues.length}{" "}
+                      {currentTechnicalReport.issues.length === 1 ? "problema técnico" : "problemas técnicos"}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+                      <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>
+                        {currentTechnicalReport.actualReadinessScore}
+                      </span>
+                      <Icon name="arrRight" size={16} />
+                      <span
+                        style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", color: "var(--pos-ink)", fontVariantNumeric: "tabular-nums" }}
+                      >
+                        {currentTechnicalReport.projectedReadinessScore}
+                      </span>
+                      <span className="badge badge-pos" style={{ marginLeft: "auto", fontSize: 10.5, background: "var(--surface)" }}>
+                        calculado
+                      </span>
+                    </div>
+                    {/* Names WHICH score these two numbers are. Founder review
+                        2026-08-03: the hero dial reads 58 and this card reads
+                        81 — "ya veo que es salud técnica, pero me ha costado
+                        identificarlo". They are different measures (global
+                        average vs technical only), so the fix is a label, not
+                        a shared number. Copy also cut down per the same
+                        review ("la frase tiene que ser más pequeña"). */}
+                    <div style={{ fontSize: 11, fontWeight: 650, color: "var(--pos-ink)", marginTop: 2 }}>
+                      Salud técnica
+                    </div>
+                    <p style={{ fontSize: 10.5, lineHeight: 1.45, color: "var(--ink-3)", margin: "6px 0 0" }}>
+                      Es una valoración técnica. Que la IA acabe citándote depende también de otros factores de
+                      GEO, que trabajas en Recomendaciones.
+                    </p>
+                  </div>
                 )}
-              </div>
-            </div>
 
-            {/* "Lo que ya funciona" (WEB-AUDIT-R5): performing topics have no
-                action, so they never belonged in the plan above — but they
-                shouldn't vanish either (they used to live in the removed
-                "Contenido" tab). Plain always-expanded `.card`, matching every
-                other top-level card's width/border-radius exactly (founder
-                report 2026-07-17: it previously used the smaller-radius
-                `.wa-details` chrome meant for NESTED rows, standing out from
-                its siblings). The matrix's "Rindiendo" quadrant scrolls here. */}
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div
+                    style={{
+                      padding: "13px 16px 0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: 8
+                    }}
+                  >
+                    <div style={{ fontSize: 13.5, fontWeight: 750 }}>Problemas técnicos</div>
+                    {technicalScoreDelta !== null && technicalScoreDelta !== 0 && (
+                      <span style={{ fontSize: 11.5, fontWeight: 650, display: "flex", alignItems: "center", gap: 4 }}>
+                        <Delta value={technicalScoreDelta} suffix=" pt" /> desde la auditoría anterior
+                      </span>
+                    )}
+                  </div>
+                  {/* Counts only. The sparklines that used to sit beside each
+                      number were struck out by hand in the founder's review
+                      screenshot (2026-08-03): "eso hay que eliminarlo, las
+                      líneas me refiero. Dejamos solo el conteo de críticos y
+                      el conteo de avisos". The same per-audit history is still
+                      readable in Evolución/Historial, where it has axes. */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "12px 16px 0" }}>
+                    <div>
+                      <span
+                        style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}
+                      >
+                        Críticos
+                      </span>
+                      <div style={{ marginTop: 2 }}>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: "var(--wa-crit)", fontVariantNumeric: "tabular-nums" }}>
+                          {currentTechnicalReport.issues.filter((i) => i.severity === "critical").length}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span
+                        style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}
+                      >
+                        Avisos
+                      </span>
+                      <div style={{ marginTop: 2 }}>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: "var(--warn)", fontVariantNumeric: "tabular-nums" }}>
+                          {currentTechnicalReport.issues.filter((i) => i.severity === "warning").length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                    {currentTechnicalReport.issues.length > 0 ? (
+                      currentTechnicalReport.issues.map((issue) => (
+                        <IssueRow
+                          key={issue.check}
+                          issue={issue}
+                          llmsTxt={
+                            issue.check === "llms_txt_missing" && llmsTxtFile
+                              ? { file: llmsTxtFile, steps: llmsPublishSteps }
+                              : null
+                          }
+                          sitemap={issue.check === "sitemap_missing" ? { steps: sitemapFixSteps } : null}
+                        />
+                      ))
+                    ) : (
+                      <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                        Ningún problema técnico detectado en la última auditoría.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  {/* "no has auditado" ya no es cierto: nadie audita a mano
+                      desde AUDIT-NO-BUTTON-1. Unconditional now
+                      (WEB-AUDIT-TECH-ALL-PLANS-1): this used to only claim
+                      "se comprueba sola" for canAudit (Pro) accounts, but the
+                      technical half isn't plan-gated at all any more — it
+                      auto-checks after every scan on every plan. */}
+                  Todavía no se ha auditado la salud técnica de tu web. Se comprueba sola tras cada escaneo.
+                </p>
+              </div>
+            )}
+
+            {/* Plan de acción y Matriz de oportunidad, RETIRADOS de esta
+                pantalla (founder-approved 2026-08-02): "toda la tabla de
+                plan de acción no tiene sentido aquí... debe estar en la
+                página de recomendaciones" y "la matriz no estaba en el
+                artefacto". Efecto secundario real, señalado explícitamente:
+                los temas content_gap/open_opportunity/capture no tienen hoy
+                ninguna recomendación real que los cubra en el motor de
+                reglas (ver el comentario histórico que vivía junto a la
+                query de matchedRecs, ahora eliminada) — su guía sintetizada
+                sólo existía en este bloque. Al quitarlo, esos temas se
+                quedan sin ningún sitio en el producto hasta que se decida
+                si esa guía migra a Recomendaciones o se descarta. No se
+                reconstruye especulativamente aquí; queda como gap conocido
+                para la siguiente fase. */}
+
+            {/* "Lo que ya funciona": performing topics have no action, so
+                they never belonged in a plan anyway. Plain always-expanded
+                `.card`. No longer a matrix-quadrant scroll target (the
+                matrix that used to link here is gone) — just a standalone
+                confirmation block. */}
             {grouped.performing.length > 0 && (
-              <div className="card" style={{ marginTop: 12 }} id="performing-section">
-                <div style={{ padding: "13px 16px 0", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className="badge badge-pos" style={{ flexShrink: 0 }}>Rindiendo</span>
+              <div className="card" style={{ marginTop: 12 }}>
+                {/* No "Rindiendo" pill: the heading already says these are
+                    working, so the badge only repeated it (founder review
+                    2026-08-03: "creo que no aporta nada, yo lo quitaría"). */}
+                <div style={{ padding: "13px 16px 0" }}>
                   <div style={{ fontSize: 13.5, fontWeight: 750 }}>Lo que ya funciona ({grouped.performing.length})</div>
                 </div>
                 <div style={{ padding: "14px 16px 16px" }}>
@@ -1376,198 +663,11 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
             )}
 
-            {/* Opportunity matrix as navigation: counts only, tap → filters
-                the Plan de acción above (same tab, scrolled into view). The
-                topics themselves render exactly once, inside that plan or
-                "Lo que ya funciona" (founder report: every topic used to
-                appear up to three times on one endless page). */}
-            <div className="card" style={{ marginTop: 12 }}>
-              <div style={{ padding: "13px 16px 0" }}>
-                <div style={{ fontSize: 13.5, fontWeight: 750, display: "flex", alignItems: "center" }}>
-                  Matriz de oportunidad
-                  <InfoTip text="Cruza dos señales que sí controlas: contenido propio que Google indexa, y citas verificadas a tu dominio en las respuestas de la IA. No mide si la IA menciona tu marca por lo que ya sabe de ella — puedes salir en 'Hueco de contenido' aunque la IA te nombre primero; revisa el Plan de acción para verlo." />
-                </div>
-                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                  Cada tema de tus prompts, cruzando contenido propio verificado × citas en el último escaneo. Toca un
-                  cuadrante para filtrar el plan de acción.
-                </div>
-              </div>
-              <div style={{ padding: "14px 16px 16px" }}>
-                {/* minmax(0, 1fr) — not "1fr" — so the quadrant buttons can't
-                    force the tracks past the card's width on mobile. */}
-                <div style={{ display: "grid", gridTemplateColumns: "18px minmax(0, 1fr) minmax(0, 1fr)", gridTemplateRows: "1fr 1fr 18px", gap: 6 }}>
-                  <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", gridRow: "1 / 3", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)", display: "grid", placeItems: "center" }}>
-                    Con contenido propio
-                  </div>
-                  <QuadrantButton
-                    title="⚠ Invisible para la IA"
-                    count={grouped.invisible.length}
-                    tone="warn"
-                    hint="Tienes página, pero la IA no la cita → optimizar"
-                    target="optimize"
-                  />
-                  <QuadrantButton
-                    title="✓ Rindiendo"
-                    count={grouped.performing.length}
-                    tone="pos"
-                    hint="Contenido propio citado por la IA → mantener"
-                    target="performing"
-                  />
-                  <QuadrantButton
-                    title="✕ Sin contenido propio"
-                    count={grouped.content_gap.length + grouped.open_opportunity.length}
-                    tone="neg"
-                    hint="Sin página propia y sin citas → crear contenido"
-                    target="no_content"
-                    extra={
-                      grouped.content_gap.length + grouped.open_opportunity.length > 0 ? (
-                        <span style={{ fontSize: 10.5, color: "var(--ink-3)" }}>
-                          {grouped.content_gap.length > 0 && `Compite un rival: ${grouped.content_gap.length}`}
-                          {grouped.content_gap.length > 0 && grouped.open_opportunity.length > 0 && " · "}
-                          {grouped.open_opportunity.length > 0 && `Nadie destaca aún: ${grouped.open_opportunity.length}`}
-                        </span>
-                      ) : undefined
-                    }
-                  />
-                  <QuadrantButton
-                    title="◌ Citado sin contenido verificado"
-                    count={grouped.unverified_cited.length}
-                    tone="neutral"
-                    hint="La IA te cita por otra vía, sin página verificada → capturar"
-                    target="capture"
-                  />
-                  <div style={{ gridColumn: "2 / 4", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)", display: "grid", placeItems: "center" }}>
-                    La IA no te cita → sí te cita
-                  </div>
-                </div>
-                {grouped.inconclusive.length > 0 && (
-                  <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 12, marginBottom: 0 }}>
-                    {grouped.inconclusive.length}{" "}
-                    {grouped.inconclusive.length === 1 ? "tema sin verificar en esta auditoría" : "temas sin verificar en esta auditoría"}{" "}
-                    (no cuentan para los KPIs).
-                  </p>
-                )}
-              </div>
-            </div>
+            {/* El GRÁFICO de Evolución ya no vive aquí — subido a nivel de
+                página, justo bajo el hero (founder review 2026-08-03). Lo que
+                queda debajo es sólo el Historial en tabla. */}
 
-            {/* Compact technical status — one line per signal; the detail
-                lives once, in its own tab. Expanded only when something is
-                actually wrong (a blocked bot deserves attention; seven green
-                "Permitido" rows don't). */}
-            <div className="card" style={{ marginTop: 12 }}>
-              <div style={{ padding: "13px 16px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700 }}>Salud técnica</span>
-                  <span style={{ fontSize: 12, color: "var(--ink-3)", flex: 1, minWidth: 0 }}>
-                    {technicalSnapshot
-                      ? technicalSnapshot.readiness_score === null
-                        ? "Ninguna página clave se pudo analizar en la última auditoría técnica."
-                        : `${technicalSnapshot.readiness_score} / 100 · media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"} · ${formatDate(technicalSnapshot.created_at)}`
-                      : "Todavía no has auditado la salud técnica de tu web."}
-                  </span>
-                  <GoToTabButton tab="tecnica">Ver detalle →</GoToTabButton>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700 }}>Bots de IA</span>
-                  <span style={{ fontSize: 12, color: "var(--ink-3)", flex: 1, minWidth: 0 }}>
-                    {technicalSnapshot ? (
-                      <>
-                        {allowedBotsCount} / {technicalSnapshot.bots.bots.length} con acceso
-                        {technicalSnapshot.bots.bots.some((b) => !b.allowed) &&
-                          ` · bloqueado: ${technicalSnapshot.bots.bots.filter((b) => !b.allowed).map((b) => b.agent).join(", ")}`}
-                        {" · llms.txt "}
-                        {technicalSnapshot.bots.llmsTxtFound ? "encontrado ✓" : "no encontrado"}
-                      </>
-                    ) : (
-                      "Se comprueban con la auditoría técnica (robots.txt y llms.txt)."
-                    )}
-                  </span>
-                  <GoToTabButton tab="tecnica">Ver detalle →</GoToTabButton>
-                </div>
-              </div>
-            </div>
-          </AuditTabPanel>
-
-          {/* ─── Salud técnica ─── */}
-          <AuditTabPanel id="tecnica">
-            {/* Salud técnica GEO (WEB-AUDIT-2): deterministic per-page checks +
-                AI-bot access, independent from the Gemini-driven coverage
-                audit. */}
-            <div className="section-head" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-              <div>
-                <div className="section-title">Salud técnica GEO</div>
-                <div className="section-desc">
-                  {technicalSnapshot
-                    ? `Comprobado ${formatDate(technicalSnapshot.created_at)}`
-                    : "Comprueba si tus páginas son técnicamente citables por la IA y si sus bots pueden rastrear tu web."}
-                </div>
-              </div>
-              <RunTechnicalAuditButton projectId={projectId} canAudit={canAudit} />
-            </div>
-            {technicalSnapshot && new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
-              <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 8 }}>
-                Los criterios técnicos se ampliaron el 13 jul 2026 (canonical, indexabilidad, hreflang, listas/tablas,
-                contenido, Open Graph). Esta auditoría es de antes de ese cambio — vuelve a auditar para comparar con
-                los criterios actuales.
-              </p>
-            )}
-            {technicalSnapshot ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
-                <div className="card">
-                  <div style={{ padding: "13px 16px 0" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 750 }}>Salud técnica GEO por página</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                      Hasta {technicalSnapshot.pages.length} páginas clave: portada, páginas verificadas y páginas citadas por la IA. Toca una
-                      página para ver qué mejorar.
-                    </div>
-                  </div>
-                  <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    {technicalSnapshot.pages.map((page, i) => (
-                      <PageAuditRow key={`${page.url}-${i}`} page={page} />
-                    ))}
-                  </div>
-                </div>
-                <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
-              </div>
-            ) : (
-              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 8 }}>
-                Todavía no has auditado la salud técnica de tu web. Hasta 5 auditorías al día por proyecto.
-              </p>
-            )}
-          </AuditTabPanel>
-
-          {/* ─── Evolución ─── */}
-          <AuditTabPanel id="evolucion">
-            {trend.length >= 2 ? (
-              <div className="card" style={{ marginTop: 16 }}>
-                <div style={{ padding: "13px 16px 0" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 750 }}>Evolución entre auditorías</div>
-                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                    Cobertura e implementación a lo largo de los últimos escaneos.
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 14, fontSize: 11, color: "var(--ink-3)", fontWeight: 600, padding: "10px 16px 0" }}>
-                  <span>
-                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--accent)" }} />
-                    Cobertura de temas
-                  </span>
-                  <span>
-                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--pos)" }} />
-                    Tasa de implementación
-                  </span>
-                </div>
-                <div style={{ padding: "12px 16px 14px" }}>
-                  <TrendChart points={trend} />
-                </div>
-              </div>
-            ) : (
-              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 16 }}>
-                Necesitas al menos dos auditorías sobre escaneos distintos para ver la evolución. Lanza un nuevo
-                escaneo y vuelve a auditar para empezar a comparar.
-              </p>
-            )}
-
-            {trend.length > 0 && (
+            {trend.length >= 2 && (
               <div className="card" style={{ marginTop: 12 }}>
                 <div style={{ padding: "13px 16px 0" }}>
                   <div style={{ fontSize: 13.5, fontWeight: 750 }}>Historial de auditorías</div>
@@ -1622,6 +722,107 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
             )}
           </AuditTabPanel>
+
+          {/* ─── Correcto ─── */}
+          <AuditTabPanel id="correcto">
+            {/* Founder request (2026-08-02, tras ver los mockups): "me
+                gustaría una sección... donde tenga tachado y con el check de
+                verificado todo lo que el usuario tiene bien porque eso da la
+                sensación de tienes cosas bien, pero tienes que mejorar
+                otras". Cero backend nuevo — issues.ts ya calcula qué checks
+                pasan, esta pestaña sólo enseña lo que hoy se descartaba. */}
+            {currentTechnicalReport ? (
+              <>
+                <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".03em", color: "var(--pos-ink)", textTransform: "uppercase" }}>
+                    Comprobaciones superadas
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "var(--pos-ink)", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                    {currentTechnicalReport.passing.reduce((sum, p) => sum + p.passedCount, 0)}
+                    <span style={{ fontSize: 14, fontWeight: 650, color: "var(--ink-4)" }}>
+                      {" "}
+                      / {currentTechnicalReport.passing.reduce((sum, p) => sum + p.applicableCount, 0)}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "8px 0 0" }}>
+                    Tu web hace bien la mayoría de las cosas que comprobamos. Lo que falla está en la pestaña
+                    Problemas.
+                  </p>
+                </div>
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div style={{ padding: "13px 16px 16px", display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+                    {currentTechnicalReport.passing.length > 0 ? (
+                      currentTechnicalReport.passing.map((p) => <PassingRow key={p.check} passing={p} />)
+                    ) : (
+                      <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                        Ninguna comprobación superada todavía en la última auditoría.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  Todavía no has auditado la salud técnica de tu web.
+                </p>
+              </div>
+            )}
+          </AuditTabPanel>
+
+          {/* ─── Páginas ─── */}
+          <AuditTabPanel id="paginas">
+            {/* Salud técnica GEO (WEB-AUDIT-2): deterministic per-page checks +
+                AI-bot access, independent from the Gemini-driven coverage
+                audit. Renamed from "tecnica" (WEB-AUDIT-ISSUES-1 fase 2) —
+                content unchanged, this is still the page-by-page detail the
+                aggregated Problemas/Correcto lists summarize.
+                RunTechnicalAuditButton retirado de aquí (founder-approved
+                2026-08-02: "prefiero que no haya dos botones distintos") —
+                "Auditar ahora" ya disparaba la auditoría técnica en el mismo
+                clic (WEB-AUDIT-R2, piggyback en web-audit-context.tsx), así
+                que este botón era estrictamente redundante, no una segunda
+                función real. Desde AUDIT-NO-BUTTON-1 no hay ningún botón: la
+                auditoría técnica corre con la automática tras cada escaneo. */}
+            <div className="section-head" style={{ marginTop: 16 }}>
+              <div className="section-title">Salud técnica GEO</div>
+              <div className="section-desc">
+                {technicalSnapshot
+                  ? `Comprobado ${formatDate(technicalSnapshot.created_at)}`
+                  : "Comprueba si tus páginas son técnicamente citables por la IA y si sus bots pueden rastrear tu web."}
+              </div>
+            </div>
+            {technicalSnapshot && new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
+              <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 8 }}>
+                Los criterios técnicos se ampliaron el 13 jul 2026 (canonical, indexabilidad, hreflang, listas/tablas,
+                contenido, Open Graph). Esta auditoría es de antes de ese cambio — vuelve a auditar para comparar con
+                los criterios actuales.
+              </p>
+            )}
+            {technicalSnapshot ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
+                <div className="card">
+                  <div style={{ padding: "13px 16px 0" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 750 }}>Salud técnica GEO por página</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                      Hasta {technicalSnapshot.pages.length} páginas clave: portada, páginas verificadas y páginas citadas por la IA. Toca una
+                      página para ver qué mejorar.
+                    </div>
+                  </div>
+                  <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                    {technicalSnapshot.pages.map((page, i) => (
+                      <PageAuditRow key={`${page.url}-${i}`} page={page} fixContext={fixContext} />
+                    ))}
+                  </div>
+                </div>
+                <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
+              </div>
+            ) : (
+              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 8 }}>
+                Todavía no has auditado la salud técnica de tu web. Hasta 5 auditorías al día por proyecto.
+              </p>
+            )}
+          </AuditTabPanel>
         </AuditTabsProvider>
       )}
 
@@ -1636,12 +837,15 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           flexWrap: "wrap"
         }}
       >
+        {/* DOMAINS-REDESIGN-1: «Escaneos» ya no es una pantalla de cliente. El
+            pie enlaza a Dominios, que es lo que ese enlace le resolvía al
+            usuario — cambiar de dominio — y no al historial interno. */}
         <Link
-          href={`/dashboard/projects/${projectId}/runs`}
+          href="/dashboard/domains"
           style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
         >
-          <Icon name="runs" size={13} />
-          Escaneos
+          <Icon name="globe" size={13} />
+          Dominios
         </Link>
         <Link
           href={`/dashboard/projects/${projectId}/recommendations`}
@@ -1650,6 +854,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           <Icon name="recs" size={13} />
           Recomendaciones
         </Link>
+      </div>
       </div>
     </div>
     </WebAuditProvider>

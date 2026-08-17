@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
+import { buildSeriesPaths, MIN_TREND_POINTS } from "@/lib/competitors/trend-window";
 
 export type TrendSeries = {
   key: string;
@@ -23,15 +24,31 @@ type PositionTrendChartProps = {
 const W = 640;
 const H = 240;
 const PAD_LEFT = 34;
-const PAD_RIGHT = 16;
+/** Room for the end-of-line labels that replace legend-chip cross-referencing. */
+const PAD_RIGHT = 96;
 const PAD_TOP = 16;
 const PAD_BOTTOM = 28;
 
+/**
+ * How many series are drawn before the rest have to be opted into.
+ *
+ * Eight overlapping lines is not a chart anyone reads — the founder's own
+ * screenshot was the brand plus seven competitors, every one of them a step of
+ * the same blue ramp. Four is the point where distinct hues stay
+ * distinguishable (including under colour-vision deficiency) and where end
+ * labels still fit without colliding.
+ */
+const DEFAULT_VISIBLE = 4;
+
 export function PositionTrendChart({ series, data, maxPosition }: PositionTrendChartProps) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [hidden, setHidden] = useState<Set<string>>(
+    () => new Set(series.slice(DEFAULT_VISIBLE).map((s) => s.key))
+  );
 
-  if (data.length < 2) return null;
+  if (data.length < MIN_TREND_POINTS) return null;
 
+  const visible = series.filter((s) => !hidden.has(s.key));
   const plotW = W - PAD_LEFT - PAD_RIGHT;
   const plotH = H - PAD_TOP - PAD_BOTTOM;
   const yMax = Math.max(maxPosition, 2);
@@ -39,12 +56,21 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
   const xFor = (i: number) => PAD_LEFT + (i / (data.length - 1)) * plotW;
   const yFor = (pos: number) => PAD_TOP + ((pos - 1) / (yMax - 1)) * plotH;
 
-  const tickCount = Math.min(yMax, 5);
+  const tickCount = Math.min(Math.ceil(yMax), 5);
   const yTicks: number[] = [];
   for (let i = 0; i < tickCount; i++) {
     const raw = 1 + (i / (tickCount - 1)) * (yMax - 1);
     yTicks.push(Math.round(raw * 10) / 10);
   }
+
+  const toggle = (key: string) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const handleMove = (e: MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -54,26 +80,58 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
     setHoverIdx(Math.max(0, Math.min(data.length - 1, idx)));
   };
 
+  /**
+   * Last point a series actually has a value for — where its end label goes.
+   * A series whose most recent scans are all gaps gets labelled at its real
+   * last reading rather than pinned to the right edge, which would imply data
+   * that isn't there.
+   */
+  const lastPointOf = (key: string): { i: number; v: number } | null => {
+    for (let i = data.length - 1; i >= 0; i--) {
+      const v = data[i].values[key];
+      if (v != null) return { i, v };
+    }
+    return null;
+  };
+
+  // Nudge colliding end labels apart so four series never overprint.
+  const endLabels = visible
+    .map((s) => {
+      const last = lastPointOf(s.key);
+      return last ? { s, x: xFor(last.i), y: yFor(last.v) } : null;
+    })
+    .filter((l): l is { s: TrendSeries; x: number; y: number } => l !== null)
+    .sort((a, b) => a.y - b.y);
+  for (let i = 1; i < endLabels.length; i++) {
+    const gap = endLabels[i].y - endLabels[i - 1].y;
+    if (gap < 13) endLabels[i].y = endLabels[i - 1].y + 13;
+  }
+
   return (
     <div style={{ position: "relative" }}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
         height={H}
+        /* Glyph advances are laid out at the authored size and snapped to the
+           device pixel grid BEFORE the fixed viewBox is scaled to the container
+           width, so at some scale factors the rounding accumulates into a
+           visible gap mid-word — the brand's own end label rendered "Maho u" at
+           1280px and correctly at 768 and 375 (pilot, 2026-08-03). Asking for
+           geometric precision positions glyphs exactly instead of hinting them,
+           which is what makes the artifact scale-independent. */
+        textRendering="geometricPrecision"
         style={{ display: "block", overflow: "visible" }}
         onMouseMove={handleMove}
         onMouseLeave={() => setHoverIdx(null)}
       >
+        <text x={PAD_LEFT - 8} y={PAD_TOP - 6} textAnchor="end" fontSize="9" fill="var(--ink-4)">
+          1º
+        </text>
+
         {yTicks.map((t) => (
           <g key={t}>
-            <line
-              x1={PAD_LEFT}
-              x2={W - PAD_RIGHT}
-              y1={yFor(t)}
-              y2={yFor(t)}
-              stroke="var(--line-soft)"
-              strokeWidth="1"
-            />
+            <line x1={PAD_LEFT} x2={W - PAD_RIGHT} y1={yFor(t)} y2={yFor(t)} stroke="var(--line-soft)" strokeWidth="1" />
             <text x={PAD_LEFT - 8} y={yFor(t)} textAnchor="end" dominantBaseline="middle" fontSize="10" fill="var(--ink-4)">
               {t % 1 === 0 ? t : t.toFixed(1)}
             </text>
@@ -81,33 +139,20 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
         ))}
 
         {[0, data.length - 1].map((i) => (
-          <text
-            key={i}
-            x={xFor(i)}
-            y={H - 8}
-            textAnchor={i === 0 ? "start" : "end"}
-            fontSize="10"
-            fill="var(--ink-4)"
-          >
+          <text key={i} x={xFor(i)} y={H - 8} textAnchor={i === 0 ? "start" : "end"} fontSize="10" fill="var(--ink-4)">
             {new Date(data[i].date).toLocaleDateString("es-ES", { day: "numeric", month: "short", timeZone: "Europe/Madrid" })}
           </text>
         ))}
 
-        {series.map((s) => {
-          const segments: string[] = [];
-          let current: string[] = [];
-          data.forEach((d, i) => {
-            const v = d.values[s.key];
-            if (v === null || v === undefined) {
-              if (current.length) {
-                segments.push(current.join(" "));
-                current = [];
-              }
-              return;
-            }
-            current.push(`${current.length === 0 ? "M" : "L"}${xFor(i).toFixed(1)} ${yFor(v).toFixed(1)}`);
-          });
-          if (current.length) segments.push(current.join(" "));
+        {visible.map((s) => {
+          // Straight segments between measurements — see buildSeriesPaths for
+          // why this is not a step chart.
+          const segments = buildSeriesPaths(
+            data.map((d, i) => {
+              const v = d.values[s.key];
+              return v == null ? null : { x: xFor(i), y: yFor(v) };
+            })
+          );
 
           return (
             <g key={s.key}>
@@ -117,19 +162,45 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
                   d={d}
                   fill="none"
                   stroke={s.color}
-                  strokeWidth={s.isBrand ? 2.5 : 1.8}
+                  strokeWidth={s.isBrand ? 2.6 : 1.8}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               ))}
               {data.map((d, i) => {
                 const v = d.values[s.key];
-                if (v === null || v === undefined) return null;
-                return <circle key={i} cx={xFor(i)} cy={yFor(v)} r={i === hoverIdx ? 3.5 : 2} fill={s.color} />;
+                if (v == null) return null;
+                return (
+                  <circle
+                    key={i}
+                    cx={xFor(i)}
+                    cy={yFor(v)}
+                    r={i === hoverIdx ? 3.5 : 2}
+                    fill={s.color}
+                    stroke="var(--surface)"
+                    strokeWidth={i === hoverIdx ? 1.5 : 0}
+                  />
+                );
               })}
             </g>
           );
         })}
+
+        {/* Identity at the end of the line, so nobody has to hold eight colours
+            in their head while reading a legend. */}
+        {endLabels.map(({ s, x, y }) => (
+          <text
+            key={s.key}
+            x={x + 9}
+            y={y}
+            dominantBaseline="middle"
+            fontSize="10.5"
+            fontWeight={s.isBrand ? 700 : 500}
+            fill="var(--ink-2)"
+          >
+            {s.label.length > 13 ? `${s.label.slice(0, 12)}…` : s.label}
+          </text>
+        ))}
 
         {hoverIdx !== null && (
           <line
@@ -144,16 +215,57 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
         )}
       </svg>
 
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 10, fontSize: 12 }}>
-        {series.map((s) => (
-          <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 10, height: 10, borderRadius: "50%", background: s.color, display: "inline-block" }} />
-            <span style={{ color: "var(--ink-2)", fontWeight: s.isBrand ? 700 : 500 }}>{s.label}</span>
-          </div>
-        ))}
+      {/* The greyed-out chips are OFF, not broken. Only the first
+          DEFAULT_VISIBLE series start on, and the founder read the rest as
+          disabled ("¿por qué brave, protón, etc salen deshabilitados?") — a
+          toggle that looks dead is a toggle nobody presses. Hence the hint and
+          a lighter dimming than the old 0.5, which read as "unavailable". */}
+      <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 12 }}>
+        Toca una marca para mostrarla u ocultarla en el gráfico.
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 7 }}>
+        {series.map((s) => {
+          const isHidden = hidden.has(s.key);
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => toggle(s.key)}
+              aria-pressed={!isHidden}
+              title={isHidden ? `Mostrar ${s.label}` : `Ocultar ${s.label}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 9px",
+                borderRadius: 999,
+                border: "1px solid var(--line)",
+                background: isHidden ? "transparent" : "var(--surface)",
+                cursor: "pointer",
+                font: "inherit",
+                fontSize: 12,
+                opacity: isHidden ? 0.8 : 1
+              }}
+            >
+              <span
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: 2,
+                  background: isHidden ? "transparent" : s.color,
+                  border: `1.5px solid ${s.color}`,
+                  display: "inline-block"
+                }}
+              />
+              <span style={{ color: isHidden ? "var(--ink-3)" : "var(--ink-2)", fontWeight: s.isBrand ? 700 : 500 }}>
+                {s.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {hoverIdx !== null && (
+      {hoverIdx !== null && visible.length > 0 && (
         <div
           style={{
             position: "absolute",
@@ -168,7 +280,7 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
             boxShadow: "var(--sh-2)",
             pointerEvents: "none",
             whiteSpace: "nowrap",
-            zIndex: 2,
+            zIndex: 2
           }}
         >
           <div style={{ fontWeight: 700, marginBottom: 4, color: "var(--ink)" }}>
@@ -176,16 +288,16 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
               day: "numeric",
               month: "short",
               year: "numeric",
-              timeZone: "Europe/Madrid",
+              timeZone: "Europe/Madrid"
             })}
           </div>
-          {series.map((s) => {
+          {visible.map((s) => {
             const v = data[hoverIdx].values[s.key];
             return (
               <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--ink-2)" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, display: "inline-block" }} />
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, display: "inline-block" }} />
                 <span>{s.label}:</span>
-                <b className="tnum">{v != null ? v.toFixed(1) : "—"}</b>
+                <b className="tnum">{v != null ? `${v.toFixed(1)}º` : "sin mención"}</b>
               </div>
             );
           })}

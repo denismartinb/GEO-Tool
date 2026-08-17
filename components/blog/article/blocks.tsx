@@ -1,0 +1,278 @@
+import type { ReactNode } from "react";
+import Link from "next/link";
+import type { BlogPost } from "@/lib/blog/posts";
+
+const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
+
+/**
+ * GROWTH-3 Fase 3.1 — bloques de composición de artículo.
+ *
+ * Todo artículo del blog se compone con estos bloques en vez de escribirse
+ * como prosa plana. La regla que los justifica está en
+ * `docs/brand/article-design-system.md`: **ningún visual es decorativo, todos
+ * son evidencia** — una captura que prueba la afirmación, un ejemplo enmarcado
+ * del patrón que se enseña, o una cifra con su fuente.
+ *
+ * Las recetas obligatorias por tipo de contenido (qué bloques debe llevar
+ * como mínimo cada artículo) se validan en `lib/blog/article-recipes.test.ts`,
+ * no por convención.
+ *
+ * Componentes de servidor puros: cero estado, cero interactividad, cero JS
+ * de cliente. Un artículo debe renderizar completo sin hidratación.
+ */
+
+/** Respuesta directa a la pregunta del titular, antes de cualquier desarrollo. Regla "answer first" de content-strategy.md §4.1. */
+export function KeyTakeaway({ children, label = "Respuesta rápida" }: { children: ReactNode; label?: string }) {
+  return (
+    <div className="art-takeaway">
+      <div className="art-takeaway-lbl">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Veredicto explícito cuando la respuesta honesta a "¿esto funciona?" no es
+ * un sí. Existe por la regla de honestidad del proyecto: cuando no hay
+ * evidencia de algo, se dice en un bloque destacado en vez de enterrarlo en
+ * un párrafo.
+ */
+export function Verdict({
+  title,
+  children,
+  badge = "Veredicto"
+}: {
+  title: string;
+  children: ReactNode;
+  badge?: string;
+}) {
+  return (
+    <div className="art-verdict">
+      <span className="art-verdict-badge">{badge}</span>
+      <div className="art-verdict-body">
+        <h4>{title}</h4>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Sección numerada de un playbook. El número codifica secuencia real (paso 1 → 2 → 3), no decoración. */
+export function NumberedSection({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <section className="art-numsec">
+      <div className="art-numsec-h">
+        <span className="art-numsec-n" aria-hidden="true">
+          {n}
+        </span>
+        <h3>{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Una tarea concreta al cierre de cada sección numerada. Es el bloque que convierte una guía en algo ejecutable. */
+export function QuickAction({ children, label = "Acción rápida" }: { children: ReactNode; label?: string }) {
+  return (
+    <div className="art-quick">
+      <span className="art-quick-lbl">{label}</span>
+      <div className="art-quick-body">{children}</div>
+    </div>
+  );
+}
+
+/** Cita con atribución obligatoria — sin `cite` no se puede verificar quién lo dijo, y una cita sin fuente es exactamente lo que este proyecto no publica. */
+export function PullQuote({ children, cite }: { children: ReactNode; cite: string }) {
+  // `children` NO va envuelto en <p>: en MDX el contenido en bloque ya llega
+  // envuelto, y anidar <p> dentro de <p> produce HTML inválido (QA lo
+  // encontró en el HTML generado). El estilo lo lleva el div contenedor.
+  return (
+    <blockquote className="art-pull">
+      <div className="art-pull-text">{children}</div>
+      <cite>{cite}</cite>
+    </blockquote>
+  );
+}
+
+const CHECK_ICON = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const CROSS_ICON = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+  </svg>
+);
+
+/**
+ * Checklist renderizado — visualmente distinto de una lista de viñetas, porque
+ * "cosas que comprobar" no es lo mismo que "cosas que enumerar".
+ *
+ * `tone` NO es decorativo: el icono es lo primero que lee alguien que escanea
+ * la página, así que tiene que decir lo mismo que el texto. Un apartado de
+ * "errores comunes" enumera cosas que NO hay que hacer; marcarlas con un check
+ * verde le da al lector que escanea la señal contraria a la que dice la frase
+ * (hallazgo del ux-pilot en la PR #309). Ese apartado lleva `tone="evitar"`.
+ */
+export function Checklist({ items, tone = "hacer" }: { items: ReactNode[]; tone?: "hacer" | "evitar" }) {
+  const icon = tone === "evitar" ? CROSS_ICON : CHECK_ICON;
+  // El icono es `aria-hidden`, así que con lector de pantalla el matiz
+  // hacer/evitar se perdía entero: la lista sonaba igual en los dos casos. Se
+  // etiqueta la LISTA, no cada icono — un `aria-label` por punto repetiría
+  // "Evitar" cuatro veces sin añadir nada. (Mejora propuesta por el ux-pilot.)
+  const label = tone === "evitar" ? "Cosas que evitar" : "Cosas que comprobar";
+  return (
+    <ul className={`art-check art-check-${tone}`} aria-label={label}>
+      {items.map((item, i) => (
+        <li key={i}>
+          {icon}
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Cifra destacada. `source` es obligatorio: una cifra sin fuente citable no se publica (content-strategy.md §4.5). */
+export function Stat({
+  value,
+  label,
+  source,
+  tone = "blue"
+}: {
+  value: string;
+  label: string;
+  source: string;
+  tone?: "blue" | "cyan" | "warm" | "pos" | "neg";
+}) {
+  return (
+    <div className="art-stat">
+      <div className={`art-stat-n art-tone-${tone}`}>{value}</div>
+      <div className="art-stat-l">{label}</div>
+      <div className="art-stat-src">{source}</div>
+    </div>
+  );
+}
+
+/**
+ * Rejilla de cifras. `label` es obligatorio por la misma razón que `source`
+ * lo es en `Stat`: sin él, un lector de pantalla anuncia tres bloques sueltos
+ * en vez de un grupo con sentido, y quien escribe el artículo no se ve
+ * obligado a decir de qué son esas cifras (propuesta del ux-pilot, PR #310).
+ */
+export function StatGrid({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <div className="art-stats" role="group" aria-label={label}>
+      {children}
+    </div>
+  );
+}
+
+/** Envoltorio de tabla comparativa: contenedor con scroll horizontal propio, para que el `body` nunca scrollee en móvil. */
+export function CompareTable({ children }: { children: ReactNode }) {
+  return <div className="art-tablewrap">{children}</div>;
+}
+
+/** Etiqueta de estado dentro de una tabla — codifica el veredicto en forma y color, no solo en texto. */
+export function Pill({ tone, children }: { tone: "si" | "no" | "neutral"; children: ReactNode }) {
+  return <span className={`art-pill art-pill-${tone}`}>{children}</span>;
+}
+
+/** Bloque de código con cabecera de nombre de fichero. */
+export function CodeBlock({
+  title,
+  wrap = false,
+  children
+}: {
+  title: string;
+  /**
+   * Ajusta el contenido en varias líneas visuales en vez de deslizarlo.
+   *
+   * Para código de verdad, deslizar es correcto: partir una línea de código
+   * cambia lo que dice. Para un valor **único y sin espacios que el lector
+   * tiene que copiar entero** —la expresión de fuente de GA4 de S8, 200
+   * caracteres— deslizar es lo contrario de lo que hace falta: no se puede
+   * copiar lo que no se ve, y la pista "Desliza →" sólo sale bajo 640 px, así
+   * que en escritorio la cadena aparecía cortada sin nada que dijera que había
+   * más. El ajuste es **visual**: un salto blando no mete ningún `\n` en el
+   * portapapeles, así que lo que se pega sigue siendo una sola línea (log §85).
+   */
+  wrap?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={wrap ? "art-code art-code-wrap" : "art-code"}>
+      <div className="art-code-h">{title}</div>
+      <pre>{children}</pre>
+    </div>
+  );
+}
+
+/** Bio de autor — señal E-E-A-T visible, no solo un dato en el JSON-LD. */
+export function AuthorBio({
+  name = "Equipo GenScore",
+  initial = "G",
+  children
+}: {
+  name?: string;
+  initial?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="art-bio">
+      <span className="art-avatar" aria-hidden="true">
+        {initial}
+      </span>
+      <div>
+        <h4>{name}</h4>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Cierre del artículo. Usa `next/link` para navegación interna del router. */
+export function ArticleCta({
+  title,
+  text,
+  cta = "Analiza tu dominio",
+  href = "/signup"
+}: {
+  title: string;
+  text: string;
+  cta?: string;
+  href?: string;
+}) {
+  return (
+    <div className="art-cta">
+      <div className="art-cta-glow" aria-hidden="true" />
+      <div className="art-cta-body">
+        <h3>{title}</h3>
+        <p>{text}</p>
+        <Link className="art-btn" href={href}>
+          {cta}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fecha visible de publicación, y de actualización cuando el post la tiene
+ * (SEO-POS-1, T9). Sustituye a la fecha en prosa suelta que cada MDX escribía
+ * a mano (`<p className="blog-post-meta">12 de julio de 2026</p>`): al
+ * derivarla de `post.datePublished`/`dateUpdated` en vez de teclearla, no
+ * puede desincronizarse del dato real que ya usan el schema y el sitemap.
+ */
+export function PostMeta({ post }: { post: BlogPost }) {
+  const published = dateFormatter.format(new Date(post.datePublished));
+  return (
+    <p className="blog-post-meta">
+      {published}
+      {post.dateUpdated ? ` · Actualizado el ${dateFormatter.format(new Date(post.dateUpdated))}` : null}
+    </p>
+  );
+}

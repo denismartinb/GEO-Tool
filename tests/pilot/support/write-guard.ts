@@ -120,13 +120,20 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
   const pinned = process.env.PILOT_WRITE_PROJECT_ID?.trim();
   if (pinned) return pinned;
 
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
+  // `/dashboard/domains`: `/dashboard/projects` es una redirección desde
+  // DOMAINS-ARCHIVE-RETIRE-1 (log §104), y esperar `domcontentloaded` sobre una
+  // redirección deja el contexto muriéndose bajo la siguiente consulta.
+  await page.goto("/dashboard/domains", { waitUntil: "domcontentloaded" });
 
   // Higher stakes than the sweep's version of this wait: reading the projects
   // list before it renders would conclude the write-project does not exist and
   // create a second one.
   await waitForContent(page, [
-    () => page.locator('a[href^="/dashboard/projects/"]').first().isVisible(),
+    () =>
+      page
+        .locator('a[href^="/dashboard/projects/"], a[href^="/dashboard/domains?active="]')
+        .first()
+        .isVisible(),
     () => page.getByRole("link", { name: /nuevo dominio|crear/i }).first().isVisible()
   ]);
 
@@ -180,14 +187,20 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
   await captureStep(page, "wizard-trimmed-to-one-prompt");
   await page.getByRole("button", { name: /crear dominio y escanear/i }).click();
 
-  await page.waitForURL(/\/dashboard\/projects\/[^/]+\/runs/, { timeout: 90_000 }).catch(() => undefined);
+  // DOMAINS-REDESIGN-1: el alta aterriza en Visión general, no en Escaneos.
+  // Es ahí donde vive ahora `AutoExecuteScan`, el driver que de verdad ejecuta
+  // los lotes del primer escaneo, así que esta espera vigila exactamente la
+  // pantalla de la que depende que el escaneo avance.
+  await page
+    .waitForURL(/\/dashboard\/projects\/[0-9a-f-]{36}(?:[?#]|$)/, { timeout: 90_000 })
+    .catch(() => undefined);
 
-  await captureStep(page, "project-created-runs-page");
+  await captureStep(page, "project-created-overview");
 
-  const created = page.url().match(/\/dashboard\/projects\/([^/?#]+)\/runs/)?.[1];
+  const created = page.url().match(/\/dashboard\/projects\/([0-9a-f-]{36})/)?.[1];
   if (!created) {
     throw new Error(
-      `El alta de dominio no terminó en la pantalla de escaneos. URL final: ${page.url()}`
+      `El alta de dominio no terminó en la visión general del proyecto. URL final: ${page.url()}`
     );
   }
 
@@ -196,13 +209,21 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
 
 /** Finds the project whose row links to a project and matches the reserved domain. */
 async function findProjectIdByDomain(page: Page): Promise<string | undefined> {
-  const links = page.locator('a[href^="/dashboard/projects/"]');
+  // Las dos formas de enlace de la rejilla: el dominio activo apunta a su
+  // pantalla, los demás a un cambio de activo. Mirar sólo la primera haría que
+  // el piloto concluyera que el proyecto de escritura no existe y creara un
+  // segundo — el fallo caro que este `waitForContent` de arriba ya evitaba.
+  const links = page.locator(
+    'a[href^="/dashboard/projects/"], a[href^="/dashboard/domains?active="]'
+  );
   const count = await links.count();
 
   for (let i = 0; i < count; i += 1) {
     const link = links.nth(i);
     const href = await link.getAttribute("href");
-    const id = href?.match(/\/dashboard\/projects\/([^/?#]+)$/)?.[1];
+    const id =
+      href?.match(/\/dashboard\/projects\/([^/?#]+)$/)?.[1] ??
+      href?.match(/\/dashboard\/domains\?active=([^&#]+)$/)?.[1];
     if (!id || id === "new") continue;
 
     // The domain is rendered as a sibling of the project-name link, so check

@@ -1,6 +1,15 @@
 import "server-only";
 import { extractionOutputSchema } from "@/lib/extraction/schema";
-import type { GeminiVisibilityResponse, GeminiStructuredExtractionResponse } from "@/lib/llm/gemini";
+import { ExtractionError } from "@/lib/llm/extraction-errors";
+import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
+import {
+  EXTRACTION_CALL_TIMEOUT_MS,
+  EXTRACTION_MAX_ATTEMPTS,
+  EXTRACTION_RETRY_BASE_DELAY_MS,
+  EXTRACTION_RETRY_MAX_DELAY_MS
+} from "@/lib/llm/constants";
+import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/contracts";
+import { delay, fetchWithTimeout } from "@/lib/llm/http";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_API_VERSION = "2023-06-01";
@@ -22,21 +31,6 @@ export class ClaudeTimeoutError extends Error {
 
 export class ClaudeConfigError extends Error {}
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } catch (error) {
-    if (controller.signal.aborted) {
-      throw new ClaudeTimeoutError();
-    }
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 function getClaudeModel(): string {
   return process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_CLAUDE_MODEL;
 }
@@ -46,10 +40,6 @@ function getClaudeApiError(status: number): string {
   if (status === 429) return "Claude API quota or rate limit reached.";
   if (status === 400) return "Claude API rejected the request. Check ANTHROPIC_MODEL and request configuration.";
   return `Claude API request failed with status ${status}.`;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildHeaders(apiKey: string): Record<string, string> {
@@ -124,7 +114,8 @@ export async function generateClaudeVisibilityAnswer(input: {
   let response = await fetchWithTimeout(
     ANTHROPIC_API_URL,
     { method: "POST", headers, body: requestBody },
-    CLAUDE_CALL_TIMEOUT_MS
+    CLAUDE_CALL_TIMEOUT_MS,
+    () => new ClaudeTimeoutError()
   );
 
   if (response.status === 429) {
@@ -132,8 +123,9 @@ export async function generateClaudeVisibilityAnswer(input: {
     response = await fetchWithTimeout(
       ANTHROPIC_API_URL,
       { method: "POST", headers, body: requestBody },
-      CLAUDE_CALL_TIMEOUT_MS
-    );
+      CLAUDE_CALL_TIMEOUT_MS,
+    () => new ClaudeTimeoutError()
+  );
   }
 
   if (!response.ok) {
@@ -167,9 +159,15 @@ export async function extractClaudeStructuredData(input: {
   competitors: string[];
   rawResponseText: string;
   promptText: string;
+  profile?: BusinessProfile;
+  /** Absolute epoch-ms budget for the whole extraction pass (EXTRACTION-RELIABILITY-1) — no attempt or backoff starts past it. */
+  deadlineAt?: number;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new ClaudeConfigError("Missing ANTHROPIC_API_KEY");
+  // Categorized rather than a ClaudeConfigError: at the extraction stage this
+  // is a per-row failure to be recorded, not the run-level abort that a
+  // missing key during *generation* triggers in the executor.
+  if (!apiKey) throw new ExtractionError("config", "Missing ANTHROPIC_API_KEY");
 
   const model = getClaudeModel();
 
@@ -195,7 +193,7 @@ For "competitors": return EXACTLY one entry per name listed under Competitors be
 
 For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if not mentioned. Rank only mentioned entities with no gaps (1, 2, 3...). Brand and competitors share a single ranking.
 
-For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. Only include names genuinely present in the text — never invent one. Exclude generic terms or product categories. Up to 5 entries, each a short canonical name. Empty array [] if none.`;
+For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. Only include names genuinely present in the text — never invent one. Exclude generic terms or product categories.${otherBrandsRelevanceHint(input.profile)} Up to 5 entries, each a short canonical name. Empty array [] if none.`;
 
   const userContent = [
     schemaInstruction,
@@ -214,21 +212,25 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   const headers = buildHeaders(apiKey);
 
-  const response = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers,
-    body: requestBody
-  });
-
-  if (!response.ok) {
-    throw new Error(getClaudeApiError(response.status));
-  }
+  const response = await fetchExtractionWithRetry(
+    ANTHROPIC_API_URL,
+    { method: "POST", headers, body: requestBody },
+    {
+      timeoutMs: EXTRACTION_CALL_TIMEOUT_MS,
+      maxAttempts: EXTRACTION_MAX_ATTEMPTS,
+      baseDelayMs: EXTRACTION_RETRY_BASE_DELAY_MS,
+      maxDelayMs: EXTRACTION_RETRY_MAX_DELAY_MS,
+      deadlineAt: input.deadlineAt,
+      describeStatus: getClaudeApiError,
+      timeoutMessage: "Claude extraction request timed out."
+    }
+  );
 
   const data = (await response.json()) as AnthropicResponse;
   const text = extractText(data);
 
   if (!text) {
-    throw new Error("Claude extraction returned empty response.");
+    throw new ExtractionError("empty", "Claude extraction returned empty response.");
   }
 
   let parsedJson: unknown;
@@ -237,12 +239,12 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
     const cleaned = text.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim();
     parsedJson = JSON.parse(cleaned);
   } catch {
-    throw new Error("Claude extraction returned invalid JSON.");
+    throw new ExtractionError("invalid_json", "Claude extraction returned invalid JSON.");
   }
 
   const parsed = extractionOutputSchema.safeParse(parsedJson);
   if (!parsed.success) {
-    throw new Error("Claude extraction JSON failed schema validation.");
+    throw new ExtractionError("schema", "Claude extraction JSON failed schema validation.");
   }
 
   return {

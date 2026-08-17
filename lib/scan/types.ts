@@ -1,8 +1,7 @@
-import type { requireUser } from "@/lib/auth";
-
 export type ProjectActionErrorCode =
   | "active_run_exists"
   | "free_plan_scan_limit_reached"
+  | "no_engines_enabled"
   | "project_archived"
   | "project_not_found"
   | "prompts_required"
@@ -34,7 +33,6 @@ export type RunErrorDisplay = {
   kind: RunErrorDisplayKind;
 };
 
-export type AuthenticatedContext = Awaited<ReturnType<typeof requireUser>>;
 
 export type JobRow = {
   id: string;
@@ -43,6 +41,12 @@ export type JobRow = {
   attempt_count: number;
   max_attempts: number;
   payload_json: Record<string, unknown>;
+  /**
+   * When the current holder claimed this job. Read by the lock leases
+   * (PROMPT_LOCK_LEASE_MS / FINALIZE_LOCK_LEASE_MS) to tell a job a live
+   * invocation is working on from one whose invocation was killed.
+   */
+  locked_at?: string | null;
 };
 
 export type ScanPromptResultRow = {
@@ -53,8 +57,12 @@ export type ScanPromptResultRow = {
   } | null;
   prompt_text_snapshot: string;
   brand_snapshot: string;
+  /** projects.brand_aliases frozen at scan time (GEO-SCORE-BRAND-IDENTITY-1). Optional for rows written before migration 0025. */
+  brand_aliases_snapshot?: string[] | null;
   competitors_snapshot: Array<{ name?: string }> | null;
   provider: string;
   status: string;
   extraction_version: string;
+  /** Categorized `category: message` reason a prior extraction attempt failed (EXTRACTION-RELIABILITY-1); null when never attempted or successful. */
+  extraction_error?: string | null;
 };

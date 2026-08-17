@@ -3,6 +3,7 @@ import "server-only";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { getEffectiveGeoScore } from "@/lib/scoring/run-scoring";
 import { sendWeeklyDigestEmail } from "@/lib/email/transactional";
+import { serverEnv } from "@/lib/env";
 
 const TIME_BUDGET_MS = 45_000;
 const SCANS_THIS_WEEK_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -14,7 +15,13 @@ type RunScoreRow = {
   details_json: unknown;
 };
 
-type RankingEntry = { name: string; is_brand: boolean; avg_position: number; mention_count: number };
+type RankingEntry = {
+  name: string;
+  is_brand: boolean;
+  /** null when the AI never named this entity (geo-score-v3, docs/adr/0026). */
+  avg_position_when_mentioned: number | null;
+  mention_count: number;
+};
 
 type SubScores = {
   /** presence — % of prompts where the brand was mentioned */
@@ -89,7 +96,9 @@ function getTopCompetitorMover(
  */
 export async function runWeeklyDigest({
   service,
-  maxProjects = Number(process.env.MAX_PROJECTS_PER_DIGEST_RUN ?? 200)
+  // Fase R4: era una lectura directa envuelta en `Number(...)`, que con un
+  // valor no numérico daba `NaN` y dejaba el resumen sin proyectos, en silencio.
+  maxProjects = serverEnv().MAX_PROJECTS_PER_DIGEST_RUN
 }: {
   service: ReturnType<typeof createServiceClient>;
   maxProjects?: number;

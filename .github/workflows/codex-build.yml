@@ -23,6 +23,14 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # `secrets` NO es un contexto disponible en el `if:` de un paso — sólo lo
+    # son `github`, `needs`, `strategy`, `matrix`, `job`, `runner`, `env`,
+    # `vars`, `steps` e `inputs`. Los dos pasos de abajo lo usaban ahí, así que
+    # GitHub rechazaba el fichero entero y creaba un run fallido de CERO jobs en
+    # cada push. `env` sí está disponible, así que el secreto se expone aquí y
+    # los pasos comprueban la variable (log §105).
+    env:
+      CODEX_AGENT_TOKEN: ${{ secrets.CODEX_AGENT_TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -61,7 +69,7 @@ jobs:
           echo "Build workflow skipped because no build trigger label or dispatch input was provided."
 
       - name: Skip when Codex secret is missing
-        if: steps.context.outputs.should_run == 'true' && secrets.CODEX_AGENT_TOKEN == ''
+        if: steps.context.outputs.should_run == 'true' && env.CODEX_AGENT_TOKEN == ''
         run: |
           {
             echo "Codex build placeholder skipped."
@@ -70,7 +78,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Placeholder build guard
-        if: steps.context.outputs.should_run == 'true' && secrets.CODEX_AGENT_TOKEN != ''
+        if: steps.context.outputs.should_run == 'true' && env.CODEX_AGENT_TOKEN != ''
         run: |
           {
             echo "Codex build placeholder is enabled."

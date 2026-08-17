@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { reconcileExtractedCompetitors, runStructuredExtractionForRun, verifyExtractedMentions } from "./extraction";
-import { EXTRACTION_VERSION } from "./constants";
+import { EXTRACTION_CONCURRENCY, EXTRACTION_VERSION } from "./constants";
+import { ExtractionError } from "@/lib/llm/extraction-errors";
 import type { ExtractionOutput } from "@/lib/extraction/schema";
 
 vi.mock("@/lib/llm/gemini", () => ({
@@ -32,23 +33,30 @@ import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 function createServiceMock(options: {
   selectResult: { data: unknown[] | null; error: unknown };
   updateCalls: Array<Record<string, unknown>>;
+  /** EMERGING-BRANDS-GROUNDING-1: result for the `projects` table lookup runStructuredExtractionForRun does to read the cached business profile. Defaults to "no profile cached", matching every pre-existing test's expectations. */
+  projectResult?: { data: Record<string, unknown> | null; error?: unknown };
 }) {
-  const builder: Record<string, unknown> = {};
-  const methods = ["select", "eq", "not", "update", "in"];
+  const methods = ["select", "eq", "not", "update", "in", "maybeSingle"];
 
-  for (const method of methods) {
-    builder[method] = vi.fn((...args: unknown[]) => {
-      if (method === "update") {
-        options.updateCalls.push(args[0] as Record<string, unknown>);
-      }
-      return builder;
-    });
+  function makeBuilder(result: unknown) {
+    const builder: Record<string, unknown> = {};
+    for (const method of methods) {
+      builder[method] = vi.fn((...args: unknown[]) => {
+        if (method === "update") {
+          options.updateCalls.push(args[0] as Record<string, unknown>);
+        }
+        return builder;
+      });
+    }
+    builder.then = (resolve: (value: unknown) => unknown) => resolve(result);
+    return builder;
   }
 
-  builder.then = (resolve: (value: unknown) => unknown) => resolve(options.selectResult);
+  const scanResultsBuilder = makeBuilder(options.selectResult);
+  const projectsBuilder = makeBuilder(options.projectResult ?? { data: null, error: null });
 
   return {
-    from: vi.fn(() => builder)
+    from: vi.fn((table: string) => (table === "projects" ? projectsBuilder : scanResultsBuilder))
   };
 }
 
@@ -144,6 +152,60 @@ describe("runStructuredExtractionForRun", () => {
     expect(groundingCitations[1]).toMatchObject({ domain: null, confidence: "low" });
     expect(update.citations_count).toBe(2);
     expect(update.citation_found).toBe(true);
+  });
+
+  it("EMERGING-BRANDS-GROUNDING-1: threads the project's cached business profile into the extractor call", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const cachedProfile = {
+      whatItSells: "a web browser",
+      sector: "software",
+      subSector: "web browsers",
+      businessModel: "b2c" as const,
+      targetCustomer: "general internet users",
+      geographicScope: "global",
+      sizeEstimate: "large",
+      confidence: "high" as const
+    };
+    const service = createServiceMock({
+      selectResult: { data: [baseRow()], error: null },
+      updateCalls,
+      projectResult: { data: { business_profile: cachedProfile }, error: null }
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).toHaveBeenCalledWith(expect.objectContaining({ profile: cachedProfile }));
+  });
+
+  it("passes profile: undefined (never a fabricated profile) when the project has no cached business profile yet", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: { data: [baseRow()], error: null },
+      updateCalls
+      // projectResult omitted — defaults to "no profile cached".
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).toHaveBeenCalledWith(expect.objectContaining({ profile: undefined }));
   });
 
   it("derives citations_count/citation_found from grounding chunks only, ignoring inline matches", async () => {
@@ -329,7 +391,9 @@ describe("runStructuredExtractionForRun", () => {
       updateCalls
     });
 
-    vi.mocked(extractGeminiStructuredData).mockRejectedValue(new Error("Gemini extraction JSON failed schema validation."));
+    vi.mocked(extractGeminiStructuredData).mockRejectedValue(
+      new ExtractionError("schema", "Gemini extraction JSON failed schema validation.")
+    );
 
     await runStructuredExtractionForRun({
       service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
@@ -339,9 +403,49 @@ describe("runStructuredExtractionForRun", () => {
 
     expect(updateCalls).toHaveLength(1);
     const update = updateCalls[0];
-    expect(update.extraction_error).toBe("Gemini extraction JSON failed schema validation.");
+    // EXTRACTION-RELIABILITY-1: persisted with its category prefix, so
+    // "the model ignored the schema" is distinguishable in SQL from "the
+    // account has no credit" — see lib/llm/extraction-errors.ts.
+    expect(update.extraction_error).toBe("schema: Gemini extraction JSON failed schema validation.");
     expect(update.extraction_version).toBeUndefined();
     expect(update.citations_count).toBeUndefined();
+  });
+
+  it("flattens an uncategorized failure instead of persisting its raw message", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: {
+        data: [
+          {
+            id: "row-1",
+            raw_response_text: "Acme is great.",
+            raw_response_json: { grounding_chunks: [] },
+            prompt_text_snapshot: "best crm",
+            brand_snapshot: "Acme",
+            competitors_snapshot: [],
+            provider: "gemini",
+            status: "completed",
+            extraction_version: "phase4-basic-v1"
+          }
+        ],
+        error: null
+      },
+      updateCalls
+    });
+
+    // A raw thrown value can embed a URL or provider payload; .claude/rules/
+    // gemini.md forbids persisting either. formatExtractionError is what
+    // makes that structurally impossible rather than a review question.
+    vi.mocked(extractGeminiStructuredData).mockRejectedValue(new Error("fetch failed to https://secret.internal?key=abc123"));
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(updateCalls).toHaveLength(1);
+    expect(updateCalls[0].extraction_error).toBe("unknown: Extraction failed.");
   });
 
   it("moves an untracked competitor into other_brands_mentioned instead of persisting it as a competitor", async () => {
@@ -565,6 +669,78 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
       ...overrides
     };
   }
+
+  /* ---- GEO-SCORE-BRAND-IDENTITY-1: a brand is not one name ---- */
+
+  // Verbatim from the founder's real 2026-08-02 scan of mozilla.org. All
+  // three engines recommended Firefox; the brand only counted at all because
+  // each answer happened to also write the parent company's name in passing.
+  const CLAUDE_RESPONSE_WITHOUT_PARENT_NAME =
+    "Firefox\nOfrece proteccion de rastreo mejorada de forma predeterminada y tiene configuracion granular de privacidad. " +
+    "Firefox es probablemente la mejor opcion equilibrada: excelente privacidad y codigo abierto.";
+
+  it("counts the brand when the AI recommends its product by name (the Mozilla case)", () => {
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Firefox", evidence: [], position: 1 }
+    });
+
+    const withoutAliases = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla");
+    const withAliases = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", ["Firefox"]);
+
+    // This is the defect: an answer that recommends Firefox twice scored the
+    // brand as absent, because "Firefox" does not plausibly name "Mozilla".
+    expect(withoutAliases.brand.mentioned).toBe(false);
+    expect(withAliases.brand.mentioned).toBe(true);
+    expect(withAliases.brand.position).toBe(1);
+  });
+
+  it("still requires the claimed name to be in the raw text — an alias cannot manufacture a mention", () => {
+    // The safety property. Aliases loosen check (a) of ADR 0021; check (b) is
+    // untouched, so an alias for a product the answer never mentions is still
+    // a non-mention.
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Thunderbird", evidence: [], position: 1 }
+    });
+
+    const result = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", [
+      "Firefox",
+      "Thunderbird"
+    ]);
+
+    expect(result.brand.mentioned).toBe(false);
+  });
+
+  it("keeps matching the brand's own name when aliases are present", () => {
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Mozilla", evidence: [], position: 2 }
+    });
+
+    const result = verifyExtractedMentions(data, "El navegador esta desarrollado por Mozilla.", "Mozilla", ["Firefox"]);
+
+    expect(result.brand.mentioned).toBe(true);
+  });
+
+  it("ignores blank aliases instead of matching everything", () => {
+    // An empty alias would make namesPlausiblyMatch trivially true and switch
+    // verification off entirely for that project.
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "algo sin relacion", evidence: [], position: 1 }
+    });
+
+    const result = verifyExtractedMentions(data, "algo sin relacion aparece aqui.", "Mozilla", ["", "   "]);
+
+    expect(result.brand.mentioned).toBe(false);
+  });
+
+  it("does not apply brand aliases to competitors", () => {
+    const data = baseData({
+      competitors: [{ name: "Brave", mentioned: true, display_name_found: "Firefox", evidence: [], position: 1 }]
+    });
+
+    const result = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", ["Firefox"]);
+
+    expect(result.competitors[0].mentioned).toBe(false);
+  });
 
   it("downgrades a brand mention whose display_name_found is not present in the raw text", () => {
     const data = baseData({
@@ -813,5 +989,121 @@ describe("reconcileExtractedCompetitors", () => {
 
     expect(result.competitors).toEqual([]);
     expect(result.other_brands_mentioned).toContain("Whoever");
+  });
+});
+
+/**
+ * EXTRACTION-RELIABILITY-1 (docs/adr/0029) — the defect these pin.
+ *
+ * `runStructuredExtractionForRun` used to `.slice(0, MAX_EXTRACTION_RESULTS)`
+ * (= 20) the eligible rows and silently discard the rest: no error, no log,
+ * no trace on the row. Since SCAN-CHAIN-1 a campaign can hold far more than
+ * 20 rows (plan prompt cap × active engines — 300 on Pro), so on production
+ * data every 30-row run persisted exactly 20 extractions and left 10 answers
+ * permanently unprocessed. The first test below fails against that code.
+ */
+describe("runStructuredExtractionForRun — no row cap (EXTRACTION-RELIABILITY-1)", () => {
+  afterEach(() => {
+    vi.mocked(extractGeminiStructuredData).mockReset();
+    vi.mocked(resolveGroundingRedirects).mockReset();
+    vi.mocked(resolveGroundingRedirects).mockResolvedValue(new Map());
+  });
+
+  function manyRows(count: number) {
+    return Array.from({ length: count }, (_, i) => baseRow({ id: `row-${i}` }));
+  }
+
+  it("extracts every eligible row, not just the first 20", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({ selectResult: { data: manyRows(30), error: null }, updateCalls });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({ data: baseExtractionOutput(), model: "gemini-test" });
+
+    const summary = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(summary.attempted).toBe(30);
+    expect(summary.succeeded).toBe(30);
+    expect(summary.remaining).toBe(0);
+    expect(vi.mocked(extractGeminiStructuredData)).toHaveBeenCalledTimes(30);
+    expect(updateCalls).toHaveLength(30);
+  });
+
+  it("never runs more than EXTRACTION_CONCURRENCY calls at once", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({ selectResult: { data: manyRows(20), error: null }, updateCalls });
+
+    let inFlight = 0;
+    let peak = 0;
+    vi.mocked(extractGeminiStructuredData).mockImplementation(async () => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      inFlight -= 1;
+      return { data: baseExtractionOutput(), model: "gemini-test" };
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    // The old code dispatched all 20 at once — the heaviest requests in the
+    // pipeline, simultaneously, which is a good way to manufacture the very
+    // 429s that then failed every one of them.
+    expect(peak).toBeLessThanOrEqual(EXTRACTION_CONCURRENCY);
+    expect(vi.mocked(extractGeminiStructuredData)).toHaveBeenCalledTimes(20);
+  });
+
+  it("leaves rows for the next pass when the budget runs out, rather than dropping them", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({ selectResult: { data: manyRows(30), error: null }, updateCalls });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({ data: baseExtractionOutput(), model: "gemini-test" });
+
+    // A deadline already in the past: no row can be started.
+    const summary = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1",
+      deadlineAt: Date.now() - 1
+    });
+
+    expect(summary.attempted).toBe(0);
+    // Reported as still-to-do, which is what stops the executor completing
+    // the run — the crucial difference from the old silent truncation.
+    expect(summary.remaining).toBe(30);
+    expect(updateCalls).toHaveLength(0);
+  });
+
+  it("does not re-attempt a row that already failed extraction", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: {
+        data: [
+          baseRow({ id: "fresh" }),
+          baseRow({ id: "already-failed", extraction_error: "quota: OpenAI API quota or rate limit reached." })
+        ],
+        error: null
+      },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({ data: baseExtractionOutput(), model: "gemini-test" });
+
+    const summary = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    // Otherwise one systematic failure (an exhausted account) would consume
+    // every pass's budget and starve rows nothing has looked at yet.
+    expect(summary.attempted).toBe(1);
+    expect(vi.mocked(extractGeminiStructuredData)).toHaveBeenCalledTimes(1);
   });
 });

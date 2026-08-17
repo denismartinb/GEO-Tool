@@ -29,12 +29,17 @@ const SITE_URL = "https://www.genscore.es";
 
 const AUTHED_PAGES = new Map([
   ["/dashboard", "Panel"],
+  // DOMAINS-ARCHIVE-RETIRE-1 (log §104): retirada en producción. El fixture la
+  // sirve como redirección para que el self-check ejercite lo mismo que el
+  // piloto se encuentra — un fixture que sirviera la pantalla vieja dejaría de
+  // probar la ruta que de verdad existe.
   ["/dashboard/projects", "Proyectos"],
   [`/dashboard/projects/${PROJECT_ID}`, "Visión general"],
   [`/dashboard/projects/${PROJECT_ID}/prompts`, "Prompts"],
   [`/dashboard/projects/${PROJECT_ID}/competitors`, "Competidores"],
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
-  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"],
+  ["/dashboard/domains", "Dominios"],
+  ["/dashboard/notifications", "Notificaciones"],
   [`/dashboard/projects/${PROJECT_ID}/web-audit`, "Auditoría web"]
 ]);
 
@@ -48,7 +53,28 @@ const BLOG_SLUGS = [
   "que-es-geo-generative-engine-optimization",
   "como-elegir-prompts-monitorizar-marca-ia",
   "como-elegir-competidores-analisis-geo",
-  "genscore-vs-herramientas-geo"
+  "genscore-vs-herramientas-geo",
+  "llms-txt-guia-practica",
+  "como-conseguir-que-chatgpt-te-cite",
+  // Cluster "sectores" (GROWTH-2). Faltaban aquí desde que se publicaron, así
+  // que sus journeys recibían un 404 y tumbaban el caso SANO del self-check
+  // — el que debe pasar (log §44). `fixture-drift.test.ts` impide que la
+  // próxima pieza de contenido repita la historia.
+  "geo-para-ecommerce",
+  "geo-para-saas-b2b",
+  "geo-para-agencias",
+  // SEO-POS-1 Fase C, C1 (2026-08-10).
+  "como-saber-si-tu-marca-aparece-en-chatgpt",
+  // SEO-POS-1 Fase C, S5 (2026-08-13).
+  "que-es-una-auditoria-geo",
+  // SEO-POS-1 Fase C, S6 (2026-08-13).
+  "metricas-geo-que-medir",
+  // SEO-POS-1 Fase C, S7 (2026-08-14).
+  "como-aparecer-en-perplexity",
+  // SEO-POS-1 Fase C, S8 (2026-08-14).
+  "como-medir-trafico-chatgpt-ga4",
+  // SEO-POS-1 Fase C, S9 (2026-08-15).
+  "como-hacer-que-chatgpt-recomiende-tu-negocio"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
@@ -56,13 +82,38 @@ const BLOG_SLUGS = [
 // publicHtml — the journey now asserts on cluster headings and internal
 // "Sigue leyendo" links that a one-size-fits-all title+paragraph can't carry.
 const PUBLIC_PAGES = new Map([
-  ["/geo", "GEO — Genscore"],
-  ["/privacidad", "Privacidad — Genscore"],
-  ["/cookies", "Cookies — Genscore"],
-  ["/terminos", "Términos — Genscore"],
-  ["/glosario", "Glosario GEO — Genscore"],
-  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"]
+  ["/geo", "GEO — GenScore"],
+  ["/que-es-genscore", "Qué es GenScore — GenScore"],
+  ["/privacidad", "Privacidad — GenScore"],
+  ["/cookies", "Cookies — GenScore"],
+  ["/terminos", "Términos — GenScore"],
+  ["/glosario", "Glosario GEO — GenScore"],
+  ["/comparativas", "Comparativas — GenScore"],
+  ["/comparativas/genscore-vs-otterly", "GenScore vs Otterly — GenScore"],
+  ["/comparativas/genscore-vs-peec-ai", "GenScore vs Peec AI — GenScore"],
+  ["/comparativas/genscore-vs-profound", "GenScore vs Profound — GenScore"],
+  ["/comparativas/alternativas-a-otterly", "Alternativas a Otterly en 2026 — GenScore"],
+  ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — GenScore"]
 ]);
+
+// GROWTH-2 Fase 2.6b (tests/pilot/journeys/public-pages.spec.ts): the two
+// glossary terms the journey checks — each gets its own render function
+// because it needs a "Sigue explorando" related-links block, which the
+// generic publicHtml can't carry.
+const GLOSSARY_TERM_SLUGS = ["geo", "geo-score"];
+const GLOSSARY_RELATED_OF_SLUG = { geo: "geo-score", "geo-score": "geo" };
+
+function glosarioTerminoHtml(slug) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const related = GLOSSARY_RELATED_OF_SLUG[slug];
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/glosario/${slug}">
+<title>¿Qué es ${slug}? — Glosario GEO — GenScore</title>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
+</head><body><h1>¿Qué es ${slug}?</h1><p>contenido</p><div class="glossary-related"><h2>Sigue explorando</h2><ul><li><a href="/glosario/${related}">${related}</a></li></ul></div>${overflow}</body></html>`;
+}
 
 // GROWTH-2 Fase 2.3 (tests/pilot/journeys/docs-pages.spec.ts): same idea as
 // PUBLIC_PAGES above, kept as a separate map/function because these pages
@@ -120,12 +171,37 @@ function citationsPage() {
     <div class="cit2-kpis">
       <div class="cit2-k">
         Respuestas con cita
-        <span class="info-tip" tabindex="0">
+        <!-- The long aria-label is deliberate: it reproduces the real
+             production incident (2026-08-02, ENAMETOOLONG) where an
+             accessible .info-tip's unbounded aria-label sailed into a
+             Playwright attachment name uncapped. explore.ts must cap it
+             regardless of source, or this fixture's own selfcheck run
+             reproduces the crash on a screen the explorer is supposed to
+             pass cleanly. -->
+        <span
+          class="info-tip"
+          tabindex="0"
+          aria-label="Media simple de tus señales disponibles: cobertura de temas, temas implementados, citados por la IA, y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media."
+        >
           <span class="info-tip-icon">i</span>
           <span class="info-tip-bubble">Tooltip de prueba de la fixture</span>
         </span>
       </div>
       <div class="cit2-v">50%</div>
+    </div>
+    <!-- Mirrors the real .cit2-split-key legend so the selfcheck exercises
+         the same test path as core-flow.spec.ts's "citations KPI tooltip and
+         row expand actually work" journey — added 2026-08-03 alongside that
+         journey's new legend-tooltip check, so a healthy fixture run proves
+         the assertion itself works before trusting it against production. -->
+    <div class="cit2-split-key">
+      <span>
+        Terceros que te mencionan
+        <span class="info-tip" tabindex="0">
+          <span class="info-tip-icon">i</span>
+          <span class="info-tip-bubble">Tooltip de leyenda de prueba de la fixture</span>
+        </span>
+      </span>
     </div>
     <div class="cit2-search"><input type="text" placeholder="Buscar página o dominio…" /></div>
     <div class="cit2-filtercount" style="display:none"></div>
@@ -154,14 +230,145 @@ function citationsPage() {
     <script>${CITATIONS_SCRIPT}</script>`;
 }
 
+/**
+ * Authenticated pages are wrapped in the same shape as the real app shell:
+ * pinned to the viewport, with the actual scrolling done by an inner element.
+ *
+ * That is what made `fullPage: true` silently crop every dashboard capture at
+ * the fold — `document.documentElement.scrollHeight` never grows past one
+ * viewport, so Playwright believed it had the whole page. Reproducing the
+ * shape here is what lets the self-check prove the fix instead of asserting it
+ * (`BELOW_FOLD_MARKER` sits far enough down that only a working capture
+ * contains it).
+ *
+ * The class names and the `.dash-main { min-height: 0 }` flex-shrink trick are
+ * the real ones from app/globals.css + app/dashboard/layout.tsx, not
+ * stand-ins: journey.ts measures horizontal overflow against `.dash-content`
+ * specifically, so a fixture that invented its own class name would leave that
+ * measurement untested (see the shell-clip case in pilot-selfcheck.mjs).
+ */
+const BELOW_FOLD_MARKER = "marcador-bajo-el-pliegue";
+
+function shellWrap(body) {
+  const filler = Array.from(
+    { length: 40 },
+    (_, i) => `<p style="margin:0 0 24px">fila de relleno ${i + 1}</p>`
+  ).join("");
+  // Trapped INSIDE `.dash-content`, whose own `overflow-y: auto` computes
+  // `overflow-x: auto` too — so the document never sees it. Only a check that
+  // measures `.dash-content` directly can catch this.
+  const trappedWide =
+    BREAK_MODE === "shell-clip"
+      ? '<div style="width:2200px" id="shell-clip-wide-marker">ancho atrapado dentro de .dash-content</div>'
+      : "";
+  return `<div class="shell" style="height:100dvh;overflow:hidden;display:flex;flex-direction:column">
+  <header class="topbar" style="padding:8px 16px;display:flex;gap:12px;align-items:center">
+    <span>cabecera</span>
+    <button type="button" class="header-bell" aria-label="Notificaciones">campana</button>
+    <div class="notif-panel" style="display:none;position:absolute;top:40px;right:8px;background:#fff;border:1px solid #ddd;padding:8px;max-width:320px">
+      <!-- Clase propia, NO .notif-row: ese selector es el que la pantalla de
+           notificaciones usa como prueba de contenido real, y este panel vive
+           oculto en la cabecera de TODAS las páginas. Reutilizarlo hacía que
+           la primera coincidencia del DOM fuera invisible y la pantalla se
+           reportara como estado vacío (5ª pasada del self-check). -->
+      <p class="notif-panel-row">Sin novedades</p>
+    </div>
+    <button type="button" class="side-geo">¿Qué es el GEO?</button>
+  </header>
+  <script>
+  (function () {
+    var bell = document.querySelector(".header-bell");
+    var panel = document.querySelector(".notif-panel");
+    if (bell && panel) {
+      bell.addEventListener("click", function () {
+        panel.style.display = panel.style.display === "block" ? "none" : "block";
+      });
+    }
+    // Reabrir el tour desde el menú: el journey lo pulsa tras cerrar el popup.
+    // El popup se ELIMINA del DOM al cerrarse y al recargar cuando ya se ha
+    // visto, así que reabrirlo es reconstruirlo con __pilotShowWelcome, no
+    // des-ocultar un nodo que ya no existe.
+    var reopen = document.querySelector(".side-geo");
+    if (reopen) {
+      reopen.addEventListener("click", function () {
+        if (typeof window.__pilotShowWelcome === "function") {
+          window.__pilotShowWelcome();
+          return;
+        }
+        var scrim = document.querySelector(".ptour-scrim");
+        if (scrim) scrim.style.display = "block";
+      });
+    }
+  })();
+  </script>
+  <div class="dash-main" style="flex:1;min-height:0;display:flex;flex-direction:column">
+    <main class="dash-content" style="flex:1;overflow-y:auto;padding:16px">
+      ${body}
+      ${trappedWide}
+      ${filler}
+      <p id="${BELOW_FOLD_MARKER}">${BELOW_FOLD_MARKER}</p>
+    </main>
+  </div>
+</div>`;
+}
+
+/**
+ * Reproduces, in miniature, the two regressions the founder found by eye on
+ * 2026-08-11 after the pilot had already run (log §55).
+ *
+ * `duplicate` — the landing hero shipped its CTA twice, because the block was
+ * moved into a client island and the original was left behind. The two copies
+ * lived in SIBLING containers, so this fixture puts them in sibling containers
+ * too: a same-parent detector would pass this and miss the real bug.
+ *
+ * `contrast` — the drawer CTA turned grey-on-blue when its element changed
+ * from <button> to <a> and an ancestor rule won on specificity. The colours
+ * here are the real ones: #6b7280 on #2563eb, 1.07:1 — medido, no estimado.
+ */
+/**
+ * Una lista LEGÍTIMA de exactamente dos tarjetas iguales, cada una con el
+ * mismo botón. Va en el fixture SANO, y su trabajo es no aparecer nunca en los
+ * hallazgos: si el detector de duplicados vuelve a contarla como un fallo, el
+ * caso que debe pasar se pone rojo.
+ *
+ * Existe porque la primera pasada real del detector (2026-08-11) la contó como
+ * duplicado: las dos tarjetas `.cm2-emg` de Competidores, con su botón
+ * «Seguir» cada una, en una lista que daba la casualidad de tener dos
+ * elementos. El umbral era «tres hermanos iguales» y dos no llegaban.
+ */
+function legitimateTwoItemList() {
+  const card = `<div class="fx-card">
+      <span class="fx-card-name">Competidor</span>
+      <button type="button" class="fx-card-btn">Seguir</button>
+    </div>`;
+  return `<section class="fx-list">${card}${card}</section>`;
+}
+
+function brokenControls() {
+  if (BREAK_MODE === "duplicate") {
+    return `<section class="fx-hero">
+      <div class="fx-hero-form"><a class="fx-cta" href="/dashboard">Analiza gratis</a></div>
+      <div class="fx-hero-actions"><a class="fx-cta" href="/dashboard">Analiza gratis</a></div>
+    </section>`;
+  }
+  if (BREAK_MODE === "contrast") {
+    return `<section class="fx-hero">
+      <a class="fx-cta" href="/dashboard" style="display:inline-block;padding:8px 16px;background:#2563eb;color:#6b7280">Prueba gratis</a>
+    </section>`;
+  }
+  return "";
+}
+
 function html(title, body) {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
-</head><body><h1>${title}</h1>${body}${overflow}</body></html>`;
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui}</style>
+</head><body>${shellWrap(
+    `<h1>${title}</h1>${body}${overflow}${legitimateTwoItemList()}${brokenControls()}`
+  )}</body></html>`;
 }
 
 function publicHtml(path, title) {
@@ -171,7 +378,7 @@ function publicHtml(path, title) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}${path}">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>${title}</h1><p>contenido</p>${overflow}</body></html>`;
 }
 
@@ -185,7 +392,7 @@ function docsPage(path, title) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}${path}">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>${title}</h1><nav>${sidebar}</nav><p>contenido</p>${overflow}</body></html>`;
 }
 
@@ -209,9 +416,9 @@ function blogIndexHtml() {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/blog">
-<title>Blog — Genscore</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
-</head><body><h1>Blog — Genscore</h1>${sections}${overflow}</body></html>`;
+<title>Blog — GenScore</title>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
+</head><body><h1>Blog — GenScore</h1>${sections}${overflow}</body></html>`;
 }
 
 function blogPostHtml(slug) {
@@ -227,14 +434,36 @@ function blogPostHtml(slug) {
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/blog/${slug}">
-<title>${slug} — Genscore</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
-</head><body><h1>${slug} — Genscore</h1><p>contenido</p>${related}${overflow}</body></html>`;
+<title>${slug} — GenScore</title>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${slug} — GenScore</h1><p>contenido</p>${related}${overflow}</body></html>`;
+}
+
+// GROWTH-2 Fase 2.9 (B1b): the 4 clusters each get a pillar page at
+// /blog/<key> — mirrors lib/blog/posts.ts's BLOG_CLUSTERS keys. "sectores"
+// has zero real posts, so it renders the same honest empty-state copy the
+// real page does instead of "contenido del pilar" — the pilot journey
+// asserts on that exact text.
+const BLOG_PILLAR_KEYS = ["fundamentos", "medicion", "playbooks", "sectores"];
+
+function blogPillarHtml(key) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const body =
+    key === "sectores"
+      ? `<p>Todavía no hay artículos publicados en esta sección — está planificada en nuestro <a href="/blog">calendario de contenido</a> y llegará más adelante.</p>`
+      : `<p>contenido del pilar</p>`;
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/blog/${key}">
+<title>${key} — Blog — GenScore</title>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${key}</h1>${body}${overflow}</body></html>`;
 }
 
 function feedXml() {
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel><title>Genscore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
+<rss version="2.0"><channel><title>GenScore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
 }
 
 function loginPage() {
@@ -250,20 +479,456 @@ function loginPage() {
   );
 }
 
-function projectsPage() {
-  return html(
-    "Proyectos",
-    `<a href="/dashboard/projects/${PROJECT_ID}">Proyecto de prueba</a>`
-  );
+/**
+ * Minimal stand-ins for the "this screen has real data" anchors each read-only
+ * journey declares via `ContentExpectation` (tests/pilot/support/journey.ts).
+ *
+ * The fixture used to serve a generic `<p>contenido</p>` for every authed
+ * page, which was fine while the harness only checked for breakage. It is not
+ * fine now: `assertPageIsHealthy` fails a screen that renders no real content,
+ * so a fixture serving placeholders would make the "healthy fixture must
+ * PASS" half of `pnpm pilot:selfcheck` fail for the right reason on the wrong
+ * subject. Modelling a project WITH data is also simply more honest — an
+ * empty account is the state the pilot must refuse, not the state it
+ * self-checks against.
+ *
+ * Deliberately the smallest markup that satisfies each anchor; this is not an
+ * attempt to mirror the real screens.
+ */
+function screenBody(path) {
+  // `empty` reproduces the exact production state that made the pilot lie on
+  // 2026-08-02: every screen loads cleanly, with no console error, no failed
+  // request and no overflow — and shows a placeholder instead of the product.
+  // The self-check asserts the pilot FAILS here; a harness that passes this
+  // fixture has lost the only defence against certifying an empty account.
+  if (BREAK_MODE === "empty") {
+    return "<p>Todavía no has auditado tu web</p>";
+  }
+
+  if (path === `/dashboard/projects/${PROJECT_ID}`) {
+    return "<h2>Puntuación GEO</h2><p>62 / 100</p><p>Tasa de mención 40%</p>";
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/prompts`) {
+    return '<p>GenScore monitoriza 3 prompts activos</p><div class="pr2-page">Prompt de prueba</div>';
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/competitors`) {
+    return '<table class="tbl"><tr><td>fixture-rival.example</td><td>Cuota de voz 22%</td></tr></table>';
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/recommendations`) {
+    return '<h2>Backlog de acciones</h2><div class="rec-card">Recomendación de prueba</div>';
+  }
+  if (path === "/dashboard/domains") {
+    // DOMAINS-REDESIGN-1: la portada del dominio activo, que es el ancla de
+    // core-flow.spec.ts. Estructura, no prosa: la pastilla de estado desaparece
+    // en reposo y la línea de automatización se oculta en móvil, así que
+    // ninguna de las dos discrimina "hay datos" en los tres viewports.
+    return `<a class="dm2-hero" href="/dashboard/projects/${PROJECT_ID}"><span class="dm2-name">Fixture</span><span class="dm2-dom">fixture.example</span><span class="dm2-gauge">64</span></a>`;
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/web-audit`) {
+    // The tablist is exactly what the web-audit journey anchors on, because
+    // the real tabs only exist once the project has a coverage audit.
+    // Real click-to-switch behaviour (not just static markup), mirroring
+    // AuditTabBar/AuditTabPanel — added 2026-08-03 alongside
+    // core-flow.spec.ts's explicit Correcto/Páginas coverage, so a healthy
+    // fixture run proves that test's own aria-selected/tabpanel assertions
+    // work before trusting them against production.
+    return `<div role="tablist" aria-label="Secciones de la auditoría">
+        <button role="tab" aria-selected="true" data-tab="problemas">Problemas</button>
+        <button role="tab" aria-selected="false" data-tab="correcto">Correcto</button>
+        <button role="tab" aria-selected="false" data-tab="paginas">Páginas</button>
+      </div>
+      <div role="tabpanel" data-panel="problemas">
+        4 páginas sin datos estructurados
+        <!-- Fase 3a's generated llms.txt lives inside one of these collapsed
+             issue rows. PR #319 shipped with a green web-audit row and not
+             one capture containing the feature, because nothing ever opened
+             it — this is what makes that journey step provable against the
+             fixture before it is trusted against production. -->
+        <details class="wa-details">
+          <summary>Aviso · sitemap.xml · No encontrado <span class="wa2-fix-ready">Solución disponible</span></summary>
+          <div class="wa-details-body">
+            <ol class="wa2-llms-steps"><li class="wa2-llms-step">Casi seguro que tu plataforma ya lo genera</li></ol>
+          </div>
+        </details>
+        <details class="wa-details">
+          <summary>Aviso · llms.txt · No encontrado <span class="wa2-fix-ready">Solución disponible</span></summary>
+          <div class="wa-details-body">
+            <pre># Marca de prueba
+
+## tema de prueba
+
+- [/pagina](https://fixture.example/pagina): DESCRIBE ESTA PÁGINA EN 1 FRASE</pre>
+          </div>
+        </details>
+      </div>
+      <div role="tabpanel" data-panel="correcto" hidden>10 de 10 páginas indexables</div>
+      <div role="tabpanel" data-panel="paginas" hidden>
+        Tabla de páginas de prueba
+        <!-- A real collapsed page row: fase 3b's copyable fixes live inside
+             one of these, so the journey has to open it to have any evidence
+             at all. Native <details>, same as PageAuditRow. -->
+        <details class="wa-details">
+          <summary>/ · 3 mejoras pendientes</summary>
+          <div class="wa-details-body">
+            <pre>&lt;link rel="canonical" href="https://fixture.example/" /&gt;</pre>
+          </div>
+        </details>
+      </div>
+      <script>
+        document.querySelectorAll('[role="tab"]').forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var target = btn.getAttribute("data-tab");
+            document.querySelectorAll('[role="tab"]').forEach(function (t) {
+              t.setAttribute("aria-selected", t.getAttribute("data-tab") === target ? "true" : "false");
+            });
+            document.querySelectorAll('[role="tabpanel"]').forEach(function (p) {
+              if (p.getAttribute("data-panel") === target) p.removeAttribute("hidden");
+              else p.setAttribute("hidden", "");
+            });
+          });
+        });
+      </script>`;
+  }
+  return "<p>contenido</p>";
 }
 
 function isAuthenticated(request) {
   return (request.headers.cookie ?? "").includes(`${SESSION_COOKIE}=1`);
 }
 
+// ---------------------------------------------------------------------------
+// Páginas que el caso SANO del self-check necesita (log §44). Sin ellas el
+// fixture devolvía 404 y el caso que DEBE pasar fallaba, dejando el self-check
+// rojo por deriva y no por un fallo real del arnés.
+//
+// Sólo llevan lo que los journeys miran, y con COMPORTAMIENTO real donde lo
+// comprueban: un plegable que no abre de verdad, o un «Siguiente» que no
+// avanza, harían pasar la aserción y mentirían sobre lo que el arnés sabe ver.
+// ---------------------------------------------------------------------------
+
+/**
+ * El tour, compartido por el popup de bienvenida y por el hero de la landing.
+ *
+ * Reglas que replica de `.claude/rules/onboarding.md`, porque los journeys las
+ * comprueban: sólo el paso 1 se reproduce solo (nunca encadena), la pista del
+ * botón «Siguiente» se queda puesta hasta el clic, y cada clic avanza un paso.
+ */
+function tourWidget({ hero }) {
+  const dots = [0, 1, 2, 3]
+    .map((i) => `<span class="pt-dot${i === 0 ? " is-on" : ""}"></span>`)
+    .join("");
+  return `<div class="ptour${hero ? " ptour--hero" : ""}">
+    <div class="pt-stage" style="min-height:180px;border:1px solid #ddd;padding:12px">
+      <span data-pt="typed"></span>
+    </div>
+    <div class="pt-dots">${dots}</div>
+    <div class="pt-foot">
+      <a href="/geo">¿Qué es el GEO?</a>
+      <button type="button" class="pt-primary pt-hint">Siguiente</button>
+    </div>
+  </div>`;
+}
+
+const TOUR_SCRIPT = `
+(function () {
+  document.querySelectorAll(".ptour").forEach(function (tour) {
+    var typed = tour.querySelector("[data-pt=typed]");
+    // El paso 1 se reproduce solo: teclea el dominio y SE PARA ahí.
+    setTimeout(function () { if (typed) typed.textContent = "fixture.example"; }, 300);
+
+    var next = tour.querySelector(".pt-primary");
+    if (!next) return;
+    next.addEventListener("click", function () {
+      var dots = Array.prototype.slice.call(tour.querySelectorAll(".pt-dot"));
+      var current = dots.findIndex(function (d) { return d.classList.contains("is-on"); });
+      var target = Math.min(current + 1, dots.length - 1);
+      dots.forEach(function (d) { d.classList.remove("is-on"); });
+      dots[target].classList.add("is-on");
+    });
+  });
+})();
+`;
+
+/**
+ * Popup de bienvenida. La marca de «visto» se escribe AL MOSTRARLO, nunca al
+ * cerrarlo (regla de ruta de onboarding): escribirla al cerrar convierte «sale
+ * en el primer acceso» en «sale en cada carga hasta que lo cierres».
+ */
+const WELCOME_POPUP_SCRIPT = `
+(function () {
+  var KEY = "genscore.onboarding-tour.seen.v1";
+  var scrim = document.querySelector(".ptour-scrim");
+  if (!scrim) return;
+
+  // El markup se guarda ANTES de tocar nada. El popup no puede limitarse a
+  // ocultarse —el journey comprueba tras recargar que NO EXISTA
+  // (\`toHaveCount(0)\`), porque la regresión que persigue es un popup que
+  // reaparecía en cada carga— y tampoco puede desaparecer para siempre, porque
+  // el botón del menú lo reabre. Así que se elimina y se reconstruye.
+  var markup = scrim.outerHTML;
+  var parent = scrim.parentNode;
+
+  function bindClose(node) {
+    var close = node.querySelector(".pt-close");
+    if (close) close.addEventListener("click", function () { node.remove(); });
+  }
+
+  window.__pilotShowWelcome = function () {
+    if (document.querySelector(".ptour-scrim")) return;
+    var wrap = document.createElement("div");
+    wrap.innerHTML = markup;
+    var node = wrap.firstElementChild;
+    node.style.display = "block";
+    parent.appendChild(node);
+    bindClose(node);
+    // El reloj del tour ya corrió en el nodo original; el reconstruido nace
+    // con el paso 1 ya tecleado en vez de con el lienzo en blanco.
+    var typed = node.querySelector("[data-pt=typed]");
+    if (typed) typed.textContent = "fixture.example";
+  };
+
+  try {
+    if (window.localStorage.getItem(KEY) === "1") { scrim.remove(); return; }
+    window.localStorage.setItem(KEY, "1");
+  } catch (e) { /* almacenamiento no disponible: se muestra igual */ }
+  scrim.style.display = "block";
+  bindClose(scrim);
+})();
+`;
+
+function welcomeTourPopup() {
+  return `<div class="ptour-scrim" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50">
+    <div role="dialog" aria-label="Aprende cómo funciona" style="background:#fff;margin:24px auto;max-width:520px;padding:16px">
+      <h2>Aprende cómo funciona</h2>
+      <button type="button" class="pt-close" aria-label="Cerrar">×</button>
+      ${tourWidget({ hero: false })}
+    </div>
+  </div>`;
+}
+
+/**
+ * El cajón de navegación móvil de las páginas comerciales
+ * (`components/marketing-mobile-nav.tsx`), reducido a lo que el journey
+ * `landing.spec.ts` necesita: un botón que abre, un `<nav class="lp-mobnav">`
+ * con enlaces y CTAs, y su propia X.
+ *
+ * Se CONSTRUYE al pulsar y se ELIMINA al cerrar, igual que el real (que lo
+ * monta con un portal). Que no exista mientras está cerrado importa: si
+ * estuviera oculto en el DOM, sus enlaces duplicarían los de la barra y el
+ * detector de controles repetidos —cuya evaluación descarta lo invisible—
+ * dejaría de estar ejercitado en un caso realista.
+ */
+const MOBNAV_MARKUP = `<nav class="lp-mobnav" aria-label="Menú">
+  <button type="button" class="lp-mobnav-close" aria-label="Cerrar menú">×</button>
+  <a href="/pricing">Precios</a>
+  <a href="/blog">Blog</a>
+  <div class="lp-mobnav-ctas">
+    <a class="lp-cta-soft" href="/login">Iniciar sesión</a>
+    <a class="lp-cta" href="/signup">Prueba gratis</a>
+  </div>
+</nav>`;
+
+const MOBNAV_STYLE = `
+  .lp-burger { background:#fff; color:#111; border:1px solid #ccc; padding:6px 10px; }
+  .lp-mobnav { position:fixed; inset:0 0 0 auto; width:80%; max-width:280px; background:#fff; color:#111; padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .lp-mobnav a { color:#111; }
+  .lp-mobnav .lp-cta, .lp-mobnav .lp-cta:hover { background:#2563eb; color:#fff; padding:8px 16px; display:block; text-align:center; }
+  .lp-mobnav .lp-cta-soft { color:#2563eb; padding:8px 16px; display:block; text-align:center; }`;
+
+const MOBNAV_SCRIPT = `
+  (function () {
+    var markup = ${JSON.stringify(MOBNAV_MARKUP)};
+    var burger = document.querySelector(".lp-burger");
+    if (!burger) return;
+    burger.addEventListener("click", function () {
+      if (document.querySelector(".lp-mobnav")) return;
+      var wrap = document.createElement("div");
+      wrap.innerHTML = markup;
+      var drawer = wrap.firstElementChild;
+      document.body.appendChild(drawer);
+      drawer.querySelector(".lp-mobnav-close").addEventListener("click", function () {
+        drawer.remove();
+      });
+    });
+  })();`;
+
+function landingPage() {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/">
+<title>GenScore — visibilidad de marca en motores de IA</title>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}.pt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin:2px}.pt-dot.is-on{background:#333}${MOBNAV_STYLE}</style>
+</head><body>
+<nav class="lp-nav"><button type="button" class="lp-burger" aria-label="Abrir menú">≡</button></nav>
+<section class="lp-hero">
+  <h1>Mide cómo te ve la IA</h1>
+  <div class="lp-hero-form"><input type="text" placeholder="tudominio.com"><a class="lp-cta" href="/signup">Analiza gratis</a></div>
+</section>
+<div class="lp-shot">${tourWidget({ hero: true })}</div>
+${overflow}
+<script>${TOUR_SCRIPT}</script>
+<script>${MOBNAV_SCRIPT}</script>
+</body></html>`;
+}
+
+/**
+ * `/pricing` (landing.spec.ts). Necesita tarjetas de plan reconocibles —el
+ * `ContentExpectation` del journey mira `.price-card`— y el mismo cajón móvil,
+ * porque las dos páginas comerciales comparten `MarketingMobileNav` y un fallo
+ * en él sale en las dos.
+ */
+function pricingPage() {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const cards = ["Free", "Starter", "Pro"]
+    .map(
+      (plan) =>
+        `<div class="price-card"><h2>${plan}</h2><p>Descripción del plan.</p><a class="lp-cta" href="/signup">Elegir ${plan}</a></div>`
+    )
+    .join("");
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/pricing">
+<title>Precios — GenScore</title>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}${MOBNAV_STYLE}</style>
+</head><body>
+<nav class="lp-nav"><button type="button" class="lp-burger" aria-label="Abrir menú">≡</button></nav>
+<h1>Precios</h1>
+<div class="price-cards">${cards}</div>
+${overflow}
+<script>${MOBNAV_SCRIPT}</script>
+</body></html>`;
+}
+
+/**
+ * Pantalla de notificaciones (NOTIF-AUTOREAD-1). El journey mira tres cosas:
+ * que haya filas reales —no el vacío, que no probaría nada—, que NO exista ya
+ * un control de «marcar como leídas», y que la pestaña «No leídas» resuelva a
+ * filas o a un vacío legible.
+ *
+ * Las filas se ELIMINAN al cambiar de pestaña en vez de ocultarse: el journey
+ * mira `.notif-row, .notif-page-empty` y toma la PRIMERA del DOM. Con las
+ * filas escondidas, esa primera coincidencia sería una fila invisible y la
+ * comprobación fallaría aunque el vacío se pintase perfectamente — el mismo
+ * fallo por orden del DOM que ya costó una pasada con `.notif-row` en la
+ * cabecera.
+ */
+function notificationsPage() {
+  const rows = `
+    <article class="notif-row"><h3>Escaneo completado</h3><p>Tu dominio se escaneó hace 2 horas.</p></article>
+    <article class="notif-row"><h3>Nueva recomendación</h3><p>Hay una acción nueva en tu backlog.</p></article>`;
+  return `<div class="notif-page">
+    <div class="notif-tabs" role="group">
+      <button type="button" class="notif-tab is-on" data-tab="all">Todas</button>
+      <button type="button" class="notif-tab" data-tab="unread">No leídas</button>
+    </div>
+    <div class="notif-list">${rows}</div>
+    <script>
+    (function () {
+      var list = document.querySelector(".notif-list");
+      var all = ${JSON.stringify(rows)};
+      var empty = '<p class="notif-page-empty">No tienes notificaciones sin leer. ' +
+        'Se marcan solas al abrirlas.</p>';
+      document.querySelectorAll(".notif-tab").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          document.querySelectorAll(".notif-tab").forEach(function (t) {
+            t.classList.remove("is-on");
+          });
+          tab.classList.add("is-on");
+          list.innerHTML = tab.dataset.tab === "unread" ? empty : all;
+        });
+      });
+    })();
+    </script>
+  </div>`;
+}
+
+/**
+ * Ajustes en una sola página (CONSOLE-REDESIGN-1). Los cinco journeys de
+ * `settings.spec.ts` miran: el titular, el email real, las tres secciones en
+ * orden, los dos plegables gemelos —que nacen cerrados y cuyo cuerpo NO existe
+ * en el DOM hasta abrirlo—, el bloque de eliminar cuenta al final y fuera del
+ * índice, y que en móvil no quede nada fijado dentro de `.page`.
+ */
+function settingsPage() {
+  return `<div class="page">
+    <h1 class="set-title">Ajustes</h1>
+    <nav class="set-idx" style="position:sticky;top:0">
+      <a href="#cuenta">Cuenta</a>
+      <a href="#avisos">Avisos</a>
+      <a href="#plan">Plan</a>
+    </nav>
+
+    <h2 class="set-sech" id="cuenta">Cuenta</h2>
+    <p class="set-idmail">piloto@fixture.example</p>
+    <label for="profile-email">Email</label>
+    <input id="profile-email" value="piloto@fixture.example">
+
+    <button type="button" class="set-fold-h" aria-controls="company-fold-body" aria-expanded="false">
+      Datos de empresa
+    </button>
+    <div data-fold-slot="company-fold-body"></div>
+
+    <button type="button" class="set-fold-h" aria-controls="billing-fold-body" aria-expanded="false">
+      Datos de facturación
+    </button>
+    <div data-fold-slot="billing-fold-body"></div>
+
+    <h2 class="set-sech" id="avisos">Avisos</h2>
+    <p>Preferencias de notificación</p>
+
+    <h2 class="set-sech" id="plan">Plan</h2>
+    <p>Plan actual: Pro</p>
+
+    <div class="set-end">
+      <h3>Eliminar cuenta</h3>
+      <button type="button" class="set-end-d">Eliminar cuenta — esta acción es irreversible</button>
+    </div>
+  </div>
+  <style>
+    /* El índice desaparece por debajo de 900px: en móvil la página es un solo
+       scroll y nada suyo queda fijado (settings.spec.ts). */
+    @media (max-width: 899px) { .set-idx { display: none } }
+  </style>
+  <script>
+  (function () {
+    var BODIES = {
+      "company-fold-body": '<div id="company-fold-body"><label for="company-name">Nombre</label><input id="company-name" value="Fixture SL"></div>',
+      "billing-fold-body": '<div id="billing-fold-body"><label for="billing-legal-name">Razón social</label><input id="billing-legal-name" value="Fixture SL"></div>'
+    };
+    document.querySelectorAll("[aria-controls]").forEach(function (trigger) {
+      var id = trigger.getAttribute("aria-controls");
+      if (!BODIES[id]) return;
+      var slot = document.querySelector('[data-fold-slot="' + id + '"]');
+      trigger.addEventListener("click", function () {
+        var open = trigger.getAttribute("aria-expanded") === "true";
+        trigger.setAttribute("aria-expanded", open ? "false" : "true");
+        // El cuerpo NO existe en el DOM mientras está cerrado: el journey
+        // comprueba toHaveCount(0), no sólo que esté oculto.
+        slot.innerHTML = open ? "" : BODIES[id];
+      });
+    });
+  })();
+  </script>`;
+}
+
 const server = createServer((request, response) => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const path = url.pathname;
+
+  if (path === "/") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(landingPage());
+    return;
+  }
+
+  if (path === "/pricing") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(pricingPage());
+    return;
+  }
 
   if (path === "/login" && request.method === "POST") {
     // Accept any credentials: the fixture verifies harness plumbing, not auth.
@@ -293,9 +958,21 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (BLOG_PILLAR_KEYS.includes(path.replace(/^\/blog\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(blogPillarHtml(path.replace(/^\/blog\//, "")));
+    return;
+  }
+
   if (BLOG_SLUGS.includes(path.replace(/^\/blog\//, ""))) {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(blogPostHtml(path.replace(/^\/blog\//, "")));
+    return;
+  }
+
+  if (GLOSSARY_TERM_SLUGS.includes(path.replace(/^\/glosario\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(glosarioTerminoHtml(path.replace(/^\/glosario\//, "")));
     return;
   }
 
@@ -307,13 +984,24 @@ const server = createServer((request, response) => {
 
   if (path === "/docs") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    response.end(docsPage(path, "Documentación — Genscore"));
+    response.end(docsPage(path, "Documentación — GenScore"));
     return;
   }
 
   if (DOCS_SLUGS.some((slug) => path === `/docs/${slug}`)) {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    response.end(docsPage(path, `${path.slice(6)} — Genscore`));
+    response.end(docsPage(path, `${path.slice(6)} — GenScore`));
+    return;
+  }
+
+  if (path === "/dashboard/settings") {
+    if (!isAuthenticated(request)) {
+      response.writeHead(303, { Location: "/login" });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(html("Ajustes", settingsPage()));
     return;
   }
 
@@ -335,12 +1023,29 @@ const server = createServer((request, response) => {
       response.end();
       return;
     }
+    // DOMAINS-ARCHIVE-RETIRE-1 (log §104): la pantalla se retiró y la ruta
+    // sobrevive como redirección. El fixture la reproduce para que el
+    // self-check ejercite la misma forma que el piloto encuentra en producción
+    // — y porque es lo que hizo saltar el journey de segundo proyecto: esperar
+    // `domcontentloaded` sobre una redirección deja el contexto muriéndose.
+    if (path === "/dashboard/projects") {
+      response.writeHead(307, { Location: "/dashboard/domains" });
+      response.end();
+      return;
+    }
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    response.end(
-      path === "/dashboard/projects"
-        ? projectsPage()
-        : html(AUTHED_PAGES.get(path) ?? "", "<p>contenido</p>")
-    );
+    // El popup de bienvenida sólo en /dashboard, que es donde aterriza un
+    // primer login de verdad y donde el journey lo busca — entrar por la
+    // pantalla final ocultaría el fallo que ese journey existe para cazar.
+    const welcome =
+      path === "/dashboard"
+        ? `${welcomeTourPopup()}<script>${TOUR_SCRIPT}</script><script>${WELCOME_POPUP_SCRIPT}</script>`
+        : "";
+    const body =
+      path === "/dashboard/notifications"
+        ? notificationsPage()
+        : screenBody(path) + welcome;
+    response.end(html(AUTHED_PAGES.get(path) ?? "", body));
     return;
   }
 

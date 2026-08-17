@@ -1,8 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { CitationsClient } from "./citations-client";
 import {
   aggregateCitations,
@@ -18,6 +23,19 @@ type CitationScoreDetails = {
   citation_score_any_domain?: number;
   citation_by_provider?: Record<string, { total: number; citation_found_count: number }>;
 };
+
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Páginas citadas", async () => (await requireActiveProject(projectId)).domain);
+}
 
 export default async function CitationsPage({
   params
@@ -56,7 +74,11 @@ export default async function CitationsPage({
         .eq("is_active", true)
     ]);
 
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
 
   const [{ data: results }, { data: score }] = latestRun
     ? await Promise.all([
@@ -160,22 +182,12 @@ export default async function CitationsPage({
           </span>
         </div>
         <div className="ov-sticky-right">
-          {lastScanDate && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {lastScanDate}
-            </span>
-          )}
-          {activeRun && latestRun ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
+          <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
         </div>
       </div>
 
       {activeRun && !latestRun ? (
-        <ScanInProgress activeRun={activeRun} />
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
       ) : !latestRun ? (
         <div className="section-empty" style={{ marginTop: 20 }}>
           <div className="section-empty-title">Todavía no hay datos de citas</div>

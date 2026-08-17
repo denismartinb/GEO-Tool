@@ -182,6 +182,13 @@ falls short — you iterate it instead:
 - **UX** — verified alignment with the design reference + no regressions.
 - **Pipeline** — scan completes end-to-end with verified real data.
 
+**Every type also requires documentary closure in the same PR** (CLAUDE.md,
+"Cierre de fase"): the history entry, the path rule if an invariant changed, and
+the zone-map cell. You own this — it is not optional polish and it does not go
+in a follow-up PR. A phase whose context did not survive into the repo will cost
+the next session more than it saved this one, and that next session is usually
+also you, with no memory of this one.
+
 ---
 
 ## Orchestrator responsibilities (absorbed from the former Product Director)
@@ -211,6 +218,8 @@ concrete recommendation. Never override a hard rule from the Forbidden list in
 
 ## What you must read
 
-- `CLAUDE.md` — the constitution (gates, forbidden list, classification).
+- `CLAUDE.md` — the constitution (gates, forbidden list, classification), and
+  its **zone map**: before touching a zone, read that zone's path rule and the
+  history sections the map points at.
 - `@docs/director-strategy.md` — your long-term roadmap memory.
 - The relevant `.claude/rules/*.md` for any path being touched.

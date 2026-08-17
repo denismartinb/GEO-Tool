@@ -3,29 +3,50 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
-import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  CompareTable,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  ShareOfVoice,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("como-elegir-competidores-analisis-geo");
 
-export const metadata = {
-  title: `${getSeoTitle(post)} — Genscore`,
-  description: getMetaDescription(post),
-  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
-};
+export const metadata = blogPostMetadata(post);
 
-<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+export const sovBrands = [
+  { name: "Referente A", value: 34 },
+  { name: "Directo B", value: 27 },
+  { name: "Tu marca", value: 21, you: true },
+  { name: "Indirecto C", value: 18 }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
 
 <BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
 
 <BlogPageShell>
 
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
 
 # {post.title}
 
-<p className="blog-post-meta">13 de julio de 2026</p>
+<PostMeta post={post} />
 
 <div className="blog-body">
+
+<KeyTakeaway>
+
+Elige competidores por **la necesidad que resuelven**, no por quién te encuentras en las ferias. Una IA no sabe a quién consideras rival: responde a un problema, y ahí compite contigo cualquiera que lo resuelva. Una lista mal elegida no da un resultado peor — da un resultado **que no significa nada**.
+
+</KeyTakeaway>
 
 Una de las primeras decisiones al empezar un análisis GEO parece muy sencilla: elegir contra quién quieres compararte. Sin embargo, es una de las que más impacto tiene en los resultados.
 
@@ -51,9 +72,32 @@ En GEO conviene darle la vuelta al razonamiento. No empieces preguntándote *"¿
 
 Ese pequeño cambio suele producir listas mucho más útiles, porque obliga a pensar desde la perspectiva del usuario. Y esa es exactamente la perspectiva desde la que responden ChatGPT, Gemini o Claude.
 
+<Figure
+  label="Figura 1."
+  caption="Así se reparte la cuota de voz entre las marcas que aparecen en un conjunto de prompts. Datos de ejemplo; la estructura es la de la pantalla de competidores del producto."
+>
+  <ShareOfVoice brands={sovBrands} total="sobre 40 prompts" />
+</Figure>
+
+Este reparto es el motivo por el que la lista importa tanto: **si metes una marca que no compite de verdad contigo, se lleva una parte de ese gráfico y hunde tu porcentaje sin que haya pasado nada real en el mercado.** Y si dejas fuera a quien sí aparece, tu cuota se infla igual de artificialmente.
+
+## Cuánto de tu GEO Score depende de esta lista
+
+Buena parte de lo que mira el <a href="/docs/metodologia/geo-score">GEO Score</a> no se puede calcular sin ella: tu puesto **frente a esas marcas**, y qué parte de las menciones totales es tuya. Ninguna de las dos existe en abstracto — se miden contra la lista que tú defines.
+
+<StatGrid label="Lo que la lista de competidores decide">
+  <Stat value="21%" label="Cuota de voz de la marca de ejemplo de la Figura 1 — un resultado, no una regla" source="Datos de ejemplo de este artículo" tone="blue" />
+  <Stat value="0" label="Veces que tu cuota de voz es comparable con la de otra empresa: cada una se mide sobre su propia lista" source="Metodología GEO" tone="cyan" />
+  <Stat value="4" label="Tipos de competidor que merece la pena distinguir antes de elegir (abajo)" source="Metodología GEO" tone="warm" />
+</StatGrid>
+
+Lo que conviene retener: **una parte grande de tu nota se mide en relación con esta lista, no en absoluto.** No es un ajuste menor de configuración — meter una marca que no compite de verdad contigo hunde tu porcentaje sin que haya pasado nada real en el mercado.
+
 ## Cuatro tipos de competidores que merece la pena considerar
 
 No todos los competidores juegan el mismo papel dentro de un análisis GEO. Una clasificación sencilla puede ayudarte a construir una lista equilibrada.
+
+<CompareTable>
 
 | Tipo | Cuándo incluirlo |
 |---|---|
@@ -61,6 +105,8 @@ No todos los competidores juegan el mismo papel dentro de un análisis GEO. Una 
 | **Competidor indirecto** | Resuelve el mismo problema con un enfoque distinto. |
 | **Referente del mercado** | Tiene mucha autoridad y suele aparecer aunque su producto sea más amplio. |
 | **No relevante** | No comparte cliente ni necesidad principal. Mejor dejarlo fuera. |
+
+</CompareTable>
 
 El objetivo no es llenar una lista enorme. Normalmente bastan unos pocos competidores bien elegidos para obtener una visión bastante representativa.
 
@@ -103,6 +149,31 @@ Cuanto más precisa sea esa comparación, más útiles serán las conclusiones. 
 <a href="/signup" className="btn btn-primary">Prueba gratis</a>
 </div>
 
+
+## Errores que invalidan el análisis
+
+<Checklist
+  tone="evitar"
+  items={[
+    "No copies un ranking de Internet: responde a criterios editoriales o comerciales, no a qué marcas considera relevantes la IA para tus clientes.",
+    "No te compares solo con gigantes si tus clientes reales no los consideran: obtendrás un resultado desalentador que no describe tu mercado.",
+    "No saques conclusiones de un único prompt. La competencia cambia según cómo se formule la pregunta.",
+    "No definas la lista una vez y te olvides: el mercado cambia y las respuestas de los modelos también."
+  ]}
+/>
+
+Si quieres el criterio completo con el que el sistema sugiere competidores, está en la <a href="/docs/metodologia/geo-score">metodología</a>, y los términos que aparecen aquí en el <a href="/glosario/cuota-de-voz-en-ia">glosario</a>.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Contra quién compites de verdad en las respuestas de IA?"
+  text="GenScore te sugiere competidores a partir de escaneos reales, no de una lista copiada."
+/>
 
 <RelatedPosts cluster="medicion" currentSlug={post.slug} />
 

@@ -6,6 +6,7 @@ import {
   auditDomainContent,
   extractGeminiStructuredData,
   inferBusinessProfile,
+  otherBrandsRelevanceHint,
   suggestCompetitors,
   suggestPrompts,
   GeminiConfigError,
@@ -16,11 +17,23 @@ import {
 const ORIGINAL_ENV = { ...process.env };
 
 function mockFetchOnce(body: unknown, status = 200) {
-  return vi.fn().mockResolvedValue({
+  return vi.fn().mockResolvedValue(mockResponse(body, status));
+}
+
+/**
+ * LLM-RESILIENCE-1 added a retrying path for the non-generation Gemini calls,
+ * and that path reads `Retry-After` off the response. A bare object without
+ * `headers` made a non-OK status blow up with a TypeError inside the retry
+ * loop instead of exercising the backoff — the test still went green, for the
+ * wrong reason.
+ */
+function mockResponse(body: unknown, status = 200) {
+  return {
     ok: status >= 200 && status < 300,
     status,
+    headers: { get: () => null },
     json: async () => body
-  });
+  };
 }
 
 function visibilityInput() {
@@ -724,6 +737,113 @@ describe("extractGeminiStructuredData — MENTION-VERIFY-1 (docs/adr/0021)", () 
     expect(promptText).toMatch(/EXACT substring of the response text/i);
     expect(promptText).toContain('"display_name_found": string|null');
   });
+
+  // EMERGING-BRANDS-GROUNDING-1: the "Marcas que aparecen y no sigues" block
+  // on the Competitors page was surfacing brands from a clearly different
+  // category (AliExpress/Carrefour/eBay for a browser project) because
+  // other_brands_mentioned had no notion of sector relevance. Grounds it in
+  // the same cached BusinessProfile suggestCompetitors/generateAddedPrompts
+  // already use, so a real mention outside the business's category never
+  // reaches the tracked-competitor suggestion surface.
+  it("EMERGING-BRANDS-GROUNDING-1: includes a sector-relevance hint in other_brands_mentioned instructions when a profile is provided", async () => {
+    const profile: BusinessProfile = {
+      whatItSells: "a web browser",
+      sector: "software",
+      subSector: "web browsers",
+      businessModel: "b2c",
+      targetCustomer: "general internet users",
+      geographicScope: "global",
+      sizeEstimate: "large",
+      confidence: "high"
+    };
+    const extractionJson = {
+      brand: { mentioned: true, display_name_found: "Mozilla", evidence: ["Mozilla is great"], position: 1 },
+      competitors: [],
+      citations: [],
+      sentiment: "positive",
+      sentiment_drivers: [],
+      other_brands_mentioned: [],
+      summary: "Mozilla looks great.",
+      confidence: "high",
+      notes: []
+    };
+    const fetchMock = mockFetchOnce({
+      candidates: [{ content: { parts: [{ text: JSON.stringify(extractionJson) }] } }],
+      modelVersion: "gemini-2.5-flash"
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await extractGeminiStructuredData({
+      brand: "Mozilla",
+      competitors: [],
+      rawResponseText: "Mozilla is a great browser.",
+      promptText: "What is the best browser?",
+      profile
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.contents[0].parts[0].text as string;
+
+    expect(promptText).toMatch(/plausible competitors or alternatives/i);
+    expect(promptText).toContain("sector: software");
+    expect(promptText).toContain("web browsers");
+  });
+
+  it("omits the sector-relevance hint when no profile is provided, keeping prior instructions unchanged", async () => {
+    const extractionJson = {
+      brand: { mentioned: true, display_name_found: "Acme", evidence: ["Acme is great"], position: 1 },
+      competitors: [],
+      citations: [],
+      sentiment: "positive",
+      sentiment_drivers: [],
+      other_brands_mentioned: [],
+      summary: "Acme looks great.",
+      confidence: "high",
+      notes: []
+    };
+    const fetchMock = mockFetchOnce({
+      candidates: [{ content: { parts: [{ text: JSON.stringify(extractionJson) }] } }],
+      modelVersion: "gemini-2.5-flash"
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await extractGeminiStructuredData({
+      brand: "Acme",
+      competitors: [],
+      rawResponseText: "Acme is a great CRM.",
+      promptText: "What is the best CRM?"
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.contents[0].parts[0].text as string;
+
+    expect(promptText).not.toMatch(/plausible competitors or alternatives/i);
+  });
+});
+
+describe("otherBrandsRelevanceHint", () => {
+  it("returns an empty string when no profile is given", () => {
+    expect(otherBrandsRelevanceHint(undefined)).toBe("");
+  });
+
+  it("mentions the sector and what the business sells when a profile is given", () => {
+    const hint = otherBrandsRelevanceHint({
+      whatItSells: "a web browser",
+      sector: "software",
+      subSector: "web browsers",
+      businessModel: "b2c",
+      targetCustomer: "general internet users",
+      geographicScope: "global",
+      sizeEstimate: "large",
+      confidence: "high"
+    });
+
+    expect(hint).toContain("software");
+    expect(hint).toContain("web browsers");
+    expect(hint).toContain("a web browser");
+  });
 });
 
 // COMPETITOR-GROUNDING-1 (docs/adr/0020-grounded-business-profile.md): these
@@ -988,6 +1108,55 @@ describe("suggestCompetitors (grounded, business-profile-driven)", () => {
       profile: financialProfile
     });
 
+    expect(result).toEqual([]);
+  });
+
+  // LLM-RESILIENCE-1. This is the exact call that emptied the onboarding
+  // wizard on 2026-08-09: the grounded competitor suggestion, against Gemini's
+  // 429. Before this phase it had no retry at all — the first rate-limited
+  // response was terminal, while the scan running in the same minute rode the
+  // same 429 out because only *it* backed off.
+  it("retries a 429 and succeeds on a later attempt", async () => {
+    const ok = mockResponse({
+      candidates: [
+        {
+          content: {
+            parts: [{ text: JSON.stringify({ competitors: [{ name: "Rival", domain: "rival.es" }] }) }]
+          }
+        }
+      ]
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(mockResponse({}, 429))
+      .mockResolvedValueOnce(ok);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await suggestCompetitors({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toEqual([{ name: "Rival", domain: "rival.es" }]);
+  });
+
+  it("does not retry a 400 — a wrong model id gives the same answer every time", async () => {
+    const fetchMock = mockFetchOnce({}, 400);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await suggestCompetitors({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual([]);
   });
 });

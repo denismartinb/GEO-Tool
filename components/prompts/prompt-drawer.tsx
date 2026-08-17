@@ -8,6 +8,8 @@ import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { FormattedResponse } from "@/components/ui/formatted-response";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
+import { sampleCountOf, sampleLabel } from "@/lib/scan/sample-display";
+import { matchDisplayName } from "@/lib/brand-aliases/match-display-name";
 // Same brand-domain matching the Citations page and run-scoring use, so
 // "Citada" here can never disagree with own_citation_share / citation_score
 // over what counts as the brand's own domain (BRAND-DOMAIN-1).
@@ -29,7 +31,7 @@ type Props = {
 };
 
 type ExtractedJson = {
-  brand?: { mentioned?: boolean; evidence?: string[] };
+  brand?: { mentioned?: boolean; evidence?: string[]; display_name_found?: string | null };
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[] }>;
   citations?: Array<{
     url?: string | null;
@@ -156,7 +158,19 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
       if (aOwn === bOwn) return 0;
       return aOwn ? -1 : 1;
     });
-    return { row: r, meta: getEngineMeta(r.provider), evidence, citations };
+    // Fase −1c (docs/geo-score-variability-2026-08.md §3): WHICH of the
+    // brand's known names this mention actually matched — the tracked brand
+    // string, or one of its aliases. Purely presentational, computed over
+    // this row's OWN snapshot (frozen at scan time, ADR 0025), never over the
+    // project's current brand_aliases, so a later alias edit can't relabel
+    // how an old mention is explained. Falls back to `projectBrand` only for
+    // rows persisted before brand_snapshot existed.
+    const displayNameMatch = matchDisplayName(
+      ext?.brand?.display_name_found,
+      r.brand_snapshot ?? projectBrand,
+      r.brand_aliases_snapshot ?? []
+    );
+    return { row: r, meta: getEngineMeta(r.provider), evidence, citations, displayNameMatch };
   });
   const evidenceGroups = engineGroups.filter((g) => g.evidence.length > 0);
   const citationGroups = engineGroups.filter((g) => g.citations.length > 0);
@@ -194,6 +208,22 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
   });
 
   const category = results[0].category;
+
+  /**
+   * SAMPLING-SURFACE-1 (ADR 0030): with repetitions, `results` arrives in
+   * whatever order the query returned, so the same engine's answers can be
+   * scattered through the "Por motor" list. Sorting by engine and then by
+   * sample puts an engine's own repetitions next to each other, which is what
+   * makes "this engine said different things on different tries" legible at a
+   * glance. `sampleCount` is derived once and shared with the label so the two
+   * cannot disagree about how many times the prompt was asked.
+   */
+  const sampleCount = sampleCountOf(results);
+  const enginesBySample = [...results].sort((a, b) => {
+    const byProvider = normalizeProvider(a.provider).localeCompare(normalizeProvider(b.provider));
+    if (byProvider !== 0) return byProvider;
+    return Number(a.sample_index ?? 0) - Number(b.sample_index ?? 0);
+  });
 
   return (
     <>
@@ -301,14 +331,27 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
               <div>
                 <p className="ac-title">Por motor</p>
                 <div className="aside-card">
-                  {results.map((r) => {
+                  {enginesBySample.map((r) => {
                     const meta = getEngineMeta(r.provider);
+                    const label = sampleLabel(r.sample_index, sampleCount);
                     return (
                       <div key={r.id} className="pr2-erow">
                         <span className="pr2-eav" style={{ color: meta.color }}>
                           <EngineGlyph provider={normalizeProvider(r.provider)} />
                         </span>
-                        <span className="pr2-erow-name">{meta.label}</span>
+                        {/* SAMPLING-SURFACE-1 (ADR 0030): with repetitions this
+                            list showed "Gemini / Gemini / Gemini / Claude /
+                            ..." with nothing saying why — three rows that look
+                            like a rendering bug but are in fact three separate
+                            answers to the same question, and whose disagreement
+                            is the entire point of sampling. The label only
+                            appears when there is more than one sample. */}
+                        <span className="pr2-erow-name">
+                          {meta.label}
+                          {label ? (
+                            <span style={{ color: "var(--ink-4)", fontWeight: 500 }}> · {label}</span>
+                          ) : null}
+                        </span>
                         <span className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
                           {r.brand_mentioned ? "Mencionada" : "Ausente"}
                         </span>
@@ -372,6 +415,17 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                             <EngineGlyph provider={normalizeProvider(g.row.provider)} />
                           </span>
                           <span className="nm">{g.meta.label}</span>
+                          {/* Fase −1c: dice explícitamente si la mención contó
+                              a través de un alias, no de "{projectBrand}"
+                              literal — el hueco que ADR 0025 dejó documentado
+                              sin arreglar ("este panel muestra la cita pero
+                              nunca dice que la mención contó porque casó con
+                              'Firefox' en vez de con 'Mozilla'"). */}
+                          {g.displayNameMatch?.isAlias ? (
+                            <span className="badge badge-accent" style={{ fontSize: 10 }}>
+                              vía alias «{g.displayNameMatch.matchedName}»
+                            </span>
+                          ) : null}
                         </div>
                         {g.evidence.map((ev, i) => (
                           <p key={i} className="pr2-evi">

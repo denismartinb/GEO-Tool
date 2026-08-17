@@ -2,29 +2,41 @@ import "server-only";
 
 import { after } from "next/server";
 import { resolvePlan } from "@/lib/billing";
-import { generateGeminiVisibilityAnswer, GeminiConfigError, type GeminiVisibilityResponse } from "@/lib/llm/gemini";
-import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/claude";
-import { generateOpenAIVisibilityAnswer, OpenAIConfigError } from "@/lib/llm/openai";
+import { delay } from "@/lib/llm/http";
+import { processPromptJob } from "@/lib/scan/prompt-job";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import {
   computeRecommendationTransition,
   type PreviousRecommendationRow
 } from "@/lib/recommendations/recommendation-history";
+import { computeEngineCoverage } from "@/lib/scan/engine-coverage";
+import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
+import {
+  resolveTechnicalComponent,
+  TECHNICAL_SNAPSHOT_LOOKUP_LIMIT
+} from "@/lib/scoring/geo-score-technical";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
+import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
   EXTRACTION_VERSION,
+  FINALIZE_LOCK_LEASE_MS,
   MAX_REAL_SCAN_PROMPTS,
-  PROMPT_RETRY_DELAY_MS,
-  PROMPT_RETRY_MAX_TOTAL_ATTEMPTS,
-  PROMPT_VERSION
+  PROMPT_LOCK_LEASE_MS,
+  SCAN_INVOCATION_WORK_BUDGET_MS
 } from "@/lib/scan/constants";
-import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/lib/scan/types";
+import { computeStaggerDelaysMs } from "@/lib/scan/pacing";
+import { triggerScanContinuation } from "@/lib/scan/continuation";
+import { ProjectActionError, type JobRow } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
-import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
+import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 import { emitNotification } from "@/lib/notifications/emit";
+import { getSiteUrl } from "@/lib/site-url";
+import { enqueueWebAuditJob } from "@/lib/web-audit/audit-job-runner";
+import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { gapPendingKey, gapResolvedKey, scanCompletedKey, scanFailedKey } from "@/lib/notifications/dedupe-keys";
 
 // gap_resolved's sampleTitles (NOTIF-SERVER-1a) needs each previous-run
@@ -32,372 +44,6 @@ import { gapPendingKey, gapResolvedKey, scanCompletedKey, scanFailedKey } from "
 // carry — extended locally rather than widening that shared type for one
 // caller.
 type PreviousRecommendationRowWithTitle = PreviousRecommendationRow & { title: string };
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export type LLMScanProvider = "gemini" | "claude" | "openai";
-const VALID_LLM_SCAN_PROVIDERS: LLMScanProvider[] = ["gemini", "claude", "openai"];
-
-function parseProviderList(raw: string): LLMScanProvider[] {
-  const parsed = raw
-    .split(",")
-    .map((p) => p.trim().toLowerCase())
-    .filter((p): p is LLMScanProvider => VALID_LLM_SCAN_PROVIDERS.includes(p as LLMScanProvider));
-  return Array.from(new Set(parsed));
-}
-
-/**
- * Engines run concurrently for every prompt in a scan: each prompt gets one
- * scan_prompt_results row per active engine (migration 0009), and KPIs/cards
- * are computed from the combined sample of all engines' rows (no per-engine
- * weighting). LLM_SCAN_PROVIDERS is a comma-separated list (e.g.
- * "gemini,claude"); falls back to the legacy single-value LLM_SCAN_PROVIDER,
- * and defaults to Gemini-only if neither is set, so deployments that never
- * configured either var keep their existing single-engine behavior.
- */
-export function getLLMScanProviders(): LLMScanProvider[] {
-  const multi = process.env.LLM_SCAN_PROVIDERS?.trim();
-  if (multi) {
-    const parsed = parseProviderList(multi);
-    if (parsed.length) return parsed;
-  }
-
-  const legacy = process.env.LLM_SCAN_PROVIDER?.trim().toLowerCase();
-  if (legacy === "claude") return ["claude"];
-  if (legacy === "openai") return ["openai"];
-  return ["gemini"];
-}
-
-type PromptJobOutcome =
-  | { kind: "success" }
-  | { kind: "failed" }
-  | { kind: "config_error"; error: Error };
-
-type ProviderAttemptResult =
-  | { provider: LLMScanProvider; kind: "success"; llmResult: GeminiVisibilityResponse; latency: number }
-  | { provider: LLMScanProvider; kind: "config_error"; error: Error }
-  | { provider: LLMScanProvider; kind: "retryable_error"; error: unknown };
-
-async function callProvider(
-  provider: LLMScanProvider,
-  input: { prompt: string; country: string; language: string }
-): Promise<GeminiVisibilityResponse> {
-  if (provider === "claude") return generateClaudeVisibilityAnswer(input);
-  if (provider === "openai") return generateOpenAIVisibilityAnswer(input);
-  return generateGeminiVisibilityAnswer(input);
-}
-
-// Processes a single scan_prompt job end-to-end (status transitions, one LLM
-// call per active engine with shared retry rounds, scan_prompt_results insert
-// per successful engine, job logging). Run concurrently for all prompt jobs
-// in a run (SCAN-ROBUST-2) so total LLM latency for a 6-prompt run stays
-// within the Hobby plan's maxDuration=60s budget
-// (docs/adr/0003-sync-scan-execution-and-maxduration.md); engines for the same
-// prompt also run concurrently with each other rather than sequentially, so
-// adding a second engine does not add to that budget. The job succeeds if at
-// least one engine produces a result. A GeminiConfigError/ClaudeConfigError
-// is only fatal for the whole run if every active engine for this prompt is
-// config-errored — one misconfigured engine must never take down another
-// engine that is working fine.
-async function processPromptJob({
-  service,
-  projectId,
-  runId,
-  job,
-  project,
-  competitors,
-  providers
-}: {
-  service: ReturnType<typeof createServiceClient>;
-  projectId: string;
-  runId: string;
-  job: JobRow;
-  project: { brand: string; country: string; language: string };
-  competitors: { name: string; domain: string }[];
-  providers: LLMScanProvider[];
-}): Promise<PromptJobOutcome> {
-  const baseAttemptCount = job.attempt_count;
-
-  await service
-    .from("jobs")
-    .update({
-      status: "running",
-      locked_at: new Date().toISOString(),
-      locked_by: "gemini-executor",
-      attempt_count: baseAttemptCount + 1,
-      last_error: null
-    })
-    .eq("id", job.id)
-    .eq("project_id", projectId)
-    .eq("run_id", runId);
-
-  const promptId = String(job.payload_json.prompt_id ?? "");
-  const promptText = String(job.payload_json.prompt_text ?? "").trim();
-
-  if (!promptId || !promptText) {
-    await logJob(service, {
-      jobId: job.id,
-      projectId,
-      runId,
-      level: "error",
-      message: "Missing prompt payload for scan_prompt job."
-    });
-
-    await service
-      .from("jobs")
-      .update({
-        status: "failed",
-        locked_at: null,
-        locked_by: null,
-        last_error: "Missing prompt payload."
-      })
-      .eq("id", job.id)
-      .eq("project_id", projectId)
-      .eq("run_id", runId);
-
-    return { kind: "failed" };
-  }
-
-  const { data: existingResults } = await service
-    .from("scan_prompt_results")
-    .select("provider")
-    .eq("run_id", runId)
-    .eq("project_id", projectId)
-    .eq("prompt_id", promptId);
-
-  const existingProviders = new Set((existingResults ?? []).map((row) => row.provider as string));
-  const pendingProviders = providers.filter((provider) => !existingProviders.has(provider));
-
-  if (pendingProviders.length === 0) {
-    await logJob(service, {
-      jobId: job.id,
-      projectId,
-      runId,
-      level: "warn",
-      message: "Skipping prompt job because a result already exists for every active engine.",
-      context: { prompt_id: promptId, providers }
-    });
-    await service
-      .from("jobs")
-      .update({
-        status: "completed",
-        locked_at: null,
-        locked_by: null
-      })
-      .eq("id", job.id)
-      .eq("project_id", projectId)
-      .eq("run_id", runId);
-
-    return { kind: "success" };
-  }
-
-  // Per-prompt retry (SCAN-ROBUST-1): total attempt rounds for this prompt are
-  // bounded by both `job.max_attempts` (jobs table, default 3) and
-  // PROMPT_RETRY_MAX_TOTAL_ATTEMPTS (2 — one retry), whichever is lower. Every
-  // engine that hasn't yet succeeded or hit a config error is retried
-  // together in the same round, so `job.attempt_count` reflects retry rounds
-  // for the prompt as a whole, not a per-engine call count. `attempt_count`
-  // already reflects round 1 from the update above; subsequent rounds bump it
-  // again before retrying.
-  const totalAttempts = Math.max(1, Math.min(job.max_attempts, PROMPT_RETRY_MAX_TOTAL_ATTEMPTS));
-
-  const remaining = new Set(pendingProviders);
-  const succeededProviders: LLMScanProvider[] = [];
-  const configErroredProviders = new Set<LLMScanProvider>();
-  let firstConfigError: Error | null = null;
-
-  for (let attempt = 1; attempt <= totalAttempts && remaining.size > 0; attempt += 1) {
-    if (attempt > 1) {
-      await delay(PROMPT_RETRY_DELAY_MS);
-      await service
-        .from("jobs")
-        .update({
-          status: "running",
-          locked_at: new Date().toISOString(),
-          locked_by: "gemini-executor",
-          attempt_count: baseAttemptCount + attempt,
-          last_error: null
-        })
-        .eq("id", job.id)
-        .eq("project_id", projectId)
-        .eq("run_id", runId);
-    }
-
-    const attemptProviders = Array.from(remaining);
-    const settled = await Promise.allSettled(
-      attemptProviders.map(async (provider): Promise<ProviderAttemptResult> => {
-        try {
-          const llmStart = Date.now();
-          const llmResult = await callProvider(provider, {
-            prompt: promptText,
-            country: project.country,
-            language: project.language
-          });
-          return { provider, kind: "success", llmResult, latency: Date.now() - llmStart };
-        } catch (error) {
-          if (error instanceof GeminiConfigError || error instanceof ClaudeConfigError || error instanceof OpenAIConfigError) {
-            return { provider, kind: "config_error", error };
-          }
-          return { provider, kind: "retryable_error", error };
-        }
-      })
-    );
-
-    for (const outcome of settled) {
-      // callProvider's try/catch above converts every failure into a
-      // resolved ProviderAttemptResult, so Promise.allSettled here never
-      // produces a "rejected" entry.
-      if (outcome.status !== "fulfilled") continue;
-      const result = outcome.value;
-
-      if (result.kind === "config_error") {
-        remaining.delete(result.provider);
-        configErroredProviders.add(result.provider);
-        firstConfigError = firstConfigError ?? result.error;
-
-        await logJob(service, {
-          jobId: job.id,
-          projectId,
-          runId,
-          level: "error",
-          message: "LLM prompt execution failed (config error).",
-          context: { prompt_id: promptId, provider: result.provider, error: result.error.message }
-        });
-        continue;
-      }
-
-      if (result.kind === "retryable_error") {
-        const isLastAttempt = attempt === totalAttempts;
-        await logJob(service, {
-          jobId: job.id,
-          projectId,
-          runId,
-          level: isLastAttempt ? "error" : "warn",
-          message: isLastAttempt ? "LLM prompt execution failed." : "LLM prompt execution failed, retrying.",
-          context: {
-            prompt_id: promptId,
-            provider: result.provider,
-            attempt,
-            total_attempts: totalAttempts,
-            error: result.error instanceof Error ? result.error.message : String(result.error)
-          }
-        });
-        continue;
-      }
-
-      // result.kind === "success"
-      remaining.delete(result.provider);
-
-      const responseLower = result.llmResult.text.toLowerCase();
-      const brandMentioned = responseLower.includes(project.brand.toLowerCase());
-      const mentionedCompetitorsCount = competitors.reduce(
-        (acc, competitor) => (responseLower.includes(competitor.name.toLowerCase()) ? acc + 1 : acc),
-        0
-      );
-
-      // Real citation extraction (grounding chunks + structured extraction)
-      // happens later in runStructuredExtractionForRun. citation_found /
-      // citations_count / extracted_json start unset here and are filled in
-      // by that step — see docs/adr/0004-gemini-search-grounding.md.
-      const { error: resultError } = await service.from("scan_prompt_results").insert({
-        run_id: runId,
-        project_id: projectId,
-        prompt_id: promptId,
-        prompt_text_snapshot: promptText,
-        brand_snapshot: project.brand,
-        competitors_snapshot: competitors.map((c) => ({ name: c.name, domain: c.domain })),
-        country_snapshot: project.country,
-        language_snapshot: project.language,
-        provider: result.provider,
-        model: result.llmResult.model,
-        status: "completed",
-        raw_response_text: result.llmResult.text,
-        raw_response_json: {
-          text: result.llmResult.text,
-          total_tokens: result.llmResult.totalTokens,
-          grounding_chunks: result.llmResult.groundingChunks ?? [],
-          prompt_version: PROMPT_VERSION
-        },
-        tokens_in: result.llmResult.tokensIn,
-        tokens_out: result.llmResult.tokensOut,
-        cost_usd: null,
-        llm_latency_ms: result.latency,
-        brand_mentioned: brandMentioned,
-        citation_found: false,
-        mentioned_competitors_count: mentionedCompetitorsCount,
-        citations_count: 0,
-        sentiment: "unknown" as const,
-        extraction_version: "phase4-basic-v1",
-        extracted_json: null
-      });
-
-      if (resultError) {
-        await logJob(service, {
-          jobId: job.id,
-          projectId,
-          runId,
-          level: "error",
-          message: "Failed to insert prompt result.",
-          context: { prompt_id: promptId, provider: result.provider, reason: resultError.message }
-        });
-        continue;
-      }
-
-      succeededProviders.push(result.provider);
-      await logJob(service, {
-        jobId: job.id,
-        projectId,
-        runId,
-        level: "info",
-        message: "Prompt job completed for engine.",
-        context: { prompt_id: promptId, provider: result.provider, brand_mentioned: brandMentioned }
-      });
-    }
-  }
-
-  if (succeededProviders.length > 0) {
-    await service
-      .from("jobs")
-      .update({
-        status: "completed",
-        locked_at: null,
-        locked_by: null
-      })
-      .eq("id", job.id)
-      .eq("project_id", projectId)
-      .eq("run_id", runId);
-
-    return { kind: "success" };
-  }
-
-  // No engine produced a result for this prompt. If every active engine was
-  // config-errored, this is a fatal, run-level misconfiguration (same
-  // semantics as the original single-provider behavior). A *partial* config
-  // error — one engine misconfigured, another merely failed/timed out —
-  // falls through to the generic "failed" branch instead, so a working
-  // engine is never taken down by an unrelated engine's bad config.
-  if (firstConfigError && configErroredProviders.size === pendingProviders.length) {
-    return { kind: "config_error", error: firstConfigError };
-  }
-
-  const errorSummary = getSanitizedScanError(null);
-
-  await service
-    .from("jobs")
-    .update({
-      status: "failed",
-      locked_at: null,
-      locked_by: null,
-      last_error: errorSummary
-    })
-    .eq("id", job.id)
-    .eq("project_id", projectId)
-    .eq("run_id", runId);
-
-  return { kind: "failed" };
-}
 
 /**
  * Recomputes `scan_runs.successful_prompts`/`failed_prompts` from the actual
@@ -445,76 +91,32 @@ async function refreshRunProgressCounters({
   return { successCount: successCount ?? 0, failedCount: failedCount ?? 0 };
 }
 
-export function getSiteUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
-  );
-}
-
 /**
- * Fires the next batch of a multi-batch campaign (SCAN-CHAIN-1) without
- * making the caller wait for it: called from inside `after()`, so Next.js
- * keeps this invocation's function instance alive just long enough for the
- * POST to actually reach `/api/scan/continue`, but the *response* to
- * whoever called `executePendingScan` (the manual "Lanzar escaneo" action,
- * the cron sweep, ...) has already been sent — this does not add to their
- * wait time. `/api/scan/continue` itself resolves quickly relative to its
- * own 60s budget; awaiting its response here just means "the next batch was
- * accepted," not "the whole remaining campaign finished."
- *
- * Errors are swallowed (logged only): if this dispatch is lost, the campaign
- * simply stalls until `reconcileStuckScanRuns` notices no progress and
- * auto-retries, same safety net as any other execution failure.
+ * Re-exported from its own leaf module (see `lib/site-url.ts` for why): the
+ * post-scan audit dispatcher needs it and this file imports the dispatcher,
+ * so defining it here would close an import cycle.
  */
-async function triggerScanContinuation({ projectId, runId }: { projectId: string; runId: string }): Promise<void> {
-  const secret = process.env.SCAN_CONTINUE_SECRET;
-  if (!secret) {
-    console.error("[scan-runner] cannot self-chain scan batch: SCAN_CONTINUE_SECRET is not configured", {
-      projectId,
-      runId
-    });
-    return;
-  }
-
-  try {
-    await fetch(`${getSiteUrl()}/api/scan/continue`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
-      body: JSON.stringify({ projectId, runId })
-    });
-  } catch (error) {
-    console.error("[scan-runner] failed to dispatch scan continuation", {
-      projectId,
-      runId,
-      message: error instanceof Error ? error.message : String(error)
-    });
-  }
-}
+export { getSiteUrl };
 
 export async function executePendingScan({
   projectId,
   runId,
-  supabase,
-  scheduleContinuation = true
+  supabase
 }: {
   projectId: string;
   runId: string;
   supabase: AuthenticatedContext["supabase"];
-  /**
-   * When a batch finishes with prompts still pending, whether to self-schedule
-   * the next batch via `after()` + a fetch to `/api/scan/continue`
-   * (docs/adr/0014). Default `true` keeps the background self-chain used by the
-   * cron / browser-closed path. The foreground driver (`autoExecutePendingScan`)
-   * passes `false`: it loops the batches itself within one request budget and
-   * re-drives from the client, so it neither needs the secret-gated
-   * continuation endpoint (which a preview deploy may not reach) nor wants a
-   * duplicate dispatch racing its own loop.
-   */
-  scheduleContinuation?: boolean;
 }) {
+  // One absolute deadline for everything this invocation does. Generation
+  // spends from it first; whatever remains is what extraction gets, across
+  // both the batch pass and the finalize sweep. See
+  // SCAN_INVOCATION_WORK_BUDGET_MS — a per-pass budget is what pushed the
+  // final batch's invocation past Vercel's 60s ceiling in production.
+  const workDeadlineAt = Date.now() + SCAN_INVOCATION_WORK_BUDGET_MS;
+
   const { data: run, error: runError } = await supabase
     .from("scan_runs")
-    .select("id, project_id, status, total_prompts")
+    .select("id, project_id, status, total_prompts, sample_count")
     .eq("id", runId)
     .eq("project_id", projectId)
     .single();
@@ -539,7 +141,7 @@ export async function executePendingScan({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, domain, brand, country, language, owner_user_id")
+    .select("id, domain, brand, brand_aliases, country, language, owner_user_id")
     .eq("id", projectId)
     .single();
 
@@ -556,7 +158,7 @@ export async function executePendingScan({
       .order("created_at", { ascending: true }),
     service
       .from("jobs")
-      .select("id, job_type, status, attempt_count, max_attempts, payload_json, created_at")
+      .select("id, job_type, status, attempt_count, max_attempts, payload_json, created_at, locked_at")
       .eq("project_id", projectId)
       .eq("run_id", runId)
       .order("created_at", { ascending: true })
@@ -589,16 +191,37 @@ export async function executePendingScan({
   const jobs = jobsRaw as unknown as (JobRow & { created_at: string })[];
   const startJob = jobs.find((job) => job.job_type === "scan_start");
   const finalizeJob = jobs.find((job) => job.job_type === "scan_finalize");
-  // Only the pending scan_prompt jobs, oldest first — the batch this
-  // invocation is responsible for (SCAN-CHAIN-1). Jobs already
-  // completed/failed by an earlier batch of this same campaign are left
-  // alone; anything beyond MAX_REAL_SCAN_PROMPTS stays pending for the next
-  // self-chained invocation.
-  const batchCandidates = jobs
-    .filter((job) => job.job_type === "scan_prompt" && job.status === "pending")
-    .slice(0, MAX_REAL_SCAN_PROMPTS);
-
   const nowIso = new Date().toISOString();
+  const promptLeaseExpiredBefore = new Date(Date.now() - PROMPT_LOCK_LEASE_MS).toISOString();
+
+  const promptJobs = jobs.filter((job) => job.job_type === "scan_prompt");
+
+  // A `running` prompt job whose lock is older than the lease belongs to an
+  // invocation that is gone (SCAN-DRIVE-1). Nothing else recovers it —
+  // `reconcileStuckScanRuns` only ever touches `scan_runs` — so before this,
+  // one killed batch left its jobs `running` forever, the campaign could never
+  // observe "every prompt job terminal", and finalize was unreachable. Same
+  // lease the finalize job has had since docs/adr/0029; it was simply never
+  // extended to the batches, which are the part that actually spends tens of
+  // seconds on provider calls.
+  const staleRunningJobs = promptJobs.filter(
+    (job) => job.status === "running" && Boolean(job.locked_at) && String(job.locked_at) < promptLeaseExpiredBefore
+  );
+
+  // A job that has already spent its attempts must not be reclaimed forever:
+  // it is failed instead, which takes it out of the unfinished set and lets
+  // the campaign reach finalize with a truthful count. Without this split, a
+  // job that reliably kills its invocation would be re-claimed on every pass.
+  const reclaimableJobs = staleRunningJobs.filter((job) => job.attempt_count < job.max_attempts);
+  const exhaustedStaleJobs = staleRunningJobs.filter((job) => job.attempt_count >= job.max_attempts);
+
+  // Oldest work first — a reclaimed job is older than anything still pending,
+  // and it is what blocks the campaign from finalizing. Anything beyond
+  // MAX_REAL_SCAN_PROMPTS waits for the next self-chained invocation.
+  const batchCandidates = [
+    ...reclaimableJobs,
+    ...promptJobs.filter((job) => job.status === "pending")
+  ].slice(0, MAX_REAL_SCAN_PROMPTS);
 
   if (isFirstBatch) {
     const { data: runningRun, error: runStartError } = await service
@@ -615,23 +238,55 @@ export async function executePendingScan({
     }
   }
 
-  // PRICING-TRUTH-1 (PR b): the active engine set is otherwise a single
-  // deployment-wide env var (LLM_SCAN_PROVIDERS) — cap it per the project
-  // owner's plan (`caps.engines`) so a Free project never fans out to more
-  // engines than its plan promises. A no-op today (every plan already caps
-  // at <= the number of real engines configured), but becomes load-bearing
-  // the moment a third engine is added (ENGINES-2) without needing to touch
-  // this gate again. `.slice` preserves LLM_SCAN_PROVIDERS' configured order,
-  // so whichever engine is listed first is the one every plan gets.
+  // Plan-capped engine set (PRICING-TRUTH-1 PR b) — see
+  // resolveScanProvidersForPlan. Shared with createPendingScanRunCore so the
+  // engine count the sampling was sized from is the same one executed here.
   const { data: ownerProfile } = await service
     .from("profiles")
     .select("current_plan")
     .eq("id", project.owner_user_id as string)
     .maybeSingle();
   const plan = resolvePlan(ownerProfile?.current_plan as string | undefined);
-  const providers = getLLMScanProviders().slice(0, plan.caps.engines);
+
+  /**
+   * `engine_{gemini,claude,openai}_enabled` (ENGINE-DEBUG-TOGGLE-1, migration
+   * 0033), re-read HERE rather than carried in `run` from creation time — same
+   * "re-read at execution, don't freeze at enqueue" rule WEB-AUDIT-AUTO-SPLIT-1
+   * established for its audit-half switches: a batch executed later than
+   * creation must see whatever the founder's switches say NOW, not what they
+   * said when the run was created. Isolated query for the same reason as
+   * `run-creation.ts`'s: the select above (`project`) is on the execution
+   * critical path, and a column PostgREST doesn't know about must not fail it.
+   */
+  const { data: engineFlagsRow } = await service
+    .from("projects")
+    .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  const enabledEngines: LLMScanProvider[] | undefined = engineFlagsRow
+    ? (
+        [
+          engineFlagsRow.engine_gemini_enabled !== false ? "gemini" : null,
+          engineFlagsRow.engine_claude_enabled !== false ? "claude" : null,
+          engineFlagsRow.engine_openai_enabled !== false ? "openai" : null
+        ].filter(Boolean) as LLMScanProvider[]
+      )
+    : undefined;
+
+  const providers = resolveScanProvidersForPlan(plan, enabledEngines);
 
   try {
+    // Same fake-scan guard as `createPendingScanRunCore` — see its comment.
+    // Reachable here only if every engine was switched off strictly between
+    // this run's creation and this batch executing. Thrown INSIDE this `try`,
+    // not before it, so the `catch` below marks the run `failed` with a real
+    // `error_summary` instead of leaving it `pending`/`running` for
+    // `reconcileStuckScanRuns` to notice only once its timeout elapses.
+    if (providers.length === 0) {
+      throw new ProjectActionError("no_engines_enabled");
+    }
+
     if (isFirstBatch && startJob) {
       await service
         .from("jobs")
@@ -652,7 +307,10 @@ export async function executePendingScan({
         runId,
         level: "info",
         message: "LLM scan started.",
-        context: { providers }
+        // sample_count logged alongside the engine set (SAMPLING-1) so
+        // "why did this run make 3x the calls" is answerable from job_logs
+        // alone, without recomputing the sampling decision after the fact.
+        context: { providers, sample_count: run.sample_count ?? 1 }
       });
 
       await service
@@ -667,30 +325,103 @@ export async function executePendingScan({
         .eq("run_id", runId);
     }
 
+    // A stale-locked job that has no attempts left is failed rather than
+    // reclaimed, so it stops blocking the campaign's path to finalize. The
+    // error is a constant this codebase authored (never a provider string),
+    // per .claude/rules/scan.md.
+    if (exhaustedStaleJobs.length > 0) {
+      const staleJobErrorSummary = getSanitizedScanError(null);
+
+      await service
+        .from("jobs")
+        .update({ status: "failed", locked_at: null, locked_by: null, last_error: staleJobErrorSummary })
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "running")
+        .lt("locked_at", promptLeaseExpiredBefore)
+        .in(
+          "id",
+          exhaustedStaleJobs.map((job) => job.id)
+        );
+
+      for (const job of exhaustedStaleJobs) {
+        await logJob(service, {
+          jobId: job.id,
+          projectId,
+          runId,
+          level: "error",
+          message: "Prompt job failed: lock lease expired with no attempts left.",
+          context: { attempt_count: job.attempt_count, max_attempts: job.max_attempts }
+        });
+      }
+    }
+
     // Atomically claim this batch's candidates (SCAN-CHAIN-1): a duplicate
     // continuation dispatch (network retry, an `after()` re-fire) racing
     // against this invocation can only ever "win" jobs that are still
     // `pending` at the moment of the update — whichever invocation's UPDATE
     // commits first for a given row is the only one that processes it.
-    let claimedJobs: (JobRow & { created_at: string })[] = [];
-    if (batchCandidates.length > 0) {
+    //
+    // Two claims, not one, because a candidate is either still `pending` or a
+    // `running` job whose lease expired (SCAN-DRIVE-1). Both are the same
+    // atomic conditional UPDATE — the reclaim additionally requires the lock
+    // to be older than the lease, so whichever invocation commits first moves
+    // `locked_at` and every racing one stops matching. Splitting them keeps
+    // each predicate exact: a claim that matched `running` unconditionally
+    // would steal work from a live invocation.
+    const claimPatch = { status: "running", locked_at: nowIso, locked_by: "gemini-executor" };
+    const claimedColumns = "id, job_type, status, attempt_count, max_attempts, payload_json, created_at, locked_at";
+    const claimedJobs: (JobRow & { created_at: string })[] = [];
+
+    const pendingCandidateIds = batchCandidates.filter((job) => job.status === "pending").map((job) => job.id);
+    const reclaimCandidateIds = batchCandidates.filter((job) => job.status === "running").map((job) => job.id);
+
+    if (pendingCandidateIds.length > 0) {
       const { data: claimedRows, error: claimError } = await service
         .from("jobs")
-        .update({ status: "running", locked_at: nowIso, locked_by: "gemini-executor" })
+        .update(claimPatch)
         .eq("project_id", projectId)
         .eq("run_id", runId)
         .eq("status", "pending")
-        .in(
-          "id",
-          batchCandidates.map((job) => job.id)
-        )
-        .select("id, job_type, status, attempt_count, max_attempts, payload_json, created_at");
+        .in("id", pendingCandidateIds)
+        .select(claimedColumns);
 
       if (claimError) {
         throw new ProjectActionError("scan_failed");
       }
 
-      claimedJobs = (claimedRows ?? []) as unknown as (JobRow & { created_at: string })[];
+      claimedJobs.push(...((claimedRows ?? []) as unknown as (JobRow & { created_at: string })[]));
+    }
+
+    if (reclaimCandidateIds.length > 0) {
+      const { data: reclaimedRows, error: reclaimError } = await service
+        .from("jobs")
+        .update(claimPatch)
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "running")
+        .lt("locked_at", promptLeaseExpiredBefore)
+        .in("id", reclaimCandidateIds)
+        .select(claimedColumns);
+
+      if (reclaimError) {
+        throw new ProjectActionError("scan_failed");
+      }
+
+      const reclaimed = (reclaimedRows ?? []) as unknown as (JobRow & { created_at: string })[];
+
+      for (const job of reclaimed) {
+        await logJob(service, {
+          jobId: job.id,
+          projectId,
+          runId,
+          level: "warn",
+          message: "Reclaimed a prompt job whose lock lease expired.",
+          context: { attempt_count: job.attempt_count, max_attempts: job.max_attempts, providers }
+        });
+      }
+
+      claimedJobs.push(...reclaimed);
     }
 
     if (claimedJobs.length > 0) {
@@ -700,9 +431,22 @@ export async function executePendingScan({
       // (docs/adr/0003-sync-scan-execution-and-maxduration.md). A campaign
       // larger than MAX_REAL_SCAN_PROMPTS spans multiple such batches,
       // chained below (docs/adr/0014-batched-self-chaining-scan-execution.md).
+      // LLM-RESILIENCE-1: spread the starts. Every job below fires one call
+      // per engine, so dispatching the whole batch on the same tick puts up to
+      // MAX_REAL_SCAN_PROMPTS simultaneous requests on each provider from a
+      // standing start — the burst shape that `EXTRACTION_CONCURRENCY` already
+      // exists to avoid one stage later. Bounded and budget-aware; see
+      // computeStaggerDelaysMs.
+      const staggerDelays = computeStaggerDelaysMs({
+        count: claimedJobs.length,
+        remainingBudgetMs: workDeadlineAt - Date.now()
+      });
+
       const promptJobResults = await Promise.allSettled(
-        claimedJobs.map((job) =>
-          processPromptJob({
+        claimedJobs.map(async (job, index) => {
+          const wait = staggerDelays[index] ?? 0;
+          if (wait > 0) await delay(wait);
+          return processPromptJob({
             service,
             projectId,
             runId,
@@ -710,8 +454,8 @@ export async function executePendingScan({
             project,
             competitors: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain })),
             providers
-          })
-        )
+          });
+        })
       );
 
       let configError: Error | null = null;
@@ -727,6 +471,22 @@ export async function executePendingScan({
         throw configError;
       }
 
+      await refreshRunProgressCounters({ service, projectId, runId });
+
+      // EXTRACTION-RELIABILITY-1: extract this batch's rows in the same
+      // invocation that generated them, instead of leaving every row in the
+      // campaign to a single pass at finalize. That pass was capped at 20
+      // rows and silently dropped the rest; spreading the work across the
+      // batches that produce it is what makes an uncapped extraction fit the
+      // ~60s budget at all (docs/adr/0029). Anything this pass cannot reach
+      // stays eligible for the next batch or for the finalize sweep below.
+      await runStructuredExtractionForRun({ service, projectId, runId, deadlineAt: workDeadlineAt });
+
+      // Second progress write, after the pass rather than only before it, so
+      // every invocation bumps `scan_runs.updated_at` on its way out. Without
+      // it, a long extraction pass is indistinguishable from a stalled
+      // campaign to `reconcileStuckScanRuns`, which keys staleness on
+      // `updated_at` — a run doing real work must never look stuck.
       await refreshRunProgressCounters({ service, projectId, runId });
     }
 
@@ -746,8 +506,8 @@ export async function executePendingScan({
       .in("status", ["pending", "running"]);
 
     if ((unfinishedCount ?? 0) > 0) {
-      // Work remains. If this invocation just made real progress
-      // (claimedJobs.length > 0), it owns handing off to the next batch
+      // Work remains, and this invocation made real progress
+      // (claimedJobs.length > 0), so it owns handing off to the next batch
       // without making whoever called executePendingScan (the manual scan
       // action, the cron sweep, a prior continuation) wait for it. If this
       // invocation claimed nothing — every candidate was already claimed by
@@ -755,11 +515,25 @@ export async function executePendingScan({
       // other invocation; scheduling a second continuation here would just
       // be redundant.
       //
-      // `scheduleContinuation === false` means the caller (the foreground
-      // driver) is looping the batches itself, so it does not want a
-      // self-fetch continuation — which it doesn't need and which a preview
-      // deploy may not even be able to reach (docs/adr/0014).
-      if (scheduleContinuation && claimedJobs.length > 0) {
+      // The hand-off is now unconditional (SCAN-DRIVE-1). It used to be
+      // suppressed for the foreground driver, on the reasoning that the
+      // driver loops the batches itself and a preview deploy may not be able
+      // to reach the secret-gated endpoint anyway (docs/adr/0014). What that
+      // missed is that the foreground driver lives in the user's *browser*:
+      // when a phone locks the screen or the tab is backgrounded, iOS Safari
+      // suspends its JavaScript, the loop stops asking for batches, and the
+      // campaign has no other driver anywhere. That is the 2026-08-07
+      // genscore.es failure — two runs, 31 prompts, 50 real answers
+      // generated and thrown away, with every unfinished job left `pending`
+      // and nothing in the system able to claim it (docs/adr/0037).
+      //
+      // A duplicate dispatch racing the foreground loop is safe by
+      // construction, not by luck: batches are claimed with an atomic
+      // conditional UPDATE, so whichever invocation commits first is the only
+      // one that processes a given job. The cost of an unreachable
+      // continuation on a preview deploy is a logged error; the cost of not
+      // scheduling one is a scan that only advances while a screen is awake.
+      if (claimedJobs.length > 0) {
         after(() => triggerScanContinuation({ projectId, runId }));
       }
       return;
@@ -775,15 +549,17 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed");
     }
 
+    const finalizeClaim = {
+      status: "running",
+      locked_at: nowIso,
+      locked_by: "gemini-executor",
+      attempt_count: finalizeJob.attempt_count + 1,
+      last_error: null
+    };
+
     const { data: claimedFinalize, error: claimFinalizeError } = await service
       .from("jobs")
-      .update({
-        status: "running",
-        locked_at: nowIso,
-        locked_by: "gemini-executor",
-        attempt_count: finalizeJob.attempt_count + 1,
-        last_error: null
-      })
+      .update(finalizeClaim)
       .eq("id", finalizeJob.id)
       .eq("project_id", projectId)
       .eq("run_id", runId)
@@ -795,10 +571,52 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed");
     }
 
-    if (!claimedFinalize) {
-      // Another invocation already claimed (or already completed) finalize
-      // for this campaign.
-      return;
+    let ownsFinalize = Boolean(claimedFinalize);
+
+    if (!ownsFinalize) {
+      // Not pending. Either another invocation is genuinely working on it, or
+      // it is a corpse: an invocation that claimed finalize and was killed
+      // (Vercel `maxDuration`) before it could complete or release the job.
+      // Nothing else recovers that — `reconcileStuckScanRuns` only ever
+      // touches `scan_runs`, never `jobs` — so before this lease, one killed
+      // invocation stranded the campaign for good: every later invocation
+      // failed the pending-claim, returned here doing nothing, and
+      // `updated_at` stopped moving until the run was failed as stuck. That
+      // is the 2026-08-04 IKEA failure (run 9608d861), and it cost a full
+      // re-scan of 26 prompts × 3 engines to recover from.
+      //
+      // Taking over a lock older than the lease is still exclusive: whichever
+      // invocation's UPDATE commits first moves `locked_at`, so every racing
+      // one stops matching the predicate — same atomic claim the prompt
+      // batches use.
+      const leaseExpiredBefore = new Date(Date.now() - FINALIZE_LOCK_LEASE_MS).toISOString();
+
+      const { data: reclaimedFinalize } = await service
+        .from("jobs")
+        .update(finalizeClaim)
+        .eq("id", finalizeJob.id)
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "running")
+        .lt("locked_at", leaseExpiredBefore)
+        .select("id")
+        .maybeSingle();
+
+      if (!reclaimedFinalize) {
+        // Genuinely held by a live invocation (or already completed).
+        return;
+      }
+
+      await logJob(service, {
+        jobId: finalizeJob.id,
+        projectId,
+        runId,
+        level: "warn",
+        message: "Reclaimed a finalize job whose lock lease expired.",
+        context: { providers }
+      });
+
+      ownsFinalize = true;
     }
 
     const { count: totalSuccessCount } = await service
@@ -819,11 +637,57 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed_no_results");
     }
 
+    // Final sweep: picks up rows whose batch pass ran out of budget, plus
+    // any row belonging to a batch driven by an invocation that died before
+    // its own pass finished.
     await runStructuredExtractionForRun({
       service,
       projectId,
-      runId
+      runId,
+      deadlineAt: workDeadlineAt
     });
+
+    // EXTRACTION-RELIABILITY-1 invariant: a run may not be marked `completed`
+    // while it still holds answers nothing has tried to extract. Scoring runs
+    // on `extracted_json`, so completing here would publish a score computed
+    // from a fraction of the run's own data and call it done — which is
+    // exactly the failure this phase exists to remove.
+    //
+    // Rather than fail (which would throw away good data) or complete
+    // anyway (which would hide the gap), the finalize job is released back to
+    // `pending` so a fresh invocation — with a fresh budget — can finish the
+    // work. Progress is strictly monotonic: every pass either extracts a row
+    // or records a categorized error on it, and both take that row out of the
+    // unprocessed set, so this can only repeat a bounded number of times. If
+    // it somehow stalls entirely, the run stops bumping `updated_at` and
+    // `reconcileStuckScanRuns` applies its usual timeout + auto-retry.
+    const unprocessedCount = await countUnprocessedExtractionRows({ service, projectId, runId });
+
+    if (unprocessedCount > 0) {
+      await logJob(service, {
+        jobId: finalizeJob.id,
+        projectId,
+        runId,
+        level: "warn",
+        message: "Extraction incomplete; deferring finalize to another invocation.",
+        context: { unprocessed: unprocessedCount, providers }
+      });
+
+      await service
+        .from("jobs")
+        .update({ status: "pending", locked_at: null, locked_by: null })
+        .eq("id", finalizeJob.id)
+        .eq("project_id", projectId)
+        .eq("run_id", runId);
+
+      // Bumps scan_runs.updated_at via the DB trigger, so the deferred run
+      // does not look stalled to the reconciliation pass while it is in fact
+      // still advancing.
+      await refreshRunProgressCounters({ service, projectId, runId });
+
+      after(() => triggerScanContinuation({ projectId, runId }));
+      return;
+    }
 
     const { data: promptResults } = await service
       .from("scan_prompt_results")
@@ -834,6 +698,37 @@ export async function executePendingScan({
       .eq("run_id", runId);
 
     const completedPromptResults = (promptResults ?? []).filter((row) => row.status === "completed");
+
+    // GEO-SCORE-V4 Fase B (docs/adr/0033): record whether this run actually
+    // measured every engine the plan promises. A prompt job succeeds when at
+    // least one engine returns, so a provider outage removes rows from the
+    // sample without failing anything — worth ~13 GEO points in the
+    // reproduction in docs/geo-score-variability-2026-08.md §1. The score is
+    // still computed over exactly the rows that exist; this only records the
+    // fact so the surfaces can stop presenting a partial run as a full one.
+    const engineCoverage = computeEngineCoverage({
+      expectedProviders: providers,
+      observedProviders: completedPromptResults.map((row) => row.provider)
+    });
+
+    // GEO-SCORE-V4 (docs/adr/0033): the technical component. The audit for
+    // THIS run has not run yet at this point (it is enqueued after the run
+    // completes, docs/adr/0027), so this normally resolves to the project's
+    // most recent earlier snapshot and is re-resolved exactly when this run's
+    // own audit lands (rescoreRunWithTechnicalSnapshot).
+    const { data: auditSnapshots } = await service
+      .from("web_audit_snapshots")
+      .select("id, scan_id, readiness_score, created_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(TECHNICAL_SNAPSHOT_LOOKUP_LIMIT);
+
+    const technicalResolution = resolveTechnicalComponent({
+      runId,
+      runFinishedAt: new Date(),
+      snapshots: auditSnapshots ?? []
+    });
+
     const scores = computeRunScoresFromResults(
       completedPromptResults.map((row) => ({
         id: row.id,
@@ -849,7 +744,12 @@ export async function executePendingScan({
         provider: row.provider,
         extraction_version: row.extraction_version
       })),
-      project.domain
+      project.domain,
+      {
+        technical: technicalResolution.component,
+        technicalReason: technicalResolution.reason,
+        engineCoverage
+      }
     );
 
     await service.from("run_scores").upsert(
@@ -1144,6 +1044,20 @@ export async function executePendingScan({
       .eq("id", runId)
       .eq("project_id", projectId);
 
+    // EXTRACTION-RELIABILITY-1 Fase B: a run can reach `completed` and still
+    // have lost a whole engine's data — that is precisely how OpenAI's 429s
+    // stayed invisible for four days. Checked here, after the run's own
+    // status update is durable, so the alert describes a state that really
+    // landed. Fail-soft inside, like every other post-scan side effect.
+    await checkAndSendScanHealthAlert({
+      service,
+      projectId,
+      runId,
+      projectDomain: project.domain as string,
+      expectedEngines: providers,
+      finalizeJobId: finalizeJob.id
+    });
+
     // Emitted only after the run's own status update above is durable — a
     // notification must never describe a state that hasn't actually landed.
     await emitNotification(service, {
@@ -1163,6 +1077,32 @@ export async function executePendingScan({
         resolvedGaps: resolvedGapsCount
       }
     });
+
+    // AUDIT-AFTER-SCAN-1: the web audit is no longer something a human has to
+    // remember to click. Queued here, after the run is durably 'completed',
+    // because the audit reads the run's persisted results — queueing earlier
+    // would race the very data it audits.
+    //
+    // Wrapped in its own try/catch for the same reason as the recommendation
+    // block above: the scan itself succeeded. A queueing failure must never
+    // surface to the user as a failed scan.
+    if (isAutoWebAuditEnabled()) {
+      try {
+        const enqueued = await enqueueWebAuditJob({ service, projectId, runId });
+        // Only dispatch when this call actually created the job. On
+        // "already_queued" something else already owns the work, and firing
+        // again would just race it.
+        if (enqueued === "enqueued") {
+          after(() => triggerWebAuditRun());
+        }
+      } catch (auditError) {
+        console.error("[scan-runner] failed to queue the post-scan web audit; the run itself completed", {
+          projectId,
+          runId,
+          message: auditError instanceof Error ? auditError.message : "unknown"
+        });
+      }
+    }
   } catch (error) {
     const errorSummary = getSanitizedScanError(error);
 

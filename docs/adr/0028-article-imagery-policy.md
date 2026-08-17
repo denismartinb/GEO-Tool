@@ -1,0 +1,206 @@
+# ADR 0028 — Política de imágenes e ilustración en artículos
+
+- **Estado:** aceptado
+- **Fecha:** 2026-08-03
+- **Fase:** GROWTH-3 Fase 3.1
+- **Decide:** de dónde salen los activos visuales de un artículo del blog, y
+  de dónde no.
+- **Renumerado 2026-08-04:** este ADR se publicó como `0026` y colisionaba con
+  `0026-position-when-mentioned.md`, que ya se había mergeado con el mismo
+  número. Se mueve este porque todas sus referencias citaban el nombre
+  completo del fichero, mientras que una docena de referencias en
+  `lib/scoring/` y `app/dashboard/` dicen solo «docs/adr/0026» y se refieren
+  al otro. Un enlace antiguo a `0026-article-imagery-policy.md` ya no
+  resuelve; es el precio de que «ADR 0026» a secas vuelva a significar una
+  sola cosa. Ver ADR 0001 §Numeración.
+
+## Contexto
+
+Hasta esta fase, los 7 artículos del blog tenían **cero imágenes en el
+cuerpo**. Cuatro tenían una `cover.png` de portada; tres ni eso. El único uso
+de un componente visual en todo el blog eran 3 apariciones sueltas
+(`ProcessFlow` ×2, `GeoScoreBreakdown` ×1). Todo lo demás era texto, listas y
+alguna tabla markdown.
+
+El diagnóstico del fundador (2026-08-03): un blog de texto plano puede traer
+tráfico, pero la tasa de rebote será alta y no habrá engagement. La referencia
+aportada fueron tres PDFs de la Knowledge Base y el blog de Semrush.
+
+Al analizar esos PDFs aparece el hallazgo que gobierna esta decisión:
+
+> **Ningún visual de Semrush es decorativo. Todos son evidencia.** Cada imagen
+> es o una captura que prueba la afirmación, o un ejemplo enmarcado del patrón
+> que se está enseñando, o una tarjeta de datos con la cifra destacada y su
+> fuente.
+
+Eso convierte la pregunta "¿qué imágenes ponemos?" en una pregunta de
+honestidad, no de estética — que es terreno donde este proyecto ya tiene
+reglas duras (`CLAUDE.md`: nada de métricas falsas, recomendaciones falsas ni
+comportamiento de producto falso).
+
+## Opciones consideradas
+
+1. **Ilustración generada por IA.** Rápida y barata de producir en volumen.
+2. **Banco de imágenes de stock.** Inmediata, sin coste de producción.
+3. **Capturas reales del producto**, cosechadas del harness del `ux-pilot`,
+   que ya captura las pantallas reales en 3 anchos en cada despliegue.
+4. **Maquetas del producto construidas en SVG/CSS**, con datos de ejemplo,
+   igual que ya hace la landing `/geo` (`GaugeMock`, tarjetas de métricas).
+
+## Decisión
+
+**Se adoptan (4) las maquetas SVG/CSS como fuente principal, y (3) las
+capturas reales solo en documentación de producto (`/docs`).**
+
+**Se rechazan (1) la ilustración generada por IA y (2) el stock, para todo el
+contenido del sitio.**
+
+> **Enmienda de 2026-08-04 — esta frase ya no es absoluta.** Las **portadas**
+> de artículo quedan excluidas de este rechazo por decisión del fundador. La
+> prohibición sigue vigente dentro del cuerpo. Ver §Enmienda al final del
+> documento antes de aplicar esta sección.
+
+### Por qué se rechaza la ilustración generada por IA
+
+- **Puede mentir.** Una ilustración generada puede representar una interfaz
+  que no existe, una métrica que no calculamos o un resultado que no hemos
+  medido. La regla de `CLAUDE.md` contra el producto falso no distingue entre
+  mentir con texto y mentir con un dibujo.
+- **No es determinista.** Un agente que regenera el artículo produce otra
+  imagen distinta. Un componente SVG produce el mismo píxel siempre, y su
+  diff es legible en la PR.
+- **Se sale de la identidad.** La marca tiene paleta y tipografía definidas
+  (`docs/brand/brand-guidelines.md`); un generador no las respeta de forma
+  fiable.
+- **Coste marginal.** Cada imagen cuesta dinero y tiempo de revisión; un
+  componente se escribe una vez y se reutiliza.
+
+### Por qué las maquetas y no las capturas reales, para el blog
+
+Las capturas del `ux-pilot` son de la cuenta piloto, que vive en el **mismo
+proyecto de Supabase que producción** y contiene datos reales. Publicarlas en
+un artículo de marketing supone exponer datos de un proyecto real sin una
+decisión explícita al respecto. Las maquetas dan control total del dato
+mostrado y riesgo cero de filtración.
+
+En `/docs`, donde el objetivo es enseñar a usar el producto y la captura
+anotada es el recurso correcto (es el patrón de la KB de Semrush), sí se
+permiten capturas reales — **con datos de una cuenta de demostración, nunca
+de un cliente**.
+
+## Consecuencias
+
+### Obligatorio
+
+- Toda maqueta de producto en un artículo lleva **datos de ejemplo**, y el pie
+  de figura lo dice explícitamente.
+- Toda cifra real que aparezca en una maqueta o en un `Stat` **cita su
+  fuente** (ADR, fichero de código o fuente externa con fecha). Un `Stat` sin
+  `source` no compila: la prop es obligatoria en el tipo.
+- Los pesos, umbrales y etiquetas que aparezcan en una maqueta deben coincidir
+  con los reales del producto. Si ADR-0015 dice 40/25/20/15, la maqueta dice
+  40/25/20/15.
+
+### Prohibido
+
+- Ilustración generada por IA **dentro del cuerpo** de una página pública.
+  (Enmienda de 2026-08-04: las **portadas** quedan excluidas de esta
+  prohibición — ver §Enmienda al final.)
+- Imágenes de stock **dentro del cuerpo** de una página pública.
+- Capturas de la cuenta piloto o de cualquier proyecto de cliente en
+  contenido de marketing.
+- Maquetas que muestren una función que el producto no tiene.
+
+### Coste
+
+Cero coste marginal por artículo. El coste es de una sola vez: la librería de
+componentes (`components/blog/article/`), construida en esta fase.
+
+## Referencias
+
+- `docs/brand/article-design-system.md` — la librería y sus reglas de uso.
+- `docs/brand/brand-guidelines.md` — paleta y tipografía de las que salen las
+  maquetas.
+- `docs/adr/0015-geo-score-v2.md` — los pesos reales que las maquetas deben
+  respetar.
+- `docs/agentic-user-pilot.md` — el harness cuyas capturas se descartan para
+  marketing y se permiten en `/docs`.
+
+---
+
+## Enmienda (2026-08-04) — las portadas quedan fuera de la prohibición
+
+**Decisión del fundador**, tras revisar el blog en móvil: las portadas
+generadas por el sistema de respaldo (degradado + icono) **no valen**. Sus
+palabras: *"parece un icono de algo que no carga bien"*, y *"hay que currarse
+bien las imágenes principales de todos los artículos, porque es lo que le da
+al blog una sensación de que es coherente y de que aporta valor"*.
+
+### Qué cambia
+
+Se permite **imagen generada o de stock en la portada** de un artículo.
+
+### Qué NO cambia, y por qué
+
+La prohibición sigue en pie **dentro del cuerpo del artículo**. La razón
+original no era estética, era de honestidad: una imagen generada puede
+representar una interfaz que no existe o una métrica que no calculamos, y eso
+es mentir con un dibujo. Dentro del artículo, donde el visual va junto a una
+afirmación concreta, ese riesgo es real.
+
+En una portada el riesgo desaparece **si la portada no afirma nada**. De ahí
+la regla que acompaña a la enmienda:
+
+> Una portada puede ser generada o de stock, pero **no puede representar una
+> interfaz de producto, un gráfico, un panel ni una métrica**. Si la portada
+> enseña algo que parece un dato de Genscore, ese dato tiene que existir — y
+> entonces ya no es una portada, es una figura, y le aplica la regla del
+> cuerpo.
+
+Es decir: portadas conceptuales o abstractas, sí. Portadas que simulen
+nuestro producto, no.
+
+### Lo que esto implica en la práctica
+
+- Las 4 portadas actuales (aportadas por el fundador) **se mantienen**.
+- Faltan 3: `que-es-el-geo-score`, `llms-txt-guia-practica` y
+  `como-conseguir-que-chatgpt-te-cite`. Hasta que existan, esos artículos
+  caen en el degradado con icono, que es justo lo que se ha rechazado.
+- ~~El agente que redacta **no puede generar imágenes**~~ — **superado el
+  2026-08-06** (ver §Segunda enmienda, abajo). El agente no puede generar mapas
+  de bits, pero **sí puede escribir un SVG**, que es texto: la portada dejó de
+  ser un paso humano y la publicación semanal ya no tiene aquí una dependencia
+  manual.
+- `lib/blog/covers.test.ts` impide que la deuda de portadas crezca: un
+  artículo nuevo nace con portada.
+
+---
+
+## Segunda enmienda (2026-08-06) — la portada la dibuja el agente
+
+La enmienda de 2026-08-04 asumía que producir una portada era trabajo humano
+porque «el agente no puede generar imágenes». Es cierto para un PNG generado o
+de stock; **no lo es para un SVG**, que es texto y el agente escribe igual que
+escribe código.
+
+Eso convierte la portada en **la opción 4 de la decisión original** —maquetas
+construidas en SVG/CSS, versionadas, legibles en el diff— en vez de una
+excepción a ella. No hay que relajar nada: la política se cumple mejor así que
+con stock.
+
+**Qué sigue igual, y es lo que importa:** una portada no puede representar una
+interfaz de producto, un gráfico, un panel ni una métrica. Esa restricción se
+mantiene entera, y el 2026-08-05 bloqueó una primera versión que incrustaba un
+«1,08%» real — cierto y citado en el artículo, pero huérfano de fuente en una
+portada, que no tiene pie de figura.
+
+**Consecuencia práctica:** las tres portadas del cluster `sectores` existen
+como SVG en el repo, `lib/blog/covers.test.ts` está en verde entero, y el
+procedimiento (proporción del lienzo, zona segura, verificación contra las seis
+ventanas de recorte) vive en `docs/agentic-weekly-post.md` §4.
+
+**Lo que queda pendiente:** los tres artículos de `COVER_DEBT`
+(`que-es-el-geo-score`, `llms-txt-guia-practica`,
+`como-conseguir-que-chatgpt-te-cite`) siguen sin portada y siguen exentos.
+Ahora que existe una vía para producirlas, esa deuda puede bajar a cero en su
+propia fase — el test ya está construido para que la lista sólo pueda menguar.

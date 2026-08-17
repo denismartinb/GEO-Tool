@@ -9,7 +9,8 @@ import { Icon } from "@/components/ui/icon";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { sanitizePromptLineText } from "@/lib/projects/project-form";
+import { isWellFormedDomain, sanitizePromptLineText } from "@/lib/projects/project-form";
+import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 
 const DEFAULT_PROMPT_CAP = 10;
 const GENERATE_MORE_BATCH_SIZE = 5;
@@ -71,17 +72,6 @@ const wizardSteps = [
 ];
 
 type Competitor = { name: string; domain: string };
-
-function isValidDomain(value: string) {
-  const domain = value
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "");
-
-  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain);
-}
 
 // Banderitas mini (mismas que onboarding.jsx) — solo los códigos definidos en
 // la referencia; el resto cae al fallback "us" igual que `F[code] || F.us`.
@@ -267,6 +257,27 @@ function SuggestionsLoadingOverlay({ domain }: { domain: string }) {
   );
 }
 
+/**
+ * LLM-RESILIENCE-1: shown on the step whose automatic suggestion came back
+ * empty, at the moment the user is looking at that empty step.
+ *
+ * Says only what is known. The server can tell that the suggestion did not
+ * produce anything, but from here we cannot tell a provider outage apart from
+ * a domain the model genuinely had nothing to say about — so the copy claims
+ * neither. The operator gets the real cause by email
+ * (`lib/llm/llm-incident.ts`); the user gets the way forward.
+ */
+function SuggestionGapNotice({ kind }: { kind: "competitors" | "prompts" }) {
+  const what = kind === "competitors" ? "competidores" : "prompts";
+  return (
+    <div className="add-hint" role="status" style={{ marginBottom: 12 }}>
+      <Icon name="alertCircle" size={13} />
+      No hemos podido sugerir {what} automáticamente para este dominio. Añádelos a mano — el escaneo funciona igual y
+      podrás cambiarlos cuando quieras.
+    </div>
+  );
+}
+
 type OnboardingWizardProps = {
   errorMessage: string | null;
   atLimit?: boolean;
@@ -300,14 +311,43 @@ export function OnboardingWizard({
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [prompts, setPrompts] = useState<Array<{ text: string; category: PromptCategory | null }>>([]);
   const [suggestError, setSuggestError] = useState<string | null>(null);
+  /**
+   * LLM-RESILIENCE-1: which halves of the automatic suggestion came back
+   * empty, so the step that is actually empty can say so.
+   *
+   * `suggestError` alone could not do this job. It is rendered inside the
+   * `step === 0` block, and the failure path calls `setStep(1)` in the same
+   * update — so the one message the wizard had was written onto a screen the
+   * user was being navigated away from at that instant. Worse, the common case
+   * on 2026-08-09 never set it at all: competitors failed while prompts
+   * succeeded, so `ok` was true and the user landed on an empty competitors
+   * step with nothing to read.
+   */
+  const [suggestFailed, setSuggestFailed] = useState<Array<"competitors" | "prompts">>([]);
   const [isPending, startTransition] = useTransition();
   const [isDomainFocused, setIsDomainFocused] = useState(false);
   const [showDomainErr, setShowDomainErr] = useState(false);
   const [isGeneratingMore, startGenerateMoreTransition] = useTransition();
   const [generateMoreError, setGenerateMoreError] = useState<string | null>(null);
 
+  /**
+   * Recoge el dominio que la persona escribió en el hero de la landing.
+   *
+   * Hasta hoy ese campo se tiraba: escribías tu dominio en la portada, te
+   * registrabas, y el asistente te lo volvía a pedir como si no lo hubieras
+   * dicho. Se lee una sola vez al montar y se consume, para que un segundo
+   * dominio en la misma cuenta no nazca relleno con el primero.
+   *
+   * En un efecto y no en el estado inicial porque `localStorage` no existe en
+   * el servidor: leerlo durante el render rompería la hidratación.
+   */
+  useEffect(() => {
+    const pending = takePendingDomain();
+    if (pending) setDomain((current) => (current ? current : pending));
+  }, []);
+
   const domainHasValue = domain.trim().length > 0;
-  const domainIsValid = isValidDomain(domain);
+  const domainIsValid = isWellFormedDomain(domain);
   const typedPlaceholder = useTypewriter(TYPE_SAMPLES, !isDomainFocused && domain === "");
   const selectedCountry = useMemo(
     () => COUNTRIES.find((option) => option.code === country) ?? COUNTRIES[0],
@@ -347,12 +387,14 @@ export function OnboardingWizard({
     }
     setShowDomainErr(false);
     setSuggestError(null);
+    setSuggestFailed([]);
     startTransition(async () => {
       const result = await suggestAction({ domain, country });
       if (!result.ok) {
         setSuggestError(
           "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
         );
+        setSuggestFailed(result.failed.length ? result.failed : ["competitors", "prompts"]);
         setCompetitors([{ name: "", domain: "" }]);
         setPrompts([{ text: "", category: null }]);
         setLanguage((current) => result.language || current);
@@ -360,6 +402,7 @@ export function OnboardingWizard({
         return;
       }
       setLanguage(result.language || language);
+      setSuggestFailed(result.failed);
       setCompetitors(result.competitors.length ? result.competitors : [{ name: "", domain: "" }]);
       setPrompts(result.prompts.length ? result.prompts : [{ text: "", category: null }]);
       setStep(1);
@@ -559,6 +602,7 @@ export function OnboardingWizard({
           </div>
 
           {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
+          {suggestFailed.includes("competitors") ? <SuggestionGapNotice kind="competitors" /> : null}
 
           <div className="space-y-2">
             {competitors.map((row, index) => (
@@ -634,6 +678,7 @@ export function OnboardingWizard({
         </div>
 
         {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
+        {suggestFailed.includes("prompts") ? <SuggestionGapNotice kind="prompts" /> : null}
 
         <div className="space-y-2">
           {prompts.map((row, index) => (

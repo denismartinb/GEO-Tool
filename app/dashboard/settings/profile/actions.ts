@@ -7,35 +7,14 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getStripeClient } from "@/lib/stripe";
 import { sendAccountDeletedEmail } from "@/lib/email/transactional";
 
-const nameSchema = z.string().trim().min(1).max(80);
-const optionalNameSchema = z.string().trim().max(80);
 const newPasswordSchema = z.string().min(8, "La nueva contraseña debe tener al menos 8 caracteres.");
 
-export type UpdateProfileNameResult = { success: true } | { success: false; error: string };
-
-export async function updateProfileName(firstName: string, lastName: string): Promise<UpdateProfileNameResult> {
-  const parsedFirst = nameSchema.safeParse(firstName);
-  const parsedLast = optionalNameSchema.safeParse(lastName);
-
-  if (!parsedFirst.success) {
-    return { success: false, error: "Introduce un nombre válido." };
-  }
-  if (!parsedLast.success) {
-    return { success: false, error: "Los apellidos son demasiado largos." };
-  }
-
-  const { supabase } = await requireUser();
-
-  const { error } = await supabase.auth.updateUser({
-    data: { first_name: parsedFirst.data, last_name: parsedLast.data }
-  });
-
-  if (error) {
-    return { success: false, error: "No se pudo guardar el nombre. Inténtalo de nuevo." };
-  }
-
-  return { success: true };
-}
+// Aquí vivía `updateProfileName`. Lo dejó sin llamadores CONSOLE-REDESIGN-1
+// (2026-08-06), que fusionó las cuatro pantallas de ajustes en una sola: el
+// nombre se guarda desde entonces en `saveAccount`
+// (`app/dashboard/settings/organization/actions.ts`), junto con los datos de
+// la organización, porque el formulario pasó a ser uno. Se borra en
+// PRELAUNCH-HARDENING-1 Fase R8-a (log §98).
 
 export type ChangePasswordResult = { success: true } | { success: false; error: string };
 

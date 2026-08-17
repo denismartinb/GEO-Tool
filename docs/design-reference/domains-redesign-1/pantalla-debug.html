@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DOMAINS-REDESIGN-1 · Pantalla /debug (referencia de implementación)</title>
+<!--
+  Referencia de implementación pixel-perfect de
+  /dashboard/projects/[projectId]/debug. Autocontenido, sin dependencias.
+
+  Pantalla INTERNA. No enlazada desde el menú y protegida en servidor
+  (propuesta: OPS_USER_EMAILS + 404). Todo lo que muestra sale de tablas que
+  ya existen — scan_runs, scan_prompt_results, jobs, job_logs,
+  web_audit_snapshots — sin ninguna migración.
+
+  Mismo shell, misma cabecera (.ov-sticky-header) y mismos tokens que
+  pantalla-dominios.html. Las tablas anchas hacen scroll en su propio
+  contenedor; el body nunca scrollea en horizontal.
+-->
+<style>
+:root{
+  --brand-ink:#0B1426;--brand-ink-2:#3B4759;--brand-ink-3:#5B6B82;--brand-ink-4:#98A2B3;
+  --brand-blue:#2563EB;--brand-blue-2:#4F7BFF;
+  --brand-blue-soft:rgba(37,99,235,.10);--brand-blue-soft-2:rgba(37,99,235,.16);
+  --brand-canvas:#F7F8FB;--brand-surface:#FFFFFF;
+  --brand-line:#E7EAF0;--brand-line-soft:#EEF1F6;
+  --brand-pos:#15915A;--brand-pos-soft:#E7F6EE;
+  --brand-neg:#D23B48;--brand-neg-soft:#FDECEE;
+  --brand-shadow-card:0 1px 2px rgba(11,20,38,.04),0 6px 18px rgba(11,20,38,.05);
+
+  --ink:var(--brand-ink);--ink-2:var(--brand-ink-2);--ink-3:var(--brand-ink-3);--ink-4:var(--brand-ink-4);
+  --canvas:var(--brand-canvas);--surface:var(--brand-surface);
+  --line:var(--brand-line);--line-soft:var(--brand-line-soft);
+  --accent:var(--brand-blue);--accent-soft:var(--brand-blue-soft);
+  --surface-sunk:#F4F6FA;
+
+  --sidebar-w:248px;--header-h:52px;--r-md:10px;--r-lg:14px;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden}
+body{background:var(--canvas);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.tnum{font-variant-numeric:tabular-nums}
+code{font-family:var(--mono);font-size:.86em;background:var(--surface-sunk);border:1px solid var(--line-soft);border-radius:5px;padding:1px 5px;color:var(--ink-2)}
+
+/* shell */
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:100vh;height:100dvh;overflow:hidden}
+.sb{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.sb-brand{display:flex;align-items:center;gap:9px;padding:16px 15px 12px}
+.sb-mark{width:24px;height:24px;border-radius:7px;background:var(--ink);display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:13px;position:relative}
+.sb-mark::after{content:"";position:absolute;right:2px;top:2px;width:4px;height:4px;border-radius:999px;background:#FFB020}
+.sb-wordmark{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.02em}
+.brand-sub{font-size:10.5px;color:var(--ink-4);margin-top:1px}
+.proj-switch{display:flex;align-items:center;gap:10px;margin:6px 0;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-md)}
+.proj-favicon{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-family:var(--display);font-weight:800;color:#fff;flex:0 0 auto;background:linear-gradient(160deg,#0B9BD8,#046FA8)}
+.proj-name{font-size:12.5px;font-weight:700;line-height:1.25;color:var(--ink)}
+.proj-dom{font-family:var(--mono);font-size:10px;color:var(--ink-4)}
+.sb-scroll{flex:1;overflow-y:auto;padding:4px 12px}
+.nav-group-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);padding:12px 9px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:8px;font-size:12.5px;color:var(--ink-2);font-weight:600}
+.nav-item:hover{background:var(--surface-sunk)}
+.nav-ic{width:15px;height:15px;border-radius:4px;background:currentColor;opacity:.3;flex:0 0 auto}
+.nav-count{margin-left:auto;font-size:11px;font-weight:700;color:var(--ink-3);background:var(--surface-sunk);border-radius:999px;padding:1px 7px}
+.sb-foot{border-top:1px solid var(--line-soft);padding:10px 12px 12px}
+.user-chip{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px}
+.avatar{width:26px;height:26px;border-radius:8px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:10.5px;font-weight:700}
+
+.mainpane{overflow-y:auto;min-width:0}
+.page{max-width:1320px;margin:0 auto;padding:26px 34px 80px}
+.topbar{display:none;height:var(--header-h);align-items:center;justify-content:space-between;padding:0 14px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.burger{width:18px;display:grid;gap:3.5px}
+.burger i{height:2px;background:var(--ink-2);border-radius:2px}
+.bell{width:18px;height:18px;border-radius:5px;background:var(--surface-sunk);border:1px solid var(--line-soft)}
+
+/* cabecera */
+.ov-sticky-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft);margin:-26px -34px 24px;padding:12px 34px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.ov-sticky-left{display:flex;align-items:center;gap:10px;min-width:0}
+.ov-sticky-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.kicker{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-4);margin-bottom:2px}
+.hdr-row{display:flex;align-items:center;gap:8px}
+.hdr-name{font-size:15px;font-weight:750;letter-spacing:-.01em;color:var(--ink)}
+
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-neutral{background:var(--surface-sunk);border:1px solid var(--line-soft);color:var(--ink-3)}
+.badge-neutral.mono{font-family:var(--mono)}
+.badge-accent{background:var(--accent-soft);color:var(--accent)}
+.badge-pos{background:var(--brand-pos-soft);color:var(--brand-pos)}
+.badge-neg{background:var(--brand-neg-soft);color:var(--brand-neg)}
+.dot{width:6px;height:6px;border-radius:999px;flex:0 0 auto}
+.dot.run{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ancho de consola */
+.dbg-page{max-width:460px;margin:0 auto}
+@media (min-width:900px){.dbg-page{max-width:640px}}
+@media (min-width:1200px){.dbg-page{max-width:1200px}}
+@media (min-width:1600px){.dbg-page{max-width:1280px}}
+
+/* banda interna */
+.dbg-band{display:flex;align-items:center;gap:11px;flex-wrap:wrap;background:var(--ink);color:#fff;border-radius:12px;padding:12px 16px;margin-bottom:20px}
+.dbg-band b{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--brand-blue-2)}
+.dbg-band span{font-size:12px;color:#B4C0D2}
+
+/* secciones */
+.dbg-sec{margin-top:26px}
+.dbg-sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:11px;flex-wrap:wrap}
+.dbg-sec-h b{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:-.01em}
+.dbg-sec-h small{font-size:10.5px;color:var(--ink-4)}
+.dbg-sec-h .src{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--ink-4);background:var(--surface-sunk);border:1px solid var(--line-soft);border-radius:6px;padding:2px 7px}
+.dbg-foot{font-size:11px;color:var(--ink-3);margin:10px 0 0;line-height:1.55}
+
+/* 1 · motores */
+.eng{display:flex;gap:9px;flex-wrap:wrap}
+.eng-c{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:11px 13px;display:flex;align-items:center;gap:10px;box-shadow:var(--brand-shadow-card)}
+.eng-c.bad{border-color:#F9C9CF;background:#FFF8F9}
+.eng-d{width:9px;height:9px;border-radius:999px;flex:0 0 auto}
+.eng-t b{font-size:12.5px;font-weight:700;display:block}
+.eng-t b span{font-weight:600;color:var(--ink-4);font-size:10px}
+.eng-t small{font-size:10.5px;color:var(--ink-3)}
+.eng-t small.bad{color:var(--brand-neg);font-weight:700}
+
+/* 2 · mapa de calor */
+.heat-wrap{overflow-x:auto}
+.heat{border-collapse:separate;border-spacing:3px;width:100%;min-width:560px}
+.heat th{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4);padding:0 0 4px;text-align:center}
+.heat th.rowh,.heat td.rowh{text-align:left;font-size:11.5px;font-weight:700;color:var(--ink-2);white-space:nowrap;padding-right:8px}
+.heat td{text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;border-radius:7px;padding:8px 4px;background:#F4F6FA;color:#C3CAD6}
+.heat td.h1{background:var(--brand-neg-soft);color:#96222C}
+.heat td.h3{background:var(--brand-neg);color:#fff}
+
+/* tablas */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:13px;background:var(--surface);box-shadow:var(--brand-shadow-card)}
+table.t{width:100%;border-collapse:collapse}
+table.t th{text-align:left;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4);padding:11px 13px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:11px 13px;border-bottom:1px solid var(--line-soft);font-size:12px;vertical-align:top}
+table.t tr:last-child td{border-bottom:0}
+table.t .num{text-align:right}
+tr.flagged{background:#FFF8F9}
+.mini-bar{display:flex;align-items:center;gap:8px}
+.mini-bar .b{flex:1;min-width:44px;height:6px;border-radius:999px;background:var(--surface-sunk);overflow:hidden}
+.mini-bar .b i{display:block;height:100%;background:var(--brand-pos)}
+.mini-bar .b i.neg{background:var(--brand-neg)}
+.sub{font-size:10.5px;color:var(--ink-4);margin-top:3px}
+.sub.neg{color:var(--brand-neg);font-weight:700}
+.err-pill{display:inline-flex;gap:7px;align-items:center;font-size:11.5px;background:var(--brand-neg-soft);color:#96222C;border-radius:8px;padding:7px 11px}
+.delta{font-family:var(--mono);font-size:11px;font-weight:700}
+.delta.up{color:var(--brand-pos)}
+.dash{color:var(--ink-4)}
+code.err{color:#96222C;background:var(--brand-neg-soft);border-color:#F9C9CF}
+
+/* 5 · controles */
+.sw-row{display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:9px;box-shadow:var(--brand-shadow-card)}
+.sw-row.pending{border-style:dashed;box-shadow:none}
+.sw-row .t{flex:1;min-width:150px}
+.sw-row .t b{font-size:12.5px;font-weight:700;display:block}
+.sw-row .t small{font-size:11px;color:var(--ink-3)}
+.switch-toggle{position:relative;width:40px;height:23px;flex-shrink:0;border:1px solid var(--line);border-radius:999px;background:var(--surface-sunk);cursor:pointer;padding:0}
+.switch-toggle::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15);transition:transform .15s ease}
+.switch-toggle.on{background:var(--accent);border-color:var(--accent)}
+.switch-toggle.on::after{transform:translateX(17px)}
+.ops{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
+.btn-ghost{display:inline-flex;align-items:center;justify-content:center;background:transparent;color:var(--ink-2);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 15px;font-family:var(--body);font-size:12.5px;font-weight:700;cursor:pointer}
+.btn-ghost:hover{background:var(--surface-sunk)}
+
+/* configuración */
+.cfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:9px}
+.cfg-i{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.cfg-i .k{font-family:var(--mono);font-size:9px;color:var(--ink-4);letter-spacing:.02em;text-transform:uppercase}
+.cfg-i .v{font-size:13px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.cfg-i .v.mono{font-family:var(--mono);font-size:11px;font-weight:600}
+
+@media (max-width:899px){
+  .shell{grid-template-columns:1fr}
+  .sb{display:none}
+  .topbar{display:flex}
+  .page{padding:18px 16px 64px}
+  .ov-sticky-header{margin:-18px -16px 18px;padding:10px 16px;top:var(--header-h)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sb">
+    <div class="sb-brand">
+      <div class="sb-mark">G</div>
+      <div>
+        <div class="sb-wordmark">Genscore</div>
+        <div class="brand-sub">Espacio de visibilidad en IA</div>
+      </div>
+    </div>
+    <div class="sb-scroll">
+      <a class="nav-item" href="#" style="margin-bottom:6px"><span class="nav-ic"></span>Dominios<span class="nav-count">4</span></a>
+      <a class="proj-switch" href="#">
+        <div class="proj-favicon">M</div>
+        <div style="min-width:0"><div class="proj-name">Movistar</div><div class="proj-dom">movistar.es</div></div>
+      </a>
+      <div class="nav-group-label">Analizar</div>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Visión general</a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Prompts<span class="nav-count">12</span></a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Competidores<span class="nav-count">5</span></a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Páginas citadas</a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Auditoría web</a>
+      <div class="nav-group-label">Actuar</div>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Recomendaciones<span class="nav-count">7</span></a>
+      <!-- /debug NO aparece en el menú, a propósito -->
+    </div>
+    <div class="sb-foot">
+      <a class="user-chip" href="#">
+        <div class="avatar">DE</div>
+        <div style="min-width:0"><div style="font-size:12.5px;font-weight:650">denis@genscore.app</div></div>
+      </a>
+    </div>
+  </aside>
+
+  <div class="mainpane">
+    <div class="topbar">
+      <div class="burger" role="button" tabindex="0" aria-label="Abrir menú"><i></i><i></i><i></i></div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <div class="sb-mark" style="width:20px;height:20px;font-size:11px">G</div>
+        <span class="sb-wordmark" style="font-size:13.5px">Genscore</span>
+      </div>
+      <div class="bell" role="button" tabindex="0" aria-label="Notificaciones"></div>
+    </div>
+
+    <div class="page">
+      <div class="ov-sticky-header">
+        <div class="ov-sticky-left">
+          <div>
+            <p class="kicker">Debug</p>
+            <div class="hdr-row">
+              <span class="hdr-name">Movistar</span>
+              <span class="badge badge-neutral mono">movistar.es</span>
+            </div>
+          </div>
+        </div>
+        <div class="ov-sticky-right">
+          <span class="badge badge-pos">Escaneado 5 ago</span>
+        </div>
+      </div>
+
+      <div class="dbg-page">
+
+        <div class="dbg-band">
+          <b>Interno</b>
+          <span>No enlazada desde el menú · sólo cuentas de operación</span>
+        </div>
+
+        <!-- 1 -->
+        <section class="dbg-sec" style="margin-top:0">
+          <div class="dbg-sec-h">
+            <b>1 · Motores</b><small>últimas 24 h</small>
+            <span class="src">scan_prompt_results</span>
+          </div>
+          <div class="eng">
+            <div class="eng-c">
+              <span class="eng-d" style="background:var(--brand-pos)"></span>
+              <div class="eng-t"><b>Gemini <span>· grounded</span></b><small>36/36 respuestas · 36 extraídas</small></div>
+            </div>
+            <div class="eng-c bad">
+              <span class="eng-d" style="background:var(--brand-neg)"></span>
+              <div class="eng-t"><b>ChatGPT <span>· grounded</span></b><small class="bad">36 respuestas · 0 extraídas — quota</small></div>
+            </div>
+            <div class="eng-c">
+              <span class="eng-d" style="background:var(--ink-4)"></span>
+              <div class="eng-t"><b>Claude</b><small>inactivo en este proyecto</small></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2 -->
+        <section class="dbg-sec">
+          <div class="dbg-sec-h">
+            <b>2 · Salud de extracción</b><small>filas por categoría, últimos 7 escaneos</small>
+            <span class="src">extraction_error LIKE 'cat:%'</span>
+          </div>
+          <div class="heat-wrap">
+            <table class="heat">
+              <thead>
+                <tr>
+                  <th class="rowh">Motor</th>
+                  <th>quota</th><th>timeout</th><th>http</th><th>empty</th>
+                  <th>invalid<br />json</th><th>schema</th><th>config</th><th>unknown</th><th>mudas</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="rowh">Gemini</td>
+                  <td>0</td><td class="h1">3</td><td>0</td><td>0</td><td class="h1">2</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                </tr>
+                <tr>
+                  <td class="rowh">ChatGPT</td>
+                  <td class="h3">247</td><td class="h1">4</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="dbg-foot">
+            «Mudas» = respuestas del motor sin datos extraídos <b>y sin error registrado</b>.
+            Tiene que ser siempre 0: es el invariante «no mute rows» de
+            <code>.claude/rules/scan.md</code>. Si algún día no lo es, esta celda es la única
+            que va a decirlo.
+          </p>
+        </section>
+
+        <!-- 3 -->
+        <section class="dbg-sec">
+          <div class="dbg-sec-h">
+            <b>3 · Alertas al operador</b><small>deduplicación de 24 h, entre todos los proyectos</small>
+            <span class="src">job_logs</span>
+          </div>
+          <div class="tbl-wrap">
+            <table class="t" style="min-width:520px">
+              <thead><tr><th>Cuándo</th><th>Motivo</th><th>Motor</th><th>Entrega</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="tnum">5 ago, 06:21</td><td><span class="badge badge-neg">quota</span></td><td>ChatGPT</td>
+                  <td><span class="badge badge-pos">Enviada</span> <span style="color:var(--ink-4);font-size:10.5px">ops@…</span></td>
+                </tr>
+                <tr>
+                  <td class="tnum">4 ago, 06:18</td><td><span class="badge badge-neg">engine_down</span></td><td>ChatGPT</td>
+                  <td><span class="badge badge-neutral">Deduplicada</span></td>
+                </tr>
+                <tr>
+                  <td class="tnum">1 ago, 06:14</td><td><span class="badge badge-neg">quota</span></td><td>ChatGPT</td>
+                  <td><span class="badge badge-neg">Sin entregar</span> <span style="color:var(--ink-4);font-size:10.5px">falta OPS_ALERT_EMAIL</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="dbg-foot">
+            «Sin entregar» es la fila que más importa y la que hoy no se ve en ningún sitio:
+            significa que el fallo se detectó y el aviso no salió.
+          </p>
+        </section>
+
+        <!-- 4 -->
+        <section class="dbg-sec">
+          <div class="dbg-sec-h">
+            <b>4 · Cola de trabajos</b><small>intentos, próximo reintento y arrendamiento</small>
+            <span class="src">jobs</span>
+          </div>
+          <div class="tbl-wrap">
+            <table class="t" style="min-width:660px">
+              <thead><tr><th>Tipo</th><th>Estado</th><th>Intentos</th><th>Próximo</th><th>Bloqueado desde</th><th>Último error</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><code>scan_finalize</code></td>
+                  <td><span class="badge badge-accent"><span class="dot run"></span>running</span></td>
+                  <td class="tnum">1/3</td><td class="dash">—</td><td class="tnum">hace 12 s</td><td class="dash">—</td>
+                </tr>
+                <tr class="flagged">
+                  <td><code>web_audit</code></td>
+                  <td><span class="badge badge-neg">running</span></td>
+                  <td class="tnum">2/3</td><td class="dash">—</td>
+                  <td class="tnum" style="color:var(--brand-neg);font-weight:700">hace 4 h · arrendamiento vencido</td>
+                  <td class="dash">—</td>
+                </tr>
+                <tr>
+                  <td><code>web_audit</code></td>
+                  <td><span class="badge badge-neutral">retrying</span></td>
+                  <td class="tnum">1/3</td><td class="tnum">en 38 min</td><td class="dash">—</td>
+                  <td><code>http: el servicio no respondió</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="dbg-foot">
+            Un trabajo <code>running</code> con el arrendamiento vencido
+            (<code>FINALIZE_LOCK_LEASE_MS = 90 s</code>) es una invocación muerta que dejó la
+            campaña atascada. <code>reconcileStuckScanRuns</code> nunca toca <code>jobs</code>,
+            así que este bloque es el único sitio donde eso se ve.
+          </p>
+        </section>
+
+        <!-- 5 -->
+        <section class="dbg-sec">
+          <div class="dbg-sec-h">
+            <b>5 · Controles</b><small>lo que apagamos para no quemar Gemini antes de producción</small>
+            <span class="src">projects · env</span>
+          </div>
+          <div class="sw-row">
+            <div class="t">
+              <b>Escaneo automático diario</b>
+              <small>Por dominio. Ya existe: <code>projects.recurring_scans_enabled</code> (migración 0008).</small>
+            </div>
+            <button class="switch-toggle on" role="switch" aria-checked="true" aria-label="Escaneo automático diario"></button>
+          </div>
+          <div class="sw-row pending">
+            <div class="t">
+              <b>Auditoría automática tras cada escaneo</b>
+              <small>Global, por <code>AUTO_WEB_AUDIT_ENABLED</code>. Por dominio necesitaría columna nueva.</small>
+            </div>
+            <span class="badge badge-neutral">Global · activada</span>
+          </div>
+          <div class="ops">
+            <button class="btn-ghost">Repetir escaneo</button>
+            <button class="btn-ghost">Forzar reconciliación</button>
+            <button class="btn-ghost">Reencolar auditoría</button>
+          </div>
+          <p class="dbg-foot">
+            Las tres son escotillas manuales que el cliente ya no tiene. Aquí sí, porque cuando algo
+            se atasca alguien tiene que poder desatascarlo sin abrir la consola de Supabase.
+          </p>
+        </section>
+
+        <!-- 6 -->
+        <section class="dbg-sec">
+          <div class="dbg-sec-h">
+            <b>6 · Historial de escaneos</b><small>18 en total</small>
+            <span class="src">scan_runs · run_scores</span>
+          </div>
+          <div class="tbl-wrap">
+            <table class="t" style="min-width:640px">
+              <thead>
+                <tr><th style="width:32px">#</th><th>Fecha</th><th>Estado</th><th>Lanzamientos</th><th>Auditoría</th><th class="num">GEO</th><th class="num">Δ</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="tnum" style="color:var(--ink-4);font-weight:700">18</td>
+                  <td><div style="font-weight:700">5 ago 2026</div><div class="sub">Fin 06:14 · 47,2 s</div></td>
+                  <td><span class="badge badge-pos">Completado</span></td>
+                  <td>
+                    <div class="mini-bar"><span class="b"><i style="width:100%"></i></span><span class="tnum" style="font-size:11px;font-weight:700">36/36</span></div>
+                    <div class="sub">12 prompts × 3 repeticiones</div>
+                  </td>
+                  <td><span class="badge badge-pos">Auditada</span><div class="sub tnum">78/100</div></td>
+                  <td class="num tnum" style="font-size:13px;font-weight:800">64</td>
+                  <td class="num"><span class="delta up">▲ 3</span></td>
+                </tr>
+                <tr>
+                  <td class="tnum" style="color:var(--ink-4);font-weight:700">17</td>
+                  <td><div style="font-weight:700">4 ago 2026</div><div class="sub">Fin 06:11 · 51,8 s</div></td>
+                  <td><span class="badge badge-pos">Completado</span></td>
+                  <td>
+                    <div class="mini-bar"><span class="b"><i style="width:94%"></i></span><span class="tnum" style="font-size:11px;font-weight:700">34/36</span></div>
+                    <div class="sub neg">2 fallos</div>
+                  </td>
+                  <td><span class="badge badge-neutral">Parcial</span><div class="sub tnum">74/100</div></td>
+                  <td class="num tnum" style="font-size:13px;font-weight:800">61</td>
+                  <td class="num"><span class="dash" style="font-size:11px" title="Midió con otro conjunto de motores">—</span></td>
+                </tr>
+                <tr>
+                  <td class="tnum" style="color:var(--ink-4);font-weight:700">16</td>
+                  <td><div style="font-weight:700">3 ago 2026</div><div class="sub">Inicio 06:10</div></td>
+                  <td><span class="badge badge-neg">Fallido</span></td>
+                  <td><div class="mini-bar"><span class="b"><i class="neg" style="width:22%"></i></span><span class="tnum" style="font-size:11px;font-weight:700">8/36</span></div></td>
+                  <td class="dash">—</td><td class="num dash">—</td><td class="num dash">—</td>
+                </tr>
+                <tr><td colspan="7" style="padding-top:0"><span class="err-pill"><b>scan_timeout</b> · reintento automático agotado en las últimas 24 h</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="dbg-foot">
+            Los guiones de «Δ» son comparaciones que no podemos afirmar (DELTA-GUARD-1).
+          </p>
+        </section>
+
+        <!-- 7 -->
+        <section class="dbg-sec">
+          <div class="dbg-sec-h">
+            <b>7 · Respuestas del escaneo 18</b><small>coste, latencia y error por fila</small>
+            <span class="src">scan_prompt_results</span>
+          </div>
+          <div class="tbl-wrap">
+            <table class="t" style="min-width:680px">
+              <thead><tr><th>Prompt</th><th>Rep.</th><th>Motor</th><th class="num">Latencia</th><th class="num">Tokens</th><th class="num">Coste</th><th>Extracción</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td style="max-width:190px">mejor tarifa de fibra y móvil</td>
+                  <td class="tnum">1/3</td><td>Gemini</td>
+                  <td class="num tnum">6 210 ms</td><td class="num tnum">1 842</td><td class="num tnum">0,0043 $</td>
+                  <td><span class="badge badge-pos">OK</span></td>
+                </tr>
+                <tr>
+                  <td style="max-width:190px">mejor tarifa de fibra y móvil</td>
+                  <td class="tnum">1/3</td><td>ChatGPT</td>
+                  <td class="num tnum">4 980 ms</td><td class="num tnum">1 601</td><td class="num tnum">0,0038 $</td>
+                  <td><code class="err">quota: límite del proveedor</code></td>
+                </tr>
+                <tr>
+                  <td style="max-width:190px">operadores con mejor atención</td>
+                  <td class="tnum">2/3</td><td>Gemini</td>
+                  <td class="num tnum">7 004 ms</td><td class="num tnum">2 118</td><td class="num tnum">0,0051 $</td>
+                  <td><span class="badge badge-pos">OK</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="dbg-foot">
+            <code>cost_usd</code>, <code>tokens_in/out</code> y <code>llm_latency_ms</code> se
+            guardan en cada fila desde el esquema inicial y no se muestran hoy en ninguna pantalla.
+          </p>
+        </section>
+
+        <!-- configuración -->
+        <section class="dbg-sec">
+          <div class="dbg-sec-h">
+            <b>Configuración vigente</b><small>lo que hay que citar en cualquier incidencia</small>
+            <span class="src">constantes · env</span>
+          </div>
+          <div class="cfg">
+            <div class="cfg-i"><div class="k">maxDuration</div><div class="v">60 s</div></div>
+            <div class="cfg-i"><div class="k">Presupuesto de trabajo</div><div class="v">45 s</div></div>
+            <div class="cfg-i"><div class="k">Prompts por lote</div><div class="v">10</div></div>
+            <div class="cfg-i"><div class="k">Concurrencia extracción</div><div class="v">4</div></div>
+            <div class="cfg-i"><div class="k">Arrendamiento finalize</div><div class="v">90 s</div></div>
+            <div class="cfg-i"><div class="k">Ejecución síncrona</div><div class="v">activada</div></div>
+            <div class="cfg-i"><div class="k">extraction_version</div><div class="v mono">verified-mention-v1</div></div>
+            <div class="cfg-i"><div class="k">prompt_version</div><div class="v mono">neutral-sim-v1</div></div>
+            <div class="cfg-i"><div class="k">Plan · tope prompts</div><div class="v">Pro · 12/30</div></div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

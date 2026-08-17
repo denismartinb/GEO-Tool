@@ -1,0 +1,315 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  Figure,
+  Verdict,
+  AuthorBio,
+  ArticleCta,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("que-es-una-auditoria-geo");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Qué es una auditoría GEO?",
+    answer:
+      "Es la revisión de si tu web está preparada para ser leída, entendida y citada por un motor generativo cuando responde a alguien. No mide tu posición en Google: mide seis señales técnicas de la propia página —datos estructurados, formato de respuesta, metadatos, frescura, indexabilidad y citabilidad— que determinan si un modelo puede extraer una respuesta de ti y atribuírtela."
+  },
+  {
+    question: "¿En qué se diferencia de una auditoría SEO?",
+    answer:
+      "Una auditoría SEO pregunta si puedes posicionar; una auditoría GEO pregunta si te pueden citar. Se solapan en lo básico (indexabilidad, canonical, metadatos), pero divergen en lo que decide el resultado: al SEO le importan enlaces, velocidad y autoridad de dominio; al GEO le importa si tu respuesta está en las primeras líneas, si el contenido está estructurado en listas y tablas que un modelo pueda extraer, y si la página tiene fecha discernible."
+  },
+  {
+    question: "¿Cada cuánto conviene auditar?",
+    answer:
+      "Cuando cambies contenido, y periódicamente aunque no cambies nada. Lo segundo importa por la frescura: una página que hoy puntúa como reciente pasa a \"envejeciendo\" a los seis meses sin que tú toques una línea. La auditoría técnica es determinista y no consume llamadas a modelos, así que repetirla es barato."
+  },
+  {
+    question: "¿Una auditoría GEO sirve de algo si mi web no está en la primera página de Google?",
+    answer:
+      "Sí, y a veces más. Un motor generativo no recorre el ranking de Google de arriba abajo: busca fuentes en el momento de responder y elige de qué extrae. Una página bien estructurada y citable puede acabar en una respuesta sin estar entre los primeros resultados orgánicos, y una página que posiciona bien puede quedarse fuera si el modelo no consigue extraer de ella una respuesta clara."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Una auditoría SEO pregunta *si puedes posicionar*. Una auditoría GEO pregunta
+*si te pueden citar*. Son preguntas distintas y se responden mirando cosas
+distintas: no enlaces ni autoridad de dominio, sino si un modelo puede abrir tu
+página, encontrar la respuesta en las primeras líneas, extraerla de una
+estructura que entienda, y saber que es tuya y que sigue vigente. Abajo tienes
+las **seis dimensiones** que eso significa en la práctica, con los umbrales
+concretos, y un checklist para pasarlo a mano por tu página más importante.
+
+</KeyTakeaway>
+
+## Por qué tu auditoría SEO no cubre esto
+
+Hay un solape real: indexabilidad, canonical y metadatos importan en las dos.
+Pero en cuanto pasas de ahí, las dos disciplinas dejan de mirar lo mismo.
+
+Una auditoría SEO clásica dedica su esfuerzo a lo que mueve un ranking: perfil
+de enlaces, velocidad de carga, arquitectura interna, autoridad. Un motor
+generativo no ordena una lista de resultados — busca fuentes mientras redacta
+la respuesta y decide de cuáles extrae. Eso cambia qué importa:
+
+<CompareTable>
+
+| Se pregunta | Auditoría SEO | Auditoría GEO |
+| --- | --- | --- |
+| La pregunta de fondo | ¿Puedo posicionar para esta consulta? | ¿Pueden extraer de mí una respuesta y atribuírmela? |
+| Enlaces entrantes | Determinante | Indirecto |
+| Velocidad de carga | Factor de ranking | Solo importa si impide el rastreo |
+| Estructura del contenido | Ayuda a la legibilidad | **Determinante**: listas y tablas se extraen; un muro de prosa, no |
+| Dónde está la respuesta | Puede ir al final | **En las primeras líneas o no cuenta** |
+| Fecha visible | Señal débil | **Puntúa directamente** |
+| Datos estructurados | Rich snippets | Cómo el modelo sabe qué tipo de cosa eres |
+
+</CompareTable>
+
+La diferencia que más sorprende es la última fila de comportamiento: en SEO
+puedes construir el artículo con una introducción larga y llegar a la respuesta
+en el minuto tres. En GEO eso te deja fuera, porque el modelo extrae de lo que
+encuentra pronto y con forma de respuesta.
+
+<Figure
+  label="Figura 1."
+  caption="La misma introducción escrita de las dos formas. Solo la de abajo pasa la comprobación de «respuesta en la introducción»: la de arriba anuncia la respuesta, no la da."
+>
+
+**Introducción que anuncia** — falla la comprobación:
+
+> En los últimos años el marketing digital ha cambiado profundamente. Cada vez
+> más usuarios acuden a asistentes de inteligencia artificial. En este artículo
+> analizaremos qué es una auditoría GEO, por qué se ha vuelto imprescindible y
+> cómo puedes empezar a aplicarla en tu negocio.
+
+**Introducción que responde** — la pasa:
+
+> Una auditoría GEO revisa seis señales técnicas de tu página —datos
+> estructurados, formato de respuesta, metadatos, frescura, indexabilidad y
+> citabilidad— para determinar si un motor generativo puede extraer de ella una
+> respuesta y atribuírtela. Se diferencia de una auditoría SEO en que no mide
+> si puedes posicionar, sino si te pueden citar.
+
+</Figure>
+
+## Las seis dimensiones de una auditoría GEO
+
+Esto no es una lista genérica: son las seis que audita GenScore, en el orden
+en que conviene mirarlas. No publicamos el reparto de puntos exacto entre
+ellas —es parte de la metodología del producto— pero sí cada umbral concreto,
+para que puedas comprobar tu propia página sin necesidad de esa cifra.
+
+<NumberedSection n={1} title="Datos estructurados">
+
+Si la página lleva JSON-LD con un tipo que el motor reconozca: `Article`,
+`NewsArticle`, `BlogPosting`, `FAQPage`, `HowTo`, `Product`, `Organization` o
+`WebPage`. Es lo que convierte "un texto" en "un artículo con autor y fecha" o
+"un producto con precio". Sin esto, el modelo tiene que inferir de qué va tu
+página; con esto, se lo estás diciendo.
+
+Es todo o nada: basta con que haya al menos un tipo reconocido.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Formato de respuesta">
+
+Tres comprobaciones, y son las que más gente falla:
+
+- **Un solo `<h1>`.** Ni cero ni tres. Un `<h1>` es la declaración de qué
+  trata la página; varios son ninguna.
+- **Al menos dos `<h2>`.** Sin subtítulos no hay secciones extraíbles, solo un
+  bloque.
+- **La respuesta en la introducción.** Que las primeras líneas respondan a la
+  pregunta del título, en lugar de prometer que la responderán más abajo.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Metadatos">
+
+Otras tres, con umbrales concretos en vez de "que estén bien puestos":
+
+- **`<title>` entre 15 y 70 caracteres.** Menos no describe; más se corta.
+- **`meta description` entre 50 y 160.**
+- **Open Graph con `og:title` y `og:description`.** Los dos, no uno.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Frescura">
+
+Se busca una fecha discernible en la página (en el JSON-LD, principalmente) y
+se mide su antigüedad:
+
+- **Hasta 180 días: reciente.**
+- **Entre 180 y 540 días: envejeciendo.**
+- **Más de 540 días: obsoleta.**
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Indexabilidad">
+
+Si el motor puede llegar y quedarse con la versión correcta:
+
+- **Canonical presente y apuntando a tu propio dominio.** Un canonical hacia
+  fuera regala la atribución.
+- **Sin `noindex`.** Es el fallo que más pesa de toda la auditoría, y con
+  razón: es el único que anula todo lo demás.
+- **`hreflang` presente**, si publicas en más de un idioma o región.
+
+</NumberedSection>
+
+<QuickAction label="Comprueba esto ahora">
+
+Abre el código fuente de tu página más importante y busca `noindex`. Son diez
+segundos. Si aparece por error —pasa más de lo que parece tras una migración o
+un entorno de pruebas mal desplegado—, ninguna de las otras cinco dimensiones
+importa: el motor no va a indexar la página, y todo lo que hagas encima no
+tiene dónde apoyarse.
+
+</QuickAction>
+
+<NumberedSection n={6} title="Citabilidad">
+
+Si hay algo que merezca la pena citar, y en un formato del que se pueda
+extraer:
+
+- **Al menos una lista o una tabla** (`<ul>`, `<ol>` o `<table>`). Un muro de
+  prosa obliga al modelo a resumir; una lista se puede citar tal cual.
+- **Al menos 300 palabras visibles.** No es un objetivo de longitud: es un
+  filtro para descartar páginas casi vacías.
+
+</NumberedSection>
+
+## El detalle que casi nadie implementa bien: la página sin fecha
+
+Aquí hay una decisión de método que merece explicarse, porque es donde una
+auditoría mal construida miente sin querer.
+
+¿Qué haces con una página en la que **no encuentras ninguna fecha**? La opción
+fácil es puntuar la frescura como si fuera cero. Y está mal: una página sin
+fecha discernible no es una página obsoleta, es una página sobre la que no
+sabes nada. Puntuarla como si fuera de 2019 convierte una ausencia de dato en
+un veredicto negativo.
+
+Lo correcto es sacarla del cálculo: puntuar sobre las dimensiones restantes y
+reescalar el resultado a 100. Así la página no es premiada por no tener fecha,
+pero tampoco es castigada por algo que no se ha medido.
+
+<Verdict title="La regla general, más allá de la frescura" badge="Método">
+
+Un dato que no se ha podido medir se excluye del cálculo y se dice; nunca se
+sustituye por cero. Vale igual para la puntuación global: cuando se combinan
+cobertura de temas, tasa de aparición en IA y preparación técnica, la media se
+hace **solo sobre los componentes que tienen valor**, y si no hay ninguno no
+hay puntuación — no un 0 que parezca un suspenso.
+
+</Verdict>
+
+## Checklist: audita tu página más importante a mano
+
+Puedes pasar esto en diez minutos con el código fuente de una sola página
+(`Ctrl+U` en el navegador). Elige la que más te importe que aparezca en una
+respuesta de IA:
+
+<Checklist items={[
+  "Busca `application/ld+json`. ¿Hay al menos uno con @type Article, BlogPosting, FAQPage, HowTo, Product, Organization o WebPage?",
+  "Cuenta los `<h1>`. Tiene que haber exactamente uno.",
+  "Cuenta los `<h2>`. Dos como mínimo.",
+  "Lee las primeras tres líneas del cuerpo. ¿Responden a la pregunta del titular, o solo la anuncian?",
+  "Mide el `<title>`: entre 15 y 70 caracteres.",
+  "Mide la `meta description`: entre 50 y 160 caracteres.",
+  "Comprueba que existen `og:title` y `og:description`, los dos.",
+  "Busca una fecha en el JSON-LD. Si la hay, ¿tiene menos de seis meses?",
+  "Busca `rel=\"canonical\"`. ¿Apunta a una URL de tu propio dominio?",
+  "Busca `noindex`. Si aparece, para aquí: nada de lo demás importa hasta arreglarlo.",
+  "Busca `hreflang`.",
+  "¿Hay al menos una `<ul>`, `<ol>` o `<table>` en el contenido?",
+  "¿La página tiene más de 300 palabras visibles de texto real?"
+]} />
+
+<QuickAction>
+
+Si solo vas a arreglar una cosa hoy, que sea **la respuesta en las primeras
+líneas**. Es la que más páginas fallan, no requiere tocar código, y es la única
+del checklist que cambia lo que el modelo puede extraer de ti en vez de cómo te
+clasifica.
+
+</QuickAction>
+
+## Con qué frecuencia repetirla
+
+Dos motivos para volver, y el segundo es el que se olvida:
+
+- **Cuando cambies la página.** Obvio.
+- **Aunque no cambies nada.** La frescura corre sola: una página que hoy
+  puntúa como reciente pasa a "envejeciendo" a los seis meses sin que tú hagas
+  nada, y a "obsoleta" al año y medio. Tu puntuación baja mientras tú no
+  miras.
+
+Hay una ventaja práctica: estas seis comprobaciones son **deterministas**. Son
+escaneos sobre el HTML, no consultas a un modelo, así que repetirlas no cuesta
+llamadas a ningún proveedor y el resultado no varía entre ejecuciones. Auditar
+a menudo es barato; medir tu visibilidad en los motores, no.
+
+## Qué NO te dice una auditoría GEO
+
+Para que la conclusión sea útil hay que decir dónde acaba. Una auditoría
+técnica te dice si tu página **puede** ser citada. No te dice si **lo es**.
+
+Son dos preguntas encadenadas: la primera se responde mirando tu HTML, y es la
+que cubre este artículo; la segunda solo se responde preguntándole a los
+motores, de forma repetida y con prompts que representen cómo pregunta de
+verdad tu cliente. Una web con 100 de preparación técnica puede no aparecer
+nunca en una respuesta si nadie pregunta por su categoría o si sus competidores
+llevan años siendo la referencia.
+
+Arregla lo técnico primero, porque es lo barato, lo determinista y lo que
+depende solo de ti. Pero no confundas haberlo arreglado con estar apareciendo.
+
+<ArticleCta
+  title="Pásale esta auditoría a tu web entera, no a una página"
+  text="GenScore audita las seis dimensiones página a página y te dice qué arreglar primero. Escaneo gratuito, sin tarjeta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

@@ -1,14 +1,19 @@
 import "server-only";
 
 import { resolvePlan } from "@/lib/billing";
+import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
 import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
-import { ProjectActionError, type AuthenticatedContext } from "@/lib/scan/types";
+import { computeSampleCount } from "@/lib/scan/sampling";
+import { ProjectActionError } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 
 type CopyForwardResultRow = {
   prompt_id: string;
   prompt_text_snapshot: string;
+  sample_index: number;
   brand_snapshot: string;
+  brand_aliases_snapshot: string[] | null;
   competitors_snapshot: unknown;
   country_snapshot: string;
   language_snapshot: string;
@@ -76,7 +81,7 @@ async function copyForwardLatestResults({
   const { data: sourceRows } = await service
     .from("scan_prompt_results")
     .select(
-      "prompt_id, prompt_text_snapshot, brand_snapshot, competitors_snapshot, country_snapshot, language_snapshot, provider, model, status, raw_response_text, raw_response_json, tokens_in, tokens_out, cost_usd, llm_latency_ms, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extraction_version, extracted_json, extraction_error"
+      "prompt_id, prompt_text_snapshot, sample_index, brand_snapshot, brand_aliases_snapshot, competitors_snapshot, country_snapshot, language_snapshot, provider, model, status, raw_response_text, raw_response_json, tokens_in, tokens_out, cost_usd, llm_latency_ms, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extraction_version, extracted_json, extraction_error"
     )
     .eq("project_id", projectId)
     .eq("run_id", latestCompletedRun.id)
@@ -91,7 +96,14 @@ async function copyForwardLatestResults({
       project_id: projectId,
       prompt_id: row.prompt_id,
       prompt_text_snapshot: row.prompt_text_snapshot,
+      // Carried, not reset. A partial rescan copies forward every sample of
+      // every prompt it is not rescanning; collapsing them to the default 0
+      // would violate the (run_id, prompt_id, provider, sample_index)
+      // uniqueness of migration 0028 the moment a prompt had more than one
+      // sample, failing the whole insert.
+      sample_index: row.sample_index,
       brand_snapshot: row.brand_snapshot,
+      brand_aliases_snapshot: row.brand_aliases_snapshot ?? [],
       competitors_snapshot: row.competitors_snapshot,
       country_snapshot: row.country_snapshot,
       language_snapshot: row.language_snapshot,
@@ -151,7 +163,10 @@ export async function createPendingScanRunCore({
 }): Promise<string> {
   const { data: project, error: projectError } = await readClient
     .from("projects")
-    .select("id, is_archived, owner_user_id")
+    // `domain` is read only for the sampling exemption (SAMPLING-1): the
+    // agentic pilot's reserved write-project must keep costing ~1 LLM call
+    // per scan (see lib/scan/sampling.ts).
+    .select("id, domain, is_archived, owner_user_id")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -166,6 +181,51 @@ export async function createPendingScanRunCore({
   if (project.is_archived) {
     throw new ProjectActionError("project_archived");
   }
+
+  /**
+   * `sampling_enabled` (SAMPLING-DEBUG-TOGGLE-1, migration 0032) is read in
+   * its OWN query rather than merged into the select above, on purpose:
+   * this select above is on the critical path of every scan creation, and a
+   * column PostgREST doesn't know about fails the WHOLE select, not just
+   * this field — exactly the incident already documented on the /debug page
+   * for `auto_technical_audit_enabled`/`auto_coverage_audit_enabled` (see
+   * `app/dashboard/projects/[projectId]/debug/page.tsx`). Isolating the read
+   * means a migration not yet applied breaks nothing here: `samplingEnabled`
+   * below falls back to `undefined`, which `computeSampleCount` treats as
+   * sampling ON — the current shipped behaviour, not a new failure mode on
+   * every scan in the product.
+   */
+  const { data: samplingRow } = await readClient
+    .from("projects")
+    .select("sampling_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  /**
+   * `engine_{gemini,claude,openai}_enabled` (ENGINE-DEBUG-TOGGLE-1, migration
+   * 0033) — same isolated-query reasoning as `sampling_enabled` above: this
+   * runs on the critical path of every scan creation, so a column PostgREST
+   * doesn't know about must not fail the whole project select. `undefined`
+   * (migration not applied, or a transient read failure) resolves to
+   * `enabledEngines: undefined` below, which `resolveScanProvidersForPlan`
+   * treats as "no project override" — the current shipped behaviour, not a
+   * new failure mode that silently drops an engine from every scan.
+   */
+  const { data: engineFlagsRow } = await readClient
+    .from("projects")
+    .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  const enabledEngines: LLMScanProvider[] | undefined = engineFlagsRow
+    ? (
+        [
+          engineFlagsRow.engine_gemini_enabled !== false ? "gemini" : null,
+          engineFlagsRow.engine_claude_enabled !== false ? "claude" : null,
+          engineFlagsRow.engine_openai_enabled !== false ? "openai" : null
+        ].filter(Boolean) as LLMScanProvider[]
+      )
+    : undefined;
 
   // Read via the service client (not readClient) so this resolves correctly
   // for every caller — the cron path and reconciliation's auto-retry path
@@ -269,6 +329,48 @@ export async function createPendingScanRunCore({
   const scannedPrompts = eligibleForJobs.slice(0, campaignCap);
   const promptCount = scannedPrompts.length;
 
+  // SAMPLING-1 (ADR 0030): how many times this run asks each prompt of each
+  // engine, so a project with few prompts still reaches the response floor
+  // the score needs. Resolved HERE, at job-creation time, because the unit of
+  // work is one (prompt, sample) job: putting the repetition inside
+  // processPromptJob instead would multiply the per-batch concurrency
+  // (10 jobs x 3 engines x R calls at once) straight through the ~60s
+  // maxDuration budget, whereas one job per sample keeps every batch at the
+  // same 30 concurrent calls it makes today and simply uses more batches
+  // (docs/adr/0014-batched-self-chaining-scan-execution.md).
+  //
+  // The engine count comes from the same resolver `executePendingScan` uses,
+  // so the number the sampling was sized from cannot drift from the number
+  // actually executed.
+  const resolvedProviders = resolveScanProvidersForPlan(plan, enabledEngines);
+
+  // ENGINE-DEBUG-TOGGLE-1: a project with every engine switched off would
+  // otherwise size and create a run with zero engines — total_prompts stuck
+  // at 0, no scan_prompt job ever created, a "completed" run that answered
+  // nothing. That is exactly the fake-scan shape CLAUDE.md forbids, so this
+  // is rejected outright rather than silently producing an empty run. The
+  // primary guard against ever reaching this is `setEngineEnabled` refusing
+  // to turn off the last enabled engine; this is the defense-in-depth check
+  // for a race between two tabs, or a migration applied without that guard.
+  if (resolvedProviders.length === 0) {
+    throw new ProjectActionError("no_engines_enabled");
+  }
+
+  const sampling = computeSampleCount({
+    promptCount,
+    engineCount: resolvedProviders.length,
+    planId: plan.id,
+    domain: project.domain as string | null | undefined,
+    samplingEnabled: samplingRow?.sampling_enabled as boolean | undefined
+  });
+
+  // Counts scan_prompt JOBS, not distinct prompts — every progress bar
+  // divides `successful_prompts + failed_prompts` (job counts, see
+  // refreshRunProgressCounters) by this, so any other definition makes the
+  // bar exceed 100%. The distinct-prompt count is recoverable as
+  // total_prompts / sample_count (migration 0028).
+  const totalJobs = promptCount * sampling.samples;
+
   const { data: run, error: runError } = await service
     .from("scan_runs")
     .insert({
@@ -276,7 +378,8 @@ export async function createPendingScanRunCore({
       triggered_by_user_id: triggeredByUserId,
       trigger_source: triggerSource,
       status: "pending",
-      total_prompts: promptCount,
+      total_prompts: totalJobs,
+      sample_count: sampling.samples,
       successful_prompts: 0,
       failed_prompts: 0,
       extraction_version: "v1",
@@ -297,18 +400,29 @@ export async function createPendingScanRunCore({
       status: "pending",
       payload_json: { run_id: run.id, project_id: projectId }
     },
-    ...scannedPrompts.map((prompt) => ({
-      project_id: projectId,
-      run_id: run.id,
-      job_type: "scan_prompt",
-      status: "pending",
-      payload_json: {
-        run_id: run.id,
+    // Sample-major order (every prompt at sample 0, then every prompt at
+    // sample 1, ...) rather than prompt-major. All of these rows are inserted
+    // by one statement and therefore share a created_at, so the batch order
+    // in `executePendingScan` is not guaranteed to follow this — but where it
+    // does, a run cut short by repeated failures degrades into "every prompt
+    // measured once" instead of "a third of the prompts measured three
+    // times", which is the more useful partial result. Nothing depends on it
+    // for correctness.
+    ...Array.from({ length: sampling.samples }, (_, sampleIndex) =>
+      scannedPrompts.map((prompt) => ({
         project_id: projectId,
-        prompt_id: prompt.id,
-        prompt_text: prompt.prompt_text
-      }
-    })),
+        run_id: run.id,
+        job_type: "scan_prompt",
+        status: "pending",
+        payload_json: {
+          run_id: run.id,
+          project_id: projectId,
+          prompt_id: prompt.id,
+          prompt_text: prompt.prompt_text,
+          sample_index: sampleIndex
+        }
+      }))
+    ).flat(),
     {
       project_id: projectId,
       run_id: run.id,

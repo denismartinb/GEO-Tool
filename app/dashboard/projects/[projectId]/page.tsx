@@ -1,17 +1,21 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
+import { requireActiveProject } from "@/lib/project-workspace";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { EmptyState } from "@/components/empty-state";
 import { Gauge } from "@/components/ui/gauge";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
+import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import {
   computeJointPotentialPoints,
@@ -20,11 +24,52 @@ import {
   isQuantifiableRecommendationType,
   type ScoreInputRow
 } from "@/lib/scoring/run-scoring";
+import {
+  computeMentionInterval,
+  hasSufficientSample,
+  MIN_RESPONSES_FOR_BAND,
+  readComparableRun,
+  resolveDelta,
+  type DeltaVerdict
+} from "@/lib/scoring/score-reliability";
+import {
+  computeWindowedScore,
+  computeWindowedSeries,
+  readWindowRun
+} from "@/lib/scoring/score-window";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
-import { getLLMScanProviders } from "@/lib/scan/executor";
+import { getLLMScanProviders } from "@/lib/scan/providers";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
+import { computePanoramaState } from "@/lib/competitors/panorama-state";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
+import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
+import {
+  GEO_SCORE_COMPONENT_META,
+  parseEngineCoverage,
+  translateDroppedComponentReason,
+  type GeoScoreEngineCoverage
+} from "./geo-score-breakdown";
+
+/**
+ * DOMAINS-REDESIGN-1: NOT optional, and not a copy-paste from the page this
+ * replaced.
+ *
+ * `AutoExecuteScan` (mounted below) drives the scan by calling
+ * `autoExecutePendingScan`, a Server Action — and Server Actions inherit the
+ * `maxDuration` of the page they are invoked from (docs/adr/0003). Overview
+ * previously exported none, so it ran on Vercel's default budget. Mounting the
+ * driver here without this line would kill every batch window mid-flight, in
+ * production only, with no error the user or the logs would attribute to it:
+ * the run would simply stop advancing and be failed later by
+ * `reconcileStuckScanRuns` as a timeout.
+ *
+ * 60s matches the window `AUTO_EXECUTE_TIME_BUDGET_MS` (~40s) is sized against.
+ */
+export const maxDuration = 60;
 
 /* ---- constants & helpers ---- */
 
@@ -91,7 +136,8 @@ type ExtractedJsonPartial = {
 type BrandPositionEntry = {
   name?: string;
   is_brand?: boolean;
-  avg_position?: number;
+  avg_position_when_mentioned?: number | null;
+  mention_rate?: number;
   mention_count?: number;
 };
 
@@ -99,7 +145,7 @@ type BrandPositionDetails = {
   prompts_with_position_data?: number;
   total_entities?: number;
   ranking?: BrandPositionEntry[];
-  brand_avg_position?: number;
+  brand_avg_position_when_mentioned?: number | null;
   confidence?: string;
 };
 
@@ -118,8 +164,11 @@ type GeoScoreDetails = {
     presence?: GeoScoreComponent;
     prominence?: GeoScoreComponent;
     standing?: GeoScoreComponent;
+    /** Technical readiness of the site (GEO-SCORE-V4, ADR 0033) — web_audit_snapshots.readiness_score, deterministic, no LLM. */
+    technical?: GeoScoreComponent;
     authority?: GeoScoreComponent;
   };
+  engine_coverage?: GeoScoreEngineCoverage | null;
   formula?: string;
 };
 
@@ -157,6 +206,19 @@ function affectedPromptIds(evidenceJson: unknown): string[] {
 
 /* ---- page ---- */
 
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Visión general", async () => (await requireActiveProject(projectId)).domain);
+}
+
 export default async function ProjectDetailPage({
   params,
   searchParams
@@ -176,33 +238,27 @@ export default async function ProjectDetailPage({
   // Reconciliation itself is decided from the already-fetched `runs` below
   // instead of running unconditionally on every render
   // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
-  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, name, domain, brand, country, language, created_at")
-      .eq("id", projectId)
-      .eq("is_archived", false)
-      .single(),
-    supabase
-      .from("project_prompts")
-      .select("id, prompt_text, category, is_active")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("project_competitors")
-      .select("id, name, domain, is_active")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("scan_runs")
-      .select(RUNS_SELECT)
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-  ]);
-
-  if (!project) notFound();
+  const [project, { data: prompts }, { data: competitors }, { data: runsData }] =
+    await Promise.all([
+      requireActiveProject(projectId),
+      supabase
+        .from("project_prompts")
+        .select("id, prompt_text, category, is_active")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("project_competitors")
+        .select("id, name, domain, is_active")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("scan_runs")
+        .select(RUNS_SELECT)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+    ]);
 
   let runs = runsData;
   if (scanRunsNeedReconciliation(runs)) {
@@ -224,12 +280,43 @@ export default async function ProjectDetailPage({
   const latestRun = runs?.[0];
   const latestCompletedRun = runs?.find((r) => r.status === "completed");
   const completedRunsCount = runs?.filter((r) => r.status === "completed").length ?? 0;
+  // ONBOARDING-ROCKET-1: the mission is a first-impression, not a product
+  // state — it spends itself once per domain. Zero completed runs is exactly
+  // the condition `hasData` already gates the whole empty-state overlay on
+  // (see `hasData` below), so this needs no new column: a project's second
+  // scan onward always falls straight to `ScanInProgressLive`.
+  const isFirstScan = completedRunsCount === 0;
   const latestFailedRun = latestRun?.status === "failed" ? latestRun : null;
-  const activeRun = runs?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = runs?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
-  const successMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
+  const rawSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
+  /**
+   * SCAN-STATES-2: `scan_started` is suppressed unconditionally. Its text
+   * ("Dominio creado. Tu primer escaneo se está ejecutando — sigue el
+   * progreso aquí") is the mission's own rail said twice, stacked above a
+   * full-bleed scene as a second surface — exactly the "banner flotando
+   * encima" the founder asked to remove (2026-08-10). Every other feedback
+   * message still shows: this drops one redundant sentence, not the
+   * mechanism.
+   *
+   * This key is fired ONLY from the first-scan creation redirect
+   * (`app/dashboard/projects/actions.ts`), so it is never valid to show as a
+   * banner: while the run is active the mission already says it, and once
+   * the run finishes the text is simply false. A first attempt gated this on
+   * `activeRun`/`isFirstScan` and got the direction backwards — it hid the
+   * message after completion but let it show *while the mission itself was
+   * on screen*, which is the one moment SCAN-STATES-2 explicitly banned
+   * (log §105, corrected same day after the founder caught it live). There
+   * is no state in which this key should ever render, so it is suppressed
+   * outright rather than gated on a run's transient status.
+   */
+  const successMessage = rawSuccessMessage && feedback.success !== "scan_started" ? rawSuccessMessage : null;
 
   /* ---- queries that require a completed run ---- */
   const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =
@@ -265,7 +352,7 @@ export default async function ProjectDetailPage({
             .order("priority_rank", { ascending: true }),
           supabase
             .from("run_scores")
-            .select("visibility_score, citation_score, competitor_gap_score, created_at, details_json")
+            .select("run_id, visibility_score, citation_score, competitor_gap_score, created_at, details_json")
             .eq("project_id", projectId)
             .order("created_at", { ascending: false })
             .limit(7)
@@ -305,7 +392,8 @@ export default async function ProjectDetailPage({
   const geoScore = scoreDetails.geo_score;
   // Fallback to legacy visibility_score for runs scored before geo-score-v1
   // existed (no backfill, per ADR 0008).
-  const gaugeScore = Math.round(geoScore?.score ?? visibilityScore);
+  /** This scan's own composite — kept as the detail figure under the gauge. */
+  const perRunScore = Math.round(geoScore?.score ?? visibilityScore);
 
   const computedMentionRate = allPromptResults?.length
     ? Math.round((allPromptResults.filter((r) => r.brand_mentioned).length / allPromptResults.length) * 100)
@@ -352,12 +440,96 @@ export default async function ProjectDetailPage({
   // GEO Score history for the gauge (audit phase B, finding 10). Pre-composite
   // runs fall back to visibility_score inside getEffectiveGeoScore — the same
   // fallback the gauge itself applies (ADR 0008, no backfill).
-  const geoTrend = trendHistory.map((r) => Math.round(getEffectiveGeoScore(r)));
+  const perRunTrend = trendHistory.map((r) => Math.round(getEffectiveGeoScore(r)));
+
+  /* ---- SCORE-WINDOW-1 — the headline is a window, not one scan ----------
+   *
+   * The engines run live retrieval, and `temperature: 0` does not control
+   * what Google Search or web_search return on any given call, so two
+   * identical scans genuinely see a different internet. That residual
+   * variance is the one Fases A–C could not remove
+   * (docs/geo-score-variability-2026-08.md §2), and the only honest
+   * instrument against per-observation noise is to stop treating one
+   * observation as the answer.
+   *
+   * `computeWindowedScore` refuses to mix runs that `compareRuns` would
+   * refuse to compare, so when it publishes nothing we fall back to the
+   * latest run's own score — never to a median of incomparable things.
+   */
+  const windowRuns = trendHistory
+    .map((r) => readWindowRun(r as { run_id?: string | null; created_at?: string | null; details_json?: unknown }))
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  const scoreWindow = computeWindowedScore(windowRuns);
+  const windowPublished = scoreWindow.verdict === "published" && scoreWindow.value !== null;
+
+  /** The number the gauge shows: the window when it exists, the run otherwise. */
+  const gaugeScore = windowPublished ? Math.round(scoreWindow.value as number) : perRunScore;
+
+  // The sparkline must plot the same quantity as the gauge above it, or the
+  // two read as different metrics and the user cannot tell which the headline
+  // belongs to. Gaps (null) stay gaps — never zeroes.
+  const windowedSeries = computeWindowedSeries(windowRuns);
+  const geoTrend = windowPublished
+    ? windowedSeries.filter((v): v is number => v !== null).map((v) => Math.round(v))
+    : perRunTrend;
 
   const prevScore = trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
   const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;
   const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
-  const gaugeDelta = geoTrend.length >= 2 ? gaugeScore - geoTrend[geoTrend.length - 2] : 0;
+
+  // Window-over-window, not window-minus-run: subtracting last scan's raw
+  // score from this window's median would compare two different quantities
+  // and call the difference a change.
+  const previousWindow = computeWindowedScore(windowRuns.slice(0, -1));
+  const gaugeDelta = windowPublished
+    ? previousWindow.verdict === "published" && previousWindow.value !== null
+      ? Math.round(scoreWindow.value as number) - Math.round(previousWindow.value)
+      : 0
+    : perRunTrend.length >= 2
+      ? gaugeScore - perRunTrend[perRunTrend.length - 2]
+      : 0;
+
+  /* ---- GEO-SCORE-RELIABILITY-1 — precision and comparability ----
+   * Every "vs. escaneo anterior" number above is a raw subtraction of two
+   * persisted rows. Whether it means anything depends on two things the page
+   * previously never checked: whether this run carries enough AI responses to
+   * support the claim, and whether the two runs measured the same thing at
+   * all (same methodology version, same surviving components, same engines,
+   * same sample size). `resolveDelta` is the single decision point for both,
+   * so the gauge and the KPI cards cannot disagree about what is assertable.
+   *
+   * When there is no previous run the verdict is null and nothing is
+   * rendered — that is the pre-existing "≥2 escaneos" behavior, unchanged.
+   */
+  const currentRun = readComparableRun(latestScore?.details_json);
+  const previousRun = prevScore ? readComparableRun(prevScore.details_json) : null;
+  const mentionInterval = computeMentionInterval(brandMentions, totalResults);
+  const sampleSufficient = hasSufficientSample(totalResults);
+  const resolve = (value: number): DeltaVerdict | null =>
+    previousRun ? resolveDelta(value, currentRun, previousRun) : null;
+  const gaugeDeltaVerdict = geoTrend.length >= 2 ? resolve(gaugeDelta) : null;
+  const visDeltaVerdict = resolve(visDelta);
+  const gapDeltaVerdict = resolve(gapDelta);
+
+  /**
+   * The ONE line that explains why the band, the delta and the trend are
+   * absent — everywhere else the withheld state renders as nothing at all
+   * (founder decision, 2026-08-03: four "sin comparación" notices on one
+   * screen read as a broken product, not a careful one).
+   *
+   * Deliberately phrased as what unlocks them, not as what is missing: the
+   * user can act on "add prompts or engines", and cannot act on "insufficient
+   * sample". Returns null when there is nothing to explain.
+   *
+   * A non-comparable pair of runs gets no line at all: it is not actionable —
+   * the next scan resolves it on its own — and naming it would reintroduce
+   * exactly the noise this change removes.
+   */
+  const sampleNudge = (verdict: DeltaVerdict | null): string | null => {
+    if (!verdict || verdict.kind !== "insufficient_sample") return null;
+    const missing = MIN_RESPONSES_FOR_BAND - verdict.responses;
+    return `Con ${missing} ${missing === 1 ? "respuesta" : "respuestas"} de IA más verás franja y evolución. Añade prompts o motores.`;
+  };
 
   /* ---- sentiment KPI (audit phase B, finding 6) ----
    * Distribution of the sentiment the AI expresses ABOUT THE BRAND in the
@@ -400,29 +572,28 @@ export default async function ProjectDetailPage({
     }
   }
 
-  const totalForSov =
-    brandMentions +
-    (competitors ?? []).reduce((sum, c) => sum + (competitorMentionCounts[c.name.toLowerCase().trim()] ?? 0), 0);
-
+  /* Mention rate — the share of THIS scan's answers that named the entity.
+     Share of voice (mentions ÷ all tracked mentions) used to be computed here
+     too and published by the panorama; it left the Overview with
+     PANORAMA-PARITY-1 because the same brand read 37% here and 48% on
+     Competidores under what looked like the same question. SoV still exists
+     and is still shown — on the Competidores podium, where it is labelled as
+     itself and computed over every completed scan. */
   const competitorRows = (competitors ?? []).map((comp, i) => {
     const key = comp.name.toLowerCase().trim();
     const mentionCount = competitorMentionCounts[key] ?? 0;
     const mentionRate = allPromptResults?.length
       ? Math.round((mentionCount / allPromptResults.length) * 100)
       : 0;
-    const sov = totalForSov > 0 ? Math.round((mentionCount / totalForSov) * 100) : 0;
     return {
       name: comp.name,
       domain: comp.domain,
       color: COMPETITOR_COLORS[i % COMPETITOR_COLORS.length],
       initial: comp.name.slice(0, 1).toUpperCase(),
       mentionRate,
-      sov,
       isLeader: false
     };
   });
-
-  const brandSov = totalForSov > 0 ? Math.round((brandMentions / totalForSov) * 100) : 0;
 
   const hasData = Boolean(latestCompletedRun && latestScore);
 
@@ -430,100 +601,71 @@ export default async function ProjectDetailPage({
   const brandPosition = scoreDetails.brand_position;
   const brandPositionPromptsWithData = n(brandPosition?.prompts_with_position_data);
   const brandPositionAvailable = Boolean(brandPosition) && brandPositionPromptsWithData > 0;
-  const brandPositionRanking = [...(brandPosition?.ranking ?? [])].sort(
-    (a, b) => n(a.avg_position) - n(b.avg_position)
-  );
+  // Ordered by rank WHEN MENTIONED, best first; entities the AI never named
+  // have no rank at all and sort last rather than being given a fabricated
+  // one (geo-score-v3 — see docs/adr/0026). Missing and null both mean "no
+  // rank" and are collapsed in one tested place, because readers disagreeing
+  // about which was which is what put a numeric rank badge beside a "—"
+  // position on the same row.
   const brandPositionLowConfidence = brandPositionPromptsWithData > 0 && brandPositionPromptsWithData <= 2;
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
 
-  /* ---- unified competitive panorama (position + share of voice) ----
-   * Merges the two previously-separate real sections (brand position
-   * ranking + competitor SOV table) into one list, per founder request
-   * (Task Intake 2026-07-23). When brand_position isn't available for this
-   * scan, falls back to the SOV-only ordering the table already used.
+  /* ---- unified competitive panorama (PANORAMA-PARITY-1, PANORAMA-EMPTY-1) ----
+   * Merges the two previously-separate real sections (brand position ranking +
+   * competitor table) into one list, per founder request (Task Intake
+   * 2026-07-23).
+   *
+   * The ranking and the state it implies are NOT decided here: they come from
+   * `computePanoramaState` (lib/competitors/panorama-state.ts), which the
+   * module header explains at length — four real states (empty / unranked /
+   * ranked-in-top-5 / ranked-beyond-top-5-or-unmentioned), not the one this
+   * block used to assume. It calls `rankLatestPositions`, the same ordering
+   * the Competidores page uses: until 2026-08-06 each screen ordered the
+   * persisted ranking for itself and disagreed on ties (PANORAMA-PARITY-1).
+   *
+   * Both screens publish the SAME figure per row: the mention rate of this
+   * scan, not cumulative share of voice (which is still real, still shown —
+   * on the Competidores podium, labelled as itself).
    */
-  type PanoramaRow = {
-    key: string;
-    name: string;
-    domain: string | null;
-    isBrand: boolean;
-    avgPosition: number | null;
-    sov: number;
-    /** Real rank among ranked entities (1-based), or null when unavailable. */
-    rank: number | null;
-  };
-  // Single source of truth for BOTH the position-bar chart and the ranked
-  // list below it — both panels must show the same entities in the same
-  // order, or the two numbers ("posición 2" on the bar vs. a different row
-  // in the list) read as contradictory (founder-reported confusion,
-  // real-data case: 18 competitors made the old "brand pinned + rest by
-  // SOV" list diverge completely from the position-ranked bars).
-  const panoramaRows: PanoramaRow[] = brandPositionAvailable
-    ? brandPositionRanking.map((entry, i) => {
-        if (entry.is_brand) {
-          return {
-            key: "brand",
-            name: project.brand,
-            domain: project.domain,
-            isBrand: true,
-            avgPosition: n(entry.avg_position),
-            sov: brandSov,
-            rank: i + 1
-          };
-        }
-        const match = competitorRows.find(
-          (c) => c.name.toLowerCase().trim() === (entry.name ?? "").toLowerCase().trim()
-        );
-        return {
-          key: entry.name ?? `pos-${i}`,
-          name: entry.name ?? "—",
-          domain: match?.domain ?? null,
-          isBrand: false,
-          avgPosition: n(entry.avg_position),
-          sov: match?.sov ?? 0,
-          rank: i + 1
-        };
-      })
-    : [
-        { key: "brand", name: project.brand, domain: project.domain, isBrand: true, avgPosition: null, sov: brandSov, rank: null },
-        ...competitorRows
-          .slice()
-          .sort((a, b) => b.mentionRate - a.mentionRate)
-          .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, sov: c.sov, rank: null }))
-      ];
-  const maxPanoramaSov = Math.max(1, ...panoramaRows.map((r) => r.sov));
+  const panoramaState = computePanoramaState({
+    entities: [
+      { key: "brand", name: project.brand, domain: project.domain, isBrand: true, fallbackMentionRate: computedMentionRate },
+      ...competitorRows.map((c) => ({
+        key: c.name,
+        name: c.name,
+        domain: c.domain,
+        isBrand: false,
+        fallbackMentionRate: c.mentionRate
+      }))
+    ],
+    ranking: brandPosition?.ranking,
+    hasPositionData: brandPositionAvailable
+  });
 
-  /* ---- position-media summary + bars (real brand_position data) ----
-   * "Tu posición media X / N" = brand's rank among the ranked entities.
-   * Bars encode avg_position (lower = better = taller). Only when
-   * brand_position is available for this scan; otherwise the panorama
-   * shows the SOV ranking list alone.
-   */
-  const brandRankIndex = brandPositionRanking.findIndex((e) => e.is_brand);
-  const brandRank = brandRankIndex >= 0 ? brandRankIndex + 1 : null;
-  const totalRanked = brandPositionRanking.length;
-
-  // Top 5 by real position — the exact same rows feed both the bars and the
-  // list. If the brand falls outside the top 5, its real row is appended so
-  // "dónde estoy" never disappears, but the top-5 podium itself stays intact.
-  const topPanoramaRows = panoramaRows.slice(0, 5);
-  const brandRow = panoramaRows.find((r) => r.isBrand);
-  const panoramaListRows =
-    brandPositionAvailable && brandRow && !topPanoramaRows.some((r) => r.isBrand)
-      ? [...topPanoramaRows, brandRow]
-      : topPanoramaRows;
+  const panoramaListRows = panoramaState.kind === "ranked" ? panoramaState.listRows : panoramaState.kind === "unranked" ? panoramaState.rows : [];
+  const maxPanoramaMention = Math.max(1, ...panoramaListRows.map((r) => r.mentionRate ?? 0));
+  const panoramaRanked = panoramaState.kind === "ranked";
+  const brandRank = panoramaState.kind === "ranked" ? panoramaState.brandRank : null;
+  const totalRanked = panoramaState.kind === "ranked" ? panoramaState.totalRanked : 0;
+  const brandAppendedBeyondTop5 = panoramaState.kind === "ranked" && panoramaState.brandAppended;
 
   const posbarsData = (() => {
-    if (!brandPositionAvailable || topPanoramaRows.length === 0) return [];
-    const positions = topPanoramaRows.map((r) => n(r.avgPosition));
+    if (panoramaState.kind !== "ranked") return [];
+    // Every ranked row has a position by construction; the guard stays because
+    // coercing a missing one to 0 would draw it as the best-placed brand on
+    // the chart, the exact inversion of the truth.
+    const ranked = panoramaState.topRows.filter(
+      (r): r is typeof r & { position: number } => r.position !== null
+    );
+    if (ranked.length === 0) return [];
+    const positions = ranked.map((r) => r.position);
     const maxPos = Math.max(...positions);
     const minPos = Math.min(...positions);
     const range = maxPos - minPos;
-    return topPanoramaRows.map((r) => {
-      const pos = n(r.avgPosition);
-      // Lower avg_position (better) → taller bar. Flat range → uniform height.
-      const height = range > 0 ? 20 + ((maxPos - pos) / range) * 40 : 40;
+    return ranked.map((r) => {
+      // Lower rank-when-mentioned (better) → taller bar. Flat range → uniform.
+      const height = range > 0 ? 20 + ((maxPos - r.position) / range) * 40 : 40;
       return { name: r.name, isBrand: r.isBrand, height };
     });
   })();
@@ -590,6 +732,21 @@ export default async function ProjectDetailPage({
   /* ---- render ---- */
   return (
     <div className="page">
+      {/* DOMAINS-REDESIGN-1 — the invisible driver that actually executes a
+          pending scan's batches, moved here from the Escaneos page it used to
+          be the ONLY mount of. Onboarding now lands on this page, so this is
+          where a freshly created project's first run gets driven; leaving it
+          behind would have stranded every new customer's first scan in
+          `pending` until the cron rescued it.
+
+          Mounted while the run is `pending` OR `running`, not just `pending`:
+          a multi-batch campaign (SCAN-CHAIN-1) flips to `running` after its
+          first batch, and unmounting then would strand the campaign after
+          batch 1. AutoExecuteScan guards against double-driving across
+          re-renders. */}
+      {ENABLE_SYNC_SCAN_EXECUTION && activeRun ? (
+        <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
+      ) : null}
       {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
       {/* Sticky page header */}
@@ -605,18 +762,15 @@ export default async function ProjectDetailPage({
           </div>
         </div>
         <div className="ov-sticky-right">
-          {latestCompletedRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
-            </span>
-          )}
-          {activeRun ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
+          <ScanStatePill
+            activeRun={activeRun}
+            lastScanLabel={
+              latestCompletedRun
+                ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                    .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                : null
+            }
+          />
         </div>
       </div>
 
@@ -652,9 +806,16 @@ export default async function ProjectDetailPage({
               <Icon name="sparkles" size={18} />
             </div>
             <p className="ov2-insight-txt">
+              {/* "prompts" here counted prompt × engine rows, not prompts: a
+                  project with 1 prompt scanned on 3 engines read "3 de 3
+                  prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1). */}
               GenScore detectó que <b>{project.brand}</b> aparece en{" "}
-              <b>{brandMentions} de {totalResults} prompts</b> ({computedMentionRate}%), con una{" "}
-              <b>puntuación GEO de {gaugeScore}/100</b>.
+              <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
+              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
+              {/* perRunScore, not gaugeScore: this sentence is about THIS
+                  scan's responses, so pairing them with the windowed median
+                  would attribute a figure to data that did not produce it. */}
+              <b>puntuación GEO de {perRunScore}/100</b>.
               {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
                   {" "}Tu rival más visible,{" "}
@@ -701,15 +862,39 @@ export default async function ProjectDetailPage({
             <div className="ov2-gauge-info">
               <div className="ov2-gauge-lbl">Puntuación GEO</div>
               <div className="ov2-gauge-badges">
-                <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
-                {geoTrend.length >= 2 && gaugeDelta !== 0 && <Delta value={gaugeDelta} suffix=" pt" />}
+                {/* The qualitative band asserts where the brand sits on a
+                    70/40 scale. Below MIN_RESPONSES_FOR_BAND responses a
+                    single AI answer moves the score by more than 7 points, so
+                    the band is not a claim the sample can support — the score
+                    itself is still shown, only its interpretation is withheld.
+                    Withheld means ABSENT, not labelled: a screen carrying four
+                    "sin comparación"/"muestra insuficiente" notices reads as
+                    broken rather than as careful (founder decision,
+                    2026-08-03). The single actionable line under the gauge
+                    below is what keeps the absence explainable. */}
+                {sampleSufficient ? (
+                  <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
+                ) : null}
+                {gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
+                  <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
+                )}
               </div>
-              {geoTrend.length >= 2 ? (
+              {/* The sparkline is the delta in graphical form: a line joining
+                  the last N scores asserts a trend between them just as
+                  literally as "+44 pt" does. Drawing a rising line directly
+                  under the words "sin comparación" would contradict them in
+                  the more persuasive medium — the founder's original report
+                  was a screenshot of exactly that rise. So the line is
+                  withheld under the same condition as the number, and the
+                  caption says why instead. */}
+              {geoTrend.length >= 2 && gaugeDeltaVerdict?.kind === "publish" ? (
                 <>
                   <Sparkline data={geoTrend} w={200} h={30} color="var(--brand-blue)" />
                   <div className="ov2-gauge-trend-cap">Últimos {geoTrend.length} escaneos</div>
                 </>
-              ) : (
+              ) : sampleNudge(gaugeDeltaVerdict) ? (
+                <div className="ov2-gauge-trend-cap">{sampleNudge(gaugeDeltaVerdict)}</div>
+              ) : geoTrend.length >= 2 ? null : (
                 <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
               )}
             </div>
@@ -725,9 +910,11 @@ export default async function ProjectDetailPage({
                 label: "Tasa de mención",
                 value: computedMentionRate,
                 unit: "%",
-                delta: visDelta,
-                hint: "Prompts donde aparece tu marca.",
-                tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo.",
+                deltaVerdict: visDeltaVerdict,
+                hint: mentionInterval
+                  ? `${brandMentions} de ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA · margen ±${Math.round(mentionInterval.marginPoints)} pt (95%).`
+                  : "Respuestas de IA donde aparece tu marca.",
+                tip: "Porcentaje de respuestas de IA en las que tu marca aparece mencionada, sobre el total de respuestas del escaneo (prompts × motores). El margen es el intervalo de confianza de Wilson al 95%: con pocas respuestas, el valor real puede estar en cualquier punto de ese rango. Se estrecha añadiendo prompts o motores.",
                 isShare: false as const
               },
               {
@@ -735,7 +922,6 @@ export default async function ProjectDetailPage({
                 label: "Cuota de Citas",
                 value: citationShareResult.share,
                 unit: "%",
-                delta: 0,
                 hint: citationShareResult.share !== null
                   ? `${citationShareResult.ownCitations} de ${citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.`
                   : "Sin citas grounding resueltas en este escaneo.",
@@ -747,12 +933,18 @@ export default async function ProjectDetailPage({
                 label: "Presión competitiva",
                 value: competitorPressureScore,
                 unit: "%",
-                delta: gapDelta,
-                hint: "Prompts donde aparece un competidor pero tu marca no.",
+                deltaVerdict: gapDeltaVerdict,
+                hint: "Respuestas de IA donde aparece un competidor pero tu marca no.",
                 invert: true,
-                tip: "Mide en qué porcentaje de tus prompts aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
+                tip: "Mide en qué porcentaje de las respuestas de IA aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
                 isShare: false as const,
-                band: getCompetitivePressureBand(competitorPressureScore)
+                // Same sample gate as the GEO gauge's band: "Presión
+                // competitiva: Baja" is a qualitative claim about the market,
+                // and over <10 AI responses it rests on one or two answers.
+                // Gating one band and not the other would just move the false
+                // precision to the card next door. Falls through to the
+                // delta verdict below, which renders the honest absence.
+                band: sampleSufficient ? getCompetitivePressureBand(competitorPressureScore) : undefined
               },
               {
                 // Sentiment replaces the old "Confianza" card (audit phase B,
@@ -767,7 +959,6 @@ export default async function ProjectDetailPage({
                   ? sentimentLabels[dominantSentiment].charAt(0).toUpperCase() + sentimentLabels[dominantSentiment].slice(1)
                   : "Sin datos",
                 unit: "",
-                delta: 0,
                 hint:
                   sentimentTotal > 0
                     ? `${sentimentBreakdown} · sobre ${sentimentTotal} ${sentimentTotal === 1 ? "respuesta" : "respuestas"} con tu marca.`
@@ -776,7 +967,16 @@ export default async function ProjectDetailPage({
                 isShare: false as const,
                 hideDelta: true as const
               }
-            ].map((m) => (
+            ]
+              // A KPI that cannot support its own claim is hidden, not
+              // labelled (founder decision, 2026-08-03). "Sentimiento de
+              // marca: Positivo" is a qualitative verdict, and it is computed
+              // only over answers that actually mention the brand — 2 of them
+              // on the run that surfaced this. Left in, it would have been the
+              // only card on the screen still asserting something confident
+              // while its three siblings withheld.
+              .filter((m) => m.key !== "sentiment" || hasSufficientSample(sentimentTotal))
+              .map((m) => (
               <div key={m.key} className="ov2-kpi">
                 <div className="ov2-kpi-k">{m.label}</div>
 
@@ -819,6 +1019,14 @@ export default async function ProjectDetailPage({
                     <>
                       <div className="ov2-kpi-v">{m.value}<small>%</small></div>
                       <div className="ov2-kpi-foot">
+                        {/* Same sample gate as the GEO band and the
+                            competitive-pressure band: "Muy bajo" is a
+                            qualitative verdict, and over <10 responses it
+                            rests on one or two cited pages. Gating three
+                            bands on this screen and leaving the fourth would
+                            just be arbitrary. */}
+                        {/* Hidden, not labelled — same rule as the gauge band. */}
+                        {!sampleSufficient ? null : (
                         <span className={`badge ${
                           m.value > 50 ? "badge-pos" :
                           m.value >= 30 ? "badge-accent" :
@@ -832,6 +1040,7 @@ export default async function ProjectDetailPage({
                            m.value >= 5  ? "Bajo" :
                            "Muy bajo"}
                         </span>
+                        )}
                       </div>
                     </>
                   ) : (
@@ -845,8 +1054,17 @@ export default async function ProjectDetailPage({
                         <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 10 }}>
                           {m.band.label}
                         </span>
-                      ) : "hideDelta" in m && m.hideDelta ? null : m.delta !== 0 ? (
-                        <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
+                      ) : "hideDelta" in m && m.hideDelta ? null : !("deltaVerdict" in m) || m.deltaVerdict === null ? null : m.deltaVerdict.kind !== "publish" ? (
+                        // Withheld -> render NOTHING. Never "— sin cambio",
+                        // which would assert measured stability we do not
+                        // have; and no "— sin comparación" label either, since
+                        // repeating that across every card reads as a broken
+                        // screen rather than a careful one (founder decision,
+                        // 2026-08-03). The absence is explained once, under
+                        // the gauge.
+                        null
+                      ) : m.deltaVerdict.value !== 0 ? (
+                        <Delta value={m.deltaVerdict.value} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
                       ) : (
                         <span className="delta flat">— sin cambio</span>
                       )}
@@ -858,6 +1076,88 @@ export default async function ProjectDetailPage({
           </div>
           </div>
           </div>
+
+          {/* Desglose del GEO Score (GEO-SCORE-V4, ADR 0033 §7): stated
+              obligation, not polish — "wherever the GEO Score is shown, its
+              component breakdown must be visible", so "subió porque
+              arreglaste la web" and "subió porque las IAs te citan más" son
+              distinguibles. Placed right under the gauge, full width, its
+              OWN labelled section — never a bare number beside the gauge,
+              which is exactly what log §22 decisión 1 warned reads as a
+              second score. Only rendered once there is a real score to
+              explain. */}
+          {geoScore?.components ? (
+            <>
+              {geoScore.engine_coverage?.status === "partial" ? (
+                <div
+                  className="feedback"
+                  style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginTop: 14 }}
+                >
+                  <p style={{ fontWeight: 650 }}>{engineCoverageNotice(parseEngineCoverage(geoScore.engine_coverage))}</p>
+                </div>
+              ) : null}
+
+              <div className="ov2-sec-lbl">
+                Desglose del GEO Score
+                <span style={{ fontWeight: 600, color: "var(--ink-4)", textTransform: "none", letterSpacing: 0 }}>
+                  {gaugeScore}/100
+                </span>
+              </div>
+              <div className="card" style={{ padding: "6px 18px" }}>
+                {(["presence", "prominence", "standing", "authority", "technical"] as const).map((key) => {
+                  const component = geoScore.components?.[key];
+                  // A run scored before GEO-SCORE-V4 has no `technical` key at
+                  // all — not a null value, the key simply does not exist.
+                  // Returning null there made the row VANISH, so the breakdown
+                  // silently had four rows on older scans and five on new ones,
+                  // with nothing saying why. That is the "no silent gap" failure
+                  // this codebase keeps paying for (.claude/rules/scan.md, "No
+                  // mute rows"). The row now always renders; a pre-v4 run says
+                  // so and tells the user what makes it appear.
+                  const isLegacyRun = !component && key === "technical";
+                  if (!component && !isLegacyRun) return null;
+                  const meta = GEO_SCORE_COMPONENT_META[key];
+                  const isDropped = isLegacyRun || component?.value === null || component?.value === undefined;
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 0",
+                        borderBottom: "1px solid var(--line-soft)"
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                          {meta.label}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+                          {isLegacyRun
+                            ? "Este escaneo es anterior a que la salud técnica entrara en el GEO Score. Se incluirá en tu próximo escaneo."
+                            : isDropped
+                              ? translateDroppedComponentReason(component?.reason)
+                              : meta.hint}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        {isDropped ? (
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-4)" }}>No disponible</span>
+                        ) : (
+                          <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>
+                            {Math.round(component?.value as number)}
+                            <small style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-4)" }}>/100</small>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+
+          ) : null}
 
           {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same
               `display: contents` default as `.ov2-hero` above — no effect on
@@ -901,59 +1201,136 @@ export default async function ProjectDetailPage({
             ) : null}
           </div>
           {competitorRows.length > 0 ? (
-            <>
-              {brandPositionAvailable && posbarsData.length > 0 && (
-                <div className="card" style={{ padding: "17px 16px 6px" }}>
-                  <div className="ov2-pm-lbl">Tu posición media</div>
-                  <div className="ov2-pm-val">
-                    {brandRank ?? "—"}<small> / {totalRanked}</small>
-                  </div>
-                  <div className="ov2-posbars">
-                    {posbarsData.map((b, i) => (
-                      <div key={`${b.name}-${i}`} className={`b ${b.isBrand ? "you" : ""}`} style={{ height: b.height }}>
-                        <span>{b.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="card" style={{ marginTop: brandPositionAvailable && posbarsData.length > 0 ? 11 : 0 }}>
-                {panoramaListRows.map((row) => {
-                  const favicon = faviconUrl(row.domain);
-                  const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
-                  return (
-                    <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
-                      <span className="ov2-cmp-n">{row.rank ?? "·"}</span>
-                      {favicon ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-                        <img src={favicon} alt="" className="ov2-cmp-fav" width={26} height={26} loading="lazy" />
+            panoramaState.kind === "empty" ? (
+              /* PANORAMA-EMPTY-1. Six rows of "0%" answered a question nobody
+                 asked — a live customer's first scan (genscore.es, zero
+                 mentions across the board, 2026-08-07) rendered exactly that,
+                 with no explanation. Nobody named is real, reportable
+                 information; it reads better as a sentence than as a table
+                 that happens to be all zeros. */
+              <div className="card" style={{ padding: "16px 18px" }}>
+                <EmptyState
+                  title="Ninguna marca apareció en este escaneo"
+                  description={`La IA no nombró a ${project.brand} ni a ninguno de tus ${competitorRows.length} ${competitorRows.length === 1 ? "competidor" : "competidores"} en ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"}. Puede pasar en un dominio nuevo o con prompts muy genéricos.`}
+                />
+                <Link
+                  href={`/dashboard/projects/${projectId}/prompts`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--brand-blue)" }}
+                >
+                  Revisar mis prompts <Icon name="arrRight" size={13} />
+                </Link>
+              </div>
+            ) : (
+              <>
+                {posbarsData.length > 0 && (
+                  <div className="card" style={{ padding: "17px 16px 6px" }}>
+                    <div className="ov2-pm-lbl">Tu puesto cuando apareces</div>
+                    <div className="ov2-pm-val">
+                      {brandRank !== null ? (
+                        <>{brandRank}<small> / {totalRanked}</small></>
                       ) : (
-                        <span className="fav" style={{ background: barColor, width: 26, height: 26, fontSize: 11 }}>
-                          {row.name.slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                      <div className="ov2-cmp-nm">
-                        <div className="t">
-                          {row.name}
-                          {row.isBrand && <span className="ov2-cmp-tag">Tú</span>}
-                        </div>
-                      </div>
-                      <div className="ov2-cmp-sov">
-                        <div className="track">
-                          <i style={{ width: `${(row.sov / maxPanoramaSov) * 100}%`, background: barColor }} />
-                        </div>
-                        <div className="pct">{row.sov}%</div>
-                      </div>
-                      {row.avgPosition !== null ? (
-                        <span className="ov2-cmp-sc">{row.avgPosition.toFixed(2)}<small> pos</small></span>
-                      ) : (
-                        <span className="ov2-cmp-sc" style={{ color: "var(--ink-4)" }}>—</span>
+                        // The brand itself was never named this scan, even though
+                        // others were — a real state (dormant or newly-tracked
+                        // domain next to established competitors), not the "—"
+                        // this used to render with the actual reason buried in a
+                        // tooltip nobody on mobile ever opens.
+                        <span className="ov2-pm-val-text">No apareciste en este escaneo</span>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            </>
+                    {/* The bars are always the real top 5, never padded with the
+                        brand's own row — forcing "your" bars to include you when
+                        you're 6th is the inversion of what a leaderboard means
+                        (founder, 2026-08-07). Labelled so the headline number
+                        above (your standing) and the bars below (who's actually
+                        top 5) are never read as the same claim. */}
+                    <div className="ov2-pm-bars-lbl">Top 5 posiciones</div>
+                    <div className="ov2-posbars">
+                      {posbarsData.map((b, i) => (
+                        <div key={`${b.name}-${i}`} className={`b ${b.isBrand ? "you" : ""}`} style={{ height: b.height }}>
+                          <span>{b.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="card" style={{ marginTop: posbarsData.length > 0 ? 11 : 0 }}>
+                  {/* One label per column, over the data it names — the rule that
+                      the Competidores list arrived at the hard way (log §15): a
+                      single heading ends up naming the wrong column the moment
+                      the layout changes under it. The panorama had NO headers at
+                      all, which is how a share-of-voice percentage passed for the
+                      mention rate shown on the other screen. */}
+                  <div className="ov2-cmp-hd">
+                    <span className="ov2-cmp-hd-nm">Último escaneo</span>
+                    <span className="ov2-cmp-sov">Mención</span>
+                    {/* No column at all when this scan has no position data,
+                        rather than a "Puesto" heading over five dashes: a labelled
+                        empty column reads as a broken screen, an absent one reads
+                        as what it is (log §15, "ni etiqueta ni tarjeta si no hay
+                        nada debajo"). */}
+                    {panoramaRanked ? <span className="ov2-cmp-sc">Puesto</span> : null}
+                  </div>
+                  {panoramaListRows.flatMap((row, i) => {
+                    const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
+                    const nodes = [];
+                    // A gap between the top 5 and your own row must LOOK like a
+                    // skip, not like a missing row — an unexplained hole at rank
+                    // 6 reads as a bug (founder, 2026-08-07).
+                    if (brandAppendedBeyondTop5 && i === panoramaListRows.length - 1) {
+                      nodes.push(
+                        <div className="ov2-cmp-gap" key="gap" aria-hidden="true">
+                          <span />
+                          <span />
+                          <span />
+                        </div>
+                      );
+                    }
+                    nodes.push(
+                      <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
+                        {/* 26 px por defecto, 30 px a partir del breakpoint de la
+                            columna de análisis (globals.css) — se pide para 30. */}
+                        <FaviconImg
+                          domain={row.domain}
+                          cssSize={30}
+                          className="ov2-cmp-fav"
+                          fallback={
+                            <span className="fav" style={{ background: barColor, width: 26, height: 26, fontSize: 11 }}>
+                              {row.name.slice(0, 1).toUpperCase()}
+                            </span>
+                          }
+                        />
+                        <div className="ov2-cmp-nm">
+                          <div className="t">
+                            {row.name}
+                            {row.isBrand && <span className="ov2-cmp-tag">Tú</span>}
+                          </div>
+                        </div>
+                        <div className="ov2-cmp-sov">
+                          <div className="track">
+                            <i
+                              style={{
+                                width: `${((row.mentionRate ?? 0) / maxPanoramaMention) * 100}%`,
+                                background: barColor
+                              }}
+                            />
+                          </div>
+                          <div className="pct">{row.mentionRate !== null ? `${Math.round(row.mentionRate)}%` : "—"}</div>
+                        </div>
+                        {/* Ordinal, and the heaviest figure of the row: "5º" is a
+                            standing, "5" is a bullet, and on the left it gets read
+                            as one (log §15, twice). Same shape as Competidores.
+                            Absent, not dashed, when the scan has no positions —
+                            every row would carry the same "—". */}
+                        {row.rank !== null ? (
+                          <span className="ov2-cmp-sc">{row.rank}º</span>
+                        ) : null}
+                      </div>
+                    );
+                    return nodes;
+                  })}
+                </div>
+              </>
+            )
           ) : (
             <div className="card" style={{ padding: "16px 18px" }}>
               <EmptyState
@@ -1059,8 +1436,16 @@ export default async function ProjectDetailPage({
       ) : (
         /* ===== EMPTY STATE ===== */
         activeRun ? (
-          /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
-          <ScanInProgressLive projectId={projectId} initial={activeRun} />
+          isFirstScan ? (
+            /* ONBOARDING-ROCKET-1 — spent once per domain; every scan after
+               this project's first falls to the plain shared bar below.
+               SCAN-STATES-2 routes it through FirstScanTakeover so the rail's
+               figures are resolved the same way here as in every section. */
+            <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+          ) : (
+            /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
+            <ScanInProgressLive projectId={projectId} initial={activeRun} />
+          )
         ) : prompts?.length ? (
           /* Estado B — Listo para lanzar */
           <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>

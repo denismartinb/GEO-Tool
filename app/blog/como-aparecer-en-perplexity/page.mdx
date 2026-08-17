@@ -1,0 +1,209 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  AnswerSample,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-aparecer-en-perplexity");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Perplexity es lo mismo que ChatGPT o que Google?",
+    answer:
+      "Ni una cosa ni la otra. Con Google compites por un puesto en una lista de enlaces; en un chat conversacional como ChatGPT compites por ser nombrado dentro de una respuesta. En Perplexity la respuesta se construye citando fuentes numeradas en línea, así que competir ahí es sobre todo competir por ser una de esas citas, no solo por ser mencionado."
+  },
+  {
+    question: "¿Puedo medir mi presencia en Perplexity con GenScore?",
+    answer:
+      "No hoy. GenScore mide ChatGPT, Gemini y Claude — Perplexity no está entre los motores que ejecuta el producto, y no lo anunciamos con fecha porque no la tenemos. Lo que sí puedes hacer es aplicar el mismo criterio de este artículo y comprobar tú mismo con búsquedas manuales."
+  },
+  {
+    question: "¿Vale lo mismo para Perplexity que para ChatGPT o Google?",
+    answer:
+      "La base es la misma —contenido claro, verificable y bien estructurado— pero el énfasis cambia. Perplexity ancla cada afirmación a una fuente concreta, así que premia más que nadie el dato citable con procedencia clara: una cifra, un estudio, una comparación con criterio explícito."
+  },
+  {
+    question: "¿Influye Reddit o los foros en lo que cita Perplexity?",
+    answer:
+      "Es un patrón que se observa con frecuencia en el sector para preguntas de opinión o comparación ('¿cuál es mejor?', '¿merece la pena?'), aunque no hay una cifra fiable y verificada de cuánto pesa. Lo prudente es no descartar ese tipo de contenido si tu categoría se presta a comparaciones, sin construir toda una estrategia sobre un patrón que nadie ha medido con rigor."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Perplexity no funciona como Google ni como un chat conversacional: construye
+la respuesta citando fuentes numeradas, en línea, para casi cada afirmación
+que hace. Eso cambia lo que significa "aparecer" — no basta con que te
+mencionen, hace falta ser la fuente concreta a la que ancla una frase. Cuatro
+cosas ayudan de verdad: estructura que se pueda extraer, datos con procedencia
+verificable, contenido reciente, y presencia donde la gente compara opciones
+en voz alta.
+
+</KeyTakeaway>
+
+## Por qué "aparecer en Perplexity" no es lo mismo que en otros motores
+
+Cada motor construye su respuesta de una forma distinta, y esa diferencia
+decide qué tienes que optimizar.
+
+<CompareTable>
+
+| | Google | Chat conversacional (ChatGPT, Gemini, Claude) | Perplexity |
+|---|---|---|---|
+| **Qué devuelve** | Una lista de enlaces ordenados | Una respuesta redactada, a veces con una mención de marca | Una respuesta redactada con citas numeradas ancladas a cada afirmación |
+| **Cómo "ganas"** | Posicionar en el ranking | Que el modelo te nombre al responder | Que una de tus páginas sea la fuente citada, no solo que te nombren |
+| **Cómo se ve tu presencia** | Un puesto en la SERP | Texto dentro de la respuesta | Un número de cita `[1]` `[2]` que enlaza directamente a tu página |
+
+</CompareTable>
+
+Esa tercera columna es la clave de todo el artículo: en Perplexity, cada frase
+de la respuesta suele llevar su propia cita. Si tu contenido no es la fuente de
+ninguna afirmación concreta, no apareces — aunque el tema sea el tuyo y aunque
+tu marca sea conocida en la categoría.
+
+<Figure
+  label="Figura 1."
+  caption="Cómo se ve una respuesta con citas ancladas: cada afirmación remite a un número, y ese número es una fuente concreta, no una mención genérica. Ejemplo ilustrativo del formato, no una respuesta real capturada."
+>
+  <AnswerSample
+    verdict="Con cita anclada"
+    text="El plan Starter incluye 25 prompts mensuales [1] y añade seguimiento semanal frente al escaneo puntual del plan gratuito [2]."
+    source="ejemplo-marca.com/planes-y-limites"
+  />
+</Figure>
+
+## Qué de verdad ayuda
+
+<NumberedSection n={1} title="Escribe para que se pueda citar una frase suelta">
+
+Una respuesta anclada necesita una frase que funcione sola, fuera de contexto,
+con sujeto y dato explícitos. "Cuesta menos que la competencia" no es citable;
+"el plan Starter cuesta 49€/mes, frente a los 79€/mes de la alternativa más
+cercana" sí lo es, porque se puede extraer entera y sigue teniendo sentido.
+
+<QuickAction>Revisa tu página más importante: subraya las frases que sobrevivirían fuera de su párrafo. Si no hay ninguna, ese es el problema antes que cualquier otro.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Respalda cada afirmación con procedencia clara">
+
+Un motor que anota la fuente de cada frase necesita que esa fuente exista de
+verdad: una cifra con su origen, una comparación con el criterio explícito, un
+dato con fecha. Una afirmación sin respaldo — "somos los mejores del mercado"
+— no tiene nada que citar, aunque sea cierta.
+
+<QuickAction>Por cada afirmación de valor en tu página, pregúntate: si alguien me pidiera la fuente ahora mismo, ¿tengo una?</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="La frescura importa más que en una búsqueda clásica">
+
+Perplexity está construido sobre búsqueda en tiempo real con más peso que un
+chat conversacional entrenado con un corte de datos fijo. Una página sin fecha
+visible o con datos evidentemente antiguos pierde ahí un punto a favor que en
+otros motores pesa menos.
+
+<QuickAction>Pon una fecha de actualización visible en tus páginas de referencia, y actualízala solo cuando cambie algo real — nunca solo la fecha.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="No descartes dónde se compara tu categoría en voz alta">
+
+Para preguntas de comparación u opinión — "¿cuál es mejor?", "¿merece la
+pena?" — es un patrón observado con frecuencia en el sector que estos motores
+tiendan a asomarse también a foros y comunidades, no solo a webs corporativas.
+No hay una cifra fiable de cuánto pesa eso, así que no construyas toda tu
+estrategia ahí — pero si tu categoría se presta a comparación pública, no la
+ignores tampoco.
+
+<QuickAction>Busca dónde se compara tu categoría en foros o comunidades reales, y participa con la misma honestidad que le pedirías a cualquier otro canal — nunca con cuentas falsas ni reseñas fabricadas.</QuickAction>
+
+</NumberedSection>
+
+<Verdict title="Fuera del alcance de GenScore hoy" badge="Límite declarado">
+
+GenScore mide tu presencia en **ChatGPT, Gemini y Claude** — los tres motores
+que ejecuta el producto hoy. Perplexity no es uno de ellos, y no ponemos fecha
+porque no la tenemos. Todo lo de este artículo puedes aplicarlo y comprobarlo
+tú mismo con búsquedas manuales; lo que no podemos ofrecerte todavía es
+seguimiento automático y sistemático de esas búsquedas, que es justo lo que sí
+hacemos para los tres motores que sí ejecutamos.
+
+</Verdict>
+
+## Errores que restan, no que suman
+
+<Checklist
+  tone="evitar"
+  items={[
+    "No repitas la misma frase clave veinte veces esperando que eso la haga más citable: lo que se cita es un dato concreto, no una palabra repetida.",
+    "No publiques una cifra sin decir de dónde sale: una afirmación sin fuente no tiene nada que anclar.",
+    "No dejes contenido antiguo sin fecha visible en las páginas que quieres que se citen.",
+    "No fabriques presencia en foros con cuentas falsas: además de deshonesto, es fácil de detectar y desprestigia justo lo que intentas construir."
+  ]}
+/>
+
+## Lo que esto tiene en común con cualquier otro motor
+
+Nada de lo anterior es exclusivo de Perplexity — es la misma base que ya
+explicamos para <a href="/blog/como-conseguir-que-chatgpt-te-cite">conseguir
+que ChatGPT te cite</a>: estructura clara, datos verificables, autoridad de
+dominio. Lo que cambia aquí es el énfasis, porque un motor que ancla cada
+frase a una fuente concreta perdona menos la afirmación sin respaldo que uno
+que solo tiene que decidir si te nombra o no.
+
+Si quieres comprobar tú mismo, a mano, si tu marca aparece citada en
+Perplexity — sin esperar a que lo automatice ninguna herramienta —, el método
+manual que describimos en <a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo
+saber si tu marca aparece en ChatGPT, Gemini y Claude</a> funciona igual: los
+mismos prompts repetidos varias veces, mirando qué cita y qué no.
+
+<ArticleCta
+  title="Mide de verdad los motores que sí puedes accionar hoy"
+  text="GenScore hace en ChatGPT, Gemini y Claude lo que este artículo te pide comprobar a mano en Perplexity: seguimiento sistemático, no una búsqueda suelta. Escaneo gratuito, sin tarjeta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

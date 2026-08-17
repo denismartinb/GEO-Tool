@@ -7,6 +7,11 @@ import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
 import {
+  AUDIT_HALF_COLUMN,
+  checkRecurringScansPrecondition,
+  isMissingColumnError
+} from "@/lib/projects/automation-toggles";
+import {
   rewriteRecommendationCore,
   rewriteRecommendationInputSchema,
   type RewriteRecommendationResult
@@ -31,17 +36,36 @@ import {
   executePendingScan,
   getActionErrorCode
 } from "@/lib/scan/scan-runner";
+import { canStartAnotherScanInvocation } from "@/lib/scan/drive-budget";
+import {
+  createCompetitorCore,
+  createCompetitorInputSchema,
+  deactivateCompetitorCore,
+  deactivateCompetitorInputSchema,
+  updateCompetitorCore,
+  updateCompetitorInputSchema,
+  type CreateCompetitorResult,
+  type DeactivateCompetitorResult,
+  type UpdateCompetitorResult
+} from "@/lib/competitors/manage-competitors";
+import { suggestCompetitors } from "@/lib/llm/gemini";
+import {
+  getSuggestedCompetitorsCore,
+  suggestedCompetitorsInputSchema,
+  type SuggestedCompetitorsResult
+} from "@/lib/competitors/suggest-competitors";
+import {
+  addBrandAliasCore,
+  addBrandAliasInputSchema,
+  removeBrandAliasCore,
+  removeBrandAliasInputSchema,
+  type ManageBrandAliasesResult
+} from "@/lib/brand-aliases/manage-brand-aliases";
 
 const promptCreateSchema = z.object({
   projectId: z.string().uuid(),
   promptText: z.string().min(10).max(3000),
   category: z.string().max(100).optional().or(z.literal(""))
-});
-
-const competitorCreateSchema = z.object({
-  projectId: z.string().uuid(),
-  name: z.string().min(1).max(120),
-  domain: z.string().min(3).max(255)
 });
 
 const scanExecuteSchema = z.object({
@@ -98,51 +122,162 @@ export async function deactivatePrompt(formData: FormData) {
   revalidatePath(`/dashboard/projects/${projectId}/prompts`);
 }
 
-export async function createCompetitor(formData: FormData) {
-  const payload = competitorCreateSchema.parse({
-    projectId: formData.get("projectId"),
-    name: formData.get("name"),
-    domain: formData.get("domain")
-  });
+/**
+ * Alta de competidor (COMP-REDESIGN-1). Called directly from the client via
+ * `useTransition`, same pattern as `addPrompts` — no FormData, no redirect,
+ * so the manage-competitor modal can show an inline error without a full
+ * navigation. There was no existing UI wired to competitor management
+ * before this, so this replaces the old FormData-based `createCompetitor`
+ * outright rather than preserving it as a second contract.
+ */
+export async function createCompetitorAction(input: {
+  projectId: string;
+  name: string;
+  domain: string;
+}): Promise<CreateCompetitorResult> {
+  const parsed = createCompetitorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
 
-  const { supabase } = await requireUser();
-  await supabase.from("project_competitors").insert({
-    project_id: payload.projectId,
-    name: payload.name,
-    domain: payload.domain
-  });
+  const { supabase, user } = await requireUser();
+  const result = await createCompetitorCore({ ...parsed.data, supabase, user });
 
-  revalidatePath(`/dashboard/projects/${payload.projectId}`);
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
 }
 
-export async function updateCompetitor(formData: FormData) {
-  const projectId = String(formData.get("projectId") ?? "");
-  const competitorId = String(formData.get("competitorId") ?? "");
-  const name = String(formData.get("name") ?? "");
-  const domain = String(formData.get("domain") ?? "");
+/**
+ * COMPETITOR-SUGGESTIONS-1: competidores sugeridos a partir del negocio real
+ * (perfil cacheado + búsqueda grounded), no de lo que salga en los prompts.
+ *
+ * Called from a client component on mount so the page itself never blocks on
+ * a multi-second grounded lookup; the block renders immediately with a
+ * skeleton and fills in when this resolves. Cached after the first call, so
+ * only a `refresh: true` ("Buscar más") pays that cost again.
+ */
+export async function getSuggestedCompetitorsAction(input: {
+  projectId: string;
+  refresh?: boolean;
+}): Promise<SuggestedCompetitorsResult> {
+  const parsed = suggestedCompetitorsInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
 
-  const { supabase } = await requireUser();
-  await supabase
-    .from("project_competitors")
-    .update({ name, domain })
-    .eq("id", competitorId)
-    .eq("project_id", projectId);
+  const { supabase, user } = await requireUser();
 
-  revalidatePath(`/dashboard/projects/${projectId}`);
+  return getSuggestedCompetitorsCore({
+    projectId: parsed.data.projectId,
+    refresh: parsed.data.refresh ?? false,
+    supabase,
+    user,
+    suggest: suggestCompetitors
+  });
 }
 
-export async function deactivateCompetitor(formData: FormData) {
-  const projectId = String(formData.get("projectId") ?? "");
-  const competitorId = String(formData.get("competitorId") ?? "");
+/** Edición de competidor (COMP-REDESIGN-1). Same call pattern as `createCompetitorAction`. */
+export async function updateCompetitorAction(input: {
+  projectId: string;
+  competitorId: string;
+  name: string;
+  domain: string;
+}): Promise<UpdateCompetitorResult> {
+  const parsed = updateCompetitorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
 
-  const { supabase } = await requireUser();
-  await supabase
-    .from("project_competitors")
-    .update({ is_active: false })
-    .eq("id", competitorId)
-    .eq("project_id", projectId);
+  const { supabase, user } = await requireUser();
+  const result = await updateCompetitorCore({ ...parsed.data, supabase, user });
 
-  revalidatePath(`/dashboard/projects/${projectId}`);
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
+}
+
+/**
+ * Baja de competidor (COMP-REDESIGN-1). Soft delete only (`is_active =
+ * false`) — hard delete of a tracked competitor is not part of this scope
+ * and stays off the list of things this action can do.
+ */
+export async function deactivateCompetitorAction(input: {
+  projectId: string;
+  competitorId: string;
+}): Promise<DeactivateCompetitorResult> {
+  const parsed = deactivateCompetitorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const result = await deactivateCompetitorCore({ ...parsed.data, supabase, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
+}
+
+/**
+ * Alias de marca (Fase −1c, docs/geo-score-variability-2026-08.md §3): add/
+ * remove UI for `projects.brand_aliases`. That column already exists
+ * (migration 0025) and already decides — via `verifyMention`, ADR 0021/0025
+ * — whether an AI answer counts as a mention of the brand, but until this
+ * phase the only way to inspect or change it was a direct SQL query (ADR
+ * 0025 "Correction (2026-08-03)": the accepted risk of a bad alias moving
+ * the score with no owner-visible way to fix it was explicitly unmitigated).
+ * Same call pattern as `createCompetitorAction` — typed input + `useTransition`,
+ * no FormData, no redirect, inline error in the modal.
+ */
+export async function addBrandAliasAction(input: {
+  projectId: string;
+  alias: string;
+}): Promise<ManageBrandAliasesResult> {
+  const parsed = addBrandAliasInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const result = await addBrandAliasCore({ ...parsed.data, supabase, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
+}
+
+/** Symmetric to addBrandAliasAction. Removal is always allowed, even below MIN_ALIAS_LENGTH — those bounds only gate what can be ADDED. */
+export async function removeBrandAliasAction(input: {
+  projectId: string;
+  alias: string;
+}): Promise<ManageBrandAliasesResult> {
+  const parsed = removeBrandAliasInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const result = await removeBrandAliasCore({ ...parsed.data, supabase, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
 }
 
 export async function executeScan(formData: FormData) {
@@ -193,21 +328,8 @@ export async function setRecurringScans(formData: FormData) {
   const { supabase, user } = await requireUser();
 
   if (enabled) {
-    const { data: completedRun, error: completedRunError } = await supabase
-      .from("scan_runs")
-      .select("id")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .limit(1)
-      .maybeSingle();
-
-    if (completedRunError) {
-      redirect(`/dashboard/projects/${projectId}/runs?error=unexpected_error`);
-    }
-
-    if (!completedRun) {
-      redirect(`/dashboard/projects/${projectId}/runs?error=recurring_requires_completed_scan`);
-    }
+    const check = await checkRecurringScansPrecondition(supabase, projectId);
+    if (!check.ok) redirect(`/dashboard/projects/${projectId}/debug?error=${check.reason}`);
   }
 
   const { data, error } = await supabase
@@ -220,23 +342,227 @@ export async function setRecurringScans(formData: FormData) {
     .maybeSingle();
 
   if (error || !data) {
-    redirect(`/dashboard/projects/${projectId}/runs?error=recurring_update_failed`);
+    redirect(`/dashboard/projects/${projectId}/debug?error=recurring_update_failed`);
   }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
-  revalidatePath(`/dashboard/projects/${projectId}/runs`);
-  redirect(`/dashboard/projects/${projectId}/runs?success=${enabled ? "recurring_enabled" : "recurring_disabled"}`);
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=${enabled ? "recurring_enabled" : "recurring_disabled"}`);
+}
+
+/**
+ * WEB-AUDIT-AUTO-SPLIT-1 — the per-project automatic-audit switches, one per
+ * half. Supersedes `setAutoWebAudit` (DOMAINS-REDESIGN-1), which wrote the
+ * single `auto_web_audit_enabled` column that migration 0031 retired: it was
+ * removed rather than left in place, because a control still writing a column
+ * nothing reads is worse than no control.
+ *
+ * Still a mirror image of `setRecurringScans` above, deliberately: the switches
+ * live side by side on /debug and a user reading them should not have to learn
+ * three behaviours.
+ *
+ * One asymmetry, and it is not an oversight: this has no "requires a completed
+ * scan" precondition. Recurring scans need one because a recurring scan repeats
+ * a known-good baseline; the audit has no such dependency — it simply does not
+ * run until there is a completed scan to audit, and enabling it early is
+ * harmless.
+ *
+ * Writing `false` here does not cancel work already queued, but it does stop
+ * that half from running: `runWebAuditJob` re-reads both switches when it picks
+ * a job up (migration 0031), so a job queued while the half was on and executed
+ * after it was turned off skips that half. What it cannot stop is a half
+ * already mid-flight in a live invocation.
+ */
+const auditHalfSchema = recurringScansSchema.extend({
+  half: z.enum(["technical", "coverage"])
+});
+
+export async function setAutoAuditHalf(formData: FormData) {
+  const parsed = auditHalfSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled"),
+    half: formData.get("half")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId, half } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ [AUDIT_HALF_COLUMN[half]]: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    // Decir "vuelve a intentarlo" ante una migración pendiente es mandar al
+    // operador a repetir algo que no puede funcionar (reportado por el
+    // fundador el 2026-08-05, desde su móvil) — de ahí el mensaje distinto.
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        isMissingColumnError(error) ? "auto_audit_migration_pending" : "auto_audit_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  revalidatePath(`/dashboard/projects/${projectId}/web-audit`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=audit_${half}_${enabled ? "enabled" : "disabled"}`);
+}
+
+/**
+ * SAMPLING-DEBUG-TOGGLE-1 — per-project override for the response floor
+ * (SAMPLING-1, `lib/scan/sampling.ts`). Same shape as `setRecurringScans` and
+ * `setAutoAuditHalf` above, and the same reason: one control, validated the
+ * same way, redirecting to the same screen.
+ *
+ * No "requires a completed scan" precondition, same as the audit switches:
+ * sampling has nothing to depend on, it just sizes the next run.
+ *
+ * Writing `false` here does not touch a run already in progress — the next
+ * one created reads the column fresh (`run-creation.ts`), same re-read-at-use
+ * pattern as the audit halves.
+ */
+export async function setSamplingEnabled(formData: FormData) {
+  const parsed = recurringScansSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ sampling_enabled: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    // Same two PostgREST codes as `setAutoAuditHalf`, same reason: "vuelve a
+    // intentarlo" would send the operator to retry something that cannot
+    // succeed without the migration being applied first.
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "sampling_migration_pending" : "sampling_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=sampling_${enabled ? "enabled" : "disabled"}`);
+}
+
+/**
+ * ENGINE-DEBUG-TOGGLE-1 — per-project, per-engine switch (Gemini/Claude/
+ * OpenAI) so a test scan can be restricted to a subset of engines. Same
+ * validated-form shape as the switches above.
+ *
+ * One asymmetry from every other switch on this page, and it is the whole
+ * point of this guard: this is the only one of the four debug switches whose
+ * "off" position can make a scan produce nothing. Recurring scans and the two
+ * audit halves can all be off simultaneously and the product just does less
+ * work; zero engines enabled makes `createPendingScanRunCore` and
+ * `executePendingScan` reject outright (`no_engines_enabled`,
+ * `lib/scan/run-creation.ts`) rather than create or run an empty scan. This
+ * action is the primary guard that keeps that state from ever being reached
+ * by the UI: it reads the other two flags before writing, and refuses to turn
+ * off the last engine still on.
+ */
+const engineToggleSchema = recurringScansSchema.extend({
+  engine: z.enum(["gemini", "claude", "openai"])
+});
+
+const ENGINE_TOGGLE_COLUMN = {
+  gemini: "engine_gemini_enabled",
+  claude: "engine_claude_enabled",
+  openai: "engine_openai_enabled"
+} as const;
+
+export async function setEngineEnabled(formData: FormData) {
+  const parsed = engineToggleSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled"),
+    engine: formData.get("engine")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId, engine } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  if (!enabled) {
+    const { data: currentFlags, error: readError } = await supabase
+      .from("projects")
+      .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+      .eq("id", projectId)
+      .eq("owner_user_id", user.id)
+      .maybeSingle();
+
+    if (readError) {
+      const missingColumn = readError.code === "42703" || readError.code === "PGRST204";
+      redirect(
+        `/dashboard/projects/${projectId}/debug?error=${
+          missingColumn ? "engine_toggle_migration_pending" : "engine_toggle_update_failed"
+        }`
+      );
+    }
+
+    // Fail-open reading (undefined -> `!== false` -> counted as enabled),
+    // same as every read of these columns elsewhere: a project this action
+    // cannot even see yet (columns not migrated) must not be told it is
+    // trying to turn off "the last engine" when it might not be.
+    const otherEnginesStillOn = (["gemini", "claude", "openai"] as const)
+      .filter((id) => id !== engine)
+      .some((id) => currentFlags?.[ENGINE_TOGGLE_COLUMN[id]] !== false);
+
+    if (!otherEnginesStillOn) {
+      redirect(`/dashboard/projects/${projectId}/debug?error=engine_toggle_requires_one_active`);
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ [ENGINE_TOGGLE_COLUMN[engine]]: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "engine_toggle_migration_pending" : "engine_toggle_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=engine_${engine}_${enabled ? "enabled" : "disabled"}`);
 }
 
 export type AutoExecuteScanStatus = "idle" | "running" | "done";
-
-// How long this server action keeps processing batches before returning to let
-// the client re-drive. Kept safely under the page's maxDuration=60s budget
-// (docs/adr/0003) so the function is never killed mid-batch: a batch of
-// MAX_REAL_SCAN_PROMPTS takes up to ~20s, so stopping at ~40s leaves margin for
-// one more batch to finish. A campaign that fits in one or two batches (e.g. a
-// 20-prompt scan) therefore completes in a single call.
-const AUTO_EXECUTE_TIME_BUDGET_MS = 40_000;
 
 /**
  * Executes a pending scan run that was created without sync execution
@@ -246,15 +572,21 @@ const AUTO_EXECUTE_TIME_BUDGET_MS = 40_000;
  * "scan in progress" UI. Does not redirect — the caller refreshes the page.
  *
  * SCAN-CHAIN-1 foreground driver: rather than processing a single batch and
- * relying on the secret-gated `/api/scan/continue` self-fetch (which a preview
- * deploy or a browser with an active session can't necessarily reach — see
- * docs/adr/0014), this loops `executePendingScan` (with `scheduleContinuation:
- * false`) directly, batch after batch, until the run is terminal or this
- * request's time budget is nearly spent. It returns the run's resulting status
- * so the client (`AutoExecuteScan`) can call again for the next window when a
- * large campaign needs more than one request to finish. This path goes through
- * the authenticated user session, so it works regardless of the continuation
- * secret or Vercel deployment protection.
+ * relying only on the secret-gated `/api/scan/continue` self-fetch (which a
+ * preview deploy or a browser with an active session can't necessarily reach —
+ * see docs/adr/0014), this loops `executePendingScan` directly, batch after
+ * batch, until the run is terminal or there is no longer room in this request
+ * for another batch's worst case. It returns the run's resulting status so the
+ * client (`AutoExecuteScan`) can call again for the next window when a large
+ * campaign needs more than one request to finish. This path goes through the
+ * authenticated user session, so it works regardless of the continuation secret
+ * or Vercel deployment protection.
+ *
+ * It is no longer the *only* driver, and must not be treated as one
+ * (SCAN-DRIVE-1, docs/adr/0037): it runs in the user's browser, so a locked
+ * phone or a backgrounded tab stops it mid-campaign. `executePendingScan` now
+ * always schedules a background continuation as well, and the atomic per-batch
+ * claim is what makes the two drivers safe to run at once.
  */
 export async function autoExecutePendingScan(input: {
   projectId: string;
@@ -275,11 +607,18 @@ export async function autoExecutePendingScan(input: {
   // claims one batch of still-pending prompt jobs per call (atomically, so a
   // duplicate/racing driver is a safe no-op) and finalizes the run once none
   // remain.
-  do {
+  //
+  // The budget is checked BEFORE each iteration, against that iteration's
+  // worst case — `canStartAnotherScanInvocation`. Checking it afterwards (the
+  // `do { ... } while (elapsed < budget)` this replaces) let an iteration start
+  // at 39s and run for another 45, pushing the action well past its 60s
+  // `maxDuration` and getting it killed mid-batch. See
+  // SCAN_INVOCATION_WORST_CASE_MS.
+  while (canStartAnotherScanInvocation({ elapsedMs: Date.now() - startedAt })) {
     const iterationStart = Date.now();
 
     try {
-      await executePendingScan({ projectId, runId, supabase, scheduleContinuation: false });
+      await executePendingScan({ projectId, runId, supabase });
     } catch {
       // executePendingScan persists any real failure state on the run itself;
       // stop looping and report whatever the run's status now is.
@@ -306,10 +645,10 @@ export async function autoExecutePendingScan(input: {
     if (Date.now() - iterationStart < 1_000) {
       break;
     }
-  } while (Date.now() - startedAt < AUTO_EXECUTE_TIME_BUDGET_MS);
+  }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
-  revalidatePath(`/dashboard/projects/${projectId}/runs`);
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
   revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
 
   return { status };
@@ -341,7 +680,7 @@ export async function addPrompts(input: {
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/prompts`);
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
-    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/runs`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/debug`);
   }
 
   return result;
@@ -415,7 +754,7 @@ export async function auditDomainCoverageAction(input: {
 }): Promise<DomainCoverageResult> {
   const parsed = domainCoverageInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "Datos de solicitud no válidos." };
+    return { success: false, error: "Datos de solicitud no válidos.", reason: "generic" };
   }
 
   const { supabase, user } = await requireUser();
@@ -444,7 +783,7 @@ export async function runTechnicalAuditAction(input: {
 }): Promise<TechnicalAuditResult> {
   const parsed = technicalAuditInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "Datos de solicitud no válidos." };
+    return { success: false, error: "Datos de solicitud no válidos.", reason: "generic" };
   }
 
   const { supabase, user } = await requireUser();

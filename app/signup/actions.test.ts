@@ -15,10 +15,16 @@ vi.mock("@/lib/email/transactional", () => ({
   sendWelcomeEmail: (...args: unknown[]) => sendWelcomeEmail(...args)
 }));
 
+const sendNewSignupOpsAlert = vi.fn();
+vi.mock("@/lib/admin/signup-alert", () => ({
+  sendNewSignupOpsAlert: (...args: unknown[]) => sendNewSignupOpsAlert(...args)
+}));
+
 beforeEach(() => {
   redirectMock.mockClear();
   signUp.mockReset();
   sendWelcomeEmail.mockReset();
+  sendNewSignupOpsAlert.mockReset();
   delete process.env.NEXT_PUBLIC_SITE_URL;
   delete process.env.VERCEL_URL;
 });
@@ -30,15 +36,26 @@ function formData(fields: Record<string, string>) {
 }
 
 describe("signup", () => {
-  it("sends a welcome email and redirects to the dashboard when email confirmation is off (session returned immediately)", async () => {
-    signUp.mockResolvedValue({ data: { session: { access_token: "tok" } }, error: null });
+  it("sends a welcome email and an ops alert, then redirects to the dashboard when email confirmation is off (session returned immediately)", async () => {
+    signUp.mockResolvedValue({
+      data: {
+        session: { access_token: "tok" },
+        user: { id: "user-1", email: "new@example.com", created_at: "2026-08-11T09:00:00.000Z" }
+      },
+      error: null
+    });
     const { signup } = await import("./actions");
 
     await expect(
-      signup(formData({ email: "new@example.com", password: "supersecret" }))
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
     ).rejects.toThrow("REDIRECT:/dashboard");
 
     expect(sendWelcomeEmail).toHaveBeenCalledWith("new@example.com");
+    expect(sendNewSignupOpsAlert).toHaveBeenCalledWith(
+      expect.anything(),
+      { id: "user-1", email: "new@example.com", created_at: "2026-08-11T09:00:00.000Z" },
+      "password"
+    );
     expect(signUp).toHaveBeenCalledWith({
       email: "new@example.com",
       password: "supersecret",
@@ -51,7 +68,7 @@ describe("signup", () => {
     const { signup } = await import("./actions");
 
     await expect(
-      signup(formData({ email: "new@example.com", password: "supersecret" }))
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
     ).rejects.toThrow("REDIRECT:/signup/confirm?email=new%40example.com");
 
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
@@ -63,7 +80,7 @@ describe("signup", () => {
     const { signup } = await import("./actions");
 
     await expect(
-      signup(formData({ email: "new@example.com", password: "supersecret" }))
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
     ).rejects.toThrow();
 
     expect(signUp).toHaveBeenCalledWith(
@@ -76,7 +93,7 @@ describe("signup", () => {
     const { signup } = await import("./actions");
 
     await expect(
-      signup(formData({ email: "new@example.com", password: "supersecret" }))
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
     ).rejects.toThrow(/^REDIRECT:\/signup\?error=/);
 
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
@@ -91,7 +108,7 @@ describe("signup", () => {
 
     let redirectUrl = "";
     try {
-      await signup(formData({ email: "new@example.com", password: "supersecret" }));
+      await signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }));
     } catch (e) {
       redirectUrl = (e as Error).message.replace("REDIRECT:", "");
     }
@@ -101,7 +118,7 @@ describe("signup", () => {
     expect(decodeURIComponent(redirectUrl)).toContain("Espera unos minutos");
   });
 
-  it("passes through other Supabase signup error messages unchanged", async () => {
+  it("maps the user_already_exists error code to a safe Spanish message", async () => {
     signUp.mockResolvedValue({
       data: { session: null },
       error: { code: "user_already_exists", message: "already registered" }
@@ -110,11 +127,54 @@ describe("signup", () => {
 
     let redirectUrl = "";
     try {
-      await signup(formData({ email: "new@example.com", password: "supersecret" }));
+      await signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }));
     } catch (e) {
       redirectUrl = (e as Error).message.replace("REDIRECT:", "");
     }
 
-    expect(decodeURIComponent(redirectUrl)).toContain("already registered");
+    expect(decodeURIComponent(redirectUrl)).not.toContain("already registered");
+    expect(decodeURIComponent(redirectUrl)).toContain("Ya existe una cuenta");
+  });
+
+  it("never surfaces a raw/unmapped Supabase error message, falling back to a generic Spanish message", async () => {
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { code: "some_unmapped_code", message: "Some raw provider detail" }
+    });
+    const { signup } = await import("./actions");
+
+    let redirectUrl = "";
+    try {
+      await signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }));
+    } catch (e) {
+      redirectUrl = (e as Error).message.replace("REDIRECT:", "");
+    }
+
+    expect(decodeURIComponent(redirectUrl)).not.toContain("Some raw provider detail");
+    expect(decodeURIComponent(redirectUrl)).toContain("No se pudo crear la cuenta");
+  });
+
+  it("rejects mismatched passwords without calling Supabase", async () => {
+    const { signup } = await import("./actions");
+
+    let redirectUrl = "";
+    try {
+      await signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "different" }));
+    } catch (e) {
+      redirectUrl = (e as Error).message.replace("REDIRECT:", "");
+    }
+
+    expect(decodeURIComponent(redirectUrl)).toBe("/signup?error=Las contraseñas no coinciden.");
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid email without calling Supabase", async () => {
+    const { signup } = await import("./actions");
+
+    await expect(
+      signup(formData({ email: "not-an-email", password: "supersecret", confirmPassword: "supersecret" }))
+    ).rejects.toThrow(/^REDIRECT:\/signup\?error=/);
+
+    expect(signUp).not.toHaveBeenCalled();
   });
 });

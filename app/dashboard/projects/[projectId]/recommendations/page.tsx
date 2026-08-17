@@ -1,9 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
-import { ScanInProgress } from "@/components/scan-in-progress";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
@@ -15,6 +17,8 @@ import {
 } from "@/lib/scoring/run-scoring";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { selectPlan } from "@/lib/recommendations/plan";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 
 /** Affected prompt ids off an evidence_json blob, defensively. */
@@ -103,6 +107,19 @@ function parseCoverageMap(raw: string | null): { scanId: string; topics: DomainC
 // surface a clean, user-visible error.
 export const maxDuration = 60;
 
+// ROOT-METADATA-1: el dominio va en la pestaña. Sin esto las pantallas de
+// consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
+// entre sí y entre proyectos. `requireActiveProject` está memoizada por
+// petición, así que esto no añade ninguna consulta.
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ projectId: string }>;
+}): Promise<Metadata> {
+  const { projectId } = await params;
+  return projectScreenMetadata("Recomendaciones", async () => (await requireActiveProject(projectId)).domain);
+}
+
 export default async function RecommendationsPage({
   params,
 }: {
@@ -112,34 +129,53 @@ export default async function RecommendationsPage({
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
-  // Latest completed run
-  const { data: latestCompletedRun } = await supabase
-    .from("scan_runs")
-    .select("id, status, created_at, finished_at")
-    .eq("project_id", projectId)
-    .eq("status", "completed")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Dos lecturas de `scan_runs` en paralelo, no tres en fila
+  // (PRELAUNCH-HARDENING-1 Fase V, V7). Eran tres `await` encadenados contra
+  // la misma tabla y el mismo `project_id`, sin ninguna dependencia entre
+  // ellos: el usuario pagaba la suma de tres viajes en vez del más lento.
+  //
+  // Y la tercera sobraba del todo: pedía "el último run de cualquier estado"
+  // con `order(created_at desc).limit(1)`, que es exactamente la primera fila
+  // de esta lista de 5 ordenada igual. Se deriva abajo en vez de volver a
+  // preguntarlo.
+  const [{ data: latestCompletedRun }, { data: recentRuns }] = await Promise.all([
+    // Latest completed run
+    supabase
+      .from("scan_runs")
+      .select("id, status, created_at, finished_at")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Recent runs to detect an in-progress scan (pending|running)
+    supabase
+      .from("scan_runs")
+      .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(5)
+  ]);
 
-  // Also fetch latest run of any status for "failed" banner
-  const { data: latestRun } = await supabase
-    .from("scan_runs")
-    .select("id, status, created_at")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // El run más reciente sea cual sea su estado — para el aviso de "el último
+  // escaneo falló". Misma fila que devolvía la consulta eliminada.
+  const latestRun = recentRuns?.[0];
 
-  // Recent runs to detect an in-progress scan (pending|running)
-  const { data: recentRuns } = await supabase
-    .from("scan_runs")
-    .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  //
+  // Se lanza aquí y se espera después del lote de recomendaciones
+  // (PRELAUNCH-HARDENING-1 Fase V, V7): ninguno de los dos consume el
+  // resultado del otro, así que esperarla en esta línea añadía una ronda
+  // serializada más a cada render. Dejarla suelta es seguro porque
+  // `withAnalysisProgress` captura sus propios errores y degrada al contador
+  // de generación (lib/scan/active-run-progress.ts) — no puede rechazar, así
+  // que no hay promesa sin manejar.
+  const activeRunPromise = rawActiveRun
+    ? withAnalysisProgress(supabase, projectId, rawActiveRun)
+    : Promise.resolve(rawActiveRun);
 
   const [{ data: recommendations }, { data: resolvedRecommendations }, { data: history }] = latestCompletedRun
     ? await Promise.all([
@@ -177,6 +213,8 @@ export default async function RecommendationsPage({
           .limit(30),
       ])
     : [{ data: null }, { data: null }, { data: null }];
+
+  const activeRun = await activeRunPromise;
 
   const baseRecs = (recommendations ?? []) as Recommendation[];
 
@@ -521,127 +559,129 @@ export default async function RecommendationsPage({
           </div>
         </div>
         <div className="ov-sticky-right">
-          {lastScanDate && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {lastScanDate}
-            </span>
-          )}
+          <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
         </div>
       </div>
 
-      <div className="rec2-scope">
-        {activeRun ? (
-          <ScanInProgress activeRun={activeRun} />
-        ) : (
-          <>
-            {latestRunFailed && latestCompletedRun && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 14px",
-                  background: "var(--warn-soft)",
-                  border: "1px solid #f3d086",
-                  borderRadius: "var(--r-md)",
-                  fontSize: 13,
-                  color: "var(--warn-ink)",
-                  marginBottom: 16,
-                }}
+      {/* Alineada con Prompts, Competidores y Páginas citadas: el overlay a
+          pantalla completa sólo sustituye a la pantalla cuando NO hay nada que
+          enseñar. Esconder las recomendaciones que ya tienes detrás de un
+          overlay porque hay un refresco en marcha era la única pantalla de
+          datos que lo hacía, y la causa del PILOT FAIL repetido de
+          "recommendations: estado vacío" (2026-08-04/05) — que no era una
+          carrera con los datos, sino esta condición. Con datos, el estado del
+          escaneo lo lleva la pastilla del sticky-header. */}
+      {activeRun && !latestCompletedRun ? (
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+      ) : (
+        <div className="rec2-scope">
+          {latestRunFailed && latestCompletedRun && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 14px",
+                background: "var(--warn-soft)",
+                border: "1px solid #f3d086",
+                borderRadius: "var(--r-md)",
+                fontSize: 13,
+                color: "var(--warn-ink)",
+                marginBottom: 16,
+              }}
+            >
+              <Icon name="info" size={14} />
+              El último escaneo falló. Estas recomendaciones son del anterior.
+            </div>
+          )}
+
+          {/* 2 · Blocking finding, above everything: while an AI crawler is
+              blocked, the content actions below cannot pay off on that engine. */}
+          {blockedBots.length > 0 && (
+            <div className="rec2-blocker">
+              <Icon name="alert" size={16} />
+              <div style={{ minWidth: 0 }}>
+                <div className="rec2-blocker-t">
+                  Tu web bloquea a {blockedBots.slice(0, 2).join(" y ")}
+                  {blockedBots.length > 2 ? ` y ${blockedBots.length - 2} más` : ""}
+                </div>
+                <div className="rec2-blocker-d">
+                  Esos motores no pueden leer tu contenido, así que no pueden citarte.{" "}
+                  <Link href={`/dashboard/projects/${projectId}/web-audit`} style={{ fontWeight: 700 }}>
+                    Ver cómo arreglarlo
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3 · Pillars — where the score stands, as context for the choices below. */}
+          {pillars.length > 0 && (
+            <div className="rec2-pillars">
+              {pillars.map((p) => (
+                <div key={p.key} className="rec2-pillar">
+                  <div className="rec2-pillar-n">
+                    {p.label}
+                    {p.help && <InfoTip text={p.help} />}
+                  </div>
+                  <div className="rec2-pillar-v">{p.value}</div>
+                  <div className="rec2-pillar-trk">
+                    <i style={{ width: `${Math.max(0, Math.min(100, p.value))}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!latestCompletedRun ? (
+            <div className="section-empty" style={{ marginTop: 20 }}>
+              <div className="section-empty-title">
+                {latestRunFailed ? "El último escaneo falló" : "Todavía no hay recomendaciones"}
+              </div>
+              <div className="section-empty-desc">
+                {latestRunFailed
+                  ? "No hay ningún escaneo completado del que sacar acciones. Revisa el dominio y vuelve a lanzarlo."
+                  : "Aparecerán en cuanto termine tu primer escaneo."}
+              </div>
+              <Link
+                href={`/dashboard/projects/${projectId}`}
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 14, display: "inline-flex" }}
               >
-                <Icon name="info" size={14} />
-                El último escaneo falló. Estas recomendaciones son del anterior.
+                Volver a visión general
+                <Icon name="arrRight" size={14} />
+              </Link>
+            </div>
+          ) : recs.length === 0 ? (
+            <div className="section-empty" style={{ marginTop: 20 }}>
+              <div className="section-empty-title">Nada que corregir ahora mismo</div>
+              <div className="section-empty-desc">
+                Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
               </div>
-            )}
-
-            {/* 2 · Blocking finding, above everything: while an AI crawler is
-                blocked, the content actions below cannot pay off on that engine. */}
-            {blockedBots.length > 0 && (
-              <div className="rec2-blocker">
-                <Icon name="alert" size={16} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="rec2-blocker-t">
-                    Tu web bloquea a {blockedBots.slice(0, 2).join(" y ")}
-                    {blockedBots.length > 2 ? ` y ${blockedBots.length - 2} más` : ""}
-                  </div>
-                  <div className="rec2-blocker-d">
-                    Esos motores no pueden leer tu contenido, así que no pueden citarte.{" "}
-                    <Link href={`/dashboard/projects/${projectId}/web-audit`} style={{ fontWeight: 700 }}>
-                      Ver cómo arreglarlo
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 3 · Pillars — where the score stands, as context for the choices below. */}
-            {pillars.length > 0 && (
-              <div className="rec2-pillars">
-                {pillars.map((p) => (
-                  <div key={p.key} className="rec2-pillar">
-                    <div className="rec2-pillar-n">
-                      {p.label}
-                      {p.help && <InfoTip text={p.help} />}
-                    </div>
-                    <div className="rec2-pillar-v">{p.value}</div>
-                    <div className="rec2-pillar-trk">
-                      <i style={{ width: `${Math.max(0, Math.min(100, p.value))}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!latestCompletedRun ? (
-              <div className="section-empty" style={{ marginTop: 20 }}>
-                <div className="section-empty-title">
-                  {latestRunFailed ? "El último escaneo falló" : "Todavía no hay recomendaciones"}
-                </div>
-                <div className="section-empty-desc">
-                  {latestRunFailed
-                    ? "No hay ningún escaneo completado del que sacar acciones. Revisa el dominio y vuelve a lanzarlo."
-                    : "Aparecerán en cuanto termine tu primer escaneo."}
-                </div>
-                <Link
-                  href={`/dashboard/projects/${projectId}`}
-                  className="btn btn-ghost btn-sm"
-                  style={{ marginTop: 14, display: "inline-flex" }}
-                >
-                  Volver a visión general
-                  <Icon name="arrRight" size={14} />
-                </Link>
-              </div>
-            ) : recs.length === 0 ? (
-              <div className="section-empty" style={{ marginTop: 20 }}>
-                <div className="section-empty-title">Nada que corregir ahora mismo</div>
-                <div className="section-empty-desc">
-                  Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
-                </div>
-                <Link
-                  href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-                  className="btn btn-ghost btn-sm"
-                  style={{ marginTop: 14, display: "inline-flex" }}
-                >
-                  Ver detalle del escaneo
-                  <Icon name="arrRight" size={14} />
-                </Link>
-              </div>
-            ) : (
-              <RecommendationsClient
-                recommendations={recs}
-                resolvedHistory={resolvedHistory}
-                recentWinsCount={recentWins.length}
-                projectId={projectId}
-                jointPoints={jointPoints}
-                jointPointsByType={jointPointsByType}
-                planIds={planIds}
-                planPoints={planPoints}
-                domain={project.domain}
-              />
-            )}
-          </>
-        )}
-      </div>
+              <Link
+                href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 14, display: "inline-flex" }}
+              >
+                Ver detalle del escaneo
+                <Icon name="arrRight" size={14} />
+              </Link>
+            </div>
+          ) : (
+            <RecommendationsClient
+              recommendations={recs}
+              resolvedHistory={resolvedHistory}
+              recentWinsCount={recentWins.length}
+              projectId={projectId}
+              jointPoints={jointPoints}
+              jointPointsByType={jointPointsByType}
+              planIds={planIds}
+              planPoints={planPoints}
+              domain={project.domain}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

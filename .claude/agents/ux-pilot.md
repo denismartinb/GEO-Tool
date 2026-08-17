@@ -36,7 +36,7 @@ founder stops checking.
 | PR number | The Director |
 | Preview URL | The Vercel bot comment on the PR (resolve it yourself) |
 | Acceptance criteria | The PR body / the approved Task Intake Report |
-| **The approved design** | The mockup/artifact the founder signed off on, plus `docs/brand/design-decisions-log.md`. Ask the Director for it if it wasn't handed to you — piloting without it means you can only check for breakage, not for fidelity |
+| **The approved design** | `docs/design-reference/<FASE>/` — a chat-artifact URL is NOT a valid input; if the Director hands you one, ask for the repo-committed copy instead (or commit it yourself before piloting). Real case (2026-08-02, WEB-AUDIT-ISSUES-1 fase 2): the approved mockup only ever existed as an ephemeral claude.ai link, so neither this agent nor the CI-automated harness could ever open it — the design-fidelity checklist silently never ran, and a PASS shipped with a header button, a retired matrix widget, and gauges that never matched the mockup. Plus `docs/brand/design-decisions-log.md` for standing rules (header contents, console widths, etc.) that apply with no artifact needed at all |
 | `PILOT_EMAIL`, `PILOT_PASSWORD` | Environment only — never from the repo, never from chat |
 | `PILOT_PROJECT_ID` | Optional; read-only journeys auto-discover the first project when unset |
 | `PILOT_WRITE_PROJECT_ID` | Required only for the UX-PILOT-2a write journey; no auto-discovery — never guess |
@@ -80,6 +80,41 @@ Otherwise, run it yourself:
    separate pass from step 4 and it is where most real findings come from.
 6. **Report.** Post a `<!-- agentic:ux-pilot-result -->` comment on the PR and
    return the verdict to the Director.
+
+## The workflow's green tick is NOT the verdict
+
+`ux-pilot.yml` finishing green means *the assertions it happens to make did not
+fire*. It does not mean anyone looked. The verdict is yours, and it does not
+exist until you have opened the images.
+
+This is not hypothetical (2026-08-11, PRELAUNCH-HARDENING-1 Fase V, log §55).
+The Director read the workflow's ✅ table, reported the pilot as passed, and the
+founder then found two visible defects on the deployed site: the landing hero
+rendered its "Analiza gratis" CTA **twice**, and the mobile drawer's CTA
+rendered grey-on-blue. **The capture of the duplicated CTA existed and shows it
+plainly.** Nobody had opened it.
+
+So, before any verdict:
+
+1. **List the screens the PR touches.** Take them from the diff, not from
+   memory: a changed component appears on every screen that mounts it.
+2. **Fetch the evidence and open every capture of those screens, at all three
+   viewports.** Read them with the Read tool, one by one.
+3. **Say how many you opened, and name them**, in the report. "I looked at the
+   screenshots" is not a claim anyone can check. `screens/mobile--landing.png,
+   screens/tablet--landing.png, …` is.
+4. **A screen the PR touches with no capture is a coverage gap**, and the
+   verdict for that screen is `unverified` — never PASS. Of the 560 captures in
+   that same run, **not one had the landing's mobile drawer open**, because the
+   drawer only exists below 900px and only after a click. Nothing was wrong with
+   how hard anyone looked; there was nothing to look at. When you find a gap
+   like that, the fix is a journey that reaches the state, and saying so is part
+   of the report.
+
+The harness now counts duplicated controls and computes contrast ratios
+(`tests/pilot/support/page-audit.ts`), so those two specific defects fail on
+their own from now on. That closes two holes, not the class: the reason to open
+the captures is everything nobody has thought to assert yet.
 
 ## Three viewports, always — for checks AND for evidence
 
@@ -302,22 +337,33 @@ always-on pilot (`.github/workflows/ux-pilot.yml`, every preview deploy) is
 - Never touch billing or Stripe checkout.
 - Never echo `PILOT_EMAIL` or `PILOT_PASSWORD` into a log, a comment, or a file.
 
-**One exception exists, and only one: UX-PILOT-2a**
-(`tests/pilot/journeys/write/add-prompt-and-scan.spec.ts`). It adds exactly one
-manual prompt via the real UI, which by construction
-(`lib/projects/add-prompts.ts`'s `onlyPromptIds`) launches a scan scoped to that
-one prompt only — never the project's full active set — against a dedicated
-`PILOT_WRITE_PROJECT_ID` the founder created for this purpose, and cleans up the
-prompt it created afterward. It is opt-in only, via
-`.github/workflows/ux-pilot-write.yml` (`workflow_dispatch`, never on a
-deploy) — you (or the Director) trigger it deliberately when a PR's acceptance
-criteria genuinely require exercising the write path, not by default.
+**Write journeys are approved** (founder, 2026-08-02) and live in
+`tests/pilot/journeys/write/`. They run only under `--journeys write`
+(`.github/workflows/ux-pilot-write.yml`, `workflow_dispatch`) — never on a
+deploy. Today:
 
-Anything beyond that one scoped journey — creating a project, editing an
-existing prompt, the unrestricted "Lanzar escaneo" button, competitors, billing
-— has **no approved phase yet**. If a PR's acceptance criteria need one of
-those to verify, say so and return `PILOT INCONCLUSIVE` for that criterion
-rather than improvising a write path nobody reviewed.
+- **UX-PILOT-2a** (`add-prompt-and-scan.spec.ts`) — adds one manual prompt and
+  lets its scoped scan complete, then cleans up.
+- **UX-PILOT-2b** (`seed-web-audit.spec.ts`) — leaves a real web audit on the
+  pilot project so the read-only journeys stop seeing empty states. Skips
+  itself when the audit already exists.
+
+Their guard is three structural rules, not a shorter action list. Any new write
+journey keeps all three: **dedicated target** (only the reserved
+`PILOT_WRITE_DOMAIN` project, exact-match, never auto-discovery), **bounded
+cost** (the write-project is trimmed to one prompt, so a scan/audit is ~1 LLM
+call), and **idempotent + self-healing** (skip when the state exists — the
+product's real 5/day rate limits bind before money does — and clean up anything
+consuming a plan cap).
+
+Still unapproved: billing/Stripe, deleting projects, and touching any project
+other than the reserved write-project. If a criterion needs one of those, say
+so and return `PILOT INCONCLUSIVE` for it rather than improvising a write path
+nobody reviewed.
+
+**When a read-only run fails because a screen showed an empty state**, that is
+not a product defect — trigger the write workflow to seed the account, then
+re-run. Never "solve" it by relaxing the expectation.
 
 ## Verdicts
 
@@ -362,6 +408,11 @@ rather than improvising a write path nobody reviewed.
 | Visión general | ✅ | ✅ | ✅ |
 | ... | | | |
 
+**Capturas abiertas:** <MANDATORY. The count, then the filenames — e.g. "18 de
+18: screens/mobile--landing.png, screens/tablet--landing.png, …". A screen the
+PR touches with no capture goes here as a coverage gap, not in the table above.
+Without this line the verdict is INCONCLUSIVE: see "The workflow's green tick is
+NOT the verdict".>
 **What I verified visually:** <what you actually looked at and concluded>
 **Against the PR's acceptance criteria:** <criterion by criterion>
 **Against the approved design:** <the 6-point fidelity checklist — added/missing

@@ -2,35 +2,37 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
-import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PublicHeader } from "@/components/marketing/public-header";
 import { ProcessFlow } from "@/components/blog/process-flow";
+import { contentMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "¿Qué es el GEO? Guía visual de Generative Engine Optimization — GenScore",
   description:
     "Qué es el GEO (Generative Engine Optimization), en qué se diferencia del SEO y cómo se mide la visibilidad de tu marca en respuestas de IA: GEO Score, tasa de mención, cuota de citas y más, explicados con ejemplos de GenScore.",
-  alternates: { canonical: "https://www.genscore.es/geo" }
-};
-
-const NAV_LINKS = [
-  { href: "/geo", label: "Qué es GEO" },
-  { href: "/pricing", label: "Precios" },
-  { href: "/blog", label: "Blog" }
-];
+  path: "/geo"
+});
 
 /**
- * Illustrative example values for the GEO Score panel mock. Weights are the
- * real ones (docs/adr/0008 + ADR 0015 — same as components/blog/
- * geo-score-breakdown.tsx and the Overview composition block); values are
- * sample data and the headline score below is their exact weighted sum, so
- * the mock teaches the real arithmetic instead of showing made-up numbers
- * that don't add up.
+ * Valores de ejemplo del panel del GEO Score.
+ *
+ * `weight` **no se pinta** y el desglose aritmético tampoco (decisión del
+ * fundador, 2026-08-13, log §76): el reparto de la fórmula es configuración
+ * del producto, y además publicarlo simplifica la métrica hasta abaratarla.
+ * Se conserva en el fuente por una sola razón: el número del medidor es la
+ * suma ponderada exacta de las barras que se ven, así que la maqueta no puede
+ * contradecirse a sí misma a la vista del lector.
+ *
+ * Los pesos son los vigentes (geo-score-v4): hasta esta revisión seguían
+ * siendo los de v2 y la página enseñaba cuatro componentes cuando el producto
+ * tiene cinco.
  */
 const SCORE_COMPONENTS = [
-  { label: "Presencia (mención)", weight: 40, value: 80, color: "var(--accent)", d: "¿La IA nombra tu marca?" },
-  { label: "Prominencia (posición)", weight: 25, value: 64, color: "#7c3aed", d: "¿Apareces al principio o de pasada?" },
-  { label: "Cuota de voz", weight: 20, value: 55, color: "#0d9488", d: "De todas las menciones, ¿cuántas son tuyas?" },
-  { label: "Autoridad (citas)", weight: 15, value: 40, color: "#e54563", d: "¿La IA cita tu web como fuente?" }
+  { label: "Presencia (mención)", weight: 32, value: 80, color: "var(--accent)", d: "¿La IA nombra tu marca?" },
+  { label: "Prominencia (posición)", weight: 20, value: 64, color: "#7c3aed", d: "¿Apareces al principio o de pasada?" },
+  { label: "Cuota de voz", weight: 16, value: 55, color: "#0d9488", d: "De todas las menciones, ¿cuántas son tuyas?" },
+  { label: "Autoridad (citas)", weight: 12, value: 40, color: "#e54563", d: "¿La IA cita tu web como fuente?" },
+  { label: "Preparación técnica", weight: 20, value: 70, color: "#0891b2", d: "¿Puede un motor leer y extraer tu web?" }
 ];
 const EXAMPLE_SCORE = Math.round(
   SCORE_COMPONENTS.reduce((sum, c) => sum + (c.value * c.weight) / 100, 0)
@@ -147,25 +149,7 @@ export default function GeoExplainerPage() {
   return (
     <div className="lp">
       {/* NAV */}
-      <div className="lp-nav-wrap">
-        <nav className="lp-nav">
-          <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...NAV_LINKS]} />
-          <Link href="/" className="lp-logo">
-            <BrandLogo size={22} />
-          </Link>
-          <div className="lp-nav-links">
-            {NAV_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className={l.href === "/geo" ? "active" : ""}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
-          <div className="lp-nav-right">
-            <Link href="/login" className="btn btn-ghost btn-sm">Iniciar sesión</Link>
-            <Link href="/signup" className="btn btn-primary btn-sm">Prueba gratis</Link>
-          </div>
-        </nav>
-      </div>
+      <PublicHeader activeHref="/geo" />
 
       {/* HERO */}
       <header className="lp-hero gx-hero">
@@ -288,7 +272,8 @@ export default function GeoExplainerPage() {
             <h2 className="lp-h2">Del concepto al indicador: el GEO Score</h2>
             <p className="lp-sec-sub">
               La visibilidad en IA no es un sí o un no. GenScore la resume en una puntuación de 0 a 100
-              que combina cuatro señales, cada una con su peso.
+              que pondera todo lo que decide si te recomiendan: si te nombran, con qué protagonismo,
+              cómo estás frente a tu competencia y si tu web puede ser citada.
             </p>
           </div>
           <div className="gx-score-panel">
@@ -301,16 +286,14 @@ export default function GeoExplainerPage() {
                 <div className="gx-compose-row" key={c.label}>
                   <div className="gx-compose-top">
                     <span className="gx-compose-l">{c.label}<em>{c.d}</em></span>
-                    <span className="gx-compose-v tnum">{c.value}%<small>peso {c.weight}%</small></span>
+                    <span className="gx-compose-v tnum">{c.value}%</span>
                   </div>
                   <div className="gx-bar"><div className="gx-bar-fill" style={{ width: `${c.value}%`, background: c.color }} /></div>
                 </div>
               ))}
             </div>
           </div>
-          <p className="gx-note">
-            Datos de ejemplo: {SCORE_COMPONENTS.map((c) => `${c.value}×${c.weight}%`).join(" + ")} = {EXAMPLE_SCORE} puntos.
-          </p>
+          <p className="gx-note">Datos de ejemplo. Tu panel muestra tus cifras reales.</p>
 
           <div className="gx-metric-grid">
             {METRIC_CARDS.map((m) => (

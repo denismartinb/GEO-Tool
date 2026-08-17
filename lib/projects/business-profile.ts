@@ -1,6 +1,10 @@
 import "server-only";
+import { z } from "zod";
 import { fetchPageSafely } from "@/lib/web-audit/fetch-page";
-import { inferBusinessProfile, type BusinessProfile } from "@/lib/llm/gemini";
+import { inferBrandAliases, inferBusinessProfile } from "@/lib/llm/gemini";
+import type { BusinessProfile } from "@/lib/llm/contracts";
+import { selectVerifiableAliases } from "@/lib/projects/brand-aliases";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 /**
  * COMPETITOR-GROUNDING-1: gives Gemini real evidence of what a business
@@ -84,7 +88,105 @@ export async function fetchHomepageEvidence(domain: string): Promise<HomepageEvi
   return { status: "ok", title, description, headings, excerpt };
 }
 
-export type BusinessContextResult = { status: "identified"; profile: BusinessProfile } | { status: "unidentified" };
+const persistedBusinessProfileSchema = z.object({
+  whatItSells: z.string(),
+  sector: z.string(),
+  subSector: z.string(),
+  businessModel: z.enum(["b2b", "b2c", "both", "unknown"]),
+  targetCustomer: z.string(),
+  geographicScope: z.string(),
+  sizeEstimate: z.string(),
+  confidence: z.enum(["low", "medium", "high"])
+});
+
+/**
+ * Defensively parses `projects.business_profile` (jsonb) — never throws,
+ * returns null on anything malformed/absent. Shared by every reader of the
+ * cached profile (prompt suggestion, and — EMERGING-BRANDS-GROUNDING-1 —
+ * scan extraction), so the persisted shape only has one source of truth.
+ */
+export function parsePersistedBusinessProfile(raw: unknown): BusinessProfile | null {
+  if (!raw || typeof raw !== "object") return null;
+  const parsed = persistedBusinessProfileSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+/**
+ * COMPETITOR-GROUNDING-2 (docs/adr/0022): resolves the business profile a
+ * project should be reasoned about with, computing and persisting it lazily
+ * on first use rather than requiring it at project-creation time.
+ *
+ * Shared by every feature that needs to know what the business actually does
+ * — prompt generation (lib/projects/add-prompts.ts) and competitor
+ * suggestion (lib/competitors/suggest-competitors.ts) — so the cache is
+ * written once and reused by both instead of each recomputing its own.
+ *
+ * Never blocks the caller: any failure to resolve or persist simply returns
+ * null, and each caller decides what "no profile" means for it (blind
+ * fallback for prompts, honest "can't suggest yet" for competitors).
+ */
+export async function resolveAndCacheBusinessProfile(input: {
+  projectId: string;
+  ownerUserId: string;
+  domain: string;
+  country: string;
+  language: string;
+  existingProfile: unknown;
+  supabase: AuthenticatedContext["supabase"];
+  /** Tag used in the cache-write warning log, so the source stays identifiable. */
+  logLabel?: string;
+}): Promise<BusinessProfile | null> {
+  const cached = parsePersistedBusinessProfile(input.existingProfile);
+  if (cached) return cached;
+
+  const context = await resolveBusinessContext({
+    domain: input.domain,
+    country: input.country,
+    language: input.language
+  }).catch(() => ({ status: "unidentified", reason: "profile_failed" }) as const);
+
+  if (context.status === "unidentified") return null;
+
+  // Best-effort cache write — a failure here must not block the caller; the
+  // next invocation simply recomputes it. Scoped by id + owner_user_id per
+  // .claude/rules/server-actions.md, even where the row was already
+  // ownership-verified by the caller.
+  const { error: cacheError } = await input.supabase
+    .from("projects")
+    .update({ business_profile: context.profile })
+    .eq("id", input.projectId)
+    .eq("owner_user_id", input.ownerUserId);
+
+  if (cacheError) {
+    console.warn(`[${input.logLabel ?? "business-profile"}] business_profile cache write failed`, {
+      project_id: input.projectId,
+      message: cacheError.message
+    });
+  }
+
+  return context.profile;
+}
+
+/**
+ * POR QUÉ no se pudo identificar el negocio. Obligatorio, no opcional: los tres
+ * motivos se le enseñaban al visitante del comprobador gratuito con el mismo
+ * mensaje —"no hemos podido leer tu web, comprueba que la página carga"— y dos
+ * de los tres no tienen NADA que ver con su web. Decirle a alguien que su sitio
+ * está roto cuando lo que falló fue nuestro modelo es exactamente lo que
+ * `.claude/rules/gemini.md` prohíbe: «nunca le digas al usuario una causa que
+ * el código no puede saber» (FREE-CHECKER-1 Fase C-bis, log §111).
+ */
+export type BusinessContextUnidentifiedReason =
+  /** No se pudo leer la portada y no había descripción del usuario. Esto SÍ es su web. */
+  | "homepage_unreadable"
+  /** Se leyó la web, pero el modelo no devolvió perfil (o la llamada falló). Es nuestro. */
+  | "profile_failed"
+  /** El modelo devolvió un perfil que él mismo marca poco fiable. Es nuestro. */
+  | "profile_low_confidence";
+
+export type BusinessContextResult =
+  | { status: "identified"; profile: BusinessProfile }
+  | { status: "unidentified"; reason: BusinessContextUnidentifiedReason };
 
 /**
  * Orchestrates evidence -> profile for the onboarding suggestion flow.
@@ -106,7 +208,7 @@ export async function resolveBusinessContext(input: {
   const evidence = await fetchHomepageEvidence(input.domain);
 
   if (evidence.status === "unavailable" && !hasUserDescription) {
-    return { status: "unidentified" };
+    return { status: "unidentified", reason: "homepage_unreadable" };
   }
 
   const profile = await inferBusinessProfile({
@@ -117,8 +219,50 @@ export async function resolveBusinessContext(input: {
     userDescription: input.userDescription
   }).catch(() => null);
 
-  if (!profile) return { status: "unidentified" };
-  if (profile.confidence === "low" && !hasUserDescription) return { status: "unidentified" };
+  if (!profile) return { status: "unidentified", reason: "profile_failed" };
+  if (profile.confidence === "low" && !hasUserDescription) {
+    return { status: "unidentified", reason: "profile_low_confidence" };
+  }
 
   return { status: "identified", profile };
+}
+
+/**
+ * Derives the project's brand aliases from its own homepage evidence
+ * (GEO-SCORE-BRAND-IDENTITY-1). Automatic, per the founder's decision
+ * (2026-08-02): no manual step is required to get a correct measurement, and
+ * a brand whose product carries the name — Mozilla/Firefox — is mis-measured
+ * from its very first scan without one.
+ *
+ * Two-stage on purpose, mirroring how the rest of this pipeline treats model
+ * output: `inferBrandAliases` PROPOSES from the fetched evidence, and
+ * `selectVerifiableAliases` DISPOSES — dropping anything absent from that
+ * same evidence, generic, too short, or over the cap. The model never gets to
+ * write directly into something that moves the score.
+ *
+ * Returns [] on any failure or when the brand genuinely has no distinct
+ * product name, which is the common and correct case. Never throws: alias
+ * derivation is an enhancement to measurement, and failing it must never
+ * block project creation or a scan.
+ */
+export async function deriveBrandAliases(input: { brand: string; domain: string }): Promise<string[]> {
+  const evidence = await fetchHomepageEvidence(input.domain).catch(() => ({ status: "unavailable" }) as const);
+  if (evidence.status !== "ok") return [];
+
+  const proposed = await inferBrandAliases({
+    brand: input.brand,
+    domain: input.domain,
+    evidence
+  }).catch(() => [] as string[]);
+
+  if (!proposed.length) return [];
+
+  // The evidence the aliases are verified against is the same block the model
+  // was shown — an alias it produced from memory rather than from the page
+  // has nothing to match here and is dropped.
+  const evidenceText = [evidence.title, evidence.description, ...evidence.headings, evidence.excerpt]
+    .filter(Boolean)
+    .join("\n");
+
+  return selectVerifiableAliases(proposed, input.brand, evidenceText).accepted;
 }

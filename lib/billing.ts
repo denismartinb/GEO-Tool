@@ -1,10 +1,11 @@
 import "server-only";
 
+import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
-import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { AuthenticatedContext } from "@/lib/auth";
 
 const DEFAULT_PLAN_ID: Plan["id"] = "pro";
 
@@ -37,6 +38,24 @@ type TrialFields = {
 };
 
 /**
+ * The read-only half of `applyTrialExpiry`: "has this reverse trial elapsed?",
+ * with no write and no email. Extracted (GENSCORE-HEADER-2) so a display-only
+ * caller can resolve the *effective* plan without triggering enforcement —
+ * `/api/me` paints the public header's plan badge and is reachable from every
+ * static marketing page, which is far more traffic than the console, and an
+ * endpoint whose job is to paint a badge must not send a customer email.
+ * Enforcement still happens where it always did: `applyTrialExpiry` below, on
+ * the console's own plan read.
+ *
+ * Both callers share this predicate rather than restating it — a second copy
+ * of "is the trial over?" would drift the badge away from the real gate.
+ */
+export function isTrialElapsed(row: TrialFields | null | undefined): boolean {
+  if (!row?.trial_ends_at || row.stripe_subscription_id) return false;
+  return new Date(row.trial_ends_at).getTime() <= Date.now();
+}
+
+/**
  * A reverse-trial account (`current_plan='pro'`, `trial_ends_at` set at
  * signup — see 0017_reverse_trial.sql) downgrades to Free the first time its
  * plan is read after the trial window ends, checked lazily here rather than
@@ -48,8 +67,10 @@ type TrialFields = {
  * callers still see the pre-expiry plan rather than a silently-wrong one.
  */
 async function applyTrialExpiry(userId: string, row: TrialFields | null | undefined): Promise<string | null | undefined> {
-  if (!row?.trial_ends_at || row.stripe_subscription_id) return row?.current_plan;
-  if (new Date(row.trial_ends_at).getTime() > Date.now()) return row.current_plan;
+  // `!row` is what narrows the type below; `isTrialElapsed` is a plain
+  // predicate on purpose — returning false means "the trial is still running",
+  // never "there is no row", so it must not be a type guard.
+  if (!row || !isTrialElapsed(row)) return row?.current_plan;
 
   try {
     const service = createServiceClient();
@@ -108,8 +129,24 @@ export function isProOrAbove(rawCurrentPlan: string | null | undefined): boolean
  * Fetches the caller's real plan (for limit-enforcement checks in server
  * actions that already hold an authenticated `supabase`/`user` from
  * `requireUser()` — avoids a second auth round trip).
+ *
+ * Memoizado con `React.cache()` por petición (PRELAUNCH-HARDENING-1 Fase V,
+ * V8). Dos motivos, y el segundo no es de rendimiento:
+ *
+ *  1. El layout del dashboard y alguna página (p. ej. Auditoría web) piden el
+ *     plan en el mismo render, y eran dos lecturas de `profiles` idénticas.
+ *  2. `applyTrialExpiry` **tiene efectos**: degrada el plan y manda el email
+ *     de "trial terminado". Dos llamadas concurrentes dentro del mismo render
+ *     podían leer la fila antes de la actualización y mandar ese email dos
+ *     veces al mismo cliente. Con una sola ejecución por petición, ese camino
+ *     corre una vez.
+ *
+ * La clave incluye el cliente `supabase`; como `requireUser()` ya está
+ * memoizado, todas las pantallas comparten la misma referencia y el acierto es
+ * real. Un llamador que construya su propio cliente simplemente no acierta —
+ * mismo comportamiento que hoy, nunca peor.
  */
-export async function getPlanForUser(
+export const getPlanForUser = cache(async function getPlanForUser(
   supabase: AuthenticatedContext["supabase"],
   userId: string
 ): Promise<Plan> {
@@ -120,7 +157,7 @@ export async function getPlanForUser(
     .maybeSingle();
   const effectivePlanId = await applyTrialExpiry(userId, data);
   return resolvePlan(effectivePlanId as Plan["id"] | undefined);
-}
+});
 
 /**
  * Real usage counters and current plan for the "Plan y facturación" page.

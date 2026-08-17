@@ -1,7 +1,7 @@
 import { BLOG_POSTS, getMetaDescription, type BlogPost } from "@/lib/blog/posts";
 
 const SITE_URL = "https://www.genscore.es";
-const FEED_TITLE = "Genscore — Blog";
+const FEED_TITLE = "GenScore — Blog";
 const FEED_DESCRIPTION = "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA.";
 
 function escapeXml(value: string): string {
