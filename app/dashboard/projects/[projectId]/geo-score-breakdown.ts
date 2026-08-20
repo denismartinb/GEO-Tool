@@ -22,12 +22,17 @@ export type GeoScoreEngineCoverage = {
   unexpected?: string[];
 };
 
-export const GEO_SCORE_COMPONENT_META: Record<GeoScoreComponentKey, { label: string; hint: string }> = {
-  presence: { label: "Presencia", hint: "Menciones de tu marca en las respuestas de IA." },
-  prominence: { label: "Prominencia", hint: "Puesto medio de tu marca cuando la IA la menciona." },
-  standing: { label: "Cuota de voz", hint: "Tus menciones frente a las de tus competidores." },
-  authority: { label: "Autoridad", hint: "Citas de la IA a páginas de tu propio dominio." },
-  technical: { label: "Diagnóstico técnico", hint: "Salud técnica de tu web para motores de IA." }
+/**
+ * `icon` names a key in the shared `Icon` component (components/ui/icon.tsx)
+ * — never a one-off SVG, so the breakdown stays visually consistent with the
+ * icon vocabulary the rest of the console already uses.
+ */
+export const GEO_SCORE_COMPONENT_META: Record<GeoScoreComponentKey, { label: string; hint: string; icon: string }> = {
+  presence: { label: "Presencia", hint: "Menciones de tu marca en las respuestas de IA.", icon: "eye" },
+  prominence: { label: "Prominencia", hint: "Puesto medio de tu marca cuando la IA la menciona.", icon: "crown" },
+  standing: { label: "Cuota de voz", hint: "Tus menciones frente a las de tus competidores.", icon: "resonance" },
+  authority: { label: "Autoridad", hint: "Citas de la IA a páginas de tu propio dominio.", icon: "shield" },
+  technical: { label: "Diagnóstico técnico", hint: "Salud técnica de tu web para motores de IA.", icon: "bolt" }
 };
 
 /**

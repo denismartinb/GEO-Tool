@@ -11126,7 +11126,221 @@ fundador, 2026-08-20.
 
 ---
 
-## 119. Dominios: seleccionar una tarjeta propaga a toda la consola, y el botón "Ver visión general" se reduce en desktop (DOMAINS-LIVE-SELECT-1, 2026-08-20)
+
+---
+
+## 119. Visión general en escritorio: cabecera de la puntuación GEO alineada, desglose y motores lado a lado (OV-DESKTOP-2, 2026-08-17)
+
+**El problema, señalado por el fundador con una captura de escritorio.** En
+la fila de cabecera de Visión general, la tarjeta de la puntuación GEO
+llevaba su título («Puntuación GEO») dentro de la propia tarjeta, mientras
+la columna de al lado («Indicadores clave») lo lleva fuera, como etiqueta de
+sección — así que las dos tarjetas arrancaban a alturas distintas y leían
+como desalineadas. Más abajo, «Desglose del GEO Score» ocupaba el ancho
+completo de la pantalla y «Posicionamiento por motores de IA» quedaba
+enterrado varias secciones después, dentro de la columna de análisis —
+mucho protagonismo para una tabla de texto plano, y una sección relacionada
+fuera de vista sin bajar la página. Las cinco filas del desglose eran
+etiqueta + número suelto («88/100»), sin ninguna otra señal visual.
+
+**Qué se decidió, con guardas explícitas en el tramo inferior.**
+
+1. **Cabecera hermana, alineada arriba Y abajo.** `.ov2-gauge-block` envuelve
+   la tarjeta con una segunda copia externa de «Puntuación GEO»
+   (`.ov2-gauge-sec-lbl`), oculta por defecto. A partir de 760px se muestra
+   la externa y se oculta la interna — nunca las dos a la vez — así que las
+   dos columnas de la fila de cabecera comparten el mismo patrón de
+   etiqueta y arrancan en la misma línea. `.ov2-hero` pasa de `align-items:
+   start` a `stretch` (revirtiendo la decisión original de OV-DESKTOP-1,
+   explícitamente a petición del fundador: quería la alineación arriba Y
+   abajo, no sólo arriba) — la tarjeta de la puntuación crece para llenar la
+   altura de la fila, y `justify-content: center` en su interior evita que
+   eso lea como aire muerto en un escaneo sin sparkline. Por debajo de 760px
+   el DOM y el CSS no cambian: la tarjeta sigue llevando su etiqueta interna
+   exactamente como antes.
+
+   **Primer intento, y por qué se corrigió en el mismo PR.** La primera
+   versión lo aplicó a partir de 1200px; el fundador pidió expresamente
+   extenderlo a tablet, y esta sesión preguntó "¿768–1199px?" asumiendo que
+   coincidía con el paso de 900px que ya existía para `.ov2-scope`/
+   `.ov2-kpi-car` — sin comprobar que 768 < 900. La segunda versión movió
+   todo el bloque de la cabecera a ese mismo `@media (min-width: 900px)`, y
+   la captura del piloto en 768px (la anchura real de "Tablet" en
+   `docs/agentic-user-pilot.md`, la que de verdad se mira) salió idéntica a
+   la de antes del PR: 768px nunca llega a activar una condición de 900px.
+   La versión final vive en su **propio** `@media (min-width: 760px)`,
+   separado del paso de 900px — reutilizando el mismo corte al que `.sb`
+   deja de ser un cajón y pasa a columna estática (`.shell` le da entonces
+   una columna fija de `--sidebar-w`), para que "la cabecera va a dos columnas"
+   y "la barra lateral es una columna fija" empiecen a la misma anchura.
+   `.ov2-scope` NO se ensancha en este paso — sigue en su tope móvil de
+   460px hasta el paso de 900px, sin tocar — así que la columna de la
+   puntuación es más estrecha aquí (`minmax(190px, 230px)`) que a partir de
+   900px (`minmax(220px, 260px)`) y que en escritorio
+   (`minmax(320px, 390px)` desde 1200px). `.ov2-kpi-car` tampoco cambia de
+   comportamiento en este tramo — sigue siendo el carrusel horizontal móvil,
+   con su propio cambio a rejilla de 2 columnas intacto en su sitio original
+   (900px) — meterlo en rejilla dentro de una columna aún más estrecha
+   arriesgaba envolver las etiquetas de los KPI sin que nadie lo comprobara.
+2. **Desglose a 2/3, motores sube.** `.ov2-score-row` agrupa «Desglose del
+   GEO Score» y «Posicionamiento por motores de IA» en una fila 2fr/1fr
+   propia, independiente de `.ov2-cols` (que ahora arranca directamente en
+   Panorámica competitiva). Por debajo de 1200px `.ov2-score-row` es
+   `display: contents`: el orden en el DOM no cambia, porque Posicionamiento
+   ya seguía inmediatamente a Desglose antes de este cambio — sólo el
+   escritorio gana la disposición lado a lado.
+3. **Filas con icono y medidor.** Cada fila del desglose suma un icono (del
+   sistema compartido `components/ui/icon.tsx` — `eye`/`crown`/`resonance`/
+   `shield`/`bolt`; nunca un SVG nuevo) y sustituye el número suelto por una
+   barra horizontal junto a la cifra. El tono (verde/azul/ámbar) reutiliza
+   `getBandTone`, el mismo umbral 70/40 que ya colorea la banda de la
+   puntuación general — no se inventa una segunda escala de color para esta
+   fila. «No disponible» dibuja una barra discontinua y vacía en vez de una
+   barra sólida al 0%: una barra sólida vacía se confundiría con Presencia o
+   Autoridad en 0, que es un valor medido real en esta misma tarjeta, no una
+   ausencia de dato. Este punto no se limitó a escritorio — el icono y el
+   medidor caben igual de bien a 375px y no dependen del ancho extra que
+   trae la fila 2/3, así que aplica a todas las anchuras.
+
+**Tercera vuelta: el carrusel de KPIs no cabía, y el `min-width: 0` no era la
+causa.** Con la cabecera ya en dos columnas a 768px, la captura del piloto
+mostró la tercera tarjeta de Indicadores clave cortada contra el borde de la
+pantalla. Se diagnosticó como un *grid blowout* clásico —falta de
+`min-width: 0` en los items— y se arregló así. **La siguiente pasada del
+piloto devolvió capturas byte a byte idénticas**, lo que descartó ese
+diagnóstico de raíz: el `min-width: 0` no cambiaba un solo píxel.
+
+La causa real estaba a la vista en la propia captura y en el comentario que
+esta misma fase había escrito para justificarse: `.ov2-kpi-car` seguía siendo
+el **carrusel horizontal móvil** (tarjetas fijas de 158px con `overflow-x`),
+y en este tramo la columna derecha mide ~205px — con el barrido lateral
+estático eso son una tarjeta y el borde izquierdo de la siguiente. No
+desbordaba nada: el carrusel recortaba correctamente, y *ese* recorte es lo
+que se lee como pantalla rota.
+
+Se dejó el carrusel intacto **a propósito**, y el comentario del CSS decía
+por qué: *«esa combinación no se había probado nunca junta y arriesgaba
+envolver etiquetas que nadie había comprobado»*. Era exactamente al revés —
+**no probarlo era el riesgo**. En este tramo `.ov2-kpi-car` pasa a una
+rejilla de una columna con las tarjetas a ancho completo, y a partir de
+900px la de dos columnas vuelve a ganar. Ambas usan el selector desnudo
+`.ov2-kpi-car`, así que decide el orden en el fichero y ninguna
+sobre-especifica a la otra (`.claude/rules/styles.md`).
+
+`min-width: 0` se queda: la convención es correcta y la comparten los otros
+pares de columnas del fichero. Queda escrito en el CSS que **no** fue el
+arreglo, para que nadie deduzca lo contrario de su presencia.
+
+**Lo que costó y cómo se cortó.** Tres vueltas de piloto para un cambio de
+CSS, dos de ellas por afirmar una causa sin comprobarla. La cuarta se
+verificó **antes** de empujar, con un banco de pruebas estático
+(`.ov2-*` reales de `globals.css` + `console.css` sobre el DOM de la
+cabecera, medido y fotografiado con el Chromium local a 768/860/1000/1280 px),
+que confirmó ausencia de desbordamiento y fondos alineados en las cuatro
+anchuras. El piloto contra el preview sigue siendo la puerta; lo que no puede
+ser es el bucle de depuración, que es la misma lección de BUILD-BUDGET-1
+—«el build no es un bucle de feedback»— aplicada al piloto.
+
+**Qué NO cambia.** Por debajo de 760px (móvil) la cabecera es pixel-idéntica
+a la de antes de este PR; por debajo de 1200px, «Desglose del GEO Score» y
+«Posicionamiento por motores de IA» siguen apilados en el mismo orden que ya
+tenían. Sólo los puntos 1 y 2 llevan guarda de anchura explícita — distinta
+entre ambos (760px la cabecera, 1200px el desglose+motores) porque cada uno
+resuelve un problema visible en un rango distinto — y el punto 3 es un
+cambio de contenido de fila, no de layout, así que no necesitaba ninguna.
+
+**Aprobación.** Maqueta Antes/Después mostrada como Artifact y aprobada por
+el fundador en la misma conversación antes de implementar, sustituyendo al
+Task Intake Report formal para este cambio de un único PR y una sola
+pantalla.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/page.tsx` (JSX);
+`app/globals.css`, `app/console.css` (`.ov2-brow*`, `.ov2-gauge-block`,
+`.ov2-gauge-sec-lbl`, `.ov2-score-row`/`.ov2-score-main`/`.ov2-score-side`);
+`app/dashboard/projects/[projectId]/geo-score-breakdown.ts` (campo `icon` en
+`GEO_SCORE_COMPONENT_META`); §4 (OV-DESKTOP-1, la fila de cabecera y la
+columna de análisis original que este PR reordena, no sustituye en su
+mecanismo `display: contents`).
+
+---
+
+## 120. El piloto se saltó a sí mismo y publicó el check en verde (2026-08-17)
+
+**Qué pasó.** En el PR #433, el job `pilot` del commit `3c19aa4` terminó en
+**8 segundos con conclusión `success`**. No ejecutó ningún test, no abrió
+ningún navegador, no capturó ninguna pantalla. El log dice:
+
+> `No open PR for 3c19aa453a0325c43421048703aebac7fcc153ec; nothing to report on.`
+> `Skipping pilot — deployment is not attached to an open pull request.`
+
+El PR estaba abierto. Llevaba abierto seis horas.
+
+**Por qué importa más que el propio fallo.** El check salió **verde**. En la
+lista de checks del PR, una pasada que no miró nada es indistinguible de una
+que lo miró todo — y la fila «pilot ✅» es exactamente lo que el Human Gate
+mira. Es el mismo fallo de §65 (un job cancelado que dejaba un PASS publicado
+sin que la puerta llegara a ejecutarse) y de §55 (dar «piloto pasado» leyendo
+la tabla de ✅), un escalón más arriba: allí fallaba el veredicto, aquí falla
+la existencia misma de la pasada. La regla de `.claude/rules/scan.md` —«una
+garantía que no se puede ver fallar no es una garantía»— se escribió para el
+escaneo y aplica igual al arnés que vigila el escaneo.
+
+**La causa, y lo que NO era.** El paso «Resolve the pull request for this
+deployment» resolvía el PR con `commits/{sha}/pulls`. Ese endpoint devolvió
+lista vacía. La primera hipótesis fue una carrera de indexación —el deployment
+llegando antes de que GitHub asociara commit y PR— y **es falsa**: el push de
+`3c19aa4` fue a las 13:57 y la consulta a las 14:27, **treinta minutos
+después**. No es que el índice no hubiera llegado; es que no respondió. Se
+comprobó a mano ese mismo día que `pulls?head=` **sí** devolvía el #433 con su
+rama y su SHA en ese mismo momento.
+
+**Qué se decidió.** Dos búsquedas en vez de una, y cinco intentos con espera
+creciente:
+
+1. **`pulls?head=owner:rama` primero.** Consulta la lista de PRs directamente
+   en vez del índice commit→PR, así que no depende de la pieza que falló. Se
+   salta cuando el `ref` del deployment es un SHA de 40 hex, que no es rama.
+2. **`commits/{sha}/pulls` de reserva**, para deployments sin rama utilizable.
+3. **`::warning::` cuando ninguna resuelve**, que sale en el resumen del run y
+   no enterrado en el log de un paso.
+
+**Lo que se dejó a propósito sin arreglar, y por qué.** El check **sigue
+saliendo verde** cuando no hay PR. Un preview de una rama sin PR abierto es
+legítimo y pintarlo en rojo llenaría el repositorio de fallos falsos. El
+precio es que la distinción entre «no había nada que pilotar» y «el piloto se
+averió» vive ahora en un aviso, no en el color del check. Es una mejora sobre
+el silencio anterior, **no una puerta**: la puerta de verdad sería una
+required status check en la protección de rama, que es configuración del
+repositorio y no código — la misma frontera que ya anotó la Fase Q5 sobre la
+ausencia de CI (§54).
+
+**Contexto: por qué se arregló dentro del PR #433 y no en uno aparte.** Mezclar
+concerns está desaconsejado (CLAUDE.md), pero el piloto es **puerta obligatoria
+del Human Gate** y estaba impidiendo que ese mismo PR llegara a juzgarse; un PR
+separado no lo desbloquearía hasta mergearse, y había diez PRs abiertos contra
+el tope de tres de BUILD-BUDGET-1. Queda anotado como excepción consciente.
+
+**Roto conocido, sin diagnosticar.** En paralelo, *Redeploy* manual desde
+Vercel falló varias veces seguidas sobre este mismo commit con
+`Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'`
+—un interno de Turbopack para `next/font/google`, que ni este PR ni ninguno
+reciente tocan— mientras que **los builds disparados por push del mismo commit
+salieron bien**, igual que los de los PRs #435 y #437 esa misma tarde.
+`next build` en local es limpio. No se ha reproducido ni diagnosticado: queda
+escrito que el camino fiable es empujar un commit, no pulsar *Redeploy*.
+
+**Trazabilidad.** `.github/workflows/ux-pilot.yml`; §65 (el job cancelado que
+dejaba un PASS publicado); §55 (dar por pasado el piloto leyendo la tabla de
+✅); §54 (Fase Q5, hacer visible la ausencia de CI, y por qué el aviso no es
+la puerta); `.claude/rules/scan.md` («una garantía que no se puede ver fallar
+no es una garantía»); `scripts/vercel-should-build.sh` (la regla que ya obliga
+a construir cuando cambia este workflow, para que el arreglo pueda ejercitarse).
+
+---
+
+---
+
+## 121. Dominios: seleccionar una tarjeta propaga a toda la consola, y el botón "Ver visión general" se reduce en desktop (DOMAINS-LIVE-SELECT-1, 2026-08-20)
 
 **Origen.** Fundador, 2026-08-20: seleccionar otro dominio en la pantalla
 "Dominios" (`/dashboard/domains`) tenía que reflejarse en toda la consola

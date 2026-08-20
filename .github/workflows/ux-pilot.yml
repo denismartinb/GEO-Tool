@@ -58,16 +58,70 @@ jobs:
         with:
           ref: ${{ github.event.deployment.sha }}
 
+      # Dos búsquedas, no una, y con reintentos — porque un salto silencioso
+      # aquí es indistinguible de un aprobado.
+      #
+      # 2026-08-17 (PR #433, log §115): `commits/{sha}/pulls` devolvió lista
+      # vacía para un commit CON un PR abierto, **treinta minutos después** del
+      # push — o sea, no es una carrera de indexación, ese índice sencillamente
+      # no respondió. El job tomó entonces la rama de "no hay PR", se saltó
+      # todos los pasos restantes y **publicó el check en VERDE**: el PR mostró
+      # un `pilot` aprobado para una pasada que no llegó a abrir un navegador.
+      # Es exactamente el fallo que este repositorio no deja de pagar — una
+      # garantía que no se puede ver fallar no es una garantía
+      # (`.claude/rules/scan.md`; log §65, §55).
+      #
+      # `pulls?head=` consulta la lista de PRs directamente en vez del índice
+      # commit→PR, así que no depende de que ese índice funcione; se comprobó
+      # a mano ese mismo día que devuelve el PR correcto cuando el otro no.
+      # Va primero, y la búsqueda por commit queda de reserva para deployments
+      # cuyo `ref` no sea un nombre de rama.
       - name: Resolve the pull request for this deployment
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SHA: ${{ github.event.deployment.sha }}
+          REF: ${{ github.event.deployment.ref }}
         run: |
-          set -euo pipefail
-          number="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" \
-            --jq 'map(select(.state == "open")) | .[0].number // empty')"
+          # Sin `-e` a propósito: el bucle de abajo TIENE que sobrevivir a que
+          # una de las dos llamadas falle, que es el caso que estamos cubriendo.
+          set -uo pipefail
+
+          owner="${GITHUB_REPOSITORY%%/*}"
+
+          by_ref() {
+            [ -n "${REF:-}" ] || return 0
+            # Un `ref` que es un SHA de 40 hex no es una rama; no preguntes por él.
+            printf '%s' "$REF" | grep -Eq '^[0-9a-f]{40}$' && return 0
+            gh api "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${owner}:${REF}&per_page=100" \
+              --jq '.[0].number // empty' 2>/dev/null
+          }
+          by_sha() {
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls?per_page=100" \
+              --jq 'map(select(.state == "open")) | .[0].number // empty' 2>/dev/null
+          }
+
+          number=""
+          for attempt in 1 2 3 4 5; do
+            number="$(by_ref)"
+            [ -n "$number" ] || number="$(by_sha)"
+            if [ -n "$number" ]; then
+              echo "PR #${number} resuelto para ${SHA} (intento ${attempt})."
+              break
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "Todavía sin PR abierto para ${SHA} (ref '${REF:-}', intento ${attempt}/5); reintentando."
+              sleep $((attempt * 8))
+            fi
+          done
+
           if [ -z "$number" ]; then
+            # `::warning::` sale en el resumen del run, no sólo enterrado en el
+            # log del paso. El check seguirá en verde —un preview de una rama
+            # sin PR es legítimo y no debe pintarse en rojo— así que este aviso
+            # es lo ÚNICO que distingue ese caso de una pasada saltada por
+            # avería. Si esto aparece en un PR abierto, el verde no vale nada.
+            echo "::warning::Ningún PR abierto resuelto para ${SHA} tras 5 intentos (ref '${REF:-}'). El piloto NO se ha ejecutado: si este deployment sí pertenece a un PR abierto, el check verde de abajo no ha pilotado nada (log §115)."
             echo "No open PR for ${SHA}; nothing to report on."
           fi
           echo "number=${number}" >> "$GITHUB_OUTPUT"
