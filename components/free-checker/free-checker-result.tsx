@@ -38,6 +38,14 @@ import { PUBLIC_CHECK_MESSAGES, type PublicCheckResponse } from "@/lib/free-chec
  *
  * El aviso de variabilidad va en bloque destacado, no en letra pequeña: es
  * parte del resultado, no una nota legal.
+ *
+ * **`response.sources` (Fase D1) es un dato distinto de `citedOwnDomain`, y
+ * los dos se enseñan por separado a propósito.** `citedOwnDomain` viene de lo
+ * que el EXTRACTOR cree haber leído en el texto (Fase B); `sources` es la
+ * metadata de búsqueda real que devuelve el proveedor. Casi siempre van a
+ * coincidir, pero fusionarlos en un único indicador escondería el caso en que
+ * no coinciden — y ahí es donde más importa poder distinguir "el extractor se
+ * equivocó" de "el motor no consultó nada".
  */
 export function FreeCheckerResult({
   response,
@@ -70,8 +78,9 @@ export function FreeCheckerResult({
     );
   }
 
-  const { brand, prompt, engineLabel, answer, brandMentioned, otherBrands } = response;
+  const { brand, prompt, engineLabel, answer, brandMentioned, otherBrands, sources } = response;
   const { citedOwnDomain } = response;
+  const isOwnSource = (sourceDomain: string) => sourceDomain === domain || sourceDomain.endsWith(`.${domain}`);
 
   return (
     <div className="fc-result">
@@ -93,6 +102,26 @@ export function FreeCheckerResult({
         <span className="fc-lbl">Respuesta completa de {engineLabel}</span>
         <AnswerMarkdown text={answer} />
       </div>
+
+      {/* Fase D1: la metadata de búsqueda real del proveedor, no lo que el
+          extractor cree haber leído. Coste cero — ya llegaba en la llamada de
+          generación y se tiraba antes de este cambio. Sólo se pinta si hay
+          algo que enseñar: una respuesta sin `web_search` no tiene fuentes. */}
+      {sources.length > 0 && (
+        <div className="fc-panel">
+          <span className="fc-lbl">De dónde sacó {engineLabel} esta respuesta</span>
+          <ul className="fc-sources">
+            {sources.map((source) => (
+              <li key={source.domain}>
+                <a href={source.url} target="_blank" rel="nofollow noopener noreferrer">
+                  {source.domain}
+                </a>
+                {isOwnSource(source.domain) && <span className="fc-source-own">tu web</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Sin números y sin la palabra "competidores": ver la cabecera. Se pintan
           como etiquetas, no como una lista ordenada, porque una lista numerada
