@@ -11,11 +11,19 @@ const AUTH_CALLBACK_ERROR = "No se pudo completar el inicio de sesión. Inténta
 // the only place that can catch them: an OAuth signup (Google) never goes
 // through that action at all, and a password signup with "Confirm email" ON
 // gets no session until the user clicks the confirmation link — that click
-// is this route's first real request for them. Supabase gives no explicit
-// "this was just created" flag on the exchange result, so a new account is
-// inferred from last_sign_in_at landing within this window of created_at; an
-// existing user signing back in (or re-confirming) has a created_at from the
-// past, so this never re-fires for them.
+// is this route's first real request for them.
+//
+// Supabase gives no explicit "this was just created" flag on the exchange
+// result. The account's created_at is NOT a usable proxy for "just now" —
+// email_confirmed_at only updates once, at the moment the account's email is
+// confirmed for the first time (signUp() itself never sets it when
+// confirmation is required), and that's exactly the same instant this
+// exchange sets last_sign_in_at for the first time. The two landing within
+// this window of each other means "this request IS the first confirmation",
+// regardless of how long the user took between signing up and clicking the
+// link. A returning user's email_confirmed_at is frozen from their original
+// confirmation while last_sign_in_at jumps to now on every login, so the two
+// drift apart and this never re-fires for them.
 const NEW_USER_WINDOW_MS = 5000;
 
 function safeLoginError(url: URL) {
@@ -24,12 +32,15 @@ function safeLoginError(url: URL) {
   );
 }
 
-function isFreshSignup(user: { created_at?: string; last_sign_in_at?: string | null }): boolean {
-  if (!user.created_at || !user.last_sign_in_at) return false;
-  const createdAt = new Date(user.created_at).getTime();
+function isFreshSignup(user: {
+  last_sign_in_at?: string | null;
+  email_confirmed_at?: string | null;
+}): boolean {
+  if (!user.last_sign_in_at || !user.email_confirmed_at) return false;
   const lastSignInAt = new Date(user.last_sign_in_at).getTime();
-  if (!Number.isFinite(createdAt) || !Number.isFinite(lastSignInAt)) return false;
-  return Math.abs(lastSignInAt - createdAt) < NEW_USER_WINDOW_MS;
+  const emailConfirmedAt = new Date(user.email_confirmed_at).getTime();
+  if (!Number.isFinite(lastSignInAt) || !Number.isFinite(emailConfirmedAt)) return false;
+  return Math.abs(lastSignInAt - emailConfirmedAt) < NEW_USER_WINDOW_MS;
 }
 
 export async function GET(request: Request) {
