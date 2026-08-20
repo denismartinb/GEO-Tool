@@ -4549,15 +4549,23 @@ a.notif-row:hover {
 
    **No hay estado "al desplazar" a propósito, y esto merece explicación**
    porque parece un olvido. Se implementó y se retiró tras medirlo: este
-   `sticky` NO funciona hoy — `html { overflow-x: hidden }` (arriba, puesto
-   para contener el desbordamiento de 3px que encontró el piloto en GROWTH-2
-   Fase 2.1) convierte al documento en contenedor de scroll y desactiva el
-   pegado. Medido en local sobre `main` antes de tocar nada: tras desplazar
-   500px, `.lp-nav-wrap` está en `y: -500` a 375 y a 1280 px. Es decir, la
-   cabecera pública se va con la página en las siete superficies, así que un
-   fondo "al desplazar" no se vería jamás. Si algún día se quita ese
-   `overflow-x`, ESTE es el sitio donde añadirlo — y entonces habrá que
-   comprobar antes que el desbordamiento de 3px no vuelve. */
+   `sticky` NO funciona hoy — tras desplazar 500px, `.lp-nav-wrap` está en
+   `y: -500` a 375 y a 1280 px, así que la cabecera pública se va con la
+   página en las siete superficies y un fondo "al desplazar" no se vería
+   jamás.
+
+   **La causa que este comentario daba era falsa, y se corrige aquí**
+   (2026-08-20, log §124). Decía que el culpable era `html { overflow-x:
+   hidden }` "convirtiendo al documento en contenedor de scroll". Se probó
+   directamente al cambiar esa declaración a `clip` —que NO crea contenedor de
+   scroll— y el sticky sigue sin pegar exactamente igual: `y: -500`. El
+   bloqueante real es `.lp-hero { overflow: hidden }` (más abajo), que es el
+   ancestro de scroll más cercano de `.lp-nav-wrap`: un sticky se pega dentro
+   de su scrollport, y ese ancestro no tiene recorrido. Quien quiera el fondo
+   "al desplazar" tiene que sacar la cabecera de `.lp-hero` o quitarle ese
+   `overflow`, no tocar la raíz. Importa dejarlo escrito porque la versión
+   anterior habría mandado a una sesión futura a pelearse con el elemento
+   equivocado. */
 .lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: transparent; border-bottom: 1px solid transparent; }
 .lp-nav { max-width: 1180px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
 .lp-logo { display: flex; align-items: center; gap: 10px; }
