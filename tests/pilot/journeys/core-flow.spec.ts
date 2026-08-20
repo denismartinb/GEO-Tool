@@ -159,6 +159,57 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
   await exploreInteractions(page, testInfo, "recommendations");
 });
 
+/**
+ * Second-project coverage (founder request, RECS-REDESIGN-1). Every screenshot
+ * the pilot has ever produced came from whichever project sits first in the
+ * list, so one domain and one data shape stood in for all of them. That hides
+ * exactly the states a redesign needs judged: a project with many
+ * recommendations exercises the grouping accordions, a fuller priority block
+ * and the per-type counts, none of which a small project ever reaches.
+ *
+ * Prefers a project whose name matches PILOT_SECOND_PROJECT (default
+ * "Movistar") and otherwise falls back to the second project in the list, so
+ * the journey is useful on any seeded account instead of being pinned to one
+ * brand. Skips — never fails — when the account has only one project: absent
+ * coverage is honest, a red pilot over a data-shape the account doesn't have
+ * would not be.
+ *
+ * Still strictly read-only: it navigates and looks, exactly like the journeys
+ * above.
+ */
+test("recommendations screen renders for a second, larger project", async ({ page }, testInfo) => {
+  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
+
+  const wanted = (process.env.PILOT_SECOND_PROJECT ?? "Movistar").trim();
+  const links = page.locator('a[href^="/dashboard/projects/"]').filter({ hasNotText: /nuevo|new/i });
+
+  const hrefs: string[] = [];
+  for (const link of await links.all()) {
+    const href = await link.getAttribute("href");
+    const text = (await link.textContent()) ?? "";
+    const match = href?.match(/^\/dashboard\/projects\/([^/?#]+)$/);
+    if (!match || match[1] === "new") continue;
+    if (new RegExp(wanted, "i").test(text)) {
+      hrefs.unshift(match[1]); // preferred match goes first
+    } else {
+      hrefs.push(match[1]);
+    }
+  }
+
+  const primary = await projectId(page);
+  const second = hrefs.find((id) => id !== primary);
+  test.skip(!second, `pilot account has no second project (looked for "${wanted}")`);
+
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    `/dashboard/projects/${second}/recommendations`,
+    "recommendations-second-project"
+  );
+  assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "recommendations-second-project");
+});
+
 test("domains screen renders", async ({ page }, testInfo) => {
   // DOMAINS-REDESIGN-1: «Escaneos» ya no es una pantalla de cliente. Su mitad
   // de cliente es Dominios; el historial se fue a /debug, que es interna y

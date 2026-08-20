@@ -175,6 +175,7 @@ export async function POST(request: Request) {
     // siempre que la marca aparezca, así que es un 1 sin conjunto contra el que
     // rankear. Ver `PublicCheckResponse`.
     otherBrands: outcome.otherBrands,
-    citedOwnDomain: outcome.citedOwnDomain
+    citedOwnDomain: outcome.citedOwnDomain,
+    sources: outcome.sources
   });
 }

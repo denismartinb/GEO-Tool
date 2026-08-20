@@ -4,6 +4,7 @@ import { Hanken_Grotesk, Bricolage_Grotesque, Figtree, JetBrains_Mono } from "ne
 import { PostHogProvider } from "@/components/posthog-provider";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
 import { CANONICAL_DEFINITION } from "@/lib/brand/canonical-definition";
+import { SESSION_CACHE_KEY } from "@/lib/session-hint";
 
 // TODO(BRAND-5b): Hanken Grotesk is the outgoing UI typeface (BRAND-5,
 // docs/brand/brand-guidelines.md). It stays until 5b repaints the UI onto
@@ -117,10 +118,31 @@ export const viewport: Viewport = {
   viewportFit: "cover"
 };
 
+/**
+ * header-flicker-skeleton-prehydration (2026-08-20): closes the gap
+ * pro-badge-alignment-flickering-v4brfv (log §117) left open on purpose — the
+ * browser paints the server-rendered (anonymous) HTML the instant it parses
+ * it, before React exists to correct it. Same fix dark-mode toggles use for
+ * their own flash-of-wrong-theme problem: a blocking inline script, first
+ * thing in `<body>`, that runs before the parser reaches anything else and
+ * sets an attribute on `<html>` — `app/globals.css` reads that attribute to
+ * swap the anonymous CTAs for a content-free skeleton (`.lp-session-skeleton`
+ * in `components/marketing/public-header.tsx`) until `useSessionUser`'s own
+ * layout effect (`lib/use-session-user.ts`) clears it. It never writes a
+ * name, a plan, anything — only whether *something* was cached, which is why
+ * it can run this early without risking stale or wrong content on screen.
+ * Runs on every page, dashboard included: harmless there (one `sessionStorage`
+ * read, no matching selectors in the console DOM), and splitting it out to a
+ * public-only layout isn't worth a second `<html>`/`<body>` shell for what's
+ * already a no-op.
+ */
+const SESSION_HINT_SCRIPT = `(function(){try{if(sessionStorage.getItem(${JSON.stringify(SESSION_CACHE_KEY)})){document.documentElement.setAttribute('data-session-hint','1')}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${sans.variable} ${display.variable} ${body.variable} ${mono.variable}`}>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
         <OrganizationSchema />
         <PostHogProvider>{children}</PostHogProvider>
       </body>

@@ -162,6 +162,73 @@ describe("runPublicCheck", () => {
     expect(result.citedDomains).toEqual(["blog.tallerdeideas.es", "otra.com"]);
   });
 
+  describe("fuentes reales de la generación (Fase D1, 2026-08-17)", () => {
+    // `groundingChunks` ya llegaba en la respuesta de generación y se tiraba
+    // antes de este cambio: coste cero, dato pagado y descartado. Distinto de
+    // `citedDomains`/`citedOwnDomain`, que siguen viniendo de lo que el
+    // extractor CREE haber leído en el texto (Fase B) y no se tocan aquí.
+
+    it("propaga las fuentes reales, no lo que dice el extractor", async () => {
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({
+          generateAnswer: async () => ({
+            text: "Te recomiendo Estudio Norte y Cuarto Piso.",
+            groundingChunks: [
+              { uri: "https://www.redeszone.net/articulo", title: "RedesZone" },
+              { uri: "https://orange.es/orange-tv" }
+            ]
+          })
+        })
+      );
+      if (result.status !== "completed") throw new Error("esperaba completed");
+      expect(result.sources).toEqual([
+        { domain: "redeszone.net", url: "https://www.redeszone.net/articulo", title: "RedesZone" },
+        { domain: "orange.es", url: "https://orange.es/orange-tv", title: null }
+      ]);
+    });
+
+    it("deduplica por dominio, quedándose con la PRIMERA URL y título", async () => {
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({
+          generateAnswer: async () => ({
+            text: "respuesta",
+            groundingChunks: [
+              { uri: "https://elpais.com/a", title: "Primera" },
+              { uri: "https://elpais.com/b", title: "Segunda" }
+            ]
+          })
+        })
+      );
+      if (result.status !== "completed") throw new Error("esperaba completed");
+      expect(result.sources).toEqual([{ domain: "elpais.com", url: "https://elpais.com/a", title: "Primera" }]);
+    });
+
+    it("sin groundingChunks, la lista de fuentes es vacía, nunca inventada", async () => {
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({ generateAnswer: async () => ({ text: "respuesta" }) })
+      );
+      if (result.status !== "completed") throw new Error("esperaba completed");
+      expect(result.sources).toEqual([]);
+    });
+
+    it("una URL malformada se descarta en vez de romper la comprobación entera", async () => {
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({
+          generateAnswer: async () => ({
+            text: "respuesta",
+            groundingChunks: [{ uri: "no-es-una-url" }, { uri: "https://orange.es" }]
+          })
+        })
+      );
+      if (result.status !== "completed") throw new Error("esperaba completed");
+      expect(result.sources).toEqual([{ domain: "orange.es", url: "https://orange.es", title: null }]);
+    });
+  });
+
   describe("no todo fallo del paso 1 es culpa de su web (2026-08-16)", () => {
     // Los tres motivos de `unidentified` compartían mensaje: "no hemos podido
     // leer tu web, comprueba que la página carga". Dos de los tres son

@@ -102,6 +102,16 @@ function hasUntrustedCompetitorSet(results: ScoreInputRow[]): boolean {
  */
 const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
 
+/**
+ * Minimum share of a run's results that must have extracted cleanly (parsed,
+ * no extraction error) before the run's numbers are worth qualifying above
+ * "low". Below this, too much of the sample is missing to put a figure on it.
+ *
+ * 0.8 is the tolerance ADR 0015 always intended; until 2026-08-04 the guard
+ * above it made the branch unreachable, so the effective tolerance was zero.
+ */
+const CLEAN_COVERAGE_FLOOR = 0.8;
+
 function isGroundedRow(row: ScoreInputRow): boolean {
   return !row.provider || GROUNDED_PROVIDERS.has(row.provider);
 }
@@ -390,7 +400,15 @@ export function computeRunScoresFromResults(
 
   const extractedResultsCount = results.filter((row) => row.extracted_json && typeof row.extracted_json === "object").length;
   const extractionErrorCount = results.filter((row) => row.extraction_error).length;
-  const extractionCoverage = extractedResultsCount / safeTotal;
+  /**
+   * Rows that are actually usable as evidence: extracted AND without an
+   * extraction error. This — not the raw extracted count — is what confidence
+   * is measured against (ADR 0015 rev. 2026-08-04).
+   */
+  const cleanResultsCount = results.filter(
+    (row) => row.extracted_json && typeof row.extracted_json === "object" && !row.extraction_error
+  ).length;
+  const extractionCoverage = cleanResultsCount / safeTotal;
 
   const brandMentionedCount = results.filter((row) => row.brand_mentioned).length;
   const totalCitationsCount = results.reduce((acc, row) => acc + Math.max(0, row.citations_count ?? 0), 0);
@@ -449,14 +467,27 @@ export function computeRunScoresFromResults(
   ).length;
   const competitorGapScore = round2(clamp(0, 100, (displacedPromptsCount / safeTotal) * 100));
 
-  // "high" requires >=20 fully-extracted results (was >=5): with one LLM
-  // sample per prompt/engine, 5 results give each answer a 20-point swing on
-  // presence — calling that sample "high confidence" overstated its
-  // statistical reliability (docs/geo-methodology-audit-2026-07.md, finding
-  // 5 / ADR 0015).
+  // "high" requires >=20 clean results (was >=5): with one LLM sample per
+  // prompt/engine, 5 results give each answer a 20-point swing on presence —
+  // calling that sample "high confidence" overstated its statistical
+  // reliability (docs/geo-methodology-audit-2026-07.md, finding 5 / ADR 0015).
   //
-  // "medium" now requires >=MIN_RESPONSES_FOR_BAND (10) rather than >=2
-  // (GEO-SCORE-RELIABILITY-1). Two clean results were never a "medium
+  // Revised 2026-08-04 (founder decision, ADR 0015 rev.): confidence for
+  // "low" is now PROPORTIONAL to how much of the run extracted cleanly,
+  // instead of collapsing to low the moment a single row failed. The old rule
+  // read as if it tolerated 20% of rows failing — but its
+  // `extractionCoverage >= 0.8` branch was unreachable, because the guard
+  // above it already demanded that NOTHING had failed. So a 19-of-20 run was
+  // rated exactly like a 0-of-20 one, and since
+  // computeRecommendationPotentialPoints refuses to quantify a low-confidence
+  // run, one bad row erased the "+X pt" figure from every recommendation on
+  // the page. The floor stays: below CLEAN_COVERAGE_FLOOR of the run usable,
+  // the sample is not worth putting a number on, and confidence really is low.
+  //
+  // "medium" requires >=MIN_RESPONSES_FOR_BAND (10) TOTAL responses, not just
+  // clean ones (GEO-SCORE-RELIABILITY-1 / ADR 0024, which shipped on `main`
+  // while this revision was still on its own branch — reconciled here rather
+  // than reverting either fix). Two clean results were never a "medium
   // confidence" sample in any statistical sense: below 10 responses a single
   // AI answer moves the mention rate by >=10 points, and ~0.71x of that
   // reaches the composite. This also gates `computeRecommendationPotential
@@ -465,9 +496,9 @@ export function computeRunScoresFromResults(
   // they cannot support, which is the intended consequence, not a side
   // effect.
   let confidence: "low" | "medium" | "high" = "low";
-  if (extractedResultsCount < totalResults || extractionErrorCount > 0) {
+  if (extractionCoverage < CLEAN_COVERAGE_FLOOR) {
     confidence = "low";
-  } else if (totalResults >= 20 && extractionCoverage >= 0.8) {
+  } else if (cleanResultsCount >= 20) {
     confidence = "high";
   } else if (totalResults >= MIN_RESPONSES_FOR_BAND) {
     confidence = "medium";
@@ -689,11 +720,11 @@ export function computeRunScoresFromResults(
     "citation_score = % of GROUNDED-provider prompts citing the brand's OWN domain (docs/adr/0013), not just any source. Ungrounded providers (e.g. Claude, no web search grounding) are excluded, same as docs/adr/0012, but still count toward visibility_score/standing. citation_score_any_domain (any grounding citation, regardless of domain — the pre-0013 formula) and citation_score_blended (all providers pooled, any domain) are kept in details_json for comparison only.",
     "competitor_gap_score (Competitive Pressure, docs/adr/0011) higher = worse: % of prompts where a competitor was mentioned but the brand was not (brand displacement), not raw competitor mention volume",
     extractionCoverage < 1
-      ? "Some prompts have partial extraction coverage. Confidence forced to low."
+      ? `Extraction coverage ${Math.round(extractionCoverage * 100)}% (clean rows / total). Confidence is low only below ${Math.round(CLEAN_COVERAGE_FLOOR * 100)}%.`
       : "Extraction coverage is complete.",
     "brand_position (geo-score-v3): position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). avg_position_when_mentioned = mean rank over ONLY the prompts where that entity was mentioned; lower is better and 1.0 means always listed first. Never-mentioned entities have null and sort last. mention_rate carries the other half of the story — how often the entity appeared at all. The pre-v3 figure, which averaged an N+1 penalty for every non-mention into the same number and therefore re-encoded the mention rate as if it were a rank, is retained per entity as avg_position_penalized for comparison only.",
     "geo_score (geo-score-v4, ADR 0033): composite of presence (visibility_score), prominence (rank WHEN MENTIONED, derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions), authority (citation_score) and technical (web_audit_snapshots.readiness_score — a deterministic, no-LLM measure of how readable the site is to AI engines), weighted .32/.20/.16/.12/.20. The four non-technical weights are the v3 values (.40/.25/.20/.15) scaled by 1-technical_weight, so their RELATIVE weights are unchanged and dropping `technical` renormalizes them back to exactly v3 — the addition is strictly additive, not a recalibration (that remains ADR 0031, still blocked on data). Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows, technical without a recent audit) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case, except for a missing technical component, which says nothing about the quality of the AI-answer measurement. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
-    `confidence: high requires >=20 fully-extracted results (one LLM sample per prompt/engine is noisy at small sizes); ${MIN_RESPONSES_FOR_BAND}-19 clean results are medium; below ${MIN_RESPONSES_FOR_BAND} responses a single AI answer moves the mention rate by >=${Math.round(100 / MIN_RESPONSES_FOR_BAND)} points, so the run is low confidence regardless of extraction quality (ADR 0015 + GEO-SCORE-RELIABILITY-1).`
+    `confidence (ADR 0015 rev. 2026-08-04 + GEO-SCORE-RELIABILITY-1): measured on CLEAN results (extracted, no extraction error). Low when clean coverage < ${Math.round(CLEAN_COVERAGE_FLOOR * 100)}% of the run, OR when total responses < ${MIN_RESPONSES_FOR_BAND} (below that, a single AI answer moves the mention rate by >=${Math.round(100 / MIN_RESPONSES_FOR_BAND)} points regardless of extraction quality); otherwise high with >=20 clean results (one LLM sample per prompt/engine is noisy at small sizes), medium from ${MIN_RESPONSES_FOR_BAND} total responses up.`
   ];
 
   const perPromptSummary = results.slice(0, 10).map((row) => ({
@@ -717,6 +748,7 @@ export function computeRunScoresFromResults(
       total_results: totalResults,
       extracted_results_count: extractedResultsCount,
       extraction_error_count: extractionErrorCount,
+      clean_results_count: cleanResultsCount,
       brand_mentioned_count: brandMentionedCount,
       own_domain_citation_count: ownDomainCitationCount,
       citation_found_count: citationFoundCount,
@@ -778,7 +810,15 @@ const RECOMMENDATION_POTENTIAL_KIND: Record<string, "presence" | "prominence" | 
   close_competitor_gap: "presence",
   increase_brand_prominence: "prominence",
   add_citation_block: "authority",
-  pursue_citation_sources: "authority"
+  // RECS-REDESIGN-1 split the single source-gap rule into one card per source
+  // family (comparator / community / media). All four share the same
+  // counterfactual: the brand's domain becomes a grounded citation on the
+  // affected prompts, so they map to the same "authority" mutation the
+  // original rule used — no new scoring logic, just the new type names.
+  pursue_citation_sources: "authority",
+  pursue_comparator_sources: "authority",
+  pursue_community_sources: "authority",
+  pursue_media_sources: "authority"
 };
 
 export function isQuantifiableRecommendationType(recommendationType: string): boolean {
