@@ -400,7 +400,7 @@ export async function rewriteRecommendationCore({
      * mientras el guardián rechazaba cualquiera fuera de `mentioned_competitors`,
      * vacío en estas tarjetas. Nombrar a «SE Ranking» cuando `seranking.com`
      * está en la evidencia no es fabricar nada: es la misma fuente por su
-     * nombre (log §124).
+     * nombre (log §128).
      */
     const domainAnchoredCompetitors = competitorsAnchoredByDomain(trackedCompetitors, anchoredDomains);
     const promptCompetitors = [...new Set([...mentionedCompetitors, ...domainAnchoredCompetitors])];

@@ -117,7 +117,7 @@ function compact(value: string): string {
  * lista del proyecto que no esté en `mentioned_competitors`, que en estas
  * tarjetas viene vacío. Con `seranking.com` en la evidencia y «SE Ranking» en
  * la lista de competidores del proyecto, la propuesta se descartaba por hacer
- * exactamente lo que se le pedía (log §124).
+ * exactamente lo que se le pedía (log §128).
  *
  * No afloja el guardián: sólo se admite un competidor cuyo **propio dominio**
  * está ya en la evidencia de esta tarjeta, y el emparejado es por igualdad

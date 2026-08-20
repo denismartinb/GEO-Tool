@@ -11126,6 +11126,9 @@ fundador, 2026-08-20.
 
 ---
 
+
+---
+
 ## 119. Visión general en escritorio: cabecera de la puntuación GEO alineada, desglose y motores lado a lado (OV-DESKTOP-2, 2026-08-17)
 
 **El problema, señalado por el fundador con una captura de escritorio.** En
@@ -11335,6 +11338,9 @@ a construir cuando cambia este workflow, para que el arreglo pueda ejercitarse).
 
 ---
 
+
+---
+
 ## 121. `sameAs` deja de estar vacío: LinkedIn y G2 son perfiles reales (2026-08-20)
 
 **Qué pasó.** El fundador dio de alta la página de empresa de LinkedIn
@@ -11364,7 +11370,284 @@ Estado (el mismo hueco, documentado desde el lado de contenido).
 
 ---
 
-## 122. «Generar propuesta con IA»: el prompt pedía nombrar páginas que el guardián rechazaba (2026-08-20)
+---
+
+## 122. Dominios: seleccionar una tarjeta propaga a toda la consola, y el botón "Ver visión general" se reduce en desktop (DOMAINS-LIVE-SELECT-1, 2026-08-20)
+
+**Origen.** Fundador, 2026-08-20: seleccionar otro dominio en la pantalla
+"Dominios" (`/dashboard/domains`) tenía que reflejarse en toda la consola
+sin pulsar "Ver visión general" primero; y ese botón, a ancho de escritorio,
+se veía "enorme". Task Intake aprobado el mismo día (propagación P1 + botón
+P2, mismo PR).
+
+**Por qué el botón era la única vía real.** DOMAINS-REDESIGN-1 (2026-08-05)
+decidió a propósito que pinchar una tarjeta de la rejilla no navega — sólo
+cambia qué dominio aparece en la portada, vía `?active=<id>`, para volver a
+la misma pantalla (comentario en `app/dashboard/domains/page.tsx`). Esa
+decisión sigue en pie. Pero "cuál es el proyecto activo" fuera de esa
+pantalla se resolvía en otros dos sitios de forma independiente y sólo a
+partir del *pathname* — `components/sidebar.tsx` y
+`components/workspace-topbar.tsx`, ambos con su propio `getProjectId(pathname)`
+— y la cookie `geo_active_project` que los alimentaría en su ausencia
+(DEBUG-ACTIVE-PROJECT-1) sólo la escribía `middleware.ts` al entrar de
+verdad en `/dashboard/projects/[id]/...`. Elegir una tarjeta cambiaba la
+portada pero no el pathname, así que el sidebar seguía señalando el
+proyecto anterior hasta que se pulsaba "Ver visión general" — el único
+gesto que de verdad cambiaba de ruta.
+
+**Arreglo.** `lib/active-project-cookie.ts` gana
+`getProjectIdFromDomainsQuery(pathname, searchParams)`, que valida el mismo
+`?active=<uuid>` que ya lee `app/dashboard/domains/page.tsx`.
+`middleware.ts` la usa como segunda fuente junto a la ya existente
+`getProjectIdFromPathname`, así que la cookie también se escribe al
+seleccionar una tarjeta, sin que la tarjeta navegue. `app/dashboard/layout.tsx`
+lee esa cookie server-side y se la pasa a `Sidebar` como `preferredProjectId`;
+`Sidebar` la usa como fallback entre el pathname y `projects[0]`. No se tocó
+`workspace-topbar.tsx`: fuera de una ruta de proyecto ya no muestra nada, así
+que no había fallback que corregir.
+
+**El botón.** `.dm2-open` coincidía exactamente con el diseño aprobado en
+`docs/design-reference/domains-redesign-1/pantalla-dominios.html`
+(`width:100%`), que ahora queda desactualizado — se corrige en el mismo PR.
+Por debajo de 561px se queda a ancho completo (sigue siendo la única forma
+de entrar al proyecto ahí, y el objetivo táctil grande es lo que
+corresponde). Desde 561px, ancho de contenido y alineado a la derecha
+(`.dm2-hero` pasa a `flex column` sólo para que `align-self:flex-end` pueda
+mover ese único hijo sin afectar la anchura de los demás, que se siguen
+estirando igual que en bloque).
+
+**Lo que NO cambia.** La cookie nunca es fuente de autorización — se
+re-comprueba la propiedad con RLS en cada lectura, igual que ya documentaba
+DEBUG-ACTIVE-PROJECT-1; un id ajeno o manipulado simplemente no aparece en
+`projects` y cae al siguiente criterio. La tarjeta de la rejilla sigue sin
+navegar (DOMAINS-REDESIGN-1 se mantiene intacta). Ningún control de
+escaneo/auditoría nuevo en la pantalla.
+
+**Trazabilidad.** DEBUG-ACTIVE-PROJECT-1 (la cookie); DOMAINS-REDESIGN-1,
+2026-08-05 (por qué la tarjeta no navega); DOMAINS-ACTIVE-COOKIE-1,
+2026-08-07 (la misma cookie ya usada como recuerdo de página); Task Intake
+aprobado por el fundador, 2026-08-20.
+
+**Addendum (2026-08-20, mismo PR): el pilote automático no vio la
+propagación, y le faltaba un journey para poder verla.** La pasada
+automática contra el preview del PR #443 devolvió `PILOT PASS` en las 65
+pantallas — incluida `domains`, en las tres anchuras — pero el agente
+`ux-pilot`, al revisar las capturas de verdad antes de dar la fase por
+cerrada, encontró que ni una sola tocaba la propagación al sidebar: el
+barrido genérico (`tests/pilot/support/explore.ts`) descarta cualquier
+control con `href` real como "navega fuera", y cada `.dm2-card` de la
+rejilla lleva uno (`?active=<id>`) aunque en la práctica se queda en la
+misma pantalla. Sin un journey dedicado, cada pasada futura del piloto
+seguiría reportando un ✅ vacío sobre el comportamiento que esta misma fase
+introduce — el mismo patrón que ya forzó `recommendations-interactions.spec.ts`
+para Recomendaciones. Se añadió
+`tests/pilot/journeys/domains-selection.spec.ts`: selecciona una tarjeta
+que no sea el dominio activo y comprueba que tanto la portada como
+`.proj-switch .proj-name` del sidebar cambian al nuevo dominio sin pulsar
+"Ver visión general", y que el enlace de Prompts del sidebar ya apunta al
+proyecto seleccionado. Estrictamente de lectura, en `tests/pilot/journeys/`
+(no `write/` ni `scan/`), así que entra en la pasada automática de cada
+deploy sin necesitar su propia excepción.
+
+**El journey encontró un bug real: la propagación no funcionaba.** La
+primera pasada del pilote automático sobre el push que añade el journey
+(commit `6535985`) devolvió `PILOT FAIL` en las tres anchuras: "el
+conmutador del sidebar no se actualizó tras seleccionar la tarjeta" — la
+propia funcionalidad que este PR dice introducir.
+
+**Causa.** El arreglo original leía la cookie `geo_active_project` en
+`app/dashboard/layout.tsx` (Server Component) y se la pasaba a `Sidebar`
+como `preferredProjectId`. Pero seleccionar una tarjeta en
+`/dashboard/domains` es una navegación del lado del cliente que **no
+cambia de segmento de ruta** — sigue siendo `/dashboard/domains`, sólo
+cambia `?active=`. Next.js App Router no vuelve a renderizar un layout
+compartido en ese caso (sólo el `page.tsx` de la hoja, que es por qué la
+portada sí cambiaba), así que la instancia de `Sidebar` seguía montada con
+el `preferredProjectId` calculado en la carga de página anterior — la
+cookie se escribía bien en cada petición (`middleware.ts` sí veía el nuevo
+`?active=` y actualizaba la cookie), pero nada volvía a leerla en el
+cliente.
+
+**Arreglo real.** `components/sidebar.tsx` añade `useSearchParams()` junto
+al `usePathname()` que ya tenía: ese hook SÍ es reactivo a cualquier
+navegación del cliente, cambie o no el pathname, así que leer
+`?active=` en vivo cuando `pathname === "/dashboard/domains"` refleja la
+selección en el mismo instante en que React re-renderiza tras el clic —
+sin depender de que el layout se vuelva a montar. La cookie
+(`preferredProjectId`) se queda como lo que siempre debió ser: el
+recuerdo para cuando ni el pathname ni la query llevan un id (Ajustes,
+Facturación, la raíz del dashboard). Prioridad, vía la misma
+`resolveSelectedProject` que ya usa la página de Dominios: pathname >
+`?active=` en vivo > cookie > `projects[0]`.
+
+**Lección para el mapa de zonas.** Un cambio que depende de que el layout
+de consola lea algo server-side (cookie, header) para reflejarlo en el
+sidebar necesita comprobar primero si la navegación que lo dispara cambia
+de segmento de ruta — si no lo hace, el layout no se vuelve a renderizar y
+el dato queda obsoleto hasta la siguiente carga completa de página, en
+silencio, sin ningún error.
+
+---
+
+## 123. Onboarding: el asistente dejaba entrar 10 competidores y el servidor guardaba 5 en silencio (ONBOARDING-COMPETITORS-CAP-1, 2026-08-20)
+
+**Qué pasó.** El fundador dio de alta 10 competidores en el asistente de
+nuevo dominio; al terminar el primer escaneo, la pantalla de Competidores
+("Cuota de voz en IA") solo mostraba 5.
+
+**Causa.** `parseInitialCompetitors` (`lib/projects/project-form.ts`) cortaba
+la lista en `MAX_INITIAL_COMPETITORS` (5) sin avisar, mientras el asistente
+(`components/onboarding-wizard.tsx`) no tenía ningún tope propio: el botón
+"Añadir competidor" seguía añadiendo filas y el contador decía "10
+competidores listos". El servidor descartó los últimos 5 sin error ni aviso
+en pantalla — pérdida de datos silenciosa, no un fallo de renderizado. La
+misma constante hacía doble papel: cuántos competidores pide el sistema a
+Gemini como sugerencia, y cuántos acepta del usuario. El primer uso ya tenía
+un arreglo equivalente para prompts (`maxPrompts` pasado desde el cap del
+plan); a competidores nunca se le aplicó.
+
+**Impacto real.** No es solo visual: el set de competidores entra en
+`competitors_snapshot` y alimenta `standing`, `brand_position` y
+`prominence` (ADR 0018). Ese escaneo se puntuó contra 5 competidores en vez
+de 10.
+
+**Decisión (opción B, aprobada por el fundador).** Separar los dos usos:
+`MAX_INITIAL_COMPETITORS` (5) queda solo para la petición de sugerencias a
+Gemini; nace `MAX_USER_COMPETITORS` (10) como tope explícito y **visible**
+de lo que el asistente acepta. El botón "Añadir competidor" se deshabilita
+al llegar a 10 y el contador pasa a decir "N competidores listos (máximo
+10)" — mismo patrón que ya usaba el paso de prompts con `promptCap`. Ningún
+tope que la interfaz no enseña es aceptable: es exactamente esta pérdida de
+datos silenciosa otra vez, con otro nombre.
+
+**No incluido en esta fase.** Recalcular el escaneo que ya corrió con solo 5
+competidores (los 5 que faltan se dan de alta ahora en "Gestionar", que no
+tiene tope, y entran desde el siguiente escaneo). No se tocó `sampling`, el
+pipeline de extracción, ni el cap de prompts.
+
+**Trazabilidad.** `lib/projects/project-form.ts`,
+`components/onboarding-wizard.tsx`,
+`lib/projects/project-form.test.ts`; ADR 0018 (por qué el set de
+competidores importa para el scoring, no solo para la pantalla).
+
+---
+
+## 124. La zona pública era imposible de scrollear en Chrome (2026-08-20)
+
+El fundador: *«el scroll con dos dedos de Mac no funciona en Chrome»*. Acabó
+siendo mucho peor que un gesto de trackpad: **en Chrome, ninguna página pública
+se podía scrollear de ninguna forma** — ni rueda, ni flechas, ni barra. En
+Safari funcionaba. La consola funcionaba. Producción y preview, igual de rotas.
+
+**La causa.** `html { overflow-x: hidden }` (puesto en GROWTH-2 Fase 2.1 para
+contener un desbordamiento de 3px que sólo aparecía en preview). `hidden` en un
+eje fuerza al otro a computar de `visible` a `auto` (CSS Overflow 3 §3.2), lo
+que convierte al **elemento raíz** en contenedor de scroll. Chrome resolvía eso
+a un scrollport con `overflow` usado `hidden`, y ahí la especificación dice dos
+cosas a la vez: el scroll programático está permitido y **el navegador no debe
+ofrecer ningún mecanismo de scroll al usuario**. De ahí la firma tan rara.
+Arreglado con `overflow-x: clip`, que recorta igual pero no crea contenedor de
+scroll ni convierte de eje (`clip` y `visible` no se convierten entre sí). Se
+aplica a `html` y a `body`.
+
+**Lo que costó llegar, porque el proceso es la lección.** Dos arreglos
+anteriores se enviaron sin poder reproducir el fallo y **los dos fueron
+falsos**: `overscroll-behavior-y: none → contain` (revertido; encima devolvía
+el rebote elástico que `none` suprimía a propósito) y un bucle
+`requestAnimationFrame` del tour del hero que renderizaba en pausa (correcto
+por su cuenta como mejora de rendimiento, irrelevante para esto). Ambos
+partían de razonar sobre el CSS en vez de ejercitarlo.
+
+Lo que sí funcionó fue construir el producto en local y lanzarle Chromium 141:
+seis variantes de `overflow`/`overscroll` en `html` y `body` — todas
+scrolleaban; rueda con componente horizontal de 1 a 30 — scrolleaba;
+desbordamiento horizontal real — no había ninguno (`scrollWidth ==
+clientWidth`). Nada reproducía el fallo, y eso **también era información**:
+descartaba el CSS como causa suficiente y dejaba el entorno como variable.
+
+**El dato que lo resolvió lo dio el fundador desde su consola**, y es el que
+hay que pedir primero la próxima vez:
+
+```
+{alto: 4039, ventana: 399, scroller: 'HTML'}   → hay 3.640px de recorrido
+tras scrollTo → 500                            → el documento SÍ scrollea
+```
+
+Scroll programático vivo + entrada de usuario muerta no es ambiguo: es la
+definición literal de `overflow: hidden` en un scrollport. Con eso, el arreglo
+fue directo y verificable en local (forzar `documentElement.style.overflow =
+"hidden"` reproduce la firma exacta —rueda 0, teclado 0, `scrollTo` 500— y
+`clip` la elimina, en cuatro páginas públicas y dos anchuras).
+
+**Por qué nadie lo vio antes, que es lo más grave.** Llevaba en el código desde
+GROWTH-2 Fase 2.1 y no lo cazó nada:
+
+- **La consola lo enmascara por completo.** No scrollea el documento (`.shell`
+  es `100dvh`/`overflow:hidden` y el scroller real es `.dash-content`), así que
+  el fallo parecía exclusivo de marketing cuando en realidad era del documento.
+- **El `ux-pilot` no puede verlo.** Hace capturas, no scroll: 57 superficies
+  públicas en tres anchuras salieron ✅ en la misma pasada en que el sitio era
+  inusable. Una pantalla que renderiza perfecta y no se puede recorrer pasa
+  todas las aserciones que existen hoy. **Queda pendiente**: una aserción de
+  piloto que haga rueda y teclado y compruebe que `scrollY` se mueve.
+- **Chromium headless sobre Linux no lo reproduce.** El mismo build scrollea
+  bien ahí, así que ni CI ni el piloto lo habrían cogido aunque miraran.
+
+**Corrección colateral, y es la misma enfermedad.** El comentario de
+`.lp-nav-wrap` afirmaba que el `sticky` de la cabecera pública no pega por
+culpa de ese mismo `html { overflow-x: hidden }`. Es **falso**: con `clip` —que
+no crea contenedor de scroll— el sticky sigue sin pegar, `y: -500` idéntico. El
+bloqueante real es `.lp-hero { overflow: hidden }`, el ancestro de scroll del
+sticky. Corregido en el mismo PR, porque un invariante documentado y falso es
+peor que ninguno: la siguiente sesión habría ido a pelearse con la raíz.
+
+**Trazabilidad.** `app/globals.css` (`html`/`body` y el comentario de
+`.lp-nav-wrap`); `.claude/rules/styles.md` (invariante nuevo); log §54 (Fase V,
+de donde sale el `overflow-x` original), §55 (lo que el piloto sí mide hoy).
+
+---
+
+
+---
+
+
+---
+
+
+---
+
+## 125. El cajón móvil se pulsaba antes de hidratar (2026-08-20)
+
+**Qué pasó.** `el cajón de navegación móvil de pricing abre y sus botones se
+leen` falló en móvil con «element(s) not found» sobre `.lp-mobnav`, mientras el
+mismo test sobre `/` pasaba **en la misma corrida** (PR #446).
+
+**Por qué.** `MarketingMobileNav` es un componente cliente: el botón viene en el
+HTML del servidor, pero su `onClick` no existe hasta que React hidrata, y el
+cajón no está en el DOM hasta que ese estado se abre. Un clic anterior a la
+hidratación no se encola — se pierde. El test esperaba `waitForTimeout(1_000)`
+y pulsaba una vez, o sea apostaba a que un preview frío hidrata en menos de un
+segundo. Perdió la apuesta en la página más pesada de las dos.
+
+**Qué se decidió.** El clic se reintenta hasta que el cajón aparece
+(`expect(...).toPass`), sin espera fija. No afloja nada: si el cajón no abre
+nunca, sigue fallando al agotarse el plazo. Es seguro repetirlo porque el botón
+hace `setOpen(true)`, no un alternar.
+
+**Lo que se deja anotado y NO se toca aquí.** El botón de menú es inerte hasta
+que la página hidrata, así que en un móvil lento hay una ventana real en la que
+un usuario lo pulsa y no pasa nada, sin ningún aviso. No es una regresión —es
+como funciona desde siempre— y arreglarlo es tocar la cabecera pública, otra
+zona y otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/landing.spec.ts`;
+`components/marketing-mobile-nav.tsx` (por qué el clic se pierde).
+
+---
+
+---
+
+## 126. «Generar propuesta con IA»: el prompt pedía nombrar páginas que el guardián rechazaba (2026-08-20)
 
 **Qué pasó.** El fundador pulsó «Generar propuesta con IA» en la tarjeta
 *Entrar en fuentes citadas* del proyecto GenScore y recibió «No se ha podido
@@ -11418,7 +11701,9 @@ url here is already one of citationDomains»); `.claude/rules/recommendations.md
 
 ---
 
-## 123. El piloto elegía proyecto por un enlace que dejó de existir (PILOT-PROJECT-PICK-1, 2026-08-20)
+---
+
+## 127. El piloto elegía proyecto por un enlace que dejó de existir (PILOT-PROJECT-PICK-1, 2026-08-20)
 
 **Qué pasó.** El piloto del PR #446 falló sólo en escritorio:
 `recs-interactions` → «no se han renderizado acciones prioritarias». La captura
@@ -11474,15 +11759,17 @@ patrón de verde vacío).
 
 ---
 
-## 124. El guardián rechazaba nombrar al competidor que la propia tarjeta ancla (2026-08-20)
+---
 
-**Qué pasó.** Con §122 desplegado, la misma tarjeta *Entrar en fuentes citadas*
+## 128. El guardián rechazaba nombrar al competidor que la propia tarjeta ancla (2026-08-20)
+
+**Qué pasó.** Con §126 desplegado, la misma tarjeta *Entrar en fuentes citadas*
 volvió a fallar — pero ya no con la frase genérica: **«La propuesta generada
 mencionaba datos que no están en la evidencia de esta recomendación»**. Los
-mensajes por rama que §122 introdujo hicieron su trabajo: en un clic quedó
+mensajes por rama que §126 introdujo hicieron su trabajo: en un clic quedó
 descartado el motor y señalado el guardián, sin abrir un solo log.
 
-**La causa, que es la de §122 un campo más allá.** El playbook de las reglas de
+**La causa, que es la de §126 un campo más allá.** El playbook de las reglas de
 hueco de fuentes le pide al modelo que clasifique cada dominio citado y le dé su
 jugada, y llega a pedirle que marque los que son **competidores de la marca**
 como «no es un objetivo de outreach» — algo que no se puede hacer sin
@@ -11494,7 +11781,7 @@ vez: el prompt pide una cosa y el guardián la castiga.
 
 **Qué se decidió.** `competitorsAnchoredByDomain` admite un competidor **cuando
 su propio dominio ya está en el conjunto anclado de esa tarjeta**, y ese
-competidor pasa a la vez al prompt y al guardián — el mismo invariante de §122.
+competidor pasa a la vez al prompt y al guardián — el mismo invariante de §126.
 No afloja nada más: el emparejado es por igualdad exacta de etiqueta de marca
 (`evilacme.com` no habilita «Acme», ADR 0019), y un competidor cuyo dominio no
 esté en la evidencia sigue prohibido.
@@ -11512,37 +11799,8 @@ tests. Lo que estos fijan es que prompt y guardián leen el mismo conjunto, en
 las dos dimensiones.
 
 **Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
-`rewrite-recommendation.ts`; §122 (la primera mitad, dominios);
+`rewrite-recommendation.ts`; §126 (la primera mitad, dominios);
 `.claude/rules/recommendations.md` §Reescritura con IA.
-
----
-
-## 125. El cajón móvil se pulsaba antes de hidratar (2026-08-20)
-
-**Qué pasó.** `el cajón de navegación móvil de pricing abre y sus botones se
-leen` falló en móvil con «element(s) not found» sobre `.lp-mobnav`, mientras el
-mismo test sobre `/` pasaba **en la misma corrida** (PR #446).
-
-**Por qué.** `MarketingMobileNav` es un componente cliente: el botón viene en el
-HTML del servidor, pero su `onClick` no existe hasta que React hidrata, y el
-cajón no está en el DOM hasta que ese estado se abre. Un clic anterior a la
-hidratación no se encola — se pierde. El test esperaba `waitForTimeout(1_000)`
-y pulsaba una vez, o sea apostaba a que un preview frío hidrata en menos de un
-segundo. Perdió la apuesta en la página más pesada de las dos.
-
-**Qué se decidió.** El clic se reintenta hasta que el cajón aparece
-(`expect(...).toPass`), sin espera fija. No afloja nada: si el cajón no abre
-nunca, sigue fallando al agotarse el plazo. Es seguro repetirlo porque el botón
-hace `setOpen(true)`, no un alternar.
-
-**Lo que se deja anotado y NO se toca aquí.** El botón de menú es inerte hasta
-que la página hidrata, así que en un móvil lento hay una ventana real en la que
-un usuario lo pulsa y no pasa nada, sin ningún aviso. No es una regresión —es
-como funciona desde siempre— y arreglarlo es tocar la cabecera pública, otra
-zona y otro PR.
-
-**Trazabilidad.** `tests/pilot/journeys/landing.spec.ts`;
-`components/marketing-mobile-nav.tsx` (por qué el clic se pierde).
 
 ---
 

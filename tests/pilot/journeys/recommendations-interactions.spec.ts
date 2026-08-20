@@ -47,7 +47,7 @@ const SETTLE_TIMEOUT_MS = 15_000;
  * proyecto más reciente de la cuenta fue uno sin nada que corregir: escritorio
  * aterrizó en él, vio «Nada que corregir ahora mismo» y falló por un estado
  * legítimo del producto, mientras móvil y tablet miraban otro proyecto (PR
- * #446, log §123).
+ * #446, log §127).
  *
  * Elegir por dato en vez de por nombre no puede pudrirse igual: si un día
  * ningún proyecto tiene acciones prioritarias, esto **se salta ruidosamente**

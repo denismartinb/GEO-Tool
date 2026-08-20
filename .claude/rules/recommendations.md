@@ -43,29 +43,29 @@ paths:
   hosts de `citation_pages`. Pasarle al guardián algo más estrecho que lo que
   el prompt ofreció es rechazar al modelo por obedecer — pasó con las páginas
   citadas, que el prompt pide nombrar y el guardián no admitía, y la tarjeta
-  quedó imposible de generar (log §122).
+  quedó imposible de generar (log §126).
 - **Lo mismo vale para los competidores.** Un competidor de la lista del
   proyecto se admite —en el prompt y en el guardián a la vez— sólo si su propio
   dominio está en el conjunto anclado (`competitorsAnchoredByDomain`). El
   playbook pide clasificar cada dominio citado y marcar los que son
   competidores, cosa imposible sin nombrarlos, y el guardián los rechazaba por
-  ello (log §124). El emparejado es por igualdad exacta de etiqueta de marca:
+  ello (log §128). El emparejado es por igualdad exacta de etiqueta de marca:
   `evilacme.com` no habilita «Acme» (ADR 0019).
 - **Un rechazo del guardián dice QUÉ término lo disparó, también en pantalla.**
   Diagnosticar «mencionaba datos que no están en la evidencia» exigía acceso a
-  los logs de producción; costó dos vueltas enteras (log §122, §124). El
+  los logs de producción; costó dos vueltas enteras (log §126, §128). El
   término va saneado y recortado como cualquier salida del modelo.
 - **Nada entra en ese conjunto que no venga de la evidencia persistida de esa
   tarjeta.** Ampliarlo con dominios "razonables" (redes sociales, plantillas,
   el dominio de un competidor) convierte el guardián en decoración: existe
   porque una instrucción en el prompt no es una frontera de seguridad.
 - **Ese conjunto no lleva tope propio.** Está acotado por construcción y un
-  recorte es exactamente lo que produjo el desajuste de §122 —
+  recorte es exactamente lo que produjo el desajuste de §126 —
   `citation_domains` ya venía recortado a 8 desde el motor.
 - **Cada rama de fallo dice algo distinto, y el guardián registra qué término
   lo disparó.** Cinco caminos compartiendo una frase hacen que un motor caído y
   una propuesta descartada sean indistinguibles desde el producto, que es lo
-  que convirtió un fallo determinista en una investigación (log §122). El
+  que convirtió un fallo determinista en una investigación (log §126). El
   mensaje sigue siendo propio y saneado — nunca el error del proveedor
   (`.claude/rules/gemini.md`).
 

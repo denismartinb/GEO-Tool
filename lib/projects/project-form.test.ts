@@ -4,6 +4,7 @@ import {
   deriveBrandFromDomain,
   isValidDomain,
   languageForCountry,
+  MAX_USER_COMPETITORS,
   parseInitialCompetitors,
   parseInitialPrompts,
   parseProjectForm,
@@ -228,6 +229,25 @@ describe("project-form pure helpers", () => {
 
   it("parseInitialCompetitors requires name|domain and dedupes", () => {
     const out = parseInitialCompetitors("Globex|globex.com\nGlobex|globex.com\nNoDomain\nInitech|initech.com");
+    expect(out).toHaveLength(2);
+  });
+
+  it("parseInitialCompetitors accepts up to MAX_USER_COMPETITORS (10), not the old suggestion cap of 5 (ONBOARDING-COMPETITORS-CAP-1)", () => {
+    const input = Array.from({ length: MAX_USER_COMPETITORS }, (_, i) => `Brand${i}|brand${i}.com`).join("\n");
+    const out = parseInitialCompetitors(input);
+    expect(out).toHaveLength(MAX_USER_COMPETITORS);
+    expect(MAX_USER_COMPETITORS).toBeGreaterThan(5);
+  });
+
+  it("parseInitialCompetitors still truncates beyond MAX_USER_COMPETITORS rather than growing unbounded", () => {
+    const input = Array.from({ length: MAX_USER_COMPETITORS + 5 }, (_, i) => `Brand${i}|brand${i}.com`).join("\n");
+    const out = parseInitialCompetitors(input);
+    expect(out).toHaveLength(MAX_USER_COMPETITORS);
+  });
+
+  it("parseInitialCompetitors respects an explicit lower cap when passed one", () => {
+    const input = "A|a.com\nB|b.com\nC|c.com";
+    const out = parseInitialCompetitors(input, 2);
     expect(out).toHaveLength(2);
   });
 });
