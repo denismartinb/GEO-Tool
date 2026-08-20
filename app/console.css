@@ -311,14 +311,21 @@
    two-column" and "the sidebar is a static column, not a drawer" start at
    the same width, so there's no gap where content assumes desktop chrome
    the sidebar hasn't adopted yet.
-   `.ov2-scope` is NOT widened here — it stays on its base 460px mobile cap
-   all the way to the 900px step below, unchanged and out of scope for this
-   request — so the gauge column is deliberately narrower than the ≥900px
-   step (widened again there, and again at ≥1200px). `.ov2-kpi-car` also
-   keeps its mobile carousel behavior through this range (its own grid
-   switch is still gated at 900px, untouched) rather than becoming a 2-col
-   grid squeezed into an even narrower right column — that combination
-   was never tried together and risked wrapping KPI labels no one checked. */
+   `.ov2-scope` is NOT widened here — and at 768px it could not be anyway:
+   the static sidebar takes 248px of a 768px viewport, so `.page` leaves
+   ~450px of content whatever the max-width says. Two columns out of 450px
+   is ~230px + ~205px, and that is the whole design constraint of this
+   range.
+   Which is why `.ov2-kpi-car` MUST leave its mobile carousel here (one
+   column, cards filling the width) instead of keeping 158px fixed-width
+   cards in a horizontal scroller. A first pass left the carousel alone on
+   purpose — "that combination was never tried together" — and the pilot's
+   768px capture showed the result: ~205px of column holding a 158px card
+   and the clipped left edge of the next one, which reads as a broken
+   layout rather than as something scrollable. Not trying it was the risk
+   (log §114). The ≥900px step below re-overrides this to a 2-col grid;
+   both use the bare `.ov2-kpi-car` selector so source order decides and
+   neither out-specifies the other (`.claude/rules/styles.md`). */
 @media (min-width: 760px) {
   .ov2-hero {
     display: grid;
@@ -335,13 +342,14 @@
     align-items: stretch;
     margin-top: 16px;
   }
-  /* `min-width: 0` on both grid items, same as every other `.ov2-*` column
+  /* `min-width: 0` on both grid items, matching every other `.ov2-*` column
      pair in this file (`.ov2-main`/`.ov2-rail`, `.ov2-score-main`/
-     `.ov2-score-side`): `minmax(0, 1fr)` on the TRACK bounds the column,
-     but without this the KPI carousel's own intrinsic content width still
-     wins as the grid ITEM's automatic minimum, and the hero row renders
-     wider than `.ov2-scope` — the third KPI card was found overflowing
-     past the page's own right edge in the pilot's tablet capture. */
+     `.ov2-score-side`). Hygiene, not a fix: it was added believing it was
+     the cause of the clipped KPI card at 768px, and the next pilot run came
+     back byte-identical — the cause was the carousel above, not the grid
+     item's automatic minimum. Kept because the convention is right and the
+     tracks are `minmax(0, …)` anyway; recorded as not-the-fix so nobody
+     re-derives that conclusion from its presence (log §114). */
   .ov2-gauge-block { display: flex; flex-direction: column; min-width: 0; }
   .ov2-gauge-sec-lbl { display: flex; margin: 0 2px 10px; }
   /* The internal label is only hidden here, not removed from the DOM below
@@ -366,6 +374,16 @@
   .ov2-hero-kpis .ov2-sec-lbl { margin: 0 2px 10px; }
   .ov2-hero-kpis .ov2-kpi-car { flex: 1; }
   .ov2-hero-kpis .ov2-kpi { display: flex; flex-direction: column; justify-content: center; }
+  /* One column, cards filling it — see the note above this media query for
+     why the horizontal carousel cannot survive a ~205px column. Bare
+     selectors so the ≥900px 2-col grid below wins on source order. */
+  .ov2-kpi-car {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    overflow: visible;
+  }
+  .ov2-kpi { width: auto; }
 }
 
 /* Tablet / small laptop: still one column, just not phone-width. The hero

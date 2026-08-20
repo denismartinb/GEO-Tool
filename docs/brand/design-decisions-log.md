@@ -10844,6 +10844,45 @@ etiqueta + número suelto («88/100»), sin ninguna otra señal visual.
    medidor caben igual de bien a 375px y no dependen del ancho extra que
    trae la fila 2/3, así que aplica a todas las anchuras.
 
+**Tercera vuelta: el carrusel de KPIs no cabía, y el `min-width: 0` no era la
+causa.** Con la cabecera ya en dos columnas a 768px, la captura del piloto
+mostró la tercera tarjeta de Indicadores clave cortada contra el borde de la
+pantalla. Se diagnosticó como un *grid blowout* clásico —falta de
+`min-width: 0` en los items— y se arregló así. **La siguiente pasada del
+piloto devolvió capturas byte a byte idénticas**, lo que descartó ese
+diagnóstico de raíz: el `min-width: 0` no cambiaba un solo píxel.
+
+La causa real estaba a la vista en la propia captura y en el comentario que
+esta misma fase había escrito para justificarse: `.ov2-kpi-car` seguía siendo
+el **carrusel horizontal móvil** (tarjetas fijas de 158px con `overflow-x`),
+y en este tramo la columna derecha mide ~205px — con el barrido lateral
+estático eso son una tarjeta y el borde izquierdo de la siguiente. No
+desbordaba nada: el carrusel recortaba correctamente, y *ese* recorte es lo
+que se lee como pantalla rota.
+
+Se dejó el carrusel intacto **a propósito**, y el comentario del CSS decía
+por qué: *«esa combinación no se había probado nunca junta y arriesgaba
+envolver etiquetas que nadie había comprobado»*. Era exactamente al revés —
+**no probarlo era el riesgo**. En este tramo `.ov2-kpi-car` pasa a una
+rejilla de una columna con las tarjetas a ancho completo, y a partir de
+900px la de dos columnas vuelve a ganar. Ambas usan el selector desnudo
+`.ov2-kpi-car`, así que decide el orden en el fichero y ninguna
+sobre-especifica a la otra (`.claude/rules/styles.md`).
+
+`min-width: 0` se queda: la convención es correcta y la comparten los otros
+pares de columnas del fichero. Queda escrito en el CSS que **no** fue el
+arreglo, para que nadie deduzca lo contrario de su presencia.
+
+**Lo que costó y cómo se cortó.** Tres vueltas de piloto para un cambio de
+CSS, dos de ellas por afirmar una causa sin comprobarla. La cuarta se
+verificó **antes** de empujar, con un banco de pruebas estático
+(`.ov2-*` reales de `globals.css` + `console.css` sobre el DOM de la
+cabecera, medido y fotografiado con el Chromium local a 768/860/1000/1280 px),
+que confirmó ausencia de desbordamiento y fondos alineados en las cuatro
+anchuras. El piloto contra el preview sigue siendo la puerta; lo que no puede
+ser es el bucle de depuración, que es la misma lección de BUILD-BUDGET-1
+—«el build no es un bucle de feedback»— aplicada al piloto.
+
 **Qué NO cambia.** Por debajo de 760px (móvil) la cabecera es pixel-idéntica
 a la de antes de este PR; por debajo de 1200px, «Desglose del GEO Score» y
 «Posicionamiento por motores de IA» siguen apilados en el mismo orden que ya
