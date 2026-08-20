@@ -114,6 +114,18 @@ function getBandTone(score: number): string {
 }
 
 /**
+ * Icon/meter colors for the GEO Score breakdown rows — keyed by the same
+ * "pos" / "accent" / "warn" tone `getBandTone` already uses for the gauge's
+ * own band, so a component scoring e.g. 85 reads with the same color
+ * language as the overall score badge instead of inventing a second scale.
+ */
+const GEO_SCORE_TONE_COLORS: Record<string, { soft: string; ink: string }> = {
+  pos: { soft: "var(--pos-soft)", ink: "var(--pos-ink)" },
+  accent: { soft: "var(--accent-soft)", ink: "var(--accent-ink)" },
+  warn: { soft: "var(--warn-soft)", ink: "var(--warn-ink)" }
+};
+
+/**
  * Classification bands for "Presión Competitiva" (docs/adr/0011).
  * Higher score = worse (the brand is more displaced by competitors), so the
  * tone scale is inverted relative to getBandTone: low score = green/positive,
@@ -854,7 +866,14 @@ export default async function ProjectDetailPage({
               on the mobile stacked flow — it only becomes a 2-col grid on
               desktop (app/globals.css). */}
           <div className="ov2-hero">
-          {/* 2 · Compact gauge card (score + trend) */}
+          {/* 2 · Compact gauge card (score + trend). `.ov2-gauge-block` wraps
+              the card together with an external "Puntuación GEO" label so the
+              two hero columns share the same section-label pattern and start
+              flush at the top on desktop (OV-DESKTOP-2) — below 1200px this
+              label stays hidden and the card keeps its original inline one,
+              so the mobile/tablet layout is unchanged. */}
+          <div className="ov2-gauge-block">
+          <div className="ov2-sec-lbl ov2-gauge-sec-lbl">Puntuación GEO</div>
           <div className="ov2-gauge-card">
             <div className="ov2-gauge-ring">
               <Gauge value={gaugeScore} size={96} stroke={10} />
@@ -898,6 +917,7 @@ export default async function ProjectDetailPage({
                 <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
               )}
             </div>
+          </div>
           </div>
 
           {/* 3 · Indicadores clave — KPI carousel */}
@@ -1077,15 +1097,20 @@ export default async function ProjectDetailPage({
           </div>
           </div>
 
-          {/* Desglose del GEO Score (GEO-SCORE-V4, ADR 0033 §7): stated
+          {/* Desglose del GEO Score (GEO-SCORE-V4, ADR 0033 §7) + Posicionamiento
+              por motores de IA, side by side (OV-DESKTOP-2). Stated
               obligation, not polish — "wherever the GEO Score is shown, its
               component breakdown must be visible", so "subió porque
               arreglaste la web" and "subió porque las IAs te citan más" son
-              distinguibles. Placed right under the gauge, full width, its
-              OWN labelled section — never a bare number beside the gauge,
-              which is exactly what log §22 decisión 1 warned reads as a
-              second score. Only rendered once there is a real score to
-              explain. */}
+              distinguibles. `.ov2-score-row` is `display: contents` below
+              1200px, so mobile/tablet keep the exact stacked order these two
+              sections already had (Posicionamiento immediately followed
+              Desglose in the DOM before this change) — only desktop gets the
+              2/3 + 1/3 layout. Desglose is only rendered once there is a real
+              score to explain; Posicionamiento always renders, same as
+              before. */}
+          <div className="ov2-score-row">
+          <div className="ov2-score-main">
           {geoScore?.components ? (
             <>
               {geoScore.engine_coverage?.status === "partial" ? (
@@ -1103,7 +1128,7 @@ export default async function ProjectDetailPage({
                   {gaugeScore}/100
                 </span>
               </div>
-              <div className="card" style={{ padding: "6px 18px" }}>
+              <div className="card" style={{ padding: "4px 18px" }}>
                 {(["presence", "prominence", "standing", "authority", "technical"] as const).map((key) => {
                   const component = geoScore.components?.[key];
                   // A run scored before GEO-SCORE-V4 has no `technical` key at
@@ -1118,22 +1143,22 @@ export default async function ProjectDetailPage({
                   if (!component && !isLegacyRun) return null;
                   const meta = GEO_SCORE_COMPONENT_META[key];
                   const isDropped = isLegacyRun || component?.value === null || component?.value === undefined;
+                  // Same 3-tier tone the gauge's own band uses (getBandTone),
+                  // so a component scoring e.g. 85 reads with the same color
+                  // language as the overall score badge — never a fourth,
+                  // unrelated color scale invented just for this row.
+                  const tone = isDropped ? null : GEO_SCORE_TONE_COLORS[getBandTone(component?.value as number)];
                   return (
-                    <div
-                      key={key}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "12px 0",
-                        borderBottom: "1px solid var(--line-soft)"
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
-                          {meta.label}
-                        </div>
-                        <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+                    <div key={key} className="ov2-brow">
+                      <span
+                        className="ov2-brow-ico"
+                        style={{ background: tone?.soft ?? "var(--line-soft)", color: tone?.ink ?? "var(--ink-4)" }}
+                      >
+                        <Icon name={meta.icon} size={16} />
+                      </span>
+                      <div className="ov2-brow-txt">
+                        <div className="ov2-brow-l">{meta.label}</div>
+                        <div className="ov2-brow-h">
                           {isLegacyRun
                             ? "Este escaneo es anterior a que la salud técnica entrara en el GEO Score. Se incluirá en tu próximo escaneo."
                             : isDropped
@@ -1141,14 +1166,24 @@ export default async function ProjectDetailPage({
                               : meta.hint}
                         </div>
                       </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div className="ov2-brow-meter">
                         {isDropped ? (
-                          <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-4)" }}>No disponible</span>
+                          <>
+                            <div className="track dashed"><i /></div>
+                            <div className="cap"><span className="na">No disponible</span></div>
+                          </>
                         ) : (
-                          <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>
-                            {Math.round(component?.value as number)}
-                            <small style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-4)" }}>/100</small>
-                          </span>
+                          <>
+                            <div className="track">
+                              <i style={{ width: `${component?.value}%`, background: tone?.ink }} />
+                            </div>
+                            <div className="cap">
+                              <span className="v">
+                                {Math.round(component?.value as number)}
+                                <small>/100</small>
+                              </span>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -1158,13 +1193,9 @@ export default async function ProjectDetailPage({
             </>
 
           ) : null}
+          </div>
 
-          {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same
-              `display: contents` default as `.ov2-hero` above — no effect on
-              mobile, becomes a 2-col grid with `.ov2-rail` following the
-              analysis column on desktop. */}
-          <div className="ov2-cols">
-          <div className="ov2-main">
+          <div className="ov2-score-side">
           {/* 4 · Posicionamiento por motores de IA */}
           <div className="ov2-sec-lbl">Posicionamiento por motores de IA</div>
           <div className="card" style={{ padding: 18 }}>
@@ -1192,7 +1223,15 @@ export default async function ProjectDetailPage({
               </div>
             )}
           </div>
+          </div>
+          </div>
 
+          {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same
+              `display: contents` default as `.ov2-hero` above — no effect on
+              mobile, becomes a 2-col grid with `.ov2-rail` following the
+              analysis column on desktop. */}
+          <div className="ov2-cols">
+          <div className="ov2-main">
           {/* 5 · Panorámica competitiva */}
           <div className="ov2-sec-lbl">
             Panorámica competitiva
