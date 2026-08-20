@@ -10867,6 +10867,80 @@ mecanismo `display: contents`).
 
 ---
 
+## 115. El piloto se saltó a sí mismo y publicó el check en verde (2026-08-17)
+
+**Qué pasó.** En el PR #433, el job `pilot` del commit `3c19aa4` terminó en
+**8 segundos con conclusión `success`**. No ejecutó ningún test, no abrió
+ningún navegador, no capturó ninguna pantalla. El log dice:
+
+> `No open PR for 3c19aa453a0325c43421048703aebac7fcc153ec; nothing to report on.`
+> `Skipping pilot — deployment is not attached to an open pull request.`
+
+El PR estaba abierto. Llevaba abierto seis horas.
+
+**Por qué importa más que el propio fallo.** El check salió **verde**. En la
+lista de checks del PR, una pasada que no miró nada es indistinguible de una
+que lo miró todo — y la fila «pilot ✅» es exactamente lo que el Human Gate
+mira. Es el mismo fallo de §65 (un job cancelado que dejaba un PASS publicado
+sin que la puerta llegara a ejecutarse) y de §55 (dar «piloto pasado» leyendo
+la tabla de ✅), un escalón más arriba: allí fallaba el veredicto, aquí falla
+la existencia misma de la pasada. La regla de `.claude/rules/scan.md` —«una
+garantía que no se puede ver fallar no es una garantía»— se escribió para el
+escaneo y aplica igual al arnés que vigila el escaneo.
+
+**La causa, y lo que NO era.** El paso «Resolve the pull request for this
+deployment» resolvía el PR con `commits/{sha}/pulls`. Ese endpoint devolvió
+lista vacía. La primera hipótesis fue una carrera de indexación —el deployment
+llegando antes de que GitHub asociara commit y PR— y **es falsa**: el push de
+`3c19aa4` fue a las 13:57 y la consulta a las 14:27, **treinta minutos
+después**. No es que el índice no hubiera llegado; es que no respondió. Se
+comprobó a mano ese mismo día que `pulls?head=` **sí** devolvía el #433 con su
+rama y su SHA en ese mismo momento.
+
+**Qué se decidió.** Dos búsquedas en vez de una, y cinco intentos con espera
+creciente:
+
+1. **`pulls?head=owner:rama` primero.** Consulta la lista de PRs directamente
+   en vez del índice commit→PR, así que no depende de la pieza que falló. Se
+   salta cuando el `ref` del deployment es un SHA de 40 hex, que no es rama.
+2. **`commits/{sha}/pulls` de reserva**, para deployments sin rama utilizable.
+3. **`::warning::` cuando ninguna resuelve**, que sale en el resumen del run y
+   no enterrado en el log de un paso.
+
+**Lo que se dejó a propósito sin arreglar, y por qué.** El check **sigue
+saliendo verde** cuando no hay PR. Un preview de una rama sin PR abierto es
+legítimo y pintarlo en rojo llenaría el repositorio de fallos falsos. El
+precio es que la distinción entre «no había nada que pilotar» y «el piloto se
+averió» vive ahora en un aviso, no en el color del check. Es una mejora sobre
+el silencio anterior, **no una puerta**: la puerta de verdad sería una
+required status check en la protección de rama, que es configuración del
+repositorio y no código — la misma frontera que ya anotó la Fase Q5 sobre la
+ausencia de CI (§54).
+
+**Contexto: por qué se arregló dentro del PR #433 y no en uno aparte.** Mezclar
+concerns está desaconsejado (CLAUDE.md), pero el piloto es **puerta obligatoria
+del Human Gate** y estaba impidiendo que ese mismo PR llegara a juzgarse; un PR
+separado no lo desbloquearía hasta mergearse, y había diez PRs abiertos contra
+el tope de tres de BUILD-BUDGET-1. Queda anotado como excepción consciente.
+
+**Roto conocido, sin diagnosticar.** En paralelo, *Redeploy* manual desde
+Vercel falló varias veces seguidas sobre este mismo commit con
+`Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'`
+—un interno de Turbopack para `next/font/google`, que ni este PR ni ninguno
+reciente tocan— mientras que **los builds disparados por push del mismo commit
+salieron bien**, igual que los de los PRs #435 y #437 esa misma tarde.
+`next build` en local es limpio. No se ha reproducido ni diagnosticado: queda
+escrito que el camino fiable es empujar un commit, no pulsar *Redeploy*.
+
+**Trazabilidad.** `.github/workflows/ux-pilot.yml`; §65 (el job cancelado que
+dejaba un PASS publicado); §55 (dar por pasado el piloto leyendo la tabla de
+✅); §54 (Fase Q5, hacer visible la ausencia de CI, y por qué el aviso no es
+la puerta); `.claude/rules/scan.md` («una garantía que no se puede ver fallar
+no es una garantía»); `scripts/vercel-should-build.sh` (la regla que ya obliga
+a construir cuando cambia este workflow, para que el arreglo pueda ejercitarse).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
