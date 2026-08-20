@@ -203,7 +203,7 @@ más honesta que la atribución por puntuación global.
 
 | Fase | Qué | Estado |
 |---|---|---|
-| **A** | Integridad del artefacto pegable (F1) | **implementada** (log §124) — no repara las filas ya persistidas: la ruta de idempotencia sigue sirviendo un artefacto viejo cortado |
+| **A** | Integridad del artefacto pegable (F1) | **implementada** (log §125) — no repara las filas ya persistidas: la ruta de idempotencia sigue sirviendo un artefacto viejo cortado |
 | **B** | Contexto real del sitio en el generador (F2, F3) | abierta — necesita Task Intake |
 | **C** | Anti-relleno, no-autopromoción, grafía de marca (F4, F5, F6) | abierta |
 | **D** | Bucle de cierre por prompt afectado (F7) | abierta |

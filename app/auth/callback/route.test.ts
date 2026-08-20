@@ -23,12 +23,19 @@ function requestFor(search: string): Request {
   return new Request(`https://app.example.com/auth/callback${search}`);
 }
 
-function userAt(email: string, createdAt: string, lastSignInAt: string, provider?: string) {
+function userAt(
+  email: string,
+  createdAt: string,
+  lastSignInAt: string,
+  provider?: string,
+  emailConfirmedAt: string = lastSignInAt
+) {
   return {
     id: "user-1",
     email,
     created_at: createdAt,
     last_sign_in_at: lastSignInAt,
+    email_confirmed_at: emailConfirmedAt,
     app_metadata: provider ? { provider } : undefined
   };
 }
@@ -58,7 +65,7 @@ describe("GET /auth/callback", () => {
     expect(response.headers.get("location")).toBe("https://app.example.com/dashboard/billing");
   });
 
-  it("sends the welcome email and a 'google' ops alert for a brand-new OAuth signup (last_sign_in_at ≈ created_at)", async () => {
+  it("sends the welcome email and a 'google' ops alert for a brand-new OAuth signup (last_sign_in_at ≈ email_confirmed_at)", async () => {
     exchangeCodeForSession.mockResolvedValue({
       data: { user: userAt("new@example.com", "2026-07-11T18:00:00.000Z", "2026-07-11T18:00:00.400Z", "google") },
       error: null
@@ -85,9 +92,37 @@ describe("GET /auth/callback", () => {
     expect(sendNewSignupOpsAlert).toHaveBeenCalledWith(expect.anything(), expect.anything(), "password");
   });
 
+  it("still sends the welcome email and ops alert when the user takes several minutes to click the confirmation link", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: {
+        user: userAt(
+          "slow-clicker@example.com",
+          "2026-07-11T18:00:00.000Z",
+          "2026-07-11T18:11:32.000Z",
+          undefined,
+          "2026-07-11T18:11:32.000Z"
+        )
+      },
+      error: null
+    });
+
+    await GET(requestFor("?code=abc123"));
+
+    expect(sendWelcomeEmail).toHaveBeenCalledWith("slow-clicker@example.com");
+    expect(sendNewSignupOpsAlert).toHaveBeenCalledWith(expect.anything(), expect.anything(), "password");
+  });
+
   it("does not send a welcome email or ops alert for a returning user signing back in", async () => {
     exchangeCodeForSession.mockResolvedValue({
-      data: { user: userAt("returning@example.com", "2026-01-01T00:00:00.000Z", "2026-07-11T18:00:00.000Z") },
+      data: {
+        user: userAt(
+          "returning@example.com",
+          "2026-01-01T00:00:00.000Z",
+          "2026-07-11T18:00:00.000Z",
+          undefined,
+          "2026-01-01T00:00:05.000Z"
+        )
+      },
       error: null
     });
 
