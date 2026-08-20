@@ -7,6 +7,7 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
+import { MIN_VISIBLE_POINTS, formatPoints, selectPlan } from "@/lib/recommendations/plan";
 
 // Re-exported (not redefined) so every existing `import { type GeneratedSolution } from "./recommendations-client"`
 // keeps working unchanged — lib/recommendations/generated-solution.ts is now
@@ -29,6 +30,8 @@ type EvidenceJson = {
   citation_domains?: string[];
   citation_pages?: CitationPage[];
   action_suggested?: string;
+  /** RECS-REDESIGN-1 — bounded first move for this gap. */
+  first_step?: string;
 };
 
 /**
@@ -71,6 +74,14 @@ export type Recommendation = {
   /** RECS-COVERAGE-OVERLAY-1 — null/undefined for every card type except a
    * matched `add_citation_block` card for the current scan. */
   coverageOverlay?: CoverageOverlay | null;
+  /**
+   * RECS-REDESIGN-1 — real counterfactual score delta for this action (ADR
+   * 0017), computed server-side. Null whenever the type isn't quantifiable or
+   * the run's confidence is low: the card then shows a qualitative impact
+   * instead, never a fabricated number. Undefined when the host screen doesn't
+   * compute it at all (the web-audit page reuses RecCard).
+   */
+  potentialPoints?: number | null;
 };
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority" | "resolved";
@@ -321,7 +332,28 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
  * to this page. Self-contained: owns its own open/close state and calls the
  * same server actions regardless of which page renders it.
  */
-export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
+export function RecCard({
+  rec,
+  projectId,
+  compact = false,
+  priorityRank,
+}: {
+  rec: Recommendation;
+  projectId: string;
+  /**
+   * 1-based position when this card is one of the scan's priority actions.
+   * Gives the card the accent treatment and a numbered chip, so the three
+   * that matter carry visible weight instead of looking like the rest.
+   */
+  priorityRank?: number;
+  /**
+   * Rendered inside a group of same-rule cards, where the description and
+   * first step are identical across every member and are already shown once
+   * at group level. Suppresses both so the expanded group reads as a list of
+   * affected queries rather than N copies of the same paragraph.
+   */
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [isRewriting, startRewrite] = useTransition();
   const [rewriteError, setRewriteError] = useState<string | null>(null);
@@ -385,9 +417,11 @@ export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: st
   const rankCls = priorityLevel(rec);
   const effectiveConfidence = rec.coverageOverlay?.confidenceOverride ?? rec.confidence;
   const overlay = rec.coverageOverlay;
+  // RECS-REDESIGN-1 — the single bounded first move, emitted by every engine
+  // rule. Older rows (persisted before this field existed) simply don't render
+  // the block; nothing is invented to fill it.
+  const firstStep = ev.first_step ?? null;
 
-  const priorityLabel =
-    rankCls === "high" ? "Alta" : rankCls === "med" ? "Media" : "Baja";
   const priorityBadgeCls =
     rankCls === "high"
       ? "badge badge-neg"
@@ -396,7 +430,10 @@ export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: st
         : "badge badge-neutral";
 
   return (
-    <div id={`rec-${rec.id}`} className={`rec-card${open ? " open" : ""}`}>
+    <div
+      id={priorityRank ? undefined : `rec-${rec.id}`}
+      className={`rec-card${open ? " open" : ""}${priorityRank ? " rec2-priority" : ""}`}
+    >
       <div
         className="rec-main"
         onClick={() => setOpen((o) => !o)}
@@ -410,96 +447,82 @@ export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: st
         }}
         aria-expanded={open}
       >
-        {/* Rank pill */}
-        <div className={`rec-rank ${rankCls}`}>{rec.priority_rank}</div>
-
-        {/* Center column */}
+        {/* Center column.
+            RECS-REDESIGN-1 simplification: the collapsed card carries exactly
+            three things — what to do (title), why (description) and the first
+            move (first step). The rank pill, the internal type badge
+            ("Perseguir fuentes de citación") and the impact/effort/confidence
+            meter trio were all removed from this view: they are engine
+            vocabulary, not decisions the user makes at a glance, and with
+            15+ cards they were most of the page's ink. Impact, effort and
+            confidence still exist — they moved into the expanded detail. */}
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              marginBottom: 7,
-              flexWrap: "wrap",
-            }}
-          >
-            <span className={priorityBadgeCls}>Prioridad {priorityLabel}</span>
-            <span className="badge badge-outline">
-              {labelForType(rec.recommendation_type)}
-            </span>
-            {quickWin && (
-              <span className="badge badge-pos">
-                <Icon name="bolt" size={11} />
-                Victoria rápida
-              </span>
-            )}
-            {effectiveConfidence === "low" && (
-              <span className="badge badge-warn">
-                <Icon name="info" size={11} />
-                Baja confianza
-              </span>
-            )}
-            {overlay?.state === "confirmed_surfacing_gap" && (
-              <span className="badge badge-pos">
-                <Icon name="check" size={11} />
-                Ya tienes contenido sobre esto
-              </span>
-            )}
-            {overlay?.state === "possible_content_gap" && (
-              <span className="badge badge-outline">
-                <Icon name="info" size={11} />
-                Sin contenido propio encontrado
-              </span>
-            )}
-            {(rec.consecutive_runs_open ?? 1) > 1 && (
-              <span className="badge badge-outline">
-                Abierto desde hace {rec.consecutive_runs_open} escaneos
-              </span>
-            )}
-          </div>
+          {(priorityRank || priorityLevel(rec) === "high" || quickWin || (rec.consecutive_runs_open ?? 1) > 1) && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 6,
+                flexWrap: "wrap",
+              }}
+            >
+              {priorityRank && <span className="rec2-rank">{priorityRank}</span>}
+              {priorityLevel(rec) === "high" && <span className={priorityBadgeCls}>Prioridad alta</span>}
+              {quickWin && (
+                <span className="badge badge-pos">
+                  <Icon name="bolt" size={11} />
+                  Victoria rápida
+                </span>
+              )}
+              {(rec.consecutive_runs_open ?? 1) > 1 && (
+                <span className="badge badge-outline">Abierta {rec.consecutive_runs_open} escaneos</span>
+              )}
+            </div>
+          )}
           <div className="rec-title">{rec.title}</div>
-          <div className="rec-problem">{rec.description}</div>
+          {!compact && <div className="rec-problem">{rec.description}</div>}
+          {!compact && firstStep && (
+            <div className="rec2-step">
+              <Icon name="arrRight" size={13} />
+              <span>
+                <b>Empieza por aquí.</b> {firstStep}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Right column */}
+        {/* Right column — what this action is worth, and nothing else.
+            A real counterfactual number when the run supports one (ADR 0017);
+            a qualitative impact word when it does not, never an invented
+            figure. */}
         <div
           className="rec-side"
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "flex-end",
-            gap: 14,
+            justifyContent: "space-between",
+            gap: 10,
             flexShrink: 0,
           }}
         >
-          <div className="rec-metrics">
-            <div className="rmetric">
-              <div className="l">Impacto</div>
-              <div className="v">
-                <DotMeter n={impactToN(rec.impact)} tone="h" />
+          <div style={{ textAlign: "right" }}>
+            {typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS ? (
+              <>
+                <div className="rec2-pts">+{formatPoints(rec.potentialPoints)} pt</div>
+                <div className="rec2-pts-l">potenciales</div>
+              </>
+            ) : (
+              /* Confidence deliberately NOT shown here (founder review): repeated
+                 down a list it read as the product hedging on every single card.
+                 It still qualifies the number — that is why a low-confidence run
+                 shows this qualitative label instead of a figure — and it stays
+                 visible inside the expanded detail. */
+              <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
+                {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
               </div>
-            </div>
-            <div className="rmetric">
-              <div className="l">Esfuerzo</div>
-              <div className="v">
-                <DotMeter n={effortToN(rec.effort)} tone="m" />
-              </div>
-            </div>
-            <div className="rmetric">
-              <div className="l">Confianza</div>
-              <div className="v" style={{ fontSize: 12, fontWeight: 700 }}>
-                {effectiveConfidence === "low" ? (
-                  <span className="badge badge-warn" style={{ fontSize: 10 }}>
-                    Baja
-                  </span>
-                ) : effectiveConfidence === "high" ? (
-                  "Alta"
-                ) : (
-                  "Media"
-                )}
-              </div>
-            </div>
+            )}
           </div>
           <button
             className="btn btn-ghost btn-sm"
@@ -508,7 +531,7 @@ export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: st
               setOpen((o) => !o);
             }}
           >
-            {open ? "Ocultar" : "Ver"} recomendación
+            {open ? "Ocultar" : "Ver más"}
             <Icon name={open ? "chevDown" : "chevRight"} size={14} />
           </button>
         </div>
@@ -517,6 +540,47 @@ export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: st
       {/* Expandable detail */}
       <div className="rec-detail">
         <div className="rec-detail-inner">
+          {/* Impact / effort / confidence, moved here from the collapsed card
+              (RECS-REDESIGN-1). They are qualifiers you read while deciding
+              whether to take this on — useful once the card is open, pure
+              noise multiplied across a 15-card list. */}
+          <div
+            style={{
+              display: "flex",
+              gap: 20,
+              alignItems: "center",
+              flexWrap: "wrap",
+              paddingBottom: 12,
+              marginBottom: 12,
+              borderBottom: "1px solid var(--line-soft)",
+            }}
+          >
+            <div className="rmetric" style={{ textAlign: "left" }}>
+              <div className="l">Impacto</div>
+              <div className="v" style={{ justifyContent: "flex-start" }}>
+                <DotMeter n={impactToN(rec.impact)} tone="h" />
+              </div>
+            </div>
+            <div className="rmetric" style={{ textAlign: "left" }}>
+              <div className="l">Esfuerzo</div>
+              <div className="v" style={{ justifyContent: "flex-start" }}>
+                <DotMeter n={effortToN(rec.effort)} tone="m" />
+              </div>
+            </div>
+            <div className="rmetric" style={{ textAlign: "left" }}>
+              <div className="l">Confianza</div>
+              <div className="v" style={{ justifyContent: "flex-start", fontSize: 12, fontWeight: 700 }}>
+                {effectiveConfidence === "low" ? "Baja" : effectiveConfidence === "high" ? "Alta" : "Media"}
+              </div>
+            </div>
+            <div className="rmetric" style={{ textAlign: "left" }}>
+              <div className="l">Tipo</div>
+              <div className="v" style={{ justifyContent: "flex-start", fontSize: 12, fontWeight: 700 }}>
+                {labelForType(rec.recommendation_type)}
+              </div>
+            </div>
+          </div>
+
           {/* Auditoría de cobertura del dominio (RECS-COVERAGE-OVERLAY-1) — shown
               FIRST because it reframes what this whole card means. Plain-language
               explanation of what we checked, what we found on the user's own
@@ -800,40 +864,199 @@ export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: st
   );
 }
 
+/**
+ * Groups the leftovers by recommendation type so fifteen "Aparece en …" cards
+ * collapse into one expandable row with a count. This is the density fix the
+ * redesign exists for, and it is deliberately done HERE rather than in the
+ * engine: merging them at generation time would change each gap's dedupe_key,
+ * and per-prompt keys are what let a scan resolve gaps one at a time
+ * (RECS-3). Grouping is presentation; resolution stays per prompt.
+ */
+function groupByType(recs: Recommendation[]): Array<{ type: string; items: Recommendation[] }> {
+  const byType = new Map<string, Recommendation[]>();
+  for (const rec of recs) {
+    const bucket = byType.get(rec.recommendation_type) ?? [];
+    bucket.push(rec);
+    byType.set(rec.recommendation_type, bucket);
+  }
+  return Array.from(byType.entries()).map(([type, items]) => ({ type, items }));
+}
+
+function GroupedRecs({
+  type,
+  items,
+  projectId,
+  jointPointsByType,
+}: {
+  type: string;
+  items: Recommendation[];
+  projectId: string;
+  jointPointsByType?: Record<string, number | null>;
+}) {
+  const [open, setOpen] = useState(false);
+  // Never the SUM of the members' deltas: two gaps of the same type can share
+  // affected prompts and summing double-counts them (ADR 0017 §3). The number
+  // shown here is a single joint counterfactual computed server-side over the
+  // whole group; absent it, the group shows no figure at all.
+  const joint = jointPointsByType?.[type] ?? null;
+
+  // Members of a group are, by construction, the same rule fired on different
+  // prompts — so their description and first step are word-for-word identical.
+  // Showing them once here and suppressing them on the cards is what keeps an
+  // expanded group readable instead of eight copies of the same two sentences.
+  const shared = items[0];
+  const sharedStep = shared.evidence_json?.first_step ?? null;
+  // A single-member group has nothing repeated to hoist, so its one card keeps
+  // its own description and step.
+  const single = items.length === 1;
+
+  return (
+    <div className="rec2-group">
+      <button type="button" className="rec2-group-h" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <Icon name={open ? "chevDown" : "chevRight"} size={15} />
+        <span className="rec2-group-t">{labelForType(type)}</span>
+        {joint !== null && joint >= MIN_VISIBLE_POINTS && (
+          <span className="rec2-pts" style={{ fontSize: 13 }}>
+            +{formatPoints(joint)} pt
+          </span>
+        )}
+        <span className="rec2-group-c">{items.length}</span>
+      </button>
+      {open && (
+        <div className="rec2-group-body">
+          {!single && (
+            <div style={{ padding: "12px 4px 2px" }}>
+              <div className="rec-problem" style={{ marginTop: 0 }}>
+                {shared.description}
+              </div>
+              {sharedStep && (
+                <div className="rec2-step">
+                  <Icon name="arrRight" size={13} />
+                  <span>
+                    <b>Empieza por aquí.</b> {sharedStep}
+                  </span>
+                </div>
+              )}
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-4)",
+                  margin: "14px 0 2px",
+                }}
+              >
+                Consultas afectadas
+              </div>
+            </div>
+          )}
+          {items.map((rec) => (
+            <RecCard key={rec.id} rec={rec} projectId={projectId} compact={!single} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function RecommendationsClient({
   recommendations,
   resolvedHistory = [],
   recentWinsCount = 0,
   projectId,
+  jointPoints = null,
+  jointPointsByType,
+  planIds = [],
+  planPoints = null,
+  domain = "",
 }: {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
   recentWinsCount?: number;
   projectId: string;
+  jointPoints?: number | null;
+  /** Joint counterfactual per recommendation type, computed server-side. */
+  jointPointsByType?: Record<string, number | null>;
+  /** Ids de las acciones del plan, en orden, seleccionadas en el servidor. */
+  planIds?: string[];
+  /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
+  planPoints?: number | null;
+  domain?: string;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
-  // Detect which type filters have data
-  const hasContent = recommendations.some((r) => categoryForType(r.recommendation_type) === "content");
   const hasTechnical = recommendations.some((r) => categoryForType(r.recommendation_type) === "technical");
-  const hasAuthority = recommendations.some((r) => categoryForType(r.recommendation_type) === "authority");
 
-  const filtered = recommendations.filter((r) => {
-    if (filter === "high") return r.priority_rank <= 3;
-    if (filter === "quick") return isQuickWin(r);
-    if (filter === "content") return categoryForType(r.recommendation_type) === "content";
-    if (filter === "technical") return categoryForType(r.recommendation_type) === "technical";
-    if (filter === "authority") return categoryForType(r.recommendation_type) === "authority";
-    return true;
-  });
+  // El plan y su techo de puntos se calculan en el servidor (selectPlan +
+  // un contrafactual conjunto sobre esas mismas acciones). Sumar aqui los
+  // deltas de cada tarjeta contaria dos veces los prompts que comparten
+  // (ADR 0017 §3), que es justo el error que se corrigio en los grupos.
+  const plan = planIds.length > 0
+    ? (planIds.map((id) => recommendations.find((r) => r.id === id)).filter(Boolean) as Recommendation[])
+    : selectPlan(recommendations);
+  const planIdSet = new Set(plan.map((r) => r.id));
+  const rest = recommendations.filter((r) => !planIdSet.has(r.id));
 
+  function handleExport() {
+    const lines: string[] = [
+      `# Plan de acción GEO — ${domain}`,
+      "",
+      `Generado por GenScore · ${new Date().toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })}`,
+      "",
+      `## Prioritarias (${plan.length})`,
+      "",
+    ];
+    const write = (rec: Recommendation, i: number) => {
+      const pts =
+        typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS
+          ? ` (+${formatPoints(rec.potentialPoints)} pt potenciales)`
+          : "";
+      lines.push(`${i + 1}. **${rec.title}**${pts}`);
+      lines.push(`   ${rec.description}`);
+      const step = rec.evidence_json?.first_step;
+      if (step) lines.push(`   Empieza por aquí: ${step}`);
+      lines.push("");
+    };
+    plan.forEach(write);
+    if (rest.length > 0) {
+      lines.push(`## Resto (${rest.length})`, "");
+      rest.forEach(write);
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `plan-geo-${domain || "genscore"}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // "Todas" is exactly that: every active recommendation, including the ones
+  // already shown above as priority actions.
+  //
+  // "Alta prioridad" returns THE PLAN — the same three cards shown above, not a
+  // separate impact×confidence selection. Two different answers to "what is
+  // high priority here?" on one screen is the contradiction this redesign set
+  // out to remove, and it had crept back in through the filter (founder
+  // review). Repetition is fine; disagreement is not.
+  const filtered =
+    filter === "high"
+      ? plan
+      : recommendations.filter((r) =>
+          filter === "technical" ? categoryForType(r.recommendation_type) === "technical" : true,
+        );
+
+  // Four filters, no more (founder review). "Victorias rápidas", "Contenido" y
+  // "Autoridad" salieron: con las categorías ya visibles como acordeones en la
+  // lista, duplicaban la misma navegación en dos sitios distintos.
   const tabs: [FilterMode, string][] = [
     ["all", "Todas"],
     ["high", "Alta prioridad"],
-    ["quick", "Victorias rápidas"],
-    ...(hasContent ? [["content", "Contenido"] as [FilterMode, string]] : []),
     ...(hasTechnical ? [["technical", "Técnico"] as [FilterMode, string]] : []),
-    ...(hasAuthority ? [["authority", "Autoridad"] as [FilterMode, string]] : []),
     ...(resolvedHistory.length > 0 ? [["resolved", "Resueltas"] as [FilterMode, string]] : []),
   ];
 
@@ -872,45 +1095,88 @@ export function RecommendationsClient({
         </button>
       )}
 
-      {/* Filters */}
+      {/* 4 · The priority actions — always on top, whatever the filter, in the
+          accent treatment so the three that matter carry visible weight. They
+          are NOT removed from the list below: "Todas" means all of them, and a
+          repeat costs nothing next to the confusion of a list that silently
+          hides its three most important rows (founder review). */}
+      {plan.length > 0 && (
+        <>
+          <div className="rec2-plan">
+            {/* Sin punto final: cuando no hay cifra de puntos (una corrida de
+                confianza baja, que hoy es lo normal) el titular se quedaba en
+                "3 acciones prioritarias." y ese punto huérfano cantaba. */}
+            <div className="rec2-plan-t">
+              {plan.length} {plan.length === 1 ? "acción prioritaria" : "acciones prioritarias"}
+              {planPoints !== null && planPoints >= MIN_VISIBLE_POINTS ? `. Hasta +${formatPoints(planPoints)} puntos` : ""}
+            </div>
+          </div>
+          {plan.map((rec, i) => (
+            <RecCard key={`plan-${rec.id}`} rec={rec} projectId={projectId} priorityRank={i + 1} />
+          ))}
+        </>
+      )}
+
+      {/* 5 · Filters, directly under the priority actions. */}
+      <div className="rec2-sec">
+        <span className="rec2-sec-t">Todas las recomendaciones</span>
+        <button
+          type="button"
+          onClick={handleExport}
+          className="btn btn-ghost btn-sm"
+          style={{ padding: "5px 11px", fontSize: 12 }}
+        >
+          <Icon name="download" size={13} />
+          Exportar plan
+        </button>
+      </div>
       <div className="filters">
         <div className="seg">
           {tabs.map(([key, label]) => (
-            <button
-              key={key}
-              className={filter === key ? "on" : ""}
-              onClick={() => setFilter(key)}
-            >
+            <button key={key} className={filter === key ? "on" : ""} onClick={() => setFilter(key)}>
               {label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Cards */}
-      {filter === "resolved"
-        ? resolvedHistory.map((item) => <ResolvedHistoryCard key={item.id} item={item} />)
-        : filtered.map((rec) => <RecCard key={rec.id} rec={rec} projectId={projectId} />)}
+      {/* 6 · The list.
+          Accordions ONLY under "Todas": grouping exists to tame 20+ mixed
+          recommendations, and a filtered view is already narrow and already
+          named. Filtering to "Técnico" and then having to open an accordion
+          labelled by category to reach the actions is the same choice asked
+          twice (founder review). Filtered views list their actions directly. */}
+      {filter !== "resolved" &&
+        (filtered.length === 0 ? (
+          <div className="section-empty">
+            <div className="section-empty-title">Nada con este filtro</div>
+            <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
+          </div>
+        ) : filter === "all" ? (
+          groupByType(filtered).map(({ type, items }) => (
+            <GroupedRecs
+              key={type}
+              type={type}
+              items={items}
+              projectId={projectId}
+              jointPointsByType={jointPointsByType}
+            />
+          ))
+        ) : (
+          filtered.map((rec) => <RecCard key={`f-${rec.id}`} rec={rec} projectId={projectId} />)
+        ))}
 
-      {filter === "resolved"
-        ? resolvedHistory.length === 0 && (
-            <div className="section-empty">
-              <div className="section-empty-title">Todavía no hay recomendaciones resueltas</div>
-              <div className="section-empty-desc">
-                Aquí aparecerán las que se resuelvan solas en un escaneo futuro o que marques como hechas.
-              </div>
+      {filter === "resolved" &&
+        (resolvedHistory.length > 0 ? (
+          resolvedHistory.map((item) => <ResolvedHistoryCard key={item.id} item={item} />)
+        ) : (
+          <div className="section-empty">
+            <div className="section-empty-title">Todavía no hay nada resuelto</div>
+            <div className="section-empty-desc">
+              Aquí aparecerá lo que un escaneo confirme como resuelto y lo que marques como hecho.
             </div>
-          )
-        : filtered.length === 0 && (
-            <div className="section-empty">
-              <div className="section-empty-title">
-                No hay recomendaciones con este filtro
-              </div>
-              <div className="section-empty-desc">
-                Prueba con &ldquo;Todas&rdquo; para ver el backlog completo.
-              </div>
-            </div>
-          )}
+          </div>
+        ))}
     </>
   );
 }

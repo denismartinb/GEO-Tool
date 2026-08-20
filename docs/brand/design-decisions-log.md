@@ -10816,7 +10816,63 @@ corrige).
 
 ---
 
-## 115. Cabecera pública: badge Pro desalineado bajo el email, y flicker de "Iniciar sesión" en cada recarga (pro-badge-alignment-flickering-v4brfv, 2026-08-17)
+## 115. Rediseño de Recomendaciones — "copiloto GEO" (RECS-REDESIGN-1, fase 1, 2026-08-03)
+
+**Contexto.** Investigación previa sobre tres guías de optimización para
+motores generativos (Semrush, 2026) y un teardown completo de la pantalla
+equivalente de Otterly.AI. Conclusión principal: el fallo del mercado no es
+la falta de diagnósticos, es el exceso — listas de ~100 filas casi idénticas,
+sin primer paso, sin decir cuánto vale cada acción. El fundador revisó cuatro
+opciones de diseño y aprobó la D ("copiloto GEO"), en tres fases.
+
+**Decidido en esta fase (fase 1).**
+
+1. **Estructura de la página**, en una columna y de arriba abajo: bloqueador
+   técnico → pilares del GEO Score → plan de acciones prioritarias → resto
+   agrupado → filtros. Móvil primero; los breakpoints solo ensanchan la
+   columna, nunca reordenan.
+2. **Repintado v3** con el patrón de zonas (`.rec2-scope`), anchos del
+   estándar de consola (460 / 640 ≥900 / 1200 ≥1200 / 1280 ≥1600) fijado en
+   §5/§8 — deuda que este documento dejaba explícitamente pendiente "cuando le
+   toque su propio rediseño".
+3. **Densidad.** Fuera de la tarjeta plegada: el pill de rango, la etiqueta de
+   tipo interno ("Perseguir fuentes de citación") y el trío de medidores
+   impacto/esfuerzo/confianza. Los tres qualifiers siguen existiendo, dentro
+   del detalle expandido. La tarjeta plegada queda en tres cosas: qué hacer,
+   por qué y el primer paso.
+4. **Cabecera.** Eliminada la fila de metadatos (prompts / competidores /
+   escaneos / score): repetía el Overview y empujaba la primera acción real
+   fuera de la pantalla. Queda título + fecha de escaneo.
+5. **Puntos potenciales en la propia página.** Ya existían (ADR 0017) pero solo
+   se renderizaban en Oportunidades del Overview. Con el fallback honesto
+   intacto: sin número cuantificable o con confianza baja, se muestra impacto
+   cualitativo, nunca una cifra inventada.
+6. **Agrupación en presentación, no en el motor.** Las repeticiones del mismo
+   tipo colapsan en una fila con contador. Deliberadamente NO se fusionan en
+   el motor: eso cambiaría el `dedupe_key` de cada hueco y las claves por
+   prompt son justamente lo que permite resolverlos de uno en uno (RECS-3).
+7. **Prioridad unificada.** El filtro "Alta prioridad" pasa a usar el mismo
+   criterio absoluto que la badge (impacto × confianza). Antes convivían dos
+   definiciones: la badge absoluta y un `priority_rank <= 3` posicional, que
+   se contradecían en la misma pantalla.
+8. **"Exportar plan"** deja de ser un botón muerto: descarga el plan en
+   Markdown, con el primer paso de cada acción.
+9. **Bloqueador técnico.** Si la auditoría web detecta crawlers de IA
+   bloqueados, se muestra por encima de todo lo demás: mientras siga así, el
+   trabajo de contenido no puede rendir en ese motor.
+
+**Pendiente (fases 2 y 3, aprobadas pero no implementadas).** Fase 2: estado
+persistente "hecha / en curso" y veredicto post-escaneo con puntos realmente
+recuperados — requiere migración de schema y por tanto aprobación explícita
+propia. Fase 3: chip de pilar por acción (mapeo regla→pilar).
+
+**Roto conocido, no tocado aquí.** Los tokens `--p-high/--p-med/--p-low` de
+§4 siguen sin definirse en ningún `:root`; afectan a `.rec-card-preview` del
+Overview antiguo, fuera del alcance de esta fase.
+
+---
+
+## 116. Cabecera pública: badge Pro desalineado bajo el email, y flicker de "Iniciar sesión" en cada recarga (pro-badge-alignment-flickering-v4brfv, 2026-08-17)
 
 **Origen.** El fundador reportó dos cosas con una captura de la portada en
 escritorio, ya logado: (1) en el chip de cuenta de la cabecera pública, el

@@ -39,3 +39,29 @@ paths:
 
 - `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario
   antes de cualquier escritura con service-role (patrón data-guardian C5).
+
+## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
+
+- **Repintado de zona en `.rec2-scope`**, mismo mecanismo que `.ov2-scope`/
+  `.cm2-scope`: reapunta los nombres de variable que sus descendientes ya leen,
+  nunca toca `:root`. La cabecera de la pantalla (kicker + nombre de proyecto +
+  `ScanStatePill`) va FUERA de `.rec2-scope` — sangra a los bordes con márgenes
+  negativos y quedaría recortada dentro de la columna centrada de 460px.
+- **Todo el motor emite `first_step`.** Un diagnóstico sin una primera acción
+  concreta y acotada es lo que hacía inservibles las listas de referencia
+  (Semrush, Otterly.AI) que motivaron el rediseño — no se añade un tipo de
+  recomendación nuevo sin decidir su primer paso.
+- **El hueco de fuentes se divide por familia** (`pursue_comparator_sources`,
+  `pursue_community_sources`, `pursue_media_sources`), reutilizando el
+  clasificador de Páginas citadas. Las fuentes enciclopédicas quedan **fuera a
+  propósito**: no se puede pedir a un usuario que entre en Wikipedia. Los tres
+  tipos comparten la misma mutación contrafactual `authority` que el tipo
+  original — sin lógica de scoring nueva.
+- **"Alta prioridad" es un único criterio absoluto** (impacto × confianza),
+  compartido entre la badge de la tarjeta y el filtro. No debe volver a existir
+  un segundo criterio posicional (`priority_rank <= N`) conviviendo con él en
+  la misma pantalla.
+- **`activeRun` nunca oculta recomendaciones ya existentes.** El overlay a
+  pantalla completa (`FirstScanTakeover`) sólo sustituye la pantalla cuando NO
+  hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
+  `ScanStatePill` del sticky-header, nunca tapando el backlog.

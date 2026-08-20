@@ -91,3 +91,72 @@ not exist yet. Revisit as its own small ADR once that data exists.
   rule-engine's confidence-weighted severity. Free-plan runs (≤10 prompts)
   can no longer present themselves as high-confidence samples.
 - No schema changes; everything lives in `run_scores.details_json`.
+
+---
+
+## Revisión 2026-08-04 — la confianza pasa a ser proporcional
+
+**Aprobado por el fundador durante RECS-REDESIGN-1.**
+
+### Problema
+
+La regla original hundía la confianza a `"low"` en cuanto **una sola** fila del
+escaneo fallaba al extraerse:
+
+```ts
+if (extractedResultsCount < totalResults || extractionErrorCount > 0) {
+  confidence = "low";
+} else if (totalResults >= 20 && extractionCoverage >= 0.8) {
+  confidence = "high";
+}
+```
+
+Esa segunda rama **era inalcanzable**: para llegar a ella, la guarda anterior ya
+había exigido que no fallara ninguna fila, así que `extractionCoverage` valía
+siempre 1,0 y el umbral del 0,8 no decidía nunca nada. El código aparentaba
+tolerar un 20% de fallos y en realidad toleraba cero. Un escaneo con 19 de 20
+filas limpias se calificaba exactamente igual que uno donde no se extrajo nada.
+
+La consecuencia visible: `computeRecommendationPotentialPoints` se niega a
+cuantificar una corrida de confianza baja (correctamente — sería falsa
+precisión), así que **una fila mala borraba el "+X pt" de todas las
+recomendaciones de la pantalla**. Los dos proyectos piloto reales llevaban
+permanentemente en ese estado, con la moneda central del rediseño invisible.
+
+### Decisión
+
+La confianza se mide sobre los resultados **limpios** (extraídos y sin
+`extraction_error`), de forma proporcional:
+
+```ts
+if (extractionCoverage < CLEAN_COVERAGE_FLOOR) confidence = "low";      // < 80% útil
+else if (cleanResultsCount >= 20) confidence = "high";
+else if (totalResults >= MIN_RESPONSES_FOR_BAND) confidence = "medium"; // ver nota
+```
+
+El suelo del 80% que el ADR original pretendía pasa a ser real.
+
+**Nota de reconciliación (RECS-REDESIGN-1, mergeada 2026-08-17).** Esta
+revisión se escribió en una rama que partió de antes de
+**GEO-SCORE-RELIABILITY-1 (ADR 0024, 2026-08-03)**, que subió el umbral de
+`medium` de `>= 2` a `>= MIN_RESPONSES_FOR_BAND` (10) resultados — sin verlo,
+porque la rama nunca llegó a fusionarse hasta ahora. El umbral de arriba usa
+ya la versión de ADR 0024 (por tamaño de muestra TOTAL, no de resultados
+limpios): el suelo del 80% que sí introduce esta revisión sigue aplicando a
+`"low"`/`"high"`, y el gate de tamaño de muestra de ADR 0024 sigue aplicando a
+`"medium"` — son dos protecciones ortogonales, no una sustituyendo a la otra.
+
+### Consecuencias
+
+- Una corrida con fallos aislados de extracción vuelve a poder cuantificarse,
+  siempre que además tenga las respuestas suficientes para no ser ya "low" por
+  tamaño de muestra (ADR 0024). Un escaneo de 20 respuestas aguanta hasta 4
+  filas malas antes de caer a baja.
+- Sigue habiendo suelo: por debajo del 80% útil, la confianza es baja y no se
+  muestra ninguna cifra. La protección contra la falsa precisión se conserva,
+  igual que el suelo de `MIN_RESPONSES_FOR_BAND` de ADR 0024.
+- Se persiste `clean_results_count` en `details_json`, junto a los ya
+  existentes `extracted_results_count` y `extraction_error_count`, para que la
+  diferencia sea auditable desde el propio escaneo.
+- Sin backfill, igual que el resto de este ADR: las corridas antiguas conservan
+  la confianza con la que se calcularon.

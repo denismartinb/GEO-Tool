@@ -1,3 +1,5 @@
+import { classifySourceType, type SourceType } from "@/lib/citations/source-type";
+
 type ProjectInput = {
   brand: string;
   domain: string;
@@ -124,6 +126,9 @@ const categoryByType: Record<string, RecommendationCategory> = {
   improve_citation_readiness: "authority",
   add_citation_block: "authority",
   pursue_citation_sources: "authority",
+  pursue_comparator_sources: "authority",
+  pursue_community_sources: "authority",
+  pursue_media_sources: "authority",
   address_negative_narrative: "content",
   update_stale_content: "content",
   strengthen_brand_entity_clarity: "technical",
@@ -150,7 +155,10 @@ const labelByType: Record<string, string> = {
   create_faq_section: "Crear sección de FAQ",
   increase_brand_prominence: "Aumentar prominencia de marca",
   increase_brand_visibility: "Aumentar visibilidad de marca",
-  pursue_citation_sources: "Perseguir fuentes de citación",
+  pursue_citation_sources: "Entrar en fuentes citadas",
+  pursue_comparator_sources: "Entrar en comparadores",
+  pursue_community_sources: "Entrar en comunidades",
+  pursue_media_sources: "Conseguir cobertura en medios",
   strengthen_brand_entity_clarity: "Reforzar claridad de marca",
   track_emerging_competitor: "Seguir competidor emergente",
   update_stale_content: "Actualizar contenido desactualizado"
@@ -276,12 +284,24 @@ function buildEvidenceJson(opts: {
   affected: PromptResultInput[];
   assumptions: string[];
   whyThisMatters: string;
+  /**
+   * RECS-REDESIGN-1 — the single, time-boxed first move for this gap ("Añade
+   * una tabla de precios al principio de la página. 30 min."). Every rule must
+   * supply one: the research behind this redesign (Semrush 2026 guides, the
+   * Otterly teardown) is unanimous that a diagnosis without a bounded first
+   * action is what makes a recommendations list unusable — the user reads
+   * twenty true statements and still doesn't know what to do this afternoon.
+   * Rendered as the only always-visible instruction on a collapsed card, so it
+   * has to stand on its own without the surrounding evidence.
+   */
+  firstStep: string;
   extra?: Record<string, unknown>;
   snippetSource?: "brand" | "competitor" | "none";
 }): Record<string, unknown> {
   const agg = aggregateEvidence(opts.affected, opts.snippetSource);
   return {
     rule_id: opts.ruleId,
+    first_step: opts.firstStep,
     scoring_version: opts.scoreDetails.scoring_version ?? "unknown",
     visibility_score: opts.runScore.visibility_score,
     citation_score: opts.runScore.citation_score,
@@ -486,9 +506,9 @@ function perPromptGapCards(opts: {
 
     if (!result.brand_mentioned && !hasCompetitor) {
       cards.push({
-        title: `Consigue aparecer en "${label}"`,
+        title: `Aparece en "${label}"`,
         description:
-          "Tu marca no aparece en la respuesta de IA a esta consulta y ningún competidor concreto la domina todavía. Refuerza el contenido y las señales de marca específicas para esta búsqueda.",
+          "Ni tú ni ningún competidor aparecéis en esta respuesta. Es una consulta libre: se la lleva quien publique primero la mejor respuesta.",
         rule_id: "rule_visibility_001",
         recommendation_type: "increase_brand_visibility",
         dedupeKey: `increase_brand_visibility:${stableId}`,
@@ -504,15 +524,18 @@ function perPromptGapCards(opts: {
           runScore,
           affected: [result],
           assumptions: ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
-          whyThisMatters: "No aparecer en esta consulta reduce tu visibilidad ante una intención de búsqueda concreta.",
+          whyThisMatters:
+            "Nadie ocupa todavía esta consulta. Entrar ahora es más barato que disputarla cuando un competidor ya se haya asentado.",
+          firstStep:
+            "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",
           snippetSource: "brand"
         })
       });
     } else if (result.brand_mentioned && !result.citation_found) {
       cards.push({
-        title: `Te mencionan pero no citan tu dominio en "${label}"`,
+        title: `Consigue que te citen en "${label}"`,
         description:
-          "La IA menciona tu marca en esta consulta pero no cita tu dominio como fuente. Añade un bloque factual y citable que la IA pueda referenciar directamente.",
+          "La IA te nombra en esta respuesta, pero se apoya en otras webs como fuente. Para citarte necesita un dato tuyo que pueda verificar.",
         rule_id: "rule_citations_001",
         recommendation_type: "add_citation_block",
         dedupeKey: `add_citation_block:${stableId}`,
@@ -528,7 +551,10 @@ function perPromptGapCards(opts: {
           runScore,
           affected: [result],
           assumptions: ["Una mención sin cita indica contenido que la IA conoce pero no referencia como fuente."],
-          whyThisMatters: "Que te mencionen sin citar tu dominio limita tu autoridad como fuente en esta consulta.",
+          whyThisMatters:
+            "Que te nombren sin citarte deja la autoridad en otra web. La cita es lo que convierte la mención en tráfico y en confianza.",
+          firstStep:
+            "Añade a la página que responde esta consulta un dato concreto con fecha y fuente (precio, cifra, plazo).",
           snippetSource: "none"
         })
       });
@@ -798,8 +824,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
       const impact: "high" | "medium" = entry.prompts.length >= 3 ? "high" : "medium";
       const effort: "high" | "medium" = entry.prompts.length >= 4 ? "high" : "medium";
       candidates.push({
-        title: `Recupera terreno frente a ${entry.competitor} en ${entry.prompts.length} prompts clave`,
-        description: `${entry.competitor} aparece en respuestas de IA donde tu marca está ausente. Refuerza tu posicionamiento comparativo y tu contenido específico frente a este competidor.`,
+        title: `Disputa a ${entry.competitor} ${entry.prompts.length} consultas donde no apareces`,
+        description: `${entry.competitor} sale en ${entry.prompts.length} respuestas y tú no. Publica contenido que responda esas consultas mejor y que compare con honestidad.`,
         rule_id: "rule_competitor_gap_001",
         recommendation_type: "close_competitor_gap",
         dedupeKey: `close_competitor_gap:${entry.competitor.trim().toLowerCase()}`,
@@ -815,7 +841,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           runScore,
           affected: entry.prompts,
           assumptions: [`${entry.competitor} aparece de forma recurrente en prompts donde tu marca no se menciona.`],
-          whyThisMatters: `Las respuestas de IA dominadas por ${entry.competitor} pueden desviar la decisión de compra fuera de tu marca.`,
+          whyThisMatters: `Cuando la IA responde con ${entry.competitor} y no contigo, la decisión se toma sin que llegues a estar en la lista.`,
+          firstStep: `Abre una de estas respuestas y mira qué páginas cita para ${entry.competitor}: ahí está el listón que tienes que superar.`,
           extra: { dominant_competitor: entry.competitor },
           snippetSource: "competitor"
         })
@@ -825,8 +852,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     const impact: "high" | "medium" = runScore.competitor_gap_score >= 70 ? "high" : "medium";
     const effort: "high" | "medium" = competitorNoBrand.length >= 3 ? "high" : "medium";
     candidates.push({
-      title: "Reduce la brecha frente a los competidores que mencionan los motores de IA",
-      description: "Los competidores aparecen en las respuestas de IA mientras que tu marca está ausente en prompts clave. Refuerza tus diferenciadores y tu posicionamiento comparativo.",
+      title: "Recorta la distancia con tus competidores",
+      description: "Tus competidores aparecen en respuestas donde tú no. Refuerza el contenido de las consultas donde más se repite esa ausencia.",
       rule_id: "rule_competitor_gap_001",
       recommendation_type: "close_competitor_gap",
       dedupeKey: "close_competitor_gap",
@@ -842,7 +869,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         runScore,
         affected: competitorNoBrand,
         assumptions: ["Un mayor número de menciones de competidores con la marca ausente indica un riesgo de visibilidad competitiva."],
-        whyThisMatters: "Las respuestas de IA dominadas por la competencia pueden desviar la decisión de compra fuera de tu marca.",
+        whyThisMatters: "Cuando la IA responde con tus competidores y no contigo, la decisión se toma sin que llegues a estar en la lista.",
+        firstStep: "Elige la consulta con más peso comercial de la lista y publica una página que la responda de forma directa.",
         snippetSource: "competitor"
       })
     });
@@ -857,8 +885,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   for (const entry of prominenceGaps) {
     const impact: "high" | "medium" = entry.prompts.length >= 3 ? "high" : "medium";
     candidates.push({
-      title: `${entry.competitor} aparece antes que tú en ${entry.prompts.length} respuestas donde sí te mencionan`,
-      description: `La IA te menciona, pero cita a ${entry.competitor} primero o con más prominencia en estas consultas. Refuerza tu contenido para convertirte en la referencia principal, no solo en una mención secundaria.`,
+      title: `Adelanta a ${entry.competitor}: sales después en ${entry.prompts.length} respuestas`,
+      description: `Ya te mencionan, pero la IA nombra antes a ${entry.competitor}. Aparecer primero pesa mucho más que aparecer.`,
       rule_id: "rule_prominence_001",
       recommendation_type: "increase_brand_prominence",
       dedupeKey: `increase_brand_prominence:${entry.competitor.trim().toLowerCase()}`,
@@ -876,7 +904,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         assumptions: [
           `${entry.competitor} aparece con mayor prominencia que tu marca en ${entry.prompts.length} respuestas donde ambos se mencionan.`
         ],
-        whyThisMatters: `Ser mencionado en segundo plano frente a ${entry.competitor} reduce tus probabilidades de ser la opción elegida, aunque aparezcas en la respuesta.`,
+        whyThisMatters: `Quien lee la respuesta se queda con el primer nombre. Estar detrás de ${entry.competitor} te deja fuera de la decisión aunque aparezcas.`,
+        firstStep: `Compara tu página con la de ${entry.competitor} en estas consultas: qué responde antes, con qué datos y en qué formato.`,
         extra: { dominant_competitor: entry.competitor },
         snippetSource: "brand"
       })
@@ -890,8 +919,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   const emergingCompetitors = computeEmergingCompetitors(promptResults, input.competitors, input.project.brand);
   for (const entry of emergingCompetitors) {
     candidates.push({
-      title: `La IA menciona recurrentemente a ${entry.competitor}, que no monitorizas`,
-      description: `${entry.competitor} aparece de forma recurrente en las respuestas de IA (${entry.prompts.length} consultas) sin que la tengas añadida como competidor. Añádela para monitorizar tu posición frente a ella.`,
+      title: `Añade a ${entry.competitor} como competidor`,
+      description: `La IA la nombra en ${entry.prompts.length} respuestas de tu categoría y no la estás siguiendo. Añádela y sabrás cuánto terreno te quita.`,
       rule_id: "rule_emerging_competitor_001",
       recommendation_type: "track_emerging_competitor",
       dedupeKey: `track_emerging_competitor:${entry.competitor.trim().toLowerCase()}`,
@@ -909,7 +938,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         assumptions: [
           `${entry.competitor} aparece mencionada por la IA en ${entry.prompts.length} respuestas sin estar trackeada como competidor.`
         ],
-        whyThisMatters: `Monitorizar a ${entry.competitor} te permite medir tu posición frente a un competidor real que la IA ya está citando.`,
+        whyThisMatters: `Si la IA ya la trata como alternativa a ti, te interesa medirla: hoy no aparece en ninguna de tus comparativas de competencia.`,
+        firstStep: `Añade ${entry.competitor} en la pestaña Competidores. El próximo escaneo ya la medirá.`,
         extra: { emerging_competitor: entry.competitor },
         snippetSource: "none"
       })
@@ -918,8 +948,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
 
   if (comparativePrompts.length >= 2) {
     candidates.push({
-      title: "Añade contenido comparativo para los prompts competitivos",
-      description: "Varios prompts comparativos o comerciales mencionan a competidores mientras que tu marca no aparece. Publica páginas de comparativa específicas.",
+      title: `Publica una comparativa: ${comparativePrompts.length} consultas la piden`,
+      description: "Son consultas de comparación donde salen tus competidores y tú no. La IA cita comparativas que incluyen a la competencia con honestidad.",
       rule_id: "rule_comparison_content_001",
       recommendation_type: "add_comparison_content",
       dedupeKey: "add_comparison_content",
@@ -935,7 +965,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         runScore,
         affected: comparativePrompts,
         assumptions: ["Los prompts con intención comparativa suelen premiar el contenido explícito de comparación entre competidores y tu marca."],
-        whyThisMatters: "Las páginas centradas en comparativas ayudan a recuperar visibilidad en los prompts de la fase de decisión.",
+        whyThisMatters: "Quien compara está a punto de decidir. Si la IA no encuentra tu comparativa, usa la de otro.",
+        firstStep: "Monta una tabla comparativa con criterios claros e incluye a tus competidores. Sin tabla, la IA no puede extraerla.",
         snippetSource: "competitor"
       })
     });
@@ -943,8 +974,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
 
   if (runScore.visibility_score < 60 && runScore.citation_score < 50 && informationalPrompts.length > 0) {
     candidates.push({
-      title: "Crea contenido informativo y FAQ listo para responder",
-      description: "Los prompts informativos rinden por debajo de lo esperado en visibilidad y citas. Añade bloques de FAQ o de respuesta concisos y alineados con esas preguntas.",
+      title: "Añade un bloque de preguntas y respuestas",
+      description: "Tus consultas informativas rinden por debajo. Un bloque de preguntas con respuestas de dos frases es lo que la IA extrae mejor.",
       rule_id: "rule_faq_001",
       recommendation_type: "create_faq_section",
       dedupeKey: "create_faq_section",
@@ -960,15 +991,16 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         runScore,
         affected: informationalPrompts,
         assumptions: ["Los prompts en forma de pregunta se benefician de estructuras concisas y fáciles de responder."],
-        whyThisMatters: "El contenido listo para responder aumenta su captación por la IA ante la demanda informativa."
+        whyThisMatters: "La IA construye sus respuestas con fragmentos. Cuanto más limpio sea el fragmento, más fácil es que use el tuyo.",
+        firstStep: "Coge las tres preguntas de la lista y respóndelas en tu web, cada una en dos frases, bajo un titular con la pregunta literal."
       })
     });
   }
 
   if (candidates.length < 3 && runScore.visibility_score < 50 && totalCompetitorMentions === 0) {
     candidates.push({
-      title: "Refuerza la claridad de tu marca como entidad y sus señales de categoría",
-      description: "Las menciones de marca son bajas y las señales de los competidores también son débiles. Aclara las asociaciones entre tu marca y su categoría, y los descriptores principales de la entidad.",
+      title: "Explica mejor a qué se dedica tu marca",
+      description: "La IA apenas te nombra, y tampoco a tus competidores: probablemente no tiene claro en qué categoría situarte.",
       rule_id: "rule_entity_clarity_001",
       recommendation_type: "strengthen_brand_entity_clarity",
       dedupeKey: "strengthen_brand_entity_clarity",
@@ -984,54 +1016,163 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         runScore,
         affected: brandMissing,
         assumptions: ["Señales bajas tanto de marca como de competidores pueden indicar una vinculación débil con la entidad o la categoría."],
-        whyThisMatters: "La claridad de la entidad ayuda a los modelos a asociar tu marca con las intenciones temáticas relevantes."
+        whyThisMatters: "Si la IA no sabe en qué categoría estás, no te propone como opción aunque tu web esté bien hecha.",
+        firstStep: "Revisa tu página de inicio: en la primera frase debe decir qué haces, para quién y en qué mercado."
       })
     });
   }
 
-  // Gap 8 (digital PR): the third-party sources Gemini already cites where the
-  // brand is absent — the publications worth pursuing so the model cites you too.
+  // Gap 8 (source gap): the third-party sources the AI already grounds on in
+  // prompts where the brand's domain is absent — the pages worth getting into
+  // so the model starts citing the brand too.
+  //
+  // RECS-REDESIGN-1 splits this by SOURCE FAMILY (comparator / community /
+  // media) instead of emitting one "pursue_citation_sources" card lumping all
+  // of them together. The old single card was true but unusable: getting listed
+  // on a price comparator, answering a Reddit thread and pitching a newspaper
+  // are three different jobs, for three different people, on three different
+  // timelines — merged into one card they collapse into vague "haz PR digital".
+  // Each family now gets its own card, its own first step and its own effort
+  // rating, using the classifier that already backs the Páginas citadas screen
+  // (lib/citations/source-type.ts) — no new data, no crawler.
   const citationSources = computeCitationSourceGap(promptResults, input.project.domain);
   if (citationSources.length > 0) {
-    const affectedIds = new Set<string>();
+    const byFamily = new Map<SourceType, CitationSource[]>();
     for (const source of citationSources) {
-      for (const p of source.prompts) affectedIds.add(p.id);
+      const family = classifySourceType(source.domain);
+      const bucket = byFamily.get(family) ?? [];
+      bucket.push(source);
+      byFamily.set(family, bucket);
     }
-    const affected = promptResults.filter((p) => affectedIds.has(p.id));
-    const sourceDomains = citationSources.map((source) => source.domain);
-    // RECS-2B / N2: example pages (title + url) for the sources that have one,
-    // so the asset can target a specific article instead of only a bare domain.
-    const citationPages = citationSources
-      .filter((source): source is CitationSource & { examplePage: CitationExamplePage } => source.examplePage !== null)
-      .map((source) => ({ domain: source.domain, title: source.examplePage.title, url: source.examplePage.url }));
-    const impact: "high" | "medium" = affected.length >= 4 ? "high" : "medium";
-    const topPage = citationPages[0];
-    candidates.push({
-      title: "Consigue que las fuentes que cita la IA también te citen a ti",
-      description: `La IA se apoya en fuentes de terceros (${sourceDomains.slice(0, 3).join(", ")}${sourceDomains.length > 3 ? "…" : ""}) en consultas donde tu dominio no aparece.${topPage ? ` Por ejemplo, cita "${topPage.title}" (${topPage.domain}).` : ""} Trabaja esas fuentes (relaciones públicas digitales) para que te incluyan y empieces a ser citado.`,
-      rule_id: "rule_source_gap_001",
-      recommendation_type: "pursue_citation_sources",
-      dedupeKey: "pursue_citation_sources",
-      impact,
-      effort: "high",
-      confidence: runScore.confidence,
-      source_type: "rule",
-      affectedCount: affected.length,
-      severityScore: affected.length * 12 + confWeight(runScore.confidence) * 3,
-      evidence_json: buildEvidenceJson({
+
+    // "encyclopedia" (Wikipedia and friends) is deliberately NOT actionable
+    // here: you cannot pitch yourself onto Wikipedia, and telling a user to try
+    // is advice that gets their edit reverted. Those sources stay out of the
+    // recommendation set entirely rather than becoming a card we know is bad
+    // advice.
+    const FAMILY_COPY: Partial<
+      Record<
+        SourceType,
+        {
+          type: string;
+          ruleId: string;
+          title: (n: number) => string;
+          description: (domains: string[]) => string;
+          why: string;
+          firstStep: (top: CitationExamplePage & { domain: string } | null, domains: string[]) => string;
+          effort: "low" | "medium" | "high";
+        }
+      >
+    > = {
+      comparator: {
+        type: "pursue_comparator_sources",
+        ruleId: "rule_source_gap_comparator_001",
+        title: (n) => (n === 1 ? "Entra en el comparador que cita la IA" : `Entra en los ${n} comparadores que cita la IA`),
+        description: (domains) =>
+          `La IA se apoya en ${domains.slice(0, 3).join(", ")} para responder, y tu marca no está en esas fichas. Aparecer en un comparador te mete en todas las consultas que lo citan.`,
+        why: "Los comparadores son la fuente más citada en consultas de decisión. Estar fuera de la tabla equivale a no existir en ellas.",
+        firstStep: (top, domains) =>
+          top
+            ? `Escribe a ${top.domain} para que te incluyan en "${top.title}". Es la página concreta que la IA está citando.`
+            : `Escribe a ${domains[0]} pidiendo que te incluyan en su comparativa, con tus datos verificables.`,
+        effort: "medium"
+      },
+      community: {
+        type: "pursue_community_sources",
+        ruleId: "rule_source_gap_community_001",
+        title: (n) => (n === 1 ? "Participa en la comunidad que cita la IA" : `Participa en las ${n} comunidades que cita la IA`),
+        description: (domains) =>
+          `La IA cita conversaciones de ${domains.slice(0, 3).join(", ")} donde tu marca no sale. Una respuesta útil y honesta ahí acaba en la respuesta de la IA.`,
+        why: "Los foros pesan mucho en las respuestas de IA porque se leen como opinión real de usuarios, no como marketing.",
+        firstStep: (top, domains) =>
+          top
+            ? `Entra en "${top.title}" (${top.domain}) y responde aportando datos concretos, sin tono comercial.`
+            : `Busca el hilo más citado en ${domains[0]} y responde aportando datos concretos, sin tono comercial.`,
+        effort: "low"
+      },
+      media: {
+        type: "pursue_media_sources",
+        ruleId: "rule_source_gap_media_001",
+        title: (n) => (n === 1 ? "Consigue cobertura en el medio que cita la IA" : `Consigue cobertura en ${n} medios que cita la IA`),
+        description: (domains) =>
+          `La IA se apoya en ${domains.slice(0, 3).join(", ")} y ninguno te menciona. Una sola pieza en estos medios entra en varias respuestas a la vez.`,
+        why: "Un medio citado por la IA reparte autoridad a todas las marcas que nombra. Hoy ese reparto se hace sin ti.",
+        firstStep: (top, domains) =>
+          top
+            ? `Ofrece a ${top.domain} un dato propio o un caso real para una pieza como "${top.title}".`
+            : `Ofrece a ${domains[0]} un dato propio o un caso real que puedan publicar.`,
+        effort: "high"
+      },
+      unknown: {
+        type: "pursue_citation_sources",
         ruleId: "rule_source_gap_001",
-        scoreDetails,
-        runScore,
-        affected,
-        assumptions: [
-          "Las fuentes que la IA cita de forma recurrente sin incluir tu marca son objetivos de relaciones públicas digitales."
-        ],
-        whyThisMatters:
-          "Entrar en las fuentes que los motores de IA ya citan aumenta directamente tu probabilidad de ser referenciado.",
-        extra: { source_domains: sourceDomains, citation_pages: citationPages },
-        snippetSource: "none"
-      })
-    });
+        title: (n) => (n === 1 ? "Consigue que la web que cita la IA te mencione" : `Consigue que ${n} webs que cita la IA te mencionen`),
+        description: (domains) =>
+          `La IA se apoya en ${domains.slice(0, 3).join(", ")} en consultas donde tu dominio no aparece. Trabaja esas webs para que empiecen a citarte.`,
+        why: "Entrar en las webs que los motores ya citan es la vía más corta para que empiecen a citarte a ti.",
+        firstStep: (top, domains) =>
+          top
+            ? `Revisa "${top.title}" (${top.domain}) y contacta con quien la publica ofreciendo información útil.`
+            : `Revisa ${domains[0]} y contacta con quien la publica ofreciendo información útil.`,
+        effort: "high"
+      }
+    };
+
+    for (const [family, sources] of byFamily) {
+      const copy = FAMILY_COPY[family];
+      if (!copy) continue; // encyclopedia — intentionally not actionable
+
+      const affectedIds = new Set<string>();
+      for (const source of sources) {
+        for (const p of source.prompts) affectedIds.add(p.id);
+      }
+      const affected = promptResults.filter((p) => affectedIds.has(p.id));
+      const sourceDomains = sources.map((s) => s.domain);
+      // RECS-2B / N2: example pages (title + url) for the sources that have
+      // one, so the action can target a specific article, not a bare domain.
+      const citationPages = sources
+        .filter((s): s is CitationSource & { examplePage: CitationExamplePage } => s.examplePage !== null)
+        .map((s) => ({ domain: s.domain, title: s.examplePage.title, url: s.examplePage.url }));
+      // A citation's title is sometimes just the domain again ("ocu.org"),
+      // which turns the first step into «Escribe a ocu.org para que te incluyan
+      // en "ocu.org"» — nonsense, and it was on screen in the Movistar pilot.
+      // Only quote a title that actually names a page.
+      const usefulPage =
+        citationPages.find((page) => {
+          const title = page.title.trim().toLowerCase();
+          const domain = normalizeDomainValue(page.domain);
+          return title.length > 3 && title !== domain && title !== page.domain.trim().toLowerCase();
+        }) ?? null;
+      const topPage = usefulPage;
+      const impact: "high" | "medium" = affected.length >= 4 ? "high" : "medium";
+
+      candidates.push({
+        title: copy.title(sources.length),
+        description: copy.description(sourceDomains),
+        rule_id: copy.ruleId,
+        recommendation_type: copy.type,
+        dedupeKey: copy.type,
+        impact,
+        effort: copy.effort,
+        confidence: runScore.confidence,
+        source_type: "rule",
+        affectedCount: affected.length,
+        severityScore: affected.length * 12 + confWeight(runScore.confidence) * 3,
+        evidence_json: buildEvidenceJson({
+          ruleId: copy.ruleId,
+          scoreDetails,
+          runScore,
+          affected,
+          assumptions: [
+            `${sourceDomains.slice(0, 3).join(", ")} aparecen citadas de forma recurrente en consultas donde tu dominio no se cita.`
+          ],
+          whyThisMatters: copy.why,
+          firstStep: copy.firstStep(topPage, sourceDomains),
+          extra: { source_domains: sourceDomains, citation_pages: citationPages, source_family: family },
+          snippetSource: "none"
+        })
+      });
+    }
   }
 
   // Gap 9 (negative narrative): one card summarising all prompts where the AI
@@ -1047,9 +1188,12 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     candidates.push({
       title:
         drivers.length > 0
-          ? `Contrarresta la percepción negativa sobre ${drivers[0]} en las respuestas de IA`
-          : `Contrarresta la percepción negativa de tu marca en las respuestas de IA`,
-      description: `Las respuestas de IA expresan sentimiento negativo o mixto sobre tu marca${themeSuffix} en ${negativePrompts.length} ${negativePrompts.length === 1 ? "consulta" : "consultas"}. Publica contenido con datos y casos reales que corrijan esa narrativa.`,
+          ? `Responde a lo que la IA dice sobre ${drivers[0]}`
+          : `Responde a la imagen negativa que da la IA de ti`,
+      description:
+        drivers.length > 0
+          ? `La IA habla de tu marca en tono negativo o dudoso en ${negativePrompts.length} ${negativePrompts.length === 1 ? "respuesta" : "respuestas"}, y vuelve siempre a lo mismo:${themeSuffix.replace(" sobre", "")}.`
+          : `La IA habla de tu marca en tono negativo o dudoso en ${negativePrompts.length} ${negativePrompts.length === 1 ? "respuesta" : "respuestas"}.`,
       rule_id: "rule_negative_narrative_001",
       recommendation_type: "address_negative_narrative",
       dedupeKey: "address_negative_narrative",
@@ -1070,7 +1214,11 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
             : `La IA expresa sentimiento negativo o mixto sobre la marca en ${negativePrompts.length} respuestas.`
         ],
         whyThisMatters:
-          "Una percepción negativa recurrente en las respuestas de IA erosiona la credibilidad de la marca en la fase de decisión.",
+          "La IA repite lo que encuentra escrito. Si nadie ha publicado tu versión con datos, la única que existe es la del descontento.",
+        firstStep:
+          drivers.length > 0
+            ? `Publica una página que explique tu posición sobre ${drivers[0]} con datos concretos y verificables.`
+            : "Publica una página que responda con datos concretos a la objeción que aparece en estas respuestas.",
         snippetSource: "brand",
         extra: { sentiment_drivers: drivers }
       })
@@ -1091,8 +1239,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
       .filter((s): s is string => s !== null)
       .slice(0, 4);
     candidates.push({
-      title: `Actualiza la información de tu marca que la IA cita como desactualizada`,
-      description: `La IA señala información desactualizada sobre tu marca en ${stalePrompts.length} ${stalePrompts.length === 1 ? "consulta" : "consultas"}. Publica contenido actualizado con datos actuales para que los modelos reflejen la situación real.`,
+      title: "Actualiza los datos que la IA da por viejos",
+      description: `La IA cuenta cosas desactualizadas sobre tu marca en ${stalePrompts.length} ${stalePrompts.length === 1 ? "respuesta" : "respuestas"}. Publica la versión actual con fecha visible.`,
       rule_id: "rule_freshness_001",
       recommendation_type: "update_stale_content",
       dedupeKey: "update_stale_content",
@@ -1109,7 +1257,9 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         affected: stalePrompts,
         assumptions: [`La IA cita información desactualizada sobre la marca en ${stalePrompts.length} respuestas.`],
         whyThisMatters:
-          "La información desactualizada en las respuestas de IA genera desconfianza y puede costar conversiones cuando el usuario contrasta los datos.",
+          "Un dato viejo en la respuesta hace dudar de todo lo demás, y la IA prefiere citar páginas con fecha reciente.",
+        firstStep:
+          "Actualiza la página donde vive ese dato y deja visible la fecha de actualización. Es de lo más rápido que puedes hacer.",
         snippetSource: "brand",
         extra: { stale_signals: staleSignals }
       })
@@ -1125,8 +1275,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   const hasOpenGap = brandMissing.length > 0 || promptResults.some((p) => p.brand_mentioned && !p.citation_found);
   if (winningPrompts.length >= 2 && hasOpenGap) {
     candidates.push({
-      title: `Replica el patrón que ya funciona en ${winningPrompts.length} consultas`,
-      description: `La IA ya te menciona y te cita, sin narrativa negativa, en ${winningPrompts.length} consultas. Identifica qué tienen en común esas respuestas y aplica el mismo enfoque de contenido a las consultas donde todavía no apareces.`,
+      title: `Repite lo que ya te funciona en ${winningPrompts.length} consultas`,
+      description: `En estas consultas la IA te menciona y te cita. Mira qué tienen en común esas páginas y aplica la misma fórmula donde todavía no apareces.`,
       rule_id: "rule_amplify_positive_001",
       recommendation_type: "amplify_positive_pattern",
       dedupeKey: "amplify_positive_pattern",
@@ -1143,7 +1293,9 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         affected: winningPrompts,
         assumptions: [`La IA te menciona y cita, sin narrativa negativa, en ${winningPrompts.length} consultas.`],
         whyThisMatters:
-          "Entender por qué estas respuestas ya funcionan permite replicar ese mismo patrón de contenido en las consultas donde todavía no apareces.",
+          "Ya tienes la receta probada en tu propio dominio. Copiarla es más barato y más seguro que inventar un formato nuevo.",
+        firstStep:
+          "Abre las páginas que la IA cita en estas consultas y anota el patrón: formato, longitud y qué dato concreto usan.",
         snippetSource: "brand"
       })
     });
