@@ -63,7 +63,7 @@ export function LegalPageShell({
             <Link href="/" className="lp-logo">
               <BrandLogo size={19} />
             </Link>
-            <div className="links">
+            <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
               <Link href="/pricing">Precios</Link>
@@ -79,7 +79,7 @@ export function LegalPageShell({
               ))}
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
-            </div>
+            </nav>
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>

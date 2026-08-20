@@ -258,7 +258,7 @@ export function LandingPage() {
             <div className="lp-logo">
               <BrandLogo size={19} />
             </div>
-            <div className="links">
+            <nav className="links" aria-label="Pie de página">
               <a href="#producto">Producto</a>
               <a href="#como">Cómo funciona</a>
               <a href="#recomendaciones">Recomendaciones</a>
@@ -276,7 +276,7 @@ export function LandingPage() {
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/cookies">Cookies</Link>
               <Link href="/terminos">Términos</Link>
-            </div>
+            </nav>
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
