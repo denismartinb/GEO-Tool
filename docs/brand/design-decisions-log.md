@@ -11688,6 +11688,28 @@ must have an entry here") y `deliverable.test.ts` falla si una regla nueva
 llega sin decidir qué entregable promete su botón. Mismo mecanismo que la
 regla de ruta ya imponía para `first_step`.
 
+**Dos de los tres cambios son invisibles para el `ux-pilot`, y por eso se
+prueban por render.** La pasada de PR #453 dio PASS con 68 pantallas en tres
+anchuras, y aun así no vio ni el chip de control ni la insignia de estado:
+
+- El **chip de control** sólo se pinta en los tipos `third_party`/`in_app`, y
+  el proyecto del piloto tenía tres recomendaciones, las tres de su propia
+  web. Ningún tipo externo, ninguna captura.
+- La **insignia de estado** sólo existe cuando hay una propuesta generada, y
+  generar una es una **escritura**. El piloto permanente es de solo lectura por
+  diseño, así que no puede alcanzar ese estado en ninguna pasada — ni hoy ni
+  nunca, no es cuestión de repetir la pasada con más datos.
+
+Es el mismo fallo del 2026-08-02 (un rediseño entero aprobado con capturas de
+un estado vacío), y la respuesta no es aflojar el listón sino moverlo:
+`recommendations-client.test.tsx` renderiza `RecCard` y `SolutionPanel` de
+verdad con `react-dom/server` y asegura el contenido —el CTA por tipo, el chip
+presente en `third_party`, **ausente** en `own_site`, y la cuenta de huecos—.
+El aspecto sigue siendo del piloto; la existencia ya no depende de que el
+proyecto del piloto tenga por casualidad el dato adecuado. Lo que el piloto SÍ
+verificó, a 1280 px: el botón de una recomendación `increase_brand_visibility`
+dice «Generar brief de contenido».
+
 **Pendiente, no roto.** Ninguna recomendación apunta todavía a una URL
 concreta de la web del cliente: el puente existe (el mapa de cobertura mapea
 `promptId → URLs propias verificadas`) pero es Pro+, nace apagado

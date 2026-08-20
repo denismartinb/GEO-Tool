@@ -166,7 +166,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
  * ready-to-paste example artifact with its own copy button. All content is
  * already sanitized server-side; it is rendered as plain React text.
  */
-function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
+export function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
   // RECS-ACCION-1 — cuánto trabajo queda antes de poder publicar esto. NO es
   // una estimación: el prompt de reescritura obliga a marcar con un
   // placeholder todo valor que no esté en la evidencia en vez de inventarlo,

@@ -74,6 +74,13 @@ paths:
   regex excluye comillas y llaves a propósito: los JSON-LD llevan arrays, y
   contarlos como datos que faltan volvería la etiqueta ruido justo en el
   artefacto más pegable que se genera.
+- **Lo que el piloto no puede alcanzar se prueba por render.** El chip de
+  control (sólo en tipos externos) y la insignia de estado (sólo tras una
+  escritura, que el piloto permanente no hace) son estructuralmente invisibles
+  para `ux-pilot`. `recommendations-client.test.tsx` los renderiza con
+  `react-dom/server` y asegura su contenido — incluida la **ausencia** del chip
+  en `own_site`, que es lo que le da significado. No se retira ese test para
+  «ya lo mira el piloto»: no puede (log §125).
 - **El hueco de fuentes se divide por familia** (`pursue_comparator_sources`,
   `pursue_community_sources`, `pursue_media_sources`), reutilizando el
   clasificador de Páginas citadas. Las fuentes enciclopédicas quedan **fuera a
