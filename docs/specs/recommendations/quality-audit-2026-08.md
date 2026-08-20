@@ -203,7 +203,7 @@ más honesta que la atribución por puntuación global.
 
 | Fase | Qué | Estado |
 |---|---|---|
-| **A** | Integridad del artefacto pegable (F1) | **implementada** (log §122) |
+| **A** | Integridad del artefacto pegable (F1) | **implementada** (log §124) |
 | **B** | Contexto real del sitio en el generador (F2, F3) | abierta — necesita Task Intake |
 | **C** | Anti-relleno, no-autopromoción, grafía de marca (F4, F5, F6) | abierta |
 | **D** | Bucle de cierre por prompt afectado (F7) | abierta |

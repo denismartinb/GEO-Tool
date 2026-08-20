@@ -1,6 +1,6 @@
 /**
  * Integridad de un artefacto pegable de una solución generada
- * (RECS-USEFULNESS-1 Fase A, log §122).
+ * (RECS-USEFULNESS-1 Fase A, log §124).
  *
  * **Por qué existe.** El 2026-08-20 el fundador ejecutó las recomendaciones que
  * GenScore emite para el propio `genscore.es` y el bloque JSON-LD que la

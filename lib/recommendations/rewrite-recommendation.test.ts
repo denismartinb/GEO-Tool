@@ -527,7 +527,7 @@ describe("rewriteRecommendationCore", () => {
   it("descarta el artefacto cortado en vez de persistirlo, y conserva el resto del plan", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     // El bloque real del incidente del 2026-08-20: un `FAQPage` que se queda
-    // sin cerrar porque el modelo llegó a su presupuesto (log §122).
+    // sin cerrar porque el modelo llegó a su presupuesto (log §124).
     const jsonLdCortado =
       '<script type="application/ld+json">\n{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Cómo optimizo la web?","acceptedAnswer":{"@type":"Answer","text":"Utiliza HTML se';
     rewriteRecommendationMock.mockResolvedValue({
