@@ -11182,6 +11182,37 @@ escaneo/auditoría nuevo en la pantalla.
 2026-08-07 (la misma cookie ya usada como recuerdo de página); Task Intake
 aprobado por el fundador, 2026-08-20.
 
+**Addendum (2026-08-20, mismo PR): el pilote automático no vio la
+propagación, y le faltaba un journey para poder verla.** La pasada
+automática contra el preview del PR #443 devolvió `PILOT PASS` en las 65
+pantallas — incluida `domains`, en las tres anchuras — pero el agente
+`ux-pilot`, al revisar las capturas de verdad antes de dar la fase por
+cerrada, encontró que ni una sola tocaba la propagación al sidebar: el
+barrido genérico (`tests/pilot/support/explore.ts`) descarta cualquier
+control con `href` real como "navega fuera", y cada `.dm2-card` de la
+rejilla lleva uno (`?active=<id>`) aunque en la práctica se queda en la
+misma pantalla. Sin un journey dedicado, cada pasada futura del piloto
+seguiría reportando un ✅ vacío sobre el comportamiento que esta misma fase
+introduce — el mismo patrón que ya forzó `recommendations-interactions.spec.ts`
+para Recomendaciones. Se añadió
+`tests/pilot/journeys/domains-selection.spec.ts`: selecciona una tarjeta
+que no sea el dominio activo y comprueba que tanto la portada como
+`.proj-switch .proj-name` del sidebar cambian al nuevo dominio sin pulsar
+"Ver visión general", y que el enlace de Prompts del sidebar ya apunta al
+proyecto seleccionado. Estrictamente de lectura, en `tests/pilot/journeys/`
+(no `write/` ni `scan/`), así que entra en la pasada automática de cada
+deploy sin necesitar su propia excepción.
+
+**Pendiente.** Este journey nuevo no se ha podido ejecutar contra un
+preview real desde esta sesión (sin credenciales de la cuenta piloto ni
+despliegue accesible aquí) — se valida con `tsc`/`eslint` limpios y su
+lectura contra los selectores reales del DOM (`.dm2-card`, `.dm2-hero
+.dm2-name`, `.proj-switch .proj-name`, `.nav-item[href*="/prompts"]`,
+verificados contra `app/dashboard/domains/page.tsx` y
+`components/sidebar.tsx` de este mismo commit), pero no con una corrida
+real. La primera pasada del pilote automático sobre el push que lo añade
+es la que lo confirma de verdad.
+
 ---
 
 ## Cómo mantener este documento
