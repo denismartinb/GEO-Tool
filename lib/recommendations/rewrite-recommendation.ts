@@ -148,7 +148,7 @@ function withTimeout<T>(promise: PromiseLike<T>, stage: string): Promise<T> {
  *
  * **Ya no recorta.** Recortaba con un `.slice(0, 1200)` ciego sobre lo que
  * podía ser un bloque JSON-LD, y eso es lo que puso medio schema sin cerrar
- * detrás de un botón «Copiar» (log §125). Quién puede recortarse y quién debe
+ * detrás de un botón «Copiar» (log §126). Quién puede recortarse y quién debe
  * descartarse entero lo decide `checkPasteableArtifact`, que sí sabe qué clase
  * de artefacto tiene delante.
  */
@@ -451,7 +451,7 @@ export async function rewriteRecommendationCore({
     // ejemplo menos) y para nosotros sería invisible también sin esto. Es el
     // único sitio desde el que se puede ver si el tope de longitud sigue
     // cortando artefactos o si el modelo devuelve JSON roto por su cuenta
-    // (log §125); sin la traza, la Fase B se diseñaría a ciegas.
+    // (log §126); sin la traza, la Fase B se diseñaría a ciegas.
     if (dropped.length > 0) {
       console.warn(`${LOG_PREFIX} artifact_dropped`, {
         project_id: projectId,

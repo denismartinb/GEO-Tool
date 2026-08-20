@@ -35,7 +35,7 @@ paths:
 - Los límites de generación son **contadores de gasto real**, no decoración:
   respetar el presupuesto por proyecto y día con su `generation_type` propio.
 
-## Artefactos pegables (RECS-USEFULNESS-1 Fase A, log §125)
+## Artefactos pegables (RECS-USEFULNESS-1 Fase A, log §126)
 
 - **Un artefacto de código no se trunca nunca.** JSON-LD o marcado: o cabe
   entero y es sintácticamente válido, o se descarta. Medio schema no falla al

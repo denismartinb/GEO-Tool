@@ -182,7 +182,7 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
     .map((item) => ({ label: item.label.trim(), content: item.content.trim() }))
     // El tope de aquí es sólo un cortafuegos contra una respuesta desbocada;
     // quién puede recortarse y quién se descarta entero lo decide
-    // `checkPasteableArtifact` en el saneado del servidor (log §125). Antes
+    // `checkPasteableArtifact` en el saneado del servidor (log §126). Antes
     // valía 2000 y descartaba en silencio artefactos de código válidos.
     .filter((item) => item.label.length > 0 && item.content.length > 0 && item.content.length <= CODE_ARTIFACT_MAX)
     .slice(0, MAX_GENERATED_EXAMPLES);

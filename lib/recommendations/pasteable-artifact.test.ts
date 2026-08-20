@@ -13,7 +13,7 @@ import {
  * botón «Copiar» el 2026-08-20 para el propio proyecto `genscore.es`,
  * reproducido tal cual llegó — cortado dentro de la segunda respuesta, sin
  * cerrar el objeto ni el `</script>`. 1.182 caracteres contra un tope de 1.200
- * (log §125).
+ * (log §126).
  */
 const ARTEFACTO_DEL_INCIDENTE = `<script type="application/ld+json">
 {
