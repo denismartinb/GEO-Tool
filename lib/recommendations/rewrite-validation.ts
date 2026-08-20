@@ -67,7 +67,13 @@ export type RewriteValidationInput = {
   description: string;
   /** Competitor names already anchored to THIS recommendation's evidence (mentioned_competitors + dominant_competitor, if any). */
   allowedCompetitors: string[];
-  /** Domains already anchored to THIS recommendation's evidence (citation_domains). */
+  /**
+   * Domains already anchored to THIS recommendation's evidence — the FULL
+   * anchored set (`lib/recommendations/anchored-domains.ts`), which is what the
+   * prompt's own allowlist is built from. Passing anything narrower than what
+   * the prompt offered is how a rewrite gets rejected for obeying its
+   * instructions.
+   */
   allowedDomains: string[];
   /** The project's FULL tracked-competitor roster — used to catch a swap to a real-but-unanchored competitor, not just a fully invented name. */
   trackedCompetitors: string[];
@@ -76,7 +82,20 @@ export type RewriteValidationInput = {
 
 export type RewriteValidationResult =
   | { valid: true }
-  | { valid: false; reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned" };
+  | {
+      valid: false;
+      reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned";
+      /**
+       * The exact term that tripped the guard. Logged (never shown to the
+       * user) so a rejection can be diagnosed without re-running anything: a
+       * bare `reason` says the rewrite named something unanchored, which is
+       * one step short of the only question worth asking — WHAT did it name?
+       * That step cost a full investigation on 2026-08-20, when two cards
+       * failed with the same opaque message for what may not be the same
+       * cause.
+       */
+      offending: string;
+    };
 
 export function validateRewriteAgainstEvidence(input: RewriteValidationInput): RewriteValidationResult {
   const rawText = `${input.title} ${input.description}`;
@@ -87,7 +106,7 @@ export function validateRewriteAgainstEvidence(input: RewriteValidationInput): R
     const normalizedCompetitor = normalize(competitor);
     if (!normalizedCompetitor || allowedCompetitors.has(normalizedCompetitor)) continue;
     if (mentionsTerm(normalizedText, normalizedCompetitor)) {
-      return { valid: false, reason: "untracked_competitor_mentioned" };
+      return { valid: false, reason: "untracked_competitor_mentioned", offending: competitor };
     }
   }
 
@@ -98,7 +117,7 @@ export function validateRewriteAgainstEvidence(input: RewriteValidationInput): R
   for (const match of domainMatches) {
     if (!looksLikeDomain(match)) continue;
     if (!allowedDomains.has(normalizeDomain(match))) {
-      return { valid: false, reason: "unanchored_domain_mentioned" };
+      return { valid: false, reason: "unanchored_domain_mentioned", offending: normalizeDomain(match) };
     }
   }
 

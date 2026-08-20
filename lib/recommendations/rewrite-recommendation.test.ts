@@ -368,6 +368,9 @@ describe("rewriteRecommendationCore", () => {
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
     expect(result.error).not.toContain("raw provider failure with secrets");
+    // Each failure branch says something different: five branches sharing one
+    // sentence is what made the 2026-08-20 report impossible to triage.
+    expect(result.error).toContain("El motor de IA");
     expect(getInserted()).toHaveLength(0);
 
     errorSpy.mockRestore();
@@ -388,6 +391,8 @@ describe("rewriteRecommendationCore", () => {
     });
 
     expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    expect(result.error).toContain("El motor de IA");
     expect(getInserted()).toHaveLength(0);
     expect(validateRewriteAgainstEvidenceMock).not.toHaveBeenCalled();
   });
@@ -400,7 +405,11 @@ describe("rewriteRecommendationCore", () => {
       steps: ["Menciona a Ikea sin permiso"],
       examples: []
     });
-    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: false, reason: "untracked_competitor_mentioned" });
+    validateRewriteAgainstEvidenceMock.mockReturnValue({
+      valid: false,
+      reason: "untracked_competitor_mentioned",
+      offending: "Ikea"
+    });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { client } = makeFakeSupabase({
       project: PROJECT,
@@ -418,6 +427,15 @@ describe("rewriteRecommendationCore", () => {
     });
 
     expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    // A discarded rewrite reads differently from a provider failure, and the
+    // term that tripped the guard is logged (never shown) so the next report
+    // arrives already diagnosed.
+    expect(result.error).toContain("no están en la evidencia");
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("rejected"),
+      expect.objectContaining({ reason: "untracked_competitor_mentioned", offending: "Ikea" })
+    );
     expect(getInserted()).toHaveLength(0);
 
     warnSpy.mockRestore();
@@ -476,6 +494,8 @@ describe("rewriteRecommendationCore", () => {
     });
 
     expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    expect(result.error).toContain("no se ha podido guardar");
 
     errorSpy.mockRestore();
   });
@@ -595,5 +615,64 @@ describe("rewriteRecommendationCore", () => {
     expect(payload.sanitized_at).toBeTruthy();
     const sanitized = JSON.parse(payload.sanitized_content as string) as GeneratedSolution;
     expect(sanitized).toEqual(REWRITE);
+  });
+
+  it("anchors the prompt and the guard to the SAME domain set when the cited pages fall outside citation_domains", async () => {
+    // The founder's real GenScore card (pursue_citation_sources, 2026-08-20):
+    // citation_domains is an 8-item aggregate over the affected prompts while
+    // citation_pages/source_domains come from the qualifying citation sources,
+    // so three of four cited pages sat outside it. The prompt asked the model
+    // to name those exact pages and the guard then rejected the answer as an
+    // unanchored domain — the rewrite could never succeed on that card.
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    const sourceGapRecommendation = {
+      ...RULE_RECOMMENDATION,
+      recommendation_type: "pursue_citation_sources",
+      evidence_json: {
+        ...EVIDENCE,
+        citation_domains: ["example.com", "keyword.com"],
+        source_domains: ["example.com", "keyword.com"],
+        citation_pages: [
+          { domain: "dageno.ai", title: "dageno.ai", url: "https://dageno.ai/herramientas" },
+          { domain: "blog.hubspot.es", title: "hubspot.es", url: "https://blog.hubspot.es/marketing/geo" }
+        ]
+      }
+    };
+    rewriteRecommendationMock.mockResolvedValue(REWRITE);
+    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+    const { client } = makeFakeSupabase({
+      project: PROJECT,
+      recommendation: sourceGapRecommendation,
+      competitors: []
+    });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: sourceGapRecommendation.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(true);
+
+    const anchored = ["example.com", "keyword.com", "dageno.ai", "blog.hubspot.es"];
+    const geminiArgs = rewriteRecommendationMock.mock.calls[0][0];
+    const validationArgs = validateRewriteAgainstEvidenceMock.mock.calls[0][0];
+    expect(geminiArgs.citationDomains).toEqual(anchored);
+    expect(validationArgs.allowedDomains).toEqual(anchored);
+    // The invariant, stated directly: what the model is allowed to write and
+    // what it is judged against are the same set.
+    expect(validationArgs.allowedDomains).toEqual(geminiArgs.citationDomains);
+    // Every page the prompt offers is inside that set.
+    for (const page of sourceGapRecommendation.evidence_json.citation_pages) {
+      expect(anchored).toContain(page.domain);
+    }
+
+    // The set actually used is persisted with the row, so a later rejection is
+    // diagnosable from the data instead of only from a runtime log.
+    const evidence = getInserted()[0].evidence_json as Record<string, unknown>;
+    expect(evidence.anchored_domains).toEqual(anchored);
   });
 });

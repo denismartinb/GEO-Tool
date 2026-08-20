@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { rewriteRecommendation } from "@/lib/llm/gemini";
 import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-validation";
+import { collectAnchoredDomains } from "@/lib/recommendations/anchored-domains";
 import { checkGenerationRateLimit } from "@/lib/recommendations/generation-rate-limit";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
@@ -58,6 +59,10 @@ type EvidenceJson = {
   affected_prompts?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
+  // Source-gap rules (pursue_*): the third-party domains the card is actually
+  // about. Built separately from citation_domains, so neither contains the
+  // other — see lib/recommendations/anchored-domains.ts.
+  source_domains?: string[];
   evidence_snippets?: string[];
   dominant_competitor?: string;
   // RECS-2B / N2 (pursue_citation_sources only) — specific pages the AI
@@ -86,8 +91,36 @@ type ProjectRow = {
 
 type SolutionContent = GeneratedSolution;
 
+/**
+ * One message per failure branch, all self-authored and free of any provider
+ * text (`.claude/rules/gemini.md`, "Sanitize all errors").
+ *
+ * They used to be a single sentence shared by five different branches — a
+ * provider outage, a model returning nonsense, the anti-fabrication guard
+ * rejecting the answer, and a failed write all read identically on screen. On
+ * 2026-08-20 two recommendations failed with that one sentence and neither the
+ * founder nor the agent could tell from the product whether they were even the
+ * same failure; that took a code investigation to narrow and still needed the
+ * runtime log to close. A user-facing message cannot name a cause it does not
+ * know, but it can distinguish the causes the code already branches on.
+ */
 const GENERIC_REWRITE_FAILURE =
   "No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.";
+
+/** The provider failed, timed out, or returned something unusable. */
+const ENGINE_FAILURE =
+  "El motor de IA no ha devuelto una propuesta utilizable. Inténtalo de nuevo en unos minutos.";
+
+/**
+ * The rewrite came back naming something outside this recommendation's own
+ * evidence, so it was discarded rather than shown. Retrying is worth it: the
+ * model is sampled, not deterministic.
+ */
+const UNVERIFIED_FAILURE =
+  "La propuesta generada mencionaba datos que no están en la evidencia de esta recomendación, así que se ha descartado. Vuelve a intentarlo.";
+
+/** Generated fine, but the write failed — a distinct thing to retry. */
+const PERSIST_FAILURE = "La propuesta se ha generado pero no se ha podido guardar. Inténtalo de nuevo en unos minutos.";
 
 const RATE_LIMIT_FAILURE =
   "Has alcanzado el límite de mejoras con IA para este dominio por hoy. Vuelve a intentarlo más tarde.";
@@ -325,6 +358,12 @@ export async function rewriteRecommendationCore({
     const evidence: EvidenceJson = recommendation.evidence_json ?? {};
     const mentionedCompetitors = evidence.mentioned_competitors ?? [];
     const citationDomains = evidence.citation_domains ?? [];
+    // The ONE closed set of domains this card's evidence anchors. The prompt's
+    // allowlist and the guard that re-checks the answer must be the same set:
+    // when they weren't, the prompt asked the model to name a cited page whose
+    // domain the guard then rejected, and the rewrite failed every single time
+    // on that card (lib/recommendations/anchored-domains.ts).
+    const anchoredDomains = collectAnchoredDomains(evidence);
     const allowedCompetitors = evidence.dominant_competitor
       ? [...mentionedCompetitors, evidence.dominant_competitor]
       : mentionedCompetitors;
@@ -359,7 +398,7 @@ export async function rewriteRecommendationCore({
         whyThisMatters: evidence.why_this_matters ?? "",
         affectedPrompts: evidence.affected_prompts ?? [],
         mentionedCompetitors,
-        citationDomains,
+        citationDomains: anchoredDomains,
         dominantCompetitor: evidence.dominant_competitor,
         evidenceSnippets: evidence.evidence_snippets ?? [],
         citationPages: evidence.citation_pages
@@ -371,7 +410,7 @@ export async function rewriteRecommendationCore({
         duration_ms: Date.now() - geminiCallStartedAt,
         error_name: error instanceof Error ? error.name : "unknown"
       });
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: ENGINE_FAILURE };
     }
 
     console.info(`${LOG_PREFIX} gemini_call_succeeded`, {
@@ -382,7 +421,7 @@ export async function rewriteRecommendationCore({
     });
 
     if (!rewrite) {
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: ENGINE_FAILURE };
     }
 
     // Validate ALL generated text (title + summary + every step + every
@@ -394,7 +433,7 @@ export async function rewriteRecommendationCore({
       title: rewrite.title,
       description: [rewrite.summary, ...rewrite.steps, ...exampleText].join(" "),
       allowedCompetitors,
-      allowedDomains: citationDomains,
+      allowedDomains: anchoredDomains,
       trackedCompetitors,
       brandDomain: project.domain
     });
@@ -403,9 +442,14 @@ export async function rewriteRecommendationCore({
       console.warn(`${LOG_PREFIX} rejected`, {
         project_id: projectId,
         recommendation_id: recommendationId,
-        reason: validation.reason
+        reason: validation.reason,
+        // WHAT it named, not just that it named something — without this the
+        // log tells you the guard fired and nothing about why.
+        offending: validation.offending,
+        anchored_domains: anchoredDomains,
+        tracked_competitors_count: trackedCompetitors.length
       });
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: UNVERIFIED_FAILURE };
     }
 
     const sanitized = sanitizeSolution(rewrite);
@@ -414,7 +458,7 @@ export async function rewriteRecommendationCore({
         project_id: projectId,
         recommendation_id: recommendationId
       });
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: ENGINE_FAILURE };
     }
 
     const sanitizedAt = new Date().toISOString();
@@ -438,6 +482,11 @@ export async function rewriteRecommendationCore({
             rule_description: recommendation.description,
             mentioned_competitors: mentionedCompetitors,
             citation_domains: citationDomains,
+            // What the model was actually allowed to name (and was judged
+            // against), which is a superset of citation_domains for the
+            // source-gap rules — kept so a later rejection can be diagnosed
+            // from the row instead of from a runtime log.
+            anchored_domains: anchoredDomains,
             dominant_competitor: evidence.dominant_competitor ?? null,
             affected_prompts: evidence.affected_prompts ?? []
           }
@@ -449,7 +498,7 @@ export async function rewriteRecommendationCore({
 
     if (insertError || !insertedRaw) {
       console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId, recommendation_id: recommendationId });
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: PERSIST_FAILURE };
     }
 
     console.info(`${LOG_PREFIX} persisted`, { project_id: projectId, recommendation_id: recommendationId });

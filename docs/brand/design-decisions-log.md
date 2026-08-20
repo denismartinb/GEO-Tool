@@ -11364,6 +11364,59 @@ Estado (el mismo hueco, documentado desde el lado de contenido).
 
 ---
 
+## 122. «Generar propuesta con IA»: el prompt pedía nombrar páginas que el guardián rechazaba (2026-08-20)
+
+**Qué pasó.** El fundador pulsó «Generar propuesta con IA» en la tarjeta
+*Entrar en fuentes citadas* del proyecto GenScore y recibió «No se ha podido
+mejorar la redacción en este momento». En una segunda tarjeta, de tipo
+distinto, el mismo mensaje.
+
+**La causa encontrada, con los datos de la propia captura.** Esa acción arma
+el prompt con dos listas: *Domains you may mention* (`evidence_json.
+citation_domains`) y, sólo en las reglas de hueco de fuentes, *Example pages
+already cited* (`citation_pages`), con la instrucción explícita de **nombrar
+esa página concreta en vez del dominio pelado**. El guardián antifabricación
+que revisa la respuesta (`lib/recommendations/rewrite-validation.ts`) sólo
+admitía `citation_domains`. Y las dos listas las construye código distinto en
+`recommendation-engine.ts`: `citation_domains` es un agregado sobre los prompts
+afectados **recortado a 8**, y las páginas salen de las fuentes que califican
+para el hueco. En la tarjeta del fundador, tres de las cuatro páginas citadas
+(`dageno.ai`, `blog.hubspot.es`, `es.semrush.com`) caían fuera de esos ocho.
+El modelo obedecía la instrucción y el guardián lo rechazaba por ello:
+`unanchored_domain_mentioned`, de forma **determinista**, gastando una llamada
+a Gemini y una plaza del límite diario en cada intento. Reproducido en
+`lib/recommendations/anchored-domains.test.ts` con esos datos reales.
+
+**Qué se decidió.** Un único conjunto anclado
+(`lib/recommendations/anchored-domains.ts`): unión de `citation_domains`,
+`source_domains`, el dominio de cada página citada y el host de su URL,
+normalizada y sin duplicados. Ese mismo array alimenta **el prompt y el
+guardián**, que es el invariante que faltaba — lo que el modelo puede escribir
+y aquello contra lo que se le juzga tienen que ser el mismo conjunto. No se
+relaja nada: todo lo que entra viene de la evidencia persistida de esa misma
+tarjeta, el emparejado sigue siendo por etiqueta (`evilacme.com` no casa con
+`acme.com`, ADR 0019) y un dominio que no esté en ninguna parte de la
+evidencia se sigue rechazando. El conjunto está acotado por construcción
+(8 + 6 fuentes) y **no lleva tope propio a propósito**: un tope es justo lo que
+creó el desajuste.
+
+**Lo que este arreglo NO explica, dicho tal cual.** La segunda tarjeta no tiene
+«Páginas citadas», así que su fallo es otro. Con cinco ramas de fallo
+compartiendo una sola frase en pantalla, ni el fundador ni el agente podían
+distinguir un motor caído de una propuesta descartada por el guardián. Por eso
+el mismo PR separa el mensaje por rama —motor / descartada por evidencia / no
+se ha podido guardar / genérico— y registra **qué término** disparó el
+guardián (`offending`), no sólo que se disparó. Es lo que convierte el próximo
+clic en un diagnóstico de diez segundos en vez de una investigación.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`rewrite-recommendation.ts`, `rewrite-validation.ts`,
+`recommendation-rewrite-llm.ts` (cuyo comentario afirmaba lo contrario: «every
+url here is already one of citationDomains»); `.claude/rules/recommendations.md`
+§Reescritura con IA.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

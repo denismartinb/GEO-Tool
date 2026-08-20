@@ -20,15 +20,24 @@ export type RecommendationRewriteInput = {
   whyThisMatters: string;
   affectedPrompts: string[];
   mentionedCompetitors: string[];
+  /**
+   * The FULL set of domains this recommendation's evidence anchors — the same
+   * set the anti-fabrication guard enforces on the answer
+   * (lib/recommendations/anchored-domains.ts). It must stay the same set on
+   * both sides: this prompt's allowlist used to be the narrower
+   * `evidence_json.citation_domains` while the prompt also handed over
+   * `citationPages` built from a different list, so a card whose cited pages
+   * fell outside those domains asked the model for a page name the guard then
+   * rejected — and the rewrite failed on that card every time.
+   */
   citationDomains: string[];
   dominantCompetitor?: string;
   evidenceSnippets: string[];
   /**
-   * Specific pages (title + url) the AI already cites among citationDomains
-   * (RECS-2B / N2, pursue_citation_sources only) — lets the digital-PR asset
-   * target a named article instead of only a bare domain. Every url here is
-   * already one of citationDomains, so it needs no separate anti-fabrication
-   * check beyond the existing domain allowlist.
+   * Specific pages (title + url) the AI already cites (RECS-2B / N2,
+   * pursue_citation_sources only) — lets the digital-PR asset target a named
+   * article instead of only a bare domain. Every domain here is part of the
+   * anchored set above, so naming one of these pages is allowed by the guard.
    */
   citationPages?: { domain: string; title: string; url: string }[];
 };

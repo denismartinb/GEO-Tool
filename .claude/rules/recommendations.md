@@ -35,6 +35,29 @@ paths:
 - Los límites de generación son **contadores de gasto real**, no decoración:
   respetar el presupuesto por proyecto y día con su `generation_type` propio.
 
+## Reescritura con IA ("Generar propuesta con IA")
+
+- **El prompt y el guardián leen el MISMO conjunto de dominios anclados.**
+  `collectAnchoredDomains` (`lib/recommendations/anchored-domains.ts`) es la
+  única fuente: unión de `citation_domains`, `source_domains` y los dominios y
+  hosts de `citation_pages`. Pasarle al guardián algo más estrecho que lo que
+  el prompt ofreció es rechazar al modelo por obedecer — pasó con las páginas
+  citadas, que el prompt pide nombrar y el guardián no admitía, y la tarjeta
+  quedó imposible de generar (log §122).
+- **Nada entra en ese conjunto que no venga de la evidencia persistida de esa
+  tarjeta.** Ampliarlo con dominios "razonables" (redes sociales, plantillas,
+  el dominio de un competidor) convierte el guardián en decoración: existe
+  porque una instrucción en el prompt no es una frontera de seguridad.
+- **Ese conjunto no lleva tope propio.** Está acotado por construcción y un
+  recorte es exactamente lo que produjo el desajuste de §122 —
+  `citation_domains` ya venía recortado a 8 desde el motor.
+- **Cada rama de fallo dice algo distinto, y el guardián registra qué término
+  lo disparó.** Cinco caminos compartiendo una frase hacen que un motor caído y
+  una propuesta descartada sean indistinguibles desde el producto, que es lo
+  que convirtió un fallo determinista en una investigación (log §122). El
+  mensaje sigue siendo propio y saneado — nunca el error del proveedor
+  (`.claude/rules/gemini.md`).
+
 ## Escrituras
 
 - `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario
