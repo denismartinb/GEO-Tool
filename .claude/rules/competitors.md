@@ -10,6 +10,22 @@ paths:
 Aplican automáticamente al tocar esta zona. Historia completa y el porqué de
 cada decisión: `docs/brand/design-decisions-log.md` §10 y §11.
 
+## Entrada inicial (alta de proyecto)
+
+- **Un tope de cuántos competidores acepta el asistente que la interfaz no
+  enseña es pérdida de datos silenciosa, no un límite razonable.**
+  `parseInitialCompetitors` (`lib/projects/project-form.ts`) recortaba a
+  `MAX_INITIAL_COMPETITORS` (5) mientras el asistente
+  (`components/onboarding-wizard.tsx`) dejaba añadir filas sin tope y su
+  contador decía "10 competidores listos" — el servidor descartaba las
+  últimas 5 sin error ni aviso (log §123, ONBOARDING-COMPETITORS-CAP-1).
+  El tope de entrada del usuario vive en `MAX_USER_COMPETITORS` (10),
+  **distinto** de `MAX_INITIAL_COMPETITORS` (5, cuántos competidores se le
+  piden a Gemini como sugerencia): no son el mismo número ni el mismo
+  concepto, y reunificarlos reabre este mismo bug. Cualquier tope de entrada
+  del usuario se refleja en la UI (botón deshabilitado, contador con el
+  máximo) en el mismo cambio que lo introduce.
+
 ## Origen de las sugerencias
 
 - **Las sugerencias salen del `business_profile` real del proyecto** (perfil

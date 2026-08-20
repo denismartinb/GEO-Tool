@@ -9,7 +9,7 @@ import { Icon } from "@/components/ui/icon";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { isWellFormedDomain, sanitizePromptLineText } from "@/lib/projects/project-form";
+import { isWellFormedDomain, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 
 const DEFAULT_PROMPT_CAP = 10;
@@ -632,8 +632,16 @@ export function OnboardingWizard({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-white p-3">
-            <p className="sub">{validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} listo{validCompetitorCount === 1 ? "" : "s"}.</p>
-            <Button type="button" variant="outline" onClick={() => setCompetitors((rows) => [...rows, { name: "", domain: "" }])}>
+            <p className="sub">
+              {validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} listo{validCompetitorCount === 1 ? "" : "s"}
+              {` (máximo ${MAX_USER_COMPETITORS})`}.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={competitors.length >= MAX_USER_COMPETITORS}
+              onClick={() => setCompetitors((rows) => (rows.length >= MAX_USER_COMPETITORS ? rows : [...rows, { name: "", domain: "" }]))}
+            >
               Añadir competidor
             </Button>
           </div>
