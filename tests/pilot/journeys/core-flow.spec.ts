@@ -3,6 +3,7 @@ import {
   assertFullyVisible,
   assertPageIsHealthy,
   captureInteraction,
+  discoverProjectIds,
   resolveProjectId,
   visitAsUser
 } from "../support/journey";
@@ -167,38 +168,31 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
  * recommendations exercises the grouping accordions, a fuller priority block
  * and the per-type counts, none of which a small project ever reaches.
  *
- * Prefers a project whose name matches PILOT_SECOND_PROJECT (default
- * "Movistar") and otherwise falls back to the second project in the list, so
- * the journey is useful on any seeded account instead of being pinned to one
- * brand. Skips — never fails — when the account has only one project: absent
- * coverage is honest, a red pilot over a data-shape the account doesn't have
- * would not be.
+ * Takes the next project after the primary one, so the journey is useful on
+ * any seeded account instead of being pinned to one brand. Skips — never fails
+ * — when the account has only one project: absent coverage is honest, a red
+ * pilot over a data-shape the account doesn't have would not be.
+ *
+ * **The project list comes from `discoverProjectIds`, and it has to.** This
+ * used to scrape `a[href^="/dashboard/projects/"]` off `/dashboard/projects`
+ * and prefer a name (PILOT_SECOND_PROJECT, "Movistar"). That route became a
+ * redirect to `/dashboard/domains` in DOMAINS-ARCHIVE-RETIRE-1 (log §104), and
+ * on the domains screen only the COVER project links to
+ * `/dashboard/projects/<id>` — every other domain links to `?active=<id>`. So
+ * the scrape returned exactly one id, always the cover one, the name could
+ * never match, and `find(id => id !== primary)` was always undefined: this
+ * test **skipped silently on every run** from 2026-08-15 on, while the pilot
+ * table kept looking healthy. `discoverProjectIds` is the helper that already
+ * handles both link shapes, written for precisely this trap.
  *
  * Still strictly read-only: it navigates and looks, exactly like the journeys
  * above.
  */
 test("recommendations screen renders for a second, larger project", async ({ page }, testInfo) => {
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
-
-  const wanted = (process.env.PILOT_SECOND_PROJECT ?? "Movistar").trim();
-  const links = page.locator('a[href^="/dashboard/projects/"]').filter({ hasNotText: /nuevo|new/i });
-
-  const hrefs: string[] = [];
-  for (const link of await links.all()) {
-    const href = await link.getAttribute("href");
-    const text = (await link.textContent()) ?? "";
-    const match = href?.match(/^\/dashboard\/projects\/([^/?#]+)$/);
-    if (!match || match[1] === "new") continue;
-    if (new RegExp(wanted, "i").test(text)) {
-      hrefs.unshift(match[1]); // preferred match goes first
-    } else {
-      hrefs.push(match[1]);
-    }
-  }
-
+  const ids = await discoverProjectIds(page);
   const primary = await projectId(page);
-  const second = hrefs.find((id) => id !== primary);
-  test.skip(!second, `pilot account has no second project (looked for "${wanted}")`);
+  const second = ids.find((id) => id !== primary);
+  test.skip(!second, "pilot account has no second project to compare against");
 
   const findings = await visitAsUser(
     page,

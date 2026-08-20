@@ -386,10 +386,13 @@ re-run. Never "solve" it by relaxing the expectation.
   whichever project sits first in the list, so a single domain and data shape
   stood in for all of them — and the states that only appear with many
   recommendations (grouped accordions, a full priority block, per-category
-  counts) were never seen. A second-project journey now exists
-  (`PILOT_SECOND_PROJECT`, default "Movistar"). When a PR's behaviour depends
-  on data volume, check that the evidence includes the larger project, and say
-  so if it does not.
+  counts) were never seen. Second-project journeys now exist, and they pick
+  their target **by data, not by name** — the interaction journey opens
+  candidates until one actually has priority actions, and skips loudly if none
+  does. A name-based pick rotted silently for five days when
+  `/dashboard/projects` became a redirect (log §104, §123). When a PR's
+  behaviour depends on data volume, check that the evidence includes the larger
+  project, and say so if it does not — a skipped journey is not coverage.
 - **Interaction coverage is bounded and partial by design** — see the coverage
   traps above. Absence of an interaction finding is never evidence that a
   control works.

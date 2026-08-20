@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser } from "../support/journey";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { assertPageIsHealthy, captureInteraction, discoverProjectIds, visitAsUser } from "../support/journey";
 
 /**
  * RECS-REDESIGN-1 — interaction proof for the Recomendaciones screen.
@@ -14,8 +14,9 @@ import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser 
  *
  * So the screen this PR rebuilds gets an explicit journey instead: it clicks
  * the real controls and ASSERTS the consequence, rather than reporting "the
- * DOM changed". Runs against the SECOND project (Movistar by default), which
- * is the only one with enough recommendations to have accordions at all.
+ * DOM changed". Runs against the first project of the account that actually
+ * has priority actions to click on — picked by looking, not by name; see
+ * `pickProjectWithPriorityActions` for why the name-based pick rotted.
  *
  * SCOPE GUARD — read-only, same as core-flow.spec.ts. Every control touched
  * here is a local state toggle or a client-side download. It never launches a
@@ -24,27 +25,74 @@ import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser 
 
 test.describe.configure({ mode: "serial" });
 
-async function largestProjectId(page: Parameters<typeof resolveProjectId>[0]): Promise<string | null> {
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
-  const wanted = (process.env.PILOT_SECOND_PROJECT ?? "Movistar").trim();
-  const links = page.locator('a[href^="/dashboard/projects/"]').filter({ hasNotText: /nuevo|new/i });
-  const ids: string[] = [];
-  for (const link of await links.all()) {
-    const href = await link.getAttribute("href");
-    const text = (await link.textContent()) ?? "";
-    const match = href?.match(/^\/dashboard\/projects\/([^/?#]+)$/);
-    if (!match || match[1] === "new") continue;
-    if (new RegExp(wanted, "i").test(text)) ids.unshift(match[1]);
-    else ids.push(match[1]);
+/** Cuántos proyectos se abren buscando uno con acciones prioritarias. Acotado: cada candidato es una carga de página, por anchura. */
+const MAX_CANDIDATES = 4;
+
+/** Margen para que la pantalla se decida entre pintar prioritarias o su estado vacío. */
+const SETTLE_TIMEOUT_MS = 15_000;
+
+/**
+ * El proyecto que este journey necesita es **uno que tenga acciones
+ * prioritarias**, y la única forma honesta de saber cuál es abrirlo y mirar.
+ *
+ * Antes se buscaba por nombre (`PILOT_SECOND_PROJECT`, "Movistar") sobre los
+ * enlaces de `/dashboard/projects`. Esa ruta pasó a ser una redirección a
+ * `/dashboard/domains` (DOMAINS-ARCHIVE-RETIRE-1, log §104) y allí **sólo el
+ * proyecto de portada enlaza a `/dashboard/projects/<id>`**; los demás enlazan
+ * a `?active=<id>`. La lista quedó con un único elemento —el de portada, que
+ * sale del cookie `geo_active_project` que el middleware reescribe en cada
+ * navegación, o del proyecto más reciente si no hay cookie—, el filtro por
+ * nombre no podía casar con nada, y el journey llevaba desde el 2026-08-15
+ * midiendo lo que hubiera delante en cada anchura. Se puso rojo el día que el
+ * proyecto más reciente de la cuenta fue uno sin nada que corregir: escritorio
+ * aterrizó en él, vio «Nada que corregir ahora mismo» y falló por un estado
+ * legítimo del producto, mientras móvil y tablet miraban otro proyecto (PR
+ * #446, log §123).
+ *
+ * Elegir por dato en vez de por nombre no puede pudrirse igual: si un día
+ * ningún proyecto tiene acciones prioritarias, esto **se salta ruidosamente**
+ * en vez de fallar — y nunca afirma sobre una pantalla vacía, que es la regla
+ * que nació el 2026-08-02.
+ */
+async function pickProjectWithPriorityActions(page: Page, testInfo: TestInfo): Promise<string | null> {
+  const all = await discoverProjectIds(page);
+  const candidates = all.slice(0, MAX_CANDIDATES);
+
+  for (const id of candidates) {
+    await page.goto(`/dashboard/projects/${id}/recommendations`, { waitUntil: "domcontentloaded" });
+    const priority = page.locator(".rec-card.rec2-priority").first();
+    // Esperar a que la pantalla se decida. Sin esto, un cero puede ser
+    // "todavía no ha hidratado" y el journey descartaría un proyecto bueno.
+    await priority
+      .or(page.locator(".section-empty").first())
+      .first()
+      .waitFor({ state: "visible", timeout: SETTLE_TIMEOUT_MS })
+      .catch(() => {});
+
+    if (await priority.isVisible().catch(() => false)) {
+      // Sin topes mudos: lo que no se miró se dice.
+      if (all.length > candidates.length) {
+        testInfo.annotations.push({
+          type: "coverage",
+          description: `${all.length - candidates.length} proyecto(s) más de la cuenta no se examinaron (tope: ${MAX_CANDIDATES}).`
+        });
+      }
+      return id;
+    }
   }
-  return ids[0] ?? null;
+
+  return null;
 }
 
 test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar responden de verdad", async ({
   page
 }, testInfo) => {
-  const id = await largestProjectId(page);
-  test.skip(!id, "la cuenta piloto no tiene ningún proyecto");
+  const id = await pickProjectWithPriorityActions(page, testInfo);
+  test.skip(
+    !id,
+    `ningún proyecto de la cuenta piloto (primeros ${MAX_CANDIDATES}) tiene acciones prioritarias: ` +
+      "no hay nada que este journey pueda comprobar. Siembra un proyecto con recomendaciones."
+  );
 
   const findings = await visitAsUser(
     page,

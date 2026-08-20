@@ -422,8 +422,20 @@ Three coverage gaps compounded it, all now closed:
    `tests/pilot/journeys/recommendations-interactions.spec.ts`).
 3. **Only one project was ever inspected.** The journeys took whichever project
    sat first in the list, so states that only exist with many recommendations
-   were never seen. A second-project journey now covers that
-   (`PILOT_SECOND_PROJECT`, default "Movistar").
+   were never seen. Second-project journeys now cover that.
+
+   How they pick that project matters, and got it wrong once: they scraped
+   `a[href^="/dashboard/projects/"]` off `/dashboard/projects` and preferred a
+   name (`PILOT_SECOND_PROJECT`, "Movistar"). That route became a redirect to
+   `/dashboard/domains` (log §104), where **only the cover project links that
+   way** — the rest link to `?active=<id>` — so the list held exactly one id,
+   the name never matched, and from 2026-08-15 one journey silently skipped
+   every run while another asserted against whatever project happened to be on
+   the cover. Selection is now by **data, not by name**: `discoverProjectIds`
+   for the list (it handles both link shapes), and the interaction journey
+   opens candidates until it finds one that actually has priority actions,
+   skipping loudly if none does (log §123). `PILOT_SECOND_PROJECT` no longer
+   exists.
 
 The standing lesson, recorded in the agent's brief as **coverage traps**: a
 green table means "it loaded", never "it works" and never "it looks right", and

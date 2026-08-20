@@ -11417,6 +11417,62 @@ url here is already one of citationDomains»); `.claude/rules/recommendations.md
 
 ---
 
+## 123. El piloto elegía proyecto por un enlace que dejó de existir (PILOT-PROJECT-PICK-1, 2026-08-20)
+
+**Qué pasó.** El piloto del PR #446 falló sólo en escritorio:
+`recs-interactions` → «no se han renderizado acciones prioritarias». La captura
+lo explica sola: estaba en el proyecto **Linkedin**, con presencia 100, cuota
+de voz 100 y «Nada que corregir ahora mismo». Un estado legítimo del producto,
+no un fallo. Móvil y tablet, en la misma pasada, miraban **GenScore**, con sus
+tres acciones prioritarias.
+
+**La causa.** Los dos journeys que buscan «un segundo proyecto, más grande»
+raspaban `a[href^="/dashboard/projects/"]` sobre `/dashboard/projects` y
+preferían un nombre (`PILOT_SECOND_PROJECT`, «Movistar»). Esa ruta es una
+**redirección** a `/dashboard/domains` desde DOMAINS-ARCHIVE-RETIRE-1 (§104), y
+en la pantalla de dominios **sólo el proyecto de portada** enlaza a
+`/dashboard/projects/<id>`; los demás enlazan a `?active=<id>`. Así que la
+lista tenía exactamente un elemento —el de portada, que resuelve
+`resolveSelectedProject`: `?active=` → cookie `geo_active_project` (que el
+middleware reescribe en cada navegación a una ruta de proyecto) → el proyecto
+más reciente— y el filtro por nombre no podía casar con nada.
+
+Consecuencias, distintas en cada journey y las dos malas:
+
+- `recommendations-interactions.spec.ts` afirmaba contra **lo que hubiera
+  delante**, distinto por anchura porque cada contexto de Playwright llega con
+  el cookie donde lo dejó su propia navegación anterior. Verde por suerte
+  durante cinco días; rojo el día que el proyecto más reciente de la cuenta fue
+  uno sin nada que corregir.
+- `core-flow.spec.ts` («recommendations screen renders for a second, larger
+  project») resolvía `find(id => id !== primary)` sobre esa lista de uno:
+  siempre `undefined`, así que **se saltaba en silencio en cada pasada** desde
+  el 2026-08-15, con la tabla del piloto igual de verde. Es el fallo de §120 y
+  §65 otra vez —una garantía que no se puede ver fallar— pero por omisión: no
+  es que el veredicto fuera malo, es que la comprobación no llegó a existir.
+
+`discoverProjectIds` ya contemplaba las dos formas de enlace y lleva escrito en
+su cabecera justo este agujero. Los dos journeys no lo usaban.
+
+**Qué se decidió.** Los dos pasan por `discoverProjectIds`, y el de
+interacciones elige **por dato, no por nombre**: abre candidatos (tope 4,
+anotado si sobran) hasta encontrar uno que de verdad tenga acciones
+prioritarias, y si ninguno las tiene **se salta ruidosamente** en vez de
+afirmar sobre una pantalla vacía — la regla del 2026-08-02. Un nombre puede
+pudrirse sin avisar; «tiene lo que voy a pulsar» no. `PILOT_SECOND_PROJECT`
+desaparece, y con él la última referencia a «Movistar» en el arnés.
+
+**Lo que esto NO arregla.** Sigue sin haber nada que avise de que un journey
+lleva días saltándose: un `skip` no se distingue de un ✅ en la tabla del
+informe. Queda apuntado como lo siguiente que mirar en la zona.
+
+**Trazabilidad.** `tests/pilot/journeys/recommendations-interactions.spec.ts`,
+`tests/pilot/journeys/core-flow.spec.ts`, `docs/agentic-user-pilot.md`,
+`.claude/agents/ux-pilot.md`; §104 (la ruta que cambió), §120 y §65 (el mismo
+patrón de verde vacío).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
