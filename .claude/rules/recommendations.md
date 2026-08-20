@@ -51,6 +51,29 @@ paths:
   concreta y acotada es lo que hacía inservibles las listas de referencia
   (Semrush, Otterly.AI) que motivaron el rediseño — no se añade un tipo de
   recomendación nuevo sin decidir su primer paso.
+- **Todo tipo declara su entregable y su control** (`lib/recommendations/
+  deliverable.ts`, RECS-ACCION-1a, log §125). El CTA nombra el artefacto que su
+  playbook de `recommendation-rewrite-llm.ts` ya le pide al modelo ("Generar
+  comparativa", no "Generar propuesta con IA"): si cambia un playbook, cambia
+  el CTA con él o el botón promete una cosa y llega otra.
+  `deliverable.test.ts` recorre `KNOWN_RECOMMENDATION_TYPES` y falla si una
+  regla nueva llega sin decidirlo — misma disciplina que `first_step`. Un tipo
+  sin entrada degrada al CTA genérico y **no afirma control ninguno**: decir
+  "En tu web" sobre algo sin clasificar sería inventarse un hecho, misma
+  dirección de fallo que el tri-estado de las sondas de la auditoría.
+- **Del control sólo se pinta la excepción.** `third_party` e `in_app` llevan
+  chip en la tarjeta plegada; `own_site` no, porque es lo que el usuario ya da
+  por supuesto en 11 de los 15 tipos y repetirlo sería la tinta que §115 quitó
+  de esa vista. La ausencia de chip significa "es tuyo". Lo que §115 retiró de
+  ahí fue vocabulario del motor, no señales de triaje.
+- **"Listo para copiar" se cuenta, no se estima.** La insignia del panel del
+  plan sale de contar los placeholders (`[tu dato aquí]`) que el prompt de
+  reescritura ya obliga a poner donde falta un dato. Se cuentan artefactos y
+  pasos, nunca título ni resumen. Si algún día el prompt deja de exigir
+  placeholders, esta cuenta deja de significar nada y hay que rehacerla. El
+  regex excluye comillas y llaves a propósito: los JSON-LD llevan arrays, y
+  contarlos como datos que faltan volvería la etiqueta ruido justo en el
+  artefacto más pegable que se genera.
 - **El hueco de fuentes se divide por familia** (`pursue_comparator_sources`,
   `pursue_community_sources`, `pursue_media_sources`), reutilizando el
   clasificador de Páginas citadas. Las fuentes enciclopédicas quedan **fuera a
