@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState } from "react";
+import { SESSION_CACHE_KEY, SESSION_HINT_ATTR } from "@/lib/session-hint";
 
 export type SessionUser = { email: string; planId: string; planName: string };
 
@@ -31,8 +32,22 @@ export type SessionUser = { email: string; planId: string; planName: string };
  * mismatch — the very flash this is meant to remove. A layout effect commits
  * its `setState` before the browser paints, so the cached identity replaces
  * the anonymous frame invisibly instead of after a visible flash.
+ *
+ * header-flicker-skeleton-prehydration (2026-08-20): that layout effect still
+ * can't win the very first paint — the browser paints the server-rendered
+ * (anonymous) HTML the instant it's parsed, before any JS, React included,
+ * has run at all. `app/layout.tsx` closes that specific gap with a blocking
+ * inline script — same trick as a dark-mode FOUC guard — that reads this same
+ * cache key synchronously and sets `data-session-hint` on `<html>` before the
+ * browser paints anything, which `app/globals.css` uses to show a
+ * content-free skeleton instead of the anonymous CTAs. That script has no
+ * React and no way to know when React has taken over, so this hook clears the
+ * attribute itself, in the same layout effect that already reads the cache —
+ * by the time this runs, `PublicHeader`'s own conditional render already
+ * reflects the truth, so nothing here should keep hiding it. The key and
+ * attribute name live in `lib/session-hint.ts`, not here — see that file for
+ * why a Server Component can't import them from a `"use client"` module.
  */
-const SESSION_CACHE_KEY = "gs_session_user_hint";
 
 /** Exported for `use-session-user.test.ts` — the hook itself needs a DOM/React
  *  render harness this repo doesn't carry (`vitest.config.ts` runs `environment:
@@ -89,6 +104,7 @@ export function useSessionUser(): SessionUser | null {
   useLayoutEffect(() => {
     const cached = readCachedSessionUser();
     if (cached) setUser(cached);
+    document.documentElement.removeAttribute(SESSION_HINT_ATTR);
   }, []);
 
   useEffect(() => {

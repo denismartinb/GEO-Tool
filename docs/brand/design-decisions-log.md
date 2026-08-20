@@ -11054,6 +11054,78 @@ apilado que esto deja intacto).
 
 ---
 
+## 118. Cabecera pública: skeleton antes de hidratar cierra el flicker residual (header-flicker-skeleton-prehydration, 2026-08-20)
+
+**Origen.** El fundador confirmó que §117 (pro-badge-alignment-flickering-v4brfv)
+mejoró el flicker de "Iniciar sesión" pero seguía viéndose "un pelín" en
+cada recarga logado. Task Intake aprobado el mismo día para cerrarlo del
+todo con un script de pre-hidratación, sin revertir la decisión de
+GENSCORE-HEADER-2 de servir las páginas públicas en estático.
+
+**Causa.** §117 corregía el estado en cuanto React hidrataba
+(`useLayoutEffect`), pero el navegador pinta el HTML del servidor —siempre
+"Iniciar sesión"— en cuanto lo parsea, **antes de que exista React**. Ese
+hueco (el tiempo hasta que el JS carga y React hidrata) es estructural a
+servir HTML estático con contenido dependiente de sesión; no se cierra
+desde React solo.
+
+**Arreglo.** Mismo patrón que usan los guardas de flash de tema
+oscuro/claro: un `<script>` inline y síncrono, primer hijo de `<body>` en
+`app/layout.tsx`, que lee la misma caché de `sessionStorage`
+(`gs_session_user_hint`) y — si hay algo cacheado — pone
+`data-session-hint="1"` en `<html>` antes de que el navegador pinte nada
+más. `app/globals.css` usa ese atributo para ocultar los CTAs anónimos y
+mostrar un **skeleton sin contenido** (círculo + barra grises,
+`.lp-session-skeleton` en `components/marketing/public-header.tsx`) en su
+lugar — nunca el email o el plan reales, porque el script no tiene forma
+de verificar que esa caché siga siendo cierta. En cuanto React hidrata, el
+mismo `useLayoutEffect` de `lib/use-session-user.ts` que ya leía la caché
+ahora también quita el atributo, y el contenido real (chip o CTAs) que
+React ya había decidido renderizar queda visible.
+
+**Bug real encontrado y corregido antes de desplegar.** La primera versión
+ponía la constante de la clave (`SESSION_CACHE_KEY`) en
+`lib/use-session-user.ts`, un módulo `"use client"`, y la importaba desde
+`app/layout.tsx` (Server Component). Compilaba limpio y pasaba
+`tsc`/`eslint` sin avisar — pero Next.js sustituye las exportaciones de un
+módulo `"use client"` por referencias opacas cuando las importa un Server
+Component, así que el HTML construido enviaba literalmente
+`sessionStorage.getItem(undefined)`, desactivando la función entera en
+silencio. Sólo se detectó inspeccionando el HTML de verdad construido por
+`next build` (`pnpm run validate` no lo habría cogido de otra forma). Se
+movió la constante a `lib/session-hint.ts`, un módulo plano sin
+`"use client"`, importado por los dos lados; `lib/session-hint.test.ts`
+comprueba que ese fichero nunca vuelve a llevar la directiva.
+
+**Segundo bug real, cogido por Claude QA antes del Human Gate.**
+`components/not-found-mission.tsx` reutiliza la clase `.lp-nav-right` a
+propósito (su propio comentario: "sin datos, sin sesión, sin JavaScript
+propio") pero nunca renderiza el skeleton ni monta `useSessionUser`, así
+que nada en esa página limpia `data-session-hint` — la regla original de
+ocultar hermanos (`.lp-nav-right > *:not(.lp-session-skeleton)`) le habría
+escondido los dos CTAs para siempre a cualquier visitante que aterrizara
+ahí con una caché de `sessionStorage` viva. Arreglado cualificando el
+selector con `:has(.lp-session-skeleton)` — ya usado en este mismo fichero
+para `.art-stats` — que excluye estructuralmente cualquier
+`.lp-nav-right`/`.lp-mobnav-ctas` que no renderice el propio skeleton, así
+que protege igual ante cualquier reutilización futura de esas clases, no
+sólo el caso de la 404. Verificado contra el HTML real de `next build`
+antes y después.
+
+**Pendiente / roto conocido, no tocado aquí.** El hueco en sí (unos ms
+entre el pintado del HTML estático y que React hidrate) no desaparece —
+eliminarlo del todo exigiría no servir HTML estático, que es justo lo que
+GENSCORE-HEADER-2 descartó por SEO. Lo que cambia es que ese hueco ahora
+muestra un skeleton neutro en vez de "Iniciar sesión", así que deja de
+leerse como un fallo.
+
+**Trazabilidad.** §117 (pro-badge-alignment-flickering-v4brfv, el fix que
+dejó este hueco documentado como pendiente); §65 (GENSCORE-HEADER-2, la
+decisión de estático que este PR no revierte); Task Intake aprobado por el
+fundador, 2026-08-20.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
