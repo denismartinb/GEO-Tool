@@ -11578,6 +11578,18 @@ pasos) sigue valiendo aunque uno de los tres ejemplos venga roto, y devolver un
 error entero le gastaría al usuario una generación de su cupo diario a cambio de
 nada. Lo que no se hace nunca es enseñar el roto.
 
+**El arreglo no repara lo ya generado, y eso importa hoy.** La ruta de
+idempotencia devuelve la solución persistida más reciente
+(`status: completed`, `is_sanitized: true`) sin volver a llamar a Gemini, así
+que **una recomendación que ya tenga guardado un artefacto cortado lo seguirá
+sirviendo cortado para siempre**: el validador nuevo se aplica al escribir, y
+esa fila se escribió antes. No se purga aquí a propósito —borrar filas de
+`generated_solutions` es escritura destructiva sobre datos de clientes y va con
+su propia aprobación—, pero queda dicho: el bloque que originó este incidente
+sigue roto en la cuenta del fundador hasta que se decida qué hacer con las
+filas viejas. Opciones para su fase: revalidar al leer y regenerar sólo si
+falla, o una purga acotada a artefactos que no parsean.
+
 **Lo que queda roto conocido.** El usuario ve un plan con un ejemplo menos y
 **no se le dice que ha faltado uno**; avisarlo en pantalla es trabajo de UI con
 su pasada de piloto. Y quedan seis fallos más de la misma sesión sin tocar, el
