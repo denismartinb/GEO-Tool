@@ -11532,6 +11532,81 @@ competidores importa para el scoring, no solo para la pantalla).
 
 ---
 
+## 124. La zona pública era imposible de scrollear en Chrome (2026-08-20)
+
+El fundador: *«el scroll con dos dedos de Mac no funciona en Chrome»*. Acabó
+siendo mucho peor que un gesto de trackpad: **en Chrome, ninguna página pública
+se podía scrollear de ninguna forma** — ni rueda, ni flechas, ni barra. En
+Safari funcionaba. La consola funcionaba. Producción y preview, igual de rotas.
+
+**La causa.** `html { overflow-x: hidden }` (puesto en GROWTH-2 Fase 2.1 para
+contener un desbordamiento de 3px que sólo aparecía en preview). `hidden` en un
+eje fuerza al otro a computar de `visible` a `auto` (CSS Overflow 3 §3.2), lo
+que convierte al **elemento raíz** en contenedor de scroll. Chrome resolvía eso
+a un scrollport con `overflow` usado `hidden`, y ahí la especificación dice dos
+cosas a la vez: el scroll programático está permitido y **el navegador no debe
+ofrecer ningún mecanismo de scroll al usuario**. De ahí la firma tan rara.
+Arreglado con `overflow-x: clip`, que recorta igual pero no crea contenedor de
+scroll ni convierte de eje (`clip` y `visible` no se convierten entre sí). Se
+aplica a `html` y a `body`.
+
+**Lo que costó llegar, porque el proceso es la lección.** Dos arreglos
+anteriores se enviaron sin poder reproducir el fallo y **los dos fueron
+falsos**: `overscroll-behavior-y: none → contain` (revertido; encima devolvía
+el rebote elástico que `none` suprimía a propósito) y un bucle
+`requestAnimationFrame` del tour del hero que renderizaba en pausa (correcto
+por su cuenta como mejora de rendimiento, irrelevante para esto). Ambos
+partían de razonar sobre el CSS en vez de ejercitarlo.
+
+Lo que sí funcionó fue construir el producto en local y lanzarle Chromium 141:
+seis variantes de `overflow`/`overscroll` en `html` y `body` — todas
+scrolleaban; rueda con componente horizontal de 1 a 30 — scrolleaba;
+desbordamiento horizontal real — no había ninguno (`scrollWidth ==
+clientWidth`). Nada reproducía el fallo, y eso **también era información**:
+descartaba el CSS como causa suficiente y dejaba el entorno como variable.
+
+**El dato que lo resolvió lo dio el fundador desde su consola**, y es el que
+hay que pedir primero la próxima vez:
+
+```
+{alto: 4039, ventana: 399, scroller: 'HTML'}   → hay 3.640px de recorrido
+tras scrollTo → 500                            → el documento SÍ scrollea
+```
+
+Scroll programático vivo + entrada de usuario muerta no es ambiguo: es la
+definición literal de `overflow: hidden` en un scrollport. Con eso, el arreglo
+fue directo y verificable en local (forzar `documentElement.style.overflow =
+"hidden"` reproduce la firma exacta —rueda 0, teclado 0, `scrollTo` 500— y
+`clip` la elimina, en cuatro páginas públicas y dos anchuras).
+
+**Por qué nadie lo vio antes, que es lo más grave.** Llevaba en el código desde
+GROWTH-2 Fase 2.1 y no lo cazó nada:
+
+- **La consola lo enmascara por completo.** No scrollea el documento (`.shell`
+  es `100dvh`/`overflow:hidden` y el scroller real es `.dash-content`), así que
+  el fallo parecía exclusivo de marketing cuando en realidad era del documento.
+- **El `ux-pilot` no puede verlo.** Hace capturas, no scroll: 57 superficies
+  públicas en tres anchuras salieron ✅ en la misma pasada en que el sitio era
+  inusable. Una pantalla que renderiza perfecta y no se puede recorrer pasa
+  todas las aserciones que existen hoy. **Queda pendiente**: una aserción de
+  piloto que haga rueda y teclado y compruebe que `scrollY` se mueve.
+- **Chromium headless sobre Linux no lo reproduce.** El mismo build scrollea
+  bien ahí, así que ni CI ni el piloto lo habrían cogido aunque miraran.
+
+**Corrección colateral, y es la misma enfermedad.** El comentario de
+`.lp-nav-wrap` afirmaba que el `sticky` de la cabecera pública no pega por
+culpa de ese mismo `html { overflow-x: hidden }`. Es **falso**: con `clip` —que
+no crea contenedor de scroll— el sticky sigue sin pegar, `y: -500` idéntico. El
+bloqueante real es `.lp-hero { overflow: hidden }`, el ancestro de scroll del
+sticky. Corregido en el mismo PR, porque un invariante documentado y falso es
+peor que ninguno: la siguiente sesión habría ido a pelearse con la raíz.
+
+**Trazabilidad.** `app/globals.css` (`html`/`body` y el comentario de
+`.lp-nav-wrap`); `.claude/rules/styles.md` (invariante nuevo); log §54 (Fase V,
+de donde sale el `overflow-x` original), §55 (lo que el piloto sí mide hoy).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

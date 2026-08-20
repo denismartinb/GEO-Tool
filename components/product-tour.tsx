@@ -542,6 +542,13 @@ export function ProductTour({
 
     let raf = 0;
     let currentIdx = -1;
+    // `render()` fuerza varias lecturas síncronas de layout por llamada
+    // (`getBoundingClientRect` del cursor y de los gráficos). Con el tour en
+    // pausa `c.t` no cambia entre fotogramas, así que repetirla a 60fps es
+    // trabajo idéntico tirado a la basura, indefinidamente, mientras el hero
+    // está a la vista — justo donde alguien intenta hacer scroll nada más
+    // aterrizar. Sólo se renderiza cuando `t` reproduce o acaba de saltar.
+    let lastRenderedT = -1;
     function frame(now: number) {
       const c = clock.current;
       if (c.last === null) c.last = now;
@@ -567,10 +574,13 @@ export function ProductTour({
         fireClicks(prev, c.t);
         firedClick.current = c.t;
       }
-      const idx = render(c.t);
-      if (idx !== currentIdx) {
-        currentIdx = idx;
-        setStepIdx(idx);
+      if (c.playing || c.t !== lastRenderedT) {
+        lastRenderedT = c.t;
+        const idx = render(c.t);
+        if (idx !== currentIdx) {
+          currentIdx = idx;
+          setStepIdx(idx);
+        }
       }
       raf = requestAnimationFrame(frame);
     }
