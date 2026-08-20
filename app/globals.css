@@ -4098,10 +4098,10 @@ a.notif-row:hover {
    inside the SVG it was locked to the scene's ratio and stopped short of the
    viewport edges. `.mrk-pad-wrap` is only as wide as the scene; the band
    escapes it to 100vw. */
-.mrk-pad-wrap { position: relative; width: 100%; }
+.mrk-pad-wrap { position: relative; width: 100%; --mrk-ground-h: clamp(46px, 13vw, 86px); }
 .mrk-pad-wrap .mrk-sky { max-width: none; }
 .mrk-ground {
-  width: 100%; height: clamp(46px, 13vw, 86px);
+  width: 100%; height: var(--mrk-ground-h);
   background: #D3DEF0;
   border-top: 1.4px solid #B3C2DC;
 }
@@ -4147,6 +4147,30 @@ a.notif-row:hover {
     pointer-events: none;
   }
   .mrk-sky { max-width: none; width: 100%; height: 100%; }
+  /* Rampa/ignición nest their SVG one level deeper than every other scene —
+     inside `.mrk-pad-wrap`, to leave room for `.mrk-ground` stacked below it.
+     The `height: 100%` above assumes a direct, definite-height parent, and
+     `.mrk-pad-wrap` only had `width: 100%` — no height of its own, so its
+     percentage-height child fell back to `auto`, sized by its own aspect
+     ratio (viewBox 400×228, wide and short) instead of the scene box. Taller
+     than intended once the ground band stacked on top of that, the excess
+     overflowed `.mrk-full`'s own box top AND bottom, and `overflow: hidden`
+     there silently clipped the rocket's base off the bottom (founder
+     screenshot, 2026-08-20, "especialmente la primera [escena]" — the only
+     two beats built this way).
+     Tried `.mrk-pad-wrap { height: 100% }` first and it does NOT work: inside
+     `.mrk-scene-slot`'s grid (an unconstrained implicit row, `place-items` only
+     controls alignment, never track sizing), a percentage-height item and an
+     `auto` row can go circular — the row sized itself to the item's OWN
+     content instead of the container's 640px, which is the same overflow one
+     level up. `position: absolute; inset: 0` sidesteps the grid entirely,
+     the same way `.mrk-scene-slot` itself gets a guaranteed box from
+     `.mrk-canvas` two rules up — `.mrk-pad-wrap`'s height is never in doubt,
+     so `--mrk-ground-h` mirrors `.mrk-ground`'s own height and the SVG gets
+     exactly what's left: the two always sum to the full box, whatever that
+     ends up being, with no second breakpoint to keep in sync. */
+  .mrk-pad-wrap { position: absolute; inset: 0; }
+  .mrk-pad-wrap .mrk-sky { height: calc(100% - var(--mrk-ground-h)); }
   .mrk-copy {
     position: relative; z-index: 1;
     grid-column: 1; text-align: left; margin: 0; padding: 0; max-width: 30ch;

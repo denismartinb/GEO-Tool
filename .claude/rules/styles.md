@@ -92,3 +92,21 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   se descartó por eso mismo en log §122: convertiría esos overlays en overlays
   contenidos sin que ninguna pantalla que los usa lo supiera, sin ningún
   ux-pilot en ese PR para cazarlo.
+- **Un `height: 100%` puede caer en referencia circular dentro de un grid con
+  fila implícita (`auto`), y el navegador no avisa — sólo desborda su
+  contenedor en silencio.** `place-items`/`align-items` sólo alinean DENTRO de
+  la pista; no la dimensionan. Sin `grid-template-rows` explícito, una fila
+  `auto` se dimensiona por su contenido, así que un hijo con `height:100%`
+  cuyo propio contenido depende de esa misma altura (p. ej. un `calc(100% -
+  X)` más abajo) puede resolver contra el contenido en vez de contra la caja
+  del grid — comprobado con Playwright en `.mrk-scene-slot > .mrk-pad-wrap`
+  (log §122): la fila se dimensionó a 674px, el contenido, en vez de a los
+  640px reales de la caja, y el sobrante se recortó por `overflow:hidden` dos
+  niveles más arriba, silenciosamente. La corrección que sí funciona es
+  `position: absolute; inset: 0` en el hijo — lo saca del grid entero y le da
+  una altura garantizada por el `position:absolute` del propio contenedor, sin
+  depender de cómo el grid decida dimensionar su fila. Cuando un hijo dentro de
+  un grid/flex de fila implícita necesita una altura fiable derivada de un
+  ancestro con caja garantizada, `position:absolute;inset:0` es más robusto que
+  `height:100%` — no lo contrario intuitivamente, pero es lo que midió el
+  navegador.

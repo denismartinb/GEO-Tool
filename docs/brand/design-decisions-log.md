@@ -11364,7 +11364,7 @@ Estado (el mismo hueco, documentado desde el lado de contenido).
 
 ---
 
-## 122. El cohete de la primera misión se pintaba detrás de la barra lateral en escritorio, y Auditoría web se había quedado fuera del beat de ascenso (2026-08-20)
+## 122. El cohete de la primera misión se pintaba cortado en escritorio — horizontal y luego vertical —, y Auditoría web se había quedado fuera del beat de ascenso (2026-08-20)
 
 **El problema, reportado por el fundador con una captura de escritorio.** En
 Visión general, mientras corre el primer escaneo de un proyecto, el texto de
@@ -11418,6 +11418,41 @@ overlays contenidos dentro de `.dash-content` sin que ninguna pantalla que los
 usa lo supiera — una regresión de superficie mucho mayor que el bug que se
 estaba arreglando, y sin ux-pilot corriendo en este PR para cazarla.
 
+**El fundador probó el fix horizontal en el preview y encontró un segundo
+corte, vertical esta vez — "se sigue cortando, especialmente la primera"
+(captura de escritorio, rampa/ignición).** El texto ya no se veía cortado
+—el fix de arriba funcionaba— pero la base del cohete (toberas, llamas) se
+veía recortada por el borde inferior de la pantalla. Causa distinta a la
+primera, y no provocada por este PR: rampa/ignición (`PadScene`) son las
+únicas dos escenas que anidan su SVG un nivel más adentro, dentro de
+`.mrk-pad-wrap`, para dejarle sitio a `.mrk-ground` apilada debajo — las
+demás escenas (ascenso, órbita, entrega) montan su SVG directamente en
+`.mrk-scene-slot`. La regla de escritorio `.mrk-sky { height: 100% }` asume un
+padre directo con altura definida; a través de `.mrk-pad-wrap` (sin altura
+propia, sólo `width: 100%`) ese porcentaje caía a `auto`, así que el SVG se
+dimensionaba por su propia proporción (`viewBox="0 0 400 228"`, ancho y bajo)
+en vez de por la caja de la escena — más alto de lo debido en cuanto se suma
+la banda del suelo encima de eso, y el sobrante desbordaba la caja de
+`.mrk-full` por arriba Y por abajo; `overflow: hidden` ahí recortaba en
+silencio la base del cohete.
+
+*Primer intento, descartado por circular.* `.mrk-pad-wrap { height: 100% }` +
+`.mrk-sky { height: calc(100% - var(--mrk-ground-h)) }` parecía la corrección
+obvia, y NO funciona: dentro del grid de `.mrk-scene-slot` (una fila implícita
+sin `grid-template-rows`, donde `place-items` sólo alinea, nunca dimensiona la
+pista), un hijo con altura porcentual y una fila `auto` pueden entrar en
+referencia circular — medido con Playwright contra un fixture con el CSS real:
+la fila se dimensionó por el contenido del propio `.mrk-pad-wrap` (674px) en
+vez de por los 640px de `.mrk-scene-slot`, el mismo desbordamiento un nivel
+más arriba. **La corrección real:** `.mrk-pad-wrap { position: absolute; inset:
+0 }`, que saca a `.mrk-pad-wrap` del grid entero — igual que `.mrk-scene-slot`
+ya saca su propia caja de `.mrk-canvas` — así que su altura nunca depende de
+su contenido, y `--mrk-ground-h` (variable nueva, la comparten `.mrk-ground` y
+el `calc()` del SVG) reparte esa altura garantizada entre el SVG y el suelo sin
+que la suma pueda pasarse. Verificado con el mismo fixture en cinco anchos
+(1280 a 2560px): `overflowTop=false, overflowBottom=false` en los cinco, y las
+escenas de hijo directo (ascenso/órbita/entrega) sin cambios, confirmado aparte.
+
 **Segunda pieza, pedida por el fundador en el mismo hilo: Auditoría web se
 había quedado fuera del beat de ascenso.** ONBOARDING-ROCKET-1 (2026-08-08)
 hizo que `FirstScanTakeover` sustituyera la pantalla entera en Visión general,
@@ -11454,8 +11489,8 @@ de riesgo distinto (los ~16 solapes de orden ya documentados) y no es lo que
 este PR estaba arreglando.
 
 **Trazabilidad.** `app/globals.css` (`.mrk-full`, `--page-max-w`,
-`--page-pad-x`); `lib/web-audit/page-data.ts` y su test
-(`activeRun`); `app/dashboard/projects/[projectId]/web-audit/page.tsx`;
+`--page-pad-x`, `.mrk-pad-wrap`, `--mrk-ground-h`); `lib/web-audit/page-data.ts`
+y su test (`activeRun`); `app/dashboard/projects/[projectId]/web-audit/page.tsx`;
 log §55 (ONBOARDING-ROCKET-1, la decisión original de las cinco pantallas);
 log §57 (SCAN-STATES-3 / `ReentryMission`); `.claude/rules/mission-rocket.md`;
 `.claude/rules/styles.md` (nueva regla, cascada del break-out con sidebar).
