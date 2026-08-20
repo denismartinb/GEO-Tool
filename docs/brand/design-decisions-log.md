@@ -11364,6 +11364,82 @@ Estado (el mismo hueco, documentado desde el lado de contenido).
 
 ---
 
+## 122. Rediseño del onboarding de nuevo dominio — dirección "Consola" (ONBOARDING-DOMAIN-REDESIGN-1, 2026-08-20)
+
+**El problema.** El asistente de alta de dominio (`components/onboarding-
+wizard.tsx`) seguía en el sistema visual anterior a la migración de marca:
+índigo `#4F46E5`, degradado morado-teal en el titular, Hanken Grotesk — el
+único flujo P0 del producto que un usuario nuevo ve obligatoriamente y que
+seguía sin la paleta azul/Bricolage Grotesque que ya llevan Visión general
+(§119), Recomendaciones (§115) y el resto de la consola. Las dos cargas
+(sugerencia de Gemini, creación del proyecto) eran además una cortina fija a
+pantalla completa (`.state-wrap`, `position: fixed; inset: 0`) que tapaba
+todo el contexto — dominio escrito, plan, navegación — mientras esperabas.
+
+**Qué se decidió.** Tres direcciones se plantearon en el lienzo de `/design`
+(A "Cuenta atrás" con la metáfora del cohete de la misión completa, B
+"Consola" con el sistema visual del resto del producto, C "Rampa lateral" con
+un panel nocturno fijo). El fundador eligió **B**. Detalle completo, capturas
+de las tres pantallas y de las cinco maquetas de B en
+`docs/design-reference/onboarding-domain-redesign-1/README.md` y
+`direccion-b-aprobada.html`.
+
+Cambios concretos:
+
+1. **Migración de tokens.** `.onb2-scope` se suma al remap compartido
+   `.ov2-scope`/`.set-scope` (mismo mecanismo que ya pedía reutilizar el
+   comentario de ese bloque — un remap, no un tercero) — azul
+   `--brand-blue`, Bricolage Grotesque/Figtree, sombra de marca. La barra de
+   pasos pasa de círculos numerados a tres segmentos con etiqueta debajo
+   (`.onb2-steps`).
+2. **Cargas embebidas, no cortina.** `SuggestionsLoadingOverlay` y
+   `CreateProjectOverlay` (fixed, `inset: 0`) desaparecen. En su lugar, cada
+   paso sustituye su propia tarjeta por una versión "cargando" en el mismo
+   sitio (`DomainAnalyzingCard`, y `PromptsStepBody` leyendo
+   `useFormStatus()`) — el panel de resumen y la navegación nunca
+   desaparecen de la pantalla.
+3. **Panel "Resumen del lanzamiento".** Columna derecha fija con dominio,
+   idioma (marcado "detectado" sólo desde que `suggestAction` ha resuelto,
+   nunca antes), motores, competidores y prompts — cada cifra es el estado
+   real del asistente; "Pendiente" mientras ese paso no se ha alcanzado, en
+   vez de un cero o un guion que podría leerse como un valor medido. El
+   total de respuestas estimadas (`prompts × motores`) se calcula del estado,
+   nunca de una tabla fija.
+4. **`Competitor` gana `source: "suggested" | "manual"`.** El chip "sugerido"
+   del paso de competidores sólo se pinta en las filas que de verdad vinieron
+   de Gemini — una fila añadida a mano con "Añadir competidor" nunca lo
+   lleva. Desviación deliberada frente a la maqueta (que no distinguía
+   origen); ver el README de la carpeta de diseño.
+5. **Reparto de prompts por categoría.** Nuevo panel de barras en el paso de
+   prompts, calculado en `useMemo` sobre el propio estado `prompts` — cuenta
+   real, no inventada.
+
+**Qué NO cambió.** Los tres pasos, sus validaciones, el límite de plan, la
+recogida del dominio pendiente de la landing (`pending-domain.ts`), los
+mensajes de error de Gemini (`SuggestionGapNotice`) y los nombres de los
+campos ocultos del `<form>` que lee `createProject` — nada de la lógica de
+servidor se tocó.
+
+**Dónde vive el CSS y por qué no en `console.css`.** El bloque `onb2-` vive
+en `app/globals.css`, no en `app/console.css`, aunque el asistente sólo se
+renderiza dentro de `app/dashboard/**`: `components/onboarding-wizard.tsx`
+es un fichero de `components/`, y `tests/console-css-scope.test.ts` sólo
+excluye el directorio `app/dashboard/**` de "fuera de la consola" — trata
+cualquier clase escrita desde `components/` como pública, tal y como ya
+advertía `.claude/rules/styles.md` sobre la pantalla de notificaciones. Las
+clases exclusivas del wizard anterior (`.add-domain`, `.add-card`,
+`.wiz-steps`, …) se borraron de `globals.css`; las que seguían siendo
+compartidas con otras pantallas (`.add-sub`, `.domain-bar`, `.field-label`,
+`.type-caret`, `.cap`, `.meta-flag`, …) se mantienen intactas y el nuevo
+diseño las reutiliza tal cual.
+
+**Trazabilidad.** `components/onboarding-wizard.tsx`; `app/globals.css`
+(bloque `.onb2-`); `docs/design-reference/onboarding-domain-redesign-1/`;
+log §2 (mecanismo de remap de tokens), §119 (última pantalla migrada al
+mismo sistema).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
