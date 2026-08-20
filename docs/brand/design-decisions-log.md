@@ -11338,9 +11338,41 @@ a construir cuando cambia este workflow, para que el arreglo pueda ejercitarse).
 
 ---
 
+
 ---
 
-## 121. Dominios: seleccionar una tarjeta propaga a toda la consola, y el botón "Ver visión general" se reduce en desktop (DOMAINS-LIVE-SELECT-1, 2026-08-20)
+## 121. `sameAs` deja de estar vacío: LinkedIn y G2 son perfiles reales (2026-08-20)
+
+**Qué pasó.** El fundador dio de alta la página de empresa de LinkedIn
+(`https://www.linkedin.com/company/genscore/`) y la ficha de vendedor en G2
+(`https://www.g2.com/sellers/genscore`) y pasó ambas URLs directamente. Es
+justo el evento que §100 y `docs/off-site-authority-kit.md` §8 dejaron escrito
+como el único que habilita esto: `organization-schema.tsx` llevaba desde
+GROWTH-2 Fase 2.1 sin `sameAs` a propósito, porque declarar un perfil que no
+existe es el mismo dato falso que una métrica inventada.
+
+**Qué se decidió.** Añadir ambas URLs al `sameAs` de `OrganizationSchema`
+(`components/seo/organization-schema.tsx`) y nada más — ni Capterra (copy
+listo, ficha sin crear todavía) ni YouTube (guiones listos, sin grabar). El
+kit off-site (`docs/off-site-authority-kit.md` §7-8, tabla de Estado) se
+actualiza en el mismo PR para que la próxima sesión no vuelva a preguntar qué
+falta: Capterra sigue "Alta: fundador", LinkedIn y G2 pasan a "Dados de alta".
+
+**Por qué no hace falta re-verificar las URLs.** La regla que protege este
+campo (§100, `docs/off-site-authority-kit.md` §8) es contra que el propio
+agente **invente** un perfil, no contra recibir una URL real de quien es dueño
+de la cuenta — el fundador pasando directamente las dos URLs es precisamente
+el mecanismo que esos documentos describen como el que las desbloquea.
+
+**Trazabilidad.** `components/seo/organization-schema.tsx`; log §100 (por qué
+`sameAs` nació vacío); `docs/off-site-authority-kit.md` §7-8 y su tabla de
+Estado (el mismo hueco, documentado desde el lado de contenido).
+
+---
+
+---
+
+## 122. Dominios: seleccionar una tarjeta propaga a toda la consola, y el botón "Ver visión general" se reduce en desktop (DOMAINS-LIVE-SELECT-1, 2026-08-20)
 
 **Origen.** Fundador, 2026-08-20: seleccionar otro dominio en la pantalla
 "Dominios" (`/dashboard/domains`) tenía que reflejarse en toda la consola

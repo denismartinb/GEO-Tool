@@ -79,7 +79,7 @@ export function Sidebar({
   // clicked, with no round trip. Confirmed the hard way: the read-only pilot
   // journey added for this feature failed on the first push without this —
   // the hero updated (it's a fresh Server Component render) but the sidebar
-  // didn't (see docs/brand/design-decisions-log.md §121).
+  // didn't (see docs/brand/design-decisions-log.md §122).
   const domainsQueryProjectId = pathname === "/dashboard/domains" ? searchParams.get("active") : null;
   // Outside a project's own routes (Billing, Settings, the dashboard root)
   // the URL carries no projectId at all — fall back to the cookie-remembered
