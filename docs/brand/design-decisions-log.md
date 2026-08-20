@@ -11489,6 +11489,49 @@ silencio, sin ningún error.
 
 ---
 
+## 123. Onboarding: el asistente dejaba entrar 10 competidores y el servidor guardaba 5 en silencio (ONBOARDING-COMPETITORS-CAP-1, 2026-08-20)
+
+**Qué pasó.** El fundador dio de alta 10 competidores en el asistente de
+nuevo dominio; al terminar el primer escaneo, la pantalla de Competidores
+("Cuota de voz en IA") solo mostraba 5.
+
+**Causa.** `parseInitialCompetitors` (`lib/projects/project-form.ts`) cortaba
+la lista en `MAX_INITIAL_COMPETITORS` (5) sin avisar, mientras el asistente
+(`components/onboarding-wizard.tsx`) no tenía ningún tope propio: el botón
+"Añadir competidor" seguía añadiendo filas y el contador decía "10
+competidores listos". El servidor descartó los últimos 5 sin error ni aviso
+en pantalla — pérdida de datos silenciosa, no un fallo de renderizado. La
+misma constante hacía doble papel: cuántos competidores pide el sistema a
+Gemini como sugerencia, y cuántos acepta del usuario. El primer uso ya tenía
+un arreglo equivalente para prompts (`maxPrompts` pasado desde el cap del
+plan); a competidores nunca se le aplicó.
+
+**Impacto real.** No es solo visual: el set de competidores entra en
+`competitors_snapshot` y alimenta `standing`, `brand_position` y
+`prominence` (ADR 0018). Ese escaneo se puntuó contra 5 competidores en vez
+de 10.
+
+**Decisión (opción B, aprobada por el fundador).** Separar los dos usos:
+`MAX_INITIAL_COMPETITORS` (5) queda solo para la petición de sugerencias a
+Gemini; nace `MAX_USER_COMPETITORS` (10) como tope explícito y **visible**
+de lo que el asistente acepta. El botón "Añadir competidor" se deshabilita
+al llegar a 10 y el contador pasa a decir "N competidores listos (máximo
+10)" — mismo patrón que ya usaba el paso de prompts con `promptCap`. Ningún
+tope que la interfaz no enseña es aceptable: es exactamente esta pérdida de
+datos silenciosa otra vez, con otro nombre.
+
+**No incluido en esta fase.** Recalcular el escaneo que ya corrió con solo 5
+competidores (los 5 que faltan se dan de alta ahora en "Gestionar", que no
+tiene tope, y entran desde el siguiente escaneo). No se tocó `sampling`, el
+pipeline de extracción, ni el cap de prompts.
+
+**Trazabilidad.** `lib/projects/project-form.ts`,
+`components/onboarding-wizard.tsx`,
+`lib/projects/project-form.test.ts`; ADR 0018 (por qué el set de
+competidores importa para el scoring, no solo para la pantalla).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
