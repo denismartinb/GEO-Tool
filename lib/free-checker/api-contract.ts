@@ -37,6 +37,13 @@ export type PublicCheckResponse =
        */
       otherBrands: string[];
       citedOwnDomain: boolean;
+      /**
+       * Fase D1 (2026-08-17) — las fuentes reales que ChatGPT consultó con
+       * `web_search`, deduplicadas por dominio. Distinto de `citedOwnDomain`:
+       * ése viene de lo que el extractor CREE haber leído en el texto (Fase B),
+       * esto viene de la metadata de búsqueda del propio proveedor.
+       */
+      sources: Array<{ domain: string; url: string; title: string | null }>;
     }
   /** Se intentó y no salió. El visitante ve qué pasó y puede reintentar. */
   | { status: "failed"; error: PublicCheckError }

@@ -53,6 +53,7 @@ import { ScoreGauge, SubScoreTile, LockedSubScoreTile, MiniBar } from "./_compon
 import { PageAuditRow } from "./_components/page-audit-row";
 import { BotAccessCard } from "./_components/bot-access-card";
 import { TrendChart } from "./_components/trend-chart";
+import { TechnicalPotentialBanner } from "./_components/technical-potential-banner";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -491,45 +492,24 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 estimación). */}
             {currentTechnicalReport ? (
               <>
-                {currentTechnicalReport.totalPointPotential > 0 && (
-                  <div
-                    className="card"
-                    style={{ marginTop: 12, padding: "14px 16px", background: "var(--pos-soft)", border: "1px solid transparent" }}
-                  >
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".03em", color: "var(--pos-ink)", textTransform: "uppercase" }}>
-                      Si arreglas los {currentTechnicalReport.issues.length}{" "}
-                      {currentTechnicalReport.issues.length === 1 ? "problema técnico" : "problemas técnicos"}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-                      <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>
-                        {currentTechnicalReport.actualReadinessScore}
-                      </span>
-                      <Icon name="arrRight" size={16} />
-                      <span
-                        style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", color: "var(--pos-ink)", fontVariantNumeric: "tabular-nums" }}
-                      >
-                        {currentTechnicalReport.projectedReadinessScore}
-                      </span>
-                      <span className="badge badge-pos" style={{ marginLeft: "auto", fontSize: 10.5, background: "var(--surface)" }}>
-                        calculado
-                      </span>
-                    </div>
-                    {/* Names WHICH score these two numbers are. Founder review
-                        2026-08-03: the hero dial reads 58 and this card reads
-                        81 — "ya veo que es salud técnica, pero me ha costado
-                        identificarlo". They are different measures (global
-                        average vs technical only), so the fix is a label, not
-                        a shared number. Copy also cut down per the same
-                        review ("la frase tiene que ser más pequeña"). */}
-                    <div style={{ fontSize: 11, fontWeight: 650, color: "var(--pos-ink)", marginTop: 2 }}>
-                      Salud técnica
-                    </div>
-                    <p style={{ fontSize: 10.5, lineHeight: 1.45, color: "var(--ink-3)", margin: "6px 0 0" }}>
-                      Es una valoración técnica. Que la IA acabe citándote depende también de otros factores de
-                      GEO, que trabajas en Recomendaciones.
-                    </p>
-                  </div>
-                )}
+                {/* Names WHICH score these two numbers are. Founder review
+                    2026-08-03: the hero dial reads 58 and this card reads 81
+                    — "ya veo que es salud técnica, pero me ha costado
+                    identificarlo". They are different measures (global
+                    average vs technical only), so the fix is a label, not a
+                    shared number. Copy also cut down per the same review
+                    ("la frase tiene que ser más pequeña"). Restyled
+                    2026-08-17 (founder: "muy feo") — see
+                    TechnicalPotentialBanner. */}
+                {currentTechnicalReport.totalPointPotential > 0 &&
+                  currentTechnicalReport.actualReadinessScore !== null &&
+                  currentTechnicalReport.projectedReadinessScore !== null && (
+                    <TechnicalPotentialBanner
+                      issueCount={currentTechnicalReport.issues.length}
+                      fromScore={currentTechnicalReport.actualReadinessScore}
+                      toScore={currentTechnicalReport.projectedReadinessScore}
+                    />
+                  )}
 
                 <div className="card" style={{ marginTop: 12 }}>
                   <div
