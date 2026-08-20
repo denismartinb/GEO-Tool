@@ -12,7 +12,25 @@ import { PROMPT_CATEGORIES } from "@/lib/projects/prompt-categories";
  */
 
 export const MAX_INITIAL_PROMPTS = 10;
+
+/**
+ * How many competitors the system asks Gemini to SUGGEST
+ * (`suggestCompetitors`, `app/dashboard/projects/actions.ts` /
+ * `lib/projects/create-project.ts`'s auto-fill path). Not the cap on how many
+ * the user can enter — see `MAX_USER_COMPETITORS` for that.
+ */
 export const MAX_INITIAL_COMPETITORS = 5;
+
+/**
+ * How many competitors `parseInitialCompetitors` accepts from the onboarding
+ * wizard's own free-form rows. ONBOARDING-COMPETITORS-CAP-1: the wizard's
+ * "Añadir competidor" button had no limit while this parser silently capped
+ * at `MAX_INITIAL_COMPETITORS` (5) — a user who added 10 rows got the first 5
+ * persisted with no error and no indication anything was dropped. This is a
+ * separate, higher, visible cap: the wizard disables its own "add" button at
+ * this same number so the two stay in agreement.
+ */
+export const MAX_USER_COMPETITORS = 10;
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
   es: "es",
@@ -141,7 +159,7 @@ export function parseInitialPrompts(
   return prompts;
 }
 
-export function parseInitialCompetitors(input: string | undefined) {
+export function parseInitialCompetitors(input: string | undefined, maxCompetitors: number = MAX_USER_COMPETITORS) {
   if (!input) return [];
 
   const seen = new Set<string>();
@@ -164,7 +182,7 @@ export function parseInitialCompetitors(input: string | undefined) {
 
     competitors.push({ name, domain });
 
-    if (competitors.length >= MAX_INITIAL_COMPETITORS) break;
+    if (competitors.length >= maxCompetitors) break;
   }
 
   return competitors;
