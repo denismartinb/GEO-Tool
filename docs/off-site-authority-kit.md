@@ -216,12 +216,13 @@ fabricarlas fuera sería el mismo dato falso, y además G2 las retira.
 
 Esto es lo que ata la Fase A con la Fase E, y conviene no perderlo de vista:
 
-`components/seo/organization-schema.tsx` **no declara `sameAs`** — a propósito,
-porque hoy no existe ningún perfil real que citar, e inventarlo sería un dato
-falso (log §100). **En cuanto existan** la página de LinkedIn, el canal de
-YouTube y las fichas de G2/Capterra, esas URLs son `sameAs` legítimos, y
-añadirlas es el refuerzo de entidad más barato que queda: le da al motor las
-corroboraciones externas que hoy no tiene.
+`components/seo/organization-schema.tsx` sólo declara en `sameAs` los perfiles
+que existen de verdad — a propósito, porque inventar uno sería un dato falso
+(log §100). **LinkedIn y G2 ya están dados de alta y en `sameAs` desde
+log §121.** En cuanto exista también la ficha de Capterra o el canal de
+YouTube, esas URLs son `sameAs` legítimos y añadirlas es el refuerzo de
+entidad más barato que queda: le da al motor las corroboraciones externas que
+hoy le faltan a esos dos.
 
 **Cuando el fundador cree cada perfil, pasa la URL y se añade** — es un PR de
 tres líneas. No al revés: no se declara un `sameAs` de un perfil que aún no
@@ -235,7 +236,8 @@ existe.
 |---|---|
 | Reddit | Material listo. Publicar: fundador |
 | YouTube (2 vídeos) | Guiones listos. Grabar: fundador |
-| G2 / Capterra / LinkedIn | Copy listo. Alta: fundador |
+| G2 / LinkedIn | **Dados de alta** (log §121) |
+| Capterra | Copy listo. Alta: fundador |
 | Nota de prensa | **Bloqueada** — depende del Observatorio (sin aprobar) |
 | EUIPO | Pendiente del fundador; sólo bloquea difusión pagada |
-| `sameAs` en el schema | Pendiente de que existan los perfiles |
+| `sameAs` en el schema | LinkedIn y G2 añadidos (log §121). Capterra pendiente de que exista el perfil |
