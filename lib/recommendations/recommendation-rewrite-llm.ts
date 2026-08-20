@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { generateGeminiJson } from "@/lib/llm/gemini-client";
+import { CODE_ARTIFACT_MAX, PROSE_ARTIFACT_MAX } from "@/lib/recommendations/pasteable-artifact";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R5 (2/2) — la reescritura de recomendaciones, en
@@ -126,7 +127,9 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
     '"summary": 1-2 sentences, max 400 characters, why this matters for this brand given the facts.',
     '"steps": 3 to 6 concrete, specific actions (each max 200 characters) the brand should take, grounded in the real prompts/competitors below.',
     "IMPORTANT: the brand may ALREADY have this information on its site but in a form AI engines cannot read. So the steps MUST cover not just creating content but making it machine-readable: at least one step on HOW to expose/structure it for AI — clear semantic HTML and descriptive headings, structured data (JSON-LD schema such as FAQPage/Article/Organization) where relevant, content crawlable as real text (not hidden behind scripts, images or logins), and concise directly-extractable answers. Phrase it as 'if you already have this, expose it like this; if not, create it like this'.",
-    '"examples": 1 to 3 ready-to-paste TEMPLATE artifacts the user adapts before publishing — one per distinct deliverable the steps call for (e.g. a citable factual paragraph, a short FAQ, a JSON-LD schema snippet). Each is an example to review and fill in, never a verified fact. Each item: "label" names it (max 80 chars); "content" is the pasteable text (max 1200 chars). Return [] only if no useful artifact can be grounded in the facts.',
+    `"examples": 1 to 3 ready-to-paste TEMPLATE artifacts the user adapts before publishing — one per distinct deliverable the steps call for (e.g. a citable factual paragraph, a short FAQ, a JSON-LD schema snippet). Each is an example to review and fill in, never a verified fact. Each item: "label" names it (max 80 chars); "content" is the pasteable text.`,
+    `LENGTH BUDGET — prose artifacts (a paragraph, an outline, an outreach template): up to ${PROSE_ARTIFACT_MAX} characters. Code artifacts (JSON-LD, an HTML snippet): up to ${CODE_ARTIFACT_MAX} characters, because a FAQPage with two answered questions does not fit in less.`,
+    "COMPLETENESS BEATS COVERAGE — a code artifact MUST be syntactically complete and valid on its own: every brace, bracket, quote and tag closed, no ellipsis, never stopped mid-sentence. If the full artifact would not fit in its budget, produce a SMALLER but complete one (e.g. a FAQPage with two questions instead of four) — never a truncated larger one. A JSON-LD block that does not parse is worse than no example at all, and it will be discarded.",
     "In any example (especially JSON-LD), the ONLY URLs/domains you may use are the brand domain above and schema.org (for @context). For any other URL — social profiles, third-party pages — use a placeholder like https://[tu-dominio]/pagina; NEVER write a real third-party or competitor domain.",
     ...(playbook ? ["", playbook] : []),
     "",
@@ -177,7 +180,11 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
   const rawExamples = parsed.data.examples ?? (parsed.data.example ? [parsed.data.example] : []);
   const examples = rawExamples
     .map((item) => ({ label: item.label.trim(), content: item.content.trim() }))
-    .filter((item) => item.label.length > 0 && item.content.length > 0 && item.content.length <= 2000)
+    // El tope de aquí es sólo un cortafuegos contra una respuesta desbocada;
+    // quién puede recortarse y quién se descarta entero lo decide
+    // `checkPasteableArtifact` en el saneado del servidor (log §122). Antes
+    // valía 2000 y descartaba en silencio artefactos de código válidos.
+    .filter((item) => item.label.length > 0 && item.content.length > 0 && item.content.length <= CODE_ARTIFACT_MAX)
     .slice(0, MAX_GENERATED_EXAMPLES);
 
   return { title, summary, steps, examples };
