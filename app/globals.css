@@ -4744,13 +4744,28 @@ a.notif-row:hover {
   border-radius: 999px; padding: 3px 8px; flex: none;
 }
 
-/* Etiquetas, no lista ordenada: no hay ranking que enseñar (Fase C, log §113). */
+/* Etiquetas. En Fase C no había ranking que enseñar (log §113), así que eran
+   texto suelto sin número; desde Fase D2 SÍ hay un puesto real cuando el
+   extractor lo devuelve, y `.fc-rival-pos` lo antepone dentro de la propia
+   etiqueta — nunca como lista ordenada, porque el orden del DOM no es el dato:
+   el dato es el número. */
 .fc-rivals { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
 .fc-rivals li {
-  font-size: 13.5px; font-weight: 600; color: var(--ink); background: var(--surface-2);
-  border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+  display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600;
+  color: var(--ink); background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: 5px 12px 5px 8px;
+}
+.fc-rival-pos {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  color: var(--ink-4); background: var(--surface-sunk); border-radius: 999px;
+  width: 18px; height: 18px; flex: none; display: inline-flex; align-items: center; justify-content: center;
 }
 .fc-rivals-note { margin: 12px 0 0 !important; font-size: 12.5px !important; color: var(--ink-4) !important; }
+/* Las marcas fuera de categoría (Fase D2): línea aparte, sin etiquetas — la
+   forma visual de una etiqueta ya se usó para decir "esto compite contigo", y
+   éstas no. */
+.fc-rivals-other { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-4); }
+.fc-rivals-other strong { color: var(--ink-3); font-weight: 600; }
 .fc-upsell {
   border: 1px solid var(--line); border-radius: 13px; padding: 22px 24px; margin-top: 22px;
   background: var(--surface-2);

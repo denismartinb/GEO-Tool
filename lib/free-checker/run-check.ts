@@ -184,8 +184,19 @@ export type PublicCheckOutcome =
        * necesita compararlo con las posiciones reales cuando existan.
        */
       brandPosition: number | null;
-      /** Quién SÍ apareció, en el orden en que la IA los nombró. */
-      otherBrands: string[];
+      /**
+       * Quién SÍ apareció — con posición y categoría reales (Fase D2), a
+       * partir de `other_brands_detail`. `position` comparte ranking con
+       * `brand`, así que aquí un puesto SÍ es un dato medido, a diferencia
+       * de `brandPosition` de arriba. `sameCategory: false` es lo que
+       * distingue una alternativa real de algo que sólo apareció en el
+       * mismo párrafo (el caso Netflix/Orange de Fase C, log §111/§113).
+       * Si el extractor no devolvió `other_brands_detail` (fallback viejo,
+       * mock de test), se reconstruye desde `other_brands_mentioned` con
+       * `position: null, sameCategory: true` — nunca se pierde un nombre
+       * que el modelo sí llegó a nombrar.
+       */
+      otherBrands: Array<{ name: string; position: number | null; sameCategory: boolean }>;
       /** Dominios que la IA citó como fuente. */
       citedDomains: string[];
       /** Si alguna cita es del dominio del visitante. */
@@ -236,6 +247,14 @@ export type PublicCheckExtractor = (input: {
     brand: { mentioned: boolean; position: number | null };
     citations: Array<{ domain: string | null }>;
     other_brands_mentioned: string[];
+    /**
+     * Fase D2: la forma rica y PARALELA de `other_brands_mentioned` — mismas
+     * entidades, con posición real (compartiendo ranking con `brand`) y un
+     * juicio de categoría. `.default([])` en el esquema, así que un
+     * extractor viejo (o un mock de test) que no lo declare sigue
+     * encajando: se lee `?? []` en cuanto se consume.
+     */
+    other_brands_detail?: Array<{ name: string; position: number | null; same_category: boolean }>;
   };
 }>;
 
@@ -454,6 +473,23 @@ export async function runPublicCheck(
       .map((c) => c.domain?.trim().toLowerCase())
       .filter((d): d is string => Boolean(d));
 
+    // Fase D2. `other_brands_detail` es la fuente preferida: trae posición
+    // real (comparte ranking con `brand`) y categoría. Si el extractor no lo
+    // devolvió — un fallback viejo, un mock de test — se reconstruye desde
+    // `other_brands_mentioned` en vez de perder los nombres: `position: null`
+    // (nunca inventado) y `sameCategory: true` (el comportamiento de antes de
+    // esta fase, cuando no había forma de distinguir).
+    const detailNames = new Set((verified.other_brands_detail ?? []).map((b) => b.name?.trim()).filter(Boolean));
+    const otherBrands = [
+      ...(verified.other_brands_detail ?? [])
+        .filter((b) => b.name?.trim())
+        .map((b) => ({ name: b.name.trim(), position: b.position, sameCategory: b.same_category })),
+      ...verified.other_brands_mentioned
+        .map((n) => n?.trim())
+        .filter((n): n is string => Boolean(n) && !detailNames.has(n))
+        .map((name) => ({ name, position: null, sameCategory: true }))
+    ];
+
     return {
       status: "completed",
       brand,
@@ -462,7 +498,7 @@ export async function runPublicCheck(
       answer,
       brandMentioned: verified.brand.mentioned,
       brandPosition: verified.brand.mentioned ? verified.brand.position : null,
-      otherBrands: verified.other_brands_mentioned.filter((n) => n?.trim()),
+      otherBrands,
       citedDomains,
       citedOwnDomain: citedDomains.some((d) => d === domain || d.endsWith(`.${domain}`)),
       sources,

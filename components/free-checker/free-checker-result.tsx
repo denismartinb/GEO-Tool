@@ -21,20 +21,22 @@ import { PUBLIC_CHECK_MESSAGES, type PublicCheckResponse } from "@/lib/free-chec
  *   separa un dato de un susto vendido como dato.
  * - **Ningún análisis de los competidores** más allá de a quién nombró. Su
  *   estrategia o su cuota exigirían datos que en esta consulta no existen.
- * - **Ningún puesto, ni para la marca ni para las demás** (Fase C, 2026-08-16).
- *   Aquí `competitors` va vacío a propósito, así que la única entidad que el
- *   extractor rankea es la propia marca: su `position` vale 1 SIEMPRE que
- *   aparezca, diga lo que diga el resto de la respuesta. Se enseñó como
- *   "Movistar en el puesto 1" en una respuesta que nombraba a Orange antes —
- *   un dato que parecía medido y no lo estaba. Y `other_brands_mentioned` es
- *   una lista de nombres **sin posición**: numerarla 1..N era numerar el índice
- *   de un array. Un puesto real exige un conjunto contra el que rankear, y eso
- *   es la Fase D, no un ajuste de copy.
- * - **Las demás marcas no se llaman "competidores".** El motor nombra lo que
- *   hay en la respuesta, y en la primera ejecución real eso incluyó a Netflix,
- *   HBO Max y DAZN junto a Orange y Yoigo: plataformas incluidas en los
- *   paquetes, no rivales del operador. Llamarlas competencia era una
- *   interpretación nuestra sobre un dato que no la sostiene.
+ * - **`brandPosition` sigue sin publicarse** (Fase C, 2026-08-16; vigente tras
+ *   Fase D2). Con `competitors: []`, la posición de la marca era un 1
+ *   estructural sin nada contra lo que rankear — se enseñó como "Movistar en
+ *   el puesto 1" en una respuesta que nombraba a Orange antes, un dato que
+ *   parecía medido y no lo estaba. Ver `api-contract.ts` para por qué sigue
+ *   fuera aunque el dato ya podría ser real.
+ * - **Las demás marcas SÍ tienen puesto real desde Fase D2** (2026-08-17):
+ *   `otherBrands[].position` comparte ranking con la propia marca, así que un
+ *   número aquí es un dato medido, no un índice de array — lo contrario de lo
+ *   que Fase C retiró. `null` cuando el extractor no lo devolvió; nunca se
+ *   inventa uno.
+ * - **Y ya distinguen si son competencia de verdad.** `sameCategory` es el
+ *   arreglo directo del caso que Fase C sólo pudo avisar: una respuesta sobre
+ *   operadores de telecomunicaciones que nombraba a Netflix y HBO Max junto a
+ *   Orange y Yoigo. Las de categoría distinta se enseñan aparte, nunca
+ *   mezcladas con las alternativas reales.
  *
  * El aviso de variabilidad va en bloque destacado, no en letra pequeña: es
  * parte del resultado, no una nota legal.
@@ -123,28 +125,42 @@ export function FreeCheckerResult({
         </div>
       )}
 
-      {/* Sin números y sin la palabra "competidores": ver la cabecera. Se pintan
-          como etiquetas, no como una lista ordenada, porque una lista numerada
-          se lee como un ranking aunque el número no esté — y aquí no hay
-          ranking que enseñar. */}
-      {otherBrands.length > 0 && (
-        <div className="fc-panel">
-          <span className="fc-lbl">
-            {brandMentioned
-              ? `Las demás marcas que ${engineLabel} nombró`
-              : `Las marcas que ${engineLabel} sí nombró`}
-          </span>
-          <ul className="fc-rivals">
-            {otherBrands.map((name, i) => (
-              <li key={`${name}-${i}`}>{name}</li>
-            ))}
-          </ul>
-          <p className="fc-rivals-note">
-            Tal cual las nombró, sin orden. Alguna puede no ser competencia tuya: son todas las
-            marcas que aparecen en la respuesta, no una selección nuestra.
-          </p>
-        </div>
-      )}
+      {/* Fase D2: alternativas reales primero (posición real cuando existe,
+          ordenadas por ella), las de categoría distinta aparte y sin
+          etiqueta — nunca mezcladas, porque una etiqueta ya afirma "esto
+          compite contigo" y para esas no es cierto. */}
+      {otherBrands.length > 0 && (() => {
+        const alternatives = otherBrands
+          .filter((b) => b.sameCategory)
+          .sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity));
+        const offCategory = otherBrands.filter((b) => !b.sameCategory);
+
+        return (
+          <div className="fc-panel">
+            <span className="fc-lbl">
+              {brandMentioned
+                ? `Las demás marcas que ${engineLabel} nombró`
+                : `Las marcas que ${engineLabel} sí nombró`}
+            </span>
+            {alternatives.length > 0 && (
+              <ul className="fc-rivals">
+                {alternatives.map((b) => (
+                  <li key={b.name}>
+                    {b.position !== null && <span className="fc-rival-pos">{b.position}</span>}
+                    {b.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {offCategory.length > 0 && (
+              <p className="fc-rivals-other">
+                <strong>También mencionó, aunque no compite en tu categoría:</strong>{" "}
+                {offCategory.map((b) => b.name).join(", ")}.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* La cita del propio dominio se recoge siempre y sólo se enseña cuando
           es verdad: es la señal más fuerte que puede dar una respuesta —que el

@@ -27,15 +27,33 @@ export type PublicCheckResponse =
       answer: string;
       brandMentioned: boolean;
       /**
-       * **No hay `brandPosition` a propósito, y quitarlo del contrato es el
-       * punto** (Fase C, 2026-08-16). La comprobación pasa `competitors: []`,
-       * así que la única entidad que el extractor rankea es la propia marca y
-       * su `position` vale 1 siempre que aparezca. Se publicó como "en el
-       * puesto 1" sobre una respuesta que nombraba a Orange antes que a
-       * Movistar. Mientras el dato no exista, no puede llegar al navegador:
-       * dejarlo en la respuesta y confiar en que nadie lo pinte es cómo vuelve.
+       * **Sigue sin haber `brandPosition` a propósito** (Fase C, 2026-08-16;
+       * revisado en Fase D2). Con `competitors: []`, la posición de la marca
+       * era un 1 estructural sin nada contra lo que rankear. Fase D2 pide al
+       * modelo que comparta esa misma numeración con `other_brands_detail`
+       * (abajo), así que `brand.position` ya podría ser un dato real cuando
+       * hay otras marcas — pero exponerlo al visitante no formaba parte de lo
+       * aprobado en esta fase, y sigue sin verificarse contra el texto igual
+       * que `other_brands_detail`. Queda para una fase futura, con su propio
+       * Task Intake.
        */
-      otherBrands: string[];
+      otherBrands: Array<{
+        name: string;
+        /**
+         * Fase D2 (2026-08-17) — comparte ranking con `brand`, así que un
+         * puesto aquí SÍ es un dato medido, a diferencia de `brandPosition`
+         * de arriba (que ni siquiera se envía). `null` cuando el extractor no
+         * lo devolvió — nunca un número inventado por reconstrucción.
+         */
+        position: number | null;
+        /**
+         * `false` cuando el motor la nombró en la misma respuesta pero no es
+         * una alternativa real para la misma necesidad — el caso Netflix/HBO
+         * Max junto a Orange y Yoigo en una respuesta sobre operadores de
+         * telecomunicaciones (Fase C, log §111/§113).
+         */
+        sameCategory: boolean;
+      }>;
       citedOwnDomain: boolean;
       /**
        * Fase D1 (2026-08-17) — las fuentes reales que ChatGPT consultó con

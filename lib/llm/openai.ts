@@ -268,6 +268,7 @@ export async function extractOpenAIStructuredData(input: {
   "citations": [{ "url": string|null, "domain": string|null, "label": string|null, "evidence": string|null }],
   "sentiment": "positive"|"neutral"|"negative"|"mixed"|"unknown",
   "other_brands_mentioned": string[],
+  "other_brands_detail": [{ "name": string, "position": number|null, "same_category": boolean }],
   "summary": string,
   "confidence": "low"|"medium"|"high",
   "notes": string[]
@@ -283,7 +284,9 @@ For "competitors": return EXACTLY one entry per name listed under Competitors be
 
 For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if not mentioned. Rank only mentioned entities with no gaps (1, 2, 3...). Brand and competitors share a single ranking.
 
-For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. Only include names genuinely present in the text — never invent one. Exclude generic terms or product categories.${otherBrandsRelevanceHint(input.profile)} Up to 5 entries, each a short canonical name. Empty array [] if none.`;
+For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. Only include names genuinely present in the text — never invent one. Exclude generic terms or product categories.${otherBrandsRelevanceHint(input.profile)} Up to 5 entries, each a short canonical name. Empty array [] if none.
+
+For "other_brands_detail": EXACTLY one entry per name in "other_brands_mentioned", same names, any order. "position": that entity's own first-mention rank using the SAME 1-based, no-gaps ranking rule as brand/competitors' "position" above — share the ranking with brand and competitors, not a separate count restarted at 1. "same_category": true only if this is a genuine alternative a customer would actually compare against ${input.brand} for the SAME need — false for something merely mentioned alongside it (a bundled add-on, a platform included in a package, an unrelated product line from the same response). Example: if the response recommends telecom operators and one package happens to include a streaming service, the operators are "same_category": true and the streaming service is "same_category": false — it is not competing for the same purchase decision. Never invent a name that is not also in "other_brands_mentioned".`;
 
   const userContent = [
     schemaInstruction,

@@ -10826,6 +10826,61 @@ redirecciones); `lib/scan/extraction.ts` (`buildGroundedCitations`,
 `extractDomain` — el patrón que se duplica a propósito);
 `docs/llm-cost-analysis-2026-08.md`.
 
+### Fase D2 (2026-08-20): posición y categoría reales, sin tocar lo que ya funciona
+
+Task Intake propio, aprobado por el fundador en sesión, sobre los dos huecos
+que Fase C dejó explícitamente pendientes: un "puesto 1" que ni siquiera se
+publicaba porque no había nada real que medir, y una lista de marcas que no
+distinguía competencia real de lo que sólo apareció en el mismo párrafo (el
+caso Netflix/HBO Max junto a Orange y Yoigo).
+
+**El riesgo real de esta fase, dicho antes de tocar nada.** `other_brands_mentioned`
+(`string[]`) tiene consumidores de verdad en el escaneo — la reconciliación de
+`lib/scan/extraction.ts`, RECS-4A ("competidores emergentes") en
+`lib/recommendations/recommendation-engine.ts`, y
+`lib/citations/aggregate-citations.ts`. Cambiar su tipo habría sido tocar los
+tres a la vez, sin necesidad. La decisión: **campo nuevo y paralelo**,
+`other_brands_detail: Array<{name, position, same_category}>`, `.default([])`
+en el esquema. `other_brands_mentioned` no cambia ni de tipo ni de contenido —
+los tres consumidores existentes no ven este PR. Sólo el comprobador gratuito
+lee el campo nuevo hoy.
+
+**La posición comparte ranking con la marca, no un conteo aparte.** La
+instrucción ya existente ("brand and competitors share a single ranking") se
+extendió a `other_brands_detail` en los tres proveedores (Gemini/OpenAI/Claude,
+mismo texto, misma disciplina que exige `.claude/rules/gemini.md`: "lo que
+comparten los tres motores no vive dentro de uno de ellos" — aquí vive
+duplicado a propósito en los tres, como ya lo estaba la instrucción original).
+Efecto colateral honesto: `brand.position` **también** podría ser un dato real
+ahora que hay algo contra lo que rankear, no el 1 estructural que Fase C
+retiró. **No se ha publicado** — no era lo aprobado en este Task Intake, y
+sigue sin verificarse contra el texto igual que el resto de este campo. Anotado
+en `api-contract.ts` para la fase que lo recoja.
+
+**`same_category` es un juicio del modelo, no una verificación.** A diferencia
+de `verifyExtractedMentions` (que sí comprueba `brand`/`competitors` contra el
+texto literal), no hay nada contra lo que verificar "¿es esto de la misma
+categoría?" — es una pregunta de contexto, no de presencia textual. Se acepta
+como lo que es: el juicio del modelo con el perfil del negocio delante
+(reutilizando `otherBrandsRelevanceHint`), no un hecho comprobado. La pantalla
+lo trata así: las marcas de categoría distinta se enseñan aparte, en una frase,
+nunca como una etiqueta que ya afirma "esto compite contigo".
+
+**Qué pasa cuando el modelo no cumple del todo.** `other_brands_detail` puede
+llegar vacío, o con menos entradas que `other_brands_mentioned` (el modelo
+puede nombrar una marca en la lista plana y olvidarla en la rica). El
+comprobador nunca pierde un nombre por eso: reconstruye las entradas que
+faltan desde `other_brands_mentioned` con `position: null, sameCategory: true`
+— el comportamiento exacto de antes de esta fase, así que un incumplimiento
+parcial del modelo degrada a "como en Fase C", nunca a un nombre desaparecido.
+
+**Trazabilidad.** Task Intake Fase D2 (2026-08-20, aprobado en sesión);
+`lib/extraction/schema.ts` (`other_brands_detail`); `lib/llm/{gemini,openai,
+claude}.ts` (instrucción compartida, duplicada a propósito en los tres);
+`lib/free-checker/run-check.ts` (reconstrucción de respaldo); §113 arriba
+(Fase C, el bug de Netflix/Orange que esto arregla); `.claude/rules/gemini.md`
+("lo que comparten los tres motores…").
+
 ---
 
 ## 114. Páginas citadas: la tarjeta de Impacto se quedaba recortada cuando no había donut que ponerle al lado (2026-08-17)

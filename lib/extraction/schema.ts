@@ -95,6 +95,37 @@ export const extractionOutputSchema = z.object({
    * older extracted JSON without the field still parses.
    */
   other_brands_mentioned: z.array(z.string()).default([]),
+  /**
+   * FREE-CHECKER-1 Fase D2 — the richer, PARALLEL form of
+   * `other_brands_mentioned`: same entities, plus a real position and a
+   * category judgment. Deliberately a SIBLING field, not a replacement.
+   * `other_brands_mentioned` stays exactly `string[]` — untouched in type and
+   * content — because it already has real consumers (`lib/scan/extraction.ts`
+   * reconciliation/spillover, RECS-4A in
+   * `lib/recommendations/recommendation-engine.ts`, and
+   * `lib/citations/aggregate-citations.ts`) that this phase's Task Intake
+   * explicitly kept out of scope. Only the free checker reads this field
+   * today. `.default([])` so extracted_json persisted before this field
+   * existed still parses.
+   */
+  other_brands_detail: z
+    .array(
+      z.object({
+        name: z.string(),
+        /** Same meaning as `brand.position`/`competitors[].position` above: this entity's own first-mention rank. */
+        position: positionSchema,
+        /**
+         * Is this a genuine alternative in the SAME category as the brand
+         * being measured, or something else the response happened to mention
+         * (a bundled add-on, an unrelated product line)? The bug this exists
+         * to fix: a telco comprobación that named Netflix and HBO Max
+         * alongside Orange and Yoigo — platforms included in a package, not
+         * competing operators (FREE-CHECKER-1 Fase C, log §111/§113).
+         */
+        same_category: z.boolean()
+      })
+    )
+    .default([]),
   summary: z.string(),
   confidence: extractionConfidenceSchema,
   notes: z.array(z.string())

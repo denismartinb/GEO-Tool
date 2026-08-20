@@ -220,6 +220,7 @@ export async function extractGeminiStructuredData(input: {
   "sentiment": "positive"|"neutral"|"negative"|"mixed"|"unknown",
   "sentiment_drivers": string[],
   "other_brands_mentioned": string[],
+  "other_brands_detail": [{ "name": string, "position": number|null, "same_category": boolean }],
   "summary": string,
   "confidence": "low"|"medium"|"high",
   "notes": string[]
@@ -237,7 +238,9 @@ For "position": the 1-based rank of the entity's FIRST mention in the response t
 
 For "sentiment_drivers": ONLY when "sentiment" is "negative" or "mixed", list up to 3 short noun-phrase themes (2-4 words each) that are visible in or evidenced by the response as reasons for the negative perception OF THE BRAND (e.g. "atención al cliente", "plazos de entrega", "precios altos", "equipaje de mano"). Include themes that are clearly implied by the response text, not just ones listed explicitly — for example, if the response says "passengers often report problems with checked baggage fees", extract "checked baggage fees" even though it wasn't presented as a bullet point. Do NOT invent a criticism that has no basis in the response text. Empty array [] for positive/neutral sentiment or when the response gives no indication of any specific negative theme about the brand.
 
-For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. This surfaces brands the AI mentions that are not currently being tracked. Only include names that are genuinely present in the response text — never invent one. Exclude generic terms, product categories, or descriptive phrases (e.g. "aerolíneas low-cost" is not a brand name).${otherBrandsRelevanceHint(input.profile)} Up to 5 entries, each a short canonical name (e.g. "IKEA", not "la marca IKEA" or "la empresa sueca IKEA"). Empty array [] if none.`;
+For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. This surfaces brands the AI mentions that are not currently being tracked. Only include names that are genuinely present in the response text — never invent one. Exclude generic terms, product categories, or descriptive phrases (e.g. "aerolíneas low-cost" is not a brand name).${otherBrandsRelevanceHint(input.profile)} Up to 5 entries, each a short canonical name (e.g. "IKEA", not "la marca IKEA" or "la empresa sueca IKEA"). Empty array [] if none.
+
+For "other_brands_detail": EXACTLY one entry per name in "other_brands_mentioned", same names, any order. "position": that entity's own first-mention rank using the SAME 1-based, no-gaps ranking rule as brand/competitors' "position" above — share the ranking with brand and competitors, not a separate count restarted at 1. "same_category": true only if this is a genuine alternative a customer would actually compare against ${input.brand} for the SAME need — false for something merely mentioned alongside it (a bundled add-on, a platform included in a package, an unrelated product line from the same response). Example: if the response recommends telecom operators and one package happens to include a streaming service, the operators are "same_category": true and the streaming service is "same_category": false — it is not competing for the same purchase decision. Never invent a name that is not also in "other_brands_mentioned".`;
 
   const promptBlock = [
     schemaInstruction,

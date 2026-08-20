@@ -171,9 +171,9 @@ export async function POST(request: Request) {
     engineLabel: PUBLIC_CHECK_ENGINE_LABEL,
     answer: outcome.answer,
     brandMentioned: outcome.brandMentioned,
-    // `outcome.brandPosition` NO se reenvía: con `competitors: []` vale 1
-    // siempre que la marca aparezca, así que es un 1 sin conjunto contra el que
-    // rankear. Ver `PublicCheckResponse`.
+    // `outcome.brandPosition` NO se reenvía. Ver el comentario de
+    // `PublicCheckResponse.otherBrands` en api-contract.ts — sigue fuera del
+    // contrato tras Fase D2, a propósito.
     otherBrands: outcome.otherBrands,
     citedOwnDomain: outcome.citedOwnDomain,
     sources: outcome.sources

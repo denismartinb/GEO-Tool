@@ -60,7 +60,13 @@ describe("runPublicCheck", () => {
     const result = await runPublicCheck("tallerdeideas.es", deps());
     if (result.status !== "completed") throw new Error("esperaba completed");
     expect(result.brandMentioned).toBe(false);
-    expect(result.otherBrands).toEqual(["Estudio Norte", "Cuarto Piso"]);
+    // Este fixture no declara `other_brands_detail` (mock viejo, sin Fase D2):
+    // se reconstruye desde `other_brands_mentioned` con posición nula y
+    // sameCategory:true, el comportamiento de antes de esta fase.
+    expect(result.otherBrands).toEqual([
+      { name: "Estudio Norte", position: null, sameCategory: true },
+      { name: "Cuarto Piso", position: null, sameCategory: true }
+    ]);
   });
 
   it("la mención la decide la VERIFICACIÓN, no lo que afirme el modelo", async () => {
@@ -160,6 +166,79 @@ describe("runPublicCheck", () => {
     if (result.status !== "completed") throw new Error("esperaba completed");
     expect(result.citedOwnDomain).toBe(true);
     expect(result.citedDomains).toEqual(["blog.tallerdeideas.es", "otra.com"]);
+  });
+
+  describe("posición y categoría reales de las demás marcas (Fase D2, 2026-08-20)", () => {
+    // `other_brands_detail` es la forma rica y PARALELA de `other_brands_mentioned`
+    // (Fase C-bis dejó claro que `other_brands_mentioned` no puede tocarse: lo
+    // consume el escaneo real — RECS-4A, reconciliación, citas). Estos tests
+    // protegen que la posición nunca se invente y que las marcas fuera de
+    // categoría lleguen marcadas, no filtradas ni mezcladas.
+
+    it("propaga posición y categoría reales de other_brands_detail", async () => {
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({
+          extract: async () => ({
+            data: {
+              brand: { mentioned: true, position: 2 },
+              citations: [],
+              other_brands_mentioned: ["Orange", "Netflix"],
+              other_brands_detail: [
+                { name: "Orange", position: 1, same_category: true },
+                { name: "Netflix", position: 3, same_category: false }
+              ]
+            }
+          })
+        })
+      );
+      if (result.status !== "completed") throw new Error("esperaba completed");
+      expect(result.otherBrands).toEqual([
+        { name: "Orange", position: 1, sameCategory: true },
+        { name: "Netflix", position: 3, sameCategory: false }
+      ]);
+    });
+
+    it("un nombre en other_brands_mentioned pero AUSENTE de other_brands_detail no se pierde", async () => {
+      // El modelo puede incumplir "exactamente una entrada por nombre". Perder
+      // una marca que sí nombró sería peor que no tener su posición.
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({
+          extract: async () => ({
+            data: {
+              brand: { mentioned: false, position: null },
+              citations: [],
+              other_brands_mentioned: ["Orange", "Yoigo"],
+              other_brands_detail: [{ name: "Orange", position: 1, same_category: true }]
+            }
+          })
+        })
+      );
+      if (result.status !== "completed") throw new Error("esperaba completed");
+      expect(result.otherBrands).toEqual([
+        { name: "Orange", position: 1, sameCategory: true },
+        { name: "Yoigo", position: null, sameCategory: true }
+      ]);
+    });
+
+    it("other_brands_detail vacío no inventa una posición: cae al comportamiento de antes de Fase D2", async () => {
+      const result = await runPublicCheck(
+        "tallerdeideas.es",
+        deps({
+          extract: async () => ({
+            data: {
+              brand: { mentioned: false, position: null },
+              citations: [],
+              other_brands_mentioned: ["Estudio Norte"],
+              other_brands_detail: []
+            }
+          })
+        })
+      );
+      if (result.status !== "completed") throw new Error("esperaba completed");
+      expect(result.otherBrands).toEqual([{ name: "Estudio Norte", position: null, sameCategory: true }]);
+    });
   });
 
   describe("fuentes reales de la generación (Fase D1, 2026-08-17)", () => {
@@ -456,7 +535,7 @@ describe("runPublicCheck", () => {
       expect(extractFallback).toHaveBeenCalledTimes(1);
       if (result.status !== "completed") throw new Error("esperaba completed");
       expect(result.answer).toBe("Te recomiendo Estudio Norte y Cuarto Piso.");
-      expect(result.otherBrands).toEqual(["Estudio Norte"]);
+      expect(result.otherBrands).toEqual([{ name: "Estudio Norte", position: null, sameCategory: true }]);
     });
 
     it("recuperarse NO borra el incidente: la causa sigue llegando al operador", async () => {

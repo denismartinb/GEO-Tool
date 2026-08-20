@@ -300,27 +300,37 @@ con escaneos reales — necesitaba su propio Task Intake, con presupuesto de
 coste explícito.
 
 **FREE-CHECKER-1, Task Intake del 2026-08-15.** Investigación real del
-repositorio (coste medido en `docs/llm-cost-analysis-2026-08.md`, rate
-limiting inexistente hoy, punto de esquema/RLS que exige aprobación aparte)
-dividió la fase en tres decisiones separadas. El fundador aprobó **solo la
-primera**:
+repositorio (coste medido en `docs/llm-cost-analysis-2026-08.md`) dividió la
+fase en decisiones separadas, aprobadas una a una en sesión conforme cada
+pieza demostró su valor:
 
 - **Fase A — ✅ Hecha (2026-08-15, log §113).** `/gratis/aparece-mi-marca-en-chatgpt`:
   capta el dominio (mismo arrastre que el hero de la landing) y lo lleva al
   registro real. Cero llamadas LLM, cero escritura en base de datos, cero
-  esquema. Sirve para medir demanda real antes de gastar en la máquina de
-  verdad.
-- **Fase B — backend anónimo (tabla + rate limit + libro de coste)**: sin
-  decidir. Requiere migración + política RLS + escritura por service-role en
-  ruta anónima — las tres prohibidas sin aprobación explícita del fundador, y
-  esa aprobación no se ha pedido todavía.
-- **Motor de la comprobación real (C/D)**: sin decidir. Gemini cuesta 0,002 $
-  por llamada pero el titular tendría que decir "Gemini"; ChatGPT cuesta
-  5,5× más pero es el motor que el titular nombra de verdad.
-
-Mientras B y el motor sigan sin decisión, C1 y la Fase A cumplen el papel:
-captación real con CTA al plan Free real, sin ninguna comprobación
-instantánea que el producto no pueda cumplir.
+  esquema.
+- **Fase B — ✅ Hecha (2026-08-15, log §113).** Backend anónimo real: tabla
+  `public_checks` (migración aplicada por el fundador), rate limit por
+  IP/dominio/techo diario, IP hasheada con sal obligatoria. Motor: **ChatGPT**
+  — Gemini costaba 5,5× menos pero el titular tendría que decir "Gemini",
+  reclamo falso para la página que existe para nombrar ChatGPT.
+- **Fase C / C-bis — ✅ Hechas (2026-08-16, log §113).** Lo que las dos
+  primeras ejecuciones reales contra producción destaparon: causas de fallo
+  categorizadas, presupuesto de invocación real, motor de reserva para la
+  extracción, y tres afirmaciones sin dato debajo retiradas de la pantalla
+  (numeración inventada, "puesto 1" estructural, "competidores" que no lo
+  eran).
+- **Fase D1 — ✅ Hecha (2026-08-17, log §113).** Las fuentes reales que
+  ChatGPT consultó (`groundingChunks`), coste cero — ya llegaban en la llamada
+  de generación y se tiraban.
+- **Fase D2 — ✅ Hecha (2026-08-20, log §113).** Posición real (comparte
+  ranking con la marca) y categoría por marca mencionada, campo nuevo y
+  paralelo en el esquema de extracción compartido — sin tocar
+  `other_brands_mentioned`, que ya tenía consumidores reales en el escaneo.
+- **Fase D3 — propuesta, estrategia aprobada, sin implementar.** Logos por
+  marca. Rechazada la vía obvia (pedirle al modelo un dominio: alucinación con
+  forma de URL). Aprobada en su lugar: cruzar el nombre contra los dominios
+  reales de Fase D1 — cobertura parcial, cero llamadas nuevas, nunca un
+  dominio inventado.
 
 ### Fase A — Autoridad y off-site (fundador, con material preparado por agentes)
 
