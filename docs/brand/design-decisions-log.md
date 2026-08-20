@@ -11126,6 +11126,64 @@ fundador, 2026-08-20.
 
 ---
 
+## 119. Dominios: seleccionar una tarjeta propaga a toda la consola, y el botón "Ver visión general" se reduce en desktop (DOMAINS-LIVE-SELECT-1, 2026-08-20)
+
+**Origen.** Fundador, 2026-08-20: seleccionar otro dominio en la pantalla
+"Dominios" (`/dashboard/domains`) tenía que reflejarse en toda la consola
+sin pulsar "Ver visión general" primero; y ese botón, a ancho de escritorio,
+se veía "enorme". Task Intake aprobado el mismo día (propagación P1 + botón
+P2, mismo PR).
+
+**Por qué el botón era la única vía real.** DOMAINS-REDESIGN-1 (2026-08-05)
+decidió a propósito que pinchar una tarjeta de la rejilla no navega — sólo
+cambia qué dominio aparece en la portada, vía `?active=<id>`, para volver a
+la misma pantalla (comentario en `app/dashboard/domains/page.tsx`). Esa
+decisión sigue en pie. Pero "cuál es el proyecto activo" fuera de esa
+pantalla se resolvía en otros dos sitios de forma independiente y sólo a
+partir del *pathname* — `components/sidebar.tsx` y
+`components/workspace-topbar.tsx`, ambos con su propio `getProjectId(pathname)`
+— y la cookie `geo_active_project` que los alimentaría en su ausencia
+(DEBUG-ACTIVE-PROJECT-1) sólo la escribía `middleware.ts` al entrar de
+verdad en `/dashboard/projects/[id]/...`. Elegir una tarjeta cambiaba la
+portada pero no el pathname, así que el sidebar seguía señalando el
+proyecto anterior hasta que se pulsaba "Ver visión general" — el único
+gesto que de verdad cambiaba de ruta.
+
+**Arreglo.** `lib/active-project-cookie.ts` gana
+`getProjectIdFromDomainsQuery(pathname, searchParams)`, que valida el mismo
+`?active=<uuid>` que ya lee `app/dashboard/domains/page.tsx`.
+`middleware.ts` la usa como segunda fuente junto a la ya existente
+`getProjectIdFromPathname`, así que la cookie también se escribe al
+seleccionar una tarjeta, sin que la tarjeta navegue. `app/dashboard/layout.tsx`
+lee esa cookie server-side y se la pasa a `Sidebar` como `preferredProjectId`;
+`Sidebar` la usa como fallback entre el pathname y `projects[0]`. No se tocó
+`workspace-topbar.tsx`: fuera de una ruta de proyecto ya no muestra nada, así
+que no había fallback que corregir.
+
+**El botón.** `.dm2-open` coincidía exactamente con el diseño aprobado en
+`docs/design-reference/domains-redesign-1/pantalla-dominios.html`
+(`width:100%`), que ahora queda desactualizado — se corrige en el mismo PR.
+Por debajo de 561px se queda a ancho completo (sigue siendo la única forma
+de entrar al proyecto ahí, y el objetivo táctil grande es lo que
+corresponde). Desde 561px, ancho de contenido y alineado a la derecha
+(`.dm2-hero` pasa a `flex column` sólo para que `align-self:flex-end` pueda
+mover ese único hijo sin afectar la anchura de los demás, que se siguen
+estirando igual que en bloque).
+
+**Lo que NO cambia.** La cookie nunca es fuente de autorización — se
+re-comprueba la propiedad con RLS en cada lectura, igual que ya documentaba
+DEBUG-ACTIVE-PROJECT-1; un id ajeno o manipulado simplemente no aparece en
+`projects` y cae al siguiente criterio. La tarjeta de la rejilla sigue sin
+navegar (DOMAINS-REDESIGN-1 se mantiene intacta). Ningún control de
+escaneo/auditoría nuevo en la pantalla.
+
+**Trazabilidad.** DEBUG-ACTIVE-PROJECT-1 (la cookie); DOMAINS-REDESIGN-1,
+2026-08-05 (por qué la tarjeta no navega); DOMAINS-ACTIVE-COOKIE-1,
+2026-08-07 (la misma cookie ya usada como recuerdo de página); Task Intake
+aprobado por el fundador, 2026-08-20.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

@@ -6677,6 +6677,28 @@ select.set-field {
 .dm2-hero:hover .dm2-open { background: #1d51c7; }
 .dm2-open svg { position: absolute; right: 18px; }
 
+/* DOMAINS-LIVE-SELECT-1: en desktop la selección ya se propaga sola al
+   escoger una tarjeta (ver lib/active-project-cookie.ts), así que este botón
+   deja de ser el único gesto de navegación real y no necesita todo el ancho
+   de la portada para pedir el clic — un botón de ancho de contenido, alineado
+   a la derecha, es proporcional al resto de la tarjeta (fundador,
+   2026-08-20: "ahora es enorme"). Se queda a ancho completo por debajo de
+   561px: ahí sigue siendo la única forma de entrar al proyecto, y un objetivo
+   táctil grande es lo que corresponde. `.dm2-hero` pasa a flex en columna
+   sólo para que `align-self` pueda alinear este único hijo a la derecha sin
+   afectar la anchura del resto (que sigue estirándose, como en bloque). */
+@media (min-width: 561px) {
+  .dm2-hero { display: flex; flex-direction: column; }
+  .dm2-open {
+    align-self: flex-end;
+    width: auto;
+    gap: 8px;
+    padding: 11px 20px;
+    font-size: 13.5px;
+  }
+  .dm2-open svg { position: static; }
+}
+
 /* ---- Rejilla de los demás dominios ---- */
 .dm2-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 @media (min-width: 1200px) { .dm2-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

@@ -43,6 +43,7 @@ function getProjectId(pathname: string) {
 
 export function Sidebar({
   projects,
+  preferredProjectId,
   promptCountByProject,
   competitorCountByProject,
   recommendationCountByProject,
@@ -52,6 +53,8 @@ export function Sidebar({
   signOutAction
 }: {
   projects: WorkspaceProject[];
+  /** DOMAINS-LIVE-SELECT-1 — `geo_active_project` cookie value from the layout, read server-side. Fallback below the pathname, above `projects[0]`. */
+  preferredProjectId: string | null;
   promptCountByProject: Record<string, number>;
   competitorCountByProject: Record<string, number>;
   recommendationCountByProject: Record<string, number>;
@@ -63,11 +66,17 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const activeProjectId = getProjectId(pathname);
-  // Outside a project's own routes (Billing, Settings, the dashboard root)
-  // the URL carries no projectId — fall back to the most recent active
-  // project so "Analizar"/"Actuar" still link somewhere instead of going
-  // fully disabled whenever the account isn't currently inside a project.
-  const project = projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? null;
+  // Outside a project's own routes (Billing, Settings, the dashboard root,
+  // or /dashboard/domains after picking a card without navigating) the URL
+  // carries no projectId — fall back to the cookie-remembered selection, then
+  // to the most recent active project, so "Analizar"/"Actuar" still link
+  // somewhere instead of going fully disabled whenever the account isn't
+  // currently inside a project.
+  const project =
+    projects.find((item) => item.id === activeProjectId) ??
+    projects.find((item) => item.id === preferredProjectId) ??
+    projects[0] ??
+    null;
   const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
   const { open: openTour } = useTour();
   const asideRef = useRef<HTMLElement | null>(null);
