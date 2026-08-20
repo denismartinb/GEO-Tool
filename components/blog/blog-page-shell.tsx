@@ -24,9 +24,11 @@ export function BlogPageShell({
     <div className="lp">
       <PublicHeader activeHref={activeHref} />
 
-      <section className="lp-section">
-        <div className="lp-inner">{children}</div>
-      </section>
+      <main>
+        <section className="lp-section">
+          <div className="lp-inner">{children}</div>
+        </section>
+      </main>
 
       <footer className="lp-footer">
         <div className="lp-inner">
@@ -34,7 +36,7 @@ export function BlogPageShell({
             <Link href="/" className="lp-logo">
               <BrandLogo size={19} />
             </Link>
-            <div className="links">
+            <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
               <Link href="/pricing">Precios</Link>
@@ -50,7 +52,7 @@ export function BlogPageShell({
               ))}
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
-            </div>
+            </nav>
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>

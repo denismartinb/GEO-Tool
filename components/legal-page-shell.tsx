@@ -31,29 +31,31 @@ export function LegalPageShell({
     <div className="lp">
       <PublicHeader />
 
-      <section className="lp-section" style={{ paddingBottom: 0 }}>
-        <div className="lp-inner">
-          <h1 className="lp-h2">{title}</h1>
-          <p className="legal-updated">Última actualización: {updated}</p>
-          <div className="legal-subnav">
-            {LEGAL_NAV_LINKS.map((l) =>
-              l.href === activeHref ? (
-                <span key={l.href} className="legal-subnav-current">
-                  {l.label}
-                </span>
-              ) : (
-                <Link key={l.href} href={l.href} className="link-mini">
-                  {l.label}
-                </Link>
-              )
-            )}
+      <main>
+        <section className="lp-section" style={{ paddingBottom: 0 }}>
+          <div className="lp-inner">
+            <h1 className="lp-h2">{title}</h1>
+            <p className="legal-updated">Última actualización: {updated}</p>
+            <div className="legal-subnav">
+              {LEGAL_NAV_LINKS.map((l) =>
+                l.href === activeHref ? (
+                  <span key={l.href} className="legal-subnav-current">
+                    {l.label}
+                  </span>
+                ) : (
+                  <Link key={l.href} href={l.href} className="link-mini">
+                    {l.label}
+                  </Link>
+                )
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="lp-section">
-        <div className="lp-inner legal-body">{children}</div>
-      </section>
+        <section className="lp-section">
+          <div className="lp-inner legal-body">{children}</div>
+        </section>
+      </main>
 
       <footer className="lp-footer">
         <div className="lp-inner">
@@ -61,7 +63,7 @@ export function LegalPageShell({
             <Link href="/" className="lp-logo">
               <BrandLogo size={19} />
             </Link>
-            <div className="links">
+            <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
               <Link href="/pricing">Precios</Link>
@@ -77,7 +79,7 @@ export function LegalPageShell({
               ))}
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
-            </div>
+            </nav>
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>

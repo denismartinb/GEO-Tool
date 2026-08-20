@@ -10872,6 +10872,63 @@ Overview antiguo, fuera del alcance de esta fase.
 
 ---
 
+## 116. Accesibilidad del sitio público — landmark, contraste y áreas táctiles (A11Y-PSI-1, 2026-08-20)
+
+**Contexto.** PageSpeed Insights móvil sobre `https://www.genscore.es/`
+(17/8/26): Rendimiento 75, Accesibilidad 91, Prácticas recomendadas 100, SEO
+100. Sin datos de campo (CrUX vacío) — el 75 es de laboratorio, sin ningún
+usuario real medido. Las dos palancas más grandes de rendimiento (LCP del
+tour del hero, JS de Sentry) están detrás de decisiones ya tomadas y
+deliberadamente no revisadas aquí: diferir el tour empeora el LCP y choca con
+`.claude/rules/onboarding.md`; diferir Sentry ya costó errores de producción
+perdidos dos veces (`components/posthog-provider.tsx`). Esta fase ataca solo
+los tres hallazgos de Accesibilidad, que sí eran baratos y seguros.
+
+**Decidido.**
+
+1. **Landmark `<main>` en las cinco superficies que cubren todo el sitemap
+   público**: `components/landing/landing-page.tsx`,
+   `components/pricing/pricing-page.tsx`, `components/blog/blog-page-shell.tsx`
+   (blog, glosario, comparativas, `/gratis/aparece-mi-marca-en-chatgpt`,
+   `/que-es-genscore`), `components/docs/docs-page-shell.tsx` y
+   `components/legal-page-shell.tsx` (privacidad, cookies, términos). El
+   `<header>`/hero y el `<footer>` quedan fuera de `<main>` a propósito — son
+   landmarks propios. No hay combinadores de hijo directo sobre `.lp` en
+   `app/globals.css`, así que envolver las secciones existentes en `<main>`
+   no cambia ninguna cascada.
+2. **Contraste — `.price-meter-scale span`** (`/pricing`, los pills "10 / 25
+   / 100 / 300"): `color: var(--ink-3)` sobre `background: var(--surface-sunk)`
+   daba 4,44:1, por debajo de AA — la misma trampa de token que
+   `.claude/rules/styles.md` ya documentaba para Recomendaciones (log §55).
+   Pasa a `--ink-2` (7,50:1 sobre ese fondo).
+3. **Área táctil — `.lp-footer .links a`**, compartido por las cinco
+   superficies de arriba: el enlace no tenía relleno propio, así que su caja
+   pulsable era solo la línea de texto (~13px), muy por debajo de 24×24.
+   Relleno `8px 6px` con margen negativo equivalente — el texto no se mueve,
+   el hit-box crece, y el hueco entre enlaces (`gap: 22px`) sigue siendo
+   positivo tras restar los márgenes.
+
+**Deliberadamente NO tocado en esta fase, con el motivo por escrito para que
+nadie lo redescubra desde cero:**
+
+- **LCP (5,3s) y los 129 KiB de JS sin usar** — dominados por el tour del
+  hero y por Sentry respectivamente; ambos vetados por decisiones ya
+  documentadas (arriba).
+- **`ink-4` como texto de cuerpo** — falla AA incluso sobre blanco (2,63:1),
+  y aparece en 258 sitios de `app/globals.css`, la mayoría en zonas de
+  consola. Es un problema real y más grande que el que reportó PSI (que solo
+  vio la home, pública y anónima), pero corregirlo de raíz es un cambio de
+  token de sistema de diseño que necesita su propia fase con su propia pasada
+  de piloto — no cabe en un P2 barato.
+- **`.lp-inner > .blog-cover-compact:first-child` y los ~33 KB de CSS de
+  consola sin mover** — siguen exactamente como los dejó `.claude/rules/
+  styles.md`; esta fase no reordena la cascada.
+
+**Roto conocido, no tocado aquí.** `ink-4` como texto de cuerpo (ver arriba)
+sigue fallando AA en el resto del producto, dentro y fuera de esta zona.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
