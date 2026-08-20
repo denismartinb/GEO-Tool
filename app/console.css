@@ -780,6 +780,83 @@
   place-items: center;
 }
 
+/* "Si arreglas los N problemas técnicos" (TechnicalPotentialBanner).
+   Founder feedback 2026-08-17: la caja plana original no se leía como el
+   titular de la pestaña Problemas. `color-mix` reutiliza --pos-ink en vez de
+   inventar un hex nuevo, mismo patrón que .art-rec-pri. */
+.tech-potential {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 20px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(135deg, var(--pos-soft), var(--surface) 130%);
+  border: 1px solid color-mix(in srgb, var(--pos-ink) 16%, transparent);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 24px color-mix(in srgb, var(--pos-ink) 12%, transparent);
+}
+.tech-potential-badge {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--pos-ink);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 10px color-mix(in srgb, var(--pos-ink) 18%, transparent);
+}
+.tech-potential-body { flex: 1; min-width: 0; }
+.tech-potential-label {
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--pos-ink);
+}
+.tech-potential-scores { display: flex; align-items: center; gap: 10px; margin-top: 7px; flex-wrap: wrap; }
+.tech-potential-score {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.tech-potential-score-from { color: var(--ink-3); }
+.tech-potential-score-to { color: var(--pos-ink); }
+.tech-potential-arrow {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--pos-ink);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
+}
+.tech-potential-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--pos-ink);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 4px 10px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .06);
+  white-space: nowrap;
+}
+.tech-potential-caption { font-size: 11.5px; font-weight: 650; color: var(--pos-ink); margin-top: 9px; }
+.tech-potential-note { font-size: 10.5px; line-height: 1.5; color: var(--ink-3); margin: 4px 0 0; }
+
+@media (max-width: 420px) {
+  .tech-potential { padding: 16px; }
+  .tech-potential-score { font-size: 26px; }
+}
+
 /* ============================================================
    /debug — pantalla interna (DOMAINS-REDESIGN-1)
    ============================================================ */

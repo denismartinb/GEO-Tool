@@ -2030,6 +2030,14 @@ a {
      (own review of the pilot capture, 2026-08-02). */
   .cit2-dist { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: stretch; }
   .cit2-dist > .cit2-block { margin-top: 12px; }
+  /* SourceDonut renders null when nothing in the citation set matches the
+     curated source-type list (real, not rare — CITATIONS-REDESIGN-1 §8
+     documents most real domains as unclassified long tail). With only the
+     impact card actually in the DOM, the 1.35fr/1fr split still reserved
+     the second track, leaving the card visibly truncated with dead space
+     beside it — the parent adds this modifier once it knows the donut has
+     nothing to show, so the impact card takes the full row instead. */
+  .cit2-dist.cit2-dist-solo { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 899px) {
   .cit2-dist .cit2-donut { width: 78px; height: 78px; }
