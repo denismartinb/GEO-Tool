@@ -11384,7 +11384,8 @@ para el hueco. En la tarjeta del fundador, tres de las cuatro páginas citadas
 (`dageno.ai`, `blog.hubspot.es`, `es.semrush.com`) caían fuera de esos ocho.
 El modelo obedecía la instrucción y el guardián lo rechazaba por ello:
 `unanchored_domain_mentioned`, de forma **determinista**, gastando una llamada
-a Gemini y una plaza del límite diario en cada intento. Reproducido en
+a Gemini en cada intento — el límite diario no, que se cuenta sobre filas de
+`generated_solutions` y un rechazo no persiste ninguna. Reproducido en
 `lib/recommendations/anchored-domains.test.ts` con esos datos reales.
 
 **Qué se decidió.** Un único conjunto anclado
