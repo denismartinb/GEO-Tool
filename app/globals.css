@@ -4807,11 +4807,22 @@ a.notif-row:hover {
    rule earlier in this file with nothing to do with this component. Verified
    by reading the *computed* padding in a real browser, not just the source. */
 .user-chip.lp-user-chip { padding: 13px 14px; gap: 13px; }
+/* Fase pro-badge-alignment-flickering-v4brfv (2026-08-17): the email and the
+   plan badge sit on one row, badge to the right of the email, instead of the
+   badge stacking below and left-aligning under a much wider email — which is
+   what read as misaligned (founder). `min-width: 0` on both the row and the
+   email is what lets the email's own ellipsis win over the row's intrinsic
+   width; the badge is `flex: 0 0 auto` so it never gets squeezed. Sidebar's
+   `.sb-plan-badge` (components/sidebar.tsx) keeps the stacked layout — that
+   chip is ~240px wide, this one has the whole nav to work with. */
+.lp-user-chip-identity {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
 .lp-user-chip .lp-user-chip-email {
   font-size: 12.5px; font-weight: 650; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
-.lp-user-chip .sb-plan-badge { margin-top: 7px; }
+.lp-user-chip .sb-plan-badge { flex: 0 0 auto; margin-top: 0; }
 /* In the drawer it is the full-width bottom action, in place of the two CTAs. */
 .lp-mobnav-ctas .lp-user-chip { max-width: none; }
 
