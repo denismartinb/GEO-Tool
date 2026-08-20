@@ -11517,6 +11517,35 @@ las dos dimensiones.
 
 ---
 
+## 125. El cajón móvil se pulsaba antes de hidratar (2026-08-20)
+
+**Qué pasó.** `el cajón de navegación móvil de pricing abre y sus botones se
+leen` falló en móvil con «element(s) not found» sobre `.lp-mobnav`, mientras el
+mismo test sobre `/` pasaba **en la misma corrida** (PR #446).
+
+**Por qué.** `MarketingMobileNav` es un componente cliente: el botón viene en el
+HTML del servidor, pero su `onClick` no existe hasta que React hidrata, y el
+cajón no está en el DOM hasta que ese estado se abre. Un clic anterior a la
+hidratación no se encola — se pierde. El test esperaba `waitForTimeout(1_000)`
+y pulsaba una vez, o sea apostaba a que un preview frío hidrata en menos de un
+segundo. Perdió la apuesta en la página más pesada de las dos.
+
+**Qué se decidió.** El clic se reintenta hasta que el cajón aparece
+(`expect(...).toPass`), sin espera fija. No afloja nada: si el cajón no abre
+nunca, sigue fallando al agotarse el plazo. Es seguro repetirlo porque el botón
+hace `setOpen(true)`, no un alternar.
+
+**Lo que se deja anotado y NO se toca aquí.** El botón de menú es inerte hasta
+que la página hidrata, así que en un móvil lento hay una ventana real en la que
+un usuario lo pulsa y no pasa nada, sin ningún aviso. No es una regresión —es
+como funciona desde siempre— y arreglarlo es tocar la cabecera pública, otra
+zona y otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/landing.spec.ts`;
+`components/marketing-mobile-nav.tsx` (por qué el clic se pierde).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
