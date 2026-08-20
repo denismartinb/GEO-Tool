@@ -26,6 +26,12 @@
   --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
   --sidebar-w: 248px;
   --header-h: 52px;
+  /* `.page`'s own max-width/padding, pulled out to variables because
+     `.mrk-full`'s sidebar-aware full-bleed fix below has to reproduce this
+     exact geometry to cancel it out — two literals that must stay equal but
+     live in different rules is exactly how they drift. */
+  --page-max-w: 1320px;
+  --page-pad-x: 34px;
   /* Shared mobile-drawer chassis (header-consistency-public-private,
      2026-08-15) — both the console sidebar drawer (.sb) and the public
      header drawer (.lp-mobnav) read these, so a future change to one
@@ -408,9 +414,9 @@ a {
 }
 
 .page {
-  max-width: 1320px;
+  max-width: var(--page-max-w);
   margin: 0 auto;
-  padding: 26px 34px 80px;
+  padding: 26px var(--page-pad-x) 80px;
 }
 
 .card {
@@ -4004,6 +4010,39 @@ a.notif-row:hover {
    the atmosphere rather than keeping a daylit frame around a night scene. */
 .mrk-full.night { background: linear-gradient(180deg, #04070F 0%, #14293F 100%); }
 
+/* The base rule's `100vw` / `calc(50% - 50vw)` break-out assumes `.page` is
+   centered in the TRUE viewport, which only holds below 760px — that's where
+   `.shell` collapses to one column and the sidebar leaves the grid entirely
+   (below). Above it `.shell` still reserves `--sidebar-w` of real width, so
+   `.dash-content` (this component's actual ancestor) is narrower than the
+   viewport and sits offset to the right of it. The unmodified trick centered
+   itself on the viewport instead: it rendered a box shifted `--sidebar-w / 2`
+   too far left — its left ~124px painted behind the sidebar as the founder
+   found it (screenshot, 2026-08-20), the same again as unwanted overflow past
+   the right edge, which is what left `.dash-content` scrolling horizontally
+   (`tests/pilot/support/journey.ts`'s note that it computes its own implicit
+   `overflow-x: auto`).
+   The fix re-derives the same break-out against `.dash-content`'s box
+   instead of the viewport: `width` matches `.dash-content`'s real width, and
+   the left margin cancels exactly what `.page`'s own centering/padding would
+   otherwise contribute — `max(…, 0px)` because `.page` only centers with
+   spare margin once the sidebar-content column is wider than `--page-max-w`,
+   which is common on an ultra-wide monitor and reachable at zero on a
+   laptop-width screen. The right edge needs no separate term: for an in-flow
+   block, only its own left margin and width decide where it sits, so a
+   `width` of exactly `.dash-content`'s width already lands the right edge on
+   `.dash-content`'s right edge (which is the viewport's, unchanged from the
+   base rule) with no margin-right math to keep in sync. */
+@media (min-width: 761px) {
+  .mrk-full {
+    width: calc(100vw - var(--sidebar-w));
+    max-width: calc(100vw - var(--sidebar-w));
+    margin-inline: calc(
+      -1 * (var(--page-pad-x) + max((100vw - var(--sidebar-w)) - var(--page-max-w), 0px) / 2)
+    ) 0;
+  }
+}
+
 .mrk-rail {
   display: flex; align-items: center; justify-content: space-between; gap: 4px 14px;
   flex-wrap: wrap;
@@ -5333,7 +5372,8 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 
 @media (max-width: 1000px) {
   .page {
-    padding: 22px 20px 80px;
+    --page-pad-x: 20px;
+    padding: 22px var(--page-pad-x) 80px;
   }
   /* Keep the full-bleed mission flush with the header at this breakpoint too. */
   .mrk-full {
