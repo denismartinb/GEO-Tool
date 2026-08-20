@@ -73,7 +73,10 @@ describe("resolveBusinessContext", () => {
 
     const result = await resolveBusinessContext({ domain: "nobody-home.com", country: "ES", language: "es" });
 
-    expect(result).toEqual({ status: "unidentified" });
+    // The reason is required, not decorative: this is the ONLY one of the three
+    // that is genuinely about the visitor's own site, and the free checker's
+    // copy branches on exactly that (log §113, Fase C-bis).
+    expect(result).toEqual({ status: "unidentified", reason: "homepage_unreadable" });
     expect(inferBusinessProfileMock).not.toHaveBeenCalled();
   });
 
@@ -112,7 +115,9 @@ describe("resolveBusinessContext", () => {
 
     const result = await resolveBusinessContext({ domain: "unclear.com", country: "ES", language: "es" });
 
-    expect(result).toEqual({ status: "unidentified" });
+    // The homepage was read fine — telling this visitor to check that their
+    // page loads would be a diagnosis the code cannot support.
+    expect(result).toEqual({ status: "unidentified", reason: "profile_low_confidence" });
   });
 
   it("accepts a low-confidence profile when the user supplied their own description", async () => {
@@ -147,7 +152,7 @@ describe("resolveBusinessContext", () => {
 
     const result = await resolveBusinessContext({ domain: "flaky.com", country: "ES", language: "es" });
 
-    expect(result).toEqual({ status: "unidentified" });
+    expect(result).toEqual({ status: "unidentified", reason: "profile_failed" });
   });
 });
 

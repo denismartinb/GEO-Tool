@@ -289,16 +289,38 @@ fundador. Pendiente declarado y no arreglado: el `title`/`description` del
 layout raíz siguen siendo una cuarta redacción de lo que es GenScore, y actúan
 de respaldo para toda página sin metadata propia (log §100).
 
-### Fase P — Free checker "¿Aparece tu marca en ChatGPT?" ⚠️ (requiere su propio Task Intake)
+### Fase P — Free checker "¿Aparece tu marca en ChatGPT?" ⚠️ (Task Intake propio, parcialmente aprobado)
 
 La oportunidad nº 1 de la investigación y el patrón de mayor conversión
 demostrado (Semrush free checker, HubSpot AEO Grader): una página pública que
 ejecuta una comprobación real y pide el email/registro para el informe
-completo. **No se implementa bajo este plan**: toca pipeline de escaneo, coste
-por consulta, rate limiting y superficie de abuso (data-guardian), y bordea
-"fake scans" si no se diseña con escaneos reales. Si el fundador la aprueba,
-será su propio Task Intake con presupuesto de coste explícito. Mientras tanto,
-C1 cumple el papel con CTA al plan Free real.
+completo. Toca pipeline de escaneo, coste por consulta, rate limiting y
+superficie de abuso (data-guardian), y bordea "fake scans" si no se diseña
+con escaneos reales — necesitaba su propio Task Intake, con presupuesto de
+coste explícito.
+
+**FREE-CHECKER-1, Task Intake del 2026-08-15.** Investigación real del
+repositorio (coste medido en `docs/llm-cost-analysis-2026-08.md`, rate
+limiting inexistente hoy, punto de esquema/RLS que exige aprobación aparte)
+dividió la fase en tres decisiones separadas. El fundador aprobó **solo la
+primera**:
+
+- **Fase A — ✅ Hecha (2026-08-15, log §113).** `/gratis/aparece-mi-marca-en-chatgpt`:
+  capta el dominio (mismo arrastre que el hero de la landing) y lo lleva al
+  registro real. Cero llamadas LLM, cero escritura en base de datos, cero
+  esquema. Sirve para medir demanda real antes de gastar en la máquina de
+  verdad.
+- **Fase B — backend anónimo (tabla + rate limit + libro de coste)**: sin
+  decidir. Requiere migración + política RLS + escritura por service-role en
+  ruta anónima — las tres prohibidas sin aprobación explícita del fundador, y
+  esa aprobación no se ha pedido todavía.
+- **Motor de la comprobación real (C/D)**: sin decidir. Gemini cuesta 0,002 $
+  por llamada pero el titular tendría que decir "Gemini"; ChatGPT cuesta
+  5,5× más pero es el motor que el titular nombra de verdad.
+
+Mientras B y el motor sigan sin decisión, C1 y la Fase A cumplen el papel:
+captación real con CTA al plan Free real, sin ninguna comprobación
+instantánea que el producto no pueda cumplir.
 
 ### Fase A — Autoridad y off-site (fundador, con material preparado por agentes)
 

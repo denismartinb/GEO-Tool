@@ -20,6 +20,20 @@ import { readFileSync } from "node:fs";
  * el fichero establece identidad, no que la aplique al dato que toca. Eso sigue
  * siendo revisión humana y `data-guardian`. Lo que impide es lo otro: un uso de
  * rol de servicio en un fichero donde no hay identidad de ninguna clase.
+ *
+ * **La salida anónima (FREE-CHECKER-1, 2026-08-15).** El comprobador gratuito
+ * escribe con rol de servicio y **no tiene identidad que establecer**: su
+ * visitante no tiene cuenta, que es el producto entero de esa página. Añadirle
+ * una quinta "puerta de identidad" habría sido mentir para poner el test en
+ * verde, porque no hay ninguna.
+ *
+ * Lo que de verdad hace segura esa ruta no es una identidad: es **la tabla que
+ * toca**. `public_checks` no tiene datos de cliente ni clave foránea a nada que
+ * un cliente posea, así que saltarse RLS ahí no puede exponer la fila de nadie.
+ * Por eso la excepción se comprueba por TABLA y no por nombre de fichero: si
+ * alguien añade mañana un `.from("projects")` a esa ruta, este test se pone
+ * rojo igual — que es exactamente lo que una excepción por nombre no habría
+ * hecho.
  */
 
 /**
@@ -41,6 +55,22 @@ const IDENTITY_GATES = [
   "isAuthorizedInternalRequest(",
   "constructEvent("
 ] as const;
+
+/**
+ * Tablas sin un solo dato de cliente. Una ruta anónima puede usar rol de
+ * servicio contra ÉSTAS y sólo éstas.
+ *
+ * Añadir una aquí es afirmar que filtrar esa tabla entera no expone datos de
+ * ningún usuario. `public_checks` lo cumple por construcción: sin FK a
+ * `projects` ni a `profiles`, y con la IP guardada sólo como hash con sal
+ * (migración 0034).
+ */
+const ANONYMOUS_SAFE_TABLES = ["public_checks"] as const;
+
+/** Cada tabla que el fichero toca vía `.from("…")`. */
+function tablesTouched(source: string): string[] {
+  return [...source.matchAll(/\.from\(\s*["'`]([a-z0-9_]+)["'`]\s*\)/gi)].map((m) => m[1]);
+}
 
 function serviceRoleFilesInApp(): string[] {
   // `git grep --untracked` para que un fichero recién creado y aún sin
@@ -66,12 +96,24 @@ describe("todo uso del rol de servicio en app/ establece identidad en servidor",
   it.each(serviceRoleFilesInApp())("%s", (file) => {
     const source = readFileSync(file, "utf8");
     const gate = IDENTITY_GATES.find((needle) => source.includes(needle));
+    if (gate) return;
+
+    // Sin identidad, la única salida es que no toque nada de nadie.
+    const tables = tablesTouched(source);
+    const unsafe = tables.filter(
+      (t) => !ANONYMOUS_SAFE_TABLES.includes(t as (typeof ANONYMOUS_SAFE_TABLES)[number])
+    );
 
     expect(
-      gate,
-      `${file} usa createServiceClient() —que salta RLS— y no establece identidad de ninguna forma conocida.\n` +
+      { file, tables, unsafe },
+      `${file} usa createServiceClient() —que salta RLS— sin establecer identidad.\n` +
         `Formas válidas hoy: ${IDENTITY_GATES.join(", ")}.\n` +
-        `Si de verdad hace falta una nueva, añádela a IDENTITY_GATES a conciencia, no para poner el test en verde.`
-    ).toBeDefined();
+        `La única alternativa es que toque SÓLO tablas sin datos de cliente ` +
+        `(${ANONYMOUS_SAFE_TABLES.join(", ")}), y ésta toca: ${unsafe.join(", ") || "(ninguna tabla)"}.\n` +
+        `Si de verdad hace falta ampliar alguna de las dos listas, hazlo a conciencia, no para poner el test en verde.`
+    ).toEqual({ file, tables, unsafe: [] });
+
+    // Una ruta anónima que no toca ninguna tabla no necesita rol de servicio.
+    expect(tables.length, `${file} usa rol de servicio sin tocar ninguna tabla`).toBeGreaterThan(0);
   });
 });

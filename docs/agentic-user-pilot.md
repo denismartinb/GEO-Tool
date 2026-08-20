@@ -391,6 +391,45 @@ returns concrete proposed improvements, even on a pass. See
 machine can know for certain, the agent owns judgement, and neither pretends to
 do the other's work.
 
+### The failure this split exists to prevent (RECS-REDESIGN-1, 2026-08-04)
+
+A run returned **PILOT PASS with the Recomendaciones screen green at all three
+viewports while, at 375px, its cards were structurally broken** — the text
+column squeezed to ~90px and the title falling vertically, one word per line.
+Every mechanical check passed honestly: nothing overflowed horizontally, no
+console error fired, the page did not bounce to login. The defect was only
+visible by looking.
+
+Three coverage gaps compounded it, all now closed:
+
+1. **Screenshots were fold-cropped.** The dashboard shell is `height: 100vh;
+   overflow: hidden` with an inner `overflow-y: auto` column, so the *document*
+   never grew past the viewport — and Playwright's `fullPage` measures the
+   document. Every dashboard screenshot the pilot had ever produced was the top
+   fold only, indistinguishable from a complete one. Fixed by
+   `captureFullContent` (`tests/pilot/support/journey.ts`), which grows the
+   *viewport* to the measured content height and lets the app lay itself out
+   honestly at that size, then restores it — rather than stripping the
+   shell's `overflow: hidden`, which would capture a layout the product never
+   renders. Bounded by `MAX_CAPTURE_HEIGHT` so a runaway list produces a
+   truncated (and flagged) capture instead of an unreadable PNG.
+2. **The interaction sweep never reached the screen's own controls.** It caps
+   at `PILOT_MAX_INTERACTIONS` (default 4) per screen, its allow-list excludes
+   filter tabs, and the destructive-text guard refuses anything matching stems
+   like "añad" — which includes an innocent "Añadir bloque de cita" accordion.
+   The sweep is bounded **by design**; the fix is not to loosen it but to add a
+   dedicated journey when a PR's core controls fall outside it (see
+   `tests/pilot/journeys/recommendations-interactions.spec.ts`).
+3. **Only one project was ever inspected.** The journeys took whichever project
+   sat first in the list, so states that only exist with many recommendations
+   were never seen. A second-project journey now covers that
+   (`PILOT_SECOND_PROJECT`, default "Movistar").
+
+The standing lesson, recorded in the agent's brief as **coverage traps**: a
+green table means "it loaded", never "it works" and never "it looks right", and
+the absence of an interaction finding is never evidence that a control does
+anything.
+
 ## Scope guard (UX-PILOT-1)
 
 The pilot runs against the **same Supabase project as production**, and scans

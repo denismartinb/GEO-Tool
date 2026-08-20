@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getProjectIdFromPathname, resolveSelectedProject } from "@/lib/active-project-cookie";
+import {
+  getProjectIdFromDomainsQuery,
+  getProjectIdFromPathname,
+  resolveSelectedProject
+} from "@/lib/active-project-cookie";
 
 describe("resolveSelectedProject", () => {
   const projects = [{ id: "a" }, { id: "b" }, { id: "c" }];
@@ -40,5 +44,25 @@ describe("getProjectIdFromPathname", () => {
     expect(getProjectIdFromPathname("/dashboard/domains")).toBeNull();
     expect(getProjectIdFromPathname("/dashboard/settings/profile")).toBeNull();
     expect(getProjectIdFromPathname("/debug")).toBeNull();
+  });
+});
+
+describe("getProjectIdFromDomainsQuery", () => {
+  const uuid = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+
+  it("extracts a valid ?active= id on /dashboard/domains", () => {
+    expect(getProjectIdFromDomainsQuery("/dashboard/domains", new URLSearchParams(`active=${uuid}`))).toBe(uuid);
+  });
+
+  it("ignores the param on any other route", () => {
+    expect(getProjectIdFromDomainsQuery("/dashboard", new URLSearchParams(`active=${uuid}`))).toBeNull();
+    expect(
+      getProjectIdFromDomainsQuery(`/dashboard/projects/${uuid}`, new URLSearchParams(`active=${uuid}`))
+    ).toBeNull();
+  });
+
+  it("ignores a missing or non-uuid value", () => {
+    expect(getProjectIdFromDomainsQuery("/dashboard/domains", new URLSearchParams())).toBeNull();
+    expect(getProjectIdFromDomainsQuery("/dashboard/domains", new URLSearchParams("active=not-a-uuid"))).toBeNull();
   });
 });

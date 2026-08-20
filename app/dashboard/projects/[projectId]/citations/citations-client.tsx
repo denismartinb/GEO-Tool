@@ -282,6 +282,15 @@ function ImpactBar({ breakdown, brandLabel }: { breakdown: ImpactBreakdown; bran
   );
 }
 
+/** Whether SourceDonut will actually render something for this breakdown —
+ * mirrors its own early-return condition below. Needed by the parent so
+ * .cit2-dist can drop to a single column when there's nothing to pair the
+ * impact bar with, instead of reserving a second grid track for a component
+ * that renders null (see .cit2-dist-solo). */
+function hasClassifiedSourceType(breakdown: SourceTypeSlice[]): boolean {
+  return breakdown.some((s) => s.type !== "unknown" && s.cited > 0);
+}
+
 function SourceDonut({ breakdown }: { breakdown: SourceTypeSlice[] }) {
   const colorClass = (type: SourceTypeSlice["type"]) =>
     type === "own"
@@ -555,8 +564,13 @@ export function CitationsClient({
       {/* Impact split and source-type donut sit side by side from 900px:
           both answer "how are the citations distributed", so as two stacked
           full-width cards they read as competing blocks rather than one
-          section (own UX review, 2026-08-02). */}
-      <div className="cit2-dist">
+          section (own UX review, 2026-08-02). When every citation is an
+          unclassified "otra web" (common on real scans — see SourceDonut),
+          it renders nothing, and the two-column grid must collapse to one
+          column instead of leaving the impact card truncated with dead
+          space where the donut would have been (desktop layout bug found on
+          a real Vodafone scan, 2026-08-17). */}
+      <div className={`cit2-dist${hasClassifiedSourceType(sourceTypeBreakdown) ? "" : " cit2-dist-solo"}`}>
         <ImpactBar breakdown={impactBreakdown} brandLabel={brandLabel} />
         <SourceDonut breakdown={sourceTypeBreakdown} />
       </div>

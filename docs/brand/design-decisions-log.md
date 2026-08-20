@@ -10279,6 +10279,62 @@ unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de
 
 ---
 
+
+---
+
+## 111. Se retira la banda «Revisando tu web» de Visión general — dos avisos del mismo hecho en la misma pantalla (2026-08-16)
+
+**El problema, señalado por el fundador con una captura.** Mientras la
+auditoría técnica del primer escaneo corre, Visión general mostraba **dos**
+señales simultáneas del mismo hecho: la pastilla «Auditando…» del
+sticky-header (`ScanStatePill`) y, justo debajo, la tarjeta clicable «Revisando
+tu web / La auditoría técnica sigue en marcha. No hace falta que esperes
+aquí» (`ScanMissionBand`, ONBOARDING-ROCKET-1). Un tercer sitio —la pantalla
+de Auditoría web— ya cuenta la misma historia con la escena completa del
+cohete en reentrada (`ReentryMission`, SCAN-STATES-3). El fundador: *«tampoco
+hace falta, la auditoría web tiene su propio estado de escaneando con el
+cohete en reentrada»*.
+
+**Por qué esto NO es el mismo bug que §112.** El banner de §112 era stale —
+afirmaba algo falso tras terminar el escaneo. `ScanMissionBand` no mentía
+nunca: su condición (`shouldShowMissionBand`, exactamente 1 escaneo completado
+y una auditoría activa) era correcta y tenía tests. El problema no era
+veracidad, era **redundancia entre dos superficies a la vez visibles en la
+misma pantalla** — se preguntó explícitamente al fundador el alcance antes de
+tocar nada, porque quitar un componente probado y diseñado a propósito no es
+lo mismo que corregir un dato falso.
+
+**Qué se decidió.** Se retira la banda entera de Visión general y se deja de
+pasarle `auditing` a su `ScanStatePill` — la pastilla vuelve a mostrar solo
+`Escaneando…`/`Analizando…`/`Escaneado <fecha>` ahí, igual que en Prompts,
+Competidores, Citas y Recomendaciones (ninguna de esas pantallas pasó nunca
+`auditing`; Visión general era la única excepción). La pastilla «Auditando…»
+de Auditoría web (`app/dashboard/projects/[projectId]/web-audit/page.tsx`) NO
+se toca — ahí es la propia pantalla afirmando su propio estado, no una segunda
+voz sobre el mismo hecho.
+
+**Lo que esto deja sin dueño, dicho en voz alta.** Con la banda fuera, Visión
+general no vuelve a mencionar la auditoría mientras corre — ni pastilla ni
+tarjeta. Quien quiera saber que está en marcha tiene que entrar a Auditoría
+web y ver el cohete en reentrada o la pastilla propia de esa pantalla. Es la
+elección explícita del fundador entre las opciones planteadas, no un olvido.
+
+**Código muerto retirado en el mismo PR**, no dejado atrás para una sesión
+futura que se pregunte si sigue en uso: `components/scan-mission-band.tsx`
+entero, `shouldShowMissionBand` y sus 4 tests en
+`lib/scan/mission-beats.ts`/`.test.ts`, la consulta a `jobs` que sólo existía
+para alimentar la banda y la pastilla de Visión general
+(`activeAuditJobCount`/`hasActiveAuditJob` en `page.tsx`), y el CSS `.mba-*`
+de `app/globals.css`.
+
+**Trazabilidad.** ONBOARDING-ROCKET-1 (`docs/design-reference/scan-states-1/rev3-cohete-secuencia.html`,
+sección "La misión suelta la pantalla a mitad" — su diseño queda superseded
+por esta retirada, no borrado del artefacto histórico); SCAN-STATES-3
+(`ReentryMission`, `docs/design-reference/scan-states-1/rev6-reentrada.html`);
+DOMAINS-REDESIGN-1 (`ScanStatePill`, log §26).
+
+---
+
 ## 110. El autofix que arregla lo que llevaba una semana arreglándose a mano (LOG-NUMBERING-AUTOFIX-1, 2026-08-16)
 
 **Qué se decidió.** `pnpm run fix:log-numbering` — un script que hace, sin
@@ -10341,6 +10397,1140 @@ en el ejemplo).
 
 ---
 
+---
+
+## 112. El aviso verde de «tu primer escaneo se está ejecutando» reaparecía ya terminado el escaneo (2026-08-16)
+
+**El problema, reportado por el fundador con una captura del móvil.** En
+Visión general, el banner de éxito `scan_started` («Dominio creado. Tu primer
+escaneo se está ejecutando — sigue el progreso aquí») aparecía **a la vez** que
+la puntuación GEO ya calculada y la etiqueta «Escaneado 16 ago 2026» — es
+decir, después de que el escaneo hubiera terminado. Nadie recargó nada a mano.
+
+**La causa.** SCAN-STATES-2 (§56) ya había decidido ocultar este banner
+mientras la misión del cohete ocupa la pantalla, con la condición
+`isFirstScan && activeRun`. Pero `?success=scan_started` se queda en la URL
+después del redirect inicial, y `ScanProgressPoller` dispara un
+`router.refresh()` en cuanto el run pasa a estado terminal, sin acción del
+usuario. En ese refresh `activeRun` ya no existe **y** `isFirstScan` ya ha
+pasado a `false` (hay 1 escaneo completado), así que la condición de ocultado
+deja de cumplirse y el texto stale —que sigue diciendo «se está ejecutando»—
+vuelve a mostrarse, ahora contradiciendo los datos reales que tiene debajo.
+
+**Primer intento, y por qué se quedó a medias.** Se cambió la condición de
+ocultado a depender sólo de `activeRun` (`!activeRun` ⇒ ocultar), razonando
+que `isFirstScan` era redundante en el momento del redirect. Es la mitad
+correcta del argumento y la mitad equivocada del código: `!activeRun` oculta
+el banner **después** de terminar, pero lo deja pasar **mientras** `activeRun`
+es verdadero — es decir, mientras la misión del cohete está en pantalla, que es
+el caso exacto que SCAN-STATES-2 prohibió en primer lugar. El fundador lo cazó
+en el acto, con una captura del banner flotando sobre el cohete en plena
+órbita: la condición había quedado invertida respecto a la intención.
+
+**Qué se decidió, de verdad.** Esta clave sólo la dispara la creación de
+proyecto (`app/dashboard/projects/actions.ts`), así que no existe ningún
+momento en el que mostrarla sea correcto: mientras el escaneo corre, la misión
+ya dice lo mismo; en cuanto termina, el texto es falso. Se suprime sin
+condición (`feedback.success !== "scan_started"`), no se «gatea» contra
+ningún estado del run.
+
+**No se revisaron el resto de claves de `feedbackSuccessMessages`** porque
+ninguna comparte el patrón: o describen un hecho estable que no caduca
+(«Escaneo completado», los toggles de `/debug`), o no dependen de un estado
+transitorio que el propio poller invalida en segundo plano. `scan_started` es
+la única clave que nunca debía renderizarse como banner.
+
+**Trazabilidad.** §56 (SCAN-STATES-2, decisión de ocultado original — la razón
+de fondo no cambia, sólo la condición de código que la implementaba);
+`components/scan-progress-poller.tsx` (el `router.refresh()` que dispara el
+refresco silencioso que expuso el caso "ya terminado").
+
+---
+
+---
+
+---
+
+## 113. Una página que capta el dominio en vez de fingir que lo comprueba (FREE-CHECKER-1 Fase A, 2026-08-15)
+
+**Qué se decidió.** `/gratis/aparece-mi-marca-en-chatgpt`, primera pieza de la
+Fase P de `docs/seo-positioning-plan.md` (comprobador gratuito público).
+Task Intake propio, aprobado por el fundador solo para esta fase — las otras
+dos preguntas del Task Intake (autorización de esquema/RLS para una
+comprobación real, y Gemini vs. ChatGPT como motor) siguen sin respuesta y
+bloquean cualquier fase posterior.
+
+**Por qué esta fase y no la comprobación real.** El coste real medido
+(`docs/llm-cost-analysis-2026-08.md`) de una comprobación anónima de 3
+prompts es ~0,016 $ — la mitad de un escaneo Free completo — y hoy no existe
+en el repositorio ningún primitivo para limitar a un visitante sin cuenta:
+sin rate-limit por IP, sin Redis, sin captcha. 1.000 consultas/día costarían
+32× el gasto LLM actual del producto, y 500/día agotarían el tramo gratuito
+de grounding de Gemini que comparten los clientes de pago. Cualquier versión
+que llame a un LLM de verdad necesita una tabla nueva (migración), una
+política RLS nueva o escritura por service-role en una ruta anónima — las
+tres prohibidas sin aprobación explícita del fundador (CLAUDE.md), y esa
+aprobación no se ha pedido todavía.
+
+**Lo que sí se decidió: medir demanda antes de construir la máquina.** La
+página capta el dominio con el mismo mecanismo que ya usa el hero de la
+landing (`lib/onboarding/pending-domain.ts`, sin modificarlo — arrastre por
+`localStorage`, se consume al leerlo) y lleva al registro real, donde el
+asistente lo recoge y lanza el escaneo real del plan Free. Cero llamadas LLM,
+cero escritura en base de datos, cero esquema nuevo.
+
+**Honestidad del copy, no solo del backend.** La página dice explícitamente
+que no es un resultado instantáneo — es el escaneo real del plan Free (10
+prompts, 1 motor) — porque prometer una comprobación inmediata y entregar un
+registro habría sido el mismo "fake scan" que CLAUDE.md prohíbe, solo que en
+la página de captación en vez de en el producto.
+
+**Reutiliza el shell de blog, no un layout nuevo.** `BlogPageShell`, el mismo
+que usan `/glosario` y `/comparativas` — `growth-content.md` fija cinco
+shells de marketing y ninguno añade un `<Link>` de pie a mano.
+`.lp-cta:disabled` es el único CSS nuevo: el botón no existía deshabilitado
+en ningún sitio del sistema y el criterio de aceptación exige que un dominio
+inválido no habilite el envío.
+
+### El CTA muerto que ninguna aserción podía cazar
+
+La primera versión deshabilitaba el botón hasta tener un dominio válido. Suena
+correcto y en pantalla era lo contrario: **el CTA principal —lo único que la
+página existe para que pulses— recibía al visitante gris y apagado**, antes de
+que hubiera hecho nada mal. Eso no se lee como «escribe algo primero», se lee
+como «esto está roto», y estaba en la primera pantalla del embudo de captación.
+
+**El piloto lo dio por PASS, y no es un fallo del piloto.**
+`tests/pilot/support/page-audit.ts` salta los controles deshabilitados al medir
+contraste (`if (control.disabled) continue;`) porque **WCAG los exime de AA**:
+mecánicamente la página era impecable. Es el caso puro de lo que el cuarto
+criterio del piloto existe para juzgar —«¿esto es bueno, no sólo correcto?»— y
+de por qué el veredicto no es la tabla de ✅ sino la lista de capturas que
+alguien abrió. Se encontró mirando la captura de móvil, donde el botón gris
+ocupa el centro de la primera pantalla.
+
+**El arreglo no fue pintar mejor el estado deshabilitado, fue quitarlo.** El
+botón siempre invita; al pulsarlo sin un dominio válido devuelve el foco al
+campo y enseña una pista concreta (`.fc-hint`, `--brand-neg` sobre fondo claro,
+4,6:1). Es además la política que el hero de la landing ya tenía escrita y
+justificada: bloquear el alta es peor que arrastrar un dato de menos.
+
+`.lp-cta:disabled` se queda en `globals.css` aunque ninguna pantalla lo use, y
+**en azul atenuado, nunca en gris**: el día que alguien lo necesite, sin esa
+regla heredaría el azul a plena fuerza y parecería pulsable. Al estar exento de
+AA, no lo vigila ningún test — sólo el ojo.
+
+### El motor decide el titular, y el titular decidió el motor
+
+La fase B se aprobó con **Gemini** por coste (0,002 $ contra 0,0117 $ por
+llamada). Al ir a escribir el copy apareció la consecuencia que esa decisión
+arrastraba y que no estaba sobre la mesa al tomarla: **si la comprobación
+pregunta a Gemini, el titular no puede decir ChatGPT**, y la página entera
+existe por la consulta "¿aparece mi marca en ChatGPT?".
+
+La salida propuesta fue reencuadrar la página a "la IA" y quedarse con Gemini.
+El fundador eligió la contraria (2026-08-15): **ChatGPT como motor**, pagando
+la diferencia, *"maximiza el posicionamiento de ChatGPT en todo el artículo si
+eso es lo que más visitas nos va a traer"*. Es la lectura correcta del
+trade-off: los ~90 $/mes de diferencia recortaban la factura y tiraban la
+palabra clave que justifica la página. El coste del techo pasa de ~1,80 $/día
+a **~4,80 $/día** (~145 $/mes en el peor caso absoluto), escrito en el test del
+límite para que subirlo no sea silencioso.
+
+**El perfil y la derivación de la pregunta se quedan en Gemini**: son pasos
+internos que el visitante no ve, así que ahí el motor barato no cuesta nada ni
+en honestidad ni en posicionamiento.
+
+### Por qué esto NO canibaliza al artículo S1
+
+`/blog/como-saber-si-tu-marca-aparece-en-chatgpt` ya tiene
+`primaryKeyword: "cómo saber si mi marca aparece en chatgpt"`. Dos URLs propias
+peleando por una consulta es que Google elija una y ninguna rinda como habría
+rendido una sola.
+
+No ocurre porque **la intención es distinta**: S1 es informacional (una guía de
+tres métodos, para quien quiere entenderlo) y el comprobador es transaccional
+(para quien no quiere leer nada). Misma keyword raíz, SERP distinta, y se
+enlazan entre sí en vez de competir. Por eso se descartó también la idea de
+hacer tres páginas —una por motor—: habría canibalizado a S1, dos de las tres
+habrían sido falsas mientras el motor no fuera el del titular, y "aparece mi
+marca en Gemini" no tiene búsquedas.
+
+**Los tres motores aparecen, cada uno donde es cierto**: ChatGPT manda porque
+es lo que ejecuta la comprobación gratuita; Gemini y Claude viven en el escalón
+de pago y en las FAQ, porque es ahí donde el producto los ejecuta de verdad.
+Nombrarlos no es relleno de densidad —la regla de `growth-content.md` dice que
+la densidad es un techo, no un objetivo—: es que una página sobre visibilidad
+en IA que sólo nombrara uno describiría mal lo que se vende.
+
+### Cuando hay resultado, la página ES el resultado
+
+La primera versión metía el veredicto **dentro** de la página de venta: debajo
+seguían "qué comprobamos exactamente", "por qué importa aparecer en ChatGPT" y
+las cinco FAQ, y arriba el H1 seguía invitando a escribir el dominio. Todo ese
+copy existe para convencerte de hacer una cosa que **acabas de hacer**, así que
+dejarlo ahí convierte la respuesta en un anuncio con un dato encima.
+
+El arreglo no fue CSS: el componente de cliente recibe la cabecera y el copy
+como `props` y deja de pintarlos en cuanto hay algo que enseñar. Siguen
+renderizándose en servidor —llegan como JSX, no se duplican en el cliente—; lo
+único que decide el cliente es si se ven.
+
+**Dos remates que sólo aparecen mirando la pantalla**, no en ninguna aserción:
+la página se encogía de la portada larga a la espera corta y el pie subía
+dejando un hueco gris, para volver a bajar al llegar el resultado —tres saltos
+de maquetación en veinte segundos, justo donde el visitante está esperando y
+mirando—, resuelto con `min-height` en los dos estados. Y `citedOwnDomain` se
+recogía y no se pintaba: es la señal más fuerte que puede dar una consulta —que
+el motor fuera a leer TU web en vez de nombrarte de memoria— y estaba tirándose.
+Se enseña sólo cuando es verdad, nunca en negativo: "no te citó" con una sola
+consulta sería el mismo veredicto prematuro que el aviso de variabilidad
+desmonta.
+
+### La guarda del rol de servicio tuvo que aprender un caso nuevo
+
+`tests/service-role-identity.test.ts` (§92) exige que todo uso de
+`createServiceClient()` en `app/` establezca identidad. La ruta del comprobador
+la usa y **no tiene identidad que establecer**: su visitante no tiene cuenta,
+que es el producto entero de esa página. Su propio mensaje de error avisaba de
+la tentación — *"añádela a IDENTITY_GATES a conciencia, no para poner el test en
+verde"*.
+
+Añadir una quinta puerta de identidad habría sido mentir, porque no hay
+ninguna. Lo que de verdad hace segura esa ruta no es una identidad sino **la
+tabla que toca**: `public_checks` no tiene datos de cliente ni clave foránea a
+nada que un cliente posea. Así que la excepción se comprueba **por tabla**, no
+por nombre de fichero: si alguien añade mañana un `.from("projects")` ahí, el
+test se pone rojo igual — que es exactamente lo que una excepción por nombre no
+habría hecho. Verificado rompiéndolo.
+
+### `/gratis` entra en el guardián de honestidad
+
+`article-honesty.test.ts` cubría cuatro superficies y esta nació fuera. Es la
+primera página pública dirigida a alguien **sin cuenta**, así que es donde más
+caro sale publicar un peso del compuesto o un código ADR. Se añadió al crearla,
+no cuando se le escapara algo, y se verificó metiendo un `ADR 0033` de mentira
+para ver el test en rojo.
+
+### Addendum (2026-08-15, misma tarde): la primera ejecución real falló, y lo grave no fue el fallo
+
+El fundador probó el comprobador en su móvil nada más configurarse la variable
+y la migración. Resultado: **"Hemos recibido la respuesta pero no hemos podido
+interpretarla"** — `extraction_failed`. Lo que ese mensaje demuestra que SÍ
+funcionaba: la sal, la tabla, los tres límites, la lectura de la portada, la
+derivación de la pregunta y **la llamada real a ChatGPT**. Falló el último paso,
+el que lee esa respuesta y devuelve JSON estructurado.
+
+**Lo grave no fue el fallo, fue que no se podía diagnosticar.** El fichero tenía
+cinco `catch {}` que tiraban la causa entera, así que `extraction_failed` podía
+ser un 400 del proveedor, un JSON roto, un timeout, un fallo de esquema o una
+respuesta vacía — cinco cosas que se arreglan de cinco maneras distintas, y
+ninguna forma de saber cuál. Es literalmente la regla que ya estaba escrita:
+*"un `catch` que descarta la causa es un fallo, no un estilo"*
+(`.claude/rules/gemini.md`). Ahora cada paso guarda una etiqueta corta escrita
+por este repositorio —la categoría del `ExtractionError` (`quota`, `timeout`,
+`http`, `empty`, `invalid_json`, `schema`, `config`) o el nombre de la clase,
+saneado a letras— que va al log de ejecución y a `error_category` de la fila.
+**Nunca sale en la respuesta HTTP**: la lee un desconocido.
+
+**Segundo fallo, encontrado leyendo y no ejecutando: el presupuesto no llegaba
+al proveedor.** `extractOpenAIStructuredData` acepta un `deadlineAt` y la
+comprobación no se lo pasaba, así que su bucle de reintentos (3 intentos de
+hasta 20 s) arrancaba uno nuevo mientras quedara un milisegundo — hasta 60 s de
+extracción dentro de una función con `maxDuration = 60`, o sea un 504 sin cuerpo
+con el dinero ya gastado. Se le pasa el deadline de la invocación **menos un
+presupuesto de paso entero**, porque el helper sólo promete "no EMPIEZO un
+intento pasado el deadline" y hay que dejarle sitio para terminar el que sí
+empiece (`.claude/rules/scan.md`; `docs/adr/0037`).
+
+**Y un motor de reserva para la extracción, sólo para la extracción.** Tirar a
+la basura una llamada con búsqueda ya pagada —cuya respuesta estaba entera y
+correcta en memoria— porque el lector falló era perder el resultado teniéndolo
+delante. Leer la respuesta es un paso interno que el visitante no ve, igual que
+el perfil del negocio y la derivación de la pregunta, que ya iban por Gemini a
+propósito; **lo que el visitante ve —la pregunta y la respuesta literal— lo
+sigue produciendo ChatGPT**, así que el titular de la página sigue siendo
+cierto. La reserva está acotada por el mismo presupuesto: si no cabe, no
+arranca.
+
+**Recuperarse no borra el incidente.** Cuando la reserva salva la comprobación,
+la causa del primer fallo se guarda igual (`fallback:config`) en una fila con
+`status = 'completed'`. Una degradación silenciosa es exactamente cómo los 429
+de OpenAI corrieron cuatro días sin que nadie se enterara (`docs/adr/0029`).
+
+**Lo que este addendum NO resuelve, dicho explícitamente.** La causa raíz del
+fallo de OpenAI sigue **sin diagnosticar**: se ha hecho diagnosticable, no se ha
+diagnosticado. Se sabrá con la primera ejecución después de este cambio,
+mirando `error_category`. Y hay un antecedente que apunta ahí: §54 dejó anotado
+"conocido y no resuelto: los 400 de OpenAI del 5-08 (`Check OPENAI_MODEL`)",
+que es el mensaje exacto de `getOpenAIApiError(400)` y sigue sin tocarse. Si la
+categoría que aparezca es `config`, el mismo fallo lleva diez días vivo también
+en el escaneo, y ahí no hay reserva que lo tape — sería su propia fase.
+
+### Fase C (2026-08-16): la primera comprobación que salió bien enseñaba tres datos que no existían
+
+Task Intake aprobado por el fundador el mismo día, sobre una captura suya del
+resultado real. El comprobador funcionó —el motor de reserva no llegó a hacer
+falta— y lo que llegó a pantalla tenía **tres afirmaciones sin dato debajo**.
+Vale la pena el detalle, porque las tres son la misma clase de error: convertir
+la ausencia de un dato en la apariencia de uno.
+
+1. **La lista numeraba el índice de un array.** El encabezado decía "Quién sí
+   apareció, **en el orden en que ChatGPT los nombró**" y pintaba `1..10`. Pero
+   `other_brands_mentioned` es `string[]`: el extractor no devuelve posición
+   para esas marcas, y el prompt tampoco se la pide. El componente numeraba
+   `i + 1`. Ahora son etiquetas sin número, con el orden desmentido en el
+   propio bloque.
+
+2. **"Movistar en el puesto 1" era un 1 estructural, no medido.** La
+   comprobación pasa `competitors: []` a propósito (es lo que hace que todo
+   salga por `other_brands_mentioned`), así que la marca es la **única entidad
+   que el extractor rankea** y su `position` vale 1 siempre que aparezca. En la
+   respuesta que lo destapó, ChatGPT nombraba a Orange antes que a Movistar.
+   `brandPosition` **se ha eliminado de `PublicCheckResponse`**, no ocultado en
+   la pantalla: un campo que llega al navegador y depende de que nadie lo pinte
+   es un campo que vuelve.
+
+3. **Netflix no compite con Movistar.** La lista mezclaba a Orange, Yoigo y
+   MÁSMÓVIL con SkyShowtime, DAZN, Netflix, Prime Video, Disney+ y HBO Max —
+   plataformas que van *dentro* de los paquetes. `otherBrandsRelevanceHint` no
+   basta, y no hay dato hoy para separarlas, así que lo que se ha quitado es
+   **nuestra interpretación**: ya no se llaman competidores ni "quién apareció
+   en tu lugar", y el bloque dice explícitamente que alguna puede no ser
+   competencia.
+
+**Y la respuesta se lee.** Llegaba en markdown y se pintaba en crudo dentro de
+un `<blockquote>` con `white-space: pre-wrap`: un muro con URLs enteras a la
+vista. `lib/free-checker/answer-markdown.ts` es un parser propio y mínimo
+—párrafos, listas, negritas, enlaces— que **devuelve datos, no HTML**. No
+existe ninguna ruta a `dangerouslySetInnerHTML`, así que la inyección no es
+algo que haya que acordarse de evitar: es imposible por construcción. Los
+enlaces se validan por protocolo (`http`/`https`; cualquier otro degrada a
+texto) y salen con `rel="nofollow noopener noreferrer"`. La URL se conserva tal
+cual, `?utm_source=openai` incluido: es la respuesta literal, y limpiarla sería
+enseñar algo distinto de lo que se recibió en la pantalla cuyo argumento entero
+es que enseña lo que se recibió.
+
+**Fase D, propuesta y sin aprobar.** Lo que la Fase C deja sobre la mesa, con
+su coste medido: la generación cuesta $0,0117 (74% del total, y es el fee de
+búsqueda) y **la extracción $0,00036 — el 2%**. Pedirle más a esa llamada es
+prácticamente gratis. Cabrían ahí: posiciones reales para las demás marcas (lo
+que devolvería un ranking honesto), el dominio de cada una (→ logo por favicon)
+y un "¿es de tu categoría?" que arregla el fallo 3 de verdad. Y **sin coste
+ninguno**: las fuentes que el motor consultó ya vienen en la respuesta como
+`groundingChunks` y `runPublicCheck` las tira al quedarse sólo con
+`generated.text`. Es el dato más accionable de la pantalla —de dónde saca
+ChatGPT lo que dice de tu categoría— y está pagado. Lo que **no** cabe en
+ningún caso es una puntuación: el producto exige diez respuestas antes de
+llamar fiable a un número. Toca el esquema de extracción compartido con el
+escaneo, así que necesita su propio Task Intake.
+
+### Fase C-bis (2026-08-16): el segundo fallo real, y el agujero que dejó la primera instrumentación
+
+Segunda ejecución del fundador: **"No hemos podido leer tu web"** —
+`site_unreachable`, un paso antes que la vez anterior. Dos cosas mal, y la
+primera es mía.
+
+**El agujero.** `resolveBusinessContext` **nunca lanza**: colapsa tres motivos
+distintos en un único `{status: "unidentified"}`. La instrumentación de la
+mañana metió la causa en los `catch`, y este camino no pasa por ninguno — así
+que `error_category` volvió a quedarse en `site_unreachable` a secas, sin causa,
+que es exactamente el fallo que esa instrumentación existía para eliminar. Una
+categorización que sólo cubre las excepciones no cubre el código que devuelve
+sus errores en vez de lanzarlos.
+
+**Y lo que se le decía al visitante era falso dos veces de cada tres.** Los tres
+motivos son: la portada no se pudo leer, el modelo no devolvió perfil, o el
+modelo devolvió uno que él mismo marca poco fiable. **Sólo el primero es su
+web.** A los otros dos se les enseñaba *"comprueba que el dominio es correcto y
+que la página carga"* sobre un sitio que carga perfectamente — una causa que el
+código no puede saber (`.claude/rules/gemini.md`). `BusinessContextResult` gana
+un `reason` **obligatorio, no opcional**: opcional habría dejado que un retorno
+futuro se olvidara de decir por qué, y este fallo consiste precisamente en no
+saber por qué. El comprobador ramifica sobre él y estrena `profile_unclear`, con
+un mensaje que dice lo que es cierto y **no manda a nadie a revisar su web**.
+
+**Tercera cosa, de la captura y no del código.** Al fallar, la pantalla retiraba
+la página entera y dejaba un panel de error solo en medio de un blanco: se lee
+como una web rota, no como un intento que no salió. La página se retira cuando
+hay un resultado que la sustituya; un fallo no lo es. Se queda el contenido, se
+va el titular —que invita a escribir un dominio donde ya no hay campo.
+
+**Sigue sin diagnosticarse** la causa raíz del `extraction_failed` de la mañana:
+esta segunda ejecución ni llegó al paso 4.
+
+**Trazabilidad.** Task Intake FREE-CHECKER-1 (2026-08-15, sin PR propio —
+generado en la conversación, no committeado como documento aparte); Task Intake
+Fase C (2026-08-16, aprobado en sesión); `docs/seo-positioning-plan.md` Fase P;
+`docs/llm-cost-analysis-2026-08.md` (los costes de arriba);
+`tests/pilot/support/page-audit.ts` (la exención que hace este fallo
+invisible); §55 (Q5b, cuando el chequeo de contraste entró en el piloto); §54
+(los 400 de OpenAI, conocidos y sin resolver); `docs/adr/0029` (categorizar y
+avisar); `docs/adr/0037` (presupuestar contra la invocación);
+`.claude/rules/styles.md` (`a:not(.btn)` en la regla de ancestro).
+
+### Fase D1 (2026-08-17): las fuentes reales, coste cero
+
+Task Intake propio aprobado por el fundador en sesión, sobre el mismo dato ya
+identificado en el cierre de Fase C-bis: `generateOpenAIVisibilityAnswer`
+devuelve `groundingChunks` —las páginas reales que `web_search` consultó,
+metadata del propio proveedor— y `runPublicCheck` se quedaba sólo con
+`generated.text`, tirando el resto. El dato ya estaba pagado dentro del coste
+de la llamada de generación ($0,0117); enseñarlo no añade ni una llamada.
+
+**Deliberadamente un campo aparte de `citedDomains`/`citedOwnDomain`, no un
+reemplazo.** Esos dos siguen viniendo de lo que el extractor CREE haber leído
+en el texto de la respuesta (Fase B) — una segunda llamada de LLM sin acceso a
+la metadata real, reconstruyendo desde markdown lo que la primera llamada ya
+sabía con certeza. `sources` es la metadata real. Casi siempre van a coincidir;
+fusionarlos en un único indicador habría escondido el caso en que no
+coinciden, que es precisamente cuando más interesa saber cuál de los dos se
+equivocó. La pantalla los enseña por separado: la lista completa bajo "De
+dónde sacó ChatGPT esta respuesta", y el aviso "Además, citó tu web" se deja
+intacto con su fuente original.
+
+**Deduplicado por dominio, no por URL.** Varias citas al mismo sitio son una
+sola fila; se conserva la primera URL y título con los que apareció, porque el
+enlace tiene que llevar a algún sitio concreto y cualquiera de las citas del
+mismo dominio sirve igual de bien. La extracción de dominio (`new URL(uri)
+.hostname`, sin `www.`) duplica a propósito la de
+`lib/scan/extraction.ts::extractDomain` en vez de importarla: esa función no
+está exportada, y `lib/scan/**` es una feature del escaneo, no vocabulario
+común (`.claude/rules/scan.md`) — este fichero ya declaraba en su cabecera que
+no importa nada de ahí. A diferencia del escaneo con Gemini, no hace falta
+resolver redirecciones: las `url_citation` de OpenAI ya son el destino final
+(`lib/llm/openai.ts`), así que no hay una llamada de red extra por cita.
+
+**Lo que NO se ha tocado, explícitamente.** `brandPosition` sigue fuera del
+contrato HTTP (Fase C). La categoría de cada marca sigue sin decidirse (el
+caso Netflix/Orange de Fase C). Ninguno de los dos entra en D1: ambos exigen
+tocar `extractionOutputSchema`, compartido con los tres motores del escaneo, y
+D1 se aprobó explícitamente sin tocarlo — quedan como Fase D2/D3, sin aprobar.
+
+**Colisión de numeración heredada, no causada por esta fase.** Al preparar
+este cierre, §111 estaba reclamado dos veces en `main`: por esta misma sección
+(FREE-CHECKER-1, mergeada 2026-08-17T12:00:50+02:00) y por "Se retira la banda
+«Revisando tu web»" (PR #428, mergeada 2026-08-17T11:53:08+02:00, ocho minutos
+antes). Ninguna de las dos ramas vio a la otra: `pnpm run fix:log-numbering`
+sólo compara la copia local contra `origin/main`, y las dos ya estaban en
+`main` cuando esta sesión empezó a trabajar sobre él. El propio autofix se
+niega a decidir en este caso —"ninguna de las dos ramas es claramente la
+nueva"— y pide mirar `git log --format='%h %cI %s' origin/main` para ver cuál
+mergeó después. Renumerada a mano la que llegó más tarde (ésta, FREE-CHECKER-1)
+a **§113**, dejando §111 y §112 (ambas de "Visión general") como estaban.
+
+**Trazabilidad.** Task Intake Fase D1 (2026-08-17, aprobado en sesión);
+`lib/llm/contracts.ts` (`GeminiVisibilityResponse.groundingChunks`);
+`lib/llm/openai.ts` (por qué las `url_citation` no necesitan resolución de
+redirecciones); `lib/scan/extraction.ts` (`buildGroundedCitations`,
+`extractDomain` — el patrón que se duplica a propósito);
+`docs/llm-cost-analysis-2026-08.md`.
+
+---
+
+## 114. Páginas citadas: la tarjeta de Impacto se quedaba recortada cuando no había donut que ponerle al lado (2026-08-17)
+
+**Origen.** El fundador reportó, con captura de un escaneo real de
+vodafone.es en escritorio, que la pantalla de Páginas citadas "parece mal
+maquetada": la tarjeta "Impacto de N citas" terminaba muy por debajo del
+ancho de la tira de KPIs y de la lista de abajo, dejando un hueco en blanco
+a su derecha, en vez de ocupar el ancho completo de la columna.
+
+**Causa.** `.cit2-dist` (`app/globals.css`) reserva desde 900px una rejilla
+de dos columnas fija (`1.35fr` para `ImpactBar`, `1fr` para `SourceDonut`) —
+decisión de CITATIONS-REDESIGN-1 (§8) para que las dos tarjetas lean como
+una sola sección en vez de dos apiladas. Pero `SourceDonut` devuelve `null`
+en cuanto no hay ninguna fuente clasificada (`classifiedTotal === 0`), algo
+nada raro: la mayoría de dominios reales caen en "Otras webs", ya
+documentado en §8 como long tail sin reconocer. Sin el segundo hijo en el
+DOM, la rejilla seguía reservando su segunda columna vacía, y `ImpactBar`
+sólo ocupaba la primera — la tarjeta se veía recortada con espacio muerto al
+lado, exactamente lo que enseñaba la captura.
+
+**Arreglo.** `CitationsClient` calcula ahora si `SourceDonut` va a pintar
+algo (`hasClassifiedSourceType`, mismo criterio que el early-return interno
+del propio componente) y añade el modificador `.cit2-dist-solo` cuando no —
+ese modificador colapsa la rejilla a una sola columna (`minmax(0, 1fr)`)
+sólo para ese caso, así que `ImpactBar` ocupa el ancho completo en vez de
+dejar un hueco donde iría el donut. El caso con donut clasificado no cambia.
+Reproducido y verificado visualmente (Playwright, 1920/1440px, con y sin
+datos de tipo de fuente) antes y después del fix — sin entorno de Supabase
+real disponible en esta sesión, así que la verificación fue contra una ruta
+de desarrollo desechable que montaba `CitationsClient` con props de mock
+imitando el escaneo reportado; la ruta no se ha committeado.
+
+**Pendiente / roto conocido, no tocado en este PR.** `.cit2-page` (topes
+1200px/1280px, mismo mecanismo que `.ov2-scope`/`.pr2-scope`) vive dentro de
+`.page` (`app/globals.css`, tope fijo de 1320px, sin las media queries de
+escritorio de BRAND-5b) — la inconsistencia de ancho ya documentada en §4
+("Pendiente/roto conocido") sigue sin corregir para esta zona; no formaba
+parte del bug reportado y una sesión que la toque debe hacerlo aparte.
+
+**Trazabilidad.** Captura del fundador (vodafone.es, 2026-08-17); §8
+(CITATIONS-REDESIGN-1, origen de `.cit2-dist` y de la exclusión de "Otras
+webs" del donut); §4 (la inconsistencia `.page`/`.ov2-scope` que esto no
+corrige).
+
+---
+
+## 115. Rediseño de Recomendaciones — "copiloto GEO" (RECS-REDESIGN-1, fase 1, 2026-08-03)
+
+**Contexto.** Investigación previa sobre tres guías de optimización para
+motores generativos (Semrush, 2026) y un teardown completo de la pantalla
+equivalente de Otterly.AI. Conclusión principal: el fallo del mercado no es
+la falta de diagnósticos, es el exceso — listas de ~100 filas casi idénticas,
+sin primer paso, sin decir cuánto vale cada acción. El fundador revisó cuatro
+opciones de diseño y aprobó la D ("copiloto GEO"), en tres fases.
+
+**Decidido en esta fase (fase 1).**
+
+1. **Estructura de la página**, en una columna y de arriba abajo: bloqueador
+   técnico → pilares del GEO Score → plan de acciones prioritarias → resto
+   agrupado → filtros. Móvil primero; los breakpoints solo ensanchan la
+   columna, nunca reordenan.
+2. **Repintado v3** con el patrón de zonas (`.rec2-scope`), anchos del
+   estándar de consola (460 / 640 ≥900 / 1200 ≥1200 / 1280 ≥1600) fijado en
+   §5/§8 — deuda que este documento dejaba explícitamente pendiente "cuando le
+   toque su propio rediseño".
+3. **Densidad.** Fuera de la tarjeta plegada: el pill de rango, la etiqueta de
+   tipo interno ("Perseguir fuentes de citación") y el trío de medidores
+   impacto/esfuerzo/confianza. Los tres qualifiers siguen existiendo, dentro
+   del detalle expandido. La tarjeta plegada queda en tres cosas: qué hacer,
+   por qué y el primer paso.
+4. **Cabecera.** Eliminada la fila de metadatos (prompts / competidores /
+   escaneos / score): repetía el Overview y empujaba la primera acción real
+   fuera de la pantalla. Queda título + fecha de escaneo.
+5. **Puntos potenciales en la propia página.** Ya existían (ADR 0017) pero solo
+   se renderizaban en Oportunidades del Overview. Con el fallback honesto
+   intacto: sin número cuantificable o con confianza baja, se muestra impacto
+   cualitativo, nunca una cifra inventada.
+6. **Agrupación en presentación, no en el motor.** Las repeticiones del mismo
+   tipo colapsan en una fila con contador. Deliberadamente NO se fusionan en
+   el motor: eso cambiaría el `dedupe_key` de cada hueco y las claves por
+   prompt son justamente lo que permite resolverlos de uno en uno (RECS-3).
+7. **Prioridad unificada.** El filtro "Alta prioridad" pasa a usar el mismo
+   criterio absoluto que la badge (impacto × confianza). Antes convivían dos
+   definiciones: la badge absoluta y un `priority_rank <= 3` posicional, que
+   se contradecían en la misma pantalla.
+8. **"Exportar plan"** deja de ser un botón muerto: descarga el plan en
+   Markdown, con el primer paso de cada acción.
+9. **Bloqueador técnico.** Si la auditoría web detecta crawlers de IA
+   bloqueados, se muestra por encima de todo lo demás: mientras siga así, el
+   trabajo de contenido no puede rendir en ese motor.
+
+**Pendiente (fases 2 y 3, aprobadas pero no implementadas).** Fase 2: estado
+persistente "hecha / en curso" y veredicto post-escaneo con puntos realmente
+recuperados — requiere migración de schema y por tanto aprobación explícita
+propia. Fase 3: chip de pilar por acción (mapeo regla→pilar).
+
+**Roto conocido, no tocado aquí.** Los tokens `--p-high/--p-med/--p-low` de
+§4 siguen sin definirse en ningún `:root`; afectan a `.rec-card-preview` del
+Overview antiguo, fuera del alcance de esta fase.
+
+---
+
+## 116. Accesibilidad del sitio público — landmark, contraste y áreas táctiles (A11Y-PSI-1, 2026-08-20)
+
+**Contexto.** PageSpeed Insights móvil sobre `https://www.genscore.es/`
+(17/8/26): Rendimiento 75, Accesibilidad 91, Prácticas recomendadas 100, SEO
+100. Sin datos de campo (CrUX vacío) — el 75 es de laboratorio, sin ningún
+usuario real medido. Las dos palancas más grandes de rendimiento (LCP del
+tour del hero, JS de Sentry) están detrás de decisiones ya tomadas y
+deliberadamente no revisadas aquí: diferir el tour empeora el LCP y choca con
+`.claude/rules/onboarding.md`; diferir Sentry ya costó errores de producción
+perdidos dos veces (`components/posthog-provider.tsx`). Esta fase ataca solo
+los tres hallazgos de Accesibilidad, que sí eran baratos y seguros.
+
+**Decidido.**
+
+1. **Landmark `<main>` en las cinco superficies que cubren todo el sitemap
+   público**: `components/landing/landing-page.tsx`,
+   `components/pricing/pricing-page.tsx`, `components/blog/blog-page-shell.tsx`
+   (blog, glosario, comparativas, `/gratis/aparece-mi-marca-en-chatgpt`,
+   `/que-es-genscore`), `components/docs/docs-page-shell.tsx` y
+   `components/legal-page-shell.tsx` (privacidad, cookies, términos). El
+   `<header>`/hero y el `<footer>` quedan fuera de `<main>` a propósito — son
+   landmarks propios. No hay combinadores de hijo directo sobre `.lp` en
+   `app/globals.css`, así que envolver las secciones existentes en `<main>`
+   no cambia ninguna cascada.
+2. **Contraste — `.price-meter-scale span`** (`/pricing`, los pills "10 / 25
+   / 100 / 300"): `color: var(--ink-3)` sobre `background: var(--surface-sunk)`
+   daba 4,44:1, por debajo de AA — la misma trampa de token que
+   `.claude/rules/styles.md` ya documentaba para Recomendaciones (log §55).
+   Pasa a `--ink-2` (7,50:1 sobre ese fondo).
+3. **Área táctil — `.lp-footer .links a`**, compartido por las cinco
+   superficies de arriba: el enlace no tenía relleno propio, así que su caja
+   pulsable era solo la línea de texto (~13px), muy por debajo de 24×24.
+   Relleno `8px 6px` con margen negativo equivalente — el texto no se mueve,
+   el hit-box crece, y el hueco entre enlaces (`gap: 22px`) sigue siendo
+   positivo tras restar los márgenes.
+
+**Deliberadamente NO tocado en esta fase, con el motivo por escrito para que
+nadie lo redescubra desde cero:**
+
+- **LCP (5,3s) y los 129 KiB de JS sin usar** — dominados por el tour del
+  hero y por Sentry respectivamente; ambos vetados por decisiones ya
+  documentadas (arriba).
+- **`ink-4` como texto de cuerpo** — falla AA incluso sobre blanco (2,63:1),
+  y aparece en 258 sitios de `app/globals.css`, la mayoría en zonas de
+  consola. Es un problema real y más grande que el que reportó PSI (que solo
+  vio la home, pública y anónima), pero corregirlo de raíz es un cambio de
+  token de sistema de diseño que necesita su propia fase con su propia pasada
+  de piloto — no cabe en un P2 barato.
+- **`.lp-inner > .blog-cover-compact:first-child` y los ~33 KB de CSS de
+  consola sin mover** — siguen exactamente como los dejó `.claude/rules/
+  styles.md`; esta fase no reordena la cascada.
+
+**Roto conocido, no tocado aquí.** `ink-4` como texto de cuerpo (ver arriba)
+sigue fallando AA en el resto del producto, dentro y fuera de esta zona.
+
+---
+
+## 117. Cabecera pública: badge Pro desalineado bajo el email, y flicker de "Iniciar sesión" en cada recarga (pro-badge-alignment-flickering-v4brfv, 2026-08-17)
+
+**Origen.** El fundador reportó dos cosas con una captura de la portada en
+escritorio, ya logado: (1) en el chip de cuenta de la cabecera pública, el
+badge "Pro" salía apilado debajo del email y alineado a la izquierda, muy
+por debajo del ancho real del email, leyendo como desalineado; (2) al
+recargar cualquier página pública, la cabecera muestra brevemente "Iniciar
+sesión" / "Prueba gratis" antes de reemplazarlos por el chip de cuenta — un
+flicker que ocurre en cada recarga, no sólo la primera vez.
+
+**Causa (badge).** `AccountChip` (`components/marketing/public-header.tsx`)
+metía el email y el badge como dos hijos de bloque sueltos dentro de un
+`<div>` sin `display: flex`; el badge (`.sb-plan-badge`, `inline-flex`)
+caía por tanto en una línea nueva bajo el email en vez de a su lado. Es la
+misma clase que usa el chip de la barra lateral de consola
+(`components/sidebar.tsx`, previo a GENSCORE-HEADER-2, §65), donde apilar sí
+tiene sentido porque esa barra mide ~240px; la cabecera pública tiene todo
+el ancho del nav para trabajar y no tenía motivo para heredar el apilado.
+
+**Causa (flicker).** `useSessionUser` (`lib/use-session-user.ts`,
+GENSCORE-HEADER-2, §65) arranca siempre en `null` ("anónimo o sin resolver
+todavía") y pide `/api/me` en un `useEffect` — una decisión deliberada y
+documentada para no retrasar el CTA de conversión al visitante anónimo, que
+es la inmensa mayoría del tráfico. El coste declarado de esa decisión era
+que un visitante ya logado ve el estado anónimo "por el momento que tarda en
+responder" — pero ese momento se repetía en CADA recarga, y el fundador lo
+señaló como molesto, no como breve.
+
+**Arreglo (badge).** El contenedor de email+badge pasa a
+`.lp-user-chip-identity` (`display: flex; align-items: center; gap: 8px;
+min-width: 0`), con el email en `flex` normal (su propio `min-width: 0` deja
+que el `text-overflow: ellipsis` existente gane) y el badge en `flex: 0 0
+auto` para que nunca se comprima. `.sb-plan-badge` base sigue con
+`margin-top: 3px` para el uso apilado del sidebar; el contexto
+`.lp-user-chip .sb-plan-badge` lo pone a `0` porque en una fila centrada ese
+margen ya no tiene sentido. El chip de la barra lateral no se toca — sigue
+apilado, que es correcto para su ancho.
+
+**Arreglo (flicker).** No se toca la decisión de GENSCORE-HEADER-2 de
+arrancar optimista para el anónimo — seguiría siendo peor retrasar el CTA
+para el 100% de los visitantes por evitar un flicker que sólo ve quien ya
+tiene cuenta. En vez de eso, `useSessionUser` recuerda la última identidad
+resuelta en `sessionStorage` (`gs_session_user_hint`) y la relee en un
+`useLayoutEffect` — no en el inicializador de `useState`, que también
+corre durante la hidratación y tiene que devolver exactamente el marcado
+anónimo que sirvió el servidor o React marca un mismatch de hidratación (el
+mismo flash que esto quiere quitar). Un `useLayoutEffect` compromete su
+`setState` antes de que el navegador pinte, así que la identidad cacheada
+sustituye al fotograma anónimo de forma invisible en vez de después de un
+flash visible. `fetchSessionUser()` sigue siendo la única fuente de verdad:
+corre siempre, y su resultado sobrescribe la caché (y el estado) aunque
+diga `null` — una sesión caducada entre recargas se corrige, no se queda
+pegada al último valor bueno.
+
+**Pendiente / roto conocido, no tocado en este PR.** El primer login de la
+sesión del navegador (sin nada aún en `sessionStorage`) sigue viendo el
+flicker original — no hay forma de evitarlo sin una llamada síncrona antes
+del primer pintado, que es justo lo que GENSCORE-HEADER-2 descartó por el
+coste en TTFB de las ~45 páginas estáticas. Lo que cambia es que a partir de
+la segunda recarga en la misma pestaña, no vuelve a pasar.
+
+**Trazabilidad.** Captura del fundador (portada, escritorio, 2026-08-17);
+§65 (GENSCORE-HEADER-2, `lib/use-session-user.ts`, el trade-off
+anónimo-optimista que esto no revierte); `components/sidebar.tsx` (el chip
+apilado que esto deja intacto).
+
+---
+
+## 118. Cabecera pública: skeleton antes de hidratar cierra el flicker residual (header-flicker-skeleton-prehydration, 2026-08-20)
+
+**Origen.** El fundador confirmó que §117 (pro-badge-alignment-flickering-v4brfv)
+mejoró el flicker de "Iniciar sesión" pero seguía viéndose "un pelín" en
+cada recarga logado. Task Intake aprobado el mismo día para cerrarlo del
+todo con un script de pre-hidratación, sin revertir la decisión de
+GENSCORE-HEADER-2 de servir las páginas públicas en estático.
+
+**Causa.** §117 corregía el estado en cuanto React hidrataba
+(`useLayoutEffect`), pero el navegador pinta el HTML del servidor —siempre
+"Iniciar sesión"— en cuanto lo parsea, **antes de que exista React**. Ese
+hueco (el tiempo hasta que el JS carga y React hidrata) es estructural a
+servir HTML estático con contenido dependiente de sesión; no se cierra
+desde React solo.
+
+**Arreglo.** Mismo patrón que usan los guardas de flash de tema
+oscuro/claro: un `<script>` inline y síncrono, primer hijo de `<body>` en
+`app/layout.tsx`, que lee la misma caché de `sessionStorage`
+(`gs_session_user_hint`) y — si hay algo cacheado — pone
+`data-session-hint="1"` en `<html>` antes de que el navegador pinte nada
+más. `app/globals.css` usa ese atributo para ocultar los CTAs anónimos y
+mostrar un **skeleton sin contenido** (círculo + barra grises,
+`.lp-session-skeleton` en `components/marketing/public-header.tsx`) en su
+lugar — nunca el email o el plan reales, porque el script no tiene forma
+de verificar que esa caché siga siendo cierta. En cuanto React hidrata, el
+mismo `useLayoutEffect` de `lib/use-session-user.ts` que ya leía la caché
+ahora también quita el atributo, y el contenido real (chip o CTAs) que
+React ya había decidido renderizar queda visible.
+
+**Bug real encontrado y corregido antes de desplegar.** La primera versión
+ponía la constante de la clave (`SESSION_CACHE_KEY`) en
+`lib/use-session-user.ts`, un módulo `"use client"`, y la importaba desde
+`app/layout.tsx` (Server Component). Compilaba limpio y pasaba
+`tsc`/`eslint` sin avisar — pero Next.js sustituye las exportaciones de un
+módulo `"use client"` por referencias opacas cuando las importa un Server
+Component, así que el HTML construido enviaba literalmente
+`sessionStorage.getItem(undefined)`, desactivando la función entera en
+silencio. Sólo se detectó inspeccionando el HTML de verdad construido por
+`next build` (`pnpm run validate` no lo habría cogido de otra forma). Se
+movió la constante a `lib/session-hint.ts`, un módulo plano sin
+`"use client"`, importado por los dos lados; `lib/session-hint.test.ts`
+comprueba que ese fichero nunca vuelve a llevar la directiva.
+
+**Segundo bug real, cogido por Claude QA antes del Human Gate.**
+`components/not-found-mission.tsx` reutiliza la clase `.lp-nav-right` a
+propósito (su propio comentario: "sin datos, sin sesión, sin JavaScript
+propio") pero nunca renderiza el skeleton ni monta `useSessionUser`, así
+que nada en esa página limpia `data-session-hint` — la regla original de
+ocultar hermanos (`.lp-nav-right > *:not(.lp-session-skeleton)`) le habría
+escondido los dos CTAs para siempre a cualquier visitante que aterrizara
+ahí con una caché de `sessionStorage` viva. Arreglado cualificando el
+selector con `:has(.lp-session-skeleton)` — ya usado en este mismo fichero
+para `.art-stats` — que excluye estructuralmente cualquier
+`.lp-nav-right`/`.lp-mobnav-ctas` que no renderice el propio skeleton, así
+que protege igual ante cualquier reutilización futura de esas clases, no
+sólo el caso de la 404. Verificado contra el HTML real de `next build`
+antes y después.
+
+**Pendiente / roto conocido, no tocado aquí.** El hueco en sí (unos ms
+entre el pintado del HTML estático y que React hidrate) no desaparece —
+eliminarlo del todo exigiría no servir HTML estático, que es justo lo que
+GENSCORE-HEADER-2 descartó por SEO. Lo que cambia es que ese hueco ahora
+muestra un skeleton neutro en vez de "Iniciar sesión", así que deja de
+leerse como un fallo.
+
+**Trazabilidad.** §117 (pro-badge-alignment-flickering-v4brfv, el fix que
+dejó este hueco documentado como pendiente); §65 (GENSCORE-HEADER-2, la
+decisión de estático que este PR no revierte); Task Intake aprobado por el
+fundador, 2026-08-20.
+
+---
+
+
+---
+
+## 119. Visión general en escritorio: cabecera de la puntuación GEO alineada, desglose y motores lado a lado (OV-DESKTOP-2, 2026-08-17)
+
+**El problema, señalado por el fundador con una captura de escritorio.** En
+la fila de cabecera de Visión general, la tarjeta de la puntuación GEO
+llevaba su título («Puntuación GEO») dentro de la propia tarjeta, mientras
+la columna de al lado («Indicadores clave») lo lleva fuera, como etiqueta de
+sección — así que las dos tarjetas arrancaban a alturas distintas y leían
+como desalineadas. Más abajo, «Desglose del GEO Score» ocupaba el ancho
+completo de la pantalla y «Posicionamiento por motores de IA» quedaba
+enterrado varias secciones después, dentro de la columna de análisis —
+mucho protagonismo para una tabla de texto plano, y una sección relacionada
+fuera de vista sin bajar la página. Las cinco filas del desglose eran
+etiqueta + número suelto («88/100»), sin ninguna otra señal visual.
+
+**Qué se decidió, con guardas explícitas en el tramo inferior.**
+
+1. **Cabecera hermana, alineada arriba Y abajo.** `.ov2-gauge-block` envuelve
+   la tarjeta con una segunda copia externa de «Puntuación GEO»
+   (`.ov2-gauge-sec-lbl`), oculta por defecto. A partir de 760px se muestra
+   la externa y se oculta la interna — nunca las dos a la vez — así que las
+   dos columnas de la fila de cabecera comparten el mismo patrón de
+   etiqueta y arrancan en la misma línea. `.ov2-hero` pasa de `align-items:
+   start` a `stretch` (revirtiendo la decisión original de OV-DESKTOP-1,
+   explícitamente a petición del fundador: quería la alineación arriba Y
+   abajo, no sólo arriba) — la tarjeta de la puntuación crece para llenar la
+   altura de la fila, y `justify-content: center` en su interior evita que
+   eso lea como aire muerto en un escaneo sin sparkline. Por debajo de 760px
+   el DOM y el CSS no cambian: la tarjeta sigue llevando su etiqueta interna
+   exactamente como antes.
+
+   **Primer intento, y por qué se corrigió en el mismo PR.** La primera
+   versión lo aplicó a partir de 1200px; el fundador pidió expresamente
+   extenderlo a tablet, y esta sesión preguntó "¿768–1199px?" asumiendo que
+   coincidía con el paso de 900px que ya existía para `.ov2-scope`/
+   `.ov2-kpi-car` — sin comprobar que 768 < 900. La segunda versión movió
+   todo el bloque de la cabecera a ese mismo `@media (min-width: 900px)`, y
+   la captura del piloto en 768px (la anchura real de "Tablet" en
+   `docs/agentic-user-pilot.md`, la que de verdad se mira) salió idéntica a
+   la de antes del PR: 768px nunca llega a activar una condición de 900px.
+   La versión final vive en su **propio** `@media (min-width: 760px)`,
+   separado del paso de 900px — reutilizando el mismo corte al que `.sb`
+   deja de ser un cajón y pasa a columna estática (`.shell` le da entonces
+   una columna fija de `--sidebar-w`), para que "la cabecera va a dos columnas"
+   y "la barra lateral es una columna fija" empiecen a la misma anchura.
+   `.ov2-scope` NO se ensancha en este paso — sigue en su tope móvil de
+   460px hasta el paso de 900px, sin tocar — así que la columna de la
+   puntuación es más estrecha aquí (`minmax(190px, 230px)`) que a partir de
+   900px (`minmax(220px, 260px)`) y que en escritorio
+   (`minmax(320px, 390px)` desde 1200px). `.ov2-kpi-car` tampoco cambia de
+   comportamiento en este tramo — sigue siendo el carrusel horizontal móvil,
+   con su propio cambio a rejilla de 2 columnas intacto en su sitio original
+   (900px) — meterlo en rejilla dentro de una columna aún más estrecha
+   arriesgaba envolver las etiquetas de los KPI sin que nadie lo comprobara.
+2. **Desglose a 2/3, motores sube.** `.ov2-score-row` agrupa «Desglose del
+   GEO Score» y «Posicionamiento por motores de IA» en una fila 2fr/1fr
+   propia, independiente de `.ov2-cols` (que ahora arranca directamente en
+   Panorámica competitiva). Por debajo de 1200px `.ov2-score-row` es
+   `display: contents`: el orden en el DOM no cambia, porque Posicionamiento
+   ya seguía inmediatamente a Desglose antes de este cambio — sólo el
+   escritorio gana la disposición lado a lado.
+3. **Filas con icono y medidor.** Cada fila del desglose suma un icono (del
+   sistema compartido `components/ui/icon.tsx` — `eye`/`crown`/`resonance`/
+   `shield`/`bolt`; nunca un SVG nuevo) y sustituye el número suelto por una
+   barra horizontal junto a la cifra. El tono (verde/azul/ámbar) reutiliza
+   `getBandTone`, el mismo umbral 70/40 que ya colorea la banda de la
+   puntuación general — no se inventa una segunda escala de color para esta
+   fila. «No disponible» dibuja una barra discontinua y vacía en vez de una
+   barra sólida al 0%: una barra sólida vacía se confundiría con Presencia o
+   Autoridad en 0, que es un valor medido real en esta misma tarjeta, no una
+   ausencia de dato. Este punto no se limitó a escritorio — el icono y el
+   medidor caben igual de bien a 375px y no dependen del ancho extra que
+   trae la fila 2/3, así que aplica a todas las anchuras.
+
+**Tercera vuelta: el carrusel de KPIs no cabía, y el `min-width: 0` no era la
+causa.** Con la cabecera ya en dos columnas a 768px, la captura del piloto
+mostró la tercera tarjeta de Indicadores clave cortada contra el borde de la
+pantalla. Se diagnosticó como un *grid blowout* clásico —falta de
+`min-width: 0` en los items— y se arregló así. **La siguiente pasada del
+piloto devolvió capturas byte a byte idénticas**, lo que descartó ese
+diagnóstico de raíz: el `min-width: 0` no cambiaba un solo píxel.
+
+La causa real estaba a la vista en la propia captura y en el comentario que
+esta misma fase había escrito para justificarse: `.ov2-kpi-car` seguía siendo
+el **carrusel horizontal móvil** (tarjetas fijas de 158px con `overflow-x`),
+y en este tramo la columna derecha mide ~205px — con el barrido lateral
+estático eso son una tarjeta y el borde izquierdo de la siguiente. No
+desbordaba nada: el carrusel recortaba correctamente, y *ese* recorte es lo
+que se lee como pantalla rota.
+
+Se dejó el carrusel intacto **a propósito**, y el comentario del CSS decía
+por qué: *«esa combinación no se había probado nunca junta y arriesgaba
+envolver etiquetas que nadie había comprobado»*. Era exactamente al revés —
+**no probarlo era el riesgo**. En este tramo `.ov2-kpi-car` pasa a una
+rejilla de una columna con las tarjetas a ancho completo, y a partir de
+900px la de dos columnas vuelve a ganar. Ambas usan el selector desnudo
+`.ov2-kpi-car`, así que decide el orden en el fichero y ninguna
+sobre-especifica a la otra (`.claude/rules/styles.md`).
+
+`min-width: 0` se queda: la convención es correcta y la comparten los otros
+pares de columnas del fichero. Queda escrito en el CSS que **no** fue el
+arreglo, para que nadie deduzca lo contrario de su presencia.
+
+**Lo que costó y cómo se cortó.** Tres vueltas de piloto para un cambio de
+CSS, dos de ellas por afirmar una causa sin comprobarla. La cuarta se
+verificó **antes** de empujar, con un banco de pruebas estático
+(`.ov2-*` reales de `globals.css` + `console.css` sobre el DOM de la
+cabecera, medido y fotografiado con el Chromium local a 768/860/1000/1280 px),
+que confirmó ausencia de desbordamiento y fondos alineados en las cuatro
+anchuras. El piloto contra el preview sigue siendo la puerta; lo que no puede
+ser es el bucle de depuración, que es la misma lección de BUILD-BUDGET-1
+—«el build no es un bucle de feedback»— aplicada al piloto.
+
+**Qué NO cambia.** Por debajo de 760px (móvil) la cabecera es pixel-idéntica
+a la de antes de este PR; por debajo de 1200px, «Desglose del GEO Score» y
+«Posicionamiento por motores de IA» siguen apilados en el mismo orden que ya
+tenían. Sólo los puntos 1 y 2 llevan guarda de anchura explícita — distinta
+entre ambos (760px la cabecera, 1200px el desglose+motores) porque cada uno
+resuelve un problema visible en un rango distinto — y el punto 3 es un
+cambio de contenido de fila, no de layout, así que no necesitaba ninguna.
+
+**Aprobación.** Maqueta Antes/Después mostrada como Artifact y aprobada por
+el fundador en la misma conversación antes de implementar, sustituyendo al
+Task Intake Report formal para este cambio de un único PR y una sola
+pantalla.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/page.tsx` (JSX);
+`app/globals.css`, `app/console.css` (`.ov2-brow*`, `.ov2-gauge-block`,
+`.ov2-gauge-sec-lbl`, `.ov2-score-row`/`.ov2-score-main`/`.ov2-score-side`);
+`app/dashboard/projects/[projectId]/geo-score-breakdown.ts` (campo `icon` en
+`GEO_SCORE_COMPONENT_META`); §4 (OV-DESKTOP-1, la fila de cabecera y la
+columna de análisis original que este PR reordena, no sustituye en su
+mecanismo `display: contents`).
+
+---
+
+## 120. El piloto se saltó a sí mismo y publicó el check en verde (2026-08-17)
+
+**Qué pasó.** En el PR #433, el job `pilot` del commit `3c19aa4` terminó en
+**8 segundos con conclusión `success`**. No ejecutó ningún test, no abrió
+ningún navegador, no capturó ninguna pantalla. El log dice:
+
+> `No open PR for 3c19aa453a0325c43421048703aebac7fcc153ec; nothing to report on.`
+> `Skipping pilot — deployment is not attached to an open pull request.`
+
+El PR estaba abierto. Llevaba abierto seis horas.
+
+**Por qué importa más que el propio fallo.** El check salió **verde**. En la
+lista de checks del PR, una pasada que no miró nada es indistinguible de una
+que lo miró todo — y la fila «pilot ✅» es exactamente lo que el Human Gate
+mira. Es el mismo fallo de §65 (un job cancelado que dejaba un PASS publicado
+sin que la puerta llegara a ejecutarse) y de §55 (dar «piloto pasado» leyendo
+la tabla de ✅), un escalón más arriba: allí fallaba el veredicto, aquí falla
+la existencia misma de la pasada. La regla de `.claude/rules/scan.md` —«una
+garantía que no se puede ver fallar no es una garantía»— se escribió para el
+escaneo y aplica igual al arnés que vigila el escaneo.
+
+**La causa, y lo que NO era.** El paso «Resolve the pull request for this
+deployment» resolvía el PR con `commits/{sha}/pulls`. Ese endpoint devolvió
+lista vacía. La primera hipótesis fue una carrera de indexación —el deployment
+llegando antes de que GitHub asociara commit y PR— y **es falsa**: el push de
+`3c19aa4` fue a las 13:57 y la consulta a las 14:27, **treinta minutos
+después**. No es que el índice no hubiera llegado; es que no respondió. Se
+comprobó a mano ese mismo día que `pulls?head=` **sí** devolvía el #433 con su
+rama y su SHA en ese mismo momento.
+
+**Qué se decidió.** Dos búsquedas en vez de una, y cinco intentos con espera
+creciente:
+
+1. **`pulls?head=owner:rama` primero.** Consulta la lista de PRs directamente
+   en vez del índice commit→PR, así que no depende de la pieza que falló. Se
+   salta cuando el `ref` del deployment es un SHA de 40 hex, que no es rama.
+2. **`commits/{sha}/pulls` de reserva**, para deployments sin rama utilizable.
+3. **`::warning::` cuando ninguna resuelve**, que sale en el resumen del run y
+   no enterrado en el log de un paso.
+
+**Lo que se dejó a propósito sin arreglar, y por qué.** El check **sigue
+saliendo verde** cuando no hay PR. Un preview de una rama sin PR abierto es
+legítimo y pintarlo en rojo llenaría el repositorio de fallos falsos. El
+precio es que la distinción entre «no había nada que pilotar» y «el piloto se
+averió» vive ahora en un aviso, no en el color del check. Es una mejora sobre
+el silencio anterior, **no una puerta**: la puerta de verdad sería una
+required status check en la protección de rama, que es configuración del
+repositorio y no código — la misma frontera que ya anotó la Fase Q5 sobre la
+ausencia de CI (§54).
+
+**Contexto: por qué se arregló dentro del PR #433 y no en uno aparte.** Mezclar
+concerns está desaconsejado (CLAUDE.md), pero el piloto es **puerta obligatoria
+del Human Gate** y estaba impidiendo que ese mismo PR llegara a juzgarse; un PR
+separado no lo desbloquearía hasta mergearse, y había diez PRs abiertos contra
+el tope de tres de BUILD-BUDGET-1. Queda anotado como excepción consciente.
+
+**Roto conocido, sin diagnosticar.** En paralelo, *Redeploy* manual desde
+Vercel falló varias veces seguidas sobre este mismo commit con
+`Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font'`
+—un interno de Turbopack para `next/font/google`, que ni este PR ni ninguno
+reciente tocan— mientras que **los builds disparados por push del mismo commit
+salieron bien**, igual que los de los PRs #435 y #437 esa misma tarde.
+`next build` en local es limpio. No se ha reproducido ni diagnosticado: queda
+escrito que el camino fiable es empujar un commit, no pulsar *Redeploy*.
+
+**Trazabilidad.** `.github/workflows/ux-pilot.yml`; §65 (el job cancelado que
+dejaba un PASS publicado); §55 (dar por pasado el piloto leyendo la tabla de
+✅); §54 (Fase Q5, hacer visible la ausencia de CI, y por qué el aviso no es
+la puerta); `.claude/rules/scan.md` («una garantía que no se puede ver fallar
+no es una garantía»); `scripts/vercel-should-build.sh` (la regla que ya obliga
+a construir cuando cambia este workflow, para que el arreglo pueda ejercitarse).
+
+---
+
+
+---
+
+## 121. `sameAs` deja de estar vacío: LinkedIn y G2 son perfiles reales (2026-08-20)
+
+**Qué pasó.** El fundador dio de alta la página de empresa de LinkedIn
+(`https://www.linkedin.com/company/genscore/`) y la ficha de vendedor en G2
+(`https://www.g2.com/sellers/genscore`) y pasó ambas URLs directamente. Es
+justo el evento que §100 y `docs/off-site-authority-kit.md` §8 dejaron escrito
+como el único que habilita esto: `organization-schema.tsx` llevaba desde
+GROWTH-2 Fase 2.1 sin `sameAs` a propósito, porque declarar un perfil que no
+existe es el mismo dato falso que una métrica inventada.
+
+**Qué se decidió.** Añadir ambas URLs al `sameAs` de `OrganizationSchema`
+(`components/seo/organization-schema.tsx`) y nada más — ni Capterra (copy
+listo, ficha sin crear todavía) ni YouTube (guiones listos, sin grabar). El
+kit off-site (`docs/off-site-authority-kit.md` §7-8, tabla de Estado) se
+actualiza en el mismo PR para que la próxima sesión no vuelva a preguntar qué
+falta: Capterra sigue "Alta: fundador", LinkedIn y G2 pasan a "Dados de alta".
+
+**Por qué no hace falta re-verificar las URLs.** La regla que protege este
+campo (§100, `docs/off-site-authority-kit.md` §8) es contra que el propio
+agente **invente** un perfil, no contra recibir una URL real de quien es dueño
+de la cuenta — el fundador pasando directamente las dos URLs es precisamente
+el mecanismo que esos documentos describen como el que las desbloquea.
+
+**Trazabilidad.** `components/seo/organization-schema.tsx`; log §100 (por qué
+`sameAs` nació vacío); `docs/off-site-authority-kit.md` §7-8 y su tabla de
+Estado (el mismo hueco, documentado desde el lado de contenido).
+
+---
+
+---
+
+## 122. Dominios: seleccionar una tarjeta propaga a toda la consola, y el botón "Ver visión general" se reduce en desktop (DOMAINS-LIVE-SELECT-1, 2026-08-20)
+
+**Origen.** Fundador, 2026-08-20: seleccionar otro dominio en la pantalla
+"Dominios" (`/dashboard/domains`) tenía que reflejarse en toda la consola
+sin pulsar "Ver visión general" primero; y ese botón, a ancho de escritorio,
+se veía "enorme". Task Intake aprobado el mismo día (propagación P1 + botón
+P2, mismo PR).
+
+**Por qué el botón era la única vía real.** DOMAINS-REDESIGN-1 (2026-08-05)
+decidió a propósito que pinchar una tarjeta de la rejilla no navega — sólo
+cambia qué dominio aparece en la portada, vía `?active=<id>`, para volver a
+la misma pantalla (comentario en `app/dashboard/domains/page.tsx`). Esa
+decisión sigue en pie. Pero "cuál es el proyecto activo" fuera de esa
+pantalla se resolvía en otros dos sitios de forma independiente y sólo a
+partir del *pathname* — `components/sidebar.tsx` y
+`components/workspace-topbar.tsx`, ambos con su propio `getProjectId(pathname)`
+— y la cookie `geo_active_project` que los alimentaría en su ausencia
+(DEBUG-ACTIVE-PROJECT-1) sólo la escribía `middleware.ts` al entrar de
+verdad en `/dashboard/projects/[id]/...`. Elegir una tarjeta cambiaba la
+portada pero no el pathname, así que el sidebar seguía señalando el
+proyecto anterior hasta que se pulsaba "Ver visión general" — el único
+gesto que de verdad cambiaba de ruta.
+
+**Arreglo.** `lib/active-project-cookie.ts` gana
+`getProjectIdFromDomainsQuery(pathname, searchParams)`, que valida el mismo
+`?active=<uuid>` que ya lee `app/dashboard/domains/page.tsx`.
+`middleware.ts` la usa como segunda fuente junto a la ya existente
+`getProjectIdFromPathname`, así que la cookie también se escribe al
+seleccionar una tarjeta, sin que la tarjeta navegue. `app/dashboard/layout.tsx`
+lee esa cookie server-side y se la pasa a `Sidebar` como `preferredProjectId`;
+`Sidebar` la usa como fallback entre el pathname y `projects[0]`. No se tocó
+`workspace-topbar.tsx`: fuera de una ruta de proyecto ya no muestra nada, así
+que no había fallback que corregir.
+
+**El botón.** `.dm2-open` coincidía exactamente con el diseño aprobado en
+`docs/design-reference/domains-redesign-1/pantalla-dominios.html`
+(`width:100%`), que ahora queda desactualizado — se corrige en el mismo PR.
+Por debajo de 561px se queda a ancho completo (sigue siendo la única forma
+de entrar al proyecto ahí, y el objetivo táctil grande es lo que
+corresponde). Desde 561px, ancho de contenido y alineado a la derecha
+(`.dm2-hero` pasa a `flex column` sólo para que `align-self:flex-end` pueda
+mover ese único hijo sin afectar la anchura de los demás, que se siguen
+estirando igual que en bloque).
+
+**Lo que NO cambia.** La cookie nunca es fuente de autorización — se
+re-comprueba la propiedad con RLS en cada lectura, igual que ya documentaba
+DEBUG-ACTIVE-PROJECT-1; un id ajeno o manipulado simplemente no aparece en
+`projects` y cae al siguiente criterio. La tarjeta de la rejilla sigue sin
+navegar (DOMAINS-REDESIGN-1 se mantiene intacta). Ningún control de
+escaneo/auditoría nuevo en la pantalla.
+
+**Trazabilidad.** DEBUG-ACTIVE-PROJECT-1 (la cookie); DOMAINS-REDESIGN-1,
+2026-08-05 (por qué la tarjeta no navega); DOMAINS-ACTIVE-COOKIE-1,
+2026-08-07 (la misma cookie ya usada como recuerdo de página); Task Intake
+aprobado por el fundador, 2026-08-20.
+
+**Addendum (2026-08-20, mismo PR): el pilote automático no vio la
+propagación, y le faltaba un journey para poder verla.** La pasada
+automática contra el preview del PR #443 devolvió `PILOT PASS` en las 65
+pantallas — incluida `domains`, en las tres anchuras — pero el agente
+`ux-pilot`, al revisar las capturas de verdad antes de dar la fase por
+cerrada, encontró que ni una sola tocaba la propagación al sidebar: el
+barrido genérico (`tests/pilot/support/explore.ts`) descarta cualquier
+control con `href` real como "navega fuera", y cada `.dm2-card` de la
+rejilla lleva uno (`?active=<id>`) aunque en la práctica se queda en la
+misma pantalla. Sin un journey dedicado, cada pasada futura del piloto
+seguiría reportando un ✅ vacío sobre el comportamiento que esta misma fase
+introduce — el mismo patrón que ya forzó `recommendations-interactions.spec.ts`
+para Recomendaciones. Se añadió
+`tests/pilot/journeys/domains-selection.spec.ts`: selecciona una tarjeta
+que no sea el dominio activo y comprueba que tanto la portada como
+`.proj-switch .proj-name` del sidebar cambian al nuevo dominio sin pulsar
+"Ver visión general", y que el enlace de Prompts del sidebar ya apunta al
+proyecto seleccionado. Estrictamente de lectura, en `tests/pilot/journeys/`
+(no `write/` ni `scan/`), así que entra en la pasada automática de cada
+deploy sin necesitar su propia excepción.
+
+**El journey encontró un bug real: la propagación no funcionaba.** La
+primera pasada del pilote automático sobre el push que añade el journey
+(commit `6535985`) devolvió `PILOT FAIL` en las tres anchuras: "el
+conmutador del sidebar no se actualizó tras seleccionar la tarjeta" — la
+propia funcionalidad que este PR dice introducir.
+
+**Causa.** El arreglo original leía la cookie `geo_active_project` en
+`app/dashboard/layout.tsx` (Server Component) y se la pasaba a `Sidebar`
+como `preferredProjectId`. Pero seleccionar una tarjeta en
+`/dashboard/domains` es una navegación del lado del cliente que **no
+cambia de segmento de ruta** — sigue siendo `/dashboard/domains`, sólo
+cambia `?active=`. Next.js App Router no vuelve a renderizar un layout
+compartido en ese caso (sólo el `page.tsx` de la hoja, que es por qué la
+portada sí cambiaba), así que la instancia de `Sidebar` seguía montada con
+el `preferredProjectId` calculado en la carga de página anterior — la
+cookie se escribía bien en cada petición (`middleware.ts` sí veía el nuevo
+`?active=` y actualizaba la cookie), pero nada volvía a leerla en el
+cliente.
+
+**Arreglo real.** `components/sidebar.tsx` añade `useSearchParams()` junto
+al `usePathname()` que ya tenía: ese hook SÍ es reactivo a cualquier
+navegación del cliente, cambie o no el pathname, así que leer
+`?active=` en vivo cuando `pathname === "/dashboard/domains"` refleja la
+selección en el mismo instante en que React re-renderiza tras el clic —
+sin depender de que el layout se vuelva a montar. La cookie
+(`preferredProjectId`) se queda como lo que siempre debió ser: el
+recuerdo para cuando ni el pathname ni la query llevan un id (Ajustes,
+Facturación, la raíz del dashboard). Prioridad, vía la misma
+`resolveSelectedProject` que ya usa la página de Dominios: pathname >
+`?active=` en vivo > cookie > `projects[0]`.
+
+**Lección para el mapa de zonas.** Un cambio que depende de que el layout
+de consola lea algo server-side (cookie, header) para reflejarlo en el
+sidebar necesita comprobar primero si la navegación que lo dispara cambia
+de segmento de ruta — si no lo hace, el layout no se vuelve a renderizar y
+el dato queda obsoleto hasta la siguiente carga completa de página, en
+silencio, sin ningún error.
+
+---
+
+## 123. Onboarding: el asistente dejaba entrar 10 competidores y el servidor guardaba 5 en silencio (ONBOARDING-COMPETITORS-CAP-1, 2026-08-20)
+
+**Qué pasó.** El fundador dio de alta 10 competidores en el asistente de
+nuevo dominio; al terminar el primer escaneo, la pantalla de Competidores
+("Cuota de voz en IA") solo mostraba 5.
+
+**Causa.** `parseInitialCompetitors` (`lib/projects/project-form.ts`) cortaba
+la lista en `MAX_INITIAL_COMPETITORS` (5) sin avisar, mientras el asistente
+(`components/onboarding-wizard.tsx`) no tenía ningún tope propio: el botón
+"Añadir competidor" seguía añadiendo filas y el contador decía "10
+competidores listos". El servidor descartó los últimos 5 sin error ni aviso
+en pantalla — pérdida de datos silenciosa, no un fallo de renderizado. La
+misma constante hacía doble papel: cuántos competidores pide el sistema a
+Gemini como sugerencia, y cuántos acepta del usuario. El primer uso ya tenía
+un arreglo equivalente para prompts (`maxPrompts` pasado desde el cap del
+plan); a competidores nunca se le aplicó.
+
+**Impacto real.** No es solo visual: el set de competidores entra en
+`competitors_snapshot` y alimenta `standing`, `brand_position` y
+`prominence` (ADR 0018). Ese escaneo se puntuó contra 5 competidores en vez
+de 10.
+
+**Decisión (opción B, aprobada por el fundador).** Separar los dos usos:
+`MAX_INITIAL_COMPETITORS` (5) queda solo para la petición de sugerencias a
+Gemini; nace `MAX_USER_COMPETITORS` (10) como tope explícito y **visible**
+de lo que el asistente acepta. El botón "Añadir competidor" se deshabilita
+al llegar a 10 y el contador pasa a decir "N competidores listos (máximo
+10)" — mismo patrón que ya usaba el paso de prompts con `promptCap`. Ningún
+tope que la interfaz no enseña es aceptable: es exactamente esta pérdida de
+datos silenciosa otra vez, con otro nombre.
+
+**No incluido en esta fase.** Recalcular el escaneo que ya corrió con solo 5
+competidores (los 5 que faltan se dan de alta ahora en "Gestionar", que no
+tiene tope, y entran desde el siguiente escaneo). No se tocó `sampling`, el
+pipeline de extracción, ni el cap de prompts.
+
+**Trazabilidad.** `lib/projects/project-form.ts`,
+`components/onboarding-wizard.tsx`,
+`lib/projects/project-form.test.ts`; ADR 0018 (por qué el set de
+competidores importa para el scoring, no solo para la pantalla).
+
+---
 
 ## Cómo mantener este documento
 

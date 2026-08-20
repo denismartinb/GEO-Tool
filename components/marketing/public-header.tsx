@@ -36,16 +36,39 @@ function AccountChip({ user, onNavigate }: { user: SessionUser; onNavigate?: () 
       <div className="avatar" aria-hidden="true">
         {avatarInitials(user.email)}
       </div>
-      <div style={{ minWidth: 0 }} aria-hidden="true">
+      <div className="lp-user-chip-identity" aria-hidden="true">
         <div className="lp-user-chip-email">{user.email}</div>
         {showsPlanBadge(user.planId) && (
           <span className="sb-plan-badge">
-            <Icon name="crown" size={10} />
+            {/* ux-pilot, pro-badge-alignment-flickering-v4brfv: 12px instead of
+                the sidebar's 10px — this chip's own mobile-drawer capture is
+                where the glyph sat closest to the legibility floor. */}
+            <Icon name="crown" size={12} />
             {user.planName}
           </span>
         )}
       </div>
     </Link>
+  );
+}
+
+/**
+ * header-flicker-skeleton-prehydration (2026-08-20): a content-free
+ * placeholder, always in the DOM next to the real anonymous CTAs / account
+ * chip, hidden by default (`app/globals.css`). The blocking inline script in
+ * `app/layout.tsx` can flip it on before React ever runs, because it never
+ * renders anything from the cached identity — no email, no plan — so it's
+ * safe to show before anyone has verified that cache is still true. Once
+ * `useSessionUser`'s layout effect clears `data-session-hint`
+ * (`lib/use-session-user.ts`), this goes back to hidden and whichever real
+ * content React rendered (chip or CTAs) is what's on screen.
+ */
+function SessionSkeleton() {
+  return (
+    <span className="lp-session-skeleton" aria-hidden="true">
+      <span className="lp-session-skeleton-avatar" />
+      <span className="lp-session-skeleton-bar" />
+    </span>
   );
 }
 
@@ -135,6 +158,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
         )}
       </div>
       <div className="lp-nav-right">
+        <SessionSkeleton />
         {user ? (
           <AccountChip user={user} />
         ) : hero ? (
@@ -166,18 +190,21 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
           </Link>
         }
         ctas={
-          user ? (
-            <AccountChip user={user} />
-          ) : (
-            <>
-              <button type="button" className="lp-cta-soft" onClick={goToLogin}>
-                Iniciar sesión
-              </button>
-              <button type="button" className="lp-cta" onClick={goToSignup}>
-                Prueba gratis
-              </button>
-            </>
-          )
+          <>
+            <SessionSkeleton />
+            {user ? (
+              <AccountChip user={user} />
+            ) : (
+              <>
+                <button type="button" className="lp-cta-soft" onClick={goToLogin}>
+                  Iniciar sesión
+                </button>
+                <button type="button" className="lp-cta" onClick={goToSignup}>
+                  Prueba gratis
+                </button>
+              </>
+            )}
+          </>
         }
       />
     </nav>

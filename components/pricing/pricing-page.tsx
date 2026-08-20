@@ -162,6 +162,7 @@ export function PricingPage() {
         </div>
       </header>
 
+      <main>
       {/* CARDS */}
       <section className="lp-section" style={{ paddingTop: 8 }}>
         <div className="lp-inner">
@@ -261,6 +262,7 @@ export function PricingPage() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer className="lp-footer">
@@ -269,7 +271,7 @@ export function PricingPage() {
             <Link className="lp-logo" href="/" aria-label="Inicio de GenScore">
               <BrandLogo size={19} />
             </Link>
-            <div className="links">
+            <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
               <Link href="/pricing">Precios</Link>
@@ -286,7 +288,7 @@ export function PricingPage() {
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/cookies">Cookies</Link>
               <Link href="/terminos">Términos</Link>
-            </div>
+            </nav>
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>

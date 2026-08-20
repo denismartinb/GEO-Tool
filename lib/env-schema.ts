@@ -96,6 +96,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   ANTHROPIC_MODEL: "se usa el modelo por defecto fijado en código",
   OPENAI_API_KEY: "si OpenAI está en LLM_SCAN_PROVIDERS, sus llamadas fallan",
   OPENAI_MODEL: "OBLIGATORIA si hay OPENAI_API_KEY — no hay modelo por defecto a propósito",
+  PUBLIC_CHECK_IP_SALT:
+    "el comprobador gratuito anónimo deja de comprobar y cae a captar el dominio — a propósito: sin sal, hashear la IP no la protege",
   LLM_SCAN_PROVIDERS: "el escaneo cae a Gemini en solitario",
   LLM_SCAN_PROVIDER: "legacy: sólo se lee si LLM_SCAN_PROVIDERS no está",
   ENABLE_SYNC_SCAN_EXECUTION: "el escaneo síncrono no se ejecuta",
@@ -141,6 +143,7 @@ export const envSchema = z.object({
   ANTHROPIC_MODEL: optionalText,
   OPENAI_API_KEY: optionalText,
   OPENAI_MODEL: optionalText,
+  PUBLIC_CHECK_IP_SALT: optionalText,
   LLM_SCAN_PROVIDERS: optionalText,
   LLM_SCAN_PROVIDER: optionalText,
 
@@ -255,6 +258,24 @@ export function checkEnvRules(env: Env, raw: RawEnv = {}): EnvProblem[] {
   if (stripeSet.length > 0 && stripeSet.length < stripePieces.length) {
     const missing = stripePieces.filter(([, v]) => !v).map(([k]) => k);
     add("STRIPE_*", "error", `Stripe está configurado a medias: faltan ${missing.join(", ")}. Un checkout que ningún webhook confirma deja al cliente pagando sin plan.`);
+  }
+
+  // El comprobador gratuito degrada EN SILENCIO sin sal: la página sigue
+  // cargando y sigue captando el dominio, así que a la vista funciona — y no
+  // comprueba nada. Es el fallo exacto que `.claude/rules/scan.md` prohíbe
+  // dejar invisible ("a failure the operator can fix must reach the
+  // operator"): la única señal en producción sería un `console.error` en un
+  // log efímero, que no es un diagnóstico.
+  //
+  // Aviso y no error a propósito: sin esta variable el resto del producto
+  // funciona entero, así que romper el arranque castigaría a quien no usa el
+  // comprobador. Lo que hace falta no es parar, es que se vea.
+  if (!env.PUBLIC_CHECK_IP_SALT) {
+    add(
+      "PUBLIC_CHECK_IP_SALT",
+      "warning",
+      "El comprobador gratuito no comprobará: sin sal no se puede hashear la IP, así que degrada a captar el dominio y llevar al registro. La página parece funcionar."
+    );
   }
 
   // Avisos: nada se rompe, pero el operador debería saberlo.

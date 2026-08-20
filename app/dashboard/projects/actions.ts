@@ -75,7 +75,7 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
   const promptLimit = Math.min(plan.caps.prompts, MAX_INITIAL_PROMPTS);
 
   const context = await resolveBusinessContext({ domain, country, language }).catch(
-    () => ({ status: "unidentified" }) as const
+    () => ({ status: "unidentified", reason: "profile_failed" }) as const
   );
 
   if (context.status === "unidentified") {

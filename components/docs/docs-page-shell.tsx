@@ -34,30 +34,32 @@ export function DocsPageShell({
         ]}
       />
 
-      <section className="lp-section">
-        <div className="lp-inner docs-layout">
-          <aside className="docs-side" aria-label="Navegación de la documentación">
-            <Link href="/docs" className={`docs-side-home${!activeSlug ? " active" : ""}`}>
-              Documentación
-            </Link>
-            {DOCS_NAV.map((section) => (
-              <div key={section.title} className="docs-side-section">
-                <div className="docs-side-title">{section.title}</div>
-                {section.pages.map((page) => (
-                  <Link
-                    key={page.slug}
-                    href={`/docs/${page.slug}`}
-                    className={page.slug === activeSlug ? "active" : ""}
-                  >
-                    {page.title}
-                  </Link>
-                ))}
-              </div>
-            ))}
-          </aside>
-          <div className="docs-content">{children}</div>
-        </div>
-      </section>
+      <main>
+        <section className="lp-section">
+          <div className="lp-inner docs-layout">
+            <aside className="docs-side" aria-label="Navegación de la documentación">
+              <Link href="/docs" className={`docs-side-home${!activeSlug ? " active" : ""}`}>
+                Documentación
+              </Link>
+              {DOCS_NAV.map((section) => (
+                <div key={section.title} className="docs-side-section">
+                  <div className="docs-side-title">{section.title}</div>
+                  {section.pages.map((page) => (
+                    <Link
+                      key={page.slug}
+                      href={`/docs/${page.slug}`}
+                      className={page.slug === activeSlug ? "active" : ""}
+                    >
+                      {page.title}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </aside>
+            <div className="docs-content">{children}</div>
+          </div>
+        </section>
+      </main>
 
       <footer className="lp-footer">
         <div className="lp-inner">
@@ -65,7 +67,7 @@ export function DocsPageShell({
             <Link href="/" className="lp-logo">
               <BrandLogo size={19} />
             </Link>
-            <div className="links">
+            <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
               <Link href="/pricing">Precios</Link>
@@ -81,7 +83,7 @@ export function DocsPageShell({
               ))}
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
-            </div>
+            </nav>
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>

@@ -10,6 +10,15 @@
  * it back. Middleware, not `requireActiveProject`, because Next.js only
  * allows writing cookies from Route Handlers / Server Actions / middleware —
  * not from a Server Component's render.
+ *
+ * DOMAINS-LIVE-SELECT-1 extended that same cookie to a second source:
+ * selecting a domain card on `/dashboard/domains?active=<id>` doesn't
+ * navigate anywhere (founder decision, 2026-08-05 — see that page's header
+ * comment), so it never crosses `getProjectIdFromPathname`. Without also
+ * writing the cookie there, the sidebar kept pointing at whatever project the
+ * URL last carried, so picking a card changed the hero but nothing else in
+ * the console — the founder had to open the project for real (click "Ver
+ * visión general") before the rest of the console caught up.
  */
 export const ACTIVE_PROJECT_COOKIE = "geo_active_project";
 
@@ -20,6 +29,13 @@ export function getProjectIdFromPathname(pathname: string): string | null {
   const match = pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
   if (!match || !UUID_RE.test(match)) return null;
   return match;
+}
+
+/** Extracts and validates the `?active=<id>` query param on `/dashboard/domains`, the other place selection can change without a pathname change. */
+export function getProjectIdFromDomainsQuery(pathname: string, searchParams: URLSearchParams): string | null {
+  if (pathname !== "/dashboard/domains") return null;
+  const value = searchParams.get("active");
+  return value && UUID_RE.test(value) ? value : null;
 }
 
 /**
