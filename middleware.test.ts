@@ -84,6 +84,23 @@ describe("middleware · cookie del proyecto activo", () => {
     const response = await middleware(request("/dashboard/projects/new"));
     expect(response.cookies.get(ACTIVE_PROJECT_COOKIE)).toBeUndefined();
   });
+
+  /**
+   * DOMAINS-LIVE-SELECT-1 — seleccionar una tarjeta en /dashboard/domains no
+   * navega (decisión del fundador, 2026-08-05), así que nunca casa con el
+   * regex de ruta de arriba. Sin esta segunda rama la cookie se quedaba con
+   * el proyecto anterior y el resto de la consola no se enteraba de la
+   * selección hasta entrar de verdad al proyecto.
+   */
+  it("recuerda el proyecto cuando /dashboard/domains lleva ?active=", async () => {
+    const response = await middleware(request(`/dashboard/domains?active=${PROJECT_ID}`));
+    expect(response.cookies.get(ACTIVE_PROJECT_COOKIE)?.value).toBe(PROJECT_ID);
+  });
+
+  it("ignora un ?active= que no es un uuid", async () => {
+    const response = await middleware(request("/dashboard/domains?active=not-a-uuid"));
+    expect(response.cookies.get(ACTIVE_PROJECT_COOKIE)).toBeUndefined();
+  });
 });
 
 describe("middleware · alcance", () => {
