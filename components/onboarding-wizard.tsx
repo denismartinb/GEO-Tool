@@ -9,7 +9,7 @@ import { Icon } from "@/components/ui/icon";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { isWellFormedDomain, sanitizePromptLineText } from "@/lib/projects/project-form";
+import { isWellFormedDomain, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 
 const DEFAULT_PROMPT_CAP = 10;
@@ -815,7 +815,7 @@ export function OnboardingWizard({
         <div className="onb2-grid">
           <div>
             <div className="onb2-seclbl">
-              {validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"}
+              {validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} (máximo {MAX_USER_COMPETITORS})
             </div>
             <div className="card" style={{ overflow: "hidden" }}>
               {competitors.map((row, index) => (
@@ -857,7 +857,12 @@ export function OnboardingWizard({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setCompetitors((rows) => [...rows, { name: "", domain: "", source: "manual" }])}
+                  disabled={competitors.length >= MAX_USER_COMPETITORS}
+                  onClick={() =>
+                    setCompetitors((rows) =>
+                      rows.length >= MAX_USER_COMPETITORS ? rows : [...rows, { name: "", domain: "", source: "manual" }]
+                    )
+                  }
                 >
                   <Icon name="plus" size={13} />
                   Añadir competidor
