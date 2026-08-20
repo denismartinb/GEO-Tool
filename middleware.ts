@@ -1,6 +1,10 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { ACTIVE_PROJECT_COOKIE, getProjectIdFromPathname } from "@/lib/active-project-cookie";
+import {
+  ACTIVE_PROJECT_COOKIE,
+  getProjectIdFromDomainsQuery,
+  getProjectIdFromPathname
+} from "@/lib/active-project-cookie";
 
 /**
  * Refreshes the Supabase auth session cookie on every request.
@@ -60,7 +64,13 @@ export async function middleware(request: NextRequest) {
   // lib/active-project-cookie.ts). Ownership is re-checked with RLS wherever
   // this cookie is read, so a stale or tampered value can only ever miss and
   // fall back — it is never trusted as authorization.
-  const activeProjectId = getProjectIdFromPathname(request.nextUrl.pathname);
+  //
+  // DOMAINS-LIVE-SELECT-1 — the second source: `/dashboard/domains?active=`
+  // changes which domain is selected without ever matching the pathname
+  // regex above, so it needs its own branch to still update the cookie.
+  const activeProjectId =
+    getProjectIdFromPathname(request.nextUrl.pathname) ??
+    getProjectIdFromDomainsQuery(request.nextUrl.pathname, request.nextUrl.searchParams);
   if (activeProjectId) {
     response.cookies.set(ACTIVE_PROJECT_COOKIE, activeProjectId, {
       path: "/",
