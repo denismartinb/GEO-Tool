@@ -10873,6 +10873,187 @@ corrige).
 
 ---
 
+## 115. Rediseño de Recomendaciones — "copiloto GEO" (RECS-REDESIGN-1, fase 1, 2026-08-03)
+
+**Contexto.** Investigación previa sobre tres guías de optimización para
+motores generativos (Semrush, 2026) y un teardown completo de la pantalla
+equivalente de Otterly.AI. Conclusión principal: el fallo del mercado no es
+la falta de diagnósticos, es el exceso — listas de ~100 filas casi idénticas,
+sin primer paso, sin decir cuánto vale cada acción. El fundador revisó cuatro
+opciones de diseño y aprobó la D ("copiloto GEO"), en tres fases.
+
+**Decidido en esta fase (fase 1).**
+
+1. **Estructura de la página**, en una columna y de arriba abajo: bloqueador
+   técnico → pilares del GEO Score → plan de acciones prioritarias → resto
+   agrupado → filtros. Móvil primero; los breakpoints solo ensanchan la
+   columna, nunca reordenan.
+2. **Repintado v3** con el patrón de zonas (`.rec2-scope`), anchos del
+   estándar de consola (460 / 640 ≥900 / 1200 ≥1200 / 1280 ≥1600) fijado en
+   §5/§8 — deuda que este documento dejaba explícitamente pendiente "cuando le
+   toque su propio rediseño".
+3. **Densidad.** Fuera de la tarjeta plegada: el pill de rango, la etiqueta de
+   tipo interno ("Perseguir fuentes de citación") y el trío de medidores
+   impacto/esfuerzo/confianza. Los tres qualifiers siguen existiendo, dentro
+   del detalle expandido. La tarjeta plegada queda en tres cosas: qué hacer,
+   por qué y el primer paso.
+4. **Cabecera.** Eliminada la fila de metadatos (prompts / competidores /
+   escaneos / score): repetía el Overview y empujaba la primera acción real
+   fuera de la pantalla. Queda título + fecha de escaneo.
+5. **Puntos potenciales en la propia página.** Ya existían (ADR 0017) pero solo
+   se renderizaban en Oportunidades del Overview. Con el fallback honesto
+   intacto: sin número cuantificable o con confianza baja, se muestra impacto
+   cualitativo, nunca una cifra inventada.
+6. **Agrupación en presentación, no en el motor.** Las repeticiones del mismo
+   tipo colapsan en una fila con contador. Deliberadamente NO se fusionan en
+   el motor: eso cambiaría el `dedupe_key` de cada hueco y las claves por
+   prompt son justamente lo que permite resolverlos de uno en uno (RECS-3).
+7. **Prioridad unificada.** El filtro "Alta prioridad" pasa a usar el mismo
+   criterio absoluto que la badge (impacto × confianza). Antes convivían dos
+   definiciones: la badge absoluta y un `priority_rank <= 3` posicional, que
+   se contradecían en la misma pantalla.
+8. **"Exportar plan"** deja de ser un botón muerto: descarga el plan en
+   Markdown, con el primer paso de cada acción.
+9. **Bloqueador técnico.** Si la auditoría web detecta crawlers de IA
+   bloqueados, se muestra por encima de todo lo demás: mientras siga así, el
+   trabajo de contenido no puede rendir en ese motor.
+
+**Pendiente (fases 2 y 3, aprobadas pero no implementadas).** Fase 2: estado
+persistente "hecha / en curso" y veredicto post-escaneo con puntos realmente
+recuperados — requiere migración de schema y por tanto aprobación explícita
+propia. Fase 3: chip de pilar por acción (mapeo regla→pilar).
+
+**Roto conocido, no tocado aquí.** Los tokens `--p-high/--p-med/--p-low` de
+§4 siguen sin definirse en ningún `:root`; afectan a `.rec-card-preview` del
+Overview antiguo, fuera del alcance de esta fase.
+
+---
+
+## 116. Accesibilidad del sitio público — landmark, contraste y áreas táctiles (A11Y-PSI-1, 2026-08-20)
+
+**Contexto.** PageSpeed Insights móvil sobre `https://www.genscore.es/`
+(17/8/26): Rendimiento 75, Accesibilidad 91, Prácticas recomendadas 100, SEO
+100. Sin datos de campo (CrUX vacío) — el 75 es de laboratorio, sin ningún
+usuario real medido. Las dos palancas más grandes de rendimiento (LCP del
+tour del hero, JS de Sentry) están detrás de decisiones ya tomadas y
+deliberadamente no revisadas aquí: diferir el tour empeora el LCP y choca con
+`.claude/rules/onboarding.md`; diferir Sentry ya costó errores de producción
+perdidos dos veces (`components/posthog-provider.tsx`). Esta fase ataca solo
+los tres hallazgos de Accesibilidad, que sí eran baratos y seguros.
+
+**Decidido.**
+
+1. **Landmark `<main>` en las cinco superficies que cubren todo el sitemap
+   público**: `components/landing/landing-page.tsx`,
+   `components/pricing/pricing-page.tsx`, `components/blog/blog-page-shell.tsx`
+   (blog, glosario, comparativas, `/gratis/aparece-mi-marca-en-chatgpt`,
+   `/que-es-genscore`), `components/docs/docs-page-shell.tsx` y
+   `components/legal-page-shell.tsx` (privacidad, cookies, términos). El
+   `<header>`/hero y el `<footer>` quedan fuera de `<main>` a propósito — son
+   landmarks propios. No hay combinadores de hijo directo sobre `.lp` en
+   `app/globals.css`, así que envolver las secciones existentes en `<main>`
+   no cambia ninguna cascada.
+2. **Contraste — `.price-meter-scale span`** (`/pricing`, los pills "10 / 25
+   / 100 / 300"): `color: var(--ink-3)` sobre `background: var(--surface-sunk)`
+   daba 4,44:1, por debajo de AA — la misma trampa de token que
+   `.claude/rules/styles.md` ya documentaba para Recomendaciones (log §55).
+   Pasa a `--ink-2` (7,50:1 sobre ese fondo).
+3. **Área táctil — `.lp-footer .links a`**, compartido por las cinco
+   superficies de arriba: el enlace no tenía relleno propio, así que su caja
+   pulsable era solo la línea de texto (~13px), muy por debajo de 24×24.
+   Relleno `8px 6px` con margen negativo equivalente — el texto no se mueve,
+   el hit-box crece, y el hueco entre enlaces (`gap: 22px`) sigue siendo
+   positivo tras restar los márgenes.
+
+**Deliberadamente NO tocado en esta fase, con el motivo por escrito para que
+nadie lo redescubra desde cero:**
+
+- **LCP (5,3s) y los 129 KiB de JS sin usar** — dominados por el tour del
+  hero y por Sentry respectivamente; ambos vetados por decisiones ya
+  documentadas (arriba).
+- **`ink-4` como texto de cuerpo** — falla AA incluso sobre blanco (2,63:1),
+  y aparece en 258 sitios de `app/globals.css`, la mayoría en zonas de
+  consola. Es un problema real y más grande que el que reportó PSI (que solo
+  vio la home, pública y anónima), pero corregirlo de raíz es un cambio de
+  token de sistema de diseño que necesita su propia fase con su propia pasada
+  de piloto — no cabe en un P2 barato.
+- **`.lp-inner > .blog-cover-compact:first-child` y los ~33 KB de CSS de
+  consola sin mover** — siguen exactamente como los dejó `.claude/rules/
+  styles.md`; esta fase no reordena la cascada.
+
+**Roto conocido, no tocado aquí.** `ink-4` como texto de cuerpo (ver arriba)
+sigue fallando AA en el resto del producto, dentro y fuera de esta zona.
+
+---
+
+## 117. Cabecera pública: badge Pro desalineado bajo el email, y flicker de "Iniciar sesión" en cada recarga (pro-badge-alignment-flickering-v4brfv, 2026-08-17)
+
+**Origen.** El fundador reportó dos cosas con una captura de la portada en
+escritorio, ya logado: (1) en el chip de cuenta de la cabecera pública, el
+badge "Pro" salía apilado debajo del email y alineado a la izquierda, muy
+por debajo del ancho real del email, leyendo como desalineado; (2) al
+recargar cualquier página pública, la cabecera muestra brevemente "Iniciar
+sesión" / "Prueba gratis" antes de reemplazarlos por el chip de cuenta — un
+flicker que ocurre en cada recarga, no sólo la primera vez.
+
+**Causa (badge).** `AccountChip` (`components/marketing/public-header.tsx`)
+metía el email y el badge como dos hijos de bloque sueltos dentro de un
+`<div>` sin `display: flex`; el badge (`.sb-plan-badge`, `inline-flex`)
+caía por tanto en una línea nueva bajo el email en vez de a su lado. Es la
+misma clase que usa el chip de la barra lateral de consola
+(`components/sidebar.tsx`, previo a GENSCORE-HEADER-2, §65), donde apilar sí
+tiene sentido porque esa barra mide ~240px; la cabecera pública tiene todo
+el ancho del nav para trabajar y no tenía motivo para heredar el apilado.
+
+**Causa (flicker).** `useSessionUser` (`lib/use-session-user.ts`,
+GENSCORE-HEADER-2, §65) arranca siempre en `null` ("anónimo o sin resolver
+todavía") y pide `/api/me` en un `useEffect` — una decisión deliberada y
+documentada para no retrasar el CTA de conversión al visitante anónimo, que
+es la inmensa mayoría del tráfico. El coste declarado de esa decisión era
+que un visitante ya logado ve el estado anónimo "por el momento que tarda en
+responder" — pero ese momento se repetía en CADA recarga, y el fundador lo
+señaló como molesto, no como breve.
+
+**Arreglo (badge).** El contenedor de email+badge pasa a
+`.lp-user-chip-identity` (`display: flex; align-items: center; gap: 8px;
+min-width: 0`), con el email en `flex` normal (su propio `min-width: 0` deja
+que el `text-overflow: ellipsis` existente gane) y el badge en `flex: 0 0
+auto` para que nunca se comprima. `.sb-plan-badge` base sigue con
+`margin-top: 3px` para el uso apilado del sidebar; el contexto
+`.lp-user-chip .sb-plan-badge` lo pone a `0` porque en una fila centrada ese
+margen ya no tiene sentido. El chip de la barra lateral no se toca — sigue
+apilado, que es correcto para su ancho.
+
+**Arreglo (flicker).** No se toca la decisión de GENSCORE-HEADER-2 de
+arrancar optimista para el anónimo — seguiría siendo peor retrasar el CTA
+para el 100% de los visitantes por evitar un flicker que sólo ve quien ya
+tiene cuenta. En vez de eso, `useSessionUser` recuerda la última identidad
+resuelta en `sessionStorage` (`gs_session_user_hint`) y la relee en un
+`useLayoutEffect` — no en el inicializador de `useState`, que también
+corre durante la hidratación y tiene que devolver exactamente el marcado
+anónimo que sirvió el servidor o React marca un mismatch de hidratación (el
+mismo flash que esto quiere quitar). Un `useLayoutEffect` compromete su
+`setState` antes de que el navegador pinte, así que la identidad cacheada
+sustituye al fotograma anónimo de forma invisible en vez de después de un
+flash visible. `fetchSessionUser()` sigue siendo la única fuente de verdad:
+corre siempre, y su resultado sobrescribe la caché (y el estado) aunque
+diga `null` — una sesión caducada entre recargas se corrige, no se queda
+pegada al último valor bueno.
+
+**Pendiente / roto conocido, no tocado en este PR.** El primer login de la
+sesión del navegador (sin nada aún en `sessionStorage`) sigue viendo el
+flicker original — no hay forma de evitarlo sin una llamada síncrona antes
+del primer pintado, que es justo lo que GENSCORE-HEADER-2 descartó por el
+coste en TTFB de las ~45 páginas estáticas. Lo que cambia es que a partir de
+la segunda recarga en la misma pestaña, no vuelve a pasar.
+
+**Trazabilidad.** Captura del fundador (portada, escritorio, 2026-08-17);
+§65 (GENSCORE-HEADER-2, `lib/use-session-user.ts`, el trade-off
+anónimo-optimista que esto no revierte); `components/sidebar.tsx` (el chip
+apilado que esto deja intacto).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
