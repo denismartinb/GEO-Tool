@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
@@ -9,6 +9,7 @@ import { useMobileShell } from "@/components/mobile-shell";
 import { useTour } from "@/components/tour-provider";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { avatarInitials as deriveAvatarInitials, showsPlanBadge } from "@/lib/account-chip";
+import { resolveSelectedProject } from "@/lib/active-project-cookie";
 
 type WorkspaceProject = {
   id: string;
@@ -65,18 +66,28 @@ export function Sidebar({
   signOutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const activeProjectId = getProjectId(pathname);
-  // Outside a project's own routes (Billing, Settings, the dashboard root,
-  // or /dashboard/domains after picking a card without navigating) the URL
-  // carries no projectId — fall back to the cookie-remembered selection, then
-  // to the most recent active project, so "Analizar"/"Actuar" still link
-  // somewhere instead of going fully disabled whenever the account isn't
-  // currently inside a project.
+  // DOMAINS-LIVE-SELECT-1 — selecting a card on /dashboard/domains changes
+  // `?active=` without changing the pathname, and this Sidebar instance stays
+  // mounted across that client-side navigation (same layout segment), so
+  // `preferredProjectId` — read once, server-side, when the layout itself
+  // last rendered — does NOT pick up the change on its own; that cookie
+  // update needs a real page load elsewhere to be reflected here. `useSearchParams()`
+  // is reactive to every client-side navigation regardless, so reading the
+  // live query string is what makes the sidebar update the instant a card is
+  // clicked, with no round trip. Confirmed the hard way: the read-only pilot
+  // journey added for this feature failed on the first push without this —
+  // the hero updated (it's a fresh Server Component render) but the sidebar
+  // didn't (see docs/brand/design-decisions-log.md §119).
+  const domainsQueryProjectId = pathname === "/dashboard/domains" ? searchParams.get("active") : null;
+  // Outside a project's own routes (Billing, Settings, the dashboard root)
+  // the URL carries no projectId at all — fall back to the cookie-remembered
+  // selection, then to the most recent active project, so "Analizar"/"Actuar"
+  // still link somewhere instead of going fully disabled whenever the
+  // account isn't currently inside a project.
   const project =
-    projects.find((item) => item.id === activeProjectId) ??
-    projects.find((item) => item.id === preferredProjectId) ??
-    projects[0] ??
-    null;
+    resolveSelectedProject(projects, activeProjectId ?? domainsQueryProjectId, preferredProjectId) ?? null;
   const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
   const { open: openTour } = useTour();
   const asideRef = useRef<HTMLElement | null>(null);

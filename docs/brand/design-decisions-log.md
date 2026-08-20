@@ -11203,15 +11203,43 @@ proyecto seleccionado. Estrictamente de lectura, en `tests/pilot/journeys/`
 (no `write/` ni `scan/`), así que entra en la pasada automática de cada
 deploy sin necesitar su propia excepción.
 
-**Pendiente.** Este journey nuevo no se ha podido ejecutar contra un
-preview real desde esta sesión (sin credenciales de la cuenta piloto ni
-despliegue accesible aquí) — se valida con `tsc`/`eslint` limpios y su
-lectura contra los selectores reales del DOM (`.dm2-card`, `.dm2-hero
-.dm2-name`, `.proj-switch .proj-name`, `.nav-item[href*="/prompts"]`,
-verificados contra `app/dashboard/domains/page.tsx` y
-`components/sidebar.tsx` de este mismo commit), pero no con una corrida
-real. La primera pasada del pilote automático sobre el push que lo añade
-es la que lo confirma de verdad.
+**El journey encontró un bug real: la propagación no funcionaba.** La
+primera pasada del pilote automático sobre el push que añade el journey
+(commit `6535985`) devolvió `PILOT FAIL` en las tres anchuras: "el
+conmutador del sidebar no se actualizó tras seleccionar la tarjeta" — la
+propia funcionalidad que este PR dice introducir.
+
+**Causa.** El arreglo original leía la cookie `geo_active_project` en
+`app/dashboard/layout.tsx` (Server Component) y se la pasaba a `Sidebar`
+como `preferredProjectId`. Pero seleccionar una tarjeta en
+`/dashboard/domains` es una navegación del lado del cliente que **no
+cambia de segmento de ruta** — sigue siendo `/dashboard/domains`, sólo
+cambia `?active=`. Next.js App Router no vuelve a renderizar un layout
+compartido en ese caso (sólo el `page.tsx` de la hoja, que es por qué la
+portada sí cambiaba), así que la instancia de `Sidebar` seguía montada con
+el `preferredProjectId` calculado en la carga de página anterior — la
+cookie se escribía bien en cada petición (`middleware.ts` sí veía el nuevo
+`?active=` y actualizaba la cookie), pero nada volvía a leerla en el
+cliente.
+
+**Arreglo real.** `components/sidebar.tsx` añade `useSearchParams()` junto
+al `usePathname()` que ya tenía: ese hook SÍ es reactivo a cualquier
+navegación del cliente, cambie o no el pathname, así que leer
+`?active=` en vivo cuando `pathname === "/dashboard/domains"` refleja la
+selección en el mismo instante en que React re-renderiza tras el clic —
+sin depender de que el layout se vuelva a montar. La cookie
+(`preferredProjectId`) se queda como lo que siempre debió ser: el
+recuerdo para cuando ni el pathname ni la query llevan un id (Ajustes,
+Facturación, la raíz del dashboard). Prioridad, vía la misma
+`resolveSelectedProject` que ya usa la página de Dominios: pathname >
+`?active=` en vivo > cookie > `projects[0]`.
+
+**Lección para el mapa de zonas.** Un cambio que depende de que el layout
+de consola lea algo server-side (cookie, header) para reflejarlo en el
+sidebar necesita comprobar primero si la navegación que lo dispara cambia
+de segmento de ruta — si no lo hace, el layout no se vuelve a renderizar y
+el dato queda obsoleto hasta la siguiente carga completa de página, en
+silencio, sin ningún error.
 
 ---
 
