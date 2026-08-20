@@ -4855,11 +4855,23 @@ a.notif-row:hover {
    together with the attribute, so once `useSessionUser`'s layout effect
    clears it, whichever real content React rendered is what shows, undoing
    itself automatically. Deliberately content-free: a gray circle and a gray
-   bar, nothing that could be wrong. */
+   bar, nothing that could be wrong.
+
+   QA caught a real one here: `components/not-found-mission.tsx` hand-copies
+   `.lp-nav-right` markup on purpose (its own header comment: "sin datos, sin
+   sesión, sin JavaScript propio") and never renders `<SessionSkeleton/>` or
+   mounts `useSessionUser`, so nothing on that page ever clears the
+   attribute — a plain `.lp-nav-right > *:not(...)` rule would hide its two
+   CTAs permanently for any returning visitor who lands there with a cached
+   hint. The `:has(.lp-session-skeleton)` qualifier scopes the hiding rule to
+   containers that actually render the skeleton, which the 404's own nav
+   never does — so it's excluded structurally, not by a page-specific
+   exception, and the same protection holds for any future reuse of these
+   class names that doesn't also render `<SessionSkeleton/>`. */
 .lp-session-skeleton { display: none; align-items: center; gap: 8px; }
 html[data-session-hint="1"] .lp-session-skeleton { display: flex; }
-html[data-session-hint="1"] .lp-nav-right > *:not(.lp-session-skeleton),
-html[data-session-hint="1"] .lp-mobnav-ctas > *:not(.lp-session-skeleton) {
+html[data-session-hint="1"] .lp-nav-right:has(.lp-session-skeleton) > *:not(.lp-session-skeleton),
+html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.lp-session-skeleton) {
   display: none;
 }
 .lp-session-skeleton-avatar {
