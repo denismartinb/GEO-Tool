@@ -84,9 +84,37 @@
    class of bug, not a one-page patch: nothing here intentionally scrolls
    the page itself horizontally — every real horizontal scroller already
    lives in its own inner container (.tbl-wrap, .filters,
-   .price-matrix-wrap), none of which this touches. */
+   .price-matrix-wrap), none of which this touches.
+
+   `clip`, NOT `hidden` (2026-08-20). `hidden` on one axis forces the other
+   axis to compute from `visible` to `auto` (CSS Overflow 3 §3.2), which turns
+   the ROOT ELEMENT into a scroll container. That is not free: this file
+   already documents one casualty — the public header's `position: sticky`
+   stops sticking (see `.lp-nav-wrap` below) — and on 2026-08-20 the founder
+   hit a worse one. On Chrome/macOS the public pages became **completely
+   unscrollable by the user**: no trackpad, no keyboard, no scrollbar, while
+   `window.scrollTo()` still worked. That split is the textbook signature of a
+   scrollport whose used `overflow` is `hidden` — the spec allows programmatic
+   scrolling there and forbids the UA from offering any user mechanism. The
+   console was unaffected because it never scrolls the document (`.shell` is
+   `100dvh`/`overflow:hidden` and `.dash-content` is the real scroller), which
+   is exactly why the bug looked like it only hit marketing pages. Safari was
+   fine throughout, so this is a Chrome-side resolution of the same fragile
+   construction, not something the page asks for.
+
+   Reproduced in Chromium 141 against a local production build before changing
+   anything: forcing `documentElement.style.overflow = "hidden"` reproduces the
+   founder's exact signature (wheel 0, keyboard 0, `scrollTo` 500), while the
+   same forcing on `body` does NOT — proof the blocking element is the root,
+   and that `body`'s own rule was never load-bearing here.
+
+   `clip` clips identically but creates no scroll container and triggers no
+   axis conversion: `clip` and `visible` are not converted into each other, so
+   `overflow-y` stays `visible` and the viewport scrolls normally. Supported
+   since Chrome 90 / Safari 16. If the 3px overflow ever returns, this is
+   still the line that contains it. */
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -97,7 +125,11 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;
-  overflow-x: hidden;
+  /* Same `clip`-not-`hidden` reasoning as `html` above. This one was already
+     documented as not fixing the overflow it was added for ("did NOT fix it
+     on the next deploy"), so all it contributed was a second nested scroll
+     container. `clip` keeps the belt-and-braces clipping without that. */
+  overflow-x: clip;
 }
 
 a {
