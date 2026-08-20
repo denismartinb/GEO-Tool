@@ -59,7 +59,7 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   a todos los llamadores a la vez.
 - **RLS**: lecturas con el cliente de usuario; cualquier escritura con
   service-role prueba propiedad antes con el cliente de usuario.
-- **El beat de ascenso de la primera misión también vive aquí** (log §122).
+- **El beat de ascenso de la primera misión también vive aquí** (log §124).
   `loadWebAuditPageData` expone `activeRun` (el run `pending`/`running` del
   proyecto, mismo patrón — y mismo `withAnalysisProgress` — que Prompts,
   Competidores, Recomendaciones y Páginas citadas) y `page.tsx` renderiza

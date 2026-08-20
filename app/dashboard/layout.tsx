@@ -2,8 +2,10 @@
 // entran por aquí, no por `globals.css`: así no viajan a /blog ni a la
 // landing. Ver la cabecera de `app/console.css` para qué se movió y qué no.
 import "@/app/console.css";
+import { cookies } from "next/headers";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
+import { ACTIVE_PROJECT_COOKIE } from "@/lib/active-project-cookie";
 import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { ConsoleHeader } from "@/components/console-header";
@@ -17,6 +19,15 @@ import { signOut } from "./actions";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user } = await requireUser();
+
+  // DOMAINS-LIVE-SELECT-1 — outside a project's own route (e.g. right after
+  // picking a domain card on /dashboard/domains, which selects without
+  // navigating) the sidebar has no pathname to read a project id from. The
+  // cookie middleware.ts now writes for that screen too is the fallback, so
+  // selecting a domain there updates the sidebar immediately instead of only
+  // after clicking into the project.
+  const cookieStore = await cookies();
+  const preferredProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value ?? null;
 
   const {
     projects,
@@ -37,6 +48,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <TourProvider>
       <Sidebar
         projects={projects ?? []}
+        preferredProjectId={preferredProjectId}
         promptCountByProject={promptCountByProject}
         competitorCountByProject={competitorCountByProject}
         recommendationCountByProject={recommendationCountByProject}

@@ -11126,6 +11126,9 @@ fundador, 2026-08-20.
 
 ---
 
+
+---
+
 ## 119. Visión general en escritorio: cabecera de la puntuación GEO alineada, desglose y motores lado a lado (OV-DESKTOP-2, 2026-08-17)
 
 **El problema, señalado por el fundador con una captura de escritorio.** En
@@ -11335,6 +11338,9 @@ a construir cuando cambia este workflow, para que el arreglo pueda ejercitarse).
 
 ---
 
+
+---
+
 ## 121. `sameAs` deja de estar vacío: LinkedIn y G2 son perfiles reales (2026-08-20)
 
 **Qué pasó.** El fundador dio de alta la página de empresa de LinkedIn
@@ -11364,7 +11370,169 @@ Estado (el mismo hueco, documentado desde el lado de contenido).
 
 ---
 
-## 122. El cohete de la primera misión se pintaba cortado en escritorio — horizontal y luego vertical —, y Auditoría web se había quedado fuera del beat de ascenso (2026-08-20)
+---
+
+## 122. Dominios: seleccionar una tarjeta propaga a toda la consola, y el botón "Ver visión general" se reduce en desktop (DOMAINS-LIVE-SELECT-1, 2026-08-20)
+
+**Origen.** Fundador, 2026-08-20: seleccionar otro dominio en la pantalla
+"Dominios" (`/dashboard/domains`) tenía que reflejarse en toda la consola
+sin pulsar "Ver visión general" primero; y ese botón, a ancho de escritorio,
+se veía "enorme". Task Intake aprobado el mismo día (propagación P1 + botón
+P2, mismo PR).
+
+**Por qué el botón era la única vía real.** DOMAINS-REDESIGN-1 (2026-08-05)
+decidió a propósito que pinchar una tarjeta de la rejilla no navega — sólo
+cambia qué dominio aparece en la portada, vía `?active=<id>`, para volver a
+la misma pantalla (comentario en `app/dashboard/domains/page.tsx`). Esa
+decisión sigue en pie. Pero "cuál es el proyecto activo" fuera de esa
+pantalla se resolvía en otros dos sitios de forma independiente y sólo a
+partir del *pathname* — `components/sidebar.tsx` y
+`components/workspace-topbar.tsx`, ambos con su propio `getProjectId(pathname)`
+— y la cookie `geo_active_project` que los alimentaría en su ausencia
+(DEBUG-ACTIVE-PROJECT-1) sólo la escribía `middleware.ts` al entrar de
+verdad en `/dashboard/projects/[id]/...`. Elegir una tarjeta cambiaba la
+portada pero no el pathname, así que el sidebar seguía señalando el
+proyecto anterior hasta que se pulsaba "Ver visión general" — el único
+gesto que de verdad cambiaba de ruta.
+
+**Arreglo.** `lib/active-project-cookie.ts` gana
+`getProjectIdFromDomainsQuery(pathname, searchParams)`, que valida el mismo
+`?active=<uuid>` que ya lee `app/dashboard/domains/page.tsx`.
+`middleware.ts` la usa como segunda fuente junto a la ya existente
+`getProjectIdFromPathname`, así que la cookie también se escribe al
+seleccionar una tarjeta, sin que la tarjeta navegue. `app/dashboard/layout.tsx`
+lee esa cookie server-side y se la pasa a `Sidebar` como `preferredProjectId`;
+`Sidebar` la usa como fallback entre el pathname y `projects[0]`. No se tocó
+`workspace-topbar.tsx`: fuera de una ruta de proyecto ya no muestra nada, así
+que no había fallback que corregir.
+
+**El botón.** `.dm2-open` coincidía exactamente con el diseño aprobado en
+`docs/design-reference/domains-redesign-1/pantalla-dominios.html`
+(`width:100%`), que ahora queda desactualizado — se corrige en el mismo PR.
+Por debajo de 561px se queda a ancho completo (sigue siendo la única forma
+de entrar al proyecto ahí, y el objetivo táctil grande es lo que
+corresponde). Desde 561px, ancho de contenido y alineado a la derecha
+(`.dm2-hero` pasa a `flex column` sólo para que `align-self:flex-end` pueda
+mover ese único hijo sin afectar la anchura de los demás, que se siguen
+estirando igual que en bloque).
+
+**Lo que NO cambia.** La cookie nunca es fuente de autorización — se
+re-comprueba la propiedad con RLS en cada lectura, igual que ya documentaba
+DEBUG-ACTIVE-PROJECT-1; un id ajeno o manipulado simplemente no aparece en
+`projects` y cae al siguiente criterio. La tarjeta de la rejilla sigue sin
+navegar (DOMAINS-REDESIGN-1 se mantiene intacta). Ningún control de
+escaneo/auditoría nuevo en la pantalla.
+
+**Trazabilidad.** DEBUG-ACTIVE-PROJECT-1 (la cookie); DOMAINS-REDESIGN-1,
+2026-08-05 (por qué la tarjeta no navega); DOMAINS-ACTIVE-COOKIE-1,
+2026-08-07 (la misma cookie ya usada como recuerdo de página); Task Intake
+aprobado por el fundador, 2026-08-20.
+
+**Addendum (2026-08-20, mismo PR): el pilote automático no vio la
+propagación, y le faltaba un journey para poder verla.** La pasada
+automática contra el preview del PR #443 devolvió `PILOT PASS` en las 65
+pantallas — incluida `domains`, en las tres anchuras — pero el agente
+`ux-pilot`, al revisar las capturas de verdad antes de dar la fase por
+cerrada, encontró que ni una sola tocaba la propagación al sidebar: el
+barrido genérico (`tests/pilot/support/explore.ts`) descarta cualquier
+control con `href` real como "navega fuera", y cada `.dm2-card` de la
+rejilla lleva uno (`?active=<id>`) aunque en la práctica se queda en la
+misma pantalla. Sin un journey dedicado, cada pasada futura del piloto
+seguiría reportando un ✅ vacío sobre el comportamiento que esta misma fase
+introduce — el mismo patrón que ya forzó `recommendations-interactions.spec.ts`
+para Recomendaciones. Se añadió
+`tests/pilot/journeys/domains-selection.spec.ts`: selecciona una tarjeta
+que no sea el dominio activo y comprueba que tanto la portada como
+`.proj-switch .proj-name` del sidebar cambian al nuevo dominio sin pulsar
+"Ver visión general", y que el enlace de Prompts del sidebar ya apunta al
+proyecto seleccionado. Estrictamente de lectura, en `tests/pilot/journeys/`
+(no `write/` ni `scan/`), así que entra en la pasada automática de cada
+deploy sin necesitar su propia excepción.
+
+**El journey encontró un bug real: la propagación no funcionaba.** La
+primera pasada del pilote automático sobre el push que añade el journey
+(commit `6535985`) devolvió `PILOT FAIL` en las tres anchuras: "el
+conmutador del sidebar no se actualizó tras seleccionar la tarjeta" — la
+propia funcionalidad que este PR dice introducir.
+
+**Causa.** El arreglo original leía la cookie `geo_active_project` en
+`app/dashboard/layout.tsx` (Server Component) y se la pasaba a `Sidebar`
+como `preferredProjectId`. Pero seleccionar una tarjeta en
+`/dashboard/domains` es una navegación del lado del cliente que **no
+cambia de segmento de ruta** — sigue siendo `/dashboard/domains`, sólo
+cambia `?active=`. Next.js App Router no vuelve a renderizar un layout
+compartido en ese caso (sólo el `page.tsx` de la hoja, que es por qué la
+portada sí cambiaba), así que la instancia de `Sidebar` seguía montada con
+el `preferredProjectId` calculado en la carga de página anterior — la
+cookie se escribía bien en cada petición (`middleware.ts` sí veía el nuevo
+`?active=` y actualizaba la cookie), pero nada volvía a leerla en el
+cliente.
+
+**Arreglo real.** `components/sidebar.tsx` añade `useSearchParams()` junto
+al `usePathname()` que ya tenía: ese hook SÍ es reactivo a cualquier
+navegación del cliente, cambie o no el pathname, así que leer
+`?active=` en vivo cuando `pathname === "/dashboard/domains"` refleja la
+selección en el mismo instante en que React re-renderiza tras el clic —
+sin depender de que el layout se vuelva a montar. La cookie
+(`preferredProjectId`) se queda como lo que siempre debió ser: el
+recuerdo para cuando ni el pathname ni la query llevan un id (Ajustes,
+Facturación, la raíz del dashboard). Prioridad, vía la misma
+`resolveSelectedProject` que ya usa la página de Dominios: pathname >
+`?active=` en vivo > cookie > `projects[0]`.
+
+**Lección para el mapa de zonas.** Un cambio que depende de que el layout
+de consola lea algo server-side (cookie, header) para reflejarlo en el
+sidebar necesita comprobar primero si la navegación que lo dispara cambia
+de segmento de ruta — si no lo hace, el layout no se vuelve a renderizar y
+el dato queda obsoleto hasta la siguiente carga completa de página, en
+silencio, sin ningún error.
+
+---
+
+## 123. Onboarding: el asistente dejaba entrar 10 competidores y el servidor guardaba 5 en silencio (ONBOARDING-COMPETITORS-CAP-1, 2026-08-20)
+
+**Qué pasó.** El fundador dio de alta 10 competidores en el asistente de
+nuevo dominio; al terminar el primer escaneo, la pantalla de Competidores
+("Cuota de voz en IA") solo mostraba 5.
+
+**Causa.** `parseInitialCompetitors` (`lib/projects/project-form.ts`) cortaba
+la lista en `MAX_INITIAL_COMPETITORS` (5) sin avisar, mientras el asistente
+(`components/onboarding-wizard.tsx`) no tenía ningún tope propio: el botón
+"Añadir competidor" seguía añadiendo filas y el contador decía "10
+competidores listos". El servidor descartó los últimos 5 sin error ni aviso
+en pantalla — pérdida de datos silenciosa, no un fallo de renderizado. La
+misma constante hacía doble papel: cuántos competidores pide el sistema a
+Gemini como sugerencia, y cuántos acepta del usuario. El primer uso ya tenía
+un arreglo equivalente para prompts (`maxPrompts` pasado desde el cap del
+plan); a competidores nunca se le aplicó.
+
+**Impacto real.** No es solo visual: el set de competidores entra en
+`competitors_snapshot` y alimenta `standing`, `brand_position` y
+`prominence` (ADR 0018). Ese escaneo se puntuó contra 5 competidores en vez
+de 10.
+
+**Decisión (opción B, aprobada por el fundador).** Separar los dos usos:
+`MAX_INITIAL_COMPETITORS` (5) queda solo para la petición de sugerencias a
+Gemini; nace `MAX_USER_COMPETITORS` (10) como tope explícito y **visible**
+de lo que el asistente acepta. El botón "Añadir competidor" se deshabilita
+al llegar a 10 y el contador pasa a decir "N competidores listos (máximo
+10)" — mismo patrón que ya usaba el paso de prompts con `promptCap`. Ningún
+tope que la interfaz no enseña es aceptable: es exactamente esta pérdida de
+datos silenciosa otra vez, con otro nombre.
+
+**No incluido en esta fase.** Recalcular el escaneo que ya corrió con solo 5
+competidores (los 5 que faltan se dan de alta ahora en "Gestionar", que no
+tiene tope, y entran desde el siguiente escaneo). No se tocó `sampling`, el
+pipeline de extracción, ni el cap de prompts.
+
+**Trazabilidad.** `lib/projects/project-form.ts`,
+`components/onboarding-wizard.tsx`,
+`lib/projects/project-form.test.ts`; ADR 0018 (por qué el set de
+competidores importa para el scoring, no solo para la pantalla).
+
+---
+
+## 124. El cohete de la primera misión se pintaba cortado en escritorio — horizontal y luego vertical —, y Auditoría web se había quedado fuera del beat de ascenso (2026-08-20)
 
 **El problema, reportado por el fundador con una captura de escritorio.** En
 Visión general, mientras corre el primer escaneo de un proyecto, el texto de

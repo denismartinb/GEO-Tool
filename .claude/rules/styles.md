@@ -75,7 +75,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   y el sobrante de la derecha es justo lo que dejaba a `.dash-content` con
   scroll horizontal implícito. `.mrk-full` lo tenía (`ScanMissionRocket` /
   `ReentryMission`, cortado detrás de la barra lateral en escritorio, log
-  §122): la corrección va en un `@media (min-width: 761px)` — el mismo corte
+  §124): la corrección va en un `@media (min-width: 761px)` — el mismo corte
   donde `.shell` deja de colapsar — que rederiva el mismo break-out contra
   `.dash-content` en vez del viewport (`width: calc(100vw - var(--sidebar-w))`
   y un margen izquierdo que cancela el propio centrado/padding de `.page`, vía
@@ -89,7 +89,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   `.dash-content` contiene modales, drawers y el popup del tour de onboarding —
   todos `fixed` y pensados contra el viewport real. Es la solución "correcta"
   de libro para el problema anterior (`cqw` en vez de rederivar `vw` a mano) y
-  se descartó por eso mismo en log §122: convertiría esos overlays en overlays
+  se descartó por eso mismo en log §124: convertiría esos overlays en overlays
   contenidos sin que ninguna pantalla que los usa lo supiera, sin ningún
   ux-pilot en ese PR para cazarlo.
 - **Un `height: 100%` puede caer en referencia circular dentro de un grid con
@@ -100,7 +100,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   cuyo propio contenido depende de esa misma altura (p. ej. un `calc(100% -
   X)` más abajo) puede resolver contra el contenido en vez de contra la caja
   del grid — comprobado con Playwright en `.mrk-scene-slot > .mrk-pad-wrap`
-  (log §122): la fila se dimensionó a 674px, el contenido, en vez de a los
+  (log §124): la fila se dimensionó a 674px, el contenido, en vez de a los
   640px reales de la caja, y el sobrante se recortó por `overflow:hidden` dos
   niveles más arriba, silenciosamente. La corrección que sí funciona es
   `position: absolute; inset: 0` en el hijo — lo saca del grid entero y le da
