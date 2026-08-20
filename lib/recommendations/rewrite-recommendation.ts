@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { rewriteRecommendation } from "@/lib/llm/gemini";
 import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-validation";
-import { collectAnchoredDomains } from "@/lib/recommendations/anchored-domains";
+import { collectAnchoredDomains, competitorsAnchoredByDomain } from "@/lib/recommendations/anchored-domains";
 import { checkGenerationRateLimit } from "@/lib/recommendations/generation-rate-limit";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
@@ -119,6 +119,19 @@ const ENGINE_FAILURE =
 const UNVERIFIED_FAILURE =
   "La propuesta generada mencionaba datos que no están en la evidencia de esta recomendación, así que se ha descartado. Vuelve a intentarlo.";
 
+/**
+ * El término concreto, cuando el guardián lo sabe. «Mencionaba datos que no
+ * están en la evidencia» deja al usuario —y al agente que lo depura— sin la
+ * única pregunta que importa: *qué* mencionaba. Va saneado y recortado como
+ * cualquier otra salida del modelo (nunca es texto del proveedor, es un solo
+ * término), y se cae al mensaje genérico si no queda nada tras sanear.
+ */
+function unverifiedFailure(offending: string): string {
+  const term = sanitizeField(offending, OFFENDING_TERM_MAX);
+  if (!term) return UNVERIFIED_FAILURE;
+  return `La propuesta generada mencionaba «${term}», que no está en la evidencia de esta recomendación, así que se ha descartado. Vuelve a intentarlo.`;
+}
+
 /** Generated fine, but the write failed — a distinct thing to retry. */
 const PERSIST_FAILURE = "La propuesta se ha generado pero no se ha podido guardar. Inténtalo de nuevo en unos minutos.";
 
@@ -140,6 +153,7 @@ const MAX_STEPS = 6;
 const EXAMPLE_LABEL_MAX = 80;
 const EXAMPLE_CONTENT_MAX = 1200;
 const MAX_EXAMPLES = 3;
+const OFFENDING_TERM_MAX = 60;
 
 // Only the Gemini fetch is bounded inside lib/llm/gemini.ts; the Supabase
 // reads/writes below have no library-level timeout, so each is bounded here and
@@ -378,10 +392,24 @@ export async function rewriteRecommendationCore({
       (row) => row.name
     );
 
+    /**
+     * Un competidor de la lista del proyecto cuyo PROPIO dominio ya está
+     * anclado a esta tarjeta. El playbook le pide al modelo que clasifique
+     * cada dominio citado y llegue a marcar los que son competidores como «no
+     * es un objetivo de outreach» — cosa que no puede hacer sin nombrarlos —
+     * mientras el guardián rechazaba cualquiera fuera de `mentioned_competitors`,
+     * vacío en estas tarjetas. Nombrar a «SE Ranking» cuando `seranking.com`
+     * está en la evidencia no es fabricar nada: es la misma fuente por su
+     * nombre (log §124).
+     */
+    const domainAnchoredCompetitors = competitorsAnchoredByDomain(trackedCompetitors, anchoredDomains);
+    const promptCompetitors = [...new Set([...mentionedCompetitors, ...domainAnchoredCompetitors])];
+
     console.info(`${LOG_PREFIX} evidence_loaded`, {
       project_id: projectId,
       recommendation_id: recommendationId,
-      tracked_competitors_count: trackedCompetitors.length
+      tracked_competitors_count: trackedCompetitors.length,
+      domain_anchored_competitors_count: domainAnchoredCompetitors.length
     });
 
     stage = "gemini_call";
@@ -397,7 +425,7 @@ export async function rewriteRecommendationCore({
         ruleDescription: recommendation.description,
         whyThisMatters: evidence.why_this_matters ?? "",
         affectedPrompts: evidence.affected_prompts ?? [],
-        mentionedCompetitors,
+        mentionedCompetitors: promptCompetitors,
         citationDomains: anchoredDomains,
         dominantCompetitor: evidence.dominant_competitor,
         evidenceSnippets: evidence.evidence_snippets ?? [],
@@ -432,7 +460,7 @@ export async function rewriteRecommendationCore({
     const validation = validateRewriteAgainstEvidence({
       title: rewrite.title,
       description: [rewrite.summary, ...rewrite.steps, ...exampleText].join(" "),
-      allowedCompetitors,
+      allowedCompetitors: [...allowedCompetitors, ...domainAnchoredCompetitors],
       allowedDomains: anchoredDomains,
       trackedCompetitors,
       brandDomain: project.domain
@@ -449,7 +477,7 @@ export async function rewriteRecommendationCore({
         anchored_domains: anchoredDomains,
         tracked_competitors_count: trackedCompetitors.length
       });
-      return { success: false, error: UNVERIFIED_FAILURE };
+      return { success: false, error: unverifiedFailure(validation.offending) };
     }
 
     const sanitized = sanitizeSolution(rewrite);
@@ -481,6 +509,10 @@ export async function rewriteRecommendationCore({
             rule_title: recommendation.title,
             rule_description: recommendation.description,
             mentioned_competitors: mentionedCompetitors,
+            // Los que además se admitieron por tener su dominio en la
+            // evidencia de esta tarjeta, por el mismo motivo que
+            // `anchored_domains`: que un rechazo posterior se pueda leer aquí.
+            domain_anchored_competitors: domainAnchoredCompetitors,
             citation_domains: citationDomains,
             // What the model was actually allowed to name (and was judged
             // against), which is a superset of citation_domains for the

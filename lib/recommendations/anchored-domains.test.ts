@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectAnchoredDomains } from "@/lib/recommendations/anchored-domains";
+import { collectAnchoredDomains, competitorsAnchoredByDomain } from "@/lib/recommendations/anchored-domains";
 import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-validation";
 
 describe("collectAnchoredDomains", () => {
@@ -96,5 +96,34 @@ describe("anchored domains vs the anti-fabrication guard", () => {
         brandDomain: "genscore.io"
       })
     ).toEqual({ valid: false, reason: "unanchored_domain_mentioned", offending: "inventado-por-la-ia.com" });
+  });
+});
+
+describe("competitorsAnchoredByDomain", () => {
+  it("admite al competidor cuyo propio dominio está anclado a la tarjeta", () => {
+    expect(
+      competitorsAnchoredByDomain(
+        ["SE Ranking", "Semrush", "Otterly", "Brand24", "Delve AI"],
+        ["seranking.com", "es.semrush.com", "brand24.com", "delve.ai"]
+      )
+    ).toEqual(["SE Ranking", "Semrush", "Brand24", "Delve AI"]);
+  });
+
+  it("no admite a un competidor cuyo dominio no está en la evidencia", () => {
+    expect(competitorsAnchoredByDomain(["Otterly", "Peec AI"], ["seranking.com", "dageno.ai"])).toEqual([]);
+  });
+
+  it("empareja por etiqueta exacta: un dominio parecido no habilita la marca (ADR 0019)", () => {
+    expect(competitorsAnchoredByDomain(["Acme"], ["evilacme.com", "acme-falso.com"])).toEqual([]);
+    expect(competitorsAnchoredByDomain(["Acme"], ["acme.com"])).toEqual(["Acme"]);
+  });
+
+  it("ignora nombres vacíos y dominios sin etiqueta utilizable", () => {
+    expect(competitorsAnchoredByDomain(["", "  "], ["seranking.com"])).toEqual([]);
+    expect(competitorsAnchoredByDomain(["SE Ranking"], ["", "com"])).toEqual([]);
+  });
+
+  it("no se queda con el segundo nivel genérico de un `.co.uk`", () => {
+    expect(competitorsAnchoredByDomain(["Which", "Co"], ["which.co.uk"])).toEqual(["Which"]);
   });
 });

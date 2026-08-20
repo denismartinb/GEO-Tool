@@ -79,3 +79,63 @@ export function collectAnchoredDomains(evidence: AnchoredDomainEvidence): string
   }
   return anchored;
 }
+
+/**
+ * Dominios de segundo nivel que no son la marca (`example.co.uk`), para no
+ * quedarse con "co" como etiqueta de marca.
+ */
+const SECOND_LEVEL_LABELS = new Set(["co", "com", "org", "net", "gov", "edu", "ac"]);
+
+/** La etiqueta que lleva la marca: `blog.hubspot.es` → "hubspot", `delve.ai` → "delve". */
+function brandLabel(domain: string): string {
+  const parts = domain.split(".").filter(Boolean);
+  if (parts.length < 2) return "";
+  let index = parts.length - 2;
+  if (index > 0 && SECOND_LEVEL_LABELS.has(parts[index])) index -= 1;
+  return parts[index] ?? "";
+}
+
+/** Forma comparable de un nombre o una etiqueta: sin acentos, sin espacios, sin signos. */
+function compact(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Los competidores de la lista del proyecto que ESTA tarjeta ya ancla por su
+ * dominio — «SE Ranking» cuando `seranking.com` está entre los dominios
+ * anclados, «Semrush» cuando lo está `es.semrush.com`.
+ *
+ * Existe por el mismo choque que `collectAnchoredDomains`, un campo más allá.
+ * El playbook de las reglas de hueco de fuentes le pide al modelo que clasifique
+ * cada dominio y diga su jugada, e **incluso que marque los que son
+ * competidores de la marca como «no es un objetivo de outreach»** — lo cual
+ * exige nombrarlos. El guardián, en cambio, rechaza cualquier competidor de la
+ * lista del proyecto que no esté en `mentioned_competitors`, que en estas
+ * tarjetas viene vacío. Con `seranking.com` en la evidencia y «SE Ranking» en
+ * la lista de competidores del proyecto, la propuesta se descartaba por hacer
+ * exactamente lo que se le pedía (log §124).
+ *
+ * No afloja el guardián: sólo se admite un competidor cuyo **propio dominio**
+ * está ya en la evidencia de esta tarjeta, y el emparejado es por igualdad
+ * exacta de etiqueta, así que `evilacme.com` no habilita «Acme» (ADR 0019).
+ */
+export function competitorsAnchoredByDomain(trackedCompetitors: string[], anchoredDomains: string[]): string[] {
+  const keys = new Set<string>();
+  for (const domain of anchoredDomains) {
+    const label = compact(brandLabel(domain));
+    if (label) keys.add(label);
+    // `delve.ai` → "delveai", que es como se escribe «Delve AI» en la lista de
+    // competidores. Sin esto, un competidor cuyo nombre incluye el TLD se
+    // quedaría fuera de su propio dominio.
+    const whole = compact(domain);
+    if (whole) keys.add(whole);
+  }
+  return trackedCompetitors.filter((name) => {
+    const key = compact(name);
+    return key.length > 0 && keys.has(key);
+  });
+}

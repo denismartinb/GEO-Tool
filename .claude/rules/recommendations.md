@@ -44,6 +44,17 @@ paths:
   el prompt ofreció es rechazar al modelo por obedecer — pasó con las páginas
   citadas, que el prompt pide nombrar y el guardián no admitía, y la tarjeta
   quedó imposible de generar (log §122).
+- **Lo mismo vale para los competidores.** Un competidor de la lista del
+  proyecto se admite —en el prompt y en el guardián a la vez— sólo si su propio
+  dominio está en el conjunto anclado (`competitorsAnchoredByDomain`). El
+  playbook pide clasificar cada dominio citado y marcar los que son
+  competidores, cosa imposible sin nombrarlos, y el guardián los rechazaba por
+  ello (log §124). El emparejado es por igualdad exacta de etiqueta de marca:
+  `evilacme.com` no habilita «Acme» (ADR 0019).
+- **Un rechazo del guardián dice QUÉ término lo disparó, también en pantalla.**
+  Diagnosticar «mencionaba datos que no están en la evidencia» exigía acceso a
+  los logs de producción; costó dos vueltas enteras (log §122, §124). El
+  término va saneado y recortado como cualquier salida del modelo.
 - **Nada entra en ese conjunto que no venga de la evidencia persistida de esa
   tarjeta.** Ampliarlo con dominios "razonables" (redes sociales, plantillas,
   el dominio de un competidor) convierte el guardián en decoración: existe

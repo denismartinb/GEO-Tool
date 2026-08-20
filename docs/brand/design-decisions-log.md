@@ -11473,6 +11473,49 @@ patrón de verde vacío).
 
 ---
 
+## 124. El guardián rechazaba nombrar al competidor que la propia tarjeta ancla (2026-08-20)
+
+**Qué pasó.** Con §122 desplegado, la misma tarjeta *Entrar en fuentes citadas*
+volvió a fallar — pero ya no con la frase genérica: **«La propuesta generada
+mencionaba datos que no están en la evidencia de esta recomendación»**. Los
+mensajes por rama que §122 introdujo hicieron su trabajo: en un clic quedó
+descartado el motor y señalado el guardián, sin abrir un solo log.
+
+**La causa, que es la de §122 un campo más allá.** El playbook de las reglas de
+hueco de fuentes le pide al modelo que clasifique cada dominio citado y le dé su
+jugada, y llega a pedirle que marque los que son **competidores de la marca**
+como «no es un objetivo de outreach» — algo que no se puede hacer sin
+nombrarlos. El guardián, en cambio, rechaza cualquier competidor de la lista del
+proyecto que no esté en `mentioned_competitors`, que en estas tarjetas viene
+vacío. Con `seranking.com` entre los dominios citados y «SE Ranking» entre los
+cinco competidores del proyecto, la propuesta se descartaba por obedecer. Otra
+vez: el prompt pide una cosa y el guardián la castiga.
+
+**Qué se decidió.** `competitorsAnchoredByDomain` admite un competidor **cuando
+su propio dominio ya está en el conjunto anclado de esa tarjeta**, y ese
+competidor pasa a la vez al prompt y al guardián — el mismo invariante de §122.
+No afloja nada más: el emparejado es por igualdad exacta de etiqueta de marca
+(`evilacme.com` no habilita «Acme», ADR 0019), y un competidor cuyo dominio no
+esté en la evidencia sigue prohibido.
+
+**Y el mensaje dice el término.** «Mencionaba datos que no están en la
+evidencia» deja fuera la única pregunta que importa: *cuál*. Ahora dice
+«mencionaba «SE Ranking», que no está en la evidencia», saneado y recortado como
+cualquier otra salida del modelo. Un rechazo del guardián deja de necesitar
+acceso a producción para diagnosticarse — que es lo que costó las dos vueltas
+anteriores.
+
+**Lo que sigue sin comprobarse aquí.** Que la propuesta se genere de verdad
+depende de una llamada real a Gemini, y eso no se puede ejercitar desde los
+tests. Lo que estos fijan es que prompt y guardián leen el mismo conjunto, en
+las dos dimensiones.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`rewrite-recommendation.ts`; §122 (la primera mitad, dominios);
+`.claude/rules/recommendations.md` §Reescritura con IA.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

@@ -431,7 +431,10 @@ describe("rewriteRecommendationCore", () => {
     // A discarded rewrite reads differently from a provider failure, and the
     // term that tripped the guard is logged (never shown) so the next report
     // arrives already diagnosed.
-    expect(result.error).toContain("no están en la evidencia");
+    // El término va en el mensaje: sin él, «mencionaba datos que no están en la
+    // evidencia» deja fuera la única pregunta que importa — cuál.
+    expect(result.error).toContain("«Ikea»");
+    expect(result.error).toContain("no está en la evidencia");
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("rejected"),
       expect.objectContaining({ reason: "untracked_competitor_mentioned", offending: "Ikea" })
@@ -674,5 +677,57 @@ describe("rewriteRecommendationCore", () => {
     // diagnosable from the data instead of only from a runtime log.
     const evidence = getInserted()[0].evidence_json as Record<string, unknown>;
     expect(evidence.anchored_domains).toEqual(anchored);
+  });
+
+  it("permite nombrar al competidor cuyo propio dominio está anclado, y sólo a ese", async () => {
+    // El playbook de las tarjetas de fuentes le pide al modelo que clasifique
+    // cada dominio citado y marque los que son competidores como «no es un
+    // objetivo de outreach» — no puede hacerlo sin nombrarlos, y el guardián
+    // los rechazaba por hacerlo.
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    const sourceGapRecommendation = {
+      ...RULE_RECOMMENDATION,
+      recommendation_type: "pursue_citation_sources",
+      evidence_json: {
+        ...EVIDENCE,
+        mentioned_competitors: [],
+        dominant_competitor: undefined,
+        citation_domains: ["seranking.com", "example.com"],
+        citation_pages: [{ domain: "seranking.com", title: "Mejores herramientas", url: "https://seranking.com/blog" }]
+      }
+    };
+    rewriteRecommendationMock.mockResolvedValue(REWRITE);
+    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+    const { client } = makeFakeSupabase({
+      project: PROJECT,
+      recommendation: sourceGapRecommendation,
+      competitors: [
+        { project_id: PROJECT.id, name: "SE Ranking" },
+        { project_id: PROJECT.id, name: "Conforama" }
+      ]
+    });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: sourceGapRecommendation.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(true);
+
+    // Al prompt y al guardián, el mismo competidor: el que la tarjeta ancla por
+    // su dominio. Conforama no lo está y sigue prohibido.
+    const geminiArgs = rewriteRecommendationMock.mock.calls[0][0];
+    const validationArgs = validateRewriteAgainstEvidenceMock.mock.calls[0][0];
+    expect(geminiArgs.mentionedCompetitors).toEqual(["SE Ranking"]);
+    expect(validationArgs.allowedCompetitors).toContain("SE Ranking");
+    expect(validationArgs.allowedCompetitors).not.toContain("Conforama");
+    expect(validationArgs.trackedCompetitors).toEqual(["SE Ranking", "Conforama"]);
+
+    const evidence = getInserted()[0].evidence_json as Record<string, unknown>;
+    expect(evidence.domain_anchored_competitors).toEqual(["SE Ranking"]);
   });
 });
