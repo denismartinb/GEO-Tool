@@ -11088,7 +11088,7 @@ ponía la constante de la clave (`SESSION_CACHE_KEY`) en
 `lib/use-session-user.ts`, un módulo `"use client"`, y la importaba desde
 `app/layout.tsx` (Server Component). Compilaba limpio y pasaba
 `tsc`/`eslint` sin avisar — pero Next.js sustituye las exportaciones de un
-módulo `"use client"` por referencias opacas quando las importa un Server
+módulo `"use client"` por referencias opacas cuando las importa un Server
 Component, así que el HTML construido enviaba literalmente
 `sessionStorage.getItem(undefined)`, desactivando la función entera en
 silencio. Sólo se detectó inspeccionando el HTML de verdad construido por
@@ -11096,6 +11096,21 @@ silencio. Sólo se detectó inspeccionando el HTML de verdad construido por
 movió la constante a `lib/session-hint.ts`, un módulo plano sin
 `"use client"`, importado por los dos lados; `lib/session-hint.test.ts`
 comprueba que ese fichero nunca vuelve a llevar la directiva.
+
+**Segundo bug real, cogido por Claude QA antes del Human Gate.**
+`components/not-found-mission.tsx` reutiliza la clase `.lp-nav-right` a
+propósito (su propio comentario: "sin datos, sin sesión, sin JavaScript
+propio") pero nunca renderiza el skeleton ni monta `useSessionUser`, así
+que nada en esa página limpia `data-session-hint` — la regla original de
+ocultar hermanos (`.lp-nav-right > *:not(.lp-session-skeleton)`) le habría
+escondido los dos CTAs para siempre a cualquier visitante que aterrizara
+ahí con una caché de `sessionStorage` viva. Arreglado cualificando el
+selector con `:has(.lp-session-skeleton)` — ya usado en este mismo fichero
+para `.art-stats` — que excluye estructuralmente cualquier
+`.lp-nav-right`/`.lp-mobnav-ctas` que no renderice el propio skeleton, así
+que protege igual ante cualquier reutilización futura de esas clases, no
+sólo el caso de la 404. Verificado contra el HTML real de `next build`
+antes y después.
 
 **Pendiente / roto conocido, no tocado aquí.** El hueco en sí (unos ms
 entre el pintado del HTML estático y que React hidrate) no desaparece —
