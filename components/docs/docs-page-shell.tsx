@@ -34,30 +34,32 @@ export function DocsPageShell({
         ]}
       />
 
-      <section className="lp-section">
-        <div className="lp-inner docs-layout">
-          <aside className="docs-side" aria-label="Navegación de la documentación">
-            <Link href="/docs" className={`docs-side-home${!activeSlug ? " active" : ""}`}>
-              Documentación
-            </Link>
-            {DOCS_NAV.map((section) => (
-              <div key={section.title} className="docs-side-section">
-                <div className="docs-side-title">{section.title}</div>
-                {section.pages.map((page) => (
-                  <Link
-                    key={page.slug}
-                    href={`/docs/${page.slug}`}
-                    className={page.slug === activeSlug ? "active" : ""}
-                  >
-                    {page.title}
-                  </Link>
-                ))}
-              </div>
-            ))}
-          </aside>
-          <div className="docs-content">{children}</div>
-        </div>
-      </section>
+      <main>
+        <section className="lp-section">
+          <div className="lp-inner docs-layout">
+            <aside className="docs-side" aria-label="Navegación de la documentación">
+              <Link href="/docs" className={`docs-side-home${!activeSlug ? " active" : ""}`}>
+                Documentación
+              </Link>
+              {DOCS_NAV.map((section) => (
+                <div key={section.title} className="docs-side-section">
+                  <div className="docs-side-title">{section.title}</div>
+                  {section.pages.map((page) => (
+                    <Link
+                      key={page.slug}
+                      href={`/docs/${page.slug}`}
+                      className={page.slug === activeSlug ? "active" : ""}
+                    >
+                      {page.title}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </aside>
+            <div className="docs-content">{children}</div>
+          </div>
+        </section>
+      </main>
 
       <footer className="lp-footer">
         <div className="lp-inner">

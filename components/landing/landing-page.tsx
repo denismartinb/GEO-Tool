@@ -102,6 +102,7 @@ export function LandingPage() {
         </div>
       </header>
 
+      <main>
       {/* TRUST */}
       <div className="lp-trust">
         <div className="lp-inner">
@@ -248,6 +249,7 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer className="lp-footer">

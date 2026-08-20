@@ -31,29 +31,31 @@ export function LegalPageShell({
     <div className="lp">
       <PublicHeader />
 
-      <section className="lp-section" style={{ paddingBottom: 0 }}>
-        <div className="lp-inner">
-          <h1 className="lp-h2">{title}</h1>
-          <p className="legal-updated">Última actualización: {updated}</p>
-          <div className="legal-subnav">
-            {LEGAL_NAV_LINKS.map((l) =>
-              l.href === activeHref ? (
-                <span key={l.href} className="legal-subnav-current">
-                  {l.label}
-                </span>
-              ) : (
-                <Link key={l.href} href={l.href} className="link-mini">
-                  {l.label}
-                </Link>
-              )
-            )}
+      <main>
+        <section className="lp-section" style={{ paddingBottom: 0 }}>
+          <div className="lp-inner">
+            <h1 className="lp-h2">{title}</h1>
+            <p className="legal-updated">Última actualización: {updated}</p>
+            <div className="legal-subnav">
+              {LEGAL_NAV_LINKS.map((l) =>
+                l.href === activeHref ? (
+                  <span key={l.href} className="legal-subnav-current">
+                    {l.label}
+                  </span>
+                ) : (
+                  <Link key={l.href} href={l.href} className="link-mini">
+                    {l.label}
+                  </Link>
+                )
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="lp-section">
-        <div className="lp-inner legal-body">{children}</div>
-      </section>
+        <section className="lp-section">
+          <div className="lp-inner legal-body">{children}</div>
+        </section>
+      </main>
 
       <footer className="lp-footer">
         <div className="lp-inner">

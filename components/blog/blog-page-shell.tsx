@@ -24,9 +24,11 @@ export function BlogPageShell({
     <div className="lp">
       <PublicHeader activeHref={activeHref} />
 
-      <section className="lp-section">
-        <div className="lp-inner">{children}</div>
-      </section>
+      <main>
+        <section className="lp-section">
+          <div className="lp-inner">{children}</div>
+        </section>
+      </main>
 
       <footer className="lp-footer">
         <div className="lp-inner">

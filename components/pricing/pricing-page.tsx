@@ -162,6 +162,7 @@ export function PricingPage() {
         </div>
       </header>
 
+      <main>
       {/* CARDS */}
       <section className="lp-section" style={{ paddingTop: 8 }}>
         <div className="lp-inner">
@@ -261,6 +262,7 @@ export function PricingPage() {
           </div>
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer className="lp-footer">

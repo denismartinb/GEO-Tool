@@ -4866,7 +4866,12 @@ a.notif-row:hover {
 .lp-footer { border-top: 1px solid var(--line); padding: 40px 0; }
 .lp-footer .row1 { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .lp-footer .links { margin-left: auto; display: flex; gap: 22px; flex-wrap: wrap; }
-.lp-footer .links a { font-size: 13px; color: var(--ink-3); font-weight: 550; }
+/* A11Y-PSI-1: el enlace en sí sólo medía la caja del texto (~13px de línea),
+   muy por debajo del área táctil mínima (24x24). El relleno amplía el hit-box
+   sin mover nada visualmente — el margen negativo compensa el padding, así
+   que el texto sigue en el mismo sitio y el hueco entre enlaces (gap: 22px)
+   sigue siendo positivo tras restar los 2x8px del margen. */
+.lp-footer .links a { font-size: 13px; color: var(--ink-3); font-weight: 550; display: inline-block; padding: 8px 6px; margin: -8px -6px; }
 .lp-footer .links a:hover { color: var(--ink); }
 .lp-footer .copy { font-size: 12.5px; color: var(--ink-4); margin-top: 18px; }
 
@@ -5153,7 +5158,7 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .price-meter-t { font-size: 17px; font-weight: 750; margin-top: 15px; letter-spacing: -.01em; }
 .price-meter-d { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); margin-top: 7px; }
 .price-meter-scale { display: flex; align-items: center; gap: 6px; margin-top: 18px; flex-wrap: wrap; }
-.price-meter-scale span { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 4px 9px; border-radius: 999px; background: var(--surface-sunk); color: var(--ink-3); }
+.price-meter-scale span { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 4px 9px; border-radius: 999px; background: var(--surface-sunk); color: var(--ink-2); }
 .price-meter-scale span.top { background: var(--accent); color: #fff; }
 
 .price-matrix-wrap { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--sh-1); background: #fff; }
