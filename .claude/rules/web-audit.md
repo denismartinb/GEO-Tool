@@ -39,6 +39,23 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   comentario sin escribirla: la copia de la matriz se quedó en `{"gemini"}` un
   mes tras entrar ChatGPT —clasificando como `invisible` temas que ChatGPT sí
   citaba— **bajo una cabecera que juraba que un test lo impedía** (log §128).
+- **Un hallazgo nuevo no puntúa sin decisión de producto.** `readiness_score` es
+  el componente `technical` del GEO Score (peso .20) con pesos aprobados por el
+  fundador: darle puntos a un check nuevo mueve la nota de todos los proyectos
+  en silencio. Lo que se añade se reporta **sin puntos** —como `bot_blocked`,
+  `llms_txt_missing`, `sitemap_missing` y `snippet_blocked`—, con tests que
+  fijan que la nota real y la proyectada no se mueven. Ponderarlo es una fase
+  aparte (log §129).
+- **Una señal que sólo existe en la respuesta HTTP se lee antes del cuerpo.**
+  `fetchPageSafely` descartaba las cabeceras al leer el HTML, y una
+  `X-Robots-Tag: nosnippet` servida por un CDN era indetectable mirando sólo el
+  HTML. Si hace falta otra cabecera, se captura en ese mismo punto — después ya
+  no existe (log §129).
+- **Un campo nuevo en `PageCheckResult` nace opcional y con tri-estado.**
+  `undefined` es «nunca medido» y se excluye de fallos Y de aprobados;
+  el valor vacío es «medido y limpio». Nunca se declara limpio lo que no se
+  miró. Leer un campo nuevo sin guardia sobre una fila vieja tiró producción el
+  2026-07-12.
 - **Puerta Pro**: leer `profiles.current_plan` en crudo vía `isProOrAbove`
   (`lib/billing.ts`), nunca vía `getPlanForUser`/`resolvePlan`.
 - **La puerta cubre la cobertura, no la salud técnica** (ADR 0035). La

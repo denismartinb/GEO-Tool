@@ -11928,3 +11928,48 @@ guardián **puede fallar**: reintroduciendo el bug, saltan dos tests.
 siguiente pasada las recalcula sola.
 
 ---
+
+## 129. La auditoría no miraba si el motor tiene permitido citar la página (AUDIT-SNIPPET-1, 2026-08-21)
+
+**El hueco.** `noindex` se comprobaba desde WEB-AUDIT-R3. `nosnippet`,
+`max-snippet:0` y la cabecera `X-Robots-Tag` **no aparecían en ninguna parte
+del repositorio**. Son cosas distintas: `noindex` saca la página del índice;
+`nosnippet` la deja indexada pero **prohíbe reproducir un fragmento de ella**.
+Para un producto de visibilidad en IA, ése es el bloqueo que importa — sin
+fragmento no hay cita, por buena que sea la página.
+
+**Lo que lo hacía invisible.** La directiva puede venir por cabecera HTTP, no
+sólo por meta. `fetchPageSafely` tenía la respuesta en la mano, leía el cuerpo
+y **descartaba las cabeceras con ella**, así que una `X-Robots-Tag: nosnippet`
+servida por un CDN era indetectable para cualquier análisis del HTML — que es
+todo lo que hacíamos. Ahora se lee antes de consumir el cuerpo, que es el único
+momento en que existe.
+
+**No mueve ninguna nota, a propósito.** Se reporta como hallazgo crítico **sin
+puntos**, igual que `bot_blocked`. Dárselos cambiaría `readiness_score`, que es
+el componente `technical` del GEO Score (peso .20) y cuyos pesos aprobó el
+fundador en la fase de `web-audit-issues-1`. Hay tests que fijan que la nota
+real y la proyectada no se mueven. Cuando toque decidir si esto debe pesar,
+será una decisión de producto con su propia aprobación, no un efecto colateral.
+
+**`noarchive` queda fuera, deliberadamente.** Quita la copia en caché, no la
+capacidad de citar. Incluirlo habría sido añadir ruido de higiene justo en la
+mitad del producto que menos lo necesita — la misma crítica que la guía de
+Google hace a los checklists genéricos de GEO.
+
+**Tres estados, no dos.** `[]` es «medido y limpio»; `undefined` es «nunca
+medido» y se excluye de las dos listas. Una instantánea anterior a esta fase no
+se declara limpia: afirmarlo sería decirle al cliente que su web permite
+fragmentos sin haberlo mirado nunca. Es la lección de R3, que tiró producción
+el 2026-07-12 por leer un campo nuevo sin guardia sobre una fila vieja.
+
+**Detalle que costó un test.** `data-nosnippet` es un atributo que marca un
+bloque concreto (un aviso legal, un pie), no una directiva de página. Contarlo
+habría convertido en «bloqueada» cualquier web que lo use bien.
+
+**Pendiente, no roto.** Sigue sin comprobarse el `Disallow` por ruta en
+`robots.txt` (hoy sólo cuenta `Disallow: /` literal, así que un
+`Disallow: /blog/` para GPTBot pasa limpio) ni el Googlebot clásico. Son la
+siguiente tanda de la misma zona.
+
+---
