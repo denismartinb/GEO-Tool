@@ -423,7 +423,7 @@ mismas guardas estructurales que las dos ya aprobadas:
      Nota: el hard-delete de proyectos ya está shipeado (DATA-MGMT-1), pero
      darle ese poder al piloto es nuevo — si prefieres, la v1 archiva en vez
      de borrar y el borrado queda manual.
-- **P2 · Journeys de lectura nuevos** — ✅ **hecho (2026-08-20, log §128)**:
+- **P2 · Journeys de lectura nuevos** — ✅ **hecho (2026-08-20, log §129)**:
   `/signup` + `/forgot-password` (render + overflow en 3 anchos + `noindex,
   follow`; el loop real de email de confirmación sigue siendo smoke manual —
   no hay buzón), vía `tests/pilot/journeys/auth-pages.spec.ts`. `/pricing` y
@@ -452,7 +452,7 @@ Los listo con recomendación para que decidas cuáles entran:
    "hasta publicar la web" — lanzar es publicar. Recomiendo: entra. (log §32)
 2. ~~**`triggerWebAuditRun` sin comprobar `response.ok`**~~ — **ya
    implementado**, encontrado al verificar durante el Task Intake de
-   PRELAUNCH-HARDENING-1 Fase P2 (2026-08-20, log §128):
+   PRELAUNCH-HARDENING-1 Fase P2 (2026-08-20, log §129):
    `lib/web-audit/audit-dispatch.ts` ya comprueba `response.ok` y registra el
    fallo. WEB-AUDIT-DRIVE-1 (2026-08-07) cerró esto sin que este ítem se
    marcara — el plan quedó obsoleto en ese punto, no el código. Ningún trabajo
