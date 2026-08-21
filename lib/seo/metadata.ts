@@ -37,7 +37,7 @@ const RASTER = /\.(png|jpe?g|webp|gif)$/i;
 /** La portada si sirve como tarjeta social; si no, la imagen de marca. */
 export function ogImageFor(cover: string | undefined): { url: string; width?: number; height?: number } {
   if (!cover || !RASTER.test(cover)) return DEFAULT_OG_IMAGE;
-  // Sin `width`/`height`: las portadas reales son cuadradas de 1254×1254 y
+  // Sin `width`/`height`: las portadas reales son apaisadas de 1200×300 y
   // declararlas como 1200×630 sería mentir sobre el activo. Omitirlas es
   // válido — el rastreador descarga la imagen y la mide.
   return { url: cover };

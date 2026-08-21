@@ -11607,6 +11607,98 @@ de donde sale el `overflow-x` original), §55 (lo que el piloto sí mide hoy).
 
 ---
 
+## 125. Las 16 portadas del blog pasan a la tanda WebP del fundador, y tres de ellas llevaban tres pilotos en verde sin usarse (2026-08-20)
+
+El fundador entregó un zip con 16 portadas nuevas (1200×300 WebP, una por
+artículo publicado, con su índice de concepto visual). Sustituyen a las que
+había: 13 reemplazan un `cover.webp` anterior y 3 —los posts de sector— llegan
+donde antes había un SVG dibujado por un agente.
+
+**El fallo, que es la parte que merece quedar escrita.** Copiar los 16 ficheros
+a `public/blog/<slug>/cover.webp` parecía el trabajo entero, y no lo era.
+`geo-para-ecommerce`, `geo-para-saas-b2b` y `geo-para-agencias` declaraban
+`coverImage: "/blog/<slug>/cover.svg"` en `lib/blog/posts.ts`. El `.webp` nuevo
+quedó en `public/` sin que nada lo referenciara y esos tres artículos siguieron
+pintando la portada vieja. Es decir: **3 de las 16 portadas que el encargo pedía
+actualizar no se actualizaron**, y el PR afirmaba que sí.
+
+**Lo grave es cómo pasó la revisión.** El `ux-pilot` corrió **tres veces** sobre
+tres commits distintos y las tres dio `PILOT PASS` con
+`blog-geo-para-ecommerce`, `blog-geo-para-saas-b2b` y `blog-geo-para-agencias`
+en ✅ a 375, 768 y 1280 px. Y tenía razón en lo que mide: la página cargaba
+perfecta, con una portada válida y bonita. Sólo que era la anterior. Misma
+enfermedad que §124 (57 superficies en verde sobre un sitio que no se podía
+scrollear) y que el incidente fundacional de Auditoría web del 2026-08-02: **una
+pantalla que renderiza bien no es una pantalla verificada.** Un reemplazo de
+activo no tiene forma de fallar visiblemente — el respaldo es otro activo
+correcto—, así que aquí el veredicto del piloto no aportaba nada y la
+comprobación tenía que ser sobre el código: *¿quién referencia el fichero que
+acabo de escribir?*
+
+**Lo que se corrigió al encontrarlo:**
+
+- Las tres declaraciones `coverImage` pasan a `.webp`.
+- Los tres `cover.svg` superseded se borran: nada los referencia ya, y dejarlos
+  invita a la siguiente sesión a preguntarse cuál manda.
+- **Efecto colateral bueno, no buscado:** `ogImageFor` (`lib/seo/metadata.ts`)
+  filtra por `RASTER`, así que un `coverImage` SVG cae a la imagen OG de marca.
+  Esos tres artículos llevaban desde su publicación compartiéndose en redes con
+  la portada genérica; ahora emiten la suya.
+- El comentario de `ogImageFor` afirmaba que «las portadas reales son cuadradas
+  de 1254×1254». Con esta tanda son apaisadas de 1200×300 (verificado leyendo la
+  cabecera VP8 de los 16 ficheros). El argumento de omitir `width`/`height`
+  sigue siendo válido —declarar 1200×630 seguiría siendo mentira—, pero la cifra
+  era falsa y un comentario falso es peor que ninguno (§124).
+- `docs/agentic-weekly-post.md` mandaba copiar esos tres SVG como plantilla de
+  partida. Referencia muerta desde el borrado; reescrita.
+
+**Qué queda pendiente.** La cobertura de portadas se apoya hoy en
+`lib/blog/covers.test.ts`, que comprueba que todo post declara `coverImage` y
+que el fichero declarado existe. Las dos cosas eran ciertas **durante todo el
+fallo**: `.svg` existía. Lo que no cubre nadie es la pregunta inversa —un
+`public/blog/<slug>/` con dos portadas de distinta extensión y sólo una
+declarada— que es exactamente la firma de este incidente. Un test de huérfanos
+ahí lo habría cazado en CI sin gastar un piloto.
+
+Y no es hipotético: al barrer el directorio buscando esta firma aparecieron
+**cinco `cover.svg` huérfanos más**, anteriores a esta fase y ajenos a ella
+(`como-aparecer-en-perplexity`, `como-hacer-que-chatgpt-recomiende-tu-negocio`,
+`como-medir-trafico-chatgpt-ga4`, `metricas-geo-que-medir`,
+`que-es-una-auditoria-geo`). Esos posts ya declaraban `.webp`, así que ahí el
+huérfano no rompe nada hoy — pero son cinco directorios donde la siguiente
+sesión encontrará dos portadas y ninguna señal de cuál manda. **No se borran en
+este PR a propósito**: son de otra fase y el encargo era actualizar portadas, no
+barrer activos. Quedan como el primer caso de prueba del test de huérfanos
+cuando se escriba.
+
+**Decisión abierta que este PR NO resuelve: chocan con la letra de ADR 0028.**
+Su regla vigente dice que una portada «no puede representar una interfaz de
+producto, un gráfico, un panel ni una métrica». Las 16 portadas nuevas son
+justamente eso: paneles, líneas, donuts, barras, medidores y tarjetas de KPI.
+
+Miradas a resolución nativa, sin embargo, **no contienen una sola cifra
+legible** — todo el texto de las maquetas son barras de relleno abstractas, sin
+ejes, sin etiquetas y sin números. Cumplen entero el *motivo* declarado de la
+regla («si la portada enseña algo que parece un dato de Genscore, ese dato tiene
+que existir»: aquí no hay nada que parsee como dato) y contradicen su *letra*.
+Tampoco reproducen la interfaz real de GenScore: son paneles genéricos de stock.
+
+Se publican tal cual porque son activos entregados por el fundador, y ADR 0028
+ya trató así las cuatro primeras («las portadas actuales, aportadas por el
+fundador, se mantienen»). Pero **queda un ADR contradicho en silencio**, que es
+exactamente lo que §124 llama peor que ninguno. La salida limpia es una tercera
+enmienda a ADR 0028 que estreche la regla de «ningún panel ni gráfico» a «ninguna
+cifra legible ni interfaz reconocible de GenScore» — que es lo que la regla
+siempre quiso decir. **No se escribe aquí porque es una decisión, no un
+arreglo**, y le corresponde al fundador.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `lib/seo/metadata.ts`,
+`.claude/rules/growth-content.md`, `docs/agentic-weekly-post.md`,
+`public/blog/*/cover.webp`; ADR 0028 y sus dos enmiendas; log §124 y el
+incidente del 2026-08-02 en CLAUDE.md para el mismo punto ciego del piloto.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
