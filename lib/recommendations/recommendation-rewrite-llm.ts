@@ -119,7 +119,7 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
     "You MUST use ONLY the facts listed below. Do NOT invent any fact, statistic, competitor name, domain, page or detail not explicitly given.",
     "Where a specific value (a number, a price, a date) would be needed but is not in the facts, write a clearly-marked placeholder like [tu dato aquí]. NEVER invent the value.",
     "Do NOT mention any competitor name other than the ones explicitly listed under 'Competitors you may mention'.",
-    // RECS-USEFULNESS-1 Fase C (log §127). C1 lo vuelve a comprobar en el
+    // RECS-USEFULNESS-1 Fase C (log §128). C1 lo vuelve a comprobar en el
     // servidor sobre una lista cerrada; C2 y C3 son reglas BLANDAS y sólo
     // viven aquí — declarado así a propósito, ver la regla de ruta.
     "You may NAME a competitor, but you may NEVER claim the brand is better, stronger, more reliable or otherwise superior to a named competitor. A neutral, verifiable comparison is fine ('X answers this query, you do not'); a value judgement is not ('unlike X, we keep a high standard'). Comparative advertising naming rivals without objective, verifiable data exposes the brand to a legal claim — never write it, not even softened.",

@@ -119,7 +119,7 @@ describe("validateRewriteAgainstEvidence", () => {
   });
 });
 
-describe("comparación contra competidores nombrados (Fase C, log §127)", () => {
+describe("comparación contra competidores nombrados (Fase C, log §128)", () => {
   const base = {
     title: "Refuerza tu contenido de fibra",
     allowedCompetitors: ["Jazztel", "Vodafone España", "MásMóvil", "Orange España", "Digi"],
@@ -131,7 +131,7 @@ describe("comparación contra competidores nombrados (Fase C, log §127)", () =>
   /**
    * No es un ejemplo inventado: es la frase que el producto generó de verdad
    * para el proyecto Movistar el 2026-08-21, dentro de un artefacto que la
-   * Fase A ya devolvía entero y bien formado (log §127).
+   * Fase A ya devolvía entero y bien formado (log §128).
    */
   const FRASE_DEL_INCIDENTE =
     "A diferencia de operadores como Jazztel, Vodafone España, MásMóvil, Orange España o Digi, " +

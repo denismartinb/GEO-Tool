@@ -74,6 +74,36 @@ paths:
   concreta y acotada es lo que hacía inservibles las listas de referencia
   (Semrush, Otterly.AI) que motivaron el rediseño — no se añade un tipo de
   recomendación nuevo sin decidir su primer paso.
+- **Todo tipo declara su entregable y su control** (`lib/recommendations/
+  deliverable.ts`, RECS-ACCION-1a, log §127). El CTA nombra el artefacto que su
+  playbook de `recommendation-rewrite-llm.ts` ya le pide al modelo ("Generar
+  comparativa", no "Generar propuesta con IA"): si cambia un playbook, cambia
+  el CTA con él o el botón promete una cosa y llega otra.
+  `deliverable.test.ts` recorre `KNOWN_RECOMMENDATION_TYPES` y falla si una
+  regla nueva llega sin decidirlo — misma disciplina que `first_step`. Un tipo
+  sin entrada degrada al CTA genérico y **no afirma control ninguno**: decir
+  "En tu web" sobre algo sin clasificar sería inventarse un hecho, misma
+  dirección de fallo que el tri-estado de las sondas de la auditoría.
+- **Del control sólo se pinta la excepción.** `third_party` e `in_app` llevan
+  chip en la tarjeta plegada; `own_site` no, porque es lo que el usuario ya da
+  por supuesto en 11 de los 15 tipos y repetirlo sería la tinta que §115 quitó
+  de esa vista. La ausencia de chip significa "es tuyo". Lo que §115 retiró de
+  ahí fue vocabulario del motor, no señales de triaje.
+- **"Listo para copiar" se cuenta, no se estima.** La insignia del panel del
+  plan sale de contar los placeholders (`[tu dato aquí]`) que el prompt de
+  reescritura ya obliga a poner donde falta un dato. Se cuentan artefactos y
+  pasos, nunca título ni resumen. Si algún día el prompt deja de exigir
+  placeholders, esta cuenta deja de significar nada y hay que rehacerla. El
+  regex excluye comillas y llaves a propósito: los JSON-LD llevan arrays, y
+  contarlos como datos que faltan volvería la etiqueta ruido justo en el
+  artefacto más pegable que se genera.
+- **Lo que el piloto no puede alcanzar se prueba por render.** El chip de
+  control (sólo en tipos externos) y la insignia de estado (sólo tras una
+  escritura, que el piloto permanente no hace) son estructuralmente invisibles
+  para `ux-pilot`. `recommendations-client.test.tsx` los renderiza con
+  `react-dom/server` y asegura su contenido — incluida la **ausencia** del chip
+  en `own_site`, que es lo que le da significado. No se retira ese test para
+  «ya lo mira el piloto»: no puede (log §127).
 - **El hueco de fuentes se divide por familia** (`pursue_comparator_sources`,
   `pursue_community_sources`, `pursue_media_sources`), reutilizando el
   clasificador de Páginas citadas. Las fuentes enciclopédicas quedan **fuera a
@@ -89,7 +119,7 @@ paths:
   hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
   `ScanStatePill` del sticky-header, nunca tapando el backlog.
 
-## Honestidad de lo que se genera (RECS-USEFULNESS-1 Fase C, log §127)
+## Honestidad de lo que se genera (RECS-USEFULNESS-1 Fase C, log §128)
 
 - **Nombrar a un competidor sí; decir que somos mejores que él, no.** Se rechaza
   en servidor el texto generado cuya frase nombra a un competidor de la lista

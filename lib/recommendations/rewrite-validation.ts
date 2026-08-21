@@ -87,7 +87,7 @@ export type RewriteValidationResult =
   | { valid: false; reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned" | "comparative_claim_against_competitor" };
 
 /**
- * Léxico de **juicio de valor comparativo** (RECS-USEFULNESS-1 Fase C, log §127).
+ * Léxico de **juicio de valor comparativo** (RECS-USEFULNESS-1 Fase C, log §128).
  *
  * **Por qué existe.** El 2026-08-21 el fundador generó una propuesta real para
  * el proyecto Movistar y el artefacto salió sintácticamente impecable —la Fase A
@@ -116,7 +116,7 @@ export type RewriteValidationResult =
  * eso son exactas. «Juicio de valor» no lo es: este léxico es finito y está en
  * castellano, así que un superlativo escrito de otra forma —o en otro idioma,
  * y `projects.language` admite más de uno— pasa. Es una red, no una garantía,
- * y la regla blanda del prompt es lo que cubre el resto (log §127).
+ * y la regla blanda del prompt es lo que cubre el resto (log §128).
  */
 const COMPARATIVE_JUDGEMENT_MARKERS = [
   "superior",
