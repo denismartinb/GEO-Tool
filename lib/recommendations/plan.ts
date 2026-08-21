@@ -10,6 +10,8 @@
  * del que muestra.
  */
 
+import { deliverableForType } from "@/lib/recommendations/deliverable";
+
 export type PlanCandidate = {
   id: string;
   recommendation_type: string;
@@ -19,6 +21,27 @@ export type PlanCandidate = {
   consecutive_runs_open?: number;
   potentialPoints?: number | null;
 };
+
+/**
+ * RECS-ACCION-1c — el techo de las acciones externas.
+ *
+ * Una acción que depende de un tercero **nunca** se pone por encima de una que
+ * el cliente puede ejecutar hoy. Antes el plan ordenaba sólo por puntos, y el
+ * contrafactual de `pursue_*` es generoso por construcción: asume que TODAS las
+ * fuentes citadas acaban mencionando la marca, así que "consigue que cinco
+ * webs te mencionen" salía la primera, con más puntos que nada de lo que el
+ * usuario controla. Es exactamente la queja que abrió esta serie de fases
+ * (fundador, 2026-08-21: *"escribir a hubspot y conseguir que te nombren en su
+ * blog no es muy realista"*), y el chip de control la señalaba sin corregirla.
+ *
+ * No las esconde: si no hay nada propio que hacer, una externa sigue subiendo
+ * al plan. Es un techo, no un filtro.
+ *
+ * Un tipo sin control declarado NO se penaliza — misma dirección de fallo que
+ * `deliverableForType`: sin clasificar no se afirma nada, y el orden se queda
+ * como estaba.
+ */
+const CONTROL_BAND = 10_000;
 
 /**
  * Cuántas acciones propone el plan por escaneo. Tres es una decisión de
@@ -35,12 +58,13 @@ export const PLAN_SIZE = 3;
  * del motor, que ya pondera severidad, impacto, confianza y alcance.
  */
 export function planScore(rec: PlanCandidate): number {
+  const band = deliverableForType(rec.recommendation_type).control === "third_party" ? 0 : CONTROL_BAND;
   const points = typeof rec.potentialPoints === "number" && rec.potentialPoints > 0 ? rec.potentialPoints : null;
   if (points !== null) {
     const effortBonus = rec.effort === "low" ? 0.3 : rec.effort === "medium" ? 0.1 : 0;
-    return 1000 + points + effortBonus;
+    return band + 1000 + points + effortBonus;
   }
-  return 1000 - rec.priority_rank;
+  return band + 1000 - rec.priority_rank;
 }
 
 /**

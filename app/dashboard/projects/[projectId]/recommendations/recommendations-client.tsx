@@ -12,6 +12,7 @@ import {
   CONTROL_LABEL,
   classifySolutionReadiness,
   deliverableForType,
+  pointsCaption,
   readinessLabel
 } from "@/lib/recommendations/deliverable";
 
@@ -554,7 +555,7 @@ export function RecCard({
             {typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS ? (
               <>
                 <div className="rec2-pts">+{formatPoints(rec.potentialPoints)} pt</div>
-                <div className="rec2-pts-l">potenciales</div>
+                <div className="rec2-pts-l">{pointsCaption(rec.recommendation_type)}</div>
               </>
             ) : (
               /* Confidence deliberately NOT shown here (founder review): repeated
@@ -1053,7 +1054,7 @@ export function RecommendationsClient({
     const write = (rec: Recommendation, i: number) => {
       const pts =
         typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS
-          ? ` (+${formatPoints(rec.potentialPoints)} pt potenciales)`
+          ? ` (+${formatPoints(rec.potentialPoints)} pt ${pointsCaption(rec.recommendation_type)})`
           : "";
       lines.push(`${i + 1}. **${rec.title}**${pts}`);
       lines.push(`   ${rec.description}`);

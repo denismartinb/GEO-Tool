@@ -12091,3 +12091,46 @@ habría convertido en «bloqueada» cualquier web que lo use bien.
 siguiente tanda de la misma zona.
 
 ---
+
+## 132. Lo que no controlas deja de encabezar el plan (RECS-ACCION-1c, 2026-08-21)
+
+**Qué pasó.** El fundador escaneó un proyecto real (30 prompts, 7 competidores)
+y la primera acción de la pantalla, con «Prioridad alta» y **+11 pt** —el
+potencial más alto de las tres—, era *«Consigue que 5 webs que cita la IA te
+mencionen»*. Es literalmente la queja con la que abrió esta serie de fases:
+*«escribir a hubspot y conseguir que te nombren en su blog no es muy
+realista»*. RECS-ACCION-1a (§127) le puso el chip «Depende de terceros», que
+lo **señalaba** — pero nada lo bajaba de sitio.
+
+**Por qué salía primera, y no es casualidad.** El contrafactual de ADR 0017
+para los tipos `pursue_*` aplica la mutación `authority` sobre todas las filas
+afectadas: asume que **todas** las fuentes citadas acaban mencionando la marca.
+Es un techo honesto («hasta +X»), pero es un techo generoso por construcción, y
+compite en la misma unidad que «añade un párrafo a tu página». Ordenando sólo
+por puntos, lo que menos controlas gana casi siempre.
+
+**Dos correcciones, ninguna toca el motor ni el scoring.**
+
+1. **Techo de control en el plan** (`planScore`, `lib/recommendations/plan.ts`).
+   Una acción `third_party` nunca se pone por encima de una que el cliente
+   puede ejecutar hoy. **Es un techo, no un filtro**: si no hay nada propio que
+   hacer, la externa sigue subiendo al plan — esconderla sería la otra forma de
+   mentir. `in_app` cuenta como propio (se resuelve dentro del producto), y un
+   tipo sin control declarado **no se penaliza**, misma dirección de fallo que
+   `deliverableForType`.
+2. **La promesa dice de quién depende** (`pointsCaption`). La cifra no cambia;
+   cambia su etiqueta: «+11 pt · **si te citan**» en vez de «potenciales». Dos
+   promesas que no valen lo mismo dejan de enseñarse con la misma palabra.
+
+**Lo que NO se hizo, y por qué está aquí escrito.** El plan aprobado de
+RECS-ACCION-1 incluía este techo desde el principio; la fase 1a entregó el chip
+y se dejó el techo fuera sin decirlo. Se corrige aquí en vez de dejar el hueco
+tapado por una fase que parecía completa.
+
+**Pendiente, con decisión del fundador abierta.** «Aumentar visibilidad de
+marca» emite **una tarjeta por prompt** — 30 en este proyecto, de 36 acciones
+totales. Agrupar en el motor está descartado (§115 punto 6: cambiaría el
+`dedupe_key` y rompería la resolución por prompt de RECS-3), así que la salida
+tiene que ser de presentación. Opciones evaluadas en la sesión; sin implementar.
+
+---

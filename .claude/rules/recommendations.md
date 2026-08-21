@@ -110,6 +110,17 @@ paths:
   propósito**: no se puede pedir a un usuario que entre en Wikipedia. Los tres
   tipos comparten la misma mutación contrafactual `authority` que el tipo
   original — sin lógica de scoring nueva.
+- **Lo que depende de un tercero nunca encabeza el plan** (`planScore`,
+  RECS-ACCION-1c, log §132). El contrafactual de los tipos `pursue_*` asume que
+  TODAS las fuentes citadas acaban mencionando la marca, así que su cifra es
+  generosa por construcción y ordenando sólo por puntos se comía el primer
+  puesto. **Es un techo, no un filtro**: sin nada propio que hacer, una externa
+  sigue subiendo — esconderla sería la otra forma de mentir. `in_app` cuenta
+  como propio; un tipo sin control declarado no se penaliza.
+- **Una cifra condicionada se etiqueta como tal.** «+11 pt · si te citan», no
+  «potenciales» (`pointsCaption`). El número no cambia — cambia lo que declara,
+  porque "que cinco terceros actúen" y "añade un párrafo a tu página" no son la
+  misma promesa aunque ADR 0017 las calcule igual (log §132).
 - **"Alta prioridad" es un único criterio absoluto** (impacto × confianza),
   compartido entre la badge de la tarjeta y el filtro. No debe volver a existir
   un segundo criterio posicional (`priority_rank <= N`) conviviendo con él en
