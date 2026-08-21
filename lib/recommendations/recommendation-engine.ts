@@ -174,6 +174,16 @@ export function labelForType(type: string): string {
   return labelByType[type] ?? type.replaceAll("_", " ");
 }
 
+/**
+ * Registro canónico de los tipos que este motor puede emitir. `labelByType` ya
+ * era esa lista de facto ("every value emitted by this engine must have an
+ * entry here"); exportarla la vuelve verificable, y es lo que permite que
+ * `deliverable.test.ts` falle si se añade una regla nueva sin decidir qué
+ * entregable promete su botón — el mismo fallo que la regla de ruta ya impide
+ * para `first_step`.
+ */
+export const KNOWN_RECOMMENDATION_TYPES: readonly string[] = Object.keys(labelByType);
+
 type ExtractedShape = {
   brand?: { evidence?: string[]; position?: number | null };
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[]; position?: number | null }>;

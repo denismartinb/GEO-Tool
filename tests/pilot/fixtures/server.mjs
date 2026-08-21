@@ -479,6 +479,47 @@ function loginPage() {
   );
 }
 
+// PRELAUNCH-HARDENING-1 Fase P2 (auth-pages.spec.ts). Mismo molde que
+// `loginPage()` a propósito, no `html()`: son la misma clase de pantalla —
+// fina, sin chasis de consola — y las tres (login/signup/forgot-password)
+// declaran `robots: { index: false, follow: true }` (SEO-POS-1 T10), así que
+// las dos nuevas llevan la meta que `loginPage()` no necesitaba comprobar.
+function signupPage() {
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, follow">
+<title>Crear cuenta — GenScore</title>
+</head><body>
+<h1>Crea tu cuenta</h1>
+<form method="POST" action="/signup">
+  <label for="email">Email de trabajo</label>
+  <input id="email" name="email" type="email" required>
+  <label for="password">Contraseña</label>
+  <input id="password" name="password" type="password" required>
+  <label for="confirmPassword">Repite la contraseña</label>
+  <input id="confirmPassword" name="confirmPassword" type="password" required>
+  <button type="submit">Crear cuenta</button>
+</form>
+</body></html>`;
+}
+
+function forgotPasswordPage() {
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, follow">
+<title>Recuperar contraseña — GenScore</title>
+</head><body>
+<h1>¿Olvidaste tu contraseña?</h1>
+<form>
+  <label for="reset-email">Email de trabajo</label>
+  <input id="reset-email" name="email" type="email" required>
+  <button type="submit">Enviar código de recuperación</button>
+</form>
+</body></html>`;
+}
+
 /**
  * Minimal stand-ins for the "this screen has real data" anchors each read-only
  * journey declares via `ContentExpectation` (tests/pilot/support/journey.ts).
@@ -943,6 +984,18 @@ const server = createServer((request, response) => {
   if (path === "/login") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(loginPage());
+    return;
+  }
+
+  if (path === "/signup") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(signupPage());
+    return;
+  }
+
+  if (path === "/forgot-password") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(forgotPasswordPage());
     return;
   }
 

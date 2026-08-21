@@ -48,6 +48,21 @@ export type MetadataCheck = {
 export type FreshnessStatus = "fresh" | "aging" | "stale" | "unknown";
 export type FreshnessCheck = { status: FreshnessStatus; points: number; date: string | null };
 
+/**
+ * Una directiva que impide a un motor CITAR la página, aunque pueda
+ * rastrearla e indexarla (AUDIT-SNIPPET-1).
+ *
+ * Deliberadamente NO incluye `noarchive`: eso quita la copia en caché, no la
+ * capacidad de citar, y meterlo aquí sería añadir ruido de higiene justo en
+ * la mitad del producto que menos lo necesita. Sólo se recoge lo que de
+ * verdad bloquea una cita.
+ */
+export type SnippetBlock = {
+  directive: "nosnippet" | "max-snippet:0";
+  /** Dónde se declaró, para que la guía señale el sitio exacto que hay que tocar. */
+  source: "meta" | "header";
+};
+
 export type IndexabilityCheck = {
   points: number;
   canonicalPresent: boolean;
@@ -57,6 +72,18 @@ export type IndexabilityCheck = {
   /** true when a <meta name="robots" content="..."> tag contains "noindex". Absence of the tag means indexable (the default). */
   noindex: boolean;
   hreflangPresent: boolean;
+  /**
+   * Directivas que bloquean la cita, de la meta robots y de `X-Robots-Tag`.
+   * Opcional SÓLO porque las instantáneas persistidas antes de AUDIT-SNIPPET-1
+   * no lo tienen: `undefined` significa "nunca medido" y **no** es lo mismo
+   * que `[]` ("medido y limpio"). Misma disciplina que `metadata.ogOk` y por
+   * el mismo motivo — leer un campo nuevo sin guardia sobre una fila vieja
+   * tiró la pantalla en producción el 2026-07-12.
+   *
+   * No suma ni resta puntos: `points` sigue saliendo de canonical + noindex +
+   * hreflang, así que ninguna nota histórica se mueve.
+   */
+  snippetBlocks?: SnippetBlock[];
 };
 
 export type CitabilityCheck = {
@@ -83,6 +110,8 @@ export type PageCheckContext = {
   /** The page's own (post-redirect) URL — used to resolve a relative canonical href to an absolute one. */
   pageUrl: string;
   projectDomainNormalized: string;
+  /** Cabecera `X-Robots-Tag` de la respuesta, si la hubo (AUDIT-SNIPPET-1). Ver `PageFetchResult`. */
+  xRobotsTag?: string | null;
 };
 
 const LD_JSON_RE = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -272,6 +301,44 @@ function hasNoindex(html: string): boolean {
   return false;
 }
 
+/** Lee el `content` de la meta robots una sola vez, en minúsculas. */
+function robotsMetaContent(html: string): string | null {
+  const metaTagRe = /<meta\b[^>]*>/gi;
+  for (const match of html.matchAll(metaTagRe)) {
+    const tag = match[0];
+    if ((getAttr(tag, "name") ?? "").toLowerCase() !== "robots") continue;
+    return (getAttr(tag, "content") ?? "").toLowerCase();
+  }
+  return null;
+}
+
+/** `max-snippet:0` prohíbe cualquier fragmento — equivale a nosnippet para citar. */
+const MAX_SNIPPET_ZERO_RE = /max-snippet\s*:\s*0(?!\d)/;
+
+function findSnippetBlocks(html: string, xRobotsTag: string | null | undefined): SnippetBlock[] {
+  const blocks: SnippetBlock[] = [];
+  const seen = new Set<string>();
+
+  const scan = (value: string | null | undefined, source: SnippetBlock["source"]) => {
+    if (!value) return;
+    const text = value.toLowerCase();
+    // "nosnippet" como palabra: que `data-nosnippet` (un atributo de bloque,
+    // no una directiva de página) no se cuele como si lo fuera.
+    if (/(^|[\s,;:])nosnippet([\s,;:]|$)/.test(text)) {
+      const key = `nosnippet:${source}`;
+      if (!seen.has(key)) (seen.add(key), blocks.push({ directive: "nosnippet", source }));
+    }
+    if (MAX_SNIPPET_ZERO_RE.test(text)) {
+      const key = `max-snippet:0:${source}`;
+      if (!seen.has(key)) (seen.add(key), blocks.push({ directive: "max-snippet:0", source }));
+    }
+  };
+
+  scan(robotsMetaContent(html), "meta");
+  scan(xRobotsTag, "header");
+  return blocks;
+}
+
 /**
  * Indexing signals (WEB-AUDIT-R3): whether the page can even be indexed
  * (noindex is a hard blocker worth the most points here — a verified page
@@ -288,6 +355,10 @@ export function checkIndexability(html: string, context: PageCheckContext): Inde
   const hreflangPresent = hasHreflang(html);
 
   // R3 weight: canonical 5 + indexable 10 + hreflang 5 = 20 — see module header.
+  // `snippetBlocks` queda FUERA de esta suma a propósito (AUDIT-SNIPPET-1):
+  // meterlo movería `readiness_score`, que es componente del GEO Score con
+  // peso .20 y pesos aprobados por el fundador. Se reporta como hallazgo sin
+  // puntos, igual que `bot_blocked`.
   const points = (canonical.present && canonical.sameDomain ? 5 : 0) + (noindex ? 0 : 10) + (hreflangPresent ? 5 : 0);
   return {
     points,
@@ -295,7 +366,8 @@ export function checkIndexability(html: string, context: PageCheckContext): Inde
     canonicalOk: canonical.present && canonical.sameDomain,
     canonicalUrl: canonical.url,
     noindex,
-    hreflangPresent
+    hreflangPresent,
+    snippetBlocks: findSnippetBlocks(html, context.xRobotsTag)
   };
 }
 

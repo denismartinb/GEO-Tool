@@ -34,6 +34,33 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
 - **Ampliar el corte pasa por ordenar la cascada primero.** `@layer`, o mover
   MOBILE-1 entero. No es una limpieza: cambia quién gana en cada empate de
   especificidad, así que va en su propia fase con su propia pasada de piloto.
+- **En `html` y `body`, recortar es `overflow-x: clip` — NUNCA `hidden`.**
+  `hidden` en un eje fuerza al otro a computar de `visible` a `auto` (CSS
+  Overflow 3 §3.2), y eso convierte al elemento raíz en contenedor de scroll.
+  En Chrome acaba en un scrollport cuyo `overflow` usado es `hidden`, donde la
+  especificación permite el scroll programático y **prohíbe al navegador
+  ofrecer cualquier mecanismo al usuario**: el 2026-08-20 la zona pública
+  entera era imposible de scrollear en Chrome —ni rueda, ni teclado, ni
+  barra— mientras `window.scrollTo()` seguía funcionando (log §124). `clip`
+  recorta exactamente igual y no crea contenedor de scroll ni convierte de eje.
+  La firma a reconocer, porque no se parece a nada más: **`scrollTo` funciona y
+  la entrada de usuario no**. Si vuelve a pasar, lo primero que hay que pedir
+  es `getComputedStyle(document.documentElement).overflowY` junto a
+  `scrollHeight`/`innerHeight`, no capturas.
+- **Nada de lo que sólo rompe el documento se ve desde la consola, y el piloto
+  tampoco lo ve.** La consola no scrollea el documento (`.shell` es
+  `100dvh`/`overflow:hidden`; el scroller es `.dash-content`), así que enmascara
+  cualquier fallo del scroll de página y lo hace parecer exclusivo de
+  marketing. Y el `ux-pilot` hace capturas, no scroll: las 57 superficies
+  públicas salieron ✅ en las tres anchuras en la misma pasada en que el sitio
+  era inusable (log §124). Un cambio en `overflow`/`overscroll-behavior` de
+  `html` o `body` **se verifica ejercitando rueda y teclado**, no mirando que
+  la pantalla renderice.
+- **Chromium headless sobre Linux no reproduce esto**, así que ni CI ni el
+  piloto son red aquí: el mismo build que era inusable en Chrome/macOS
+  scrolleaba bien en Chromium 141 sobre Linux (log §124). Vale para descartar
+  causas —seis variantes de `overflow`/`overscroll` probadas, ninguna
+  reproducía—, no para dar por bueno un arreglo de scroll.
 - **Un token de tinta que aprueba AA sobre blanco no lo aprueba sobre un fondo
   hundido.** `--ink-3` (#6b7385) da 4,76:1 sobre `#fff` y **4,44:1** sobre
   `--surface-sunk` (#f6f7f9) — por debajo del 4,5:1, por seis centésimas que a
@@ -75,7 +102,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   y el sobrante de la derecha es justo lo que dejaba a `.dash-content` con
   scroll horizontal implícito. `.mrk-full` lo tenía (`ScanMissionRocket` /
   `ReentryMission`, cortado detrás de la barra lateral en escritorio, log
-  §124): la corrección va en un `@media (min-width: 761px)` — el mismo corte
+  §132): la corrección va en un `@media (min-width: 761px)` — el mismo corte
   donde `.shell` deja de colapsar — que rederiva el mismo break-out contra
   `.dash-content` en vez del viewport (`width: calc(100vw - var(--sidebar-w))`
   y un margen izquierdo que cancela el propio centrado/padding de `.page`, vía
@@ -89,7 +116,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   `.dash-content` contiene modales, drawers y el popup del tour de onboarding —
   todos `fixed` y pensados contra el viewport real. Es la solución "correcta"
   de libro para el problema anterior (`cqw` en vez de rederivar `vw` a mano) y
-  se descartó por eso mismo en log §124: convertiría esos overlays en overlays
+  se descartó por eso mismo en log §132: convertiría esos overlays en overlays
   contenidos sin que ninguna pantalla que los usa lo supiera, sin ningún
   ux-pilot en ese PR para cazarlo.
 - **Un `height: 100%` puede caer en referencia circular dentro de un grid con
@@ -100,7 +127,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   cuyo propio contenido depende de esa misma altura (p. ej. un `calc(100% -
   X)` más abajo) puede resolver contra el contenido en vez de contra la caja
   del grid — comprobado con Playwright en `.mrk-scene-slot > .mrk-pad-wrap`
-  (log §124): la fila se dimensionó a 674px, el contenido, en vez de a los
+  (log §132): la fila se dimensionó a 674px, el contenido, en vez de a los
   640px reales de la caja, y el sobrante se recortó por `overflow:hidden` dos
   niveles más arriba, silenciosamente. La corrección que sí funciona es
   `position: absolute; inset: 0` en el hijo — lo saca del grid entero y le da

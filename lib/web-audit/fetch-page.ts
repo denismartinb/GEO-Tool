@@ -213,6 +213,16 @@ export type PageFetchResult =
       fetchMs?: number;
       /** Byte size of the (possibly truncated) HTML body, informational only, same rationale as fetchMs. */
       htmlBytes?: number;
+      /**
+       * Valor crudo de la cabecera `X-Robots-Tag`, si la hubo
+       * (AUDIT-SNIPPET-1). Se captura aquí porque es el ÚNICO sitio donde
+       * existe: la respuesta se descarta al leer el cuerpo, y una directiva
+       * servida por cabecera es invisible en el HTML. `null` = medida y
+       * ausente; `undefined` = nunca medida (fixtures previas a esta fase),
+       * y esa distinción es la que impide afirmar "limpio" sobre algo que no
+       * se miró.
+       */
+      xRobotsTag?: string | null;
     }
   | { status: Exclude<PageFetchStatus, "analyzed"> };
 
@@ -266,13 +276,19 @@ export async function fetchPageSafely(rawUrl: string, projectDomainNormalized: s
     const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
     if (!contentType.includes("text/html")) return { status: "skipped_not_html" };
 
+    // Leer la cabecera ANTES de consumir el cuerpo: después, `response` ya no
+    // sirve para nada y hasta ahora se tiraba con ella una directiva que
+    // decide si un motor puede citar la página.
+    const xRobotsTag = response.headers.get("x-robots-tag");
+
     const html = await readBodyCapped(response, MAX_HTML_BYTES);
     return {
       status: "analyzed",
       html,
       finalUrl: current.toString(),
       fetchMs: Date.now() - startedAt,
-      htmlBytes: Buffer.byteLength(html, "utf-8")
+      htmlBytes: Buffer.byteLength(html, "utf-8"),
+      xRobotsTag
     };
   }
 

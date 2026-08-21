@@ -72,11 +72,97 @@ export type RewriteValidationInput = {
   /** The project's FULL tracked-competitor roster — used to catch a swap to a real-but-unanchored competitor, not just a fully invented name. */
   trackedCompetitors: string[];
   brandDomain: string;
+  /**
+   * El texto generado troceado por piezas (título, resumen, cada paso, cada
+   * ejemplo). La comprobación de comparación es por frase, y un paso sin punto
+   * final se pegaría al siguiente si sólo recibiéramos el texto unido — lo que
+   * inventaría frases que nadie escribió. Opcional: sin él, la guarda cae a
+   * `[title, description]`, que es el comportamiento de los llamadores viejos.
+   */
+  segments?: string[];
 };
 
 export type RewriteValidationResult =
   | { valid: true }
-  | { valid: false; reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned" };
+  | { valid: false; reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned" | "comparative_claim_against_competitor" };
+
+/**
+ * Léxico de **juicio de valor comparativo** (RECS-USEFULNESS-1 Fase C, log §128).
+ *
+ * **Por qué existe.** El 2026-08-21 el fundador generó una propuesta real para
+ * el proyecto Movistar y el artefacto salió sintácticamente impecable —la Fase A
+ * hizo su trabajo— con esta frase dentro, lista para pegar en la web del
+ * cliente:
+ *
+ * > «A diferencia de operadores como Jazztel, Vodafone España, MásMóvil,
+ * > Orange España o Digi, Movistar mantiene un alto estándar de calidad y
+ * > cobertura»
+ *
+ * Publicidad comparativa contra cinco competidores nombrados, sin un solo dato
+ * que la sostenga. En España la comparación tiene que ser objetiva y
+ * verificable sobre características esenciales (art. 10 de la Ley de
+ * Competencia Desleal), así que eso no es contenido flojo: es una reclamación
+ * esperando a ocurrir, y se la damos al cliente con un botón de copiar.
+ *
+ * **Qué se prohíbe y qué NO.** Nombrar a un competidor sigue permitido —lo
+ * gobierna la lista cerrada de `allowedCompetitors`, y media plataforma se basa
+ * en ello: «Compara tu página con la de Digi», una tabla comparativa, «Digi
+ * aparece antes que tú». Lo que se prohíbe es el **juicio de valor** en la
+ * misma frase que el nombre. La comparación neutra y verificable sobrevive
+ * entera; la que dice quién es mejor, no.
+ *
+ * **Límite declarado, porque esto no es un conjunto cerrado.** Las otras dos
+ * guardas de este fichero comparan contra listas (competidores, dominios) y por
+ * eso son exactas. «Juicio de valor» no lo es: este léxico es finito y está en
+ * castellano, así que un superlativo escrito de otra forma —o en otro idioma,
+ * y `projects.language` admite más de uno— pasa. Es una red, no una garantía,
+ * y la regla blanda del prompt es lo que cubre el resto (log §128).
+ */
+const COMPARATIVE_JUDGEMENT_MARKERS = [
+  "superior",
+  "superiores",
+  "supera",
+  "superan",
+  "aventaja",
+  "mejor",
+  "mejores",
+  "peor",
+  "peores",
+  "lider",
+  "líder",
+  "insuperable",
+  "inigualable",
+  "imbatible",
+  "optimo",
+  "óptimo",
+  "por encima de",
+  "alto estandar",
+  "alto estándar",
+  "mayor calidad",
+  "mas fiable",
+  "más fiable",
+  "mas robusto",
+  "más robusto",
+  "mas completo",
+  "más completo",
+  "ventaja frente",
+  "ventaja sobre",
+  "valor anadido",
+  "valor añadido"
+] as const;
+
+/**
+ * Trocea en frases para que el juicio y el nombre tengan que convivir en la
+ * misma. Sin esto, un plan que nombra a un competidor en el paso 2 y usa la
+ * palabra "mejor" en el paso 5 se rechazaría entero — y esos planes son
+ * legítimos.
+ */
+function toSentences(segment: string): string[] {
+  return segment
+    .split(/[.!?\n]+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
 
 export function validateRewriteAgainstEvidence(input: RewriteValidationInput): RewriteValidationResult {
   const rawText = `${input.title} ${input.description}`;
@@ -99,6 +185,22 @@ export function validateRewriteAgainstEvidence(input: RewriteValidationInput): R
     if (!looksLikeDomain(match)) continue;
     if (!allowedDomains.has(normalizeDomain(match))) {
       return { valid: false, reason: "unanchored_domain_mentioned" };
+    }
+  }
+
+  const segments = input.segments?.length ? input.segments : [input.title, input.description];
+  const competitorNames = [...new Set([...input.allowedCompetitors, ...input.trackedCompetitors])]
+    .map(normalize)
+    .filter(Boolean);
+
+  for (const segment of segments) {
+    for (const sentence of toSentences(segment)) {
+      const normalizedSentence = normalize(sentence);
+      const namesCompetitor = competitorNames.some((name) => mentionsTerm(normalizedSentence, name));
+      if (!namesCompetitor) continue;
+      if (COMPARATIVE_JUDGEMENT_MARKERS.some((marker) => normalizedSentence.includes(marker))) {
+        return { valid: false, reason: "comparative_claim_against_competitor" };
+      }
     }
   }
 

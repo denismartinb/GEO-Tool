@@ -100,7 +100,7 @@ function hasUntrustedCompetitorSet(results: ScoreInputRow[]): boolean {
  * UI purposes (that module must stay import-free of scoring code). If a
  * provider gains real grounding, update BOTH this set and ENGINE_META.
  */
-const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
+export const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
 
 /**
  * Minimum share of a run's results that must have extracted cleanly (parsed,
