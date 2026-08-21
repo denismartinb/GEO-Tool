@@ -11607,6 +11607,179 @@ de donde sale el `overflow-x` original), §55 (lo que el piloto sí mide hoy).
 
 ---
 
+## 125. Las 16 portadas del blog pasan a la tanda WebP del fundador, y tres de ellas llevaban tres pilotos en verde sin usarse (2026-08-20)
+
+El fundador entregó un zip con 16 portadas nuevas (1200×300 WebP, una por
+artículo publicado, con su índice de concepto visual). Sustituyen a las que
+había: 13 reemplazan un `cover.webp` anterior y 3 —los posts de sector— llegan
+donde antes había un SVG dibujado por un agente.
+
+**El fallo, que es la parte que merece quedar escrita.** Copiar los 16 ficheros
+a `public/blog/<slug>/cover.webp` parecía el trabajo entero, y no lo era.
+`geo-para-ecommerce`, `geo-para-saas-b2b` y `geo-para-agencias` declaraban
+`coverImage: "/blog/<slug>/cover.svg"` en `lib/blog/posts.ts`. El `.webp` nuevo
+quedó en `public/` sin que nada lo referenciara y esos tres artículos siguieron
+pintando la portada vieja. Es decir: **3 de las 16 portadas que el encargo pedía
+actualizar no se actualizaron**, y el PR afirmaba que sí.
+
+**Lo grave es cómo pasó la revisión.** El `ux-pilot` corrió **tres veces** sobre
+tres commits distintos y las tres dio `PILOT PASS` con
+`blog-geo-para-ecommerce`, `blog-geo-para-saas-b2b` y `blog-geo-para-agencias`
+en ✅ a 375, 768 y 1280 px. Y tenía razón en lo que mide: la página cargaba
+perfecta, con una portada válida y bonita. Sólo que era la anterior. Misma
+enfermedad que §124 (57 superficies en verde sobre un sitio que no se podía
+scrollear) y que el incidente fundacional de Auditoría web del 2026-08-02: **una
+pantalla que renderiza bien no es una pantalla verificada.** Un reemplazo de
+activo no tiene forma de fallar visiblemente — el respaldo es otro activo
+correcto—, así que aquí el veredicto del piloto no aportaba nada y la
+comprobación tenía que ser sobre el código: *¿quién referencia el fichero que
+acabo de escribir?*
+
+**Lo que se corrigió al encontrarlo:**
+
+- Las tres declaraciones `coverImage` pasan a `.webp`.
+- Los tres `cover.svg` superseded se borran: nada los referencia ya, y dejarlos
+  invita a la siguiente sesión a preguntarse cuál manda.
+- **Efecto colateral bueno, no buscado:** `ogImageFor` (`lib/seo/metadata.ts`)
+  filtra por `RASTER`, así que un `coverImage` SVG cae a la imagen OG de marca.
+  Esos tres artículos llevaban desde su publicación compartiéndose en redes con
+  la portada genérica; ahora emiten la suya.
+- El comentario de `ogImageFor` afirmaba que «las portadas reales son cuadradas
+  de 1254×1254». Con esta tanda son apaisadas de 1200×300 (verificado leyendo la
+  cabecera VP8 de los 16 ficheros). El argumento de omitir `width`/`height`
+  sigue siendo válido —declarar 1200×630 seguiría siendo mentira—, pero la cifra
+  era falsa y un comentario falso es peor que ninguno (§124).
+- `docs/agentic-weekly-post.md` mandaba copiar esos tres SVG como plantilla de
+  partida. Referencia muerta desde el borrado; reescrita.
+
+**Qué queda pendiente.** La cobertura de portadas se apoya hoy en
+`lib/blog/covers.test.ts`, que comprueba que todo post declara `coverImage` y
+que el fichero declarado existe. Las dos cosas eran ciertas **durante todo el
+fallo**: `.svg` existía. Lo que no cubre nadie es la pregunta inversa —un
+`public/blog/<slug>/` con dos portadas de distinta extensión y sólo una
+declarada— que es exactamente la firma de este incidente. Un test de huérfanos
+ahí lo habría cazado en CI sin gastar un piloto.
+
+Y no es hipotético: al barrer el directorio buscando esta firma aparecieron
+**cinco `cover.svg` huérfanos más**, anteriores a esta fase y ajenos a ella
+(`como-aparecer-en-perplexity`, `como-hacer-que-chatgpt-recomiende-tu-negocio`,
+`como-medir-trafico-chatgpt-ga4`, `metricas-geo-que-medir`,
+`que-es-una-auditoria-geo`). Esos posts ya declaraban `.webp`, así que ahí el
+huérfano no rompe nada hoy — pero son cinco directorios donde la siguiente
+sesión encontrará dos portadas y ninguna señal de cuál manda. **No se borran en
+este PR a propósito**: son de otra fase y el encargo era actualizar portadas, no
+barrer activos. Quedan como el primer caso de prueba del test de huérfanos
+cuando se escriba.
+
+**Decisión abierta que este PR NO resuelve: chocan con la letra de ADR 0028.**
+Su regla vigente dice que una portada «no puede representar una interfaz de
+producto, un gráfico, un panel ni una métrica». Las 16 portadas nuevas son
+justamente eso: paneles, líneas, donuts, barras, medidores y tarjetas de KPI.
+
+Miradas a resolución nativa, sin embargo, **no contienen una sola cifra
+legible** — todo el texto de las maquetas son barras de relleno abstractas, sin
+ejes, sin etiquetas y sin números. Cumplen entero el *motivo* declarado de la
+regla («si la portada enseña algo que parece un dato de Genscore, ese dato tiene
+que existir»: aquí no hay nada que parsee como dato) y contradicen su *letra*.
+Tampoco reproducen la interfaz real de GenScore: son paneles genéricos de stock.
+
+Se publican tal cual porque son activos entregados por el fundador, y ADR 0028
+ya trató así las cuatro primeras («las portadas actuales, aportadas por el
+fundador, se mantienen»). Pero **queda un ADR contradicho en silencio**, que es
+exactamente lo que §124 llama peor que ninguno. La salida limpia es una tercera
+enmienda a ADR 0028 que estreche la regla de «ningún panel ni gráfico» a «ninguna
+cifra legible ni interfaz reconocible de GenScore» — que es lo que la regla
+siempre quiso decir. **No se escribe aquí porque es una decisión, no un
+arreglo**, y le corresponde al fundador.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `lib/seo/metadata.ts`,
+`.claude/rules/growth-content.md`, `docs/agentic-weekly-post.md`,
+`public/blog/*/cover.webp`; ADR 0028 y sus dos enmiendas; log §124 y el
+incidente del 2026-08-02 en CLAUDE.md para el mismo punto ciego del piloto.
+
+---
+
+## 126. El bloque que ofrecíamos copiar no era JSON válido (RECS-USEFULNESS-1 Fase A, 2026-08-20)
+
+**Origen.** El fundador ejecutó las recomendaciones que GenScore emite para el
+propio `genscore.es`, con la pregunta puesta del lado del cliente: *«imagina que
+pagas porque la herramienta te dé esto para pegar e implementar
+directamente»*. Dos recomendaciones bastaron para encontrar siete fallos. El
+primero no es de criterio, es objetivo: **el bloque JSON-LD que la pantalla
+ofrecía junto a un botón «Copiar» terminaba a media palabra**, en
+`...bien organizadas con HTML se`.
+
+**Causa.** 1.182 caracteres contra un tope de 1.200, en dos sitios a la vez: el
+prompt le pedía al modelo `max 1200 chars` y `sanitizeExampleContent()`
+remataba con un `.slice(0, 1200)` ciego sobre lo que podía ser código. Y nada
+lo paraba después: la validación sólo miraba evidencia (competidores y dominios
+inventados) y longitud — **no había un solo `JSON.parse` en toda la ruta**, así
+que un objeto sin cerrar se persistía y se pintaba con su botón de copiar. El
+cliente lo pegaba, le fallaba en su web, y no tenía forma de saber que el fallo
+era nuestro.
+
+Debajo hay una incompatibilidad de diseño, no un número mal elegido: el playbook
+de `create_faq_section` le pide al modelo «2-4 pares pregunta/respuesta más un
+bloque JSON-LD». **Eso no cabe en 1.200 caracteres.** Le pedíamos algo que no
+entraba y luego lo cortábamos.
+
+**Qué se decidió.** Un módulo propio, `lib/recommendations/pasteable-artifact.ts`,
+con dos reglas que a propósito no son la misma:
+
+- **Un artefacto de código no se trunca jamás.** Medio JSON-LD es peor que
+  ninguno: no falla al pegarlo, falla después, en la web del cliente. Si no
+  cabe, se descarta entero.
+- **La prosa sí se recorta, pero por límite de palabra.** Un párrafo citable que
+  se pasa por poco sigue sirviendo; tirarlo entero pierde valor sin ganar
+  corrección.
+
+Con eso: tope de código a 3.000 (medido sobre el artefacto real, no elegido a
+ojo), `JSON.parse` obligatorio sobre todo lo que pretenda ser JSON —incluido un
+`<script type="application/ld+json">` al que le falte el cierre—, detección de
+marcado que acaba dentro de una etiqueta abierta, y el prompt reescrito para que
+**la integridad gane a la cobertura**: antes un `FAQPage` de dos preguntas
+completo que uno de cuatro cortado.
+
+**El descarte es por artefacto, no por solución.** El plan (título, resumen,
+pasos) sigue valiendo aunque uno de los tres ejemplos venga roto, y devolver un
+error entero le gastaría al usuario una generación de su cupo diario a cambio de
+nada. Lo que no se hace nunca es enseñar el roto.
+
+**El arreglo no repara lo ya generado, y eso importa hoy.** La ruta de
+idempotencia devuelve la solución persistida más reciente
+(`status: completed`, `is_sanitized: true`) sin volver a llamar a Gemini, así
+que **una recomendación que ya tenga guardado un artefacto cortado lo seguirá
+sirviendo cortado para siempre**: el validador nuevo se aplica al escribir, y
+esa fila se escribió antes. No se purga aquí a propósito —borrar filas de
+`generated_solutions` es escritura destructiva sobre datos de clientes y va con
+su propia aprobación—, pero queda dicho: el bloque que originó este incidente
+sigue roto en la cuenta del fundador hasta que se decida qué hacer con las
+filas viejas. Opciones para su fase: revalidar al leer y regenerar sólo si
+falla, o una purga acotada a artefactos que no parsean.
+
+**Lo que queda roto conocido.** El usuario ve un plan con un ejemplo menos y
+**no se le dice que ha faltado uno**; avisarlo en pantalla es trabajo de UI con
+su pasada de piloto. Y quedan seis fallos más de la misma sesión sin tocar, el
+mayor de ellos: **el generador no sabe nada de la web del cliente** —lee sólo
+marca, dominio e idioma— mientras la auditoría web ya parsea su JSON-LD y sabe
+qué `@type` emite. Por eso nos recomendó implementar `FAQPage` en un sitio que
+ya lo emite en doce superficies. Inventario completo, con fases B/C/D
+propuestas, en `docs/specs/recommendations/quality-audit-2026-08.md`.
+
+**Un detalle del método, porque se repitió el patrón de siempre.** La primera
+versión del validador dejaba pasar una valla ```` ```json ```` sin cerrar: al no
+desenvolverla, el bloque dejaba de parecer JSON, se clasificaba como prosa y el
+objeto cortado se colaba recortado por palabra. Lo cazó su propio test antes de
+salir del contenedor. El fixture no es inventado: es el artefacto real del
+incidente.
+
+**Trazabilidad.** `lib/recommendations/pasteable-artifact.ts` y su test;
+`lib/recommendations/rewrite-recommendation.ts` (saneado y traza
+`artifact_dropped`); `lib/recommendations/recommendation-rewrite-llm.ts`
+(presupuesto por tipo de artefacto);
+`docs/specs/recommendations/quality-audit-2026-08.md`.
+
+---
 
 ---
 
@@ -11616,146 +11789,112 @@ de donde sale el `overflow-x` original), §55 (lo que el piloto sí mide hoy).
 
 ---
 
-## 125. El cajón móvil se pulsaba antes de hidratar (2026-08-20)
-
-**Qué pasó.** `el cajón de navegación móvil de pricing abre y sus botones se
-leen` falló en móvil con «element(s) not found» sobre `.lp-mobnav`, mientras el
-mismo test sobre `/` pasaba **en la misma corrida** (PR #446).
-
-**Por qué.** `MarketingMobileNav` es un componente cliente: el botón viene en el
-HTML del servidor, pero su `onClick` no existe hasta que React hidrata, y el
-cajón no está en el DOM hasta que ese estado se abre. Un clic anterior a la
-hidratación no se encola — se pierde. El test esperaba `waitForTimeout(1_000)`
-y pulsaba una vez, o sea apostaba a que un preview frío hidrata en menos de un
-segundo. Perdió la apuesta en la página más pesada de las dos.
-
-**Qué se decidió.** El clic se reintenta hasta que el cajón aparece
-(`expect(...).toPass`), sin espera fija. No afloja nada: si el cajón no abre
-nunca, sigue fallando al agotarse el plazo. Es seguro repetirlo porque el botón
-hace `setOpen(true)`, no un alternar.
-
-**Lo que se deja anotado y NO se toca aquí.** El botón de menú es inerte hasta
-que la página hidrata, así que en un móvil lento hay una ventana real en la que
-un usuario lo pulsa y no pasa nada, sin ningún aviso. No es una regresión —es
-como funciona desde siempre— y arreglarlo es tocar la cabecera pública, otra
-zona y otro PR.
-
-**Trazabilidad.** `tests/pilot/journeys/landing.spec.ts`;
-`components/marketing-mobile-nav.tsx` (por qué el clic se pierde).
 
 ---
 
 ---
 
-## 126. «Generar propuesta con IA»: el prompt pedía nombrar páginas que el guardián rechazaba (2026-08-20)
-
-**Qué pasó.** El fundador pulsó «Generar propuesta con IA» en la tarjeta
-*Entrar en fuentes citadas* del proyecto GenScore y recibió «No se ha podido
-mejorar la redacción en este momento». En una segunda tarjeta, de tipo
-distinto, el mismo mensaje.
-
-**La causa encontrada, con los datos de la propia captura.** Esa acción arma
-el prompt con dos listas: *Domains you may mention* (`evidence_json.
-citation_domains`) y, sólo en las reglas de hueco de fuentes, *Example pages
-already cited* (`citation_pages`), con la instrucción explícita de **nombrar
-esa página concreta en vez del dominio pelado**. El guardián antifabricación
-que revisa la respuesta (`lib/recommendations/rewrite-validation.ts`) sólo
-admitía `citation_domains`. Y las dos listas las construye código distinto en
-`recommendation-engine.ts`: `citation_domains` es un agregado sobre los prompts
-afectados **recortado a 8**, y las páginas salen de las fuentes que califican
-para el hueco. En la tarjeta del fundador, tres de las cuatro páginas citadas
-(`dageno.ai`, `blog.hubspot.es`, `es.semrush.com`) caían fuera de esos ocho.
-El modelo obedecía la instrucción y el guardián lo rechazaba por ello:
-`unanchored_domain_mentioned`, de forma **determinista**, gastando una llamada
-a Gemini en cada intento — el límite diario no, que se cuenta sobre filas de
-`generated_solutions` y un rechazo no persiste ninguna. Reproducido en
-`lib/recommendations/anchored-domains.test.ts` con esos datos reales.
-
-**Qué se decidió.** Un único conjunto anclado
-(`lib/recommendations/anchored-domains.ts`): unión de `citation_domains`,
-`source_domains`, el dominio de cada página citada y el host de su URL,
-normalizada y sin duplicados. Ese mismo array alimenta **el prompt y el
-guardián**, que es el invariante que faltaba — lo que el modelo puede escribir
-y aquello contra lo que se le juzga tienen que ser el mismo conjunto. No se
-relaja nada: todo lo que entra viene de la evidencia persistida de esa misma
-tarjeta, el emparejado sigue siendo por etiqueta (`evilacme.com` no casa con
-`acme.com`, ADR 0019) y un dominio que no esté en ninguna parte de la
-evidencia se sigue rechazando. El conjunto está acotado por construcción
-(8 + 6 fuentes) y **no lleva tope propio a propósito**: un tope es justo lo que
-creó el desajuste.
-
-**Lo que este arreglo NO explica, dicho tal cual.** La segunda tarjeta no tiene
-«Páginas citadas», así que su fallo es otro. Con cinco ramas de fallo
-compartiendo una sola frase en pantalla, ni el fundador ni el agente podían
-distinguir un motor caído de una propuesta descartada por el guardián. Por eso
-el mismo PR separa el mensaje por rama —motor / descartada por evidencia / no
-se ha podido guardar / genérico— y registra **qué término** disparó el
-guardián (`offending`), no sólo que se disparó. Es lo que convierte el próximo
-clic en un diagnóstico de diez segundos en vez de una investigación.
-
-**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
-`rewrite-recommendation.ts`, `rewrite-validation.ts`,
-`recommendation-rewrite-llm.ts` (cuyo comentario afirmaba lo contrario: «every
-url here is already one of citationDomains»); `.claude/rules/recommendations.md`
-§Reescritura con IA.
 
 ---
 
 ---
 
-## 127. El piloto elegía proyecto por un enlace que dejó de existir (PILOT-PROJECT-PICK-1, 2026-08-20)
 
-**Qué pasó.** El piloto del PR #446 falló sólo en escritorio:
-`recs-interactions` → «no se han renderizado acciones prioritarias». La captura
-lo explica sola: estaba en el proyecto **Linkedin**, con presencia 100, cuota
-de voz 100 y «Nada que corregir ahora mismo». Un estado legítimo del producto,
-no un fallo. Móvil y tablet, en la misma pasada, miraban **GenScore**, con sus
-tres acciones prioritarias.
+---
 
-**La causa.** Los dos journeys que buscan «un segundo proyecto, más grande»
-raspaban `a[href^="/dashboard/projects/"]` sobre `/dashboard/projects` y
-preferían un nombre (`PILOT_SECOND_PROJECT`, «Movistar»). Esa ruta es una
-**redirección** a `/dashboard/domains` desde DOMAINS-ARCHIVE-RETIRE-1 (§104), y
-en la pantalla de dominios **sólo el proyecto de portada** enlaza a
-`/dashboard/projects/<id>`; los demás enlazan a `?active=<id>`. Así que la
-lista tenía exactamente un elemento —el de portada, que resuelve
-`resolveSelectedProject`: `?active=` → cookie `geo_active_project` (que el
-middleware reescribe en cada navegación a una ruta de proyecto) → el proyecto
-más reciente— y el filtro por nombre no podía casar con nada.
+---
 
-Consecuencias, distintas en cada journey y las dos malas:
+## 127. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
 
-- `recommendations-interactions.spec.ts` afirmaba contra **lo que hubiera
-  delante**, distinto por anchura porque cada contexto de Playwright llega con
-  el cookie donde lo dejó su propia navegación anterior. Verde por suerte
-  durante cinco días; rojo el día que el proyecto más reciente de la cuenta fue
-  uno sin nada que corregir.
-- `core-flow.spec.ts` («recommendations screen renders for a second, larger
-  project») resolvía `find(id => id !== primary)` sobre esa lista de uno:
-  siempre `undefined`, así que **se saltaba en silencio en cada pasada** desde
-  el 2026-08-15, con la tabla del piloto igual de verde. Es el fallo de §120 y
-  §65 otra vez —una garantía que no se puede ver fallar— pero por omisión: no
-  es que el veredicto fuera malo, es que la comprobación no llegó a existir.
+**Qué se decidió.** Tres cambios en la tarjeta de recomendación, todos
+derivados de datos que el producto ya tenía y no enseñaba.
 
-`discoverProjectIds` ya contemplaba las dos formas de enlace y lleva escrito en
-su cabecera justo este agujero. Los dos journeys no lo usaban.
+**1. El CTA nombra el artefacto.** Decía "Generar propuesta con IA" en los
+quince tipos por igual. Pero el motor **ya sabe** qué artefacto toca en cada
+caso: los playbooks por tipo de `recommendation-rewrite-llm.ts` llevan desde
+la fase C1 dirigiendo la generación hacia una comparativa, una FAQ, un
+JSON-LD de `Organization` o un plan de contacto. Esa decisión estaba tomada y
+escondida en el prompt; ahora está en el botón ("Generar comparativa",
+"Generar FAQ", "Generar pitch"). Un CTA genérico obliga a hacer clic para
+saber qué te van a dar, que es precisamente la fricción que convierte una
+lista de acciones en una lista de lectura.
 
-**Qué se decidió.** Los dos pasan por `discoverProjectIds`, y el de
-interacciones elige **por dato, no por nombre**: abre candidatos (tope 4,
-anotado si sobran) hasta encontrar uno que de verdad tenga acciones
-prioritarias, y si ninguno las tiene **se salta ruidosamente** en vez de
-afirmar sobre una pantalla vacía — la regla del 2026-08-02. Un nombre puede
-pudrirse sin avisar; «tiene lo que voy a pulsar» no. `PILOT_SECOND_PROJECT`
-desaparece, y con él la última referencia a «Movistar» en el arnés.
+**2. La tarjeta declara el control, y solo cuando es la excepción.**
+"Escribe a este comparador para que te incluyan" y "añade este bloque a tu
+página de precios" no son la misma clase de trabajo —una la ejecutas hoy, la
+otra la solicitas y puede que nunca ocurra— y la pantalla las pintaba
+idénticas. Ahora cada tipo declara `own_site` / `third_party` / `in_app`,
+pero **solo se pinta chip para las dos excepciones**: "En tu web" es lo que
+el usuario da por supuesto en 11 de los 15 tipos, y repetirlo en cada tarjeta
+sería justo la tinta que RECS-REDESIGN-1 quitó de esta vista (§115). La
+ausencia de chip significa "es tuyo". Esto no reabre §115: lo que aquella
+fase retiró de la tarjeta plegada fue **vocabulario del motor** (el tipo
+interno, el trío impacto/esfuerzo/confianza); la fila de insignias de triaje
+("Victoria rápida", "Abierta N escaneos") siguió viva, y el control es
+triaje, no vocabulario.
 
-**Lo que esto NO arregla.** Sigue sin haber nada que avise de que un journey
-lleva días saltándose: un `skip` no se distingue de un ✅ en la tabla del
-informe. Queda apuntado como lo siguiente que mirar en la zona.
+**3. El artefacto generado dice cuánto trabajo le queda, contando.** Nueva
+insignia en el panel del plan: "Listo para copiar" o "N huecos por rellenar".
+**No es una estimación.** El prompt de reescritura obliga desde el primer día
+a marcar con un placeholder (`[tu dato aquí]`) todo valor que no esté en la
+evidencia, en vez de inventárselo — una barrera anti-invención que, sin
+proponérselo, deja los huecos **contables**. La cifra se calcula sobre el
+texto real que se le enseña al usuario (artefactos y pasos; el título y el
+resumen quedan fuera porque son la explicación, no el entregable).
 
-**Trazabilidad.** `tests/pilot/journeys/recommendations-interactions.spec.ts`,
-`tests/pilot/journeys/core-flow.spec.ts`, `docs/agentic-user-pilot.md`,
-`.claude/agents/ux-pilot.md`; §104 (la ruta que cambió), §120 y §65 (el mismo
-patrón de verde vacío).
+**Por qué esto y no el catálogo de tipos nuevos.** El origen fue una
+reflexión del fundador sobre que las recomendaciones no eran accionables
+("escribir a HubSpot no es realista"), contrastada con una propuesta externa
+de rehacer el catálogo entero. La auditoría del código dijo otra cosa: el
+motor ya es determinista, ya ancla cada tarjeta a `affected_prompt_ids`
+reales, ya cita páginas concretas y ya excluye Wikipedia por no accionable.
+Lo que faltaba no era diagnóstico nuevo — era que la pantalla **no
+distinguía** lo ejecutable de lo que depende de un tercero, ni prometía nada
+concreto antes del clic. Esta fase cierra esa distancia sin tocar el motor,
+sin esquema y sin una sola llamada LLM nueva.
+
+**Lo que se descartó a propósito.** La propuesta externa clasificaba la
+salida en cuatro clases, una de ellas "brief de producción" (requiere
+investigación o trabajo creativo). Se ha implementado todo menos ésa: no hay
+forma honesta de decidir por código si un artefacto es "pegable" o "un brief"
+—es un juicio, no un hecho— y una etiqueta que no se puede justificar es peor
+que ninguna. Las tres que sí se muestran (control, listo/huecos) se derivan
+del tipo o se cuentan del texto.
+
+**Invariante nuevo, con test.** `KNOWN_RECOMMENDATION_TYPES` se exporta desde
+el motor (era ya `labelByType` de facto: "every value emitted by this engine
+must have an entry here") y `deliverable.test.ts` falla si una regla nueva
+llega sin decidir qué entregable promete su botón. Mismo mecanismo que la
+regla de ruta ya imponía para `first_step`.
+
+**Dos de los tres cambios son invisibles para el `ux-pilot`, y por eso se
+prueban por render.** La pasada de PR #453 dio PASS con 68 pantallas en tres
+anchuras, y aun así no vio ni el chip de control ni la insignia de estado:
+
+- El **chip de control** sólo se pinta en los tipos `third_party`/`in_app`, y
+  el proyecto del piloto tenía tres recomendaciones, las tres de su propia
+  web. Ningún tipo externo, ninguna captura.
+- La **insignia de estado** sólo existe cuando hay una propuesta generada, y
+  generar una es una **escritura**. El piloto permanente es de solo lectura por
+  diseño, así que no puede alcanzar ese estado en ninguna pasada — ni hoy ni
+  nunca, no es cuestión de repetir la pasada con más datos.
+
+Es el mismo fallo del 2026-08-02 (un rediseño entero aprobado con capturas de
+un estado vacío), y la respuesta no es aflojar el listón sino moverlo:
+`recommendations-client.test.tsx` renderiza `RecCard` y `SolutionPanel` de
+verdad con `react-dom/server` y asegura el contenido —el CTA por tipo, el chip
+presente en `third_party`, **ausente** en `own_site`, y la cuenta de huecos—.
+El aspecto sigue siendo del piloto; la existencia ya no depende de que el
+proyecto del piloto tenga por casualidad el dato adecuado. Lo que el piloto SÍ
+verificó, a 1280 px: el botón de una recomendación `increase_brand_visibility`
+dice «Generar brief de contenido».
+
+**Pendiente, no roto.** Ninguna recomendación apunta todavía a una URL
+concreta de la web del cliente: el puente existe (el mapa de cobertura mapea
+`promptId → URLs propias verificadas`) pero es Pro+, nace apagado
+(`auto_coverage_audit_enabled = false`) y el motor corre antes de que exista
+ninguna auditoría. Es la siguiente fase (AUDIT-RECS-JOIN-1) y necesita una
+decisión del fundador sobre el coste (~$0,28 por auditoría).
 
 ---
 
@@ -11853,6 +11992,151 @@ mitades anteriores del mismo agujero).
 
 ---
 
+---
+
+## 130. El cajón móvil se pulsaba antes de hidratar (2026-08-20)
+
+**Qué pasó.** `el cajón de navegación móvil de pricing abre y sus botones se
+leen` falló en móvil con «element(s) not found» sobre `.lp-mobnav`, mientras el
+mismo test sobre `/` pasaba **en la misma corrida** (PR #446).
+
+**Por qué.** `MarketingMobileNav` es un componente cliente: el botón viene en el
+HTML del servidor, pero su `onClick` no existe hasta que React hidrata, y el
+cajón no está en el DOM hasta que ese estado se abre. Un clic anterior a la
+hidratación no se encola — se pierde. El test esperaba `waitForTimeout(1_000)`
+y pulsaba una vez, o sea apostaba a que un preview frío hidrata en menos de un
+segundo. Perdió la apuesta en la página más pesada de las dos.
+
+**Qué se decidió.** El clic se reintenta hasta que el cajón aparece
+(`expect(...).toPass`), sin espera fija. No afloja nada: si el cajón no abre
+nunca, sigue fallando al agotarse el plazo. Es seguro repetirlo porque el botón
+hace `setOpen(true)`, no un alternar.
+
+**Lo que se deja anotado y NO se toca aquí.** El botón de menú es inerte hasta
+que la página hidrata, así que en un móvil lento hay una ventana real en la que
+un usuario lo pulsa y no pasa nada, sin ningún aviso. No es una regresión —es
+como funciona desde siempre— y arreglarlo es tocar la cabecera pública, otra
+zona y otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/landing.spec.ts`;
+`components/marketing-mobile-nav.tsx` (por qué el clic se pierde).
+
+---
+
+---
+
+## 131. «Generar propuesta con IA»: el prompt pedía nombrar páginas que el guardián rechazaba (2026-08-20)
+
+**Qué pasó.** El fundador pulsó «Generar propuesta con IA» en la tarjeta
+*Entrar en fuentes citadas* del proyecto GenScore y recibió «No se ha podido
+mejorar la redacción en este momento». En una segunda tarjeta, de tipo
+distinto, el mismo mensaje.
+
+**La causa encontrada, con los datos de la propia captura.** Esa acción arma
+el prompt con dos listas: *Domains you may mention* (`evidence_json.
+citation_domains`) y, sólo en las reglas de hueco de fuentes, *Example pages
+already cited* (`citation_pages`), con la instrucción explícita de **nombrar
+esa página concreta en vez del dominio pelado**. El guardián antifabricación
+que revisa la respuesta (`lib/recommendations/rewrite-validation.ts`) sólo
+admitía `citation_domains`. Y las dos listas las construye código distinto en
+`recommendation-engine.ts`: `citation_domains` es un agregado sobre los prompts
+afectados **recortado a 8**, y las páginas salen de las fuentes que califican
+para el hueco. En la tarjeta del fundador, tres de las cuatro páginas citadas
+(`dageno.ai`, `blog.hubspot.es`, `es.semrush.com`) caían fuera de esos ocho.
+El modelo obedecía la instrucción y el guardián lo rechazaba por ello:
+`unanchored_domain_mentioned`, de forma **determinista**, gastando una llamada
+a Gemini en cada intento — el límite diario no, que se cuenta sobre filas de
+`generated_solutions` y un rechazo no persiste ninguna. Reproducido en
+`lib/recommendations/anchored-domains.test.ts` con esos datos reales.
+
+**Qué se decidió.** Un único conjunto anclado
+(`lib/recommendations/anchored-domains.ts`): unión de `citation_domains`,
+`source_domains`, el dominio de cada página citada y el host de su URL,
+normalizada y sin duplicados. Ese mismo array alimenta **el prompt y el
+guardián**, que es el invariante que faltaba — lo que el modelo puede escribir
+y aquello contra lo que se le juzga tienen que ser el mismo conjunto. No se
+relaja nada: todo lo que entra viene de la evidencia persistida de esa misma
+tarjeta, el emparejado sigue siendo por etiqueta (`evilacme.com` no casa con
+`acme.com`, ADR 0019) y un dominio que no esté en ninguna parte de la
+evidencia se sigue rechazando. El conjunto está acotado por construcción
+(8 + 6 fuentes) y **no lleva tope propio a propósito**: un tope es justo lo que
+creó el desajuste.
+
+**Lo que este arreglo NO explica, dicho tal cual.** La segunda tarjeta no tiene
+«Páginas citadas», así que su fallo es otro. Con cinco ramas de fallo
+compartiendo una sola frase en pantalla, ni el fundador ni el agente podían
+distinguir un motor caído de una propuesta descartada por el guardián. Por eso
+el mismo PR separa el mensaje por rama —motor / descartada por evidencia / no
+se ha podido guardar / genérico— y registra **qué término** disparó el
+guardián (`offending`), no sólo que se disparó. Es lo que convierte el próximo
+clic en un diagnóstico de diez segundos en vez de una investigación.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`rewrite-recommendation.ts`, `rewrite-validation.ts`,
+`recommendation-rewrite-llm.ts` (cuyo comentario afirmaba lo contrario: «every
+url here is already one of citationDomains»); `.claude/rules/recommendations.md`
+§Reescritura con IA.
+
+---
+
+---
+
+## 132. El piloto elegía proyecto por un enlace que dejó de existir (PILOT-PROJECT-PICK-1, 2026-08-20)
+
+**Qué pasó.** El piloto del PR #446 falló sólo en escritorio:
+`recs-interactions` → «no se han renderizado acciones prioritarias». La captura
+lo explica sola: estaba en el proyecto **Linkedin**, con presencia 100, cuota
+de voz 100 y «Nada que corregir ahora mismo». Un estado legítimo del producto,
+no un fallo. Móvil y tablet, en la misma pasada, miraban **GenScore**, con sus
+tres acciones prioritarias.
+
+**La causa.** Los dos journeys que buscan «un segundo proyecto, más grande»
+raspaban `a[href^="/dashboard/projects/"]` sobre `/dashboard/projects` y
+preferían un nombre (`PILOT_SECOND_PROJECT`, «Movistar»). Esa ruta es una
+**redirección** a `/dashboard/domains` desde DOMAINS-ARCHIVE-RETIRE-1 (§104), y
+en la pantalla de dominios **sólo el proyecto de portada** enlaza a
+`/dashboard/projects/<id>`; los demás enlazan a `?active=<id>`. Así que la
+lista tenía exactamente un elemento —el de portada, que resuelve
+`resolveSelectedProject`: `?active=` → cookie `geo_active_project` (que el
+middleware reescribe en cada navegación a una ruta de proyecto) → el proyecto
+más reciente— y el filtro por nombre no podía casar con nada.
+
+Consecuencias, distintas en cada journey y las dos malas:
+
+- `recommendations-interactions.spec.ts` afirmaba contra **lo que hubiera
+  delante**, distinto por anchura porque cada contexto de Playwright llega con
+  el cookie donde lo dejó su propia navegación anterior. Verde por suerte
+  durante cinco días; rojo el día que el proyecto más reciente de la cuenta fue
+  uno sin nada que corregir.
+- `core-flow.spec.ts` («recommendations screen renders for a second, larger
+  project») resolvía `find(id => id !== primary)` sobre esa lista de uno:
+  siempre `undefined`, así que **se saltaba en silencio en cada pasada** desde
+  el 2026-08-15, con la tabla del piloto igual de verde. Es el fallo de §120 y
+  §65 otra vez —una garantía que no se puede ver fallar— pero por omisión: no
+  es que el veredicto fuera malo, es que la comprobación no llegó a existir.
+
+`discoverProjectIds` ya contemplaba las dos formas de enlace y lleva escrito en
+su cabecera justo este agujero. Los dos journeys no lo usaban.
+
+**Qué se decidió.** Los dos pasan por `discoverProjectIds`, y el de
+interacciones elige **por dato, no por nombre**: abre candidatos (tope 4,
+anotado si sobran) hasta encontrar uno que de verdad tenga acciones
+prioritarias, y si ninguno las tiene **se salta ruidosamente** en vez de
+afirmar sobre una pantalla vacía — la regla del 2026-08-02. Un nombre puede
+pudrirse sin avisar; «tiene lo que voy a pulsar» no. `PILOT_SECOND_PROJECT`
+desaparece, y con él la última referencia a «Movistar» en el arnés.
+
+**Lo que esto NO arregla.** Sigue sin haber nada que avise de que un journey
+lleva días saltándose: un `skip` no se distingue de un ✅ en la tabla del
+informe. Queda apuntado como lo siguiente que mirar en la zona.
+
+**Trazabilidad.** `tests/pilot/journeys/recommendations-interactions.spec.ts`,
+`tests/pilot/journeys/core-flow.spec.ts`, `docs/agentic-user-pilot.md`,
+`.claude/agents/ux-pilot.md`; §104 (la ruta que cambió), §120 y §65 (el mismo
+patrón de verde vacío).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -11868,5 +12152,3 @@ tipografía o patrones de navegación:
 3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
    técnico aquí (este documento es "qué se decidió", no "cómo se
    implementó").
-
----

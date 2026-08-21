@@ -434,7 +434,7 @@ Three coverage gaps compounded it, all now closed:
    the cover. Selection is now by **data, not by name**: `discoverProjectIds`
    for the list (it handles both link shapes), and the interaction journey
    opens candidates until it finds one that actually has priority actions,
-   skipping loudly if none does (log §127). `PILOT_SECOND_PROJECT` no longer
+   skipping loudly if none does (log §132). `PILOT_SECOND_PROJECT` no longer
    exists.
 
 The standing lesson, recorded in the agent's brief as **coverage traps**: a

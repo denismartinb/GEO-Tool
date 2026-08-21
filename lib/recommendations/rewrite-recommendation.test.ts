@@ -547,6 +547,98 @@ describe("rewriteRecommendationCore", () => {
     expect(sanitized.examples[0]?.label).not.toContain("<");
   });
 
+  it("descarta el artefacto cortado en vez de persistirlo, y conserva el resto del plan", async () => {
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    // El bloque real del incidente del 2026-08-20: un `FAQPage` que se queda
+    // sin cerrar porque el modelo llegó a su presupuesto (log §126).
+    const jsonLdCortado =
+      '<script type="application/ld+json">\n{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Cómo optimizo la web?","acceptedAnswer":{"@type":"Answer","text":"Utiliza HTML se';
+    rewriteRecommendationMock.mockResolvedValue({
+      title: "Responde las tres consultas que hoy no cubres",
+      summary: "La IA responde a esas preguntas sin ti.",
+      steps: ["Publica la respuesta en dos frases.", "Marca la FAQ con datos estructurados."],
+      examples: [
+        { label: "Párrafo citable", content: "Una respuesta directa con un dato concreto." },
+        { label: "Schema FAQPage", content: jsonLdCortado }
+      ]
+    });
+    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: RULE_RECOMMENDATION.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error("expected success");
+    // El plan sobrevive; el artefacto roto no llega ni a la respuesta ni a la fila.
+    expect(result.solution.steps).toHaveLength(2);
+    expect(result.solution.examples).toHaveLength(1);
+    expect(result.solution.examples[0].label).toBe("Párrafo citable");
+
+    const sanitized = JSON.parse(getInserted()[0].sanitized_content as string) as GeneratedSolution;
+    expect(sanitized.examples).toHaveLength(1);
+    expect(JSON.stringify(sanitized)).not.toContain("ld+json");
+  });
+
+  it("un artefacto de código válido más largo que el tope viejo (1.200) se persiste entero", async () => {
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    const faqLarga = `<script type="application/ld+json">\n${JSON.stringify(
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: [1, 2, 3].map((n) => ({
+          "@type": "Question",
+          name: `¿Pregunta ${n} sobre visibilidad en respuestas generativas?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Una respuesta larga, del tamaño que este producto pide de verdad, con su dato concreto dentro. ".repeat(
+              4
+            )
+          }
+        }))
+      },
+      null,
+      2
+    )}\n</script>`;
+    expect(faqLarga.length).toBeGreaterThan(1_200);
+
+    rewriteRecommendationMock.mockResolvedValue({
+      title: "Marca tu FAQ con datos estructurados",
+      summary: "Ya respondes estas preguntas, pero la IA no puede extraerlas.",
+      steps: ["Pega el bloque en la página que ya responde estas preguntas."],
+      examples: [{ label: "Schema FAQPage", content: faqLarga }]
+    });
+    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: RULE_RECOMMENDATION.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error("expected success");
+    expect(result.solution.examples[0].content).toBe(faqLarga);
+
+    // Y lo persistido sigue parseando: es lo que el usuario va a copiar.
+    const sanitized = JSON.parse(getInserted()[0].sanitized_content as string) as GeneratedSolution;
+    const payload = sanitized.examples[0].content
+      .replace(/^<script[^>]*>/, "")
+      .replace(/<\/script>$/, "")
+      .trim();
+    expect(() => JSON.parse(payload)).not.toThrow();
+  });
+
   it("happy path: calls Gemini with the recommendation's own evidence, validates every field, and inserts a sanitized structured solution", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     rewriteRecommendationMock.mockResolvedValue(REWRITE);

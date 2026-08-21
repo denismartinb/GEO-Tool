@@ -390,7 +390,7 @@ re-run. Never "solve" it by relaxing the expectation.
   their target **by data, not by name** — the interaction journey opens
   candidates until one actually has priority actions, and skips loudly if none
   does. A name-based pick rotted silently for five days when
-  `/dashboard/projects` became a redirect (log §104, §127). When a PR's
+  `/dashboard/projects` became a redirect (log §104, §132). When a PR's
   behaviour depends on data volume, check that the evidence includes the larger
   project, and say so if it does not — a skipped journey is not coverage.
 - **Interaction coverage is bounded and partial by design** — see the coverage

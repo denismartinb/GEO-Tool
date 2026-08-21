@@ -35,12 +35,35 @@ paths:
 - Los límites de generación son **contadores de gasto real**, no decoración:
   respetar el presupuesto por proyecto y día con su `generation_type` propio.
 
+## Artefactos pegables (RECS-USEFULNESS-1 Fase A, log §126)
+
+- **Un artefacto de código no se trunca nunca.** JSON-LD o marcado: o cabe
+  entero y es sintácticamente válido, o se descarta. Medio schema no falla al
+  pegarlo, falla después en la web del cliente — y llevaba un botón «Copiar» al
+  lado. Prohibido volver a meter un `.slice()` en esa ruta: quien decide es
+  `checkPasteableArtifact`, que sabe qué clase de artefacto tiene delante
+  (`lib/recommendations/pasteable-artifact.ts`).
+- **Todo lo que pretenda ser JSON se parsea antes de persistirlo**, incluido un
+  `<script type="application/ld+json">` sin su cierre. La validación de
+  evidencia no cubre esto: mira competidores y dominios inventados, no sintaxis.
+- **El tope de longitud se decide contra el artefacto que le pedimos al
+  modelo, no al revés.** El playbook de `create_faq_section` exige 2-4 pares
+  pregunta/respuesta más su JSON-LD; con 1.200 caracteres eso era imposible por
+  construcción. Si un playbook nuevo pide un artefacto mayor, el tope se
+  recalcula — y el prompt dice explícitamente que **la integridad gana a la
+  cobertura**: mejor un artefacto pequeño y completo que uno grande y cortado.
+- **Se descarta el artefacto, no la solución.** El plan sigue siendo útil sin
+  uno de sus ejemplos, y devolver un error entero le gasta al usuario una
+  generación de su cupo diario a cambio de nada. Todo descarte se registra con
+  su motivo (`artifact_dropped`): un artefacto que desaparece en silencio es
+  invisible para el usuario y también para nosotros.
+
 ## Reescritura con IA ("Generar propuesta con IA")
 
 - **El conjunto de dominios admitidos se DERIVA del prompt, no se recompone.**
   `buildRecommendationRewritePrompt` construye el texto y `domainsShownInPrompt`
   extrae de él lo que el guardián admite. Recomponerlo campo a campo falló tres
-  veces por tres piezas distintas —páginas citadas (§126), competidores con
+  veces por tres piezas distintas —páginas citadas (§131), competidores con
   dominio propio (§128) y el título de una página citada, que suele ser otro
   dominio (§129)—, y cada vez el modelo fue rechazado por repetir algo que tenía
   delante. Si añades un dato al prompt, ya queda anclado; si lo anclas sin
@@ -56,7 +79,7 @@ paths:
   hosts de `citation_pages`. Pasarle al guardián algo más estrecho que lo que
   el prompt ofreció es rechazar al modelo por obedecer — pasó con las páginas
   citadas, que el prompt pide nombrar y el guardián no admitía, y la tarjeta
-  quedó imposible de generar (log §126).
+  quedó imposible de generar (log §131).
 - **Lo mismo vale para los competidores.** Un competidor de la lista del
   proyecto se admite —en el prompt y en el guardián a la vez— sólo si su propio
   dominio está en el conjunto anclado (`competitorsAnchoredByDomain`). El
@@ -66,19 +89,19 @@ paths:
   `evilacme.com` no habilita «Acme» (ADR 0019).
 - **Un rechazo del guardián dice QUÉ término lo disparó, también en pantalla.**
   Diagnosticar «mencionaba datos que no están en la evidencia» exigía acceso a
-  los logs de producción; costó dos vueltas enteras (log §126, §128). El
+  los logs de producción; costó dos vueltas enteras (log §131, §128). El
   término va saneado y recortado como cualquier salida del modelo.
 - **Nada entra en ese conjunto que no venga de la evidencia persistida de esa
   tarjeta.** Ampliarlo con dominios "razonables" (redes sociales, plantillas,
   el dominio de un competidor) convierte el guardián en decoración: existe
   porque una instrucción en el prompt no es una frontera de seguridad.
 - **Ese conjunto no lleva tope propio.** Está acotado por construcción y un
-  recorte es exactamente lo que produjo el desajuste de §126 —
+  recorte es exactamente lo que produjo el desajuste de §131 —
   `citation_domains` ya venía recortado a 8 desde el motor.
 - **Cada rama de fallo dice algo distinto, y el guardián registra qué término
   lo disparó.** Cinco caminos compartiendo una frase hacen que un motor caído y
   una propuesta descartada sean indistinguibles desde el producto, que es lo
-  que convirtió un fallo determinista en una investigación (log §126). El
+  que convirtió un fallo determinista en una investigación (log §131). El
   mensaje sigue siendo propio y saneado — nunca el error del proveedor
   (`.claude/rules/gemini.md`).
 
@@ -98,6 +121,36 @@ paths:
   concreta y acotada es lo que hacía inservibles las listas de referencia
   (Semrush, Otterly.AI) que motivaron el rediseño — no se añade un tipo de
   recomendación nuevo sin decidir su primer paso.
+- **Todo tipo declara su entregable y su control** (`lib/recommendations/
+  deliverable.ts`, RECS-ACCION-1a, log §127). El CTA nombra el artefacto que su
+  playbook de `recommendation-rewrite-llm.ts` ya le pide al modelo ("Generar
+  comparativa", no "Generar propuesta con IA"): si cambia un playbook, cambia
+  el CTA con él o el botón promete una cosa y llega otra.
+  `deliverable.test.ts` recorre `KNOWN_RECOMMENDATION_TYPES` y falla si una
+  regla nueva llega sin decidirlo — misma disciplina que `first_step`. Un tipo
+  sin entrada degrada al CTA genérico y **no afirma control ninguno**: decir
+  "En tu web" sobre algo sin clasificar sería inventarse un hecho, misma
+  dirección de fallo que el tri-estado de las sondas de la auditoría.
+- **Del control sólo se pinta la excepción.** `third_party` e `in_app` llevan
+  chip en la tarjeta plegada; `own_site` no, porque es lo que el usuario ya da
+  por supuesto en 11 de los 15 tipos y repetirlo sería la tinta que §115 quitó
+  de esa vista. La ausencia de chip significa "es tuyo". Lo que §115 retiró de
+  ahí fue vocabulario del motor, no señales de triaje.
+- **"Listo para copiar" se cuenta, no se estima.** La insignia del panel del
+  plan sale de contar los placeholders (`[tu dato aquí]`) que el prompt de
+  reescritura ya obliga a poner donde falta un dato. Se cuentan artefactos y
+  pasos, nunca título ni resumen. Si algún día el prompt deja de exigir
+  placeholders, esta cuenta deja de significar nada y hay que rehacerla. El
+  regex excluye comillas y llaves a propósito: los JSON-LD llevan arrays, y
+  contarlos como datos que faltan volvería la etiqueta ruido justo en el
+  artefacto más pegable que se genera.
+- **Lo que el piloto no puede alcanzar se prueba por render.** El chip de
+  control (sólo en tipos externos) y la insignia de estado (sólo tras una
+  escritura, que el piloto permanente no hace) son estructuralmente invisibles
+  para `ux-pilot`. `recommendations-client.test.tsx` los renderiza con
+  `react-dom/server` y asegura su contenido — incluida la **ausencia** del chip
+  en `own_site`, que es lo que le da significado. No se retira ese test para
+  «ya lo mira el piloto»: no puede (log §127).
 - **El hueco de fuentes se divide por familia** (`pursue_comparator_sources`,
   `pursue_community_sources`, `pursue_media_sources`), reutilizando el
   clasificador de Páginas citadas. Las fuentes enciclopédicas quedan **fuera a

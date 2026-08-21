@@ -211,11 +211,24 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   a la página `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter
   enteras, sin ningún error visible. Pasó en la home y en `/pricing` (log §47).
 - **Un `og:image` sólo puede ser una imagen rasterizada.** Ninguna red social
-  renderiza SVG: la tarjeta sale en blanco. Tres portadas del blog son SVG y por
-  eso `ogImageFor()` cae a la imagen de marca en vez de usarlas (log §47).
+  renderiza SVG: la tarjeta sale en blanco, y `ogImageFor()` filtra por `RASTER`
+  justo por eso (log §47). **Desde el 2026-08-20 ninguna portada del blog es
+  SVG**: las 16 son WebP, así que las 16 emiten portada propia. Las tres que
+  seguían en SVG (`geo-para-*`) llevaban desde su publicación compartiéndose con
+  la imagen genérica (log §125). Si alguna vuelve a declararse en SVG, vuelve a
+  perder su tarjeta social sin que nada falle.
+- **La extensión declarada en `coverImage` tiene que ser la del fichero que se
+  quiere enseñar.** `covers.test.ts` comprueba que el fichero declarado existe,
+  no que sea el que acabas de escribir: con `cover.svg` y `cover.webp` en el
+  mismo directorio y sólo el primero declarado, el test pasa, la página carga y
+  el artículo enseña la portada vieja. Tres pasadas de `ux-pilot` en verde no lo
+  vieron, porque el respaldo de un activo es otro activo correcto (log §125). Al
+  reemplazar una portada: comprobar quién la referencia, no sólo que el fichero
+  esté en `public/`.
 - **No se declaran medidas de una imagen cuyo tamaño no se conoce.** Las
-  portadas reales son cuadradas de 1254×1254; anunciarlas como 1200×630 describe
-  mal el activo. `width`/`height` solo para la imagen de marca (log §47).
+  portadas reales son apaisadas de 1200×300 (verificado sobre la cabecera VP8 de
+  los 16 ficheros, log §125); anunciarlas como 1200×630 describe mal el activo.
+  `width`/`height` solo para la imagen de marca (log §47).
 - **`llms.txt` y el sitemap se generan de las SSOT, nunca a mano.** El estático
   derivó hasta listar la mitad del contenido publicado sin que nada avisara — y
   es el fichero sobre el que el producto publica una guía
