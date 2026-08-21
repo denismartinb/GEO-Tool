@@ -26,6 +26,12 @@
   --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
   --sidebar-w: 248px;
   --header-h: 52px;
+  /* `.page`'s own max-width/padding, pulled out to variables because
+     `.mrk-full`'s sidebar-aware full-bleed fix below has to reproduce this
+     exact geometry to cancel it out — two literals that must stay equal but
+     live in different rules is exactly how they drift. */
+  --page-max-w: 1320px;
+  --page-pad-x: 34px;
   /* Shared mobile-drawer chassis (header-consistency-public-private,
      2026-08-15) — both the console sidebar drawer (.sb) and the public
      header drawer (.lp-mobnav) read these, so a future change to one
@@ -440,9 +446,9 @@ a {
 }
 
 .page {
-  max-width: 1320px;
+  max-width: var(--page-max-w);
   margin: 0 auto;
-  padding: 26px 34px 80px;
+  padding: 26px var(--page-pad-x) 80px;
 }
 
 .card {
@@ -4036,6 +4042,39 @@ a.notif-row:hover {
    the atmosphere rather than keeping a daylit frame around a night scene. */
 .mrk-full.night { background: linear-gradient(180deg, #04070F 0%, #14293F 100%); }
 
+/* The base rule's `100vw` / `calc(50% - 50vw)` break-out assumes `.page` is
+   centered in the TRUE viewport, which only holds below 760px — that's where
+   `.shell` collapses to one column and the sidebar leaves the grid entirely
+   (below). Above it `.shell` still reserves `--sidebar-w` of real width, so
+   `.dash-content` (this component's actual ancestor) is narrower than the
+   viewport and sits offset to the right of it. The unmodified trick centered
+   itself on the viewport instead: it rendered a box shifted `--sidebar-w / 2`
+   too far left — its left ~124px painted behind the sidebar as the founder
+   found it (screenshot, 2026-08-20), the same again as unwanted overflow past
+   the right edge, which is what left `.dash-content` scrolling horizontally
+   (`tests/pilot/support/journey.ts`'s note that it computes its own implicit
+   `overflow-x: auto`).
+   The fix re-derives the same break-out against `.dash-content`'s box
+   instead of the viewport: `width` matches `.dash-content`'s real width, and
+   the left margin cancels exactly what `.page`'s own centering/padding would
+   otherwise contribute — `max(…, 0px)` because `.page` only centers with
+   spare margin once the sidebar-content column is wider than `--page-max-w`,
+   which is common on an ultra-wide monitor and reachable at zero on a
+   laptop-width screen. The right edge needs no separate term: for an in-flow
+   block, only its own left margin and width decide where it sits, so a
+   `width` of exactly `.dash-content`'s width already lands the right edge on
+   `.dash-content`'s right edge (which is the viewport's, unchanged from the
+   base rule) with no margin-right math to keep in sync. */
+@media (min-width: 761px) {
+  .mrk-full {
+    width: calc(100vw - var(--sidebar-w));
+    max-width: calc(100vw - var(--sidebar-w));
+    margin-inline: calc(
+      -1 * (var(--page-pad-x) + max((100vw - var(--sidebar-w)) - var(--page-max-w), 0px) / 2)
+    ) 0;
+  }
+}
+
 .mrk-rail {
   display: flex; align-items: center; justify-content: space-between; gap: 4px 14px;
   flex-wrap: wrap;
@@ -4091,10 +4130,10 @@ a.notif-row:hover {
    inside the SVG it was locked to the scene's ratio and stopped short of the
    viewport edges. `.mrk-pad-wrap` is only as wide as the scene; the band
    escapes it to 100vw. */
-.mrk-pad-wrap { position: relative; width: 100%; }
+.mrk-pad-wrap { position: relative; width: 100%; --mrk-ground-h: clamp(46px, 13vw, 86px); }
 .mrk-pad-wrap .mrk-sky { max-width: none; }
 .mrk-ground {
-  width: 100%; height: clamp(46px, 13vw, 86px);
+  width: 100%; height: var(--mrk-ground-h);
   background: #D3DEF0;
   border-top: 1.4px solid #B3C2DC;
 }
@@ -4140,6 +4179,30 @@ a.notif-row:hover {
     pointer-events: none;
   }
   .mrk-sky { max-width: none; width: 100%; height: 100%; }
+  /* Rampa/ignición nest their SVG one level deeper than every other scene —
+     inside `.mrk-pad-wrap`, to leave room for `.mrk-ground` stacked below it.
+     The `height: 100%` above assumes a direct, definite-height parent, and
+     `.mrk-pad-wrap` only had `width: 100%` — no height of its own, so its
+     percentage-height child fell back to `auto`, sized by its own aspect
+     ratio (viewBox 400×228, wide and short) instead of the scene box. Taller
+     than intended once the ground band stacked on top of that, the excess
+     overflowed `.mrk-full`'s own box top AND bottom, and `overflow: hidden`
+     there silently clipped the rocket's base off the bottom (founder
+     screenshot, 2026-08-20, "especialmente la primera [escena]" — the only
+     two beats built this way).
+     Tried `.mrk-pad-wrap { height: 100% }` first and it does NOT work: inside
+     `.mrk-scene-slot`'s grid (an unconstrained implicit row, `place-items` only
+     controls alignment, never track sizing), a percentage-height item and an
+     `auto` row can go circular — the row sized itself to the item's OWN
+     content instead of the container's 640px, which is the same overflow one
+     level up. `position: absolute; inset: 0` sidesteps the grid entirely,
+     the same way `.mrk-scene-slot` itself gets a guaranteed box from
+     `.mrk-canvas` two rules up — `.mrk-pad-wrap`'s height is never in doubt,
+     so `--mrk-ground-h` mirrors `.mrk-ground`'s own height and the SVG gets
+     exactly what's left: the two always sum to the full box, whatever that
+     ends up being, with no second breakpoint to keep in sync. */
+  .mrk-pad-wrap { position: absolute; inset: 0; }
+  .mrk-pad-wrap .mrk-sky { height: calc(100% - var(--mrk-ground-h)); }
   .mrk-copy {
     position: relative; z-index: 1;
     grid-column: 1; text-align: left; margin: 0; padding: 0; max-width: 30ch;
@@ -5499,7 +5562,8 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 
 @media (max-width: 1000px) {
   .page {
-    padding: 22px 20px 80px;
+    --page-pad-x: 20px;
+    padding: 22px var(--page-pad-x) 80px;
   }
   /* Keep the full-bleed mission flush with the header at this breakpoint too. */
   .mrk-full {

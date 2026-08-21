@@ -40,10 +40,28 @@ type TableResult = { data: unknown; count?: number | null };
  * se devuelve a sí mismo y el resultado se resuelve por tabla. Con esto basta
  * porque el módulo no depende de QUÉ filtros aplica —eso lo prueba producción
  * contra RLS— sino de qué hace con las filas que vuelven.
+ *
+ * `scan_runs` es la primera tabla con DOS consultas distintas en la misma
+ * carga (el último run completado, vía `maybeSingle`, y los 5 más recientes
+ * de cualquier estado, vía `limit`, para detectar `activeRun`) — un valor
+ * único por tabla ya no basta para distinguirlas. Un fixture puede seguir
+ * siendo un `TableResult` (se reutiliza en cada llamada, como hasta ahora) o
+ * un ARRAY de `TableResult` (uno por llamada, en el orden en que
+ * `loadWebAuditPageData` las hace) cuando a una tabla le hace falta responder
+ * distinto la segunda vez.
  */
-function fakeSupabase(byTable: Record<string, TableResult>) {
+function fakeSupabase(byTable: Record<string, TableResult | TableResult[]>) {
   const calls: string[] = [];
-  const resultFor = (table: string): TableResult => byTable[table] ?? { data: null };
+  const callCounts: Record<string, number> = {};
+  const resultFor = (table: string): TableResult => {
+    const entry = byTable[table];
+    if (Array.isArray(entry)) {
+      const index = callCounts[table] ?? 0;
+      callCounts[table] = index + 1;
+      return entry[index] ?? entry[entry.length - 1] ?? { data: null };
+    }
+    return entry ?? { data: null };
+  };
 
   const builder = (table: string) => {
     const chain: Record<string, unknown> = {};
@@ -166,7 +184,7 @@ function promptResults() {
   return [row(1, true), row(2, false), row(3, false)];
 }
 
-function load(byTable: Record<string, TableResult>) {
+function load(byTable: Record<string, TableResult | TableResult[]>) {
   const { client } = fakeSupabase(byTable);
   return loadWebAuditPageData({ supabase: client, userId: "user-1", project: PROJECT });
 }
@@ -237,7 +255,7 @@ describe("la cifra principal según el plan (ADR 0033 / ADR 0035)", () => {
   it("una cuenta que bajó de plan ve su nota técnica, no el compuesto heredado", async () => {
     const data = await load({
       profiles: { data: { current_plan: "free" } },
-      scan_runs: { data: { id: RUN_ID, finished_at: null, created_at: "2026-08-11T08:00:00.000Z" } },
+      scan_runs: [{ data: { id: RUN_ID, finished_at: null, created_at: "2026-08-11T08:00:00.000Z" } }, { data: [] }],
       generated_solutions: { data: [{ sanitized_content: coverageMapJson() }] },
       // Sin resultados de escaneo cada tema queda `inconclusive` y el
       // porcentaje de cobertura sale nulo — la clasificación necesita cruzar el
@@ -262,7 +280,14 @@ describe("despertar al worker es una decisión, no un efecto (WEB-AUDIT-DRIVE-1)
    */
   const withJob = (job: Record<string, unknown> | null) => ({
     profiles: { data: { current_plan: "pro" } },
-    scan_runs: { data: { id: RUN_ID, finished_at: "2026-08-11T09:00:00.000Z", created_at: "2026-08-11T08:00:00.000Z" } },
+    // Dos llamadas a `scan_runs`: el último run completado (`maybeSingle`),
+    // luego los 5 más recientes de cualquier estado para `activeRun` — ninguno
+    // de estos tests ejercita un escaneo en curso, así que la segunda vuelve
+    // vacía.
+    scan_runs: [
+      { data: { id: RUN_ID, finished_at: "2026-08-11T09:00:00.000Z", created_at: "2026-08-11T08:00:00.000Z" } },
+      { data: [] }
+    ],
     jobs: { data: job }
   });
 
@@ -323,7 +348,7 @@ describe("despertar al worker es una decisión, no un efecto (WEB-AUDIT-DRIVE-1)
 describe("«auditando» se mide contra el reloj, no contra un estado", () => {
   const withJob = (status: string) => ({
     profiles: { data: { current_plan: "pro" } },
-    scan_runs: { data: { id: RUN_ID, finished_at: null, created_at: "2026-08-11T08:00:00.000Z" } },
+    scan_runs: [{ data: { id: RUN_ID, finished_at: null, created_at: "2026-08-11T08:00:00.000Z" } }, { data: [] }],
     jobs: { data: { status, next_attempt_at: null, locked_at: null } }
   });
 
@@ -424,6 +449,70 @@ describe("el delta técnico sólo existe con dos puntos reales", () => {
     });
 
     expect(data.technicalScoreDelta).toBe(20);
+  });
+});
+
+describe("activeRun — el escaneo en curso, para el beat de ascenso de la primera misión", () => {
+  const ACTIVE_RUN_ID = "33333333-3333-3333-3333-333333333333";
+
+  /**
+   * El caso que motiva este campo: mientras dura el primer escaneo de un
+   * proyecto, `!hasCompletedScan` es cierto y sin `activeRun` la pantalla no
+   * tenía forma de distinguir "nunca se ha escaneado" de "se está escaneando
+   * ahora mismo" — mostraba la tarjeta vacía estática en los dos casos
+   * (`FirstScanTakeover` cubre las otras cuatro secciones desde
+   * ONBOARDING-ROCKET-1, pero Auditoría web se quedó fuera).
+   */
+  it("un run pending sin ningún escaneo completado se expone como activeRun", async () => {
+    const data = await load({
+      profiles: { data: { current_plan: "pro" } },
+      scan_runs: [
+        { data: null },
+        {
+          data: [
+            {
+              id: ACTIVE_RUN_ID,
+              status: "pending",
+              total_prompts: 12,
+              successful_prompts: 0,
+              failed_prompts: 0,
+              started_at: null
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(data.hasCompletedScan).toBe(false);
+    expect(data.activeRun).not.toBeNull();
+    expect(data.activeRun?.id).toBe(ACTIVE_RUN_ID);
+    expect(data.activeRun?.status).toBe("pending");
+  });
+
+  it("sin ningún run, activeRun es null", async () => {
+    const data = await load({
+      profiles: { data: { current_plan: "pro" } },
+      scan_runs: [{ data: null }, { data: [] }]
+    });
+
+    expect(data.activeRun).toBeNull();
+  });
+
+  /** Un run `completed`/`failed` no es un escaneo "en curso". */
+  it("sólo pending/running cuentan como activeRun, no un run ya terminado", async () => {
+    const data = await load({
+      profiles: { data: { current_plan: "pro" } },
+      scan_runs: [
+        { data: null },
+        {
+          data: [
+            { id: ACTIVE_RUN_ID, status: "failed", total_prompts: 12, successful_prompts: 0, failed_prompts: 12, started_at: null }
+          ]
+        }
+      ]
+    });
+
+    expect(data.activeRun).toBeNull();
   });
 });
 
