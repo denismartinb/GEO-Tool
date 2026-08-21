@@ -88,7 +88,7 @@ export type RewriteValidationResult =
        * usuario en el mensaje, porque un `reason` a secas dice que la propuesta
        * nombró algo indebido y se queda a un paso de la única pregunta que
        * importa — QUÉ nombró. Ese paso costó una investigación entera el
-       * 2026-08-20 (log §131) y dos vueltas más hasta el 21 (§134).
+       * 2026-08-20 (log §137) y dos vueltas más hasta el 21 (§134).
        */
       offending: string;
     };

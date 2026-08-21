@@ -38,7 +38,7 @@ test.describe.configure({ mode: "serial" });
  * proyecto de portada enlaza a `/dashboard/projects/<id>`**; los demás enlazan
  * a `?active=<id>`. La lista quedó con un único elemento, el filtro por nombre
  * no podía casar con nada, y el journey llevaba desde el 2026-08-15 midiendo lo
- * que hubiera delante en cada anchura (log §132).
+ * que hubiera delante en cada anchura (log §138).
  */
 const PRIORITY_CARD = ".rec-card.rec2-priority";
 

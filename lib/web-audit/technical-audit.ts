@@ -449,7 +449,11 @@ export async function runTechnicalAuditCore({
           url: candidate.url,
           contextLabel: candidate.contextLabel,
           status: "analyzed",
-          check: buildPageCheckResult(fetchResult.html, { pageUrl: fetchResult.finalUrl, projectDomainNormalized }),
+          check: buildPageCheckResult(fetchResult.html, {
+            pageUrl: fetchResult.finalUrl,
+            projectDomainNormalized,
+            xRobotsTag: fetchResult.xRobotsTag
+          }),
           fetchMs: fetchResult.fetchMs ?? null,
           htmlBytes: fetchResult.htmlBytes ?? null
         });

@@ -32,7 +32,7 @@
  * Es el conjunto que el guardián debe admitir, y la razón es de una línea: un
  * modelo no fabrica nada cuando repite algo que tiene delante. Derivarlo del
  * texto del prompt —en vez de recomponerlo campo a campo— es lo que impide que
- * vuelva a faltar una pieza: ya faltaron las páginas citadas (§131), los
+ * vuelva a faltar una pieza: ya faltaron las páginas citadas (§137), los
  * competidores con dominio propio (§133) y el título de una página citada, que
  * suele ser otro dominio (`blog.hubspot.es — "hubspot.es"`, §134). El guardián
  * sigue rechazando cualquier dominio que NO esté en el prompt, que es lo que

@@ -476,7 +476,7 @@ export async function rewriteRecommendationCore({
     /**
      * Lo que el guardián admite es **lo que el prompt le enseña al modelo**, no
      * una lista recompuesta campo a campo. Recomponerla falló tres veces por
-     * tres piezas distintas —las páginas citadas (§131), los competidores con
+     * tres piezas distintas —las páginas citadas (§137), los competidores con
      * dominio propio (§133) y el TÍTULO de una página citada, que a menudo es
      * otro dominio (`blog.hubspot.es — "hubspot.es"`, §134)—, y cada vez el
      * modelo fue rechazado por repetir algo que tenía delante. Derivarlo del

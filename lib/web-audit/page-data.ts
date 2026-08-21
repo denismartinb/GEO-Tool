@@ -22,6 +22,8 @@ import { buildTechnicalIssuesReport, type TechnicalIssuesReport } from "@/lib/we
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { PageFixContext } from "@/lib/web-audit/page-fixes";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import type { ActiveScanRun } from "@/components/scan-in-progress";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R7-b — la orquestación de Auditoría web, fuera de
@@ -96,6 +98,21 @@ export type WebAuditPageData = {
    * dos fuentes para el mismo hecho, que es como empiezan a discrepar.
    */
   hasCompletedScan: boolean;
+
+  /**
+   * The pending/running scan for this project, if any — same shape and same
+   * `withAnalysisProgress` enrichment as the other four sections
+   * (`FirstScanTakeover`'s `LiveRun`). `null` once nothing is in flight.
+   *
+   * Only meaningful together with `hasCompletedScan`: the screen shows the
+   * ascent beat (`FirstScanTakeover`) while this is set and no scan has ever
+   * completed, exactly the same rule Prompts/Competidores/Recomendaciones/
+   * Páginas citadas already follow (`.claude/rules/mission-rocket.md`,
+   * ONBOARDING-ROCKET-1). Once that first scan finishes, `hasCompletedScan`
+   * flips and the mission continues into `ReentryMission` below — no new
+   * wiring needed there, `auditIsRunning` already covers it.
+   */
+  activeRun: (ActiveScanRun & { id: string }) | null;
 
   technicalSnapshot: TechnicalSnapshotRow | null;
   currentTechnicalReport: TechnicalIssuesReport | null;
@@ -177,6 +194,7 @@ export async function loadWebAuditPageData({
   const [
     { data: profileRow },
     { data: latestRunRow },
+    { data: recentRunRows },
     { data: historyRows },
     { data: technicalHistoryRows },
     { data: activeCampaignRow }
@@ -190,6 +208,15 @@ export async function loadWebAuditPageData({
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Recent runs to detect an in-progress scan (pending|running) — same
+    // query the other four sections run, for the same reason (`activeRun`
+    // above).
+    supabase
+      .from("scan_runs")
+      .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(5),
     supabase
       .from("generated_solutions")
       .select("sanitized_content, created_at")
@@ -233,6 +260,15 @@ export async function loadWebAuditPageData({
       .limit(1)
       .maybeSingle()
   ]);
+
+  const rawActiveRun =
+    (recentRunRows as Array<ActiveScanRun & { id: string }> | null)?.find(
+      (r) => r.status === "pending" || r.status === "running"
+    ) ?? null;
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the takeover's progress reflects extraction too, not just generation —
+  // same call the other four sections make.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : null;
 
   const canAuditCoverage = isProOrAbove(profileRow?.current_plan as string | undefined);
 
@@ -461,6 +497,7 @@ export async function loadWebAuditPageData({
   return {
     canAuditCoverage,
     hasCompletedScan: Boolean(latestRunRow),
+    activeRun,
     technicalSnapshot,
     currentTechnicalReport,
     technicalScoreDelta,

@@ -127,7 +127,7 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
  * Es la única forma de mantener el invariante sin ir ampliando una lista a
  * mano: lo que el modelo puede nombrar es **lo que este texto le enseña**, y el
  * guardián admite exactamente eso. Cada vez que se dedujo el conjunto por otro
- * camino faltó una pieza distinta — primero las páginas citadas (log §131),
+ * camino faltó una pieza distinta — primero las páginas citadas (log §137),
  * luego los competidores anclados por su dominio (log §133), y después el
  * TÍTULO de una página citada, que muy a menudo es él mismo un dominio
  * (`blog.hubspot.es — "hubspot.es"`). Tres agujeros del mismo agujero.
