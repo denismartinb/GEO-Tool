@@ -8,6 +8,7 @@ import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/auth";
 import { sanitizeField } from "@/lib/text/sanitize";
+import { type ArtifactRejection, checkPasteableArtifact } from "@/lib/recommendations/pasteable-artifact";
 
 /**
  * Core business logic for "Mejorar redacción con IA" (the on-demand AI rewrite
@@ -105,7 +106,6 @@ const SUMMARY_MAX = 400;
 const STEP_MAX = 200;
 const MAX_STEPS = 6;
 const EXAMPLE_LABEL_MAX = 80;
-const EXAMPLE_CONTENT_MAX = 1200;
 const MAX_EXAMPLES = 3;
 
 // Only the Gemini fetch is bounded inside lib/llm/gemini.ts; the Supabase
@@ -143,10 +143,16 @@ function withTimeout<T>(promise: PromiseLike<T>, stage: string): Promise<T> {
  * artifact (an HTML snippet or a JSON-LD schema block) whose formatting and tags
  * are the whole point. It is safe to keep them: the UI renders this as escaped
  * React text in a <pre>, so nothing executes. Only non-newline/tab C0 control
- * characters are stripped, trailing per-line spaces and 3+ blank lines are
- * collapsed, and the length is capped.
+ * characters are stripped and trailing per-line spaces and 3+ blank lines are
+ * collapsed.
+ *
+ * **Ya no recorta.** Recortaba con un `.slice(0, 1200)` ciego sobre lo que
+ * podía ser un bloque JSON-LD, y eso es lo que puso medio schema sin cerrar
+ * detrás de un botón «Copiar» (log §126). Quién puede recortarse y quién debe
+ * descartarse entero lo decide `checkPasteableArtifact`, que sí sabe qué clase
+ * de artefacto tiene delante.
  */
-function sanitizeExampleContent(input: string, maxLen: number): string {
+function sanitizeExampleContent(input: string): string {
   let out = "";
   for (const ch of input) {
     const code = ch.codePointAt(0) ?? 0;
@@ -159,11 +165,21 @@ function sanitizeExampleContent(input: string, maxLen: number): string {
   return out
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, maxLen);
+    .trim();
 }
 
-function sanitizeSolution(raw: SolutionContent): SolutionContent | null {
+/** Un artefacto que no se enseña, y por qué — para que quede en el log. */
+type DroppedExample = { label: string; reason: ArtifactRejection };
+
+/**
+ * Sanea la solución y **descarta los artefactos que no se pueden pegar**.
+ *
+ * El descarte es por artefacto, no por solución: el plan (título, resumen,
+ * pasos) sigue siendo útil aunque uno de los tres ejemplos venga roto, y
+ * devolver un error entero le gastaría al usuario una generación de su cupo
+ * diario a cambio de nada. Lo que no se hace nunca es enseñar el roto.
+ */
+function sanitizeSolution(raw: SolutionContent): { solution: SolutionContent; dropped: DroppedExample[] } | null {
   const title = sanitizeField(raw.title, TITLE_MAX);
   const summary = sanitizeField(raw.summary, SUMMARY_MAX);
   if (!title || !summary) {
@@ -175,15 +191,27 @@ function sanitizeSolution(raw: SolutionContent): SolutionContent | null {
     .filter((step) => step.length > 0)
     .slice(0, MAX_STEPS);
 
-  const examples = (raw.examples ?? [])
-    .map((example) => ({
-      label: sanitizeField(example.label, EXAMPLE_LABEL_MAX),
-      content: sanitizeExampleContent(example.content, EXAMPLE_CONTENT_MAX)
-    }))
-    .filter((example) => example.label.length > 0 && example.content.length > 0)
-    .slice(0, MAX_EXAMPLES);
+  const examples: SolutionContent["examples"] = [];
+  const dropped: DroppedExample[] = [];
 
-  return { title, summary, steps, examples };
+  for (const example of raw.examples ?? []) {
+    const label = sanitizeField(example.label, EXAMPLE_LABEL_MAX);
+    const check = checkPasteableArtifact(sanitizeExampleContent(example.content));
+
+    if (!check.ok) {
+      dropped.push({ label, reason: check.reason });
+      continue;
+    }
+    if (label.length === 0) {
+      dropped.push({ label: "(sin etiqueta)", reason: "empty" });
+      continue;
+    }
+    if (examples.length >= MAX_EXAMPLES) break;
+
+    examples.push({ label, content: check.content });
+  }
+
+  return { solution: { title, summary, steps, examples }, dropped };
 }
 
 function isStringArray(value: unknown): value is string[] {
@@ -408,13 +436,30 @@ export async function rewriteRecommendationCore({
       return { success: false, error: GENERIC_REWRITE_FAILURE };
     }
 
-    const sanitized = sanitizeSolution(rewrite);
-    if (!sanitized) {
+    const sanitizeResult = sanitizeSolution(rewrite);
+    if (!sanitizeResult) {
       console.warn(`${LOG_PREFIX} empty_after_sanitize`, {
         project_id: projectId,
         recommendation_id: recommendationId
       });
       return { success: false, error: GENERIC_REWRITE_FAILURE };
+    }
+
+    const { solution: sanitized, dropped } = sanitizeResult;
+
+    // Un artefacto descartado es invisible para el usuario (ve un plan con un
+    // ejemplo menos) y para nosotros sería invisible también sin esto. Es el
+    // único sitio desde el que se puede ver si el tope de longitud sigue
+    // cortando artefactos o si el modelo devuelve JSON roto por su cuenta
+    // (log §126); sin la traza, la Fase B se diseñaría a ciegas.
+    if (dropped.length > 0) {
+      console.warn(`${LOG_PREFIX} artifact_dropped`, {
+        project_id: projectId,
+        recommendation_id: recommendationId,
+        recommendation_type: recommendation.recommendation_type,
+        dropped: dropped.map((item) => item.reason),
+        kept_examples: sanitized.examples.length
+      });
     }
 
     const sanitizedAt = new Date().toISOString();
