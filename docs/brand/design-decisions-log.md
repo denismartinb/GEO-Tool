@@ -11717,7 +11717,7 @@ tipografía o patrones de navegación:
 
 ---
 
-## 125. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
+## 126. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
 
 **Qué se decidió.** Tres cambios en la tarjeta de recomendación, todos
 derivados de datos que el producto ya tenía y no enseñaba.

@@ -52,7 +52,7 @@ paths:
   (Semrush, Otterly.AI) que motivaron el rediseño — no se añade un tipo de
   recomendación nuevo sin decidir su primer paso.
 - **Todo tipo declara su entregable y su control** (`lib/recommendations/
-  deliverable.ts`, RECS-ACCION-1a, log §125). El CTA nombra el artefacto que su
+  deliverable.ts`, RECS-ACCION-1a, log §126). El CTA nombra el artefacto que su
   playbook de `recommendation-rewrite-llm.ts` ya le pide al modelo ("Generar
   comparativa", no "Generar propuesta con IA"): si cambia un playbook, cambia
   el CTA con él o el botón promete una cosa y llega otra.
@@ -80,7 +80,7 @@ paths:
   para `ux-pilot`. `recommendations-client.test.tsx` los renderiza con
   `react-dom/server` y asegura su contenido — incluida la **ausencia** del chip
   en `own_site`, que es lo que le da significado. No se retira ese test para
-  «ya lo mira el piloto»: no puede (log §125).
+  «ya lo mira el piloto»: no puede (log §126).
 - **El hueco de fuentes se divide por familia** (`pursue_comparator_sources`,
   `pursue_community_sources`, `pursue_media_sources`), reutilizando el
   clasificador de Páginas citadas. Las fuentes enciclopédicas quedan **fuera a
