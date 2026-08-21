@@ -425,3 +425,63 @@ describe("buildPageCheckGuidance", () => {
     expect(withoutOg.some((line) => line.includes("Open Graph"))).toBe(true);
   });
 });
+
+/**
+ * AUDIT-SNIPPET-1 — un motor puede rastrear e indexar una página y aun así
+ * tener prohibido reproducir un fragmento de ella. Para un producto de
+ * visibilidad en IA ése es el bloqueo que importa: sin fragmento no hay cita.
+ * Hasta esta fase, ni la meta ni la cabecera se miraban.
+ */
+describe("checkIndexability — directivas que bloquean la cita", () => {
+  const clean = "<html><head></head><body>hola</body></html>";
+
+  it("detecta nosnippet en la meta robots", () => {
+    const html = `<html><head><meta name="robots" content="index, nosnippet"></head></html>`;
+    expect(checkIndexability(html, CTX).snippetBlocks).toEqual([{ directive: "nosnippet", source: "meta" }]);
+  });
+
+  it("detecta nosnippet en la cabecera X-Robots-Tag, que no aparece en el HTML", () => {
+    // El caso que motivó capturar la cabecera: servida por el CDN, invisible
+    // para cualquier análisis que sólo mire el HTML.
+    expect(checkIndexability(clean, { ...CTX, xRobotsTag: "nosnippet" }).snippetBlocks).toEqual([
+      { directive: "nosnippet", source: "header" }
+    ]);
+  });
+
+  it("detecta max-snippet:0, que prohíbe el fragmento igual que nosnippet", () => {
+    const html = `<html><head><meta name="robots" content="max-snippet:0"></head></html>`;
+    expect(checkIndexability(html, CTX).snippetBlocks).toEqual([{ directive: "max-snippet:0", source: "meta" }]);
+  });
+
+  it("no confunde max-snippet:0 con un límite real como max-snippet:50", () => {
+    const html = `<html><head><meta name="robots" content="max-snippet:50"></head></html>`;
+    expect(checkIndexability(html, CTX).snippetBlocks).toEqual([]);
+  });
+
+  it("no cuenta data-nosnippet, que marca un bloque y no la página", () => {
+    const html = `<html><body><div data-nosnippet>aviso legal</div></body></html>`;
+    expect(checkIndexability(html, CTX).snippetBlocks).toEqual([]);
+  });
+
+  it("recoge meta y cabecera a la vez, cada una con su origen", () => {
+    const html = `<html><head><meta name="robots" content="nosnippet"></head></html>`;
+    const result = checkIndexability(html, { ...CTX, xRobotsTag: "max-snippet:0" });
+    expect(result.snippetBlocks).toEqual([
+      { directive: "nosnippet", source: "meta" },
+      { directive: "max-snippet:0", source: "header" }
+    ]);
+  });
+
+  it("una página limpia queda MEDIDA y vacía, que no es lo mismo que sin medir", () => {
+    expect(checkIndexability(clean, CTX).snippetBlocks).toEqual([]);
+  });
+
+  it("NO mueve la puntuación: los puntos siguen saliendo de canonical + noindex + hreflang", () => {
+    // El invariante que protege `readiness_score` (peso .20 del GEO Score, con
+    // pesos aprobados por el fundador): este hallazgo se reporta, no se puntúa.
+    const html = `<html><head><meta name="robots" content="nosnippet"></head></html>`;
+    const blocked = checkIndexability(html, { ...CTX, xRobotsTag: "nosnippet" });
+    const allowed = checkIndexability(clean, CTX);
+    expect(blocked.points).toBe(allowed.points);
+  });
+});
