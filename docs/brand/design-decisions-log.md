@@ -12127,10 +12127,20 @@ RECS-ACCION-1 incluía este techo desde el principio; la fase 1a entregó el chi
 y se dejó el techo fuera sin decirlo. Se corrige aquí en vez de dejar el hueco
 tapado por una fase que parecía completa.
 
-**Pendiente, con decisión del fundador abierta.** «Aumentar visibilidad de
+**Tercera corrección: el muro de tarjetas iguales.** «Aumentar visibilidad de
 marca» emite **una tarjeta por prompt** — 30 en este proyecto, de 36 acciones
 totales. Agrupar en el motor está descartado (§115 punto 6: cambiaría el
 `dedupe_key` y rompería la resolución por prompt de RECS-3), así que la salida
-tiene que ser de presentación. Opciones evaluadas en la sesión; sin implementar.
+es de presentación: al desplegar un grupo se enseñan las **5 con más puntos** y
+el resto queda tras «Ver las otras N».
+
+Se eligió el tope por encima de las dos alternativas evaluadas porque **el
+problema no es cómo se agrupan, es cuáles hacer**: nadie va a escribir 30
+páginas, y el dato que las ordena ya existe en los puntos contrafactuales de
+cada tarjeta. Sub-agrupar por categoría del prompt era más bonito pero deja las
+30 en seis cajones sin decir cuáles importan, y además la categoría no está
+persistida en la recomendación (habría que añadirla a `evidence_json`). Cambiar
+sólo el contador de cabecera ayuda pero no toca el muro. **No esconde nada**: el
+resto está a un clic, igual que ya lo estaba el grupo entero.
 
 ---

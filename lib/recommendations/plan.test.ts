@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { PLAN_SIZE, formatPoints, planScore, selectPlan, type PlanCandidate } from "./plan";
+import {
+  GROUP_PREVIEW_SIZE,
+  PLAN_SIZE,
+  formatPoints,
+  planScore,
+  rankGroupMembers,
+  selectPlan,
+  type PlanCandidate
+} from "./plan";
 import { pointsCaption } from "./deliverable";
 
 const rec = (over: Partial<PlanCandidate> & { recommendation_type: string }): PlanCandidate => ({
@@ -107,5 +115,51 @@ describe("pointsCaption — la promesa dice de quién depende", () => {
   it("no toca la cifra en sí, sólo lo que declara", () => {
     expect(formatPoints(11)).toBe("11");
     expect(formatPoints(0.6)).toBe("0,6");
+  });
+});
+
+/**
+ * RECS-ACCION-1c. El motor emite una tarjeta por prompt, así que
+ * `increase_brand_visibility` en el proyecto real del fundador eran 30 de sus
+ * 36 acciones. El problema no es cómo se agrupan: es cuáles de las 30 mueven
+ * la aguja.
+ */
+describe("rankGroupMembers — dentro del grupo, primero lo que más mueve", () => {
+  it("ordena por puntos, de mayor a menor", () => {
+    const ranked = rankGroupMembers([
+      rec({ id: "a", recommendation_type: "increase_brand_visibility", potentialPoints: 0.2 }),
+      rec({ id: "b", recommendation_type: "increase_brand_visibility", potentialPoints: 3 }),
+      rec({ id: "c", recommendation_type: "increase_brand_visibility", potentialPoints: 1 })
+    ]);
+    expect(ranked.map((r) => r.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("las que no tienen cifra van detrás, por priority_rank", () => {
+    const ranked = rankGroupMembers([
+      rec({ id: "sin1", recommendation_type: "increase_brand_visibility", potentialPoints: null, priority_rank: 9 }),
+      rec({ id: "con", recommendation_type: "increase_brand_visibility", potentialPoints: 0.2 }),
+      rec({ id: "sin2", recommendation_type: "increase_brand_visibility", potentialPoints: null, priority_rank: 2 })
+    ]);
+    expect(ranked.map((r) => r.id)).toEqual(["con", "sin2", "sin1"]);
+  });
+
+  it("no muta el array de entrada", () => {
+    const items = [
+      rec({ id: "a", recommendation_type: "increase_brand_visibility", potentialPoints: 1 }),
+      rec({ id: "b", recommendation_type: "increase_brand_visibility", potentialPoints: 5 })
+    ];
+    rankGroupMembers(items);
+    expect(items.map((r) => r.id)).toEqual(["a", "b"]);
+  });
+
+  it("el cap deja ver las mejores y el resto a un clic, sin esconder nada", () => {
+    const items = Array.from({ length: 30 }, (_, i) =>
+      rec({ id: `p${i}`, recommendation_type: "increase_brand_visibility", potentialPoints: i / 10 })
+    );
+    const ranked = rankGroupMembers(items);
+    const visible = ranked.slice(0, GROUP_PREVIEW_SIZE);
+    expect(visible).toHaveLength(5);
+    expect(visible.map((r) => r.id)).toEqual(["p29", "p28", "p27", "p26", "p25"]);
+    expect(ranked.length - visible.length).toBe(25);
   });
 });

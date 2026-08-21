@@ -121,6 +121,11 @@ paths:
   «potenciales» (`pointsCaption`). El número no cambia — cambia lo que declara,
   porque "que cinco terceros actúen" y "añade un párrafo a tu página" no son la
   misma promesa aunque ADR 0017 las calcule igual (log §132).
+- **Un grupo enseña sus mejores, no todas.** `GROUP_PREVIEW_SIZE` (5) más «Ver
+  las otras N», ordenadas con la misma `planScore` que ordena el plan — un solo
+  criterio para toda la pantalla. El motor emite una tarjeta por prompt y eso no
+  cambia (§115 punto 6), así que la densidad se resuelve en presentación. **No
+  esconde nada**: el resto está a un clic (log §132).
 - **"Alta prioridad" es un único criterio absoluto** (impacto × confianza),
   compartido entre la badge de la tarjeta y el filtro. No debe volver a existir
   un segundo criterio posicional (`priority_rank <= N`) conviviendo con él en

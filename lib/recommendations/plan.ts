@@ -90,6 +90,32 @@ export function selectPlan<T extends PlanCandidate>(recommendations: readonly T[
 }
 
 /**
+ * Cuántas acciones de un mismo tipo se enseñan al desplegar su grupo
+ * (RECS-ACCION-1c). El motor emite una tarjeta por prompt, así que
+ * `increase_brand_visibility` en un proyecto de 30 prompts son 30 tarjetas
+ * idénticas salvo la consulta — 30 de las 36 acciones del proyecto real del
+ * fundador. Nadie va a escribir 30 páginas: el problema no es cómo se agrupan,
+ * es **cuáles de las 30 mueven la aguja**, y ese dato ya existe en los puntos
+ * contrafactuales de cada tarjeta.
+ *
+ * Agrupar en el motor está descartado (log §115 punto 6: cambiaría el
+ * `dedupe_key` y rompería la resolución por prompt de RECS-3), así que esto es
+ * presentación, como el resto del agrupado. **No esconde nada**: el resto está
+ * a un clic, igual que ya lo estaba el grupo entero.
+ */
+export const GROUP_PREVIEW_SIZE = 5;
+
+/**
+ * Ordena los miembros de un grupo con la MISMA función que ordena el plan, de
+ * forma que la pantalla entera tenga un solo criterio. Dentro de un grupo el
+ * tipo es constante, así que la banda de control no altera el orden relativo:
+ * lo que decide es la cifra de puntos y, sin ella, el `priority_rank`.
+ */
+export function rankGroupMembers<T extends PlanCandidate>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => planScore(b) - planScore(a));
+}
+
+/**
  * Formato de una cifra de puntos. Un delta por debajo de 1 punto es real y
  * merece verse: redondearlo a cero y caer al impacto cualitativo escondía
  * información verdadera —en un proyecto ya maduro casi todos los deltas caen
