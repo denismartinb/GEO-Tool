@@ -51,7 +51,7 @@ una con su Human Gate.
   el riesgo #3 del diagnóstico —el flujo de alta sin ningún test de principio a
   fin— se queda abierto a propósito.** **P2 hecho** (2026-08-20/21, log §129):
   `/signup` + `/forgot-password` al set por defecto. **P3 hecho** (2026-08-21,
-  log §130): matriz de definición ↔ pantalla en
+  log §132): matriz de definición ↔ pantalla en
   `docs/agentic-user-pilot.md`, consumida por `.claude/agents/ux-pilot.md`.
   **P4 sigue pendiente** — necesita GitHub Actions o la sesión local del
   fundador, fuera de alcance para una sesión remota.
