@@ -65,14 +65,14 @@ paths:
   extrae de él lo que el guardián admite. Recomponerlo campo a campo falló tres
   veces por tres piezas distintas —páginas citadas (§131), competidores con
   dominio propio (§133) y el título de una página citada, que suele ser otro
-  dominio (§129)—, y cada vez el modelo fue rechazado por repetir algo que tenía
+  dominio (§134)—, y cada vez el modelo fue rechazado por repetir algo que tenía
   delante. Si añades un dato al prompt, ya queda anclado; si lo anclas sin
   enseñarlo, sobra.
 - **El vocabulario de dominios vive en `anchored-domains.ts`; el guardián lo
   importa.** La primitiva es «qué es un dominio», el juicio es «esto está
   fabricado». Con la dependencia invertida, mockear el guardián en un test deja
   al conjunto sin extractor y el fallo se lee en pantalla como «el motor de IA
-  falló» (§129).
+  falló» (§134).
 - **El prompt y el guardián leen el MISMO conjunto de dominios anclados.**
   `collectAnchoredDomains` (`lib/recommendations/anchored-domains.ts`) es la
   única fuente: unión de `citation_domains`, `source_domains` y los dominios y
@@ -91,7 +91,7 @@ paths:
   suyo.** Un juicio comparativo (Fase C) no se cuenta como «falta evidencia»:
   el dato estaba y lo que sobra es la afirmación de superioridad, así que el
   mensaje dice qué palabra lo tumbó. Mandar al usuario a mirar la evidencia
-  cuando el problema es otro es peor que no decir nada (log §128, §129).
+  cuando el problema es otro es peor que no decir nada (log §128, §134).
 - **Un rechazo del guardián dice QUÉ término lo disparó, también en pantalla.**
   Diagnosticar «mencionaba datos que no están en la evidencia» exigía acceso a
   los logs de producción; costó dos vueltas enteras (log §131, §133). El

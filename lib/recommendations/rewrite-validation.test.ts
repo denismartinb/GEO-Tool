@@ -152,7 +152,7 @@ describe("comparación contra competidores nombrados (Fase C, log §128)", () =>
 
   it("dice QUÉ marcador lo tumbó, no sólo que hubo uno", () => {
     // Los tres motivos del guardián nombran su término: sin él, diagnosticar un
-    // rechazo exigía leer los logs de producción (log §131, §129).
+    // rechazo exigía leer los logs de producción (log §131, §134).
     const frase = "Nuestra red es superior a la de Digi en las principales ciudades.";
     const result = validateRewriteAgainstEvidence({ ...base, description: frase, segments: [frase] });
 

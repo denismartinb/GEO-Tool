@@ -11883,52 +11883,58 @@ fixture es la frase real, no un ejemplo inventado);
 
 ---
 
-## 129. El guardián se construía a mano y siempre faltaba una pieza: ahora lee el prompt (2026-08-21)
+## 129. El piloto abre por fin `/signup` y `/forgot-password` (PRELAUNCH-HARDENING-1 Fase P2, 2026-08-20)
 
-**Qué pasó.** Con §126 y §128 desplegados, el fundador probó las dos tarjetas.
-*Entrar en fuentes citadas* **funcionó**. La otra falló con el mensaje que §128
-introdujo, y esta vez el mensaje traía el término: **«mencionaba «hubspot.es»,
-que no está en la evidencia»**.
+**Qué se decidió.** `tests/pilot/journeys/auth-pages.spec.ts` — las dos
+pantallas de autenticación que el piloto de lectura nunca había abierto. Parte
+del set por defecto sin tocar configuración: sigue el mismo patrón
+`**/journeys/*.spec.ts` que el resto.
 
-**La causa, visible en la propia tarjeta.** Entre sus páginas citadas aparece
-`"hubspot.es" (blog.hubspot.es)`: el **título** de la página es él mismo un
-dominio, distinto del dominio de la página. El prompt le enseña los dos
-(`- blog.hubspot.es — "hubspot.es"`) y le pide nombrar esa página. Yo había
-anclado el dominio y el host de la URL, pero no el título. El modelo escribió
-lo que tenía delante y el guardián lo descartó.
+**Por qué necesitaban su propio contexto, sin sesión.** Los proyectos
+`mobile`/`tablet`/`desktop` montan siempre con `storageState:
+.pilot/auth.json` — correcto para pantallas de consola, pero
+`app/signup/page.tsx` hace `if (user) redirect("/dashboard")`: visitarla ya
+autenticado enseña el dashboard con otro nombre, no el formulario de alta.
+`test.use({ storageState: { cookies: [], origins: [] } })`, sólo en este
+fichero, sustituye el `storageState` del proyecto — el resto del set sigue
+entrando como la cuenta piloto. Es la corrección honesta, no un atajo: un
+contexto de verdad sin sesión es exactamente el visitante que sirven estas dos
+pantallas.
 
-**Lo que esto significa, que es más que un campo olvidado.** Es la **tercera**
-pieza que faltaba del mismo conjunto: las páginas citadas (§126), los
-competidores con dominio propio (§128) y ahora el título de una página. Tres
-veces el conjunto se recomponía campo a campo, y tres veces la lista se quedó
-corta — porque una lista escrita a mano no puede saber qué le enseña el prompt
-al modelo.
+**Qué comprueba más allá de la salud genérica.** Los campos propios de cada
+formulario (`#email`/`#password`/`#confirmPassword` en alta, `#reset-email` y
+el botón de envío en recuperación) y que ambas declaran `<meta name="robots"
+content="noindex, follow">` (SEO-POS-1 T10) — nunca lo había verificado el
+piloto. Ningún test envía el formulario: sólo navegación GET, ni Supabase Auth
+ni correo de por medio, la misma frontera que ya respeta el resto del set de
+lectura.
 
-**Qué se decidió.** El conjunto anclado deja de recomponerse: se **deriva del
-texto del prompt**. `buildRecommendationRewritePrompt` se separa de la llamada
-al modelo, el ejecutor lo construye y `domainsShownInPrompt` extrae de él todos
-los tokens con forma de dominio. Lo que el modelo puede nombrar es exactamente
-lo que se le ha enseñado. No abre la mano: el prompt sólo contiene la evidencia
-de esa tarjeta, un test comprueba que el andamiaje fijo del prompt no aporta
-más que `schema.org` y el dominio de la marca, y un dominio que no esté ahí se
-sigue rechazando con su término.
+**`tests/pilot/fixtures/server.mjs` se amplió a la vez**, con las mismas dos
+rutas y la misma forma de contenido, para que `pnpm pilot:selfcheck` siga
+demostrando que el arnés funciona de punta a punta en vez de recibir un 404 y
+fallar en falso.
 
-**Y el vocabulario de dominios cambió de dueño.** «Qué token parece un dominio»
-vive ahora en `anchored-domains.ts` y el guardián lo importa, no al revés.
-Estaba duplicado (`normalizeDomain` en los dos ficheros), y con la dependencia
-invertida cualquier suite que mockeara el guardián dejaba al conjunto anclado
-sin extractor: el flujo entero reventaba con un TypeError que **se leía en
-pantalla como «el motor de IA falló»**. Lo cazaron los tests antes de salir de
-aquí.
+**Tres afirmaciones del plan original resultaron obsoletas al verificarlas
+contra el código real**, encontradas durante el Task Intake de esta fase, no
+implementadas aquí: A2 (`triggerWebAuditRun` ya comprueba `response.ok` y
+registra el fallo — WEB-AUDIT-DRIVE-1 lo llevaba hecho), `/pricing` (ya
+cubierto por `landing.spec.ts`) y el pliegue de facturación de ajustes (ya
+cubierto por `settings.spec.ts`). Ninguna necesitaba trabajo nuevo; el plan en
+`docs/prelaunch-hardening-plan.md` se marca cerrado en A2 en el mismo PR.
 
-**Estado de la fase.** *Entrar en fuentes citadas* verificada por el fundador
-en el preview. La segunda tarjeta queda pendiente de su comprobación con este
-arreglo puesto.
+**No incluido en esta fase.** El paso de confirmación de `/forgot-password`
+(necesita un token de reinicio válido, inalcanzable sin buzón — sigue siendo
+un smoke manual del fundador, igual que la confirmación por email del alta).
+P3 (matriz de documentación) y P4 (ronda de ejecución, necesita GitHub Actions
+o la sesión local del fundador) quedan fuera, tal como recomendaba el propio
+Task Intake.
 
-**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
-`recommendation-rewrite-llm.ts` (el constructor del prompt, ahora exportado),
-`rewrite-validation.ts`, `rewrite-recommendation.ts`; §126 y §128 (las dos
-mitades anteriores del mismo agujero).
+**Trazabilidad.** `tests/pilot/journeys/auth-pages.spec.ts`;
+`tests/pilot/fixtures/server.mjs`; `docs/agentic-user-pilot.md` (sección
+"PRELAUNCH-HARDENING-1 Fase P2"); `docs/prelaunch-hardening-plan.md` (ledger
+A2).
+
+---
 
 ---
 
@@ -12111,6 +12117,57 @@ las dos dimensiones.
 **Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
 `rewrite-recommendation.ts`; §126 (la primera mitad, dominios);
 `.claude/rules/recommendations.md` §Reescritura con IA.
+
+---
+
+---
+
+## 134. El guardián se construía a mano y siempre faltaba una pieza: ahora lee el prompt (2026-08-21)
+
+**Qué pasó.** Con §126 y §128 desplegados, el fundador probó las dos tarjetas.
+*Entrar en fuentes citadas* **funcionó**. La otra falló con el mensaje que §128
+introdujo, y esta vez el mensaje traía el término: **«mencionaba «hubspot.es»,
+que no está en la evidencia»**.
+
+**La causa, visible en la propia tarjeta.** Entre sus páginas citadas aparece
+`"hubspot.es" (blog.hubspot.es)`: el **título** de la página es él mismo un
+dominio, distinto del dominio de la página. El prompt le enseña los dos
+(`- blog.hubspot.es — "hubspot.es"`) y le pide nombrar esa página. Yo había
+anclado el dominio y el host de la URL, pero no el título. El modelo escribió
+lo que tenía delante y el guardián lo descartó.
+
+**Lo que esto significa, que es más que un campo olvidado.** Es la **tercera**
+pieza que faltaba del mismo conjunto: las páginas citadas (§126), los
+competidores con dominio propio (§128) y ahora el título de una página. Tres
+veces el conjunto se recomponía campo a campo, y tres veces la lista se quedó
+corta — porque una lista escrita a mano no puede saber qué le enseña el prompt
+al modelo.
+
+**Qué se decidió.** El conjunto anclado deja de recomponerse: se **deriva del
+texto del prompt**. `buildRecommendationRewritePrompt` se separa de la llamada
+al modelo, el ejecutor lo construye y `domainsShownInPrompt` extrae de él todos
+los tokens con forma de dominio. Lo que el modelo puede nombrar es exactamente
+lo que se le ha enseñado. No abre la mano: el prompt sólo contiene la evidencia
+de esa tarjeta, un test comprueba que el andamiaje fijo del prompt no aporta
+más que `schema.org` y el dominio de la marca, y un dominio que no esté ahí se
+sigue rechazando con su término.
+
+**Y el vocabulario de dominios cambió de dueño.** «Qué token parece un dominio»
+vive ahora en `anchored-domains.ts` y el guardián lo importa, no al revés.
+Estaba duplicado (`normalizeDomain` en los dos ficheros), y con la dependencia
+invertida cualquier suite que mockeara el guardián dejaba al conjunto anclado
+sin extractor: el flujo entero reventaba con un TypeError que **se leía en
+pantalla como «el motor de IA falló»**. Lo cazaron los tests antes de salir de
+aquí.
+
+**Estado de la fase.** *Entrar en fuentes citadas* verificada por el fundador
+en el preview. La segunda tarjeta queda pendiente de su comprobación con este
+arreglo puesto.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`recommendation-rewrite-llm.ts` (el constructor del prompt, ahora exportado),
+`rewrite-validation.ts`, `rewrite-recommendation.ts`; §126 y §128 (las dos
+mitades anteriores del mismo agujero).
 
 ---
 
