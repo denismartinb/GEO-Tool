@@ -11690,6 +11690,48 @@ diseño las reutiliza tal cual.
 log §2 (mecanismo de remap de tokens), §119 (última pantalla migrada al
 mismo sistema), §123 (tope de competidores fusionado en esta misma fase).
 
+**Corrección tras revisión del fundador en el preview real (mismo día).**
+Cinco defectos de detalle, todos con capturas reales adjuntas al pedirlas:
+
+1. **`.add-hint` y `.add-engines` no existían.** El primer paso de limpieza
+   de CSS de esta misma fase borró ambas reglas al reescribir el bloque
+   `.add-*` — y el comentario que quedó en su lugar afirmaba, incorrectamente,
+   que se conservaban. Sin esas reglas, el icono y el texto de la pista del
+   dominio no tenían ningún `display:flex`/`align-items` que los alineara, y
+   la fila de motores no tenía `gap` — de ahí "el icono no está en la misma
+   línea" y "los motores quedan pegados". Vuelto a escribir tal cual estaba,
+   con el `gap` de `.add-engines` subido de 16 a 18px.
+2. **Puntos de color en vez de los iconos reales de los motores.** Sustituidos
+   por `EngineGlyph` (`components/ui/engine-glyph.tsx`) + `getEngineMeta`
+   (`lib/scan/engine-meta.ts`) — el mismo componente y los mismos colores que
+   ya usan Visión general y Prompts, no un segundo set inventado para este
+   flujo.
+3. **Competidores y prompts vivían siempre desplegados**, con un campo de
+   texto por fila a ancho completo — nunca coincidió con la maqueta B3/B4
+   aprobada (`docs/design-reference/onboarding-domain-redesign-1/`, que las
+   mostraba plegadas: nombre+dominio como texto, un prompt en una línea). Cada
+   fila gana una identidad de UI local (`id`, asignado por un contador en
+   `useRef`, nunca enviado al servidor) y un estado plegado/desplegado
+   (`openCompetitors`/`openPrompts`, un `Set<number>` de ids). Una fila
+   sugerida por Gemini nace plegada; una fila nueva vía "Añadir…" nace
+   desplegada, porque una fila vacía y plegada no da nada en lo que hacer
+   clic. El icono de engranaje (`Icon name="settings"`) la abre; al abrir
+   pasa a mostrar un check y la cierra. Competidores despliega a dos
+   columnas (nombre | dominio) en vez de apiladas, para no ocupar tanto.
+4. **Las cajas de prompt medían distinto entre sí.** El `<textarea>` no tenía
+   altura fija ni `resize:none`, así que cada una crecía según su contenido.
+   `.onb2-prompt-edit` fija `height:76px` y quita el tirador de
+   redimensionar — las tres miden lo mismo siempre.
+5. **El reparto por categoría no alineaba sus columnas.** `.onb2-cov` usaba
+   `flex-wrap`, que reparte el ancho sobrante fila a fila — dos filas de la
+   misma cuadrícula podían no tener las columnas alineadas entre sí. Cambiado
+   a `display:grid` con `repeat(auto-fit, minmax(140px, 1fr))`, que sí fuerza
+   la misma anchura en todas las filas.
+
+Verificado sin sesión real: maqueta estática con el `app/globals.css` real
+(mismo método que la captura de `direccion-b-aprobada.html`), no sólo lectura
+de CSS. `pnpm test`/`pnpm run validate` vueltos a correr limpios.
+
 ---
 
 ## Cómo mantener este documento

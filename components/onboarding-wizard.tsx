@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
+import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { isWellFormedDomain, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 const DEFAULT_PROMPT_CAP = 10;
 const GENERATE_MORE_BATCH_SIZE = 5;
@@ -31,11 +33,10 @@ const COUNTRIES: Array<{ code: string; name: string }> = [
 
 const TYPE_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
 
-const ENGINES = [
-  { name: "Gemini", color: "#4285f4" },
-  { name: "Claude", color: "#d97757" },
-  { name: "ChatGPT", color: "#10a37f" }
-];
+// Mismos motores, mismos glifos y colores que Visión general/Prompts
+// (lib/scan/engine-meta.ts, components/ui/engine-glyph.tsx) — no un set
+// paralelo de puntos de color inventado para este flujo.
+const ENGINE_PROVIDERS = ["gemini", "claude", "openai"] as const;
 
 // Nombres amigables para lo que devuelve `languageForCountry`
 // (lib/projects/project-form.ts) — sólo cubre los códigos que ese mapa puede
@@ -81,8 +82,12 @@ const CREATE_PROJECT_STEPS = [
 // `source` distingue una fila que vino de la sugerencia de Gemini de una
 // añadida a mano ("Añadir competidor") — el chip "sugerido" del paso 1 sólo
 // se pinta en la primera, para no afirmar una sugerencia de IA que no existió
-// (ver docs/design-reference/onboarding-domain-redesign-1/README.md).
-type Competitor = { name: string; domain: string; source: "suggested" | "manual" };
+// (ver docs/design-reference/onboarding-domain-redesign-1/README.md). `id` es
+// una identidad de UI local (asignada por `newId()` al montar cada fila,
+// nunca enviada al servidor) — sostiene qué filas están plegadas/desplegadas
+// sin depender del índice, que cambia al borrar una fila de en medio.
+type Competitor = { id: number; name: string; domain: string; source: "suggested" | "manual" };
+type PromptRow = { id: number; text: string; category: PromptCategory | null };
 
 // Banderitas mini (mismas que onboarding.jsx) — solo los códigos definidos en
 // la referencia; el resto cae al fallback "us" igual que `F[code] || F.us`.
@@ -370,13 +375,15 @@ function PromptsStepBody({
   categoryCounts,
   isGeneratingMore,
   generateMoreError,
+  openPrompts,
+  toggleOpenPrompt,
   updatePrompt,
   removePrompt,
   addPrompt,
   generateMorePromptsAutomatically,
   goBack
 }: {
-  prompts: Array<{ text: string; category: PromptCategory | null }>;
+  prompts: PromptRow[];
   promptCap: number;
   validPromptCount: number;
   promptRoomLeft: number;
@@ -384,6 +391,8 @@ function PromptsStepBody({
   categoryCounts: Array<[string, number]>;
   isGeneratingMore: boolean;
   generateMoreError: string | null;
+  openPrompts: Set<number>;
+  toggleOpenPrompt: (id: number) => void;
   updatePrompt: (index: number, value: string) => void;
   removePrompt: (index: number) => void;
   addPrompt: () => void;
@@ -420,29 +429,45 @@ function PromptsStepBody({
         {validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} · límite de tu plan: {promptCap}
       </div>
       <div className="card" style={{ overflow: "hidden" }}>
-        {prompts.map((row, index) => (
-          <div key={index} className="onb2-row align-top">
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <Textarea
-                aria-label={`Prompt ${index + 1}`}
-                rows={2}
-                className="onb-prompt-input"
-                placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
-                value={row.text}
-                onChange={(event) => updatePrompt(index, event.target.value)}
-              />
+        {prompts.map((row, index) => {
+          const isOpen = openPrompts.has(row.id);
+          return (
+            <div key={row.id} className={isOpen ? "onb2-row align-top" : "onb2-row"}>
+              {isOpen ? (
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Textarea
+                    aria-label={`Prompt ${index + 1}`}
+                    rows={3}
+                    className="onb-prompt-input onb2-prompt-edit"
+                    placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
+                    value={row.text}
+                    onChange={(event) => updatePrompt(index, event.target.value)}
+                    autoFocus
+                  />
+                </div>
+              ) : (
+                <span className="onb2-ptext">{row.text || "Prompt vacío"}</span>
+              )}
+              {row.category ? <span className="onb2-chip n">{row.category}</span> : null}
+              <button
+                type="button"
+                className="onb2-iconbtn"
+                aria-label={isOpen ? `Listo, prompt ${index + 1}` : `Editar prompt ${index + 1}`}
+                onClick={() => toggleOpenPrompt(row.id)}
+              >
+                <Icon name={isOpen ? "check" : "settings"} size={14} />
+              </button>
+              <button
+                type="button"
+                className="onb2-iconbtn"
+                aria-label={`Quitar prompt ${index + 1}`}
+                onClick={() => removePrompt(index)}
+              >
+                <Icon name="trash" size={14} />
+              </button>
             </div>
-            {row.category ? <span className="onb2-chip n">{row.category}</span> : null}
-            <button
-              type="button"
-              className="onb2-iconbtn"
-              aria-label={`Quitar prompt ${index + 1}`}
-              onClick={() => removePrompt(index)}
-            >
-              <Icon name="trash" size={14} />
-            </button>
-          </div>
-        ))}
+          );
+        })}
         {categoryCounts.length > 0 ? (
           <div className="onb2-cov">
             {categoryCounts.map(([category, count]) => (
@@ -502,8 +527,30 @@ export function OnboardingWizard({
   const [country, setCountry] = useState("ES");
   const [language, setLanguage] = useState("es");
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [prompts, setPrompts] = useState<Array<{ text: string; category: PromptCategory | null }>>([]);
+  const [prompts, setPrompts] = useState<PromptRow[]>([]);
   const [suggestError, setSuggestError] = useState<string | null>(null);
+  /**
+   * Identidad de UI local para cada fila de competidor/prompt — nunca sale de
+   * este componente ni llega al servidor. Filas sugeridas por Gemini nacen
+   * plegadas (`open*` no las contiene); una fila nueva vía "Añadir…" nace
+   * desplegada, porque una fila vacía y plegada no da nada en lo que hacer
+   * clic para rellenarla.
+   */
+  const nextId = useRef(0);
+  const newId = () => {
+    nextId.current += 1;
+    return nextId.current;
+  };
+  const [openCompetitors, setOpenCompetitors] = useState<Set<number>>(new Set());
+  const [openPrompts, setOpenPrompts] = useState<Set<number>>(new Set());
+  function toggleId(setter: (updater: (prev: Set<number>) => Set<number>) => void, id: number) {
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   /**
    * LLM-RESILIENCE-1: which halves of the automatic suggestion came back
    * empty, so the step that is actually empty can say so.
@@ -601,8 +648,8 @@ export function OnboardingWizard({
           "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
         );
         setSuggestFailed(result.failed.length ? result.failed : ["competitors", "prompts"]);
-        setCompetitors([{ name: "", domain: "", source: "manual" }]);
-        setPrompts([{ text: "", category: null }]);
+        setCompetitors([{ id: newId(), name: "", domain: "", source: "manual" }]);
+        setPrompts([{ id: newId(), text: "", category: null }]);
         setLanguage((current) => result.language || current);
         setStep(1);
         return;
@@ -611,10 +658,14 @@ export function OnboardingWizard({
       setSuggestFailed(result.failed);
       setCompetitors(
         result.competitors.length
-          ? result.competitors.map((c) => ({ ...c, source: "suggested" as const }))
-          : [{ name: "", domain: "", source: "manual" }]
+          ? result.competitors.map((c) => ({ id: newId(), ...c, source: "suggested" as const }))
+          : [{ id: newId(), name: "", domain: "", source: "manual" }]
       );
-      setPrompts(result.prompts.length ? result.prompts : [{ text: "", category: null }]);
+      setPrompts(
+        result.prompts.length
+          ? result.prompts.map((p) => ({ id: newId(), ...p }))
+          : [{ id: newId(), text: "", category: null }]
+      );
       setStep(1);
     });
   }
@@ -648,7 +699,7 @@ export function OnboardingWizard({
       setPrompts((rows) => {
         const room = Math.max(0, promptCap - rows.length);
         const toAdd = result.prompts.slice(0, room);
-        return [...rows, ...toAdd.map((p) => ({ text: p.text, category: p.category }))];
+        return [...rows, ...toAdd.map((p) => ({ id: newId(), text: p.text, category: p.category }))];
       });
     });
   }
@@ -754,20 +805,25 @@ export function OnboardingWizard({
                   </div>
                 ) : (
                   <div className="add-hint">
-                    <Icon name="info" size={13} />
-                    El idioma se detecta automáticamente del dominio. Podrás añadir competidores y prompts después.
+                    <Icon name="info" size={13} className="add-hint-ico" />
+                    <span>El idioma se detecta automáticamente del dominio. Podrás añadir competidores y prompts después.</span>
                   </div>
                 )}
                 {suggestError ? <p className="feedback error mt-2">{suggestError}</p> : null}
 
                 <div className="add-engines">
                   <span className="cap">Motores</span>
-                  {ENGINES.map((engine) => (
-                    <span className="eng-chip" key={engine.name}>
-                      <span className="eng-dot" style={{ background: engine.color }} />
-                      {engine.name}
-                    </span>
-                  ))}
+                  {ENGINE_PROVIDERS.map((provider) => {
+                    const meta = getEngineMeta(provider);
+                    return (
+                      <span className="eng-chip" key={provider}>
+                        <span className="eng-ico" style={{ color: meta.color }}>
+                          <EngineGlyph provider={provider} />
+                        </span>
+                        {meta.label}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -777,7 +833,7 @@ export function OnboardingWizard({
             domain={domain}
             languageKnown={false}
             language={language}
-            engineCount={ENGINES.length}
+            engineCount={ENGINE_PROVIDERS.length}
             competitorsCount={null}
             promptsCount={null}
           />
@@ -818,51 +874,76 @@ export function OnboardingWizard({
               {validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} (máximo {MAX_USER_COMPETITORS})
             </div>
             <div className="card" style={{ overflow: "hidden" }}>
-              {competitors.map((row, index) => (
-                <div key={index} className="onb2-row">
-                  <span className="onb2-fav" style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }} aria-hidden="true">
-                    {(row.name.trim()[0] || row.domain.trim()[0] || "?").toUpperCase()}
-                  </span>
-                  <div className="onb2-rmeta">
-                    <Input
-                      aria-label={`Nombre competidor ${index + 1}`}
-                      placeholder="Nombre"
-                      value={row.name}
-                      onChange={(event) => updateCompetitor(index, { name: event.target.value })}
-                    />
-                    <Input
-                      aria-label={`Dominio competidor ${index + 1}`}
-                      placeholder="dominio.com"
-                      value={row.domain}
-                      onChange={(event) => updateCompetitor(index, { domain: event.target.value })}
-                    />
-                  </div>
-                  {row.source === "suggested" ? (
-                    <span className="onb2-chip">
-                      <Icon name="sparkles" size={11} />
-                      sugerido
+              {competitors.map((row, index) => {
+                const isOpen = openCompetitors.has(row.id);
+                return (
+                  <div key={row.id} className={isOpen ? "onb2-row align-top" : "onb2-row"}>
+                    <span
+                      className="onb2-fav"
+                      style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }}
+                      aria-hidden="true"
+                    >
+                      {(row.name.trim()[0] || row.domain.trim()[0] || "?").toUpperCase()}
                     </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="onb2-iconbtn"
-                    aria-label={`Quitar competidor ${index + 1}`}
-                    onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== index))}
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                </div>
-              ))}
+                    {isOpen ? (
+                      <div className="onb2-editgrid">
+                        <Input
+                          aria-label={`Nombre competidor ${index + 1}`}
+                          placeholder="Nombre"
+                          value={row.name}
+                          onChange={(event) => updateCompetitor(index, { name: event.target.value })}
+                          autoFocus
+                        />
+                        <Input
+                          aria-label={`Dominio competidor ${index + 1}`}
+                          placeholder="dominio.com"
+                          value={row.domain}
+                          onChange={(event) => updateCompetitor(index, { domain: event.target.value })}
+                        />
+                      </div>
+                    ) : (
+                      <span className="onb2-rmeta-static">
+                        <span className="onb2-rname">{row.name || "Sin nombre"}</span>
+                        <span className="onb2-rdom">{row.domain || "sin dominio"}</span>
+                      </span>
+                    )}
+                    {row.source === "suggested" ? (
+                      <span className="onb2-chip">
+                        <Icon name="sparkles" size={11} />
+                        sugerido
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="onb2-iconbtn"
+                      aria-label={isOpen ? `Listo, competidor ${index + 1}` : `Editar competidor ${index + 1}`}
+                      onClick={() => toggleId(setOpenCompetitors, row.id)}
+                    >
+                      <Icon name={isOpen ? "check" : "settings"} size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="onb2-iconbtn"
+                      aria-label={`Quitar competidor ${index + 1}`}
+                      onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== index))}
+                    >
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </div>
+                );
+              })}
               <div className="onb2-listfoot">
                 <Button
                   type="button"
                   variant="outline"
                   disabled={competitors.length >= MAX_USER_COMPETITORS}
-                  onClick={() =>
+                  onClick={() => {
+                    const id = newId();
                     setCompetitors((rows) =>
-                      rows.length >= MAX_USER_COMPETITORS ? rows : [...rows, { name: "", domain: "", source: "manual" }]
-                    )
-                  }
+                      rows.length >= MAX_USER_COMPETITORS ? rows : [...rows, { id, name: "", domain: "", source: "manual" }]
+                    );
+                    setOpenCompetitors((prev) => new Set(prev).add(id));
+                  }}
                 >
                   <Icon name="plus" size={13} />
                   Añadir competidor
@@ -886,7 +967,7 @@ export function OnboardingWizard({
             domain={domain}
             languageKnown
             language={language}
-            engineCount={ENGINES.length}
+            engineCount={ENGINE_PROVIDERS.length}
             competitorsCount={validCompetitorCount}
             promptsCount={null}
           />
@@ -933,9 +1014,15 @@ export function OnboardingWizard({
             categoryCounts={categoryCounts}
             isGeneratingMore={isGeneratingMore}
             generateMoreError={generateMoreError}
+            openPrompts={openPrompts}
+            toggleOpenPrompt={(id) => toggleId(setOpenPrompts, id)}
             updatePrompt={updatePrompt}
             removePrompt={(index) => setPrompts((rows) => rows.filter((_, i) => i !== index))}
-            addPrompt={() => setPrompts((rows) => (rows.length >= promptCap ? rows : [...rows, { text: "", category: null }]))}
+            addPrompt={() => {
+              const id = newId();
+              setPrompts((rows) => (rows.length >= promptCap ? rows : [...rows, { id, text: "", category: null }]));
+              setOpenPrompts((prev) => new Set(prev).add(id));
+            }}
             generateMorePromptsAutomatically={generateMorePromptsAutomatically}
             goBack={() => setStep(1)}
           />
@@ -945,7 +1032,7 @@ export function OnboardingWizard({
           domain={domain}
           languageKnown
           language={language}
-          engineCount={ENGINES.length}
+          engineCount={ENGINE_PROVIDERS.length}
           competitorsCount={validCompetitorCount}
           promptsCount={validPromptCount}
         />

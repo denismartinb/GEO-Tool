@@ -4419,8 +4419,7 @@ a.notif-row:hover {
 
 .onb-engines { margin-top: 40px; display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
 .onb-engines .cap { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
-.eng-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.eng-dot { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 auto; }
+.eng-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 
 .type-caret { display: inline-block; width: 1.5px; height: 1.05em; background: var(--accent); margin-left: 1px;
   vertical-align: text-bottom; animation: caret 1s step-end infinite; }
@@ -4437,10 +4436,19 @@ a.notif-row:hover {
    compounds) was exclusive to the old onboarding-wizard.tsx layout — moved
    to the onb2- block in app/console.css (dashboard-only, per .claude/rules/
    styles.md). .domain-bar/.domain-globe/.domain-input/.country-sel/.onb-cta/
-   .eng-chip/.eng-dot/.type-caret/.db-ghost/.add-hint/.add-engines/
-   .field-label/.field-err/.cap/.meta-flag are still used as-is by the new
-   layout and stay here unchanged. */
+   .eng-chip/.eng-dot/.type-caret/.db-ghost/.field-label/.field-err/.cap/
+   .meta-flag are still used as-is by the new layout and stay here unchanged.
+   .add-hint/.add-engines are NOT unchanged — a first pass here deleted them
+   by mistake while claiming to keep them (a comment that lied cost the
+   founder a broken hint row and a cramped engines row in review, 2026-08-21):
+   re-added below, plus .eng-ico for the real engine glyphs that replaced the
+   flat color dots. */
 .add-sub { font-size: 15px; line-height: 1.6; color: var(--ink-2); margin: 12px auto 0; max-width: 460px; }
+.add-hint { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-4); font-weight: 500; margin-top: 12px; line-height: 1.45; }
+.add-hint .ico { color: var(--ink-4); flex: 0 0 auto; }
+.add-engines { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.add-engines .cap { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); }
+.eng-ico { width: 15px; height: 15px; flex: 0 0 auto; display: grid; place-items: center; }
 
 /* ============================================================
    Landing page (Phase A — copied literally from design reference
@@ -7957,7 +7965,17 @@ select.set-field {
 .onb2-row.align-top { align-items: flex-start; }
 .onb2-fav { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; font-weight: 800;
   color: #fff; flex: 0 0 auto; text-transform: uppercase; }
-.onb2-rmeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+/* Fila plegada (por defecto): nombre + dominio como texto, sin campos de
+   edición — el gear la despliega. Founder feedback 2026-08-21: las filas
+   siempre-editables ocupaban demasiado y no coincidían con la maqueta
+   aprobada (docs/design-reference/onboarding-domain-redesign-1/), que las
+   mostraba plegadas. */
+.onb2-rmeta-static { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.onb2-rname { font-size: 13.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.onb2-rdom { font-family: var(--mono); font-size: 11px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Fila desplegada: nombre y dominio a dos columnas, para que no ocupen tanto
+   como dos campos apilados a ancho completo. */
+.onb2-editgrid { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .onb2-chip { display: inline-flex; align-items: center; gap: 5px; height: 21px; padding: 0 8px; border-radius: 999px;
   background: var(--accent-soft); color: var(--accent-ink); font-size: 10.5px; font-weight: 700; flex: 0 0 auto; }
 .onb2-chip.n { background: var(--surface-sunk); color: var(--ink-3); }
@@ -7968,11 +7986,21 @@ select.set-field {
   padding: 11px 13px; border: 1px dashed var(--line-strong); border-radius: 13px; background: var(--surface-2); }
 .onb2-count { font-size: 12.5px; color: var(--ink-2); }
 .onb2-count b { color: var(--ink); }
+/* Prompt plegado: una línea de texto, recortada — todas las filas miden lo
+   mismo. El gear despliega el textarea de edición. */
+.onb2-ptext { flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Prompt desplegado: altura fija para las tres — sin auto-crecer ni permitir
+   redimensionar a mano, así ninguna caja queda más alta que las demás. */
+.onb2-prompt-edit { height: 76px; resize: none; overflow-y: auto; }
 
-/* Reparto de prompts por categoría — recuento real de app/state, no inventado. */
-.onb2-cov { display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 12px 13px; border-top: 1px solid var(--line-soft);
-  background: var(--surface-2); border-radius: 0 0 13px 13px; }
-.onb2-covc { flex: 1; min-width: 110px; }
+/* Reparto de prompts por categoría — recuento real de app/state, no
+   inventado. Grid, no flex-wrap: con flex-wrap cada fila reparte el ancho
+   sobrante por separado y las columnas de filas distintas no coinciden; el
+   grid las fuerza a la misma anchura en todas las filas. */
+.onb2-cov { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 16px; padding: 12px 13px;
+  border-top: 1px solid var(--line-soft); background: var(--surface-2); border-radius: 0 0 13px 13px; }
+.onb2-covc { min-width: 0; }
 .onb2-cov-l { font-size: 11px; color: var(--ink-3); font-weight: 600; display: flex; justify-content: space-between; gap: 6px; }
 .onb2-cov-l b { color: var(--ink-2); }
 .onb2-cov-b { display: block; height: 5px; border-radius: 3px; background: var(--surface-sunk); margin-top: 5px; overflow: hidden; }
@@ -8001,4 +8029,6 @@ select.set-field {
   .onb2-grid { grid-template-columns: 1fr; }
   .onb2-panel { position: static; }
   .onb2-h1 { font-size: 24px; }
+  .onb2-editgrid { grid-template-columns: 1fr; }
+  .onb2-rname, .onb2-rdom, .onb2-ptext { white-space: normal; }
 }
