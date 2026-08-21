@@ -11781,24 +11781,6 @@ incidente.
 
 ---
 
-## Cómo mantener este documento
-
-Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
-cambio de header/menú, rediseño de una pantalla) que toque layout, paleta,
-tipografía o patrones de navegación:
-
-1. Añadir una entrada nueva a la zona correspondiente (o crear una zona
-   nueva si no existe) con: qué se decidió, por qué, y qué queda pendiente
-   o roto conocido.
-2. Si una decisión previa queda **sustituida**, no borrarla — marcarla como
-   `superseded por §X` y explicar el porqué del cambio, igual que hace
-   `docs/adr/` con las decisiones técnicas.
-3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
-   técnico aquí (este documento es "qué se decidió", no "cómo se
-   implementó").
-
----
-
 ## 127. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
 
 **Qué se decidió.** Tres cambios en la tarjeta de recomendación, todos
@@ -11893,7 +11875,143 @@ decisión del fundador sobre el coste (~$0,28 por auditoría).
 
 ---
 
-## 128. La matriz de cobertura llevaba un mes ignorando las citas de ChatGPT (AUDIT-GROUNDED-PARITY-1, 2026-08-21)
+## 128. La propuesta salía entera y decía que éramos mejores que cinco competidores (RECS-USEFULNESS-1 Fase C, 2026-08-21)
+
+**Origen.** Con la Fase A ya en producción (§126), el fundador generó una
+propuesta real para el proyecto Movistar y pegó el resultado. El artefacto era
+impecable: 1.391 caracteres, `JSON.parse` limpio, cerrado. Con el tope viejo de
+1.200 habría salido cortado, así que la Fase A quedó verificada en producto y
+no sólo en tests. Y dentro de ese artefacto perfecto venía esto, listo para
+pegar en la web de un cliente de pago:
+
+> «A diferencia de operadores como Jazztel, Vodafone España, MásMóvil, Orange
+> España o Digi, Movistar mantiene un alto estándar de calidad y cobertura»
+
+**Por qué eso no es "contenido flojo".** Es publicidad comparativa contra cinco
+competidores nombrados sin un dato que la sostenga. En España la comparación
+tiene que ser objetiva y verificable sobre características esenciales (art. 10
+de la Ley de Competencia Desleal). No le estábamos dando al cliente un consejo
+mediocre: le estábamos generando una exposición legal y presentándosela con un
+botón de copiar.
+
+**El mecanismo, que es el hallazgo de verdad.** La regla anti-invención del
+prompt existía y era dura: *«where a specific value (a number, a price, a date)
+would be needed but is not in the facts, write a clearly-marked placeholder…
+NEVER invent the value»*. En los 1.391 caracteres **no había ni un
+`[tu dato aquí]`**. El modelo no la incumplió: **la rodeó**. La regla vigila
+cifras, así que el camino de menor resistencia es escribir sin ninguna —
+«precios competitivos», «excelente cobertura», «experiencia superior». Dice lo
+mismo que un número inventado y no deja rastro de que falta un dato. De ahí la
+reformulación: **la regla muerde sobre la afirmación, no sobre el número**, y un
+adjetivo evaluativo sin respaldo es un valor inventado igual que lo sería una
+cifra.
+
+**Lo que se implementa, y con qué dureza cada cosa** — la distinción es
+deliberada y se declara aquí para que nadie la lea como más fuerte de lo que es:
+
+- **C1, guarda en servidor.** Se rechaza el texto generado cuando una frase
+  nombra a un competidor **y** contiene un juicio de valor comparativo
+  (`comparative_claim_against_competitor`). Va por frase a propósito: nombrar a
+  un competidor es media plataforma —«Compara tu página con la de Digi», una
+  tabla comparativa, «Digi aparece antes que tú»— y todo eso sigue pasando. El
+  llamador pasa el texto **por piezas** (título, resumen, cada paso, cada
+  ejemplo) porque un paso sin punto final se pegaría al siguiente e inventaría
+  una frase que nadie escribió.
+- **C2 y C3, sólo prompt, y son reglas BLANDAS.** Que un adjetivo evaluativo sin
+  respaldo cuente como invención, y que todo artefacto de schema avise de que su
+  contenido tiene que estar visible en la página. No hay detector: «juicio de
+  valor» no es un conjunto cerrado, y una expresión regular lo bastante amplia
+  para cazarlo rechazaría planes buenos — y cada rechazo le gasta al usuario una
+  generación de su cupo diario. **Se prefiere una regla blanda declarada como
+  blanda a un detector que aparente una garantía que no da.**
+
+**Límite declarado de C1.** Las otras dos guardas del fichero comparan contra
+listas cerradas y son exactas. El léxico de juicio de valor es finito y está en
+castellano: un superlativo escrito de otra forma, o en otro idioma —y
+`projects.language` admite más de uno—, pasa. Es una red, no una garantía.
+
+**Lo que queda pendiente.** Las tres del inventario que siguen sin tocar, la
+mayor de ellas la Fase B1: **el generador no sabe nada de la web del cliente**.
+Y los artefactos rotos ya persistidos siguen sirviéndose por la ruta de
+idempotencia (§126): purgarlos es escritura destructiva sobre datos de clientes
+y necesita su propia aprobación.
+
+**Trazabilidad.** `lib/recommendations/rewrite-validation.ts` y su test (el
+fixture es la frase real, no un ejemplo inventado);
+`lib/recommendations/recommendation-rewrite-llm.ts` (C1/C2/C3 en el prompt);
+`docs/specs/recommendations/quality-audit-2026-08.md`; log §126 (Fase A).
+
+---
+
+## 129. El piloto abre por fin `/signup` y `/forgot-password` (PRELAUNCH-HARDENING-1 Fase P2, 2026-08-20)
+
+**Qué se decidió.** `tests/pilot/journeys/auth-pages.spec.ts` — las dos
+pantallas de autenticación que el piloto de lectura nunca había abierto. Parte
+del set por defecto sin tocar configuración: sigue el mismo patrón
+`**/journeys/*.spec.ts` que el resto.
+
+**Por qué necesitaban su propio contexto, sin sesión.** Los proyectos
+`mobile`/`tablet`/`desktop` montan siempre con `storageState:
+.pilot/auth.json` — correcto para pantallas de consola, pero
+`app/signup/page.tsx` hace `if (user) redirect("/dashboard")`: visitarla ya
+autenticado enseña el dashboard con otro nombre, no el formulario de alta.
+`test.use({ storageState: { cookies: [], origins: [] } })`, sólo en este
+fichero, sustituye el `storageState` del proyecto — el resto del set sigue
+entrando como la cuenta piloto. Es la corrección honesta, no un atajo: un
+contexto de verdad sin sesión es exactamente el visitante que sirven estas dos
+pantallas.
+
+**Qué comprueba más allá de la salud genérica.** Los campos propios de cada
+formulario (`#email`/`#password`/`#confirmPassword` en alta, `#reset-email` y
+el botón de envío en recuperación) y que ambas declaran `<meta name="robots"
+content="noindex, follow">` (SEO-POS-1 T10) — nunca lo había verificado el
+piloto. Ningún test envía el formulario: sólo navegación GET, ni Supabase Auth
+ni correo de por medio, la misma frontera que ya respeta el resto del set de
+lectura.
+
+**`tests/pilot/fixtures/server.mjs` se amplió a la vez**, con las mismas dos
+rutas y la misma forma de contenido, para que `pnpm pilot:selfcheck` siga
+demostrando que el arnés funciona de punta a punta en vez de recibir un 404 y
+fallar en falso.
+
+**Tres afirmaciones del plan original resultaron obsoletas al verificarlas
+contra el código real**, encontradas durante el Task Intake de esta fase, no
+implementadas aquí: A2 (`triggerWebAuditRun` ya comprueba `response.ok` y
+registra el fallo — WEB-AUDIT-DRIVE-1 lo llevaba hecho), `/pricing` (ya
+cubierto por `landing.spec.ts`) y el pliegue de facturación de ajustes (ya
+cubierto por `settings.spec.ts`). Ninguna necesitaba trabajo nuevo; el plan en
+`docs/prelaunch-hardening-plan.md` se marca cerrado en A2 en el mismo PR.
+
+**No incluido en esta fase.** El paso de confirmación de `/forgot-password`
+(necesita un token de reinicio válido, inalcanzable sin buzón — sigue siendo
+un smoke manual del fundador, igual que la confirmación por email del alta).
+P3 (matriz de documentación) y P4 (ronda de ejecución, necesita GitHub Actions
+o la sesión local del fundador) quedan fuera, tal como recomendaba el propio
+Task Intake.
+
+**Trazabilidad.** `tests/pilot/journeys/auth-pages.spec.ts`;
+`tests/pilot/fixtures/server.mjs`; `docs/agentic-user-pilot.md` (sección
+"PRELAUNCH-HARDENING-1 Fase P2"); `docs/prelaunch-hardening-plan.md` (ledger
+A2).
+
+---
+
+## Cómo mantener este documento
+
+Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
+cambio de header/menú, rediseño de una pantalla) que toque layout, paleta,
+tipografía o patrones de navegación:
+
+1. Añadir una entrada nueva a la zona correspondiente (o crear una zona
+   nueva si no existe) con: qué se decidió, por qué, y qué queda pendiente
+   o roto conocido.
+2. Si una decisión previa queda **sustituida**, no borrarla — marcarla como
+   `superseded por §X` y explicar el porqué del cambio, igual que hace
+   `docs/adr/` con las decisiones técnicas.
+3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
+   técnico aquí (este documento es "qué se decidió", no "cómo se
+   implementó").
+## 130. La matriz de cobertura llevaba un mes ignorando las citas de ChatGPT (AUDIT-GROUNDED-PARITY-1, 2026-08-21)
 
 **Qué pasaba.** `lib/web-audit/opportunity-matrix.ts` decidía si una cita
 cuenta como evidencia real con su propia copia de `GROUNDED_PROVIDERS`, y esa
@@ -11929,7 +12047,7 @@ siguiente pasada las recalcula sola.
 
 ---
 
-## 129. La auditoría no miraba si el motor tiene permitido citar la página (AUDIT-SNIPPET-1, 2026-08-21)
+## 131. La auditoría no miraba si el motor tiene permitido citar la página (AUDIT-SNIPPET-1, 2026-08-21)
 
 **El hueco.** `noindex` se comprobaba desde WEB-AUDIT-R3. `nosnippet`,
 `max-snippet:0` y la cabecera `X-Robots-Tag` **no aparecían en ninguna parte

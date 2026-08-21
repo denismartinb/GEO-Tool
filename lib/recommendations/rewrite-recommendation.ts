@@ -424,7 +424,11 @@ export async function rewriteRecommendationCore({
       allowedCompetitors,
       allowedDomains: citationDomains,
       trackedCompetitors,
-      brandDomain: project.domain
+      brandDomain: project.domain,
+      // Por piezas, no unido: la guarda de comparación (Fase C) exige que el
+      // juicio de valor y el nombre del competidor estén en la MISMA frase, y
+      // un paso sin punto final se pegaría al siguiente.
+      segments: [rewrite.title, rewrite.summary, ...rewrite.steps, ...exampleText]
     });
 
     if (!validation.valid) {

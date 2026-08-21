@@ -205,7 +205,7 @@ más honesta que la atribución por puntuación global.
 |---|---|---|
 | **A** | Integridad del artefacto pegable (F1) | **implementada** (log §126) — no repara las filas ya persistidas: la ruta de idempotencia sigue sirviendo un artefacto viejo cortado |
 | **B** | Contexto real del sitio en el generador (F2, F3) | abierta — necesita Task Intake |
-| **C** | Anti-relleno, no-autopromoción, grafía de marca (F4, F5, F6) | abierta |
+| **C** | Anti-relleno, no-autopromoción, contenido visible del schema (F4, F5) | **implementada** (log §128) — C1 con guarda en servidor; C2 y C3 sólo en el prompt y declaradas blandas. La grafía de marca (F6) NO entra: sale del campo `brand` del proyecto, se arregla editándolo, no en código |
 | **D** | Bucle de cierre por prompt afectado (F7) | abierta |
 
 B es la que convierte una plantilla en un consultor. C es barata y quita la

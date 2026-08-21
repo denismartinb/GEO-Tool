@@ -721,6 +721,45 @@ shape) so `pnpm pilot:selfcheck` keeps proving the harness works end to end —
 without this, the new journey would 404 against the fixture and the
 self-check would report a false `PILOT FAIL` on every run.
 
+## PRELAUNCH-HARDENING-1 Fase P2 — auth-pages journey (read-only, part of the default set)
+
+`tests/pilot/journeys/auth-pages.spec.ts` covers the two auth screens the
+pilot had never opened: `/signup` and `/forgot-password`. Same auto-discovery
+as the journeys above (`**/journeys/*.spec.ts`), so it needed no config change
+to join the default `mobile`/`tablet`/`desktop` run.
+
+**Runs signed-out, unlike every other journey.** The `mobile`/`tablet`/`desktop`
+projects hardcode `storageState: .pilot/auth.json` — the pilot account always
+enters authenticated, which is correct for console screens. But
+`app/signup/page.tsx` does `if (user) redirect("/dashboard")`: visiting it with
+that session shows the dashboard under another name, not the sign-up form.
+`test.use({ storageState: { cookies: [], origins: [] } })` at the top of the
+file overrides the project default for this file only — the rest of the set
+keeps entering as the pilot account. This is the honest fix, not a workaround:
+a genuinely logged-out context is the real visitor these two pages serve.
+
+Beyond the generic health checks, it asserts the form fields specific to each
+screen (`#email`/`#password`/`#confirmPassword` on signup, `#reset-email` and
+the submit button on forgot-password) and that both pages declare `<meta
+name="robots" content="noindex, follow">` (SEO-POS-1 T10) — noindexed so they
+don't compete with the marketing pages for ranking, but `follow` so their
+outbound links still pass authority. Neither test submits a form: GET
+navigation only, so nothing here touches Supabase Auth or sends an email —
+the same read-only boundary as the rest of the default set.
+
+**`tests/pilot/fixtures/server.mjs` was extended to match**: `signupPage()` and
+`forgotPasswordPage()` serve the same markup shape (form fields, `noindex,
+follow`) so the self-check keeps exercising these two journeys instead of
+404-ing against the fixture.
+
+Does not cover the plan's original description of "reset-password confirm
+step" — that screen needs a valid reset token to reach, which the pilot has no
+way to mint without a mailbox; stays a manual founder smoke, same limit as
+signup email confirmation below. `/pricing` and the settings billing fold,
+also named in the original PRELAUNCH-HARDENING-1 Fase A plan text, turned out
+to already be covered by `landing.spec.ts` and `settings.spec.ts` respectively
+— found stale during this phase's Task Intake, not new coverage added here.
+
 ## Known limits
 
 - **Signup with email confirmation is not pilotable** — no mailbox. Stays a
