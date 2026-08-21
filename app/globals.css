@@ -2334,8 +2334,36 @@ a {
   padding-top: 4px;
 }
 
-/* sticky project header inside the page scroll area */
+/* sticky project header inside the page scroll area.
+
+   HEADER-FULL-WIDTH-1 (2026-08-21): `.ov-sticky-header`'s negative margin
+   only ever bled to `.page`'s own edges (-34px cancels `.page`'s 34px
+   padding), never to the viewport. `.page` itself caps at 1320px and
+   centers once `.dash-content` (the 1fr grid track next to the sidebar,
+   `.shell { grid-template-columns: var(--sidebar-w) 1fr }`) is wider than
+   that — from ~1568px of window width up — so above that width this band
+   fell short of both edges while `.dash-header` (the topbar) and
+   `.dmb-band` (the data-maturity banner) above it, which are siblings of
+   `.page` and carry no max-width, kept reaching them. Three chrome bands
+   stacked and only the middle one stopped short (founder screenshot,
+   2026-08-21).
+
+   `--ov-hdr-bleed` is the extra half-width beyond 1320px that
+   `.dash-content` has to spare: `max(0px, (100vw - var(--sidebar-w) -
+   1320px) / 2)`, zero at any width `.page` isn't capped at yet (mobile's
+   drawer sidebar doesn't subtract `--sidebar-w` from the column at all,
+   but that only makes this compute to MORE than the true excess while
+   already at 0 — still 0). Margin grows more negative by exactly that much
+   and padding grows by exactly that much too, so the box edge moves out to
+   `.dash-content`'s real edge while the title/badge content stays at the
+   same horizontal position it always has (the two offsetting terms net to
+   the original -34px/+34px pair). Aligning that content with `.ov2-scope`'s
+   narrower card column instead is a separate, larger change — it needs one
+   answer for all 8 screens sharing this class, some still on the older
+   `.page`/1320px system and some already on their own scope (`.ov2-scope`,
+   `.pr2-scope`) — and is intentionally out of scope here. */
 .ov-sticky-header {
+  --ov-hdr-bleed: max(0px, (100vw - var(--sidebar-w) - 1320px) / 2);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -2343,8 +2371,8 @@ a {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line-soft);
-  margin: -26px -34px 24px;
-  padding: 12px 34px;
+  margin: -26px calc(-34px - var(--ov-hdr-bleed)) 24px;
+  padding: 12px calc(34px + var(--ov-hdr-bleed));
   display: flex;
   align-items: center;
   justify-content: space-between;

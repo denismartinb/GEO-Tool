@@ -12091,3 +12091,42 @@ habría convertido en «bloqueada» cualquier web que lo use bien.
 siguiente tanda de la misma zona.
 
 ---
+
+## 132. La cabecera de página no llegaba a los bordes en pantallas anchas (HEADER-FULL-WIDTH-1, 2026-08-21)
+
+**Lo que vio el fundador.** En Visión general, con la ventana a tamaño real,
+la banda `Visión general / Genscore / genscore.es` se quedaba corta por los
+dos lados mientras la topbar (`Completado`, campana, `Cerrar sesión`) y el
+banner «Tu histórico se está construyendo» de justo encima sí llegaban a los
+dos bordes. Tres bandas de cromo apiladas y sólo la del medio se recortaba.
+
+**Causa.** `.ov-sticky-header` vive dentro de `.page` (tope 1320px, centrado)
+y su margen negativo (`-26px -34px 24px`) sólo cancela el padding de `.page`
+— nunca llega más allá de sus bordes. `.dash-header` y `.dmb-band`, en
+cambio, son hermanos de `.page` dentro de `.dash-main` y no tienen tope
+alguno. En cuanto la columna de contenido (`.dash-content`, el carril `1fr`
+de `.shell { grid-template-columns: var(--sidebar-w) 1fr }`) supera 1320px
+—desde ~1568px de ventana con el sidebar en 248px— `.page` empieza a
+centrarse y la cabecera deja huecos a los lados que las otras dos bandas no
+tienen.
+
+**Arreglo.** `--ov-hdr-bleed` calcula ese exceso (`max(0px, (100vw -
+var(--sidebar-w) - 1320px) / 2)`) y se suma tanto al margen negativo como al
+padding, así que el borde de la caja llega al borde real de `.dash-content`
+mientras el contenido (título, badges, pastilla de estado) se queda
+exactamente donde estaba — los dos términos se cancelan. Por debajo de
+~1568px de ventana `--ov-hdr-bleed` es 0 y el comportamiento es
+byte-idéntico al de antes.
+
+**Deliberadamente fuera de esta fase.** `.ov-sticky-header` la comparten 8
+pantallas (Visión general, Prompts, Competidores, Páginas citadas,
+Recomendaciones, Auditoría web, debug, `loading.tsx`), y su contenido no
+está alineado con la misma columna en todas: Visión general y Prompts usan
+`.ov2-scope`/`.pr2-scope` (640/1200/1280px), las otras seis siguen en el
+`.page`/1320px antiguo (`app/console.css:509-515`, ya señalado como decisión
+pendiente desde PROMPTS-DESKTOP-2). Alinear el contenido de la cabecera con
+la columna de tarjetas —no sólo llevar el fondo a sangre— exige decidir esa
+convergencia para las 8 pantallas a la vez; esta fase sólo corrige que la
+banda deje de recortarse, sin tocar dónde cae el texto dentro de ella.
+
+---
