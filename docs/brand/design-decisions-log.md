@@ -11699,6 +11699,88 @@ incidente del 2026-08-02 en CLAUDE.md para el mismo punto ciego del piloto.
 
 ---
 
+## 126. El bloque que ofrecíamos copiar no era JSON válido (RECS-USEFULNESS-1 Fase A, 2026-08-20)
+
+**Origen.** El fundador ejecutó las recomendaciones que GenScore emite para el
+propio `genscore.es`, con la pregunta puesta del lado del cliente: *«imagina que
+pagas porque la herramienta te dé esto para pegar e implementar
+directamente»*. Dos recomendaciones bastaron para encontrar siete fallos. El
+primero no es de criterio, es objetivo: **el bloque JSON-LD que la pantalla
+ofrecía junto a un botón «Copiar» terminaba a media palabra**, en
+`...bien organizadas con HTML se`.
+
+**Causa.** 1.182 caracteres contra un tope de 1.200, en dos sitios a la vez: el
+prompt le pedía al modelo `max 1200 chars` y `sanitizeExampleContent()`
+remataba con un `.slice(0, 1200)` ciego sobre lo que podía ser código. Y nada
+lo paraba después: la validación sólo miraba evidencia (competidores y dominios
+inventados) y longitud — **no había un solo `JSON.parse` en toda la ruta**, así
+que un objeto sin cerrar se persistía y se pintaba con su botón de copiar. El
+cliente lo pegaba, le fallaba en su web, y no tenía forma de saber que el fallo
+era nuestro.
+
+Debajo hay una incompatibilidad de diseño, no un número mal elegido: el playbook
+de `create_faq_section` le pide al modelo «2-4 pares pregunta/respuesta más un
+bloque JSON-LD». **Eso no cabe en 1.200 caracteres.** Le pedíamos algo que no
+entraba y luego lo cortábamos.
+
+**Qué se decidió.** Un módulo propio, `lib/recommendations/pasteable-artifact.ts`,
+con dos reglas que a propósito no son la misma:
+
+- **Un artefacto de código no se trunca jamás.** Medio JSON-LD es peor que
+  ninguno: no falla al pegarlo, falla después, en la web del cliente. Si no
+  cabe, se descarta entero.
+- **La prosa sí se recorta, pero por límite de palabra.** Un párrafo citable que
+  se pasa por poco sigue sirviendo; tirarlo entero pierde valor sin ganar
+  corrección.
+
+Con eso: tope de código a 3.000 (medido sobre el artefacto real, no elegido a
+ojo), `JSON.parse` obligatorio sobre todo lo que pretenda ser JSON —incluido un
+`<script type="application/ld+json">` al que le falte el cierre—, detección de
+marcado que acaba dentro de una etiqueta abierta, y el prompt reescrito para que
+**la integridad gane a la cobertura**: antes un `FAQPage` de dos preguntas
+completo que uno de cuatro cortado.
+
+**El descarte es por artefacto, no por solución.** El plan (título, resumen,
+pasos) sigue valiendo aunque uno de los tres ejemplos venga roto, y devolver un
+error entero le gastaría al usuario una generación de su cupo diario a cambio de
+nada. Lo que no se hace nunca es enseñar el roto.
+
+**El arreglo no repara lo ya generado, y eso importa hoy.** La ruta de
+idempotencia devuelve la solución persistida más reciente
+(`status: completed`, `is_sanitized: true`) sin volver a llamar a Gemini, así
+que **una recomendación que ya tenga guardado un artefacto cortado lo seguirá
+sirviendo cortado para siempre**: el validador nuevo se aplica al escribir, y
+esa fila se escribió antes. No se purga aquí a propósito —borrar filas de
+`generated_solutions` es escritura destructiva sobre datos de clientes y va con
+su propia aprobación—, pero queda dicho: el bloque que originó este incidente
+sigue roto en la cuenta del fundador hasta que se decida qué hacer con las
+filas viejas. Opciones para su fase: revalidar al leer y regenerar sólo si
+falla, o una purga acotada a artefactos que no parsean.
+
+**Lo que queda roto conocido.** El usuario ve un plan con un ejemplo menos y
+**no se le dice que ha faltado uno**; avisarlo en pantalla es trabajo de UI con
+su pasada de piloto. Y quedan seis fallos más de la misma sesión sin tocar, el
+mayor de ellos: **el generador no sabe nada de la web del cliente** —lee sólo
+marca, dominio e idioma— mientras la auditoría web ya parsea su JSON-LD y sabe
+qué `@type` emite. Por eso nos recomendó implementar `FAQPage` en un sitio que
+ya lo emite en doce superficies. Inventario completo, con fases B/C/D
+propuestas, en `docs/specs/recommendations/quality-audit-2026-08.md`.
+
+**Un detalle del método, porque se repitió el patrón de siempre.** La primera
+versión del validador dejaba pasar una valla ```` ```json ```` sin cerrar: al no
+desenvolverla, el bloque dejaba de parecer JSON, se clasificaba como prosa y el
+objeto cortado se colaba recortado por palabra. Lo cazó su propio test antes de
+salir del contenedor. El fixture no es inventado: es el artefacto real del
+incidente.
+
+**Trazabilidad.** `lib/recommendations/pasteable-artifact.ts` y su test;
+`lib/recommendations/rewrite-recommendation.ts` (saneado y traza
+`artifact_dropped`); `lib/recommendations/recommendation-rewrite-llm.ts`
+(presupuesto por tipo de artefacto);
+`docs/specs/recommendations/quality-audit-2026-08.md`.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -11717,7 +11799,7 @@ tipografía o patrones de navegación:
 
 ---
 
-## 126. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
+## 127. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
 
 **Qué se decidió.** Tres cambios en la tarjeta de recomendación, todos
 derivados de datos que el producto ya tenía y no enseñaba.
