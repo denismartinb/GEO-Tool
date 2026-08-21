@@ -11851,3 +11851,97 @@ tipografía o patrones de navegación:
    implementó").
 
 ---
+
+## 127. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
+
+**Qué se decidió.** Tres cambios en la tarjeta de recomendación, todos
+derivados de datos que el producto ya tenía y no enseñaba.
+
+**1. El CTA nombra el artefacto.** Decía "Generar propuesta con IA" en los
+quince tipos por igual. Pero el motor **ya sabe** qué artefacto toca en cada
+caso: los playbooks por tipo de `recommendation-rewrite-llm.ts` llevan desde
+la fase C1 dirigiendo la generación hacia una comparativa, una FAQ, un
+JSON-LD de `Organization` o un plan de contacto. Esa decisión estaba tomada y
+escondida en el prompt; ahora está en el botón ("Generar comparativa",
+"Generar FAQ", "Generar pitch"). Un CTA genérico obliga a hacer clic para
+saber qué te van a dar, que es precisamente la fricción que convierte una
+lista de acciones en una lista de lectura.
+
+**2. La tarjeta declara el control, y solo cuando es la excepción.**
+"Escribe a este comparador para que te incluyan" y "añade este bloque a tu
+página de precios" no son la misma clase de trabajo —una la ejecutas hoy, la
+otra la solicitas y puede que nunca ocurra— y la pantalla las pintaba
+idénticas. Ahora cada tipo declara `own_site` / `third_party` / `in_app`,
+pero **solo se pinta chip para las dos excepciones**: "En tu web" es lo que
+el usuario da por supuesto en 11 de los 15 tipos, y repetirlo en cada tarjeta
+sería justo la tinta que RECS-REDESIGN-1 quitó de esta vista (§115). La
+ausencia de chip significa "es tuyo". Esto no reabre §115: lo que aquella
+fase retiró de la tarjeta plegada fue **vocabulario del motor** (el tipo
+interno, el trío impacto/esfuerzo/confianza); la fila de insignias de triaje
+("Victoria rápida", "Abierta N escaneos") siguió viva, y el control es
+triaje, no vocabulario.
+
+**3. El artefacto generado dice cuánto trabajo le queda, contando.** Nueva
+insignia en el panel del plan: "Listo para copiar" o "N huecos por rellenar".
+**No es una estimación.** El prompt de reescritura obliga desde el primer día
+a marcar con un placeholder (`[tu dato aquí]`) todo valor que no esté en la
+evidencia, en vez de inventárselo — una barrera anti-invención que, sin
+proponérselo, deja los huecos **contables**. La cifra se calcula sobre el
+texto real que se le enseña al usuario (artefactos y pasos; el título y el
+resumen quedan fuera porque son la explicación, no el entregable).
+
+**Por qué esto y no el catálogo de tipos nuevos.** El origen fue una
+reflexión del fundador sobre que las recomendaciones no eran accionables
+("escribir a HubSpot no es realista"), contrastada con una propuesta externa
+de rehacer el catálogo entero. La auditoría del código dijo otra cosa: el
+motor ya es determinista, ya ancla cada tarjeta a `affected_prompt_ids`
+reales, ya cita páginas concretas y ya excluye Wikipedia por no accionable.
+Lo que faltaba no era diagnóstico nuevo — era que la pantalla **no
+distinguía** lo ejecutable de lo que depende de un tercero, ni prometía nada
+concreto antes del clic. Esta fase cierra esa distancia sin tocar el motor,
+sin esquema y sin una sola llamada LLM nueva.
+
+**Lo que se descartó a propósito.** La propuesta externa clasificaba la
+salida en cuatro clases, una de ellas "brief de producción" (requiere
+investigación o trabajo creativo). Se ha implementado todo menos ésa: no hay
+forma honesta de decidir por código si un artefacto es "pegable" o "un brief"
+—es un juicio, no un hecho— y una etiqueta que no se puede justificar es peor
+que ninguna. Las tres que sí se muestran (control, listo/huecos) se derivan
+del tipo o se cuentan del texto.
+
+**Invariante nuevo, con test.** `KNOWN_RECOMMENDATION_TYPES` se exporta desde
+el motor (era ya `labelByType` de facto: "every value emitted by this engine
+must have an entry here") y `deliverable.test.ts` falla si una regla nueva
+llega sin decidir qué entregable promete su botón. Mismo mecanismo que la
+regla de ruta ya imponía para `first_step`.
+
+**Dos de los tres cambios son invisibles para el `ux-pilot`, y por eso se
+prueban por render.** La pasada de PR #453 dio PASS con 68 pantallas en tres
+anchuras, y aun así no vio ni el chip de control ni la insignia de estado:
+
+- El **chip de control** sólo se pinta en los tipos `third_party`/`in_app`, y
+  el proyecto del piloto tenía tres recomendaciones, las tres de su propia
+  web. Ningún tipo externo, ninguna captura.
+- La **insignia de estado** sólo existe cuando hay una propuesta generada, y
+  generar una es una **escritura**. El piloto permanente es de solo lectura por
+  diseño, así que no puede alcanzar ese estado en ninguna pasada — ni hoy ni
+  nunca, no es cuestión de repetir la pasada con más datos.
+
+Es el mismo fallo del 2026-08-02 (un rediseño entero aprobado con capturas de
+un estado vacío), y la respuesta no es aflojar el listón sino moverlo:
+`recommendations-client.test.tsx` renderiza `RecCard` y `SolutionPanel` de
+verdad con `react-dom/server` y asegura el contenido —el CTA por tipo, el chip
+presente en `third_party`, **ausente** en `own_site`, y la cuenta de huecos—.
+El aspecto sigue siendo del piloto; la existencia ya no depende de que el
+proyecto del piloto tenga por casualidad el dato adecuado. Lo que el piloto SÍ
+verificó, a 1280 px: el botón de una recomendación `increase_brand_visibility`
+dice «Generar brief de contenido».
+
+**Pendiente, no roto.** Ninguna recomendación apunta todavía a una URL
+concreta de la web del cliente: el puente existe (el mapa de cobertura mapea
+`promptId → URLs propias verificadas`) pero es Pro+, nace apagado
+(`auto_coverage_audit_enabled = false`) y el motor corre antes de que exista
+ninguna auditoría. Es la siguiente fase (AUDIT-RECS-JOIN-1) y necesita una
+decisión del fundador sobre el coste (~$0,28 por auditoría).
+
+---
