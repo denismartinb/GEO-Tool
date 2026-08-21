@@ -4853,20 +4853,31 @@ a.notif-row:hover {
    pasen por la banda del botón y no por el titular —que en móvil ocupa el
    ancho entero y no deja hueco lateral—, y quedan DOS lazos por lado cruzando
    a 35 y 120 px, con 150 px centrales limpios. Tres no caben fuera del medio,
-   y apretarlos para que quepan es lo contrario de separarlos. */
+   y apretarlos para que quepan es lo contrario de separarlos.
+
+   Y LA BANDA SE ESTRECHA AQUÍ, del 15 % del radio al 9 %. No es un ajuste de
+   gusto: la banda se define como fracción del RADIO, y en móvil el radio es
+   pequeño respecto a la pantalla, así que con el mismo 15 % cada arco ocupaba
+   el 14-17,6 % del ancho del viewport frente al 8-11 % en escritorio. Casi el
+   doble: por eso los dos lazos se leían como una mancha y no como dos líneas
+   (fundador, 2026-08-21: «al ser dos es como una mancha que no se sabe muy
+   bien si tiene sentido»). Con el 9 % ocupan 8,4 % y 10,5 %, que es la
+   proporción del escritorio. Si alguien cambia los radios de móvil, tiene que
+   recalcular esta banda contra el ancho de pantalla, no dejarla en un
+   porcentaje del radio y darla por buena. */
 @media (max-width: 760px) {
   .ha-grid { height: 360px; background-size: 40px 40px; }
   .ha-field { width: 1240px; height: 1240px; }
   .ha-field--l { top: -190px; left: -920px; }
   .ha-field--r { top: -220px; right: -920px; }
   .ha-loop--l1 { top: 66px; left: -664px; width: 728px; height: 728px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.44) 92%, rgba(255,255,255,0) 99%); }
+    background: radial-gradient(closest-side, rgba(255,255,255,0) 87.5%, rgba(255,255,255,0.44) 92%, rgba(255,255,255,0) 96.5%); }
   .ha-loop--l2 { top: -27px; left: -757px; width: 914px; height: 914px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.3) 92%, rgba(255,255,255,0) 99%); }
+    background: radial-gradient(closest-side, rgba(255,255,255,0) 87.5%, rgba(255,255,255,0.3) 92%, rgba(255,255,255,0) 96.5%); }
   .ha-loop--r1 { top: 36px; right: -664px; width: 728px; height: 728px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.44) 92%, rgba(255,255,255,0) 99%); }
+    background: radial-gradient(closest-side, rgba(255,255,255,0) 87.5%, rgba(255,255,255,0.44) 92%, rgba(255,255,255,0) 96.5%); }
   .ha-loop--r2 { top: -57px; right: -757px; width: 914px; height: 914px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.3) 92%, rgba(255,255,255,0) 99%); }
+    background: radial-gradient(closest-side, rgba(255,255,255,0) 87.5%, rgba(255,255,255,0.3) 92%, rgba(255,255,255,0) 96.5%); }
   .ha-clear { top: -40px; width: 470px; height: 440px; }
 }
 

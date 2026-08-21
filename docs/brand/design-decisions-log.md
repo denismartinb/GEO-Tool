@@ -12267,6 +12267,19 @@ y quedan **dos** lazos por lado cruzando a 35 y 120 px. Tres no caben fuera del
 medio, y apretarlos para que quepan es lo contrario de separarlos: el fundador
 pidió expresamente más blanco en el centro tras ver la primera versión con tres.
 
+**La banda de los lazos se mide contra la PANTALLA, no contra el radio.** Se
+define como fracción del radio del círculo, y en móvil los radios son pequeños:
+con el mismo 15 % que usa el escritorio, cada arco ocupaba el 14 % y el 17,6 %
+del ancho del viewport, frente al 8,2 % y 11,1 % de escritorio. Casi el doble
+de grueso en proporción, y por eso los dos lazos se leían como una mancha en
+vez de como dos líneas — fundador, 2026-08-21, mirando el preview: *«al ser dos
+es como una mancha que no se sabe muy bien si tiene sentido»*. El diagnóstico
+inicial («sobra un lazo») era el equivocado: no sobraba ninguno, estaban
+demasiado gruesos. Con la banda al 9 % del radio ocupan el 8,4 % y el 10,5 %,
+que es la proporción del escritorio. Quien cambie los radios de móvil tiene que
+recalcular esta banda contra el ancho de pantalla, no dejarla en un porcentaje
+del radio y darla por buena.
+
 **No reutiliza `.onb-aurora`, a propósito.** Esa clase son cuatro manchas
 animadas en bucle más dos anillos girando, y la sirven `/geo`, `/pricing`, las
 portadas del blog y una sección inferior de la propia landing: tocarla habría
