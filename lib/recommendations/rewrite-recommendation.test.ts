@@ -777,6 +777,39 @@ describe("rewriteRecommendationCore", () => {
     expect(evidence.anchored_domains).toEqual(validationArgs.allowedDomains);
   });
 
+  it("un juicio comparativo no se explica como si faltara evidencia", async () => {
+    // El dato estaba; lo que sobra es la afirmación de superioridad
+    // (RECS-USEFULNESS-1 Fase C). Decir «no está en la evidencia» mandaría al
+    // usuario a mirar donde no es.
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    rewriteRecommendationMock.mockResolvedValue(REWRITE);
+    validateRewriteAgainstEvidenceMock.mockReturnValue({
+      valid: false,
+      reason: "comparative_claim_against_competitor",
+      offending: "superior"
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: RULE_RECOMMENDATION.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    expect(result.error).toContain("«superior»");
+    expect(result.error).toContain("sin datos que lo respalden");
+    expect(result.error).not.toContain("no está en la evidencia");
+    expect(getInserted()).toHaveLength(0);
+
+    warnSpy.mockRestore();
+  });
+
   it("permite nombrar al competidor cuyo propio dominio está anclado, y sólo a ese", async () => {
     // El playbook de las tarjetas de fuentes le pide al modelo que clasifique
     // cada dominio citado y marque los que son competidores como «no es un

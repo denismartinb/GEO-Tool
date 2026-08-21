@@ -132,8 +132,20 @@ const UNVERIFIED_FAILURE =
  * cualquier otra salida del modelo (nunca es texto del proveedor, es un solo
  * término), y se cae al mensaje genérico si no queda nada tras sanear.
  */
-function unverifiedFailure(offending: string): string {
-  const term = sanitizeField(offending, OFFENDING_TERM_MAX);
+function unverifiedFailure(validation: {
+  reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned" | "comparative_claim_against_competitor";
+  offending: string;
+}): string {
+  const term = sanitizeField(validation.offending, OFFENDING_TERM_MAX);
+  if (validation.reason === "comparative_claim_against_competitor") {
+    // Nada que ver con la evidencia: aquí el dato existía y el problema es
+    // que la propuesta afirmaba superioridad sobre un competidor nombrado
+    // (RECS-USEFULNESS-1 Fase C). Decir «no está en la evidencia» sería
+    // sencillamente falso, y mandaría al usuario a mirar donde no es.
+    return term
+      ? `La propuesta comparaba tu marca con un competidor afirmando que eres «${term}», y eso no se puede publicar sin datos que lo respalden, así que se ha descartado. Vuelve a intentarlo.`
+      : "La propuesta afirmaba superioridad sobre un competidor sin datos que lo respalden, así que se ha descartado. Vuelve a intentarlo.";
+  }
   if (!term) return UNVERIFIED_FAILURE;
   return `La propuesta generada mencionaba «${term}», que no está en la evidencia de esta recomendación, así que se ha descartado. Vuelve a intentarlo.`;
 }
@@ -433,7 +445,7 @@ export async function rewriteRecommendationCore({
      * mientras el guardián rechazaba cualquiera fuera de `mentioned_competitors`,
      * vacío en estas tarjetas. Nombrar a «SE Ranking» cuando `seranking.com`
      * está en la evidencia no es fabricar nada: es la misma fuente por su
-     * nombre (log §128).
+     * nombre (log §133).
      */
     const domainAnchoredCompetitors = competitorsAnchoredByDomain(trackedCompetitors, anchoredDomains);
     const promptCompetitors = [...new Set([...mentionedCompetitors, ...domainAnchoredCompetitors])];
@@ -465,7 +477,7 @@ export async function rewriteRecommendationCore({
      * Lo que el guardián admite es **lo que el prompt le enseña al modelo**, no
      * una lista recompuesta campo a campo. Recomponerla falló tres veces por
      * tres piezas distintas —las páginas citadas (§131), los competidores con
-     * dominio propio (§128) y el TÍTULO de una página citada, que a menudo es
+     * dominio propio (§133) y el TÍTULO de una página citada, que a menudo es
      * otro dominio (`blog.hubspot.es — "hubspot.es"`, §129)—, y cada vez el
      * modelo fue rechazado por repetir algo que tenía delante. Derivarlo del
      * texto del prompt cierra la clase entera: nada de fuera entra, porque el
@@ -511,7 +523,11 @@ export async function rewriteRecommendationCore({
       allowedCompetitors: [...allowedCompetitors, ...domainAnchoredCompetitors],
       allowedDomains: domainsInPrompt,
       trackedCompetitors,
-      brandDomain: project.domain
+      brandDomain: project.domain,
+      // Por piezas, no unido: la guarda de comparación (Fase C) exige que el
+      // juicio de valor y el nombre del competidor estén en la MISMA frase, y
+      // un paso sin punto final se pegaría al siguiente.
+      segments: [rewrite.title, rewrite.summary, ...rewrite.steps, ...exampleText]
     });
 
     if (!validation.valid) {
@@ -525,7 +541,7 @@ export async function rewriteRecommendationCore({
         anchored_domains: domainsInPrompt,
         tracked_competitors_count: trackedCompetitors.length
       });
-      return { success: false, error: unverifiedFailure(validation.offending) };
+      return { success: false, error: unverifiedFailure(validation) };
     }
 
     const sanitizeResult = sanitizeSolution(rewrite);

@@ -33,7 +33,7 @@
  * modelo no fabrica nada cuando repite algo que tiene delante. Derivarlo del
  * texto del prompt —en vez de recomponerlo campo a campo— es lo que impide que
  * vuelva a faltar una pieza: ya faltaron las páginas citadas (§131), los
- * competidores con dominio propio (§128) y el título de una página citada, que
+ * competidores con dominio propio (§133) y el título de una página citada, que
  * suele ser otro dominio (`blog.hubspot.es — "hubspot.es"`, §129). El guardián
  * sigue rechazando cualquier dominio que NO esté en el prompt, que es lo que
  * protege de verdad.
@@ -174,7 +174,7 @@ function compact(value: string): string {
  * lista del proyecto que no esté en `mentioned_competitors`, que en estas
  * tarjetas viene vacío. Con `seranking.com` en la evidencia y «SE Ranking» en
  * la lista de competidores del proyecto, la propuesta se descartaba por hacer
- * exactamente lo que se le pedía (log §128).
+ * exactamente lo que se le pedía (log §133).
  *
  * No afloja el guardián: sólo se admite un competidor cuyo **propio dominio**
  * está ya en la evidencia de esta tarjeta, y el emparejado es por igualdad

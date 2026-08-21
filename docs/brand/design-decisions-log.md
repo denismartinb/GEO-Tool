@@ -1121,7 +1121,6 @@ más, con capturas reales de dispositivo:
    filas recibe) ni la cuota de voz / Terreno por tema / matriz, que siguen
    siendo acumulativas por diseño.
 
-
 ## 11. Competidores sugeridos (COMPETITOR-SUGGESTIONS-1, 2026-08-03)
 
 **Qué se decidió.** La caja de sugerencias de la pantalla de Competidores deja
@@ -1320,7 +1319,6 @@ en el degradado con icono, que es exactamente lo que se ha rechazado.
 humano: no hay herramienta de generación en el entorno del agente y el stock
 exige licencia. Mientras siga así, la publicación semanal autónoma (Fase A1)
 tiene aquí una dependencia manual.
-
 
 ## 15. Gráfico de evolución del puesto — ventana y huecos (TREND-WINDOW-1, 2026-08-04)
 
@@ -1531,10 +1529,6 @@ documentación que se pudre.
 **Pendiente conocido.** La colisión de ADR 0026 sigue sin resolver (renumerar
 uno de los dos toca enlaces cruzados y merece su propia decisión). Las tres
 zonas sin regla de ruta siguen dependiendo de que se lea su histórico.
-
----
-
----
 
 ---
 
@@ -4783,8 +4777,6 @@ detectados durante esta investigación y sin tocar.
 
 ---
 
----
-
 ## 55. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
 
 **Estado: implementada la fase 1 (secuencia + traspaso).** Exploración de
@@ -4875,7 +4867,6 @@ de 5 minutos contra una copia que promete "un par de minutos".
 
 ---
 
-
 **Addendum rev.4 (2026-08-10) — la animación, rehecha.** La primera pasada por
 producción del fundador, en el móvil y sobre la fase de órbita, fue lapidaria:
 *«queda muy cutre… el cohete está parado, da la sensación de que la página está
@@ -4930,7 +4921,6 @@ pares de fotogramas de la órbita separados 4 s que demuestran el desplazamiento
 de estrellas, Tierra, cohete y paquetes. Sigue **sin verificar por el piloto**,
 por la razón de siempre: el proyecto piloto tiene historial, así que
 `isFirstScan` es `false` y el cohete no llega a montarse nunca.
-
 
 ## 56. La misión ocupa la pantalla entera, y el encendido deja de durar un minuto (SCAN-STATES-2, 2026-08-10)
 
@@ -5007,7 +4997,6 @@ los objetos colocados (tamaño fijo), que es lo que hace `rev5`. Y sigue **sin
 verificar por el piloto**, por la razón de siempre: el proyecto piloto tiene
 historial, así que `isFirstScan` es `false` y esta pantalla no se monta nunca.
 
-
 **Addendum (2026-08-10, misma tarde) — tres correcciones tras la primera prueba
 real en producción.** El fundador escaneó `genscore.es` desde el móvil y
 encontró tres cosas. Las tres eran ciertas.
@@ -5050,7 +5039,6 @@ fase: la auditoría corre DESPUÉS del escaneo, así que la misión tendría que
 continuar más allá de `entrega`, y eso cambia el contrato de
 `computeMissionBeat`, no sólo el copy.
 
-
 **Addendum (2026-08-11) — la banda de auditoría nunca se mostró.** El fundador
 probó el cohete («ahora es perfecto») y añadió: *«pero no he visto la parte de
 la auditoría»*. No era percepción suya: `ScanMissionBand` era **código muerto
@@ -5075,7 +5063,6 @@ esta pantalla no encontraron un elemento que no se dibujaba nunca. Lo encontró
 un humano escaneando un dominio real. El piloto no podía verlo —proyecto con
 historial, `isFirstScan` falso— y ningún test cubría la expresión porque
 estaba en línea dentro del JSX.
-
 
 ## 57. La reentrada: la auditoría web entra en la misión (SCAN-STATES-3, 2026-08-11)
 
@@ -5225,8 +5212,6 @@ pilar `sectores`) y la Fase C de contenido.
 
 ---
 
----
-
 ## 48. Los últimos P1 técnicos del plan SEO: preguntas reales marcadas, tres portadas que faltaban, y un pilar que dejó de mentir sobre su edad (SEO-POS-1 Fase T-c, 2026-08-10)
 
 **Qué se decidió.** Cierra los tres P1 menores que quedaban abiertos del plan
@@ -5348,9 +5333,6 @@ esto cierra); §42 (el flake de sesión, aún abierto).
 
 ---
 
-
----
-
 ## 50. Primera pieza de la Fase C, y una corrección al propio plan antes de escribirla (SEO-POS-1, S1, 2026-08-10)
 
 **Origen.** Primera pieza de la cola de contenido priorizada por
@@ -5395,7 +5377,6 @@ self-check — funcionó exactamente como debía, cazándolo antes de mergear.
 **Validación:** 1892/1892 tests, `pnpm run validate` limpio. Verificado sobre
 el HTML del build: título/canonical propios, `FAQPage` presente, entra en el
 índice de `/blog`, en el pilar `playbooks` y en el sitemap.
-
 
 ---
 
@@ -6114,8 +6095,6 @@ prompts, por ejemplo, solo en Gemini"*.
   cambio).
 - **Sin piloto agéntico todavía**: mismo estado que la 52 y la 53 — los tres
   interruptores viven en `/debug` y esta fase no se ha visto en un preview.
-
----
 
 ---
 
@@ -8749,7 +8728,6 @@ configuración, no código, y ningún test de este repo puede verla.
 (cadena de lotes) y ADR 0016 (cadena del barrido); §89 (Q1).
 
 ---
----
 
 ## 91. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
 
@@ -9155,11 +9133,6 @@ se escribió de una vez y el código siguió moviéndose.**
 **Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q5); §42 (la
 pérdida de sesión y el `retries: 0`); §54 (la intermitencia de CI); §55
 (`ContentExpectation` y por qué existe).
-
----
-
-
----
 
 ---
 
@@ -9661,8 +9634,6 @@ juicio visual formal antes del Human Gate de este PR.
 
 ---
 
----
-
 ## 102. Dos trozos de código que la documentación juraba vivos (PRELAUNCH-HARDENING-1 Fase R8, 2026-08-15)
 
 **Qué se decidió.** Se borran los dos huérfanos que quedaban de la Fase R.
@@ -9719,12 +9690,6 @@ leyera sin ese aviso la implementaría otra vez.
 `docs/specs/web-audit/ROADMAP.md` fila 3 y «Fase A».
 
 ---
-
-
----
-
----
-
 
 ## 103. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
 
@@ -10049,14 +10014,6 @@ ADR 0033/0035 (la puerta y la cifra principal).
 
 ---
 
-
----
-
-
----
-
----
-
 ## 107. El único documento pensado para copiarse fuera (SEO-POS-1 Fase A, 2026-08-16)
 
 Fase A es la capa que el plan siempre asignó al fundador: Reddit, YouTube,
@@ -10279,9 +10236,6 @@ unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de
 
 ---
 
-
----
-
 ## 111. Se retira la banda «Revisando tu web» de Visión general — dos avisos del mismo hecho en la misma pantalla (2026-08-16)
 
 **El problema, señalado por el fundador con una captura.** Mientras la
@@ -10397,8 +10351,6 @@ en el ejemplo).
 
 ---
 
----
-
 ## 112. El aviso verde de «tu primer escaneo se está ejecutando» reaparecía ya terminado el escaneo (2026-08-16)
 
 **El problema, reportado por el fundador con una captura del móvil.** En
@@ -10444,10 +10396,6 @@ la única clave que nunca debía renderizarse como banner.
 de fondo no cambia, sólo la condición de código que la implementaba);
 `components/scan-progress-poller.tsx` (el `router.refresh()` que dispara el
 refresco silencioso que expuso el caso "ya terminado").
-
----
-
----
 
 ---
 
@@ -11126,9 +11074,6 @@ fundador, 2026-08-20.
 
 ---
 
-
----
-
 ## 119. Visión general en escritorio: cabecera de la puntuación GEO alineada, desglose y motores lado a lado (OV-DESKTOP-2, 2026-08-17)
 
 **El problema, señalado por el fundador con una captura de escritorio.** En
@@ -11338,9 +11283,6 @@ a construir cuando cambia este workflow, para que el arreglo pueda ejercitarse).
 
 ---
 
-
----
-
 ## 121. `sameAs` deja de estar vacío: LinkedIn y G2 son perfiles reales (2026-08-20)
 
 **Qué pasó.** El fundador dio de alta la página de empresa de LinkedIn
@@ -11367,8 +11309,6 @@ el mecanismo que esos documentos describen como el que las desbloquea.
 **Trazabilidad.** `components/seo/organization-schema.tsx`; log §100 (por qué
 `sameAs` nació vacío); `docs/off-site-authority-kit.md` §7-8 y su tabla de
 Estado (el mismo hueco, documentado desde el lado de contenido).
-
----
 
 ---
 
@@ -11781,29 +11721,6 @@ incidente.
 
 ---
 
----
-
-
----
-
-
----
-
-
----
-
----
-
-
----
-
----
-
-
----
-
----
-
 ## 127. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
 
 **Qué se decidió.** Tres cambios en la tarjeta de recomendación, todos
@@ -11898,48 +11815,71 @@ decisión del fundador sobre el coste (~$0,28 por auditoría).
 
 ---
 
----
+## 128. La propuesta salía entera y decía que éramos mejores que cinco competidores (RECS-USEFULNESS-1 Fase C, 2026-08-21)
 
-## 128. El guardián rechazaba nombrar al competidor que la propia tarjeta ancla (2026-08-20)
+**Origen.** Con la Fase A ya en producción (§126), el fundador generó una
+propuesta real para el proyecto Movistar y pegó el resultado. El artefacto era
+impecable: 1.391 caracteres, `JSON.parse` limpio, cerrado. Con el tope viejo de
+1.200 habría salido cortado, así que la Fase A quedó verificada en producto y
+no sólo en tests. Y dentro de ese artefacto perfecto venía esto, listo para
+pegar en la web de un cliente de pago:
 
-**Qué pasó.** Con §126 desplegado, la misma tarjeta *Entrar en fuentes citadas*
-volvió a fallar — pero ya no con la frase genérica: **«La propuesta generada
-mencionaba datos que no están en la evidencia de esta recomendación»**. Los
-mensajes por rama que §126 introdujo hicieron su trabajo: en un clic quedó
-descartado el motor y señalado el guardián, sin abrir un solo log.
+> «A diferencia de operadores como Jazztel, Vodafone España, MásMóvil, Orange
+> España o Digi, Movistar mantiene un alto estándar de calidad y cobertura»
 
-**La causa, que es la de §126 un campo más allá.** El playbook de las reglas de
-hueco de fuentes le pide al modelo que clasifique cada dominio citado y le dé su
-jugada, y llega a pedirle que marque los que son **competidores de la marca**
-como «no es un objetivo de outreach» — algo que no se puede hacer sin
-nombrarlos. El guardián, en cambio, rechaza cualquier competidor de la lista del
-proyecto que no esté en `mentioned_competitors`, que en estas tarjetas viene
-vacío. Con `seranking.com` entre los dominios citados y «SE Ranking» entre los
-cinco competidores del proyecto, la propuesta se descartaba por obedecer. Otra
-vez: el prompt pide una cosa y el guardián la castiga.
+**Por qué eso no es "contenido flojo".** Es publicidad comparativa contra cinco
+competidores nombrados sin un dato que la sostenga. En España la comparación
+tiene que ser objetiva y verificable sobre características esenciales (art. 10
+de la Ley de Competencia Desleal). No le estábamos dando al cliente un consejo
+mediocre: le estábamos generando una exposición legal y presentándosela con un
+botón de copiar.
 
-**Qué se decidió.** `competitorsAnchoredByDomain` admite un competidor **cuando
-su propio dominio ya está en el conjunto anclado de esa tarjeta**, y ese
-competidor pasa a la vez al prompt y al guardián — el mismo invariante de §126.
-No afloja nada más: el emparejado es por igualdad exacta de etiqueta de marca
-(`evilacme.com` no habilita «Acme», ADR 0019), y un competidor cuyo dominio no
-esté en la evidencia sigue prohibido.
+**El mecanismo, que es el hallazgo de verdad.** La regla anti-invención del
+prompt existía y era dura: *«where a specific value (a number, a price, a date)
+would be needed but is not in the facts, write a clearly-marked placeholder…
+NEVER invent the value»*. En los 1.391 caracteres **no había ni un
+`[tu dato aquí]`**. El modelo no la incumplió: **la rodeó**. La regla vigila
+cifras, así que el camino de menor resistencia es escribir sin ninguna —
+«precios competitivos», «excelente cobertura», «experiencia superior». Dice lo
+mismo que un número inventado y no deja rastro de que falta un dato. De ahí la
+reformulación: **la regla muerde sobre la afirmación, no sobre el número**, y un
+adjetivo evaluativo sin respaldo es un valor inventado igual que lo sería una
+cifra.
 
-**Y el mensaje dice el término.** «Mencionaba datos que no están en la
-evidencia» deja fuera la única pregunta que importa: *cuál*. Ahora dice
-«mencionaba «SE Ranking», que no está en la evidencia», saneado y recortado como
-cualquier otra salida del modelo. Un rechazo del guardián deja de necesitar
-acceso a producción para diagnosticarse — que es lo que costó las dos vueltas
-anteriores.
+**Lo que se implementa, y con qué dureza cada cosa** — la distinción es
+deliberada y se declara aquí para que nadie la lea como más fuerte de lo que es:
 
-**Lo que sigue sin comprobarse aquí.** Que la propuesta se genere de verdad
-depende de una llamada real a Gemini, y eso no se puede ejercitar desde los
-tests. Lo que estos fijan es que prompt y guardián leen el mismo conjunto, en
-las dos dimensiones.
+- **C1, guarda en servidor.** Se rechaza el texto generado cuando una frase
+  nombra a un competidor **y** contiene un juicio de valor comparativo
+  (`comparative_claim_against_competitor`). Va por frase a propósito: nombrar a
+  un competidor es media plataforma —«Compara tu página con la de Digi», una
+  tabla comparativa, «Digi aparece antes que tú»— y todo eso sigue pasando. El
+  llamador pasa el texto **por piezas** (título, resumen, cada paso, cada
+  ejemplo) porque un paso sin punto final se pegaría al siguiente e inventaría
+  una frase que nadie escribió.
+- **C2 y C3, sólo prompt, y son reglas BLANDAS.** Que un adjetivo evaluativo sin
+  respaldo cuente como invención, y que todo artefacto de schema avise de que su
+  contenido tiene que estar visible en la página. No hay detector: «juicio de
+  valor» no es un conjunto cerrado, y una expresión regular lo bastante amplia
+  para cazarlo rechazaría planes buenos — y cada rechazo le gasta al usuario una
+  generación de su cupo diario. **Se prefiere una regla blanda declarada como
+  blanda a un detector que aparente una garantía que no da.**
 
-**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
-`rewrite-recommendation.ts`; §126 (la primera mitad, dominios);
-`.claude/rules/recommendations.md` §Reescritura con IA.
+**Límite declarado de C1.** Las otras dos guardas del fichero comparan contra
+listas cerradas y son exactas. El léxico de juicio de valor es finito y está en
+castellano: un superlativo escrito de otra forma, o en otro idioma —y
+`projects.language` admite más de uno—, pasa. Es una red, no una garantía.
+
+**Lo que queda pendiente.** Las tres del inventario que siguen sin tocar, la
+mayor de ellas la Fase B1: **el generador no sabe nada de la web del cliente**.
+Y los artefactos rotos ya persistidos siguen sirviéndose por la ruta de
+idempotencia (§126): purgarlos es escritura destructiva sobre datos de clientes
+y necesita su propia aprobación.
+
+**Trazabilidad.** `lib/recommendations/rewrite-validation.ts` y su test (el
+fixture es la frase real, no un ejemplo inventado);
+`lib/recommendations/recommendation-rewrite-llm.ts` (C1/C2/C3 en el prompt);
+`docs/specs/recommendations/quality-audit-2026-08.md`; log §126 (Fase A).
 
 ---
 
@@ -11992,8 +11932,6 @@ mitades anteriores del mismo agujero).
 
 ---
 
----
-
 ## 130. El cajón móvil se pulsaba antes de hidratar (2026-08-20)
 
 **Qué pasó.** `el cajón de navegación móvil de pricing abre y sus botones se
@@ -12020,8 +11958,6 @@ zona y otro PR.
 
 **Trazabilidad.** `tests/pilot/journeys/landing.spec.ts`;
 `components/marketing-mobile-nav.tsx` (por qué el clic se pierde).
-
----
 
 ---
 
@@ -12076,8 +12012,6 @@ clic en un diagnóstico de diez segundos en vez de una investigación.
 `recommendation-rewrite-llm.ts` (cuyo comentario afirmaba lo contrario: «every
 url here is already one of citationDomains»); `.claude/rules/recommendations.md`
 §Reescritura con IA.
-
----
 
 ---
 
@@ -12137,6 +12071,49 @@ patrón de verde vacío).
 
 ---
 
+## 133. El guardián rechazaba nombrar al competidor que la propia tarjeta ancla (2026-08-20)
+
+**Qué pasó.** Con §126 desplegado, la misma tarjeta *Entrar en fuentes citadas*
+volvió a fallar — pero ya no con la frase genérica: **«La propuesta generada
+mencionaba datos que no están en la evidencia de esta recomendación»**. Los
+mensajes por rama que §126 introdujo hicieron su trabajo: en un clic quedó
+descartado el motor y señalado el guardián, sin abrir un solo log.
+
+**La causa, que es la de §126 un campo más allá.** El playbook de las reglas de
+hueco de fuentes le pide al modelo que clasifique cada dominio citado y le dé su
+jugada, y llega a pedirle que marque los que son **competidores de la marca**
+como «no es un objetivo de outreach» — algo que no se puede hacer sin
+nombrarlos. El guardián, en cambio, rechaza cualquier competidor de la lista del
+proyecto que no esté en `mentioned_competitors`, que en estas tarjetas viene
+vacío. Con `seranking.com` entre los dominios citados y «SE Ranking» entre los
+cinco competidores del proyecto, la propuesta se descartaba por obedecer. Otra
+vez: el prompt pide una cosa y el guardián la castiga.
+
+**Qué se decidió.** `competitorsAnchoredByDomain` admite un competidor **cuando
+su propio dominio ya está en el conjunto anclado de esa tarjeta**, y ese
+competidor pasa a la vez al prompt y al guardián — el mismo invariante de §126.
+No afloja nada más: el emparejado es por igualdad exacta de etiqueta de marca
+(`evilacme.com` no habilita «Acme», ADR 0019), y un competidor cuyo dominio no
+esté en la evidencia sigue prohibido.
+
+**Y el mensaje dice el término.** «Mencionaba datos que no están en la
+evidencia» deja fuera la única pregunta que importa: *cuál*. Ahora dice
+«mencionaba «SE Ranking», que no está en la evidencia», saneado y recortado como
+cualquier otra salida del modelo. Un rechazo del guardián deja de necesitar
+acceso a producción para diagnosticarse — que es lo que costó las dos vueltas
+anteriores.
+
+**Lo que sigue sin comprobarse aquí.** Que la propuesta se genere de verdad
+depende de una llamada real a Gemini, y eso no se puede ejercitar desde los
+tests. Lo que estos fijan es que prompt y guardián leen el mismo conjunto, en
+las dos dimensiones.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`rewrite-recommendation.ts`; §126 (la primera mitad, dominios);
+`.claude/rules/recommendations.md` §Reescritura con IA.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -12152,3 +12129,5 @@ tipografía o patrones de navegación:
 3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
    técnico aquí (este documento es "qué se decidió", no "cómo se
    implementó").
+
+---

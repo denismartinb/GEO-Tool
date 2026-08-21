@@ -64,7 +64,7 @@ paths:
   `buildRecommendationRewritePrompt` construye el texto y `domainsShownInPrompt`
   extrae de él lo que el guardián admite. Recomponerlo campo a campo falló tres
   veces por tres piezas distintas —páginas citadas (§131), competidores con
-  dominio propio (§128) y el título de una página citada, que suele ser otro
+  dominio propio (§133) y el título de una página citada, que suele ser otro
   dominio (§129)—, y cada vez el modelo fue rechazado por repetir algo que tenía
   delante. Si añades un dato al prompt, ya queda anclado; si lo anclas sin
   enseñarlo, sobra.
@@ -85,11 +85,16 @@ paths:
   dominio está en el conjunto anclado (`competitorsAnchoredByDomain`). El
   playbook pide clasificar cada dominio citado y marcar los que son
   competidores, cosa imposible sin nombrarlos, y el guardián los rechazaba por
-  ello (log §128). El emparejado es por igualdad exacta de etiqueta de marca:
+  ello (log §133). El emparejado es por igualdad exacta de etiqueta de marca:
   `evilacme.com` no habilita «Acme» (ADR 0019).
+- **Los TRES motivos del guardián nombran su término, y cada uno explica lo
+  suyo.** Un juicio comparativo (Fase C) no se cuenta como «falta evidencia»:
+  el dato estaba y lo que sobra es la afirmación de superioridad, así que el
+  mensaje dice qué palabra lo tumbó. Mandar al usuario a mirar la evidencia
+  cuando el problema es otro es peor que no decir nada (log §128, §129).
 - **Un rechazo del guardián dice QUÉ término lo disparó, también en pantalla.**
   Diagnosticar «mencionaba datos que no están en la evidencia» exigía acceso a
-  los logs de producción; costó dos vueltas enteras (log §131, §128). El
+  los logs de producción; costó dos vueltas enteras (log §131, §133). El
   término va saneado y recortado como cualquier salida del modelo.
 - **Nada entra en ese conjunto que no venga de la evidencia persistida de esa
   tarjeta.** Ampliarlo con dominios "razonables" (redes sociales, plantillas,
@@ -165,3 +170,30 @@ paths:
   pantalla completa (`FirstScanTakeover`) sólo sustituye la pantalla cuando NO
   hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
   `ScanStatePill` del sticky-header, nunca tapando el backlog.
+
+## Honestidad de lo que se genera (RECS-USEFULNESS-1 Fase C, log §128)
+
+- **Nombrar a un competidor sí; decir que somos mejores que él, no.** Se rechaza
+  en servidor el texto generado cuya frase nombra a un competidor de la lista
+  cerrada y además lleva un juicio de valor comparativo
+  (`comparative_claim_against_competitor` → `rewrite-validation.ts`). Motivo, y
+  no es de estilo: la comparación contra rivales nombrados sin dato objetivo
+  expone al cliente a una reclamación (art. 10 LCD). La comparación **neutra y
+  verificable** sigue permitida y es media plataforma — no la rompas al tocar
+  el léxico.
+- **La comprobación es por frase, y el texto se pasa por piezas.** Título,
+  resumen, cada paso y cada ejemplo van por separado a `segments`: unidos, un
+  paso sin punto final se pega al siguiente y se inventa una frase que nadie
+  escribió, que rechazaría planes buenos.
+- **Un adjetivo evaluativo sin respaldo es un valor inventado**, igual que una
+  cifra inventada. La regla del prompt vigilaba números y el modelo la rodeó
+  escribiendo sin ninguno («precios competitivos», «excelente cobertura»). Si
+  añades reglas anti-invención, escríbelas sobre **la afirmación**, no sobre el
+  tipo de dato.
+- **C2 y C3 son reglas blandas y se declaran como tales.** Viven sólo en el
+  prompt porque «juicio de valor» no es un conjunto cerrado y un detector amplio
+  rechazaría planes legítimos — y cada rechazo gasta una generación del cupo
+  diario del usuario. No las documentes como garantías.
+- **Todo artefacto de datos estructurados avisa de que su contenido tiene que
+  estar visible en la página.** Marcar un `FAQPage` sobre preguntas que no están
+  en la página es marcado de contenido inexistente.

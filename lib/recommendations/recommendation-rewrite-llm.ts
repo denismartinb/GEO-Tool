@@ -128,7 +128,7 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
  * mano: lo que el modelo puede nombrar es **lo que este texto le enseña**, y el
  * guardián admite exactamente eso. Cada vez que se dedujo el conjunto por otro
  * camino faltó una pieza distinta — primero las páginas citadas (log §131),
- * luego los competidores anclados por su dominio (log §128), y después el
+ * luego los competidores anclados por su dominio (log §133), y después el
  * TÍTULO de una página citada, que muy a menudo es él mismo un dominio
  * (`blog.hubspot.es — "hubspot.es"`). Tres agujeros del mismo agujero.
  */
@@ -140,6 +140,12 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
     "You MUST use ONLY the facts listed below. Do NOT invent any fact, statistic, competitor name, domain, page or detail not explicitly given.",
     "Where a specific value (a number, a price, a date) would be needed but is not in the facts, write a clearly-marked placeholder like [tu dato aquí]. NEVER invent the value.",
     "Do NOT mention any competitor name other than the ones explicitly listed under 'Competitors you may mention'.",
+    // RECS-USEFULNESS-1 Fase C (log §128). C1 lo vuelve a comprobar en el
+    // servidor sobre una lista cerrada; C2 y C3 son reglas BLANDAS y sólo
+    // viven aquí — declarado así a propósito, ver la regla de ruta.
+    "You may NAME a competitor, but you may NEVER claim the brand is better, stronger, more reliable or otherwise superior to a named competitor. A neutral, verifiable comparison is fine ('X answers this query, you do not'); a value judgement is not ('unlike X, we keep a high standard'). Comparative advertising naming rivals without objective, verifiable data exposes the brand to a legal claim — never write it, not even softened.",
+    "An evaluative adjective about the brand's own product IS an invented value unless a given fact backs it. 'Competitive prices', 'excellent coverage', 'robust network', 'superior experience', 'added value' are inventions exactly like an invented number would be: you do not know them. Either ground the claim in the facts below, or write the placeholder ([tu dato aquí]) and let the user fill it in. Prefer a short, verifiable sentence over a long, flattering one.",
+    "Whenever an example is FAQPage (or any schema whose content is user-visible), the plan MUST state that the questions and answers have to be visible on the page itself — structured data describing content that is not on the page is treated as spam by search engines and cannot be corroborated by AI engines.",
     "Do NOT mention any domain or URL other than the ones explicitly listed under 'Domains you may mention'.",
     "If no competitors or domains are listed below, do not invent or imply any.",
     `Write entirely in this language: ${input.language}.`,
