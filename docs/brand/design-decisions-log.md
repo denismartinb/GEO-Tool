@@ -11892,3 +11892,39 @@ ninguna auditoría. Es la siguiente fase (AUDIT-RECS-JOIN-1) y necesita una
 decisión del fundador sobre el coste (~$0,28 por auditoría).
 
 ---
+
+## 128. La matriz de cobertura llevaba un mes ignorando las citas de ChatGPT (AUDIT-GROUNDED-PARITY-1, 2026-08-21)
+
+**Qué pasaba.** `lib/web-audit/opportunity-matrix.ts` decidía si una cita
+cuenta como evidencia real con su propia copia de `GROUNDED_PROVIDERS`, y esa
+copia decía `{"gemini"}`. Desde ENGINES-2a (2026-07-18) ChatGPT genera con la
+herramienta `web_search` y produce citas reales — el scoring
+(`lib/scoring/run-scoring.ts`) y `ENGINE_META` lo daban por grounded desde
+entonces; sólo esta tercera copia se quedó atrás.
+
+**Consecuencia.** Un tema que **ChatGPT sí estaba citando** se clasificaba como
+`invisible` o `content_gap` si Gemini no lo citaba también. Es decir: la
+Auditoría web decía «no te citan aquí» sobre temas donde sí te citaban, y la
+pantalla proponía crear contenido que ya funcionaba. No es un fallo de pintado,
+es un diagnóstico equivocado en un motor de los tres.
+
+**Lo que lo hizo invisible durante un mes.** La cabecera de la constante
+afirmaba, literalmente, que *«opportunity-matrix.test.ts guards the two from
+silently diverging»*. **Ese test no existía.** Los que había cubrían `gemini`,
+`claude` y `null` — nunca `openai`, que es justo el motor que podía divergir y
+divergió. Un comentario que promete una garantía inexistente es peor que no
+tener comentario: la siguiente sesión lee «esto está cubierto» y no mira.
+
+**Decisión.** Las tres declaraciones de «qué motor está grounded» siguen
+duplicadas a propósito —el scoring no debe volverse dependencia de la UI ni de
+la auditoría por una constante—, pero ahora el precio de esa decisión está
+pagado: `GROUNDED_PROVIDERS` se exporta desde el scoring (sólo `export`, sin
+cambio de comportamiento) y `opportunity-matrix.test.ts` recorre el conjunto
+canónico comprobando las tres copias en ambas direcciones — todo grounded lo es
+en las tres, y ningún no-grounded cuela en ninguna. Verificado además que el
+guardián **puede fallar**: reintroduciendo el bug, saltan dos tests.
+
+**Sin backfill.** Las auditorías ya persistidas conservan su clasificación; la
+siguiente pasada las recalcula sola.
+
+---

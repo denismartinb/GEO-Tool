@@ -28,6 +28,17 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   `lib/recommendations/domain-coverage.ts` y `lib/scoring/run-scoring.ts`.
 - **El texto narrativo de Gemini nunca es hecho verificado** — se muestra con el
   aviso de "interpretación de la IA".
+- **Qué motor está grounded se declara en tres sitios y los tres se prueban
+  juntos.** El canónico es `GROUNDED_PROVIDERS` en `lib/scoring/run-scoring.ts`
+  (ADR 0012); `lib/web-audit/opportunity-matrix.ts` y `lib/scan/engine-meta.ts`
+  lo duplican a propósito, para que el scoring no se vuelva dependencia de la
+  auditoría ni de la UI por una constante. El precio de esa duplicación lo paga
+  el test de paridad de `opportunity-matrix.test.ts`, que recorre el conjunto
+  canónico y comprueba las tres copias **en ambas direcciones**. No se añade una
+  cuarta copia sin meterla en ese test, y no se declara una garantía en un
+  comentario sin escribirla: la copia de la matriz se quedó en `{"gemini"}` un
+  mes tras entrar ChatGPT —clasificando como `invisible` temas que ChatGPT sí
+  citaba— **bajo una cabecera que juraba que un test lo impedía** (log §128).
 - **Puerta Pro**: leer `profiles.current_plan` en crudo vía `isProOrAbove`
   (`lib/billing.ts`), nunca vía `getPlanForUser`/`resolvePlan`.
 - **La puerta cubre la cobertura, no la salud técnica** (ADR 0035). La

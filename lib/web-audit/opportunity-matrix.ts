@@ -64,13 +64,20 @@ export type WebAuditSummary = {
 
 /**
  * Providers whose generation call includes real grounding (Google Search)
- * and can therefore produce genuine citation evidence. Mirrors the private
- * GROUNDED_PROVIDERS set in lib/scoring/run-scoring.ts (ADR-0012) — kept as a
- * separate copy rather than an import so the reviewed scoring module stays
- * untouched; opportunity-matrix.test.ts guards the two from silently
- * diverging.
+ * and can therefore produce genuine citation evidence. Mirrors
+ * GROUNDED_PROVIDERS in lib/scoring/run-scoring.ts (ADR-0012) — copia y no
+ * import para que este módulo no arrastre el de scoring entero por una
+ * constante.
+ *
+ * **`openai` faltaba aquí desde ENGINES-2a** (2026-07-18): ChatGPT genera con
+ * la herramienta `web_search` y produce citas reales, y tanto el scoring como
+ * `ENGINE_META` lo daban por grounded — sólo esta copia se quedó atrás. El
+ * efecto era que un tema que ChatGPT SÍ citaba se clasificaba como `invisible`
+ * o `content_gap`. La cabecera anterior afirmaba que un test impedía la
+ * divergencia; ese test no existía. Ahora sí, y cubre las tres copias
+ * (`opportunity-matrix.test.ts`, "paridad de motores grounded").
  */
-const GROUNDED_PROVIDERS = new Set<string>(["gemini"]);
+const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
 
 function isGroundedProvider(provider: string | null): boolean {
   return !provider || GROUNDED_PROVIDERS.has(provider);
