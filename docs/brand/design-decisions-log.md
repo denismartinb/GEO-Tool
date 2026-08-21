@@ -11507,7 +11507,7 @@ tipografía o patrones de navegación:
 
 ---
 
-## 123. El hero de la portada estrena aura, y no reutiliza la de /geo (HERO-AURA-1, 2026-08-21)
+## 130. El hero de la portada estrena aura, y no reutiliza la de /geo (HERO-AURA-1, 2026-08-21)
 
 **Origen.** Fundador, 2026-08-21: el hero de la portada necesitaba un fondo con
 más presencia. Se dibujaron seis en un lienzo de diseño y se eligió el quinto.
