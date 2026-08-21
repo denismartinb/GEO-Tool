@@ -3,7 +3,7 @@ import {
   assertFullyVisible,
   assertPageIsHealthy,
   captureInteraction,
-  discoverProjectIds,
+  pickProjectShowing,
   resolveProjectId,
   visitAsUser
 } from "../support/journey";
@@ -144,8 +144,27 @@ test("competitors screen renders", async ({ page }, testInfo) => {
   await exploreInteractions(page, testInfo, "competitors");
 });
 
+/**
+ * Contra un proyecto que TENGA recomendaciones, no contra el que salga primero.
+ *
+ * Este journey exige contenido real (`ContentExpectation`), y «el primero de la
+ * lista» sale del cookie `geo_active_project` o, sin él, del proyecto más
+ * reciente. Basta con que alguien dé de alta un dominio para que el piloto
+ * aterrice en uno recién escaneado cuyo backlog está vacío — «Nada que corregir
+ * ahora mismo», que es un estado legítimo del producto y no un fallo. Pasó con
+ * Amazon el 2026-08-21 y tumbó las tres anchuras (log §135).
+ */
 test("recommendations screen renders", async ({ page }, testInfo) => {
-  const id = await projectId(page);
+  const id = await pickProjectShowing(page, testInfo, {
+    path: (projectIdToVisit) => `/dashboard/projects/${projectIdToVisit}/recommendations`,
+    contentSelector: ".rec-card"
+  });
+  test.skip(
+    !id,
+    "ningún proyecto de la cuenta piloto tiene recomendaciones: no hay backlog que juzgar. " +
+      "Siembra la cuenta con la pasada de escritura del piloto."
+  );
+
   const findings = await visitAsUser(
     page,
     testInfo,
@@ -189,10 +208,16 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
  * above.
  */
 test("recommendations screen renders for a second, larger project", async ({ page }, testInfo) => {
-  const ids = await discoverProjectIds(page);
+  // Otro proyecto CON recomendaciones, por el mismo motivo que el journey de
+  // arriba: un segundo proyecto vacío no enseña las agrupaciones ni el bloque
+  // de prioritarias, que es justo lo que este journey existe para ver.
   const primary = await projectId(page);
-  const second = ids.find((id) => id !== primary);
-  test.skip(!second, "pilot account has no second project to compare against");
+  const second = await pickProjectShowing(page, testInfo, {
+    path: (projectIdToVisit) => `/dashboard/projects/${projectIdToVisit}/recommendations`,
+    contentSelector: ".rec-card",
+    exclude: [primary]
+  });
+  test.skip(!second, "pilot account has no second project with recommendations to compare against");
 
   const findings = await visitAsUser(
     page,

@@ -12171,6 +12171,47 @@ mitades anteriores del mismo agujero).
 
 ---
 
+## 135. El piloto exigía contenido real al proyecto que saliera primero (2026-08-21)
+
+**Qué pasó.** El journey `recommendations screen renders` falló en las tres
+anchuras: «the page loaded without errors but never rendered el backlog de
+acciones». La captura lo explica sola — el proyecto era **Amazon**, dado de alta
+ese mismo día, con presencia 100 y **«Nada que corregir ahora mismo»**.
+
+**Por qué no es un fallo del producto.** Ese estado vacío es legítimo: el
+escaneo no encontró huecos accionables. Lo que estaba mal era la pregunta. El
+journey exige contenido real (`ContentExpectation`, la regla que nació el
+2026-08-02) sobre «el primer proyecto de la lista», y cuál es el primero sale
+del cookie `geo_active_project` o, sin él, del **más reciente**. Basta con que
+alguien cree un dominio para que el piloto aterrice en él. Exigir contenido real
+a un proyecto elegido a ciegas es una contradicción, y un rojo que no significa
+nada enseña a ignorar los rojos.
+
+**Es la segunda vez el mismo día.** Por la mañana pasó en
+`recs-interactions` con el proyecto Linkedin (§132) y se arregló allí: elegir el
+proyecto **por dato**, abriéndolo y mirando. `core-flow.spec.ts` se quedó
+eligiendo a ciegas, así que el mismo fallo volvió por la otra puerta seis horas
+después.
+
+**Qué se decidió.** La elección pasa a `pickProjectShowing`
+(`tests/pilot/support/journey.ts`), compartida por los tres journeys que la
+necesitan: abre candidatos acotados, se queda con el primero que enseña de
+verdad lo que se va a juzgar y **se salta ruidosamente** si ninguno lo hace.
+Nunca afirma sobre una pantalla vacía. `exclude` permite que el journey de
+«segundo proyecto» pida uno distinto del que ya usó el primero, que antes era
+`ids.find(id => id !== primary)` — otra elección ciega.
+
+**Lo que esto NO arregla.** La cuenta piloto sigue sin datos sembrados de forma
+determinista: si un día ningún proyecto tiene recomendaciones, estos journeys se
+saltan y la cobertura desaparece, ruidosamente pero desaparece. La salida real
+es la pasada de escritura del piloto, que está fuera de este PR.
+
+**Trazabilidad.** `tests/pilot/support/journey.ts` (`pickProjectShowing`),
+`core-flow.spec.ts`, `recommendations-interactions.spec.ts`; §132 (la primera
+mitad del mismo fallo), §130.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
