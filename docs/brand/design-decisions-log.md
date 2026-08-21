@@ -11532,7 +11532,256 @@ competidores importa para el scoring, no solo para la pantalla).
 
 ---
 
-## 124. El piloto abre por fin `/signup` y `/forgot-password` (PRELAUNCH-HARDENING-1 Fase P2, 2026-08-20)
+## 124. La zona pública era imposible de scrollear en Chrome (2026-08-20)
+
+El fundador: *«el scroll con dos dedos de Mac no funciona en Chrome»*. Acabó
+siendo mucho peor que un gesto de trackpad: **en Chrome, ninguna página pública
+se podía scrollear de ninguna forma** — ni rueda, ni flechas, ni barra. En
+Safari funcionaba. La consola funcionaba. Producción y preview, igual de rotas.
+
+**La causa.** `html { overflow-x: hidden }` (puesto en GROWTH-2 Fase 2.1 para
+contener un desbordamiento de 3px que sólo aparecía en preview). `hidden` en un
+eje fuerza al otro a computar de `visible` a `auto` (CSS Overflow 3 §3.2), lo
+que convierte al **elemento raíz** en contenedor de scroll. Chrome resolvía eso
+a un scrollport con `overflow` usado `hidden`, y ahí la especificación dice dos
+cosas a la vez: el scroll programático está permitido y **el navegador no debe
+ofrecer ningún mecanismo de scroll al usuario**. De ahí la firma tan rara.
+Arreglado con `overflow-x: clip`, que recorta igual pero no crea contenedor de
+scroll ni convierte de eje (`clip` y `visible` no se convierten entre sí). Se
+aplica a `html` y a `body`.
+
+**Lo que costó llegar, porque el proceso es la lección.** Dos arreglos
+anteriores se enviaron sin poder reproducir el fallo y **los dos fueron
+falsos**: `overscroll-behavior-y: none → contain` (revertido; encima devolvía
+el rebote elástico que `none` suprimía a propósito) y un bucle
+`requestAnimationFrame` del tour del hero que renderizaba en pausa (correcto
+por su cuenta como mejora de rendimiento, irrelevante para esto). Ambos
+partían de razonar sobre el CSS en vez de ejercitarlo.
+
+Lo que sí funcionó fue construir el producto en local y lanzarle Chromium 141:
+seis variantes de `overflow`/`overscroll` en `html` y `body` — todas
+scrolleaban; rueda con componente horizontal de 1 a 30 — scrolleaba;
+desbordamiento horizontal real — no había ninguno (`scrollWidth ==
+clientWidth`). Nada reproducía el fallo, y eso **también era información**:
+descartaba el CSS como causa suficiente y dejaba el entorno como variable.
+
+**El dato que lo resolvió lo dio el fundador desde su consola**, y es el que
+hay que pedir primero la próxima vez:
+
+```
+{alto: 4039, ventana: 399, scroller: 'HTML'}   → hay 3.640px de recorrido
+tras scrollTo → 500                            → el documento SÍ scrollea
+```
+
+Scroll programático vivo + entrada de usuario muerta no es ambiguo: es la
+definición literal de `overflow: hidden` en un scrollport. Con eso, el arreglo
+fue directo y verificable en local (forzar `documentElement.style.overflow =
+"hidden"` reproduce la firma exacta —rueda 0, teclado 0, `scrollTo` 500— y
+`clip` la elimina, en cuatro páginas públicas y dos anchuras).
+
+**Por qué nadie lo vio antes, que es lo más grave.** Llevaba en el código desde
+GROWTH-2 Fase 2.1 y no lo cazó nada:
+
+- **La consola lo enmascara por completo.** No scrollea el documento (`.shell`
+  es `100dvh`/`overflow:hidden` y el scroller real es `.dash-content`), así que
+  el fallo parecía exclusivo de marketing cuando en realidad era del documento.
+- **El `ux-pilot` no puede verlo.** Hace capturas, no scroll: 57 superficies
+  públicas en tres anchuras salieron ✅ en la misma pasada en que el sitio era
+  inusable. Una pantalla que renderiza perfecta y no se puede recorrer pasa
+  todas las aserciones que existen hoy. **Queda pendiente**: una aserción de
+  piloto que haga rueda y teclado y compruebe que `scrollY` se mueve.
+- **Chromium headless sobre Linux no lo reproduce.** El mismo build scrollea
+  bien ahí, así que ni CI ni el piloto lo habrían cogido aunque miraran.
+
+**Corrección colateral, y es la misma enfermedad.** El comentario de
+`.lp-nav-wrap` afirmaba que el `sticky` de la cabecera pública no pega por
+culpa de ese mismo `html { overflow-x: hidden }`. Es **falso**: con `clip` —que
+no crea contenedor de scroll— el sticky sigue sin pegar, `y: -500` idéntico. El
+bloqueante real es `.lp-hero { overflow: hidden }`, el ancestro de scroll del
+sticky. Corregido en el mismo PR, porque un invariante documentado y falso es
+peor que ninguno: la siguiente sesión habría ido a pelearse con la raíz.
+
+**Trazabilidad.** `app/globals.css` (`html`/`body` y el comentario de
+`.lp-nav-wrap`); `.claude/rules/styles.md` (invariante nuevo); log §54 (Fase V,
+de donde sale el `overflow-x` original), §55 (lo que el piloto sí mide hoy).
+
+---
+
+## 125. Las 16 portadas del blog pasan a la tanda WebP del fundador, y tres de ellas llevaban tres pilotos en verde sin usarse (2026-08-20)
+
+El fundador entregó un zip con 16 portadas nuevas (1200×300 WebP, una por
+artículo publicado, con su índice de concepto visual). Sustituyen a las que
+había: 13 reemplazan un `cover.webp` anterior y 3 —los posts de sector— llegan
+donde antes había un SVG dibujado por un agente.
+
+**El fallo, que es la parte que merece quedar escrita.** Copiar los 16 ficheros
+a `public/blog/<slug>/cover.webp` parecía el trabajo entero, y no lo era.
+`geo-para-ecommerce`, `geo-para-saas-b2b` y `geo-para-agencias` declaraban
+`coverImage: "/blog/<slug>/cover.svg"` en `lib/blog/posts.ts`. El `.webp` nuevo
+quedó en `public/` sin que nada lo referenciara y esos tres artículos siguieron
+pintando la portada vieja. Es decir: **3 de las 16 portadas que el encargo pedía
+actualizar no se actualizaron**, y el PR afirmaba que sí.
+
+**Lo grave es cómo pasó la revisión.** El `ux-pilot` corrió **tres veces** sobre
+tres commits distintos y las tres dio `PILOT PASS` con
+`blog-geo-para-ecommerce`, `blog-geo-para-saas-b2b` y `blog-geo-para-agencias`
+en ✅ a 375, 768 y 1280 px. Y tenía razón en lo que mide: la página cargaba
+perfecta, con una portada válida y bonita. Sólo que era la anterior. Misma
+enfermedad que §124 (57 superficies en verde sobre un sitio que no se podía
+scrollear) y que el incidente fundacional de Auditoría web del 2026-08-02: **una
+pantalla que renderiza bien no es una pantalla verificada.** Un reemplazo de
+activo no tiene forma de fallar visiblemente — el respaldo es otro activo
+correcto—, así que aquí el veredicto del piloto no aportaba nada y la
+comprobación tenía que ser sobre el código: *¿quién referencia el fichero que
+acabo de escribir?*
+
+**Lo que se corrigió al encontrarlo:**
+
+- Las tres declaraciones `coverImage` pasan a `.webp`.
+- Los tres `cover.svg` superseded se borran: nada los referencia ya, y dejarlos
+  invita a la siguiente sesión a preguntarse cuál manda.
+- **Efecto colateral bueno, no buscado:** `ogImageFor` (`lib/seo/metadata.ts`)
+  filtra por `RASTER`, así que un `coverImage` SVG cae a la imagen OG de marca.
+  Esos tres artículos llevaban desde su publicación compartiéndose en redes con
+  la portada genérica; ahora emiten la suya.
+- El comentario de `ogImageFor` afirmaba que «las portadas reales son cuadradas
+  de 1254×1254». Con esta tanda son apaisadas de 1200×300 (verificado leyendo la
+  cabecera VP8 de los 16 ficheros). El argumento de omitir `width`/`height`
+  sigue siendo válido —declarar 1200×630 seguiría siendo mentira—, pero la cifra
+  era falsa y un comentario falso es peor que ninguno (§124).
+- `docs/agentic-weekly-post.md` mandaba copiar esos tres SVG como plantilla de
+  partida. Referencia muerta desde el borrado; reescrita.
+
+**Qué queda pendiente.** La cobertura de portadas se apoya hoy en
+`lib/blog/covers.test.ts`, que comprueba que todo post declara `coverImage` y
+que el fichero declarado existe. Las dos cosas eran ciertas **durante todo el
+fallo**: `.svg` existía. Lo que no cubre nadie es la pregunta inversa —un
+`public/blog/<slug>/` con dos portadas de distinta extensión y sólo una
+declarada— que es exactamente la firma de este incidente. Un test de huérfanos
+ahí lo habría cazado en CI sin gastar un piloto.
+
+Y no es hipotético: al barrer el directorio buscando esta firma aparecieron
+**cinco `cover.svg` huérfanos más**, anteriores a esta fase y ajenos a ella
+(`como-aparecer-en-perplexity`, `como-hacer-que-chatgpt-recomiende-tu-negocio`,
+`como-medir-trafico-chatgpt-ga4`, `metricas-geo-que-medir`,
+`que-es-una-auditoria-geo`). Esos posts ya declaraban `.webp`, así que ahí el
+huérfano no rompe nada hoy — pero son cinco directorios donde la siguiente
+sesión encontrará dos portadas y ninguna señal de cuál manda. **No se borran en
+este PR a propósito**: son de otra fase y el encargo era actualizar portadas, no
+barrer activos. Quedan como el primer caso de prueba del test de huérfanos
+cuando se escriba.
+
+**Decisión abierta que este PR NO resuelve: chocan con la letra de ADR 0028.**
+Su regla vigente dice que una portada «no puede representar una interfaz de
+producto, un gráfico, un panel ni una métrica». Las 16 portadas nuevas son
+justamente eso: paneles, líneas, donuts, barras, medidores y tarjetas de KPI.
+
+Miradas a resolución nativa, sin embargo, **no contienen una sola cifra
+legible** — todo el texto de las maquetas son barras de relleno abstractas, sin
+ejes, sin etiquetas y sin números. Cumplen entero el *motivo* declarado de la
+regla («si la portada enseña algo que parece un dato de Genscore, ese dato tiene
+que existir»: aquí no hay nada que parsee como dato) y contradicen su *letra*.
+Tampoco reproducen la interfaz real de GenScore: son paneles genéricos de stock.
+
+Se publican tal cual porque son activos entregados por el fundador, y ADR 0028
+ya trató así las cuatro primeras («las portadas actuales, aportadas por el
+fundador, se mantienen»). Pero **queda un ADR contradicho en silencio**, que es
+exactamente lo que §124 llama peor que ninguno. La salida limpia es una tercera
+enmienda a ADR 0028 que estreche la regla de «ningún panel ni gráfico» a «ninguna
+cifra legible ni interfaz reconocible de GenScore» — que es lo que la regla
+siempre quiso decir. **No se escribe aquí porque es una decisión, no un
+arreglo**, y le corresponde al fundador.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `lib/seo/metadata.ts`,
+`.claude/rules/growth-content.md`, `docs/agentic-weekly-post.md`,
+`public/blog/*/cover.webp`; ADR 0028 y sus dos enmiendas; log §124 y el
+incidente del 2026-08-02 en CLAUDE.md para el mismo punto ciego del piloto.
+
+---
+
+## 126. El bloque que ofrecíamos copiar no era JSON válido (RECS-USEFULNESS-1 Fase A, 2026-08-20)
+
+**Origen.** El fundador ejecutó las recomendaciones que GenScore emite para el
+propio `genscore.es`, con la pregunta puesta del lado del cliente: *«imagina que
+pagas porque la herramienta te dé esto para pegar e implementar
+directamente»*. Dos recomendaciones bastaron para encontrar siete fallos. El
+primero no es de criterio, es objetivo: **el bloque JSON-LD que la pantalla
+ofrecía junto a un botón «Copiar» terminaba a media palabra**, en
+`...bien organizadas con HTML se`.
+
+**Causa.** 1.182 caracteres contra un tope de 1.200, en dos sitios a la vez: el
+prompt le pedía al modelo `max 1200 chars` y `sanitizeExampleContent()`
+remataba con un `.slice(0, 1200)` ciego sobre lo que podía ser código. Y nada
+lo paraba después: la validación sólo miraba evidencia (competidores y dominios
+inventados) y longitud — **no había un solo `JSON.parse` en toda la ruta**, así
+que un objeto sin cerrar se persistía y se pintaba con su botón de copiar. El
+cliente lo pegaba, le fallaba en su web, y no tenía forma de saber que el fallo
+era nuestro.
+
+Debajo hay una incompatibilidad de diseño, no un número mal elegido: el playbook
+de `create_faq_section` le pide al modelo «2-4 pares pregunta/respuesta más un
+bloque JSON-LD». **Eso no cabe en 1.200 caracteres.** Le pedíamos algo que no
+entraba y luego lo cortábamos.
+
+**Qué se decidió.** Un módulo propio, `lib/recommendations/pasteable-artifact.ts`,
+con dos reglas que a propósito no son la misma:
+
+- **Un artefacto de código no se trunca jamás.** Medio JSON-LD es peor que
+  ninguno: no falla al pegarlo, falla después, en la web del cliente. Si no
+  cabe, se descarta entero.
+- **La prosa sí se recorta, pero por límite de palabra.** Un párrafo citable que
+  se pasa por poco sigue sirviendo; tirarlo entero pierde valor sin ganar
+  corrección.
+
+Con eso: tope de código a 3.000 (medido sobre el artefacto real, no elegido a
+ojo), `JSON.parse` obligatorio sobre todo lo que pretenda ser JSON —incluido un
+`<script type="application/ld+json">` al que le falte el cierre—, detección de
+marcado que acaba dentro de una etiqueta abierta, y el prompt reescrito para que
+**la integridad gane a la cobertura**: antes un `FAQPage` de dos preguntas
+completo que uno de cuatro cortado.
+
+**El descarte es por artefacto, no por solución.** El plan (título, resumen,
+pasos) sigue valiendo aunque uno de los tres ejemplos venga roto, y devolver un
+error entero le gastaría al usuario una generación de su cupo diario a cambio de
+nada. Lo que no se hace nunca es enseñar el roto.
+
+**El arreglo no repara lo ya generado, y eso importa hoy.** La ruta de
+idempotencia devuelve la solución persistida más reciente
+(`status: completed`, `is_sanitized: true`) sin volver a llamar a Gemini, así
+que **una recomendación que ya tenga guardado un artefacto cortado lo seguirá
+sirviendo cortado para siempre**: el validador nuevo se aplica al escribir, y
+esa fila se escribió antes. No se purga aquí a propósito —borrar filas de
+`generated_solutions` es escritura destructiva sobre datos de clientes y va con
+su propia aprobación—, pero queda dicho: el bloque que originó este incidente
+sigue roto en la cuenta del fundador hasta que se decida qué hacer con las
+filas viejas. Opciones para su fase: revalidar al leer y regenerar sólo si
+falla, o una purga acotada a artefactos que no parsean.
+
+**Lo que queda roto conocido.** El usuario ve un plan con un ejemplo menos y
+**no se le dice que ha faltado uno**; avisarlo en pantalla es trabajo de UI con
+su pasada de piloto. Y quedan seis fallos más de la misma sesión sin tocar, el
+mayor de ellos: **el generador no sabe nada de la web del cliente** —lee sólo
+marca, dominio e idioma— mientras la auditoría web ya parsea su JSON-LD y sabe
+qué `@type` emite. Por eso nos recomendó implementar `FAQPage` en un sitio que
+ya lo emite en doce superficies. Inventario completo, con fases B/C/D
+propuestas, en `docs/specs/recommendations/quality-audit-2026-08.md`.
+
+**Un detalle del método, porque se repitió el patrón de siempre.** La primera
+versión del validador dejaba pasar una valla ```` ```json ```` sin cerrar: al no
+desenvolverla, el bloque dejaba de parecer JSON, se clasificaba como prosa y el
+objeto cortado se colaba recortado por palabra. Lo cazó su propio test antes de
+salir del contenedor. El fixture no es inventado: es el artefacto real del
+incidente.
+
+**Trazabilidad.** `lib/recommendations/pasteable-artifact.ts` y su test;
+`lib/recommendations/rewrite-recommendation.ts` (saneado y traza
+`artifact_dropped`); `lib/recommendations/recommendation-rewrite-llm.ts`
+(presupuesto por tipo de artefacto);
+`docs/specs/recommendations/quality-audit-2026-08.md`.
+
+---
+
+## 127. El piloto abre por fin `/signup` y `/forgot-password` (PRELAUNCH-HARDENING-1 Fase P2, 2026-08-20)
 
 **Qué se decidió.** `tests/pilot/journeys/auth-pages.spec.ts` — las dos
 pantallas de autenticación que el piloto de lectura nunca había abierto. Parte
