@@ -1,0 +1,101 @@
+<!-- agentic:ux-pilot-result -->
+## Agentic User Pilot — PILOT FAIL
+
+**Deployment:** https://geo-tool-jyy6sajrl-9v7mrc44g8-1223s-projects.vercel.app (commit `3aa29ed`)
+**Ejecutado por:** GitHub Actions
+
+**Configuración detectada:** PILOT_EMAIL ✅ · PILOT_PASSWORD ✅ · PILOT_PROJECT_ID — · PILOT_VERCEL_BYPASS ✅
+
+| Pantalla | Mobile 375 | Tablet 768 | Desktop 1280 |
+|---|---|---|---|
+| signup | ✅ | ✅ | ✅ |
+| forgot-password | ✅ | ✅ | ✅ |
+| dashboard | ✅ | ✅ | ✅ |
+| projects-legacy-redirect | ✅ | ✅ | ✅ |
+| overview | ✅ | ✅ | ✅ |
+| prompts | ✅ | ✅ | ✅ |
+| competitors | ✅ | ✅ | ✅ |
+| recommendations | ❌ estado vacío, sin contenido real | ❌ estado vacío, sin contenido real | ❌ estado vacío, sin contenido real |
+| docs-index | ✅ | ✅ | ✅ |
+| docs-empezar/primer-escaneo | ✅ | ✅ | ✅ |
+| docs-informes/overview | ✅ | ✅ | ✅ |
+| docs-metodologia/geo-score | ✅ | ✅ | ✅ |
+| docs-planes-y-limites | ✅ | ✅ | ✅ |
+| domains-before | ✅ | ✅ | ✅ |
+| landing | ✅ | ✅ | ✅ |
+| pricing | ✅ | ✅ | ✅ |
+| notifications-bell | ✅ | ✅ | ✅ |
+| notifications-page | ✅ | ✅ | ✅ |
+| landing-hero-tour | ✅ | ✅ | ✅ |
+| blog-index | ✅ | ✅ | ✅ |
+| blog-pillar-fundamentos | ✅ | ✅ | ✅ |
+| blog-pillar-medicion | ✅ | ✅ | ✅ |
+| blog-pillar-playbooks | ✅ | ✅ | ✅ |
+| blog-pillar-sectores | ✅ | ✅ | ✅ |
+| blog-que-es-el-geo-score | ✅ | ✅ | ✅ |
+| blog-que-es-geo-generative-engine-optimization | ✅ | ✅ | ✅ |
+| blog-como-elegir-prompts-monitorizar-marca-ia | ✅ | ✅ | ✅ |
+| blog-como-elegir-competidores-analisis-geo | ✅ | ✅ | ✅ |
+| blog-genscore-vs-herramientas-geo | ✅ | ✅ | ✅ |
+| blog-llms-txt-guia-practica | ✅ | ✅ | ✅ |
+| blog-como-conseguir-que-chatgpt-te-cite | ✅ | ✅ | ✅ |
+| blog-geo-para-ecommerce | ✅ | ✅ | ✅ |
+| blog-geo-para-saas-b2b | ✅ | ✅ | ✅ |
+| blog-geo-para-agencias | ✅ | ✅ | ✅ |
+| blog-que-es-una-auditoria-geo | ✅ | ✅ | ✅ |
+| blog-como-saber-si-tu-marca-aparece-en-chatgpt | ✅ | ✅ | ✅ |
+| blog-metricas-geo-que-medir | ✅ | ✅ | ✅ |
+| blog-como-aparecer-en-perplexity | ✅ | ✅ | ✅ |
+| blog-como-medir-trafico-chatgpt-ga4 | ✅ | ✅ | ✅ |
+| blog-como-hacer-que-chatgpt-recomiende-tu-negocio | ✅ | ✅ | ✅ |
+| que-es-genscore | ✅ | ✅ | ✅ |
+| geo | ✅ | ✅ | ✅ |
+| free-checker | ✅ | ✅ | ✅ |
+| geo-mobile-drawer-source | ✅ | ✅ | ✅ |
+| privacidad | ✅ | ✅ | ✅ |
+| cookies | ✅ | ✅ | ✅ |
+| terminos | ✅ | ✅ | ✅ |
+| glosario | ✅ | ✅ | ✅ |
+| glosario-geo | ✅ | ✅ | ✅ |
+| glosario-geo-score | ✅ | ✅ | ✅ |
+| comparativas-genscore-vs-otterly | ✅ | ✅ | ✅ |
+| comparativas-genscore-vs-peec-ai | ✅ | ✅ | ✅ |
+| comparativas-genscore-vs-profound | ✅ | ✅ | ✅ |
+| comparativas-alternativas-a-otterly | ✅ | ✅ | ✅ |
+| comparativas-index | ✅ | ✅ | ✅ |
+| comparativas-mejores-herramientas-geo | ✅ | ✅ | ✅ |
+| not-found-mission | ✅ | ✅ | ✅ |
+| recs-interactions | ✅ | ✅ | ✅ |
+| p2-overview | ✅ | ✅ | ✅ |
+| p2-competitors | ✅ | ✅ | ✅ |
+| p3-overview | ✅ | ✅ | ✅ |
+| p3-competitors | ✅ | ✅ | ✅ |
+| settings | ✅ | ✅ | ✅ |
+| settings-sections | ✅ | ✅ | ✅ |
+| settings-folds-closed | ✅ | ✅ | ✅ |
+| settings-delete-block | ✅ | ✅ | ✅ |
+| settings-no-section-nav | ✅ | ✅ | ✅ |
+
+**Fallos (6):**
+
+- `[mobile]` recommendations screen renders
+  - Error: recommendations @ mobile: the page loaded without errors but never rendered el backlog de acciones generado por el último escaneo — this is an empty state, a plan gate, or an unresolved skeleton, NOT the screen this journey exists to verify. Reporting it as passing would certify a placeholder (real incident, 2026-08-02: a full-screen redesign shipped with a green pilot because every capture showed "Todavía no has auditado tu web"). Fix by seeding the pilot account with real data — run the "Agentic User Pilot (write)" workflow, whose seed journey creates a project, scans it and audits it. See docs/agentic-user-pilot.md § "Datos reales".
+- `[tablet]` recommendations screen renders
+  - Error: recommendations @ tablet: the page loaded without errors but never rendered el backlog de acciones generado por el último escaneo — this is an empty state, a plan gate, or an unresolved skeleton, NOT the screen this journey exists to verify. Reporting it as passing would certify a placeholder (real incident, 2026-08-02: a full-screen redesign shipped with a green pilot because every capture showed "Todavía no has auditado tu web"). Fix by seeding the pilot account with real data — run the "Agentic User Pilot (write)" workflow, whose seed journey creates a project, scans it and audits it. See docs/agentic-user-pilot.md § "Datos reales".
+- `[desktop]` recommendations screen renders
+  - Error: recommendations @ desktop: the page loaded without errors but never rendered el backlog de acciones generado por el último escaneo — this is an empty state, a plan gate, or an unresolved skeleton, NOT the screen this journey exists to verify. Reporting it as passing would certify a placeholder (real incident, 2026-08-02: a full-screen redesign shipped with a green pilot because every capture showed "Todavía no has auditado tu web"). Fix by seeding the pilot account with real data — run the "Agentic User Pilot (write)" workflow, whose seed journey creates a project, scans it and audits it. See docs/agentic-user-pilot.md § "Datos reales".
+- `[mobile]` recomendaciones: acordeones, filtros, detalle, tooltips y exportar responden de verdad
+  - Error: no se han renderizado acciones prioritarias
+- `[tablet]` recomendaciones: acordeones, filtros, detalle, tooltips y exportar responden de verdad
+  - Error: no se han renderizado acciones prioritarias
+- `[desktop]` recomendaciones: acordeones, filtros, detalle, tooltips y exportar responden de verdad
+  - Error: no se han renderizado acciones prioritarias
+
+Hay algo roto en el deployment. Revisa la tabla y las capturas antes de tocar código.
+
+**Evidencia:**
+- Humanos: artefacto `pilot-screenshots` de este run.
+- Agentes: `git fetch origin pilot-evidence/pr-455` — los artefactos de Actions se sirven desde Azure Blob, inalcanzable desde un sandbox de agente; git sí atraviesa el proxy.
+
+---
+_Generated by [Claude Code](https://claude.ai/code)_
