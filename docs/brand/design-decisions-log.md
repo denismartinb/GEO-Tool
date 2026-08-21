@@ -11943,6 +11943,59 @@ fixture es la frase real, no un ejemplo inventado);
 
 ---
 
+## 129. El piloto abre por fin `/signup` y `/forgot-password` (PRELAUNCH-HARDENING-1 Fase P2, 2026-08-20)
+
+**Qué se decidió.** `tests/pilot/journeys/auth-pages.spec.ts` — las dos
+pantallas de autenticación que el piloto de lectura nunca había abierto. Parte
+del set por defecto sin tocar configuración: sigue el mismo patrón
+`**/journeys/*.spec.ts` que el resto.
+
+**Por qué necesitaban su propio contexto, sin sesión.** Los proyectos
+`mobile`/`tablet`/`desktop` montan siempre con `storageState:
+.pilot/auth.json` — correcto para pantallas de consola, pero
+`app/signup/page.tsx` hace `if (user) redirect("/dashboard")`: visitarla ya
+autenticado enseña el dashboard con otro nombre, no el formulario de alta.
+`test.use({ storageState: { cookies: [], origins: [] } })`, sólo en este
+fichero, sustituye el `storageState` del proyecto — el resto del set sigue
+entrando como la cuenta piloto. Es la corrección honesta, no un atajo: un
+contexto de verdad sin sesión es exactamente el visitante que sirven estas dos
+pantallas.
+
+**Qué comprueba más allá de la salud genérica.** Los campos propios de cada
+formulario (`#email`/`#password`/`#confirmPassword` en alta, `#reset-email` y
+el botón de envío en recuperación) y que ambas declaran `<meta name="robots"
+content="noindex, follow">` (SEO-POS-1 T10) — nunca lo había verificado el
+piloto. Ningún test envía el formulario: sólo navegación GET, ni Supabase Auth
+ni correo de por medio, la misma frontera que ya respeta el resto del set de
+lectura.
+
+**`tests/pilot/fixtures/server.mjs` se amplió a la vez**, con las mismas dos
+rutas y la misma forma de contenido, para que `pnpm pilot:selfcheck` siga
+demostrando que el arnés funciona de punta a punta en vez de recibir un 404 y
+fallar en falso.
+
+**Tres afirmaciones del plan original resultaron obsoletas al verificarlas
+contra el código real**, encontradas durante el Task Intake de esta fase, no
+implementadas aquí: A2 (`triggerWebAuditRun` ya comprueba `response.ok` y
+registra el fallo — WEB-AUDIT-DRIVE-1 lo llevaba hecho), `/pricing` (ya
+cubierto por `landing.spec.ts`) y el pliegue de facturación de ajustes (ya
+cubierto por `settings.spec.ts`). Ninguna necesitaba trabajo nuevo; el plan en
+`docs/prelaunch-hardening-plan.md` se marca cerrado en A2 en el mismo PR.
+
+**No incluido en esta fase.** El paso de confirmación de `/forgot-password`
+(necesita un token de reinicio válido, inalcanzable sin buzón — sigue siendo
+un smoke manual del fundador, igual que la confirmación por email del alta).
+P3 (matriz de documentación) y P4 (ronda de ejecución, necesita GitHub Actions
+o la sesión local del fundador) quedan fuera, tal como recomendaba el propio
+Task Intake.
+
+**Trazabilidad.** `tests/pilot/journeys/auth-pages.spec.ts`;
+`tests/pilot/fixtures/server.mjs`; `docs/agentic-user-pilot.md` (sección
+"PRELAUNCH-HARDENING-1 Fase P2"); `docs/prelaunch-hardening-plan.md` (ledger
+A2).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
