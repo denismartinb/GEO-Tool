@@ -4682,7 +4682,22 @@ a.notif-row:hover {
    entero pasaba de 33 ms a 82 ms por fotograma (Chromium, 1280 px, sin
    estrangular CPU). Sin blur vuelve a 33 ms — el aura sale gratis. Si alguien
    reintroduce `filter` aquí, que mida antes. */
-.ha-aura { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+/* El desvanecido inferior NO es decorativo: sin él, `overflow: hidden` recorta
+   las capas con una línea horizontal recta justo donde acaba el hero, y el azul
+   y el lila mueren de golpe contra el blanco de la sección siguiente. La
+   maqueta no lo llevaba porque el artboard terminaba en ese mismo canto y el
+   corte no se veía; en la página real, con la sección de motores debajo, sí.
+   Lo cogió una captura de página completa del piloto, no las de 800 px de alto.
+   En porcentaje, no en px, para que siga el alto real del hero (1154 px en
+   escritorio, bastante más en móvil).
+
+   El `mask` crea contexto de apilamiento, pero sólo en esta capa decorativa:
+   `.lp-hero--home` sigue sin crearlo, que es lo que el cajón móvil necesita. */
+.ha-aura {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 99%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 99%);
+}
 .ha-aura > * { position: absolute; border-radius: 50%; }
 
 .ha-grid {

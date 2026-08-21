@@ -11583,6 +11583,19 @@ coste sí era real: rasterizar el hero entero pasaba de **33 ms a 82 ms por
 fotograma** a 1280 px sin estrangular CPU. Retirado el blur, vuelve a 33 ms:
 **el aura sale gratis**. Si alguien reintroduce `filter` aquí, que mida antes.
 
+**El desvanecido inferior lo encontró una captura de página completa del
+piloto.** Sin él, `overflow: hidden` recorta las capas con una línea horizontal
+recta justo donde acaba el hero, y el azul y el lila mueren de golpe contra el
+blanco de la sección de motores. La maqueta no lo llevaba —el artboard termina
+en ese mismo canto, así que el corte no se veía— y mis propias capturas de
+verificación, de 800-900 px de alto, tampoco llegaban hasta ahí: el hero mide
+1154 px en escritorio y 1193 en móvil. Lo destapó abrir las capturas del piloto,
+que fotografía la página entera. Es el caso exacto que CLAUDE.md describe cuando
+dice que el ✅ de la tabla no es el veredicto. La máscara va en porcentaje, no en
+px, para seguir el alto real del hero, y crea contexto de apilamiento sólo en la
+capa decorativa — `.lp-hero--home` sigue sin crearlo, que es lo que el cajón
+móvil necesita.
+
 **Comprobado, y lo que se midió de verdad.** `pnpm test` (2672) y
 `pnpm run validate` en verde. La landing real —servida desde el build de
 producción, no la maqueta— renderizada en Chromium a
