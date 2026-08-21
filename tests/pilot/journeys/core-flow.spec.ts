@@ -3,6 +3,7 @@ import {
   assertFullyVisible,
   assertPageIsHealthy,
   captureInteraction,
+  pickProjectShowing,
   resolveProjectId,
   visitAsUser
 } from "../support/journey";
@@ -143,8 +144,27 @@ test("competitors screen renders", async ({ page }, testInfo) => {
   await exploreInteractions(page, testInfo, "competitors");
 });
 
+/**
+ * Contra un proyecto que TENGA recomendaciones, no contra el que salga primero.
+ *
+ * Este journey exige contenido real (`ContentExpectation`), y «el primero de la
+ * lista» sale del cookie `geo_active_project` o, sin él, del proyecto más
+ * reciente. Basta con que alguien dé de alta un dominio para que el piloto
+ * aterrice en uno recién escaneado cuyo backlog está vacío — «Nada que corregir
+ * ahora mismo», que es un estado legítimo del producto y no un fallo. Pasó con
+ * Amazon el 2026-08-21 y tumbó las tres anchuras (log §135).
+ */
 test("recommendations screen renders", async ({ page }, testInfo) => {
-  const id = await projectId(page);
+  const id = await pickProjectShowing(page, testInfo, {
+    path: (projectIdToVisit) => `/dashboard/projects/${projectIdToVisit}/recommendations`,
+    contentSelector: ".rec-card"
+  });
+  test.skip(
+    !id,
+    "ningún proyecto de la cuenta piloto tiene recomendaciones: no hay backlog que juzgar. " +
+      "Siembra la cuenta con la pasada de escritura del piloto."
+  );
+
   const findings = await visitAsUser(
     page,
     testInfo,
@@ -167,38 +187,37 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
  * recommendations exercises the grouping accordions, a fuller priority block
  * and the per-type counts, none of which a small project ever reaches.
  *
- * Prefers a project whose name matches PILOT_SECOND_PROJECT (default
- * "Movistar") and otherwise falls back to the second project in the list, so
- * the journey is useful on any seeded account instead of being pinned to one
- * brand. Skips — never fails — when the account has only one project: absent
- * coverage is honest, a red pilot over a data-shape the account doesn't have
- * would not be.
+ * Takes the next project after the primary one, so the journey is useful on
+ * any seeded account instead of being pinned to one brand. Skips — never fails
+ * — when the account has only one project: absent coverage is honest, a red
+ * pilot over a data-shape the account doesn't have would not be.
+ *
+ * **The project list comes from `discoverProjectIds`, and it has to.** This
+ * used to scrape `a[href^="/dashboard/projects/"]` off `/dashboard/projects`
+ * and prefer a name (PILOT_SECOND_PROJECT, "Movistar"). That route became a
+ * redirect to `/dashboard/domains` in DOMAINS-ARCHIVE-RETIRE-1 (log §104), and
+ * on the domains screen only the COVER project links to
+ * `/dashboard/projects/<id>` — every other domain links to `?active=<id>`. So
+ * the scrape returned exactly one id, always the cover one, the name could
+ * never match, and `find(id => id !== primary)` was always undefined: this
+ * test **skipped silently on every run** from 2026-08-15 on, while the pilot
+ * table kept looking healthy. `discoverProjectIds` is the helper that already
+ * handles both link shapes, written for precisely this trap.
  *
  * Still strictly read-only: it navigates and looks, exactly like the journeys
  * above.
  */
 test("recommendations screen renders for a second, larger project", async ({ page }, testInfo) => {
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
-
-  const wanted = (process.env.PILOT_SECOND_PROJECT ?? "Movistar").trim();
-  const links = page.locator('a[href^="/dashboard/projects/"]').filter({ hasNotText: /nuevo|new/i });
-
-  const hrefs: string[] = [];
-  for (const link of await links.all()) {
-    const href = await link.getAttribute("href");
-    const text = (await link.textContent()) ?? "";
-    const match = href?.match(/^\/dashboard\/projects\/([^/?#]+)$/);
-    if (!match || match[1] === "new") continue;
-    if (new RegExp(wanted, "i").test(text)) {
-      hrefs.unshift(match[1]); // preferred match goes first
-    } else {
-      hrefs.push(match[1]);
-    }
-  }
-
+  // Otro proyecto CON recomendaciones, por el mismo motivo que el journey de
+  // arriba: un segundo proyecto vacío no enseña las agrupaciones ni el bloque
+  // de prioritarias, que es justo lo que este journey existe para ver.
   const primary = await projectId(page);
-  const second = hrefs.find((id) => id !== primary);
-  test.skip(!second, `pilot account has no second project (looked for "${wanted}")`);
+  const second = await pickProjectShowing(page, testInfo, {
+    path: (projectIdToVisit) => `/dashboard/projects/${projectIdToVisit}/recommendations`,
+    contentSelector: ".rec-card",
+    exclude: [primary]
+  });
+  test.skip(!second, "pilot account has no second project with recommendations to compare against");
 
   const findings = await visitAsUser(
     page,

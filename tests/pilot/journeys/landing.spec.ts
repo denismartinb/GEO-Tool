@@ -60,14 +60,33 @@ for (const path of ["/", "/pricing"]) {
     );
 
     await page.goto(path, { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(1_000);
 
     const burger = page.locator(".lp-burger").first();
     await expect(burger, "no se encontró el botón de menú en la anchura móvil").toBeVisible();
-    await burger.click();
 
     const drawer = page.locator(".lp-mobnav");
-    await expect(drawer, "el cajón no se abrió al pulsar el menú").toBeVisible();
+
+    /**
+     * El clic se reintenta hasta que el cajón aparece, en vez de pulsar una vez
+     * tras una espera fija.
+     *
+     * `MarketingMobileNav` es un componente cliente: el botón se pinta en el
+     * HTML del servidor pero su `onClick` no existe hasta que React hidrata, y
+     * `.lp-mobnav` no está en el DOM hasta que ese estado se abre. Un clic
+     * anterior a la hidratación no se encola: se pierde. Con
+     * `waitForTimeout(1_000)` el test apostaba a que un preview frío hidrata en
+     * menos de un segundo, y el 2026-08-20 perdió esa apuesta en `/pricing`
+     * mientras `/` pasaba en la misma corrida (PR #446).
+     *
+     * Esto no afloja la comprobación —si el cajón no abre nunca, sigue fallando
+     * al agotarse el plazo— y es seguro repetirlo porque el botón hace
+     * `setOpen(true)`, no un alternar: un segundo clic sobre un cajón ya
+     * abierto no lo cierra.
+     */
+    await expect(async () => {
+      await burger.click();
+      await expect(drawer).toBeVisible({ timeout: 2_000 });
+    }, "el cajón no se abrió al pulsar el menú").toPass({ timeout: 20_000 });
     // Un cajón que abre pero deja sus enlaces fuera de la ventana es tan
     // inservible como uno que no abre; que el primero sea visible lo demuestra.
     await expect(drawer.locator("a").first()).toBeVisible();
