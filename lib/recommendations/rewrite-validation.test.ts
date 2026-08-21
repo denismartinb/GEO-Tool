@@ -118,3 +118,88 @@ describe("validateRewriteAgainstEvidence", () => {
     expect(result).toEqual({ valid: true });
   });
 });
+
+describe("comparación contra competidores nombrados (Fase C, log §128)", () => {
+  const base = {
+    title: "Refuerza tu contenido de fibra",
+    allowedCompetitors: ["Jazztel", "Vodafone España", "MásMóvil", "Orange España", "Digi"],
+    allowedDomains: [],
+    trackedCompetitors: ["Jazztel", "Vodafone España", "MásMóvil", "Orange España", "Digi"],
+    brandDomain: "movistar.es"
+  };
+
+  /**
+   * No es un ejemplo inventado: es la frase que el producto generó de verdad
+   * para el proyecto Movistar el 2026-08-21, dentro de un artefacto que la
+   * Fase A ya devolvía entero y bien formado (log §128).
+   */
+  const FRASE_DEL_INCIDENTE =
+    "A diferencia de operadores como Jazztel, Vodafone España, MásMóvil, Orange España o Digi, " +
+    "Movistar mantiene un alto estándar de calidad y cobertura, incluso en sus opciones de bajo coste.";
+
+  it("rechaza la frase real que se generó para Movistar", () => {
+    const result = validateRewriteAgainstEvidence({
+      ...base,
+      description: FRASE_DEL_INCIDENTE,
+      segments: [base.title, FRASE_DEL_INCIDENTE]
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.reason).toBe("comparative_claim_against_competitor");
+  });
+
+  it("rechaza un superlativo directo junto al nombre", () => {
+    const frase = "Nuestra red es superior a la de Digi en las principales ciudades.";
+    const result = validateRewriteAgainstEvidence({ ...base, description: frase, segments: [frase] });
+
+    expect(result.valid === false && result.reason).toBe("comparative_claim_against_competitor");
+  });
+
+  it("NO rechaza nombrar a un competidor sin juzgarlo — es media plataforma", () => {
+    const pasos = [
+      "Compara tu página con la de Digi en estas consultas: qué responde antes, con qué datos y en qué formato.",
+      "Añade Vodafone España en la pestaña Competidores. El próximo escaneo ya la medirá.",
+      "Monta una tabla con criterios claros e incluye a Jazztel y a MásMóvil."
+    ];
+    const result = validateRewriteAgainstEvidence({
+      ...base,
+      description: pasos.join(" "),
+      segments: [base.title, ...pasos]
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it("NO rechaza el juicio de valor cuando no hay competidor en esa frase", () => {
+    const pasos = [
+      "Digi aparece antes que tú en 10 respuestas donde sí te mencionan.",
+      "Publica la mejor respuesta posible a esa consulta, en las dos primeras frases."
+    ];
+    const result = validateRewriteAgainstEvidence({
+      ...base,
+      description: pasos.join(" "),
+      segments: [base.title, ...pasos]
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it("el troceado por frases evita el falso positivo entre pasos distintos", () => {
+    // Sin `segments`, estos dos pasos se unirían y el nombre acabaría en la
+    // misma frase que el juicio. Con piezas, cada uno se juzga por separado.
+    const pasos = ["Revisa qué publica Digi", "Elige la mejor de tus páginas y refuérzala"];
+    const result = validateRewriteAgainstEvidence({
+      ...base,
+      description: pasos.join(" "),
+      segments: [base.title, ...pasos]
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it("sin `segments` sigue validando, con el comportamiento de los llamadores viejos", () => {
+    const result = validateRewriteAgainstEvidence({ ...base, description: FRASE_DEL_INCIDENTE });
+
+    expect(result.valid === false && result.reason).toBe("comparative_claim_against_competitor");
+  });
+});

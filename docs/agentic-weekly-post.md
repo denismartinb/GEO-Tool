@@ -99,14 +99,21 @@ reglas son consecuencia de fallos reales, no preferencias estéticas:
   de figura donde citar la fuente, así que un dato ahí queda huérfano aunque
   sea cierto. Los números viven en el `StatGrid` del cuerpo.
 - **La portada sigue siendo evidencia, no adorno.** Debe dibujar la tesis del
-  artículo. Los tres ejemplos ya publicados están en
-  `public/blog/geo-para-{ecommerce,saas-b2b,agencias}/cover.svg`; cópialos como
-  punto de partida antes que empezar de cero.
+  artículo. Los tres SVG de `geo-para-{ecommerce,saas-b2b,agencias}` que servían
+  de plantilla **ya no existen**: el 2026-08-20 los sustituyó la tanda de
+  portadas WebP del fundador (log §125), que es la referencia visual a imitar
+  ahora. El camino de SVG sigue soportado en código para una portada escrita por
+  un agente; lo que ya no hay es un ejemplo que copiar literalmente.
 
 ### Cómo se conecta
 
-1. El fichero va en `public/blog/<slug>/cover.svg`.
+1. El fichero va en `public/blog/<slug>/cover.svg` (o `cover.webp` si la portada
+   viene del pipeline de diseño en vez de escribirse a mano).
 2. Se declara `coverImage: "/blog/<slug>/cover.svg"` en `lib/blog/posts.ts`.
+   **La extensión tiene que coincidir con el fichero real**: los tres posts de
+   sector declaraban `.svg` mientras su `.webp` nuevo estaba ya en `public/`, y
+   durante tres pasadas de piloto en verde siguieron pintando la portada vieja
+   (log §125).
 3. `components/blog/blog-cover.tsx` ya marca `unoptimized` cuando la ruta acaba
    en `.svg` — `next/image` se niega a servir SVG de otro modo, y el flag
    global `dangerouslyAllowSVG` no se activa a propósito.

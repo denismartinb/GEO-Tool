@@ -84,9 +84,37 @@
    class of bug, not a one-page patch: nothing here intentionally scrolls
    the page itself horizontally — every real horizontal scroller already
    lives in its own inner container (.tbl-wrap, .filters,
-   .price-matrix-wrap), none of which this touches. */
+   .price-matrix-wrap), none of which this touches.
+
+   `clip`, NOT `hidden` (2026-08-20). `hidden` on one axis forces the other
+   axis to compute from `visible` to `auto` (CSS Overflow 3 §3.2), which turns
+   the ROOT ELEMENT into a scroll container. That is not free: this file
+   already documents one casualty — the public header's `position: sticky`
+   stops sticking (see `.lp-nav-wrap` below) — and on 2026-08-20 the founder
+   hit a worse one. On Chrome/macOS the public pages became **completely
+   unscrollable by the user**: no trackpad, no keyboard, no scrollbar, while
+   `window.scrollTo()` still worked. That split is the textbook signature of a
+   scrollport whose used `overflow` is `hidden` — the spec allows programmatic
+   scrolling there and forbids the UA from offering any user mechanism. The
+   console was unaffected because it never scrolls the document (`.shell` is
+   `100dvh`/`overflow:hidden` and `.dash-content` is the real scroller), which
+   is exactly why the bug looked like it only hit marketing pages. Safari was
+   fine throughout, so this is a Chrome-side resolution of the same fragile
+   construction, not something the page asks for.
+
+   Reproduced in Chromium 141 against a local production build before changing
+   anything: forcing `documentElement.style.overflow = "hidden"` reproduces the
+   founder's exact signature (wheel 0, keyboard 0, `scrollTo` 500), while the
+   same forcing on `body` does NOT — proof the blocking element is the root,
+   and that `body`'s own rule was never load-bearing here.
+
+   `clip` clips identically but creates no scroll container and triggers no
+   axis conversion: `clip` and `visible` are not converted into each other, so
+   `overflow-y` stays `visible` and the viewport scrolls normally. Supported
+   since Chrome 90 / Safari 16. If the 3px overflow ever returns, this is
+   still the line that contains it. */
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -97,7 +125,11 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;
-  overflow-x: hidden;
+  /* Same `clip`-not-`hidden` reasoning as `html` above. This one was already
+     documented as not fixing the overflow it was added for ("did NOT fix it
+     on the next deploy"), so all it contributed was a second nested scroll
+     container. `clip` keeps the belt-and-braces clipping without that. */
+  overflow-x: clip;
 }
 
 a {
@@ -4517,15 +4549,23 @@ a.notif-row:hover {
 
    **No hay estado "al desplazar" a propósito, y esto merece explicación**
    porque parece un olvido. Se implementó y se retiró tras medirlo: este
-   `sticky` NO funciona hoy — `html { overflow-x: hidden }` (arriba, puesto
-   para contener el desbordamiento de 3px que encontró el piloto en GROWTH-2
-   Fase 2.1) convierte al documento en contenedor de scroll y desactiva el
-   pegado. Medido en local sobre `main` antes de tocar nada: tras desplazar
-   500px, `.lp-nav-wrap` está en `y: -500` a 375 y a 1280 px. Es decir, la
-   cabecera pública se va con la página en las siete superficies, así que un
-   fondo "al desplazar" no se vería jamás. Si algún día se quita ese
-   `overflow-x`, ESTE es el sitio donde añadirlo — y entonces habrá que
-   comprobar antes que el desbordamiento de 3px no vuelve. */
+   `sticky` NO funciona hoy — tras desplazar 500px, `.lp-nav-wrap` está en
+   `y: -500` a 375 y a 1280 px, así que la cabecera pública se va con la
+   página en las siete superficies y un fondo "al desplazar" no se vería
+   jamás.
+
+   **La causa que este comentario daba era falsa, y se corrige aquí**
+   (2026-08-20, log §124). Decía que el culpable era `html { overflow-x:
+   hidden }` "convirtiendo al documento en contenedor de scroll". Se probó
+   directamente al cambiar esa declaración a `clip` —que NO crea contenedor de
+   scroll— y el sticky sigue sin pegar exactamente igual: `y: -500`. El
+   bloqueante real es `.lp-hero { overflow: hidden }` (más abajo), que es el
+   ancestro de scroll más cercano de `.lp-nav-wrap`: un sticky se pega dentro
+   de su scrollport, y ese ancestro no tiene recorrido. Quien quiera el fondo
+   "al desplazar" tiene que sacar la cabecera de `.lp-hero` o quitarle ese
+   `overflow`, no tocar la raíz. Importa dejarlo escrito porque la versión
+   anterior habría mandado a una sesión futura a pelearse con el elemento
+   equivocado. */
 .lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: transparent; border-bottom: 1px solid transparent; }
 .lp-nav { max-width: 1180px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
 .lp-logo { display: flex; align-items: center; gap: 10px; }

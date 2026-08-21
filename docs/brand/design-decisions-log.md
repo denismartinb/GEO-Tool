@@ -11489,6 +11489,513 @@ silencio, sin ningún error.
 
 ---
 
+## 123. Onboarding: el asistente dejaba entrar 10 competidores y el servidor guardaba 5 en silencio (ONBOARDING-COMPETITORS-CAP-1, 2026-08-20)
+
+**Qué pasó.** El fundador dio de alta 10 competidores en el asistente de
+nuevo dominio; al terminar el primer escaneo, la pantalla de Competidores
+("Cuota de voz en IA") solo mostraba 5.
+
+**Causa.** `parseInitialCompetitors` (`lib/projects/project-form.ts`) cortaba
+la lista en `MAX_INITIAL_COMPETITORS` (5) sin avisar, mientras el asistente
+(`components/onboarding-wizard.tsx`) no tenía ningún tope propio: el botón
+"Añadir competidor" seguía añadiendo filas y el contador decía "10
+competidores listos". El servidor descartó los últimos 5 sin error ni aviso
+en pantalla — pérdida de datos silenciosa, no un fallo de renderizado. La
+misma constante hacía doble papel: cuántos competidores pide el sistema a
+Gemini como sugerencia, y cuántos acepta del usuario. El primer uso ya tenía
+un arreglo equivalente para prompts (`maxPrompts` pasado desde el cap del
+plan); a competidores nunca se le aplicó.
+
+**Impacto real.** No es solo visual: el set de competidores entra en
+`competitors_snapshot` y alimenta `standing`, `brand_position` y
+`prominence` (ADR 0018). Ese escaneo se puntuó contra 5 competidores en vez
+de 10.
+
+**Decisión (opción B, aprobada por el fundador).** Separar los dos usos:
+`MAX_INITIAL_COMPETITORS` (5) queda solo para la petición de sugerencias a
+Gemini; nace `MAX_USER_COMPETITORS` (10) como tope explícito y **visible**
+de lo que el asistente acepta. El botón "Añadir competidor" se deshabilita
+al llegar a 10 y el contador pasa a decir "N competidores listos (máximo
+10)" — mismo patrón que ya usaba el paso de prompts con `promptCap`. Ningún
+tope que la interfaz no enseña es aceptable: es exactamente esta pérdida de
+datos silenciosa otra vez, con otro nombre.
+
+**No incluido en esta fase.** Recalcular el escaneo que ya corrió con solo 5
+competidores (los 5 que faltan se dan de alta ahora en "Gestionar", que no
+tiene tope, y entran desde el siguiente escaneo). No se tocó `sampling`, el
+pipeline de extracción, ni el cap de prompts.
+
+**Trazabilidad.** `lib/projects/project-form.ts`,
+`components/onboarding-wizard.tsx`,
+`lib/projects/project-form.test.ts`; ADR 0018 (por qué el set de
+competidores importa para el scoring, no solo para la pantalla).
+
+---
+
+## 124. La zona pública era imposible de scrollear en Chrome (2026-08-20)
+
+El fundador: *«el scroll con dos dedos de Mac no funciona en Chrome»*. Acabó
+siendo mucho peor que un gesto de trackpad: **en Chrome, ninguna página pública
+se podía scrollear de ninguna forma** — ni rueda, ni flechas, ni barra. En
+Safari funcionaba. La consola funcionaba. Producción y preview, igual de rotas.
+
+**La causa.** `html { overflow-x: hidden }` (puesto en GROWTH-2 Fase 2.1 para
+contener un desbordamiento de 3px que sólo aparecía en preview). `hidden` en un
+eje fuerza al otro a computar de `visible` a `auto` (CSS Overflow 3 §3.2), lo
+que convierte al **elemento raíz** en contenedor de scroll. Chrome resolvía eso
+a un scrollport con `overflow` usado `hidden`, y ahí la especificación dice dos
+cosas a la vez: el scroll programático está permitido y **el navegador no debe
+ofrecer ningún mecanismo de scroll al usuario**. De ahí la firma tan rara.
+Arreglado con `overflow-x: clip`, que recorta igual pero no crea contenedor de
+scroll ni convierte de eje (`clip` y `visible` no se convierten entre sí). Se
+aplica a `html` y a `body`.
+
+**Lo que costó llegar, porque el proceso es la lección.** Dos arreglos
+anteriores se enviaron sin poder reproducir el fallo y **los dos fueron
+falsos**: `overscroll-behavior-y: none → contain` (revertido; encima devolvía
+el rebote elástico que `none` suprimía a propósito) y un bucle
+`requestAnimationFrame` del tour del hero que renderizaba en pausa (correcto
+por su cuenta como mejora de rendimiento, irrelevante para esto). Ambos
+partían de razonar sobre el CSS en vez de ejercitarlo.
+
+Lo que sí funcionó fue construir el producto en local y lanzarle Chromium 141:
+seis variantes de `overflow`/`overscroll` en `html` y `body` — todas
+scrolleaban; rueda con componente horizontal de 1 a 30 — scrolleaba;
+desbordamiento horizontal real — no había ninguno (`scrollWidth ==
+clientWidth`). Nada reproducía el fallo, y eso **también era información**:
+descartaba el CSS como causa suficiente y dejaba el entorno como variable.
+
+**El dato que lo resolvió lo dio el fundador desde su consola**, y es el que
+hay que pedir primero la próxima vez:
+
+```
+{alto: 4039, ventana: 399, scroller: 'HTML'}   → hay 3.640px de recorrido
+tras scrollTo → 500                            → el documento SÍ scrollea
+```
+
+Scroll programático vivo + entrada de usuario muerta no es ambiguo: es la
+definición literal de `overflow: hidden` en un scrollport. Con eso, el arreglo
+fue directo y verificable en local (forzar `documentElement.style.overflow =
+"hidden"` reproduce la firma exacta —rueda 0, teclado 0, `scrollTo` 500— y
+`clip` la elimina, en cuatro páginas públicas y dos anchuras).
+
+**Por qué nadie lo vio antes, que es lo más grave.** Llevaba en el código desde
+GROWTH-2 Fase 2.1 y no lo cazó nada:
+
+- **La consola lo enmascara por completo.** No scrollea el documento (`.shell`
+  es `100dvh`/`overflow:hidden` y el scroller real es `.dash-content`), así que
+  el fallo parecía exclusivo de marketing cuando en realidad era del documento.
+- **El `ux-pilot` no puede verlo.** Hace capturas, no scroll: 57 superficies
+  públicas en tres anchuras salieron ✅ en la misma pasada en que el sitio era
+  inusable. Una pantalla que renderiza perfecta y no se puede recorrer pasa
+  todas las aserciones que existen hoy. **Queda pendiente**: una aserción de
+  piloto que haga rueda y teclado y compruebe que `scrollY` se mueve.
+- **Chromium headless sobre Linux no lo reproduce.** El mismo build scrollea
+  bien ahí, así que ni CI ni el piloto lo habrían cogido aunque miraran.
+
+**Corrección colateral, y es la misma enfermedad.** El comentario de
+`.lp-nav-wrap` afirmaba que el `sticky` de la cabecera pública no pega por
+culpa de ese mismo `html { overflow-x: hidden }`. Es **falso**: con `clip` —que
+no crea contenedor de scroll— el sticky sigue sin pegar, `y: -500` idéntico. El
+bloqueante real es `.lp-hero { overflow: hidden }`, el ancestro de scroll del
+sticky. Corregido en el mismo PR, porque un invariante documentado y falso es
+peor que ninguno: la siguiente sesión habría ido a pelearse con la raíz.
+
+**Trazabilidad.** `app/globals.css` (`html`/`body` y el comentario de
+`.lp-nav-wrap`); `.claude/rules/styles.md` (invariante nuevo); log §54 (Fase V,
+de donde sale el `overflow-x` original), §55 (lo que el piloto sí mide hoy).
+
+---
+
+## 125. Las 16 portadas del blog pasan a la tanda WebP del fundador, y tres de ellas llevaban tres pilotos en verde sin usarse (2026-08-20)
+
+El fundador entregó un zip con 16 portadas nuevas (1200×300 WebP, una por
+artículo publicado, con su índice de concepto visual). Sustituyen a las que
+había: 13 reemplazan un `cover.webp` anterior y 3 —los posts de sector— llegan
+donde antes había un SVG dibujado por un agente.
+
+**El fallo, que es la parte que merece quedar escrita.** Copiar los 16 ficheros
+a `public/blog/<slug>/cover.webp` parecía el trabajo entero, y no lo era.
+`geo-para-ecommerce`, `geo-para-saas-b2b` y `geo-para-agencias` declaraban
+`coverImage: "/blog/<slug>/cover.svg"` en `lib/blog/posts.ts`. El `.webp` nuevo
+quedó en `public/` sin que nada lo referenciara y esos tres artículos siguieron
+pintando la portada vieja. Es decir: **3 de las 16 portadas que el encargo pedía
+actualizar no se actualizaron**, y el PR afirmaba que sí.
+
+**Lo grave es cómo pasó la revisión.** El `ux-pilot` corrió **tres veces** sobre
+tres commits distintos y las tres dio `PILOT PASS` con
+`blog-geo-para-ecommerce`, `blog-geo-para-saas-b2b` y `blog-geo-para-agencias`
+en ✅ a 375, 768 y 1280 px. Y tenía razón en lo que mide: la página cargaba
+perfecta, con una portada válida y bonita. Sólo que era la anterior. Misma
+enfermedad que §124 (57 superficies en verde sobre un sitio que no se podía
+scrollear) y que el incidente fundacional de Auditoría web del 2026-08-02: **una
+pantalla que renderiza bien no es una pantalla verificada.** Un reemplazo de
+activo no tiene forma de fallar visiblemente — el respaldo es otro activo
+correcto—, así que aquí el veredicto del piloto no aportaba nada y la
+comprobación tenía que ser sobre el código: *¿quién referencia el fichero que
+acabo de escribir?*
+
+**Lo que se corrigió al encontrarlo:**
+
+- Las tres declaraciones `coverImage` pasan a `.webp`.
+- Los tres `cover.svg` superseded se borran: nada los referencia ya, y dejarlos
+  invita a la siguiente sesión a preguntarse cuál manda.
+- **Efecto colateral bueno, no buscado:** `ogImageFor` (`lib/seo/metadata.ts`)
+  filtra por `RASTER`, así que un `coverImage` SVG cae a la imagen OG de marca.
+  Esos tres artículos llevaban desde su publicación compartiéndose en redes con
+  la portada genérica; ahora emiten la suya.
+- El comentario de `ogImageFor` afirmaba que «las portadas reales son cuadradas
+  de 1254×1254». Con esta tanda son apaisadas de 1200×300 (verificado leyendo la
+  cabecera VP8 de los 16 ficheros). El argumento de omitir `width`/`height`
+  sigue siendo válido —declarar 1200×630 seguiría siendo mentira—, pero la cifra
+  era falsa y un comentario falso es peor que ninguno (§124).
+- `docs/agentic-weekly-post.md` mandaba copiar esos tres SVG como plantilla de
+  partida. Referencia muerta desde el borrado; reescrita.
+
+**Qué queda pendiente.** La cobertura de portadas se apoya hoy en
+`lib/blog/covers.test.ts`, que comprueba que todo post declara `coverImage` y
+que el fichero declarado existe. Las dos cosas eran ciertas **durante todo el
+fallo**: `.svg` existía. Lo que no cubre nadie es la pregunta inversa —un
+`public/blog/<slug>/` con dos portadas de distinta extensión y sólo una
+declarada— que es exactamente la firma de este incidente. Un test de huérfanos
+ahí lo habría cazado en CI sin gastar un piloto.
+
+Y no es hipotético: al barrer el directorio buscando esta firma aparecieron
+**cinco `cover.svg` huérfanos más**, anteriores a esta fase y ajenos a ella
+(`como-aparecer-en-perplexity`, `como-hacer-que-chatgpt-recomiende-tu-negocio`,
+`como-medir-trafico-chatgpt-ga4`, `metricas-geo-que-medir`,
+`que-es-una-auditoria-geo`). Esos posts ya declaraban `.webp`, así que ahí el
+huérfano no rompe nada hoy — pero son cinco directorios donde la siguiente
+sesión encontrará dos portadas y ninguna señal de cuál manda. **No se borran en
+este PR a propósito**: son de otra fase y el encargo era actualizar portadas, no
+barrer activos. Quedan como el primer caso de prueba del test de huérfanos
+cuando se escriba.
+
+**Decisión abierta que este PR NO resuelve: chocan con la letra de ADR 0028.**
+Su regla vigente dice que una portada «no puede representar una interfaz de
+producto, un gráfico, un panel ni una métrica». Las 16 portadas nuevas son
+justamente eso: paneles, líneas, donuts, barras, medidores y tarjetas de KPI.
+
+Miradas a resolución nativa, sin embargo, **no contienen una sola cifra
+legible** — todo el texto de las maquetas son barras de relleno abstractas, sin
+ejes, sin etiquetas y sin números. Cumplen entero el *motivo* declarado de la
+regla («si la portada enseña algo que parece un dato de Genscore, ese dato tiene
+que existir»: aquí no hay nada que parsee como dato) y contradicen su *letra*.
+Tampoco reproducen la interfaz real de GenScore: son paneles genéricos de stock.
+
+Se publican tal cual porque son activos entregados por el fundador, y ADR 0028
+ya trató así las cuatro primeras («las portadas actuales, aportadas por el
+fundador, se mantienen»). Pero **queda un ADR contradicho en silencio**, que es
+exactamente lo que §124 llama peor que ninguno. La salida limpia es una tercera
+enmienda a ADR 0028 que estreche la regla de «ningún panel ni gráfico» a «ninguna
+cifra legible ni interfaz reconocible de GenScore» — que es lo que la regla
+siempre quiso decir. **No se escribe aquí porque es una decisión, no un
+arreglo**, y le corresponde al fundador.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `lib/seo/metadata.ts`,
+`.claude/rules/growth-content.md`, `docs/agentic-weekly-post.md`,
+`public/blog/*/cover.webp`; ADR 0028 y sus dos enmiendas; log §124 y el
+incidente del 2026-08-02 en CLAUDE.md para el mismo punto ciego del piloto.
+
+---
+
+## 126. El bloque que ofrecíamos copiar no era JSON válido (RECS-USEFULNESS-1 Fase A, 2026-08-20)
+
+**Origen.** El fundador ejecutó las recomendaciones que GenScore emite para el
+propio `genscore.es`, con la pregunta puesta del lado del cliente: *«imagina que
+pagas porque la herramienta te dé esto para pegar e implementar
+directamente»*. Dos recomendaciones bastaron para encontrar siete fallos. El
+primero no es de criterio, es objetivo: **el bloque JSON-LD que la pantalla
+ofrecía junto a un botón «Copiar» terminaba a media palabra**, en
+`...bien organizadas con HTML se`.
+
+**Causa.** 1.182 caracteres contra un tope de 1.200, en dos sitios a la vez: el
+prompt le pedía al modelo `max 1200 chars` y `sanitizeExampleContent()`
+remataba con un `.slice(0, 1200)` ciego sobre lo que podía ser código. Y nada
+lo paraba después: la validación sólo miraba evidencia (competidores y dominios
+inventados) y longitud — **no había un solo `JSON.parse` en toda la ruta**, así
+que un objeto sin cerrar se persistía y se pintaba con su botón de copiar. El
+cliente lo pegaba, le fallaba en su web, y no tenía forma de saber que el fallo
+era nuestro.
+
+Debajo hay una incompatibilidad de diseño, no un número mal elegido: el playbook
+de `create_faq_section` le pide al modelo «2-4 pares pregunta/respuesta más un
+bloque JSON-LD». **Eso no cabe en 1.200 caracteres.** Le pedíamos algo que no
+entraba y luego lo cortábamos.
+
+**Qué se decidió.** Un módulo propio, `lib/recommendations/pasteable-artifact.ts`,
+con dos reglas que a propósito no son la misma:
+
+- **Un artefacto de código no se trunca jamás.** Medio JSON-LD es peor que
+  ninguno: no falla al pegarlo, falla después, en la web del cliente. Si no
+  cabe, se descarta entero.
+- **La prosa sí se recorta, pero por límite de palabra.** Un párrafo citable que
+  se pasa por poco sigue sirviendo; tirarlo entero pierde valor sin ganar
+  corrección.
+
+Con eso: tope de código a 3.000 (medido sobre el artefacto real, no elegido a
+ojo), `JSON.parse` obligatorio sobre todo lo que pretenda ser JSON —incluido un
+`<script type="application/ld+json">` al que le falte el cierre—, detección de
+marcado que acaba dentro de una etiqueta abierta, y el prompt reescrito para que
+**la integridad gane a la cobertura**: antes un `FAQPage` de dos preguntas
+completo que uno de cuatro cortado.
+
+**El descarte es por artefacto, no por solución.** El plan (título, resumen,
+pasos) sigue valiendo aunque uno de los tres ejemplos venga roto, y devolver un
+error entero le gastaría al usuario una generación de su cupo diario a cambio de
+nada. Lo que no se hace nunca es enseñar el roto.
+
+**El arreglo no repara lo ya generado, y eso importa hoy.** La ruta de
+idempotencia devuelve la solución persistida más reciente
+(`status: completed`, `is_sanitized: true`) sin volver a llamar a Gemini, así
+que **una recomendación que ya tenga guardado un artefacto cortado lo seguirá
+sirviendo cortado para siempre**: el validador nuevo se aplica al escribir, y
+esa fila se escribió antes. No se purga aquí a propósito —borrar filas de
+`generated_solutions` es escritura destructiva sobre datos de clientes y va con
+su propia aprobación—, pero queda dicho: el bloque que originó este incidente
+sigue roto en la cuenta del fundador hasta que se decida qué hacer con las
+filas viejas. Opciones para su fase: revalidar al leer y regenerar sólo si
+falla, o una purga acotada a artefactos que no parsean.
+
+**Lo que queda roto conocido.** El usuario ve un plan con un ejemplo menos y
+**no se le dice que ha faltado uno**; avisarlo en pantalla es trabajo de UI con
+su pasada de piloto. Y quedan seis fallos más de la misma sesión sin tocar, el
+mayor de ellos: **el generador no sabe nada de la web del cliente** —lee sólo
+marca, dominio e idioma— mientras la auditoría web ya parsea su JSON-LD y sabe
+qué `@type` emite. Por eso nos recomendó implementar `FAQPage` en un sitio que
+ya lo emite en doce superficies. Inventario completo, con fases B/C/D
+propuestas, en `docs/specs/recommendations/quality-audit-2026-08.md`.
+
+**Un detalle del método, porque se repitió el patrón de siempre.** La primera
+versión del validador dejaba pasar una valla ```` ```json ```` sin cerrar: al no
+desenvolverla, el bloque dejaba de parecer JSON, se clasificaba como prosa y el
+objeto cortado se colaba recortado por palabra. Lo cazó su propio test antes de
+salir del contenedor. El fixture no es inventado: es el artefacto real del
+incidente.
+
+**Trazabilidad.** `lib/recommendations/pasteable-artifact.ts` y su test;
+`lib/recommendations/rewrite-recommendation.ts` (saneado y traza
+`artifact_dropped`); `lib/recommendations/recommendation-rewrite-llm.ts`
+(presupuesto por tipo de artefacto);
+`docs/specs/recommendations/quality-audit-2026-08.md`.
+
+---
+
+## 127. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
+
+**Qué se decidió.** Tres cambios en la tarjeta de recomendación, todos
+derivados de datos que el producto ya tenía y no enseñaba.
+
+**1. El CTA nombra el artefacto.** Decía "Generar propuesta con IA" en los
+quince tipos por igual. Pero el motor **ya sabe** qué artefacto toca en cada
+caso: los playbooks por tipo de `recommendation-rewrite-llm.ts` llevan desde
+la fase C1 dirigiendo la generación hacia una comparativa, una FAQ, un
+JSON-LD de `Organization` o un plan de contacto. Esa decisión estaba tomada y
+escondida en el prompt; ahora está en el botón ("Generar comparativa",
+"Generar FAQ", "Generar pitch"). Un CTA genérico obliga a hacer clic para
+saber qué te van a dar, que es precisamente la fricción que convierte una
+lista de acciones en una lista de lectura.
+
+**2. La tarjeta declara el control, y solo cuando es la excepción.**
+"Escribe a este comparador para que te incluyan" y "añade este bloque a tu
+página de precios" no son la misma clase de trabajo —una la ejecutas hoy, la
+otra la solicitas y puede que nunca ocurra— y la pantalla las pintaba
+idénticas. Ahora cada tipo declara `own_site` / `third_party` / `in_app`,
+pero **solo se pinta chip para las dos excepciones**: "En tu web" es lo que
+el usuario da por supuesto en 11 de los 15 tipos, y repetirlo en cada tarjeta
+sería justo la tinta que RECS-REDESIGN-1 quitó de esta vista (§115). La
+ausencia de chip significa "es tuyo". Esto no reabre §115: lo que aquella
+fase retiró de la tarjeta plegada fue **vocabulario del motor** (el tipo
+interno, el trío impacto/esfuerzo/confianza); la fila de insignias de triaje
+("Victoria rápida", "Abierta N escaneos") siguió viva, y el control es
+triaje, no vocabulario.
+
+**3. El artefacto generado dice cuánto trabajo le queda, contando.** Nueva
+insignia en el panel del plan: "Listo para copiar" o "N huecos por rellenar".
+**No es una estimación.** El prompt de reescritura obliga desde el primer día
+a marcar con un placeholder (`[tu dato aquí]`) todo valor que no esté en la
+evidencia, en vez de inventárselo — una barrera anti-invención que, sin
+proponérselo, deja los huecos **contables**. La cifra se calcula sobre el
+texto real que se le enseña al usuario (artefactos y pasos; el título y el
+resumen quedan fuera porque son la explicación, no el entregable).
+
+**Por qué esto y no el catálogo de tipos nuevos.** El origen fue una
+reflexión del fundador sobre que las recomendaciones no eran accionables
+("escribir a HubSpot no es realista"), contrastada con una propuesta externa
+de rehacer el catálogo entero. La auditoría del código dijo otra cosa: el
+motor ya es determinista, ya ancla cada tarjeta a `affected_prompt_ids`
+reales, ya cita páginas concretas y ya excluye Wikipedia por no accionable.
+Lo que faltaba no era diagnóstico nuevo — era que la pantalla **no
+distinguía** lo ejecutable de lo que depende de un tercero, ni prometía nada
+concreto antes del clic. Esta fase cierra esa distancia sin tocar el motor,
+sin esquema y sin una sola llamada LLM nueva.
+
+**Lo que se descartó a propósito.** La propuesta externa clasificaba la
+salida en cuatro clases, una de ellas "brief de producción" (requiere
+investigación o trabajo creativo). Se ha implementado todo menos ésa: no hay
+forma honesta de decidir por código si un artefacto es "pegable" o "un brief"
+—es un juicio, no un hecho— y una etiqueta que no se puede justificar es peor
+que ninguna. Las tres que sí se muestran (control, listo/huecos) se derivan
+del tipo o se cuentan del texto.
+
+**Invariante nuevo, con test.** `KNOWN_RECOMMENDATION_TYPES` se exporta desde
+el motor (era ya `labelByType` de facto: "every value emitted by this engine
+must have an entry here") y `deliverable.test.ts` falla si una regla nueva
+llega sin decidir qué entregable promete su botón. Mismo mecanismo que la
+regla de ruta ya imponía para `first_step`.
+
+**Dos de los tres cambios son invisibles para el `ux-pilot`, y por eso se
+prueban por render.** La pasada de PR #453 dio PASS con 68 pantallas en tres
+anchuras, y aun así no vio ni el chip de control ni la insignia de estado:
+
+- El **chip de control** sólo se pinta en los tipos `third_party`/`in_app`, y
+  el proyecto del piloto tenía tres recomendaciones, las tres de su propia
+  web. Ningún tipo externo, ninguna captura.
+- La **insignia de estado** sólo existe cuando hay una propuesta generada, y
+  generar una es una **escritura**. El piloto permanente es de solo lectura por
+  diseño, así que no puede alcanzar ese estado en ninguna pasada — ni hoy ni
+  nunca, no es cuestión de repetir la pasada con más datos.
+
+Es el mismo fallo del 2026-08-02 (un rediseño entero aprobado con capturas de
+un estado vacío), y la respuesta no es aflojar el listón sino moverlo:
+`recommendations-client.test.tsx` renderiza `RecCard` y `SolutionPanel` de
+verdad con `react-dom/server` y asegura el contenido —el CTA por tipo, el chip
+presente en `third_party`, **ausente** en `own_site`, y la cuenta de huecos—.
+El aspecto sigue siendo del piloto; la existencia ya no depende de que el
+proyecto del piloto tenga por casualidad el dato adecuado. Lo que el piloto SÍ
+verificó, a 1280 px: el botón de una recomendación `increase_brand_visibility`
+dice «Generar brief de contenido».
+
+**Pendiente, no roto.** Ninguna recomendación apunta todavía a una URL
+concreta de la web del cliente: el puente existe (el mapa de cobertura mapea
+`promptId → URLs propias verificadas`) pero es Pro+, nace apagado
+(`auto_coverage_audit_enabled = false`) y el motor corre antes de que exista
+ninguna auditoría. Es la siguiente fase (AUDIT-RECS-JOIN-1) y necesita una
+decisión del fundador sobre el coste (~$0,28 por auditoría).
+
+---
+
+## 128. La propuesta salía entera y decía que éramos mejores que cinco competidores (RECS-USEFULNESS-1 Fase C, 2026-08-21)
+
+**Origen.** Con la Fase A ya en producción (§126), el fundador generó una
+propuesta real para el proyecto Movistar y pegó el resultado. El artefacto era
+impecable: 1.391 caracteres, `JSON.parse` limpio, cerrado. Con el tope viejo de
+1.200 habría salido cortado, así que la Fase A quedó verificada en producto y
+no sólo en tests. Y dentro de ese artefacto perfecto venía esto, listo para
+pegar en la web de un cliente de pago:
+
+> «A diferencia de operadores como Jazztel, Vodafone España, MásMóvil, Orange
+> España o Digi, Movistar mantiene un alto estándar de calidad y cobertura»
+
+**Por qué eso no es "contenido flojo".** Es publicidad comparativa contra cinco
+competidores nombrados sin un dato que la sostenga. En España la comparación
+tiene que ser objetiva y verificable sobre características esenciales (art. 10
+de la Ley de Competencia Desleal). No le estábamos dando al cliente un consejo
+mediocre: le estábamos generando una exposición legal y presentándosela con un
+botón de copiar.
+
+**El mecanismo, que es el hallazgo de verdad.** La regla anti-invención del
+prompt existía y era dura: *«where a specific value (a number, a price, a date)
+would be needed but is not in the facts, write a clearly-marked placeholder…
+NEVER invent the value»*. En los 1.391 caracteres **no había ni un
+`[tu dato aquí]`**. El modelo no la incumplió: **la rodeó**. La regla vigila
+cifras, así que el camino de menor resistencia es escribir sin ninguna —
+«precios competitivos», «excelente cobertura», «experiencia superior». Dice lo
+mismo que un número inventado y no deja rastro de que falta un dato. De ahí la
+reformulación: **la regla muerde sobre la afirmación, no sobre el número**, y un
+adjetivo evaluativo sin respaldo es un valor inventado igual que lo sería una
+cifra.
+
+**Lo que se implementa, y con qué dureza cada cosa** — la distinción es
+deliberada y se declara aquí para que nadie la lea como más fuerte de lo que es:
+
+- **C1, guarda en servidor.** Se rechaza el texto generado cuando una frase
+  nombra a un competidor **y** contiene un juicio de valor comparativo
+  (`comparative_claim_against_competitor`). Va por frase a propósito: nombrar a
+  un competidor es media plataforma —«Compara tu página con la de Digi», una
+  tabla comparativa, «Digi aparece antes que tú»— y todo eso sigue pasando. El
+  llamador pasa el texto **por piezas** (título, resumen, cada paso, cada
+  ejemplo) porque un paso sin punto final se pegaría al siguiente e inventaría
+  una frase que nadie escribió.
+- **C2 y C3, sólo prompt, y son reglas BLANDAS.** Que un adjetivo evaluativo sin
+  respaldo cuente como invención, y que todo artefacto de schema avise de que su
+  contenido tiene que estar visible en la página. No hay detector: «juicio de
+  valor» no es un conjunto cerrado, y una expresión regular lo bastante amplia
+  para cazarlo rechazaría planes buenos — y cada rechazo le gasta al usuario una
+  generación de su cupo diario. **Se prefiere una regla blanda declarada como
+  blanda a un detector que aparente una garantía que no da.**
+
+**Límite declarado de C1.** Las otras dos guardas del fichero comparan contra
+listas cerradas y son exactas. El léxico de juicio de valor es finito y está en
+castellano: un superlativo escrito de otra forma, o en otro idioma —y
+`projects.language` admite más de uno—, pasa. Es una red, no una garantía.
+
+**Lo que queda pendiente.** Las tres del inventario que siguen sin tocar, la
+mayor de ellas la Fase B1: **el generador no sabe nada de la web del cliente**.
+Y los artefactos rotos ya persistidos siguen sirviéndose por la ruta de
+idempotencia (§126): purgarlos es escritura destructiva sobre datos de clientes
+y necesita su propia aprobación.
+
+**Trazabilidad.** `lib/recommendations/rewrite-validation.ts` y su test (el
+fixture es la frase real, no un ejemplo inventado);
+`lib/recommendations/recommendation-rewrite-llm.ts` (C1/C2/C3 en el prompt);
+`docs/specs/recommendations/quality-audit-2026-08.md`; log §126 (Fase A).
+
+---
+
+## 129. El piloto abre por fin `/signup` y `/forgot-password` (PRELAUNCH-HARDENING-1 Fase P2, 2026-08-20)
+
+**Qué se decidió.** `tests/pilot/journeys/auth-pages.spec.ts` — las dos
+pantallas de autenticación que el piloto de lectura nunca había abierto. Parte
+del set por defecto sin tocar configuración: sigue el mismo patrón
+`**/journeys/*.spec.ts` que el resto.
+
+**Por qué necesitaban su propio contexto, sin sesión.** Los proyectos
+`mobile`/`tablet`/`desktop` montan siempre con `storageState:
+.pilot/auth.json` — correcto para pantallas de consola, pero
+`app/signup/page.tsx` hace `if (user) redirect("/dashboard")`: visitarla ya
+autenticado enseña el dashboard con otro nombre, no el formulario de alta.
+`test.use({ storageState: { cookies: [], origins: [] } })`, sólo en este
+fichero, sustituye el `storageState` del proyecto — el resto del set sigue
+entrando como la cuenta piloto. Es la corrección honesta, no un atajo: un
+contexto de verdad sin sesión es exactamente el visitante que sirven estas dos
+pantallas.
+
+**Qué comprueba más allá de la salud genérica.** Los campos propios de cada
+formulario (`#email`/`#password`/`#confirmPassword` en alta, `#reset-email` y
+el botón de envío en recuperación) y que ambas declaran `<meta name="robots"
+content="noindex, follow">` (SEO-POS-1 T10) — nunca lo había verificado el
+piloto. Ningún test envía el formulario: sólo navegación GET, ni Supabase Auth
+ni correo de por medio, la misma frontera que ya respeta el resto del set de
+lectura.
+
+**`tests/pilot/fixtures/server.mjs` se amplió a la vez**, con las mismas dos
+rutas y la misma forma de contenido, para que `pnpm pilot:selfcheck` siga
+demostrando que el arnés funciona de punta a punta en vez de recibir un 404 y
+fallar en falso.
+
+**Tres afirmaciones del plan original resultaron obsoletas al verificarlas
+contra el código real**, encontradas durante el Task Intake de esta fase, no
+implementadas aquí: A2 (`triggerWebAuditRun` ya comprueba `response.ok` y
+registra el fallo — WEB-AUDIT-DRIVE-1 lo llevaba hecho), `/pricing` (ya
+cubierto por `landing.spec.ts`) y el pliegue de facturación de ajustes (ya
+cubierto por `settings.spec.ts`). Ninguna necesitaba trabajo nuevo; el plan en
+`docs/prelaunch-hardening-plan.md` se marca cerrado en A2 en el mismo PR.
+
+**No incluido en esta fase.** El paso de confirmación de `/forgot-password`
+(necesita un token de reinicio válido, inalcanzable sin buzón — sigue siendo
+un smoke manual del fundador, igual que la confirmación por email del alta).
+P3 (matriz de documentación) y P4 (ronda de ejecución, necesita GitHub Actions
+o la sesión local del fundador) quedan fuera, tal como recomendaba el propio
+Task Intake.
+
+**Trazabilidad.** `tests/pilot/journeys/auth-pages.spec.ts`;
+`tests/pilot/fixtures/server.mjs`; `docs/agentic-user-pilot.md` (sección
+"PRELAUNCH-HARDENING-1 Fase P2"); `docs/prelaunch-hardening-plan.md` (ledger
+A2).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -11504,6 +12011,84 @@ tipografía o patrones de navegación:
 3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
    técnico aquí (este documento es "qué se decidió", no "cómo se
    implementó").
+## 130. La matriz de cobertura llevaba un mes ignorando las citas de ChatGPT (AUDIT-GROUNDED-PARITY-1, 2026-08-21)
+
+**Qué pasaba.** `lib/web-audit/opportunity-matrix.ts` decidía si una cita
+cuenta como evidencia real con su propia copia de `GROUNDED_PROVIDERS`, y esa
+copia decía `{"gemini"}`. Desde ENGINES-2a (2026-07-18) ChatGPT genera con la
+herramienta `web_search` y produce citas reales — el scoring
+(`lib/scoring/run-scoring.ts`) y `ENGINE_META` lo daban por grounded desde
+entonces; sólo esta tercera copia se quedó atrás.
+
+**Consecuencia.** Un tema que **ChatGPT sí estaba citando** se clasificaba como
+`invisible` o `content_gap` si Gemini no lo citaba también. Es decir: la
+Auditoría web decía «no te citan aquí» sobre temas donde sí te citaban, y la
+pantalla proponía crear contenido que ya funcionaba. No es un fallo de pintado,
+es un diagnóstico equivocado en un motor de los tres.
+
+**Lo que lo hizo invisible durante un mes.** La cabecera de la constante
+afirmaba, literalmente, que *«opportunity-matrix.test.ts guards the two from
+silently diverging»*. **Ese test no existía.** Los que había cubrían `gemini`,
+`claude` y `null` — nunca `openai`, que es justo el motor que podía divergir y
+divergió. Un comentario que promete una garantía inexistente es peor que no
+tener comentario: la siguiente sesión lee «esto está cubierto» y no mira.
+
+**Decisión.** Las tres declaraciones de «qué motor está grounded» siguen
+duplicadas a propósito —el scoring no debe volverse dependencia de la UI ni de
+la auditoría por una constante—, pero ahora el precio de esa decisión está
+pagado: `GROUNDED_PROVIDERS` se exporta desde el scoring (sólo `export`, sin
+cambio de comportamiento) y `opportunity-matrix.test.ts` recorre el conjunto
+canónico comprobando las tres copias en ambas direcciones — todo grounded lo es
+en las tres, y ningún no-grounded cuela en ninguna. Verificado además que el
+guardián **puede fallar**: reintroduciendo el bug, saltan dos tests.
+
+**Sin backfill.** Las auditorías ya persistidas conservan su clasificación; la
+siguiente pasada las recalcula sola.
+
+---
+
+## 131. La auditoría no miraba si el motor tiene permitido citar la página (AUDIT-SNIPPET-1, 2026-08-21)
+
+**El hueco.** `noindex` se comprobaba desde WEB-AUDIT-R3. `nosnippet`,
+`max-snippet:0` y la cabecera `X-Robots-Tag` **no aparecían en ninguna parte
+del repositorio**. Son cosas distintas: `noindex` saca la página del índice;
+`nosnippet` la deja indexada pero **prohíbe reproducir un fragmento de ella**.
+Para un producto de visibilidad en IA, ése es el bloqueo que importa — sin
+fragmento no hay cita, por buena que sea la página.
+
+**Lo que lo hacía invisible.** La directiva puede venir por cabecera HTTP, no
+sólo por meta. `fetchPageSafely` tenía la respuesta en la mano, leía el cuerpo
+y **descartaba las cabeceras con ella**, así que una `X-Robots-Tag: nosnippet`
+servida por un CDN era indetectable para cualquier análisis del HTML — que es
+todo lo que hacíamos. Ahora se lee antes de consumir el cuerpo, que es el único
+momento en que existe.
+
+**No mueve ninguna nota, a propósito.** Se reporta como hallazgo crítico **sin
+puntos**, igual que `bot_blocked`. Dárselos cambiaría `readiness_score`, que es
+el componente `technical` del GEO Score (peso .20) y cuyos pesos aprobó el
+fundador en la fase de `web-audit-issues-1`. Hay tests que fijan que la nota
+real y la proyectada no se mueven. Cuando toque decidir si esto debe pesar,
+será una decisión de producto con su propia aprobación, no un efecto colateral.
+
+**`noarchive` queda fuera, deliberadamente.** Quita la copia en caché, no la
+capacidad de citar. Incluirlo habría sido añadir ruido de higiene justo en la
+mitad del producto que menos lo necesita — la misma crítica que la guía de
+Google hace a los checklists genéricos de GEO.
+
+**Tres estados, no dos.** `[]` es «medido y limpio»; `undefined` es «nunca
+medido» y se excluye de las dos listas. Una instantánea anterior a esta fase no
+se declara limpia: afirmarlo sería decirle al cliente que su web permite
+fragmentos sin haberlo mirado nunca. Es la lección de R3, que tiró producción
+el 2026-07-12 por leer un campo nuevo sin guardia sobre una fila vieja.
+
+**Detalle que costó un test.** `data-nosnippet` es un atributo que marca un
+bloque concreto (un aviso legal, un pie), no una directiva de página. Contarlo
+habría convertido en «bloqueada» cualquier web que lo use bien.
+
+**Pendiente, no roto.** Sigue sin comprobarse el `Disallow` por ruta en
+`robots.txt` (hoy sólo cuenta `Disallow: /` literal, así que un
+`Disallow: /blog/` para GPTBot pasa limpio) ni el Googlebot clásico. Son la
+siguiente tanda de la misma zona.
 
 ---
 
