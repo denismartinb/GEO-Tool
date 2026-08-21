@@ -11570,10 +11570,44 @@ aprobado: se separó explícitamente en el Task Intake y necesita el suyo propio
 Quien abra `docs/design-reference/hero-aura-1/` y vea que el texto no coincide
 con la portada real, que sepa que es deliberado.
 
-**Comprobado.** `pnpm test` (2672) y `pnpm run validate` en verde, y la landing
-real renderizada en Chromium a 1440/1280/1024/980/760/640/390/375 px: sin
-desbordamiento horizontal en ninguno, seis lazos por encima de 1200 px y cuatro
-por debajo, `.lp-promo` en `z-index: 1`.
+**Sin `filter: blur()`, y eso salió de medirlo.** Las maquetas llevaban 10-50 px
+de desenfoque en cada capa y se implementaron así. La auditoría posterior
+—fundador, mismo día: "revisa que lo del refactor, SEO, sameAs y Core Web
+Vitals se respeta o se mejora"— encontró que era **redundante y caro**. Todos
+estos gradientes ya mueren en transparente dentro de su propia caja (los lazos
+al 99 % del radio, los campos al 86 %), así que no hay canto duro que suavizar
+y desenfocar un degradado ya suave no cambia nada. Medido en Chromium: la
+diferencia máxima entre las dos versiones fue de **5/255 en el 0,02 % de los
+subpíxeles** en escritorio y 6/255 en móvil, por debajo de lo perceptible. El
+coste sí era real: rasterizar el hero entero pasaba de **33 ms a 82 ms por
+fotograma** a 1280 px sin estrangular CPU. Retirado el blur, vuelve a 33 ms:
+**el aura sale gratis**. Si alguien reintroduce `filter` aquí, que mida antes.
+
+**Comprobado, y lo que se midió de verdad.** `pnpm test` (2672) y
+`pnpm run validate` en verde. La landing real —servida desde el build de
+producción, no la maqueta— renderizada en Chromium a
+1440/1280/1024/980/760/640/390/375 px: sin desbordamiento horizontal en
+ninguno, seis lazos por encima de 1200 px y cuatro por debajo, `.lp-promo` en
+`z-index: 1`. Sobre Core Web Vitals, con el aura activada y desactivada
+interceptando la hoja de estilos:
+
+- **CLS 0,0002-0,0005, idéntico con y sin.** No puede empeorar por
+  construcción: la capa es `position: absolute` dentro de un contenedor con
+  `overflow: hidden` y no participa en el layout.
+- **LCP sin cambio medible**, dentro del ruido entre ejecuciones. `FCP == LCP`
+  en todas las pasadas, o sea que el elemento LCP es texto pintado en el primer
+  fotograma y el aura no es candidato ni afecta a su layout.
+- **Scroll idéntico**, 16,6 ms/fotograma con y sin: la capa se compone y no se
+  re-rasteriza al desplazar.
+- **INP intacto**: cero JS y `pointer-events: none`.
+- **Carga útil +650 B gzip** (+1,58 % del CSS que ya viajaba), en el bundle que
+  ya se servía. Sin peticiones nuevas.
+
+Nada de esto toca `sameAs` ni el resto de datos estructurados (Organization,
+SoftwareApplication, Offer siguen emitiéndose en la portada), ni el `<h1>`, ni
+el landmark `<main>` que A11Y-PSI-1 añadió a este mismo fichero (§116): la capa
+va dentro del `<header>`, que queda fuera de `<main>` a propósito, y es
+`aria-hidden`.
 
 **Pendiente / conocido.** A 980 px la cabecera pública desborda —los enlaces se
 parten a tres líneas y "Prueba gratis" se sale— pero es anterior a este cambio y
