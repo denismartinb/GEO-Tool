@@ -49,7 +49,12 @@ una con su Human Gate.
 - **Fase P ⛔ P1 descartado (2026-08-15, fundador; log §88)** — no tendrá la
   aprobación de excepción de escritura que necesitaba. **Consecuencia asumida:
   el riesgo #3 del diagnóstico —el flujo de alta sin ningún test de principio a
-  fin— se queda abierto a propósito.** P2–P4 siguen pendientes.
+  fin— se queda abierto a propósito.** **P2 hecho** (2026-08-20/21, log §129):
+  `/signup` + `/forgot-password` al set por defecto. **P3 hecho** (2026-08-21,
+  log §130): matriz de definición ↔ pantalla en
+  `docs/agentic-user-pilot.md`, consumida por `.claude/agents/ux-pilot.md`.
+  **P4 sigue pendiente** — necesita GitHub Actions o la sesión local del
+  fundador, fuera de alcance para una sesión remota.
 - **Fase A** — pendiente: son decisiones del fundador, no trabajo de agente.
 
 **Origen:** petición del fundador (2026-08-09): antes de lanzar GenScore al

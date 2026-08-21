@@ -11996,6 +11996,40 @@ A2).
 
 ---
 
+## 130. La matriz de definición ↔ pantalla, para que "verificar contra la documentación" sea un checklist y no una frase (PRELAUNCH-HARDENING-1 Fase P3, 2026-08-21)
+
+**Qué se decidió.** Una tabla nueva en `docs/agentic-user-pilot.md` —
+"Matriz de definición ↔ pantalla" — con una fila por zona del mapa de zonas
+de `CLAUDE.md`, mismo orden: qué regla de ruta le aplica, qué pantallas del
+piloto (si alguna) la recorren y con qué etiquetas, y una nota de cobertura.
+`.claude/agents/ux-pilot.md` la lista ahora como input obligatorio, junto a
+la maqueta aprobada.
+
+**Por qué hacía falta.** El plan de PRELAUNCH-HARDENING-1 (P3) ya pedía esto
+explícitamente: sin la tabla, "verificar contra la definición" era una frase
+del agente `ux-pilot`, no algo que pudiera ejecutar — no tenía dónde mirar
+qué regla o qué histórico correspondía a la pantalla que estaba juzgando.
+
+**El hallazgo real, construyendo la tabla.** Seis zonas del mapa —Metodología
+GEO (scoring), Correos transaccionales, Fiabilidad LLM, la mitad "depuración"
+de Dominios, Escaneo (pipeline) fuera del set `read`, y Consola de operador—
+**no las ve el piloto de lectura en ningún deploy**, cada una por una razón de
+fondo distinta (no es UI, no hay buzón, es sólo `workflow_dispatch`, es otra
+cuenta). No es un agujero nuevo — ya se sabía caso por caso — pero antes de
+esta tabla esa ausencia no estaba escrita en ningún sitio que una pasada del
+piloto pudiera leer antes de fallar en falso buscando algo que nunca pudo ver.
+
+**Lo que NO cambia.** Ningún journey nuevo, ninguna pantalla nueva pilotada.
+Es documentación pura — cero cambio de producto, cero cambio de comportamiento
+del arnés.
+
+**Trazabilidad.** `docs/agentic-user-pilot.md` (sección "Matriz de definición
+↔ pantalla"); `.claude/agents/ux-pilot.md` (fila de inputs "The zone's own
+truth"); `docs/prelaunch-hardening-plan.md` (P3 del ledger); CLAUDE.md (mapa
+de zonas, la fuente que esta tabla espeja).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
