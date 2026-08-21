@@ -8,6 +8,8 @@ import {
 } from "./opportunity-matrix";
 import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageMap } from "./coverage-map";
 import type { PromptResultLite } from "./opportunity-matrix";
+import { GROUNDED_PROVIDERS } from "@/lib/scoring/run-scoring";
+import { ENGINE_META } from "@/lib/scan/engine-meta";
 
 const PROJECT_DOMAIN = "acme.com";
 const SCAN_1_DATE = "2026-07-01T00:00:00.000Z";
@@ -64,6 +66,46 @@ describe("hasOwnDomainGroundingCitation", () => {
 
   it("treats a null/missing provider as grounded (historical Gemini-only rows)", () => {
     expect(hasOwnDomainGroundingCitation(ownGroundingCitation("acme.com"), "acme.com", null)).toBe(true);
+  });
+
+  it("cuenta las citas de ChatGPT, que es grounded desde ENGINES-2a", () => {
+    // La regresión concreta: esta copia se quedó en {"gemini"} cuando entró
+    // OpenAI como motor, así que un tema que ChatGPT SÍ citaba se clasificaba
+    // como invisible o content_gap.
+    expect(hasOwnDomainGroundingCitation(ownGroundingCitation("acme.com"), "acme.com", "openai")).toBe(true);
+  });
+});
+
+/**
+ * El guardián que la cabecera de `opportunity-matrix.ts` llevaba meses
+ * afirmando que existía, y no existía: sólo se probaban `gemini`, `claude` y
+ * `null`, así que `openai` pudo divergir en silencio durante un mes. Hay tres
+ * declaraciones de "qué motor está grounded" —el scoring (canónica), esta
+ * matriz y `ENGINE_META` para la UI— y se duplican a propósito, para que un
+ * módulo no arrastre a otro por una constante. El precio de esa decisión es
+ * este test: si alguna se mueve sin las otras, salta aquí.
+ */
+describe("paridad de motores grounded entre las tres copias", () => {
+  it("todo motor grounded en el scoring lo es también en la matriz y en ENGINE_META", () => {
+    expect(GROUNDED_PROVIDERS.size).toBeGreaterThan(0);
+    for (const provider of GROUNDED_PROVIDERS) {
+      expect(
+        hasOwnDomainGroundingCitation(ownGroundingCitation("acme.com"), "acme.com", provider),
+        `la matriz no cuenta a ${provider} como grounded`
+      ).toBe(true);
+      expect(ENGINE_META[provider]?.grounded, `ENGINE_META no marca ${provider} como grounded`).toBe(true);
+    }
+  });
+
+  it("y ningún motor NO grounded cuela en ninguna de las tres", () => {
+    for (const [provider, meta] of Object.entries(ENGINE_META)) {
+      if (GROUNDED_PROVIDERS.has(provider)) continue;
+      expect(meta.grounded, `ENGINE_META marca ${provider} como grounded y el scoring no`).toBe(false);
+      expect(
+        hasOwnDomainGroundingCitation(ownGroundingCitation("acme.com"), "acme.com", provider),
+        `la matriz cuenta a ${provider} como grounded y el scoring no`
+      ).toBe(false);
+    }
   });
 });
 

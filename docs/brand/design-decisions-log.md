@@ -12011,5 +12011,83 @@ tipografía o patrones de navegación:
 3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
    técnico aquí (este documento es "qué se decidió", no "cómo se
    implementó").
+## 130. La matriz de cobertura llevaba un mes ignorando las citas de ChatGPT (AUDIT-GROUNDED-PARITY-1, 2026-08-21)
+
+**Qué pasaba.** `lib/web-audit/opportunity-matrix.ts` decidía si una cita
+cuenta como evidencia real con su propia copia de `GROUNDED_PROVIDERS`, y esa
+copia decía `{"gemini"}`. Desde ENGINES-2a (2026-07-18) ChatGPT genera con la
+herramienta `web_search` y produce citas reales — el scoring
+(`lib/scoring/run-scoring.ts`) y `ENGINE_META` lo daban por grounded desde
+entonces; sólo esta tercera copia se quedó atrás.
+
+**Consecuencia.** Un tema que **ChatGPT sí estaba citando** se clasificaba como
+`invisible` o `content_gap` si Gemini no lo citaba también. Es decir: la
+Auditoría web decía «no te citan aquí» sobre temas donde sí te citaban, y la
+pantalla proponía crear contenido que ya funcionaba. No es un fallo de pintado,
+es un diagnóstico equivocado en un motor de los tres.
+
+**Lo que lo hizo invisible durante un mes.** La cabecera de la constante
+afirmaba, literalmente, que *«opportunity-matrix.test.ts guards the two from
+silently diverging»*. **Ese test no existía.** Los que había cubrían `gemini`,
+`claude` y `null` — nunca `openai`, que es justo el motor que podía divergir y
+divergió. Un comentario que promete una garantía inexistente es peor que no
+tener comentario: la siguiente sesión lee «esto está cubierto» y no mira.
+
+**Decisión.** Las tres declaraciones de «qué motor está grounded» siguen
+duplicadas a propósito —el scoring no debe volverse dependencia de la UI ni de
+la auditoría por una constante—, pero ahora el precio de esa decisión está
+pagado: `GROUNDED_PROVIDERS` se exporta desde el scoring (sólo `export`, sin
+cambio de comportamiento) y `opportunity-matrix.test.ts` recorre el conjunto
+canónico comprobando las tres copias en ambas direcciones — todo grounded lo es
+en las tres, y ningún no-grounded cuela en ninguna. Verificado además que el
+guardián **puede fallar**: reintroduciendo el bug, saltan dos tests.
+
+**Sin backfill.** Las auditorías ya persistidas conservan su clasificación; la
+siguiente pasada las recalcula sola.
+
+---
+
+## 131. La auditoría no miraba si el motor tiene permitido citar la página (AUDIT-SNIPPET-1, 2026-08-21)
+
+**El hueco.** `noindex` se comprobaba desde WEB-AUDIT-R3. `nosnippet`,
+`max-snippet:0` y la cabecera `X-Robots-Tag` **no aparecían en ninguna parte
+del repositorio**. Son cosas distintas: `noindex` saca la página del índice;
+`nosnippet` la deja indexada pero **prohíbe reproducir un fragmento de ella**.
+Para un producto de visibilidad en IA, ése es el bloqueo que importa — sin
+fragmento no hay cita, por buena que sea la página.
+
+**Lo que lo hacía invisible.** La directiva puede venir por cabecera HTTP, no
+sólo por meta. `fetchPageSafely` tenía la respuesta en la mano, leía el cuerpo
+y **descartaba las cabeceras con ella**, así que una `X-Robots-Tag: nosnippet`
+servida por un CDN era indetectable para cualquier análisis del HTML — que es
+todo lo que hacíamos. Ahora se lee antes de consumir el cuerpo, que es el único
+momento en que existe.
+
+**No mueve ninguna nota, a propósito.** Se reporta como hallazgo crítico **sin
+puntos**, igual que `bot_blocked`. Dárselos cambiaría `readiness_score`, que es
+el componente `technical` del GEO Score (peso .20) y cuyos pesos aprobó el
+fundador en la fase de `web-audit-issues-1`. Hay tests que fijan que la nota
+real y la proyectada no se mueven. Cuando toque decidir si esto debe pesar,
+será una decisión de producto con su propia aprobación, no un efecto colateral.
+
+**`noarchive` queda fuera, deliberadamente.** Quita la copia en caché, no la
+capacidad de citar. Incluirlo habría sido añadir ruido de higiene justo en la
+mitad del producto que menos lo necesita — la misma crítica que la guía de
+Google hace a los checklists genéricos de GEO.
+
+**Tres estados, no dos.** `[]` es «medido y limpio»; `undefined` es «nunca
+medido» y se excluye de las dos listas. Una instantánea anterior a esta fase no
+se declara limpia: afirmarlo sería decirle al cliente que su web permite
+fragmentos sin haberlo mirado nunca. Es la lección de R3, que tiró producción
+el 2026-07-12 por leer un campo nuevo sin guardia sobre una fila vieja.
+
+**Detalle que costó un test.** `data-nosnippet` es un atributo que marca un
+bloque concreto (un aviso legal, un pie), no una directiva de página. Contarlo
+habría convertido en «bloqueada» cualquier web que lo use bien.
+
+**Pendiente, no roto.** Sigue sin comprobarse el `Disallow` por ruta en
+`robots.txt` (hoy sólo cuenta `Disallow: /` literal, así que un
+`Disallow: /blog/` para GPTBot pasa limpio) ni el Googlebot clásico. Son la
+siguiente tanda de la misma zona.
 
 ---
