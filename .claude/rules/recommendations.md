@@ -88,3 +88,30 @@ paths:
   pantalla completa (`FirstScanTakeover`) sólo sustituye la pantalla cuando NO
   hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
   `ScanStatePill` del sticky-header, nunca tapando el backlog.
+
+## Honestidad de lo que se genera (RECS-USEFULNESS-1 Fase C, log §127)
+
+- **Nombrar a un competidor sí; decir que somos mejores que él, no.** Se rechaza
+  en servidor el texto generado cuya frase nombra a un competidor de la lista
+  cerrada y además lleva un juicio de valor comparativo
+  (`comparative_claim_against_competitor` → `rewrite-validation.ts`). Motivo, y
+  no es de estilo: la comparación contra rivales nombrados sin dato objetivo
+  expone al cliente a una reclamación (art. 10 LCD). La comparación **neutra y
+  verificable** sigue permitida y es media plataforma — no la rompas al tocar
+  el léxico.
+- **La comprobación es por frase, y el texto se pasa por piezas.** Título,
+  resumen, cada paso y cada ejemplo van por separado a `segments`: unidos, un
+  paso sin punto final se pega al siguiente y se inventa una frase que nadie
+  escribió, que rechazaría planes buenos.
+- **Un adjetivo evaluativo sin respaldo es un valor inventado**, igual que una
+  cifra inventada. La regla del prompt vigilaba números y el modelo la rodeó
+  escribiendo sin ninguno («precios competitivos», «excelente cobertura»). Si
+  añades reglas anti-invención, escríbelas sobre **la afirmación**, no sobre el
+  tipo de dato.
+- **C2 y C3 son reglas blandas y se declaran como tales.** Viven sólo en el
+  prompt porque «juicio de valor» no es un conjunto cerrado y un detector amplio
+  rechazaría planes legítimos — y cada rechazo gasta una generación del cupo
+  diario del usuario. No las documentes como garantías.
+- **Todo artefacto de datos estructurados avisa de que su contenido tiene que
+  estar visible en la página.** Marcar un `FAQPage` sobre preguntas que no están
+  en la página es marcado de contenido inexistente.

@@ -11781,6 +11781,74 @@ incidente.
 
 ---
 
+## 127. La propuesta salía entera y decía que éramos mejores que cinco competidores (RECS-USEFULNESS-1 Fase C, 2026-08-21)
+
+**Origen.** Con la Fase A ya en producción (§126), el fundador generó una
+propuesta real para el proyecto Movistar y pegó el resultado. El artefacto era
+impecable: 1.391 caracteres, `JSON.parse` limpio, cerrado. Con el tope viejo de
+1.200 habría salido cortado, así que la Fase A quedó verificada en producto y
+no sólo en tests. Y dentro de ese artefacto perfecto venía esto, listo para
+pegar en la web de un cliente de pago:
+
+> «A diferencia de operadores como Jazztel, Vodafone España, MásMóvil, Orange
+> España o Digi, Movistar mantiene un alto estándar de calidad y cobertura»
+
+**Por qué eso no es "contenido flojo".** Es publicidad comparativa contra cinco
+competidores nombrados sin un dato que la sostenga. En España la comparación
+tiene que ser objetiva y verificable sobre características esenciales (art. 10
+de la Ley de Competencia Desleal). No le estábamos dando al cliente un consejo
+mediocre: le estábamos generando una exposición legal y presentándosela con un
+botón de copiar.
+
+**El mecanismo, que es el hallazgo de verdad.** La regla anti-invención del
+prompt existía y era dura: *«where a specific value (a number, a price, a date)
+would be needed but is not in the facts, write a clearly-marked placeholder…
+NEVER invent the value»*. En los 1.391 caracteres **no había ni un
+`[tu dato aquí]`**. El modelo no la incumplió: **la rodeó**. La regla vigila
+cifras, así que el camino de menor resistencia es escribir sin ninguna —
+«precios competitivos», «excelente cobertura», «experiencia superior». Dice lo
+mismo que un número inventado y no deja rastro de que falta un dato. De ahí la
+reformulación: **la regla muerde sobre la afirmación, no sobre el número**, y un
+adjetivo evaluativo sin respaldo es un valor inventado igual que lo sería una
+cifra.
+
+**Lo que se implementa, y con qué dureza cada cosa** — la distinción es
+deliberada y se declara aquí para que nadie la lea como más fuerte de lo que es:
+
+- **C1, guarda en servidor.** Se rechaza el texto generado cuando una frase
+  nombra a un competidor **y** contiene un juicio de valor comparativo
+  (`comparative_claim_against_competitor`). Va por frase a propósito: nombrar a
+  un competidor es media plataforma —«Compara tu página con la de Digi», una
+  tabla comparativa, «Digi aparece antes que tú»— y todo eso sigue pasando. El
+  llamador pasa el texto **por piezas** (título, resumen, cada paso, cada
+  ejemplo) porque un paso sin punto final se pegaría al siguiente e inventaría
+  una frase que nadie escribió.
+- **C2 y C3, sólo prompt, y son reglas BLANDAS.** Que un adjetivo evaluativo sin
+  respaldo cuente como invención, y que todo artefacto de schema avise de que su
+  contenido tiene que estar visible en la página. No hay detector: «juicio de
+  valor» no es un conjunto cerrado, y una expresión regular lo bastante amplia
+  para cazarlo rechazaría planes buenos — y cada rechazo le gasta al usuario una
+  generación de su cupo diario. **Se prefiere una regla blanda declarada como
+  blanda a un detector que aparente una garantía que no da.**
+
+**Límite declarado de C1.** Las otras dos guardas del fichero comparan contra
+listas cerradas y son exactas. El léxico de juicio de valor es finito y está en
+castellano: un superlativo escrito de otra forma, o en otro idioma —y
+`projects.language` admite más de uno—, pasa. Es una red, no una garantía.
+
+**Lo que queda pendiente.** Las tres del inventario que siguen sin tocar, la
+mayor de ellas la Fase B1: **el generador no sabe nada de la web del cliente**.
+Y los artefactos rotos ya persistidos siguen sirviéndose por la ruta de
+idempotencia (§126): purgarlos es escritura destructiva sobre datos de clientes
+y necesita su propia aprobación.
+
+**Trazabilidad.** `lib/recommendations/rewrite-validation.ts` y su test (el
+fixture es la frase real, no un ejemplo inventado);
+`lib/recommendations/recommendation-rewrite-llm.ts` (C1/C2/C3 en el prompt);
+`docs/specs/recommendations/quality-audit-2026-08.md`; log §126 (Fase A).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
