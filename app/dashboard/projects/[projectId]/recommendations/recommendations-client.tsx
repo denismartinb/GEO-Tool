@@ -8,6 +8,12 @@ import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/
 import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
 import { MIN_VISIBLE_POINTS, formatPoints, selectPlan } from "@/lib/recommendations/plan";
+import {
+  CONTROL_LABEL,
+  classifySolutionReadiness,
+  deliverableForType,
+  readinessLabel
+} from "@/lib/recommendations/deliverable";
 
 // Re-exported (not redefined) so every existing `import { type GeneratedSolution } from "./recommendations-client"`
 // keeps working unchanged — lib/recommendations/generated-solution.ts is now
@@ -160,7 +166,12 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
  * ready-to-paste example artifact with its own copy button. All content is
  * already sanitized server-side; it is rendered as plain React text.
  */
-function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
+export function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
+  // RECS-ACCION-1 — cuánto trabajo queda antes de poder publicar esto. NO es
+  // una estimación: el prompt de reescritura obliga a marcar con un
+  // placeholder todo valor que no esté en la evidencia en vez de inventarlo,
+  // así que los huecos se cuentan sobre el texto real que se enseña abajo.
+  const readiness = classifySolutionReadiness(solution);
   return (
     <div
       style={{
@@ -186,6 +197,12 @@ function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
       >
         <Icon name="sparkles" size={12} />
         Plan de acción
+        <span
+          className={readiness.kind === "ready" ? "badge badge-pos" : "badge badge-warn"}
+          style={{ marginLeft: "auto", textTransform: "none", letterSpacing: 0 }}
+        >
+          {readinessLabel(readiness)}
+        </span>
       </div>
       <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>{solution.title}</div>
       <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>{solution.summary}</p>
@@ -414,6 +431,9 @@ export function RecCard({
   const sentimentDrivers = ev.sentiment_drivers ?? [];
   const assumptions = ev.assumptions ?? [];
   const quickWin = isQuickWin(rec);
+  // RECS-ACCION-1 — qué artefacto promete el botón y de quién depende el
+  // resultado. Ambos derivan del tipo, igual que labelForType/categoryForType.
+  const { cta: deliverableCta, control } = deliverableForType(rec.recommendation_type);
   const rankCls = priorityLevel(rec);
   const effectiveConfidence = rec.coverageOverlay?.confidenceOverride ?? rec.confidence;
   const overlay = rec.coverageOverlay;
@@ -457,7 +477,12 @@ export function RecCard({
             15+ cards they were most of the page's ink. Impact, effort and
             confidence still exist — they moved into the expanded detail. */}
         <div style={{ minWidth: 0, flex: 1 }}>
-          {(priorityRank || priorityLevel(rec) === "high" || quickWin || (rec.consecutive_runs_open ?? 1) > 1) && (
+          {(priorityRank ||
+            priorityLevel(rec) === "high" ||
+            quickWin ||
+            (rec.consecutive_runs_open ?? 1) > 1 ||
+            control === "third_party" ||
+            control === "in_app") && (
             <div
               style={{
                 display: "flex",
@@ -477,6 +502,24 @@ export function RecCard({
               )}
               {(rec.consecutive_runs_open ?? 1) > 1 && (
                 <span className="badge badge-outline">Abierta {rec.consecutive_runs_open} escaneos</span>
+              )}
+              {/* RECS-ACCION-1 — sólo se marca la EXCEPCIÓN. "En tu web" es lo
+                  que el usuario ya da por supuesto en 11 de los 15 tipos, y
+                  repetirlo en cada tarjeta sería justo la tinta que
+                  RECS-REDESIGN-1 quitó de aquí (log §115). Lo que cambia una
+                  decisión de un vistazo es lo contrario: que esto NO dependa
+                  de él. La ausencia de chip significa "es tuyo". */}
+              {control === "third_party" && (
+                <span className="badge badge-outline">
+                  <Icon name="globe" size={11} />
+                  {CONTROL_LABEL.third_party}
+                </span>
+              )}
+              {control === "in_app" && (
+                <span className="badge badge-outline">
+                  <Icon name="robot" size={11} />
+                  {CONTROL_LABEL.in_app}
+                </span>
               )}
             </div>
           )}
@@ -781,12 +824,12 @@ export function RecCard({
                 <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
                   {isRewriting ? (
                     <>
-                      <span className="btn-spinner" /> Generando propuesta…
+                      <span className="btn-spinner" /> Generando…
                     </>
                   ) : (
                     <>
                       <Icon name="sparkles" size={13} />
-                      Generar propuesta con IA
+                      {deliverableCta}
                     </>
                   )}
                 </button>
