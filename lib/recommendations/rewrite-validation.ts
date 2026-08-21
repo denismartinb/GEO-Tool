@@ -20,15 +20,14 @@
  * safety net consistent with CLAUDE.md's "no fake recommendations" given a
  * closed, known competitor roster and a closed, known domain list. Pure logic,
  * no I/O — importable from Vitest with no server-only shim needed.
+ *
+ * El vocabulario de dominios (qué token parece un dominio, cómo se normaliza)
+ * vive en `anchored-domains.ts` y se importa de allí: la primitiva es "qué es
+ * un dominio" y esto es el juicio que la usa, nunca al revés.
  */
+import { extractDomainTokens, normalizeDomain } from "@/lib/recommendations/anchored-domains";
 
-const COMMON_TLDS = new Set([
-  "com", "es", "org", "net", "io", "co", "info", "app", "ai", "biz", "shop",
-  "store", "dev", "mx", "fr", "de", "it", "uk", "eu", "cat", "pt", "nl", "be",
-  "ar", "cl", "pe", "us", "ca", "br", "gov", "edu", "me", "tv", "online"
-]);
 
-const DOMAIN_TOKEN_PATTERN = /\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}\b/gi;
 
 // Structured-data vocabulary domains that legitimately appear in any JSON-LD
 // example (e.g. `"@context": "https://schema.org"`). They are not citation or
@@ -37,19 +36,6 @@ const ALWAYS_ALLOWED_DOMAINS = ["schema.org", "www.w3.org"];
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();
-}
-
-function normalizeDomain(value: string): string {
-  return normalize(value)
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "");
-}
-
-function looksLikeDomain(token: string): boolean {
-  const parts = normalizeDomain(token).split(".");
-  if (parts.length < 2) return false;
-  return COMMON_TLDS.has(parts[parts.length - 1]);
 }
 
 function escapeRegExp(value: string): string {
@@ -113,11 +99,9 @@ export function validateRewriteAgainstEvidence(input: RewriteValidationInput): R
   const allowedDomains = new Set(
     [...input.allowedDomains, input.brandDomain, ...ALWAYS_ALLOWED_DOMAINS].map(normalizeDomain).filter(Boolean)
   );
-  const domainMatches = rawText.match(DOMAIN_TOKEN_PATTERN) ?? [];
-  for (const match of domainMatches) {
-    if (!looksLikeDomain(match)) continue;
-    if (!allowedDomains.has(normalizeDomain(match))) {
-      return { valid: false, reason: "unanchored_domain_mentioned", offending: normalizeDomain(match) };
+  for (const domain of extractDomainTokens(rawText)) {
+    if (!allowedDomains.has(domain)) {
+      return { valid: false, reason: "unanchored_domain_mentioned", offending: domain };
     }
   }
 

@@ -26,6 +26,29 @@
  * Pure logic, no I/O — importable from Vitest with no server-only shim.
  */
 
+/**
+ * Todos los dominios que el prompt le ENSEÑA al modelo.
+ *
+ * Es el conjunto que el guardián debe admitir, y la razón es de una línea: un
+ * modelo no fabrica nada cuando repite algo que tiene delante. Derivarlo del
+ * texto del prompt —en vez de recomponerlo campo a campo— es lo que impide que
+ * vuelva a faltar una pieza: ya faltaron las páginas citadas (§126), los
+ * competidores con dominio propio (§128) y el título de una página citada, que
+ * suele ser otro dominio (`blog.hubspot.es — "hubspot.es"`, §129). El guardián
+ * sigue rechazando cualquier dominio que NO esté en el prompt, que es lo que
+ * protege de verdad.
+ */
+export function domainsShownInPrompt(prompt: string): string[] {
+  const seen = new Set<string>();
+  const shown: string[] = [];
+  for (const domain of extractDomainTokens(prompt)) {
+    if (!domain || seen.has(domain)) continue;
+    seen.add(domain);
+    shown.push(domain);
+  }
+  return shown;
+}
+
 export type AnchoredDomainEvidence = {
   /** Aggregate of cited domains across the affected prompts (capped upstream). */
   citation_domains?: string[];
@@ -35,13 +58,47 @@ export type AnchoredDomainEvidence = {
   citation_pages?: { domain?: string; url?: string }[];
 };
 
-function normalizeDomain(value: string): string {
+/**
+ * El vocabulario de dominios de esta zona vive AQUÍ, y el guardián
+ * (`rewrite-validation.ts`) lo importa — no al revés.
+ *
+ * La dirección importa por dos razones. La primera es de capas: "qué es un
+ * dominio" es la primitiva y "esto está fabricado" es el juicio que la usa. La
+ * segunda la cazó un test: con la dependencia invertida, cualquier suite que
+ * mockee el guardián deja al conjunto anclado sin extractor y todo el flujo
+ * revienta con un TypeError que se lee como «el motor falló». Y estaba
+ * duplicado: `normalizeDomain` existía en los dos ficheros.
+ */
+const COMMON_TLDS = new Set([
+  "com", "es", "org", "net", "io", "co", "info", "app", "ai", "biz", "shop",
+  "store", "dev", "mx", "fr", "de", "it", "uk", "eu", "cat", "pt", "nl", "be",
+  "ar", "cl", "pe", "us", "ca", "br", "gov", "edu", "me", "tv", "online"
+]);
+
+const DOMAIN_TOKEN_PATTERN = /\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}\b/gi;
+
+export function normalizeDomain(value: string): string {
   return value
     .trim()
     .toLowerCase()
     .replace(/^https?:\/\//, "")
     .replace(/^www\./, "")
     .replace(/\/.*$/, "");
+}
+
+/**
+ * ¿Parece un dominio? Se compara el TLD contra una lista corriente para no
+ * confundir abreviaturas como «p.ej.» con un dominio.
+ */
+export function looksLikeDomain(token: string): boolean {
+  const parts = normalizeDomain(token).split(".");
+  if (parts.length < 2) return false;
+  return COMMON_TLDS.has(parts[parts.length - 1]);
+}
+
+/** Los tokens con forma de dominio de un texto, normalizados. */
+export function extractDomainTokens(text: string): string[] {
+  return (text.match(DOMAIN_TOKEN_PATTERN) ?? []).filter(looksLikeDomain).map(normalizeDomain);
 }
 
 function hostOf(url: string): string {

@@ -119,7 +119,19 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
   }
 }
 
-export async function rewriteRecommendation(input: RecommendationRewriteInput): Promise<RecommendationRewrite | null> {
+/**
+ * El prompt exacto que ve el modelo, construido aparte para que el guardián
+ * pueda leerlo.
+ *
+ * Es la única forma de mantener el invariante sin ir ampliando una lista a
+ * mano: lo que el modelo puede nombrar es **lo que este texto le enseña**, y el
+ * guardián admite exactamente eso. Cada vez que se dedujo el conjunto por otro
+ * camino faltó una pieza distinta — primero las páginas citadas (log §126),
+ * luego los competidores anclados por su dominio (log §128), y después el
+ * TÍTULO de una página citada, que muy a menudo es él mismo un dominio
+ * (`blog.hubspot.es — "hubspot.es"`). Tres agujeros del mismo agujero.
+ */
+export function buildRecommendationRewritePrompt(input: RecommendationRewriteInput): string {
   const playbook = assetPlaybook(input);
   const promptBlock = [
     "You are a senior GEO (Generative Engine Optimization) consultant writing one concrete, copy-paste-ready action plan on a brand's dashboard.",
@@ -171,6 +183,12 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
         ]
       : [])
   ].join("\n");
+
+  return promptBlock;
+}
+
+export async function rewriteRecommendation(input: RecommendationRewriteInput): Promise<RecommendationRewrite | null> {
+  const promptBlock = buildRecommendationRewritePrompt(input);
 
   const raw = await generateGeminiJson(promptBlock);
   const parsed = recommendationRewriteSchema.safeParse(raw);

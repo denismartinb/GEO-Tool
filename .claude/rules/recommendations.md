@@ -37,6 +37,19 @@ paths:
 
 ## Reescritura con IA ("Generar propuesta con IA")
 
+- **El conjunto de dominios admitidos se DERIVA del prompt, no se recompone.**
+  `buildRecommendationRewritePrompt` construye el texto y `domainsShownInPrompt`
+  extrae de él lo que el guardián admite. Recomponerlo campo a campo falló tres
+  veces por tres piezas distintas —páginas citadas (§126), competidores con
+  dominio propio (§128) y el título de una página citada, que suele ser otro
+  dominio (§129)—, y cada vez el modelo fue rechazado por repetir algo que tenía
+  delante. Si añades un dato al prompt, ya queda anclado; si lo anclas sin
+  enseñarlo, sobra.
+- **El vocabulario de dominios vive en `anchored-domains.ts`; el guardián lo
+  importa.** La primitiva es «qué es un dominio», el juicio es «esto está
+  fabricado». Con la dependencia invertida, mockear el guardián en un test deja
+  al conjunto sin extractor y el fallo se lee en pantalla como «el motor de IA
+  falló» (§129).
 - **El prompt y el guardián leen el MISMO conjunto de dominios anclados.**
   `collectAnchoredDomains` (`lib/recommendations/anchored-domains.ts`) es la
   única fuente: unión de `citation_domains`, `source_domains` y los dominios y

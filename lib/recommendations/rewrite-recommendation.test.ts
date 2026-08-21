@@ -598,10 +598,13 @@ describe("rewriteRecommendationCore", () => {
     expect(validationArgs.description).toContain(REWRITE.examples[1].label);
     expect(validationArgs).toMatchObject({
       allowedCompetitors: ["Conforama", "Conforama"],
-      allowedDomains: EVIDENCE.citation_domains,
       trackedCompetitors: ["Conforama", "Ikea"],
       brandDomain: PROJECT.domain
     });
+    // El guardián admite lo que el prompt ENSEÑA, que incluye la evidencia de
+    // la tarjeta y nada de fuera.
+    expect(validationArgs.allowedDomains).toContain(EVIDENCE.citation_domains[0]);
+    expect(validationArgs.allowedDomains).not.toContain("inventado.com");
 
     // The solution is written to generated_solutions, sanitized and renderable,
     // anchored to the recommendation. The recommendation row is never mutated.
@@ -664,19 +667,22 @@ describe("rewriteRecommendationCore", () => {
     const geminiArgs = rewriteRecommendationMock.mock.calls[0][0];
     const validationArgs = validateRewriteAgainstEvidenceMock.mock.calls[0][0];
     expect(geminiArgs.citationDomains).toEqual(anchored);
-    expect(validationArgs.allowedDomains).toEqual(anchored);
-    // The invariant, stated directly: what the model is allowed to write and
-    // what it is judged against are the same set.
-    expect(validationArgs.allowedDomains).toEqual(geminiArgs.citationDomains);
-    // Every page the prompt offers is inside that set.
-    for (const page of sourceGapRecommendation.evidence_json.citation_pages) {
-      expect(anchored).toContain(page.domain);
+
+    // The invariant, stated directly: everything the prompt shows the model is
+    // admitted by the guard — the cited pages included, which is what the
+    // narrower evidence-only set kept missing.
+    for (const domain of anchored) {
+      expect(validationArgs.allowedDomains).toContain(domain);
     }
+    for (const page of sourceGapRecommendation.evidence_json.citation_pages) {
+      expect(validationArgs.allowedDomains).toContain(page.domain);
+    }
+    expect(validationArgs.allowedDomains).not.toContain("inventado-por-la-ia.com");
 
     // The set actually used is persisted with the row, so a later rejection is
     // diagnosable from the data instead of only from a runtime log.
     const evidence = getInserted()[0].evidence_json as Record<string, unknown>;
-    expect(evidence.anchored_domains).toEqual(anchored);
+    expect(evidence.anchored_domains).toEqual(validationArgs.allowedDomains);
   });
 
   it("permite nombrar al competidor cuyo propio dominio está anclado, y sólo a ese", async () => {

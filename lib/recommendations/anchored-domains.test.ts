@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { collectAnchoredDomains, competitorsAnchoredByDomain } from "@/lib/recommendations/anchored-domains";
+import {
+  collectAnchoredDomains,
+  competitorsAnchoredByDomain,
+  domainsShownInPrompt
+} from "@/lib/recommendations/anchored-domains";
+import { buildRecommendationRewritePrompt } from "@/lib/recommendations/recommendation-rewrite-llm";
 import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-validation";
 
 describe("collectAnchoredDomains", () => {
@@ -125,5 +130,80 @@ describe("competitorsAnchoredByDomain", () => {
 
   it("no se queda con el segundo nivel genérico de un `.co.uk`", () => {
     expect(competitorsAnchoredByDomain(["Which", "Co"], ["which.co.uk"])).toEqual(["Which"]);
+  });
+});
+
+describe("domainsShownInPrompt", () => {
+  // La tarjeta real del fundador (2026-08-21): la página citada es
+  // `blog.hubspot.es` y su TÍTULO es la cadena "hubspot.es". El prompt le
+  // enseña las dos (`- blog.hubspot.es — "hubspot.es"`), el modelo escribió el
+  // título y el guardián lo descartó por «hubspot.es».
+  const input = {
+    brand: "GenScore",
+    domain: "genscore.es",
+    language: "es",
+    recommendationType: "pursue_citation_sources",
+    ruleTitle: "Consigue que 5 webs que cita la IA te mencionen",
+    ruleDescription: "La IA se apoya en amicited.com, dageno.ai, blog.hubspot.es en consultas donde tu dominio no aparece.",
+    whyThisMatters: "Entrar en las webs que los motores ya citan es la vía más corta.",
+    affectedPrompts: ["¿Existen plataformas que ofrezcan análisis competitivo de la visibilidad en IA?"],
+    mentionedCompetitors: [],
+    citationDomains: ["amicited.com", "keyword.com", "dageno.ai", "blog.hubspot.es"],
+    evidenceSnippets: [],
+    citationPages: [
+      { domain: "blog.hubspot.es", title: "hubspot.es", url: "https://blog.hubspot.es/marketing/geo" },
+      { domain: "es.semrush.com", title: "semrush.com", url: "https://es.semrush.com/blog/geo/" }
+    ]
+  };
+
+  it("incluye el título de una página citada cuando el título es él mismo un dominio", () => {
+    const shown = domainsShownInPrompt(buildRecommendationRewritePrompt(input));
+    // El dominio de la página y su título, que son distintos y ambos visibles.
+    expect(shown).toContain("blog.hubspot.es");
+    expect(shown).toContain("hubspot.es");
+    expect(shown).toContain("es.semrush.com");
+    expect(shown).toContain("semrush.com");
+  });
+
+  it("el conjunto por evidencia NO lo incluía: es el agujero que cerró esta vuelta", () => {
+    expect(
+      collectAnchoredDomains({ citation_domains: input.citationDomains, citation_pages: input.citationPages })
+    ).not.toContain("hubspot.es");
+  });
+
+  it("una propuesta que nombra el título citado ya no se descarta", () => {
+    const shown = domainsShownInPrompt(buildRecommendationRewritePrompt(input));
+    expect(
+      validateRewriteAgainstEvidence({
+        title: "Consigue una mención en hubspot.es",
+        description: 'Contacta con quien publica "hubspot.es" (blog.hubspot.es) y ofrece un dato propio.',
+        allowedCompetitors: [],
+        allowedDomains: shown,
+        trackedCompetitors: [],
+        brandDomain: "genscore.es"
+      })
+    ).toEqual({ valid: true });
+  });
+
+  it("sigue rechazando un dominio que el prompt no enseña", () => {
+    const shown = domainsShownInPrompt(buildRecommendationRewritePrompt(input));
+    expect(
+      validateRewriteAgainstEvidence({
+        title: "Escribe a inventado-por-la-ia.com",
+        description: "Y también a otracosa.es.",
+        allowedCompetitors: [],
+        allowedDomains: shown,
+        trackedCompetitors: [],
+        brandDomain: "genscore.es"
+      })
+    ).toEqual({ valid: false, reason: "unanchored_domain_mentioned", offending: "inventado-por-la-ia.com" });
+  });
+
+  it("el andamiaje fijo del prompt no cuela ningún dominio ajeno", () => {
+    const shown = domainsShownInPrompt(
+      buildRecommendationRewritePrompt({ ...input, citationDomains: [], citationPages: [], ruleDescription: "d", whyThisMatters: "", affectedPrompts: [] })
+    );
+    // Sólo schema.org (vocabulario de datos estructurados) y el dominio de la marca.
+    expect(shown.sort()).toEqual(["genscore.es", "schema.org"]);
   });
 });

@@ -2,8 +2,13 @@ import "server-only";
 
 import { z } from "zod";
 import { rewriteRecommendation } from "@/lib/llm/gemini";
+import { buildRecommendationRewritePrompt } from "@/lib/recommendations/recommendation-rewrite-llm";
 import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-validation";
-import { collectAnchoredDomains, competitorsAnchoredByDomain } from "@/lib/recommendations/anchored-domains";
+import {
+  collectAnchoredDomains,
+  competitorsAnchoredByDomain,
+  domainsShownInPrompt
+} from "@/lib/recommendations/anchored-domains";
 import { checkGenerationRateLimit } from "@/lib/recommendations/generation-rate-limit";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
@@ -412,25 +417,40 @@ export async function rewriteRecommendationCore({
       domain_anchored_competitors_count: domainAnchoredCompetitors.length
     });
 
+    const llmInput = {
+      brand: project.brand,
+      domain: project.domain,
+      language: project.language,
+      recommendationType: recommendation.recommendation_type,
+      ruleTitle: recommendation.title,
+      ruleDescription: recommendation.description,
+      whyThisMatters: evidence.why_this_matters ?? "",
+      affectedPrompts: evidence.affected_prompts ?? [],
+      mentionedCompetitors: promptCompetitors,
+      citationDomains: anchoredDomains,
+      dominantCompetitor: evidence.dominant_competitor,
+      evidenceSnippets: evidence.evidence_snippets ?? [],
+      citationPages: evidence.citation_pages
+    };
+
+    /**
+     * Lo que el guardián admite es **lo que el prompt le enseña al modelo**, no
+     * una lista recompuesta campo a campo. Recomponerla falló tres veces por
+     * tres piezas distintas —las páginas citadas (§126), los competidores con
+     * dominio propio (§128) y el TÍTULO de una página citada, que a menudo es
+     * otro dominio (`blog.hubspot.es — "hubspot.es"`, §129)—, y cada vez el
+     * modelo fue rechazado por repetir algo que tenía delante. Derivarlo del
+     * texto del prompt cierra la clase entera: nada de fuera entra, porque el
+     * prompt sólo contiene la evidencia de esta tarjeta.
+     */
+    const promptText = buildRecommendationRewritePrompt(llmInput);
+    const domainsInPrompt = domainsShownInPrompt(promptText);
+
     stage = "gemini_call";
     let rewrite: SolutionContent | null;
     const geminiCallStartedAt = Date.now();
     try {
-      rewrite = await rewriteRecommendation({
-        brand: project.brand,
-        domain: project.domain,
-        language: project.language,
-        recommendationType: recommendation.recommendation_type,
-        ruleTitle: recommendation.title,
-        ruleDescription: recommendation.description,
-        whyThisMatters: evidence.why_this_matters ?? "",
-        affectedPrompts: evidence.affected_prompts ?? [],
-        mentionedCompetitors: promptCompetitors,
-        citationDomains: anchoredDomains,
-        dominantCompetitor: evidence.dominant_competitor,
-        evidenceSnippets: evidence.evidence_snippets ?? [],
-        citationPages: evidence.citation_pages
-      });
+      rewrite = await rewriteRecommendation(llmInput);
     } catch (error) {
       console.error(`${LOG_PREFIX} gemini_call_failed`, {
         project_id: projectId,
@@ -461,7 +481,7 @@ export async function rewriteRecommendationCore({
       title: rewrite.title,
       description: [rewrite.summary, ...rewrite.steps, ...exampleText].join(" "),
       allowedCompetitors: [...allowedCompetitors, ...domainAnchoredCompetitors],
-      allowedDomains: anchoredDomains,
+      allowedDomains: domainsInPrompt,
       trackedCompetitors,
       brandDomain: project.domain
     });
@@ -474,7 +494,7 @@ export async function rewriteRecommendationCore({
         // WHAT it named, not just that it named something — without this the
         // log tells you the guard fired and nothing about why.
         offending: validation.offending,
-        anchored_domains: anchoredDomains,
+        anchored_domains: domainsInPrompt,
         tracked_competitors_count: trackedCompetitors.length
       });
       return { success: false, error: unverifiedFailure(validation.offending) };
@@ -518,7 +538,7 @@ export async function rewriteRecommendationCore({
             // against), which is a superset of citation_domains for the
             // source-gap rules — kept so a later rejection can be diagnosed
             // from the row instead of from a runtime log.
-            anchored_domains: anchoredDomains,
+            anchored_domains: domainsInPrompt,
             dominant_competitor: evidence.dominant_competitor ?? null,
             affected_prompts: evidence.affected_prompts ?? []
           }

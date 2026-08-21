@@ -11804,6 +11804,55 @@ las dos dimensiones.
 
 ---
 
+## 129. El guardián se construía a mano y siempre faltaba una pieza: ahora lee el prompt (2026-08-21)
+
+**Qué pasó.** Con §126 y §128 desplegados, el fundador probó las dos tarjetas.
+*Entrar en fuentes citadas* **funcionó**. La otra falló con el mensaje que §128
+introdujo, y esta vez el mensaje traía el término: **«mencionaba «hubspot.es»,
+que no está en la evidencia»**.
+
+**La causa, visible en la propia tarjeta.** Entre sus páginas citadas aparece
+`"hubspot.es" (blog.hubspot.es)`: el **título** de la página es él mismo un
+dominio, distinto del dominio de la página. El prompt le enseña los dos
+(`- blog.hubspot.es — "hubspot.es"`) y le pide nombrar esa página. Yo había
+anclado el dominio y el host de la URL, pero no el título. El modelo escribió
+lo que tenía delante y el guardián lo descartó.
+
+**Lo que esto significa, que es más que un campo olvidado.** Es la **tercera**
+pieza que faltaba del mismo conjunto: las páginas citadas (§126), los
+competidores con dominio propio (§128) y ahora el título de una página. Tres
+veces el conjunto se recomponía campo a campo, y tres veces la lista se quedó
+corta — porque una lista escrita a mano no puede saber qué le enseña el prompt
+al modelo.
+
+**Qué se decidió.** El conjunto anclado deja de recomponerse: se **deriva del
+texto del prompt**. `buildRecommendationRewritePrompt` se separa de la llamada
+al modelo, el ejecutor lo construye y `domainsShownInPrompt` extrae de él todos
+los tokens con forma de dominio. Lo que el modelo puede nombrar es exactamente
+lo que se le ha enseñado. No abre la mano: el prompt sólo contiene la evidencia
+de esa tarjeta, un test comprueba que el andamiaje fijo del prompt no aporta
+más que `schema.org` y el dominio de la marca, y un dominio que no esté ahí se
+sigue rechazando con su término.
+
+**Y el vocabulario de dominios cambió de dueño.** «Qué token parece un dominio»
+vive ahora en `anchored-domains.ts` y el guardián lo importa, no al revés.
+Estaba duplicado (`normalizeDomain` en los dos ficheros), y con la dependencia
+invertida cualquier suite que mockeara el guardián dejaba al conjunto anclado
+sin extractor: el flujo entero reventaba con un TypeError que **se leía en
+pantalla como «el motor de IA falló»**. Lo cazaron los tests antes de salir de
+aquí.
+
+**Estado de la fase.** *Entrar en fuentes citadas* verificada por el fundador
+en el preview. La segunda tarjeta queda pendiente de su comprobación con este
+arreglo puesto.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`recommendation-rewrite-llm.ts` (el constructor del prompt, ahora exportado),
+`rewrite-validation.ts`, `rewrite-recommendation.ts`; §126 y §128 (las dos
+mitades anteriores del mismo agujero).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
