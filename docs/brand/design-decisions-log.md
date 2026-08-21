@@ -11996,21 +11996,6 @@ A2).
 
 ---
 
-## Cómo mantener este documento
-
-Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
-cambio de header/menú, rediseño de una pantalla) que toque layout, paleta,
-tipografía o patrones de navegación:
-
-1. Añadir una entrada nueva a la zona correspondiente (o crear una zona
-   nueva si no existe) con: qué se decidió, por qué, y qué queda pendiente
-   o roto conocido.
-2. Si una decisión previa queda **sustituida**, no borrarla — marcarla como
-   `superseded por §X` y explicar el porqué del cambio, igual que hace
-   `docs/adr/` con las decisiones técnicas.
-3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
-   técnico aquí (este documento es "qué se decidió", no "cómo se
-   implementó").
 ## 130. La matriz de cobertura llevaba un mes ignorando las citas de ChatGPT (AUDIT-GROUNDED-PARITY-1, 2026-08-21)
 
 **Qué pasaba.** `lib/web-audit/opportunity-matrix.ts` decidía si una cita
@@ -12091,3 +12076,152 @@ habría convertido en «bloqueada» cualquier web que lo use bien.
 siguiente tanda de la misma zona.
 
 ---
+
+## 132. El cohete de la primera misión se pintaba cortado en escritorio — horizontal y luego vertical —, y Auditoría web se había quedado fuera del beat de ascenso (2026-08-20)
+
+**El problema, reportado por el fundador con una captura de escritorio.** En
+Visión general, mientras corre el primer escaneo de un proyecto, el texto de
+`ScanMissionRocket` (título, subtítulo, chiste) aparecía cortado por el borde
+izquierdo — «de 30» en vez de «Lanzamiento 12 de 30», «amientos» en vez de
+«Lanzamientos» — con el cohete descentrado hacia la derecha. Sólo en
+escritorio; en móvil (donde ONBOARDING-ROCKET-1 se validó y aprobó) se veía
+bien.
+
+**La causa.** `.mrk-full` (el envoltorio full-bleed compartido por
+`ScanMissionRocket` y `ReentryMission`, rev.5 del diseño) usa el idiom
+estándar `width: 100vw; margin-inline: calc(50% - 50vw)` para escapar del
+`max-width` y el padding de `.page` y llegar a los bordes reales de la
+pantalla. Ese idiom asume que `.page` está centrado en el viewport
+COMPLETO — cierto en móvil, donde `.shell` colapsa a una columna (≤760px), pero
+falso en escritorio: ahí `.shell` sigue reservando `--sidebar-w` (248px) de
+ancho real en su grid, así que `.dash-content` — el ancestro real de
+`.mrk-full` — es más estrecho que el viewport y está desplazado a la derecha.
+El resultado medido: la caja renderizaba con su borde izquierdo a
+`--sidebar-w / 2` (~124px) del borde del viewport — ni en el borde real (0px)
+ni en el borde de `.dash-content` (248px) — y sobraba esa misma cantidad por
+la derecha, que es lo que dejaba a `.dash-content` con su propio scroll
+horizontal implícito (`tests/pilot/support/journey.ts` ya documentaba ese
+`overflow-x: auto` implícito sin saber que este componente lo estaba
+disparando).
+
+**Qué se decidió.** Un `@media (min-width: 761px)` (el mismo punto de corte
+donde `.shell` deja de colapsar) que rederiva el mismo break-out contra
+`.dash-content` en vez del viewport: `width: calc(100vw - var(--sidebar-w))`
+y un `margin-inline-start` que cancela exactamente el propio centrado/padding
+de `.page` — con un `max(…, 0px)` porque `.page` sólo se centra con margen de
+sobra cuando la columna sidebar+contenido supera `--page-max-w`, algo habitual
+en un monitor ancho y cero en un portátil. El borde derecho no necesita término
+propio: para una caja de bloque en flujo normal, sólo el margen izquierdo y el
+`width` deciden dónde cae, así que un `width` igual al de `.dash-content` ya
+deja el borde derecho exactamente en el borde de `.dash-content` (que coincide
+con el del viewport, sin cambios respecto a la regla base). Dos variables
+nuevas en `:root` (`--page-max-w`, `--page-pad-x`) para que `.page` y esta
+corrección compartan la misma geometría sin dos literales que puedan divergir.
+
+**Por qué no se usó `container-type: inline-size` en `.dash-content`.** Era la
+solución "correcta" de libro — `cqw` resuelve exactamente este problema sin
+tener que rederivar la fórmula a mano. Se descartó porque `container-type`
+implica `contain: layout`, y `contain: layout` convierte al elemento en el
+containing block de cualquier descendiente `position: fixed` — y
+`.dash-content` contiene el modal genérico (`.modal-overlay`), el drawer de
+Prompts (`.drawer`/`.prompt-drawer`) y el popup del tour de onboarding
+(`.ptour-scrim`), todos `position: fixed` y todos pensados para posicionarse
+contra el viewport real. Aplicar `container-type` ahí los habría convertido en
+overlays contenidos dentro de `.dash-content` sin que ninguna pantalla que los
+usa lo supiera — una regresión de superficie mucho mayor que el bug que se
+estaba arreglando, y sin ux-pilot corriendo en este PR para cazarla.
+
+**El fundador probó el fix horizontal en el preview y encontró un segundo
+corte, vertical esta vez — "se sigue cortando, especialmente la primera"
+(captura de escritorio, rampa/ignición).** El texto ya no se veía cortado
+—el fix de arriba funcionaba— pero la base del cohete (toberas, llamas) se
+veía recortada por el borde inferior de la pantalla. Causa distinta a la
+primera, y no provocada por este PR: rampa/ignición (`PadScene`) son las
+únicas dos escenas que anidan su SVG un nivel más adentro, dentro de
+`.mrk-pad-wrap`, para dejarle sitio a `.mrk-ground` apilada debajo — las
+demás escenas (ascenso, órbita, entrega) montan su SVG directamente en
+`.mrk-scene-slot`. La regla de escritorio `.mrk-sky { height: 100% }` asume un
+padre directo con altura definida; a través de `.mrk-pad-wrap` (sin altura
+propia, sólo `width: 100%`) ese porcentaje caía a `auto`, así que el SVG se
+dimensionaba por su propia proporción (`viewBox="0 0 400 228"`, ancho y bajo)
+en vez de por la caja de la escena — más alto de lo debido en cuanto se suma
+la banda del suelo encima de eso, y el sobrante desbordaba la caja de
+`.mrk-full` por arriba Y por abajo; `overflow: hidden` ahí recortaba en
+silencio la base del cohete.
+
+*Primer intento, descartado por circular.* `.mrk-pad-wrap { height: 100% }` +
+`.mrk-sky { height: calc(100% - var(--mrk-ground-h)) }` parecía la corrección
+obvia, y NO funciona: dentro del grid de `.mrk-scene-slot` (una fila implícita
+sin `grid-template-rows`, donde `place-items` sólo alinea, nunca dimensiona la
+pista), un hijo con altura porcentual y una fila `auto` pueden entrar en
+referencia circular — medido con Playwright contra un fixture con el CSS real:
+la fila se dimensionó por el contenido del propio `.mrk-pad-wrap` (674px) en
+vez de por los 640px de `.mrk-scene-slot`, el mismo desbordamiento un nivel
+más arriba. **La corrección real:** `.mrk-pad-wrap { position: absolute; inset:
+0 }`, que saca a `.mrk-pad-wrap` del grid entero — igual que `.mrk-scene-slot`
+ya saca su propia caja de `.mrk-canvas` — así que su altura nunca depende de
+su contenido, y `--mrk-ground-h` (variable nueva, la comparten `.mrk-ground` y
+el `calc()` del SVG) reparte esa altura garantizada entre el SVG y el suelo sin
+que la suma pueda pasarse. Verificado con el mismo fixture en cinco anchos
+(1280 a 2560px): `overflowTop=false, overflowBottom=false` en los cinco, y las
+escenas de hijo directo (ascenso/órbita/entrega) sin cambios, confirmado aparte.
+
+**Segunda pieza, pedida por el fundador en el mismo hilo: Auditoría web se
+había quedado fuera del beat de ascenso.** ONBOARDING-ROCKET-1 (2026-08-08)
+hizo que `FirstScanTakeover` sustituyera la pantalla entera en Visión general,
+Prompts, Competidores, Recomendaciones y Páginas citadas mientras dura el
+primer escaneo de un proyecto — pero no en Auditoría web, que seguía enseñando
+la tarjeta estática «Todavía no hay ningún escaneo completado» aunque el
+escaneo estuviera corriendo en ese mismo instante. `lib/web-audit/page-data.ts`
+no consultaba `scan_runs` en busca de un run `pending`/`running` — sólo el
+último `completed`, para `hasCompletedScan`. Se añadió esa segunda consulta
+(mismo patrón que las otras cuatro pantallas: 5 runs más recientes de
+cualquier estado, `withAnalysisProgress` para las cifras de la etapa de
+análisis) y una rama nueva `!hasCompletedScan && activeRun` que renderiza
+`FirstScanTakeover`, delante de la tarjeta vacía existente.
+
+**La reentrada YA estaba cubierta — no hizo falta escribir nada nuevo para
+ella.** SCAN-STATES-3 (`ReentryMission`) ya renderiza en exactamente esta
+pantalla cuando `!summary && !technicalSnapshot && auditIsRunning`, es decir,
+"primera auditoría de este dominio, en marcha". En cuanto el primer escaneo
+termina, `hasCompletedScan` pasa a `true` y dentro de un instante la auditoría
+automática post-escaneo (AUDIT-AFTER-SCAN-1) arranca — la misión sigue de
+ascenso a reentrada sin ninguna rama nueva, porque las dos ya estaban
+escritas para "nada que tapar" y sólo faltaba que la primera se alcanzara
+desde esta pantalla.
+
+**Qué no se tocó.** Ni `components/scan-mission-rocket.tsx`, ni
+`components/reentry-mission.tsx`, ni `lib/scan/mission-beats.ts` —
+`.claude/rules/mission-rocket.md` sólo exige avisar/actualizar el otro cohete
+cuando cambia la silueta, la paleta o las escenas, y este PR no toca ninguna
+de las dos misiones, sólo el envoltorio CSS que ambas comparten y el punto
+donde una de ellas se monta. Tampoco se movieron las clases `.mrk-*` a
+`console.css` aunque `.claude/rules/styles.md` diría que les corresponde (sólo
+se usan bajo `app/dashboard/**`) — mover 150 líneas de cascada activa un tipo
+de riesgo distinto (los ~16 solapes de orden ya documentados) y no es lo que
+este PR estaba arreglando.
+
+**Trazabilidad.** `app/globals.css` (`.mrk-full`, `--page-max-w`,
+`--page-pad-x`, `.mrk-pad-wrap`, `--mrk-ground-h`); `lib/web-audit/page-data.ts`
+y su test (`activeRun`); `app/dashboard/projects/[projectId]/web-audit/page.tsx`;
+log §55 (ONBOARDING-ROCKET-1, la decisión original de las cinco pantallas);
+log §57 (SCAN-STATES-3 / `ReentryMission`); `.claude/rules/mission-rocket.md`;
+`.claude/rules/styles.md` (nueva regla, cascada del break-out con sidebar).
+
+---
+
+## Cómo mantener este documento
+
+Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
+cambio de header/menú, rediseño de una pantalla) que toque layout, paleta,
+tipografía o patrones de navegación:
+
+1. Añadir una entrada nueva a la zona correspondiente (o crear una zona
+   nueva si no existe) con: qué se decidió, por qué, y qué queda pendiente
+   o roto conocido.
+2. Si una decisión previa queda **sustituida**, no borrarla — marcarla como
+   `superseded por §X` y explicar el porqué del cambio, igual que hace
+   `docs/adr/` con las decisiones técnicas.
+3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
+   técnico aquí (este documento es "qué se decidió", no "cómo se
+   implementó").
