@@ -458,3 +458,55 @@ describe("buildTechnicalIssuesReport — integration against the real page-check
     );
   });
 });
+
+/**
+ * AUDIT-SNIPPET-1. Tres estados, y el tercero es el que la lección de R3
+ * obliga a respetar: una instantánea anterior a esta fase no se declara
+ * limpia, se excluye de ambas listas.
+ */
+describe("buildTechnicalIssuesReport — snippet_blocked", () => {
+  it("marca crítico y SIN puntos cuando la página prohíbe el fragmento", () => {
+    const check = passingCheck(100);
+    check.indexability!.snippetBlocks = [{ directive: "nosnippet", source: "header" }];
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", check)], botsReport());
+
+    const issue = findIssue(report.issues, "snippet_blocked");
+    expect(issue).toBeDefined();
+    expect(issue!.severity).toBe("critical");
+    // Sin puntos a propósito: dárselos movería readiness_score, que es
+    // componente del GEO Score con pesos aprobados por el fundador.
+    expect(issue!.pointDelta).toBeNull();
+    expect(issue!.affectedLabels).toEqual(["https://acme.com/a"]);
+  });
+
+  it("no mueve ni la nota real ni la proyectada", () => {
+    const blocked = passingCheck(100);
+    blocked.indexability!.snippetBlocks = [{ directive: "nosnippet", source: "meta" }];
+    const withBlock = buildTechnicalIssuesReport([page("https://acme.com/a", blocked)], botsReport());
+
+    const cleanCheck = passingCheck(100);
+    cleanCheck.indexability!.snippetBlocks = [];
+    const withoutBlock = buildTechnicalIssuesReport([page("https://acme.com/a", cleanCheck)], botsReport());
+
+    expect(withBlock.actualReadinessScore).toBe(withoutBlock.actualReadinessScore);
+    expect(withBlock.projectedReadinessScore).toBe(withoutBlock.projectedReadinessScore);
+    expect(withBlock.totalPointPotential).toBe(withoutBlock.totalPointPotential);
+  });
+
+  it("cuenta como aprobado cuando se midió y estaba limpio", () => {
+    const check = passingCheck(100);
+    check.indexability!.snippetBlocks = [];
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", check)], botsReport());
+    expect(report.passing.map((p) => p.check)).toContain("snippet_blocked");
+    expect(findIssue(report.issues, "snippet_blocked")).toBeUndefined();
+  });
+
+  it("una instantánea anterior a esta fase no aparece ni como fallo ni como aprobado", () => {
+    // `passingCheck()` no trae `snippetBlocks`: nunca medido. Afirmar aquí que
+    // pasa sería decirle al cliente que su web permite fragmentos sin haberlo
+    // mirado nunca.
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], botsReport());
+    expect(findIssue(report.issues, "snippet_blocked")).toBeUndefined();
+    expect(report.passing.map((p) => p.check)).not.toContain("snippet_blocked");
+  });
+});
