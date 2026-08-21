@@ -11506,3 +11506,76 @@ tipografía o patrones de navegación:
    implementó").
 
 ---
+
+## 123. El hero de la portada estrena aura, y no reutiliza la de /geo (HERO-AURA-1, 2026-08-21)
+
+**Origen.** Fundador, 2026-08-21: el hero de la portada necesitaba un fondo con
+más presencia. Se dibujaron seis en un lienzo de diseño y se eligió el quinto.
+Task Intake aprobado el mismo día, con el alcance recortado a **sólo el fondo**
+(ver "Lo que no entró").
+
+**Cómo se eligió.** Los tres primeros fondos eran patrones de líneas —malla
+diagonal, constelación de fuentes, topografía— y el fundador los descartó
+entera y explícitamente a favor de luz difusa. El cuarto subió intensidad; el
+sexto calcó una referencia externa píxel a píxel, renderizando en Chromium a
+1681 px y corrigiendo contra la captura en cinco pasadas. Ganó el **quinto**:
+la misma forma circular que el cuarto con los bordes tres veces más anchos y la
+mitad de opacidad. **Se eligió por discreto**, y ése es el criterio que hay que
+preservar si alguien lo retoca; subirle la voz lo convierte en el cuarto, que
+ya se había descartado.
+
+**La geometría, y por qué importa.** Cada lazo es un círculo cuyo centro cae
+fuera del encuadre, a 520 px del lateral. La banda blanca se pinta al 92 % del
+radio con caída del 84 % al 99 %, así que el arco cruza la altura de su centro
+a `0,92·r − 520` px del borde: 124, 354 y 602 px para los tres radios. **Radio
+grande = curva suave.** Los intentos previos ponían el centro pegado al borde
+con radios de 700-1200 px, y eso da curvas cerradas que cruzan el titular en
+diagonal en vez de rozar el lateral — fue el fallo que costó dos iteraciones
+enteras de diseño antes de identificarlo.
+
+**Los dos cortes responsive no son redondeos a ojo**, salen de esa fórmula: los
+lazos exteriores se solapan en el centro por debajo de 1204 px (602·2) y los
+medios por debajo de 708 px (354·2). De ahí `max-width: 1200px` (retira el
+tercer lazo) y `max-width: 760px` (juego corto de móvil).
+
+**En móvil se reparametriza, no se escala.** Los círculos de 2480 px se quedan
+enteros fuera de un encuadre de 390 px. El centro se aleja del borde (−300), baja
+(430/400) para que los lazos pasen por la banda del botón y no por el titular
+—que en móvil ocupa el ancho entero y no deja hueco lateral como en escritorio—
+y quedan **dos** lazos por lado cruzando a 35 y 120 px. Tres no caben fuera del
+medio, y apretarlos para que quepan es lo contrario de separarlos: el fundador
+pidió expresamente más blanco en el centro tras ver la primera versión con tres.
+
+**No reutiliza `.onb-aurora`, a propósito.** Esa clase son cuatro manchas
+animadas en bucle más dos anillos girando, y la sirven `/geo`, `/pricing`, las
+portadas del blog y una sección inferior de la propia landing: tocarla habría
+arrastrado cinco superficies para cambiar una. El hero de la portada **no la
+usaba** —sólo tenía un degradado plano—, así que el aura nueva (`.ha-*`) es
+puramente aditiva y `.onb-aurora` queda intacta. Efecto secundario bueno: el
+fondo nuevo es estático, sin animaciones ni `will-change`, así que no necesita
+nada bajo `prefers-reduced-motion`.
+
+**Lo que NO se aísla, y por qué.** `.lp-hero--home` no crea contexto de
+apilamiento. Dentro vive `PublicHeader`, y su cajón móvil es
+`position: fixed; z-index: 320` (`.lp-mobnav`, velo a 310): aislar el hero lo
+encerraría dentro y lo dejaría por debajo de lo que hay fuera. La capa va a
+`z-index: 0`, por debajo de la cabecera pegajosa (50) y del contenido (2). El
+único hijo estático que quedaba por debajo era `.lp-promo` —y los estáticos se
+pintan antes que cualquier posicionado, así que el aura le teñía el ámbar—, que
+sube con `position: relative; z-index: 1`.
+
+**Lo que no entró.** Las maquetas llevan titular, bajada y una tarjeta-demo de
+ChatGPT que **no son los de producción**. Ese rediseño del hero no está
+aprobado: se separó explícitamente en el Task Intake y necesita el suyo propio.
+Quien abra `docs/design-reference/hero-aura-1/` y vea que el texto no coincide
+con la portada real, que sepa que es deliberado.
+
+**Comprobado.** `pnpm test` (2672) y `pnpm run validate` en verde, y la landing
+real renderizada en Chromium a 1440/1280/1024/980/760/640/390/375 px: sin
+desbordamiento horizontal en ninguno, seis lazos por encima de 1200 px y cuatro
+por debajo, `.lp-promo` en `z-index: 1`.
+
+**Pendiente / conocido.** A 980 px la cabecera pública desborda —los enlaces se
+parten a tres líneas y "Prueba gratis" se sale— pero es anterior a este cambio y
+no lo toca esta fase: el aura es una capa `pointer-events: none` dentro de un
+contenedor con `overflow: hidden` y no puede afectar al layout de la nav.
