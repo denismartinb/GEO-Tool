@@ -18,10 +18,105 @@ const FEATURES: Array<{ icon: string; t: string; d: string }> = [
   { icon: "sparkles", t: "Soluciones generadas", d: "Genera el FAQ, el schema o el contenido que falta con un clic, listo para publicar." }
 ];
 
-const STEPS: Array<{ n: string; icon: string; t: string; d: string }> = [
-  { n: "1", icon: "search", t: "Analiza", d: "Leemos el contenido real de tu dominio y lanzamos tus prompts clave en los principales motores de IA." },
-  { n: "2", icon: "competitors", t: "Compara", d: "Medimos tu mención, cita y cuota de voz frente a tus competidores directos, prompt a prompt." },
-  { n: "3", icon: "recs", t: "Implementa", d: "Recibes un plan priorizado y generas las soluciones de contenido y técnicas con un clic." }
+
+/**
+ * HOME-2026-08 Fase B1 — los cuatro pasos de «Mides, entiendes, arreglas y
+ * mejoras». Las tarjetas son maquetas del producto, no datos de nadie.
+ *
+ * **Los puntos del paso 03 son los REALES, no los del artboard.** La maqueta
+ * ponía «+12» a los datos estructurados, «+8» a la intro y «+6» a `llms.txt`.
+ * En el producto el peso de los datos estructurados es 15 y el de la intro
+ * respuesta-primero es 5 (`WEIGHT`, `lib/web-audit/issues.ts`), y `llms.txt`
+ * es un aviso con `pointDelta: null` — el producto se niega a atribuirle
+ * puntos a propósito. Publicar «+6 pts» ahí habría sido inventar una métrica
+ * que la pantalla real nunca enseña (CLAUDE.md, "no fake metrics"). Los
+ * rótulos también son los del producto («Datos estructurados», «Intro
+ * respuesta-primero», «llms.txt»), copiados de `issue-rows.tsx`, para que
+ * quien llegue a la auditoría reconozca lo que vio en la portada.
+ */
+const HOW_STEPS: Array<{ n: string; t: string; d: string; sheet: ReactNode }> = [
+  {
+    n: "01",
+    t: "Mides tu visibilidad",
+    d: "Tus prompts se lanzan en los motores de IA. Cuántas veces te nombran y cuántas te citan como fuente: son dos problemas distintos con soluciones distintas.",
+    sheet: (
+      <div className="lp-sheet">
+        {[
+          { m: "IKEA", v: 24, tone: "own" },
+          { m: "Leroy Merlin", v: 21, tone: "" },
+          { m: "Maisons du Monde", v: 18, tone: "" }
+        ].map((r) => (
+          <div className="lp-sheet-row" key={r.m}>
+            <span className="lp-sheet-name">{r.m}</span>
+            <span className="lp-sheet-bar">
+              <span className={`fill ${r.tone}`} style={{ width: `${(r.v / 24) * 100}%` }} />
+            </span>
+            <span className="lp-sheet-num">{r.v}%</span>
+          </div>
+        ))}
+      </div>
+    )
+  },
+  {
+    n: "02",
+    t: "Entiendes por qué",
+    d: "Un modelo construye su respuesta a partir de páginas concretas. Te enseñamos cuáles son y quién sale citado en ellas.",
+    sheet: (
+      <div className="lp-sheet">
+        <div className="lp-sheet-src">
+          <span className="lp-sheet-fav">EM</span>
+          <span className="lp-sheet-name">elmueble.com</span>
+          <span className="lp-sheet-meta">10 citas · cita a 3 rivales</span>
+        </div>
+        <div className="lp-sheet-flag">No te cita</div>
+        <blockquote className="lp-sheet-quote">
+          «…según elmueble.com, las mejores opciones son Maisons du Monde y Kave Home…»
+        </blockquote>
+      </div>
+    )
+  },
+  {
+    n: "03",
+    t: "Arreglas tu web",
+    d: "Antes de pelear por que te recomienden, hay que poder leerte. Para cada fallo estimamos los puntos que ganarías al corregirlo.",
+    sheet: (
+      <div className="lp-sheet">
+        {[
+          { t: "Datos estructurados", p: "+15 pts" },
+          { t: "Intro respuesta-primero", p: "+5 pts" },
+          { t: "llms.txt", p: "aviso" }
+        ].map((f) => (
+          <div className="lp-sheet-fix" key={f.t}>
+            <span className="lp-sheet-name">{f.t}</span>
+            <span className={`lp-sheet-pts ${f.p === "aviso" ? "warn" : ""}`}>{f.p}</span>
+          </div>
+        ))}
+        <div className="lp-sheet-fix lp-sheet-fix--ok">
+          <span className="lp-sheet-name">GPTBot con acceso permitido</span>
+          <Icon name="shield" size={15} />
+        </div>
+      </div>
+    )
+  },
+  {
+    n: "04",
+    t: "Mejoras tu presencia",
+    d: "Cada acción trae su solución generada: las FAQ, el schema, la página que falta. El siguiente escaneo mide si funcionó.",
+    sheet: (
+      <div className="lp-sheet">
+        <div className="lp-sheet-gen">
+          <span className="lp-sheet-name">Solución generada</span>
+          <span className="lp-sheet-ready">Lista para publicar</span>
+        </div>
+        <pre className="lp-sheet-code">{'<script type="application/ld+json">\n{ "@type": "FAQPage", … }\n</script>'}</pre>
+        <div className="lp-sheet-delta">
+          <span className="lp-sheet-before">antes 48</span>
+          <span className="lp-sheet-after">71</span>
+          <span className="lp-sheet-gain">+23 pts</span>
+        </div>
+      </div>
+    )
+  }
 ];
 
 const SPOTLIGHT_ITEMS: Array<{ t: string; d: string }> = [
@@ -117,24 +212,102 @@ export function LandingPage() {
           el campo de dominio. Mantener las dos dejaba los mismos tres nombres
           repetidos a cien píxeles de distancia. */}
 
-      {/* HOW IT WORKS */}
-      <section className="lp-section alt" id="como">
+      {/* EL CAMBIO DE REGLAS — HOME-2026-08 Fase B1. Sección nueva: es la que
+          explica por qué el producto existe antes de contar qué hace. */}
+      <section className="lp-section lp-rules">
         <div className="lp-inner">
           <div className="lp-sec-head">
-            <div className="lp-kicker">Cómo funciona</div>
-            <h2 className="lp-h2">De cero a un plan de acción en tres pasos</h2>
-            <p className="lp-sec-sub">Sin configuración compleja. Introduce tu dominio y deja que GenScore haga el análisis.</p>
+            <div className="lp-kicker">El cambio de reglas</div>
+            <h2 className="lp-h2">
+              En Google competías por un clic.<br />
+              En la IA compites por ser la respuesta.
+            </h2>
+            <p className="lp-sec-sub">
+              Quien pregunta a un modelo <strong>no recibe diez enlaces para elegir: recibe una
+              recomendación</strong> con dos o tres marcas. <strong>O estás en esa frase, o no existes.</strong>
+            </p>
           </div>
-          <div className="lp-steps">
-            {STEPS.map((s) => (
-              <div className="lp-step" key={s.n}>
-                <div className="num">{s.n}</div>
-                <Icon name={s.icon} size={20} className="ico-tag" />
-                <h3>{s.t}</h3>
-                <p>{s.d}</p>
+
+          <div className="lp-rules-pair">
+            <article className="lp-rules-card">
+              <div className="lp-rules-tag">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/engines/google.svg" alt="" width={16} height={16} aria-hidden="true" />
+                Búsqueda tradicional · SEO
               </div>
-            ))}
+              <div className="lp-rules-query">
+                <Icon name="search" size={15} />
+                mejores tiendas de muebles calidad precio
+              </div>
+              <ol className="lp-serp">
+                <li><span className="t">Las 12 mejores tiendas de muebles en 2026</span><span className="u">elmueble.com</span></li>
+                <li><span className="t">Muebles de salón | Maisons du Monde</span><span className="u">maisonsdumonde.com</span></li>
+                <li><span className="t">IKEA — Muebles y decoración para tu hogar</span><span className="u">ikea.es</span></li>
+              </ol>
+              <p className="lp-rules-foot">Compites por la <strong>posición</strong>. El usuario elige un enlace.</p>
+            </article>
+
+            <div className="lp-rules-arrow" aria-hidden="true">
+              <Icon name="arrRight" size={17} />
+            </div>
+
+            <article className="lp-rules-card lp-rules-card--geo">
+              <div className="lp-rules-tag lp-rules-tag--geo">
+                <Icon name="sparkles" size={15} />
+                Respuesta generativa · GEO
+              </div>
+              <div className="lp-rules-ask">¿Qué tienda de muebles tiene mejor relación calidad-precio?</div>
+              <div className="lp-rules-answer">
+                Para calidad-precio, las opciones más recomendadas son <mark>Maisons du Monde</mark>, por
+                diseño, y <mark>Kave Home</mark>, por materiales y acabados. Si buscas soluciones a medida,{" "}
+                <mark>Leroy Merlin</mark> es la alternativa habitual…
+              </div>
+              <div className="lp-rules-src">
+                <Icon name="link" size={13} />
+                Fuentes: elmueble.com, micasarevista.com
+              </div>
+              <p className="lp-rules-foot">Compites por la <strong>mención</strong>. La IA ya ha respondido por ti.</p>
+            </article>
           </div>
+        </div>
+      </section>
+
+      {/* CÓMO FUNCIONA — la única superficie oscura de la zona pública.
+          Conserva `id="como"` porque el enlace del nav apunta ahí y el nav es
+          fuente única de las ~57 páginas públicas: cambiarlo aquí las rompe
+          todas.
+
+          SIN REVELACIÓN POR SCROLL, y es una decisión. El artboard entra las
+          cuatro tarjetas con `IntersectionObserver`. Montarlo pediría una isla
+          de cliente en una página que PRELAUNCH-HARDENING-1 Fase V dejó
+          server-rendered a propósito —el campo del hero es la única isla— y el
+          precio sería hidratar seis secciones de markup que no cambian nunca,
+          a cambio de un fundido. El contenido se pinta y se lee igual. */}
+      <section className="lp-section lp-how" id="como">
+        <div className="lp-inner">
+          <div className="lp-sec-head">
+            <div className="lp-kicker lp-kicker--dark">Cómo funciona</div>
+            <h2 className="lp-h2 lp-h2--dark">
+              Mides, entiendes,<br />arreglas y mejoras
+            </h2>
+            <p className="lp-sec-sub lp-sec-sub--dark">
+              La mayoría de herramientas te dicen si te mencionan. GenScore te da el trabajo hecho.
+            </p>
+          </div>
+
+          <ol className="lp-how-rail">
+            {HOW_STEPS.map((step) => (
+              <li className="lp-how-step" key={step.n}>
+                <div className="lp-how-text">
+                  <div className="lp-how-num">{step.n}</div>
+                  <h3 className="lp-how-h3">{step.t}</h3>
+                  <p>{step.d}</p>
+                </div>
+                <div className="lp-how-dot" aria-hidden="true" />
+                <div className="lp-how-sheet">{step.sheet}</div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 

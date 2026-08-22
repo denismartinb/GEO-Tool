@@ -4850,6 +4850,202 @@ a.notif-row:hover {
    motores a 20 px de icono y 13 de texto. El corte coincide con el
    `max-width` del campo a propósito: es el ancho a partir del cual la píldora
    deja de tener holgura, no un número redondo. */
+/* ==================================================================
+   HOME-2026-08 Fase B1 — «El cambio de reglas» y «Cómo funciona».
+   Diseño aprobado en `docs/design-reference/home-2026-08/`.
+   ================================================================== */
+
+/* --- El cambio de reglas: SEO frente a GEO, dos tarjetas y una flecha --- */
+/* `stretch` y no `center`: en el artboard las dos tarjetas empiezan a la
+   misma altura y se estiran a la del par. Centradas, la de GEO —más corta—
+   quedaba flotando por debajo de la de SEO. La flecha sí se centra sola. */
+.lp-rules-pair {
+  display: grid; grid-template-columns: 1fr 56px 1fr; align-items: stretch;
+  gap: 0; margin-top: 56px;
+}
+.lp-rules-arrow { align-self: center; }
+.lp-rules-card {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg, 16px);
+  padding: 20px; box-shadow: 0 10px 34px rgba(16,24,40,.06);
+}
+.lp-rules-card--geo { border-color: rgba(37,99,235,.22); box-shadow: 0 14px 40px rgba(37,99,235,.10); }
+.lp-rules-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface-2); border-radius: 999px; padding: 6px 12px;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-2);
+}
+.lp-rules-tag img { display: block; }
+.lp-rules-tag--geo { background: var(--accent-soft); color: var(--brand-blue); }
+.lp-rules-query {
+  display: flex; align-items: center; gap: 8px; margin-top: 16px;
+  border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px;
+  font-size: 13.5px; color: var(--ink-3);
+}
+.lp-serp { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 14px; }
+.lp-serp li { display: grid; gap: 3px; }
+.lp-serp .t { font-size: 14px; font-weight: 650; color: var(--brand-blue); }
+.lp-serp .u { font-size: 12.5px; color: #3f8c5c; }
+.lp-rules-ask {
+  margin-top: 16px; background: var(--surface-2); border-radius: 12px;
+  padding: 11px 14px; font-size: 13.5px; font-weight: 650; color: var(--ink);
+}
+.lp-rules-answer {
+  margin-top: 12px; border: 1px solid var(--line-soft, var(--line)); border-radius: 12px;
+  padding: 13px 15px; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); font-style: italic;
+}
+/* `mark` y no un `span`: son las marcas que el motor nombra, que es
+   literalmente el hecho que el producto mide. El resaltado es semántico. */
+.lp-rules-answer mark {
+  background: var(--accent-soft); color: var(--brand-blue);
+  border-radius: 5px; padding: 1px 5px; font-style: normal; font-weight: 600;
+}
+.lp-rules-src {
+  display: flex; align-items: center; gap: 6px; margin-top: 12px;
+  font-size: 12px; color: var(--ink-4);
+}
+.lp-rules-foot {
+  margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line);
+  font-size: 13px; color: var(--ink-3);
+}
+.lp-rules-arrow {
+  display: grid; place-items: center; width: 34px; height: 34px; margin: 0 auto;
+  border-radius: 999px; background: #fff; border: 1px solid var(--line);
+  color: var(--brand-blue); box-shadow: 0 4px 14px rgba(16,24,40,.08);
+}
+
+/* --- Cómo funciona: la ÚNICA superficie oscura de la zona pública ---------
+   Los tokens de tinta del sitio están calculados sobre blanco, así que aquí
+   no se reutiliza ninguno: sobre #0a1220 no aprobarían contraste. Se declaran
+   colores propios y explícitos (`--line-strong` de `.claude/rules/styles.md`:
+   un token que aprueba AA sobre blanco no lo aprueba sobre otra superficie).  */
+.lp-how {
+  background: #0a1220; color: #e8eefc; position: relative; overflow: hidden;
+}
+.lp-how::before, .lp-how::after {
+  content: ""; position: absolute; border-radius: 999px; pointer-events: none;
+}
+.lp-how::before {
+  top: -260px; left: 12%; width: 820px; height: 640px;
+  background: radial-gradient(closest-side, rgba(37,99,235,.34), rgba(37,99,235,0));
+}
+.lp-how::after {
+  bottom: -300px; right: -60px; width: 780px; height: 640px;
+  background: radial-gradient(closest-side, rgba(9,197,214,.16), rgba(9,197,214,0));
+}
+.lp-how .lp-inner { position: relative; z-index: 1; }
+.lp-kicker--dark { color: var(--brand-cyan); }
+.lp-h2--dark { color: #fff; }
+.lp-sec-sub--dark { color: #93a3bd; }
+
+.lp-how-rail { list-style: none; margin: 84px 0 0; padding: 0; position: relative; }
+/* El raíl es el hilo que une los cuatro pasos. Va detrás de los puntos. */
+.lp-how-rail::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+  transform: translateX(-.5px);
+  background: linear-gradient(180deg, rgba(37,99,235,0), rgba(37,99,235,.55) 12%, rgba(9,197,214,.55) 88%, rgba(9,197,214,0));
+}
+.lp-how-step {
+  display: grid; grid-template-columns: 1fr 96px 1fr; align-items: center;
+  margin-bottom: 96px;
+}
+.lp-how-step:last-child { margin-bottom: 0; }
+/* Los tres `order` son OBLIGATORIOS, no decorativos. `.lp-how-dot` lleva
+   `order: 2` para poder cruzarse en los pasos pares; si texto y hoja se
+   quedan en el 0 por defecto, la rejilla los coloca a los dos ANTES que el
+   punto y la hoja acaba en la columna del raíl —96 px— estrujada y con su
+   contenido fuera de la caja. Numerarlos los tres deja el orden explícito. */
+.lp-how-text { order: 1; padding-right: 56px; text-align: right; }
+.lp-how-sheet { order: 3; padding-left: 56px; }
+/* Los pasos pares se cruzan: texto a la derecha, tarjeta a la izquierda. El
+   raíl queda siempre en medio. */
+.lp-how-step:nth-child(even) .lp-how-text {
+  order: 3; padding-right: 0; padding-left: 56px; text-align: left;
+}
+.lp-how-step:nth-child(even) .lp-how-sheet { order: 1; padding-left: 0; padding-right: 56px; }
+.lp-how-dot {
+  order: 2; justify-self: center; width: 13px; height: 13px; border-radius: 999px;
+  background: var(--brand-cyan); box-shadow: 0 0 0 5px rgba(9,197,214,.16);
+  position: relative; z-index: 1;
+}
+.lp-how-num {
+  font-family: var(--font-display, inherit); font-size: 13px; font-weight: 700;
+  letter-spacing: .12em; color: var(--brand-cyan);
+}
+.lp-how-h3 { margin: 16px 0 0; font-size: 23px; font-weight: 750; color: #fff; }
+.lp-how-text p { margin: 12px 0 0; font-size: 15px; line-height: 1.7; color: #93a3bd; }
+
+/* La «hoja»: la maqueta de producto de cada paso. */
+.lp-sheet {
+  background: #fff; color: var(--ink); border-radius: 14px; padding: 14px 16px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.36); display: grid; gap: 10px;
+}
+.lp-sheet-row, .lp-sheet-fix, .lp-sheet-src, .lp-sheet-gen, .lp-sheet-delta {
+  display: flex; align-items: center; gap: 10px; font-size: 13px;
+}
+.lp-sheet-name { font-weight: 600; }
+.lp-sheet-row .lp-sheet-name { width: 118px; flex: 0 0 auto; }
+.lp-sheet-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.lp-sheet-bar .fill { display: block; height: 100%; border-radius: 999px; background: var(--ink-4); }
+.lp-sheet-bar .fill.own { background: var(--brand-blue); }
+.lp-sheet-num { width: 42px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.lp-sheet-fav {
+  width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+  background: var(--surface-2); font-size: 10px; font-weight: 700; color: var(--ink-3);
+}
+.lp-sheet-meta { margin-left: auto; font-size: 11.5px; color: var(--ink-4); }
+.lp-sheet-flag {
+  align-self: start; background: #fdecec; color: #b42318; border-radius: 999px;
+  padding: 4px 10px; font-size: 11.5px; font-weight: 650;
+}
+.lp-sheet-quote {
+  margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); font-style: italic;
+}
+.lp-sheet-pts {
+  margin-left: auto; background: var(--accent-soft); color: var(--brand-blue);
+  border-radius: 999px; padding: 3px 9px; font-size: 11.5px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* `llms.txt` no lleva puntos porque el producto no se los da: se pinta como
+   aviso, no como ganancia. Ver el comentario de `HOW_STEPS`. */
+.lp-sheet-pts.warn { background: #fff4e5; color: #8a5a08; }
+.lp-sheet-fix--ok { color: var(--ink-3); }
+.lp-sheet-fix--ok .lp-sheet-name { font-weight: 500; }
+.lp-sheet-fix--ok svg { margin-left: auto; color: #3f8c5c; }
+.lp-sheet-ready {
+  margin-left: auto; background: #e8f6ee; color: #256b45; border-radius: 999px;
+  padding: 3px 9px; font-size: 11.5px; font-weight: 650;
+}
+.lp-sheet-code {
+  margin: 0; background: var(--surface-2); border-radius: 9px; padding: 10px 12px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.6; color: var(--ink-2);
+  white-space: pre-wrap; word-break: break-word;
+}
+.lp-sheet-before { color: var(--ink-4); text-decoration: line-through; }
+.lp-sheet-after { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lp-sheet-gain {
+  margin-left: auto; background: #e8f6ee; color: #256b45; border-radius: 999px;
+  padding: 3px 9px; font-size: 11.5px; font-weight: 700;
+}
+
+/* Por debajo de 900 px el raíl central deja de tener sitio: los pasos pasan a
+   una columna, el hilo se va al borde izquierdo y se acaban los cruces. */
+@media (max-width: 900px) {
+  .lp-rules-pair { grid-template-columns: 1fr; gap: 18px; }
+  .lp-rules-arrow { transform: rotate(90deg); }
+
+  .lp-how-rail::before { left: 6px; }
+  .lp-how-step { grid-template-columns: 13px 1fr; gap: 0 22px; align-items: start; margin-bottom: 56px; }
+  .lp-how-text,
+  .lp-how-step:nth-child(even) .lp-how-text {
+    order: 2; grid-column: 2; padding: 0; text-align: left;
+  }
+  .lp-how-sheet,
+  .lp-how-step:nth-child(even) .lp-how-sheet {
+    order: 3; grid-column: 2; padding: 0; margin-top: 20px;
+  }
+  .lp-how-dot { order: 1; grid-column: 1; grid-row: 1; margin-top: 6px; }
+}
+
 @media (max-width: 560px) {
   /* La cápsula baja del envoltorio al campo: el botón deja de estar dentro del
      recuadro blanco y pasa a ser un bloque propio debajo, con su hueco, como

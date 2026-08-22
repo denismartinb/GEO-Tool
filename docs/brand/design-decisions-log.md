@@ -12770,3 +12770,102 @@ GenScore te propondrá a quién vigilar y qué prompts lanzar», que es el subt�
 del paso 1 del tour, no copy del hero: sigue siendo cierto del producto, pero
 convive raro con un botón que ahora lleva al comprobador. Se va solo cuando la
 Fase A2 sustituya ese bloque.
+
+---
+
+## 143. La portada estrena «El cambio de reglas» y una sección oscura, y tres cifras del artboard no eran ciertas (HOME-2026-08 Fase B1, 2026-08-22)
+
+**Origen.** Continuación del Task Intake de HOME-2026-08, aprobado el
+2026-08-22. La Fase B se partió en dos al medirla: B1 son las secciones
+estáticas y B2 es «Cinco pantallas», que resultó ser un **segundo componente
+con estado** —cinco pestañas, quince llaves de plantilla, cinco manejadores de
+clic— y ocupa 28,6 de los 51 KB de toda la fase.
+
+**Y B1 son DOS secciones, no tres.** El plan listaba «Cómo se gana una
+recomendación» como estática; al abrirla resultó ser **la sección del
+testimonio** (Nerea Solís · Nordika Home · +128 %), que estaba asignada a la
+Fase C y sigue pendiente de que el fundador confirme si esa cifra es una
+medición real de esa cuenta. Se movió a C antes de escribir código.
+
+### Lo que entra
+
+1. **«En Google competías por un clic. En la IA compites por ser la
+   respuesta.»** Sección nueva, antes de «Cómo funciona»: explica por qué el
+   producto existe antes de contar qué hace. Dos tarjetas enfrentadas —un SERP
+   de Google y una respuesta generativa— con una flecha entre ellas. Las marcas
+   que el motor nombra van en `<mark>` y no en un `<span>`: que un motor
+   nombre una marca es literalmente el hecho que el producto mide, así que el
+   resaltado es semántico, no decorativo.
+2. **«Mides, entiendes, arreglas y mejoras»**, la **única superficie oscura de
+   la zona pública**. Cuatro pasos alternados a los lados de un raíl vertical,
+   cada uno con su maqueta de producto. Conserva `id="como"` porque el enlace
+   del nav apunta ahí y el nav es fuente única de las ~57 páginas públicas:
+   cambiarlo aquí las rompe todas. Sustituye a «De cero a un plan de acción en
+   tres pasos», que ocupaba ese ancla.
+
+### Tres cifras del artboard que no eran ciertas
+
+La sección oscura dice, en su tercer paso, *«para cada fallo estimamos los
+puntos que ganarías al corregirlo»* — y después enseña números. El artboard
+ponía **+12** a los datos estructurados, **+8** a la intro respuesta-primero y
+**+6** a `llms.txt`. Ninguno coincide con el producto:
+
+| Artboard | Producto (`lib/web-audit/issues.ts`) |
+|---|---|
+| Datos estructurados **+12** | `WEIGHT.structuredData` = **15** |
+| Intro respuesta-primero **+8** | `WEIGHT.answerFirstIntro` = **5** |
+| `llms.txt` **+6** | `pointDelta: null` — **no se le atribuyen puntos** |
+
+El tercero es el grave: `llms_txt_missing` se emite siempre como `warning` con
+`pointDelta: null`, o sea que el producto **se niega a puntuarlo a propósito**.
+Publicar «+6 pts» ahí habría sido inventar una métrica que la pantalla real no
+enseña nunca (CLAUDE.md, "no fake metrics"). Se implementa con los pesos reales
+y `llms.txt` se pinta como lo que es: un aviso, en ámbar, sin puntos.
+
+Los **rótulos** también son los del producto —«Datos estructurados», «Intro
+respuesta-primero», «llms.txt»—, copiados de `issue-rows.tsx` y no reescritos,
+para que quien llegue a la auditoría reconozca lo que vio en la portada.
+
+### Sin revelación por scroll, y es una decisión
+
+El artboard entra las cuatro tarjetas con `IntersectionObserver`. Montarlo
+pediría una isla de cliente en una página que PRELAUNCH-HARDENING-1 Fase V dejó
+server-rendered a propósito —el campo del hero es la única isla—, y el precio
+sería hidratar seis secciones de markup que no cambian nunca a cambio de un
+fundido. El contenido se pinta y se lee igual. Efecto secundario bueno: se
+esquiva la trampa que el README de la referencia describe, la de fotografiar
+las tarjetas a opacidad 0.
+
+### Dos fallos encontrados mirando, no razonando
+
+**El `order` de la rejilla no es decorativo.** `.lp-how-dot` lleva `order: 2`
+para poder cruzarse en los pasos pares. Con texto y hoja en el `0` por defecto,
+la rejilla los colocaba a los dos **antes** que el punto, así que en los pasos
+impares la hoja caía en la columna del raíl —96 px— estrujada a 50 px de ancho
+y con su contenido fuera de la caja. Los pasos pares, que sí tenían `order`
+explícito, salían bien: por eso la mitad de la sección parecía correcta. Ahora
+los tres van numerados.
+
+**Las dos tarjetas del cambio de reglas van `stretch`, no `center`.** Centradas,
+la de GEO —más corta— quedaba flotando por debajo de la de SEO; en el artboard
+las dos empiezan a la misma altura.
+
+### Contraste sobre la superficie oscura, recalculado
+
+`.claude/rules/styles.md` obliga: un token que aprueba AA sobre blanco no lo
+aprueba sobre otra superficie. No se reutiliza ninguno de los tokens de tinta
+del sitio —están calculados sobre blanco—; se declaran colores propios y se
+miden sobre `#0a1220`: cuerpo `#e8eefc` **16,13:1**, párrafos `#93a3bd`
+**7,33:1**, kicker `--brand-cyan` **8,90:1**, titulares `#fff` **18,75:1**.
+Los cuatro pasan AA con holgura.
+
+**Comprobado.** `pnpm test`, `pnpm run validate` y `git diff --check` en verde.
+Landing real desde el build de producción a trece anchuras (1440 → 320 px): sin
+desbordamiento horizontal en ninguna, las cuatro hojas a 514 px en escritorio y
+el raíl al borde izquierdo por debajo de 900 px, donde los pasos pasan a una
+columna y se acaban los cruces.
+
+**Pendiente / conocido.** El `id="como"` ahora lleva a una sección que cuenta
+cuatro pasos, no tres; el texto del nav sigue diciendo «Cómo funciona» y encaja.
+La sección «De cero a un plan de acción en tres pasos» desaparece con sus tres
+pasos: lo que contaba está repartido entre los cuatro nuevos.
