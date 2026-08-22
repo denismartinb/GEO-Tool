@@ -150,3 +150,30 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   ahí, el desvanecido va **en porcentaje**, no en px, para seguir el alto real
   de la sección. Y se verifica sobre una captura de **página completa**, nunca
   sobre el recorte del viewport.
+- **Un modificador `--dark` suelto NO gana a su clase base: califícalo por
+  sección.** `.lp-kicker--dark` y `.lp-kicker` valen los dos (0,1,0), así que
+  decide el orden dentro del fichero — y las clases base de la landing viven
+  al final. El resultado no es un fallo visible: es un color que se declara,
+  se documenta y **no llega a pintarse nunca**. Pasó dos veces en la misma
+  sección: primero con la escala tipográfica (log §143) y, con el diagnóstico
+  ya escrito tres líneas más arriba en el mismo fichero, otra vez con los
+  colores (log §144), donde dejó la bajada de la única superficie oscura del
+  sitio a **2,34:1**, por debajo de AA. Lo que engaña es que uno de los tres
+  modificadores sí funcionaba, y sólo porque su clase base no declaraba
+  `color`. La forma correcta es `.lp-how .lp-kicker--dark` (0,2,0), que deja de
+  depender del orden.
+- **Fidelidad a una maqueta se MIDE en un navegador, no se lee en dos hojas de
+  estilo.** Abrir el `.dc.html` aprobado y la página real en el mismo Chromium
+  y comparar `getComputedStyle` más la caja de cada pareja de elementos
+  encontró 36 diferencias en una sección que ya se había dado por ajustada a
+  ojo (log §144). Y se compara la **distancia**, no la propiedad: un
+  `margin-bottom` de 122px daba un hueco real de 136 porque la fila de al lado
+  centra su contenido; la propiedad coincidía con la maqueta y el resultado no.
+- **Un estado inicial oculto que sólo deshace una isla de cliente esconde la
+  sección entera sin JavaScript.** `opacity: 0` / `scaleX(0)` en el CSS a secas,
+  revelados al llegar una clase que pone `useEffect`, significa que sin JS esa
+  clase no llega nunca (log §144). El estado oculto cuelga de una clase que
+  pone la propia isla —`.is-armed`— y así el servidor pinta siempre algo
+  legible. Mismo espíritu que `prefers-reduced-motion` en
+  `.claude/rules/onboarding.md`: la degradación es el contrato, no una
+  degradación.

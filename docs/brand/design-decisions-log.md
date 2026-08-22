@@ -12770,3 +12770,382 @@ GenScore te propondrá a quién vigilar y qué prompts lanzar», que es el subt�
 del paso 1 del tour, no copy del hero: sigue siendo cierto del producto, pero
 convive raro con un botón que ahora lleva al comprobador. Se va solo cuando la
 Fase A2 sustituya ese bloque.
+
+---
+
+## 143. La portada estrena «El cambio de reglas» y una sección oscura, y tres cifras del artboard no eran ciertas (HOME-2026-08 Fase B1, 2026-08-22)
+
+**Origen.** Continuación del Task Intake de HOME-2026-08, aprobado el
+2026-08-22. La Fase B se partió en dos al medirla: B1 son las secciones
+estáticas y B2 es «Cinco pantallas», que resultó ser un **segundo componente
+con estado** —cinco pestañas, quince llaves de plantilla, cinco manejadores de
+clic— y ocupa 28,6 de los 51 KB de toda la fase.
+
+**Y B1 son DOS secciones, no tres.** El plan listaba «Cómo se gana una
+recomendación» como estática; al abrirla resultó ser **la sección del
+testimonio** (Nerea Solís · Nordika Home · +128 %), que estaba asignada a la
+Fase C y sigue pendiente de que el fundador confirme si esa cifra es una
+medición real de esa cuenta. Se movió a C antes de escribir código.
+
+### Lo que entra
+
+1. **«En Google competías por un clic. En la IA compites por ser la
+   respuesta.»** Sección nueva, antes de «Cómo funciona»: explica por qué el
+   producto existe antes de contar qué hace. Dos tarjetas enfrentadas —un SERP
+   de Google y una respuesta generativa— con una flecha entre ellas. Las marcas
+   que el motor nombra van en `<mark>` y no en un `<span>`: que un motor
+   nombre una marca es literalmente el hecho que el producto mide, así que el
+   resaltado es semántico, no decorativo.
+2. **«Mides, entiendes, arreglas y mejoras»**, la **única superficie oscura de
+   la zona pública**. Cuatro pasos alternados a los lados de un raíl vertical,
+   cada uno con su maqueta de producto. Conserva `id="como"` porque el enlace
+   del nav apunta ahí y el nav es fuente única de las ~57 páginas públicas:
+   cambiarlo aquí las rompe todas. Sustituye a «De cero a un plan de acción en
+   tres pasos», que ocupaba ese ancla.
+
+### Tres cifras del artboard que no eran ciertas
+
+La sección oscura dice, en su tercer paso, *«para cada fallo estimamos los
+puntos que ganarías al corregirlo»* — y después enseña números. El artboard
+ponía **+12** a los datos estructurados, **+8** a la intro respuesta-primero y
+**+6** a `llms.txt`. Ninguno coincide con el producto:
+
+| Artboard | Producto (`lib/web-audit/issues.ts`) |
+|---|---|
+| Datos estructurados **+12** | `WEIGHT.structuredData` = **15** |
+| Intro respuesta-primero **+8** | `WEIGHT.answerFirstIntro` = **5** |
+| `llms.txt` **+6** | `pointDelta: null` — **no se le atribuyen puntos** |
+
+El tercero es el grave: `llms_txt_missing` se emite siempre como `warning` con
+`pointDelta: null`, o sea que el producto **se niega a puntuarlo a propósito**.
+Publicar «+6 pts» ahí habría sido inventar una métrica que la pantalla real no
+enseña nunca (CLAUDE.md, "no fake metrics"). Se implementa con los pesos reales
+y `llms.txt` se pinta como lo que es: un aviso, en ámbar, sin puntos.
+
+Los **rótulos** también son los del producto —«Datos estructurados», «Intro
+respuesta-primero», «llms.txt»—, copiados de `issue-rows.tsx` y no reescritos,
+para que quien llegue a la auditoría reconozca lo que vio en la portada.
+
+### «Pixel perfect» no estaba verificado, y al medirlo no lo era
+
+El fundador preguntó, con el PR ya abierto, si el piloto había comprobado
+tamaños de fuente, espacios y animaciones. **No lo había comprobado, y no lo
+comprueba**: el `ux-pilot` mira que las pantallas carguen con contenido real,
+el contraste y que los controles respondan; **no compara contra el artboard**,
+no hay diff de píxeles ni de tipografía. Y quien implementó tampoco midió:
+construyó desde el marcado y juzgó las capturas a ojo.
+
+Medido después, **ninguna de las siete propiedades comparadas coincidía**,
+porque se reutilizaron las clases del sitio (`.lp-h2`, `.lp-kicker`) en vez de
+la escala del artboard, que es otra:
+
+| | Artboard | Lo que se había implementado |
+|---|---|---|
+| Kicker | 12px/600, `letter-spacing: .14em` | 13px/700, .04em |
+| h2 claro | 42px/700 | 38px/800 |
+| h2 oscuro | 44px/700 | 38px/800 |
+| Bajada | 16px, `line-height: 1.72` | 16,5px, 1.6 |
+| **Número de paso** | **96px** perfilado | **13px** relleno |
+| h3 de paso | 34px/700 | 23px/750 |
+| Cabecera → primer paso | 122px | 84px |
+
+El número de paso era el peor: en el artboard es un «01» de 96 px **vacío, con
+sólo el perfil dibujado** (`color: transparent` + `-webkit-text-stroke`), y se
+había implementado como un rótulo de 13 px relleno. No es una diferencia de
+redondeo, es otro elemento.
+
+**Los selectores van calificados por la sección** (`.lp-how .lp-h2`) y no como
+modificador suelto (`.lp-h2--dark`): las clases base viven más abajo en el
+fichero, así que a igualdad de especificidad ganaban ellas y el titular oscuro
+seguía saliendo a 38 px con la regla nueva puesta. Y el hueco de la cabecera va
+como **un** número (122px) en vez de los «96 + 26» que suman en el artboard,
+porque los márgenes verticales adyacentes se colapsan en el mayor: declararlo
+en dos sitios daba 96, no 122 — comprobado midiendo, no deducido.
+
+### La revelación por scroll: primero se descartó, luego se implementó
+
+En la primera versión no entró, con argumento: pediría una isla de cliente en
+una página que PRELAUNCH-HARDENING-1 Fase V dejó server-rendered a propósito.
+**El fundador la echó en falta al mirar el preview** y entró, con el mecanismo
+exacto del artboard: cada paso recibe `is-in` al asomar (umbral 0,28) y sus
+barras crecen de `scaleX(0)` a `scaleX(1)` en 1,1 s con
+`cubic-bezier(.2,.8,.25,1)` y retardos de .12/.26/.40 s.
+
+La isla (`components/landing/reveal-on-scroll.tsx`) se mantiene **mínima a
+propósito**: un observador y una clase, sin estado de React y sin volver a
+renderizar. El marcado sigue viniendo del servidor, así que si el JS no llega
+los pasos se ven igual, ya revelados. Se desobserva cada paso al entrar y el
+observador se cierra cuando han entrado todos.
+
+`prefers-reduced-motion` no degrada: marca todo como entrado en el primer
+efecto y no observa nada. Aquí no hay «fotograma final que siga contando la
+historia» que discutir —como sí lo hay en el tour— porque **la barra llena ES
+el dato**. Verificado en los dos modos: con movimiento normal la barra pasa de
+`matrix(0,…)` a `matrix(1,…)` y el texto de opacidad 0 a 1 al entrar; con
+movimiento reducido ya están en su estado final antes de entrar y nada se
+mueve.
+
+Se pierde el efecto secundario bueno que tenía no animar: vuelve a existir la
+trampa de fotografiar las tarjetas a opacidad 0 que el README de la referencia
+describe. Sigue documentada ahí. Comprobado en la pasada siguiente del piloto:
+**no ocurre**, porque su captura de página completa desplaza la página y eso
+dispara el observador. Vale para este arnés, no como garantía general.
+
+### El artboard móvil tiene su propia escala, y también había que medirla
+
+Corregida la tipografía contra el artboard de escritorio, a 375 px el titular
+partía en **cuatro** líneas. La causa: se estaba sirviendo la escala de
+escritorio en todas las anchuras, y el artboard móvil declara la suya —h2 31px
+en vez de 44, h3 25 en vez de 34 con `-.025em`, el número 58 en vez de 96 y con
+`text-stroke` de 1,2 en vez de 1,4, la bajada 15/1.68 y el kicker 11,5. Las
+cinco coinciden ahora, y el titular vuelve a dos líneas.
+
+**El corte va a 560px, que es el que ya usaba el hero**, y no un número nuevo:
+entre 560 y 900 el diseño no da datos —sus dos artboards son 1280 y 390— y a
+768 la escala de escritorio cabe en dos líneas, que es como se lee en el
+grande. Inventar un corte intermedio habría sido decidir por el diseño en una
+anchura que el diseño no cubre.
+
+### Los competidores llevan su favicon oficial, y eso es regla de producto
+
+Fundador, 2026-08-22: *«donde salgan competidores tienen que salir los logos
+favicons oficiales»*. La primera versión los pintaba como texto plano, y la
+fuente citada del paso 02 como un cuadrado con «EM». El artboard sí los lleva,
+en una caja `.fav` con las iniciales de respaldo.
+
+Se resuelve con **`FaviconImg`**, el mecanismo que el producto ya usa en
+Competidores (FAVICON-QUALITY-1, §36), y con **dominios reales** —`ikea.es`,
+`leroymerlin.es`, `maisonsdumonde.com`, `elmueble.com`—. Eso lo deja **mejor
+que el artboard**: el lienzo dibujaba a Maisons du Monde y a elmueble.com con
+iniciales porque no tenía sus assets, y aquí el servicio los trae. La caja
+copia `.fav` del diseño (8px de radio, fondo blanco, borde, iniciales a 10,5px)
+para que el respaldo siga siendo el del artboard cuando el servicio no conozca
+un dominio.
+
+**Dónde NO van, y también está medido:** la tarjeta del SERP de «El cambio de
+reglas» no lleva ninguno — cero `<img>` entre las dos tarjetas del artboard—, y
+las marcas citadas dentro de la respuesta generativa van en `<mark>`, no como
+logos.
+
+**Lo que no se pudo verificar aquí.** Las cuatro peticiones salen con el
+dominio y el tamaño correctos, y el respaldo se pinta bien; pero **el sandbox
+de los agentes no alcanza `www.google.com`**, que es de donde `favicon-source`
+saca los iconos, así que la ruta devuelve 204 y localmente sólo se ven las
+iniciales. Tampoco alcanza el preview de Vercel. **Que los logos oficiales
+salgan de verdad se comprueba en las capturas del piloto**, que corre en GitHub
+Actions con salida real — no dando por bueno el cableado.
+
+Nota de fidelidad que parece un fallo y no lo es: «Maisons du Monde» parte en
+dos líneas. El artboard fija esa columna en 110px con el mismo cuerpo y su fila
+mide los mismos 59px, así que envuelve igual.
+
+### Dos fallos encontrados mirando, no razonando
+
+**El `order` de la rejilla no es decorativo.** `.lp-how-dot` lleva `order: 2`
+para poder cruzarse en los pasos pares. Con texto y hoja en el `0` por defecto,
+la rejilla los colocaba a los dos **antes** que el punto, así que en los pasos
+impares la hoja caía en la columna del raíl —96 px— estrujada a 50 px de ancho
+y con su contenido fuera de la caja. Los pasos pares, que sí tenían `order`
+explícito, salían bien: por eso la mitad de la sección parecía correcta. Ahora
+los tres van numerados.
+
+**Las dos tarjetas del cambio de reglas van `stretch`, no `center`.** Centradas,
+la de GEO —más corta— quedaba flotando por debajo de la de SEO; en el artboard
+las dos empiezan a la misma altura.
+
+### Contraste sobre la superficie oscura, recalculado
+
+`.claude/rules/styles.md` obliga: un token que aprueba AA sobre blanco no lo
+aprueba sobre otra superficie. No se reutiliza ninguno de los tokens de tinta
+del sitio —están calculados sobre blanco—; se declaran colores propios y se
+miden sobre `#0a1220`: cuerpo `#e8eefc` **16,13:1**, párrafos `#93a3bd`
+**7,33:1**, kicker `--brand-cyan` **8,90:1**, titulares `#fff` **18,75:1**.
+Los cuatro pasan AA con holgura.
+
+> **Corregido en §144.** Dos de esas cuatro cifras eran de los colores que este
+> PR *declaró*, no de los que el navegador *pintó*: por una colisión de
+> especificidad el kicker salía índigo (**3,00:1**) y los párrafos en
+> `--ink-2` (**2,34:1**). Las cifras de arriba sólo pasaron a ser ciertas
+> cuando §144 arregló la colisión.
+
+**Comprobado.** `pnpm test`, `pnpm run validate` y `git diff --check` en verde.
+Landing real desde el build de producción a trece anchuras (1440 → 320 px): sin
+desbordamiento horizontal en ninguna, las cuatro hojas a 514 px en escritorio y
+el raíl al borde izquierdo por debajo de 900 px, donde los pasos pasan a una
+columna y se acaban los cruces.
+
+**Pendiente / conocido.** El `id="como"` ahora lleva a una sección que cuenta
+cuatro pasos, no tres; el texto del nav sigue diciendo «Cómo funciona» y encaja.
+La sección «De cero a un plan de acción en tres pasos» desaparece con sus tres
+pasos: lo que contaba está repartido entre los cuatro nuevos.
+
+---
+
+## 144. «Pixel perfect» no es una propiedad que se declara, es una distancia que se mide (HOME-2026-08 Fase B1, segunda pasada, 2026-08-22)
+
+El fundador preguntó si la tipografía, los espacios y las animaciones de la
+Fase B1 eran pixel perfect. La respuesta honesta en §143 fue que no, y allí se
+corrigió la escala tipográfica. Esta sección es la segunda pasada: **comparar
+propiedad a propiedad, en un navegador, la maqueta aprobada contra la landing
+de producción**, en vez de leer las dos hojas de estilo y darlas por iguales.
+
+El método importa más que la lista. Un script abre
+`docs/design-reference/home-2026-08/portada-escritorio.dc.html` y
+`http://localhost:3000/` en el mismo Chromium, resuelve las parejas de
+elementos equivalentes y compara `getComputedStyle` más la caja real. La
+primera pasada dio **36 diferencias** en la cabecera de las dos secciones
+nuevas y **otras tantas** dentro de la primera hoja. Al terminar quedan 17, y
+todas son de una de estas tres clases: tokens de tinta del sitio que difieren
+del artboard en 3-4 unidades (`--ink-4` #98a0b0 frente a #98A2B3), métricas de
+la fuente de display frente a la que la maqueta tiene de reserva, y una
+decisión deliberada —las iniciales del favicon— que se explica más abajo.
+
+### Lo que estaba mal y no se veía leyendo el CSS
+
+**Dos de los tres colores de la sección oscura no llegaban a pintar nada.**
+`.lp-kicker--dark` y `.lp-sec-sub--dark` son (0,1,0), igual que `.lp-kicker` y
+`.lp-sec-sub`, que declaran `color` **más abajo en el mismo fichero**: a
+igualdad de especificidad gana el último. El rótulo salía índigo `--accent`
+sobre azul marino y la bajada en `--ink-2` #475067, un gris calculado sobre
+blanco que sobre `#0a1220` da **2,34:1** — muy por debajo del 4,5:1 de AA para
+texto de cuerpo. §143 ya había diagnosticado exactamente esta trampa **para la
+escala tipográfica** y la resolvió calificando por sección; los colores se
+quedaron como modificadores sueltos y volvieron a caer en ella. `.lp-h2--dark`
+sí funcionaba, y sólo por casualidad: `.lp-h2` no declara `color`. Es decir,
+**el caso que se veía bien era el que no demostraba nada**, y las cifras de
+contraste de §143 se calcularon sobre el CSS escrito, no sobre el pintado.
+
+**El hueco de la cabecera se midió por su propiedad, no por su distancia.**
+§143 puso `margin-bottom: 122px` razonando sobre el colapso de márgenes. El
+hueco real entre la cabecera y el «01» salía a **136px** contra los 122 del
+artboard: la fila del paso está centrada verticalmente y el número, con
+`line-height: .8`, deja 14px de aire dentro de su propia caja. Ahora la
+declaración es 108 y **lo que se comprueba es el hueco**, que da 122.
+
+**La hoja de producto era un tercio más baja que la del artboard.** 135px
+contra 192. Tres causas: un único `padding` para las cuatro hojas cuando el
+diseño les da uno distinto a cada una (10/20, 22, 8/20 y 0), filas separadas
+por `gap` en vez de por relleno propio y una línea entre ellas, y la interlínea
+del sitio (24px) heredada dentro de la tarjeta, que engordaba 16px cualquier
+fila cuyo nombre partiera en dos líneas.
+
+**Faltaban tres piezas enteras del diseño**, no matices: la barra de reparto
+de cuatro segmentos del paso 2, los distintivos redondos de ✗/✓ del paso 3 y
+**el disco de puntuación de 132px del paso 4**, que es la imagen que cierra la
+sección. Estaban implementadas como texto plano.
+
+### La revelación escondía la sección entera sin JavaScript
+
+El estado inicial (`opacity: 0`, `scaleX(0)`) estaba escrito en el CSS a secas
+y sólo se deshacía al llegar `is-in`, que pone una isla de cliente. Con el JS
+desactivado esa clase no llega nunca: **la única superficie oscura del sitio se
+quedaba en blanco** — cuatro pasos invisibles y tres barras a cero. El
+comentario de `RevealOnScroll` afirmaba, palabra por palabra, lo contrario («si
+el JS no llega, los pasos se ven igual»). Ahora el estado oculto cuelga de
+`.is-armed`, que pone la propia isla, así que sin JS no hay nada que revelar; y
+lo que ya está en pantalla al armar se marca entrado en el mismo fotograma,
+para que no dé un salto de visible a oculto y vuelta. Comprobado con el JS
+desactivado y con `prefers-reduced-motion`: los cuatro pasos a opacidad 1, las
+barras sin transformación y el disco a 87.5.
+
+El disco se anima ahora como las barras —1,8s, mismo retardo que el artboard—,
+porque es el mismo dato contado de otra forma.
+
+### El logo de ChatGPT no se veía, y en la maqueta tampoco
+
+La fila de motores del paso 1 va en el artboard con las marcas sueltas sobre el
+fondo oscuro. El logo de ChatGPT es negro puro: sobre `#0a1220` desaparece, y
+en la propia maqueta sale como una mancha. Se resuelve metiendo **cada** marca
+en un disco blanco de 26px, no retocando la de OpenAI: es la regla que sigue
+valiendo cuando entre un cuarto motor. La fila sirve los tres motores que el
+escaneo ejecuta de verdad (`lib/llm/`), que es lo que la frase del paso afirma;
+la maqueta traía uno y dos huecos que rellenaba su editor.
+
+### Lo que se aparta del artboard a propósito
+
+- **Las iniciales del favicon** van a 10,5px/700 en `--ink-3`; la maqueta las
+  deja heredar 16px/400, que en una caja de 28px se sale. Es la caja de
+  respaldo de `FaviconImg`, y sólo se ve cuando el servicio no conoce el
+  dominio.
+- **«Maisons du Monde» no se abrevia.** La maqueta móvil lo recorta a «Maisons
+  du M.» para que no parta en dos líneas; es un nombre de marca real y parte.
+- **Los pesos de la auditoría del paso 3** siguen siendo los del producto
+  (+15 / +5 / aviso), no los de la maqueta (+12 / +6 / +8), por lo ya decidido
+  en §143.
+
+### El carrusel del cambio de reglas, que el artboard móvil ya tenía
+
+El fundador, mirando el preview: *«las tarjetas habíamos decidido ponerlas como
+un carrusel, scroll horizontal, como una transición del seo al geo»*. Tenía
+razón y **no era una decisión nueva**: el artboard móvil nunca tuvo las dos
+tarjetas apiladas. Tiene un carrusel de dos diapositivas (`.cslide`), dos
+puntitos de 24×4 (`.cpt`) y flechas redondas de 40px (`.cnav`), con la de
+«siguiente» pulsando hasta que se pulsa. La primera implementación las apiló, y
+con eso se perdía lo único que la sección tiene que contar: que se **pasa** del
+SEO al GEO, no que existan los dos por separado. El artboard de ESCRITORIO sí
+las pone lado a lado con la flecha en medio —ahí la comparación se ve de un
+vistazo— así que el carrusel es sólo del móvil, decidido con el fundador.
+
+**Se desliza con el dedo, y eso sí se aparta del artboard.** La maqueta
+intercambia diapositivas con `display:none` y un fundido; aquí la pista es un
+contenedor con `scroll-snap`, que es lo que se hace en un teléfono. Lo que se
+gana es que **sin JS sigue funcionando**: la pista se desliza igual y lo único
+que falta son los mandos, que los pinta la isla `RulesCarousel` y no el
+servidor — un botón que existe pero no responde es peor que un botón que no
+está. El coste, declarado: sin JS quedan 40px de hueco reservado y vacío, que
+es lo que evita que la hidratación mueva la página para todos los demás.
+
+### La frase de cierre era la conclusión y se leía como otra fila
+
+*«Resalta la última frase de compites por una posición o por la mención; que si
+no parece otro resultado más»* (fundador, 2026-08-22). Con el borde fino del
+artboard, la frase que la sección existe para dejar caer quedaba a la altura de
+un resultado más de la lista. Pasa a ser una **banda al pie de la tarjeta**, a
+sangre contra sus bordes y con el fondo de su bando: gris para el SEO, azul
+para el GEO. El contraste entre las dos bandas es lo que hace el argumento de
+un vistazo.
+
+Tres cosas que hubo que arreglar detrás, las tres encontradas mirando:
+
+- La banda de GEO dejaba un dedo de blanco bajo ella, porque las dos tarjetas
+  se estiran a la altura del par y la de GEO es más corta. La tarjeta pasa a
+  ser columna flexible con un separador que se come el sobrante. **No vale
+  `margin-top: auto`** en la banda: con la tarjeta llena el hueco de 18px
+  desaparece.
+- Al volverla columna flexible, la cápsula del rótulo —un `inline-flex`— se
+  estiró de lado a lado. Lleva `align-self: flex-start`.
+- La banda se escribió primero con `display: grid`, y eso convirtió cada nodo
+  de texto en una fila: la frase salía partida en tres, con el punto suelto en
+  la suya.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
+en verde. La comparación contra el artboard, en el navegador, a 1280 y 390px.
+El carrusel ejercitado a once anchuras (320 → 1440): mandos sólo por debajo de
+560, rejilla por encima, la banda pegada al pie en todas, y sin JS la pista
+sigue deslizándose. Una advertencia para la próxima sesión: **la captura de un
+elemento con Playwright desplaza un contenedor con `scroll-snap`**, así que una
+captura de la sección entera la fotografía a medio deslizar aunque el carrusel
+esté bien parado. Se comprueba con captura de ventana y midiendo `scrollLeft`,
+no con captura de elemento.
+La sección entera fotografiada en las dos anchuras con los cuatro pasos
+revelados, y comparada con la misma captura de la maqueta.
+
+### Lo que el piloto enseñó después, y que sólo se ve mirando
+
+`PILOT PASS` sobre `fc23c48`, capturas abiertas: la sección oscura sale entera
+y correcta en las tres anchuras —rótulo cian, bajada legible, barra de reparto,
+distintivos, disco lleno con el 71, motores visibles en sus discos— y **los
+favicons oficiales salen de verdad**: IKEA, Leroy Merlin y Maisons du Monde con
+su logo. `elmueble.com` cae a las iniciales «EM» porque el servicio de iconos
+no lo conoce; el respaldo se pinta como la caja del artboard, que es lo que
+está diseñado que pase.
+
+Y un fallo que sólo apareció ahí: **«Solución generada» partía en dos líneas a
+375px, por un píxel** —quedaban 102 para un título de 103—. Se recupera con el
+hueco a 8px y el título en `nowrap`. Dos efectos secundarios que hubo que
+cerrar en el mismo sitio, los dos encontrados midiendo: sin `flex: 0 0 auto` la
+fila estrujaba el icono a **8px** de ancho, y por debajo de 380px la cápsula
+«Lista para publicar» se salía de la tarjeta y el `overflow: hidden` de la hoja
+la recortaba **en silencio** — que es la peor forma de no caber. Ahí baja a su
+propia línea. Comprobado a 320/360/375/390/560/561/768/900/1024/1280/1440:
+nada se sale de su tarjeta en ninguna.
