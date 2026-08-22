@@ -13078,7 +13078,22 @@ en verde. La comparación contra el artboard, en el navegador, a 1280 y 390px.
 La sección entera fotografiada en las dos anchuras con los cuatro pasos
 revelados, y comparada con la misma captura de la maqueta.
 
-**Pendiente / conocido.** Los favicons oficiales siguen **sin verificar desde
-aquí**: el sandbox no alcanza `www.google.com`, que es de donde salen, así que
-en local sólo se ven las iniciales. Lo tienen que enseñar las capturas del
-piloto, que corre con salida real.
+### Lo que el piloto enseñó después, y que sólo se ve mirando
+
+`PILOT PASS` sobre `fc23c48`, capturas abiertas: la sección oscura sale entera
+y correcta en las tres anchuras —rótulo cian, bajada legible, barra de reparto,
+distintivos, disco lleno con el 71, motores visibles en sus discos— y **los
+favicons oficiales salen de verdad**: IKEA, Leroy Merlin y Maisons du Monde con
+su logo. `elmueble.com` cae a las iniciales «EM» porque el servicio de iconos
+no lo conoce; el respaldo se pinta como la caja del artboard, que es lo que
+está diseñado que pase.
+
+Y un fallo que sólo apareció ahí: **«Solución generada» partía en dos líneas a
+375px, por un píxel** —quedaban 102 para un título de 103—. Se recupera con el
+hueco a 8px y el título en `nowrap`. Dos efectos secundarios que hubo que
+cerrar en el mismo sitio, los dos encontrados midiendo: sin `flex: 0 0 auto` la
+fila estrujaba el icono a **8px** de ancho, y por debajo de 380px la cápsula
+«Lista para publicar» se salía de la tarjeta y el `overflow: hidden` de la hoja
+la recortaba **en silencio** — que es la peor forma de no caber. Ahí baja a su
+propia línea. Comprobado a 320/360/375/390/560/561/768/900/1024/1280/1440:
+nada se sale de su tarjeta en ninguna.

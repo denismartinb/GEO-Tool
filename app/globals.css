@@ -5199,7 +5199,9 @@ a.notif-row:hover {
 .lp-sheet-pts.warn { background: #fff4e5; color: #8a5a08; }
 .lp-sheet-fix--ok .lp-sheet-name { color: var(--ink-4); }
 .lp-sheet-gen { padding: 16px 20px; gap: 10px; border-bottom: 1px solid var(--line-soft); }
-.lp-sheet-gen > svg { color: var(--brand-blue); }
+/* `flex: 0 0 auto` o el icono es lo primero que la fila estruja cuando el
+   título deja de partir: a 375px se quedó en 8px de ancho. */
+.lp-sheet-gen > svg { flex: 0 0 auto; color: var(--brand-blue); }
 .lp-sheet-ready {
   margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center;
   height: 22px; padding: 0 9px; background: #e7f6ee; color: #15915a;
@@ -5278,7 +5280,19 @@ a.notif-row:hover {
   .lp-sheet--rows { padding: 8px 16px; }
   .lp-sheet--card { padding: 18px 16px; }
   .lp-sheet--fix { padding: 6px 16px; }
-  .lp-sheet-gen { padding: 14px 16px; }
+  /* «Solución generada» partía en dos líneas por un píxel: con 375px de
+     ventana quedan 102 para un título que mide 103. Se recupera holgura
+     estrechando el hueco, y el título deja de partir pase lo que pase — si
+     alguna vez no cupiera, cede la cápsula, no el rótulo. */
+  .lp-sheet-gen { padding: 14px 16px; gap: 8px; }
+  .lp-sheet-gen .lp-sheet-name { white-space: nowrap; }
+  /* Por debajo de 380px ya no caben en la misma línea y la cápsula se salía
+     de la tarjeta —recortada en silencio por el `overflow: hidden` de la
+     hoja, que es la peor forma de no caber—. Baja a su propia línea. */
+  @media (max-width: 380px) {
+    .lp-sheet-gen { flex-wrap: wrap; }
+    .lp-sheet-gen .lp-sheet-ready { margin-left: 0; }
+  }
   /* En móvil el artefacto pegable pasa a ocupar el ancho entero por debajo
      del marcador: en una columna de 1fr junto a un disco de 92px, el código
      salía a cuatro caracteres por línea. */
