@@ -5717,6 +5717,119 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-spot-item .d { font-size: 13.5px; color: var(--ink-2); line-height: 1.55; margin-top: 2px; }
 .lp-spot-visual { border-radius: var(--r-lg); border: 1px solid var(--line); background: #fff; box-shadow: var(--sh-3); padding: 18px; }
 
+/* --- El producto: cinco pantallas (HOME-2026-08 Fase B2) ----------------
+   La sección va en claro (`prod--light` del artboard). El marco es un
+   navegador de pega y su cuerpo el lienzo de la consola.
+
+   TODAS LAS CLASES VAN PREFIJADAS `lp-prod-`, hasta las de dentro. El artboard
+   usa nombres genéricos —`cap`, `num`, `val`, `url`, `dot`— y este fichero ya
+   tiene un `.cap` global en mayúsculas y un `.delta` con fondo de píldora. Con
+   `.lp-prod-kpi .cap` mis declaraciones ganaban, pero **`text-transform`, que
+   yo no declaraba, se colaba igual**: los rótulos de los indicadores salieron
+   en versales. Es la misma regla que `.claude/rules/onboarding.md` fijó para
+   el tour, y se aplica aquí antes de repetir el patrón en cuatro pantallas
+   más. */
+.lp-prod { background: var(--canvas); border-top: 1px solid var(--line-soft); padding: 128px 0; }
+.lp-prod .lp-kicker { color: var(--ink-4); font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+.lp-prod .lp-h2 { font-size: 42px; font-weight: 700; letter-spacing: -.03em; line-height: 1.08; margin-top: 22px; }
+.lp-prod .lp-sec-sub { font-size: 17px; margin-top: 22px; }
+.lp-prod .lp-sec-head { max-width: 660px; margin-bottom: 46px; }
+
+/* La tira reserva su alto SIEMPRE, la pinte la isla o no, para que hidratar
+   no empuje el marco hacia abajo. */
+.lp-prod-shell { position: relative; max-width: 1060px; margin: 0 auto; min-height: 40px; }
+.lp-prod-tabs {
+  display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 40px;
+}
+.lp-prod-tab {
+  display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  color: var(--ink-3); background: none; border: 1px solid var(--line);
+  transition: background .15s, color .15s, border-color .15s;
+}
+.lp-prod-tab:hover { background: #fff; color: var(--ink); }
+.lp-prod-tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* Las flechas son del artboard MÓVIL: ahí la tira se desplaza y el marco lleva
+   sus propios mandos encima. En escritorio caben las cinco pestañas y sobran. */
+.lp-prod-arrows { display: none; }
+
+.lp-prod-frame {
+  border-radius: 16px; border: 1px solid var(--line); background: #fff; overflow: hidden;
+  color: var(--ink); box-shadow: 0 30px 70px rgba(16,24,40,.14), 0 6px 18px rgba(16,24,40,.06);
+}
+.lp-prod-bar {
+  height: 42px; background: var(--surface-2); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 8px; padding: 0 16px;
+}
+.lp-prod-bar .lp-prod-dot { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; }
+.lp-prod-bar .lp-prod-url {
+  margin: 0 auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; height: 26px;
+  display: flex; align-items: center; padding: 0 16px; min-width: 300px; justify-content: center;
+  font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
+}
+.lp-prod-body { background: var(--canvas); padding: 28px 30px; min-height: 520px; }
+/* Sin JS la primera pantalla es la que el servidor marcó `.on`; las otras
+   cuatro no se pintan. No hay controles muertos porque los mandos los pone la
+   isla, así que lo que queda es una captura fija y honesta. */
+.lp-prod-pg { display: none; }
+.lp-prod-pg.on { display: block; animation: lp-prod-in .45s cubic-bezier(.2, .8, .25, 1) both; }
+@keyframes lp-prod-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.lp-prod-pg.on .lp-prod-card { animation: lp-prod-card .5s cubic-bezier(.2, .8, .25, 1) both; }
+@keyframes lp-prod-card { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .lp-prod-pg.on, .lp-prod-pg.on .lp-prod-card { animation: none; }
+}
+
+.lp-prod-card { background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 10px 34px rgba(16,24,40,.06); }
+.lp-prod-head { display: flex; align-items: center; gap: 12px; }
+.lp-prod-head .lp-prod-who { display: grid; }
+.lp-prod-head .lp-prod-dom { font-size: 15px; font-weight: 600; }
+.lp-prod-head .lp-prod-sub { font-size: 12px; color: var(--ink-4); margin-top: 1px; }
+.lp-prod-chip {
+  margin-left: auto; display: inline-flex; align-items: center; height: 22px; padding: 0 9px;
+  border-radius: 999px; background: #fff; border: 1px solid var(--line); color: var(--ink-3);
+  font-size: 11.5px; font-weight: 600;
+}
+.lp-prod-pill {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 10px;
+}
+.lp-prod-pill.pos { background: #e7f6ee; color: #15915a; }
+
+.lp-prod-row2 { display: grid; grid-template-columns: 340px 1fr; gap: 20px; margin-top: 22px; }
+.lp-prod-score { padding: 26px; display: flex; align-items: center; gap: 24px; }
+.lp-prod-score .lp-prod-dial { position: relative; width: 112px; height: 112px; flex: 0 0 auto; }
+.lp-prod-score .lp-prod-dial svg { width: 100%; height: 100%; display: block; }
+.lp-prod-score .lp-prod-dial .lp-prod-num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--font-display), inherit; font-size: 34px; font-weight: 700;
+  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+.lp-prod-score .lp-prod-cap { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
+.lp-prod-score .lp-prod-franja { font-size: 13px; color: var(--ink-3); margin-top: 10px; line-height: 1.5; }
+.lp-prod-score .lp-prod-franja b { font-weight: 600; color: var(--ink); }
+.lp-prod-cardcap { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.lp-prod-row2 > .lp-prod-card:nth-child(2) { padding: 26px; }
+/* `non-scaling-stroke` en la línea: el `viewBox` se estira a lo ancho de su
+   tarjeta y sin eso el trazo engordaría con él. */
+.lp-prod-spark { width: 100%; height: 130px; margin-top: 12px; display: block; }
+.lp-prod-sparkfoot {
+  display: flex; justify-content: space-between; margin-top: 6px;
+  font-size: 11.5px; color: var(--ink-4); font-variant-numeric: tabular-nums;
+}
+
+.lp-prod-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
+.lp-prod-kpi { padding: 22px; }
+.lp-prod-kpi .lp-prod-cap { font-size: 12.5px; color: var(--ink-4); font-weight: 500; }
+.lp-prod-kpi .lp-prod-val {
+  font-family: var(--font-display), inherit; font-size: 30px; font-weight: 700; margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.lp-prod-kpi .lp-prod-delta { font-size: 12.5px; margin-top: 4px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lp-prod-kpi .lp-prod-delta.pos { color: #15915a; }
+.lp-prod-kpi .lp-prod-delta.neg { color: #d23b48; }
+
 /* --- Testimonio (HOME-2026-08 Fase C) -----------------------------------
    Dos tarjetas de anchos distintos —1.62fr y 1fr— y no dos mitades: la cita
    manda y la cifra la acompaña. `stretch` porque en el artboard las dos miden

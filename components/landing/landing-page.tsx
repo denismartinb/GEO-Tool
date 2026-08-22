@@ -8,6 +8,7 @@ import { ProductTour } from "@/components/product-tour";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
 import { RulesCarousel } from "@/components/landing/rules-carousel";
 import { FaqAccordion } from "@/components/landing/faq-accordion";
+import { ProductTabs } from "@/components/landing/product-tabs";
 import { HOME_FAQ, homeFaqJsonLd } from "@/lib/landing/home-faq";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
@@ -48,6 +49,16 @@ const HOW_ENGINES = [
   { name: "Gemini", src: "/brand/engines/gemini.svg" },
   { name: "Claude", src: "/brand/engines/claude.svg" }
 ];
+
+/* Las cinco pantallas, en el orden del artboard. Los rótulos son los del
+   producto (la barra lateral de la consola), no una versión comercial. */
+const PRODUCT_TABS = [
+  { id: "pg-overview", label: "Visión general" },
+  { id: "pg-prompts", label: "Prompts" },
+  { id: "pg-comp", label: "Competidores" },
+  { id: "pg-audit", label: "Auditoría web" },
+  { id: "pg-recs", label: "Recomendaciones" }
+] as const;
 
 const HOW_STEPS: Array<{ n: string; t: string; d: string; extra?: ReactNode; sheet: ReactNode }> = [
   {
@@ -474,6 +485,108 @@ export function LandingPage() {
               <span className="btn btn-soft btn-sm mt12" style={{ width: "100%" }} aria-hidden="true">
                 <Icon name="sparkles" size={13} />Generar solución
               </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* EL PRODUCTO — HOME-2026-08 Fase B2. Cinco pantallas del producto en un
+          marco de navegador, con pestañas. Va en CLARO (`prod--light` del
+          artboard) y no en oscuro: el artboard móvil la tiene sobre `--canvas`
+          y «Cómo funciona», justo encima, es la única superficie oscura de la
+          zona pública (`docs/design-reference/home-2026-08/README.md`). Dos
+          oscuras seguidas no.
+
+          LAS CIFRAS SON ILUSTRATIVAS, y es una decisión del fundador
+          (2026-08-22: «lo hacemos tal cual la maqueta, es ilustrativo»). El
+          vocabulario sí es del producto — «Franja competitivo» con 71 es
+          exactamente lo que asigna `app/dashboard/projects/[projectId]`
+          a partir de 70. */}
+      <section className="lp-section lp-prod" id="pantallas">
+        <div className="lp-inner">
+          <div className="lp-sec-head">
+            <div className="lp-kicker">El producto</div>
+            <h2 className="lp-h2">Cinco pantallas. Todo tu posicionamiento.</h2>
+            <p className="lp-sec-sub">
+              Esto es exactamente lo que tienes el primer día.<br />
+              Sin demos preparadas y sin pedir una llamada.
+            </p>
+          </div>
+
+          {/* Reserva el alto de la tira de pestañas para que la isla no mueva
+              la página al hidratar. */}
+          <div className="lp-prod-shell">
+            <ProductTabs tabs={PRODUCT_TABS} panel=".lp-prod-pg" />
+
+            <div className="lp-prod-frame">
+              <div className="lp-prod-bar">
+                <span className="lp-prod-dot" style={{ background: "#ff5f57" }} />
+                <span className="lp-prod-dot" style={{ background: "#febc2e" }} />
+                <span className="lp-prod-dot" style={{ background: "#28c840" }} />
+                <span className="lp-prod-url">app.genscore.es/ikea.es</span>
+              </div>
+              <div className="lp-prod-body">
+                {/* Visión general */}
+                <div className="lp-prod-pg on" id="pg-overview" role="tabpanel">
+                  <div className="lp-prod-head">
+                    <span className="lp-sheet-fav">
+                      <FaviconImg domain="ikea.es" cssSize={30} fallback={<span>IK</span>} />
+                    </span>
+                    <span className="lp-prod-who">
+                      <span className="lp-prod-dom">ikea.es</span>
+                      <span className="lp-prod-sub">Escaneo posterior a las acciones aplicadas</span>
+                    </span>
+                    <span className="lp-prod-chip">Últimos 7 días</span>
+                  </div>
+
+                  <div className="lp-prod-row2">
+                    <div className="lp-prod-card lp-prod-score">
+                      <div className="lp-prod-dial">
+                        <svg viewBox="0 0 112 112" aria-hidden="true">
+                          <circle cx="56" cy="56" r="48" fill="none" stroke="#eef1f6" strokeWidth="12" />
+                          <circle cx="56" cy="56" r="48" fill="none" stroke="var(--brand-blue)" strokeWidth="12" strokeLinecap="round" strokeDasharray="301.6" strokeDashoffset="87.5" transform="rotate(-90 56 56)" />
+                        </svg>
+                        <span className="lp-prod-num">71</span>
+                      </div>
+                      <div>
+                        <div className="lp-prod-cap">GEO Score</div>
+                        <div className="lp-prod-pill pos">+23 pts</div>
+                        <div className="lp-prod-franja">Franja<br /><b>competitivo</b></div>
+                      </div>
+                    </div>
+
+                    <div className="lp-prod-card">
+                      <div className="lp-prod-cardcap">Evolución</div>
+                      <svg className="lp-prod-spark" viewBox="0 0 520 130" preserveAspectRatio="none" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="lp-prod-gsg" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--brand-blue)" stopOpacity=".22" />
+                            <stop offset="100%" stopColor="var(--brand-blue)" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M0,104 L86,98 L172,88 L258,86 L344,58 L430,40 L520,20 L520,130 L0,130 Z" fill="url(#lp-prod-gsg)" />
+                        <path d="M0,104 L86,98 L172,88 L258,86 L344,58 L430,40 L520,20" fill="none" stroke="var(--brand-blue)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                        <circle cx="516" cy="20" r="4.5" fill="var(--brand-blue)" />
+                      </svg>
+                      <div className="lp-prod-sparkfoot"><span>48</span><span>71</span></div>
+                    </div>
+                  </div>
+
+                  <div className="lp-prod-row3">
+                    {[
+                      { t: "Tasa de mención", v: "68%", d: "▲ 9 pts", tono: "pos" },
+                      { t: "Tasa de cita", v: "12%", d: "▼ 2 pts", tono: "neg" },
+                      { t: "Cuota de voz", v: "24%", d: "▲ 3 pts", tono: "pos" }
+                    ].map((k) => (
+                      <div className="lp-prod-card lp-prod-kpi" key={k.t}>
+                        <div className="lp-prod-cap">{k.t}</div>
+                        <div className="lp-prod-val">{k.v}</div>
+                        <div className={`lp-prod-delta ${k.tono}`}>{k.d}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
