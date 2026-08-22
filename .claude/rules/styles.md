@@ -137,3 +137,16 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   ancestro con caja garantizada, `position:absolute;inset:0` es más robusto que
   `height:100%` — no lo contrario intuitivamente, pero es lo que midió el
   navegador.
+- **Un fondo que ocupa una sección entera tiene que terminar en el color de la
+  sección de debajo.** La costura entre dos bloques a ancho completo no se ve
+  en una maqueta —el artboard acaba justo en ese canto— ni en una captura de
+  800 px de alto, porque el hero de la portada mide 1154 px en escritorio y
+  1193 en móvil: se ve en la página real, y lo que aparece es una **línea
+  horizontal recta**. Ha pasado dos veces seguidas en la misma zona por dos
+  vías distintas: el aura descartada lo tuvo que tapar con un desvanecido
+  enmascarado, y la variante de degradado que volvía a teñir el final del hero
+  lo reprodujo tal cual (log §141). Un `linear-gradient` que termine en el
+  color del vecino no necesita máscara ninguna; si el fondo no puede terminar
+  ahí, el desvanecido va **en porcentaje**, no en px, para seguir el alto real
+  de la sección. Y se verifica sobre una captura de **página completa**, nunca
+  sobre el recorte del viewport.

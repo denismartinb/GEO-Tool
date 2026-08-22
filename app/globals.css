@@ -4742,9 +4742,37 @@ a.notif-row:hover {
   font-family: var(--font-body), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* HERO-GRADIENT-1 (fundador, 2026-08-22): el fondo del hero de la portada es
+   un degradado lineal y nada más. Referencia en
+   `docs/design-reference/hero-gradient-1/`.
+
+   EL COLOR SE AGOTA EN EL PRIMER CUARTO. Las cuatro paradas están medidas
+   contra el alto real del hero (1154 px en escritorio, 1193 en móvil), no
+   repartidas a ojo: a 14 % el tinte ya ha cedido la mitad, a 28 % es casi
+   blanco y desde 44 % es blanco puro. Eso deja el titular sobre el tramo con
+   color y el campo de dominio, los botones y la tarjeta-demo sobre blanco
+   limpio. Subir esas paradas devuelve el color a la zona del formulario, que
+   es justo lo que se descartó.
+
+   EL 100 % TIENE QUE SER BLANCO, y no es cosmético: debajo del hero va la
+   sección de motores, que es blanca. Un degradado que termine en color deja
+   una línea horizontal recta en la costura — el mismo fallo que el aura tuvo
+   que tapar con un desvanecido enmascarado, y que la variante «doble extremo»
+   reprodujo al volver a teñir el final (fundador, 2026-08-22). Aquí no hace
+   falta máscara ninguna porque el degradado ya llega a #ffffff por su cuenta.
+
+   NO HAY CAPA NI ELEMENTOS. Es una sola propiedad `background` sobre el
+   contenedor que ya existía: cero DOM, cero JS, cero peticiones, y nada que
+   pueda recortarse, desbordar o crear contexto de apilamiento. Por eso esta
+   zona ya no necesita las precauciones que sí necesitaba el aura (`.lp-promo`
+   vuelve a ser estático, y `.lp-hero--home` sigue sin aislarse porque dentro
+   vive el cajón móvil `position: fixed` de `PublicHeader`).
+
+   `.onb-aurora` sigue intacta y es otra cosa: la sirven /geo, precios y las
+   portadas del blog, y esa sí anima. */
 .lp-hero--home {
   padding: 0 0 64px;
-  background: linear-gradient(180deg, #f4f7ff 0%, #f7f8fb 60%);
+  background: linear-gradient(180deg, #cfe0fa 0%, #e4edfb 14%, #f6f9fe 28%, #ffffff 44%, #ffffff 100%);
 }
 .lp-hero--home .lp-hero-content { padding-top: 44px; }
 
