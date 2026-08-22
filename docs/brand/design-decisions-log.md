@@ -13073,8 +13073,60 @@ la maqueta traía uno y dos huecos que rellenaba su editor.
   (+15 / +5 / aviso), no los de la maqueta (+12 / +6 / +8), por lo ya decidido
   en §143.
 
+### El carrusel del cambio de reglas, que el artboard móvil ya tenía
+
+El fundador, mirando el preview: *«las tarjetas habíamos decidido ponerlas como
+un carrusel, scroll horizontal, como una transición del seo al geo»*. Tenía
+razón y **no era una decisión nueva**: el artboard móvil nunca tuvo las dos
+tarjetas apiladas. Tiene un carrusel de dos diapositivas (`.cslide`), dos
+puntitos de 24×4 (`.cpt`) y flechas redondas de 40px (`.cnav`), con la de
+«siguiente» pulsando hasta que se pulsa. La primera implementación las apiló, y
+con eso se perdía lo único que la sección tiene que contar: que se **pasa** del
+SEO al GEO, no que existan los dos por separado. El artboard de ESCRITORIO sí
+las pone lado a lado con la flecha en medio —ahí la comparación se ve de un
+vistazo— así que el carrusel es sólo del móvil, decidido con el fundador.
+
+**Se desliza con el dedo, y eso sí se aparta del artboard.** La maqueta
+intercambia diapositivas con `display:none` y un fundido; aquí la pista es un
+contenedor con `scroll-snap`, que es lo que se hace en un teléfono. Lo que se
+gana es que **sin JS sigue funcionando**: la pista se desliza igual y lo único
+que falta son los mandos, que los pinta la isla `RulesCarousel` y no el
+servidor — un botón que existe pero no responde es peor que un botón que no
+está. El coste, declarado: sin JS quedan 40px de hueco reservado y vacío, que
+es lo que evita que la hidratación mueva la página para todos los demás.
+
+### La frase de cierre era la conclusión y se leía como otra fila
+
+*«Resalta la última frase de compites por una posición o por la mención; que si
+no parece otro resultado más»* (fundador, 2026-08-22). Con el borde fino del
+artboard, la frase que la sección existe para dejar caer quedaba a la altura de
+un resultado más de la lista. Pasa a ser una **banda al pie de la tarjeta**, a
+sangre contra sus bordes y con el fondo de su bando: gris para el SEO, azul
+para el GEO. El contraste entre las dos bandas es lo que hace el argumento de
+un vistazo.
+
+Tres cosas que hubo que arreglar detrás, las tres encontradas mirando:
+
+- La banda de GEO dejaba un dedo de blanco bajo ella, porque las dos tarjetas
+  se estiran a la altura del par y la de GEO es más corta. La tarjeta pasa a
+  ser columna flexible con un separador que se come el sobrante. **No vale
+  `margin-top: auto`** en la banda: con la tarjeta llena el hueco de 18px
+  desaparece.
+- Al volverla columna flexible, la cápsula del rótulo —un `inline-flex`— se
+  estiró de lado a lado. Lleva `align-self: flex-start`.
+- La banda se escribió primero con `display: grid`, y eso convirtió cada nodo
+  de texto en una fila: la frase salía partida en tres, con el punto suelto en
+  la suya.
+
 **Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
 en verde. La comparación contra el artboard, en el navegador, a 1280 y 390px.
+El carrusel ejercitado a once anchuras (320 → 1440): mandos sólo por debajo de
+560, rejilla por encima, la banda pegada al pie en todas, y sin JS la pista
+sigue deslizándose. Una advertencia para la próxima sesión: **la captura de un
+elemento con Playwright desplaza un contenedor con `scroll-snap`**, así que una
+captura de la sección entera la fotografía a medio deslizar aunque el carrusel
+esté bien parado. Se comprueba con captura de ventana y midiendo `scrollLeft`,
+no con captura de elemento.
 La sección entera fotografiada en las dos anchuras con los cuatro pasos
 revelados, y comparada con la misma captura de la maqueta.
 

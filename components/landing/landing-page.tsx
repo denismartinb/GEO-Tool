@@ -6,6 +6,7 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
+import { RulesCarousel } from "@/components/landing/rules-carousel";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { PromoStrip, RecommendationsCta, HomeCtaBand } from "@/components/landing/session-ctas";
@@ -294,6 +295,12 @@ export function LandingPage() {
             </p>
           </div>
 
+          {/* Reserva el alto de los mandos del carrusel para que la isla no
+              mueva la página al hidratar. Sólo mide algo bajo 560px. */}
+          <div className="lp-rules-navslot">
+            <RulesCarousel track=".lp-rules-pair" slide=".lp-rules-card" />
+          </div>
+
           <div className="lp-rules-pair">
             <article className="lp-rules-card">
               <div className="lp-rules-tag">
@@ -310,7 +317,8 @@ export function LandingPage() {
                 <li><span className="t">Muebles de salón | Maisons du Monde</span><span className="u">maisonsdumonde.com</span></li>
                 <li><span className="t">IKEA — Muebles y decoración para tu hogar</span><span className="u">ikea.es</span></li>
               </ol>
-              <p className="lp-rules-foot">Compites por la <strong>posición</strong>. El usuario elige un enlace.</p>
+              <div className="lp-rules-grow" aria-hidden="true" />
+              <p className="lp-rules-foot">Compites por la <strong>posición</strong>.<span>El usuario elige un enlace.</span></p>
             </article>
 
             <div className="lp-rules-arrow" aria-hidden="true">
@@ -332,7 +340,8 @@ export function LandingPage() {
                 <Icon name="link" size={13} />
                 Fuentes: elmueble.com, micasarevista.com
               </div>
-              <p className="lp-rules-foot">Compites por la <strong>mención</strong>. La IA ya ha respondido por ti.</p>
+              <div className="lp-rules-grow" aria-hidden="true" />
+              <p className="lp-rules-foot lp-rules-foot--geo">Compites por la <strong>mención</strong>.<span>La IA ya ha respondido por ti.</span></p>
             </article>
           </div>
         </div>

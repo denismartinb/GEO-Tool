@@ -4869,8 +4869,11 @@ a.notif-row:hover {
   padding: 20px; box-shadow: 0 10px 34px rgba(16,24,40,.06);
 }
 .lp-rules-card--geo { border-color: rgba(37,99,235,.22); box-shadow: 0 14px 40px rgba(37,99,235,.10); }
+/* `align-self: flex-start` desde que la tarjeta es columna flexible: un
+   `inline-flex` dentro de un flex column se estira a todo el ancho, y la
+   cápsula pasó de rótulo a barra de lado a lado. */
 .lp-rules-tag {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-self: flex-start; align-items: center; gap: 8px;
   background: var(--surface-2); border-radius: 999px; padding: 6px 12px;
   font-size: 12.5px; font-weight: 600; color: var(--ink-2);
 }
@@ -4903,9 +4906,70 @@ a.notif-row:hover {
   display: flex; align-items: center; gap: 6px; margin-top: 12px;
   font-size: 12px; color: var(--ink-4);
 }
+/* LA FRASE DE CIERRE ES LA CONCLUSIÓN, NO OTRO RESULTADO MÁS.
+   Con el borde fino del artboard se leía como una fila más de la lista de
+   arriba —fundador, 2026-08-22: «si no parece otro resultado más»—, y es
+   justamente la frase que la sección existe para dejar caer: posición frente
+   a mención. Pasa a ser una banda al pie de la tarjeta, a sangre contra sus
+   bordes, con el fondo del bando al que pertenece. El contraste entre las dos
+   bandas es lo que hace el argumento de un vistazo. */
 .lp-rules-foot {
-  margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line);
-  font-size: 13px; color: var(--ink-3);
+  margin: 18px -20px -20px; padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--canvas);
+  border-radius: 0 0 var(--r-lg, 16px) var(--r-lg, 16px);
+  font-size: 14px; line-height: 1.45; color: var(--ink-2);
+}
+/* `strong` va EN LÍNEA con la frase; el `span` es el que baja de renglón. Con
+   la caja en `grid` cada nodo de texto se convertía en una fila y la frase
+   salía partida en tres, con el punto suelto en la suya. */
+.lp-rules-foot strong { font-size: 16px; font-weight: 750; color: var(--ink); letter-spacing: -.01em; }
+.lp-rules-foot span { display: block; margin-top: 3px; font-size: 13px; color: var(--ink-4); }
+.lp-rules-foot--geo {
+  border-top-color: rgba(37,99,235,.18); background: var(--accent-soft);
+  color: var(--brand-blue);
+}
+.lp-rules-foot--geo strong { color: var(--brand-blue); }
+.lp-rules-foot--geo span { color: rgba(29,78,216,.72); }
+/* La tarjeta recorta la banda a sus esquinas: sin esto, el fondo se sale por
+   debajo del radio del borde. Y es columna flexible para que la banda quede
+   PEGADA AL PIE aunque la tarjeta sea más alta que su contenido: las dos se
+   estiran a la altura del par, y la de GEO —más corta— dejaba un dedo de
+   blanco entre su banda y el borde. El separador `lp-rules-grow` se come ese
+   sobrante; `margin-top: auto` en la banda no vale, porque entonces con la
+   tarjeta llena el hueco de 18px desaparece. */
+.lp-rules-card { overflow: hidden; display: flex; flex-direction: column; }
+.lp-rules-grow { flex: 1 1 auto; min-height: 0; }
+
+/* --- El carrusel del móvil ---------------------------------------------
+   El artboard móvil nunca tuvo las dos tarjetas apiladas: son un carrusel de
+   dos diapositivas con puntitos y flechas. Apiladas se pierde lo único que la
+   sección cuenta, que se PASA del SEO al GEO. Los mandos los pinta la isla
+   `RulesCarousel`; el hueco lo reserva este `navslot`, así que hidratar no
+   mueve la página. */
+.lp-rules-navslot { display: none; }
+.lp-rules-nav { display: flex; align-items: center; justify-content: space-between; }
+.lp-rules-dots { display: flex; align-items: center; gap: 8px; }
+.lp-rules-dot { width: 24px; height: 4px; border-radius: 999px; background: var(--line); transition: background .2s; }
+.lp-rules-dot.on { background: var(--brand-blue); }
+.lp-rules-arrows { display: flex; align-items: center; gap: 8px; }
+.lp-rules-navbtn {
+  width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line);
+  background: #fff; display: grid; place-items: center; color: var(--ink-3);
+  cursor: pointer;
+}
+.lp-rules-navbtn:disabled { opacity: .38; cursor: default; }
+/* El pulso invita al deslizamiento y no se apaga solo: existe para conseguir
+   ese primer gesto, así que dura hasta que llega — mismo criterio que la pista
+   del botón «Siguiente» del tour (`.claude/rules/onboarding.md`). */
+.lp-rules-navbtn.go.late:not(:disabled) { animation: lp-rules-pulse 1.7s ease-in-out infinite; }
+@keyframes lp-rules-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,.35); }
+  50% { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-rules-navbtn.go.late:not(:disabled) { animation: none; }
+  .lp-rules-pair { scroll-behavior: auto; }
 }
 .lp-rules-arrow {
   display: grid; place-items: center; width: 34px; height: 34px; margin: 0 auto;
@@ -5314,6 +5378,9 @@ a.notif-row:hover {
 @media (max-width: 900px) {
   .lp-rules-pair { grid-template-columns: 1fr; gap: 18px; }
   .lp-rules-arrow { transform: rotate(90deg); }
+  /* La banda de cierre sangra contra el relleno de la tarjeta, que aquí es
+     menor. */
+  .lp-rules-foot { margin-left: -20px; margin-right: -20px; }
 
   .lp-how-rail::before { left: 6px; }
   .lp-how-step { grid-template-columns: 13px 1fr; gap: 0 22px; align-items: start; margin-bottom: 56px; }
@@ -5329,6 +5396,25 @@ a.notif-row:hover {
 }
 
 @media (max-width: 560px) {
+  /* Las dos tarjetas pasan a ser una pista que se desliza con el dedo, con
+     `scroll-snap` para que pare centrada en cada una. Sin JS se desliza igual;
+     lo único que falta son los mandos, y por eso los pinta la isla. El relleno
+     vertical existe porque `overflow-x: auto` también recorta el eje vertical,
+     y sin él se comía la sombra de las tarjetas. */
+  .lp-rules-navslot { display: block; min-height: 40px; margin-top: 30px; }
+  .lp-rules-pair {
+    display: flex; grid-template-columns: none; gap: 12px; margin-top: 12px;
+    overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scroll-behavior: smooth;
+    padding: 6px 0 10px; scrollbar-width: none;
+  }
+  .lp-rules-pair::-webkit-scrollbar { display: none; }
+  .lp-rules-pair:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 3px; border-radius: 18px; }
+  .lp-rules-card { flex: 0 0 100%; scroll-snap-align: center; }
+  /* La flecha es del artboard de ESCRITORIO; en el móvil su sitio lo ocupan
+     los puntitos y las flechas del carrusel. */
+  .lp-rules-arrow { display: none; }
+
   /* La cápsula baja del envoltorio al campo: el botón deja de estar dentro del
      recuadro blanco y pasa a ser un bloque propio debajo, con su hueco, como
      en el artboard móvil. */
