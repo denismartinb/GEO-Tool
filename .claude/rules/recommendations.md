@@ -58,6 +58,58 @@ paths:
   su motivo (`artifact_dropped`): un artefacto que desaparece en silencio es
   invisible para el usuario y también para nosotros.
 
+## Reescritura con IA ("Generar propuesta con IA")
+
+- **El conjunto de dominios admitidos se DERIVA del prompt, no se recompone.**
+  `buildRecommendationRewritePrompt` construye el texto y `domainsShownInPrompt`
+  extrae de él lo que el guardián admite. Recomponerlo campo a campo falló tres
+  veces por tres piezas distintas —páginas citadas (§137), competidores con
+  dominio propio (§133) y el título de una página citada, que suele ser otro
+  dominio (§134)—, y cada vez el modelo fue rechazado por repetir algo que tenía
+  delante. Si añades un dato al prompt, ya queda anclado; si lo anclas sin
+  enseñarlo, sobra.
+- **El vocabulario de dominios vive en `anchored-domains.ts`; el guardián lo
+  importa.** La primitiva es «qué es un dominio», el juicio es «esto está
+  fabricado». Con la dependencia invertida, mockear el guardián en un test deja
+  al conjunto sin extractor y el fallo se lee en pantalla como «el motor de IA
+  falló» (§134).
+- **El prompt y el guardián leen el MISMO conjunto de dominios anclados.**
+  `collectAnchoredDomains` (`lib/recommendations/anchored-domains.ts`) es la
+  única fuente: unión de `citation_domains`, `source_domains` y los dominios y
+  hosts de `citation_pages`. Pasarle al guardián algo más estrecho que lo que
+  el prompt ofreció es rechazar al modelo por obedecer — pasó con las páginas
+  citadas, que el prompt pide nombrar y el guardián no admitía, y la tarjeta
+  quedó imposible de generar (log §137).
+- **Lo mismo vale para los competidores.** Un competidor de la lista del
+  proyecto se admite —en el prompt y en el guardián a la vez— sólo si su propio
+  dominio está en el conjunto anclado (`competitorsAnchoredByDomain`). El
+  playbook pide clasificar cada dominio citado y marcar los que son
+  competidores, cosa imposible sin nombrarlos, y el guardián los rechazaba por
+  ello (log §133). El emparejado es por igualdad exacta de etiqueta de marca:
+  `evilacme.com` no habilita «Acme» (ADR 0019).
+- **Los TRES motivos del guardián nombran su término, y cada uno explica lo
+  suyo.** Un juicio comparativo (Fase C) no se cuenta como «falta evidencia»:
+  el dato estaba y lo que sobra es la afirmación de superioridad, así que el
+  mensaje dice qué palabra lo tumbó. Mandar al usuario a mirar la evidencia
+  cuando el problema es otro es peor que no decir nada (log §128, §134).
+- **Un rechazo del guardián dice QUÉ término lo disparó, también en pantalla.**
+  Diagnosticar «mencionaba datos que no están en la evidencia» exigía acceso a
+  los logs de producción; costó dos vueltas enteras (log §137, §133). El
+  término va saneado y recortado como cualquier salida del modelo.
+- **Nada entra en ese conjunto que no venga de la evidencia persistida de esa
+  tarjeta.** Ampliarlo con dominios "razonables" (redes sociales, plantillas,
+  el dominio de un competidor) convierte el guardián en decoración: existe
+  porque una instrucción en el prompt no es una frontera de seguridad.
+- **Ese conjunto no lleva tope propio.** Está acotado por construcción y un
+  recorte es exactamente lo que produjo el desajuste de §137 —
+  `citation_domains` ya venía recortado a 8 desde el motor.
+- **Cada rama de fallo dice algo distinto, y el guardián registra qué término
+  lo disparó.** Cinco caminos compartiendo una frase hacen que un motor caído y
+  una propuesta descartada sean indistinguibles desde el producto, que es lo
+  que convirtió un fallo determinista en una investigación (log §137). El
+  mensaje sigue siendo propio y saneado — nunca el error del proveedor
+  (`.claude/rules/gemini.md`).
+
 ## Escrituras
 
 - `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario
@@ -111,7 +163,7 @@ paths:
   tipos comparten la misma mutación contrafactual `authority` que el tipo
   original — sin lógica de scoring nueva.
 - **Lo que depende de un tercero nunca encabeza el plan** (`planScore`,
-  RECS-ACCION-1c, log §132). El contrafactual de los tipos `pursue_*` asume que
+  RECS-ACCION-1c, log §140). El contrafactual de los tipos `pursue_*` asume que
   TODAS las fuentes citadas acaban mencionando la marca, así que su cifra es
   generosa por construcción y ordenando sólo por puntos se comía el primer
   puesto. **Es un techo, no un filtro**: sin nada propio que hacer, una externa
@@ -120,12 +172,12 @@ paths:
 - **Una cifra condicionada se etiqueta como tal.** «+11 pt · si te citan», no
   «potenciales» (`pointsCaption`). El número no cambia — cambia lo que declara,
   porque "que cinco terceros actúen" y "añade un párrafo a tu página" no son la
-  misma promesa aunque ADR 0017 las calcule igual (log §132).
+  misma promesa aunque ADR 0017 las calcule igual (log §140).
 - **Un grupo enseña sus mejores, no todas.** `GROUP_PREVIEW_SIZE` (5) más «Ver
   las otras N», ordenadas con la misma `planScore` que ordena el plan — un solo
   criterio para toda la pantalla. El motor emite una tarjeta por prompt y eso no
   cambia (§115 punto 6), así que la densidad se resuelve en presentación. **No
-  esconde nada**: el resto está a un clic (log §132).
+  esconde nada**: el resto está a un clic (log §140).
 - **"Alta prioridad" es un único criterio absoluto** (impacto × confianza),
   compartido entre la badge de la tarjeta y el filtro. No debe volver a existir
   un segundo criterio posicional (`priority_rank <= N`) conviviendo con él en

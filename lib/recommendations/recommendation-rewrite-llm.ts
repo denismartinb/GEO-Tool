@@ -21,15 +21,24 @@ export type RecommendationRewriteInput = {
   whyThisMatters: string;
   affectedPrompts: string[];
   mentionedCompetitors: string[];
+  /**
+   * The FULL set of domains this recommendation's evidence anchors — the same
+   * set the anti-fabrication guard enforces on the answer
+   * (lib/recommendations/anchored-domains.ts). It must stay the same set on
+   * both sides: this prompt's allowlist used to be the narrower
+   * `evidence_json.citation_domains` while the prompt also handed over
+   * `citationPages` built from a different list, so a card whose cited pages
+   * fell outside those domains asked the model for a page name the guard then
+   * rejected — and the rewrite failed on that card every time.
+   */
   citationDomains: string[];
   dominantCompetitor?: string;
   evidenceSnippets: string[];
   /**
-   * Specific pages (title + url) the AI already cites among citationDomains
-   * (RECS-2B / N2, pursue_citation_sources only) — lets the digital-PR asset
-   * target a named article instead of only a bare domain. Every url here is
-   * already one of citationDomains, so it needs no separate anti-fabrication
-   * check beyond the existing domain allowlist.
+   * Specific pages (title + url) the AI already cites (RECS-2B / N2,
+   * pursue_citation_sources only) — lets the digital-PR asset target a named
+   * article instead of only a bare domain. Every domain here is part of the
+   * anchored set above, so naming one of these pages is allowed by the guard.
    */
   citationPages?: { domain: string; title: string; url: string }[];
 };
@@ -111,7 +120,19 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
   }
 }
 
-export async function rewriteRecommendation(input: RecommendationRewriteInput): Promise<RecommendationRewrite | null> {
+/**
+ * El prompt exacto que ve el modelo, construido aparte para que el guardián
+ * pueda leerlo.
+ *
+ * Es la única forma de mantener el invariante sin ir ampliando una lista a
+ * mano: lo que el modelo puede nombrar es **lo que este texto le enseña**, y el
+ * guardián admite exactamente eso. Cada vez que se dedujo el conjunto por otro
+ * camino faltó una pieza distinta — primero las páginas citadas (log §137),
+ * luego los competidores anclados por su dominio (log §133), y después el
+ * TÍTULO de una página citada, que muy a menudo es él mismo un dominio
+ * (`blog.hubspot.es — "hubspot.es"`). Tres agujeros del mismo agujero.
+ */
+export function buildRecommendationRewritePrompt(input: RecommendationRewriteInput): string {
   const playbook = assetPlaybook(input);
   const promptBlock = [
     "You are a senior GEO (Generative Engine Optimization) consultant writing one concrete, copy-paste-ready action plan on a brand's dashboard.",
@@ -171,6 +192,12 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
         ]
       : [])
   ].join("\n");
+
+  return promptBlock;
+}
+
+export async function rewriteRecommendation(input: RecommendationRewriteInput): Promise<RecommendationRewrite | null> {
+  const promptBlock = buildRecommendationRewritePrompt(input);
 
   const raw = await generateGeminiJson(promptBlock);
   const parsed = recommendationRewriteSchema.safeParse(raw);

@@ -87,6 +87,17 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   a todos los llamadores a la vez.
 - **RLS**: lecturas con el cliente de usuario; cualquier escritura con
   service-role prueba propiedad antes con el cliente de usuario.
+- **El beat de ascenso de la primera misión también vive aquí** (log §132).
+  `loadWebAuditPageData` expone `activeRun` (el run `pending`/`running` del
+  proyecto, mismo patrón — y mismo `withAnalysisProgress` — que Prompts,
+  Competidores, Recomendaciones y Páginas citadas) y `page.tsx` renderiza
+  `FirstScanTakeover` cuando `!hasCompletedScan && activeRun`, delante de la
+  tarjeta vacía. Es seguro exactamente porque `!hasCompletedScan` implica que
+  no existen ni `summary` ni `technicalSnapshot` que tapar — la misma condición
+  que ya protege a `ReentryMission` un poco más abajo en el mismo árbol de
+  decisión. No hace falta ninguna rama nueva para la reentrada: en cuanto el
+  escaneo termina, `hasCompletedScan` pasa a `true` y `ReentryMission` ya
+  cubre "primera auditoría, en marcha" por su cuenta (SCAN-STATES-3, log §57).
 
 ### Las dos mitades tienen interruptor propio, y por defecto están apagadas
 

@@ -24,6 +24,7 @@ import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
 import { WEB_AUDIT_JOB_TYPE, WEB_AUDIT_STALE_LOCK_MS } from "@/lib/web-audit/audit-job";
 import { ReentryMission } from "@/components/reentry-mission";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { deriveAuditPillState, isWebAuditJobDue } from "@/lib/web-audit/audit-liveness";
 import { triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { loadWebAuditPageData } from "@/lib/web-audit/page-data";
@@ -88,6 +89,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   const {
     canAuditCoverage,
     hasCompletedScan,
+    activeRun,
     technicalSnapshot,
     currentTechnicalReport,
     technicalScoreDelta,
@@ -285,7 +287,20 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           told per-signal instead, inside the tiles/sections that need it
           (LockedSubScoreTile, the coverage-only Evolución/Historial blocks
           that stay empty by construction for a non-Pro project). */}
-      {!hasCompletedScan ? (
+      {!hasCompletedScan && activeRun ? (
+        /* ONBOARDING-ROCKET-1's ascent beat, extended to this screen: it
+           already took over Visión general, Prompts, Competidores,
+           Recomendaciones and Páginas citadas while a project's first scan is
+           in flight — Auditoría web was the one section still showing a
+           static "sin escaneo" card instead. Safe by the same rule
+           `ReentryMission` below already follows: this only replaces the
+           screen when there is nothing yet to hide, since `!hasCompletedScan`
+           means no summary and no technical snapshot exist. Once the scan
+           finishes, `hasCompletedScan` flips and the mission continues into
+           `ReentryMission` with no further wiring — that branch already
+           covers "first audit, nothing to hide" on its own. */
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+      ) : !hasCompletedScan ? (
         <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
           <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
             Todavía no hay ningún escaneo completado
