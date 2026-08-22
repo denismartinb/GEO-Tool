@@ -658,6 +658,182 @@ export function LandingPage() {
                     <span><i className="lp-prod-chip-eng off" /> No apareces</span>
                   </div>
                 </div>
+
+                {/* Competidores */}
+                <div className="lp-prod-pg" id="pg-comp" role="tabpanel">
+                  <div className="lp-prod-pghead">
+                    <span className="t">Competidores</span>
+                    <span className="m">Cuota de voz en IA · últimos 7 días</span>
+                  </div>
+
+                  <div className="lp-prod-card lp-prod-list">
+                    {[
+                      { n: 1, m: "IKEA", d: "ikea.es", ini: "IK", w: 100, v: "24%", delta: "▲2", tono: "pos", propia: true },
+                      { n: 2, m: "Leroy Merlin", d: "leroymerlin.es", ini: "LM", w: 87, v: "21%", delta: "▲3", tono: "pos", propia: false },
+                      { n: 3, m: "Maisons du Monde", d: "maisonsdumonde.com", ini: "MM", w: 75, v: "18%", delta: "▼1", tono: "neg", propia: false },
+                      { n: 4, m: "Kave Home", d: "kavehome.com", ini: "KH", w: 50, v: "12%", delta: "▲4", tono: "pos", propia: false }
+                    ].map((r) => (
+                      <div className="lp-prod-rank" key={r.m}>
+                        <span className="pos">{r.n}</span>
+                        <span className="lp-sheet-fav">
+                          <FaviconImg domain={r.d} cssSize={28} fallback={<span>{r.ini}</span>} />
+                        </span>
+                        <span className="who">
+                          <span className="nm">{r.m}</span>
+                          <span className="dm">{r.d}</span>
+                        </span>
+                        <span className="bar">
+                          <span className={`fill ${r.propia ? "own" : r.w <= 50 ? "flojo" : ""}`} style={{ width: `${r.w}%` }} />
+                        </span>
+                        <span className={`val ${r.propia ? "own" : ""}`}>{r.v}</span>
+                        <span className={`delta ${r.tono}`}>{r.delta}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="lp-prod-row3 lp-prod-temas">
+                    {[
+                      { t: "Precio y ofertas", v: "+28", tono: "pos" },
+                      { t: "Calidad y materiales", v: "−48", tono: "neg" },
+                      { t: "Diseño y estilo", v: "−5", tono: "neutro" }
+                    ].map((t) => (
+                      <div className="lp-prod-card lp-prod-tema" key={t.t}>
+                        <div className="lp-prod-cap">{t.t}</div>
+                        <div className={`v ${t.tono}`}>{t.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Auditoría web.
+                    LOS PESOS SON LOS DEL PRODUCTO, no los del artboard, y aquí
+                    no es sólo cuestión de honestidad: la sección oscura de esta
+                    MISMA PÁGINA ya publica +15 y +5 (log §143), así que dejar
+                    los +12 y +8 del artboard haría que la portada se
+                    contradijera a sí misma sobre el mismo fallo. `llms.txt` no
+                    lleva puntos —`pointDelta: null`— y por eso el artboard le
+                    pone «Generar», que es lo que sí ofrece. El total del
+                    encabezado es la suma real: 15 + 5 + 8. */}
+                <div className="lp-prod-pg" id="pg-audit" role="tabpanel">
+                  <div className="lp-prod-pghead">
+                    <span className="t">Auditoría web</span>
+                    <span className="m">34 páginas revisadas · 28 puntos recuperables</span>
+                  </div>
+
+                  <div className="lp-prod-card lp-prod-list">
+                    {[
+                      { t: "Sin datos estructurados", mono: "Product", p: "+15 pts", tipo: "pts" },
+                      { t: "Falta", mono: "llms.txt", p: "Generar", tipo: "accion" },
+                      { t: "La intro no responde primero · 9 páginas", p: "+5 pts", tipo: "pts" },
+                      { t: "Contenido sin fecha de actualización", p: "+8 pts", tipo: "pts" },
+                      { t: "GPTBot con acceso permitido", tipo: "ok" },
+                      { t: "Sitemap y canonical correctos", tipo: "ok" }
+                    ].map((f) => (
+                      <div className="lp-prod-fix" key={f.t + (f.mono ?? "")}>
+                        <span className={`lp-sheet-badge ${f.tipo === "ok" ? "lp-sheet-badge--ok" : "lp-sheet-badge--bad"}`}>
+                          <Icon name={f.tipo === "ok" ? "check" : "x"} size={14} />
+                        </span>
+                        <span className={`t ${f.tipo === "ok" ? "ok" : ""}`}>
+                          {f.t}
+                          {f.mono ? <> <code>{f.mono}</code></> : null}
+                        </span>
+                        {f.p ? (
+                          <span className={`lp-prod-pill ${f.tipo === "accion" ? "cita" : "pos"}`}>{f.p}</span>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recomendaciones */}
+                <div className="lp-prod-pg" id="pg-recs" role="tabpanel">
+                  <div className="lp-prod-pghead">
+                    <span className="t">Recomendaciones</span>
+                    <span className="m">9 acciones priorizadas por impacto</span>
+                  </div>
+
+                  <div className="lp-prod-recs">
+                    <div className="lp-prod-card lp-prod-accion">
+                      <div className="lp-prod-tags">
+                        <span className="lp-prod-pill alto">Impacto alto</span>
+                        <span className="lp-prod-pill cita">Victoria rápida</span>
+                      </div>
+                      <h3>Te mencionan pero no citan tu dominio en «mejores tiendas de muebles»</h3>
+
+                      <div className="lp-prod-evid">
+                        <div className="lp-prod-cap">La evidencia</div>
+                        <p>
+                          «…las opciones más recomendadas son <b>IKEA</b> y Maisons du Monde, según{" "}
+                          <b>elmueble.com</b>…»
+                        </p>
+                        <div className="lp-prod-evidsrc">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/brand/engines/chatgpt.svg" alt="" width={14} height={14} />
+                          <span className="m">ChatGPT · 6 respuestas · cita a</span>
+                          <span className="lp-sheet-fav lp-prod-favmini">
+                            <FaviconImg domain="elmueble.com" cssSize={18} fallback={<span>EM</span>} />
+                          </span>
+                          <span className="dm">elmueble.com</span>
+                        </div>
+                      </div>
+
+                      <div className="lp-prod-medidas">
+                        {[
+                          { t: "Impacto", w: 86, tono: "azul", v: null },
+                          { t: "Esfuerzo", w: 22, tono: "verde", v: null },
+                          { t: "Confianza", w: 88, tono: "azul", v: "88%" }
+                        ].map((m) => (
+                          <div className="lp-prod-medida" key={m.t}>
+                            <span className="t">{m.t}</span>
+                            <span className="bar"><span className={`fill ${m.tono}`} style={{ width: `${m.w}%` }} /></span>
+                            {m.v ? <span className="v">{m.v}</span> : null}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="lp-prod-card lp-prod-sol">
+                      <div className="lp-sheet-gen">
+                        <Icon name="sparkles" size={16} />
+                        <span className="lp-sheet-name">Solución generada</span>
+                        <span className="lp-sheet-ready">Lista para publicar</span>
+                      </div>
+
+                      <div className="lp-prod-solbody">
+                        <div className="lp-prod-cap">Página citable · FAQ</div>
+                        <h4>Guía de compra: qué tienda de muebles tiene mejor relación calidad-precio</h4>
+                        <div className="lp-prod-preguntas">
+                          {[
+                            "¿Qué tienda tiene mejor calidad-precio?",
+                            "¿Cuánto cuesta amueblar un salón?",
+                            "¿Qué garantía tienen los muebles?"
+                          ].map((q) => (
+                            <div className="lp-prod-pregunta" key={q}>
+                              <Icon name="check" size={14} />
+                              <span>{q}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <pre className="lp-sheet-code lp-prod-code">
+                          <span className="tag">&lt;script type=&quot;application/ld+json&quot;&gt;</span>
+                          {'\n{ "@type": "FAQPage",\n  "mainEntity": [{ "@type": "Question",\n    "name": "¿Qué tienda tiene mejor calidad-precio?" }]\n'}
+                          <span className="tag">&lt;/script&gt;</span>
+                        </pre>
+
+                        {/* Son el dibujo de dos botones dentro de una maqueta, no
+                            los botones del producto: no llevan `onClick` ni
+                            enlace, y por eso van como `span` y no como `button`.
+                            Un `<button>` sin acción es un control muerto, que es
+                            justo lo que el piloto marca como fallo. */}
+                        <div className="lp-prod-botones" aria-hidden="true">
+                          <span className="lp-prod-btn primario">Copiar el schema</span>
+                          <span className="lp-prod-btn">Descargar la página</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
