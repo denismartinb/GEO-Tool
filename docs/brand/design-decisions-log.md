@@ -12962,6 +12962,12 @@ miden sobre `#0a1220`: cuerpo `#e8eefc` **16,13:1**, párrafos `#93a3bd`
 **7,33:1**, kicker `--brand-cyan` **8,90:1**, titulares `#fff` **18,75:1**.
 Los cuatro pasan AA con holgura.
 
+> **Corregido en §144.** Dos de esas cuatro cifras eran de los colores que este
+> PR *declaró*, no de los que el navegador *pintó*: por una colisión de
+> especificidad el kicker salía índigo (**3,00:1**) y los párrafos en
+> `--ink-2` (**2,34:1**). Las cifras de arriba sólo pasaron a ser ciertas
+> cuando §144 arregló la colisión.
+
 **Comprobado.** `pnpm test`, `pnpm run validate` y `git diff --check` en verde.
 Landing real desde el build de producción a trece anchuras (1440 → 320 px): sin
 desbordamiento horizontal en ninguna, las cuatro hojas a 514 px en escritorio y
@@ -12972,3 +12978,107 @@ columna y se acaban los cruces.
 cuatro pasos, no tres; el texto del nav sigue diciendo «Cómo funciona» y encaja.
 La sección «De cero a un plan de acción en tres pasos» desaparece con sus tres
 pasos: lo que contaba está repartido entre los cuatro nuevos.
+
+---
+
+## 144. «Pixel perfect» no es una propiedad que se declara, es una distancia que se mide (HOME-2026-08 Fase B1, segunda pasada, 2026-08-22)
+
+El fundador preguntó si la tipografía, los espacios y las animaciones de la
+Fase B1 eran pixel perfect. La respuesta honesta en §143 fue que no, y allí se
+corrigió la escala tipográfica. Esta sección es la segunda pasada: **comparar
+propiedad a propiedad, en un navegador, la maqueta aprobada contra la landing
+de producción**, en vez de leer las dos hojas de estilo y darlas por iguales.
+
+El método importa más que la lista. Un script abre
+`docs/design-reference/home-2026-08/portada-escritorio.dc.html` y
+`http://localhost:3000/` en el mismo Chromium, resuelve las parejas de
+elementos equivalentes y compara `getComputedStyle` más la caja real. La
+primera pasada dio **36 diferencias** en la cabecera de las dos secciones
+nuevas y **otras tantas** dentro de la primera hoja. Al terminar quedan 17, y
+todas son de una de estas tres clases: tokens de tinta del sitio que difieren
+del artboard en 3-4 unidades (`--ink-4` #98a0b0 frente a #98A2B3), métricas de
+la fuente de display frente a la que la maqueta tiene de reserva, y una
+decisión deliberada —las iniciales del favicon— que se explica más abajo.
+
+### Lo que estaba mal y no se veía leyendo el CSS
+
+**Dos de los tres colores de la sección oscura no llegaban a pintar nada.**
+`.lp-kicker--dark` y `.lp-sec-sub--dark` son (0,1,0), igual que `.lp-kicker` y
+`.lp-sec-sub`, que declaran `color` **más abajo en el mismo fichero**: a
+igualdad de especificidad gana el último. El rótulo salía índigo `--accent`
+sobre azul marino y la bajada en `--ink-2` #475067, un gris calculado sobre
+blanco que sobre `#0a1220` da **2,34:1** — muy por debajo del 4,5:1 de AA para
+texto de cuerpo. §143 ya había diagnosticado exactamente esta trampa **para la
+escala tipográfica** y la resolvió calificando por sección; los colores se
+quedaron como modificadores sueltos y volvieron a caer en ella. `.lp-h2--dark`
+sí funcionaba, y sólo por casualidad: `.lp-h2` no declara `color`. Es decir,
+**el caso que se veía bien era el que no demostraba nada**, y las cifras de
+contraste de §143 se calcularon sobre el CSS escrito, no sobre el pintado.
+
+**El hueco de la cabecera se midió por su propiedad, no por su distancia.**
+§143 puso `margin-bottom: 122px` razonando sobre el colapso de márgenes. El
+hueco real entre la cabecera y el «01» salía a **136px** contra los 122 del
+artboard: la fila del paso está centrada verticalmente y el número, con
+`line-height: .8`, deja 14px de aire dentro de su propia caja. Ahora la
+declaración es 108 y **lo que se comprueba es el hueco**, que da 122.
+
+**La hoja de producto era un tercio más baja que la del artboard.** 135px
+contra 192. Tres causas: un único `padding` para las cuatro hojas cuando el
+diseño les da uno distinto a cada una (10/20, 22, 8/20 y 0), filas separadas
+por `gap` en vez de por relleno propio y una línea entre ellas, y la interlínea
+del sitio (24px) heredada dentro de la tarjeta, que engordaba 16px cualquier
+fila cuyo nombre partiera en dos líneas.
+
+**Faltaban tres piezas enteras del diseño**, no matices: la barra de reparto
+de cuatro segmentos del paso 2, los distintivos redondos de ✗/✓ del paso 3 y
+**el disco de puntuación de 132px del paso 4**, que es la imagen que cierra la
+sección. Estaban implementadas como texto plano.
+
+### La revelación escondía la sección entera sin JavaScript
+
+El estado inicial (`opacity: 0`, `scaleX(0)`) estaba escrito en el CSS a secas
+y sólo se deshacía al llegar `is-in`, que pone una isla de cliente. Con el JS
+desactivado esa clase no llega nunca: **la única superficie oscura del sitio se
+quedaba en blanco** — cuatro pasos invisibles y tres barras a cero. El
+comentario de `RevealOnScroll` afirmaba, palabra por palabra, lo contrario («si
+el JS no llega, los pasos se ven igual»). Ahora el estado oculto cuelga de
+`.is-armed`, que pone la propia isla, así que sin JS no hay nada que revelar; y
+lo que ya está en pantalla al armar se marca entrado en el mismo fotograma,
+para que no dé un salto de visible a oculto y vuelta. Comprobado con el JS
+desactivado y con `prefers-reduced-motion`: los cuatro pasos a opacidad 1, las
+barras sin transformación y el disco a 87.5.
+
+El disco se anima ahora como las barras —1,8s, mismo retardo que el artboard—,
+porque es el mismo dato contado de otra forma.
+
+### El logo de ChatGPT no se veía, y en la maqueta tampoco
+
+La fila de motores del paso 1 va en el artboard con las marcas sueltas sobre el
+fondo oscuro. El logo de ChatGPT es negro puro: sobre `#0a1220` desaparece, y
+en la propia maqueta sale como una mancha. Se resuelve metiendo **cada** marca
+en un disco blanco de 26px, no retocando la de OpenAI: es la regla que sigue
+valiendo cuando entre un cuarto motor. La fila sirve los tres motores que el
+escaneo ejecuta de verdad (`lib/llm/`), que es lo que la frase del paso afirma;
+la maqueta traía uno y dos huecos que rellenaba su editor.
+
+### Lo que se aparta del artboard a propósito
+
+- **Las iniciales del favicon** van a 10,5px/700 en `--ink-3`; la maqueta las
+  deja heredar 16px/400, que en una caja de 28px se sale. Es la caja de
+  respaldo de `FaviconImg`, y sólo se ve cuando el servicio no conoce el
+  dominio.
+- **«Maisons du Monde» no se abrevia.** La maqueta móvil lo recorta a «Maisons
+  du M.» para que no parta en dos líneas; es un nombre de marca real y parte.
+- **Los pesos de la auditoría del paso 3** siguen siendo los del producto
+  (+15 / +5 / aviso), no los de la maqueta (+12 / +6 / +8), por lo ya decidido
+  en §143.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
+en verde. La comparación contra el artboard, en el navegador, a 1280 y 390px.
+La sección entera fotografiada en las dos anchuras con los cuatro pasos
+revelados, y comparada con la misma captura de la maqueta.
+
+**Pendiente / conocido.** Los favicons oficiales siguen **sin verificar desde
+aquí**: el sandbox no alcanza `www.google.com`, que es de donde salen, así que
+en local sólo se ven las iniciales. Lo tienen que enseñar las capturas del
+piloto, que corre con salida real.

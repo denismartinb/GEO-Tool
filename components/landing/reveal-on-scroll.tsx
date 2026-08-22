@@ -22,8 +22,16 @@ import { useEffect, useRef } from "react";
  *
  * **`prefers-reduced-motion` no degrada, revela y ya.** No hay fotograma
  * intermedio que contar aquí: la barra llena ES el dato. Con movimiento
- * reducido se marca todo como entrado en el primer efecto y no se observa
- * nada.
+ * reducido no se arma nada y los pasos se quedan como los pintó el servidor.
+ *
+ * **El estado oculto lo enciende esta isla, no la hoja de estilos.** Es lo que
+ * hace cierta la frase de arriba. Escrito al revés —`opacity: 0` y
+ * `scaleX(0)` en el CSS a secas, revelados sólo al llegar `is-in`— la sección
+ * ENTERA desaparecía sin JS: cuatro pasos invisibles y tres barras a cero, en
+ * la única superficie oscura del sitio. El CSS sólo esconde bajo `.is-armed`,
+ * que se pone aquí; sin JS esa clase no llega nunca y no hay nada que
+ * revelar. Lo que ya está en pantalla al armar se marca `is-in` en el mismo
+ * fotograma, para que no dé un salto de visible a oculto y vuelta.
  */
 export function RevealOnScroll({ selector }: { selector: string }) {
   const hecho = useRef(false);
@@ -39,12 +47,18 @@ export function RevealOnScroll({ selector }: { selector: string }) {
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    if (quieto || typeof IntersectionObserver === "undefined") {
-      pasos.forEach((p) => p.classList.add("is-in"));
-      return;
+    if (quieto || typeof IntersectionObserver === "undefined") return;
+
+    // Armar y, en el mismo fotograma, dar por entrado lo que ya se ve.
+    for (const p of pasos) {
+      p.classList.add("is-armed");
+      const r = p.getBoundingClientRect();
+      const visible = r.top < window.innerHeight && r.bottom > 0;
+      if (visible) p.classList.add("is-in");
     }
 
-    let pendientes = pasos.length;
+    let pendientes = pasos.filter((p) => !p.classList.contains("is-in")).length;
+    if (pendientes === 0) return;
     const obs = new IntersectionObserver(
       (entradas) => {
         for (const e of entradas) {
@@ -59,7 +73,7 @@ export function RevealOnScroll({ selector }: { selector: string }) {
       { threshold: 0.28 }
     );
 
-    pasos.forEach((p) => obs.observe(p));
+    pasos.filter((p) => !p.classList.contains("is-in")).forEach((p) => obs.observe(p));
     return () => obs.disconnect();
   }, [selector]);
 

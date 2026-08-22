@@ -36,13 +36,31 @@ const FEATURES: Array<{ icon: string; t: string; d: string }> = [
  * respuesta-primero», «llms.txt»), copiados de `issue-rows.tsx`, para que
  * quien llegue a la auditoría reconozca lo que vio en la portada.
  */
-const HOW_STEPS: Array<{ n: string; t: string; d: string; sheet: ReactNode }> = [
+/* Los tres motores que el escaneo consulta de verdad (`lib/llm/`), no una
+   selección de marcas. El artboard pone esta fila bajo el texto del paso 1 con
+   un solo logo y dos huecos que su editor rellenaba; aquí se sirven los tres
+   que el producto ejecuta, que es lo que la frase del paso afirma. */
+const HOW_ENGINES = [
+  { name: "ChatGPT", src: "/brand/engines/chatgpt.svg" },
+  { name: "Gemini", src: "/brand/engines/gemini.svg" },
+  { name: "Claude", src: "/brand/engines/claude.svg" }
+];
+
+const HOW_STEPS: Array<{ n: string; t: string; d: string; extra?: ReactNode; sheet: ReactNode }> = [
   {
     n: "01",
     t: "Mides tu visibilidad",
     d: "Tus prompts se lanzan en los motores de IA. Cuántas veces te nombran y cuántas te citan como fuente: son dos problemas distintos con soluciones distintas.",
+    extra: (
+      <div className="lp-how-engines">
+        {HOW_ENGINES.map((e) => (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img key={e.name} src={e.src} alt={e.name} width={20} height={20} />
+        ))}
+      </div>
+    ),
     sheet: (
-      <div className="lp-sheet">
+      <div className="lp-sheet lp-sheet--rows">
         {[
           { m: "IKEA", d: "ikea.es", ini: "IK", v: 24, tone: "own" },
           { m: "Leroy Merlin", d: "leroymerlin.es", ini: "LM", v: 21, tone: "" },
@@ -50,7 +68,7 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; sheet: ReactNode }> = 
         ].map((r) => (
           <div className="lp-sheet-row" key={r.m}>
             <span className="lp-sheet-fav">
-              <FaviconImg domain={r.d} cssSize={26} fallback={<span>{r.ini}</span>} />
+              <FaviconImg domain={r.d} cssSize={28} fallback={<span>{r.ini}</span>} />
             </span>
             <span className="lp-sheet-name">{r.m}</span>
             <span className="lp-sheet-bar">
@@ -67,15 +85,26 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; sheet: ReactNode }> = 
     t: "Entiendes por qué",
     d: "Un modelo construye su respuesta a partir de páginas concretas. Te enseñamos cuáles son y quién sale citado en ellas.",
     sheet: (
-      <div className="lp-sheet">
+      <div className="lp-sheet lp-sheet--card">
+        {/* El reparto de la respuesta entre quienes salen citados. Va sin
+            etiquetas, como en el artboard: enseña la forma del dato, no lo
+            afirma. */}
+        <div className="lp-sheet-split" aria-hidden="true">
+          <span style={{ width: "43%", background: "var(--brand-blue)" }} />
+          <span style={{ width: "20%", background: "#d23b48" }} />
+          <span style={{ width: "19%", background: "var(--brand-cyan)" }} />
+          <span style={{ width: "18%", background: "#c3cbd8" }} />
+        </div>
         <div className="lp-sheet-src">
           <span className="lp-sheet-fav">
             <FaviconImg domain="elmueble.com" cssSize={26} fallback={<span>EM</span>} />
           </span>
-          <span className="lp-sheet-name">elmueble.com</span>
-          <span className="lp-sheet-meta">10 citas · cita a 3 rivales</span>
+          <span className="lp-sheet-srcname">
+            <span className="lp-sheet-name">elmueble.com</span>
+            <span className="lp-sheet-meta">10 citas · cita a 3 rivales</span>
+          </span>
+          <span className="lp-sheet-flag">No te cita</span>
         </div>
-        <div className="lp-sheet-flag">No te cita</div>
         <blockquote className="lp-sheet-quote">
           «…según elmueble.com, las mejores opciones son Maisons du Monde y Kave Home…»
         </blockquote>
@@ -87,20 +116,25 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; sheet: ReactNode }> = 
     t: "Arreglas tu web",
     d: "Antes de pelear por que te recomienden, hay que poder leerte. Para cada fallo estimamos los puntos que ganarías al corregirlo.",
     sheet: (
-      <div className="lp-sheet">
+      <div className="lp-sheet lp-sheet--fix">
         {[
-          { t: "Datos estructurados", p: "+15 pts" },
-          { t: "Intro respuesta-primero", p: "+5 pts" },
-          { t: "llms.txt", p: "aviso" }
+          { t: "Sin datos estructurados", p: "+15 pts" },
+          { t: "La intro no responde primero", p: "+5 pts" },
+          { t: "Falta llms.txt", p: "aviso" }
         ].map((f) => (
           <div className="lp-sheet-fix" key={f.t}>
+            <span className="lp-sheet-badge lp-sheet-badge--bad">
+              <Icon name="x" size={14} />
+            </span>
             <span className="lp-sheet-name">{f.t}</span>
             <span className={`lp-sheet-pts ${f.p === "aviso" ? "warn" : ""}`}>{f.p}</span>
           </div>
         ))}
         <div className="lp-sheet-fix lp-sheet-fix--ok">
+          <span className="lp-sheet-badge lp-sheet-badge--ok">
+            <Icon name="check" size={14} />
+          </span>
           <span className="lp-sheet-name">GPTBot con acceso permitido</span>
-          <Icon name="shield" size={15} />
         </div>
       </div>
     )
@@ -110,16 +144,41 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; sheet: ReactNode }> = 
     t: "Mejoras tu presencia",
     d: "Cada acción trae su solución generada: las FAQ, el schema, la página que falta. El siguiente escaneo mide si funcionó.",
     sheet: (
-      <div className="lp-sheet">
+      <div className="lp-sheet lp-sheet--split">
         <div className="lp-sheet-gen">
+          <Icon name="sparkles" size={16} />
           <span className="lp-sheet-name">Solución generada</span>
           <span className="lp-sheet-ready">Lista para publicar</span>
         </div>
-        <pre className="lp-sheet-code">{'<script type="application/ld+json">\n{ "@type": "FAQPage", … }\n</script>'}</pre>
-        <div className="lp-sheet-delta">
-          <span className="lp-sheet-before">antes 48</span>
-          <span className="lp-sheet-after">71</span>
-          <span className="lp-sheet-gain">+23 pts</span>
+        <div className="lp-sheet-result">
+          <div className="lp-sheet-dial">
+            <svg viewBox="0 0 112 112" aria-hidden="true">
+              <circle cx="56" cy="56" r="48" fill="none" stroke="#eef1f6" strokeWidth="12" />
+              <circle
+                className="lp-sheet-dial-arc"
+                cx="56"
+                cy="56"
+                r="48"
+                fill="none"
+                stroke="var(--brand-blue)"
+                strokeWidth="12"
+                strokeLinecap="round"
+                strokeDasharray="301.6"
+                strokeDashoffset="87.5"
+                transform="rotate(-90 56 56)"
+              />
+            </svg>
+            <span className="lp-sheet-dial-num">71</span>
+          </div>
+          <div className="lp-sheet-delta">
+            <span className="lp-sheet-before">antes 48</span>
+            <span className="lp-sheet-gain">+23 pts</span>
+          </div>
+          <pre className="lp-sheet-code">
+            <span className="tag">&lt;script type=&quot;application/ld+json&quot;&gt;</span>
+            {'\n{ "@type": "FAQPage", … }\n'}
+            <span className="tag">&lt;/script&gt;</span>
+          </pre>
         </div>
       </div>
     )
@@ -284,12 +343,14 @@ export function LandingPage() {
           fuente única de las ~57 páginas públicas: cambiarlo aquí las rompe
           todas.
 
-          SIN REVELACIÓN POR SCROLL, y es una decisión. El artboard entra las
-          cuatro tarjetas con `IntersectionObserver`. Montarlo pediría una isla
-          de cliente en una página que PRELAUNCH-HARDENING-1 Fase V dejó
-          server-rendered a propósito —el campo del hero es la única isla— y el
-          precio sería hidratar seis secciones de markup que no cambian nunca,
-          a cambio de un fundido. El contenido se pinta y se lee igual. */}
+          CON REVELACIÓN POR SCROLL desde el 2026-08-22. Se descartó primero
+          para no añadir una isla de cliente a una página que
+          PRELAUNCH-HARDENING-1 Fase V dejó server-rendered a propósito, y el
+          fundador la echó en falta al mirar el preview: la revelación no es un
+          adorno del artboard, es lo que hace que las barras se lean como una
+          medición que ocurre. `RevealOnScroll` es una isla de ~1KB que sólo
+          observa y añade una clase; el markup de la sección sigue siendo del
+          servidor y sin JS se ve entero y quieto. */}
       <section className="lp-section lp-how" id="como">
         <div className="lp-inner">
           <div className="lp-sec-head">
@@ -309,6 +370,7 @@ export function LandingPage() {
                   <div className="lp-how-num">{step.n}</div>
                   <h3 className="lp-how-h3">{step.t}</h3>
                   <p>{step.d}</p>
+                  {step.extra}
                 </div>
                 <div className="lp-how-dot" aria-hidden="true" />
                 <div className="lp-how-sheet">{step.sheet}</div>

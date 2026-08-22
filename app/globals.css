@@ -4956,21 +4956,41 @@ a.notif-row:hover {
 .lp-how .lp-h2 { font-weight: 700; letter-spacing: -.03em; }
 .lp-rules .lp-h2 { font-size: 42px; line-height: 1.08; }
 .lp-how .lp-h2 { font-size: 44px; line-height: 1.06; }
-.lp-rules .lp-sec-sub,
+.lp-rules .lp-sec-sub { font-size: 15.5px; line-height: 1.72; color: var(--ink-3); }
 .lp-how .lp-sec-sub { font-size: 16px; line-height: 1.72; }
+.lp-rules .lp-sec-sub,
 .lp-how .lp-sec-sub { margin-top: 24px; }
-.lp-rules .lp-sec-head { margin-bottom: 64px; }
-/* La cabecera de la sección oscura respira más que la clara: 96px frente a 64,
-   medido sobre el artboard. El raíl no añade margen propio; el hueco lo pone
-   la cabecera. Va como UN número —122px— y no como los «96 de margen + 26 del
-   paso» que suman en el artboard, porque márgenes verticales adyacentes se
-   colapsan en el mayor: declarar 96 aquí y 26 en el raíl da 96, no 122
-   (comprobado midiendo, no deducido). */
-.lp-how .lp-sec-head { margin-bottom: 122px; }
+/* La bajada oscura no lleva el ancho máximo del sitio: en el artboard ocupa
+   los 700px enteros de su cabecera y entra en UNA línea. Con los 560px
+   heredados de `.lp-sec-sub` partía en dos y la cabecera crecía 27px. */
+.lp-how .lp-sec-sub { max-width: none; }
+.lp-rules .lp-h2,
+.lp-how .lp-h2 { margin-top: 22px; }
+.lp-rules .lp-sec-head { max-width: 660px; margin-bottom: 64px; }
+.lp-how .lp-sec-head { max-width: 700px; }
+/* La cabecera de la sección oscura respira más que la clara. El número que
+   importa es el HUECO REAL entre el borde inferior de la cabecera y el «01»
+   del primer paso: 122px en el artboard, medido, no el `margin-bottom` de
+   nadie. Aquí sale a 108 porque la fila del paso está centrada verticalmente
+   y el número, con `line-height: .8`, deja 14px de aire por arriba dentro de
+   su propia caja. Puesto a 122 el hueco salía a 136 — el error no se veía
+   comparando propiedades, sólo midiendo la distancia. */
+.lp-how .lp-sec-head { margin-bottom: 108px; }
 
-.lp-kicker--dark { color: var(--brand-cyan); }
-.lp-h2--dark { color: #fff; }
-.lp-sec-sub--dark { color: #93a3bd; }
+/* LOS COLORES VAN CALIFICADOS POR SECCIÓN POR EL MISMO MOTIVO QUE LA ESCALA.
+   Se escribieron primero como modificadores sueltos —`.lp-kicker--dark`— y dos
+   de los tres no llegaron a pintar nada: `.lp-kicker` y `.lp-sec-sub` declaran
+   `color` más abajo en este fichero y, a igualdad de especificidad (0,1,0),
+   gana el último. El resultado en producción era un rótulo índigo sobre azul
+   marino en vez de cian, y una bajada en `--ink-2` —un gris calculado sobre
+   blanco— que sobre #0a1220 daba 2,34:1, muy por debajo del 4,5:1 de AA.
+   `.lp-h2--dark` sí funcionaba, y sólo porque `.lp-h2` no declara color: el
+   fallo era invisible en dos de tres y el titular parecía demostrar que el
+   patrón servía. Medido contra el artboard el 2026-08-22, no deducido. */
+.lp-rules .lp-kicker { color: var(--ink-4); }
+.lp-how .lp-kicker--dark { color: var(--brand-cyan); }
+.lp-how .lp-h2--dark { color: #fff; }
+.lp-how .lp-sec-sub--dark { color: #93a3bd; }
 
 .lp-how-rail { list-style: none; margin: 0; padding: 0; position: relative; }
 /* El raíl es el hilo que une los cuatro pasos. Va detrás de los puntos. */
@@ -5020,18 +5040,52 @@ a.notif-row:hover {
   font-size: 34px; font-weight: 700; line-height: 1.12; letter-spacing: -.03em; color: #fff;
 }
 .lp-how-text p { margin: 16px 0 0; font-size: 15.5px; line-height: 1.7; color: #93a3bd; }
+/* Los motores van del lado del raíl, así que siguen el cruce del paso.
+   CADA MARCA VA EN UN DISCO BLANCO, y no suelta como en el artboard: el logo
+   de ChatGPT es negro puro y sobre #0a1220 no se ve —en la maqueta tampoco,
+   ahí sale como una mancha oscura— mientras que los de Gemini y Claude sí.
+   El disco lo resuelve para las tres sin tocar ninguna marca ajena, que es la
+   regla que aguanta cuando mañana entre un cuarto motor. */
+.lp-how-engines { display: flex; align-items: center; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+.lp-how-step:nth-child(even) .lp-how-engines { justify-content: flex-start; }
+.lp-how-engines img {
+  width: 26px; height: 26px; display: block; padding: 4px; border-radius: 999px;
+  background: #fff; box-sizing: border-box;
+}
 
-/* La «hoja»: la maqueta de producto de cada paso. */
+/* La «hoja»: la maqueta de producto de cada paso.
+   CADA PASO TIENE SU PROPIO RELLENO en el artboard —10/20, 22, 8/20 y 0— y no
+   uno común: las hojas que son una lista separan sus filas con una línea y el
+   relleno vertical lo ponen las filas, mientras que las que son una tarjeta lo
+   ponen ellas. Servirlas todas con `padding: 12px 20px` y `gap: 10px` dejaba
+   la primera hoja en 135px de alto contra los 192px del artboard (medido el
+   2026-08-22): no era un matiz, era una tarjeta un tercio más baja. */
 .lp-sheet {
-  background: #fff; color: var(--ink); border-radius: 16px; padding: 12px 20px;
-  box-shadow: 0 16px 36px rgba(2,6,14,.55); display: grid; gap: 10px;
+  background: #fff; color: var(--ink); border-radius: 16px; overflow: hidden;
+  box-shadow: 0 16px 36px rgba(2,6,14,.55);
+  /* La hoja no hereda la interlínea del sitio (24px): con ella un nombre de
+     competidor que parte en dos líneas engordaba su fila 16px y la tarjeta
+     entera se iba 10px por encima del artboard. Los bloques que sí necesitan
+     su propia interlínea —la cita y el código— la declaran. */
+  line-height: normal;
 }
+.lp-sheet--rows { padding: 10px 20px; }
+.lp-sheet--card { padding: 22px; }
+.lp-sheet--fix { padding: 8px 20px; }
+.lp-sheet--split { padding: 0; }
 .lp-sheet-row, .lp-sheet-fix, .lp-sheet-src, .lp-sheet-gen, .lp-sheet-delta {
-  display: flex; align-items: center; gap: 10px; font-size: 13px;
+  display: flex; align-items: center; gap: 14px;
 }
-.lp-sheet-name { font-weight: 600; }
+/* Las filas de una lista se separan con una línea entre ellas, nunca por
+   encima de la primera ni por debajo de la última. */
+.lp-sheet-row { padding: 14px 0; }
+.lp-sheet-fix { padding: 15px 0; }
+.lp-sheet-row + .lp-sheet-row,
+.lp-sheet-fix + .lp-sheet-fix { border-top: 1px solid var(--line-soft); }
+.lp-sheet-name { font-size: 13.5px; font-weight: 600; }
+.lp-sheet-fix .lp-sheet-name { flex: 1; font-size: 14px; font-weight: 500; }
 .lp-sheet-row .lp-sheet-name { width: 110px; flex: 0 0 auto; }
-.lp-sheet-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.lp-sheet-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
 /* La barra crece de 0 a su ancho cuando el paso entra en pantalla, con los
    tiempos del artboard: 1,1 s, `cubic-bezier(.2,.8,.25,1)` y retardos de
    .12/.26/.40 s. `transform` y no `width`: escalar se compone en el hilo de
@@ -5039,37 +5093,63 @@ a.notif-row:hover {
    estilo en línea, así que sin JS —o con movimiento reducido— la barra ya está
    en su sitio y sólo falta quitarle la escala. */
 .lp-sheet-bar .fill {
-  display: block; height: 100%; border-radius: 999px; background: var(--ink-4);
-  transform: scaleX(0); transform-origin: left center;
+  display: block; height: 100%; border-radius: 999px; background: #93b0f2;
+  transform-origin: left center;
   transition: transform 1.1s cubic-bezier(.2, .8, .25, 1);
 }
-.lp-how-step.is-in .lp-sheet-bar .fill { transform: scaleX(1); }
+/* EL ESTADO OCULTO CUELGA DE `.is-armed`, que pone la isla de cliente. Sin JS
+   esa clase no llega y la sección se ve entera y quieta. Escrito sin ella
+   —`scaleX(0)` y `opacity: 0` a secas— la única superficie oscura del sitio
+   se quedaba en blanco con el JS desactivado, y el comentario de
+   `RevealOnScroll` afirmaba justo lo contrario. */
+.lp-how-step.is-armed .lp-sheet-bar .fill { transform: scaleX(0); }
+.lp-how-step.is-armed.is-in .lp-sheet-bar .fill { transform: scaleX(1); }
 .lp-how-step .lp-sheet-row:nth-child(1) .fill { transition-delay: .12s; }
 .lp-how-step .lp-sheet-row:nth-child(2) .fill { transition-delay: .26s; }
 .lp-how-step .lp-sheet-row:nth-child(3) .fill { transition-delay: .40s; }
+/* El disco del paso 4 se llena igual que las barras: es el mismo dato
+   contado de otra forma, así que comparte el gesto (1,8 s en el artboard,
+   con .2 s de retardo). El trazo va de vacío a 71. */
+.lp-sheet-dial-arc { transition: stroke-dashoffset 1.8s cubic-bezier(.2, .8, .25, 1) .2s; }
+.lp-how-step.is-armed .lp-sheet-dial-arc { stroke-dashoffset: 301.6; }
+.lp-how-step.is-armed.is-in .lp-sheet-dial-arc { stroke-dashoffset: 87.5; }
 
 /* El paso entero asoma: sube un poco y aparece. Nada se mueve si el visitante
    pidió menos movimiento — y ahí no hay degradación que explicar, porque el
    estado final es el contenido. */
 .lp-how-step .lp-how-text,
 .lp-how-step .lp-how-sheet {
-  opacity: 0; transform: translateY(14px);
   transition: opacity .7s ease, transform .7s cubic-bezier(.2, .8, .25, 1);
 }
-.lp-how-step.is-in .lp-how-text,
-.lp-how-step.is-in .lp-how-sheet { opacity: 1; transform: none; }
+.lp-how-step.is-armed .lp-how-text,
+.lp-how-step.is-armed .lp-how-sheet { opacity: 0; transform: translateY(14px); }
+.lp-how-step.is-armed.is-in .lp-how-text,
+.lp-how-step.is-armed.is-in .lp-how-sheet { opacity: 1; transform: none; }
 .lp-how-step .lp-how-sheet { transition-delay: .10s; }
 
+/* Con movimiento reducido la isla no arma nada, así que aquí sólo queda
+   apagar las transiciones por si alguien llega ya armado (cambio de ajuste
+   con la página abierta). */
 @media (prefers-reduced-motion: reduce) {
   .lp-sheet-bar .fill,
+  .lp-sheet-dial-arc,
   .lp-how-step .lp-how-text,
   .lp-how-step .lp-how-sheet {
     transition: none; transform: none; opacity: 1;
   }
-  .lp-sheet-bar .fill { transform: scaleX(1); }
+  .lp-how-step.is-armed .lp-sheet-bar .fill { transform: scaleX(1); }
+  .lp-how-step.is-armed .lp-sheet-dial-arc { stroke-dashoffset: 87.5; }
 }
 .lp-sheet-bar .fill.own { background: var(--brand-blue); }
-.lp-sheet-num { width: 42px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Las barras que no son la propia marca son azul claro, no gris: en el
+   artboard la columna entera se lee como una misma escala y sólo la primera
+   destaca por saturación. En gris (`--ink-4`) parecían apagadas, otra cosa. */
+.lp-sheet-num {
+  width: 46px; text-align: right; flex: 0 0 auto;
+  font-family: var(--font-display), inherit; font-size: 16px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lp-sheet-row + .lp-sheet-row .lp-sheet-num { color: var(--ink-3); }
 /* La caja del favicon: el logo oficial cuando el servicio lo conoce y las
    iniciales cuando no. El fundador, 2026-08-22: «donde salgan competidores
    tienen que salir los logos favicons oficiales». Se resuelve con `FaviconImg`
@@ -5083,40 +5163,82 @@ a.notif-row:hover {
   font-size: 10.5px; font-weight: 700; color: var(--ink-3); letter-spacing: -.02em;
 }
 .lp-sheet-fav img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.lp-sheet-meta { margin-left: auto; font-size: 11.5px; color: var(--ink-4); }
+.lp-sheet-row .lp-sheet-fav { width: 28px; height: 28px; }
+/* El reparto de la respuesta: cuatro segmentos pegados dentro de una misma
+   cápsula, sin hueco entre ellos. */
+.lp-sheet-split { display: flex; height: 11px; border-radius: 999px; overflow: hidden; }
+.lp-sheet-split span { display: block; height: 100%; }
+.lp-sheet-src { gap: 11px; margin-top: 20px; }
+.lp-sheet-srcname { flex: 1; min-width: 0; display: grid; }
+.lp-sheet-meta { font-size: 12px; color: var(--ink-4); }
 .lp-sheet-flag {
-  align-self: start; background: #fdecec; color: #b42318; border-radius: 999px;
-  padding: 4px 10px; font-size: 11.5px; font-weight: 650;
+  flex: 0 0 auto; display: inline-flex; align-items: center; height: 22px;
+  padding: 0 9px; background: #fdecee; color: #a02531; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600;
 }
 .lp-sheet-quote {
-  margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-3); font-style: italic;
+  margin: 16px 0 0; padding: 14px 16px; background: var(--canvas); border-radius: 12px;
+  font-size: 13px; line-height: 1.7; color: var(--ink-3); font-style: italic;
 }
+/* El distintivo redondo de cada fallo. El artboard lo usa para decir de un
+   vistazo qué está mal y qué está bien antes de leer una sola palabra. */
+.lp-sheet-badge {
+  width: 22px; height: 22px; flex: 0 0 auto; border-radius: 999px;
+  display: grid; place-items: center;
+}
+.lp-sheet-badge--bad { background: #fdecee; color: #d23b48; }
+.lp-sheet-badge--ok { background: #e7f6ee; color: #15915a; }
+.lp-sheet-badge svg { stroke-width: 3; }
 .lp-sheet-pts {
-  margin-left: auto; background: var(--accent-soft); color: var(--brand-blue);
-  border-radius: 999px; padding: 3px 9px; font-size: 11.5px; font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto; display: inline-flex; align-items: center; height: 22px;
+  padding: 0 9px; background: #e7f6ee; color: #15915a; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 /* `llms.txt` no lleva puntos porque el producto no se los da: se pinta como
    aviso, no como ganancia. Ver el comentario de `HOW_STEPS`. */
 .lp-sheet-pts.warn { background: #fff4e5; color: #8a5a08; }
-.lp-sheet-fix--ok { color: var(--ink-3); }
-.lp-sheet-fix--ok .lp-sheet-name { font-weight: 500; }
-.lp-sheet-fix--ok svg { margin-left: auto; color: #3f8c5c; }
+.lp-sheet-fix--ok .lp-sheet-name { color: var(--ink-4); }
+.lp-sheet-gen { padding: 16px 20px; gap: 10px; border-bottom: 1px solid var(--line-soft); }
+.lp-sheet-gen > svg { color: var(--brand-blue); }
 .lp-sheet-ready {
-  margin-left: auto; background: #e8f6ee; color: #256b45; border-radius: 999px;
-  padding: 3px 9px; font-size: 11.5px; font-weight: 650;
+  margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center;
+  height: 22px; padding: 0 9px; background: #e7f6ee; color: #15915a;
+  border-radius: 999px; font-size: 11.5px; font-weight: 600;
 }
+/* El resultado: el marcador a la izquierda y, a su derecha, lo que se ganó y
+   el artefacto pegable. El disco es un `svg` fluido dentro de una columna fija
+   de 132px, así que al estrecharse la pantalla encoge con ella. */
+.lp-sheet-result {
+  padding: 20px; display: grid; gap: 0 20px; align-items: center;
+  grid-template-columns: 132px 1fr;
+  grid-template-areas: "dial delta" "dial code";
+}
+.lp-sheet-dial { grid-area: dial; }
+.lp-sheet-result .lp-sheet-delta { grid-area: delta; align-self: end; }
+.lp-sheet-result .lp-sheet-code { grid-area: code; align-self: start; }
+.lp-sheet-dial { position: relative; width: 132px; height: 132px; }
+.lp-sheet-dial svg { width: 100%; height: 100%; display: block; }
+.lp-sheet-dial-num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--font-display), inherit; font-size: 38px; font-weight: 700;
+  letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+.lp-sheet-delta { gap: 10px; }
+.lp-sheet-before { font-size: 13px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.lp-sheet-gain {
+  flex: 0 0 auto; display: inline-flex; align-items: center; height: 22px;
+  padding: 0 9px; background: #e7f6ee; color: #15915a; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+/* El bloque de código es oscuro DENTRO de una tarjeta blanca que está sobre
+   fondo oscuro. Es del artboard y no es un descuido: el artefacto pegable se
+   lee como código, no como texto de la tarjeta. */
 .lp-sheet-code {
-  margin: 0; background: var(--surface-2); border-radius: 9px; padding: 10px 12px;
-  font-family: var(--mono); font-size: 11px; line-height: 1.6; color: var(--ink-2);
+  margin: 14px 0 0; background: #0a1220; border-radius: 12px; padding: 14px 16px;
+  font-family: var(--mono); font-size: 10.5px; line-height: 1.8; color: #9fd4ff;
   white-space: pre-wrap; word-break: break-word;
 }
-.lp-sheet-before { color: var(--ink-4); text-decoration: line-through; }
-.lp-sheet-after { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.lp-sheet-gain {
-  margin-left: auto; background: #e8f6ee; color: #256b45; border-radius: 999px;
-  padding: 3px 9px; font-size: 11.5px; font-weight: 700;
-}
+.lp-sheet-code .tag { color: #5b7fb0; }
 
 /* Por debajo de 900 px el raíl central deja de tener sitio: los pasos pasan a
    una columna, el hilo se va al borde izquierdo y se acaban los cruces. */
@@ -5133,10 +5255,41 @@ a.notif-row:hover {
   .lp-rules .lp-sec-sub,
   .lp-how .lp-sec-sub { font-size: 15px; line-height: 1.68; }
   .lp-how-num { font-size: 58px; }
-  .lp-how-h3 { font-size: 25px; line-height: 1.14; letter-spacing: -.025em; margin-top: 16px; }
-  .lp-how-text p { font-size: 15px; line-height: 1.68; }
+  .lp-how-h3 { font-size: 25px; line-height: 1.14; letter-spacing: -.025em; margin-top: 14px; }
+  .lp-how-text p { font-size: 15px; line-height: 1.68; margin-top: 12px; }
   .lp-how .lp-sec-head { margin-bottom: 72px; }
-  .lp-how-step { margin-bottom: 72px; }
+  .lp-how-step { margin-bottom: 52px; }
+  /* Con el raíl a la izquierda todo el paso se alinea a la izquierda, la fila
+     de motores incluida: era lo único que se quedaba pegado al borde derecho. */
+  .lp-how-engines { margin-top: 16px; justify-content: flex-end; }
+  .lp-how-step .lp-how-engines,
+  .lp-how-step:nth-child(even) .lp-how-engines { justify-content: flex-start; }
+  /* La lista de competidores con la escala del artboard móvil: columna de
+     nombre de 96px, barra de 7 y cifra de 40/15. */
+  .lp-sheet-row { padding: 12px 0; }
+  .lp-sheet-fix { padding: 13px 0; }
+  .lp-sheet-row .lp-sheet-name { width: 96px; flex: 0 0 auto; font-size: 13px; }
+  .lp-sheet-row .lp-sheet-fav { width: 26px; height: 26px; }
+  .lp-sheet-bar { height: 7px; }
+  .lp-sheet-num { width: 40px; font-size: 15px; }
+  /* Las hojas encogen con la pantalla: rellenos del artboard móvil, el disco
+     a 92px y su cifra a 28. El resultado deja de ser dos columnas —a 375px
+     una columna de 132px se come el ancho— y pasa a apilarse. */
+  .lp-sheet--rows { padding: 8px 16px; }
+  .lp-sheet--card { padding: 18px 16px; }
+  .lp-sheet--fix { padding: 6px 16px; }
+  .lp-sheet-gen { padding: 14px 16px; }
+  /* En móvil el artefacto pegable pasa a ocupar el ancho entero por debajo
+     del marcador: en una columna de 1fr junto a un disco de 92px, el código
+     salía a cuatro caracteres por línea. */
+  .lp-sheet-result {
+    padding: 18px 16px; grid-template-columns: 92px 1fr; gap: 0 16px;
+    grid-template-areas: "dial delta" "code code";
+  }
+  .lp-sheet-dial { width: 92px; height: 92px; }
+  .lp-sheet-dial-num { font-size: 28px; }
+  .lp-sheet-delta { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .lp-sheet-code { margin-top: 16px; border-radius: 11px; padding: 13px 14px; }
 }
 @supports (-webkit-text-stroke: 1px currentColor) {
   @media (max-width: 560px) {
