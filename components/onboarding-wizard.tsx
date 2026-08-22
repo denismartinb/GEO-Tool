@@ -806,7 +806,7 @@ export function OnboardingWizard({
                 ) : (
                   <div className="add-hint">
                     <Icon name="info" size={13} className="add-hint-ico" />
-                    <span>El idioma se detecta automáticamente del dominio. Podrás añadir competidores y prompts después.</span>
+                    <span>Elige el país cuyo mercado quieres analizar.</span>
                   </div>
                 )}
                 {suggestError ? <p className="feedback error mt-2">{suggestError}</p> : null}

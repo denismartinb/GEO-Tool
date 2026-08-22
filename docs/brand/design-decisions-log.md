@@ -11732,6 +11732,23 @@ Verificado sin sesión real: maqueta estática con el `app/globals.css` real
 (mismo método que la captura de `direccion-b-aprobada.html`), no sólo lectura
 de CSS. `pnpm test`/`pnpm run validate` vueltos a correr limpios.
 
+**Segunda ronda de feedback del fundador probando el preview real: el copy
+del selector de país mentía.** Probó `amazon.es` cambiando el país de
+análisis y le salió "idioma inglés detectado" con competidores de España —
+"un poco lío". La pista bajo el campo de dominio decía "El idioma se detecta
+automáticamente del dominio", y eso es falso: `languageForCountry`
+(`lib/projects/project-form.ts`) deriva el idioma de una tabla país→idioma
+fija a partir de la bandera elegida, nunca del contenido real del dominio —
+y ese mismo `country` es un input real que se manda a `suggestCompetitors`/
+`suggestPrompts` (`app/dashboard/projects/actions.ts`) para decirle a Gemini
+para qué mercado analizar. Quitar la bandera, como sugirió primero el
+fundador, habría perdido esa capacidad real (monitorizar un `.es` para el
+mercado inglés, por ejemplo); el fundador decidió en su lugar corregir sólo
+el copy para que diga lo que el selector hace de verdad: **"Elige el país
+cuyo mercado quieres analizar."** Cambio de una sola línea en
+`components/onboarding-wizard.tsx`; sin tocar `languageForCountry` ni la
+lógica de sugerencia.
+
 ---
 
 ## Cómo mantener este documento
