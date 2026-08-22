@@ -178,6 +178,19 @@ paths:
   criterio para toda la pantalla. El motor emite una tarjeta por prompt y eso no
   cambia (§115 punto 6), así que la densidad se resuelve en presentación. **No
   esconde nada**: el resto está a un clic (log §140).
+- **Los bloqueos duros de la auditoría se enseñan aquí, y sólo ellos**
+  (`findCitationBlockers`, log §142). Bots bloqueados, `noindex` y
+  `nosnippet`/`max-snippet:0` hacen **imposible** la cita, así que salen sobre
+  el backlog con sus URLs. No rompe el reparto de zonas —«La Auditoría arregla
+  tu web; Recomendaciones consigue que te citen»—: no se duplica el catálogo ni
+  se convierten en recomendaciones, se señala lo que impide el objetivo de esta
+  pantalla y se manda a arreglarlo donde se arregla. Los otros trece checks
+  técnicos **no** suben aquí; si algún día sube un cuarto bloqueo, tiene que
+  ser porque impide la cita, no porque reste puntos.
+- **Este módulo sólo afirma problemas, nunca «está bien».** Es lo que hace
+  segura la ausencia de un campo en una instantánea vieja: «nunca medido» se
+  excluye solo, sin necesidad de un `isMeasured` propio. Si alguna vez se le
+  pide que declare algo limpio, esa garantía se cae y hay que rehacerla.
 - **"Alta prioridad" es un único criterio absoluto** (impacto × confianza),
   compartido entre la badge de la tarjeta y el filtro. No debe volver a existir
   un segundo criterio posicional (`priority_rank <= N`) conviviendo con él en

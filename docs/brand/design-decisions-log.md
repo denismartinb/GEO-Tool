@@ -12653,3 +12653,55 @@ cambio es una propiedad CSS sobre un contenedor que ya existía y no toca el
 **Pendiente / conocido.** A 980 px la cabecera pública desborda —los enlaces se
 parten a tres líneas y «Prueba gratis» se sale—, pero es anterior a este cambio
 y no lo toca esta fase.
+
+## 142. Recomendaciones nombra por fin una URL tuya: los tres bloqueos que impiden la cita (AUDIT-RECS-JOIN-1 Fase A, 2026-08-22)
+
+**El hueco.** Tras RECS-ACCION-1, la pantalla ya nombra su entregable, declara
+el control y ordena bien — pero **ninguna recomendación decía nunca «edita
+ESTA página tuya»**. Todas hablaban de consultas («publica una página que
+responda esto»), nunca de una URL concreta del cliente. Era el pendiente
+declarado en §127 y §140.
+
+**Lo que había, y estaba a un tercio.** La pantalla ya sacaba UN bloqueo de la
+auditoría —los bots rastreadores— con esta justificación escrita en su propio
+comentario: *«mientras un rastreador de IA esté bloqueado, las acciones de
+contenido de abajo no pueden rendir en ese motor»*. El razonamiento vale
+idéntico para los otros dos bloqueos duros, y ninguno se enseñaba:
+
+- **`noindex`** (peso 10, `hardBlock`): la página no puede indexarse, así que
+  no puede citarse por buena que sea.
+- **`nosnippet` / `max-snippet:0`** (§131): el motor puede rastrearla e
+  indexarla y aun así tener prohibido reproducir un fragmento. Sin fragmento no
+  hay cita.
+
+**Decisión.** `findCitationBlockers` (`lib/recommendations/citation-blockers.ts`)
+lee la última instantánea de la auditoría y devuelve los tres, **cada uno con
+sus URLs**. El banner deja de ser uno y pasa a ser una lista.
+
+**Por qué NO rompe el reparto de zonas** («La Auditoría arregla tu web;
+Recomendaciones consigue que te citen», `lib/web-audit/issues.ts`). No duplica
+el catálogo de la auditoría ni convierte sus hallazgos en recomendaciones:
+señala los tres hechos que hacen **imposible** el objetivo de esta pantalla y
+manda a arreglarlos donde se arreglan. Es la excepción que ya estaba tomada y
+justificada, aplicada entera en vez de a un tercio. Los otros trece checks
+técnicos siguen viviendo sólo en la auditoría.
+
+**Tri-estado, otra vez.** Un campo ausente en una instantánea anterior a la
+fase que lo introdujo es «nunca medido», no «limpio». Aquí sale gratis porque
+este módulo **sólo afirma problemas** y nunca declara que algo esté bien — pero
+está en su test, porque la próxima persona que añada un bloqueo no tiene por
+qué deducirlo.
+
+**Lo que sigue pendiente, y por qué.** La otra mitad de AUDIT-RECS-JOIN-1 —que
+una recomendación de contenido diga «tu página `/precios` ya responde esto,
+mejórala» en vez de «publica algo»— necesita el **mapa de cobertura**, que hoy
+nace apagado (`auto_coverage_audit_enabled = false`, migración 0031). Medido en
+esta sesión: **encenderlo no cuesta prácticamente nada** — una campaña cubre 4
+prompts (`BATCH_TOPICS_PER_CALL`), no todos, y Gemini no paga grounding en el
+tramo actual (1.500 peticiones/día gratis). La cifra de ~$0,28 que se manejó
+antes era errónea: asumía un barrido completo y grounding de pago. Queda como
+decisión del fundador, ya no por coste sino por criterio de producto; el
+interruptor está en la consola de operador (`/admin/users`, «Auditoría de
+cobertura IA»).
+
+---

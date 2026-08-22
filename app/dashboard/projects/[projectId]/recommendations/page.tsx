@@ -16,6 +16,13 @@ import {
   type ScoreInputRow,
 } from "@/lib/scoring/run-scoring";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
+import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
+import {
+  blockerDetail,
+  blockerTitle,
+  blockerUrls,
+  findCitationBlockers
+} from "@/lib/recommendations/citation-blockers";
 import { selectPlan } from "@/lib/recommendations/plan";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
@@ -372,7 +379,7 @@ export default async function RecommendationsPage({
         // audit screen they may never open.
         supabase
           .from("web_audit_snapshots")
-          .select("bots, created_at")
+          .select("bots, pages, created_at")
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -516,8 +523,13 @@ export default async function RecommendationsPage({
   }
 
   // Blocked AI crawlers = a hard ceiling on everything else on this page.
-  const botsReport = (auditRow as { bots: BotAccessReport | null } | null)?.bots ?? null;
-  const blockedBots = (botsReport?.bots ?? []).filter((b) => !b.allowed).map((b) => b.agent);
+  // AUDIT-RECS-JOIN-1 Fase A — los tres bloqueos que hacen imposible una cita,
+  // no sólo el de los bots. Ver `lib/recommendations/citation-blockers.ts`.
+  const auditSnapshot = auditRow as { bots: BotAccessReport | null; pages: PageAuditEntry[] | null } | null;
+  const citationBlockers = findCitationBlockers({
+    bots: auditSnapshot?.bots ?? null,
+    pages: auditSnapshot?.pages ?? null
+  });
 
   const total = recs.length;
   const latestRunFailed = latestRun?.status === "failed";
@@ -597,23 +609,42 @@ export default async function RecommendationsPage({
 
           {/* 2 · Blocking finding, above everything: while an AI crawler is
               blocked, the content actions below cannot pay off on that engine. */}
-          {blockedBots.length > 0 && (
-            <div className="rec2-blocker">
-              <Icon name="alert" size={16} />
-              <div style={{ minWidth: 0 }}>
-                <div className="rec2-blocker-t">
-                  Tu web bloquea a {blockedBots.slice(0, 2).join(" y ")}
-                  {blockedBots.length > 2 ? ` y ${blockedBots.length - 2} más` : ""}
-                </div>
-                <div className="rec2-blocker-d">
-                  Esos motores no pueden leer tu contenido, así que no pueden citarte.{" "}
-                  <Link href={`/dashboard/projects/${projectId}/web-audit`} style={{ fontWeight: 700 }}>
-                    Ver cómo arreglarlo
-                  </Link>
+          {citationBlockers.map((blocker) => {
+            const urls = blockerUrls(blocker);
+            return (
+              <div className="rec2-blocker" key={blocker.kind}>
+                <Icon name="alert" size={16} />
+                <div style={{ minWidth: 0 }}>
+                  <div className="rec2-blocker-t">{blockerTitle(blocker)}</div>
+                  <div className="rec2-blocker-d">
+                    {blockerDetail(blocker)}{" "}
+                    <Link href={`/dashboard/projects/${projectId}/web-audit`} style={{ fontWeight: 700 }}>
+                      Ver cómo arreglarlo
+                    </Link>
+                  </div>
+                  {/* La URL concreta: es lo primero en esta pantalla que señala
+                      una página del cliente en vez de una consulta. */}
+                  {urls.length > 0 && (
+                    <ul
+                      style={{
+                        margin: "6px 0 0",
+                        paddingLeft: 16,
+                        fontSize: 12,
+                        color: "var(--ink-2)",
+                        lineHeight: 1.7,
+                        wordBreak: "break-word"
+                      }}
+                    >
+                      {urls.slice(0, 3).map((url) => (
+                        <li key={url}>{url}</li>
+                      ))}
+                      {urls.length > 3 && <li>y {urls.length - 3} más</li>}
+                    </ul>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })}
 
           {/* 3 · Pillars — where the score stands, as context for the choices below. */}
           {pillars.length > 0 && (
