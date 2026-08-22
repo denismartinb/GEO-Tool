@@ -6,6 +6,7 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { PromoStrip, RecommendationsCta, HomeCtaBand } from "@/components/landing/session-ctas";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
@@ -43,11 +44,14 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; sheet: ReactNode }> = 
     sheet: (
       <div className="lp-sheet">
         {[
-          { m: "IKEA", v: 24, tone: "own" },
-          { m: "Leroy Merlin", v: 21, tone: "" },
-          { m: "Maisons du Monde", v: 18, tone: "" }
+          { m: "IKEA", d: "ikea.es", ini: "IK", v: 24, tone: "own" },
+          { m: "Leroy Merlin", d: "leroymerlin.es", ini: "LM", v: 21, tone: "" },
+          { m: "Maisons du Monde", d: "maisonsdumonde.com", ini: "MM", v: 18, tone: "" }
         ].map((r) => (
           <div className="lp-sheet-row" key={r.m}>
+            <span className="lp-sheet-fav">
+              <FaviconImg domain={r.d} cssSize={26} fallback={<span>{r.ini}</span>} />
+            </span>
             <span className="lp-sheet-name">{r.m}</span>
             <span className="lp-sheet-bar">
               <span className={`fill ${r.tone}`} style={{ width: `${(r.v / 24) * 100}%` }} />
@@ -65,7 +69,9 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; sheet: ReactNode }> = 
     sheet: (
       <div className="lp-sheet">
         <div className="lp-sheet-src">
-          <span className="lp-sheet-fav">EM</span>
+          <span className="lp-sheet-fav">
+            <FaviconImg domain="elmueble.com" cssSize={26} fallback={<span>EM</span>} />
+          </span>
           <span className="lp-sheet-name">elmueble.com</span>
           <span className="lp-sheet-meta">10 citas · cita a 3 rivales</span>
         </div>

@@ -12906,6 +12906,39 @@ entre 560 y 900 el diseño no da datos —sus dos artboards son 1280 y 390— y 
 grande. Inventar un corte intermedio habría sido decidir por el diseño en una
 anchura que el diseño no cubre.
 
+### Los competidores llevan su favicon oficial, y eso es regla de producto
+
+Fundador, 2026-08-22: *«donde salgan competidores tienen que salir los logos
+favicons oficiales»*. La primera versión los pintaba como texto plano, y la
+fuente citada del paso 02 como un cuadrado con «EM». El artboard sí los lleva,
+en una caja `.fav` con las iniciales de respaldo.
+
+Se resuelve con **`FaviconImg`**, el mecanismo que el producto ya usa en
+Competidores (FAVICON-QUALITY-1, §36), y con **dominios reales** —`ikea.es`,
+`leroymerlin.es`, `maisonsdumonde.com`, `elmueble.com`—. Eso lo deja **mejor
+que el artboard**: el lienzo dibujaba a Maisons du Monde y a elmueble.com con
+iniciales porque no tenía sus assets, y aquí el servicio los trae. La caja
+copia `.fav` del diseño (8px de radio, fondo blanco, borde, iniciales a 10,5px)
+para que el respaldo siga siendo el del artboard cuando el servicio no conozca
+un dominio.
+
+**Dónde NO van, y también está medido:** la tarjeta del SERP de «El cambio de
+reglas» no lleva ninguno — cero `<img>` entre las dos tarjetas del artboard—, y
+las marcas citadas dentro de la respuesta generativa van en `<mark>`, no como
+logos.
+
+**Lo que no se pudo verificar aquí.** Las cuatro peticiones salen con el
+dominio y el tamaño correctos, y el respaldo se pinta bien; pero **el sandbox
+de los agentes no alcanza `www.google.com`**, que es de donde `favicon-source`
+saca los iconos, así que la ruta devuelve 204 y localmente sólo se ven las
+iniciales. Tampoco alcanza el preview de Vercel. **Que los logos oficiales
+salgan de verdad se comprueba en las capturas del piloto**, que corre en GitHub
+Actions con salida real — no dando por bueno el cableado.
+
+Nota de fidelidad que parece un fallo y no lo es: «Maisons du Monde» parte en
+dos líneas. El artboard fija esa columna en 110px con el mismo cuerpo y su fila
+mide los mismos 59px, así que envuelve igual.
+
 ### Dos fallos encontrados mirando, no razonando
 
 **El `order` de la rejilla no es decorativo.** `.lp-how-dot` lleva `order: 2`

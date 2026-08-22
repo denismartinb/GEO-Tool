@@ -5030,7 +5030,7 @@ a.notif-row:hover {
   display: flex; align-items: center; gap: 10px; font-size: 13px;
 }
 .lp-sheet-name { font-weight: 600; }
-.lp-sheet-row .lp-sheet-name { width: 118px; flex: 0 0 auto; }
+.lp-sheet-row .lp-sheet-name { width: 110px; flex: 0 0 auto; }
 .lp-sheet-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 /* La barra crece de 0 a su ancho cuando el paso entra en pantalla, con los
    tiempos del artboard: 1,1 s, `cubic-bezier(.2,.8,.25,1)` y retardos de
@@ -5070,10 +5070,19 @@ a.notif-row:hover {
 }
 .lp-sheet-bar .fill.own { background: var(--brand-blue); }
 .lp-sheet-num { width: 42px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* La caja del favicon: el logo oficial cuando el servicio lo conoce y las
+   iniciales cuando no. El fundador, 2026-08-22: «donde salgan competidores
+   tienen que salir los logos favicons oficiales». Se resuelve con `FaviconImg`
+   —el mecanismo que el producto ya usa en Competidores— y con dominios reales,
+   así que salen también los de Maisons du Monde y elmueble.com, que el lienzo
+   no podía traer y dibujaba con iniciales. */
 .lp-sheet-fav {
-  width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
-  background: var(--surface-2); font-size: 10px; font-weight: 700; color: var(--ink-3);
+  width: 26px; height: 26px; flex: 0 0 auto; border-radius: 8px; overflow: hidden;
+  display: grid; place-items: center;
+  background: #fff; border: 1px solid var(--line);
+  font-size: 10.5px; font-weight: 700; color: var(--ink-3); letter-spacing: -.02em;
 }
+.lp-sheet-fav img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .lp-sheet-meta { margin-left: auto; font-size: 11.5px; color: var(--ink-4); }
 .lp-sheet-flag {
   align-self: start; background: #fdecec; color: #b42318; border-radius: 999px;
