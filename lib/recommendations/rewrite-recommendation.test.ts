@@ -368,6 +368,9 @@ describe("rewriteRecommendationCore", () => {
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
     expect(result.error).not.toContain("raw provider failure with secrets");
+    // Each failure branch says something different: five branches sharing one
+    // sentence is what made the 2026-08-20 report impossible to triage.
+    expect(result.error).toContain("El motor de IA");
     expect(getInserted()).toHaveLength(0);
 
     errorSpy.mockRestore();
@@ -388,6 +391,8 @@ describe("rewriteRecommendationCore", () => {
     });
 
     expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    expect(result.error).toContain("El motor de IA");
     expect(getInserted()).toHaveLength(0);
     expect(validateRewriteAgainstEvidenceMock).not.toHaveBeenCalled();
   });
@@ -400,7 +405,11 @@ describe("rewriteRecommendationCore", () => {
       steps: ["Menciona a Ikea sin permiso"],
       examples: []
     });
-    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: false, reason: "untracked_competitor_mentioned" });
+    validateRewriteAgainstEvidenceMock.mockReturnValue({
+      valid: false,
+      reason: "untracked_competitor_mentioned",
+      offending: "Ikea"
+    });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { client } = makeFakeSupabase({
       project: PROJECT,
@@ -418,6 +427,18 @@ describe("rewriteRecommendationCore", () => {
     });
 
     expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    // A discarded rewrite reads differently from a provider failure, and the
+    // term that tripped the guard is logged (never shown) so the next report
+    // arrives already diagnosed.
+    // El término va en el mensaje: sin él, «mencionaba datos que no están en la
+    // evidencia» deja fuera la única pregunta que importa — cuál.
+    expect(result.error).toContain("«Ikea»");
+    expect(result.error).toContain("no está en la evidencia");
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("rejected"),
+      expect.objectContaining({ reason: "untracked_competitor_mentioned", offending: "Ikea" })
+    );
     expect(getInserted()).toHaveLength(0);
 
     warnSpy.mockRestore();
@@ -476,6 +497,8 @@ describe("rewriteRecommendationCore", () => {
     });
 
     expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    expect(result.error).toContain("no se ha podido guardar");
 
     errorSpy.mockRestore();
   });
@@ -667,10 +690,13 @@ describe("rewriteRecommendationCore", () => {
     expect(validationArgs.description).toContain(REWRITE.examples[1].label);
     expect(validationArgs).toMatchObject({
       allowedCompetitors: ["Conforama", "Conforama"],
-      allowedDomains: EVIDENCE.citation_domains,
       trackedCompetitors: ["Conforama", "Ikea"],
       brandDomain: PROJECT.domain
     });
+    // El guardián admite lo que el prompt ENSEÑA, que incluye la evidencia de
+    // la tarjeta y nada de fuera.
+    expect(validationArgs.allowedDomains).toContain(EVIDENCE.citation_domains[0]);
+    expect(validationArgs.allowedDomains).not.toContain("inventado.com");
 
     // The solution is written to generated_solutions, sanitized and renderable,
     // anchored to the recommendation. The recommendation row is never mutated.
@@ -687,5 +713,152 @@ describe("rewriteRecommendationCore", () => {
     expect(payload.sanitized_at).toBeTruthy();
     const sanitized = JSON.parse(payload.sanitized_content as string) as GeneratedSolution;
     expect(sanitized).toEqual(REWRITE);
+  });
+
+  it("anchors the prompt and the guard to the SAME domain set when the cited pages fall outside citation_domains", async () => {
+    // The founder's real GenScore card (pursue_citation_sources, 2026-08-20):
+    // citation_domains is an 8-item aggregate over the affected prompts while
+    // citation_pages/source_domains come from the qualifying citation sources,
+    // so three of four cited pages sat outside it. The prompt asked the model
+    // to name those exact pages and the guard then rejected the answer as an
+    // unanchored domain — the rewrite could never succeed on that card.
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    const sourceGapRecommendation = {
+      ...RULE_RECOMMENDATION,
+      recommendation_type: "pursue_citation_sources",
+      evidence_json: {
+        ...EVIDENCE,
+        citation_domains: ["example.com", "keyword.com"],
+        source_domains: ["example.com", "keyword.com"],
+        citation_pages: [
+          { domain: "dageno.ai", title: "dageno.ai", url: "https://dageno.ai/herramientas" },
+          { domain: "blog.hubspot.es", title: "hubspot.es", url: "https://blog.hubspot.es/marketing/geo" }
+        ]
+      }
+    };
+    rewriteRecommendationMock.mockResolvedValue(REWRITE);
+    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+    const { client } = makeFakeSupabase({
+      project: PROJECT,
+      recommendation: sourceGapRecommendation,
+      competitors: []
+    });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: sourceGapRecommendation.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(true);
+
+    const anchored = ["example.com", "keyword.com", "dageno.ai", "blog.hubspot.es"];
+    const geminiArgs = rewriteRecommendationMock.mock.calls[0][0];
+    const validationArgs = validateRewriteAgainstEvidenceMock.mock.calls[0][0];
+    expect(geminiArgs.citationDomains).toEqual(anchored);
+
+    // The invariant, stated directly: everything the prompt shows the model is
+    // admitted by the guard — the cited pages included, which is what the
+    // narrower evidence-only set kept missing.
+    for (const domain of anchored) {
+      expect(validationArgs.allowedDomains).toContain(domain);
+    }
+    for (const page of sourceGapRecommendation.evidence_json.citation_pages) {
+      expect(validationArgs.allowedDomains).toContain(page.domain);
+    }
+    expect(validationArgs.allowedDomains).not.toContain("inventado-por-la-ia.com");
+
+    // The set actually used is persisted with the row, so a later rejection is
+    // diagnosable from the data instead of only from a runtime log.
+    const evidence = getInserted()[0].evidence_json as Record<string, unknown>;
+    expect(evidence.anchored_domains).toEqual(validationArgs.allowedDomains);
+  });
+
+  it("un juicio comparativo no se explica como si faltara evidencia", async () => {
+    // El dato estaba; lo que sobra es la afirmación de superioridad
+    // (RECS-USEFULNESS-1 Fase C). Decir «no está en la evidencia» mandaría al
+    // usuario a mirar donde no es.
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    rewriteRecommendationMock.mockResolvedValue(REWRITE);
+    validateRewriteAgainstEvidenceMock.mockReturnValue({
+      valid: false,
+      reason: "comparative_claim_against_competitor",
+      offending: "superior"
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: RULE_RECOMMENDATION.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    expect(result.error).toContain("«superior»");
+    expect(result.error).toContain("sin datos que lo respalden");
+    expect(result.error).not.toContain("no está en la evidencia");
+    expect(getInserted()).toHaveLength(0);
+
+    warnSpy.mockRestore();
+  });
+
+  it("permite nombrar al competidor cuyo propio dominio está anclado, y sólo a ese", async () => {
+    // El playbook de las tarjetas de fuentes le pide al modelo que clasifique
+    // cada dominio citado y marque los que son competidores como «no es un
+    // objetivo de outreach» — no puede hacerlo sin nombrarlos, y el guardián
+    // los rechazaba por hacerlo.
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    const sourceGapRecommendation = {
+      ...RULE_RECOMMENDATION,
+      recommendation_type: "pursue_citation_sources",
+      evidence_json: {
+        ...EVIDENCE,
+        mentioned_competitors: [],
+        dominant_competitor: undefined,
+        citation_domains: ["seranking.com", "example.com"],
+        citation_pages: [{ domain: "seranking.com", title: "Mejores herramientas", url: "https://seranking.com/blog" }]
+      }
+    };
+    rewriteRecommendationMock.mockResolvedValue(REWRITE);
+    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+    const { client } = makeFakeSupabase({
+      project: PROJECT,
+      recommendation: sourceGapRecommendation,
+      competitors: [
+        { project_id: PROJECT.id, name: "SE Ranking" },
+        { project_id: PROJECT.id, name: "Conforama" }
+      ]
+    });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: sourceGapRecommendation.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(true);
+
+    // Al prompt y al guardián, el mismo competidor: el que la tarjeta ancla por
+    // su dominio. Conforama no lo está y sigue prohibido.
+    const geminiArgs = rewriteRecommendationMock.mock.calls[0][0];
+    const validationArgs = validateRewriteAgainstEvidenceMock.mock.calls[0][0];
+    expect(geminiArgs.mentionedCompetitors).toEqual(["SE Ranking"]);
+    expect(validationArgs.allowedCompetitors).toContain("SE Ranking");
+    expect(validationArgs.allowedCompetitors).not.toContain("Conforama");
+    expect(validationArgs.trackedCompetitors).toEqual(["SE Ranking", "Conforama"]);
+
+    const evidence = getInserted()[0].evidence_json as Record<string, unknown>;
+    expect(evidence.domain_anchored_competitors).toEqual(["SE Ranking"]);
   });
 });
