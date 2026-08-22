@@ -5111,6 +5111,30 @@ a.notif-row:hover {
 
 /* Por debajo de 900 px el raíl central deja de tener sitio: los pasos pasan a
    una columna, el hilo se va al borde izquierdo y se acaban los cruces. */
+/* El artboard MÓVIL tiene su propia escala tipográfica, y servir la de
+   escritorio a 375px partía el titular en cuatro líneas. Se cambia en el mismo
+   corte que ya usa el hero (560px) en vez de inventar uno nuevo: entre 560 y
+   900 el diseño no da datos —sus dos artboards son 1280 y 390— y a 768 la
+   escala de escritorio cabe en dos líneas, que es como se lee en el grande. */
+@media (max-width: 560px) {
+  .lp-rules .lp-kicker,
+  .lp-how .lp-kicker { font-size: 11.5px; }
+  .lp-how .lp-h2 { font-size: 31px; line-height: 1.1; }
+  .lp-rules .lp-h2 { font-size: 31px; line-height: 1.1; }
+  .lp-rules .lp-sec-sub,
+  .lp-how .lp-sec-sub { font-size: 15px; line-height: 1.68; }
+  .lp-how-num { font-size: 58px; }
+  .lp-how-h3 { font-size: 25px; line-height: 1.14; letter-spacing: -.025em; margin-top: 16px; }
+  .lp-how-text p { font-size: 15px; line-height: 1.68; }
+  .lp-how .lp-sec-head { margin-bottom: 72px; }
+  .lp-how-step { margin-bottom: 72px; }
+}
+@supports (-webkit-text-stroke: 1px currentColor) {
+  @media (max-width: 560px) {
+    .lp-how-num { -webkit-text-stroke-width: 1.2px; }
+  }
+}
+
 @media (max-width: 900px) {
   .lp-rules-pair { grid-template-columns: 1fr; gap: 18px; }
   .lp-rules-arrow { transform: rotate(90deg); }

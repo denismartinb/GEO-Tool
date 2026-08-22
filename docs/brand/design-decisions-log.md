@@ -12887,7 +12887,24 @@ mueve.
 
 Se pierde el efecto secundario bueno que tenía no animar: vuelve a existir la
 trampa de fotografiar las tarjetas a opacidad 0 que el README de la referencia
-describe. Sigue documentada ahí.
+describe. Sigue documentada ahí. Comprobado en la pasada siguiente del piloto:
+**no ocurre**, porque su captura de página completa desplaza la página y eso
+dispara el observador. Vale para este arnés, no como garantía general.
+
+### El artboard móvil tiene su propia escala, y también había que medirla
+
+Corregida la tipografía contra el artboard de escritorio, a 375 px el titular
+partía en **cuatro** líneas. La causa: se estaba sirviendo la escala de
+escritorio en todas las anchuras, y el artboard móvil declara la suya —h2 31px
+en vez de 44, h3 25 en vez de 34 con `-.025em`, el número 58 en vez de 96 y con
+`text-stroke` de 1,2 en vez de 1,4, la bajada 15/1.68 y el kicker 11,5. Las
+cinco coinciden ahora, y el titular vuelve a dos líneas.
+
+**El corte va a 560px, que es el que ya usaba el hero**, y no un número nuevo:
+entre 560 y 900 el diseño no da datos —sus dos artboards son 1280 y 390— y a
+768 la escala de escritorio cabe en dos líneas, que es como se lee en el
+grande. Inventar un corte intermedio habría sido decidir por el diseño en una
+anchura que el diseño no cubre.
 
 ### Dos fallos encontrados mirando, no razonando
 
