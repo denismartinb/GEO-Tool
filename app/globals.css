@@ -5811,7 +5811,17 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-close .lp-h2 { font-size: 52px; font-weight: 700; letter-spacing: -.03em; line-height: 1.08; margin: 0; }
 .lp-close .lp-sec-sub { font-size: 18.5px; line-height: 1.6; color: var(--ink-2); margin: 26px auto 0; max-width: 520px; }
 .lp-close-field { max-width: 560px; margin: 40px auto 0; }
-.lp-close-field .lp-hero-note { margin-top: 20px; font-size: 13.5px; font-weight: 500; gap: 22px; }
+/* AQUÍ NO BASTA CON `--ink-3`, Y ES EL MISMO ERROR QUE ESTA FASE VENÍA A
+   ARREGLAR. El cierre no está sobre blanco: está sobre el degradado, y a la
+   altura de esta fila (75% de la banda) el fondo ya es #f3f7ff. Ahí `--ink-3`
+   da **4,43:1** — por debajo del 4,5 de AA por siete centésimas— mientras que
+   sobre el blanco de `/pricing` y del comprobador da 4,76 y pasa. `--ink-2`
+   da 7,49:1. Es literalmente el invariante de `.claude/rules/styles.md`
+   («un token que aprueba AA sobre blanco no lo aprueba sobre otra
+   superficie») pisado mientras se corregía un fallo de contraste, y no se vio
+   hasta calcular el color pintado del degradado a esa altura en vez del
+   `background-color` del elemento, que es transparente. */
+.lp-close-field .lp-hero-note { margin-top: 20px; font-size: 13.5px; font-weight: 500; gap: 22px; color: var(--ink-2); }
 .lp-close-field .lp-hero-note .dot { width: 3px; height: 3px; border-radius: 999px; background: currentColor; opacity: .5; }
 .lp-close-row { display: flex; justify-content: center; margin-top: 34px; }
 .lp-close-row .lp-cta--lg { height: 52px; padding: 0 26px; font-size: 15.5px; }
