@@ -78,6 +78,16 @@ export function HeroDomainField() {
 
   return (
     <>
+      {/* El botón es HERMANO del campo, no hijo, y eso es del diseño: en el
+          artboard de escritorio va dentro de la píldora y en el de móvil va
+          fuera, debajo, con su propio hueco. Con un solo marcado eso se
+          resuelve moviendo el «cromado» de la píldora —borde, fondo, sombra,
+          radio— entre el envoltorio (escritorio: los dos dentro de la misma
+          cápsula) y el campo (móvil: cápsula sólo alrededor del campo). Si
+          estuviera dentro, el recuadro blanco envolvería también al botón y en
+          el móvil quedaría una caja alta con el botón flotando dentro
+          (fundador, 2026-08-22, sobre el preview en su teléfono). */}
+      <div className="lp-field-wrap">
       <div className="lp-field">
         <Icon name="globe" size={18} className="lp-field-ico" />
         <input
@@ -97,6 +107,7 @@ export function HeroDomainField() {
             <span className="type-caret" />
           </span>
         )}
+      </div>
         <button type="button" className="lp-cta lp-field-cta" onClick={start}>
           Comprobar gratis
         </button>

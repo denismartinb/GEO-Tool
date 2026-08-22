@@ -4805,17 +4805,21 @@ a.notif-row:hover {
 
 .lp-h1-accent { color: var(--brand-blue); }
 
-.lp-field {
-  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px; position: relative;
+/* El «cromado» de la píldora —fondo, borde, sombra, radio— vive en el
+   envoltorio, no en el campo, porque de él depende si el botón queda dentro de
+   la cápsula (escritorio) o fuera (móvil). Ver el comentario del componente. */
+.lp-field-wrap {
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px;
   background: #fff; border: 1px solid var(--line-strong); border-radius: 999px;
   box-shadow: 0 6px 28px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
   transition: border-color .15s, box-shadow .15s;
 }
-.lp-field:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
+.lp-field-wrap:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
+.lp-field { display: flex; align-items: center; gap: 8px; position: relative; flex: 1; min-width: 0; }
 .lp-field-ico { color: var(--ink-4); flex: 0 0 auto; }
 .lp-field-input { flex: 1; min-width: 0; border: none; outline: none; background: transparent;
   font-size: 15.5px; font-weight: 500; color: var(--ink); height: 40px; }
-.lp-field-ghost { position: absolute; left: 44px; top: 6px; bottom: 6px; display: flex; align-items: center;
+.lp-field-ghost { position: absolute; left: 26px; top: 6px; bottom: 6px; display: flex; align-items: center;
   color: var(--ink-4); font-size: 15.5px; font-weight: 400; pointer-events: none; line-height: 1; }
 .lp-field-ghost .type-caret { background: var(--brand-blue); }
 
@@ -4847,14 +4851,25 @@ a.notif-row:hover {
    `max-width` del campo a propósito: es el ancho a partir del cual la píldora
    deja de tener holgura, no un número redondo. */
 @media (max-width: 560px) {
-  .lp-field { flex-wrap: wrap; padding: 6px 16px; border-radius: 22px; }
-  .lp-field-cta { width: 100%; margin-top: 10px; justify-content: center; }
-  /* El fantasma del tecleo va en absoluto y se anclaba arriba Y abajo, así que
-     al envolverse la píldora se estiraba por toda la caja y su centrado
-     vertical lo dejaba a media altura, debajo del icono en vez de dentro del
-     campo. Aquí se le da la altura de la primera fila y se suelta el anclaje
-     inferior. */
-  .lp-field-ghost { bottom: auto; height: 40px; left: 40px; }
+  /* La cápsula baja del envoltorio al campo: el botón deja de estar dentro del
+     recuadro blanco y pasa a ser un bloque propio debajo, con su hueco, como
+     en el artboard móvil. */
+  .lp-field-wrap {
+    display: block; padding: 0;
+    background: none; border: none; border-radius: 0; box-shadow: none;
+  }
+  .lp-field-wrap:focus-within { border-color: transparent; box-shadow: none; }
+  .lp-field {
+    padding: 6px 16px; background: #fff; border: 1px solid var(--line-strong);
+    border-radius: 999px; box-shadow: 0 6px 28px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .lp-field:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
+  /* El fantasma se posiciona contra `.lp-field`, y aquí el campo recupera su
+     relleno de 16px: sin corregirlo arranca dentro del icono («⊕udomin»).
+     16 de relleno + 18 del globo + 8 de hueco = 42. */
+  .lp-field-ghost { left: 42px; }
+  .lp-field-cta { width: 100%; margin-top: 12px; justify-content: center; }
   .lp-engines { margin-top: 20px; gap: 12px 16px; }
   .lp-engine { font-size: 13px; gap: 7px; }
   .lp-engine img { width: 20px; height: 20px; }

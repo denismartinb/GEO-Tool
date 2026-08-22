@@ -12717,10 +12717,22 @@ repetidos a cien píxeles.
 tiene `max-width: 560px`, así que por debajo de ese ancho el botón empieza a
 comerse el hueco de escribir —a 390 px lo dejaba en ocho caracteres— y es lo
 que hace el artboard móvil. El corte coincide con ese `max-width` a propósito.
-Al envolverse la píldora apareció un segundo fallo: el fantasma del tecleo va
-en `position: absolute` anclado arriba **y** abajo, así que se estiraba por
-toda la caja y su centrado vertical lo dejaba a media altura, debajo del icono.
-Se le da la altura de la primera fila y se suelta el anclaje inferior.
+**Y el botón es hermano del campo, no hijo.** Los dos artboards no comparten
+marcado aquí: en escritorio el botón va DENTRO de la píldora y en móvil va
+FUERA, debajo, con 12 px de hueco. Con un solo marcado eso se resuelve moviendo
+el cromado —fondo, borde, sombra, radio— entre el envoltorio (escritorio: los
+dos dentro de la misma cápsula) y el campo (móvil: cápsula sólo alrededor del
+campo). Tenerlo dentro dejaba el recuadro blanco envolviendo también al botón,
+y en el teléfono se leía como una caja alta con el botón flotando dentro. **Lo
+cazó el fundador mirando el preview en su móvil, no mis capturas**, que a 390 px
+en Chromium enseñaban lo mismo sin que yo lo leyera como un fallo: tenía el
+marcado del artboard delante y no lo comparé.
+
+Cada movimiento del relleno rompió el fantasma del tecleo, que va en
+`position: absolute` contra el campo y por tanto depende de dónde esté ese
+relleno: primero se estiró por toda la caja al envolverse la píldora, y después
+arrancó dentro del globo («⊕udomin») al devolverle al campo sus 16 px. Queda en
+42 px = 16 de relleno + 18 del globo + 8 de hueco, medidos.
 
 ### Lo que se predijo mal, y se midió
 
