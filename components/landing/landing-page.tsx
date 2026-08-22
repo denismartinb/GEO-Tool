@@ -63,25 +63,6 @@ export function LandingPage() {
       {/* HERO — nav + promo strip integrated into the same gradient ground
           (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
       <header className="lp-hero lp-hero--home" id="producto">
-        {/* HERO-AURA-1 (fundador, 2026-08-21): el aura del hero. Decoración
-            pura — `aria-hidden`, sin texto y sin controles —, así que va como
-            divs vacíos y toda la geometría vive en `.ha-*` de globals.css,
-            donde están anotados los dos cortes responsive y por qué el hero NO
-            crea contexto de apilamiento. No reutiliza `.onb-aurora`: esa son
-            cuatro manchas animadas en bucle y la sirven /geo, precios y las
-            portadas del blog; tocarla habría arrastrado cinco superficies. */}
-        <div className="ha-aura" aria-hidden="true">
-          <div className="ha-grid" />
-          <div className="ha-field ha-field--l" />
-          <div className="ha-field ha-field--r" />
-          <div className="ha-loop ha-loop--l1" />
-          <div className="ha-loop ha-loop--l2" />
-          <div className="ha-loop ha-loop--l3" />
-          <div className="ha-loop ha-loop--r1" />
-          <div className="ha-loop ha-loop--r2" />
-          <div className="ha-loop ha-loop--r3" />
-          <div className="ha-clear" />
-        </div>
         {/* GENSCORE-HEADER-3 (fundador, 2026-08-12): "la franja de 7 días
             tiene que salir a usuarios no logados o plan free". Es una oferta
             de alta, así que a quien ya paga le sobra — pero a un logado en

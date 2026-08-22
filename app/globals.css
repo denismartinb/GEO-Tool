@@ -4742,150 +4742,41 @@ a.notif-row:hover {
   font-family: var(--font-body), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* HERO-GRADIENT-1 (fundador, 2026-08-22): el fondo del hero de la portada es
+   un degradado lineal y nada más. Referencia en
+   `docs/design-reference/hero-gradient-1/`.
+
+   EL COLOR SE AGOTA EN EL PRIMER CUARTO. Las cuatro paradas están medidas
+   contra el alto real del hero (1154 px en escritorio, 1193 en móvil), no
+   repartidas a ojo: a 14 % el tinte ya ha cedido la mitad, a 28 % es casi
+   blanco y desde 44 % es blanco puro. Eso deja el titular sobre el tramo con
+   color y el campo de dominio, los botones y la tarjeta-demo sobre blanco
+   limpio. Subir esas paradas devuelve el color a la zona del formulario, que
+   es justo lo que se descartó.
+
+   EL 100 % TIENE QUE SER BLANCO, y no es cosmético: debajo del hero va la
+   sección de motores, que es blanca. Un degradado que termine en color deja
+   una línea horizontal recta en la costura — el mismo fallo que el aura tuvo
+   que tapar con un desvanecido enmascarado, y que la variante «doble extremo»
+   reprodujo al volver a teñir el final (fundador, 2026-08-22). Aquí no hace
+   falta máscara ninguna porque el degradado ya llega a #ffffff por su cuenta.
+
+   NO HAY CAPA NI ELEMENTOS. Es una sola propiedad `background` sobre el
+   contenedor que ya existía: cero DOM, cero JS, cero peticiones, y nada que
+   pueda recortarse, desbordar o crear contexto de apilamiento. Por eso esta
+   zona ya no necesita las precauciones que sí necesitaba el aura (`.lp-promo`
+   vuelve a ser estático, y `.lp-hero--home` sigue sin aislarse porque dentro
+   vive el cajón móvil `position: fixed` de `PublicHeader`).
+
+   `.onb-aurora` sigue intacta y es otra cosa: la sirven /geo, precios y las
+   portadas del blog, y esa sí anima. */
 .lp-hero--home {
   padding: 0 0 64px;
-  background: linear-gradient(180deg, #e9eefb 0%, #f1f4fd 38%, #f9fafe 76%, #ffffff 100%);
+  background: linear-gradient(180deg, #cfe0fa 0%, #e4edfb 14%, #f6f9fe 28%, #ffffff 44%, #ffffff 100%);
 }
 .lp-hero--home .lp-hero-content { padding-top: 44px; }
 
-/* HERO-AURA-1 (fundador, 2026-08-21): fondo del hero de la portada. Es el
-   «Fondo 5 · Aura suave» del lienzo aprobado, copiado en
-   `docs/design-reference/hero-aura-1/`.
-
-   GEOMETRÍA. Cada lazo es un círculo cuyo centro cae FUERA del encuadre, a
-   520 px del lateral. La banda blanca se pinta al 92 % del radio con caída del
-   84 % al 99 %, así que el arco cruza la altura de su centro a `0,92·r − 520`
-   px del borde: 124, 354 y 602 px para los tres radios. Radio grande = curva
-   suave; con el centro pegado al borde las curvas se cierran y cruzan el
-   titular en diagonal (es lo que se descartó al elegir entre variantes).
-
-   DE AHÍ SALEN LOS DOS CORTES, que no son redondeos a ojo: los lazos
-   exteriores se solapan en el centro por debajo de 1204 px (602·2) y los
-   medios por debajo de 708 px (354·2). A 1200 px se retira el tercero; a
-   760 px se pasa al juego corto de móvil.
-
-   NO SE AÍSLA `.lp-hero--home` A PROPÓSITO. Dentro vive `PublicHeader`, y su
-   cajón móvil es `position: fixed; z-index: 320` (`.lp-mobnav`, con su velo a
-   310): darle contexto de apilamiento al hero lo encerraría dentro y lo
-   dejaría por debajo de lo que hay fuera. La capa va a `z-index: 0`, por
-   debajo de la cabecera pegajosa (50) y del contenido (2); el único hijo
-   estático que quedaba por debajo era `.lp-promo`, y sube con `z-index: 1`.
-
-   Estático a propósito: ni animaciones ni `will-change`, al contrario que
-   `.onb-aurora` —cuatro blobs a la deriva— que sigue intacta en /geo, precios
-   y portadas de blog. Por eso no necesita nada bajo `prefers-reduced-motion`.
-
-   SIN `filter: blur()`, Y NO ES UN DESCUIDO. Las maquetas llevaban 10-50 px de
-   desenfoque en cada capa; medido, era redundante y caro. Todos estos
-   gradientes ya mueren en transparente dentro de su propia caja —los lazos al
-   99 % del radio, los campos al 86 %—, así que no hay canto duro que suavizar,
-   y desenfocar un degradado ya suave no cambia nada: la diferencia máxima
-   medida entre las dos versiones fue de 5/255 en el 0,02 % de los subpíxeles,
-   por debajo de lo perceptible. El coste sí era real: rasterizar el hero
-   entero pasaba de 33 ms a 82 ms por fotograma (Chromium, 1280 px, sin
-   estrangular CPU). Sin blur vuelve a 33 ms — el aura sale gratis. Si alguien
-   reintroduce `filter` aquí, que mida antes. */
-/* El desvanecido inferior NO es decorativo: sin él, `overflow: hidden` recorta
-   las capas con una línea horizontal recta justo donde acaba el hero, y el azul
-   y el lila mueren de golpe contra el blanco de la sección siguiente. La
-   maqueta no lo llevaba porque el artboard terminaba en ese mismo canto y el
-   corte no se veía; en la página real, con la sección de motores debajo, sí.
-   Lo cogió una captura de página completa del piloto, no las de 800 px de alto.
-   En porcentaje, no en px, para que siga el alto real del hero (1154 px en
-   escritorio, bastante más en móvil).
-
-   El `mask` crea contexto de apilamiento, pero sólo en esta capa decorativa:
-   `.lp-hero--home` sigue sin crearlo, que es lo que el cajón móvil necesita. */
-.ha-aura {
-  position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 99%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 70%, transparent 99%);
-}
-.ha-aura > * { position: absolute; border-radius: 50%; }
-
-.ha-grid {
-  border-radius: 0; top: 0; left: 0; right: 0; height: 820px;
-  background-image:
-    linear-gradient(rgba(37, 99, 235, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(37, 99, 235, 0.055) 1px, transparent 1px);
-  background-size: 58px 58px;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 78%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 78%);
-}
-
-.ha-field { width: 2480px; height: 2480px; }
-.ha-field--l {
-  top: -540px; left: -1760px;
-  background: radial-gradient(closest-side, rgba(59, 110, 246, 0.3), rgba(59, 110, 246, 0.11) 60%, rgba(59, 110, 246, 0) 86%);
-}
-.ha-field--r {
-  top: -600px; right: -1760px;
-  background: radial-gradient(closest-side, rgba(140, 118, 242, 0.28), rgba(140, 118, 242, 0.1) 60%, rgba(140, 118, 242, 0) 86%);
-}
-
-.ha-loop--l1 { top: 0; left: -1220px; width: 1400px; height: 1400px;
-  background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.46) 92%, rgba(255,255,255,0) 99%); }
-.ha-loop--l2 { top: -250px; left: -1470px; width: 1900px; height: 1900px;
-  background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.33) 92%, rgba(255,255,255,0) 99%); }
-.ha-loop--l3 { top: -520px; left: -1740px; width: 2440px; height: 2440px;
-  background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.23) 92%, rgba(255,255,255,0) 99%); }
-.ha-loop--r1 { top: -60px; right: -1220px; width: 1400px; height: 1400px;
-  background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.44) 92%, rgba(255,255,255,0) 99%); }
-.ha-loop--r2 { top: -310px; right: -1470px; width: 1900px; height: 1900px;
-  background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.31) 92%, rgba(255,255,255,0) 99%); }
-.ha-loop--r3 { top: -580px; right: -1740px; width: 2440px; height: 2440px;
-  background: radial-gradient(closest-side, rgba(255,255,255,0) 84%, rgba(255,255,255,0.22) 92%, rgba(255,255,255,0) 99%); }
-
-/* El claro central: lo que mantiene titular y campo de dominio sobre blanco. */
-.ha-clear {
-  top: -170px; left: 50%; transform: translateX(-50%); width: 1140px; height: 940px;
-  background: radial-gradient(closest-side, rgba(255,255,255,0.92), rgba(255,255,255,0.5) 60%, rgba(255,255,255,0) 82%);
-}
-
-/* Por debajo de 1204 px los lazos exteriores se cruzan en el centro. */
-@media (max-width: 1200px) {
-  .ha-loop--l3, .ha-loop--r3 { display: none; }
-}
-
-/* Juego corto. Los círculos de 2480 px se quedan enteros fuera de un encuadre
-   de 390 px, así que aquí se reposiciona todo: el centro se aleja del borde
-   (−300) para que la curva roce el lateral, baja (430/400) para que los lazos
-   pasen por la banda del botón y no por el titular —que en móvil ocupa el
-   ancho entero y no deja hueco lateral—, y quedan DOS lazos por lado cruzando
-   a 35 y 120 px, con 150 px centrales limpios. Tres no caben fuera del medio,
-   y apretarlos para que quepan es lo contrario de separarlos.
-
-   Y LA BANDA SE ESTRECHA AQUÍ, del 15 % del radio al 9 %. No es un ajuste de
-   gusto: la banda se define como fracción del RADIO, y en móvil el radio es
-   pequeño respecto a la pantalla, así que con el mismo 15 % cada arco ocupaba
-   el 14-17,6 % del ancho del viewport frente al 8-11 % en escritorio. Casi el
-   doble: por eso los dos lazos se leían como una mancha y no como dos líneas
-   (fundador, 2026-08-21: «al ser dos es como una mancha que no se sabe muy
-   bien si tiene sentido»). Con el 9 % ocupan 8,4 % y 10,5 %, que es la
-   proporción del escritorio. Si alguien cambia los radios de móvil, tiene que
-   recalcular esta banda contra el ancho de pantalla, no dejarla en un
-   porcentaje del radio y darla por buena. */
-@media (max-width: 760px) {
-  .ha-grid { height: 360px; background-size: 40px 40px; }
-  .ha-field { width: 1240px; height: 1240px; }
-  .ha-field--l { top: -190px; left: -920px; }
-  .ha-field--r { top: -220px; right: -920px; }
-  .ha-loop--l1 { top: 66px; left: -664px; width: 728px; height: 728px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0) 87.5%, rgba(255,255,255,0.44) 92%, rgba(255,255,255,0) 96.5%); }
-  .ha-loop--l2 { top: -27px; left: -757px; width: 914px; height: 914px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0) 87.5%, rgba(255,255,255,0.3) 92%, rgba(255,255,255,0) 96.5%); }
-  .ha-loop--r1 { top: 36px; right: -664px; width: 728px; height: 728px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0) 87.5%, rgba(255,255,255,0.44) 92%, rgba(255,255,255,0) 96.5%); }
-  .ha-loop--r2 { top: -57px; right: -757px; width: 914px; height: 914px;
-    background: radial-gradient(closest-side, rgba(255,255,255,0) 87.5%, rgba(255,255,255,0.3) 92%, rgba(255,255,255,0) 96.5%); }
-  .ha-clear { top: -40px; width: 470px; height: 440px; }
-}
-
-/* `position`/`z-index`: HERO-AURA-1. Era el único hijo estático del hero, y
-   los estáticos se pintan ANTES que cualquier posicionado, así que la capa del
-   aura (`z-index: 0`) le pasaba por encima y le teñía el ámbar. */
 .lp-promo {
-  position: relative; z-index: 1;
   text-align: center; font-size: 12.5px; font-weight: 600; color: #8a5a08;
   background: #fff3dc; padding: 8px 14px;
 }

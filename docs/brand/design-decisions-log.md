@@ -12458,135 +12458,124 @@ tipografía o patrones de navegación:
 
 ---
 
-## 139. El hero de la portada estrena aura, y no reutiliza la de /geo (HERO-AURA-1, 2026-08-21)
+## 139. El hero de la portada acaba en un degradado lineal, después de construir un aura entera que se descartó (HERO-GRADIENT-1, 2026-08-22)
 
 **Origen.** Fundador, 2026-08-21: el hero de la portada necesitaba un fondo con
-más presencia. Se dibujaron seis en un lienzo de diseño y se eligió el quinto.
-Task Intake aprobado el mismo día, con el alcance recortado a **sólo el fondo**
-(ver "Lo que no entró").
+más presencia que el degradado plano que tenía. Task Intake aprobado el mismo
+día, con el alcance recortado a **sólo el fondo**. Lo que se implementó primero
+—y lo que finalmente se quedó— no es lo mismo, y esta entrada cuenta las dos
+mitades porque la segunda no se entiende sin la primera.
 
-**Cómo se eligió.** Los tres primeros fondos eran patrones de líneas —malla
-diagonal, constelación de fuentes, topografía— y el fundador los descartó
-entera y explícitamente a favor de luz difusa. El cuarto subió intensidad; el
-sexto calcó una referencia externa píxel a píxel, renderizando en Chromium a
-1681 px y corrigiendo contra la captura en cinco pasadas. Ganó el **quinto**:
-la misma forma circular que el cuarto con los bordes tres veces más anchos y la
-mitad de opacidad. **Se eligió por discreto**, y ése es el criterio que hay que
-preservar si alguien lo retoca; subirle la voz lo convierte en el cuarto, que
-ya se había descartado.
+### Lo que se quedó
 
-**La geometría, y por qué importa.** Cada lazo es un círculo cuyo centro cae
-fuera del encuadre, a 520 px del lateral. La banda blanca se pinta al 92 % del
-radio con caída del 84 % al 99 %, así que el arco cruza la altura de su centro
-a `0,92·r − 520` px del borde: 124, 354 y 602 px para los tres radios. **Radio
-grande = curva suave.** Los intentos previos ponían el centro pegado al borde
-con radios de 700-1200 px, y eso da curvas cerradas que cruzan el titular en
-diagonal en vez de rozar el lateral — fue el fallo que costó dos iteraciones
-enteras de diseño antes de identificarlo.
+Un degradado lineal vertical sobre `.lp-hero--home` y **nada más**: ni capa, ni
+elementos, ni máscara. Cuatro paradas, medidas contra el alto real del hero
+(1154 px en escritorio, 1193 en móvil):
 
-**Los dos cortes responsive no son redondeos a ojo**, salen de esa fórmula: los
-lazos exteriores se solapan en el centro por debajo de 1204 px (602·2) y los
-medios por debajo de 708 px (354·2). De ahí `max-width: 1200px` (retira el
-tercer lazo) y `max-width: 760px` (juego corto de móvil).
+```css
+background: linear-gradient(180deg,
+  #cfe0fa 0%, #e4edfb 14%, #f6f9fe 28%, #ffffff 44%, #ffffff 100%);
+```
 
-**En móvil se reparametriza, no se escala.** Los círculos de 2480 px se quedan
-enteros fuera de un encuadre de 390 px. El centro se aleja del borde (−300), baja
-(430/400) para que los lazos pasen por la banda del botón y no por el titular
-—que en móvil ocupa el ancho entero y no deja hueco lateral como en escritorio—
-y quedan **dos** lazos por lado cruzando a 35 y 120 px. Tres no caben fuera del
-medio, y apretarlos para que quepan es lo contrario de separarlos: el fundador
-pidió expresamente más blanco en el centro tras ver la primera versión con tres.
+**Las paradas no están repartidas a ojo, cumplen dos reglas.**
 
-**La banda de los lazos se mide contra la PANTALLA, no contra el radio.** Se
-define como fracción del radio del círculo, y en móvil los radios son pequeños:
-con el mismo 15 % que usa el escritorio, cada arco ocupaba el 14 % y el 17,6 %
-del ancho del viewport, frente al 8,2 % y 11,1 % de escritorio. Casi el doble
-de grueso en proporción, y por eso los dos lazos se leían como una mancha en
-vez de como dos líneas — fundador, 2026-08-21, mirando el preview: *«al ser dos
-es como una mancha que no se sabe muy bien si tiene sentido»*. El diagnóstico
-inicial («sobra un lazo») era el equivocado: no sobraba ninguno, estaban
-demasiado gruesos. Con la banda al 9 % del radio ocupan el 8,4 % y el 10,5 %,
-que es la proporción del escritorio. Quien cambie los radios de móvil tiene que
-recalcular esta banda contra el ancho de pantalla, no dejarla en un porcentaje
-del radio y darla por buena.
+1. **El color se agota antes del formulario.** A 14 % el tinte ya ha cedido la
+   mitad, a 28 % es casi blanco y desde 44 % es blanco puro. El titular cae en
+   el tramo con color; el campo de dominio, los botones y la tarjeta-demo caen
+   sobre blanco limpio. Subir esas paradas devuelve el tinte a la zona del
+   formulario, que es exactamente lo que se descartó al elegir entre variantes.
+2. **El 100 % tiene que ser blanco.** Debajo del hero va la sección de motores,
+   que es blanca: un degradado que termine en color deja una línea horizontal
+   recta en la costura. No es teórico — es el mismo fallo que el aura tuvo que
+   tapar con un desvanecido enmascarado, y volvió a aparecer por otra vía en la
+   variante «doble extremo», que teñía el final del hero para enmarcarlo
+   (descartada por eso, fundador 2026-08-22). Terminando en `#ffffff` no hace
+   falta máscara ninguna.
 
-**No reutiliza `.onb-aurora`, a propósito.** Esa clase son cuatro manchas
-animadas en bucle más dos anillos girando, y la sirven `/geo`, `/pricing`, las
-portadas del blog y una sección inferior de la propia landing: tocarla habría
-arrastrado cinco superficies para cambiar una. El hero de la portada **no la
-usaba** —sólo tenía un degradado plano—, así que el aura nueva (`.ha-*`) es
-puramente aditiva y `.onb-aurora` queda intacta. Efecto secundario bueno: el
-fondo nuevo es estático, sin animaciones ni `will-change`, así que no necesita
-nada bajo `prefers-reduced-motion`.
+**Cómo se eligió, en dos rondas.** Primero seis fondos de aura en un lienzo de
+diseño; después, tras el rechazo, **ocho degradados (A-H)** renderizados sobre
+la landing real y mirados en escritorio y móvil. Ganó el **F**. Los criterios,
+en el orden en que decidieron: que el color no invada el formulario (elimina A,
+C, D y G), que el final sea blanco (elimina B y H), y **discreto antes que
+vistoso** —el mismo criterio con el que se había elegido el aura— que elimina E
+por invisible. Referencia y capturas en
+`docs/design-reference/hero-gradient-1/`.
 
-**Lo que NO se aísla, y por qué.** `.lp-hero--home` no crea contexto de
-apilamiento. Dentro vive `PublicHeader`, y su cajón móvil es
-`position: fixed; z-index: 320` (`.lp-mobnav`, velo a 310): aislar el hero lo
-encerraría dentro y lo dejaría por debajo de lo que hay fuera. La capa va a
-`z-index: 0`, por debajo de la cabecera pegajosa (50) y del contenido (2). El
-único hijo estático que quedaba por debajo era `.lp-promo` —y los estáticos se
-pintan antes que cualquier posicionado, así que el aura le teñía el ámbar—, que
-sube con `position: relative; z-index: 1`.
+**Coste, comparado con lo que sustituye:** cero DOM, cero JS, cero peticiones,
+una sola propiedad `background`. Nada que pueda recortarse, desbordar ni crear
+contexto de apilamiento, así que esta zona ya no necesita ninguna de las
+precauciones que sí necesitaba el aura: `.lp-promo` vuelve a ser estático y no
+hay capa que pueda teñirlo.
 
-**Lo que no entró.** Las maquetas llevan titular, bajada y una tarjeta-demo de
-ChatGPT que **no son los de producción**. Ese rediseño del hero no está
-aprobado: se separó explícitamente en el Task Intake y necesita el suyo propio.
-Quien abra `docs/design-reference/hero-aura-1/` y vea que el texto no coincide
-con la portada real, que sepa que es deliberado.
+### Por qué el aura no llegó, y qué dejó aprendido
 
-**Sin `filter: blur()`, y eso salió de medirlo.** Las maquetas llevaban 10-50 px
-de desenfoque en cada capa y se implementaron así. La auditoría posterior
-—fundador, mismo día: "revisa que lo del refactor, SEO, sameAs y Core Web
-Vitals se respeta o se mejora"— encontró que era **redundante y caro**. Todos
-estos gradientes ya mueren en transparente dentro de su propia caja (los lazos
-al 99 % del radio, los campos al 86 %), así que no hay canto duro que suavizar
-y desenfocar un degradado ya suave no cambia nada. Medido en Chromium: la
-diferencia máxima entre las dos versiones fue de **5/255 en el 0,02 % de los
-subpíxeles** en escritorio y 6/255 en móvil, por debajo de lo perceptible. El
-coste sí era real: rasterizar el hero entero pasaba de **33 ms a 82 ms por
-fotograma** a 1280 px sin estrangular CPU. Retirado el blur, vuelve a 33 ms:
-**el aura sale gratis**. Si alguien reintroduce `filter` aquí, que mida antes.
+Se construyó entera, se desplegó, pasó el piloto y **el fundador la rechazó en
+móvil**: *«al ser dos es como una mancha que no se sabe muy bien si tiene
+sentido»* (2026-08-21) y, tras un intento de arreglo, *«No me convence. Haz una
+versión como la de Apple con un degradado lineal de abajo a arriba»*
+(2026-08-22). Las maquetas quedan en
+`docs/design-reference/hero-gradient-1/descartado-aura/`. Lo que sigue vivo de
+esa pasada, porque vuelve a aplicar a cualquier fondo futuro:
 
-**El desvanecido inferior lo encontró una captura de página completa del
-piloto.** Sin él, `overflow: hidden` recorta las capas con una línea horizontal
-recta justo donde acaba el hero, y el azul y el lila mueren de golpe contra el
-blanco de la sección de motores. La maqueta no lo llevaba —el artboard termina
-en ese mismo canto, así que el corte no se veía— y mis propias capturas de
-verificación, de 800-900 px de alto, tampoco llegaban hasta ahí: el hero mide
-1154 px en escritorio y 1193 en móvil. Lo destapó abrir las capturas del piloto,
-que fotografía la página entera. Es el caso exacto que CLAUDE.md describe cuando
-dice que el ✅ de la tabla no es el veredicto. La máscara va en porcentaje, no en
-px, para seguir el alto real del hero, y crea contexto de apilamiento sólo en la
-capa decorativa — `.lp-hero--home` sigue sin crearlo, que es lo que el cajón
-móvil necesita.
+**Una banda que se define como fracción del RADIO hay que medirla contra la
+PANTALLA.** Los lazos del aura pintaban su banda blanca al 15 % del radio del
+círculo. En escritorio eso ocupaba el 8,2 % y el 11,1 % del ancho del viewport;
+en móvil, con radios mucho más pequeños, el mismo 15 % ocupaba el **14 % y el
+17,6 %** — casi el doble de grueso en proporción. Por eso los dos arcos se
+leían como una mancha y no como dos líneas. El diagnóstico inicial («sobra un
+lazo») era el equivocado: no sobraba ninguno, estaban demasiado gruesos.
 
-**Comprobado, y lo que se midió de verdad.** `pnpm test` (2672) y
-`pnpm run validate` en verde. La landing real —servida desde el build de
-producción, no la maqueta— renderizada en Chromium a
-1440/1280/1024/980/760/640/390/375 px: sin desbordamiento horizontal en
-ninguno, seis lazos por encima de 1200 px y cuatro por debajo, `.lp-promo` en
-`z-index: 1`. Sobre Core Web Vitals, con el aura activada y desactivada
-interceptando la hoja de estilos:
+**Radio grande = curva suave, y el centro va fuera del encuadre.** Poner el
+centro pegado al borde con radios de 700-1200 px da curvas cerradas que cruzan
+el titular en diagonal en vez de rozar el lateral. Costó dos iteraciones
+enteras de diseño identificarlo.
 
-- **CLS 0,0002-0,0005, idéntico con y sin.** No puede empeorar por
-  construcción: la capa es `position: absolute` dentro de un contenedor con
-  `overflow: hidden` y no participa en el layout.
-- **LCP sin cambio medible**, dentro del ruido entre ejecuciones. `FCP == LCP`
-  en todas las pasadas, o sea que el elemento LCP es texto pintado en el primer
-  fotograma y el aura no es candidato ni afecta a su layout.
-- **Scroll idéntico**, 16,6 ms/fotograma con y sin: la capa se compone y no se
-  re-rasteriza al desplazar.
-- **INP intacto**: cero JS y `pointer-events: none`.
-- **Carga útil +650 B gzip** (+1,58 % del CSS que ya viajaba), en el bundle que
-  ya se servía. Sin peticiones nuevas.
+**`filter: blur()` sobre un degradado que ya muere en transparente es
+redundante y caro, y eso salió de medirlo.** Las maquetas llevaban 10-50 px de
+desenfoque por capa y se implementaron así. Medido en Chromium, la diferencia
+máxima entre las dos versiones fue de **5/255 en el 0,02 % de los subpíxeles**
+en escritorio y 6/255 en móvil, por debajo de lo perceptible; el coste era
+rasterizar el hero entero en **82 ms por fotograma en vez de 33** a 1280 px sin
+estrangular CPU. Si alguien mete `filter` en un fondo, que mida antes.
 
-Nada de esto toca `sameAs` ni el resto de datos estructurados (Organization,
-SoftwareApplication, Offer siguen emitiéndose en la portada), ni el `<h1>`, ni
-el landmark `<main>` que A11Y-PSI-1 añadió a este mismo fichero (§116): la capa
-va dentro del `<header>`, que queda fuera de `<main>` a propósito, y es
-`aria-hidden`.
+**Una captura de 800 px de alto no ve el final del hero.** El corte recto contra
+la sección de motores lo destapó abrir las capturas de **página completa** del
+piloto; mis propias capturas de verificación no llegaban hasta ahí, porque el
+hero mide 1154 px. Es el caso exacto que CLAUDE.md describe al decir que el ✅ de
+la tabla no es el veredicto. Vale igual para las capturas de comparación de
+variantes: las tres últimas (F, G, H) se volvieron a renderizar con el hero
+entero en el encuadre justo por esto, y es lo que dejó ver que H fallaba.
+
+**Y el aura era barata: el problema no era el rendimiento.** Con el blur
+retirado, CLS idéntico (0,0002-0,0005 con y sin), LCP sin cambio medible
+(`FCP == LCP` en todas las pasadas: el elemento LCP es texto del primer
+fotograma), scroll idéntico a 16,6 ms/fotograma, INP intacto y +650 B gzip.
+Se descartó por criterio visual, no por coste — que es la razón por la que
+merecía la pena medirlo antes de discutirlo.
+
+### Lo que NO entró
+
+Las maquetas del aura llevan **otro titular, otra bajada y una tarjeta-demo de
+ChatGPT** que no son los de producción. Ese rediseño del hero no está aprobado:
+se separó explícitamente en el Task Intake y necesita el suyo propio. Quien
+abra `descartado-aura/` y vea que el texto no coincide con la portada real, que
+sepa que es deliberado.
+
+`.onb-aurora` queda **intacta** y es otra cosa: cuatro manchas animadas en bucle
+más dos anillos girando, servidas por `/geo`, `/pricing`, las portadas del blog
+y una sección inferior de la propia landing. El hero de la portada nunca la
+usó. Ni el aura descartada ni el degradado la tocan.
+
+### Comprobado
+
+`pnpm test` y `pnpm run validate` en verde. La landing real —servida desde el
+build de producción, no la maqueta— renderizada en Chromium a
+1440/1280/1024/980/760/640/390/375 px: sin desbordamiento horizontal en ninguno.
+`sameAs` y el resto de datos estructurados (Organization, SoftwareApplication,
+Offer), el `<h1>` y el landmark `<main>` de A11Y-PSI-1 (§116) intactos — el
+cambio es una propiedad CSS sobre un contenedor que ya existía y no toca el
+árbol.
 
 **Pendiente / conocido.** A 980 px la cabecera pública desborda —los enlaces se
-parten a tres líneas y "Prueba gratis" se sale— pero es anterior a este cambio y
-no lo toca esta fase: el aura es una capa `pointer-events: none` dentro de un
-contenedor con `overflow: hidden` y no puede afectar al layout de la nav.
+parten a tres líneas y «Prueba gratis» se sale—, pero es anterior a este cambio
+y no lo toca esta fase.
