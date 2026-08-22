@@ -52,6 +52,18 @@ const HOW_ENGINES = [
 
 /* Las cinco pantallas, en el orden del artboard. Los rótulos son los del
    producto (la barra lateral de la consola), no una versión comercial. */
+/* La cápsula de motor de la pantalla de Prompts: el mismo logo con tres
+   estados —te cita, te menciona, no apareces—, que es la distinción que el
+   producto hace de verdad y la que la sección oscura ya explicaba. */
+function PromptEngine({ src, tono }: { src: "chatgpt" | "gemini" | "claude"; tono: "cite" | "ment" | "off" }) {
+  return (
+    <span className={`lp-prod-chip-eng ${tono}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/brand/engines/${src}.svg`} alt="" width={15} height={15} />
+    </span>
+  );
+}
+
 const PRODUCT_TABS = [
   { id: "pg-overview", label: "Visión general" },
   { id: "pg-prompts", label: "Prompts" },
@@ -584,6 +596,66 @@ export function LandingPage() {
                         <div className={`lp-prod-delta ${k.tono}`}>{k.d}</div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Prompts */}
+                <div className="lp-prod-pg" id="pg-prompts" role="tabpanel">
+                  <div className="lp-prod-pghead">
+                    <span className="t">Prompts</span>
+                    <span className="m">14 preguntas · 3 motores · 42 respuestas</span>
+                  </div>
+
+                  <div className="lp-prod-card lp-prod-list">
+                    <div className="lp-prod-q lp-prod-q--open">
+                      <div className="lp-prod-qrow">
+                        <span className="q">«¿Dónde compro muebles baratos y bonitos?»</span>
+                        <span className="lp-prod-chips">
+                          <PromptEngine src="chatgpt" tono="cite" />
+                          <PromptEngine src="gemini" tono="ment" />
+                          <PromptEngine src="claude" tono="off" />
+                        </span>
+                      </div>
+                      <div className="lp-prod-answer">
+                        <div className="lp-prod-qrow">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/brand/engines/chatgpt.svg" alt="" width={16} height={16} />
+                          <span className="lp-prod-ansc">Respuesta de ChatGPT</span>
+                          <span className="lp-prod-pill cita">Te cita</span>
+                        </div>
+                        <p>
+                          Para calidad-precio la referencia sigue siendo <mark>IKEA</mark>, sobre todo
+                          en salón y almacenaje…
+                        </p>
+                        <div className="lp-prod-src">
+                          <Icon name="link" size={14} />
+                          <span>ikea.es/es/es/rooms/living-room</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {[
+                      { q: "«¿Qué tienda de muebles tiene mejor calidad?»", e: ["off", "off", "ment"] },
+                      { q: "«Mejores tiendas para amueblar un piso pequeño»", e: ["ment", "ment", "off"] },
+                      { q: "«Tiendas de decoración nórdica en España»", e: ["cite", "cite", "ment"] }
+                    ].map((r) => (
+                      <div className="lp-prod-q" key={r.q}>
+                        <div className="lp-prod-qrow">
+                          <span className="q">{r.q}</span>
+                          <span className="lp-prod-chips">
+                            {(["chatgpt", "gemini", "claude"] as const).map((m, n) => (
+                              <PromptEngine key={m} src={m} tono={r.e[n] as "cite" | "ment" | "off"} />
+                            ))}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="lp-prod-legend">
+                    <span><i className="lp-prod-chip-eng cite" /> Te cita como fuente</span>
+                    <span><i className="lp-prod-chip-eng ment" /> Te menciona</span>
+                    <span><i className="lp-prod-chip-eng off" /> No apareces</span>
                   </div>
                 </div>
               </div>

@@ -5830,6 +5830,48 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-kpi .lp-prod-delta.pos { color: #15915a; }
 .lp-prod-kpi .lp-prod-delta.neg { color: #d23b48; }
 
+/* Pantalla 2: Prompts. */
+.lp-prod-pghead { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.lp-prod-pghead .t { font-size: 15px; font-weight: 600; }
+.lp-prod-pghead .m { font-size: 12.5px; color: var(--ink-4); }
+.lp-prod-list { margin-top: 18px; overflow: hidden; }
+.lp-prod-q { padding: 15px 20px; }
+.lp-prod-q:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
+.lp-prod-q--open { background: rgba(37, 99, 235, .035); }
+.lp-prod-qrow { display: flex; align-items: center; gap: 14px; }
+.lp-prod-q .q { flex: 1; font-size: 14.5px; color: var(--ink-2); }
+.lp-prod-q--open .q { font-weight: 600; color: var(--ink); }
+.lp-prod-chips { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+/* Los tres estados del motor. `--off` en gris y atenuado: no aparecer no es un
+   error, es un dato, así que se apaga en vez de pintarse en rojo. */
+.lp-prod-chip-eng {
+  width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--line);
+  background: #fff; display: grid; place-items: center; flex: 0 0 auto;
+}
+.lp-prod-chip-eng img { width: 15px; height: 15px; display: block; }
+.lp-prod-chip-eng.off { background: var(--canvas); border-color: var(--line-soft); }
+.lp-prod-chip-eng.off img { opacity: .28; filter: grayscale(1); }
+.lp-prod-chip-eng.cite { border-color: var(--brand-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+.lp-prod-chip-eng.ment { border-color: #15915a; box-shadow: 0 0 0 3px rgba(21, 145, 90, .12); }
+.lp-prod-answer {
+  margin-top: 14px; padding: 16px 18px; background: #fff;
+  border: 1px solid var(--line); border-radius: 12px;
+}
+.lp-prod-ansc { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.lp-prod-pill.cita { background: var(--accent-soft); color: var(--brand-blue); margin-top: 0; }
+.lp-prod-answer p { margin: 12px 0 0; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+/* El subrayado del artboard es una sombra interior, no un `background`: así el
+   trazo se queda pegado a la línea base y no envuelve el texto como un rótulo. */
+.lp-prod-answer mark {
+  background: none; font-weight: 600; color: var(--ink);
+  box-shadow: inset 0 -8px 0 rgba(21, 145, 90, .16);
+}
+.lp-prod-src { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--ink-3); }
+.lp-prod-src span { font-family: var(--mono); font-size: 11.5px; }
+.lp-prod-legend { display: flex; gap: 22px; margin-top: 16px; flex-wrap: wrap; }
+.lp-prod-legend span { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-3); }
+.lp-prod-legend i { width: 18px; height: 18px; }
+
 /* --- Testimonio (HOME-2026-08 Fase C) -----------------------------------
    Dos tarjetas de anchos distintos —1.62fr y 1fr— y no dos mitades: la cita
    manda y la cifra la acompaña. `stretch` porque en el artboard las dos miden
