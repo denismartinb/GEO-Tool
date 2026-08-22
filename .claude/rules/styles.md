@@ -145,7 +145,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   horizontal recta**. Ha pasado dos veces seguidas en la misma zona por dos
   vías distintas: el aura descartada lo tuvo que tapar con un desvanecido
   enmascarado, y la variante de degradado que volvía a teñir el final del hero
-  lo reprodujo tal cual (log §139). Un `linear-gradient` que termine en el
+  lo reprodujo tal cual (log §141). Un `linear-gradient` que termine en el
   color del vecino no necesita máscara ninguna; si el fondo no puede terminar
   ahí, el desvanecido va **en porcentaje**, no en px, para seguir el alto real
   de la sección. Y se verifica sobre una captura de **página completa**, nunca

@@ -7,11 +7,18 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
-import { MIN_VISIBLE_POINTS, formatPoints, selectPlan } from "@/lib/recommendations/plan";
+import {
+  GROUP_PREVIEW_SIZE,
+  MIN_VISIBLE_POINTS,
+  formatPoints,
+  rankGroupMembers,
+  selectPlan
+} from "@/lib/recommendations/plan";
 import {
   CONTROL_LABEL,
   classifySolutionReadiness,
   deliverableForType,
+  pointsCaption,
   readinessLabel
 } from "@/lib/recommendations/deliverable";
 
@@ -554,7 +561,7 @@ export function RecCard({
             {typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS ? (
               <>
                 <div className="rec2-pts">+{formatPoints(rec.potentialPoints)} pt</div>
-                <div className="rec2-pts-l">potenciales</div>
+                <div className="rec2-pts-l">{pointsCaption(rec.recommendation_type)}</div>
               </>
             ) : (
               /* Confidence deliberately NOT shown here (founder review): repeated
@@ -937,6 +944,10 @@ function GroupedRecs({
   jointPointsByType?: Record<string, number | null>;
 }) {
   const [open, setOpen] = useState(false);
+  // RECS-ACCION-1c — dentro del grupo se enseñan primero las que más mueven la
+  // aguja, y el resto queda tras un clic. Un grupo de 30 tarjetas idénticas
+  // salvo la consulta no es una lista de trabajo, es un muro.
+  const [showAll, setShowAll] = useState(false);
   // Never the SUM of the members' deltas: two gaps of the same type can share
   // affected prompts and summing double-counts them (ADR 0017 §3). The number
   // shown here is a single joint counterfactual computed server-side over the
@@ -952,6 +963,10 @@ function GroupedRecs({
   // A single-member group has nothing repeated to hoist, so its one card keeps
   // its own description and step.
   const single = items.length === 1;
+
+  const ranked = rankGroupMembers(items);
+  const visible = showAll ? ranked : ranked.slice(0, GROUP_PREVIEW_SIZE);
+  const hiddenCount = ranked.length - visible.length;
 
   return (
     <div className="rec2-group">
@@ -994,9 +1009,20 @@ function GroupedRecs({
               </div>
             </div>
           )}
-          {items.map((rec) => (
+          {visible.map((rec) => (
             <RecCard key={rec.id} rec={rec} projectId={projectId} compact={!single} />
           ))}
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ margin: "6px 4px 2px" }}
+              onClick={() => setShowAll(true)}
+            >
+              <Icon name="chevDown" size={13} />
+              Ver las otras {hiddenCount}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -1053,7 +1079,7 @@ export function RecommendationsClient({
     const write = (rec: Recommendation, i: number) => {
       const pts =
         typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS
-          ? ` (+${formatPoints(rec.potentialPoints)} pt potenciales)`
+          ? ` (+${formatPoints(rec.potentialPoints)} pt ${pointsCaption(rec.recommendation_type)})`
           : "";
       lines.push(`${i + 1}. **${rec.title}**${pts}`);
       lines.push(`   ${rec.description}`);

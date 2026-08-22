@@ -12150,16 +12150,6 @@ log §57 (SCAN-STATES-3 / `ReentryMission`); `.claude/rules/mission-rocket.md`;
 
 ---
 
----
-
-
----
-
-
----
-
----
-
 ## 133. El guardián rechazaba nombrar al competidor que la propia tarjeta ancla (2026-08-20)
 
 **Qué pasó.** Con §126 desplegado, la misma tarjeta *Entrar en fuentes citadas*
@@ -12440,6 +12430,40 @@ patrón de verde vacío).
 
 ---
 
+## 139. La matriz de definición ↔ pantalla, para que "verificar contra la documentación" sea un checklist y no una frase (PRELAUNCH-HARDENING-1 Fase P3, 2026-08-21)
+
+**Qué se decidió.** Una tabla nueva en `docs/agentic-user-pilot.md` —
+"Matriz de definición ↔ pantalla" — con una fila por zona del mapa de zonas
+de `CLAUDE.md`, mismo orden: qué regla de ruta le aplica, qué pantallas del
+piloto (si alguna) la recorren y con qué etiquetas, y una nota de cobertura.
+`.claude/agents/ux-pilot.md` la lista ahora como input obligatorio, junto a
+la maqueta aprobada.
+
+**Por qué hacía falta.** El plan de PRELAUNCH-HARDENING-1 (P3) ya pedía esto
+explícitamente: sin la tabla, "verificar contra la definición" era una frase
+del agente `ux-pilot`, no algo que pudiera ejecutar — no tenía dónde mirar
+qué regla o qué histórico correspondía a la pantalla que estaba juzgando.
+
+**El hallazgo real, construyendo la tabla.** Seis zonas del mapa —Metodología
+GEO (scoring), Correos transaccionales, Fiabilidad LLM, la mitad "depuración"
+de Dominios, Escaneo (pipeline) fuera del set `read`, y Consola de operador—
+**no las ve el piloto de lectura en ningún deploy**, cada una por una razón de
+fondo distinta (no es UI, no hay buzón, es sólo `workflow_dispatch`, es otra
+cuenta). No es un agujero nuevo — ya se sabía caso por caso — pero antes de
+esta tabla esa ausencia no estaba escrita en ningún sitio que una pasada del
+piloto pudiera leer antes de fallar en falso buscando algo que nunca pudo ver.
+
+**Lo que NO cambia.** Ningún journey nuevo, ninguna pantalla nueva pilotada.
+Es documentación pura — cero cambio de producto, cero cambio de comportamiento
+del arnés.
+
+**Trazabilidad.** `docs/agentic-user-pilot.md` (sección "Matriz de definición
+↔ pantalla"); `.claude/agents/ux-pilot.md` (fila de inputs "The zone's own
+truth"); `docs/prelaunch-hardening-plan.md` (P3 del ledger); CLAUDE.md (mapa
+de zonas, la fuente que esta tabla espeja).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -12455,10 +12479,60 @@ tipografía o patrones de navegación:
 3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
    técnico aquí (este documento es "qué se decidió", no "cómo se
    implementó").
+## 140. Lo que no controlas deja de encabezar el plan (RECS-ACCION-1c, 2026-08-21)
+
+**Qué pasó.** El fundador escaneó un proyecto real (30 prompts, 7 competidores)
+y la primera acción de la pantalla, con «Prioridad alta» y **+11 pt** —el
+potencial más alto de las tres—, era *«Consigue que 5 webs que cita la IA te
+mencionen»*. Es literalmente la queja con la que abrió esta serie de fases:
+*«escribir a hubspot y conseguir que te nombren en su blog no es muy
+realista»*. RECS-ACCION-1a (§127) le puso el chip «Depende de terceros», que
+lo **señalaba** — pero nada lo bajaba de sitio.
+
+**Por qué salía primera, y no es casualidad.** El contrafactual de ADR 0017
+para los tipos `pursue_*` aplica la mutación `authority` sobre todas las filas
+afectadas: asume que **todas** las fuentes citadas acaban mencionando la marca.
+Es un techo honesto («hasta +X»), pero es un techo generoso por construcción, y
+compite en la misma unidad que «añade un párrafo a tu página». Ordenando sólo
+por puntos, lo que menos controlas gana casi siempre.
+
+**Dos correcciones, ninguna toca el motor ni el scoring.**
+
+1. **Techo de control en el plan** (`planScore`, `lib/recommendations/plan.ts`).
+   Una acción `third_party` nunca se pone por encima de una que el cliente
+   puede ejecutar hoy. **Es un techo, no un filtro**: si no hay nada propio que
+   hacer, la externa sigue subiendo al plan — esconderla sería la otra forma de
+   mentir. `in_app` cuenta como propio (se resuelve dentro del producto), y un
+   tipo sin control declarado **no se penaliza**, misma dirección de fallo que
+   `deliverableForType`.
+2. **La promesa dice de quién depende** (`pointsCaption`). La cifra no cambia;
+   cambia su etiqueta: «+11 pt · **si te citan**» en vez de «potenciales». Dos
+   promesas que no valen lo mismo dejan de enseñarse con la misma palabra.
+
+**Lo que NO se hizo, y por qué está aquí escrito.** El plan aprobado de
+RECS-ACCION-1 incluía este techo desde el principio; la fase 1a entregó el chip
+y se dejó el techo fuera sin decirlo. Se corrige aquí en vez de dejar el hueco
+tapado por una fase que parecía completa.
+
+**Tercera corrección: el muro de tarjetas iguales.** «Aumentar visibilidad de
+marca» emite **una tarjeta por prompt** — 30 en este proyecto, de 36 acciones
+totales. Agrupar en el motor está descartado (§115 punto 6: cambiaría el
+`dedupe_key` y rompería la resolución por prompt de RECS-3), así que la salida
+es de presentación: al desplegar un grupo se enseñan las **5 con más puntos** y
+el resto queda tras «Ver las otras N».
+
+Se eligió el tope por encima de las dos alternativas evaluadas porque **el
+problema no es cómo se agrupan, es cuáles hacer**: nadie va a escribir 30
+páginas, y el dato que las ordena ya existe en los puntos contrafactuales de
+cada tarjeta. Sub-agrupar por categoría del prompt era más bonito pero deja las
+30 en seis cajones sin decir cuáles importan, y además la categoría no está
+persistida en la recomendación (habría que añadirla a `evidence_json`). Cambiar
+sólo el contador de cabecera ayuda pero no toca el muro. **No esconde nada**: el
+resto está a un clic, igual que ya lo estaba el grupo entero.
 
 ---
 
-## 139. El hero de la portada acaba en un degradado lineal, después de construir un aura entera que se descartó (HERO-GRADIENT-1, 2026-08-22)
+## 141. El hero de la portada acaba en un degradado lineal, después de construir un aura entera que se descartó (HERO-GRADIENT-1, 2026-08-22)
 
 **Origen.** Fundador, 2026-08-21: el hero de la portada necesitaba un fondo con
 más presencia que el degradado plano que tenía. Task Intake aprobado el mismo

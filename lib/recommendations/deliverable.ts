@@ -143,6 +143,20 @@ export function classifySolutionReadiness(solution: {
   return blanks === 0 ? { kind: "ready" } : { kind: "needs_data", blanks };
 }
 
+/**
+ * Etiqueta que acompaña a la cifra de puntos (RECS-ACCION-1c).
+ *
+ * El contrafactual de ADR 0017 es un techo honesto —"hasta +X"— pero para una
+ * acción externa ese techo depende de que actúe **otro**: el `+11 pt` de
+ * "consigue que cinco webs te mencionen" asume que las cinco te mencionan.
+ * Enseñar eso con la misma palabra que "añade un párrafo a tu página" iguala
+ * dos promesas que no valen lo mismo. La cifra no cambia; cambia lo que
+ * declara.
+ */
+export function pointsCaption(type: string): string {
+  return deliverableForType(type).control === "third_party" ? "si te citan" : "potenciales";
+}
+
 /** Copy de la insignia de estado del artefacto generado. */
 export function readinessLabel(readiness: SolutionReadiness): string {
   if (readiness.kind === "ready") return "Listo para copiar";
