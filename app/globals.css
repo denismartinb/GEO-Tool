@@ -4746,13 +4746,21 @@ a.notif-row:hover {
    un degradado lineal y nada más. Referencia en
    `docs/design-reference/hero-gradient-1/`.
 
-   EL COLOR SE AGOTA EN EL PRIMER CUARTO. Las cuatro paradas están medidas
-   contra el alto real del hero (1154 px en escritorio, 1193 en móvil), no
-   repartidas a ojo: a 14 % el tinte ya ha cedido la mitad, a 28 % es casi
-   blanco y desde 44 % es blanco puro. Eso deja el titular sobre el tramo con
-   color y el campo de dominio, los botones y la tarjeta-demo sobre blanco
-   limpio. Subir esas paradas devuelve el color a la zona del formulario, que
-   es justo lo que se descartó.
+   EL COLOR SE AGOTA EN EL PRIMER TERCIO. A 14 % el tinte ha cedido la mitad,
+   a 28 % es #f6f9fe y desde 44 % es blanco. El titular cae en el tramo con
+   color y el campo de dominio en la cola, ya indistinguible del blanco.
+
+   «Indistinguible» es una medición, no una impresión: muestreando el píxel
+   junto al campo sobre la página real, el fondo va de 250,252,255 a
+   246,249,254 según la anchura — nueve unidades por debajo del blanco en el
+   peor caso (768 px). El artboard aprobado hace lo mismo: su campo tampoco cae
+   sobre blanco puro, sino en esta misma rampa. Quien venga después: **no hace
+   falta recalibrar esto cuando cambie el alto del hero.** Se comprobó al
+   cambiar el hero en HOME-2026-08 Fase A —el hero pasó de 1154 a 1176 px en
+   escritorio y a 1001 px a 768 px— y las paradas en porcentaje siguieron
+   cayendo donde tenían que caer. Lo que sí rompería la regla es SUBIR las
+   paradas, que devuelve color a la zona del formulario: eso es acercarse a la
+   variante A, descartada.
 
    EL 100 % TIENE QUE SER BLANCO, y no es cosmético: debajo del hero va la
    sección de motores, que es blanca. Un degradado que termine en color deja
@@ -4797,19 +4805,75 @@ a.notif-row:hover {
 
 .lp-h1-accent { color: var(--brand-blue); }
 
-.lp-field {
-  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px; position: relative;
+/* El «cromado» de la píldora —fondo, borde, sombra, radio— vive en el
+   envoltorio, no en el campo, porque de él depende si el botón queda dentro de
+   la cápsula (escritorio) o fuera (móvil). Ver el comentario del componente. */
+.lp-field-wrap {
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px;
   background: #fff; border: 1px solid var(--line-strong); border-radius: 999px;
   box-shadow: 0 6px 28px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
   transition: border-color .15s, box-shadow .15s;
 }
-.lp-field:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
+.lp-field-wrap:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
+.lp-field { display: flex; align-items: center; gap: 8px; position: relative; flex: 1; min-width: 0; }
 .lp-field-ico { color: var(--ink-4); flex: 0 0 auto; }
 .lp-field-input { flex: 1; min-width: 0; border: none; outline: none; background: transparent;
   font-size: 15.5px; font-weight: 500; color: var(--ink); height: 40px; }
-.lp-field-ghost { position: absolute; left: 44px; top: 6px; bottom: 6px; display: flex; align-items: center;
+.lp-field-ghost { position: absolute; left: 26px; top: 6px; bottom: 6px; display: flex; align-items: center;
   color: var(--ink-4); font-size: 15.5px; font-weight: 400; pointer-events: none; line-height: 1; }
 .lp-field-ghost .type-caret { background: var(--brand-blue); }
+
+/* HOME-2026-08 Fase A: la llamada a la acción vive DENTRO de la píldora, no
+   debajo. El relleno asimétrico que `.lp-field` ya tenía (6px arriba, abajo y
+   derecha; 16px a la izquierda) existía justo para esto. */
+.lp-field-cta { flex: 0 0 auto; }
+
+/* Los tres motores, bajo el campo. No es decoración: es la lista de lo que el
+   comprobador consulta de verdad, y por eso los nombres van en texto y no
+   dentro del SVG — un logo no lo lee un lector de pantalla ni un motor
+   generativo. Los `img` van `aria-hidden` porque el nombre ya está al lado. */
+.lp-engines {
+  margin-top: 22px; display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: center; gap: 14px 26px;
+}
+.lp-engine {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 14.5px; font-weight: 600; color: var(--ink-2);
+}
+.lp-engine img { width: 22px; height: 22px; display: block; }
+
+/* Por debajo de 560 px el botón sale de la píldora y se pone debajo, a todo el
+   ancho. No es preferencia: el campo tiene `max-width: 560px`, así que por
+   debajo de ese ancho ya no cabe entero y el botón empieza a comerse el
+   hueco de escribir — a 390 px dejaba el campo en ocho caracteres
+   («tudomin|»). Es lo que hace el artboard móvil aprobado, que además baja los
+   motores a 20 px de icono y 13 de texto. El corte coincide con el
+   `max-width` del campo a propósito: es el ancho a partir del cual la píldora
+   deja de tener holgura, no un número redondo. */
+@media (max-width: 560px) {
+  /* La cápsula baja del envoltorio al campo: el botón deja de estar dentro del
+     recuadro blanco y pasa a ser un bloque propio debajo, con su hueco, como
+     en el artboard móvil. */
+  .lp-field-wrap {
+    display: block; padding: 0;
+    background: none; border: none; border-radius: 0; box-shadow: none;
+  }
+  .lp-field-wrap:focus-within { border-color: transparent; box-shadow: none; }
+  .lp-field {
+    padding: 6px 16px; background: #fff; border: 1px solid var(--line-strong);
+    border-radius: 999px; box-shadow: 0 6px 28px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .lp-field:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
+  /* El fantasma se posiciona contra `.lp-field`, y aquí el campo recupera su
+     relleno de 16px: sin corregirlo arranca dentro del icono («⊕udomin»).
+     16 de relleno + 18 del globo + 8 de hueco = 42. */
+  .lp-field-ghost { left: 42px; }
+  .lp-field-cta { width: 100%; margin-top: 12px; justify-content: center; }
+  .lp-engines { margin-top: 20px; gap: 12px 16px; }
+  .lp-engine { font-size: 13px; gap: 7px; }
+  .lp-engine img { width: 20px; height: 20px; }
+}
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 /* Pista del comprobador gratuito cuando lo escrito no es un dominio

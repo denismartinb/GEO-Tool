@@ -12653,3 +12653,120 @@ cambio es una propiedad CSS sobre un contenedor que ya existía y no toca el
 **Pendiente / conocido.** A 980 px la cabecera pública desborda —los enlaces se
 parten a tres líneas y «Prueba gratis» se sale—, pero es anterior a este cambio
 y no lo toca esta fase.
+
+---
+
+## 142. La portada estrena el hero del diseño aprobado, y su botón deja de llevar al registro (HOME-2026-08 Fase A, 2026-08-22)
+
+**Origen.** Fundador, 2026-08-22, tras mergear el degradado: *«El efecto real hay
+que verlo con la home definitiva del canvas pixel perfect»*. Task Intake
+aprobado el mismo día, troceado en Paso 0 (el diseño al repo) más tres fases de
+código. Esta entrada cubre el Paso 0 y la Fase A.
+
+### Paso 0: el diseño aprobado no estaba en el repo, y eso invalidaba media pasada del piloto
+
+HERO-GRADIENT-1 (§141) commiteó como «referencia de escritorio» el artboard
+**del hero**, no la home, y sin sus assets. La home completa de escritorio
+—9.152 px, ocho secciones— vivía sólo en el lienzo publicado, que ni CI ni una
+sesión futura pueden abrir. Es exactamente el fallo que CLAUDE.md describe: sin
+diseño en el repo, la mitad de fidelidad del piloto no corre y nadie se entera.
+
+Corregido: `docs/design-reference/home-2026-08/` con los dos artboards,
+`canvas.json` y los diez assets. Y **los dos artboards llevaban todavía el
+aura**, así que se les aplicó el degradado de producción y se republicó el
+lienzo: referencia y producto dicen ahora lo mismo. Era literalmente lo que el
+fundador señalaba como pendiente («sólo quedaba aplicar el hero definitivo»).
+
+Dos cosas que un lector no puede ver y que el README deja escritas, porque las
+dos me hicieron leer mal el diseño antes de mirarlas bien: las cuatro tarjetas
+de la sección oscura entran con `IntersectionObserver` y una captura sin scroll
+las fotografía a opacidad 0 —parecen faltar y no faltan—, y la demo del hero
+son **cinco escenas** cuyo estado vive en las llaves del editor del lienzo, así
+que fuera de él la tarjeta sale vacía con `{{url}}` en la barra.
+
+### Fase A: el hero
+
+Titular, bajada, campo con su llamada a la acción dentro de la píldora y la
+fila de los tres motores con sus logos. El salto de línea del titular es del
+diseño y va explícito: dejarlo fluir se lleva «la» a la primera línea a 1280 px.
+
+**El botón lleva al comprobador gratuito, no al registro.** Es el cambio de
+verdad: la portada pasa de «date de alta y analiza» a «compruébalo ahora, sin
+cuenta». El comprobador existe y es real (FREE-CHECKER-1), así que la promesa
+se sostiene. El dominio escrito viaja **dos veces y las dos hacen falta**: por
+la URL (`?d=`) para que el comprobador aparezca con el campo puesto, y por
+`localStorage` porque el alta sigue estando después y el asistente lo sigue
+recogiendo igual (`.claude/rules/onboarding.md`, «El dominio del hero llega al
+asistente»).
+
+**Rellena, pero no lanza.** Cada comprobación es una llamada real a un LLM con
+tope diario: auto-ejecutarla desde un parámetro convertiría cualquier enlace en
+una forma de gastarle el cupo a otro. Verificado con cuatro entradas —dominio
+válido, un intento de `<script>`, basura y sin parámetro—: rellena sólo el
+válido, filtra el resto con el mismo validador que habilita el botón, y
+**cero** llamadas a `/api/gratis/` en los cuatro casos.
+
+El comprobador necesitó un `Suspense` para poder leer `?d=`: sin él Next no
+prerenderiza la página, que es estática y tiene que seguir siéndolo.
+
+**Se retira la franja «Motores de IA que analizamos por ti».** Los tres motores
+suben al hero con sus logos; mantener las dos dejaba los mismos tres nombres
+repetidos a cien píxeles.
+
+**Por debajo de 560 px el botón sale de la píldora.** No es gusto: el campo
+tiene `max-width: 560px`, así que por debajo de ese ancho el botón empieza a
+comerse el hueco de escribir —a 390 px lo dejaba en ocho caracteres— y es lo
+que hace el artboard móvil. El corte coincide con ese `max-width` a propósito.
+**Y el botón es hermano del campo, no hijo.** Los dos artboards no comparten
+marcado aquí: en escritorio el botón va DENTRO de la píldora y en móvil va
+FUERA, debajo, con 12 px de hueco. Con un solo marcado eso se resuelve moviendo
+el cromado —fondo, borde, sombra, radio— entre el envoltorio (escritorio: los
+dos dentro de la misma cápsula) y el campo (móvil: cápsula sólo alrededor del
+campo). Tenerlo dentro dejaba el recuadro blanco envolviendo también al botón,
+y en el teléfono se leía como una caja alta con el botón flotando dentro. **Lo
+cazó el fundador mirando el preview en su móvil, no mis capturas**, que a 390 px
+en Chromium enseñaban lo mismo sin que yo lo leyera como un fallo: tenía el
+marcado del artboard delante y no lo comparé.
+
+Cada movimiento del relleno rompió el fantasma del tecleo, que va en
+`position: absolute` contra el campo y por tanto depende de dónde esté ese
+relleno: primero se estiró por toda la caja al envolverse la píldora, y después
+arrancó dentro del globo («⊕udomin») al devolverle al campo sus 16 px. Queda en
+42 px = 16 de relleno + 18 del globo + 8 de hueco, medidos.
+
+### Lo que se predijo mal, y se midió
+
+El Task Intake anunciaba que habría que **recalibrar las paradas del
+degradado** al cambiar el alto del hero. Se midió y **no hacía falta**.
+Muestreando el píxel junto al campo sobre la página real, el fondo va de
+`250,252,255` a `246,249,254` según la anchura: nueve unidades por debajo del
+blanco en el peor caso (768 px, donde el hero se acorta a 1001 px y el campo
+sube al 27 %). Las paradas en porcentaje siguieron cayendo donde tenían que
+caer.
+
+De paso quedó claro que **el comentario del CSS era más estricto que el propio
+diseño**: decía que el campo cae «sobre blanco puro», y en el artboard aprobado
+tampoco cae sobre blanco puro, cae en la misma rampa. Corregido el comentario,
+no el degradado — y anotado ahí que no hay que recalibrar esto cuando cambie el
+alto del hero, para que nadie «arregle» un problema que no existe.
+
+### Lo que NO entra, y por qué
+
+- **La demo de cinco escenas del hero.** El hueco lo sigue ocupando
+  `ProductTour`, el tour de ocho pasos. Sustituirlo no es portar marcado: es un
+  componente con reloj, y el tour vive además en el popup de bienvenida de la
+  consola, así que no se puede retirar sin decidir qué pasa allí.
+  `.claude/rules/onboarding.md` ya resolvió estos mismos problemas y sus
+  invariantes se aplican igual. Necesita su fase.
+- **La navegación de 7 enlaces a 4.** Se lleva «Comparativas», decisión
+  explícita del fundador (COMPARATIVAS-DESIGN-1), y el nav es fuente única de
+  las ~57 superficies públicas. Va en su propio PR.
+- **El testimonio con nombre y cifra** (Nerea Solís · Nordika Home · +128 %).
+  El fundador aprobó publicarlo; entra en la Fase C, y antes hay que confirmar
+  que la cifra es una medición real de esa cuenta.
+
+**Pendiente / conocido.** Bajo el campo sigue leyéndose «Escribe tu dominio y
+GenScore te propondrá a quién vigilar y qué prompts lanzar», que es el subtítulo
+del paso 1 del tour, no copy del hero: sigue siendo cierto del producto, pero
+convive raro con un botón que ahora lleva al comprobador. Se va solo cuando la
+Fase A2 sustituya ese bloque.
