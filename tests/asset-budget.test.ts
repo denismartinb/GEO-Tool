@@ -29,8 +29,24 @@ import { describe, expect, it } from "vitest";
 /** Ningún fichero suelto por encima de esto. Hoy el mayor es genscore-og.png (239 KB). */
 const MAX_FILE_BYTES = 320 * 1024;
 
-/** Peso total de `public/`. Hoy son 615 KB en 25 ficheros. */
-const MAX_TOTAL_BYTES = 1.5 * 1024 * 1024;
+/**
+ * Peso total de `public/`.
+ *
+ * **1,7 MB desde el 2026-08-22** (HOME-2026-08 Fase C). Sube por lo que este
+ * comentario dice que hay que hacer —«se sube el número en el mismo PR y con
+ * una razón escrita»— y la razón es el testimonio real de la portada: un
+ * retrato y una captura de la web del cliente, 28 KB entre los dos, ya en
+ * WebP y ya redimensionados al tamaño en que se pintan (128px el retrato,
+ * 720px la captura, contra los 520 y 900 del original). Comprimirlos más para
+ * no tocar el número habría sido tocar el número por la puerta de atrás.
+ *
+ * Y el comentario anterior estaba obsoleto: decía «615 KB en 25 ficheros»
+ * cuando ya eran 1.512 KB en 41. El tope aguantó, pero la cifra que explicaba
+ * de dónde salía llevaba meses mintiendo — que es cómo un presupuesto deja de
+ * ser una decisión y pasa a ser un número heredado. Hoy: **1.540 KB en 44
+ * ficheros**, con ~160 KB de holgura.
+ */
+const MAX_TOTAL_BYTES = 1.7 * 1024 * 1024;
 
 /**
  * Imágenes de contenido: WebP (raster) o SVG (vectorial).

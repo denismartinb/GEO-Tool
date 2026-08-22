@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { showsPromoStrip } from "@/lib/account-chip";
 import { useSessionUser } from "@/lib/use-session-user";
+import { HeroDomainField } from "@/components/landing/hero-domain-field";
 
 /**
  * Three small client islands, one per session-aware fragment of the home
@@ -45,15 +46,31 @@ export function RecommendationsCta() {
  * visitor and "Prueba gratis" serves no one who already has an account,
  * including Free. Heading and subtitle change too, not just the buttons.
  */
+/**
+ * El cierre de la portada (HOME-2026-08 Fase C).
+ *
+ * A quien NO ha entrado se le ofrece lo del diseño aprobado: el mismo campo de
+ * dominio del hero, sin la fila de motores, al comprobador gratuito. La promesa
+ * es literal y comprobable — «Después, primer escaneo completo gratis» es
+ * exactamente lo que da el plan Free: **un** escaneo completo, porque
+ * `createPendingScanRunCore` rechaza el segundo y `runRecurringScanSweep`
+ * descarta los proyectos Free (`lib/scan/cron.ts`).
+ *
+ * A quien SÍ ha entrado se le manda a su panel, y eso se conserva de
+ * GENSCORE-HEADER-3: ofrecerle darse de alta —o un comprobador anónimo— a
+ * alguien que ya tiene cuenta es ruido. El corte es logado / anónimo, no de
+ * pago / no de pago: «Iniciar sesión» no le sirve a ningún logado y «Prueba
+ * gratis» tampoco a uno en Free, que ya la tiene.
+ */
 export function HomeCtaBand() {
   const user = useSessionUser();
   if (user) {
     return (
-      <div style={{ position: "relative", zIndex: 2 }}>
-        <h2>Continúa donde lo dejaste</h2>
-        <p>Vuelve a tu panel para ver cómo va la visibilidad de tus dominios.</p>
-        <div className="row">
-          <Link href="/dashboard" className="btn btn-white btn-lg">
+      <div className="lp-close-in">
+        <h2 className="lp-h2">Continúa donde lo dejaste</h2>
+        <p className="lp-sec-sub">Vuelve a tu panel para ver cómo va la visibilidad de tus dominios.</p>
+        <div className="lp-close-row">
+          <Link href="/dashboard" className="lp-cta lp-cta--lg">
             Ir al panel <Icon name="arrRight" size={16} />
           </Link>
         </div>
@@ -61,16 +78,20 @@ export function HomeCtaBand() {
     );
   }
   return (
-    <div style={{ position: "relative", zIndex: 2 }}>
-      <h2>Descubre tu visibilidad en IA hoy</h2>
-      <p>Introduce tu dominio y obtén tu primer informe en minutos. Gratis.</p>
-      <div className="row">
-        <Link className="btn btn-white btn-lg" href="/signup">
-          Prueba gratis <Icon name="arrRight" size={16} />
-        </Link>
-        <Link className="btn btn-onaccent btn-lg" href="/login">
-          Iniciar sesión
-        </Link>
+    <div className="lp-close-in">
+      <h2 className="lp-h2">Averigua qué dice la IA de ti<br />ahora mismo</h2>
+      <p className="lp-sec-sub">
+        Una comprobación real contra ChatGPT, en 20 segundos. Después, primer escaneo completo gratis.
+      </p>
+      <div className="lp-close-field">
+        <HeroDomainField withEngines={false} />
+        <div className="lp-hero-note">
+          <span>Sin registro</span>
+          <span className="dot" aria-hidden="true" />
+          <span>Sin tarjeta</span>
+          <span className="dot" aria-hidden="true" />
+          <span>Sin llamada de ventas</span>
+        </div>
       </div>
     </div>
   );

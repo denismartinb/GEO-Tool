@@ -7,6 +7,8 @@ import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
 import { RulesCarousel } from "@/components/landing/rules-carousel";
+import { FaqAccordion } from "@/components/landing/faq-accordion";
+import { HOME_FAQ, homeFaqJsonLd } from "@/lib/landing/home-faq";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { PromoStrip, RecommendationsCta, HomeCtaBand } from "@/components/landing/session-ctas";
@@ -222,6 +224,14 @@ function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon
 export function LandingPage() {
   return (
     <div className="lp">
+      {/* El `FAQPage` sale de `HOME_FAQ`, la misma constante que pinta la
+          sección de abajo. Un schema que afirma preguntas que la página no
+          enseña es exactamente el fallo que este producto audita en las webs
+          de sus clientes; construirlo de otra fuente lo permitiría. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: homeFaqJsonLd() }}
+      />
       {/* HERO — nav + promo strip integrated into the same gradient ground
           (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
       <header className="lp-hero lp-hero--home" id="producto">
@@ -469,40 +479,100 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* QUOTE */}
-      <section className="lp-section">
+      {/* TESTIMONIO — HOME-2026-08 Fase C.
+          Sustituye a un testimonio INVENTADO que llevaba meses en producción:
+          «Aisha Robinson, Growth Lead, Beltway», con la cifra «del 9% al 21%
+          de citas». Ni la persona ni el dato existían, y CLAUDE.md prohíbe las
+          métricas falsas. Éste es real: el fundador confirmó el 2026-08-22 que
+          el +128% es una medición de esa cuenta. Si algún día deja de poder
+          sostenerse, la sección se retira entera; no se sustituye por otro
+          nombre inventado. */}
+      <section className="lp-section lp-testi">
         <div className="lp-inner">
-          <div className="lp-quote">
-            <Icon name="quote" size={30} className="text-[var(--accent)]" />
-            <blockquote>
-              &ldquo;Pasamos de no saber si la IA nos nombraba a tener un plan claro de qué cambiar primero.
-              En dos meses subimos del 9% al 21% de citas.&rdquo;
-            </blockquote>
-            <div className="who">
-              <div className="av">AR</div>
-              <div style={{ textAlign: "left" }}>
-                <div style={{ fontWeight: 750 }}>Aisha Robinson</div>
-                <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>Growth Lead, Beltway</div>
+          <div className="lp-kicker">Nuestros clientes</div>
+          <h2 className="lp-h2">Cómo se gana una recomendación</h2>
+
+          <div className="lp-testi-pair">
+            <figure className="lp-testi-quote">
+              <div className="lp-testi-brand">
+                <span className="mark">n</span>
+                <span className="name">nordika<span>&nbsp;Home</span></span>
+              </div>
+              <blockquote>
+                <svg width="22" height="18" viewBox="0 0 22 18" fill="none" aria-hidden="true">
+                  <path d="M0 18V9.5C0 4.3 3.2.8 8 0l1 2.6C6 3.6 4.4 5.4 4.3 7.9H8V18H0zm12 0V9.5C12 4.3 15.2.8 20 0l1 2.6c-3 1-4.6 2.8-4.7 5.3H20V18h-8z" fill="#7DA2F5" />
+                </svg>
+                <p>
+                  No sabíamos si ChatGPT nos nombraba, y mucho menos por qué. En tres meses hemos
+                  subido un <strong>128% nuestra cuota de voz en IA</strong>: lo que más ha cambiado no
+                  es el dato, es que sabemos qué escribir la semana que viene.
+                </p>
+              </blockquote>
+              <figcaption className="lp-testi-who">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/home/nerea.webp" alt="" width={52} height={52} />
+                <span>
+                  <span className="n">Nerea Solís</span>
+                  <span className="r">Marketing digital en Nordika Home</span>
+                </span>
+              </figcaption>
+            </figure>
+
+            <div className="lp-testi-metric">
+              <svg className="lp-testi-rayas" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                  <pattern id="lp-testi-rayas" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="#93b0f2" strokeWidth="2.4" />
+                  </pattern>
+                </defs>
+                <path d="M100 0 L100 100 L0 0 Z" fill="url(#lp-testi-rayas)" />
+              </svg>
+              <div className="lp-testi-num">+128%</div>
+              <p className="lp-testi-cap">Aumento de cuota<br />de voz en IA</p>
+              <div className="lp-testi-shot">
+                <div className="dom">nordikahome.es</div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/home/nordika-home.webp" alt="Portada de nordikahome.es" width={720} height={540} />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA BAND */}
-      <section className="lp-section" style={{ paddingTop: 0 }}>
+      {/* FAQ — HOME-2026-08 Fase C. Abierta en escritorio, acordeón en móvil,
+          como los dos artboards. El `FAQPage` sale de la MISMA constante que
+          pinta la pantalla, así que no pueden divergir. */}
+      <section className="lp-section lp-faq-sec" id="faq">
         <div className="lp-inner">
-          <div className="lp-ctaband">
-            <div className="onb-aurora" style={{ opacity: 0.25 }}><div className="blob blob-2" /><div className="blob blob-3" /></div>
-            {/* GENSCORE-HEADER-3: a quien ya entró no se le ofrece darse de
-                alta. Aquí el corte NO es el de la franja (de pago / no de
-                pago): "Iniciar sesión" no le sirve a ningún logado, y
-                "Prueba gratis" a un logado en Free tampoco —ya la tiene—, así
-                que el corte es logado / anónimo. El titular y el subtítulo
-                cambian con los botones: "obtén tu primer informe" le habla a
-                quien no tiene ninguno. */}
-            <HomeCtaBand />
+          <div className="lp-sec-head">
+            <div className="lp-kicker">Preguntas frecuentes</div>
+            <h2 className="lp-h2">Lo que nos preguntan antes de empezar</h2>
           </div>
+          <div className="lp-faq">
+            {HOME_FAQ.map((f) => (
+              <details className="lp-faq-item" key={f.q} open>
+                <summary>
+                  <span>{f.q}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </summary>
+                <p>{f.a}</p>
+              </details>
+            ))}
+          </div>
+          <FaqAccordion selector=".lp-faq-item" />
+        </div>
+      </section>
+
+      {/* CIERRE — HOME-2026-08 Fase C. El degradado sube hasta #EFF4FF y muere
+          contra el pie: es el eco del hero, que baja del tinte al blanco.
+          Conserva la rama de sesión iniciada de `HomeCtaBand`
+          (GENSCORE-HEADER-3): a quien ya está dentro no se le ofrece el
+          comprobador anónimo ni darse de alta, se le manda a su panel. */}
+      <section className="lp-close">
+        <div className="lp-inner">
+          <HomeCtaBand />
         </div>
       </section>
       </main>
