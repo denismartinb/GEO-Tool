@@ -187,3 +187,14 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   §145). Es la tercera vez que el orden de este fichero decide en vez de la
   intención: antes con la escala tipográfica (§143) y con los colores de la
   superficie oscura (§144).
+- **`--ink-3` sólo aprueba AA sobre BLANCO PURO. Sobre `--canvas` no.** La
+  cifra, para no volver a deducirla: 4,76:1 sobre `#ffffff` y **4,44:1** sobre
+  `#f6f7f9` — seis centésimas por debajo del mínimo. Ha caído tres veces en la
+  misma zona en un día: la nota del cierre sobre el degradado del hero, esa
+  misma nota otra vez al pensar que bastaba con subir un escalón, y las
+  pestañas de «Cinco pantallas» (log §145, §146). Sobre cualquier superficie
+  que no sea blanca —`--canvas`, un degradado tintado, una tarjeta gris— el
+  texto secundario va en `--ink-2` (7,50:1). Y el fondo se mide **pintado**: un
+  elemento con `background` en atajo tiene `background-color` transparente, así
+  que preguntárselo al navegador devuelve el blanco del `body` y da un número
+  que ahí no es cierto.

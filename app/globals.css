@@ -5741,10 +5741,17 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-tabs {
   display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 40px;
 }
+/* `--ink-2` y no `--ink-3`: la sección tiene el fondo en `--canvas` (#f6f7f9),
+   no en blanco, y ahí `--ink-3` da **4,44:1** — por debajo del 4,5 de AA. Lo
+   cazó el piloto, no yo (PILOT FAIL sobre `bbbebc5`), y es la TERCERA vez en
+   esta zona con el mismo token: la nota del cierre sobre el degradado (§145) y
+   ésta. La cifra concreta, para no volver a deducirla: **`--ink-3` sólo aprueba
+   sobre blanco puro** (4,76:1); sobre `--canvas` se queda a seis centésimas.
+   `--ink-2` da 7,50:1. */
 .lp-prod-tab {
   display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px;
   font-size: 14px; font-weight: 600; cursor: pointer;
-  color: var(--ink-3); background: none; border: 1px solid var(--line);
+  color: var(--ink-2); background: none; border: 1px solid var(--line);
   transition: background .15s, color .15s, border-color .15s;
 }
 .lp-prod-tab:hover { background: #fff; color: var(--ink); }

@@ -13337,6 +13337,25 @@ Y los «botones» de las maquetas —«Copiar el schema», «Descargar la págin
 control y no llevan acción. Un `<button>` sin `onClick` es un control muerto, que
 es lo que el piloto marca como fallo.
 
+### Y el piloto encontró lo que yo no: `--ink-3` sobre `--canvas`
+
+`PILOT FAIL` sobre `bbbebc5`, en las tres anchuras: las pestañas inactivas
+salían en `--ink-3` sobre el fondo `--canvas` de la sección, **4,44:1** — seis
+centésimas por debajo de AA. Van en `--ink-2`, **7,50:1**.
+
+Es la **tercera** vez en el mismo día con el mismo token: la nota del cierre
+sobre el degradado del hero, esa misma nota otra vez al creer que bastaba con
+subir un escalón (§145), y ahora esto. Así que la regla deja de ser cualitativa
+y pasa a llevar la cifra: **`--ink-3` sólo aprueba sobre blanco puro** (4,76:1);
+sobre `#f6f7f9` no llega. Sobre cualquier superficie que no sea blanca, el texto
+secundario va en `--ink-2`.
+
+Vale la pena decir de quién fue el acierto: **lo cazó el arnés, no yo**. Medí el
+contraste a mano dos veces en esta sesión y las dos veces di por bueno el
+siguiente escalón sin volver a medirlo contra el fondo real. El `auditControls`
+del piloto lo hace en cada control de cada pantalla, en las tres anchuras, sin
+cansarse.
+
 **Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
 en verde. Once anchuras de 320 a 1440: sin desbordamiento horizontal, el juego
 correcto a cada lado del corte de 560, y las cinco pestañas siempre con su
