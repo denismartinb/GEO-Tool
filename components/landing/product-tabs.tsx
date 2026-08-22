@@ -29,7 +29,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type ProductTab = { id: string; label: string };
 
-export function ProductTabs({ tabs, panel }: { tabs: readonly ProductTab[]; panel: string }) {
+export function ProductTabs({
+  tabs,
+  panel,
+  children
+}: {
+  tabs: readonly ProductTab[];
+  panel: string;
+  /** El marco con las pantallas. Va DENTRO de esta isla, y no al lado, porque
+      las flechas del móvil se posicionan contra él: centradas en el envoltorio
+      común caían sobre la tira de pestañas. El marcado sigue siendo del
+      servidor — se pasa como `children` y esta isla no lo re-renderiza. */
+  children: React.ReactNode;
+}) {
   const [indice, setIndice] = useState(0);
   const [tocado, setTocado] = useState(false);
   const [presentes, setPresentes] = useState<readonly ProductTab[]>([]);
@@ -75,8 +87,8 @@ export function ProductTabs({ tabs, panel }: { tabs: readonly ProductTab[]; pane
   );
 
   // Con una sola pantalla no hay nada que elegir, y una tira de una pestaña es
-  // ruido: no se pinta hasta que hay al menos dos.
-  if (presentes.length < 2) return null;
+  // ruido: se pinta el marco sin mandos.
+  if (presentes.length < 2) return <div className="lp-prod-viewport">{children}</div>;
 
   return (
     <>
@@ -95,8 +107,10 @@ export function ProductTabs({ tabs, panel }: { tabs: readonly ProductTab[]; pane
           </button>
         ))}
       </div>
-      <div className="lp-prod-arrows" aria-hidden="true">
-        <button
+      <div className="lp-prod-viewport">
+        {children}
+        <div className="lp-prod-arrows" aria-hidden="true">
+          <button
           type="button"
           className={`lp-prod-arrow iz ${indice <= 0 ? "oculta" : ""}`}
           onClick={() => ir(indice - 1)}
@@ -119,7 +133,8 @@ export function ProductTabs({ tabs, panel }: { tabs: readonly ProductTab[]; pane
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M9 6l6 6-6 6" />
           </svg>
-        </button>
+          </button>
+        </div>
       </div>
     </>
   );

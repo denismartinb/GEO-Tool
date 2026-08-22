@@ -5750,6 +5750,10 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-tab:hover { background: #fff; color: var(--ink); }
 .lp-prod-tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+/* El envoltorio del marco: es el ancestro posicionado contra el que se centran
+   las flechas del móvil. Centradas en `.lp-prod-shell` caían sobre la tira de
+   pestañas, porque el `50%` incluía su altura. */
+.lp-prod-viewport { position: relative; }
 /* Las flechas son del artboard MÓVIL: ahí la tira se desplaza y el marco lleva
    sus propios mandos encima. En escritorio caben las cinco pestañas y sobran. */
 .lp-prod-arrows { display: none; }
@@ -5961,6 +5965,115 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   border: 1px solid var(--line); color: var(--ink-3); background: #fff;
 }
 .lp-prod-btn.primario { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
+
+/* LAS CINCO PANTALLAS DEL MÓVIL. El artboard móvil no reflowa las de
+   escritorio: las simplifica —el marcador sin la evolución al lado, tres
+   competidores en vez de cuatro, la acción sin su tarjeta de solución—, así
+   que son otro marcado y no otra hoja de estilos. Se sirven los dos juegos y
+   se oculta uno; medido, el juego móvil añade 2-3 KB comprimidos sobre los
+   50,8 KB que ya pesa la portada, que es lo que cuesta ser fiel al diseño.
+
+   El bloque de 560px va AQUÍ, pegado a lo que corrige, y no en el que hay más
+   arriba en el fichero: allí perdería por orden y no pintaría nada (log §145). */
+.lp-prod-mob { display: none; }
+
+@media (max-width: 560px) {
+  .lp-prod { padding: 72px 0; }
+  .lp-prod .lp-h2 { font-size: 31px; line-height: 1.1; margin-top: 16px; }
+  .lp-prod .lp-kicker { font-size: 11.5px; }
+  .lp-prod .lp-sec-sub { font-size: 16px; margin-top: 16px; }
+  .lp-prod .lp-sec-head { margin-bottom: 0; }
+
+  /* La tira deja de estar centrada y pasa a desplazarse: cinco pestañas no
+     caben en 375px y envolverlas en tres filas come media pantalla. */
+  .lp-prod-tabs {
+    justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto;
+    gap: 8px; padding: 26px 0 4px; margin-bottom: 18px;
+    scrollbar-width: none; scroll-behavior: smooth;
+  }
+  .lp-prod-tabs::-webkit-scrollbar { display: none; }
+  .lp-prod-tab { height: 44px; flex: 0 0 auto; }
+
+  /* El marco lleva sus propias flechas encima, como en el artboard. */
+  .lp-prod-arrows { display: block; }
+  .lp-prod-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+    width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center;
+    background: #fff; border: 1px solid var(--line); color: var(--ink-3); cursor: pointer;
+    box-shadow: 0 6px 18px rgba(16,24,40,.12);
+  }
+  .lp-prod-arrow.iz { left: 10px; }
+  .lp-prod-arrow.de { right: 10px; }
+  .lp-prod-arrow.oculta { opacity: 0; pointer-events: none; }
+  .lp-prod-arrow.de.late:not(.oculta) { animation: lp-rules-pulse 2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .lp-prod-arrow.de.late { animation: none; } }
+
+  .lp-prod-bar { height: 38px; padding: 0 14px; gap: 7px; }
+  .lp-prod-bar .lp-prod-dot { width: 9px; height: 9px; }
+  .lp-prod-bar .lp-prod-url { display: none; }
+  .lp-prod-body { padding: 16px; min-height: 0; }
+
+  /* Se enseña el juego móvil y se apaga TODO lo demás del panel. Así no hay
+     que envolver el marcado de escritorio en un contenedor sólo para poder
+     ocultarlo. */
+  .lp-prod-mob { display: block; }
+  .lp-prod-pg > *:not(.lp-prod-mob) { display: none; }
+
+  .lp-prod-mscore { padding: 18px; display: flex; align-items: center; gap: 18px; }
+  .lp-prod-mscore .lp-prod-dial { position: relative; width: 88px; height: 88px; flex: 0 0 auto; }
+  .lp-prod-mscore .lp-prod-dial svg { width: 100%; height: 100%; display: block; }
+  .lp-prod-mscore .lp-prod-num {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: var(--font-display), inherit; font-size: 27px; font-weight: 700;
+    letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+  }
+  .lp-prod-mscore .lp-prod-cap { font-size: 11px; }
+  .lp-prod-mscore .lp-prod-franja { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+  .lp-prod-mscore .lp-prod-franja b { font-weight: 600; color: var(--ink); }
+  .lp-prod-mkpis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .lp-prod-mkpi { padding: 14px; }
+  .lp-prod-mkpi .lp-prod-cap { font-size: 11.5px; text-transform: none; letter-spacing: normal; font-weight: 500; }
+  .lp-prod-mkpi .lp-prod-val { font-family: var(--font-display), inherit; font-size: 23px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .lp-prod-mkpi .lp-prod-delta { font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lp-prod-mkpi .lp-prod-delta.pos { color: #15915a; }
+  .lp-prod-mkpi .lp-prod-delta.neg { color: #d23b48; }
+  .lp-prod-mspark { padding: 14px; margin-top: 12px; }
+  .lp-prod-mspark .lp-prod-cap { font-size: 11.5px; text-transform: none; letter-spacing: normal; font-weight: 500; }
+  .lp-prod-mspark svg { width: 100%; height: 76px; margin-top: 6px; display: block; }
+
+  .lp-prod-mq { padding: 14px 16px; }
+  .lp-prod-mq:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
+  .lp-prod-mq .q { font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+  .lp-prod-mq .lp-prod-tags { margin-top: 9px; gap: 7px; flex-wrap: wrap; }
+  .lp-prod-pill.ment { background: #e7f6ee; color: #15915a; margin-top: 0; }
+  .lp-prod-pill.gris { background: var(--canvas); color: var(--ink-4); margin-top: 0; }
+
+  .lp-prod-mlist { padding: 6px 16px; }
+  .lp-prod-mrank { display: grid; grid-template-columns: 16px 26px 1fr auto; align-items: center; gap: 12px; padding: 13px 0; }
+  .lp-prod-mrank:not(:first-child) { border-top: 1px solid var(--line-soft); }
+  .lp-prod-mrank .pos { font-size: 12px; color: var(--ink-4); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lp-prod-mrank .who { min-width: 0; }
+  .lp-prod-mrank .nm { display: block; font-size: 13.5px; font-weight: 600; }
+  .lp-prod-mrank .bar { display: block; height: 6px; border-radius: 999px; background: var(--line-soft); margin-top: 6px; overflow: hidden; }
+  .lp-prod-mrank .bar .fill { display: block; height: 100%; border-radius: 999px; background: #93b0f2; }
+  .lp-prod-mrank .bar .fill.own { background: var(--brand-blue); }
+  .lp-prod-mrank .val { font-family: var(--font-display), inherit; font-size: 16px; font-weight: 700; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .lp-prod-mrank .val.own { color: var(--ink); }
+
+  .lp-prod-mfix { display: flex; align-items: center; gap: 10px; padding: 14px 0; }
+  .lp-prod-mfix:not(:first-child) { border-top: 1px solid var(--line-soft); }
+  .lp-prod-mfix .t { flex: 1; font-size: 13.5px; color: var(--ink-2); }
+  .lp-prod-mfix .t.ok { color: var(--ink-4); }
+  .lp-prod-mfix code { font-family: var(--mono); font-size: 12.5px; }
+  .lp-prod-mfix .lp-sheet-badge { width: 20px; height: 20px; }
+
+  .lp-prod-maccion { padding: 18px; }
+  .lp-prod-maccion h3 { font-size: 15px; font-weight: 600; line-height: 1.42; margin: 14px 0 0; }
+  .lp-prod-maccion p { margin: 9px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink-3); }
+  .lp-prod-mbtn { display: flex; width: 100%; height: 46px; font-size: 14.5px; margin-top: 16px; }
+
+  .lp-prod-mpie { margin: 12px 0 0; font-size: 12px; color: var(--ink-4); }
+}
 
 /* --- Testimonio (HOME-2026-08 Fase C) -----------------------------------
    Dos tarjetas de anchos distintos —1.62fr y 1fr— y no dos mitades: la cita

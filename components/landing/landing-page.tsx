@@ -528,8 +528,7 @@ export function LandingPage() {
           {/* Reserva el alto de la tira de pestañas para que la isla no mueva
               la página al hidratar. */}
           <div className="lp-prod-shell">
-            <ProductTabs tabs={PRODUCT_TABS} panel=".lp-prod-pg" />
-
+            <ProductTabs tabs={PRODUCT_TABS} panel=".lp-prod-pg">
             <div className="lp-prod-frame">
               <div className="lp-prod-bar">
                 <span className="lp-prod-dot" style={{ background: "#ff5f57" }} />
@@ -540,6 +539,44 @@ export function LandingPage() {
               <div className="lp-prod-body">
                 {/* Visión general */}
                 <div className="lp-prod-pg on" id="pg-overview" role="tabpanel">
+                  {/* Móvil: el artboard simplifica esta pantalla a marcador,
+                      dos indicadores y una línea de evolución. */}
+                  <div className="lp-prod-mob">
+                    <div className="lp-prod-card lp-prod-mscore">
+                      <div className="lp-prod-dial">
+                        <svg viewBox="0 0 88 88" aria-hidden="true">
+                          <circle cx="44" cy="44" r="37" fill="none" stroke="#eef1f6" strokeWidth="10" />
+                          <circle cx="44" cy="44" r="37" fill="none" stroke="var(--brand-blue)" strokeWidth="10" strokeLinecap="round" strokeDasharray="232.5" strokeDashoffset="67.4" transform="rotate(-90 44 44)" />
+                        </svg>
+                        <span className="lp-prod-num">71</span>
+                      </div>
+                      <div>
+                        <div className="lp-prod-cap">GEO Score</div>
+                        <div className="lp-prod-pill pos">+23 pts</div>
+                        <div className="lp-prod-franja">Franja <b>competitivo</b></div>
+                      </div>
+                    </div>
+                    <div className="lp-prod-mkpis">
+                      <div className="lp-prod-card lp-prod-mkpi">
+                        <div className="lp-prod-cap">Tasa de mención</div>
+                        <div className="lp-prod-val">68%</div>
+                        <div className="lp-prod-delta pos">▲ 9 pts</div>
+                      </div>
+                      <div className="lp-prod-card lp-prod-mkpi">
+                        <div className="lp-prod-cap">Tasa de cita</div>
+                        <div className="lp-prod-val">12%</div>
+                        <div className="lp-prod-delta neg">▼ 2 pts</div>
+                      </div>
+                    </div>
+                    <div className="lp-prod-card lp-prod-mspark">
+                      <div className="lp-prod-cap">Evolución</div>
+                      <svg viewBox="0 0 300 76" preserveAspectRatio="none" aria-hidden="true">
+                        <path d="M0,62 L50,58 L100,52 L150,50 L200,34 L250,24 L300,12" fill="none" stroke="var(--brand-blue)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                        <circle cx="296" cy="12" r="4" fill="var(--brand-blue)" />
+                      </svg>
+                    </div>
+                  </div>
+
                   <div className="lp-prod-head">
                     <span className="lp-sheet-fav">
                       <FaviconImg domain="ikea.es" cssSize={30} fallback={<span>IK</span>} />
@@ -601,6 +638,26 @@ export function LandingPage() {
 
                 {/* Prompts */}
                 <div className="lp-prod-pg" id="pg-prompts" role="tabpanel">
+                  <div className="lp-prod-mob">
+                    <div className="lp-prod-card lp-prod-list">
+                      {[
+                        { q: "«¿Dónde compro muebles baratos y bonitos?»", e: [["Mención", "ment"], ["Cita", "cita"]] },
+                        { q: "«¿Qué tienda de muebles tiene mejor calidad?»", e: [["Sin mención", "alto"]] },
+                        { q: "«Mejores tiendas para amueblar un piso pequeño»", e: [["Mención", "ment"], ["Sin cita", "gris"]] }
+                      ].map((r) => (
+                        <div className="lp-prod-mq" key={r.q}>
+                          <div className="q">{r.q}</div>
+                          <div className="lp-prod-tags">
+                            {r.e.map(([t, tono]) => (
+                              <span className={`lp-prod-pill ${tono}`} key={t}>{t}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="lp-prod-mpie">14 preguntas, lanzadas en los tres motores.</p>
+                  </div>
+
                   <div className="lp-prod-pghead">
                     <span className="t">Prompts</span>
                     <span className="m">14 preguntas · 3 motores · 42 respuestas</span>
@@ -661,6 +718,29 @@ export function LandingPage() {
 
                 {/* Competidores */}
                 <div className="lp-prod-pg" id="pg-comp" role="tabpanel">
+                  <div className="lp-prod-mob">
+                    <div className="lp-prod-card lp-prod-mlist">
+                      {[
+                        { n: 1, m: "IKEA", d: "ikea.es", ini: "IK", w: 100, v: "24%", propia: true },
+                        { n: 2, m: "Leroy Merlin", d: "leroymerlin.es", ini: "LM", w: 87, v: "21%", propia: false },
+                        { n: 3, m: "Maisons du Monde", d: "maisonsdumonde.com", ini: "MM", w: 75, v: "18%", propia: false }
+                      ].map((r) => (
+                        <div className="lp-prod-mrank" key={r.m}>
+                          <span className="pos">{r.n}</span>
+                          <span className="lp-sheet-fav">
+                            <FaviconImg domain={r.d} cssSize={26} fallback={<span>{r.ini}</span>} />
+                          </span>
+                          <span className="who">
+                            <span className="nm">{r.m}</span>
+                            <span className="bar"><span className={`fill ${r.propia ? "own" : ""}`} style={{ width: `${r.w}%` }} /></span>
+                          </span>
+                          <span className={`val ${r.propia ? "own" : ""}`}>{r.v}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="lp-prod-mpie">Cuota de voz en IA · últimos 7 días.</p>
+                  </div>
+
                   <div className="lp-prod-pghead">
                     <span className="t">Competidores</span>
                     <span className="m">Cuota de voz en IA · últimos 7 días</span>
@@ -715,6 +795,29 @@ export function LandingPage() {
                     pone «Generar», que es lo que sí ofrece. El total del
                     encabezado es la suma real: 15 + 5 + 8. */}
                 <div className="lp-prod-pg" id="pg-audit" role="tabpanel">
+                  <div className="lp-prod-mob">
+                    <div className="lp-prod-card lp-prod-mlist">
+                      {[
+                        { t: "Sin datos estructurados", p: "+15 pts", tono: "pos" },
+                        { t: "Falta", mono: "llms.txt", p: "Generar", tono: "cita" },
+                        { t: "La intro no responde primero", p: "+5 pts", tono: "pos" },
+                        { t: "GPTBot con acceso permitido", ok: true }
+                      ].map((f) => (
+                        <div className="lp-prod-mfix" key={f.t + (f.mono ?? "")}>
+                          {f.ok ? (
+                            <span className="lp-sheet-badge lp-sheet-badge--ok"><Icon name="check" size={12} /></span>
+                          ) : null}
+                          <span className={`t ${f.ok ? "ok" : ""}`}>
+                            {f.t}
+                            {f.mono ? <> <code>{f.mono}</code></> : null}
+                          </span>
+                          {f.p ? <span className={`lp-prod-pill ${f.tono}`}>{f.p}</span> : null}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="lp-prod-mpie">34 páginas revisadas · 28 puntos recuperables.</p>
+                  </div>
+
                   <div className="lp-prod-pghead">
                     <span className="t">Auditoría web</span>
                     <span className="m">34 páginas revisadas · 28 puntos recuperables</span>
@@ -747,6 +850,20 @@ export function LandingPage() {
 
                 {/* Recomendaciones */}
                 <div className="lp-prod-pg" id="pg-recs" role="tabpanel">
+                  <div className="lp-prod-mob">
+                    <div className="lp-prod-card lp-prod-maccion">
+                      <div className="lp-prod-tags">
+                        <span className="lp-prod-pill alto">Impacto alto</span>
+                        <span className="lp-prod-pill cita">Victoria rápida</span>
+                      </div>
+                      <h3>Te mencionan pero no citan tu dominio en «mejores tiendas de muebles»</h3>
+                      <p>La IA te nombra en 6 respuestas y cita a elmueble.com como fuente.</p>
+                      {/* Dibujo de un botón, no un botón: sin acción, va como `span`. */}
+                      <span className="lp-prod-btn primario lp-prod-mbtn" aria-hidden="true">Generar solución</span>
+                    </div>
+                    <p className="lp-prod-mpie">9 acciones priorizadas por impacto.</p>
+                  </div>
+
                   <div className="lp-prod-pghead">
                     <span className="t">Recomendaciones</span>
                     <span className="m">9 acciones priorizadas por impacto</span>
@@ -836,6 +953,7 @@ export function LandingPage() {
                 </div>
               </div>
             </div>
+            </ProductTabs>
           </div>
         </div>
       </section>

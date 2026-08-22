@@ -13262,3 +13262,83 @@ continuamente» se sostiene en `lib/scan/cron.ts`, «diario en free/pro/agency»
 Es **inexacto**: un proyecto Free no llega nunca a su intervalo. La regla se ha
 quedado como estaba —es de otra zona y el texto del tour es del fundador— pero
 queda anotado aquí para quien la lea después.
+
+---
+
+## 146. Cinco pantallas del producto, y los pesos de la auditoría otra vez (HOME-2026-08 Fase B2, 2026-08-22)
+
+«Cinco pantallas. Todo tu posicionamiento.»: un marco de navegador con cinco
+maquetas del producto y una tira de pestañas. Con esto la portada queda completa
+salvo la demo de cinco escenas del hero (Fase A2), que sigue sin empezar.
+
+### La sección va en claro, no en oscuro
+
+`{{prodClass}}` del artboard alterna entre `prod--dark` y `prod--light` y no dice
+cuál gana. Se elige **claro** con dos apoyos: el artboard móvil la tiene sobre
+`--canvas`, y «Cómo funciona» —justo encima— es la única superficie oscura de la
+zona pública (`docs/design-reference/home-2026-08/README.md`). Dos oscuras
+seguidas no.
+
+### Las cifras son ilustrativas, y lo decidió el fundador
+
+Se planteó que las cinco maquetas dibujan una cuenta buena bajo un titular que
+promete «exactamente lo que tienes el primer día», cuando el primer día un
+proyecto Free tiene un escaneo y un score bajo — la propia captura del piloto
+enseña 24/100. El fundador, 2026-08-22: *«lo hacemos tal cual la maqueta. Es
+ilustrativo»*. Se implementa así y queda anotado que la frase convierte cifras
+ilustrativas en promesa, que es lo que `.claude/rules/onboarding.md` prohíbe para
+el tour. **El vocabulario sí es del producto**: «Franja competitivo» con 71 es
+exactamente lo que asigna la consola a partir de 70.
+
+### Excepción: los pesos de la auditoría, porque la página se contradecía
+
+La pantalla de Auditoría del artboard repite los **+12 / +8 / +4** que ya se
+corrigieron en §143. Dejarlos habría hecho que **la misma portada publicara +12
+en una sección y +15 en otra para el mismo fallo**, con las dos a la vista. Van
+los del producto —+15 / +5 / +8— y el total del encabezado pasa de 24 a 28, que
+es su suma. `llms.txt` sigue con «Generar» y sin puntos, que es lo que el
+producto ofrece de verdad. Esto no contradice la decisión de arriba: lo
+ilustrativo es la cuenta, no los pesos, que son constantes del código.
+
+### Dos juegos de marcado, y por qué se paga
+
+El artboard móvil **no reflowa** las pantallas de escritorio: las simplifica —el
+marcador sin la evolución al lado, tres competidores en vez de cuatro, la acción
+sin su tarjeta de solución—. Ser fiel exige los dos juegos. Medido antes de
+repetirlo cinco veces: el juego móvil añade **2-3 KB comprimidos** sobre los 50,8
+KB que ya pesa la portada. Se sirven los dos y se oculta uno con
+`.lp-prod-pg > *:not(.lp-prod-mob)`, que evita envolver el marcado de escritorio
+en un contenedor sólo para poder apagarlo.
+
+### Tres cosas aprendidas construyéndola
+
+**El `.cap` global coló sus versales.** Se usaron los nombres genéricos del
+artboard (`cap`, `num`, `val`, `url`) y, aunque `.lp-prod-kpi .cap` ganaba en lo
+declarado, **`text-transform` —que no se declaraba— se colaba igual**: los
+rótulos de los indicadores salieron en mayúsculas. Toda la sección va ahora
+prefijada `lp-prod-`, que es la regla que `.claude/rules/onboarding.md` fijó para
+el tour. Se arregló con una pantalla hecha, no con cinco.
+
+**Una pestaña sin pantalla es un control roto.** El plan era partir la fase en
+dos PRs —armazón y una pantalla primero, las otras cuatro después— y no se
+sostiene: una tira de cinco pestañas donde cuatro abren un marco vacío parece
+una sección terminada y no lo está. La isla **cuenta los paneles que existen en
+el DOM** y sólo pinta esas pestañas, así que mientras se añadían pantallas la
+tira creció sola y nunca mintió.
+
+**Las flechas del móvil se centran contra el marco, no contra la sección.** Con
+el envoltorio común, el `50%` incluía la altura de la tira de pestañas y las
+flechas caían sobre ella. El marco pasa a ir **dentro** de la isla, como
+`children`, para que comparta ancestro posicionado con las flechas; el marcado
+de las pantallas sigue siendo del servidor.
+
+Y los «botones» de las maquetas —«Copiar el schema», «Descargar la página»,
+«Generar solución»— van como `span`, no como `button`: son el dibujo de un
+control y no llevan acción. Un `<button>` sin `onClick` es un control muerto, que
+es lo que el piloto marca como fallo.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
+en verde. Once anchuras de 320 a 1440: sin desbordamiento horizontal, el juego
+correcto a cada lado del corte de 560, y las cinco pestañas siempre con su
+pantalla. **Sin JavaScript** se sirve una pantalla y ningún mando, así que no
+queda ningún control muerto.
