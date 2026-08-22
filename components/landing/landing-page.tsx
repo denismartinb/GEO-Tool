@@ -558,18 +558,18 @@ export function LandingPage() {
                     </div>
                     <div className="lp-prod-mkpis">
                       <div className="lp-prod-card lp-prod-mkpi">
-                        <div className="lp-prod-cap">Tasa de mención</div>
+                        <div className="lp-prod-lbl">Tasa de mención</div>
                         <div className="lp-prod-val">68%</div>
                         <div className="lp-prod-delta pos">▲ 9 pts</div>
                       </div>
                       <div className="lp-prod-card lp-prod-mkpi">
-                        <div className="lp-prod-cap">Tasa de cita</div>
+                        <div className="lp-prod-lbl">Tasa de cita</div>
                         <div className="lp-prod-val">12%</div>
                         <div className="lp-prod-delta neg">▼ 2 pts</div>
                       </div>
                     </div>
                     <div className="lp-prod-card lp-prod-mspark">
-                      <div className="lp-prod-cap">Evolución</div>
+                      <div className="lp-prod-lbl">Evolución</div>
                       <svg viewBox="0 0 300 76" preserveAspectRatio="none" aria-hidden="true">
                         <path d="M0,62 L50,58 L100,52 L150,50 L200,34 L250,24 L300,12" fill="none" stroke="var(--brand-blue)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                         <circle cx="296" cy="12" r="4" fill="var(--brand-blue)" />
@@ -605,7 +605,7 @@ export function LandingPage() {
                     </div>
 
                     <div className="lp-prod-card">
-                      <div className="lp-prod-cardcap">Evolución</div>
+                      <div className="lp-prod-lbl">Evolución</div>
                       <svg className="lp-prod-spark" viewBox="0 0 520 130" preserveAspectRatio="none" aria-hidden="true">
                         <defs>
                           <linearGradient id="lp-prod-gsg" x1="0" y1="0" x2="0" y2="1">
@@ -628,7 +628,7 @@ export function LandingPage() {
                       { t: "Cuota de voz", v: "24%", d: "▲ 3 pts", tono: "pos" }
                     ].map((k) => (
                       <div className="lp-prod-card lp-prod-kpi" key={k.t}>
-                        <div className="lp-prod-cap">{k.t}</div>
+                        <div className="lp-prod-lbl">{k.t}</div>
                         <div className="lp-prod-val">{k.v}</div>
                         <div className={`lp-prod-delta ${k.tono}`}>{k.d}</div>
                       </div>
@@ -778,7 +778,7 @@ export function LandingPage() {
                       { t: "Diseño y estilo", v: "−5", tono: "neutro" }
                     ].map((t) => (
                       <div className="lp-prod-card lp-prod-tema" key={t.t}>
-                        <div className="lp-prod-cap">{t.t}</div>
+                        <div className="lp-prod-lbl">{t.t}</div>
                         <div className={`v ${t.tono}`}>{t.v}</div>
                       </div>
                     ))}

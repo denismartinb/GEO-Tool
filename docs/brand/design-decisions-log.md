@@ -13350,6 +13350,18 @@ y pasa a llevar la cifra: **`--ink-3` sólo aprueba sobre blanco puro** (4,76:1)
 sobre `#f6f7f9` no llega. Sobre cualquier superficie que no sea blanca, el texto
 secundario va en `--ink-2`.
 
+Y en la misma pasada enseñó un segundo fallo que yo daba por arreglado: **los
+rótulos de los indicadores seguían en versales**. La causa no era ya el `.cap`
+global del sitio —eso sí quedó resuelto al prefijar— sino **mi propio
+`.lp-prod-cap`**, que introduje al añadir la quinta pantalla con
+`text-transform: uppercase` para los antetítulos («LA EVIDENCIA», «PÁGINA
+CITABLE · FAQ») y que se colaba en los rótulos de indicador porque sus reglas no
+declaraban esa propiedad. Recreé con mi propia clase exactamente la fuga que
+había venido a arreglar. Peor: en el móvil la había parcheado con
+`text-transform: none`, que es tapar el síntoma en vez de mirar la causa. Ahora
+son dos clases distintas —`--cap` para el antetítulo en versales, `--lbl` para
+el rótulo en caja baja— porque son dos cosas distintas.
+
 Vale la pena decir de quién fue el acierto: **lo cazó el arnés, no yo**. Medí el
 contraste a mano dos veces en esta sesión y las dos veces di por bueno el
 siguiente escalón sin volver a medirlo contra el fondo real. El `auditControls`

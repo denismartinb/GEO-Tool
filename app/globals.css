@@ -5820,7 +5820,7 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-score .lp-prod-cap { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
 .lp-prod-score .lp-prod-franja { font-size: 13px; color: var(--ink-3); margin-top: 10px; line-height: 1.5; }
 .lp-prod-score .lp-prod-franja b { font-weight: 600; color: var(--ink); }
-.lp-prod-cardcap { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+
 .lp-prod-row2 > .lp-prod-card:nth-child(2) { padding: 26px; }
 /* `non-scaling-stroke` en la línea: el `viewBox` se estira a lo ancho de su
    tarjeta y sin eso el trazo engordaría con él. */
@@ -5832,7 +5832,7 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 
 .lp-prod-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
 .lp-prod-kpi { padding: 22px; }
-.lp-prod-kpi .lp-prod-cap { font-size: 12.5px; color: var(--ink-4); font-weight: 500; }
+.lp-prod-kpi .lp-prod-lbl { font-size: 12.5px; }
 .lp-prod-kpi .lp-prod-val {
   font-family: var(--font-display), inherit; font-size: 30px; font-weight: 700; margin-top: 8px;
   font-variant-numeric: tabular-nums;
@@ -5910,7 +5910,7 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-rank .delta.neg { color: #d23b48; }
 .lp-prod-temas { gap: 14px; margin-top: 18px; }
 .lp-prod-tema { padding: 16px 18px; }
-.lp-prod-tema .lp-prod-cap { font-size: 12.5px; color: var(--ink-4); }
+.lp-prod-tema .lp-prod-lbl { font-size: 12.5px; }
 .lp-prod-tema .v { font-size: 19px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .lp-prod-tema .v.pos { color: #15915a; }
 .lp-prod-tema .v.neg { color: #d23b48; }
@@ -5935,6 +5935,18 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-pill.alto { background: #fdecee; color: #a02531; margin-top: 0; }
 .lp-prod-accion h3 { font-size: 17px; font-weight: 600; line-height: 1.42; margin: 16px 0 0; }
 .lp-prod-evid { margin-top: 20px; padding: 16px 18px; background: var(--canvas); border-radius: 12px; }
+/* DOS RÓTULOS DISTINTOS, DOS CLASES DISTINTAS. `--cap` es el antetítulo en
+   versales del artboard («GEO SCORE», «LA EVIDENCIA», «PÁGINA CITABLE · FAQ»);
+   `--lbl` es el rótulo en caja baja de un indicador («Tasa de mención»,
+   «Evolución»). Estaban compartiendo `.lp-prod-cap` y, como las reglas de los
+   indicadores no declaraban `text-transform`, la versal del antetítulo se les
+   colaba: los indicadores salieron en MAYÚSCULAS en el preview.
+
+   Es **el mismo fallo que esta sección ya había arreglado** contra el `.cap`
+   global del sitio, recreado con mi propia clase al añadir la quinta pantalla.
+   Y en el móvil lo había parcheado con `text-transform: none`, que es tapar el
+   síntoma. Lo cazó el piloto, no yo (`bbbebc5`). */
+.lp-prod-lbl { font-size: 12.5px; font-weight: 500; color: var(--ink-4); }
 .lp-prod-cap { font-size: 11.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
 .lp-prod-evid p { margin: 10px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--ink-2); }
 .lp-prod-evid b { font-weight: 600; color: var(--ink); }
@@ -6039,13 +6051,13 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-prod-mscore .lp-prod-franja b { font-weight: 600; color: var(--ink); }
   .lp-prod-mkpis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
   .lp-prod-mkpi { padding: 14px; }
-  .lp-prod-mkpi .lp-prod-cap { font-size: 11.5px; text-transform: none; letter-spacing: normal; font-weight: 500; }
+  .lp-prod-mkpi .lp-prod-lbl { font-size: 11.5px; }
   .lp-prod-mkpi .lp-prod-val { font-family: var(--font-display), inherit; font-size: 23px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
   .lp-prod-mkpi .lp-prod-delta { font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .lp-prod-mkpi .lp-prod-delta.pos { color: #15915a; }
   .lp-prod-mkpi .lp-prod-delta.neg { color: #d23b48; }
   .lp-prod-mspark { padding: 14px; margin-top: 12px; }
-  .lp-prod-mspark .lp-prod-cap { font-size: 11.5px; text-transform: none; letter-spacing: normal; font-weight: 500; }
+  .lp-prod-mspark .lp-prod-lbl { font-size: 11.5px; }
   .lp-prod-mspark svg { width: 100%; height: 76px; margin-top: 6px; display: block; }
 
   .lp-prod-mq { padding: 14px 16px; }
