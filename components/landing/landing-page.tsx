@@ -73,12 +73,21 @@ export function LandingPage() {
         <PublicHeader hero />
 
         <div className="lp-hero-content">
+          {/* HOME-2026-08 Fase A: titular y bajada del diseño aprobado
+              (`docs/design-reference/home-2026-08/`). El titular es una
+              pregunta a propósito: es la que se hace quien llega, y es la que
+              el comprobador gratuito responde en veinte segundos. */}
           <h1 className="lp-h1">
-            Que la IA <span className="lp-h1-accent">hable de tu marca</span>
+            {/* El salto es del diseño, no del ancho: la maqueta lleva un `<br>`
+                ahí para que «la inteligencia artificial» caiga entera en la
+                segunda línea, en azul. Dejarlo fluir parte la frase por donde
+                toque el ancho y en 1280 px se lleva «la» a la primera. */}
+            ¿Te recomienda<br />
+            <span className="lp-h1-accent">la inteligencia artificial</span>?
           </h1>
           <p className="lp-lead">
-            Descubre si los motores de IA mencionan tu marca, frente a quién pierdes y exactamente
-            qué cambiar primero. Análisis claro, acciones que puedes ejecutar.
+            Comprobamos si ChatGPT, Gemini y Claude nombran tu marca al responder a tus clientes
+            y qué marcas salen en tu lugar.
           </p>
           {/* Las llamadas a la acción viven DENTRO de `HeroDomainField`, no
               aquí: «Analiza gratis» tiene que guardar el dominio escrito antes
@@ -103,15 +112,10 @@ export function LandingPage() {
       </header>
 
       <main>
-      {/* TRUST */}
-      <div className="lp-trust">
-        <div className="lp-inner">
-          <div className="cap">Motores de IA que analizamos por ti</div>
-          <div className="lp-logos">
-            <span className="lg">Gemini</span><span className="lg">ChatGPT</span><span className="lg">Claude</span>
-          </div>
-        </div>
-      </div>
+      {/* La franja «Motores de IA que analizamos por ti» se retira aquí:
+          HOME-2026-08 sube los tres motores al hero, con sus logos, justo bajo
+          el campo de dominio. Mantener las dos dejaba los mismos tres nombres
+          repetidos a cien píxeles de distancia. */}
 
       {/* HOW IT WORKS */}
       <section className="lp-section alt" id="como">

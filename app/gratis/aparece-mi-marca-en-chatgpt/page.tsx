@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
@@ -82,6 +83,13 @@ export default function FreeCheckerPage() {
       />
       <FaqPageSchema items={FAQ_ITEMS} />
 
+      {/* `Suspense` no es ceremonia: `FreeCheckerForm` lee `?d=` con
+          `useSearchParams` desde HOME-2026-08 —el dominio que el visitante
+          escribió en el hero de la portada—, y sin este límite Next no puede
+          prerenderizar la página, que es estática y tiene que seguir siéndolo.
+          El respaldo va vacío a propósito: el formulario aparece en cuanto
+          hidrata y un esqueleto aquí sólo añadiría un salto de layout. */}
+      <Suspense fallback={null}>
       <FreeCheckerForm
         heading={
           <div style={{ textAlign: "center", maxWidth: 640, margin: "0 auto 26px" }}>
@@ -170,6 +178,7 @@ export default function FreeCheckerPage() {
           </p>
         </div>
       </FreeCheckerForm>
+      </Suspense>
 
     </BlogPageShell>
   );
