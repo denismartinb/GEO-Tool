@@ -4933,20 +4933,55 @@ a.notif-row:hover {
   background: radial-gradient(closest-side, rgba(9,197,214,.16), rgba(9,197,214,0));
 }
 .lp-how .lp-inner { position: relative; z-index: 1; }
+/* TIPOGRAFÍA MEDIDA CONTRA EL ARTBOARD, no heredada del sitio.
+   `.lp-h2` y `.lp-kicker` del resto de la landing son 38px/800 y 13px/700; el
+   diseño de esta home usa otra escala —42-44px/700 y 12px/600 con 0.14em— y
+   reutilizar las de siempre dejaba las dos secciones nuevas con una tipografía
+   que no es la aprobada (medido el 2026-08-22 sobre el artboard, a petición
+   del fundador: ninguna de las siete propiedades comparadas coincidía). Se
+   redefinen dentro de estas dos secciones y sólo dentro de ellas, para no
+   tocar las que aún no se han rediseñado.
+
+   Todos los selectores van CALIFICADOS por la sección y no como modificador
+   suelto (`.lp-h2--dark`): las clases base viven más abajo en este fichero, así
+   que a igualdad de especificidad ganaban ellas y el titular oscuro seguía
+   saliendo a 38px con la regla nueva puesta. Con `.lp-how .lp-h2` la
+   especificidad sube a (0,2,0) y el orden dentro del fichero deja de importar. */
+.lp-rules .lp-kicker,
+.lp-how .lp-kicker {
+  font-size: 12px; font-weight: 600; line-height: normal;
+  letter-spacing: .14em; text-transform: uppercase;
+}
+.lp-rules .lp-h2,
+.lp-how .lp-h2 { font-weight: 700; letter-spacing: -.03em; }
+.lp-rules .lp-h2 { font-size: 42px; line-height: 1.08; }
+.lp-how .lp-h2 { font-size: 44px; line-height: 1.06; }
+.lp-rules .lp-sec-sub,
+.lp-how .lp-sec-sub { font-size: 16px; line-height: 1.72; }
+.lp-how .lp-sec-sub { margin-top: 24px; }
+.lp-rules .lp-sec-head { margin-bottom: 64px; }
+/* La cabecera de la sección oscura respira más que la clara: 96px frente a 64,
+   medido sobre el artboard. El raíl no añade margen propio; el hueco lo pone
+   la cabecera. Va como UN número —122px— y no como los «96 de margen + 26 del
+   paso» que suman en el artboard, porque márgenes verticales adyacentes se
+   colapsan en el mayor: declarar 96 aquí y 26 en el raíl da 96, no 122
+   (comprobado midiendo, no deducido). */
+.lp-how .lp-sec-head { margin-bottom: 122px; }
+
 .lp-kicker--dark { color: var(--brand-cyan); }
 .lp-h2--dark { color: #fff; }
 .lp-sec-sub--dark { color: #93a3bd; }
 
-.lp-how-rail { list-style: none; margin: 84px 0 0; padding: 0; position: relative; }
+.lp-how-rail { list-style: none; margin: 0; padding: 0; position: relative; }
 /* El raíl es el hilo que une los cuatro pasos. Va detrás de los puntos. */
 .lp-how-rail::before {
-  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
-  transform: translateX(-.5px);
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px;
+  transform: translateX(-1px);
   background: linear-gradient(180deg, rgba(37,99,235,0), rgba(37,99,235,.55) 12%, rgba(9,197,214,.55) 88%, rgba(9,197,214,0));
 }
 .lp-how-step {
   display: grid; grid-template-columns: 1fr 96px 1fr; align-items: center;
-  margin-bottom: 96px;
+  margin-bottom: 104px;
 }
 .lp-how-step:last-child { margin-bottom: 0; }
 /* Los tres `order` son OBLIGATORIOS, no decorativos. `.lp-how-dot` lleva
@@ -4963,21 +4998,33 @@ a.notif-row:hover {
 }
 .lp-how-step:nth-child(even) .lp-how-sheet { order: 1; padding-left: 0; padding-right: 56px; }
 .lp-how-dot {
-  order: 2; justify-self: center; width: 13px; height: 13px; border-radius: 999px;
-  background: var(--brand-cyan); box-shadow: 0 0 0 5px rgba(9,197,214,.16);
+  order: 2; justify-self: center; width: 15px; height: 15px; border-radius: 999px;
+  background: var(--brand-blue); box-shadow: 0 0 0 6px rgba(37,99,235,.18);
   position: relative; z-index: 1;
 }
+/* El número NO es una etiqueta: en el artboard es un «01» de 96 px vacío, con
+   sólo el perfil dibujado (`color: transparent` + `text-stroke`). Se leía como
+   un rótulo de 13 px hasta que se midió. `-webkit-text-stroke` no tiene
+   equivalente estándar y sin él el número queda invisible, así que el color
+   transparente va detrás del prefijo: si el navegador no lo entiende, el
+   número se pinta en gris tenue en vez de desaparecer. */
 .lp-how-num {
-  font-family: var(--font-display, inherit); font-size: 13px; font-weight: 700;
-  letter-spacing: .12em; color: var(--brand-cyan);
+  font-family: var(--font-display), inherit; font-size: 96px; font-weight: 700;
+  line-height: .8; letter-spacing: -.05em; color: rgba(147, 163, 189, .42);
 }
-.lp-how-h3 { margin: 16px 0 0; font-size: 23px; font-weight: 750; color: #fff; }
-.lp-how-text p { margin: 12px 0 0; font-size: 15px; line-height: 1.7; color: #93a3bd; }
+@supports (-webkit-text-stroke: 1px currentColor) {
+  .lp-how-num { color: transparent; -webkit-text-stroke: 1.4px rgba(147, 163, 189, .42); }
+}
+.lp-how-h3 {
+  font-family: var(--font-display), inherit; margin: 20px 0 0;
+  font-size: 34px; font-weight: 700; line-height: 1.12; letter-spacing: -.03em; color: #fff;
+}
+.lp-how-text p { margin: 16px 0 0; font-size: 15.5px; line-height: 1.7; color: #93a3bd; }
 
 /* La «hoja»: la maqueta de producto de cada paso. */
 .lp-sheet {
-  background: #fff; color: var(--ink); border-radius: 14px; padding: 14px 16px;
-  box-shadow: 0 24px 60px rgba(0,0,0,.36); display: grid; gap: 10px;
+  background: #fff; color: var(--ink); border-radius: 16px; padding: 12px 20px;
+  box-shadow: 0 16px 36px rgba(2,6,14,.55); display: grid; gap: 10px;
 }
 .lp-sheet-row, .lp-sheet-fix, .lp-sheet-src, .lp-sheet-gen, .lp-sheet-delta {
   display: flex; align-items: center; gap: 10px; font-size: 13px;
@@ -4985,7 +5032,42 @@ a.notif-row:hover {
 .lp-sheet-name { font-weight: 600; }
 .lp-sheet-row .lp-sheet-name { width: 118px; flex: 0 0 auto; }
 .lp-sheet-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-.lp-sheet-bar .fill { display: block; height: 100%; border-radius: 999px; background: var(--ink-4); }
+/* La barra crece de 0 a su ancho cuando el paso entra en pantalla, con los
+   tiempos del artboard: 1,1 s, `cubic-bezier(.2,.8,.25,1)` y retardos de
+   .12/.26/.40 s. `transform` y no `width`: escalar se compone en el hilo de
+   composición y no dispara layout en cada fotograma. El ancho real lo pone el
+   estilo en línea, así que sin JS —o con movimiento reducido— la barra ya está
+   en su sitio y sólo falta quitarle la escala. */
+.lp-sheet-bar .fill {
+  display: block; height: 100%; border-radius: 999px; background: var(--ink-4);
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform 1.1s cubic-bezier(.2, .8, .25, 1);
+}
+.lp-how-step.is-in .lp-sheet-bar .fill { transform: scaleX(1); }
+.lp-how-step .lp-sheet-row:nth-child(1) .fill { transition-delay: .12s; }
+.lp-how-step .lp-sheet-row:nth-child(2) .fill { transition-delay: .26s; }
+.lp-how-step .lp-sheet-row:nth-child(3) .fill { transition-delay: .40s; }
+
+/* El paso entero asoma: sube un poco y aparece. Nada se mueve si el visitante
+   pidió menos movimiento — y ahí no hay degradación que explicar, porque el
+   estado final es el contenido. */
+.lp-how-step .lp-how-text,
+.lp-how-step .lp-how-sheet {
+  opacity: 0; transform: translateY(14px);
+  transition: opacity .7s ease, transform .7s cubic-bezier(.2, .8, .25, 1);
+}
+.lp-how-step.is-in .lp-how-text,
+.lp-how-step.is-in .lp-how-sheet { opacity: 1; transform: none; }
+.lp-how-step .lp-how-sheet { transition-delay: .10s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-sheet-bar .fill,
+  .lp-how-step .lp-how-text,
+  .lp-how-step .lp-how-sheet {
+    transition: none; transform: none; opacity: 1;
+  }
+  .lp-sheet-bar .fill { transform: scaleX(1); }
+}
 .lp-sheet-bar .fill.own { background: var(--brand-blue); }
 .lp-sheet-num { width: 42px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 .lp-sheet-fav {

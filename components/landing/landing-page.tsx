@@ -5,6 +5,7 @@ import { BrandLogo } from "@/components/ui/brand-logo";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
+import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { PromoStrip, RecommendationsCta, HomeCtaBand } from "@/components/landing/session-ctas";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
@@ -309,6 +310,7 @@ export function LandingPage() {
             ))}
           </ol>
         </div>
+        <RevealOnScroll selector=".lp-how-step" />
       </section>
 
       {/* FEATURES */}

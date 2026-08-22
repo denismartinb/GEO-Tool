@@ -12826,15 +12826,68 @@ Los **rótulos** también son los del producto —«Datos estructurados», «Int
 respuesta-primero», «llms.txt»—, copiados de `issue-rows.tsx` y no reescritos,
 para que quien llegue a la auditoría reconozca lo que vio en la portada.
 
-### Sin revelación por scroll, y es una decisión
+### «Pixel perfect» no estaba verificado, y al medirlo no lo era
 
-El artboard entra las cuatro tarjetas con `IntersectionObserver`. Montarlo
-pediría una isla de cliente en una página que PRELAUNCH-HARDENING-1 Fase V dejó
-server-rendered a propósito —el campo del hero es la única isla—, y el precio
-sería hidratar seis secciones de markup que no cambian nunca a cambio de un
-fundido. El contenido se pinta y se lee igual. Efecto secundario bueno: se
-esquiva la trampa que el README de la referencia describe, la de fotografiar
-las tarjetas a opacidad 0.
+El fundador preguntó, con el PR ya abierto, si el piloto había comprobado
+tamaños de fuente, espacios y animaciones. **No lo había comprobado, y no lo
+comprueba**: el `ux-pilot` mira que las pantallas carguen con contenido real,
+el contraste y que los controles respondan; **no compara contra el artboard**,
+no hay diff de píxeles ni de tipografía. Y quien implementó tampoco midió:
+construyó desde el marcado y juzgó las capturas a ojo.
+
+Medido después, **ninguna de las siete propiedades comparadas coincidía**,
+porque se reutilizaron las clases del sitio (`.lp-h2`, `.lp-kicker`) en vez de
+la escala del artboard, que es otra:
+
+| | Artboard | Lo que se había implementado |
+|---|---|---|
+| Kicker | 12px/600, `letter-spacing: .14em` | 13px/700, .04em |
+| h2 claro | 42px/700 | 38px/800 |
+| h2 oscuro | 44px/700 | 38px/800 |
+| Bajada | 16px, `line-height: 1.72` | 16,5px, 1.6 |
+| **Número de paso** | **96px** perfilado | **13px** relleno |
+| h3 de paso | 34px/700 | 23px/750 |
+| Cabecera → primer paso | 122px | 84px |
+
+El número de paso era el peor: en el artboard es un «01» de 96 px **vacío, con
+sólo el perfil dibujado** (`color: transparent` + `-webkit-text-stroke`), y se
+había implementado como un rótulo de 13 px relleno. No es una diferencia de
+redondeo, es otro elemento.
+
+**Los selectores van calificados por la sección** (`.lp-how .lp-h2`) y no como
+modificador suelto (`.lp-h2--dark`): las clases base viven más abajo en el
+fichero, así que a igualdad de especificidad ganaban ellas y el titular oscuro
+seguía saliendo a 38 px con la regla nueva puesta. Y el hueco de la cabecera va
+como **un** número (122px) en vez de los «96 + 26» que suman en el artboard,
+porque los márgenes verticales adyacentes se colapsan en el mayor: declararlo
+en dos sitios daba 96, no 122 — comprobado midiendo, no deducido.
+
+### La revelación por scroll: primero se descartó, luego se implementó
+
+En la primera versión no entró, con argumento: pediría una isla de cliente en
+una página que PRELAUNCH-HARDENING-1 Fase V dejó server-rendered a propósito.
+**El fundador la echó en falta al mirar el preview** y entró, con el mecanismo
+exacto del artboard: cada paso recibe `is-in` al asomar (umbral 0,28) y sus
+barras crecen de `scaleX(0)` a `scaleX(1)` en 1,1 s con
+`cubic-bezier(.2,.8,.25,1)` y retardos de .12/.26/.40 s.
+
+La isla (`components/landing/reveal-on-scroll.tsx`) se mantiene **mínima a
+propósito**: un observador y una clase, sin estado de React y sin volver a
+renderizar. El marcado sigue viniendo del servidor, así que si el JS no llega
+los pasos se ven igual, ya revelados. Se desobserva cada paso al entrar y el
+observador se cierra cuando han entrado todos.
+
+`prefers-reduced-motion` no degrada: marca todo como entrado en el primer
+efecto y no observa nada. Aquí no hay «fotograma final que siga contando la
+historia» que discutir —como sí lo hay en el tour— porque **la barra llena ES
+el dato**. Verificado en los dos modos: con movimiento normal la barra pasa de
+`matrix(0,…)` a `matrix(1,…)` y el texto de opacidad 0 a 1 al entrar; con
+movimiento reducido ya están en su estado final antes de entrar y nada se
+mueve.
+
+Se pierde el efecto secundario bueno que tenía no animar: vuelve a existir la
+trampa de fotografiar las tarjetas a opacidad 0 que el README de la referencia
+describe. Sigue documentada ahí.
 
 ### Dos fallos encontrados mirando, no razonando
 
