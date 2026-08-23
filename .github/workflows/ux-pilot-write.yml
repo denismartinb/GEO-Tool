@@ -119,10 +119,17 @@ jobs:
           PILOT_VERCEL_BYPASS: ${{ secrets.PILOT_VERCEL_BYPASS }}
         run: |
           set +e
+          # THROWAWAY, chore/pilot-cleanup-pr459 branch only — never on main.
+          # Filters the write journey down to the one-off cleanup spec
+          # (tests/pilot/journeys/write/oneoff-cleanup-pr459.spec.ts) so this
+          # dispatch does not also re-run add-prompt-and-scan.spec.ts /
+          # seed-web-audit.spec.ts, which is exactly what left the stray
+          # prompt behind in the first place.
           node scripts/pilot.mjs \
             --url "${{ steps.deploy.outputs.url }}" \
             --journeys write \
-            --summary-md .pilot/summary.md
+            --summary-md .pilot/summary.md \
+            tests/pilot/journeys/write/oneoff-cleanup-pr459.spec.ts
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
 
       - name: Upload screenshots and signals
