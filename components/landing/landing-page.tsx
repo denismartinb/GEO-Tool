@@ -4,8 +4,9 @@ import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { ProductTour } from "@/components/product-tour";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
+import { HeroDemo } from "@/components/landing/hero-demo";
+import { HeroDemoScenes } from "@/components/landing/hero-demo-scenes";
 import { RulesCarousel } from "@/components/landing/rules-carousel";
 import { RulesModal } from "@/components/landing/rules-modal";
 import { FaqAccordion } from "@/components/landing/faq-accordion";
@@ -254,7 +255,12 @@ function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon
  * Lo que queda de cliente, y por qué:
  * - `HeroDomainField` — el campo del hero: estado y marcador tecleado.
  * - `MarketingMobileNav` — el cajón de navegación en móvil: abre y cierra.
- * - `ProductTour` — el tour del hero, que es una animación.
+ * - `HeroDemo` — los mandos de la demo del hero. Sus cinco escenas son
+ *   marcado del servidor; la isla sólo mueve una clase, pinta el raíl y coloca
+ *   el cursor.
+ * - `RulesCarousel`, `ProductTabs`, `SolutionDemo`, `FaqAccordion`,
+ *   `RulesModal` — mandos de sus secciones, con el mismo trato: el contenido
+ *   lo sirve el servidor y la isla sólo lo conduce.
  *
  * Todo lo demás navega con `<Link>` en vez de con `router.push`, que es lo que
  * obligaba a que la página entera fuera de cliente. El aspecto no cambia: las
@@ -314,15 +320,39 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* ONBOARDING-TOUR-1: donde antes había una captura estática ahora va
-            el tour, dentro del mismo `.browserframe` ya aprobado (log §1). El
-            marco no cambia; lo que cambia es que el producto se mueve.
-            Con `prefers-reduced-motion` el tour se queda quieto en su último
-            fotograma —la Visión general con su gauge y su curva—, así que el
-            hero estático que había antes ya no hace falta: esa captura la da
-            el propio tour. */}
-        <div className="lp-shot">
-          <ProductTour variant="hero" ctaHref="/signup" />
+        {/* LA DEMO DEL HERO — HOME-2026-08 Fase A2.
+
+            **Aquí estaba `ProductTour variant="hero"`, y se va.** El artboard
+            aprobado pone en este hueco una demo de cinco escenas, no el tour;
+            el tour en el hero fue una decisión nuestra de mientras tanto (log
+            §1), no del diseño. **El tour NO se pierde**: sigue montado en la
+            consola desde `tour-provider.tsx` como popup de bienvenida, que es
+            donde tiene sentido — se lo enseña a quien acaba de entrar, no a
+            quien todavía no sabe qué es esto.
+
+            Lo que gana el hueco: en vez de un recorrido por la interfaz, una
+            historia de cinco escenas que empieza por el golpe —ChatGPT
+            recomendando a tus rivales sin nombrarte— y termina con la misma
+            pregunta contigo dentro. La interfaz se enseña después, en «Cinco
+            pantallas».
+
+            El marcado de las escenas es del SERVIDOR y la 0 se sirve puesta:
+            lo primero que ve alguien que llega no puede depender de hidratar.
+            La isla sólo mueve la clase, pinta el raíl y coloca el cursor. */}
+        <div className="lp-shot lp-hx" id="lp-hx">
+          <div className="lp-hx-halo" aria-hidden="true" />
+          <div className="lp-hx-dev">
+            <div className="lp-hx-bar">
+              <span className="lp-prod-dot" style={{ background: "#ff5f57" }} />
+              <span className="lp-prod-dot" style={{ background: "#febc2e" }} />
+              <span className="lp-prod-dot" style={{ background: "#28c840" }} />
+              <span className="lp-hx-urlbar">chatgpt.com</span>
+            </div>
+            <div className="lp-hx-body">
+              <HeroDemoScenes />
+            </div>
+          </div>
+          <HeroDemo target="#lp-hx" />
         </div>
       </header>
 

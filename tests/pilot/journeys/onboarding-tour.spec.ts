@@ -122,61 +122,68 @@ test("el tour de bienvenida sale solo, se lee, se cierra y no vuelve", async ({ 
 });
 
 /**
- * El mismo tour, en su otra superficie: el hero de la landing pública.
+ * La DEMO del hero de la portada (HOME-2026-08 Fase A2).
  *
- * Existe porque el piloto **no visitaba `/`** — cubre el blog, /geo, docs,
- * comparativas y las legales, pero no la portada. Media fase vive ahí (la
- * captura estática del hero se sustituyó por el tour), así que un PILOT PASS
- * sin esta pasada estaba certificando sólo la mitad. Es exactamente el hueco
- * que el CLAUDE.md manda declarar en vez de dar por bueno.
+ * **Sustituye a la pasada del tour en la landing, que ya no existe ahí.** El
+ * artboard aprobado pone en ese hueco una historia de cinco escenas, no el
+ * tour; el tour sigue vivo y sigue cubierto por la pasada de arriba, en su
+ * sitio de verdad — el popup de bienvenida de la consola. Lo que cambia es que
+ * la portada estrena una pieza y no puede quedarse sin mirar: media Fase A2
+ * vive ahí, y un PILOT PASS sin esto certificaría la mitad.
  *
- * SCOPE GUARD: página pública, sólo navegación y los controles del propio
- * tour. No envía nada.
+ * **Lo que se comprueba es lo que esta pasada PUEDE ver.** No se comprueba que
+ * la reproducción automática espere a que la demo entre en pantalla:
+ * `visitAsUser` redimensiona el viewport para capturar la página entera, con lo
+ * que la demo pasa a verse y arranca durante la propia captura — la
+ * comprobación pasaría siempre sin demostrar nada, que es peor que no tenerla.
+ * Es la misma limitación declarada que tenía la pasada del tour.
+ *
+ * SCOPE GUARD: página pública, sólo navegación y el raíl de la propia demo.
+ * No envía nada.
  */
-test("el tour del hero arranca al verse entero y para en el paso 1", async ({ page }, testInfo) => {
-  const findings = await visitAsUser(page, testInfo, "/", "landing-hero-tour", {
-    describedAs: "el tour dentro del marco del hero de la landing",
-    anyOf: [{ selector: ".ptour--hero .pt-stage" }]
+test("la demo del hero enseña sus cinco escenas y el raíl las gobierna", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/", "landing-hero-demo", {
+    describedAs: "la demo de cinco escenas del hero de la portada",
+    // Contenido real, no un contenedor vacío: si la respuesta de ChatGPT no
+    // está, lo fotografiado es un marco de navegador y nada más.
+    anyOf: [{ selector: "#hx-sc-0 .lp-hx-texto", text: /Maisons du Monde/ }]
   });
   assertPageIsHealthy(findings);
 
-  // NO se comprueba aquí que el tour espere a verse entero antes de arrancar.
-  // Se intentó y sería mentira: `visitAsUser` redimensiona el viewport para
-  // capturar la página completa, con lo que el lienzo pasa a verse entero y el
-  // tour arranca durante la propia captura. La comprobación pasaría siempre sin
-  // demostrar nada, que es peor que no tenerla. Ese arranque está verificado con
-  // Playwright contra el build de producción en local (log §40); aquí se
-  // verifica lo que esta pasada sí puede ver.
-  const typed = page.locator("[data-pt=typed]").first();
-  await page.evaluate(() => {
-    document.querySelector(".ptour--hero .pt-stage")?.scrollIntoView({ block: "center" });
-  });
-  await expect
-    .poll(async () => (await typed.textContent())?.trim().length ?? 0, {
-      message: "el tour del hero no arrancó ni viéndose entero",
-      timeout: 15_000
-    })
-    .toBeGreaterThan(0);
+  // La escena 0 se sirve puesta: es lo primero que ve quien llega y no puede
+  // depender de que hidrate.
+  await expect(page.locator("#hx-sc-0"), "la escena 0 no se sirve puesta").toHaveClass(/on/);
+  await expect(
+    page.locator("#hx-foco"),
+    "el golpe de la escena 0 —que la marca no aparece— no está"
+  ).toContainText("no aparece");
 
-  // La pista de «Siguiente» arranca con el paso 1, no al detenerse (fundador,
-  // 2026-08-08) — se comprueba una vez el tour ya está parado, que es el
-  // instante en que más importa que siga puesta.
-  await page.waitForTimeout(7_000);
-  await expect(
-    page.locator(".ptour--hero .pt-dot").first(),
-    "el tour del hero siguió solo más allá del paso 1"
-  ).toHaveClass(/is-on/);
-  await expect(
-    page.locator(".ptour--hero .pt-foot .pt-primary"),
-    "el botón «Siguiente» no llamó la atención al detenerse el tour"
-  ).toHaveClass(/pt-hint/);
-  await captureInteraction(page, testInfo, "landing-hero-tour-paso-1");
+  // El raíl existe, lo pinta la isla y tiene una parada por escena.
+  const pasos = page.locator(".lp-hx-step");
+  await expect(pasos, "el raíl no tiene sus cinco escenas").toHaveCount(5);
+  await captureInteraction(page, testInfo, "landing-hero-demo-escena-1");
 
-  // Y avanza a mano, un paso por clic.
-  await page.locator(".ptour--hero").getByRole("button", { name: /Siguiente/ }).click();
+  // Cada parada abre SU escena, y sólo una está puesta a la vez. Es la
+  // comprobación que impide que un raíl con cinco botones abra un marco vacío,
+  // igual que en «Cinco pantallas».
+  for (const [n, id] of [[2, "hx-sc-2"], [4, "hx-sc-4"]] as const) {
+    await pasos.nth(n).click();
+    await expect(page.locator(`#${id}`), `la escena ${n} no se abrió`).toHaveClass(/on/, {
+      timeout: 5_000
+    });
+    await expect(
+      page.locator(".lp-hx-sc.on"),
+      "hay más de una escena puesta a la vez"
+    ).toHaveCount(1);
+    await captureInteraction(page, testInfo, `landing-hero-demo-escena-${n + 1}`);
+  }
+
+  // Tocar el raíl apaga la reproducción automática: quien elige una escena la
+  // está leyendo, y que se la lleve el reloj es lo que hace que una demo se
+  // sienta un anuncio (log §149).
+  await page.waitForTimeout(6_000);
   await expect(
-    page.locator(".ptour--hero .pt-dot").nth(1),
-    "«Siguiente» no avanzó al paso 2 en la landing"
-  ).toHaveClass(/is-on/, { timeout: 5_000 });
-  await captureInteraction(page, testInfo, "landing-hero-tour-paso-2");
+    page.locator("#hx-sc-4"),
+    "la reproducción automática siguió después de tocar el raíl"
+  ).toHaveClass(/on/);
 });

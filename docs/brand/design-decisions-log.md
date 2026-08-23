@@ -13621,3 +13621,126 @@ visible, no hay botones de generar y el enlace de la tabla es un enlace a
 **Lo que queda de la portada:** sólo la demo de cinco escenas del hero (Fase
 A2), que sigue bloqueada por una decisión del fundador — meterla implica sacar
 `ProductTour` de la landing.
+
+---
+
+## 149. La demo del hero: cinco escenas, y el tour deja la portada (HOME-2026-08 Fase A2, 2026-08-23)
+
+La última pieza que faltaba del artboard, y la primera que ve cualquiera que
+llega. Petición del fundador: *«ahí te tienes que lucir, es la primera zona de
+la landing y tiene que enganchar al usuario»*.
+
+### La historia, que es lo que engancha
+
+No es un recorrido por la interfaz —eso ya está más abajo, en «Cinco
+pantallas»—: es una historia de cinco escenas dentro de un marco de navegador.
+
+| # | Escena | Qué dice |
+|---|---|---|
+| 0 | **La respuesta** | ChatGPT recomienda a Maisons du Monde, Kave Home y Leroy Merlin. Y debajo, en rojo: **IKEA no aparece, en 11 de sus 14 preguntas clave.** |
+| 1 | **Tu puntuación** | 34/100, franja «inicial». Te mencionan 21%, te citan 4%. |
+| 2 | **Competidores** | El ranking. Tú, el octavo, con un 4%. |
+| 3 | **La solución** | La recomendación, el botón, la espera y el schema generado. |
+| 4 | **El resultado** | La misma pregunta, ahora contigo dentro. 71, +37 pts, y la curva. |
+
+Empieza por el golpe y termina por la promesa. La escena 0 es la única que se
+permite llamar la atención —el aviso rojo entra con un rebote corto— porque es
+la que tiene que parar el scroll.
+
+### El tour se va de la portada, y no se pierde
+
+Ese hueco lo ocupaba `ProductTour variant="hero"`. **El artboard aprobado nunca
+tuvo el tour ahí**: ponía esta demo. El tour en el hero fue una decisión
+nuestra de mientras tanto (log §1).
+
+El tour **sigue montado** en la consola, desde `tour-provider.tsx`, como popup
+de bienvenida — que es donde tiene sentido: se lo enseña a quien acaba de
+entrar, no a quien todavía no sabe qué es esto. `variant="hero"` sigue
+existiendo en el componente; se retiró el montaje, no la variante.
+
+Lo que arrastra, hecho en este mismo PR:
+
+- `.claude/rules/onboarding.md` tenía tres invariantes sobre el
+  comportamiento **en la landing**. Dos quedan sin objeto y se marcan como tal
+  —con lo que habría que recuperar si algún día vuelve—, y la tercera se
+  reescribe para hablar sólo del popup. Una regla que nadie puede cumplir es
+  peor que ninguna: una sesión futura la obedecería igual.
+- La pasada del piloto `landing-hero-tour` **se sustituye**, no se borra: pasa
+  a ser `landing-hero-demo`, con la misma forma —contenido real como ancla, no
+  un contenedor vacío— y comprobando que la escena 0 se sirve puesta, que el
+  raíl tiene cinco paradas, que cada una abre **su** escena y sólo una a la
+  vez, y que tocar el raíl apaga la reproducción automática. El tour sigue
+  cubierto por la otra mitad de esa misma pasada, la del popup de la consola.
+
+### Dos cifras del artboard que no se publican
+
+- **«Franja invisible»** para un 34. El producto no tiene esa franja: son
+  «competitivo» desde 70, «emergente» desde 40 e **«inicial»** por debajo
+  (`app/dashboard/projects/[projectId]/page.tsx`). Estrenar vocabulario en la
+  primera pantalla de la portada que la consola nunca enseña es la misma clase
+  de error que los pesos de la auditoría en §146.
+- Los rótulos que se repiten más abajo —14 prompts, 3 motores, «Te mencionan»,
+  «Te citan»— se dicen **igual** aquí que allí. La portada no puede
+  contradecirse a sí misma al hacer scroll.
+
+Las cifras de la historia (34 → 71) son ilustrativas como el resto de la
+maqueta, por la decisión del fundador del 2026-08-22. Lo que no es ilustrativo
+es el vocabulario.
+
+### Cómo está construida, y por qué así
+
+- **Las cinco escenas son marcado del SERVIDOR, con la 0 ya puesta.** Lo
+  primero que ve alguien que llega no puede depender de que hidrate: sin una
+  línea de JavaScript se lee la escena que engancha, entera y quieta. La isla
+  sólo mueve la clase `on`, pinta el raíl y coloca el cursor — la misma
+  arquitectura que `ProductTabs`.
+- **Un solo reloj para avanzar; dentro de cada escena, CSS con `fill: both`.**
+  A los ~2,5 s la escena está en un fotograma final **estable**, que es lo que
+  permite al piloto fijar una y fotografiar algo determinista. Con animaciones
+  encadenadas a mano fotografiaría un fotograma al azar y su veredicto no
+  valdría nada (`.claude/rules/onboarding.md`, «Un solo reloj»).
+- **No se reproduce fuera de pantalla y se para al llegar al final.** Un
+  `IntersectionObserver` arranca y para; en la escena 4 el reloj se detiene y
+  no vuelve. Un bucle perpetuo en el hero convierte la historia en un
+  salvapantallas.
+- **Tocar el raíl apaga la reproducción automática para siempre.** Quien elige
+  una escena la está leyendo; que se la lleve el reloj cuatro segundos después
+  es exactamente lo que hace que una demo se sienta un anuncio.
+- **El cursor apunta a ELEMENTOS, no a coordenadas** —la lección del tour—, y
+  si el elemento no existe a esa anchura no se pinta en vez de señalar al
+  vacío. Bajo 640px desaparece: allí ya hay un dedo sobre la pantalla.
+- **`prefers-reduced-motion`** deja cada escena en **su** fotograma final —el
+  que cuenta la historia—, no en el inicial, y no hay reproducción automática.
+
+### Tres recortes silenciosos, y una comprobación que ahora los ve
+
+El barrido que traía de §147 medía el desbordamiento de cada elemento contra
+la caja de su panel. No bastaba: **un elemento puede caber en el panel y estar
+recortado por un `overflow: hidden` intermedio**. La comprobación pasa a medir
+también `scrollHeight > clientHeight` en todo lo que esconde su contenido, y
+con eso salieron tres cosas que ninguna captura habría delatado:
+
+1. El bloque de schema de la escena 3 se cortaba el `</script>`: la caja medía
+   116px y el contenido 140.
+2. Al estrechar, ese mismo bloque pasaba de 3 a 5 líneas y pedía 178px en una
+   caja de 144. Se arregla con `white-space: pre` + scroll horizontal — un
+   bloque de código que se desplaza es lo normal; uno que cambia de alto según
+   la ventana obliga a dimensionar el hueco para el peor caso en todas las
+   anchuras.
+3. Y ese `white-space` **no se aplicaba**: el elemento lleva `.lp-sheet-code` y
+   `.lp-hx-code`, misma especificidad, y `.lp-sheet-code` vive más abajo en el
+   fichero. **Sexta vez que el orden decide en vez de la intención** (§143,
+   §144, §145, §146, §147). Aquí no valía «escríbelo al lado», porque lo que
+   corrige es de otra sección: se cualifica por el contenedor,
+   `.lp-hx-artefacto .lp-hx-code` (0,2,0), y el orden deja de importar.
+
+Se excluye del recorte una cosa a propósito: un `<img>` con `object-fit: cover`
+dentro de `overflow: hidden` recorta **por diseño**, es el encuadre.
+
+**Comprobado.** `pnpm test` y `pnpm run validate` en verde. Barrido de 10
+anchuras × 5 escenas = **50 combinaciones**, sin desbordar el marco y sin un
+solo recorte silencioso, con cada escena medida en su fotograma final. Los
+altos del cuerpo son medidos, no números redondos: 436px en escritorio y 508px
+bajo 640, que es lo que mide la escena más larga.
+
+**Con esto la portada de HOME-2026-08 queda completa.**

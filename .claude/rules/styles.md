@@ -209,7 +209,18 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   un contenedor con `overflow: hidden` está cortando por dentro: el marco de
   «Cinco pantallas» recortó una tarjeta, un ranking y una cápsula entre 561 y
   720px con once anchuras «sin desbordamiento» (log §147). Se mide **cada
-  elemento contra la caja de su contenedor**, no el documento.
+  elemento contra la caja de su contenedor**, no el documento. Y eso TAMPOCO
+  basta: un elemento puede caber en el panel y estar cortado por un
+  `overflow: hidden` intermedio, así que se mide además
+  `scrollHeight > clientHeight` en todo lo que esconde su contenido — es lo que
+  destapó el `</script>` cortado de la demo del hero (log §149). Excepción
+  legítima y única: un `<img>` con `object-fit: cover` dentro de
+  `overflow: hidden` recorta **por diseño**; eso es el encuadre, no un fallo.
+- **Un bloque de código dentro de una maqueta va en `white-space: pre` con
+  scroll horizontal.** Envolviendo, cambia de número de líneas según la
+  ventana, y entonces el hueco que lo contiene hay que dimensionarlo para el
+  peor caso en TODAS las anchuras — o se corta en la estrecha. Uno que se
+  desplaza mide siempre lo mismo (log §149).
 - **`--ink-3` sólo aprueba AA sobre BLANCO PURO. Sobre `--canvas` no.** La
   cifra, para no volver a deducirla: 4,76:1 sobre `#ffffff` y **4,44:1** sobre
   `#f6f7f9` — seis centésimas por debajo del mínimo. Ha caído tres veces en la
