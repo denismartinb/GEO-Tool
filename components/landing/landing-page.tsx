@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
@@ -157,18 +157,21 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; extra?: ReactNode; she
     d: "Un modelo construye su respuesta a partir de páginas concretas. Te enseñamos cuáles son y quién sale citado en ellas.",
     sheet: (
       <div className="lp-sheet lp-sheet--card">
-        {/* RECS-DARK-02-B (2026-08-23): la barra iba sin etiquetas —"enseña la
+        {/* RECS-DARK-02-A (2026-08-23): la barra iba sin etiquetas —"enseña la
             forma del dato, no lo afirma"— pero el fundador la vio sin decir a
             quién pertenece cada tramo y pidió una leyenda. Los nombres son
             los mismos competidores ya establecidos en esta portada —Kave
             Home y Maisons du Monde son justo los que cita la frase de abajo,
-            Leroy Merlin ya aparece en la tarjeta 01— y no marcas nuevas. El
-            segundo tramo deja de ser `--brand-neg` (#d23b48): ese rojo está
-            reservado en todo el sitio para "negativo/tuyo" —cuotas que
-            bajan, `x` de la auditoría—, y aquí no marcaba nada tuyo, era sólo
-            decorativo. Kave Home pasa a un azul más claro de la misma
-            familia, y el rojo se reserva para la fila de IKEA que SÍ es
-            negativa: 0%, no aparece citada. */}
+            Leroy Merlin ya aparece en la tarjeta 01— y no marcas nuevas.
+            **Compacta, en una fila que envuelve** (versión A, no la lista de
+            la B): la tarjeta tiene sitio limitado y una leyenda de una o dos
+            líneas deja más aire para la cita de abajo, que es la que sostiene
+            el argumento de la sección. El segundo tramo deja de ser
+            `--brand-neg` (#d23b48): ese rojo está reservado en todo el sitio
+            para "negativo/tuyo" —cuotas que bajan, `x` de la auditoría—, y
+            aquí no marcaba nada tuyo, era sólo decorativo. Kave Home pasa a
+            un azul más claro de la misma familia, y el rojo se reserva para
+            IKEA, que SÍ es negativa: 0%, no aparece citada. */}
         <div className="lp-sheet-split" aria-hidden="true">
           <span style={{ width: "43%", background: "var(--brand-blue)" }} />
           <span style={{ width: "20%", background: "#7da2f5" }} />
@@ -182,19 +185,15 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; extra?: ReactNode; she
             { n: "Leroy Merlin", p: 19, c: "var(--brand-cyan)" },
             { n: "Otras marcas", p: 18, c: "#c3cbd8" }
           ].map((s) => (
-            <Fragment key={s.n}>
-              <span className="lp-sheet-legn">
-                <span className="i" style={{ background: s.c }} />
-                {s.n}
-              </span>
-              <span className="lp-sheet-legp">{s.p}%</span>
-            </Fragment>
+            <span className="lp-sheet-legitem" key={s.n}>
+              <span className="i" style={{ background: s.c }} />
+              {s.n} <b>{s.p}%</b>
+            </span>
           ))}
-          <span className="lp-sheet-legn lp-sheet-legn--tu">
+          <span className="lp-sheet-legitem lp-sheet-legitem--tu">
             <span className="i" />
-            IKEA
+            IKEA <b>0%</b>
           </span>
-          <span className="lp-sheet-legp lp-sheet-legn--tu">0%</span>
         </div>
         <div className="lp-sheet-src">
           <span className="lp-sheet-fav">

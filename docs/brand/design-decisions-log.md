@@ -13872,8 +13872,12 @@ copia de al lado promete dos métricas distintas, y la tarjeta 02 dibujaba una
 barra de cuatro tramos sin decir a quién pertenece ninguno. Elegido: **la
 tarjeta 01 en su versión B pero sin la leyenda de arriba** —cada marca pasa a
 tener sus dos barras, «Nombran»/«Citan», y la propia etiqueta de la fila hace
-innecesaria una leyenda aparte—; **la tarjeta 02 en su versión B**, con los
-cuatro tramos nombrados en una lista y sus cifras alineadas.
+innecesaria una leyenda aparte—; **la tarjeta 02 en su versión A**, con los
+cuatro tramos nombrados en una fila compacta que envuelve, no en una lista de
+una marca por línea. (Se implementó primero la B por una lectura apresurada
+del mensaje; el fundador aclaró minutos después «había elegido la leyenda
+compacta» y se corrigió antes de que nadie la piloteara — la A es la que
+quedó, y es la que describe el resto de esta entrada.)
 
 El «Citan 4%» de IKEA en la tarjeta 01 no es un número nuevo: es el mismo dato
 que ya usa la escena 1 de la demo del hero para la misma marca ficticia. Dos
