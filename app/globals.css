@@ -6932,7 +6932,9 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-close { padding: 84px 0 88px; }
   .lp-close-in { text-align: left; }
   /* El salto forzado es del artboard de ESCRITORIO; el móvil no lo tiene y
-     con él el titular parte por «de ti» en vez de por donde quepa. */
+     con él el titular parte por «de ti» en vez de por donde quepa.
+     APAGAR UN `<br>` NO DEJA UN ESPACIO EN SU SITIO: el marcado lleva uno
+     explícito delante por eso, y quitarlo devuelve «de tiahora mismo». */
   .lp-close .lp-h2 { font-size: 34px; }
   .lp-close .lp-h2 br { display: none; }
   .lp-close .lp-sec-sub { margin: 18px 0 0; font-size: 16px; }

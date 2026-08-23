@@ -79,7 +79,11 @@ export function HomeCtaBand() {
   }
   return (
     <div className="lp-close-in">
-      <h2 className="lp-h2">Averigua qué dice la IA de ti<br />ahora mismo</h2>
+      {/* El espacio ANTES del `<br />` es obligatorio y no sobra: en móvil el
+          salto se apaga con `display: none` y sin él las dos palabras se pegan
+          («de tiahora mismo», visto en producción el 2026-08-23). En
+          escritorio el espacio se colapsa al final de la línea y no se ve. */}
+      <h2 className="lp-h2">Averigua qué dice la IA de ti <br />ahora mismo</h2>
       <p className="lp-sec-sub">
         Una comprobación real contra ChatGPT, en 20 segundos. Después, primer escaneo completo gratis.
       </p>
