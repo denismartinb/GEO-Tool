@@ -5775,12 +5775,39 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-pastilla {
   position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none;
   border-radius: 999px; background: var(--ink);
-  transition: transform .34s cubic-bezier(.2,.8,.25,1), width .34s cubic-bezier(.2,.8,.25,1);
+  transition: transform .3s cubic-bezier(.2,.8,.25,1), width .3s cubic-bezier(.2,.8,.25,1);
 }
 @media (prefers-reduced-motion: reduce) { .lp-prod-pastilla { transition: none; } }
-/* Con pastilla, la pestaña activa sólo aporta el color del texto. */
+
+/* LA PESTAÑA ACTIVA CONSERVA SU PROPIO FONDO OSCURO, y la pastilla sólo hace
+   el viaje. El primer intento la dejaba en `background: none; color: #fff`
+   —el fondo lo ponía la pastilla— y el piloto lo tumbó con razón: la pastilla
+   es un HERMANO, no un ancestro, así que nada dentro de la caja del botón
+   pinta oscuro y el texto blanco se lee contra `--canvas`, 1,07:1. No es un
+   falso positivo del arnés: un lector que resuelva el fondo por el árbol —o
+   un modo de alto contraste que descarte los decorados— ve lo mismo que él.
+
+   La animación se conserva con los retardos asimétricos. En CSS mandan las
+   propiedades del estado DESTINO, así que:
+     · al perder `.on` la regla que manda es la base → el fondo se va en 0s,
+       justo cuando la pastilla aún cubre esa pestaña;
+     · al ganar `.on` manda esta regla → el fondo entra a los .3s, que es
+       cuando la pastilla termina su viaje.
+   Resultado: nunca hay dos pastillas oscuras a la vez, y en reposo el fondo
+   del botón y la pastilla ocupan el mismo rectángulo (log §147). */
+.lp-prod-tabs.con-pastilla .lp-prod-tab {
+  transition: background-color 0s, border-color 0s, color 0s;
+}
 .lp-prod-tabs.con-pastilla .lp-prod-tab.on {
-  background: none; border-color: transparent; color: #fff;
+  background: var(--ink); border-color: var(--ink); color: #fff;
+  transition: background-color 0s .3s, border-color 0s .3s, color 0s .3s;
+}
+/* Sin movimiento la pastilla no viaja, así que esperar .3s dejaría el texto
+   oscuro sobre la pastilla ya colocada. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-prod-tabs.con-pastilla .lp-prod-tab.on {
+    transition: background-color 0s, border-color 0s, color 0s;
+  }
 }
 
 .lp-prod-viewport { position: relative; }

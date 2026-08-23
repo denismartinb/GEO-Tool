@@ -13405,6 +13405,21 @@ queda pegado al borde mientras la tira se desplaza por debajo.
 
 Detalles que no son estilo:
 
+- **La pestaña activa conserva su propio fondo oscuro; la pastilla sólo hace
+  el viaje.** El primer intento la dejaba en `background: none; color: #fff` y
+  el fondo lo ponía la pastilla — **`PILOT FAIL` sobre `2456b4d`**, siete
+  fallos de contraste en las tres anchuras. La pastilla es un **hermano**, no
+  un ancestro, así que nada dentro de la caja del botón pinta oscuro: el texto
+  blanco resolvía contra `--canvas` y daba **1,07:1**. No es un falso positivo
+  del arnés —un lector que resuelva el fondo por el árbol, o un modo de alto
+  contraste que descarte los decorados, ve exactamente lo mismo—, así que **no
+  se allow-listea**: se arregla. La animación se conserva con retardos
+  asimétricos, aprovechando que en CSS mandan las propiedades del estado
+  destino: al perder `.on` el fondo se va en `0s` (la pastilla aún cubre esa
+  pestaña) y al ganarlo entra a los `.3s` (cuando la pastilla llega). Medido:
+  en vuelo hay **cero** pestañas oscuras y una sola pastilla; en reposo, una
+  pestaña oscura con la pastilla encima. Con `prefers-reduced-motion` el
+  retardo se anula, o la pastilla llegaría 300ms antes que su texto.
 - **La pastilla se mide, no se calcula.** Las pestañas son texto y su ancho
   depende de la fuente que acabe cargando. Va en `useLayoutEffect` para que el
   primer fotograma ya la tenga colocada, y un `ResizeObserver` la vuelve a
@@ -13489,9 +13504,10 @@ escribe junto a lo que corrige*— y aun así se volvió a pisar, porque el
 instinto es agrupar lo que comparte anchura en vez de lo que comparte
 elemento. Queda anotado ahí que agrupar por `@media` es exactamente el error.
 
-**Comprobado.** `pnpm test` y `pnpm run validate` en verde. 135 combinaciones
-de anchura × pantalla sin un solo elemento fuera de su caja. Pastilla alineada
-en 25 combinaciones, filas envueltas incluidas. `prefers-reduced-motion` deja
-la transición en 0s. **Sin JavaScript**: cero tiras, cero pastillas, cero
-botones, cinco paneles en el marcado y exactamente uno visible — ningún
-control muerto.
+**Comprobado.** `pnpm test` y `pnpm run validate` en verde. El barrido final
+comprueba las cuatro cosas a la vez —desbordamiento del documento, recorte
+dentro del panel, contraste de todo control y alineación de la pastilla— en 19
+anchuras × 5 pantallas = **95 combinaciones, todas limpias**, filas envueltas
+incluidas. `prefers-reduced-motion` deja la transición en 0s. **Sin
+JavaScript**: cero tiras, cero botones, cinco paneles en el marcado y
+exactamente uno visible — ningún control muerto.
