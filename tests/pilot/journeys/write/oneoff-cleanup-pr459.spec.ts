@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+import { dismissWelcomeTour } from "../../support/journey";
 import { sweepTestPrompts } from "../../support/write-guard";
 
 /**
@@ -25,6 +26,15 @@ const STRAY_PROJECT_ID = "72b2b61e-f89c-4575-8a97-d3303e4bd55d";
 test("ONEOFF-CLEANUP-PR459: remove the stray [PILOT-TEST] prompt from the wrong project", async ({
   page
 }) => {
+  // First run (a276651 → f0f5885) reported "removed 0" — a false negative.
+  // sweepTestPrompts navigates straight to the prompts list, but the
+  // write-project's storageState still carries a fresh, undismissed welcome
+  // tour (the "auth" project setup strips the tour-seen marker on purpose —
+  // .claude/rules/onboarding.md), so the popup was covering the whole page
+  // and `getByText(marker)` found nothing behind it. Dismiss it first.
+  await page.goto(`/dashboard/projects/${STRAY_PROJECT_ID}/prompts`, { waitUntil: "domcontentloaded" });
+  await dismissWelcomeTour(page);
+
   const deleted = await sweepTestPrompts(page, STRAY_PROJECT_ID);
   // eslint-disable-next-line no-console
   console.log(`Cleanup: removed ${deleted} stray prompt(s) from project ${STRAY_PROJECT_ID}.`);
