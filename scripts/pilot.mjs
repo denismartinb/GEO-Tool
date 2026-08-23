@@ -418,7 +418,7 @@ async function main() {
 
   const run = spawnSync(
     "pnpm",
-    ["exec", "playwright", "test", "--config=playwright.config.ts", ...projectArgs, ...args.passthrough],
+    ["exec", "playwright", "test", "--config=playwright.config.ts", ...args.passthrough, ...projectArgs],
     {
       stdio: "inherit",
       env: { ...process.env, PILOT_BASE_URL: baseUrl }
