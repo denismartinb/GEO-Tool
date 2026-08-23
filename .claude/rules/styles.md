@@ -184,9 +184,22 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   nada**: misma especificidad, gana la última. El síntoma no es un color raro,
   es una sección rota —una respuesta de FAQ en una columna de 111px, un galón
   que no aparece— y no se ve leyendo, sólo midiendo `getComputedStyle` (log
-  §145). Es la tercera vez que el orden de este fichero decide en vez de la
-  intención: antes con la escala tipográfica (§143) y con los colores de la
-  superficie oscura (§144).
+  §145). Es la QUINTA vez que el orden de este fichero decide en vez de la
+  intención: la escala tipográfica (§143), los colores de la superficie oscura
+  (§144), la escala móvil de la FAQ (§145), el prefijado de «Cinco pantallas»
+  (§146) y la franja 561-720 de esas mismas pantallas (§147).
+  **Agrupar por `@media` es exactamente el error.** En §147 los tres arreglos
+  de una franja se escribieron juntos en un solo bloque, nacido al lado del
+  primero de ellos; los otros dos quedaron por delante de sus reglas base y no
+  se aplicó ninguno. El instinto es agrupar lo que comparte anchura — y lo que
+  manda es lo que comparte elemento. Si un bloque `@media` corrige dos
+  selectores distintos, casi siempre tienen que ser dos bloques.
+- **Un elemento recortado no desborda la página, y por eso es peor.** Un
+  barrido de anchuras que sólo mira `document.scrollWidth` da por bueno lo que
+  un contenedor con `overflow: hidden` está cortando por dentro: el marco de
+  «Cinco pantallas» recortó una tarjeta, un ranking y una cápsula entre 561 y
+  720px con once anchuras «sin desbordamiento» (log §147). Se mide **cada
+  elemento contra la caja de su contenedor**, no el documento.
 - **`--ink-3` sólo aprueba AA sobre BLANCO PURO. Sobre `--canvas` no.** La
   cifra, para no volver a deducirla: 4,76:1 sobre `#ffffff` y **4,44:1** sobre
   `#f6f7f9` — seis centésimas por debajo del mínimo. Ha caído tres veces en la

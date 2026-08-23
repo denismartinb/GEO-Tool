@@ -5270,7 +5270,11 @@ a.notif-row:hover {
    aviso, no como ganancia. Ver el comentario de `HOW_STEPS`. */
 .lp-sheet-pts.warn { background: #fff4e5; color: #8a5a08; }
 .lp-sheet-fix--ok .lp-sheet-name { color: var(--ink-4); }
-.lp-sheet-gen { padding: 16px 20px; gap: 10px; border-bottom: 1px solid var(--line-soft); }
+/* `flex-wrap: wrap` es la red: cuando el rótulo y la cápsula no caben en una
+   línea, la cápsula baja en vez de salirse de una tarjeta con
+   `overflow: hidden`, que es no caber sin que se note. Cuando caben, el
+   `margin-left:auto` de la cápsula manda igual y no cambia nada. */
+.lp-sheet-gen { padding: 16px 20px; gap: 10px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
 /* `flex: 0 0 auto` o el icono es lo primero que la fila estruja cuando el
    título deja de partir: a 375px se quedó en 8px de ancho. */
 .lp-sheet-gen > svg { flex: 0 0 auto; color: var(--brand-blue); }
@@ -5740,6 +5744,7 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-shell { position: relative; max-width: 1060px; margin: 0 auto; min-height: 40px; }
 .lp-prod-tabs {
   display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 40px;
+  position: relative;
 }
 /* `--ink-2` y no `--ink-3`: la sección tiene el fondo en `--canvas` (#f6f7f9),
    no en blanco, y ahí `--ink-3` da **4,44:1** — por debajo del 4,5 de AA. Lo
@@ -5753,17 +5758,33 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   font-size: 14px; font-weight: 600; cursor: pointer;
   color: var(--ink-2); background: none; border: 1px solid var(--line);
   transition: background .15s, color .15s, border-color .15s;
+  position: relative; z-index: 1;
 }
 .lp-prod-tab:hover { background: #fff; color: var(--ink); }
+/* Sin medida todavía (primer fotograma, o `ResizeObserver` ausente) el fondo
+   oscuro lo lleva la propia pestaña. Es lo que evita el instante de texto
+   blanco sobre blanco mientras la pastilla no existe. */
 .lp-prod-tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 
-/* El envoltorio del marco: es el ancestro posicionado contra el que se centran
-   las flechas del móvil. Centradas en `.lp-prod-shell` caían sobre la tira de
-   pestañas, porque el `50%` incluía su altura. */
+/* LA PASTILLA. Un solo elemento que se desplaza entre pestañas, en lugar de un
+   fondo que aparece y desaparece en cada una: es lo que enseña que la tira es
+   un mando y no cinco etiquetas. Sustituye a las flechas del artboard móvil,
+   que caían sobre el contenido del marco (fundador, 2026-08-23; log §147).
+   Se anima `transform` y `width`, no `left`, para no disparar layout en cada
+   fotograma. */
+.lp-prod-pastilla {
+  position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none;
+  border-radius: 999px; background: var(--ink);
+  transition: transform .34s cubic-bezier(.2,.8,.25,1), width .34s cubic-bezier(.2,.8,.25,1);
+}
+@media (prefers-reduced-motion: reduce) { .lp-prod-pastilla { transition: none; } }
+/* Con pastilla, la pestaña activa sólo aporta el color del texto. */
+.lp-prod-tabs.con-pastilla .lp-prod-tab.on {
+  background: none; border-color: transparent; color: #fff;
+}
+
 .lp-prod-viewport { position: relative; }
-/* Las flechas son del artboard MÓVIL: ahí la tira se desplaza y el marco lleva
-   sus propios mandos encima. En escritorio caben las cinco pestañas y sobran. */
-.lp-prod-arrows { display: none; }
+
 
 .lp-prod-frame {
   border-radius: 16px; border: 1px solid var(--line); background: #fff; overflow: hidden;
@@ -5809,6 +5830,15 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-pill.pos { background: #e7f6ee; color: #15915a; }
 
 .lp-prod-row2 { display: grid; grid-template-columns: 340px 1fr; gap: 20px; margin-top: 22px; }
+/* Entre el corte del móvil y ~720px el marco mide ~440px por dentro, y los
+   340px fijos de la tarjeta del marcador dejan 80px para la evolución, que
+   tiene 108px de contenido mínimo. El marco lleva `overflow:hidden`, así que
+   NO desbordaba la página: recortaba la tarjeta en silencio, que es peor —un
+   barrido que sólo mira `document.scrollWidth` lo da por bueno (medido a
+   561px, 2026-08-23). En esa franja las dos tarjetas se apilan. */
+@media (min-width: 561px) and (max-width: 720px) {
+  .lp-prod-row2 { grid-template-columns: minmax(0, 1fr); }
+}
 .lp-prod-score { padding: 26px; display: flex; align-items: center; gap: 24px; }
 .lp-prod-score .lp-prod-dial { position: relative; width: 112px; height: 112px; flex: 0 0 auto; }
 .lp-prod-score .lp-prod-dial svg { width: 100%; height: 100%; display: block; }
@@ -5891,6 +5921,16 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   display: grid; grid-template-columns: 22px 28px 1fr 220px 56px 44px;
   align-items: center; gap: 14px; padding: 15px 20px;
 }
+/* La fila pide 510px de mínimos (22+28+220+56+44 más cinco huecos de 14)
+   contra los ~443 que deja el marco justo por encima del corte del móvil: las
+   cápsulas de variación se salían por la derecha, recortadas sin ruido por el
+   `overflow: hidden` del marco. Va AQUÍ y no junto al resto de la franja
+   561-720 porque a igualdad de especificidad manda el orden del fichero:
+   escrita antes de esta regla base, la anulaba la base y no se aplicaba nada
+   (§145, y van cinco). */
+@media (min-width: 561px) and (max-width: 720px) {
+  .lp-prod-rank { grid-template-columns: 22px 28px 1fr 120px 50px 40px; gap: 10px; padding: 15px 16px; }
+}
 .lp-prod-rank:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
 .lp-prod-rank .pos { font-size: 13px; color: var(--ink-4); font-weight: 600; font-variant-numeric: tabular-nums; }
 .lp-prod-rank .who { display: grid; min-width: 0; }
@@ -5930,6 +5970,12 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    `align-items: start`: son dos tarjetas de altura distinta y estirarlas
    dejaría la de la derecha con un vacío al pie. */
 .lp-prod-recs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 18px; align-items: start; }
+/* Dos columnas dejan ~211px por tarjeta en esa franja, y ahí «Solución
+   generada» no cabe con su cápsula al lado. Mismo motivo de colocación que en
+   `.lp-prod-rank`. */
+@media (min-width: 561px) and (max-width: 720px) {
+  .lp-prod-recs { grid-template-columns: minmax(0, 1fr); }
+}
 .lp-prod-accion { padding: 24px; }
 .lp-prod-tags { display: flex; align-items: center; gap: 9px; }
 .lp-prod-pill.alto { background: #fdecee; color: #a02531; margin-top: 0; }
@@ -6013,24 +6059,33 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-prod-tabs::-webkit-scrollbar { display: none; }
   .lp-prod-tab { height: 44px; flex: 0 0 auto; }
 
-  /* El marco lleva sus propias flechas encima, como en el artboard. */
-  .lp-prod-arrows { display: block; }
-  .lp-prod-arrow {
-    position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
-    width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center;
-    background: #fff; border: 1px solid var(--line); color: var(--ink-3); cursor: pointer;
-    box-shadow: 0 6px 18px rgba(16,24,40,.12);
+  /* La tira se sale del encuadre por los dos lados, y eso hay que decirlo. Es
+     la mitad del trabajo que hacían las flechas del artboard; la otra mitad la
+     hace la pastilla. El `mask-image` recorta la caja visible, no el
+     contenido, así que el difuminado se queda pegado al borde mientras la
+     tira se desplaza por debajo. Cada lado se enciende sólo si de verdad queda
+     algo fuera: un borde difuminado sin nada detrás promete lo que no hay. */
+  .lp-prod-tabs.mas-de {
+    mask-image: linear-gradient(to right, #000 86%, transparent 100%);
   }
-  .lp-prod-arrow.iz { left: 10px; }
-  .lp-prod-arrow.de { right: 10px; }
-  .lp-prod-arrow.oculta { opacity: 0; pointer-events: none; }
-  .lp-prod-arrow.de.late:not(.oculta) { animation: lp-rules-pulse 2s ease-in-out infinite; }
-  @media (prefers-reduced-motion: reduce) { .lp-prod-arrow.de.late { animation: none; } }
+  .lp-prod-tabs.mas-iz {
+    mask-image: linear-gradient(to right, transparent 0%, #000 10%);
+  }
+  .lp-prod-tabs.mas-iz.mas-de {
+    mask-image: linear-gradient(to right, transparent 0%, #000 10%, #000 86%, transparent 100%);
+  }
 
   .lp-prod-bar { height: 38px; padding: 0 14px; gap: 7px; }
   .lp-prod-bar .lp-prod-dot { width: 9px; height: 9px; }
   .lp-prod-bar .lp-prod-url { display: none; }
-  .lp-prod-body { padding: 16px; min-height: 0; }
+  /* El `min-height` es del artboard móvil y no es cosmético: sin él, el marco
+     encoge hasta la pantalla más corta (Competidores, 293px) y crece hasta la
+     más larga (Prompts, 571px), así que cambiar de pestaña da un salto de casi
+     300px bajo el dedo. Con el suelo puesto el recorrido es 368→571. Queda
+     salto, y está medido en el PR: quitarlo del todo exige fijar la altura a
+     la pantalla más alta —y entonces las cortas se pintan medio vacías— o
+     animarla, que es otra fase. */
+  .lp-prod-body { padding: 16px; min-height: 330px; }
 
   /* Se enseña el juego móvil y se apaga TODO lo demás del panel. Así no hay
      que envolver el marcado de escritorio en un contenedor sólo para poder
@@ -6061,6 +6116,34 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-prod-mspark svg { width: 100%; height: 76px; margin-top: 6px; display: block; }
 
   .lp-prod-mq { padding: 14px 16px; }
+  /* La respuesta abierta de la primera pregunta. No reutiliza
+     `.lp-prod-answer` de escritorio: allí es una tarjeta dentro de una fila
+     ancha con su propio borde, y aquí el ancho útil son ~287px, así que se
+     apoya en el fondo `--canvas` y prescinde del borde para no encajar dos
+     marcos uno dentro de otro. */
+  .lp-prod-manswer {
+    margin-top: 12px; padding: 12px 13px; border-radius: 10px; background: var(--canvas);
+  }
+  .lp-prod-mansrow { display: flex; align-items: center; gap: 7px; }
+  .lp-prod-manswer .lp-prod-ansc { font-size: 11.5px; }
+  .lp-prod-manswer p { margin: 9px 0 0; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+  .lp-prod-manswer mark {
+    background: #e7f6ee; color: var(--ink); font-weight: 600; padding: 0 3px; border-radius: 4px;
+  }
+  .lp-prod-manswer .lp-prod-src { margin-top: 10px; }
+  .lp-prod-manswer .lp-prod-src span { font-size: 10.5px; word-break: break-all; }
+
+  /* La evidencia dentro de la tarjeta de acción. El bloque de escritorio va
+     sobre `--canvas` dentro de una tarjeta blanca; en móvil esa tarjeta es la
+     única que hay, así que sólo cambian las medidas. La fila de la fuente
+     envuelve: «ChatGPT · 6 respuestas» más el dominio no caben en una línea a
+     375px, y partirla es mejor que encogerla. */
+  .lp-prod-mevid { margin-top: 14px; padding: 13px 14px; border-radius: 10px; }
+  .lp-prod-mevid p { font-size: 12.5px; line-height: 1.65; }
+  .lp-prod-mevid .lp-prod-evidsrc { flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .lp-prod-mevid .lp-prod-evidsrc .m { font-size: 11px; }
+  .lp-prod-mevid .lp-prod-evidsrc .dm { font-size: 11px; }
+  .lp-prod-fuente { display: inline-flex; align-items: center; gap: 6px; }
   .lp-prod-mq:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
   .lp-prod-mq .q { font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
   .lp-prod-mq .lp-prod-tags { margin-top: 9px; gap: 7px; flex-wrap: wrap; }

@@ -528,7 +528,7 @@ export function LandingPage() {
           {/* Reserva el alto de la tira de pestañas para que la isla no mueva
               la página al hidratar. */}
           <div className="lp-prod-shell">
-            <ProductTabs tabs={PRODUCT_TABS} panel=".lp-prod-pg">
+            <ProductTabs tabs={PRODUCT_TABS}>
             <div className="lp-prod-frame">
               <div className="lp-prod-bar">
                 <span className="lp-prod-dot" style={{ background: "#ff5f57" }} />
@@ -640,8 +640,35 @@ export function LandingPage() {
                 <div className="lp-prod-pg" id="pg-prompts" role="tabpanel">
                   <div className="lp-prod-mob">
                     <div className="lp-prod-card lp-prod-list">
+                      {/* LA PRIMERA VA ABIERTA, y eso NO sale del artboard móvil, que
+                          deja las tres preguntas con sus pastillas y nada más. El
+                          fundador lo pidió el 2026-08-23: sin una respuesta a la vista
+                          la pantalla enseña que medimos, no QUÉ leemos, que es lo único
+                          que distingue esto de una lista de palabras clave. La respuesta
+                          es la misma que ya está en el artboard de escritorio. */}
+                      <div className="lp-prod-mq">
+                        <div className="q">«¿Dónde compro muebles baratos y bonitos?»</div>
+                        <div className="lp-prod-tags">
+                          <span className="lp-prod-pill ment">Mención</span>
+                          <span className="lp-prod-pill cita">Cita</span>
+                        </div>
+                        <div className="lp-prod-manswer">
+                          <div className="lp-prod-mansrow">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/brand/engines/chatgpt.svg" alt="" width={14} height={14} />
+                            <span className="lp-prod-ansc">Respuesta de ChatGPT</span>
+                          </div>
+                          <p>
+                            Para calidad-precio la referencia sigue siendo <mark>IKEA</mark>, sobre
+                            todo en salón y almacenaje…
+                          </p>
+                          <div className="lp-prod-src">
+                            <Icon name="link" size={13} />
+                            <span>ikea.es/es/es/rooms/living-room</span>
+                          </div>
+                        </div>
+                      </div>
                       {[
-                        { q: "«¿Dónde compro muebles baratos y bonitos?»", e: [["Mención", "ment"], ["Cita", "cita"]] },
                         { q: "«¿Qué tienda de muebles tiene mejor calidad?»", e: [["Sin mención", "alto"]] },
                         { q: "«Mejores tiendas para amueblar un piso pequeño»", e: [["Mención", "ment"], ["Sin cita", "gris"]] }
                       ].map((r) => (
@@ -857,7 +884,33 @@ export function LandingPage() {
                         <span className="lp-prod-pill cita">Victoria rápida</span>
                       </div>
                       <h3>Te mencionan pero no citan tu dominio en «mejores tiendas de muebles»</h3>
-                      <p>La IA te nombra en 6 respuestas y cita a elmueble.com como fuente.</p>
+                      {/* LA EVIDENCIA, en lugar del resumen en prosa del artboard móvil
+                          («La IA te nombra en 6 respuestas y cita a elmueble.com»).
+                          Dice lo mismo, pero enseñándolo: la cita literal del motor y la
+                          fuente con su favicon. Es lo que sostiene la promesa de la
+                          sección —«no es otro dashboard pasivo»— y lo que el artboard de
+                          escritorio ya trae (fundador, 2026-08-23; log §147). */}
+                      <div className="lp-prod-evid lp-prod-mevid">
+                        <div className="lp-prod-cap">La evidencia</div>
+                        <p>
+                          «…las opciones más recomendadas son <b>IKEA</b> y Maisons du Monde,
+                          según <b>elmueble.com</b>…»
+                        </p>
+                        <div className="lp-prod-evidsrc">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/brand/engines/chatgpt.svg" alt="" width={14} height={14} />
+                          <span className="m">ChatGPT · 6 respuestas</span>
+                          {/* El favicon y su dominio van en un solo envoltorio: la fila
+                              envuelve a 375px y sueltos acababan en líneas distintas,
+                              con el icono huérfano al final de la primera. */}
+                          <span className="lp-prod-fuente">
+                            <span className="lp-sheet-fav lp-prod-favmini">
+                              <FaviconImg domain="elmueble.com" cssSize={18} fallback={<span>EM</span>} />
+                            </span>
+                            <span className="dm">elmueble.com</span>
+                          </span>
+                        </div>
+                      </div>
                       {/* Dibujo de un botón, no un botón: sin acción, va como `span`. */}
                       <span className="lp-prod-btn primario lp-prod-mbtn" aria-hidden="true">Generar solución</span>
                     </div>

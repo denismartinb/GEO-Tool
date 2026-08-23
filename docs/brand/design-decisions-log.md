@@ -13373,3 +13373,125 @@ en verde. Once anchuras de 320 a 1440: sin desbordamiento horizontal, el juego
 correcto a cada lado del corte de 560, y las cinco pestañas siempre con su
 pantalla. **Sin JavaScript** se sirve una pantalla y ningún mando, así que no
 queda ningún control muerto.
+
+---
+
+## 147. Una pastilla que se desplaza en lugar de dos flechas, y el recorte que un barrido de anchuras no veía (HOME-2026-08 Fase B2, segunda pasada, 2026-08-23)
+
+**Qué pedía el fundador.** Dos cosas, al ver las cinco pantallas del móvil:
+«si animamos una pastilla no hacen falta las flechas izquierda y derecha», y
+«veo algunas pantallas excesivamente simples… ¿así estaban en la maqueta?».
+
+### Las flechas se van, y el artboard las tenía
+
+El artboard móvil pone dos flechas flotando sobre el marco (`.carrflecha`,
+`position:absolute; top:50%; left/right:10px`) y así se implementaron. A esa
+altura caen sobre el contenido: tapaban el `21%` de Leroy Merlin en
+Competidores y mordían la última palabra del titular en Recomendaciones. No
+era un fallo de implementación —el artboard tiene la misma geometría, y su
+propia fila de competidor termina en el `%` justo bajo la flecha derecha—,
+pero el resultado es un número ilegible.
+
+Las sustituye **una sola pastilla oscura que se desliza** entre pestañas, en
+lugar de un fondo que se enciende y se apaga en cada una. Es lo que enseña que
+la tira es un mando y no cinco etiquetas.
+
+Las flechas hacían **dos** trabajos, no uno, y el segundo hay que reponerlo:
+decían que había más pantallas fuera del encuadre. Eso pasa a decirlo un
+**difuminado en el borde** de la tira, encendido sólo en el lado donde de
+verdad queda algo — un borde difuminado sin nada detrás promete lo que no hay.
+Va con `mask-image`, que recorta la caja visible y no el contenido, así que se
+queda pegado al borde mientras la tira se desplaza por debajo.
+
+Detalles que no son estilo:
+
+- **La pastilla se mide, no se calcula.** Las pestañas son texto y su ancho
+  depende de la fuente que acabe cargando. Va en `useLayoutEffect` para que el
+  primer fotograma ya la tenga colocada, y un `ResizeObserver` la vuelve a
+  medir al cambiar de anchura (la pestaña pasa de 40 a 44px de alto en el
+  corte del móvil). Comprobado en 25 combinaciones de anchura × pantalla,
+  **incluidas las filas envueltas**: la desviación máxima contra la pestaña
+  activa es < 1,5px en las cuatro dimensiones.
+- **Mientras no hay medida, el fondo oscuro lo lleva la propia pestaña.** Sin
+  eso habría un instante de texto blanco sobre blanco.
+- `prefers-reduced-motion: reduce` deja la transición en `0s`. Medido.
+
+### Las pantallas simples SÍ eran así, y dos dejan de serlo
+
+Verificado contra `portada-movil.dc.html` antes de tocar nada: el artboard
+móvil **no reflowa** el de escritorio, lo simplifica. Prompts son tres
+preguntas con pastillas y ninguna respuesta abierta; Competidores, tres filas
+sin las tarjetas de temas; Recomendaciones, dos pastillas, un titular, una
+línea de prosa y el botón. La respuesta abierta de ChatGPT que el fundador
+recordaba existe — en el artboard de **escritorio**, y la implementación de
+escritorio la tiene.
+
+Se apartan del artboard móvil dos pantallas, por decisión del fundador
+(2026-08-23), y en la misma dirección: enseñar en vez de resumir.
+
+- **Prompts**: la primera pregunta va abierta con la respuesta de ChatGPT, la
+  marca resaltada y la URL citada. Sin una respuesta a la vista, la pantalla
+  demuestra que medimos, no **qué** leemos, que es lo único que la distingue
+  de una lista de palabras clave.
+- **Recomendaciones**: la prosa («La IA te nombra en 6 respuestas y cita a
+  elmueble.com como fuente») deja paso al bloque de evidencia real — la cita
+  literal del motor y la fuente con su favicon. Dice lo mismo enseñándolo, y
+  es lo que sostiene la promesa de la sección: «no es otro dashboard pasivo».
+- **Competidores se queda como la maqueta**: ya tiene ranking, barras y
+  porcentajes.
+
+Se restaura además el `min-height: 330px` del cuerpo, que estaba en el
+artboard móvil y yo había puesto a `0`. No es cosmético: sin él el marco
+encogía a 293px en Competidores y crecía a 571px en Prompts, así que cambiar
+de pestaña daba un salto de casi 300px bajo el dedo. Con el suelo puesto el
+recorrido es 368→571. **Queda salto**, y quitarlo del todo exige fijar la
+altura a la pantalla más alta —y entonces las cortas se pintan medio vacías—
+o animarla: es otra fase, no se hace aquí.
+
+### El recorte que 27 anchuras no habrían visto, y por qué el barrido anterior lo dio por bueno
+
+Al barrer anchuras con una medición **por elemento** aparecieron tres
+desbordamientos entre 561 y 720px — la franja donde ya se sirve el marcado de
+escritorio pero el marco mide ~443px por dentro:
+
+| Dónde | Mínimos | Sitio | Efecto |
+|---|---|---|---|
+| `.lp-prod-row2` | 340px fijos + 108 de contenido | 443px | la evolución recortada |
+| `.lp-prod-rank` | 510px (22+28+220+56+44 + 5 huecos de 14) | 443px | las cápsulas de variación fuera |
+| `.lp-prod-recs` | 2 columnas → ~211px por tarjeta | — | «Solución generada» y su cápsula sin caber |
+
+**Ninguno desbordaba la página.** El marco lleva `overflow: hidden`, así que
+recortaba en silencio — y el barrido de once anchuras del PR original medía
+`document.scrollWidth` y `.lp-prod-viewport`, las dos limpias. Un elemento
+recortado dentro de un contenedor con `overflow: hidden` es invisible para esa
+comprobación, que es justo lo que hace peligroso el recorte silencioso frente
+al desbordamiento: el segundo se ve. **La comprobación pasa a medir cada
+elemento contra la caja de su panel**, y el barrido final son 27 anchuras × 5
+pantallas = 135 combinaciones, todas limpias.
+
+Como red aparte, `.lp-sheet-gen` gana `flex-wrap: wrap`: cuando el rótulo y su
+cápsula no caben, la cápsula baja en vez de salirse de una tarjeta con
+`overflow: hidden`. Cuando caben, el `margin-left:auto` manda igual y no
+cambia nada.
+
+### Y la trampa del orden del fichero, por quinta vez
+
+Los tres arreglos de esa franja se escribieron juntos, en el bloque `@media`
+que nació al lado de `.lp-prod-row2`. Dos de ellos —`.lp-prod-rank` y
+`.lp-prod-recs`— quedaron así **antes** de sus reglas base en el fichero y, a
+igualdad de especificidad, gana la última: **no se aplicó nada**. El síntoma
+fue que el barrido siguió marcando 561px en rojo con el arreglo ya escrito.
+
+Es el mismo fallo de §143 (escala tipográfica), §144 (colores de la sección
+oscura), §145 (escala móvil de la FAQ) y el prefijado de §146. La regla ya
+existe en `.claude/rules/styles.md` desde §145 —*un tramo responsive se
+escribe junto a lo que corrige*— y aun así se volvió a pisar, porque el
+instinto es agrupar lo que comparte anchura en vez de lo que comparte
+elemento. Queda anotado ahí que agrupar por `@media` es exactamente el error.
+
+**Comprobado.** `pnpm test` y `pnpm run validate` en verde. 135 combinaciones
+de anchura × pantalla sin un solo elemento fuera de su caja. Pastilla alineada
+en 25 combinaciones, filas envueltas incluidas. `prefers-reduced-motion` deja
+la transición en 0s. **Sin JavaScript**: cero tiras, cero pastillas, cero
+botones, cinco paneles en el marcado y exactamente uno visible — ningún
+control muerto.
