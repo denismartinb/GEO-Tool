@@ -13268,10 +13268,32 @@ está escrito para responder justo esas preguntas, así que medimos en parte
 nuestro propio SEO— y la marca se llama como su categoría, que es el falso
 positivo que ADR 0021 existe para atajar.
 
+### El piloto no puede ver este arreglo, y por eso hay tests de render
+
+La pasada del piloto sobre el PR #466 dio verde y su captura del cajón existe,
+se abre y se ve entera en 375, 768 y 1280. **Y no verifica nada de esto.** La
+cuenta del piloto es de plan Free, el tope de plan la deja en UN motor
+(`caps.engines`), y el fallo que este PR arregla —una mención de tres
+respuestas pintada como «100%»— necesita varias respuestas para existir
+siquiera. Su cajón enseña una fila y un 0%, que es exactamente lo que enseñaba
+antes del cambio.
+
+Es la misma familia de fallo que §135 y el incidente de Auditoría web del
+2026-08-02: una pantalla que carga limpia con datos que no ejercitan la
+funcionalidad no está vista. Aquí no se arregla ampliando el piloto —haría
+falta subir de plan la cuenta, que es otra decisión— sino renderizando el
+componente en un test (`components/prompts/prompt-drawer.test.tsx`, con
+`react-dom/server` como los de Auditoría web, log §87). Eso asegura **qué cifra
+se publica y qué texto la acompaña**; el aspecto de la fila con la fracción
+puesta a 375 px sigue sin verificarse y se declara como tal.
+
 ### Roto conocido / pendiente
 
 - La cola del 10% sin cita utilizable no se investiga en esta fase. Se explica,
   no se resuelve.
+- **La fila del ranking con fracción no se ha visto nunca en un navegador.**
+  Lleva un elemento más que antes y la anchura que aprieta es 375 px. Ningún
+  piloto podrá mirarlo mientras la cuenta siga en un solo motor.
 - La tarjeta «La IA menciona tu marca» sigue siendo binaria (verde si al menos
   una respuesta te nombra). Con 1 de 3 es cierta pero generosa; la lista «Por
   motor» justo debajo la desambigua. No se toca aquí.
