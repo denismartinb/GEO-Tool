@@ -67,6 +67,33 @@ describe("buildRanking — la marca", () => {
     expect(marca.mentioned).toBe(true);
   });
 
+  it("la fila propia lleva el nombre real del proyecto, no el literal «Tu marca»", () => {
+    const results = [fila(true)];
+    const [marca] = buildRanking({
+      results,
+      extractedList: [null],
+      competitors: [],
+      brandEvidence: [],
+      brandSentiment: null,
+      brandName: "GenScore"
+    });
+
+    expect(marca.name).toBe("GenScore");
+  });
+
+  it("sin nombre de marca, cae en el literal de siempre", () => {
+    const results = [fila(true)];
+    const [marca] = buildRanking({
+      results,
+      extractedList: [null],
+      competitors: [],
+      brandEvidence: [],
+      brandSentiment: null
+    });
+
+    expect(marca.name).toBe("Tu marca");
+  });
+
   it("3 de 3 sigue siendo 100% y 0 de 3 sigue siendo 0%", () => {
     const todas = [fila(true), fila(true), fila(true)];
     const ninguna = [fila(false), fila(false), fila(false)];

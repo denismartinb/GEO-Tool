@@ -13287,13 +13287,42 @@ componente en un test (`components/prompts/prompt-drawer.test.tsx`, con
 se publica y qué texto la acompaña**; el aspecto de la fila con la fracción
 puesta a 375 px sigue sin verificarse y se declara como tal.
 
+### Addendum — feedback en vivo sobre el preview, antes de mergear (2026-08-23)
+
+El fundador probó el preview de este PR en el móvil y confirmó a ojo que el
+fallo original está corregido: «1/3 · 33%» donde antes ponía «100%», con
+captura adjunta. Sobre esa misma captura pidió tres cosas, las tres dentro de
+la misma pantalla y ya implementadas:
+
+1. **Un rótulo sobre la columna de porcentajes.** «33%» suelto no dice de qué
+   es 33% — ahora «Aparición en motores» corona la fracción y el porcentaje,
+   en una cabecera de columna encima de la tarjeta.
+2. **El muro de ceros se pliega.** El ranking de la captura tenía nueve marcas
+   y ocho a 0%. Las no mencionadas —esté su cobertura en 0% o sin evaluar del
+   todo— quedan detrás de un botón «Ver N marcas más sin mención», con un
+   resumen arriba («1 de 9 marcas mencionadas en este prompt»). La marca propia
+   nunca se pliega, mencionada o no: es la razón de abrir el cajón.
+3. **«Tu marca» pasa a decir el nombre real.** La fila decía literalmente «Tu
+   marca» mientras el panel de evidencias, tres centímetros más abajo, decía
+   «Evidencias de mención de GenScore» — dos nombres para la misma entidad en
+   la misma pantalla. Ahora la fila usa el nombre real del proyecto con la
+   pastilla «Tú» al lado, y `buildRanking` acepta ese nombre con el literal de
+   siempre como respaldo para no romper los tests que no lo ejercitan.
+
+Este ciclo confirma, además, el límite documentado más abajo: el piloto
+automático no vio ni el fallo original ni esta corrección — el fundador sí,
+mirando su propia cuenta con datos reales de tres motores. Es la verificación
+que este PR necesitaba y que ninguna cuenta de un solo motor podía darle.
+
 ### Roto conocido / pendiente
 
 - La cola del 10% sin cita utilizable no se investiga en esta fase. Se explica,
   no se resuelve.
-- **La fila del ranking con fracción no se ha visto nunca en un navegador.**
-  Lleva un elemento más que antes y la anchura que aprieta es 375 px. Ningún
-  piloto podrá mirarlo mientras la cuenta siga en un solo motor.
+- **El botón de plegado y la cabecera de columna no se han visto en un
+  navegador.** El fundador vio la corrección de la fracción (addendum de
+  arriba) pero no esta segunda vuelta, que llegó después de esa captura.
+  Ningún piloto podrá verlo tampoco mientras la cuenta del piloto tenga un solo
+  motor y por tanto ningún competidor real que plegar.
 - La tarjeta «La IA menciona tu marca» sigue siendo binaria (verde si al menos
   una respuesta te nombra). Con 1 de 3 es cierta pero generosa; la lista «Por
   motor» justo debajo la desambigua. No se toca aquí.

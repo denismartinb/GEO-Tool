@@ -101,12 +101,22 @@ export function buildRanking(input: {
   competitors: Array<{ name: string }>;
   brandEvidence: string[];
   brandSentiment: string | null;
+  /**
+   * El nombre real del proyecto. La fila propia se llamaba literalmente
+   * «Tu marca» mientras el panel de evidencias, tres centímetros más abajo,
+   * decía «Evidencias de mención de GenScore» — dos formas de referirse a lo
+   * mismo en la misma pantalla (founder feedback, 2026-08-23). Opcional y con
+   * el literal de siempre como respaldo para no tocar los tests existentes,
+   * que no ejercitan el nombre.
+   */
+  brandName?: string;
 }): RankingRow[] {
   const { results, extractedList, competitors, brandEvidence, brandSentiment } = input;
+  const brandName = input.brandName?.trim() || "Tu marca";
 
   const brandMentionCount = results.filter((r) => r.brand_mentioned).length;
   const brandRow: RankingRow = {
-    name: "Tu marca",
+    name: brandName,
     isOwn: true,
     mentionCount: brandMentionCount,
     evaluatedCount: results.length,

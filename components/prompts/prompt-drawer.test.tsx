@@ -109,7 +109,15 @@ describe("PromptDrawer — la cobertura del ranking", () => {
     expect(html).not.toContain(">1/1<");
   });
 
-  it("un competidor al que nadie evaluó sale sin cifra, no a cero", () => {
+  /**
+   * La distinción 0% (se evaluó y no salió) vs «—» (nadie la evaluó) sigue
+   * viva en `mention-coverage.test.ts`, que ejercita `buildRanking` sin pasar
+   * por el plegado del cajón. Aquí, en cambio, ninguna de las dos se ve
+   * mencionada — así que el plegado de ceros (más abajo en este fichero) las
+   * esconde a las dos por igual detrás del mismo botón, que es el
+   * comportamiento correcto: el fundador pidió justo eso el 2026-08-23.
+   */
+  it("un competidor sin mención no aparece suelto — el plegado de ceros lo cubre", () => {
     const results: ResultRow[] = [
       fila({ id: "1", brand_mentioned: true, extracted_json: extraccion({ marcaMencionada: true, competidores: [{ name: "Otterly", mentioned: false }] }) })
     ];
@@ -121,10 +129,91 @@ describe("PromptDrawer — la cobertura del ranking", () => {
       ]} />
     );
 
-    // Otterly se evaluó y no salió: 0%. Semrush no se evaluó: «—».
-    expect(html).toContain(">0%<");
-    expect(html).toContain(">—<");
-    expect(html).toContain("Ninguna respuesta de este prompt llegó a evaluar esta marca.");
+    expect(html).not.toContain(">Otterly<");
+    expect(html).not.toContain(">Semrush<");
+    expect(html).toContain("Ver 2 marcas más sin mención");
+  });
+});
+
+describe("PromptDrawer — el ranking, columna y muro de ceros", () => {
+  /**
+   * Feedback en vivo sobre el preview de este mismo PR, 2026-08-23: la fila
+   * propia decía «Tu marca» y el panel de evidencias, tres centímetros más
+   * abajo, decía «Evidencias de mención de GenScore» — dos nombres para lo
+   * mismo en la misma pantalla.
+   */
+  it("la fila propia lleva el nombre real de la marca, no el literal «Tu marca»", () => {
+    const results: ResultRow[] = [
+      fila({ id: "1", brand_mentioned: true, extracted_json: extraccion({ marcaMencionada: true }) })
+    ];
+
+    const html = renderToStaticMarkup(<PromptDrawer {...props} results={results} competitors={[]} />);
+
+    expect(html).toContain(">GenScore<");
+    expect(html).not.toContain(">Tu marca<");
+  });
+
+  it("la columna numérica lleva su rótulo encima", () => {
+    const results: ResultRow[] = [
+      fila({ id: "1", brand_mentioned: true, extracted_json: extraccion({ marcaMencionada: true }) })
+    ];
+
+    const html = renderToStaticMarkup(<PromptDrawer {...props} results={results} competitors={[]} />);
+
+    expect(html).toContain("Aparición en motores");
+  });
+
+  /**
+   * El caso que motivó esto: nueve marcas, ocho a 0%. El resumen dice cuántas
+   * SÍ salieron y las no mencionadas se pliegan detrás de un botón — la marca
+   * propia nunca, esté o no mencionada, porque es la razón de abrir el cajón.
+   */
+  it("las no mencionadas se pliegan; el resumen y el botón cuentan bien", () => {
+    const results: ResultRow[] = [
+      fila({
+        id: "1",
+        brand_mentioned: true,
+        extracted_json: extraccion({
+          marcaMencionada: true,
+          competidores: [
+            { name: "Otterly", mentioned: true },
+            { name: "Semrush", mentioned: false },
+            { name: "Pavesen", mentioned: false }
+          ]
+        })
+      })
+    ];
+
+    const html = renderToStaticMarkup(
+      <PromptDrawer {...props} results={results} competitors={[
+        { id: "c1", name: "Otterly", domain: "otterly.ai" },
+        { id: "c2", name: "Semrush", domain: "semrush.com" },
+        { id: "c3", name: "Pavesen", domain: "pavesen.com" }
+      ]} />
+    );
+
+    // Dos mencionadas (marca + Otterly) de cuatro filas totales.
+    expect(html).toContain("2 de 4 marcas mencionadas en este prompt.");
+    expect(html).toContain(">Otterly<");
+    expect(html).not.toContain(">Semrush<");
+    expect(html).not.toContain(">Pavesen<");
+    expect(html).toContain("Ver 2 marcas más sin mención");
+  });
+
+  it("sin nada que ocultar, no aparece el botón", () => {
+    const results: ResultRow[] = [
+      fila({
+        id: "1",
+        brand_mentioned: true,
+        extracted_json: extraccion({ marcaMencionada: true, competidores: [{ name: "Otterly", mentioned: true }] })
+      })
+    ];
+
+    const html = renderToStaticMarkup(
+      <PromptDrawer {...props} results={results} competitors={[{ id: "c1", name: "Otterly", domain: "otterly.ai" }]} />
+    );
+
+    expect(html).not.toContain("sin mención");
   });
 });
 

@@ -108,6 +108,12 @@ function dominantSentiment(rows: ResultRow[]): string | null {
 
 export function PromptDrawer({ projectId, projectDomain, projectBrand, results, competitors, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("resumen");
+  // Un prompt con muchos competidores es, casi siempre, un muro de ceros
+  // (founder feedback, 2026-08-23: "9 marcas, 8 a 0%"). Las no mencionadas
+  // quedan plegadas detrás de un botón hasta que alguien pide verlas; la
+  // marca propia nunca se pliega, mencionada o no, porque es la razón por la
+  // que se abrió el cajón.
+  const [showAllRanking, setShowAllRanking] = useState(false);
 
   if (!results.length) return null;
 
@@ -194,7 +200,12 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
     competitors,
     brandEvidence,
     brandSentiment: dominantSentiment(results),
+    brandName: projectBrand,
   });
+
+  const mentionedRankingCount = allRows.filter((row) => row.mentioned).length;
+  const visibleRankingRows = allRows.filter((row) => row.isOwn || row.mentioned || showAllRanking);
+  const hiddenRankingCount = allRows.length - visibleRankingRows.length;
 
   const category = results[0].category;
 
@@ -360,9 +371,21 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
 
               {/* Ranking de marcas */}
               <div>
-                <p className="ac-title">Ranking de marcas</p>
+                <div className="pr2-rk-head">
+                  <p className="ac-title">Ranking de marcas</p>
+                  {/* Rotula la columna numérica de abajo (fracción +
+                      porcentaje) — sin esto, un «33%» suelto no dice de qué es
+                      el 33% (founder feedback, 2026-08-23). */}
+                  <span className="pr2-rk-col-label">Aparición en motores</span>
+                </div>
                 <div className="aside-card">
-                  {allRows.map((row, i) => (
+                  {/* Resumen antes que la lista: con muchos competidores no
+                      mencionados, la lista es puro 0% y el dato que importa
+                      —cuántos SÍ salieron— se pierde en el muro. */}
+                  <p className="pr2-rk-summary">
+                    {mentionedRankingCount} de {allRows.length} marcas mencionadas en este prompt.
+                  </p>
+                  {visibleRankingRows.map((row, i) => (
                     <div key={row.name} className={`pr2-rk${row.isOwn ? " you" : ""}`}>
                       <span className="pr2-rk-n">{i + 1}</span>
                       <span className="pr2-rk-av">{row.name[0].toUpperCase()}</span>
@@ -400,6 +423,11 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                       </span>
                     </div>
                   ))}
+                  {hiddenRankingCount > 0 ? (
+                    <button type="button" className="pr2-rk-more" onClick={() => setShowAllRanking(true)}>
+                      Ver {hiddenRankingCount} {hiddenRankingCount === 1 ? "marca más sin mención" : "marcas más sin mención"}
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
