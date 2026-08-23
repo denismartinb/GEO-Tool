@@ -13737,6 +13737,20 @@ con eso salieron tres cosas que ninguna captura habría delatado:
 Se excluye del recorte una cosa a propósito: un `<img>` con `object-fit: cover`
 dentro de `overflow: hidden` recorta **por diseño**, es el encuadre.
 
+### El primer `PILOT FAIL` fue del aserto, no del producto
+
+La pasada nueva afirmaba «la escena 0 se sirve puesta» **contra el DOM vivo**, y
+falló en escritorio. No estaba roto nada: la demo avanza sola cada 4,6 s, así
+que para cuando el aserto llegaba la escena 0 ya había dejado de estarlo. El
+invariante era correcto y la comprobación estaba en la capa equivocada.
+
+Ahora se comprueba **en el HTML servido** —que es donde vive ese invariante: lo
+primero que se ve no puede depender de hidratar— y todo lo demás se manda a
+mano, empezando por un clic en la primera parada del raíl, que además apaga el
+reloj. Queda dicho para la próxima: **un aserto sobre «qué escena está puesta»
+en algo que se reproduce solo es una carrera contra su reloj**, y el arnés la
+pierde tarde o temprano en una anchura o en otra.
+
 **Comprobado.** `pnpm test` y `pnpm run validate` en verde. Barrido de 10
 anchuras × 5 escenas = **50 combinaciones**, sin desbordar el marco y sin un
 solo recorte silencioso, con cada escena medida en su fotograma final. Los

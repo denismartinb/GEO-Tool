@@ -150,17 +150,34 @@ test("la demo del hero enseña sus cinco escenas y el raíl las gobierna", async
   });
   assertPageIsHealthy(findings);
 
-  // La escena 0 se sirve puesta: es lo primero que ve quien llega y no puede
-  // depender de que hidrate.
-  await expect(page.locator("#hx-sc-0"), "la escena 0 no se sirve puesta").toHaveClass(/on/);
-  await expect(
-    page.locator("#hx-foco"),
-    "el golpe de la escena 0 —que la marca no aparece— no está"
-  ).toContainText("no aparece");
+  // «La escena 0 se sirve puesta» se comprueba EN EL HTML SERVIDO, no en el DOM
+  // vivo. Es donde vive el invariante —lo primero que se ve no puede depender
+  // de hidratar— y además es lo único estable: la demo avanza sola cada 4,6 s,
+  // así que en la página viva la escena 0 ya no está puesta cuando el aserto
+  // llega. Afirmarlo contra el DOM daba un PILOT FAIL que no era del producto
+  // sino del aserto (2026-08-23).
+  const servido = await page.request.get("/");
+  const html = await servido.text();
+  const escena0 = html.match(/<div[^>]*id="hx-sc-0"[^>]*>/)?.[0] ?? "";
+  expect(escena0, "la escena 0 no está en el HTML servido").not.toBe("");
+  expect(escena0, "la escena 0 no se sirve con la clase `on`").toMatch(/class="[^"]*\bon\b/);
+  expect(html, "el golpe de la escena 0 no está en el HTML servido").toContain("IKEA no aparece");
 
   // El raíl existe, lo pinta la isla y tiene una parada por escena.
   const pasos = page.locator(".lp-hx-step");
   await expect(pasos, "el raíl no tiene sus cinco escenas").toHaveCount(5);
+
+  // A partir de aquí se manda a mano: el primer clic apaga la reproducción
+  // automática, y sin eso cualquier aserto sobre «qué escena está puesta» es
+  // una carrera contra el reloj de la demo.
+  await pasos.nth(0).click();
+  await expect(page.locator("#hx-sc-0"), "el raíl no volvió a la escena 0").toHaveClass(/on/, {
+    timeout: 5_000
+  });
+  await expect(
+    page.locator("#hx-foco"),
+    "el golpe de la escena 0 —que la marca no aparece— no está"
+  ).toContainText("no aparece");
   await captureInteraction(page, testInfo, "landing-hero-demo-escena-1");
 
   // Cada parada abre SU escena, y sólo una está puesta a la vez. Es la
@@ -178,9 +195,10 @@ test("la demo del hero enseña sus cinco escenas y el raíl las gobierna", async
     await captureInteraction(page, testInfo, `landing-hero-demo-escena-${n + 1}`);
   }
 
-  // Tocar el raíl apaga la reproducción automática: quien elige una escena la
-  // está leyendo, y que se la lleve el reloj es lo que hace que una demo se
-  // sienta un anuncio (log §149).
+  // Tocar el raíl apaga la reproducción automática PARA SIEMPRE: quien elige una
+  // escena la está leyendo, y que se la lleve el reloj es lo que hace que una
+  // demo se sienta un anuncio (log §149). Seis segundos es más de un paso
+  // (4,6 s), así que si el reloj siguiera vivo esto lo cazaría.
   await page.waitForTimeout(6_000);
   await expect(
     page.locator("#hx-sc-4"),
