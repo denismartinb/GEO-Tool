@@ -11790,6 +11790,31 @@ distintas, una por queja:
 Ningún dato falso: ambos arreglos son de layout puro, sin tocar la lógica del
 asistente.
 
+**Tercera ronda (2026-08-23, móvil): `.db-ghost` nunca había existido.** El
+fundador reportó en su móvil que el texto animado del campo de dominio ("el
+placeholder que escribe solo", `TYPE_SAMPLES`) no salía en gris, y que
+desplazaba toda la pantalla lateralmente mientras escribía. El comentario de
+la sección de arriba (líneas ~4448-4455) listaba `.db-ghost` entre las clases
+"still used as-is by the new layout and stay here unchanged" — pero la regla
+nunca se escribió, ni en esta migración ni en la anterior: no existía ninguna
+definición `.db-ghost` en todo `globals.css`. Sin ella, ese `<span>` se
+pintaba con el texto negro por defecto del navegador (no `--ink-4`) y, más
+grave, participaba como un hijo flex normal más dentro de `.domain-bar`,
+aportando el ancho de su propio contenido en vez de superponerse al input —
+exactamente lo que ya le pasó a `.add-hint`/`.add-engines` en la ronda
+anterior de esta misma fase. Reproducido localmente (`globals.css` real,
+Chromium headless, sin la regla): el input se encogía de 203px a 99px para
+hacerle sitio al texto fantasma, y con una muestra más larga o un viewport de
+375px real ese hueco no basta y la fila entera se desborda — el "desplazamiento
+de toda la pantalla" que describió el fundador. Corregido con
+`position: absolute` + `color: var(--ink-4)`, el mismo patrón que ya usa el
+placeholder gemelo de la portada pública (`.lp-field-ghost`, con el mismo
+`left: 44px` por construcción): al sacarlo del flujo, deja de aportar ancho a
+la fila sea cual sea el viewport. Verificado con y sin la regla en la misma
+reproducción: sin ella el input se encoge y el texto sale negro; con ella el
+input recupera su ancho y el texto sale en gris, sin tocar el resto de la
+fila.
+
 ---
 
 ## Cómo mantener este documento

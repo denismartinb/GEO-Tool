@@ -4408,6 +4408,21 @@ a.notif-row:hover {
 .domain-input { flex: 1; min-width: 0; border: none; outline: none; background: transparent;
   font-size: 15.5px; font-weight: 550; color: var(--ink); height: 40px; }
 .domain-input::placeholder { color: var(--ink-4); font-weight: 450; }
+/* Typewriter placeholder overlay — same role and offset as the landing
+   hero's `.lp-field-ghost` (left: 44px matches `.domain-bar`'s own
+   padding + icon box + gap by construction, just like there). `position:
+   absolute` takes it out of the flex row entirely: the comment above claimed
+   this rule "stays here unchanged" while it had actually never existed, so
+   the ghost text rendered as a normal flex sibling with real inline text —
+   unstyled (default black, not the intended --ink-4 gray) and, worse,
+   contributing its own content width to the row like any other flex item.
+   On narrow phones that pushed .domain-bar wider than the viewport and the
+   whole page scrolled sideways as the typewriter cycled through longer
+   samples (founder report, 2026-08-23). `right` + `overflow:hidden` bound it
+   so a long sample never paints over the country selector. */
+.db-ghost { position: absolute; left: 44px; top: 0; bottom: 0; right: 128px; display: flex; align-items: center;
+  color: var(--ink-4); font-size: 15.5px; font-weight: 450; pointer-events: none; line-height: 1;
+  overflow: hidden; white-space: nowrap; }
 .country-sel {
   display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 11px; border-radius: 9px;
   border: 1px solid var(--line); background: var(--surface-2); font-size: 13.5px; font-weight: 600; color: var(--ink-2);
@@ -4436,8 +4451,14 @@ a.notif-row:hover {
    compounds) was exclusive to the old onboarding-wizard.tsx layout — moved
    to the onb2- block in app/console.css (dashboard-only, per .claude/rules/
    styles.md). .domain-bar/.domain-globe/.domain-input/.country-sel/.onb-cta/
-   .eng-chip/.eng-dot/.type-caret/.db-ghost/.field-label/.field-err/.cap/
+   .eng-chip/.eng-dot/.type-caret/.field-label/.field-err/.cap/
    .meta-flag are still used as-is by the new layout and stay here unchanged.
+   .db-ghost is NOT unchanged either, on top of the two below — this comment
+   claimed it too, and it had never existed at all: the typewriter placeholder
+   rendered as unstyled black text and, worse, as a normal flex sibling whose
+   own content width could push .domain-bar past the viewport on phones
+   (founder report, 2026-08-23). Re-added above, mirroring the landing hero's
+   .lp-field-ghost.
    .add-hint/.add-engines are NOT unchanged — a first pass here deleted them
    by mistake while claiming to keep them (a comment that lied cost the
    founder a broken hint row and a cramped engines row in review, 2026-08-21):
