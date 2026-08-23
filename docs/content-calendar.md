@@ -98,11 +98,45 @@ Decisiones de honestidad tomadas:
 - Portada dibujada en SVG y rasterizada a WebP con `sharp` (Playwright no
   pudo descargar Chromium en este entorno — proxy de egress —, así que la
   conversión SVG→WebP se hizo con la librería `sharp` ya presente como
-  dependencia transitiva, sin usar navegador). Diagrama de solapamiento real
-  entre los tres círculos (SEO/GEO/AEO) con LLMO como término afín anclado a
-  GEO — evidencia de la afirmación central del artículo, no decorativa.
-  Verificada la tira de 96 px (`.blog-cover-compact`) simulando el recorte a
-  1124×96 y 375×96 antes de dar la portada por buena.
+  dependencia transitiva, sin usar navegador). Verificada la tira de 96 px
+  (`.blog-cover-compact`) simulando el recorte a 1124×96 antes de darla por
+  buena: las cuatro siglas se leen enteras ahí, que es donde de verdad se ve
+  la portada.
+
+**Revisión del fundador (2026-08-23):** *"dale una vuelta para que parezca un
+pelín más humano, quitando las típicas expresiones que genera la IA"* y *"genera
+otra portada más visual y parecida al resto"*. Dos correcciones:
+
+1. **Portada rehecha.** La primera era un degradado plano con un diagrama
+   pequeño en el centro, y las otras 16 del catálogo comparten un lenguaje
+   visual muy definido que aquella ignoraba: fondo casi negro azulado, paneles
+   translúcidos con neón, y una composición de izquierda a derecha —muchas
+   piezas dispersas → convergen en una lente → un panel resuelto—. La nueva la
+   habla: las cuatro siglas como etiquetas dispersas sobre un muro de tarjetas
+   de contenido, sus haces convergiendo en la lente, y a la derecha la
+   respuesta generada con la marca mencionada y su cita. **El fallo no lo
+   habría cogido ningún test**: `covers.test.ts` comprueba que la portada
+   declarada existe y se enseña, no que se parezca a las demás. Sólo se ve
+   poniendo las 17 una debajo de otra.
+2. **Texto repasado para quitarle el acento de IA.** Los guiones largos pasan
+   de 25 a 1, y se van los tics de construcción repetida ("en la práctica",
+   "lo que sí", "cabe en una frase", "un ejemplo real de", "nota al margen") y
+   sobre todo la antítesis "no es X, es Y", que aparecía siete veces y es la
+   marca de fábrica más reconocible. Frases de longitud variada en vez del
+   ritmo parejo de antes. No cambia ninguna afirmación ni ningún enlace: el
+   recuento del cuerpo se queda en 1.556 palabras, dentro del rango de la
+   guía, y los cuatro enlaces internos siguen donde estaban.
+
+- **El SVG fuente de la portada NO vive en `public/`** sino en
+  `docs/design-reference/blog-covers/`. Son 57 KB que ninguna página pide (la
+  que se sirve es la WebP de 28 KB), y `public/` se sirve entero desde el mismo
+  origen que las páginas públicas. El diagrama del cuerpo (`solapamiento.svg`,
+  4 KB) sí se queda en `public/` porque el artículo lo carga.
+- **Subido el tope de `tests/asset-budget.test.ts` de 1,5 a 1,75 MB**, con la
+  razón escrita en el propio test, como manda su comentario de cabecera. No es
+  para acomodar esta portada: en `main` quedaban **24 KB libres** de
+  presupuesto y las portadas ya publicadas pesan entre 59 y 88 KB, así que el
+  tope llevaba tiempo impidiendo publicar cualquier pieza nueva con portada.
 - Añadido a las dos listas del piloto en este mismo PR: `BLOG_SLUGS` en
   `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
   `tests/pilot/journeys/public-pages.spec.ts`.
