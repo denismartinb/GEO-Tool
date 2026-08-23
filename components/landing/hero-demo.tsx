@@ -200,14 +200,18 @@ export function HeroDemo({ target }: { target: string }) {
         activo: true
       });
     };
-    // Un respiro sólo cuando hay algo que señalar: la escena entrante se anima
-    // al entrar y su caja aún no está donde va a estar. En el primer arranque
-    // es además lo que separa el reposo del destino, y por tanto lo que se ve
-    // como un movimiento. El reposo, en cambio, se coloca ya.
-    const t = setTimeout(colocar, aLaVista ? 160 : 0);
+    // DOS pasadas, y las dos hacen falta. La primera, a los 160ms, es la que
+    // separa el reposo del destino y por tanto lo que se ve como un
+    // movimiento; pero a esa altura la escena todavía se está animando y hay
+    // dianas que crecen mientras tanto —la tarjeta de evolución gana alto
+    // según se dibuja la curva—, así que el cursor se quedaba 14px por debajo
+    // de su centro. La segunda, ya con las animaciones asentadas (~2,5s,
+    // `.claude/rules/onboarding.md`), lo recoloca sobre lo que de verdad hay.
+    const relojes = [setTimeout(colocar, aLaVista ? 160 : 0)];
+    if (aLaVista) relojes.push(setTimeout(colocar, 1_400));
     window.addEventListener("resize", colocar);
     return () => {
-      clearTimeout(t);
+      relojes.forEach(clearTimeout);
       window.removeEventListener("resize", colocar);
     };
   }, [escena, target, aLaVista]);

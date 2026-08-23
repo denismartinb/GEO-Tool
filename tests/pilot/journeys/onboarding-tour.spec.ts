@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   WELCOME_TOUR_SCRIM,
   assertPageIsHealthy,
@@ -141,6 +141,56 @@ test("el tour de bienvenida sale solo, se lee, se cierra y no vuelve", async ({ 
  * SCOPE GUARD: página pública, sólo navegación y el raíl de la propia demo.
  * No envía nada.
  */
+/**
+ * Cada escena declara a qué elemento apunta su cursor. Está aquí y no
+ * importado del componente a propósito: si alguien renombra un `id` en el
+ * marcado, esta pasada tiene que ROMPERSE, no seguirle la corriente.
+ */
+const DIANA_POR_ESCENA = ["hx-foco", "hx-dial-1", "hx-fila-tuya", "hx-generar", "hx-evo"] as const;
+
+/**
+ * Las animaciones de una escena son CSS con `fill: both` y a los ~2,5 s dejan
+ * un fotograma final estable — es el contrato que hace determinista lo que se
+ * fotografía (`.claude/rules/onboarding.md`, «Un solo reloj»). Sin esta espera
+ * la captura salía a mitad de camino: el 2026-08-23 las tres capturas del
+ * cursor lo enseñaban EN VUELO, a 85px de lo que señalaba, porque
+ * `captureInteraction` corría en cuanto la clase `on` aparecía.
+ */
+async function asentarEscena(page: Page) {
+  await page.waitForTimeout(2_600);
+}
+
+/**
+ * El cursor apunta a ELEMENTOS, no a coordenadas — el invariante que el tour ya
+ * documenta y que la demo hereda. Se comprueba midiendo: el centro de la diana
+ * contra la traslación real del cursor, con holgura para el último fotograma de
+ * la animación de entrada. Un `id` mal escrito deja el cursor en reposo (fuera
+ * del marco) y eso lo caza esta distancia, no una captura que nadie abre.
+ */
+async function esperarCursorEn(page: Page, id: string) {
+  const medida = await page.evaluate((diana) => {
+    const caja = document.querySelector("#lp-hx");
+    const cursor = document.querySelector(".lp-hx-cur");
+    const meta = document.getElementById(diana);
+    if (!caja || !cursor || !meta) return { falta: { caja: !caja, cursor: !cursor, meta: !meta } };
+    const c = caja.getBoundingClientRect();
+    const m = meta.getBoundingClientRect();
+    const t = new DOMMatrix(getComputedStyle(cursor).transform);
+    return {
+      activo: cursor.classList.contains("activo"),
+      dx: Math.abs(t.m41 - (m.left - c.left + m.width / 2)),
+      dy: Math.abs(t.m42 - (m.top - c.top + m.height / 2))
+    };
+  }, id);
+
+  expect(medida.falta, `no se pudo medir el cursor contra #${id}`).toBeUndefined();
+  expect(medida.activo, `el cursor sigue en reposo en vez de señalar #${id}`).toBe(true);
+  // 12px, no 24: medido en 375/768/1280 la distancia real es 0-1px, así que la
+  // holgura es para el redondeo de un runner, no para tapar un desajuste.
+  expect(medida.dx, `el cursor está a ${Math.round(medida.dx!)}px de #${id} en horizontal`).toBeLessThan(12);
+  expect(medida.dy, `el cursor está a ${Math.round(medida.dy!)}px de #${id} en vertical`).toBeLessThan(12);
+}
+
 test("la demo del hero enseña sus cinco escenas y el raíl las gobierna", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/", "landing-hero-demo", {
     describedAs: "la demo de cinco escenas del hero de la portada",
@@ -178,6 +228,8 @@ test("la demo del hero enseña sus cinco escenas y el raíl las gobierna", async
     page.locator("#hx-foco"),
     "el golpe de la escena 0 —que la marca no aparece— no está"
   ).toContainText("no aparece");
+  await asentarEscena(page);
+  await esperarCursorEn(page, "hx-foco");
   await captureInteraction(page, testInfo, "landing-hero-demo-escena-1");
 
   // Cada parada abre SU escena, y sólo una está puesta a la vez. Es la
@@ -192,6 +244,8 @@ test("la demo del hero enseña sus cinco escenas y el raíl las gobierna", async
       page.locator(".lp-hx-sc.on"),
       "hay más de una escena puesta a la vez"
     ).toHaveCount(1);
+    await asentarEscena(page);
+    await esperarCursorEn(page, DIANA_POR_ESCENA[n]);
     await captureInteraction(page, testInfo, `landing-hero-demo-escena-${n + 1}`);
   }
 
