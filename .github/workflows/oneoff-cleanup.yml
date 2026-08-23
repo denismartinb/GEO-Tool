@@ -1,0 +1,38 @@
+name: One-off pilot cleanup (PR #459 stray prompt)
+
+# THROWAWAY. Removes the [PILOT-TEST] prompt that a buggy write-pilot run
+# left in the wrong project (see scripts/pilot-cleanup-once.mjs for the full
+# story). Meant to run once and then be deleted along with the script and
+# this branch — never merged into main.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: Remove the stray [PILOT-TEST] prompt
+        env:
+          PILOT_EMAIL: ${{ secrets.PILOT_EMAIL }}
+          PILOT_PASSWORD: ${{ secrets.PILOT_PASSWORD }}
+          PILOT_VERCEL_BYPASS: ${{ secrets.PILOT_VERCEL_BYPASS }}
+          PILOT_BASE_URL: https://geo-tool-2obafeqdf-9v7mrc44g8-1223s-projects.vercel.app
+          CLEANUP_PROJECT_ID: 72b2b61e-f89c-4575-8a97-d3303e4bd55d
+        run: node scripts/pilot-cleanup-once.mjs
