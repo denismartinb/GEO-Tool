@@ -4992,6 +4992,13 @@ a.notif-row:hover {
   .lp-hx-r3 { grid-template-columns: 170px 1fr; }
 }
 @media (max-width: 640px) {
+  /* «Competidores · cuota de voz en IA» parte en dos líneas a esta anchura
+     mientras «14 prompts · 3 motores» se queda centrado en vertical con
+     `align-items: baseline` — pegado a la primera línea del título, montado
+     sobre la segunda. Apilar dueña de las dos frases en vez de ponerlas en la
+     misma fila es lo que las deja enteras (fundador, 2026-08-23). */
+  .lp-hx-head { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .lp-hx-head .m { margin-left: 0; }
   /* A esta anchura el marco mide ~335px por dentro: las parejas se apilan y la
      escena crece, así que el cuerpo deja de tener alto fijo y se desplaza. Es
      preferible a recortar en silencio dentro de un `overflow: hidden`. */
@@ -6431,6 +6438,24 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    para pedirla, porque el botón también lo pinta la isla. */
 .lp-prod-genbtn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: 0; }
 .lp-prod-genbtn[disabled] { cursor: default; }
+/* Nadie ha tocado este botón todavía y en la maqueta es uno azul más entre
+   varios: sin pista no se lee como el único que hace algo de verdad
+   (fundador, 2026-08-23: «anímalo como el de la animación de arriba para que
+   se sepa que se debe clickear»). Mismo gesto que la pista del «Siguiente» del
+   tour —halo que crece y se desvanece, en bucle hasta el clic, `:not([disabled])`
+   para que se apague sola en cuanto se pulsa—: ya está resuelto ahí y existe
+   para conseguir ese clic, así que se reutiliza en vez de inventar otro. */
+.lp-prod-genbtn:not([disabled]) { animation: lp-prod-hint 1.6s ease-out infinite; }
+@keyframes lp-prod-hint {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, .45); }
+  70%  { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+/* El contrato de siempre: sin movimiento, el anillo se queda quieto en vez de
+   desaparecer — sigue diciendo «este botón», sólo que sin animarlo. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-prod-genbtn:not([disabled]) { animation: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, .25); }
+}
 .lp-prod-accionpie { margin-top: 20px; }
 .lp-prod-accionpie .lp-prod-genbtn { width: 100%; justify-content: center; height: 44px; }
 

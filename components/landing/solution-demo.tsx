@@ -38,7 +38,11 @@ import { Icon } from "@/components/ui/icon";
  * pestaña convertiría la demostración en un peaje.
  */
 
-const ESPERA_MS = 1000;
+// 1250, no 1000: el fundador pidió el 2026-08-23 que «la pantalla de la
+// solución dure un 25% más» — 1000 se sentía demasiado rápido para leerse
+// como una generación de verdad, aunque la cifra sigue sin medir nada real
+// (CLAUDE.md, "no fake metrics"; ver la nota de arriba).
+const ESPERA_MS = 1250;
 
 type Estado = "listo" | "generando" | "hecho";
 

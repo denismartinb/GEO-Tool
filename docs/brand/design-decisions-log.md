@@ -13885,3 +13885,33 @@ auditoría—, puesto ahí sin ningún significado. Pasa a un azul más claro de
 misma familia, y el rojo queda libre para la única fila que sí es negativa:
 IKEA, 0%, no aparece citada — con un punto hueco y punteado en vez de un
 círculo sólido de un color que no está en el reparto de arriba.
+
+**Y una cuarta ronda, mismo PR, sobre dos capturas de móvil de las mismas dos
+maquetas.** Cuatro pedidos sueltos del fundador:
+
+1. **La cabecera de la escena 2 del hero («Competidores») partía en dos
+   líneas** y «14 prompts · 3 motores» quedaba pegado a la primera línea del
+   título en vez de debajo de las dos —consecuencia de `align-items: baseline`
+   en una fila que ya no cabe en una sola línea a 375px—. Apilar título y meta
+   en vez de ponerlos en la misma fila deja las dos frases enteras.
+2. **La demo del hero le suma un arco narrativo a tres de sus cinco
+   pantallas.** «Visión general» no tenía pie de página; «Competidores» y
+   «Recomendaciones» tenían uno factual (`Cuota de voz en IA · últimos 7
+   días.` / `9 acciones priorizadas por impacto.`). Pasan a contar una
+   historia en tres frases —*primero sabes dónde estás, luego quién te está
+   ganando, y por último por qué generar la solución te devuelve a la
+   conversación*—: «Lo primero es conocer tu situación actual.» / «Y quién
+   tiene mejor posicionamiento que tú.» / «Para que en próxima respuesta la IA
+   te mencione.» Prompts y Auditoría web conservan su pie factual a propósito:
+   no cuentan esa historia, la sostienen.
+3. **El botón «Generar solución» no se leía como accionable** entre el resto
+   de maquetas de la sección, que son dibujo. Es real —el único `<button>` con
+   `onClick` de las cinco pantallas— y ahora lo dice: reutiliza el halo
+   pulsante del «Siguiente» del tour (`ptHintHalo`), en bucle hasta el clic vía
+   `:not([disabled])`, en vez de inventar una segunda animación para el mismo
+   propósito (`.claude/rules/onboarding.md`, «la pista existe para conseguir
+   ese clic»).
+4. **`ESPERA_MS` sube de 1000 a 1250** («que la pantalla de la solución dure
+   un 25% más»): sigue siendo el ritmo de una maqueta, no una medición —la
+   nota de `solution-demo.tsx` ya deja escrito que no puede prometer cuánto
+   tarda el producto de verdad, y sigue sin poder.

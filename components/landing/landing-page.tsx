@@ -702,6 +702,13 @@ export function LandingPage() {
                         <circle cx="296" cy="12" r="4" fill="var(--brand-blue)" />
                       </svg>
                     </div>
+                    {/* El arco de las tres pantallas que sí importan para el
+                        argumento del producto: primero sabes dónde estás, luego
+                        quién te está ganando, y por último por qué el trabajo
+                        que hiciste te devuelve a la conversación (fundador,
+                        2026-08-23). Prompts y Auditoría web se quedan con su
+                        pie factual — no cuentan esa historia, la sostienen. */}
+                    <p className="lp-prod-mpie">Lo primero es conocer tu situación actual.</p>
                   </div>
 
                   <div className="lp-prod-head">
@@ -914,7 +921,7 @@ export function LandingPage() {
                         ))}
                       </div>
                     </div>
-                    <p className="lp-prod-mpie">Cuota de voz en IA · últimos 7 días.</p>
+                    <p className="lp-prod-mpie">Y quién tiene mejor posicionamiento que tú.</p>
                   </div>
 
                   <div className="lp-prod-pghead">
@@ -1152,7 +1159,7 @@ export function LandingPage() {
                         </div>
                       </div>
                     </div>
-                    <p className="lp-prod-mpie">9 acciones priorizadas por impacto.</p>
+                    <p className="lp-prod-mpie">Para que en próxima respuesta la IA te mencione.</p>
                   </div>
 
                   <div className="lp-prod-pghead">
