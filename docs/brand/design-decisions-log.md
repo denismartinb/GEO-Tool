@@ -13318,11 +13318,19 @@ que este PR necesitaba y que ninguna cuenta de un solo motor podía darle.
 
 - La cola del 10% sin cita utilizable no se investiga en esta fase. Se explica,
   no se resuelve.
-- **El botón de plegado y la cabecera de columna no se han visto en un
-  navegador.** El fundador vio la corrección de la fracción (addendum de
-  arriba) pero no esta segunda vuelta, que llegó después de esa captura.
-  Ningún piloto podrá verlo tampoco mientras la cuenta del piloto tenga un solo
-  motor y por tanto ningún competidor real que plegar.
+- ~~El botón de plegado y la cabecera de columna no se han visto en un
+  navegador.~~ **Corregido tras la propia pasada del piloto sobre `46ffb43`**:
+  al contrario de lo asumido aquí mismo un párrafo antes, el proyecto del
+  piloto sí tiene 9 competidores rastreados (aunque escanee con un solo
+  motor), así que el plegado, el resumen y la cabecera de columna **sí se
+  ejercitan** — la captura de `prompts` a 375 px enseña «Ranking de marcas /
+  Aparición en motores», «0 de 9 marcas mencionadas en este prompt», la fila
+  propia con «Genscore Tú Neutral 0%» y el botón «Ver 8 marcas más sin
+  mención», todo legible y sin solapes. Lo que sigue sin verse en un navegador
+  es la combinación exacta de **fracción + cabecera** a 375 px — la fracción
+  («1/3») sólo aparece con más de una respuesta por prompt, que el piloto de un
+  motor no genera; esa combinación queda cubierta por la captura móvil que el
+  fundador adjuntó él mismo, no por el piloto automático.
 - La tarjeta «La IA menciona tu marca» sigue siendo binaria (verde si al menos
   una respuesta te nombra). Con 1 de 3 es cierta pero generosa; la lista «Por
   motor» justo debajo la desambigua. No se toca aquí.
