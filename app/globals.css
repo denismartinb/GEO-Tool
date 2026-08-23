@@ -5997,6 +5997,70 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    `align-items: start`: son dos tarjetas de altura distinta y estirarlas
    dejaría la de la derecha con un vacío al pie. */
 .lp-prod-recs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 18px; align-items: start; }
+
+/* ── «GENERAR SOLUCIÓN»: el botón, la espera y el revelado ──────────────────
+   El estado oculto cuelga SIEMPRE de `.is-armed`, que sólo pone la isla al
+   montar. Sin JavaScript no llega nunca y la solución se sirve entera, que es
+   el mismo contrato de la sección oscura (log §144) — esconder desde la hoja
+   de estilos dejaría a quien no ejecute JS sin media pantalla y sin el botón
+   para pedirla, porque el botón también lo pinta la isla. */
+.lp-prod-genbtn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: 0; }
+.lp-prod-genbtn[disabled] { cursor: default; }
+.lp-prod-accionpie { margin-top: 20px; }
+.lp-prod-accionpie .lp-prod-genbtn { width: 100%; justify-content: center; height: 44px; }
+
+.lp-prod-spinner {
+  width: 15px; height: 15px; flex: 0 0 auto; border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.35); border-top-color: #fff;
+  animation: lp-prod-giro .7s linear infinite;
+}
+@keyframes lp-prod-giro { to { transform: rotate(360deg); } }
+/* Sin movimiento el disco no gira, pero tiene que seguir diciendo «espera»:
+   se queda como un anillo incompleto, que es la misma figura quieta. */
+@media (prefers-reduced-motion: reduce) { .lp-prod-spinner { animation: none; } }
+
+/* Antes del clic la solución no está; después entra con un desplazamiento
+   corto. `visibility` además de `opacity` para que no sea un objetivo de
+   tabulador invisible mientras no existe. */
+#pg-recs.is-armed:not(.is-hecho) .lp-prod-sol,
+#pg-recs.is-armed:not(.is-hecho) .lp-prod-msol { display: none; }
+#pg-recs.is-hecho .lp-prod-sol,
+#pg-recs.is-hecho .lp-prod-msol { animation: lp-prod-entra .34s cubic-bezier(.2,.8,.25,1) both; }
+@keyframes lp-prod-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #pg-recs.is-hecho .lp-prod-sol,
+  #pg-recs.is-hecho .lp-prod-msol { animation: none; }
+}
+
+/* El aviso para lectores de pantalla: el resultado aparece LEJOS del botón, y
+   sin esto se oye «generando» y nunca que ya está. No usa `display:none`, que
+   lo dejaría fuera del árbol de accesibilidad y sin anunciar nada. */
+.lp-prod-aviso {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* ── HUECOS DE PROMPT ──────────────────────────────────────────────────────
+   Llena el hueco que dejaba Competidores bajo las tarjetas de tema. Los
+   colores son los de la pantalla real (`CATEGORY_BAR_COLOR`), no una paleta
+   nueva. */
+.lp-prod-huecos { margin-top: 18px; padding: 16px 20px; border-radius: 14px; background: #fff; border: 1px solid var(--line); }
+.lp-prod-huecohead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.lp-prod-huecohead .m { font-size: 12px; color: var(--ink-3); }
+.lp-prod-huecobar { display: flex; gap: 3px; margin-top: 12px; height: 8px; }
+.lp-prod-huecobar .seg { border-radius: 999px; }
+.lp-prod-huecobar .seg.mal { background: var(--brand-neg, #d23b48); }
+.lp-prod-huecobar .seg.regular { background: #f0a3aa; }
+.lp-prod-huecobar .seg.bien { background: #93b0f2; }
+.lp-prod-huecobar .seg.top { background: #15915a; }
+.lp-prod-huecolist { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; }
+.lp-prod-hueco { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-2); }
+.lp-prod-hueco b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.lp-prod-hueco .pt { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 auto; }
+.lp-prod-hueco .pt.mal { background: var(--brand-neg, #d23b48); }
+.lp-prod-hueco .pt.regular { background: #f0a3aa; }
+.lp-prod-hueco .pt.bien { background: #93b0f2; }
+.lp-prod-hueco .pt.top { background: #15915a; }
 /* Dos columnas dejan ~211px por tarjeta en esa franja, y ahí «Solución
    generada» no cabe con su cápsula al lado. Mismo motivo de colocación que en
    `.lp-prod-rank`. */
@@ -6142,6 +6206,26 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-prod-mspark .lp-prod-lbl { font-size: 11.5px; }
   .lp-prod-mspark svg { width: 100%; height: 76px; margin-top: 6px; display: block; }
 
+  /* La tira de huecos también en móvil: el marco de Competidores es el más
+     corto de los cinco y ahí el hueco se nota igual. */
+  .lp-prod-huecos { margin-top: 14px; padding: 13px 14px; border-radius: 12px; }
+  .lp-prod-huecohead { flex-direction: column; gap: 2px; }
+  .lp-prod-huecohead .m { font-size: 11.5px; }
+  .lp-prod-huecolist { gap: 6px 14px; margin-top: 10px; }
+  .lp-prod-hueco { font-size: 11.5px; gap: 6px; }
+
+  /* La solución del móvil: la de escritorio no cabe —el bloque de schema salía
+     a cuatro caracteres por línea, el mismo fallo que ya obligó a apilar el
+     artefacto en «Cómo funciona»—, así que aquí van la cabecera, el título y
+     dos de las tres preguntas. */
+  .lp-prod-msol { margin-top: 12px; overflow: hidden; }
+  .lp-prod-msolbody { padding: 14px 16px; }
+  .lp-prod-msolbody h4 { margin: 8px 0 0; font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .lp-prod-msolbody .lp-prod-preguntas { margin-top: 10px; }
+  .lp-prod-msolbody .lp-prod-pregunta { font-size: 12.5px; padding: 8px 0; }
+  .lp-prod-mbtnfila { margin-top: 16px; }
+  .lp-prod-mbtnfila .lp-prod-genbtn { display: flex; width: 100%; justify-content: center; height: 46px; font-size: 14.5px; }
+
   .lp-prod-mq { padding: 14px 16px; }
   /* La respuesta abierta de la primera pregunta. No reutiliza
      `.lp-prod-answer` de escritorio: allí es una tarjeta dentro de una fila
@@ -6199,7 +6283,6 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-prod-maccion { padding: 18px; }
   .lp-prod-maccion h3 { font-size: 15px; font-weight: 600; line-height: 1.42; margin: 14px 0 0; }
   .lp-prod-maccion p { margin: 9px 0 0; font-size: 13px; line-height: 1.7; color: var(--ink-3); }
-  .lp-prod-mbtn { display: flex; width: 100%; height: 46px; font-size: 14.5px; margin-top: 16px; }
 
   .lp-prod-mpie { margin: 12px 0 0; font-size: 12px; color: var(--ink-4); }
 }
@@ -6290,6 +6373,105 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    blanco por lo mismo que el hero acaba en blanco: la sección de encima lo es
    y cualquier otro color deja una línea horizontal recta
    (`.claude/rules/styles.md`, la costura). */
+/* ── MODAL «QUÉ CAMBIA, PUNTO POR PUNTO» ───────────────────────────────────
+   `<dialog>` nativo: `showModal()` trae trampa de foco, `Esc` y fondo inerte.
+   El `::backdrop` es del navegador, no un `div` — un scrim propio se olvida de
+   `Esc` y del foco la mitad de las veces. */
+.lp-sec-lnk { color: inherit; text-decoration: none; border-bottom: 2px solid rgba(37,99,235,.3); cursor: pointer; transition: border-color .15s; }
+.lp-sec-lnk:hover { border-bottom-color: var(--brand-blue); }
+
+.lp-modal {
+  width: min(860px, calc(100vw - 40px)); max-height: 86vh; padding: 0; border: 0;
+  border-radius: 20px; background: #fff; color: var(--ink); overflow: visible;
+  box-shadow: 0 40px 90px rgba(11,20,38,.28);
+}
+.lp-modal::backdrop { background: rgba(11,20,38,.46); }
+.lp-modal-box { position: relative; padding: 44px 48px 40px; max-height: 86vh; overflow-y: auto; border-radius: 20px; }
+.lp-modal .lp-kicker { color: var(--ink-4); font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+.lp-modal-h {
+  font-family: var(--font-display), inherit; font-size: 30px; font-weight: 700;
+  letter-spacing: -.025em; margin: 14px 0 0; line-height: 1.18;
+}
+.lp-modal-x {
+  position: absolute; top: 18px; right: 18px; width: 38px; height: 38px; border-radius: 999px;
+  border: 1px solid var(--line); background: #fff; color: var(--ink-2);
+  display: grid; place-items: center; cursor: pointer;
+}
+.lp-modal-x:hover { background: var(--canvas); color: var(--ink); }
+
+.lp-modal-tabla { display: grid; grid-template-columns: 1fr 1fr; margin-top: 32px; }
+.lp-modal-cab { display: flex; align-items: baseline; gap: 12px; padding-bottom: 22px; }
+.lp-modal-cab .q { font-family: var(--font-display), inherit; font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
+.lp-modal-cab .c { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.lp-modal-cab.seo { padding-right: 56px; }
+.lp-modal-cab.seo .q { color: var(--ink-3); }
+.lp-modal-cab.geo { padding-left: 56px; border-left: 1px solid var(--line-soft); }
+.lp-modal-cab.geo .q { color: var(--accent); }
+.lp-modal-celda { padding: 20px 0; border-top: 1px solid var(--line-soft); font-size: 15.5px; line-height: 1.62; color: var(--ink-2); }
+.lp-modal-celda b { font-weight: 600; color: var(--ink); }
+.lp-modal-celda.seo { padding-right: 56px; }
+.lp-modal-celda.geo { padding-left: 56px; border-left: 1px solid var(--line-soft); }
+
+@media (max-width: 560px) {
+  /* Dos columnas de 15,5px en 335px no son una tabla, son dos columnas de una
+     palabra. Se apila, y cada celda dice de qué lado está. */
+  .lp-modal-box { padding: 34px 20px 28px; }
+  .lp-modal-h { font-size: 23px; }
+  .lp-modal-tabla { grid-template-columns: minmax(0, 1fr); margin-top: 24px; }
+  .lp-modal-cab { padding-bottom: 10px; }
+  .lp-modal-cab.seo, .lp-modal-celda.seo { padding-right: 0; }
+  .lp-modal-cab.geo, .lp-modal-celda.geo { padding-left: 0; border-left: 0; }
+  .lp-modal-cab.geo { padding-top: 26px; }
+  .lp-modal-celda { padding: 14px 0; font-size: 14.5px; }
+}
+
+/* ── TIRA DEL BLOG ─────────────────────────────────────────────────────────
+   Va entre el cierre y el pie, sobre `--canvas`, como en el artboard. El
+   antetítulo usa `.lp-kicker`, que en esta sección es gris igual que en las
+   otras tres de más arriba. */
+.lp-blog { background: var(--canvas); border-top: 1px solid var(--line-soft); }
+.lp-blog .lp-kicker { color: var(--ink-4); font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+.lp-blog-head { display: flex; align-items: flex-end; gap: 24px; margin-bottom: 32px; }
+.lp-blog-h2 {
+  font-family: var(--font-display), inherit; font-size: 26px; font-weight: 700;
+  letter-spacing: -.025em; margin: 12px 0 0; color: var(--ink);
+}
+.lp-blog-todo {
+  margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px;
+  font-size: 14.5px; font-weight: 600; color: var(--accent); text-decoration: none;
+}
+.lp-blog-todo:hover { text-decoration: underline; }
+.lp-blog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.lp-blog-card {
+  display: flex; flex-direction: column; padding: 26px 24px; border-radius: 16px;
+  border: 1px solid var(--line); background: #fff; text-decoration: none;
+  transition: box-shadow .15s, border-color .15s, transform .15s;
+}
+.lp-blog-card:hover {
+  border-color: var(--brand-blue); transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(16,24,40,.08);
+}
+@media (prefers-reduced-motion: reduce) { .lp-blog-card:hover { transform: none; } }
+.lp-blog-cluster {
+  font-size: 11.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent);
+}
+/* El título empuja la fecha al fondo de la tarjeta: con dos y tres líneas de
+   título, las tres fechas tienen que quedar alineadas entre sí. */
+.lp-blog-t { font-size: 16px; font-weight: 600; line-height: 1.42; color: var(--ink); margin-top: 12px; flex: 1 1 auto; }
+.lp-blog-fecha { font-size: 12.5px; color: var(--ink-3); margin-top: 14px; }
+@media (max-width: 900px) {
+  .lp-blog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .lp-blog-head { flex-direction: column; align-items: flex-start; gap: 14px; margin-bottom: 22px; }
+  .lp-blog-todo { margin-left: 0; }
+  .lp-blog-h2 { font-size: 22px; }
+  .lp-blog-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .lp-blog-card { padding: 20px 18px; }
+  .lp-blog-t { font-size: 15px; margin-top: 10px; }
+}
+
 .lp-close {
   background: linear-gradient(180deg, #ffffff 0%, #eff4ff 100%);
   padding: 132px 0 140px;

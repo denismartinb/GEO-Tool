@@ -194,6 +194,16 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   se aplicó ninguno. El instinto es agrupar lo que comparte anchura — y lo que
   manda es lo que comparte elemento. Si un bloque `@media` corrige dos
   selectores distintos, casi siempre tienen que ser dos bloques.
+- **Un `<dialog>` no cuelga de nada que pueda ocultarse.** `showModal()`
+  promociona a la capa superior sólo lo que está en el árbol de renderizado:
+  metido dentro de un contenedor con `display: none` a esa anchura, el diálogo
+  devuelve `open === true`, se cierra con `Esc` —es modal de verdad— y mide
+  **0×0**. Ningún estado dice «roto»; sólo el `getBoundingClientRect()` (log
+  §148, el modal de «El cambio de reglas» dentro de `.lp-rules-navslot`).
+- **Un estado inicial oculto cuelga de una clase que pone la isla, nunca del
+  CSS a secas** — y si el control que lo revela también lo pinta la isla, con
+  más razón: sin JS quedarían la mitad de la pantalla escondida y ninguna forma
+  de pedirla (log §144 y §148).
 - **Un elemento recortado no desborda la página, y por eso es peor.** Un
   barrido de anchuras que sólo mira `document.scrollWidth` da por bueno lo que
   un contenedor con `overflow: hidden` está cortando por dentro: el marco de

@@ -7,9 +7,12 @@ import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
 import { RulesCarousel } from "@/components/landing/rules-carousel";
+import { RulesModal } from "@/components/landing/rules-modal";
 import { FaqAccordion } from "@/components/landing/faq-accordion";
 import { ProductTabs } from "@/components/landing/product-tabs";
+import { SolutionDemo } from "@/components/landing/solution-demo";
 import { HOME_FAQ, homeFaqJsonLd } from "@/lib/landing/home-faq";
+import { homeBlogStrip } from "@/lib/landing/home-blog";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { PromoStrip, RecommendationsCta, HomeCtaBand } from "@/components/landing/session-ctas";
@@ -63,6 +66,23 @@ function PromptEngine({ src, tono }: { src: "chatgpt" | "gemini" | "claude"; ton
     </span>
   );
 }
+
+/**
+ * Las categorías de «Huecos de prompt» de la pantalla real de Competidores
+ * (`app/dashboard/projects/[projectId]/competitors/prompt-gap-section.tsx`).
+ * Se omite la quinta, «Sin nadie» —los prompts donde el motor no nombra a
+ * ningún competidor—, porque no es un hueco: no hay nada que recuperar ahí y
+ * en una tira de cuatro elementos ocupaba sitio sin decir nada. Los cuatro que
+ * quedan suman los 14 prompts que declara la pantalla de Prompts.
+ */
+const BLOG_STRIP = homeBlogStrip();
+
+const HUECOS = [
+  { t: "Ausente", n: 4, tono: "mal" },
+  { t: "Por detrás", n: 3, tono: "regular" },
+  { t: "Por delante", n: 5, tono: "bien" },
+  { t: "En exclusiva", n: 2, tono: "top" }
+] as const;
 
 const PRODUCT_TABS = [
   { id: "pg-overview", label: "Visión general" },
@@ -323,8 +343,15 @@ export function LandingPage() {
               En la IA compites por ser la respuesta.
             </h2>
             <p className="lp-sec-sub">
-              Quien pregunta a un modelo <strong>no recibe diez enlaces para elegir: recibe una
-              recomendación</strong> con dos o tres marcas. <strong>O estás en esa frase, o no existes.</strong>
+              Quien pregunta a un modelo{" "}
+              {/* En el marcado del servidor esto es un enlace normal a `/geo`. La
+                  isla lo intercepta y abre la tabla en su lugar; sin JS, o en
+                  pestaña nueva, se llega a la página que lo explica con más sitio.
+                  Un modal que no se abre no deja nada detrás; un enlace sí. */}
+              <Link className="lp-sec-lnk" id="lp-abrir-tabla" href="/geo">
+                <strong>no recibe diez enlaces para elegir: recibe una recomendación</strong>
+              </Link>{" "}
+              con dos o tres marcas. <strong>O estás en esa frase, o no existes.</strong>
             </p>
           </div>
 
@@ -333,6 +360,12 @@ export function LandingPage() {
           <div className="lp-rules-navslot">
             <RulesCarousel track=".lp-rules-pair" slide=".lp-rules-card" />
           </div>
+
+          {/* FUERA del hueco de los mandos, que es `display: none` por encima de
+              560px. Un `<dialog>` cuyo ancestro no se pinta no entra en la capa
+              superior: `showModal()` decía `open=true` y el diálogo medía 0×0.
+              Va suelto en la sección, que es donde un modal no depende de nadie. */}
+          <RulesModal triggerId="lp-abrir-tabla" />
 
           <div className="lp-rules-pair">
             <article className="lp-rules-card">
@@ -765,6 +798,28 @@ export function LandingPage() {
                         </div>
                       ))}
                     </div>
+                    {/* La misma tira de huecos que en escritorio: el marco de
+                        Competidores es el más corto de los cinco y aquí el hueco bajo
+                        el ranking se ve igual. */}
+                    <div className="lp-prod-huecos">
+                      <div className="lp-prod-huecohead">
+                        <span className="lp-prod-lbl">Huecos de prompt</span>
+                        <span className="m">14 preguntas del último escaneo</span>
+                      </div>
+                      <div className="lp-prod-huecobar" aria-hidden="true">
+                        {HUECOS.map((h) => (
+                          <span key={h.t} className={`seg ${h.tono}`} style={{ width: `${(h.n / 14) * 100}%` }} />
+                        ))}
+                      </div>
+                      <div className="lp-prod-huecolist">
+                        {HUECOS.map((h) => (
+                          <span className="lp-prod-hueco" key={h.t}>
+                            <i className={`pt ${h.tono}`} />
+                            <b>{h.n}</b> {h.t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                     <p className="lp-prod-mpie">Cuota de voz en IA · últimos 7 días.</p>
                   </div>
 
@@ -810,6 +865,42 @@ export function LandingPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* HUECOS DE PROMPT. Ni el artboard de escritorio ni el móvil lo
+                      traen: la pantalla terminaba en las tres tarjetas de tema y el
+                      marco quedaba con ~100px en blanco debajo, porque su alto lo
+                      manda la pantalla más larga. El fundador pidió el 2026-08-23
+                      llenarlo con algo.
+
+                      No es relleno inventado: es la sección «Huecos de prompt» que
+                      la pantalla real de Competidores ya tiene
+                      (`competitors/prompt-gap-section.tsx`), con SUS cinco categorías
+                      y sus nombres —«Ausente», «Por detrás», «Por delante», «En
+                      exclusiva»—, y es lo que de verdad separa a este producto de una
+                      herramienta que sólo mide cuota de voz: no dice cuánto apareces,
+                      dice EN QUÉ PREGUNTAS te ganan. Los números son ilustrativos como
+                      el resto de la maqueta, y suman los 14 prompts que declara la
+                      pantalla de Prompts — un total que no cuadrara sería un descuido
+                      visible al cambiar de pestaña. */}
+                  <div className="lp-prod-huecos">
+                    <div className="lp-prod-huecohead">
+                      <span className="lp-prod-lbl">Huecos de prompt</span>
+                      <span className="m">14 preguntas del último escaneo</span>
+                    </div>
+                    <div className="lp-prod-huecobar" aria-hidden="true">
+                      {HUECOS.map((h) => (
+                        <span key={h.t} className={`seg ${h.tono}`} style={{ width: `${(h.n / 14) * 100}%` }} />
+                      ))}
+                    </div>
+                    <div className="lp-prod-huecolist">
+                      {HUECOS.map((h) => (
+                        <span className="lp-prod-hueco" key={h.t}>
+                          <i className={`pt ${h.tono}`} />
+                          <b>{h.n}</b> {h.t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Auditoría web.
@@ -831,9 +922,15 @@ export function LandingPage() {
                         { t: "GPTBot con acceso permitido", ok: true }
                       ].map((f) => (
                         <div className="lp-prod-mfix" key={f.t + (f.mono ?? "")}>
-                          {f.ok ? (
-                            <span className="lp-sheet-badge lp-sheet-badge--ok"><Icon name="check" size={12} /></span>
-                          ) : null}
+                          {/* El artboard móvil sólo pone el ✓ de la fila correcta y deja
+                              las que fallan sin marca, así que se leían como una lista
+                              de cosas sin más. El fundador lo pidió el 2026-08-23: las
+                              dos marcas, como en escritorio. Es además lo único que
+                              distingue «lo que está mal» de «lo que está bien» cuando la
+                              cápsula de puntos se lee de reojo. */}
+                          <span className={`lp-sheet-badge ${f.ok ? "lp-sheet-badge--ok" : "lp-sheet-badge--bad"}`}>
+                            <Icon name={f.ok ? "check" : "x"} size={12} />
+                          </span>
                           <span className={`t ${f.ok ? "ok" : ""}`}>
                             {f.t}
                             {f.mono ? <> <code>{f.mono}</code></> : null}
@@ -911,8 +1008,36 @@ export function LandingPage() {
                           </span>
                         </div>
                       </div>
-                      {/* Dibujo de un botón, no un botón: sin acción, va como `span`. */}
-                      <span className="lp-prod-btn primario lp-prod-mbtn" aria-hidden="true">Generar solución</span>
+                      {/* Éste SÍ lleva acción, al revés que los demás botones de la
+                          maqueta: gira un segundo y revela la solución (fundador,
+                          2026-08-23). La isla lo pinta; sin JS no hay botón y la
+                          solución de abajo se sirve ya visible. */}
+                      <div className="lp-prod-mbtnfila">
+                        <SolutionDemo target="#pg-recs" />
+                      </div>
+                    </div>
+
+                    <div className="lp-prod-card lp-prod-msol">
+                      <div className="lp-sheet-gen">
+                        <Icon name="sparkles" size={15} />
+                        <span className="lp-sheet-name">Solución generada</span>
+                        <span className="lp-sheet-ready">Lista para publicar</span>
+                      </div>
+                      <div className="lp-prod-msolbody">
+                        <div className="lp-prod-cap">Página citable · FAQ</div>
+                        <h4>Guía de compra: qué tienda de muebles tiene mejor relación calidad-precio</h4>
+                        <div className="lp-prod-preguntas">
+                          {[
+                            "¿Qué tienda tiene mejor calidad-precio?",
+                            "¿Cuánto cuesta amueblar un salón?"
+                          ].map((q) => (
+                            <div className="lp-prod-pregunta" key={q}>
+                              <Icon name="check" size={13} />
+                              <span>{q}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <p className="lp-prod-mpie">9 acciones priorizadas por impacto.</p>
                   </div>
@@ -959,6 +1084,14 @@ export function LandingPage() {
                             {m.v ? <span className="v">{m.v}</span> : null}
                           </div>
                         ))}
+                      </div>
+
+                      {/* El mismo botón que el móvil, contra el mismo estado. Aquí la
+                          tarjeta de acción y la de solución van lado a lado, así que
+                          antes del clic la columna derecha está vacía y el marco se ve
+                          a medias: es lo que hace que la aparición signifique algo. */}
+                      <div className="lp-prod-accionpie">
+                        <SolutionDemo target="#pg-recs" />
                       </div>
                     </div>
 
@@ -1107,6 +1240,44 @@ export function LandingPage() {
           <HomeCtaBand />
         </div>
       </section>
+      {/* TIRA DEL BLOG — HOME-2026-08, la sección que faltaba del artboard.
+
+          **Los tres artículos NO están escritos a mano.** Salen de
+          `BLOG_POSTS` por su cluster, el más reciente de cada uno, así que la
+          tira envejece con el blog en vez de apuntar a lo que se decidió un
+          martes. Es la misma regla que la FAQ y el `FAQPage`: una sola fuente,
+          o divergen.
+
+          **Y no llevan «7 min de lectura».** El artboard lo pone en las tres
+          tarjetas, pero el producto no calcula tiempo de lectura en ninguna
+          parte —no existe el campo, y el índice del blog enseña la fecha—, así
+          que publicarlo sería inventarse una cifra en la página que más se
+          lee. Va la fecha, que es la que el blog ya enseña. */}
+      {BLOG_STRIP.length > 0 ? (
+        <section className="lp-section lp-blog">
+          <div className="lp-inner">
+            <div className="lp-blog-head">
+              <div>
+                <div className="lp-kicker">Aprender</div>
+                <h2 className="lp-blog-h2">Cómo se trabaja el posicionamiento GEO</h2>
+              </div>
+              <Link className="lp-blog-todo" href="/blog">
+                Ver el blog
+                <Icon name="arrRight" size={15} />
+              </Link>
+            </div>
+            <div className="lp-blog-grid">
+              {BLOG_STRIP.map((a) => (
+                <Link className="lp-blog-card" key={a.slug} href={`/blog/${a.slug}`}>
+                  <span className="lp-blog-cluster">{a.cluster}</span>
+                  <span className="lp-blog-t">{a.title}</span>
+                  <span className="lp-blog-fecha">{a.fecha}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
       </main>
 
       {/* FOOTER */}

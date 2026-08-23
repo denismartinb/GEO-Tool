@@ -13511,3 +13511,113 @@ anchuras × 5 pantallas = **95 combinaciones, todas limpias**, filas envueltas
 incluidas. `prefers-reduced-motion` deja la transición en 0s. **Sin
 JavaScript**: cero tiras, cero botones, cinco paneles en el marcado y
 exactamente uno visible — ningún control muerto.
+
+---
+
+## 148. La solución se genera, la auditoría marca sus fallos, y la portada estrena su tira de blog y su tabla (HOME-2026-08 Fase B2/D, 2026-08-23)
+
+Cuatro peticiones del fundador sobre las cinco pantallas, y con las dos últimas
+la portada queda completa salvo la demo del hero.
+
+### «Generar solución» pasa a hacer algo
+
+Hasta aquí, todos los «botones» de las maquetas iban como `span` porque no
+llevaban acción — un `<button>` sin `onClick` es un control muerto y el piloto
+lo marca. Éste sí la lleva: gira un segundo y aparece la solución. Es el gesto
+que separa a este producto de un panel que sólo mide, y verlo pasar vale más
+que leerlo en un titular.
+
+Lo que la maqueta **no** dice: cuánto tarda una generación de verdad. El
+segundo es ritmo de demostración, no una medición, y no hay nada en pantalla
+que lo presente como tal.
+
+Tres decisiones de implementación:
+
+- **Sin JS la solución se sirve visible y no hay botón.** El ocultamiento
+  cuelga de `is-armed`, que sólo pone la isla al montar. Escrito en la hoja de
+  estilos a secas, quien no ejecutara JS se quedaría sin media pantalla **y**
+  sin el botón para pedirla, porque el botón también lo pinta la isla. Es el
+  contrato de §144.
+- **El estado vive fuera de React, en un `store` de módulo.** Hay DOS botones
+  —el de escritorio y el del móvil son marcados distintos— y sólo uno se ve a
+  cada anchura. Con un `useState` por isla, generar en escritorio y estrechar
+  la ventana enseñaba la solución ya revelada con su botón intacto encima.
+- **El resultado aparece lejos del botón**, así que un lector de pantalla oiría
+  «generando» y nunca que ya está: hay una región `role="status"` que lo dice.
+
+### La auditoría móvil no marcaba sus fallos
+
+El artboard móvil pone el ✓ de la fila correcta y deja las tres que fallan sin
+marca, así que se leían como una lista de cosas sin más. Ahora llevan su ✗,
+como en escritorio. Es lo único que distingue «esto está mal» de «esto está
+bien» cuando la cápsula de puntos se mira de reojo.
+
+### Competidores llena su hueco con algo del producto
+
+El marco tiene un alto mínimo y Competidores es la pantalla más corta, así que
+dejaba ~100px en blanco. Lo llena la sección **«Huecos de prompt»**, que la
+pantalla real de Competidores ya tiene (`competitors/prompt-gap-section.tsx`),
+con sus categorías y sus nombres: Ausente, Por detrás, Por delante, En
+exclusiva. Se omite la quinta —«Sin nadie»— porque no es un hueco: no hay nada
+que recuperar ahí.
+
+No es relleno: es justo lo que separa a esto de una herramienta que mide cuota
+de voz. No dice cuánto apareces, dice **en qué preguntas te ganan**. Los cuatro
+números suman los 14 prompts que declara la pantalla de Prompts; un total que
+no cuadrara sería un descuido visible al cambiar de pestaña.
+
+### La tira del blog, que faltaba entera
+
+Sección del artboard que nunca se implementó. Tres artículos con su cluster y
+su fecha, y un enlace al blog.
+
+**Los tres NO están escritos a mano.** Salen de `BLOG_POSTS` por cluster —el
+más reciente de `fundamentos`, `playbooks` y `medicion`—, así que la tira
+envejece con el blog en vez de apuntar a lo que se decidió un martes, un
+artículo retirado no puede dejar un 404 en la portada, y uno nuevo entra solo.
+Misma regla que el `FAQPage` de §145: una sola fuente, o divergen. Los tres
+clusters son una decisión editorial: responden «qué es esto», «qué hago» y
+«cómo sé si funciona», en ese orden. `sectores` queda fuera porque en la
+portada le habla a una fracción de quien llega.
+
+**Sin «7 min de lectura».** El artboard lo pone en las tres tarjetas. El
+producto no calcula tiempo de lectura en ninguna parte —no existe el campo en
+`BlogPost`, y el índice del blog enseña la fecha—, así que publicarlo sería
+inventarse una cifra en la página que más se lee. Va la fecha, con el formato
+del blog. Lo cubre `lib/landing/home-blog.test.ts`, junto con que los slugs
+existan y que la fecha no se corra un día al formatearse.
+
+### La tabla «Qué cambia, punto por punto»
+
+La otra pieza que faltaba: el modal que el artboard abre desde el párrafo de
+«El cambio de reglas».
+
+- **Sin JS el enlace lleva a `/geo`.** En el marcado del servidor la frase es
+  un enlace normal a la página que explica esto con más sitio; la isla
+  intercepta el clic y abre la tabla. Un clic con modificador o con el botón
+  central se deja pasar: quien pide pestaña nueva quiere la página.
+- **Es un `<dialog>` nativo con `showModal()`**, que trae trampa de foco,
+  cierre con `Esc`, fondo inerte y `::backdrop` sin escribir gestión de teclado.
+- **La última fila no dice lo que dice el artboard.** Ahí pone «No hay una
+  herramienta de medición unificada», que en la portada de una herramienta de
+  medición unificada es a la vez falso y un tiro en el pie. Lo cierto, y lo que
+  además es el argumento, es que el dato no llega solo: hay que preguntárselo a
+  los motores, prompt a prompt.
+
+**Y un fallo que sólo se vio midiendo.** Coloqué el `<dialog>` dentro de
+`.lp-rules-navslot`, que es `display: none` por encima de 560px. `showModal()`
+devolvía `open === true` y `Esc` lo cerraba —o sea, era modal de verdad— pero
+el diálogo medía **0×0**: un elemento cuyo ancestro no se pinta no entra en la
+capa superior. Ningún estado decía «roto»; sólo el `getBoundingClientRect()`.
+Queda como invariante: **un `<dialog>` no cuelga de nada que pueda ocultarse.**
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.781 pruebas) y `pnpm run validate`
+en verde. Barrido de 13 anchuras comprobando a la vez las cinco pestañas, la
+generación completa, el modal abierto, el contraste de todo control y el
+desbordamiento por elemento: limpio. Sin JavaScript: la solución se sirve
+visible, no hay botones de generar y el enlace de la tabla es un enlace a
+`/geo`.
+
+**Lo que queda de la portada:** sólo la demo de cinco escenas del hero (Fase
+A2), que sigue bloqueada por una decisión del fundador — meterla implica sacar
+`ProductTour` de la landing.
