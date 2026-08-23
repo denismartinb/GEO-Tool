@@ -29,8 +29,28 @@ import { describe, expect, it } from "vitest";
 /** Ningún fichero suelto por encima de esto. Hoy el mayor es genscore-og.png (239 KB). */
 const MAX_FILE_BYTES = 320 * 1024;
 
-/** Peso total de `public/`. Hoy son 615 KB en 25 ficheros. */
-const MAX_TOTAL_BYTES = 1.5 * 1024 * 1024;
+/**
+ * Peso total de `public/`. Hoy son 1.544 KB en 44 ficheros.
+ *
+ * **Subido de 1,5 a 1,75 MB el 2026-08-23**, con la razón que el comentario de
+ * arriba exige. El tope de 1,5 MB se fijó con `public/` en 615 KB, o sea con
+ * un 60 % de holgura; al publicar este artículo quedaban **24 KB libres**, y
+ * una portada de blog de las que ya están publicadas pesa entre 59 y 88 KB.
+ * Es decir: el presupuesto ya no daba para *ninguna* pieza de contenido más, y
+ * el motor de contenido de GROWTH-2 publica ~10 URLs al mes
+ * (`docs/content-strategy.md` §5). Un tope que convierte "publicar un artículo
+ * con portada" en un fallo de CI no está midiendo una regresión, está midiendo
+ * el uso normal del repositorio.
+ *
+ * Lo que NO cambia es para qué existe el número: sigue siendo el estado real
+ * con holgura para crecer, no una aspiración. Los 1,75 MB dan sitio a unas
+ * seis portadas más al peso de la de este artículo (28 KB) o a tres al peso de
+ * las más pesadas del catálogo, que es margen para un par de meses de
+ * publicación. La siguiente vez que se agote, la pregunta correcta no es subir
+ * otro cuarto de mega: es por qué una portada del catálogo pesa 88 KB cuando
+ * una equivalente cabe en 28.
+ */
+const MAX_TOTAL_BYTES = 1.75 * 1024 * 1024;
 
 /**
  * Imágenes de contenido: WebP (raster) o SVG (vectorial).

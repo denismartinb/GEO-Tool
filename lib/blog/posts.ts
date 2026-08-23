@@ -151,6 +151,17 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "medicion"
   },
   {
+    slug: "geo-vs-aeo-vs-seo",
+    title: "GEO vs AEO vs SEO: qué significa cada sigla (y cuál usar)",
+    description:
+      "GEO, AEO, SEO y LLMO se usan a menudo como sinónimos y el sector no se ha puesto de acuerdo en un nombre único. Qué significa cada sigla, quién usa cada término y cuál conviene según lo que quieras medir.",
+    datePublished: "2026-08-23",
+    coverIcon: "lang",
+    coverImage: "/blog/geo-vs-aeo-vs-seo/cover.webp",
+    primaryKeyword: "geo vs aeo vs seo",
+    cluster: "fundamentos"
+  },
+  {
     slug: "genscore-vs-herramientas-geo",
     title: "GenScore frente a las herramientas GEO tradicionales: la diferencia entre medir y mejorar",
     description:
