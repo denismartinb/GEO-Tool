@@ -184,6 +184,6 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   nada**: misma especificidad, gana la última. El síntoma no es un color raro,
   es una sección rota —una respuesta de FAQ en una columna de 111px, un galón
   que no aparece— y no se ve leyendo, sólo midiendo `getComputedStyle` (log
-  §145). Es la tercera vez que el orden de este fichero decide en vez de la
+  §146). Es la tercera vez que el orden de este fichero decide en vez de la
   intención: antes con la escala tipográfica (§143) y con los colores de la
   superficie oscura (§144).

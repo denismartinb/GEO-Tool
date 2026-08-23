@@ -13152,7 +13152,94 @@ nada se sale de su tarjeta en ninguna.
 
 ---
 
-## 145. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
+## 145. Una portada nueva no se juzga sola, se juzga al lado de las otras dieciséis (2026-08-23)
+
+Al publicar `/blog/geo-vs-aeo-vs-seo` (GEO vs AEO vs SEO) la portada pasó todas
+las comprobaciones que existen —`covers.test.ts` verifica que el fichero
+declarado existe y que el artículo lo enseña, y el `ux-pilot` dio ✅ en las tres
+anchuras— y aun así estaba mal. Era un degradado azul plano con un diagrama
+pequeño en el centro; las otras dieciséis del catálogo comparten un lenguaje
+visual muy definido que aquélla ignoraba por completo: fondo casi negro
+azulado, paneles translúcidos con neón, y una composición de izquierda a
+derecha en tres tiempos —muchas piezas dispersas → convergen en una lente →
+un panel resuelto—.
+
+**El fallo no tiene síntoma y ningún test puede tenerlo.** La página carga
+limpia, el activo existe, el `og:image` es correcto y la tira de 96px se
+compone bien. Lo único que lo enseña es **poner las diecisiete una debajo de
+otra y mirarlas**, que es lo que hubo que hacer. Es el mismo patrón que §125
+(la portada declarada en SVG que perdía su tarjeta social) un escalón más
+arriba: allí el respaldo de un activo era otro activo correcto; aquí el
+respaldo de una portada es otra portada correcta que no pertenece a la familia.
+
+La nueva habla ese idioma y además dice algo cierto del artículo: las cuatro
+siglas como etiquetas dispersas sobre un muro de tarjetas de contenido, sus
+haces convergiendo en la lente, y a la derecha la respuesta generada con la
+marca mencionada y su cita. El fuente vive en
+`docs/design-reference/blog-covers/`, no en `public/`.
+
+### La zona segura de una portada son dos condiciones, no una
+
+La regla vigente hasta hoy decía que *«la portada se juzga en la tira de 96px,
+no en el lienzo donde se dibuja»* (§85). Es verdad y es incompleta, y lo de
+menos es que faltara un detalle: la primera versión de esta portada se dio por
+buena **habiendo comprobado exactamente lo que la regla pedía**.
+
+En escritorio, `.blog-cover-compact` recorta en vertical: de un lienzo de 4:1
+sólo se ve el tercio central de la altura. Pero **en móvil la cabecera no
+enseña esa tira**, sino una caja de ~3,35:1, más estrecha que el lienzo, así
+que `object-fit: cover` recorta **en horizontal**: unos 98px por cada lado. Con
+las cuatro siglas repartidas por todo el ancho, «SEO» y «LLMO» quedaban
+partidas contra el borde izquierdo — dos de las cuatro protagonistas del
+artículo, en el formato donde más gente lo va a abrir.
+
+La zona segura real es **x 100-1100 e y 100-200 a la vez**, las dos
+condiciones. Un elemento puede cumplir una y fallar la otra, que es justo lo
+que pasó. Antes de dar una portada por buena hay que simular los **dos**
+recortes, no uno.
+
+Lo encontró mirar las capturas del piloto, no su tabla: el run que las produjo
+dio `PILOT PASS` con ✅ en las tres anchuras, porque una portada recortada no
+impide que la página cargue. Tercera vez que se repite lo mismo (§55, §85, y
+ésta), y la conclusión no cambia: **el verde del piloto dice que las
+aserciones que existen no saltaron, nunca que lo que se ve esté bien.**
+
+### El presupuesto de `public/` llevaba tiempo impidiendo publicar
+
+`tests/asset-budget.test.ts` saltó al añadir la portada. No por su peso: en
+`main` quedaban **24 KB libres** de un tope de 1,5 MB, y las portadas ya
+publicadas pesan entre 59 y 88 KB cada una. O sea que el presupuesto no estaba
+frenando una regresión, estaba frenando **el uso normal del repositorio** —
+GROWTH-2 publica del orden de diez URLs al mes, casi todas con imagen.
+
+Subido a 1,75 MB con la razón escrita en el propio test, que es el
+procedimiento que su comentario de cabecera ya establecía. Antes de subirlo se
+quitó el peso muerto real: el SVG fuente de la portada (57 KB) no lo pide
+ninguna página y se sirve desde el mismo origen que las páginas públicas, así
+que se fue a `docs/`. La próxima vez que se agote, la pregunta correcta no es
+subir otro cuarto de mega: es por qué una portada del catálogo pesa 88 KB
+cuando una equivalente cabe en 28.
+
+### Y el texto sonaba a lo que era
+
+Revisión del fundador sobre el borrador: *«dale una vuelta para que parezca un
+pelín más humano, quitando las típicas expresiones que genera la IA»*. Los
+guiones largos pasaron de 25 a 1, y se fueron las construcciones que se
+repetían con un patrón reconocible —«en la práctica», «lo que sí», «cabe en una
+frase», «un ejemplo real de», «nota al margen»— y sobre todo la antítesis
+«no es X, es Y», que aparecía siete veces en 1.500 palabras. Ninguna
+afirmación, ningún enlace y ninguna decisión de honestidad cambiaron: lo que se
+tocó fue el ritmo.
+
+No hay test para esto y no lo va a haber. Queda como criterio: **si el texto
+tiene un patrón sintáctico que se repite más de dos o tres veces, se nota**, y
+en una pieza que existe para posicionar en una categoría nueva se nota más,
+porque el lector que llega ya viene harto de leer lo mismo en otros seis
+sitios.
+
+---
+
+## 146. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
 
 Entran las tres últimas secciones del diseño aprobado —testimonio, FAQ y
 cierre— y con ellas se va algo que llevaba meses en producción sin que nadie lo
