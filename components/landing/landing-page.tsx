@@ -1066,16 +1066,35 @@ export function LandingPage() {
                       <div className="lp-prod-msolbody">
                         <div className="lp-prod-cap">Página citable · FAQ</div>
                         <h4>Guía de compra: qué tienda de muebles tiene mejor relación calidad-precio</h4>
-                        <div className="lp-prod-preguntas">
+                        {/* La orden de trabajo, no el índice de preguntas: el artefacto
+                            generado son TRES piezas —el texto, el schema y dónde
+                            publicarlo— y verlas desglosadas es lo que distingue «un
+                            consejo» de «un encargo ya resuelto» (fundador, 2026-08-23:
+                            «dame alternativas para poner una solución más potente»).
+                            Los tres pasos son ilustrativos, como el resto de la
+                            maqueta —igual que los «+15 pts» de Auditoría web arriba—,
+                            no datos de un escaneo real. */}
+                        <div className="lp-prod-pasos">
                           {[
-                            "¿Qué tienda tiene mejor calidad-precio?",
-                            "¿Cuánto cuesta amueblar un salón?"
-                          ].map((q) => (
-                            <div className="lp-prod-pregunta" key={q}>
-                              <Icon name="check" size={13} />
-                              <span>{q}</span>
+                            { t: "El texto de la página", s: "2 preguntas · 340 palabras" },
+                            { t: "El schema FAQPage", s: "JSON-LD para el <head>" },
+                            { t: "Dónde publicarlo", s: "ikea.es/guia-de-compra" }
+                          ].map((p, i) => (
+                            <div className="lp-prod-paso" key={p.t}>
+                              <span className="n">{i + 1}</span>
+                              <span className="tt">
+                                {p.t}
+                                <span className="ss">{p.s}</span>
+                              </span>
+                              <span className="ok">Listo</span>
                             </div>
                           ))}
+                        </div>
+                        <div className="lp-prod-pasocierre">
+                          <Icon name="check" size={13} />
+                          <span>
+                            <b>+12 pt potenciales.</b> El próximo escaneo mide si funcionó.
+                          </span>
                         </div>
                       </div>
                     </div>

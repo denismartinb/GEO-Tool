@@ -6611,8 +6611,36 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-prod-msol { margin-top: 12px; overflow: hidden; }
   .lp-prod-msolbody { padding: 14px 16px; }
   .lp-prod-msolbody h4 { margin: 8px 0 0; font-size: 14px; font-weight: 600; line-height: 1.4; }
-  .lp-prod-msolbody .lp-prod-preguntas { margin-top: 10px; }
-  .lp-prod-msolbody .lp-prod-pregunta { font-size: 12.5px; padding: 8px 0; }
+  /* Los tres pasos del entregable, en vez del índice de preguntas: «lo que
+     pegas» se lee mejor desglosado en piezas que como una lista de enunciados
+     sin respuesta (fundador, 2026-08-23). Compactado a propósito —el primer
+     intento medía 462px de tarjeta y bajó a 396 sin perder ningún paso ni el
+     cierre, sólo aire entre ellos. */
+  .lp-prod-pasos { margin-top: 10px; display: grid; gap: 6px; }
+  .lp-prod-paso {
+    display: grid; grid-template-columns: 20px 1fr auto; gap: 9px; align-items: center;
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2);
+  }
+  .lp-prod-paso .n {
+    width: 20px; height: 20px; border-radius: 999px; background: var(--brand-blue); color: #fff;
+    display: grid; place-items: center; font-size: 10.5px; font-weight: 700; flex: 0 0 auto;
+  }
+  .lp-prod-paso .tt { font-size: 12px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+  .lp-prod-paso .ss { display: block; font-size: 11px; font-weight: 400; color: var(--ink-3); margin-top: 1px; }
+  .lp-prod-paso .ok {
+    display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px;
+    background: #e7f6ee; color: #15915a; font-size: 10px; font-weight: 600;
+  }
+  /* Cierra el bucle: el escaneo que sigue es lo que convierte «+12 pt
+     potenciales» en un dato real, no una promesa (CLAUDE.md, "no fake
+     metrics" — el número es ilustrativo, la afirmación de que el siguiente
+     escaneo lo mide es literalmente cierta). */
+  .lp-prod-pasocierre {
+    display: flex; align-items: center; gap: 7px; margin-top: 9px; padding-top: 9px;
+    border-top: 1px solid var(--line-soft); font-size: 11px; line-height: 1.4; color: var(--ink-3);
+  }
+  .lp-prod-pasocierre svg { flex: 0 0 auto; color: #15915a; }
+  .lp-prod-pasocierre b { color: #15915a; font-weight: 700; }
   .lp-prod-mbtnfila { margin-top: 16px; }
   .lp-prod-mbtnfila .lp-prod-genbtn { display: flex; width: 100%; justify-content: center; height: 46px; font-size: 14.5px; }
 

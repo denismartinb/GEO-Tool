@@ -13846,3 +13846,21 @@ Pendiente de decisión del fundador, con alternativas ya dibujadas y enseñadas:
 la tarjeta 01 de la sección oscura con una segunda métrica (citas además de
 menciones) y la tarjeta 02 con leyenda de colores, que hoy no explica qué
 significan los cuatro segmentos de su barra.
+
+**Además, mismo PR, mismo día — la tarjeta de solución de Recomendaciones
+(móvil) se vuelve una orden de trabajo.** El fundador, tras ver la pantalla
+enseñada por el piloto: *«el bloque de recomendaciones ha quedado bien, dame
+alternativas para poner una solución más potente»*. La tarjeta enseñaba dos
+enunciados de pregunta con un check, sin respuesta y sin decir qué se había
+generado de verdad. Tres alternativas dibujadas y enseñadas — «lo que pegas»
+(preguntas con su respuesta y el JSON-LD real), «la orden de trabajo» (el
+entregable desglosado en tres piezas numeradas) y una versión con pestañas —;
+eligió la segunda y pidió compactarla «sin quitar lo importante»: bajó de
+462 a 396px de tarjeta apretando el relleno de cada paso, no quitando ninguno.
+
+Los tres pasos —texto, schema, dónde publicarlo— y el «+12 pt potenciales» son
+ilustrativos, como el resto de la maqueta de producto de la portada (los
+«+15 pts» de Auditoría web, el «71» del marcador): no salen de un escaneo
+real, y no podían, porque esta pantalla no tiene sesión detrás. Lo que sí es
+literalmente cierto es la frase de cierre — «el próximo escaneo mide si
+funcionó» —, que es la promesa que el producto sostiene de verdad.
