@@ -1,6 +1,6 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { dismissWelcomeTour } from "../../support/journey";
-import { sweepTestPrompts } from "../../support/write-guard";
+import { PILOT_TEST_PROMPT_MARKER } from "../../support/write-guard";
 
 /**
  * ONE-OFF, NOT PART OF THE PILOT HARNESS.
@@ -14,28 +14,60 @@ import { sweepTestPrompts } from "../../support/write-guard";
  *
  * The founder confirmed the stray prompt is really there and asked for it to
  * be removed. This test does exactly that, against the exact confirmed
- * project id, reusing the same trusted `sweepTestPrompts` the write-pilot
- * itself uses for cleanup — it bypasses only the buggy domain resolver, not
- * the deletion mechanism. No new prompt, no new scan.
+ * project id, driving the real "Borrar prompt" UI by hand instead of the
+ * shared `sweepTestPrompts` (see below for why) — it bypasses only the buggy
+ * domain resolver, not any deletion logic. No new prompt, no new scan.
  *
- * This branch (`chore/pilot-cleanup-pr459`) is not meant to be merged; this
- * file exists only so a CI run can drive the real "Borrar prompt" UI once.
+ * This branch (`chore/pilot-cleanup-pr459`) is not meant to be merged.
  */
 const STRAY_PROJECT_ID = "72b2b61e-f89c-4575-8a97-d3303e4bd55d";
 
 test("ONEOFF-CLEANUP-PR459: remove the stray [PILOT-TEST] prompt from the wrong project", async ({
   page
 }) => {
-  // First run (a276651 → f0f5885) reported "removed 0" — a false negative.
-  // sweepTestPrompts navigates straight to the prompts list, but the
-  // write-project's storageState still carries a fresh, undismissed welcome
-  // tour (the "auth" project setup strips the tour-seen marker on purpose —
-  // .claude/rules/onboarding.md), so the popup was covering the whole page
-  // and `getByText(marker)` found nothing behind it. Dismiss it first.
+  // Run 1 (a276651): "removed 0" — the fresh storageState's undismissed
+  // welcome tour covered the whole page (its tour-seen marker is
+  // deliberately stripped for the "auth" project — .claude/rules/
+  // onboarding.md), so getByText(marker) found nothing behind it.
   await page.goto(`/dashboard/projects/${STRAY_PROJECT_ID}/prompts`, { waitUntil: "domcontentloaded" });
   await dismissWelcomeTour(page);
 
-  const deleted = await sweepTestPrompts(page, STRAY_PROJECT_ID);
+  // Run 2 (d63130f), tour dismissed: STILL "removed 0". Confirmed from this
+  // run's own screenshot — prompt rows live inside per-topic accordions that
+  // mount collapsed (`isOpen = expandedTopics.has(category) ||
+  // query.trim().length > 0` in prompts-client.tsx), so with both topics
+  // closed the marker text was never in the DOM for `sweepTestPrompts`'s
+  // bare getByText to find. A non-empty search query force-opens the
+  // matching topic — the same lever three earlier commits on this harness
+  // already used for this exact bug (runs 10-12, 2026-08-05) before it
+  // regressed. Three "Buscar prompt" inputs exist (mobile/tablet/desktop
+  // toolbar placements); exactly one is visible at this viewport.
+  const searchBoxes = page.getByLabel("Buscar prompt");
+  const count = await searchBoxes.count();
+  let filled = false;
+  for (let i = 0; i < count; i += 1) {
+    const box = searchBoxes.nth(i);
+    if (await box.isVisible().catch(() => false)) {
+      await box.fill(PILOT_TEST_PROMPT_MARKER);
+      filled = true;
+      break;
+    }
+  }
+  expect(filled, "no visible 'Buscar prompt' search box found").toBe(true);
+
+  const row = page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).first();
+  await expect(row, "search did not reveal the marked prompt").toBeVisible({ timeout: 10_000 });
+  await row.click();
+
+  const drawer = page.locator(".prompt-drawer");
+  await expect(drawer).toBeVisible();
+  await drawer.getByLabel("Borrar prompt").click();
+
+  const confirm = page.locator(".modal-card");
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: /^borrar prompt$/i }).click();
+  await expect(drawer).toBeHidden({ timeout: 15_000 });
+
   // eslint-disable-next-line no-console
-  console.log(`Cleanup: removed ${deleted} stray prompt(s) from project ${STRAY_PROJECT_ID}.`);
+  console.log(`Cleanup: removed 1 stray prompt from project ${STRAY_PROJECT_ID}.`);
 });
