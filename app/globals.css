@@ -7919,7 +7919,7 @@ select.set-field {
    pública, tal y como documenta .claude/rules/styles.md ("deja fuera cosas
    que sí son de consola... porque sus clases se escriben desde components/").
    ============================================================ */
-.onb2-page { max-width: 1080px; }
+.onb2-page { max-width: 1200px; }
 .onb2-crumb { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 650; color: var(--ink-3); }
 .onb2-back { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 650; color: var(--ink-3);
   border: 0; background: none; padding: 0; cursor: pointer; font-family: inherit; }
@@ -7939,7 +7939,14 @@ select.set-field {
 .onb2-stp.on .onb2-stp-lb { color: var(--ink); }
 .onb2-stp.done .onb2-stp-lb { color: var(--ink-2); }
 
-.onb2-grid { display: grid; grid-template-columns: 1fr 320px; gap: 22px; align-items: start; }
+/* minmax(0, 1fr), not 1fr — the category-coverage grid inside the prompts
+   step (.onb2-cov, repeat(auto-fit, minmax(140px, 1fr))) contributes a
+   min-content width of (category count × 140px), and a bare `1fr` track
+   grows to fit that instead of shrinking, pushing the fixed 320px summary
+   panel outside the viewport with no scrollbar to reach it (`.shell` clips
+   overflow-x). Same fix already used for the analogous content+panel layout
+   in `.cm2-cols` (log §125 addendum, founder screenshot 2026-08-22). */
+.onb2-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
 .onb2-seclbl { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-4); margin: 0 0 8px 2px; }
 .onb2-cpad { padding: 20px; }
 

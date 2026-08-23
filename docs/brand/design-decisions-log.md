@@ -11749,6 +11749,47 @@ cuyo mercado quieres analizar."** Cambio de una sola línea en
 `components/onboarding-wizard.tsx`; sin tocar `languageForCountry` ni la
 lógica de sugerencia.
 
+**Segunda ronda de revisión manual (2026-08-22): distribución de escritorio y
+un corte real en el paso de prompts.** El fundador probó el preview real en
+capturas de escritorio y reportó dos cosas: (1) "en general" el asistente se
+veía centrado en medio de la pantalla, con demasiado espacio libre a los
+lados en las tres pantallas; (2) específicamente en "Revisa tus prompts", el
+panel "Resumen del lanzamiento" salía "mal centrado" y "se corta".
+
+Investigado sin sesión autenticada (igual que las rondas anteriores):
+reproducción estática local con el `app/globals.css` real, renderizada con
+Chromium headless a 1440×900 y 1920×1080, con un script de depuración que
+mide `getBoundingClientRect()` de cada elemento del `.onb2-grid`. Dos causas
+distintas, una por queja:
+
+1. **El espacio libre era real, no percepción.** `.onb2-page { max-width:
+   1080px }` es más estrecho que el resto de pantallas de consola
+   rediseñadas con este mismo patrón contenido+panel — `.cm2-page`,
+   `.cit2-page`, `.dm2-page` escalan hasta 1200-1280px en pantallas grandes.
+   Subido a `1200px`, en línea con esas otras zonas.
+2. **El corte en el paso de prompts era un bug real de CSS Grid, no una
+   percepción ni un recorte de captura.** `.onb2-grid` usaba
+   `grid-template-columns: 1fr 320px` (sin `minmax(0, …)`). La cuadrícula de
+   cobertura por categoría dentro de ese paso (`.onb2-cov`, `repeat(auto-fit,
+   minmax(140px, 1fr))`) aporta un ancho mínimo de contenido de
+   `nº categorías × 140px`; con un `1fr` a secas ese mínimo empuja la columna
+   de contenido más allá de su reparto justo, y el panel fijo de 320px sale
+   empujado fuera del viewport — sin scroll horizontal porque `.shell` recorta
+   ese eje (`.claude/rules/styles.md`, "clip, nunca hidden"). Reproducido:
+   a 1440px el panel completo (incluido el valor del dominio) quedaba fuera
+   de la pantalla, invisible y sin forma de llegar a él. `.onb2-grid` no era
+   una construcción nueva: el mismo layout contenido+panel fijo ya existía en
+   `.cm2-cols` (competidores real) con `minmax(0, 1fr) 320px` — el onboarding
+   se desvió de ese patrón ya establecido. Corregido igualando esa regla; el
+   único paso con `.onb2-cov` es precisamente "Revisa tus prompts", que es
+   por lo que el corte no aparecía en los pasos de dominio o competidores.
+   Verificado tras el cambio: a 1440px y 1920px el panel completo queda
+   dentro del viewport en ambos casos, sin overflow horizontal
+   (`document.documentElement.scrollWidth === innerWidth`).
+
+Ningún dato falso: ambos arreglos son de layout puro, sin tocar la lógica del
+asistente.
+
 ---
 
 ## Cómo mantener este documento
