@@ -1121,7 +1121,6 @@ más, con capturas reales de dispositivo:
    filas recibe) ni la cuota de voz / Terreno por tema / matriz, que siguen
    siendo acumulativas por diseño.
 
-
 ## 11. Competidores sugeridos (COMPETITOR-SUGGESTIONS-1, 2026-08-03)
 
 **Qué se decidió.** La caja de sugerencias de la pantalla de Competidores deja
@@ -1320,7 +1319,6 @@ en el degradado con icono, que es exactamente lo que se ha rechazado.
 humano: no hay herramienta de generación en el entorno del agente y el stock
 exige licencia. Mientras siga así, la publicación semanal autónoma (Fase A1)
 tiene aquí una dependencia manual.
-
 
 ## 15. Gráfico de evolución del puesto — ventana y huecos (TREND-WINDOW-1, 2026-08-04)
 
@@ -1531,10 +1529,6 @@ documentación que se pudre.
 **Pendiente conocido.** La colisión de ADR 0026 sigue sin resolver (renumerar
 uno de los dos toca enlaces cruzados y merece su propia decisión). Las tres
 zonas sin regla de ruta siguen dependiendo de que se lea su histórico.
-
----
-
----
 
 ---
 
@@ -4783,8 +4777,6 @@ detectados durante esta investigación y sin tocar.
 
 ---
 
----
-
 ## 55. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
 
 **Estado: implementada la fase 1 (secuencia + traspaso).** Exploración de
@@ -4875,7 +4867,6 @@ de 5 minutos contra una copia que promete "un par de minutos".
 
 ---
 
-
 **Addendum rev.4 (2026-08-10) — la animación, rehecha.** La primera pasada por
 producción del fundador, en el móvil y sobre la fase de órbita, fue lapidaria:
 *«queda muy cutre… el cohete está parado, da la sensación de que la página está
@@ -4930,7 +4921,6 @@ pares de fotogramas de la órbita separados 4 s que demuestran el desplazamiento
 de estrellas, Tierra, cohete y paquetes. Sigue **sin verificar por el piloto**,
 por la razón de siempre: el proyecto piloto tiene historial, así que
 `isFirstScan` es `false` y el cohete no llega a montarse nunca.
-
 
 ## 56. La misión ocupa la pantalla entera, y el encendido deja de durar un minuto (SCAN-STATES-2, 2026-08-10)
 
@@ -5007,7 +4997,6 @@ los objetos colocados (tamaño fijo), que es lo que hace `rev5`. Y sigue **sin
 verificar por el piloto**, por la razón de siempre: el proyecto piloto tiene
 historial, así que `isFirstScan` es `false` y esta pantalla no se monta nunca.
 
-
 **Addendum (2026-08-10, misma tarde) — tres correcciones tras la primera prueba
 real en producción.** El fundador escaneó `genscore.es` desde el móvil y
 encontró tres cosas. Las tres eran ciertas.
@@ -5050,7 +5039,6 @@ fase: la auditoría corre DESPUÉS del escaneo, así que la misión tendría que
 continuar más allá de `entrega`, y eso cambia el contrato de
 `computeMissionBeat`, no sólo el copy.
 
-
 **Addendum (2026-08-11) — la banda de auditoría nunca se mostró.** El fundador
 probó el cohete («ahora es perfecto») y añadió: *«pero no he visto la parte de
 la auditoría»*. No era percepción suya: `ScanMissionBand` era **código muerto
@@ -5075,7 +5063,6 @@ esta pantalla no encontraron un elemento que no se dibujaba nunca. Lo encontró
 un humano escaneando un dominio real. El piloto no podía verlo —proyecto con
 historial, `isFirstScan` falso— y ningún test cubría la expresión porque
 estaba en línea dentro del JSX.
-
 
 ## 57. La reentrada: la auditoría web entra en la misión (SCAN-STATES-3, 2026-08-11)
 
@@ -5225,8 +5212,6 @@ pilar `sectores`) y la Fase C de contenido.
 
 ---
 
----
-
 ## 48. Los últimos P1 técnicos del plan SEO: preguntas reales marcadas, tres portadas que faltaban, y un pilar que dejó de mentir sobre su edad (SEO-POS-1 Fase T-c, 2026-08-10)
 
 **Qué se decidió.** Cierra los tres P1 menores que quedaban abiertos del plan
@@ -5348,9 +5333,6 @@ esto cierra); §42 (el flake de sesión, aún abierto).
 
 ---
 
-
----
-
 ## 50. Primera pieza de la Fase C, y una corrección al propio plan antes de escribirla (SEO-POS-1, S1, 2026-08-10)
 
 **Origen.** Primera pieza de la cola de contenido priorizada por
@@ -5395,7 +5377,6 @@ self-check — funcionó exactamente como debía, cazándolo antes de mergear.
 **Validación:** 1892/1892 tests, `pnpm run validate` limpio. Verificado sobre
 el HTML del build: título/canonical propios, `FAQPage` presente, entra en el
 índice de `/blog`, en el pilar `playbooks` y en el sitemap.
-
 
 ---
 
@@ -6114,8 +6095,6 @@ prompts, por ejemplo, solo en Gemini"*.
   cambio).
 - **Sin piloto agéntico todavía**: mismo estado que la 52 y la 53 — los tres
   interruptores viven en `/debug` y esta fase no se ha visto en un preview.
-
----
 
 ---
 
@@ -8749,7 +8728,6 @@ configuración, no código, y ningún test de este repo puede verla.
 (cadena de lotes) y ADR 0016 (cadena del barrido); §89 (Q1).
 
 ---
----
 
 ## 91. Una marca escrita de dos formas es ruido que ponemos nosotros (SEO-POS-1 Fase E, E1, 2026-08-13)
 
@@ -9155,11 +9133,6 @@ se escribió de una vez y el código siguió moviéndose.**
 **Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q (Q5); §42 (la
 pérdida de sesión y el `retries: 0`); §54 (la intermitencia de CI); §55
 (`ContentExpectation` y por qué existe).
-
----
-
-
----
 
 ---
 
@@ -9661,8 +9634,6 @@ juicio visual formal antes del Human Gate de este PR.
 
 ---
 
----
-
 ## 102. Dos trozos de código que la documentación juraba vivos (PRELAUNCH-HARDENING-1 Fase R8, 2026-08-15)
 
 **Qué se decidió.** Se borran los dos huérfanos que quedaban de la Fase R.
@@ -9719,12 +9690,6 @@ leyera sin ese aviso la implementaría otra vez.
 `docs/specs/web-audit/ROADMAP.md` fila 3 y «Fase A».
 
 ---
-
-
----
-
----
-
 
 ## 103. Dieciséis pantallas con la misma pestaña, y un pendiente que valía menos de lo que dije (ROOT-METADATA-1, 2026-08-15)
 
@@ -10049,14 +10014,6 @@ ADR 0033/0035 (la puerta y la cifra principal).
 
 ---
 
-
----
-
-
----
-
----
-
 ## 107. El único documento pensado para copiarse fuera (SEO-POS-1 Fase A, 2026-08-16)
 
 Fase A es la capa que el plan siempre asignó al fundador: Reddit, YouTube,
@@ -10279,9 +10236,6 @@ unificó enlaces y CTAs). El bloqueo del `sticky` se remonta al comentario de
 
 ---
 
-
----
-
 ## 111. Se retira la banda «Revisando tu web» de Visión general — dos avisos del mismo hecho en la misma pantalla (2026-08-16)
 
 **El problema, señalado por el fundador con una captura.** Mientras la
@@ -10397,8 +10351,6 @@ en el ejemplo).
 
 ---
 
----
-
 ## 112. El aviso verde de «tu primer escaneo se está ejecutando» reaparecía ya terminado el escaneo (2026-08-16)
 
 **El problema, reportado por el fundador con una captura del móvil.** En
@@ -10444,10 +10396,6 @@ la única clave que nunca debía renderizarse como banner.
 de fondo no cambia, sólo la condición de código que la implementaba);
 `components/scan-progress-poller.tsx` (el `router.refresh()` que dispara el
 refresco silencioso que expuso el caso "ya terminado").
-
----
-
----
 
 ---
 
@@ -11126,9 +11074,6 @@ fundador, 2026-08-20.
 
 ---
 
-
----
-
 ## 119. Visión general en escritorio: cabecera de la puntuación GEO alineada, desglose y motores lado a lado (OV-DESKTOP-2, 2026-08-17)
 
 **El problema, señalado por el fundador con una captura de escritorio.** En
@@ -11338,9 +11283,6 @@ a construir cuando cambia este workflow, para que el arreglo pueda ejercitarse).
 
 ---
 
-
----
-
 ## 121. `sameAs` deja de estar vacío: LinkedIn y G2 son perfiles reales (2026-08-20)
 
 **Qué pasó.** El fundador dio de alta la página de empresa de LinkedIn
@@ -11367,8 +11309,6 @@ el mecanismo que esos documentos describen como el que las desbloquea.
 **Trazabilidad.** `components/seo/organization-schema.tsx`; log §100 (por qué
 `sameAs` nació vacío); `docs/off-site-authority-kit.md` §7-8 y su tabla de
 Estado (el mismo hueco, documentado desde el lado de contenido).
-
----
 
 ---
 
@@ -11607,7 +11547,1612 @@ de donde sale el `overflow-x` original), §55 (lo que el piloto sí mide hoy).
 
 ---
 
-## 125. Rediseño del onboarding de nuevo dominio — dirección "Consola" (ONBOARDING-DOMAIN-REDESIGN-1, 2026-08-20)
+## 125. Las 16 portadas del blog pasan a la tanda WebP del fundador, y tres de ellas llevaban tres pilotos en verde sin usarse (2026-08-20)
+
+El fundador entregó un zip con 16 portadas nuevas (1200×300 WebP, una por
+artículo publicado, con su índice de concepto visual). Sustituyen a las que
+había: 13 reemplazan un `cover.webp` anterior y 3 —los posts de sector— llegan
+donde antes había un SVG dibujado por un agente.
+
+**El fallo, que es la parte que merece quedar escrita.** Copiar los 16 ficheros
+a `public/blog/<slug>/cover.webp` parecía el trabajo entero, y no lo era.
+`geo-para-ecommerce`, `geo-para-saas-b2b` y `geo-para-agencias` declaraban
+`coverImage: "/blog/<slug>/cover.svg"` en `lib/blog/posts.ts`. El `.webp` nuevo
+quedó en `public/` sin que nada lo referenciara y esos tres artículos siguieron
+pintando la portada vieja. Es decir: **3 de las 16 portadas que el encargo pedía
+actualizar no se actualizaron**, y el PR afirmaba que sí.
+
+**Lo grave es cómo pasó la revisión.** El `ux-pilot` corrió **tres veces** sobre
+tres commits distintos y las tres dio `PILOT PASS` con
+`blog-geo-para-ecommerce`, `blog-geo-para-saas-b2b` y `blog-geo-para-agencias`
+en ✅ a 375, 768 y 1280 px. Y tenía razón en lo que mide: la página cargaba
+perfecta, con una portada válida y bonita. Sólo que era la anterior. Misma
+enfermedad que §124 (57 superficies en verde sobre un sitio que no se podía
+scrollear) y que el incidente fundacional de Auditoría web del 2026-08-02: **una
+pantalla que renderiza bien no es una pantalla verificada.** Un reemplazo de
+activo no tiene forma de fallar visiblemente — el respaldo es otro activo
+correcto—, así que aquí el veredicto del piloto no aportaba nada y la
+comprobación tenía que ser sobre el código: *¿quién referencia el fichero que
+acabo de escribir?*
+
+**Lo que se corrigió al encontrarlo:**
+
+- Las tres declaraciones `coverImage` pasan a `.webp`.
+- Los tres `cover.svg` superseded se borran: nada los referencia ya, y dejarlos
+  invita a la siguiente sesión a preguntarse cuál manda.
+- **Efecto colateral bueno, no buscado:** `ogImageFor` (`lib/seo/metadata.ts`)
+  filtra por `RASTER`, así que un `coverImage` SVG cae a la imagen OG de marca.
+  Esos tres artículos llevaban desde su publicación compartiéndose en redes con
+  la portada genérica; ahora emiten la suya.
+- El comentario de `ogImageFor` afirmaba que «las portadas reales son cuadradas
+  de 1254×1254». Con esta tanda son apaisadas de 1200×300 (verificado leyendo la
+  cabecera VP8 de los 16 ficheros). El argumento de omitir `width`/`height`
+  sigue siendo válido —declarar 1200×630 seguiría siendo mentira—, pero la cifra
+  era falsa y un comentario falso es peor que ninguno (§124).
+- `docs/agentic-weekly-post.md` mandaba copiar esos tres SVG como plantilla de
+  partida. Referencia muerta desde el borrado; reescrita.
+
+**Qué queda pendiente.** La cobertura de portadas se apoya hoy en
+`lib/blog/covers.test.ts`, que comprueba que todo post declara `coverImage` y
+que el fichero declarado existe. Las dos cosas eran ciertas **durante todo el
+fallo**: `.svg` existía. Lo que no cubre nadie es la pregunta inversa —un
+`public/blog/<slug>/` con dos portadas de distinta extensión y sólo una
+declarada— que es exactamente la firma de este incidente. Un test de huérfanos
+ahí lo habría cazado en CI sin gastar un piloto.
+
+Y no es hipotético: al barrer el directorio buscando esta firma aparecieron
+**cinco `cover.svg` huérfanos más**, anteriores a esta fase y ajenos a ella
+(`como-aparecer-en-perplexity`, `como-hacer-que-chatgpt-recomiende-tu-negocio`,
+`como-medir-trafico-chatgpt-ga4`, `metricas-geo-que-medir`,
+`que-es-una-auditoria-geo`). Esos posts ya declaraban `.webp`, así que ahí el
+huérfano no rompe nada hoy — pero son cinco directorios donde la siguiente
+sesión encontrará dos portadas y ninguna señal de cuál manda. **No se borran en
+este PR a propósito**: son de otra fase y el encargo era actualizar portadas, no
+barrer activos. Quedan como el primer caso de prueba del test de huérfanos
+cuando se escriba.
+
+**Decisión abierta que este PR NO resuelve: chocan con la letra de ADR 0028.**
+Su regla vigente dice que una portada «no puede representar una interfaz de
+producto, un gráfico, un panel ni una métrica». Las 16 portadas nuevas son
+justamente eso: paneles, líneas, donuts, barras, medidores y tarjetas de KPI.
+
+Miradas a resolución nativa, sin embargo, **no contienen una sola cifra
+legible** — todo el texto de las maquetas son barras de relleno abstractas, sin
+ejes, sin etiquetas y sin números. Cumplen entero el *motivo* declarado de la
+regla («si la portada enseña algo que parece un dato de Genscore, ese dato tiene
+que existir»: aquí no hay nada que parsee como dato) y contradicen su *letra*.
+Tampoco reproducen la interfaz real de GenScore: son paneles genéricos de stock.
+
+Se publican tal cual porque son activos entregados por el fundador, y ADR 0028
+ya trató así las cuatro primeras («las portadas actuales, aportadas por el
+fundador, se mantienen»). Pero **queda un ADR contradicho en silencio**, que es
+exactamente lo que §124 llama peor que ninguno. La salida limpia es una tercera
+enmienda a ADR 0028 que estreche la regla de «ningún panel ni gráfico» a «ninguna
+cifra legible ni interfaz reconocible de GenScore» — que es lo que la regla
+siempre quiso decir. **No se escribe aquí porque es una decisión, no un
+arreglo**, y le corresponde al fundador.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `lib/seo/metadata.ts`,
+`.claude/rules/growth-content.md`, `docs/agentic-weekly-post.md`,
+`public/blog/*/cover.webp`; ADR 0028 y sus dos enmiendas; log §124 y el
+incidente del 2026-08-02 en CLAUDE.md para el mismo punto ciego del piloto.
+
+---
+
+## 126. El bloque que ofrecíamos copiar no era JSON válido (RECS-USEFULNESS-1 Fase A, 2026-08-20)
+
+**Origen.** El fundador ejecutó las recomendaciones que GenScore emite para el
+propio `genscore.es`, con la pregunta puesta del lado del cliente: *«imagina que
+pagas porque la herramienta te dé esto para pegar e implementar
+directamente»*. Dos recomendaciones bastaron para encontrar siete fallos. El
+primero no es de criterio, es objetivo: **el bloque JSON-LD que la pantalla
+ofrecía junto a un botón «Copiar» terminaba a media palabra**, en
+`...bien organizadas con HTML se`.
+
+**Causa.** 1.182 caracteres contra un tope de 1.200, en dos sitios a la vez: el
+prompt le pedía al modelo `max 1200 chars` y `sanitizeExampleContent()`
+remataba con un `.slice(0, 1200)` ciego sobre lo que podía ser código. Y nada
+lo paraba después: la validación sólo miraba evidencia (competidores y dominios
+inventados) y longitud — **no había un solo `JSON.parse` en toda la ruta**, así
+que un objeto sin cerrar se persistía y se pintaba con su botón de copiar. El
+cliente lo pegaba, le fallaba en su web, y no tenía forma de saber que el fallo
+era nuestro.
+
+Debajo hay una incompatibilidad de diseño, no un número mal elegido: el playbook
+de `create_faq_section` le pide al modelo «2-4 pares pregunta/respuesta más un
+bloque JSON-LD». **Eso no cabe en 1.200 caracteres.** Le pedíamos algo que no
+entraba y luego lo cortábamos.
+
+**Qué se decidió.** Un módulo propio, `lib/recommendations/pasteable-artifact.ts`,
+con dos reglas que a propósito no son la misma:
+
+- **Un artefacto de código no se trunca jamás.** Medio JSON-LD es peor que
+  ninguno: no falla al pegarlo, falla después, en la web del cliente. Si no
+  cabe, se descarta entero.
+- **La prosa sí se recorta, pero por límite de palabra.** Un párrafo citable que
+  se pasa por poco sigue sirviendo; tirarlo entero pierde valor sin ganar
+  corrección.
+
+Con eso: tope de código a 3.000 (medido sobre el artefacto real, no elegido a
+ojo), `JSON.parse` obligatorio sobre todo lo que pretenda ser JSON —incluido un
+`<script type="application/ld+json">` al que le falte el cierre—, detección de
+marcado que acaba dentro de una etiqueta abierta, y el prompt reescrito para que
+**la integridad gane a la cobertura**: antes un `FAQPage` de dos preguntas
+completo que uno de cuatro cortado.
+
+**El descarte es por artefacto, no por solución.** El plan (título, resumen,
+pasos) sigue valiendo aunque uno de los tres ejemplos venga roto, y devolver un
+error entero le gastaría al usuario una generación de su cupo diario a cambio de
+nada. Lo que no se hace nunca es enseñar el roto.
+
+**El arreglo no repara lo ya generado, y eso importa hoy.** La ruta de
+idempotencia devuelve la solución persistida más reciente
+(`status: completed`, `is_sanitized: true`) sin volver a llamar a Gemini, así
+que **una recomendación que ya tenga guardado un artefacto cortado lo seguirá
+sirviendo cortado para siempre**: el validador nuevo se aplica al escribir, y
+esa fila se escribió antes. No se purga aquí a propósito —borrar filas de
+`generated_solutions` es escritura destructiva sobre datos de clientes y va con
+su propia aprobación—, pero queda dicho: el bloque que originó este incidente
+sigue roto en la cuenta del fundador hasta que se decida qué hacer con las
+filas viejas. Opciones para su fase: revalidar al leer y regenerar sólo si
+falla, o una purga acotada a artefactos que no parsean.
+
+**Lo que queda roto conocido.** El usuario ve un plan con un ejemplo menos y
+**no se le dice que ha faltado uno**; avisarlo en pantalla es trabajo de UI con
+su pasada de piloto. Y quedan seis fallos más de la misma sesión sin tocar, el
+mayor de ellos: **el generador no sabe nada de la web del cliente** —lee sólo
+marca, dominio e idioma— mientras la auditoría web ya parsea su JSON-LD y sabe
+qué `@type` emite. Por eso nos recomendó implementar `FAQPage` en un sitio que
+ya lo emite en doce superficies. Inventario completo, con fases B/C/D
+propuestas, en `docs/specs/recommendations/quality-audit-2026-08.md`.
+
+**Un detalle del método, porque se repitió el patrón de siempre.** La primera
+versión del validador dejaba pasar una valla ```` ```json ```` sin cerrar: al no
+desenvolverla, el bloque dejaba de parecer JSON, se clasificaba como prosa y el
+objeto cortado se colaba recortado por palabra. Lo cazó su propio test antes de
+salir del contenedor. El fixture no es inventado: es el artefacto real del
+incidente.
+
+**Trazabilidad.** `lib/recommendations/pasteable-artifact.ts` y su test;
+`lib/recommendations/rewrite-recommendation.ts` (saneado y traza
+`artifact_dropped`); `lib/recommendations/recommendation-rewrite-llm.ts`
+(presupuesto por tipo de artefacto);
+`docs/specs/recommendations/quality-audit-2026-08.md`.
+
+---
+
+## 127. Recomendaciones: el botón nombra el entregable y la tarjeta declara de quién depende (RECS-ACCION-1a, 2026-08-20)
+
+**Qué se decidió.** Tres cambios en la tarjeta de recomendación, todos
+derivados de datos que el producto ya tenía y no enseñaba.
+
+**1. El CTA nombra el artefacto.** Decía "Generar propuesta con IA" en los
+quince tipos por igual. Pero el motor **ya sabe** qué artefacto toca en cada
+caso: los playbooks por tipo de `recommendation-rewrite-llm.ts` llevan desde
+la fase C1 dirigiendo la generación hacia una comparativa, una FAQ, un
+JSON-LD de `Organization` o un plan de contacto. Esa decisión estaba tomada y
+escondida en el prompt; ahora está en el botón ("Generar comparativa",
+"Generar FAQ", "Generar pitch"). Un CTA genérico obliga a hacer clic para
+saber qué te van a dar, que es precisamente la fricción que convierte una
+lista de acciones en una lista de lectura.
+
+**2. La tarjeta declara el control, y solo cuando es la excepción.**
+"Escribe a este comparador para que te incluyan" y "añade este bloque a tu
+página de precios" no son la misma clase de trabajo —una la ejecutas hoy, la
+otra la solicitas y puede que nunca ocurra— y la pantalla las pintaba
+idénticas. Ahora cada tipo declara `own_site` / `third_party` / `in_app`,
+pero **solo se pinta chip para las dos excepciones**: "En tu web" es lo que
+el usuario da por supuesto en 11 de los 15 tipos, y repetirlo en cada tarjeta
+sería justo la tinta que RECS-REDESIGN-1 quitó de esta vista (§115). La
+ausencia de chip significa "es tuyo". Esto no reabre §115: lo que aquella
+fase retiró de la tarjeta plegada fue **vocabulario del motor** (el tipo
+interno, el trío impacto/esfuerzo/confianza); la fila de insignias de triaje
+("Victoria rápida", "Abierta N escaneos") siguió viva, y el control es
+triaje, no vocabulario.
+
+**3. El artefacto generado dice cuánto trabajo le queda, contando.** Nueva
+insignia en el panel del plan: "Listo para copiar" o "N huecos por rellenar".
+**No es una estimación.** El prompt de reescritura obliga desde el primer día
+a marcar con un placeholder (`[tu dato aquí]`) todo valor que no esté en la
+evidencia, en vez de inventárselo — una barrera anti-invención que, sin
+proponérselo, deja los huecos **contables**. La cifra se calcula sobre el
+texto real que se le enseña al usuario (artefactos y pasos; el título y el
+resumen quedan fuera porque son la explicación, no el entregable).
+
+**Por qué esto y no el catálogo de tipos nuevos.** El origen fue una
+reflexión del fundador sobre que las recomendaciones no eran accionables
+("escribir a HubSpot no es realista"), contrastada con una propuesta externa
+de rehacer el catálogo entero. La auditoría del código dijo otra cosa: el
+motor ya es determinista, ya ancla cada tarjeta a `affected_prompt_ids`
+reales, ya cita páginas concretas y ya excluye Wikipedia por no accionable.
+Lo que faltaba no era diagnóstico nuevo — era que la pantalla **no
+distinguía** lo ejecutable de lo que depende de un tercero, ni prometía nada
+concreto antes del clic. Esta fase cierra esa distancia sin tocar el motor,
+sin esquema y sin una sola llamada LLM nueva.
+
+**Lo que se descartó a propósito.** La propuesta externa clasificaba la
+salida en cuatro clases, una de ellas "brief de producción" (requiere
+investigación o trabajo creativo). Se ha implementado todo menos ésa: no hay
+forma honesta de decidir por código si un artefacto es "pegable" o "un brief"
+—es un juicio, no un hecho— y una etiqueta que no se puede justificar es peor
+que ninguna. Las tres que sí se muestran (control, listo/huecos) se derivan
+del tipo o se cuentan del texto.
+
+**Invariante nuevo, con test.** `KNOWN_RECOMMENDATION_TYPES` se exporta desde
+el motor (era ya `labelByType` de facto: "every value emitted by this engine
+must have an entry here") y `deliverable.test.ts` falla si una regla nueva
+llega sin decidir qué entregable promete su botón. Mismo mecanismo que la
+regla de ruta ya imponía para `first_step`.
+
+**Dos de los tres cambios son invisibles para el `ux-pilot`, y por eso se
+prueban por render.** La pasada de PR #453 dio PASS con 68 pantallas en tres
+anchuras, y aun así no vio ni el chip de control ni la insignia de estado:
+
+- El **chip de control** sólo se pinta en los tipos `third_party`/`in_app`, y
+  el proyecto del piloto tenía tres recomendaciones, las tres de su propia
+  web. Ningún tipo externo, ninguna captura.
+- La **insignia de estado** sólo existe cuando hay una propuesta generada, y
+  generar una es una **escritura**. El piloto permanente es de solo lectura por
+  diseño, así que no puede alcanzar ese estado en ninguna pasada — ni hoy ni
+  nunca, no es cuestión de repetir la pasada con más datos.
+
+Es el mismo fallo del 2026-08-02 (un rediseño entero aprobado con capturas de
+un estado vacío), y la respuesta no es aflojar el listón sino moverlo:
+`recommendations-client.test.tsx` renderiza `RecCard` y `SolutionPanel` de
+verdad con `react-dom/server` y asegura el contenido —el CTA por tipo, el chip
+presente en `third_party`, **ausente** en `own_site`, y la cuenta de huecos—.
+El aspecto sigue siendo del piloto; la existencia ya no depende de que el
+proyecto del piloto tenga por casualidad el dato adecuado. Lo que el piloto SÍ
+verificó, a 1280 px: el botón de una recomendación `increase_brand_visibility`
+dice «Generar brief de contenido».
+
+**Pendiente, no roto.** Ninguna recomendación apunta todavía a una URL
+concreta de la web del cliente: el puente existe (el mapa de cobertura mapea
+`promptId → URLs propias verificadas`) pero es Pro+, nace apagado
+(`auto_coverage_audit_enabled = false`) y el motor corre antes de que exista
+ninguna auditoría. Es la siguiente fase (AUDIT-RECS-JOIN-1) y necesita una
+decisión del fundador sobre el coste (~$0,28 por auditoría).
+
+---
+
+## 128. La propuesta salía entera y decía que éramos mejores que cinco competidores (RECS-USEFULNESS-1 Fase C, 2026-08-21)
+
+**Origen.** Con la Fase A ya en producción (§126), el fundador generó una
+propuesta real para el proyecto Movistar y pegó el resultado. El artefacto era
+impecable: 1.391 caracteres, `JSON.parse` limpio, cerrado. Con el tope viejo de
+1.200 habría salido cortado, así que la Fase A quedó verificada en producto y
+no sólo en tests. Y dentro de ese artefacto perfecto venía esto, listo para
+pegar en la web de un cliente de pago:
+
+> «A diferencia de operadores como Jazztel, Vodafone España, MásMóvil, Orange
+> España o Digi, Movistar mantiene un alto estándar de calidad y cobertura»
+
+**Por qué eso no es "contenido flojo".** Es publicidad comparativa contra cinco
+competidores nombrados sin un dato que la sostenga. En España la comparación
+tiene que ser objetiva y verificable sobre características esenciales (art. 10
+de la Ley de Competencia Desleal). No le estábamos dando al cliente un consejo
+mediocre: le estábamos generando una exposición legal y presentándosela con un
+botón de copiar.
+
+**El mecanismo, que es el hallazgo de verdad.** La regla anti-invención del
+prompt existía y era dura: *«where a specific value (a number, a price, a date)
+would be needed but is not in the facts, write a clearly-marked placeholder…
+NEVER invent the value»*. En los 1.391 caracteres **no había ni un
+`[tu dato aquí]`**. El modelo no la incumplió: **la rodeó**. La regla vigila
+cifras, así que el camino de menor resistencia es escribir sin ninguna —
+«precios competitivos», «excelente cobertura», «experiencia superior». Dice lo
+mismo que un número inventado y no deja rastro de que falta un dato. De ahí la
+reformulación: **la regla muerde sobre la afirmación, no sobre el número**, y un
+adjetivo evaluativo sin respaldo es un valor inventado igual que lo sería una
+cifra.
+
+**Lo que se implementa, y con qué dureza cada cosa** — la distinción es
+deliberada y se declara aquí para que nadie la lea como más fuerte de lo que es:
+
+- **C1, guarda en servidor.** Se rechaza el texto generado cuando una frase
+  nombra a un competidor **y** contiene un juicio de valor comparativo
+  (`comparative_claim_against_competitor`). Va por frase a propósito: nombrar a
+  un competidor es media plataforma —«Compara tu página con la de Digi», una
+  tabla comparativa, «Digi aparece antes que tú»— y todo eso sigue pasando. El
+  llamador pasa el texto **por piezas** (título, resumen, cada paso, cada
+  ejemplo) porque un paso sin punto final se pegaría al siguiente e inventaría
+  una frase que nadie escribió.
+- **C2 y C3, sólo prompt, y son reglas BLANDAS.** Que un adjetivo evaluativo sin
+  respaldo cuente como invención, y que todo artefacto de schema avise de que su
+  contenido tiene que estar visible en la página. No hay detector: «juicio de
+  valor» no es un conjunto cerrado, y una expresión regular lo bastante amplia
+  para cazarlo rechazaría planes buenos — y cada rechazo le gasta al usuario una
+  generación de su cupo diario. **Se prefiere una regla blanda declarada como
+  blanda a un detector que aparente una garantía que no da.**
+
+**Límite declarado de C1.** Las otras dos guardas del fichero comparan contra
+listas cerradas y son exactas. El léxico de juicio de valor es finito y está en
+castellano: un superlativo escrito de otra forma, o en otro idioma —y
+`projects.language` admite más de uno—, pasa. Es una red, no una garantía.
+
+**Lo que queda pendiente.** Las tres del inventario que siguen sin tocar, la
+mayor de ellas la Fase B1: **el generador no sabe nada de la web del cliente**.
+Y los artefactos rotos ya persistidos siguen sirviéndose por la ruta de
+idempotencia (§126): purgarlos es escritura destructiva sobre datos de clientes
+y necesita su propia aprobación.
+
+**Trazabilidad.** `lib/recommendations/rewrite-validation.ts` y su test (el
+fixture es la frase real, no un ejemplo inventado);
+`lib/recommendations/recommendation-rewrite-llm.ts` (C1/C2/C3 en el prompt);
+`docs/specs/recommendations/quality-audit-2026-08.md`; log §126 (Fase A).
+
+---
+
+## 129. El piloto abre por fin `/signup` y `/forgot-password` (PRELAUNCH-HARDENING-1 Fase P2, 2026-08-20)
+
+**Qué se decidió.** `tests/pilot/journeys/auth-pages.spec.ts` — las dos
+pantallas de autenticación que el piloto de lectura nunca había abierto. Parte
+del set por defecto sin tocar configuración: sigue el mismo patrón
+`**/journeys/*.spec.ts` que el resto.
+
+**Por qué necesitaban su propio contexto, sin sesión.** Los proyectos
+`mobile`/`tablet`/`desktop` montan siempre con `storageState:
+.pilot/auth.json` — correcto para pantallas de consola, pero
+`app/signup/page.tsx` hace `if (user) redirect("/dashboard")`: visitarla ya
+autenticado enseña el dashboard con otro nombre, no el formulario de alta.
+`test.use({ storageState: { cookies: [], origins: [] } })`, sólo en este
+fichero, sustituye el `storageState` del proyecto — el resto del set sigue
+entrando como la cuenta piloto. Es la corrección honesta, no un atajo: un
+contexto de verdad sin sesión es exactamente el visitante que sirven estas dos
+pantallas.
+
+**Qué comprueba más allá de la salud genérica.** Los campos propios de cada
+formulario (`#email`/`#password`/`#confirmPassword` en alta, `#reset-email` y
+el botón de envío en recuperación) y que ambas declaran `<meta name="robots"
+content="noindex, follow">` (SEO-POS-1 T10) — nunca lo había verificado el
+piloto. Ningún test envía el formulario: sólo navegación GET, ni Supabase Auth
+ni correo de por medio, la misma frontera que ya respeta el resto del set de
+lectura.
+
+**`tests/pilot/fixtures/server.mjs` se amplió a la vez**, con las mismas dos
+rutas y la misma forma de contenido, para que `pnpm pilot:selfcheck` siga
+demostrando que el arnés funciona de punta a punta en vez de recibir un 404 y
+fallar en falso.
+
+**Tres afirmaciones del plan original resultaron obsoletas al verificarlas
+contra el código real**, encontradas durante el Task Intake de esta fase, no
+implementadas aquí: A2 (`triggerWebAuditRun` ya comprueba `response.ok` y
+registra el fallo — WEB-AUDIT-DRIVE-1 lo llevaba hecho), `/pricing` (ya
+cubierto por `landing.spec.ts`) y el pliegue de facturación de ajustes (ya
+cubierto por `settings.spec.ts`). Ninguna necesitaba trabajo nuevo; el plan en
+`docs/prelaunch-hardening-plan.md` se marca cerrado en A2 en el mismo PR.
+
+**No incluido en esta fase.** El paso de confirmación de `/forgot-password`
+(necesita un token de reinicio válido, inalcanzable sin buzón — sigue siendo
+un smoke manual del fundador, igual que la confirmación por email del alta).
+P3 (matriz de documentación) y P4 (ronda de ejecución, necesita GitHub Actions
+o la sesión local del fundador) quedan fuera, tal como recomendaba el propio
+Task Intake.
+
+**Trazabilidad.** `tests/pilot/journeys/auth-pages.spec.ts`;
+`tests/pilot/fixtures/server.mjs`; `docs/agentic-user-pilot.md` (sección
+"PRELAUNCH-HARDENING-1 Fase P2"); `docs/prelaunch-hardening-plan.md` (ledger
+A2).
+
+---
+
+## 130. La matriz de cobertura llevaba un mes ignorando las citas de ChatGPT (AUDIT-GROUNDED-PARITY-1, 2026-08-21)
+
+**Qué pasaba.** `lib/web-audit/opportunity-matrix.ts` decidía si una cita
+cuenta como evidencia real con su propia copia de `GROUNDED_PROVIDERS`, y esa
+copia decía `{"gemini"}`. Desde ENGINES-2a (2026-07-18) ChatGPT genera con la
+herramienta `web_search` y produce citas reales — el scoring
+(`lib/scoring/run-scoring.ts`) y `ENGINE_META` lo daban por grounded desde
+entonces; sólo esta tercera copia se quedó atrás.
+
+**Consecuencia.** Un tema que **ChatGPT sí estaba citando** se clasificaba como
+`invisible` o `content_gap` si Gemini no lo citaba también. Es decir: la
+Auditoría web decía «no te citan aquí» sobre temas donde sí te citaban, y la
+pantalla proponía crear contenido que ya funcionaba. No es un fallo de pintado,
+es un diagnóstico equivocado en un motor de los tres.
+
+**Lo que lo hizo invisible durante un mes.** La cabecera de la constante
+afirmaba, literalmente, que *«opportunity-matrix.test.ts guards the two from
+silently diverging»*. **Ese test no existía.** Los que había cubrían `gemini`,
+`claude` y `null` — nunca `openai`, que es justo el motor que podía divergir y
+divergió. Un comentario que promete una garantía inexistente es peor que no
+tener comentario: la siguiente sesión lee «esto está cubierto» y no mira.
+
+**Decisión.** Las tres declaraciones de «qué motor está grounded» siguen
+duplicadas a propósito —el scoring no debe volverse dependencia de la UI ni de
+la auditoría por una constante—, pero ahora el precio de esa decisión está
+pagado: `GROUNDED_PROVIDERS` se exporta desde el scoring (sólo `export`, sin
+cambio de comportamiento) y `opportunity-matrix.test.ts` recorre el conjunto
+canónico comprobando las tres copias en ambas direcciones — todo grounded lo es
+en las tres, y ningún no-grounded cuela en ninguna. Verificado además que el
+guardián **puede fallar**: reintroduciendo el bug, saltan dos tests.
+
+**Sin backfill.** Las auditorías ya persistidas conservan su clasificación; la
+siguiente pasada las recalcula sola.
+
+---
+
+## 131. La auditoría no miraba si el motor tiene permitido citar la página (AUDIT-SNIPPET-1, 2026-08-21)
+
+**El hueco.** `noindex` se comprobaba desde WEB-AUDIT-R3. `nosnippet`,
+`max-snippet:0` y la cabecera `X-Robots-Tag` **no aparecían en ninguna parte
+del repositorio**. Son cosas distintas: `noindex` saca la página del índice;
+`nosnippet` la deja indexada pero **prohíbe reproducir un fragmento de ella**.
+Para un producto de visibilidad en IA, ése es el bloqueo que importa — sin
+fragmento no hay cita, por buena que sea la página.
+
+**Lo que lo hacía invisible.** La directiva puede venir por cabecera HTTP, no
+sólo por meta. `fetchPageSafely` tenía la respuesta en la mano, leía el cuerpo
+y **descartaba las cabeceras con ella**, así que una `X-Robots-Tag: nosnippet`
+servida por un CDN era indetectable para cualquier análisis del HTML — que es
+todo lo que hacíamos. Ahora se lee antes de consumir el cuerpo, que es el único
+momento en que existe.
+
+**No mueve ninguna nota, a propósito.** Se reporta como hallazgo crítico **sin
+puntos**, igual que `bot_blocked`. Dárselos cambiaría `readiness_score`, que es
+el componente `technical` del GEO Score (peso .20) y cuyos pesos aprobó el
+fundador en la fase de `web-audit-issues-1`. Hay tests que fijan que la nota
+real y la proyectada no se mueven. Cuando toque decidir si esto debe pesar,
+será una decisión de producto con su propia aprobación, no un efecto colateral.
+
+**`noarchive` queda fuera, deliberadamente.** Quita la copia en caché, no la
+capacidad de citar. Incluirlo habría sido añadir ruido de higiene justo en la
+mitad del producto que menos lo necesita — la misma crítica que la guía de
+Google hace a los checklists genéricos de GEO.
+
+**Tres estados, no dos.** `[]` es «medido y limpio»; `undefined` es «nunca
+medido» y se excluye de las dos listas. Una instantánea anterior a esta fase no
+se declara limpia: afirmarlo sería decirle al cliente que su web permite
+fragmentos sin haberlo mirado nunca. Es la lección de R3, que tiró producción
+el 2026-07-12 por leer un campo nuevo sin guardia sobre una fila vieja.
+
+**Detalle que costó un test.** `data-nosnippet` es un atributo que marca un
+bloque concreto (un aviso legal, un pie), no una directiva de página. Contarlo
+habría convertido en «bloqueada» cualquier web que lo use bien.
+
+**Pendiente, no roto.** Sigue sin comprobarse el `Disallow` por ruta en
+`robots.txt` (hoy sólo cuenta `Disallow: /` literal, así que un
+`Disallow: /blog/` para GPTBot pasa limpio) ni el Googlebot clásico. Son la
+siguiente tanda de la misma zona.
+
+---
+
+## 132. El cohete de la primera misión se pintaba cortado en escritorio — horizontal y luego vertical —, y Auditoría web se había quedado fuera del beat de ascenso (2026-08-20)
+
+**El problema, reportado por el fundador con una captura de escritorio.** En
+Visión general, mientras corre el primer escaneo de un proyecto, el texto de
+`ScanMissionRocket` (título, subtítulo, chiste) aparecía cortado por el borde
+izquierdo — «de 30» en vez de «Lanzamiento 12 de 30», «amientos» en vez de
+«Lanzamientos» — con el cohete descentrado hacia la derecha. Sólo en
+escritorio; en móvil (donde ONBOARDING-ROCKET-1 se validó y aprobó) se veía
+bien.
+
+**La causa.** `.mrk-full` (el envoltorio full-bleed compartido por
+`ScanMissionRocket` y `ReentryMission`, rev.5 del diseño) usa el idiom
+estándar `width: 100vw; margin-inline: calc(50% - 50vw)` para escapar del
+`max-width` y el padding de `.page` y llegar a los bordes reales de la
+pantalla. Ese idiom asume que `.page` está centrado en el viewport
+COMPLETO — cierto en móvil, donde `.shell` colapsa a una columna (≤760px), pero
+falso en escritorio: ahí `.shell` sigue reservando `--sidebar-w` (248px) de
+ancho real en su grid, así que `.dash-content` — el ancestro real de
+`.mrk-full` — es más estrecho que el viewport y está desplazado a la derecha.
+El resultado medido: la caja renderizaba con su borde izquierdo a
+`--sidebar-w / 2` (~124px) del borde del viewport — ni en el borde real (0px)
+ni en el borde de `.dash-content` (248px) — y sobraba esa misma cantidad por
+la derecha, que es lo que dejaba a `.dash-content` con su propio scroll
+horizontal implícito (`tests/pilot/support/journey.ts` ya documentaba ese
+`overflow-x: auto` implícito sin saber que este componente lo estaba
+disparando).
+
+**Qué se decidió.** Un `@media (min-width: 761px)` (el mismo punto de corte
+donde `.shell` deja de colapsar) que rederiva el mismo break-out contra
+`.dash-content` en vez del viewport: `width: calc(100vw - var(--sidebar-w))`
+y un `margin-inline-start` que cancela exactamente el propio centrado/padding
+de `.page` — con un `max(…, 0px)` porque `.page` sólo se centra con margen de
+sobra cuando la columna sidebar+contenido supera `--page-max-w`, algo habitual
+en un monitor ancho y cero en un portátil. El borde derecho no necesita término
+propio: para una caja de bloque en flujo normal, sólo el margen izquierdo y el
+`width` deciden dónde cae, así que un `width` igual al de `.dash-content` ya
+deja el borde derecho exactamente en el borde de `.dash-content` (que coincide
+con el del viewport, sin cambios respecto a la regla base). Dos variables
+nuevas en `:root` (`--page-max-w`, `--page-pad-x`) para que `.page` y esta
+corrección compartan la misma geometría sin dos literales que puedan divergir.
+
+**Por qué no se usó `container-type: inline-size` en `.dash-content`.** Era la
+solución "correcta" de libro — `cqw` resuelve exactamente este problema sin
+tener que rederivar la fórmula a mano. Se descartó porque `container-type`
+implica `contain: layout`, y `contain: layout` convierte al elemento en el
+containing block de cualquier descendiente `position: fixed` — y
+`.dash-content` contiene el modal genérico (`.modal-overlay`), el drawer de
+Prompts (`.drawer`/`.prompt-drawer`) y el popup del tour de onboarding
+(`.ptour-scrim`), todos `position: fixed` y todos pensados para posicionarse
+contra el viewport real. Aplicar `container-type` ahí los habría convertido en
+overlays contenidos dentro de `.dash-content` sin que ninguna pantalla que los
+usa lo supiera — una regresión de superficie mucho mayor que el bug que se
+estaba arreglando, y sin ux-pilot corriendo en este PR para cazarla.
+
+**El fundador probó el fix horizontal en el preview y encontró un segundo
+corte, vertical esta vez — "se sigue cortando, especialmente la primera"
+(captura de escritorio, rampa/ignición).** El texto ya no se veía cortado
+—el fix de arriba funcionaba— pero la base del cohete (toberas, llamas) se
+veía recortada por el borde inferior de la pantalla. Causa distinta a la
+primera, y no provocada por este PR: rampa/ignición (`PadScene`) son las
+únicas dos escenas que anidan su SVG un nivel más adentro, dentro de
+`.mrk-pad-wrap`, para dejarle sitio a `.mrk-ground` apilada debajo — las
+demás escenas (ascenso, órbita, entrega) montan su SVG directamente en
+`.mrk-scene-slot`. La regla de escritorio `.mrk-sky { height: 100% }` asume un
+padre directo con altura definida; a través de `.mrk-pad-wrap` (sin altura
+propia, sólo `width: 100%`) ese porcentaje caía a `auto`, así que el SVG se
+dimensionaba por su propia proporción (`viewBox="0 0 400 228"`, ancho y bajo)
+en vez de por la caja de la escena — más alto de lo debido en cuanto se suma
+la banda del suelo encima de eso, y el sobrante desbordaba la caja de
+`.mrk-full` por arriba Y por abajo; `overflow: hidden` ahí recortaba en
+silencio la base del cohete.
+
+*Primer intento, descartado por circular.* `.mrk-pad-wrap { height: 100% }` +
+`.mrk-sky { height: calc(100% - var(--mrk-ground-h)) }` parecía la corrección
+obvia, y NO funciona: dentro del grid de `.mrk-scene-slot` (una fila implícita
+sin `grid-template-rows`, donde `place-items` sólo alinea, nunca dimensiona la
+pista), un hijo con altura porcentual y una fila `auto` pueden entrar en
+referencia circular — medido con Playwright contra un fixture con el CSS real:
+la fila se dimensionó por el contenido del propio `.mrk-pad-wrap` (674px) en
+vez de por los 640px de `.mrk-scene-slot`, el mismo desbordamiento un nivel
+más arriba. **La corrección real:** `.mrk-pad-wrap { position: absolute; inset:
+0 }`, que saca a `.mrk-pad-wrap` del grid entero — igual que `.mrk-scene-slot`
+ya saca su propia caja de `.mrk-canvas` — así que su altura nunca depende de
+su contenido, y `--mrk-ground-h` (variable nueva, la comparten `.mrk-ground` y
+el `calc()` del SVG) reparte esa altura garantizada entre el SVG y el suelo sin
+que la suma pueda pasarse. Verificado con el mismo fixture en cinco anchos
+(1280 a 2560px): `overflowTop=false, overflowBottom=false` en los cinco, y las
+escenas de hijo directo (ascenso/órbita/entrega) sin cambios, confirmado aparte.
+
+**Segunda pieza, pedida por el fundador en el mismo hilo: Auditoría web se
+había quedado fuera del beat de ascenso.** ONBOARDING-ROCKET-1 (2026-08-08)
+hizo que `FirstScanTakeover` sustituyera la pantalla entera en Visión general,
+Prompts, Competidores, Recomendaciones y Páginas citadas mientras dura el
+primer escaneo de un proyecto — pero no en Auditoría web, que seguía enseñando
+la tarjeta estática «Todavía no hay ningún escaneo completado» aunque el
+escaneo estuviera corriendo en ese mismo instante. `lib/web-audit/page-data.ts`
+no consultaba `scan_runs` en busca de un run `pending`/`running` — sólo el
+último `completed`, para `hasCompletedScan`. Se añadió esa segunda consulta
+(mismo patrón que las otras cuatro pantallas: 5 runs más recientes de
+cualquier estado, `withAnalysisProgress` para las cifras de la etapa de
+análisis) y una rama nueva `!hasCompletedScan && activeRun` que renderiza
+`FirstScanTakeover`, delante de la tarjeta vacía existente.
+
+**La reentrada YA estaba cubierta — no hizo falta escribir nada nuevo para
+ella.** SCAN-STATES-3 (`ReentryMission`) ya renderiza en exactamente esta
+pantalla cuando `!summary && !technicalSnapshot && auditIsRunning`, es decir,
+"primera auditoría de este dominio, en marcha". En cuanto el primer escaneo
+termina, `hasCompletedScan` pasa a `true` y dentro de un instante la auditoría
+automática post-escaneo (AUDIT-AFTER-SCAN-1) arranca — la misión sigue de
+ascenso a reentrada sin ninguna rama nueva, porque las dos ya estaban
+escritas para "nada que tapar" y sólo faltaba que la primera se alcanzara
+desde esta pantalla.
+
+**Qué no se tocó.** Ni `components/scan-mission-rocket.tsx`, ni
+`components/reentry-mission.tsx`, ni `lib/scan/mission-beats.ts` —
+`.claude/rules/mission-rocket.md` sólo exige avisar/actualizar el otro cohete
+cuando cambia la silueta, la paleta o las escenas, y este PR no toca ninguna
+de las dos misiones, sólo el envoltorio CSS que ambas comparten y el punto
+donde una de ellas se monta. Tampoco se movieron las clases `.mrk-*` a
+`console.css` aunque `.claude/rules/styles.md` diría que les corresponde (sólo
+se usan bajo `app/dashboard/**`) — mover 150 líneas de cascada activa un tipo
+de riesgo distinto (los ~16 solapes de orden ya documentados) y no es lo que
+este PR estaba arreglando.
+
+**Trazabilidad.** `app/globals.css` (`.mrk-full`, `--page-max-w`,
+`--page-pad-x`, `.mrk-pad-wrap`, `--mrk-ground-h`); `lib/web-audit/page-data.ts`
+y su test (`activeRun`); `app/dashboard/projects/[projectId]/web-audit/page.tsx`;
+log §55 (ONBOARDING-ROCKET-1, la decisión original de las cinco pantallas);
+log §57 (SCAN-STATES-3 / `ReentryMission`); `.claude/rules/mission-rocket.md`;
+`.claude/rules/styles.md` (nueva regla, cascada del break-out con sidebar).
+
+---
+
+## 133. El guardián rechazaba nombrar al competidor que la propia tarjeta ancla (2026-08-20)
+
+**Qué pasó.** Con §126 desplegado, la misma tarjeta *Entrar en fuentes citadas*
+volvió a fallar — pero ya no con la frase genérica: **«La propuesta generada
+mencionaba datos que no están en la evidencia de esta recomendación»**. Los
+mensajes por rama que §126 introdujo hicieron su trabajo: en un clic quedó
+descartado el motor y señalado el guardián, sin abrir un solo log.
+
+**La causa, que es la de §126 un campo más allá.** El playbook de las reglas de
+hueco de fuentes le pide al modelo que clasifique cada dominio citado y le dé su
+jugada, y llega a pedirle que marque los que son **competidores de la marca**
+como «no es un objetivo de outreach» — algo que no se puede hacer sin
+nombrarlos. El guardián, en cambio, rechaza cualquier competidor de la lista del
+proyecto que no esté en `mentioned_competitors`, que en estas tarjetas viene
+vacío. Con `seranking.com` entre los dominios citados y «SE Ranking» entre los
+cinco competidores del proyecto, la propuesta se descartaba por obedecer. Otra
+vez: el prompt pide una cosa y el guardián la castiga.
+
+**Qué se decidió.** `competitorsAnchoredByDomain` admite un competidor **cuando
+su propio dominio ya está en el conjunto anclado de esa tarjeta**, y ese
+competidor pasa a la vez al prompt y al guardián — el mismo invariante de §126.
+No afloja nada más: el emparejado es por igualdad exacta de etiqueta de marca
+(`evilacme.com` no habilita «Acme», ADR 0019), y un competidor cuyo dominio no
+esté en la evidencia sigue prohibido.
+
+**Y el mensaje dice el término.** «Mencionaba datos que no están en la
+evidencia» deja fuera la única pregunta que importa: *cuál*. Ahora dice
+«mencionaba «SE Ranking», que no está en la evidencia», saneado y recortado como
+cualquier otra salida del modelo. Un rechazo del guardián deja de necesitar
+acceso a producción para diagnosticarse — que es lo que costó las dos vueltas
+anteriores.
+
+**Lo que sigue sin comprobarse aquí.** Que la propuesta se genere de verdad
+depende de una llamada real a Gemini, y eso no se puede ejercitar desde los
+tests. Lo que estos fijan es que prompt y guardián leen el mismo conjunto, en
+las dos dimensiones.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`rewrite-recommendation.ts`; §126 (la primera mitad, dominios);
+`.claude/rules/recommendations.md` §Reescritura con IA.
+
+---
+
+---
+
+## 134. El guardián se construía a mano y siempre faltaba una pieza: ahora lee el prompt (2026-08-21)
+
+**Qué pasó.** Con §126 y §128 desplegados, el fundador probó las dos tarjetas.
+*Entrar en fuentes citadas* **funcionó**. La otra falló con el mensaje que §128
+introdujo, y esta vez el mensaje traía el término: **«mencionaba «hubspot.es»,
+que no está en la evidencia»**.
+
+**La causa, visible en la propia tarjeta.** Entre sus páginas citadas aparece
+`"hubspot.es" (blog.hubspot.es)`: el **título** de la página es él mismo un
+dominio, distinto del dominio de la página. El prompt le enseña los dos
+(`- blog.hubspot.es — "hubspot.es"`) y le pide nombrar esa página. Yo había
+anclado el dominio y el host de la URL, pero no el título. El modelo escribió
+lo que tenía delante y el guardián lo descartó.
+
+**Lo que esto significa, que es más que un campo olvidado.** Es la **tercera**
+pieza que faltaba del mismo conjunto: las páginas citadas (§126), los
+competidores con dominio propio (§128) y ahora el título de una página. Tres
+veces el conjunto se recomponía campo a campo, y tres veces la lista se quedó
+corta — porque una lista escrita a mano no puede saber qué le enseña el prompt
+al modelo.
+
+**Qué se decidió.** El conjunto anclado deja de recomponerse: se **deriva del
+texto del prompt**. `buildRecommendationRewritePrompt` se separa de la llamada
+al modelo, el ejecutor lo construye y `domainsShownInPrompt` extrae de él todos
+los tokens con forma de dominio. Lo que el modelo puede nombrar es exactamente
+lo que se le ha enseñado. No abre la mano: el prompt sólo contiene la evidencia
+de esa tarjeta, un test comprueba que el andamiaje fijo del prompt no aporta
+más que `schema.org` y el dominio de la marca, y un dominio que no esté ahí se
+sigue rechazando con su término.
+
+**Y el vocabulario de dominios cambió de dueño.** «Qué token parece un dominio»
+vive ahora en `anchored-domains.ts` y el guardián lo importa, no al revés.
+Estaba duplicado (`normalizeDomain` en los dos ficheros), y con la dependencia
+invertida cualquier suite que mockeara el guardián dejaba al conjunto anclado
+sin extractor: el flujo entero reventaba con un TypeError que **se leía en
+pantalla como «el motor de IA falló»**. Lo cazaron los tests antes de salir de
+aquí.
+
+**Estado de la fase.** *Entrar en fuentes citadas* verificada por el fundador
+en el preview. La segunda tarjeta queda pendiente de su comprobación con este
+arreglo puesto.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`recommendation-rewrite-llm.ts` (el constructor del prompt, ahora exportado),
+`rewrite-validation.ts`, `rewrite-recommendation.ts`; §126 y §128 (las dos
+mitades anteriores del mismo agujero).
+
+---
+
+## 135. El piloto exigía contenido real al proyecto que saliera primero (2026-08-21)
+
+**Qué pasó.** El journey `recommendations screen renders` falló en las tres
+anchuras: «the page loaded without errors but never rendered el backlog de
+acciones». La captura lo explica sola — el proyecto era **Amazon**, dado de alta
+ese mismo día, con presencia 100 y **«Nada que corregir ahora mismo»**.
+
+**Por qué no es un fallo del producto.** Ese estado vacío es legítimo: el
+escaneo no encontró huecos accionables. Lo que estaba mal era la pregunta. El
+journey exige contenido real (`ContentExpectation`, la regla que nació el
+2026-08-02) sobre «el primer proyecto de la lista», y cuál es el primero sale
+del cookie `geo_active_project` o, sin él, del **más reciente**. Basta con que
+alguien cree un dominio para que el piloto aterrice en él. Exigir contenido real
+a un proyecto elegido a ciegas es una contradicción, y un rojo que no significa
+nada enseña a ignorar los rojos.
+
+**Es la segunda vez el mismo día.** Por la mañana pasó en
+`recs-interactions` con el proyecto Linkedin (§132) y se arregló allí: elegir el
+proyecto **por dato**, abriéndolo y mirando. `core-flow.spec.ts` se quedó
+eligiendo a ciegas, así que el mismo fallo volvió por la otra puerta seis horas
+después.
+
+**Qué se decidió.** La elección pasa a `pickProjectShowing`
+(`tests/pilot/support/journey.ts`), compartida por los tres journeys que la
+necesitan: abre candidatos acotados, se queda con el primero que enseña de
+verdad lo que se va a juzgar y **se salta ruidosamente** si ninguno lo hace.
+Nunca afirma sobre una pantalla vacía. `exclude` permite que el journey de
+«segundo proyecto» pida uno distinto del que ya usó el primero, que antes era
+`ids.find(id => id !== primary)` — otra elección ciega.
+
+**Lo que esto NO arregla.** La cuenta piloto sigue sin datos sembrados de forma
+determinista: si un día ningún proyecto tiene recomendaciones, estos journeys se
+saltan y la cobertura desaparece, ruidosamente pero desaparece. La salida real
+es la pasada de escritura del piloto, que está fuera de este PR.
+
+**Trazabilidad.** `tests/pilot/support/journey.ts` (`pickProjectShowing`),
+`core-flow.spec.ts`, `recommendations-interactions.spec.ts`; §132 (la primera
+mitad del mismo fallo), §130.
+
+---
+
+---
+
+## 136. El cajón móvil se pulsaba antes de hidratar (2026-08-20)
+
+**Qué pasó.** `el cajón de navegación móvil de pricing abre y sus botones se
+leen` falló en móvil con «element(s) not found» sobre `.lp-mobnav`, mientras el
+mismo test sobre `/` pasaba **en la misma corrida** (PR #446).
+
+**Por qué.** `MarketingMobileNav` es un componente cliente: el botón viene en el
+HTML del servidor, pero su `onClick` no existe hasta que React hidrata, y el
+cajón no está en el DOM hasta que ese estado se abre. Un clic anterior a la
+hidratación no se encola — se pierde. El test esperaba `waitForTimeout(1_000)`
+y pulsaba una vez, o sea apostaba a que un preview frío hidrata en menos de un
+segundo. Perdió la apuesta en la página más pesada de las dos.
+
+**Qué se decidió.** El clic se reintenta hasta que el cajón aparece
+(`expect(...).toPass`), sin espera fija. No afloja nada: si el cajón no abre
+nunca, sigue fallando al agotarse el plazo. Es seguro repetirlo porque el botón
+hace `setOpen(true)`, no un alternar.
+
+**Lo que se deja anotado y NO se toca aquí.** El botón de menú es inerte hasta
+que la página hidrata, así que en un móvil lento hay una ventana real en la que
+un usuario lo pulsa y no pasa nada, sin ningún aviso. No es una regresión —es
+como funciona desde siempre— y arreglarlo es tocar la cabecera pública, otra
+zona y otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/landing.spec.ts`;
+`components/marketing-mobile-nav.tsx` (por qué el clic se pierde).
+
+---
+
+---
+
+## 137. «Generar propuesta con IA»: el prompt pedía nombrar páginas que el guardián rechazaba (2026-08-20)
+
+**Qué pasó.** El fundador pulsó «Generar propuesta con IA» en la tarjeta
+*Entrar en fuentes citadas* del proyecto GenScore y recibió «No se ha podido
+mejorar la redacción en este momento». En una segunda tarjeta, de tipo
+distinto, el mismo mensaje.
+
+**La causa encontrada, con los datos de la propia captura.** Esa acción arma
+el prompt con dos listas: *Domains you may mention* (`evidence_json.
+citation_domains`) y, sólo en las reglas de hueco de fuentes, *Example pages
+already cited* (`citation_pages`), con la instrucción explícita de **nombrar
+esa página concreta en vez del dominio pelado**. El guardián antifabricación
+que revisa la respuesta (`lib/recommendations/rewrite-validation.ts`) sólo
+admitía `citation_domains`. Y las dos listas las construye código distinto en
+`recommendation-engine.ts`: `citation_domains` es un agregado sobre los prompts
+afectados **recortado a 8**, y las páginas salen de las fuentes que califican
+para el hueco. En la tarjeta del fundador, tres de las cuatro páginas citadas
+(`dageno.ai`, `blog.hubspot.es`, `es.semrush.com`) caían fuera de esos ocho.
+El modelo obedecía la instrucción y el guardián lo rechazaba por ello:
+`unanchored_domain_mentioned`, de forma **determinista**, gastando una llamada
+a Gemini en cada intento — el límite diario no, que se cuenta sobre filas de
+`generated_solutions` y un rechazo no persiste ninguna. Reproducido en
+`lib/recommendations/anchored-domains.test.ts` con esos datos reales.
+
+**Qué se decidió.** Un único conjunto anclado
+(`lib/recommendations/anchored-domains.ts`): unión de `citation_domains`,
+`source_domains`, el dominio de cada página citada y el host de su URL,
+normalizada y sin duplicados. Ese mismo array alimenta **el prompt y el
+guardián**, que es el invariante que faltaba — lo que el modelo puede escribir
+y aquello contra lo que se le juzga tienen que ser el mismo conjunto. No se
+relaja nada: todo lo que entra viene de la evidencia persistida de esa misma
+tarjeta, el emparejado sigue siendo por etiqueta (`evilacme.com` no casa con
+`acme.com`, ADR 0019) y un dominio que no esté en ninguna parte de la
+evidencia se sigue rechazando. El conjunto está acotado por construcción
+(8 + 6 fuentes) y **no lleva tope propio a propósito**: un tope es justo lo que
+creó el desajuste.
+
+**Lo que este arreglo NO explica, dicho tal cual.** La segunda tarjeta no tiene
+«Páginas citadas», así que su fallo es otro. Con cinco ramas de fallo
+compartiendo una sola frase en pantalla, ni el fundador ni el agente podían
+distinguir un motor caído de una propuesta descartada por el guardián. Por eso
+el mismo PR separa el mensaje por rama —motor / descartada por evidencia / no
+se ha podido guardar / genérico— y registra **qué término** disparó el
+guardián (`offending`), no sólo que se disparó. Es lo que convierte el próximo
+clic en un diagnóstico de diez segundos en vez de una investigación.
+
+**Trazabilidad.** `lib/recommendations/anchored-domains.ts`,
+`rewrite-recommendation.ts`, `rewrite-validation.ts`,
+`recommendation-rewrite-llm.ts` (cuyo comentario afirmaba lo contrario: «every
+url here is already one of citationDomains»); `.claude/rules/recommendations.md`
+§Reescritura con IA.
+
+---
+
+---
+
+## 138. El piloto elegía proyecto por un enlace que dejó de existir (PILOT-PROJECT-PICK-1, 2026-08-20)
+
+**Qué pasó.** El piloto del PR #446 falló sólo en escritorio:
+`recs-interactions` → «no se han renderizado acciones prioritarias». La captura
+lo explica sola: estaba en el proyecto **Linkedin**, con presencia 100, cuota
+de voz 100 y «Nada que corregir ahora mismo». Un estado legítimo del producto,
+no un fallo. Móvil y tablet, en la misma pasada, miraban **GenScore**, con sus
+tres acciones prioritarias.
+
+**La causa.** Los dos journeys que buscan «un segundo proyecto, más grande»
+raspaban `a[href^="/dashboard/projects/"]` sobre `/dashboard/projects` y
+preferían un nombre (`PILOT_SECOND_PROJECT`, «Movistar»). Esa ruta es una
+**redirección** a `/dashboard/domains` desde DOMAINS-ARCHIVE-RETIRE-1 (§104), y
+en la pantalla de dominios **sólo el proyecto de portada** enlaza a
+`/dashboard/projects/<id>`; los demás enlazan a `?active=<id>`. Así que la
+lista tenía exactamente un elemento —el de portada, que resuelve
+`resolveSelectedProject`: `?active=` → cookie `geo_active_project` (que el
+middleware reescribe en cada navegación a una ruta de proyecto) → el proyecto
+más reciente— y el filtro por nombre no podía casar con nada.
+
+Consecuencias, distintas en cada journey y las dos malas:
+
+- `recommendations-interactions.spec.ts` afirmaba contra **lo que hubiera
+  delante**, distinto por anchura porque cada contexto de Playwright llega con
+  el cookie donde lo dejó su propia navegación anterior. Verde por suerte
+  durante cinco días; rojo el día que el proyecto más reciente de la cuenta fue
+  uno sin nada que corregir.
+- `core-flow.spec.ts` («recommendations screen renders for a second, larger
+  project») resolvía `find(id => id !== primary)` sobre esa lista de uno:
+  siempre `undefined`, así que **se saltaba en silencio en cada pasada** desde
+  el 2026-08-15, con la tabla del piloto igual de verde. Es el fallo de §120 y
+  §65 otra vez —una garantía que no se puede ver fallar— pero por omisión: no
+  es que el veredicto fuera malo, es que la comprobación no llegó a existir.
+
+`discoverProjectIds` ya contemplaba las dos formas de enlace y lleva escrito en
+su cabecera justo este agujero. Los dos journeys no lo usaban.
+
+**Qué se decidió.** Los dos pasan por `discoverProjectIds`, y el de
+interacciones elige **por dato, no por nombre**: abre candidatos (tope 4,
+anotado si sobran) hasta encontrar uno que de verdad tenga acciones
+prioritarias, y si ninguno las tiene **se salta ruidosamente** en vez de
+afirmar sobre una pantalla vacía — la regla del 2026-08-02. Un nombre puede
+pudrirse sin avisar; «tiene lo que voy a pulsar» no. `PILOT_SECOND_PROJECT`
+desaparece, y con él la última referencia a «Movistar» en el arnés.
+
+**Lo que esto NO arregla.** Sigue sin haber nada que avise de que un journey
+lleva días saltándose: un `skip` no se distingue de un ✅ en la tabla del
+informe. Queda apuntado como lo siguiente que mirar en la zona.
+
+**Trazabilidad.** `tests/pilot/journeys/recommendations-interactions.spec.ts`,
+`tests/pilot/journeys/core-flow.spec.ts`, `docs/agentic-user-pilot.md`,
+`.claude/agents/ux-pilot.md`; §104 (la ruta que cambió), §120 y §65 (el mismo
+patrón de verde vacío).
+
+---
+
+## 139. La matriz de definición ↔ pantalla, para que "verificar contra la documentación" sea un checklist y no una frase (PRELAUNCH-HARDENING-1 Fase P3, 2026-08-21)
+
+**Qué se decidió.** Una tabla nueva en `docs/agentic-user-pilot.md` —
+"Matriz de definición ↔ pantalla" — con una fila por zona del mapa de zonas
+de `CLAUDE.md`, mismo orden: qué regla de ruta le aplica, qué pantallas del
+piloto (si alguna) la recorren y con qué etiquetas, y una nota de cobertura.
+`.claude/agents/ux-pilot.md` la lista ahora como input obligatorio, junto a
+la maqueta aprobada.
+
+**Por qué hacía falta.** El plan de PRELAUNCH-HARDENING-1 (P3) ya pedía esto
+explícitamente: sin la tabla, "verificar contra la definición" era una frase
+del agente `ux-pilot`, no algo que pudiera ejecutar — no tenía dónde mirar
+qué regla o qué histórico correspondía a la pantalla que estaba juzgando.
+
+**El hallazgo real, construyendo la tabla.** Seis zonas del mapa —Metodología
+GEO (scoring), Correos transaccionales, Fiabilidad LLM, la mitad "depuración"
+de Dominios, Escaneo (pipeline) fuera del set `read`, y Consola de operador—
+**no las ve el piloto de lectura en ningún deploy**, cada una por una razón de
+fondo distinta (no es UI, no hay buzón, es sólo `workflow_dispatch`, es otra
+cuenta). No es un agujero nuevo — ya se sabía caso por caso — pero antes de
+esta tabla esa ausencia no estaba escrita en ningún sitio que una pasada del
+piloto pudiera leer antes de fallar en falso buscando algo que nunca pudo ver.
+
+**Lo que NO cambia.** Ningún journey nuevo, ninguna pantalla nueva pilotada.
+Es documentación pura — cero cambio de producto, cero cambio de comportamiento
+del arnés.
+
+**Trazabilidad.** `docs/agentic-user-pilot.md` (sección "Matriz de definición
+↔ pantalla"); `.claude/agents/ux-pilot.md` (fila de inputs "The zone's own
+truth"); `docs/prelaunch-hardening-plan.md` (P3 del ledger); CLAUDE.md (mapa
+de zonas, la fuente que esta tabla espeja).
+
+---
+
+## Cómo mantener este documento
+
+Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
+cambio de header/menú, rediseño de una pantalla) que toque layout, paleta,
+tipografía o patrones de navegación:
+
+1. Añadir una entrada nueva a la zona correspondiente (o crear una zona
+   nueva si no existe) con: qué se decidió, por qué, y qué queda pendiente
+   o roto conocido.
+2. Si una decisión previa queda **sustituida**, no borrarla — marcarla como
+   `superseded por §X` y explicar el porqué del cambio, igual que hace
+   `docs/adr/` con las decisiones técnicas.
+3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
+   técnico aquí (este documento es "qué se decidió", no "cómo se
+   implementó").
+## 140. Lo que no controlas deja de encabezar el plan (RECS-ACCION-1c, 2026-08-21)
+
+**Qué pasó.** El fundador escaneó un proyecto real (30 prompts, 7 competidores)
+y la primera acción de la pantalla, con «Prioridad alta» y **+11 pt** —el
+potencial más alto de las tres—, era *«Consigue que 5 webs que cita la IA te
+mencionen»*. Es literalmente la queja con la que abrió esta serie de fases:
+*«escribir a hubspot y conseguir que te nombren en su blog no es muy
+realista»*. RECS-ACCION-1a (§127) le puso el chip «Depende de terceros», que
+lo **señalaba** — pero nada lo bajaba de sitio.
+
+**Por qué salía primera, y no es casualidad.** El contrafactual de ADR 0017
+para los tipos `pursue_*` aplica la mutación `authority` sobre todas las filas
+afectadas: asume que **todas** las fuentes citadas acaban mencionando la marca.
+Es un techo honesto («hasta +X»), pero es un techo generoso por construcción, y
+compite en la misma unidad que «añade un párrafo a tu página». Ordenando sólo
+por puntos, lo que menos controlas gana casi siempre.
+
+**Dos correcciones, ninguna toca el motor ni el scoring.**
+
+1. **Techo de control en el plan** (`planScore`, `lib/recommendations/plan.ts`).
+   Una acción `third_party` nunca se pone por encima de una que el cliente
+   puede ejecutar hoy. **Es un techo, no un filtro**: si no hay nada propio que
+   hacer, la externa sigue subiendo al plan — esconderla sería la otra forma de
+   mentir. `in_app` cuenta como propio (se resuelve dentro del producto), y un
+   tipo sin control declarado **no se penaliza**, misma dirección de fallo que
+   `deliverableForType`.
+2. **La promesa dice de quién depende** (`pointsCaption`). La cifra no cambia;
+   cambia su etiqueta: «+11 pt · **si te citan**» en vez de «potenciales». Dos
+   promesas que no valen lo mismo dejan de enseñarse con la misma palabra.
+
+**Lo que NO se hizo, y por qué está aquí escrito.** El plan aprobado de
+RECS-ACCION-1 incluía este techo desde el principio; la fase 1a entregó el chip
+y se dejó el techo fuera sin decirlo. Se corrige aquí en vez de dejar el hueco
+tapado por una fase que parecía completa.
+
+**Tercera corrección: el muro de tarjetas iguales.** «Aumentar visibilidad de
+marca» emite **una tarjeta por prompt** — 30 en este proyecto, de 36 acciones
+totales. Agrupar en el motor está descartado (§115 punto 6: cambiaría el
+`dedupe_key` y rompería la resolución por prompt de RECS-3), así que la salida
+es de presentación: al desplegar un grupo se enseñan las **5 con más puntos** y
+el resto queda tras «Ver las otras N».
+
+Se eligió el tope por encima de las dos alternativas evaluadas porque **el
+problema no es cómo se agrupan, es cuáles hacer**: nadie va a escribir 30
+páginas, y el dato que las ordena ya existe en los puntos contrafactuales de
+cada tarjeta. Sub-agrupar por categoría del prompt era más bonito pero deja las
+30 en seis cajones sin decir cuáles importan, y además la categoría no está
+persistida en la recomendación (habría que añadirla a `evidence_json`). Cambiar
+sólo el contador de cabecera ayuda pero no toca el muro. **No esconde nada**: el
+resto está a un clic, igual que ya lo estaba el grupo entero.
+
+---
+
+## 141. El hero de la portada acaba en un degradado lineal, después de construir un aura entera que se descartó (HERO-GRADIENT-1, 2026-08-22)
+
+**Origen.** Fundador, 2026-08-21: el hero de la portada necesitaba un fondo con
+más presencia que el degradado plano que tenía. Task Intake aprobado el mismo
+día, con el alcance recortado a **sólo el fondo**. Lo que se implementó primero
+—y lo que finalmente se quedó— no es lo mismo, y esta entrada cuenta las dos
+mitades porque la segunda no se entiende sin la primera.
+
+### Lo que se quedó
+
+Un degradado lineal vertical sobre `.lp-hero--home` y **nada más**: ni capa, ni
+elementos, ni máscara. Cuatro paradas, medidas contra el alto real del hero
+(1154 px en escritorio, 1193 en móvil):
+
+```css
+background: linear-gradient(180deg,
+  #cfe0fa 0%, #e4edfb 14%, #f6f9fe 28%, #ffffff 44%, #ffffff 100%);
+```
+
+**Las paradas no están repartidas a ojo, cumplen dos reglas.**
+
+1. **El color se agota antes del formulario.** A 14 % el tinte ya ha cedido la
+   mitad, a 28 % es casi blanco y desde 44 % es blanco puro. El titular cae en
+   el tramo con color; el campo de dominio, los botones y la tarjeta-demo caen
+   sobre blanco limpio. Subir esas paradas devuelve el tinte a la zona del
+   formulario, que es exactamente lo que se descartó al elegir entre variantes.
+2. **El 100 % tiene que ser blanco.** Debajo del hero va la sección de motores,
+   que es blanca: un degradado que termine en color deja una línea horizontal
+   recta en la costura. No es teórico — es el mismo fallo que el aura tuvo que
+   tapar con un desvanecido enmascarado, y volvió a aparecer por otra vía en la
+   variante «doble extremo», que teñía el final del hero para enmarcarlo
+   (descartada por eso, fundador 2026-08-22). Terminando en `#ffffff` no hace
+   falta máscara ninguna.
+
+**Cómo se eligió, en dos rondas.** Primero seis fondos de aura en un lienzo de
+diseño; después, tras el rechazo, **ocho degradados (A-H)** renderizados sobre
+la landing real y mirados en escritorio y móvil. Ganó el **F**. Los criterios,
+en el orden en que decidieron: que el color no invada el formulario (elimina A,
+C, D y G), que el final sea blanco (elimina B y H), y **discreto antes que
+vistoso** —el mismo criterio con el que se había elegido el aura— que elimina E
+por invisible. Referencia y capturas en
+`docs/design-reference/hero-gradient-1/`.
+
+**Coste, comparado con lo que sustituye:** cero DOM, cero JS, cero peticiones,
+una sola propiedad `background`. Nada que pueda recortarse, desbordar ni crear
+contexto de apilamiento, así que esta zona ya no necesita ninguna de las
+precauciones que sí necesitaba el aura: `.lp-promo` vuelve a ser estático y no
+hay capa que pueda teñirlo.
+
+### Por qué el aura no llegó, y qué dejó aprendido
+
+Se construyó entera, se desplegó, pasó el piloto y **el fundador la rechazó en
+móvil**: *«al ser dos es como una mancha que no se sabe muy bien si tiene
+sentido»* (2026-08-21) y, tras un intento de arreglo, *«No me convence. Haz una
+versión como la de Apple con un degradado lineal de abajo a arriba»*
+(2026-08-22). Las maquetas quedan en
+`docs/design-reference/hero-gradient-1/descartado-aura/`. Lo que sigue vivo de
+esa pasada, porque vuelve a aplicar a cualquier fondo futuro:
+
+**Una banda que se define como fracción del RADIO hay que medirla contra la
+PANTALLA.** Los lazos del aura pintaban su banda blanca al 15 % del radio del
+círculo. En escritorio eso ocupaba el 8,2 % y el 11,1 % del ancho del viewport;
+en móvil, con radios mucho más pequeños, el mismo 15 % ocupaba el **14 % y el
+17,6 %** — casi el doble de grueso en proporción. Por eso los dos arcos se
+leían como una mancha y no como dos líneas. El diagnóstico inicial («sobra un
+lazo») era el equivocado: no sobraba ninguno, estaban demasiado gruesos.
+
+**Radio grande = curva suave, y el centro va fuera del encuadre.** Poner el
+centro pegado al borde con radios de 700-1200 px da curvas cerradas que cruzan
+el titular en diagonal en vez de rozar el lateral. Costó dos iteraciones
+enteras de diseño identificarlo.
+
+**`filter: blur()` sobre un degradado que ya muere en transparente es
+redundante y caro, y eso salió de medirlo.** Las maquetas llevaban 10-50 px de
+desenfoque por capa y se implementaron así. Medido en Chromium, la diferencia
+máxima entre las dos versiones fue de **5/255 en el 0,02 % de los subpíxeles**
+en escritorio y 6/255 en móvil, por debajo de lo perceptible; el coste era
+rasterizar el hero entero en **82 ms por fotograma en vez de 33** a 1280 px sin
+estrangular CPU. Si alguien mete `filter` en un fondo, que mida antes.
+
+**Una captura de 800 px de alto no ve el final del hero.** El corte recto contra
+la sección de motores lo destapó abrir las capturas de **página completa** del
+piloto; mis propias capturas de verificación no llegaban hasta ahí, porque el
+hero mide 1154 px. Es el caso exacto que CLAUDE.md describe al decir que el ✅ de
+la tabla no es el veredicto. Vale igual para las capturas de comparación de
+variantes: las tres últimas (F, G, H) se volvieron a renderizar con el hero
+entero en el encuadre justo por esto, y es lo que dejó ver que H fallaba.
+
+**Y el aura era barata: el problema no era el rendimiento.** Con el blur
+retirado, CLS idéntico (0,0002-0,0005 con y sin), LCP sin cambio medible
+(`FCP == LCP` en todas las pasadas: el elemento LCP es texto del primer
+fotograma), scroll idéntico a 16,6 ms/fotograma, INP intacto y +650 B gzip.
+Se descartó por criterio visual, no por coste — que es la razón por la que
+merecía la pena medirlo antes de discutirlo.
+
+### Lo que NO entró
+
+Las maquetas del aura llevan **otro titular, otra bajada y una tarjeta-demo de
+ChatGPT** que no son los de producción. Ese rediseño del hero no está aprobado:
+se separó explícitamente en el Task Intake y necesita el suyo propio. Quien
+abra `descartado-aura/` y vea que el texto no coincide con la portada real, que
+sepa que es deliberado.
+
+`.onb-aurora` queda **intacta** y es otra cosa: cuatro manchas animadas en bucle
+más dos anillos girando, servidas por `/geo`, `/pricing`, las portadas del blog
+y una sección inferior de la propia landing. El hero de la portada nunca la
+usó. Ni el aura descartada ni el degradado la tocan.
+
+### Comprobado
+
+`pnpm test` y `pnpm run validate` en verde. La landing real —servida desde el
+build de producción, no la maqueta— renderizada en Chromium a
+1440/1280/1024/980/760/640/390/375 px: sin desbordamiento horizontal en ninguno.
+`sameAs` y el resto de datos estructurados (Organization, SoftwareApplication,
+Offer), el `<h1>` y el landmark `<main>` de A11Y-PSI-1 (§116) intactos — el
+cambio es una propiedad CSS sobre un contenedor que ya existía y no toca el
+árbol.
+
+**Pendiente / conocido.** A 980 px la cabecera pública desborda —los enlaces se
+parten a tres líneas y «Prueba gratis» se sale—, pero es anterior a este cambio
+y no lo toca esta fase.
+
+---
+
+## 142. La portada estrena el hero del diseño aprobado, y su botón deja de llevar al registro (HOME-2026-08 Fase A, 2026-08-22)
+
+**Origen.** Fundador, 2026-08-22, tras mergear el degradado: *«El efecto real hay
+que verlo con la home definitiva del canvas pixel perfect»*. Task Intake
+aprobado el mismo día, troceado en Paso 0 (el diseño al repo) más tres fases de
+código. Esta entrada cubre el Paso 0 y la Fase A.
+
+### Paso 0: el diseño aprobado no estaba en el repo, y eso invalidaba media pasada del piloto
+
+HERO-GRADIENT-1 (§141) commiteó como «referencia de escritorio» el artboard
+**del hero**, no la home, y sin sus assets. La home completa de escritorio
+—9.152 px, ocho secciones— vivía sólo en el lienzo publicado, que ni CI ni una
+sesión futura pueden abrir. Es exactamente el fallo que CLAUDE.md describe: sin
+diseño en el repo, la mitad de fidelidad del piloto no corre y nadie se entera.
+
+Corregido: `docs/design-reference/home-2026-08/` con los dos artboards,
+`canvas.json` y los diez assets. Y **los dos artboards llevaban todavía el
+aura**, así que se les aplicó el degradado de producción y se republicó el
+lienzo: referencia y producto dicen ahora lo mismo. Era literalmente lo que el
+fundador señalaba como pendiente («sólo quedaba aplicar el hero definitivo»).
+
+Dos cosas que un lector no puede ver y que el README deja escritas, porque las
+dos me hicieron leer mal el diseño antes de mirarlas bien: las cuatro tarjetas
+de la sección oscura entran con `IntersectionObserver` y una captura sin scroll
+las fotografía a opacidad 0 —parecen faltar y no faltan—, y la demo del hero
+son **cinco escenas** cuyo estado vive en las llaves del editor del lienzo, así
+que fuera de él la tarjeta sale vacía con `{{url}}` en la barra.
+
+### Fase A: el hero
+
+Titular, bajada, campo con su llamada a la acción dentro de la píldora y la
+fila de los tres motores con sus logos. El salto de línea del titular es del
+diseño y va explícito: dejarlo fluir se lleva «la» a la primera línea a 1280 px.
+
+**El botón lleva al comprobador gratuito, no al registro.** Es el cambio de
+verdad: la portada pasa de «date de alta y analiza» a «compruébalo ahora, sin
+cuenta». El comprobador existe y es real (FREE-CHECKER-1), así que la promesa
+se sostiene. El dominio escrito viaja **dos veces y las dos hacen falta**: por
+la URL (`?d=`) para que el comprobador aparezca con el campo puesto, y por
+`localStorage` porque el alta sigue estando después y el asistente lo sigue
+recogiendo igual (`.claude/rules/onboarding.md`, «El dominio del hero llega al
+asistente»).
+
+**Rellena, pero no lanza.** Cada comprobación es una llamada real a un LLM con
+tope diario: auto-ejecutarla desde un parámetro convertiría cualquier enlace en
+una forma de gastarle el cupo a otro. Verificado con cuatro entradas —dominio
+válido, un intento de `<script>`, basura y sin parámetro—: rellena sólo el
+válido, filtra el resto con el mismo validador que habilita el botón, y
+**cero** llamadas a `/api/gratis/` en los cuatro casos.
+
+El comprobador necesitó un `Suspense` para poder leer `?d=`: sin él Next no
+prerenderiza la página, que es estática y tiene que seguir siéndolo.
+
+**Se retira la franja «Motores de IA que analizamos por ti».** Los tres motores
+suben al hero con sus logos; mantener las dos dejaba los mismos tres nombres
+repetidos a cien píxeles.
+
+**Por debajo de 560 px el botón sale de la píldora.** No es gusto: el campo
+tiene `max-width: 560px`, así que por debajo de ese ancho el botón empieza a
+comerse el hueco de escribir —a 390 px lo dejaba en ocho caracteres— y es lo
+que hace el artboard móvil. El corte coincide con ese `max-width` a propósito.
+**Y el botón es hermano del campo, no hijo.** Los dos artboards no comparten
+marcado aquí: en escritorio el botón va DENTRO de la píldora y en móvil va
+FUERA, debajo, con 12 px de hueco. Con un solo marcado eso se resuelve moviendo
+el cromado —fondo, borde, sombra, radio— entre el envoltorio (escritorio: los
+dos dentro de la misma cápsula) y el campo (móvil: cápsula sólo alrededor del
+campo). Tenerlo dentro dejaba el recuadro blanco envolviendo también al botón,
+y en el teléfono se leía como una caja alta con el botón flotando dentro. **Lo
+cazó el fundador mirando el preview en su móvil, no mis capturas**, que a 390 px
+en Chromium enseñaban lo mismo sin que yo lo leyera como un fallo: tenía el
+marcado del artboard delante y no lo comparé.
+
+Cada movimiento del relleno rompió el fantasma del tecleo, que va en
+`position: absolute` contra el campo y por tanto depende de dónde esté ese
+relleno: primero se estiró por toda la caja al envolverse la píldora, y después
+arrancó dentro del globo («⊕udomin») al devolverle al campo sus 16 px. Queda en
+42 px = 16 de relleno + 18 del globo + 8 de hueco, medidos.
+
+### Lo que se predijo mal, y se midió
+
+El Task Intake anunciaba que habría que **recalibrar las paradas del
+degradado** al cambiar el alto del hero. Se midió y **no hacía falta**.
+Muestreando el píxel junto al campo sobre la página real, el fondo va de
+`250,252,255` a `246,249,254` según la anchura: nueve unidades por debajo del
+blanco en el peor caso (768 px, donde el hero se acorta a 1001 px y el campo
+sube al 27 %). Las paradas en porcentaje siguieron cayendo donde tenían que
+caer.
+
+De paso quedó claro que **el comentario del CSS era más estricto que el propio
+diseño**: decía que el campo cae «sobre blanco puro», y en el artboard aprobado
+tampoco cae sobre blanco puro, cae en la misma rampa. Corregido el comentario,
+no el degradado — y anotado ahí que no hay que recalibrar esto cuando cambie el
+alto del hero, para que nadie «arregle» un problema que no existe.
+
+### Lo que NO entra, y por qué
+
+- **La demo de cinco escenas del hero.** El hueco lo sigue ocupando
+  `ProductTour`, el tour de ocho pasos. Sustituirlo no es portar marcado: es un
+  componente con reloj, y el tour vive además en el popup de bienvenida de la
+  consola, así que no se puede retirar sin decidir qué pasa allí.
+  `.claude/rules/onboarding.md` ya resolvió estos mismos problemas y sus
+  invariantes se aplican igual. Necesita su fase.
+- **La navegación de 7 enlaces a 4.** Se lleva «Comparativas», decisión
+  explícita del fundador (COMPARATIVAS-DESIGN-1), y el nav es fuente única de
+  las ~57 superficies públicas. Va en su propio PR.
+- **El testimonio con nombre y cifra** (Nerea Solís · Nordika Home · +128 %).
+  El fundador aprobó publicarlo; entra en la Fase C, y antes hay que confirmar
+  que la cifra es una medición real de esa cuenta.
+
+**Pendiente / conocido.** Bajo el campo sigue leyéndose «Escribe tu dominio y
+GenScore te propondrá a quién vigilar y qué prompts lanzar», que es el subtítulo
+del paso 1 del tour, no copy del hero: sigue siendo cierto del producto, pero
+convive raro con un botón que ahora lleva al comprobador. Se va solo cuando la
+Fase A2 sustituya ese bloque.
+
+---
+
+## 143. La portada estrena «El cambio de reglas» y una sección oscura, y tres cifras del artboard no eran ciertas (HOME-2026-08 Fase B1, 2026-08-22)
+
+**Origen.** Continuación del Task Intake de HOME-2026-08, aprobado el
+2026-08-22. La Fase B se partió en dos al medirla: B1 son las secciones
+estáticas y B2 es «Cinco pantallas», que resultó ser un **segundo componente
+con estado** —cinco pestañas, quince llaves de plantilla, cinco manejadores de
+clic— y ocupa 28,6 de los 51 KB de toda la fase.
+
+**Y B1 son DOS secciones, no tres.** El plan listaba «Cómo se gana una
+recomendación» como estática; al abrirla resultó ser **la sección del
+testimonio** (Nerea Solís · Nordika Home · +128 %), que estaba asignada a la
+Fase C y sigue pendiente de que el fundador confirme si esa cifra es una
+medición real de esa cuenta. Se movió a C antes de escribir código.
+
+### Lo que entra
+
+1. **«En Google competías por un clic. En la IA compites por ser la
+   respuesta.»** Sección nueva, antes de «Cómo funciona»: explica por qué el
+   producto existe antes de contar qué hace. Dos tarjetas enfrentadas —un SERP
+   de Google y una respuesta generativa— con una flecha entre ellas. Las marcas
+   que el motor nombra van en `<mark>` y no en un `<span>`: que un motor
+   nombre una marca es literalmente el hecho que el producto mide, así que el
+   resaltado es semántico, no decorativo.
+2. **«Mides, entiendes, arreglas y mejoras»**, la **única superficie oscura de
+   la zona pública**. Cuatro pasos alternados a los lados de un raíl vertical,
+   cada uno con su maqueta de producto. Conserva `id="como"` porque el enlace
+   del nav apunta ahí y el nav es fuente única de las ~57 páginas públicas:
+   cambiarlo aquí las rompe todas. Sustituye a «De cero a un plan de acción en
+   tres pasos», que ocupaba ese ancla.
+
+### Tres cifras del artboard que no eran ciertas
+
+La sección oscura dice, en su tercer paso, *«para cada fallo estimamos los
+puntos que ganarías al corregirlo»* — y después enseña números. El artboard
+ponía **+12** a los datos estructurados, **+8** a la intro respuesta-primero y
+**+6** a `llms.txt`. Ninguno coincide con el producto:
+
+| Artboard | Producto (`lib/web-audit/issues.ts`) |
+|---|---|
+| Datos estructurados **+12** | `WEIGHT.structuredData` = **15** |
+| Intro respuesta-primero **+8** | `WEIGHT.answerFirstIntro` = **5** |
+| `llms.txt` **+6** | `pointDelta: null` — **no se le atribuyen puntos** |
+
+El tercero es el grave: `llms_txt_missing` se emite siempre como `warning` con
+`pointDelta: null`, o sea que el producto **se niega a puntuarlo a propósito**.
+Publicar «+6 pts» ahí habría sido inventar una métrica que la pantalla real no
+enseña nunca (CLAUDE.md, "no fake metrics"). Se implementa con los pesos reales
+y `llms.txt` se pinta como lo que es: un aviso, en ámbar, sin puntos.
+
+Los **rótulos** también son los del producto —«Datos estructurados», «Intro
+respuesta-primero», «llms.txt»—, copiados de `issue-rows.tsx` y no reescritos,
+para que quien llegue a la auditoría reconozca lo que vio en la portada.
+
+### «Pixel perfect» no estaba verificado, y al medirlo no lo era
+
+El fundador preguntó, con el PR ya abierto, si el piloto había comprobado
+tamaños de fuente, espacios y animaciones. **No lo había comprobado, y no lo
+comprueba**: el `ux-pilot` mira que las pantallas carguen con contenido real,
+el contraste y que los controles respondan; **no compara contra el artboard**,
+no hay diff de píxeles ni de tipografía. Y quien implementó tampoco midió:
+construyó desde el marcado y juzgó las capturas a ojo.
+
+Medido después, **ninguna de las siete propiedades comparadas coincidía**,
+porque se reutilizaron las clases del sitio (`.lp-h2`, `.lp-kicker`) en vez de
+la escala del artboard, que es otra:
+
+| | Artboard | Lo que se había implementado |
+|---|---|---|
+| Kicker | 12px/600, `letter-spacing: .14em` | 13px/700, .04em |
+| h2 claro | 42px/700 | 38px/800 |
+| h2 oscuro | 44px/700 | 38px/800 |
+| Bajada | 16px, `line-height: 1.72` | 16,5px, 1.6 |
+| **Número de paso** | **96px** perfilado | **13px** relleno |
+| h3 de paso | 34px/700 | 23px/750 |
+| Cabecera → primer paso | 122px | 84px |
+
+El número de paso era el peor: en el artboard es un «01» de 96 px **vacío, con
+sólo el perfil dibujado** (`color: transparent` + `-webkit-text-stroke`), y se
+había implementado como un rótulo de 13 px relleno. No es una diferencia de
+redondeo, es otro elemento.
+
+**Los selectores van calificados por la sección** (`.lp-how .lp-h2`) y no como
+modificador suelto (`.lp-h2--dark`): las clases base viven más abajo en el
+fichero, así que a igualdad de especificidad ganaban ellas y el titular oscuro
+seguía saliendo a 38 px con la regla nueva puesta. Y el hueco de la cabecera va
+como **un** número (122px) en vez de los «96 + 26» que suman en el artboard,
+porque los márgenes verticales adyacentes se colapsan en el mayor: declararlo
+en dos sitios daba 96, no 122 — comprobado midiendo, no deducido.
+
+### La revelación por scroll: primero se descartó, luego se implementó
+
+En la primera versión no entró, con argumento: pediría una isla de cliente en
+una página que PRELAUNCH-HARDENING-1 Fase V dejó server-rendered a propósito.
+**El fundador la echó en falta al mirar el preview** y entró, con el mecanismo
+exacto del artboard: cada paso recibe `is-in` al asomar (umbral 0,28) y sus
+barras crecen de `scaleX(0)` a `scaleX(1)` en 1,1 s con
+`cubic-bezier(.2,.8,.25,1)` y retardos de .12/.26/.40 s.
+
+La isla (`components/landing/reveal-on-scroll.tsx`) se mantiene **mínima a
+propósito**: un observador y una clase, sin estado de React y sin volver a
+renderizar. El marcado sigue viniendo del servidor, así que si el JS no llega
+los pasos se ven igual, ya revelados. Se desobserva cada paso al entrar y el
+observador se cierra cuando han entrado todos.
+
+`prefers-reduced-motion` no degrada: marca todo como entrado en el primer
+efecto y no observa nada. Aquí no hay «fotograma final que siga contando la
+historia» que discutir —como sí lo hay en el tour— porque **la barra llena ES
+el dato**. Verificado en los dos modos: con movimiento normal la barra pasa de
+`matrix(0,…)` a `matrix(1,…)` y el texto de opacidad 0 a 1 al entrar; con
+movimiento reducido ya están en su estado final antes de entrar y nada se
+mueve.
+
+Se pierde el efecto secundario bueno que tenía no animar: vuelve a existir la
+trampa de fotografiar las tarjetas a opacidad 0 que el README de la referencia
+describe. Sigue documentada ahí. Comprobado en la pasada siguiente del piloto:
+**no ocurre**, porque su captura de página completa desplaza la página y eso
+dispara el observador. Vale para este arnés, no como garantía general.
+
+### El artboard móvil tiene su propia escala, y también había que medirla
+
+Corregida la tipografía contra el artboard de escritorio, a 375 px el titular
+partía en **cuatro** líneas. La causa: se estaba sirviendo la escala de
+escritorio en todas las anchuras, y el artboard móvil declara la suya —h2 31px
+en vez de 44, h3 25 en vez de 34 con `-.025em`, el número 58 en vez de 96 y con
+`text-stroke` de 1,2 en vez de 1,4, la bajada 15/1.68 y el kicker 11,5. Las
+cinco coinciden ahora, y el titular vuelve a dos líneas.
+
+**El corte va a 560px, que es el que ya usaba el hero**, y no un número nuevo:
+entre 560 y 900 el diseño no da datos —sus dos artboards son 1280 y 390— y a
+768 la escala de escritorio cabe en dos líneas, que es como se lee en el
+grande. Inventar un corte intermedio habría sido decidir por el diseño en una
+anchura que el diseño no cubre.
+
+### Los competidores llevan su favicon oficial, y eso es regla de producto
+
+Fundador, 2026-08-22: *«donde salgan competidores tienen que salir los logos
+favicons oficiales»*. La primera versión los pintaba como texto plano, y la
+fuente citada del paso 02 como un cuadrado con «EM». El artboard sí los lleva,
+en una caja `.fav` con las iniciales de respaldo.
+
+Se resuelve con **`FaviconImg`**, el mecanismo que el producto ya usa en
+Competidores (FAVICON-QUALITY-1, §36), y con **dominios reales** —`ikea.es`,
+`leroymerlin.es`, `maisonsdumonde.com`, `elmueble.com`—. Eso lo deja **mejor
+que el artboard**: el lienzo dibujaba a Maisons du Monde y a elmueble.com con
+iniciales porque no tenía sus assets, y aquí el servicio los trae. La caja
+copia `.fav` del diseño (8px de radio, fondo blanco, borde, iniciales a 10,5px)
+para que el respaldo siga siendo el del artboard cuando el servicio no conozca
+un dominio.
+
+**Dónde NO van, y también está medido:** la tarjeta del SERP de «El cambio de
+reglas» no lleva ninguno — cero `<img>` entre las dos tarjetas del artboard—, y
+las marcas citadas dentro de la respuesta generativa van en `<mark>`, no como
+logos.
+
+**Lo que no se pudo verificar aquí.** Las cuatro peticiones salen con el
+dominio y el tamaño correctos, y el respaldo se pinta bien; pero **el sandbox
+de los agentes no alcanza `www.google.com`**, que es de donde `favicon-source`
+saca los iconos, así que la ruta devuelve 204 y localmente sólo se ven las
+iniciales. Tampoco alcanza el preview de Vercel. **Que los logos oficiales
+salgan de verdad se comprueba en las capturas del piloto**, que corre en GitHub
+Actions con salida real — no dando por bueno el cableado.
+
+Nota de fidelidad que parece un fallo y no lo es: «Maisons du Monde» parte en
+dos líneas. El artboard fija esa columna en 110px con el mismo cuerpo y su fila
+mide los mismos 59px, así que envuelve igual.
+
+### Dos fallos encontrados mirando, no razonando
+
+**El `order` de la rejilla no es decorativo.** `.lp-how-dot` lleva `order: 2`
+para poder cruzarse en los pasos pares. Con texto y hoja en el `0` por defecto,
+la rejilla los colocaba a los dos **antes** que el punto, así que en los pasos
+impares la hoja caía en la columna del raíl —96 px— estrujada a 50 px de ancho
+y con su contenido fuera de la caja. Los pasos pares, que sí tenían `order`
+explícito, salían bien: por eso la mitad de la sección parecía correcta. Ahora
+los tres van numerados.
+
+**Las dos tarjetas del cambio de reglas van `stretch`, no `center`.** Centradas,
+la de GEO —más corta— quedaba flotando por debajo de la de SEO; en el artboard
+las dos empiezan a la misma altura.
+
+### Contraste sobre la superficie oscura, recalculado
+
+`.claude/rules/styles.md` obliga: un token que aprueba AA sobre blanco no lo
+aprueba sobre otra superficie. No se reutiliza ninguno de los tokens de tinta
+del sitio —están calculados sobre blanco—; se declaran colores propios y se
+miden sobre `#0a1220`: cuerpo `#e8eefc` **16,13:1**, párrafos `#93a3bd`
+**7,33:1**, kicker `--brand-cyan` **8,90:1**, titulares `#fff` **18,75:1**.
+Los cuatro pasan AA con holgura.
+
+> **Corregido en §144.** Dos de esas cuatro cifras eran de los colores que este
+> PR *declaró*, no de los que el navegador *pintó*: por una colisión de
+> especificidad el kicker salía índigo (**3,00:1**) y los párrafos en
+> `--ink-2` (**2,34:1**). Las cifras de arriba sólo pasaron a ser ciertas
+> cuando §144 arregló la colisión.
+
+**Comprobado.** `pnpm test`, `pnpm run validate` y `git diff --check` en verde.
+Landing real desde el build de producción a trece anchuras (1440 → 320 px): sin
+desbordamiento horizontal en ninguna, las cuatro hojas a 514 px en escritorio y
+el raíl al borde izquierdo por debajo de 900 px, donde los pasos pasan a una
+columna y se acaban los cruces.
+
+**Pendiente / conocido.** El `id="como"` ahora lleva a una sección que cuenta
+cuatro pasos, no tres; el texto del nav sigue diciendo «Cómo funciona» y encaja.
+La sección «De cero a un plan de acción en tres pasos» desaparece con sus tres
+pasos: lo que contaba está repartido entre los cuatro nuevos.
+
+---
+
+## 144. «Pixel perfect» no es una propiedad que se declara, es una distancia que se mide (HOME-2026-08 Fase B1, segunda pasada, 2026-08-22)
+
+El fundador preguntó si la tipografía, los espacios y las animaciones de la
+Fase B1 eran pixel perfect. La respuesta honesta en §143 fue que no, y allí se
+corrigió la escala tipográfica. Esta sección es la segunda pasada: **comparar
+propiedad a propiedad, en un navegador, la maqueta aprobada contra la landing
+de producción**, en vez de leer las dos hojas de estilo y darlas por iguales.
+
+El método importa más que la lista. Un script abre
+`docs/design-reference/home-2026-08/portada-escritorio.dc.html` y
+`http://localhost:3000/` en el mismo Chromium, resuelve las parejas de
+elementos equivalentes y compara `getComputedStyle` más la caja real. La
+primera pasada dio **36 diferencias** en la cabecera de las dos secciones
+nuevas y **otras tantas** dentro de la primera hoja. Al terminar quedan 17, y
+todas son de una de estas tres clases: tokens de tinta del sitio que difieren
+del artboard en 3-4 unidades (`--ink-4` #98a0b0 frente a #98A2B3), métricas de
+la fuente de display frente a la que la maqueta tiene de reserva, y una
+decisión deliberada —las iniciales del favicon— que se explica más abajo.
+
+### Lo que estaba mal y no se veía leyendo el CSS
+
+**Dos de los tres colores de la sección oscura no llegaban a pintar nada.**
+`.lp-kicker--dark` y `.lp-sec-sub--dark` son (0,1,0), igual que `.lp-kicker` y
+`.lp-sec-sub`, que declaran `color` **más abajo en el mismo fichero**: a
+igualdad de especificidad gana el último. El rótulo salía índigo `--accent`
+sobre azul marino y la bajada en `--ink-2` #475067, un gris calculado sobre
+blanco que sobre `#0a1220` da **2,34:1** — muy por debajo del 4,5:1 de AA para
+texto de cuerpo. §143 ya había diagnosticado exactamente esta trampa **para la
+escala tipográfica** y la resolvió calificando por sección; los colores se
+quedaron como modificadores sueltos y volvieron a caer en ella. `.lp-h2--dark`
+sí funcionaba, y sólo por casualidad: `.lp-h2` no declara `color`. Es decir,
+**el caso que se veía bien era el que no demostraba nada**, y las cifras de
+contraste de §143 se calcularon sobre el CSS escrito, no sobre el pintado.
+
+**El hueco de la cabecera se midió por su propiedad, no por su distancia.**
+§143 puso `margin-bottom: 122px` razonando sobre el colapso de márgenes. El
+hueco real entre la cabecera y el «01» salía a **136px** contra los 122 del
+artboard: la fila del paso está centrada verticalmente y el número, con
+`line-height: .8`, deja 14px de aire dentro de su propia caja. Ahora la
+declaración es 108 y **lo que se comprueba es el hueco**, que da 122.
+
+**La hoja de producto era un tercio más baja que la del artboard.** 135px
+contra 192. Tres causas: un único `padding` para las cuatro hojas cuando el
+diseño les da uno distinto a cada una (10/20, 22, 8/20 y 0), filas separadas
+por `gap` en vez de por relleno propio y una línea entre ellas, y la interlínea
+del sitio (24px) heredada dentro de la tarjeta, que engordaba 16px cualquier
+fila cuyo nombre partiera en dos líneas.
+
+**Faltaban tres piezas enteras del diseño**, no matices: la barra de reparto
+de cuatro segmentos del paso 2, los distintivos redondos de ✗/✓ del paso 3 y
+**el disco de puntuación de 132px del paso 4**, que es la imagen que cierra la
+sección. Estaban implementadas como texto plano.
+
+### La revelación escondía la sección entera sin JavaScript
+
+El estado inicial (`opacity: 0`, `scaleX(0)`) estaba escrito en el CSS a secas
+y sólo se deshacía al llegar `is-in`, que pone una isla de cliente. Con el JS
+desactivado esa clase no llega nunca: **la única superficie oscura del sitio se
+quedaba en blanco** — cuatro pasos invisibles y tres barras a cero. El
+comentario de `RevealOnScroll` afirmaba, palabra por palabra, lo contrario («si
+el JS no llega, los pasos se ven igual»). Ahora el estado oculto cuelga de
+`.is-armed`, que pone la propia isla, así que sin JS no hay nada que revelar; y
+lo que ya está en pantalla al armar se marca entrado en el mismo fotograma,
+para que no dé un salto de visible a oculto y vuelta. Comprobado con el JS
+desactivado y con `prefers-reduced-motion`: los cuatro pasos a opacidad 1, las
+barras sin transformación y el disco a 87.5.
+
+El disco se anima ahora como las barras —1,8s, mismo retardo que el artboard—,
+porque es el mismo dato contado de otra forma.
+
+### El logo de ChatGPT no se veía, y en la maqueta tampoco
+
+La fila de motores del paso 1 va en el artboard con las marcas sueltas sobre el
+fondo oscuro. El logo de ChatGPT es negro puro: sobre `#0a1220` desaparece, y
+en la propia maqueta sale como una mancha. Se resuelve metiendo **cada** marca
+en un disco blanco de 26px, no retocando la de OpenAI: es la regla que sigue
+valiendo cuando entre un cuarto motor. La fila sirve los tres motores que el
+escaneo ejecuta de verdad (`lib/llm/`), que es lo que la frase del paso afirma;
+la maqueta traía uno y dos huecos que rellenaba su editor.
+
+### Lo que se aparta del artboard a propósito
+
+- **Las iniciales del favicon** van a 10,5px/700 en `--ink-3`; la maqueta las
+  deja heredar 16px/400, que en una caja de 28px se sale. Es la caja de
+  respaldo de `FaviconImg`, y sólo se ve cuando el servicio no conoce el
+  dominio.
+- **«Maisons du Monde» no se abrevia.** La maqueta móvil lo recorta a «Maisons
+  du M.» para que no parta en dos líneas; es un nombre de marca real y parte.
+- **Los pesos de la auditoría del paso 3** siguen siendo los del producto
+  (+15 / +5 / aviso), no los de la maqueta (+12 / +6 / +8), por lo ya decidido
+  en §143.
+
+### El carrusel del cambio de reglas, que el artboard móvil ya tenía
+
+El fundador, mirando el preview: *«las tarjetas habíamos decidido ponerlas como
+un carrusel, scroll horizontal, como una transición del seo al geo»*. Tenía
+razón y **no era una decisión nueva**: el artboard móvil nunca tuvo las dos
+tarjetas apiladas. Tiene un carrusel de dos diapositivas (`.cslide`), dos
+puntitos de 24×4 (`.cpt`) y flechas redondas de 40px (`.cnav`), con la de
+«siguiente» pulsando hasta que se pulsa. La primera implementación las apiló, y
+con eso se perdía lo único que la sección tiene que contar: que se **pasa** del
+SEO al GEO, no que existan los dos por separado. El artboard de ESCRITORIO sí
+las pone lado a lado con la flecha en medio —ahí la comparación se ve de un
+vistazo— así que el carrusel es sólo del móvil, decidido con el fundador.
+
+**Se desliza con el dedo, y eso sí se aparta del artboard.** La maqueta
+intercambia diapositivas con `display:none` y un fundido; aquí la pista es un
+contenedor con `scroll-snap`, que es lo que se hace en un teléfono. Lo que se
+gana es que **sin JS sigue funcionando**: la pista se desliza igual y lo único
+que falta son los mandos, que los pinta la isla `RulesCarousel` y no el
+servidor — un botón que existe pero no responde es peor que un botón que no
+está. El coste, declarado: sin JS quedan 40px de hueco reservado y vacío, que
+es lo que evita que la hidratación mueva la página para todos los demás.
+
+### La frase de cierre era la conclusión y se leía como otra fila
+
+*«Resalta la última frase de compites por una posición o por la mención; que si
+no parece otro resultado más»* (fundador, 2026-08-22). Con el borde fino del
+artboard, la frase que la sección existe para dejar caer quedaba a la altura de
+un resultado más de la lista. Pasa a ser una **banda al pie de la tarjeta**, a
+sangre contra sus bordes y con el fondo de su bando: gris para el SEO, azul
+para el GEO. El contraste entre las dos bandas es lo que hace el argumento de
+un vistazo.
+
+Tres cosas que hubo que arreglar detrás, las tres encontradas mirando:
+
+- La banda de GEO dejaba un dedo de blanco bajo ella, porque las dos tarjetas
+  se estiran a la altura del par y la de GEO es más corta. La tarjeta pasa a
+  ser columna flexible con un separador que se come el sobrante. **No vale
+  `margin-top: auto`** en la banda: con la tarjeta llena el hueco de 18px
+  desaparece.
+- Al volverla columna flexible, la cápsula del rótulo —un `inline-flex`— se
+  estiró de lado a lado. Lleva `align-self: flex-start`.
+- La banda se escribió primero con `display: grid`, y eso convirtió cada nodo
+  de texto en una fila: la frase salía partida en tres, con el punto suelto en
+  la suya.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
+en verde. La comparación contra el artboard, en el navegador, a 1280 y 390px.
+El carrusel ejercitado a once anchuras (320 → 1440): mandos sólo por debajo de
+560, rejilla por encima, la banda pegada al pie en todas, y sin JS la pista
+sigue deslizándose. Una advertencia para la próxima sesión: **la captura de un
+elemento con Playwright desplaza un contenedor con `scroll-snap`**, así que una
+captura de la sección entera la fotografía a medio deslizar aunque el carrusel
+esté bien parado. Se comprueba con captura de ventana y midiendo `scrollLeft`,
+no con captura de elemento.
+La sección entera fotografiada en las dos anchuras con los cuatro pasos
+revelados, y comparada con la misma captura de la maqueta.
+
+### Lo que el piloto enseñó después, y que sólo se ve mirando
+
+`PILOT PASS` sobre `fc23c48`, capturas abiertas: la sección oscura sale entera
+y correcta en las tres anchuras —rótulo cian, bajada legible, barra de reparto,
+distintivos, disco lleno con el 71, motores visibles en sus discos— y **los
+favicons oficiales salen de verdad**: IKEA, Leroy Merlin y Maisons du Monde con
+su logo. `elmueble.com` cae a las iniciales «EM» porque el servicio de iconos
+no lo conoce; el respaldo se pinta como la caja del artboard, que es lo que
+está diseñado que pase.
+
+Y un fallo que sólo apareció ahí: **«Solución generada» partía en dos líneas a
+375px, por un píxel** —quedaban 102 para un título de 103—. Se recupera con el
+hueco a 8px y el título en `nowrap`. Dos efectos secundarios que hubo que
+cerrar en el mismo sitio, los dos encontrados midiendo: sin `flex: 0 0 auto` la
+fila estrujaba el icono a **8px** de ancho, y por debajo de 380px la cápsula
+«Lista para publicar» se salía de la tarjeta y el `overflow: hidden` de la hoja
+la recortaba **en silencio** — que es la peor forma de no caber. Ahí baja a su
+propia línea. Comprobado a 320/360/375/390/560/561/768/900/1024/1280/1440:
+nada se sale de su tarjeta en ninguna.
+
+---
+
+## 145. Rediseño del onboarding de nuevo dominio — dirección "Consola" (ONBOARDING-DOMAIN-REDESIGN-1, 2026-08-20)
 
 **El problema.** El asistente de alta de dominio (`components/onboarding-
 wizard.tsx`) seguía en el sistema visual anterior a la migración de marca:
@@ -11814,23 +13359,3 @@ la fila sea cual sea el viewport. Verificado con y sin la regla en la misma
 reproducción: sin ella el input se encoge y el texto sale negro; con ella el
 input recupera su ancho y el texto sale en gris, sin tocar el resto de la
 fila.
-
----
-
-## Cómo mantener este documento
-
-Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
-cambio de header/menú, rediseño de una pantalla) que toque layout, paleta,
-tipografía o patrones de navegación:
-
-1. Añadir una entrada nueva a la zona correspondiente (o crear una zona
-   nueva si no existe) con: qué se decidió, por qué, y qué queda pendiente
-   o roto conocido.
-2. Si una decisión previa queda **sustituida**, no borrarla — marcarla como
-   `superseded por §X` y explicar el porqué del cambio, igual que hace
-   `docs/adr/` con las decisiones técnicas.
-3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
-   técnico aquí (este documento es "qué se decidió", no "cómo se
-   implementó").
-
----

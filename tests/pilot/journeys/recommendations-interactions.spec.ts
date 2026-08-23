@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser } from "../support/journey";
+import { assertPageIsHealthy, captureInteraction, pickProjectShowing, visitAsUser } from "../support/journey";
 
 /**
  * RECS-REDESIGN-1 — interaction proof for the Recomendaciones screen.
@@ -14,8 +14,9 @@ import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser 
  *
  * So the screen this PR rebuilds gets an explicit journey instead: it clicks
  * the real controls and ASSERTS the consequence, rather than reporting "the
- * DOM changed". Runs against the SECOND project (Movistar by default), which
- * is the only one with enough recommendations to have accordions at all.
+ * DOM changed". Runs against the first project of the account that actually
+ * has priority actions to click on — picked by looking, not by name; see
+ * `pickProjectWithPriorityActions` for why the name-based pick rotted.
  *
  * SCOPE GUARD — read-only, same as core-flow.spec.ts. Every control touched
  * here is a local state toggle or a client-side download. It never launches a
@@ -24,27 +25,35 @@ import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser 
 
 test.describe.configure({ mode: "serial" });
 
-async function largestProjectId(page: Parameters<typeof resolveProjectId>[0]): Promise<string | null> {
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
-  const wanted = (process.env.PILOT_SECOND_PROJECT ?? "Movistar").trim();
-  const links = page.locator('a[href^="/dashboard/projects/"]').filter({ hasNotText: /nuevo|new/i });
-  const ids: string[] = [];
-  for (const link of await links.all()) {
-    const href = await link.getAttribute("href");
-    const text = (await link.textContent()) ?? "";
-    const match = href?.match(/^\/dashboard\/projects\/([^/?#]+)$/);
-    if (!match || match[1] === "new") continue;
-    if (new RegExp(wanted, "i").test(text)) ids.unshift(match[1]);
-    else ids.push(match[1]);
-  }
-  return ids[0] ?? null;
-}
+/**
+ * El proyecto que este journey necesita es **uno que tenga acciones
+ * prioritarias**, y la única forma honesta de saber cuál es abrirlo y mirar.
+ * La elección vive en `pickProjectShowing` (`../support/journey`), compartida
+ * con `core-flow.spec.ts`, porque el fallo era el mismo en los dos sitios y dos
+ * copias se arreglan una vez y media.
+ *
+ * Antes se buscaba por nombre (`PILOT_SECOND_PROJECT`, "Movistar") sobre los
+ * enlaces de `/dashboard/projects`. Esa ruta pasó a ser una redirección a
+ * `/dashboard/domains` (DOMAINS-ARCHIVE-RETIRE-1, log §104) y allí **sólo el
+ * proyecto de portada enlaza a `/dashboard/projects/<id>`**; los demás enlazan
+ * a `?active=<id>`. La lista quedó con un único elemento, el filtro por nombre
+ * no podía casar con nada, y el journey llevaba desde el 2026-08-15 midiendo lo
+ * que hubiera delante en cada anchura (log §138).
+ */
+const PRIORITY_CARD = ".rec-card.rec2-priority";
 
 test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar responden de verdad", async ({
   page
 }, testInfo) => {
-  const id = await largestProjectId(page);
-  test.skip(!id, "la cuenta piloto no tiene ningún proyecto");
+  const id = await pickProjectShowing(page, testInfo, {
+    path: (projectIdToVisit) => `/dashboard/projects/${projectIdToVisit}/recommendations`,
+    contentSelector: PRIORITY_CARD
+  });
+  test.skip(
+    !id,
+    "ningún proyecto de la cuenta piloto tiene acciones prioritarias: no hay nada que este " +
+      "journey pueda comprobar. Siembra un proyecto con recomendaciones."
+  );
 
   const findings = await visitAsUser(
     page,
@@ -55,7 +64,7 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
   assertPageIsHealthy(findings);
 
   // --- 1 · Las acciones prioritarias existen y son de tipos distintos -------
-  const priority = page.locator(".rec-card.rec2-priority");
+  const priority = page.locator(PRIORITY_CARD);
   const priorityCount = await priority.count();
   expect(priorityCount, "no se han renderizado acciones prioritarias").toBeGreaterThan(0);
   const priorityTitles = await priority.locator(".rec-title").allTextContents();

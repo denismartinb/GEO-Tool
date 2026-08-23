@@ -33,6 +33,7 @@ export type IssueCheckKey =
   | "description_length"
   | "open_graph"
   | "noindex"
+  | "snippet_blocked"
   | "canonical"
   | "hreflang"
   | "list_or_table"
@@ -251,6 +252,28 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: (c) => c.indexability !== undefined,
     fails: (c) => c.indexability!.noindex,
     gain: (c) => pointGainForCheck(c, WEIGHT.indexableNotNoindex),
+    hardBlock: true
+  },
+  {
+    /**
+     * `nosnippet` / `max-snippet:0` (AUDIT-SNIPPET-1). Un motor puede
+     * rastrear e indexar la página y aun así tener prohibido reproducir un
+     * fragmento de ella — que para un producto de visibilidad en IA es el
+     * bloqueo que importa: sin fragmento no hay cita.
+     *
+     * `gain: () => null` NO es una laguna: es la decisión. Este hallazgo no
+     * lleva puntos porque dárselos movería `readiness_score`, componente del
+     * GEO Score con peso .20 y pesos aprobados por el fundador. Mismo trato
+     * que `bot_blocked`, y por el mismo motivo.
+     *
+     * `isMeasured` exige el campo nuevo: una instantánea anterior a esta fase
+     * no se declara limpia, se excluye. `[]` es "medido y limpio";
+     * `undefined` es "nunca medido".
+     */
+    key: "snippet_blocked",
+    isMeasured: (c) => c.indexability?.snippetBlocks !== undefined,
+    fails: (c) => c.indexability!.snippetBlocks!.length > 0,
+    gain: () => null,
     hardBlock: true
   },
   {

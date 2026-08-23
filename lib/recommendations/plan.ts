@@ -10,6 +10,8 @@
  * del que muestra.
  */
 
+import { deliverableForType } from "@/lib/recommendations/deliverable";
+
 export type PlanCandidate = {
   id: string;
   recommendation_type: string;
@@ -19,6 +21,27 @@ export type PlanCandidate = {
   consecutive_runs_open?: number;
   potentialPoints?: number | null;
 };
+
+/**
+ * RECS-ACCION-1c — el techo de las acciones externas.
+ *
+ * Una acción que depende de un tercero **nunca** se pone por encima de una que
+ * el cliente puede ejecutar hoy. Antes el plan ordenaba sólo por puntos, y el
+ * contrafactual de `pursue_*` es generoso por construcción: asume que TODAS las
+ * fuentes citadas acaban mencionando la marca, así que "consigue que cinco
+ * webs te mencionen" salía la primera, con más puntos que nada de lo que el
+ * usuario controla. Es exactamente la queja que abrió esta serie de fases
+ * (fundador, 2026-08-21: *"escribir a hubspot y conseguir que te nombren en su
+ * blog no es muy realista"*), y el chip de control la señalaba sin corregirla.
+ *
+ * No las esconde: si no hay nada propio que hacer, una externa sigue subiendo
+ * al plan. Es un techo, no un filtro.
+ *
+ * Un tipo sin control declarado NO se penaliza — misma dirección de fallo que
+ * `deliverableForType`: sin clasificar no se afirma nada, y el orden se queda
+ * como estaba.
+ */
+const CONTROL_BAND = 10_000;
 
 /**
  * Cuántas acciones propone el plan por escaneo. Tres es una decisión de
@@ -35,12 +58,13 @@ export const PLAN_SIZE = 3;
  * del motor, que ya pondera severidad, impacto, confianza y alcance.
  */
 export function planScore(rec: PlanCandidate): number {
+  const band = deliverableForType(rec.recommendation_type).control === "third_party" ? 0 : CONTROL_BAND;
   const points = typeof rec.potentialPoints === "number" && rec.potentialPoints > 0 ? rec.potentialPoints : null;
   if (points !== null) {
     const effortBonus = rec.effort === "low" ? 0.3 : rec.effort === "medium" ? 0.1 : 0;
-    return 1000 + points + effortBonus;
+    return band + 1000 + points + effortBonus;
   }
-  return 1000 - rec.priority_rank;
+  return band + 1000 - rec.priority_rank;
 }
 
 /**
@@ -63,6 +87,32 @@ export function selectPlan<T extends PlanCandidate>(recommendations: readonly T[
     if (!plan.includes(rec)) plan.push(rec);
   }
   return plan;
+}
+
+/**
+ * Cuántas acciones de un mismo tipo se enseñan al desplegar su grupo
+ * (RECS-ACCION-1c). El motor emite una tarjeta por prompt, así que
+ * `increase_brand_visibility` en un proyecto de 30 prompts son 30 tarjetas
+ * idénticas salvo la consulta — 30 de las 36 acciones del proyecto real del
+ * fundador. Nadie va a escribir 30 páginas: el problema no es cómo se agrupan,
+ * es **cuáles de las 30 mueven la aguja**, y ese dato ya existe en los puntos
+ * contrafactuales de cada tarjeta.
+ *
+ * Agrupar en el motor está descartado (log §115 punto 6: cambiaría el
+ * `dedupe_key` y rompería la resolución por prompt de RECS-3), así que esto es
+ * presentación, como el resto del agrupado. **No esconde nada**: el resto está
+ * a un clic, igual que ya lo estaba el grupo entero.
+ */
+export const GROUP_PREVIEW_SIZE = 5;
+
+/**
+ * Ordena los miembros de un grupo con la MISMA función que ordena el plan, de
+ * forma que la pantalla entera tenga un solo criterio. Dentro de un grupo el
+ * tipo es constante, así que la banda de control no altera el orden relativo:
+ * lo que decide es la cifra de puntos y, sin ella, el `priority_rank`.
+ */
+export function rankGroupMembers<T extends PlanCandidate>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => planScore(b) - planScore(a));
 }
 
 /**

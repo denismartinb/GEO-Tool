@@ -77,6 +77,12 @@ const CHECK_META: Record<IssueCheckKey, { label: string; guidance: string; unit:
     guidance: "Actualiza el contenido y refresca su fecha de modificación (dateModified en el JSON-LD, o una etiqueta de última modificación).",
     unit: "página"
   },
+  snippet_blocked: {
+    label: "Fragmentos bloqueados",
+    guidance:
+      'Estas páginas declaran "nosnippet" o "max-snippet:0", que prohíbe a los motores reproducir un fragmento — sin fragmento no hay cita, por buena que sea la página. Quítalo de la etiqueta <meta name="robots"> o de la cabecera X-Robots-Tag de tu servidor o CDN.',
+    unit: "página"
+  },
   bot_blocked: { label: "Acceso de bots de IA", guidance: "Revisa tu robots.txt y quita la regla que bloquea a este motor.", unit: "bot" },
   llms_txt_missing: {
     label: "llms.txt",

@@ -1031,3 +1031,64 @@ export async function discoverProjectIds(page: Page): Promise<string[]> {
   }
   return ids;
 }
+
+/** Cuántos proyectos se abren buscando uno que sirva. Acotado: cada candidato es una carga de página, por anchura. */
+const MAX_PROJECT_CANDIDATES = 4;
+
+/** Margen para que la pantalla se decida entre pintar contenido o su estado vacío. */
+const PROJECT_SETTLE_TIMEOUT_MS = 15_000;
+
+/**
+ * El primer proyecto de la cuenta que **tiene de verdad** lo que el journey va
+ * a mirar, abriéndolo y comprobándolo.
+ *
+ * Elegir «el primero de la lista» y luego exigir contenido real es una
+ * contradicción: qué proyecto sale primero depende del cookie
+ * `geo_active_project` y, sin él, del más reciente — así que basta con que
+ * alguien cree un dominio para que el piloto aterrice en uno recién escaneado
+ * y sin nada que corregir. Ese estado vacío es **legítimo del producto**, no un
+ * fallo, y hacer fallar al piloto por él enseña a ignorarlo (PR #446: pasó dos
+ * veces el mismo día, primero en `recs-interactions` con el proyecto Linkedin
+ * y después aquí con Amazon).
+ *
+ * Elegir por dato no puede pudrirse igual: si ningún proyecto tiene lo que hace
+ * falta, quien llama **se salta ruidosamente** en vez de afirmar sobre una
+ * pantalla vacía — la regla que nació el 2026-08-02.
+ *
+ * `exclude` permite que un segundo journey pida otro proyecto distinto del que
+ * ya usó el primero.
+ */
+export async function pickProjectShowing(
+  page: Page,
+  testInfo: TestInfo,
+  options: { path: (id: string) => string; contentSelector: string; emptySelector?: string; exclude?: string[] }
+): Promise<string | null> {
+  const excluded = new Set(options.exclude ?? []);
+  const all = (await discoverProjectIds(page)).filter((id) => !excluded.has(id));
+  const candidates = all.slice(0, MAX_PROJECT_CANDIDATES);
+
+  for (const id of candidates) {
+    await page.goto(options.path(id), { waitUntil: "domcontentloaded" });
+    const content = page.locator(options.contentSelector).first();
+    // Esperar a que la pantalla se decida. Sin esto, un cero puede ser
+    // "todavía no ha hidratado" y se descartaría un proyecto bueno.
+    await content
+      .or(page.locator(options.emptySelector ?? ".section-empty").first())
+      .first()
+      .waitFor({ state: "visible", timeout: PROJECT_SETTLE_TIMEOUT_MS })
+      .catch(() => {});
+
+    if (await content.isVisible().catch(() => false)) {
+      // Sin topes mudos: lo que no se miró se dice.
+      if (all.length > candidates.length) {
+        testInfo.annotations.push({
+          type: "coverage",
+          description: `${all.length - candidates.length} proyecto(s) más de la cuenta no se examinaron (tope: ${MAX_PROJECT_CANDIDATES}).`
+        });
+      }
+      return id;
+    }
+  }
+
+  return null;
+}

@@ -2,12 +2,19 @@ import "server-only";
 
 import { z } from "zod";
 import { rewriteRecommendation } from "@/lib/llm/gemini";
+import { buildRecommendationRewritePrompt } from "@/lib/recommendations/recommendation-rewrite-llm";
 import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-validation";
+import {
+  collectAnchoredDomains,
+  competitorsAnchoredByDomain,
+  domainsShownInPrompt
+} from "@/lib/recommendations/anchored-domains";
 import { checkGenerationRateLimit } from "@/lib/recommendations/generation-rate-limit";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/auth";
 import { sanitizeField } from "@/lib/text/sanitize";
+import { type ArtifactRejection, checkPasteableArtifact } from "@/lib/recommendations/pasteable-artifact";
 
 /**
  * Core business logic for "Mejorar redacción con IA" (the on-demand AI rewrite
@@ -58,6 +65,10 @@ type EvidenceJson = {
   affected_prompts?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
+  // Source-gap rules (pursue_*): the third-party domains the card is actually
+  // about. Built separately from citation_domains, so neither contains the
+  // other — see lib/recommendations/anchored-domains.ts.
+  source_domains?: string[];
   evidence_snippets?: string[];
   dominant_competitor?: string;
   // RECS-2B / N2 (pursue_citation_sources only) — specific pages the AI
@@ -86,8 +97,61 @@ type ProjectRow = {
 
 type SolutionContent = GeneratedSolution;
 
+/**
+ * One message per failure branch, all self-authored and free of any provider
+ * text (`.claude/rules/gemini.md`, "Sanitize all errors").
+ *
+ * They used to be a single sentence shared by five different branches — a
+ * provider outage, a model returning nonsense, the anti-fabrication guard
+ * rejecting the answer, and a failed write all read identically on screen. On
+ * 2026-08-20 two recommendations failed with that one sentence and neither the
+ * founder nor the agent could tell from the product whether they were even the
+ * same failure; that took a code investigation to narrow and still needed the
+ * runtime log to close. A user-facing message cannot name a cause it does not
+ * know, but it can distinguish the causes the code already branches on.
+ */
 const GENERIC_REWRITE_FAILURE =
   "No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.";
+
+/** The provider failed, timed out, or returned something unusable. */
+const ENGINE_FAILURE =
+  "El motor de IA no ha devuelto una propuesta utilizable. Inténtalo de nuevo en unos minutos.";
+
+/**
+ * The rewrite came back naming something outside this recommendation's own
+ * evidence, so it was discarded rather than shown. Retrying is worth it: the
+ * model is sampled, not deterministic.
+ */
+const UNVERIFIED_FAILURE =
+  "La propuesta generada mencionaba datos que no están en la evidencia de esta recomendación, así que se ha descartado. Vuelve a intentarlo.";
+
+/**
+ * El término concreto, cuando el guardián lo sabe. «Mencionaba datos que no
+ * están en la evidencia» deja al usuario —y al agente que lo depura— sin la
+ * única pregunta que importa: *qué* mencionaba. Va saneado y recortado como
+ * cualquier otra salida del modelo (nunca es texto del proveedor, es un solo
+ * término), y se cae al mensaje genérico si no queda nada tras sanear.
+ */
+function unverifiedFailure(validation: {
+  reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned" | "comparative_claim_against_competitor";
+  offending: string;
+}): string {
+  const term = sanitizeField(validation.offending, OFFENDING_TERM_MAX);
+  if (validation.reason === "comparative_claim_against_competitor") {
+    // Nada que ver con la evidencia: aquí el dato existía y el problema es
+    // que la propuesta afirmaba superioridad sobre un competidor nombrado
+    // (RECS-USEFULNESS-1 Fase C). Decir «no está en la evidencia» sería
+    // sencillamente falso, y mandaría al usuario a mirar donde no es.
+    return term
+      ? `La propuesta comparaba tu marca con un competidor afirmando que eres «${term}», y eso no se puede publicar sin datos que lo respalden, así que se ha descartado. Vuelve a intentarlo.`
+      : "La propuesta afirmaba superioridad sobre un competidor sin datos que lo respalden, así que se ha descartado. Vuelve a intentarlo.";
+  }
+  if (!term) return UNVERIFIED_FAILURE;
+  return `La propuesta generada mencionaba «${term}», que no está en la evidencia de esta recomendación, así que se ha descartado. Vuelve a intentarlo.`;
+}
+
+/** Generated fine, but the write failed — a distinct thing to retry. */
+const PERSIST_FAILURE = "La propuesta se ha generado pero no se ha podido guardar. Inténtalo de nuevo en unos minutos.";
 
 const RATE_LIMIT_FAILURE =
   "Has alcanzado el límite de mejoras con IA para este dominio por hoy. Vuelve a intentarlo más tarde.";
@@ -105,8 +169,8 @@ const SUMMARY_MAX = 400;
 const STEP_MAX = 200;
 const MAX_STEPS = 6;
 const EXAMPLE_LABEL_MAX = 80;
-const EXAMPLE_CONTENT_MAX = 1200;
 const MAX_EXAMPLES = 3;
+const OFFENDING_TERM_MAX = 60;
 
 // Only the Gemini fetch is bounded inside lib/llm/gemini.ts; the Supabase
 // reads/writes below have no library-level timeout, so each is bounded here and
@@ -143,10 +207,16 @@ function withTimeout<T>(promise: PromiseLike<T>, stage: string): Promise<T> {
  * artifact (an HTML snippet or a JSON-LD schema block) whose formatting and tags
  * are the whole point. It is safe to keep them: the UI renders this as escaped
  * React text in a <pre>, so nothing executes. Only non-newline/tab C0 control
- * characters are stripped, trailing per-line spaces and 3+ blank lines are
- * collapsed, and the length is capped.
+ * characters are stripped and trailing per-line spaces and 3+ blank lines are
+ * collapsed.
+ *
+ * **Ya no recorta.** Recortaba con un `.slice(0, 1200)` ciego sobre lo que
+ * podía ser un bloque JSON-LD, y eso es lo que puso medio schema sin cerrar
+ * detrás de un botón «Copiar» (log §126). Quién puede recortarse y quién debe
+ * descartarse entero lo decide `checkPasteableArtifact`, que sí sabe qué clase
+ * de artefacto tiene delante.
  */
-function sanitizeExampleContent(input: string, maxLen: number): string {
+function sanitizeExampleContent(input: string): string {
   let out = "";
   for (const ch of input) {
     const code = ch.codePointAt(0) ?? 0;
@@ -159,11 +229,21 @@ function sanitizeExampleContent(input: string, maxLen: number): string {
   return out
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, maxLen);
+    .trim();
 }
 
-function sanitizeSolution(raw: SolutionContent): SolutionContent | null {
+/** Un artefacto que no se enseña, y por qué — para que quede en el log. */
+type DroppedExample = { label: string; reason: ArtifactRejection };
+
+/**
+ * Sanea la solución y **descarta los artefactos que no se pueden pegar**.
+ *
+ * El descarte es por artefacto, no por solución: el plan (título, resumen,
+ * pasos) sigue siendo útil aunque uno de los tres ejemplos venga roto, y
+ * devolver un error entero le gastaría al usuario una generación de su cupo
+ * diario a cambio de nada. Lo que no se hace nunca es enseñar el roto.
+ */
+function sanitizeSolution(raw: SolutionContent): { solution: SolutionContent; dropped: DroppedExample[] } | null {
   const title = sanitizeField(raw.title, TITLE_MAX);
   const summary = sanitizeField(raw.summary, SUMMARY_MAX);
   if (!title || !summary) {
@@ -175,15 +255,27 @@ function sanitizeSolution(raw: SolutionContent): SolutionContent | null {
     .filter((step) => step.length > 0)
     .slice(0, MAX_STEPS);
 
-  const examples = (raw.examples ?? [])
-    .map((example) => ({
-      label: sanitizeField(example.label, EXAMPLE_LABEL_MAX),
-      content: sanitizeExampleContent(example.content, EXAMPLE_CONTENT_MAX)
-    }))
-    .filter((example) => example.label.length > 0 && example.content.length > 0)
-    .slice(0, MAX_EXAMPLES);
+  const examples: SolutionContent["examples"] = [];
+  const dropped: DroppedExample[] = [];
 
-  return { title, summary, steps, examples };
+  for (const example of raw.examples ?? []) {
+    const label = sanitizeField(example.label, EXAMPLE_LABEL_MAX);
+    const check = checkPasteableArtifact(sanitizeExampleContent(example.content));
+
+    if (!check.ok) {
+      dropped.push({ label, reason: check.reason });
+      continue;
+    }
+    if (label.length === 0) {
+      dropped.push({ label: "(sin etiqueta)", reason: "empty" });
+      continue;
+    }
+    if (examples.length >= MAX_EXAMPLES) break;
+
+    examples.push({ label, content: check.content });
+  }
+
+  return { solution: { title, summary, steps, examples }, dropped };
 }
 
 function isStringArray(value: unknown): value is string[] {
@@ -325,6 +417,12 @@ export async function rewriteRecommendationCore({
     const evidence: EvidenceJson = recommendation.evidence_json ?? {};
     const mentionedCompetitors = evidence.mentioned_competitors ?? [];
     const citationDomains = evidence.citation_domains ?? [];
+    // The ONE closed set of domains this card's evidence anchors. The prompt's
+    // allowlist and the guard that re-checks the answer must be the same set:
+    // when they weren't, the prompt asked the model to name a cited page whose
+    // domain the guard then rejected, and the rewrite failed every single time
+    // on that card (lib/recommendations/anchored-domains.ts).
+    const anchoredDomains = collectAnchoredDomains(evidence);
     const allowedCompetitors = evidence.dominant_competitor
       ? [...mentionedCompetitors, evidence.dominant_competitor]
       : mentionedCompetitors;
@@ -339,31 +437,60 @@ export async function rewriteRecommendationCore({
       (row) => row.name
     );
 
+    /**
+     * Un competidor de la lista del proyecto cuyo PROPIO dominio ya está
+     * anclado a esta tarjeta. El playbook le pide al modelo que clasifique
+     * cada dominio citado y llegue a marcar los que son competidores como «no
+     * es un objetivo de outreach» — cosa que no puede hacer sin nombrarlos —
+     * mientras el guardián rechazaba cualquiera fuera de `mentioned_competitors`,
+     * vacío en estas tarjetas. Nombrar a «SE Ranking» cuando `seranking.com`
+     * está en la evidencia no es fabricar nada: es la misma fuente por su
+     * nombre (log §133).
+     */
+    const domainAnchoredCompetitors = competitorsAnchoredByDomain(trackedCompetitors, anchoredDomains);
+    const promptCompetitors = [...new Set([...mentionedCompetitors, ...domainAnchoredCompetitors])];
+
     console.info(`${LOG_PREFIX} evidence_loaded`, {
       project_id: projectId,
       recommendation_id: recommendationId,
-      tracked_competitors_count: trackedCompetitors.length
+      tracked_competitors_count: trackedCompetitors.length,
+      domain_anchored_competitors_count: domainAnchoredCompetitors.length
     });
+
+    const llmInput = {
+      brand: project.brand,
+      domain: project.domain,
+      language: project.language,
+      recommendationType: recommendation.recommendation_type,
+      ruleTitle: recommendation.title,
+      ruleDescription: recommendation.description,
+      whyThisMatters: evidence.why_this_matters ?? "",
+      affectedPrompts: evidence.affected_prompts ?? [],
+      mentionedCompetitors: promptCompetitors,
+      citationDomains: anchoredDomains,
+      dominantCompetitor: evidence.dominant_competitor,
+      evidenceSnippets: evidence.evidence_snippets ?? [],
+      citationPages: evidence.citation_pages
+    };
+
+    /**
+     * Lo que el guardián admite es **lo que el prompt le enseña al modelo**, no
+     * una lista recompuesta campo a campo. Recomponerla falló tres veces por
+     * tres piezas distintas —las páginas citadas (§137), los competidores con
+     * dominio propio (§133) y el TÍTULO de una página citada, que a menudo es
+     * otro dominio (`blog.hubspot.es — "hubspot.es"`, §134)—, y cada vez el
+     * modelo fue rechazado por repetir algo que tenía delante. Derivarlo del
+     * texto del prompt cierra la clase entera: nada de fuera entra, porque el
+     * prompt sólo contiene la evidencia de esta tarjeta.
+     */
+    const promptText = buildRecommendationRewritePrompt(llmInput);
+    const domainsInPrompt = domainsShownInPrompt(promptText);
 
     stage = "gemini_call";
     let rewrite: SolutionContent | null;
     const geminiCallStartedAt = Date.now();
     try {
-      rewrite = await rewriteRecommendation({
-        brand: project.brand,
-        domain: project.domain,
-        language: project.language,
-        recommendationType: recommendation.recommendation_type,
-        ruleTitle: recommendation.title,
-        ruleDescription: recommendation.description,
-        whyThisMatters: evidence.why_this_matters ?? "",
-        affectedPrompts: evidence.affected_prompts ?? [],
-        mentionedCompetitors,
-        citationDomains,
-        dominantCompetitor: evidence.dominant_competitor,
-        evidenceSnippets: evidence.evidence_snippets ?? [],
-        citationPages: evidence.citation_pages
-      });
+      rewrite = await rewriteRecommendation(llmInput);
     } catch (error) {
       console.error(`${LOG_PREFIX} gemini_call_failed`, {
         project_id: projectId,
@@ -371,7 +498,7 @@ export async function rewriteRecommendationCore({
         duration_ms: Date.now() - geminiCallStartedAt,
         error_name: error instanceof Error ? error.name : "unknown"
       });
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: ENGINE_FAILURE };
     }
 
     console.info(`${LOG_PREFIX} gemini_call_succeeded`, {
@@ -382,7 +509,7 @@ export async function rewriteRecommendationCore({
     });
 
     if (!rewrite) {
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: ENGINE_FAILURE };
     }
 
     // Validate ALL generated text (title + summary + every step + every
@@ -393,28 +520,54 @@ export async function rewriteRecommendationCore({
     const validation = validateRewriteAgainstEvidence({
       title: rewrite.title,
       description: [rewrite.summary, ...rewrite.steps, ...exampleText].join(" "),
-      allowedCompetitors,
-      allowedDomains: citationDomains,
+      allowedCompetitors: [...allowedCompetitors, ...domainAnchoredCompetitors],
+      allowedDomains: domainsInPrompt,
       trackedCompetitors,
-      brandDomain: project.domain
+      brandDomain: project.domain,
+      // Por piezas, no unido: la guarda de comparación (Fase C) exige que el
+      // juicio de valor y el nombre del competidor estén en la MISMA frase, y
+      // un paso sin punto final se pegaría al siguiente.
+      segments: [rewrite.title, rewrite.summary, ...rewrite.steps, ...exampleText]
     });
 
     if (!validation.valid) {
       console.warn(`${LOG_PREFIX} rejected`, {
         project_id: projectId,
         recommendation_id: recommendationId,
-        reason: validation.reason
+        reason: validation.reason,
+        // WHAT it named, not just that it named something — without this the
+        // log tells you the guard fired and nothing about why.
+        offending: validation.offending,
+        anchored_domains: domainsInPrompt,
+        tracked_competitors_count: trackedCompetitors.length
       });
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: unverifiedFailure(validation) };
     }
 
-    const sanitized = sanitizeSolution(rewrite);
-    if (!sanitized) {
+    const sanitizeResult = sanitizeSolution(rewrite);
+    if (!sanitizeResult) {
       console.warn(`${LOG_PREFIX} empty_after_sanitize`, {
         project_id: projectId,
         recommendation_id: recommendationId
       });
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: ENGINE_FAILURE };
+    }
+
+    const { solution: sanitized, dropped } = sanitizeResult;
+
+    // Un artefacto descartado es invisible para el usuario (ve un plan con un
+    // ejemplo menos) y para nosotros sería invisible también sin esto. Es el
+    // único sitio desde el que se puede ver si el tope de longitud sigue
+    // cortando artefactos o si el modelo devuelve JSON roto por su cuenta
+    // (log §126); sin la traza, la Fase B se diseñaría a ciegas.
+    if (dropped.length > 0) {
+      console.warn(`${LOG_PREFIX} artifact_dropped`, {
+        project_id: projectId,
+        recommendation_id: recommendationId,
+        recommendation_type: recommendation.recommendation_type,
+        dropped: dropped.map((item) => item.reason),
+        kept_examples: sanitized.examples.length
+      });
     }
 
     const sanitizedAt = new Date().toISOString();
@@ -437,7 +590,16 @@ export async function rewriteRecommendationCore({
             rule_title: recommendation.title,
             rule_description: recommendation.description,
             mentioned_competitors: mentionedCompetitors,
+            // Los que además se admitieron por tener su dominio en la
+            // evidencia de esta tarjeta, por el mismo motivo que
+            // `anchored_domains`: que un rechazo posterior se pueda leer aquí.
+            domain_anchored_competitors: domainAnchoredCompetitors,
             citation_domains: citationDomains,
+            // What the model was actually allowed to name (and was judged
+            // against), which is a superset of citation_domains for the
+            // source-gap rules — kept so a later rejection can be diagnosed
+            // from the row instead of from a runtime log.
+            anchored_domains: domainsInPrompt,
             dominant_competitor: evidence.dominant_competitor ?? null,
             affected_prompts: evidence.affected_prompts ?? []
           }
@@ -449,7 +611,7 @@ export async function rewriteRecommendationCore({
 
     if (insertError || !insertedRaw) {
       console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId, recommendation_id: recommendationId });
-      return { success: false, error: GENERIC_REWRITE_FAILURE };
+      return { success: false, error: PERSIST_FAILURE };
     }
 
     console.info(`${LOG_PREFIX} persisted`, { project_id: projectId, recommendation_id: recommendationId });

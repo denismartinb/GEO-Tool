@@ -422,8 +422,20 @@ Three coverage gaps compounded it, all now closed:
    `tests/pilot/journeys/recommendations-interactions.spec.ts`).
 3. **Only one project was ever inspected.** The journeys took whichever project
    sat first in the list, so states that only exist with many recommendations
-   were never seen. A second-project journey now covers that
-   (`PILOT_SECOND_PROJECT`, default "Movistar").
+   were never seen. Second-project journeys now cover that.
+
+   How they pick that project matters, and got it wrong once: they scraped
+   `a[href^="/dashboard/projects/"]` off `/dashboard/projects` and preferred a
+   name (`PILOT_SECOND_PROJECT`, "Movistar"). That route became a redirect to
+   `/dashboard/domains` (log §104), where **only the cover project links that
+   way** — the rest link to `?active=<id>` — so the list held exactly one id,
+   the name never matched, and from 2026-08-15 one journey silently skipped
+   every run while another asserted against whatever project happened to be on
+   the cover. Selection is now by **data, not by name**: `discoverProjectIds`
+   for the list (it handles both link shapes), and the interaction journey
+   opens candidates until it finds one that actually has priority actions,
+   skipping loudly if none does (log §138). `PILOT_SECOND_PROJECT` no longer
+   exists.
 
 The standing lesson, recorded in the agent's brief as **coverage traps**: a
 green table means "it loaded", never "it works" and never "it looks right", and
@@ -720,6 +732,94 @@ minimal stand-ins for these same public routes (with the same canonical/title
 shape) so `pnpm pilot:selfcheck` keeps proving the harness works end to end —
 without this, the new journey would 404 against the fixture and the
 self-check would report a false `PILOT FAIL` on every run.
+
+## PRELAUNCH-HARDENING-1 Fase P2 — auth-pages journey (read-only, part of the default set)
+
+`tests/pilot/journeys/auth-pages.spec.ts` covers the two auth screens the
+pilot had never opened: `/signup` and `/forgot-password`. Same auto-discovery
+as the journeys above (`**/journeys/*.spec.ts`), so it needed no config change
+to join the default `mobile`/`tablet`/`desktop` run.
+
+**Runs signed-out, unlike every other journey.** The `mobile`/`tablet`/`desktop`
+projects hardcode `storageState: .pilot/auth.json` — the pilot account always
+enters authenticated, which is correct for console screens. But
+`app/signup/page.tsx` does `if (user) redirect("/dashboard")`: visiting it with
+that session shows the dashboard under another name, not the sign-up form.
+`test.use({ storageState: { cookies: [], origins: [] } })` at the top of the
+file overrides the project default for this file only — the rest of the set
+keeps entering as the pilot account. This is the honest fix, not a workaround:
+a genuinely logged-out context is the real visitor these two pages serve.
+
+Beyond the generic health checks, it asserts the form fields specific to each
+screen (`#email`/`#password`/`#confirmPassword` on signup, `#reset-email` and
+the submit button on forgot-password) and that both pages declare `<meta
+name="robots" content="noindex, follow">` (SEO-POS-1 T10) — noindexed so they
+don't compete with the marketing pages for ranking, but `follow` so their
+outbound links still pass authority. Neither test submits a form: GET
+navigation only, so nothing here touches Supabase Auth or sends an email —
+the same read-only boundary as the rest of the default set.
+
+**`tests/pilot/fixtures/server.mjs` was extended to match**: `signupPage()` and
+`forgotPasswordPage()` serve the same markup shape (form fields, `noindex,
+follow`) so the self-check keeps exercising these two journeys instead of
+404-ing against the fixture.
+
+Does not cover the plan's original description of "reset-password confirm
+step" — that screen needs a valid reset token to reach, which the pilot has no
+way to mint without a mailbox; stays a manual founder smoke, same limit as
+signup email confirmation below. `/pricing` and the settings billing fold,
+also named in the original PRELAUNCH-HARDENING-1 Fase A plan text, turned out
+to already be covered by `landing.spec.ts` and `settings.spec.ts` respectively
+— found stale during this phase's Task Intake, not new coverage added here.
+
+## Matriz de definición ↔ pantalla (PRELAUNCH-HARDENING-1 Fase P3)
+
+`docs/prelaunch-hardening-plan.md` pedía esto para que "verificar contra la
+documentación" fuera un checklist ejecutable del `ux-pilot`, no una frase.
+Cada fila es una zona del mapa de zonas de `CLAUDE.md` — misma lista, mismo
+orden — con su fuente de verdad y, ahora, qué journey del piloto (si alguno)
+la recorre y con qué etiquetas de pantalla. `ux-pilot` la usa para comprobar
+antes de cada veredicto no sólo si una captura carga limpia, sino si concuerda
+con lo que su zona tiene documentado como decidido.
+
+**Esta tabla es un índice, igual que el mapa de zonas del que sale: creo cuando
+nace una zona nueva, no en cada fase.** Si una zona cambia de journey o de
+regla de ruta, se actualiza aquí en el mismo PR que lo cambie — la disciplina
+de "Cierre de fase" de `CLAUDE.md` cubre esto igual que cubre el propio mapa.
+
+| Zona | Regla de ruta | Pantallas del piloto (journey) | Cobertura |
+|---|---|---|---|
+| Competidores | `competitors.md` | `competitors`, `p2-competitors`, `p3-competitors` (`core-flow.spec.ts`, `second-project.spec.ts`) | Completa en el set por defecto |
+| Recomendaciones | `recommendations.md` | `recommendations`, `recommendations-second-project` (`core-flow.spec.ts`), `recs-interactions` (`recommendations-interactions.spec.ts`) | Completa; interacciones (acordeones, filtros, exportar) en journey dedicado |
+| Auditoría web | `web-audit.md` | `web-audit` + pestañas/filas expandidas (`core-flow.spec.ts`) | Completa, incluida la apertura mecánica de `<details>` (log §102, §106) |
+| Metodología GEO (scoring) | `scoring.md` | Ninguna propia | **No pilotable directamente** — el scoring no es una pantalla, se ve indirectamente en Visión general/Competidores. Verificación real vive en Vitest (`lib/scoring/**`) |
+| Blog y contenido | `growth-content.md` | `blog-index`, `blog-pillar-*`, `blog-<slug>` (uno por post), `comparativas-*`, `glosario`, `glosario-<slug>` (`public-pages.spec.ts`) | Completa para lo publicado; un post o comparativa nuevos necesitan su entrada en `BLOG_SLUGS`/listas equivalentes del journey o quedan fuera en silencio |
+| Comprobador gratuito (Fase P) | *(sin regla propia)* | `free-checker` (`public-pages.spec.ts`) | Completa para el render; no ejercita una comprobación real contra ChatGPT (coste) |
+| Escaneo (pipeline) | `scan.md` · `mission-rocket.md` | `scan-debug`, `scan-overview` (`scan/request-scan.spec.ts`, UX-PILOT-3) | **Fuera del set por defecto a propósito** — sólo `workflow_dispatch` con `--journeys scan`, nunca en un deploy (ver más abajo) |
+| Dominios y depuración | *(sin regla propia)* | `domains`, `domains-before` (`core-flow.spec.ts`, `domains-selection.spec.ts`) | Dominios completa; `/debug` (la mitad "depuración") deliberadamente fuera del recorrido excepto `scan-debug` en el set `scan` |
+| Visión general | *(sin regla propia)* | `overview`, `p2-overview`, `p3-overview` (`core-flow.spec.ts`, `second-project.spec.ts`) | Completa |
+| Prompts | *(sin regla propia)* | `prompts` (`core-flow.spec.ts`) | Completa |
+| Páginas citadas | *(sin regla propia)* | `citations` (`core-flow.spec.ts`) | Completa |
+| Notificaciones | *(sin regla propia)* | `notifications-bell`, `notifications-after-navigate`, `notifications-bell-returned`, `notifications-page` (`notifications.spec.ts`) | Completa |
+| Correos transaccionales | *(sin regla propia)* | Ninguna | **No pilotable** — no hay buzón que el piloto pueda leer. Verificación real vive en Vitest (`lib/email/transactional.ts`) |
+| Onboarding (tour) | `onboarding.md` | `landing-hero-tour` (`onboarding-tour.spec.ts`) | Completa para el arranque en landing; el popup de `/dashboard` se cierra como parte del `visitAsUser` genérico, no tiene journey propia con aserciones sobre su contenido |
+| Ajustes de cuenta | *(sin regla propia)* | `settings`, `settings-sections`, `settings-folds-closed`, `settings-delete-block`, `settings-no-section-nav` (`settings.spec.ts`) | Completa, incluido el pliegue de Plan/facturación |
+| Navegación pública (cabecera) | *(sin regla propia)* | Transversal — se ve en cada pantalla pública que cualquier journey visita | Sin journey dedicada; una regresión de cabecera se vería sólo si toca una pantalla que ya se pilota |
+| Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | Ninguna | **No pilotable** — reintentos, alertas y sanitización de errores no son UI. Verificación real vive en Vitest |
+| Rendimiento (velocidad de carga) | `styles.md` | Transversal — `assertPageIsHealthy` mide overflow horizontal en cada pantalla | Sin journey dedicada a velocidad de carga en sí (Lighthouse/PSI no corre en el harness) |
+| Proceso agéntico (builds/CI) | *(sin regla propia)* | `signup`, `forgot-password` (`auth-pages.spec.ts`) para la parte de auth pilotable; el resto (CI, numeración, builds) no es UI | La zona mezcla infraestructura de repo (no pilotable) con las dos pantallas de auth que sí lo son |
+| Autenticación (login/registro/recuperación) | *(sin regla propia)* | `signup`, `forgot-password` (`auth-pages.spec.ts`) | Login en sí no tiene journey propia con aserciones de contenido — sólo lo ejercita `auth.setup.ts` como mecanismo de entrada, no como pantalla verificada |
+| Metadata y títulos de pantalla | `growth-content.md` | Transversal — `assertCanonical` en `public-pages.spec.ts`/`docs-pages.spec.ts`, `documentTitle` en los findings genéricos de toda pantalla | Sin journey dedicada; cubierta como aserción secundaria dentro de otras |
+| Consola de operador | `admin.md` | Ninguna | **Fuera del piloto por completo** — la cuenta piloto no es de operador (`OPS_USER_EMAILS`); necesitaría su propia excepción de escritura/cuenta, no pedida todavía |
+
+**Lo que esta tabla deja explícito y antes vivía sólo implícito**: seis zonas
+(Metodología GEO, Correos transaccionales, Fiabilidad LLM, Escaneo-pipeline
+fuera del set por defecto, Consola de operador, y la mitad "depuración" de
+Dominios) **no las ve el piloto de lectura en ningún deploy**. No es un hueco
+nuevo — cada una tiene su propia razón de fondo (no es UI, no hay buzón, es
+sólo `workflow_dispatch`, es una cuenta distinta) — pero antes de esta tabla
+esa ausencia no estaba escrita en ningún sitio que un `ux-pilot` pudiera leer
+antes de fallar en falso por buscar algo que nunca podía haber visto.
 
 ## Known limits
 
