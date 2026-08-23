@@ -5592,6 +5592,41 @@ a.notif-row:hover {
   .lp-how-step.is-armed .lp-sheet-dial-arc { stroke-dashoffset: 87.5; }
 }
 .lp-sheet-bar .fill.own { background: var(--brand-blue); }
+.lp-sheet-bar .fill.cit { background: var(--brand-cyan); }
+/* La tarjeta 01: dos barras por marca —«Nombran»/«Citan»— en vez de una.
+   `.lp-sheet-row--dual` reemplaza el `flex` de una fila de una línea por un
+   grid de dos, porque una fila de dos líneas centrada verticalmente deja el
+   favicon flotando a media altura. */
+.lp-sheet-row--dual {
+  display: grid; grid-template-columns: 28px 1fr; gap: 0 14px; align-items: start;
+}
+.lp-sheet-dualbody { display: grid; gap: 6px; min-width: 0; }
+.lp-sheet-nm { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; }
+.lp-sheet-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: .02em; color: #1d4ed8;
+  background: rgba(37, 99, 235, .10); border-radius: 5px; padding: 1px 6px;
+}
+.lp-sheet-mini { display: grid; grid-template-columns: 52px 1fr 34px; align-items: center; gap: 9px; }
+.lp-sheet-mini .k { font-size: 11px; color: var(--ink-4); }
+.lp-sheet-mini .lp-sheet-bar { height: 6px; }
+.lp-sheet-mini .v {
+  font-size: 11.5px; font-weight: 700; color: var(--ink-2); text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* La tarjeta 02: la leyenda de la barra de reparto. Grid de dos columnas
+   —nombre a la izquierda, cifra a la derecha alineada— con cada marca como
+   dos celdas directas: envueltas en un contenedor por fila, cada par contaría
+   como una sola celda y las dos columnas se irían al garete (mismo patrón que
+   la tabla de `rules-modal.tsx`). */
+.lp-sheet-leg { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; margin-top: 12px; }
+.lp-sheet-legn { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); min-width: 0; }
+.lp-sheet-legn .i { width: 9px; height: 9px; border-radius: 3px; flex: 0 0 auto; }
+.lp-sheet-legp { text-align: right; font-size: 12px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+/* La fila de IKEA no es un tramo de la barra —no aparece citada, no tiene
+   ancho que dibujar—, así que su punto va hueco y punteado en vez de un
+   círculo sólido de un color que no existe en el reparto de arriba. */
+.lp-sheet-legn--tu, .lp-sheet-legp.lp-sheet-legn--tu { color: var(--brand-neg, #d23b48); }
+.lp-sheet-legn--tu .i { background: none; border: 1.5px dashed currentColor; }
 /* Las barras que no son la propia marca son azul claro, no gris: en el
    artboard la columna entera se lee como una misma escala y sólo la primera
    destaca por saturación. En gris (`--ink-4`) parecían apagadas, otra cosa. */

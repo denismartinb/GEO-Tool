@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
@@ -107,21 +107,45 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; extra?: ReactNode; she
       </div>
     ),
     sheet: (
+      // RECS-DARK-01-B (2026-08-23): la tarjeta enseñaba sólo "te nombran",
+      // cuando la copia de al lado dice explícitamente que nombrar y citar
+      // «son dos problemas distintos con soluciones distintas». Cada marca
+      // pasa a tener sus DOS barras, una por métrica, con su propia etiqueta
+      // ("Nombran"/"Citan") — así la fila explica su propio dato y no hace
+      // falta una leyenda aparte arriba (fundador, 2026-08-23: "la B pero sin
+      // leyenda"). El dato de "citan" de IKEA es el mismo 4% de la escena 1
+      // de la demo del hero: es la misma marca ficticia en la misma portada,
+      // y no puede decir dos cosas distintas de sí misma.
       <div className="lp-sheet lp-sheet--rows">
         {[
-          { m: "IKEA", d: "ikea.es", ini: "IK", v: 24, tone: "own" },
-          { m: "Leroy Merlin", d: "leroymerlin.es", ini: "LM", v: 21, tone: "" },
-          { m: "Maisons du Monde", d: "maisonsdumonde.com", ini: "MM", v: 18, tone: "" }
+          { m: "IKEA", d: "ikea.es", ini: "IK", men: 24, cit: 4, own: true },
+          { m: "Leroy Merlin", d: "leroymerlin.es", ini: "LM", men: 21, cit: 16, own: false },
+          { m: "Maisons du Monde", d: "maisonsdumonde.com", ini: "MM", men: 18, cit: 21, own: false }
         ].map((r) => (
-          <div className="lp-sheet-row" key={r.m}>
+          <div className="lp-sheet-row lp-sheet-row--dual" key={r.m}>
             <span className="lp-sheet-fav">
               <FaviconImg domain={r.d} cssSize={28} fallback={<span>{r.ini}</span>} />
             </span>
-            <span className="lp-sheet-name">{r.m}</span>
-            <span className="lp-sheet-bar">
-              <span className={`fill ${r.tone}`} style={{ width: `${(r.v / 24) * 100}%` }} />
+            <span className="lp-sheet-dualbody">
+              <span className="lp-sheet-nm">
+                {r.m}
+                {r.own ? <span className="lp-sheet-tag">Tu marca</span> : null}
+              </span>
+              <span className="lp-sheet-mini">
+                <span className="k">Nombran</span>
+                <span className="lp-sheet-bar">
+                  <span className={`fill ${r.own ? "own" : ""}`} style={{ width: `${(r.men / 24) * 100}%` }} />
+                </span>
+                <span className="v">{r.men}%</span>
+              </span>
+              <span className="lp-sheet-mini">
+                <span className="k">Citan</span>
+                <span className="lp-sheet-bar">
+                  <span className="fill cit" style={{ width: `${(r.cit / 24) * 100}%` }} />
+                </span>
+                <span className="v">{r.cit}%</span>
+              </span>
             </span>
-            <span className="lp-sheet-num">{r.v}%</span>
           </div>
         ))}
       </div>
@@ -133,14 +157,44 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; extra?: ReactNode; she
     d: "Un modelo construye su respuesta a partir de páginas concretas. Te enseñamos cuáles son y quién sale citado en ellas.",
     sheet: (
       <div className="lp-sheet lp-sheet--card">
-        {/* El reparto de la respuesta entre quienes salen citados. Va sin
-            etiquetas, como en el artboard: enseña la forma del dato, no lo
-            afirma. */}
+        {/* RECS-DARK-02-B (2026-08-23): la barra iba sin etiquetas —"enseña la
+            forma del dato, no lo afirma"— pero el fundador la vio sin decir a
+            quién pertenece cada tramo y pidió una leyenda. Los nombres son
+            los mismos competidores ya establecidos en esta portada —Kave
+            Home y Maisons du Monde son justo los que cita la frase de abajo,
+            Leroy Merlin ya aparece en la tarjeta 01— y no marcas nuevas. El
+            segundo tramo deja de ser `--brand-neg` (#d23b48): ese rojo está
+            reservado en todo el sitio para "negativo/tuyo" —cuotas que
+            bajan, `x` de la auditoría—, y aquí no marcaba nada tuyo, era sólo
+            decorativo. Kave Home pasa a un azul más claro de la misma
+            familia, y el rojo se reserva para la fila de IKEA que SÍ es
+            negativa: 0%, no aparece citada. */}
         <div className="lp-sheet-split" aria-hidden="true">
           <span style={{ width: "43%", background: "var(--brand-blue)" }} />
-          <span style={{ width: "20%", background: "#d23b48" }} />
+          <span style={{ width: "20%", background: "#7da2f5" }} />
           <span style={{ width: "19%", background: "var(--brand-cyan)" }} />
           <span style={{ width: "18%", background: "#c3cbd8" }} />
+        </div>
+        <div className="lp-sheet-leg">
+          {[
+            { n: "Maisons du Monde", p: 43, c: "var(--brand-blue)" },
+            { n: "Kave Home", p: 20, c: "#7da2f5" },
+            { n: "Leroy Merlin", p: 19, c: "var(--brand-cyan)" },
+            { n: "Otras marcas", p: 18, c: "#c3cbd8" }
+          ].map((s) => (
+            <Fragment key={s.n}>
+              <span className="lp-sheet-legn">
+                <span className="i" style={{ background: s.c }} />
+                {s.n}
+              </span>
+              <span className="lp-sheet-legp">{s.p}%</span>
+            </Fragment>
+          ))}
+          <span className="lp-sheet-legn lp-sheet-legn--tu">
+            <span className="i" />
+            IKEA
+          </span>
+          <span className="lp-sheet-legp lp-sheet-legn--tu">0%</span>
         </div>
         <div className="lp-sheet-src">
           <span className="lp-sheet-fav">

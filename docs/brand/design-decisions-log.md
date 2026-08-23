@@ -13864,3 +13864,24 @@ ilustrativos, como el resto de la maqueta de producto de la portada (los
 real, y no podían, porque esta pantalla no tiene sesión detrás. Lo que sí es
 literalmente cierto es la frase de cierre — «el próximo escaneo mide si
 funcionó» —, que es la promesa que el producto sostiene de verdad.
+
+**Y las dos tarjetas de la sección oscura, mismo PR.** Quedaban dos gaps
+señalados por el fundador y ya cerrados con alternativas dibujadas y
+enseñadas (ver arriba): la tarjeta 01 sólo enseñaba «te nombran» cuando la
+copia de al lado promete dos métricas distintas, y la tarjeta 02 dibujaba una
+barra de cuatro tramos sin decir a quién pertenece ninguno. Elegido: **la
+tarjeta 01 en su versión B pero sin la leyenda de arriba** —cada marca pasa a
+tener sus dos barras, «Nombran»/«Citan», y la propia etiqueta de la fila hace
+innecesaria una leyenda aparte—; **la tarjeta 02 en su versión B**, con los
+cuatro tramos nombrados en una lista y sus cifras alineadas.
+
+El «Citan 4%» de IKEA en la tarjeta 01 no es un número nuevo: es el mismo dato
+que ya usa la escena 1 de la demo del hero para la misma marca ficticia. Dos
+sitios de la misma portada no pueden decir cifras distintas de la misma
+marca inventada. La tarjeta 02 corrigió además algo que no se había pedido:
+el segundo tramo de la barra era `--brand-neg` (#d23b48), el rojo que en todo
+el sitio significa «negativo/tuyo» —deltas que bajan, las `x` de la
+auditoría—, puesto ahí sin ningún significado. Pasa a un azul más claro de la
+misma familia, y el rojo queda libre para la única fila que sí es negativa:
+IKEA, 0%, no aparece citada — con un punto hueco y punteado en vez de un
+círculo sólido de un color que no está en el reparto de arriba.
