@@ -38,7 +38,7 @@ function fila(overrides: Partial<ResultRow> & { id: string }): ResultRow {
     category: "Comparación",
     provider: "gemini",
     sample_index: 0,
-    brand_snapshot: "Genscore",
+    brand_snapshot: "GenScore",
     brand_aliases_snapshot: [],
     ...overrides
   };
@@ -53,7 +53,7 @@ function extraccion(input: {
   return {
     brand: {
       mentioned: input.marcaMencionada,
-      display_name_found: input.marcaMencionada ? "Genscore" : null,
+      display_name_found: input.marcaMencionada ? "GenScore" : null,
       evidence: input.evidenciaMarca ?? []
     },
     competitors: (input.competidores ?? []).map((c) => ({
@@ -70,7 +70,7 @@ function extraccion(input: {
 const props = {
   projectId: "p1",
   projectDomain: "genscore.es",
-  projectBrand: "Genscore",
+  projectBrand: "GenScore",
   onClose: () => {}
 };
 
@@ -81,7 +81,7 @@ describe("PromptDrawer — la cobertura del ranking", () => {
    */
   it("un motor de tres no se publica como 100%", () => {
     const results: ResultRow[] = [
-      fila({ id: "1", provider: "gemini", brand_mentioned: true, extracted_json: extraccion({ marcaMencionada: true, evidenciaMarca: ["Genscore mide tu visibilidad"] }) }),
+      fila({ id: "1", provider: "gemini", brand_mentioned: true, extracted_json: extraccion({ marcaMencionada: true, evidenciaMarca: ["GenScore mide tu visibilidad"] }) }),
       fila({ id: "2", provider: "openai", extracted_json: extraccion({ marcaMencionada: false }) }),
       fila({ id: "3", provider: "claude", extracted_json: extraccion({ marcaMencionada: false }) })
     ];
@@ -142,18 +142,18 @@ describe("PromptDrawer — la evidencia que no se puede recuperar", () => {
 
     const html = renderToStaticMarkup(<PromptDrawer {...props} results={results} competitors={[]} />);
 
-    expect(html).toContain("Evidencias de mención de Genscore");
+    expect(html).toContain("Evidencias de mención de GenScore");
     expect(html).toContain("no dejó una cita textual recuperable");
   });
 
   it("cuando hay cita, se publica la cita y no el aviso", () => {
     const results: ResultRow[] = [
-      fila({ id: "1", brand_mentioned: true, extracted_json: extraccion({ marcaMencionada: true, evidenciaMarca: ["Genscore mide tu visibilidad en IA"] }) })
+      fila({ id: "1", brand_mentioned: true, extracted_json: extraccion({ marcaMencionada: true, evidenciaMarca: ["GenScore mide tu visibilidad en IA"] }) })
     ];
 
     const html = renderToStaticMarkup(<PromptDrawer {...props} results={results} competitors={[]} />);
 
-    expect(html).toContain("Genscore mide tu visibilidad en IA");
+    expect(html).toContain("GenScore mide tu visibilidad en IA");
     expect(html).not.toContain("no dejó una cita textual recuperable");
   });
 
@@ -171,6 +171,6 @@ describe("PromptDrawer — la evidencia que no se puede recuperar", () => {
     const html = renderToStaticMarkup(<PromptDrawer {...props} results={results} competitors={[]} />);
 
     expect(html).not.toContain("no dejó una cita textual recuperable");
-    expect(html).not.toContain("Evidencias de mención de Genscore");
+    expect(html).not.toContain("Evidencias de mención de GenScore");
   });
 });
