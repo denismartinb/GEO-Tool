@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Tres círculos que se solapan, etiquetados SEO, GEO y AEO, con LLMO señalado como el término más cercano a GEO — representando que las cuatro siglas describen prácticas que se superponen entre sí">
+  <defs>
+    <linearGradient id="bgVenn" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowVennA" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowVennB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".3"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgVenn)"/>
+  <circle cx="150" cy="150" r="220" fill="url(#glowVennA)"/>
+  <circle cx="1060" cy="150" r="210" fill="url(#glowVennB)"/>
+
+  <!-- Los tres términos con más uso real en el mercado, como un diagrama de
+       solapamiento: no es decoración, es la afirmación central del artículo
+       dibujada — SEO, GEO y AEO comparten un núcleo real, no son disciplinas
+       aisladas. Radios iguales a propósito: no hay dato fiable de cuota de
+       mercado entre los tres como para representar uno más grande que otro.
+       Geometría comprimida verticalmente (98-212 de 300) a propósito: la
+       portada se ve recortada a una tira de ~96px de alto en el artículo
+       (`.blog-cover-compact`), y todo lo que importa tiene que caber en esa
+       banda central. -->
+  <g>
+    <circle cx="555" cy="162" r="50" fill="#2563eb" fill-opacity="0.5" stroke="#4F7BFF" stroke-width="1.5"/>
+    <circle cx="645" cy="162" r="50" fill="#09c5d6" fill-opacity="0.42" stroke="#5de6f2" stroke-width="1.5"/>
+    <circle cx="600" cy="148" r="50" fill="#4F7BFF" fill-opacity="0.4" stroke="#8fb0ff" stroke-width="1.5"/>
+
+    <text x="525" y="180" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700" fill="#dce6ff" text-anchor="middle">SEO</text>
+    <text x="675" y="180" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700" fill="#dcf9fc" text-anchor="middle">AEO</text>
+    <text x="600" y="125" font-family="ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="700" fill="#eef2ff" text-anchor="middle">GEO</text>
+  </g>
+
+  <!-- LLMO señalado como satélite del término GEO, con una línea de anclaje:
+       representa que es el sinónimo más cercano, no una cuarta categoría
+       aparte (ver /glosario/llmo). En la misma banda vertical que el resto. -->
+  <path d="M675 150 L 800 150" stroke="#3b62b8" stroke-width="2" stroke-dasharray="3 4" fill="none"/>
+  <rect x="802" y="130" width="150" height="40" rx="10" fill="#0d1830" stroke="#3b62b8" stroke-width="1.5"/>
+  <text x="877" y="146" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" fill="#8fb0ff" text-anchor="middle">término afín</text>
+  <text x="877" y="163" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="700" fill="#eef2ff" text-anchor="middle">LLMO</text>
+
+  <!-- Etiqueta del núcleo compartido, en el centro del solapamiento triple. -->
+  <text x="600" y="167" font-family="ui-monospace, monospace" font-size="9.5" fill="#eef2ff" text-anchor="middle">contenido</text>
+  <text x="600" y="178" font-family="ui-monospace, monospace" font-size="9.5" fill="#eef2ff" text-anchor="middle">citable</text>
+</svg>

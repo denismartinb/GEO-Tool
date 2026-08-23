@@ -64,6 +64,48 @@ transaccional).
 | B1b | Páginas pilar dedicadas por cluster (`/blog/<cluster>`) | ✅ Hecho — 3 de 4 (ver nota) | — |
 | B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | ✅ Hecho | — |
 | B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | ✅ Hecho | — |
+| B4 | `/blog/geo-vs-aeo-vs-seo` (cluster fundamentos) | ✅ Hecho | — |
+
+**B4 — hecho (2026-08-23).** `/blog/geo-vs-aeo-vs-seo`, keyword primaria "geo
+vs aeo vs seo" (secundarias: aeo, llmo, generative engine optimization,
+answer engine optimization, diferencia entre seo y geo). Encargo directo del
+fundador, no del brief de `seo-geo-research`: el sector todavía no se ha
+puesto de acuerdo en cómo llamar a esta disciplina, y la gente sigue
+buscando más en términos de SEO que de GEO/AEO. El eje es **la confusión de
+nomenclatura en sí** — de dónde sale cada sigla, quién usa cuál y por qué, y
+cuándo conviene cada una — deliberadamente distinto del ya publicado
+`/blog/que-es-geo-generative-engine-optimization` (que cubre "qué es GEO y
+en qué se diferencia del SEO" en profundidad); ambos son del cluster
+`fundamentos` y se enlazan entre sí, de forma recíproca vía `RelatedPosts`
+(misma cluster) y con un enlace contextual explícito en el cuerpo hacia el
+artículo existente para no duplicar su explicación.
+
+Decisiones de honestidad tomadas:
+
+- **Ninguna cifra de cuota de mercado entre GEO/AEO/SEO/LLMO.** El texto dice
+  qué término "hemos visto usar más" entre herramientas y medios en español
+  — una observación editorial en primera persona, no un dato de mercado
+  verificado con fuente y tamaño de muestra. No se afirma ningún porcentaje
+  de búsquedas ni de adopción.
+- **El ejemplo de "un proveedor de este sector prefiere AEO a GEO" se deja
+  sin nombrar la empresa concreta** en el cuerpo publicado, precisamente para
+  no tener que sostener una cita textual de su blog que esta sesión no pudo
+  verificar contra la fuente primaria (el proxy de salida bloqueó el fetch).
+  Se mantiene sólo el hecho de que existe divergencia real de naming dentro
+  del propio sector, que sí está bien corroborado.
+- Ningún motor no soportado (Perplexity, Copilot) se nombra en ningún sitio
+  del artículo — no hacía falta para el ángulo de esta pieza.
+- Portada dibujada en SVG y rasterizada a WebP con `sharp` (Playwright no
+  pudo descargar Chromium en este entorno — proxy de egress —, así que la
+  conversión SVG→WebP se hizo con la librería `sharp` ya presente como
+  dependencia transitiva, sin usar navegador). Diagrama de solapamiento real
+  entre los tres círculos (SEO/GEO/AEO) con LLMO como término afín anclado a
+  GEO — evidencia de la afirmación central del artículo, no decorativa.
+  Verificada la tira de 96 px (`.blog-cover-compact`) simulando el recorte a
+  1124×96 y 375×96 antes de dar la portada por buena.
+- Añadido a las dos listas del piloto en este mismo PR: `BLOG_SLUGS` en
+  `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
+  `tests/pilot/journeys/public-pages.spec.ts`.
 
 **Nota B1b:** páginas pilar reales para fundamentos, medición y playbooks —
 cada una con una síntesis propia (no relleno) del porqué de esa sección y
