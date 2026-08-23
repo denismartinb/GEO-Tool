@@ -24,8 +24,12 @@
     <circle cx="380" cy="132" r="92" fill="#4F7BFF" fill-opacity=".26" stroke="#9fbcff" stroke-width="2"/>
   </g>
 
-  <text x="222" y="238" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#dce6ff" text-anchor="middle">SEO</text>
-  <text x="538" y="238" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#dcf9fc" text-anchor="middle">AEO</text>
+  <!-- Las etiquetas de SEO y AEO van metidas hacia dentro a propósito: a la
+       altura y=238 el círculo sólo mide 82 px de medio ancho, así que un
+       rótulo pegado al borde se lleva el trazo por encima de la letra. Lo
+       enseñó la captura del piloto del 2026-08-23. -->
+  <text x="245" y="238" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#dce6ff" text-anchor="middle">SEO</text>
+  <text x="515" y="238" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#dcf9fc" text-anchor="middle">AEO</text>
   <text x="380" y="76" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#eef2ff" text-anchor="middle">GEO</text>
 
   <!-- El núcleo compartido: lo que las tres disciplinas persiguen igual. -->
