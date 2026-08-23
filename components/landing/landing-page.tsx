@@ -217,9 +217,19 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; extra?: ReactNode; she
             </svg>
             <span className="lp-sheet-dial-num">71</span>
           </div>
+          {/* El botón es un DIBUJO dentro de una maqueta, no un control: va como
+              `span` y `aria-hidden`, igual que los de la demo del hero. Un
+              `<button>` aquí sería un control muerto, y el barrido del piloto
+              lo pulsaría esperando que hiciera algo. Cierra la historia de la
+              tarjeta: la recomendación no te dice qué hacer, se aplica
+              (fundador, 2026-08-23). */}
           <div className="lp-sheet-delta">
             <span className="lp-sheet-before">antes 48</span>
             <span className="lp-sheet-gain">+23 pts</span>
+            <span className="lp-sheet-apply" aria-hidden="true">
+              <Icon name="check" size={13} />
+              Aplicar solución
+            </span>
           </div>
           <pre className="lp-sheet-code">
             <span className="tag">&lt;script type=&quot;application/ld+json&quot;&gt;</span>
@@ -1200,7 +1210,7 @@ export function LandingPage() {
                 <p>
                   No sabíamos si ChatGPT nos nombraba, y mucho menos por qué. En tres meses hemos
                   subido un <strong>128% nuestra cuota de voz en IA</strong>: lo que más ha cambiado no
-                  es el dato, es que sabemos qué escribir la semana que viene.
+                  es el dato, es que sabemos qué estrategia de contenidos adoptar.
                 </p>
               </blockquote>
               <figcaption className="lp-testi-who">

@@ -4754,9 +4754,8 @@ a.notif-row:hover {
 /* `text-align: left` explícito: el hero centra su contenido y `.lp-shot` cuelga
    de él, así que la respuesta de ChatGPT salía centrada como un poema. Es una
    maqueta de una interfaz; dentro de ella nada se centra por herencia. */
-.lp-hx-body { position: relative; height: 436px; overflow: hidden; background: var(--canvas); text-align: left; }
+.lp-hx-body { position: relative; height: 440px; overflow: hidden; background: var(--canvas); text-align: left; }
 .lp-hx-sc { position: absolute; inset: 0; padding: 24px 26px; display: none; }
-.lp-hx-sc.on#hx-sc-0 { display: flex; flex-direction: column; justify-content: center; }
 .lp-hx-sc.on { display: block; animation: lp-hx-in .5s cubic-bezier(.2,.8,.25,1) both; }
 @keyframes lp-hx-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
@@ -4777,7 +4776,12 @@ a.notif-row:hover {
 .lp-hx-motor .t { margin-left: auto; font-size: 11.5px; color: var(--ink-3); }
 .lp-hx-preg { margin: 12px 0 0; font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.5; }
 .lp-hx-texto { margin: 10px 0 0; font-size: 14px; line-height: 1.72; color: var(--ink-2); }
+/* `box-decoration-break: clone`: los nombres de los rivales llevan fondo y
+   redondeo, y al partirse en dos líneas el fondo se estiraba hasta el borde de
+   la tarjeta —visible a 375px con «Maisons du Monde»—. Clonado, cada mitad
+   lleva su propia cajita. */
 .lp-hx-texto mark {
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
   background: rgba(37,99,235,.10); color: #1d4ed8; font-weight: 600;
   padding: 1px 5px; border-radius: 5px;
 }
@@ -4913,17 +4917,46 @@ a.notif-row:hover {
 .lp-hx-pt.p4 { animation-delay: 2s; }
 
 /* ── el cursor ──────────────────────────────────────────────────────────── */
+/* Nace en reposo —fuera del marco, invisible— y sólo se enciende cuando la
+   demo se ve. Así lo primero que hace es ENTRAR viajando hasta lo que señala
+   la escena 0: aparecer ya colocado se lee como una diapositiva, no como una
+   demostración (fundador, 2026-08-23). Es el mismo contrato que la pista del
+   tour: el movimiento existe para que se entienda que algo está pasando. */
 .lp-hx-cur {
   position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none;
   width: 22px; height: 22px; filter: drop-shadow(0 3px 8px rgba(11,20,38,.3));
-  transition: transform .8s cubic-bezier(.2,.8,.25,1);
+  opacity: 0;
+  transition: transform .8s cubic-bezier(.2,.8,.25,1), opacity .3s ease;
 }
+.lp-hx-cur.activo { opacity: 1; }
 .lp-hx-cur .ring {
   position: absolute; left: -13px; top: -13px; width: 48px; height: 48px;
   border-radius: 999px; border: 2px solid var(--brand-blue); opacity: 0;
 }
 .lp-hx-cur.clic .ring { animation: lp-hx-clic .8s ease-out .5s 2; }
 @keyframes lp-hx-clic { 0% { transform: scale(.25); opacity: .75; } 100% { transform: scale(1); opacity: 0; } }
+
+/* ── la barra de avance ─────────────────────────────────────────────────── */
+/* Anuncia que la escena va a cambiar. Es el reloj REAL: dura exactamente el
+   mismo `PASO_MS` que el `setInterval`, la isla se lo pasa como
+   `animation-duration` en vez de duplicar el número aquí, y sólo se pinta
+   mientras ese reloj corre de verdad (fundador, 2026-08-23: «una barrita
+   horizontal alargada que muestre el progreso de cada slide, para que se vea
+   que va a ocurrir algo»). Si alguien toca el raíl, si la demo sale de
+   pantalla o si se llegó a la última escena, desaparece: una barra que avanza
+   sin que vaya a pasar nada es progreso inventado. */
+.lp-hx-avance {
+  display: block; height: 3px; margin: 16px 0 0;
+  border-radius: 999px; background: var(--line); overflow: hidden;
+}
+.lp-hx-avance .f {
+  display: block; width: 100%; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan));
+  transform: scaleX(0); transform-origin: left center;
+  animation-name: lp-hx-avance; animation-timing-function: linear; animation-fill-mode: both;
+}
+@keyframes lp-hx-avance { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lp-hx-avance + .lp-hx-rail { margin-top: 14px; }
 
 /* ── el raíl ────────────────────────────────────────────────────────────── */
 .lp-hx-rail { display: flex; gap: 8px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
@@ -4962,13 +4995,23 @@ a.notif-row:hover {
   /* A esta anchura el marco mide ~335px por dentro: las parejas se apilan y la
      escena crece, así que el cuerpo deja de tener alto fijo y se desplaza. Es
      preferible a recortar en silencio dentro de un `overflow: hidden`. */
-  /* 508 y no 470: la escena 4 mide 503px de contenido con el marcador ya en
-     fila y la curva ya recortada, y seguir apretando le quitaba aire a las
-     otras cuatro para arreglar una. El cuerpo es el alto de la escena más
-     larga, medido, no un número redondo. */
-  .lp-hx-body { height: 508px; }
+  /* El cuerpo es el alto de la escena más larga, medido, no un número
+     redondo — y por eso apretar las escenas 3 y 4 es lo que lo baja. Estaba en
+     508 y las otras tres dejaban entre 135 y 220px de blanco debajo, que es
+     justo lo que el fundador señaló el 2026-08-23 («ese espacio blanco queda
+     fatal … sólo hay que resolver la pantalla de la solución, porque esa sí
+     ocupa, igual que la del resultado»). Las escenas ya no se centran: lo que
+     sobre queda abajo, no repartido arriba y abajo. */
+  .lp-hx-body { height: 444px; }
   .lp-hx-sc { padding: 16px; overflow-y: auto; }
-  .lp-hx-marcador, .lp-hx-r3 { grid-template-columns: minmax(0, 1fr); }
+  .lp-hx-marcador { grid-template-columns: minmax(0, 1fr); }
+  /* La escena 4 NO se apila. Apilada medía 473px de contenido contra 444 de
+     cuerpo y era ella sola la que obligaba al marco a ser más alto que
+     cualquier otra escena — el blanco que el fundador señaló el 2026-08-23 en
+     las tres primeras salía de aquí. En dos columnas mide 115 en vez de 215:
+     el disco y la curva se leen igual pequeños, y de paso la escena 4 se
+     parece a la de escritorio en vez de ser otra pantalla. */
+  .lp-hx-r3 { grid-template-columns: 96px minmax(0, 1fr); }
   .lp-hx-dialcard { gap: 14px; padding: 14px; }
   .lp-hx-dial { width: 84px; height: 84px; }
   .lp-hx-dial .n { font-size: 25px; }
@@ -4983,8 +5026,21 @@ a.notif-row:hover {
   .lp-hx-foco { padding: 12px 14px; gap: 10px; margin-top: 12px; }
   .lp-hx-foco b { font-size: 13.5px; }
   .lp-hx-foco .s { font-size: 12px; }
-  .lp-hx-accion h4 { font-size: 13.5px; }
-  .lp-hx-artefacto { height: 146px; }
+  .lp-hx-accion { padding: 14px 16px; }
+  .lp-hx-accion h4 { font-size: 13.5px; margin-top: 8px; }
+  .lp-hx-accion p { margin-top: 6px; }
+  .lp-hx-botones { margin-top: 11px; }
+  /* `nowrap`: a 375px los dos rótulos se partían en dos líneas dentro de una
+     pastilla de 31px y el texto se salía por arriba y por abajo. Caben en una
+     línea (270px de los 311 disponibles), sólo hacía falta decirlo. */
+  .lp-hx-botones .lp-prod-btn { height: 31px; white-space: nowrap; }
+  /* El artefacto es un hueco fijo con la espera y lo generado apilados, así
+     que su alto es el de la tarjeta más alta —la del código, con su cabecera y
+     sus tres líneas—, no una holgura. Se aprieta la cabecera y la fuente del
+     código, y el hueco se mide contra el resultado. */
+  .lp-hx-hechohead { padding: 9px 14px; font-size: 11.5px; }
+  .lp-hx-artefacto { height: 122px; margin-top: 10px; }
+  .lp-hx-artefacto .lp-hx-code { font-size: 10.5px; }
   /* Escena 4: apilada tal cual no cabe en 470px —el marcador y la evolución
      sumaban ~526— y la evolución se salía por abajo. El marcador pasa a fila
      (disco + cápsula al lado) y la curva baja de alto. Medido, no estimado. */
@@ -4992,23 +5048,21 @@ a.notif-row:hover {
   .lp-hx-prompt .q { font-size: 12.5px; }
   .lp-hx-r2 { padding: 12px 14px; margin-top: 10px; }
   .lp-hx-r2 p { font-size: 12.5px; }
-  .lp-hx-r3 { gap: 10px; margin-top: 10px; }
-  .lp-hx-dialcard.fin { flex-direction: row; justify-content: center; gap: 16px; padding: 12px; }
-  .lp-hx-dialcard.fin .lp-hx-dial { width: 74px; height: 74px; }
-  .lp-hx-dialcard.fin .lp-hx-dial .n { font-size: 22px; }
-  .lp-hx-evo { padding: 12px 14px; }
-  .lp-hx-evo svg { height: 52px; margin-top: 6px; }
-  /* La línea de cierre de la escena 4 caía 20px fuera del cuerpo. Se recortan
-     de la curva y del margen del pie, no del alto del marco: subir el cuerpo
-     empuja el pliegue en un móvil, que es peor que una curva algo más baja. */
-  .lp-hx-sc#hx-sc-4 .lp-hx-pie { margin-top: 10px; }
+  .lp-hx-r3 { gap: 8px; margin-top: 8px; }
+  .lp-hx-dialcard.fin { gap: 8px; padding: 12px 8px; }
+  .lp-hx-dialcard.fin .lp-hx-dial { width: 62px; height: 62px; }
+  .lp-hx-dialcard.fin .lp-hx-dial .n { font-size: 19px; }
+  .lp-hx-evo { padding: 10px 14px; }
+  /* La curva baja de 52 a 40: es el único elemento de la escena cuyo alto no
+     cuenta nada —la historia la cuentan el 34, el 71 y la pendiente, y una
+     pendiente se lee igual en 40px—. El resto de la escena no se toca. */
+  .lp-hx-evo svg { height: 40px; margin-top: 6px; }
   .lp-hx-espera { padding: 0 14px; gap: 10px; }
-  .lp-hx-pie { font-size: 12.5px; }
+  /* El margen del pie era un caso particular de la escena 4; ahora que las
+     cinco se miden contra el mismo cuerpo más bajo, vale para todas. */
+  .lp-hx-pie { font-size: 12.5px; margin-top: 10px; }
   .lp-hx-step { height: 32px; padding: 0 12px; font-size: 12px; gap: 7px; }
   .lp-hx-rail { gap: 6px; margin-top: 16px; }
-  /* El cursor señala elementos que a esta anchura se mueven o desaparecen, y
-     un dedo ya está encima de la pantalla: sobra. */
-  .lp-hx-cur { display: none; }
 }
 
 /* Por debajo de 360px el marco deja ~290px por dentro y las escenas 3 y 4 se
@@ -5018,25 +5072,27 @@ a.notif-row:hover {
   .lp-hx-accion { padding: 12px 14px; }
   .lp-hx-accion h4 { font-size: 13px; margin-top: 8px; }
   .lp-hx-accion p { font-size: 12px; margin-top: 6px; }
-  .lp-hx-botones { margin-top: 10px; gap: 8px; }
-  .lp-hx-botones .lp-prod-btn { height: 30px; font-size: 12px; padding: 0 11px; }
-  .lp-hx-artefacto { height: 132px; margin-top: 10px; }
-  .lp-hx-artefacto .lp-hx-code { font-size: 10.5px; }
-  .lp-hx-hechohead { padding: 9px 14px; font-size: 11.5px; }
-  .lp-hx-evo svg { height: 42px; }
-  .lp-hx-dialcard.fin .lp-hx-dial { width: 64px; height: 64px; }
-  .lp-hx-dialcard.fin .lp-hx-dial .n { font-size: 19px; }
+  .lp-hx-botones { margin-top: 10px; gap: 6px; }
+  /* A 320px los dos rótulos en una línea suman 242 de los 260 disponibles: se
+     recorta el relleno y la fuente, no se parte ninguno ni se esconde el
+     segundo. */
+  .lp-hx-botones .lp-prod-btn { height: 30px; font-size: 11.5px; padding: 0 9px; gap: 5px; }
   .lp-hx-r2 p, .lp-hx-prompt .q { font-size: 12px; }
-  /* La línea de cierre de la escena 4 seguía cayendo fuera por unos píxeles. */
-  .lp-hx-sc#hx-sc-4 .lp-hx-pie { margin-top: 8px; font-size: 12px; }
-  /* Escena 4 a 320px: 552 de contenido en 508 de cuerpo. Se recortan 58 del
-     relleno y de los tamaños —nada del texto—, medido pieza a pieza: la
-     cabecera del prompt, la respuesta y el bloque del marcador. */
+  .lp-hx-pie { margin-top: 8px; font-size: 12px; }
+  /* A 320px el titular de la recomendación ocupa una línea más y la escena 3
+     se pasaba 18px del cuerpo. Se recortan de la cabecera y del hueco del
+     artefacto —comprobado que el código sigue sin recortarse—, no del titular. */
+  .lp-hx-head { margin-bottom: 8px; }
+  .lp-hx-artefacto { height: 112px; margin-top: 6px; }
+  .lp-hx-artefacto .lp-hx-code { font-size: 10px; padding: 10px 12px; line-height: 1.65; }
+  .lp-hx-hechohead { padding: 7px 12px; font-size: 11px; }
+  /* Relleno y tamaños, nada del texto: la cabecera del prompt, la respuesta y
+     el bloque del marcador. */
   .lp-hx-prompt { padding: 10px 12px; gap: 8px; }
   .lp-hx-r2 { padding: 10px 12px; margin-top: 8px; }
   .lp-hx-r2 .lp-hx-url { margin-top: 7px; font-size: 10.5px; }
-  .lp-hx-r3 { margin-top: 8px; gap: 8px; }
-  .lp-hx-dialcard.fin { padding: 10px; gap: 12px; }
+  .lp-hx-r3 { grid-template-columns: 84px minmax(0, 1fr); margin-top: 8px; gap: 8px; }
+  .lp-hx-dialcard.fin { padding: 10px 6px; gap: 7px; }
   .lp-hx-dialcard.fin .lp-hx-dial { width: 56px; height: 56px; }
   .lp-hx-dialcard.fin .lp-hx-dial .n { font-size: 17px; }
   .lp-hx-evo { padding: 10px 12px; }
@@ -5631,6 +5687,14 @@ a.notif-row:hover {
   padding: 0 9px; background: #e7f6ee; color: #15915a; border-radius: 999px;
   font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums;
 }
+/* `margin-left: auto` y no un `justify-content: space-between` en la fila: el
+   «antes 48» y el «+23 pts» son una pareja y tienen que seguir juntos. */
+.lp-sheet-apply {
+  flex: 0 0 auto; margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 12px; border-radius: 999px;
+  background: var(--brand-blue); color: #fff;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
 /* El bloque de código es oscuro DENTRO de una tarjeta blanca que está sobre
    fondo oscuro. Es del artboard y no es un descuido: el artefacto pegable se
    lee como código, no como texto de la tarjeta. */
@@ -5702,7 +5766,10 @@ a.notif-row:hover {
   }
   .lp-sheet-dial { width: 92px; height: 92px; }
   .lp-sheet-dial-num { font-size: 28px; }
-  .lp-sheet-delta { flex-direction: column; align-items: flex-start; gap: 8px; }
+  /* Apilada, la fila deja de tener «derecha»: el botón vuelve a la línea del
+     «+23 pts» en vez de irse solo a un tercer renglón. */
+  .lp-sheet-delta { flex-wrap: wrap; gap: 8px 10px; }
+  .lp-sheet-apply { margin-left: 0; height: 26px; padding: 0 10px; font-size: 11.5px; }
   .lp-sheet-code { margin-top: 16px; border-radius: 11px; padding: 13px 14px; }
 }
 @supports (-webkit-text-stroke: 1px currentColor) {

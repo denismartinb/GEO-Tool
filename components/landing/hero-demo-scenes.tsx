@@ -85,7 +85,7 @@ function Escena1() {
 
       <div className="lp-hx-marcador">
         <div className="lp-hx-card lp-hx-dialcard">
-          <div className="lp-hx-dial">
+          <div className="lp-hx-dial" id="hx-dial-1">
             <svg viewBox="0 0 112 112" aria-hidden="true">
               <circle cx="56" cy="56" r="48" fill="none" stroke="#EEF1F6" strokeWidth="12" />
               <circle
@@ -142,7 +142,11 @@ function Escena2() {
 
       <div className="lp-hx-card lp-hx-rank">
         {filas.map((f, i) => (
-          <div className={`lp-hx-fila ${f.tuya ? "tuya" : ""}`} key={f.m}>
+          <div
+            className={`lp-hx-fila ${f.tuya ? "tuya" : ""}`}
+            id={f.tuya ? "hx-fila-tuya" : undefined}
+            key={f.m}
+          >
             <span className="pos">{f.n}</span>
             <span className="lp-sheet-fav">
               <FaviconImg domain={f.d} cssSize={26} fallback={<span>{f.ini}</span>} />
@@ -257,7 +261,7 @@ function Escena4() {
           <span className="lp-prod-pill pos">+37 pts</span>
         </div>
 
-        <div className="lp-hx-card lp-hx-evo">
+        <div className="lp-hx-card lp-hx-evo" id="hx-evo">
           <span className="lp-prod-lbl">Evolución del GEO Score</span>
           <span className="s">últimos 5 escaneos</span>
           <svg viewBox="0 0 460 84" preserveAspectRatio="none" aria-hidden="true">

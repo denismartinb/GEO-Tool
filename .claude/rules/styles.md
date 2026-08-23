@@ -232,3 +232,18 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   elemento con `background` en atajo tiene `background-color` transparente, así
   que preguntárselo al navegador devuelve el blanco del `body` y da un número
   que ahí no es cierto.
+- **Un marco de alto fijo con escenas apiladas se mide contra la escena MÁS
+  ALTA, así que el blanco de las cortas se arregla en las largas.** Es
+  contraintuitivo y por eso está escrito: la demo del hero enseñaba 220px de
+  vacío bajo la escena 0 y la escena 0 no tenía nada que corregir — el cuerpo
+  estaba en 508 porque la escena 4 medía 509 (log §150). Antes de tocar la
+  pantalla que enseña el problema, medir las cinco y arreglar la que manda. Y
+  **«móvil» no significa «apilar»**: la escena 4 pasó de 215 a 115px volviendo
+  a dos columnas, que además es como se ve en escritorio.
+- **Una barra de avance es un reloj o no es nada.** Si se pinta una, su
+  duración sale del mismo valor que gobierna el avance —pasado como
+  `animation-duration` desde el código, nunca duplicado en el CSS— y sólo
+  existe mientras ese reloj corre de verdad: fuera de pantalla, con la
+  reproducción automática apagada o en el último paso desaparece. Una barra que
+  avanza sin que vaya a pasar nada es progreso inventado (CLAUDE.md, "no fake
+  progress"; log §150).

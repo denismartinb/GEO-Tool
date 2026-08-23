@@ -13758,3 +13758,91 @@ altos del cuerpo son medidos, no números redondos: 436px en escritorio y 508px
 bajo 640, que es lo que mide la escena más larga.
 
 **Con esto la portada de HOME-2026-08 queda completa.**
+
+---
+
+## 150. El marco de la demo deja de estar medido para su peor escena, y una barra anuncia el cambio (HOME-2026-08 Fase A2, segunda pasada, 2026-08-23)
+
+**Qué pasó.** El fundador mandó una captura del hero en móvil con un rectángulo
+rojo alrededor de todo el blanco que quedaba bajo la respuesta de ChatGPT:
+*«ese espacio blanco queda fatal. Podemos hacer la pantalla menos alta. Y subir
+el contenido de esta pantalla a la parte superior. Solo hay que resolver la
+pantalla de la solución, porque esa sí ocupa, igual que la de el resultado»*.
+Con dos peticiones más en el mismo mensaje: que la curva de evolución se
+anime al llegar, y *«es importante que aparezca el cursor y comience a moverse
+al hacer scroll, si no no parece una animación»*.
+
+**Por qué había blanco.** El cuerpo de la demo tiene alto fijo —las cinco
+escenas se apilan en el mismo hueco y un alto por escena daría un salto de más
+de 100px en cada cambio (§149)—, así que lo manda la escena más alta. Medido a
+375px: escenas 0/1/2 entre 334 y 373, escena 3 en 485 y escena 4 en **509**. El
+cuerpo estaba en 508 por la escena 4 y las tres primeras arrastraban entre 135
+y 220px de vacío. El diagnóstico del fundador era exacto: el problema no estaba
+en las escenas que enseñaban el blanco, estaba en las dos que lo causaban.
+
+**Qué se hizo.** La escena 4 **deja de apilarse en móvil**. Estaba en una
+columna porque «móvil = apilar», y en dos columnas de 96px + resto mide 115px
+en vez de 215 — el disco y la curva se leen igual pequeños, y de paso la escena
+se parece a la de escritorio en vez de ser otra pantalla. La escena 3 pierde 45
+entre el hueco del artefacto (146 → 122, medido contra la tarjeta del código,
+no a ojo), el relleno de la tarjeta y los márgenes. Con eso el cuerpo baja de
+**508 a 444** y el peor vacío pasa de 220 a 110px. Ninguna escena se centra ya:
+lo que sobra queda abajo, que es lo que se pidió.
+
+Barrido de 320 a 1280px, cinco escenas cada uno, midiendo el fondo real del
+contenido contra la caja **y** `scrollHeight > clientHeight` en todo lo que
+esconde desbordamiento (§147). Encontró tres cosas que ningún ojo iba a ver:
+la tarjeta del código recortada dentro de su hueco entre 320 y 340px, los dos
+botones de «Generar solución» partidos en dos líneas dentro de una pastilla de
+31px a 375px, y el fondo de «Maisons du Monde» estirándose hasta el borde de la
+tarjeta al partirse en dos líneas (`box-decoration-break: clone`).
+
+**El cursor.** Se pintaba sólo cuando tenía destino, así que aparecía de la
+nada ya colocado: eso no se lee como movimiento. Ahora nace **en reposo** —
+fuera del marco, abajo a la derecha, invisible— y su primer cambio de
+coordenadas es un viaje hasta lo que señala la escena 0. Las cinco escenas
+apuntan a algo (antes sólo la 0 y la 3, y el cursor se quedaba quieto tres
+cambios seguidos), y **deja de estar escondido bajo 640px**: el motivo por el
+que lo estaba —«señala elementos que a esta anchura desaparecen»— dejó de ser
+cierto cuando las cinco dianas existieron en todas las anchuras.
+
+**Lo de la curva no era un fallo de la curva.** Muestreada, la animación
+siempre corría bien (`stroke-dashoffset` 620 → 177 → 27 → 0). Lo que fallaba
+era **cuándo arrancaba la demo**: un `threshold: 0.35` a secas, que en un móvil
+donde la demo mide más que media pantalla se cumple con la demo casi entera
+por debajo del pliegue. La historia se reproducía sola mientras nadie la
+miraba y quien bajaba se la encontraba por el final, con la curva ya dibujada.
+Ahora se exige el **70% de lo que puede llegar a verse** —`min(alto de la demo,
+alto de la ventana)`, no la demo entera, o una demo más alta que la pantalla no
+arrancaría jamás— con un `threshold` de 21 pasos, porque sin ellos el
+observador sólo avisa al cruzar 0 y la fracción que importa se alcanza sin que
+salte ningún evento. Es la misma trampa que el tour ya documenta
+(`.claude/rules/onboarding.md`).
+
+**La barra de avance** (fundador, en el mismo hilo: *«quizás venga bien una
+barrita horizontal alargada que muestre el progreso de cada slide, para que se
+vea que va a ocurrir algo»*). Es el reloj real: la isla le pasa el mismo
+`PASO_MS` que usa el `setInterval` como `animation-duration` en vez de duplicar
+el número en el CSS, y **sólo se pinta mientras ese reloj corre de verdad** —
+fuera de pantalla, tras tocar el raíl o en la última escena no hay nada que
+anunciar y desaparece. Una barra que avanza sin que vaya a pasar nada es
+progreso inventado, que es lo que CLAUDE.md prohíbe en el producto y no hay
+motivo para permitirse en la portada.
+
+**Además, en el mismo PR:** el botón «Aplicar solución» a la derecha del
+«+23 pts» en la tarjeta 04 de la sección oscura (dibujo dentro de una maqueta,
+así que `span` y `aria-hidden`: un `<button>` ahí sería un control muerto que
+el barrido del piloto pulsaría esperando algo), y el cierre del testimonio de
+Nordika Home pasa de «sabemos qué escribir la semana que viene» a «sabemos qué
+estrategia de contenidos adoptar».
+
+**Lo que queda.** El vacío no desaparece, se reparte mejor: con el cuerpo en
+444 y la escena 2 en 334, siguen sobrando 110px en móvil, y en escritorio la
+escena 1 («Tu puntuación») deja 162 de los 440. Es inherente a un marco de alto
+fijo con cinco escenas de contenido distinto; la salida sería enriquecer las
+escenas cortas, no seguir apretando las largas. Sin decidir.
+
+Pendiente de decisión del fundador, con alternativas ya dibujadas y enseñadas:
+la tarjeta 01 de la sección oscura con una segunda métrica (citas además de
+menciones) y la tarjeta 02 con leyenda de colores, que hoy no explica qué
+significan los cuatro segmentos de su barra.
