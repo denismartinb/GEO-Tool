@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
-import { DotMeter } from "@/components/ui/dot-meter";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
 import { HeroDemo } from "@/components/landing/hero-demo";
@@ -16,17 +15,8 @@ import { HOME_FAQ, homeFaqJsonLd } from "@/lib/landing/home-faq";
 import { homeBlogStrip } from "@/lib/landing/home-blog";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
-import { PromoStrip, RecommendationsCta, HomeCtaBand } from "@/components/landing/session-ctas";
+import { PromoStrip, HomeCtaBand } from "@/components/landing/session-ctas";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
-
-const FEATURES: Array<{ icon: string; t: string; d: string }> = [
-  { icon: "search", t: "¿Apareces en la IA?", d: "Mide en qué porcentaje de respuestas de IA te mencionan y te citan como fuente, prompt a prompt." },
-  { icon: "competitors", t: "Frente a quién pierdes", d: "Detecta competidores directos y descubre dónde ganan visibilidad que tú no tienes." },
-  { icon: "cite", t: "Qué URLs se citan", d: "Conoce las páginas que los motores de IA usan como fuente para responder en tu mercado." },
-  { icon: "layers", t: "Multi-motor", d: "Gemini, Claude y ChatGPT hoy, con más motores de IA sumándose sin coste extra — una visión unificada de tu visibilidad." },
-  { icon: "recs", t: "Acciones, no solo datos", d: "Cada insight se convierte en una acción priorizada por impacto, esfuerzo y confianza." },
-  { icon: "sparkles", t: "Soluciones generadas", d: "Genera el FAQ, el schema o el contenido que falta con un clic, listo para publicar." }
-];
 
 
 /**
@@ -295,21 +285,6 @@ const HOW_STEPS: Array<{ n: string; t: string; d: string; extra?: ReactNode; she
   }
 ];
 
-const SPOTLIGHT_ITEMS: Array<{ t: string; d: string }> = [
-  { t: "Priorizado por impacto", d: "Ordenamos las acciones por su efecto real en tu visibilidad en IA." },
-  { t: "Basado en evidencia", d: "Cada recomendación incluye la respuesta de IA y la fuente que la respalda." },
-  { t: "Genera la solución", d: "FAQ, schema, contenido o reglas técnicas listas para publicar." }
-];
-
-function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon?: string; children: ReactNode }) {
-  return (
-    <span className={`badge badge-${tone}`}>
-      {icon ? <Icon name={icon} size={12} /> : null}
-      {children}
-    </span>
-  );
-}
-
 /**
  * La landing es un **componente de servidor** (PRELAUNCH-HARDENING-1 Fase V,
  * V4). Lo era todo de cliente por un solo campo con estado, y con ello se
@@ -549,84 +524,15 @@ export function LandingPage() {
         <RevealOnScroll selector=".lp-how-step" />
       </section>
 
-      {/* FEATURES */}
-      <section className="lp-section">
-        <div className="lp-inner">
-          <div className="lp-sec-head">
-            <div className="lp-kicker">La plataforma</div>
-            <h2 className="lp-h2">Todo lo que necesitas para ganar en la búsqueda de IA</h2>
-          </div>
-          <div className="lp-features">
-            {FEATURES.map((f) => (
-              <div className="lp-feat" key={f.t}>
-                <div className="fic"><Icon name={f.icon} size={20} /></div>
-                <h3>{f.t}</h3>
-                <p>{f.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SPOTLIGHT — recommendations */}
-      <section className="lp-section alt" id="recomendaciones">
-        <div className="lp-inner">
-          <div className="lp-spot">
-            <div>
-              <div className="lp-kicker">El corazón del producto</div>
-              <h2 className="lp-h2" style={{ marginTop: 12 }}>Recomendaciones que se convierten en trabajo hecho</h2>
-              <p className="lp-sec-sub" style={{ margin: "14px 0 0", maxWidth: "none" }}>
-                No es otro dashboard pasivo. Cada acción explica el problema, por qué importa y la evidencia — y genera la solución por ti.
-              </p>
-              <div className="lp-spot-list">
-                {SPOTLIGHT_ITEMS.map((x) => (
-                  <div className="lp-spot-item" key={x.t}>
-                    <span className="chk"><Icon name="check" size={13} /></span>
-                    <div><div className="t">{x.t}</div><div className="d">{x.d}</div></div>
-                  </div>
-                ))}
-              </div>
-              <RecommendationsCta />
-            </div>
-
-            {/* mock rec card */}
-            <div className="lp-spot-visual">
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span className="rec-rank high" style={{ width: 30, height: 30, fontSize: 13 }}>1</span>
-                <Badge tone="neg">Alta</Badge>
-                <Badge tone="pos" icon="bolt">Victoria rápida</Badge>
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 750, lineHeight: 1.3 }}>Añade FAQ listo para citar en prompts de comparación</div>
-              <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 6, lineHeight: 1.5 }}>
-                Tus competidores aparecen en 7 prompts de comparación donde tu marca no figura.
-              </div>
-              <div style={{ display: "flex", gap: 18, marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line-soft)" }}>
-                <div className="rmetric"><div className="l">Impacto</div><div className="v"><DotMeter n={5} tone="h" /></div></div>
-                <div className="rmetric"><div className="l">Esfuerzo</div><div className="v"><DotMeter n={2} tone="m" /></div></div>
-                <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                  <div className="l" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>Confianza</div>
-                  <div className="tnum" style={{ fontSize: 13, fontWeight: 750, marginTop: 4 }}>88%</div>
-                </div>
-              </div>
-              <div className="evidence mt12">
-                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
-                  <Badge tone="neutral" icon="quote">Gemini</Badge>
-                </div>
-                <div className="ev-quote">…las opciones más recomendadas son <span className="mk">Orbit</span> y <span className="mk">Quanta</span>, con onboarding sólido…</div>
-              </div>
-              {/* Es el dibujo de un botón dentro de una tarjeta de ejemplo, no
-                  un control: la recomendación que ilustra es inventada, así que
-                  no hay nada que generar. Se pinta como `<span>` para que un
-                  lector de pantalla no lo anuncie como pulsable y el teclado no
-                  se pare en él. El aspecto no cambia: `.btn` declara su propio
-                  `display: inline-flex`. */}
-              <span className="btn btn-soft btn-sm mt12" style={{ width: "100%" }} aria-hidden="true">
-                <Icon name="sparkles" size={13} />Generar solución
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* FEATURES y SPOTLIGHT (la maqueta de recomendación con marcas
+          inventadas "Orbit"/"Quanta") vivían aquí, de antes de HOME-2026-08.
+          Se retiran en el mismo PR que cierra esa fase (log §150): las dos
+          quedaron enteramente supersedidas por secciones ya enviadas más
+          arriba y más abajo — "Cómo funciona" ya cuenta lo mismo que
+          FEATURES con evidencia real, y "Cinco pantallas" ya trae una
+          Recomendaciones de verdad, con IKEA y un botón que genera de
+          verdad, no un `<span>` que finge. Mantener las dos habría dejado la
+          portada afirmando dos historias de marca distintas a la vez. */}
 
       {/* EL PRODUCTO — HOME-2026-08 Fase B2. Cinco pantallas del producto en un
           marco de navegador, con pestañas. Va en CLARO (`prod--light` del
@@ -1409,7 +1315,7 @@ export function LandingPage() {
             <nav className="links" aria-label="Pie de página">
               <a href="#producto">Producto</a>
               <a href="#como">Cómo funciona</a>
-              <a href="#recomendaciones">Recomendaciones</a>
+              <a href="#pantallas">Recomendaciones</a>
               <Link href="/geo">Qué es GEO</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>

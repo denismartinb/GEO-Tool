@@ -6144,14 +6144,6 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-feat h3 { font-size: 16.5px; font-weight: 700; margin: 16px 0 0; letter-spacing: -.01em; }
 .lp-feat p { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); margin: 7px 0 0; }
 
-.lp-spot { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
-.lp-spot-list { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
-.lp-spot-item { display: flex; gap: 13px; }
-.lp-spot-item .chk { width: 24px; height: 24px; border-radius: 999px; background: var(--pos-soft); color: var(--pos); display: grid; place-items: center; flex: 0 0 auto; margin-top: 1px; }
-.lp-spot-item .t { font-size: 15px; font-weight: 700; }
-.lp-spot-item .d { font-size: 13.5px; color: var(--ink-2); line-height: 1.55; margin-top: 2px; }
-.lp-spot-visual { border-radius: var(--r-lg); border: 1px solid var(--line); background: #fff; box-shadow: var(--sh-3); padding: 18px; }
-
 /* --- El producto: cinco pantallas (HOME-2026-08 Fase B2) ----------------
    La sección va en claro (`prod--light` del artboard). El marco es un
    navegador de pega y su cuerpo el lienzo de la consola.
@@ -7239,7 +7231,6 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 
 @media (max-width: 900px) {
   .lp-steps, .lp-features { grid-template-columns: 1fr; }
-  .lp-spot { grid-template-columns: 1fr; gap: 28px; }
   .lp-h1 { font-size: 42px; }
   .lp-h2 { font-size: 30px; }
   .lp-nav-links { display: none; }

@@ -13919,3 +13919,39 @@ maquetas.** Cuatro pedidos sueltos del fundador:
    un 25% más»): sigue siendo el ritmo de una maqueta, no una medición —la
    nota de `solution-demo.tsx` ya deja escrito que no puede prometer cuánto
    tarda el producto de verdad, y sigue sin poder.
+
+**Y la retirada de los dos bloques de la home anterior a HOME-2026-08, mismo
+PR** (fundador: *«puedes quitar ya los bloques que sobran de la home
+antigua»*). Dos secciones sobrevivían de antes del rediseño, entre «Cómo
+funciona» y «Cinco pantallas»:
+
+- **FEATURES** («Todo lo que necesitas para ganar en la búsqueda de IA»), una
+  rejilla de seis tarjetas que repetía el mismo argumento que «Cómo funciona»
+  —mides, entiendes, arreglas, mejoras— sin la evidencia real que esa sección
+  ya trae.
+- **SPOTLIGHT** («Recomendaciones que se convierten en trabajo hecho»), con
+  una tarjeta de recomendación de ejemplo que citaba marcas **inventadas**
+  —«Orbit» y «Quanta»— mientras el resto de la portada, desde HOME-2026-08,
+  cuenta una sola historia con marcas reales (IKEA, Leroy Merlin, Maisons du
+  Monde). El botón «Generar solución» de esa tarjeta además era un `<span>`
+  decorativo; el de «Cinco pantallas» genera de verdad (Fase B2, segunda
+  pasada, más arriba en esta misma entrada).
+
+Las dos quedaron enteramente supersedidas por secciones ya enviadas: mantener
+cualquiera de las dos habría dejado la portada afirmando dos historias de
+marca a la vez, una con nombres reales y otra con nombres de attrezzo.
+
+**Lo que se comprobó antes de borrar, no sólo el JSX:**
+
+- `Badge` (componente local) y las constantes `FEATURES`/`SPOTLIGHT_ITEMS`
+  sólo se usaban ahí — se retiran con la sección.
+- `.lp-spot*` (CSS) sólo pintaba SPOTLIGHT — se retira. `.lp-features`/
+  `.lp-feat*`, `.badge*`, `.rec-rank`, `.evidence`, `.ev-quote`, `.rmetric`
+  **NO se tocan**: son clases compartidas con la consola (`badge*`,
+  `rec-rank`, `evidence`, `rmetric`, usadas en Recomendaciones de verdad) o
+  con `/geo` (`lp-features`, `lp-feat`, `ev-quote`, incluida `.mk` dentro de
+  ella) — borrar la regla habría dejado esas otras pantallas sin estilo.
+- El enlace del pie de página «Recomendaciones» apuntaba a
+  `#recomendaciones`, el ancla de SPOTLIGHT. Repuntado a `#pantallas`
+  («Cinco pantallas»), que es donde esa historia vive ahora — no se dejó un
+  enlace roto.
