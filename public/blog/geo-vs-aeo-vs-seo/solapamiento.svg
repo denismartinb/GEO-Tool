@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 340" width="960" height="340" role="img" aria-label="Tres círculos del mismo tamaño que se solapan, etiquetados SEO, GEO y AEO, con un núcleo común en el centro rotulado «contenido que se puede citar»; a la derecha, LLMO aparece unido a GEO por una línea discontinua como término afín">
+  <defs>
+    <linearGradient id="ovBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="ovGlow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="960" height="340" fill="url(#ovBg)"/>
+  <ellipse cx="380" cy="170" rx="330" ry="200" fill="url(#ovGlow)"/>
+
+  <!-- Los tres términos con uso real en el mercado, dibujados como conjuntos
+       que se solapan. Es la afirmación central del artículo: comparten un
+       núcleo, no son disciplinas aisladas. Radios idénticos a propósito — no
+       hay dato fiable de cuota de uso entre ellos como para pintar uno mayor
+       que otro. -->
+  <g>
+    <circle cx="292" cy="196" r="92" fill="#2563eb" fill-opacity=".34" stroke="#4F7BFF" stroke-width="2"/>
+    <circle cx="468" cy="196" r="92" fill="#09c5d6" fill-opacity=".28" stroke="#5de6f2" stroke-width="2"/>
+    <circle cx="380" cy="132" r="92" fill="#4F7BFF" fill-opacity=".26" stroke="#9fbcff" stroke-width="2"/>
+  </g>
+
+  <!-- Las etiquetas de SEO y AEO van metidas hacia dentro a propósito: a la
+       altura y=238 el círculo sólo mide 82 px de medio ancho, así que un
+       rótulo pegado al borde se lleva el trazo por encima de la letra. Lo
+       enseñó la captura del piloto del 2026-08-23. -->
+  <text x="245" y="238" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#dce6ff" text-anchor="middle">SEO</text>
+  <text x="515" y="238" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#dcf9fc" text-anchor="middle">AEO</text>
+  <text x="380" y="76" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="22" font-weight="700" fill="#eef2ff" text-anchor="middle">GEO</text>
+
+  <!-- El núcleo compartido: lo que las tres disciplinas persiguen igual. -->
+  <text x="380" y="182" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">contenido</text>
+  <text x="380" y="200" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">que se puede citar</text>
+
+  <!-- LLMO como satélite de GEO, no como un cuarto conjunto: es el término
+       más cercano, con el foco puesto en el modelo en vez de en el producto
+       que lo envuelve (ver /glosario/llmo). -->
+  <path d="M576 140 H 664" stroke="#3b62b8" stroke-width="2" stroke-dasharray="4 5" fill="none"/>
+  <rect x="668" y="106" width="212" height="68" rx="12" fill="#0d1830" stroke="#3b62b8" stroke-width="1.8"/>
+  <text x="774" y="132" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="13" fill="#8fb0ff" text-anchor="middle">término afín</text>
+  <text x="774" y="157" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="20" font-weight="700" fill="#eef2ff" text-anchor="middle">LLMO</text>
+
+  <!-- Los tres persiguen lo mismo desde ángulos distintos; el pie recuerda de
+       qué lado se mide cada cosa. -->
+  <rect x="668" y="196" width="212" height="88" rx="12" fill="#0b1526" stroke="#1e3a6b" stroke-width="1.5"/>
+  <text x="774" y="224" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="13" fill="#8fb0ff" text-anchor="middle">SEO se mide en posiciones.</text>
+  <text x="774" y="246" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="13" fill="#8fb0ff" text-anchor="middle">Los otros tres, en si</text>
+  <text x="774" y="268" font-family="Liberation Sans, DejaVu Sans, sans-serif" font-size="13" fill="#8fb0ff" text-anchor="middle">apareces en la respuesta.</text>
+</svg>

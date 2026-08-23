@@ -54,7 +54,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // SEO-POS-1 Fase C, S8 (2026-08-14).
   "como-medir-trafico-chatgpt-ga4": "medicion",
   // SEO-POS-1 Fase C, S9 (2026-08-15).
-  "como-hacer-que-chatgpt-recomiende-tu-negocio": "playbooks"
+  "como-hacer-que-chatgpt-recomiende-tu-negocio": "playbooks",
+  // Cluster "fundamentos" (2026-08-23): la confusión de nomenclatura GEO/AEO/SEO/LLMO.
+  "geo-vs-aeo-vs-seo": "fundamentos"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

@@ -18,7 +18,7 @@ import { FaviconImg } from "@/components/ui/favicon-img";
  *    vocabulario que la consola nunca enseña.
  * 2. Los pesos y los rótulos que se repiten en otras secciones —14 prompts, 3
  *    motores, «Te mencionan» y «Te citan»— se dicen igual aquí que abajo. La
- *    portada no puede contradecirse a sí misma al hacer scroll (§146).
+ *    portada no puede contradecirse a sí misma al hacer scroll (§147).
  *
  * Las cifras de la historia (34 → 71) son ilustrativas, como el resto de la
  * maqueta, por decisión del fundador (2026-08-22). Lo que NO es ilustrativo es

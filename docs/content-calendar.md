@@ -64,6 +64,82 @@ transaccional).
 | B1b | Páginas pilar dedicadas por cluster (`/blog/<cluster>`) | ✅ Hecho — 3 de 4 (ver nota) | — |
 | B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | ✅ Hecho | — |
 | B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | ✅ Hecho | — |
+| B4 | `/blog/geo-vs-aeo-vs-seo` (cluster fundamentos) | ✅ Hecho | — |
+
+**B4 — hecho (2026-08-23).** `/blog/geo-vs-aeo-vs-seo`, keyword primaria "geo
+vs aeo vs seo" (secundarias: aeo, llmo, generative engine optimization,
+answer engine optimization, diferencia entre seo y geo). Encargo directo del
+fundador, no del brief de `seo-geo-research`: el sector todavía no se ha
+puesto de acuerdo en cómo llamar a esta disciplina, y la gente sigue
+buscando más en términos de SEO que de GEO/AEO. El eje es **la confusión de
+nomenclatura en sí** — de dónde sale cada sigla, quién usa cuál y por qué, y
+cuándo conviene cada una — deliberadamente distinto del ya publicado
+`/blog/que-es-geo-generative-engine-optimization` (que cubre "qué es GEO y
+en qué se diferencia del SEO" en profundidad); ambos son del cluster
+`fundamentos` y se enlazan entre sí, de forma recíproca vía `RelatedPosts`
+(misma cluster) y con un enlace contextual explícito en el cuerpo hacia el
+artículo existente para no duplicar su explicación.
+
+Decisiones de honestidad tomadas:
+
+- **Ninguna cifra de cuota de mercado entre GEO/AEO/SEO/LLMO.** El texto dice
+  qué término "hemos visto usar más" entre herramientas y medios en español
+  — una observación editorial en primera persona, no un dato de mercado
+  verificado con fuente y tamaño de muestra. No se afirma ningún porcentaje
+  de búsquedas ni de adopción.
+- **El ejemplo de "un proveedor de este sector prefiere AEO a GEO" se deja
+  sin nombrar la empresa concreta** en el cuerpo publicado, precisamente para
+  no tener que sostener una cita textual de su blog que esta sesión no pudo
+  verificar contra la fuente primaria (el proxy de salida bloqueó el fetch).
+  Se mantiene sólo el hecho de que existe divergencia real de naming dentro
+  del propio sector, que sí está bien corroborado.
+- Ningún motor no soportado (Perplexity, Copilot) se nombra en ningún sitio
+  del artículo — no hacía falta para el ángulo de esta pieza.
+- Portada dibujada en SVG y rasterizada a WebP con `sharp` (Playwright no
+  pudo descargar Chromium en este entorno — proxy de egress —, así que la
+  conversión SVG→WebP se hizo con la librería `sharp` ya presente como
+  dependencia transitiva, sin usar navegador). Verificada la tira de 96 px
+  (`.blog-cover-compact`) simulando el recorte a 1124×96 antes de darla por
+  buena: las cuatro siglas se leen enteras ahí, que es donde de verdad se ve
+  la portada.
+
+**Revisión del fundador (2026-08-23):** *"dale una vuelta para que parezca un
+pelín más humano, quitando las típicas expresiones que genera la IA"* y *"genera
+otra portada más visual y parecida al resto"*. Dos correcciones:
+
+1. **Portada rehecha.** La primera era un degradado plano con un diagrama
+   pequeño en el centro, y las otras 16 del catálogo comparten un lenguaje
+   visual muy definido que aquella ignoraba: fondo casi negro azulado, paneles
+   translúcidos con neón, y una composición de izquierda a derecha —muchas
+   piezas dispersas → convergen en una lente → un panel resuelto—. La nueva la
+   habla: las cuatro siglas como etiquetas dispersas sobre un muro de tarjetas
+   de contenido, sus haces convergiendo en la lente, y a la derecha la
+   respuesta generada con la marca mencionada y su cita. **El fallo no lo
+   habría cogido ningún test**: `covers.test.ts` comprueba que la portada
+   declarada existe y se enseña, no que se parezca a las demás. Sólo se ve
+   poniendo las 17 una debajo de otra.
+2. **Texto repasado para quitarle el acento de IA.** Los guiones largos pasan
+   de 25 a 1, y se van los tics de construcción repetida ("en la práctica",
+   "lo que sí", "cabe en una frase", "un ejemplo real de", "nota al margen") y
+   sobre todo la antítesis "no es X, es Y", que aparecía siete veces y es la
+   marca de fábrica más reconocible. Frases de longitud variada en vez del
+   ritmo parejo de antes. No cambia ninguna afirmación ni ningún enlace: el
+   recuento del cuerpo se queda en 1.556 palabras, dentro del rango de la
+   guía, y los cuatro enlaces internos siguen donde estaban.
+
+- **El SVG fuente de la portada NO vive en `public/`** sino en
+  `docs/design-reference/blog-covers/`. Son 57 KB que ninguna página pide (la
+  que se sirve es la WebP de 28 KB), y `public/` se sirve entero desde el mismo
+  origen que las páginas públicas. El diagrama del cuerpo (`solapamiento.svg`,
+  4 KB) sí se queda en `public/` porque el artículo lo carga.
+- **Subido el tope de `tests/asset-budget.test.ts` de 1,5 a 1,75 MB**, con la
+  razón escrita en el propio test, como manda su comentario de cabecera. No es
+  para acomodar esta portada: en `main` quedaban **24 KB libres** de
+  presupuesto y las portadas ya publicadas pesan entre 59 y 88 KB, así que el
+  tope llevaba tiempo impidiendo publicar cualquier pieza nueva con portada.
+- Añadido a las dos listas del piloto en este mismo PR: `BLOG_SLUGS` en
+  `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
+  `tests/pilot/journeys/public-pages.spec.ts`.
 
 **Nota B1b:** páginas pilar reales para fundamentos, medición y playbooks —
 cada una con una síntesis propia (no relleno) del porqué de esa sección y

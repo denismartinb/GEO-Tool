@@ -28,7 +28,7 @@ obedecerá igual.
   se lee (fundador, 2026-08-07; log §40). Ampliarlo exige volver a medir si el
   subtítulo del último paso automático da tiempo a leerse.
 - **EL TOUR YA NO ESTÁ EN LA LANDING** (HOME-2026-08 Fase A2, 2026-08-23, log
-  §149). Ese hueco lo ocupa ahora la demo de cinco escenas del hero, que es lo
+  §150). Ese hueco lo ocupa ahora la demo de cinco escenas del hero, que es lo
   que el artboard aprobado pone ahí; el tour en el hero fue una decisión
   nuestra de mientras tanto (log §1), no del diseño. **`variant="hero"` sigue
   existiendo en el componente** —se retiró el montaje, no la variante— y el

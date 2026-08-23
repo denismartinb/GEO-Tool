@@ -526,7 +526,7 @@ export function LandingPage() {
 
       {/* FEATURES y SPOTLIGHT (la maqueta de recomendación con marcas
           inventadas "Orbit"/"Quanta") vivían aquí, de antes de HOME-2026-08.
-          Se retiran en el mismo PR que cierra esa fase (log §150): las dos
+          Se retiran en el mismo PR que cierra esa fase (log §151): las dos
           quedaron enteramente supersedidas por secciones ya enviadas más
           arriba y más abajo — "Cómo funciona" ya cuenta lo mismo que
           FEATURES con evidencia real, y "Cinco pantallas" ya trae una
@@ -992,7 +992,7 @@ export function LandingPage() {
                           Dice lo mismo, pero enseñándolo: la cita literal del motor y la
                           fuente con su favicon. Es lo que sostiene la promesa de la
                           sección —«no es otro dashboard pasivo»— y lo que el artboard de
-                          escritorio ya trae (fundador, 2026-08-23; log §147). */}
+                          escritorio ya trae (fundador, 2026-08-23; log §148). */}
                       <div className="lp-prod-evid lp-prod-mevid">
                         <div className="lp-prod-cap">La evidencia</div>
                         <p>

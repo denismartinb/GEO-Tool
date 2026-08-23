@@ -13152,7 +13152,94 @@ nada se sale de su tarjeta en ninguna.
 
 ---
 
-## 145. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
+## 145. Una portada nueva no se juzga sola, se juzga al lado de las otras dieciséis (2026-08-23)
+
+Al publicar `/blog/geo-vs-aeo-vs-seo` (GEO vs AEO vs SEO) la portada pasó todas
+las comprobaciones que existen —`covers.test.ts` verifica que el fichero
+declarado existe y que el artículo lo enseña, y el `ux-pilot` dio ✅ en las tres
+anchuras— y aun así estaba mal. Era un degradado azul plano con un diagrama
+pequeño en el centro; las otras dieciséis del catálogo comparten un lenguaje
+visual muy definido que aquélla ignoraba por completo: fondo casi negro
+azulado, paneles translúcidos con neón, y una composición de izquierda a
+derecha en tres tiempos —muchas piezas dispersas → convergen en una lente →
+un panel resuelto—.
+
+**El fallo no tiene síntoma y ningún test puede tenerlo.** La página carga
+limpia, el activo existe, el `og:image` es correcto y la tira de 96px se
+compone bien. Lo único que lo enseña es **poner las diecisiete una debajo de
+otra y mirarlas**, que es lo que hubo que hacer. Es el mismo patrón que §125
+(la portada declarada en SVG que perdía su tarjeta social) un escalón más
+arriba: allí el respaldo de un activo era otro activo correcto; aquí el
+respaldo de una portada es otra portada correcta que no pertenece a la familia.
+
+La nueva habla ese idioma y además dice algo cierto del artículo: las cuatro
+siglas como etiquetas dispersas sobre un muro de tarjetas de contenido, sus
+haces convergiendo en la lente, y a la derecha la respuesta generada con la
+marca mencionada y su cita. El fuente vive en
+`docs/design-reference/blog-covers/`, no en `public/`.
+
+### La zona segura de una portada son dos condiciones, no una
+
+La regla vigente hasta hoy decía que *«la portada se juzga en la tira de 96px,
+no en el lienzo donde se dibuja»* (§85). Es verdad y es incompleta, y lo de
+menos es que faltara un detalle: la primera versión de esta portada se dio por
+buena **habiendo comprobado exactamente lo que la regla pedía**.
+
+En escritorio, `.blog-cover-compact` recorta en vertical: de un lienzo de 4:1
+sólo se ve el tercio central de la altura. Pero **en móvil la cabecera no
+enseña esa tira**, sino una caja de ~3,35:1, más estrecha que el lienzo, así
+que `object-fit: cover` recorta **en horizontal**: unos 98px por cada lado. Con
+las cuatro siglas repartidas por todo el ancho, «SEO» y «LLMO» quedaban
+partidas contra el borde izquierdo — dos de las cuatro protagonistas del
+artículo, en el formato donde más gente lo va a abrir.
+
+La zona segura real es **x 100-1100 e y 100-200 a la vez**, las dos
+condiciones. Un elemento puede cumplir una y fallar la otra, que es justo lo
+que pasó. Antes de dar una portada por buena hay que simular los **dos**
+recortes, no uno.
+
+Lo encontró mirar las capturas del piloto, no su tabla: el run que las produjo
+dio `PILOT PASS` con ✅ en las tres anchuras, porque una portada recortada no
+impide que la página cargue. Tercera vez que se repite lo mismo (§55, §85, y
+ésta), y la conclusión no cambia: **el verde del piloto dice que las
+aserciones que existen no saltaron, nunca que lo que se ve esté bien.**
+
+### El presupuesto de `public/` llevaba tiempo impidiendo publicar
+
+`tests/asset-budget.test.ts` saltó al añadir la portada. No por su peso: en
+`main` quedaban **24 KB libres** de un tope de 1,5 MB, y las portadas ya
+publicadas pesan entre 59 y 88 KB cada una. O sea que el presupuesto no estaba
+frenando una regresión, estaba frenando **el uso normal del repositorio** —
+GROWTH-2 publica del orden de diez URLs al mes, casi todas con imagen.
+
+Subido a 1,75 MB con la razón escrita en el propio test, que es el
+procedimiento que su comentario de cabecera ya establecía. Antes de subirlo se
+quitó el peso muerto real: el SVG fuente de la portada (57 KB) no lo pide
+ninguna página y se sirve desde el mismo origen que las páginas públicas, así
+que se fue a `docs/`. La próxima vez que se agote, la pregunta correcta no es
+subir otro cuarto de mega: es por qué una portada del catálogo pesa 88 KB
+cuando una equivalente cabe en 28.
+
+### Y el texto sonaba a lo que era
+
+Revisión del fundador sobre el borrador: *«dale una vuelta para que parezca un
+pelín más humano, quitando las típicas expresiones que genera la IA»*. Los
+guiones largos pasaron de 25 a 1, y se fueron las construcciones que se
+repetían con un patrón reconocible —«en la práctica», «lo que sí», «cabe en una
+frase», «un ejemplo real de», «nota al margen»— y sobre todo la antítesis
+«no es X, es Y», que aparecía siete veces en 1.500 palabras. Ninguna
+afirmación, ningún enlace y ninguna decisión de honestidad cambiaron: lo que se
+tocó fue el ritmo.
+
+No hay test para esto y no lo va a haber. Queda como criterio: **si el texto
+tiene un patrón sintáctico que se repite más de dos o tres veces, se nota**, y
+en una pieza que existe para posicionar en una categoría nueva se nota más,
+porque el lector que llega ya viene harto de leer lo mismo en otros seis
+sitios.
+
+---
+
+## 146. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
 
 Entran las tres últimas secciones del diseño aprobado —testimonio, FAQ y
 cierre— y con ellas se va algo que llevaba meses en producción sin que nadie lo
@@ -13265,7 +13352,7 @@ queda anotado aquí para quien la lea después.
 
 ---
 
-## 146. Cinco pantallas del producto, y los pesos de la auditoría otra vez (HOME-2026-08 Fase B2, 2026-08-22)
+## 147. Cinco pantallas del producto, y los pesos de la auditoría otra vez (HOME-2026-08 Fase B2, 2026-08-22)
 
 «Cinco pantallas. Todo tu posicionamiento.»: un marco de navegador con cinco
 maquetas del producto y una tira de pestañas. Con esto la portada queda completa
@@ -13345,7 +13432,7 @@ centésimas por debajo de AA. Van en `--ink-2`, **7,50:1**.
 
 Es la **tercera** vez en el mismo día con el mismo token: la nota del cierre
 sobre el degradado del hero, esa misma nota otra vez al creer que bastaba con
-subir un escalón (§145), y ahora esto. Así que la regla deja de ser cualitativa
+subir un escalón (§146), y ahora esto. Así que la regla deja de ser cualitativa
 y pasa a llevar la cifra: **`--ink-3` sólo aprueba sobre blanco puro** (4,76:1);
 sobre `#f6f7f9` no llega. Sobre cualquier superficie que no sea blanca, el texto
 secundario va en `--ink-2`.
@@ -13376,7 +13463,7 @@ queda ningún control muerto.
 
 ---
 
-## 147. Una pastilla que se desplaza en lugar de dos flechas, y el recorte que un barrido de anchuras no veía (HOME-2026-08 Fase B2, segunda pasada, 2026-08-23)
+## 148. Una pastilla que se desplaza en lugar de dos flechas, y el recorte que un barrido de anchuras no veía (HOME-2026-08 Fase B2, segunda pasada, 2026-08-23)
 
 **Qué pedía el fundador.** Dos cosas, al ver las cinco pantallas del móvil:
 «si animamos una pastilla no hacen falta las flechas izquierda y derecha», y
@@ -13498,8 +13585,8 @@ igualdad de especificidad, gana la última: **no se aplicó nada**. El síntoma
 fue que el barrido siguió marcando 561px en rojo con el arreglo ya escrito.
 
 Es el mismo fallo de §143 (escala tipográfica), §144 (colores de la sección
-oscura), §145 (escala móvil de la FAQ) y el prefijado de §146. La regla ya
-existe en `.claude/rules/styles.md` desde §145 —*un tramo responsive se
+oscura), §146 (escala móvil de la FAQ) y el prefijado de §147. La regla ya
+existe en `.claude/rules/styles.md` desde §146 —*un tramo responsive se
 escribe junto a lo que corrige*— y aun así se volvió a pisar, porque el
 instinto es agrupar lo que comparte anchura en vez de lo que comparte
 elemento. Queda anotado ahí que agrupar por `@media` es exactamente el error.
@@ -13514,7 +13601,7 @@ exactamente uno visible — ningún control muerto.
 
 ---
 
-## 148. La solución se genera, la auditoría marca sus fallos, y la portada estrena su tira de blog y su tabla (HOME-2026-08 Fase B2/D, 2026-08-23)
+## 149. La solución se genera, la auditoría marca sus fallos, y la portada estrena su tira de blog y su tabla (HOME-2026-08 Fase B2/D, 2026-08-23)
 
 Cuatro peticiones del fundador sobre las cinco pantallas, y con las dos últimas
 la portada queda completa salvo la demo del hero.
@@ -13575,7 +13662,7 @@ su fecha, y un enlace al blog.
 más reciente de `fundamentos`, `playbooks` y `medicion`—, así que la tira
 envejece con el blog en vez de apuntar a lo que se decidió un martes, un
 artículo retirado no puede dejar un 404 en la portada, y uno nuevo entra solo.
-Misma regla que el `FAQPage` de §145: una sola fuente, o divergen. Los tres
+Misma regla que el `FAQPage` de §146: una sola fuente, o divergen. Los tres
 clusters son una decisión editorial: responden «qué es esto», «qué hago» y
 «cómo sé si funciona», en ese orden. `sectores` queda fuera porque en la
 portada le habla a una fracción de quien llega.
@@ -13624,7 +13711,7 @@ A2), que sigue bloqueada por una decisión del fundador — meterla implica saca
 
 ---
 
-## 149. La demo del hero: cinco escenas, y el tour deja la portada (HOME-2026-08 Fase A2, 2026-08-23)
+## 150. La demo del hero: cinco escenas, y el tour deja la portada (HOME-2026-08 Fase A2, 2026-08-23)
 
 La última pieza que faltaba del artboard, y la primera que ve cualquiera que
 llega. Petición del fundador: *«ahí te tienes que lucir, es la primera zona de
@@ -13678,7 +13765,7 @@ Lo que arrastra, hecho en este mismo PR:
   «competitivo» desde 70, «emergente» desde 40 e **«inicial»** por debajo
   (`app/dashboard/projects/[projectId]/page.tsx`). Estrenar vocabulario en la
   primera pantalla de la portada que la consola nunca enseña es la misma clase
-  de error que los pesos de la auditoría en §146.
+  de error que los pesos de la auditoría en §147.
 - Los rótulos que se repiten más abajo —14 prompts, 3 motores, «Te mencionan»,
   «Te citan»— se dicen **igual** aquí que allí. La portada no puede
   contradecirse a sí misma al hacer scroll.
@@ -13714,7 +13801,7 @@ es el vocabulario.
 
 ### Tres recortes silenciosos, y una comprobación que ahora los ve
 
-El barrido que traía de §147 medía el desbordamiento de cada elemento contra
+El barrido que traía de §148 medía el desbordamiento de cada elemento contra
 la caja de su panel. No bastaba: **un elemento puede caber en el panel y estar
 recortado por un `overflow: hidden` intermedio**. La comprobación pasa a medir
 también `scrollHeight > clientHeight` en todo lo que esconde su contenido, y
@@ -13730,7 +13817,7 @@ con eso salieron tres cosas que ninguna captura habría delatado:
 3. Y ese `white-space` **no se aplicaba**: el elemento lleva `.lp-sheet-code` y
    `.lp-hx-code`, misma especificidad, y `.lp-sheet-code` vive más abajo en el
    fichero. **Sexta vez que el orden decide en vez de la intención** (§143,
-   §144, §145, §146, §147). Aquí no valía «escríbelo al lado», porque lo que
+   §144, §146, §147, §148). Aquí no valía «escríbelo al lado», porque lo que
    corrige es de otra sección: se cualifica por el contenedor,
    `.lp-hx-artefacto .lp-hx-code` (0,2,0), y el orden deja de importar.
 
@@ -13761,7 +13848,7 @@ bajo 640, que es lo que mide la escena más larga.
 
 ---
 
-## 150. El marco de la demo deja de estar medido para su peor escena, y una barra anuncia el cambio (HOME-2026-08 Fase A2, segunda pasada, 2026-08-23)
+## 151. El marco de la demo deja de estar medido para su peor escena, y una barra anuncia el cambio (HOME-2026-08 Fase A2, segunda pasada, 2026-08-23)
 
 **Qué pasó.** El fundador mandó una captura del hero en móvil con un rectángulo
 rojo alrededor de todo el blanco que quedaba bajo la respuesta de ChatGPT:
@@ -13774,7 +13861,7 @@ al hacer scroll, si no no parece una animación»*.
 
 **Por qué había blanco.** El cuerpo de la demo tiene alto fijo —las cinco
 escenas se apilan en el mismo hueco y un alto por escena daría un salto de más
-de 100px en cada cambio (§149)—, así que lo manda la escena más alta. Medido a
+de 100px en cada cambio (§150)—, así que lo manda la escena más alta. Medido a
 375px: escenas 0/1/2 entre 334 y 373, escena 3 en 485 y escena 4 en **509**. El
 cuerpo estaba en 508 por la escena 4 y las tres primeras arrastraban entre 135
 y 220px de vacío. El diagnóstico del fundador era exacto: el problema no estaba
@@ -13791,7 +13878,7 @@ lo que sobra queda abajo, que es lo que se pidió.
 
 Barrido de 320 a 1280px, cinco escenas cada uno, midiendo el fondo real del
 contenido contra la caja **y** `scrollHeight > clientHeight` en todo lo que
-esconde desbordamiento (§147). Encontró tres cosas que ningún ojo iba a ver:
+esconde desbordamiento (§148). Encontró tres cosas que ningún ojo iba a ver:
 la tarjeta del código recortada dentro de su hueco entre 320 y 340px, los dos
 botones de «Generar solución» partidos en dos líneas dentro de una pastilla de
 31px a 375px, y el fondo de «Maisons du Monde» estirándose hasta el borde de la

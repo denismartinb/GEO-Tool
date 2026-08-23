@@ -251,7 +251,7 @@ test("la demo del hero enseña sus cinco escenas y el raíl las gobierna", async
 
   // Tocar el raíl apaga la reproducción automática PARA SIEMPRE: quien elige una
   // escena la está leyendo, y que se la lleve el reloj es lo que hace que una
-  // demo se sienta un anuncio (log §149). Seis segundos es más de un paso
+  // demo se sienta un anuncio (log §150). Seis segundos es más de un paso
   // (4,6 s), así que si el reloj siguiera vivo esto lo cazaría.
   await page.waitForTimeout(6_000);
   await expect(
