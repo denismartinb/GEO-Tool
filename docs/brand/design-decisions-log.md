@@ -13359,3 +13359,41 @@ la fila sea cual sea el viewport. Verificado con y sin la regla en la misma
 reproducción: sin ella el input se encoge y el texto sale negro; con ella el
 input recupera su ancho y el texto sale en gris, sin tocar el resto de la
 fila.
+
+**Cuarta ronda (2026-08-23, móvil): clasificación de prompts sin alinear,
+copy sobrante, y favicons reales en competidores.** El fundador señaló con
+una captura anotada que el chip de categoría de cada prompt "flotaba" a
+distinta altura fila a fila. Causa: `.onb2-row` (sin abrir) usaba
+`align-items: center`, y como `.onb2-ptext` envuelve a 1-3 líneas según el
+prompt, cada fila tiene una altura distinta — el chip y los dos iconos
+quedaban centrados respecto a ESA altura, no respecto a la primera línea de
+texto, así que su posición vertical variaba de fila en fila aunque su
+posición horizontal (a la derecha, empujada por `flex:1` en `.onb2-ptext`)
+fuera siempre la misma. `.onb2-row.align-top` (`align-items: flex-start`) ya
+existía — se usaba sólo en la fila abierta, para editar — y aplicarla también
+a la fila plegada ancla el chip a la primera línea en todas las filas por
+igual. Verificado con una reproducción local de tres filas de distinto largo:
+el chip queda al mismo borde superior en las tres.
+
+Segundo cambio: retirada la frase final del panel "Resumen del lanzamiento"
+("Si tu plan repite la tanda, serán más.") — el fundador la tachó a mano sin
+más explicación; el panel se queda en "N prompts × M motores." sin perder
+ningún dato real.
+
+Tercer cambio, en respuesta a una pregunta del fundador sobre coste
+("¿sería caro obtener los favicons en la búsqueda de competidores?"): la
+respuesta fue que no hace falta LLM — el producto ya tiene infraestructura de
+favicons reales servida por `/api/favicon` (`lib/domains/favicon.ts`,
+FAVICON-QUALITY-1 §36/§39), usada hoy en la pantalla real de Competidores
+(`FaviconImg`, `.cm2-rank-fav-img`) y en Visión general. El asistente de
+onboarding pintaba en su lugar un círculo de color con la inicial
+(`AVATAR_COLORS`, puramente decorativo). Con el "impleméntalo" del fundador:
+la fila de competidor pasa a usar el mismo `<FaviconImg domain={row.domain}
+cssSize={28}>` con el círculo de inicial como `fallback` — sin tocar
+`lib/domains/favicon.ts` ni el backend, cero llamadas a Gemini, y con el
+mismo apagado a iniciales que ya usan Competidores/Visión general cuando el
+dominio no tiene icono conocido o mientras el campo está vacío (una fila
+"Añadir competidor" nueva, sin dominio todavía).
+
+Los tres cambios son sólo de presentación — `MAX_USER_COMPETITORS`, la
+lógica de sugerencia y los campos que `createProject` lee no se tocaron.

@@ -8713,6 +8713,12 @@ select.set-field {
 .onb2-row.align-top { align-items: flex-start; }
 .onb2-fav { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; font-weight: 800;
   color: #fff; flex: 0 0 auto; text-transform: uppercase; }
+/* Favicon real (lib/domains/favicon.ts vía FaviconImg) — mismo tratamiento
+   que .cm2-rank-fav-img en la pantalla real de Competidores; cae a .onb2-fav
+   (iniciales) cuando el dominio no tiene icono conocido. Founder feedback
+   2026-08-23: "implementa favicons". */
+.onb2-fav-img { width: 28px; height: 28px; border-radius: 8px; flex: 0 0 auto;
+  object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06); }
 /* Fila plegada (por defecto): nombre + dominio como texto, sin campos de
    edición — el gear la despliega. Founder feedback 2026-08-21: las filas
    siempre-editables ocupaban demasiado y no coincidían con la maqueta

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
@@ -329,7 +330,7 @@ function LaunchSummaryPanel({
               <div className="onb2-est-n">{estimatedResponses}</div>
               <div className="onb2-est-l">respuestas estimadas en el primer escaneo</div>
               <div className="onb2-est-f">
-                {promptsCount} prompts × {engineCount} motores. Si tu plan repite la tanda, serán más.
+                {promptsCount} prompts × {engineCount} motores.
               </div>
             </>
           ) : (
@@ -432,7 +433,7 @@ function PromptsStepBody({
         {prompts.map((row, index) => {
           const isOpen = openPrompts.has(row.id);
           return (
-            <div key={row.id} className={isOpen ? "onb2-row align-top" : "onb2-row"}>
+            <div key={row.id} className="onb2-row align-top">
               {isOpen ? (
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Textarea
@@ -878,13 +879,20 @@ export function OnboardingWizard({
                 const isOpen = openCompetitors.has(row.id);
                 return (
                   <div key={row.id} className={isOpen ? "onb2-row align-top" : "onb2-row"}>
-                    <span
-                      className="onb2-fav"
-                      style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }}
-                      aria-hidden="true"
-                    >
-                      {(row.name.trim()[0] || row.domain.trim()[0] || "?").toUpperCase()}
-                    </span>
+                    <FaviconImg
+                      domain={row.domain}
+                      cssSize={28}
+                      className="onb2-fav-img"
+                      fallback={
+                        <span
+                          className="onb2-fav"
+                          style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }}
+                          aria-hidden="true"
+                        >
+                          {(row.name.trim()[0] || row.domain.trim()[0] || "?").toUpperCase()}
+                        </span>
+                      }
+                    />
                     {isOpen ? (
                       <div className="onb2-editgrid">
                         <Input
