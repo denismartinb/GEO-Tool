@@ -55,11 +55,20 @@ cause (`scan_prompt_results`, the largest table, was 53 MB) — this is a
 request-volume problem, not a storage problem, so deleting rows does not fix
 it.
 
-The fix is a **second, dedicated Supabase project that only Preview deploys
-talk to**, using Vercel's native per-environment variable scoping (same
+The fix is a **second, dedicated Supabase project — in a NEW Supabase
+organization, not a new project inside the existing one** — that only Preview
+deploys talk to, using Vercel's native per-environment variable scoping (same
 variable name, different value for Production vs Preview — no application
-code branches on `VERCEL_ENV` for this). Setup, once the founder has created
-the empty project in the Supabase dashboard:
+code branches on `VERCEL_ENV` for this).
+
+**Why a new organization, not just a new project:** Supabase's Free-plan
+quotas (egress included) are pooled per **organization**, across every
+project it holds — confirmed by the usage screen itself, which labels the
+banner "Organization exceeded its quota" and aggregates egress under "All
+projects". A second project created inside the `denismartinb` organization
+would draw from the same already-exhausted 5 GB pool and fix nothing. Setup,
+once the founder has created a brand-new organization (Free plan) with an
+empty project in it:
 
 1. `pnpm run supabase:bundle > bootstrap.sql` — concatenates every file in
    `supabase/migrations/` in order into one paste-able script (migrations here
@@ -78,6 +87,12 @@ the empty project in the Supabase dashboard:
    `SUPABASE_SERVICE_ROLE_KEY` for the new project's values, **scoped to
    Preview only** — leave the Production-scoped values pointing at the
    original project untouched.
+
+If the Supabase dashboard refuses to create a second Free-plan organization
+under an account that already has one in Fair Use, the fallback is creating
+that new organization under a different email the founder controls (e.g. one
+of the other accounts already in play for GEO-Tool) — the isolation only
+works if the new organization's quota is genuinely independent.
 
 Once live: production users' data and CI/pilot traffic stop sharing a quota,
 and this section's "Status" line should be updated to say so (with the date
