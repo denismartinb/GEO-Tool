@@ -4,7 +4,7 @@ import type { ResultRow } from "@/app/dashboard/projects/[projectId]/prompts/pag
 import { PromptDrawer } from "./prompt-drawer";
 
 /**
- * PROMPT-DRAWER-TRUTH-1 (log §145) — tests de render del cajón, escritos por
+ * PROMPT-DRAWER-TRUTH-1 (log §147) — tests de render del cajón, escritos por
  * un motivo concreto: **el piloto agéntico no puede llegar a este estado.**
  *
  * La cuenta del piloto es de plan Free, y el tope de plan (`caps.engines`) la

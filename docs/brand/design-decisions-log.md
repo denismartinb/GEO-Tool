@@ -13152,7 +13152,207 @@ nada se sale de su tarjeta en ninguna.
 
 ---
 
-## 145. Un motor de tres se pintaba como «100%», y la evidencia desaparecía sin decirlo (PROMPT-DRAWER-TRUTH-1, 2026-08-23)
+## 145. Una portada nueva no se juzga sola, se juzga al lado de las otras dieciséis (2026-08-23)
+
+Al publicar `/blog/geo-vs-aeo-vs-seo` (GEO vs AEO vs SEO) la portada pasó todas
+las comprobaciones que existen —`covers.test.ts` verifica que el fichero
+declarado existe y que el artículo lo enseña, y el `ux-pilot` dio ✅ en las tres
+anchuras— y aun así estaba mal. Era un degradado azul plano con un diagrama
+pequeño en el centro; las otras dieciséis del catálogo comparten un lenguaje
+visual muy definido que aquélla ignoraba por completo: fondo casi negro
+azulado, paneles translúcidos con neón, y una composición de izquierda a
+derecha en tres tiempos —muchas piezas dispersas → convergen en una lente →
+un panel resuelto—.
+
+**El fallo no tiene síntoma y ningún test puede tenerlo.** La página carga
+limpia, el activo existe, el `og:image` es correcto y la tira de 96px se
+compone bien. Lo único que lo enseña es **poner las diecisiete una debajo de
+otra y mirarlas**, que es lo que hubo que hacer. Es el mismo patrón que §125
+(la portada declarada en SVG que perdía su tarjeta social) un escalón más
+arriba: allí el respaldo de un activo era otro activo correcto; aquí el
+respaldo de una portada es otra portada correcta que no pertenece a la familia.
+
+La nueva habla ese idioma y además dice algo cierto del artículo: las cuatro
+siglas como etiquetas dispersas sobre un muro de tarjetas de contenido, sus
+haces convergiendo en la lente, y a la derecha la respuesta generada con la
+marca mencionada y su cita. El fuente vive en
+`docs/design-reference/blog-covers/`, no en `public/`.
+
+### La zona segura de una portada son dos condiciones, no una
+
+La regla vigente hasta hoy decía que *«la portada se juzga en la tira de 96px,
+no en el lienzo donde se dibuja»* (§85). Es verdad y es incompleta, y lo de
+menos es que faltara un detalle: la primera versión de esta portada se dio por
+buena **habiendo comprobado exactamente lo que la regla pedía**.
+
+En escritorio, `.blog-cover-compact` recorta en vertical: de un lienzo de 4:1
+sólo se ve el tercio central de la altura. Pero **en móvil la cabecera no
+enseña esa tira**, sino una caja de ~3,35:1, más estrecha que el lienzo, así
+que `object-fit: cover` recorta **en horizontal**: unos 98px por cada lado. Con
+las cuatro siglas repartidas por todo el ancho, «SEO» y «LLMO» quedaban
+partidas contra el borde izquierdo — dos de las cuatro protagonistas del
+artículo, en el formato donde más gente lo va a abrir.
+
+La zona segura real es **x 100-1100 e y 100-200 a la vez**, las dos
+condiciones. Un elemento puede cumplir una y fallar la otra, que es justo lo
+que pasó. Antes de dar una portada por buena hay que simular los **dos**
+recortes, no uno.
+
+Lo encontró mirar las capturas del piloto, no su tabla: el run que las produjo
+dio `PILOT PASS` con ✅ en las tres anchuras, porque una portada recortada no
+impide que la página cargue. Tercera vez que se repite lo mismo (§55, §85, y
+ésta), y la conclusión no cambia: **el verde del piloto dice que las
+aserciones que existen no saltaron, nunca que lo que se ve esté bien.**
+
+### El presupuesto de `public/` llevaba tiempo impidiendo publicar
+
+`tests/asset-budget.test.ts` saltó al añadir la portada. No por su peso: en
+`main` quedaban **24 KB libres** de un tope de 1,5 MB, y las portadas ya
+publicadas pesan entre 59 y 88 KB cada una. O sea que el presupuesto no estaba
+frenando una regresión, estaba frenando **el uso normal del repositorio** —
+GROWTH-2 publica del orden de diez URLs al mes, casi todas con imagen.
+
+Subido a 1,75 MB con la razón escrita en el propio test, que es el
+procedimiento que su comentario de cabecera ya establecía. Antes de subirlo se
+quitó el peso muerto real: el SVG fuente de la portada (57 KB) no lo pide
+ninguna página y se sirve desde el mismo origen que las páginas públicas, así
+que se fue a `docs/`. La próxima vez que se agote, la pregunta correcta no es
+subir otro cuarto de mega: es por qué una portada del catálogo pesa 88 KB
+cuando una equivalente cabe en 28.
+
+### Y el texto sonaba a lo que era
+
+Revisión del fundador sobre el borrador: *«dale una vuelta para que parezca un
+pelín más humano, quitando las típicas expresiones que genera la IA»*. Los
+guiones largos pasaron de 25 a 1, y se fueron las construcciones que se
+repetían con un patrón reconocible —«en la práctica», «lo que sí», «cabe en una
+frase», «un ejemplo real de», «nota al margen»— y sobre todo la antítesis
+«no es X, es Y», que aparecía siete veces en 1.500 palabras. Ninguna
+afirmación, ningún enlace y ninguna decisión de honestidad cambiaron: lo que se
+tocó fue el ritmo.
+
+No hay test para esto y no lo va a haber. Queda como criterio: **si el texto
+tiene un patrón sintáctico que se repite más de dos o tres veces, se nota**, y
+en una pieza que existe para posicionar en una categoría nueva se nota más,
+porque el lector que llega ya viene harto de leer lo mismo en otros seis
+sitios.
+
+---
+
+## 146. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
+
+Entran las tres últimas secciones del diseño aprobado —testimonio, FAQ y
+cierre— y con ellas se va algo que llevaba meses en producción sin que nadie lo
+mirase.
+
+### Lo que había: una persona que no existe y un dato que no se midió
+
+La sección `QUOTE` de la portada decía, entre comillas:
+
+> «Pasamos de no saber si la IA nos nombraba a tener un plan claro de qué
+> cambiar primero. En dos meses subimos del 9% al 21% de citas.»
+> — **Aisha Robinson, Growth Lead, Beltway**
+
+Ni la persona, ni la empresa, ni la cifra. Un testimonio de relleno de una
+maqueta que se quedó puesto y se sirvió como si fuera real en la página que más
+tráfico recibe. CLAUDE.md prohíbe las métricas falsas desde su primera versión,
+y esto es la forma más directa de romperlo: una cita atribuida a alguien.
+
+**Lo sustituye uno real**: Nerea Solís, marketing digital en Nordika Home, y el
++128% de cuota de voz en IA, que el fundador confirmó el 2026-08-22 que es una
+medición de esa cuenta. La regla que queda escrita en el propio componente: si
+algún día ese testimonio deja de poder sostenerse, **la sección se retira
+entera**; no se sustituye por otro nombre inventado.
+
+### La FAQ: tres respuestas del artboard afirmaban de más
+
+Las seis preguntas se verificaron contra el código antes de publicarse, y tres
+cambiaron. No por prudencia: porque eran falsas o incompletas.
+
+| El artboard decía | Lo que hace el producto | Publicado |
+|---|---|---|
+| «una llamada real por prompt y por motor» | Con muestreo, un plan de pago repite el conjunto hasta 5 veces para llegar al suelo de 50 respuestas (`lib/scan/sampling.ts`, ADR 0030) | «**al menos** una llamada real» |
+| «…y de forma continua» | Un proyecto Free tiene **un** escaneo y sólo uno: `runRecurringScanSweep` descarta los proyectos Free y `createPendingScanRunCore` rechaza el segundo | «…de forma continua **en los planes de pago**» |
+| «Cada fallo indica cuántos puntos recuperas» | `llms_txt_missing` sale siempre con `pointDelta: null` | «**Los fallos que puntúan** te dicen…» |
+
+La segunda es la que más importa: decirle «de forma continua» a quien acaba de
+registrarse en Free es prometerle algo que el backend nunca va a hacer.
+
+**El `FAQPage` sale de la misma constante que pinta la pantalla**
+(`lib/landing/home-faq.ts`). Escritos por separado divergirían, y el schema
+acabaría afirmando preguntas que la página no enseña — que es literalmente el
+fallo que este producto audita en las webs de sus clientes.
+
+### `<details>` de verdad, servidos abiertos
+
+La FAQ es acordeón en móvil y lista abierta en escritorio, como los dos
+artboards. Son `<details>`/`<summary>` nativos: teclado, lector de pantalla y
+buscar-en-la-página funcionan solos. **Se sirven abiertos y una isla los pliega
+en móvil**, nunca al revés — servirlos cerrados dejaría la sección inservible
+sin JS y escondería de la primera pintura el mismo texto que el `FAQPage`
+afirma.
+
+### Un gris que no pasaba contraste, y no era de esta fase
+
+La fila «Sin registro · Sin tarjeta · Sin llamada de ventas» hereda
+`.lp-hero-note`, que se servía en `--ink-4`: **2,63:1 sobre blanco**, muy por
+debajo del 4,5:1 de AA. No es decoración —es media objeción de compra
+resuelta—, así que pasa a `--ink-3`, **4,76:1**. La clase ya se usaba así en
+`/pricing` y en el comprobador gratuito, de modo que la corrección alcanza a
+las tres pantallas. Se declara aquí en vez de arreglarlo callando porque toca
+dos páginas fuera del alcance de esta fase.
+
+**Y `--ink-3` tampoco bastaba en el cierre**, que es donde esto se pone
+divertido: esa banda no está sobre blanco, está sobre el degradado, y a la
+altura de la fila —el 75% de la banda— el fondo ya es `#f3f7ff`. Ahí
+`--ink-3` da **4,43:1**, por debajo del 4,5 por siete centésimas, mientras que
+sobre el blanco de `/pricing` y del comprobador da 4,76 y pasa. En el cierre va
+`--ink-2`: **7,49:1**. Es exactamente el invariante que
+`.claude/rules/styles.md` ya tenía escrito —«un token que aprueba AA sobre
+blanco no lo aprueba sobre otra superficie»— pisado **mientras se corregía un
+fallo de contraste**, y no se vio hasta calcular el color pintado del degradado
+a esa altura: el `background-color` del elemento es transparente, así que
+preguntárselo al navegador devuelve el blanco del `body` y da un 4,76 que ahí
+no es cierto.
+
+### La misma trampa del orden del fichero, por tercera vez
+
+La escala móvil de estas tres secciones se escribió en el bloque
+`@media (max-width: 560px)` que había más cerca, y ese bloque vive **antes** en
+`app/globals.css` que las reglas base que corrige: a igualdad de especificidad
+gana la última, así que no pintó nada. El síntoma no fue un color raro, fue una
+sección rota —la respuesta de la FAQ metida en una columna de 111px y el galón
+sin aparecer— y sólo se vio midiendo, no leyendo. Ya había pasado con la escala
+tipográfica (§143) y con los colores de la sección oscura (§144). **La regla
+que sale de aquí: un tramo responsive se escribe junto a lo que corrige, no en
+el bloque de esa anchura que pille más cerca.**
+
+### El presupuesto de assets hizo su trabajo
+
+`tests/asset-budget.test.ts` rechazó los dos JPEG del testimonio, por formato y
+por peso. Los dos van ahora en WebP y **redimensionados al tamaño en que se
+pintan** —128px el retrato contra 520 del original, 720px la captura contra
+900—: 28 KB entre los dos. Aun así el tope de 1,5 MB se quedaba corto por 3,5
+KB, y se sube a 1,7 MB con la razón escrita en el propio fichero, que es lo que
+ese test pide que se haga. De paso se corrige su comentario, que decía «615 KB
+en 25 ficheros» cuando ya eran 1.512 en 41: un presupuesto cuya explicación
+lleva meses obsoleta ha dejado de ser una decisión y es un número heredado.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
+en verde. Once anchuras de 320 a 1440: sin desbordamiento y sin nada fuera de
+su caja en las tres secciones; acordeón por debajo de 560 y lista abierta por
+encima, comprobado a los dos lados del corte. **Sin JavaScript las seis
+preguntas se sirven abiertas**, medido.
+
+**Pendiente / conocido.** `.claude/rules/onboarding.md` afirma que «se escanea
+continuamente» se sostiene en `lib/scan/cron.ts`, «diario en free/pro/agency».
+Es **inexacto**: un proyecto Free no llega nunca a su intervalo. La regla se ha
+quedado como estaba —es de otra zona y el texto del tour es del fundador— pero
+queda anotado aquí para quien la lea después.
+
+---
+
+## 147. Un motor de tres se pintaba como «100%», y la evidencia desaparecía sin decirlo (PROMPT-DRAWER-TRUTH-1, 2026-08-23)
 
 El fundador abrió el cajón de un prompt en su propio proyecto y le dio la
 sensación de que las respuestas estaban condicionadas por su cuenta: los

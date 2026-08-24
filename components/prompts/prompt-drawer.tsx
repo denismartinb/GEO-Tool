@@ -174,7 +174,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
     return { row: r, meta: getEngineMeta(r.provider), evidence, citations, displayNameMatch, verifiedMention };
   });
   /**
-   * PROMPT-DRAWER-TRUTH-1 (log §145): un motor entra en el panel si aporta
+   * PROMPT-DRAWER-TRUTH-1 (log §147): un motor entra en el panel si aporta
    * citas **o** si su mención está verificada y no las trae.
    *
    * Antes sólo entraba con citas, así que el 10% de las menciones verificadas
@@ -191,7 +191,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
     g.citations.some((c) => isBrandDomain(c.domain, projectDomain))
   );
 
-  // PROMPT-DRAWER-TRUTH-1 (log §145): la cobertura sale de contar respuestas,
+  // PROMPT-DRAWER-TRUTH-1 (log §147): la cobertura sale de contar respuestas,
   // no de `some(...)` pintado como 100%/0%. El cálculo y su orden viven en
   // `mention-coverage.ts` porque son la parte verificable sin navegador.
   const allRows = buildRanking({

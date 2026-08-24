@@ -7,7 +7,7 @@
  * sólo uno nombraba a la marca se leía como **100%** justo debajo de la lista
  * «Mencionada · Ausente · Ausente» que decía lo contrario — las dos
  * afirmaciones caben en la misma captura de pantalla, y el fundador las vio
- * juntas el 2026-08-23 (log §145). Con muestreo (ADR 0030) el error crece:
+ * juntas el 2026-08-23 (log §147). Con muestreo (ADR 0030) el error crece:
  * nueve respuestas y una mención siguen siendo «100%».
  *
  * La puntuación real nunca tuvo este fallo (`lib/scoring/run-scoring.ts`

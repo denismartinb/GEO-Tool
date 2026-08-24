@@ -1,0 +1,177 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  CompareTable,
+  Verdict,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("geo-vs-aeo-vs-seo");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Es lo mismo GEO que AEO?",
+    answer:
+      "Casi. Los dos buscan que un sistema automatizado te use como fuente al responder, en vez de limitarse a enlazarte, y las técnicas que sirven para uno sirven para el otro. Cuando alguien traza la diferencia, es de foco: GEO mira a los motores conversacionales de IA generativa (ChatGPT, Gemini, Claude) y AEO abarca cualquier sistema que conteste directamente, incluidos los fragmentos destacados y las cajas de respuesta de un buscador de toda la vida. No hay ninguna autoridad del sector que haya fijado cuál es la definición buena, y las herramientas usan una u otra por motivos de marca más que por describir prácticas distintas."
+  },
+  {
+    question: "¿Qué significa LLMO y en qué se diferencia de GEO?",
+    answer:
+      "LLMO son las siglas de Large Language Model Optimization. Es la menos usada de las tres y la más literal: nombra la tecnología de debajo, el modelo de lenguaje, en lugar de la categoría de producto que lo envuelve. El trabajo que hay detrás es el mismo que el de GEO, contenido que un modelo pueda leer, entender y citar."
+  },
+  {
+    question: "¿El SEO ha quedado obsoleto por el GEO?",
+    answer:
+      "No. El SEO sigue siendo el canal principal de descubrimiento, y buena parte de lo que premia (contenido claro, autoridad demostrable, estructura legible) también ayuda al GEO. Lo que ocurre no es que el SEO deje de importar, sino que se le suma una pregunta nueva al lado del ranking: qué dice un asistente de IA de tu marca cuando alguien le pregunta por tu categoría."
+  },
+  {
+    question: "¿Qué término debo usar en el contenido de mi empresa?",
+    answer:
+      "Depende de a quién le escribas, no de cuál sea el correcto, porque no lo hay. Si tu audiencia ya busca y habla en términos de GEO, usa GEO: es el que más vemos entre herramientas y medios en español. Si te mueves en un entorno más anglosajón o más pegado al SEO clásico, te encontrarás AEO con más frecuencia. Lo que sí conviene evitar es alternar las cuatro siglas dentro del mismo texto sin avisar, porque no suma nada y el lector se pierde."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Tres de las cuatro siglas del título significan casi lo mismo. **GEO**, **AEO** y **LLMO** describen el mismo trabajo: que una IA te mencione y te cite cuando responde, en vez de limitarse a enlazarte. La excepción es **SEO**, que sigue significando lo de siempre, posicionar en Google o en Bing. Nadie ha zanjado cuál de las tres nuevas es la buena porque no existe ningún organismo que pueda hacerlo, así que cada herramienta y cada medio adoptó la que le sonó mejor. La versión corta: usa **SEO** para hablar de rankings y **GEO** para hablar de lo que ChatGPT, Gemini o Claude dicen de ti. GEO es la que más se usa hoy en castellano y la que usamos en este blog.
+
+</KeyTakeaway>
+
+Si llevas unos meses leyendo sobre esto, te habrá pasado. Un artículo habla de GEO. El siguiente, de AEO. Un tercero mezcla los dos en el mismo párrafo y mete LLMO por el medio. Y los cuatro describen aproximadamente la misma cosa.
+
+No te has perdido nada. Es que el sector todavía no ha decidido cómo llamarlo.
+
+## ¿Por qué hay tantas siglas para casi lo mismo?
+
+El SEO tuvo veinte años para ponerse de acuerdo consigo mismo. Cuando empezó a escribirse en serio sobre él ya existía un nombre aceptado, y todo el mundo lo usó sin discutirlo.
+
+Con esto ha pasado lo contrario. Optimizar para que un asistente de IA te recomiende pasó de curiosidad a preocupación de negocio en cuestión de meses, y en esos meses varios grupos le pusieron nombre a la vez sin hablar entre ellos. Agencias, herramientas recién fundadas, medios especializados. Cada uno tiró por su lado:
+
+- Unos calcaron la estructura de «SEO» y cambiaron el buscador por el motor generativo. De ahí **GEO**.
+- Otros pusieron el acento en la respuesta y no en quién la genera. De ahí **AEO**.
+- Los más técnicos fueron directos a la tecnología de debajo, el modelo de lenguaje. De ahí **LLMO**.
+
+Ninguna ganó, entre otras cosas porque no hay ninguna autoridad capaz de declararla ganadora. Basta con mirar el propio sector de herramientas de monitorización de marca en IA: hay empresas que venden prácticamente lo mismo y lo llaman de forma distinta.
+
+Visto de cerca, la etiqueta importa bastante menos que la pregunta que hay debajo. ¿Te menciona la IA cuando alguien pregunta por lo tuyo? ¿Y por qué?
+
+<Figure
+  label="Figura 1."
+  caption="SEO, GEO y AEO no son tres cajas separadas: comparten un núcleo real, que es contenido claro, estructurado y con autoridad demostrable. LLMO es la etiqueta más próxima a GEO, con el foco puesto en el modelo en vez de en el producto que lo envuelve."
+>
+  <img
+    src="/blog/geo-vs-aeo-vs-seo/solapamiento.svg"
+    alt="Diagrama de solapamiento entre SEO, GEO y AEO, con LLMO señalado como término afín a GEO"
+    style={{ width: "100%", height: "auto", display: "block", borderRadius: "10px" }}
+  />
+</Figure>
+
+## GEO (Generative Engine Optimization): de dónde viene
+
+**GEO** es la [optimización para motores generativos](/glosario/geo). ChatGPT, Gemini, Claude. El objetivo es que te nombren y te recomienden cuando alguien les pregunta por tu categoría, y es el término que usamos aquí y del que sale el propio nombre de GenScore.
+
+Ya explicamos qué es y en qué se separa del buscador clásico en [qué es el GEO y en qué se diferencia del SEO](/blog/que-es-geo-generative-engine-optimization), así que no lo repito. Si es la primera vez que oyes la sigla, empieza por ahí y vuelve.
+
+Sí merece la pena señalar un defecto de nacimiento: **«GEO» ya estaba cogido**. Geografía, geolocalización, segmentación geo en publicidad. La raíz tiene un significado dominante que no tiene nada que ver con motores generativos, y eso genera ruido real cuando buscas o cuando agrupas palabras clave. Es el precio de haber copiado la forma de «SEO» con tres letras que ya venían con equipaje.
+
+## AEO (Answer Engine Optimization): ¿en qué se separa de GEO?
+
+**AEO** es *Answer Engine Optimization*, optimización para motores de respuesta. Nuestro glosario lo llama el [término hermano de GEO](/glosario/aeo), y la diferencia está en dónde pone el foco: no en los motores conversacionales, sino en cualquier sistema que conteste directamente en lugar de darte una lista de enlaces.
+
+Ahí caben los asistentes de IA, pero también los fragmentos destacados de Google y las cajas de respuesta que llevan años funcionando. Por eso a quien viene del SEO clásico «AEO» suele encajarle mejor: la caja de respuesta es anterior a ChatGPT, y AEO la mete en el mismo saco que un asistente conversacional en vez de tratarla como un mundo aparte.
+
+La frontera entre ambos es más de vocabulario que de trabajo. Responder en las primeras líneas, estructurar en listas y tablas, dar datos con procedencia clara: todo eso sirve igual para lo uno que para lo otro. Quien busca «qué es AEO» quiere saber lo mismo que quien busca «qué es GEO».
+
+## LLMO (Large Language Model Optimization): la tercera en discordia
+
+**LLMO** es la menos usada de las tres y la más literal sobre dónde mira: al modelo de lenguaje, no al producto que lo envuelve.
+
+Lo desarrollamos en el [glosario](/glosario/llmo), pero la idea es sencilla. Quien busca LLMO quiere lo mismo que quien busca GEO, que ChatGPT, Gemini o Claude le nombren. Solo que ha llegado por el lado técnico, pensando primero en el modelo y después en el producto.
+
+## ¿Y el SEO, dónde queda?
+
+El SEO no se ha muerto, y confundirlo con GEO es el error simétrico del que este artículo intenta resolver. Sigue siendo optimizar para que un buscador te coloque en su lista de resultados, y se mide en posiciones, clics y tráfico orgánico.
+
+Además ayuda. Los motores generativos también prefieren fuentes con autoridad y contenido bien estructurado cuando deciden a quién citar. Pero ayudar no es lo mismo que sustituir: puedes posicionar de maravilla en Google y ser invisible en la respuesta de una IA, porque lo que decide si te citan no es tu puesto en un ranking. La comparación completa, con tabla y ejemplos, está en el artículo que enlazamos más arriba.
+
+## Las cuatro siglas, una al lado de la otra
+
+<CompareTable>
+
+| | SEO | GEO | AEO | LLMO |
+|---|---|---|---|---|
+| **Significado** | Search Engine Optimization | Generative Engine Optimization | Answer Engine Optimization | Large Language Model Optimization |
+| **A qué apunta** | Buscadores clásicos (Google, Bing) | Motores generativos conversacionales (ChatGPT, Gemini, Claude) | Cualquier respuesta directa: motores generativos, fragmentos destacados, asistentes de voz | El modelo de lenguaje en sí, más allá del producto que lo envuelve |
+| **Cómo se mide el éxito** | Posición en el ranking, clics, tráfico orgánico | Si te mencionan, con qué prominencia y si citan una fuente | Igual que GEO, ampliado a fragmentos destacados y cajas de respuesta | Igual que GEO |
+| **Antigüedad del término** | Décadas | Desde que los asistentes de IA se volvieron un canal real de descubrimiento | Similar a GEO, con raíces también en el SEO de fragmentos destacados | La menos usada de las tres nuevas |
+| **¿Sustituye al SEO?** | — | No, lo complementa | No, lo complementa | No, lo complementa |
+
+</CompareTable>
+
+## ¿Cuál uso, y cuándo?
+
+<Verdict title="La guía práctica" badge="Recomendación">
+
+Ninguna de las tres nuevas es más correcta que las otras. Describen la misma práctica con acentos distintos, así que la decisión es más aburrida de lo que parece:
+
+- **SEO** para posicionamiento en buscador: rankings, enlaces, velocidad de carga, tráfico orgánico.
+- **GEO** para visibilidad en las respuestas de ChatGPT, Gemini o Claude. Es la que más vemos en castellano y la que usamos en GenScore.
+- **AEO** y **LLMO** valen igual si tu audiencia ya las reconoce, por ejemplo si escribes para un público internacional o muy técnico.
+
+Lo único que desaconsejamos es ir alternando las cuatro dentro del mismo texto. No suma nada y el lector se pierde.
+
+</Verdict>
+
+Que la elección es de marca y no de técnica se nota en un detalle: hay proveedores de este mismo sector que dedican contenido propio a explicar por qué prefieren «AEO» a «GEO», admitiendo a la vez que describen la misma práctica. Ninguno está equivocado. Están resolviendo cómo quieren que les encuentren, que es otro problema.
+
+Circulan más, por cierto: SXO, GSO, AISEO y alguna otra, casi todas en contenido en inglés. No las tratamos aquí porque son minoritarias incluso comparadas con LLMO, y porque no cambiarían la respuesta.
+
+## La pregunta que hay debajo de las cuatro
+
+Llames a esto como lo llames, debajo siempre está lo mismo. Cuando alguien le pregunta a una IA por tu categoría, ¿sales tú? ¿Y hay una fuente real que respalde lo que dice de ti?
+
+Eso no cambia según la sigla que elijas. Lo que cambia es qué estás midiendo: una posición en un buscador, o tu presencia dentro de una respuesta generada. Si todavía no tienes claro en cuál de las dos estás, ese es el primer paso, y es anterior a decidir cómo lo llamas.
+
+<ArticleCta
+  title="Deja de discutir el nombre y mide lo que importa"
+  text="GenScore te dice si ChatGPT, Gemini o Claude mencionan tu marca, con qué prominencia y si citan una fuente. Escaneo gratuito, sin tarjeta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>

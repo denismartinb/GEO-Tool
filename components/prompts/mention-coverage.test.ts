@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRanking, coveragePercent, type CoverageExtractedJson } from "./mention-coverage";
 
 /**
- * PROMPT-DRAWER-TRUTH-1 (log §145).
+ * PROMPT-DRAWER-TRUTH-1 (log §147).
  *
  * Lo que protegen estos tests es una sola frase: **el ranking no puede afirmar
  * nada que sus propias filas no sostengan**. El fallo que los motiva cabía en
