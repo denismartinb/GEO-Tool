@@ -13236,3 +13236,116 @@ tiene un patrón sintáctico que se repite más de dos o tres veces, se nota**, 
 en una pieza que existe para posicionar en una categoría nueva se nota más,
 porque el lector que llega ya viene harto de leer lo mismo en otros seis
 sitios.
+
+---
+
+## 146. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
+
+Entran las tres últimas secciones del diseño aprobado —testimonio, FAQ y
+cierre— y con ellas se va algo que llevaba meses en producción sin que nadie lo
+mirase.
+
+### Lo que había: una persona que no existe y un dato que no se midió
+
+La sección `QUOTE` de la portada decía, entre comillas:
+
+> «Pasamos de no saber si la IA nos nombraba a tener un plan claro de qué
+> cambiar primero. En dos meses subimos del 9% al 21% de citas.»
+> — **Aisha Robinson, Growth Lead, Beltway**
+
+Ni la persona, ni la empresa, ni la cifra. Un testimonio de relleno de una
+maqueta que se quedó puesto y se sirvió como si fuera real en la página que más
+tráfico recibe. CLAUDE.md prohíbe las métricas falsas desde su primera versión,
+y esto es la forma más directa de romperlo: una cita atribuida a alguien.
+
+**Lo sustituye uno real**: Nerea Solís, marketing digital en Nordika Home, y el
++128% de cuota de voz en IA, que el fundador confirmó el 2026-08-22 que es una
+medición de esa cuenta. La regla que queda escrita en el propio componente: si
+algún día ese testimonio deja de poder sostenerse, **la sección se retira
+entera**; no se sustituye por otro nombre inventado.
+
+### La FAQ: tres respuestas del artboard afirmaban de más
+
+Las seis preguntas se verificaron contra el código antes de publicarse, y tres
+cambiaron. No por prudencia: porque eran falsas o incompletas.
+
+| El artboard decía | Lo que hace el producto | Publicado |
+|---|---|---|
+| «una llamada real por prompt y por motor» | Con muestreo, un plan de pago repite el conjunto hasta 5 veces para llegar al suelo de 50 respuestas (`lib/scan/sampling.ts`, ADR 0030) | «**al menos** una llamada real» |
+| «…y de forma continua» | Un proyecto Free tiene **un** escaneo y sólo uno: `runRecurringScanSweep` descarta los proyectos Free y `createPendingScanRunCore` rechaza el segundo | «…de forma continua **en los planes de pago**» |
+| «Cada fallo indica cuántos puntos recuperas» | `llms_txt_missing` sale siempre con `pointDelta: null` | «**Los fallos que puntúan** te dicen…» |
+
+La segunda es la que más importa: decirle «de forma continua» a quien acaba de
+registrarse en Free es prometerle algo que el backend nunca va a hacer.
+
+**El `FAQPage` sale de la misma constante que pinta la pantalla**
+(`lib/landing/home-faq.ts`). Escritos por separado divergirían, y el schema
+acabaría afirmando preguntas que la página no enseña — que es literalmente el
+fallo que este producto audita en las webs de sus clientes.
+
+### `<details>` de verdad, servidos abiertos
+
+La FAQ es acordeón en móvil y lista abierta en escritorio, como los dos
+artboards. Son `<details>`/`<summary>` nativos: teclado, lector de pantalla y
+buscar-en-la-página funcionan solos. **Se sirven abiertos y una isla los pliega
+en móvil**, nunca al revés — servirlos cerrados dejaría la sección inservible
+sin JS y escondería de la primera pintura el mismo texto que el `FAQPage`
+afirma.
+
+### Un gris que no pasaba contraste, y no era de esta fase
+
+La fila «Sin registro · Sin tarjeta · Sin llamada de ventas» hereda
+`.lp-hero-note`, que se servía en `--ink-4`: **2,63:1 sobre blanco**, muy por
+debajo del 4,5:1 de AA. No es decoración —es media objeción de compra
+resuelta—, así que pasa a `--ink-3`, **4,76:1**. La clase ya se usaba así en
+`/pricing` y en el comprobador gratuito, de modo que la corrección alcanza a
+las tres pantallas. Se declara aquí en vez de arreglarlo callando porque toca
+dos páginas fuera del alcance de esta fase.
+
+**Y `--ink-3` tampoco bastaba en el cierre**, que es donde esto se pone
+divertido: esa banda no está sobre blanco, está sobre el degradado, y a la
+altura de la fila —el 75% de la banda— el fondo ya es `#f3f7ff`. Ahí
+`--ink-3` da **4,43:1**, por debajo del 4,5 por siete centésimas, mientras que
+sobre el blanco de `/pricing` y del comprobador da 4,76 y pasa. En el cierre va
+`--ink-2`: **7,49:1**. Es exactamente el invariante que
+`.claude/rules/styles.md` ya tenía escrito —«un token que aprueba AA sobre
+blanco no lo aprueba sobre otra superficie»— pisado **mientras se corregía un
+fallo de contraste**, y no se vio hasta calcular el color pintado del degradado
+a esa altura: el `background-color` del elemento es transparente, así que
+preguntárselo al navegador devuelve el blanco del `body` y da un 4,76 que ahí
+no es cierto.
+
+### La misma trampa del orden del fichero, por tercera vez
+
+La escala móvil de estas tres secciones se escribió en el bloque
+`@media (max-width: 560px)` que había más cerca, y ese bloque vive **antes** en
+`app/globals.css` que las reglas base que corrige: a igualdad de especificidad
+gana la última, así que no pintó nada. El síntoma no fue un color raro, fue una
+sección rota —la respuesta de la FAQ metida en una columna de 111px y el galón
+sin aparecer— y sólo se vio midiendo, no leyendo. Ya había pasado con la escala
+tipográfica (§143) y con los colores de la sección oscura (§144). **La regla
+que sale de aquí: un tramo responsive se escribe junto a lo que corrige, no en
+el bloque de esa anchura que pille más cerca.**
+
+### El presupuesto de assets hizo su trabajo
+
+`tests/asset-budget.test.ts` rechazó los dos JPEG del testimonio, por formato y
+por peso. Los dos van ahora en WebP y **redimensionados al tamaño en que se
+pintan** —128px el retrato contra 520 del original, 720px la captura contra
+900—: 28 KB entre los dos. Aun así el tope de 1,5 MB se quedaba corto por 3,5
+KB, y se sube a 1,7 MB con la razón escrita en el propio fichero, que es lo que
+ese test pide que se haga. De paso se corrige su comentario, que decía «615 KB
+en 25 ficheros» cuando ya eran 1.512 en 41: un presupuesto cuya explicación
+lleva meses obsoleta ha dejado de ser una decisión y es un número heredado.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
+en verde. Once anchuras de 320 a 1440: sin desbordamiento y sin nada fuera de
+su caja en las tres secciones; acordeón por debajo de 560 y lista abierta por
+encima, comprobado a los dos lados del corte. **Sin JavaScript las seis
+preguntas se sirven abiertas**, medido.
+
+**Pendiente / conocido.** `.claude/rules/onboarding.md` afirma que «se escanea
+continuamente» se sostiene en `lib/scan/cron.ts`, «diario en free/pro/agency».
+Es **inexacto**: un proyecto Free no llega nunca a su intervalo. La regla se ha
+quedado como estaba —es de otra zona y el texto del tour es del fundador— pero
+queda anotado aquí para quien la lea después.

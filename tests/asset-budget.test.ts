@@ -30,25 +30,34 @@ import { describe, expect, it } from "vitest";
 const MAX_FILE_BYTES = 320 * 1024;
 
 /**
- * Peso total de `public/`. Hoy son 1.544 KB en 44 ficheros.
+/**
+ * Peso total de `public/`. Hoy: **1.571 KB en 46 ficheros**.
  *
- * **Subido de 1,5 a 1,75 MB el 2026-08-23**, con la razón que el comentario de
- * arriba exige. El tope de 1,5 MB se fijó con `public/` en 615 KB, o sea con
- * un 60 % de holgura; al publicar este artículo quedaban **24 KB libres**, y
- * una portada de blog de las que ya están publicadas pesa entre 59 y 88 KB.
- * Es decir: el presupuesto ya no daba para *ninguna* pieza de contenido más, y
- * el motor de contenido de GROWTH-2 publica ~10 URLs al mes
- * (`docs/content-strategy.md` §5). Un tope que convierte "publicar un artículo
- * con portada" en un fallo de CI no está midiendo una regresión, está midiendo
- * el uso normal del repositorio.
+ * **Subido a 1,75 MB** — dos razones, en el mismo merge y ambas con número
+ * escrito, como este comentario exige:
+ *
+ * 1. El testimonio real de la portada (HOME-2026-08 Fase C, 2026-08-22): un
+ *    retrato y una captura de la web del cliente, 28 KB entre los dos, ya en
+ *    WebP y ya redimensionados al tamaño en que se pintan (128px el retrato,
+ *    720px la captura, contra los 520 y 900 del original).
+ * 2. La portada de `/blog/geo-vs-aeo-vs-seo` (2026-08-23): siguiendo el
+ *    lenguaje visual del resto del catálogo, no el mínimo posible.
+ *
+ * Con `public/` en 1.512 KB antes de las dos, el tope de 1,5 MB dejaba **~24
+ * KB libres** — menos que una sola portada de blog (59-88 KB de media en el
+ * catálogo). Ese hueco era el problema real, no ninguna de las dos piezas por
+ * separado: el motor de contenido de GROWTH-2 publica ~10 URLs al mes
+ * (`docs/content-strategy.md` §5), así que un tope sin margen convierte
+ * "publicar un artículo con portada" en un fallo de CI — eso no es medir una
+ * regresión, es medir el uso normal del repositorio.
  *
  * Lo que NO cambia es para qué existe el número: sigue siendo el estado real
- * con holgura para crecer, no una aspiración. Los 1,75 MB dan sitio a unas
- * seis portadas más al peso de la de este artículo (28 KB) o a tres al peso de
- * las más pesadas del catálogo, que es margen para un par de meses de
- * publicación. La siguiente vez que se agote, la pregunta correcta no es subir
- * otro cuarto de mega: es por qué una portada del catálogo pesa 88 KB cuando
- * una equivalente cabe en 28.
+ * con holgura para crecer, no una aspiración. 1,75 MB deja sitio a unas seis
+ * portadas más al peso de la más ligera de las nuevas (28 KB) o a dos al peso
+ * de las más pesadas del catálogo (~88 KB) — margen para un par de meses de
+ * publicación. La siguiente vez que se agote, la pregunta correcta no es
+ * subir otro cuarto de mega: es por qué una portada del catálogo pesa 88 KB
+ * cuando una equivalente cabe en 28.
  */
 const MAX_TOTAL_BYTES = 1.75 * 1024 * 1024;
 
