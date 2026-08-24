@@ -64,6 +64,11 @@ function Escena0() {
         <span className="n">11</span>
         <span className="of">/ 14</span>
         <span className="lbl">preguntas donde IKEA no aparece</span>
+        <span className="lp-hx-track" aria-hidden="true">
+          {Array.from({ length: 14 }, (_, i) => (
+            <span key={i} className={i < 11 ? "miss" : undefined} />
+          ))}
+        </span>
       </div>
 
       <div className="lp-hx-chat">

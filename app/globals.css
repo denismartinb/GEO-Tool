@@ -4796,11 +4796,20 @@ a.notif-row:hover {
 /* El veredicto entra ANTES que la conversación: en la alternativa "burbujas
    de chat" a secas, el golpe dependía de leer el párrafo entero. El 11/14 se
    lee sin necesidad de leer nada más — mezcla con "veredicto primero",
-   ambas probadas como alternativas en el chat antes de esta versión. */
+   ambas probadas como alternativas en el chat antes de esta versión. La
+   frase va a la derecha del número, no debajo (fundador, 2026-08-24: "puedes
+   poner preguntas donde IKEA no aparece a la derecha de 11/14"); envuelve
+   sola si el ancho no da, porque nada la fuerza a su propia línea. La tira
+   de 14 sí fuerza línea propia (`flex-basis: 100%`) — es la que B llevaba y
+   D había dejado fuera por espacio; vuelve porque el fundador la pidió de
+   nuevo ("y poner debajo el gráfico de las 11/14 barras"). */
 .lp-hx-verdict { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .lp-hx-verdict .n { font-family: var(--font-display); font-size: 40px; font-weight: 800; color: #b3202e; line-height: 1; letter-spacing: -.02em; }
 .lp-hx-verdict .of { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--ink-3); }
-.lp-hx-verdict .lbl { flex-basis: 100%; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.lp-hx-verdict .lbl { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.lp-hx-track { display: flex; gap: 3px; flex-basis: 100%; margin-top: 4px; }
+.lp-hx-track span { flex: 1; height: 5px; border-radius: 999px; background: var(--line-strong); }
+.lp-hx-track span.miss { background: #b3202e; }
 
 /* Pregunta Y respuesta en burbuja de chat — no sólo la respuesta (fundador,
    2026-08-24: "recuerda poner tanto la pregunta como la respuesta en
@@ -4833,13 +4842,21 @@ a.notif-row:hover {
    respuesta, no una caja de aviso aparte — un solo objeto visual, en vez de
    dos cajas apiladas. Entra con un rebote corto, después del texto; es lo
    único de la demo que se permite llamar la atención. Sigue siendo
-   `#hx-foco` — ver el comentario del componente. */
+   `#hx-foco` — ver el comentario del componente.
+
+   Rojo suave, no el sólido de antes: relleno vivo + texto blanco leía
+   "llamativo" de más para una insignia que aparece SOLA sobre una tarjeta
+   blanca (fundador, 2026-08-24: "en la pill de Ikea me gusta un rojo no tan
+   llamativo, como el de la maqueta"). `--neg-soft`/`--neg-ink` son los
+   mismos tokens que ya usaba la caja de aviso original antes de este
+   rediseño — no un rojo nuevo, el mismo atenuado de siempre. */
 .lp-hx-foco {
   position: absolute; top: -12px; right: -8px; z-index: 1;
   display: flex; align-items: center; gap: 5px;
-  background: #b3202e; color: #fff; font-size: 11px; font-weight: 700;
+  background: var(--neg-soft); color: var(--neg-ink); font-size: 11px; font-weight: 700;
   padding: 6px 11px 6px 7px; border-radius: 999px;
-  box-shadow: 0 6px 16px rgba(179,32,46,.35);
+  border: 1px solid rgba(165,31,44,.18);
+  box-shadow: 0 6px 16px rgba(16,24,40,.12);
   animation: lp-hx-foco .6s cubic-bezier(.2,.8,.25,1) .75s both;
 }
 @keyframes lp-hx-foco {
@@ -4849,7 +4866,7 @@ a.notif-row:hover {
 }
 .lp-hx-focoico {
   width: 15px; height: 15px; flex: 0 0 auto; border-radius: 999px;
-  background: rgba(255,255,255,.22); color: #fff; display: grid; place-items: center;
+  background: rgba(165,31,44,.14); color: var(--neg-ink); display: grid; place-items: center;
 }
 
 /* ── 1 · el marcador ────────────────────────────────────────────────────── */

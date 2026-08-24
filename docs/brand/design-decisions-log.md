@@ -14266,3 +14266,20 @@ de cada una sin dejar diff.
     viva dentro de la burbuja en vez de dentro de una tarjeta con borde.
     Verificado con Playwright en 375/768/1280px: el cursor cae a menos de 1px
     del centro real de la insignia en las tres.
+14. **Tres retoques sobre la D, mirando la captura real.** El fundador, sobre
+    la propia demo: "En la pill de Ikea me gusta un rojo no tan llamativo,
+    como el de la maqueta. Puedes poner preguntas donde IKEA no aparece a la
+    derecha de 11/14. Y poner debajo el gráfico de las 11/14 barras."
+    - La insignia pasa de relleno rojo sólido + texto blanco a
+      `--neg-soft`/`--neg-ink` — los mismos tokens que ya llevaba la caja de
+      aviso ANTES de este rediseño, no un rojo nuevo. Relleno vivo con texto
+      blanco leía «llamativo» de más para algo que aparece solo, colgado de
+      la esquina de una tarjeta blanca.
+    - La frase «preguntas donde IKEA no aparece» deja de forzar su propia
+      línea (`flex-basis: 100%` en `.lbl`) y pasa a fluir a la derecha del
+      11/14, envolviendo sola si el ancho no da — no es un salto fijo, es
+      flujo normal.
+    - La tira de 14 barras de la alternativa B —descartada en la D por
+      espacio— vuelve, debajo del número: 11 en rojo, 3 en `--line-strong`.
+      Ella sí fuerza su propia línea, porque tiene que quedar clavada bajo el
+      11/14 y no colarse junto a la frase si hay hueco.
