@@ -14328,3 +14328,18 @@ de cada una sin dejar diff.
     disponible, ningún nivel nuevo. Por debajo de 1200px el marco sigue
     igualado al titular, sin cambios. Verificado con Playwright: 1060px de
     ancho real a 1280 y 1440px, sin cambios en 768/375.
+18. **La píldora del campo del hero sube de sombra para leerse con el mismo
+    bisel que la demo.** El fundador, comparando contra Semrush: "No veo en
+    la captura que hayas conseguido el mismo bisel que Semrush". Medido:
+    `.lp-field-wrap` llevaba `0 6px 28px rgba(...,.08)` — casi invisible sobre
+    el degradado azul claro del hero (`.lp-hero--home`) — mientras
+    `.lp-hx-dev` lleva `0 40px 90px rgba(...,.16)`, mucho más opaca y grande.
+    El borde no era el problema (`--line-strong` en la píldora es de hecho más
+    oscuro que `--line` en el marco); la sombra sí. Sube a
+    `0 24px 56px rgba(...,.16), 0 6px 16px rgba(...,.07)` — a medio camino
+    entre la antigua y la del marco, sin llegar a igualarla del todo porque es
+    un elemento mucho más pequeño. Se cambia en los dos sitios donde vive el
+    mismo valor duplicado a propósito: `.lp-field-wrap` en escritorio y
+    `.lp-field` en móvil (el «cromado» se mueve del envoltorio al campo según
+    la anchura; ver comentario en `app/globals.css`). Verificado con capturas
+    reales en escritorio y móvil, enviadas al fundador antes de hacer commit.
