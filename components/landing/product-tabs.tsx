@@ -98,14 +98,35 @@ export function ProductTabs({
     return () => ro.disconnect();
   }, [medir]);
 
-  // En móvil la tira se desplaza para que la pestaña activa quede a la vista:
-  // con cinco y una pantalla de 375px, las dos últimas nacen fuera del encuadre.
+  /**
+   * En móvil la tira se desplaza para que la pestaña activa quede a la vista:
+   * con cinco y una pantalla de 375px, las dos últimas nacen fuera del
+   * encuadre.
+   *
+   * `behavior: "instant"`, NUNCA `"smooth"` ni `"auto"`. La pastilla vive
+   * DENTRO de este mismo contenedor con scroll, así que su posición en
+   * pantalla es `translateX - scrollLeft`: dos animaciones independientes
+   * restando entre sí. Un scroll suave del navegador tiene su propio reloj y
+   * su propia curva de aceleración, ajenos a los `.3s cubic-bezier` de la
+   * pastilla — y cuando el salto de pestaña obliga a desplazar mucho (p. ej.
+   * de la primera a la última), las dos curvas divergen a media carrera y la
+   * resta se dispara: medido con Playwright, la pastilla llegó a -309px en un
+   * viewport de 375px, volando fuera de la pantalla por la izquierda antes de
+   * asentarse ("la animación de las pestañas no funciona bien", fundador,
+   * 2026-08-24). `"auto"` NO basta para evitarlo: la spec de CSSOM View hace
+   * que `behavior:"auto"` herede el `scroll-behavior: smooth` que la regla
+   * móvil de `.lp-prod-tabs` ya declara para el gesto táctil, así que seguía
+   * animándose exactamente igual — sólo `"instant"` lo bloquea de verdad. Con
+   * el scroll instantáneo la tira salta a su sitio en el mismo tick del clic
+   * y la pastilla queda como la única animación visible, deslizándose dentro
+   * de un marco ya quieto.
+   */
   useEffect(() => {
     const tira = tiraRef.current;
     const activa = botonesRef.current[indice];
     if (!tira || !activa) return;
     const izq = activa.offsetLeft - (tira.clientWidth - activa.clientWidth) / 2;
-    tira.scrollTo({ left: Math.max(0, izq), behavior: "smooth" });
+    tira.scrollTo({ left: Math.max(0, izq), behavior: "instant" });
   }, [indice, presentes]);
 
   /**
