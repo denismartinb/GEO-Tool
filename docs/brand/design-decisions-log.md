@@ -14119,3 +14119,27 @@ entera desaparecía si `corriendo` era falso; ahora sólo la animación de la
 pastilla en curso depende de `corriendo` — el estado ya visto es hecho, no
 progreso inventado, y no tiene por qué desaparecer con el reloj. Regla
 actualizada en el mismo PR.
+
+**Dos ajustes más, mismo PR, tras probar seis titulares con capturas reales.**
+Antes de decidir, se generaron capturas de las seis frases contra el servidor
+local con el CSS real de `.lp-h1` (60px, Bricolage Grotesque 800) — no una
+maqueta aparte, la tipografía de producto — y se restauró el fichero después
+de cada una sin dejar diff.
+
+1. **El titular del hero cambia** de «¿Te recomienda la inteligencia
+   artificial?» a **«¿La IA recomienda tu marca?»** (fundador, 2026-08-24: «Vamos
+   con ¿La IA recomienda tu marca?»). Nombra sujeto, verbo y objeto sin
+   depender de que «te» se lea como «tu marca» — el visitante frío no siempre
+   hace esa conexión a la primera. Pierde el `<br>` fijo del titular anterior:
+   la frase es corta de sobra para no necesitar el salto que sí hacía falta
+   con «la inteligencia artificial» entera, y a los anchos habituales del
+   hero cabe en una línea sola. **Diverge a propósito del artboard aprobado**
+   (`docs/design-reference/home-2026-08/`), que lleva la versión larga —
+   decisión del fundador sobre el propio titular, no un gap de
+   implementación.
+2. **La tira de avance de la demo del hero se oscurece.** Los tramos vacíos
+   usaban `--line` (#e8eaef), que a 3px de alto casi no se distinguía de
+   `--canvas` detrás. Pasan a `--line-strong` (#c8ccd6) — el mismo tono que ya
+   usa el medidor de fuerza de contraseña (`.pw-meter i`) para el mismo
+   problema: una barra fina que necesita leerse vacía sin convertirse en un
+   borde.

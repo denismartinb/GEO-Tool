@@ -337,12 +337,13 @@ export function LandingPage() {
               pregunta a propósito: es la que se hace quien llega, y es la que
               el comprobador gratuito responde en veinte segundos. */}
           <h1 className="lp-h1">
-            {/* El salto es del diseño, no del ancho: la maqueta lleva un `<br>`
-                ahí para que «la inteligencia artificial» caiga entera en la
-                segunda línea, en azul. Dejarlo fluir parte la frase por donde
-                toque el ancho y en 1280 px se lleva «la» a la primera. */}
-            ¿Te recomienda<br />
-            <span className="lp-h1-accent">la inteligencia artificial</span>?
+            {/* Titular sustituido tras probar seis alternativas (fundador,
+                2026-08-24): nombra sujeto, verbo y objeto sin depender de que
+                «te» se lea como «tu marca» — la anterior obligaba a esa
+                inferencia. Deja de llevar `<br>` fijo: la frase es corta
+                de sobra para no necesitar el salto que sí hacía falta con
+                «la inteligencia artificial» entera. */}
+            ¿<span className="lp-h1-accent">La IA</span> recomienda tu marca?
           </h1>
           <p className="lp-lead">
             Comprobamos si ChatGPT, Gemini y Claude nombran tu marca al responder a tus clientes

@@ -4946,8 +4946,13 @@ a.notif-row:hover {
    pantalla o si se llegó a la última escena, desaparece: una barra que avanza
    sin que vaya a pasar nada es progreso inventado. */
 .lp-hx-avance { display: flex; gap: 5px; margin: 16px 0 0; }
+/* `--line-strong` y no `--line`: a 3px de alto una pastilla vacía con
+   `--line` casi no se distingue del `--canvas` de fondo — el fundador pidió
+   verla "un poco más oscura" (2026-08-24). `--line-strong` es el mismo tono
+   que ya usa el medidor de fuerza de contraseña (`.pw-meter i`) para el
+   mismo caso: una barra fina que necesita leerse vacía sin ser un borde. */
 .lp-hx-avance .s {
-  flex: 1; height: 3px; border-radius: 999px; background: var(--line); overflow: hidden;
+  flex: 1; height: 3px; border-radius: 999px; background: var(--line-strong); overflow: hidden;
 }
 /* Llena y quieta: escena ya vista, o la actual con el reloj parado. Mismo
    degradado de marca que el relleno en marcha, para que una pastilla no lea
