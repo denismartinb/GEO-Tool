@@ -13534,3 +13534,93 @@ que este PR necesitaba y que ninguna cuenta de un solo motor podía darle.
 - La tarjeta «La IA menciona tu marca» sigue siendo binaria (verde si al menos
   una respuesta te nombra). Con 1 de 3 es cierta pero generosa; la lista «Por
   motor» justo debajo la desambigua. No se toca aquí.
+
+## 148. `/pricing` dejaba de hablar de usuarios ilimitados: no hay gestión de equipo que lo sostenga (2026-08-24)
+
+`/pricing` y `/docs/planes-y-limites` vendían "usuarios ilimitados en todos
+los planes" como diferenciador — titular del hero, ítem del checklist, fila
+propia ("Usuarios del equipo") en la matriz comparativa, y una pregunta de la
+FAQ dedicada a contrastar "cobramos por prompts y motores, no por usuarios".
+La gestión de equipo/RBAC nunca se construyó: sigue en la lista de "Forbidden
+Without Explicit Approval" de CLAUDE.md, y `/dashboard/settings/team` sólo
+redirige desde que se ocultó la pestaña en 2026-07-12. Es la misma clase de
+fallo que PRICING-TRUTH-1 corrigió: un reclamo verificable en dos clics —abrir
+Ajustes y buscar cómo invitar a alguien— que no se sostiene.
+
+**Cambio, sin tocar el tema de fondo ("paga por valor").** El titular del hero
+pasa de "no por usuarios" a "no por adivinar"; el checklist cambia "Usuarios
+ilimitados" por "Sube o baja de plan cuando quieras" (cierto en los cuatro
+planes); la fila "Usuarios del equipo" sale de `PLAN_MATRIX`; la pregunta de la
+FAQ se queda sin la mitad que mencionaba usuarios ("¿Por qué cobráis por
+prompts y motores?"). `/docs/planes-y-limites` pierde el mismo párrafo — se
+corrige ahí también porque, si no, la página quedaba contradiciendo a
+`/pricing` a un enlace de distancia, el mismo patrón que ya cubre
+`.claude/rules/growth-content.md` (§74).
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.790 pruebas) y `pnpm run
+validate` en verde. Sin fila nueva en el mapa de zonas: es una corrección
+editorial sobre un invariante que ya existía (CLAUDE.md, "no fake product
+behavior"), no una fase que cree uno nuevo.
+
+## 149. Rediseño de `/pricing` (Fase A+B): copy nuevo y medios de pago — la promo de precio y el escaneo diario de Starter se quedan fuera (2026-08-24)
+
+El fundador pidió un rediseño más amplio de `/pricing`: hero nuevo, precios
+tachados con promo hasta el 1 de septiembre, banda de medios de pago, quitar
+"Cómo medimos" y "El precio se ancla…", renombrar "frecuencia de refresco" a
+"frecuencia de escaneo", y subir Starter de escaneo semanal a diario. Se
+partió en fases porque dos de esas piezas tocan invariantes duros del
+repositorio, no solo copy.
+
+### Lo que se ha hecho (Fase A: copy/IA; Fase B: medios de pago)
+
+- Hero: badge "Planes que crecen contigo", título "Paga solo por lo que
+  necesitas", subtítulo y checklist nuevos (`components/pricing/pricing-page.tsx`).
+- Retirados los bloques "Cómo medimos" (`METER_ITEMS`) y "El precio se ancla
+  en el tiempo de analista que te ahorras", y el párrafo "Las palancas de
+  upsell…" bajo la comparativa.
+- "Frecuencia de refresco" → "Frecuencia de escaneo" en los 6 sitios donde
+  aparecía: `app/pricing/plans-data.ts` (matriz, FAQ, highlights de Pro/Agencia),
+  `components/billing/change-plan-modal.tsx` y `app/docs/planes-y-limites/page.tsx`.
+- FAQ "¿Cómo se mide la fiabilidad de los datos?" retirada de `/pricing` —el
+  principio que describía (credibilidad de medición visible) sigue siendo
+  real y sigue en la matriz comparativa, solo deja de tener su propia pregunta
+  aquí.
+- Banda "Pagos seguros con Stripe, Apple Pay y Google Pay": tres marcas
+  CC0 de `simple-icons` (silueta simplificada, no el asset de prensa oficial
+  pixel-exacto de cada marca), en su color de marca. Asunción, no verificación:
+  Stripe Checkout las ofrece por defecto cuando no se restringe
+  `payment_method_types` (`app/dashboard/settings/billing/actions.ts` no lo
+  hace), pero nadie ha confirmado en el propio dashboard de Stripe que Apple
+  Pay/Google Pay estén activos. Si no lo están, la insignia miente y hay que
+  quitarla o activar esos métodos.
+
+### Lo que se ha dejado fuera, y por qué
+
+- **La promo de precio (45€→19€ Starter, 179€→59€ Pro) no se ha tocado.**
+  `plans-data.ts.price` es solo un número de display — lo que cobra Stripe de
+  verdad sale de `STRIPE_PRICE_ID_STARTER`/`STRIPE_PRICE_ID_PRO`
+  (`lib/stripe.ts`), completamente desacoplado. Cambiar solo el número
+  mostrado sería anunciar un precio que el checkout no cobra — la clase de
+  cosa que CLAUDE.md prohíbe explícitamente, y "billing" está en la lista de
+  áreas que necesitan aprobación propia para "nuevos mecanismos de precio". Hoy
+  Stripe sigue en modo test en producción (`docs/launch-plan.md`, Fase 5 LAUNCH
+  pendiente), así que el riesgo inmediato es bajo, pero la promo necesita un
+  mecanismo real (con fecha de caducidad en código, no en la memoria de
+  alguien) antes de construirse.
+- **Starter sigue en escaneo semanal.** `lib/scan/cron.ts`
+  (`RECURRING_INTERVAL_MS_BY_PLAN.starter = 7 * DAY_MS`) es justo el fix de
+  PRICING-TRUTH-1 que hasta ahora garantizaba que el cron cumpliera lo que
+  `/pricing` prometía. Subirlo a diario es un cambio real de pipeline —7x más
+  llamadas a Gemini/Claude/ChatGPT por proyecto Starter al mes— que además
+  compone mal con la promo de precio no aprobada (bajar precio y subir coste
+  a la vez). Por eso el highlight de Starter dice "Escaneo **semanal** +
+  evolución", no "diario": decir lo contrario sin el cambio de backend habría
+  sido la misma clase de promesa falsa que se acaba de quitar.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.790 pruebas) y `pnpm run
+validate` en verde.
+
+**Pendiente.** Confirmar con el fundador si Apple Pay/Google Pay están
+activos en Stripe antes de dar la Fase B por cerrada del todo. Fases C
+(promo de precio) y D (Starter a diario) siguen bloqueadas hasta su propia
+aprobación explícita.
