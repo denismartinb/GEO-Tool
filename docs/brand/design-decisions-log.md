@@ -14189,3 +14189,40 @@ de cada una sin dejar diff.
    degradado de arriba y el titular), y `.lp-shot.lp-hx` —que en móvil no
    tenía override propio y heredaba el `margin-top: 54px` de escritorio— sube
    a 66px antes de la demo animada.
+
+**Cinco ajustes más, mismo PR, misma tarde.**
+
+7. **Tercera bajada del hero del día**: «Descubre si ChatGPT, Gemini y Claude
+   te recomiendan y cómo mejorar tu visibilidad en IA.» pasa a «Analizamos si
+   ChatGPT, Gemini y Claude te recomiendan y cómo puedes mejorar tu
+   visibilidad en los motores de IA.»
+8. **La entradilla de «El cambio de reglas» se recorta.** «...recibe una
+   recomendación con dos o tres marcas. O estás en esa frase, o no existes.»
+   pasa a «...recibe una respuesta. O estás en esa frase, o no existes.» —
+   fuera «con dos o tres marcas», y «recomendación» pasa a «respuesta». El
+   enlace a `/geo` (la tabla SEO↔GEO) sigue envolviendo la misma frase en
+   negrita, con «respuesta» en vez de «recomendación».
+9. **El titular de la tira del blog gana «la visibilidad y»**: «Cómo se
+   trabaja el posicionamiento GEO» pasa a «Cómo se trabaja la visibilidad y
+   el posicionamiento GEO.» (con punto final, que antes no llevaba).
+10. **Las cinco pastillas de la barra de avance pasan de degradado a azul
+    sólido.** Cada pastilla mide ~60-80px, y en ese ancho el degradado
+    `--brand-blue` → `--brand-cyan` dejaba el extremo en un cian claro casi
+    indistinguible del `--line-strong` vacío detrás (fundador: "que las 5
+    barras de cargando tengan un azul más visible, al final de la barra no se
+    ve bien"). `--brand-blue` de punta a punta se lee igual de intenso en
+    todo el tramo — mismo color en la pastilla llena y en el relleno en
+    marcha, sin que cambie de tono a mitad de camino.
+11. **El texto de la pestaña activa de «Cinco pantallas» deja de saltar en
+    seco.** Con el fondo ya arreglado (arriba, y antes con el `:hover`), lo
+    que quedaba visible era el propio diseño: `color` cambiaba con
+    `transition: color 0s .3s` — cero duración, sólo retardo — así que pasaba
+    de `--ink-2` a blanco puro EN UN SOLO FOTOGRAMA. Sin nada entre medias,
+    ese salto se lee como un parpadeo (fundador: "el texto como que parpadea
+    de negro a blanco y queda raro"). El fondo tiene que seguir siendo un
+    salto — si se difuminara, habría un instante con dos zonas oscuras a
+    medias, la pastilla ya llegada y el fondo propio entrando — pero el texto
+    no tiene ese problema, así que gana un fundido real: `color .15s .3s`.
+    Medido con Playwright: el fondo salta en el mismo fotograma de siempre;
+    el color pasa por ocho tonos intermedios antes de llegar a blanco puro,
+    ~150ms después.

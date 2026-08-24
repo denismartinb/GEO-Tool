@@ -4967,13 +4967,18 @@ a.notif-row:hover {
 .lp-hx-avance .s {
   flex: 1; height: 3px; border-radius: 999px; background: var(--line-strong); overflow: hidden;
 }
-/* Llena y quieta: escena ya vista, o la actual con el reloj parado. Mismo
-   degradado de marca que el relleno en marcha, para que una pastilla no lea
-   como un color distinto de la otra a mitad de camino. */
-.lp-hx-avance .s.hecho { background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan)); }
+/* Azul sólido, no degradado — cada pastilla mide ~60-80px, y en ese ancho el
+   degradado a `--brand-cyan` dejaba el extremo de la pastilla en un cian
+   claro que casi no se distinguía del `--line-strong` vacío detrás (fundador,
+   2026-08-24: "que las 5 barras de cargando tengan un azul más visible, al
+   final de la barra no se ve bien"). `--brand-blue` de punta a punta se lee
+   igual de intenso en todo el tramo. Llena y quieta: escena ya vista, o la
+   actual con el reloj parado. Mismo color que el relleno en marcha, para que
+   una pastilla no lea como un color distinto de la otra a mitad de camino. */
+.lp-hx-avance .s.hecho { background: var(--brand-blue); }
 .lp-hx-avance .s .f {
   display: block; width: 100%; height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan));
+  background: var(--brand-blue);
   transform: scaleX(0); transform-origin: left center;
   animation-name: lp-hx-avance; animation-timing-function: linear; animation-fill-mode: both;
 }
@@ -6262,9 +6267,20 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod-tabs.con-pastilla .lp-prod-tab {
   transition: background-color 0s, border-color 0s, color 0s;
 }
+/* El texto lleva fundido corto (`.15s`), no el salto en seco de las otras
+   dos. El fondo TIENE que ser un salto: si se difuminara, habría un instante
+   con dos zonas oscuras a medias —la pastilla ya llegada y el fondo propio
+   entrando— justo lo que el párrafo de arriba evita. El texto no tiene ese
+   problema —es una sola pestaña, no dos solapando— y el salto en seco SÍ se
+   notaba ahí: de golpe, blanco puro sobre negro puro en un solo fotograma,
+   sin nada entre medias, se lee como un parpadeo (fundador, 2026-08-24: "el
+   texto como que parpadea de negro a blanco y queda raro" — una vez ya
+   arreglado el fondo, log §152, esto es lo que quedaba visible detrás).
+   `.15s` empieza en el mismo instante que el fondo (mismo retardo, `.3s`) y
+   termina antes de que a nadie le dé tiempo a mirar dos veces. */
 .lp-prod-tabs.con-pastilla .lp-prod-tab.on {
   background: var(--ink); border-color: var(--ink); color: #fff;
-  transition: background-color 0s .3s, border-color 0s .3s, color 0s .3s;
+  transition: background-color 0s .3s, border-color 0s .3s, color .15s .3s;
 }
 /* Sin movimiento la pastilla no viaja, así que esperar .3s dejaría el texto
    oscuro sobre la pastilla ya colocada. */

@@ -347,7 +347,8 @@ export function LandingPage() {
             recomienda tu marca?
           </h1>
           <p className="lp-lead">
-            Descubre si ChatGPT, Gemini y Claude te recomiendan y cómo mejorar tu visibilidad en IA.
+            Analizamos si ChatGPT, Gemini y Claude te recomiendan y cómo puedes mejorar tu visibilidad
+            en los motores de IA.
           </p>
           {/* Las llamadas a la acción viven DENTRO de `HeroDomainField`, no
               aquí: «Analiza gratis» tiene que guardar el dominio escrito antes
@@ -418,9 +419,9 @@ export function LandingPage() {
                   pestaña nueva, se llega a la página que lo explica con más sitio.
                   Un modal que no se abre no deja nada detrás; un enlace sí. */}
               <Link className="lp-sec-lnk" id="lp-abrir-tabla" href="/geo">
-                <strong>no recibe diez enlaces para elegir: recibe una recomendación</strong>
-              </Link>{" "}
-              con dos o tres marcas. <strong>O estás en esa frase, o no existes.</strong>
+                <strong>no recibe diez enlaces para elegir: recibe una respuesta</strong>
+              </Link>
+              . <strong>O estás en esa frase, o no existes.</strong>
             </p>
           </div>
 
@@ -1285,7 +1286,7 @@ export function LandingPage() {
             <div className="lp-blog-head">
               <div>
                 <div className="lp-kicker">Aprender</div>
-                <h2 className="lp-blog-h2">Cómo se trabaja el posicionamiento GEO</h2>
+                <h2 className="lp-blog-h2">Cómo se trabaja la visibilidad y el posicionamiento GEO.</h2>
               </div>
               <Link className="lp-blog-todo" href="/blog">
                 Ver el blog
