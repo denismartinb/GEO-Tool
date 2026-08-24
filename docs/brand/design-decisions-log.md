@@ -13349,3 +13349,188 @@ continuamente» se sostiene en `lib/scan/cron.ts`, «diario en free/pro/agency»
 Es **inexacto**: un proyecto Free no llega nunca a su intervalo. La regla se ha
 quedado como estaba —es de otra zona y el texto del tour es del fundador— pero
 queda anotado aquí para quien la lea después.
+
+---
+
+## 147. Un motor de tres se pintaba como «100%», y la evidencia desaparecía sin decirlo (PROMPT-DRAWER-TRUTH-1, 2026-08-23)
+
+El fundador abrió el cajón de un prompt en su propio proyecto y le dio la
+sensación de que las respuestas estaban condicionadas por su cuenta: los
+motores «sabían» que trabaja en GenScore. No lo estaban —y la investigación que
+lo descarta está más abajo—, pero al ir a comprobarlo aparecieron **dos
+afirmaciones falsas en la misma pantalla**, y esas sí eran nuestras.
+
+### Lo que decía la pestaña Resumen
+
+En una sola captura convivían esto:
+
+> Gemini **Mencionada** · ChatGPT **Ausente** · Claude **Ausente**
+
+y, tres centímetros más abajo:
+
+> **1. Tu marca** «Tú» — **100%**
+
+La celda era literalmente `{row.mentioned ? "100%" : "0%"}` sobre
+`results.some(r => r.brand_mentioned)`. Un motor de tres nombrándote se pintaba
+como cobertura total. Con muestreo (ADR 0030) el error crece en vez de
+diluirse: nueve respuestas y una mención seguían siendo «100%».
+
+**La puntuación real nunca tuvo este fallo.** `lib/scoring/run-scoring.ts`
+calcula `brandMentionedCount / totalResults` desde siempre. Era una mentira de
+pantalla, no de scoring — lo cual no la hace menor: es justo la pantalla donde
+alguien va a decidir si se fía de las cifras del resto del producto.
+
+Ahora la cobertura se cuenta por respuestas (`1/3 · 33%`), con la fracción al
+lado del porcentaje porque un «33%» sin denominador no se puede juzgar y el
+denominador cambia de un prompt a otro. Tres decisiones que van con ello:
+
+- **Denominadores distintos por entidad, a propósito.** La marca se mide sobre
+  todas las respuestas (`brand_mentioned` existe en todas las filas, mismo
+  denominador que `visibilityScore`); un competidor, sólo sobre las que
+  llegaron a evaluarlo. Una fila cuya extracción falló no tiene opinión sobre
+  ese competidor, y meterla en su denominador convertiría un fallo nuestro en
+  un 0% suyo. Es el criterio que `computeBrandPosition` ya aplicaba al saltarse
+  las filas sin `extracted_json`, no uno nuevo.
+- **Sin evaluar se pinta «—», no «0%».** Un cero es una afirmación sobre una
+  marca que nadie llegó a mirar (mismo criterio que `ScoreGauge` en Auditoría
+  web).
+- **La marca propia deja de estar clavada en el primer puesto.** Estaba pinada
+  arriba siempre que estuviera mencionada, así que el «ranking» no ordenaba
+  nada: salías primero por construcción. Ahora manda la cobertura y la marca
+  propia sólo gana los empates. Un competidor al que la IA nombra más veces que
+  a ti sale por encima, que es la única versión de esta pantalla que sirve para
+  algo.
+
+### Lo segundo: la evidencia que se esfumaba
+
+Debajo de «La IA menciona tu marca» en verde no había nada. Ni la cita, ni una
+explicación: el panel «Evidencias de mención» se filtraba entero cuando el
+grupo del motor traía `evidence: []` (ADR 0021, follow-up 2, que lo eligió a
+conciencia: «mejor ninguna evidencia que una falsa»). Es correcto y es mudo, y
+lo mudo aquí se lee como inventado.
+
+**La hipótesis con la que se empezó era falsa y conviene dejarlo escrito.** Se
+supuso que `verifyMention` se estaba comiendo las citas al compararlas contra
+el texto crudo sin normalizar el markdown: la respuesta lleva
+`**Genscore**: Ideal para…` y el modelo cita sin los asteriscos, así que el
+nombre suelto pasa la comprobación y la frase entera no. Reproducible en dos
+líneas de Node. **Los datos la tumbaron:**
+
+| Motor | Menciones verificadas | Con evidencia | |
+|---|---|---|---|
+| Claude | 802 | 790 | 98,5% |
+| Gemini | 1.378 | 1.192 | 86,5% |
+| ChatGPT | 187 | 148 | 79,1% |
+| **Total** | **2.367** | **2.130** | **90,0%** |
+
+Claude es el motor que más markdown mete y el que mejor puntúa: si el markdown
+fuera la causa sería el peor. **No hay bug sistémico en el filtro** y la fase
+que iba a arreglarlo (`EVIDENCE-VERIFY-MARKDOWN-1`) se descartó antes de
+escribir una línea. Queda una cola del 10% —186 filas de Gemini, 39 de ChatGPT,
+12 de Claude— en la que el modelo verifica la mención y no deja una cita
+utilizable.
+
+Para esa cola no hace falta recuperar la cita: hace falta que la pantalla diga
+la verdad cuando no la tiene. El motor entra ahora en el panel si aporta citas
+**o** si su mención está verificada sin ellas, y en el segundo caso lo dice y
+manda a la pestaña «Respuestas», donde el nombre está resaltado sobre la
+respuesta completa. Se lee de `extracted_json`, no de la columna
+`brand_mentioned`: en una fila cuya extracción falló esa columna conserva el
+valor ingenuo de `prompt-job.ts` (una subcadena) y llamar a eso «mención
+verificada» sería afirmar algo que nadie comprobó.
+
+### Y el condicionamiento por cuenta, que era la pregunta original: no existe
+
+Descartado en el código y en los datos, porque la sospecha va a volver:
+
+- `lib/scan/prompt-job.ts` sólo pasa `{ prompt, country, language }` al motor.
+  Ni marca, ni dominio, ni proyecto, ni usuario.
+- La instrucción de generación es **ciega a la marca** por diseño (ADR 0007) en
+  los tres motores, la clave de API es de la plataforma, no hay sesión ni
+  historial, y `temperature: 0`.
+- `lib/projects/prompt-suggestions-llm.ts` prohíbe explícitamente que el prompt
+  sugerido nombre la marca.
+- Y sobre todo: de las nueve respuestas medidas a «¿Cuál es la mejor
+  herramienta de GEO?», **ocho hablaban de Google Maps, QGIS, ArcGIS y mapas
+  catastrales**. Un modelo condicionado a favor de GenScore no contesta sobre
+  parcelas del catastro.
+
+**Lo que sí es real, y es peor:** «GEO» es un acrónimo colisionado —*Generative
+Engine Optimization* frente a *Sistemas de Información Geográfica*— y ese
+prompt mide el mercado equivocado el 89% de las veces, diluyendo el
+denominador de la marca con respuestas sobre software cartográfico. Es un
+prompt malo que el generador produjo y que nadie filtró. Se reescribe a mano;
+que el generador rechace acrónimos ambiguos es trabajo futuro y sin aprobar.
+
+Queda anotado, además, que **el proyecto GenScore es el peor banco de pruebas
+para juzgar la herramienta a ojo**: es autorreferencial —nuestro propio blog
+está escrito para responder justo esas preguntas, así que medimos en parte
+nuestro propio SEO— y la marca se llama como su categoría, que es el falso
+positivo que ADR 0021 existe para atajar.
+
+### El piloto no puede ver este arreglo, y por eso hay tests de render
+
+La pasada del piloto sobre el PR #466 dio verde y su captura del cajón existe,
+se abre y se ve entera en 375, 768 y 1280. **Y no verifica nada de esto.** La
+cuenta del piloto es de plan Free, el tope de plan la deja en UN motor
+(`caps.engines`), y el fallo que este PR arregla —una mención de tres
+respuestas pintada como «100%»— necesita varias respuestas para existir
+siquiera. Su cajón enseña una fila y un 0%, que es exactamente lo que enseñaba
+antes del cambio.
+
+Es la misma familia de fallo que §135 y el incidente de Auditoría web del
+2026-08-02: una pantalla que carga limpia con datos que no ejercitan la
+funcionalidad no está vista. Aquí no se arregla ampliando el piloto —haría
+falta subir de plan la cuenta, que es otra decisión— sino renderizando el
+componente en un test (`components/prompts/prompt-drawer.test.tsx`, con
+`react-dom/server` como los de Auditoría web, log §87). Eso asegura **qué cifra
+se publica y qué texto la acompaña**; el aspecto de la fila con la fracción
+puesta a 375 px sigue sin verificarse y se declara como tal.
+
+### Addendum — feedback en vivo sobre el preview, antes de mergear (2026-08-23)
+
+El fundador probó el preview de este PR en el móvil y confirmó a ojo que el
+fallo original está corregido: «1/3 · 33%» donde antes ponía «100%», con
+captura adjunta. Sobre esa misma captura pidió tres cosas, las tres dentro de
+la misma pantalla y ya implementadas:
+
+1. **Un rótulo sobre la columna de porcentajes.** «33%» suelto no dice de qué
+   es 33% — ahora «Aparición en motores» corona la fracción y el porcentaje,
+   en una cabecera de columna encima de la tarjeta.
+2. **El muro de ceros se pliega.** El ranking de la captura tenía nueve marcas
+   y ocho a 0%. Las no mencionadas —esté su cobertura en 0% o sin evaluar del
+   todo— quedan detrás de un botón «Ver N marcas más sin mención», con un
+   resumen arriba («1 de 9 marcas mencionadas en este prompt»). La marca propia
+   nunca se pliega, mencionada o no: es la razón de abrir el cajón.
+3. **«Tu marca» pasa a decir el nombre real.** La fila decía literalmente «Tu
+   marca» mientras el panel de evidencias, tres centímetros más abajo, decía
+   «Evidencias de mención de GenScore» — dos nombres para la misma entidad en
+   la misma pantalla. Ahora la fila usa el nombre real del proyecto con la
+   pastilla «Tú» al lado, y `buildRanking` acepta ese nombre con el literal de
+   siempre como respaldo para no romper los tests que no lo ejercitan.
+
+Este ciclo confirma, además, el límite documentado más abajo: el piloto
+automático no vio ni el fallo original ni esta corrección — el fundador sí,
+mirando su propia cuenta con datos reales de tres motores. Es la verificación
+que este PR necesitaba y que ninguna cuenta de un solo motor podía darle.
+
+### Roto conocido / pendiente
+
+- La cola del 10% sin cita utilizable no se investiga en esta fase. Se explica,
+  no se resuelve.
+- ~~El botón de plegado y la cabecera de columna no se han visto en un
+  navegador.~~ **Corregido tras la propia pasada del piloto sobre `46ffb43`**:
+  al contrario de lo asumido aquí mismo un párrafo antes, el proyecto del
+  piloto sí tiene 9 competidores rastreados (aunque escanee con un solo
+  motor), así que el plegado, el resumen y la cabecera de columna **sí se
+  ejercitan** — la captura de `prompts` a 375 px enseña «Ranking de marcas /
+  Aparición en motores», «0 de 9 marcas mencionadas en este prompt», la fila
+  propia con «Genscore Tú Neutral 0%» y el botón «Ver 8 marcas más sin
+  mención», todo legible y sin solapes. Lo que sigue sin verse en un navegador
+  es la combinación exacta de **fracción + cabecera** a 375 px — la fracción
+  («1/3») sólo aparece con más de una respuesta por prompt, que el piloto de un
+  motor no genera; esa combinación queda cubierta por la captura móvil que el
+  fundador adjuntó él mismo, no por el piloto automático.
+- La tarjeta «La IA menciona tu marca» sigue siendo binaria (verde si al menos
+  una respuesta te nombra). Con 1 de 3 es cierta pero generosa; la lista «Por
+  motor» justo debajo la desambigua. No se toca aquí.
