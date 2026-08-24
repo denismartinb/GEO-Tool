@@ -3504,6 +3504,20 @@ textarea.add-prompts-text-input {
 .pr2-rk-tag { font-size: 9.5px; color: var(--brand-blue); font-weight: 700; background: var(--surface); border-radius: 99px; padding: 0 6px; flex: 0 0 auto; }
 .pr2-rk-cov { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 13px; flex: 0 0 auto; }
 
+/* Cabecera de columna del ranking: rotula la fracción + el porcentaje de cada
+   fila, que sin esto son un número suelto sin dueño (founder feedback,
+   2026-08-23). `.ac-title` de aquí pierde su padding propio porque el
+   contenedor flex ya lo aporta una sola vez para las dos etiquetas. */
+.pr2-rk-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 14px 0; }
+.pr2-rk-head .ac-title { padding: 0; }
+.pr2-rk-col-label { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-4); white-space: nowrap; flex: 0 0 auto; }
+.pr2-rk-summary { font-size: 11px; color: var(--ink-3); padding: 2px 14px 8px; }
+.pr2-rk-more {
+  padding: 10px 14px; border-top: 1px solid var(--line-soft); text-align: center;
+  color: var(--brand-blue); font-size: 12px; font-weight: 700; cursor: pointer; background: none;
+  border-left: none; border-right: none; border-bottom: none; width: 100%; font-family: inherit;
+}
+
 /* Evidence quotes */
 .pr2-evi { font-size: 12px; color: var(--ink-2); line-height: 1.55; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); font-style: italic; }
 .pr2-evi:last-child { border-bottom: none; }
