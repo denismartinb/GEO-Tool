@@ -32,43 +32,61 @@ function ChatGptMark({ size = 18 }: { size?: number }) {
   );
 }
 
-/** 0 · La respuesta que ya se está dando sin ti. */
+/**
+ * 0 · La respuesta que ya se está dando sin ti.
+ *
+ * Reescrita tras probar cuatro direcciones en el chat (fundador, 2026-08-24):
+ * mezcla de "burbujas de chat" y "veredicto primero", con la fila de marca
+ * más visible arriba — "para que se entienda que esa pantalla es de alguien
+ * que gestiona IKEA usando GenScore". El 11/14 se lee antes que una sola
+ * palabra de la respuesta; la pregunta y la respuesta van las dos en burbuja,
+ * como un chat real, no como una tarjeta con borde.
+ *
+ * `.lp-hx-texto` y `#hx-foco` no cambian de nombre aunque cambien de sitio:
+ * el primero porque `tests/pilot/journeys/onboarding-tour.spec.ts` comprueba
+ * el HTML servido contra esa clase, el segundo porque es a donde apunta el
+ * cursor de esta escena (`hero-demo.tsx`, `ESCENAS[0].apunta`) y lo que esa
+ * misma pasada lee textualmente.
+ */
 function Escena0() {
   return (
     <div className="lp-hx-sc on" id="hx-sc-0" role="tabpanel" aria-label="La respuesta">
       <div className="lp-hx-marca">
         <span className="lp-sheet-fav">
-          <FaviconImg domain="ikea.es" cssSize={26} fallback={<span>IK</span>} />
+          <FaviconImg domain="ikea.es" cssSize={32} fallback={<span>IK</span>} />
         </span>
         <span className="n">IKEA</span>
         <span className="d">ikea.es</span>
-        <span className="q">La marca que analizamos</span>
+        <span className="tag">Tu marca en GenScore</span>
       </div>
 
-      <div className="lp-hx-card lp-hx-resp">
-        <div className="lp-hx-motor">
-          <ChatGptMark />
-          <span className="m">ChatGPT</span>
-          <span className="t">hace 20 s</span>
-        </div>
-        <p className="lp-hx-preg">
+      <div className="lp-hx-verdict">
+        <span className="n">11</span>
+        <span className="of">/ 14</span>
+        <span className="lbl">preguntas donde IKEA no aparece</span>
+      </div>
+
+      <div className="lp-hx-chat">
+        <p className="lp-hx-qbubble">
           «¿Dónde compro muebles de calidad para el salón sin gastarme una fortuna?»
         </p>
-        <p className="lp-hx-texto">
-          Depende del estilo que busques, pero las tiendas más recomendadas son{" "}
-          <mark>Maisons du Monde</mark> por diseño, <mark>Kave Home</mark> si priorizas
-          materiales, y <mark>Leroy Merlin</mark> para soluciones a medida…
-        </p>
-      </div>
-
-      <div className="lp-hx-foco" id="hx-foco">
-        <span className="lp-hx-focoico" aria-hidden="true">
-          <Icon name="x" size={15} />
-        </span>
-        <span>
-          <b>IKEA no aparece</b>
-          <span className="s">en 11 de sus 14 preguntas clave</span>
-        </span>
+        <div className="lp-hx-abubble">
+          <div className="lp-hx-motor">
+            <ChatGptMark />
+            <span className="m">ChatGPT</span>
+          </div>
+          <p className="lp-hx-texto">
+            Depende del estilo que busques, pero las tiendas más recomendadas son{" "}
+            <mark>Maisons du Monde</mark> por diseño, <mark>Kave Home</mark> si priorizas
+            materiales, y <mark>Leroy Merlin</mark> para soluciones a medida…
+          </p>
+          <span className="lp-hx-foco" id="hx-foco">
+            <span className="lp-hx-focoico" aria-hidden="true">
+              <Icon name="x" size={10} />
+            </span>
+            IKEA no aparece
+          </span>
+        </div>
       </div>
     </div>
   );

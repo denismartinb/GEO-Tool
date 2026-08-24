@@ -14232,3 +14232,37 @@ de cada una sin dejar diff.
     HOME-2026-08 (log §151) — así que llevaba desde entonces a ningún sitio.
     Fuera de `PUBLIC_NAV_ITEMS`, "de momento": si una sección futura gana un
     ancla equivalente, el enlace puede volver.
+13. **La escena 0 de la demo del hero, «La respuesta», se rediseña entera.**
+    Antes de tocar código se probaron cuatro direcciones como capturas en el
+    chat: A (burbujas de chat + insignia), B (el 11/14 primero, como
+    veredicto), C (el hueco marcado dentro de la propia frase) y D (mezcla de
+    A+B con la fila de marca más visible). El fundador: "Probamos D. Recuerda
+    poner tanto la pregunta como la respuesta en burbujas" — el mock de D
+    sólo llevaba la respuesta en burbuja; la versión final lleva las dos,
+    pregunta alineada a la derecha (quien pregunta es el usuario, no la marca
+    ni la IA) y respuesta a la izquierda con el logo de ChatGPT.
+
+    La fila de marca sube de peso — favicon de 26 a 32px, nombre en
+    `--font-display`, y una pastilla «Tu marca en GenScore» donde antes decía
+    «La marca que analizamos» — porque sin eso la escena podía leerse como
+    "así responde ChatGPT" en vez de "esto es lo que ve quien gestiona IKEA en
+    GenScore" (motivo explícito del fundador al pedir la mezcla A+B). El
+    11/14 en rojo, con la tipografía de titulares, es lo primero que se lee
+    después de la marca — no hace falta leer la respuesta de ChatGPT para
+    entender el golpe.
+
+    La antigua caja de aviso (`.lp-hx-foco`, una fila ancha con icono + dos
+    líneas de texto) pasa a ser una insignia que cuelga de la esquina de la
+    burbuja de respuesta — un solo objeto visual en vez de dos cajas
+    apiladas, con el mismo rebote de entrada de antes. **Sigue usando el
+    mismo `id="hx-foco"`** aunque cambie de clase y de forma: es a donde
+    apunta el cursor de esta escena (`hero-demo.tsx`, `ESCENAS[0].apunta`) y
+    lo que `tests/pilot/journeys/onboarding-tour.spec.ts` comprueba
+    textualmente (`.toContainText("no aparece")`) — cambiar el id habría
+    dejado el cursor en reposo y la pasada del piloto rota, en silencio,
+    hasta la siguiente vez que alguien mirara esa captura. Por la misma
+    razón, `.lp-hx-texto` (el párrafo con «Maisons du Monde», que esa misma
+    pasada comprueba contra el HTML servido) conserva su nombre aunque ahora
+    viva dentro de la burbuja en vez de dentro de una tarjeta con borde.
+    Verificado con Playwright en 375/768/1280px: el cursor cae a menos de 1px
+    del centro real de la insignia en las tres.
