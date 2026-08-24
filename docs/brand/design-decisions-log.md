@@ -13349,3 +13349,30 @@ continuamente» se sostiene en `lib/scan/cron.ts`, «diario en free/pro/agency»
 Es **inexacto**: un proyecto Free no llega nunca a su intervalo. La regla se ha
 quedado como estaba —es de otra zona y el texto del tour es del fundador— pero
 queda anotado aquí para quien la lea después.
+
+## 147. `/pricing` dejaba de hablar de usuarios ilimitados: no hay gestión de equipo que lo sostenga (2026-08-24)
+
+`/pricing` y `/docs/planes-y-limites` vendían "usuarios ilimitados en todos
+los planes" como diferenciador — titular del hero, ítem del checklist, fila
+propia ("Usuarios del equipo") en la matriz comparativa, y una pregunta de la
+FAQ dedicada a contrastar "cobramos por prompts y motores, no por usuarios".
+La gestión de equipo/RBAC nunca se construyó: sigue en la lista de "Forbidden
+Without Explicit Approval" de CLAUDE.md, y `/dashboard/settings/team` sólo
+redirige desde que se ocultó la pestaña en 2026-07-12. Es la misma clase de
+fallo que PRICING-TRUTH-1 corrigió: un reclamo verificable en dos clics —abrir
+Ajustes y buscar cómo invitar a alguien— que no se sostiene.
+
+**Cambio, sin tocar el tema de fondo ("paga por valor").** El titular del hero
+pasa de "no por usuarios" a "no por adivinar"; el checklist cambia "Usuarios
+ilimitados" por "Sube o baja de plan cuando quieras" (cierto en los cuatro
+planes); la fila "Usuarios del equipo" sale de `PLAN_MATRIX`; la pregunta de la
+FAQ se queda sin la mitad que mencionaba usuarios ("¿Por qué cobráis por
+prompts y motores?"). `/docs/planes-y-limites` pierde el mismo párrafo — se
+corrige ahí también porque, si no, la página quedaba contradiciendo a
+`/pricing` a un enlace de distancia, el mismo patrón que ya cubre
+`.claude/rules/growth-content.md` (§74).
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.790 pruebas) y `pnpm run
+validate` en verde. Sin fila nueva en el mapa de zonas: es una corrección
+editorial sobre un invariante que ya existía (CLAUDE.md, "no fake product
+behavior"), no una fase que cree uno nuevo.

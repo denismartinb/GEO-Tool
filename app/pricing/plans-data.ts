@@ -130,8 +130,7 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
       { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
       { label: "Motores de IA", vals: ["1", "3", "3", "3"] },
       { label: "Frecuencia de refresco", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
-      { label: "Tendencia temporal", vals: [false, true, true, true] },
-      { label: "Usuarios del equipo", vals: ["1", "Ilimitados", "Ilimitados", "Ilimitados"] }
+      { label: "Tendencia temporal", vals: [false, true, true, true] }
     ]
   },
   {
@@ -161,8 +160,8 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
     a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de GenScore antes de pagar nada."
   },
   {
-    q: "¿Por qué cobráis por prompts y motores, y no por usuarios?",
-    a: "Porque el valor está en cuánto monitorizas, no en cuánta gente lo mira. Los usuarios son ilimitados desde Starter. Pagas por prompts × motores × frecuencia de refresco — la unidad real de coste y de valor."
+    q: "¿Por qué cobráis por prompts y motores?",
+    a: "Porque el valor está en cuánto monitorizas, no en un precio plano. Pagas por prompts × motores × frecuencia de refresco — la unidad real de coste y de valor."
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",

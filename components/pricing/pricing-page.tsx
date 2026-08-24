@@ -148,15 +148,15 @@ export function PricingPage() {
         <div className="lp-hero-content">
           <span className="lp-eyebrow"><Icon name="card" size={14} />Precios mid-market · facturación mensual</span>
           <h1 className="lp-h1" style={{ fontSize: 52 }}>
-            Paga por <span className="grad">valor</span>,<br />no por usuarios
+            Paga por <span className="grad">valor</span>,<br />no por adivinar
           </h1>
           <p className="lp-lead">
-            Usuarios ilimitados en todos los planes. Mides por prompts, motores y frecuencia de refresco —
+            Mides por prompts, motores y frecuencia de refresco —
             y conviertes cada dato en acción. Empieza con un escaneo gratis.
           </p>
           <div className="lp-hero-note" style={{ marginTop: 22 }}>
             <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sin tarjeta para empezar</span>
-            <span><Icon name="check" size={14} className="text-[var(--pos)]" />Usuarios ilimitados</span>
+            <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sube o baja de plan cuando quieras</span>
             <span><Icon name="check" size={14} className="text-[var(--pos)]" />Cancela cuando quieras</span>
           </div>
         </div>
@@ -180,7 +180,7 @@ export function PricingPage() {
           <div className="price-meter-head">
             <div className="lp-kicker">Cómo medimos</div>
             <h2 className="lp-h2" style={{ fontSize: 30, marginTop: 10 }}>Tres palancas, una factura honesta</h2>
-            <p className="lp-sec-sub" style={{ margin: "12px 0 0" }}>Tu plan se define por estas tres variables. Sin costes ocultos por usuario.</p>
+            <p className="lp-sec-sub" style={{ margin: "12px 0 0" }}>Tu plan se define por estas tres variables. Sin costes ocultos ni letra pequeña.</p>
           </div>
           <div className="price-meter-grid">
             {METER_ITEMS.map((m) => (
