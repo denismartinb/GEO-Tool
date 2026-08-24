@@ -14226,3 +14226,9 @@ de cada una sin dejar diff.
     Medido con Playwright: el fondo salta en el mismo fotograma de siempre;
     el color pasa por ocho tonos intermedios antes de llegar a blanco puro,
     ~150ms después.
+12. **«Recomendaciones» también sale de la cabecera** (fundador: "Recomendaciones
+    ya no apunta a nada en el header. Lo quitamos de momento"). Su ancla,
+    `#recomendaciones`, era la sección SPOTLIGHT — retirada de la portada en
+    HOME-2026-08 (log §151) — así que llevaba desde entonces a ningún sitio.
+    Fuera de `PUBLIC_NAV_ITEMS`, "de momento": si una sección futura gana un
+    ancla equivalente, el enlace puede volver.

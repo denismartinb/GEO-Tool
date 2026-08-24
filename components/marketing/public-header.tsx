@@ -84,11 +84,16 @@ function SessionSkeleton() {
  * (2026-08-11), que lo puso en la cabecera además del pie. Las páginas de
  * `/comparativas` y su enlace del pie de página siguen ahí — esto retira sólo
  * la entrada de la cabecera.
+ *
+ * **"Recomendaciones" también sale** (fundador, 2026-08-24: "ya no apunta a
+ * nada"). El ancla `#recomendaciones` era la sección SPOTLIGHT, retirada de
+ * la portada en HOME-2026-08 (log §151) — el enlace llevaba desde entonces a
+ * ningún sitio. Quitado "de momento": si «Cinco pantallas» u otra sección
+ * gana un ancla equivalente, el enlace puede volver apuntando ahí.
  */
 const PUBLIC_NAV_ITEMS: NavItem[] = [
   { anchor: "producto", label: "Producto" },
   { anchor: "como", label: "Cómo funciona" },
-  { anchor: "recomendaciones", label: "Recomendaciones" },
   { href: "/geo", label: "Qué es GEO" },
   { href: "/pricing", label: "Precios" },
   { href: "/blog", label: "Blog" }
