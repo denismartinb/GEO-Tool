@@ -59,9 +59,9 @@ export default function PlanesYLimitesPage() {
 
       <h2>Qué cambia al subir de plan</h2>
       <ul>
-        <li><strong>Free → Starter</strong>: pasas de un escaneo puntual a monitorización con refresco semanal y tendencia histórica.</li>
-        <li><strong>Starter → Pro</strong>: refresco diario, más dominios y prompts, y el generador de soluciones (FAQ, schema, briefs listos para publicar).</li>
-        <li><strong>Pro → Agencia</strong>: volumen de dominios y prompts a medida de tu cartera de clientes, con las mismas condiciones de motores y refresco que Pro.</li>
+        <li><strong>Free → Starter</strong>: pasas de un escaneo puntual a monitorización con escaneo semanal y evolución histórica.</li>
+        <li><strong>Starter → Pro</strong>: escaneo diario, más dominios y prompts, y el generador de soluciones (FAQ, schema, briefs listos para publicar).</li>
+        <li><strong>Pro → Agencia</strong>: volumen de dominios y prompts a medida de tu cartera de clientes, con las mismas condiciones de motores y frecuencia de escaneo que Pro.</li>
       </ul>
 
       <p>

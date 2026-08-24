@@ -6194,6 +6194,13 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .price-meter-scale span { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 4px 9px; border-radius: 999px; background: var(--surface-sunk); color: var(--ink-2); }
 .price-meter-scale span.top { background: var(--accent); color: #fff; }
 
+.price-pay-badges { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+.price-pay-label { font-size: 12.5px; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.price-pay-icons { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.price-pay-icon { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 650; color: var(--ink-2); }
+.price-pay-icon svg { flex: 0 0 auto; }
+@media (max-width: 560px) { .price-pay-badges { gap: 10px 16px; } .price-pay-icons { gap: 16px; } }
+
 .price-matrix-wrap { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--sh-1); background: #fff; }
 .price-matrix { width: 100%; border-collapse: separate; border-spacing: 0; }
 .price-matrix thead th { padding: 18px 16px 16px; vertical-align: bottom; border-bottom: 1px solid var(--line); text-align: center; background: var(--surface-2); }
