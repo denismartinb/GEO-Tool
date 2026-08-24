@@ -14073,3 +14073,49 @@ marca a la vez, una con nombres reales y otra con nombres de attrezzo.
    texto en las dos secciones de la portada, mismo criterio que ya obligaba a
    que «14 prompts · 3 motores» se diga igual arriba y abajo (log §147: «la
    portada no puede contradecirse a sí misma al hacer scroll»).
+
+## 152. La pastilla de «Cinco pantallas» deja de pelearse con su propio scroll, y la barra de la demo del hero pasa a ser cinco pastillas (HOME-2026-08, 2026-08-24)
+
+**Qué pasó.** El fundador, sobre el preview: *«la animación de las pestañas de
+las 5 pantallas no funciona bien»*.
+
+**Diagnóstico.** La pastilla de `ProductTabs` vive `position: absolute` DENTRO
+del mismo contenedor que hace scroll horizontal en móvil, así que su posición
+en pantalla es `translateX − scrollLeft`: dos animaciones con reloj propio
+restándose entre sí. Al saltar a una pestaña que obliga a desplazar la tira
+—cualquiera que no esté ya a la vista—, el `scrollTo` usaba
+`behavior: "smooth"`, con su propia curva de aceleración, ajena a los
+`.3s cubic-bezier` de la pastilla. Medido con Playwright: al saltar de la
+primera a la última pestaña en 375px, la pastilla llegó a **−309px**, fuera de
+la pantalla por la izquierda, antes de asentarse.
+
+`behavior: "auto"` NO lo arregla — la spec de CSSOM View hace que `"auto"`
+herede el `scroll-behavior: smooth` que la regla móvil de `.lp-prod-tabs` ya
+declaraba para el gesto táctil, así que seguía animándose igual. Sólo
+`behavior: "instant"` bloquea la animación del navegador de verdad. Con eso la
+tira salta a su sitio en el mismo tick del clic y la pastilla queda como la
+única animación visible.
+
+**Límite honesto, como ya pasó con el gráfico de evolución (§151).** Chromium
+headless colapsa el scroll `"smooth"` a un solo fotograma, así que el
+parpadeo exacto no se pudo reproducir aquí — mismo límite ya registrado en
+`.claude/rules/styles.md` para bugs de scroll en este repo. El arreglo sale
+del diagnóstico de la carrera de animaciones, no de haberla visto reproducida.
+
+**La barra de la demo del hero, mismo día, misma conversación.** El fundador
+pidió alternativas a la barra continua de `lp-hx-avance` —que se reiniciaba en
+seco en cada escena y no decía en qué punto de las cinco estabas sin mirar el
+raíl—, y aprobó la segmentada (patrón Stories: una pastilla por escena) con el
+degradado de marca ya usado en el resto de la demo (`--brand-blue` →
+`--brand-cyan`). Las pastillas ya vistas quedan llenas y quietas —es estado
+real, no una animación en marcha, así que seguir pintándolas no es la mentira
+que sí sería seguir animando una que no va a ningún sitio—; la actual sólo se
+anima mientras el reloj corre de verdad (`corriendo`), y si se paró —tocaste
+el raíl, la demo salió de pantalla, o es la última escena— se queda llena y
+quieta en vez de a medias, porque a medias leería como una barra rota, no como
+el final de la historia. Esto **cambia** el invariante «una barra de avance es
+un reloj o no es nada» de `.claude/rules/styles.md` (§151): antes la barra
+entera desaparecía si `corriendo` era falso; ahora sólo la animación de la
+pastilla en curso depende de `corriendo` — el estado ya visto es hecho, no
+progreso inventado, y no tiene por qué desaparecer con el reloj. Regla
+actualizada en el mismo PR.

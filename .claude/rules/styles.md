@@ -240,10 +240,33 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   pantalla que enseña el problema, medir las cinco y arreglar la que manda. Y
   **«móvil» no significa «apilar»**: la escena 4 pasó de 215 a 115px volviendo
   a dos columnas, que además es como se ve en escritorio.
-- **Una barra de avance es un reloj o no es nada.** Si se pinta una, su
-  duración sale del mismo valor que gobierna el avance —pasado como
-  `animation-duration` desde el código, nunca duplicado en el CSS— y sólo
-  existe mientras ese reloj corre de verdad: fuera de pantalla, con la
-  reproducción automática apagada o en el último paso desaparece. Una barra que
-  avanza sin que vaya a pasar nada es progreso inventado (CLAUDE.md, "no fake
-  progress"; log §151).
+- **Una barra de avance es un reloj o no es nada — pero «reloj» se mide por
+  segmento, no por la barra entera.** Cada tramo que anima su relleno saca su
+  duración del mismo valor que gobierna el avance real —pasado como
+  `animation-duration` desde el código, nunca duplicado en el CSS— y esa
+  animación sólo existe mientras el reloj corre de verdad para ESE tramo:
+  fuera de pantalla, con la reproducción automática apagada o en el último
+  paso, no se anima. Lo que NO es progreso inventado es un tramo ya
+  completado quedándose lleno y quieto — eso es estado real (una escena que ya
+  se vio), no una animación fingiendo seguir en marcha, así que no tiene por
+  qué desaparecer con el reloj (`components/landing/hero-demo.tsx`,
+  `.lp-hx-avance`, log §152 — corrige la primera versión de esta regla, log
+  §151, escrita para una barra continua de un solo tramo). Una barra sigue
+  siendo progreso inventado si ANIMA sin que vaya a pasar nada; no lo es por
+  seguir mostrando, ya quieta, algo que de verdad pasó
+  (CLAUDE.md, "no fake progress").
+- **Un elemento animado por `transform` DENTRO de un contenedor con scroll
+  propio hereda una segunda animación que no controla: la del scroll mismo.**
+  Su posición en pantalla es `translateX − scrollLeft`, y si algo más también
+  anima `scrollLeft` —un `scrollTo({behavior:"smooth"})` disparado por el mismo
+  clic, por ejemplo— hay dos relojes independientes restándose. `behavior:
+  "auto"` no basta para desactivar el segundo: por la spec de CSSOM View,
+  `"auto"` hereda el `scroll-behavior` computado del elemento, así que si una
+  regla de CSS ya declara `scroll-behavior: smooth` en ese contenedor —como la
+  tira de `.lp-prod-tabs` en móvil, para el gesto táctil—, `"auto"` sigue
+  animándose igual. Sólo `behavior: "instant"` lo bloquea de verdad. Medido con
+  Playwright en `ProductTabs`: la pastilla llegó a **−309px** en un viewport de
+  375px, fuera de pantalla, antes de asentarse (log §152). Chromium headless
+  colapsa `"smooth"` a un solo fotograma y no lo reproduce — mismo límite que
+  ya consta más abajo para bugs de scroll en este repo; el diagnóstico se
+  valida por el mecanismo, no por ver el parpadeo en el arnés.

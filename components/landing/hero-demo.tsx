@@ -276,20 +276,32 @@ export function HeroDemo({ target }: { target: string }) {
       </span>
       ) : null}
 
-      {/* La barra de avance. Sólo existe mientras el reloj CORRE de verdad: si
-          la demo está fuera de pantalla, si alguien tocó el raíl o si se llegó
-          a la última escena, no hay nada que anunciar y la barra no se pinta.
-          Una barra que avanza sin que vaya a pasar nada es progreso falso, que
-          es exactamente lo que CLAUDE.md prohíbe en el producto y no hay
-          motivo para permitirse en la portada.
+      {/* La barra de avance: una pastilla por escena, patrón "Stories" — dice
+          en qué punto de las cinco estás sin obligar a leer el raíl de abajo.
+          Las que ya pasaron quedan llenas y QUIETAS: es estado real —esas
+          escenas ya se vieron—, no una animación en curso, así que seguir
+          pintándolas no es la mentira que sí sería seguir animando una que no
+          va a ningún sitio. La actual sólo se anima mientras el reloj CORRE de
+          verdad (`corriendo`): si se paró —tocaste el raíl, la demo salió de
+          pantalla, o es la última escena—, esa pastilla se queda llena y
+          quieta en vez de a medias, porque a medias leería como una barra
+          rota, no como el final de la historia. Las que faltan están vacías.
 
-          `key={escena}` la remonta en cada cambio: sin eso la animación CSS no
-          se reinicia y la segunda escena heredaría la barra ya llena. */}
-      {corriendo ? (
-        <span className="lp-hx-avance" aria-hidden="true">
-          <span className="f" key={escena} style={{ animationDuration: `${PASO_MS}ms` }} />
-        </span>
-      ) : null}
+          `key={escena}` en el relleno en marcha lo remonta en cada cambio:
+          sin eso la animación CSS no se reinicia sola. */}
+      <div className="lp-hx-avance" aria-hidden="true">
+        {ESCENAS.map((e, n) => {
+          const hecho = n < escena || (n === escena && !corriendo);
+          const actual = n === escena && corriendo;
+          return (
+            <span key={e.id} className={`s ${hecho ? "hecho" : ""}`}>
+              {actual ? (
+                <span className="f" key={escena} style={{ animationDuration: `${PASO_MS}ms` }} />
+              ) : null}
+            </span>
+          );
+        })}
+      </div>
 
       <div className="lp-hx-rail" role="tablist" aria-label="Escenas de la demostración">
         {ESCENAS.map((e, n) => (

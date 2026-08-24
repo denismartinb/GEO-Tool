@@ -4945,11 +4945,15 @@ a.notif-row:hover {
    que va a ocurrir algo»). Si alguien toca el raíl, si la demo sale de
    pantalla o si se llegó a la última escena, desaparece: una barra que avanza
    sin que vaya a pasar nada es progreso inventado. */
-.lp-hx-avance {
-  display: block; height: 3px; margin: 16px 0 0;
-  border-radius: 999px; background: var(--line); overflow: hidden;
+.lp-hx-avance { display: flex; gap: 5px; margin: 16px 0 0; }
+.lp-hx-avance .s {
+  flex: 1; height: 3px; border-radius: 999px; background: var(--line); overflow: hidden;
 }
-.lp-hx-avance .f {
+/* Llena y quieta: escena ya vista, o la actual con el reloj parado. Mismo
+   degradado de marca que el relleno en marcha, para que una pastilla no lea
+   como un color distinto de la otra a mitad de camino. */
+.lp-hx-avance .s.hecho { background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan)); }
+.lp-hx-avance .s .f {
   display: block; width: 100%; height: 100%; border-radius: 999px;
   background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan));
   transform: scaleX(0); transform-origin: left center;
