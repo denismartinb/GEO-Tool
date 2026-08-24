@@ -42,6 +42,47 @@ custom SMTP provider in `Authentication → Settings → SMTP Settings` — Rese
 (already used for `lib/email/transactional.ts`) supports SMTP relay and is
 the natural choice here.
 
+### CI/Preview Supabase project (egress isolation, proposed 2026-08-24)
+
+**Status: documented, not yet live.** Today `NEXT_PUBLIC_SUPABASE_URL` /
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` are the same value in Production and every
+Preview deploy (see the note above) — confirmed as the dominant cause of a
+Supabase Free-plan egress overage (19.24 GB / 5 GB, 2026-08-24): the
+mandatory `ux-pilot` run on every preview deploy re-reads the same ~75 MB of
+data hundreds of times per PR, and PR volume multiplies that into GBs/month.
+A `pg_total_relation_size` audit the same day ruled out stored data as the
+cause (`scan_prompt_results`, the largest table, was 53 MB) — this is a
+request-volume problem, not a storage problem, so deleting rows does not fix
+it.
+
+The fix is a **second, dedicated Supabase project that only Preview deploys
+talk to**, using Vercel's native per-environment variable scoping (same
+variable name, different value for Production vs Preview — no application
+code branches on `VERCEL_ENV` for this). Setup, once the founder has created
+the empty project in the Supabase dashboard:
+
+1. `pnpm run supabase:bundle > bootstrap.sql` — concatenates every file in
+   `supabase/migrations/` in order into one paste-able script (migrations here
+   are hand-applied in the SQL editor, never via CI; see
+   `supabase/migrations/migrations.test.ts`). Paste `bootstrap.sql` into the
+   new project's SQL editor and run it once.
+2. In the new project: `Authentication → Providers → Email` — decide the
+   "Confirm email" toggle the same way as production (see the note above; if
+   ON, configure SMTP first, the built-in mailer rate-limits hard).
+3. Sign up a dedicated pilot account in the new project (never the founder's
+   own — see UX-PILOT-1 below) matching `PILOT_EMAIL` / `PILOT_PASSWORD`.
+   `PILOT_WRITE_DOMAIN` (`mozilla.org`) self-bootstraps on first write-journey
+   run; nothing to seed by hand for it.
+4. In Vercel → Project Settings → Environment Variables, set
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
+   `SUPABASE_SERVICE_ROLE_KEY` for the new project's values, **scoped to
+   Preview only** — leave the Production-scoped values pointing at the
+   original project untouched.
+
+Once live: production users' data and CI/pilot traffic stop sharing a quota,
+and this section's "Status" line should be updated to say so (with the date
+and which PR did it), per the phase-closure rule in `CLAUDE.md`.
+
 ### Operator console (ADMIN-CONSOLE-1)
 
 | Variable | Required | Where | Expected shape |

@@ -14,7 +14,8 @@
     "bench:extraction": "NODE_OPTIONS=--conditions=react-server tsx scripts/extraction-bench.ts",
     "validate": "pnpm run build && pnpm run typecheck && pnpm run lint",
     "check:env": "node --experimental-strip-types scripts/check-env.mjs",
-    "fix:log-numbering": "node --experimental-strip-types scripts/fix-log-numbering.mjs"
+    "fix:log-numbering": "node --experimental-strip-types scripts/fix-log-numbering.mjs",
+    "supabase:bundle": "node scripts/bundle-supabase-migrations.mjs"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",
