@@ -14143,3 +14143,49 @@ de cada una sin dejar diff.
    usa el medidor de fuerza de contraseña (`.pw-meter i`) para el mismo
    problema: una barra fina que necesita leerse vacía sin convertirse en un
    borde.
+
+**Cuatro ajustes más, mismo PR, mismo día.**
+
+3. **La pastilla de «Cinco pantallas» seguía rara al pulsar — un bug distinto
+   del que ya se había arreglado.** El anterior era el scroll (§152, arriba);
+   éste era de color: el fundador seguía viendo «primero se pone negro luego
+   blanco, un poco raro» al pulsar una pestaña. Medido con Playwright
+   fotograma a fotograma (`getComputedStyle` sobre las cinco pestañas y la
+   pastilla, muestreado cada frame): la pestaña recién pulsada mostraba un
+   estado intermedio — fondo blanco durante ~300-400ms — antes de asentarse en
+   el fondo oscuro correcto. Causa: `.lp-prod-tab:hover { background: #fff }`
+   sin acotar. La transición retardada de `.on` (el truco de los «retardos
+   asimétricos», §147) parte del valor YA PINTADO en el fotograma anterior
+   como punto de partida — y ese valor, en el instante de cualquier clic real,
+   es el de `:hover`, porque el ratón siempre está encima de lo que acabas de
+   pulsar. El resultado: en vez de ir de transparente a oscuro, iba de blanco
+   (el de `:hover`) a oscuro, con dos etapas donde el diseño preveía una sola.
+   Arreglado acotando el `:hover` a `.lp-prod-tabs:not(.con-pastilla)`: en
+   cuanto la pastilla gobierna la pestaña, el `:hover` deja de pintar sobre
+   ella y la transición retardada parte del valor correcto. Verificado con el
+   mismo arnés: la pestaña ahora va de `rgba(0,0,0,0)` a `rgb(15,23,41)` sin
+   paso intermedio.
+4. **«Comparativas» sale de la cabecera** (fundador: «Quitamos comparativas de
+   la cabecera»), supersediendo COMPARATIVAS-DESIGN-1 (2026-08-11), que la
+   había puesto ahí además del pie. Las páginas de `/comparativas` y su
+   enlace en el pie siguen existiendo — sólo se retira la entrada de
+   `PUBLIC_NAV_ITEMS`.
+5. **Los enlaces de ancla de la cabecera se desplazan suavizados**
+   (fundador: «que los enlaces vayan con ancla y efecto suavizado a la
+   landing»). Ya eran anclas de verdad —`<a href="#…">`, sin JS
+   interceptando el clic—, así que lo único que faltaba era
+   `scroll-behavior: smooth` en `html`, con su reversa en
+   `prefers-reduced-motion: reduce`. No toca la consola: `.shell` no
+   scrollea el documento (`.claude/rules/styles.md`).
+6. **Segundo titular del día, y la bajada cambia con él.** De «¿La IA
+   recomienda tu marca?» a **«¿Sabes si la IA / recomienda tu marca?»**
+   (fundador: «Prueba esto en el hero», con el salto de línea ya escrito por
+   él), con la bajada nueva: «Descubre si ChatGPT, Gemini y Claude te
+   recomiendan y cómo mejorar tu visibilidad en IA.» Recupera el `<br>` fijo
+   —esta vez porque el propio fundador partió la frase en dos líneas, no
+   porque el ancho lo exija. Y **dos huecos del hero móvil ganan aire**: el
+   padding superior de `.lp-hero-content` sube de 8 a 20px (con el
+   `margin-top: 24px` de `.lp-h1` ya puesto, pasa de 32 a 44px reales entre el
+   degradado de arriba y el titular), y `.lp-shot.lp-hx` —que en móvil no
+   tenía override propio y heredaba el `margin-top: 54px` de escritorio— sube
+   a 66px antes de la demo animada.

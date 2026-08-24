@@ -337,17 +337,17 @@ export function LandingPage() {
               pregunta a propósito: es la que se hace quien llega, y es la que
               el comprobador gratuito responde en veinte segundos. */}
           <h1 className="lp-h1">
-            {/* Titular sustituido tras probar seis alternativas (fundador,
-                2026-08-24): nombra sujeto, verbo y objeto sin depender de que
-                «te» se lea como «tu marca» — la anterior obligaba a esa
-                inferencia. Deja de llevar `<br>` fijo: la frase es corta
-                de sobra para no necesitar el salto que sí hacía falta con
-                «la inteligencia artificial» entera. */}
-            ¿<span className="lp-h1-accent">La IA</span> recomienda tu marca?
+            {/* Segunda sustitución del titular en el mismo día (fundador,
+                2026-08-24: "Prueba esto en el hero"). Vuelve a llevar `<br>`
+                fijo, esta vez porque el fundador lo escribió ya partido en
+                dos líneas — «¿Sabes si la IA» / «recomienda tu marca?» — y
+                el acento sigue en «la IA», que es lo que cierra la primera
+                línea. */}
+            ¿Sabes si <span className="lp-h1-accent">la IA</span><br />
+            recomienda tu marca?
           </h1>
           <p className="lp-lead">
-            Comprobamos si ChatGPT, Gemini y Claude nombran tu marca al responder a tus clientes
-            y qué marcas salen en tu lugar.
+            Descubre si ChatGPT, Gemini y Claude te recomiendan y cómo mejorar tu visibilidad en IA.
           </p>
           {/* Las llamadas a la acción viven DENTRO de `HeroDomainField`, no
               aquí: «Analiza gratis» tiene que guardar el dominio escrito antes

@@ -121,6 +121,19 @@
    still the line that contains it. */
 html {
   overflow-x: clip;
+  /* Los enlaces de la cabecera a secciones de la portada (`#producto`,
+     `#como`, `#recomendaciones`) son anclas de verdad — `<a href="#…">`, sin
+     JS interceptando el clic — así que el suavizado sale de esta propiedad
+     del documento, no de una isla nueva. Cubre también saltar aquí desde
+     otra página (`/#producto`): el navegador aplica el mismo
+     `scroll-behavior` al desplazamiento inicial hacia el ancla (fundador,
+     2026-08-24: "que los enlaces vayan con ancla y efecto suavizado a la
+     landing"). No es válido para la consola: `.shell` no scrollea el
+     documento (`.claude/rules/styles.md`), así que esto no la toca. */
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 body {
@@ -6195,7 +6208,23 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   transition: background .15s, color .15s, border-color .15s;
   position: relative; z-index: 1;
 }
-.lp-prod-tab:hover { background: #fff; color: var(--ink); }
+/* Sólo antes de que la pastilla exista (primer fotograma, o sin
+   `ResizeObserver`): el `:hover` normal está bien ahí, porque nada más está
+   coordinando el color de esa pestaña. En cuanto `con-pastilla` gobierna, el
+   ratón se queda encima de la pestaña que se acaba de pulsar —es donde estaba
+   cuando hiciste clic—, y con `:hover` sin acotar eso se convierte en el
+   valor DE PARTIDA de la transición retardada de abajo: la pestaña pasaba de
+   fondo blanco (el del `:hover`, no el suyo) a fondo oscuro de golpe a los
+   .3s, en vez de ir de transparente a oscuro. Se veía "primero blanco, luego
+   negro" en cada clic real —el ratón siempre está sobre lo que acabas de
+   pulsar— aunque el veredicto final ya fuera el correcto (fundador,
+   2026-08-24: "primero se pone negro luego blanco, un poco raro" — el orden
+   exacto percibido puede variar con qué pestaña y qué tan rápido se mira,
+   pero medido con Playwright el mecanismo es siempre el mismo: dos etapas en
+   vez de una). Acotado a
+   `:not(.con-pastilla)` esto desaparece: la transición retardada parte de la
+   base transparente de verdad. */
+.lp-prod-tabs:not(.con-pastilla) .lp-prod-tab:hover { background: #fff; color: var(--ink); }
 /* Sin medida todavía (primer fotograma, o `ResizeObserver` ausente) el fondo
    oscuro lo lleva la propia pestaña. Es lo que evita el instante de texto
    blanco sobre blanco mientras la pastilla no existe. */
@@ -7289,7 +7318,15 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
      width because every mobile drawer carries its own CTAs (`ctas` prop on
      MarketingMobileNav), so showing both was a duplicate, not a fallback. */
   .lp-nav-right { display: none; }
-  .lp-hero--home .lp-hero-content { padding-top: 8px; }
+  /* "Un pelín más de aire" en dos puntos del hero móvil (fundador,
+     2026-08-24): entre el degradado de arriba y el titular, y entre el
+     bloque de texto/CTA y la demo animada. `padding-top` sube de 8 a 20px
+     (con el `margin-top: 24px` del propio `.lp-h1` ya suma 32px hoy, 44px con
+     esto); `.lp-shot` no tenía override móvil — hereda el `margin-top: 54px`
+     de escritorio — y sube a 66px. Los dos, pequeños a propósito: "un pelín",
+     no un rediseño del ritmo vertical. */
+  .lp-hero--home .lp-hero-content { padding-top: 20px; }
+  .lp-hero--home .lp-shot.lp-hx { margin-top: 66px; }
   .lp-promo { font-size: 11.5px; padding: 7px 14px; }
 }
 

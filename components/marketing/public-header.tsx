@@ -79,10 +79,11 @@ function SessionSkeleton() {
  * own hand-copied array and silently drifted (missing links, missing mobile
  * CTAs, a different burger/drawer behavior on home vs everywhere else).
  *
- * "Comparativas" carries forward COMPARATIVAS-DESIGN-1 (founder, 2026-08-11):
- * it belongs in the top nav, not only in the footer — a reader mid-article is
- * exactly who'd want to compare tools, and comparison pages are the highest
- * purchase-intent content in the portfolio.
+ * **"Comparativas" salió de aquí** (fundador, 2026-08-24: "Quitamos
+ * comparativas de la cabecera"), supersediendo COMPARATIVAS-DESIGN-1
+ * (2026-08-11), que lo puso en la cabecera además del pie. Las páginas de
+ * `/comparativas` y su enlace del pie de página siguen ahí — esto retira sólo
+ * la entrada de la cabecera.
  */
 const PUBLIC_NAV_ITEMS: NavItem[] = [
   { anchor: "producto", label: "Producto" },
@@ -90,8 +91,7 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
   { anchor: "recomendaciones", label: "Recomendaciones" },
   { href: "/geo", label: "Qué es GEO" },
   { href: "/pricing", label: "Precios" },
-  { href: "/blog", label: "Blog" },
-  { href: "/comparativas", label: "Comparativas" }
+  { href: "/blog", label: "Blog" }
 ];
 
 /**
