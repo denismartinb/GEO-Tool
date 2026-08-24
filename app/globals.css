@@ -4711,7 +4711,16 @@ a.notif-row:hover {
 .lp-eyebrow { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 14px 0 11px; border-radius: 999px;
   background: rgba(255,255,255,.72); border: 1px solid var(--line-strong); backdrop-filter: blur(6px);
   font-size: 12.5px; font-weight: 650; color: var(--accent-ink); box-shadow: var(--sh-1); }
-.lp-h1 { font-size: 60px; font-weight: 800; letter-spacing: -.03em; line-height: 1.02; margin: 24px 0 0; text-wrap: balance; }
+/* 84px/800, no 60px/800: comparado contra el titular de Semrush —mismo peso
+   extremo, interlineado y tracking más apretados— y aprobado así (fundador,
+   2026-08-24: "Me gusta Bricolage 84/900", tras ver la comparativa de cuatro
+   versiones). El peso pedido era 900, pero Bricolage Grotesque no tiene ese
+   corte —ni siquiera en la variable font, cuyo eje `wght` llega hasta 800
+   (comprobado contra la propia API de Google Fonts, que devuelve 400 para esa
+   petición)— así que la comparativa que se aprobó lo mostraba en negrita
+   sintética del navegador, no en un 900 real. 800 es el peso real más grueso
+   que existe para esta tipografía. */
+.lp-h1 { font-size: 84px; font-weight: 800; letter-spacing: -.045em; line-height: .94; margin: 24px 0 0; text-wrap: balance; }
 .lp-h1 .grad { background: linear-gradient(100deg, #4f46e5, #7c3aed 55%, #0d9488); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .lp-lead { font-size: 18.5px; line-height: 1.6; color: var(--ink-2); margin: 22px auto 0; max-width: 600px; font-weight: 450; }
 .lp-hero-form { max-width: 540px; margin: 30px auto 0; }
@@ -4745,6 +4754,15 @@ a.notif-row:hover {
    que permite al piloto fijar una y fotografiar algo determinista en vez de un
    fotograma al azar (`.claude/rules/onboarding.md`, «Un solo reloj»). */
 .lp-hx { max-width: 820px; }
+/* En escritorios grandes la demo puede crecer hasta el ancho que `.lp-shot`
+   ya permite (1060px) sin dejar de estar centrada bajo un titular más
+   estrecho (`.lp-hero-content`, 820px) — mismo patrón que Semrush, cuya
+   captura de producto es notablemente más ancha que su titular (fundador,
+   2026-08-24, comparando capturas). Sólo desktop: en el resto de anchuras el
+   marco sigue igualado al titular. */
+@media (min-width: 1200px) {
+  .lp-hx { max-width: 1060px; }
+}
 .lp-hx-halo {
   position: absolute; inset: 20px 20px -40px; pointer-events: none;
   background: radial-gradient(ellipse at 50% 60%, rgba(37,99,235,.22), rgba(37,99,235,0) 70%);

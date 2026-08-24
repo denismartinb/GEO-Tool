@@ -14283,3 +14283,48 @@ de cada una sin dejar diff.
       espacio— vuelve, debajo del número: 11 en rojo, 3 en `--line-strong`.
       Ella sí fuerza su propia línea, porque tiene que quedar clavada bajo el
       11/14 y no colarse junto a la frase si hay hueco.
+15. **El titular pasa a 84px, pero no a peso 900 — ese peso no existe.** El
+    fundador aprobó "Bricolage 84/900" tras comparar cuatro variantes
+    servidas como capturas en el chat. La comparativa estaba mal etiquetada
+    en dos sentidos, encontrados al intentar cargar el peso de verdad
+    (`next/font` rechazó el build: "Unknown weight 900 for font Bricolage
+    Grotesque. Available weights: 200, 300, 400, 500, 600, 700, 800,
+    variable" — confirmado también contra la API pública de Google Fonts,
+    que devuelve 400 Missing font family para ese peso). Primero, Bricolage
+    Grotesque no tiene corte 900 en ningún sitio, ni siquiera en la variable
+    font, así que lo que se vio en la comparativa era negrita **sintética**
+    del navegador, no un peso real. Segundo, `.lp-h1` nunca tuvo su propia
+    `font-family` — BRAND-5b (línea "El titular (`.lp-h1`) mantiene el peso
+    de la tipografía existente del sitio") dejó el titular deliberadamente en
+    Hanken Grotesk, no en Bricolage — y el guion de comparación dejaba
+    `fontFamily` sin tocar, así que las tres variantes etiquetadas "Bricolage"
+    eran en realidad Hanken Grotesk, que tampoco tiene corte 900. `.lp-h1`
+    queda en `font-size: 84px; font-weight: 800` (el peso real más grueso
+    disponible), sin tocar `font-family` ni la decisión de BRAND-5b.
+    Verificado en escritorio y móvil (el override móvil sólo toca
+    `font-size`, así que peso/tracking/interlineado heredan de la regla base
+    sin más cambios).
+16. **El campo del hero vuelve a llevar al registro, no al comprobador
+    gratuito.** HOME-2026-08 Fase A (log §150) había cambiado el destino a
+    `/gratis/aparece-mi-marca-en-chatgpt` — "compruébalo ahora mismo, sin
+    cuenta". El fundador pide revertirlo: "quiero que al introducir el
+    dominio vaya a la pantalla de registro, como antes. Como hace Semrush" —
+    cuyo CTA de portada lleva directo al alta. `HeroDomainField.start()` pasa
+    a `router.push("/signup")` siempre (antes construía la URL del
+    comprobador, con o sin el dominio en `?d=`); el arrastre del dominio a
+    `localStorage` (`PENDING_DOMAIN_KEY`, consumido por el asistente de alta)
+    no cambia — es el mecanismo que ya existía antes de Fase A y sigue siendo
+    el que lleva el dominio hasta el asistente tras el registro y la
+    confirmación por correo. El botón recupera su copy anterior a Fase A,
+    "Analiza gratis" (ya usado así en los fixtures del piloto). El
+    comprobador gratuito no se retira: sigue existiendo en su propia URL,
+    sólo deja de ser el destino del hero.
+17. **La demo del hero crece en escritorios grandes.** El fundador comparó
+    capturas de la portada propia contra la de Semrush: su panel de producto
+    es notablemente más ancho que el titular; el nuestro estaba igualado al
+    ancho del titular (820px, `.lp-hero-content`) en vez de al ancho que
+    `.lp-shot` ya permitía (1060px). `.lp-hx` gana un `@media (min-width:
+    1200px) { max-width: 1060px }` — el mismo ancho que `.lp-shot` ya tenía
+    disponible, ningún nivel nuevo. Por debajo de 1200px el marco sigue
+    igualado al titular, sin cambios. Verificado con Playwright: 1060px de
+    ancho real a 1280 y 1440px, sin cambios en 768/375.
