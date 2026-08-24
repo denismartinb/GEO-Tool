@@ -14042,3 +14042,34 @@ marca a la vez, una con nombres reales y otra con nombres de attrezzo.
   `#recomendaciones`, el ancla de SPOTLIGHT. Repuntado a `#pantallas`
   («Cinco pantallas»), que es donde esa historia vive ahora — no se dejó un
   enlace roto.
+
+**Tres arreglos más, mismo PR, tras el Human Gate del #463.**
+
+1. **El punto de IKEA en la leyenda de la tarjeta 02 se veía roto.** Era un
+   círculo de 9px con borde **punteado** — a ese tamaño el patrón de guiones
+   se fragmenta en algo que no se lee como un anillo, se lee como ruido
+   (fundador, 2026-08-23: «el color de IKEA se ve raro»). Pasa a borde sólido:
+   dice lo mismo —no es un tramo de la barra, es la marca que falta— y sigue
+   siendo legible a 9px.
+2. **La curva de «El resultado» se quedaba en blanco al volver a esa escena
+   una vez de cada dos** (fundador: «el gráfico de evolución va una vez sí y
+   otra no al pinchar en las pestañas»). Causa: alternar `display: none →
+   block` en el contenedor de la escena no garantiza que el navegador
+   reproduzca desde el principio las animaciones CSS de sus hijos —el trazo y
+   los puntos, con `fill: both`, podían quedar congelados en su fotograma
+   inicial si el navegador no detectaba la reaparición a tiempo. Un primer
+   intento con `cancel()` de Web Animations API lo empeoró: cancela la
+   animación que estaba a punto de arrancar y nada la vuelve a crear sola. El
+   arreglo que sí funciona —el truco estándar para esto— es quitar la clase
+   `on`, forzar un `reflow` leyendo `offsetWidth` y volver a ponerla: sin el
+   reflow entre medias el navegador no distingue «seguía puesta» de «acaba de
+   aparecer». Es síncrono pero no pinta nada —el navegador no compone un
+   fotograma hasta que el efecto termina—, así que no hay parpadeo.
+3. **Las tres frases del arco narrativo de «Cinco pantallas» se repiten
+   también en la demo del hero**, en las escenas que cuentan la misma
+   historia: «Tu puntuación» → «Lo primero es conocer tu situación actual.»,
+   «Competidores» → «Y quién tiene mejor posicionamiento que tú.», «El
+   resultado» → «Para que en próxima respuesta la IA te mencione.» — mismo
+   texto en las dos secciones de la portada, mismo criterio que ya obligaba a
+   que «14 prompts · 3 motores» se diga igual arriba y abajo (log §147: «la
+   portada no puede contradecirse a sí misma al hacer scroll»).

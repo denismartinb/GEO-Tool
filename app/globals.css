@@ -5632,7 +5632,10 @@ a.notif-row:hover {
    ancho que dibujar—, así que su punto va hueco y punteado en vez de un
    círculo sólido de un color que no existe en el reparto de arriba. */
 .lp-sheet-legitem--tu { color: var(--brand-neg, #d23b48); }
-.lp-sheet-legitem--tu .i { background: none; border: 1.5px dashed currentColor; }
+/* Un borde PUNTEADO a 9px se rompe en fragmentos ilegibles — "se ve raro",
+   founder, 2026-08-23. Un contorno sólido hueco dice lo mismo —no es un tramo
+   de la barra, es la marca que falta— y sigue leyéndose a este tamaño. */
+.lp-sheet-legitem--tu .i { background: none; border: 1.5px solid currentColor; }
 /* Las barras que no son la propia marca son azul claro, no gris: en el
    artboard la columna entera se lee como una misma escala y sólo la primera
    destaca por saturación. En gris (`--ink-4`) parecían apagadas, otra cosa. */

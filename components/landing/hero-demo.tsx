@@ -117,10 +117,30 @@ export function HeroDemo({ target }: { target: string }) {
     return () => ojo.disconnect();
   }, [target]);
 
-  // La clase `on` vive en el marcado del servidor; aquí sólo se mueve.
+  /**
+   * La clase `on` vive en el marcado del servidor; aquí sólo se mueve. Pero
+   * alternar `display: none → block` sin más NO garantiza que el navegador
+   * reproduzca desde el principio las animaciones CSS del contenido — la
+   * curva de «El resultado» se quedaba en blanco al volver a esa escena una
+   * vez de cada dos, con el trazo y los puntos congelados en su fotograma
+   * inicial (founder, 2026-08-23). Un `cancel()` a secas por Web Animations
+   * API lo empeoraba: cancela la animación que estaba a punto de arrancar y
+   * ninguna regla CSS la vuelve a crear sola. Lo que sí funciona, y es el
+   * truco estándar para esto: quitar la clase, forzar un `reflow` leyendo
+   * `offsetWidth` —sin eso el navegador no distingue "seguía puesta" de
+   * "acaba de aparecer"— y volver a ponerla. El `reflow` es síncrono pero no
+   * pinta nada: el navegador no compone un fotograma hasta que este efecto
+   * termina, así que no hay parpadeo.
+   */
   useEffect(() => {
     ESCENAS.forEach((e, n) => {
-      document.getElementById(e.id)?.classList.toggle("on", n === escena);
+      const el = document.getElementById(e.id);
+      if (!el) return;
+      el.classList.remove("on");
+      if (n === escena) {
+        void el.offsetWidth;
+        el.classList.add("on");
+      }
     });
   }, [escena]);
 

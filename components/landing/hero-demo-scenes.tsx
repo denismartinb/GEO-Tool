@@ -120,7 +120,7 @@ function Escena1() {
         </div>
       </div>
 
-      <p className="lp-hx-pie">Lo primero es saber en qué punto estás.</p>
+      <p className="lp-hx-pie">Lo primero es conocer tu situación actual.</p>
     </div>
   );
 }
@@ -160,7 +160,7 @@ function Escena2() {
         ))}
       </div>
 
-      <p className="lp-hx-pie">Y quién se está llevando las respuestas que le tocaban.</p>
+      <p className="lp-hx-pie">Y quién tiene mejor posicionamiento que tú.</p>
     </div>
   );
 }
@@ -281,7 +281,7 @@ function Escena4() {
         </div>
       </div>
 
-      <p className="lp-hx-pie">Y la siguiente respuesta ya se da contigo dentro.</p>
+      <p className="lp-hx-pie">Para que en próxima respuesta la IA te mencione.</p>
     </div>
   );
 }
