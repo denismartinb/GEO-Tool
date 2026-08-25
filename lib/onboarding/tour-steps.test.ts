@@ -5,12 +5,9 @@ import {
   FREEZE_OFFSET_MS,
   STEP_END_MARGIN_MS,
   TOUR_DURATION_MS,
-  TOUR_SEEN_STORAGE_KEY,
   TOUR_STEPS,
   freezeTimeFor,
-  hasSeenTour,
   holdTimeFor,
-  markTourSeen,
   stepIndexAt
 } from "./tour-steps";
 
@@ -131,53 +128,5 @@ describe("reproducción automática", () => {
 
   it("deja los demás pasos al usuario", () => {
     expect(AUTOPLAY_THROUGH_STEP_INDEX).toBeLessThan(TOUR_STEPS.length - 1);
-  });
-});
-
-describe("marca de «ya visto»", () => {
-  function fakeStorage(initial: Record<string, string> = {}) {
-    const data = { ...initial };
-    return {
-      getItem: (k: string) => (k in data ? data[k] : null),
-      setItem: (k: string, v: string) => {
-        data[k] = v;
-      },
-      read: () => data
-    };
-  }
-
-  it("no da por visto lo que nunca se marcó", () => {
-    expect(hasSeenTour(fakeStorage())).toBe(false);
-  });
-
-  it("marca y reconoce", () => {
-    const s = fakeStorage();
-    markTourSeen(s);
-    expect(s.read()[TOUR_SEEN_STORAGE_KEY]).toBe("1");
-    expect(hasSeenTour(s)).toBe(true);
-  });
-
-  it("trata como no visto cualquier valor que no sea exactamente «1»", () => {
-    expect(hasSeenTour(fakeStorage({ [TOUR_SEEN_STORAGE_KEY]: "true" }))).toBe(false);
-    expect(hasSeenTour(fakeStorage({ [TOUR_SEEN_STORAGE_KEY]: "" }))).toBe(false);
-  });
-
-  it("sobrevive a un almacenamiento ausente — servidor, o navegador que lo bloquea", () => {
-    expect(hasSeenTour(null)).toBe(false);
-    expect(hasSeenTour(undefined)).toBe(false);
-    expect(() => markTourSeen(null)).not.toThrow();
-  });
-
-  it("sobrevive a un almacenamiento que lanza — Safari en modo privado", () => {
-    const roto = {
-      getItem() {
-        throw new Error("SecurityError");
-      },
-      setItem() {
-        throw new Error("QuotaExceededError");
-      }
-    };
-    expect(hasSeenTour(roto)).toBe(false);
-    expect(() => markTourSeen(roto)).not.toThrow();
   });
 });

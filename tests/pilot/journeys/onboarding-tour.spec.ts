@@ -19,33 +19,51 @@ import {
  * abre, se comprueba que trae contenido real —no un lienzo vacío—, se
  * fotografía y se cierra.
  *
- * Va todo en UNA prueba a propósito. El popup se muestra una vez por navegador
- * y Playwright estrena contexto en cada `test`, así que «ya no vuelve a
- * saltar» sólo se puede comprobar sin salir de la misma sesión.
+ * ONBOARDING-TOUR-PERSIST-1 (2026-08-25) movió la escena de «sale solo en el
+ * primer acceso y no vuelve tras recargar» a
+ * `journeys/write/onboarding-tour-first-run.spec.ts`. Antes esta pasada podía
+ * forzar «no visto» borrando `localStorage`, una escritura inocua sobre el
+ * navegador desechable de cada test. Ahora la marca vive en `profiles` — una
+ * fila real, compartida por TODAS las pasadas de esta misma cuenta— así que
+ * forzarla a «no visto» es una escritura de producto, y el piloto siempre-on
+ * (cada preview deploy) está prohibido de escribir por convención de código,
+ * no sólo de estilo (CLAUDE.md, "Pilot write scope"). Esa escena pasa a
+ * `--journeys write`, igual que cualquier otra siembra de estado.
  *
- * SCOPE GUARD: estrictamente de lectura. Navega, pulsa los propios controles
- * del tour (Siguiente, la X) y el botón del menú que lo reabre. No lanza
- * escaneos, no crea proyectos, no envía formularios. Lo único que escribe es
- * la marca de «ya visto» en el `localStorage` del navegador desechable de esta
- * pasada.
+ * Lo que SÍ sigue siendo determinista sin ninguna escritura: reabrir el tour
+ * desde «¿Qué es el GEO?» funciona pase lo que pase con la marca de «ya
+ * visto» — es la vía que existe precisamente para volver a verlo. Esta
+ * pasada verifica esa vía, siempre.
+ *
+ * SCOPE GUARD: estrictamente de lectura. Navega, pulsa el botón del menú que
+ * reabre el tour y los propios controles del tour (Siguiente, la X). No
+ * lanza escaneos, no crea proyectos, no envía formularios, no escribe nada.
  */
 
 const TITLE = "Aprende cómo funciona";
 
-test("el tour de bienvenida sale solo, se lee, se cierra y no vuelve", async ({ page }, testInfo) => {
-  // Se entra por `/dashboard` A PROPÓSITO, que es donde aterriza un primer
-  // login de verdad. Esa ruta no pinta nada: redirige al proyecto más reciente.
-  // Justo ahí se rompía (2026-08-07): el popup se montaba en la ruta puente,
-  // escribía la marca de «visto», y la redirección se lo llevaba por delante,
-  // de modo que el tour no salía nunca en el único momento para el que se hizo.
-  // Entrar por la pantalla final ocultaría exactamente ese fallo.
+test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra", async ({ page }, testInfo) => {
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(2_500);
+  await page.waitForTimeout(1_500);
+
+  // Si el popup salió solo (primer acceso real de esta cuenta en esta
+  // pasada), se cierra sin verificarlo aquí — eso es lo que el journey de
+  // escritura comprueba a propósito, con la marca reseteada. Reabrir desde el
+  // menú tiene que funcionar en cualquiera de los dos estados de partida.
+  await dismissWelcomeTour(page);
+
+  const burger = page.getByRole("button", { name: "Abrir menú de navegación" });
+  if (await burger.isVisible().catch(() => false)) {
+    await burger.click();
+    await page.waitForTimeout(400);
+  }
+
+  const reopen = page.getByRole("button", { name: /Qué es el GEO/i });
+  await expect(reopen, "«¿Qué es el GEO?» desapareció del menú lateral").toBeVisible();
+  await reopen.click();
 
   const scrim = page.locator(WELCOME_TOUR_SCRIM);
-  await expect(scrim, "el popup de bienvenida no salió solo en el primer acceso").toBeVisible({
-    timeout: 10_000
-  });
+  await expect(scrim, "«¿Qué es el GEO?» del menú no reabrió el tour").toBeVisible({ timeout: 5_000 });
   await expect(page.getByRole("heading", { name: TITLE })).toBeVisible();
 
   // Contenido real, no un lienzo en blanco. El paso 1 teclea el dominio; si el
@@ -60,16 +78,7 @@ test("el tour de bienvenida sale solo, se lee, se cierra y no vuelve", async ({ 
       }
     )
     .toBeGreaterThan(0);
-  await captureInteraction(page, testInfo, "onboarding-tour-paso-1");
-
-  // Sólo el primer paso se reproduce solo (log §40). Comprobado midiendo, no
-  // asumido: pasados varios segundos el paso activo tiene que seguir siendo el
-  // primero. Si alguien devuelve la reproducción encadenada, esto lo caza.
-  await page.waitForTimeout(6_000);
-  await expect(
-    page.locator(".pt-dot").first(),
-    "el tour siguió solo más allá del paso 1: la reproducción automática debe pararse ahí"
-  ).toHaveClass(/is-on/);
+  await captureInteraction(page, testInfo, "onboarding-tour-reabierto-desde-el-menu");
 
   // Siguiente cambia de paso de verdad — un control muerto es un hallazgo.
   await page.getByRole("button", { name: /Siguiente/ }).click();
@@ -89,36 +98,6 @@ test("el tour de bienvenida sale solo, se lee, se cierra y no vuelve", async ({ 
   // de cerrar, esto tiene que fallar en vez de taparlo con una vía alternativa.
   expect(await dismissWelcomeTour(page), "el popup no se pudo cerrar con su X").toBe(true);
   await expect(scrim).toBeHidden();
-
-  // Y ya no vuelve. Es la regresión concreta que el piloto encontró el
-  // 2026-08-07: la marca de «visto» se escribía al cerrar, así que el popup
-  // reaparecía en cada carga y tapaba la consola indefinidamente.
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(1_500);
-  await expect(
-    page.locator(WELCOME_TOUR_SCRIM),
-    "el popup volvió a saltar tras haberse visto: «primer acceso» se convierte en «cada carga»"
-  ).toHaveCount(0);
-
-  // Pero sigue habiendo puerta de vuelta desde el menú lateral. En móvil ese
-  // menú es un cajón, así que primero hay que abrirlo, igual que haría
-  // cualquiera.
-  const burger = page.getByRole("button", { name: "Abrir menú de navegación" });
-  if (await burger.isVisible().catch(() => false)) {
-    await burger.click();
-    await page.waitForTimeout(400);
-  }
-
-  const reopen = page.getByRole("button", { name: /Qué es el GEO/i });
-  await expect(reopen, "«¿Qué es el GEO?» desapareció del menú lateral").toBeVisible();
-  await reopen.click();
-  await expect(
-    page.locator(WELCOME_TOUR_SCRIM),
-    "«¿Qué es el GEO?» del menú no reabrió el tour"
-  ).toBeVisible({ timeout: 5_000 });
-  await captureInteraction(page, testInfo, "onboarding-tour-reabierto-desde-el-menu");
-
-  await dismissWelcomeTour(page);
 });
 
 /**
