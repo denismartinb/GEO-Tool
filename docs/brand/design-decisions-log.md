@@ -13692,9 +13692,26 @@ promo vaya sin descuento a propósito.
 
 **Comprobado.** `pnpm test` (201 ficheros, 2.817 pruebas, incluidos los casos
 nuevos de `createCheckoutSession` con/sin cupón y la regla de entorno) y
-`pnpm run validate` en verde. Nadie ha visto esto en un navegador todavía —
-el piloto lo hará contra el preview de este PR, y hasta entonces la promo no
-puede darse por verificada visualmente.
+`pnpm run validate` en verde.
+
+### Addendum — el fundador configuró Stripe, y `/pricing` es estática (2026-08-25)
+
+El fundador creó los dos cupones en Stripe test mode (`amount_off` correcto,
+`duration: repeating` × 6 meses, `redeem_by` 1 de septiembre) y puso sus IDs
+en las variables de Vercel. Al principio no se veía nada en el preview
+aunque las variables ya estaban bien: `/pricing` es una página **estática**
+(prerenderizada en el build, `○` en la salida de `next build`), así que
+`getActivePromoPlanIds()` se evalúa una sola vez, en el momento de construir,
+no en cada visita — cambiar la variable de entorno sin volver a construir no
+hace nada. `/dashboard/settings/billing` sí es dinámica (`ƒ`), así que ahí sí
+se habría visto sin rebuild; la página pública no.
+
+Un "Redeploy" manual desde el propio Vercel Dashboard se canceló solo dos
+veces seguidas (2s de duración cada vez) — probablemente por deduplicación de
+builds concurrentes de Vercel al reintentar. La solución fue forzar un build
+nuevo empujando un commit real a la rama (este mismo párrafo), que dispara el
+ciclo normal de CI + piloto en vez de pelear con el botón de redeploy.
 
 **Pendiente.** Fase D (Starter a escaneo diario) sigue bloqueada, sin tocar
 en este PR — el highlight de Starter sigue diciendo "Escaneo semanal".
+Verificación visual del tachado en el preview, en curso.
