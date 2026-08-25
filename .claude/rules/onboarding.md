@@ -20,21 +20,26 @@ obedecerá igual.
   tamaño dependa del paso rompe esto (fundador, 2026-08-06: «que no haya
   movimientos de altura de la imagen»).
 - **`prefers-reduced-motion: reduce` deja el tour quieto en su último
-  fotograma.** No es una degradación, es el contrato: nada se anima nunca. En
-  la landing ese fotograma final ES la captura del hero, así que no hay
-  alternativa estática que mantener.
+  fotograma.** No es una degradación, es el contrato: nada se anima nunca.
 - **Sólo el primer paso se reproduce solo; los otros siete los pide el
   usuario.** `AUTOPLAY_THROUGH_STEP_INDEX` es 0 y no es un ajuste cosmético:
   encadenados, los ocho pasos cambian de pantalla antes de que dé tiempo a leer
   el subtítulo, y el tour pasa a ser algo que se mira pasar en vez de algo que
   se lee (fundador, 2026-08-07; log §40). Ampliarlo exige volver a medir si el
   subtítulo del último paso automático da tiempo a leerse.
-- **En la landing no arranca hasta que el lienzo se ve ENTERO.** Con el umbral
-  de asomo (`0.25`) quien bajaba hasta el hero se lo encontraba con el paso 1 ya
-  empezado o terminado (fundador, 2026-08-07). La comprobación de «entero»
-  tiene que seguir contemplando que el lienzo sea más alto que la ventana: con
-  un `intersectionRatio >= 0.98` a secas, en una pantalla corta no se cumple
-  nunca y el tour no arranca jamás.
+- **EL TOUR YA NO ESTÁ EN LA LANDING** (HOME-2026-08 Fase A2, 2026-08-23, log
+  §157). Ese hueco lo ocupa ahora la demo de cinco escenas del hero, que es lo
+  que el artboard aprobado pone ahí; el tour en el hero fue una decisión
+  nuestra de mientras tanto (log §1), no del diseño. **`variant="hero"` sigue
+  existiendo en el componente** —se retiró el montaje, no la variante— y el
+  tour vive donde tiene sentido: el popup de bienvenida de la consola
+  (`tour-provider.tsx`), que se lo enseña a quien acaba de entrar y no a quien
+  todavía no sabe qué es esto. Las reglas de abajo hablan de ese popup. Si
+  alguna vez vuelve a la landing, vuelve con ellas: arrancar sólo al verse el
+  lienzo ENTERO —con el umbral de asomo (`0.25`) quien bajaba se lo encontraba
+  con el paso 1 ya terminado (fundador, 2026-08-07)— y contemplando que el
+  lienzo pueda ser más alto que la ventana, porque con un
+  `intersectionRatio >= 0.98` a secas en una pantalla corta no arranca jamás.
 - **La pista del botón «Siguiente» va en bucle hasta el clic.** Ni el ratón por
   encima ni el foco la apagan: existe para conseguir ese clic, así que mientras
   no llegue no ha terminado su trabajo (fundador, 2026-08-07; log §40). Es la
@@ -44,7 +49,7 @@ obedecerá igual.
   detiene.** Corregido el 2026-08-08: al principio sólo se encendía al pausarse
   la reproducción automática, así que invitaba al clic cuatro segundos y medio
   tarde. Ahora se enciende a la vez que el reloj empieza a correr —al montar el
-  popup, o al verse entero el lienzo en la landing— y se mantiene puesta
+  popup— y se mantiene puesta
   mientras el paso 1 se reproduce solo y después, hasta el clic.
 - **No hay reproducción perpetua en el tour.** Arranca al verse entero y se para
   al salir de pantalla. Una animación fuera de pantalla es CPU y batería a cambio de
@@ -76,9 +81,18 @@ obedecerá igual.
   nacería relleno con el primero. Y sólo se guarda lo que el asistente
   aceptaría —`isWellFormedDomain`, la misma función que habilita su botón, no
   una copia— porque arrastrar basura es peor que no arrastrar nada (log §54).
-- **El «ya visto» va en `localStorage`, no en el esquema.** Una migración está
-  prohibida sin aprobación explícita del fundador (CLAUDE.md). El coste
-  asumido y declarado: el popup reaparece en un navegador nuevo.
+- **El «ya visto» vive en `profiles.onboarding_tour_seen_at`, no en
+  `localStorage`.** Migró ahí en ONBOARDING-TOUR-PERSIST-1 (2026-08-25, log
+  §153), founder-approved vía Task Intake, precisamente porque vivir en
+  `localStorage` (decisión original de ONBOARDING-TOUR-1) hacía que el popup
+  reapareciera en cualquier navegador nuevo — la queja que motivó el cambio.
+  Se lee en `app/dashboard/layout.tsx` con su propia consulta (mismo patrón
+  que los flags de debug: la migración se aplica a mano, nunca en el select
+  compartido de `getWorkspaceCounters`) y falla cerrado hacia «ya visto» —
+  un error de lectura NO muestra el popup, para no repetirlo en cada carga
+  mientras la migración no esté aplicada. Se escribe con la server action
+  `markTourSeen` (`app/dashboard/actions.ts`), llamada desde `TourProvider`
+  con `startTransition`, nunca con un `window.localStorage.setItem`.
 - **El popup no se abre en `/dashboard`.** Es una ruta puente: su página no
   pinta nada, sólo redirige al proyecto más reciente. Abrir ahí montaba el
   popup, escribía la marca de «visto» y la redirección se lo llevaba por
@@ -94,12 +108,20 @@ obedecerá igual.
   anchuras (log §40).
 - **El popup es un modal y tapa la consola entera, así que el piloto tiene que
   poder sortearlo.** `visitAsUser` lo cierra con su propia X y lo anota en
-  `dismissedWelcomeTour`; `auth.setup` **filtra la marca de «visto» del
-  `storageState` ya capturado**, porque si no el estado compartido diría «ya lo
-  vio» y el piloto no podría verlo nunca. Que sea un filtro sobre el objeto y no
-  un `removeItem` sobre la página no es estilo: `waitForURL` resuelve antes de
-  que React hidrate, así que el borrado se adelanta al efecto que escribe la
-  marca y el efecto la repone justo a tiempo de que la capture (2026-08-07, el
-  popup no salió en ninguna anchura). Si tocas cualquiera de las dos cosas,
-  `tests/pilot/journeys/onboarding-tour.spec.ts` es lo que impide que el tour
-  vuelva a quedarse sin mirar (log §40).
+  `dismissedWelcomeTour`.
+- **La marca de «ya visto» es por CUENTA, no por navegador — el piloto no
+  puede forzar «no visto» desde el set de lectura.** Hasta ONBOARDING-TOUR-
+  PERSIST-1 (2026-08-25, log §153) la marca vivía en `localStorage`, así que
+  `auth.setup` podía filtrarla del `storageState` ya capturado sin escribir
+  nada real, y cada test de Playwright partía "no visto" por tener un
+  contexto de navegador aislado. Ahora vive en `profiles`, una fila real
+  compartida por todas las pasadas de la misma cuenta piloto: forzarla a «no
+  visto» es una escritura de producto, y el piloto siempre-on es
+  estrictamente de lectura por convención de código (CLAUDE.md, "Pilot write
+  scope"). La escena de «sale solo en el primer acceso y no vuelve tras
+  recargar» vive en `tests/pilot/journeys/write/onboarding-tour-first-run.spec.ts`,
+  sólo bajo `--journeys write`, con su propio reset owner-scoped
+  (`POST /api/account/onboarding-tour/reset`). `tests/pilot/journeys/
+  onboarding-tour.spec.ts` (set por defecto, cada preview deploy) se queda
+  con lo único que es determinista sin escribir nada: reabrir el tour desde
+  «¿Qué es el GEO?» funciona pase lo que pase con la marca de origen.

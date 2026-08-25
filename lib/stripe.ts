@@ -1,7 +1,7 @@
 import "server-only";
 
 import Stripe from "stripe";
-import type { Plan } from "@/app/pricing/plans-data";
+import { isPromoActive, PLANS, type Plan } from "@/app/pricing/plans-data";
 
 /**
  * BILLING-STRIPE-1: only Starter and Pro are self-serve Stripe products —
@@ -31,6 +31,82 @@ export function getPlanIdForPriceId(priceId: string): SelfServePlanId | null {
     if (envPriceId && envPriceId === priceId) return planId as SelfServePlanId;
   }
   return null;
+}
+
+/**
+ * PRICING-PROMO-1: cupón real de Stripe (`amount_off`, `duration: repeating`,
+ * `duration_in_months: 6`, `redeem_by` = `PROMO_ENDS_AT`) — creado a mano en
+ * el Dashboard (test mode hoy; live cuando se active), nunca por esta app.
+ * `null` mientras no exista, y entonces el checkout cobra el precio normal.
+ */
+const SELF_SERVE_PROMO_COUPON_ENV_VAR: Partial<Record<Plan["id"], string | undefined>> = {
+  starter: process.env.STRIPE_COUPON_ID_STARTER_PROMO,
+  pro: process.env.STRIPE_COUPON_ID_PRO_PROMO
+};
+
+export function getPromoCouponIdForPlan(planId: SelfServePlanId): string | null {
+  return SELF_SERVE_PROMO_COUPON_ENV_VAR[planId] ?? null;
+}
+
+/**
+ * Los planes cuya promo se puede mostrar de verdad ahora mismo: la fecha no
+ * ha pasado Y el cupón de Stripe que la haría real está configurado. Nunca al
+ * revés — mostrar el precio tachado sin cupón anunciaría un descuento que el
+ * checkout no puede dar, que es justo lo que esta fase existe para evitar.
+ * Fuente única para `/pricing` y para el modal de cambio de plan, así que las
+ * dos pantallas no puedan divergir sobre qué planes llevan promo.
+ */
+export function getActivePromoPlanIds(): SelfServePlanId[] {
+  if (!isPromoActive()) return [];
+  return (["starter", "pro"] as const).filter((id) => getPromoCouponIdForPlan(id) !== null);
+}
+
+/**
+ * PRICING-PROMO-1: whether a REAL subscription is currently under one of our
+ * own promo coupons, and until when — read from Stripe itself, never
+ * inferred from `isPromoActive()` (that only says whether *new* checkouts
+ * can still redeem the coupon; a subscriber who redeemed it before
+ * `PROMO_ENDS_AT` keeps their 6 months running well past that date). Matches
+ * the discount's coupon id against `getPromoCouponIdForPlan(planId)` rather
+ * than trusting any discount present, so a manually-applied support coupon
+ * in the Stripe Dashboard is never mislabeled as "precio de lanzamiento".
+ * Returns null on any failure (unconfigured Stripe, unreachable API, no
+ * matching discount) — the "Tu plan" card falls back to the plain price
+ * rather than guessing.
+ */
+export async function getActiveSubscriptionPromo(
+  subscriptionId: string,
+  planId: Plan["id"]
+): Promise<{ promoPrice: number; endsAt: string } | null> {
+  if (!isSelfServePlan(planId)) return null;
+  const couponId = getPromoCouponIdForPlan(planId);
+  if (!couponId) return null;
+
+  const stripe = getStripeClient();
+  if (!stripe) return null;
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["discounts"] });
+    const match = (subscription.discounts ?? []).find((d) => {
+      if (typeof d === "string") return false;
+      const coupon = d.source.coupon;
+      return (typeof coupon === "string" ? coupon : coupon?.id) === couponId;
+    });
+    if (!match || typeof match === "string" || !match.end) return null;
+
+    // The Plan definition, not the coupon's amount_off, is the source of
+    // truth for the price shown — same reasoning as getActivePromoPlanIds.
+    const plan = PLANS.find((p) => p.id === planId);
+    if (!plan || plan.promoPrice === undefined) return null;
+
+    return { promoPrice: plan.promoPrice, endsAt: new Date(match.end * 1000).toISOString() };
+  } catch (error) {
+    console.error("[geo:billing] failed to read subscription discount from Stripe", {
+      subscriptionId,
+      message: error instanceof Error ? error.message : String(error)
+    });
+    return null;
+  }
 }
 
 let cachedClient: Stripe | null = null;

@@ -152,8 +152,13 @@ export default async function CitationsPage({
       })
     : null;
 
+  // Mirrors the FirstScanTakeover condition below — hidden while the mission
+  // takeover owns the screen, so the rocket animation reads as full screen
+  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  const showMissionTakeover = Boolean(activeRun) && !latestRun;
+
   return (
-    <div className="page fade-in">
+    <div className={`page fade-in${showMissionTakeover ? " mrk-fill" : ""}`}>
       {/* Sticky header. HEADER-FULL-WIDTH-1 (2026-08-25): esta pantalla se
           había quedado con un layout de una sola línea (kicker + separador +
           dominio) de antes de que el resto de la consola convergiera en
@@ -162,27 +167,30 @@ export default async function CitationsPage({
           usan (Recomendaciones incluso dice explícitamente "alineada con...
           Páginas citadas", que nunca lo estuvo). Resultado: aquí la banda
           salía más baja que en el resto y con una tipografía distinta
-          (fundador, 2026-08-25). Mismo patrón, letra por letra. */}
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Páginas citadas</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                {project.name}
-              </span>
-              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                {project.domain}
-              </span>
+          (fundador, 2026-08-25). Mismo patrón, letra por letra. Se oculta
+          mientras la misión del primer escaneo ocupa la pantalla entera. */}
+      {!showMissionTakeover && (
+        <div className="ov-sticky-header">
+          <div className="ov-sticky-left">
+            <div>
+              <p className="kicker" style={{ marginBottom: 2 }}>Páginas citadas</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
+                  {project.name}
+                </span>
+                <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
+                  {project.domain}
+                </span>
+              </div>
             </div>
           </div>
+          <div className="ov-sticky-right">
+            <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
+          </div>
         </div>
-        <div className="ov-sticky-right">
-          <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
-        </div>
-      </div>
+      )}
 
-      {activeRun && !latestRun ? (
+      {activeRun && showMissionTakeover ? (
         <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
       ) : !latestRun ? (
         <div className="section-empty" style={{ marginTop: 20 }}>

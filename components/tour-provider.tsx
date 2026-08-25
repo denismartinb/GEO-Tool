@@ -1,10 +1,20 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  startTransition,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode
+} from "react";
 
 import { ProductTour } from "@/components/product-tour";
-import { hasSeenTour, markTourSeen } from "@/lib/onboarding/tour-steps";
+import { markTourSeen } from "@/app/dashboard/actions";
 
 /**
  * ONBOARDING-TOUR-1 — el tour como popup de la consola.
@@ -13,12 +23,11 @@ import { hasSeenTour, markTourSeen } from "@/lib/onboarding/tour-steps";
  *   1. solo, la primera vez que alguien entra en la consola;
  *   2. a demanda, desde «¿Qué es el GEO?» del menú lateral.
  *
- * El «ya lo he visto» va en `localStorage` y no en una columna de usuario a
- * propósito: una migración de esquema está prohibida sin aprobación explícita
- * (CLAUDE.md). El coste, declarado y no escondido: el popup reaparece en un
- * navegador nuevo o tras limpiar el almacenamiento. Para un tour descartable
- * de un clic es preferible a tocar el esquema; si algún día molesta, la
- * conversión a columna es una fase con su propio Task Intake.
+ * El «ya lo he visto» vive en `profiles.onboarding_tour_seen_at`
+ * (ONBOARDING-TOUR-PERSIST-1, 2026-08-25) y llega como prop leída
+ * server-side en `app/dashboard/layout.tsx` — antes vivía en `localStorage`
+ * y reaparecía en cualquier navegador nuevo, que era justo la queja que
+ * motivó el cambio.
  */
 
 type TourContextValue = { open: () => void };
@@ -34,16 +43,19 @@ export function useTour(): TourContextValue {
   return useContext(TourContext) ?? { open: () => {} };
 }
 
-export function TourProvider({ children }: { children: ReactNode }) {
+export function TourProvider({
+  children,
+  hasSeenTour
+}: {
+  children: ReactNode;
+  /** Leído server-side en `app/dashboard/layout.tsx`, único punto de montaje. */
+  hasSeenTour: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
 
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
 
-  // Primera visita. Se decide en el cliente tras montar, nunca en el render
-  // inicial: `localStorage` no existe en el servidor y leerlo durante el
-  // render daría una discrepancia de hidratación.
-  //
   // La marca de «visto» se escribe AL MOSTRARLO, no al cerrarlo. Escribirla al
   // cerrar convertía «salta en el primer acceso» en «salta en cada carga hasta
   // que lo cierres»: quien miraba el popup y pinchaba en el menú, o recargaba,
@@ -64,12 +76,22 @@ export function TourProvider({ children }: { children: ReactNode }) {
   // Prompts, Competidores o Páginas citadas, y jamás en Visión general.
   const pathname = usePathname();
 
+  // El efecto sólo debe disparar una vez por montaje del provider — sin esta
+  // guarda, una navegación a `/dashboard` y de vuelta reevaluaría la
+  // condición con `hasSeenTour` todavía en su valor inicial (el layout no se
+  // remonta entre rutas del dashboard) y podría reabrirlo.
+  const hasCheckedRef = useRef(false);
+
   useEffect(() => {
     if (pathname === "/dashboard") return;
-    if (hasSeenTour(window.localStorage)) return;
-    markTourSeen(window.localStorage);
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
+    if (hasSeenTour) return;
     setIsOpen(true);
-  }, [pathname]);
+    startTransition(() => {
+      markTourSeen();
+    });
+  }, [pathname, hasSeenTour]);
 
   // Escape cierra, y mientras está abierto el fondo no hace scroll.
   useEffect(() => {

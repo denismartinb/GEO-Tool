@@ -14,6 +14,20 @@ function dismissedKey(projectId: string): string {
 }
 
 /**
+ * DEBUG-HIDE-NO-TRACKING-1: preferencia local (no hay migración detrás) que
+ * silencia el aviso "Tu análisis de hoy no se repetirá" del estado
+ * `no_tracking`. Se activa desde un switch en `/dashboard/projects/
+ * [projectId]/debug` (`components/no-tracking-banner-toggle.tsx`), que
+ * importa esta misma función para no duplicar el formato de la clave entre
+ * los dos ficheros. A diferencia de `dismissedKey` (un descarte de un solo
+ * render, por `useState`), esta persiste hasta que se apague el switch — el
+ * aviso seguiría reapareciendo en cada carga si sólo se pudiera descartar.
+ */
+export function noTrackingHiddenKey(projectId: string): string {
+  return `dmb-hide-no-tracking:${projectId}`;
+}
+
+/**
  * DATA-MATURITY-1: explains the gap between "your score today is real" and
  * "trends/competitor comparisons need more history" instead of leaving that
  * gap silent (see lib/project-workspace.ts computeDataMaturity for the state
@@ -30,18 +44,22 @@ export function DataMaturityBanner({
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
   const [dismissed, setDismissed] = useState(false);
+  const [noTrackingHidden, setNoTrackingHidden] = useState(false);
 
   useEffect(() => {
     if (!projectId || typeof window === "undefined") {
       setDismissed(false);
+      setNoTrackingHidden(false);
       return;
     }
     setDismissed(window.localStorage.getItem(dismissedKey(projectId)) === "1");
+    setNoTrackingHidden(window.localStorage.getItem(noTrackingHiddenKey(projectId)) === "1");
   }, [projectId]);
 
   if (!projectId) return null;
   const state = dataMaturityByProject[projectId];
   if (!state || state.kind === "hidden" || dismissed) return null;
+  if (state.kind === "no_tracking" && noTrackingHidden) return null;
 
   function dismiss() {
     if (projectId && typeof window !== "undefined") {

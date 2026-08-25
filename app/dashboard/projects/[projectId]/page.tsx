@@ -609,6 +609,16 @@ export default async function ProjectDetailPage({
 
   const hasData = Boolean(latestCompletedRun && latestScore);
 
+  // The mission (ScanMissionRocket, mounted via FirstScanTakeover below) is a
+  // full-bleed, edge-to-edge scene — `.mrk-full`'s own negative top margin
+  // already assumes it sits flush against `.page`'s top padding, sticky
+  // header or not. Keeping `.ov-sticky-header` mounted alongside it just
+  // stacks a second chrome band above a screen that is supposed to read as
+  // full screen (founder, 2026-08-25). The condition mirrors exactly when
+  // `FirstScanTakeover` renders below: `!hasData` (no completed run yet) with
+  // an active run that is this project's first.
+  const showMissionTakeover = !hasData && Boolean(activeRun) && isFirstScan;
+
   /* ---- brand position (Phase A) ---- */
   const brandPosition = scoreDetails.brand_position;
   const brandPositionPromptsWithData = n(brandPosition?.prompts_with_position_data);
@@ -743,7 +753,7 @@ export default async function ProjectDetailPage({
 
   /* ---- render ---- */
   return (
-    <div className="page">
+    <div className={`page${showMissionTakeover ? " mrk-fill" : ""}`}>
       {/* DOMAINS-REDESIGN-1 — the invisible driver that actually executes a
           pending scan's batches, moved here from the Escaneos page it used to
           be the ONLY mount of. Onboarding now lands on this page, so this is
@@ -761,30 +771,34 @@ export default async function ProjectDetailPage({
       ) : null}
       {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
-      {/* Sticky page header */}
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Visión general</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>{project.name}</span>
-              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{project.domain}</span>
-              <span className="meta-pill">{project.country}/{project.language}</span>
+      {/* Sticky page header — hidden while the first-scan mission takeover
+          (below) owns the screen, so the rocket animation reads as full
+          screen instead of sitting under a second chrome band. */}
+      {!showMissionTakeover && (
+        <div className="ov-sticky-header">
+          <div className="ov-sticky-left">
+            <div>
+              <p className="kicker" style={{ marginBottom: 2 }}>Visión general</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>{project.name}</span>
+                <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{project.domain}</span>
+                <span className="meta-pill">{project.country}/{project.language}</span>
+              </div>
             </div>
           </div>
+          <div className="ov-sticky-right">
+            <ScanStatePill
+              activeRun={activeRun}
+              lastScanLabel={
+                latestCompletedRun
+                  ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                      .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                  : null
+              }
+            />
+          </div>
         </div>
-        <div className="ov-sticky-right">
-          <ScanStatePill
-            activeRun={activeRun}
-            lastScanLabel={
-              latestCompletedRun
-                ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                    .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
-                : null
-            }
-          />
-        </div>
-      </div>
+      )}
 
       {/* Feedback */}
       {feedbackErrorMessage && (

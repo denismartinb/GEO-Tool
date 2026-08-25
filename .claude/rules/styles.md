@@ -110,6 +110,54 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   misma geometría). Cualquier elemento nuevo bajo `app/dashboard/**` que
   reutilice este idiom de full-bleed necesita la misma corrección — no es
   exclusivo de `.mrk-full`.
+- **Un fixture de verificación que no incluye el reset real de la app
+  verifica un modelo de caja distinto del que se despliega, y puede dar
+  "exacto" sobre una fórmula que en producción no lo es.** `@tailwind base;`
+  (primera línea de `app/globals.css`) trae el Preflight de Tailwind, que
+  pone `box-sizing: border-box` en todo elemento — así que `.page`, capado
+  por `max-width`, renderiza exactamente ese ancho (el padding vive DENTRO
+  del presupuesto). Una fórmula de sangrado verificada contra un fixture que
+  concatena sólo las hojas de estilo propias (`sed '/^@tailwind/d'` para
+  poder cargarlas en un navegador sin PostCSS) pierde ese reset y cae al
+  valor por defecto del navegador (`content-box`, donde el padding se SUMA al
+  `max-width`) — dos modelos que difieren en exactamente
+  `2 × page-pad-x` en el ancho total de una caja topada, y por tanto en su
+  desplazamiento de centrado. Una corrección calibrada contra el fixture
+  incompleto (log §160, la misma fase) pasó las nueve anchuras de su propio
+  fixture con hueco cero y dejó la escena real 34px corta en cada borde en
+  cuanto `.page` llegaba a toparse — encontrado por el fundador en el
+  preview, no por el fixture, porque el fixture nunca preguntó "¿coincide
+  este `box-sizing` con el que carga la app?". **Para verificar geometría con
+  `--tw-*`/Preflight de por medio, arranca el fixture desde la SALIDA
+  COMPILADA (`.next/static/chunks/*.css` tras `pnpm run build`, buscando el
+  chunk que contenga las clases en juego), no desde una concatenación manual
+  de fuentes** — es lo único que garantiza que el reset, el orden de cascada
+  y las capas de Tailwind son los que de verdad se sirven. Diagnosticado
+  pidiendo al fundador que inspeccionara el hueco en DevTools: el selector
+  marcó `.dash-content`, es decir, `.mrk-full` genuinemente no llegaba ahí —
+  ese dato desde el navegador real es lo que descartó "el código ya está
+  bien, es caché" antes de gastar una vuelta más de fixture equivocado.
+- **Un selector `.a > .b` para un componente full-bleed asume que `.b` es
+  hijo DIRECTO de `.a` en TODAS sus pantallas — compruébalo, no lo asumas por
+  la pantalla donde ya se verificó.** `.mrk-fill` (log §160) se probó primero
+  contra `.page > .mrk-full` (cierto en 5 de 6 pantallas) y contra `.cm2-scope
+  > .page.cm2-page > .mrk-full` (el envoltorio de Competidores, ya conocido) —
+  y ninguno de los dos cubría Auditoría web, donde `.wa2-scope.wa2-page` mete
+  a `.mrk-full` un nivel más adentro, como NIETO de `.page`, no hijo. El
+  selector con `>` simplemente nunca casaba ahí: sin error de consola, sin
+  warning, la misión seguía con su comportamiento antiguo en silencio.
+  Combinador de descendiente (sin `>`) para que case a cualquier profundidad,
+  y `display: contents` en cada envoltorio intermedio para que `flex: 1`
+  siga significando algo una vez que el selector ya casa — las dos piezas
+  hacen falta, ninguna sustituye a la otra. Y dos envoltorios que se PARECEN
+  no son intercambiables: `.cm2-page` va combinado en `.page` (su propio
+  `max-width` SÍ es el de `.page`), `.wa2-page` es un hijo aparte (su
+  `max-width` deja de pintar nada en cuanto es `display: contents`, y `.page`
+  sigue topado por el global) — copiar la variable de sangrado de uno al otro
+  sin releer esa diferencia dejó la escena 20px corta por los dos lados, y
+  sólo lo cazó el fixture, no el razonamiento por analogía. Antes de dar un
+  patrón por cubierto: `grep -n "<FirstScanTakeover\|<ReentryMission"` y mira
+  qué hay entre esa línea y el `.page` más cercano, en las 6 pantallas.
 - **`container-type`/`contain: layout` en cualquier ancestro dentro de
   `.dash-content` es del tipo de riesgo que no se toma a la ligera.** Convierte
   al elemento en el containing block de sus descendientes `position: fixed`, y
@@ -184,6 +232,114 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   nada**: misma especificidad, gana la última. El síntoma no es un color raro,
   es una sección rota —una respuesta de FAQ en una columna de 111px, un galón
   que no aparece— y no se ve leyendo, sólo midiendo `getComputedStyle` (log
-  §146). Es la tercera vez que el orden de este fichero decide en vez de la
-  intención: antes con la escala tipográfica (§143) y con los colores de la
-  superficie oscura (§144).
+  §146). Es la QUINTA vez que el orden de este fichero decide en vez de la
+  intención: la escala tipográfica (§143), los colores de la superficie oscura
+  (§144), la escala móvil de la FAQ (§146), el prefijado de «Cinco pantallas»
+  (§154) y la franja 561-720 de esas mismas pantallas (§155).
+  **Agrupar por `@media` es exactamente el error.** En §155 los tres arreglos
+  de una franja se escribieron juntos en un solo bloque, nacido al lado del
+  primero de ellos; los otros dos quedaron por delante de sus reglas base y no
+  se aplicó ninguno. El instinto es agrupar lo que comparte anchura — y lo que
+  manda es lo que comparte elemento. Si un bloque `@media` corrige dos
+  selectores distintos, casi siempre tienen que ser dos bloques.
+- **Un `<dialog>` no cuelga de nada que pueda ocultarse.** `showModal()`
+  promociona a la capa superior sólo lo que está en el árbol de renderizado:
+  metido dentro de un contenedor con `display: none` a esa anchura, el diálogo
+  devuelve `open === true`, se cierra con `Esc` —es modal de verdad— y mide
+  **0×0**. Ningún estado dice «roto»; sólo el `getBoundingClientRect()` (log
+  §156, el modal de «El cambio de reglas» dentro de `.lp-rules-navslot`).
+- **Un estado inicial oculto cuelga de una clase que pone la isla, nunca del
+  CSS a secas** — y si el control que lo revela también lo pinta la isla, con
+  más razón: sin JS quedarían la mitad de la pantalla escondida y ninguna forma
+  de pedirla (log §144 y §156).
+- **Un elemento recortado no desborda la página, y por eso es peor.** Un
+  barrido de anchuras que sólo mira `document.scrollWidth` da por bueno lo que
+  un contenedor con `overflow: hidden` está cortando por dentro: el marco de
+  «Cinco pantallas» recortó una tarjeta, un ranking y una cápsula entre 561 y
+  720px con once anchuras «sin desbordamiento» (log §155). Se mide **cada
+  elemento contra la caja de su contenedor**, no el documento. Y eso TAMPOCO
+  basta: un elemento puede caber en el panel y estar cortado por un
+  `overflow: hidden` intermedio, así que se mide además
+  `scrollHeight > clientHeight` en todo lo que esconde su contenido — es lo que
+  destapó el `</script>` cortado de la demo del hero (log §157). Excepción
+  legítima y única: un `<img>` con `object-fit: cover` dentro de
+  `overflow: hidden` recorta **por diseño**; eso es el encuadre, no un fallo.
+- **Un bloque de código dentro de una maqueta va en `white-space: pre` con
+  scroll horizontal.** Envolviendo, cambia de número de líneas según la
+  ventana, y entonces el hueco que lo contiene hay que dimensionarlo para el
+  peor caso en TODAS las anchuras — o se corta en la estrecha. Uno que se
+  desplaza mide siempre lo mismo (log §157).
+- **`--ink-3` sólo aprueba AA sobre BLANCO PURO. Sobre `--canvas` no.** La
+  cifra, para no volver a deducirla: 4,76:1 sobre `#ffffff` y **4,44:1** sobre
+  `#f6f7f9` — seis centésimas por debajo del mínimo. Ha caído tres veces en la
+  misma zona en un día: la nota del cierre sobre el degradado del hero, esa
+  misma nota otra vez al pensar que bastaba con subir un escalón, y las
+  pestañas de «Cinco pantallas» (log §146, §154). Sobre cualquier superficie
+  que no sea blanca —`--canvas`, un degradado tintado, una tarjeta gris— el
+  texto secundario va en `--ink-2` (7,50:1). Y el fondo se mide **pintado**: un
+  elemento con `background` en atajo tiene `background-color` transparente, así
+  que preguntárselo al navegador devuelve el blanco del `body` y da un número
+  que ahí no es cierto.
+- **Un marco de alto fijo con escenas apiladas se mide contra la escena MÁS
+  ALTA, así que el blanco de las cortas se arregla en las largas.** Es
+  contraintuitivo y por eso está escrito: la demo del hero enseñaba 220px de
+  vacío bajo la escena 0 y la escena 0 no tenía nada que corregir — el cuerpo
+  estaba en 508 porque la escena 4 medía 509 (log §158). Antes de tocar la
+  pantalla que enseña el problema, medir las cinco y arreglar la que manda. Y
+  **«móvil» no significa «apilar»**: la escena 4 pasó de 215 a 115px volviendo
+  a dos columnas, que además es como se ve en escritorio.
+- **Una barra de avance es un reloj o no es nada — pero «reloj» se mide por
+  segmento, no por la barra entera.** Cada tramo que anima su relleno saca su
+  duración del mismo valor que gobierna el avance real —pasado como
+  `animation-duration` desde el código, nunca duplicado en el CSS— y esa
+  animación sólo existe mientras el reloj corre de verdad para ESE tramo:
+  fuera de pantalla, con la reproducción automática apagada o en el último
+  paso, no se anima. Lo que NO es progreso inventado es un tramo ya
+  completado quedándose lleno y quieto — eso es estado real (una escena que ya
+  se vio), no una animación fingiendo seguir en marcha, así que no tiene por
+  qué desaparecer con el reloj (`components/landing/hero-demo.tsx`,
+  `.lp-hx-avance`, log §159 — corrige la primera versión de esta regla, log
+  §158, escrita para una barra continua de un solo tramo). Una barra sigue
+  siendo progreso inventado si ANIMA sin que vaya a pasar nada; no lo es por
+  seguir mostrando, ya quieta, algo que de verdad pasó
+  (CLAUDE.md, "no fake progress").
+- **Un elemento animado por `transform` DENTRO de un contenedor con scroll
+  propio hereda una segunda animación que no controla: la del scroll mismo.**
+  Su posición en pantalla es `translateX − scrollLeft`, y si algo más también
+  anima `scrollLeft` —un `scrollTo({behavior:"smooth"})` disparado por el mismo
+  clic, por ejemplo— hay dos relojes independientes restándose. `behavior:
+  "auto"` no basta para desactivar el segundo: por la spec de CSSOM View,
+  `"auto"` hereda el `scroll-behavior` computado del elemento, así que si una
+  regla de CSS ya declara `scroll-behavior: smooth` en ese contenedor —como la
+  tira de `.lp-prod-tabs` en móvil, para el gesto táctil—, `"auto"` sigue
+  animándose igual. Sólo `behavior: "instant"` lo bloquea de verdad. Medido con
+  Playwright en `ProductTabs`: la pastilla llegó a **−309px** en un viewport de
+  375px, fuera de pantalla, antes de asentarse (log §159). Chromium headless
+  colapsa `"smooth"` a un solo fotograma y no lo reproduce — mismo límite que
+  ya consta más abajo para bugs de scroll en este repo; el diagnóstico se
+  valida por el mecanismo, no por ver el parpadeo en el arnés.
+- **En un contenedor `display:flex` con `gap`, un nodo de texto entre
+  elementos inline es su propio ítem flex — el `gap` se cuela también ahí,
+  aunque el JSX no tenga espacio en el marcado.** `.lp-promo-row` (`gap:
+  7px`) mezclaba texto suelto y `<s>`/`<b>` como hijos directos, y el hueco
+  apareció entre `</b>` y la coma que la seguía inmediatamente en el código
+  — nada en el JSX lo explicaba (log §159, item 23). Un contenedor `flex`
+  con `gap` que necesita fluir como una frase (con puntuación pegada, sin
+  huecos entre palabras) envuelve esa frase en un único hijo; el `gap` sólo
+  debe separar bloques de verdad distintos —aquí, el badge de la frase—, no
+  palabras sueltas dentro de una.
+- **`animation-delay` NEGATIVO adelanta la animación esa fracción de su
+  propio ciclo — no la retrasa.** Con `animation-delay: -4.5s` sobre un
+  ciclo de 13,5s, en `t=0` la fila ya está en el 33% de su recorrido, no en
+  el 0%. Generalizar una rotación de 2 mensajes (retardo a mitad de ciclo,
+  keyframes simétricos) a 3 mensajes cambiando sólo el retardo (a un
+  tercio) sin recalcular dónde caen los keyframes de salida deja una fila
+  arrancando A MITAD de su propia transición de salida — parcialmente
+  visible y solapada con la que sí está en su fotograma inicial (log §159,
+  item 23: "que tarde un par de segundos en rotar el primer mensaje, sino
+  queda raro, se tapan" — se tapaban). La transición de salida de cada fila
+  tiene que completarse ANTES del punto de retardo de la siguiente fila, con
+  margen. Se verifica leyendo `element.getAnimations()[0].currentTime` en
+  varios instantes del ciclo completo — no reproduciendo la animación de
+  verdad, que Chromium headless no hace con fidelidad (dos entradas más
+  arriba en este fichero).

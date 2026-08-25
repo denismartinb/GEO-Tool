@@ -18,7 +18,7 @@ import { TourProvider } from "@/components/tour-provider";
 import { signOut } from "./actions";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   // DOMAINS-LIVE-SELECT-1 — outside a project's own route (e.g. right after
   // picking a domain card on /dashboard/domains, which selects without
@@ -40,12 +40,30 @@ export default async function DashboardLayout({ children }: { children: React.Re
     notifications
   } = await getWorkspaceCounters();
 
+  /* ONBOARDING-TOUR-PERSIST-1 — misma forma que auditFlagRow/samplingFlagRow
+     en la página de debug: `onboarding_tour_seen_at` llega en la migración
+     0035, aplicada a mano, y esta consulta va sola para que no arrastre a
+     `getWorkspaceCounters()` (compartida por toda la consola) si la
+     migración todavía no está aplicada.
+
+     Dirección de fallo a propósito: ante un error de lectura se asume «ya
+     visto» y NO se muestra el popup. La otra dirección —mostrarlo siempre que
+     la consulta falle— repetiría el tour en cada carga para cada cuenta
+     mientras la migración no esté aplicada, la misma regresión que este
+     cambio existe para arreglar. */
+  const { data: tourFlagRow, error: tourFlagError } = await supabase
+    .from("profiles")
+    .select("onboarding_tour_seen_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  const hasSeenTour = tourFlagError ? true : tourFlagRow?.onboarding_tour_seen_at != null;
+
   return (
     <MobileShellProvider>
       {/* ONBOARDING-TOUR-1: el popup «Aprende cómo funciona». Envuelve la
           consola entera porque tiene que poder abrirse desde el menú lateral
           y saltar solo en el primer acceso, sea cual sea la pantalla. */}
-      <TourProvider>
+      <TourProvider hasSeenTour={hasSeenTour}>
       <Sidebar
         projects={projects ?? []}
         preferredProjectId={preferredProjectId}
