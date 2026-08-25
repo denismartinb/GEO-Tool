@@ -14389,3 +14389,26 @@ de cada una sin dejar diff.
       las barras, que es lo único que pidió el fundador.
     Verificado con capturas reales en escritorio y móvil antes de hacer
     commit.
+21. **La tira de promoción dice cuánto dura el precio, no sólo hasta cuándo
+    se puede contratar.** El fundador: "Habría que decir en el CTA que la
+    promo de pro a 59€ dura 6 meses". "Hasta el 1 de septiembre" es la
+    ventana de alta; "6 meses" es cuánto dura el precio una vez dado de
+    alta — dos plazos distintos, y sin el segundo el primero se podía leer
+    como que el precio sube ese mismo día para quien ya se había apuntado.
+    El mensaje B pasa a "Pro a 59 €/mes, 6 meses · hasta 1 sept.".
+
+    **Se acortó el texto de fecha para que quepa en 320px.** La primera
+    redacción ("...durante 6 meses · hasta el 1 de septiembre") cabía de
+    sobra a 375px pero **desbordaba silenciosamente a 320px** (iPhone SE y
+    similares) — visible en captura, con `−67%` cortado a `7%` por un lado y
+    "septiembre" cortado a "septiem" por el otro. `.lp-promo-row` es
+    `position:absolute; inset:0` dentro de `.lp-promo-track`, así que su
+    caja no crece con el texto; y `.lp-promo` recorta con `overflow:hidden`
+    para la animación vertical, así que el desbordamiento horizontal no
+    aparece en `scrollWidth` — el mismo patrón de "recorte que no se ve
+    mirando el documento" que ya documenta este fichero más arriba. Se
+    acorta a "hasta 1 sept." y "6 meses" sin "durante"; medido con la fila
+    escapada de su `position:absolute` (para leer su ancho real de
+    contenido): 257px al tamaño de fuente móvil (11,5px) contra 292px
+    disponibles a 320px de viewport. Verificado sin recorte a
+    320/375/1440px.

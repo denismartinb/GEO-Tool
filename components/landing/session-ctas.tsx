@@ -30,8 +30,15 @@ import { HeroDomainField } from "@/components/landing/hero-domain-field";
  * y romper la línea única del diseño.
  *
  * La rebaja es real y va coordinada con Stripe en otra fase (fundador,
- * 2026-08-25) — no es una cifra decorativa; si el precio o la fecha de corte
- * cambian, este componente cambia con ellos.
+ * 2026-08-25) — no es una cifra decorativa; si el precio, la duración o la
+ * fecha de corte cambian, este componente cambia con ellos.
+ *
+ * Dos plazos distintos, y el mensaje dice los dos: "hasta el 1 de
+ * septiembre" es la ventana para darse de alta con la rebaja; "durante 6
+ * meses" es cuánto dura el precio de 59€ una vez dado de alta (fundador,
+ * 2026-08-25: "habría que decir en el CTA que la promo de pro a 59€ dura 6
+ * meses"). Sin el segundo dato, "hasta el 1 de septiembre" se podía leer
+ * como que el precio sube ese mismo día para quien ya se dio de alta antes.
  */
 export function PromoStrip() {
   const user = useSessionUser();
@@ -41,7 +48,7 @@ export function PromoStrip() {
       <span className="lp-promo-track">
         <span className="lp-promo-row a">7 días de Pro · Sin tarjeta</span>
         <span className="lp-promo-row b">
-          <span className="lp-promo-pill">−67%</span> Pro a <b>59&nbsp;€/mes</b> hasta el 1 de septiembre
+          <span className="lp-promo-pill">−67%</span> Pro a <b>59&nbsp;€/mes</b>, 6 meses · hasta 1 sept.
         </span>
       </span>
     </div>
