@@ -135,7 +135,6 @@ export default async function SettingsPage({
               firstName={firstName}
               lastName={lastName}
               company={company}
-              companyReadOnly={!isAdmin}
               billingDetails={billingDetails}
             />
 

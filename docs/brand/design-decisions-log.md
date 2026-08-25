@@ -15946,3 +15946,60 @@ lógica de navegación programática se tocó — sólo marcado muerto.
 **Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
 (build + typecheck + lint), `git diff --check` y
 `bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 165. Ocultado "Datos de empresa" en Ajustes: era la única mitad del par que no servía para nada (2026-08-25)
+
+**El origen.** El fundador preguntó, mirando la pantalla de Ajustes, si los
+dos acordeones opcionales de Cuenta ("Datos de empresa" y "Datos de
+facturación") viajaban a Stripe. Investigación: ninguno de los dos sincroniza
+con Stripe hoy — ambos sólo escriben en `user_metadata` de Supabase Auth
+(`app/dashboard/settings/organization/actions.ts`). Pero no son equivalentes:
+`org_legal_name`/`org_tax_id` ("Datos de facturación") existen explícitamente
+para la factura (`lib/settings/company-details.ts:16`, "*exist for the
+invoice*") y son candidatos reales a una sincronización futura con Stripe
+(Task Intake `BILLING-INVOICE-FIELDS-1`, propuesto y **sin aprobar todavía**).
+`org_name`/`org_website`/`org_sector` ("Datos de empresa") no tienen ningún
+consumidor ni plan documentado — el propio código lo admite: "*Nothing in the
+product reads them yet*". Ni sitio web ni sector tienen equivalente en un
+customer de Stripe.
+
+**La decisión (founder, 2026-08-25):** ocultar sólo "Datos de empresa". No es
+un caso de "fake behavior" en sentido estricto — el hint decía "Opcional", no
+prometía nada — pero mantener un formulario editable sin ningún efecto es
+ruido de producto y trabajo de mantenimiento gratis, y "Datos de facturación"
+sí tiene un destino real por delante.
+
+**Qué cambió.** `components/settings/account-section.tsx` deja de importar y
+renderizar `CompanyFold`; sólo queda el acordeón "Datos de facturación" en
+`.set-folds`. La prop `companyReadOnly` desaparece de `AccountSection` (y de
+su único caller, `app/dashboard/settings/page.tsx`) porque sólo existía para
+ese fold. El estado `companyValue` también desaparece: sin UI para editarlo,
+`save()` reenvía directamente `company.name/website/sector` (el valor ya
+cargado) para no perder los datos que una cuenta hubiera guardado antes de
+ocultar el fold. **No se toca el backend**: `saveAccount`
+(`organization/actions.ts`) sigue aceptando y persistiendo los tres campos sin
+cambios — sólo se quita la forma de editarlos.
+
+**Lo que NO se borra.** `components/settings/company-fold.tsx` sigue
+existiendo, sin importar desde ningún sitio — ocultar, no eliminar
+(`CLAUDE.md`, "Never delete source files casually"), por si el bloque vuelve
+a tener sentido junto a algún consumidor futuro.
+
+**El piloto.** `tests/pilot/journeys/settings.spec.ts` tenía interacción real
+con el fold de empresa (`COMPANY_FOLD_TRIGGER`/`COMPANY_FOLD_BODY`,
+abrirlo y comprobar `#company-name`) — se retira esa mitad y el test pasa a
+llamarse "the billing fold opens..." (antes cubría los dos plegables). El
+fixture del self-check (`tests/pilot/fixtures/server.mjs`) sigue sirviendo el
+marcado del fold de empresa sin usar: es inocuo (nada lo referencia ya) y
+`fixture-drift.test.ts` sólo vigila drift de blog/comparativas, no de Ajustes.
+
+**Pendiente, explícito:** `BILLING-INVOICE-FIELDS-1` (razón social + NIF →
+`invoice_settings.custom_fields` de Stripe) sigue propuesto y sin aprobar —
+este PR no lo implementa, sólo despeja el campo que sí tiene destino del que
+no.
+
+**Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
+(build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.

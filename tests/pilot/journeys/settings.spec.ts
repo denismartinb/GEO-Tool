@@ -28,10 +28,9 @@ import { assertFullyVisible, assertPageIsHealthy, captureInteraction, visitAsUse
 // The runner is still sequential (workers: 1 in playwright.config.ts).
 
 const INDEX = ".set-idx";
-// Two twin folds now live in Cuenta, so `.set-fold-h` alone is ambiguous.
-// aria-controls is the exact, behaviour-carrying handle for each.
-const COMPANY_FOLD_TRIGGER = '[aria-controls="company-fold-body"]';
-const COMPANY_FOLD_BODY = "#company-fold-body";
+// "Datos de empresa" is hidden (founder, 2026-08-25 — nothing in the product
+// reads it). "Datos de facturación" is the only fold left in Cuenta, so
+// `.set-fold-h` is no longer ambiguous, but aria-controls stays the handle.
 const BILLING_FOLD_TRIGGER = '[aria-controls="billing-fold-body"]';
 const BILLING_FOLD_BODY = "#billing-fold-body";
 const DELETE_BLOCK = ".set-end";
@@ -84,10 +83,10 @@ test("the three sections are all present and in order", async ({ page }, testInf
   ]);
 });
 
-test("both optional folds open, and their content is not clipped", async ({ page }, testInfo) => {
+test("the billing fold opens, and its content is not clipped", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/dashboard/settings", "settings-folds-closed", {
-    describedAs: "los dos plegables opcionales de Cuenta",
-    anyOf: [{ selector: COMPANY_FOLD_TRIGGER }]
+    describedAs: "el plegable opcional de Datos de facturación en Cuenta",
+    anyOf: [{ selector: BILLING_FOLD_TRIGGER }]
   });
 
   // Every test asserts health, not just the first. Without it a rejected
@@ -97,22 +96,12 @@ test("both optional folds open, and their content is not clipped", async ({ page
   // after the first failure, so each has to name its own blocker.
   assertPageIsHealthy(findings);
 
-  // Both are twins in Cuenta, one under the other (founder, 2026-08-06). Razón
-  // social lives in the second one, NOT in the Plan section.
-  const company = page.locator(COMPANY_FOLD_TRIGGER);
+  // "Datos de empresa" is hidden (founder, 2026-08-25). Razón social/NIF live
+  // in this one remaining fold in Cuenta, NOT in the Plan section.
   const billing = page.locator(BILLING_FOLD_TRIGGER);
 
-  await expect(company, "el plegable de empresa nace abierto").toHaveAttribute("aria-expanded", "false");
   await expect(billing, "el plegable de facturación nace abierto").toHaveAttribute("aria-expanded", "false");
-  await expect(page.locator(COMPANY_FOLD_BODY), "el cuerpo del plegable se ve cerrado").toHaveCount(0);
   await expect(page.locator(BILLING_FOLD_BODY), "el cuerpo del plegable se ve cerrado").toHaveCount(0);
-
-  await company.click();
-  await expect(company, "el plegable de empresa no se abrió").toHaveAttribute("aria-expanded", "true");
-  await expect(page.locator(COMPANY_FOLD_BODY)).toBeVisible();
-  // A reveal that renders half-cut behind its own container is green to an
-  // assertion and broken to a person (founder, 2026-08-02).
-  await assertFullyVisible(page, "#company-name", "el campo Nombre del plegable de empresa");
 
   await billing.click();
   await expect(billing, "el plegable de facturación no se abrió").toHaveAttribute("aria-expanded", "true");
@@ -123,11 +112,11 @@ test("both optional folds open, and their content is not clipped", async ({ page
   // container that fires on anything merely below the fold, which is not a
   // defect. Scrolled into view, the assertion measures what it exists to
   // measure: whether the field is cut off by the fold's own `overflow: hidden`.
+  // A reveal that renders half-cut behind its own container is green to an
+  // assertion and broken to a person (founder, 2026-08-02).
   await page.locator("#billing-legal-name").scrollIntoViewIfNeeded();
   await assertFullyVisible(page, "#billing-legal-name", "el campo Razón social");
 
-  // fullContent: both folds open are taller than the 375px viewport frame, so
-  // the very thing being verified would be cut off.
   await captureInteraction(page, testInfo, "settings-folds-open", { fullContent: true });
 });
 
