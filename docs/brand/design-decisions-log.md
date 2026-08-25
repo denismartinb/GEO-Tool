@@ -16113,3 +16113,13 @@ tras verificar la factura de prueba en el Dashboard de Stripe.**
 **Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run validate`
 (build + typecheck + lint), `git diff --check` y
 `bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Tercer addendum, mismo día: retirada la promesa de roadmap al pie de
+"Notificaciones".** El pie de sección decía "Iremos añadiendo avisos de
+competidores, recomendaciones y escaneos. Te lo diremos cuando estén." — un
+compromiso de roadmap que esta pantalla no debería hacer (mismo espíritu que
+justificó quitar los cuatro switches "Próximamente" en CONSOLE-REDESIGN-1).
+Retirado a petición del fundador (`components/settings/notifications-section.tsx`).
+Sin tests que dependieran del texto. `.set-quiet` (`app/globals.css`) se deja
+tal cual: es una clase de utilidad genérica, no exclusiva de este párrafo.
+`pnpm test` (203/203, 2.837/2.837) y `pnpm run validate` en verde.
