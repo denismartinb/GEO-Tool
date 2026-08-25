@@ -120,7 +120,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   margen `auto` real a los dos lados y la resta de sólo un `page-pad-x` dentro
   de `margin-inline: calc(-1 * (page-pad-x + bleed))` deja la caja fuera de
   sitio por exactamente ese valor a cada lado: bajo la barra lateral por la
-  izquierda, corta del borde por la derecha (log §152, encontrado en
+  izquierda, corta del borde por la derecha (log §153, encontrado en
   `.mrk-full` a partir de ~1568px de ventana en las 6 pantallas de la misión,
   no sólo donde se probó). El término que falta va DENTRO del cálculo del
   sobrante, no fuera: `bleed = max(disponible - tope - 2 * page-pad-x, 0) / 2`

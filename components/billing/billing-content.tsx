@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { getUsageSummary } from "@/lib/billing";
+import { getActivePromoPlanIds } from "@/lib/stripe";
 import { PlanBillingSection } from "@/components/billing/plan-billing-section";
 import { CheckoutSuccessPoller } from "@/components/billing/checkout-success-poller";
 import { SUPPORT_EMAIL } from "@/lib/support";
@@ -27,6 +28,11 @@ export async function BillingContent({
   checkoutStatus?: string;
 }) {
   const usage = await getUsageSummary();
+  // PRICING-PROMO-1: computed server-side (needs STRIPE_COUPON_ID_*, which
+  // stays out of the client bundle) and passed down as data — ChangePlanModal
+  // only shows a promo price for a plan actually in this list, never just
+  // because the promo window's date allows it.
+  const promoPlanIds = getActivePromoPlanIds();
 
   return (
     <div className="set-pane">
@@ -47,6 +53,7 @@ export async function BillingContent({
         agencyPlanId="agency"
         usage={usage}
         activeProjects={usage.activeProjects}
+        promoPlanIds={promoPlanIds}
       />
 
       <Card>

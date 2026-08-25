@@ -13711,8 +13711,193 @@ que ya usan las otras 6 pantallas. Ningún cambio de CSS — el desajuste era
 de estructura JSX, no de la banda en sí (que ya sangraba bien tras §150).
 
 ---
+## 152. Fase C de la promo de precio: cupones reales de Stripe, no un número cambiado en `plans-data.ts` (PRICING-PROMO-1, 2026-08-24)
 
-## 152. La misión del primer escaneo compartía pantalla con la cabecera fija, en las 6 secciones que la montan (2026-08-25)
+El Task Intake de Fase C (§149 dejó C y D bloqueadas) preguntó al fundador
+tres cosas — duración del descuento, fecha límite, y si asumía configurar
+Stripe él mismo — y las tres se respondieron: **6 meses, sin permanencia**
+(cupón `duration: repeating`, `duration_in_months: 6`), **1 de septiembre de
+2026 a las 00:00 hora de Madrid**, y sí, el fundador crea los cupones.
+
+### Por qué no fue "cambiar `price: 45` a `19`"
+
+`plans-data.ts.price` es sólo un número de pantalla. Lo que cobra Stripe de
+verdad sale de `STRIPE_PRICE_ID_STARTER`/`STRIPE_PRICE_ID_PRO`
+(`lib/stripe.ts`), fijado en el Dashboard y desacoplado del todo del número
+que pinta `/pricing`. Cambiar sólo el número habría anunciado un precio que
+el checkout no cobra — y no sólo en la web pública: `plan.price` también
+pinta `components/billing/plan-billing-section.tsx` (el plan actual del
+dashboard) y `change-plan-modal.tsx` (el selector real que dispara Stripe
+Checkout), así que un cliente ya logueado habría visto "19 €" y pagado 45 €.
+
+### El mecanismo: `PROMO_ENDS_AT` decide qué se muestra, un cupón de Stripe con `redeem_by` decide qué se cobra
+
+- `app/pricing/plans-data.ts`: `PROMO_ENDS_AT` (constante única, ISO con
+  offset de Madrid) e `isPromoActive(now)`. `Plan.promoPrice` en Starter (19)
+  y Pro (59).
+- `lib/stripe.ts`: `getPromoCouponIdForPlan` lee
+  `STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO` (variables nuevas, aún sin
+  valor — el fundador las crea en Stripe cuando tenga los cupones).
+  `getActivePromoPlanIds()` es la fuente única que cruza fecha Y cupón
+  configurado: **nunca** muestra un precio tachado sólo porque la fecha lo
+  permita. La usan `/pricing` y `billing-content.tsx` (servidor) para que las
+  dos pantallas no puedan divergir sobre qué planes llevan promo.
+- `app/dashboard/settings/billing/actions.ts` (`createCheckoutSession`):
+  aplica `discounts: [{ coupon: promoCouponId }]` a la Checkout Session real
+  con la misma condición (`isPromoActive() && getPromoCouponIdForPlan`) — el
+  único sitio que decide de verdad cuánto se cobra.
+- El cupón de Stripe lleva su propio `redeem_by` = `PROMO_ENDS_AT`: aunque
+  este código nunca se volviera a tocar, Stripe deja de aceptar el cupón esa
+  fecha por su cuenta — la caducidad real no depende de que nadie recuerde
+  apagar nada.
+
+### Alcance deliberadamente recortado: sólo la conversión Free → de pago
+
+`change-plan-modal.tsx` comparte la misma rejilla de planes para dos flujos
+distintos: Free (o trial sin convertir) → Starter/Pro pasa por Checkout (ahí
+sí aplica el cupón), pero Starter↔Pro para una cuenta que YA paga se
+gestiona en el Portal de Stripe (`createPortalSession`,
+`subscription_update_confirm`), que este PR no toca. Mostrar el precio promo
+ahí habría sido la misma mentira que se acaba de evitar en otro sitio —
+`promoShown()` en el modal comprueba `!hasRealSubscription`, así que una
+cuenta con suscripción real nunca ve el tachado, aunque esté cambiando a un
+plan con `promoPrice`.
+
+### Lo que el fundador tiene que hacer en Stripe (test mode ahora; live cuando toque)
+
+Dos cupones — `amount_off` (2600 en Starter, 12000 en Pro, céntimos EUR),
+`duration: repeating`, `duration_in_months: 6`, `redeem_by` = `1788213600`
+(Unix timestamp de 2026-09-01T00:00:00+02:00, es decir 2026-08-31T22:00:00Z).
+Sus IDs van en `STRIPE_COUPON_ID_STARTER_PROMO`/`STRIPE_COUPON_ID_PRO_PROMO`
+en Vercel. Sin esas dos variables, `getActivePromoPlanIds()` devuelve una
+lista vacía y todo el sitio sigue mostrando el precio normal — el sistema
+falla hacia "no hay promo", nunca hacia "promo a medias". `pnpm run
+check:env` avisa (no falla) si la ventana está abierta, Stripe funciona, y
+falta un cupón — señal de que probablemente se olvidó el paso, no de que la
+promo vaya sin descuento a propósito.
+
+**Comprobado.** `pnpm test` (201 ficheros, 2.817 pruebas, incluidos los casos
+nuevos de `createCheckoutSession` con/sin cupón y la regla de entorno) y
+`pnpm run validate` en verde.
+
+### Addendum — el fundador configuró Stripe, y `/pricing` es estática (2026-08-25)
+
+El fundador creó los dos cupones en Stripe test mode (`amount_off` correcto,
+`duration: repeating` × 6 meses, `redeem_by` 1 de septiembre) y puso sus IDs
+en las variables de Vercel. Al principio no se veía nada en el preview
+aunque las variables ya estaban bien: `/pricing` es una página **estática**
+(prerenderizada en el build, `○` en la salida de `next build`), así que
+`getActivePromoPlanIds()` se evalúa una sola vez, en el momento de construir,
+no en cada visita — cambiar la variable de entorno sin volver a construir no
+hace nada. `/dashboard/settings/billing` sí es dinámica (`ƒ`), así que ahí sí
+se habría visto sin rebuild; la página pública no.
+
+Un "Redeploy" manual desde el propio Vercel Dashboard se canceló solo varias
+veces seguidas (2s de duración cada vez, "Canceled by Ignored Build Step").
+La causa real, encontrada más tarde: **no es deduplicación de Vercel, es
+`scripts/vercel-should-build.sh` funcionando exactamente como está diseñado**.
+Ese script compara el push contra el último deploy con éxito de la rama — y
+al redesplegar el mismo commit que ya se construyó con éxito, ese "último
+éxito" es él mismo, así que el diff está vacío y el script decide que no hay
+nada que construir. Es el mismo mecanismo que evita builds de más en
+`docs/`/`.claude/`/etc. (sección "Presupuesto de builds" arriba), pero tiene
+un punto ciego: **un cambio de variable de entorno no deja rastro en el diff
+de git**, así que un redeploy manual del mismo commit nunca puede recogerlo,
+por muchas veces que se pulse el botón. La única vía es un commit real nuevo
+en la rama — el mismo remedio que ya haría falta para cualquier otro cambio,
+sólo que aquí no hay ningún fichero de código que cambiar; documentar el
+hallazgo (este párrafo) sirvió de vehículo legítimo para ese commit.
+
+**Pendiente.** Fase D (Starter a escaneo diario) sigue bloqueada, sin tocar
+en este PR — el highlight de Starter sigue diciendo "Escaneo semanal".
+
+**Verificación visual confirmada por el fundador** en `/pricing`: banda de
+promo y tachado correctos en las cuatro tarjetas. Al probar el flujo real de
+upgrade (trial de Pro → "Contratar ahora") aparecieron dos fallos reales,
+corregidos en el mismo PR:
+
+1. **El paso de confirmación del checkout ignoraba la promo por completo.**
+   `ChangePlanModal` ya calculaba `promoShown(planId)` correctamente para las
+   tarjetas del paso "select" (`.cp-plan-price .was/.now`), pero el paso
+   "confirm" — el que de verdad ve quien pulsa "Contratar ahora" desde el
+   aviso de trial — llamaba a `planPrice(target)` a secas, sin pasar por
+   `promoShown` en ningún sitio: ni en la caja "Nuevo" (`cp-move`), ni en el
+   pie (`cp-foot-note`). El precio mostrado justo antes de ir a Stripe era el
+   de siempre (179 €), aunque el propio Stripe sí iba a cobrar el promo. Se
+   añadió `targetPromoPrice` (una sola derivación, reutilizada en los dos
+   sitios para que no puedan desincronizarse) y ahora ambos muestran el
+   tachado, el precio promo y la duración — la misma info que ya llevaba el
+   pie de la banda de `/pricing`, ahora también aquí y en la nota de aviso de
+   Stripe.
+2. **La duración de la promo ("6 meses") vivía como literal suelto,
+   repetido en dos sitios de `pricing-page.tsx`.** Se subió a
+   `PROMO_DURATION_MONTHS` en `plans-data.ts`, junto a `PROMO_ENDS_AT`, y la
+   usan tanto `pricing-page.tsx` como el nuevo bloque de `change-plan-modal.tsx` — un
+   cambio de duración del cupón ya no puede quedarse desincronizado entre
+   pantallas.
+
+Aparte, el fundador pidió que "Comparar planes" (tarjeta de Agencia en
+`/dashboard/settings/billing`) navegue a la página pública de precios en vez
+de abrir el modal de cambio de plan — ese botón abría `ChangePlanModal`
+(CONSOLE-REDESIGN-1), que sólo enseña cuatro tarjetas resumidas, no la matriz
+de comparación completa que el texto del botón promete. Ahora es un
+`<Link href="/pricing">` real.
+
+### Addendum 2 — el precio promo también después de contratar (2026-08-25)
+
+El fundador contrató Pro de verdad en una cuenta de prueba y señaló que la
+tarjeta "Tu plan" de `/dashboard/settings/billing` seguía enseñando 179 €/mes
+llano, sin ningún rastro de que la suscripción real llevara el cupón. No era
+un bug de esa cuenta en concreto — es que nada en el código comprobaba nunca
+si la suscripción activa tenía un descuento de Stripe aplicado; `getUsageSummary`
+sólo leía `profiles` en Supabase, y ninguna columna ahí registra descuentos.
+
+Se resolvió leyendo el estado real de Stripe, no inventándolo: `getActiveSubscriptionPromo`
+(`lib/stripe.ts`) llama a `stripe.subscriptions.retrieve(id, { expand: ["discounts"] })`
+y compara el id del cupón del descuento activo contra
+`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO` — nunca "hay algún descuento", que
+etiquetaría un cupón de soporte aplicado a mano en el Dashboard como si fuera
+el precio de lanzamiento. La fecha de fin que se muestra (`discount.end`) es
+la real de Stripe para ESA suscripción, no `PROMO_ENDS_AT`: dos cuentas que se
+dieron de alta en días distintos terminan su promo en fechas distintas, y
+`PROMO_ENDS_AT` sólo dice hasta cuándo se puede *empezar* a redimir el cupón,
+no hasta cuándo dura para quien ya lo redimió. Sin columna nueva en el
+esquema — de haber hecho falta una migración, esto habría requerido su propia
+aprobación explícita (CLAUDE.md, "Forbidden Without Explicit Approval").
+
+**Comprobado.** `pnpm test` (202 ficheros, 2.827 pruebas — 8 nuevas en
+`lib/stripe.test.ts` para `getActiveSubscriptionPromo`, incluida la que
+comprueba que un cupón ajeno no se etiqueta como la promo; 2 nuevas en
+`lib/billing.test.ts` para el threading de `subscriptionPromo`) y
+`pnpm run validate` en verde. El fundador verificó en el propio Dashboard de
+Stripe (suscripción real en test mode) que el cupón lleva "Descuento de
+120,00 € durante 6 meses" sobre los 179 € de Pro — cuadra con los 59 € que se
+cobran de verdad, y con lo que `getActiveSubscriptionPromo` ahora lee.
+
+### Addendum 3 — el mismo tachado en el índice de Ajustes (2026-08-25)
+
+El fundador señaló que el índice lateral de `/dashboard/settings` ("Plan · Pro
+179 €/mes", visible en el cajón móvil) seguía sin reflejar la promo, aunque
+"Tu plan" ya la mostraba correctamente desde el Addendum 2. `SettingsIndexEntry.detail`
+sólo aceptaba `string` — `lib/settings/index-entries.ts` es deliberadamente
+NO un componente cliente (ver el comentario de cabecera del propio fichero:
+un `"use client"` ahí rompió el render en CONSOLE-REDESIGN-1), así que no podía
+construir JSX; sólo devolvía la plantilla de texto plano `"Pro · 179 €/mes"`.
+Se amplió el tipo a `ReactNode` (import de sólo-tipo, no cambia el carácter
+server-safe del fichero) y `app/dashboard/settings/page.tsx` —ya Server
+Component, ya con `usage.subscriptionPromo` disponible desde el Addendum 2—
+construye el nodo con el precio tachado cuando aplica, exactamente el mismo
+dato que ya pinta "Tu plan". `.set-ie span` fuerza `display: block` en sus
+hijos (para el propio texto del detalle); sin `.set-ie span .was/.now { display:
+inline }` los dos precios habrían caído en líneas separadas en vez de en línea
+como el resto de las pantallas.
+
+**Comprobado.** `pnpm test` (202/202, 2.827/2.827) y `pnpm run validate` en
+verde.
+
+---
+
+## 153. La misión del primer escaneo compartía pantalla con la cabecera fija, en las 6 secciones que la montan (2026-08-25)
 
 **Lo que pidió el fundador.** Con `.ov-sticky-header` ya sangrando a los
 bordes reales en las 8 pantallas que la comparten (§150, §151), señaló que la
