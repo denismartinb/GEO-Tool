@@ -40,6 +40,13 @@ export default function BlogIndexPage() {
         <a href="/feed.xml" className="link-mini">
           Suscríbete por RSS
         </a>
+        {" · "}
+        {/* HOME-SEO-AUDIT-1: el comprobador gratuito no tenía ningún enlace
+            entrante desde el blog — la superficie de contenido que más tráfico
+            de intención informacional recibe. */}
+        <Link href="/gratis/aparece-mi-marca-en-chatgpt" className="link-mini">
+          ¿Aparece tu marca en ChatGPT? Compruébalo gratis
+        </Link>
       </p>
 
       {/* Comparativas como sección propia del índice, no solo como enlace de

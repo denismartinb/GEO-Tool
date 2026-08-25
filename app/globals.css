@@ -4810,6 +4810,11 @@ a.notif-row:hover {
 .lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 @media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
 
+/* HOME-SEO-AUDIT-1: enlace secundario al comprobador anónimo, bajo el campo
+   del hero. Texto, no botón — el CTA primario ya es «Analiza gratis». */
+.lp-hero-alt { font-size: 13.5px; color: var(--ink-3); margin-top: 14px; text-align: center; }
+.lp-hero-alt a { color: var(--brand-blue); font-weight: 600; }
+
 .lp-shot { position: relative; z-index: 2; max-width: 1060px; margin: 54px auto 0; }
 /* "Unos pixeles más de aire" entre título, subtítulo, campo y demo — sólo en
    escritorio (fundador, 2026-08-25). El móvil ya tiene su propio ajuste
@@ -7394,6 +7399,14 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-faq-item p {
   margin: 0; font-size: 15.5px; line-height: 1.72; color: var(--ink-3); max-width: none;
 }
+/* HOME-SEO-AUDIT-1: el único enlace real dentro de una respuesta de la FAQ,
+   al comprobador gratuito. Inline con el texto a propósito — es la
+   continuación de la frase, no una tarjeta aparte.
+   NOTA: este bloque de FAQ+Cierre está duplicado íntegro más arriba
+   (líneas ~7101-7231) — la cascada usa este por ser el último; el otro es
+   CSS muerto pendiente de limpieza aparte (HOME-SEO-AUDIT-1, no arreglado
+   aquí para no ampliar el diff de este PR). */
+.lp-faq-link { font-weight: 600; color: var(--brand-blue); white-space: nowrap; }
 
 /* --- Cierre (HOME-2026-08 Fase C) ---------------------------------------
    El degradado es el eco del hero al revés: allí baja del tinte al blanco,

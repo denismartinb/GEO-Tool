@@ -15208,3 +15208,64 @@ de cada una sin dejar diff.
     una sustituya a la otra. Ilustra la propia advertencia de la regla de
     "Cierre de fase": mientras una rama fusiona `main` para resolver una
     colisión, `main` puede volver a moverse por debajo.
+
+---
+
+## 160. HOME-SEO-AUDIT-1: la FAQ deja de prometer un comprobador al que el hero ya no lleva, y el comprobador gana sus primeros enlaces internos (2026-08-25)
+
+**Por qué.** Auditoría pedida por el fundador tras el cierre de HOME-2026-08
+(§141-§159): con la portada reescrita entera en tres días, ¿qué del código o
+del SEO se quedó desalineado? El hallazgo real no fue el previsto (un
+refactor de `landing-page.tsx`), fue una afirmación falsa publicada en
+`FAQPage`.
+
+**El fallo.** `lib/landing/home-faq.ts` respondía a "¿Cómo sé si mi marca
+aparece en ChatGPT?" con "Escribe tu dominio arriba y lo comprobamos gratis,
+sin registro" — cierto mientras el hero llevaba al comprobador anónimo
+(HOME-2026-08 Fase A). El fundador revirtió ese destino a `/signup` el
+2026-08-24 (§159), y la respuesta de la FAQ se quedó describiendo un
+comportamiento que la portada ya no tiene — publicado además como dato
+estructurado que un motor generativo lee, exactamente lo que este producto
+audita en las webs de sus clientes (CLAUDE.md, "no fake product behavior").
+
+**Consecuencia relacionada, misma causa.** El giro del hero a `/signup`
+dejó `/gratis/aparece-mi-marca-en-chatgpt` sin ningún enlace interno en todo
+el repo salvo el propio sitemap — ni desde `llms.txt`, ni desde el blog
+(incluido el artículo que comparte su misma keyword,
+`como-saber-si-tu-marca-aparece-en-chatgpt`), ni desde la portada.
+
+**Qué se decidió.**
+1. `HOME_FAQ` gana un campo `link` opcional; la pregunta 2 ahora describe el
+   hero real (lleva a `/signup`) y enlaza aparte al comprobador. El texto
+   plano que alimenta el `FAQPage` (`homeFaqJsonLd()`) no lleva el enlace —
+   sigue siendo sólo prosa verificada, como pide la cabecera del fichero.
+2. Enlace secundario bajo el campo del hero (`.lp-hero-alt`): "¿Prefieres
+   una comprobación sin registrarte?" → comprobador. El CTA primario
+   («Analiza gratis») sigue yendo a `/signup`, sin tocar la decisión del
+   fundador sobre el hero.
+3. Enlace desde `/blog` (índice) y desde
+   `como-saber-si-tu-marca-aparece-en-chatgpt` (dentro del método 1, "la
+   primera de esas 27 comprobaciones hecha por ti") — los dos pedidos
+   explícitamente por el fundador al aprobar este informe.
+4. `llms.txt` gana la entrada del comprobador en su sección "Producto".
+5. El sitemap traía la home y `/pricing` con `lastModified: "2026-07-23"`
+   pese a reescribirse ambas en agosto (home: HOME-2026-08 completo;
+   pricing: PRICING-PROMO-1 el 24 y 25-08, §148/§149/§152) — corregido a
+   `2026-08-25`. `/geo` se dejó igual a propósito: sin cambio de contenido
+   real desde HEADER-FLAT-1 (sólo la cabecera compartida), subirla habría
+   sido la misma frescura falsa que este fichero existe para no dar.
+
+**Hallazgo aparte, no arreglado aquí.** `app/globals.css` tiene un bloque de
+~130 líneas (FAQ + Cierre de la portada) duplicado byte a byte —
+líneas ~7101-7231 repetidas en ~7367-7497 tras esta edición. La cascada usa
+el segundo (el `.lp-faq-link` de este PR se añadió ahí); el primero es CSS
+muerto. No se toca en este PR: es puramente mecánico pero amplía el diff sin
+relación con la FAQ, y merece su propio PR con pasada de piloto — es una
+sección visible (FAQ + cierre) aunque el cambio en sí no debería mover un
+píxel.
+
+**Trazabilidad.** `lib/landing/home-faq.ts`, `components/landing/
+landing-page.tsx`, `app/globals.css` (`.lp-faq-link`, `.lp-hero-alt`),
+`app/blog/page.tsx`, `app/blog/como-saber-si-tu-marca-aparece-en-chatgpt/
+page.mdx`, `lib/seo/llms-txt.ts`, `app/sitemap.ts`. `pnpm test` (203
+ficheros, 2827 pruebas) y `pnpm run validate` en verde.

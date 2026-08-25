@@ -354,6 +354,14 @@ export function LandingPage() {
           <div className="lp-hero-form">
             <HeroDomainField />
           </div>
+          {/* HOME-SEO-AUDIT-1: segunda salida junto al campo, hacia el
+              comprobador anónimo. El botón de al lado («Analiza gratis») lleva
+              al registro a propósito (§159); esto es para quien todavía no
+              quiere darse de alta y sólo quiere ver una respuesta real. */}
+          <p className="lp-hero-alt">
+            ¿Prefieres una comprobación sin registrarte?{" "}
+            <Link href="/gratis/aparece-mi-marca-en-chatgpt">Pruébalo gratis →</Link>
+          </p>
         </div>
 
         {/* LA DEMO DEL HERO — HOME-2026-08 Fase A2.
@@ -1246,7 +1254,17 @@ export function LandingPage() {
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </summary>
-                <p>{f.a}</p>
+                <p>
+                  {f.a}
+                  {f.link ? (
+                    <>
+                      {" "}
+                      <Link href={f.link.href} className="lp-faq-link">
+                        {f.link.label} →
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
               </details>
             ))}
           </div>
