@@ -11,6 +11,13 @@ const SITE_URL = "https://www.genscore.es";
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
+/** Lightweight `**bold**` for `pillarIntro` — the box read as flat, undifferentiated
+ * prose next to bordered cards (fundador, 2026-08-25). Not a markdown renderer: just
+ * the one token this content actually uses, on real sentences already in the copy. */
+function renderWithBold(text: string) {
+  return text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : part));
+}
+
 export function generateStaticParams() {
   return BLOG_CLUSTERS.map((c) => ({ cluster: c.key }));
 }
@@ -64,7 +71,7 @@ export default async function BlogClusterPillarPage({ params }: { params: Promis
           `.blog-index-card`: borde, fondo, radio. */}
       <div className="blog-cluster-intro">
         {introParagraphs.length > 0 ? (
-          introParagraphs.map((p, i) => <p key={i}>{p}</p>)
+          introParagraphs.map((p, i) => <p key={i}>{renderWithBold(p)}</p>)
         ) : (
           <p>
             Todavía no hay artículos publicados en esta sección — está planificada en nuestro{" "}

@@ -6107,6 +6107,7 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 }
 .blog-cluster-intro p { font-size: 15px; line-height: 1.7; color: var(--ink-2); margin: 0 0 14px; }
 .blog-cluster-intro p:last-child { margin-bottom: 0; }
+.blog-cluster-intro strong { color: var(--ink); font-weight: 700; }
 /* Mismo motivo que `.legal-body a:not(.btn)` / `.docs-content ... a:not(.btn)`
    (`.claude/rules/styles.md`): el enlace "calendario de contenido" del estado
    sin artículos vive aquí ahora, y sin esta regla cae al gris de prosa
