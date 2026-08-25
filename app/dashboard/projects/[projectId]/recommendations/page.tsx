@@ -533,6 +533,11 @@ export default async function RecommendationsPage({
       })
     : null;
 
+  // Mirrors the FirstScanTakeover condition below — hidden while the mission
+  // takeover owns the screen, so the rocket animation reads as full screen
+  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  const showMissionTakeover = Boolean(activeRun) && !latestCompletedRun;
+
   return (
     <div className="page fade-in">
       {/* 1 · Cabecera estándar de sección, igual que Competidores, Prompts y
@@ -543,25 +548,28 @@ export default async function RecommendationsPage({
 
           Va FUERA de `.rec2-scope`, como en el resto de secciones: la cabecera
           sangra a los bordes de la página con márgenes negativos, y dentro de
-          una columna centrada de 460px quedaría recortada. */}
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>
-              Recomendaciones
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                {project.name}
-              </span>
-              {total > 0 && <span className="badge badge-neutral">{total} acciones</span>}
+          una columna centrada de 460px quedaría recortada. Se oculta mientras
+          la misión del primer escaneo (abajo) ocupa la pantalla entera. */}
+      {!showMissionTakeover && (
+        <div className="ov-sticky-header">
+          <div className="ov-sticky-left">
+            <div>
+              <p className="kicker" style={{ marginBottom: 2 }}>
+                Recomendaciones
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
+                  {project.name}
+                </span>
+                {total > 0 && <span className="badge badge-neutral">{total} acciones</span>}
+              </div>
             </div>
           </div>
+          <div className="ov-sticky-right">
+            <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
+          </div>
         </div>
-        <div className="ov-sticky-right">
-          <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
-        </div>
-      </div>
+      )}
 
       {/* Alineada con Prompts, Competidores y Páginas citadas: el overlay a
           pantalla completa sólo sustituye a la pantalla cuando NO hay nada que
@@ -571,7 +579,7 @@ export default async function RecommendationsPage({
           "recommendations: estado vacío" (2026-08-04/05) — que no era una
           carrera con los datos, sino esta condición. Con datos, el estado del
           escaneo lo lleva la pastilla del sticky-header. */}
-      {activeRun && !latestCompletedRun ? (
+      {activeRun && showMissionTakeover ? (
         <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
       ) : (
         <div className="rec2-scope">

@@ -120,10 +120,17 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     after(() => triggerWebAuditRun());
   }
 
+  // Mirrors the FirstScanTakeover condition below — hidden while the mission
+  // takeover owns the screen, so the rocket animation reads as full screen
+  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  const showMissionTakeover = !hasCompletedScan && Boolean(activeRun);
+
   return (
     <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAuditCoverage}>
     <div className="page">
-      {/* Sticky header */}
+      {/* Sticky header — oculta mientras la misión del primer escaneo ocupa
+          la pantalla entera. */}
+      {!showMissionTakeover && (
       <div className="ov-sticky-header">
         <div className="ov-sticky-left">
           <div>
@@ -210,6 +217,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           )}
         </div>
       </div>
+      )}
 
       {/* WEB-AUDIT-ISSUES-1 fase 2: v3 repaint + the founder-approved
           640/1200/1280px console width standard (CITATIONS-REDESIGN-1,
@@ -287,7 +295,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           told per-signal instead, inside the tiles/sections that need it
           (LockedSubScoreTile, the coverage-only Evolución/Historial blocks
           that stay empty by construction for a non-Pro project). */}
-      {!hasCompletedScan && activeRun ? (
+      {activeRun && showMissionTakeover ? (
         /* ONBOARDING-ROCKET-1's ascent beat, extended to this screen: it
            already took over Visión general, Prompts, Competidores,
            Recomendaciones and Páginas citadas while a project's first scan is

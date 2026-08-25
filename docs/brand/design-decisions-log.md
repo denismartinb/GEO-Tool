@@ -13711,3 +13711,68 @@ que ya usan las otras 6 pantallas. Ningún cambio de CSS — el desajuste era
 de estructura JSX, no de la banda en sí (que ya sangraba bien tras §150).
 
 ---
+
+## 152. La misión del primer escaneo compartía pantalla con la cabecera fija, en las 6 secciones que la montan (2026-08-25)
+
+**Lo que pidió el fundador.** Con `.ov-sticky-header` ya sangrando a los
+bordes reales en las 8 pantallas que la comparten (§150, §151), señaló que la
+propia misión del primer escaneo (`ScanMissionRocket`, vía
+`FirstScanTakeover`) seguía compitiendo con esa cabecera en vez de leerse como
+pantalla completa: "mientras dure la animación quitar ese header de visión
+general en todas las páginas y que se vea la animación a pantalla completa".
+
+**Por qué es seguro quitarla, no sólo agrandarla.** `.mrk-full` (el
+envoltorio full-bleed de la misión) ya declara `margin-top: -26px`
+específicamente para "sentarse a ras" contra lo que tenga encima — el
+comentario de `app/globals.css` decía literalmente que cancela el
+`padding-top` de `.page` (26px), no que dependa de que exista una cabecera
+sticky delante. Quitar `.ov-sticky-header` mientras la misión está activa no
+rompe esa geometría: `.mrk-full` pasa a ser el primer hijo de `.page` y su
+margen negativo cancela el mismo padding igual que antes, quedando a ras del
+todo bajo la topbar — verificado con un fixture Playwright/Chromium headless
+que reproduce `.shell > .dash-main > .dash-content > .page` con el CSS real,
+midiendo `getBoundingClientRect` a 2560px de ancho.
+
+**Las 6 pantallas que montan `FirstScanTakeover`** (Visión general, Prompts,
+Competidores, Recomendaciones, Páginas citadas, Auditoría web) ganan una
+variable `showMissionTakeover`, calculada con la MISMA condición que ya decide
+si `FirstScanTakeover` se monta en cada una (`!hasData && activeRun &&
+isFirstScan` en Visión general; `activeRun && !hasCompletedRun`/
+`!latestCompletedRun`/`!latestRun`/`completedRuns.length === 0` según el
+nombre local en las demás; `!hasCompletedScan && activeRun` en Auditoría web)
+— nunca una condición nueva y paralela que pudiera desincronizarse de cuál se
+muestra realmente. `.ov-sticky-header` se envuelve en `{!showMissionTakeover
+&& (...)}` en las 6.
+
+**El único efecto secundario real, y por qué se corrigió en el mismo PR.**
+Prompts es la única de las 6 cuyo `.page` fuerza `style={{ paddingTop: 0 }}`
+—las otras 5 usan el padding por defecto de `.page` (26px)—, puesto ahí para
+que la cabecera (que ya cancela ese padding con su propio margen) no dejase un
+hueco doble. Con la cabecera oculta, `.mrk-full` pasaba a ser el primer hijo
+de un `.page` con padding 0: su margen de -26px ya no tenía padding del que
+"comerse" y colapsaba A TRAVÉS de `.page` (colapso de márgenes padre-hijo,
+válido porque `padding-top:0` no lo bloquea), arrastrando la propia caja de
+`.page` 26px hacia arriba y dejando el primer tramo de la escena del cohete
+recortado por el `overflow-y:auto` de `.dash-content` — medido con el mismo
+fixture (`mrkFull.top` quedaba por encima de `dashContent.top`, señal
+inequívoca de recorte). Se corrigió condicionando ese `paddingTop:0` a que la
+cabecera SÍ esté montada: `paddingTop: showMissionTakeover ? undefined : 0`.
+Sin esta comprobación cruzada (fixture midiendo top/bottom, no sólo
+left/right) el PR habría enviado una regresión visual específica de Prompts.
+
+**Deliberadamente sin tocar.** Los banners de feedback (error/éxito, prompt
+mínimo) que viven entre la cabecera y el cuerpo de cada pantalla siguen
+renderizando sin condición — no se solapan con la misión en la práctica porque
+`scan_started`, el único mensaje que coincide en el tiempo con el primer
+escaneo, ya se suprime desde SCAN-STATES-2 (§40) por la misma razón ("banner
+flotando encima" de la misión).
+
+**Regla derivada, ya trazable.** Un componente full-bleed que cancela el
+padding de su contenedor con un margen negativo fijo asume que ese padding
+existe tal cual — cualquier pantalla que además lo fuerce a 0 por su cuenta
+tiene que condicionar esa fuerza a si el componente full-bleed va a ser el
+primer hijo o no. No es exclusivo de esta fase: es el mismo colapso de
+márgenes padre-hijo que `.claude/rules/styles.md` ya documenta para otros
+casos de `height:100%`/`position:absolute`, ahora con `margin-top` negativo.
+
+---

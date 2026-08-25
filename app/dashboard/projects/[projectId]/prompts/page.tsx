@@ -261,40 +261,51 @@ export default async function PromptsPage({
   const hasActivePrompts = (projectPrompts?.length ?? 0) > 0;
   const hasCompletedRun = latestRun !== null;
   const hasResults = results.length > 0;
+  // Mirrors the FirstScanTakeover condition below — hidden while the mission
+  // takeover owns the screen, so the rocket animation reads as full screen
+  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  const showMissionTakeover = Boolean(activeRun) && !hasCompletedRun;
 
   return (
-    <div className="page" style={{ paddingTop: 0 }}>
-      <header className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Prompts</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                {project.name}
-              </span>
-              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                {project.domain}
-              </span>
-              <span className="meta-pill">{project.country}/{project.language}</span>
+    // `.page`'s default top padding is what stops the mission's full-bleed
+    // scene (`.mrk-full`, negative top margin) from collapsing THROUGH an
+    // empty `.page` and clipping its own top edge — this screen zeroes that
+    // padding only when the sticky header (which absorbs the same margin on
+    // its own) is actually mounted below it.
+    <div className="page" style={{ paddingTop: showMissionTakeover ? undefined : 0 }}>
+      {!showMissionTakeover && (
+        <header className="ov-sticky-header">
+          <div className="ov-sticky-left">
+            <div>
+              <p className="kicker" style={{ marginBottom: 2 }}>Prompts</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
+                  {project.name}
+                </span>
+                <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
+                  {project.domain}
+                </span>
+                <span className="meta-pill">{project.country}/{project.language}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="ov-sticky-right">
-          <ScanStatePill
-            activeRun={activeRun}
-            lastScanLabel={
-              latestRun
-                ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                    timeZone: "Europe/Madrid"
-                  })
-                : null
-            }
-          />
-        </div>
-      </header>
+          <div className="ov-sticky-right">
+            <ScanStatePill
+              activeRun={activeRun}
+              lastScanLabel={
+                latestRun
+                  ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      timeZone: "Europe/Madrid"
+                    })
+                  : null
+              }
+            />
+          </div>
+        </header>
+      )}
 
       {promptsAddedMessage ? (
         <p className="feedback success" style={{ marginTop: 20 }}>
@@ -331,7 +342,7 @@ export default async function PromptsPage({
             </Link>
           </div>
         )}
-        {activeRun && !hasCompletedRun ? (
+        {activeRun && showMissionTakeover ? (
           <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
         ) : !hasActivePrompts ? (
           <div
