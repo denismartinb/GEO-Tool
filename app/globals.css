@@ -1694,17 +1694,32 @@ a {
    of quietly falling back to the wrong constant. */
 .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 460px; }
 
+/* SCAN-FULLSCREEN-HEADER-1 continuation (2026-08-25): `.mrk-full` (the
+   first-scan mission's full-bleed shell) has the exact same blind spot
+   `--ov-hdr-page-cap` was already fixed for above — its own bleed math
+   (`app/globals.css`, `.mrk-full`'s `@media (min-width: 761px)` rule) reads
+   `--page-max-w` (1320px) unconditionally, which is wrong on THIS screen
+   where `.page`'s real cap is `.cm2-page`'s own step. Left unset, `.mrk-full`
+   undershoots the left edge and overshoots the right by up to 34px here —
+   found with the same Playwright/Chromium fixture used for the header and
+   height fixes, rendering the real `.page.cm2-page` markup (not just a
+   generic `.page`) at 1024px wide. Same four steps, same mechanism. */
+.cm2-page .mrk-full { --mrk-page-cap: 460px; }
+
 @media (min-width: 900px) {
   .cm2-page { max-width: 640px; }
   .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 640px; }
+  .cm2-page .mrk-full { --mrk-page-cap: 640px; }
 }
 @media (min-width: 1200px) {
   .cm2-page { max-width: 1200px; }
   .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 1200px; }
+  .cm2-page .mrk-full { --mrk-page-cap: 1200px; }
 }
 @media (min-width: 1600px) {
   .cm2-page { max-width: 1280px; }
   .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 1280px; }
+  .cm2-page .mrk-full { --mrk-page-cap: 1280px; }
 }
 
 /* 1 · Insight banner — same visual language as .ov2-insight/.pr2-insight */
@@ -4124,6 +4139,73 @@ a.notif-row:hover {
    the atmosphere rather than keeping a daylit frame around a night scene. */
 .mrk-full.night { background: linear-gradient(180deg, #04070F 0%, #14293F 100%); }
 
+/* SCAN-FULLSCREEN-HEADER-1 continuation (2026-08-25): with `.ov-sticky-header`
+   hidden while the mission is on screen, `.mrk-canvas`'s height cap
+   (`min(80svh, 700px)` desktop / `min(78svh, 620px)` mobile) left a growing
+   gap between the scene and the true bottom of `.dash-content` on tall
+   viewports — measured at 157px at 1920×1080 with the same Playwright/
+   Chromium fixture used for the width fix (founder screenshot: the ground
+   band stopping well short of the sidebar's last nav item).
+
+   `.mrk-fill` makes `.mrk-full` grow to fill whatever height is left instead
+   of stopping at that cap. Flexbox, not `.mrk-full`'s own negative-margin
+   trick above: a flex container never collapses margins into or out of
+   itself, so converting `.page` to one here sidesteps the exact
+   collapse-through-parent bug the width fix hit on Prompts (§153, `.page`'s
+   own `padding-top: 0` collapsing `.mrk-full`'s `-26px` through it and
+   clipping the scene) — `.mrk-fill` zeroes `.page`'s padding outright and
+   zeroes `.mrk-full`'s margin to match, no cancellation arithmetic needed.
+
+   `.cm2-scope.mrk-fill` / `.wa2-scope.wa2-page.mrk-fill { display: contents }`
+   matter for the two screens whose `.page` isn't `.mrk-full`'s direct DOM
+   parent. `min-height: 100%` only resolves against an ancestor with a
+   DEFINITE height, and Competidores wraps `.page.cm2-page` in `.cm2-scope`
+   (a custom-property scope only, see its own rule) — an extra layer whose
+   own height is `auto` by default and would break the percentage chain.
+   `display: contents` removes that box so `.page.mrk-fill` sees
+   `.dash-content` (a real flex item of `.dash-main`'s column, so a definite
+   height) as its containing block, same as the other screens.
+
+   Auditoría web needed the same treatment for a DIFFERENT reason, found only
+   by testing the real markup: `.wa2-scope.wa2-page` wraps the mission ONE
+   level deeper than `.cm2-scope` does — inside `.page`, not combined with
+   it — so `.mrk-full` there is `.page`'s GRANDCHILD in the DOM, never its
+   direct child. The rules below used to read `.page.mrk-fill > .mrk-full`
+   (`>`, direct-child only), which silently never matched there: the mission
+   kept its old fixed-height cap and its old (already-fixed-above) margin,
+   with none of `.mrk-fill`'s zeroed padding to sit flush against — the exact
+   top-clipping the flex approach exists to avoid, one wrapper removed from
+   where it was already fixed (founder screenshot, Auditoría web, the órbita
+   beat cut off under the topbar with a left-edge gap besides). Descendant
+   selectors (no `>`) fix the match; `display: contents` on `.wa2-scope.wa2-
+   page` (like `.cm2-scope`) is what then makes `flex: 1` mean something —
+   contents makes an element's children act as direct children of ITS OWN
+   parent for box-generation and flex-participation purposes, without
+   changing the DOM tree a selector still has to match against. Any FUTURE
+   screen that nests a `*-scope`/`*-page` wrapper between `.page` and
+   `FirstScanTakeover`/`ReentryMission` needs the same `.mrk-fill` variant on
+   that wrapper — grep for `<FirstScanTakeover` and `<ReentryMission` and
+   check what's between them and the nearest `.page`. */
+.page.mrk-fill {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.page.mrk-fill .mrk-full {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+}
+.page.mrk-fill .mrk-full > .mrk-canvas {
+  flex: 1;
+  min-height: 0;
+}
+.cm2-scope.mrk-fill { display: contents; }
+
 /* The base rule's `100vw` / `calc(50% - 50vw)` break-out assumes `.page` is
    centered in the TRUE viewport, which only holds below 760px — that's where
    `.shell` collapses to one column and the sidebar leaves the grid entirely
@@ -4151,8 +4233,41 @@ a.notif-row:hover {
   .mrk-full {
     width: calc(100vw - var(--sidebar-w));
     max-width: calc(100vw - var(--sidebar-w));
+    /* `var(--mrk-page-cap, var(--page-max-w))` — same fallback-to-global
+       shape as `--ov-hdr-page-cap` (line ~1682): the excess this formula
+       bleeds into is measured against `.page`'s REAL max-width, and
+       Competidores is the one screen where that's `.cm2-page`'s own step
+       (460/640/1200/1280), not the global 1320px every other screen uses.
+       Unset anywhere else, so the fallback is what actually runs there.
+
+       CORRECTION (2026-08-25, same day, two commits later): an earlier pass
+       here added a `- 2 * var(--page-pad-x)` term to this formula, reasoned
+       from a fixture that did NOT include Tailwind's Preflight reset — which
+       sets `box-sizing: border-box` on every element in this app (`app/
+       globals.css` starts with `@tailwind base;`). Under the browser's
+       PLAIN default (content-box, what that fixture silently fell back to),
+       `.page`'s rendered width when capped is `cap + 2 × page-pad-x`
+       (max-width applies to content only, padding adds on top), and the
+       extra term was the correction that box model needed. Under the app's
+       REAL border-box model, `.page`'s rendered width when capped is
+       exactly `cap` (max-width already includes the padding budget) — the
+       ORIGINAL formula below, with no extra term, is exact in that model,
+       and the "fix" instead pushed the box 34px short of the right edge and
+       34px past the left, live on the founder's screen (report: "queda
+       eliminar ese hueco de la izquierda entre el menú y la animación").
+       Diagnosed by asking the founder to inspect the gap in DevTools — it
+       selected `.dash-content`, meaning `.mrk-full` genuinely wasn't there —
+       then confirmed by building a fixture from the actual compiled,
+       minified `.next` CSS output instead of hand-assembled source, which is
+       what should have been used from the start for anything claiming to be
+       pixel-verified: same 761–2560px sweep as before, all four edges
+       (top/bottom/left/right) exactly zero against `.dash-content`, through
+       both `.cm2-scope` and `.wa2-scope.wa2-page`'s `display: contents`.
+       `--mrk-page-cap` itself is untouched and still correct — reading the
+       right cap value and computing the right margin FROM it are two
+       different bugs, and only the second one was ever real. */
     margin-inline: calc(
-      -1 * (var(--page-pad-x) + max((100vw - var(--sidebar-w)) - var(--page-max-w), 0px) / 2)
+      -1 * (var(--page-pad-x) + max((100vw - var(--sidebar-w)) - var(--mrk-page-cap, var(--page-max-w)), 0px) / 2)
     ) 0;
   }
 }

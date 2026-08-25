@@ -493,40 +493,47 @@ export default async function CompetitorsPage({
     </>
   );
 
+  // Mirrors the FirstScanTakeover condition below — hidden while the mission
+  // takeover owns the screen, so the rocket animation reads as full screen
+  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  const showMissionTakeover = Boolean(activeRun) && completedRuns.length === 0;
+
   return (
-    <div className="cm2-scope">
-      <div className="page cm2-page">
+    <div className={`cm2-scope${showMissionTakeover ? " mrk-fill" : ""}`}>
+      <div className={`page cm2-page${showMissionTakeover ? " mrk-fill" : ""}`}>
         {/* Sticky header */}
-        <div className="ov-sticky-header">
-          <div className="ov-sticky-left">
-            <div>
-              <p className="kicker" style={{ marginBottom: 2 }}>Competidores</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span
-                  style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}
-                >
-                  {project.name}
-                </span>
-                <span className="badge badge-neutral">
-                  {activeCompetitors.length} {activeCompetitors.length === 1 ? "competidor" : "competidores"}
-                </span>
+        {!showMissionTakeover && (
+          <div className="ov-sticky-header">
+            <div className="ov-sticky-left">
+              <div>
+                <p className="kicker" style={{ marginBottom: 2 }}>Competidores</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span
+                    style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}
+                  >
+                    {project.name}
+                  </span>
+                  <span className="badge badge-neutral">
+                    {activeCompetitors.length} {activeCompetitors.length === 1 ? "competidor" : "competidores"}
+                  </span>
+                </div>
               </div>
             </div>
+            <div className="ov-sticky-right">
+              <ScanStatePill
+                activeRun={activeRun}
+                lastScanLabel={
+                  latestCompletedRun
+                    ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                        .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                    : null
+                }
+              />
+            </div>
           </div>
-          <div className="ov-sticky-right">
-            <ScanStatePill
-              activeRun={activeRun}
-              lastScanLabel={
-                latestCompletedRun
-                  ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                      .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
-                  : null
-              }
-            />
-          </div>
-        </div>
+        )}
 
-        {activeRun && completedRuns.length === 0 ? (
+        {activeRun && showMissionTakeover ? (
           <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
         ) : (
         <>
