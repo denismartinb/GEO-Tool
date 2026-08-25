@@ -5477,6 +5477,26 @@ a.notif-row:hover {
    derecha; 16px a la izquierda) existía justo para esto. */
 .lp-field-cta { flex: 0 0 auto; }
 
+/* HOME-SEO-AUDIT-1 (fundador, sobre el comprobador: "en móvil se ve bien, en
+   desktop sigue sin salir el borde de la caja del dominio"). Causa: el
+   comprobador (`FreeCheckerForm`) monta `.lp-field` SIN envolverlo en
+   `.lp-field-wrap` — su botón va debajo del campo siempre, no dentro de la
+   píldora como en el hero de la home, así que no necesita ese envoltorio. El
+   borde de escritorio de `.lp-field` vive en `.lp-field-wrap` (arriba); sin
+   ese envoltorio, en escritorio `.lp-field` no tenía NINGÚN borde propio —
+   sólo lo ganaba por accidente bajo 560px, donde el bloque `@media` de más
+   abajo se lo da directamente a `.lp-field` para la variante móvil del hero.
+   `.fc-field` (aplicado junto a `.lp-field` sólo en el comprobador) le da esa
+   misma píldora en TODAS las anchuras — coincide con los valores que ya trae
+   el bloque móvil de abajo, así que no hay salto visual donde ambas reglas se
+   solapan por debajo de 560px. */
+.fc-field {
+  padding: 6px 16px; background: #fff; border: 1px solid var(--line-strong);
+  border-radius: 999px; box-shadow: 0 24px 56px rgba(16,24,40,.16), 0 6px 16px rgba(16,24,40,.07);
+  transition: border-color .15s, box-shadow .15s;
+}
+.fc-field:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
+
 /* Los tres motores, bajo el campo. No es decoración: es la lista de lo que el
    comprobador consulta de verdad, y por eso los nombres van en texto y no
    dentro del SVG — un logo no lo lee un lector de pantalla ni un motor

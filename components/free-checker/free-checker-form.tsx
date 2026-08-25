@@ -178,7 +178,10 @@ export function FreeCheckerForm({
     <>
       {heading}
       <div className="lp-hero-form">
-        <div className="lp-field">
+        {/* HOME-SEO-AUDIT-1: `.fc-field` le da a `.lp-field` el borde/píldora
+            que en el hero de la home aporta `.lp-field-wrap` — aquí no se usa
+            ese envoltorio porque el botón va debajo, no dentro de la píldora. */}
+        <div className="lp-field fc-field">
           <Icon name="globe" size={18} className="lp-field-ico" />
           <input
             ref={inputRef}

@@ -15311,3 +15311,23 @@ el tono del borde no iba a bastar nunca sobre ese fondo. La corrección real
 es la que ya usan `.lp-hx-body`/`.lp-shot-body`/`.lp-prod-body` para el mismo
 problema: `background: var(--canvas)` (#f6f7f9), que sí se distingue del
 blanco de la página. `pnpm test` (2827) y `pnpm run validate` en verde.
+
+**Tercer addendum, mismo día: una segunda caja, un bug distinto.** El
+fundador, sobre ese mismo preview: "en móvil se ve bien, en desktop sigue sin
+salir el borde de la caja del dominio" — la píldora del campo de dominio del
+comprobador, no la caja de arriba. Causa: `FreeCheckerForm` monta `.lp-field`
+SIN envolverlo en `.lp-field-wrap`, porque su botón ("Comprobar mi marca") va
+siempre debajo del campo, nunca dentro de la píldora como en el hero de la
+home. El borde de escritorio vive en `.lp-field-wrap` (`app/globals.css`
+~5460); sin ese envoltorio, en escritorio `.lp-field` no tenía NINGÚN borde
+propio. En móvil "se veía bien" por una razón que no tiene nada que ver con
+el comprobador: el bloque `@media (max-width: 560px)` de HOME-2026-08 Fase A
+le da el borde directamente a `.lp-field` para la variante móvil del HERO (el
+botón baja fuera de la píldora ahí también) — ese mismo selector, por
+coincidir el nombre de clase, alcanzaba sin querer al comprobador. Arreglado
+con `.fc-field` (`components/free-checker/free-checker-form.tsx`), un
+modificador que da esa misma píldora a `.lp-field` en TODAS las anchuras sólo
+en esta página — coincide con los valores del bloque móvil de abajo, así que
+no hay salto donde ambas reglas se solapan por debajo de 560px. No se toca
+`.lp-field-wrap` ni el bloque `@media`: son del hero de la home y este PR no
+los usa. `pnpm test` (2827) y `pnpm run validate` en verde.
