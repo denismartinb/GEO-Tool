@@ -23,10 +23,16 @@ import { HeroDomainField } from "@/components/landing/hero-domain-field";
  * acortarlos para que quepan juntos en una línea. Un solo reloj CSS
  * (`lp-promo-cycle`), mismo mecanismo que la demo del hero: cada fila
  * arranca ya un tercio de ciclo dentro con `animation-delay` negativo
- * (0 / -4.5s / -9s sobre un ciclo de 13.5s), así que nunca hay un primer
+ * (0 / -3s / -6s sobre un ciclo de 9s), así que nunca hay un primer
  * fotograma con dos mensajes superpuestos. `prefers-reduced-motion` deja
  * el primer mensaje quieto y oculta los otros dos enteros, en vez de
  * mostrar los tres a la vez y romper la línea única del diseño.
+ *
+ * El mensaje del ensayo lleva su propio badge, "Gratis", igual que Pro y
+ * Starter llevan el suyo con el porcentaje (fundador, 2026-08-25: "mete
+ * '7 días de Pro gratis' y gratis en un badge como en los otros
+ * rotativos") — las tres filas comparten el mismo patrón visual (badge +
+ * frase), no sólo las dos de la rebaja.
  *
  * **Por qué tres filas y no una sola con los dos planes juntos.** El
  * fundador pidió "Starter a 45€ (tachado) 19€ y Pro a 179€ (tachado)
@@ -56,7 +62,10 @@ export function PromoStrip() {
   return (
     <div className="lp-promo">
       <span className="lp-promo-track">
-        <span className="lp-promo-row a">7 días de Pro · Sin tarjeta</span>
+        <span className="lp-promo-row a">
+          <span className="lp-promo-pill">Gratis</span>
+          <span>7 días de Pro</span>
+        </span>
         <span className="lp-promo-row b">
           <span className="lp-promo-pill">−67%</span>
           <span>Pro <s>179&nbsp;€</s> <b>59&nbsp;€/mes</b>, 6 meses · hasta 1 sept.</span>

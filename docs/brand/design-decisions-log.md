@@ -14497,3 +14497,11 @@ de cada una sin dejar diff.
     varios instantes, no reproducción real— para confirmar que el recorte
     no reabre el solape que ese item ya había cerrado: a t=0 sigue sin
     haber dos filas simultáneas cerca de opacidad 1.
+26. **El mensaje del ensayo gratis lleva su propio badge, como Pro y
+    Starter.** El fundador: "Mete '7 días de Pro gratis' y gratis en un
+    badge como en los otros rotativos". Pasa de "7 días de Pro · Sin
+    tarjeta" (una sola frase suelta) a badge "Gratis" + "7 días de Pro" —
+    misma estructura de dos ítems flex (`.lp-promo-pill` + `<span>`) que ya
+    usan las filas B y C desde el item 23, así que las tres filas comparten
+    ahora el mismo patrón visual. "Sin tarjeta" se retira del mensaje —
+    Verificado sin recorte a 320/375/1440px.
