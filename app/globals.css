@@ -4749,7 +4749,9 @@ a.notif-row:hover {
 @media (min-width: 901px) {
   .lp-lead { margin-top: 28px; }
   .lp-hero-form { margin-top: 38px; }
-  .lp-shot { margin-top: 64px; }
+  /* 64px -> 84px (fundador, 2026-08-25, sobre una captura del preview real:
+     "baja un poco la animación para separarla del input"). */
+  .lp-shot { margin-top: 84px; }
 }
 
 /* ══ LA DEMO DEL HERO (HOME-2026-08 Fase A2) ═══════════════════════════════

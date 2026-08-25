@@ -14505,3 +14505,10 @@ de cada una sin dejar diff.
     usan las filas B y C desde el item 23, así que las tres filas comparten
     ahora el mismo patrón visual. "Sin tarjeta" se retira del mensaje —
     Verificado sin recorte a 320/375/1440px.
+27. **Más aire entre el campo del hero y la demo, en escritorio.** El
+    fundador mandó una captura del preview real: "baja un poco la animación
+    para separarla del input y dejarla exactamente así". `.lp-shot`
+    (`@media (min-width: 901px)`, item 20 de este mismo §) sube de
+    `margin-top: 64px` a `84px`. Verificado midiendo el hueco real entre
+    `.lp-engines` y `.lp-shot.lp-hx` (64px → 84px) y con captura del hero
+    completo antes de hacer commit.
