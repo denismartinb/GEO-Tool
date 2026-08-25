@@ -15946,3 +15946,76 @@ lógica de navegación programática se tocó — sólo marcado muerto.
 **Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
 (build + typecheck + lint), `git diff --check` y
 `bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 165. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
+
+**Lo que pidió el fundador.** Que la configuración de `/debug` que hoy es
+manual (`sampling_enabled`, `auto_coverage_audit_enabled`,
+`auto_technical_audit_enabled`, `recurring_scans_enabled`) nazca en ON para
+toda cuenta, salvo tres direcciones de correo que siguen siendo sus propias
+cuentas de prueba interna. Aprobado vía Task Intake, con tres preguntas de
+alcance resueltas explícitamente antes de tocar código:
+
+1. **Sólo altas nuevas.** Ningún proyecto ya existente se toca. Nada de
+   `UPDATE` retroactivo — eso queda como una fase aparte si algún día se pide.
+2. **`auto_technical_audit_enabled` entra también**, no sólo las dos que
+   gastan Gemini: no cuesta IA y hoy congela un componente del GEO Score si
+   está apagada.
+3. **`recurring_scans_enabled` se activa solo, tras el primer escaneo**, no en
+   el alta — es la única de las cuatro cuya propia UI exige un escaneo
+   completado antes de poder encenderse, así que no puede nacer en ON.
+
+**Por qué esto NO era "cambiar dos booleanos".** Las tres migraciones que
+tocan (0031, 0032, 0033) documentan sus defaults en `false` como decisiones
+de coste deliberadas — el propio comentario de 0032 dice literalmente que la
+pregunta de qué hacer "cuando lleguen clientes reales" queda abierta a
+propósito. Encender `sampling_enabled` multiplica hasta ×5 las llamadas de
+un escaneo; `auto_coverage_audit_enabled` añade una llamada a Gemini por
+prompt activo tras cada escaneo. No es ajuste de UI, es una decisión de coste
+recurrente sobre toda cuenta real — de ahí el Task Intake Report en vez de
+implementación directa.
+
+**Mecanismo, dos sitios distintos porque el precondicionante es distinto:**
+
+- **Alta del proyecto** (`app/dashboard/projects/actions.ts`,
+  `productionDefaultsForAccount`): los tres flags que sí pueden nacer en ON
+  se pasan como `extraProjectColumns` a `createProjectCore`, exactamente
+  igual que `previewTestingDefaults` — que sigue mandando primero: preview/dev
+  conserva sus defaults baratos pase lo que pase, y sólo cuando no aplica (o
+  sea, en producción) entra la lógica nueva.
+- **Fin del primer escaneo** (`lib/scan/executor.ts`, tras el `UPDATE` que
+  marca `scan_runs.status = 'completed'`): `recurring_scans_enabled` se lee
+  en su propia consulta aislada (mismo patrón que `engineFlagsRow` un poco
+  más arriba, ADR 0029/0033) y sólo se enciende si el proyecto tiene
+  exactamente un escaneo completado — la primera vez que la propia
+  precondición de `/debug` queda satisfecha. Deliberadamente NO se reevalúa
+  en escaneos posteriores: un cliente que lo apague a mano después no vuelve
+  a encenderse solo en el siguiente escaneo. Todo el bloque es fail-soft
+  (`try/catch`, mismo patrón que la cola de auditoría web un poco más abajo
+  en el mismo fichero): un fallo aquí nunca tumba un escaneo que ya terminó
+  bien.
+
+**La exclusión es por email, no por `auth.users.id`, y es una desviación
+consciente de `ADMIN_USER_IDS`.** El contrato de entorno (`docs/
+environment-contract.md`) es explícito en que `/admin` gatea por ID
+precisamente porque un email es cambiable por el propio usuario desde
+Ajustes — ahí ese cambio compraría acceso. Aquí el fallo de ese mismo cambio
+es "una cuenta de prueba recibe por descuido los defaults caros en su
+siguiente alta", barato de notar y corregir, no una brecha. Vive en
+`lib/projects/internal-test-accounts.ts`, leída desde la variable de entorno
+nueva `INTERNAL_TEST_ACCOUNT_EMAILS` (lista separada por comas) — nunca
+hardcodeada en el código fuente, y falla cerrado: sin la variable, nadie
+queda exento y toda cuenta nueva recibe los defaults de producción.
+
+**Pendiente / fuera de alcance, explícitamente.** Ningún dominio existente
+cambia con este PR. Si en el futuro se decide aplicar esto retroactivamente
+a cuentas reales que ya están escaneando, es una fase nueva con su propio
+Task Intake — cambia el gasto de clientes que no lo pidieron, no sólo el de
+altas nuevas.
+
+**Comprobado.** `pnpm test` (204/204, 2.832/2.832, incluye los 5 tests nuevos
+de `internal-test-accounts.test.ts`), `pnpm run validate` (build + typecheck
++ lint), `git diff --check` y `bash scripts/agentic-handoff-check.sh`, todo
+en verde.

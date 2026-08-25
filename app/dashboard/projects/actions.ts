@@ -11,6 +11,7 @@ import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { createProjectCore } from "@/lib/projects/create-project";
+import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
 import {
   cleanDomain,
   deriveBrandFromDomain,
@@ -231,6 +232,37 @@ function previewTestingDefaults(): Record<string, boolean> {
   };
 }
 
+/**
+ * PROJECT-DEFAULTS-BY-ACCOUNT-1 (founder-approved 2026-08-25) — production
+ * column defaults for a real customer account.
+ *
+ * `sampling_enabled` (0032), `auto_coverage_audit_enabled` and
+ * `auto_technical_audit_enabled` (0031) all default to `false` in the schema
+ * on purpose: those migrations were written pre-launch, when the stated need
+ * was cheap internal test scans and the product had no paying customers whose
+ * score reliability the schema default could silently degrade — a question
+ * each migration's own comment left open "for whenever real customers
+ * arrive". This is that revisit, scoped to account creation only: it does not
+ * touch any project that already exists.
+ *
+ * The three internal test accounts (`isInternalTestAccountEmail`) are the
+ * exception — they keep today's cheap schema defaults (`{}`, i.e. every
+ * column falls through to its `default false`), same as before this change,
+ * so prelaunch-style cheap testing still works for them.
+ *
+ * `engine_*_enabled` is deliberately NOT set here: those three already
+ * default `true` (0033) for everyone, so there is nothing to change.
+ */
+function productionDefaultsForAccount(email: string | null | undefined): Record<string, boolean> {
+  if (isInternalTestAccountEmail(email)) return {};
+
+  return {
+    sampling_enabled: true,
+    auto_coverage_audit_enabled: true,
+    auto_technical_audit_enabled: true
+  };
+}
+
 export async function createProject(formData: FormData) {
   const { supabase, user } = await requireUser();
   const plan = await getPlanForUser(supabase, user.id);
@@ -244,6 +276,15 @@ export async function createProject(formData: FormData) {
     redirect(`/dashboard/projects/new?error=${parsedForm.error}`);
   }
 
+  // PROJECT-DEFAULTS-BY-ACCOUNT-1: preview/dev keeps its own cheap defaults
+  // regardless of who is signed in — `previewTestingDefaults` exists
+  // precisely so the founder can test cheaply there even from a real-looking
+  // account. Only when that returns nothing (production) does the per-account
+  // default kick in.
+  const preview = previewTestingDefaults();
+  const extraProjectColumns =
+    Object.keys(preview).length > 0 ? preview : productionDefaultsForAccount(user.email);
+
   // Fase Q1: toda la lógica vive en `createProjectCore` y devuelve un
   // resultado; lo único que queda aquí es traducirlo a revalidaciones y a un
   // destino. La traducción es una tabla —una variante, un `redirect`— y ése es
@@ -254,7 +295,7 @@ export async function createProject(formData: FormData) {
     plan,
     supabase,
     user,
-    extraProjectColumns: previewTestingDefaults()
+    extraProjectColumns
   });
 
   if (result.status === "project_limit_reached") {
