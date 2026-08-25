@@ -12153,3 +12153,28 @@ PROMPTS-DESKTOP-2); esta fase sólo corrige que la banda deje de recortarse,
 sin tocar dónde cae el texto dentro de ella.
 
 ---
+
+## 133. La cabecera de Páginas citadas nunca adoptó el patrón compartido (HEADER-FULL-WIDTH-1, 2026-08-25)
+
+**Lo que vio el fundador.** Comparando capturas anchas de Competidores y
+Páginas citadas: la segunda seguía con la banda más baja que el resto de la
+consola, y con una tipografía distinta.
+
+**Causa.** `.ov-sticky-header` la comparten 8 pantallas, y 7 de ellas (Visión
+general, Prompts, Competidores, Recomendaciones, Auditoría web, Debug, y
+ahora Páginas citadas) siguen el mismo patrón de dos líneas dentro de
+`.ov-sticky-left`: un `<p className="kicker">` con el nombre de la sección
+arriba, y debajo el nombre del proyecto en negrita (15px/750) junto a una
+badge del dominio en monoespaciada (11px). Páginas citadas se había quedado
+con un layout de una sola línea de antes de esa convergencia — kicker,
+separador vertical y el dominio en 14px/700, sin mostrar nunca el nombre del
+proyecto — que resultaba en una banda más baja y con letra distinta al
+resto. El propio comentario de `recommendations/page.tsx` ("Alineada con
+Prompts, Competidores y Páginas citadas") ya daba por hecho que lo estaba,
+sin serlo.
+
+**Arreglo.** `citations/page.tsx` adopta el mismo bloque, letra por letra,
+que ya usan las otras 6 pantallas. Ningún cambio de CSS — el desajuste era
+de estructura JSX, no de la banda en sí (que ya sangraba bien tras §132).
+
+---
