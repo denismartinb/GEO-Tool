@@ -15910,3 +15910,39 @@ en esta página — coincide con los valores del bloque móvil de abajo, así qu
 no hay salto donde ambas reglas se solapan por debajo de 560px. No se toca
 `.lp-field-wrap` ni el bloque `@media`: son del hero de la home y este PR no
 los usa. `pnpm test` (2827) y `pnpm run validate` en verde.
+
+---
+
+## 164. Dos enlaces de navegación redundantes retirados: "Volver a competidores" en el onboarding y el pie de Auditoría web (2026-08-25)
+
+**Lo que pidió el fundador**, con capturas de las dos pantallas: quitar el
+enlace "Volver a competidores" del paso de prompts del asistente de alta de
+dominio, y quitar los enlaces "Dominios"/"Recomendaciones" del pie de
+Auditoría web.
+
+**Por qué eran redundantes, no navegación perdida.** En los dos casos ya
+existía una forma real de volver:
+
+- El paso de prompts (`components/onboarding-wizard.tsx`,
+  `PromptsStepBody`) ya renderiza su propio botón "Atrás" en el pie del
+  formulario, cableado al mismo `goBack={() => setStep(1)}` que usaba el
+  enlace retirado — mismo destino, un solo control en vez de dos.
+- El pie de "Footer links" de Auditoría web
+  (`app/dashboard/projects/[projectId]/web-audit/page.tsx`) vivía fuera de
+  la cadena de estados de la pantalla (mission takeover / sin escaneo / sin
+  auditoría / con datos) y se pintaba en los cuatro por igual — no era
+  específico del estado vacío que enseñaba la captura. Con los dos únicos
+  enlaces que contenía retirados, el bloque entero (contenedor + separador)
+  se retira también: dejarlo habría sido un `<div>` con `borderTop` y sin
+  contenido.
+
+**Sin tocar `.onb2-back`.** La clase CSS sigue en uso en el paso de
+Competidores (mismo componente, enlace "Volver a dominio") — sólo se retiró
+el `<button>` del paso de Prompts, no la regla compartida.
+
+Cambio puramente de presentación: ningún estado, acción de servidor ni
+lógica de navegación programática se tocó — sólo marcado muerto.
+
+**Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
+(build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.

@@ -829,35 +829,6 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
         </AuditTabsProvider>
       )}
 
-      {/* Footer links */}
-      <div
-        style={{
-          display: "flex",
-          gap: 20,
-          marginTop: 28,
-          paddingTop: 18,
-          borderTop: "1px solid var(--line-soft)",
-          flexWrap: "wrap"
-        }}
-      >
-        {/* DOMAINS-REDESIGN-1: «Escaneos» ya no es una pantalla de cliente. El
-            pie enlaza a Dominios, que es lo que ese enlace le resolvía al
-            usuario — cambiar de dominio — y no al historial interno. */}
-        <Link
-          href="/dashboard/domains"
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
-        >
-          <Icon name="globe" size={13} />
-          Dominios
-        </Link>
-        <Link
-          href={`/dashboard/projects/${projectId}/recommendations`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
-        >
-          <Icon name="recs" size={13} />
-          Recomendaciones
-        </Link>
-      </div>
       </div>
     </div>
     </WebAuditProvider>
