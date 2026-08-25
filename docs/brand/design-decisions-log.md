@@ -14365,3 +14365,27 @@ de cada una sin dejar diff.
     publicar sin problema". La mecánica de precios de Stripe (BILLING-STRIPE-1
     ampliado) se coordina en paralelo, fuera de este PR — este cambio es sólo
     la tira de marketing, no toca `lib/billing/**` ni Stripe.
+20. **Cuatro retoques finos sobre el hero y la escena 0, mirando la captura
+    real.** El fundador: "En escritorio da unos pixeles más de aire entre
+    input, titulo, subtitulo y animación. En la animación, baja un poco la
+    pregunta, está muy pegada al gráfico de barras. La pregunta debe estar en
+    una burbuja, como en la maqueta. El gráfico de barras, un rojo que sea
+    algo menos llamativo."
+    - **Ritmo del hero, sólo escritorio.** `.lp-lead`/`.lp-hero-form`/
+      `.lp-shot` ganan `margin-top` mayor bajo `@media (min-width: 901px)` —
+      28/38/64px, antes 22/30/54. El móvil no se toca: ya tenía su propio
+      ajuste de aire (2026-08-24, item 6).
+    - **La burbuja de pregunta baja.** `.lp-hx-verdict` (el bloque del 11/14
+      y sus 14 barras) sube su `margin-bottom` de 16 a 26px.
+    - **La burbuja de pregunta, encontrada rota.** Su fondo era
+      `var(--surface-2, #f4f5f7)` — pero `--surface-2` SÍ está definida
+      (#fbfbfd), así que el *fallback* nunca se aplicaba: una burbuja más
+      clara que el propio `--canvas` de la escena (#f6f7f9), casi invisible.
+      Es la explicación técnica de por qué "no estaba en una burbuja" pese a
+      que el CSS decía lo contrario. Pasa a `#e7e9ee`, un gris con contraste
+      real contra el canvas (6,62:1 el texto encima, sobre AA).
+    - **El rojo de las 14 barras se desatura.** De `#b3202e` (el mismo que
+      lleva el "11" grande) a `#bf5a63` — el número grande no se toca, sólo
+      las barras, que es lo único que pidió el fundador.
+    Verificado con capturas reales en escritorio y móvil antes de hacer
+    commit.

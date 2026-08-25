@@ -4742,6 +4742,15 @@ a.notif-row:hover {
 @media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
 
 .lp-shot { position: relative; z-index: 2; max-width: 1060px; margin: 54px auto 0; }
+/* "Unos pixeles más de aire" entre título, subtítulo, campo y demo — sólo en
+   escritorio (fundador, 2026-08-25). El móvil ya tiene su propio ajuste
+   ("un pelín más de aire", 2026-08-24, más abajo en este fichero) y no se
+   toca aquí. */
+@media (min-width: 901px) {
+  .lp-lead { margin-top: 28px; }
+  .lp-hero-form { margin-top: 38px; }
+  .lp-shot { margin-top: 64px; }
+}
 
 /* ══ LA DEMO DEL HERO (HOME-2026-08 Fase A2) ═══════════════════════════════
    Cinco escenas dentro de un marco de navegador, un raíl para elegirlas y un
@@ -4821,22 +4830,35 @@ a.notif-row:hover {
    de 14 sí fuerza línea propia (`flex-basis: 100%`) — es la que B llevaba y
    D había dejado fuera por espacio; vuelve porque el fundador la pidió de
    nuevo ("y poner debajo el gráfico de las 11/14 barras"). */
-.lp-hx-verdict { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+/* margin-bottom sube de 16 a 26px (fundador, 2026-08-25: "baja un poco la
+   pregunta, está muy pegada al gráfico de barras") — separa la burbuja de
+   pregunta de la tira de 14 barras que cierra `.lp-hx-verdict`. */
+.lp-hx-verdict { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
 .lp-hx-verdict .n { font-family: var(--font-display); font-size: 40px; font-weight: 800; color: #b3202e; line-height: 1; letter-spacing: -.02em; }
 .lp-hx-verdict .of { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--ink-3); }
 .lp-hx-verdict .lbl { font-size: 13px; color: var(--ink-2); font-weight: 600; }
 .lp-hx-track { display: flex; gap: 3px; flex-basis: 100%; margin-top: 4px; }
 .lp-hx-track span { flex: 1; height: 5px; border-radius: 999px; background: var(--line-strong); }
-.lp-hx-track span.miss { background: #b3202e; }
+/* Rojo menos llamativo que el "11" de arriba (fundador, 2026-08-25) — el
+   número sigue en el rojo de golpe (#b3202e); las barras, en una versión más
+   desaturada, coherente con lo que ya se hizo con la insignia en log §152
+   item 14 ("un rojo no tan llamativo"). */
+.lp-hx-track span.miss { background: #bf5a63; }
 
 /* Pregunta Y respuesta en burbuja de chat — no sólo la respuesta (fundador,
    2026-08-24: "recuerda poner tanto la pregunta como la respuesta en
    burbujas"). La pregunta se alinea a la derecha, como el propio usuario en
    cualquier chat: es quien pregunta, no la marca ni la IA. */
 .lp-hx-chat { display: flex; flex-direction: column; }
+/* El fondo era `var(--surface-2, #f4f5f7)` — pero `--surface-2` SÍ existe
+   (#fbfbfd), así que el fallback nunca se usaba: una burbuja más clara que el
+   propio `--canvas` (#f6f7f9) de la escena, casi invisible (fundador,
+   2026-08-25: "la pregunta debe estar en una burbuja, como en la maqueta").
+   `#e7e9ee` es un gris con contraste real contra el canvas, sin literal
+   nuevo desconectado del sistema: mismo tono que `--line`/`--line-strong`. */
 .lp-hx-qbubble {
   align-self: flex-end; max-width: 82%; margin: 0;
-  background: var(--surface-2, #f4f5f7); border-radius: 14px 14px 3px 14px;
+  background: #e7e9ee; border-radius: 14px 14px 3px 14px;
   padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); line-height: 1.45;
 }
 .lp-hx-abubble {
