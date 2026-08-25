@@ -15528,3 +15528,260 @@ una colisión, `main` puede volver a moverse por debajo.
 **Comprobado.** `pnpm test` (202/202, 2.827/2.827), `pnpm run build`,
 `pnpm run typecheck`, `pnpm run lint` y `bash scripts/agentic-handoff-check.sh`
 en verde.
+
+---
+
+## 162. Rediseño del onboarding de nuevo dominio — dirección "Consola" (ONBOARDING-DOMAIN-REDESIGN-1, 2026-08-20)
+
+**El problema.** El asistente de alta de dominio (`components/onboarding-
+wizard.tsx`) seguía en el sistema visual anterior a la migración de marca:
+índigo `#4F46E5`, degradado morado-teal en el titular, Hanken Grotesk — el
+único flujo P0 del producto que un usuario nuevo ve obligatoriamente y que
+seguía sin la paleta azul/Bricolage Grotesque que ya llevan Visión general
+(§119), Recomendaciones (§115) y el resto de la consola. Las dos cargas
+(sugerencia de Gemini, creación del proyecto) eran además una cortina fija a
+pantalla completa (`.state-wrap`, `position: fixed; inset: 0`) que tapaba
+todo el contexto — dominio escrito, plan, navegación — mientras esperabas.
+
+**Qué se decidió.** Tres direcciones se plantearon en el lienzo de `/design`
+(A "Cuenta atrás" con la metáfora del cohete de la misión completa, B
+"Consola" con el sistema visual del resto del producto, C "Rampa lateral" con
+un panel nocturno fijo). El fundador eligió **B**. Detalle completo, capturas
+de las tres pantallas y de las cinco maquetas de B en
+`docs/design-reference/onboarding-domain-redesign-1/README.md` y
+`direccion-b-aprobada.html`.
+
+Cambios concretos:
+
+1. **Migración de tokens.** `.onb2-scope` se suma al remap compartido
+   `.ov2-scope`/`.set-scope` (mismo mecanismo que ya pedía reutilizar el
+   comentario de ese bloque — un remap, no un tercero) — azul
+   `--brand-blue`, Bricolage Grotesque/Figtree, sombra de marca. La barra de
+   pasos pasa de círculos numerados a tres segmentos con etiqueta debajo
+   (`.onb2-steps`).
+2. **Cargas embebidas, no cortina.** `SuggestionsLoadingOverlay` y
+   `CreateProjectOverlay` (fixed, `inset: 0`) desaparecen. En su lugar, cada
+   paso sustituye su propia tarjeta por una versión "cargando" en el mismo
+   sitio (`DomainAnalyzingCard`, y `PromptsStepBody` leyendo
+   `useFormStatus()`) — el panel de resumen y la navegación nunca
+   desaparecen de la pantalla.
+3. **Panel "Resumen del lanzamiento".** Columna derecha fija con dominio,
+   idioma (marcado "detectado" sólo desde que `suggestAction` ha resuelto,
+   nunca antes), motores, competidores y prompts — cada cifra es el estado
+   real del asistente; "Pendiente" mientras ese paso no se ha alcanzado, en
+   vez de un cero o un guion que podría leerse como un valor medido. El
+   total de respuestas estimadas (`prompts × motores`) se calcula del estado,
+   nunca de una tabla fija.
+4. **`Competitor` gana `source: "suggested" | "manual"`.** El chip "sugerido"
+   del paso de competidores sólo se pinta en las filas que de verdad vinieron
+   de Gemini — una fila añadida a mano con "Añadir competidor" nunca lo
+   lleva. Desviación deliberada frente a la maqueta (que no distinguía
+   origen); ver el README de la carpeta de diseño.
+5. **Reparto de prompts por categoría.** Nuevo panel de barras en el paso de
+   prompts, calculado en `useMemo` sobre el propio estado `prompts` — cuenta
+   real, no inventada.
+
+**Qué NO cambió.** Los tres pasos, sus validaciones, la recogida del dominio
+pendiente de la landing (`pending-domain.ts`), los mensajes de error de
+Gemini (`SuggestionGapNotice`) y los nombres de los campos ocultos del
+`<form>` que lee `createProject` — nada de la lógica de servidor se tocó.
+
+**Fusión con ONBOARDING-COMPETITORS-CAP-1 (§123), en marcha en paralelo.**
+Esta fase se escribió sobre una base de `main` anterior a §122-124; al
+sincronizar antes del Human Gate, `components/onboarding-wizard.tsx` traía un
+cambio real de #448 (tope `MAX_USER_COMPETITORS` en el paso de competidores,
+botón "Añadir competidor" deshabilitado al llegar a 10) que el merge de git no
+podía aplicar solo porque el fichero se había reescrito entero — se
+reincorporó a mano sobre el nuevo diseño (contador "(máximo 10)" en el
+`onb2-seclbl`, `disabled` en el botón). Sin este paso, el merge habría
+revertido en silencio un fix de pérdida de datos ya en producción.
+
+**Dónde vive el CSS y por qué no en `console.css`.** El bloque `onb2-` vive
+en `app/globals.css`, no en `app/console.css`, aunque el asistente sólo se
+renderiza dentro de `app/dashboard/**`: `components/onboarding-wizard.tsx`
+es un fichero de `components/`, y `tests/console-css-scope.test.ts` sólo
+excluye el directorio `app/dashboard/**` de "fuera de la consola" — trata
+cualquier clase escrita desde `components/` como pública, tal y como ya
+advertía `.claude/rules/styles.md` sobre la pantalla de notificaciones. Las
+clases exclusivas del wizard anterior (`.add-domain`, `.add-card`,
+`.wiz-steps`, …) se borraron de `globals.css`; las que seguían siendo
+compartidas con otras pantallas (`.add-sub`, `.domain-bar`, `.field-label`,
+`.type-caret`, `.cap`, `.meta-flag`, …) se mantienen intactas y el nuevo
+diseño las reutiliza tal cual.
+
+**Trazabilidad.** `components/onboarding-wizard.tsx`; `app/globals.css`
+(bloque `.onb2-`); `docs/design-reference/onboarding-domain-redesign-1/`;
+log §2 (mecanismo de remap de tokens), §119 (última pantalla migrada al
+mismo sistema), §123 (tope de competidores fusionado en esta misma fase).
+
+**Corrección tras revisión del fundador en el preview real (mismo día).**
+Cinco defectos de detalle, todos con capturas reales adjuntas al pedirlas:
+
+1. **`.add-hint` y `.add-engines` no existían.** El primer paso de limpieza
+   de CSS de esta misma fase borró ambas reglas al reescribir el bloque
+   `.add-*` — y el comentario que quedó en su lugar afirmaba, incorrectamente,
+   que se conservaban. Sin esas reglas, el icono y el texto de la pista del
+   dominio no tenían ningún `display:flex`/`align-items` que los alineara, y
+   la fila de motores no tenía `gap` — de ahí "el icono no está en la misma
+   línea" y "los motores quedan pegados". Vuelto a escribir tal cual estaba,
+   con el `gap` de `.add-engines` subido de 16 a 18px.
+2. **Puntos de color en vez de los iconos reales de los motores.** Sustituidos
+   por `EngineGlyph` (`components/ui/engine-glyph.tsx`) + `getEngineMeta`
+   (`lib/scan/engine-meta.ts`) — el mismo componente y los mismos colores que
+   ya usan Visión general y Prompts, no un segundo set inventado para este
+   flujo.
+3. **Competidores y prompts vivían siempre desplegados**, con un campo de
+   texto por fila a ancho completo — nunca coincidió con la maqueta B3/B4
+   aprobada (`docs/design-reference/onboarding-domain-redesign-1/`, que las
+   mostraba plegadas: nombre+dominio como texto, un prompt en una línea). Cada
+   fila gana una identidad de UI local (`id`, asignado por un contador en
+   `useRef`, nunca enviado al servidor) y un estado plegado/desplegado
+   (`openCompetitors`/`openPrompts`, un `Set<number>` de ids). Una fila
+   sugerida por Gemini nace plegada; una fila nueva vía "Añadir…" nace
+   desplegada, porque una fila vacía y plegada no da nada en lo que hacer
+   clic. El icono de engranaje (`Icon name="settings"`) la abre; al abrir
+   pasa a mostrar un check y la cierra. Competidores despliega a dos
+   columnas (nombre | dominio) en vez de apiladas, para no ocupar tanto.
+4. **Las cajas de prompt medían distinto entre sí.** El `<textarea>` no tenía
+   altura fija ni `resize:none`, así que cada una crecía según su contenido.
+   `.onb2-prompt-edit` fija `height:76px` y quita el tirador de
+   redimensionar — las tres miden lo mismo siempre.
+5. **El reparto por categoría no alineaba sus columnas.** `.onb2-cov` usaba
+   `flex-wrap`, que reparte el ancho sobrante fila a fila — dos filas de la
+   misma cuadrícula podían no tener las columnas alineadas entre sí. Cambiado
+   a `display:grid` con `repeat(auto-fit, minmax(140px, 1fr))`, que sí fuerza
+   la misma anchura en todas las filas.
+
+Verificado sin sesión real: maqueta estática con el `app/globals.css` real
+(mismo método que la captura de `direccion-b-aprobada.html`), no sólo lectura
+de CSS. `pnpm test`/`pnpm run validate` vueltos a correr limpios.
+
+**Segunda ronda de feedback del fundador probando el preview real: el copy
+del selector de país mentía.** Probó `amazon.es` cambiando el país de
+análisis y le salió "idioma inglés detectado" con competidores de España —
+"un poco lío". La pista bajo el campo de dominio decía "El idioma se detecta
+automáticamente del dominio", y eso es falso: `languageForCountry`
+(`lib/projects/project-form.ts`) deriva el idioma de una tabla país→idioma
+fija a partir de la bandera elegida, nunca del contenido real del dominio —
+y ese mismo `country` es un input real que se manda a `suggestCompetitors`/
+`suggestPrompts` (`app/dashboard/projects/actions.ts`) para decirle a Gemini
+para qué mercado analizar. Quitar la bandera, como sugirió primero el
+fundador, habría perdido esa capacidad real (monitorizar un `.es` para el
+mercado inglés, por ejemplo); el fundador decidió en su lugar corregir sólo
+el copy para que diga lo que el selector hace de verdad: **"Elige el país
+cuyo mercado quieres analizar."** Cambio de una sola línea en
+`components/onboarding-wizard.tsx`; sin tocar `languageForCountry` ni la
+lógica de sugerencia.
+
+**Segunda ronda de revisión manual (2026-08-22): distribución de escritorio y
+un corte real en el paso de prompts.** El fundador probó el preview real en
+capturas de escritorio y reportó dos cosas: (1) "en general" el asistente se
+veía centrado en medio de la pantalla, con demasiado espacio libre a los
+lados en las tres pantallas; (2) específicamente en "Revisa tus prompts", el
+panel "Resumen del lanzamiento" salía "mal centrado" y "se corta".
+
+Investigado sin sesión autenticada (igual que las rondas anteriores):
+reproducción estática local con el `app/globals.css` real, renderizada con
+Chromium headless a 1440×900 y 1920×1080, con un script de depuración que
+mide `getBoundingClientRect()` de cada elemento del `.onb2-grid`. Dos causas
+distintas, una por queja:
+
+1. **El espacio libre era real, no percepción.** `.onb2-page { max-width:
+   1080px }` es más estrecho que el resto de pantallas de consola
+   rediseñadas con este mismo patrón contenido+panel — `.cm2-page`,
+   `.cit2-page`, `.dm2-page` escalan hasta 1200-1280px en pantallas grandes.
+   Subido a `1200px`, en línea con esas otras zonas.
+2. **El corte en el paso de prompts era un bug real de CSS Grid, no una
+   percepción ni un recorte de captura.** `.onb2-grid` usaba
+   `grid-template-columns: 1fr 320px` (sin `minmax(0, …)`). La cuadrícula de
+   cobertura por categoría dentro de ese paso (`.onb2-cov`, `repeat(auto-fit,
+   minmax(140px, 1fr))`) aporta un ancho mínimo de contenido de
+   `nº categorías × 140px`; con un `1fr` a secas ese mínimo empuja la columna
+   de contenido más allá de su reparto justo, y el panel fijo de 320px sale
+   empujado fuera del viewport — sin scroll horizontal porque `.shell` recorta
+   ese eje (`.claude/rules/styles.md`, "clip, nunca hidden"). Reproducido:
+   a 1440px el panel completo (incluido el valor del dominio) quedaba fuera
+   de la pantalla, invisible y sin forma de llegar a él. `.onb2-grid` no era
+   una construcción nueva: el mismo layout contenido+panel fijo ya existía en
+   `.cm2-cols` (competidores real) con `minmax(0, 1fr) 320px` — el onboarding
+   se desvió de ese patrón ya establecido. Corregido igualando esa regla; el
+   único paso con `.onb2-cov` es precisamente "Revisa tus prompts", que es
+   por lo que el corte no aparecía en los pasos de dominio o competidores.
+   Verificado tras el cambio: a 1440px y 1920px el panel completo queda
+   dentro del viewport en ambos casos, sin overflow horizontal
+   (`document.documentElement.scrollWidth === innerWidth`).
+
+Ningún dato falso: ambos arreglos son de layout puro, sin tocar la lógica del
+asistente.
+
+**Tercera ronda (2026-08-23, móvil): `.db-ghost` nunca había existido.** El
+fundador reportó en su móvil que el texto animado del campo de dominio ("el
+placeholder que escribe solo", `TYPE_SAMPLES`) no salía en gris, y que
+desplazaba toda la pantalla lateralmente mientras escribía. El comentario de
+la sección de arriba (líneas ~4448-4455) listaba `.db-ghost` entre las clases
+"still used as-is by the new layout and stay here unchanged" — pero la regla
+nunca se escribió, ni en esta migración ni en la anterior: no existía ninguna
+definición `.db-ghost` en todo `globals.css`. Sin ella, ese `<span>` se
+pintaba con el texto negro por defecto del navegador (no `--ink-4`) y, más
+grave, participaba como un hijo flex normal más dentro de `.domain-bar`,
+aportando el ancho de su propio contenido en vez de superponerse al input —
+exactamente lo que ya le pasó a `.add-hint`/`.add-engines` en la ronda
+anterior de esta misma fase. Reproducido localmente (`globals.css` real,
+Chromium headless, sin la regla): el input se encogía de 203px a 99px para
+hacerle sitio al texto fantasma, y con una muestra más larga o un viewport de
+375px real ese hueco no basta y la fila entera se desborda — el "desplazamiento
+de toda la pantalla" que describió el fundador. Corregido con
+`position: absolute` + `color: var(--ink-4)`, el mismo patrón que ya usa el
+placeholder gemelo de la portada pública (`.lp-field-ghost`, con el mismo
+`left: 44px` por construcción): al sacarlo del flujo, deja de aportar ancho a
+la fila sea cual sea el viewport. Verificado con y sin la regla en la misma
+reproducción: sin ella el input se encoge y el texto sale negro; con ella el
+input recupera su ancho y el texto sale en gris, sin tocar el resto de la
+fila.
+
+**Cuarta ronda (2026-08-23, móvil): clasificación de prompts sin alinear,
+copy sobrante, y favicons reales en competidores.** El fundador señaló con
+una captura anotada que el chip de categoría de cada prompt "flotaba" a
+distinta altura fila a fila. Causa: `.onb2-row` (sin abrir) usaba
+`align-items: center`, y como `.onb2-ptext` envuelve a 1-3 líneas según el
+prompt, cada fila tiene una altura distinta — el chip y los dos iconos
+quedaban centrados respecto a ESA altura, no respecto a la primera línea de
+texto, así que su posición vertical variaba de fila en fila aunque su
+posición horizontal (a la derecha, empujada por `flex:1` en `.onb2-ptext`)
+fuera siempre la misma. `.onb2-row.align-top` (`align-items: flex-start`) ya
+existía — se usaba sólo en la fila abierta, para editar — y aplicarla también
+a la fila plegada ancla el chip a la primera línea en todas las filas por
+igual. Verificado con una reproducción local de tres filas de distinto largo:
+el chip queda al mismo borde superior en las tres.
+
+Segundo cambio: retirada la frase final del panel "Resumen del lanzamiento"
+("Si tu plan repite la tanda, serán más.") — el fundador la tachó a mano sin
+más explicación; el panel se queda en "N prompts × M motores." sin perder
+ningún dato real.
+
+Tercer cambio, en respuesta a una pregunta del fundador sobre coste
+("¿sería caro obtener los favicons en la búsqueda de competidores?"): la
+respuesta fue que no hace falta LLM — el producto ya tiene infraestructura de
+favicons reales servida por `/api/favicon` (`lib/domains/favicon.ts`,
+FAVICON-QUALITY-1 §36/§39), usada hoy en la pantalla real de Competidores
+(`FaviconImg`, `.cm2-rank-fav-img`) y en Visión general. El asistente de
+onboarding pintaba en su lugar un círculo de color con la inicial
+(`AVATAR_COLORS`, puramente decorativo). Con el "impleméntalo" del fundador:
+la fila de competidor pasa a usar el mismo `<FaviconImg domain={row.domain}
+cssSize={28}>` con el círculo de inicial como `fallback` — sin tocar
+`lib/domains/favicon.ts` ni el backend, cero llamadas a Gemini, y con el
+mismo apagado a iniciales que ya usan Competidores/Visión general cuando el
+dominio no tiene icono conocido o mientras el campo está vacío (una fila
+"Añadir competidor" nueva, sin dominio todavía).
+
+Los tres cambios son sólo de presentación — `MAX_USER_COMPETITORS`, la
+lógica de sugerencia y los campos que `createProject` lee no se tocaron.
+
+**Nota de renumeración.** Esta sección nació como §145 en su propia rama;
+`main` avanzó mientras tanto y reclamó ese número (GEO-VS-AEO-VS-SEO, zona
+Blog y contenido), así que pasó a §152 en una primera fusión con `main`. Esa
+misma colisión en cadena volvió a producirse: `main` siguió avanzando (PR
+PRICING-PROMO-1) y reclamó también el §152, así que esta sección pasa a
+**§162** al fusionar de nuevo — mismo protocolo que describe la sección
+"Cierre de fase" de `CLAUDE.md`, y la misma cadena de colisiones que ya
+documentan los §159/§161 de este mismo fichero.

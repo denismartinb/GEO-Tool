@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ONBOARDING-DOMAIN-REDESIGN-1 — Dirección B aprobada</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  body { margin: 0; padding: 32px; background: #eef1f6; font-family: Figtree, sans-serif; }
+  .intro { max-width: 760px; margin: 0 auto 32px; font-size: 14px; line-height: 1.6; color: #3b4759; }
+  .intro h1 { font-family: "Bricolage Grotesque", sans-serif; font-size: 22px; color: #0B1426; }
+  .scr { max-width: 100%; margin: 0 auto 40px; }
+  .scr h2 { font-family: "JetBrains Mono", monospace; font-size: 13px; color: #2563eb; text-align: center; margin-bottom: 12px; }
+  .frame { margin: 0 auto; box-shadow: 0 12px 40px rgba(11,20,38,.16); border-radius: 10px; overflow: hidden; }
+  
+:root{
+  --ink:#0B1426; --ink-2:#3b4759; --ink-3:#5b6b82; --ink-4:#98a2b3;
+  --blue:#2563eb; --blue-2:#4f7bff; --blue-soft:rgba(37,99,235,.10); --blue-soft-2:rgba(37,99,235,.16);
+  --cyan:#09c5d6; --warm:#ffb020;
+  --canvas:#f7f8fb; --surface:#ffffff; --line:#e7eaf0; --line-soft:#eef1f6;
+  --pos:#15915a; --pos-soft:#e7f6ee;
+  --sh:0 1px 2px rgba(11,20,38,.04), 0 6px 18px rgba(11,20,38,.05);
+  --sh-pop:0 12px 40px rgba(11,20,38,.14), 0 4px 12px rgba(11,20,38,.06);
+  --font:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --display:"Bricolage Grotesque",-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --sidebar-w:248px; --header-h:52px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none} a:hover{color:#1d4fd7}
+.ico{flex:0 0 auto}
+
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:100%;overflow:hidden;background:var(--canvas)}
+.sb{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.sb-brand{height:var(--header-h);display:flex;align-items:center;padding:0 16px 0 18px;border-bottom:1px solid var(--line-soft)}
+.brand-sub{margin-top:2px;font-size:11px;color:var(--ink-4)}
+.sb-scroll{flex:1;overflow:hidden;padding:8px 12px 12px}
+.no-dom{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fbfcfe;margin-bottom:14px}
+.no-dom-t{font-size:12.5px;font-weight:700}
+.no-dom-d{font-size:11.5px;color:var(--ink-3);line-height:1.45;margin:3px 0 8px}
+.no-dom-a{font-size:12px;font-weight:650;color:var(--blue);display:inline-flex;align-items:center;gap:5px}
+.nav-group-label{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4);margin:10px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;font-size:13.5px;font-weight:550;color:var(--ink-2)}
+.nav-item.disabled{color:var(--ink-4)}
+.nav-item.active{background:var(--blue-soft);color:var(--blue);font-weight:650}
+.sb-foot{border-top:1px solid var(--line-soft);padding:10px 12px 12px}
+.sb-help{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-3);padding:7px 8px}
+.user-chip{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:10px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-size:11px;font-weight:700}
+.user-mail{font-size:12px;color:var(--ink-2);font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
+.plan-badge{display:inline-flex;align-items:center;gap:4px;margin-top:3px;font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-soft);border-radius:999px;padding:2px 7px}
+.main{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{height:var(--header-h);display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:0 22px;flex:0 0 auto}
+.signout{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:13px;font-weight:650;color:var(--ink-2);box-shadow:var(--sh)}
+.content{flex:1;min-height:0;overflow:hidden}
+
+.content{background:var(--canvas);overflow:hidden}
+.pagew{max-width:1160px;margin:0 auto;padding:22px 34px 0;height:100%;display:flex;flex-direction:column}
+.crumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3);font-weight:550}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:10px 0 18px}
+.h1{font-family:var(--display);font-size:29px;font-weight:800;letter-spacing:-.025em;line-height:1.1;margin:0}
+.sub{font-size:14px;line-height:1.55;color:var(--ink-3);margin:7px 0 0;max-width:560px}
+.steps{display:flex;align-items:center;gap:0;flex:0 0 auto}
+.stp{display:flex;flex-direction:column;gap:7px;width:96px}
+.stp .bar{display:block;height:3px;border-radius:2px;background:#e2e6ee}
+.stp.on .bar{background:var(--blue)} .stp.done .bar{background:var(--pos)}
+.stp .lb{font-size:11.5px;font-weight:650;color:var(--ink-4)}
+.stp.on .lb{color:var(--ink)} .stp.done .lb{color:var(--ink-2)}
+.grid{display:grid;grid-template-columns:1fr 320px;gap:22px;flex:1;min-height:0}
+.seclbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4);margin:0 0 8px 2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh)}
+.cpad{padding:20px}
+.flabel{font-size:12.5px;font-weight:650;color:var(--ink-2);display:block;margin-bottom:7px}
+.dbar{display:flex;align-items:center;gap:10px;height:48px;padding:0 6px 0 14px;border:1px solid var(--line);border-radius:11px;background:#fff;
+  box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+.dbar .val{flex:1;font-size:16px;font-weight:600;color:var(--ink);font-family:var(--mono)}
+.caret{display:inline-block;width:1.5px;height:17px;background:var(--blue);vertical-align:-3px}
+.csel{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fbfcfe;
+  font-size:13px;font-weight:600;color:var(--ink-2)}
+.cta{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:9px;background:var(--blue);color:#fff;
+  font-size:13.5px;font-weight:700}
+.cta.dim{background:#93b1f4}
+.ghost{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--line);background:#fff;
+  font-size:13.5px;font-weight:650;color:var(--ink-2)}
+.hint{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-4);font-weight:500;margin-top:11px}
+.engrow{display:flex;align-items:center;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.cap{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4)}
+.echip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.edot{width:7px;height:7px;border-radius:50%}
+/* summary panel */
+.pnl{position:sticky;top:0}
+.prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.prow:last-child{border-bottom:0}
+.pico{width:26px;height:26px;border-radius:8px;background:#f3f5f9;color:var(--ink-3);display:grid;place-items:center;flex:0 0 auto}
+.pk{font-size:12.5px;color:var(--ink-3);flex:1}
+.pv{font-size:13px;font-weight:700;color:var(--ink)}
+.pv.mono{font-family:var(--mono);font-size:12px;font-weight:600}
+.pv.na{color:var(--ink-4);font-weight:550}
+.est{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.est-n{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1;color:var(--ink)}
+.est-l{font-size:12.5px;color:var(--ink-2);font-weight:600;margin-top:3px}
+.est-f{font-size:11px;color:var(--ink-4);line-height:1.45;margin-top:8px}
+/* lists */
+.row{display:flex;align-items:center;gap:11px;padding:10px 12px;border-bottom:1px solid var(--line-soft)}
+.row:last-child{border-bottom:0}
+.fav{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;flex:0 0 auto}
+.rname{font-size:13.5px;font-weight:700}
+.rdom{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:1px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:21px;padding:0 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue);
+  font-size:10.5px;font-weight:700}
+.chip.n{background:#f2f4f8;color:var(--ink-3)}
+.iconbtn{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--ink-4)}
+.tick{width:18px;height:18px;border-radius:5px;background:var(--blue);color:#fff;display:grid;place-items:center;flex:0 0 auto}
+.ptext{font-size:13px;line-height:1.45;color:var(--ink);flex:1}
+.cardfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid var(--line);background:#fbfcfe;
+  border-radius:0 0 14px 14px}
+.foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+/* coverage strip */
+.cov{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line-soft)}
+.covc{flex:1}
+.covc .cl{font-size:11px;color:var(--ink-3);font-weight:600;display:flex;justify-content:space-between}
+.covc .cb{display:block;height:5px;border-radius:3px;background:#eef1f6;margin-top:5px;overflow:hidden}
+.covc .cf{display:block;height:100%;border-radius:3px;background:var(--blue)}
+/* inline loading */
+.skel{display:block;height:11px;border-radius:5px;background:linear-gradient(90deg,#eef1f6,#e4e9f1,#eef1f6)}
+.ci{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-3);padding:5px 0}
+.ci.on{color:var(--ink);font-weight:650}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(37,99,235,.25);border-top-color:var(--blue);flex:0 0 auto}
+.cdone{width:16px;height:16px;border-radius:50%;background:var(--pos-soft);color:var(--pos);display:grid;place-items:center;flex:0 0 auto}
+
+
+:root{
+  --ink:#0B1426; --ink-2:#3b4759; --ink-3:#5b6b82; --ink-4:#98a2b3;
+  --blue:#2563eb; --blue-2:#4f7bff; --blue-soft:rgba(37,99,235,.10); --blue-soft-2:rgba(37,99,235,.16);
+  --cyan:#09c5d6; --warm:#ffb020;
+  --canvas:#f7f8fb; --surface:#ffffff; --line:#e7eaf0; --line-soft:#eef1f6;
+  --pos:#15915a; --pos-soft:#e7f6ee;
+  --sh:0 1px 2px rgba(11,20,38,.04), 0 6px 18px rgba(11,20,38,.05);
+  --sh-pop:0 12px 40px rgba(11,20,38,.14), 0 4px 12px rgba(11,20,38,.06);
+  --font:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --display:"Bricolage Grotesque",-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --sidebar-w:248px; --header-h:52px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none} a:hover{color:#1d4fd7}
+.ico{flex:0 0 auto}
+
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:100%;overflow:hidden;background:var(--canvas)}
+.sb{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.sb-brand{height:var(--header-h);display:flex;align-items:center;padding:0 16px 0 18px;border-bottom:1px solid var(--line-soft)}
+.brand-sub{margin-top:2px;font-size:11px;color:var(--ink-4)}
+.sb-scroll{flex:1;overflow:hidden;padding:8px 12px 12px}
+.no-dom{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fbfcfe;margin-bottom:14px}
+.no-dom-t{font-size:12.5px;font-weight:700}
+.no-dom-d{font-size:11.5px;color:var(--ink-3);line-height:1.45;margin:3px 0 8px}
+.no-dom-a{font-size:12px;font-weight:650;color:var(--blue);display:inline-flex;align-items:center;gap:5px}
+.nav-group-label{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4);margin:10px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;font-size:13.5px;font-weight:550;color:var(--ink-2)}
+.nav-item.disabled{color:var(--ink-4)}
+.nav-item.active{background:var(--blue-soft);color:var(--blue);font-weight:650}
+.sb-foot{border-top:1px solid var(--line-soft);padding:10px 12px 12px}
+.sb-help{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-3);padding:7px 8px}
+.user-chip{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:10px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-size:11px;font-weight:700}
+.user-mail{font-size:12px;color:var(--ink-2);font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
+.plan-badge{display:inline-flex;align-items:center;gap:4px;margin-top:3px;font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-soft);border-radius:999px;padding:2px 7px}
+.main{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{height:var(--header-h);display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:0 22px;flex:0 0 auto}
+.signout{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:13px;font-weight:650;color:var(--ink-2);box-shadow:var(--sh)}
+.content{flex:1;min-height:0;overflow:hidden}
+
+.content{height:100%;display:flex;flex-direction:column;overflow:hidden}
+.mtop{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex:0 0 auto}
+.burger{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-2)}
+.h1{font-family:var(--display);font-weight:800;letter-spacing:-.03em;line-height:1.08;margin:10px 0 0}
+.sub{font-size:14px;line-height:1.55;color:var(--ink-3);margin:9px 0 0}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
+.dinput{display:flex;align-items:center;gap:9px;height:52px;padding:0 14px;border:1px solid var(--line);border-radius:13px;background:#fff;
+  box-shadow:0 0 0 4px rgba(37,99,235,.10)}
+.dinput .val{flex:1;font-family:var(--mono);font-size:16px;font-weight:600}
+.caret{display:inline-block;width:1.5px;height:18px;background:var(--blue);vertical-align:-3px}
+.csel{display:flex;align-items:center;gap:8px;height:46px;padding:0 13px;border:1px solid var(--line);border-radius:11px;background:#fbfcfe;
+  font-size:14px;font-weight:600;color:var(--ink-2);margin-top:10px}
+.cta{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:12px;background:var(--blue);color:#fff;
+  font-size:15px;font-weight:700;margin-top:10px;box-shadow:0 6px 16px rgba(37,99,235,.26)}
+.hint{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--ink-4);font-weight:500;margin-top:11px;line-height:1.45}
+.engrow{display:flex;align-items:center;gap:13px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.cap{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4)}
+.echip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.edot{width:6px;height:6px;border-radius:50%}
+
+  .content{background:var(--canvas)}
+  .wrap{padding:14px 16px;flex:1;min-height:0;overflow:hidden}
+  .h1{font-size:25px}
+  .steps{display:flex;gap:7px;margin-top:14px}
+  .stp{flex:1}
+  .stp .bar{height:3px;border-radius:2px;background:#e2e6ee;display:block}
+  .stp.on .bar{background:var(--blue)}
+  .stp .lb{font-size:11px;font-weight:650;color:var(--ink-4);margin-top:6px;display:block}
+  .stp.on .lb{color:var(--ink)}
+  .seclbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4);margin:18px 0 7px 2px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh);padding:16px}
+  .prow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:12.5px;color:var(--ink-3)}
+  .prow:last-child{border-bottom:0}
+  .pico{width:24px;height:24px;border-radius:7px;background:#f3f5f9;color:var(--ink-3);display:grid;place-items:center;flex:0 0 auto}
+  .pv{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--ink)}
+  .pv.na{color:var(--ink-4);font-weight:550}
+  
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>ONBOARDING-DOMAIN-REDESIGN-1 — Dirección B, "Consola"</h1>
+  <p>Aprobado por el fundador el 2026-08-20. De las tres direcciones planteadas en el lienzo de
+  <code>/design</code> (A "Cuenta atrás", B "Consola", C "Rampa lateral"), se eligió <b>B</b>: el onboarding
+  se parece al resto de la consola ya migrada (Bricolage Grotesque + Figtree, azul <code>#2563EB</code>,
+  sombra de marca, etiqueta de sección fuera de la tarjeta) en vez de la metáfora del cohete a pantalla
+  completa. Su diferencia funcional principal frente al wizard anterior: las dos cargas
+  (sugerencias de Gemini, creación del proyecto) dejan de ser una cortina fija a pantalla completa y
+  pasan a estar contenidas dentro de la propia tarjeta, con checklist + esqueleto de filas, sin tapar
+  nunca el panel "Resumen del lanzamiento".</p>
+  <p>Estas cinco pantallas (+ el primer paso a 375px) son el diseño aprobado tal cual — estático,
+  autocontenido, sin el runtime del editor de Design Canvas. La implementación real vive en
+  <code>components/onboarding-wizard.tsx</code> y el bloque <code>onb2-</code> de
+  <code>app/console.css</code>; datos y contadores de esta maqueta son ilustrativos.</p>
+</div>
+
+  <section class="scr">
+    <h2>B1 · Dominio</h2>
+    <div class="frame" style="width:1280px">
+      <div class="root" style="width:1280px;height:900px;overflow:hidden">
+<div class="shell">
+  <aside class="sb">
+  <div class="sb-brand">
+    <div>
+      <span style="display:inline-flex;align-items:center;gap:7px"><span style="display:inline-flex"><svg viewBox="0 0 285 292" width="22" height="22" aria-hidden="true"><path transform="translate(3 3)" d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" fill="#0B1426"></path><path transform="translate(3 3)" d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" fill="#2563EB"></path><path transform="translate(3 3)" d="M219.50,29.00 L206.00,34.25 L200.25,39.00 L194.00,48.50 L192.00,62.25 L194.00,73.25 L198.25,80.75 L204.00,87.50 L216.50,93.75 L227.25,94.75 L233.25,93.75 L240.75,90.50 L252.50,79.75 L256.75,67.25 L256.75,58.50 L253.75,47.50 L246.25,37.00 L233.25,30.00 L219.75,29.00 Z" fill="#FFB020"></path></svg></span><span style="font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.02em;color:var(--ink)">enscore</span></span>
+      <div class="brand-sub">Espacio de visibilidad en IA</div>
+    </div>
+  </div>
+  <div class="sb-scroll">
+    <div class="no-dom"><div class="no-dom-t">Sin dominio todavía</div><div class="no-dom-d">Crea tu primer dominio para empezar a escanear.</div><span class="no-dom-a">Crear dominio</span></div>
+    <div class="nav-group-label">Analizar</div>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg><span>Visión general</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg><span>Prompts</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg><span>Competidores</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><circle cx="18" cy="18" r="2.5"></circle><path d="M8.2 11 15.8 7M8.2 13l7.6 4"></path></svg><span>Páginas citadas</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-3.6-3.6"></path></svg><span>Auditoría web</span></span>
+    <div class="nav-group-label">Actuar</div>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1V17h6v-1.4c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3Z"></path><path d="M9.5 20.5h5M10 23h4"></path></svg><span>Recomendaciones</span></span>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-help"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v1M12 11v5"></path></svg><span>¿Qué es el GEO?</span></div>
+    <div class="user-chip">
+      <span class="avatar">DE</span>
+      <span><span class="user-mail">denis.martinb@gmail.com</span><br><span class="plan-badge"><svg class="ico " width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 7 12l5-7 5 7 3.5-3.5V17a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V8.5Z"></path><path d="M6 20.5h12"></path></svg>Pro</span></span>
+    </div>
+  </div>
+</aside>
+  <div class="main">
+    <div class="topbar">
+  <span style="color:var(--ink-3)"><svg class="ico " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span>
+  <span class="signout"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg>Cerrar sesión</span>
+</div>
+    <div class="content"><div class="pagew">
+  <div class="crumb"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Nuevo dominio</div>
+  <div class="head">
+    <div>
+      <h1 class="h1">Añade un dominio</h1>
+      <p class="sub">Lo leemos, te proponemos competidores y prompts, y lanzamos el primer escaneo en los tres motores.</p>
+    </div>
+    <div class="steps">
+  <div class="stp on" style="margin-right:8px"><span class="bar"></span><span class="lb">Dominio</span></div><div class="stp" style="margin-right:8px"><span class="bar"></span><span class="lb">Competidores</span></div><div class="stp" style="margin-right:8px"><span class="bar"></span><span class="lb">Prompts</span></div>
+</div>
+  </div>
+  <div class="grid">
+    <div>
+      <div class="seclbl">Dominio y mercado</div>
+      <div class="card cpad">
+        <span class="flabel">Dominio</span>
+        <div class="dbar">
+          <span style="color:var(--ink-4)"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg></span>
+          <span class="val">genscore.es<span class="caret"></span></span>
+          <span class="csel"><svg viewBox="0 0 19 13" width="17" height="12" style="border-radius:2px;display:block"><rect width="19" height="13" fill="#c60b1e"></rect><rect y="3.25" width="19" height="6.5" fill="#ffc400"></rect></svg>España<svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+          <span class="cta">Continuar<svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+        </div>
+        <div class="hint"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v1M12 11v5"></path></svg>Solo el dominio, sin https:// ni rutas. El idioma se detecta automáticamente.</div>
+        <div class="engrow"><span class="cap">Motores</span><span class="echip"><span class="edot" style="background:#4285f4"></span>Gemini</span><span class="echip"><span class="edot" style="background:#10a37f"></span>ChatGPT</span><span class="echip"><span class="edot" style="background:#d97757"></span>Claude</span></div>
+      </div>
+    </div>
+    <div>
+  <div class="seclbl">Resumen del lanzamiento</div>
+  <div class="card cpad pnl">
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg></span><span class="pk">Dominio</span><span class="pv mono">genscore.es</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h9M8.5 5c0 5-3 9-5.5 11M5 9c1.5 3.5 4 5 7 6.5M14 21l4-9 4 9M15.5 18h5"></path></svg></span><span class="pk">Idioma</span><span class="pv ">Español <span style="color:var(--ink-4);font-weight:500">· detectado</span></span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg></span><span class="pk">Motores</span><span class="pv ">3</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg></span><span class="pk">Competidores</span><span class="pv na">Pendiente</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg></span><span class="pk">Prompts</span><span class="pv na">Pendiente</span></div>
+    <div class="est"><div class="est-f" style="margin:0">El total de respuestas aparecerá aquí cuando elijas tus prompts.</div></div>
+  </div>
+</div>
+  </div>
+</div></div>
+  </div>
+</div>
+</div>
+    </div>
+  </section>
+  <section class="scr">
+    <h2>B2 · Carga — analizando</h2>
+    <div class="frame" style="width:1280px">
+      <div class="root" style="width:1280px;height:900px;overflow:hidden">
+<div class="shell">
+  <aside class="sb">
+  <div class="sb-brand">
+    <div>
+      <span style="display:inline-flex;align-items:center;gap:7px"><span style="display:inline-flex"><svg viewBox="0 0 285 292" width="22" height="22" aria-hidden="true"><path transform="translate(3 3)" d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" fill="#0B1426"></path><path transform="translate(3 3)" d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" fill="#2563EB"></path><path transform="translate(3 3)" d="M219.50,29.00 L206.00,34.25 L200.25,39.00 L194.00,48.50 L192.00,62.25 L194.00,73.25 L198.25,80.75 L204.00,87.50 L216.50,93.75 L227.25,94.75 L233.25,93.75 L240.75,90.50 L252.50,79.75 L256.75,67.25 L256.75,58.50 L253.75,47.50 L246.25,37.00 L233.25,30.00 L219.75,29.00 Z" fill="#FFB020"></path></svg></span><span style="font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.02em;color:var(--ink)">enscore</span></span>
+      <div class="brand-sub">Espacio de visibilidad en IA</div>
+    </div>
+  </div>
+  <div class="sb-scroll">
+    <div class="no-dom"><div class="no-dom-t">Sin dominio todavía</div><div class="no-dom-d">Crea tu primer dominio para empezar a escanear.</div><span class="no-dom-a">Crear dominio</span></div>
+    <div class="nav-group-label">Analizar</div>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg><span>Visión general</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg><span>Prompts</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg><span>Competidores</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><circle cx="18" cy="18" r="2.5"></circle><path d="M8.2 11 15.8 7M8.2 13l7.6 4"></path></svg><span>Páginas citadas</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-3.6-3.6"></path></svg><span>Auditoría web</span></span>
+    <div class="nav-group-label">Actuar</div>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1V17h6v-1.4c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3Z"></path><path d="M9.5 20.5h5M10 23h4"></path></svg><span>Recomendaciones</span></span>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-help"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v1M12 11v5"></path></svg><span>¿Qué es el GEO?</span></div>
+    <div class="user-chip">
+      <span class="avatar">DE</span>
+      <span><span class="user-mail">denis.martinb@gmail.com</span><br><span class="plan-badge"><svg class="ico " width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 7 12l5-7 5 7 3.5-3.5V17a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V8.5Z"></path><path d="M6 20.5h12"></path></svg>Pro</span></span>
+    </div>
+  </div>
+</aside>
+  <div class="main">
+    <div class="topbar">
+  <span style="color:var(--ink-3)"><svg class="ico " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span>
+  <span class="signout"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg>Cerrar sesión</span>
+</div>
+    <div class="content"><div class="pagew">
+  <div class="crumb"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Nuevo dominio</div>
+  <div class="head">
+    <div>
+      <h1 class="h1">Leyendo genscore.es</h1>
+      <p class="sub">Buscamos con quién compites y qué te preguntarían de verdad en un chat de IA. Unos 15 segundos.</p>
+    </div>
+    <div class="steps">
+  <div class="stp on" style="margin-right:8px"><span class="bar"></span><span class="lb">Dominio</span></div><div class="stp" style="margin-right:8px"><span class="bar"></span><span class="lb">Competidores</span></div><div class="stp" style="margin-right:8px"><span class="bar"></span><span class="lb">Prompts</span></div>
+</div>
+  </div>
+  <div class="grid">
+    <div>
+      <div class="seclbl">Analizando</div>
+      <div class="card">
+        <div class="cpad" style="padding-bottom:14px">
+          <div class="ci"><span class="cdone"><svg class="ico " width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>Leyendo el contenido de genscore.es</div>
+          <div class="ci on"><span class="spin"></span>Buscando competidores relevantes</div>
+          <div class="ci"><span class="spin" style="opacity:.3"></span>Generando prompts de monitorización</div>
+        </div>
+        <div style="border-top:1px solid var(--line-soft)">
+          <div class="row"><span class="fav" style="background:#eef1f6"></span>
+            <span style="flex:1"><span class="skel" style="display:block;width:70%"></span>
+            <span class="skel" style="display:block;width:44%;height:8px;margin-top:6px;opacity:.7"></span></span></div><div class="row"><span class="fav" style="background:#eef1f6"></span>
+            <span style="flex:1"><span class="skel" style="display:block;width:52%"></span>
+            <span class="skel" style="display:block;width:26%;height:8px;margin-top:6px;opacity:.7"></span></span></div><div class="row"><span class="fav" style="background:#eef1f6"></span>
+            <span style="flex:1"><span class="skel" style="display:block;width:61%"></span>
+            <span class="skel" style="display:block;width:35%;height:8px;margin-top:6px;opacity:.7"></span></span></div><div class="row"><span class="fav" style="background:#eef1f6"></span>
+            <span style="flex:1"><span class="skel" style="display:block;width:45%"></span>
+            <span class="skel" style="display:block;width:19%;height:8px;margin-top:6px;opacity:.7"></span></span></div>
+        </div>
+        <div class="cardfoot"><span style="font-size:12px;color:var(--ink-4)">No cierres ni recargues esta pestaña.</span>
+          <span class="cta dim">Continuar<svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></div>
+      </div>
+    </div>
+    <div>
+  <div class="seclbl">Resumen del lanzamiento</div>
+  <div class="card cpad pnl">
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg></span><span class="pk">Dominio</span><span class="pv mono">genscore.es</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h9M8.5 5c0 5-3 9-5.5 11M5 9c1.5 3.5 4 5 7 6.5M14 21l4-9 4 9M15.5 18h5"></path></svg></span><span class="pk">Idioma</span><span class="pv ">Español <span style="color:var(--ink-4);font-weight:500">· detectado</span></span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg></span><span class="pk">Motores</span><span class="pv ">3</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg></span><span class="pk">Competidores</span><span class="pv na">Pendiente</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg></span><span class="pk">Prompts</span><span class="pv na">Pendiente</span></div>
+    <div class="est"><div class="est-f" style="margin:0">El total de respuestas aparecerá aquí cuando elijas tus prompts.</div></div>
+  </div>
+</div>
+  </div>
+</div></div>
+  </div>
+</div>
+</div>
+    </div>
+  </section>
+  <section class="scr">
+    <h2>B3 · Competidores</h2>
+    <div class="frame" style="width:1280px">
+      <div class="root" style="width:1280px;height:900px;overflow:hidden">
+<div class="shell">
+  <aside class="sb">
+  <div class="sb-brand">
+    <div>
+      <span style="display:inline-flex;align-items:center;gap:7px"><span style="display:inline-flex"><svg viewBox="0 0 285 292" width="22" height="22" aria-hidden="true"><path transform="translate(3 3)" d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" fill="#0B1426"></path><path transform="translate(3 3)" d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" fill="#2563EB"></path><path transform="translate(3 3)" d="M219.50,29.00 L206.00,34.25 L200.25,39.00 L194.00,48.50 L192.00,62.25 L194.00,73.25 L198.25,80.75 L204.00,87.50 L216.50,93.75 L227.25,94.75 L233.25,93.75 L240.75,90.50 L252.50,79.75 L256.75,67.25 L256.75,58.50 L253.75,47.50 L246.25,37.00 L233.25,30.00 L219.75,29.00 Z" fill="#FFB020"></path></svg></span><span style="font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.02em;color:var(--ink)">enscore</span></span>
+      <div class="brand-sub">Espacio de visibilidad en IA</div>
+    </div>
+  </div>
+  <div class="sb-scroll">
+    <div class="no-dom"><div class="no-dom-t">Sin dominio todavía</div><div class="no-dom-d">Crea tu primer dominio para empezar a escanear.</div><span class="no-dom-a">Crear dominio</span></div>
+    <div class="nav-group-label">Analizar</div>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg><span>Visión general</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg><span>Prompts</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg><span>Competidores</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><circle cx="18" cy="18" r="2.5"></circle><path d="M8.2 11 15.8 7M8.2 13l7.6 4"></path></svg><span>Páginas citadas</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-3.6-3.6"></path></svg><span>Auditoría web</span></span>
+    <div class="nav-group-label">Actuar</div>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1V17h6v-1.4c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3Z"></path><path d="M9.5 20.5h5M10 23h4"></path></svg><span>Recomendaciones</span></span>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-help"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v1M12 11v5"></path></svg><span>¿Qué es el GEO?</span></div>
+    <div class="user-chip">
+      <span class="avatar">DE</span>
+      <span><span class="user-mail">denis.martinb@gmail.com</span><br><span class="plan-badge"><svg class="ico " width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 7 12l5-7 5 7 3.5-3.5V17a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V8.5Z"></path><path d="M6 20.5h12"></path></svg>Pro</span></span>
+    </div>
+  </div>
+</aside>
+  <div class="main">
+    <div class="topbar">
+  <span style="color:var(--ink-3)"><svg class="ico " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span>
+  <span class="signout"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg>Cerrar sesión</span>
+</div>
+    <div class="content"><div class="pagew">
+  <div class="crumb"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>Volver al dominio</div>
+  <div class="head">
+    <div>
+      <h1 class="h1">Tus competidores</h1>
+      <p class="sub">Mediremos cuántas veces te nombra la IA a ti y cuántas a ellos, en las mismas preguntas. Edita o quita lo que no encaje.</p>
+    </div>
+    <div class="steps">
+  <div class="stp done" style="margin-right:8px"><span class="bar"></span><span class="lb">Dominio</span></div><div class="stp on" style="margin-right:8px"><span class="bar"></span><span class="lb">Competidores</span></div><div class="stp" style="margin-right:8px"><span class="bar"></span><span class="lb">Prompts</span></div>
+</div>
+  </div>
+  <div class="grid">
+    <div>
+      <div class="seclbl">4 competidores · sugeridos por IA</div>
+      <div class="card">
+        <div class="row">
+          <span class="fav" style="background:#2563eb">P</span>
+          <span style="flex:1;min-width:0"><span class="rname">Profound</span><div class="rdom">tryprofound.com</div></span>
+          <span class="chip"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"></path><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"></path><path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5z"></path></svg>sugerido</span>
+          <span class="iconbtn"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6h14z"></path><path d="M10 11v6M14 11v6"></path></svg></span>
+        </div><div class="row">
+          <span class="fav" style="background:#7c3aed">P</span>
+          <span style="flex:1;min-width:0"><span class="rname">Peec AI</span><div class="rdom">peec.ai</div></span>
+          <span class="chip"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"></path><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"></path><path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5z"></path></svg>sugerido</span>
+          <span class="iconbtn"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6h14z"></path><path d="M10 11v6M14 11v6"></path></svg></span>
+        </div><div class="row">
+          <span class="fav" style="background:#0f9d8e">O</span>
+          <span style="flex:1;min-width:0"><span class="rname">Otterly</span><div class="rdom">otterly.ai</div></span>
+          <span class="chip"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"></path><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"></path><path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5z"></path></svg>sugerido</span>
+          <span class="iconbtn"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6h14z"></path><path d="M10 11v6M14 11v6"></path></svg></span>
+        </div><div class="row">
+          <span class="fav" style="background:#ff642d">S</span>
+          <span style="flex:1;min-width:0"><span class="rname">Semrush</span><div class="rdom">semrush.com</div></span>
+          <span class="chip"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"></path><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"></path><path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5z"></path></svg>sugerido</span>
+          <span class="iconbtn"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6h14z"></path><path d="M10 11v6M14 11v6"></path></svg></span>
+        </div>
+        <div class="cardfoot">
+          <span class="ghost" style="height:32px;font-size:12.5px"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Añadir competidor</span>
+          <span style="font-size:12px;color:var(--ink-4)">Podrás cambiarlos cuando quieras.</span>
+        </div>
+      </div>
+      <div class="foot">
+        <span class="ghost"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>Atrás</span>
+        <span class="cta">Continuar a prompts<svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+      </div>
+    </div>
+    <div>
+  <div class="seclbl">Resumen del lanzamiento</div>
+  <div class="card cpad pnl">
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg></span><span class="pk">Dominio</span><span class="pv mono">genscore.es</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h9M8.5 5c0 5-3 9-5.5 11M5 9c1.5 3.5 4 5 7 6.5M14 21l4-9 4 9M15.5 18h5"></path></svg></span><span class="pk">Idioma</span><span class="pv ">Español <span style="color:var(--ink-4);font-weight:500">· detectado</span></span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg></span><span class="pk">Motores</span><span class="pv ">3</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg></span><span class="pk">Competidores</span><span class="pv ">4</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg></span><span class="pk">Prompts</span><span class="pv na">Pendiente</span></div>
+    <div class="est"><div class="est-f" style="margin:0">El total de respuestas aparecerá aquí cuando elijas tus prompts.</div></div>
+  </div>
+</div>
+  </div>
+</div></div>
+  </div>
+</div>
+</div>
+    </div>
+  </section>
+  <section class="scr">
+    <h2>B4 · Prompts</h2>
+    <div class="frame" style="width:1280px">
+      <div class="root" style="width:1280px;height:900px;overflow:hidden">
+<div class="shell">
+  <aside class="sb">
+  <div class="sb-brand">
+    <div>
+      <span style="display:inline-flex;align-items:center;gap:7px"><span style="display:inline-flex"><svg viewBox="0 0 285 292" width="22" height="22" aria-hidden="true"><path transform="translate(3 3)" d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" fill="#0B1426"></path><path transform="translate(3 3)" d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" fill="#2563EB"></path><path transform="translate(3 3)" d="M219.50,29.00 L206.00,34.25 L200.25,39.00 L194.00,48.50 L192.00,62.25 L194.00,73.25 L198.25,80.75 L204.00,87.50 L216.50,93.75 L227.25,94.75 L233.25,93.75 L240.75,90.50 L252.50,79.75 L256.75,67.25 L256.75,58.50 L253.75,47.50 L246.25,37.00 L233.25,30.00 L219.75,29.00 Z" fill="#FFB020"></path></svg></span><span style="font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.02em;color:var(--ink)">enscore</span></span>
+      <div class="brand-sub">Espacio de visibilidad en IA</div>
+    </div>
+  </div>
+  <div class="sb-scroll">
+    <div class="no-dom"><div class="no-dom-t">Sin dominio todavía</div><div class="no-dom-d">Crea tu primer dominio para empezar a escanear.</div><span class="no-dom-a">Crear dominio</span></div>
+    <div class="nav-group-label">Analizar</div>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg><span>Visión general</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg><span>Prompts</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg><span>Competidores</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><circle cx="18" cy="18" r="2.5"></circle><path d="M8.2 11 15.8 7M8.2 13l7.6 4"></path></svg><span>Páginas citadas</span></span>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-3.6-3.6"></path></svg><span>Auditoría web</span></span>
+    <div class="nav-group-label">Actuar</div>
+    <span class="nav-item disabled"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1V17h6v-1.4c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3Z"></path><path d="M9.5 20.5h5M10 23h4"></path></svg><span>Recomendaciones</span></span>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-help"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v1M12 11v5"></path></svg><span>¿Qué es el GEO?</span></div>
+    <div class="user-chip">
+      <span class="avatar">DE</span>
+      <span><span class="user-mail">denis.martinb@gmail.com</span><br><span class="plan-badge"><svg class="ico " width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 7 12l5-7 5 7 3.5-3.5V17a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V8.5Z"></path><path d="M6 20.5h12"></path></svg>Pro</span></span>
+    </div>
+  </div>
+</aside>
+  <div class="main">
+    <div class="topbar">
+  <span style="color:var(--ink-3)"><svg class="ico " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span>
+  <span class="signout"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg>Cerrar sesión</span>
+</div>
+    <div class="content"><div class="pagew">
+  <div class="crumb"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>Volver a competidores</div>
+  <div class="head">
+    <div>
+      <h1 class="h1">Revisa tus prompts</h1>
+      <p class="sub">Cada uno se lanza a los tres motores. Quita los que no te representen — cuantos más dejes, más estable es tu puntuación.</p>
+    </div>
+    <div class="steps">
+  <div class="stp done" style="margin-right:8px"><span class="bar"></span><span class="lb">Dominio</span></div><div class="stp done" style="margin-right:8px"><span class="bar"></span><span class="lb">Competidores</span></div><div class="stp on" style="margin-right:8px"><span class="bar"></span><span class="lb">Prompts</span></div>
+</div>
+  </div>
+  <div class="grid">
+    <div style="min-height:0;display:flex;flex-direction:column">
+      <div class="seclbl">12 prompts · límite de tu plan: 25</div>
+      <div class="card" style="overflow:hidden">
+        <div class="row" style="align-items:flex-start">
+          <span class="tick" style="margin-top:1px"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+          <span class="ptext">¿Cuáles son las mejores herramientas para medir la visibilidad de una marca en ChatGPT?</span><span class="chip n">Categoría</span></div><div class="row" style="align-items:flex-start">
+          <span class="tick" style="margin-top:1px"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+          <span class="ptext">¿Qué es el GEO y en qué se diferencia del SEO?</span><span class="chip n">Educativa</span></div><div class="row" style="align-items:flex-start">
+          <span class="tick" style="margin-top:1px"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+          <span class="ptext">Alternativas a Semrush para monitorizar menciones en IA</span><span class="chip n">Comparativa</span></div><div class="row" style="align-items:flex-start">
+          <span class="tick" style="margin-top:1px"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+          <span class="ptext">¿Merece la pena Profound para una agencia pequeña?</span><span class="chip n">Marca</span></div><div class="row" style="align-items:flex-start">
+          <span class="tick" style="margin-top:1px"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+          <span class="ptext">Herramientas de GEO en español</span><span class="chip n">Categoría</span></div><div class="row" style="align-items:flex-start">
+          <span class="tick" style="margin-top:1px"><svg class="ico " width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>
+          <span class="ptext">¿Cómo se mide si mi marca aparece en respuestas de IA?</span><span class="chip n">Educativa</span></div>
+        <div class="cov">
+          <div class="covc"><span class="cl"><span>Categoría</span><b style="color:var(--ink-2)">5</b></span><span class="cb"><span class="cf" style="width:100%"></span></span></div><div class="covc"><span class="cl"><span>Comparativa</span><b style="color:var(--ink-2)">3</b></span><span class="cb"><span class="cf" style="width:60%"></span></span></div><div class="covc"><span class="cl"><span>Educativa</span><b style="color:var(--ink-2)">3</b></span><span class="cb"><span class="cf" style="width:60%"></span></span></div><div class="covc"><span class="cl"><span>Marca</span><b style="color:var(--ink-2)">1</b></span><span class="cb"><span class="cf" style="width:20%"></span></span></div>
+        </div>
+        <div class="cardfoot">
+          <span style="display:flex;gap:8px">
+            <span class="ghost" style="height:32px;font-size:12.5px"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Añadir prompt</span>
+            <span class="ghost" style="height:32px;font-size:12.5px"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"></path><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"></path><path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5z"></path></svg>Generar 5 más</span>
+          </span>
+          <span style="font-size:12px;color:var(--ink-4)">6 de 12 mostrados</span>
+        </div>
+      </div>
+      <div class="foot">
+        <span class="ghost"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg>Atrás</span>
+        <span class="cta">Crear dominio y escanear<svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+      </div>
+    </div>
+    <div>
+  <div class="seclbl">Resumen del lanzamiento</div>
+  <div class="card cpad pnl">
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg></span><span class="pk">Dominio</span><span class="pv mono">genscore.es</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h9M8.5 5c0 5-3 9-5.5 11M5 9c1.5 3.5 4 5 7 6.5M14 21l4-9 4 9M15.5 18h5"></path></svg></span><span class="pk">Idioma</span><span class="pv ">Español <span style="color:var(--ink-4);font-weight:500">· detectado</span></span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg></span><span class="pk">Motores</span><span class="pv ">3</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg></span><span class="pk">Competidores</span><span class="pv ">4</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg></span><span class="pk">Prompts</span><span class="pv ">12</span></div>
+    <div class="est">
+      <div class="est-n">36</div>
+      <div class="est-l">respuestas en el primer escaneo</div>
+      <div class="est-f">12 prompts × 3 motores. Si tu plan repite la tanda, serán más.</div>
+    </div>
+  </div>
+</div>
+  </div>
+</div></div>
+  </div>
+</div>
+</div>
+    </div>
+  </section>
+  <section class="scr">
+    <h2>B5 · Carga — creando</h2>
+    <div class="frame" style="width:1280px">
+      <div class="root" style="width:1280px;height:900px;overflow:hidden">
+<div class="shell">
+  <aside class="sb">
+  <div class="sb-brand">
+    <div>
+      <span style="display:inline-flex;align-items:center;gap:7px"><span style="display:inline-flex"><svg viewBox="0 0 285 292" width="22" height="22" aria-hidden="true"><path transform="translate(3 3)" d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" fill="#0B1426"></path><path transform="translate(3 3)" d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" fill="#2563EB"></path><path transform="translate(3 3)" d="M219.50,29.00 L206.00,34.25 L200.25,39.00 L194.00,48.50 L192.00,62.25 L194.00,73.25 L198.25,80.75 L204.00,87.50 L216.50,93.75 L227.25,94.75 L233.25,93.75 L240.75,90.50 L252.50,79.75 L256.75,67.25 L256.75,58.50 L253.75,47.50 L246.25,37.00 L233.25,30.00 L219.75,29.00 Z" fill="#FFB020"></path></svg></span><span style="font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.02em;color:var(--ink)">enscore</span></span>
+      <div class="brand-sub">Espacio de visibilidad en IA</div>
+    </div>
+  </div>
+  <div class="sb-scroll">
+    <div class="no-dom"><div class="no-dom-t">genscore.es</div><div class="no-dom-d">Escaneo en curso — los datos aparecerán aquí.</div></div>
+    <div class="nav-group-label">Analizar</div>
+    <span class="nav-item"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg><span>Visión general</span></span>
+    <span class="nav-item"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg><span>Prompts</span></span>
+    <span class="nav-item"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg><span>Competidores</span></span>
+    <span class="nav-item"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><circle cx="18" cy="18" r="2.5"></circle><path d="M8.2 11 15.8 7M8.2 13l7.6 4"></path></svg><span>Páginas citadas</span></span>
+    <span class="nav-item"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-3.6-3.6"></path></svg><span>Auditoría web</span></span>
+    <div class="nav-group-label">Actuar</div>
+    <span class="nav-item"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1V17h6v-1.4c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3Z"></path><path d="M9.5 20.5h5M10 23h4"></path></svg><span>Recomendaciones</span></span>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-help"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v1M12 11v5"></path></svg><span>¿Qué es el GEO?</span></div>
+    <div class="user-chip">
+      <span class="avatar">DE</span>
+      <span><span class="user-mail">denis.martinb@gmail.com</span><br><span class="plan-badge"><svg class="ico " width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5 7 12l5-7 5 7 3.5-3.5V17a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V8.5Z"></path><path d="M6 20.5h12"></path></svg>Pro</span></span>
+    </div>
+  </div>
+</aside>
+  <div class="main">
+    <div class="topbar">
+  <span style="color:var(--ink-3)"><svg class="ico " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span>
+  <span class="signout"><svg class="ico " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg>Cerrar sesión</span>
+</div>
+    <div class="content"><div class="pagew">
+  <div class="crumb"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Nuevo dominio</div>
+  <div class="head">
+    <div>
+      <h1 class="h1">Creando genscore.es</h1>
+      <p class="sub">En cuanto esté guardado, te llevamos a la pantalla del escaneo. Puedes cerrar la pestaña: el trabajo sigue en nuestros servidores.</p>
+    </div>
+    <div class="steps">
+  <div class="stp done" style="margin-right:8px"><span class="bar"></span><span class="lb">Dominio</span></div><div class="stp done" style="margin-right:8px"><span class="bar"></span><span class="lb">Competidores</span></div><div class="stp on" style="margin-right:8px"><span class="bar"></span><span class="lb">Prompts</span></div>
+</div>
+  </div>
+  <div class="grid">
+    <div>
+      <div class="seclbl">Lanzando</div>
+      <div class="card">
+        <div class="cpad" style="display:flex;gap:18px;align-items:center">
+          <span style="flex:0 0 auto;width:74px;display:grid;place-items:center;background:linear-gradient(180deg,#FDFEFF,#E7EEFA);
+            border:1px solid var(--line-soft);border-radius:12px;padding:10px 0"><svg viewBox="168 130 66 136" width="45" height="92" aria-hidden="true" style="display:block;transform:rotate(0deg)">
+    
+    <path d="M190 216 q5 20 0 30 q-5 -10 0 -30 Z" fill="#4f7bff"></path>
+    <path d="M200 217 q6 24 0 35 q-6 -11 0 -35 Z" fill="#09c5d6"></path>
+    <path d="M210 216 q5 20 0 30 q-5 -10 0 -30 Z" fill="#4f7bff"></path>
+    <rect x="184" y="208" width="9" height="8" rx="2" fill="#3b4759"></rect>
+    <rect x="196" y="208" width="9" height="9" rx="2" fill="#3b4759"></rect>
+    <rect x="208" y="208" width="9" height="8" rx="2" fill="#3b4759"></rect>
+    <path d="M184 188 L174 210 L184 206 Z" fill="#2563eb"></path>
+    <path d="M217 188 L227 210 L217 206 Z" fill="#2563eb"></path>
+    <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#0B1426"></path>
+    <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#1B2B45"></path>
+    <circle cx="200" cy="176" r="6.5" fill="#f7f8fb"></circle>
+    <circle cx="200" cy="176" r="4" fill="#2563eb"></circle>
+  </svg></span>
+          <span style="flex:1">
+            <div class="ci"><span class="cdone"><svg class="ico " width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>Guardando tu dominio y configuración</div>
+            <div class="ci"><span class="cdone"><svg class="ico " width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span>Creando tus prompts y competidores</div>
+            <div class="ci on"><span class="spin"></span>Lanzando tu primer escaneo</div>
+          </span>
+        </div>
+        <div class="cardfoot"><span style="font-size:12px;color:var(--ink-4)">Un momento — estamos colocando la cola de trabajo.</span>
+          <span class="cta dim">Creando…</span></div>
+      </div>
+    </div>
+    <div>
+  <div class="seclbl">Resumen del lanzamiento</div>
+  <div class="card cpad pnl">
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg></span><span class="pk">Dominio</span><span class="pv mono">genscore.es</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h9M8.5 5c0 5-3 9-5.5 11M5 9c1.5 3.5 4 5 7 6.5M14 21l4-9 4 9M15.5 18h5"></path></svg></span><span class="pk">Idioma</span><span class="pv ">Español <span style="color:var(--ink-4);font-weight:500">· detectado</span></span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg></span><span class="pk">Motores</span><span class="pv ">3</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg></span><span class="pk">Competidores</span><span class="pv ">4</span></div>
+    <div class="prow"><span class="pico"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg></span><span class="pk">Prompts</span><span class="pv ">12</span></div>
+    <div class="est">
+      <div class="est-n">36</div>
+      <div class="est-l">respuestas en el primer escaneo</div>
+      <div class="est-f">12 prompts × 3 motores. Si tu plan repite la tanda, serán más.</div>
+    </div>
+  </div>
+</div>
+  </div>
+</div></div>
+  </div>
+</div>
+</div>
+    </div>
+  </section>
+  <section class="scr">
+    <h2>B · 375px</h2>
+    <div class="frame" style="width:375px">
+      <div class="root" style="width:375px;height:812px;overflow:hidden">
+<div class="content">
+  <div class="mtop"><span class="burger"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg></span><span style="display:inline-flex;align-items:center;gap:7px"><span style="display:inline-flex"><svg viewBox="0 0 285 292" width="20" height="20" aria-hidden="true"><path transform="translate(3 3)" d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" fill="#0B1426"></path><path transform="translate(3 3)" d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" fill="#2563EB"></path><path transform="translate(3 3)" d="M219.50,29.00 L206.00,34.25 L200.25,39.00 L194.00,48.50 L192.00,62.25 L194.00,73.25 L198.25,80.75 L204.00,87.50 L216.50,93.75 L227.25,94.75 L233.25,93.75 L240.75,90.50 L252.50,79.75 L256.75,67.25 L256.75,58.50 L253.75,47.50 L246.25,37.00 L233.25,30.00 L219.75,29.00 Z" fill="#FFB020"></path></svg></span><span style="font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.02em;color:var(--ink)">enscore</span></span><span style="color:var(--ink-3)"><svg class="ico " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span></div>
+  <div class="wrap">
+    <h1 class="h1">Añade un dominio</h1>
+    <p class="sub">Lo leemos, te proponemos competidores y prompts, y lanzamos el primer escaneo.</p>
+    <div class="steps">
+      <span class="stp on"><span class="bar"></span><span class="lb">Dominio</span></span>
+      <span class="stp"><span class="bar"></span><span class="lb">Competidores</span></span>
+      <span class="stp"><span class="bar"></span><span class="lb">Prompts</span></span>
+    </div>
+    <div class="seclbl">Dominio y mercado</div>
+    <div class="card">
+      <div class="dinput"><span style="color:var(--ink-4)"><svg class="ico " width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg></span><span class="val">genscore.es<span class="caret"></span></span></div>
+  <div class="csel"><svg viewBox="0 0 19 13" width="18" height="12" style="border-radius:2px;display:block"><rect width="19" height="13" fill="#c60b1e"></rect><rect y="3.25" width="19" height="6.5" fill="#ffc400"></rect></svg>España<span style="margin-left:auto;color:var(--ink-4)"><svg class="ico " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></div>
+  <div class="cta">Continuar<svg class="ico " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></div>
+      <div class="hint"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v1M12 11v5"></path></svg>Solo el dominio, sin https:// ni rutas.</div>
+      <div class="engrow"><span class="cap">Motores</span><span class="echip"><span class="edot" style="background:#4285f4"></span>Gemini</span><span class="echip"><span class="edot" style="background:#10a37f"></span>ChatGPT</span><span class="echip"><span class="edot" style="background:#d97757"></span>Claude</span></div>
+    </div>
+    <div class="seclbl">Resumen del lanzamiento</div>
+    <div class="card" style="padding:10px 16px">
+      <div class="prow"><span class="pico"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg></span>Dominio<span class="pv" style="font-family:var(--mono);font-size:11.5px">genscore.es</span></div>
+      <div class="prow"><span class="pico"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="6" rx="1.5"></rect><rect x="3" y="15" width="7.5" height="6" rx="1.5"></rect><rect x="13.5" y="12" width="7.5" height="9" rx="1.5"></rect></svg></span>Motores<span class="pv">3</span></div>
+      <div class="prow"><span class="pico"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="14" r="3"></circle><path d="M2.5 20a5.5 5.5 0 0 1 9.5-3.8M14 6.2A5.5 5.5 0 0 1 21.5 11"></path></svg></span>Competidores<span class="pv na">Pendiente</span></div>
+      <div class="prow"><span class="pico"><svg class="ico " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h11M4 19h7"></path></svg></span>Prompts<span class="pv na">Pendiente</span></div>
+    </div>
+  </div>
+</div>
+</div>
+    </div>
+  </section>
+</body>
+</html>
