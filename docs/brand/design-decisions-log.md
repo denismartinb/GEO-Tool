@@ -14050,4 +14050,59 @@ ancho de ventana donde el error resulta ser cero por coincidencia (como pasó
 aquí a 1440px, donde `.page` no llegaba a toparse y el error desapareció sin
 que la fórmula fuera correcta).
 
+**Cuarta vuelta, en el mismo hilo: el fundador probó Auditoría web y reportó
+"sale cortado arriba y en todas hay que pegarla al menú izquierdo"** — captura
+con el beat "En órbita" (`ScanMissionRocket`, primer escaneo) con su rail
+partido por el borde superior y un hueco claro antes de la barra lateral. Ni
+`.mrk-fill` ni `--mrk-page-cap` estaban actuando ahí, y la razón era
+estructural, no de fórmula: Auditoría web es la única de las 6 pantallas donde
+`FirstScanTakeover`/`ReentryMission` NO cuelga directo de `.page` — hay un
+`<div className="wa2-scope wa2-page">` de por medio, que en Competidores SÍ
+existe (`.cm2-scope`) pero como envoltorio EXTERIOR de un `.page.cm2-page`
+combinado en el mismo elemento, nunca como hijo. Los selectores de esta fase
+(`.page.mrk-fill > .mrk-full`, con combinador de hijo directo `>`) asumían que
+`.mrk-full` era hijo de `.page` en las 6 — cierto en 5, falso en Auditoría web,
+donde es NIETO. El selector simplemente no casaba nunca ahí: la misión seguía
+con su tope de altura de siempre y su margen de siempre, sin nada del `.mrk-
+fill` que se acababa de escribir.
+
+**Arreglo, en dos piezas.** Los combinadores pasan a descendiente
+(`.page.mrk-fill .mrk-full`, sin `>`) para que casen sea cual sea la
+profundidad real. Y `.wa2-scope.wa2-page.mrk-fill { display: contents }` en
+`app/console.css` (mismo mecanismo que `.cm2-scope.mrk-fill`) es lo que hace
+que `flex: 1` signifique algo una vez que el selector sí casa: `contents` hace
+que los hijos de un elemento cuenten como hijos directos de SU PROPIO padre a
+efectos de caja y de participación en flex, sin cambiar el árbol DOM que un
+selector sigue teniendo que atravesar — las dos piezas son necesarias, ninguna
+sustituye a la otra.
+
+**El primer intento copió también `--mrk-page-cap` a `.wa2-page .mrk-full`, y
+el fixture lo pilló mal.** El razonamiento parecía el mismo que en
+Competidores —"otra pantalla con su propio escalón de ancho, dale su propia
+variable"— pero la diferencia estructural que acababa de motivar el arreglo de
+arriba también invalida esa analogía: `.cm2-page` va COMBINADO en `.page`
+(`<div class="page cm2-page">`), así que el `max-width` real de `.page` SÍ es
+el escalón de `.cm2-page`. `.wa2-page` es un hijo aparte DENTRO de un `.page`
+sin modificar — en cuanto `display:contents` le quita la caja, su propio
+`max-width`/`margin:auto` dejan de tener nada a lo que aplicarse, y `.page`
+sigue topado por el `--page-max-w` global de siempre, como cualquier pantalla
+sin clase `*2-page` propia. Con `--mrk-page-cap` puesto ahí, la fórmula de
+sangrado recibía un tope al que `.page` nunca estuvo sujeto: la escena quedaba
+20px corta por los dos lados a 1920px, medido con el mismo fixture, no
+razonando sobre los dos envoltorios como si tuvieran la misma forma. Retirado
+sin sustituto — a esta pantalla le basta con no tener la variable declarada,
+para que el `var(--mrk-page-cap, var(--page-max-w))` de `.mrk-full` caiga al
+global, que es lo correcto aquí.
+
+**Regla añadida a la de arriba.** Un `.mrk-fill` que sólo se prueba contra la
+forma genérica de `.page` (o contra una que YA se conocía, como `.cm2-scope`)
+dice poco de las demás: cualquier pantalla nueva que meta un envoltorio de
+columna estrecha entre `.page` y la misión necesita su propio grep de
+`<FirstScanTakeover` / `<ReentryMission` hacia arriba para ver qué hay en
+medio, antes de asumir que el patrón ya cubierto por otra pantalla se aplica
+igual. Verificado con el mismo fixture reproduciendo la jerarquía real de
+Auditoría web (`.page.mrk-fill > .wa2-scope.wa2-page.mrk-fill > .mrk-full`) en
+siete anchos de 375 a 2560px: hueco superior/inferior/izquierdo/derecho contra
+`.dash-content` en cero en los siete.
+
 ---

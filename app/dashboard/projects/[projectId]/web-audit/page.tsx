@@ -226,7 +226,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           unedited `.card`/badge/etc. inside repaints automatically. Wraps
           everything below the sticky header, which stays on the shared
           chrome untouched, matching this repo's established nesting. */}
-      <div className="wa2-scope wa2-page">
+      <div className={`wa2-scope wa2-page${showMissionTakeover ? " mrk-fill" : ""}`}>
 
       {/* AUDIT-NO-BUTTON-1 (founder, 2026-08-05): here lived the page's one
           "Auditar ahora" button, and briefly after it a status pill. Both are

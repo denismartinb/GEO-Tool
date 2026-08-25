@@ -131,6 +131,27 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   ese padding tiene se verifica con un fixture que mida los cuatro bordes en
   varios anchos — nunca a ojo en uno solo, y nunca sólo por debajo del umbral
   donde el tope empieza a aplicar.
+- **Un selector `.a > .b` para un componente full-bleed asume que `.b` es
+  hijo DIRECTO de `.a` en TODAS sus pantallas — compruébalo, no lo asumas por
+  la pantalla donde ya se verificó.** `.mrk-fill` (log §153) se probó primero
+  contra `.page > .mrk-full` (cierto en 5 de 6 pantallas) y contra `.cm2-scope
+  > .page.cm2-page > .mrk-full` (el envoltorio de Competidores, ya conocido) —
+  y ninguno de los dos cubría Auditoría web, donde `.wa2-scope.wa2-page` mete
+  a `.mrk-full` un nivel más adentro, como NIETO de `.page`, no hijo. El
+  selector con `>` simplemente nunca casaba ahí: sin error de consola, sin
+  warning, la misión seguía con su comportamiento antiguo en silencio.
+  Combinador de descendiente (sin `>`) para que case a cualquier profundidad,
+  y `display: contents` en cada envoltorio intermedio para que `flex: 1`
+  siga significando algo una vez que el selector ya casa — las dos piezas
+  hacen falta, ninguna sustituye a la otra. Y dos envoltorios que se PARECEN
+  no son intercambiables: `.cm2-page` va combinado en `.page` (su propio
+  `max-width` SÍ es el de `.page`), `.wa2-page` es un hijo aparte (su
+  `max-width` deja de pintar nada en cuanto es `display: contents`, y `.page`
+  sigue topado por el global) — copiar la variable de sangrado de uno al otro
+  sin releer esa diferencia dejó la escena 20px corta por los dos lados, y
+  sólo lo cazó el fixture, no el razonamiento por analogía. Antes de dar un
+  patrón por cubierto: `grep -n "<FirstScanTakeover\|<ReentryMission"` y mira
+  qué hay entre esa línea y el `.page` más cercano, en las 6 pantallas.
 - **`container-type`/`contain: layout` en cualquier ancestro dentro de
   `.dash-content` es del tipo de riesgo que no se toma a la ligera.** Convierte
   al elemento en el containing block de sus descendientes `position: fixed`, y
