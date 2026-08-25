@@ -16003,3 +16003,63 @@ no.
 **Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
 (build + typecheck + lint), `git diff --check` y
 `bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 166. Razón social y NIF llegan de verdad a Stripe: BILLING-INVOICE-FIELDS-1 (2026-08-25)
+
+**El origen es §165.** Al ocultar "Datos de empresa" se dejó constancia de
+que "Datos de facturación" (razón social, NIF) no sincronizaba con Stripe
+tampoco — solo que sí tenía un destino real documentado
+(`lib/settings/company-details.ts`: "*exist for the invoice*"). El fundador
+pidió el Task Intake para valorar el coste; con el reporte en mano, aprobó
+implementarlo ("Apruebo ese plan").
+
+**Fuera del alcance original de BILLING-STRIPE-1**, así que necesitaba su
+propia aprobación por la regla de `CLAUDE.md` ("*new pricing mechanics,
+additional payment providers, invoicing changes* needs its own approval") —
+esta es esa aprobación, registrada aquí y en `docs/launch-plan.md` Fase 4.
+
+**Diseño elegido: `invoice_settings.custom_fields`, no `tax_id_data`.** La
+alternativa típica de Stripe para un NIF es `tax_id_data` (tipado por país,
+p. ej. `es_cif`/`es_nif`), pero exige inferir el tipo fiscal correcto y falla
+si el formato no encaja — complejidad innecesaria para un campo de texto
+libre y opcional. `invoice_settings.custom_fields` imprime lo que sea tal
+cual en la factura: una llamada, sin validación de formato fiscal.
+
+**Qué cambió.**
+
+- `syncBillingDetailsToStripeCustomer` (`lib/stripe.ts`): recibe un
+  `customerId` y `{legalName, taxId}`; construye hasta dos `custom_fields`
+  ("Razón social", "NIF"), cada uno truncado a 30 caracteres — el límite real
+  de Stripe para nombre y valor de estos campos — y llama
+  `stripe.customers.update`. Si ambos campos están vacíos, envía
+  `custom_fields: null` (no `[]`): Stripe exige `null` para borrar los que
+  hubiera antes, así que vaciar el formulario también vacía la factura.
+- `saveAccount` (`app/dashboard/settings/organization/actions.ts`): tras
+  escribir en `user_metadata`, hace su propia consulta a
+  `profiles.stripe_customer_id` (mismo patrón que
+  `createCheckoutSession` en `billing/actions.ts`) y solo si existe llama a
+  la sincronización.
+- **Best-effort con doble red de seguridad.** `syncBillingDetailsToStripeCustomer`
+  ya atrapa sus propios errores (registra y no relanza); `saveAccount`
+  además envuelve la llamada en su propio `try/catch` por si esa garantía
+  interna cambiara alguna vez. Ningún fallo de Stripe puede convertir un
+  guardado real en Supabase en un `{success: false}` reportado al usuario —
+  el guardado en Supabase sigue siendo lo único que decide "guardado" para
+  este formulario.
+- **Cuentas sin `stripe_customer_id` todavía** (nunca pasaron por checkout):
+  no se intenta ninguna llamada — no hay cliente al que sincronizar, y el
+  dato queda listo para la próxima vez que `saveAccount` corra tras un
+  checkout real.
+- `lib/settings/company-details.ts`: el comentario que decía "*exist for the
+  invoice*" (aspiracional cuando se escribió) ahora documenta la
+  sincronización real.
+
+**Sigue en modo test de Stripe.** No toca el go-live checklist de
+BILLING-STRIPE-1 (Vercel Pro hecho; alta autónomo y VeriFactu, pendientes).
+
+**Comprobado.** 9 tests nuevos (`lib/stripe.test.ts` ×6,
+`organization/actions.test.ts` ×3). `pnpm test` (203/203, 2.836/2.836),
+`pnpm run validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.

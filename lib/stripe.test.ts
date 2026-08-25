@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const retrieve = vi.fn();
+const update = vi.fn();
 vi.mock("stripe", () => ({
   default: vi.fn().mockImplementation(() => ({
-    subscriptions: { retrieve }
+    subscriptions: { retrieve },
+    customers: { update }
   }))
 }));
 
@@ -20,8 +22,14 @@ async function freshGetActiveSubscriptionPromo() {
   return mod.getActiveSubscriptionPromo;
 }
 
+async function freshSyncBillingDetailsToStripeCustomer() {
+  const mod = await import("./stripe");
+  return mod.syncBillingDetailsToStripeCustomer;
+}
+
 beforeEach(() => {
   retrieve.mockReset();
+  update.mockReset();
   vi.resetModules();
   process.env = { ...ORIGINAL_ENV };
 });
@@ -125,6 +133,92 @@ describe("getActiveSubscriptionPromo", () => {
     const result = await getActiveSubscriptionPromo("sub_1", "pro");
 
     expect(result).toBeNull();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+});
+
+/**
+ * BILLING-INVOICE-FIELDS-1 (Task Intake approved 2026-08-25, log §166): razón
+ * social/NIF reach a real Stripe customer as `invoice_settings.custom_fields`
+ * — free text, not typed `tax_id_data`, so there is no fiscal-type inference
+ * to get wrong.
+ */
+describe("syncBillingDetailsToStripeCustomer", () => {
+  it("does nothing when Stripe isn't configured at all", async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    const syncBillingDetailsToStripeCustomer = await freshSyncBillingDetailsToStripeCustomer();
+
+    await syncBillingDetailsToStripeCustomer("cus_123", { legalName: "Xataka Media S.L.", taxId: "B-1" });
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("sends both fields when both are filled in", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    update.mockResolvedValue({});
+    const syncBillingDetailsToStripeCustomer = await freshSyncBillingDetailsToStripeCustomer();
+
+    await syncBillingDetailsToStripeCustomer("cus_123", {
+      legalName: "Xataka Media S.L.",
+      taxId: "B-84920011"
+    });
+
+    expect(update).toHaveBeenCalledWith("cus_123", {
+      invoice_settings: {
+        custom_fields: [
+          { name: "Razón social", value: "Xataka Media S.L." },
+          { name: "NIF", value: "B-84920011" }
+        ]
+      }
+    });
+  });
+
+  it("only sends the field that is actually filled in", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    update.mockResolvedValue({});
+    const syncBillingDetailsToStripeCustomer = await freshSyncBillingDetailsToStripeCustomer();
+
+    await syncBillingDetailsToStripeCustomer("cus_123", { legalName: "Xataka Media S.L.", taxId: "" });
+
+    expect(update).toHaveBeenCalledWith("cus_123", {
+      invoice_settings: { custom_fields: [{ name: "Razón social", value: "Xataka Media S.L." }] }
+    });
+  });
+
+  it("clears custom_fields with null, not an empty array, when both are blank", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    update.mockResolvedValue({});
+    const syncBillingDetailsToStripeCustomer = await freshSyncBillingDetailsToStripeCustomer();
+
+    await syncBillingDetailsToStripeCustomer("cus_123", { legalName: "", taxId: "" });
+
+    expect(update).toHaveBeenCalledWith("cus_123", { invoice_settings: { custom_fields: null } });
+  });
+
+  it("truncates a value past Stripe's 30-character limit instead of sending it raw", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    update.mockResolvedValue({});
+    const syncBillingDetailsToStripeCustomer = await freshSyncBillingDetailsToStripeCustomer();
+    const longName = "Una Razón Social Muy Larga De Verdad S.L.";
+
+    await syncBillingDetailsToStripeCustomer("cus_123", { legalName: longName, taxId: "" });
+
+    const sentValue = update.mock.calls[0][1].invoice_settings.custom_fields[0].value;
+    expect(sentValue).toBe(longName.slice(0, 30));
+    expect(sentValue.length).toBe(30);
+  });
+
+  it("fails safe (silent, logged) when the Stripe API call itself fails", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    update.mockRejectedValue(new Error("network down"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const syncBillingDetailsToStripeCustomer = await freshSyncBillingDetailsToStripeCustomer();
+
+    await expect(
+      syncBillingDetailsToStripeCustomer("cus_123", { legalName: "Xataka Media S.L.", taxId: "" })
+    ).resolves.toBeUndefined();
+
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
   });

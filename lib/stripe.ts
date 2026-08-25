@@ -109,6 +109,58 @@ export async function getActiveSubscriptionPromo(
   }
 }
 
+// Stripe caps both the name and the value of an `invoice_settings.custom_fields`
+// entry at 30 characters; anything longer is truncated rather than sent raw and
+// rejected by the API (`https://docs.stripe.com/api/customers/update`).
+const INVOICE_CUSTOM_FIELD_VALUE_LIMIT = 30;
+
+function truncateForInvoiceField(value: string): string {
+  return value.length > INVOICE_CUSTOM_FIELD_VALUE_LIMIT
+    ? value.slice(0, INVOICE_CUSTOM_FIELD_VALUE_LIMIT)
+    : value;
+}
+
+/**
+ * BILLING-INVOICE-FIELDS-1 (Task Intake approved 2026-08-25): pushes "Datos de
+ * facturación" (razón social, NIF) onto the Stripe customer so they print on
+ * real invoices, via `invoice_settings.custom_fields` rather than typed
+ * `tax_id_data` — free text, no fiscal-type inference, matches what the
+ * settings form actually collects.
+ *
+ * Best-effort and silent on failure: this runs after the Supabase write that
+ * is the account's source of truth, so a Stripe outage must not make the
+ * settings form fail to save. Empty fields clear `custom_fields` entirely
+ * (`null`, not `[]` — Stripe requires null to remove them) so unsetting a
+ * value in the form removes it from future invoices instead of leaving a
+ * stale one behind.
+ */
+export async function syncBillingDetailsToStripeCustomer(
+  customerId: string,
+  details: { legalName: string; taxId: string }
+): Promise<void> {
+  const stripe = getStripeClient();
+  if (!stripe) return;
+
+  const customFields: Stripe.CustomerUpdateParams.InvoiceSettings.CustomField[] = [];
+  if (details.legalName) {
+    customFields.push({ name: "Razón social", value: truncateForInvoiceField(details.legalName) });
+  }
+  if (details.taxId) {
+    customFields.push({ name: "NIF", value: truncateForInvoiceField(details.taxId) });
+  }
+
+  try {
+    await stripe.customers.update(customerId, {
+      invoice_settings: { custom_fields: customFields.length > 0 ? customFields : null }
+    });
+  } catch (error) {
+    console.error("[geo:billing] failed to sync billing details to Stripe customer", {
+      customerId,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
 let cachedClient: Stripe | null = null;
 
 /**
