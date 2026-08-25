@@ -7,14 +7,17 @@ import { useSessionUser } from "@/lib/use-session-user";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 
 /**
- * Three small client islands, one per session-aware fragment of the home
- * page — kept separate rather than one wrapper around the whole page,
- * because `LandingPage` itself is a Server Component
- * (PRELAUNCH-HARDENING-1 Fase V4) and should stay one. Each calls
- * `useSessionUser()` independently; the hook's own module-level cache
- * (`lib/use-session-user.ts`) means that's one shared `/api/me` request per
- * page load, not three, however many of these mount at once — same
- * mechanism `PublicHeader` already relies on.
+ * Three small client islands, one per session-aware fragment — kept
+ * separate rather than one wrapper around the whole page, because
+ * `LandingPage` itself is a Server Component (PRELAUNCH-HARDENING-1 Fase
+ * V4) and should stay one. Each calls `useSessionUser()` independently; the
+ * hook's own module-level cache (`lib/use-session-user.ts`) means that's one
+ * shared `/api/me` request per page load, not three, however many of these
+ * mount at once — same mechanism `PublicHeader` already relies on.
+ *
+ * `PromoStrip` no es sólo de la home: PROMO-EVERYWHERE-1 (2026-08-25) lo
+ * movió dentro de `PublicHeader`, así que se monta en las siete superficies
+ * públicas que comparten esa cabecera — ver el comentario de ese componente.
  */
 
 /**

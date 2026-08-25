@@ -14538,3 +14538,35 @@ de cada una sin dejar diff.
     acentuar en el H1 del hero — "la IA" (como ahora, con
     `.lp-h1-accent`/`--brand-blue`), "tu marca", o ambas. Sigue pendiente de
     respuesta/confirmación, no se ha tocado `landing-page.tsx` para esto.
+    Recomendación dada: mantener "la IA" — es lo que aporta información
+    nueva en el titular, y acentuar las dos frases diluiría el énfasis.
+29. **El ancla "Cómo funciona" ya tenía desplazamiento suave** — verificado a
+    petición del fundador ("el ancla a cómo funciona, que sea un efecto de
+    desplazamiento suave hasta esa zona de la página"), pero `html {
+    scroll-behavior: smooth }` ya estaba en `app/globals.css` desde el
+    2026-08-24 (fundador: "que los enlaces vayan con ancla y efecto
+    suavizado a la landing"), cubriendo tanto el ancla `#como` como saltar
+    ahí desde otra página (`/#como`). No hizo falta ningún cambio de código;
+    se confirmó con Playwright que `getComputedStyle(document.documentElement)
+    .scrollBehavior === "smooth"` y que el enlace del nav sigue apuntando a
+    `#como`.
+30. **PROMO-EVERYWHERE-1 — la tira de promoción sale en las siete
+    superficies públicas, no sólo en la home.** El fundador: "lleva la
+    misma tira de promocion a todas las urls públicas si el usuario no está
+    logado". `PromoStrip` vivía sólo dentro de `.lp-hero--home`
+    (`LandingPage`); se movió a `PublicHeader` (`components/marketing/
+    public-header.tsx`) — la misma fuente única de la que ya cuelgan
+    `PUBLIC_NAV_ITEMS`, GENSCORE-HEADER-1 — así que ahora se monta también
+    en `/pricing`, `/geo`, `/blog`, `/comparativas`, `/glosario`, `/docs` y
+    las páginas legales, que comparten ese componente. `LandingPage` deja de
+    importar y renderizar `PromoStrip` directamente. No es literalmente
+    "sólo si no está logado": se mantiene el gating existente de
+    `showsPromoStrip` (`lib/account-chip.ts`, GENSCORE-HEADER-3,
+    2026-08-12) — anónimo o Free logado la ven, cualquier plan de pago no —
+    porque es una decisión ya tomada y documentada, no algo que este cambio
+    deba reabrir. `.lp-promo` no depende de estar dentro de `.lp-hero--home`
+    (fondo y tipografía propios), así que el movimiento no tocó CSS.
+    Verificado con Playwright en las seis superficies (home, /pricing, /geo,
+    /blog, /comparativas, /privacidad): una sola `.lp-promo` por página, sin
+    errores de consola, cajón móvil de `/pricing` abre con normalidad.
+    `pnpm test && pnpm run validate` en verde.

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { Icon } from "@/components/ui/icon";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PromoStrip } from "@/components/landing/session-ctas";
 import { avatarInitials, showsPlanBadge } from "@/lib/account-chip";
 import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
 
@@ -144,7 +145,23 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   );
 
   return (
-    <div className="lp-nav-wrap">
+    <>
+      {/* PROMO-EVERYWHERE-1 (fundador, 2026-08-25: "lleva la misma tira de
+          promocion a todas las urls públicas si el usuario no está logado").
+          Vivía sólo en el hero de la home (`LandingPage`); movida aquí para
+          que salga en las siete superficies públicas que comparten
+          `PublicHeader` (home, /geo, /pricing, /blog, /comparativas,
+          /glosario, /docs, legales) sin copiar el render en cada una — el
+          mismo motivo por el que `PUBLIC_NAV_ITEMS` vive en un solo sitio
+          (GENSCORE-HEADER-1, comentario de arriba). El propio componente
+          decide si se muestra (`showsPromoStrip`, `lib/account-chip.ts`):
+          nada logado que ya pague la ve, pero sí un anónimo o un Free
+          logado — no es "sólo si no está logado" en sentido estricto, y se
+          mantiene así a propósito (fundador, 2026-08-12, GENSCORE-HEADER-3).
+          No es sticky: ocupa su propio alto y empuja `.lp-nav-wrap` hacia
+          abajo, igual que hacía dentro de `.lp-hero--home`. */}
+      <PromoStrip />
+      <div className="lp-nav-wrap">
       <nav className={hero ? "lp-nav lp-nav--hero" : "lp-nav"}>
       <Link href="/" className="lp-logo">
         <BrandLogo size={22} />
@@ -214,5 +231,6 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
       />
     </nav>
     </div>
+    </>
   );
 }

@@ -15,7 +15,7 @@ import { HOME_FAQ, homeFaqJsonLd } from "@/lib/landing/home-faq";
 import { homeBlogStrip } from "@/lib/landing/home-blog";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
-import { PromoStrip, HomeCtaBand } from "@/components/landing/session-ctas";
+import { HomeCtaBand } from "@/components/landing/session-ctas";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
 
 
@@ -319,16 +319,12 @@ export function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: homeFaqJsonLd() }}
       />
-      {/* HERO — nav + promo strip integrated into the same gradient ground
-          (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
+      {/* HERO — nav integrated into the gradient ground (v3 rebrand,
+          founder-approved design session: "estilo Semrush"). The promo strip
+          used to be rendered here directly; PROMO-EVERYWHERE-1 moved it
+          inside `PublicHeader` itself so it shows on every public surface,
+          not just home (see that component for the render + rationale). */}
       <header className="lp-hero lp-hero--home" id="producto">
-        {/* GENSCORE-HEADER-3 (fundador, 2026-08-12): "la franja de 7 días
-            tiene que salir a usuarios no logados o plan free". Es una oferta
-            de alta, así que a quien ya paga le sobra — pero a un logado en
-            Free le sigue sirviendo, y por eso no basta con "ocultar si hay
-            sesión". `showsPromoStrip` es la misma pregunta que la insignia de
-            plan, invertida, y vive junto a ella. */}
-        <PromoStrip />
         <PublicHeader hero />
 
         <div className="lp-hero-content">
