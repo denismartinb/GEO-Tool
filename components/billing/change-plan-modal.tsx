@@ -18,7 +18,7 @@ const METER_ROWS: Array<{ label: string; icon: string; get: (p: Plan) => string 
   { label: "Dominios", icon: "globe", get: (p) => p.meter.projects },
   { label: "Prompts monitorizados", icon: "prompts", get: (p) => "~" + p.meter.prompts },
   { label: "Motores de IA", icon: "layers", get: (p) => String(p.meter.engines) },
-  { label: "Frecuencia de refresco", icon: "refresh", get: (p) => p.meter.refresh }
+  { label: "Frecuencia de escaneo", icon: "refresh", get: (p) => p.meter.refresh }
 ];
 
 function PlanMeterChips({ plan }: { plan: Plan }) {

@@ -20,15 +20,14 @@
  * safety net consistent with CLAUDE.md's "no fake recommendations" given a
  * closed, known competitor roster and a closed, known domain list. Pure logic,
  * no I/O — importable from Vitest with no server-only shim needed.
+ *
+ * El vocabulario de dominios (qué token parece un dominio, cómo se normaliza)
+ * vive en `anchored-domains.ts` y se importa de allí: la primitiva es "qué es
+ * un dominio" y esto es el juicio que la usa, nunca al revés.
  */
+import { extractDomainTokens, normalizeDomain } from "@/lib/recommendations/anchored-domains";
 
-const COMMON_TLDS = new Set([
-  "com", "es", "org", "net", "io", "co", "info", "app", "ai", "biz", "shop",
-  "store", "dev", "mx", "fr", "de", "it", "uk", "eu", "cat", "pt", "nl", "be",
-  "ar", "cl", "pe", "us", "ca", "br", "gov", "edu", "me", "tv", "online"
-]);
 
-const DOMAIN_TOKEN_PATTERN = /\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}\b/gi;
 
 // Structured-data vocabulary domains that legitimately appear in any JSON-LD
 // example (e.g. `"@context": "https://schema.org"`). They are not citation or
@@ -37,19 +36,6 @@ const ALWAYS_ALLOWED_DOMAINS = ["schema.org", "www.w3.org"];
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();
-}
-
-function normalizeDomain(value: string): string {
-  return normalize(value)
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "");
-}
-
-function looksLikeDomain(token: string): boolean {
-  const parts = normalizeDomain(token).split(".");
-  if (parts.length < 2) return false;
-  return COMMON_TLDS.has(parts[parts.length - 1]);
 }
 
 function escapeRegExp(value: string): string {
@@ -67,7 +53,13 @@ export type RewriteValidationInput = {
   description: string;
   /** Competitor names already anchored to THIS recommendation's evidence (mentioned_competitors + dominant_competitor, if any). */
   allowedCompetitors: string[];
-  /** Domains already anchored to THIS recommendation's evidence (citation_domains). */
+  /**
+   * Domains already anchored to THIS recommendation's evidence — the FULL
+   * anchored set (`lib/recommendations/anchored-domains.ts`), which is what the
+   * prompt's own allowlist is built from. Passing anything narrower than what
+   * the prompt offered is how a rewrite gets rejected for obeying its
+   * instructions.
+   */
   allowedDomains: string[];
   /** The project's FULL tracked-competitor roster — used to catch a swap to a real-but-unanchored competitor, not just a fully invented name. */
   trackedCompetitors: string[];
@@ -84,7 +76,22 @@ export type RewriteValidationInput = {
 
 export type RewriteValidationResult =
   | { valid: true }
-  | { valid: false; reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned" | "comparative_claim_against_competitor" };
+  | {
+      valid: false;
+      reason:
+        | "untracked_competitor_mentioned"
+        | "unanchored_domain_mentioned"
+        | "comparative_claim_against_competitor";
+      /**
+       * El término exacto que disparó el guardián: el competidor, el dominio o
+       * el marcador de juicio de valor. Se registra siempre y se enseña al
+       * usuario en el mensaje, porque un `reason` a secas dice que la propuesta
+       * nombró algo indebido y se queda a un paso de la única pregunta que
+       * importa — QUÉ nombró. Ese paso costó una investigación entera el
+       * 2026-08-20 (log §137) y dos vueltas más hasta el 21 (§134).
+       */
+      offending: string;
+    };
 
 /**
  * Léxico de **juicio de valor comparativo** (RECS-USEFULNESS-1 Fase C, log §128).
@@ -173,18 +180,16 @@ export function validateRewriteAgainstEvidence(input: RewriteValidationInput): R
     const normalizedCompetitor = normalize(competitor);
     if (!normalizedCompetitor || allowedCompetitors.has(normalizedCompetitor)) continue;
     if (mentionsTerm(normalizedText, normalizedCompetitor)) {
-      return { valid: false, reason: "untracked_competitor_mentioned" };
+      return { valid: false, reason: "untracked_competitor_mentioned", offending: competitor };
     }
   }
 
   const allowedDomains = new Set(
     [...input.allowedDomains, input.brandDomain, ...ALWAYS_ALLOWED_DOMAINS].map(normalizeDomain).filter(Boolean)
   );
-  const domainMatches = rawText.match(DOMAIN_TOKEN_PATTERN) ?? [];
-  for (const match of domainMatches) {
-    if (!looksLikeDomain(match)) continue;
-    if (!allowedDomains.has(normalizeDomain(match))) {
-      return { valid: false, reason: "unanchored_domain_mentioned" };
+  for (const domain of extractDomainTokens(rawText)) {
+    if (!allowedDomains.has(domain)) {
+      return { valid: false, reason: "unanchored_domain_mentioned", offending: domain };
     }
   }
 
@@ -198,8 +203,12 @@ export function validateRewriteAgainstEvidence(input: RewriteValidationInput): R
       const normalizedSentence = normalize(sentence);
       const namesCompetitor = competitorNames.some((name) => mentionsTerm(normalizedSentence, name));
       if (!namesCompetitor) continue;
-      if (COMPARATIVE_JUDGEMENT_MARKERS.some((marker) => normalizedSentence.includes(marker))) {
-        return { valid: false, reason: "comparative_claim_against_competitor" };
+      // El marcador concreto, no sólo "hubo uno": es lo que permite decirle al
+      // usuario qué palabra tumbó la propuesta y, si el léxico se queda corto,
+      // ver desde fuera cuál está disparando de más.
+      const marker = COMPARATIVE_JUDGEMENT_MARKERS.find((candidate) => normalizedSentence.includes(candidate));
+      if (marker) {
+        return { valid: false, reason: "comparative_claim_against_competitor", offending: marker };
       }
     }
   }

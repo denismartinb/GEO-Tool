@@ -92,3 +92,98 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   no depende de que alguien mire la captura — pero el barrido sigue haciendo
   falta: el contraste coge el color, no el tamaño ni el relleno que esa misma
   regla también impone.
+- **El idiom `width:100vw; margin-inline:calc(50% - 50vw)` asume que su
+  ancestro está centrado en el viewport COMPLETO — falso en cualquier pantalla
+  de consola por encima de 760px**, donde `.shell` reserva `--sidebar-w` de
+  ancho real y `.dash-content` (el ancestro de hecho de todo lo que se monta
+  ahí dentro) es más estrecho que el viewport y está desplazado a la derecha.
+  Sin corrección, la caja renderiza con su borde izquierdo a
+  `--sidebar-w / 2` del borde real — ni en el viewport ni en `.dash-content` —
+  y el sobrante de la derecha es justo lo que dejaba a `.dash-content` con
+  scroll horizontal implícito. `.mrk-full` lo tenía (`ScanMissionRocket` /
+  `ReentryMission`, cortado detrás de la barra lateral en escritorio, log
+  §132): la corrección va en un `@media (min-width: 761px)` — el mismo corte
+  donde `.shell` deja de colapsar — que rederiva el mismo break-out contra
+  `.dash-content` en vez del viewport (`width: calc(100vw - var(--sidebar-w))`
+  y un margen izquierdo que cancela el propio centrado/padding de `.page`, vía
+  las variables `--page-max-w`/`--page-pad-x` para que ambos lados compartan la
+  misma geometría). Cualquier elemento nuevo bajo `app/dashboard/**` que
+  reutilice este idiom de full-bleed necesita la misma corrección — no es
+  exclusivo de `.mrk-full`.
+- **`container-type`/`contain: layout` en cualquier ancestro dentro de
+  `.dash-content` es del tipo de riesgo que no se toma a la ligera.** Convierte
+  al elemento en el containing block de sus descendientes `position: fixed`, y
+  `.dash-content` contiene modales, drawers y el popup del tour de onboarding —
+  todos `fixed` y pensados contra el viewport real. Es la solución "correcta"
+  de libro para el problema anterior (`cqw` en vez de rederivar `vw` a mano) y
+  se descartó por eso mismo en log §132: convertiría esos overlays en overlays
+  contenidos sin que ninguna pantalla que los usa lo supiera, sin ningún
+  ux-pilot en ese PR para cazarlo.
+- **Un `height: 100%` puede caer en referencia circular dentro de un grid con
+  fila implícita (`auto`), y el navegador no avisa — sólo desborda su
+  contenedor en silencio.** `place-items`/`align-items` sólo alinean DENTRO de
+  la pista; no la dimensionan. Sin `grid-template-rows` explícito, una fila
+  `auto` se dimensiona por su contenido, así que un hijo con `height:100%`
+  cuyo propio contenido depende de esa misma altura (p. ej. un `calc(100% -
+  X)` más abajo) puede resolver contra el contenido en vez de contra la caja
+  del grid — comprobado con Playwright en `.mrk-scene-slot > .mrk-pad-wrap`
+  (log §132): la fila se dimensionó a 674px, el contenido, en vez de a los
+  640px reales de la caja, y el sobrante se recortó por `overflow:hidden` dos
+  niveles más arriba, silenciosamente. La corrección que sí funciona es
+  `position: absolute; inset: 0` en el hijo — lo saca del grid entero y le da
+  una altura garantizada por el `position:absolute` del propio contenedor, sin
+  depender de cómo el grid decida dimensionar su fila. Cuando un hijo dentro de
+  un grid/flex de fila implícita necesita una altura fiable derivada de un
+  ancestro con caja garantizada, `position:absolute;inset:0` es más robusto que
+  `height:100%` — no lo contrario intuitivamente, pero es lo que midió el
+  navegador.
+- **Un fondo que ocupa una sección entera tiene que terminar en el color de la
+  sección de debajo.** La costura entre dos bloques a ancho completo no se ve
+  en una maqueta —el artboard acaba justo en ese canto— ni en una captura de
+  800 px de alto, porque el hero de la portada mide 1154 px en escritorio y
+  1193 en móvil: se ve en la página real, y lo que aparece es una **línea
+  horizontal recta**. Ha pasado dos veces seguidas en la misma zona por dos
+  vías distintas: el aura descartada lo tuvo que tapar con un desvanecido
+  enmascarado, y la variante de degradado que volvía a teñir el final del hero
+  lo reprodujo tal cual (log §141). Un `linear-gradient` que termine en el
+  color del vecino no necesita máscara ninguna; si el fondo no puede terminar
+  ahí, el desvanecido va **en porcentaje**, no en px, para seguir el alto real
+  de la sección. Y se verifica sobre una captura de **página completa**, nunca
+  sobre el recorte del viewport.
+- **Un modificador `--dark` suelto NO gana a su clase base: califícalo por
+  sección.** `.lp-kicker--dark` y `.lp-kicker` valen los dos (0,1,0), así que
+  decide el orden dentro del fichero — y las clases base de la landing viven
+  al final. El resultado no es un fallo visible: es un color que se declara,
+  se documenta y **no llega a pintarse nunca**. Pasó dos veces en la misma
+  sección: primero con la escala tipográfica (log §143) y, con el diagnóstico
+  ya escrito tres líneas más arriba en el mismo fichero, otra vez con los
+  colores (log §144), donde dejó la bajada de la única superficie oscura del
+  sitio a **2,34:1**, por debajo de AA. Lo que engaña es que uno de los tres
+  modificadores sí funcionaba, y sólo porque su clase base no declaraba
+  `color`. La forma correcta es `.lp-how .lp-kicker--dark` (0,2,0), que deja de
+  depender del orden.
+- **Fidelidad a una maqueta se MIDE en un navegador, no se lee en dos hojas de
+  estilo.** Abrir el `.dc.html` aprobado y la página real en el mismo Chromium
+  y comparar `getComputedStyle` más la caja de cada pareja de elementos
+  encontró 36 diferencias en una sección que ya se había dado por ajustada a
+  ojo (log §144). Y se compara la **distancia**, no la propiedad: un
+  `margin-bottom` de 122px daba un hueco real de 136 porque la fila de al lado
+  centra su contenido; la propiedad coincidía con la maqueta y el resultado no.
+- **Un estado inicial oculto que sólo deshace una isla de cliente esconde la
+  sección entera sin JavaScript.** `opacity: 0` / `scaleX(0)` en el CSS a secas,
+  revelados al llegar una clase que pone `useEffect`, significa que sin JS esa
+  clase no llega nunca (log §144). El estado oculto cuelga de una clase que
+  pone la propia isla —`.is-armed`— y así el servidor pinta siempre algo
+  legible. Mismo espíritu que `prefers-reduced-motion` en
+  `.claude/rules/onboarding.md`: la degradación es el contrato, no una
+  degradación.
+- **Un tramo responsive se escribe JUNTO a lo que corrige, no en el bloque de
+  esa anchura que pille más cerca.** `app/globals.css` tiene una decena de
+  `@media (max-width: 560px)` repartidos, y meter las reglas móviles de una
+  sección nueva en uno anterior a sus reglas base significa que **no pintan
+  nada**: misma especificidad, gana la última. El síntoma no es un color raro,
+  es una sección rota —una respuesta de FAQ en una columna de 111px, un galón
+  que no aparece— y no se ve leyendo, sólo midiendo `getComputedStyle` (log
+  §146). Es la tercera vez que el orden de este fichero decide en vez de la
+  intención: antes con la escala tipográfica (§143) y con los colores de la
+  superficie oscura (§144).

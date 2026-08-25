@@ -51,7 +51,7 @@ describe("validateRewriteAgainstEvidence", () => {
         allowedCompetitors: ["Conforama"]
       })
     );
-    expect(result).toEqual({ valid: false, reason: "untracked_competitor_mentioned" });
+    expect(result).toEqual({ valid: false, reason: "untracked_competitor_mentioned", offending: "Ikea" });
   });
 
   it("rejects when the text mentions a domain that isn't anchored to this recommendation", () => {
@@ -61,7 +61,9 @@ describe("validateRewriteAgainstEvidence", () => {
         description: "Acme no aparece citada frente a Conforama en respuestas sobre muebles."
       })
     );
-    expect(result).toEqual({ valid: false, reason: "unanchored_domain_mentioned" });
+    // The offending token is logged, never shown: it is what turns "the rewrite
+    // named something unanchored" into a diagnosis.
+    expect(result).toEqual({ valid: false, reason: "unanchored_domain_mentioned", offending: "bylmo.com" });
   });
 
   it("passes a JSON-LD example that references schema.org and the brand's own domain", () => {
@@ -83,7 +85,7 @@ describe("validateRewriteAgainstEvidence", () => {
         description: '{ "@context": "https://schema.org", "sameAs": "https://bylmo.com/acme" }'
       })
     );
-    expect(result).toEqual({ valid: false, reason: "unanchored_domain_mentioned" });
+    expect(result).toEqual({ valid: false, reason: "unanchored_domain_mentioned", offending: "bylmo.com" });
   });
 
   it("does not false-positive on a Spanish abbreviation like 'p.ej.'", () => {
@@ -104,7 +106,7 @@ describe("validateRewriteAgainstEvidence", () => {
         trackedCompetitors: ["Ikea"]
       })
     );
-    expect(result).toEqual({ valid: false, reason: "untracked_competitor_mentioned" });
+    expect(result).toEqual({ valid: false, reason: "untracked_competitor_mentioned", offending: "Ikea" });
   });
 
   it("does not flag a competitor name that appears only as a substring of another word", () => {
@@ -146,6 +148,19 @@ describe("comparación contra competidores nombrados (Fase C, log §128)", () =>
 
     expect(result.valid).toBe(false);
     expect(result.valid === false && result.reason).toBe("comparative_claim_against_competitor");
+  });
+
+  it("dice QUÉ marcador lo tumbó, no sólo que hubo uno", () => {
+    // Los tres motivos del guardián nombran su término: sin él, diagnosticar un
+    // rechazo exigía leer los logs de producción (log §137, §134).
+    const frase = "Nuestra red es superior a la de Digi en las principales ciudades.";
+    const result = validateRewriteAgainstEvidence({ ...base, description: frase, segments: [frase] });
+
+    expect(result).toEqual({
+      valid: false,
+      reason: "comparative_claim_against_competitor",
+      offending: "superior"
+    });
   });
 
   it("rechaza un superlativo directo junto al nombre", () => {
