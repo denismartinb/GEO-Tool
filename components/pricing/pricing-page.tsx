@@ -6,7 +6,7 @@ import { PublicHeader } from "@/components/marketing/public-header";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { supportMailto } from "@/lib/support";
-import { PLANS, PLAN_MATRIX, PROMO_ENDS_AT, type Plan, type PlanCell } from "@/app/pricing/plans-data";
+import { PLANS, PLAN_MATRIX, PROMO_ENDS_AT, PROMO_DURATION_MONTHS, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 
 // Marcas simplificadas (simple-icons, CC0) — cada método de pago que Stripe
@@ -45,7 +45,7 @@ function PlanCard({ plan, promoActive }: { plan: Plan; promoActive: boolean }) {
           <>
             <span className="price-was">{plan.price}&nbsp;€</span>
             <span className="price-amount">{plan.promoPrice}&nbsp;€</span>
-            <span className="price-per">/{plan.period} · 6 meses</span>
+            <span className="price-per">/{plan.period} · {PROMO_DURATION_MONTHS} meses</span>
           </>
         ) : (
           <>

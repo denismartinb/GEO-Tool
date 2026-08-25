@@ -6848,6 +6848,9 @@ select.set-field {
 .cp-move-lbl { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); }
 .cp-move-plan { font-size: 17px; font-weight: 800; letter-spacing: -.01em; margin-top: 2px; }
 .cp-move-plan .per { font-size: 12px; color: var(--ink-4); font-weight: 650; }
+.cp-move-promo { display: inline-flex; align-items: baseline; gap: 5px; flex-wrap: wrap; }
+.cp-move-promo .was { font-size: 12px; font-weight: 600; color: var(--ink-4); text-decoration: line-through; }
+.cp-move-promo .now { font-size: 17px; font-weight: 800; color: var(--ink); }
 .cp-move-arrow { color: var(--accent); flex: 0 0 auto; }
 
 .cp-proration { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }

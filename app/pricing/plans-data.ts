@@ -11,6 +11,14 @@
  */
 export const PROMO_ENDS_AT = "2026-09-01T00:00:00+02:00";
 
+/**
+ * Duración real del descuento en los cupones de Stripe (`duration: repeating`,
+ * `duration_in_months: 6`) — no es un adorno de copy, es lo que Stripe factura
+ * de verdad cada mes hasta que se cumplen los 6, así que cualquier pantalla
+ * que muestre el precio promo tiene que decir esto junto a él.
+ */
+export const PROMO_DURATION_MONTHS = 6;
+
 export function isPromoActive(now: Date = new Date()): boolean {
   return now.getTime() < new Date(PROMO_ENDS_AT).getTime();
 }

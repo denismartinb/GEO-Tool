@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -290,15 +291,17 @@ export function PlanBillingSection({
               Dominios y prompts a medida (~300 de referencia), los mismos motores de IA que Pro, onboarding
               acompañado. Precio a medida — hablamos contigo y lo ajustamos a tu cartera.
             </p>
-            {/* CONSOLE-REDESIGN-1: this used to preselect Agencia in the
-                modal, which opened it with "Continuar" already disabled —
-                the dead end reached from the default path. Agencia is no
-                longer a selectable radio there (it has its own sales cell),
-                so the button just opens the comparison it promises. */}
-            <Button type="button" className="w-full justify-center" onClick={() => setModal({})}>
+            {/* The comparison this button promises lives on the public
+                pricing page (full plan matrix, not just this modal's four
+                cards), so it navigates there instead of opening the modal —
+                fundador, 2026-08-25. */}
+            <Link
+              href="/pricing"
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[8px] px-3 text-sm font-semibold bg-[var(--accent)] text-white hover:opacity-95"
+            >
               Comparar planes
               <Icon name="arrRight" size={14} />
-            </Button>
+            </Link>
           </CardContent>
         </Card>
         )}

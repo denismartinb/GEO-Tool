@@ -13724,4 +13724,35 @@ hallazgo (este párrafo) sirvió de vehículo legítimo para ese commit.
 
 **Pendiente.** Fase D (Starter a escaneo diario) sigue bloqueada, sin tocar
 en este PR — el highlight de Starter sigue diciendo "Escaneo semanal".
-Verificación visual del tachado en el preview, en curso.
+
+**Verificación visual confirmada por el fundador** en `/pricing`: banda de
+promo y tachado correctos en las cuatro tarjetas. Al probar el flujo real de
+upgrade (trial de Pro → "Contratar ahora") aparecieron dos fallos reales,
+corregidos en el mismo PR:
+
+1. **El paso de confirmación del checkout ignoraba la promo por completo.**
+   `ChangePlanModal` ya calculaba `promoShown(planId)` correctamente para las
+   tarjetas del paso "select" (`.cp-plan-price .was/.now`), pero el paso
+   "confirm" — el que de verdad ve quien pulsa "Contratar ahora" desde el
+   aviso de trial — llamaba a `planPrice(target)` a secas, sin pasar por
+   `promoShown` en ningún sitio: ni en la caja "Nuevo" (`cp-move`), ni en el
+   pie (`cp-foot-note`). El precio mostrado justo antes de ir a Stripe era el
+   de siempre (179 €), aunque el propio Stripe sí iba a cobrar el promo. Se
+   añadió `targetPromoPrice` (una sola derivación, reutilizada en los dos
+   sitios para que no puedan desincronizarse) y ahora ambos muestran el
+   tachado, el precio promo y la duración — la misma info que ya llevaba el
+   pie de la banda de `/pricing`, ahora también aquí y en la nota de aviso de
+   Stripe.
+2. **La duración de la promo ("6 meses") vivía como literal suelto,
+   repetido en dos sitios de `pricing-page.tsx`.** Se subió a
+   `PROMO_DURATION_MONTHS` en `plans-data.ts`, junto a `PROMO_ENDS_AT`, y la
+   usan tanto `pricing-page.tsx` como el nuevo bloque de `change-plan-modal.tsx` — un
+   cambio de duración del cupón ya no puede quedarse desincronizado entre
+   pantallas.
+
+Aparte, el fundador pidió que "Comparar planes" (tarjeta de Agencia en
+`/dashboard/settings/billing`) navegue a la página pública de precios en vez
+de abrir el modal de cambio de plan — ese botón abría `ChangePlanModal`
+(CONSOLE-REDESIGN-1), que sólo enseña cuatro tarjetas resumidas, no la matriz
+de comparación completa que el texto del botón promete. Ahora es un
+`<Link href="/pricing">` real.

@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { SUPPORT_EMAIL } from "@/lib/support";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { PLANS, type Plan } from "@/app/pricing/plans-data";
+import { PLANS, PROMO_DURATION_MONTHS, type Plan } from "@/app/pricing/plans-data";
 import type { ActiveProjectSummary } from "@/lib/billing";
 import type { CheckoutSessionResult, PortalIntent, PortalSessionResult } from "@/app/dashboard/settings/billing/actions";
 
@@ -115,6 +115,11 @@ export function ChangePlanModal({
   // never for an account with a real subscription, since that always routes to
   // the Portal instead, which this promo cannot apply to.
   const promoShown = (planId: Plan["id"]) => !hasRealSubscription && promoPlanIds.includes(planId);
+
+  // PRICING-PROMO-1: the promo price this checkout will actually charge for
+  // `target`, or null when it doesn't apply — computed once so the move box
+  // and the footer note below can't disagree with each other.
+  const targetPromoPrice = target.promoPrice !== undefined && promoShown(target.id) ? target.promoPrice : null;
 
   const isSelfServeTarget = target.id === "starter" || target.id === "pro";
   // BILLING-STRIPE-1: a fresh Checkout Session (as opposed to the Customer
@@ -359,7 +364,16 @@ export function ChangePlanModal({
                 <div className="cp-move-side">
                   <div className="cp-move-lbl">Nuevo</div>
                   <div className="cp-move-plan">
-                    {target.name} <span className="per">· {planPrice(target)}</span>
+                    {target.name}{" "}
+                    {targetPromoPrice !== null ? (
+                      <span className="cp-move-promo">
+                        <span className="was">{money(target.price, 0)}</span>
+                        <span className="now">{money(targetPromoPrice, 0)}</span>
+                        <span className="per">/mes · {PROMO_DURATION_MONTHS} meses</span>
+                      </span>
+                    ) : (
+                      <span className="per">· {planPrice(target)}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -368,6 +382,13 @@ export function ChangePlanModal({
                 <span>
                   Al continuar, Stripe te pedirá los datos de pago en una página segura fuera de GenScore. Tu plan{" "}
                   {target.name} se activa en cuanto el pago se confirme.
+                  {targetPromoPrice !== null && (
+                    <>
+                      {" "}
+                      Precio de lanzamiento: {money(targetPromoPrice, 0)}/mes durante {PROMO_DURATION_MONTHS} meses,
+                      después {planPrice(target)}.
+                    </>
+                  )}
                 </span>
               </div>
               {error && (
@@ -378,7 +399,13 @@ export function ChangePlanModal({
             </div>
             <div className="cp-foot">
               <div className="cp-foot-note">
-                {planPrice(target)}
+                {targetPromoPrice !== null ? (
+                  <>
+                    <b>{money(targetPromoPrice, 0)}/mes</b> · {PROMO_DURATION_MONTHS} meses (antes {planPrice(target)})
+                  </>
+                ) : (
+                  planPrice(target)
+                )}
               </div>
               <Button type="button" variant="ghost" onClick={() => setStep("select")} disabled={isPending}>
                 <Icon name="chevLeft" size={15} />
