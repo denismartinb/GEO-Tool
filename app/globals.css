@@ -4652,6 +4652,36 @@ a.notif-row:hover {
 .lp-nav-links a.active { background: var(--accent-soft); color: var(--accent-ink); }
 .lp-nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
+/* "Blog" nav item: was a plain link, now opens BLOG_CLUSTERS as a panel
+   (BlogNavDropdown). Desktop only — `.lp-nav-links` is `display:none` under
+   the mobile breakpoint below, so no extra mobile rule is needed here. */
+.lp-nav-drop { position: relative; }
+.lp-nav-drop-trigger {
+  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+}
+.lp-nav-drop-trigger:hover { background: var(--surface-2); color: var(--ink); }
+.lp-nav-drop-trigger.active { background: var(--accent-soft); color: var(--accent-ink); }
+.lp-nav-drop-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+.lp-nav-drop-trigger svg { transition: transform .15s ease; }
+.lp-nav-drop-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
+  width: 420px; padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  box-shadow: 0 12px 32px rgba(11,20,38,.14);
+}
+/* Qualified as `.lp-nav-drop-panel .lp-nav-drop-item` (two classes), not the
+   bare class alone: these anchors sit inside `.lp-nav-links`, and
+   `.lp-nav-links a` (one class + one type) would otherwise win the padding/
+   font-size/color cascade fight and silently override this rule — the exact
+   trap `.claude/rules/styles.md` documents for `.lp-mobnav a` / `.blog-body a`. */
+.lp-nav-drop-panel .lp-nav-drop-item { display: block; padding: 10px 11px; border-radius: 8px; }
+.lp-nav-drop-panel .lp-nav-drop-item:hover { background: var(--surface-2); }
+.lp-nav-drop-item-title { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+.lp-nav-drop-item-desc { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+.lp-nav-drop-panel .lp-nav-drop-item--full { grid-column: 1 / -1; border-top: 1px solid var(--line-soft); margin-top: 3px; padding-top: 11px; }
+
 /* --- Mobile nav: hamburger + slide-in drawer, same look and feel as the
    dashboard sidebar's mobile drawer (.sb / .mob-scrim). --- */
 .lp-burger { display: none; }
@@ -6004,6 +6034,38 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .blog-cluster-head p { margin: 0; color: var(--ink-3); font-size: 14px; }
 .blog-cluster-soon { font-size: 14px; color: var(--ink-4); font-style: italic; border: 1px dashed var(--line); border-radius: var(--r-md); padding: 16px 18px; margin: 0; }
 
+/* Hub editorial de /blog: destacado + 2 laterales, y cada cluster en una
+   fila de tarjetas en vez de una columna. Reutiliza `.blog-index-card` y
+   `.blog-cover` tal cual (misma portada, mismo recorte de siempre) — sólo
+   cambia cómo se agrupan, nunca cómo se recortan. */
+/* `.blog-featured-hero.blog-index-card h2` / `.blog-featured-side
+   .blog-index-card h2` (two classes) rather than the bare descendant
+   selector: both would tie `.blog-index-card h2` above at one class + one
+   type, and win only by coming later in the file — the fragile tie-break
+   `.claude/rules/styles.md` warns against relying on. Two classes wins
+   outright, independent of source order. */
+.blog-featured { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; margin-bottom: 44px; }
+.blog-featured-hero.blog-index-card { margin-bottom: 0; }
+.blog-featured-hero.blog-index-card h2 { font-size: 22px; line-height: 1.28; }
+.blog-featured-side { display: flex; flex-direction: column; gap: 20px; }
+.blog-featured-side .blog-index-card { margin-bottom: 0; flex: 1; }
+.blog-featured-side .blog-index-card-body { padding: 16px; }
+.blog-featured-side .blog-index-card h2 { font-size: 15px; line-height: 1.32; }
+.blog-featured-side .blog-cover { height: 110px; }
+
+/* Etiqueta de cluster: un único acento (el mismo `--accent-soft`/`--accent-ink`
+   que ya usa el nav activo), no un color por categoría — esa taxonomía de
+   color no se ha aprobado, sólo el hub editorial. */
+.blog-card-tag {
+  display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  color: var(--accent-ink); background: var(--accent-soft); padding: 3px 8px; border-radius: 5px; margin-bottom: 8px;
+}
+
+.blog-cluster-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.blog-cluster-more { flex: none; font-size: 13px; font-weight: 700; color: var(--accent-ink); white-space: nowrap; }
+.blog-cluster-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.blog-cluster-grid > .blog-index-card { margin-bottom: 0; }
+
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }
 
@@ -6024,6 +6086,12 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
+
+@media (max-width: 760px) {
+  .blog-featured { grid-template-columns: 1fr; }
+  .blog-cluster-grid { grid-template-columns: 1fr; }
+  .blog-cluster-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
 
 /* GROWTH-2 Fase 2.3: /docs sidebar layout. */
 .docs-layout { display: flex; flex-direction: column; gap: 32px; align-items: flex-start; }

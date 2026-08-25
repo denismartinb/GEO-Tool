@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { Icon } from "@/components/ui/icon";
+import { BlogNavDropdown } from "@/components/marketing/blog-nav-dropdown";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { avatarInitials, showsPlanBadge } from "@/lib/account-chip";
 import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
@@ -150,6 +151,8 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
             <a key={l.href} href={l.href}>
               {l.label}
             </a>
+          ) : l.href === "/blog" ? (
+            <BlogNavDropdown key={l.href} active={l.href === activeHref} />
           ) : (
             <Link key={l.href} href={l.href} className={l.href === activeHref ? "active" : ""}>
               {l.label}

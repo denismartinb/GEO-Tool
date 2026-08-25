@@ -13624,3 +13624,84 @@ validate` en verde.
 activos en Stripe antes de dar la Fase B por cerrada del todo. Fases C
 (promo de precio) y D (Starter a diario) siguen bloqueadas hasta su propia
 aprobación explícita.
+
+## 150. `/blog` deja de ser una lista plana: destacado, filas por cluster, y "Blog" entra en el desplegable de cabecera (BLOG-HUB-1, 2026-08-25)
+
+El fundador: "es como una lista de enlaces", con las portadas abstractas
+llevándose todo el protagonismo y sin decir de qué trata cada artículo. Se le
+propusieron tres alternativas de arquitectura de información en un artefacto
+(hub editorial, directorio filtrable, bento por color de cluster); eligió la
+A. Un segundo artefacto exploró además un sistema de portadas planas nuevo
+(anillo del logo, sin degradado); esa parte se descarta por ahora —
+**esta fase mantiene las 17 portadas actuales sin tocar**, sólo la
+arquitectura alrededor de ellas.
+
+### Lo que cambia
+
+- **Destacado + 2 laterales**, arriba del todo: el artículo más reciente de
+  todo el blog (hoy `geo-vs-aeo-vs-seo`) y los dos siguientes por fecha.
+  Deliberadamente **no** es un campo "pilar" curado a mano — `lib/blog/posts.ts`
+  no tiene ese concepto, e inventarlo sería la misma clase de dato no
+  respaldado que la regla de honestidad del proyecto prohíbe en el propio
+  contenido. Se calcula por fecha real (`byMostRecent`), así que se mantiene
+  correcto solo con publicar.
+- **Comparativas sigue siendo la segunda sección**, justo después del
+  destacado — no al final como en la maqueta original. Ya había una razón
+  documentada (fundador, 2026-08-11) para que fuera lo primero tras el H1: es
+  el contenido con más intención de compra del portfolio. El destacado nuevo
+  pasa a ser lo primero de la página, así que Comparativas se queda pegada a
+  él en vez de mudarse al fondo.
+- **Cada cluster es ahora una fila de tarjetas** (`blog-cluster-grid`, hasta 3
+  por fila) en vez de una columna vertical de todas. Los artículos que ya
+  salieron en el destacado/laterales no se repiten en la fila de su cluster.
+  Un enlace "Ver todos →" lleva a `/blog/[cluster]`, que además enseña la
+  síntesis (`pillarIntro`) que el índice no repite — **nunca un recuento**:
+  "el índice del blog no publica un recuento de artículos" ya estaba decidido
+  (fundador, 2026-08-11, log §61) y sigue aplicando aunque ahora haya menos
+  tarjetas visibles por cluster.
+- **"Blog" pasa de enlace suelto a desplegable** en la cabecera pública
+  (`components/marketing/blog-nav-dropdown.tsx`), con las 4 categorías reales
+  de `BLOG_CLUSTERS` + Comparativas — antes esa taxonomía sólo se veía
+  dentro de `/blog`. Solo en escritorio: `MarketingMobileNav` toma una lista
+  plana sin anidamiento, así que en el cajón móvil "Blog" se queda como
+  enlace suelto, sin tocar ese componente.
+- Portadas: sin cambios de fichero ni de recorte. El destacado y los
+  laterales usan el mismo `<BlogCover>`/`.blog-cover` de siempre — sólo varía
+  el tamaño de la tarjeta que lo envuelve, nunca un `object-fit` ni una
+  proporción nueva.
+
+### Una trampa de especificidad evitada, no sólo corregida
+
+`.lp-nav-links a` (una clase + un tipo) le habría ganado en la cascada a
+`.lp-nav-drop-item` (una clase sola) — exactamente el patrón que
+`.claude/rules/styles.md` documenta para `.lp-mobnav a` y `.blog-body a`. Se
+cualificó como `.lp-nav-drop-panel .lp-nav-drop-item` (dos clases) antes de
+que llegara a manifestarse, no después de verlo roto en una captura. Mismo
+criterio para `.blog-featured-hero h2`/`.blog-featured-side h2` contra
+`.blog-index-card h2`: en vez de dejar que ganaran por venir después en el
+fichero (el empate frágil que ese mismo documento avisa de no usar), se
+cualificaron con dos clases para ganar por especificidad, no por orden.
+
+### Lo que se ha dejado fuera
+
+- **El sistema de portadas planas** (anillo de marca + icono real por
+  cluster) explorado en el segundo artefacto — el fundador pidió ejecutar
+  "con las portadas actuales". Sigue disponible como fase propia si se
+  retoma; de paso quedó anotado ahí un bug menor no relacionado con esta fase:
+  `coverIcon: "compass"` en `que-es-geo-generative-engine-optimization` no
+  existe en `components/ui/icon.tsx` y cae en silencio al icono de rejilla
+  (`icons.overview`) — sin corregir, porque tocar `lib/blog/posts.ts` estaba
+  fuera del alcance aprobado.
+- Ningún color por categoría en las tarjetas: la etiqueta de cluster
+  (`.blog-card-tag`) usa un único acento (`--accent-soft`/`--accent-ink`, el
+  mismo que ya usa el nav activo), no una paleta de cuatro colores — esa
+  taxonomía de color era parte del concepto "bento" descartado, no del hub
+  editorial aprobado.
+
+**Comprobado.** `pnpm test` (201 ficheros, 2.814 pruebas) y `pnpm run
+validate` (build + typecheck + lint) en verde.
+
+**Pendiente.** Human Gate — capturas del `ux-pilot` contra el preview antes de
+pedir revisión al fundador (la cabecera pública es compartida por las 7
+superficies de marketing, así que el barrido tiene que confirmar que ninguna
+de las otras seis se rompió, no sólo `/blog`).
