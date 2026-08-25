@@ -12464,6 +12464,12 @@ de zonas, la fuente que esta tabla espeja).
 
 ---
 
+---
+
+
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -13625,7 +13631,94 @@ activos en Stripe antes de dar la Fase B por cerrada del todo. Fases C
 (promo de precio) y D (Starter a diario) siguen bloqueadas hasta su propia
 aprobación explícita.
 
-## 150. `/blog` deja de ser una lista plana: destacado, filas por cluster, y "Blog" entra en el desplegable de cabecera (BLOG-HUB-1, 2026-08-25)
+## 150. La cabecera de página no llegaba a los bordes en pantallas anchas (HEADER-FULL-WIDTH-1, 2026-08-21)
+
+**Lo que vio el fundador.** En Visión general, con la ventana a tamaño real,
+la banda `Visión general / Genscore / genscore.es` se quedaba corta por los
+dos lados mientras la topbar (`Completado`, campana, `Cerrar sesión`) y el
+banner «Tu histórico se está construyendo» de justo encima sí llegaban a los
+dos bordes. Tres bandas de cromo apiladas y sólo la del medio se recortaba.
+
+**Causa.** `.ov-sticky-header` vive dentro de `.page` (tope 1320px, centrado)
+y su margen negativo (`-26px -34px 24px`) sólo cancela el padding de `.page`
+— nunca llega más allá de sus bordes. `.dash-header` y `.dmb-band`, en
+cambio, son hermanos de `.page` dentro de `.dash-main` y no tienen tope
+alguno. En cuanto la columna de contenido (`.dash-content`, el carril `1fr`
+de `.shell { grid-template-columns: var(--sidebar-w) 1fr }`) supera 1320px
+—desde ~1568px de ventana con el sidebar en 248px— `.page` empieza a
+centrarse y la cabecera deja huecos a los lados que las otras dos bandas no
+tienen.
+
+**Arreglo.** `--ov-hdr-bleed` calcula ese exceso (`max(0px, (100vw -
+var(--sidebar-w) - var(--ov-hdr-page-cap)) / 2)`, con `--ov-hdr-page-cap` a
+1320px por defecto) y se suma tanto al margen negativo como al padding, así
+que el borde de la caja llega al borde real de `.dash-content` mientras el
+contenido (título, badges, pastilla de estado) se queda exactamente donde
+estaba — los dos términos se cancelan. Por debajo de ~1568px de ventana
+`--ov-hdr-bleed` es 0 y el comportamiento es byte-idéntico al de antes.
+
+**Corrección el mismo día, antes de mergear: Competidores se quedaba corta
+igual.** El fundador probó el preview en Competidores y Páginas citadas y
+sólo la primera seguía sin llegar al borde. Causa: de las 8 pantallas que
+comparten `.ov-sticky-header`, **Competidores es la única cuya clase de
+columna estrecha va combinada directamente sobre `.page`**
+(`<div className="page cm2-page">`) en vez de anidada como hija suya —
+Visión general, Prompts y Páginas citadas meten su `.ov2-scope`/`.pr2-scope`/
+`.cit2-page` como un `<div>` aparte DENTRO de un `.page` sin modificar, que
+sigue en 1320px. En Competidores, en cambio, `.cm2-page` reescribe el propio
+`max-width` de `.page` a sus escalones (460/640/1200/1280px), así que el
+`1320px` que `--ov-hdr-bleed` daba por hecho estaba mal para esa pantalla en
+concreto — sangraba de menos, no de más, y por eso seguía viéndose corta.
+`--ov-hdr-page-cap` se hizo variable y `.cm2-page .ov-sticky-header`
+redeclara los mismos cuatro escalones que `.cm2-page` ya usa, en las mismas
+media queries, así que la sangría concuerda con el `max-width` real en cada
+una en vez de asumir un valor fijo. Ninguna otra de las 8 pantallas comparte
+esta estructura, así que ninguna otra necesita el mismo override — verificado
+leyendo el JSX de las 8, no sólo de las dos reportadas.
+
+**Deliberadamente fuera de esta fase.** El contenido de la cabecera (título,
+badges) no está alineado con la misma columna que las tarjetas de debajo en
+todas las 8 pantallas: Visión general y Prompts usan `.ov2-scope`/
+`.pr2-scope` (640/1200/1280px) como columna interior, más estrecha que la
+cabecera; Páginas citadas usa `.cit2-page` con el mismo patrón. Es
+exactamente lo que enseñan las capturas de Páginas citadas: la cabecera ya
+llega al borde correcto (nunca tuvo el bug de Competidores), pero las
+tarjetas de debajo, más estrechas, no — un desajuste que ya existía antes de
+esta fase y sigue igual de visible después. Alinear el contenido de la
+cabecera con la columna de tarjetas —no sólo llevar el fondo a sangre— exige
+decidir esa convergencia para las 8 pantallas a la vez
+(`app/console.css:509-515`, ya señalado como decisión pendiente desde
+PROMPTS-DESKTOP-2); esta fase sólo corrige que la banda deje de recortarse,
+sin tocar dónde cae el texto dentro de ella.
+
+---
+
+## 151. La cabecera de Páginas citadas nunca adoptó el patrón compartido (HEADER-FULL-WIDTH-1, 2026-08-25)
+
+**Lo que vio el fundador.** Comparando capturas anchas de Competidores y
+Páginas citadas: la segunda seguía con la banda más baja que el resto de la
+consola, y con una tipografía distinta.
+
+**Causa.** `.ov-sticky-header` la comparten 8 pantallas, y 7 de ellas (Visión
+general, Prompts, Competidores, Recomendaciones, Auditoría web, Debug, y
+ahora Páginas citadas) siguen el mismo patrón de dos líneas dentro de
+`.ov-sticky-left`: un `<p className="kicker">` con el nombre de la sección
+arriba, y debajo el nombre del proyecto en negrita (15px/750) junto a una
+badge del dominio en monoespaciada (11px). Páginas citadas se había quedado
+con un layout de una sola línea de antes de esa convergencia — kicker,
+separador vertical y el dominio en 14px/700, sin mostrar nunca el nombre del
+proyecto — que resultaba en una banda más baja y con letra distinta al
+resto. El propio comentario de `recommendations/page.tsx` ("Alineada con
+Prompts, Competidores y Páginas citadas") ya daba por hecho que lo estaba,
+sin serlo.
+
+**Arreglo.** `citations/page.tsx` adopta el mismo bloque, letra por letra,
+que ya usan las otras 6 pantallas. Ningún cambio de CSS — el desajuste era
+de estructura JSX, no de la banda en sí (que ya sangraba bien tras §150).
+
+---
+
+## 152. `/blog` deja de ser una lista plana: destacado, filas por cluster, y "Blog" entra en el desplegable de cabecera (BLOG-HUB-1, 2026-08-25)
 
 El fundador: "es como una lista de enlaces", con las portadas abstractas
 llevándose todo el protagonismo y sin decir de qué trata cada artículo. Se le

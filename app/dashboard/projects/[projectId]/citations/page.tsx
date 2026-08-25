@@ -154,32 +154,28 @@ export default async function CitationsPage({
 
   return (
     <div className="page fade-in">
-      {/* Sticky header */}
+      {/* Sticky header. HEADER-FULL-WIDTH-1 (2026-08-25): esta pantalla se
+          había quedado con un layout de una sola línea (kicker + separador +
+          dominio) de antes de que el resto de la consola convergiera en
+          kicker arriba / nombre+badge de dominio abajo — Visión general,
+          Prompts, Competidores, Recomendaciones, Auditoría web y Debug ya lo
+          usan (Recomendaciones incluso dice explícitamente "alineada con...
+          Páginas citadas", que nunca lo estuvo). Resultado: aquí la banda
+          salía más baja que en el resto y con una tipografía distinta
+          (fundador, 2026-08-25). Mismo patrón, letra por letra. */}
       <div className="ov-sticky-header">
         <div className="ov-sticky-left">
-          <span className="kicker">Páginas citadas</span>
-          <span
-            style={{
-              width: 1,
-              height: 16,
-              background: "var(--line-strong)",
-              display: "inline-block",
-              margin: "0 2px"
-            }}
-          />
-          <span
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "var(--ink)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: 260
-            }}
-          >
-            {project.domain}
-          </span>
+          <div>
+            <p className="kicker" style={{ marginBottom: 2 }}>Páginas citadas</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
+                {project.name}
+              </span>
+              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
+                {project.domain}
+              </span>
+            </div>
+          </div>
         </div>
         <div className="ov-sticky-right">
           <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
