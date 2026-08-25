@@ -168,7 +168,7 @@ describe("syncBillingDetailsToStripeCustomer", () => {
       invoice_settings: {
         custom_fields: [
           { name: "Razón social", value: "Xataka Media S.L." },
-          { name: "NIF", value: "B-84920011" }
+          { name: "NIF/CIF", value: "B-84920011" }
         ]
       }
     });

@@ -16063,3 +16063,20 @@ BILLING-STRIPE-1 (Vercel Pro hecho; alta autónomo y VeriFactu, pendientes).
 `organization/actions.test.ts` ×3). `pnpm test` (203/203, 2.836/2.836),
 `pnpm run validate` (build + typecheck + lint), `git diff --check` y
 `bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Addendum, mismo día: dos correcciones de copy pedidas por el fundador tras
+ver el preview.**
+
+- **"NIF" → "NIF/CIF"**, tanto en la etiqueta del campo
+  (`components/settings/billing-details.tsx`) como en el nombre del
+  `custom_field` que llega a Stripe (`lib/stripe.ts`) — el NIF es para
+  personas físicas, el CIF para empresas, y "Razón social" ya deja claro que
+  este bloque es para una empresa; "NIF/CIF" no obliga a adivinar cuál de los
+  dos escribir.
+- **Retirada la pista "Salen en la factura"** del acordeón "Datos de
+  facturación" (`hint` de `SettingsFold`, ahora omitido). No era falsa —
+  desde este mismo PR sí es cierto que llegan a la factura vía Stripe— pero
+  el fundador prefirió quitarla; el título del bloque ya dice "facturación".
+- `lib/stripe.test.ts` actualizado para el nuevo nombre de campo. Sin cambios
+  de comportamiento: sigue siendo el mismo `custom_field`, solo cambia el
+  texto impreso en la factura.

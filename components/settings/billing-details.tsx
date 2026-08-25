@@ -22,7 +22,7 @@ export function BillingDetailsFold({
   onChange: (next: BillingDetails) => void;
 }) {
   return (
-    <SettingsFold id="billing-fold" title="Datos de facturación" hint="Salen en la factura">
+    <SettingsFold id="billing-fold" title="Datos de facturación">
       <div className="set-form-grid">
         <div>
           <label className="field-label" htmlFor="billing-legal-name">
@@ -37,7 +37,7 @@ export function BillingDetailsFold({
         </div>
         <div>
           <label className="field-label" htmlFor="billing-tax-id">
-            NIF
+            NIF/CIF
           </label>
           <input
             id="billing-tax-id"

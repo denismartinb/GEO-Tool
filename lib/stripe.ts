@@ -146,7 +146,7 @@ export async function syncBillingDetailsToStripeCustomer(
     customFields.push({ name: "Razón social", value: truncateForInvoiceField(details.legalName) });
   }
   if (details.taxId) {
-    customFields.push({ name: "NIF", value: truncateForInvoiceField(details.taxId) });
+    customFields.push({ name: "NIF/CIF", value: truncateForInvoiceField(details.taxId) });
   }
 
   try {
