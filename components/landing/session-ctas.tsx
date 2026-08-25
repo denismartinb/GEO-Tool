@@ -17,10 +17,35 @@ import { HeroDomainField } from "@/components/landing/hero-domain-field";
  * mechanism `PublicHeader` already relies on.
  */
 
+/**
+ * Rotación vertical entre dos mensajes ciertos a la vez — el ensayo gratis de
+ * siempre y la rebaja de lanzamiento— en vez de acortar uno de los dos para
+ * que quepan juntos en una línea. Un solo reloj CSS (`lp-promo-cycle`),
+ * mismo mecanismo que la demo del hero: el mensaje B arranca ya medio ciclo
+ * dentro con `animation-delay` negativo, así que nunca hay un primer
+ * fotograma con los dos superpuestos. `prefers-reduced-motion` dejaba
+ * históricamente animaciones así en su fotograma final; aquí no hay
+ * "final" — los dos mensajes son ciertos siempre — así que se congela en el
+ * primero y el segundo se oculta entero, en vez de mostrar los dos a la vez
+ * y romper la línea única del diseño.
+ *
+ * La rebaja es real y va coordinada con Stripe en otra fase (fundador,
+ * 2026-08-25) — no es una cifra decorativa; si el precio o la fecha de corte
+ * cambian, este componente cambia con ellos.
+ */
 export function PromoStrip() {
   const user = useSessionUser();
   if (!showsPromoStrip(user?.planId)) return null;
-  return <div className="lp-promo">7 días de Pro · Sin tarjeta</div>;
+  return (
+    <div className="lp-promo">
+      <span className="lp-promo-track">
+        <span className="lp-promo-row a">7 días de Pro · Sin tarjeta</span>
+        <span className="lp-promo-row b">
+          <span className="lp-promo-pill">−67%</span> Pro a <b>59&nbsp;€/mes</b> hasta el 1 de septiembre
+        </span>
+      </span>
+    </div>
+  );
 }
 
 /** The "Recomendaciones" section's CTA — GENSCORE-HEADER-3: a logged-in visitor doesn't get offered a signup. */

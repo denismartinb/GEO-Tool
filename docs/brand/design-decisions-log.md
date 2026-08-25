@@ -14343,3 +14343,25 @@ de cada una sin dejar diff.
     `.lp-field` en móvil (el «cromado» se mueve del envoltorio al campo según
     la anchura; ver comentario en `app/globals.css`). Verificado con capturas
     reales en escritorio y móvil, enviadas al fundador antes de hacer commit.
+19. **La tira de promoción anuncia la rebaja de lanzamiento, con rotación
+    vertical.** Se propusieron 3 alternativas ya sobre la cabecera y colores
+    reales (texto simple, icono fijo, pill de descuento); el fundador eligió
+    la del pill: "Me quedo con V3, pero es hasta el 1 de septiembre" —
+    corrige la fecha de la propuesta original (1 de diciembre). `PromoStrip`
+    (`components/landing/session-ctas.tsx`) alterna «7 días de Pro · Sin
+    tarjeta» y «−67% · Pro a 59€/mes hasta el 1 de septiembre» con un solo
+    reloj CSS (`lp-promo-cycle`, `animation-delay` negativo en el mensaje B
+    para que nunca arranquen superpuestos — mismo mecanismo que
+    `.lp-hx-avance`, log §152). `prefers-reduced-motion` congela en el
+    primer mensaje y oculta el segundo entero, verificado con
+    `reducedMotion: "reduce"` en Playwright.
+
+    **Precio real, no decorativo — confirmado explícitamente antes de
+    implementar.** Anunciar «59€/mes» en la portada pública sin que el
+    checkout de Stripe cobre ese precio sería la clase de incidente que
+    CLAUDE.md prohíbe ("no fake product behavior"): quien viera la tira y
+    pagara, pagaría 179€. Se preguntó directamente antes de tocar código; el
+    fundador: "Estoy implementando estos precios en otra sesión. Puedes
+    publicar sin problema". La mecánica de precios de Stripe (BILLING-STRIPE-1
+    ampliado) se coordina en paralelo, fuera de este PR — este cambio es sólo
+    la tira de marketing, no toca `lib/billing/**` ni Stripe.
