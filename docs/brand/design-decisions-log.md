@@ -14471,3 +14471,18 @@ de cada una sin dejar diff.
       mensaje se sostiene sólido ~3s (más que "un par de segundos") y el
       resto del tiempo su opacidad y la de los otros dos suman como mucho
       ~0,96, nunca dos filas a la vez cerca de opacidad 1.
+24. **Hueco vacío entre el párrafo y el carrusel de «El cambio de reglas» en
+    móvil.** El fundador mandó una captura real de 375px con un círculo
+    rojo sobre la zona vacía: "Quita este espacio." Medido en el navegador,
+    no a ojo: `.lp-rules .lp-sec-head` lleva `margin-bottom: 64px` — bien en
+    escritorio, donde separa el párrafo directamente de las tarjetas — pero
+    en móvil antes de las tarjetas va `.lp-rules-navslot` (el hueco
+    reservado para los mandos del carrusel: 40px + 30px de margen propio),
+    así que los mismos 64px se sumaban a ese hueco y dejaban ~104px vacíos
+    antes de que aparecieran los puntitos. Se recorta a 20px sólo dentro de
+    `@media (max-width: 560px)`, junto a la regla del `navslot` que ya vivía
+    ahí — el valor de escritorio no se toca.
+
+    **Y un salto de línea antes de "O estás en esa frase, o no existes."**
+    — pedido en el mismo mensaje, va como `<br />` explícito entre las dos
+    frases del párrafo.

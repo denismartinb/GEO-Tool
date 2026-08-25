@@ -421,7 +421,8 @@ export function LandingPage() {
               <Link className="lp-sec-lnk" id="lp-abrir-tabla" href="/geo">
                 <strong>no recibe diez enlaces para elegir: recibe una respuesta</strong>
               </Link>
-              . <strong>O estás en esa frase, o no existes.</strong>
+              .<br />
+              <strong>O estás en esa frase, o no existes.</strong>
             </p>
           </div>
 

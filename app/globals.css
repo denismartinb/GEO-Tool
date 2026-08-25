@@ -6012,6 +6012,14 @@ a.notif-row:hover {
 }
 
 @media (max-width: 560px) {
+  /* En escritorio los 64px de `.lp-rules .lp-sec-head` separan el párrafo de
+     las tarjetas directamente (bien) — pero en móvil, antes de las tarjetas
+     va el `.lp-rules-navslot` reservado (40px + 30px de margen, ver más
+     abajo), así que los mismos 64px se sumaban a ese hueco y dejaban ~104px
+     de espacio vacío entre el párrafo y los puntitos del carrusel (fundador,
+     2026-08-25: "quita este espacio", círculo sobre esa zona en una captura
+     real de 375px). Se recorta sólo aquí, sin tocar el valor de escritorio. */
+  .lp-rules .lp-sec-head { margin-bottom: 20px; }
   /* Las dos tarjetas pasan a ser una pista que se desliza con el dedo, con
      `scroll-snap` para que pare centrada en cada una. Sin JS se desliza igual;
      lo único que falta son los mandos, y por eso los pinta la isla. El relleno
