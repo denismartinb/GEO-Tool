@@ -28,7 +28,7 @@ obedecerá igual.
   se lee (fundador, 2026-08-07; log §40). Ampliarlo exige volver a medir si el
   subtítulo del último paso automático da tiempo a leerse.
 - **EL TOUR YA NO ESTÁ EN LA LANDING** (HOME-2026-08 Fase A2, 2026-08-23, log
-  §156). Ese hueco lo ocupa ahora la demo de cinco escenas del hero, que es lo
+  §157). Ese hueco lo ocupa ahora la demo de cinco escenas del hero, que es lo
   que el artboard aprobado pone ahí; el tour en el hero fue una decisión
   nuestra de mientras tanto (log §1), no del diseño. **`variant="hero"` sigue
   existiendo en el componente** —se retiró el montaje, no la variante— y el
@@ -81,9 +81,18 @@ obedecerá igual.
   nacería relleno con el primero. Y sólo se guarda lo que el asistente
   aceptaría —`isWellFormedDomain`, la misma función que habilita su botón, no
   una copia— porque arrastrar basura es peor que no arrastrar nada (log §54).
-- **El «ya visto» va en `localStorage`, no en el esquema.** Una migración está
-  prohibida sin aprobación explícita del fundador (CLAUDE.md). El coste
-  asumido y declarado: el popup reaparece en un navegador nuevo.
+- **El «ya visto» vive en `profiles.onboarding_tour_seen_at`, no en
+  `localStorage`.** Migró ahí en ONBOARDING-TOUR-PERSIST-1 (2026-08-25, log
+  §153), founder-approved vía Task Intake, precisamente porque vivir en
+  `localStorage` (decisión original de ONBOARDING-TOUR-1) hacía que el popup
+  reapareciera en cualquier navegador nuevo — la queja que motivó el cambio.
+  Se lee en `app/dashboard/layout.tsx` con su propia consulta (mismo patrón
+  que los flags de debug: la migración se aplica a mano, nunca en el select
+  compartido de `getWorkspaceCounters`) y falla cerrado hacia «ya visto» —
+  un error de lectura NO muestra el popup, para no repetirlo en cada carga
+  mientras la migración no esté aplicada. Se escribe con la server action
+  `markTourSeen` (`app/dashboard/actions.ts`), llamada desde `TourProvider`
+  con `startTransition`, nunca con un `window.localStorage.setItem`.
 - **El popup no se abre en `/dashboard`.** Es una ruta puente: su página no
   pinta nada, sólo redirige al proyecto más reciente. Abrir ahí montaba el
   popup, escribía la marca de «visto» y la redirección se lo llevaba por
@@ -99,12 +108,20 @@ obedecerá igual.
   anchuras (log §40).
 - **El popup es un modal y tapa la consola entera, así que el piloto tiene que
   poder sortearlo.** `visitAsUser` lo cierra con su propia X y lo anota en
-  `dismissedWelcomeTour`; `auth.setup` **filtra la marca de «visto» del
-  `storageState` ya capturado**, porque si no el estado compartido diría «ya lo
-  vio» y el piloto no podría verlo nunca. Que sea un filtro sobre el objeto y no
-  un `removeItem` sobre la página no es estilo: `waitForURL` resuelve antes de
-  que React hidrate, así que el borrado se adelanta al efecto que escribe la
-  marca y el efecto la repone justo a tiempo de que la capture (2026-08-07, el
-  popup no salió en ninguna anchura). Si tocas cualquiera de las dos cosas,
-  `tests/pilot/journeys/onboarding-tour.spec.ts` es lo que impide que el tour
-  vuelva a quedarse sin mirar (log §40).
+  `dismissedWelcomeTour`.
+- **La marca de «ya visto» es por CUENTA, no por navegador — el piloto no
+  puede forzar «no visto» desde el set de lectura.** Hasta ONBOARDING-TOUR-
+  PERSIST-1 (2026-08-25, log §153) la marca vivía en `localStorage`, así que
+  `auth.setup` podía filtrarla del `storageState` ya capturado sin escribir
+  nada real, y cada test de Playwright partía "no visto" por tener un
+  contexto de navegador aislado. Ahora vive en `profiles`, una fila real
+  compartida por todas las pasadas de la misma cuenta piloto: forzarla a «no
+  visto» es una escritura de producto, y el piloto siempre-on es
+  estrictamente de lectura por convención de código (CLAUDE.md, "Pilot write
+  scope"). La escena de «sale solo en el primer acceso y no vuelve tras
+  recargar» vive en `tests/pilot/journeys/write/onboarding-tour-first-run.spec.ts`,
+  sólo bajo `--journeys write`, con su propio reset owner-scoped
+  (`POST /api/account/onboarding-tour/reset`). `tests/pilot/journeys/
+  onboarding-tour.spec.ts` (set por defecto, cada preview deploy) se queda
+  con lo único que es determinista sin escribir nada: reabrir el tour desde
+  «¿Qué es el GEO?» funciona pase lo que pase con la marca de origen.

@@ -13711,6 +13711,7 @@ que ya usan las otras 6 pantallas. Ningún cambio de CSS — el desajuste era
 de estructura JSX, no de la banda en sí (que ya sangraba bien tras §150).
 
 ---
+
 ## 152. Fase C de la promo de precio: cupones reales de Stripe, no un número cambiado en `plans-data.ts` (PRICING-PROMO-1, 2026-08-24)
 
 El Task Intake de Fase C (§149 dejó C y D bloqueadas) preguntó al fundador
@@ -13894,7 +13895,58 @@ como el resto de las pantallas.
 
 **Comprobado.** `pnpm test` (202/202, 2.827/2.827) y `pnpm run validate` en
 verde.
-## 153. Cinco pantallas del producto, y los pesos de la auditoría otra vez (HOME-2026-08 Fase B2, 2026-08-22)
+
+
+---
+
+## 153. La marca de «ya visto» del tour pasa de `localStorage` a `profiles` (ONBOARDING-TOUR-PERSIST-1, 2026-08-25)
+
+**Lo que reportó el fundador.** El tour «Aprende cómo funciona» le saltaba
+muchas veces en la consola. Causa: desde ONBOARDING-TOUR-1 la marca vivía a
+propósito en `localStorage` (para no tocar esquema sin aprobación), con el
+coste ya declarado entonces de que reaparecería en cualquier navegador nuevo
+o tras limpiar el almacenamiento. El fundador aprobó, vía Task Intake
+Report, convertirla en una columna real.
+
+**Arreglo.** Migración `0035_profile_onboarding_tour_seen.sql` añade
+`profiles.onboarding_tour_seen_at timestamptz`, misma forma que
+`notify_score_drop_alert`/`notify_weekly_digest` (0020): booleano/marca
+owner-editable, cubierta por la RLS `profiles_update_own` ya existente —
+sin cambio de RLS, sin service-role. `app/dashboard/layout.tsx` la lee con
+su propia consulta (mismo patrón que `auditFlagRow`/`samplingFlagRow` en la
+página de debug: la migración se aplica a mano, así que no puede ir en el
+select compartido de `getWorkspaceCounters`), con fallo cerrado hacia «ya
+visto» — si la consulta falla, el popup NO se muestra, para no repetirse en
+cada carga de cada cuenta mientras la migración no esté aplicada. La
+escritura es la nueva server action `markTourSeen` (`app/dashboard/
+actions.ts`), llamada desde `TourProvider` con `startTransition` en vez de
+`window.localStorage.setItem`. `lib/onboarding/tour-steps.ts` pierde
+`hasSeenTour`/`markTourSeen`/`TOUR_SEEN_STORAGE_KEY` — ya no tienen dueño.
+
+**Coste asumido y declarado.** Quien ya tuviera la marca antigua en
+`localStorage` verá el tour una vez más tras este despliegue: la columna
+nueva nace `NULL` para todas las cuentas existentes y no hay forma de leer
+la marca antigua desde el servidor. Es un coste de una sola vez, no
+recurrente — el motivo por el que se hacía este cambio.
+
+**Piloto.** La escena de «sale solo en el primer acceso y no vuelve tras
+recargar» necesitaba forzar «no visto» antes de cada pasada. Con la marca en
+`localStorage` eso era borrar un valor del navegador desechable de cada
+test; con la marca en `profiles` —una fila real, compartida por TODAS las
+pasadas de la misma cuenta piloto— forzarla es una escritura de producto, y
+el piloto siempre-on es estrictamente de lectura por convención de código
+(CLAUDE.md, "Pilot write scope"). Esa escena se movió a
+`tests/pilot/journeys/write/onboarding-tour-first-run.spec.ts`, sólo bajo
+`--journeys write`, con su propio reset owner-scoped
+(`POST /api/account/onboarding-tour/reset`, cuenta piloto sobre su propia
+fila — sin `service-role`, sin alcanzar ningún proyecto real). La pasada de
+lectura (`journeys/onboarding-tour.spec.ts`) se quedó con lo que sí es
+determinista sin escribir nada: reabrir el tour desde «¿Qué es el GEO?»
+funciona pase lo que pase con la marca de origen, así que verifica esa vía
+siempre, en el set por defecto de cada preview deploy.
+
+---
+## 154. Cinco pantallas del producto, y los pesos de la auditoría otra vez (HOME-2026-08 Fase B2, 2026-08-22)
 
 «Cinco pantallas. Todo tu posicionamiento.»: un marco de navegador con cinco
 maquetas del producto y una tira de pestañas. Con esto la portada queda completa
@@ -14005,7 +14057,7 @@ queda ningún control muerto.
 
 ---
 
-## 154. Una pastilla que se desplaza en lugar de dos flechas, y el recorte que un barrido de anchuras no veía (HOME-2026-08 Fase B2, segunda pasada, 2026-08-23)
+## 155. Una pastilla que se desplaza en lugar de dos flechas, y el recorte que un barrido de anchuras no veía (HOME-2026-08 Fase B2, segunda pasada, 2026-08-23)
 
 **Qué pedía el fundador.** Dos cosas, al ver las cinco pantallas del móvil:
 «si animamos una pastilla no hacen falta las flechas izquierda y derecha», y
@@ -14127,7 +14179,7 @@ igualdad de especificidad, gana la última: **no se aplicó nada**. El síntoma
 fue que el barrido siguió marcando 561px en rojo con el arreglo ya escrito.
 
 Es el mismo fallo de §143 (escala tipográfica), §144 (colores de la sección
-oscura), §146 (escala móvil de la FAQ) y el prefijado de §153. La regla ya
+oscura), §146 (escala móvil de la FAQ) y el prefijado de §154. La regla ya
 existe en `.claude/rules/styles.md` desde §146 —*un tramo responsive se
 escribe junto a lo que corrige*— y aun así se volvió a pisar, porque el
 instinto es agrupar lo que comparte anchura en vez de lo que comparte
@@ -14143,7 +14195,7 @@ exactamente uno visible — ningún control muerto.
 
 ---
 
-## 155. La solución se genera, la auditoría marca sus fallos, y la portada estrena su tira de blog y su tabla (HOME-2026-08 Fase B2/D, 2026-08-23)
+## 156. La solución se genera, la auditoría marca sus fallos, y la portada estrena su tira de blog y su tabla (HOME-2026-08 Fase B2/D, 2026-08-23)
 
 Cuatro peticiones del fundador sobre las cinco pantallas, y con las dos últimas
 la portada queda completa salvo la demo del hero.
@@ -14253,7 +14305,7 @@ A2), que sigue bloqueada por una decisión del fundador — meterla implica saca
 
 ---
 
-## 156. La demo del hero: cinco escenas, y el tour deja la portada (HOME-2026-08 Fase A2, 2026-08-23)
+## 157. La demo del hero: cinco escenas, y el tour deja la portada (HOME-2026-08 Fase A2, 2026-08-23)
 
 La última pieza que faltaba del artboard, y la primera que ve cualquiera que
 llega. Petición del fundador: *«ahí te tienes que lucir, es la primera zona de
@@ -14307,7 +14359,7 @@ Lo que arrastra, hecho en este mismo PR:
   «competitivo» desde 70, «emergente» desde 40 e **«inicial»** por debajo
   (`app/dashboard/projects/[projectId]/page.tsx`). Estrenar vocabulario en la
   primera pantalla de la portada que la consola nunca enseña es la misma clase
-  de error que los pesos de la auditoría en §153.
+  de error que los pesos de la auditoría en §154.
 - Los rótulos que se repiten más abajo —14 prompts, 3 motores, «Te mencionan»,
   «Te citan»— se dicen **igual** aquí que allí. La portada no puede
   contradecirse a sí misma al hacer scroll.
@@ -14343,7 +14395,7 @@ es el vocabulario.
 
 ### Tres recortes silenciosos, y una comprobación que ahora los ve
 
-El barrido que traía de §154 medía el desbordamiento de cada elemento contra
+El barrido que traía de §155 medía el desbordamiento de cada elemento contra
 la caja de su panel. No bastaba: **un elemento puede caber en el panel y estar
 recortado por un `overflow: hidden` intermedio**. La comprobación pasa a medir
 también `scrollHeight > clientHeight` en todo lo que esconde su contenido, y
@@ -14359,7 +14411,7 @@ con eso salieron tres cosas que ninguna captura habría delatado:
 3. Y ese `white-space` **no se aplicaba**: el elemento lleva `.lp-sheet-code` y
    `.lp-hx-code`, misma especificidad, y `.lp-sheet-code` vive más abajo en el
    fichero. **Sexta vez que el orden decide en vez de la intención** (§143,
-   §144, §146, §153, §154). Aquí no valía «escríbelo al lado», porque lo que
+   §144, §146, §154, §155). Aquí no valía «escríbelo al lado», porque lo que
    corrige es de otra sección: se cualifica por el contenedor,
    `.lp-hx-artefacto .lp-hx-code` (0,2,0), y el orden deja de importar.
 
@@ -14390,7 +14442,7 @@ bajo 640, que es lo que mide la escena más larga.
 
 ---
 
-## 157. El marco de la demo deja de estar medido para su peor escena, y una barra anuncia el cambio (HOME-2026-08 Fase A2, segunda pasada, 2026-08-23)
+## 158. El marco de la demo deja de estar medido para su peor escena, y una barra anuncia el cambio (HOME-2026-08 Fase A2, segunda pasada, 2026-08-23)
 
 **Qué pasó.** El fundador mandó una captura del hero en móvil con un rectángulo
 rojo alrededor de todo el blanco que quedaba bajo la respuesta de ChatGPT:
@@ -14403,7 +14455,7 @@ al hacer scroll, si no no parece una animación»*.
 
 **Por qué había blanco.** El cuerpo de la demo tiene alto fijo —las cinco
 escenas se apilan en el mismo hueco y un alto por escena daría un salto de más
-de 100px en cada cambio (§156)—, así que lo manda la escena más alta. Medido a
+de 100px en cada cambio (§157)—, así que lo manda la escena más alta. Medido a
 375px: escenas 0/1/2 entre 334 y 373, escena 3 en 485 y escena 4 en **509**. El
 cuerpo estaba en 508 por la escena 4 y las tres primeras arrastraban entre 135
 y 220px de vacío. El diagnóstico del fundador era exacto: el problema no estaba
@@ -14420,7 +14472,7 @@ lo que sobra queda abajo, que es lo que se pidió.
 
 Barrido de 320 a 1280px, cinco escenas cada uno, midiendo el fondo real del
 contenido contra la caja **y** `scrollHeight > clientHeight` en todo lo que
-esconde desbordamiento (§154). Encontró tres cosas que ningún ojo iba a ver:
+esconde desbordamiento (§155). Encontró tres cosas que ningún ojo iba a ver:
 la tarjeta del código recortada dentro de su hueco entre 320 y 340px, los dos
 botones de «Generar solución» partidos en dos líneas dentro de una pastilla de
 31px a 375px, y el fondo de «Maisons du Monde» estirándose hasta el borde de la
@@ -14613,10 +14665,10 @@ marca a la vez, una con nombres reales y otra con nombres de attrezzo.
    «Competidores» → «Y quién tiene mejor posicionamiento que tú.», «El
    resultado» → «Para que en próxima respuesta la IA te mencione.» — mismo
    texto en las dos secciones de la portada, mismo criterio que ya obligaba a
-   que «14 prompts · 3 motores» se diga igual arriba y abajo (log §153: «la
+   que «14 prompts · 3 motores» se diga igual arriba y abajo (log §154: «la
    portada no puede contradecirse a sí misma al hacer scroll»).
 
-## 158. La pastilla de «Cinco pantallas» deja de pelearse con su propio scroll, y la barra de la demo del hero pasa a ser cinco pastillas (HOME-2026-08, 2026-08-24)
+## 159. La pastilla de «Cinco pantallas» deja de pelearse con su propio scroll, y la barra de la demo del hero pasa a ser cinco pastillas (HOME-2026-08, 2026-08-24)
 
 **Qué pasó.** El fundador, sobre el preview: *«la animación de las pestañas de
 las 5 pantallas no funciona bien»*.
@@ -14638,7 +14690,7 @@ declaraba para el gesto táctil, así que seguía animándose igual. Sólo
 tira salta a su sitio en el mismo tick del clic y la pastilla queda como la
 única animación visible.
 
-**Límite honesto, como ya pasó con el gráfico de evolución (§157).** Chromium
+**Límite honesto, como ya pasó con el gráfico de evolución (§158).** Chromium
 headless colapsa el scroll `"smooth"` a un solo fotograma, así que el
 parpadeo exacto no se pudo reproducir aquí — mismo límite ya registrado en
 `.claude/rules/styles.md` para bugs de scroll en este repo. El arreglo sale
@@ -14656,7 +14708,7 @@ anima mientras el reloj corre de verdad (`corriendo`), y si se paró —tocaste
 el raíl, la demo salió de pantalla, o es la última escena— se queda llena y
 quieta en vez de a medias, porque a medias leería como una barra rota, no como
 el final de la historia. Esto **cambia** el invariante «una barra de avance es
-un reloj o no es nada» de `.claude/rules/styles.md` (§157): antes la barra
+un reloj o no es nada» de `.claude/rules/styles.md` (§158): antes la barra
 entera desaparecía si `corriendo` era falso; ahora sólo la animación de la
 pastilla en curso depende de `corriendo` — el estado ya visto es hecho, no
 progreso inventado, y no tiene por qué desaparecer con el reloj. Regla
@@ -14689,7 +14741,7 @@ de cada una sin dejar diff.
 **Cuatro ajustes más, mismo PR, mismo día.**
 
 3. **La pastilla de «Cinco pantallas» seguía rara al pulsar — un bug distinto
-   del que ya se había arreglado.** El anterior era el scroll (§158, arriba);
+   del que ya se había arreglado.** El anterior era el scroll (§159, arriba);
    éste era de color: el fundador seguía viendo «primero se pone negro luego
    blanco, un poco raro» al pulsar una pestaña. Medido con Playwright
    fotograma a fotograma (`getComputedStyle` sobre las cinco pestañas y la
@@ -14697,7 +14749,7 @@ de cada una sin dejar diff.
    estado intermedio — fondo blanco durante ~300-400ms — antes de asentarse en
    el fondo oscuro correcto. Causa: `.lp-prod-tab:hover { background: #fff }`
    sin acotar. La transición retardada de `.on` (el truco de los «retardos
-   asimétricos», §153) parte del valor YA PINTADO en el fotograma anterior
+   asimétricos», §154) parte del valor YA PINTADO en el fotograma anterior
    como punto de partida — y ese valor, en el instante de cualquier clic real,
    es el de `:hover`, porque el ratón siempre está encima de lo que acabas de
    pulsar. El resultado: en vez de ir de transparente a oscuro, iba de blanco
@@ -14771,7 +14823,7 @@ de cada una sin dejar diff.
 12. **«Recomendaciones» también sale de la cabecera** (fundador: "Recomendaciones
     ya no apunta a nada en el header. Lo quitamos de momento"). Su ancla,
     `#recomendaciones`, era la sección SPOTLIGHT — retirada de la portada en
-    HOME-2026-08 (log §157) — así que llevaba desde entonces a ningún sitio.
+    HOME-2026-08 (log §158) — así que llevaba desde entonces a ningún sitio.
     Fuera de `PUBLIC_NAV_ITEMS`, "de momento": si una sección futura gana un
     ancla equivalente, el enlace puede volver.
 13. **La escena 0 de la demo del hero, «La respuesta», se rediseña entera.**
@@ -14847,7 +14899,7 @@ de cada una sin dejar diff.
     `font-size`, así que peso/tracking/interlineado heredan de la regla base
     sin más cambios).
 16. **El campo del hero vuelve a llevar al registro, no al comprobador
-    gratuito.** HOME-2026-08 Fase A (log §156) había cambiado el destino a
+    gratuito.** HOME-2026-08 Fase A (log §157) había cambiado el destino a
     `/gratis/aparece-mi-marca-en-chatgpt` — "compruébalo ahora mismo, sin
     cuenta". El fundador pide revertirlo: "quiero que al introducir el
     dominio vaya a la pantalla de registro, como antes. Como hace Semrush" —
@@ -14894,7 +14946,7 @@ de cada una sin dejar diff.
     tarjeta» y «−67% · Pro a 59€/mes hasta el 1 de septiembre» con un solo
     reloj CSS (`lp-promo-cycle`, `animation-delay` negativo en el mensaje B
     para que nunca arranquen superpuestos — mismo mecanismo que
-    `.lp-hx-avance`, log §158). `prefers-reduced-motion` congela en el
+    `.lp-hx-avance`, log §159). `prefers-reduced-motion` congela en el
     primer mensaje y oculta el segundo entero, verificado con
     `reducedMotion: "reduce"` en Playwright.
 
@@ -15144,3 +15196,15 @@ de cada una sin dejar diff.
     correcta hacia "no hay promo", no un fallo. `pnpm test` (203 ficheros,
     2832 pruebas, incluye `tests/log-numbering.test.ts`) y
     `pnpm run validate` en verde tras el merge.
+
+    **Pasó una segunda vez, un escalón más tarde, mientras se resolvía la
+    primera.** Entre fusionar `main` y empujar el resultado, `main` avanzó
+    otra vez (PR #473, ONBOARDING-TOUR-PERSIST-1) y reclamó §153 — el mismo
+    número al que esta rama acababa de renumerar su primera colisión. Misma
+    corrección, un paso más: los §153-158 de esta rama pasan a §154-159, y
+    la fila "Onboarding (tour)" del mapa de zonas de CLAUDE.md pasa a listar
+    **las dos** fases cerradas (ONBOARDING-TOUR-PERSIST-1 en negrita, por
+    ser la más reciente, y "el tour deja la portada" detrás) en vez de que
+    una sustituya a la otra. Ilustra la propia advertencia de la regla de
+    "Cierre de fase": mientras una rama fusiona `main` para resolver una
+    colisión, `main` puede volver a moverse por debajo.

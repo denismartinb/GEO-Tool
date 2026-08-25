@@ -88,7 +88,7 @@ function SessionSkeleton() {
  *
  * **"Recomendaciones" también sale** (fundador, 2026-08-24: "ya no apunta a
  * nada"). El ancla `#recomendaciones` era la sección SPOTLIGHT, retirada de
- * la portada en HOME-2026-08 (log §158) — el enlace llevaba desde entonces a
+ * la portada en HOME-2026-08 (log §159) — el enlace llevaba desde entonces a
  * ningún sitio. Quitado "de momento": si «Cinco pantallas» u otra sección
  * gana un ancla equivalente, el enlace puede volver apuntando ahí.
  */

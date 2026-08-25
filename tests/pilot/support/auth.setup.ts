@@ -1,6 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, type Page, test as setup } from "@playwright/test";
-import { TOUR_SEEN_STORAGE_KEY } from "../../../lib/onboarding/tour-steps";
 import { readPilotEnv, redact } from "./env";
 
 const AUTH_STATE_PATH = ".pilot/auth.json";
@@ -82,26 +81,15 @@ setup("authenticate as the pilot user", async ({ page }) => {
     );
   }
 
-  // `storageState()` persiste también el `localStorage`, y el login aterriza en
-  // /dashboard, donde el tour de bienvenida salta y se marca como visto. Sin
-  // quitar esa marca, el estado compartido llegaría a TODAS las pasadas
-  // diciendo «este navegador ya lo vio» y el popup no volvería a salir jamás
-  // — es decir, el piloto no podría verlo nunca, que es justo la trampa que el
-  // CLAUDE.md documenta del 2026-08-02: dar por verificado lo que no se miró.
-  //
-  // Se filtra del estado ya capturado, NO con un `removeItem` sobre la página.
-  // Borrarlo en la página es una carrera que se pierde: `waitForURL` resuelve
-  // al navegar, antes de que React hidrate, así que el borrado se adelanta al
-  // efecto que escribe la marca y el efecto la vuelve a poner justo a tiempo de
-  // que `storageState()` la capture. Pasó exactamente eso (2026-08-07): el
-  // popup no salió en ninguna de las tres anchuras y la consola se veía
-  // impecable detrás. Filtrar el objeto no depende de ningún instante.
+  // La marca de «ya visto» del tour de bienvenida vive en `profiles`
+  // (ONBOARDING-TOUR-PERSIST-1) y no en `localStorage`, así que ya no es
+  // parte de este `storageState` y no hay nada que filtrar aquí. Es una
+  // marca por CUENTA, no por navegador/contexto: `onboarding-tour.spec.ts` es
+  // quien necesita verla "no vista" y es quien la resetea, justo antes de
+  // comprobarlo, vía `POST /api/account/onboarding-tour/reset` — resetear
+  // aquí, una vez, no bastaría, porque cualquier otra pasada que visite
+  // /dashboard antes consumiría la marca real del producto primero.
   const state = await page.context().storageState();
-  for (const origin of state.origins ?? []) {
-    origin.localStorage = (origin.localStorage ?? []).filter(
-      (entry) => entry.name !== TOUR_SEEN_STORAGE_KEY
-    );
-  }
   mkdirSync(".pilot", { recursive: true });
   writeFileSync(AUTH_STATE_PATH, JSON.stringify(state, null, 2));
 });

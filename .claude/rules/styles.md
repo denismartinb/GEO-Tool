@@ -187,8 +187,8 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   §146). Es la QUINTA vez que el orden de este fichero decide en vez de la
   intención: la escala tipográfica (§143), los colores de la superficie oscura
   (§144), la escala móvil de la FAQ (§146), el prefijado de «Cinco pantallas»
-  (§153) y la franja 561-720 de esas mismas pantallas (§154).
-  **Agrupar por `@media` es exactamente el error.** En §154 los tres arreglos
+  (§154) y la franja 561-720 de esas mismas pantallas (§155).
+  **Agrupar por `@media` es exactamente el error.** En §155 los tres arreglos
   de una franja se escribieron juntos en un solo bloque, nacido al lado del
   primero de ellos; los otros dos quedaron por delante de sus reglas base y no
   se aplicó ninguno. El instinto es agrupar lo que comparte anchura — y lo que
@@ -199,34 +199,34 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   metido dentro de un contenedor con `display: none` a esa anchura, el diálogo
   devuelve `open === true`, se cierra con `Esc` —es modal de verdad— y mide
   **0×0**. Ningún estado dice «roto»; sólo el `getBoundingClientRect()` (log
-  §155, el modal de «El cambio de reglas» dentro de `.lp-rules-navslot`).
+  §156, el modal de «El cambio de reglas» dentro de `.lp-rules-navslot`).
 - **Un estado inicial oculto cuelga de una clase que pone la isla, nunca del
   CSS a secas** — y si el control que lo revela también lo pinta la isla, con
   más razón: sin JS quedarían la mitad de la pantalla escondida y ninguna forma
-  de pedirla (log §144 y §155).
+  de pedirla (log §144 y §156).
 - **Un elemento recortado no desborda la página, y por eso es peor.** Un
   barrido de anchuras que sólo mira `document.scrollWidth` da por bueno lo que
   un contenedor con `overflow: hidden` está cortando por dentro: el marco de
   «Cinco pantallas» recortó una tarjeta, un ranking y una cápsula entre 561 y
-  720px con once anchuras «sin desbordamiento» (log §154). Se mide **cada
+  720px con once anchuras «sin desbordamiento» (log §155). Se mide **cada
   elemento contra la caja de su contenedor**, no el documento. Y eso TAMPOCO
   basta: un elemento puede caber en el panel y estar cortado por un
   `overflow: hidden` intermedio, así que se mide además
   `scrollHeight > clientHeight` en todo lo que esconde su contenido — es lo que
-  destapó el `</script>` cortado de la demo del hero (log §156). Excepción
+  destapó el `</script>` cortado de la demo del hero (log §157). Excepción
   legítima y única: un `<img>` con `object-fit: cover` dentro de
   `overflow: hidden` recorta **por diseño**; eso es el encuadre, no un fallo.
 - **Un bloque de código dentro de una maqueta va en `white-space: pre` con
   scroll horizontal.** Envolviendo, cambia de número de líneas según la
   ventana, y entonces el hueco que lo contiene hay que dimensionarlo para el
   peor caso en TODAS las anchuras — o se corta en la estrecha. Uno que se
-  desplaza mide siempre lo mismo (log §156).
+  desplaza mide siempre lo mismo (log §157).
 - **`--ink-3` sólo aprueba AA sobre BLANCO PURO. Sobre `--canvas` no.** La
   cifra, para no volver a deducirla: 4,76:1 sobre `#ffffff` y **4,44:1** sobre
   `#f6f7f9` — seis centésimas por debajo del mínimo. Ha caído tres veces en la
   misma zona en un día: la nota del cierre sobre el degradado del hero, esa
   misma nota otra vez al pensar que bastaba con subir un escalón, y las
-  pestañas de «Cinco pantallas» (log §146, §153). Sobre cualquier superficie
+  pestañas de «Cinco pantallas» (log §146, §154). Sobre cualquier superficie
   que no sea blanca —`--canvas`, un degradado tintado, una tarjeta gris— el
   texto secundario va en `--ink-2` (7,50:1). Y el fondo se mide **pintado**: un
   elemento con `background` en atajo tiene `background-color` transparente, así
@@ -236,7 +236,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   ALTA, así que el blanco de las cortas se arregla en las largas.** Es
   contraintuitivo y por eso está escrito: la demo del hero enseñaba 220px de
   vacío bajo la escena 0 y la escena 0 no tenía nada que corregir — el cuerpo
-  estaba en 508 porque la escena 4 medía 509 (log §157). Antes de tocar la
+  estaba en 508 porque la escena 4 medía 509 (log §158). Antes de tocar la
   pantalla que enseña el problema, medir las cinco y arreglar la que manda. Y
   **«móvil» no significa «apilar»**: la escena 4 pasó de 215 a 115px volviendo
   a dos columnas, que además es como se ve en escritorio.
@@ -250,8 +250,8 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   completado quedándose lleno y quieto — eso es estado real (una escena que ya
   se vio), no una animación fingiendo seguir en marcha, así que no tiene por
   qué desaparecer con el reloj (`components/landing/hero-demo.tsx`,
-  `.lp-hx-avance`, log §158 — corrige la primera versión de esta regla, log
-  §157, escrita para una barra continua de un solo tramo). Una barra sigue
+  `.lp-hx-avance`, log §159 — corrige la primera versión de esta regla, log
+  §158, escrita para una barra continua de un solo tramo). Una barra sigue
   siendo progreso inventado si ANIMA sin que vaya a pasar nada; no lo es por
   seguir mostrando, ya quieta, algo que de verdad pasó
   (CLAUDE.md, "no fake progress").
@@ -266,7 +266,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   tira de `.lp-prod-tabs` en móvil, para el gesto táctil—, `"auto"` sigue
   animándose igual. Sólo `behavior: "instant"` lo bloquea de verdad. Medido con
   Playwright en `ProductTabs`: la pastilla llegó a **−309px** en un viewport de
-  375px, fuera de pantalla, antes de asentarse (log §158). Chromium headless
+  375px, fuera de pantalla, antes de asentarse (log §159). Chromium headless
   colapsa `"smooth"` a un solo fotograma y no lo reproduce — mismo límite que
   ya consta más abajo para bugs de scroll en este repo; el diagnóstico se
   valida por el mecanismo, no por ver el parpadeo en el arnés.
@@ -275,7 +275,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   aunque el JSX no tenga espacio en el marcado.** `.lp-promo-row` (`gap:
   7px`) mezclaba texto suelto y `<s>`/`<b>` como hijos directos, y el hueco
   apareció entre `</b>` y la coma que la seguía inmediatamente en el código
-  — nada en el JSX lo explicaba (log §158, item 23). Un contenedor `flex`
+  — nada en el JSX lo explicaba (log §159, item 23). Un contenedor `flex`
   con `gap` que necesita fluir como una frase (con puntuación pegada, sin
   huecos entre palabras) envuelve esa frase en un único hijo; el `gap` sólo
   debe separar bloques de verdad distintos —aquí, el badge de la frase—, no
@@ -287,7 +287,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   keyframes simétricos) a 3 mensajes cambiando sólo el retardo (a un
   tercio) sin recalcular dónde caen los keyframes de salida deja una fila
   arrancando A MITAD de su propia transición de salida — parcialmente
-  visible y solapada con la que sí está en su fotograma inicial (log §158,
+  visible y solapada con la que sí está en su fotograma inicial (log §159,
   item 23: "que tarde un par de segundos en rotar el primer mensaje, sino
   queda raro, se tapan" — se tapaban). La transición de salida de cada fila
   tiene que completarse ANTES del punto de retardo de la siguiente fila, con
