@@ -6,8 +6,14 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
-import { PLANS } from "@/app/pricing/plans-data";
-import { getStripeClient, getPriceIdForPlan, isSelfServePlan, type SelfServePlanId } from "@/lib/stripe";
+import { PLANS, isPromoActive } from "@/app/pricing/plans-data";
+import {
+  getStripeClient,
+  getPriceIdForPlan,
+  getPromoCouponIdForPlan,
+  isSelfServePlan,
+  type SelfServePlanId
+} from "@/lib/stripe";
 
 const planIdSchema = z.enum(PLANS.map((plan) => plan.id) as [string, ...string[]]);
 const archiveIdsSchema = z.array(z.string().uuid()).max(50);
@@ -194,12 +200,21 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
   const siteUrl = await getRequestSiteUrl();
   const existingCustomerId = profileRow?.stripe_customer_id as string | null | undefined;
 
+  // PRICING-PROMO-1: only applied when the promo window is open AND Stripe
+  // actually has a coupon configured for this plan — never just because the
+  // date allows it. This is the one place that determines what a customer is
+  // really charged; app/pricing (display) and lib/stripe.ts's
+  // getActivePromoPlanIds share the exact same two conditions so the shown
+  // price and the charged price can't drift apart.
+  const promoCouponId = isPromoActive() ? getPromoCouponIdForPlan(planId) : null;
+
   // Arrow function expressions (not hoisted `function` declarations) so
   // TypeScript retains the `priceId` non-null narrowing from the early
   // return above — a hoisted declaration is conservative about closures.
   const buildSessionParams = (customerId: string | null | undefined): Stripe.Checkout.SessionCreateParams => ({
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
+    ...(promoCouponId ? { discounts: [{ coupon: promoCouponId }] } : {}),
     client_reference_id: user.id,
     customer: customerId ?? undefined,
     customer_email: customerId ? undefined : (user.email ?? undefined),

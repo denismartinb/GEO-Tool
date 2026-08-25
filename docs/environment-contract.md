@@ -415,6 +415,8 @@ ha apoyado históricamente en el índice de Bing, así que este paso no es solo
 | `STRIPE_WEBHOOK_SECRET` | No | Vercel | Signing secret for the `/api/webhooks/stripe` endpoint, from the Stripe Dashboard webhook config (`whsec_...`) |
 | `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price |
 | `STRIPE_PRICE_ID_PRO` | No | Vercel | Stripe Price id for the Pro plan's recurring price |
+| `STRIPE_COUPON_ID_STARTER_PROMO` | No | Vercel | PRICING-PROMO-1: Stripe Coupon id (`amount_off`, `duration: repeating`, `duration_in_months: 6`, `redeem_by` = 2026-09-01T00:00:00+02:00) applied to Starter checkout while `isPromoActive()` (`app/pricing/plans-data.ts`) is true |
+| `STRIPE_COUPON_ID_PRO_PROMO` | No | Vercel | Same as above, for Pro |
 
 All four are optional by design: `lib/stripe.ts`'s `getStripeClient()` returns
 `null` when `STRIPE_SECRET_KEY` is unset, and every caller (`createCheckoutSession`,
@@ -422,6 +424,15 @@ All four are optional by design: `lib/stripe.ts`'s `getStripeClient()` returns
 no disponible todavía" error instead of crashing — same inert-until-configured
 pattern as Sentry/PostHog. Agency has no self-serve price (still "hablar con
 ventas" per PRICING-TRUTH-1), so there's no `STRIPE_PRICE_ID_AGENCY`.
+
+The two promo coupon ids are optional in the same spirit, but asymmetric on
+purpose: `lib/stripe.ts`'s `getActivePromoPlanIds()` shows a promo price
+**only** when both the date and the coupon are set, so a missing coupon just
+means the promo silently doesn't run — never a page promising a discount
+Stripe won't honor. `pnpm run check:env` still warns (not errors) if the promo
+window is open, Stripe itself is otherwise fully configured, and a coupon id
+is missing — that combination is almost certainly a forgotten step, not an
+intentional no-discount promo.
 
 **Go-live checklist** (building/testing against Stripe test mode doesn't need
 any of this; only switching to real charges does — docs/launch-plan.md Fase 4):
