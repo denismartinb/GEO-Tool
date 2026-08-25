@@ -13896,7 +13896,6 @@ como el resto de las pantallas.
 **Comprobado.** `pnpm test` (202/202, 2.827/2.827) y `pnpm run validate` en
 verde.
 
-
 ---
 
 ## 153. La marca de «ya visto» del tour pasa de `localStorage` a `profiles` (ONBOARDING-TOUR-PERSIST-1, 2026-08-25)
@@ -15479,3 +15478,53 @@ selecciona el inspector en el hueco) que confirme DÓNDE está el desajuste
 antes de decidir CÓMO corregirlo.
 
 ---
+
+## 161. Switch para silenciar el aviso "Tu análisis de hoy no se repetirá" (DEBUG-HIDE-NO-TRACKING-1, 2026-08-25)
+
+**Lo que pidió el fundador.** Un switch en `/debug` para desactivar la banda
+de `no_tracking` del data-maturity banner (`components/data-maturity-banner.tsx`)
+— el aviso que invita a activar el seguimiento diario y que aparece en toda la
+consola mientras `recurring_scans_enabled` esté apagado en un proyecto con
+historial parcial (`computeDataMaturity`, `lib/project-workspace.ts`).
+
+**Por qué no es otro switch de proyecto en `projects`.** Los switches ya
+existentes de `/debug` (`recurring_scans_enabled`, `sampling_enabled`, los
+tres `engine_*_enabled`) deciden **trabajo real** — qué gasta IA en el
+próximo escaneo — y viven en el esquema porque ese estado tiene que
+sobrevivir entre sesiones y dispositivos y ser la fuente de verdad que lee el
+propio pipeline. Este switch no decide nada del producto: sólo si el
+navegador actual muestra o no un aviso ya calculado en el servidor. Añadir
+una columna y una migración para eso habría sido el mismo error que
+`.claude/rules/onboarding.md` ya evita para el "ya visto" del tour —
+"una migración está prohibida sin aprobación explícita del fundador"—, así
+que sigue el mismo patrón: `localStorage`, con el coste asumido de que la
+preferencia no viaja entre navegadores.
+
+**Mecanismo.** `noTrackingHiddenKey(projectId)` (exportada desde
+`data-maturity-banner.tsx`) construye la clave `dmb-hide-no-tracking:<id>`;
+el switch nuevo, `NoTrackingBannerToggle` (`app/dashboard/projects/[projectId]/
+debug/no-tracking-banner-toggle.tsx`), la lee/escribe. `DataMaturityBanner`
+comprueba esa misma clave junto al `dismissed` que ya tenía, y devuelve
+`null` para el estado `no_tracking` cuando está activada — no toca los
+estados `free` ni `accumulating`, que siguen su propio dismiss por sesión.
+
+**Por qué el componente no vive en `components/`.** Reutiliza las clases
+`dbg-switch`/`dbg-switch-ico`/`dbg-switch-txt` de `app/console.css`, y
+`tests/console-css-scope.test.ts` prohíbe que esas clases aparezcan en
+cualquier fichero fuera de `app/dashboard/**` — la primera versión sí vivía
+en `components/` y el test lo cazó en la primera pasada. Se movió junto a
+`page.tsx`, mismo patrón que `delete-domain-button.tsx` en la misma carpeta.
+
+**Nota de renumeración.** Esta sección nació como §153 en su propia rama;
+`main` avanzó mientras tanto (PR de ONBOARDING-TOUR-PERSIST-1) y reclamó
+§153-159, así que pasó a §160 en una primera fusión. Mientras esa colisión se
+resolvía, `main` volvió a avanzar (PR #472, SCAN-FULLSCREEN-HEADER-1) y
+reclamó también el §160 — así que esta sección pasa a **§161** en esta
+segunda fusión. Mismo protocolo que ya describe la sección "Cierre de fase"
+de `CLAUDE.md`, y el mismo patrón de colisión en cadena que ya documenta el
+§159 de este mismo fichero: mientras una rama fusiona `main` para resolver
+una colisión, `main` puede volver a moverse por debajo.
+
+**Comprobado.** `pnpm test` (202/202, 2.827/2.827), `pnpm run build`,
+`pnpm run typecheck`, `pnpm run lint` y `bash scripts/agentic-handoff-check.sh`
+en verde.
