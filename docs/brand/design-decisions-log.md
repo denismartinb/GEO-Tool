@@ -15913,7 +15913,50 @@ los usa. `pnpm test` (2827) y `pnpm run validate` en verde.
 
 ---
 
-## 164. Cabecera pública: cookie de Supabase como segundo hint de pre-hidratación, y `Server-Timing` en `/api/me` (SESSION-HINT-COOKIE-1, 2026-08-25)
+## 164. Dos enlaces de navegación redundantes retirados: "Volver a competidores" en el onboarding y el pie de Auditoría web (2026-08-25)
+
+**Lo que pidió el fundador**, con capturas de las dos pantallas: quitar el
+enlace "Volver a competidores" del paso de prompts del asistente de alta de
+dominio, y quitar los enlaces "Dominios"/"Recomendaciones" del pie de
+Auditoría web.
+
+**Por qué eran redundantes, no navegación perdida.** En los dos casos ya
+existía una forma real de volver:
+
+- El paso de prompts (`components/onboarding-wizard.tsx`,
+  `PromptsStepBody`) ya renderiza su propio botón "Atrás" en el pie del
+  formulario, cableado al mismo `goBack={() => setStep(1)}` que usaba el
+  enlace retirado — mismo destino, un solo control en vez de dos.
+- El pie de "Footer links" de Auditoría web
+  (`app/dashboard/projects/[projectId]/web-audit/page.tsx`) vivía fuera de
+  la cadena de estados de la pantalla (mission takeover / sin escaneo / sin
+  auditoría / con datos) y se pintaba en los cuatro por igual — no era
+  específico del estado vacío que enseñaba la captura. Con los dos únicos
+  enlaces que contenía retirados, el bloque entero (contenedor + separador)
+  se retira también: dejarlo habría sido un `<div>` con `borderTop` y sin
+  contenido.
+
+**Sin tocar `.onb2-back`.** La clase CSS sigue en uso en el paso de
+Competidores (mismo componente, enlace "Volver a dominio") — sólo se retiró
+el `<button>` del paso de Prompts, no la regla compartida.
+
+Cambio puramente de presentación: ningún estado, acción de servidor ni
+lógica de navegación programática se tocó — sólo marcado muerto.
+
+**Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
+(build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 165. Cabecera pública: cookie de Supabase como segundo hint de pre-hidratación, y `Server-Timing` en `/api/me` (SESSION-HINT-COOKIE-1, 2026-08-25)
+
+**Nota de renumeración.** Esta sección nació como §164 en su propia rama;
+mientras el PR estaba abierto, `main` avanzó y reclamó ese mismo número con
+el PR de los dos enlaces redundantes (arriba). Pasa a **§165**, el primero
+libre al fusionar — mismo protocolo que ya describe la sección "Cierre de
+fase" de `CLAUDE.md`, y el mismo patrón de colisión que ya documentan varias
+secciones anteriores de este fichero.
 
 **Origen.** El fundador reportó "muchísimo flickering" en la home y el resto
 de páginas públicas hasta que aparece la cabecera con el usuario logado. Task
