@@ -16037,3 +16037,43 @@ colores propios, no en un modificador de sección. Arreglado dando a
 visible (los hijos ya pintaban así), cierra el hueco que el auditor sí ve.
 `pnpm test` (204/204, 2.835/2.835) y `pnpm run validate` en verde tras el
 arreglo.
+
+**Segundo addendum, mismo día — Fase 2 del propio Task Intake, pedida por el
+fundador tras revisar el preview: rastro de miga visible en artículos y
+comparativas.** Hasta ahora sólo existía el `BreadcrumbList` invisible de
+schema.org (`<BreadcrumbSchema>`); la cabecera de un artículo no enseñaba de
+qué clúster venía. Ejemplo del fundador: "blog -> Fundamentos GEO".
+
+- `lib/blog/posts.ts`: `blogPostBreadcrumb(post)` (Blog → su clúster, se
+  detiene ahí a propósito — el título ya es el `<h1>` justo debajo, repetirlo
+  en el rastro diría lo mismo dos veces) y `blogPostBreadcrumbSchema(post)`
+  (la misma cadena, con "Inicio" delante y el propio artículo detrás, para el
+  `<BreadcrumbSchema>` existente). El JSON-LD de los 17 artículos pasa de
+  Inicio→Blog→título a Inicio→Blog→Clúster→título — se saltaba el clúster
+  antes también en la estructura invisible, no sólo en la visible.
+- `lib/comparativas/index.ts`: `COMPARATIVAS_BREADCRUMB` (un único cruce,
+  "Comparativas" → `/comparativas`), compartida por las 5 páginas de
+  comparativa — su JSON-LD ya incluía ese nivel, no hacía falta tocarlo.
+- `components/blog/blog-page-shell.tsx`: prop opcional `breadcrumb` — **opt-in
+  a propósito**, porque este shell también lo usan `/docs`, `/glosario`, el
+  comprobador gratuito y `/que-es-genscore`, y ninguna de esas pidió esto. Sin
+  la prop, cero cambio de render.
+- `app/globals.css`: `.breadcrumb-trail` (13px, `--ink-3` — aprueba AA porque
+  `.lp` pinta blanco puro, no `--canvas`; ver `.claude/rules/styles.md`). El
+  rastro pasa a ser el primer hijo real de `.lp-inner` en todo artículo, así
+  que `.blog-cover-compact` deja de ser `:first-child` — el tirón de -36px que
+  compensaba el padding de `.lp-section` se trasladó a
+  `.breadcrumb-trail:first-child`; la regla original se deja (inofensiva, no
+  muerta) por si algún día hay una portada sin rastro delante.
+- 17 `page.mdx` de artículo + 5 `page.tsx` de comparativa: cada uno pasa
+  `breadcrumb={blogPostBreadcrumb(post)}` / `breadcrumb={COMPARATIVAS_BREADCRUMB}`
+  al `<BlogPageShell>` y `items={blogPostBreadcrumbSchema(post)}` al
+  `<BreadcrumbSchema>` existente (los 5 de comparativas no tocan su schema,
+  ya llevaba el nivel de "Comparativas").
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde. Verificado a mano en
+el HTML generado de `geo-para-saas-b2b` ("Blog / GEO por sector", como pidió
+el fundador) y de `genscore-vs-otterly` ("Comparativas"), y que el JSON-LD del
+primero ya incluye el nivel de clúster.

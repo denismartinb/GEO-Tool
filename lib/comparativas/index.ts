@@ -42,3 +42,6 @@ export const COMPARATIVAS_INDEX: ComparativaLink[] = [
     blurb: "Cinco alternativas comparadas por el motivo que te hace buscarlas: prompts, motores que se cobran aparte, o producto solo en inglés."
   }
 ];
+
+/** Visible breadcrumb trail shared by every /comparativas/<slug> page — just the one parent, same as blogPostBreadcrumb stops at the cluster. */
+export const COMPARATIVAS_BREADCRUMB: { label: string; href: string }[] = [{ label: "Comparativas", href: "/comparativas" }];

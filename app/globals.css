@@ -7722,13 +7722,36 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    Las reglas van acotadas al artículo a propósito: `.blog-cover-compact`
    solo se usa aquí (el índice y los hubs usan la portada normal dentro de
    una tarjeta), y `.blog-post-meta` sí se comparte con las tarjetas del
-   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`. */
+   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`.
+
+   BLOG-INDEX-CARDS-2026-08 Fase 2: el rastro de miga (`.breadcrumb-trail`,
+   ver más abajo) ahora es el primer hijo real de `.lp-inner` en todo
+   artículo y toda página de `/comparativas/<slug>`, así que
+   `.blog-cover-compact` deja de ser `:first-child` — el tirón de -36px que
+   compensaba el padding de `.lp-section` se traslada a lo que SÍ es el
+   primer hijo ahora. La regla original se deja intacta por si algún día
+   existe una portada sin rastro delante; hoy no ocurre, así que es
+   inofensiva, no muerta. */
 .lp-inner > .blog-cover-compact:first-child { margin-top: -36px; border-radius: var(--r-md); }
+.lp-inner > .breadcrumb-trail:first-child { margin-top: -36px; }
 .blog-cover-compact { margin-bottom: 24px; }
 .blog-cover-compact + h1 { margin: 0 0 14px; line-height: 1.22; }
 h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
+
+/* BLOG-INDEX-CARDS-2026-08 Fase 2: rastro de miga visible en artículos y
+   páginas de /comparativas (founder request — la portada de un artículo
+   sólo llevaba el BreadcrumbList invisible de schema.org). Opt-in vía la
+   prop `breadcrumb` de `BlogPageShell`: las demás superficies que
+   comparten el shell (/docs, /glosario, el comprobador gratuito,
+   /que-es-genscore) no la pasan y no cambian. `--ink-3` aprueba AA aquí
+   porque `.lp` pinta blanco puro (#fff), no `--canvas` — ver
+   `.claude/rules/styles.md`, "--ink-3 sólo aprueba AA sobre blanco puro". */
+.breadcrumb-trail { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 13px; font-weight: 600; }
+.breadcrumb-trail a { color: var(--ink-3); }
+.breadcrumb-trail a:hover { color: var(--brand-blue); text-decoration: underline; }
+.breadcrumb-sep { color: var(--ink-4); }
 
 /* BLOG-COVERS-2026-08: el índice de /blog deja de mostrar `<BlogCover>` por
    tarjeta (imagen o degradado+icono) y pasa a tarjetas de color plano por

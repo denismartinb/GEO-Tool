@@ -1,4 +1,4 @@
-import { contentMetadata } from "@/lib/seo/metadata";
+import { contentMetadata, SITE_URL } from "@/lib/seo/metadata";
 
 /**
  * Single source of truth for blog post metadata (GROWTH-1 Fase 7a/7b, SEO
@@ -319,6 +319,34 @@ export function getBlogCluster(key: BlogCluster["key"]): BlogCluster | undefined
 /** The single most recently published post — `datePublished` is `YYYY-MM-DD`, so string order is date order. */
 export function getMostRecentPost(): BlogPost {
   return [...BLOG_POSTS].sort((a, b) => b.datePublished.localeCompare(a.datePublished))[0];
+}
+
+/**
+ * Visible breadcrumb trail for an article page: Blog → its cluster.
+ * Deliberately stops there — the post title is the <h1> right below it, so
+ * repeating it in the trail would just say the same thing twice in a row.
+ */
+export function blogPostBreadcrumb(post: BlogPost): { label: string; href: string }[] {
+  const cluster = getBlogCluster(post.cluster);
+  const items = [{ label: "Blog", href: "/blog" }];
+  if (cluster) items.push({ label: cluster.title, href: `/blog/${cluster.key}` });
+  return items;
+}
+
+/**
+ * schema.org BreadcrumbList items for an article page — the same trail as
+ * `blogPostBreadcrumb`, with "Inicio" prepended and the post itself
+ * appended. Kept as a separate function (not a re-render of the visible
+ * trail) because the two audiences differ: the visible trail stops at the
+ * cluster on purpose, but the structured data is expected to name the
+ * current page too.
+ */
+export function blogPostBreadcrumbSchema(post: BlogPost): { name: string; url: string }[] {
+  return [
+    { name: "Inicio", url: SITE_URL },
+    ...blogPostBreadcrumb(post).map((item) => ({ name: item.label, url: `${SITE_URL}${item.href}` })),
+    { name: post.title, url: `${SITE_URL}/blog/${post.slug}` }
+  ];
 }
 
 /** <title> for search engines: `seoTitle` when set, otherwise `title`. */
