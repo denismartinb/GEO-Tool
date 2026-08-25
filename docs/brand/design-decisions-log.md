@@ -13711,3 +13711,51 @@ que ya usan las otras 6 pantallas. Ningún cambio de CSS — el desajuste era
 de estructura JSX, no de la banda en sí (que ya sangraba bien tras §150).
 
 ---
+
+## 152. La marca de «ya visto» del tour pasa de `localStorage` a `profiles` (ONBOARDING-TOUR-PERSIST-1, 2026-08-25)
+
+**Lo que reportó el fundador.** El tour «Aprende cómo funciona» le saltaba
+muchas veces en la consola. Causa: desde ONBOARDING-TOUR-1 la marca vivía a
+propósito en `localStorage` (para no tocar esquema sin aprobación), con el
+coste ya declarado entonces de que reaparecería en cualquier navegador nuevo
+o tras limpiar el almacenamiento. El fundador aprobó, vía Task Intake
+Report, convertirla en una columna real.
+
+**Arreglo.** Migración `0035_profile_onboarding_tour_seen.sql` añade
+`profiles.onboarding_tour_seen_at timestamptz`, misma forma que
+`notify_score_drop_alert`/`notify_weekly_digest` (0020): booleano/marca
+owner-editable, cubierta por la RLS `profiles_update_own` ya existente —
+sin cambio de RLS, sin service-role. `app/dashboard/layout.tsx` la lee con
+su propia consulta (mismo patrón que `auditFlagRow`/`samplingFlagRow` en la
+página de debug: la migración se aplica a mano, así que no puede ir en el
+select compartido de `getWorkspaceCounters`), con fallo cerrado hacia «ya
+visto» — si la consulta falla, el popup NO se muestra, para no repetirse en
+cada carga de cada cuenta mientras la migración no esté aplicada. La
+escritura es la nueva server action `markTourSeen` (`app/dashboard/
+actions.ts`), llamada desde `TourProvider` con `startTransition` en vez de
+`window.localStorage.setItem`. `lib/onboarding/tour-steps.ts` pierde
+`hasSeenTour`/`markTourSeen`/`TOUR_SEEN_STORAGE_KEY` — ya no tienen dueño.
+
+**Coste asumido y declarado.** Quien ya tuviera la marca antigua en
+`localStorage` verá el tour una vez más tras este despliegue: la columna
+nueva nace `NULL` para todas las cuentas existentes y no hay forma de leer
+la marca antigua desde el servidor. Es un coste de una sola vez, no
+recurrente — el motivo por el que se hacía este cambio.
+
+**Piloto.** La escena de «sale solo en el primer acceso y no vuelve tras
+recargar» necesitaba forzar «no visto» antes de cada pasada. Con la marca en
+`localStorage` eso era borrar un valor del navegador desechable de cada
+test; con la marca en `profiles` —una fila real, compartida por TODAS las
+pasadas de la misma cuenta piloto— forzarla es una escritura de producto, y
+el piloto siempre-on es estrictamente de lectura por convención de código
+(CLAUDE.md, "Pilot write scope"). Esa escena se movió a
+`tests/pilot/journeys/write/onboarding-tour-first-run.spec.ts`, sólo bajo
+`--journeys write`, con su propio reset owner-scoped
+(`POST /api/account/onboarding-tour/reset`, cuenta piloto sobre su propia
+fila — sin `service-role`, sin alcanzar ningún proyecto real). La pasada de
+lectura (`journeys/onboarding-tour.spec.ts`) se quedó con lo que sí es
+determinista sin escribir nada: reabrir el tour desde «¿Qué es el GEO?»
+funciona pase lo que pase con la marca de origen, así que verifica esa vía
+siempre, en el set por defecto de cada preview deploy.
+
+---
