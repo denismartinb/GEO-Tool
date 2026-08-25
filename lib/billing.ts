@@ -235,10 +235,47 @@ export type DomainOverage = {
  * error here reads toward "not over capacity" — today's shipped behaviour,
  * no block at all — never toward blocking the entire console for every user
  * on a transient read error.
+ *
+ * Deliberately does NOT go through `getPlanForUser()`: `resolvePlan()`
+ * defaults an unresolvable plan id to `DEFAULT_PLAN_ID` ("pro", cap 5) — the
+ * right call for a usage bar (generous), wrong for a BLOCKING gate. That
+ * default is fine for a profile row that exists with a genuinely unset
+ * `current_plan` (existing, accepted behaviour elsewhere in this file); it
+ * is NOT fine for a row this query failed to find at all — that would read
+ * an Agency-tier account (cap 999) hit by a transient read glitch as capped
+ * at 5, and lock a legitimate paying customer out of the whole console on a
+ * blip (caught in QA review before merge). A missing/errored profile row
+ * fails toward "not over capacity" here too, same direction as the count
+ * query below. This also means trial-expiry recompute (`applyTrialExpiry`)
+ * is skipped for this one check — the narrow window where that matters (a
+ * trial expired but hasn't been recomputed by another read yet) only ever
+ * makes this check UNDER-detect overage, the same safe direction.
  */
 export async function getDomainOverage(): Promise<DomainOverage> {
   const { supabase, user } = await requireUser();
-  const plan = await getPlanForUser(supabase, user.id);
+
+  const { data: profileRow, error: profileError } = await supabase
+    .from("profiles")
+    .select("current_plan, stripe_subscription_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profileRow) {
+    const fallbackPlan = resolvePlan(undefined);
+    return {
+      isOverCapacity: false,
+      planId: fallbackPlan.id,
+      planName: fallbackPlan.name,
+      activeCount: 0,
+      cap: 0,
+      requiredRemoveCount: 0,
+      domains: [],
+      hasStripeSubscription: false
+    };
+  }
+
+  const plan = resolvePlan(profileRow.current_plan as Plan["id"] | undefined);
+  const hasStripeSubscription = Boolean(profileRow.stripe_subscription_id);
 
   const { count: activeCount, error: countError } = await supabase
     .from("projects")
@@ -254,18 +291,15 @@ export async function getDomainOverage(): Promise<DomainOverage> {
       cap: plan.caps.projects,
       requiredRemoveCount: 0,
       domains: [],
-      hasStripeSubscription: false
+      hasStripeSubscription
     };
   }
 
-  const [{ data: projects }, { data: profileRow }] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, name, domain")
-      .eq("is_archived", false)
-      .order("created_at", { ascending: true }),
-    supabase.from("profiles").select("stripe_subscription_id").eq("id", user.id).maybeSingle()
-  ]);
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id, name, domain")
+    .eq("is_archived", false)
+    .order("created_at", { ascending: true });
 
   const domains = projects ?? [];
 
@@ -277,6 +311,6 @@ export async function getDomainOverage(): Promise<DomainOverage> {
     cap: plan.caps.projects,
     requiredRemoveCount: Math.max(0, domains.length - plan.caps.projects),
     domains,
-    hasStripeSubscription: Boolean(profileRow?.stripe_subscription_id)
+    hasStripeSubscription
   };
 }
