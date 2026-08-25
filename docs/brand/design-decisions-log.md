@@ -15946,3 +15946,76 @@ lógica de navegación programática se tocó — sólo marcado muerto.
 **Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
 (build + typecheck + lint), `git diff --check` y
 `bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 165. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
+
+**Propuesta del fundador** (referencia: el listado de blog de Semrush —
+tarjetas de color plano, sin portada, título + subtítulo), iterada en un
+artefacto de diseño antes de tocar código y aprobada con Task Intake Report
+explícito. Fase 1 de 2: sólo el índice de `/blog` (`app/blog/page.tsx`). La
+Fase 2 (mega menú "Recursos" en `components/marketing/public-header.tsx`,
+compartido por las 8 superficies públicas) queda para un PR aparte, por
+radio de impacto.
+
+**Qué cambia:**
+
+- Cada tarjeta del índice deja de renderizar `<BlogCover>` (imagen o
+  degradado+icono) y pasa a un color plano por clúster —azul (Fundamentos),
+  cian (Metodología), gris pizarra (Playbooks), índigo (GEO por sector),
+  verde-azulado (Comparativas). El color no es decorativo: identifica el
+  clúster de origen, repetido como punto en la cabecera del carril.
+- Un carril "destacado" a todo ancho, en marino, con el artículo publicado
+  más recientemente (`getMostRecentPost()`, nuevo en `lib/blog/posts.ts`),
+  excluido de su propio carril de clúster para no repetirse.
+- **Comparativas pasa de párrafo suelto a carril de primer nivel**, con el
+  mismo patrón de tarjetas que los clústeres — mueve al final de la página,
+  justo antes del banner (el fundador lo pidió explícitamente después de
+  ver la primera versión, que lo dejaba arriba). Su lista de páginas vivía
+  sólo como un array local en `app/comparativas/page.tsx`; ahora es
+  `lib/comparativas/index.ts` (`COMPARATIVAS_INDEX`), y las dos superficies
+  la comparten — mismo motivo que `BLOG_CLUSTERS`/`BLOG_POSTS`: un slug o
+  título que cambie no puede desincronizarse entre dos copias.
+- Cada carril enseña como mucho 3 tarjetas. Si el clúster (o Comparativas)
+  tiene más, un enlace **"Ver más →" genérico**, sin cifra — el índice del
+  blog no publica un recuento de artículos (regla ya existente,
+  `growth-content.md`, log §61) — hacia `/blog/[cluster]` o `/comparativas`.
+  Se descartó un carrusel: no hacía falta construir nada nuevo (esas rutas
+  ya existen), y un control interactivo nuevo es una superficie más que
+  puede fallar en el barrido del `ux-pilot`.
+- El subtítulo bajo "Blog" pasa de `.legal-updated` (13px, `--ink-3`) a
+  `.blog-subtitle` (19px, negrita, `--ink-2`, ancho completo) — el fundador
+  lo encontró demasiado parecido a texto plano.
+- Los enlaces de RSS y del comprobador gratuito, antes bajo el título, bajan
+  a un banner a todo ancho al final de la página (marino, con CTA "Comprobar
+  gratis" hacia `/gratis/aparece-mi-marca-en-chatgpt` y el enlace de RSS
+  dentro, con `.link-mini` — lo exige
+  `marketing-content-links.test.ts`, "el enlace lleva una clase de enlace,
+  no el color heredado del texto").
+
+**Qué NO cambia, y por qué.** La portada real de cada artículo
+(`.blog-cover-compact` en la cabecera de `app/blog/<slug>/page.mdx`), su uso
+en Open Graph/redes y en el schema, y las tarjetas de
+`app/blog/[cluster]/page.tsx` (`.blog-index-card`, sin tocar) siguen
+exactamente igual — esta fase toca sólo el listado del índice. `ADR 0028`
+("Ningún visual es decorativo: todos son evidencia") sigue vigente para el
+cuerpo y la portada de un artículo; nunca exigió que el ÍNDICE mostrara esa
+portada, así que retirarla del listado no es una excepción a la política, es
+una superficie que esa política nunca gobernó. Aun así se lo señalé al
+fundador antes de implementar, por si lo veía de otra forma — lo aprobó.
+
+**Colores elegidos y por qué no son un arcoíris.** La primera pasada usó un
+tinte azul pálido para Fundamentos y otro casi idéntico para GEO por sector
+— indistinguibles a primera vista. Corregido dando a cada carril un matiz
+realmente distinto dentro de la familia azul/cian/marino de la marca (nunca
+ámbar: `--brand-warm` es exclusivo del punto del logo, `docs/brand/
+brand-guidelines.md`), en vez de rotar por más tonos.
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835 — 5 tests nuevos:
+`getMostRecentPost` en `lib/blog/posts.test.ts`, `lib/comparativas/
+index.test.ts`), `pnpm run typecheck`, `pnpm run lint`, `pnpm run build`
+(incluye `/blog` prerenderizado como estático), todo en verde. Verificado a
+mano en el HTML generado que "Ver más →" sale exactamente en Metodología,
+Playbooks y Comparativas — no en Fundamentos ni en GEO por sector, que caben
+en 3 tarjetas.

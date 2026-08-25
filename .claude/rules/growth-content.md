@@ -97,10 +97,20 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 
 ## Imágenes
 
-- **Ningún visual es decorativo: todos son evidencia** (ADR 0026
-  `article-imagery-policy`). Cada imagen es una captura que prueba la
-  afirmación, un ejemplo enmarcado del patrón que se enseña, o una tarjeta de
-  dato con su fuente. Si una imagen no prueba nada, no va.
+- **Ningún visual es decorativo: todos son evidencia** (ADR 0028
+  `article-imagery-policy` — renumerado desde 0026, ver su propia nota de
+  renumeración; "ADR 0026" a secas hoy es otro documento). Cada imagen es una
+  captura que prueba la afirmación, un ejemplo enmarcado del patrón que se
+  enseña, o una tarjeta de dato con su fuente. Si una imagen no prueba nada,
+  no va.
+- **Esa política gobierna el cuerpo y la portada de un artículo — nunca
+  exigió que el ÍNDICE del blog mostrara esa portada.** El listado de
+  `/blog` dejó de renderizar `<BlogCover>` por tarjeta y pasa a un color
+  plano por clúster (BLOG-INDEX-CARDS-2026-08, log §165); la portada real de cada
+  artículo, su Open Graph y su schema siguen exactamente igual — sólo cambió
+  cómo se presenta el listado, no si el artículo tiene portada. Antes de leer
+  esto como una segunda excepción a la política: no lo es, es una superficie
+  que la política nunca gobernó.
 - **Una figura cuyo contenido es una tabla se declara `<Figure wide>`.**
   `.art-frame` nace con `overflow: hidden` —correcto para un `ProductMock` o un
   SVG, pésimo para una tabla: la columna que no cabe desaparece sin dejar gesto

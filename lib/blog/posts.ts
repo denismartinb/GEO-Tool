@@ -316,6 +316,11 @@ export function getBlogCluster(key: BlogCluster["key"]): BlogCluster | undefined
   return BLOG_CLUSTERS.find((c) => c.key === key);
 }
 
+/** The single most recently published post — `datePublished` is `YYYY-MM-DD`, so string order is date order. */
+export function getMostRecentPost(): BlogPost {
+  return [...BLOG_POSTS].sort((a, b) => b.datePublished.localeCompare(a.datePublished))[0];
+}
+
 /** <title> for search engines: `seoTitle` when set, otherwise `title`. */
 export function getSeoTitle(post: BlogPost): string {
   return post.seoTitle ?? post.title;

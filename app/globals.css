@@ -7730,6 +7730,74 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
 
+/* BLOG-COVERS-2026-08: el índice de /blog deja de mostrar `<BlogCover>` por
+   tarjeta (imagen o degradado+icono) y pasa a tarjetas de color plano por
+   clúster, sin portada. Sólo toca el ÍNDICE (`app/blog/page.tsx`) — la
+   portada de cabecera de cada artículo (`.blog-cover-compact`) y las
+   tarjetas de `app/blog/[cluster]/page.tsx` (`.blog-index-card`, sin tocar)
+   siguen exactamente igual. El color no es decorativo: identifica el
+   clúster, así que se repite como acento en la cabecera del carril
+   (`.blog-rail-dot`) y en cada tarjeta de ese clúster. */
+.blog-subtitle { margin: 14px 0 0; font-size: 19px; font-weight: 700; color: var(--ink-2); line-height: 1.4; letter-spacing: -.005em; }
+
+.blog-rail { margin-top: 48px; }
+.blog-rail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.blog-rail-head-left { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.blog-rail-head-left h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
+.blog-rail-head-left p { margin: 0; font-size: 14px; color: var(--ink-3); }
+.blog-rail-dot { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+.blog-rail-more { flex: none; font-size: 13.5px; font-weight: 700; color: var(--brand-blue); white-space: nowrap; }
+.blog-rail-more:hover { text-decoration: underline; }
+.blog-rail-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 22px; }
+@media (max-width: 760px) {
+  .blog-rail-grid { grid-template-columns: 1fr; }
+}
+
+.blog-tile { display: flex; flex-direction: column; border-radius: var(--r-lg); padding: 26px; }
+.blog-tile h2 { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.28; letter-spacing: -.01em; }
+.blog-tile p { margin: 10px 0 0; font-size: 14px; line-height: 1.5; }
+.blog-tile time { display: block; margin-top: 16px; font-size: 12.5px; font-weight: 600; letter-spacing: .01em; }
+
+.blog-tile--fundamentos { background: #E3ECFE; }
+.blog-tile--fundamentos p { color: #23345C; }
+.blog-tile--fundamentos time { color: #4863A8; }
+.blog-tile--medicion { background: #DEF6F8; }
+.blog-tile--medicion p { color: #0D4A52; }
+.blog-tile--medicion time { color: #167985; }
+.blog-tile--playbooks { background: #ECEEF3; }
+.blog-tile--playbooks p { color: #2C3542; }
+.blog-tile--playbooks time { color: #56606F; }
+.blog-tile--sectores { background: #DBDFFC; }
+.blog-tile--sectores p { color: #2A3170; }
+.blog-tile--sectores time { color: #454FB0; }
+.blog-tile--comparativas { background: #D3F0E6; }
+.blog-tile--comparativas p { color: #114F44; }
+
+.blog-featured { position: relative; display: block; margin-top: 40px; border-radius: var(--r-xl); padding: 44px 48px; background: var(--brand-surface-dark); overflow: hidden; }
+.blog-featured-ring { position: absolute; right: -70px; top: -90px; opacity: .16; pointer-events: none; }
+.blog-featured-content { position: relative; max-width: 640px; }
+.blog-featured-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.blog-featured h2 { margin: 18px 0 0; font-size: 32px; font-weight: 800; letter-spacing: -.02em; line-height: 1.18; color: var(--brand-ink-on-dark); }
+.blog-featured p { margin: 14px 0 0; font-size: 15px; line-height: 1.6; color: rgba(247,248,251,.78); }
+.blog-featured time { display: block; margin-top: 20px; font-size: 12.5px; font-weight: 600; color: rgba(247,248,251,.55); }
+@media (max-width: 760px) {
+  .blog-featured { padding: 30px 26px; }
+  .blog-featured h2 { font-size: 23px; }
+}
+
+.blog-banner { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 40px; margin-top: 64px; border-radius: 20px; padding: 48px; background: var(--brand-surface-dark); overflow: hidden; }
+.blog-banner-ring { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); opacity: .18; pointer-events: none; }
+.blog-banner-content { position: relative; max-width: 620px; }
+.blog-banner h2 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; color: var(--brand-ink-on-dark); }
+.blog-banner p { margin: 12px 0 0; font-size: 15.5px; line-height: 1.6; color: rgba(247,248,251,.78); }
+.blog-banner .link-mini { color: #fff; font-weight: 700; text-decoration: underline; }
+.blog-banner-cta { display: inline-flex; align-items: center; height: 46px; padding: 0 26px; margin-top: 26px; border-radius: 999px; background: #fff; color: var(--brand-surface-dark); font-size: 14.5px; font-weight: 700; }
+@media (max-width: 760px) {
+  .blog-banner { flex-direction: column; align-items: flex-start; padding: 30px 26px; }
+  .blog-banner-ring { display: none; }
+  .blog-banner h2 { font-size: 22px; }
+}
+
 /* GROWTH-2 Fase 2.3: /docs sidebar layout. */
 .docs-layout { display: flex; flex-direction: column; gap: 32px; align-items: flex-start; }
 .docs-side { display: flex; flex-direction: column; gap: 4px; flex: none; width: 100%; }
