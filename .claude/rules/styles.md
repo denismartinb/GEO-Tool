@@ -110,6 +110,27 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   misma geometría). Cualquier elemento nuevo bajo `app/dashboard/**` que
   reutilice este idiom de full-bleed necesita la misma corrección — no es
   exclusivo de `.mrk-full`.
+- **Ese mismo `margin` corregido daba el ancho justo pero el borde equivocado:
+  se pasaba `--page-pad-x` exacto por cada lado en cuanto `.page` llegaba a
+  toparse de verdad con su `max-width`.** La corrección de arriba (log §132)
+  sólo se había verificado sin que `.page` estuviera realmente topado —a esa
+  anchura, el margen `auto` de `.page` aporta 0 y `-page-pad-x` sola cancela
+  su padding, así que el resultado salía exacto por casualidad, no porque la
+  fórmula fuera correcta. En cuanto el tope sí aplica, `.page` se centra con
+  margen `auto` real a los dos lados y la resta de sólo un `page-pad-x` dentro
+  de `margin-inline: calc(-1 * (page-pad-x + bleed))` deja la caja fuera de
+  sitio por exactamente ese valor a cada lado: bajo la barra lateral por la
+  izquierda, corta del borde por la derecha (log §152, encontrado en
+  `.mrk-full` a partir de ~1568px de ventana en las 6 pantallas de la misión,
+  no sólo donde se probó). El término que falta va DENTRO del cálculo del
+  sobrante, no fuera: `bleed = max(disponible - tope - 2 * page-pad-x, 0) / 2`
+  — así vale exactamente 0 hasta que `.page` deja de caber bajo su tope MÁS su
+  propio padding a los dos lados, que es el punto real donde el centrado
+  `auto` empieza a existir. Cualquier fórmula de sangrado a bordes reales que
+  reste el padding del contenedor un número de veces distinto al de lados que
+  ese padding tiene se verifica con un fixture que mida los cuatro bordes en
+  varios anchos — nunca a ojo en uno solo, y nunca sólo por debajo del umbral
+  donde el tope empieza a aplicar.
 - **`container-type`/`contain: layout` en cualquier ancestro dentro de
   `.dash-content` es del tipo de riesgo que no se toma a la ligera.** Convierte
   al elemento en el containing block de sus descendientes `position: fixed`, y

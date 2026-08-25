@@ -13744,8 +13744,8 @@ nombre local en las demás; `!hasCompletedScan && activeRun` en Auditoría web)
 muestra realmente. `.ov-sticky-header` se envuelve en `{!showMissionTakeover
 && (...)}` en las 6.
 
-**El único efecto secundario real, y por qué se corrigió en el mismo PR.**
-Prompts es la única de las 6 cuyo `.page` fuerza `style={{ paddingTop: 0 }}`
+**Primer efecto secundario, encontrado con el fixture antes de mergear.**
+Prompts es la única de las 6 cuyo `.page` forzaba `style={{ paddingTop: 0 }}`
 —las otras 5 usan el padding por defecto de `.page` (26px)—, puesto ahí para
 que la cabecera (que ya cancela ese padding con su propio margen) no dejase un
 hueco doble. Con la cabecera oculta, `.mrk-full` pasaba a ser el primer hijo
@@ -13755,10 +13755,91 @@ válido porque `padding-top:0` no lo bloquea), arrastrando la propia caja de
 `.page` 26px hacia arriba y dejando el primer tramo de la escena del cohete
 recortado por el `overflow-y:auto` de `.dash-content` — medido con el mismo
 fixture (`mrkFull.top` quedaba por encima de `dashContent.top`, señal
-inequívoca de recorte). Se corrigió condicionando ese `paddingTop:0` a que la
-cabecera SÍ esté montada: `paddingTop: showMissionTakeover ? undefined : 0`.
-Sin esta comprobación cruzada (fixture midiendo top/bottom, no sólo
-left/right) el PR habría enviado una regresión visual específica de Prompts.
+inequívoca de recorte). Esta ruta quedó superseded por `.mrk-fill` (siguiente
+apartado) antes de que el PR se abriera; se deja anotada porque fue la primera
+señal de que el colapso de márgenes padre-hijo era el riesgo real de esta
+fase, no una curiosidad.
+
+**Segunda vuelta: el fundador probó el preview y preguntó "¿por qué no llega
+hasta abajo la animación?"** — captura de Vodafone, hueco claro entre el suelo
+del cohete y el borde inferior real. Causa: `.mrk-canvas` lleva un tope de
+altura fijo (`min(80svh, 700px)` en escritorio, `min(78svh, 620px)` en móvil)
+pensado para una pantalla donde la cabecera sticky seguía ocupando su franja
+encima — con la cabecera fuera, ese tope deja de tener sentido y el hueco
+crece con la ventana: medido en 157px a 1920×1080 con el mismo fixture.
+
+**`.mrk-fill` — la misión crece para llenar lo que quede, no un cálculo de
+píxeles por breakpoint.** `.page.mrk-fill` pasa a `display:flex; flex-direction:
+column; min-height:100%` (cancelando su padding vertical directamente, sin
+margen que colapsar) y `.mrk-full`/`.mrk-canvas` se vuelven `flex:1;
+min-height:0` en cascada — el mismo motivo por el que `.mrk-pad-wrap` ya usa
+`position:absolute;inset:0` en vez de porcentajes en log §132: flexbox nunca
+colapsa márgenes hacia dentro o fuera de sí mismo, así que esta ruta esquiva
+por construcción el mismo bug que rompió Prompts arriba, en vez de pedirle a
+cada pantalla que calcule el `margin-top` correcto. `.cm2-scope.mrk-fill {
+display: contents }` es la pieza que hace falta SÓLO en Competidores: es la
+única de las 6 que envuelve `.page.cm2-page` en `.cm2-scope` (un scope de
+variables de marca, sin caja propia declarada), y `min-height:100%` sólo
+resuelve contra un ancestro de altura DEFINIDA — sin `contents`, `.cm2-scope`
+(altura `auto`) rompía la cadena. Verificado con el fixture, con y sin ese
+envoltorio, en nueve anchos (761 a 2560px): hueco inferior cero en los nueve.
+
+**Tercer hallazgo, en el mismo barrido: `.mrk-full` tampoco llegaba a los
+bordes horizontales reales — y no era nuevo de este PR.** Comprobando
+Competidores con su markup real (`.page.cm2-page`, no un `.page` genérico) el
+fixture midió `.mrk-full` 34px por debajo del borde izquierdo de
+`.dash-content` (bajo la barra lateral) y 34px corto del derecho, en vez de
+alinear con ninguno de los dos. La causa no era `--mrk-page-cap` (variable
+nueva de esta fase, ver abajo) sino la fórmula de sangrado que `.mrk-full` ya
+traía desde antes de esta fase: `margin-inline: calc(-1 * (page-pad-x +
+bleed))`, con `bleed = max(disponible - tope, 0) / 2`. Esa fórmula sólo da el
+resultado exacto cuando `.page` NO está topada (su margen `auto` no aporta
+nada, así que `-page-pad-x` sola cancela su padding) — en cuanto el tope de
+`.page` sí aplica, `.page` se centra con margen `auto` real a los dos lados y
+la fórmula se pasa exactamente `page-pad-x` de largo, en las 6 pantallas, no
+sólo en Competidores: reproducido igual en Visión general a partir de
+~1568px de ventana (el mismo umbral donde §150 documentó que `--ov-hdr-bleed`
+empieza a aportar algo). Invisible en la práctica —el sobrante de la izquierda
+queda bajo la barra lateral, pintado en blanco sobre blanco; el de la derecha
+es un borde de `--canvas` casi imperceptible junto al degradado— pero medible,
+y exactamente la pregunta que abrió este apartado. Rederivada desde el modelo
+de caja en vez de ajustada a ojo: el término que faltaba es `- 2 *
+page-pad-x` dentro del propio cálculo del sobrante, no un ajuste al margen
+final. Con él, `bleed` vale 0 exactamente hasta que `.page` deja de caber bajo
+su tope MÁS su propio padding a los dos lados — el punto real donde el
+centrado `auto` empieza a existir — y a partir de ahí compensa la fórmula
+completa, no sólo la mitad. Verificado con el mismo fixture en los mismos
+nueve anchos: hueco izquierdo y derecho cero en los nueve, con y sin el
+envoltorio de Competidores. **Deliberadamente no tocado en este PR:**
+`--ov-hdr-bleed` (`.ov-sticky-header`, §150/§151) tiene la misma forma y
+probablemente el mismo desajuste de `page-pad-x` — pero es una fase ya
+cerrada y aprobada, invisible por las mismas razones, y tocarla es un cambio
+más amplio (afecta a las 8 pantallas de la consola, no sólo a la misión) que
+merece su propio Task Intake si el fundador quiere perseguirlo.
+
+**`--mrk-page-cap`, la variable nueva.** Mismo mecanismo que
+`--ov-hdr-page-cap` (§150): `.mrk-full`'s fórmula de sangrado leía
+`--page-max-w` (1320px) sin condición, que es el tope real de `.page` en 5 de
+las 6 pantallas pero NO en Competidores, donde `.cm2-page` reescribe ese tope
+a sus propios escalones (460/640/1200/1280px en 0/900/1200/1600px de
+ventana). `.cm2-page .mrk-full { --mrk-page-cap: <escalón> }` en los mismos
+cuatro puntos de corte que `.cm2-page` ya usa; en las otras 5 pantallas la
+variable queda sin declarar y `var(--mrk-page-cap, var(--page-max-w))` cae al
+global. Sin esto, Competidores heredaba el error genérico de arriba MÁS un
+segundo error por comparar contra el tope equivocado — ambos corregidos a la
+vez porque son la misma fórmula.
+
+**`ReentryMission` (Auditoría web, re-escaneos) hereda la corrección gratis.**
+Comparte `.mrk-full`/`.mrk-canvas` con `ScanMissionRocket` (ver
+`.claude/rules/mission-rocket.md`) pero NUNCA se le añadió la clase
+`.mrk-fill`, así que su comportamiento de altura no cambia — sigue con el
+mismo tope `min(80svh, 700px)` de siempre, sin el hueco inferior de esta fase
+porque nunca perdió su cabecera. Sí hereda la corrección del sangrado
+horizontal (el `- 2 * page-pad-x` de la fórmula base), porque esa fórmula es
+compartida y el bug lo era igual de para las dos misiones. Ninguna de las dos
+reglas de `mission-rocket.md` que protegen la silueta, la paleta o la
+dirección de vuelo se toca en este PR — todo lo de aquí es geometría del
+contenedor, no de la escena.
 
 **Deliberadamente sin tocar.** Los banners de feedback (error/éxito, prompt
 mínimo) que viven entre la cabecera y el cuerpo de cada pantalla siguen
@@ -13771,8 +13852,17 @@ flotando encima" de la misión).
 padding de su contenedor con un margen negativo fijo asume que ese padding
 existe tal cual — cualquier pantalla que además lo fuerce a 0 por su cuenta
 tiene que condicionar esa fuerza a si el componente full-bleed va a ser el
-primer hijo o no. No es exclusivo de esta fase: es el mismo colapso de
-márgenes padre-hijo que `.claude/rules/styles.md` ya documenta para otros
-casos de `height:100%`/`position:absolute`, ahora con `margin-top` negativo.
+primer hijo o no, o mejor aún, resolverlo con flexbox (que no colapsa
+márgenes) en vez de con un margen negativo que asume una geometría concreta.
+No es exclusivo de esta fase: es el mismo colapso de márgenes padre-hijo que
+`.claude/rules/styles.md` ya documenta para otros casos de
+`height:100%`/`position:absolute`. Y una fórmula de sangrado a bordes reales
+que resta el padding del contenedor una sola vez, en vez de una por cada lado
+que ese padding existe, subestima el sobrante exactamente por ese padding en
+cuanto el tope de ancho real empieza a aplicar — verificar contra el modelo de
+caja completo, con un fixture que mida los cuatro bordes, no sólo a ojo en un
+ancho de ventana donde el error resulta ser cero por coincidencia (como pasó
+aquí a 1440px, donde `.page` no llegaba a toparse y el error desapareció sin
+que la fórmula fuera correcta).
 
 ---

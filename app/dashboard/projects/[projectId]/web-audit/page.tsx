@@ -127,7 +127,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
 
   return (
     <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAuditCoverage}>
-    <div className="page">
+    <div className={`page${showMissionTakeover ? " mrk-fill" : ""}`}>
       {/* Sticky header — oculta mientras la misión del primer escaneo ocupa
           la pantalla entera. */}
       {!showMissionTakeover && (

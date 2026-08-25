@@ -158,7 +158,7 @@ export default async function CitationsPage({
   const showMissionTakeover = Boolean(activeRun) && !latestRun;
 
   return (
-    <div className="page fade-in">
+    <div className={`page fade-in${showMissionTakeover ? " mrk-fill" : ""}`}>
       {/* Sticky header. HEADER-FULL-WIDTH-1 (2026-08-25): esta pantalla se
           había quedado con un layout de una sola línea (kicker + separador +
           dominio) de antes de que el resto de la consola convergiera en

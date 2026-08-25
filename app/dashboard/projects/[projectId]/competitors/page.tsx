@@ -499,8 +499,8 @@ export default async function CompetitorsPage({
   const showMissionTakeover = Boolean(activeRun) && completedRuns.length === 0;
 
   return (
-    <div className="cm2-scope">
-      <div className="page cm2-page">
+    <div className={`cm2-scope${showMissionTakeover ? " mrk-fill" : ""}`}>
+      <div className={`page cm2-page${showMissionTakeover ? " mrk-fill" : ""}`}>
         {/* Sticky header */}
         {!showMissionTakeover && (
           <div className="ov-sticky-header">

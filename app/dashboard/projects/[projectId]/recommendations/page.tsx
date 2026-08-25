@@ -539,7 +539,7 @@ export default async function RecommendationsPage({
   const showMissionTakeover = Boolean(activeRun) && !latestCompletedRun;
 
   return (
-    <div className="page fade-in">
+    <div className={`page fade-in${showMissionTakeover ? " mrk-fill" : ""}`}>
       {/* 1 · Cabecera estándar de sección, igual que Competidores, Prompts y
           Páginas citadas: kicker con el nombre de la sección, nombre del
           proyecto, contador y fecha de escaneo a la derecha. El rediseño la

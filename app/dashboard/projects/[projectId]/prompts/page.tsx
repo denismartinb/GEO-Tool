@@ -271,8 +271,13 @@ export default async function PromptsPage({
     // scene (`.mrk-full`, negative top margin) from collapsing THROUGH an
     // empty `.page` and clipping its own top edge — this screen zeroes that
     // padding only when the sticky header (which absorbs the same margin on
-    // its own) is actually mounted below it.
-    <div className="page" style={{ paddingTop: showMissionTakeover ? undefined : 0 }}>
+    // its own) is actually mounted below it. `.mrk-fill` (mission mode)
+    // zeroes it its own way via CSS, so the inline override only applies
+    // when the header is shown.
+    <div
+      className={`page${showMissionTakeover ? " mrk-fill" : ""}`}
+      style={showMissionTakeover ? undefined : { paddingTop: 0 }}
+    >
       {!showMissionTakeover && (
         <header className="ov-sticky-header">
           <div className="ov-sticky-left">

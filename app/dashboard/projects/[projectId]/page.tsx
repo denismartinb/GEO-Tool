@@ -753,7 +753,7 @@ export default async function ProjectDetailPage({
 
   /* ---- render ---- */
   return (
-    <div className="page">
+    <div className={`page${showMissionTakeover ? " mrk-fill" : ""}`}>
       {/* DOMAINS-REDESIGN-1 — the invisible driver that actually executes a
           pending scan's batches, moved here from the Escaneos page it used to
           be the ONLY mount of. Onboarding now lands on this page, so this is
