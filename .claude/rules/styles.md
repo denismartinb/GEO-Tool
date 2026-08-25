@@ -110,6 +110,54 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   misma geometría). Cualquier elemento nuevo bajo `app/dashboard/**` que
   reutilice este idiom de full-bleed necesita la misma corrección — no es
   exclusivo de `.mrk-full`.
+- **Un fixture de verificación que no incluye el reset real de la app
+  verifica un modelo de caja distinto del que se despliega, y puede dar
+  "exacto" sobre una fórmula que en producción no lo es.** `@tailwind base;`
+  (primera línea de `app/globals.css`) trae el Preflight de Tailwind, que
+  pone `box-sizing: border-box` en todo elemento — así que `.page`, capado
+  por `max-width`, renderiza exactamente ese ancho (el padding vive DENTRO
+  del presupuesto). Una fórmula de sangrado verificada contra un fixture que
+  concatena sólo las hojas de estilo propias (`sed '/^@tailwind/d'` para
+  poder cargarlas en un navegador sin PostCSS) pierde ese reset y cae al
+  valor por defecto del navegador (`content-box`, donde el padding se SUMA al
+  `max-width`) — dos modelos que difieren en exactamente
+  `2 × page-pad-x` en el ancho total de una caja topada, y por tanto en su
+  desplazamiento de centrado. Una corrección calibrada contra el fixture
+  incompleto (log §160, la misma fase) pasó las nueve anchuras de su propio
+  fixture con hueco cero y dejó la escena real 34px corta en cada borde en
+  cuanto `.page` llegaba a toparse — encontrado por el fundador en el
+  preview, no por el fixture, porque el fixture nunca preguntó "¿coincide
+  este `box-sizing` con el que carga la app?". **Para verificar geometría con
+  `--tw-*`/Preflight de por medio, arranca el fixture desde la SALIDA
+  COMPILADA (`.next/static/chunks/*.css` tras `pnpm run build`, buscando el
+  chunk que contenga las clases en juego), no desde una concatenación manual
+  de fuentes** — es lo único que garantiza que el reset, el orden de cascada
+  y las capas de Tailwind son los que de verdad se sirven. Diagnosticado
+  pidiendo al fundador que inspeccionara el hueco en DevTools: el selector
+  marcó `.dash-content`, es decir, `.mrk-full` genuinemente no llegaba ahí —
+  ese dato desde el navegador real es lo que descartó "el código ya está
+  bien, es caché" antes de gastar una vuelta más de fixture equivocado.
+- **Un selector `.a > .b` para un componente full-bleed asume que `.b` es
+  hijo DIRECTO de `.a` en TODAS sus pantallas — compruébalo, no lo asumas por
+  la pantalla donde ya se verificó.** `.mrk-fill` (log §160) se probó primero
+  contra `.page > .mrk-full` (cierto en 5 de 6 pantallas) y contra `.cm2-scope
+  > .page.cm2-page > .mrk-full` (el envoltorio de Competidores, ya conocido) —
+  y ninguno de los dos cubría Auditoría web, donde `.wa2-scope.wa2-page` mete
+  a `.mrk-full` un nivel más adentro, como NIETO de `.page`, no hijo. El
+  selector con `>` simplemente nunca casaba ahí: sin error de consola, sin
+  warning, la misión seguía con su comportamiento antiguo en silencio.
+  Combinador de descendiente (sin `>`) para que case a cualquier profundidad,
+  y `display: contents` en cada envoltorio intermedio para que `flex: 1`
+  siga significando algo una vez que el selector ya casa — las dos piezas
+  hacen falta, ninguna sustituye a la otra. Y dos envoltorios que se PARECEN
+  no son intercambiables: `.cm2-page` va combinado en `.page` (su propio
+  `max-width` SÍ es el de `.page`), `.wa2-page` es un hijo aparte (su
+  `max-width` deja de pintar nada en cuanto es `display: contents`, y `.page`
+  sigue topado por el global) — copiar la variable de sangrado de uno al otro
+  sin releer esa diferencia dejó la escena 20px corta por los dos lados, y
+  sólo lo cazó el fixture, no el razonamiento por analogía. Antes de dar un
+  patrón por cubierto: `grep -n "<FirstScanTakeover\|<ReentryMission"` y mira
+  qué hay entre esa línea y el `.page` más cercano, en las 6 pantallas.
 - **`container-type`/`contain: layout` en cualquier ancestro dentro de
   `.dash-content` es del tipo de riesgo que no se toma a la ligera.** Convierte
   al elemento en el containing block de sus descendientes `position: fixed`, y

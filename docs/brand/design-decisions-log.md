@@ -13896,7 +13896,6 @@ como el resto de las pantallas.
 **Comprobado.** `pnpm test` (202/202, 2.827/2.827) y `pnpm run validate` en
 verde.
 
-
 ---
 
 ## 153. La marca de «ya visto» del tour pasa de `localStorage` a `profiles` (ONBOARDING-TOUR-PERSIST-1, 2026-08-25)
@@ -15208,10 +15207,590 @@ de cada una sin dejar diff.
     una sustituya a la otra. Ilustra la propia advertencia de la regla de
     "Cierre de fase": mientras una rama fusiona `main` para resolver una
     colisión, `main` puede volver a moverse por debajo.
+---
+
+## 160. La misión del primer escaneo compartía pantalla con la cabecera fija, en las 6 secciones que la montan (2026-08-25)
+
+**Lo que pidió el fundador.** Con `.ov-sticky-header` ya sangrando a los
+bordes reales en las 8 pantallas que la comparten (§150, §151), señaló que la
+propia misión del primer escaneo (`ScanMissionRocket`, vía
+`FirstScanTakeover`) seguía compitiendo con esa cabecera en vez de leerse como
+pantalla completa: "mientras dure la animación quitar ese header de visión
+general en todas las páginas y que se vea la animación a pantalla completa".
+
+**Por qué es seguro quitarla, no sólo agrandarla.** `.mrk-full` (el
+envoltorio full-bleed de la misión) ya declara `margin-top: -26px`
+específicamente para "sentarse a ras" contra lo que tenga encima — el
+comentario de `app/globals.css` decía literalmente que cancela el
+`padding-top` de `.page` (26px), no que dependa de que exista una cabecera
+sticky delante. Quitar `.ov-sticky-header` mientras la misión está activa no
+rompe esa geometría: `.mrk-full` pasa a ser el primer hijo de `.page` y su
+margen negativo cancela el mismo padding igual que antes, quedando a ras del
+todo bajo la topbar — verificado con un fixture Playwright/Chromium headless
+que reproduce `.shell > .dash-main > .dash-content > .page` con el CSS real,
+midiendo `getBoundingClientRect` a 2560px de ancho.
+
+**Las 6 pantallas que montan `FirstScanTakeover`** (Visión general, Prompts,
+Competidores, Recomendaciones, Páginas citadas, Auditoría web) ganan una
+variable `showMissionTakeover`, calculada con la MISMA condición que ya decide
+si `FirstScanTakeover` se monta en cada una (`!hasData && activeRun &&
+isFirstScan` en Visión general; `activeRun && !hasCompletedRun`/
+`!latestCompletedRun`/`!latestRun`/`completedRuns.length === 0` según el
+nombre local en las demás; `!hasCompletedScan && activeRun` en Auditoría web)
+— nunca una condición nueva y paralela que pudiera desincronizarse de cuál se
+muestra realmente. `.ov-sticky-header` se envuelve en `{!showMissionTakeover
+&& (...)}` en las 6.
+
+**Primer efecto secundario, encontrado con el fixture antes de mergear.**
+Prompts es la única de las 6 cuyo `.page` forzaba `style={{ paddingTop: 0 }}`
+—las otras 5 usan el padding por defecto de `.page` (26px)—, puesto ahí para
+que la cabecera (que ya cancela ese padding con su propio margen) no dejase un
+hueco doble. Con la cabecera oculta, `.mrk-full` pasaba a ser el primer hijo
+de un `.page` con padding 0: su margen de -26px ya no tenía padding del que
+"comerse" y colapsaba A TRAVÉS de `.page` (colapso de márgenes padre-hijo,
+válido porque `padding-top:0` no lo bloquea), arrastrando la propia caja de
+`.page` 26px hacia arriba y dejando el primer tramo de la escena del cohete
+recortado por el `overflow-y:auto` de `.dash-content` — medido con el mismo
+fixture (`mrkFull.top` quedaba por encima de `dashContent.top`, señal
+inequívoca de recorte). Esta ruta quedó superseded por `.mrk-fill` (siguiente
+apartado) antes de que el PR se abriera; se deja anotada porque fue la primera
+señal de que el colapso de márgenes padre-hijo era el riesgo real de esta
+fase, no una curiosidad.
+
+**Segunda vuelta: el fundador probó el preview y preguntó "¿por qué no llega
+hasta abajo la animación?"** — captura de Vodafone, hueco claro entre el suelo
+del cohete y el borde inferior real. Causa: `.mrk-canvas` lleva un tope de
+altura fijo (`min(80svh, 700px)` en escritorio, `min(78svh, 620px)` en móvil)
+pensado para una pantalla donde la cabecera sticky seguía ocupando su franja
+encima — con la cabecera fuera, ese tope deja de tener sentido y el hueco
+crece con la ventana: medido en 157px a 1920×1080 con el mismo fixture.
+
+**`.mrk-fill` — la misión crece para llenar lo que quede, no un cálculo de
+píxeles por breakpoint.** `.page.mrk-fill` pasa a `display:flex; flex-direction:
+column; min-height:100%` (cancelando su padding vertical directamente, sin
+margen que colapsar) y `.mrk-full`/`.mrk-canvas` se vuelven `flex:1;
+min-height:0` en cascada — el mismo motivo por el que `.mrk-pad-wrap` ya usa
+`position:absolute;inset:0` en vez de porcentajes en log §132: flexbox nunca
+colapsa márgenes hacia dentro o fuera de sí mismo, así que esta ruta esquiva
+por construcción el mismo bug que rompió Prompts arriba, en vez de pedirle a
+cada pantalla que calcule el `margin-top` correcto. `.cm2-scope.mrk-fill {
+display: contents }` es la pieza que hace falta SÓLO en Competidores: es la
+única de las 6 que envuelve `.page.cm2-page` en `.cm2-scope` (un scope de
+variables de marca, sin caja propia declarada), y `min-height:100%` sólo
+resuelve contra un ancestro de altura DEFINIDA — sin `contents`, `.cm2-scope`
+(altura `auto`) rompía la cadena. Verificado con el fixture, con y sin ese
+envoltorio, en nueve anchos (761 a 2560px): hueco inferior cero en los nueve.
+
+**Tercer hallazgo, en el mismo barrido: `.mrk-full` tampoco llegaba a los
+bordes horizontales reales — y no era nuevo de este PR.** Comprobando
+Competidores con su markup real (`.page.cm2-page`, no un `.page` genérico) el
+fixture midió `.mrk-full` 34px por debajo del borde izquierdo de
+`.dash-content` (bajo la barra lateral) y 34px corto del derecho, en vez de
+alinear con ninguno de los dos. La causa no era `--mrk-page-cap` (variable
+nueva de esta fase, ver abajo) sino la fórmula de sangrado que `.mrk-full` ya
+traía desde antes de esta fase: `margin-inline: calc(-1 * (page-pad-x +
+bleed))`, con `bleed = max(disponible - tope, 0) / 2`. Esa fórmula sólo da el
+resultado exacto cuando `.page` NO está topada (su margen `auto` no aporta
+nada, así que `-page-pad-x` sola cancela su padding) — en cuanto el tope de
+`.page` sí aplica, `.page` se centra con margen `auto` real a los dos lados y
+la fórmula se pasa exactamente `page-pad-x` de largo, en las 6 pantallas, no
+sólo en Competidores: reproducido igual en Visión general a partir de
+~1568px de ventana (el mismo umbral donde §150 documentó que `--ov-hdr-bleed`
+empieza a aportar algo). Invisible en la práctica —el sobrante de la izquierda
+queda bajo la barra lateral, pintado en blanco sobre blanco; el de la derecha
+es un borde de `--canvas` casi imperceptible junto al degradado— pero medible,
+y exactamente la pregunta que abrió este apartado. Rederivada desde el modelo
+de caja en vez de ajustada a ojo: el término que faltaba es `- 2 *
+page-pad-x` dentro del propio cálculo del sobrante, no un ajuste al margen
+final. Con él, `bleed` vale 0 exactamente hasta que `.page` deja de caber bajo
+su tope MÁS su propio padding a los dos lados — el punto real donde el
+centrado `auto` empieza a existir — y a partir de ahí compensa la fórmula
+completa, no sólo la mitad. Verificado con el mismo fixture en los mismos
+nueve anchos: hueco izquierdo y derecho cero en los nueve, con y sin el
+envoltorio de Competidores. **Deliberadamente no tocado en este PR:**
+`--ov-hdr-bleed` (`.ov-sticky-header`, §150/§151) tiene la misma forma y
+probablemente el mismo desajuste de `page-pad-x` — pero es una fase ya
+cerrada y aprobada, invisible por las mismas razones, y tocarla es un cambio
+más amplio (afecta a las 8 pantallas de la consola, no sólo a la misión) que
+merece su propio Task Intake si el fundador quiere perseguirlo.
+
+**`--mrk-page-cap`, la variable nueva.** Mismo mecanismo que
+`--ov-hdr-page-cap` (§150): `.mrk-full`'s fórmula de sangrado leía
+`--page-max-w` (1320px) sin condición, que es el tope real de `.page` en 5 de
+las 6 pantallas pero NO en Competidores, donde `.cm2-page` reescribe ese tope
+a sus propios escalones (460/640/1200/1280px en 0/900/1200/1600px de
+ventana). `.cm2-page .mrk-full { --mrk-page-cap: <escalón> }` en los mismos
+cuatro puntos de corte que `.cm2-page` ya usa; en las otras 5 pantallas la
+variable queda sin declarar y `var(--mrk-page-cap, var(--page-max-w))` cae al
+global. Sin esto, Competidores heredaba el error genérico de arriba MÁS un
+segundo error por comparar contra el tope equivocado — ambos corregidos a la
+vez porque son la misma fórmula.
+
+**`ReentryMission` (Auditoría web, re-escaneos) hereda la corrección gratis.**
+Comparte `.mrk-full`/`.mrk-canvas` con `ScanMissionRocket` (ver
+`.claude/rules/mission-rocket.md`) pero NUNCA se le añadió la clase
+`.mrk-fill`, así que su comportamiento de altura no cambia — sigue con el
+mismo tope `min(80svh, 700px)` de siempre, sin el hueco inferior de esta fase
+porque nunca perdió su cabecera. Sí hereda la corrección del sangrado
+horizontal (el `- 2 * page-pad-x` de la fórmula base), porque esa fórmula es
+compartida y el bug lo era igual de para las dos misiones. Ninguna de las dos
+reglas de `mission-rocket.md` que protegen la silueta, la paleta o la
+dirección de vuelo se toca en este PR — todo lo de aquí es geometría del
+contenedor, no de la escena.
+
+**Deliberadamente sin tocar.** Los banners de feedback (error/éxito, prompt
+mínimo) que viven entre la cabecera y el cuerpo de cada pantalla siguen
+renderizando sin condición — no se solapan con la misión en la práctica porque
+`scan_started`, el único mensaje que coincide en el tiempo con el primer
+escaneo, ya se suprime desde SCAN-STATES-2 (§40) por la misma razón ("banner
+flotando encima" de la misión).
+
+**Regla derivada, ya trazable.** Un componente full-bleed que cancela el
+padding de su contenedor con un margen negativo fijo asume que ese padding
+existe tal cual — cualquier pantalla que además lo fuerce a 0 por su cuenta
+tiene que condicionar esa fuerza a si el componente full-bleed va a ser el
+primer hijo o no, o mejor aún, resolverlo con flexbox (que no colapsa
+márgenes) en vez de con un margen negativo que asume una geometría concreta.
+No es exclusivo de esta fase: es el mismo colapso de márgenes padre-hijo que
+`.claude/rules/styles.md` ya documenta para otros casos de
+`height:100%`/`position:absolute`. Y una fórmula de sangrado a bordes reales
+que resta el padding del contenedor una sola vez, en vez de una por cada lado
+que ese padding existe, subestima el sobrante exactamente por ese padding en
+cuanto el tope de ancho real empieza a aplicar — verificar contra el modelo de
+caja completo, con un fixture que mida los cuatro bordes, no sólo a ojo en un
+ancho de ventana donde el error resulta ser cero por coincidencia (como pasó
+aquí a 1440px, donde `.page` no llegaba a toparse y el error desapareció sin
+que la fórmula fuera correcta).
+
+**Cuarta vuelta, en el mismo hilo: el fundador probó Auditoría web y reportó
+"sale cortado arriba y en todas hay que pegarla al menú izquierdo"** — captura
+con el beat "En órbita" (`ScanMissionRocket`, primer escaneo) con su rail
+partido por el borde superior y un hueco claro antes de la barra lateral. Ni
+`.mrk-fill` ni `--mrk-page-cap` estaban actuando ahí, y la razón era
+estructural, no de fórmula: Auditoría web es la única de las 6 pantallas donde
+`FirstScanTakeover`/`ReentryMission` NO cuelga directo de `.page` — hay un
+`<div className="wa2-scope wa2-page">` de por medio, que en Competidores SÍ
+existe (`.cm2-scope`) pero como envoltorio EXTERIOR de un `.page.cm2-page`
+combinado en el mismo elemento, nunca como hijo. Los selectores de esta fase
+(`.page.mrk-fill > .mrk-full`, con combinador de hijo directo `>`) asumían que
+`.mrk-full` era hijo de `.page` en las 6 — cierto en 5, falso en Auditoría web,
+donde es NIETO. El selector simplemente no casaba nunca ahí: la misión seguía
+con su tope de altura de siempre y su margen de siempre, sin nada del `.mrk-
+fill` que se acababa de escribir.
+
+**Arreglo, en dos piezas.** Los combinadores pasan a descendiente
+(`.page.mrk-fill .mrk-full`, sin `>`) para que casen sea cual sea la
+profundidad real. Y `.wa2-scope.wa2-page.mrk-fill { display: contents }` en
+`app/console.css` (mismo mecanismo que `.cm2-scope.mrk-fill`) es lo que hace
+que `flex: 1` signifique algo una vez que el selector sí casa: `contents` hace
+que los hijos de un elemento cuenten como hijos directos de SU PROPIO padre a
+efectos de caja y de participación en flex, sin cambiar el árbol DOM que un
+selector sigue teniendo que atravesar — las dos piezas son necesarias, ninguna
+sustituye a la otra.
+
+**El primer intento copió también `--mrk-page-cap` a `.wa2-page .mrk-full`, y
+el fixture lo pilló mal.** El razonamiento parecía el mismo que en
+Competidores —"otra pantalla con su propio escalón de ancho, dale su propia
+variable"— pero la diferencia estructural que acababa de motivar el arreglo de
+arriba también invalida esa analogía: `.cm2-page` va COMBINADO en `.page`
+(`<div class="page cm2-page">`), así que el `max-width` real de `.page` SÍ es
+el escalón de `.cm2-page`. `.wa2-page` es un hijo aparte DENTRO de un `.page`
+sin modificar — en cuanto `display:contents` le quita la caja, su propio
+`max-width`/`margin:auto` dejan de tener nada a lo que aplicarse, y `.page`
+sigue topado por el `--page-max-w` global de siempre, como cualquier pantalla
+sin clase `*2-page` propia. Con `--mrk-page-cap` puesto ahí, la fórmula de
+sangrado recibía un tope al que `.page` nunca estuvo sujeto: la escena quedaba
+20px corta por los dos lados a 1920px, medido con el mismo fixture, no
+razonando sobre los dos envoltorios como si tuvieran la misma forma. Retirado
+sin sustituto — a esta pantalla le basta con no tener la variable declarada,
+para que el `var(--mrk-page-cap, var(--page-max-w))` de `.mrk-full` caiga al
+global, que es lo correcto aquí.
+
+**Regla añadida a la de arriba.** Un `.mrk-fill` que sólo se prueba contra la
+forma genérica de `.page` (o contra una que YA se conocía, como `.cm2-scope`)
+dice poco de las demás: cualquier pantalla nueva que meta un envoltorio de
+columna estrecha entre `.page` y la misión necesita su propio grep de
+`<FirstScanTakeover` / `<ReentryMission` hacia arriba para ver qué hay en
+medio, antes de asumir que el patrón ya cubierto por otra pantalla se aplica
+igual. Verificado con el mismo fixture reproduciendo la jerarquía real de
+Auditoría web (`.page.mrk-fill > .wa2-scope.wa2-page.mrk-fill > .mrk-full`) en
+siete anchos de 375 a 2560px: hueco superior/inferior/izquierdo/derecho contra
+`.dash-content` en cero en los siete.
+
+**Quinta vuelta, mismo hilo: el fundador volvió a probar y circuló a mano el
+hueco exacto** — "queda eliminar ese hueco de la izquierda entre el menú y la
+animación en todas las páginas", con una captura marcando en rojo la franja
+blanca entre la barra lateral y el degradado de la misión en Visión general.
+Contradecía directamente el fixture de la tercera vuelta, que había dado hueco
+cero en nueve anchos para esa misma fórmula. Antes de tocar CSS una cuarta vez
+a ciegas, se pidió al fundador un dato del navegador real en vez de otra
+captura: clic derecho → Inspeccionar sobre el hueco. El selector marcó
+`.dash-content` — es decir, ni `.page` ni `.mrk-full` llegaban ahí en
+absoluto, no era un problema de un par de píxeles.
+
+**La causa: el fixture de la tercera vuelta nunca cargó el Preflight de
+Tailwind.** Los tres fixtures anteriores se montaban concatenando
+`app/globals.css`/`app/console.css` tras un `sed '/^@tailwind/d'` —
+imprescindible para que un `<style>` en un HTML suelto no intente resolver
+`@tailwind base;` como si fuera CSS real, pero con un efecto secundario nunca
+comprobado: sin Preflight, todo el fixture heredaba el `box-sizing` por
+defecto del navegador (`content-box`), mientras que la propia `@tailwind
+base;` que se estaba borrando es justo lo que pone `box-sizing: border-box`
+en todo elemento de la app real. Con `content-box`, el ancho renderizado de
+un `.page` topado es `tope + 2 × page-pad-x` (el padding se SUMA al
+`max-width`); con `border-box` (el real), es exactamente `tope` (el padding
+vive DENTRO de ese presupuesto). La diferencia entre los dos modelos es
+`2 × page-pad-x` en el ancho total de la caja — y por tanto en su
+desplazamiento de centrado — que es EXACTAMENTE el término que la tercera
+vuelta añadió a la fórmula, calibrado para corregir un error que sólo existía
+en el fixture, no en la app. El fixture pasó sus nueve anchos porque estaba
+siendo consistente consigo mismo, no porque midiera lo mismo que el
+navegador del fundador.
+
+**Arreglo: revertir la fórmula del margen a su forma original**
+(`margin-inline: calc(-1 * (page-pad-x + bleed))`, `bleed = max(disponible -
+tope, 0) / 2`, sin el `- 2 × page-pad-x` que había añadido la tercera vuelta),
+**dejando intacto todo lo demás de esa vuelta** — `--mrk-page-cap` seguía
+siendo necesaria y correcta (leer el tope real de `.cm2-page` en vez del
+global 1320 es un problema distinto de cómo se resta ese tope, y ese primero
+nunca dependió del modelo de caja). Verificado reconstruyendo el fixture
+desde la SALIDA COMPILADA de verdad (`.next/static/chunks/*.css` tras `pnpm
+run build`, buscando el chunk que contiene `.mrk-full`) en vez de una
+concatenación manual de fuentes — es la única forma de garantizar que el
+Preflight, el orden de capas de Tailwind y todo lo demás que un `sed` pueda
+borrar por accidente están realmente presentes. Mismo barrido de anchos que
+las vueltas anteriores, con hueco superior/inferior/izquierdo/derecho en cero
+en todos, incluida la propia pantalla y ancho de la captura del fundador
+(Visión general, ~2000px).
+
+**Regla derivada, distinta de las tres anteriores de esta misma fase.** Un
+fixture que pretende verificar CSS de una app con Tailwind tiene que arrancar
+de la hoja de estilo COMPILADA, no de una concatenación manual de las fuentes
+— cualquier paso manual entre el código fuente y el navegador (`sed`, copiar
+sólo un subconjunto de ficheros, omitir las directivas `@tailwind`) es un
+punto donde el modelo de caja, la cascada o las capas pueden divergir de lo
+que el usuario ve, en silencio y sin que el propio fixture pueda detectarlo
+—pasa sus propios anchos con hueco cero porque es consistente consigo mismo,
+no porque mida lo mismo que la app real. Y cuando la evidencia del fundador
+contradice un fixture ya "verificado", el primer paso no es un cuarto intento
+de arreglo a ciegas: es pedir un dato del navegador real (aquí, qué elemento
+selecciona el inspector en el hueco) que confirme DÓNDE está el desajuste
+antes de decidir CÓMO corregirlo.
 
 ---
 
-## 160. HOME-SEO-AUDIT-1: la FAQ deja de prometer un comprobador al que el hero ya no lleva, y el comprobador gana sus primeros enlaces internos (2026-08-25)
+## 161. Switch para silenciar el aviso "Tu análisis de hoy no se repetirá" (DEBUG-HIDE-NO-TRACKING-1, 2026-08-25)
+
+**Lo que pidió el fundador.** Un switch en `/debug` para desactivar la banda
+de `no_tracking` del data-maturity banner (`components/data-maturity-banner.tsx`)
+— el aviso que invita a activar el seguimiento diario y que aparece en toda la
+consola mientras `recurring_scans_enabled` esté apagado en un proyecto con
+historial parcial (`computeDataMaturity`, `lib/project-workspace.ts`).
+
+**Por qué no es otro switch de proyecto en `projects`.** Los switches ya
+existentes de `/debug` (`recurring_scans_enabled`, `sampling_enabled`, los
+tres `engine_*_enabled`) deciden **trabajo real** — qué gasta IA en el
+próximo escaneo — y viven en el esquema porque ese estado tiene que
+sobrevivir entre sesiones y dispositivos y ser la fuente de verdad que lee el
+propio pipeline. Este switch no decide nada del producto: sólo si el
+navegador actual muestra o no un aviso ya calculado en el servidor. Añadir
+una columna y una migración para eso habría sido el mismo error que
+`.claude/rules/onboarding.md` ya evita para el "ya visto" del tour —
+"una migración está prohibida sin aprobación explícita del fundador"—, así
+que sigue el mismo patrón: `localStorage`, con el coste asumido de que la
+preferencia no viaja entre navegadores.
+
+**Mecanismo.** `noTrackingHiddenKey(projectId)` (exportada desde
+`data-maturity-banner.tsx`) construye la clave `dmb-hide-no-tracking:<id>`;
+el switch nuevo, `NoTrackingBannerToggle` (`app/dashboard/projects/[projectId]/
+debug/no-tracking-banner-toggle.tsx`), la lee/escribe. `DataMaturityBanner`
+comprueba esa misma clave junto al `dismissed` que ya tenía, y devuelve
+`null` para el estado `no_tracking` cuando está activada — no toca los
+estados `free` ni `accumulating`, que siguen su propio dismiss por sesión.
+
+**Por qué el componente no vive en `components/`.** Reutiliza las clases
+`dbg-switch`/`dbg-switch-ico`/`dbg-switch-txt` de `app/console.css`, y
+`tests/console-css-scope.test.ts` prohíbe que esas clases aparezcan en
+cualquier fichero fuera de `app/dashboard/**` — la primera versión sí vivía
+en `components/` y el test lo cazó en la primera pasada. Se movió junto a
+`page.tsx`, mismo patrón que `delete-domain-button.tsx` en la misma carpeta.
+
+**Nota de renumeración.** Esta sección nació como §153 en su propia rama;
+`main` avanzó mientras tanto (PR de ONBOARDING-TOUR-PERSIST-1) y reclamó
+§153-159, así que pasó a §160 en una primera fusión. Mientras esa colisión se
+resolvía, `main` volvió a avanzar (PR #472, SCAN-FULLSCREEN-HEADER-1) y
+reclamó también el §160 — así que esta sección pasa a **§161** en esta
+segunda fusión. Mismo protocolo que ya describe la sección "Cierre de fase"
+de `CLAUDE.md`, y el mismo patrón de colisión en cadena que ya documenta el
+§159 de este mismo fichero: mientras una rama fusiona `main` para resolver
+una colisión, `main` puede volver a moverse por debajo.
+
+**Comprobado.** `pnpm test` (202/202, 2.827/2.827), `pnpm run build`,
+`pnpm run typecheck`, `pnpm run lint` y `bash scripts/agentic-handoff-check.sh`
+en verde.
+
+---
+
+## 162. Rediseño del onboarding de nuevo dominio — dirección "Consola" (ONBOARDING-DOMAIN-REDESIGN-1, 2026-08-20)
+
+**El problema.** El asistente de alta de dominio (`components/onboarding-
+wizard.tsx`) seguía en el sistema visual anterior a la migración de marca:
+índigo `#4F46E5`, degradado morado-teal en el titular, Hanken Grotesk — el
+único flujo P0 del producto que un usuario nuevo ve obligatoriamente y que
+seguía sin la paleta azul/Bricolage Grotesque que ya llevan Visión general
+(§119), Recomendaciones (§115) y el resto de la consola. Las dos cargas
+(sugerencia de Gemini, creación del proyecto) eran además una cortina fija a
+pantalla completa (`.state-wrap`, `position: fixed; inset: 0`) que tapaba
+todo el contexto — dominio escrito, plan, navegación — mientras esperabas.
+
+**Qué se decidió.** Tres direcciones se plantearon en el lienzo de `/design`
+(A "Cuenta atrás" con la metáfora del cohete de la misión completa, B
+"Consola" con el sistema visual del resto del producto, C "Rampa lateral" con
+un panel nocturno fijo). El fundador eligió **B**. Detalle completo, capturas
+de las tres pantallas y de las cinco maquetas de B en
+`docs/design-reference/onboarding-domain-redesign-1/README.md` y
+`direccion-b-aprobada.html`.
+
+Cambios concretos:
+
+1. **Migración de tokens.** `.onb2-scope` se suma al remap compartido
+   `.ov2-scope`/`.set-scope` (mismo mecanismo que ya pedía reutilizar el
+   comentario de ese bloque — un remap, no un tercero) — azul
+   `--brand-blue`, Bricolage Grotesque/Figtree, sombra de marca. La barra de
+   pasos pasa de círculos numerados a tres segmentos con etiqueta debajo
+   (`.onb2-steps`).
+2. **Cargas embebidas, no cortina.** `SuggestionsLoadingOverlay` y
+   `CreateProjectOverlay` (fixed, `inset: 0`) desaparecen. En su lugar, cada
+   paso sustituye su propia tarjeta por una versión "cargando" en el mismo
+   sitio (`DomainAnalyzingCard`, y `PromptsStepBody` leyendo
+   `useFormStatus()`) — el panel de resumen y la navegación nunca
+   desaparecen de la pantalla.
+3. **Panel "Resumen del lanzamiento".** Columna derecha fija con dominio,
+   idioma (marcado "detectado" sólo desde que `suggestAction` ha resuelto,
+   nunca antes), motores, competidores y prompts — cada cifra es el estado
+   real del asistente; "Pendiente" mientras ese paso no se ha alcanzado, en
+   vez de un cero o un guion que podría leerse como un valor medido. El
+   total de respuestas estimadas (`prompts × motores`) se calcula del estado,
+   nunca de una tabla fija.
+4. **`Competitor` gana `source: "suggested" | "manual"`.** El chip "sugerido"
+   del paso de competidores sólo se pinta en las filas que de verdad vinieron
+   de Gemini — una fila añadida a mano con "Añadir competidor" nunca lo
+   lleva. Desviación deliberada frente a la maqueta (que no distinguía
+   origen); ver el README de la carpeta de diseño.
+5. **Reparto de prompts por categoría.** Nuevo panel de barras en el paso de
+   prompts, calculado en `useMemo` sobre el propio estado `prompts` — cuenta
+   real, no inventada.
+
+**Qué NO cambió.** Los tres pasos, sus validaciones, la recogida del dominio
+pendiente de la landing (`pending-domain.ts`), los mensajes de error de
+Gemini (`SuggestionGapNotice`) y los nombres de los campos ocultos del
+`<form>` que lee `createProject` — nada de la lógica de servidor se tocó.
+
+**Fusión con ONBOARDING-COMPETITORS-CAP-1 (§123), en marcha en paralelo.**
+Esta fase se escribió sobre una base de `main` anterior a §122-124; al
+sincronizar antes del Human Gate, `components/onboarding-wizard.tsx` traía un
+cambio real de #448 (tope `MAX_USER_COMPETITORS` en el paso de competidores,
+botón "Añadir competidor" deshabilitado al llegar a 10) que el merge de git no
+podía aplicar solo porque el fichero se había reescrito entero — se
+reincorporó a mano sobre el nuevo diseño (contador "(máximo 10)" en el
+`onb2-seclbl`, `disabled` en el botón). Sin este paso, el merge habría
+revertido en silencio un fix de pérdida de datos ya en producción.
+
+**Dónde vive el CSS y por qué no en `console.css`.** El bloque `onb2-` vive
+en `app/globals.css`, no en `app/console.css`, aunque el asistente sólo se
+renderiza dentro de `app/dashboard/**`: `components/onboarding-wizard.tsx`
+es un fichero de `components/`, y `tests/console-css-scope.test.ts` sólo
+excluye el directorio `app/dashboard/**` de "fuera de la consola" — trata
+cualquier clase escrita desde `components/` como pública, tal y como ya
+advertía `.claude/rules/styles.md` sobre la pantalla de notificaciones. Las
+clases exclusivas del wizard anterior (`.add-domain`, `.add-card`,
+`.wiz-steps`, …) se borraron de `globals.css`; las que seguían siendo
+compartidas con otras pantallas (`.add-sub`, `.domain-bar`, `.field-label`,
+`.type-caret`, `.cap`, `.meta-flag`, …) se mantienen intactas y el nuevo
+diseño las reutiliza tal cual.
+
+**Trazabilidad.** `components/onboarding-wizard.tsx`; `app/globals.css`
+(bloque `.onb2-`); `docs/design-reference/onboarding-domain-redesign-1/`;
+log §2 (mecanismo de remap de tokens), §119 (última pantalla migrada al
+mismo sistema), §123 (tope de competidores fusionado en esta misma fase).
+
+**Corrección tras revisión del fundador en el preview real (mismo día).**
+Cinco defectos de detalle, todos con capturas reales adjuntas al pedirlas:
+
+1. **`.add-hint` y `.add-engines` no existían.** El primer paso de limpieza
+   de CSS de esta misma fase borró ambas reglas al reescribir el bloque
+   `.add-*` — y el comentario que quedó en su lugar afirmaba, incorrectamente,
+   que se conservaban. Sin esas reglas, el icono y el texto de la pista del
+   dominio no tenían ningún `display:flex`/`align-items` que los alineara, y
+   la fila de motores no tenía `gap` — de ahí "el icono no está en la misma
+   línea" y "los motores quedan pegados". Vuelto a escribir tal cual estaba,
+   con el `gap` de `.add-engines` subido de 16 a 18px.
+2. **Puntos de color en vez de los iconos reales de los motores.** Sustituidos
+   por `EngineGlyph` (`components/ui/engine-glyph.tsx`) + `getEngineMeta`
+   (`lib/scan/engine-meta.ts`) — el mismo componente y los mismos colores que
+   ya usan Visión general y Prompts, no un segundo set inventado para este
+   flujo.
+3. **Competidores y prompts vivían siempre desplegados**, con un campo de
+   texto por fila a ancho completo — nunca coincidió con la maqueta B3/B4
+   aprobada (`docs/design-reference/onboarding-domain-redesign-1/`, que las
+   mostraba plegadas: nombre+dominio como texto, un prompt en una línea). Cada
+   fila gana una identidad de UI local (`id`, asignado por un contador en
+   `useRef`, nunca enviado al servidor) y un estado plegado/desplegado
+   (`openCompetitors`/`openPrompts`, un `Set<number>` de ids). Una fila
+   sugerida por Gemini nace plegada; una fila nueva vía "Añadir…" nace
+   desplegada, porque una fila vacía y plegada no da nada en lo que hacer
+   clic. El icono de engranaje (`Icon name="settings"`) la abre; al abrir
+   pasa a mostrar un check y la cierra. Competidores despliega a dos
+   columnas (nombre | dominio) en vez de apiladas, para no ocupar tanto.
+4. **Las cajas de prompt medían distinto entre sí.** El `<textarea>` no tenía
+   altura fija ni `resize:none`, así que cada una crecía según su contenido.
+   `.onb2-prompt-edit` fija `height:76px` y quita el tirador de
+   redimensionar — las tres miden lo mismo siempre.
+5. **El reparto por categoría no alineaba sus columnas.** `.onb2-cov` usaba
+   `flex-wrap`, que reparte el ancho sobrante fila a fila — dos filas de la
+   misma cuadrícula podían no tener las columnas alineadas entre sí. Cambiado
+   a `display:grid` con `repeat(auto-fit, minmax(140px, 1fr))`, que sí fuerza
+   la misma anchura en todas las filas.
+
+Verificado sin sesión real: maqueta estática con el `app/globals.css` real
+(mismo método que la captura de `direccion-b-aprobada.html`), no sólo lectura
+de CSS. `pnpm test`/`pnpm run validate` vueltos a correr limpios.
+
+**Segunda ronda de feedback del fundador probando el preview real: el copy
+del selector de país mentía.** Probó `amazon.es` cambiando el país de
+análisis y le salió "idioma inglés detectado" con competidores de España —
+"un poco lío". La pista bajo el campo de dominio decía "El idioma se detecta
+automáticamente del dominio", y eso es falso: `languageForCountry`
+(`lib/projects/project-form.ts`) deriva el idioma de una tabla país→idioma
+fija a partir de la bandera elegida, nunca del contenido real del dominio —
+y ese mismo `country` es un input real que se manda a `suggestCompetitors`/
+`suggestPrompts` (`app/dashboard/projects/actions.ts`) para decirle a Gemini
+para qué mercado analizar. Quitar la bandera, como sugirió primero el
+fundador, habría perdido esa capacidad real (monitorizar un `.es` para el
+mercado inglés, por ejemplo); el fundador decidió en su lugar corregir sólo
+el copy para que diga lo que el selector hace de verdad: **"Elige el país
+cuyo mercado quieres analizar."** Cambio de una sola línea en
+`components/onboarding-wizard.tsx`; sin tocar `languageForCountry` ni la
+lógica de sugerencia.
+
+**Segunda ronda de revisión manual (2026-08-22): distribución de escritorio y
+un corte real en el paso de prompts.** El fundador probó el preview real en
+capturas de escritorio y reportó dos cosas: (1) "en general" el asistente se
+veía centrado en medio de la pantalla, con demasiado espacio libre a los
+lados en las tres pantallas; (2) específicamente en "Revisa tus prompts", el
+panel "Resumen del lanzamiento" salía "mal centrado" y "se corta".
+
+Investigado sin sesión autenticada (igual que las rondas anteriores):
+reproducción estática local con el `app/globals.css` real, renderizada con
+Chromium headless a 1440×900 y 1920×1080, con un script de depuración que
+mide `getBoundingClientRect()` de cada elemento del `.onb2-grid`. Dos causas
+distintas, una por queja:
+
+1. **El espacio libre era real, no percepción.** `.onb2-page { max-width:
+   1080px }` es más estrecho que el resto de pantallas de consola
+   rediseñadas con este mismo patrón contenido+panel — `.cm2-page`,
+   `.cit2-page`, `.dm2-page` escalan hasta 1200-1280px en pantallas grandes.
+   Subido a `1200px`, en línea con esas otras zonas.
+2. **El corte en el paso de prompts era un bug real de CSS Grid, no una
+   percepción ni un recorte de captura.** `.onb2-grid` usaba
+   `grid-template-columns: 1fr 320px` (sin `minmax(0, …)`). La cuadrícula de
+   cobertura por categoría dentro de ese paso (`.onb2-cov`, `repeat(auto-fit,
+   minmax(140px, 1fr))`) aporta un ancho mínimo de contenido de
+   `nº categorías × 140px`; con un `1fr` a secas ese mínimo empuja la columna
+   de contenido más allá de su reparto justo, y el panel fijo de 320px sale
+   empujado fuera del viewport — sin scroll horizontal porque `.shell` recorta
+   ese eje (`.claude/rules/styles.md`, "clip, nunca hidden"). Reproducido:
+   a 1440px el panel completo (incluido el valor del dominio) quedaba fuera
+   de la pantalla, invisible y sin forma de llegar a él. `.onb2-grid` no era
+   una construcción nueva: el mismo layout contenido+panel fijo ya existía en
+   `.cm2-cols` (competidores real) con `minmax(0, 1fr) 320px` — el onboarding
+   se desvió de ese patrón ya establecido. Corregido igualando esa regla; el
+   único paso con `.onb2-cov` es precisamente "Revisa tus prompts", que es
+   por lo que el corte no aparecía en los pasos de dominio o competidores.
+   Verificado tras el cambio: a 1440px y 1920px el panel completo queda
+   dentro del viewport en ambos casos, sin overflow horizontal
+   (`document.documentElement.scrollWidth === innerWidth`).
+
+Ningún dato falso: ambos arreglos son de layout puro, sin tocar la lógica del
+asistente.
+
+**Tercera ronda (2026-08-23, móvil): `.db-ghost` nunca había existido.** El
+fundador reportó en su móvil que el texto animado del campo de dominio ("el
+placeholder que escribe solo", `TYPE_SAMPLES`) no salía en gris, y que
+desplazaba toda la pantalla lateralmente mientras escribía. El comentario de
+la sección de arriba (líneas ~4448-4455) listaba `.db-ghost` entre las clases
+"still used as-is by the new layout and stay here unchanged" — pero la regla
+nunca se escribió, ni en esta migración ni en la anterior: no existía ninguna
+definición `.db-ghost` en todo `globals.css`. Sin ella, ese `<span>` se
+pintaba con el texto negro por defecto del navegador (no `--ink-4`) y, más
+grave, participaba como un hijo flex normal más dentro de `.domain-bar`,
+aportando el ancho de su propio contenido en vez de superponerse al input —
+exactamente lo que ya le pasó a `.add-hint`/`.add-engines` en la ronda
+anterior de esta misma fase. Reproducido localmente (`globals.css` real,
+Chromium headless, sin la regla): el input se encogía de 203px a 99px para
+hacerle sitio al texto fantasma, y con una muestra más larga o un viewport de
+375px real ese hueco no basta y la fila entera se desborda — el "desplazamiento
+de toda la pantalla" que describió el fundador. Corregido con
+`position: absolute` + `color: var(--ink-4)`, el mismo patrón que ya usa el
+placeholder gemelo de la portada pública (`.lp-field-ghost`, con el mismo
+`left: 44px` por construcción): al sacarlo del flujo, deja de aportar ancho a
+la fila sea cual sea el viewport. Verificado con y sin la regla en la misma
+reproducción: sin ella el input se encoge y el texto sale negro; con ella el
+input recupera su ancho y el texto sale en gris, sin tocar el resto de la
+fila.
+
+**Cuarta ronda (2026-08-23, móvil): clasificación de prompts sin alinear,
+copy sobrante, y favicons reales en competidores.** El fundador señaló con
+una captura anotada que el chip de categoría de cada prompt "flotaba" a
+distinta altura fila a fila. Causa: `.onb2-row` (sin abrir) usaba
+`align-items: center`, y como `.onb2-ptext` envuelve a 1-3 líneas según el
+prompt, cada fila tiene una altura distinta — el chip y los dos iconos
+quedaban centrados respecto a ESA altura, no respecto a la primera línea de
+texto, así que su posición vertical variaba de fila en fila aunque su
+posición horizontal (a la derecha, empujada por `flex:1` en `.onb2-ptext`)
+fuera siempre la misma. `.onb2-row.align-top` (`align-items: flex-start`) ya
+existía — se usaba sólo en la fila abierta, para editar — y aplicarla también
+a la fila plegada ancla el chip a la primera línea en todas las filas por
+igual. Verificado con una reproducción local de tres filas de distinto largo:
+el chip queda al mismo borde superior en las tres.
+
+Segundo cambio: retirada la frase final del panel "Resumen del lanzamiento"
+("Si tu plan repite la tanda, serán más.") — el fundador la tachó a mano sin
+más explicación; el panel se queda en "N prompts × M motores." sin perder
+ningún dato real.
+
+Tercer cambio, en respuesta a una pregunta del fundador sobre coste
+("¿sería caro obtener los favicons en la búsqueda de competidores?"): la
+respuesta fue que no hace falta LLM — el producto ya tiene infraestructura de
+favicons reales servida por `/api/favicon` (`lib/domains/favicon.ts`,
+FAVICON-QUALITY-1 §36/§39), usada hoy en la pantalla real de Competidores
+(`FaviconImg`, `.cm2-rank-fav-img`) y en Visión general. El asistente de
+onboarding pintaba en su lugar un círculo de color con la inicial
+(`AVATAR_COLORS`, puramente decorativo). Con el "impleméntalo" del fundador:
+la fila de competidor pasa a usar el mismo `<FaviconImg domain={row.domain}
+cssSize={28}>` con el círculo de inicial como `fallback` — sin tocar
+`lib/domains/favicon.ts` ni el backend, cero llamadas a Gemini, y con el
+mismo apagado a iniciales que ya usan Competidores/Visión general cuando el
+dominio no tiene icono conocido o mientras el campo está vacío (una fila
+"Añadir competidor" nueva, sin dominio todavía).
+
+Los tres cambios son sólo de presentación — `MAX_USER_COMPETITORS`, la
+lógica de sugerencia y los campos que `createProject` lee no se tocaron.
+
+**Nota de renumeración.** Esta sección nació como §145 en su propia rama;
+`main` avanzó mientras tanto y reclamó ese número (GEO-VS-AEO-VS-SEO, zona
+Blog y contenido), así que pasó a §152 en una primera fusión con `main`. Esa
+misma colisión en cadena volvió a producirse: `main` siguió avanzando (PR
+PRICING-PROMO-1) y reclamó también el §152, así que esta sección pasa a
+**§162** al fusionar de nuevo — mismo protocolo que describe la sección
+"Cierre de fase" de `CLAUDE.md`, y la misma cadena de colisiones que ya
+documentan los §159/§161 de este mismo fichero.
+
+---
+
+## 163. HOME-SEO-AUDIT-1: la FAQ deja de prometer un comprobador al que el hero ya no lleva, y el comprobador gana sus primeros enlaces internos (2026-08-25)
+
+**Nota de renumeración.** Esta sección nació como §160 en su propia rama; mientras se abría el PR, `main` avanzó dos veces y reclamó ese mismo número dos veces por delante (§160 con SCAN-FULLSCREEN-HEADER-1, PR #472, y §161/§162 con DEBUG-HIDE-NO-TRACKING-1 y ONBOARDING-DOMAIN-REDESIGN-1). Pasa a **§163**, el primero libre al fusionar. Mismo protocolo que ya describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión que ya documentan los §159 y §161 de este mismo fichero.
 
 **Por qué.** Auditoría pedida por el fundador tras el cierre de HOME-2026-08
 (§141-§159): con la portada reescrita entera en tres días, ¿qué del código o

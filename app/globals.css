@@ -1123,9 +1123,12 @@ a {
 /* CONSOLE-REDESIGN-1 reuses this remap for Ajustes (`.set-scope`) rather than
    inventing a second mechanism, as the design log §2 requires. The two share
    the token block below; only `.ov2-scope` gets Overview's 460px column, which
-   is why the width rule stays on its own selector further down. */
+   is why the width rule stays on its own selector further down.
+   ONBOARDING-DOMAIN-REDESIGN-1 adds `.onb2-scope` to the same remap for the
+   same reason — one mechanism, not a third copy. */
 .ov2-scope,
-.set-scope {
+.set-scope,
+.onb2-scope {
   font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ink: var(--brand-ink);
   --ink-2: var(--brand-ink-2);
@@ -1146,7 +1149,8 @@ a {
 .ov2-scope .ov2-insight,
 .ov2-scope .ov2-kpi,
 .ov2-scope .ov2-opps,
-.set-scope .card {
+.set-scope .card,
+.onb2-scope .card {
   box-shadow: var(--brand-shadow-card);
 }
 /* Gauge component's inner number is a shared component (not an ov2 class), so
@@ -1694,17 +1698,32 @@ a {
    of quietly falling back to the wrong constant. */
 .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 460px; }
 
+/* SCAN-FULLSCREEN-HEADER-1 continuation (2026-08-25): `.mrk-full` (the
+   first-scan mission's full-bleed shell) has the exact same blind spot
+   `--ov-hdr-page-cap` was already fixed for above — its own bleed math
+   (`app/globals.css`, `.mrk-full`'s `@media (min-width: 761px)` rule) reads
+   `--page-max-w` (1320px) unconditionally, which is wrong on THIS screen
+   where `.page`'s real cap is `.cm2-page`'s own step. Left unset, `.mrk-full`
+   undershoots the left edge and overshoots the right by up to 34px here —
+   found with the same Playwright/Chromium fixture used for the header and
+   height fixes, rendering the real `.page.cm2-page` markup (not just a
+   generic `.page`) at 1024px wide. Same four steps, same mechanism. */
+.cm2-page .mrk-full { --mrk-page-cap: 460px; }
+
 @media (min-width: 900px) {
   .cm2-page { max-width: 640px; }
   .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 640px; }
+  .cm2-page .mrk-full { --mrk-page-cap: 640px; }
 }
 @media (min-width: 1200px) {
   .cm2-page { max-width: 1200px; }
   .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 1200px; }
+  .cm2-page .mrk-full { --mrk-page-cap: 1200px; }
 }
 @media (min-width: 1600px) {
   .cm2-page { max-width: 1280px; }
   .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 1280px; }
+  .cm2-page .mrk-full { --mrk-page-cap: 1280px; }
 }
 
 /* 1 · Insight banner — same visual language as .ov2-insight/.pr2-insight */
@@ -4124,6 +4143,73 @@ a.notif-row:hover {
    the atmosphere rather than keeping a daylit frame around a night scene. */
 .mrk-full.night { background: linear-gradient(180deg, #04070F 0%, #14293F 100%); }
 
+/* SCAN-FULLSCREEN-HEADER-1 continuation (2026-08-25): with `.ov-sticky-header`
+   hidden while the mission is on screen, `.mrk-canvas`'s height cap
+   (`min(80svh, 700px)` desktop / `min(78svh, 620px)` mobile) left a growing
+   gap between the scene and the true bottom of `.dash-content` on tall
+   viewports — measured at 157px at 1920×1080 with the same Playwright/
+   Chromium fixture used for the width fix (founder screenshot: the ground
+   band stopping well short of the sidebar's last nav item).
+
+   `.mrk-fill` makes `.mrk-full` grow to fill whatever height is left instead
+   of stopping at that cap. Flexbox, not `.mrk-full`'s own negative-margin
+   trick above: a flex container never collapses margins into or out of
+   itself, so converting `.page` to one here sidesteps the exact
+   collapse-through-parent bug the width fix hit on Prompts (§153, `.page`'s
+   own `padding-top: 0` collapsing `.mrk-full`'s `-26px` through it and
+   clipping the scene) — `.mrk-fill` zeroes `.page`'s padding outright and
+   zeroes `.mrk-full`'s margin to match, no cancellation arithmetic needed.
+
+   `.cm2-scope.mrk-fill` / `.wa2-scope.wa2-page.mrk-fill { display: contents }`
+   matter for the two screens whose `.page` isn't `.mrk-full`'s direct DOM
+   parent. `min-height: 100%` only resolves against an ancestor with a
+   DEFINITE height, and Competidores wraps `.page.cm2-page` in `.cm2-scope`
+   (a custom-property scope only, see its own rule) — an extra layer whose
+   own height is `auto` by default and would break the percentage chain.
+   `display: contents` removes that box so `.page.mrk-fill` sees
+   `.dash-content` (a real flex item of `.dash-main`'s column, so a definite
+   height) as its containing block, same as the other screens.
+
+   Auditoría web needed the same treatment for a DIFFERENT reason, found only
+   by testing the real markup: `.wa2-scope.wa2-page` wraps the mission ONE
+   level deeper than `.cm2-scope` does — inside `.page`, not combined with
+   it — so `.mrk-full` there is `.page`'s GRANDCHILD in the DOM, never its
+   direct child. The rules below used to read `.page.mrk-fill > .mrk-full`
+   (`>`, direct-child only), which silently never matched there: the mission
+   kept its old fixed-height cap and its old (already-fixed-above) margin,
+   with none of `.mrk-fill`'s zeroed padding to sit flush against — the exact
+   top-clipping the flex approach exists to avoid, one wrapper removed from
+   where it was already fixed (founder screenshot, Auditoría web, the órbita
+   beat cut off under the topbar with a left-edge gap besides). Descendant
+   selectors (no `>`) fix the match; `display: contents` on `.wa2-scope.wa2-
+   page` (like `.cm2-scope`) is what then makes `flex: 1` mean something —
+   contents makes an element's children act as direct children of ITS OWN
+   parent for box-generation and flex-participation purposes, without
+   changing the DOM tree a selector still has to match against. Any FUTURE
+   screen that nests a `*-scope`/`*-page` wrapper between `.page` and
+   `FirstScanTakeover`/`ReentryMission` needs the same `.mrk-fill` variant on
+   that wrapper — grep for `<FirstScanTakeover` and `<ReentryMission` and
+   check what's between them and the nearest `.page`. */
+.page.mrk-fill {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.page.mrk-fill .mrk-full {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+}
+.page.mrk-fill .mrk-full > .mrk-canvas {
+  flex: 1;
+  min-height: 0;
+}
+.cm2-scope.mrk-fill { display: contents; }
+
 /* The base rule's `100vw` / `calc(50% - 50vw)` break-out assumes `.page` is
    centered in the TRUE viewport, which only holds below 760px — that's where
    `.shell` collapses to one column and the sidebar leaves the grid entirely
@@ -4151,8 +4237,41 @@ a.notif-row:hover {
   .mrk-full {
     width: calc(100vw - var(--sidebar-w));
     max-width: calc(100vw - var(--sidebar-w));
+    /* `var(--mrk-page-cap, var(--page-max-w))` — same fallback-to-global
+       shape as `--ov-hdr-page-cap` (line ~1682): the excess this formula
+       bleeds into is measured against `.page`'s REAL max-width, and
+       Competidores is the one screen where that's `.cm2-page`'s own step
+       (460/640/1200/1280), not the global 1320px every other screen uses.
+       Unset anywhere else, so the fallback is what actually runs there.
+
+       CORRECTION (2026-08-25, same day, two commits later): an earlier pass
+       here added a `- 2 * var(--page-pad-x)` term to this formula, reasoned
+       from a fixture that did NOT include Tailwind's Preflight reset — which
+       sets `box-sizing: border-box` on every element in this app (`app/
+       globals.css` starts with `@tailwind base;`). Under the browser's
+       PLAIN default (content-box, what that fixture silently fell back to),
+       `.page`'s rendered width when capped is `cap + 2 × page-pad-x`
+       (max-width applies to content only, padding adds on top), and the
+       extra term was the correction that box model needed. Under the app's
+       REAL border-box model, `.page`'s rendered width when capped is
+       exactly `cap` (max-width already includes the padding budget) — the
+       ORIGINAL formula below, with no extra term, is exact in that model,
+       and the "fix" instead pushed the box 34px short of the right edge and
+       34px past the left, live on the founder's screen (report: "queda
+       eliminar ese hueco de la izquierda entre el menú y la animación").
+       Diagnosed by asking the founder to inspect the gap in DevTools — it
+       selected `.dash-content`, meaning `.mrk-full` genuinely wasn't there —
+       then confirmed by building a fixture from the actual compiled,
+       minified `.next` CSS output instead of hand-assembled source, which is
+       what should have been used from the start for anything claiming to be
+       pixel-verified: same 761–2560px sweep as before, all four edges
+       (top/bottom/left/right) exactly zero against `.dash-content`, through
+       both `.cm2-scope` and `.wa2-scope.wa2-page`'s `display: contents`.
+       `--mrk-page-cap` itself is untouched and still correct — reading the
+       right cap value and computing the right margin FROM it are two
+       different bugs, and only the second one was ever real. */
     margin-inline: calc(
-      -1 * (var(--page-pad-x) + max((100vw - var(--sidebar-w)) - var(--page-max-w), 0px) / 2)
+      -1 * (var(--page-pad-x) + max((100vw - var(--sidebar-w)) - var(--mrk-page-cap, var(--page-max-w)), 0px) / 2)
     ) 0;
   }
 }
@@ -4440,29 +4559,12 @@ a.notif-row:hover {
 .btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 999px; animation: spin .7s linear infinite; flex-shrink: 0; }
 .progress-track { height: 6px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; margin: 24px auto 0; max-width: 380px; }
 .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .5s ease; }
-/* Indeterminate variant: no measured completion, so the fill is an animated
-   stripe instead of a width tied to a real percentage (see onboarding-wizard.tsx). */
-.progress-track.indeterminate .progress-fill { width: 40%; animation: progress-indeterminate 1.4s ease-in-out infinite; }
-@keyframes progress-indeterminate {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(250%); }
-}
-
-/* Checklist used by onboarding loading overlays (onboarding-wizard.tsx).
-   Visual language ported from docs/design-reference/geo-suite-2/styles.css
-   .load-step* — but unlike the reference, the "active" step here is driven by
-   a cosmetic local timer and is capped before the last step until the real
-   async call resolves (never shows a fake "done" on the final step). */
-.load-steps { text-align: left; margin: 26px auto 0; max-width: 380px; display: flex; flex-direction: column; gap: 2px; }
-.load-step { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--r-md); font-size: 13.5px; font-weight: 600; color: var(--ink-4); }
-.load-step.active { background: var(--accent-soft); color: var(--accent-ink); }
-.load-step.done { color: var(--ink-2); }
-.ls-ico { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; flex: 0 0 auto; border: 2px solid var(--line-strong); }
-.load-step.done .ls-ico { background: var(--pos); border-color: var(--pos); color: #fff; }
-.load-step.active .ls-ico { border-color: var(--accent); }
-.load-step.active .ls-ico .spinner { width: 12px; height: 12px; border-width: 2px; }
-.ls-num { font-size: 11px; font-weight: 700; color: var(--ink-4); }
-.ls-working { margin-left: auto; font-size: 11.5px; color: var(--accent-ink); font-weight: 600; }
+/* ONBOARDING-DOMAIN-REDESIGN-1 dropped the .indeterminate variant and the
+   .load-steps/.ls-* checklist: both were exclusive to the old full-screen
+   onboarding overlays. The new embedded-in-card loading states use the
+   onb2-check* classes in app/console.css instead. .progress-track/
+   .progress-fill above stay — components/scan-in-progress.tsx still uses
+   them with a real measured percentage. */
 
 /* ============================================================
    Escaneos — first-scan / scan-in-progress banner
@@ -4561,11 +4663,26 @@ a.notif-row:hover {
   box-shadow: 0 6px 28px rgba(16,24,40,.10), 0 1px 2px rgba(16,24,40,.05);
   transition: border-color .15s, box-shadow .15s;
 }
-.domain-bar:focus-within { border-color: var(--accent-ring); box-shadow: 0 0 0 4px var(--accent-ring), 0 10px 32px rgba(79,70,229,.16); }
+.domain-bar:focus-within { border-color: var(--accent-ring); box-shadow: 0 0 0 4px var(--accent-ring), 0 10px 32px rgba(37,99,235,.16); }
 .domain-globe { color: var(--ink-4); padding: 0 4px 0 8px; flex: 0 0 auto; }
 .domain-input { flex: 1; min-width: 0; border: none; outline: none; background: transparent;
   font-size: 15.5px; font-weight: 550; color: var(--ink); height: 40px; }
 .domain-input::placeholder { color: var(--ink-4); font-weight: 450; }
+/* Typewriter placeholder overlay — same role and offset as the landing
+   hero's `.lp-field-ghost` (left: 44px matches `.domain-bar`'s own
+   padding + icon box + gap by construction, just like there). `position:
+   absolute` takes it out of the flex row entirely: the comment above claimed
+   this rule "stays here unchanged" while it had actually never existed, so
+   the ghost text rendered as a normal flex sibling with real inline text —
+   unstyled (default black, not the intended --ink-4 gray) and, worse,
+   contributing its own content width to the row like any other flex item.
+   On narrow phones that pushed .domain-bar wider than the viewport and the
+   whole page scrolled sideways as the typewriter cycled through longer
+   samples (founder report, 2026-08-23). `right` + `overflow:hidden` bound it
+   so a long sample never paints over the country selector. */
+.db-ghost { position: absolute; left: 44px; top: 0; bottom: 0; right: 128px; display: flex; align-items: center;
+  color: var(--ink-4); font-size: 15.5px; font-weight: 450; pointer-events: none; line-height: 1;
+  overflow: hidden; white-space: nowrap; }
 .country-sel {
   display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 11px; border-radius: 9px;
   border: 1px solid var(--line); background: var(--surface-2); font-size: 13.5px; font-weight: 600; color: var(--ink-2);
@@ -4577,8 +4694,7 @@ a.notif-row:hover {
 
 .onb-engines { margin-top: 40px; display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
 .onb-engines .cap { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
-.eng-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.eng-dot { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 auto; }
+.eng-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 
 .type-caret { display: inline-block; width: 1.5px; height: 1.05em; background: var(--accent); margin-left: 1px;
   vertical-align: text-bottom; animation: caret 1s step-end infinite; }
@@ -4589,54 +4705,31 @@ a.notif-row:hover {
 .cap { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
 .meta-flag { width: 17px; height: 12px; border-radius: 2px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.06); display: inline-block; }
 
-.add-domain { max-width: 760px; }
-.add-back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2);
-  padding: 7px 12px 7px 9px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); margin-bottom: 22px; }
-.add-back:hover { background: var(--surface-2); color: var(--ink); }
-.add-wrap { }
-.add-hero { text-align: center; max-width: 540px; margin: 8px auto 24px; }
-.add-domain.cs-page, .cs-page { max-width: 1040px; }
-.cs-headwrap { margin-bottom: 22px; max-width: 640px; }
-.cs-headwrap .add-h1 { font-size: 30px; }
-.add-back { cursor: pointer; font-family: inherit; }
-.add-h1 { font-size: 32px; font-weight: 800; letter-spacing: -.025em; line-height: 1.08; margin: 16px 0 0; }
-.add-h1 .grad { background: linear-gradient(100deg, #4f46e5, #7c3aed 55%, #0d9488); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+/* ONBOARDING-DOMAIN-REDESIGN-1: .add-sub is shared with
+   app/dashboard/domains/page.tsx, so it stays. Everything that positioned it
+   (.add-domain, .add-hero, .add-card, .add-steps, .wiz-steps and their
+   compounds) was exclusive to the old onboarding-wizard.tsx layout — moved
+   to the onb2- block in app/console.css (dashboard-only, per .claude/rules/
+   styles.md). .domain-bar/.domain-globe/.domain-input/.country-sel/.onb-cta/
+   .eng-chip/.eng-dot/.type-caret/.field-label/.field-err/.cap/
+   .meta-flag are still used as-is by the new layout and stay here unchanged.
+   .db-ghost is NOT unchanged either, on top of the two below — this comment
+   claimed it too, and it had never existed at all: the typewriter placeholder
+   rendered as unstyled black text and, worse, as a normal flex sibling whose
+   own content width could push .domain-bar past the viewport on phones
+   (founder report, 2026-08-23). Re-added above, mirroring the landing hero's
+   .lp-field-ghost.
+   .add-hint/.add-engines are NOT unchanged — a first pass here deleted them
+   by mistake while claiming to keep them (a comment that lied cost the
+   founder a broken hint row and a cramped engines row in review, 2026-08-21):
+   re-added below, plus .eng-ico for the real engine glyphs that replaced the
+   flat color dots. */
 .add-sub { font-size: 15px; line-height: 1.6; color: var(--ink-2); margin: 12px auto 0; max-width: 460px; }
-
-.add-card { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-xl); box-shadow: var(--sh-2); }
-.add-aurora { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: .5; }
-.add-aurora .blob { position: absolute; filter: blur(56px); }
-.add-aurora .blob-1 { width: 360px; height: 360px; left: -120px; top: -180px; }
-.add-aurora .blob-3 { width: 360px; height: 360px; right: -120px; bottom: -200px; }
-.add-card-inner { position: relative; z-index: 2; padding: 26px 28px; }
-.add-card-inner .field-label { font-size: 12.5px; }
-.add-card .domain-bar { box-shadow: var(--sh-1); }
-.db-ghost { position: absolute; left: 44px; top: 7px; bottom: 7px; display: flex; align-items: center; color: var(--ink-4); font-size: 15.5px; font-weight: 450; pointer-events: none; line-height: 1; }
-.add-hint { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-4); font-weight: 500; margin-top: 12px; }
+.add-hint { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-4); font-weight: 500; margin-top: 12px; line-height: 1.45; }
 .add-hint .ico { color: var(--ink-4); flex: 0 0 auto; }
-.add-engines { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.add-engines { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
 .add-engines .cap { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); }
-
-.add-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
-.add-step { display: flex; gap: 11px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-md); padding: 14px 15px; }
-.add-step .as-ico { width: 32px; height: 32px; border-radius: 9px; background: var(--accent-soft); color: var(--accent);
-  display: grid; place-items: center; flex: 0 0 auto; }
-.add-step .as-t { font-size: 13px; font-weight: 750; }
-.add-step .as-d { font-size: 11.5px; color: var(--ink-3); line-height: 1.45; margin-top: 3px; }
-
-/* wizard stepper */
-.wiz-steps { display: flex; align-items: center; gap: 10px; }
-.wiz-step { display: inline-flex; align-items: center; gap: 8px; }
-.wiz-step .ws-dot { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 800;
-  background: var(--surface-sunk); color: var(--ink-4); border: 1px solid var(--line-strong); }
-.wiz-step .ws-l { font-size: 12.5px; font-weight: 650; color: var(--ink-4); }
-.wiz-step.on .ws-dot { background: var(--accent); color: #fff; border-color: var(--accent); }
-.wiz-step.on .ws-l { color: var(--ink); }
-.wiz-step.done .ws-dot { background: var(--pos); color: #fff; border-color: var(--pos); }
-.wiz-step.done .ws-l { color: var(--ink-2); }
-.wiz-sep { width: 28px; height: 1.5px; background: var(--line-strong); border-radius: 2px; }
+.eng-ico { width: 15px; height: 15px; flex: 0 0 auto; display: grid; place-items: center; }
 
 /* ============================================================
    Landing page (Phase A — copied literally from design reference
@@ -8083,10 +8176,6 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     grid-template-columns: 1fr;
   }
 
-  .add-steps {
-    grid-template-columns: 1fr;
-  }
-
   .card,
   .wide-stat,
   .dom-card {
@@ -10523,4 +10612,144 @@ select.set-field {
 }
 @media (min-width: 1600px) {
   .rec2-scope { max-width: 1280px; }
+}
+
+/* ============================================================
+   Onboarding de nuevo dominio (ONBOARDING-DOMAIN-REDESIGN-1, 2026-08-20)
+   Dirección "Consola" aprobada, ver
+   docs/design-reference/onboarding-domain-redesign-1/. `.onb2-scope` entra
+   en el remap compartido de arriba junto a `.ov2-scope`/`.set-scope`
+   (log §2). Vive en globals.css y no en console.css: aunque
+   components/onboarding-wizard.tsx sólo se renderiza dentro de
+   app/dashboard/**, el componente en sí está en `components/`, y
+   tests/console-css-scope.test.ts sólo excluye `app/dashboard/**` de "fuera
+   de la consola" — trata cualquier clase escrita desde `components/` como
+   pública, tal y como documenta .claude/rules/styles.md ("deja fuera cosas
+   que sí son de consola... porque sus clases se escriben desde components/").
+   ============================================================ */
+.onb2-page { max-width: 1200px; }
+.onb2-crumb { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 650; color: var(--ink-3); }
+.onb2-back { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 650; color: var(--ink-3);
+  border: 0; background: none; padding: 0; cursor: pointer; font-family: inherit; }
+.onb2-back:hover { color: var(--ink); }
+.onb2-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 12px 0 20px; flex-wrap: wrap; }
+.onb2-h1 { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 29px; font-weight: 800;
+  letter-spacing: -.025em; line-height: 1.1; margin: 0; color: var(--ink); }
+.onb2-sub { font-size: 14px; line-height: 1.55; color: var(--ink-3); margin: 7px 0 0; max-width: 560px; }
+
+/* Barra de pasos: tres segmentos con etiqueta debajo, sustituye a .wiz-steps. */
+.onb2-steps { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.onb2-stp { display: flex; flex-direction: column; gap: 7px; width: 92px; }
+.onb2-stp-bar { display: block; height: 3px; border-radius: 2px; background: var(--line-strong); }
+.onb2-stp.on .onb2-stp-bar { background: var(--accent); }
+.onb2-stp.done .onb2-stp-bar { background: var(--pos); }
+.onb2-stp-lb { font-size: 11.5px; font-weight: 650; color: var(--ink-4); }
+.onb2-stp.on .onb2-stp-lb { color: var(--ink); }
+.onb2-stp.done .onb2-stp-lb { color: var(--ink-2); }
+
+/* minmax(0, 1fr), not 1fr — the category-coverage grid inside the prompts
+   step (.onb2-cov, repeat(auto-fit, minmax(140px, 1fr))) contributes a
+   min-content width of (category count × 140px), and a bare `1fr` track
+   grows to fit that instead of shrinking, pushing the fixed 320px summary
+   panel outside the viewport with no scrollbar to reach it (`.shell` clips
+   overflow-x). Same fix already used for the analogous content+panel layout
+   in `.cm2-cols` (log §152 addendum, founder screenshot 2026-08-22). */
+.onb2-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 22px; align-items: start; }
+.onb2-seclbl { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-4); margin: 0 0 8px 2px; }
+.onb2-cpad { padding: 20px; }
+
+/* Panel "Resumen del lanzamiento" — datos reales del estado del asistente. */
+.onb2-panel { position: sticky; top: 12px; }
+.onb2-prow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+.onb2-prow:last-child { border-bottom: 0; }
+.onb2-pico { width: 26px; height: 26px; border-radius: 8px; background: var(--surface-sunk); color: var(--ink-3);
+  display: grid; place-items: center; flex: 0 0 auto; }
+.onb2-pk { font-size: 12.5px; color: var(--ink-3); flex: 1; }
+.onb2-pv { font-size: 13px; font-weight: 700; color: var(--ink); }
+.onb2-pv.mono { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.onb2-pv.na { color: var(--ink-4); font-weight: 550; }
+.onb2-est { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.onb2-est-n { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--ink); }
+.onb2-est-l { font-size: 12.5px; color: var(--ink-2); font-weight: 600; margin-top: 3px; }
+.onb2-est-f { font-size: 11px; color: var(--ink-4); line-height: 1.45; margin-top: 8px; }
+
+/* Filas de competidores/prompts. */
+.onb2-list { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+.onb2-row { display: flex; align-items: center; gap: 11px; padding: 11px 13px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 13px; box-shadow: var(--sh-1); }
+.onb2-row.align-top { align-items: flex-start; }
+.onb2-fav { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; font-weight: 800;
+  color: #fff; flex: 0 0 auto; text-transform: uppercase; }
+/* Favicon real (lib/domains/favicon.ts vía FaviconImg) — mismo tratamiento
+   que .cm2-rank-fav-img en la pantalla real de Competidores; cae a .onb2-fav
+   (iniciales) cuando el dominio no tiene icono conocido. Founder feedback
+   2026-08-23: "implementa favicons". */
+.onb2-fav-img { width: 28px; height: 28px; border-radius: 8px; flex: 0 0 auto;
+  object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06); }
+/* Fila plegada (por defecto): nombre + dominio como texto, sin campos de
+   edición — el gear la despliega. Founder feedback 2026-08-21: las filas
+   siempre-editables ocupaban demasiado y no coincidían con la maqueta
+   aprobada (docs/design-reference/onboarding-domain-redesign-1/), que las
+   mostraba plegadas. */
+.onb2-rmeta-static { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.onb2-rname { font-size: 13.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.onb2-rdom { font-family: var(--mono); font-size: 11px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Fila desplegada: nombre y dominio a dos columnas, para que no ocupen tanto
+   como dos campos apilados a ancho completo. */
+.onb2-editgrid { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.onb2-chip { display: inline-flex; align-items: center; gap: 5px; height: 21px; padding: 0 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent-ink); font-size: 10.5px; font-weight: 700; flex: 0 0 auto; }
+.onb2-chip.n { background: var(--surface-sunk); color: var(--ink-3); }
+.onb2-iconbtn { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; color: var(--ink-4); flex: 0 0 auto;
+  border: 0; background: none; cursor: pointer; }
+.onb2-iconbtn:hover { background: var(--surface-sunk); color: var(--neg-ink); }
+.onb2-listfoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 13px; border: 1px dashed var(--line-strong); border-radius: 13px; background: var(--surface-2); }
+.onb2-count { font-size: 12.5px; color: var(--ink-2); }
+.onb2-count b { color: var(--ink); }
+/* Prompt plegado: una línea de texto, recortada — todas las filas miden lo
+   mismo. El gear despliega el textarea de edición. */
+.onb2-ptext { flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Prompt desplegado: altura fija para las tres — sin auto-crecer ni permitir
+   redimensionar a mano, así ninguna caja queda más alta que las demás. */
+.onb2-prompt-edit { height: 76px; resize: none; overflow-y: auto; }
+
+/* Reparto de prompts por categoría — recuento real de app/state, no
+   inventado. Grid, no flex-wrap: con flex-wrap cada fila reparte el ancho
+   sobrante por separado y las columnas de filas distintas no coinciden; el
+   grid las fuerza a la misma anchura en todas las filas. */
+.onb2-cov { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 16px; padding: 12px 13px;
+  border-top: 1px solid var(--line-soft); background: var(--surface-2); border-radius: 0 0 13px 13px; }
+.onb2-covc { min-width: 0; }
+.onb2-cov-l { font-size: 11px; color: var(--ink-3); font-weight: 600; display: flex; justify-content: space-between; gap: 6px; }
+.onb2-cov-l b { color: var(--ink-2); }
+.onb2-cov-b { display: block; height: 5px; border-radius: 3px; background: var(--surface-sunk); margin-top: 5px; overflow: hidden; }
+.onb2-cov-f { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+
+.onb2-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+
+/* Cargas embebidas dentro de la propia tarjeta — sustituyen a .state-wrap
+   (cortina fija a pantalla completa) sólo en este flujo. */
+.onb2-check { display: flex; flex-direction: column; gap: 2px; }
+.onb2-ci { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-3); padding: 6px 2px; }
+.onb2-ci.on { color: var(--ink); font-weight: 650; }
+.onb2-cdone { width: 16px; height: 16px; border-radius: 50%; background: var(--pos-soft); color: var(--pos);
+  display: grid; place-items: center; flex: 0 0 auto; }
+.onb2-cspin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent-soft-2); border-top-color: var(--accent);
+  flex: 0 0 auto; animation: spin .7s linear infinite; }
+.onb2-cpending { width: 14px; height: 14px; flex: 0 0 auto; opacity: .35; display: grid; place-items: center; }
+.onb2-cpending::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); }
+.onb2-skel { display: block; height: 11px; border-radius: 5px; background: linear-gradient(90deg, var(--surface-sunk), var(--line-soft), var(--surface-sunk));
+  background-size: 200% 100%; animation: onb2Shimmer 1.6s ease-in-out infinite; }
+@keyframes onb2Shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.onb2-skelrow { display: flex; align-items: center; gap: 11px; padding: 10px 13px; border-top: 1px solid var(--line-soft); }
+.onb2-skelrow .onb2-fav { background: var(--surface-sunk); }
+
+@media (max-width: 760px) {
+  .onb2-grid { grid-template-columns: 1fr; }
+  .onb2-panel { position: static; }
+  .onb2-h1 { font-size: 24px; }
+  .onb2-editgrid { grid-template-columns: 1fr; }
+  .onb2-rname, .onb2-rdom, .onb2-ptext { white-space: normal; }
 }
