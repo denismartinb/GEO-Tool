@@ -5303,35 +5303,41 @@ a.notif-row:hover {
 /* Rotación vertical entre TRES mensajes ciertos a la vez — el ensayo gratis
    y la rebaja de lanzamiento en sus dos planes — un solo reloj CSS, mismo
    mecanismo que `.lp-hx-avance` (log §152). Cada fila arranca con
-   `animation-delay` negativo a un tercio de ciclo (0 / -4.5s / -9s sobre
-   13.5s). Antes eran dos mensajes sobre un ciclo de 9s; separar Pro y
-   Starter en su propia fila (en vez de una sola frase con los dos planes)
-   fue necesario porque esa frase no cabía en la tira — ver el comentario del
-   componente.
+   `animation-delay` negativo a un tercio de ciclo (0 / -3s / -6s sobre 9s).
+   Antes eran dos mensajes sobre un ciclo de 9s; separar Pro y Starter en su
+   propia fila (en vez de una sola frase con los dos planes) fue necesario
+   porque esa frase no cabía en la tira — ver el comentario del componente.
+
+   **El turno de cada fila dura 3s, no 4,5s** (fundador, 2026-08-25: "la
+   primera rotación tarda mucho, bájale un segundo y medio" — sobre los
+   4,5s que duraba cada turno). Los PORCENTAJES de los keyframes son
+   relativos a la duración total, así que no cambian al acortar el ciclo de
+   13,5s a 9s — sólo cambian `animation` (13.5s→9s) y los `animation-delay`
+   de B/C (-4.5s/-9s → -3s/-6s), manteniendo el mismo tercio de ciclo cada
+   uno.
 
    Los puntos de los keyframes (29%/33%) NO son los del ciclo de 2 filas
-   escalados a tres — fundador, 2026-08-25: "que tarde un par de segundos en
-   rotar el primer mensaje, sino queda raro, se tapan". Con `animation-delay`
-   NEGATIVO cada fila arranca ADELANTADA esa fracción de su propio ciclo, no
-   retrasada: a t=0 la fila B ya está en el 33% de su recorrido (4.5s/13.5s).
-   La primera versión tenía la salida en 31%–36%, así que a t=0 la fila B
-   caía A MITAD de su propia transición de salida — parcialmente visible,
-   solapada con la fila A. La salida tiene que completarse ANTES del punto
-   de arranque de la siguiente fila (33%), con margen: aquí en 29%–33%, así
-   que a t=0 la fila B ya está totalmente oculta (fase 33%, justo en el
-   límite oculto) y la C igual (fase 66,7%, dentro de la zona oculta
-   29%–96%). Verificado leyendo `getAnimations()[0].currentTime` en vez de
-   reproducir la animación de verdad — Chromium headless no la reproduce con
-   fidelidad (`.claude/rules/styles.md`, "Chromium headless sobre Linux no
-   reproduce esto"). */
+   escalados a tres. Con `animation-delay` NEGATIVO cada fila arranca
+   ADELANTADA esa fracción de su propio ciclo, no retrasada: a t=0 la fila B
+   ya está en el 33% de su recorrido. Una versión anterior tenía la salida
+   en 31%–36%, así que a t=0 la fila B caía A MITAD de su propia transición
+   de salida — parcialmente visible, solapada con la fila A. La salida
+   tiene que completarse ANTES del punto de arranque de la siguiente fila
+   (33%), con margen: aquí en 29%–33%, así que a t=0 la fila B ya está
+   totalmente oculta (fase 33%, justo en el límite oculto) y la C igual
+   (fase 66,7%, dentro de la zona oculta 29%–96%). Verificado leyendo
+   `getAnimations()[0].currentTime` en vez de reproducir la animación de
+   verdad — Chromium headless no la reproduce con fidelidad
+   (`.claude/rules/styles.md`, "Chromium headless sobre Linux no reproduce
+   esto"). */
 .lp-promo-track { position: relative; display: inline-block; height: 18px; min-width: 300px; }
 .lp-promo-row {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   gap: 7px; white-space: nowrap; opacity: 1; transform: translateY(0);
-  animation: lp-promo-cycle 13.5s ease-in-out infinite;
+  animation: lp-promo-cycle 9s ease-in-out infinite;
 }
-.lp-promo-row.b { animation-delay: -4.5s; }
-.lp-promo-row.c { animation-delay: -9s; }
+.lp-promo-row.b { animation-delay: -3s; }
+.lp-promo-row.c { animation-delay: -6s; }
 @keyframes lp-promo-cycle {
   0%, 29% { transform: translateY(0); opacity: 1; }
   33%, 96% { transform: translateY(-20px); opacity: 0; }

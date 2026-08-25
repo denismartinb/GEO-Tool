@@ -14486,3 +14486,14 @@ de cada una sin dejar diff.
     **Y un salto de línea antes de "O estás en esa frase, o no existes."**
     — pedido en el mismo mensaje, va como `<br />` explícito entre las dos
     frases del párrafo.
+25. **El turno de cada mensaje de la tira de promoción se acorta 1,5s.**
+    El fundador: "la primera rotación tarda mucho, bájale un segundo y
+    medio" — sobre los 4,5s que duraba el turno de cada fila (item 23).
+    Como los porcentajes de los keyframes son relativos a la duración
+    total, no hizo falta tocarlos: sólo el ciclo (13,5s→9s) y los
+    `animation-delay` de B/C (-4,5s/-9s → -3s/-6s), manteniendo el mismo
+    tercio de ciclo cada fila. Turno nuevo: 3s (antes 4,5s). Reverificado
+    con el mismo método del item 23 —`getAnimations()[0].currentTime` en
+    varios instantes, no reproducción real— para confirmar que el recorte
+    no reabre el solape que ese item ya había cerrado: a t=0 sigue sin
+    haber dos filas simultáneas cerca de opacidad 1.
