@@ -66,7 +66,7 @@ export default function BlogIndexPage() {
           sin cambios) — sólo cambia el tamaño de la tarjeta. */}
       <section className="blog-featured">
         <Link href={`/blog/${hero.slug}`} className="blog-index-card blog-featured-hero">
-          <BlogCover icon={hero.coverIcon} image={hero.coverImage} alt={hero.title} />
+          <BlogCover icon={hero.coverIcon} image={hero.coverImage} alt={hero.title} priority />
           <div className="blog-index-card-body">
             <span className="blog-card-tag">{clusterTitle(hero.cluster)}</span>
             <h2>{hero.title}</h2>
