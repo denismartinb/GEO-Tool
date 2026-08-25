@@ -17,6 +17,16 @@
 # PR's preview pointing at stale code, and the pilot would then judge a screen
 # that is not what the commit says it is — the exact "verified something it
 # never saw" failure the pilot exists to prevent. Quota is cheaper than that.
+#
+# BLIND SPOT, FOUND 2026-08-25 (PR #470): an environment variable change is
+# invisible to this script — it only ever diffs git trees, and env vars leave
+# no trace in one. Redeploying the SAME commit from the Vercel dashboard after
+# editing an env var compares that commit against itself (its own last
+# successful deployment), gets an empty diff, and is skipped every time —
+# "Canceled by Ignored Build Step", not a dashboard bug. Vercel also bakes env
+# vars into a deployment's serverless functions at creation time, so even a
+# clean redeploy of stale bits would still run with stale env vars. The only
+# way to pick up a new env var value is a real commit on a new SHA.
 set -uo pipefail
 
 run() { printf '[should-build] BUILD — %s\n' "$1"; exit 1; }

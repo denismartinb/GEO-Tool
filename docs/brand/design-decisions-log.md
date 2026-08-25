@@ -13706,11 +13706,21 @@ no en cada visita — cambiar la variable de entorno sin volver a construir no
 hace nada. `/dashboard/settings/billing` sí es dinámica (`ƒ`), así que ahí sí
 se habría visto sin rebuild; la página pública no.
 
-Un "Redeploy" manual desde el propio Vercel Dashboard se canceló solo dos
-veces seguidas (2s de duración cada vez) — probablemente por deduplicación de
-builds concurrentes de Vercel al reintentar. La solución fue forzar un build
-nuevo empujando un commit real a la rama (este mismo párrafo), que dispara el
-ciclo normal de CI + piloto en vez de pelear con el botón de redeploy.
+Un "Redeploy" manual desde el propio Vercel Dashboard se canceló solo varias
+veces seguidas (2s de duración cada vez, "Canceled by Ignored Build Step").
+La causa real, encontrada más tarde: **no es deduplicación de Vercel, es
+`scripts/vercel-should-build.sh` funcionando exactamente como está diseñado**.
+Ese script compara el push contra el último deploy con éxito de la rama — y
+al redesplegar el mismo commit que ya se construyó con éxito, ese "último
+éxito" es él mismo, así que el diff está vacío y el script decide que no hay
+nada que construir. Es el mismo mecanismo que evita builds de más en
+`docs/`/`.claude/`/etc. (sección "Presupuesto de builds" arriba), pero tiene
+un punto ciego: **un cambio de variable de entorno no deja rastro en el diff
+de git**, así que un redeploy manual del mismo commit nunca puede recogerlo,
+por muchas veces que se pulse el botón. La única vía es un commit real nuevo
+en la rama — el mismo remedio que ya haría falta para cualquier otro cambio,
+sólo que aquí no hay ningún fichero de código que cambiar; documentar el
+hallazgo (este párrafo) sirvió de vehículo legítimo para ese commit.
 
 **Pendiente.** Fase D (Starter a escaneo diario) sigue bloqueada, sin tocar
 en este PR — el highlight de Starter sigue diciendo "Escaneo semanal".
