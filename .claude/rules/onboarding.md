@@ -78,7 +78,7 @@ obedecerá igual.
   una copia— porque arrastrar basura es peor que no arrastrar nada (log §54).
 - **El «ya visto» vive en `profiles.onboarding_tour_seen_at`, no en
   `localStorage`.** Migró ahí en ONBOARDING-TOUR-PERSIST-1 (2026-08-25, log
-  §152), founder-approved vía Task Intake, precisamente porque vivir en
+  §153), founder-approved vía Task Intake, precisamente porque vivir en
   `localStorage` (decisión original de ONBOARDING-TOUR-1) hacía que el popup
   reapareciera en cualquier navegador nuevo — la queja que motivó el cambio.
   Se lee en `app/dashboard/layout.tsx` con su propia consulta (mismo patrón
@@ -106,7 +106,7 @@ obedecerá igual.
   `dismissedWelcomeTour`.
 - **La marca de «ya visto» es por CUENTA, no por navegador — el piloto no
   puede forzar «no visto» desde el set de lectura.** Hasta ONBOARDING-TOUR-
-  PERSIST-1 (2026-08-25, log §152) la marca vivía en `localStorage`, así que
+  PERSIST-1 (2026-08-25, log §153) la marca vivía en `localStorage`, así que
   `auth.setup` podía filtrarla del `storageState` ya capturado sin escribir
   nada real, y cada test de Playwright partía "no visto" por tener un
   contexto de navegador aislado. Ahora vive en `profiles`, una fila real
