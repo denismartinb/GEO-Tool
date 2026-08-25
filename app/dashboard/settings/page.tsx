@@ -138,11 +138,6 @@ export default async function SettingsPage({
               billingDetails={billingDetails}
             />
 
-            <h2 className="set-sech sp" id="avisos">
-              Avisos
-            </h2>
-            <NotificationsSection initialScoreDropAlert={scoreDropAlert} initialWeeklyDigest={weeklyDigest} />
-
             {isAdmin && (
               <>
                 <h2 className="set-sech sp" id="plan">
@@ -151,6 +146,11 @@ export default async function SettingsPage({
                 <BillingContent checkoutStatus={checkout} />
               </>
             )}
+
+            <h2 className="set-sech sp" id="avisos">
+              Notificaciones
+            </h2>
+            <NotificationsSection initialScoreDropAlert={scoreDropAlert} initialWeeklyDigest={weeklyDigest} />
 
             {/* Last block on the page and deliberately not in the index: an
                 irreversible action is reached by scrolling, not by one click

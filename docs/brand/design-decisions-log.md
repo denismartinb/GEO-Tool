@@ -16080,3 +16080,36 @@ ver el preview.**
 - `lib/stripe.test.ts` actualizado para el nuevo nombre de campo. Sin cambios
   de comportamiento: sigue siendo el mismo `custom_field`, solo cambia el
   texto impreso en la factura.
+
+**Segundo addendum, mismo día: tres ajustes más de `Ajustes → Cuenta`, pedidos
+tras verificar la factura de prueba en el Dashboard de Stripe.**
+
+- **Etiqueta del campo → "Empresa o Razón social"** (antes "Razón social",
+  `components/settings/billing-details.tsx`), mismo motivo que "NIF/CIF": no
+  obliga a adivinar qué escribir. **Deliberadamente no se tocó** el nombre del
+  `custom_field` que llega a Stripe (sigue siendo "Razón social" en
+  `lib/stripe.ts`) — es el texto impreso en un documento oficial, donde
+  "Razón social" a secas es la convención española estándar; la etiqueta más
+  larga es una ayuda de UI para rellenar el formulario, no lo que debe
+  imprimirse.
+- **"Avisos" → "Notificaciones"** como texto visible de la sección y de su
+  entrada en el índice (`lib/settings/index-entries.ts`,
+  `app/dashboard/settings/page.tsx`). El `id` DOM se queda en `avisos` a
+  propósito: `app/dashboard/settings/notifications/page.tsx` redirige a
+  `/dashboard/settings#avisos`, y esa es la URL que ya viajó en emails
+  transaccionales reales — cambiar el id rompería esos enlaces
+  irreescribibles (mismo razonamiento que documenta el comentario de cabecera
+  de `page.tsx` sobre las cuatro rutas viejas).
+- **Sección Plan reordenada: ahora va justo debajo de Cuenta**, antes de
+  Notificaciones (orden anterior: Cuenta → Avisos → Plan; nuevo: Cuenta →
+  Plan → Notificaciones). Plan sigue siendo solo-admin — el bloque JSX se
+  movió, no la condición `isAdmin`. `buildSettingsIndex` refleja el mismo
+  orden en el índice lateral.
+- Tests actualizados: `lib/settings/index-entries.test.ts` (orden
+  `["cuenta","plan","avisos"]` para admin, etiqueta "Notificaciones"),
+  `tests/pilot/journeys/settings.spec.ts` (orden de los `<h2>` y texto visible
+  de `#avisos`).
+
+**Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run validate`
+(build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.

@@ -55,7 +55,7 @@ test("Ajustes shows the real account, not an empty form", async ({ page }, testI
 
 test("the three sections are all present and in order", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/dashboard/settings", "settings-sections", {
-    describedAs: "los títulos de sección Cuenta y Avisos",
+    describedAs: "los títulos de sección Cuenta y Notificaciones",
     anyOf: [{ selector: "#cuenta" }]
   });
 
@@ -67,7 +67,13 @@ test("the three sections are all present and in order", async ({ page }, testInf
   assertPageIsHealthy(findings);
 
   await expect(page.locator("#cuenta"), "falta la sección Cuenta").toBeVisible();
-  await expect(page.locator("#avisos"), "falta la sección Avisos").toBeVisible();
+  // The DOM id stays "avisos" — four transactional emails already sent link to
+  // `#avisos` (app/dashboard/settings/notifications/page.tsx) and cannot be
+  // rewritten. Only the visible label changed to "Notificaciones".
+  await expect(page.locator("#avisos"), "falta la sección Notificaciones").toBeVisible();
+  await expect(page.locator("#avisos"), "la sección #avisos no dice Notificaciones").toHaveText(
+    "Notificaciones"
+  );
 
   // Plan is admin-only. The pilot account is an admin, so its absence is a
   // finding rather than an accepted branch — but say which one failed.
@@ -76,10 +82,10 @@ test("the three sections are all present and in order", async ({ page }, testInf
   const order = await page
     .locator("h2.set-sech")
     .evaluateAll((nodes) => nodes.map((node) => node.id).filter(Boolean));
-  expect(order, "las secciones no van en el orden Cuenta → Avisos → Plan").toEqual([
+  expect(order, "las secciones no van en el orden Cuenta → Plan → Notificaciones").toEqual([
     "cuenta",
-    "avisos",
-    "plan"
+    "plan",
+    "avisos"
   ]);
 });
 

@@ -26,7 +26,7 @@ export function BillingDetailsFold({
       <div className="set-form-grid">
         <div>
           <label className="field-label" htmlFor="billing-legal-name">
-            Razón social
+            Empresa o Razón social
           </label>
           <input
             id="billing-legal-name"
