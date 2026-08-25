@@ -13152,7 +13152,569 @@ nada se sale de su tarjeta en ninguna.
 
 ---
 
-## 145. Rediseño del onboarding de nuevo dominio — dirección "Consola" (ONBOARDING-DOMAIN-REDESIGN-1, 2026-08-20)
+## 145. Una portada nueva no se juzga sola, se juzga al lado de las otras dieciséis (2026-08-23)
+
+Al publicar `/blog/geo-vs-aeo-vs-seo` (GEO vs AEO vs SEO) la portada pasó todas
+las comprobaciones que existen —`covers.test.ts` verifica que el fichero
+declarado existe y que el artículo lo enseña, y el `ux-pilot` dio ✅ en las tres
+anchuras— y aun así estaba mal. Era un degradado azul plano con un diagrama
+pequeño en el centro; las otras dieciséis del catálogo comparten un lenguaje
+visual muy definido que aquélla ignoraba por completo: fondo casi negro
+azulado, paneles translúcidos con neón, y una composición de izquierda a
+derecha en tres tiempos —muchas piezas dispersas → convergen en una lente →
+un panel resuelto—.
+
+**El fallo no tiene síntoma y ningún test puede tenerlo.** La página carga
+limpia, el activo existe, el `og:image` es correcto y la tira de 96px se
+compone bien. Lo único que lo enseña es **poner las diecisiete una debajo de
+otra y mirarlas**, que es lo que hubo que hacer. Es el mismo patrón que §125
+(la portada declarada en SVG que perdía su tarjeta social) un escalón más
+arriba: allí el respaldo de un activo era otro activo correcto; aquí el
+respaldo de una portada es otra portada correcta que no pertenece a la familia.
+
+La nueva habla ese idioma y además dice algo cierto del artículo: las cuatro
+siglas como etiquetas dispersas sobre un muro de tarjetas de contenido, sus
+haces convergiendo en la lente, y a la derecha la respuesta generada con la
+marca mencionada y su cita. El fuente vive en
+`docs/design-reference/blog-covers/`, no en `public/`.
+
+### La zona segura de una portada son dos condiciones, no una
+
+La regla vigente hasta hoy decía que *«la portada se juzga en la tira de 96px,
+no en el lienzo donde se dibuja»* (§85). Es verdad y es incompleta, y lo de
+menos es que faltara un detalle: la primera versión de esta portada se dio por
+buena **habiendo comprobado exactamente lo que la regla pedía**.
+
+En escritorio, `.blog-cover-compact` recorta en vertical: de un lienzo de 4:1
+sólo se ve el tercio central de la altura. Pero **en móvil la cabecera no
+enseña esa tira**, sino una caja de ~3,35:1, más estrecha que el lienzo, así
+que `object-fit: cover` recorta **en horizontal**: unos 98px por cada lado. Con
+las cuatro siglas repartidas por todo el ancho, «SEO» y «LLMO» quedaban
+partidas contra el borde izquierdo — dos de las cuatro protagonistas del
+artículo, en el formato donde más gente lo va a abrir.
+
+La zona segura real es **x 100-1100 e y 100-200 a la vez**, las dos
+condiciones. Un elemento puede cumplir una y fallar la otra, que es justo lo
+que pasó. Antes de dar una portada por buena hay que simular los **dos**
+recortes, no uno.
+
+Lo encontró mirar las capturas del piloto, no su tabla: el run que las produjo
+dio `PILOT PASS` con ✅ en las tres anchuras, porque una portada recortada no
+impide que la página cargue. Tercera vez que se repite lo mismo (§55, §85, y
+ésta), y la conclusión no cambia: **el verde del piloto dice que las
+aserciones que existen no saltaron, nunca que lo que se ve esté bien.**
+
+### El presupuesto de `public/` llevaba tiempo impidiendo publicar
+
+`tests/asset-budget.test.ts` saltó al añadir la portada. No por su peso: en
+`main` quedaban **24 KB libres** de un tope de 1,5 MB, y las portadas ya
+publicadas pesan entre 59 y 88 KB cada una. O sea que el presupuesto no estaba
+frenando una regresión, estaba frenando **el uso normal del repositorio** —
+GROWTH-2 publica del orden de diez URLs al mes, casi todas con imagen.
+
+Subido a 1,75 MB con la razón escrita en el propio test, que es el
+procedimiento que su comentario de cabecera ya establecía. Antes de subirlo se
+quitó el peso muerto real: el SVG fuente de la portada (57 KB) no lo pide
+ninguna página y se sirve desde el mismo origen que las páginas públicas, así
+que se fue a `docs/`. La próxima vez que se agote, la pregunta correcta no es
+subir otro cuarto de mega: es por qué una portada del catálogo pesa 88 KB
+cuando una equivalente cabe en 28.
+
+### Y el texto sonaba a lo que era
+
+Revisión del fundador sobre el borrador: *«dale una vuelta para que parezca un
+pelín más humano, quitando las típicas expresiones que genera la IA»*. Los
+guiones largos pasaron de 25 a 1, y se fueron las construcciones que se
+repetían con un patrón reconocible —«en la práctica», «lo que sí», «cabe en una
+frase», «un ejemplo real de», «nota al margen»— y sobre todo la antítesis
+«no es X, es Y», que aparecía siete veces en 1.500 palabras. Ninguna
+afirmación, ningún enlace y ninguna decisión de honestidad cambiaron: lo que se
+tocó fue el ritmo.
+
+No hay test para esto y no lo va a haber. Queda como criterio: **si el texto
+tiene un patrón sintáctico que se repite más de dos o tres veces, se nota**, y
+en una pieza que existe para posicionar en una categoría nueva se nota más,
+porque el lector que llega ya viene harto de leer lo mismo en otros seis
+sitios.
+
+---
+
+## 146. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
+
+Entran las tres últimas secciones del diseño aprobado —testimonio, FAQ y
+cierre— y con ellas se va algo que llevaba meses en producción sin que nadie lo
+mirase.
+
+### Lo que había: una persona que no existe y un dato que no se midió
+
+La sección `QUOTE` de la portada decía, entre comillas:
+
+> «Pasamos de no saber si la IA nos nombraba a tener un plan claro de qué
+> cambiar primero. En dos meses subimos del 9% al 21% de citas.»
+> — **Aisha Robinson, Growth Lead, Beltway**
+
+Ni la persona, ni la empresa, ni la cifra. Un testimonio de relleno de una
+maqueta que se quedó puesto y se sirvió como si fuera real en la página que más
+tráfico recibe. CLAUDE.md prohíbe las métricas falsas desde su primera versión,
+y esto es la forma más directa de romperlo: una cita atribuida a alguien.
+
+**Lo sustituye uno real**: Nerea Solís, marketing digital en Nordika Home, y el
++128% de cuota de voz en IA, que el fundador confirmó el 2026-08-22 que es una
+medición de esa cuenta. La regla que queda escrita en el propio componente: si
+algún día ese testimonio deja de poder sostenerse, **la sección se retira
+entera**; no se sustituye por otro nombre inventado.
+
+### La FAQ: tres respuestas del artboard afirmaban de más
+
+Las seis preguntas se verificaron contra el código antes de publicarse, y tres
+cambiaron. No por prudencia: porque eran falsas o incompletas.
+
+| El artboard decía | Lo que hace el producto | Publicado |
+|---|---|---|
+| «una llamada real por prompt y por motor» | Con muestreo, un plan de pago repite el conjunto hasta 5 veces para llegar al suelo de 50 respuestas (`lib/scan/sampling.ts`, ADR 0030) | «**al menos** una llamada real» |
+| «…y de forma continua» | Un proyecto Free tiene **un** escaneo y sólo uno: `runRecurringScanSweep` descarta los proyectos Free y `createPendingScanRunCore` rechaza el segundo | «…de forma continua **en los planes de pago**» |
+| «Cada fallo indica cuántos puntos recuperas» | `llms_txt_missing` sale siempre con `pointDelta: null` | «**Los fallos que puntúan** te dicen…» |
+
+La segunda es la que más importa: decirle «de forma continua» a quien acaba de
+registrarse en Free es prometerle algo que el backend nunca va a hacer.
+
+**El `FAQPage` sale de la misma constante que pinta la pantalla**
+(`lib/landing/home-faq.ts`). Escritos por separado divergirían, y el schema
+acabaría afirmando preguntas que la página no enseña — que es literalmente el
+fallo que este producto audita en las webs de sus clientes.
+
+### `<details>` de verdad, servidos abiertos
+
+La FAQ es acordeón en móvil y lista abierta en escritorio, como los dos
+artboards. Son `<details>`/`<summary>` nativos: teclado, lector de pantalla y
+buscar-en-la-página funcionan solos. **Se sirven abiertos y una isla los pliega
+en móvil**, nunca al revés — servirlos cerrados dejaría la sección inservible
+sin JS y escondería de la primera pintura el mismo texto que el `FAQPage`
+afirma.
+
+### Un gris que no pasaba contraste, y no era de esta fase
+
+La fila «Sin registro · Sin tarjeta · Sin llamada de ventas» hereda
+`.lp-hero-note`, que se servía en `--ink-4`: **2,63:1 sobre blanco**, muy por
+debajo del 4,5:1 de AA. No es decoración —es media objeción de compra
+resuelta—, así que pasa a `--ink-3`, **4,76:1**. La clase ya se usaba así en
+`/pricing` y en el comprobador gratuito, de modo que la corrección alcanza a
+las tres pantallas. Se declara aquí en vez de arreglarlo callando porque toca
+dos páginas fuera del alcance de esta fase.
+
+**Y `--ink-3` tampoco bastaba en el cierre**, que es donde esto se pone
+divertido: esa banda no está sobre blanco, está sobre el degradado, y a la
+altura de la fila —el 75% de la banda— el fondo ya es `#f3f7ff`. Ahí
+`--ink-3` da **4,43:1**, por debajo del 4,5 por siete centésimas, mientras que
+sobre el blanco de `/pricing` y del comprobador da 4,76 y pasa. En el cierre va
+`--ink-2`: **7,49:1**. Es exactamente el invariante que
+`.claude/rules/styles.md` ya tenía escrito —«un token que aprueba AA sobre
+blanco no lo aprueba sobre otra superficie»— pisado **mientras se corregía un
+fallo de contraste**, y no se vio hasta calcular el color pintado del degradado
+a esa altura: el `background-color` del elemento es transparente, así que
+preguntárselo al navegador devuelve el blanco del `body` y da un 4,76 que ahí
+no es cierto.
+
+### La misma trampa del orden del fichero, por tercera vez
+
+La escala móvil de estas tres secciones se escribió en el bloque
+`@media (max-width: 560px)` que había más cerca, y ese bloque vive **antes** en
+`app/globals.css` que las reglas base que corrige: a igualdad de especificidad
+gana la última, así que no pintó nada. El síntoma no fue un color raro, fue una
+sección rota —la respuesta de la FAQ metida en una columna de 111px y el galón
+sin aparecer— y sólo se vio midiendo, no leyendo. Ya había pasado con la escala
+tipográfica (§143) y con los colores de la sección oscura (§144). **La regla
+que sale de aquí: un tramo responsive se escribe junto a lo que corrige, no en
+el bloque de esa anchura que pille más cerca.**
+
+### El presupuesto de assets hizo su trabajo
+
+`tests/asset-budget.test.ts` rechazó los dos JPEG del testimonio, por formato y
+por peso. Los dos van ahora en WebP y **redimensionados al tamaño en que se
+pintan** —128px el retrato contra 520 del original, 720px la captura contra
+900—: 28 KB entre los dos. Aun así el tope de 1,5 MB se quedaba corto por 3,5
+KB, y se sube a 1,7 MB con la razón escrita en el propio fichero, que es lo que
+ese test pide que se haga. De paso se corrige su comentario, que decía «615 KB
+en 25 ficheros» cuando ya eran 1.512 en 41: un presupuesto cuya explicación
+lleva meses obsoleta ha dejado de ser una decisión y es un número heredado.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
+en verde. Once anchuras de 320 a 1440: sin desbordamiento y sin nada fuera de
+su caja en las tres secciones; acordeón por debajo de 560 y lista abierta por
+encima, comprobado a los dos lados del corte. **Sin JavaScript las seis
+preguntas se sirven abiertas**, medido.
+
+**Pendiente / conocido.** `.claude/rules/onboarding.md` afirma que «se escanea
+continuamente» se sostiene en `lib/scan/cron.ts`, «diario en free/pro/agency».
+Es **inexacto**: un proyecto Free no llega nunca a su intervalo. La regla se ha
+quedado como estaba —es de otra zona y el texto del tour es del fundador— pero
+queda anotado aquí para quien la lea después.
+
+---
+
+## 147. Un motor de tres se pintaba como «100%», y la evidencia desaparecía sin decirlo (PROMPT-DRAWER-TRUTH-1, 2026-08-23)
+
+El fundador abrió el cajón de un prompt en su propio proyecto y le dio la
+sensación de que las respuestas estaban condicionadas por su cuenta: los
+motores «sabían» que trabaja en GenScore. No lo estaban —y la investigación que
+lo descarta está más abajo—, pero al ir a comprobarlo aparecieron **dos
+afirmaciones falsas en la misma pantalla**, y esas sí eran nuestras.
+
+### Lo que decía la pestaña Resumen
+
+En una sola captura convivían esto:
+
+> Gemini **Mencionada** · ChatGPT **Ausente** · Claude **Ausente**
+
+y, tres centímetros más abajo:
+
+> **1. Tu marca** «Tú» — **100%**
+
+La celda era literalmente `{row.mentioned ? "100%" : "0%"}` sobre
+`results.some(r => r.brand_mentioned)`. Un motor de tres nombrándote se pintaba
+como cobertura total. Con muestreo (ADR 0030) el error crece en vez de
+diluirse: nueve respuestas y una mención seguían siendo «100%».
+
+**La puntuación real nunca tuvo este fallo.** `lib/scoring/run-scoring.ts`
+calcula `brandMentionedCount / totalResults` desde siempre. Era una mentira de
+pantalla, no de scoring — lo cual no la hace menor: es justo la pantalla donde
+alguien va a decidir si se fía de las cifras del resto del producto.
+
+Ahora la cobertura se cuenta por respuestas (`1/3 · 33%`), con la fracción al
+lado del porcentaje porque un «33%» sin denominador no se puede juzgar y el
+denominador cambia de un prompt a otro. Tres decisiones que van con ello:
+
+- **Denominadores distintos por entidad, a propósito.** La marca se mide sobre
+  todas las respuestas (`brand_mentioned` existe en todas las filas, mismo
+  denominador que `visibilityScore`); un competidor, sólo sobre las que
+  llegaron a evaluarlo. Una fila cuya extracción falló no tiene opinión sobre
+  ese competidor, y meterla en su denominador convertiría un fallo nuestro en
+  un 0% suyo. Es el criterio que `computeBrandPosition` ya aplicaba al saltarse
+  las filas sin `extracted_json`, no uno nuevo.
+- **Sin evaluar se pinta «—», no «0%».** Un cero es una afirmación sobre una
+  marca que nadie llegó a mirar (mismo criterio que `ScoreGauge` en Auditoría
+  web).
+- **La marca propia deja de estar clavada en el primer puesto.** Estaba pinada
+  arriba siempre que estuviera mencionada, así que el «ranking» no ordenaba
+  nada: salías primero por construcción. Ahora manda la cobertura y la marca
+  propia sólo gana los empates. Un competidor al que la IA nombra más veces que
+  a ti sale por encima, que es la única versión de esta pantalla que sirve para
+  algo.
+
+### Lo segundo: la evidencia que se esfumaba
+
+Debajo de «La IA menciona tu marca» en verde no había nada. Ni la cita, ni una
+explicación: el panel «Evidencias de mención» se filtraba entero cuando el
+grupo del motor traía `evidence: []` (ADR 0021, follow-up 2, que lo eligió a
+conciencia: «mejor ninguna evidencia que una falsa»). Es correcto y es mudo, y
+lo mudo aquí se lee como inventado.
+
+**La hipótesis con la que se empezó era falsa y conviene dejarlo escrito.** Se
+supuso que `verifyMention` se estaba comiendo las citas al compararlas contra
+el texto crudo sin normalizar el markdown: la respuesta lleva
+`**Genscore**: Ideal para…` y el modelo cita sin los asteriscos, así que el
+nombre suelto pasa la comprobación y la frase entera no. Reproducible en dos
+líneas de Node. **Los datos la tumbaron:**
+
+| Motor | Menciones verificadas | Con evidencia | |
+|---|---|---|---|
+| Claude | 802 | 790 | 98,5% |
+| Gemini | 1.378 | 1.192 | 86,5% |
+| ChatGPT | 187 | 148 | 79,1% |
+| **Total** | **2.367** | **2.130** | **90,0%** |
+
+Claude es el motor que más markdown mete y el que mejor puntúa: si el markdown
+fuera la causa sería el peor. **No hay bug sistémico en el filtro** y la fase
+que iba a arreglarlo (`EVIDENCE-VERIFY-MARKDOWN-1`) se descartó antes de
+escribir una línea. Queda una cola del 10% —186 filas de Gemini, 39 de ChatGPT,
+12 de Claude— en la que el modelo verifica la mención y no deja una cita
+utilizable.
+
+Para esa cola no hace falta recuperar la cita: hace falta que la pantalla diga
+la verdad cuando no la tiene. El motor entra ahora en el panel si aporta citas
+**o** si su mención está verificada sin ellas, y en el segundo caso lo dice y
+manda a la pestaña «Respuestas», donde el nombre está resaltado sobre la
+respuesta completa. Se lee de `extracted_json`, no de la columna
+`brand_mentioned`: en una fila cuya extracción falló esa columna conserva el
+valor ingenuo de `prompt-job.ts` (una subcadena) y llamar a eso «mención
+verificada» sería afirmar algo que nadie comprobó.
+
+### Y el condicionamiento por cuenta, que era la pregunta original: no existe
+
+Descartado en el código y en los datos, porque la sospecha va a volver:
+
+- `lib/scan/prompt-job.ts` sólo pasa `{ prompt, country, language }` al motor.
+  Ni marca, ni dominio, ni proyecto, ni usuario.
+- La instrucción de generación es **ciega a la marca** por diseño (ADR 0007) en
+  los tres motores, la clave de API es de la plataforma, no hay sesión ni
+  historial, y `temperature: 0`.
+- `lib/projects/prompt-suggestions-llm.ts` prohíbe explícitamente que el prompt
+  sugerido nombre la marca.
+- Y sobre todo: de las nueve respuestas medidas a «¿Cuál es la mejor
+  herramienta de GEO?», **ocho hablaban de Google Maps, QGIS, ArcGIS y mapas
+  catastrales**. Un modelo condicionado a favor de GenScore no contesta sobre
+  parcelas del catastro.
+
+**Lo que sí es real, y es peor:** «GEO» es un acrónimo colisionado —*Generative
+Engine Optimization* frente a *Sistemas de Información Geográfica*— y ese
+prompt mide el mercado equivocado el 89% de las veces, diluyendo el
+denominador de la marca con respuestas sobre software cartográfico. Es un
+prompt malo que el generador produjo y que nadie filtró. Se reescribe a mano;
+que el generador rechace acrónimos ambiguos es trabajo futuro y sin aprobar.
+
+Queda anotado, además, que **el proyecto GenScore es el peor banco de pruebas
+para juzgar la herramienta a ojo**: es autorreferencial —nuestro propio blog
+está escrito para responder justo esas preguntas, así que medimos en parte
+nuestro propio SEO— y la marca se llama como su categoría, que es el falso
+positivo que ADR 0021 existe para atajar.
+
+### El piloto no puede ver este arreglo, y por eso hay tests de render
+
+La pasada del piloto sobre el PR #466 dio verde y su captura del cajón existe,
+se abre y se ve entera en 375, 768 y 1280. **Y no verifica nada de esto.** La
+cuenta del piloto es de plan Free, el tope de plan la deja en UN motor
+(`caps.engines`), y el fallo que este PR arregla —una mención de tres
+respuestas pintada como «100%»— necesita varias respuestas para existir
+siquiera. Su cajón enseña una fila y un 0%, que es exactamente lo que enseñaba
+antes del cambio.
+
+Es la misma familia de fallo que §135 y el incidente de Auditoría web del
+2026-08-02: una pantalla que carga limpia con datos que no ejercitan la
+funcionalidad no está vista. Aquí no se arregla ampliando el piloto —haría
+falta subir de plan la cuenta, que es otra decisión— sino renderizando el
+componente en un test (`components/prompts/prompt-drawer.test.tsx`, con
+`react-dom/server` como los de Auditoría web, log §87). Eso asegura **qué cifra
+se publica y qué texto la acompaña**; el aspecto de la fila con la fracción
+puesta a 375 px sigue sin verificarse y se declara como tal.
+
+### Addendum — feedback en vivo sobre el preview, antes de mergear (2026-08-23)
+
+El fundador probó el preview de este PR en el móvil y confirmó a ojo que el
+fallo original está corregido: «1/3 · 33%» donde antes ponía «100%», con
+captura adjunta. Sobre esa misma captura pidió tres cosas, las tres dentro de
+la misma pantalla y ya implementadas:
+
+1. **Un rótulo sobre la columna de porcentajes.** «33%» suelto no dice de qué
+   es 33% — ahora «Aparición en motores» corona la fracción y el porcentaje,
+   en una cabecera de columna encima de la tarjeta.
+2. **El muro de ceros se pliega.** El ranking de la captura tenía nueve marcas
+   y ocho a 0%. Las no mencionadas —esté su cobertura en 0% o sin evaluar del
+   todo— quedan detrás de un botón «Ver N marcas más sin mención», con un
+   resumen arriba («1 de 9 marcas mencionadas en este prompt»). La marca propia
+   nunca se pliega, mencionada o no: es la razón de abrir el cajón.
+3. **«Tu marca» pasa a decir el nombre real.** La fila decía literalmente «Tu
+   marca» mientras el panel de evidencias, tres centímetros más abajo, decía
+   «Evidencias de mención de GenScore» — dos nombres para la misma entidad en
+   la misma pantalla. Ahora la fila usa el nombre real del proyecto con la
+   pastilla «Tú» al lado, y `buildRanking` acepta ese nombre con el literal de
+   siempre como respaldo para no romper los tests que no lo ejercitan.
+
+Este ciclo confirma, además, el límite documentado más abajo: el piloto
+automático no vio ni el fallo original ni esta corrección — el fundador sí,
+mirando su propia cuenta con datos reales de tres motores. Es la verificación
+que este PR necesitaba y que ninguna cuenta de un solo motor podía darle.
+
+### Roto conocido / pendiente
+
+- La cola del 10% sin cita utilizable no se investiga en esta fase. Se explica,
+  no se resuelve.
+- ~~El botón de plegado y la cabecera de columna no se han visto en un
+  navegador.~~ **Corregido tras la propia pasada del piloto sobre `46ffb43`**:
+  al contrario de lo asumido aquí mismo un párrafo antes, el proyecto del
+  piloto sí tiene 9 competidores rastreados (aunque escanee con un solo
+  motor), así que el plegado, el resumen y la cabecera de columna **sí se
+  ejercitan** — la captura de `prompts` a 375 px enseña «Ranking de marcas /
+  Aparición en motores», «0 de 9 marcas mencionadas en este prompt», la fila
+  propia con «Genscore Tú Neutral 0%» y el botón «Ver 8 marcas más sin
+  mención», todo legible y sin solapes. Lo que sigue sin verse en un navegador
+  es la combinación exacta de **fracción + cabecera** a 375 px — la fracción
+  («1/3») sólo aparece con más de una respuesta por prompt, que el piloto de un
+  motor no genera; esa combinación queda cubierta por la captura móvil que el
+  fundador adjuntó él mismo, no por el piloto automático.
+- La tarjeta «La IA menciona tu marca» sigue siendo binaria (verde si al menos
+  una respuesta te nombra). Con 1 de 3 es cierta pero generosa; la lista «Por
+  motor» justo debajo la desambigua. No se toca aquí.
+
+## 148. `/pricing` dejaba de hablar de usuarios ilimitados: no hay gestión de equipo que lo sostenga (2026-08-24)
+
+`/pricing` y `/docs/planes-y-limites` vendían "usuarios ilimitados en todos
+los planes" como diferenciador — titular del hero, ítem del checklist, fila
+propia ("Usuarios del equipo") en la matriz comparativa, y una pregunta de la
+FAQ dedicada a contrastar "cobramos por prompts y motores, no por usuarios".
+La gestión de equipo/RBAC nunca se construyó: sigue en la lista de "Forbidden
+Without Explicit Approval" de CLAUDE.md, y `/dashboard/settings/team` sólo
+redirige desde que se ocultó la pestaña en 2026-07-12. Es la misma clase de
+fallo que PRICING-TRUTH-1 corrigió: un reclamo verificable en dos clics —abrir
+Ajustes y buscar cómo invitar a alguien— que no se sostiene.
+
+**Cambio, sin tocar el tema de fondo ("paga por valor").** El titular del hero
+pasa de "no por usuarios" a "no por adivinar"; el checklist cambia "Usuarios
+ilimitados" por "Sube o baja de plan cuando quieras" (cierto en los cuatro
+planes); la fila "Usuarios del equipo" sale de `PLAN_MATRIX`; la pregunta de la
+FAQ se queda sin la mitad que mencionaba usuarios ("¿Por qué cobráis por
+prompts y motores?"). `/docs/planes-y-limites` pierde el mismo párrafo — se
+corrige ahí también porque, si no, la página quedaba contradiciendo a
+`/pricing` a un enlace de distancia, el mismo patrón que ya cubre
+`.claude/rules/growth-content.md` (§74).
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.790 pruebas) y `pnpm run
+validate` en verde. Sin fila nueva en el mapa de zonas: es una corrección
+editorial sobre un invariante que ya existía (CLAUDE.md, "no fake product
+behavior"), no una fase que cree uno nuevo.
+
+## 149. Rediseño de `/pricing` (Fase A+B): copy nuevo y medios de pago — la promo de precio y el escaneo diario de Starter se quedan fuera (2026-08-24)
+
+El fundador pidió un rediseño más amplio de `/pricing`: hero nuevo, precios
+tachados con promo hasta el 1 de septiembre, banda de medios de pago, quitar
+"Cómo medimos" y "El precio se ancla…", renombrar "frecuencia de refresco" a
+"frecuencia de escaneo", y subir Starter de escaneo semanal a diario. Se
+partió en fases porque dos de esas piezas tocan invariantes duros del
+repositorio, no solo copy.
+
+### Lo que se ha hecho (Fase A: copy/IA; Fase B: medios de pago)
+
+- Hero: badge "Planes que crecen contigo", título "Paga solo por lo que
+  necesitas", subtítulo y checklist nuevos (`components/pricing/pricing-page.tsx`).
+- Retirados los bloques "Cómo medimos" (`METER_ITEMS`) y "El precio se ancla
+  en el tiempo de analista que te ahorras", y el párrafo "Las palancas de
+  upsell…" bajo la comparativa.
+- "Frecuencia de refresco" → "Frecuencia de escaneo" en los 6 sitios donde
+  aparecía: `app/pricing/plans-data.ts` (matriz, FAQ, highlights de Pro/Agencia),
+  `components/billing/change-plan-modal.tsx` y `app/docs/planes-y-limites/page.tsx`.
+- FAQ "¿Cómo se mide la fiabilidad de los datos?" retirada de `/pricing` —el
+  principio que describía (credibilidad de medición visible) sigue siendo
+  real y sigue en la matriz comparativa, solo deja de tener su propia pregunta
+  aquí.
+- Banda "Pagos seguros con Stripe, Apple Pay y Google Pay": tres marcas
+  CC0 de `simple-icons` (silueta simplificada, no el asset de prensa oficial
+  pixel-exacto de cada marca), en su color de marca. Asunción, no verificación:
+  Stripe Checkout las ofrece por defecto cuando no se restringe
+  `payment_method_types` (`app/dashboard/settings/billing/actions.ts` no lo
+  hace), pero nadie ha confirmado en el propio dashboard de Stripe que Apple
+  Pay/Google Pay estén activos. Si no lo están, la insignia miente y hay que
+  quitarla o activar esos métodos.
+
+### Lo que se ha dejado fuera, y por qué
+
+- **La promo de precio (45€→19€ Starter, 179€→59€ Pro) no se ha tocado.**
+  `plans-data.ts.price` es solo un número de display — lo que cobra Stripe de
+  verdad sale de `STRIPE_PRICE_ID_STARTER`/`STRIPE_PRICE_ID_PRO`
+  (`lib/stripe.ts`), completamente desacoplado. Cambiar solo el número
+  mostrado sería anunciar un precio que el checkout no cobra — la clase de
+  cosa que CLAUDE.md prohíbe explícitamente, y "billing" está en la lista de
+  áreas que necesitan aprobación propia para "nuevos mecanismos de precio". Hoy
+  Stripe sigue en modo test en producción (`docs/launch-plan.md`, Fase 5 LAUNCH
+  pendiente), así que el riesgo inmediato es bajo, pero la promo necesita un
+  mecanismo real (con fecha de caducidad en código, no en la memoria de
+  alguien) antes de construirse.
+- **Starter sigue en escaneo semanal.** `lib/scan/cron.ts`
+  (`RECURRING_INTERVAL_MS_BY_PLAN.starter = 7 * DAY_MS`) es justo el fix de
+  PRICING-TRUTH-1 que hasta ahora garantizaba que el cron cumpliera lo que
+  `/pricing` prometía. Subirlo a diario es un cambio real de pipeline —7x más
+  llamadas a Gemini/Claude/ChatGPT por proyecto Starter al mes— que además
+  compone mal con la promo de precio no aprobada (bajar precio y subir coste
+  a la vez). Por eso el highlight de Starter dice "Escaneo **semanal** +
+  evolución", no "diario": decir lo contrario sin el cambio de backend habría
+  sido la misma clase de promesa falsa que se acaba de quitar.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.790 pruebas) y `pnpm run
+validate` en verde.
+
+**Pendiente.** Confirmar con el fundador si Apple Pay/Google Pay están
+activos en Stripe antes de dar la Fase B por cerrada del todo. Fases C
+(promo de precio) y D (Starter a diario) siguen bloqueadas hasta su propia
+aprobación explícita.
+
+## 150. La cabecera de página no llegaba a los bordes en pantallas anchas (HEADER-FULL-WIDTH-1, 2026-08-21)
+
+**Lo que vio el fundador.** En Visión general, con la ventana a tamaño real,
+la banda `Visión general / Genscore / genscore.es` se quedaba corta por los
+dos lados mientras la topbar (`Completado`, campana, `Cerrar sesión`) y el
+banner «Tu histórico se está construyendo» de justo encima sí llegaban a los
+dos bordes. Tres bandas de cromo apiladas y sólo la del medio se recortaba.
+
+**Causa.** `.ov-sticky-header` vive dentro de `.page` (tope 1320px, centrado)
+y su margen negativo (`-26px -34px 24px`) sólo cancela el padding de `.page`
+— nunca llega más allá de sus bordes. `.dash-header` y `.dmb-band`, en
+cambio, son hermanos de `.page` dentro de `.dash-main` y no tienen tope
+alguno. En cuanto la columna de contenido (`.dash-content`, el carril `1fr`
+de `.shell { grid-template-columns: var(--sidebar-w) 1fr }`) supera 1320px
+—desde ~1568px de ventana con el sidebar en 248px— `.page` empieza a
+centrarse y la cabecera deja huecos a los lados que las otras dos bandas no
+tienen.
+
+**Arreglo.** `--ov-hdr-bleed` calcula ese exceso (`max(0px, (100vw -
+var(--sidebar-w) - var(--ov-hdr-page-cap)) / 2)`, con `--ov-hdr-page-cap` a
+1320px por defecto) y se suma tanto al margen negativo como al padding, así
+que el borde de la caja llega al borde real de `.dash-content` mientras el
+contenido (título, badges, pastilla de estado) se queda exactamente donde
+estaba — los dos términos se cancelan. Por debajo de ~1568px de ventana
+`--ov-hdr-bleed` es 0 y el comportamiento es byte-idéntico al de antes.
+
+**Corrección el mismo día, antes de mergear: Competidores se quedaba corta
+igual.** El fundador probó el preview en Competidores y Páginas citadas y
+sólo la primera seguía sin llegar al borde. Causa: de las 8 pantallas que
+comparten `.ov-sticky-header`, **Competidores es la única cuya clase de
+columna estrecha va combinada directamente sobre `.page`**
+(`<div className="page cm2-page">`) en vez de anidada como hija suya —
+Visión general, Prompts y Páginas citadas meten su `.ov2-scope`/`.pr2-scope`/
+`.cit2-page` como un `<div>` aparte DENTRO de un `.page` sin modificar, que
+sigue en 1320px. En Competidores, en cambio, `.cm2-page` reescribe el propio
+`max-width` de `.page` a sus escalones (460/640/1200/1280px), así que el
+`1320px` que `--ov-hdr-bleed` daba por hecho estaba mal para esa pantalla en
+concreto — sangraba de menos, no de más, y por eso seguía viéndose corta.
+`--ov-hdr-page-cap` se hizo variable y `.cm2-page .ov-sticky-header`
+redeclara los mismos cuatro escalones que `.cm2-page` ya usa, en las mismas
+media queries, así que la sangría concuerda con el `max-width` real en cada
+una en vez de asumir un valor fijo. Ninguna otra de las 8 pantallas comparte
+esta estructura, así que ninguna otra necesita el mismo override — verificado
+leyendo el JSX de las 8, no sólo de las dos reportadas.
+
+**Deliberadamente fuera de esta fase.** El contenido de la cabecera (título,
+badges) no está alineado con la misma columna que las tarjetas de debajo en
+todas las 8 pantallas: Visión general y Prompts usan `.ov2-scope`/
+`.pr2-scope` (640/1200/1280px) como columna interior, más estrecha que la
+cabecera; Páginas citadas usa `.cit2-page` con el mismo patrón. Es
+exactamente lo que enseñan las capturas de Páginas citadas: la cabecera ya
+llega al borde correcto (nunca tuvo el bug de Competidores), pero las
+tarjetas de debajo, más estrechas, no — un desajuste que ya existía antes de
+esta fase y sigue igual de visible después. Alinear el contenido de la
+cabecera con la columna de tarjetas —no sólo llevar el fondo a sangre— exige
+decidir esa convergencia para las 8 pantallas a la vez
+(`app/console.css:509-515`, ya señalado como decisión pendiente desde
+PROMPTS-DESKTOP-2); esta fase sólo corrige que la banda deje de recortarse,
+sin tocar dónde cae el texto dentro de ella.
+
+---
+
+## 151. La cabecera de Páginas citadas nunca adoptó el patrón compartido (HEADER-FULL-WIDTH-1, 2026-08-25)
+
+**Lo que vio el fundador.** Comparando capturas anchas de Competidores y
+Páginas citadas: la segunda seguía con la banda más baja que el resto de la
+consola, y con una tipografía distinta.
+
+**Causa.** `.ov-sticky-header` la comparten 8 pantallas, y 7 de ellas (Visión
+general, Prompts, Competidores, Recomendaciones, Auditoría web, Debug, y
+ahora Páginas citadas) siguen el mismo patrón de dos líneas dentro de
+`.ov-sticky-left`: un `<p className="kicker">` con el nombre de la sección
+arriba, y debajo el nombre del proyecto en negrita (15px/750) junto a una
+badge del dominio en monoespaciada (11px). Páginas citadas se había quedado
+con un layout de una sola línea de antes de esa convergencia — kicker,
+separador vertical y el dominio en 14px/700, sin mostrar nunca el nombre del
+proyecto — que resultaba en una banda más baja y con letra distinta al
+resto. El propio comentario de `recommendations/page.tsx` ("Alineada con
+Prompts, Competidores y Páginas citadas") ya daba por hecho que lo estaba,
+sin serlo.
+
+**Arreglo.** `citations/page.tsx` adopta el mismo bloque, letra por letra,
+que ya usan las otras 6 pantallas. Ningún cambio de CSS — el desajuste era
+de estructura JSX, no de la banda en sí (que ya sangraba bien tras §150).
+
+---
+
+---
+
+## 152. Rediseño del onboarding de nuevo dominio — dirección "Consola" (ONBOARDING-DOMAIN-REDESIGN-1, 2026-08-20)
 
 **El problema.** El asistente de alta de dominio (`components/onboarding-
 wizard.tsx`) seguía en el sistema visual anterior a la migración de marca:

@@ -119,6 +119,25 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   pizarra, el único color fuera de la familia, y en escritorio era exactamente
   eso. Antes de dar una portada por buena, renderízala en 1124×96 con
   `object-fit: cover` y mírala (log §85).
+- **Pero la zona segura son DOS condiciones, y la de arriba sólo es una.** En
+  móvil la cabecera no enseña esa tira: es una caja de ~3,35:1, **más estrecha
+  que el lienzo**, así que ahí `object-fit: cover` recorta en horizontal ~98 px
+  por cada lado. La zona segura real es **x 100-1100 e y 100-200 a la vez**, y
+  un elemento puede cumplir una condición y fallar la otra. Pasó con la portada
+  de `geo-vs-aeo-vs-seo`: verificada en la tira de 96 px tal y como pedía la
+  regla anterior, y aun así en móvil se comía «SEO» y «LLMO», dos de las cuatro
+  siglas de las que trata el artículo. Simula **los dos** recortes antes de dar
+  una portada por buena (log §145).
+- **Una portada nueva se mira al lado de las que ya están publicadas, no
+  sola.** Las portadas del blog comparten un lenguaje visual —fondo casi negro
+  azulado, paneles translúcidos con neón, y una composición de izquierda a
+  derecha: piezas dispersas → lente → panel resuelto— que no está escrito en
+  ningún sitio salvo en las propias imágenes. Una que no lo hable desentona en
+  `/blog`, donde se ven en columna una detrás de otra, **y ningún test puede
+  cogerlo**: `covers.test.ts` comprueba que el fichero declarado existe y que el
+  artículo lo enseña, y el piloto da ✅ porque la página carga. El único método
+  que funciona es renderizar las portadas del catálogo en una tira y mirarlas
+  juntas (log §145).
 - **Un valor que el lector tiene que copiar entero va en `<CodeBlock wrap>`.**
   Para código de verdad, deslizar es correcto: partir la línea cambia lo que
   dice. Para una cadena única y sin espacios —una expresión regular, una

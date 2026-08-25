@@ -71,7 +71,7 @@ export const PLANS: Plan[] = [
     highlights: [
       "1 dominio · ~25 prompts",
       "3 motores de IA (Gemini, Claude y ChatGPT)",
-      "Refresco semanal + tendencia",
+      "Escaneo semanal + evolución",
       "Bucle de acción básico",
       "Credibilidad de medición visible"
     ],
@@ -90,7 +90,7 @@ export const PLANS: Plan[] = [
     ctaStyle: "primary",
     highlights: [
       "5 dominios · ~100 prompts",
-      "3 motores de IA (Gemini, Claude y ChatGPT) · refresco diario",
+      "3 motores de IA (Gemini, Claude y ChatGPT) · escaneo diario",
       "Nuevos motores incluidos sin coste extra cuando se publiquen",
       "Bucle de acción completo",
       "Generador de soluciones (FAQ, schema, briefs)"
@@ -110,7 +110,7 @@ export const PLANS: Plan[] = [
     ctaStyle: "ghost",
     highlights: [
       "Dominios y prompts a medida (~300 de referencia)",
-      "3 motores de IA (Gemini, Claude y ChatGPT) · refresco diario",
+      "3 motores de IA (Gemini, Claude y ChatGPT) · escaneo diario",
       "Volumen y condiciones adaptadas a tu agencia",
       "Onboarding acompañado antes de contratar"
     ],
@@ -129,9 +129,8 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
       { label: "Dominios", vals: ["1", "1", "5", "A medida"] },
       { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
       { label: "Motores de IA", vals: ["1", "3", "3", "3"] },
-      { label: "Frecuencia de refresco", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
-      { label: "Tendencia temporal", vals: [false, true, true, true] },
-      { label: "Usuarios del equipo", vals: ["1", "Ilimitados", "Ilimitados", "Ilimitados"] }
+      { label: "Frecuencia de escaneo", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
+      { label: "Tendencia temporal", vals: [false, true, true, true] }
     ]
   },
   {
@@ -161,8 +160,8 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
     a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de GenScore antes de pagar nada."
   },
   {
-    q: "¿Por qué cobráis por prompts y motores, y no por usuarios?",
-    a: "Porque el valor está en cuánto monitorizas, no en cuánta gente lo mira. Los usuarios son ilimitados desde Starter. Pagas por prompts × motores × frecuencia de refresco — la unidad real de coste y de valor."
+    q: "¿Por qué cobráis por prompts y motores?",
+    a: "Porque el valor está en cuánto monitorizas, no en un precio plano. Pagas por prompts × motores × frecuencia de escaneo — la unidad real de coste y de valor."
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -171,10 +170,6 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   {
     q: "¿Qué incluye la prueba de Pro?",
     a: "Actualmente puedes activar Pro completo eligiendo ese plan al registrarte, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Mientras no lancemos la facturación no hay límite de tiempo automático — te avisaremos con antelación razonable antes de introducir el cobro."
-  },
-  {
-    q: "¿Cómo se mide la fiabilidad de los datos?",
-    a: "Cada métrica muestra su tamaño de muestra y metodología. No inflamos puntuaciones ni mostramos progreso falso: si la confianza de un dato es baja, lo verás. Es nuestro principio de credibilidad de medición."
   },
   {
     q: "¿Qué incluye el plan Agencia?",

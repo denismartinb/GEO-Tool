@@ -53,7 +53,14 @@ const ENGINES = [
  * parámetro convierte cualquier enlace en una forma de gastarle el cupo a
  * otro. El visitante llega con su dominio escrito y pulsa.
  */
-export function HeroDomainField() {
+/**
+ * `withEngines` existe para el CIERRE de la portada (Fase C), que usa el mismo
+ * campo sin la fila de motores: allí ya se han nombrado tres veces. Se
+ * comparte el componente en vez de copiar el campo porque lo que hay detrás no
+ * es un `<input>` — es el arrastre del dominio a `localStorage`, el validador
+ * y la regla de «rellena pero no lanza». Duplicarlo sería duplicar eso.
+ */
+export function HeroDomainField({ withEngines = true }: { withEngines?: boolean } = {}) {
   const router = useRouter();
   const [domain, setDomain] = useState("");
   const [isDomainFocused, setIsDomainFocused] = useState(false);
@@ -112,15 +119,17 @@ export function HeroDomainField() {
           Comprobar gratis
         </button>
       </div>
-      <div className="lp-engines">
-        {ENGINES.map((engine) => (
-          <span className="lp-engine" key={engine.name}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={engine.src} alt="" width={22} height={22} aria-hidden="true" />
-            {engine.name}
-          </span>
-        ))}
-      </div>
+      {withEngines && (
+        <div className="lp-engines">
+          {ENGINES.map((engine) => (
+            <span className="lp-engine" key={engine.name}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={engine.src} alt="" width={22} height={22} aria-hidden="true" />
+              {engine.name}
+            </span>
+          ))}
+        </div>
+      )}
     </>
   );
 }
