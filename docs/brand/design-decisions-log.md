@@ -15949,7 +15949,187 @@ lógica de navegación programática se tocó — sólo marcado muerto.
 
 ---
 
-## 165. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
+## 165. Ocultado "Datos de empresa" en Ajustes: era la única mitad del par que no servía para nada (2026-08-25)
+
+**El origen.** El fundador preguntó, mirando la pantalla de Ajustes, si los
+dos acordeones opcionales de Cuenta ("Datos de empresa" y "Datos de
+facturación") viajaban a Stripe. Investigación: ninguno de los dos sincroniza
+con Stripe hoy — ambos sólo escriben en `user_metadata` de Supabase Auth
+(`app/dashboard/settings/organization/actions.ts`). Pero no son equivalentes:
+`org_legal_name`/`org_tax_id` ("Datos de facturación") existen explícitamente
+para la factura (`lib/settings/company-details.ts:16`, "*exist for the
+invoice*") y son candidatos reales a una sincronización futura con Stripe
+(Task Intake `BILLING-INVOICE-FIELDS-1`, propuesto y **sin aprobar todavía**).
+`org_name`/`org_website`/`org_sector` ("Datos de empresa") no tienen ningún
+consumidor ni plan documentado — el propio código lo admite: "*Nothing in the
+product reads them yet*". Ni sitio web ni sector tienen equivalente en un
+customer de Stripe.
+
+**La decisión (founder, 2026-08-25):** ocultar sólo "Datos de empresa". No es
+un caso de "fake behavior" en sentido estricto — el hint decía "Opcional", no
+prometía nada — pero mantener un formulario editable sin ningún efecto es
+ruido de producto y trabajo de mantenimiento gratis, y "Datos de facturación"
+sí tiene un destino real por delante.
+
+**Qué cambió.** `components/settings/account-section.tsx` deja de importar y
+renderizar `CompanyFold`; sólo queda el acordeón "Datos de facturación" en
+`.set-folds`. La prop `companyReadOnly` desaparece de `AccountSection` (y de
+su único caller, `app/dashboard/settings/page.tsx`) porque sólo existía para
+ese fold. El estado `companyValue` también desaparece: sin UI para editarlo,
+`save()` reenvía directamente `company.name/website/sector` (el valor ya
+cargado) para no perder los datos que una cuenta hubiera guardado antes de
+ocultar el fold. **No se toca el backend**: `saveAccount`
+(`organization/actions.ts`) sigue aceptando y persistiendo los tres campos sin
+cambios — sólo se quita la forma de editarlos.
+
+**Lo que NO se borra.** `components/settings/company-fold.tsx` sigue
+existiendo, sin importar desde ningún sitio — ocultar, no eliminar
+(`CLAUDE.md`, "Never delete source files casually"), por si el bloque vuelve
+a tener sentido junto a algún consumidor futuro.
+
+**El piloto.** `tests/pilot/journeys/settings.spec.ts` tenía interacción real
+con el fold de empresa (`COMPANY_FOLD_TRIGGER`/`COMPANY_FOLD_BODY`,
+abrirlo y comprobar `#company-name`) — se retira esa mitad y el test pasa a
+llamarse "the billing fold opens..." (antes cubría los dos plegables). El
+fixture del self-check (`tests/pilot/fixtures/server.mjs`) sigue sirviendo el
+marcado del fold de empresa sin usar: es inocuo (nada lo referencia ya) y
+`fixture-drift.test.ts` sólo vigila drift de blog/comparativas, no de Ajustes.
+
+**Pendiente, explícito:** `BILLING-INVOICE-FIELDS-1` (razón social + NIF →
+`invoice_settings.custom_fields` de Stripe) sigue propuesto y sin aprobar —
+este PR no lo implementa, sólo despeja el campo que sí tiene destino del que
+no.
+
+**Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
+(build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 166. Razón social y NIF llegan de verdad a Stripe: BILLING-INVOICE-FIELDS-1 (2026-08-25)
+
+**El origen es §165.** Al ocultar "Datos de empresa" se dejó constancia de
+que "Datos de facturación" (razón social, NIF) no sincronizaba con Stripe
+tampoco — solo que sí tenía un destino real documentado
+(`lib/settings/company-details.ts`: "*exist for the invoice*"). El fundador
+pidió el Task Intake para valorar el coste; con el reporte en mano, aprobó
+implementarlo ("Apruebo ese plan").
+
+**Fuera del alcance original de BILLING-STRIPE-1**, así que necesitaba su
+propia aprobación por la regla de `CLAUDE.md` ("*new pricing mechanics,
+additional payment providers, invoicing changes* needs its own approval") —
+esta es esa aprobación, registrada aquí y en `docs/launch-plan.md` Fase 4.
+
+**Diseño elegido: `invoice_settings.custom_fields`, no `tax_id_data`.** La
+alternativa típica de Stripe para un NIF es `tax_id_data` (tipado por país,
+p. ej. `es_cif`/`es_nif`), pero exige inferir el tipo fiscal correcto y falla
+si el formato no encaja — complejidad innecesaria para un campo de texto
+libre y opcional. `invoice_settings.custom_fields` imprime lo que sea tal
+cual en la factura: una llamada, sin validación de formato fiscal.
+
+**Qué cambió.**
+
+- `syncBillingDetailsToStripeCustomer` (`lib/stripe.ts`): recibe un
+  `customerId` y `{legalName, taxId}`; construye hasta dos `custom_fields`
+  ("Razón social", "NIF"), cada uno truncado a 30 caracteres — el límite real
+  de Stripe para nombre y valor de estos campos — y llama
+  `stripe.customers.update`. Si ambos campos están vacíos, envía
+  `custom_fields: null` (no `[]`): Stripe exige `null` para borrar los que
+  hubiera antes, así que vaciar el formulario también vacía la factura.
+- `saveAccount` (`app/dashboard/settings/organization/actions.ts`): tras
+  escribir en `user_metadata`, hace su propia consulta a
+  `profiles.stripe_customer_id` (mismo patrón que
+  `createCheckoutSession` en `billing/actions.ts`) y solo si existe llama a
+  la sincronización.
+- **Best-effort con doble red de seguridad.** `syncBillingDetailsToStripeCustomer`
+  ya atrapa sus propios errores (registra y no relanza); `saveAccount`
+  además envuelve la llamada en su propio `try/catch` por si esa garantía
+  interna cambiara alguna vez. Ningún fallo de Stripe puede convertir un
+  guardado real en Supabase en un `{success: false}` reportado al usuario —
+  el guardado en Supabase sigue siendo lo único que decide "guardado" para
+  este formulario.
+- **Cuentas sin `stripe_customer_id` todavía** (nunca pasaron por checkout):
+  no se intenta ninguna llamada — no hay cliente al que sincronizar, y el
+  dato queda listo para la próxima vez que `saveAccount` corra tras un
+  checkout real.
+- `lib/settings/company-details.ts`: el comentario que decía "*exist for the
+  invoice*" (aspiracional cuando se escribió) ahora documenta la
+  sincronización real.
+
+**Sigue en modo test de Stripe.** No toca el go-live checklist de
+BILLING-STRIPE-1 (Vercel Pro hecho; alta autónomo y VeriFactu, pendientes).
+
+**Comprobado.** 9 tests nuevos (`lib/stripe.test.ts` ×6,
+`organization/actions.test.ts` ×3). `pnpm test` (203/203, 2.836/2.836),
+`pnpm run validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Addendum, mismo día: dos correcciones de copy pedidas por el fundador tras
+ver el preview.**
+
+- **"NIF" → "NIF/CIF"**, tanto en la etiqueta del campo
+  (`components/settings/billing-details.tsx`) como en el nombre del
+  `custom_field` que llega a Stripe (`lib/stripe.ts`) — el NIF es para
+  personas físicas, el CIF para empresas, y "Razón social" ya deja claro que
+  este bloque es para una empresa; "NIF/CIF" no obliga a adivinar cuál de los
+  dos escribir.
+- **Retirada la pista "Salen en la factura"** del acordeón "Datos de
+  facturación" (`hint` de `SettingsFold`, ahora omitido). No era falsa —
+  desde este mismo PR sí es cierto que llegan a la factura vía Stripe— pero
+  el fundador prefirió quitarla; el título del bloque ya dice "facturación".
+- `lib/stripe.test.ts` actualizado para el nuevo nombre de campo. Sin cambios
+  de comportamiento: sigue siendo el mismo `custom_field`, solo cambia el
+  texto impreso en la factura.
+
+**Segundo addendum, mismo día: tres ajustes más de `Ajustes → Cuenta`, pedidos
+tras verificar la factura de prueba en el Dashboard de Stripe.**
+
+- **Etiqueta del campo → "Empresa o Razón social"** (antes "Razón social",
+  `components/settings/billing-details.tsx`), mismo motivo que "NIF/CIF": no
+  obliga a adivinar qué escribir. **Deliberadamente no se tocó** el nombre del
+  `custom_field` que llega a Stripe (sigue siendo "Razón social" en
+  `lib/stripe.ts`) — es el texto impreso en un documento oficial, donde
+  "Razón social" a secas es la convención española estándar; la etiqueta más
+  larga es una ayuda de UI para rellenar el formulario, no lo que debe
+  imprimirse.
+- **"Avisos" → "Notificaciones"** como texto visible de la sección y de su
+  entrada en el índice (`lib/settings/index-entries.ts`,
+  `app/dashboard/settings/page.tsx`). El `id` DOM se queda en `avisos` a
+  propósito: `app/dashboard/settings/notifications/page.tsx` redirige a
+  `/dashboard/settings#avisos`, y esa es la URL que ya viajó en emails
+  transaccionales reales — cambiar el id rompería esos enlaces
+  irreescribibles (mismo razonamiento que documenta el comentario de cabecera
+  de `page.tsx` sobre las cuatro rutas viejas).
+- **Sección Plan reordenada: ahora va justo debajo de Cuenta**, antes de
+  Notificaciones (orden anterior: Cuenta → Avisos → Plan; nuevo: Cuenta →
+  Plan → Notificaciones). Plan sigue siendo solo-admin — el bloque JSX se
+  movió, no la condición `isAdmin`. `buildSettingsIndex` refleja el mismo
+  orden en el índice lateral.
+- Tests actualizados: `lib/settings/index-entries.test.ts` (orden
+  `["cuenta","plan","avisos"]` para admin, etiqueta "Notificaciones"),
+  `tests/pilot/journeys/settings.spec.ts` (orden de los `<h2>` y texto visible
+  de `#avisos`).
+
+**Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run validate`
+(build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Tercer addendum, mismo día: retirada la promesa de roadmap al pie de
+"Notificaciones".** El pie de sección decía "Iremos añadiendo avisos de
+competidores, recomendaciones y escaneos. Te lo diremos cuando estén." — un
+compromiso de roadmap que esta pantalla no debería hacer (mismo espíritu que
+justificó quitar los cuatro switches "Próximamente" en CONSOLE-REDESIGN-1).
+Retirado a petición del fundador (`components/settings/notifications-section.tsx`).
+Sin tests que dependieran del texto. `.set-quiet` (`app/globals.css`) se deja
+tal cual: es una clase de utilidad genérica, no exclusiva de este párrafo.
+`pnpm test` (203/203, 2.837/2.837) y `pnpm run validate` en verde.
+
+---
+
+## 167. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
+
+**Nota de renumeración.** Esta sección nació como §165 en su propia rama; mientras se abría el PR, `main` avanzó y reclamó ese número y el siguiente (§165/§166, BILLING-INVOICE-FIELDS-1, PR #478). Pasa a **§167**, el primero libre al fusionar. Mismo protocolo que describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión que ya documentan los §159/§161/§163 de este mismo fichero.
+
 
 **Lo que pidió el fundador.** Que la configuración de `/debug` que hoy es
 manual (`sampling_enabled`, `auto_coverage_audit_enabled`,
