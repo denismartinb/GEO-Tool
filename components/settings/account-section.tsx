@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CompanyFold } from "@/components/settings/company-fold";
 import { BillingDetailsFold } from "@/components/settings/billing-details";
 import type { BillingDetails, CompanyDetails } from "@/lib/settings/company-details";
 import { changePassword } from "@/app/dashboard/settings/profile/actions";
@@ -32,7 +31,6 @@ export function AccountSection({
   firstName,
   lastName,
   company,
-  companyReadOnly,
   billingDetails
 }: {
   email: string;
@@ -40,15 +38,14 @@ export function AccountSection({
   firstName: string;
   lastName: string;
   company: CompanyDetails;
-  companyReadOnly: boolean;
   billingDetails: BillingDetails;
 }) {
   const [first, setFirst] = useState(firstName);
   const [last, setLast] = useState(lastName);
-  // Lifted out of the two folds: they used to own this state and carry their
-  // own «Guardar», so the card's button silently dropped whatever had been
-  // typed inside them (founder, 2026-08-06). One card, one save.
-  const [companyValue, setCompanyValue] = useState(company);
+  // "Datos de empresa" is hidden (nothing in the product reads it — see
+  // lib/settings/company-details.ts), so there is no UI left to change
+  // `company`. It is only round-tripped here so saving does not wipe out
+  // whatever an account saved before the fold was hidden.
   const [billingValue, setBillingValue] = useState(billingDetails);
 
   const [isSaving, startSaving] = useTransition();
@@ -60,9 +57,9 @@ export function AccountSection({
       const result = await saveAccount({
         firstName: first,
         lastName: last,
-        companyName: companyValue.name,
-        companyWebsite: companyValue.website,
-        companySector: companyValue.sector,
+        companyName: company.name,
+        companyWebsite: company.website,
+        companySector: company.sector,
         legalName: billingValue.legalName,
         taxId: billingValue.taxId
       });
@@ -164,12 +161,12 @@ export function AccountSection({
             </div>
           </div>
 
-          {/* Twin folds, «empresa» then «facturación» — founder, 2026-08-06:
-              "mete datos de facturación en un acordeón similar a datos de
-              empresa justo debajo". Both are things you fill in once, so they
-              read better as a pair than split across two sections. */}
+          {/* "Datos de empresa" hidden here — nothing in the product reads
+              org_name/org_website/org_sector, so showing an editable form for
+              them was a promise the product did not keep (founder,
+              2026-08-25). "Datos de facturación" stays: it is the field pair
+              a future Stripe-invoice sync would use. */}
           <div className="set-folds">
-            <CompanyFold value={companyValue} onChange={setCompanyValue} readOnly={companyReadOnly} />
             <BillingDetailsFold value={billingValue} onChange={setBillingValue} />
           </div>
 

@@ -15,9 +15,9 @@ import {
  *
  * The previous version listed six, four of them disabled behind a
  * "Próximamente" badge — a screen where two thirds of the controls are dead
- * reads as a roadmap, not as a setting. The four unbuilt ones become one line
- * of text at the foot, which says the same thing without four inert switches
- * taking up more room than the working feature.
+ * reads as a roadmap, not as a setting. The four unbuilt ones are gone
+ * outright now (founder, 2026-08-25): even a footer line promising them was
+ * a roadmap commitment this screen shouldn't be making.
  *
  * `visibility` sends the score-drop alert (Fase 6a) and `weekly` the Monday
  * digest (Fase 6b, gated behind CRON_DIGEST_ENABLED). Both persist server-side.
@@ -72,9 +72,6 @@ export function NotificationsSection({
             <Switch on={state[row.key]} onChange={set(row.key, row.persisted)} />
           </SettingRow>
         ))}
-        <p className="set-quiet">
-          Iremos añadiendo avisos de competidores, recomendaciones y escaneos. Te lo diremos cuando estén.
-        </p>
       </CardContent>
     </Card>
   );

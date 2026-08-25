@@ -46,11 +46,11 @@ export function buildSettingsIndex({
 }): SettingsIndexEntry[] {
   return [
     { id: "cuenta", label: "Cuenta", detail: fullName.trim() || email },
+    ...(planLabel ? [{ id: "plan", label: "Plan", detail: planLabel }] : []),
     {
       id: "avisos",
-      label: "Avisos",
+      label: "Notificaciones",
       detail: `${activeAlerts} ${activeAlerts === 1 ? "activo" : "activos"}`
-    },
-    ...(planLabel ? [{ id: "plan", label: "Plan", detail: planLabel }] : [])
+    }
   ];
 }
