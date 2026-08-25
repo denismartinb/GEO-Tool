@@ -58,10 +58,12 @@ export function PromoStrip() {
       <span className="lp-promo-track">
         <span className="lp-promo-row a">7 días de Pro · Sin tarjeta</span>
         <span className="lp-promo-row b">
-          <span className="lp-promo-pill">−67%</span> Pro <s>179&nbsp;€</s> <b>59&nbsp;€/mes</b>, 6 meses · hasta 1 sept.
+          <span className="lp-promo-pill">−67%</span>
+          <span>Pro <s>179&nbsp;€</s> <b>59&nbsp;€/mes</b>, 6 meses · hasta 1 sept.</span>
         </span>
         <span className="lp-promo-row c">
-          <span className="lp-promo-pill">−58%</span> Starter <s>45&nbsp;€</s> <b>19&nbsp;€/mes</b>, 6 meses · hasta 1 sept.
+          <span className="lp-promo-pill">−58%</span>
+          <span>Starter <s>45&nbsp;€</s> <b>19&nbsp;€/mes</b>, 6 meses · hasta 1 sept.</span>
         </span>
       </span>
     </div>

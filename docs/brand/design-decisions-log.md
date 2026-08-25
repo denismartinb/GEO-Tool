@@ -14440,3 +14440,34 @@ de cada una sin dejar diff.
     Verificado sin recorte a 320/375/1440px (las tres filas), y con
     `reducedMotion: "reduce"`: el mensaje del ensayo se congela quieto, Pro y
     Starter se ocultan enteros — mismo criterio que el item 19.
+23. **Dos fallos reales en la rotación de tres mensajes, encontrados al
+    pedir el fundador que se vieran menos "raros" los cambios de mensaje.**
+    "que tarde un par de segundos en rotar el primer mensaje, sino queda
+    raro, se tapan" — y sí, se tapaban: dos fallos distintos, uno de
+    espaciado y uno de temporización.
+
+    - **La coma se separaba de "€/mes".** `.lp-promo-row` es
+      `display:flex; gap:7px`, y en flexbox **cada nodo de texto entre
+      elementos inline es su propio ítem flex** — así que el `gap` se
+      colaba también entre `</b>` y la coma que lo seguía en el marcado,
+      aunque en el JSX no hubiera espacio ahí. Arreglado envolviendo la
+      frase completa (después del badge) en un único `<span>`: el badge y
+      la frase pasan a ser los dos únicos ítems flex, y dentro de la frase
+      el texto fluye normal, sin gaps inyectados entre palabras.
+    - **Los mensajes SÍ se superponían al arrancar, y por eso "el primero
+      rotaba demasiado rápido".** `animation-delay` NEGATIVO adelanta la
+      animación esa fracción de su propio ciclo — no la retrasa. Con las
+      filas B/C a -4.5s/-9s sobre un ciclo de 13,5s, a t=0 la fila B ya
+      estaba en el 33% de su recorrido; los keyframes del item 22 tenían la
+      salida en 31%–36%, así que a t=0 la fila B estaba A MITAD de su
+      propia transición de salida — parcialmente visible y solapada con la
+      fila A, que sí estaba en su fotograma inicial. Se corrige separando
+      la salida (29%–33%) del punto de arranque de la fila siguiente (33%
+      exacto), con margen — a t=0, B cae justo en el límite ya oculto y C
+      (fase 66,7%) cae de lleno en la zona oculta. Verificado leyendo
+      `element.getAnimations()[0].currentTime` en vez de reproducir la
+      animación de verdad —Chromium headless no la reproduce con
+      fidelidad— en 16 instantes a lo largo del ciclo completo: cada
+      mensaje se sostiene sólido ~3s (más que "un par de segundos") y el
+      resto del tiempo su opacidad y la de los otros dos suman como mucho
+      ~0,96, nunca dos filas a la vez cerca de opacidad 1.

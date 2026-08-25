@@ -270,3 +270,28 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   colapsa `"smooth"` a un solo fotograma y no lo reproduce — mismo límite que
   ya consta más abajo para bugs de scroll en este repo; el diagnóstico se
   valida por el mecanismo, no por ver el parpadeo en el arnés.
+- **En un contenedor `display:flex` con `gap`, un nodo de texto entre
+  elementos inline es su propio ítem flex — el `gap` se cuela también ahí,
+  aunque el JSX no tenga espacio en el marcado.** `.lp-promo-row` (`gap:
+  7px`) mezclaba texto suelto y `<s>`/`<b>` como hijos directos, y el hueco
+  apareció entre `</b>` y la coma que la seguía inmediatamente en el código
+  — nada en el JSX lo explicaba (log §152, item 23). Un contenedor `flex`
+  con `gap` que necesita fluir como una frase (con puntuación pegada, sin
+  huecos entre palabras) envuelve esa frase en un único hijo; el `gap` sólo
+  debe separar bloques de verdad distintos —aquí, el badge de la frase—, no
+  palabras sueltas dentro de una.
+- **`animation-delay` NEGATIVO adelanta la animación esa fracción de su
+  propio ciclo — no la retrasa.** Con `animation-delay: -4.5s` sobre un
+  ciclo de 13,5s, en `t=0` la fila ya está en el 33% de su recorrido, no en
+  el 0%. Generalizar una rotación de 2 mensajes (retardo a mitad de ciclo,
+  keyframes simétricos) a 3 mensajes cambiando sólo el retardo (a un
+  tercio) sin recalcular dónde caen los keyframes de salida deja una fila
+  arrancando A MITAD de su propia transición de salida — parcialmente
+  visible y solapada con la que sí está en su fotograma inicial (log §152,
+  item 23: "que tarde un par de segundos en rotar el primer mensaje, sino
+  queda raro, se tapan" — se tapaban). La transición de salida de cada fila
+  tiene que completarse ANTES del punto de retardo de la siguiente fila, con
+  margen. Se verifica leyendo `element.getAnimations()[0].currentTime` en
+  varios instantes del ciclo completo — no reproduciendo la animación de
+  verdad, que Chromium headless no hace con fidelidad (dos entradas más
+  arriba en este fichero).
