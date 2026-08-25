@@ -133,6 +133,16 @@ export function PlanBillingSection({
       )
     : null;
 
+  // PRICING-PROMO-1: only trust promo data fetched for the plan actually
+  // shown — `planId` can move locally (downgrade to Free, see `applyChange`)
+  // without a refetch, and Free never carries a promo anyway.
+  const activePromo = planId === currentPlanId ? usage.subscriptionPromo : null;
+  const promoEndsDate = activePromo
+    ? new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" }).format(
+        new Date(activePromo.endsAt)
+      )
+    : null;
+
   return (
     <>
       {/* CONSOLE-REDESIGN-1: these two banners used four hand-written hexes
@@ -204,7 +214,18 @@ export function PlanBillingSection({
                 <span className="badge badge-accent">Plan actual</span>
               </div>
               <p className="text-lg font-bold text-[var(--ink)]">
-                {current.priceLabel ?? (
+                {current.priceLabel ? (
+                  current.priceLabel
+                ) : activePromo ? (
+                  <span className="pb-current-promo">
+                    <span className="was">
+                      {current.price}&nbsp;€/{current.period}
+                    </span>
+                    <span className="now">
+                      {activePromo.promoPrice}&nbsp;€/{current.period}
+                    </span>
+                  </span>
+                ) : (
                   <>
                     {current.price}&nbsp;€/{current.period}
                   </>
@@ -212,6 +233,13 @@ export function PlanBillingSection({
               </p>
             </div>
             <p className="sub mt-1">{current.tagline}</p>
+            {activePromo && (
+              <p className="sub mt-1">
+                <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
+                Precio de lanzamiento hasta el <b>{promoEndsDate}</b> — después vuelve a {current.price}&nbsp;€/
+                {current.period}.
+              </p>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <ul className="space-y-2 text-sm text-[var(--ink-2)]">

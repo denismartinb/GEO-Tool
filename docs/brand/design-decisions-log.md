@@ -13756,3 +13756,31 @@ de abrir el modal de cambio de plan — ese botón abría `ChangePlanModal`
 (CONSOLE-REDESIGN-1), que sólo enseña cuatro tarjetas resumidas, no la matriz
 de comparación completa que el texto del botón promete. Ahora es un
 `<Link href="/pricing">` real.
+
+### Addendum 2 — el precio promo también después de contratar (2026-08-25)
+
+El fundador contrató Pro de verdad en una cuenta de prueba y señaló que la
+tarjeta "Tu plan" de `/dashboard/settings/billing` seguía enseñando 179 €/mes
+llano, sin ningún rastro de que la suscripción real llevara el cupón. No era
+un bug de esa cuenta en concreto — es que nada en el código comprobaba nunca
+si la suscripción activa tenía un descuento de Stripe aplicado; `getUsageSummary`
+sólo leía `profiles` en Supabase, y ninguna columna ahí registra descuentos.
+
+Se resolvió leyendo el estado real de Stripe, no inventándolo: `getActiveSubscriptionPromo`
+(`lib/stripe.ts`) llama a `stripe.subscriptions.retrieve(id, { expand: ["discounts"] })`
+y compara el id del cupón del descuento activo contra
+`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO` — nunca "hay algún descuento", que
+etiquetaría un cupón de soporte aplicado a mano en el Dashboard como si fuera
+el precio de lanzamiento. La fecha de fin que se muestra (`discount.end`) es
+la real de Stripe para ESA suscripción, no `PROMO_ENDS_AT`: dos cuentas que se
+dieron de alta en días distintos terminan su promo en fechas distintas, y
+`PROMO_ENDS_AT` sólo dice hasta cuándo se puede *empezar* a redimir el cupón,
+no hasta cuándo dura para quien ya lo redimió. Sin columna nueva en el
+esquema — de haber hecho falta una migración, esto habría requerido su propia
+aprobación explícita (CLAUDE.md, "Forbidden Without Explicit Approval").
+
+**Comprobado.** `pnpm test` (202 ficheros, 2.827 pruebas — 8 nuevas en
+`lib/stripe.test.ts` para `getActiveSubscriptionPromo`, incluida la que
+comprueba que un cupón ajeno no se etiqueta como la promo; 2 nuevas en
+`lib/billing.test.ts` para el threading de `subscriptionPromo`) y
+`pnpm run validate` en verde.

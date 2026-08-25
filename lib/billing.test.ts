@@ -11,6 +11,11 @@ vi.mock("@/lib/email/transactional", () => ({
   sendTrialEndedEmail: (...args: unknown[]) => sendTrialEndedEmail(...args)
 }));
 
+const getActiveSubscriptionPromo = vi.fn();
+vi.mock("@/lib/stripe", () => ({
+  getActiveSubscriptionPromo: (...args: unknown[]) => getActiveSubscriptionPromo(...args)
+}));
+
 import { getPlanForUser, getUsageSummary, isProOrAbove } from "./billing";
 
 describe("isProOrAbove", () => {
@@ -72,6 +77,8 @@ beforeEach(() => {
   createServiceClient.mockReset();
   requireUser.mockReset();
   sendTrialEndedEmail.mockReset();
+  getActiveSubscriptionPromo.mockReset();
+  getActiveSubscriptionPromo.mockResolvedValue(null);
 });
 
 describe("getPlanForUser — reverse trial expiry", () => {
@@ -246,5 +253,38 @@ describe("getUsageSummary — trial fields", () => {
     const usage = await getUsageSummary();
 
     expect(usage.cancelAt).toBeNull();
+  });
+});
+
+describe("getUsageSummary — subscriptionPromo (PRICING-PROMO-1)", () => {
+  it("never checks Stripe for a promo when there's no real subscription yet", async () => {
+    const supabase = fakeUsageSupabase({
+      current_plan: "free",
+      trial_ends_at: null,
+      stripe_customer_id: null,
+      stripe_subscription_id: null
+    });
+    requireUser.mockResolvedValue({ supabase, user: { id: "user-1" } });
+
+    const usage = await getUsageSummary();
+
+    expect(usage.subscriptionPromo).toBeNull();
+    expect(getActiveSubscriptionPromo).not.toHaveBeenCalled();
+  });
+
+  it("threads through whatever Stripe reports for a real subscription", async () => {
+    const supabase = fakeUsageSupabase({
+      current_plan: "pro",
+      trial_ends_at: null,
+      stripe_customer_id: "cus_123",
+      stripe_subscription_id: "sub_123"
+    });
+    requireUser.mockResolvedValue({ supabase, user: { id: "user-1" } });
+    getActiveSubscriptionPromo.mockResolvedValue({ promoPrice: 59, endsAt: "2027-01-01T00:00:00.000Z" });
+
+    const usage = await getUsageSummary();
+
+    expect(usage.subscriptionPromo).toEqual({ promoPrice: 59, endsAt: "2027-01-01T00:00:00.000Z" });
+    expect(getActiveSubscriptionPromo).toHaveBeenCalledWith("sub_123", "pro");
   });
 });

@@ -6853,6 +6853,12 @@ select.set-field {
 .cp-move-promo .now { font-size: 17px; font-weight: 800; color: var(--ink); }
 .cp-move-arrow { color: var(--accent); flex: 0 0 auto; }
 
+/* PRICING-PROMO-1: the "Tu plan" card's price when the real subscription is
+   under an active promo coupon (plan-billing-section.tsx). */
+.pb-current-promo { display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.pb-current-promo .was { font-size: 12px; font-weight: 600; color: var(--ink-4); text-decoration: line-through; }
+.pb-current-promo .now { font-size: 18px; font-weight: 800; color: var(--ink); }
+
 .cp-proration { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
 .cp-pror-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; font-size: 13px; color: var(--ink-2); font-weight: 550; border-bottom: 1px solid var(--line-soft); }
 .cp-pror-row .v { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
