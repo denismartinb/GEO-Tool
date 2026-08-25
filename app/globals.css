@@ -4652,22 +4652,26 @@ a.notif-row:hover {
 .lp-nav-links a.active { background: var(--accent-soft); color: var(--accent-ink); }
 .lp-nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
-/* "Blog" nav item: was a plain link, now opens BLOG_CLUSTERS as a panel
-   (BlogNavDropdown). Desktop only — `.lp-nav-links` is `display:none` under
-   the mobile breakpoint below, so no extra mobile rule is needed here. */
-.lp-nav-drop { position: relative; }
-.lp-nav-drop-trigger {
-  appearance: none; border: 0; background: none; cursor: pointer; font: inherit;
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 7px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+/* "Blog" nav item: split into a plain link (straight to /blog — the first
+   version wrapped the whole label in a toggle button, so clicking "Blog"
+   only opened a panel and /blog itself became unreachable from the header,
+   fundador feedback 2026-08-25) and a small caret that opens BLOG_CLUSTERS as
+   a compact panel (BlogNavDropdown). Desktop only — `.lp-nav-links` is
+   `display:none` under the mobile breakpoint below, so no extra mobile rule
+   is needed here. The label `<a>` needs no CSS of its own: it's a plain
+   anchor inside `.lp-nav-links`, so it already gets the ambient
+   `.lp-nav-links a` styling (padding/hover/active) every other nav link uses. */
+.lp-nav-drop { position: relative; display: flex; align-items: center; }
+.lp-nav-drop-toggle {
+  appearance: none; border: 0; background: none; cursor: pointer;
+  display: inline-flex; align-items: center; padding: 8px 6px; margin-left: -4px; border-radius: 8px; color: var(--ink-3);
 }
-.lp-nav-drop-trigger:hover { background: var(--surface-2); color: var(--ink); }
-.lp-nav-drop-trigger.active { background: var(--accent-soft); color: var(--accent-ink); }
-.lp-nav-drop-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
-.lp-nav-drop-trigger svg { transition: transform .15s ease; }
+.lp-nav-drop-toggle:hover { background: var(--surface-2); color: var(--ink); }
+.lp-nav-drop-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.lp-nav-drop-toggle svg { transition: transform .15s ease; }
 .lp-nav-drop-panel {
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
-  width: 420px; padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px;
+  min-width: 220px; padding: 6px; display: flex; flex-direction: column; gap: 1px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
   box-shadow: 0 12px 32px rgba(11,20,38,.14);
 }
@@ -4676,11 +4680,8 @@ a.notif-row:hover {
    `.lp-nav-links a` (one class + one type) would otherwise win the padding/
    font-size/color cascade fight and silently override this rule — the exact
    trap `.claude/rules/styles.md` documents for `.lp-mobnav a` / `.blog-body a`. */
-.lp-nav-drop-panel .lp-nav-drop-item { display: block; padding: 10px 11px; border-radius: 8px; }
+.lp-nav-drop-panel .lp-nav-drop-item { display: block; padding: 9px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
 .lp-nav-drop-panel .lp-nav-drop-item:hover { background: var(--surface-2); }
-.lp-nav-drop-item-title { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink); }
-.lp-nav-drop-item-desc { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
-.lp-nav-drop-panel .lp-nav-drop-item--full { grid-column: 1 / -1; border-top: 1px solid var(--line-soft); margin-top: 3px; padding-top: 11px; }
 
 /* --- Mobile nav: hamburger + slide-in drawer, same look and feel as the
    dashboard sidebar's mobile drawer (.sb / .mob-scrim). --- */
@@ -6063,8 +6064,24 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 
 .blog-cluster-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .blog-cluster-more { flex: none; font-size: 13px; font-weight: 700; color: var(--accent-ink); white-space: nowrap; }
-.blog-cluster-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+/* `var(--row-cols, 3)`, set inline per row from `shown.length`: a row with
+   fewer posts than the 3-card limit no longer stretches into an empty third
+   column that reads as a broken card (fundador, 2026-08-25). The mobile
+   override below still wins by cascade order, not specificity — it doesn't
+   reference the variable, so it fully replaces this value regardless. */
+.blog-cluster-grid { display: grid; grid-template-columns: repeat(var(--row-cols, 3), 1fr); gap: 20px; }
 .blog-cluster-grid > .blog-index-card { margin-bottom: 0; }
+
+/* Misma tarjeta que `.blog-index-card` (borde, radio, fondo) en vez de una
+   `.blog-cluster-head` sin fila de tarjetas debajo, que se leía como una
+   sección a medias (fundador, 2026-08-25). */
+.blog-compare-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  margin-bottom: 44px; padding: 22px 24px;
+  border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface);
+}
+.blog-compare-banner h2 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 4px; }
+.blog-compare-banner p { margin: 0; font-size: 13.5px; color: var(--ink-3); max-width: 56ch; }
 
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }

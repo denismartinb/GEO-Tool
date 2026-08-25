@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
@@ -95,20 +96,25 @@ export default function BlogIndexPage() {
           los clusters — justo después del destacado, que ahora es lo primero
           de la página — porque es el contenido con más intención de compra
           del portfolio y no debería exigir bajar por toda la lista de
-          artículos. */}
-      <section className="blog-cluster">
-        <div className="blog-cluster-head">
-          <div>
-            <h2>Comparativas</h2>
-            <p>
-              GenScore frente a las otras herramientas de visibilidad en IA, comparado de forma honesta —
-              con las filas donde gana cada una.
-            </p>
-          </div>
-          <Link href="/comparativas" className="blog-cluster-more">
-            Ver las comparativas →
-          </Link>
+          artículos.
+
+          Tarjeta propia (`.blog-compare-banner`), no una `.blog-cluster-head`
+          sin fila de tarjetas debajo: eso se leía como una sección rota o a
+          medias, no como una decisión (fundador, 2026-08-25). El borde y el
+          fondo son literalmente los de `.blog-index-card` — misma estética
+          que las tarjetas de alrededor, sin fingir ser una fila de cluster
+          que no tiene. */}
+      <section className="blog-compare-banner">
+        <div>
+          <h2>Comparativas</h2>
+          <p>
+            GenScore frente a las otras herramientas de visibilidad en IA, comparado de forma honesta —
+            con las filas donde gana cada una.
+          </p>
         </div>
+        <Link href="/comparativas" className="btn btn-primary btn-sm">
+          Ver las comparativas →
+        </Link>
       </section>
 
       {BLOG_CLUSTERS.map((cluster) => {
@@ -129,13 +135,18 @@ export default function BlogIndexPage() {
               </Link>
             </div>
             {shown.length > 0 ? (
-              <div className="blog-cluster-grid">
+              // `--row-cols` en vez de siempre 3 columnas: con menos artículos
+              // que el límite, un grid de 3 fijas deja una columna en blanco
+              // que se lee como una tarjeta rota, no como "no hay más"
+              // (fundador, 2026-08-25). El breakpoint móvil de abajo sigue
+              // ganando por orden de cascada, no por especificidad: no usa
+              // esta variable.
+              <div className="blog-cluster-grid" style={{ "--row-cols": shown.length } as CSSProperties}>
                 {shown.map((post) => (
                   <Link key={post.slug} href={`/blog/${post.slug}`} className="blog-index-card">
                     <BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} />
                     <div className="blog-index-card-body">
                       <h2>{post.title}</h2>
-                      <p>{post.description}</p>
                       <p className="blog-post-meta">{dateFormatter.format(new Date(post.datePublished))}</p>
                     </div>
                   </Link>
