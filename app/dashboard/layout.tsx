@@ -5,12 +5,15 @@ import "@/app/console.css";
 import { cookies } from "next/headers";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
+import { getAccountRole } from "@/lib/account-role";
+import { getDomainOverage } from "@/lib/billing";
 import { ACTIVE_PROJECT_COOKIE } from "@/lib/active-project-cookie";
 import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { ConsoleHeader } from "@/components/console-header";
 import { NotificationBell } from "@/components/notification-bell";
 import { DataMaturityBanner } from "@/components/data-maturity-banner";
+import { DomainOverageGate } from "@/components/billing/domain-overage-gate";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { MobileShellProvider } from "@/components/mobile-shell";
@@ -58,8 +61,34 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .maybeSingle();
   const hasSeenTour = tourFlagError ? true : tourFlagRow?.onboarding_tour_seen_at != null;
 
+  // DOMAINS-OVERAGE-GATE-1 (founder-approved Task Intake): every account is
+  // "admin" today (lib/account-role.ts — no teams/RBAC yet), matching the
+  // same condition Ajustes gates the Plan section behind, so this stays
+  // correct without changes once multi-user ships. Computed after the tour
+  // flag read, not in parallel with it: getDomainOverage() shares
+  // requireUser()/getPlanForUser()'s per-request cache with the rest of this
+  // render, and it is cheap in the overwhelming common case (one COUNT
+  // query) — see lib/billing.ts.
+  const role = await getAccountRole();
+  const overage = role === "admin" ? await getDomainOverage() : null;
+
   return (
     <MobileShellProvider>
+      {/* Blocking on purpose: no close button, no Escape, no click-outside.
+          Rendered above everything else in the console — Sidebar included —
+          for as long as the account holds more active domains than its plan
+          allows, on every page in app/dashboard/**, incl. Facturación. */}
+      {overage?.isOverCapacity && (
+        <DomainOverageGate
+          planId={overage.planId}
+          planName={overage.planName}
+          activeCount={overage.activeCount}
+          cap={overage.cap}
+          requiredRemoveCount={overage.requiredRemoveCount}
+          domains={overage.domains}
+          hasStripeSubscription={overage.hasStripeSubscription}
+        />
+      )}
       {/* ONBOARDING-TOUR-1: el popup «Aprende cómo funciona». Envuelve la
           consola entera porque tiene que poder abrirse desde el menú lateral
           y saltar solo en el primer acceso, sea cual sea la pantalla. */}

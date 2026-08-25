@@ -16123,3 +16123,85 @@ Retirado a petición del fundador (`components/settings/notifications-section.ts
 Sin tests que dependieran del texto. `.set-quiet` (`app/globals.css`) se deja
 tal cual: es una clase de utilidad genérica, no exclusiva de este párrafo.
 `pnpm test` (203/203, 2.837/2.837) y `pnpm run validate` en verde.
+
+## 167. Gate bloqueante de dominios al exceder el plan: DOMAINS-OVERAGE-GATE-1 (2026-08-25)
+
+**El problema.** El fundador enseñó una captura de Facturación con "Tienes 4
+dominios activos y tu plan Starter permite 1" y preguntó si de verdad se podían
+seguir usando los 4. Inspección del código: sí — ese aviso era (y el mecanismo
+que sigue siéndolo para el flujo que no toca esta fase) puramente informativo.
+`isOverCapacity` sólo se calculaba en cliente en `plan-billing-section.tsx`
+para pintar un banner; nada en `lib/scan/cron.ts`, `run-creation.ts` ni
+`executor.ts` comprobaba el recuento de dominios activos contra el cupo del
+plan — sólo `is_archived`. Un downgrade hecho desde el portal de Stripe deja el
+recuento sobrado a propósito (`changePlan`/`createPortalSession`,
+`app/dashboard/settings/billing/actions.ts`: "el fundador quiere que el dueño
+elija qué dominios mantener, nunca decidirlo por él") y nada más lo obligaba a
+resolverlo.
+
+**Task Intake aprobado**, con maqueta interactiva previa (Artifact, 6 estados)
+para validar el flujo antes de tocar código. Cuatro decisiones explícitas del
+fundador, cada una contraria a mi recomendación por defecto salvo la primera:
+
+1. **Borrado duro, no archivado** — a diferencia del flujo ya existente y
+   **deliberadamente intacto** de "Elegir dominios" (`ChangePlanModal`,
+   `overageOnly`), que sigue archivando (reversible) exactamente igual que
+   antes de este PR. El gate nuevo es un componente separado
+   (`components/billing/domain-overage-gate.tsx`) precisamente para no
+   cambiar la semántica de ese flujo ya enviado sin su propio Task Intake.
+2. **Salida a "subir de plan"** dentro del propio gate — sin ella, alguien que
+   bajó de plan por error quedaría atrapado entre borrar dominios o nada.
+3. **El bloqueo cubre toda la consola, incluida Facturación** — sólo tiene
+   sentido combinado con la decisión 2.
+4. **`/admin` queda exento** — es una zona aparte (`admin.md`), no una
+   pantalla del propio cliente.
+
+**Qué se construyó:**
+
+- `lib/billing.ts` → `getDomainOverage()`: consulta dedicada y barata (un
+  `COUNT`) que corre en cada carga de `app/dashboard/layout.tsx` — a
+  propósito NO `getUsageSummary()` (cuatro consultas en paralelo, hasta 500
+  filas de resultados de escaneo y una consulta a Stripe), que habría sido
+  trabajo desperdiciado en cada navegación para la inmensa mayoría de cuentas
+  que nunca están sobre su cupo. Sólo dispara la segunda consulta (los
+  dominios) cuando la primera confirma overage. Falla hacia "no hay overage"
+  — mismo sentido de fallo que `SAMPLING-DEBUG-TOGGLE-1`
+  (`.claude/rules/scan.md`): un error de lectura transitorio nunca puede
+  bloquear la consola entera.
+- `app/dashboard/projects/actions.ts` → `deleteProjects(ids)`: variante en
+  lote de la ya existente `deleteProject`, mismo cascade, mismo scoping por
+  `owner_user_id`, misma irreversibilidad — y revalida en servidor que el
+  recuento final cabe en el plan, igual que ya hace `changePlan` tras
+  archivar.
+- `components/billing/domain-overage-gate.tsx`: cinco pasos —
+  elegir camino → seleccionar a retirar → confirmar con fricción extra
+  (lista qué se pierde por dominio, checkbox obligatorio "entiendo que no se
+  puede deshacer" antes de habilitar el botón de peligro, con salida a
+  "subir de plan" incluso ahí) → hecho; o elegir camino → plan que ya cubre
+  el recuento (reutiliza `createCheckoutSession`/`createPortalSession`) →
+  redirección a Stripe. Reutiliza el cromado `.cp-*` de `ChangePlanModal`
+  (`app/globals.css`) para el shell/tipografía; sólo el selector de dos
+  caminos y el tratamiento de peligro son clases nuevas (`.dog-*`). Sin botón
+  de cerrar, sin `Escape`, sin clic-fuera — el `scrim` no lleva `onClick`.
+- `app/dashboard/layout.tsx`: monta el gate cuando `role === "admin"` (mismo
+  gate que ya usa Ajustes para la sección Plan) y `getDomainOverage()`
+  reporta overage, por encima de todo lo demás — Sidebar incluido.
+
+**Las clases nuevas del componente viven en `app/globals.css`, no en
+`app/console.css`**, aunque el gate es exclusivamente de consola: sus clases
+se escriben desde `components/`, y `tests/console-css-scope.test.ts` no puede
+atribuir eso al dashboard (mismo motivo por el que las clases de la pantalla
+de notificaciones tampoco viven en `console.css` — cabecera de ese fichero).
+Se intentó primero en `console.css` y el test lo cazó.
+
+**Pendiente, explícito.** El `ux-pilot` siempre-activo no puede ver este
+estado: la cuenta piloto de solo-lectura nunca está sobre su cupo. Verificarlo
+de verdad exige un journey de escritura nuevo (dominio de sobra + downgrade)
+bajo `tests/pilot/journeys/write/`, con su propio Task Intake si amplía el
+alcance ya aprobado en CLAUDE.md ("Pilot write scope"). Este PR no lo incluye
+— queda para una fase siguiente, y el pase del piloto en este PR no cubre esta
+pantalla (`ContentExpectation` no puede afirmarse sin datos reales de
+overage).
+
+**Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build`, todo en verde.

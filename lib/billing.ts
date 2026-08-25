@@ -212,3 +212,71 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     subscriptionPromo
   };
 }
+
+export type DomainOverage = {
+  isOverCapacity: boolean;
+  planId: Plan["id"];
+  planName: string;
+  activeCount: number;
+  cap: number;
+  requiredRemoveCount: number;
+  domains: ActiveProjectSummary[];
+  hasStripeSubscription: boolean;
+};
+
+/**
+ * DOMAINS-OVERAGE-GATE-1: cheap, dedicated check for the blocking gate
+ * mounted in the dashboard layout on every navigation — deliberately NOT
+ * `getUsageSummary()` (four parallel queries including up to 500 scan
+ * result rows and a Stripe promo lookup), which would be wasted work on
+ * every page load for the near-totality of accounts that are never over
+ * their plan's domain cap. Same fail-safe direction as
+ * SAMPLING-DEBUG-TOGGLE-1's dedicated query (.claude/rules/scan.md): a read
+ * error here reads toward "not over capacity" — today's shipped behaviour,
+ * no block at all — never toward blocking the entire console for every user
+ * on a transient read error.
+ */
+export async function getDomainOverage(): Promise<DomainOverage> {
+  const { supabase, user } = await requireUser();
+  const plan = await getPlanForUser(supabase, user.id);
+
+  const { count: activeCount, error: countError } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("is_archived", false);
+
+  if (countError || activeCount == null || activeCount <= plan.caps.projects) {
+    return {
+      isOverCapacity: false,
+      planId: plan.id,
+      planName: plan.name,
+      activeCount: activeCount ?? 0,
+      cap: plan.caps.projects,
+      requiredRemoveCount: 0,
+      domains: [],
+      hasStripeSubscription: false
+    };
+  }
+
+  const [{ data: projects }, { data: profileRow }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, name, domain")
+      .eq("is_archived", false)
+      .order("created_at", { ascending: true }),
+    supabase.from("profiles").select("stripe_subscription_id").eq("id", user.id).maybeSingle()
+  ]);
+
+  const domains = projects ?? [];
+
+  return {
+    isOverCapacity: true,
+    planId: plan.id,
+    planName: plan.name,
+    activeCount: domains.length,
+    cap: plan.caps.projects,
+    requiredRemoveCount: Math.max(0, domains.length - plan.caps.projects),
+    domains,
+    hasStripeSubscription: Boolean(profileRow?.stripe_subscription_id)
+  };
+}
