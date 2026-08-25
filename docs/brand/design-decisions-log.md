@@ -13783,4 +13783,28 @@ aprobación explícita (CLAUDE.md, "Forbidden Without Explicit Approval").
 `lib/stripe.test.ts` para `getActiveSubscriptionPromo`, incluida la que
 comprueba que un cupón ajeno no se etiqueta como la promo; 2 nuevas en
 `lib/billing.test.ts` para el threading de `subscriptionPromo`) y
-`pnpm run validate` en verde.
+`pnpm run validate` en verde. El fundador verificó en el propio Dashboard de
+Stripe (suscripción real en test mode) que el cupón lleva "Descuento de
+120,00 € durante 6 meses" sobre los 179 € de Pro — cuadra con los 59 € que se
+cobran de verdad, y con lo que `getActiveSubscriptionPromo` ahora lee.
+
+### Addendum 3 — el mismo tachado en el índice de Ajustes (2026-08-25)
+
+El fundador señaló que el índice lateral de `/dashboard/settings` ("Plan · Pro
+179 €/mes", visible en el cajón móvil) seguía sin reflejar la promo, aunque
+"Tu plan" ya la mostraba correctamente desde el Addendum 2. `SettingsIndexEntry.detail`
+sólo aceptaba `string` — `lib/settings/index-entries.ts` es deliberadamente
+NO un componente cliente (ver el comentario de cabecera del propio fichero:
+un `"use client"` ahí rompió el render en CONSOLE-REDESIGN-1), así que no podía
+construir JSX; sólo devolvía la plantilla de texto plano `"Pro · 179 €/mes"`.
+Se amplió el tipo a `ReactNode` (import de sólo-tipo, no cambia el carácter
+server-safe del fichero) y `app/dashboard/settings/page.tsx` —ya Server
+Component, ya con `usage.subscriptionPromo` disponible desde el Addendum 2—
+construye el nodo con el precio tachado cuando aplica, exactamente el mismo
+dato que ya pinta "Tu plan". `.set-ie span` fuerza `display: block` en sus
+hijos (para el propio texto del detalle); sin `.set-ie span .was/.now { display:
+inline }` los dos precios habrían caído en líneas separadas en vez de en línea
+como el resto de las pantallas.
+
+**Comprobado.** `pnpm test` (202/202, 2.827/2.827) y `pnpm run validate` en
+verde.

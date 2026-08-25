@@ -6586,6 +6586,12 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .set-ie:hover b { color: var(--ink); }
 .set-ie.on { border-left-color: var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; }
 .set-ie.on b { color: var(--accent); }
+/* PRICING-PROMO-1: the "Pro · 179 €/mes" detail line becomes "Pro · <s>179 €/mes</s> 59 €/mes"
+   when the subscription has an active promo — must override .set-ie span's `display: block`,
+   which would otherwise stack these onto their own lines. */
+.set-ie span .was, .set-ie span .now { display: inline; }
+.set-ie span .was { text-decoration: line-through; }
+.set-ie span .now { color: var(--ink-3); font-weight: 700; }
 
 .set-sech {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
