@@ -4227,31 +4227,34 @@ a.notif-row:hover {
        (460/640/1200/1280), not the global 1320px every other screen uses.
        Unset anywhere else, so the fallback is what actually runs there.
 
-       The `- 2 * var(--page-pad-x)` term (2026-08-25, found chasing the
-       founder's "why doesn't the animation reach the bottom" into a sibling
-       left/right gap) is load-bearing, not decoration. Without it — the
-       original shape, which this rule already shipped and had already been
-       Playwright-verified against — the formula is only exact when `.page`
-       is NOT capped by `--mrk-page-cap` (`.page`'s own auto-margin
-       centering contributes 0, so `-page-pad-x` alone cancels its padding
-       exactly). The instant the cap actually binds, `.page` centers with
-       real auto-margins on both sides, and this formula's own comment three
-       lines up already claims the goal precisely: land the right edge
-       exactly on `.dash-content`'s. It didn't — measured 34px short on the
-       right (and 34px UNDER the sidebar on the left) on every screen at any
-       width past the ~1568px threshold where the cap binds, not just
-       Competidores. Re-derived from the box model (`.page`'s own
-       content-box width is `min(available, cap)`, auto-margin splits
-       whatever's left) rather than adjusted by trial and error, and
-       verified with the same fixture at nine widths spanning 761–2560px
-       (761/800/900/1024/1200/1440/1600/1920/2560): left/right/bottom gaps
-       against `.dash-content` all zero, at every one, including through
-       `.cm2-scope`'s `display: contents` and `.cm2-page`'s own steps. */
+       CORRECTION (2026-08-25, same day, two commits later): an earlier pass
+       here added a `- 2 * var(--page-pad-x)` term to this formula, reasoned
+       from a fixture that did NOT include Tailwind's Preflight reset — which
+       sets `box-sizing: border-box` on every element in this app (`app/
+       globals.css` starts with `@tailwind base;`). Under the browser's
+       PLAIN default (content-box, what that fixture silently fell back to),
+       `.page`'s rendered width when capped is `cap + 2 × page-pad-x`
+       (max-width applies to content only, padding adds on top), and the
+       extra term was the correction that box model needed. Under the app's
+       REAL border-box model, `.page`'s rendered width when capped is
+       exactly `cap` (max-width already includes the padding budget) — the
+       ORIGINAL formula below, with no extra term, is exact in that model,
+       and the "fix" instead pushed the box 34px short of the right edge and
+       34px past the left, live on the founder's screen (report: "queda
+       eliminar ese hueco de la izquierda entre el menú y la animación").
+       Diagnosed by asking the founder to inspect the gap in DevTools — it
+       selected `.dash-content`, meaning `.mrk-full` genuinely wasn't there —
+       then confirmed by building a fixture from the actual compiled,
+       minified `.next` CSS output instead of hand-assembled source, which is
+       what should have been used from the start for anything claiming to be
+       pixel-verified: same 761–2560px sweep as before, all four edges
+       (top/bottom/left/right) exactly zero against `.dash-content`, through
+       both `.cm2-scope` and `.wa2-scope.wa2-page`'s `display: contents`.
+       `--mrk-page-cap` itself is untouched and still correct — reading the
+       right cap value and computing the right margin FROM it are two
+       different bugs, and only the second one was ever real. */
     margin-inline: calc(
-      -1 * var(--page-pad-x) - max(
-        ((100vw - var(--sidebar-w)) - var(--mrk-page-cap, var(--page-max-w)) - 2 * var(--page-pad-x)) / 2,
-        0px
-      )
+      -1 * (var(--page-pad-x) + max((100vw - var(--sidebar-w)) - var(--mrk-page-cap, var(--page-max-w)), 0px) / 2)
     ) 0;
   }
 }

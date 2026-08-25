@@ -14105,4 +14105,64 @@ Auditoría web (`.page.mrk-fill > .wa2-scope.wa2-page.mrk-fill > .mrk-full`) en
 siete anchos de 375 a 2560px: hueco superior/inferior/izquierdo/derecho contra
 `.dash-content` en cero en los siete.
 
+**Quinta vuelta, mismo hilo: el fundador volvió a probar y circuló a mano el
+hueco exacto** — "queda eliminar ese hueco de la izquierda entre el menú y la
+animación en todas las páginas", con una captura marcando en rojo la franja
+blanca entre la barra lateral y el degradado de la misión en Visión general.
+Contradecía directamente el fixture de la tercera vuelta, que había dado hueco
+cero en nueve anchos para esa misma fórmula. Antes de tocar CSS una cuarta vez
+a ciegas, se pidió al fundador un dato del navegador real en vez de otra
+captura: clic derecho → Inspeccionar sobre el hueco. El selector marcó
+`.dash-content` — es decir, ni `.page` ni `.mrk-full` llegaban ahí en
+absoluto, no era un problema de un par de píxeles.
+
+**La causa: el fixture de la tercera vuelta nunca cargó el Preflight de
+Tailwind.** Los tres fixtures anteriores se montaban concatenando
+`app/globals.css`/`app/console.css` tras un `sed '/^@tailwind/d'` —
+imprescindible para que un `<style>` en un HTML suelto no intente resolver
+`@tailwind base;` como si fuera CSS real, pero con un efecto secundario nunca
+comprobado: sin Preflight, todo el fixture heredaba el `box-sizing` por
+defecto del navegador (`content-box`), mientras que la propia `@tailwind
+base;` que se estaba borrando es justo lo que pone `box-sizing: border-box`
+en todo elemento de la app real. Con `content-box`, el ancho renderizado de
+un `.page` topado es `tope + 2 × page-pad-x` (el padding se SUMA al
+`max-width`); con `border-box` (el real), es exactamente `tope` (el padding
+vive DENTRO de ese presupuesto). La diferencia entre los dos modelos es
+`2 × page-pad-x` en el ancho total de la caja — y por tanto en su
+desplazamiento de centrado — que es EXACTAMENTE el término que la tercera
+vuelta añadió a la fórmula, calibrado para corregir un error que sólo existía
+en el fixture, no en la app. El fixture pasó sus nueve anchos porque estaba
+siendo consistente consigo mismo, no porque midiera lo mismo que el
+navegador del fundador.
+
+**Arreglo: revertir la fórmula del margen a su forma original**
+(`margin-inline: calc(-1 * (page-pad-x + bleed))`, `bleed = max(disponible -
+tope, 0) / 2`, sin el `- 2 × page-pad-x` que había añadido la tercera vuelta),
+**dejando intacto todo lo demás de esa vuelta** — `--mrk-page-cap` seguía
+siendo necesaria y correcta (leer el tope real de `.cm2-page` en vez del
+global 1320 es un problema distinto de cómo se resta ese tope, y ese primero
+nunca dependió del modelo de caja). Verificado reconstruyendo el fixture
+desde la SALIDA COMPILADA de verdad (`.next/static/chunks/*.css` tras `pnpm
+run build`, buscando el chunk que contiene `.mrk-full`) en vez de una
+concatenación manual de fuentes — es la única forma de garantizar que el
+Preflight, el orden de capas de Tailwind y todo lo demás que un `sed` pueda
+borrar por accidente están realmente presentes. Mismo barrido de anchos que
+las vueltas anteriores, con hueco superior/inferior/izquierdo/derecho en cero
+en todos, incluida la propia pantalla y ancho de la captura del fundador
+(Visión general, ~2000px).
+
+**Regla derivada, distinta de las tres anteriores de esta misma fase.** Un
+fixture que pretende verificar CSS de una app con Tailwind tiene que arrancar
+de la hoja de estilo COMPILADA, no de una concatenación manual de las fuentes
+— cualquier paso manual entre el código fuente y el navegador (`sed`, copiar
+sólo un subconjunto de ficheros, omitir las directivas `@tailwind`) es un
+punto donde el modelo de caja, la cascada o las capas pueden divergir de lo
+que el usuario ve, en silencio y sin que el propio fixture pueda detectarlo
+—pasa sus propios anchos con hueco cero porque es consistente consigo mismo,
+no porque mida lo mismo que la app real. Y cuando la evidencia del fundador
+contradice un fixture ya "verificado", el primer paso no es un cuarto intento
+de arreglo a ciegas: es pedir un dato del navegador real (aquí, qué elemento
+selecciona el inspector en el hueco) que confirme DÓNDE está el desajuste
+antes de decidir CÓMO corregirlo.
+
 ---

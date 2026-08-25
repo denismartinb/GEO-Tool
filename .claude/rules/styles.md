@@ -110,27 +110,33 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   misma geometría). Cualquier elemento nuevo bajo `app/dashboard/**` que
   reutilice este idiom de full-bleed necesita la misma corrección — no es
   exclusivo de `.mrk-full`.
-- **Ese mismo `margin` corregido daba el ancho justo pero el borde equivocado:
-  se pasaba `--page-pad-x` exacto por cada lado en cuanto `.page` llegaba a
-  toparse de verdad con su `max-width`.** La corrección de arriba (log §132)
-  sólo se había verificado sin que `.page` estuviera realmente topado —a esa
-  anchura, el margen `auto` de `.page` aporta 0 y `-page-pad-x` sola cancela
-  su padding, así que el resultado salía exacto por casualidad, no porque la
-  fórmula fuera correcta. En cuanto el tope sí aplica, `.page` se centra con
-  margen `auto` real a los dos lados y la resta de sólo un `page-pad-x` dentro
-  de `margin-inline: calc(-1 * (page-pad-x + bleed))` deja la caja fuera de
-  sitio por exactamente ese valor a cada lado: bajo la barra lateral por la
-  izquierda, corta del borde por la derecha (log §153, encontrado en
-  `.mrk-full` a partir de ~1568px de ventana en las 6 pantallas de la misión,
-  no sólo donde se probó). El término que falta va DENTRO del cálculo del
-  sobrante, no fuera: `bleed = max(disponible - tope - 2 * page-pad-x, 0) / 2`
-  — así vale exactamente 0 hasta que `.page` deja de caber bajo su tope MÁS su
-  propio padding a los dos lados, que es el punto real donde el centrado
-  `auto` empieza a existir. Cualquier fórmula de sangrado a bordes reales que
-  reste el padding del contenedor un número de veces distinto al de lados que
-  ese padding tiene se verifica con un fixture que mida los cuatro bordes en
-  varios anchos — nunca a ojo en uno solo, y nunca sólo por debajo del umbral
-  donde el tope empieza a aplicar.
+- **Un fixture de verificación que no incluye el reset real de la app
+  verifica un modelo de caja distinto del que se despliega, y puede dar
+  "exacto" sobre una fórmula que en producción no lo es.** `@tailwind base;`
+  (primera línea de `app/globals.css`) trae el Preflight de Tailwind, que
+  pone `box-sizing: border-box` en todo elemento — así que `.page`, capado
+  por `max-width`, renderiza exactamente ese ancho (el padding vive DENTRO
+  del presupuesto). Una fórmula de sangrado verificada contra un fixture que
+  concatena sólo las hojas de estilo propias (`sed '/^@tailwind/d'` para
+  poder cargarlas en un navegador sin PostCSS) pierde ese reset y cae al
+  valor por defecto del navegador (`content-box`, donde el padding se SUMA al
+  `max-width`) — dos modelos que difieren en exactamente
+  `2 × page-pad-x` en el ancho total de una caja topada, y por tanto en su
+  desplazamiento de centrado. Una corrección calibrada contra el fixture
+  incompleto (log §153, la misma fase) pasó las nueve anchuras de su propio
+  fixture con hueco cero y dejó la escena real 34px corta en cada borde en
+  cuanto `.page` llegaba a toparse — encontrado por el fundador en el
+  preview, no por el fixture, porque el fixture nunca preguntó "¿coincide
+  este `box-sizing` con el que carga la app?". **Para verificar geometría con
+  `--tw-*`/Preflight de por medio, arranca el fixture desde la SALIDA
+  COMPILADA (`.next/static/chunks/*.css` tras `pnpm run build`, buscando el
+  chunk que contenga las clases en juego), no desde una concatenación manual
+  de fuentes** — es lo único que garantiza que el reset, el orden de cascada
+  y las capas de Tailwind son los que de verdad se sirven. Diagnosticado
+  pidiendo al fundador que inspeccionara el hueco en DevTools: el selector
+  marcó `.dash-content`, es decir, `.mrk-full` genuinemente no llegaba ahí —
+  ese dato desde el navegador real es lo que descartó "el código ya está
+  bien, es caché" antes de gastar una vuelta más de fixture equivocado.
 - **Un selector `.a > .b` para un componente full-bleed asume que `.b` es
   hijo DIRECTO de `.a` en TODAS sus pantallas — compruébalo, no lo asumas por
   la pantalla donde ya se verificó.** `.mrk-fill` (log §153) se probó primero
