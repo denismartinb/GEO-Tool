@@ -5298,9 +5298,17 @@ a.notif-row:hover {
 }
 .lp-hero--home .lp-hero-content { padding-top: 44px; }
 
+/* El degradado azul/índigo es el mismo de la banda de precios de PR #470
+   (fundador, 2026-08-25, sobre esa captura: "me gusta el color de la banda
+   superior azul que tenemos aquí" — "ejecuta la tira" para traerlo aquí).
+   Tensión conocida y ya señalada dos veces: `docs/brand/brand-guidelines.md`
+   retira el índigo y los degradados en la v3 ("colores planos, no
+   degradados"); se aplica igualmente por ser una orden explícita y acotada
+   a esta tira, no una reintroducción general de la paleta v2. */
 .lp-promo {
-  text-align: center; font-size: 12.5px; font-weight: 600; color: #8a5a08;
-  background: #fff3dc; padding: 8px 14px; position: relative; overflow: hidden;
+  text-align: center; font-size: 12.5px; font-weight: 600; color: #fff;
+  background: linear-gradient(120deg, #312e81, #4f46e5 60%, #6d28d9);
+  padding: 8px 14px; position: relative; overflow: hidden;
 }
 /* Rotación vertical entre TRES mensajes ciertos a la vez — el ensayo gratis
    y la rebaja de lanzamiento en sus dos planes — un solo reloj CSS, mismo
@@ -5346,10 +5354,11 @@ a.notif-row:hover {
   100% { transform: translateY(0); opacity: 1; }
 }
 .lp-promo-pill {
-  background: #8a5a08; color: #fff3dc; font-weight: 800; font-size: 10.5px;
+  background: rgba(255, 255, 255, .18); color: #fff; font-weight: 800; font-size: 10.5px;
   padding: 2px 7px; border-radius: 999px; letter-spacing: .01em;
 }
-.lp-promo-row s { text-decoration-thickness: 1.5px; opacity: .75; }
+.lp-promo-row s { text-decoration-thickness: 1.5px; color: rgba(255, 255, 255, .7); }
+.lp-promo-row b { color: #fff; }
 @media (prefers-reduced-motion: reduce) {
   .lp-promo-row { animation: none; }
   .lp-promo-row.b, .lp-promo-row.c { display: none; }

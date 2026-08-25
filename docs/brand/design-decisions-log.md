@@ -14512,3 +14512,29 @@ de cada una sin dejar diff.
     `margin-top: 64px` a `84px`. Verificado midiendo el hueco real entre
     `.lp-engines` y `.lp-shot.lp-hx` (64px → 84px) y con captura del hero
     completo antes de hacer commit.
+28. **La tira de promoción pasa de crema (`#fff3dc`) a un degradado
+    azul/índigo.** El fundador, sobre una captura del preview de PR #470
+    (`/pricing`, banda de precios): "me gusta el color de la banda superior
+    azul que tenemos aquí" — y tras ver un mockup comparativo inyectado con
+    Playwright sobre el dev server (sin tocar fuente), confirmó "ejecuta la
+    tira". `.lp-promo` pasa a
+    `background: linear-gradient(120deg, #312e81, #4f46e5 60%, #6d28d9)` con
+    `color: #fff`, mismo degradado exacto que la banda de PR #470. Cambios
+    dependientes para mantener contraste: `.lp-promo-pill` (fondo
+    `rgba(255,255,255,.18)`, antes `#8a5a08` sólido), `.lp-promo-row s`
+    (tachado ahora en `rgba(255,255,255,.7)` en vez de heredar el color de
+    texto con opacidad reducida) y `.lp-promo-row b` (precio en negrita
+    explícito a `#fff`, antes heredaba el `color` del contenedor). Tensión
+    con `docs/brand/brand-guidelines.md` señalada dos veces en la
+    conversación (la v3 retira índigo y degradados: "colores planos, no
+    degradados") — se aplica igual por ser una orden explícita y acotada a
+    esta tira concreta, no una reintroducción general de la paleta v2 en el
+    resto del producto. Verificado con Playwright a 320/375/1440px, las tres
+    filas (ensayo, Pro, Starter) pausando `getAnimations()` en cada fase, y
+    con `prefers-reduced-motion: reduce`; `pnpm test && pnpm run validate`
+    en verde.
+
+    **Pregunta abierta del fundador, sin cambio de código todavía:** cuál
+    acentuar en el H1 del hero — "la IA" (como ahora, con
+    `.lp-h1-accent`/`--brand-blue`), "tu marca", o ambas. Sigue pendiente de
+    respuesta/confirmación, no se ha tocado `landing-page.tsx` para esto.
