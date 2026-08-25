@@ -15112,3 +15112,35 @@ de cada una sin dejar diff.
     /blog, /comparativas, /privacidad): una sola `.lp-promo` por página, sin
     errores de consola, cajón móvil de `/pricing` abre con normalidad.
     `pnpm test && pnpm run validate` en verde.
+31. **`main` trae PR #470 (PRICING-PROMO-1 Fase C) — colisión de §147-152 con
+    esta rama, resuelta al fusionar.** Ambas ramas reclamaron los mismos
+    números de sección de forma independiente desde que divergieron: #470
+    usó §147-152 para su propio trabajo (`PROMPT-DRAWER-TRUTH-1`,
+    `HEADER-FULL-WIDTH-1`, `PRICING-PROMO-1`...), y esta rama usaba esos
+    mismos números para HOME-2026-08 (Fase B2/A2, la tira de promo). Exacto
+    el escenario que la propia regla de "Cierre de fase" de CLAUDE.md avisa
+    que git no para. Como los de #470 ya estaban en `main`, se renumeran los
+    de esta rama — nunca al revés — preservando el orden relativo: §147→153,
+    §148→154, §149→155, §150→156, §151→157, §152→158. Además de las
+    cabeceras, se corrigieron todas las citas `§NNN` en el propio
+    `design-decisions-log.md`, `CLAUDE.md` (fila "Portada" del mapa de
+    zonas y fila "Onboarding"), `.claude/rules/{styles,onboarding}.md`,
+    `components/landing/{hero-demo-scenes,landing-page}.tsx`,
+    `components/marketing/public-header.tsx` y
+    `tests/pilot/journeys/onboarding-tour.spec.ts` — verificado con
+    `grep -rn "§14[7-9]\|§15[0-2]"` hasta que sólo quedaron las citas
+    genuinas de #470. Dos de esas correcciones no eran mecánicas: dos citas
+    del código (`hero-demo-scenes.tsx`, "cifras que se repiten... §147") ya
+    apuntaban, antes de esta rama tocar nada, a una sección distinta de la
+    que su propio nombre sugería — se corrigieron por coincidencia de
+    contenido, no por aritmética de renumerado.
+
+    **Y la tira común sobrevive al merge, como pidió el fundador**
+    ("importante mantener la tira comun en /precios"): verificado en
+    `/pricing` tras fusionar `main` — `.lp-promo` (la común, en
+    `PublicHeader`) sigue montada, y `.price-promo-band` (la propia de
+    #470, gated por `isPromoActive()` + cupón de Stripe) no se pinta en
+    local por no haber cupón de prueba configurado en el entorno — caída
+    correcta hacia "no hay promo", no un fallo. `pnpm test` (203 ficheros,
+    2832 pruebas, incluye `tests/log-numbering.test.ts`) y
+    `pnpm run validate` en verde tras el merge.
