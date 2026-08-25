@@ -58,7 +58,11 @@ export default async function BlogClusterPillarPage({ params }: { params: Promis
         {cluster.description}
       </p>
 
-      <div className="legal-body">
+      {/* Caja propia en vez de párrafos sueltos sobre el fondo de la página
+          — se leía "como un bloc de notas" al lado de las tarjetas con
+          borde de debajo (fundador, 2026-08-25). Mismo lenguaje que
+          `.blog-index-card`: borde, fondo, radio. */}
+      <div className="blog-cluster-intro">
         {introParagraphs.length > 0 ? (
           introParagraphs.map((p, i) => <p key={i}>{p}</p>)
         ) : (

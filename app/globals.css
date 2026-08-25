@@ -6097,6 +6097,22 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .compare-index-card h2 { font-size: 16.5px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 6px; }
 .compare-index-card p { font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.5; }
 
+/* Intro de /blog/[cluster] (`cluster.pillarIntro`): antes eran párrafos
+   sueltos directamente sobre el fondo, sin nada que los distinguiera de la
+   página — "parece un bloc de notas" (fundador, 2026-08-25). Misma caja que
+   `.blog-index-card`. */
+.blog-cluster-intro {
+  padding: 22px 26px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface);
+  margin-bottom: 32px;
+}
+.blog-cluster-intro p { font-size: 15px; line-height: 1.7; color: var(--ink-2); margin: 0 0 14px; }
+.blog-cluster-intro p:last-child { margin-bottom: 0; }
+/* Mismo motivo que `.legal-body a:not(.btn)` / `.docs-content ... a:not(.btn)`
+   (`.claude/rules/styles.md`): el enlace "calendario de contenido" del estado
+   sin artículos vive aquí ahora, y sin esta regla cae al gris de prosa
+   heredado en vez de leerse como enlace. */
+.blog-cluster-intro a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
+
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }
 
