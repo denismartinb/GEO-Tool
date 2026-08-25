@@ -840,15 +840,30 @@
 
 .wa2-page { max-width: 460px; margin: 0 auto; }
 
-@media (min-width: 900px) {
-  .wa2-page { max-width: 640px; }
-}
-@media (min-width: 1200px) {
-  .wa2-page { max-width: 1200px; }
-}
-@media (min-width: 1600px) {
-  .wa2-page { max-width: 1280px; }
-}
+/* SCAN-FULLSCREEN-HEADER-1 continuation (2026-08-25, log §153): `.wa2-scope
+   .wa2-page` sits BETWEEN `.page` and `FirstScanTakeover`/`ReentryMission`
+   (Auditoría web is the only screen among the 6 where the narrow-column
+   wrapper isn't combined directly onto `.page` itself, `.cm2-page`-style —
+   it's a genuine extra DOM layer, not the same element). `.mrk-fill {
+   display: contents }` — same mechanism as `.cm2-scope.mrk-fill` in
+   `app/globals.css`: it makes `.mrk-full` count as `.page.mrk-fill`'s flex
+   child for layout, without which the mission kept its old fixed-height cap
+   and clipped under the topbar.
+
+   Deliberately NO `--mrk-page-cap` override here, unlike `.cm2-page .mrk-
+   full` — and that asymmetry is the point, not an oversight. `.cm2-page` is
+   combined directly on `.page` (`<div class="page cm2-page">`), so `.page`'s
+   OWN real max-width genuinely is `.cm2-page`'s narrower step. `.wa2-page`
+   is a plain child INSIDE an otherwise unmodified `.page` — once `display:
+   contents` removes its box, its own `max-width`/`margin: auto` apply to
+   NOTHING, and `.page` itself is still capped at the global `--page-max-w`
+   (1320px) same as every screen without a `*2-page` class of its own. A
+   first attempt copied `.cm2-page .mrk-full`'s override here too and it was
+   wrong: it fed `.mrk-full`'s bleed formula a cap `.page` was never actually
+   held to, landing the scene 20px short of both edges at 1920px instead of
+   exact — caught by the fixture, not by reasoning about the two wrappers as
+   if they were the same shape. */
+.wa2-scope.wa2-page.mrk-fill { display: contents; }
 
 /* Technical issue / passing-check rows reuse .wa-details for the collapsible
    shell (same component PageAuditRow already uses) — only the severity
