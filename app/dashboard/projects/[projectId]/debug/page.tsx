@@ -31,6 +31,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { setAutoAuditHalf, setEngineEnabled, setRecurringScans, setSamplingEnabled } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
+import { NoTrackingBannerToggle } from "./no-tracking-banner-toggle";
 
 // Server Actions inherit the maxDuration of the page they're invoked from
 // (docs/adr/0003). `autoExecutePendingScan` needs the full 60s Vercel budget:
@@ -611,6 +612,12 @@ export default async function RunsPage({
           />
         </form>
       </div>
+
+      {/* DEBUG-HIDE-NO-TRACKING-1 — preferencia local, no un flag de proyecto:
+          silencia el aviso de la banda de arriba (`DataMaturityBanner`, estado
+          `no_tracking`) sin tocar `recurring_scans_enabled`. Va junto al
+          switch de seguimiento diario porque hablan del mismo aviso. */}
+      <NoTrackingBannerToggle projectId={projectId} />
 
       {/* WEB-AUDIT-AUTO-SPLIT-1 — dos interruptores, no uno. Las dos mitades de
           la auditoría tienen coste opuesto (ADR 0035): la cobertura son
