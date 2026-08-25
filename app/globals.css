@@ -8672,13 +8672,17 @@ select.set-field {
 
 /* --- Respuesta rápida ---------------------------------------------------- */
 /* HOME-SEO-AUDIT-1 (fundador, sobre el preview de /gratis/aparece-mi-marca-
-   en-chatgpt): el borde "casi no se ve". `--line` (#e8eaef) sobre
-   `--brand-surface` (#ffffff, blanco puro) es casi el mismo tono — mismo
-   problema de contraste que ya resolvió `--line-strong` para la tira de
-   avance de la demo del hero (log §159). Afecta a `<KeyTakeaway>` en TODO el
-   blog, no sólo al comprobador: es el mismo componente en las dos superficies. */
+   en-chatgpt): el borde "se confunde con el fondo". Primer intento — subir el
+   borde a `--line-strong` — no bastó: `.lp` fuerza fondo blanco puro en toda
+   la zona pública (`.lp { background: #fff }`), así que la caja seguía siendo
+   blanco sobre blanco con sólo un borde de 1,6:1 de contraste separándola. La
+   corrección real es la que ya usan `.lp-hx-body`/`.lp-shot-body`/
+   `.lp-prod-body` para el mismo problema: un fondo `--canvas` (#f6f7f9) que sí
+   se distingue del blanco de la página, no sólo un borde más oscuro. Afecta a
+   `<KeyTakeaway>` en TODO el blog, no sólo al comprobador: es el mismo
+   componente en las dos superficies. */
 .art-takeaway {
-  background: var(--brand-surface); border: 1px solid var(--line-strong);
+  background: var(--canvas); border: 1px solid var(--line-strong);
   border-left: 3px solid var(--brand-blue); border-radius: 12px;
   padding: 22px 24px; margin: 0 0 34px; box-shadow: var(--brand-shadow-card);
 }

@@ -15300,3 +15300,14 @@ seguía sin poder loguearse — ver más abajo).** Tres correcciones:
    gobernando el tachado de precio en `PlanCard`/`PlanMatrix`.
 
 `pnpm test` (203, 2827) y `pnpm run validate` en verde tras las tres.
+
+**Segundo addendum, mismo día: el arreglo del punto 2 no bastó.** El
+fundador probó el nuevo preview y adjuntó captura con la URL visible del
+comprobador: el borde `--line-strong` seguía "confundiéndose con el fondo".
+Causa real: `.lp { background: #fff }` fuerza blanco puro en toda la zona
+pública, así que `.art-takeaway` en `--brand-surface` (también #ffffff) era
+blanco sobre blanco con sólo un borde de contraste 1,6:1 separándola — subir
+el tono del borde no iba a bastar nunca sobre ese fondo. La corrección real
+es la que ya usan `.lp-hx-body`/`.lp-shot-body`/`.lp-prod-body` para el mismo
+problema: `background: var(--canvas)` (#f6f7f9), que sí se distingue del
+blanco de la página. `pnpm test` (2827) y `pnpm run validate` en verde.
