@@ -18,27 +18,37 @@ import { HeroDomainField } from "@/components/landing/hero-domain-field";
  */
 
 /**
- * Rotación vertical entre dos mensajes ciertos a la vez — el ensayo gratis de
- * siempre y la rebaja de lanzamiento— en vez de acortar uno de los dos para
- * que quepan juntos en una línea. Un solo reloj CSS (`lp-promo-cycle`),
- * mismo mecanismo que la demo del hero: el mensaje B arranca ya medio ciclo
- * dentro con `animation-delay` negativo, así que nunca hay un primer
- * fotograma con los dos superpuestos. `prefers-reduced-motion` dejaba
- * históricamente animaciones así en su fotograma final; aquí no hay
- * "final" — los dos mensajes son ciertos siempre — así que se congela en el
- * primero y el segundo se oculta entero, en vez de mostrar los dos a la vez
- * y romper la línea única del diseño.
+ * Rotación vertical entre TRES mensajes ciertos a la vez — el ensayo gratis
+ * de siempre y la rebaja de lanzamiento en sus dos planes — en vez de
+ * acortarlos para que quepan juntos en una línea. Un solo reloj CSS
+ * (`lp-promo-cycle`), mismo mecanismo que la demo del hero: cada fila
+ * arranca ya un tercio de ciclo dentro con `animation-delay` negativo
+ * (0 / -4.5s / -9s sobre un ciclo de 13.5s), así que nunca hay un primer
+ * fotograma con dos mensajes superpuestos. `prefers-reduced-motion` deja
+ * el primer mensaje quieto y oculta los otros dos enteros, en vez de
+ * mostrar los tres a la vez y romper la línea única del diseño.
+ *
+ * **Por qué tres filas y no una sola con los dos planes juntos.** El
+ * fundador pidió "Starter a 45€ (tachado) 19€ y Pro a 179€ (tachado)
+ * 59€/mes" en una sola frase — pero medido, ese texto no cabe en la tira a
+ * 320px (el ancho real disponible es ~292px; sólo el tramo de Pro ya
+ * ocupaba 257px, y el de Starter añade tanto como el de Pro). Se separan en
+ * dos filas — la misma solución que ya sacó "durante 6 meses" del
+ * desbordamiento silencioso el 2026-08-25 — y cada una lleva SU descuento
+ * real: −67% es exacto para Pro (179→59), pero para Starter (45→19) es
+ * −58%, no −67%; un −67% único en un mensaje combinado habría sido una
+ * cifra falsa para uno de los dos planes (CLAUDE.md, "no fake metrics").
  *
  * La rebaja es real y va coordinada con Stripe en otra fase (fundador,
- * 2026-08-25) — no es una cifra decorativa; si el precio, la duración o la
+ * 2026-08-25) — no son cifras decorativas; si un precio, la duración o la
  * fecha de corte cambian, este componente cambia con ellos.
  *
- * Dos plazos distintos, y el mensaje dice los dos: "hasta el 1 de
- * septiembre" es la ventana para darse de alta con la rebaja; "durante 6
- * meses" es cuánto dura el precio de 59€ una vez dado de alta (fundador,
- * 2026-08-25: "habría que decir en el CTA que la promo de pro a 59€ dura 6
- * meses"). Sin el segundo dato, "hasta el 1 de septiembre" se podía leer
- * como que el precio sube ese mismo día para quien ya se dio de alta antes.
+ * Dos plazos distintos en cada mensaje de rebaja: "hasta el 1 de
+ * septiembre" es la ventana para darse de alta; "6 meses" es cuánto dura el
+ * precio rebajado una vez dado de alta (fundador, 2026-08-25: "habría que
+ * decir en el CTA que la promo de pro a 59€ dura 6 meses"). Sin el segundo
+ * dato, "hasta el 1 de septiembre" se podía leer como que el precio sube
+ * ese mismo día para quien ya se había apuntado.
  */
 export function PromoStrip() {
   const user = useSessionUser();
@@ -48,7 +58,10 @@ export function PromoStrip() {
       <span className="lp-promo-track">
         <span className="lp-promo-row a">7 días de Pro · Sin tarjeta</span>
         <span className="lp-promo-row b">
-          <span className="lp-promo-pill">−67%</span> Pro a <b>59&nbsp;€/mes</b>, 6 meses · hasta 1 sept.
+          <span className="lp-promo-pill">−67%</span> Pro <s>179&nbsp;€</s> <b>59&nbsp;€/mes</b>, 6 meses · hasta 1 sept.
+        </span>
+        <span className="lp-promo-row c">
+          <span className="lp-promo-pill">−58%</span> Starter <s>45&nbsp;€</s> <b>19&nbsp;€/mes</b>, 6 meses · hasta 1 sept.
         </span>
       </span>
     </div>

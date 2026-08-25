@@ -14412,3 +14412,31 @@ de cada una sin dejar diff.
     contenido): 257px al tamaño de fuente móvil (11,5px) contra 292px
     disponibles a 320px de viewport. Verificado sin recorte a
     320/375/1440px.
+22. **La tira de promoción pasa a rotar TRES mensajes, no dos: Starter
+    también lleva su rebaja.** El fundador: "-67% Starter a 45€ (tachado)
+    19€ y Pro a 179€ (tachado) 59 €/mes, durante 6 meses · hasta 1 sept."
+    — pedido como una sola frase con los dos planes.
+
+    **Por qué se separa en dos filas en vez de una frase combinada.** Medido
+    igual que el item 21: esa frase no cabe en la tira ni de lejos a 320px
+    (el tramo de Pro solo ya ocupaba 257px de los 292px disponibles; el de
+    Starter añade una cantidad comparable). Y hay un segundo problema, de
+    exactitud, no de espacio: **−67% es el descuento real de Pro (179→59),
+    pero el de Starter (45→19) es −58%, no −67%.** Una única insignia
+    "−67%" cubriendo los dos planes habría sido una cifra falsa para uno de
+    ellos — CLAUDE.md, "no fake metrics". La solución reutiliza la rotación
+    ya construida en el item 19/21: de 2 mensajes (ensayo / Pro) pasa a 3
+    (ensayo / Pro / Starter), cada uno con su insignia exacta. El reloj CSS
+    pasa de un ciclo de 9s con dos filas a 13.5s con tres, mismos keyframes
+    reescalados a tercios (0/-4.5s/-9s de retraso) — mismo mecanismo,
+    generalizado.
+
+    **El precio anterior tachado, como pidió el fundador** ("(tachado)").
+    `<s>179 €</s> 59 €/mes` y `<s>45 €</s> 19 €/mes` — el precio de antes se
+    ve, no solo se dice "antes costaba más"; y con el precio de antes visible
+    al lado del de ahora, cada insignia de porcentaje queda verificable a
+    ojo, no es una afirmación suelta.
+
+    Verificado sin recorte a 320/375/1440px (las tres filas), y con
+    `reducedMotion: "reduce"`: el mensaje del ensayo se congela quieto, Pro y
+    Starter se ocultan enteros — mismo criterio que el item 19.
