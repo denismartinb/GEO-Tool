@@ -7749,8 +7749,9 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
    porque `.lp` pinta blanco puro (#fff), no `--canvas` — ver
    `.claude/rules/styles.md`, "--ink-3 sólo aprueba AA sobre blanco puro". */
 .breadcrumb-trail { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 13px; font-weight: 600; }
-.breadcrumb-trail a { color: var(--ink-3); }
-.breadcrumb-trail a:hover { color: var(--brand-blue); text-decoration: underline; }
+.breadcrumb-item { display: inline-flex; align-items: center; gap: 8px; }
+.breadcrumb-trail a { color: var(--brand-blue); }
+.breadcrumb-trail a:hover { text-decoration: underline; }
 .breadcrumb-sep { color: var(--ink-4); }
 
 /* BLOG-COVERS-2026-08: el índice de /blog deja de mostrar `<BlogCover>` por

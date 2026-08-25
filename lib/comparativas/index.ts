@@ -43,5 +43,14 @@ export const COMPARATIVAS_INDEX: ComparativaLink[] = [
   }
 ];
 
-/** Visible breadcrumb trail shared by every /comparativas/<slug> page — just the one parent, same as blogPostBreadcrumb stops at the cluster. */
-export const COMPARATIVAS_BREADCRUMB: { label: string; href: string }[] = [{ label: "Comparativas", href: "/comparativas" }];
+/**
+ * Visible breadcrumb trail shared by every /comparativas/<slug> page.
+ * Leads with "Blog" (founder request, 2026-08-25: "Blog / Comparativas") —
+ * Comparativas is presented as part of the blog content family (it's a rail
+ * inside /blog too, BLOG-INDEX-CARDS-2026-08), even though its own route
+ * isn't nested under /blog.
+ */
+export const COMPARATIVAS_BREADCRUMB: { label: string; href: string }[] = [
+  { label: "Blog", href: "/blog" },
+  { label: "Comparativas", href: "/comparativas" }
+];
