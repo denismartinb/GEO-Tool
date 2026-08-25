@@ -7773,7 +7773,16 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-tile--comparativas { background: #D3F0E6; }
 .blog-tile--comparativas p { color: #114F44; }
 
-.blog-featured { position: relative; display: block; margin-top: 40px; border-radius: var(--r-xl); padding: 44px 48px; background: var(--brand-surface-dark); overflow: hidden; }
+/* `color` explícito aquí, aunque cada hijo (tag/h2/p/time) ya declara el
+   suyo: sin esto el ancla hereda la tinta oscura ambiente de la página
+   mientras su propio fondo es marino — el piloto audita el color computado
+   del CONTROL entero (`getComputedStyle(el).color`, no el de sus hijos)
+   contra su fondo resuelto, así que sin este color propio lee "tinta oscura
+   sobre marino" (1,08:1) aunque nada se pinte realmente así
+   (`.claude/rules/styles.md`, patrón "un modificador suelto no gana a su
+   contexto" — mismo tipo de bug, esta vez en el color base de un ancla
+   entera en vez de un modificador). */
+.blog-featured { position: relative; display: block; margin-top: 40px; border-radius: var(--r-xl); padding: 44px 48px; background: var(--brand-surface-dark); color: var(--brand-ink-on-dark); overflow: hidden; }
 .blog-featured-ring { position: absolute; right: -70px; top: -90px; opacity: .16; pointer-events: none; }
 .blog-featured-content { position: relative; max-width: 640px; }
 .blog-featured-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; }

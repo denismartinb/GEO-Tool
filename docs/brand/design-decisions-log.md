@@ -16019,3 +16019,21 @@ index.test.ts`), `pnpm run typecheck`, `pnpm run lint`, `pnpm run build`
 mano en el HTML generado que "Ver más →" sale exactamente en Metodología,
 Playbooks y Comparativas — no en Fundamentos ni en GEO por sector, que caben
 en 3 tarjetas.
+
+**Addendum, mismo día — lo cazó el `ux-pilot` en el PR: `PILOT FAIL` por
+contraste en las tres anchuras, la tarjeta destacada.** `.blog-featured`
+(`<Link>` que envuelve toda la tarjeta) declaraba `background: var(--brand-
+surface-dark)` pero nunca su propio `color` — cada hijo (`.blog-featured-tag`,
+`h2`, `p`, `time`) sí pintaba el suyo en claro, así que visualmente todo se
+leía bien. El auditor del piloto (`tests/pilot/support/page-audit.ts`) no mira
+eso: lee `getComputedStyle(el).color` del CONTROL entero (aquí, el `<a>`), que
+sin `color` propio hereda la tinta oscura ambiente de la página, contra el
+primer fondo opaco resolviendo hacia arriba (el marino de la propia tarjeta)
+— tinta oscura sobre marino, 1,08:1. Mismo patrón que ya documenta
+`.claude/rules/styles.md` ("un modificador suelto no gana a su contexto"),
+esta vez en el color base de un ancla entera envolviendo contenido con
+colores propios, no en un modificador de sección. Arreglado dando a
+`.blog-featured` su propio `color: var(--brand-ink-on-dark)` — no cambia nada
+visible (los hijos ya pintaban así), cierra el hueco que el auditor sí ve.
+`pnpm test` (204/204, 2.835/2.835) y `pnpm run validate` en verde tras el
+arreglo.
