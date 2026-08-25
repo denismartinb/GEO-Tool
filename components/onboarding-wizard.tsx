@@ -986,11 +986,6 @@ export function OnboardingWizard({
 
   return (
     <div className="page onb2-scope onb2-page fade-in">
-      <button type="button" className="onb2-back" onClick={() => setStep(1)}>
-        <Icon name="chevLeft" size={14} />
-        Volver a competidores
-      </button>
-
       <div className="onb2-head">
         <div>
           <h1 className="onb2-h1">Revisa tus prompts</h1>
