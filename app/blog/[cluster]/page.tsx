@@ -70,14 +70,19 @@ export default async function BlogClusterPillarPage({ params }: { params: Promis
         )}
       </div>
 
+      {/* Mismo grid de tarjetas compactas que las filas de /blog (título +
+          fecha, sin descripción) en vez de una columna de tarjetas grandes
+          con párrafo completo — la lista sí muestra el cluster entero (no hay
+          límite que redirigir), así que no necesita `--row-cols`: el grid
+          envuelve por sí solo (fundador, 2026-08-25: "muy feas y mucho
+          texto"). */}
       {posts.length > 0 && (
-        <div>
+        <div className="blog-cluster-grid">
           {posts.map((post) => (
             <Link key={post.slug} href={`/blog/${post.slug}`} className="blog-index-card">
               <BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} />
               <div className="blog-index-card-body">
                 <h2>{post.title}</h2>
-                <p>{post.description}</p>
                 <p className="blog-post-meta">{dateFormatter.format(new Date(post.datePublished))}</p>
               </div>
             </Link>

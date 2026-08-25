@@ -6083,6 +6083,20 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .blog-compare-banner h2 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 4px; }
 .blog-compare-banner p { margin: 0; font-size: 13.5px; color: var(--ink-3); max-width: 56ch; }
 
+/* Índice de /comparativas: era una `<ul>` sin ninguna tarjeta (fundador,
+   2026-08-25: "parece de los años 90"). Mismo borde/radio/fondo que
+   `.blog-index-card` — no hay portada que enseñar aquí, así que la tarjeta es
+   texto solo, con el mismo acento de etiqueta que `.blog-card-tag`. */
+.compare-index-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.compare-index-card { display: block; padding: 20px 22px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); }
+.compare-index-card:hover { border-color: var(--accent); }
+.compare-index-card-eyebrow {
+  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--accent-ink); margin-bottom: 8px;
+}
+.compare-index-card h2 { font-size: 16.5px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 6px; }
+.compare-index-card p { font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.5; }
+
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }
 
@@ -6108,6 +6122,7 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
   .blog-featured { grid-template-columns: 1fr; }
   .blog-cluster-grid { grid-template-columns: 1fr; }
   .blog-cluster-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .compare-index-grid { grid-template-columns: 1fr; }
 }
 
 /* GROWTH-2 Fase 2.3: /docs sidebar layout. */

@@ -88,35 +88,6 @@ export default function BlogIndexPage() {
         </div>
       </section>
 
-      {/* Comparativas como sección propia del índice, no solo como enlace de
-          navegación (fundador, 2026-08-11: "sigo sin verlo en blog, no puede
-          ser una sección más normal?"). En móvil la nav superior se pliega
-          tras el menú de hamburguesa, así que añadirla a NAV_LINKS la dejaba
-          invisible justo en la anchura donde más se lee. Sigue yendo antes de
-          los clusters — justo después del destacado, que ahora es lo primero
-          de la página — porque es el contenido con más intención de compra
-          del portfolio y no debería exigir bajar por toda la lista de
-          artículos.
-
-          Tarjeta propia (`.blog-compare-banner`), no una `.blog-cluster-head`
-          sin fila de tarjetas debajo: eso se leía como una sección rota o a
-          medias, no como una decisión (fundador, 2026-08-25). El borde y el
-          fondo son literalmente los de `.blog-index-card` — misma estética
-          que las tarjetas de alrededor, sin fingir ser una fila de cluster
-          que no tiene. */}
-      <section className="blog-compare-banner">
-        <div>
-          <h2>Comparativas</h2>
-          <p>
-            GenScore frente a las otras herramientas de visibilidad en IA, comparado de forma honesta —
-            con las filas donde gana cada una.
-          </p>
-        </div>
-        <Link href="/comparativas" className="btn btn-primary btn-sm">
-          Ver las comparativas →
-        </Link>
-      </section>
-
       {BLOG_CLUSTERS.map((cluster) => {
         const posts = byMostRecent(getPostsByCluster(cluster.key).filter((p) => !featuredSlugs.has(p.slug)));
         const shown = posts.slice(0, ROW_LIMIT);
@@ -158,6 +129,23 @@ export default function BlogIndexPage() {
           </section>
         );
       })}
+
+      {/* Al final, no arriba (fundador, 2026-08-25 — sustituye la colocación
+          anterior de log §61, que la ponía justo tras el destacado). Misma
+          tarjeta que `.blog-index-card` — borde/fondo/radio — que el resto
+          del índice. */}
+      <section className="blog-compare-banner">
+        <div>
+          <h2>Comparativas</h2>
+          <p>
+            GenScore frente a las otras herramientas de visibilidad en IA, comparado de forma honesta —
+            con las filas donde gana cada una.
+          </p>
+        </div>
+        <Link href="/comparativas" className="btn btn-primary btn-sm">
+          Ver las comparativas →
+        </Link>
+      </section>
     </BlogPageShell>
   );
 }
