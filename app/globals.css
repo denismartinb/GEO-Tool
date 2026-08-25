@@ -1665,14 +1665,27 @@ a {
 }
 .cm2-page { max-width: 460px; margin: 0 auto; }
 
+/* HEADER-FULL-WIDTH-1 (2026-08-25): `.ov-sticky-header` lives inside this
+   same `.page.cm2-page` element (Competidores is the one screen among the 8
+   sharing that class where the narrow-column class is combined directly on
+   `.page`, not nested as a child) — so `.page`'s real max-width here is
+   `.cm2-page`'s own step, not the 1320px `.ov-sticky-header` assumes by
+   default. Re-declaring the same steps against `--ov-hdr-page-cap` is what
+   makes its bleed math agree with the max-width one line above it, instead
+   of quietly falling back to the wrong constant. */
+.cm2-page .ov-sticky-header { --ov-hdr-page-cap: 460px; }
+
 @media (min-width: 900px) {
   .cm2-page { max-width: 640px; }
+  .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 640px; }
 }
 @media (min-width: 1200px) {
   .cm2-page { max-width: 1200px; }
+  .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 1200px; }
 }
 @media (min-width: 1600px) {
   .cm2-page { max-width: 1280px; }
+  .cm2-page .ov-sticky-header { --ov-hdr-page-cap: 1280px; }
 }
 
 /* 1 · Insight banner — same visual language as .ov2-insight/.pr2-insight */
@@ -2348,22 +2361,35 @@ a {
    stacked and only the middle one stopped short (founder screenshot,
    2026-08-21).
 
-   `--ov-hdr-bleed` is the extra half-width beyond 1320px that
+   `--ov-hdr-bleed` is the extra half-width beyond `--ov-hdr-page-cap` that
    `.dash-content` has to spare: `max(0px, (100vw - var(--sidebar-w) -
-   1320px) / 2)`, zero at any width `.page` isn't capped at yet (mobile's
-   drawer sidebar doesn't subtract `--sidebar-w` from the column at all,
-   but that only makes this compute to MORE than the true excess while
-   already at 0 — still 0). Margin grows more negative by exactly that much
-   and padding grows by exactly that much too, so the box edge moves out to
-   `.dash-content`'s real edge while the title/badge content stays at the
-   same horizontal position it always has (the two offsetting terms net to
-   the original -34px/+34px pair). Aligning that content with `.ov2-scope`'s
-   narrower card column instead is a separate, larger change — it needs one
-   answer for all 8 screens sharing this class, some still on the older
-   `.page`/1320px system and some already on their own scope (`.ov2-scope`,
-   `.pr2-scope`) — and is intentionally out of scope here. */
+   var(--ov-hdr-page-cap)) / 2)`, zero at any width `.page` isn't capped at
+   yet (mobile's drawer sidebar doesn't subtract `--sidebar-w` from the
+   column at all, but that only makes this compute to MORE than the true
+   excess while already at 0 — still 0). Margin grows more negative by
+   exactly that much and padding grows by exactly that much too, so the box
+   edge moves out to `.dash-content`'s real edge while the title/badge
+   content stays at the same horizontal position it always has (the two
+   offsetting terms net to the original -34px/+34px pair).
+
+   `--ov-hdr-page-cap` defaults to `.page`'s own 1320px — correct for the 7
+   of 8 screens sharing this class whose narrower card column (`.ov2-scope`,
+   `.pr2-scope`, `.cit2-page`…) is a CHILD nested inside an unmodified
+   `.page`, leaving `.page` itself at 1320px. Competidores is the one
+   exception: its outer element is `.page.cm2-page` — the combined class
+   overrides `.page`'s own max-width down to `.cm2-page`'s own steps
+   (460/640/1200/1280), so the 1320px default overshot the real cap there
+   and the band fell short of the edge exactly like before this fix, just by
+   a smaller, breakpoint-dependent amount instead of the full gap. The
+   override below re-derives the same steps `.cm2-page` uses, scoped to
+   `.ov-sticky-header` so only the bleed math changes — not `.cm2-page`
+   itself. Aligning the header's CONTENT with `.ov2-scope`'s narrower card
+   column instead (the 20px overshoot that predates this fix) is a separate,
+   larger change needing one answer for all 8 screens, and is intentionally
+   still out of scope here. */
 .ov-sticky-header {
-  --ov-hdr-bleed: max(0px, (100vw - var(--sidebar-w) - 1320px) / 2);
+  --ov-hdr-page-cap: 1320px;
+  --ov-hdr-bleed: max(0px, (100vw - var(--sidebar-w) - var(--ov-hdr-page-cap)) / 2);
   position: sticky;
   top: 0;
   z-index: 20;

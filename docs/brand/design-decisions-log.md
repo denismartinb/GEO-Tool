@@ -12111,22 +12111,45 @@ centrarse y la cabecera deja huecos a los lados que las otras dos bandas no
 tienen.
 
 **Arreglo.** `--ov-hdr-bleed` calcula ese exceso (`max(0px, (100vw -
-var(--sidebar-w) - 1320px) / 2)`) y se suma tanto al margen negativo como al
-padding, así que el borde de la caja llega al borde real de `.dash-content`
-mientras el contenido (título, badges, pastilla de estado) se queda
-exactamente donde estaba — los dos términos se cancelan. Por debajo de
-~1568px de ventana `--ov-hdr-bleed` es 0 y el comportamiento es
-byte-idéntico al de antes.
+var(--sidebar-w) - var(--ov-hdr-page-cap)) / 2)`, con `--ov-hdr-page-cap` a
+1320px por defecto) y se suma tanto al margen negativo como al padding, así
+que el borde de la caja llega al borde real de `.dash-content` mientras el
+contenido (título, badges, pastilla de estado) se queda exactamente donde
+estaba — los dos términos se cancelan. Por debajo de ~1568px de ventana
+`--ov-hdr-bleed` es 0 y el comportamiento es byte-idéntico al de antes.
 
-**Deliberadamente fuera de esta fase.** `.ov-sticky-header` la comparten 8
-pantallas (Visión general, Prompts, Competidores, Páginas citadas,
-Recomendaciones, Auditoría web, debug, `loading.tsx`), y su contenido no
-está alineado con la misma columna en todas: Visión general y Prompts usan
-`.ov2-scope`/`.pr2-scope` (640/1200/1280px), las otras seis siguen en el
-`.page`/1320px antiguo (`app/console.css:509-515`, ya señalado como decisión
-pendiente desde PROMPTS-DESKTOP-2). Alinear el contenido de la cabecera con
-la columna de tarjetas —no sólo llevar el fondo a sangre— exige decidir esa
-convergencia para las 8 pantallas a la vez; esta fase sólo corrige que la
-banda deje de recortarse, sin tocar dónde cae el texto dentro de ella.
+**Corrección el mismo día, antes de mergear: Competidores se quedaba corta
+igual.** El fundador probó el preview en Competidores y Páginas citadas y
+sólo la primera seguía sin llegar al borde. Causa: de las 8 pantallas que
+comparten `.ov-sticky-header`, **Competidores es la única cuya clase de
+columna estrecha va combinada directamente sobre `.page`**
+(`<div className="page cm2-page">`) en vez de anidada como hija suya —
+Visión general, Prompts y Páginas citadas meten su `.ov2-scope`/`.pr2-scope`/
+`.cit2-page` como un `<div>` aparte DENTRO de un `.page` sin modificar, que
+sigue en 1320px. En Competidores, en cambio, `.cm2-page` reescribe el propio
+`max-width` de `.page` a sus escalones (460/640/1200/1280px), así que el
+`1320px` que `--ov-hdr-bleed` daba por hecho estaba mal para esa pantalla en
+concreto — sangraba de menos, no de más, y por eso seguía viéndose corta.
+`--ov-hdr-page-cap` se hizo variable y `.cm2-page .ov-sticky-header`
+redeclara los mismos cuatro escalones que `.cm2-page` ya usa, en las mismas
+media queries, así que la sangría concuerda con el `max-width` real en cada
+una en vez de asumir un valor fijo. Ninguna otra de las 8 pantallas comparte
+esta estructura, así que ninguna otra necesita el mismo override — verificado
+leyendo el JSX de las 8, no sólo de las dos reportadas.
+
+**Deliberadamente fuera de esta fase.** El contenido de la cabecera (título,
+badges) no está alineado con la misma columna que las tarjetas de debajo en
+todas las 8 pantallas: Visión general y Prompts usan `.ov2-scope`/
+`.pr2-scope` (640/1200/1280px) como columna interior, más estrecha que la
+cabecera; Páginas citadas usa `.cit2-page` con el mismo patrón. Es
+exactamente lo que enseñan las capturas de Páginas citadas: la cabecera ya
+llega al borde correcto (nunca tuvo el bug de Competidores), pero las
+tarjetas de debajo, más estrechas, no — un desajuste que ya existía antes de
+esta fase y sigue igual de visible después. Alinear el contenido de la
+cabecera con la columna de tarjetas —no sólo llevar el fondo a sangre— exige
+decidir esa convergencia para las 8 pantallas a la vez
+(`app/console.css:509-515`, ya señalado como decisión pendiente desde
+PROMPTS-DESKTOP-2); esta fase sólo corrige que la banda deje de recortarse,
+sin tocar dónde cae el texto dentro de ella.
 
 ---
