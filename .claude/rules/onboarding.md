@@ -20,21 +20,26 @@ obedecerá igual.
   tamaño dependa del paso rompe esto (fundador, 2026-08-06: «que no haya
   movimientos de altura de la imagen»).
 - **`prefers-reduced-motion: reduce` deja el tour quieto en su último
-  fotograma.** No es una degradación, es el contrato: nada se anima nunca. En
-  la landing ese fotograma final ES la captura del hero, así que no hay
-  alternativa estática que mantener.
+  fotograma.** No es una degradación, es el contrato: nada se anima nunca.
 - **Sólo el primer paso se reproduce solo; los otros siete los pide el
   usuario.** `AUTOPLAY_THROUGH_STEP_INDEX` es 0 y no es un ajuste cosmético:
   encadenados, los ocho pasos cambian de pantalla antes de que dé tiempo a leer
   el subtítulo, y el tour pasa a ser algo que se mira pasar en vez de algo que
   se lee (fundador, 2026-08-07; log §40). Ampliarlo exige volver a medir si el
   subtítulo del último paso automático da tiempo a leerse.
-- **En la landing no arranca hasta que el lienzo se ve ENTERO.** Con el umbral
-  de asomo (`0.25`) quien bajaba hasta el hero se lo encontraba con el paso 1 ya
-  empezado o terminado (fundador, 2026-08-07). La comprobación de «entero»
-  tiene que seguir contemplando que el lienzo sea más alto que la ventana: con
-  un `intersectionRatio >= 0.98` a secas, en una pantalla corta no se cumple
-  nunca y el tour no arranca jamás.
+- **EL TOUR YA NO ESTÁ EN LA LANDING** (HOME-2026-08 Fase A2, 2026-08-23, log
+  §157). Ese hueco lo ocupa ahora la demo de cinco escenas del hero, que es lo
+  que el artboard aprobado pone ahí; el tour en el hero fue una decisión
+  nuestra de mientras tanto (log §1), no del diseño. **`variant="hero"` sigue
+  existiendo en el componente** —se retiró el montaje, no la variante— y el
+  tour vive donde tiene sentido: el popup de bienvenida de la consola
+  (`tour-provider.tsx`), que se lo enseña a quien acaba de entrar y no a quien
+  todavía no sabe qué es esto. Las reglas de abajo hablan de ese popup. Si
+  alguna vez vuelve a la landing, vuelve con ellas: arrancar sólo al verse el
+  lienzo ENTERO —con el umbral de asomo (`0.25`) quien bajaba se lo encontraba
+  con el paso 1 ya terminado (fundador, 2026-08-07)— y contemplando que el
+  lienzo pueda ser más alto que la ventana, porque con un
+  `intersectionRatio >= 0.98` a secas en una pantalla corta no arranca jamás.
 - **La pista del botón «Siguiente» va en bucle hasta el clic.** Ni el ratón por
   encima ni el foco la apagan: existe para conseguir ese clic, así que mientras
   no llegue no ha terminado su trabajo (fundador, 2026-08-07; log §40). Es la
@@ -44,7 +49,7 @@ obedecerá igual.
   detiene.** Corregido el 2026-08-08: al principio sólo se encendía al pausarse
   la reproducción automática, así que invitaba al clic cuatro segundos y medio
   tarde. Ahora se enciende a la vez que el reloj empieza a correr —al montar el
-  popup, o al verse entero el lienzo en la landing— y se mantiene puesta
+  popup— y se mantiene puesta
   mientras el paso 1 se reproduce solo y después, hasta el clic.
 - **No hay reproducción perpetua en el tour.** Arranca al verse entero y se para
   al salir de pantalla. Una animación fuera de pantalla es CPU y batería a cambio de

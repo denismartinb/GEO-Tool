@@ -25,7 +25,8 @@ export function showsPlanBadge(planId: string): boolean {
 }
 
 /**
- * Whether the home page's "7 días de Pro · Sin tarjeta" strip renders.
+ * Whether the promo strip (`PromoStrip`, rendered by `PublicHeader` on every
+ * public surface since PROMO-EVERYWHERE-1) renders.
  *
  * Founder, 2026-08-12: *"la franja de 7 días tiene que salir a usuarios no
  * logados o plan free"*. It is an acquisition offer, so a paying customer

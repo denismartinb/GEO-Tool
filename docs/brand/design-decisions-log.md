@@ -13946,3 +13946,1265 @@ funciona pase lo que pase con la marca de origen, así que verifica esa vía
 siempre, en el set por defecto de cada preview deploy.
 
 ---
+## 154. Cinco pantallas del producto, y los pesos de la auditoría otra vez (HOME-2026-08 Fase B2, 2026-08-22)
+
+«Cinco pantallas. Todo tu posicionamiento.»: un marco de navegador con cinco
+maquetas del producto y una tira de pestañas. Con esto la portada queda completa
+salvo la demo de cinco escenas del hero (Fase A2), que sigue sin empezar.
+
+### La sección va en claro, no en oscuro
+
+`{{prodClass}}` del artboard alterna entre `prod--dark` y `prod--light` y no dice
+cuál gana. Se elige **claro** con dos apoyos: el artboard móvil la tiene sobre
+`--canvas`, y «Cómo funciona» —justo encima— es la única superficie oscura de la
+zona pública (`docs/design-reference/home-2026-08/README.md`). Dos oscuras
+seguidas no.
+
+### Las cifras son ilustrativas, y lo decidió el fundador
+
+Se planteó que las cinco maquetas dibujan una cuenta buena bajo un titular que
+promete «exactamente lo que tienes el primer día», cuando el primer día un
+proyecto Free tiene un escaneo y un score bajo — la propia captura del piloto
+enseña 24/100. El fundador, 2026-08-22: *«lo hacemos tal cual la maqueta. Es
+ilustrativo»*. Se implementa así y queda anotado que la frase convierte cifras
+ilustrativas en promesa, que es lo que `.claude/rules/onboarding.md` prohíbe para
+el tour. **El vocabulario sí es del producto**: «Franja competitivo» con 71 es
+exactamente lo que asigna la consola a partir de 70.
+
+### Excepción: los pesos de la auditoría, porque la página se contradecía
+
+La pantalla de Auditoría del artboard repite los **+12 / +8 / +4** que ya se
+corrigieron en §143. Dejarlos habría hecho que **la misma portada publicara +12
+en una sección y +15 en otra para el mismo fallo**, con las dos a la vista. Van
+los del producto —+15 / +5 / +8— y el total del encabezado pasa de 24 a 28, que
+es su suma. `llms.txt` sigue con «Generar» y sin puntos, que es lo que el
+producto ofrece de verdad. Esto no contradice la decisión de arriba: lo
+ilustrativo es la cuenta, no los pesos, que son constantes del código.
+
+### Dos juegos de marcado, y por qué se paga
+
+El artboard móvil **no reflowa** las pantallas de escritorio: las simplifica —el
+marcador sin la evolución al lado, tres competidores en vez de cuatro, la acción
+sin su tarjeta de solución—. Ser fiel exige los dos juegos. Medido antes de
+repetirlo cinco veces: el juego móvil añade **2-3 KB comprimidos** sobre los 50,8
+KB que ya pesa la portada. Se sirven los dos y se oculta uno con
+`.lp-prod-pg > *:not(.lp-prod-mob)`, que evita envolver el marcado de escritorio
+en un contenedor sólo para poder apagarlo.
+
+### Tres cosas aprendidas construyéndola
+
+**El `.cap` global coló sus versales.** Se usaron los nombres genéricos del
+artboard (`cap`, `num`, `val`, `url`) y, aunque `.lp-prod-kpi .cap` ganaba en lo
+declarado, **`text-transform` —que no se declaraba— se colaba igual**: los
+rótulos de los indicadores salieron en mayúsculas. Toda la sección va ahora
+prefijada `lp-prod-`, que es la regla que `.claude/rules/onboarding.md` fijó para
+el tour. Se arregló con una pantalla hecha, no con cinco.
+
+**Una pestaña sin pantalla es un control roto.** El plan era partir la fase en
+dos PRs —armazón y una pantalla primero, las otras cuatro después— y no se
+sostiene: una tira de cinco pestañas donde cuatro abren un marco vacío parece
+una sección terminada y no lo está. La isla **cuenta los paneles que existen en
+el DOM** y sólo pinta esas pestañas, así que mientras se añadían pantallas la
+tira creció sola y nunca mintió.
+
+**Las flechas del móvil se centran contra el marco, no contra la sección.** Con
+el envoltorio común, el `50%` incluía la altura de la tira de pestañas y las
+flechas caían sobre ella. El marco pasa a ir **dentro** de la isla, como
+`children`, para que comparta ancestro posicionado con las flechas; el marcado
+de las pantallas sigue siendo del servidor.
+
+Y los «botones» de las maquetas —«Copiar el schema», «Descargar la página»,
+«Generar solución»— van como `span`, no como `button`: son el dibujo de un
+control y no llevan acción. Un `<button>` sin `onClick` es un control muerto, que
+es lo que el piloto marca como fallo.
+
+### Y el piloto encontró lo que yo no: `--ink-3` sobre `--canvas`
+
+`PILOT FAIL` sobre `bbbebc5`, en las tres anchuras: las pestañas inactivas
+salían en `--ink-3` sobre el fondo `--canvas` de la sección, **4,44:1** — seis
+centésimas por debajo de AA. Van en `--ink-2`, **7,50:1**.
+
+Es la **tercera** vez en el mismo día con el mismo token: la nota del cierre
+sobre el degradado del hero, esa misma nota otra vez al creer que bastaba con
+subir un escalón (§146), y ahora esto. Así que la regla deja de ser cualitativa
+y pasa a llevar la cifra: **`--ink-3` sólo aprueba sobre blanco puro** (4,76:1);
+sobre `#f6f7f9` no llega. Sobre cualquier superficie que no sea blanca, el texto
+secundario va en `--ink-2`.
+
+Y en la misma pasada enseñó un segundo fallo que yo daba por arreglado: **los
+rótulos de los indicadores seguían en versales**. La causa no era ya el `.cap`
+global del sitio —eso sí quedó resuelto al prefijar— sino **mi propio
+`.lp-prod-cap`**, que introduje al añadir la quinta pantalla con
+`text-transform: uppercase` para los antetítulos («LA EVIDENCIA», «PÁGINA
+CITABLE · FAQ») y que se colaba en los rótulos de indicador porque sus reglas no
+declaraban esa propiedad. Recreé con mi propia clase exactamente la fuga que
+había venido a arreglar. Peor: en el móvil la había parcheado con
+`text-transform: none`, que es tapar el síntoma en vez de mirar la causa. Ahora
+son dos clases distintas —`--cap` para el antetítulo en versales, `--lbl` para
+el rótulo en caja baja— porque son dos cosas distintas.
+
+Vale la pena decir de quién fue el acierto: **lo cazó el arnés, no yo**. Medí el
+contraste a mano dos veces en esta sesión y las dos veces di por bueno el
+siguiente escalón sin volver a medirlo contra el fondo real. El `auditControls`
+del piloto lo hace en cada control de cada pantalla, en las tres anchuras, sin
+cansarse.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.776 pruebas) y `pnpm run validate`
+en verde. Once anchuras de 320 a 1440: sin desbordamiento horizontal, el juego
+correcto a cada lado del corte de 560, y las cinco pestañas siempre con su
+pantalla. **Sin JavaScript** se sirve una pantalla y ningún mando, así que no
+queda ningún control muerto.
+
+---
+
+## 155. Una pastilla que se desplaza en lugar de dos flechas, y el recorte que un barrido de anchuras no veía (HOME-2026-08 Fase B2, segunda pasada, 2026-08-23)
+
+**Qué pedía el fundador.** Dos cosas, al ver las cinco pantallas del móvil:
+«si animamos una pastilla no hacen falta las flechas izquierda y derecha», y
+«veo algunas pantallas excesivamente simples… ¿así estaban en la maqueta?».
+
+### Las flechas se van, y el artboard las tenía
+
+El artboard móvil pone dos flechas flotando sobre el marco (`.carrflecha`,
+`position:absolute; top:50%; left/right:10px`) y así se implementaron. A esa
+altura caen sobre el contenido: tapaban el `21%` de Leroy Merlin en
+Competidores y mordían la última palabra del titular en Recomendaciones. No
+era un fallo de implementación —el artboard tiene la misma geometría, y su
+propia fila de competidor termina en el `%` justo bajo la flecha derecha—,
+pero el resultado es un número ilegible.
+
+Las sustituye **una sola pastilla oscura que se desliza** entre pestañas, en
+lugar de un fondo que se enciende y se apaga en cada una. Es lo que enseña que
+la tira es un mando y no cinco etiquetas.
+
+Las flechas hacían **dos** trabajos, no uno, y el segundo hay que reponerlo:
+decían que había más pantallas fuera del encuadre. Eso pasa a decirlo un
+**difuminado en el borde** de la tira, encendido sólo en el lado donde de
+verdad queda algo — un borde difuminado sin nada detrás promete lo que no hay.
+Va con `mask-image`, que recorta la caja visible y no el contenido, así que se
+queda pegado al borde mientras la tira se desplaza por debajo.
+
+Detalles que no son estilo:
+
+- **La pestaña activa conserva su propio fondo oscuro; la pastilla sólo hace
+  el viaje.** El primer intento la dejaba en `background: none; color: #fff` y
+  el fondo lo ponía la pastilla — **`PILOT FAIL` sobre `2456b4d`**, siete
+  fallos de contraste en las tres anchuras. La pastilla es un **hermano**, no
+  un ancestro, así que nada dentro de la caja del botón pinta oscuro: el texto
+  blanco resolvía contra `--canvas` y daba **1,07:1**. No es un falso positivo
+  del arnés —un lector que resuelva el fondo por el árbol, o un modo de alto
+  contraste que descarte los decorados, ve exactamente lo mismo—, así que **no
+  se allow-listea**: se arregla. La animación se conserva con retardos
+  asimétricos, aprovechando que en CSS mandan las propiedades del estado
+  destino: al perder `.on` el fondo se va en `0s` (la pastilla aún cubre esa
+  pestaña) y al ganarlo entra a los `.3s` (cuando la pastilla llega). Medido:
+  en vuelo hay **cero** pestañas oscuras y una sola pastilla; en reposo, una
+  pestaña oscura con la pastilla encima. Con `prefers-reduced-motion` el
+  retardo se anula, o la pastilla llegaría 300ms antes que su texto.
+- **La pastilla se mide, no se calcula.** Las pestañas son texto y su ancho
+  depende de la fuente que acabe cargando. Va en `useLayoutEffect` para que el
+  primer fotograma ya la tenga colocada, y un `ResizeObserver` la vuelve a
+  medir al cambiar de anchura (la pestaña pasa de 40 a 44px de alto en el
+  corte del móvil). Comprobado en 25 combinaciones de anchura × pantalla,
+  **incluidas las filas envueltas**: la desviación máxima contra la pestaña
+  activa es < 1,5px en las cuatro dimensiones.
+- **Mientras no hay medida, el fondo oscuro lo lleva la propia pestaña.** Sin
+  eso habría un instante de texto blanco sobre blanco.
+- `prefers-reduced-motion: reduce` deja la transición en `0s`. Medido.
+
+### Las pantallas simples SÍ eran así, y dos dejan de serlo
+
+Verificado contra `portada-movil.dc.html` antes de tocar nada: el artboard
+móvil **no reflowa** el de escritorio, lo simplifica. Prompts son tres
+preguntas con pastillas y ninguna respuesta abierta; Competidores, tres filas
+sin las tarjetas de temas; Recomendaciones, dos pastillas, un titular, una
+línea de prosa y el botón. La respuesta abierta de ChatGPT que el fundador
+recordaba existe — en el artboard de **escritorio**, y la implementación de
+escritorio la tiene.
+
+Se apartan del artboard móvil dos pantallas, por decisión del fundador
+(2026-08-23), y en la misma dirección: enseñar en vez de resumir.
+
+- **Prompts**: la primera pregunta va abierta con la respuesta de ChatGPT, la
+  marca resaltada y la URL citada. Sin una respuesta a la vista, la pantalla
+  demuestra que medimos, no **qué** leemos, que es lo único que la distingue
+  de una lista de palabras clave.
+- **Recomendaciones**: la prosa («La IA te nombra en 6 respuestas y cita a
+  elmueble.com como fuente») deja paso al bloque de evidencia real — la cita
+  literal del motor y la fuente con su favicon. Dice lo mismo enseñándolo, y
+  es lo que sostiene la promesa de la sección: «no es otro dashboard pasivo».
+- **Competidores se queda como la maqueta**: ya tiene ranking, barras y
+  porcentajes.
+
+Se restaura además el `min-height: 330px` del cuerpo, que estaba en el
+artboard móvil y yo había puesto a `0`. No es cosmético: sin él el marco
+encogía a 293px en Competidores y crecía a 571px en Prompts, así que cambiar
+de pestaña daba un salto de casi 300px bajo el dedo. Con el suelo puesto el
+recorrido es 368→571. **Queda salto**, y quitarlo del todo exige fijar la
+altura a la pantalla más alta —y entonces las cortas se pintan medio vacías—
+o animarla: es otra fase, no se hace aquí.
+
+### El recorte que 27 anchuras no habrían visto, y por qué el barrido anterior lo dio por bueno
+
+Al barrer anchuras con una medición **por elemento** aparecieron tres
+desbordamientos entre 561 y 720px — la franja donde ya se sirve el marcado de
+escritorio pero el marco mide ~443px por dentro:
+
+| Dónde | Mínimos | Sitio | Efecto |
+|---|---|---|---|
+| `.lp-prod-row2` | 340px fijos + 108 de contenido | 443px | la evolución recortada |
+| `.lp-prod-rank` | 510px (22+28+220+56+44 + 5 huecos de 14) | 443px | las cápsulas de variación fuera |
+| `.lp-prod-recs` | 2 columnas → ~211px por tarjeta | — | «Solución generada» y su cápsula sin caber |
+
+**Ninguno desbordaba la página.** El marco lleva `overflow: hidden`, así que
+recortaba en silencio — y el barrido de once anchuras del PR original medía
+`document.scrollWidth` y `.lp-prod-viewport`, las dos limpias. Un elemento
+recortado dentro de un contenedor con `overflow: hidden` es invisible para esa
+comprobación, que es justo lo que hace peligroso el recorte silencioso frente
+al desbordamiento: el segundo se ve. **La comprobación pasa a medir cada
+elemento contra la caja de su panel**, y el barrido final son 27 anchuras × 5
+pantallas = 135 combinaciones, todas limpias.
+
+Como red aparte, `.lp-sheet-gen` gana `flex-wrap: wrap`: cuando el rótulo y su
+cápsula no caben, la cápsula baja en vez de salirse de una tarjeta con
+`overflow: hidden`. Cuando caben, el `margin-left:auto` manda igual y no
+cambia nada.
+
+### Y la trampa del orden del fichero, por quinta vez
+
+Los tres arreglos de esa franja se escribieron juntos, en el bloque `@media`
+que nació al lado de `.lp-prod-row2`. Dos de ellos —`.lp-prod-rank` y
+`.lp-prod-recs`— quedaron así **antes** de sus reglas base en el fichero y, a
+igualdad de especificidad, gana la última: **no se aplicó nada**. El síntoma
+fue que el barrido siguió marcando 561px en rojo con el arreglo ya escrito.
+
+Es el mismo fallo de §143 (escala tipográfica), §144 (colores de la sección
+oscura), §146 (escala móvil de la FAQ) y el prefijado de §154. La regla ya
+existe en `.claude/rules/styles.md` desde §146 —*un tramo responsive se
+escribe junto a lo que corrige*— y aun así se volvió a pisar, porque el
+instinto es agrupar lo que comparte anchura en vez de lo que comparte
+elemento. Queda anotado ahí que agrupar por `@media` es exactamente el error.
+
+**Comprobado.** `pnpm test` y `pnpm run validate` en verde. El barrido final
+comprueba las cuatro cosas a la vez —desbordamiento del documento, recorte
+dentro del panel, contraste de todo control y alineación de la pastilla— en 19
+anchuras × 5 pantallas = **95 combinaciones, todas limpias**, filas envueltas
+incluidas. `prefers-reduced-motion` deja la transición en 0s. **Sin
+JavaScript**: cero tiras, cero botones, cinco paneles en el marcado y
+exactamente uno visible — ningún control muerto.
+
+---
+
+## 156. La solución se genera, la auditoría marca sus fallos, y la portada estrena su tira de blog y su tabla (HOME-2026-08 Fase B2/D, 2026-08-23)
+
+Cuatro peticiones del fundador sobre las cinco pantallas, y con las dos últimas
+la portada queda completa salvo la demo del hero.
+
+### «Generar solución» pasa a hacer algo
+
+Hasta aquí, todos los «botones» de las maquetas iban como `span` porque no
+llevaban acción — un `<button>` sin `onClick` es un control muerto y el piloto
+lo marca. Éste sí la lleva: gira un segundo y aparece la solución. Es el gesto
+que separa a este producto de un panel que sólo mide, y verlo pasar vale más
+que leerlo en un titular.
+
+Lo que la maqueta **no** dice: cuánto tarda una generación de verdad. El
+segundo es ritmo de demostración, no una medición, y no hay nada en pantalla
+que lo presente como tal.
+
+Tres decisiones de implementación:
+
+- **Sin JS la solución se sirve visible y no hay botón.** El ocultamiento
+  cuelga de `is-armed`, que sólo pone la isla al montar. Escrito en la hoja de
+  estilos a secas, quien no ejecutara JS se quedaría sin media pantalla **y**
+  sin el botón para pedirla, porque el botón también lo pinta la isla. Es el
+  contrato de §144.
+- **El estado vive fuera de React, en un `store` de módulo.** Hay DOS botones
+  —el de escritorio y el del móvil son marcados distintos— y sólo uno se ve a
+  cada anchura. Con un `useState` por isla, generar en escritorio y estrechar
+  la ventana enseñaba la solución ya revelada con su botón intacto encima.
+- **El resultado aparece lejos del botón**, así que un lector de pantalla oiría
+  «generando» y nunca que ya está: hay una región `role="status"` que lo dice.
+
+### La auditoría móvil no marcaba sus fallos
+
+El artboard móvil pone el ✓ de la fila correcta y deja las tres que fallan sin
+marca, así que se leían como una lista de cosas sin más. Ahora llevan su ✗,
+como en escritorio. Es lo único que distingue «esto está mal» de «esto está
+bien» cuando la cápsula de puntos se mira de reojo.
+
+### Competidores llena su hueco con algo del producto
+
+El marco tiene un alto mínimo y Competidores es la pantalla más corta, así que
+dejaba ~100px en blanco. Lo llena la sección **«Huecos de prompt»**, que la
+pantalla real de Competidores ya tiene (`competitors/prompt-gap-section.tsx`),
+con sus categorías y sus nombres: Ausente, Por detrás, Por delante, En
+exclusiva. Se omite la quinta —«Sin nadie»— porque no es un hueco: no hay nada
+que recuperar ahí.
+
+No es relleno: es justo lo que separa a esto de una herramienta que mide cuota
+de voz. No dice cuánto apareces, dice **en qué preguntas te ganan**. Los cuatro
+números suman los 14 prompts que declara la pantalla de Prompts; un total que
+no cuadrara sería un descuido visible al cambiar de pestaña.
+
+### La tira del blog, que faltaba entera
+
+Sección del artboard que nunca se implementó. Tres artículos con su cluster y
+su fecha, y un enlace al blog.
+
+**Los tres NO están escritos a mano.** Salen de `BLOG_POSTS` por cluster —el
+más reciente de `fundamentos`, `playbooks` y `medicion`—, así que la tira
+envejece con el blog en vez de apuntar a lo que se decidió un martes, un
+artículo retirado no puede dejar un 404 en la portada, y uno nuevo entra solo.
+Misma regla que el `FAQPage` de §146: una sola fuente, o divergen. Los tres
+clusters son una decisión editorial: responden «qué es esto», «qué hago» y
+«cómo sé si funciona», en ese orden. `sectores` queda fuera porque en la
+portada le habla a una fracción de quien llega.
+
+**Sin «7 min de lectura».** El artboard lo pone en las tres tarjetas. El
+producto no calcula tiempo de lectura en ninguna parte —no existe el campo en
+`BlogPost`, y el índice del blog enseña la fecha—, así que publicarlo sería
+inventarse una cifra en la página que más se lee. Va la fecha, con el formato
+del blog. Lo cubre `lib/landing/home-blog.test.ts`, junto con que los slugs
+existan y que la fecha no se corra un día al formatearse.
+
+### La tabla «Qué cambia, punto por punto»
+
+La otra pieza que faltaba: el modal que el artboard abre desde el párrafo de
+«El cambio de reglas».
+
+- **Sin JS el enlace lleva a `/geo`.** En el marcado del servidor la frase es
+  un enlace normal a la página que explica esto con más sitio; la isla
+  intercepta el clic y abre la tabla. Un clic con modificador o con el botón
+  central se deja pasar: quien pide pestaña nueva quiere la página.
+- **Es un `<dialog>` nativo con `showModal()`**, que trae trampa de foco,
+  cierre con `Esc`, fondo inerte y `::backdrop` sin escribir gestión de teclado.
+- **La última fila no dice lo que dice el artboard.** Ahí pone «No hay una
+  herramienta de medición unificada», que en la portada de una herramienta de
+  medición unificada es a la vez falso y un tiro en el pie. Lo cierto, y lo que
+  además es el argumento, es que el dato no llega solo: hay que preguntárselo a
+  los motores, prompt a prompt.
+
+**Y un fallo que sólo se vio midiendo.** Coloqué el `<dialog>` dentro de
+`.lp-rules-navslot`, que es `display: none` por encima de 560px. `showModal()`
+devolvía `open === true` y `Esc` lo cerraba —o sea, era modal de verdad— pero
+el diálogo medía **0×0**: un elemento cuyo ancestro no se pinta no entra en la
+capa superior. Ningún estado decía «roto»; sólo el `getBoundingClientRect()`.
+Queda como invariante: **un `<dialog>` no cuelga de nada que pueda ocultarse.**
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.781 pruebas) y `pnpm run validate`
+en verde. Barrido de 13 anchuras comprobando a la vez las cinco pestañas, la
+generación completa, el modal abierto, el contraste de todo control y el
+desbordamiento por elemento: limpio. Sin JavaScript: la solución se sirve
+visible, no hay botones de generar y el enlace de la tabla es un enlace a
+`/geo`.
+
+**Lo que queda de la portada:** sólo la demo de cinco escenas del hero (Fase
+A2), que sigue bloqueada por una decisión del fundador — meterla implica sacar
+`ProductTour` de la landing.
+
+---
+
+## 157. La demo del hero: cinco escenas, y el tour deja la portada (HOME-2026-08 Fase A2, 2026-08-23)
+
+La última pieza que faltaba del artboard, y la primera que ve cualquiera que
+llega. Petición del fundador: *«ahí te tienes que lucir, es la primera zona de
+la landing y tiene que enganchar al usuario»*.
+
+### La historia, que es lo que engancha
+
+No es un recorrido por la interfaz —eso ya está más abajo, en «Cinco
+pantallas»—: es una historia de cinco escenas dentro de un marco de navegador.
+
+| # | Escena | Qué dice |
+|---|---|---|
+| 0 | **La respuesta** | ChatGPT recomienda a Maisons du Monde, Kave Home y Leroy Merlin. Y debajo, en rojo: **IKEA no aparece, en 11 de sus 14 preguntas clave.** |
+| 1 | **Tu puntuación** | 34/100, franja «inicial». Te mencionan 21%, te citan 4%. |
+| 2 | **Competidores** | El ranking. Tú, el octavo, con un 4%. |
+| 3 | **La solución** | La recomendación, el botón, la espera y el schema generado. |
+| 4 | **El resultado** | La misma pregunta, ahora contigo dentro. 71, +37 pts, y la curva. |
+
+Empieza por el golpe y termina por la promesa. La escena 0 es la única que se
+permite llamar la atención —el aviso rojo entra con un rebote corto— porque es
+la que tiene que parar el scroll.
+
+### El tour se va de la portada, y no se pierde
+
+Ese hueco lo ocupaba `ProductTour variant="hero"`. **El artboard aprobado nunca
+tuvo el tour ahí**: ponía esta demo. El tour en el hero fue una decisión
+nuestra de mientras tanto (log §1).
+
+El tour **sigue montado** en la consola, desde `tour-provider.tsx`, como popup
+de bienvenida — que es donde tiene sentido: se lo enseña a quien acaba de
+entrar, no a quien todavía no sabe qué es esto. `variant="hero"` sigue
+existiendo en el componente; se retiró el montaje, no la variante.
+
+Lo que arrastra, hecho en este mismo PR:
+
+- `.claude/rules/onboarding.md` tenía tres invariantes sobre el
+  comportamiento **en la landing**. Dos quedan sin objeto y se marcan como tal
+  —con lo que habría que recuperar si algún día vuelve—, y la tercera se
+  reescribe para hablar sólo del popup. Una regla que nadie puede cumplir es
+  peor que ninguna: una sesión futura la obedecería igual.
+- La pasada del piloto `landing-hero-tour` **se sustituye**, no se borra: pasa
+  a ser `landing-hero-demo`, con la misma forma —contenido real como ancla, no
+  un contenedor vacío— y comprobando que la escena 0 se sirve puesta, que el
+  raíl tiene cinco paradas, que cada una abre **su** escena y sólo una a la
+  vez, y que tocar el raíl apaga la reproducción automática. El tour sigue
+  cubierto por la otra mitad de esa misma pasada, la del popup de la consola.
+
+### Dos cifras del artboard que no se publican
+
+- **«Franja invisible»** para un 34. El producto no tiene esa franja: son
+  «competitivo» desde 70, «emergente» desde 40 e **«inicial»** por debajo
+  (`app/dashboard/projects/[projectId]/page.tsx`). Estrenar vocabulario en la
+  primera pantalla de la portada que la consola nunca enseña es la misma clase
+  de error que los pesos de la auditoría en §154.
+- Los rótulos que se repiten más abajo —14 prompts, 3 motores, «Te mencionan»,
+  «Te citan»— se dicen **igual** aquí que allí. La portada no puede
+  contradecirse a sí misma al hacer scroll.
+
+Las cifras de la historia (34 → 71) son ilustrativas como el resto de la
+maqueta, por la decisión del fundador del 2026-08-22. Lo que no es ilustrativo
+es el vocabulario.
+
+### Cómo está construida, y por qué así
+
+- **Las cinco escenas son marcado del SERVIDOR, con la 0 ya puesta.** Lo
+  primero que ve alguien que llega no puede depender de que hidrate: sin una
+  línea de JavaScript se lee la escena que engancha, entera y quieta. La isla
+  sólo mueve la clase `on`, pinta el raíl y coloca el cursor — la misma
+  arquitectura que `ProductTabs`.
+- **Un solo reloj para avanzar; dentro de cada escena, CSS con `fill: both`.**
+  A los ~2,5 s la escena está en un fotograma final **estable**, que es lo que
+  permite al piloto fijar una y fotografiar algo determinista. Con animaciones
+  encadenadas a mano fotografiaría un fotograma al azar y su veredicto no
+  valdría nada (`.claude/rules/onboarding.md`, «Un solo reloj»).
+- **No se reproduce fuera de pantalla y se para al llegar al final.** Un
+  `IntersectionObserver` arranca y para; en la escena 4 el reloj se detiene y
+  no vuelve. Un bucle perpetuo en el hero convierte la historia en un
+  salvapantallas.
+- **Tocar el raíl apaga la reproducción automática para siempre.** Quien elige
+  una escena la está leyendo; que se la lleve el reloj cuatro segundos después
+  es exactamente lo que hace que una demo se sienta un anuncio.
+- **El cursor apunta a ELEMENTOS, no a coordenadas** —la lección del tour—, y
+  si el elemento no existe a esa anchura no se pinta en vez de señalar al
+  vacío. Bajo 640px desaparece: allí ya hay un dedo sobre la pantalla.
+- **`prefers-reduced-motion`** deja cada escena en **su** fotograma final —el
+  que cuenta la historia—, no en el inicial, y no hay reproducción automática.
+
+### Tres recortes silenciosos, y una comprobación que ahora los ve
+
+El barrido que traía de §155 medía el desbordamiento de cada elemento contra
+la caja de su panel. No bastaba: **un elemento puede caber en el panel y estar
+recortado por un `overflow: hidden` intermedio**. La comprobación pasa a medir
+también `scrollHeight > clientHeight` en todo lo que esconde su contenido, y
+con eso salieron tres cosas que ninguna captura habría delatado:
+
+1. El bloque de schema de la escena 3 se cortaba el `</script>`: la caja medía
+   116px y el contenido 140.
+2. Al estrechar, ese mismo bloque pasaba de 3 a 5 líneas y pedía 178px en una
+   caja de 144. Se arregla con `white-space: pre` + scroll horizontal — un
+   bloque de código que se desplaza es lo normal; uno que cambia de alto según
+   la ventana obliga a dimensionar el hueco para el peor caso en todas las
+   anchuras.
+3. Y ese `white-space` **no se aplicaba**: el elemento lleva `.lp-sheet-code` y
+   `.lp-hx-code`, misma especificidad, y `.lp-sheet-code` vive más abajo en el
+   fichero. **Sexta vez que el orden decide en vez de la intención** (§143,
+   §144, §146, §154, §155). Aquí no valía «escríbelo al lado», porque lo que
+   corrige es de otra sección: se cualifica por el contenedor,
+   `.lp-hx-artefacto .lp-hx-code` (0,2,0), y el orden deja de importar.
+
+Se excluye del recorte una cosa a propósito: un `<img>` con `object-fit: cover`
+dentro de `overflow: hidden` recorta **por diseño**, es el encuadre.
+
+### El primer `PILOT FAIL` fue del aserto, no del producto
+
+La pasada nueva afirmaba «la escena 0 se sirve puesta» **contra el DOM vivo**, y
+falló en escritorio. No estaba roto nada: la demo avanza sola cada 4,6 s, así
+que para cuando el aserto llegaba la escena 0 ya había dejado de estarlo. El
+invariante era correcto y la comprobación estaba en la capa equivocada.
+
+Ahora se comprueba **en el HTML servido** —que es donde vive ese invariante: lo
+primero que se ve no puede depender de hidratar— y todo lo demás se manda a
+mano, empezando por un clic en la primera parada del raíl, que además apaga el
+reloj. Queda dicho para la próxima: **un aserto sobre «qué escena está puesta»
+en algo que se reproduce solo es una carrera contra su reloj**, y el arnés la
+pierde tarde o temprano en una anchura o en otra.
+
+**Comprobado.** `pnpm test` y `pnpm run validate` en verde. Barrido de 10
+anchuras × 5 escenas = **50 combinaciones**, sin desbordar el marco y sin un
+solo recorte silencioso, con cada escena medida en su fotograma final. Los
+altos del cuerpo son medidos, no números redondos: 436px en escritorio y 508px
+bajo 640, que es lo que mide la escena más larga.
+
+**Con esto la portada de HOME-2026-08 queda completa.**
+
+---
+
+## 158. El marco de la demo deja de estar medido para su peor escena, y una barra anuncia el cambio (HOME-2026-08 Fase A2, segunda pasada, 2026-08-23)
+
+**Qué pasó.** El fundador mandó una captura del hero en móvil con un rectángulo
+rojo alrededor de todo el blanco que quedaba bajo la respuesta de ChatGPT:
+*«ese espacio blanco queda fatal. Podemos hacer la pantalla menos alta. Y subir
+el contenido de esta pantalla a la parte superior. Solo hay que resolver la
+pantalla de la solución, porque esa sí ocupa, igual que la de el resultado»*.
+Con dos peticiones más en el mismo mensaje: que la curva de evolución se
+anime al llegar, y *«es importante que aparezca el cursor y comience a moverse
+al hacer scroll, si no no parece una animación»*.
+
+**Por qué había blanco.** El cuerpo de la demo tiene alto fijo —las cinco
+escenas se apilan en el mismo hueco y un alto por escena daría un salto de más
+de 100px en cada cambio (§157)—, así que lo manda la escena más alta. Medido a
+375px: escenas 0/1/2 entre 334 y 373, escena 3 en 485 y escena 4 en **509**. El
+cuerpo estaba en 508 por la escena 4 y las tres primeras arrastraban entre 135
+y 220px de vacío. El diagnóstico del fundador era exacto: el problema no estaba
+en las escenas que enseñaban el blanco, estaba en las dos que lo causaban.
+
+**Qué se hizo.** La escena 4 **deja de apilarse en móvil**. Estaba en una
+columna porque «móvil = apilar», y en dos columnas de 96px + resto mide 115px
+en vez de 215 — el disco y la curva se leen igual pequeños, y de paso la escena
+se parece a la de escritorio en vez de ser otra pantalla. La escena 3 pierde 45
+entre el hueco del artefacto (146 → 122, medido contra la tarjeta del código,
+no a ojo), el relleno de la tarjeta y los márgenes. Con eso el cuerpo baja de
+**508 a 444** y el peor vacío pasa de 220 a 110px. Ninguna escena se centra ya:
+lo que sobra queda abajo, que es lo que se pidió.
+
+Barrido de 320 a 1280px, cinco escenas cada uno, midiendo el fondo real del
+contenido contra la caja **y** `scrollHeight > clientHeight` en todo lo que
+esconde desbordamiento (§155). Encontró tres cosas que ningún ojo iba a ver:
+la tarjeta del código recortada dentro de su hueco entre 320 y 340px, los dos
+botones de «Generar solución» partidos en dos líneas dentro de una pastilla de
+31px a 375px, y el fondo de «Maisons du Monde» estirándose hasta el borde de la
+tarjeta al partirse en dos líneas (`box-decoration-break: clone`).
+
+**El cursor.** Se pintaba sólo cuando tenía destino, así que aparecía de la
+nada ya colocado: eso no se lee como movimiento. Ahora nace **en reposo** —
+fuera del marco, abajo a la derecha, invisible— y su primer cambio de
+coordenadas es un viaje hasta lo que señala la escena 0. Las cinco escenas
+apuntan a algo (antes sólo la 0 y la 3, y el cursor se quedaba quieto tres
+cambios seguidos), y **deja de estar escondido bajo 640px**: el motivo por el
+que lo estaba —«señala elementos que a esta anchura desaparecen»— dejó de ser
+cierto cuando las cinco dianas existieron en todas las anchuras.
+
+**Lo de la curva no era un fallo de la curva.** Muestreada, la animación
+siempre corría bien (`stroke-dashoffset` 620 → 177 → 27 → 0). Lo que fallaba
+era **cuándo arrancaba la demo**: un `threshold: 0.35` a secas, que en un móvil
+donde la demo mide más que media pantalla se cumple con la demo casi entera
+por debajo del pliegue. La historia se reproducía sola mientras nadie la
+miraba y quien bajaba se la encontraba por el final, con la curva ya dibujada.
+Ahora se exige el **70% de lo que puede llegar a verse** —`min(alto de la demo,
+alto de la ventana)`, no la demo entera, o una demo más alta que la pantalla no
+arrancaría jamás— con un `threshold` de 21 pasos, porque sin ellos el
+observador sólo avisa al cruzar 0 y la fracción que importa se alcanza sin que
+salte ningún evento. Es la misma trampa que el tour ya documenta
+(`.claude/rules/onboarding.md`).
+
+**La barra de avance** (fundador, en el mismo hilo: *«quizás venga bien una
+barrita horizontal alargada que muestre el progreso de cada slide, para que se
+vea que va a ocurrir algo»*). Es el reloj real: la isla le pasa el mismo
+`PASO_MS` que usa el `setInterval` como `animation-duration` en vez de duplicar
+el número en el CSS, y **sólo se pinta mientras ese reloj corre de verdad** —
+fuera de pantalla, tras tocar el raíl o en la última escena no hay nada que
+anunciar y desaparece. Una barra que avanza sin que vaya a pasar nada es
+progreso inventado, que es lo que CLAUDE.md prohíbe en el producto y no hay
+motivo para permitirse en la portada.
+
+**Además, en el mismo PR:** el botón «Aplicar solución» a la derecha del
+«+23 pts» en la tarjeta 04 de la sección oscura (dibujo dentro de una maqueta,
+así que `span` y `aria-hidden`: un `<button>` ahí sería un control muerto que
+el barrido del piloto pulsaría esperando algo), y el cierre del testimonio de
+Nordika Home pasa de «sabemos qué escribir la semana que viene» a «sabemos qué
+estrategia de contenidos adoptar».
+
+**Lo que queda.** El vacío no desaparece, se reparte mejor: con el cuerpo en
+444 y la escena 2 en 334, siguen sobrando 110px en móvil, y en escritorio la
+escena 1 («Tu puntuación») deja 162 de los 440. Es inherente a un marco de alto
+fijo con cinco escenas de contenido distinto; la salida sería enriquecer las
+escenas cortas, no seguir apretando las largas. Sin decidir.
+
+Pendiente de decisión del fundador, con alternativas ya dibujadas y enseñadas:
+la tarjeta 01 de la sección oscura con una segunda métrica (citas además de
+menciones) y la tarjeta 02 con leyenda de colores, que hoy no explica qué
+significan los cuatro segmentos de su barra.
+
+**Además, mismo PR, mismo día — la tarjeta de solución de Recomendaciones
+(móvil) se vuelve una orden de trabajo.** El fundador, tras ver la pantalla
+enseñada por el piloto: *«el bloque de recomendaciones ha quedado bien, dame
+alternativas para poner una solución más potente»*. La tarjeta enseñaba dos
+enunciados de pregunta con un check, sin respuesta y sin decir qué se había
+generado de verdad. Tres alternativas dibujadas y enseñadas — «lo que pegas»
+(preguntas con su respuesta y el JSON-LD real), «la orden de trabajo» (el
+entregable desglosado en tres piezas numeradas) y una versión con pestañas —;
+eligió la segunda y pidió compactarla «sin quitar lo importante»: bajó de
+462 a 396px de tarjeta apretando el relleno de cada paso, no quitando ninguno.
+
+Los tres pasos —texto, schema, dónde publicarlo— y el «+12 pt potenciales» son
+ilustrativos, como el resto de la maqueta de producto de la portada (los
+«+15 pts» de Auditoría web, el «71» del marcador): no salen de un escaneo
+real, y no podían, porque esta pantalla no tiene sesión detrás. Lo que sí es
+literalmente cierto es la frase de cierre — «el próximo escaneo mide si
+funcionó» —, que es la promesa que el producto sostiene de verdad.
+
+**Y las dos tarjetas de la sección oscura, mismo PR.** Quedaban dos gaps
+señalados por el fundador y ya cerrados con alternativas dibujadas y
+enseñadas (ver arriba): la tarjeta 01 sólo enseñaba «te nombran» cuando la
+copia de al lado promete dos métricas distintas, y la tarjeta 02 dibujaba una
+barra de cuatro tramos sin decir a quién pertenece ninguno. Elegido: **la
+tarjeta 01 en su versión B pero sin la leyenda de arriba** —cada marca pasa a
+tener sus dos barras, «Nombran»/«Citan», y la propia etiqueta de la fila hace
+innecesaria una leyenda aparte—; **la tarjeta 02 en su versión A**, con los
+cuatro tramos nombrados en una fila compacta que envuelve, no en una lista de
+una marca por línea. (Se implementó primero la B por una lectura apresurada
+del mensaje; el fundador aclaró minutos después «había elegido la leyenda
+compacta» y se corrigió antes de que nadie la piloteara — la A es la que
+quedó, y es la que describe el resto de esta entrada.)
+
+El «Citan 4%» de IKEA en la tarjeta 01 no es un número nuevo: es el mismo dato
+que ya usa la escena 1 de la demo del hero para la misma marca ficticia. Dos
+sitios de la misma portada no pueden decir cifras distintas de la misma
+marca inventada. La tarjeta 02 corrigió además algo que no se había pedido:
+el segundo tramo de la barra era `--brand-neg` (#d23b48), el rojo que en todo
+el sitio significa «negativo/tuyo» —deltas que bajan, las `x` de la
+auditoría—, puesto ahí sin ningún significado. Pasa a un azul más claro de la
+misma familia, y el rojo queda libre para la única fila que sí es negativa:
+IKEA, 0%, no aparece citada — con un punto hueco y punteado en vez de un
+círculo sólido de un color que no está en el reparto de arriba.
+
+**Y una cuarta ronda, mismo PR, sobre dos capturas de móvil de las mismas dos
+maquetas.** Cuatro pedidos sueltos del fundador:
+
+1. **La cabecera de la escena 2 del hero («Competidores») partía en dos
+   líneas** y «14 prompts · 3 motores» quedaba pegado a la primera línea del
+   título en vez de debajo de las dos —consecuencia de `align-items: baseline`
+   en una fila que ya no cabe en una sola línea a 375px—. Apilar título y meta
+   en vez de ponerlos en la misma fila deja las dos frases enteras.
+2. **La demo del hero le suma un arco narrativo a tres de sus cinco
+   pantallas.** «Visión general» no tenía pie de página; «Competidores» y
+   «Recomendaciones» tenían uno factual (`Cuota de voz en IA · últimos 7
+   días.` / `9 acciones priorizadas por impacto.`). Pasan a contar una
+   historia en tres frases —*primero sabes dónde estás, luego quién te está
+   ganando, y por último por qué generar la solución te devuelve a la
+   conversación*—: «Lo primero es conocer tu situación actual.» / «Y quién
+   tiene mejor posicionamiento que tú.» / «Para que en próxima respuesta la IA
+   te mencione.» Prompts y Auditoría web conservan su pie factual a propósito:
+   no cuentan esa historia, la sostienen.
+3. **El botón «Generar solución» no se leía como accionable** entre el resto
+   de maquetas de la sección, que son dibujo. Es real —el único `<button>` con
+   `onClick` de las cinco pantallas— y ahora lo dice: reutiliza el halo
+   pulsante del «Siguiente» del tour (`ptHintHalo`), en bucle hasta el clic vía
+   `:not([disabled])`, en vez de inventar una segunda animación para el mismo
+   propósito (`.claude/rules/onboarding.md`, «la pista existe para conseguir
+   ese clic»).
+4. **`ESPERA_MS` sube de 1000 a 1250** («que la pantalla de la solución dure
+   un 25% más»): sigue siendo el ritmo de una maqueta, no una medición —la
+   nota de `solution-demo.tsx` ya deja escrito que no puede prometer cuánto
+   tarda el producto de verdad, y sigue sin poder.
+
+**Y la retirada de los dos bloques de la home anterior a HOME-2026-08, mismo
+PR** (fundador: *«puedes quitar ya los bloques que sobran de la home
+antigua»*). Dos secciones sobrevivían de antes del rediseño, entre «Cómo
+funciona» y «Cinco pantallas»:
+
+- **FEATURES** («Todo lo que necesitas para ganar en la búsqueda de IA»), una
+  rejilla de seis tarjetas que repetía el mismo argumento que «Cómo funciona»
+  —mides, entiendes, arreglas, mejoras— sin la evidencia real que esa sección
+  ya trae.
+- **SPOTLIGHT** («Recomendaciones que se convierten en trabajo hecho»), con
+  una tarjeta de recomendación de ejemplo que citaba marcas **inventadas**
+  —«Orbit» y «Quanta»— mientras el resto de la portada, desde HOME-2026-08,
+  cuenta una sola historia con marcas reales (IKEA, Leroy Merlin, Maisons du
+  Monde). El botón «Generar solución» de esa tarjeta además era un `<span>`
+  decorativo; el de «Cinco pantallas» genera de verdad (Fase B2, segunda
+  pasada, más arriba en esta misma entrada).
+
+Las dos quedaron enteramente supersedidas por secciones ya enviadas: mantener
+cualquiera de las dos habría dejado la portada afirmando dos historias de
+marca a la vez, una con nombres reales y otra con nombres de attrezzo.
+
+**Lo que se comprobó antes de borrar, no sólo el JSX:**
+
+- `Badge` (componente local) y las constantes `FEATURES`/`SPOTLIGHT_ITEMS`
+  sólo se usaban ahí — se retiran con la sección.
+- `.lp-spot*` (CSS) sólo pintaba SPOTLIGHT — se retira. `.lp-features`/
+  `.lp-feat*`, `.badge*`, `.rec-rank`, `.evidence`, `.ev-quote`, `.rmetric`
+  **NO se tocan**: son clases compartidas con la consola (`badge*`,
+  `rec-rank`, `evidence`, `rmetric`, usadas en Recomendaciones de verdad) o
+  con `/geo` (`lp-features`, `lp-feat`, `ev-quote`, incluida `.mk` dentro de
+  ella) — borrar la regla habría dejado esas otras pantallas sin estilo.
+- El enlace del pie de página «Recomendaciones» apuntaba a
+  `#recomendaciones`, el ancla de SPOTLIGHT. Repuntado a `#pantallas`
+  («Cinco pantallas»), que es donde esa historia vive ahora — no se dejó un
+  enlace roto.
+
+**Tres arreglos más, mismo PR, tras el Human Gate del #463.**
+
+1. **El punto de IKEA en la leyenda de la tarjeta 02 se veía roto.** Era un
+   círculo de 9px con borde **punteado** — a ese tamaño el patrón de guiones
+   se fragmenta en algo que no se lee como un anillo, se lee como ruido
+   (fundador, 2026-08-23: «el color de IKEA se ve raro»). Pasa a borde sólido:
+   dice lo mismo —no es un tramo de la barra, es la marca que falta— y sigue
+   siendo legible a 9px.
+2. **La curva de «El resultado» se quedaba en blanco al volver a esa escena
+   una vez de cada dos** (fundador: «el gráfico de evolución va una vez sí y
+   otra no al pinchar en las pestañas»). Causa: alternar `display: none →
+   block` en el contenedor de la escena no garantiza que el navegador
+   reproduzca desde el principio las animaciones CSS de sus hijos —el trazo y
+   los puntos, con `fill: both`, podían quedar congelados en su fotograma
+   inicial si el navegador no detectaba la reaparición a tiempo. Un primer
+   intento con `cancel()` de Web Animations API lo empeoró: cancela la
+   animación que estaba a punto de arrancar y nada la vuelve a crear sola. El
+   arreglo que sí funciona —el truco estándar para esto— es quitar la clase
+   `on`, forzar un `reflow` leyendo `offsetWidth` y volver a ponerla: sin el
+   reflow entre medias el navegador no distingue «seguía puesta» de «acaba de
+   aparecer». Es síncrono pero no pinta nada —el navegador no compone un
+   fotograma hasta que el efecto termina—, así que no hay parpadeo.
+3. **Las tres frases del arco narrativo de «Cinco pantallas» se repiten
+   también en la demo del hero**, en las escenas que cuentan la misma
+   historia: «Tu puntuación» → «Lo primero es conocer tu situación actual.»,
+   «Competidores» → «Y quién tiene mejor posicionamiento que tú.», «El
+   resultado» → «Para que en próxima respuesta la IA te mencione.» — mismo
+   texto en las dos secciones de la portada, mismo criterio que ya obligaba a
+   que «14 prompts · 3 motores» se diga igual arriba y abajo (log §154: «la
+   portada no puede contradecirse a sí misma al hacer scroll»).
+
+## 159. La pastilla de «Cinco pantallas» deja de pelearse con su propio scroll, y la barra de la demo del hero pasa a ser cinco pastillas (HOME-2026-08, 2026-08-24)
+
+**Qué pasó.** El fundador, sobre el preview: *«la animación de las pestañas de
+las 5 pantallas no funciona bien»*.
+
+**Diagnóstico.** La pastilla de `ProductTabs` vive `position: absolute` DENTRO
+del mismo contenedor que hace scroll horizontal en móvil, así que su posición
+en pantalla es `translateX − scrollLeft`: dos animaciones con reloj propio
+restándose entre sí. Al saltar a una pestaña que obliga a desplazar la tira
+—cualquiera que no esté ya a la vista—, el `scrollTo` usaba
+`behavior: "smooth"`, con su propia curva de aceleración, ajena a los
+`.3s cubic-bezier` de la pastilla. Medido con Playwright: al saltar de la
+primera a la última pestaña en 375px, la pastilla llegó a **−309px**, fuera de
+la pantalla por la izquierda, antes de asentarse.
+
+`behavior: "auto"` NO lo arregla — la spec de CSSOM View hace que `"auto"`
+herede el `scroll-behavior: smooth` que la regla móvil de `.lp-prod-tabs` ya
+declaraba para el gesto táctil, así que seguía animándose igual. Sólo
+`behavior: "instant"` bloquea la animación del navegador de verdad. Con eso la
+tira salta a su sitio en el mismo tick del clic y la pastilla queda como la
+única animación visible.
+
+**Límite honesto, como ya pasó con el gráfico de evolución (§158).** Chromium
+headless colapsa el scroll `"smooth"` a un solo fotograma, así que el
+parpadeo exacto no se pudo reproducir aquí — mismo límite ya registrado en
+`.claude/rules/styles.md` para bugs de scroll en este repo. El arreglo sale
+del diagnóstico de la carrera de animaciones, no de haberla visto reproducida.
+
+**La barra de la demo del hero, mismo día, misma conversación.** El fundador
+pidió alternativas a la barra continua de `lp-hx-avance` —que se reiniciaba en
+seco en cada escena y no decía en qué punto de las cinco estabas sin mirar el
+raíl—, y aprobó la segmentada (patrón Stories: una pastilla por escena) con el
+degradado de marca ya usado en el resto de la demo (`--brand-blue` →
+`--brand-cyan`). Las pastillas ya vistas quedan llenas y quietas —es estado
+real, no una animación en marcha, así que seguir pintándolas no es la mentira
+que sí sería seguir animando una que no va a ningún sitio—; la actual sólo se
+anima mientras el reloj corre de verdad (`corriendo`), y si se paró —tocaste
+el raíl, la demo salió de pantalla, o es la última escena— se queda llena y
+quieta en vez de a medias, porque a medias leería como una barra rota, no como
+el final de la historia. Esto **cambia** el invariante «una barra de avance es
+un reloj o no es nada» de `.claude/rules/styles.md` (§158): antes la barra
+entera desaparecía si `corriendo` era falso; ahora sólo la animación de la
+pastilla en curso depende de `corriendo` — el estado ya visto es hecho, no
+progreso inventado, y no tiene por qué desaparecer con el reloj. Regla
+actualizada en el mismo PR.
+
+**Dos ajustes más, mismo PR, tras probar seis titulares con capturas reales.**
+Antes de decidir, se generaron capturas de las seis frases contra el servidor
+local con el CSS real de `.lp-h1` (60px, Bricolage Grotesque 800) — no una
+maqueta aparte, la tipografía de producto — y se restauró el fichero después
+de cada una sin dejar diff.
+
+1. **El titular del hero cambia** de «¿Te recomienda la inteligencia
+   artificial?» a **«¿La IA recomienda tu marca?»** (fundador, 2026-08-24: «Vamos
+   con ¿La IA recomienda tu marca?»). Nombra sujeto, verbo y objeto sin
+   depender de que «te» se lea como «tu marca» — el visitante frío no siempre
+   hace esa conexión a la primera. Pierde el `<br>` fijo del titular anterior:
+   la frase es corta de sobra para no necesitar el salto que sí hacía falta
+   con «la inteligencia artificial» entera, y a los anchos habituales del
+   hero cabe en una línea sola. **Diverge a propósito del artboard aprobado**
+   (`docs/design-reference/home-2026-08/`), que lleva la versión larga —
+   decisión del fundador sobre el propio titular, no un gap de
+   implementación.
+2. **La tira de avance de la demo del hero se oscurece.** Los tramos vacíos
+   usaban `--line` (#e8eaef), que a 3px de alto casi no se distinguía de
+   `--canvas` detrás. Pasan a `--line-strong` (#c8ccd6) — el mismo tono que ya
+   usa el medidor de fuerza de contraseña (`.pw-meter i`) para el mismo
+   problema: una barra fina que necesita leerse vacía sin convertirse en un
+   borde.
+
+**Cuatro ajustes más, mismo PR, mismo día.**
+
+3. **La pastilla de «Cinco pantallas» seguía rara al pulsar — un bug distinto
+   del que ya se había arreglado.** El anterior era el scroll (§159, arriba);
+   éste era de color: el fundador seguía viendo «primero se pone negro luego
+   blanco, un poco raro» al pulsar una pestaña. Medido con Playwright
+   fotograma a fotograma (`getComputedStyle` sobre las cinco pestañas y la
+   pastilla, muestreado cada frame): la pestaña recién pulsada mostraba un
+   estado intermedio — fondo blanco durante ~300-400ms — antes de asentarse en
+   el fondo oscuro correcto. Causa: `.lp-prod-tab:hover { background: #fff }`
+   sin acotar. La transición retardada de `.on` (el truco de los «retardos
+   asimétricos», §154) parte del valor YA PINTADO en el fotograma anterior
+   como punto de partida — y ese valor, en el instante de cualquier clic real,
+   es el de `:hover`, porque el ratón siempre está encima de lo que acabas de
+   pulsar. El resultado: en vez de ir de transparente a oscuro, iba de blanco
+   (el de `:hover`) a oscuro, con dos etapas donde el diseño preveía una sola.
+   Arreglado acotando el `:hover` a `.lp-prod-tabs:not(.con-pastilla)`: en
+   cuanto la pastilla gobierna la pestaña, el `:hover` deja de pintar sobre
+   ella y la transición retardada parte del valor correcto. Verificado con el
+   mismo arnés: la pestaña ahora va de `rgba(0,0,0,0)` a `rgb(15,23,41)` sin
+   paso intermedio.
+4. **«Comparativas» sale de la cabecera** (fundador: «Quitamos comparativas de
+   la cabecera»), supersediendo COMPARATIVAS-DESIGN-1 (2026-08-11), que la
+   había puesto ahí además del pie. Las páginas de `/comparativas` y su
+   enlace en el pie siguen existiendo — sólo se retira la entrada de
+   `PUBLIC_NAV_ITEMS`.
+5. **Los enlaces de ancla de la cabecera se desplazan suavizados**
+   (fundador: «que los enlaces vayan con ancla y efecto suavizado a la
+   landing»). Ya eran anclas de verdad —`<a href="#…">`, sin JS
+   interceptando el clic—, así que lo único que faltaba era
+   `scroll-behavior: smooth` en `html`, con su reversa en
+   `prefers-reduced-motion: reduce`. No toca la consola: `.shell` no
+   scrollea el documento (`.claude/rules/styles.md`).
+6. **Segundo titular del día, y la bajada cambia con él.** De «¿La IA
+   recomienda tu marca?» a **«¿Sabes si la IA / recomienda tu marca?»**
+   (fundador: «Prueba esto en el hero», con el salto de línea ya escrito por
+   él), con la bajada nueva: «Descubre si ChatGPT, Gemini y Claude te
+   recomiendan y cómo mejorar tu visibilidad en IA.» Recupera el `<br>` fijo
+   —esta vez porque el propio fundador partió la frase en dos líneas, no
+   porque el ancho lo exija. Y **dos huecos del hero móvil ganan aire**: el
+   padding superior de `.lp-hero-content` sube de 8 a 20px (con el
+   `margin-top: 24px` de `.lp-h1` ya puesto, pasa de 32 a 44px reales entre el
+   degradado de arriba y el titular), y `.lp-shot.lp-hx` —que en móvil no
+   tenía override propio y heredaba el `margin-top: 54px` de escritorio— sube
+   a 66px antes de la demo animada.
+
+**Cinco ajustes más, mismo PR, misma tarde.**
+
+7. **Tercera bajada del hero del día**: «Descubre si ChatGPT, Gemini y Claude
+   te recomiendan y cómo mejorar tu visibilidad en IA.» pasa a «Analizamos si
+   ChatGPT, Gemini y Claude te recomiendan y cómo puedes mejorar tu
+   visibilidad en los motores de IA.»
+8. **La entradilla de «El cambio de reglas» se recorta.** «...recibe una
+   recomendación con dos o tres marcas. O estás en esa frase, o no existes.»
+   pasa a «...recibe una respuesta. O estás en esa frase, o no existes.» —
+   fuera «con dos o tres marcas», y «recomendación» pasa a «respuesta». El
+   enlace a `/geo` (la tabla SEO↔GEO) sigue envolviendo la misma frase en
+   negrita, con «respuesta» en vez de «recomendación».
+9. **El titular de la tira del blog gana «la visibilidad y»**: «Cómo se
+   trabaja el posicionamiento GEO» pasa a «Cómo se trabaja la visibilidad y
+   el posicionamiento GEO.» (con punto final, que antes no llevaba).
+10. **Las cinco pastillas de la barra de avance pasan de degradado a azul
+    sólido.** Cada pastilla mide ~60-80px, y en ese ancho el degradado
+    `--brand-blue` → `--brand-cyan` dejaba el extremo en un cian claro casi
+    indistinguible del `--line-strong` vacío detrás (fundador: "que las 5
+    barras de cargando tengan un azul más visible, al final de la barra no se
+    ve bien"). `--brand-blue` de punta a punta se lee igual de intenso en
+    todo el tramo — mismo color en la pastilla llena y en el relleno en
+    marcha, sin que cambie de tono a mitad de camino.
+11. **El texto de la pestaña activa de «Cinco pantallas» deja de saltar en
+    seco.** Con el fondo ya arreglado (arriba, y antes con el `:hover`), lo
+    que quedaba visible era el propio diseño: `color` cambiaba con
+    `transition: color 0s .3s` — cero duración, sólo retardo — así que pasaba
+    de `--ink-2` a blanco puro EN UN SOLO FOTOGRAMA. Sin nada entre medias,
+    ese salto se lee como un parpadeo (fundador: "el texto como que parpadea
+    de negro a blanco y queda raro"). El fondo tiene que seguir siendo un
+    salto — si se difuminara, habría un instante con dos zonas oscuras a
+    medias, la pastilla ya llegada y el fondo propio entrando — pero el texto
+    no tiene ese problema, así que gana un fundido real: `color .15s .3s`.
+    Medido con Playwright: el fondo salta en el mismo fotograma de siempre;
+    el color pasa por ocho tonos intermedios antes de llegar a blanco puro,
+    ~150ms después.
+12. **«Recomendaciones» también sale de la cabecera** (fundador: "Recomendaciones
+    ya no apunta a nada en el header. Lo quitamos de momento"). Su ancla,
+    `#recomendaciones`, era la sección SPOTLIGHT — retirada de la portada en
+    HOME-2026-08 (log §158) — así que llevaba desde entonces a ningún sitio.
+    Fuera de `PUBLIC_NAV_ITEMS`, "de momento": si una sección futura gana un
+    ancla equivalente, el enlace puede volver.
+13. **La escena 0 de la demo del hero, «La respuesta», se rediseña entera.**
+    Antes de tocar código se probaron cuatro direcciones como capturas en el
+    chat: A (burbujas de chat + insignia), B (el 11/14 primero, como
+    veredicto), C (el hueco marcado dentro de la propia frase) y D (mezcla de
+    A+B con la fila de marca más visible). El fundador: "Probamos D. Recuerda
+    poner tanto la pregunta como la respuesta en burbujas" — el mock de D
+    sólo llevaba la respuesta en burbuja; la versión final lleva las dos,
+    pregunta alineada a la derecha (quien pregunta es el usuario, no la marca
+    ni la IA) y respuesta a la izquierda con el logo de ChatGPT.
+
+    La fila de marca sube de peso — favicon de 26 a 32px, nombre en
+    `--font-display`, y una pastilla «Tu marca en GenScore» donde antes decía
+    «La marca que analizamos» — porque sin eso la escena podía leerse como
+    "así responde ChatGPT" en vez de "esto es lo que ve quien gestiona IKEA en
+    GenScore" (motivo explícito del fundador al pedir la mezcla A+B). El
+    11/14 en rojo, con la tipografía de titulares, es lo primero que se lee
+    después de la marca — no hace falta leer la respuesta de ChatGPT para
+    entender el golpe.
+
+    La antigua caja de aviso (`.lp-hx-foco`, una fila ancha con icono + dos
+    líneas de texto) pasa a ser una insignia que cuelga de la esquina de la
+    burbuja de respuesta — un solo objeto visual en vez de dos cajas
+    apiladas, con el mismo rebote de entrada de antes. **Sigue usando el
+    mismo `id="hx-foco"`** aunque cambie de clase y de forma: es a donde
+    apunta el cursor de esta escena (`hero-demo.tsx`, `ESCENAS[0].apunta`) y
+    lo que `tests/pilot/journeys/onboarding-tour.spec.ts` comprueba
+    textualmente (`.toContainText("no aparece")`) — cambiar el id habría
+    dejado el cursor en reposo y la pasada del piloto rota, en silencio,
+    hasta la siguiente vez que alguien mirara esa captura. Por la misma
+    razón, `.lp-hx-texto` (el párrafo con «Maisons du Monde», que esa misma
+    pasada comprueba contra el HTML servido) conserva su nombre aunque ahora
+    viva dentro de la burbuja en vez de dentro de una tarjeta con borde.
+    Verificado con Playwright en 375/768/1280px: el cursor cae a menos de 1px
+    del centro real de la insignia en las tres.
+14. **Tres retoques sobre la D, mirando la captura real.** El fundador, sobre
+    la propia demo: "En la pill de Ikea me gusta un rojo no tan llamativo,
+    como el de la maqueta. Puedes poner preguntas donde IKEA no aparece a la
+    derecha de 11/14. Y poner debajo el gráfico de las 11/14 barras."
+    - La insignia pasa de relleno rojo sólido + texto blanco a
+      `--neg-soft`/`--neg-ink` — los mismos tokens que ya llevaba la caja de
+      aviso ANTES de este rediseño, no un rojo nuevo. Relleno vivo con texto
+      blanco leía «llamativo» de más para algo que aparece solo, colgado de
+      la esquina de una tarjeta blanca.
+    - La frase «preguntas donde IKEA no aparece» deja de forzar su propia
+      línea (`flex-basis: 100%` en `.lbl`) y pasa a fluir a la derecha del
+      11/14, envolviendo sola si el ancho no da — no es un salto fijo, es
+      flujo normal.
+    - La tira de 14 barras de la alternativa B —descartada en la D por
+      espacio— vuelve, debajo del número: 11 en rojo, 3 en `--line-strong`.
+      Ella sí fuerza su propia línea, porque tiene que quedar clavada bajo el
+      11/14 y no colarse junto a la frase si hay hueco.
+15. **El titular pasa a 84px, pero no a peso 900 — ese peso no existe.** El
+    fundador aprobó "Bricolage 84/900" tras comparar cuatro variantes
+    servidas como capturas en el chat. La comparativa estaba mal etiquetada
+    en dos sentidos, encontrados al intentar cargar el peso de verdad
+    (`next/font` rechazó el build: "Unknown weight 900 for font Bricolage
+    Grotesque. Available weights: 200, 300, 400, 500, 600, 700, 800,
+    variable" — confirmado también contra la API pública de Google Fonts,
+    que devuelve 400 Missing font family para ese peso). Primero, Bricolage
+    Grotesque no tiene corte 900 en ningún sitio, ni siquiera en la variable
+    font, así que lo que se vio en la comparativa era negrita **sintética**
+    del navegador, no un peso real. Segundo, `.lp-h1` nunca tuvo su propia
+    `font-family` — BRAND-5b (línea "El titular (`.lp-h1`) mantiene el peso
+    de la tipografía existente del sitio") dejó el titular deliberadamente en
+    Hanken Grotesk, no en Bricolage — y el guion de comparación dejaba
+    `fontFamily` sin tocar, así que las tres variantes etiquetadas "Bricolage"
+    eran en realidad Hanken Grotesk, que tampoco tiene corte 900. `.lp-h1`
+    queda en `font-size: 84px; font-weight: 800` (el peso real más grueso
+    disponible), sin tocar `font-family` ni la decisión de BRAND-5b.
+    Verificado en escritorio y móvil (el override móvil sólo toca
+    `font-size`, así que peso/tracking/interlineado heredan de la regla base
+    sin más cambios).
+16. **El campo del hero vuelve a llevar al registro, no al comprobador
+    gratuito.** HOME-2026-08 Fase A (log §157) había cambiado el destino a
+    `/gratis/aparece-mi-marca-en-chatgpt` — "compruébalo ahora mismo, sin
+    cuenta". El fundador pide revertirlo: "quiero que al introducir el
+    dominio vaya a la pantalla de registro, como antes. Como hace Semrush" —
+    cuyo CTA de portada lleva directo al alta. `HeroDomainField.start()` pasa
+    a `router.push("/signup")` siempre (antes construía la URL del
+    comprobador, con o sin el dominio en `?d=`); el arrastre del dominio a
+    `localStorage` (`PENDING_DOMAIN_KEY`, consumido por el asistente de alta)
+    no cambia — es el mecanismo que ya existía antes de Fase A y sigue siendo
+    el que lleva el dominio hasta el asistente tras el registro y la
+    confirmación por correo. El botón recupera su copy anterior a Fase A,
+    "Analiza gratis" (ya usado así en los fixtures del piloto). El
+    comprobador gratuito no se retira: sigue existiendo en su propia URL,
+    sólo deja de ser el destino del hero.
+17. **La demo del hero crece en escritorios grandes.** El fundador comparó
+    capturas de la portada propia contra la de Semrush: su panel de producto
+    es notablemente más ancho que el titular; el nuestro estaba igualado al
+    ancho del titular (820px, `.lp-hero-content`) en vez de al ancho que
+    `.lp-shot` ya permitía (1060px). `.lp-hx` gana un `@media (min-width:
+    1200px) { max-width: 1060px }` — el mismo ancho que `.lp-shot` ya tenía
+    disponible, ningún nivel nuevo. Por debajo de 1200px el marco sigue
+    igualado al titular, sin cambios. Verificado con Playwright: 1060px de
+    ancho real a 1280 y 1440px, sin cambios en 768/375.
+18. **La píldora del campo del hero sube de sombra para leerse con el mismo
+    bisel que la demo.** El fundador, comparando contra Semrush: "No veo en
+    la captura que hayas conseguido el mismo bisel que Semrush". Medido:
+    `.lp-field-wrap` llevaba `0 6px 28px rgba(...,.08)` — casi invisible sobre
+    el degradado azul claro del hero (`.lp-hero--home`) — mientras
+    `.lp-hx-dev` lleva `0 40px 90px rgba(...,.16)`, mucho más opaca y grande.
+    El borde no era el problema (`--line-strong` en la píldora es de hecho más
+    oscuro que `--line` en el marco); la sombra sí. Sube a
+    `0 24px 56px rgba(...,.16), 0 6px 16px rgba(...,.07)` — a medio camino
+    entre la antigua y la del marco, sin llegar a igualarla del todo porque es
+    un elemento mucho más pequeño. Se cambia en los dos sitios donde vive el
+    mismo valor duplicado a propósito: `.lp-field-wrap` en escritorio y
+    `.lp-field` en móvil (el «cromado» se mueve del envoltorio al campo según
+    la anchura; ver comentario en `app/globals.css`). Verificado con capturas
+    reales en escritorio y móvil, enviadas al fundador antes de hacer commit.
+19. **La tira de promoción anuncia la rebaja de lanzamiento, con rotación
+    vertical.** Se propusieron 3 alternativas ya sobre la cabecera y colores
+    reales (texto simple, icono fijo, pill de descuento); el fundador eligió
+    la del pill: "Me quedo con V3, pero es hasta el 1 de septiembre" —
+    corrige la fecha de la propuesta original (1 de diciembre). `PromoStrip`
+    (`components/landing/session-ctas.tsx`) alterna «7 días de Pro · Sin
+    tarjeta» y «−67% · Pro a 59€/mes hasta el 1 de septiembre» con un solo
+    reloj CSS (`lp-promo-cycle`, `animation-delay` negativo en el mensaje B
+    para que nunca arranquen superpuestos — mismo mecanismo que
+    `.lp-hx-avance`, log §159). `prefers-reduced-motion` congela en el
+    primer mensaje y oculta el segundo entero, verificado con
+    `reducedMotion: "reduce"` en Playwright.
+
+    **Precio real, no decorativo — confirmado explícitamente antes de
+    implementar.** Anunciar «59€/mes» en la portada pública sin que el
+    checkout de Stripe cobre ese precio sería la clase de incidente que
+    CLAUDE.md prohíbe ("no fake product behavior"): quien viera la tira y
+    pagara, pagaría 179€. Se preguntó directamente antes de tocar código; el
+    fundador: "Estoy implementando estos precios en otra sesión. Puedes
+    publicar sin problema". La mecánica de precios de Stripe (BILLING-STRIPE-1
+    ampliado) se coordina en paralelo, fuera de este PR — este cambio es sólo
+    la tira de marketing, no toca `lib/billing/**` ni Stripe.
+20. **Cuatro retoques finos sobre el hero y la escena 0, mirando la captura
+    real.** El fundador: "En escritorio da unos pixeles más de aire entre
+    input, titulo, subtitulo y animación. En la animación, baja un poco la
+    pregunta, está muy pegada al gráfico de barras. La pregunta debe estar en
+    una burbuja, como en la maqueta. El gráfico de barras, un rojo que sea
+    algo menos llamativo."
+    - **Ritmo del hero, sólo escritorio.** `.lp-lead`/`.lp-hero-form`/
+      `.lp-shot` ganan `margin-top` mayor bajo `@media (min-width: 901px)` —
+      28/38/64px, antes 22/30/54. El móvil no se toca: ya tenía su propio
+      ajuste de aire (2026-08-24, item 6).
+    - **La burbuja de pregunta baja.** `.lp-hx-verdict` (el bloque del 11/14
+      y sus 14 barras) sube su `margin-bottom` de 16 a 26px.
+    - **La burbuja de pregunta, encontrada rota.** Su fondo era
+      `var(--surface-2, #f4f5f7)` — pero `--surface-2` SÍ está definida
+      (#fbfbfd), así que el *fallback* nunca se aplicaba: una burbuja más
+      clara que el propio `--canvas` de la escena (#f6f7f9), casi invisible.
+      Es la explicación técnica de por qué "no estaba en una burbuja" pese a
+      que el CSS decía lo contrario. Pasa a `#e7e9ee`, un gris con contraste
+      real contra el canvas (6,62:1 el texto encima, sobre AA).
+    - **El rojo de las 14 barras se desatura.** De `#b3202e` (el mismo que
+      lleva el "11" grande) a `#bf5a63` — el número grande no se toca, sólo
+      las barras, que es lo único que pidió el fundador.
+    Verificado con capturas reales en escritorio y móvil antes de hacer
+    commit.
+21. **La tira de promoción dice cuánto dura el precio, no sólo hasta cuándo
+    se puede contratar.** El fundador: "Habría que decir en el CTA que la
+    promo de pro a 59€ dura 6 meses". "Hasta el 1 de septiembre" es la
+    ventana de alta; "6 meses" es cuánto dura el precio una vez dado de
+    alta — dos plazos distintos, y sin el segundo el primero se podía leer
+    como que el precio sube ese mismo día para quien ya se había apuntado.
+    El mensaje B pasa a "Pro a 59 €/mes, 6 meses · hasta 1 sept.".
+
+    **Se acortó el texto de fecha para que quepa en 320px.** La primera
+    redacción ("...durante 6 meses · hasta el 1 de septiembre") cabía de
+    sobra a 375px pero **desbordaba silenciosamente a 320px** (iPhone SE y
+    similares) — visible en captura, con `−67%` cortado a `7%` por un lado y
+    "septiembre" cortado a "septiem" por el otro. `.lp-promo-row` es
+    `position:absolute; inset:0` dentro de `.lp-promo-track`, así que su
+    caja no crece con el texto; y `.lp-promo` recorta con `overflow:hidden`
+    para la animación vertical, así que el desbordamiento horizontal no
+    aparece en `scrollWidth` — el mismo patrón de "recorte que no se ve
+    mirando el documento" que ya documenta este fichero más arriba. Se
+    acorta a "hasta 1 sept." y "6 meses" sin "durante"; medido con la fila
+    escapada de su `position:absolute` (para leer su ancho real de
+    contenido): 257px al tamaño de fuente móvil (11,5px) contra 292px
+    disponibles a 320px de viewport. Verificado sin recorte a
+    320/375/1440px.
+22. **La tira de promoción pasa a rotar TRES mensajes, no dos: Starter
+    también lleva su rebaja.** El fundador: "-67% Starter a 45€ (tachado)
+    19€ y Pro a 179€ (tachado) 59 €/mes, durante 6 meses · hasta 1 sept."
+    — pedido como una sola frase con los dos planes.
+
+    **Por qué se separa en dos filas en vez de una frase combinada.** Medido
+    igual que el item 21: esa frase no cabe en la tira ni de lejos a 320px
+    (el tramo de Pro solo ya ocupaba 257px de los 292px disponibles; el de
+    Starter añade una cantidad comparable). Y hay un segundo problema, de
+    exactitud, no de espacio: **−67% es el descuento real de Pro (179→59),
+    pero el de Starter (45→19) es −58%, no −67%.** Una única insignia
+    "−67%" cubriendo los dos planes habría sido una cifra falsa para uno de
+    ellos — CLAUDE.md, "no fake metrics". La solución reutiliza la rotación
+    ya construida en el item 19/21: de 2 mensajes (ensayo / Pro) pasa a 3
+    (ensayo / Pro / Starter), cada uno con su insignia exacta. El reloj CSS
+    pasa de un ciclo de 9s con dos filas a 13.5s con tres, mismos keyframes
+    reescalados a tercios (0/-4.5s/-9s de retraso) — mismo mecanismo,
+    generalizado.
+
+    **El precio anterior tachado, como pidió el fundador** ("(tachado)").
+    `<s>179 €</s> 59 €/mes` y `<s>45 €</s> 19 €/mes` — el precio de antes se
+    ve, no solo se dice "antes costaba más"; y con el precio de antes visible
+    al lado del de ahora, cada insignia de porcentaje queda verificable a
+    ojo, no es una afirmación suelta.
+
+    Verificado sin recorte a 320/375/1440px (las tres filas), y con
+    `reducedMotion: "reduce"`: el mensaje del ensayo se congela quieto, Pro y
+    Starter se ocultan enteros — mismo criterio que el item 19.
+23. **Dos fallos reales en la rotación de tres mensajes, encontrados al
+    pedir el fundador que se vieran menos "raros" los cambios de mensaje.**
+    "que tarde un par de segundos en rotar el primer mensaje, sino queda
+    raro, se tapan" — y sí, se tapaban: dos fallos distintos, uno de
+    espaciado y uno de temporización.
+
+    - **La coma se separaba de "€/mes".** `.lp-promo-row` es
+      `display:flex; gap:7px`, y en flexbox **cada nodo de texto entre
+      elementos inline es su propio ítem flex** — así que el `gap` se
+      colaba también entre `</b>` y la coma que lo seguía en el marcado,
+      aunque en el JSX no hubiera espacio ahí. Arreglado envolviendo la
+      frase completa (después del badge) en un único `<span>`: el badge y
+      la frase pasan a ser los dos únicos ítems flex, y dentro de la frase
+      el texto fluye normal, sin gaps inyectados entre palabras.
+    - **Los mensajes SÍ se superponían al arrancar, y por eso "el primero
+      rotaba demasiado rápido".** `animation-delay` NEGATIVO adelanta la
+      animación esa fracción de su propio ciclo — no la retrasa. Con las
+      filas B/C a -4.5s/-9s sobre un ciclo de 13,5s, a t=0 la fila B ya
+      estaba en el 33% de su recorrido; los keyframes del item 22 tenían la
+      salida en 31%–36%, así que a t=0 la fila B estaba A MITAD de su
+      propia transición de salida — parcialmente visible y solapada con la
+      fila A, que sí estaba en su fotograma inicial. Se corrige separando
+      la salida (29%–33%) del punto de arranque de la fila siguiente (33%
+      exacto), con margen — a t=0, B cae justo en el límite ya oculto y C
+      (fase 66,7%) cae de lleno en la zona oculta. Verificado leyendo
+      `element.getAnimations()[0].currentTime` en vez de reproducir la
+      animación de verdad —Chromium headless no la reproduce con
+      fidelidad— en 16 instantes a lo largo del ciclo completo: cada
+      mensaje se sostiene sólido ~3s (más que "un par de segundos") y el
+      resto del tiempo su opacidad y la de los otros dos suman como mucho
+      ~0,96, nunca dos filas a la vez cerca de opacidad 1.
+24. **Hueco vacío entre el párrafo y el carrusel de «El cambio de reglas» en
+    móvil.** El fundador mandó una captura real de 375px con un círculo
+    rojo sobre la zona vacía: "Quita este espacio." Medido en el navegador,
+    no a ojo: `.lp-rules .lp-sec-head` lleva `margin-bottom: 64px` — bien en
+    escritorio, donde separa el párrafo directamente de las tarjetas — pero
+    en móvil antes de las tarjetas va `.lp-rules-navslot` (el hueco
+    reservado para los mandos del carrusel: 40px + 30px de margen propio),
+    así que los mismos 64px se sumaban a ese hueco y dejaban ~104px vacíos
+    antes de que aparecieran los puntitos. Se recorta a 20px sólo dentro de
+    `@media (max-width: 560px)`, junto a la regla del `navslot` que ya vivía
+    ahí — el valor de escritorio no se toca.
+
+    **Y un salto de línea antes de "O estás en esa frase, o no existes."**
+    — pedido en el mismo mensaje, va como `<br />` explícito entre las dos
+    frases del párrafo.
+25. **El turno de cada mensaje de la tira de promoción se acorta 1,5s.**
+    El fundador: "la primera rotación tarda mucho, bájale un segundo y
+    medio" — sobre los 4,5s que duraba el turno de cada fila (item 23).
+    Como los porcentajes de los keyframes son relativos a la duración
+    total, no hizo falta tocarlos: sólo el ciclo (13,5s→9s) y los
+    `animation-delay` de B/C (-4,5s/-9s → -3s/-6s), manteniendo el mismo
+    tercio de ciclo cada fila. Turno nuevo: 3s (antes 4,5s). Reverificado
+    con el mismo método del item 23 —`getAnimations()[0].currentTime` en
+    varios instantes, no reproducción real— para confirmar que el recorte
+    no reabre el solape que ese item ya había cerrado: a t=0 sigue sin
+    haber dos filas simultáneas cerca de opacidad 1.
+26. **El mensaje del ensayo gratis lleva su propio badge, como Pro y
+    Starter.** El fundador: "Mete '7 días de Pro gratis' y gratis en un
+    badge como en los otros rotativos". Pasa de "7 días de Pro · Sin
+    tarjeta" (una sola frase suelta) a badge "Gratis" + "7 días de Pro" —
+    misma estructura de dos ítems flex (`.lp-promo-pill` + `<span>`) que ya
+    usan las filas B y C desde el item 23, así que las tres filas comparten
+    ahora el mismo patrón visual. "Sin tarjeta" se retira del mensaje —
+    Verificado sin recorte a 320/375/1440px.
+27. **Más aire entre el campo del hero y la demo, en escritorio.** El
+    fundador mandó una captura del preview real: "baja un poco la animación
+    para separarla del input y dejarla exactamente así". `.lp-shot`
+    (`@media (min-width: 901px)`, item 20 de este mismo §) sube de
+    `margin-top: 64px` a `84px`. Verificado midiendo el hueco real entre
+    `.lp-engines` y `.lp-shot.lp-hx` (64px → 84px) y con captura del hero
+    completo antes de hacer commit.
+28. **La tira de promoción pasa de crema (`#fff3dc`) a un degradado
+    azul/índigo.** El fundador, sobre una captura del preview de PR #470
+    (`/pricing`, banda de precios): "me gusta el color de la banda superior
+    azul que tenemos aquí" — y tras ver un mockup comparativo inyectado con
+    Playwright sobre el dev server (sin tocar fuente), confirmó "ejecuta la
+    tira". `.lp-promo` pasa a
+    `background: linear-gradient(120deg, #312e81, #4f46e5 60%, #6d28d9)` con
+    `color: #fff`, mismo degradado exacto que la banda de PR #470. Cambios
+    dependientes para mantener contraste: `.lp-promo-pill` (fondo
+    `rgba(255,255,255,.18)`, antes `#8a5a08` sólido), `.lp-promo-row s`
+    (tachado ahora en `rgba(255,255,255,.7)` en vez de heredar el color de
+    texto con opacidad reducida) y `.lp-promo-row b` (precio en negrita
+    explícito a `#fff`, antes heredaba el `color` del contenedor). Tensión
+    con `docs/brand/brand-guidelines.md` señalada dos veces en la
+    conversación (la v3 retira índigo y degradados: "colores planos, no
+    degradados") — se aplica igual por ser una orden explícita y acotada a
+    esta tira concreta, no una reintroducción general de la paleta v2 en el
+    resto del producto. Verificado con Playwright a 320/375/1440px, las tres
+    filas (ensayo, Pro, Starter) pausando `getAnimations()` en cada fase, y
+    con `prefers-reduced-motion: reduce`; `pnpm test && pnpm run validate`
+    en verde.
+
+    **Pregunta abierta del fundador, sin cambio de código todavía:** cuál
+    acentuar en el H1 del hero — "la IA" (como ahora, con
+    `.lp-h1-accent`/`--brand-blue`), "tu marca", o ambas. Sigue pendiente de
+    respuesta/confirmación, no se ha tocado `landing-page.tsx` para esto.
+    Recomendación dada: mantener "la IA" — es lo que aporta información
+    nueva en el titular, y acentuar las dos frases diluiría el énfasis.
+29. **El ancla "Cómo funciona" ya tenía desplazamiento suave** — verificado a
+    petición del fundador ("el ancla a cómo funciona, que sea un efecto de
+    desplazamiento suave hasta esa zona de la página"), pero `html {
+    scroll-behavior: smooth }` ya estaba en `app/globals.css` desde el
+    2026-08-24 (fundador: "que los enlaces vayan con ancla y efecto
+    suavizado a la landing"), cubriendo tanto el ancla `#como` como saltar
+    ahí desde otra página (`/#como`). No hizo falta ningún cambio de código;
+    se confirmó con Playwright que `getComputedStyle(document.documentElement)
+    .scrollBehavior === "smooth"` y que el enlace del nav sigue apuntando a
+    `#como`.
+30. **PROMO-EVERYWHERE-1 — la tira de promoción sale en las siete
+    superficies públicas, no sólo en la home.** El fundador: "lleva la
+    misma tira de promocion a todas las urls públicas si el usuario no está
+    logado". `PromoStrip` vivía sólo dentro de `.lp-hero--home`
+    (`LandingPage`); se movió a `PublicHeader` (`components/marketing/
+    public-header.tsx`) — la misma fuente única de la que ya cuelgan
+    `PUBLIC_NAV_ITEMS`, GENSCORE-HEADER-1 — así que ahora se monta también
+    en `/pricing`, `/geo`, `/blog`, `/comparativas`, `/glosario`, `/docs` y
+    las páginas legales, que comparten ese componente. `LandingPage` deja de
+    importar y renderizar `PromoStrip` directamente. No es literalmente
+    "sólo si no está logado": se mantiene el gating existente de
+    `showsPromoStrip` (`lib/account-chip.ts`, GENSCORE-HEADER-3,
+    2026-08-12) — anónimo o Free logado la ven, cualquier plan de pago no —
+    porque es una decisión ya tomada y documentada, no algo que este cambio
+    deba reabrir. `.lp-promo` no depende de estar dentro de `.lp-hero--home`
+    (fondo y tipografía propios), así que el movimiento no tocó CSS.
+    Verificado con Playwright en las seis superficies (home, /pricing, /geo,
+    /blog, /comparativas, /privacidad): una sola `.lp-promo` por página, sin
+    errores de consola, cajón móvil de `/pricing` abre con normalidad.
+    `pnpm test && pnpm run validate` en verde.
+31. **`main` trae PR #470 (PRICING-PROMO-1 Fase C) — colisión de §147-152 con
+    esta rama, resuelta al fusionar.** Ambas ramas reclamaron los mismos
+    números de sección de forma independiente desde que divergieron: #470
+    usó §147-152 para su propio trabajo (`PROMPT-DRAWER-TRUTH-1`,
+    `HEADER-FULL-WIDTH-1`, `PRICING-PROMO-1`...), y esta rama usaba esos
+    mismos números para HOME-2026-08 (Fase B2/A2, la tira de promo). Exacto
+    el escenario que la propia regla de "Cierre de fase" de CLAUDE.md avisa
+    que git no para. Como los de #470 ya estaban en `main`, se renumeran los
+    de esta rama — nunca al revés — preservando el orden relativo: §147→153,
+    §148→154, §149→155, §150→156, §151→157, §152→158. Además de las
+    cabeceras, se corrigieron todas las citas `§NNN` en el propio
+    `design-decisions-log.md`, `CLAUDE.md` (fila "Portada" del mapa de
+    zonas y fila "Onboarding"), `.claude/rules/{styles,onboarding}.md`,
+    `components/landing/{hero-demo-scenes,landing-page}.tsx`,
+    `components/marketing/public-header.tsx` y
+    `tests/pilot/journeys/onboarding-tour.spec.ts` — verificado con
+    `grep -rn "§14[7-9]\|§15[0-2]"` hasta que sólo quedaron las citas
+    genuinas de #470. Dos de esas correcciones no eran mecánicas: dos citas
+    del código (`hero-demo-scenes.tsx`, "cifras que se repiten... §147") ya
+    apuntaban, antes de esta rama tocar nada, a una sección distinta de la
+    que su propio nombre sugería — se corrigieron por coincidencia de
+    contenido, no por aritmética de renumerado.
+
+    **Y la tira común sobrevive al merge, como pidió el fundador**
+    ("importante mantener la tira comun en /precios"): verificado en
+    `/pricing` tras fusionar `main` — `.lp-promo` (la común, en
+    `PublicHeader`) sigue montada, y `.price-promo-band` (la propia de
+    #470, gated por `isPromoActive()` + cupón de Stripe) no se pinta en
+    local por no haber cupón de prueba configurado en el entorno — caída
+    correcta hacia "no hay promo", no un fallo. `pnpm test` (203 ficheros,
+    2832 pruebas, incluye `tests/log-numbering.test.ts`) y
+    `pnpm run validate` en verde tras el merge.
+
+    **Pasó una segunda vez, un escalón más tarde, mientras se resolvía la
+    primera.** Entre fusionar `main` y empujar el resultado, `main` avanzó
+    otra vez (PR #473, ONBOARDING-TOUR-PERSIST-1) y reclamó §153 — el mismo
+    número al que esta rama acababa de renumerar su primera colisión. Misma
+    corrección, un paso más: los §153-158 de esta rama pasan a §154-159, y
+    la fila "Onboarding (tour)" del mapa de zonas de CLAUDE.md pasa a listar
+    **las dos** fases cerradas (ONBOARDING-TOUR-PERSIST-1 en negrita, por
+    ser la más reciente, y "el tour deja la portada" detrás) en vez de que
+    una sustituya a la otra. Ilustra la propia advertencia de la regla de
+    "Cierre de fase": mientras una rama fusiona `main` para resolver una
+    colisión, `main` puede volver a moverse por debajo.

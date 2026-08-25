@@ -9,9 +9,7 @@ import { PENDING_DOMAIN_KEY } from "@/lib/onboarding/pending-domain";
 
 const HERO_DOMAIN_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
 
-const FREE_CHECKER_PATH = "/gratis/aparece-mi-marca-en-chatgpt";
-
-/** Los tres motores que el comprobador consulta de verdad. */
+/** Los tres motores que GenScore analiza de verdad. */
 const ENGINES = [
   { name: "ChatGPT", src: "/brand/engines/chatgpt.svg" },
   { name: "Gemini", src: "/brand/engines/gemini.svg" },
@@ -40,18 +38,14 @@ const ENGINES = [
  * parece un dominio —mismo validador que usa el asistente, no una copia—:
  * arrastrar basura sería peor que no arrastrar nada.
  *
- * **HOME-2026-08 Fase A: el botón lleva al comprobador, no al registro.** El
- * diseño aprobado cambia la promesa del hero — de «date de alta y analiza» a
- * «compruébalo ahora mismo, sin cuenta»—, y el comprobador gratuito existe y es
- * real (FREE-CHECKER-1). El dominio viaja DOS veces y las dos hacen falta:
- * por la URL (`?d=`) para que el comprobador salga con el campo puesto, y por
- * `localStorage` porque el alta sigue estando después y el asistente lo sigue
- * recogiendo igual.
- *
- * **Rellena, pero no lanza.** Llegar por un enlace no dispara la comprobación:
- * es una llamada real a un LLM con tope diario, y auto-ejecutarla desde un
- * parámetro convierte cualquier enlace en una forma de gastarle el cupo a
- * otro. El visitante llega con su dominio escrito y pulsa.
+ * **HOME-2026-08 Fase A llevó el botón al comprobador; revertido 2026-08-24.**
+ * Fase A cambiaba la promesa del hero de «date de alta y analiza» a
+ * «compruébalo ahora mismo, sin cuenta», usando el comprobador gratuito
+ * (FREE-CHECKER-1). El fundador pidió volver al registro directo — mismo
+ * patrón que Semrush, cuyo CTA de portada lleva al alta, no a una
+ * comprobación anónima — así que el botón vuelve a `/signup`. El comprobador
+ * gratuito sigue existiendo y accesible por su propia URL; sólo deja de ser
+ * el destino del hero.
  */
 /**
  * `withEngines` existe para el CIERRE de la portada (Fase C), que usa el mismo
@@ -76,11 +70,7 @@ export function HeroDomainField({ withEngines = true }: { withEngines?: boolean 
       // Navegador sin almacenamiento: se sigue al registro igual. Perder el
       // arrastre es un incordio; bloquear el alta sería un fallo.
     }
-    router.push(
-      isWellFormedDomain(candidate)
-        ? `${FREE_CHECKER_PATH}?d=${encodeURIComponent(candidate)}`
-        : FREE_CHECKER_PATH
-    );
+    router.push("/signup");
   }
 
   return (
@@ -116,7 +106,7 @@ export function HeroDomainField({ withEngines = true }: { withEngines?: boolean 
         )}
       </div>
         <button type="button" className="lp-cta lp-field-cta" onClick={start}>
-          Comprobar gratis
+          Analiza gratis
         </button>
       </div>
       {withEngines && (

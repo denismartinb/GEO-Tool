@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   WELCOME_TOUR_SCRIM,
   assertPageIsHealthy,
@@ -101,61 +101,140 @@ test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra",
 });
 
 /**
- * El mismo tour, en su otra superficie: el hero de la landing pública.
+ * La DEMO del hero de la portada (HOME-2026-08 Fase A2).
  *
- * Existe porque el piloto **no visitaba `/`** — cubre el blog, /geo, docs,
- * comparativas y las legales, pero no la portada. Media fase vive ahí (la
- * captura estática del hero se sustituyó por el tour), así que un PILOT PASS
- * sin esta pasada estaba certificando sólo la mitad. Es exactamente el hueco
- * que el CLAUDE.md manda declarar en vez de dar por bueno.
+ * **Sustituye a la pasada del tour en la landing, que ya no existe ahí.** El
+ * artboard aprobado pone en ese hueco una historia de cinco escenas, no el
+ * tour; el tour sigue vivo y sigue cubierto por la pasada de arriba, en su
+ * sitio de verdad — el popup de bienvenida de la consola. Lo que cambia es que
+ * la portada estrena una pieza y no puede quedarse sin mirar: media Fase A2
+ * vive ahí, y un PILOT PASS sin esto certificaría la mitad.
  *
- * SCOPE GUARD: página pública, sólo navegación y los controles del propio
- * tour. No envía nada.
+ * **Lo que se comprueba es lo que esta pasada PUEDE ver.** No se comprueba que
+ * la reproducción automática espere a que la demo entre en pantalla:
+ * `visitAsUser` redimensiona el viewport para capturar la página entera, con lo
+ * que la demo pasa a verse y arranca durante la propia captura — la
+ * comprobación pasaría siempre sin demostrar nada, que es peor que no tenerla.
+ * Es la misma limitación declarada que tenía la pasada del tour.
+ *
+ * SCOPE GUARD: página pública, sólo navegación y el raíl de la propia demo.
+ * No envía nada.
  */
-test("el tour del hero arranca al verse entero y para en el paso 1", async ({ page }, testInfo) => {
-  const findings = await visitAsUser(page, testInfo, "/", "landing-hero-tour", {
-    describedAs: "el tour dentro del marco del hero de la landing",
-    anyOf: [{ selector: ".ptour--hero .pt-stage" }]
+/**
+ * Cada escena declara a qué elemento apunta su cursor. Está aquí y no
+ * importado del componente a propósito: si alguien renombra un `id` en el
+ * marcado, esta pasada tiene que ROMPERSE, no seguirle la corriente.
+ */
+const DIANA_POR_ESCENA = ["hx-foco", "hx-dial-1", "hx-fila-tuya", "hx-generar", "hx-evo"] as const;
+
+/**
+ * Las animaciones de una escena son CSS con `fill: both` y a los ~2,5 s dejan
+ * un fotograma final estable — es el contrato que hace determinista lo que se
+ * fotografía (`.claude/rules/onboarding.md`, «Un solo reloj»). Sin esta espera
+ * la captura salía a mitad de camino: el 2026-08-23 las tres capturas del
+ * cursor lo enseñaban EN VUELO, a 85px de lo que señalaba, porque
+ * `captureInteraction` corría en cuanto la clase `on` aparecía.
+ */
+async function asentarEscena(page: Page) {
+  await page.waitForTimeout(2_600);
+}
+
+/**
+ * El cursor apunta a ELEMENTOS, no a coordenadas — el invariante que el tour ya
+ * documenta y que la demo hereda. Se comprueba midiendo: el centro de la diana
+ * contra la traslación real del cursor, con holgura para el último fotograma de
+ * la animación de entrada. Un `id` mal escrito deja el cursor en reposo (fuera
+ * del marco) y eso lo caza esta distancia, no una captura que nadie abre.
+ */
+async function esperarCursorEn(page: Page, id: string) {
+  const medida = await page.evaluate((diana) => {
+    const caja = document.querySelector("#lp-hx");
+    const cursor = document.querySelector(".lp-hx-cur");
+    const meta = document.getElementById(diana);
+    if (!caja || !cursor || !meta) return { falta: { caja: !caja, cursor: !cursor, meta: !meta } };
+    const c = caja.getBoundingClientRect();
+    const m = meta.getBoundingClientRect();
+    const t = new DOMMatrix(getComputedStyle(cursor).transform);
+    return {
+      activo: cursor.classList.contains("activo"),
+      dx: Math.abs(t.m41 - (m.left - c.left + m.width / 2)),
+      dy: Math.abs(t.m42 - (m.top - c.top + m.height / 2))
+    };
+  }, id);
+
+  expect(medida.falta, `no se pudo medir el cursor contra #${id}`).toBeUndefined();
+  expect(medida.activo, `el cursor sigue en reposo en vez de señalar #${id}`).toBe(true);
+  // 12px, no 24: medido en 375/768/1280 la distancia real es 0-1px, así que la
+  // holgura es para el redondeo de un runner, no para tapar un desajuste.
+  expect(medida.dx, `el cursor está a ${Math.round(medida.dx!)}px de #${id} en horizontal`).toBeLessThan(12);
+  expect(medida.dy, `el cursor está a ${Math.round(medida.dy!)}px de #${id} en vertical`).toBeLessThan(12);
+}
+
+test("la demo del hero enseña sus cinco escenas y el raíl las gobierna", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/", "landing-hero-demo", {
+    describedAs: "la demo de cinco escenas del hero de la portada",
+    // Contenido real, no un contenedor vacío: si la respuesta de ChatGPT no
+    // está, lo fotografiado es un marco de navegador y nada más.
+    anyOf: [{ selector: "#hx-sc-0 .lp-hx-texto", text: /Maisons du Monde/ }]
   });
   assertPageIsHealthy(findings);
 
-  // NO se comprueba aquí que el tour espere a verse entero antes de arrancar.
-  // Se intentó y sería mentira: `visitAsUser` redimensiona el viewport para
-  // capturar la página completa, con lo que el lienzo pasa a verse entero y el
-  // tour arranca durante la propia captura. La comprobación pasaría siempre sin
-  // demostrar nada, que es peor que no tenerla. Ese arranque está verificado con
-  // Playwright contra el build de producción en local (log §40); aquí se
-  // verifica lo que esta pasada sí puede ver.
-  const typed = page.locator("[data-pt=typed]").first();
-  await page.evaluate(() => {
-    document.querySelector(".ptour--hero .pt-stage")?.scrollIntoView({ block: "center" });
+  // «La escena 0 se sirve puesta» se comprueba EN EL HTML SERVIDO, no en el DOM
+  // vivo. Es donde vive el invariante —lo primero que se ve no puede depender
+  // de hidratar— y además es lo único estable: la demo avanza sola cada 4,6 s,
+  // así que en la página viva la escena 0 ya no está puesta cuando el aserto
+  // llega. Afirmarlo contra el DOM daba un PILOT FAIL que no era del producto
+  // sino del aserto (2026-08-23).
+  const servido = await page.request.get("/");
+  const html = await servido.text();
+  const escena0 = html.match(/<div[^>]*id="hx-sc-0"[^>]*>/)?.[0] ?? "";
+  expect(escena0, "la escena 0 no está en el HTML servido").not.toBe("");
+  expect(escena0, "la escena 0 no se sirve con la clase `on`").toMatch(/class="[^"]*\bon\b/);
+  expect(html, "el golpe de la escena 0 no está en el HTML servido").toContain("IKEA no aparece");
+
+  // El raíl existe, lo pinta la isla y tiene una parada por escena.
+  const pasos = page.locator(".lp-hx-step");
+  await expect(pasos, "el raíl no tiene sus cinco escenas").toHaveCount(5);
+
+  // A partir de aquí se manda a mano: el primer clic apaga la reproducción
+  // automática, y sin eso cualquier aserto sobre «qué escena está puesta» es
+  // una carrera contra el reloj de la demo.
+  await pasos.nth(0).click();
+  await expect(page.locator("#hx-sc-0"), "el raíl no volvió a la escena 0").toHaveClass(/on/, {
+    timeout: 5_000
   });
-  await expect
-    .poll(async () => (await typed.textContent())?.trim().length ?? 0, {
-      message: "el tour del hero no arrancó ni viéndose entero",
-      timeout: 15_000
-    })
-    .toBeGreaterThan(0);
+  await expect(
+    page.locator("#hx-foco"),
+    "el golpe de la escena 0 —que la marca no aparece— no está"
+  ).toContainText("no aparece");
+  await asentarEscena(page);
+  await esperarCursorEn(page, "hx-foco");
+  await captureInteraction(page, testInfo, "landing-hero-demo-escena-1");
 
-  // La pista de «Siguiente» arranca con el paso 1, no al detenerse (fundador,
-  // 2026-08-08) — se comprueba una vez el tour ya está parado, que es el
-  // instante en que más importa que siga puesta.
-  await page.waitForTimeout(7_000);
-  await expect(
-    page.locator(".ptour--hero .pt-dot").first(),
-    "el tour del hero siguió solo más allá del paso 1"
-  ).toHaveClass(/is-on/);
-  await expect(
-    page.locator(".ptour--hero .pt-foot .pt-primary"),
-    "el botón «Siguiente» no llamó la atención al detenerse el tour"
-  ).toHaveClass(/pt-hint/);
-  await captureInteraction(page, testInfo, "landing-hero-tour-paso-1");
+  // Cada parada abre SU escena, y sólo una está puesta a la vez. Es la
+  // comprobación que impide que un raíl con cinco botones abra un marco vacío,
+  // igual que en «Cinco pantallas».
+  for (const [n, id] of [[2, "hx-sc-2"], [4, "hx-sc-4"]] as const) {
+    await pasos.nth(n).click();
+    await expect(page.locator(`#${id}`), `la escena ${n} no se abrió`).toHaveClass(/on/, {
+      timeout: 5_000
+    });
+    await expect(
+      page.locator(".lp-hx-sc.on"),
+      "hay más de una escena puesta a la vez"
+    ).toHaveCount(1);
+    await asentarEscena(page);
+    await esperarCursorEn(page, DIANA_POR_ESCENA[n]);
+    await captureInteraction(page, testInfo, `landing-hero-demo-escena-${n + 1}`);
+  }
 
-  // Y avanza a mano, un paso por clic.
-  await page.locator(".ptour--hero").getByRole("button", { name: /Siguiente/ }).click();
+  // Tocar el raíl apaga la reproducción automática PARA SIEMPRE: quien elige una
+  // escena la está leyendo, y que se la lleve el reloj es lo que hace que una
+  // demo se sienta un anuncio (log §157). Seis segundos es más de un paso
+  // (4,6 s), así que si el reloj siguiera vivo esto lo cazaría.
+  await page.waitForTimeout(6_000);
   await expect(
-    page.locator(".ptour--hero .pt-dot").nth(1),
-    "«Siguiente» no avanzó al paso 2 en la landing"
-  ).toHaveClass(/is-on/, { timeout: 5_000 });
-  await captureInteraction(page, testInfo, "landing-hero-tour-paso-2");
+    page.locator("#hx-sc-4"),
+    "la reproducción automática siguió después de tocar el raíl"
+  ).toHaveClass(/on/);
 });
