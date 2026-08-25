@@ -13645,12 +13645,12 @@ arquitectura alrededor de ellas.
   respaldado que la regla de honestidad del proyecto prohíbe en el propio
   contenido. Se calcula por fecha real (`byMostRecent`), así que se mantiene
   correcto solo con publicar.
-- **Comparativas sigue siendo la segunda sección**, justo después del
-  destacado — no al final como en la maqueta original. Ya había una razón
-  documentada (fundador, 2026-08-11) para que fuera lo primero tras el H1: es
-  el contenido con más intención de compra del portfolio. El destacado nuevo
-  pasa a ser lo primero de la página, así que Comparativas se queda pegada a
-  él en vez de mudarse al fondo.
+- **Comparativas va al final de la página.** La primera versión la dejó como
+  segunda sección, justo tras el destacado, preservando la razón de log §61
+  (es el contenido con más intención de compra, no debería exigir bajar toda
+  la lista). El fundador la reordenó explícitamente al final tras probar el
+  preview — sustituye esa colocación, no la regla de "sin recuento" del mismo
+  §61, que sigue aplicando igual.
 - **Cada cluster es ahora una fila de tarjetas** (`blog-cluster-grid`, hasta 3
   por fila) en vez de una columna vertical de todas. Los artículos que ya
   salieron en el destacado/laterales no se repiten en la fila de su cluster.
@@ -13659,16 +13659,37 @@ arquitectura alrededor de ellas.
   "el índice del blog no publica un recuento de artículos" ya estaba decidido
   (fundador, 2026-08-11, log §61) y sigue aplicando aunque ahora haya menos
   tarjetas visibles por cluster.
-- **"Blog" pasa de enlace suelto a desplegable** en la cabecera pública
-  (`components/marketing/blog-nav-dropdown.tsx`), con las 4 categorías reales
-  de `BLOG_CLUSTERS` + Comparativas — antes esa taxonomía sólo se veía
-  dentro de `/blog`. Solo en escritorio: `MarketingMobileNav` toma una lista
-  plana sin anidamiento, así que en el cajón móvil "Blog" se queda como
-  enlace suelto, sin tocar ese componente.
-- Portadas: sin cambios de fichero ni de recorte. El destacado y los
-  laterales usan el mismo `<BlogCover>`/`.blog-cover` de siempre — sólo varía
-  el tamaño de la tarjeta que lo envuelve, nunca un `object-fit` ni una
-  proporción nueva.
+- **"Blog" es un enlace directo a `/blog`**, con un acento (▾) aparte que abre
+  el desplegable de las 4 categorías reales de `BLOG_CLUSTERS` + Comparativas
+  (`components/marketing/blog-nav-dropdown.tsx`) — antes esa taxonomía sólo se
+  veía dentro de `/blog`. La primera versión envolvía toda la etiqueta "Blog"
+  en el botón del desplegable, así que `/blog` dejaba de ser alcanzable desde
+  la cabecera; el fundador lo encontró al probar el preview y se separó en dos
+  controles. Solo en escritorio: `MarketingMobileNav` toma una lista plana sin
+  anidamiento, así que en el cajón móvil "Blog" se queda como enlace suelto,
+  sin tocar ese componente.
+- **`/blog/[cluster]`** (las 4 páginas de categoría) reutiliza el mismo grid
+  de tarjetas compactas de `/blog` (título + fecha, sin descripción) en vez de
+  una columna de tarjetas grandes con párrafo completo por artículo — "muy
+  feas y mucho texto" (fundador). Al mostrar el cluster entero (no hay límite
+  que redirigir a otra página) no necesita el `--row-cols` dinámico del
+  índice: el grid envuelve solo.
+- **La intro de cada cluster (`pillarIntro`) va en una caja con borde**
+  (`.blog-cluster-intro`, mismo lenguaje que `.blog-index-card`) en vez de
+  párrafos sueltos directamente sobre el fondo — "parece un bloc de notas"
+  (fundador). Dentro, la frase que ya resumía el argumento de cada cluster se
+  resalta en negrita vía un `**bold**` ligero (`renderWithBold` en
+  `app/blog/[cluster]/page.tsx` — no un renderer de markdown completo, solo
+  el único token que usa este contenido), texto ya existente, ninguno nuevo.
+- **`/comparativas` pasa de una `<ul>` de enlaces sueltos a un grid de
+  tarjetas** (`.compare-index-grid`/`.compare-index-card`) — "parece de los
+  años 90" (fundador). Cada tarjeta suma una línea real de qué compara esa
+  página (antes solo llevaba el título), redactada a mano en el propio
+  `COMPARISONS` de `app/comparativas/page.tsx`.
+- Portadas: sin cambios de fichero ni de recorte en ninguna de las páginas
+  tocadas. El destacado y los laterales usan el mismo `<BlogCover>`/
+  `.blog-cover` de siempre — sólo varía el tamaño de la tarjeta que lo
+  envuelve, nunca un `object-fit` ni una proporción nueva.
 
 ### Una trampa de especificidad evitada, no sólo corregida
 
@@ -13699,9 +13720,24 @@ cualificaron con dos clases para ganar por especificidad, no por orden.
   editorial aprobado.
 
 **Comprobado.** `pnpm test` (201 ficheros, 2.814 pruebas) y `pnpm run
-validate` (build + typecheck + lint) en verde.
+validate` (build + typecheck + lint) en verde tras cada una de las seis
+rondas de esta fase. El QA estático (`qa` agent) aceptó la primera versión
+(destacado/filas/desplegable) sin hallazgos bloqueantes, solo dos menores ya
+corregidos (Escape en el desplegable, `priority` en la portada del destacado).
 
-**Pendiente.** Human Gate — capturas del `ux-pilot` contra el preview antes de
-pedir revisión al fundador (la cabecera pública es compartida por las 7
-superficies de marketing, así que el barrido tiene que confirmar que ninguna
-de las otras seis se rompió, no sólo `/blog`).
+**El `ux-pilot` automático nunca llegó a ver el producto en esta fase.** Las
+seis pasadas (una por commit) dieron `PILOT INCONCLUSIVE` por el mismo motivo:
+login del piloto rechazado ("Email o contraseña incorrectos") antes de cargar
+ninguna pantalla. No es un fallo de este PR — el mismo error, a la misma hora,
+tumbó el piloto en 6-7 ramas sin relación alguna (`claude/home-cinco-pantallas`,
+`claude/pricing-promo-fase-c`, etc.), la firma de un problema de credenciales o
+de bloqueo por reintentos a nivel de cuenta, no de código. No se ha tocado
+ningún secreto ni fichero de auth para "arreglarlo": queda fuera del alcance
+de este PR y de esta sesión.
+
+**El Human Gate se hizo con verificación manual del fundador**, no con el
+piloto: probó el preview a mano en cada una de las seis rondas y fue quien
+señaló los tres hallazgos de esta fase que el piloto nunca pudo ver (el
+desplegable atrapando el clic de "Blog", la caja de Comparativas sin tarjetas
+debajo, y el texto plano tanto en `/blog/[cluster]` como en `/comparativas`).
+Aprobó el merge explícitamente ("ok merge") tras la última ronda.
