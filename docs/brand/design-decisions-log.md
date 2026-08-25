@@ -15269,3 +15269,34 @@ landing-page.tsx`, `app/globals.css` (`.lp-faq-link`, `.lp-hero-alt`),
 `app/blog/page.tsx`, `app/blog/como-saber-si-tu-marca-aparece-en-chatgpt/
 page.mdx`, `lib/seo/llms-txt.ts`, `app/sitemap.ts`. `pnpm test` (203
 ficheros, 2827 pruebas) y `pnpm run validate` en verde.
+
+**Addendum, mismo día, tras probar el preview el propio fundador (el piloto
+seguía sin poder loguearse — ver más abajo).** Tres correcciones:
+
+1. **El enlace secundario bajo el campo del hero se retira.** El fundador:
+   "quita esto ¿Prefieres una comprobación sin registrarte? Pruébalo
+   gratis→". Vuelve a quedar sólo el CTA primario («Analiza gratis» →
+   `/signup`) bajo el campo; el comprobador sigue enlazado desde la FAQ, el
+   blog y `llms.txt`, que no se tocaron. `.lp-hero-alt` se retira de
+   `globals.css` por no quedarle usuario.
+2. **El borde de `<KeyTakeaway>` ("Qué comprobamos exactamente" en el
+   comprobador) casi no se veía.** `--line` (#e8eaef) sobre
+   `--brand-surface` (#ffffff) es casi el mismo tono — mismo problema de
+   contraste que `--line-strong` ya resolvió para la tira de avance de la
+   demo del hero (log §159). `.art-takeaway` pasa a `border: 1px solid
+   var(--line-strong)`. Afecta a los 16 artículos del blog que usan
+   `<KeyTakeaway>`, no sólo al comprobador: es el mismo componente.
+3. **`/pricing` pintaba DOS tiras de promoción a la vez.** `PromoStrip`
+   (común, montada en `PublicHeader` desde PROMO-EVERYWHERE-1, §30 más
+   arriba) y `.price-promo-band` (propia de `pricing-page.tsx`, de
+   PRICING-PROMO-1). El §31 de arriba ya documentaba el riesgo — verificado
+   entonces en local, donde `.price-promo-band` no pintaba por faltar el
+   cupón de Stripe de prueba — y en el preview real, con el cupón
+   configurado, las dos se pintan. El fundador la vio duplicada y pidió
+   quitar "la tira duplicada, de promoción de lanzamiento": se retira
+   `.price-promo-band` (el bloque JSX, `promoEndsLabel` y el import ya sin
+   uso de `PROMO_ENDS_AT`), quedando sólo la común, que es la que el
+   fundador pidió mantener en §31. `promoActive` se conserva — sigue
+   gobernando el tachado de precio en `PlanCard`/`PlanMatrix`.
+
+`pnpm test` (203, 2827) y `pnpm run validate` en verde tras las tres.

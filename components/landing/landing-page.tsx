@@ -354,14 +354,6 @@ export function LandingPage() {
           <div className="lp-hero-form">
             <HeroDomainField />
           </div>
-          {/* HOME-SEO-AUDIT-1: segunda salida junto al campo, hacia el
-              comprobador anónimo. El botón de al lado («Analiza gratis») lleva
-              al registro a propósito (§159); esto es para quien todavía no
-              quiere darse de alta y sólo quiere ver una respuesta real. */}
-          <p className="lp-hero-alt">
-            ¿Prefieres una comprobación sin registrarte?{" "}
-            <Link href="/gratis/aparece-mi-marca-en-chatgpt">Pruébalo gratis →</Link>
-          </p>
         </div>
 
         {/* LA DEMO DEL HERO — HOME-2026-08 Fase A2.
