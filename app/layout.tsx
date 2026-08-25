@@ -4,7 +4,11 @@ import { Hanken_Grotesk, Bricolage_Grotesque, Figtree, JetBrains_Mono } from "ne
 import { PostHogProvider } from "@/components/posthog-provider";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
 import { CANONICAL_DEFINITION } from "@/lib/brand/canonical-definition";
-import { SESSION_CACHE_KEY } from "@/lib/session-hint";
+import {
+  SESSION_CACHE_KEY,
+  SESSION_HINT_ATTR,
+  SUPABASE_AUTH_COOKIE_NAME_PATTERN
+} from "@/lib/session-hint";
 
 // TODO(BRAND-5b): Hanken Grotesk is the outgoing UI typeface (BRAND-5,
 // docs/brand/brand-guidelines.md). It stays until 5b repaints the UI onto
@@ -135,8 +139,23 @@ export const viewport: Viewport = {
  * read, no matching selectors in the console DOM), and splitting it out to a
  * public-only layout isn't worth a second `<html>`/`<body>` shell for what's
  * already a no-op.
+ *
+ * SESSION-HINT-COOKIE-1 (2026-08-25): a brand-new tab has no `sessionStorage`
+ * entry yet, which §118 documented as the one gap this script couldn't close
+ * — the very first page of a session still flickered. Second, independent
+ * check added: if nothing is cached, look for a cookie NAME that matches
+ * Supabase's own auth-cookie pattern (`lib/session-hint.ts`). Never reads a
+ * cookie's value, only whether one shaped like a session exists — same
+ * "presence, not content" rule the cached-identity check already follows.
  */
-const SESSION_HINT_SCRIPT = `(function(){try{if(sessionStorage.getItem(${JSON.stringify(SESSION_CACHE_KEY)})){document.documentElement.setAttribute('data-session-hint','1')}}catch(e){}})();`;
+const SESSION_HINT_SCRIPT = `(function(){try{
+var hint=!!sessionStorage.getItem(${JSON.stringify(SESSION_CACHE_KEY)});
+if(!hint){
+  var re=new RegExp(${JSON.stringify(SUPABASE_AUTH_COOKIE_NAME_PATTERN)},'i');
+  hint=document.cookie.split(';').some(function(p){return re.test(p.split('=')[0].trim())});
+}
+if(hint){document.documentElement.setAttribute(${JSON.stringify(SESSION_HINT_ATTR)},'1')}
+}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

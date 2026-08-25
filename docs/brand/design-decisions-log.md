@@ -15910,3 +15910,70 @@ en esta página — coincide con los valores del bloque móvil de abajo, así qu
 no hay salto donde ambas reglas se solapan por debajo de 560px. No se toca
 `.lp-field-wrap` ni el bloque `@media`: son del hero de la home y este PR no
 los usa. `pnpm test` (2827) y `pnpm run validate` en verde.
+
+---
+
+## 164. Cabecera pública: cookie de Supabase como segundo hint de pre-hidratación, y `Server-Timing` en `/api/me` (SESSION-HINT-COOKIE-1, 2026-08-25)
+
+**Origen.** El fundador reportó "muchísimo flickering" en la home y el resto
+de páginas públicas hasta que aparece la cabecera con el usuario logado. Task
+Intake aprobado el mismo día: cerrar el hueco que §118 dejó documentado como
+pendiente, y cuantificar cuánto pesa `/api/me` en ese hueco.
+
+**Diagnóstico — no era un fallo nuevo.** §117 (cache en `sessionStorage`) y
+§118 (skeleton de pre-hidratación) ya habían cerrado el flicker en cada
+recarga logada de una pestaña que ya hubiera resuelto la sesión una vez. El
+hueco que quedaba, escrito explícitamente en §118 como "pendiente, no tocado
+en este PR": **una pestaña nueva del navegador** — sin nada aún en
+`sessionStorage` — sigue sin tener ningún hint que leer antes de que React
+hidrate, así que ve el flicker original.
+
+**Arreglo (hint de cookie).** `lib/session-hint.ts` exporta ahora
+`hasSupabaseAuthCookie()` y el patrón `SUPABASE_AUTH_COOKIE_NAME_PATTERN`
+(`^sb-|supabase`, sin distinguir mayúsculas) — el mismo criterio que
+`tests/pilot/support/journey.ts` (`describeAuthState`) ya usa para reconocer
+una cookie de sesión de Supabase por su NOMBRE, nunca por su valor. El script
+inline de `app/layout.tsx` lo usa como segundo hint: si `sessionStorage` no
+tiene nada cacheado, busca en `document.cookie` un nombre que encaje con ese
+patrón antes de decidir si pinta el skeleton o los CTAs anónimos. Como el
+patrón no puede vivir como `RegExp` literal (un script inline necesita texto
+JS, no una referencia de módulo — el mismo motivo por el que `SESSION_CACHE_KEY`
+vive en un módulo plano desde §118), se exporta como cadena y cada lado
+construye su propio `RegExp` a partir de ella.
+
+Sigue siendo estrictamente un hint optimista: `fetchSessionUser()` sigue
+siendo la única fuente de verdad, así que una cookie caducada o ajena sólo
+puede pintar el skeleton neutro (sin email, sin plan) durante un fotograma de
+más antes de que la respuesta real lo corrija — nunca conceder nada. Cubre el
+caso real que quedaba abierto (visita nueva de alguien ya logado en una sesión
+anterior del navegador), no el primerísimo login sin cookie previa, que sigue
+sin tener nada que leer antes del primer pintado — ese hueco es estructural a
+servir HTML estático (la misma conclusión de GENSCORE-HEADER-2 y §118, no
+revertida aquí).
+
+**Medición (`Server-Timing`).** El fundador también pidió cuantificar cuánto
+pesa `/api/me` en el flicker. Sin acceso a logs de producción desde la sesión
+que hizo este cambio, se usó como cota conocida el hallazgo ya auditado de
+`docs/architecture-audit-2026-07.md` §1.2 (`getUser()` es un viaje de red real
+al servidor de Auth de Supabase, ~80-150ms medido en julio) — `/api/me` hace
+esa misma llamada sin ningún dedupe (es un Route Handler, fuera del
+`React.cache()` que PERF-1 aplicó a las Server Components) más una consulta a
+`profiles`. En vez de una cifra inventada, `/api/me` devuelve ahora una
+cabecera `Server-Timing` (`auth;dur=…` y, si hay usuario, `profile;dur=…`)
+puramente diagnóstica — no la lee ningún código de producto — para que el
+próximo deploy de preview reporte el número real.
+
+**Pendiente / roto conocido, no tocado aquí.** La palanca que de verdad
+recorta esa latencia — cambiar `getUser()` por `getClaims()` (verificación
+local del JWT, ~0ms, ya aplicado en `middleware.ts`) — queda fuera a
+propósito: el propio audit de julio la marca como auth-sensible, fase propia
+con revisión de `data-guardian` (tabla PERF-4). El primerísimo login de una
+pestaña sin cookie previa tampoco se cierra aquí (ver diagnóstico arriba).
+
+**Trazabilidad.** §117 (pro-badge-alignment-flickering-v4brfv, el cache de
+`sessionStorage`); §118 (header-flicker-skeleton-prehydration, el skeleton de
+pre-hidratación y el hueco que deja pendiente); `docs/architecture-audit-2026-07.md`
+§1.2 y tabla PERF-4 (el coste de `getUser()` y por qué `getClaims()` no entra
+en este PR); `tests/pilot/support/journey.ts` (`describeAuthState`, el mismo
+patrón de detección de cookie reutilizado aquí); Task Intake aprobado por el
+fundador, 2026-08-25.

@@ -118,6 +118,24 @@ describe("GET /api/me", () => {
     expect(sendTrialEndedEmail).not.toHaveBeenCalled();
   });
 
+  it("reports Server-Timing for the auth round trip when anonymous", async () => {
+    anonymous();
+
+    const response = await GET();
+
+    expect(response.headers.get("Server-Timing")).toMatch(/^auth;dur=\d+(\.\d+)?$/);
+  });
+
+  it("reports Server-Timing for both the auth round trip and the profile query when logged in", async () => {
+    loggedIn({ current_plan: "pro", trial_ends_at: null, stripe_subscription_id: null });
+
+    const response = await GET();
+
+    expect(response.headers.get("Server-Timing")).toMatch(
+      /^auth;dur=\d+(\.\d+)?, profile;dur=\d+(\.\d+)?$/
+    );
+  });
+
   it("reads only the three columns the chip needs, never the whole profile row", async () => {
     loggedIn({ current_plan: "pro" });
 

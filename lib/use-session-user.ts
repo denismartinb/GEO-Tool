@@ -47,6 +47,13 @@ export type SessionUser = { email: string; planId: string; planName: string };
  * reflects the truth, so nothing here should keep hiding it. The key and
  * attribute name live in `lib/session-hint.ts`, not here — see that file for
  * why a Server Component can't import them from a `"use client"` module.
+ *
+ * SESSION-HINT-COOKIE-1 (2026-08-25): the inline script now sets this same
+ * attribute from a second, independent hint too — a Supabase auth cookie's
+ * mere presence, checked when `sessionStorage` has nothing cached yet (a
+ * brand-new tab). This hook doesn't need to know which hint fired: either way
+ * the attribute is cleared here, on the same layout effect, once the real
+ * render has already decided what to show.
  */
 
 /** Exported for `use-session-user.test.ts` — the hook itself needs a DOM/React

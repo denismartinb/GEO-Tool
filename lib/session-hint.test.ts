@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { SESSION_CACHE_KEY, SESSION_HINT_ATTR } from "./session-hint";
+import {
+  SESSION_CACHE_KEY,
+  SESSION_HINT_ATTR,
+  hasSupabaseAuthCookie
+} from "./session-hint";
 
 /**
  * Regression guard for the exact bug this file's header comment describes:
@@ -22,5 +26,34 @@ describe("session-hint", () => {
   it("is never a \"use client\" module", () => {
     const source = readFileSync(fileURLToPath(new URL("./session-hint.ts", import.meta.url)), "utf8");
     expect(source.trimStart().startsWith('"use client"')).toBe(false);
+  });
+});
+
+describe("hasSupabaseAuthCookie", () => {
+  it("finds a plain sb-<ref>-auth-token cookie", () => {
+    expect(hasSupabaseAuthCookie("sb-abcprojref-auth-token=eyJ...")).toBe(true);
+  });
+
+  it("finds a chunked auth cookie among unrelated ones", () => {
+    expect(
+      hasSupabaseAuthCookie("gs_theme=dark; sb-abcprojref-auth-token.0=eyJ...; sb-abcprojref-auth-token.1=abc")
+    ).toBe(true);
+  });
+
+  it("matches case-insensitively and by the 'supabase' fallback name too", () => {
+    expect(hasSupabaseAuthCookie("SB-abc-auth-token=x")).toBe(true);
+    expect(hasSupabaseAuthCookie("my-supabase-session=x")).toBe(true);
+  });
+
+  it("returns false when no cookie name matches", () => {
+    expect(hasSupabaseAuthCookie("gs_theme=dark; _ga=GA1.2.3")).toBe(false);
+  });
+
+  it("returns false for an empty cookie string", () => {
+    expect(hasSupabaseAuthCookie("")).toBe(false);
+  });
+
+  it("never inspects cookie VALUES — a value containing 'sb-' on an unrelated cookie name doesn't count", () => {
+    expect(hasSupabaseAuthCookie("marketing_ref=sb-campaign-2026")).toBe(false);
   });
 });

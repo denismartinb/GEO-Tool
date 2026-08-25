@@ -24,17 +24,28 @@ export const dynamic = "force-dynamic";
  * than `getPlanForUser`, so painting a badge never performs the trial
  * downgrade or sends the "trial ended" email. Enforcement stays on the
  * console's plan read, which is where it has always been.
+ *
+ * SESSION-HINT-COOKIE-1 (2026-08-25): `Server-Timing` reports how long
+ * `getUser()` (a real network round trip to the Supabase Auth server,
+ * ~80-150ms measured in `docs/architecture-audit-2026-07.md` §1.2) and the
+ * `profiles` query each took, so the next preview deploy answers "how much
+ * of the header flicker is this endpoint" with a real number instead of that
+ * July estimate. Diagnostic only — read by browser devtools / Vercel, never
+ * by product code, so it can't change behaviour.
  */
 export async function GET() {
+  const t0 = performance.now();
   const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
+  const tAuth = performance.now();
+  const authTiming = `auth;dur=${(tAuth - t0).toFixed(1)}`;
 
   // Anonymous is the expected case on a marketing page, not an error — 200
   // with a null user keeps it out of the browser console as a failed request.
   if (!user) {
-    return NextResponse.json({ user: null });
+    return NextResponse.json({ user: null }, { headers: { "Server-Timing": authTiming } });
   }
 
   const { data: profile } = await supabase
@@ -42,14 +53,22 @@ export async function GET() {
     .select("current_plan, trial_ends_at, stripe_subscription_id")
     .eq("id", user.id)
     .maybeSingle();
+  const tProfile = performance.now();
 
   const plan = resolvePlan(isTrialElapsed(profile) ? "free" : profile?.current_plan);
 
-  return NextResponse.json({
-    user: {
-      email: user.email ?? "",
-      planId: plan.id,
-      planName: plan.name
+  return NextResponse.json(
+    {
+      user: {
+        email: user.email ?? "",
+        planId: plan.id,
+        planName: plan.name
+      }
+    },
+    {
+      headers: {
+        "Server-Timing": `${authTiming}, profile;dur=${(tProfile - tAuth).toFixed(1)}`
+      }
     }
-  });
+  );
 }
