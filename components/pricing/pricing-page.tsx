@@ -6,7 +6,7 @@ import { PublicHeader } from "@/components/marketing/public-header";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { supportMailto } from "@/lib/support";
-import { PLANS, PLAN_MATRIX, PROMO_ENDS_AT, PROMO_DURATION_MONTHS, type Plan, type PlanCell } from "@/app/pricing/plans-data";
+import { PLANS, PLAN_MATRIX, PROMO_DURATION_MONTHS, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 
 // Marcas simplificadas (simple-icons, CC0) — cada método de pago que Stripe
@@ -160,22 +160,19 @@ export function PricingPage() {
   // Y cupón de Stripe configurado. Si falta el cupón, esta pantalla no
   // muestra ningún tachado, aunque la fecha lo permita.
   const promoActive = getActivePromoPlanIds().length > 0;
-  const promoEndsLabel = new Intl.DateTimeFormat("es-ES", {
-    day: "numeric",
-    month: "long",
-    timeZone: "Europe/Madrid"
-  }).format(new Date(PROMO_ENDS_AT));
 
   return (
     <div className="lp">
-      {promoActive && (
-        <div className="price-promo-band">
-          <Icon name="spark" size={14} />
-          <span>
-            <b>Precio de lanzamiento</b> — Starter y Pro con descuento los 6 primeros meses. Termina el {promoEndsLabel}.
-          </span>
-        </div>
-      )}
+      {/* HOME-SEO-AUDIT-1 (fundador, 2026-08-25): se retira este banner
+          propio de `/pricing`. Desde PROMO-EVERYWHERE-1 (log §30 más abajo,
+          §159 en el mapa de zonas de CLAUDE.md) `PublicHeader` ya monta la
+          tira de promoción común (`.lp-promo`) en TODAS las superficies
+          públicas, incluida ésta. Con el cupón de Stripe real configurado en
+          el entorno, las dos se pintaban a la vez sobre `/pricing` — la común
+          y ésta, ambas anunciando el mismo descuento con textos distintos.
+          El fundador la vio duplicada en el preview y pidió quitar ésta,
+          quedándose con la común (`docs/brand/design-decisions-log.md` §31,
+          "importante mantener la tira comun en /precios"). */}
 
       {/* NAV */}
       <PublicHeader activeHref="/pricing" />

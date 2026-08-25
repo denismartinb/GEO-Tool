@@ -24,9 +24,19 @@
  *    `llms_txt_missing` se emite siempre con `pointDelta: null`
  *    (`lib/web-audit/issues.ts`): el producto se niega a puntuarlo, y la
  *    sección oscura de esta misma página ya lo pinta como aviso (log §143).
+ *
+ * **Corrección HOME-SEO-AUDIT-1 (2026-08-25).** La pregunta 2 decía «Escribe
+ * tu dominio arriba y lo comprobamos gratis, sin registro». Eso describía el
+ * hero de la Fase A de HOME-2026-08, que mandaba ese campo al comprobador
+ * anónimo. El fundador pidió revertirlo el 2026-08-24 (log §159): el campo del
+ * hero vuelve a llevar a `/signup`. La respuesta se quedó describiendo un
+ * comportamiento que la propia portada dejó de tener — publicado además en el
+ * `FAQPage` que un motor generativo lee. Se corrige para decir lo que el hero
+ * hace de verdad, y el "gratis, sin registro" pasa a describir con precisión
+ * el comprobador (`/gratis/aparece-mi-marca-en-chatgpt`), enlazado aparte.
  */
 
-export type HomeFaqEntry = { q: string; a: string };
+export type HomeFaqEntry = { q: string; a: string; link?: { href: string; label: string } };
 
 export const HOME_FAQ: readonly HomeFaqEntry[] = [
   {
@@ -35,7 +45,8 @@ export const HOME_FAQ: readonly HomeFaqEntry[] = [
   },
   {
     q: "¿Cómo sé si mi marca aparece en ChatGPT?",
-    a: "Escribe tu dominio arriba y lo comprobamos gratis, sin registro: preguntamos a ChatGPT por tu categoría y te decimos si te nombra y qué marcas nombra en tu lugar. Es una foto de un motor; el escaneo completo repite la comprobación en Gemini y Claude, con tus prompts, y la repite de forma continua en los planes de pago."
+    a: "Prueba el comprobador gratuito: sin registro, preguntamos a ChatGPT por tu categoría y te decimos si te nombra y qué marcas nombra en tu lugar. Es una foto de un motor; el escaneo completo, con tu cuenta gratis, repite la comprobación en Gemini y Claude, con tus propios prompts, y la repite de forma continua en los planes de pago.",
+    link: { href: "/gratis/aparece-mi-marca-en-chatgpt", label: "Probar el comprobador gratis" }
   },
   {
     q: "¿Qué motores analiza GenScore?",

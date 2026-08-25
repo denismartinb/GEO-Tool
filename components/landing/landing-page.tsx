@@ -1246,7 +1246,17 @@ export function LandingPage() {
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </summary>
-                <p>{f.a}</p>
+                <p>
+                  {f.a}
+                  {f.link ? (
+                    <>
+                      {" "}
+                      <Link href={f.link.href} className="lp-faq-link">
+                        {f.link.label} →
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
               </details>
             ))}
           </div>

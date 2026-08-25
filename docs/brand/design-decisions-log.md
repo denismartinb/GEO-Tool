@@ -15785,3 +15785,128 @@ PRICING-PROMO-1) y reclamó también el §152, así que esta sección pasa a
 **§162** al fusionar de nuevo — mismo protocolo que describe la sección
 "Cierre de fase" de `CLAUDE.md`, y la misma cadena de colisiones que ya
 documentan los §159/§161 de este mismo fichero.
+
+---
+
+## 163. HOME-SEO-AUDIT-1: la FAQ deja de prometer un comprobador al que el hero ya no lleva, y el comprobador gana sus primeros enlaces internos (2026-08-25)
+
+**Nota de renumeración.** Esta sección nació como §160 en su propia rama; mientras se abría el PR, `main` avanzó dos veces y reclamó ese mismo número dos veces por delante (§160 con SCAN-FULLSCREEN-HEADER-1, PR #472, y §161/§162 con DEBUG-HIDE-NO-TRACKING-1 y ONBOARDING-DOMAIN-REDESIGN-1). Pasa a **§163**, el primero libre al fusionar. Mismo protocolo que ya describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión que ya documentan los §159 y §161 de este mismo fichero.
+
+**Por qué.** Auditoría pedida por el fundador tras el cierre de HOME-2026-08
+(§141-§159): con la portada reescrita entera en tres días, ¿qué del código o
+del SEO se quedó desalineado? El hallazgo real no fue el previsto (un
+refactor de `landing-page.tsx`), fue una afirmación falsa publicada en
+`FAQPage`.
+
+**El fallo.** `lib/landing/home-faq.ts` respondía a "¿Cómo sé si mi marca
+aparece en ChatGPT?" con "Escribe tu dominio arriba y lo comprobamos gratis,
+sin registro" — cierto mientras el hero llevaba al comprobador anónimo
+(HOME-2026-08 Fase A). El fundador revirtió ese destino a `/signup` el
+2026-08-24 (§159), y la respuesta de la FAQ se quedó describiendo un
+comportamiento que la portada ya no tiene — publicado además como dato
+estructurado que un motor generativo lee, exactamente lo que este producto
+audita en las webs de sus clientes (CLAUDE.md, "no fake product behavior").
+
+**Consecuencia relacionada, misma causa.** El giro del hero a `/signup`
+dejó `/gratis/aparece-mi-marca-en-chatgpt` sin ningún enlace interno en todo
+el repo salvo el propio sitemap — ni desde `llms.txt`, ni desde el blog
+(incluido el artículo que comparte su misma keyword,
+`como-saber-si-tu-marca-aparece-en-chatgpt`), ni desde la portada.
+
+**Qué se decidió.**
+1. `HOME_FAQ` gana un campo `link` opcional; la pregunta 2 ahora describe el
+   hero real (lleva a `/signup`) y enlaza aparte al comprobador. El texto
+   plano que alimenta el `FAQPage` (`homeFaqJsonLd()`) no lleva el enlace —
+   sigue siendo sólo prosa verificada, como pide la cabecera del fichero.
+2. Enlace secundario bajo el campo del hero (`.lp-hero-alt`): "¿Prefieres
+   una comprobación sin registrarte?" → comprobador. El CTA primario
+   («Analiza gratis») sigue yendo a `/signup`, sin tocar la decisión del
+   fundador sobre el hero.
+3. Enlace desde `/blog` (índice) y desde
+   `como-saber-si-tu-marca-aparece-en-chatgpt` (dentro del método 1, "la
+   primera de esas 27 comprobaciones hecha por ti") — los dos pedidos
+   explícitamente por el fundador al aprobar este informe.
+4. `llms.txt` gana la entrada del comprobador en su sección "Producto".
+5. El sitemap traía la home y `/pricing` con `lastModified: "2026-07-23"`
+   pese a reescribirse ambas en agosto (home: HOME-2026-08 completo;
+   pricing: PRICING-PROMO-1 el 24 y 25-08, §148/§149/§152) — corregido a
+   `2026-08-25`. `/geo` se dejó igual a propósito: sin cambio de contenido
+   real desde HEADER-FLAT-1 (sólo la cabecera compartida), subirla habría
+   sido la misma frescura falsa que este fichero existe para no dar.
+
+**Hallazgo aparte, no arreglado aquí.** `app/globals.css` tiene un bloque de
+~130 líneas (FAQ + Cierre de la portada) duplicado byte a byte —
+líneas ~7101-7231 repetidas en ~7367-7497 tras esta edición. La cascada usa
+el segundo (el `.lp-faq-link` de este PR se añadió ahí); el primero es CSS
+muerto. No se toca en este PR: es puramente mecánico pero amplía el diff sin
+relación con la FAQ, y merece su propio PR con pasada de piloto — es una
+sección visible (FAQ + cierre) aunque el cambio en sí no debería mover un
+píxel.
+
+**Trazabilidad.** `lib/landing/home-faq.ts`, `components/landing/
+landing-page.tsx`, `app/globals.css` (`.lp-faq-link`, `.lp-hero-alt`),
+`app/blog/page.tsx`, `app/blog/como-saber-si-tu-marca-aparece-en-chatgpt/
+page.mdx`, `lib/seo/llms-txt.ts`, `app/sitemap.ts`. `pnpm test` (203
+ficheros, 2827 pruebas) y `pnpm run validate` en verde.
+
+**Addendum, mismo día, tras probar el preview el propio fundador (el piloto
+seguía sin poder loguearse — ver más abajo).** Tres correcciones:
+
+1. **El enlace secundario bajo el campo del hero se retira.** El fundador:
+   "quita esto ¿Prefieres una comprobación sin registrarte? Pruébalo
+   gratis→". Vuelve a quedar sólo el CTA primario («Analiza gratis» →
+   `/signup`) bajo el campo; el comprobador sigue enlazado desde la FAQ, el
+   blog y `llms.txt`, que no se tocaron. `.lp-hero-alt` se retira de
+   `globals.css` por no quedarle usuario.
+2. **El borde de `<KeyTakeaway>` ("Qué comprobamos exactamente" en el
+   comprobador) casi no se veía.** `--line` (#e8eaef) sobre
+   `--brand-surface` (#ffffff) es casi el mismo tono — mismo problema de
+   contraste que `--line-strong` ya resolvió para la tira de avance de la
+   demo del hero (log §159). `.art-takeaway` pasa a `border: 1px solid
+   var(--line-strong)`. Afecta a los 16 artículos del blog que usan
+   `<KeyTakeaway>`, no sólo al comprobador: es el mismo componente.
+3. **`/pricing` pintaba DOS tiras de promoción a la vez.** `PromoStrip`
+   (común, montada en `PublicHeader` desde PROMO-EVERYWHERE-1, §30 más
+   arriba) y `.price-promo-band` (propia de `pricing-page.tsx`, de
+   PRICING-PROMO-1). El §31 de arriba ya documentaba el riesgo — verificado
+   entonces en local, donde `.price-promo-band` no pintaba por faltar el
+   cupón de Stripe de prueba — y en el preview real, con el cupón
+   configurado, las dos se pintan. El fundador la vio duplicada y pidió
+   quitar "la tira duplicada, de promoción de lanzamiento": se retira
+   `.price-promo-band` (el bloque JSX, `promoEndsLabel` y el import ya sin
+   uso de `PROMO_ENDS_AT`), quedando sólo la común, que es la que el
+   fundador pidió mantener en §31. `promoActive` se conserva — sigue
+   gobernando el tachado de precio en `PlanCard`/`PlanMatrix`.
+
+`pnpm test` (203, 2827) y `pnpm run validate` en verde tras las tres.
+
+**Segundo addendum, mismo día: el arreglo del punto 2 no bastó.** El
+fundador probó el nuevo preview y adjuntó captura con la URL visible del
+comprobador: el borde `--line-strong` seguía "confundiéndose con el fondo".
+Causa real: `.lp { background: #fff }` fuerza blanco puro en toda la zona
+pública, así que `.art-takeaway` en `--brand-surface` (también #ffffff) era
+blanco sobre blanco con sólo un borde de contraste 1,6:1 separándola — subir
+el tono del borde no iba a bastar nunca sobre ese fondo. La corrección real
+es la que ya usan `.lp-hx-body`/`.lp-shot-body`/`.lp-prod-body` para el mismo
+problema: `background: var(--canvas)` (#f6f7f9), que sí se distingue del
+blanco de la página. `pnpm test` (2827) y `pnpm run validate` en verde.
+
+**Tercer addendum, mismo día: una segunda caja, un bug distinto.** El
+fundador, sobre ese mismo preview: "en móvil se ve bien, en desktop sigue sin
+salir el borde de la caja del dominio" — la píldora del campo de dominio del
+comprobador, no la caja de arriba. Causa: `FreeCheckerForm` monta `.lp-field`
+SIN envolverlo en `.lp-field-wrap`, porque su botón ("Comprobar mi marca") va
+siempre debajo del campo, nunca dentro de la píldora como en el hero de la
+home. El borde de escritorio vive en `.lp-field-wrap` (`app/globals.css`
+~5460); sin ese envoltorio, en escritorio `.lp-field` no tenía NINGÚN borde
+propio. En móvil "se veía bien" por una razón que no tiene nada que ver con
+el comprobador: el bloque `@media (max-width: 560px)` de HOME-2026-08 Fase A
+le da el borde directamente a `.lp-field` para la variante móvil del HERO (el
+botón baja fuera de la píldora ahí también) — ese mismo selector, por
+coincidir el nombre de clase, alcanzaba sin querer al comprobador. Arreglado
+con `.fc-field` (`components/free-checker/free-checker-form.tsx`), un
+modificador que da esa misma píldora a `.lp-field` en TODAS las anchuras sólo
+en esta página — coincide con los valores del bloque móvil de abajo, así que
+no hay salto donde ambas reglas se solapan por debajo de 560px. No se toca
+`.lp-field-wrap` ni el bloque `@media`: son del hero de la home y este PR no
+los usa. `pnpm test` (2827) y `pnpm run validate` en verde.
