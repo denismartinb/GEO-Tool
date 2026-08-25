@@ -283,7 +283,7 @@ export function DomainOverageGate({
               Ya encajas en tu plan <b>{planName}</b>. Los dominios retirados se eliminaron de forma permanente.
             </p>
             <div className="cp-foot" style={{ justifyContent: "flex-end", marginTop: 18 }}>
-              <Button type="button" onClick={() => router.refresh()}>
+              <Button type="button" onClick={() => router.push("/dashboard/domains")}>
                 Entendido
               </Button>
             </div>
