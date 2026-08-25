@@ -1,6 +1,20 @@
 // Packaging de GenScore: 4 tramos, precio único en euros, facturación mensual.
 // Ejes de valor: bucle de acción + credibilidad — no el volumen de datos.
 
+/**
+ * PRICING-PROMO-1 (Task Intake aprobado 2026-08-24). El cupón de Stripe que
+ * de verdad aplica el descuento (`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO`,
+ * ver `lib/stripe.ts`) lleva su propio `redeem_by` a esta misma fecha — es la
+ * aplicación real. Esta constante es sólo lo que decide qué muestra la
+ * pantalla, para que ambas cosas dejen de anunciar la promo el mismo instante
+ * en vez de depender de que alguien recuerde apagar dos sitios.
+ */
+export const PROMO_ENDS_AT = "2026-09-01T00:00:00+02:00";
+
+export function isPromoActive(now: Date = new Date()): boolean {
+  return now.getTime() < new Date(PROMO_ENDS_AT).getTime();
+}
+
 export type PlanCell = boolean | string;
 
 export type PlanMeter = {
@@ -29,6 +43,14 @@ export type Plan = {
    * reference figure only.
    */
   priceLabel?: string;
+  /**
+   * PRICING-PROMO-1: precio mientras `isPromoActive()` sea cierto y Stripe
+   * tenga configurado el cupón correspondiente (`lib/stripe.ts`,
+   * `getActivePromoPlanIds`) — nunca se muestra solo porque la fecha lo
+   * permita, para que la pantalla no prometa un descuento que el checkout no
+   * puede dar.
+   */
+  promoPrice?: number;
   period: string;
   tagline: string;
   who: string;
@@ -63,6 +85,7 @@ export const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     price: 45,
+    promoPrice: 19,
     period: "mes",
     tagline: "Empieza a monitorizar",
     who: "Consultor o marca pequeña",
@@ -82,6 +105,7 @@ export const PLANS: Plan[] = [
     id: "pro",
     name: "Pro",
     price: 179,
+    promoPrice: 59,
     period: "mes",
     tagline: "El bucle de acción completo",
     who: "Equipo in-house o consultor avanzado",

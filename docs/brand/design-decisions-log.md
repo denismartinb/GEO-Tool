@@ -13624,3 +13624,77 @@ validate` en verde.
 activos en Stripe antes de dar la Fase B por cerrada del todo. Fases C
 (promo de precio) y D (Starter a diario) siguen bloqueadas hasta su propia
 aprobación explícita.
+
+## 150. Fase C de la promo de precio: cupones reales de Stripe, no un número cambiado en `plans-data.ts` (PRICING-PROMO-1, 2026-08-24)
+
+El Task Intake de Fase C (§149 dejó C y D bloqueadas) preguntó al fundador
+tres cosas — duración del descuento, fecha límite, y si asumía configurar
+Stripe él mismo — y las tres se respondieron: **6 meses, sin permanencia**
+(cupón `duration: repeating`, `duration_in_months: 6`), **1 de septiembre de
+2026 a las 00:00 hora de Madrid**, y sí, el fundador crea los cupones.
+
+### Por qué no fue "cambiar `price: 45` a `19`"
+
+`plans-data.ts.price` es sólo un número de pantalla. Lo que cobra Stripe de
+verdad sale de `STRIPE_PRICE_ID_STARTER`/`STRIPE_PRICE_ID_PRO`
+(`lib/stripe.ts`), fijado en el Dashboard y desacoplado del todo del número
+que pinta `/pricing`. Cambiar sólo el número habría anunciado un precio que
+el checkout no cobra — y no sólo en la web pública: `plan.price` también
+pinta `components/billing/plan-billing-section.tsx` (el plan actual del
+dashboard) y `change-plan-modal.tsx` (el selector real que dispara Stripe
+Checkout), así que un cliente ya logueado habría visto "19 €" y pagado 45 €.
+
+### El mecanismo: `PROMO_ENDS_AT` decide qué se muestra, un cupón de Stripe con `redeem_by` decide qué se cobra
+
+- `app/pricing/plans-data.ts`: `PROMO_ENDS_AT` (constante única, ISO con
+  offset de Madrid) e `isPromoActive(now)`. `Plan.promoPrice` en Starter (19)
+  y Pro (59).
+- `lib/stripe.ts`: `getPromoCouponIdForPlan` lee
+  `STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO` (variables nuevas, aún sin
+  valor — el fundador las crea en Stripe cuando tenga los cupones).
+  `getActivePromoPlanIds()` es la fuente única que cruza fecha Y cupón
+  configurado: **nunca** muestra un precio tachado sólo porque la fecha lo
+  permita. La usan `/pricing` y `billing-content.tsx` (servidor) para que las
+  dos pantallas no puedan divergir sobre qué planes llevan promo.
+- `app/dashboard/settings/billing/actions.ts` (`createCheckoutSession`):
+  aplica `discounts: [{ coupon: promoCouponId }]` a la Checkout Session real
+  con la misma condición (`isPromoActive() && getPromoCouponIdForPlan`) — el
+  único sitio que decide de verdad cuánto se cobra.
+- El cupón de Stripe lleva su propio `redeem_by` = `PROMO_ENDS_AT`: aunque
+  este código nunca se volviera a tocar, Stripe deja de aceptar el cupón esa
+  fecha por su cuenta — la caducidad real no depende de que nadie recuerde
+  apagar nada.
+
+### Alcance deliberadamente recortado: sólo la conversión Free → de pago
+
+`change-plan-modal.tsx` comparte la misma rejilla de planes para dos flujos
+distintos: Free (o trial sin convertir) → Starter/Pro pasa por Checkout (ahí
+sí aplica el cupón), pero Starter↔Pro para una cuenta que YA paga se
+gestiona en el Portal de Stripe (`createPortalSession`,
+`subscription_update_confirm`), que este PR no toca. Mostrar el precio promo
+ahí habría sido la misma mentira que se acaba de evitar en otro sitio —
+`promoShown()` en el modal comprueba `!hasRealSubscription`, así que una
+cuenta con suscripción real nunca ve el tachado, aunque esté cambiando a un
+plan con `promoPrice`.
+
+### Lo que el fundador tiene que hacer en Stripe (test mode ahora; live cuando toque)
+
+Dos cupones — `amount_off` (2600 en Starter, 12000 en Pro, céntimos EUR),
+`duration: repeating`, `duration_in_months: 6`, `redeem_by` = `1788213600`
+(Unix timestamp de 2026-09-01T00:00:00+02:00, es decir 2026-08-31T22:00:00Z).
+Sus IDs van en `STRIPE_COUPON_ID_STARTER_PROMO`/`STRIPE_COUPON_ID_PRO_PROMO`
+en Vercel. Sin esas dos variables, `getActivePromoPlanIds()` devuelve una
+lista vacía y todo el sitio sigue mostrando el precio normal — el sistema
+falla hacia "no hay promo", nunca hacia "promo a medias". `pnpm run
+check:env` avisa (no falla) si la ventana está abierta, Stripe funciona, y
+falta un cupón — señal de que probablemente se olvidó el paso, no de que la
+promo vaya sin descuento a propósito.
+
+**Comprobado.** `pnpm test` (201 ficheros, 2.817 pruebas, incluidos los casos
+nuevos de `createCheckoutSession` con/sin cupón y la regla de entorno) y
+`pnpm run validate` en verde. Nadie ha visto esto en un navegador todavía —
+el piloto lo hará contra el preview de este PR, y hasta entonces la promo no
+puede darse por verificada visualmente.
+
+**Pendiente.** Fase D (Starter a escaneo diario) sigue bloqueada, sin tocar
+en este PR — el highlight de Starter sigue diciendo "Escaneo semanal".

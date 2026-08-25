@@ -61,12 +61,15 @@ export function PlanBillingSection({
   currentPlanId,
   agencyPlanId,
   usage,
-  activeProjects
+  activeProjects,
+  promoPlanIds = []
 }: {
   currentPlanId: Plan["id"];
   agencyPlanId: Plan["id"];
   usage: UsageSummary;
   activeProjects: ActiveProjectSummary[];
+  /** PRICING-PROMO-1: plans with an active, Stripe-backed promo right now — see billing-content.tsx. */
+  promoPlanIds?: string[];
 }) {
   const [planId, setPlanId] = useState<Plan["id"]>(currentPlanId);
   const [projects, setProjects] = useState<ActiveProjectSummary[]>(activeProjects);
@@ -308,6 +311,7 @@ export function PlanBillingSection({
           overageOnly={modal.overageOnly}
           hasRealSubscription={usage.hasStripeSubscription}
           activeProjects={projects}
+          promoPlanIds={promoPlanIds}
           onClose={() => setModal(null)}
           onApply={applyChange}
           onCheckout={createCheckoutSession}

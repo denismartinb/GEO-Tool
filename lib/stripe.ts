@@ -1,7 +1,7 @@
 import "server-only";
 
 import Stripe from "stripe";
-import type { Plan } from "@/app/pricing/plans-data";
+import { isPromoActive, type Plan } from "@/app/pricing/plans-data";
 
 /**
  * BILLING-STRIPE-1: only Starter and Pro are self-serve Stripe products —
@@ -31,6 +31,34 @@ export function getPlanIdForPriceId(priceId: string): SelfServePlanId | null {
     if (envPriceId && envPriceId === priceId) return planId as SelfServePlanId;
   }
   return null;
+}
+
+/**
+ * PRICING-PROMO-1: cupón real de Stripe (`amount_off`, `duration: repeating`,
+ * `duration_in_months: 6`, `redeem_by` = `PROMO_ENDS_AT`) — creado a mano en
+ * el Dashboard (test mode hoy; live cuando se active), nunca por esta app.
+ * `null` mientras no exista, y entonces el checkout cobra el precio normal.
+ */
+const SELF_SERVE_PROMO_COUPON_ENV_VAR: Partial<Record<Plan["id"], string | undefined>> = {
+  starter: process.env.STRIPE_COUPON_ID_STARTER_PROMO,
+  pro: process.env.STRIPE_COUPON_ID_PRO_PROMO
+};
+
+export function getPromoCouponIdForPlan(planId: SelfServePlanId): string | null {
+  return SELF_SERVE_PROMO_COUPON_ENV_VAR[planId] ?? null;
+}
+
+/**
+ * Los planes cuya promo se puede mostrar de verdad ahora mismo: la fecha no
+ * ha pasado Y el cupón de Stripe que la haría real está configurado. Nunca al
+ * revés — mostrar el precio tachado sin cupón anunciaría un descuento que el
+ * checkout no puede dar, que es justo lo que esta fase existe para evitar.
+ * Fuente única para `/pricing` y para el modal de cambio de plan, así que las
+ * dos pantallas no puedan divergir sobre qué planes llevan promo.
+ */
+export function getActivePromoPlanIds(): SelfServePlanId[] {
+  if (!isPromoActive()) return [];
+  return (["starter", "pro"] as const).filter((id) => getPromoCouponIdForPlan(id) !== null);
 }
 
 let cachedClient: Stripe | null = null;
