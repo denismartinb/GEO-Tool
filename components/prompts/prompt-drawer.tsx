@@ -7,6 +7,7 @@ import { InfoTip } from "@/components/ui/info-tip";
 import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { FormattedResponse } from "@/components/ui/formatted-response";
+import { buildRanking } from "@/components/prompts/mention-coverage";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 import { sampleCountOf, sampleLabel } from "@/lib/scan/sample-display";
 import { matchDisplayName } from "@/lib/brand-aliases/match-display-name";
@@ -107,6 +108,12 @@ function dominantSentiment(rows: ResultRow[]): string | null {
 
 export function PromptDrawer({ projectId, projectDomain, projectBrand, results, competitors, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("resumen");
+  // Un prompt con muchos competidores es, casi siempre, un muro de ceros
+  // (founder feedback, 2026-08-23: "9 marcas, 8 a 0%"). Las no mencionadas
+  // quedan plegadas detrás de un botón hasta que alguien pide verlas; la
+  // marca propia nunca se pliega, mencionada o no, porque es la razón por la
+  // que se abrió el cajón.
+  const [showAllRanking, setShowAllRanking] = useState(false);
 
   if (!results.length) return null;
 
@@ -116,19 +123,6 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
   const brandEvidence = Array.from(
     new Set(extractedList.flatMap((e) => e?.brand?.evidence ?? []))
   );
-
-  const mentionedMap = new Map<string, { mentioned: boolean; evidence: string[] }>();
-  for (const ext of extractedList) {
-    for (const c of ext?.competitors ?? []) {
-      if (!c.name) continue;
-      const key = c.name.toLowerCase();
-      const prev = mentionedMap.get(key) ?? { mentioned: false, evidence: [] };
-      mentionedMap.set(key, {
-        mentioned: prev.mentioned || !!c.mentioned,
-        evidence: Array.from(new Set([...prev.evidence, ...(c.evidence ?? [])])),
-      });
-    }
-  }
 
   // Evidence and citations organized by engine (founder feedback 2026-07-24:
   // a flat list merged across engines was harder to scan than one grouped by
@@ -170,42 +164,48 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
       r.brand_snapshot ?? projectBrand,
       r.brand_aliases_snapshot ?? []
     );
-    return { row: r, meta: getEngineMeta(r.provider), evidence, citations, displayNameMatch };
+    // PROMPT-DRAWER-TRUTH-1: se lee de `extracted_json`, no de la columna
+    // `brand_mentioned`. Las dos coinciden cuando la extracción funcionó, pero
+    // en una fila cuya extracción falló la columna conserva el valor ingenuo
+    // del momento de generar (una subcadena en `prompt-job.ts`) y no hay
+    // ninguna verificación detrás — decir «mención verificada» de eso sería
+    // afirmar algo que nadie comprobó (MENTION-VERIFY-1, docs/adr/0021).
+    const verifiedMention = Boolean(ext?.brand?.mentioned);
+    return { row: r, meta: getEngineMeta(r.provider), evidence, citations, displayNameMatch, verifiedMention };
   });
-  const evidenceGroups = engineGroups.filter((g) => g.evidence.length > 0);
+  /**
+   * PROMPT-DRAWER-TRUTH-1 (log §147): un motor entra en el panel si aporta
+   * citas **o** si su mención está verificada y no las trae.
+   *
+   * Antes sólo entraba con citas, así que el 10% de las menciones verificadas
+   * que no dejan una cita utilizable —186 filas de Gemini, 39 de ChatGPT y 12
+   * de Claude sobre 2.367 medidas el 2026-08-23— hacían desaparecer la sección
+   * entera sin decir nada, debajo de un «La IA menciona tu marca» en verde. El
+   * usuario que abre justo una de ésas concluye que la herramienta se lo
+   * inventa, que es exactamente lo que le pasó al fundador.
+   */
+  const evidenceGroups = engineGroups.filter((g) => g.evidence.length > 0 || g.verifiedMention);
   const citationGroups = engineGroups.filter((g) => g.citations.length > 0);
   const totalCitations = citationGroups.reduce((sum, g) => sum + g.citations.length, 0);
   const hasOwnCitation = engineGroups.some((g) =>
     g.citations.some((c) => isBrandDomain(c.domain, projectDomain))
   );
 
-  const brandRow = {
-    name: "Tu marca",
-    isOwn: true,
-    mentioned: brandMentioned,
-    evidence: brandEvidence,
-    sentiment: dominantSentiment(results),
-  };
-
-  const competitorRows = competitors.map((comp) => {
-    const match = mentionedMap.get(comp.name.toLowerCase());
-    return {
-      name: comp.name,
-      isOwn: false,
-      mentioned: match?.mentioned ?? false,
-      evidence: match?.evidence ?? [],
-      sentiment: null as string | null,
-    };
+  // PROMPT-DRAWER-TRUTH-1 (log §147): la cobertura sale de contar respuestas,
+  // no de `some(...)` pintado como 100%/0%. El cálculo y su orden viven en
+  // `mention-coverage.ts` porque son la parte verificable sin navegador.
+  const allRows = buildRanking({
+    results,
+    extractedList,
+    competitors,
+    brandEvidence,
+    brandSentiment: dominantSentiment(results),
+    brandName: projectBrand,
   });
 
-  const allRows = [brandRow, ...competitorRows].sort((a, b) => {
-    if (a.isOwn && a.mentioned) return -1;
-    if (b.isOwn && b.mentioned) return 1;
-    if (a.mentioned !== b.mentioned) return a.mentioned ? -1 : 1;
-    if (b.evidence.length !== a.evidence.length)
-      return b.evidence.length - a.evidence.length;
-    return a.name.localeCompare(b.name);
-  });
+  const mentionedRankingCount = allRows.filter((row) => row.mentioned).length;
+  const visibleRankingRows = allRows.filter((row) => row.isOwn || row.mentioned || showAllRanking);
+  const hiddenRankingCount = allRows.length - visibleRankingRows.length;
 
   const category = results[0].category;
 
@@ -371,9 +371,21 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
 
               {/* Ranking de marcas */}
               <div>
-                <p className="ac-title">Ranking de marcas</p>
+                <div className="pr2-rk-head">
+                  <p className="ac-title">Ranking de marcas</p>
+                  {/* Rotula la columna numérica de abajo (fracción +
+                      porcentaje) — sin esto, un «33%» suelto no dice de qué es
+                      el 33% (founder feedback, 2026-08-23). */}
+                  <span className="pr2-rk-col-label">Aparición en motores</span>
+                </div>
                 <div className="aside-card">
-                  {allRows.map((row, i) => (
+                  {/* Resumen antes que la lista: con muchos competidores no
+                      mencionados, la lista es puro 0% y el dato que importa
+                      —cuántos SÍ salieron— se pierde en el muro. */}
+                  <p className="pr2-rk-summary">
+                    {mentionedRankingCount} de {allRows.length} marcas mencionadas en este prompt.
+                  </p>
+                  {visibleRankingRows.map((row, i) => (
                     <div key={row.name} className={`pr2-rk${row.isOwn ? " you" : ""}`}>
                       <span className="pr2-rk-n">{i + 1}</span>
                       <span className="pr2-rk-av">{row.name[0].toUpperCase()}</span>
@@ -386,11 +398,36 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                           </span>
                         ) : null}
                       </span>
-                      <span className="pr2-rk-cov" style={{ color: row.mentioned ? "var(--pos-ink)" : "var(--ink-4)" }}>
-                        {row.mentioned ? "100%" : "0%"}
+                      {/* La fracción va al lado del porcentaje, no escondida
+                          en un `title`: «33%» sin denominador no se puede
+                          juzgar, y el denominador cambia de un prompt a otro
+                          en cuanto hay muestreo (ADR 0030). Se omite cuando
+                          sólo hubo una respuesta, donde no aporta nada. */}
+                      {row.evaluatedCount > 1 ? (
+                        <span style={{ fontSize: 10.5, color: "var(--ink-4)", flex: "0 0 auto" }}>
+                          {row.mentionCount}/{row.evaluatedCount}
+                        </span>
+                      ) : null}
+                      <span
+                        className="pr2-rk-cov"
+                        style={{ color: row.mentioned ? "var(--pos-ink)" : "var(--ink-4)" }}
+                        title={
+                          row.coverage === null
+                            ? "Ninguna respuesta de este prompt llegó a evaluar esta marca."
+                            : `Nombrada en ${row.mentionCount} de ${row.evaluatedCount} ${row.evaluatedCount === 1 ? "respuesta" : "respuestas"}.`
+                        }
+                      >
+                        {/* Sin evaluar no es 0%: un cero es una afirmación
+                            sobre una marca que nadie llegó a mirar. */}
+                        {row.coverage === null ? "—" : `${row.coverage}%`}
                       </span>
                     </div>
                   ))}
+                  {hiddenRankingCount > 0 ? (
+                    <button type="button" className="pr2-rk-more" onClick={() => setShowAllRanking(true)}>
+                      Ver {hiddenRankingCount} {hiddenRankingCount === 1 ? "marca más sin mención" : "marcas más sin mención"}
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
@@ -427,11 +464,29 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                             </span>
                           ) : null}
                         </div>
-                        {g.evidence.map((ev, i) => (
-                          <p key={i} className="pr2-evi">
-                            <strong style={{ fontStyle: "normal" }}>[{projectBrand}]</strong> «{ev}»
+                        {g.evidence.length > 0 ? (
+                          g.evidence.map((ev, i) => (
+                            <p key={i} className="pr2-evi">
+                              <strong style={{ fontStyle: "normal" }}>[{projectBrand}]</strong> «{ev}»
+                            </p>
+                          ))
+                        ) : (
+                          // Lo que este texto puede afirmar y lo que no: la
+                          // mención SÍ está verificada (el nombre aparece de
+                          // verdad en la respuesta, MENTION-VERIFY-1), y lo que
+                          // falta es la frase que la rodea. Decir «no te
+                          // menciona» aquí sería tan falso como enseñar una
+                          // cita inventada.
+                          // `pr2-evi` y no `pr2-cit-note`: comparte la fila con
+                          // las citas de los otros motores, así que va en su
+                          // misma celda. Sin cursiva —no es una cita— y en tono
+                          // apagado, porque `pr2-cit-note b` pinta en rojo de
+                          // error y aquí no ha fallado nada del usuario.
+                          <p className="pr2-evi" style={{ fontStyle: "normal", color: "var(--ink-4)" }}>
+                            Mención verificada, pero este motor no dejó una cita textual recuperable. La
+                            respuesta completa está en «Respuestas», con el nombre resaltado.
                           </p>
-                        ))}
+                        )}
                       </Fragment>
                     ))}
                   </div>

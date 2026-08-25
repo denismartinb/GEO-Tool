@@ -116,6 +116,42 @@ describe("reglas condicionales", () => {
     ).toEqual([]);
   });
 
+  it("PRICING-PROMO-1: avisa (no error) si la promo está en fecha, Stripe funciona y falta un cupón", () => {
+    const stripeConfigured = {
+      STRIPE_SECRET_KEY: "sk_test",
+      STRIPE_WEBHOOK_SECRET: "whsec",
+      STRIPE_PRICE_ID_STARTER: "price_a",
+      STRIPE_PRICE_ID_PRO: "price_b"
+    };
+    const duringPromo = new Date("2026-08-25T00:00:00Z");
+    const afterPromo = new Date("2026-09-02T00:00:00Z");
+    const promoVars = ["STRIPE_COUPON_ID_STARTER_PROMO", "STRIPE_COUPON_ID_PRO_PROMO"];
+    // Sólo las dos variables de la promo — healthy() ya dispara otros avisos
+    // ajenos (PUBLIC_CHECK_IP_SALT) que no vienen a cuento aquí.
+    const promoWarningsFor = (raw: RawEnv, now: Date) =>
+      inspectEnv(raw, now)
+        .problems.filter((p) => p.severity === "warning" && promoVars.includes(p.variable))
+        .map((p) => p.variable);
+
+    expect(promoWarningsFor(healthy(stripeConfigured), duringPromo)).toEqual(
+      expect.arrayContaining(promoVars)
+    );
+    expect(errorsFor(healthy(stripeConfigured))).toEqual([]); // sigue sin ser error
+
+    expect(
+      promoWarningsFor(
+        healthy({ ...stripeConfigured, STRIPE_COUPON_ID_STARTER_PROMO: "promo_a", STRIPE_COUPON_ID_PRO_PROMO: "promo_b" }),
+        duringPromo
+      )
+    ).toEqual([]);
+
+    // fuera de la ventana, aunque falten los cupones, no hay nada que avisar
+    expect(promoWarningsFor(healthy(stripeConfigured), afterPromo)).toEqual([]);
+
+    // Stripe ni siquiera configurado: ese caso ya es el error STRIPE_* de arriba
+    expect(promoWarningsFor(healthy(), duringPromo)).toEqual([]);
+  });
+
   it("faltar Supabase es un error", () => {
     const { NEXT_PUBLIC_SUPABASE_URL: _omitted, ...withoutUrl } = healthy();
     expect(errorsFor(withoutUrl)).toContain("NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY");

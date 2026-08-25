@@ -76,13 +76,34 @@ export default async function SettingsPage({
 
   const fullName = [firstName, lastName].filter(Boolean).join(" ");
 
+  // PRICING-PROMO-1: same struck-through/promo-price convention as "Tu plan"
+  // below (plan-billing-section.tsx) — usage.subscriptionPromo is already the
+  // real, Stripe-verified discount for this exact subscription.
+  const planLabel =
+    isAdmin && plan
+      ? (plan.priceLabel ??
+        (usage?.subscriptionPromo ? (
+          <>
+            {plan.name} ·{" "}
+            <span className="was">
+              {plan.price}&nbsp;€/{plan.period}
+            </span>{" "}
+            <span className="now">
+              {usage.subscriptionPromo.promoPrice}&nbsp;€/{plan.period}
+            </span>
+          </>
+        ) : (
+          `${plan.name} · ${plan.price} €/mes`
+        )))
+      : null;
+
   const entries = buildSettingsIndex({
     fullName,
     email,
     activeAlerts,
     // Null for a non-admin — the same condition that hides the Plan section
     // below, so the index can never advertise a section that is not there.
-    planLabel: isAdmin && plan ? plan.priceLabel ?? `${plan.name} · ${plan.price} €/mes` : null
+    planLabel
   });
 
   return (

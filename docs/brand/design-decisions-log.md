@@ -13352,7 +13352,549 @@ queda anotado aquí para quien la lea después.
 
 ---
 
-## 147. Cinco pantallas del producto, y los pesos de la auditoría otra vez (HOME-2026-08 Fase B2, 2026-08-22)
+## 147. Un motor de tres se pintaba como «100%», y la evidencia desaparecía sin decirlo (PROMPT-DRAWER-TRUTH-1, 2026-08-23)
+
+El fundador abrió el cajón de un prompt en su propio proyecto y le dio la
+sensación de que las respuestas estaban condicionadas por su cuenta: los
+motores «sabían» que trabaja en GenScore. No lo estaban —y la investigación que
+lo descarta está más abajo—, pero al ir a comprobarlo aparecieron **dos
+afirmaciones falsas en la misma pantalla**, y esas sí eran nuestras.
+
+### Lo que decía la pestaña Resumen
+
+En una sola captura convivían esto:
+
+> Gemini **Mencionada** · ChatGPT **Ausente** · Claude **Ausente**
+
+y, tres centímetros más abajo:
+
+> **1. Tu marca** «Tú» — **100%**
+
+La celda era literalmente `{row.mentioned ? "100%" : "0%"}` sobre
+`results.some(r => r.brand_mentioned)`. Un motor de tres nombrándote se pintaba
+como cobertura total. Con muestreo (ADR 0030) el error crece en vez de
+diluirse: nueve respuestas y una mención seguían siendo «100%».
+
+**La puntuación real nunca tuvo este fallo.** `lib/scoring/run-scoring.ts`
+calcula `brandMentionedCount / totalResults` desde siempre. Era una mentira de
+pantalla, no de scoring — lo cual no la hace menor: es justo la pantalla donde
+alguien va a decidir si se fía de las cifras del resto del producto.
+
+Ahora la cobertura se cuenta por respuestas (`1/3 · 33%`), con la fracción al
+lado del porcentaje porque un «33%» sin denominador no se puede juzgar y el
+denominador cambia de un prompt a otro. Tres decisiones que van con ello:
+
+- **Denominadores distintos por entidad, a propósito.** La marca se mide sobre
+  todas las respuestas (`brand_mentioned` existe en todas las filas, mismo
+  denominador que `visibilityScore`); un competidor, sólo sobre las que
+  llegaron a evaluarlo. Una fila cuya extracción falló no tiene opinión sobre
+  ese competidor, y meterla en su denominador convertiría un fallo nuestro en
+  un 0% suyo. Es el criterio que `computeBrandPosition` ya aplicaba al saltarse
+  las filas sin `extracted_json`, no uno nuevo.
+- **Sin evaluar se pinta «—», no «0%».** Un cero es una afirmación sobre una
+  marca que nadie llegó a mirar (mismo criterio que `ScoreGauge` en Auditoría
+  web).
+- **La marca propia deja de estar clavada en el primer puesto.** Estaba pinada
+  arriba siempre que estuviera mencionada, así que el «ranking» no ordenaba
+  nada: salías primero por construcción. Ahora manda la cobertura y la marca
+  propia sólo gana los empates. Un competidor al que la IA nombra más veces que
+  a ti sale por encima, que es la única versión de esta pantalla que sirve para
+  algo.
+
+### Lo segundo: la evidencia que se esfumaba
+
+Debajo de «La IA menciona tu marca» en verde no había nada. Ni la cita, ni una
+explicación: el panel «Evidencias de mención» se filtraba entero cuando el
+grupo del motor traía `evidence: []` (ADR 0021, follow-up 2, que lo eligió a
+conciencia: «mejor ninguna evidencia que una falsa»). Es correcto y es mudo, y
+lo mudo aquí se lee como inventado.
+
+**La hipótesis con la que se empezó era falsa y conviene dejarlo escrito.** Se
+supuso que `verifyMention` se estaba comiendo las citas al compararlas contra
+el texto crudo sin normalizar el markdown: la respuesta lleva
+`**Genscore**: Ideal para…` y el modelo cita sin los asteriscos, así que el
+nombre suelto pasa la comprobación y la frase entera no. Reproducible en dos
+líneas de Node. **Los datos la tumbaron:**
+
+| Motor | Menciones verificadas | Con evidencia | |
+|---|---|---|---|
+| Claude | 802 | 790 | 98,5% |
+| Gemini | 1.378 | 1.192 | 86,5% |
+| ChatGPT | 187 | 148 | 79,1% |
+| **Total** | **2.367** | **2.130** | **90,0%** |
+
+Claude es el motor que más markdown mete y el que mejor puntúa: si el markdown
+fuera la causa sería el peor. **No hay bug sistémico en el filtro** y la fase
+que iba a arreglarlo (`EVIDENCE-VERIFY-MARKDOWN-1`) se descartó antes de
+escribir una línea. Queda una cola del 10% —186 filas de Gemini, 39 de ChatGPT,
+12 de Claude— en la que el modelo verifica la mención y no deja una cita
+utilizable.
+
+Para esa cola no hace falta recuperar la cita: hace falta que la pantalla diga
+la verdad cuando no la tiene. El motor entra ahora en el panel si aporta citas
+**o** si su mención está verificada sin ellas, y en el segundo caso lo dice y
+manda a la pestaña «Respuestas», donde el nombre está resaltado sobre la
+respuesta completa. Se lee de `extracted_json`, no de la columna
+`brand_mentioned`: en una fila cuya extracción falló esa columna conserva el
+valor ingenuo de `prompt-job.ts` (una subcadena) y llamar a eso «mención
+verificada» sería afirmar algo que nadie comprobó.
+
+### Y el condicionamiento por cuenta, que era la pregunta original: no existe
+
+Descartado en el código y en los datos, porque la sospecha va a volver:
+
+- `lib/scan/prompt-job.ts` sólo pasa `{ prompt, country, language }` al motor.
+  Ni marca, ni dominio, ni proyecto, ni usuario.
+- La instrucción de generación es **ciega a la marca** por diseño (ADR 0007) en
+  los tres motores, la clave de API es de la plataforma, no hay sesión ni
+  historial, y `temperature: 0`.
+- `lib/projects/prompt-suggestions-llm.ts` prohíbe explícitamente que el prompt
+  sugerido nombre la marca.
+- Y sobre todo: de las nueve respuestas medidas a «¿Cuál es la mejor
+  herramienta de GEO?», **ocho hablaban de Google Maps, QGIS, ArcGIS y mapas
+  catastrales**. Un modelo condicionado a favor de GenScore no contesta sobre
+  parcelas del catastro.
+
+**Lo que sí es real, y es peor:** «GEO» es un acrónimo colisionado —*Generative
+Engine Optimization* frente a *Sistemas de Información Geográfica*— y ese
+prompt mide el mercado equivocado el 89% de las veces, diluyendo el
+denominador de la marca con respuestas sobre software cartográfico. Es un
+prompt malo que el generador produjo y que nadie filtró. Se reescribe a mano;
+que el generador rechace acrónimos ambiguos es trabajo futuro y sin aprobar.
+
+Queda anotado, además, que **el proyecto GenScore es el peor banco de pruebas
+para juzgar la herramienta a ojo**: es autorreferencial —nuestro propio blog
+está escrito para responder justo esas preguntas, así que medimos en parte
+nuestro propio SEO— y la marca se llama como su categoría, que es el falso
+positivo que ADR 0021 existe para atajar.
+
+### El piloto no puede ver este arreglo, y por eso hay tests de render
+
+La pasada del piloto sobre el PR #466 dio verde y su captura del cajón existe,
+se abre y se ve entera en 375, 768 y 1280. **Y no verifica nada de esto.** La
+cuenta del piloto es de plan Free, el tope de plan la deja en UN motor
+(`caps.engines`), y el fallo que este PR arregla —una mención de tres
+respuestas pintada como «100%»— necesita varias respuestas para existir
+siquiera. Su cajón enseña una fila y un 0%, que es exactamente lo que enseñaba
+antes del cambio.
+
+Es la misma familia de fallo que §135 y el incidente de Auditoría web del
+2026-08-02: una pantalla que carga limpia con datos que no ejercitan la
+funcionalidad no está vista. Aquí no se arregla ampliando el piloto —haría
+falta subir de plan la cuenta, que es otra decisión— sino renderizando el
+componente en un test (`components/prompts/prompt-drawer.test.tsx`, con
+`react-dom/server` como los de Auditoría web, log §87). Eso asegura **qué cifra
+se publica y qué texto la acompaña**; el aspecto de la fila con la fracción
+puesta a 375 px sigue sin verificarse y se declara como tal.
+
+### Addendum — feedback en vivo sobre el preview, antes de mergear (2026-08-23)
+
+El fundador probó el preview de este PR en el móvil y confirmó a ojo que el
+fallo original está corregido: «1/3 · 33%» donde antes ponía «100%», con
+captura adjunta. Sobre esa misma captura pidió tres cosas, las tres dentro de
+la misma pantalla y ya implementadas:
+
+1. **Un rótulo sobre la columna de porcentajes.** «33%» suelto no dice de qué
+   es 33% — ahora «Aparición en motores» corona la fracción y el porcentaje,
+   en una cabecera de columna encima de la tarjeta.
+2. **El muro de ceros se pliega.** El ranking de la captura tenía nueve marcas
+   y ocho a 0%. Las no mencionadas —esté su cobertura en 0% o sin evaluar del
+   todo— quedan detrás de un botón «Ver N marcas más sin mención», con un
+   resumen arriba («1 de 9 marcas mencionadas en este prompt»). La marca propia
+   nunca se pliega, mencionada o no: es la razón de abrir el cajón.
+3. **«Tu marca» pasa a decir el nombre real.** La fila decía literalmente «Tu
+   marca» mientras el panel de evidencias, tres centímetros más abajo, decía
+   «Evidencias de mención de GenScore» — dos nombres para la misma entidad en
+   la misma pantalla. Ahora la fila usa el nombre real del proyecto con la
+   pastilla «Tú» al lado, y `buildRanking` acepta ese nombre con el literal de
+   siempre como respaldo para no romper los tests que no lo ejercitan.
+
+Este ciclo confirma, además, el límite documentado más abajo: el piloto
+automático no vio ni el fallo original ni esta corrección — el fundador sí,
+mirando su propia cuenta con datos reales de tres motores. Es la verificación
+que este PR necesitaba y que ninguna cuenta de un solo motor podía darle.
+
+### Roto conocido / pendiente
+
+- La cola del 10% sin cita utilizable no se investiga en esta fase. Se explica,
+  no se resuelve.
+- ~~El botón de plegado y la cabecera de columna no se han visto en un
+  navegador.~~ **Corregido tras la propia pasada del piloto sobre `46ffb43`**:
+  al contrario de lo asumido aquí mismo un párrafo antes, el proyecto del
+  piloto sí tiene 9 competidores rastreados (aunque escanee con un solo
+  motor), así que el plegado, el resumen y la cabecera de columna **sí se
+  ejercitan** — la captura de `prompts` a 375 px enseña «Ranking de marcas /
+  Aparición en motores», «0 de 9 marcas mencionadas en este prompt», la fila
+  propia con «Genscore Tú Neutral 0%» y el botón «Ver 8 marcas más sin
+  mención», todo legible y sin solapes. Lo que sigue sin verse en un navegador
+  es la combinación exacta de **fracción + cabecera** a 375 px — la fracción
+  («1/3») sólo aparece con más de una respuesta por prompt, que el piloto de un
+  motor no genera; esa combinación queda cubierta por la captura móvil que el
+  fundador adjuntó él mismo, no por el piloto automático.
+- La tarjeta «La IA menciona tu marca» sigue siendo binaria (verde si al menos
+  una respuesta te nombra). Con 1 de 3 es cierta pero generosa; la lista «Por
+  motor» justo debajo la desambigua. No se toca aquí.
+
+## 148. `/pricing` dejaba de hablar de usuarios ilimitados: no hay gestión de equipo que lo sostenga (2026-08-24)
+
+`/pricing` y `/docs/planes-y-limites` vendían "usuarios ilimitados en todos
+los planes" como diferenciador — titular del hero, ítem del checklist, fila
+propia ("Usuarios del equipo") en la matriz comparativa, y una pregunta de la
+FAQ dedicada a contrastar "cobramos por prompts y motores, no por usuarios".
+La gestión de equipo/RBAC nunca se construyó: sigue en la lista de "Forbidden
+Without Explicit Approval" de CLAUDE.md, y `/dashboard/settings/team` sólo
+redirige desde que se ocultó la pestaña en 2026-07-12. Es la misma clase de
+fallo que PRICING-TRUTH-1 corrigió: un reclamo verificable en dos clics —abrir
+Ajustes y buscar cómo invitar a alguien— que no se sostiene.
+
+**Cambio, sin tocar el tema de fondo ("paga por valor").** El titular del hero
+pasa de "no por usuarios" a "no por adivinar"; el checklist cambia "Usuarios
+ilimitados" por "Sube o baja de plan cuando quieras" (cierto en los cuatro
+planes); la fila "Usuarios del equipo" sale de `PLAN_MATRIX`; la pregunta de la
+FAQ se queda sin la mitad que mencionaba usuarios ("¿Por qué cobráis por
+prompts y motores?"). `/docs/planes-y-limites` pierde el mismo párrafo — se
+corrige ahí también porque, si no, la página quedaba contradiciendo a
+`/pricing` a un enlace de distancia, el mismo patrón que ya cubre
+`.claude/rules/growth-content.md` (§74).
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.790 pruebas) y `pnpm run
+validate` en verde. Sin fila nueva en el mapa de zonas: es una corrección
+editorial sobre un invariante que ya existía (CLAUDE.md, "no fake product
+behavior"), no una fase que cree uno nuevo.
+
+## 149. Rediseño de `/pricing` (Fase A+B): copy nuevo y medios de pago — la promo de precio y el escaneo diario de Starter se quedan fuera (2026-08-24)
+
+El fundador pidió un rediseño más amplio de `/pricing`: hero nuevo, precios
+tachados con promo hasta el 1 de septiembre, banda de medios de pago, quitar
+"Cómo medimos" y "El precio se ancla…", renombrar "frecuencia de refresco" a
+"frecuencia de escaneo", y subir Starter de escaneo semanal a diario. Se
+partió en fases porque dos de esas piezas tocan invariantes duros del
+repositorio, no solo copy.
+
+### Lo que se ha hecho (Fase A: copy/IA; Fase B: medios de pago)
+
+- Hero: badge "Planes que crecen contigo", título "Paga solo por lo que
+  necesitas", subtítulo y checklist nuevos (`components/pricing/pricing-page.tsx`).
+- Retirados los bloques "Cómo medimos" (`METER_ITEMS`) y "El precio se ancla
+  en el tiempo de analista que te ahorras", y el párrafo "Las palancas de
+  upsell…" bajo la comparativa.
+- "Frecuencia de refresco" → "Frecuencia de escaneo" en los 6 sitios donde
+  aparecía: `app/pricing/plans-data.ts` (matriz, FAQ, highlights de Pro/Agencia),
+  `components/billing/change-plan-modal.tsx` y `app/docs/planes-y-limites/page.tsx`.
+- FAQ "¿Cómo se mide la fiabilidad de los datos?" retirada de `/pricing` —el
+  principio que describía (credibilidad de medición visible) sigue siendo
+  real y sigue en la matriz comparativa, solo deja de tener su propia pregunta
+  aquí.
+- Banda "Pagos seguros con Stripe, Apple Pay y Google Pay": tres marcas
+  CC0 de `simple-icons` (silueta simplificada, no el asset de prensa oficial
+  pixel-exacto de cada marca), en su color de marca. Asunción, no verificación:
+  Stripe Checkout las ofrece por defecto cuando no se restringe
+  `payment_method_types` (`app/dashboard/settings/billing/actions.ts` no lo
+  hace), pero nadie ha confirmado en el propio dashboard de Stripe que Apple
+  Pay/Google Pay estén activos. Si no lo están, la insignia miente y hay que
+  quitarla o activar esos métodos.
+
+### Lo que se ha dejado fuera, y por qué
+
+- **La promo de precio (45€→19€ Starter, 179€→59€ Pro) no se ha tocado.**
+  `plans-data.ts.price` es solo un número de display — lo que cobra Stripe de
+  verdad sale de `STRIPE_PRICE_ID_STARTER`/`STRIPE_PRICE_ID_PRO`
+  (`lib/stripe.ts`), completamente desacoplado. Cambiar solo el número
+  mostrado sería anunciar un precio que el checkout no cobra — la clase de
+  cosa que CLAUDE.md prohíbe explícitamente, y "billing" está en la lista de
+  áreas que necesitan aprobación propia para "nuevos mecanismos de precio". Hoy
+  Stripe sigue en modo test en producción (`docs/launch-plan.md`, Fase 5 LAUNCH
+  pendiente), así que el riesgo inmediato es bajo, pero la promo necesita un
+  mecanismo real (con fecha de caducidad en código, no en la memoria de
+  alguien) antes de construirse.
+- **Starter sigue en escaneo semanal.** `lib/scan/cron.ts`
+  (`RECURRING_INTERVAL_MS_BY_PLAN.starter = 7 * DAY_MS`) es justo el fix de
+  PRICING-TRUTH-1 que hasta ahora garantizaba que el cron cumpliera lo que
+  `/pricing` prometía. Subirlo a diario es un cambio real de pipeline —7x más
+  llamadas a Gemini/Claude/ChatGPT por proyecto Starter al mes— que además
+  compone mal con la promo de precio no aprobada (bajar precio y subir coste
+  a la vez). Por eso el highlight de Starter dice "Escaneo **semanal** +
+  evolución", no "diario": decir lo contrario sin el cambio de backend habría
+  sido la misma clase de promesa falsa que se acaba de quitar.
+
+**Comprobado.** `pnpm test` (199 ficheros, 2.790 pruebas) y `pnpm run
+validate` en verde.
+
+**Pendiente.** Confirmar con el fundador si Apple Pay/Google Pay están
+activos en Stripe antes de dar la Fase B por cerrada del todo. Fases C
+(promo de precio) y D (Starter a diario) siguen bloqueadas hasta su propia
+aprobación explícita.
+
+## 150. La cabecera de página no llegaba a los bordes en pantallas anchas (HEADER-FULL-WIDTH-1, 2026-08-21)
+
+**Lo que vio el fundador.** En Visión general, con la ventana a tamaño real,
+la banda `Visión general / Genscore / genscore.es` se quedaba corta por los
+dos lados mientras la topbar (`Completado`, campana, `Cerrar sesión`) y el
+banner «Tu histórico se está construyendo» de justo encima sí llegaban a los
+dos bordes. Tres bandas de cromo apiladas y sólo la del medio se recortaba.
+
+**Causa.** `.ov-sticky-header` vive dentro de `.page` (tope 1320px, centrado)
+y su margen negativo (`-26px -34px 24px`) sólo cancela el padding de `.page`
+— nunca llega más allá de sus bordes. `.dash-header` y `.dmb-band`, en
+cambio, son hermanos de `.page` dentro de `.dash-main` y no tienen tope
+alguno. En cuanto la columna de contenido (`.dash-content`, el carril `1fr`
+de `.shell { grid-template-columns: var(--sidebar-w) 1fr }`) supera 1320px
+—desde ~1568px de ventana con el sidebar en 248px— `.page` empieza a
+centrarse y la cabecera deja huecos a los lados que las otras dos bandas no
+tienen.
+
+**Arreglo.** `--ov-hdr-bleed` calcula ese exceso (`max(0px, (100vw -
+var(--sidebar-w) - var(--ov-hdr-page-cap)) / 2)`, con `--ov-hdr-page-cap` a
+1320px por defecto) y se suma tanto al margen negativo como al padding, así
+que el borde de la caja llega al borde real de `.dash-content` mientras el
+contenido (título, badges, pastilla de estado) se queda exactamente donde
+estaba — los dos términos se cancelan. Por debajo de ~1568px de ventana
+`--ov-hdr-bleed` es 0 y el comportamiento es byte-idéntico al de antes.
+
+**Corrección el mismo día, antes de mergear: Competidores se quedaba corta
+igual.** El fundador probó el preview en Competidores y Páginas citadas y
+sólo la primera seguía sin llegar al borde. Causa: de las 8 pantallas que
+comparten `.ov-sticky-header`, **Competidores es la única cuya clase de
+columna estrecha va combinada directamente sobre `.page`**
+(`<div className="page cm2-page">`) en vez de anidada como hija suya —
+Visión general, Prompts y Páginas citadas meten su `.ov2-scope`/`.pr2-scope`/
+`.cit2-page` como un `<div>` aparte DENTRO de un `.page` sin modificar, que
+sigue en 1320px. En Competidores, en cambio, `.cm2-page` reescribe el propio
+`max-width` de `.page` a sus escalones (460/640/1200/1280px), así que el
+`1320px` que `--ov-hdr-bleed` daba por hecho estaba mal para esa pantalla en
+concreto — sangraba de menos, no de más, y por eso seguía viéndose corta.
+`--ov-hdr-page-cap` se hizo variable y `.cm2-page .ov-sticky-header`
+redeclara los mismos cuatro escalones que `.cm2-page` ya usa, en las mismas
+media queries, así que la sangría concuerda con el `max-width` real en cada
+una en vez de asumir un valor fijo. Ninguna otra de las 8 pantallas comparte
+esta estructura, así que ninguna otra necesita el mismo override — verificado
+leyendo el JSX de las 8, no sólo de las dos reportadas.
+
+**Deliberadamente fuera de esta fase.** El contenido de la cabecera (título,
+badges) no está alineado con la misma columna que las tarjetas de debajo en
+todas las 8 pantallas: Visión general y Prompts usan `.ov2-scope`/
+`.pr2-scope` (640/1200/1280px) como columna interior, más estrecha que la
+cabecera; Páginas citadas usa `.cit2-page` con el mismo patrón. Es
+exactamente lo que enseñan las capturas de Páginas citadas: la cabecera ya
+llega al borde correcto (nunca tuvo el bug de Competidores), pero las
+tarjetas de debajo, más estrechas, no — un desajuste que ya existía antes de
+esta fase y sigue igual de visible después. Alinear el contenido de la
+cabecera con la columna de tarjetas —no sólo llevar el fondo a sangre— exige
+decidir esa convergencia para las 8 pantallas a la vez
+(`app/console.css:509-515`, ya señalado como decisión pendiente desde
+PROMPTS-DESKTOP-2); esta fase sólo corrige que la banda deje de recortarse,
+sin tocar dónde cae el texto dentro de ella.
+
+---
+
+## 151. La cabecera de Páginas citadas nunca adoptó el patrón compartido (HEADER-FULL-WIDTH-1, 2026-08-25)
+
+**Lo que vio el fundador.** Comparando capturas anchas de Competidores y
+Páginas citadas: la segunda seguía con la banda más baja que el resto de la
+consola, y con una tipografía distinta.
+
+**Causa.** `.ov-sticky-header` la comparten 8 pantallas, y 7 de ellas (Visión
+general, Prompts, Competidores, Recomendaciones, Auditoría web, Debug, y
+ahora Páginas citadas) siguen el mismo patrón de dos líneas dentro de
+`.ov-sticky-left`: un `<p className="kicker">` con el nombre de la sección
+arriba, y debajo el nombre del proyecto en negrita (15px/750) junto a una
+badge del dominio en monoespaciada (11px). Páginas citadas se había quedado
+con un layout de una sola línea de antes de esa convergencia — kicker,
+separador vertical y el dominio en 14px/700, sin mostrar nunca el nombre del
+proyecto — que resultaba en una banda más baja y con letra distinta al
+resto. El propio comentario de `recommendations/page.tsx` ("Alineada con
+Prompts, Competidores y Páginas citadas") ya daba por hecho que lo estaba,
+sin serlo.
+
+**Arreglo.** `citations/page.tsx` adopta el mismo bloque, letra por letra,
+que ya usan las otras 6 pantallas. Ningún cambio de CSS — el desajuste era
+de estructura JSX, no de la banda en sí (que ya sangraba bien tras §150).
+
+---
+## 152. Fase C de la promo de precio: cupones reales de Stripe, no un número cambiado en `plans-data.ts` (PRICING-PROMO-1, 2026-08-24)
+
+El Task Intake de Fase C (§149 dejó C y D bloqueadas) preguntó al fundador
+tres cosas — duración del descuento, fecha límite, y si asumía configurar
+Stripe él mismo — y las tres se respondieron: **6 meses, sin permanencia**
+(cupón `duration: repeating`, `duration_in_months: 6`), **1 de septiembre de
+2026 a las 00:00 hora de Madrid**, y sí, el fundador crea los cupones.
+
+### Por qué no fue "cambiar `price: 45` a `19`"
+
+`plans-data.ts.price` es sólo un número de pantalla. Lo que cobra Stripe de
+verdad sale de `STRIPE_PRICE_ID_STARTER`/`STRIPE_PRICE_ID_PRO`
+(`lib/stripe.ts`), fijado en el Dashboard y desacoplado del todo del número
+que pinta `/pricing`. Cambiar sólo el número habría anunciado un precio que
+el checkout no cobra — y no sólo en la web pública: `plan.price` también
+pinta `components/billing/plan-billing-section.tsx` (el plan actual del
+dashboard) y `change-plan-modal.tsx` (el selector real que dispara Stripe
+Checkout), así que un cliente ya logueado habría visto "19 €" y pagado 45 €.
+
+### El mecanismo: `PROMO_ENDS_AT` decide qué se muestra, un cupón de Stripe con `redeem_by` decide qué se cobra
+
+- `app/pricing/plans-data.ts`: `PROMO_ENDS_AT` (constante única, ISO con
+  offset de Madrid) e `isPromoActive(now)`. `Plan.promoPrice` en Starter (19)
+  y Pro (59).
+- `lib/stripe.ts`: `getPromoCouponIdForPlan` lee
+  `STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO` (variables nuevas, aún sin
+  valor — el fundador las crea en Stripe cuando tenga los cupones).
+  `getActivePromoPlanIds()` es la fuente única que cruza fecha Y cupón
+  configurado: **nunca** muestra un precio tachado sólo porque la fecha lo
+  permita. La usan `/pricing` y `billing-content.tsx` (servidor) para que las
+  dos pantallas no puedan divergir sobre qué planes llevan promo.
+- `app/dashboard/settings/billing/actions.ts` (`createCheckoutSession`):
+  aplica `discounts: [{ coupon: promoCouponId }]` a la Checkout Session real
+  con la misma condición (`isPromoActive() && getPromoCouponIdForPlan`) — el
+  único sitio que decide de verdad cuánto se cobra.
+- El cupón de Stripe lleva su propio `redeem_by` = `PROMO_ENDS_AT`: aunque
+  este código nunca se volviera a tocar, Stripe deja de aceptar el cupón esa
+  fecha por su cuenta — la caducidad real no depende de que nadie recuerde
+  apagar nada.
+
+### Alcance deliberadamente recortado: sólo la conversión Free → de pago
+
+`change-plan-modal.tsx` comparte la misma rejilla de planes para dos flujos
+distintos: Free (o trial sin convertir) → Starter/Pro pasa por Checkout (ahí
+sí aplica el cupón), pero Starter↔Pro para una cuenta que YA paga se
+gestiona en el Portal de Stripe (`createPortalSession`,
+`subscription_update_confirm`), que este PR no toca. Mostrar el precio promo
+ahí habría sido la misma mentira que se acaba de evitar en otro sitio —
+`promoShown()` en el modal comprueba `!hasRealSubscription`, así que una
+cuenta con suscripción real nunca ve el tachado, aunque esté cambiando a un
+plan con `promoPrice`.
+
+### Lo que el fundador tiene que hacer en Stripe (test mode ahora; live cuando toque)
+
+Dos cupones — `amount_off` (2600 en Starter, 12000 en Pro, céntimos EUR),
+`duration: repeating`, `duration_in_months: 6`, `redeem_by` = `1788213600`
+(Unix timestamp de 2026-09-01T00:00:00+02:00, es decir 2026-08-31T22:00:00Z).
+Sus IDs van en `STRIPE_COUPON_ID_STARTER_PROMO`/`STRIPE_COUPON_ID_PRO_PROMO`
+en Vercel. Sin esas dos variables, `getActivePromoPlanIds()` devuelve una
+lista vacía y todo el sitio sigue mostrando el precio normal — el sistema
+falla hacia "no hay promo", nunca hacia "promo a medias". `pnpm run
+check:env` avisa (no falla) si la ventana está abierta, Stripe funciona, y
+falta un cupón — señal de que probablemente se olvidó el paso, no de que la
+promo vaya sin descuento a propósito.
+
+**Comprobado.** `pnpm test` (201 ficheros, 2.817 pruebas, incluidos los casos
+nuevos de `createCheckoutSession` con/sin cupón y la regla de entorno) y
+`pnpm run validate` en verde.
+
+### Addendum — el fundador configuró Stripe, y `/pricing` es estática (2026-08-25)
+
+El fundador creó los dos cupones en Stripe test mode (`amount_off` correcto,
+`duration: repeating` × 6 meses, `redeem_by` 1 de septiembre) y puso sus IDs
+en las variables de Vercel. Al principio no se veía nada en el preview
+aunque las variables ya estaban bien: `/pricing` es una página **estática**
+(prerenderizada en el build, `○` en la salida de `next build`), así que
+`getActivePromoPlanIds()` se evalúa una sola vez, en el momento de construir,
+no en cada visita — cambiar la variable de entorno sin volver a construir no
+hace nada. `/dashboard/settings/billing` sí es dinámica (`ƒ`), así que ahí sí
+se habría visto sin rebuild; la página pública no.
+
+Un "Redeploy" manual desde el propio Vercel Dashboard se canceló solo varias
+veces seguidas (2s de duración cada vez, "Canceled by Ignored Build Step").
+La causa real, encontrada más tarde: **no es deduplicación de Vercel, es
+`scripts/vercel-should-build.sh` funcionando exactamente como está diseñado**.
+Ese script compara el push contra el último deploy con éxito de la rama — y
+al redesplegar el mismo commit que ya se construyó con éxito, ese "último
+éxito" es él mismo, así que el diff está vacío y el script decide que no hay
+nada que construir. Es el mismo mecanismo que evita builds de más en
+`docs/`/`.claude/`/etc. (sección "Presupuesto de builds" arriba), pero tiene
+un punto ciego: **un cambio de variable de entorno no deja rastro en el diff
+de git**, así que un redeploy manual del mismo commit nunca puede recogerlo,
+por muchas veces que se pulse el botón. La única vía es un commit real nuevo
+en la rama — el mismo remedio que ya haría falta para cualquier otro cambio,
+sólo que aquí no hay ningún fichero de código que cambiar; documentar el
+hallazgo (este párrafo) sirvió de vehículo legítimo para ese commit.
+
+**Pendiente.** Fase D (Starter a escaneo diario) sigue bloqueada, sin tocar
+en este PR — el highlight de Starter sigue diciendo "Escaneo semanal".
+
+**Verificación visual confirmada por el fundador** en `/pricing`: banda de
+promo y tachado correctos en las cuatro tarjetas. Al probar el flujo real de
+upgrade (trial de Pro → "Contratar ahora") aparecieron dos fallos reales,
+corregidos en el mismo PR:
+
+1. **El paso de confirmación del checkout ignoraba la promo por completo.**
+   `ChangePlanModal` ya calculaba `promoShown(planId)` correctamente para las
+   tarjetas del paso "select" (`.cp-plan-price .was/.now`), pero el paso
+   "confirm" — el que de verdad ve quien pulsa "Contratar ahora" desde el
+   aviso de trial — llamaba a `planPrice(target)` a secas, sin pasar por
+   `promoShown` en ningún sitio: ni en la caja "Nuevo" (`cp-move`), ni en el
+   pie (`cp-foot-note`). El precio mostrado justo antes de ir a Stripe era el
+   de siempre (179 €), aunque el propio Stripe sí iba a cobrar el promo. Se
+   añadió `targetPromoPrice` (una sola derivación, reutilizada en los dos
+   sitios para que no puedan desincronizarse) y ahora ambos muestran el
+   tachado, el precio promo y la duración — la misma info que ya llevaba el
+   pie de la banda de `/pricing`, ahora también aquí y en la nota de aviso de
+   Stripe.
+2. **La duración de la promo ("6 meses") vivía como literal suelto,
+   repetido en dos sitios de `pricing-page.tsx`.** Se subió a
+   `PROMO_DURATION_MONTHS` en `plans-data.ts`, junto a `PROMO_ENDS_AT`, y la
+   usan tanto `pricing-page.tsx` como el nuevo bloque de `change-plan-modal.tsx` — un
+   cambio de duración del cupón ya no puede quedarse desincronizado entre
+   pantallas.
+
+Aparte, el fundador pidió que "Comparar planes" (tarjeta de Agencia en
+`/dashboard/settings/billing`) navegue a la página pública de precios en vez
+de abrir el modal de cambio de plan — ese botón abría `ChangePlanModal`
+(CONSOLE-REDESIGN-1), que sólo enseña cuatro tarjetas resumidas, no la matriz
+de comparación completa que el texto del botón promete. Ahora es un
+`<Link href="/pricing">` real.
+
+### Addendum 2 — el precio promo también después de contratar (2026-08-25)
+
+El fundador contrató Pro de verdad en una cuenta de prueba y señaló que la
+tarjeta "Tu plan" de `/dashboard/settings/billing` seguía enseñando 179 €/mes
+llano, sin ningún rastro de que la suscripción real llevara el cupón. No era
+un bug de esa cuenta en concreto — es que nada en el código comprobaba nunca
+si la suscripción activa tenía un descuento de Stripe aplicado; `getUsageSummary`
+sólo leía `profiles` en Supabase, y ninguna columna ahí registra descuentos.
+
+Se resolvió leyendo el estado real de Stripe, no inventándolo: `getActiveSubscriptionPromo`
+(`lib/stripe.ts`) llama a `stripe.subscriptions.retrieve(id, { expand: ["discounts"] })`
+y compara el id del cupón del descuento activo contra
+`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO` — nunca "hay algún descuento", que
+etiquetaría un cupón de soporte aplicado a mano en el Dashboard como si fuera
+el precio de lanzamiento. La fecha de fin que se muestra (`discount.end`) es
+la real de Stripe para ESA suscripción, no `PROMO_ENDS_AT`: dos cuentas que se
+dieron de alta en días distintos terminan su promo en fechas distintas, y
+`PROMO_ENDS_AT` sólo dice hasta cuándo se puede *empezar* a redimir el cupón,
+no hasta cuándo dura para quien ya lo redimió. Sin columna nueva en el
+esquema — de haber hecho falta una migración, esto habría requerido su propia
+aprobación explícita (CLAUDE.md, "Forbidden Without Explicit Approval").
+
+**Comprobado.** `pnpm test` (202 ficheros, 2.827 pruebas — 8 nuevas en
+`lib/stripe.test.ts` para `getActiveSubscriptionPromo`, incluida la que
+comprueba que un cupón ajeno no se etiqueta como la promo; 2 nuevas en
+`lib/billing.test.ts` para el threading de `subscriptionPromo`) y
+`pnpm run validate` en verde. El fundador verificó en el propio Dashboard de
+Stripe (suscripción real en test mode) que el cupón lleva "Descuento de
+120,00 € durante 6 meses" sobre los 179 € de Pro — cuadra con los 59 € que se
+cobran de verdad, y con lo que `getActiveSubscriptionPromo` ahora lee.
+
+### Addendum 3 — el mismo tachado en el índice de Ajustes (2026-08-25)
+
+El fundador señaló que el índice lateral de `/dashboard/settings` ("Plan · Pro
+179 €/mes", visible en el cajón móvil) seguía sin reflejar la promo, aunque
+"Tu plan" ya la mostraba correctamente desde el Addendum 2. `SettingsIndexEntry.detail`
+sólo aceptaba `string` — `lib/settings/index-entries.ts` es deliberadamente
+NO un componente cliente (ver el comentario de cabecera del propio fichero:
+un `"use client"` ahí rompió el render en CONSOLE-REDESIGN-1), así que no podía
+construir JSX; sólo devolvía la plantilla de texto plano `"Pro · 179 €/mes"`.
+Se amplió el tipo a `ReactNode` (import de sólo-tipo, no cambia el carácter
+server-safe del fichero) y `app/dashboard/settings/page.tsx` —ya Server
+Component, ya con `usage.subscriptionPromo` disponible desde el Addendum 2—
+construye el nodo con el precio tachado cuando aplica, exactamente el mismo
+dato que ya pinta "Tu plan". `.set-ie span` fuerza `display: block` en sus
+hijos (para el propio texto del detalle); sin `.set-ie span .was/.now { display:
+inline }` los dos precios habrían caído en líneas separadas en vez de en línea
+como el resto de las pantallas.
+
+**Comprobado.** `pnpm test` (202/202, 2.827/2.827) y `pnpm run validate` en
+verde.
+## 153. Cinco pantallas del producto, y los pesos de la auditoría otra vez (HOME-2026-08 Fase B2, 2026-08-22)
 
 «Cinco pantallas. Todo tu posicionamiento.»: un marco de navegador con cinco
 maquetas del producto y una tira de pestañas. Con esto la portada queda completa
@@ -13463,7 +14005,7 @@ queda ningún control muerto.
 
 ---
 
-## 148. Una pastilla que se desplaza en lugar de dos flechas, y el recorte que un barrido de anchuras no veía (HOME-2026-08 Fase B2, segunda pasada, 2026-08-23)
+## 154. Una pastilla que se desplaza en lugar de dos flechas, y el recorte que un barrido de anchuras no veía (HOME-2026-08 Fase B2, segunda pasada, 2026-08-23)
 
 **Qué pedía el fundador.** Dos cosas, al ver las cinco pantallas del móvil:
 «si animamos una pastilla no hacen falta las flechas izquierda y derecha», y
@@ -13585,7 +14127,7 @@ igualdad de especificidad, gana la última: **no se aplicó nada**. El síntoma
 fue que el barrido siguió marcando 561px en rojo con el arreglo ya escrito.
 
 Es el mismo fallo de §143 (escala tipográfica), §144 (colores de la sección
-oscura), §146 (escala móvil de la FAQ) y el prefijado de §147. La regla ya
+oscura), §146 (escala móvil de la FAQ) y el prefijado de §153. La regla ya
 existe en `.claude/rules/styles.md` desde §146 —*un tramo responsive se
 escribe junto a lo que corrige*— y aun así se volvió a pisar, porque el
 instinto es agrupar lo que comparte anchura en vez de lo que comparte
@@ -13601,7 +14143,7 @@ exactamente uno visible — ningún control muerto.
 
 ---
 
-## 149. La solución se genera, la auditoría marca sus fallos, y la portada estrena su tira de blog y su tabla (HOME-2026-08 Fase B2/D, 2026-08-23)
+## 155. La solución se genera, la auditoría marca sus fallos, y la portada estrena su tira de blog y su tabla (HOME-2026-08 Fase B2/D, 2026-08-23)
 
 Cuatro peticiones del fundador sobre las cinco pantallas, y con las dos últimas
 la portada queda completa salvo la demo del hero.
@@ -13711,7 +14253,7 @@ A2), que sigue bloqueada por una decisión del fundador — meterla implica saca
 
 ---
 
-## 150. La demo del hero: cinco escenas, y el tour deja la portada (HOME-2026-08 Fase A2, 2026-08-23)
+## 156. La demo del hero: cinco escenas, y el tour deja la portada (HOME-2026-08 Fase A2, 2026-08-23)
 
 La última pieza que faltaba del artboard, y la primera que ve cualquiera que
 llega. Petición del fundador: *«ahí te tienes que lucir, es la primera zona de
@@ -13765,7 +14307,7 @@ Lo que arrastra, hecho en este mismo PR:
   «competitivo» desde 70, «emergente» desde 40 e **«inicial»** por debajo
   (`app/dashboard/projects/[projectId]/page.tsx`). Estrenar vocabulario en la
   primera pantalla de la portada que la consola nunca enseña es la misma clase
-  de error que los pesos de la auditoría en §147.
+  de error que los pesos de la auditoría en §153.
 - Los rótulos que se repiten más abajo —14 prompts, 3 motores, «Te mencionan»,
   «Te citan»— se dicen **igual** aquí que allí. La portada no puede
   contradecirse a sí misma al hacer scroll.
@@ -13801,7 +14343,7 @@ es el vocabulario.
 
 ### Tres recortes silenciosos, y una comprobación que ahora los ve
 
-El barrido que traía de §148 medía el desbordamiento de cada elemento contra
+El barrido que traía de §154 medía el desbordamiento de cada elemento contra
 la caja de su panel. No bastaba: **un elemento puede caber en el panel y estar
 recortado por un `overflow: hidden` intermedio**. La comprobación pasa a medir
 también `scrollHeight > clientHeight` en todo lo que esconde su contenido, y
@@ -13817,7 +14359,7 @@ con eso salieron tres cosas que ninguna captura habría delatado:
 3. Y ese `white-space` **no se aplicaba**: el elemento lleva `.lp-sheet-code` y
    `.lp-hx-code`, misma especificidad, y `.lp-sheet-code` vive más abajo en el
    fichero. **Sexta vez que el orden decide en vez de la intención** (§143,
-   §144, §146, §147, §148). Aquí no valía «escríbelo al lado», porque lo que
+   §144, §146, §153, §154). Aquí no valía «escríbelo al lado», porque lo que
    corrige es de otra sección: se cualifica por el contenedor,
    `.lp-hx-artefacto .lp-hx-code` (0,2,0), y el orden deja de importar.
 
@@ -13848,7 +14390,7 @@ bajo 640, que es lo que mide la escena más larga.
 
 ---
 
-## 151. El marco de la demo deja de estar medido para su peor escena, y una barra anuncia el cambio (HOME-2026-08 Fase A2, segunda pasada, 2026-08-23)
+## 157. El marco de la demo deja de estar medido para su peor escena, y una barra anuncia el cambio (HOME-2026-08 Fase A2, segunda pasada, 2026-08-23)
 
 **Qué pasó.** El fundador mandó una captura del hero en móvil con un rectángulo
 rojo alrededor de todo el blanco que quedaba bajo la respuesta de ChatGPT:
@@ -13861,7 +14403,7 @@ al hacer scroll, si no no parece una animación»*.
 
 **Por qué había blanco.** El cuerpo de la demo tiene alto fijo —las cinco
 escenas se apilan en el mismo hueco y un alto por escena daría un salto de más
-de 100px en cada cambio (§150)—, así que lo manda la escena más alta. Medido a
+de 100px en cada cambio (§156)—, así que lo manda la escena más alta. Medido a
 375px: escenas 0/1/2 entre 334 y 373, escena 3 en 485 y escena 4 en **509**. El
 cuerpo estaba en 508 por la escena 4 y las tres primeras arrastraban entre 135
 y 220px de vacío. El diagnóstico del fundador era exacto: el problema no estaba
@@ -13878,7 +14420,7 @@ lo que sobra queda abajo, que es lo que se pidió.
 
 Barrido de 320 a 1280px, cinco escenas cada uno, midiendo el fondo real del
 contenido contra la caja **y** `scrollHeight > clientHeight` en todo lo que
-esconde desbordamiento (§148). Encontró tres cosas que ningún ojo iba a ver:
+esconde desbordamiento (§154). Encontró tres cosas que ningún ojo iba a ver:
 la tarjeta del código recortada dentro de su hueco entre 320 y 340px, los dos
 botones de «Generar solución» partidos en dos líneas dentro de una pastilla de
 31px a 375px, y el fondo de «Maisons du Monde» estirándose hasta el borde de la
@@ -14071,10 +14613,10 @@ marca a la vez, una con nombres reales y otra con nombres de attrezzo.
    «Competidores» → «Y quién tiene mejor posicionamiento que tú.», «El
    resultado» → «Para que en próxima respuesta la IA te mencione.» — mismo
    texto en las dos secciones de la portada, mismo criterio que ya obligaba a
-   que «14 prompts · 3 motores» se diga igual arriba y abajo (log §147: «la
+   que «14 prompts · 3 motores» se diga igual arriba y abajo (log §153: «la
    portada no puede contradecirse a sí misma al hacer scroll»).
 
-## 152. La pastilla de «Cinco pantallas» deja de pelearse con su propio scroll, y la barra de la demo del hero pasa a ser cinco pastillas (HOME-2026-08, 2026-08-24)
+## 158. La pastilla de «Cinco pantallas» deja de pelearse con su propio scroll, y la barra de la demo del hero pasa a ser cinco pastillas (HOME-2026-08, 2026-08-24)
 
 **Qué pasó.** El fundador, sobre el preview: *«la animación de las pestañas de
 las 5 pantallas no funciona bien»*.
@@ -14096,7 +14638,7 @@ declaraba para el gesto táctil, así que seguía animándose igual. Sólo
 tira salta a su sitio en el mismo tick del clic y la pastilla queda como la
 única animación visible.
 
-**Límite honesto, como ya pasó con el gráfico de evolución (§151).** Chromium
+**Límite honesto, como ya pasó con el gráfico de evolución (§157).** Chromium
 headless colapsa el scroll `"smooth"` a un solo fotograma, así que el
 parpadeo exacto no se pudo reproducir aquí — mismo límite ya registrado en
 `.claude/rules/styles.md` para bugs de scroll en este repo. El arreglo sale
@@ -14114,7 +14656,7 @@ anima mientras el reloj corre de verdad (`corriendo`), y si se paró —tocaste
 el raíl, la demo salió de pantalla, o es la última escena— se queda llena y
 quieta en vez de a medias, porque a medias leería como una barra rota, no como
 el final de la historia. Esto **cambia** el invariante «una barra de avance es
-un reloj o no es nada» de `.claude/rules/styles.md` (§151): antes la barra
+un reloj o no es nada» de `.claude/rules/styles.md` (§157): antes la barra
 entera desaparecía si `corriendo` era falso; ahora sólo la animación de la
 pastilla en curso depende de `corriendo` — el estado ya visto es hecho, no
 progreso inventado, y no tiene por qué desaparecer con el reloj. Regla
@@ -14147,7 +14689,7 @@ de cada una sin dejar diff.
 **Cuatro ajustes más, mismo PR, mismo día.**
 
 3. **La pastilla de «Cinco pantallas» seguía rara al pulsar — un bug distinto
-   del que ya se había arreglado.** El anterior era el scroll (§152, arriba);
+   del que ya se había arreglado.** El anterior era el scroll (§158, arriba);
    éste era de color: el fundador seguía viendo «primero se pone negro luego
    blanco, un poco raro» al pulsar una pestaña. Medido con Playwright
    fotograma a fotograma (`getComputedStyle` sobre las cinco pestañas y la
@@ -14155,7 +14697,7 @@ de cada una sin dejar diff.
    estado intermedio — fondo blanco durante ~300-400ms — antes de asentarse en
    el fondo oscuro correcto. Causa: `.lp-prod-tab:hover { background: #fff }`
    sin acotar. La transición retardada de `.on` (el truco de los «retardos
-   asimétricos», §147) parte del valor YA PINTADO en el fotograma anterior
+   asimétricos», §153) parte del valor YA PINTADO en el fotograma anterior
    como punto de partida — y ese valor, en el instante de cualquier clic real,
    es el de `:hover`, porque el ratón siempre está encima de lo que acabas de
    pulsar. El resultado: en vez de ir de transparente a oscuro, iba de blanco
@@ -14229,7 +14771,7 @@ de cada una sin dejar diff.
 12. **«Recomendaciones» también sale de la cabecera** (fundador: "Recomendaciones
     ya no apunta a nada en el header. Lo quitamos de momento"). Su ancla,
     `#recomendaciones`, era la sección SPOTLIGHT — retirada de la portada en
-    HOME-2026-08 (log §151) — así que llevaba desde entonces a ningún sitio.
+    HOME-2026-08 (log §157) — así que llevaba desde entonces a ningún sitio.
     Fuera de `PUBLIC_NAV_ITEMS`, "de momento": si una sección futura gana un
     ancla equivalente, el enlace puede volver.
 13. **La escena 0 de la demo del hero, «La respuesta», se rediseña entera.**
@@ -14305,7 +14847,7 @@ de cada una sin dejar diff.
     `font-size`, así que peso/tracking/interlineado heredan de la regla base
     sin más cambios).
 16. **El campo del hero vuelve a llevar al registro, no al comprobador
-    gratuito.** HOME-2026-08 Fase A (log §150) había cambiado el destino a
+    gratuito.** HOME-2026-08 Fase A (log §156) había cambiado el destino a
     `/gratis/aparece-mi-marca-en-chatgpt` — "compruébalo ahora mismo, sin
     cuenta". El fundador pide revertirlo: "quiero que al introducir el
     dominio vaya a la pantalla de registro, como antes. Como hace Semrush" —
@@ -14352,7 +14894,7 @@ de cada una sin dejar diff.
     tarjeta» y «−67% · Pro a 59€/mes hasta el 1 de septiembre» con un solo
     reloj CSS (`lp-promo-cycle`, `animation-delay` negativo en el mensaje B
     para que nunca arranquen superpuestos — mismo mecanismo que
-    `.lp-hx-avance`, log §152). `prefers-reduced-motion` congela en el
+    `.lp-hx-avance`, log §158). `prefers-reduced-motion` congela en el
     primer mensaje y oculta el segundo entero, verificado con
     `reducedMotion: "reduce"` en Playwright.
 

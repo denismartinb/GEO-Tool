@@ -1,6 +1,28 @@
 // Packaging de GenScore: 4 tramos, precio único en euros, facturación mensual.
 // Ejes de valor: bucle de acción + credibilidad — no el volumen de datos.
 
+/**
+ * PRICING-PROMO-1 (Task Intake aprobado 2026-08-24). El cupón de Stripe que
+ * de verdad aplica el descuento (`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO`,
+ * ver `lib/stripe.ts`) lleva su propio `redeem_by` a esta misma fecha — es la
+ * aplicación real. Esta constante es sólo lo que decide qué muestra la
+ * pantalla, para que ambas cosas dejen de anunciar la promo el mismo instante
+ * en vez de depender de que alguien recuerde apagar dos sitios.
+ */
+export const PROMO_ENDS_AT = "2026-09-01T00:00:00+02:00";
+
+/**
+ * Duración real del descuento en los cupones de Stripe (`duration: repeating`,
+ * `duration_in_months: 6`) — no es un adorno de copy, es lo que Stripe factura
+ * de verdad cada mes hasta que se cumplen los 6, así que cualquier pantalla
+ * que muestre el precio promo tiene que decir esto junto a él.
+ */
+export const PROMO_DURATION_MONTHS = 6;
+
+export function isPromoActive(now: Date = new Date()): boolean {
+  return now.getTime() < new Date(PROMO_ENDS_AT).getTime();
+}
+
 export type PlanCell = boolean | string;
 
 export type PlanMeter = {
@@ -29,6 +51,14 @@ export type Plan = {
    * reference figure only.
    */
   priceLabel?: string;
+  /**
+   * PRICING-PROMO-1: precio mientras `isPromoActive()` sea cierto y Stripe
+   * tenga configurado el cupón correspondiente (`lib/stripe.ts`,
+   * `getActivePromoPlanIds`) — nunca se muestra solo porque la fecha lo
+   * permita, para que la pantalla no prometa un descuento que el checkout no
+   * puede dar.
+   */
+  promoPrice?: number;
   period: string;
   tagline: string;
   who: string;
@@ -63,6 +93,7 @@ export const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     price: 45,
+    promoPrice: 19,
     period: "mes",
     tagline: "Empieza a monitorizar",
     who: "Consultor o marca pequeña",
@@ -71,7 +102,7 @@ export const PLANS: Plan[] = [
     highlights: [
       "1 dominio · ~25 prompts",
       "3 motores de IA (Gemini, Claude y ChatGPT)",
-      "Refresco semanal + tendencia",
+      "Escaneo semanal + evolución",
       "Bucle de acción básico",
       "Credibilidad de medición visible"
     ],
@@ -82,6 +113,7 @@ export const PLANS: Plan[] = [
     id: "pro",
     name: "Pro",
     price: 179,
+    promoPrice: 59,
     period: "mes",
     tagline: "El bucle de acción completo",
     who: "Equipo in-house o consultor avanzado",
@@ -90,7 +122,7 @@ export const PLANS: Plan[] = [
     ctaStyle: "primary",
     highlights: [
       "5 dominios · ~100 prompts",
-      "3 motores de IA (Gemini, Claude y ChatGPT) · refresco diario",
+      "3 motores de IA (Gemini, Claude y ChatGPT) · escaneo diario",
       "Nuevos motores incluidos sin coste extra cuando se publiquen",
       "Bucle de acción completo",
       "Generador de soluciones (FAQ, schema, briefs)"
@@ -110,7 +142,7 @@ export const PLANS: Plan[] = [
     ctaStyle: "ghost",
     highlights: [
       "Dominios y prompts a medida (~300 de referencia)",
-      "3 motores de IA (Gemini, Claude y ChatGPT) · refresco diario",
+      "3 motores de IA (Gemini, Claude y ChatGPT) · escaneo diario",
       "Volumen y condiciones adaptadas a tu agencia",
       "Onboarding acompañado antes de contratar"
     ],
@@ -129,9 +161,8 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
       { label: "Dominios", vals: ["1", "1", "5", "A medida"] },
       { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
       { label: "Motores de IA", vals: ["1", "3", "3", "3"] },
-      { label: "Frecuencia de refresco", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
-      { label: "Tendencia temporal", vals: [false, true, true, true] },
-      { label: "Usuarios del equipo", vals: ["1", "Ilimitados", "Ilimitados", "Ilimitados"] }
+      { label: "Frecuencia de escaneo", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
+      { label: "Tendencia temporal", vals: [false, true, true, true] }
     ]
   },
   {
@@ -161,8 +192,8 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
     a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de GenScore antes de pagar nada."
   },
   {
-    q: "¿Por qué cobráis por prompts y motores, y no por usuarios?",
-    a: "Porque el valor está en cuánto monitorizas, no en cuánta gente lo mira. Los usuarios son ilimitados desde Starter. Pagas por prompts × motores × frecuencia de refresco — la unidad real de coste y de valor."
+    q: "¿Por qué cobráis por prompts y motores?",
+    a: "Porque el valor está en cuánto monitorizas, no en un precio plano. Pagas por prompts × motores × frecuencia de escaneo — la unidad real de coste y de valor."
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -171,10 +202,6 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   {
     q: "¿Qué incluye la prueba de Pro?",
     a: "Actualmente puedes activar Pro completo eligiendo ese plan al registrarte, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Mientras no lancemos la facturación no hay límite de tiempo automático — te avisaremos con antelación razonable antes de introducir el cobro."
-  },
-  {
-    q: "¿Cómo se mide la fiabilidad de los datos?",
-    a: "Cada métrica muestra su tamaño de muestra y metodología. No inflamos puntuaciones ni mostramos progreso falso: si la confianza de un dato es baja, lo verás. Es nuestro principio de credibilidad de medición."
   },
   {
     q: "¿Qué incluye el plan Agencia?",

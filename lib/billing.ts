@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
+import { getActiveSubscriptionPromo } from "@/lib/stripe";
 import type { AuthenticatedContext } from "@/lib/auth";
 
 const DEFAULT_PLAN_ID: Plan["id"] = "pro";
@@ -28,6 +29,8 @@ export type UsageSummary = {
   hasStripeSubscription: boolean;
   /** Set when a Portal-driven cancellation is scheduled (Stripe's cancel_at_period_end) — the real date the plan stops, not yet reflected as a downgrade since the account keeps access until then. */
   cancelAt: string | null;
+  /** PRICING-PROMO-1: set when the real Stripe subscription is currently under one of our promo coupons — read from Stripe itself, see `getActiveSubscriptionPromo`. Null for a plain subscription, a trial, or Free. */
+  subscriptionPromo: { promoPrice: number; endsAt: string } | null;
 };
 
 type TrialFields = {
@@ -189,6 +192,10 @@ export async function getUsageSummary(): Promise<UsageSummary> {
 
   const engineSet = new Set((results ?? []).map((r) => r.provider).filter(Boolean));
 
+  const subscriptionPromo = profile?.stripe_subscription_id
+    ? await getActiveSubscriptionPromo(profile.stripe_subscription_id, plan.id)
+    : null;
+
   return {
     planId: plan.id,
     promptCount: prompts?.length ?? 0,
@@ -201,6 +208,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     hasStripeCustomer: Boolean(profile?.stripe_customer_id),
     trialEndsAt: trialExpired ? null : (profile?.trial_ends_at ?? null),
     hasStripeSubscription: Boolean(profile?.stripe_subscription_id),
-    cancelAt: (profile?.cancel_at as string | null | undefined) ?? null
+    cancelAt: (profile?.cancel_at as string | null | undefined) ?? null,
+    subscriptionPromo
   };
 }
