@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { computeMissionBeat, resolveDisplayBeat, IGNITION_HOLD_MS, type MissionBeat } from "@/lib/scan/mission-beats";
 import type { ActiveScanRun } from "@/components/scan-in-progress";
 
@@ -30,10 +31,10 @@ const POLL_INTERVAL_MS = 3000;
  * Deliberately does NOT render a score at `entrega`. That beat fires once
  * every response has a terminal extraction outcome, which is BEFORE the run's
  * finalize step persists the score — this component has no score to show at
- * that instant. The real reveal is `ScanProgressPoller` (mounted by the
- * parent) calling `router.refresh()` once `scan_runs.status` goes terminal.
- * A placeholder number here to "keep pace" with the design reference would be
- * exactly the fake progress CLAUDE.md forbids.
+ * that instant. The real reveal is this component's own poll calling
+ * `router.refresh()` once `scan_runs.status` goes terminal (see the effect
+ * below). A placeholder number here to "keep pace" with the design reference
+ * would be exactly the fake progress CLAUDE.md forbids.
  */
 export function ScanMissionRocket({
   projectId,
@@ -52,6 +53,7 @@ export function ScanMissionRocket({
   engines: number | null;
   expectedResponses: number | null;
 }) {
+  const router = useRouter();
   const [run, setRun] = useState<LiveRun>(initial);
   const [ignitionElapsed, setIgnitionElapsed] = useState(false);
 
@@ -64,12 +66,36 @@ export function ScanMissionRocket({
         if (!res.ok || cancelled) return;
 
         const data: { run: LiveRun | null } = await res.json();
-        if (!data.run || data.run.id !== initial.id) return;
+        const live = data.run;
+        /**
+         * ANIMATION-PARITY-1 (2026-08-26) — the mission ends itself.
+         *
+         * It used to only stop its own clock here, and the reveal was left to
+         * `ScanProgressPoller`, which `app/dashboard/projects/[projectId]/
+         * page.tsx` mounts and the five OTHER sections never did. So the
+         * mission behaved differently depending on where you were standing
+         * when the scan finished: on Visión general the results appeared, and
+         * on Prompts / Competidores / Recomendaciones / Páginas citadas /
+         * Auditoría web it sat on "Casi está" forever until someone reloaded
+         * by hand (founder, 2026-08-26, on Competidores).
+         *
+         * The component that OWNS the screen is the one that has to hand it
+         * back, so the refresh moves here — one rule for all six, and the
+         * section you were reading is the one that fills in. Same three exit
+         * conditions `ScanProgressPoller` already used: terminal status, a run
+         * id that is no longer ours (SCAN-ROBUST-1's auto-retry opens a fresh
+         * run), or no active run at all.
+         */
+        const isTerminal = !live || !["pending", "running"].includes(live.status);
+        const isSuperseded = Boolean(live) && live!.id !== initial.id;
 
-        setRun(data.run);
-        if (data.run.status !== "pending" && data.run.status !== "running") {
+        if (isTerminal || isSuperseded) {
           clearInterval(id);
+          if (!cancelled) router.refresh();
+          return;
         }
+
+        if (live) setRun(live);
       } catch {
         // Transient network error — the next tick retries.
       }
@@ -79,7 +105,7 @@ export function ScanMissionRocket({
       cancelled = true;
       clearInterval(id);
     };
-  }, [projectId, initial.id]);
+  }, [projectId, initial.id, router]);
 
   /**
    * The lift-off shot gets its seconds and then hands over, whatever the
@@ -188,12 +214,26 @@ function titleFor(beat: MissionBeat): string {
     case "ignicion":
       return "Motores encendidos";
     case "ascenso":
-      return `${beat.done} de ${beat.total}`;
+      return countTitle(beat.done, beat.total);
     case "orbita":
-      return beat.total === null ? "Abriendo la carga" : `${beat.done} de ${beat.total}`;
+      return beat.total === null ? "Abriendo la carga" : countTitle(beat.done, beat.total);
     case "entrega":
       return "Casi está";
   }
+}
+
+/**
+ * "36 de 78" with NON-BREAKING spaces — ANIMATION-PARITY-1 (2026-08-26).
+ *
+ * The figure is the one thing on this screen a user reads as a single token,
+ * and at 76px it was breaking after "de" on four of the six sections (the copy
+ * column's cap used to be font-metric-dependent; see `.mrk-copy` in
+ * `app/globals.css`). The CSS fix removes the cause; this removes the
+ * possibility, at any viewport and for any pair of figures, which is what a
+ * count deserves — a wrap here reads as two different numbers.
+ */
+function countTitle(done: number, total: number): string {
+  return `${done}\u00A0de\u00A0${total}`;
 }
 
 /**

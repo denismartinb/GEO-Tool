@@ -769,7 +769,15 @@ export default async function ProjectDetailPage({
       {ENABLE_SYNC_SCAN_EXECUTION && activeRun ? (
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
       ) : null}
-      {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
+      {/* Not while the mission owns the screen: since ANIMATION-PARITY-1
+          (2026-08-26) `ScanMissionRocket` fires the terminal `router.refresh()`
+          itself, on all six sections, so mounting this one too here would just
+          request the same RSC payload twice a few hundred ms apart. Still
+          mounted for every OTHER state of this page (`ScanInProgressLive`, the
+          data view with a refresh in flight), which is what it was written for. */}
+      {activeRun && !showMissionTakeover ? (
+        <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} />
+      ) : null}
 
       {/* Sticky page header — hidden while the first-scan mission takeover
           (below) owns the screen, so the rocket animation reads as full

@@ -16123,3 +16123,147 @@ Retirado a petición del fundador (`components/settings/notifications-section.ts
 Sin tests que dependieran del texto. `.set-quiet` (`app/globals.css`) se deja
 tal cual: es una clase de utilidad genérica, no exclusiva de este párrafo.
 `pnpm test` (203/203, 2.837/2.837) y `pnpm run validate` en verde.
+
+---
+
+## 167. La misión del primer escaneo era seis misiones distintas (ANIMATION-PARITY-1, 2026-08-26)
+
+**Qué pasó.** En las pruebas finales de usuario el fundador recorrió las seis
+pantallas que montan el cohete durante el primer escaneo y encontró tres cosas
+a la vez: *"la animación sale rota en algunas pantallas: en prompts
+completamente. Y en otras un salto de línea en las cifras"*, y por separado,
+sobre Competidores, *"la animación al terminar no redirige sola a Visión
+General. Se queda así. Hasta que no recargas no ves los resultados"*. La
+petición fue explícita: **que el formato, el tamaño, el comportamiento y el
+contenedor sean exactamente iguales en todas las secciones.**
+
+**Un solo componente, seis renderizados.** `ScanMissionRocket` es uno
+(`components/scan-mission-rocket.tsx`), lo monta `FirstScanTakeover` y lo
+pintan seis páginas. Los tres fallos tienen la misma forma: **algo de fuera del
+componente decidía cómo se veía o cómo terminaba, y ninguna pantalla chillaba
+al discrepar.**
+
+### 1 · Prompts: un `<div>` de más entre `.page` y la misión
+
+Prompts renderizaba la misión **dentro** del `<div style={{ paddingTop: 20 }}>`
+que envuelve el filtro y la lista. `.mrk-fill` (§160) convierte `.page` en
+columna flex y le da `flex: 1` a `.mrk-full` — pero el ítem flex ahí era el
+envoltorio, una caja de altura `auto` que se dimensiona por su contenido. La
+escena se quedaba en su propio tope de altura mínima con página gris debajo, y
+los 20px de relleno superior la separaban además de la cabecera. Medido: **319
+px de misión dentro de una caja de 900**, y 20px de hueco arriba, en 960, 1280,
+1440, 1920 y 2560px.
+
+La misión pasa a colgar **directamente** de `.page.mrk-fill`, como en las otras
+cinco. Lo que se renderice al lado va en la rama `else`, nunca entre `.page` y
+`<FirstScanTakeover>`.
+
+### 2 · La cifra partida: `30ch` no mide lo mismo en dos tipografías
+
+`.mrk-copy` topaba su columna en `max-width: 30ch`. **`ch` es el avance del
+glifo "0" en la fuente del PROPIO elemento**, y dos de las seis pantallas
+envuelven la misión en un ámbito de marca que redeclara la familia —
+`.cm2-scope` (Competidores) y `.wa2-scope` (Auditoría web) declaran Figtree —
+mientras las otras cuatro caen a la Hanken Grotesk de `body`. Medido contra el
+CSS compilado y las webfonts reales:
+
+| | Visión general · Prompts · Páginas citadas · Recomendaciones | Competidores · Auditoría web |
+|---|---|---|
+| tipografía de la copia | Hanken Grotesk | Figtree |
+| `30ch` resuelve a | **269 px** | **308 px** |
+| "36 de 78" a 76px necesita | 290 px | 290 px |
+| resultado a 1920px | **2 líneas** | 1 línea |
+
+Es exactamente lo que enseñaban las capturas. Y el mismo desajuste arrastraba
+los colores: `.cm2-scope`/`.wa2-scope` redeclaran también la rampa `--ink-*` a
+`--brand-ink-*`, así que `.mrk-sub` salía #5b6b82 en dos pantallas y #6b7385 en
+cuatro — y **el segundo da 4,08:1 sobre el extremo oscuro del degradado de esta
+misma pantalla (#E7EEFA), por debajo de AA**, mientras el primero da 4,64:1.
+
+Tres arreglos, en este orden de importancia:
+
+- **`.mrk-full` fija su propia tipografía y su propia rampa de tinta.** Figtree
+  y `--brand-ink-*` son la mitad deliberada del par (es lo que pide
+  `docs/brand/brand-guidelines.md` y a lo que ya resuelve `--font-body`), así
+  que las seis pantallas se alinean con las dos que ya lo hacían bien — y de
+  paso la pantalla entera sube por encima de AA.
+- **El tope de la columna pasa a píxeles (420px), nunca a unidades de métrica
+  tipográfica.** Fijar la fuente ya quita la divergencia; esto quita la
+  *dependencia*, para que un cambio futuro de tipografía no la reintroduzca en
+  silencio.
+- **La cifra lleva espacios duros** (`countTitle`, `\u00A0`). El CSS quita la
+  causa; esto quita la posibilidad, a cualquier anchura y para cualquier par de
+  números. Un salto de línea ahí se lee como dos números distintos.
+
+### 3 · La misión no terminaba sola en cinco de las seis pantallas
+
+`ScanMissionRocket` sondeaba `/api/projects/[id]/scan-status` cada 3s **sólo
+para parar su propio reloj**; el `router.refresh()` que descubre la pantalla lo
+disparaba `ScanProgressPoller`, y ese lo montaba únicamente
+`app/dashboard/projects/[projectId]/page.tsx`. En Visión general los resultados
+aparecían solos; en Prompts, Competidores, Recomendaciones, Páginas citadas y
+Auditoría web la misión se quedaba en "Casi está" indefinidamente hasta que
+alguien recargaba a mano. La captura del fundador es Competidores.
+
+**El componente que ocupa la pantalla es el que tiene que devolverla**, así que
+el refresco se muda ahí: una regla para las seis, con las tres mismas
+condiciones de salida que ya usaba `ScanProgressPoller` (estado terminal, id de
+run que ya no es el nuestro por el reintento de SCAN-ROBUST-1, o ningún run
+activo). `ScanProgressPoller` deja de montarse en Visión general **mientras la
+misión ocupa la pantalla** — pedirían el mismo payload RSC dos veces con unos
+cientos de ms de diferencia; sigue montado para todos los demás estados de esa
+página, que es para lo que se escribió.
+
+**Nota sobre "redirige a Visión General".** No redirige: **refresca en el
+sitio**, y la sección que estabas leyendo es la que se rellena con sus propios
+datos. Redirigir sacaría de Competidores a quien está mirando Competidores. En
+el recorrido real de alta el primer escaneo arranca **en** Visión general, así
+que ahí el efecto es literalmente el que pedía el fundador.
+
+### Cómo se verificó
+
+Fixture de Playwright/Chromium construido desde la **salida compilada**
+(`.next/static/chunks/*.css` tras `pnpm run build`, los tres chunks: variables
+de `next/font`, `globals.css` y `console.css`) con las **webfonts reales**
+servidas desde `.next/static/media` — la regla de `.claude/rules/styles.md`
+sobre fixtures y `box-sizing` aplica igual a las métricas de fuente, y de hecho
+**una primera pasada sin las fuentes reales no reprodujo el salto de línea**:
+sin `--font-body` definido las seis pantallas caían a la misma familia y todo
+salía idéntico. Se reprodujo la cadena de envoltorios de las seis pantallas tal
+y como está en el código, a 960/1280/1440/1920/2560px, midiendo columna,
+número de líneas de la cifra, tipografía, los cuatro bordes contra
+`.dash-content` y si la misión llena su caja.
+
+- **Antes:** DIVERGENTE en las cinco anchuras — dos tipografías, columnas de
+  269 vs 308px, la cifra en 2 líneas en cuatro pantallas desde 1920px, y
+  Prompts con 20px de desplazamiento y 269–319px de misión en 900.
+- **Después:** IDÉNTICO en las cinco anchuras — Figtree, columna 271/398/420px
+  según el `clamp`, cifra en 1 línea, sangrado 0 en los cuatro bordes y misión
+  llenando la caja, en las seis.
+
+El fixture no se queda en el repo (necesita un build previo y no cabe en CI).
+Lo que sí queda es `tests/mission-parity.test.ts`, contratos a nivel de fuente
+sobre justo las propiedades que eran por-pantalla: que las seis páginas ponen
+`mrk-fill` en su `.page`, que ninguna abre una caja con relleno encima de la
+misión, que `.mrk-full` fija tipografía y rampa de tinta, que el tope de la
+columna es en píxeles y no en `ch`, y que la misión llama a `router.refresh()`.
+Comprobado que falla en la dirección correcta revirtiendo `420px` a `30ch`.
+
+**Comprobado.** `pnpm test`, `pnpm run typecheck`, `pnpm run lint`,
+`pnpm run validate` (incluye `next build`) y `git diff --check`, todo en verde.
+
+**Lo que NO entra aquí, y por qué.** El fundador reportó en la misma tanda que
+*"Auditoría web se ve mal, está centrado el contenido como si fuera mobile"*.
+Es cierto y está localizado: `.wa2-page` (`app/console.css`) se queda en
+`max-width: 460px` a cualquier anchura, sin la escalera 640/1200/1280 que sí
+tienen `.cm2-page` y `.cit2-page`. **No es la animación** — es el ancho de una
+pantalla entera, en una zona con su propia regla de ruta, y el propio
+`console.css` deja escrito que converger el ancho de la consola *"needs its own
+decision on which width the whole console converges to"*. Va en su propia fase
+con su propia pasada de piloto, no colgando de este PR.
+
+**Nota de renumeración.** Esta sección nace como §167 sobre `main` en
+796a8bf. Hay cuatro PRs abiertos que podrían reclamar el número antes; si
+`tests/log-numbering.test.ts` salta al fusionar, se renumera ESTA sección (no
+la que ya esté en `main`) y con ella todas sus referencias
+(`grep -rn "§167"`). Mismo protocolo que documentan los §159, §161 y §163.
