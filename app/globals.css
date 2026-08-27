@@ -7661,6 +7661,23 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    variantes que aún no existen. */
 .legal-body a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 
+/* El fundador, mirando un artículo en una pantalla ancha: la columna de
+   texto (.blog-body, 760px) colgaba del borde izquierdo de .lp-inner
+   (1124px de contenido) en vez de centrarse, dejando un hueco muerto a la
+   derecha — y la portada/el rastro de miga, sin max-width propio, se
+   quedaban más anchos que el propio texto que envolvían. `:has()` en vez de
+   una clase envolvente nueva: .lp-inner es compartido por TODO el sitio
+   público, así que la regla sólo debe alcanzar a las páginas que de verdad
+   tienen `.blog-body` (los 17 artículos y las 6 páginas de /comparativas) —
+   nunca a /docs, /glosario, el comprobador gratuito o /que-es-genscore, que
+   comparten el mismo `.lp-inner` con un layout distinto. Sólo fija
+   margin-left/margin-right (no `margin` en corto), así que no pisa los
+   margin-top/bottom que ya reparten el ritmo vertical más arriba en este
+   fichero (`.blog-cover-compact + h1`, `h1 + .blog-post-meta`, etc.) —
+   ninguno de ellos declara el eje horizontal, así que no hay pelea de
+   especificidad que resolver. */
+.lp-inner:has(> .blog-body) > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+
 .blog-body { max-width: 760px; }
 .blog-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
 .blog-body h2:first-child { margin-top: 0; }
