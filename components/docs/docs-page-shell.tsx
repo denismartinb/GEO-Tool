@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { DOCS_NAV } from "@/lib/docs/nav";
 
@@ -84,6 +85,9 @@ export function DocsPageShell({
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
             </nav>
+          </div>
+          <div className="lp-footer-pay">
+            <PaymentBadgesRow />
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>

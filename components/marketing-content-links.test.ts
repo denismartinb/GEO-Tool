@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "./marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_SHELLS } from "./marketing-content-links";
 
 /**
  * SEO-POS-1 (T3). El fallo que este test impide repetir: `/glosario` y
@@ -16,20 +16,6 @@ import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "./marketing-con
  */
 
 const ROOT = process.cwd();
-
-/** Cada shell de marketing con pie de página público. */
-const MARKETING_SHELLS = [
-  "components/landing/landing-page.tsx",
-  "components/pricing/pricing-page.tsx",
-  "components/blog/blog-page-shell.tsx",
-  "components/docs/docs-page-shell.tsx",
-  "components/legal-page-shell.tsx",
-  // NOT-FOUND-ROCKET-1: la 404 pública tiene su propio shell (no reutiliza
-  // BlogPageShell porque `.lp-inner` impide la escena a sangre), así que es
-  // una superficie más con pie público — justo la clase de sitio donde se
-  // olvidan las cuatro capas de contenido.
-  "components/not-found-mission.tsx"
-];
 
 describe("MARKETING_CONTENT_LINKS", () => {
   it("cubre las cuatro superficies de contenido de content-strategy §2", () => {
