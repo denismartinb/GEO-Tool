@@ -952,9 +952,19 @@ export default async function CompetitorsPage({
                             {matrixEngines.map((brandE) => {
                               const match = c.engineBreakdown.find((e) => e.provider === brandE.provider);
                               const rate = match?.mentionRate ?? 0;
+                              // TRUST-METRICS-1: la fila de marca ya lleva el
+                              // denominador real en `title` — esta fila se
+                              // había quedado sin él (hallazgo de revisión,
+                              // data-guardian, Human Gate). `match` es undefined
+                              // cuando el competidor no tiene fila alguna en ese
+                              // motor; el título lo dice explícitamente en vez
+                              // de fingir un "0 de 0".
+                              const title = match ? `${match.mentions} de ${match.total} respuestas` : "sin datos en este motor";
                               return (
                                 <td key={brandE.provider}>
-                                  <span className={`cm2-mxc h${Math.min(5, Math.floor(rate / 17))}`}>{rate}</span>
+                                  <span className={`cm2-mxc h${Math.min(5, Math.floor(rate / 17))}`} title={title}>
+                                    {rate}
+                                  </span>
                                 </td>
                               );
                             })}
