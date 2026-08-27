@@ -312,6 +312,21 @@ export default async function PromptsPage({
         </header>
       )}
 
+      {/* ANIMATION-PARITY-1 (2026-08-26): the mission hangs DIRECTLY off
+          `.page.mrk-fill`, exactly like the other five sections. It used to
+          live inside the padded `<div>` below, and that one extra box is the
+          whole of "en prompts sale rota completamente": `.mrk-fill` turns
+          `.page` into a flex column and gives `.mrk-full` `flex: 1`, but the
+          flex item there was the wrapper — an `auto`-height box that sized
+          itself to its content — so the scene stopped at its own min-height
+          cap with grey page underneath it, and the wrapper's 20px of top
+          padding pushed it off the header besides. Anything new that renders
+          alongside the mission goes in the ELSE branch, never between `.page`
+          and `<FirstScanTakeover>`. */}
+      {activeRun && showMissionTakeover ? (
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+      ) : (
+      <>
       {promptsAddedMessage ? (
         <p className="feedback success" style={{ marginTop: 20 }}>
           {promptsAddedMessage}
@@ -347,9 +362,7 @@ export default async function PromptsPage({
             </Link>
           </div>
         )}
-        {activeRun && showMissionTakeover ? (
-          <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
-        ) : !hasActivePrompts ? (
+        {!hasActivePrompts ? (
           <div
             className="card"
             style={{ padding: "32px 24px", textAlign: "center" }}
@@ -484,6 +497,8 @@ export default async function PromptsPage({
           />
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
