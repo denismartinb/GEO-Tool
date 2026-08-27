@@ -91,11 +91,17 @@ export function renderNotification(
       // a real improvement, not done here: it needs the same previous-window
       // computation Overview already does (`page.tsx`'s `previousWindow`), out
       // of scope for Fase 1's stated deliverables.
-      const scoreText = geoScore !== null ? `Escaneo actualizado: Puntuación GEO ${Math.round(geoScore)}.` : "El escaneo ha finalizado con éxito.";
+      // "·" between la puntuación y las cláusulas, no un punto y seguido: un
+      // número justo antes de otro número ("Puntuación GEO 0. 3 acciones…")
+      // se lee como un decimal ("0,3") a primera vista — encontrado por el
+      // fundador en un escaneo real de puntuación baja, donde la lectura
+      // errónea era además la más alarmante posible.
+      const scoreText =
+        geoScore !== null ? `Escaneo actualizado: Puntuación GEO ${Math.round(geoScore)}` : "El escaneo ha finalizado con éxito";
       const clauses: string[] = [];
       if (newRecs > 0) clauses.push(`${newRecs} ${plural(newRecs, "acción nueva", "acciones nuevas")}`);
       if (resolvedGaps > 0) clauses.push(`${resolvedGaps} ${plural(resolvedGaps, "brecha cerrada", "brechas cerradas")}`);
-      const tail = clauses.length ? ` ${clauses.join(" y ")}.` : "";
+      const tail = clauses.length ? ` · ${clauses.join(" y ")}.` : ".";
 
       // Direction still comes from the raw visibility delta — a reasonable
       // proxy for "did this scan look better or worse", kept only for the

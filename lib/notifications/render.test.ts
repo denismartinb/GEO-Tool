@@ -33,7 +33,7 @@ describe("renderNotification", () => {
     );
 
     expect(r.title).toBe("Escaneo completado");
-    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 64. 5 acciones nuevas y 2 brechas cerradas.");
+    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 64 · 5 acciones nuevas y 2 brechas cerradas.");
     expect(r.targetLabel).toBe("acme.com · 20 prompts");
     expect(r.icon).toBe("trendUp");
     expect(r.tone).toBe("pos");
@@ -83,7 +83,7 @@ describe("renderNotification", () => {
       DOMAINS
     );
 
-    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 75. 13 acciones nuevas y 6 brechas cerradas.");
+    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 75 · 13 acciones nuevas y 6 brechas cerradas.");
   });
 
   it("renders scan_completed with a negative visibilityDelta as trendDown/neg (icon direction only, never a shown number)", () => {
@@ -182,7 +182,7 @@ describe("renderNotification", () => {
       DOMAINS
     );
 
-    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 70. 1 acción nueva.");
+    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 70 · 1 acción nueva.");
   });
 
   it("renders scan_failed with the sanitized error summary", () => {
