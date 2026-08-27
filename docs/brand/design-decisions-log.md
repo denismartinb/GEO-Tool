@@ -16199,3 +16199,30 @@ altas nuevas.
 de `internal-test-accounts.test.ts`), `pnpm run validate` (build + typecheck
 + lint), `git diff --check` y `bash scripts/agentic-handoff-check.sh`, todo
 en verde.
+
+**Addendum, mismo día: cobertura de test para el bloque de `executor.ts`, a
+petición del propio piloto.** El agente `ux-pilot`, lanzado a juzgar el
+preview de este PR, devolvió `INCONCLUSIVE` para el comportamiento que esta
+fase implementa — no por un fallo suyo, sino porque es estructuralmente
+invisible al piloto siempre-on: vive detrás de `/debug` (fuera del recorrido
+por defecto) y detrás de un camino de escritura (creación de proyecto), y el
+piloto siempre-on es de sólo lectura por diseño (`CLAUDE.md`, "Pilot write
+scope"). Su recomendación explícita fue apoyar el Human Gate en tests
+unitarios en vez de en la pasada visual para esta pieza concreta.
+
+`lib/scan/executor.test.ts` ganó cinco tests nuevos sobre el bloque de
+auto-activación (primer escaneo completado → `recurring_scans_enabled = true`
+salvo cuenta interna de prueba; segundo escaneo en adelante → no se toca; ya
+encendido → no se reescribe; fallo del lookup de email → el escaneo igual
+completa). `productionDefaultsForAccount` (`app/dashboard/projects/
+actions.ts`) se queda sin test dedicado a propósito: es un wrapper de tres
+líneas sobre `isInternalTestAccountEmail` —que sí tiene sus 5 tests propios—
+y su hermana `previewTestingDefaults`, con la misma forma, tampoco los tiene;
+darle cobertura sólo a la nueva rompería la simetría sin razón nueva que lo
+justifique.
+
+**Comprobado (2ª pasada).** `pnpm test` (204/204, 2.847/2.847, +15 tests sobre
+la primera pasada: 5 de `internal-test-accounts.test.ts` + 5 nuevos de
+`executor.test.ts` para este addendum, más los que ya sumó `main` en
+BILLING-INVOICE-FIELDS-1), `pnpm run validate`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
