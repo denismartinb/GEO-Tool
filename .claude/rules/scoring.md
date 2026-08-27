@@ -130,8 +130,42 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
   meterlas detrás de una mediana las retrasaría dos escaneos justo cuando
   llegar tarde importa.
 
+## Una sola Puntuación GEO en todo el producto (TRUST-METRICS-1, log §179)
+
+- **Toda superficie que use la etiqueta "Puntuación GEO" (o equivalente,
+  "GEO Score") pasa por `lib/metrics/run-metrics.ts`, sin excepción.**
+  `resolveGeoScore()` es el único punto de decisión: ventana cuando
+  `SCORE-WINDOW-1` puede publicarla, compuesto del run cuando no, nunca
+  `visibility_score` crudo. Nació así porque la auditoría externa del
+  2026-08-26 encontró el mismo escaneo enseñando 6 en Visión general y 2 en
+  Dominios — visibilidad y compuesto son cosas distintas, y nada impedía que
+  cada pantalla eligiera la suya.
+- **`visibility_score` no aparece jamás bajo esa etiqueta**, ni siquiera en
+  la ruta de fallo de una consulta que falle. El primer intento de esta fase
+  se equivocó exactamente ahí: el `catch` de la notificación de fin de
+  escaneo caía a `visibility_score` en vez de al compuesto del run — lo
+  encontró la revisión reforzada, no un test, porque nadie ejercita la ruta
+  de fallo en local.
+- **Todo lo que se compare junto al titular tiene que estar en su misma
+  base.** Un delta que compara dos `visibility_score` crudos no puede sentarse
+  al lado de un titular con ventana: es la misma cifra prohibida, un nivel
+  más abajo. Se encontró en Dominios (badge de delta, DELTA-GUARD-1 original)
+  y se corrigió a ventana-sobre-ventana, misma construcción que el
+  `gaugeDelta` de Visión general.
+- **La profundidad de lectura es una constante compartida**
+  (`GEO_SCORE_LOOKBACK_ROWS`, 7 — la misma que Visión general ya usaba antes
+  de que este módulo existiera), no una elección de cada pantalla. Con menos
+  profundidad, una pantalla puede quedarse sin runs elegibles para la ventana
+  mientras otra, leyendo más atrás, sí los encuentra — dos "Puntuación GEO"
+  para el mismo proyecto, otra vez.
+- **`SCORE-WINDOW-1` en sí (la mediana, el tamaño de ventana, las reglas de
+  comparabilidad de la sección de arriba) no lo toca esta regla.** Se
+  consume, nunca se modifica — es la sección de arriba, íntegra.
+
 ## Referencias
 
 `docs/geo-methodology-audit-2026-07.md` (hallazgos abiertos),
 `docs/geo-score-variability-2026-08.md` (sensibilidad por plan),
-`docs/brand/design-decisions-log.md` §8b (cómo se muestra la incertidumbre).
+`docs/brand/design-decisions-log.md` §8b (cómo se muestra la incertidumbre),
+§179 (TRUST-METRICS-1) · `docs/external-audit-2026-08.md` Fase 1 ·
+ADR 0036 (adenda TRUST-METRICS-1).

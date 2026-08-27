@@ -109,6 +109,65 @@ cosas incomparables.
   muestran el score del último escaneo y por tanto pueden discrepar del
   titular. Hueco declarado, pendiente de decisión.
 
+## 7 · Adenda TRUST-METRICS-1 (2026-08-27, log §179) — el hueco de §6 se cierra, parcialmente
+
+**Contexto.** Auditoría externa de producto (26-08-2026): el mismo escaneo
+mostraba 6/100 en Visión general y "2 Puntuación GEO" en Dominios. El hueco
+que §6 dejó declarado ("siguen sin unificar las tarjetas de dominio y el
+resumen semanal") era exactamente esa divergencia, medida en producción.
+
+**Qué se cierra.** Las tarjetas de dominio pasan a leer la ventana, vía
+`lib/metrics/run-metrics.ts` (`resolveGeoScore`), el mismo punto de decisión
+que Visión general. La notificación de fin de escaneo hace lo mismo. Ninguno
+de los dos repuntúa nada ni toca este ADR: consumen `computeWindowedScore` /
+`readWindowRun` sin modificarlos, tal como manda §6.
+
+**Qué se verificó, se corrigió a medias, y se cerró bien a la segunda.**
+El resumen semanal (`lib/scan/weekly-digest.ts`) ya leía el compuesto vía
+`getEffectiveGeoScore` — nunca `visibility_score` crudo — para su comparación
+semana-a-semana, y es una magnitud legítimamente distinta de la ventana
+(cambio entre los dos runs más recientes, no la posición actual estabilizada).
+Ese primer paso de la revisión se quedó ahí, mirando sólo el comentario de la
+capa de datos — y el HTML que de verdad se envía (`lib/email/transactional.ts`)
+seguía rotulando ese número **"Tu GEO Score"**, en el asunto, la cabecera y el
+`preheader` del correo. Misma alerta de caída (`sendScoreDropAlertEmail`). Es
+exactamente el error que este ADR y TRUST-METRICS-1 existen para eliminar,
+sólo que en un canal — el correo — que ni el piloto ni una lectura rápida del
+componente React iban a mirar nunca.
+
+Cerrado sin tocar el cálculo: ambos correos siguen comparando runs concretos
+consecutivos, que es lo correcto para su propósito (la alerta de caída
+necesita una señal rápida y sin suavizar; SCORE-WINDOW-1 tardaría
+`ceil(K/2)` escaneos en reflejar una caída sostenida real). Lo que cambia es
+el rótulo: "Tu GEO Score" → "Puntuación de este escaneo" en el resumen
+semanal, y el asunto/cabecera de la alerta dejan de decir "GEO Score" sin más.
+La regla no es "todo número parecido a un score debe ser la ventana" — es
+"nada que no sea la ventana se llama 'Puntuación GEO'".
+
+**Lo que TRUST-METRICS-1 encontró que §6 no había previsto.** Todo lo que se
+publique junto al titular tiene que estar en su misma base. El badge de delta
+de Dominios (DELTA-GUARD-1) comparaba dos `visibility_score` crudos junto a un
+titular que ahora es la ventana — la misma cifra prohibida, un nivel más
+abajo. Se corrigió a ventana-sobre-ventana, misma construcción que el
+`gaugeDelta` de Visión general (`previousWindow`, §5 de este ADR): publica
+sólo cuando las dos resoluciones son ventanas reales.
+
+**Y una pieza nueva que §5 no necesitaba porque sólo había una pantalla.**
+Con más de una superficie leyendo runs para resolver la ventana, la
+profundidad de lectura (cuántas filas se piden antes de aplicar
+`computeWindowedScore`) tiene que ser la misma en todas — si una pantalla lee
+menos runs que otra, puede quedarse sin comparables mientras la otra sí los
+encuentra más atrás, y publicar `single_run` donde la otra publica ventana.
+`GEO_SCORE_LOOKBACK_ROWS = 7` en `lib/metrics/run-metrics.ts` (la misma
+profundidad que Visión general ya usaba) es ahora esa constante compartida.
+
+**Sigue sin cerrarse, esta vez de verdad.** El invariante completo — «toda
+superficie que use la etiqueta "Puntuación GEO" pasa por `lib/metrics/
+run-metrics.ts`» — vive en `.claude/rules/scoring.md`, no en este ADR, porque
+es una regla de ruta que se inyecta sola al tocar `lib/scoring/**`; este ADR
+documenta la decisión técnica de la ventana, no el invariante de producto que
+cuelga de ella.
+
 ## Referencias
 
 ADR 0024 (fiabilidad) · ADR 0032 (plan por fases, Fase D) · ADR 0033

@@ -271,6 +271,19 @@ export async function sendCancellationScheduledEmail(to: string, activeUntil: Da
   );
 }
 
+/**
+ * TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the two figures
+ * here are `getEffectiveGeoScore` of two SPECIFIC consecutive runs, on
+ * purpose — checkAndSendScoreDropAlert (lib/scan/score-alert.ts) needs a
+ * fast, un-smoothed signal to catch a sustained drop within two scans, and
+ * `SCORE-WINDOW-1`'s median would blunt exactly that (its own documented
+ * cost: a real step change takes ceil(K/2) runs to fully move). That makes
+ * this a legitimately different quantity from the dashboard's windowed
+ * "Puntuación GEO" — found in the TRUST-METRICS-1 Human Gate review still
+ * calling it "Tu GEO Score" in the subject and heading, which is the one
+ * thing the founder's single-score rule forbids: it is never that figure,
+ * so it never gets that label. Copy only; the detection math is untouched.
+ */
 export async function sendScoreDropAlertEmail(
   to: string,
   projectDomain: string,
@@ -279,11 +292,11 @@ export async function sendScoreDropAlertEmail(
 ): Promise<void> {
   await sendEmail(
     to,
-    `Tu GEO Score de ${projectDomain} ha bajado`,
+    `${projectDomain}: tu puntuación ha bajado`,
     wrap(
       `
       ${eyebrow("Aviso de visibilidad", "#D23B48")}
-      ${heading(`Tu GEO Score de ${projectDomain} ha bajado`)}
+      ${heading(`Tu puntuación en ${projectDomain} ha bajado`)}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;">
         <tr><td style="padding:20px 24px;text-align:center;">
           <span class="em-score-num" style="font-size:34px;font-weight:800;color:#5B6B82;letter-spacing:-.03em;font-variant-numeric:tabular-nums;">${Math.round(
@@ -306,7 +319,7 @@ export async function sendScoreDropAlertEmail(
       )}
       ${button("https://www.genscore.es/dashboard", "Revisar qué ha cambiado")}
     `,
-      { footerHtml: notificationsFooter("este aviso"), preheader: `Tu GEO Score ha pasado de ${Math.round(previousScore)} a ${Math.round(currentScore)}.` }
+      { footerHtml: notificationsFooter("este aviso"), preheader: `Tu puntuación ha pasado de ${Math.round(previousScore)} a ${Math.round(currentScore)} en los dos últimos escaneos.` }
     )
   );
 }
@@ -417,7 +430,14 @@ export async function sendWeeklyDigestEmail(
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;">
         <tr>
           <td class="em-stack-td" style="padding:22px 24px;vertical-align:middle;">
-            <div style="font-size:12.5px;color:#5B6B82;font-weight:600;">Tu GEO Score</div>
+            {/* TRUST-METRICS-1: digest.currentScore es el compuesto del run más
+                reciente (getEffectiveGeoScore), no la puntuación con ventana
+                del panel — un número real, pero de otra base. Se etiquetaba
+                "Tu GEO Score", la etiqueta que el fundador reservó para una
+                única cifra en todo el producto. Encontrado en la revisión del
+                Human Gate de TRUST-METRICS-1: nadie había mirado el HTML
+                renderizado, sólo el comentario de la capa de datos. */}
+            <div style="font-size:12.5px;color:#5B6B82;font-weight:600;">Puntuación de este escaneo</div>
             <div class="em-score-num" style="font-size:46px;font-weight:800;color:#0B1426;line-height:1;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums;">${Math.round(
               digest.currentScore
             )}</div>
@@ -434,7 +454,7 @@ export async function sendWeeklyDigestEmail(
       ${recommendationHtml}
       ${button("https://www.genscore.es/dashboard", "Ver el detalle completo")}
     `,
-      { footerHtml: notificationsFooter("este resumen"), preheader: `Tu GEO Score es ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
+      { footerHtml: notificationsFooter("este resumen"), preheader: `Puntuación de este escaneo: ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
     )
   );
 }
