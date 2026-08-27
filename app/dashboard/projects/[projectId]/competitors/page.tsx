@@ -21,7 +21,13 @@ import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-window";
-import { rankLatestPositions } from "@/lib/competitors/latest-positions";
+import { orderByLatestRank, rankLatestPositions } from "@/lib/competitors/latest-positions";
+import {
+  MEAN_RANK_COLUMN_LABEL,
+  MEAN_RANK_LIST_HEADLINE,
+  MEAN_RANK_NOTE,
+  MEAN_RANK_TREND_HEADLINE
+} from "@/lib/competitors/mean-rank-copy";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
@@ -481,6 +487,26 @@ export default async function CompetitorsPage({
     ranking: latestRunRanking
   });
 
+  // MEAN-RANK-READS-TRUE-1 (log §177). El gráfico y la tabla comparten tarjeta y
+  // hasta ahora no compartían conjunto: `trendSeries` va ordenado por cuota de
+  // voz acumulada y el gráfico sólo enciende las cuatro primeras, así que en el
+  // proyecto del fundador la tabla encabezaba con Amazon/Chrome/Brave y el
+  // gráfico dibujaba Mozilla/Chrome/Safari/Edge. Mismo bloque, dos conjuntos, y
+  // nada que lo dijera. Reordenar aquí —no en `trendSeries`— porque el orden que
+  // manda es el de la tabla que está justo debajo.
+  // El color se asigna DESPUÉS de reordenar, no antes. La paleta está ordenada
+  // de más a menos distinguible entre sí (y bajo daltonismo), y el gráfico sólo
+  // enciende las cuatro primeras series: asignarla por el orden viejo dejaría a
+  // las cuatro visibles con los tonos 0, 3, 5 y 7 en vez de con los cuatro que
+  // se eligieron precisamente para verse juntos.
+  const chartSeries: TrendSeries[] = orderByLatestRank({
+    items: trendSeries,
+    rankedKeys: latestPositions.map((entry) => entry.key)
+  }).map((series, i) => ({
+    ...series,
+    color: TREND_SERIES_COLORS[i % TREND_SERIES_COLORS.length]
+  }));
+
   // COMPETITOR-SUGGESTIONS-1: unlike the emerging-brands block it replaced,
   // this is unconditional — it derives from the business profile, not from
   // scan output, so it has something to say even before the first scan and
@@ -820,12 +846,18 @@ export default async function CompetitorsPage({
               {hasTrendData || latestPositions.length > 0 ? (
                 <>
                   <div className="cm2-sec-lbl">
-                    {hasTrendData ? "Evolución del puesto cuando apareces" : "Puesto en el último escaneo"}
+                    {hasTrendData ? MEAN_RANK_TREND_HEADLINE : MEAN_RANK_LIST_HEADLINE}
                   </div>
+                  {/* MEAN-RANK-READS-TRUE-1 (log §177): la frase va pegada a la
+                      cifra, no en un tooltip. El malentendido que arregla —una
+                      marca con 14% de mención por delante de otra con 48%— lo
+                      encontró el fundador mirando la pantalla, así que la
+                      explicación tiene que estar donde él estaba mirando. */}
+                  <p className="cm2-pos-note">{MEAN_RANK_NOTE}</p>
                   <div className={`card cm2-pos-card${hasTrendData ? "" : " list-only"}`}>
                     {hasTrendData ? (
                       <div className="cm2-pos-chart">
-                        <PositionTrendChart series={trendSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
+                        <PositionTrendChart series={chartSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
                       </div>
                     ) : null}
                     {latestPositions.length > 0 ? (
@@ -841,7 +873,7 @@ export default async function CompetitorsPage({
                         <div className="cm2-pos-list-hd">
                           <span className="cm2-pos-hd-nm">Último escaneo</span>
                           <span className="cm2-pos-rate">Mención</span>
-                          <span className="cm2-pos-n">Puesto</span>
+                          <span className="cm2-pos-n">{MEAN_RANK_COLUMN_LABEL}</span>
                         </div>
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>

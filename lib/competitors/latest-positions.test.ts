@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankLatestPositions, type LatestPositionEntity } from "./latest-positions";
+import { orderByLatestRank, rankLatestPositions, type LatestPositionEntity } from "./latest-positions";
 import type { PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
 
 function entry(
@@ -168,5 +168,69 @@ describe("rankLatestPositions", () => {
       "4º Brave",
       "5º Mozilla"
     ]);
+  });
+});
+
+/**
+ * MEAN-RANK-READS-TRUE-1 (2026-08-27, log §177).
+ *
+ * El fallo que fijan: el gráfico y la tabla comparten tarjeta en Competidores y
+ * no compartían conjunto. La tabla se ordena por `rankLatestPositions`; el
+ * gráfico recibía sus series por cuota de voz acumulada y sólo enciende las
+ * cuatro primeras. En el proyecto Mozilla del fundador eso daba Amazon/Chrome/
+ * Brave en la tabla contra Mozilla/Chrome/Safari/Edge en el gráfico.
+ */
+describe("orderByLatestRank", () => {
+  type Series = { key: string; label: string; isBrand?: boolean };
+  /** Las series como las construía la pantalla: marca primero, resto por cuota. */
+  const MOZILLA_SERIES: Series[] = [
+    { key: "brand", label: "Mozilla", isBrand: true },
+    { key: "chrome", label: "Google Chrome" },
+    { key: "safari", label: "Apple Safari" },
+    { key: "edge", label: "Microsoft Edge" },
+    { key: "brave", label: "Brave" },
+    { key: "proton", label: "Proton VPN" },
+    { key: "amazon", label: "Amazon" },
+    { key: "eset", label: "ESET" }
+  ];
+  /** El orden de la tabla en ese mismo escaneo (ver log §175 y §177). */
+  const TABLE_ORDER = ["amazon", "chrome", "brave", "brand", "edge", "safari", "proton"];
+
+  it("el caso real: las cuatro visibles pasan a ser las de la tabla", () => {
+    const ordered = orderByLatestRank({ items: MOZILLA_SERIES, rankedKeys: TABLE_ORDER });
+    // El gráfico enciende las 4 primeras. Antes: Mozilla, Chrome, Safari, Edge.
+    expect(ordered.slice(0, 4).map((s) => s.key)).toEqual(["brand", "amazon", "chrome", "brave"]);
+  });
+
+  it("la marca propia va primera aunque la tabla la ponga cuarta", () => {
+    const ordered = orderByLatestRank({ items: MOZILLA_SERIES, rankedKeys: TABLE_ORDER });
+    expect(ordered[0].isBrand, "la línea de tu propia marca no puede nacer apagada").toBe(true);
+  });
+
+  it("una marca sin puesto en el último escaneo conserva su línea, detrás", () => {
+    const ordered = orderByLatestRank({ items: MOZILLA_SERIES, rankedKeys: TABLE_ORDER });
+    // ESET no está en TABLE_ORDER: no tuvo posición en el último escaneo, pero
+    // puede tenerla en los anteriores, así que sigue teniendo serie.
+    expect(ordered.map((s) => s.key)).toContain("eset");
+    expect(ordered[ordered.length - 1].key).toBe("eset");
+  });
+
+  it("no pierde ni duplica ninguna serie", () => {
+    const ordered = orderByLatestRank({ items: MOZILLA_SERIES, rankedKeys: TABLE_ORDER });
+    expect(ordered).toHaveLength(MOZILLA_SERIES.length);
+    expect(new Set(ordered.map((s) => s.key)).size).toBe(MOZILLA_SERIES.length);
+  });
+
+  it("sin ranking, deja el orden que traía", () => {
+    const ordered = orderByLatestRank({ items: MOZILLA_SERIES, rankedKeys: [] });
+    expect(ordered.map((s) => s.key)).toEqual(MOZILLA_SERIES.map((s) => s.key));
+  });
+
+  it("una clave del ranking que no tiene serie no rompe nada", () => {
+    const ordered = orderByLatestRank({
+      items: MOZILLA_SERIES,
+      rankedKeys: ["fantasma", ...TABLE_ORDER]
+    });
+    expect(ordered.slice(0, 4).map((s) => s.key)).toEqual(["brand", "amazon", "chrome", "brave"]);
   });
 });

@@ -16706,3 +16706,94 @@ tras su próximo escaneo completo, no antes — no es un fallo, es la garantía 
 que nunca reengancha una fila de cobertura vieja.
 
 ---
+
+---
+
+## 177. «Puesto» no era un ranking, y el rótulo decía que sí (MEAN-RANK-READS-TRUE-1, 2026-08-27)
+
+**Lo que vio el fundador.** En Competidores del proyecto Mozilla: *"la tabla de
+puestos no es consistente con el gráfico. Mozilla puesto 4 y en el gráfico 1,5
+(puesto 2)"*. Mirando la captura del piloto, la tabla decía esto:
+
+| | mención | puesto |
+|---|---|---|
+| Amazon | 14% | 1º |
+| Google Chrome | 19% | 2º |
+| Brave | 14% | 3º |
+| **Mozilla** | **48%** | **4º** |
+
+**No era un fallo de cálculo, y ésa es la parte importante.**
+`avg_position_when_mentioned` promedia **sólo las respuestas donde la marca
+sale**. Amazon aparece en pocas y en ésas es la primera —domina el prompt de
+compra online—; Mozilla aparece en muchas más y promedia cuarta entre bastantes
+marcas. Los dos números son correctos para lo que miden. Lo que fallaba era el
+rótulo: la columna se llamaba «Puesto» y el titular «Tu puesto cuando
+apareces», y las dos cosas se leen como una clasificación general.
+
+**Y encima había dos incoherencias, no una.** La segunda la destapó la misma
+captura: el gráfico y la tabla comparten tarjeta y **no compartían conjunto**.
+`trendSeries` iba ordenado por cuota de voz **acumulada** y el gráfico sólo
+enciende cuatro series por defecto, así que dibujaba Mozilla / Chrome / Safari
+/ Edge mientras la tabla de debajo encabezaba con Amazon / Chrome / Brave. Ni
+las mismas marcas ni la misma magnitud (media cruda contra puesto 1..N), a
+cuatro centímetros una de otra, sin nada que lo dijera.
+
+### Lo que se descartó, y por qué
+
+- **Ordenar por tasa de mención.** Convierte esta tabla en cuota de voz, que ya
+  vive en Competidores etiquetada como tal (§11), y deja mintiendo al titular.
+  Dos bloques midiendo lo mismo es peor que uno mal rotulado.
+- **Subir el suelo de SAMPLE-FLOOR-1 (§175).** No llega: para dejar fuera a
+  Amazon y Brave (14%) habría que subirlo tanto que se lleva por delante a
+  Chrome y Edge (19%). Sobreviviría Mozilla sola, que no es una clasificación.
+
+**Decisión del fundador, tras ver las tres opciones: arreglar cómo se lee, no lo
+que mide.**
+
+### Lo que se hizo
+
+1. **Los rótulos dicen que es una media.** «Puesto» → «Puesto medio»; «Tu puesto
+   cuando apareces» → «Tu puesto medio cuando apareces».
+2. **Una frase pegada a la cifra**, en las dos pantallas, que explica el
+   mecanismo con el caso real en vez de con una definición: *«Cuenta solo las
+   respuestas donde la marca aparece: una nombrada pocas veces pero siempre la
+   primera queda por delante de otra nombrada en muchas más.»* No es un tooltip
+   a propósito — el malentendido lo encontró el fundador **mirando la
+   pantalla**, así que la explicación tiene que estar donde él estaba mirando.
+3. **El gráfico se ordena por la tabla que tiene debajo**
+   (`orderByLatestRank`), con la marca propia siempre primera para que su línea
+   nunca nazca apagada. Las series sin puesto en el último escaneo conservan la
+   suya, detrás: pueden tenerlo en escaneos anteriores.
+4. **El color se asigna DESPUÉS de reordenar.** La paleta está ordenada de más a
+   menos distinguible entre sí; asignarla antes habría dejado a las cuatro
+   visibles con los tonos 0, 3, 5 y 7 en vez de con los cuatro elegidos para
+   verse juntos.
+
+**Los rótulos viven en un solo fichero** (`lib/competitors/mean-rank-copy.ts`).
+§36 ya tuvo que arreglar que las dos pantallas ORDENARAN esta cifra distinto, y
+`rankLatestPositions` impide desde entonces que los números diverjan; esto
+impide que diverjan las palabras. Un rótulo que dice una cosa en una pantalla y
+otra en la de al lado es el mismo fallo con otra piel.
+
+**Una trampa esquivada por los pelos, y merece constar.** La nota se escribió
+primero con `max-width: 62ch`. Sus dos clases viven en ámbitos distintos —
+`.cm2-scope` redeclara `--font-body` a Figtree, `.ov2-scope` cae a la del
+`body`— así que ese `ch` habría medido distinto en cada pantalla: exactamente
+cómo `30ch` acabó partiendo en dos líneas la cifra de la misión sólo en algunas
+secciones (§168). **Una medida tipográfica en una clase compartida por dos
+ámbitos no es una medida compartida.** Está en px.
+
+**Lo que NO se ha tocado.** Ni el cálculo, ni el orden de la tabla, ni el suelo
+de §175, ni la cuota de voz (§11), ni la paridad entre las dos pantallas (§36),
+que sigue garantizada por el mismo módulo. Esto es copy y orden de pintado.
+
+**Nota de numeración.** Toma el §177 porque §173, §174, §175 y §176 están
+reservados por tres ramas abiertas a la vez que ésta (#486, #488 y #484, que
+además tuvo que renumerar del §171/§172 al §175/§176 cuando #481 y #489
+entraron en `main` antes).
+
+**Trazabilidad.** `lib/competitors/mean-rank-copy.ts` ·
+`lib/competitors/latest-positions.ts` (`orderByLatestRank`) ·
+`app/dashboard/projects/[projectId]/{competitors/,}page.tsx` ·
+`app/globals.css` (`.cm2-pos-note`/`.ov2-cmp-note`) ·
+`lib/competitors/latest-positions.test.ts`; §11, §36, §168, §175.

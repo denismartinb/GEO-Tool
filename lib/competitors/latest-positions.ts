@@ -90,3 +90,50 @@ export function rankLatestPositions<T extends LatestPositionEntity>({
     )
     .map((row, index) => ({ ...row, rank: index + 1 }));
 }
+
+/**
+ * MEAN-RANK-READS-TRUE-1 (2026-08-27, log §177) — pone cualquier lista en el
+ * mismo orden que la clasificación de arriba, para que el gráfico y la tabla que
+ * comparten tarjeta hablen del mismo conjunto de marcas.
+ *
+ * **El fallo que arregla.** En Competidores, la tabla se ordena por
+ * `rankLatestPositions` y el gráfico recibía sus series ordenadas por **cuota de
+ * voz acumulada**. Como el gráfico sólo enciende las cuatro primeras por
+ * defecto, en el proyecto Mozilla del fundador la tabla encabezaba con Amazon /
+ * Chrome / Brave y el gráfico dibujaba Mozilla / Chrome / Safari / Edge: dos
+ * conjuntos distintos, uno al lado del otro, en la misma tarjeta. Nada fallaba;
+ * simplemente no eran lo mismo y nada lo decía.
+ *
+ * **La marca propia va siempre primera**, aunque la clasificación la ponga
+ * séptima. Es la línea que el gráfico dibuja más gruesa y la única que el lector
+ * ha venido a ver: dejarla apagada por defecto para enseñar tres competidores
+ * sería el mismo tipo de inversión que el §— ya rechazó en las barras de Visión
+ * general («forzar que "tus" barras te incluyan cuando eres 6º es la inversión
+ * de lo que significa un ranking» — aquí la inversión es la contraria y con el
+ * mismo remedio: la marca es un caso aparte, no un competidor más).
+ *
+ * **Lo que no está en `rankedKeys` conserva su orden** y va detrás. Una marca sin
+ * posición en el ÚLTIMO escaneo puede tenerla en los anteriores, así que sigue
+ * teniendo línea en el gráfico — sólo que apagada por defecto, que es donde ya
+ * estaba.
+ */
+export function orderByLatestRank<T extends { key: string; isBrand?: boolean }>({
+  items,
+  rankedKeys
+}: {
+  items: readonly T[];
+  rankedKeys: readonly string[];
+}): T[] {
+  const rankOf = new Map(rankedKeys.map((key, index) => [key, index]));
+  const brand = items.filter((item) => item.isBrand);
+  const rest = items.filter((item) => !item.isBrand);
+
+  const ranked = rest
+    .filter((item) => rankOf.has(item.key))
+    // `sort` de JS es estable, así que empatar es imposible aquí: cada clave
+    // aparece una vez en `rankedKeys`.
+    .sort((a, b) => rankOf.get(a.key)! - rankOf.get(b.key)!);
+  const unranked = rest.filter((item) => !rankOf.has(item.key));
+
+  return [...brand, ...ranked, ...unranked];
+}
