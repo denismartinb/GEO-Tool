@@ -17108,7 +17108,82 @@ esta forma exacta; barrer el patrón entero es otro PR.
 clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
 está fuera de pantalla estando «visible»); §136 (el precedente).
 
----
+## 181. La pestaña "Resueltas" verifica si la predicción se cumplió — nunca mide un delta de score (RECS-LOOP-1 Fase A, ADR 0041, 2026-08-27)
+
+**El hueco.** ADR 0017 §5 prometió que "el próximo escaneo verifica" la
+predicción de puntos potenciales de una tarjeta. Nunca se construyó: una
+recomendación pasaba a `resolved` (o el usuario la marcaba «hecha») y el
+producto nunca decía si lo que prometía había pasado de verdad.
+
+**La opción obvia se descartó antes de escribir código.** Un delta de score
+compuesto o de componente entre el run donde la tarjeta estaba activa
+(`run_id`) y el que la confirmó resuelta (`resolved_in_run_id`) parecía la
+lectura natural de "puntos recuperados". Se consultó a `geo-strategy` y a
+`data-guardian` en paralelo (Task Intake RECS-LOOP-1 Fase A) y los dos lo
+rechazaron por caminos independientes: **no es atribuible** (`presence` se
+mueve por cualquier prompt, no sólo los de esta tarjeta; otra tarjeta resuelta
+en la misma ventana contamina el mismo número), **casi nunca es publicable**
+(`resolveDelta`/`compareRuns`, DELTA-GUARD-1, exige igualdad de
+`composite_version`/`inputs_used`/motores/respuestas entre dos runs, y
+`rescore-run.ts` puede reescribir retroactivamente el `run_scores` de un run ya
+completado cuando su auditoría llega tarde) y **contradice SCORE-WINDOW-1**
+(el titular que el usuario ya ve es la mediana de 3 escaneos, no el score de
+un run). El detalle completo, con las dos lecturas, vive en ADR 0041.
+
+**Lo que se construyó en su lugar.** `lib/recommendations/
+prediction-verification.ts` comprueba, sobre los MISMOS prompts que la
+tarjeta citó como evidencia, si la mutación concreta que su promesa asumía
+(`getRecommendationPotentialKind`, el mismo mapa de `run-scoring.ts` que ya
+generaba el número — nunca uno nuevo) ocurrió de verdad en el run que
+confirmó la brecha resuelta: mención (`presence`), dejar de estar por detrás
+del competidor nombrado en la propia evidencia de la tarjeta (`prominence`,
+sin exigir el "posición 1" optimista del contrafactual — sería casi siempre
+falso), o cita del dominio propio en fila de motor con grounding
+(`authority`). Es una observación sobre un puñado de filas fijas, no una
+inferencia sobre una población: no necesita banda de confianza, y una sola
+fila comprobada es una respuesta completa.
+
+**Cruzar de un run a otro no es trivial.** `evidence_json.
+affected_prompt_details[].id` es `scan_prompt_results.id` — una fila nueva
+cada escaneo (RECS-DEDUPE-1), no el id estable del prompt. Hace falta
+traducirlo vía `project_prompts.id` con una consulta anclada al `project_id` y
+`run_id` de la tarjeta antes de poder buscar la fila correspondiente en el run
+que la confirmó. Un prompt borrado desde entonces (`prompt_id` a null por el
+`on delete set null`) falla cerrado hacia "sin veredicto", nunca se asume.
+
+**Sin migración.** `data-guardian` confirmó que la promesa es derivable: la
+misma `computeRecommendationPotentialPoints` que ya existía es pura, y
+`scan_prompt_results` es inmutable tras completarse el run (`rescore-run.ts`
+sólo reescribe `run_scores`, nunca esa tabla). No hace falta congelar nada. El
+único cambio de lectura es ampliar el `select` de la pestaña "Resueltas" a
+`run_id`/`resolved_in_run_id`/`evidence_json` — columnas que ya existían.
+
+**Efecto colateral que había que arreglar de paso.** `dedupeByTitle` colapsaba
+por título normalizado sin más — necesario para el duplicado de dos motores
+sobre el mismo prompt, pero también borraba en silencio una brecha que se
+resolvió, reabrió y se resolvió otra vez, quedándose sólo con la más
+reciente. `dedupeResolvedHistory` añade `resolved_in_run_id` (o el `id` propio
+para una fila `dismissed`) a la clave: el duplicado de dos motores sigue
+colapsando, la reapertura ya no.
+
+**Deliberadamente fuera de esta fase — SIEMPRE queda en Task Intake propio.**
+Una fila `dismissed` nunca recibe `resolved_in_run_id`
+(`dismissRecommendationCore` sólo escribe `status`), así que no tiene run de
+confirmación contra el que comprobar nada — RECS-LOOP-1 Fase B. Y
+`data-guardian` encontró, de pasada, que el `delete()` de recomendaciones
+activas en `executor.ts` no captura errores: si el finalize de un run se
+reintenta después de que el usuario haya marcado una tarjeta de ese run como
+hecha, el descarte se pierde y la tarjeta reaparece activa. Es un bug ya en
+producción, independiente de esta fase — reportado al fundador, sin arreglar
+aquí.
+
+**Nunca una cifra de puntos.** El veredicto es "cumplida en N de M consultas",
+nunca comparado con el "hasta +X pt" original — son respuestas a preguntas
+distintas ("cuál es el mejor caso" vs. "¿pasó lo que el mejor caso
+afirmaba?") y presentarlas como la misma cosa habría sido la promesa que este
+ADR existe para no hacer. El copy es observacional y fechado — "en el
+escaneo que lo confirmó, la IA te nombró..." — nunca "ya apareces": el
+no-determinismo del siguiente escaneo puede revertirlo.
 
 ---
 
@@ -17421,7 +17496,43 @@ entraron en `main` antes).
 
 ---
 
-## 180. TRUST-PROMISES-1: los precios dejan de citarse a mano fuera de la consola (Fase 2 de la auditoría externa, 2026-08-27)
+## 180. Las insignias de pago se envolvían pegadas a la izquierda en móvil (PRICING-PAY-BADGES-CENTER-1, 2026-08-27)
+
+**Lo que vio el fundador.** Captura real de `/precios` en móvil, con Amazon Pay
+y Klarna ya desplegados (PROMO-CONSOLE-PARITY-1, #485): *"Maqueta bien
+centrados en todos los viewport"*. La fila «PAGOS SEGUROS CON» se veía
+centrada; debajo, Stripe/Apple Pay/Google Pay en una línea y Amazon Pay/Klarna
+en otra, las dos pegadas al borde izquierdo.
+
+**Por qué.** `.price-pay-icons` es un flex container ANIDADO dentro de
+`.price-pay-badges` (label + icons son sus dos únicos hijos). En desktop y
+tablet las 5 insignias caben en una sola línea, y esa línea se centra porque es
+el único ítem de su fila dentro de `.price-pay-badges` (que sí lleva
+`justify-content: center`). En móvil no caben: `.price-pay-icons` envuelve POR
+DENTRO en dos filas propias, y el centrado del padre sólo centra esa caja como
+bloque — nunca las líneas que se generan dentro de ella. Sin `justify-content`
+en `.price-pay-icons`, cada fila interior caía a `flex-start` por defecto.
+
+El fallo era invisible en tablet y desktop: una sola línea no revela un
+`justify-content` ausente. Sólo se ve en el ancho donde de verdad envuelve —
+confirmado reproduciendo la captura exacta del fundador en un fixture Playwright
+a 375px (con el CSS real de `app/globals.css`) antes de tocar nada, y
+comprobando después que tablet y desktop quedaban pixel-idénticos al «antes».
+
+**El arreglo:** `justify-content: center;` en `.price-pay-icons`. Una línea.
+Sin migración, sin tocar la lista de insignias, sin tocar `.price-pay-badges`.
+
+**Fijado por test** (`tests/pricing-payment-badges.test.ts`), comprobado en las
+dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
+(«las filas caen a flex-start»); con ella, pasa.
+
+**Trazabilidad.** `app/globals.css` (`.price-pay-icons`);
+`components/pricing/pricing-page.tsx` (`PAYMENT_BADGES`, sin cambios);
+`tests/pricing-payment-badges.test.ts`; §148, §149 (Fase A+B de precios).
+
+---
+
+## 182. TRUST-PROMISES-1: los precios dejan de citarse a mano fuera de la consola (Fase 2 de la auditoría externa, 2026-08-27)
 
 **Origen.** `docs/external-audit-2026-08.md`, Fase 2 (P0-06): "179 €" escrito a mano en cinco sitios distintos, cada uno con su propia probabilidad de quedarse atrás si el precio cambia en Stripe. `PROMO-CONSOLE-PARITY-1` (log §170) ya había arreglado la peor instancia — la consola cotizando 179 € a quien `/precios` ya le decía 59 € — e introdujo `resolveShownPromoPrice`, un solo sitio que decide qué precio muestra una pantalla. Esta fase hereda ese mecanismo en vez de reescribirlo y cierra el resto: todo lo que citaba un precio de plan **fuera** de la consola.
 
