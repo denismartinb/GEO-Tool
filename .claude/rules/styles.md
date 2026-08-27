@@ -343,3 +343,13 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   varios instantes del ciclo completo — no reproduciendo la animación de
   verdad, que Chromium headless no hace con fidelidad (dos entradas más
   arriba en este fichero).
+- **Un `justify-content: center` en el padre no centra las líneas que un
+  hijo `flex-wrap` genera POR DENTRO de sí mismo.** Centra ese hijo como
+  bloque en la línea del padre — nada más. `.price-pay-icons` (flex, wrap,
+  anidado dentro de `.price-pay-badges`, que sí centraba) caía a
+  `flex-start` en cada fila que generaba al envolver, así que en desktop y
+  tablet (una sola línea, cabe entera) se veía centrado y en móvil (dos
+  líneas) las dos quedaban pegadas a la izquierda — invisible salvo en el
+  ancho exacto donde de verdad envuelve (log §180). Cualquier flex
+  container anidado que pueda envolver por sí mismo necesita su PROPIO
+  `justify-content`; el del ancestro no se hereda a las líneas internas.
