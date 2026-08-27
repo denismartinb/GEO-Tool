@@ -4126,6 +4126,24 @@ a.notif-row:hover {
    component. */
 .mrk-full {
   position: relative;
+  /* ANIMATION-PARITY-1 (2026-08-26): the mission carries its OWN typeface and
+     its OWN ink ramp instead of inheriting whatever the section it lands on
+     happens to declare. Six screens mount the same component and two of them
+     wrap it in a brand scope that re-declares both — `.cm2-scope`
+     (Competidores) and `.wa2-scope` (Auditoría web) set Figtree plus the
+     `--brand-ink-*` ramp, while the other four fall through to `body`'s
+     Hanken Grotesk and the lighter global `--ink-*`. Same markup, two
+     renderings, and one of them measurably worse: `--ink-3` (#6b7385) gives
+     4,08:1 on this screen's own gradient (#E7EEFA at its darkest end), under
+     AA, where `--brand-ink-3` (#5b6b82) gives 4,64:1.
+     Figtree + the brand ramp is the deliberate half of that pair — it is what
+     `docs/brand/brand-guidelines.md` calls for and what `--font-body` already
+     resolves to — so the mission pins it here for all six. */
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
   /* Sit flush against the sticky header. `.page` puts 26px (22px ≤1000px) of
      top padding above every screen, which under a full-bleed scene reads as a
      stray light strip between the chrome and the sky — the founder circled it
@@ -4406,7 +4424,21 @@ a.notif-row:hover {
   .mrk-pad-wrap .mrk-sky { height: calc(100% - var(--mrk-ground-h)); }
   .mrk-copy {
     position: relative; z-index: 1;
-    grid-column: 1; text-align: left; margin: 0; padding: 0; max-width: 30ch;
+    grid-column: 1; text-align: left; margin: 0; padding: 0;
+    /* ANIMATION-PARITY-1 (2026-08-26): px, never `ch`. `ch` is the advance of
+       the "0" glyph in the element's OWN font, so this cap resolved to a
+       different pixel width on the two screens that wrap the mission in a
+       brand scope (Figtree) than on the four that inherit `body`'s Hanken
+       Grotesk — which is exactly why "36 de 78" broke onto two lines on
+       Visión general, Recomendaciones, Páginas citadas y Prompts and stayed
+       on one on Competidores. Pinning the font above already removes the
+       divergence; this removes the DEPENDENCY, so a future change of typeface
+       cannot bring the same bug back silently.
+       420px is measured against the widest figure the rail can produce at
+       this beat's largest size (76px at ≥1520px viewports); the copy is a
+       grid item, so at the 960px breakpoint the 44% column (~410px) still
+       wins and nothing overflows. */
+    max-width: 420px;
   }
   .mrk-title { font-size: clamp(48px, 5vw, 76px); }
   .mrk-unit { font-size: clamp(20px, 1.8vw, 26px); }
