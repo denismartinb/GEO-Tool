@@ -1061,6 +1061,39 @@ el 2026-07-10; se implementa directamente por ser una petición explícita,
 pequeña y de bajo riesgo que replica un patrón ya aprobado, sin tocar
 schema/RLS/webhook.
 
+**BILLING-INVOICE-FIELDS-1 — hecho (2026-08-25, Task Intake aprobado el
+mismo día, log §165/§166):** fuera del alcance original de BILLING-STRIPE-1
+("new pricing mechanics, additional payment providers, invoicing changes
+needs its own approval" — `CLAUDE.md`), con su propia aprobación explícita
+del fundador. Origen: al preguntar si "Datos de empresa"/"Datos de
+facturación" (`Ajustes → Cuenta`) llegaban a Stripe, la respuesta era que
+ninguno de los dos lo hacía — solo se guardaban en `user_metadata`. Se
+ocultó "Datos de empresa" (sin consumidor ni plan, §165) y se implementó la
+sincronización real solo para "Datos de facturación" (§166):
+
+- `syncBillingDetailsToStripeCustomer` (`lib/stripe.ts`): al guardar razón
+  social/NIF con `saveAccount`, si la cuenta ya tiene
+  `profiles.stripe_customer_id`, se empujan a Stripe como
+  `invoice_settings.custom_fields` — texto libre, no `tax_id_data` tipado
+  (evita inferir el tipo fiscal correcto para un campo opcional). Valores
+  truncados a 30 caracteres (límite real de Stripe para nombre y valor del
+  campo). Ambos vacíos → `custom_fields: null` (borra los campos, no deja
+  uno viejo colgado tras limpiar el formulario).
+- Best-effort y silencioso: corre después de que el guardado en Supabase ya
+  haya tenido éxito, con doble red de seguridad (try/catch dentro de
+  `syncBillingDetailsToStripeCustomer` y otra vez en `saveAccount`) — un
+  fallo de Stripe nunca convierte un guardado real en un error reportado al
+  usuario.
+- Sin cuenta con `stripe_customer_id` todavía (nunca ha llegado a
+  checkout), no se intenta ninguna llamada — no hay cliente al que
+  sincronizar.
+- 9 tests nuevos (`lib/stripe.test.ts` x6, `organization/actions.test.ts`
+  x3 — los 8 ya existentes de este último se actualizaron para el nuevo
+  `user`/`from` que ahora usa la función, sin cambiar lo que verifican).
+  2.836/2.836 tests totales (antes 2.827), `pnpm run validate` limpio.
+- **Sigue en modo test de Stripe** — no toca el go-live checklist de esta
+  fase (Vercel Pro ✅, alta autónomo, VeriFactu, todavía pendientes).
+
 ---
 
 ## Fase 5 — LAUNCH

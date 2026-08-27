@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 import { PENDING_DOMAIN_KEY } from "@/lib/onboarding/pending-domain";
@@ -64,8 +64,24 @@ export function FreeCheckerForm({
   children?: React.ReactNode;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [domain, setDomain] = useState("");
+  /**
+   * HOME-2026-08 Fase A: el hero de la portada manda aquí lo que el visitante
+   * escribió, por `?d=`. Se rellena, NO se lanza: cada comprobación es una
+   * llamada real a un LLM con tope diario, así que auto-ejecutarla desde un
+   * parámetro convertiría cualquier enlace en una forma de gastarle el cupo a
+   * otro. Y se filtra con el mismo validador que habilita el botón —no una
+   * copia—, para que un parámetro con basura no deje el campo en un estado que
+   * el propio formulario rechazaría.
+   *
+   * Valor inicial y no efecto: escribir el campo después del primer pintado lo
+   * pisaría si el visitante ya hubiera empezado a teclear.
+   */
+  const [domain, setDomain] = useState(() => {
+    const fromUrl = cleanDomain(searchParams.get("d") ?? "");
+    return isWellFormedDomain(fromUrl) ? fromUrl : "";
+  });
   const [state, setState] = useState<State>({ kind: "idle" });
   const [step, setStep] = useState(0);
 
@@ -162,7 +178,10 @@ export function FreeCheckerForm({
     <>
       {heading}
       <div className="lp-hero-form">
-        <div className="lp-field">
+        {/* HOME-SEO-AUDIT-1: `.fc-field` le da a `.lp-field` el borde/píldora
+            que en el hero de la home aporta `.lp-field-wrap` — aquí no se usa
+            ese envoltorio porque el botón va debajo, no dentro de la píldora. */}
+        <div className="lp-field fc-field">
           <Icon name="globe" size={18} className="lp-field-ico" />
           <input
             ref={inputRef}

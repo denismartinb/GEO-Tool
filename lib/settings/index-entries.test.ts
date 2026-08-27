@@ -18,11 +18,17 @@ describe("buildSettingsIndex", () => {
     expect(entries.map((entry) => entry.id)).toEqual(["cuenta", "avisos"]);
   });
 
-  it("adds Plan for an admin, with the plan as its live detail", () => {
+  it("adds Plan for an admin, right after Cuenta, with the plan as its live detail", () => {
     const entries = buildSettingsIndex({ ...base, planLabel: "Pro · 179 €/mes" });
 
-    expect(entries.map((entry) => entry.id)).toEqual(["cuenta", "avisos", "plan"]);
-    expect(entries[2].detail).toBe("Pro · 179 €/mes");
+    expect(entries.map((entry) => entry.id)).toEqual(["cuenta", "plan", "avisos"]);
+    expect(entries[1].detail).toBe("Pro · 179 €/mes");
+  });
+
+  it("labels the avisos entry Notificaciones", () => {
+    const entries = buildSettingsIndex({ ...base, planLabel: null });
+
+    expect(entries.find((entry) => entry.id === "avisos")?.label).toBe("Notificaciones");
   });
 
   it("never lists «Eliminar cuenta» — it is the last block of the page, reached by scrolling", () => {

@@ -1,0 +1,94 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 8000,
+      "title": "Portada · escritorio (hero actual)"
+    },
+    {
+      "file": "Movil.dc.html",
+      "x": 1400,
+      "y": 0,
+      "w": 390,
+      "h": 7690,
+      "title": "Portada · móvil 390"
+    },
+    {
+      "file": "HeroF1.dc.html",
+      "x": 3400,
+      "y": 0,
+      "w": 1280,
+      "h": 1290,
+      "title": "Fondo 1 · Aurora"
+    },
+    {
+      "file": "HeroF2.dc.html",
+      "x": 3400,
+      "y": 1460,
+      "w": 1280,
+      "h": 1290,
+      "title": "Fondo 2 · Bruma"
+    },
+    {
+      "file": "HeroF3.dc.html",
+      "x": 3400,
+      "y": 2920,
+      "w": 1280,
+      "h": 1290,
+      "title": "Fondo 3 · Aurora + malla"
+    },
+    {
+      "file": "HeroF4.dc.html",
+      "x": 3400,
+      "y": 4380,
+      "w": 1280,
+      "h": 1290,
+      "title": "Fondo 4 · Aura circular"
+    },
+    {
+      "file": "HeroF5.dc.html",
+      "x": 3400,
+      "y": 5840,
+      "w": 1280,
+      "h": 1290,
+      "title": "Fondo 5 · Aura suave"
+    },
+    {
+      "file": "HeroF6.dc.html",
+      "x": 3400,
+      "y": 7300,
+      "w": 1280,
+      "h": 1290,
+      "title": "Fondo 6 · Calcado de la referencia"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "nota-densidad",
+      "x": 0,
+      "y": -150,
+      "w": 520,
+      "text": "Misma estructura aprobada, la mitad de peso visual.\n\nLo que baja la densidad: los cuatro pasos llevan UN fragmento pequeño en vez de un panel de producto entero, y las cinco pantallas se ven de una en una en el mismo marco en lugar de apiladas. Eso elimina la duplicación (Competidores y Auditoría salían dos veces en la maqueta anterior)."
+    },
+    {
+      "id": "nota-movil",
+      "x": 1397,
+      "y": -221,
+      "w": 390,
+      "text": "Móvil: el mismo contenido, mucho menos scroll.\n\nLas preguntas frecuentes van plegadas (pulsa una), las cinco pantallas comparten un solo marco con la tira de pestañas, y el pie va a dos columnas. Los controles son de 54-56 px.\n\nLleva el fondo 5 (Aura suave), reparametrizado: a 390 px los círculos de 2480 px del escritorio se quedan enteros fuera del encuadre. El centro se aleja del borde para que la curva roce el lateral en vez de cruzar el titular en diagonal, y baja para que los lazos pasen por la banda del botón.\n\nY lleva DOS lazos por lado, no tres. El radio visible de cada uno es 0,92·r, así que cruza la altura del centro a x = cx + 0,92·r: con tres, el tercero caía en x=292 sobre una pantalla de 390 px, o sea por el medio y no por el lateral. Apretarlos para que quepan los tres es lo contrario de separarlos, así que se quitó uno. Los dos que quedan cruzan a x=35 y x=120: 85 px de aire entre ellos y los 150 px centrales limpios."
+    },
+    {
+      "id": "nota-fondos",
+      "x": 3400,
+      "y": -260,
+      "w": 580,
+      "text": "Tres fondos para el mismo hero de siempre, ahora en luz difusa en vez de patrones de líneas. Los tres se apagan a blanco antes de llegar al titular y al campo de dominio.\n\n1 · Aurora — dos lazos de luz blanca entrando por los laterales sobre azul de marca a la izquierda y lila a la derecha. Es el más cercano a la referencia.\n\n2 · Bruma — la misma paleta con menos gesto: una banda ancha de luz baja y dos manchas suaves en las esquinas, sin lazos. Más tranquilo, deja más protagonismo a la tarjeta de la demo.\n\n3 · Aurora + malla — el fondo 1 con la malla diagonal al 30 % por debajo de los lazos. Añade textura de oficio sin que la geometría se lea como patrón.\n\n4 · Aura circular — tres lazos concéntricos por lado, todos salidos de un mismo centro fuera de encuadre, sobre un campo de color que comparte esa geometría. Cuadrícula fina de 58 px que se desvanece antes del subtítulo.\n\n5 · Aura suave — el 4 bajado de intensidad: los lazos van del 46 % al 23 % en vez del 72 % al 40 %, cada uno con el borde tres veces más ancho, el color a poco más de la mitad y la cuadrícula casi al límite de lo visible. Misma forma, menos voz.\n\n6 · Calcado de la referencia — este no se estimó a ojo: se renderizó en Chromium a 1681 px y se corrigió contra la captura del fundador en cinco pasadas. Dos arcos por lado salidos de un círculo de radio 1400 centrado en el lado CONTRARIO (radio grande = curva suave, que es lo que fallaba en el 4 y el 5), campo de color con el borde interior sobre ese mismo arco, y una máscara vertical que abre la banda hacia el pie en vez de abrirla en las dos esquinas. Toda la geometría va en vw, así que la composición escala con el ancho.\n\nEl lila (#8B7CE8) no está hoy en la paleta: entra solo como tinte de fondo al 28 %, nunca como color de marca. Si no lo quieres, se cambia por azul y los tres siguen funcionando."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

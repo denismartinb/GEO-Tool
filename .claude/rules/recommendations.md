@@ -179,7 +179,7 @@ paths:
   cambia (§115 punto 6), así que la densidad se resuelve en presentación. **No
   esconde nada**: el resto está a un clic (log §140).
 - **Los bloqueos duros de la auditoría se enseñan aquí, y sólo ellos**
-  (`findCitationBlockers`, log §142). Bots bloqueados, `noindex` y
+  (`findCitationBlockers`, log §167). Bots bloqueados, `noindex` y
   `nosnippet`/`max-snippet:0` hacen **imposible** la cita, así que salen sobre
   el backlog con sus URLs. No rompe el reparto de zonas —«La Auditoría arregla
   tu web; Recomendaciones consigue que te citen»—: no se duplica el catálogo ni

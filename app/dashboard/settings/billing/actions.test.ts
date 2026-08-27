@@ -23,10 +23,12 @@ vi.mock("@/lib/supabase/service", () => ({ createServiceClient: (...args: unknow
 
 const getStripeClient = vi.fn();
 const getPriceIdForPlan = vi.fn();
+const getPromoCouponIdForPlan = vi.fn((_planId: string) => null as string | null);
 const isSelfServePlan = vi.fn((planId: string) => planId === "starter" || planId === "pro");
 vi.mock("@/lib/stripe", () => ({
   getStripeClient: (...args: unknown[]) => getStripeClient(...args),
   getPriceIdForPlan: (...args: unknown[]) => getPriceIdForPlan(...args),
+  getPromoCouponIdForPlan: (...args: [string]) => getPromoCouponIdForPlan(...args),
   isSelfServePlan: (...args: [string]) => isSelfServePlan(...args)
 }));
 
@@ -83,6 +85,8 @@ beforeEach(() => {
   requireUser.mockReset();
   getStripeClient.mockReset();
   getPriceIdForPlan.mockReset();
+  getPromoCouponIdForPlan.mockReset();
+  getPromoCouponIdForPlan.mockReturnValue(null);
   createServiceClient.mockReset();
   resetHeaderEntries();
 });
@@ -182,6 +186,44 @@ describe("createCheckoutSession", () => {
         metadata: { user_id: USER_ID, plan_id: "pro" }
       })
     );
+  });
+
+  // PRICING-PROMO-1. isPromoActive() reads the real wall clock — these tests
+  // only mean something while the promo window (until 2026-09-01) is open,
+  // same limitation as any other time-boxed product behavior in this repo.
+  it("applies the promo coupon to the Checkout Session when one is configured for the plan", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    getPromoCouponIdForPlan.mockReturnValue("promo_pro_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    await createCheckoutSession("pro");
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ discounts: [{ coupon: "promo_pro_test" }] })
+    );
+  });
+
+  it("does not add a discounts param when no promo coupon is configured for the plan", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    // getPromoCouponIdForPlan defaults to null in beforeEach — nothing to set.
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    await createCheckoutSession("pro");
+
+    const sessionParams = create.mock.calls[0][0];
+    expect(sessionParams).not.toHaveProperty("discounts");
   });
 
   it("strips a trailing slash from the NEXT_PUBLIC_SITE_URL fallback when no host header is present", async () => {

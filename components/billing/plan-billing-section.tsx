@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -61,12 +62,15 @@ export function PlanBillingSection({
   currentPlanId,
   agencyPlanId,
   usage,
-  activeProjects
+  activeProjects,
+  promoPlanIds = []
 }: {
   currentPlanId: Plan["id"];
   agencyPlanId: Plan["id"];
   usage: UsageSummary;
   activeProjects: ActiveProjectSummary[];
+  /** PRICING-PROMO-1: plans with an active, Stripe-backed promo right now — see billing-content.tsx. */
+  promoPlanIds?: string[];
 }) {
   const [planId, setPlanId] = useState<Plan["id"]>(currentPlanId);
   const [projects, setProjects] = useState<ActiveProjectSummary[]>(activeProjects);
@@ -126,6 +130,16 @@ export function PlanBillingSection({
   const cancelAtDate = usage.cancelAt
     ? new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" }).format(
         new Date(usage.cancelAt)
+      )
+    : null;
+
+  // PRICING-PROMO-1: only trust promo data fetched for the plan actually
+  // shown — `planId` can move locally (downgrade to Free, see `applyChange`)
+  // without a refetch, and Free never carries a promo anyway.
+  const activePromo = planId === currentPlanId ? usage.subscriptionPromo : null;
+  const promoEndsDate = activePromo
+    ? new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" }).format(
+        new Date(activePromo.endsAt)
       )
     : null;
 
@@ -200,7 +214,18 @@ export function PlanBillingSection({
                 <span className="badge badge-accent">Plan actual</span>
               </div>
               <p className="text-lg font-bold text-[var(--ink)]">
-                {current.priceLabel ?? (
+                {current.priceLabel ? (
+                  current.priceLabel
+                ) : activePromo ? (
+                  <span className="pb-current-promo">
+                    <span className="was">
+                      {current.price}&nbsp;€/{current.period}
+                    </span>
+                    <span className="now">
+                      {activePromo.promoPrice}&nbsp;€/{current.period}
+                    </span>
+                  </span>
+                ) : (
                   <>
                     {current.price}&nbsp;€/{current.period}
                   </>
@@ -208,6 +233,13 @@ export function PlanBillingSection({
               </p>
             </div>
             <p className="sub mt-1">{current.tagline}</p>
+            {activePromo && (
+              <p className="sub mt-1">
+                <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
+                Precio de lanzamiento hasta el <b>{promoEndsDate}</b> — después vuelve a {current.price}&nbsp;€/
+                {current.period}.
+              </p>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <ul className="space-y-2 text-sm text-[var(--ink-2)]">
@@ -287,15 +319,17 @@ export function PlanBillingSection({
               Dominios y prompts a medida (~300 de referencia), los mismos motores de IA que Pro, onboarding
               acompañado. Precio a medida — hablamos contigo y lo ajustamos a tu cartera.
             </p>
-            {/* CONSOLE-REDESIGN-1: this used to preselect Agencia in the
-                modal, which opened it with "Continuar" already disabled —
-                the dead end reached from the default path. Agencia is no
-                longer a selectable radio there (it has its own sales cell),
-                so the button just opens the comparison it promises. */}
-            <Button type="button" className="w-full justify-center" onClick={() => setModal({})}>
+            {/* The comparison this button promises lives on the public
+                pricing page (full plan matrix, not just this modal's four
+                cards), so it navigates there instead of opening the modal —
+                fundador, 2026-08-25. */}
+            <Link
+              href="/pricing"
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[8px] px-3 text-sm font-semibold bg-[var(--accent)] text-white hover:opacity-95"
+            >
               Comparar planes
               <Icon name="arrRight" size={14} />
-            </Button>
+            </Link>
           </CardContent>
         </Card>
         )}
@@ -308,6 +342,7 @@ export function PlanBillingSection({
           overageOnly={modal.overageOnly}
           hasRealSubscription={usage.hasStripeSubscription}
           activeProjects={projects}
+          promoPlanIds={promoPlanIds}
           onClose={() => setModal(null)}
           onApply={applyChange}
           onCheckout={createCheckoutSession}

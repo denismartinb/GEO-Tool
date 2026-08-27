@@ -46,6 +46,12 @@ En las capturas se ve el hero de producción. Las maquetas del aura
 ChatGPT** que no son los de producción: ese rediseño del hero sigue sin
 aprobar y necesita su propio Task Intake. Sólo se tocó el fondo.
 
+## La portada completa vive en otra carpeta
+
+Esta carpeta es **sólo el fondo**. El diseño aprobado de la portada entera —las
+ocho secciones, con sus assets— está en `docs/design-reference/home-2026-08/`,
+y sus dos artboards ya llevan este degradado aplicado.
+
 ## Los invariantes viven en el CSS
 
 Por qué las paradas están donde están, por qué el 100 % es blanco y por qué

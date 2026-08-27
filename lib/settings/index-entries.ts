@@ -13,12 +13,18 @@
  * to carry forward is structural, not a matter of care — a helper a Server
  * Component calls never lives in a `"use client"` file.
  */
+import type { ReactNode } from "react";
+
 export type SettingsIndexEntry = {
   /** Matches the `id` of the section heading it points at. */
   id: string;
   label: string;
-  /** The section's live state, shown under the label. */
-  detail: string;
+  /**
+   * The section's live state, shown under the label. Usually plain text, but
+   * PRICING-PROMO-1 needs a struck-through price for the Plan entry, so this
+   * accepts any node rather than forcing every caller into string-only.
+   */
+  detail: ReactNode;
 };
 
 /**
@@ -36,15 +42,15 @@ export function buildSettingsIndex({
   fullName: string;
   email: string;
   activeAlerts: number;
-  planLabel: string | null;
+  planLabel: ReactNode | null;
 }): SettingsIndexEntry[] {
   return [
     { id: "cuenta", label: "Cuenta", detail: fullName.trim() || email },
+    ...(planLabel ? [{ id: "plan", label: "Plan", detail: planLabel }] : []),
     {
       id: "avisos",
-      label: "Avisos",
+      label: "Notificaciones",
       detail: `${activeAlerts} ${activeAlerts === 1 ? "activo" : "activos"}`
-    },
-    ...(planLabel ? [{ id: "plan", label: "Plan", detail: planLabel }] : [])
+    }
   ];
 }

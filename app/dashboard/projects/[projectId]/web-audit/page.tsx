@@ -120,10 +120,17 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     after(() => triggerWebAuditRun());
   }
 
+  // Mirrors the FirstScanTakeover condition below — hidden while the mission
+  // takeover owns the screen, so the rocket animation reads as full screen
+  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  const showMissionTakeover = !hasCompletedScan && Boolean(activeRun);
+
   return (
     <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAuditCoverage}>
-    <div className="page">
-      {/* Sticky header */}
+    <div className={`page${showMissionTakeover ? " mrk-fill" : ""}`}>
+      {/* Sticky header — oculta mientras la misión del primer escaneo ocupa
+          la pantalla entera. */}
+      {!showMissionTakeover && (
       <div className="ov-sticky-header">
         <div className="ov-sticky-left">
           <div>
@@ -210,6 +217,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           )}
         </div>
       </div>
+      )}
 
       {/* WEB-AUDIT-ISSUES-1 fase 2: v3 repaint + the founder-approved
           640/1200/1280px console width standard (CITATIONS-REDESIGN-1,
@@ -218,7 +226,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           unedited `.card`/badge/etc. inside repaints automatically. Wraps
           everything below the sticky header, which stays on the shared
           chrome untouched, matching this repo's established nesting. */}
-      <div className="wa2-scope wa2-page">
+      <div className={`wa2-scope wa2-page${showMissionTakeover ? " mrk-fill" : ""}`}>
 
       {/* AUDIT-NO-BUTTON-1 (founder, 2026-08-05): here lived the page's one
           "Auditar ahora" button, and briefly after it a status pill. Both are
@@ -287,7 +295,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           told per-signal instead, inside the tiles/sections that need it
           (LockedSubScoreTile, the coverage-only Evolución/Historial blocks
           that stay empty by construction for a non-Pro project). */}
-      {!hasCompletedScan && activeRun ? (
+      {activeRun && showMissionTakeover ? (
         /* ONBOARDING-ROCKET-1's ascent beat, extended to this screen: it
            already took over Visión general, Prompts, Competidores,
            Recomendaciones and Páginas citadas while a project's first scan is
@@ -821,35 +829,6 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
         </AuditTabsProvider>
       )}
 
-      {/* Footer links */}
-      <div
-        style={{
-          display: "flex",
-          gap: 20,
-          marginTop: 28,
-          paddingTop: 18,
-          borderTop: "1px solid var(--line-soft)",
-          flexWrap: "wrap"
-        }}
-      >
-        {/* DOMAINS-REDESIGN-1: «Escaneos» ya no es una pantalla de cliente. El
-            pie enlaza a Dominios, que es lo que ese enlace le resolvía al
-            usuario — cambiar de dominio — y no al historial interno. */}
-        <Link
-          href="/dashboard/domains"
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
-        >
-          <Icon name="globe" size={13} />
-          Dominios
-        </Link>
-        <Link
-          href={`/dashboard/projects/${projectId}/recommendations`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
-        >
-          <Icon name="recs" size={13} />
-          Recomendaciones
-        </Link>
-      </div>
       </div>
     </div>
     </WebAuditProvider>

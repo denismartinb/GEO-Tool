@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { SUPPORT_EMAIL } from "@/lib/support";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { PLANS, type Plan } from "@/app/pricing/plans-data";
+import { PLANS, PROMO_DURATION_MONTHS, type Plan } from "@/app/pricing/plans-data";
 import type { ActiveProjectSummary } from "@/lib/billing";
 import type { CheckoutSessionResult, PortalIntent, PortalSessionResult } from "@/app/dashboard/settings/billing/actions";
 
@@ -18,7 +18,7 @@ const METER_ROWS: Array<{ label: string; icon: string; get: (p: Plan) => string 
   { label: "Dominios", icon: "globe", get: (p) => p.meter.projects },
   { label: "Prompts monitorizados", icon: "prompts", get: (p) => "~" + p.meter.prompts },
   { label: "Motores de IA", icon: "layers", get: (p) => String(p.meter.engines) },
-  { label: "Frecuencia de refresco", icon: "refresh", get: (p) => p.meter.refresh }
+  { label: "Frecuencia de escaneo", icon: "refresh", get: (p) => p.meter.refresh }
 ];
 
 function PlanMeterChips({ plan }: { plan: Plan }) {
@@ -39,6 +39,7 @@ export function ChangePlanModal({
   initialTargetId,
   activeProjects,
   hasRealSubscription,
+  promoPlanIds = [],
   onClose,
   onApply,
   onCheckout,
@@ -57,6 +58,15 @@ export function ChangePlanModal({
    * Portal (which has no subscription/customer to manage yet).
    */
   hasRealSubscription: boolean;
+  /**
+   * PRICING-PROMO-1: plans with an active, Stripe-backed promo right now
+   * (`billing-content.tsx` → `getActivePromoPlanIds()`). Only ever shown to
+   * an account with `!hasRealSubscription` — anyone with a real subscription
+   * switching Starter<->Pro goes through the Stripe Portal (see
+   * `paidToPaidSelfServe` below), which this promo does not reach, so
+   * showing a promo price there would be a price the Portal won't charge.
+   */
+  promoPlanIds?: string[];
   onClose: () => void;
   onApply: (targetId: Plan["id"], archiveProjectIds: string[]) => Promise<{ success: boolean; error?: string }>;
   /** BILLING-STRIPE-1: real Stripe Checkout Session for a Free -> paid move (or converting a trial to a real subscription). */
@@ -98,6 +108,18 @@ export function ChangePlanModal({
   // real" action, so it must NOT be treated the same as re-selecting a plan
   // you already pay for.
   const isSame = sel === currentId && (currentId === "free" || hasRealSubscription);
+
+  // PRICING-PROMO-1: true for exactly the accounts for whom picking any
+  // self-serve plan here actually goes through Checkout (see `requiresCheckout`
+  // below, which depends on `hasRealSubscription` the same way but per-target) —
+  // never for an account with a real subscription, since that always routes to
+  // the Portal instead, which this promo cannot apply to.
+  const promoShown = (planId: Plan["id"]) => !hasRealSubscription && promoPlanIds.includes(planId);
+
+  // PRICING-PROMO-1: the promo price this checkout will actually charge for
+  // `target`, or null when it doesn't apply — computed once so the move box
+  // and the footer note below can't disagree with each other.
+  const targetPromoPrice = target.promoPrice !== undefined && promoShown(target.id) ? target.promoPrice : null;
 
   const isSelfServeTarget = target.id === "starter" || target.id === "pro";
   // BILLING-STRIPE-1: a fresh Checkout Session (as opposed to the Customer
@@ -257,8 +279,22 @@ export function ChangePlanModal({
                       <div className="cp-plan-top">
                         <span className="cp-plan-name">{p.name}</span>
                         <span className="cp-plan-price">
-                          {p.priceLabel ?? money(p.price, 0)}
-                          <span className="per">{p.priceLabel || p.id === "free" ? "" : "/mes"}</span>
+                          {p.priceLabel ? (
+                            p.priceLabel
+                          ) : p.promoPrice !== undefined && promoShown(p.id) ? (
+                            <>
+                              <span className="was">{money(p.price, 0)}</span>
+                              <span className="now">
+                                {money(p.promoPrice, 0)}
+                                <span className="per">/mes</span>
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {money(p.price, 0)}
+                              <span className="per">{p.id === "free" ? "" : "/mes"}</span>
+                            </>
+                          )}
                         </span>
                       </div>
                       <div className="cp-plan-tag">{p.tagline}</div>
@@ -328,7 +364,16 @@ export function ChangePlanModal({
                 <div className="cp-move-side">
                   <div className="cp-move-lbl">Nuevo</div>
                   <div className="cp-move-plan">
-                    {target.name} <span className="per">· {planPrice(target)}</span>
+                    {target.name}{" "}
+                    {targetPromoPrice !== null ? (
+                      <span className="cp-move-promo">
+                        <span className="was">{money(target.price, 0)}</span>
+                        <span className="now">{money(targetPromoPrice, 0)}</span>
+                        <span className="per">/mes · {PROMO_DURATION_MONTHS} meses</span>
+                      </span>
+                    ) : (
+                      <span className="per">· {planPrice(target)}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -337,6 +382,13 @@ export function ChangePlanModal({
                 <span>
                   Al continuar, Stripe te pedirá los datos de pago en una página segura fuera de GenScore. Tu plan{" "}
                   {target.name} se activa en cuanto el pago se confirme.
+                  {targetPromoPrice !== null && (
+                    <>
+                      {" "}
+                      Precio de lanzamiento: {money(targetPromoPrice, 0)}/mes durante {PROMO_DURATION_MONTHS} meses,
+                      después {planPrice(target)}.
+                    </>
+                  )}
                 </span>
               </div>
               {error && (
@@ -347,7 +399,13 @@ export function ChangePlanModal({
             </div>
             <div className="cp-foot">
               <div className="cp-foot-note">
-                {planPrice(target)}
+                {targetPromoPrice !== null ? (
+                  <>
+                    <b>{money(targetPromoPrice, 0)}/mes</b> · {PROMO_DURATION_MONTHS} meses (antes {planPrice(target)})
+                  </>
+                ) : (
+                  planPrice(target)
+                )}
               </div>
               <Button type="button" variant="ghost" onClick={() => setStep("select")} disabled={isPending}>
                 <Icon name="chevLeft" size={15} />

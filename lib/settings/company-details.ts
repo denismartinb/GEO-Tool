@@ -11,10 +11,16 @@
  * split across two sections of the single settings page, because the two
  * halves answer different questions:
  *
- * - `org_name` / `org_website` / `org_sector` describe the company and live in
- *   a collapsed fold inside Cuenta. Nothing in the product reads them yet.
- * - `org_legal_name` / `org_tax_id` exist for the invoice, so they live in the
- *   Plan section, next to the thing they are for.
+ * - `org_name` / `org_website` / `org_sector` described the company. Nothing
+ *   in the product ever read them, so the fold that edited them was hidden
+ *   (founder, 2026-08-25, log §165) rather than left as a promise the product
+ *   did not keep. The keys and this reader stay — the values already saved by
+ *   some accounts are not deleted, only the editable UI is gone.
+ * - `org_legal_name` / `org_tax_id` exist for the invoice, and since
+ *   BILLING-INVOICE-FIELDS-1 (log §166) they really do reach one: saving this
+ *   form also pushes them to the account's Stripe customer as
+ *   `invoice_settings.custom_fields` (`lib/stripe.ts`,
+ *   `syncBillingDetailsToStripeCustomer`).
  */
 
 export type CompanyDetails = {

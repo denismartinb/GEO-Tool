@@ -126,39 +126,7 @@ export function freezeTimeFor(index: number): number {
   return Math.min(step.from + FREEZE_OFFSET_MS, step.to - 200);
 }
 
-/**
- * Marca de «ya lo ha visto» para el popup de la consola.
- *
- * Va en `localStorage` y no en una columna de usuario a propósito: una
- * migración de esquema está prohibida sin aprobación explícita del fundador
- * (CLAUDE.md, "Forbidden Without Explicit Approval"). El coste asumido y
- * declarado es que el popup reaparece en un navegador nuevo o tras limpiar el
- * almacenamiento; para un tour de bienvenida descartable de un clic, eso es
- * preferible a tocar el esquema.
- *
- * Lleva versión en la clave para que un rediseño del tour pueda volver a
- * mostrarse sin pisar la marca antigua.
- */
-export const TOUR_SEEN_STORAGE_KEY = "genscore.onboarding-tour.seen.v1";
-
-export function hasSeenTour(storage: Pick<Storage, "getItem"> | null | undefined): boolean {
-  if (!storage) return false;
-  try {
-    return storage.getItem(TOUR_SEEN_STORAGE_KEY) === "1";
-  } catch {
-    // Safari en modo privado y algunos navegadores con almacenamiento
-    // bloqueado lanzan al leer. Ante la duda no se marca como visto: enseñar
-    // el tour dos veces es peor que no enseñarlo nunca, pero sólo un poco.
-    return false;
-  }
-}
-
-export function markTourSeen(storage: Pick<Storage, "setItem"> | null | undefined): void {
-  if (!storage) return;
-  try {
-    storage.setItem(TOUR_SEEN_STORAGE_KEY, "1");
-  } catch {
-    // Si no se puede persistir, el tour volverá a salir. No es motivo para
-    // romper la navegación.
-  }
-}
+// La marca de «ya lo ha visto» ya no vive aquí. Desde ONBOARDING-TOUR-PERSIST-1
+// (2026-08-25) es `profiles.onboarding_tour_seen_at`, leída en
+// `app/dashboard/layout.tsx` y escrita por la server action `markTourSeen`
+// (`app/dashboard/actions.ts`) — ver `.claude/rules/onboarding.md`.

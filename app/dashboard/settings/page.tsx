@@ -76,13 +76,34 @@ export default async function SettingsPage({
 
   const fullName = [firstName, lastName].filter(Boolean).join(" ");
 
+  // PRICING-PROMO-1: same struck-through/promo-price convention as "Tu plan"
+  // below (plan-billing-section.tsx) — usage.subscriptionPromo is already the
+  // real, Stripe-verified discount for this exact subscription.
+  const planLabel =
+    isAdmin && plan
+      ? (plan.priceLabel ??
+        (usage?.subscriptionPromo ? (
+          <>
+            {plan.name} ·{" "}
+            <span className="was">
+              {plan.price}&nbsp;€/{plan.period}
+            </span>{" "}
+            <span className="now">
+              {usage.subscriptionPromo.promoPrice}&nbsp;€/{plan.period}
+            </span>
+          </>
+        ) : (
+          `${plan.name} · ${plan.price} €/mes`
+        )))
+      : null;
+
   const entries = buildSettingsIndex({
     fullName,
     email,
     activeAlerts,
     // Null for a non-admin — the same condition that hides the Plan section
     // below, so the index can never advertise a section that is not there.
-    planLabel: isAdmin && plan ? plan.priceLabel ?? `${plan.name} · ${plan.price} €/mes` : null
+    planLabel
   });
 
   return (
@@ -114,14 +135,8 @@ export default async function SettingsPage({
               firstName={firstName}
               lastName={lastName}
               company={company}
-              companyReadOnly={!isAdmin}
               billingDetails={billingDetails}
             />
-
-            <h2 className="set-sech sp" id="avisos">
-              Avisos
-            </h2>
-            <NotificationsSection initialScoreDropAlert={scoreDropAlert} initialWeeklyDigest={weeklyDigest} />
 
             {isAdmin && (
               <>
@@ -131,6 +146,11 @@ export default async function SettingsPage({
                 <BillingContent checkoutStatus={checkout} />
               </>
             )}
+
+            <h2 className="set-sech sp" id="avisos">
+              Notificaciones
+            </h2>
+            <NotificationsSection initialScoreDropAlert={scoreDropAlert} initialWeeklyDigest={weeklyDigest} />
 
             {/* Last block on the page and deliberately not in the index: an
                 irreversible action is reached by scrolling, not by one click
