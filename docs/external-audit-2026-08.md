@@ -97,6 +97,91 @@ la Fase 3.
 
 ---
 
+## 1 ter. Plan de ejecución
+
+Once fases, tres carriles simultáneos como máximo (`BUILD-BUDGET-1`: nunca más
+de 3 PRs abiertos). El orden de abajo no es el orden de importancia: es el que
+mantiene los tres carriles llenos sin que ninguno espere a otro.
+
+### Olas
+
+| Ola | Carril A (crítico) | Carril B | Carril C | Dura |
+|---|---|---|---|---|
+| 1 | **Fase 1** `TRUST-METRICS-1` (5-7 d) | **Fase 6** `CHECKER-COPY-1` (1 d) → **Fase 0** `AUDIT-REPRO-1` (1-2 d) | **Fase 2** `TRUST-PROMISES-1` (2-3 d) | ~1 sem |
+| 2 | **Fase 4** `ACTIONS-OBSERVABLE-1` (4-6 d) | **Fase 5** `AUDIT-RUNNABLE-1` (2-3 d) | **Fase 3** `RECURRING-VALUE-1` (3-4 d) | ~1 sem |
+| 3 | **Fase 7** `RECS-EVIDENCE-2` (3-4 d) | **Fase 8** `CITATIONS-HONESTY-1` (2-3 d) | **Fase 9** `ENTITY-HYGIENE-1` (2 d) | ~4 d |
+| 4 | **Fase 10** `SCREEN-POLISH-1` (2-3 d) | — | — | ~3 d |
+
+**~3 semanas de reloj**, no la suma de las fases. El camino crítico es el
+carril A; los otros dos existen para que nunca esté esperando.
+
+### Por qué ese reparto
+
+- **Fase 6 va primera de todo** aunque sea la sexta en severidad: un día de
+  trabajo en el punto exacto de conversión. Es el único cambio del plan que
+  paga el mismo día que entra.
+- **Fase 1 arranca el día 1** aunque sea la más larga: nada depende de ella,
+  pero ella no depende de nada, y es la que decide si el resto es creíble.
+- **Fase 0 antes que la 4**, siempre. La 4 no se puede dimensionar sin la
+  clasificación de la 0.
+- **Fase 3 después de la 2**: su calendario de seguimiento sale de ahí.
+- **Fase 5 después de su diagnóstico**: si la auditoría automática falla por una
+  causa distinta de la que suponemos, el botón sólo tapa el síntoma.
+- Las fases 7 a 10 van al final porque **ninguna bloquea cobrar**. Si hay que
+  lanzar antes, se lanzan sin ellas y se dice qué falta.
+
+### Dependencias reales (todo lo demás es paralelo)
+
+```
+Fase 0 ──> Fase 4
+Fase 2 ──> Fase 3
+Fase 1 ──> (nada; pero toda cifra que otra fase publique debe leer su módulo)
+diagnóstico técnico ──> Fase 5
+```
+
+### Regla de un PR
+
+Una fase = un PR = una entrada de histórico = una celda del mapa de zonas. Nada
+de PRs que mezclan fases: es lo que `CLAUDE.md` ya prohíbe y lo que haría
+imposible revertir una sola cosa si sale mal.
+
+Cada PR se cierra con el mismo ritual, sin excepciones: `pnpm test &&
+pnpm run validate`, QA, **piloto contra el preview**, cierre documental en el
+mismo PR, y Human Gate. Y en el mensaje al fundador, siempre: URL del preview y
+qué probar en castellano.
+
+### Protocolo reforzado para la Fase 1
+
+Petición explícita del fundador, dos veces: *"la nota GEO Score es el core de la
+herramienta"*. Esta fase se ejecuta con reglas más duras que las demás.
+
+1. **El módulo nace solo.** `lib/metrics/run-metrics.ts` y sus tests entran en
+   el primer commit, **sin un solo consumidor**. Si el módulo está mal, se ve
+   antes de que nadie dependa de él.
+2. **Una superficie, un commit.** Siete superficies, siete commits legibles y
+   revertibles por separado. Nunca "migradas todas".
+3. **Captura antes/después sobre el mismo proyecto en cada commit.** Un número
+   correcto bajo una etiqueta equivocada es invisible para cualquier test; sólo
+   se ve mirando. Es exactamente el fallo que la auditoría encontró.
+4. **Aserción cruzada en el piloto antes del Human Gate**: el piloto lee la
+   cifra en Visión general y en Dominios del mismo proyecto y falla si difieren.
+   Sin esta aserción, la fase no se presenta.
+5. **`data-guardian` revisa la lectura de datos** (la ventana pasa a leer tres
+   runs por proyecto en una pantalla que lista varios) y **`geo-strategy` revisa
+   la semántica** de cada etiqueta nueva. No es opcional en esta fase.
+6. **Plan de vuelta atrás escrito antes de empezar**: el módulo es aditivo y
+   cada migración es un commit; revertir una superficie no arrastra a las otras.
+
+### Criterio para lanzar
+
+Se puede cobrar cuando las **Fases 0 a 6** estén cerradas: ni una cifra
+contradictoria, ni una acción silenciosa, ni una promesa pública que el producto
+no cumpla, y el ciclo recurrente visible. Las fases 7 a 10 mejoran el producto y
+no bloquean el cobro; los diferenciadores (motores, investigación de demanda,
+atribución) son otro trimestre y otro Task Intake.
+
+---
+
 ## Fase 0 — `AUDIT-REPRO-1`: reproducir antes de arreglar
 
 **Problema.** El hallazgo peor puntuado del informe (fiabilidad funcional 4,0)
