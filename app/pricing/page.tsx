@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { PricingPage } from "@/components/pricing/pricing-page";
 import { contentMetadata } from "@/lib/seo/metadata";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
-import { PLAN_FAQ } from "./plans-data";
+import { PLAN_FAQ, PLANS } from "./plans-data";
+
+const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
+const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 /**
  * PRICING-PROMO-1. `/pricing` is otherwise fully static — prerendered once
@@ -25,13 +28,17 @@ export const revalidate = 3600;
  * ("cuánto cuesta el posicionamiento GEO" aparece entre las preguntas reales
  * del sector, docs/seo-positioning-plan.md §3.3).
  *
- * Los precios de la descripción salen de `plans-data.ts` — si cambian ahí,
- * cambian aquí (lo cubre `app/pricing/pricing-metadata.test.ts`).
+ * Los precios de la descripción salen de `plans-data.ts` de verdad, no sólo
+ * de nombre: hasta TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2)
+ * este párrafo era un literal escrito a mano que la coincidencia mantenía
+ * sincronizado con `PLANS`, y `pricing-metadata.test.ts` sólo podía
+ * comprobar que los dos números coincidieran — nunca impedir que uno de los
+ * dos se editara solo. Ahora el número no puede desincronizarse del
+ * catálogo porque es el mismo número.
  */
 export const metadata: Metadata = contentMetadata({
   title: "Precios de GenScore — planes de posicionamiento GEO desde 0 €",
-  description:
-    "Empieza gratis con un escaneo puntual y sube a Starter (45 €/mes) o Pro (179 €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.",
+  description: `Empieza gratis con un escaneo puntual y sube a Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
   path: "/pricing"
 });
 
