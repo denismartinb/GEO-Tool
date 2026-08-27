@@ -16780,6 +16780,28 @@ que mide.**
    delante— y la paleta tiene seis tonos, así que sigue teniendo color propio.
    El gráfico gana un `defaultVisibleKeys` opcional: sin él se comporta como
    siempre, porque sólo la pantalla sabe cuál es la marca propia.
+
+   **Y esa segunda pasada salió rota, con un fallo que merece su propio
+   párrafo.** El primer intento importaba el tope (`DEFAULT_VISIBLE`, un `= 4`)
+   desde `components/ui/position-trend-chart.tsx`, que es `"use client"`. Next
+   convierte los exports de un módulo cliente en **referencias de cliente**
+   cuando los pide un componente de servidor, así que lo que llegaba a la
+   página no era el número 4: `rankedKeys.slice(0, cap)` devolvía vacío, la
+   función caía en su rama de «no hay nadie clasificado» y el gráfico salía
+   **con una sola línea** — peor que el fallo que iba a arreglar.
+
+   Lo importante es todo lo que NO lo detectó: el typecheck pasa (los tipos son
+   correctos a los dos lados de la frontera), los tests unitarios pasan (no la
+   cruzan), `next build` compila, y el piloto marcó `competitors ✅ ✅ ✅` porque
+   la pantalla carga sin errores. Se vio abriendo la captura y contando líneas
+   —una donde debían salir cinco—, que es exactamente la razón por la que el
+   Human Gate pide qué capturas se abrieron y no la tabla de ✅.
+
+   La constante se muda a `lib/competitors/trend-window.ts`, que no es cliente y
+   que el gráfico ya importaba. Y lo fija `tests/server-client-constants.test.ts`,
+   que recorre los componentes de servidor y falla si alguno importa un **valor**
+   —no un tipo, no un componente— de un módulo `"use client"`. Comprobado en las
+   dos direcciones: con el import viejo falla nombrando fichero y símbolo.
 4. **El color se asigna DESPUÉS de reordenar.** La paleta está ordenada de más a
    menos distinguible entre sí; asignarla antes habría dejado a las cuatro
    visibles con los tonos 0, 3, 5 y 7 en vez de con los cuatro elegidos para

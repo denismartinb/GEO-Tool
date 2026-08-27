@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
-import { buildSeriesPaths, MIN_TREND_POINTS } from "@/lib/competitors/trend-window";
+import { buildSeriesPaths, DEFAULT_VISIBLE_SERIES, MIN_TREND_POINTS } from "@/lib/competitors/trend-window";
 
 export type TrendSeries = {
   key: string;
@@ -34,21 +34,8 @@ const PAD_RIGHT = 96;
 const PAD_TOP = 16;
 const PAD_BOTTOM = 28;
 
-/**
- * How many series are drawn before the rest have to be opted into.
- *
- * Eight overlapping lines is not a chart anyone reads — the founder's own
- * screenshot was the brand plus seven competitors, every one of them a step of
- * the same blue ramp. Four is the point where distinct hues stay
- * distinguishable (including under colour-vision deficiency) and where end
- * labels still fit without colliding.
- *
- * Es el número de series de CONTEXTO. La marca propia puede sumarse a mayores
- * (`defaultVisibleKeys`), así que el máximo real por defecto es 5 — ver
- * `defaultVisibleSeriesKeys` en `lib/competitors/latest-positions.ts` para por
- * qué esa quinta línea vale su coste.
- */
-export const DEFAULT_VISIBLE = 4;
+/** Alias local: la constante vive en `trend-window.ts` — ver allí por qué. */
+const DEFAULT_VISIBLE = DEFAULT_VISIBLE_SERIES;
 
 export function PositionTrendChart({
   series,
