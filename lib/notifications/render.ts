@@ -65,40 +65,50 @@ export function renderNotification(
 
   switch (row.type as NotificationType) {
     case "scan_completed": {
-      const score = num(payload.visibilityScore);
-      const delta = num(payload.visibilityDelta);
-      // Rounded like the score beside it: the payload carries a raw float
-      // difference of two scores, which surfaced in real notifications as
-      // "Visibilidad 72 (+5.549999999999997)" (founder report, 2026-08-05)
-      // and "Visibilidad 75 (+2.780000000000001)" (pilot capture, PR #336).
+      // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): this used
+      // to headline "Visibilidad NN" — the raw `visibility_score` component,
+      // not the composite Overview and Domains show as "Puntuación GEO". The
+      // audit's P0-01 found exactly that divergence (6 on the panel, "Visibilidad
+      // 2" on this same scan's notification). `geoScore` is the windowed
+      // figure every "Puntuación GEO" surface reads; `visibilityScore` is kept
+      // only as a fallback for notification rows persisted before `geoScore`
+      // existed in the payload.
       //
-      // Found and fixed twice independently, on main and on this branch; the
-      // merge kept both declarations and broke the build. This is the single
-      // survivor, and it keeps the stricter half of the two: the parenthetical
-      // disappears when the rounded value is 0, because "(+0)" is noise rather
-      // than information. `Math.round(-0.4)` is `-0`, falsy, so a sub-point
-      // dip is suppressed the same way.
-      const roundedDelta = delta === null ? null : Math.round(delta);
+      // The copy is "Escaneo actualizado", not "Puntuación de este escaneo":
+      // with a window, the figure shown is a median over several runs, so the
+      // notification cannot honestly claim it IS this scan's own result — only
+      // that this scan is what updated it.
+      const geoScore = num(payload.geoScore) ?? num(payload.visibilityScore);
       const newRecs = num(payload.newRecommendations) ?? 0;
       const resolvedGaps = num(payload.resolvedGaps) ?? 0;
       const promptsProcessed = num(payload.promptsProcessed);
 
-      const scoreText =
-        score !== null
-          ? `Visibilidad ${Math.round(score)}${roundedDelta ? ` (${roundedDelta > 0 ? "+" : ""}${roundedDelta})` : ""}.`
-          : "El escaneo ha finalizado con éxito.";
+      // The old delta parenthetical ("Visibilidad 72 (+6)") compared two raw
+      // `visibility_score` values — a different basis than the windowed score
+      // above, and pairing a windowed headline with a per-run delta would
+      // repeat the exact "two quantities under one label" mistake this phase
+      // exists to remove. A window-over-window delta for this notification is
+      // a real improvement, not done here: it needs the same previous-window
+      // computation Overview already does (`page.tsx`'s `previousWindow`), out
+      // of scope for Fase 1's stated deliverables.
+      const scoreText = geoScore !== null ? `Escaneo actualizado: Puntuación GEO ${Math.round(geoScore)}.` : "El escaneo ha finalizado con éxito.";
       const clauses: string[] = [];
       if (newRecs > 0) clauses.push(`${newRecs} ${plural(newRecs, "acción nueva", "acciones nuevas")}`);
       if (resolvedGaps > 0) clauses.push(`${resolvedGaps} ${plural(resolvedGaps, "brecha cerrada", "brechas cerradas")}`);
       const tail = clauses.length ? ` ${clauses.join(" y ")}.` : "";
+
+      // Direction still comes from the raw visibility delta — a reasonable
+      // proxy for "did this scan look better or worse", kept only for the
+      // icon/tone and never shown as a number (see above).
+      const rawDelta = num(payload.visibilityDelta);
 
       return {
         title: "Escaneo completado",
         body: `${scoreText}${tail}`,
         targetLabel: domain && promptsProcessed ? `${domain} · ${promptsProcessed} prompts` : domain,
         href: hrefForProject(row.project_id),
-        icon: delta !== null && delta < 0 ? "trendDown" : "trendUp",
-        tone: delta !== null && delta < 0 ? "neg" : "pos"
+        icon: rawDelta !== null && rawDelta < 0 ? "trendDown" : "trendUp",
+        tone: rawDelta !== null && rawDelta < 0 ? "neg" : "pos"
       };
     }
 

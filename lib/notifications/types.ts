@@ -27,6 +27,14 @@ export type NotificationPayloadByType = {
     runId: string;
     promptsProcessed: number;
     providers: string[];
+    /** TRUST-METRICS-1: the windowed "Puntuación GEO" — the only figure this
+     *  notification may headline. `undefined` for rows persisted before this
+     *  field existed; `render.ts` falls back to `visibilityScore` for those,
+     *  never the reverse. */
+    geoScore?: number;
+    /** Kept for `weekly-digest.ts` and any consumer of historical payloads —
+     *  never rendered as "Puntuación GEO" (docs/external-audit-2026-08.md,
+     *  Fase 1). */
     visibilityScore: number | null;
     visibilityDelta: number | null;
     newRecommendations: number;
