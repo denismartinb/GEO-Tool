@@ -107,16 +107,68 @@ realidad y llama "prompts" a dos unidades distintas. Es el hallazgo que hunde
 "claridad de medición" a 4,0 y contamina todo lo demás: si el score no es
 estable, ninguna recomendación es creíble.
 
-**Decisión de producto necesaria (tuya, no de ingeniería):** hay dos salidas
-para P0-01 y hay que elegir una.
+**Decisión de producto — TOMADA por el fundador el 2026-08-27.** Hay **una sola
+puntuación GEO en todo el producto, y es la puntuación con ventana**
+(`SCORE-WINDOW-1`, ADR 0036). Dominios, la notificación y cualquier superficie
+que publique una puntuación leen ese mismo valor. La visibilidad sigue
+existiendo, pero sólo como componente etiquetado dentro del desglose: nunca
+sola, nunca con aspecto de score.
 
-- **(a) Recomendada — el GEO Score compuesto es el único número de titular.**
-  Dominios y la notificación pasan a mostrarlo. La visibilidad sigue existiendo,
-  pero sólo como componente etiquetado dentro del desglose, nunca sola y nunca
-  con aspecto de score.
-- (b) Cada pantalla sigue con su cifra, pero rotulada sin ambigüedad
-  ("Visibilidad 2/100", "GEO Score 6/100"). Más barato y peor: sigue pidiendo al
-  usuario que sostenga dos escalas en la cabeza.
+Donde antes se iba a decir "puntuación de este escaneo", el copy pasa a
+**"Escaneo actualizado"** seguido de la puntuación con ventana ya actualizada.
+Es lo que evita la mentira sin partir el número en dos: la notificación no
+afirma que ése sea el resultado del escaneo que acaba de terminar, afirma que
+el escaneo ha movido la puntuación — que es lo que de verdad ha pasado.
+
+**SCORE-WINDOW-1 queda EXPLÍCITAMENTE FUERA DE ALCANCE.** No se toca la
+mediana, ni el tamaño de ventana, ni `MIN_RUNS_FOR_WINDOW`, ni las reglas de
+comparabilidad. Resuelve un problema distinto — la varianza irreducible de la
+recuperación en vivo, que `temperature: 0` no controla — y lo resuelve bien.
+Se anota aquí porque "unificar la puntuación" se puede leer como "quitar el
+suavizado", y una sesión futura lo leería así.
+
+**Corolario que cambia el criterio de aceptación del auditor.** El informe pide
+que "un mismo `scan_id` devuelva un score idéntico en cinco superficies". Con
+ventana eso es imposible **y no debe perseguirse**: la ventana es una mediana
+sobre K runs, no una propiedad de un `scan_id`. El criterio correcto es el de
+abajo: una sola cantidad publicada bajo la etiqueta "Puntuación GEO", y
+`visibility_score` jamás publicado bajo ella.
+
+*(Nota sobre lo que vio el auditor: tenía un solo escaneo completado, y la
+ventana necesita dos para publicar. El 6 que vio era el compuesto de su run,
+no la mediana — el suavizado ni siquiera estaba activo en su sesión. El 6
+contra 2 es enteramente confusión compuesto↔visibilidad.)*
+
+**Tres consecuencias que esta decisión arrastra y que no son copy.**
+
+1. **El primer escaneo no tiene ventana.** `MIN_RUNS_FOR_WINDOW` es 2, y ése es
+   exactamente el momento en que se dispara la notificación y en que Dominios
+   enseña su primer número. Se mantiene la caída actual al compuesto del run,
+   con la misma etiqueta — es la mejor estimación disponible y no inventa nada —
+   pero el marcador de fiabilidad que ya existe pasa a ser **obligatorio**
+   mientras no haya ventana, para que el salto al llegar el segundo escaneo esté
+   anunciado antes de ocurrir.
+2. **`getWorkspaceCounters` sólo guarda dos runs por proyecto**
+   (`lib/project-workspace.ts:332-340`) y la ventana necesita tres. Dominios
+   lista varios proyectos, así que es una consulta por proyecto, no una global:
+   hay que medir su coste antes de subir el límite.
+3. **La notificación se compone en `executor.ts:1066` con `visibilityScore` en
+   el payload.** Hay que meter el valor de ventana ahí — es computable en ese
+   instante, porque el run recién escrito es el más reciente — y dejar un
+   fallback para las filas históricas cuyo payload sólo lleva visibilidad.
+
+**Cuarta superficie, ausente del informe del auditor:**
+`lib/scan/weekly-digest.ts` también publica `visibility_score`. Entra en el
+alcance de esta fase por el mismo argumento que las otras cuatro.
+
+**Excepción acotada: la pantalla de detalle de un escaneo** (`/runs/[runId]`).
+El fundador la dio por no visible para el usuario final; **sí lo es**: se llega
+desde el botón "Ver detalle del escaneo" de dos estados vacíos, en Páginas
+citadas (`citations/page.tsx:220`) y en Recomendaciones
+(`recommendations/page.tsx:701`). Como trata de un run concreto por definición,
+la salida es que **hable de "este escaneo" y no llame "Puntuación GEO" a nada**,
+en lugar de retirar los dos enlaces — que son la única salida de esos dos
+estados vacíos.
 
 **Entregables.**
 - `lib/metrics/run-metrics.ts` — módulo único, sin I/O, dueño de: `geoScore`,
@@ -124,8 +176,9 @@ para P0-01 y hay que elegir una.
   `mentionRateByAnswer` (1/45), `promptCoverage` (1/15), `citationRate`, cada uno
   con `label` y `denominatorLabel` propios. Ninguna pantalla vuelve a calcular un
   porcentaje.
-- Migración de las cinco superficies: Visión general, Dominios, Prompts,
-  Competidores, notificaciones. Y de la exportación, cuando exista (Fase 3).
+- Migración de las superficies: Visión general, Dominios, Prompts, Competidores,
+  notificaciones, resumen semanal y detalle de escaneo. Y de la exportación,
+  cuando exista (Fase 3, `ACTIONS-OBSERVABLE-1`).
 - **Todo porcentaje se publica con su denominador al lado**: "2 % de respuestas
   (1/45)", "7 % de prompts (1/15)". Sin excepción.
 - Competidores: `results.length` deja de rotularse "prompts" → "45 respuestas
@@ -142,8 +195,17 @@ para P0-01 y hay que elegir una.
 - Aserción cruzada en el piloto: el score de Dominios == el de Visión general
   para el mismo proyecto (Corrección B).
 
-**Criterio de aceptación (del propio informe).** Un mismo `scan_id` devuelve
-score y denominadores idénticos en las cinco superficies. 100 %.
+**Criterio de aceptación.** Reformulado respecto al del informe, por lo dicho
+arriba sobre la ventana:
+
+- Toda superficie que publique la etiqueta "Puntuación GEO" muestra **la
+  puntuación con ventana**, o su caída documentada al compuesto del run cuando
+  aún no hay ventana — nunca `visibility_score`. 100 %.
+- `visibility_score` no aparece jamás fuera del desglose de componentes, ni bajo
+  ninguna etiqueta que contenga "Puntuación GEO". 0 excepciones.
+- Todo porcentaje se publica con su denominador. 0 excepciones.
+- Ninguna pantalla calcula un porcentaje fuera de `lib/metrics/run-metrics.ts`,
+  y `tests/metric-contract.test.ts` lo comprueba a nivel de fuente.
 
 ---
 
