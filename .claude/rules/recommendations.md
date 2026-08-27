@@ -189,7 +189,7 @@ paths:
   ser porque impide la cita, no porque reste puntos.
 - **El overlay de cobertura sólo alimenta tipos anclados a UN prompt**
   (`COVERAGE_OVERLAY_TYPES`, `lib/recommendations/coverage-overlay.ts`,
-  AUDIT-RECS-JOIN-1 Fase B, log §171). Hoy: `add_citation_block` (mencionado,
+  AUDIT-RECS-JOIN-1 Fase B, log §172). Hoy: `add_citation_block` (mencionado,
   no citado) e `increase_brand_visibility` (no mencionado en absoluto). Un
   tipo de ámbito de campaña (`create_faq_section`,
   `strengthen_brand_entity_clarity`) no entra: no hay un único tema con el

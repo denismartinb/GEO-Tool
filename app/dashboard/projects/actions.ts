@@ -343,3 +343,54 @@ export async function deleteProject(projectId: string): Promise<DeleteProjectRes
   return { success: true };
 }
 
+export type DeleteProjectsResult = { success: true } | { success: false; error: string };
+
+const deleteProjectIdsSchema = z.array(z.string().uuid()).min(1).max(50);
+
+/**
+ * Bulk variant of `deleteProject` for the domain-overage gate
+ * (DOMAINS-OVERAGE-GATE-1, founder-approved Task Intake): permanently
+ * deletes several projects in one call — same cascade, same
+ * `owner_user_id` scoping, same irreversibility, no soft-delete fallback —
+ * then re-verifies server-side that the account is actually back within its
+ * plan's domain cap, the same defense-in-depth `changePlan` already does
+ * after archiving. Never trusts the client's own count of what it selected.
+ */
+export async function deleteProjects(projectIds: string[]): Promise<DeleteProjectsResult> {
+  const parsed = deleteProjectIdsSchema.safeParse(projectIds);
+  if (!parsed.success) {
+    return { success: false, error: "No se pudieron eliminar los dominios seleccionados." };
+  }
+
+  const { supabase, user } = await requireUser();
+
+  const { error, count } = await supabase
+    .from("projects")
+    .delete({ count: "exact" })
+    .in("id", parsed.data)
+    .eq("owner_user_id", user.id);
+
+  if (error || count !== parsed.data.length) {
+    return { success: false, error: "No se pudieron eliminar los dominios seleccionados. Inténtalo de nuevo." };
+  }
+
+  const plan = await getPlanForUser(supabase, user.id);
+  const { count: remainingCount, error: countError } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false);
+
+  if (countError || (remainingCount ?? 0) > plan.caps.projects) {
+    return {
+      success: false,
+      error: "Los dominios se eliminaron, pero todavía tienes más de los que permite tu plan. Recarga la página."
+    };
+  }
+
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/projects");
+
+  return { success: true };
+}
+
