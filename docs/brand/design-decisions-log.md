@@ -16951,3 +16951,235 @@ en las dos direcciones.
 
 **Comprobado.** `pnpm test` (208/208, 2.875/2.875), `pnpm run validate`
 (build + typecheck + lint), todo en verde.
+
+---
+
+## 175. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
+
+**Lo que vio el fundador.** En la panorámica competitiva de Visión general, con
+un escaneo de 30 respuestas: *"no tiene ningún sentido que Euskaltel aparezca
+primero que Movistar. Ya solo por lógica un operador como Movistar debe estar
+primero, y además viendo que solo tiene un 3% de mención no se entiende"*.
+
+**Lo que propuso, y por qué no era el arreglo.** Su idea era ordenar la
+panorámica con los datos de «Cuota de voz en IA» de Competidores, que en sus
+capturas sí ponía a Movistar primero. Comprobado antes de tocar nada:
+
+- Las **dos** pantallas publican este puesto desde el mismo módulo,
+  `rankLatestPositions` — así que la lista «Puesto en el último escaneo» de
+  **Competidores tenía exactamente el mismo Euskaltel 1º**. Lo que él comparó
+  era otro bloque de esa misma pantalla, con otra ventana (cuota de voz es
+  **acumulado de todos los escaneos**; la panorámica es el **último**).
+- Ordenar sólo la panorámica por cuota de voz habría dejado Movistar 1º en
+  Visión general y Euskaltel 1º en Competidores: **literalmente el fallo que
+  PANORAMA-PARITY-1 arregló** (§36), reintroducido por la puerta de al lado.
+- Y habría dejado mintiendo al rótulo «ÚLTIMO ESCANEO» y al titular «Tu puesto
+  cuando apareces», que son puesto-cuando-apareces, no cuota de voz.
+
+**La causa real.** `avg_position_when_mentioned` es honesto por respuesta y
+engañoso entre entidades, porque **nada en él dice sobre cuántas respuestas
+promedia**. Euskaltel salió **una vez** en 30, fue primero en esa única
+respuesta, y con eso encabezó la clasificación con un 1,00 — por delante de
+Movistar, nombrado en 26 de 30. No es un fallo de cálculo: es una comparación
+entre una media de n=1 y otra de n=26.
+
+**El arreglo: un suelo, no un filtro.** En `rankLatestPositions`, una entidad
+necesita salir en al menos el **10% de las respuestas** (y en **2** como
+mínimo) para disputar el orden. Por debajo **conserva su fila, su tasa de
+mención y su media reales**, y se ordena detrás, con el motivo escrito en la
+fila («pocas menciones»). Esconderla cambiaría una impresión falsa por una
+ausencia; el dato es real, lo que está en duda es su comparabilidad.
+
+- **Se expresa en tasa, no en cuenta**, porque tiene que aguantar los dos
+  extremos: 3 menciones son el 10% de un escaneo de 30 y el 0,6% de uno de 500.
+  El suelo absoluto sólo cubre el otro extremo — en un primer escaneo de 10
+  respuestas, el 10% es una sola respuesta, justo lo que esto existe para
+  impedir.
+- **Arregla las dos pantallas a la vez** por estar en el módulo compartido, que
+  es la razón de que ese módulo exista (§36).
+- **Sin migración ni reescaneo**: `mention_count` y `mention_rate` ya se
+  persisten en `run_scores.details_json`.
+- **Dirección de fallo deliberada**: una entrada que no lleva ninguna de las dos
+  cifras se considera cualificada. Las anteriores a geo-score-v3 ya se
+  descartan por no tener posición (ADR 0026), así que esto sólo cubre una
+  entrada escrita a medias — y degradar una fila por una clave que nunca se
+  escribió sería inventar un veredicto a partir de un hueco.
+
+**Addendum del mismo día — el suelo se juzga sobre la cifra REDONDEADA.** En el
+preview, el fundador vio Apple Safari con «10%» **y** la etiqueta «pocas
+menciones»: su tasa real era 9,6%, que la fila imprime redondeada a 10. La
+pantalla se contradecía en el espacio de una línea. Se compara `Math.round`,
+porque la regla que el usuario puede comprobar es la que tiene delante.
+
+**Comprobado.** `lib/competitors/latest-positions.test.ts` fija el caso real de
+movistar.es (Movistar 1º … Euskaltel 7º, `qualified: false`, cifras intactas),
+los dos extremos del rango de tamaño y la dirección de fallo. El test 12
+—paridad entre las dos pantallas— sigue verde: lo que cambió es el orden
+literal que fija, y ese cambio **es** el arreglo. `pnpm test` 205/205
+(2.858/2.858) y `pnpm run validate` en verde.
+
+**Lo que NO se ha tocado, y sigue siendo cierto:** cuota de voz sigue siendo
+acumulada y viviendo en Competidores etiquetada como tal (§11); la panorámica
+sigue publicando la mención del último escaneo (§36). No se han unificado las
+dos poblaciones — la regla de ruta pide decisión explícita para eso, y el
+diagnóstico de arriba dice que no hacía falta.
+
+
+**Nota de renumeración, dos veces.** Esta sección nació como §169 sobre una
+`main` que todavía no tenía ni el §169 de BLOG-INDEX-CARDS (#479) ni el §170 de
+PROMO-CONSOLE-PARITY-1 (#485); se renumeró a §171. Mientras seguía abierta
+entraron **también** #481 (§171) y #489 (§172), así que hubo que moverla otra
+vez, ahora al §175. Las dos veces se renumeró ESTA —la que no estaba en
+`main`— y con ella sus referencias en `CLAUDE.md` y
+`.claude/rules/competitors.md` (`grep -rn "§175"`). Mismo protocolo que
+documentan los §159, §161, §163 y §168.
+
+Que haya hecho falta dos veces en una mañana no es mala suerte: es el límite
+que `tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con
+cuatro ramas abiertas a la vez. El guardián hizo su trabajo las dos veces: paró
+el choque en la que mergeaba después.
+
+---
+
+## 176. El cajón móvil estaba cerrado y la aserción no sabía verlo (PILOT-DRAWER-VIEWPORT-1, 2026-08-27)
+
+**Qué pasó.** `«¿Qué es el GEO?» reabre el tour con contenido real, avanza y
+cierra` falló en `[mobile]` sobre el PR #484 con `TimeoutError: locator.click:
+Timeout 15000ms exceeded`. El registro de la llamada es la pista entera:
+
+```
+- locator resolved to <button type="button" class="nav-item">…</button>
+- element is visible, enabled and stable
+- scrolling into view if needed
+- done scrolling
+- element is outside of the viewport
+```
+
+Un elemento **visible, estable y fuera de la pantalla** después de intentar
+llevarlo a ella es, casi siempre, un elemento dentro de algo desplazado con
+`transform`.
+
+**Por qué.** Bajo 760px la barra lateral es un cajón `position: fixed` que vive
+en `translateX(-100%)` y sólo entra cuando `MobileShellProvider` pone
+`mobnav-open` (`app/globals.css`, `components/mobile-shell.tsx`). Sus botones
+están en el DOM y pintados **todo** el tiempo — simplemente fuera de pantalla
+por la izquierda. Para Playwright eso es «visible»: la definición es caja no
+vacía y sin `visibility: hidden`, no «se ve». Así que
+`await expect(reopen).toBeVisible()` **pasaba con el menú cerrado**, y el fallo
+reaparecía un renglón más abajo, en el clic, con un mensaje sobre el viewport
+que no menciona el cajón.
+
+Y el menú estaba cerrado porque la guarda de arriba era
+`if (await burger.isVisible().catch(() => false))`: una sola pregunta, hecha una
+sola vez. En un preview frío la cabecera puede no haber pintado todavía, la
+pregunta se contesta que no, y el `if` entero se salta en silencio. Es la misma
+familia que PILOT-HYDRATION-CLICK-1 (§136), un escalón más allá: allí el clic
+se perdía por llegar antes de hidratar, aquí ni siquiera se intenta.
+
+**Qué se decidió.** Dos cambios, y ninguno afloja nada:
+
+1. **La condición deja de ser «¿hay hamburguesa?» y pasa a ser «¿se alcanza la
+   entrada del menú?»** (`toBeInViewport`). Es la pregunta que de verdad
+   importa, no depende del ancho ni de que la cabecera haya pintado, y vale
+   igual en escritorio —donde la barra es una columna estática y no hay cajón
+   que abrir— que en móvil.
+2. **El clic se reintenta hasta que el cajón trae el botón a la pantalla**
+   (`expect(...).toPass`), sin espera fija. Seguro de repetir porque el botón
+   hace `setMobileNavOpen(true)`, no un alternar
+   (`components/workspace-topbar.tsx`) — la misma comprobación que hizo seguro
+   el remedio del §136.
+
+**Lo que esto NO era.** No era un fallo del producto ni del PR que lo destapó
+(#484 toca el módulo de puestos de competidores y dos clases CSS de fila; no
+toca la barra lateral, ni el cajón, ni el tour). Era una aserción incapaz de
+distinguir dos estados, latente desde que la escena se escribió: sólo fallaba
+cuando la carrera de hidratación salía del lado malo, que es exactamente el
+perfil de lo que se despacha como «flake» y se vuelve a ejecutar. Se
+diagnosticó en vez de reintentarse.
+
+**Lo que se deja anotado y NO se toca aquí.** El resto de la suite sigue usando
+`toBeVisible()` sobre elementos que podrían estar dentro de un contenedor
+desplazado. Esta pasada era la única que abría el cajón de la consola
+(`grep -rn "Abrir menú de navegación" tests/`), así que no hay más sitios con
+esta forma exacta; barrer el patrón entero es otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/onboarding-tour.spec.ts`;
+`components/mobile-shell.tsx` y `components/workspace-topbar.tsx` (por qué el
+clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
+está fuera de pantalla estando «visible»); §136 (el precedente).
+
+---
+
+---
+
+## 178. Auditoría web se quedó en el primer peldaño de la escalera (WEB-AUDIT-WIDTH-1, 2026-08-27)
+
+**Lo que vio el fundador.** *"Auditoría web se ve mal. Está centrado el
+contenido como si fuera mobile"*. Es literal: en escritorio la pantalla pintaba
+una columna de 460px centrada bajo una cabecera fija que sí llega hasta el borde
+de la ventana.
+
+**Por qué.** La consola tiene un estándar de ancho aprobado desde
+CITATIONS-REDESIGN-1 (§5) y ratificado en OV-DESKTOP-2 (§119): **460 / 640 a
+900px / 1200 a 1200px / 1280 a 1600px**. Seis de las siete columnas de la
+consola lo suben entero (`.ov2-scope`, `.pr2-page`, `.cm2-page`, `.cit2-page`,
+`.rec2-scope`, `.dm2-page`). `.wa2-page` declaraba **sólo el primer peldaño** y
+ninguna media query.
+
+Lo caro del fallo no es la línea que faltaba, es que **la intención sí estaba
+escrita**: el comentario del `page.tsx` que monta ese div dice, palabra por
+palabra, *"the founder-approved 640/1200/1280px console width standard
+(CITATIONS-REDESIGN-1, §5)"*. El comentario prometía la escalera y el CSS tenía
+un escalón. Nadie leyendo ese diff habría notado la diferencia — el comentario
+lee como la implementación.
+
+Y no falló nada por el camino: la página cargaba, los tests pasaban, el piloto
+la fotografiaba a tres anchuras y ninguna captura decía *"esto debería medir el
+triple"*. Un ancho equivocado no lanza excepciones. Hizo falta que un humano lo
+mirara y lo dijera a ojo, meses después.
+
+**Qué se decidió.** Los mismos tres cortes, con los mismos valores, copiados de
+sus seis hermanas. Cero decisiones de diseño nuevas: esto es aplicar un estándar
+que ya estaba aprobado, no elegir un ancho.
+
+**Sin `--ov-hdr-page-cap` ni `--mrk-page-cap` acompañándolos, a propósito.** Esas
+dos existen porque en Competidores la clase estrecha va COMBINADA sobre `.page`
+(`<div class="page cm2-page">`), así que baja el tope real de `.page` y las dos
+fórmulas de bleed —la de la cabecera fija y la de la misión— leen un
+`--page-max-w` que ya no es cierto. `.wa2-page` es un hijo dentro de un `.page`
+intacto, y la cabecera fija ni siquiera está dentro de él: cuelga directamente
+de `.page`. Copiarlas aquí repetiría el error que `app/console.css` ya documenta
+haber cometido una vez en esta misma pantalla — alimentar la fórmula con un tope
+al que `.page` nunca estuvo sujeto, y dejar la escena 20px corta por los dos
+lados.
+
+**Lo que garantiza que no vuelva a pasar.** `tests/console-page-width.test.ts`
+lee las dos hojas y exige los cuatro peldaños a las **siete** columnas. Es un
+contrato a nivel de fuente, sin navegador, del mismo tipo que
+`tests/mission-parity.test.ts` (§168): la clase de fallo que ataca es la que no
+rompe nada, y ésa no la coge ni un test de render ni una captura. Comprobado en
+las dos direcciones — con el arreglo revertido, falla nombrando el peldaño que
+falta; con él, pasa. **Añadir una pantalla nueva con su propia clase de columna
+significa añadirla a ese fichero**, o vuelve a no enterarse nadie.
+
+**Lo que NO se ha tocado.** El bleed de la cabecera fija sigue como estaba (§150)
+— llega al borde de `.dash-content` en las ocho pantallas, y alinear su
+CONTENIDO con la columna estrecha sigue siendo la decisión aparte que ya
+declaraba fuera de alcance el §150. Ningún cambio en el interior de la
+auditoría: las tarjetas simplemente disponen del ancho que les correspondía.
+
+**Nota de numeración, dos veces.** Nació como §173 sobre una `main` que llegaba
+al §172. Mientras seguía abierta entraron #481, #489, #480, #490 y el propio
+#484, que dejaron `main` en el §176, y el §177 ya estaba reservado por otra rama
+(#491), así que acabó en el §178. Se renumeró ESTA —la que no estaba en `main`—
+con todas sus referencias (`grep -rn "§178"`: la regla de ruta, el test y el
+propio CSS).
+
+Cinco secciones ajenas en una mañana no es mala suerte: es el límite que
+`tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con cuatro
+ramas abiertas a la vez. Hizo su trabajo cada vez, parando el choque en la que
+mergeaba después.
+
+**Trazabilidad.** `app/console.css` (`.wa2-page`);
+`app/dashboard/projects/[projectId]/web-audit/page.tsx` (el comentario que ya
+prometía la escalera); `tests/console-page-width.test.ts`; §5, §119, §150, §168.
