@@ -8139,7 +8139,20 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 
 .price-pay-badges { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
 .price-pay-label { font-size: 12.5px; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
-.price-pay-icons { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+/* PRICING-PAY-BADGES-CENTER-1 (2026-08-27, log §180). `.price-pay-icons` es un
+   flex container ANIDADO dentro de `.price-pay-badges` (su único hermano es
+   `.price-pay-label`). En desktop y tablet las 5 insignias caben en una sola
+   fila, y esa fila se centra porque es el único ítem de su línea en
+   `.price-pay-badges` (que sí tiene `justify-content: center`). En móvil, las
+   5 no caben y `.price-pay-icons` envuelve POR DENTRO en dos filas propias —
+   y el centrado del padre sólo centra esa caja como bloque, nunca las líneas
+   que se generan dentro de ella. Sin `justify-content` aquí, cada línea caía
+   por defecto a `flex-start`: Stripe/Apple Pay/Google Pay pegados al borde
+   izquierdo, Amazon Pay/Klarna debajo, también a la izquierda — confirmado
+   con un fixture Playwright a 375px reproduciendo la captura del fundador
+   (visible sólo bajo 560px; a 768 y 1280 ya cabía en una línea y se veía
+   bien, así que el fallo pasaba inadvertido en tablet/desktop). */
+.price-pay-icons { display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap; }
 .price-pay-icon { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 650; color: var(--ink-2); }
 .price-pay-icon svg { flex: 0 0 auto; }
 @media (max-width: 560px) { .price-pay-badges { gap: 10px 16px; } .price-pay-icons { gap: 16px; } }

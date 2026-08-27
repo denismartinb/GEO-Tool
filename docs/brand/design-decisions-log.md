@@ -17421,6 +17421,42 @@ entraron en `main` antes).
 
 ---
 
+## 180. Las insignias de pago se envolvían pegadas a la izquierda en móvil (PRICING-PAY-BADGES-CENTER-1, 2026-08-27)
+
+**Lo que vio el fundador.** Captura real de `/precios` en móvil, con Amazon Pay
+y Klarna ya desplegados (PROMO-CONSOLE-PARITY-1, #485): *"Maqueta bien
+centrados en todos los viewport"*. La fila «PAGOS SEGUROS CON» se veía
+centrada; debajo, Stripe/Apple Pay/Google Pay en una línea y Amazon Pay/Klarna
+en otra, las dos pegadas al borde izquierdo.
+
+**Por qué.** `.price-pay-icons` es un flex container ANIDADO dentro de
+`.price-pay-badges` (label + icons son sus dos únicos hijos). En desktop y
+tablet las 5 insignias caben en una sola línea, y esa línea se centra porque es
+el único ítem de su fila dentro de `.price-pay-badges` (que sí lleva
+`justify-content: center`). En móvil no caben: `.price-pay-icons` envuelve POR
+DENTRO en dos filas propias, y el centrado del padre sólo centra esa caja como
+bloque — nunca las líneas que se generan dentro de ella. Sin `justify-content`
+en `.price-pay-icons`, cada fila interior caía a `flex-start` por defecto.
+
+El fallo era invisible en tablet y desktop: una sola línea no revela un
+`justify-content` ausente. Sólo se ve en el ancho donde de verdad envuelve —
+confirmado reproduciendo la captura exacta del fundador en un fixture Playwright
+a 375px (con el CSS real de `app/globals.css`) antes de tocar nada, y
+comprobando después que tablet y desktop quedaban pixel-idénticos al «antes».
+
+**El arreglo:** `justify-content: center;` en `.price-pay-icons`. Una línea.
+Sin migración, sin tocar la lista de insignias, sin tocar `.price-pay-badges`.
+
+**Fijado por test** (`tests/pricing-payment-badges.test.ts`), comprobado en las
+dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
+(«las filas caen a flex-start»); con ella, pasa.
+
+**Trazabilidad.** `app/globals.css` (`.price-pay-icons`);
+`components/pricing/pricing-page.tsx` (`PAYMENT_BADGES`, sin cambios);
+`tests/pricing-payment-badges.test.ts`; §148, §149 (Fase A+B de precios).
+
+---
+
 ## 181. "Cita a un rival" en Páginas citadas sólo significaba "citada donde también apareció un rival" (CITATIONS-HONESTY-1, 2026-08-27)
 
 **Origen.** Fase 8 de `docs/external-audit-2026-08.md` (auditoría externa
