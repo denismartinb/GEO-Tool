@@ -1,3 +1,5 @@
+import { PLANS } from "@/app/pricing/plans-data";
+
 /**
  * GROWTH-2 Fase 2.4 — datos de la comparativa GenScore vs Otterly.
  *
@@ -6,7 +8,14 @@
  * ver la nota de fecha en la propia página. Los precios y límites de
  * GenScore vienen de app/pricing/plans-data.ts, la misma fuente que usa
  * /pricing — no se reescriben a mano.
+ *
+ * TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2): ese último
+ * párrafo era una promesa que el fichero no cumplía todavía — la fila de
+ * precio de abajo era el literal "179 €/mes", no una lectura de `PLANS`.
+ * Ahora sí lo es.
  */
+const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
+
 export const OTTERLY_RESEARCH_DATE = "2 de agosto de 2026";
 
 export const COMPARISON_ROWS: {
@@ -24,7 +33,7 @@ export const COMPARISON_ROWS: {
   },
   {
     label: "Precio equivalente a ~100 prompts",
-    genscore: "179 €/mes (plan Pro)",
+    genscore: `${PRO_PRICE} €/mes (plan Pro)`,
     otterly: "189 $/mes (plan Standard)"
   },
   {
