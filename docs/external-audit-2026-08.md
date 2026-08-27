@@ -217,6 +217,28 @@ evidencia. Ninguna queda como "no sabemos".
 
 ## Fase 1 — `TRUST-METRICS-1`: un solo número, con su denominador (P0-01, P0-02, P1-03)
 
+**Estado: implementada, PR #493 abierto, pendiente de Human Gate (2026-08-27).**
+Ocho superficies/hallazgos, un commit por cada uno. Revisión reforzada de
+`data-guardian` y `geo-strategy` en dos pasadas: la primera devolvió BLOQUEAR
+con tres hallazgos reales (la etiqueta de Competidores afirmaba una
+multiplicación falsa desde el segundo escaneo; Visión general seguía
+enseñando dos "Puntuación GEO" distintas en la misma pantalla; el fallback de
+la notificación volvía a publicar `visibility_score` en su ruta de fallo),
+más un hallazgo de infraestructura compartida (profundidad de lectura
+distinta entre pantallas) y uno que revierte parcialmente esta misma fase (el
+delta de Dominios comparaba magnitudes de bases distintas — corregido a
+ventana-sobre-ventana). Segunda pasada, ACEPTAR de ambos agentes. Una tercera
+pasada, ya fuera del protocolo formal, encontró un noveno hallazgo: los
+correos transaccionales (resumen semanal, alerta de caída) seguían diciendo
+"Tu GEO Score" de un compuesto por-run que no era la ventana — ningún test lo
+cubre, sólo se ve leyendo el HTML que esas funciones renderizan. Corregido en
+copy, sin tocar el cálculo de ninguno de los dos correos. Detalle completo en
+la entrada de TRUST-METRICS-1 de `docs/brand/design-decisions-log.md` (el
+número de sección puede haber cambiado al mergear — cada PR de esta serie
+compite por el mismo hueco con lo que se mergee mientras tanto, y
+`tests/log-numbering.test.ts` renumera al primero libre; buscar por título,
+no por número). `pnpm test`: 213/213, 2.934/2.934.
+
 **Problema.** El producto publica hoy cuatro cifras distintas para la misma
 realidad y llama "prompts" a dos unidades distintas. Es el hallazgo que hunde
 "claridad de medición" a 4,0 y contamina todo lo demás: si el score no es
@@ -352,6 +374,19 @@ arriba sobre la ventana:
 ---
 
 ## Fase 2 — `TRUST-PROMISES-1`: una sola fuente de precio y capacidad (P0-06, P0-08)
+
+**Estado: implementada, PR #494 abierto, pendiente de Human Gate (2026-08-27).**
+Seis ficheros que citaban un precio a mano pasan a leer `PLANS` de
+`plans-data.ts` — la tira de promoción del hero, la metadescripción de
+`/precios` y tres comparativas. De paso, un bug de zona horaria en la fecha
+de corte de la promo (`Intl.DateTimeFormat` sin `timeZone` corría la fecha un
+día hacia atrás en un servidor UTC) que el propio arreglo habría introducido
+si no se hubiera comprobado. Guarda nueva: `tests/promise-parity.test.ts`,
+verificada contra una regresión real. Deliberadamente no se crea
+`lib/plans/catalog.ts` (PROMO-CONSOLE-PARITY-1 ya construyó esa fuente única
+donde `plans-data.ts` vivía) ni se muestra "próxima ejecución con fecha"
+(asignado a la Fase 3, que es su dueño natural). `pnpm test`: 213/213,
+2.935/2.935.
 
 **Problema.** Precio, promo, duración de prueba y límites viven escritos a mano
 en cinco sitios; y la cadencia prometida en `/pricing` ("Diario" en Pro) no es la
