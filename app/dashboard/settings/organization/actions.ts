@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { syncBillingDetailsToStripeCustomer } from "@/lib/stripe";
 
 const nameSchema = z.string().trim().min(1).max(80);
 const optionalNameSchema = z.string().trim().max(80);
@@ -32,6 +33,13 @@ export type AccountInput = {
  * Every field lives in `user_metadata`, so this is one `updateUser` call rather
  * than three round trips. The legacy `org_tax_info` key is deliberately never
  * written and never deleted — see lib/settings/company-details.ts.
+ *
+ * BILLING-INVOICE-FIELDS-1: once the Supabase write succeeds, razón
+ * social/NIF are also pushed to the account's Stripe customer (if it has
+ * one) so they print on real invoices — see
+ * `syncBillingDetailsToStripeCustomer` in lib/stripe.ts. That sync is
+ * best-effort and never changes what this action returns: the Supabase
+ * write is what "saved" means to this form.
  */
 export async function saveAccount(input: AccountInput): Promise<SaveAccountResult> {
   const first = nameSchema.safeParse(input.firstName);
@@ -69,7 +77,7 @@ export async function saveAccount(input: AccountInput): Promise<SaveAccountResul
     return { success: false, error: "El NIF es demasiado largo." };
   }
 
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   const { error } = await supabase.auth.updateUser({
     data: {
@@ -85,6 +93,31 @@ export async function saveAccount(input: AccountInput): Promise<SaveAccountResul
 
   if (error) {
     return { success: false, error: "No se pudieron guardar los cambios. Inténtalo de nuevo." };
+  }
+
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const stripeCustomerId = profileRow?.stripe_customer_id as string | null | undefined;
+  if (stripeCustomerId) {
+    // Belt and braces on top of syncBillingDetailsToStripeCustomer's own
+    // internal try/catch: this form has already saved by this point, so
+    // nothing from the Stripe sync — expected or not — may turn a real save
+    // into a reported failure.
+    try {
+      await syncBillingDetailsToStripeCustomer(stripeCustomerId, {
+        legalName: legalName.data,
+        taxId: taxId.data
+      });
+    } catch (syncError) {
+      console.error("[geo:billing] unexpected throw from Stripe invoice-fields sync", {
+        stripeCustomerId,
+        message: syncError instanceof Error ? syncError.message : String(syncError)
+      });
+    }
   }
 
   return { success: true };

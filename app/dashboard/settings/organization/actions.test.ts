@@ -3,10 +3,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const requireUser = vi.fn();
 vi.mock("@/lib/auth", () => ({ requireUser: (...args: unknown[]) => requireUser(...args) }));
 
+const syncBillingDetailsToStripeCustomer = vi.fn();
+vi.mock("@/lib/stripe", () => ({
+  syncBillingDetailsToStripeCustomer: (...args: unknown[]) => syncBillingDetailsToStripeCustomer(...args)
+}));
+
 import { saveAccount } from "./actions";
 
-function fakeSupabase(updateUser = vi.fn().mockResolvedValue({ error: null })) {
-  return { auth: { updateUser } };
+const USER = { id: "user-1" };
+
+function fakeSupabase({
+  updateUser = vi.fn().mockResolvedValue({ error: null }),
+  stripeCustomerId = null
+}: {
+  updateUser?: ReturnType<typeof vi.fn>;
+  stripeCustomerId?: string | null;
+} = {}) {
+  const maybeSingle = vi.fn().mockResolvedValue({ data: { stripe_customer_id: stripeCustomerId } });
+  const eq = vi.fn().mockReturnValue({ maybeSingle });
+  const select = vi.fn().mockReturnValue({ eq });
+  const from = vi.fn().mockReturnValue({ select });
+  return { auth: { updateUser }, from };
 }
 
 const VALID = {
@@ -21,6 +38,7 @@ const VALID = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  syncBillingDetailsToStripeCustomer.mockResolvedValue(undefined);
 });
 
 /**
@@ -34,7 +52,7 @@ beforeEach(() => {
 describe("saveAccount", () => {
   it("persists name, company and billing in a single write", async () => {
     const updateUser = vi.fn().mockResolvedValue({ error: null });
-    requireUser.mockResolvedValue({ supabase: fakeSupabase(updateUser) });
+    requireUser.mockResolvedValue({ supabase: fakeSupabase({ updateUser }), user: USER });
 
     const result = await saveAccount(VALID);
 
@@ -55,7 +73,7 @@ describe("saveAccount", () => {
 
   it("never writes or deletes the legacy org_tax_info key", async () => {
     const updateUser = vi.fn().mockResolvedValue({ error: null });
-    requireUser.mockResolvedValue({ supabase: fakeSupabase(updateUser) });
+    requireUser.mockResolvedValue({ supabase: fakeSupabase({ updateUser }), user: USER });
 
     await saveAccount(VALID);
 
@@ -66,7 +84,7 @@ describe("saveAccount", () => {
 
   it("trims every field before persisting it", async () => {
     const updateUser = vi.fn().mockResolvedValue({ error: null });
-    requireUser.mockResolvedValue({ supabase: fakeSupabase(updateUser) });
+    requireUser.mockResolvedValue({ supabase: fakeSupabase({ updateUser }), user: USER });
 
     await saveAccount({ ...VALID, firstName: "  Denis  ", legalName: "  Xataka Media S.L.  " });
 
@@ -76,7 +94,7 @@ describe("saveAccount", () => {
 
   it("accepts an account that has filled in nothing optional", async () => {
     const updateUser = vi.fn().mockResolvedValue({ error: null });
-    requireUser.mockResolvedValue({ supabase: fakeSupabase(updateUser) });
+    requireUser.mockResolvedValue({ supabase: fakeSupabase({ updateUser }), user: USER });
 
     const result = await saveAccount({
       firstName: "Denis",
@@ -92,7 +110,7 @@ describe("saveAccount", () => {
   });
 
   it("requires a first name", async () => {
-    requireUser.mockResolvedValue({ supabase: fakeSupabase() });
+    requireUser.mockResolvedValue({ supabase: fakeSupabase(), user: USER });
 
     const result = await saveAccount({ ...VALID, firstName: "   " });
 
@@ -100,7 +118,7 @@ describe("saveAccount", () => {
   });
 
   it("names the offending field when one is too long", async () => {
-    requireUser.mockResolvedValue({ supabase: fakeSupabase() });
+    requireUser.mockResolvedValue({ supabase: fakeSupabase(), user: USER });
 
     expect(await saveAccount({ ...VALID, legalName: "x".repeat(161) })).toEqual({
       success: false,
@@ -114,7 +132,7 @@ describe("saveAccount", () => {
 
   it("rejects before touching the database when input is invalid", async () => {
     const updateUser = vi.fn().mockResolvedValue({ error: null });
-    requireUser.mockResolvedValue({ supabase: fakeSupabase(updateUser) });
+    requireUser.mockResolvedValue({ supabase: fakeSupabase({ updateUser }), user: USER });
 
     await saveAccount({ ...VALID, taxId: "x".repeat(161) });
 
@@ -123,13 +141,59 @@ describe("saveAccount", () => {
 
   it("reports a save failure without leaking the provider's message", async () => {
     const updateUser = vi.fn().mockResolvedValue({ error: { message: "PGRST-whatever from upstream" } });
-    requireUser.mockResolvedValue({ supabase: fakeSupabase(updateUser) });
+    requireUser.mockResolvedValue({ supabase: fakeSupabase({ updateUser }), user: USER });
 
     const result = await saveAccount(VALID);
 
     expect(result).toEqual({
       success: false,
       error: "No se pudieron guardar los cambios. Inténtalo de nuevo."
+    });
+  });
+
+  /**
+   * BILLING-INVOICE-FIELDS-1: razón social/NIF also reach the account's
+   * Stripe customer, but only the Supabase write decides what "saved" means.
+   */
+  describe("Stripe invoice fields sync", () => {
+    it("pushes razón social and NIF to Stripe when the account has a customer", async () => {
+      requireUser.mockResolvedValue({
+        supabase: fakeSupabase({ stripeCustomerId: "cus_123" }),
+        user: USER
+      });
+
+      await saveAccount(VALID);
+
+      expect(syncBillingDetailsToStripeCustomer).toHaveBeenCalledWith("cus_123", {
+        legalName: "Xataka Media S.L.",
+        taxId: "B-84920011"
+      });
+    });
+
+    it("does not attempt a Stripe sync for an account with no customer yet", async () => {
+      requireUser.mockResolvedValue({
+        supabase: fakeSupabase({ stripeCustomerId: null }),
+        user: USER
+      });
+
+      const result = await saveAccount(VALID);
+
+      expect(result).toEqual({ success: true });
+      expect(syncBillingDetailsToStripeCustomer).not.toHaveBeenCalled();
+    });
+
+    it("still reports success even if the Stripe sync unexpectedly throws", async () => {
+      syncBillingDetailsToStripeCustomer.mockRejectedValue(new Error("stripe unreachable"));
+      requireUser.mockResolvedValue({
+        supabase: fakeSupabase({ stripeCustomerId: "cus_123" }),
+        user: USER
+      });
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await saveAccount(VALID);
+
+      expect(result).toEqual({ success: true });
+      errorSpy.mockRestore();
     });
   });
 });

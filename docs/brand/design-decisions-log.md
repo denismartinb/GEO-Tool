@@ -15949,7 +15949,380 @@ lógica de navegación programática se tocó — sólo marcado muerto.
 
 ---
 
-## 165. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
+## 165. Ocultado "Datos de empresa" en Ajustes: era la única mitad del par que no servía para nada (2026-08-25)
+
+**El origen.** El fundador preguntó, mirando la pantalla de Ajustes, si los
+dos acordeones opcionales de Cuenta ("Datos de empresa" y "Datos de
+facturación") viajaban a Stripe. Investigación: ninguno de los dos sincroniza
+con Stripe hoy — ambos sólo escriben en `user_metadata` de Supabase Auth
+(`app/dashboard/settings/organization/actions.ts`). Pero no son equivalentes:
+`org_legal_name`/`org_tax_id` ("Datos de facturación") existen explícitamente
+para la factura (`lib/settings/company-details.ts:16`, "*exist for the
+invoice*") y son candidatos reales a una sincronización futura con Stripe
+(Task Intake `BILLING-INVOICE-FIELDS-1`, propuesto y **sin aprobar todavía**).
+`org_name`/`org_website`/`org_sector` ("Datos de empresa") no tienen ningún
+consumidor ni plan documentado — el propio código lo admite: "*Nothing in the
+product reads them yet*". Ni sitio web ni sector tienen equivalente en un
+customer de Stripe.
+
+**La decisión (founder, 2026-08-25):** ocultar sólo "Datos de empresa". No es
+un caso de "fake behavior" en sentido estricto — el hint decía "Opcional", no
+prometía nada — pero mantener un formulario editable sin ningún efecto es
+ruido de producto y trabajo de mantenimiento gratis, y "Datos de facturación"
+sí tiene un destino real por delante.
+
+**Qué cambió.** `components/settings/account-section.tsx` deja de importar y
+renderizar `CompanyFold`; sólo queda el acordeón "Datos de facturación" en
+`.set-folds`. La prop `companyReadOnly` desaparece de `AccountSection` (y de
+su único caller, `app/dashboard/settings/page.tsx`) porque sólo existía para
+ese fold. El estado `companyValue` también desaparece: sin UI para editarlo,
+`save()` reenvía directamente `company.name/website/sector` (el valor ya
+cargado) para no perder los datos que una cuenta hubiera guardado antes de
+ocultar el fold. **No se toca el backend**: `saveAccount`
+(`organization/actions.ts`) sigue aceptando y persistiendo los tres campos sin
+cambios — sólo se quita la forma de editarlos.
+
+**Lo que NO se borra.** `components/settings/company-fold.tsx` sigue
+existiendo, sin importar desde ningún sitio — ocultar, no eliminar
+(`CLAUDE.md`, "Never delete source files casually"), por si el bloque vuelve
+a tener sentido junto a algún consumidor futuro.
+
+**El piloto.** `tests/pilot/journeys/settings.spec.ts` tenía interacción real
+con el fold de empresa (`COMPANY_FOLD_TRIGGER`/`COMPANY_FOLD_BODY`,
+abrirlo y comprobar `#company-name`) — se retira esa mitad y el test pasa a
+llamarse "the billing fold opens..." (antes cubría los dos plegables). El
+fixture del self-check (`tests/pilot/fixtures/server.mjs`) sigue sirviendo el
+marcado del fold de empresa sin usar: es inocuo (nada lo referencia ya) y
+`fixture-drift.test.ts` sólo vigila drift de blog/comparativas, no de Ajustes.
+
+**Pendiente, explícito:** `BILLING-INVOICE-FIELDS-1` (razón social + NIF →
+`invoice_settings.custom_fields` de Stripe) sigue propuesto y sin aprobar —
+este PR no lo implementa, sólo despeja el campo que sí tiene destino del que
+no.
+
+**Comprobado.** `pnpm test` (203/203, 2.827/2.827), `pnpm run validate`
+(build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 166. Razón social y NIF llegan de verdad a Stripe: BILLING-INVOICE-FIELDS-1 (2026-08-25)
+
+**El origen es §165.** Al ocultar "Datos de empresa" se dejó constancia de
+que "Datos de facturación" (razón social, NIF) no sincronizaba con Stripe
+tampoco — solo que sí tenía un destino real documentado
+(`lib/settings/company-details.ts`: "*exist for the invoice*"). El fundador
+pidió el Task Intake para valorar el coste; con el reporte en mano, aprobó
+implementarlo ("Apruebo ese plan").
+
+**Fuera del alcance original de BILLING-STRIPE-1**, así que necesitaba su
+propia aprobación por la regla de `CLAUDE.md` ("*new pricing mechanics,
+additional payment providers, invoicing changes* needs its own approval") —
+esta es esa aprobación, registrada aquí y en `docs/launch-plan.md` Fase 4.
+
+**Diseño elegido: `invoice_settings.custom_fields`, no `tax_id_data`.** La
+alternativa típica de Stripe para un NIF es `tax_id_data` (tipado por país,
+p. ej. `es_cif`/`es_nif`), pero exige inferir el tipo fiscal correcto y falla
+si el formato no encaja — complejidad innecesaria para un campo de texto
+libre y opcional. `invoice_settings.custom_fields` imprime lo que sea tal
+cual en la factura: una llamada, sin validación de formato fiscal.
+
+**Qué cambió.**
+
+- `syncBillingDetailsToStripeCustomer` (`lib/stripe.ts`): recibe un
+  `customerId` y `{legalName, taxId}`; construye hasta dos `custom_fields`
+  ("Razón social", "NIF"), cada uno truncado a 30 caracteres — el límite real
+  de Stripe para nombre y valor de estos campos — y llama
+  `stripe.customers.update`. Si ambos campos están vacíos, envía
+  `custom_fields: null` (no `[]`): Stripe exige `null` para borrar los que
+  hubiera antes, así que vaciar el formulario también vacía la factura.
+- `saveAccount` (`app/dashboard/settings/organization/actions.ts`): tras
+  escribir en `user_metadata`, hace su propia consulta a
+  `profiles.stripe_customer_id` (mismo patrón que
+  `createCheckoutSession` en `billing/actions.ts`) y solo si existe llama a
+  la sincronización.
+- **Best-effort con doble red de seguridad.** `syncBillingDetailsToStripeCustomer`
+  ya atrapa sus propios errores (registra y no relanza); `saveAccount`
+  además envuelve la llamada en su propio `try/catch` por si esa garantía
+  interna cambiara alguna vez. Ningún fallo de Stripe puede convertir un
+  guardado real en Supabase en un `{success: false}` reportado al usuario —
+  el guardado en Supabase sigue siendo lo único que decide "guardado" para
+  este formulario.
+- **Cuentas sin `stripe_customer_id` todavía** (nunca pasaron por checkout):
+  no se intenta ninguna llamada — no hay cliente al que sincronizar, y el
+  dato queda listo para la próxima vez que `saveAccount` corra tras un
+  checkout real.
+- `lib/settings/company-details.ts`: el comentario que decía "*exist for the
+  invoice*" (aspiracional cuando se escribió) ahora documenta la
+  sincronización real.
+
+**Sigue en modo test de Stripe.** No toca el go-live checklist de
+BILLING-STRIPE-1 (Vercel Pro hecho; alta autónomo y VeriFactu, pendientes).
+
+**Comprobado.** 9 tests nuevos (`lib/stripe.test.ts` ×6,
+`organization/actions.test.ts` ×3). `pnpm test` (203/203, 2.836/2.836),
+`pnpm run validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Addendum, mismo día: dos correcciones de copy pedidas por el fundador tras
+ver el preview.**
+
+- **"NIF" → "NIF/CIF"**, tanto en la etiqueta del campo
+  (`components/settings/billing-details.tsx`) como en el nombre del
+  `custom_field` que llega a Stripe (`lib/stripe.ts`) — el NIF es para
+  personas físicas, el CIF para empresas, y "Razón social" ya deja claro que
+  este bloque es para una empresa; "NIF/CIF" no obliga a adivinar cuál de los
+  dos escribir.
+- **Retirada la pista "Salen en la factura"** del acordeón "Datos de
+  facturación" (`hint` de `SettingsFold`, ahora omitido). No era falsa —
+  desde este mismo PR sí es cierto que llegan a la factura vía Stripe— pero
+  el fundador prefirió quitarla; el título del bloque ya dice "facturación".
+- `lib/stripe.test.ts` actualizado para el nuevo nombre de campo. Sin cambios
+  de comportamiento: sigue siendo el mismo `custom_field`, solo cambia el
+  texto impreso en la factura.
+
+**Segundo addendum, mismo día: tres ajustes más de `Ajustes → Cuenta`, pedidos
+tras verificar la factura de prueba en el Dashboard de Stripe.**
+
+- **Etiqueta del campo → "Empresa o Razón social"** (antes "Razón social",
+  `components/settings/billing-details.tsx`), mismo motivo que "NIF/CIF": no
+  obliga a adivinar qué escribir. **Deliberadamente no se tocó** el nombre del
+  `custom_field` que llega a Stripe (sigue siendo "Razón social" en
+  `lib/stripe.ts`) — es el texto impreso en un documento oficial, donde
+  "Razón social" a secas es la convención española estándar; la etiqueta más
+  larga es una ayuda de UI para rellenar el formulario, no lo que debe
+  imprimirse.
+- **"Avisos" → "Notificaciones"** como texto visible de la sección y de su
+  entrada en el índice (`lib/settings/index-entries.ts`,
+  `app/dashboard/settings/page.tsx`). El `id` DOM se queda en `avisos` a
+  propósito: `app/dashboard/settings/notifications/page.tsx` redirige a
+  `/dashboard/settings#avisos`, y esa es la URL que ya viajó en emails
+  transaccionales reales — cambiar el id rompería esos enlaces
+  irreescribibles (mismo razonamiento que documenta el comentario de cabecera
+  de `page.tsx` sobre las cuatro rutas viejas).
+- **Sección Plan reordenada: ahora va justo debajo de Cuenta**, antes de
+  Notificaciones (orden anterior: Cuenta → Avisos → Plan; nuevo: Cuenta →
+  Plan → Notificaciones). Plan sigue siendo solo-admin — el bloque JSX se
+  movió, no la condición `isAdmin`. `buildSettingsIndex` refleja el mismo
+  orden en el índice lateral.
+- Tests actualizados: `lib/settings/index-entries.test.ts` (orden
+  `["cuenta","plan","avisos"]` para admin, etiqueta "Notificaciones"),
+  `tests/pilot/journeys/settings.spec.ts` (orden de los `<h2>` y texto visible
+  de `#avisos`).
+
+**Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run validate`
+(build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Tercer addendum, mismo día: retirada la promesa de roadmap al pie de
+"Notificaciones".** El pie de sección decía "Iremos añadiendo avisos de
+competidores, recomendaciones y escaneos. Te lo diremos cuando estén." — un
+compromiso de roadmap que esta pantalla no debería hacer (mismo espíritu que
+justificó quitar los cuatro switches "Próximamente" en CONSOLE-REDESIGN-1).
+Retirado a petición del fundador (`components/settings/notifications-section.tsx`).
+Sin tests que dependieran del texto. `.set-quiet` (`app/globals.css`) se deja
+tal cual: es una clase de utilidad genérica, no exclusiva de este párrafo.
+`pnpm test` (203/203, 2.837/2.837) y `pnpm run validate` en verde.
+
+
+---
+
+## 167. Recomendaciones nombra por fin una URL tuya: los tres bloqueos que impiden la cita (AUDIT-RECS-JOIN-1 Fase A, 2026-08-22)
+
+**El hueco.** Tras RECS-ACCION-1, la pantalla ya nombra su entregable, declara
+el control y ordena bien — pero **ninguna recomendación decía nunca «edita
+ESTA página tuya»**. Todas hablaban de consultas («publica una página que
+responda esto»), nunca de una URL concreta del cliente. Era el pendiente
+declarado en §127 y §140.
+
+**Lo que había, y estaba a un tercio.** La pantalla ya sacaba UN bloqueo de la
+auditoría —los bots rastreadores— con esta justificación escrita en su propio
+comentario: *«mientras un rastreador de IA esté bloqueado, las acciones de
+contenido de abajo no pueden rendir en ese motor»*. El razonamiento vale
+idéntico para los otros dos bloqueos duros, y ninguno se enseñaba:
+
+- **`noindex`** (peso 10, `hardBlock`): la página no puede indexarse, así que
+  no puede citarse por buena que sea.
+- **`nosnippet` / `max-snippet:0`** (§131): el motor puede rastrearla e
+  indexarla y aun así tener prohibido reproducir un fragmento. Sin fragmento no
+  hay cita.
+
+**Decisión.** `findCitationBlockers` (`lib/recommendations/citation-blockers.ts`)
+lee la última instantánea de la auditoría y devuelve los tres, **cada uno con
+sus URLs**. El banner deja de ser uno y pasa a ser una lista.
+
+**Por qué NO rompe el reparto de zonas** («La Auditoría arregla tu web;
+Recomendaciones consigue que te citen», `lib/web-audit/issues.ts`). No duplica
+el catálogo de la auditoría ni convierte sus hallazgos en recomendaciones:
+señala los tres hechos que hacen **imposible** el objetivo de esta pantalla y
+manda a arreglarlos donde se arreglan. Es la excepción que ya estaba tomada y
+justificada, aplicada entera en vez de a un tercio. Los otros trece checks
+técnicos siguen viviendo sólo en la auditoría.
+
+**Tri-estado, otra vez.** Un campo ausente en una instantánea anterior a la
+fase que lo introdujo es «nunca medido», no «limpio». Aquí sale gratis porque
+este módulo **sólo afirma problemas** y nunca declara que algo esté bien — pero
+está en su test, porque la próxima persona que añada un bloqueo no tiene por
+qué deducirlo.
+
+**Lo que sigue pendiente, y por qué.** La otra mitad de AUDIT-RECS-JOIN-1 —que
+una recomendación de contenido diga «tu página `/precios` ya responde esto,
+mejórala» en vez de «publica algo»— necesita el **mapa de cobertura**, que hoy
+nace apagado (`auto_coverage_audit_enabled = false`, migración 0031). Medido en
+esta sesión: **encenderlo no cuesta prácticamente nada** — una campaña cubre 4
+prompts (`BATCH_TOPICS_PER_CALL`), no todos, y Gemini no paga grounding en el
+tramo actual (1.500 peticiones/día gratis). La cifra de ~$0,28 que se manejó
+antes era errónea: asumía un barrido completo y grounding de pago. Queda como
+decisión del fundador, ya no por coste sino por criterio de producto; el
+interruptor está en la consola de operador (`/admin/users`, «Auditoría de
+cobertura IA»).
+
+------
+
+## 168. La misión del primer escaneo era seis misiones distintas (ANIMATION-PARITY-1, 2026-08-26)
+
+**Qué pasó.** En las pruebas finales de usuario el fundador recorrió las seis
+pantallas que montan el cohete durante el primer escaneo y encontró tres cosas
+a la vez: *"la animación sale rota en algunas pantallas: en prompts
+completamente. Y en otras un salto de línea en las cifras"*, y por separado,
+sobre Competidores, *"la animación al terminar no redirige sola a Visión
+General. Se queda así. Hasta que no recargas no ves los resultados"*. La
+petición fue explícita: **que el formato, el tamaño, el comportamiento y el
+contenedor sean exactamente iguales en todas las secciones.**
+
+**Un solo componente, seis renderizados.** `ScanMissionRocket` es uno
+(`components/scan-mission-rocket.tsx`), lo monta `FirstScanTakeover` y lo
+pintan seis páginas. Los tres fallos tienen la misma forma: **algo de fuera del
+componente decidía cómo se veía o cómo terminaba, y ninguna pantalla chillaba
+al discrepar.**
+
+### 1 · Prompts: un `<div>` de más entre `.page` y la misión
+
+Prompts renderizaba la misión **dentro** del `<div style={{ paddingTop: 20 }}>`
+que envuelve el filtro y la lista. `.mrk-fill` (§160) convierte `.page` en
+columna flex y le da `flex: 1` a `.mrk-full` — pero el ítem flex ahí era el
+envoltorio, una caja de altura `auto` que se dimensiona por su contenido. La
+escena se quedaba en su propio tope de altura mínima con página gris debajo, y
+los 20px de relleno superior la separaban además de la cabecera. Medido: **319
+px de misión dentro de una caja de 900**, y 20px de hueco arriba, en 960, 1280,
+1440, 1920 y 2560px.
+
+La misión pasa a colgar **directamente** de `.page.mrk-fill`, como en las otras
+cinco. Lo que se renderice al lado va en la rama `else`, nunca entre `.page` y
+`<FirstScanTakeover>`.
+
+### 2 · La cifra partida: `30ch` no mide lo mismo en dos tipografías
+
+`.mrk-copy` topaba su columna en `max-width: 30ch`. **`ch` es el avance del
+glifo "0" en la fuente del PROPIO elemento**, y dos de las seis pantallas
+envuelven la misión en un ámbito de marca que redeclara la familia —
+`.cm2-scope` (Competidores) y `.wa2-scope` (Auditoría web) declaran Figtree —
+mientras las otras cuatro caen a la Hanken Grotesk de `body`. Medido contra el
+CSS compilado y las webfonts reales:
+
+| | Visión general · Prompts · Páginas citadas · Recomendaciones | Competidores · Auditoría web |
+|---|---|---|
+| tipografía de la copia | Hanken Grotesk | Figtree |
+| `30ch` resuelve a | **269 px** | **308 px** |
+| "36 de 78" a 76px necesita | 290 px | 290 px |
+| resultado a 1920px | **2 líneas** | 1 línea |
+
+Es exactamente lo que enseñaban las capturas. Y el mismo desajuste arrastraba
+los colores: `.cm2-scope`/`.wa2-scope` redeclaran también la rampa `--ink-*` a
+`--brand-ink-*`, así que `.mrk-sub` salía #5b6b82 en dos pantallas y #6b7385 en
+cuatro — y **el segundo da 4,08:1 sobre el extremo oscuro del degradado de esta
+misma pantalla (#E7EEFA), por debajo de AA**, mientras el primero da 4,64:1.
+
+Tres arreglos, en este orden de importancia:
+
+- **`.mrk-full` fija su propia tipografía y su propia rampa de tinta.** Figtree
+  y `--brand-ink-*` son la mitad deliberada del par (es lo que pide
+  `docs/brand/brand-guidelines.md` y a lo que ya resuelve `--font-body`), así
+  que las seis pantallas se alinean con las dos que ya lo hacían bien — y de
+  paso la pantalla entera sube por encima de AA.
+- **El tope de la columna pasa a píxeles (420px), nunca a unidades de métrica
+  tipográfica.** Fijar la fuente ya quita la divergencia; esto quita la
+  *dependencia*, para que un cambio futuro de tipografía no la reintroduzca en
+  silencio.
+- **La cifra lleva espacios duros** (`countTitle`, `\u00A0`). El CSS quita la
+  causa; esto quita la posibilidad, a cualquier anchura y para cualquier par de
+  números. Un salto de línea ahí se lee como dos números distintos.
+
+### 3 · La misión no terminaba sola en cinco de las seis pantallas
+
+`ScanMissionRocket` sondeaba `/api/projects/[id]/scan-status` cada 3s **sólo
+para parar su propio reloj**; el `router.refresh()` que descubre la pantalla lo
+disparaba `ScanProgressPoller`, y ese lo montaba únicamente
+`app/dashboard/projects/[projectId]/page.tsx`. En Visión general los resultados
+aparecían solos; en Prompts, Competidores, Recomendaciones, Páginas citadas y
+Auditoría web la misión se quedaba en "Casi está" indefinidamente hasta que
+alguien recargaba a mano. La captura del fundador es Competidores.
+
+**El componente que ocupa la pantalla es el que tiene que devolverla**, así que
+el refresco se muda ahí: una regla para las seis, con las tres mismas
+condiciones de salida que ya usaba `ScanProgressPoller` (estado terminal, id de
+run que ya no es el nuestro por el reintento de SCAN-ROBUST-1, o ningún run
+activo). `ScanProgressPoller` deja de montarse en Visión general **mientras la
+misión ocupa la pantalla** — pedirían el mismo payload RSC dos veces con unos
+cientos de ms de diferencia; sigue montado para todos los demás estados de esa
+página, que es para lo que se escribió.
+
+**Nota sobre "redirige a Visión General".** No redirige: **refresca en el
+sitio**, y la sección que estabas leyendo es la que se rellena con sus propios
+datos. Redirigir sacaría de Competidores a quien está mirando Competidores. En
+el recorrido real de alta el primer escaneo arranca **en** Visión general, así
+que ahí el efecto es literalmente el que pedía el fundador.
+
+### Cómo se verificó
+
+Fixture de Playwright/Chromium construido desde la **salida compilada**
+(`.next/static/chunks/*.css` tras `pnpm run build`, los tres chunks: variables
+de `next/font`, `globals.css` y `console.css`) con las **webfonts reales**
+servidas desde `.next/static/media` — la regla de `.claude/rules/styles.md`
+sobre fixtures y `box-sizing` aplica igual a las métricas de fuente, y de hecho
+**una primera pasada sin las fuentes reales no reprodujo el salto de línea**:
+sin `--font-body` definido las seis pantallas caían a la misma familia y todo
+salía idéntico. Se reprodujo la cadena de envoltorios de las seis pantallas tal
+y como está en el código, a 960/1280/1440/1920/2560px, midiendo columna,
+número de líneas de la cifra, tipografía, los cuatro bordes contra
+`.dash-content` y si la misión llena su caja.
+
+- **Antes:** DIVERGENTE en las cinco anchuras — dos tipografías, columnas de
+  269 vs 308px, la cifra en 2 líneas en cuatro pantallas desde 1920px, y
+  Prompts con 20px de desplazamiento y 269–319px de misión en 900.
+- **Después:** IDÉNTICO en las cinco anchuras — Figtree, columna 271/398/420px
+  según el `clamp`, cifra en 1 línea, sangrado 0 en los cuatro bordes y misión
+  llenando la caja, en las seis.
+
+El fixture no se queda en el repo (necesita un build previo y no cabe en CI).
+Lo que sí queda es `tests/mission-parity.test.ts`, contratos a nivel de fuente
+sobre justo las propiedades que eran por-pantalla: que las seis páginas ponen
+`mrk-fill` en su `.page`, que ninguna abre una caja con relleno encima de la
+misión, que `.mrk-full` fija tipografía y rampa de tinta, que el tope de la
+columna es en píxeles y no en `ch`, y que la misión llama a `router.refresh()`.
+Comprobado que falla en la dirección correcta revirtiendo `420px` a `30ch`.
+
+**Comprobado.** `pnpm test`, `pnpm run typecheck`, `pnpm run lint`,
+`pnpm run validate` (incluye `next build`) y `git diff --check`, todo en verde.
+
+**Lo que NO entra aquí, y por qué.** El fundador reportó en la misma tanda que
+*"Auditoría web se ve mal, está centrado el contenido como si fuera mobile"*.
+Es cierto y está localizado: `.wa2-page` (`app/console.css`) se queda en
+`max-width: 460px` a cualquier anchura, sin la escalera 640/1200/1280 que sí
+tienen `.cm2-page` y `.cit2-page`. **No es la animación** — es el ancho de una
+pantalla entera, en una zona con su propia regla de ruta, y el propio
+`console.css` deja escrito que converger el ancho de la consola *"needs its own
+decision on which width the whole console converges to"*. Va en su propia fase
+con su propia pasada de piloto, no colgando de este PR.
+
+**Nota de renumeración.** Esta sección nació como §167 sobre `main` en
+796a8bf. Hay cuatro PRs abiertos que podrían reclamar el número antes; si
+`tests/log-numbering.test.ts` salta al fusionar, se renumera ESTA sección (no
+la que ya esté en `main`) y con ella todas sus referencias
+(`grep -rn "§168"`). Mismo protocolo que documentan los §159, §161 y §163.
+---
+
+## 169. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
 
 **Propuesta del fundador** (referencia: el listado de blog de Semrush —
 tarjetas de color plano, sin portada, título + subtítulo), iterada en un
@@ -16077,3 +16450,39 @@ qué clúster venía. Ejemplo del fundador: "blog -> Fundamentos GEO".
 el HTML generado de `geo-para-saas-b2b` ("Blog / GEO por sector", como pidió
 el fundador) y de `genscore-vs-otterly` ("Comparativas"), y que el JSON-LD del
 primero ya incluye el nivel de clúster.
+
+**Tercer addendum, mismo día — el fundador vio un artículo real y preguntó
+por qué el texto quedaba pegado a la izquierda con un hueco vacío a la
+derecha en pantallas anchas.** `.blog-body` ya llevaba `max-width: 760px`,
+pero sin `margin: 0 auto` esa caja se queda alineada al borde izquierdo de
+`.lp-inner` (que sí es ancho completo) en vez de centrarse — visible sólo a
+partir de donde `.lp-inner` supera los 760px, que es exactamente el caso en
+1280px de escritorio. El mismo hueco afectaba a lo que va delante del
+cuerpo (el rastro de miga nuevo de este PR, la portada compacta, el `<h1>`,
+la meta del post) porque esos elementos son hermanos de `.blog-body`, no
+hijos suyos — centrar sólo `.blog-body` habría dejado la cabecera pegada a
+la izquierda encima de un cuerpo centrado.
+
+- `app/globals.css`: `.lp-inner:has(> .blog-body) > * { max-width: 760px;
+  margin-left: auto; margin-right: auto; }` — se ancla con `:has()` al
+  contenedor que de verdad tiene un `.blog-body` como hijo directo, así que
+  sólo alcanza a artículos y comparativas (los únicos que renderizan ese
+  bloque) y no a las páginas pilar de clúster (`/blog/[cluster]`), que no lo
+  usan y se comprobó por grep que no lo tienen. Aplicar el ancho y el
+  centrado a **todos** los hijos directos de ese `.lp-inner` —no sólo a
+  `.blog-body`— es lo que centra también el rastro de miga y la cabecera sin
+  necesitar un `<div>` envoltorio nuevo ni tocar el marcado de dos tipos de
+  página con cabeceras distintas (artículo: `<h1>` suelto +
+  `.blog-cover-compact` + `.blog-post-meta`; comparativa: `<h1
+  className="lp-h2">` + `.legal-updated`).
+- No afecta a `/blog` (el índice de este PR no usa `.blog-body`, usa sus
+  propios carriles a ancho completo) ni a ninguna otra superficie que
+  comparta `.lp-inner` (docs, glosario, comprobador gratuito, legal): todas
+  esas quedan fuera del selector porque ninguna tiene `.blog-body` como
+  hijo.
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build` — confirmado en el CSS compilado
+(`.next/static/chunks/*.css`) que la regla
+`lp-inner:has(>.blog-body)>*{max-width:760px;margin-left:auto;margin-right:auto}`
+se generó tal cual — y `git diff --check`, todo en verde.
