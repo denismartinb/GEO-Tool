@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
 
-import { RecCard, SolutionPanel, type Recommendation } from "./recommendations-client";
+import { RecCard, SolutionPanel, overlayCopyLocal, type Recommendation } from "./recommendations-client";
+import { overlayCopy } from "@/lib/recommendations/coverage-overlay";
 
 /**
  * Estas dos cosas el `ux-pilot` NO las puede ver, y por eso se prueban aquí.
@@ -109,5 +110,72 @@ describe("RecCard — CTA y chip de control", () => {
   it("marca como interno lo que se resuelve dentro del producto", () => {
     const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "track_emerging_competitor" })} />);
     expect(html).toContain("Aquí en GenScore");
+  });
+});
+
+/**
+ * AUDIT-RECS-JOIN-1 Fase B. `overlayCopyLocal` (cliente) es una copia
+ * verbatim de `overlayCopy` (lib/recommendations/coverage-overlay.ts,
+ * server-only) — el mismo patrón que ya usaba `CoverageOverlay`/
+ * `GeneratedSolution` en este fichero, por el mismo motivo: un componente
+ * cliente no puede importar un módulo que arrastra `import "server-only"`.
+ * Nada impide que las dos diverjan salvo este test — misma disciplina que el
+ * guardián de paridad de tres vías de GROUNDED_PROVIDERS (log §130): una
+ * duplicación sin test es la que se queda atrás en silencio.
+ */
+describe("overlayCopyLocal — en paridad con el servidor", () => {
+  const TYPES = ["add_citation_block", "increase_brand_visibility", "algún_tipo_sin_clasificar"] as const;
+  const STATES = ["confirmed_surfacing_gap", "possible_content_gap", "none"] as const;
+
+  it("coincide literalmente con overlayCopy para cada combinación de tipo y estado", () => {
+    for (const type of TYPES) {
+      for (const state of STATES) {
+        expect(overlayCopyLocal(type, state), `${type} / ${state}`).toEqual(overlayCopy(type, state));
+      }
+    }
+  });
+});
+
+describe("RecCard — el overlay de cobertura dice lo correcto según el tipo", () => {
+  const overlay = (state: "confirmed_surfacing_gap" | "possible_content_gap") => ({
+    state,
+    verifiedPage: state === "confirmed_surfacing_gap" ? { url: "https://acme.com/precios", title: "Precios" } : null,
+    confidenceOverride: null
+  });
+
+  it("increase_brand_visibility, hallazgo confirmado: habla de no aparecer en la respuesta, NUNCA de citación", () => {
+    // La regresión que este test existe para impedir: este tipo dispara
+    // cuando la marca no se menciona en absoluto, así que "la IA no lo está
+    // citando como fuente" (el texto de add_citation_block) sería falso aquí
+    // — no hay mención que citar.
+    const html = renderToStaticMarkup(
+      <RecCard
+        projectId="p1"
+        rec={baseRec({ recommendation_type: "increase_brand_visibility", coverageOverlay: overlay("confirmed_surfacing_gap") })}
+      />
+    );
+    expect(html).toContain("no está apareciendo en la respuesta de la IA");
+    expect(html).not.toContain("no lo está citando como fuente");
+    expect(html).toContain("https://acme.com/precios");
+  });
+
+  it("add_citation_block, hallazgo confirmado: conserva su texto original sobre citación", () => {
+    const html = renderToStaticMarkup(
+      <RecCard
+        projectId="p1"
+        rec={baseRec({ recommendation_type: "add_citation_block", coverageOverlay: overlay("confirmed_surfacing_gap") })}
+      />
+    );
+    expect(html).toContain("no lo está citando como fuente");
+  });
+
+  it("increase_brand_visibility, sin cobertura propia: reusa el first_step real de la regla, no un texto inventado", () => {
+    const html = renderToStaticMarkup(
+      <RecCard
+        projectId="p1"
+        rec={baseRec({ recommendation_type: "increase_brand_visibility", coverageOverlay: overlay("possible_content_gap") })}
+      />
+    );
+    expect(html).toContain("publica una página que responda esta pregunta en las dos primeras frases");
   });
 });

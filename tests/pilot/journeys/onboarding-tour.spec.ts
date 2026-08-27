@@ -54,7 +54,7 @@ test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra",
 
   const reopen = page.getByRole("button", { name: /Qué es el GEO/i });
 
-  // PILOT-DRAWER-VIEWPORT-1 (2026-08-27, log §172). Bajo 760px la barra
+  // PILOT-DRAWER-VIEWPORT-1 (2026-08-27, log §176). Bajo 760px la barra
   // lateral es un cajón `position: fixed` que vive en `translateX(-100%)`
   // hasta que la clase `mobnav-open` lo trae; sus botones están en el DOM y
   // pintados TODO el tiempo, sólo que fuera de pantalla por la izquierda. Para

@@ -16557,7 +16557,159 @@ y `git diff --check` en verde.
 
 ---
 
-## 171. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
+## 171. Gate bloqueante de dominios al exceder el plan: DOMAINS-OVERAGE-GATE-1 (2026-08-25)
+
+**El problema.** El fundador enseñó una captura de Facturación con "Tienes 4
+dominios activos y tu plan Starter permite 1" y preguntó si de verdad se podían
+seguir usando los 4. Inspección del código: sí — ese aviso era (y el mecanismo
+que sigue siéndolo para el flujo que no toca esta fase) puramente informativo.
+`isOverCapacity` sólo se calculaba en cliente en `plan-billing-section.tsx`
+para pintar un banner; nada en `lib/scan/cron.ts`, `run-creation.ts` ni
+`executor.ts` comprobaba el recuento de dominios activos contra el cupo del
+plan — sólo `is_archived`. Un downgrade hecho desde el portal de Stripe deja el
+recuento sobrado a propósito (`changePlan`/`createPortalSession`,
+`app/dashboard/settings/billing/actions.ts`: "el fundador quiere que el dueño
+elija qué dominios mantener, nunca decidirlo por él") y nada más lo obligaba a
+resolverlo.
+
+**Task Intake aprobado**, con maqueta interactiva previa (Artifact, 6 estados)
+para validar el flujo antes de tocar código. Cuatro decisiones explícitas del
+fundador, cada una contraria a mi recomendación por defecto salvo la primera:
+
+1. **Borrado duro, no archivado** — a diferencia del flujo ya existente y
+   **deliberadamente intacto** de "Elegir dominios" (`ChangePlanModal`,
+   `overageOnly`), que sigue archivando (reversible) exactamente igual que
+   antes de este PR. El gate nuevo es un componente separado
+   (`components/billing/domain-overage-gate.tsx`) precisamente para no
+   cambiar la semántica de ese flujo ya enviado sin su propio Task Intake.
+2. **Salida a "subir de plan"** dentro del propio gate — sin ella, alguien que
+   bajó de plan por error quedaría atrapado entre borrar dominios o nada.
+3. **El bloqueo cubre toda la consola, incluida Facturación** — sólo tiene
+   sentido combinado con la decisión 2.
+4. **`/admin` queda exento** — es una zona aparte (`admin.md`), no una
+   pantalla del propio cliente.
+
+**Qué se construyó:**
+
+- `lib/billing.ts` → `getDomainOverage()`: consulta dedicada y barata (un
+  `COUNT`) que corre en cada carga de `app/dashboard/layout.tsx` — a
+  propósito NO `getUsageSummary()` (cuatro consultas en paralelo, hasta 500
+  filas de resultados de escaneo y una consulta a Stripe), que habría sido
+  trabajo desperdiciado en cada navegación para la inmensa mayoría de cuentas
+  que nunca están sobre su cupo. Sólo dispara la segunda consulta (los
+  dominios) cuando la primera confirma overage. Falla hacia "no hay overage"
+  — mismo sentido de fallo que `SAMPLING-DEBUG-TOGGLE-1`
+  (`.claude/rules/scan.md`): un error de lectura transitorio nunca puede
+  bloquear la consola entera.
+- `app/dashboard/projects/actions.ts` → `deleteProjects(ids)`: variante en
+  lote de la ya existente `deleteProject`, mismo cascade, mismo scoping por
+  `owner_user_id`, misma irreversibilidad — y revalida en servidor que el
+  recuento final cabe en el plan, igual que ya hace `changePlan` tras
+  archivar.
+- `components/billing/domain-overage-gate.tsx`: cinco pasos —
+  elegir camino → seleccionar a retirar → confirmar con fricción extra
+  (lista qué se pierde por dominio, checkbox obligatorio "entiendo que no se
+  puede deshacer" antes de habilitar el botón de peligro, con salida a
+  "subir de plan" incluso ahí) → hecho; o elegir camino → plan que ya cubre
+  el recuento (reutiliza `createCheckoutSession`/`createPortalSession`) →
+  redirección a Stripe. Reutiliza el cromado `.cp-*` de `ChangePlanModal`
+  (`app/globals.css`) para el shell/tipografía; sólo el selector de dos
+  caminos y el tratamiento de peligro son clases nuevas (`.dog-*`). Sin botón
+  de cerrar, sin `Escape`, sin clic-fuera — el `scrim` no lleva `onClick`.
+- `app/dashboard/layout.tsx`: monta el gate cuando `role === "admin"` (mismo
+  gate que ya usa Ajustes para la sección Plan) y `getDomainOverage()`
+  reporta overage, por encima de todo lo demás — Sidebar incluido.
+
+**Las clases nuevas del componente viven en `app/globals.css`, no en
+`app/console.css`**, aunque el gate es exclusivamente de consola: sus clases
+se escriben desde `components/`, y `tests/console-css-scope.test.ts` no puede
+atribuir eso al dashboard (mismo motivo por el que las clases de la pantalla
+de notificaciones tampoco viven en `console.css` — cabecera de ese fichero).
+Se intentó primero en `console.css` y el test lo cazó.
+
+**Pendiente, explícito — corregido tras ver el piloto real.** La suposición
+original de este párrafo era que la cuenta piloto de solo-lectura "nunca está
+sobre su cupo" y que verificar el gate exigiría un journey de escritura nuevo.
+**Era falsa.** Los tres primeros pases de `ux-pilot` contra esta rama fallaron
+en cascada (~10 timeouts por pasada, pantallas sin relación entre sí) porque la
+cuenta piloto real **ya tenía 5 dominios activos en un plan Starter (cupo
+1)** — de siempre, sólo que nada lo comprobaba hasta este PR. El gate hizo
+exactamente lo que debía: bloquear la consola de una cuenta sobre su cupo,
+scrim incluido, y ese scrim interceptó cada clic de cada journey posterior
+(confirmado leyendo `error-context.md` de la rama `pilot-evidence/pr-481` —
+la captura del snapshot de página muestra literalmente "Tienes 5 dominios
+activos y tu plan Starter permite 1").
+
+No se corrigió en código — hacerlo habría sido el mismo antipatrón ya
+documentado en este repositorio (el piloto saltándose a sí mismo, log §120):
+el piloto tiene que comportarse como un usuario real, y un usuario real en
+esa situación vería el mismo bloqueo. El arreglo real es de datos, no de
+código: subir el plan de la cuenta piloto (Starter → Pro o superior) para que
+cubra sus 5 dominios reales, pedido al fundador fuera de este PR. Con eso
+resuelto, el pase normal del piloto SÍ cubre el estado "sin overage" en todas
+las pantallas que toca este PR — lo que sigue sin verificar automáticamente es
+el propio flujo de retirar/subir de plan dentro del gate (eso sí exige el
+journey de escritura nuevo bajo `tests/pilot/journeys/write/`, con su propio
+Task Intake, que sigue siendo trabajo de una fase siguiente).
+
+**Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build`, todo en verde.
+## 172. La tarjeta más frecuente de Recomendaciones apunta por fin a una URL tuya (AUDIT-RECS-JOIN-1 Fase B, 2026-08-27)
+
+**El hueco.** Fase A (§167) hizo que la pantalla señalara lo que impide
+citarte. Faltaba lo otro: que una tarjeta de **contenido** dijera «tu página
+`/precios` ya cubre esto, mejórala» en vez de «publica una página nueva». El
+puente ya estaba construido desde COMPETITOR-GROUNDING-2
+(`lib/recommendations/coverage-overlay.ts`, RECS-COVERAGE-OVERLAY-1) — pero
+sólo alimentaba `add_citation_block`, uno de los quince tipos. El más
+frecuente, `increase_brand_visibility` («Aparece en "..."», la tarjeta que
+sale primero en casi cualquier proyecto), no estaba conectado.
+
+**Por qué no era sólo "añadir un tipo al filtro".** `add_citation_block`
+dispara cuando la marca SÍ se menciona y no se cita; `increase_brand_visibility`
+dispara cuando NO se menciona en absoluto. El copy existente del hallazgo
+confirmado decía literalmente *«el problema no es que te falte contenido,
+sino que la IA no lo está citando como fuente»* — cierto para el primer tipo,
+**falso** para el segundo: si no hay mención, no hay nada que citar. Copiar el
+texto tal cual habría sido la misma clase de error que motivó el gate de
+honestidad de RECS-USEFULNESS-1 Fase C (§128), sólo que en código nuestro en
+vez de en la salida de un modelo.
+
+**Decisión.** `overlayCopy(recommendationType, state)` — nueva, en el mismo
+módulo — resuelve el texto por tipo. `add_citation_block` conserva su copy
+verbatim. `increase_brand_visibility` habla de "no aparece en la respuesta",
+nunca de citación, y su `whatToDo` para el caso "sin cobertura propia" **reusa
+el `firstStep` real de `rule_visibility_001`** carácter a carácter, en vez de
+inventar una segunda redacción del mismo consejo. `COVERAGE_OVERLAY_TYPES` se
+exporta como conjunto único de tipos soportados, para que el server no
+duplique la lista.
+
+**Deliberadamente NO extendido** a `create_faq_section` /
+`strengthen_brand_entity_clarity`: son reglas de ámbito de campaña (disparan
+sobre el agregado del run), no de un prompt — no hay un único tema con el que
+cruzarlas.
+
+**Duplicación con guardián, otra vez.** El overlay es server-only
+(`domain-coverage.ts` arrastra `import "server-only"`), así que el cliente no
+puede importarlo — mismo motivo por el que `CoverageOverlay`/`GeneratedSolution`
+ya vivían duplicados en `recommendations-client.tsx`. En vez de sumar una
+tercera duplicación sin red, `overlayCopyLocal` lleva un test que compara las
+dos funciones **campo a campo para cada combinación de tipo y estado**, mismo
+patrón que el guardián de tres vías de `GROUNDED_PROVIDERS` (§130). Verificado
+que puede fallar: rompiendo un texto a propósito, el test cae.
+
+**Lo que sigue sin resolverse, con conocimiento de causa.** El join exige
+`coverage.scanId === latestCompletedRun.id` (invariante de honestidad ya
+existente, sin tocar en esta fase): cobertura y recomendaciones tienen que ser
+del **mismo** escaneo. La primera vez que esto rinda en un proyecto real será
+tras su próximo escaneo completo, no antes — no es un fallo, es la garantía de
+que nunca reengancha una fila de cobertura vieja.
+
+---
+
+---
+
+## 175. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
 
 **Lo que vio el fundador.** En la panorámica competitiva de Visión general, con
 un escaneo de 30 respuestas: *"no tiene ningún sentido que Euskaltel aparezca
@@ -16628,16 +16780,23 @@ dos poblaciones — la regla de ruta pide decisión explícita para eso, y el
 diagnóstico de arriba dice que no hacía falta.
 
 
-**Nota de renumeración.** Esta sección nació como §169 sobre una `main` que
-todavía no tenía ni el §169 de BLOG-INDEX-CARDS (#479) ni el §170 de
-PROMO-CONSOLE-PARITY-1 (#485). Ambos aterrizaron antes, así que al fusionar se
-renumeró ESTA —la que no estaba en `main`— y con ella sus referencias en
-`CLAUDE.md` y `.claude/rules/competitors.md` (`grep -rn "§171"`). Mismo
-protocolo que documentan los §159, §161, §163 y §168.
+**Nota de renumeración, dos veces.** Esta sección nació como §169 sobre una
+`main` que todavía no tenía ni el §169 de BLOG-INDEX-CARDS (#479) ni el §170 de
+PROMO-CONSOLE-PARITY-1 (#485); se renumeró a §171. Mientras seguía abierta
+entraron **también** #481 (§171) y #489 (§172), así que hubo que moverla otra
+vez, ahora al §175. Las dos veces se renumeró ESTA —la que no estaba en
+`main`— y con ella sus referencias en `CLAUDE.md` y
+`.claude/rules/competitors.md` (`grep -rn "§175"`). Mismo protocolo que
+documentan los §159, §161, §163 y §168.
+
+Que haya hecho falta dos veces en una mañana no es mala suerte: es el límite
+que `tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con
+cuatro ramas abiertas a la vez. El guardián hizo su trabajo las dos veces: paró
+el choque en la que mergeaba después.
 
 ---
 
-## 172. El cajón móvil estaba cerrado y la aserción no sabía verlo (PILOT-DRAWER-VIEWPORT-1, 2026-08-27)
+## 176. El cajón móvil estaba cerrado y la aserción no sabía verlo (PILOT-DRAWER-VIEWPORT-1, 2026-08-27)
 
 **Qué pasó.** `«¿Qué es el GEO?» reabre el tour con contenido real, avanza y
 cierra` falló en `[mobile]` sobre el PR #484 con `TimeoutError: locator.click:
@@ -16703,3 +16862,4 @@ esta forma exacta; barrer el patrón entero es otro PR.
 `components/mobile-shell.tsx` y `components/workspace-topbar.tsx` (por qué el
 clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
 está fuera de pantalla estando «visible»); §136 (el precedente).
+
