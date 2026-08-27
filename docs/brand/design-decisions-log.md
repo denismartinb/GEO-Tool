@@ -17515,6 +17515,18 @@ falla también si `/precios` vuelve a declarar `PAYMENT_BADGES` a mano en vez de
 importarlo. Comprobado en las dos direcciones: con los seis footers revertidos,
 fallan los siete tests nombrando cada fichero al que le falta la fila.
 
+**Human Gate, dos preguntas cerradas por el fundador (2026-08-27).** El PR
+dejaba dos abiertas: si `/precios` debía dejar de repetir la fila (mitad de
+página + pie) y si `/geo` debía llevarla también. Respuesta: *"1 me vale / 2
+también"* — la duplicación en `/precios` queda tal cual (a propósito, no por
+descuido, según el propio razonamiento de arriba), y `app/geo/page.tsx` gana
+la fila. `/geo` sigue **fuera de `MARKETING_SHELLS`**: su pie sigue siendo la
+versión reducida a mano (sin `MARKETING_CONTENT_LINKS`/`MARKETING_ENTITY_LINKS`),
+una divergencia anterior a esta lista que el fundador no pidió arreglar — sólo
+la fila de pagos. Fijado por un test propio, no por entrar en la lista
+compartida (mismo `footerBlockOf`, comprobado en las dos direcciones: sin la
+fila, falla nombrando el fichero).
+
 **Nota de numeración.** Nació como §181 sobre una `main` que llegaba al §180
 (PRICING-PAY-BADGES-CENTER-1, #495). Mientras esta rama seguía abierta, RECS-
 LOOP-1 Fase A (#492) reclamó ese mismo §181 y mergeó primero, así que esta

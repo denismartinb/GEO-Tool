@@ -55,6 +55,17 @@ describe("pie de página: fila de pagos seguros", () => {
     });
   }
 
+  it("app/geo/page.tsx renderiza PaymentBadgesRow en su pie", () => {
+    // No entra en MARKETING_SHELLS: su pie sigue siendo la versión reducida a
+    // mano (sin MARKETING_CONTENT_LINKS/MARKETING_ENTITY_LINKS), divergencia
+    // anterior a esta lista y fuera de lo que aquí se arregla. El fundador
+    // pidió específicamente la fila de pagos, no igualar el resto del pie.
+    expect(
+      footerBlockOf("app/geo/page.tsx").includes("<PaymentBadgesRow"),
+      "app/geo/page.tsx no muestra la fila de pagos seguros en el pie"
+    ).toBe(true);
+  });
+
   it("`/precios` importa la fila compartida, no una copia local", () => {
     const source = readFileSync(join(ROOT, "components/pricing/pricing-page.tsx"), "utf8");
     expect(
