@@ -127,7 +127,21 @@ describe("percentage helpers — always carry their denominator", () => {
 describe("answerCountLabel — P0-02", () => {
   it("never calls prompt×engine rows 'prompts'", () => {
     const label = answerCountLabel(15, 3, 45);
-    expect(label).toBe("45 respuestas (15 prompts × 3 motores)");
+    expect(label).toBe("45 respuestas · 15 prompts en 3 motores");
     expect(label).not.toMatch(/^45 prompts/);
+  });
+
+  /**
+   * Caught in review (TRUST-METRICS-1 Human Gate pass): the first version
+   * used "×" between promptCount and engineCount, which reads as a claim that
+   * answerCount = promptCount * engineCount. True for a single scan, false
+   * for every project with more than one — answerCount accumulates across a
+   * project's whole history while promptCount/engineCount are snapshots of
+   * today. No arithmetic symbol may sit between the three numbers.
+   */
+  it("never claims answerCount = promptCount × engineCount", () => {
+    const label = answerCountLabel(15, 3, 90); // two scans' worth of answers
+    expect(label).not.toContain("×");
+    expect(label).toBe("90 respuestas · 15 prompts en 3 motores");
   });
 });

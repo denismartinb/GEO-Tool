@@ -99,16 +99,25 @@ export function renderNotification(
 
       // Direction still comes from the raw visibility delta — a reasonable
       // proxy for "did this scan look better or worse", kept only for the
-      // icon/tone and never shown as a number (see above).
+      // icon/tone and never shown as a number (see above). It is still a
+      // DIFFERENT basis from the windowed `geoScore` the body headlines — a
+      // real gap this fix does not close (flagged in review, geo-strategy,
+      // Human Gate pass: a downward geoScore could theoretically pair with a
+      // "trendUp" icon if the raw component moved the other way). What this
+      // fix DOES close: `rawDelta === null` used to default to "trendUp"/"pos"
+      // — the first scan of a project, with nothing to compare against yet,
+      // asserted improvement. Neutral now instead.
       const rawDelta = num(payload.visibilityDelta);
+      const direction: "up" | "down" | "neutral" =
+        rawDelta === null ? "neutral" : rawDelta < 0 ? "down" : "up";
 
       return {
         title: "Escaneo completado",
         body: `${scoreText}${tail}`,
         targetLabel: domain && promptsProcessed ? `${domain} · ${promptsProcessed} prompts` : domain,
         href: hrefForProject(row.project_id),
-        icon: rawDelta !== null && rawDelta < 0 ? "trendDown" : "trendUp",
-        tone: rawDelta !== null && rawDelta < 0 ? "neg" : "pos"
+        icon: direction === "down" ? "trendDown" : direction === "up" ? "trendUp" : "check",
+        tone: direction === "down" ? "neg" : direction === "up" ? "pos" : "blue"
       };
     }
 

@@ -112,6 +112,33 @@ describe("renderNotification", () => {
     expect(r.tone).toBe("neg");
   });
 
+  it("a null visibilityDelta (no previous run — the project's first scan) shows a neutral icon/tone, never trendUp/pos", () => {
+    // Caught in review (geo-strategy, TRUST-METRICS-1 Human Gate pass): this
+    // used to default null to trendUp/pos, asserting improvement on a scan
+    // that had nothing to compare against yet.
+    const r = renderNotification(
+      {
+        type: "scan_completed",
+        severity: "success",
+        project_id: PROJECT_ID,
+        payload_json: {
+          runId: "run-1",
+          promptsProcessed: 5,
+          providers: ["gemini"],
+          geoScore: 70,
+          visibilityScore: 70,
+          visibilityDelta: null,
+          newRecommendations: 0,
+          resolvedGaps: 0
+        }
+      },
+      DOMAINS
+    );
+
+    expect(r.icon).toBe("check");
+    expect(r.tone).toBe("blue");
+  });
+
   it("omits the new/resolved clauses when they're zero", () => {
     const r = renderNotification(
       {

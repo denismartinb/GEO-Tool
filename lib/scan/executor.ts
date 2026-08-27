@@ -15,7 +15,7 @@ import {
   resolveTechnicalComponent,
   TECHNICAL_SNAPSHOT_LOOKUP_LIMIT
 } from "@/lib/scoring/geo-score-technical";
-import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
+import { computeRunScoresFromResults, getEffectiveGeoScore, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -31,8 +31,7 @@ import { triggerScanContinuation } from "@/lib/scan/continuation";
 import { ProjectActionError, type JobRow } from "@/lib/scan/types";
 import type { AuthenticatedContext } from "@/lib/auth";
 import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
-import { resolveGeoScore } from "@/lib/metrics/run-metrics";
-import { DEFAULT_SCORE_WINDOW_SIZE } from "@/lib/scoring/score-window";
+import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore } from "@/lib/metrics/run-metrics";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
@@ -1126,14 +1125,23 @@ export async function executePendingScan({
     // Fail-soft and separate from the notification's own payload build below:
     // a scoring-history read must never block the notification that reports a
     // scan the product already knows finished.
-    let geoScoreForNotification: number = Math.round(scores.visibility_score);
+    // Caught in review (data-guardian, TRUST-METRICS-1 Human Gate pass): the
+    // fallback below used to be `Math.round(scores.visibility_score)` — the
+    // raw component, exactly the figure this whole phase exists to stop
+    // publishing under "Puntuación GEO". A failed or empty read here would
+    // have silently reintroduced P0-01 on the error path. `getEffectiveGeoScore`
+    // reads `scores.details_json` already in scope (no extra query) and is
+    // the same composite-with-fallback `resolveGeoScore` itself would compute
+    // with only this one run to look at (basis: "single_run") — the correct
+    // fallback, not a shortcut around the rule.
+    let geoScoreForNotification: number = Math.round(getEffectiveGeoScore(scores));
     try {
       const { data: recentScoreRows } = await service
         .from("run_scores")
         .select("run_id, created_at, visibility_score, details_json")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
-        .limit(DEFAULT_SCORE_WINDOW_SIZE);
+        .limit(GEO_SCORE_LOOKBACK_ROWS);
       if (recentScoreRows && recentScoreRows.length > 0) {
         geoScoreForNotification = resolveGeoScore(recentScoreRows).value;
       }

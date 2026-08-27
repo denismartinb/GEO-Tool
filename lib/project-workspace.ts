@@ -6,8 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import type { Plan } from "@/app/pricing/plans-data";
 import { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
-import { readComparableRun, resolveDelta, type ComparableRun } from "@/lib/scoring/score-reliability";
-import { resolveGeoScore, type GeoScoreRunRow } from "@/lib/metrics/run-metrics";
+import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore, type GeoScoreRunRow } from "@/lib/metrics/run-metrics";
 
 export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
 
@@ -176,11 +175,15 @@ export type WorkspaceCounters = {
   latestScanDateByProject: Record<string, string | null>;
   latestScoreByProject: Record<string, number | null>;
   /**
-   * DELTA-GUARD-1: `null` no significa sólo "no hay escaneo anterior" — también
-   * "hay uno, pero la comparación no es afirmable" (muy pocas respuestas, u
-   * otra metodología/motores). Pasa por `resolveDelta`, el mismo punto de
-   * decisión que usan Visión general y el historial, para que tres pantallas no
-   * puedan publicar tres verdades distintas sobre el mismo par de escaneos.
+   * `null` no significa sólo "no hay escaneo anterior" — también "hay
+   * varios, pero no hay dos ventanas comparables" (muy pocas respuestas, u
+   * otra metodología/motores/tamaño de muestra). TRUST-METRICS-1: ventana
+   * sobre ventana, misma construcción que el `gaugeDelta` de Visión general
+   * — antes era DELTA-GUARD-1 sobre dos `visibility_score` crudos, una base
+   * distinta de `latestScoreByProject` de aquí al lado, que ahora es la
+   * puntuación con ventana. Publica sólo cuando las dos resoluciones son
+   * ventanas reales, para que el delta hable siempre de la misma magnitud
+   * que el número que acompaña.
    */
   scoreDeltaByProject: Record<string, number | null>;
   /** Fecha de la última auditoría web persistida, por proyecto. */
@@ -327,26 +330,24 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
 
   const latestScoreByProject: Record<string, number | null> = {};
   const scoreDeltaByProject: Record<string, number | null> = {};
-  const seenScoresByProject = new Map<string, Array<{ score: number; comparable: ComparableRun }>>();
-  // TRUST-METRICS-1: a SEPARATE cap of 3, not 2 — DEFAULT_SCORE_WINDOW_SIZE
-  // in lib/scoring/score-window.ts. The delta above only ever compares two
-  // raw runs and keeps its own 2-row cap untouched; the headline score is a
-  // different quantity (the window median) and needs a third row to be
-  // eligible for it. Same `scores` rows, ordered newest-first by the query
-  // above — no second round trip to Supabase.
+  // TRUST-METRICS-1: reads GEO_SCORE_LOOKBACK_ROWS per project (7, the exact
+  // depth Overview's own trend query already reads — `page.tsx`'s
+  // `.limit(7)`) — deliberately more than DEFAULT_SCORE_WINDOW_SIZE (3),
+  // which is the window size AFTER comparability filtering, not a safe read
+  // depth. A shallower cap here can run out of ELIGIBLE runs before Overview
+  // does whenever an incomparable run is mixed into the most recent few,
+  // publishing a window on one screen and falling back to single_run on the
+  // other — the same P0-01 divergence this module exists to remove, one
+  // layer down (caught in review, geo-strategy, Human Gate pass). Rows come
+  // straight from the `scores` query above, already ordered newest-first —
+  // no second round trip to Supabase.
   const rawRunsByProject = new Map<string, GeoScoreRunRow[]>();
 
   for (const s of scores ?? []) {
     const value = Number(s.visibility_score ?? NaN);
     if (!Number.isFinite(value)) continue;
-    const seen = seenScoresByProject.get(s.project_id) ?? [];
-    if (seen.length < 2) {
-      seen.push({ score: Math.round(value), comparable: readComparableRun(s.details_json) });
-      seenScoresByProject.set(s.project_id, seen);
-    }
-
     const raw = rawRunsByProject.get(s.project_id) ?? [];
-    if (raw.length < 3) {
+    if (raw.length < GEO_SCORE_LOOKBACK_ROWS) {
       raw.push({
         run_id: s.run_id,
         created_at: s.created_at,
@@ -357,28 +358,37 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     }
   }
 
-  for (const [projectId, seen] of seenScoresByProject.entries()) {
+  for (const [projectId, rawRuns] of rawRunsByProject.entries()) {
     // TRUST-METRICS-1: the headline is `resolveGeoScore` — window-first, the
     // same rule "Puntuación GEO" obeys everywhere else in the product — never
     // the raw `visibility_score` this map used to expose directly. That
     // divergence (6 on Overview, 2 here, same scan) was the audit's P0-01.
-    const rawRuns = rawRunsByProject.get(projectId);
-    latestScoreByProject[projectId] = rawRuns && rawRuns.length > 0 ? resolveGeoScore(rawRuns).value : null;
+    const current = rawRuns.length > 0 ? resolveGeoScore(rawRuns) : null;
+    latestScoreByProject[projectId] = current?.value ?? null;
 
-    // Antes: `seen[0] - seen[1]`. Una resta cruda de dos puntuaciones no dice
-    // nada por sí sola — es un cambio real de visibilidad sólo si los dos
-    // escaneos tienen respuestas suficientes Y midieron lo mismo (ADR 0024).
-    // Es exactamente el fallo que DELTA-GUARD-1 corrigió en el historial de
-    // escaneos, y esta función lo seguía cometiendo. Delta sigue siendo una
-    // magnitud distinta de la puntuación de titular (badge de tendencia, no
-    // "Puntuación GEO") y queda fuera del alcance de TRUST-METRICS-1.
-    if (seen.length < 2) {
-      scoreDeltaByProject[projectId] = null;
-      continue;
-    }
-
-    const verdict = resolveDelta(seen[0].score - seen[1].score, seen[0].comparable, seen[1].comparable);
-    scoreDeltaByProject[projectId] = verdict.kind === "publish" ? verdict.value : null;
+    // TRUST-METRICS-1 — caught in review (geo-strategy, Human Gate pass):
+    // this delta used to be a DELTA-GUARD-1 comparison of two raw
+    // `visibility_score` values (`resolveDelta(seen[0]-seen[1], ...)`), sat
+    // right next to the windowed `score` above. Pairing them ("43  +9")
+    // claims the GEO score rose 9 points when what actually moved was one
+    // component, on a different base — the exact "two magnitudes, one label"
+    // mistake TRUST-METRICS-1 exists to remove, one more layer down (this
+    // screen's own approved design invariant is "sólo la puntuación GEO y su
+    // delta" — that phrase requires the delta to be ABOUT the score it sits
+    // beside, not merely present next to it).
+    //
+    // Fixed as window-over-window, same construction as Overview's own
+    // `gaugeDelta` (`page.tsx`'s `previousWindow`): drop the newest run from
+    // the same rawRuns list — newest-first, so `.slice(1)` is "everything but
+    // the run that just landed" — and resolve a second time. Published ONLY
+    // when both resolutions are real windows: comparing two single-run
+    // composites here would need `resolveDelta`'s own comparability check
+    // duplicated, and Overview does not do that for its window delta either.
+    // Fewer deltas shown than DELTA-GUARD-1 used to publish, but every one
+    // shown is honestly about the same figure the score displays.
+    const previous = current?.basis === "window" && rawRuns.length > 1 ? resolveGeoScore(rawRuns.slice(1)) : null;
+    scoreDeltaByProject[projectId] =
+      current?.basis === "window" && previous?.basis === "window" ? current.value - previous.value : null;
   }
 
   const latestAuditDateByProject = (auditSnapshots ?? []).reduce<Record<string, string | null>>((dates, row) => {

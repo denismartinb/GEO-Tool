@@ -49,6 +49,28 @@ import { computeWindowedScore, readWindowRun, type WindowRunInput } from "@/lib/
 
 export const GEO_SCORE_LABEL = "Puntuación GEO";
 
+/**
+ * How many of a project's most recent `run_scores` rows every caller of
+ * `resolveGeoScore` must fetch before calling it — not the window size
+ * itself (`DEFAULT_SCORE_WINDOW_SIZE`, still 3), the READ depth behind it.
+ *
+ * Found during review (geo-strategy, TRUST-METRICS-1 Human Gate pass): with
+ * an incomparable run mixed into the most recent few (a scoring-method
+ * change, an engine toggled off and back on), a caller reading only 3 raw
+ * rows can come up short of `MIN_RUNS_FOR_WINDOW` eligible runs and fall back
+ * to `single_run`, while a caller reading more rows finds enough eligible
+ * ones deeper in the history and publishes a window — two different
+ * "Puntuación GEO" figures for the same project, the exact P0-01 divergence
+ * this module exists to remove, just one layer down. Every consumer reads
+ * this many rows so the answer cannot depend on which screen asked.
+ *
+ * 7, not `DEFAULT_SCORE_WINDOW_SIZE`, because Overview's gauge trend already
+ * established 7 as the lookback for this project before this module existed
+ * (`app/dashboard/projects/[projectId]/page.tsx`) — matching it rather than
+ * picking a new number is what makes every surface agree.
+ */
+export const GEO_SCORE_LOOKBACK_ROWS = 7;
+
 export type GeoScoreRunRow = {
   run_id?: string | null;
   created_at?: string | null;
@@ -176,11 +198,22 @@ export function citationRate(citedAnswers: number, answerCount: number): RateMet
 
 /**
  * Competidores' "45 prompts" (P0-02): the actual unit is prompt × engine
- * answers, and the label must say so. `promptCount` and `engineCount` are
- * shown separately — "45 respuestas (15 prompts × 3 motores)" — rather than
- * folded into one figure, because collapsing them is exactly what produced
- * the wrong label in the first place.
+ * answers, and the label must say so.
+ *
+ * NOT a multiplication claim — caught in review (data-guardian and
+ * geo-strategy independently, TRUST-METRICS-1 Human Gate pass). The first
+ * version read "45 respuestas (15 prompts × 3 motores)", which is an
+ * arithmetic identity a user can check in two seconds, and it only held for
+ * the audit's own account because that account had exactly one scan.
+ * `answerCount` on Competidores accumulates across every completed run in
+ * the project's history while `promptCount` is today's active-prompt count
+ * and `engineCount` is every provider ever seen — three quantities from
+ * three different time windows, whose product is not `answerCount` from the
+ * second scan onward. Restating the same wrong shape under a new label would
+ * have been P0-02 again, just arithmetically instead of semantically wrong.
+ * `promptCount`/`engineCount` stay as context, joined with "en" rather than
+ * "×", so nothing on screen asserts a product that may not hold.
  */
 export function answerCountLabel(promptCount: number, engineCount: number, answerCount: number): string {
-  return `${answerCount} respuestas (${promptCount} prompts × ${engineCount} motores)`;
+  return `${answerCount} respuestas · ${promptCount} prompts en ${engineCount} motores`;
 }

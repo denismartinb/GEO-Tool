@@ -24,13 +24,13 @@ function read(relativePath: string): string {
 describe("TRUST-METRICS-1 — the headline GEO score has one owner", () => {
   it("Dominios (project-workspace.ts) resolves latestScoreByProject via resolveGeoScore, not a raw visibility_score read", () => {
     const source = read("lib/project-workspace.ts");
-    expect(source).toContain('import { resolveGeoScore, type GeoScoreRunRow } from "@/lib/metrics/run-metrics"');
+    expect(source).toMatch(/import \{[^}]*resolveGeoScore[^}]*\} from "@\/lib\/metrics\/run-metrics"/);
     expect(source).toMatch(/latestScoreByProject\[projectId\]\s*=.*resolveGeoScore/s);
   });
 
   it("the completion notification (executor.ts) resolves geoScore via resolveGeoScore before emitting", () => {
     const source = read("lib/scan/executor.ts");
-    expect(source).toContain('import { resolveGeoScore } from "@/lib/metrics/run-metrics"');
+    expect(source).toMatch(/import \{[^}]*resolveGeoScore[^}]*\} from "@\/lib\/metrics\/run-metrics"/);
     expect(source).toMatch(/geoScoreForNotification\s*=\s*resolveGeoScore/);
     // The payload must carry the resolved figure under `geoScore` — not
     // `visibilityScore` relabelled — so render.ts has something honest to
@@ -49,7 +49,7 @@ describe("TRUST-METRICS-1 — the headline GEO score has one owner", () => {
 });
 
 describe("TRUST-METRICS-1 — every answer-row percentage carries its denominator", () => {
-  it("Competidores composes 'X respuestas (Y prompts × Z motores)' only via answerCountLabel, never a bare prompt count", () => {
+  it("Competidores composes its answer-count sentence only via answerCountLabel, never a bare prompt count or a × between time windows", () => {
     const source = read("app/dashboard/projects/[projectId]/competitors/page.tsx");
     expect(source).toContain('import { answerCountLabel, citationRate, mentionRateByAnswer } from "@/lib/metrics/run-metrics"');
     expect(source).toMatch(/answerCountLabel\(promptCount, engineCount, totalResultsCount\)/);
