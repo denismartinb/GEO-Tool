@@ -228,6 +228,21 @@ que el producto hace por defecto (`recurring_scans_enabled = false`).
 En ambos casos, allá donde se afirme una cadencia se muestra **la próxima
 ejecución con fecha**, no un adjetivo.
 
+**Adelantado por trabajo ordinario (2026-08-27).** `PROMO-CONSOLE-PARITY-1`
+(#485, log §170) se mergeó mientras este plan estaba en revisión y ya cierra
+una de las divergencias que el auditor encontró: una cuenta en prueba Pro veía
+179 €/mes en Ajustes mientras `/precios` decía 59 €. Más importante que el
+síntoma es lo que introduce — `resolveShownPromoPrice` en `plans-data.ts`,
+**un solo sitio que decide qué precio enseña una pantalla** — que es la semilla
+del catálogo de esta fase y distingue además dos promociones que no son la
+misma (la contratada, cupón vivo en Stripe, y la ofrecida, campaña abierta).
+
+Lo que esta fase hereda, en consecuencia: `plans-data.ts` se promueve a
+`lib/plans/catalog.ts` en vez de escribirse de cero, y el alcance restante son
+los literales todavía sueltos (`pricing/page.tsx:34`, `session-ctas.tsx:74`,
+las dos comparativas), los topes, los días de prueba y la cadencia — no el
+precio promocional, que ya tiene dueño. **La fase encoge; no desaparece.**
+
 **Entregables.**
 - `lib/plans/catalog.ts` — fuente única: `id`, `price`, `promoPrice`,
   `promoEndsAt`, `trialDays`, `promptCap`, `domainCap`, `engines`, `cadence`.
@@ -400,7 +415,10 @@ Ninguno arregla la confianza, que es lo que hoy bloquea cobrar.
 ## 4. Cierre documental
 
 Cada fase cierra en su propio PR con: entrada en
-`docs/brand/design-decisions-log.md` (a partir de §169), actualización de la
+`docs/brand/design-decisions-log.md` (el número se calcula al abrir el PR, no
+ahora: §169 y §170 se reclamaron el 2026-08-27 mientras este plan estaba en
+revisión, y `tests/log-numbering.test.ts` existe precisamente porque dos ramas
+calculan `max + 1` sobre bases que envejecen), actualización de la
 regla de ruta de su zona si establece un invariante, y la celda "Última fase
 cerrada" del `Mapa de zonas` de `CLAUDE.md`. Las fases 0, 1, 2 y 3 tocan además
 `docs/agentic-user-pilot.md` y `CLAUDE.md`, por las correcciones de método.
