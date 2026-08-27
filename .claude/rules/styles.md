@@ -353,3 +353,13 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   ancho exacto donde de verdad envuelve (log §180). Cualquier flex
   container anidado que pueda envolver por sí mismo necesita su PROPIO
   `justify-content`; el del ancestro no se hereda a las líneas internas.
+- **Un margen simétrico pequeño se ve como «pegado al borde», no como
+  «centrado».** Un `.price-pay-badges` centrado midió 9,875px de margen
+  izquierdo y 9,89px de derecho a 768px — prácticamente idénticos — y a
+  simple vista parecía alineado a la izquierda comparado con las capturas de
+  al lado, donde el contenido dejaba más aire (log §181). El contenido casi
+  llenaba el contenedor disponible (692 de 712px), así que el margen real era
+  correcto pero demasiado pequeño para que el ojo lo distinguiera del cero.
+  Antes de descartar un centrado por «se ve a la izquierda», mide
+  `getBoundingClientRect()` de ambos lados y compara los dos números — no la
+  captura contra otra captura de una anchura distinta.

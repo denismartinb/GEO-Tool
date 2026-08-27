@@ -17,6 +17,7 @@ import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { HomeCtaBand } from "@/components/landing/session-ctas";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 
 
 /**
@@ -1340,6 +1341,9 @@ export function LandingPage() {
               <Link href="/cookies">Cookies</Link>
               <Link href="/terminos">Términos</Link>
             </nav>
+          </div>
+          <div className="lp-footer-pay">
+            <PaymentBadgesRow />
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>

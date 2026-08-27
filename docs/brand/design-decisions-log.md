@@ -17454,3 +17454,68 @@ dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
 **Trazabilidad.** `app/globals.css` (`.price-pay-icons`);
 `components/pricing/pricing-page.tsx` (`PAYMENT_BADGES`, sin cambios);
 `tests/pricing-payment-badges.test.ts`; §148, §149 (Fase A+B de precios).
+
+---
+
+## 181. La confianza de pago llega también al pie de página, sin duplicar la fila (FOOTER-PAYMENT-TRUST-1, 2026-08-27)
+
+**Lo que pidió el fundador.** *"Ahora quiero que lleves un bloque de pago
+seguro similar al footer para transmitir confianza"* — la fila «Pagos seguros
+con» que ya vivía en `/precios` (PRICING-PAY-BADGES-CENTER-1, #495), también en
+el pie de página, para que la confianza no dependa de haber llegado hasta ahí.
+
+**Por qué no era «copiar el bloque a seis sitios».** La fila existía como un
+array (`PAYMENT_BADGES`) y un bloque de JSX declarados a mano dentro de
+`pricing-page.tsx`. En cuanto un segundo sitio la necesita —y aquí son seis,
+uno por cada shell de marketing con pie completo— pegar la misma copia en cada
+uno es exactamente el fallo que este repositorio ya ha pagado por duplicado
+más de una vez hoy: dos cosas con el mismo significado que pueden divergir en
+silencio en cuanto alguien edite una sin acordarse de la otra (§36, §177, "dos
+números con el mismo significado y distinto valor es un fallo").
+
+**Lo que se hizo.**
+
+1. **`components/marketing/payment-badges.tsx`** — nuevo. `PAYMENT_BADGES` y un
+   componente `PaymentBadgesRow` que renderiza la fila entera, sin su propio
+   padding de sección (lo decide quien la envuelve — es lo que la hace
+   portable entre `/precios` y el pie).
+2. **`/precios` deja de declarar su propia copia** y pasa a importar
+   `PaymentBadgesRow`.
+3. **Los seis shells de marketing con pie completo** —`landing-page.tsx`,
+   `pricing-page.tsx`, `blog-page-shell.tsx`, `docs-page-shell.tsx`,
+   `legal-page-shell.tsx`, `not-found-mission.tsx`— renderizan
+   `<PaymentBadgesRow />` dentro de un nuevo `.lp-footer-pay`, con su propio
+   separador (`margin-top`/`padding-top`/`border-top`, a juego con el resto del
+   pie). `app/geo/page.tsx` queda fuera a propósito: su pie ya era una versión
+   reducida a mano, una divergencia anterior a esta lista y fuera de lo que
+   aquí se arregla.
+4. **`MARKETING_SHELLS`** —la lista de esos seis ficheros— sale del
+   `.test.ts` donde vivía sólo para `marketing-content-links.test.ts` y pasa a
+   `marketing-content-links.ts`, para que el test nuevo de las insignias lea la
+   MISMA lista en vez de mantener su propia copia (mismo argumento que
+   `MARKETING_CONTENT_LINKS`, log §46).
+
+**`/precios` conserva su fila a media página, además de la del pie — a
+propósito, no por descuido.** La de media página responde "¿puedo fiarme del
+checkout de ESTA pantalla, ahora que estoy decidiendo?"; la del pie responde
+"¿es un negocio real, en cualquier página del sitio?". Son dos preguntas
+distintas y las dos siguen mereciendo respuesta.
+
+**Una falsa alarma que merece constar.** La primera captura a 768px se veía
+pegada a la izquierda comparada con la de 375px y la de 1280px — pero medido
+con `getBoundingClientRect()`, el margen izquierdo y el derecho eran 9,875px y
+9,89px, prácticamente idénticos. A esa anchura el contenido casi llena el
+`.lp-inner` disponible (692 de 712px), así que el margen simétrico es tan
+pequeño que el ojo no lo distingue del borde — el mismo aviso que ya deja
+escrito este fichero sobre medir la distancia, no leerla a ojo.
+
+**Lo que garantiza que no vuelva a faltar.** `payment-badges.test.ts` recorre
+`MARKETING_SHELLS` y falla si a algún pie le falta `<PaymentBadgesRow`, y
+falla también si `/precios` vuelve a declarar `PAYMENT_BADGES` a mano en vez de
+importarlo. Comprobado en las dos direcciones: con los seis footers revertidos,
+fallan los siete tests nombrando cada fichero al que le falta la fila.
+
+**Trazabilidad.** `components/marketing/payment-badges.tsx` ·
+`components/marketing-content-links.ts` (`MARKETING_SHELLS`) ·
+`app/globals.css` (`.lp-footer-pay`) ·
+`components/marketing/payment-badges.test.ts`; §36, §46, §148, §149, §177, §180.
