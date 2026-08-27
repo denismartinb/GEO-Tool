@@ -17107,3 +17107,79 @@ esta forma exacta; barrer el patrón entero es otro PR.
 `components/mobile-shell.tsx` y `components/workspace-topbar.tsx` (por qué el
 clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
 está fuera de pantalla estando «visible»); §136 (el precedente).
+
+---
+
+---
+
+## 178. Auditoría web se quedó en el primer peldaño de la escalera (WEB-AUDIT-WIDTH-1, 2026-08-27)
+
+**Lo que vio el fundador.** *"Auditoría web se ve mal. Está centrado el
+contenido como si fuera mobile"*. Es literal: en escritorio la pantalla pintaba
+una columna de 460px centrada bajo una cabecera fija que sí llega hasta el borde
+de la ventana.
+
+**Por qué.** La consola tiene un estándar de ancho aprobado desde
+CITATIONS-REDESIGN-1 (§5) y ratificado en OV-DESKTOP-2 (§119): **460 / 640 a
+900px / 1200 a 1200px / 1280 a 1600px**. Seis de las siete columnas de la
+consola lo suben entero (`.ov2-scope`, `.pr2-page`, `.cm2-page`, `.cit2-page`,
+`.rec2-scope`, `.dm2-page`). `.wa2-page` declaraba **sólo el primer peldaño** y
+ninguna media query.
+
+Lo caro del fallo no es la línea que faltaba, es que **la intención sí estaba
+escrita**: el comentario del `page.tsx` que monta ese div dice, palabra por
+palabra, *"the founder-approved 640/1200/1280px console width standard
+(CITATIONS-REDESIGN-1, §5)"*. El comentario prometía la escalera y el CSS tenía
+un escalón. Nadie leyendo ese diff habría notado la diferencia — el comentario
+lee como la implementación.
+
+Y no falló nada por el camino: la página cargaba, los tests pasaban, el piloto
+la fotografiaba a tres anchuras y ninguna captura decía *"esto debería medir el
+triple"*. Un ancho equivocado no lanza excepciones. Hizo falta que un humano lo
+mirara y lo dijera a ojo, meses después.
+
+**Qué se decidió.** Los mismos tres cortes, con los mismos valores, copiados de
+sus seis hermanas. Cero decisiones de diseño nuevas: esto es aplicar un estándar
+que ya estaba aprobado, no elegir un ancho.
+
+**Sin `--ov-hdr-page-cap` ni `--mrk-page-cap` acompañándolos, a propósito.** Esas
+dos existen porque en Competidores la clase estrecha va COMBINADA sobre `.page`
+(`<div class="page cm2-page">`), así que baja el tope real de `.page` y las dos
+fórmulas de bleed —la de la cabecera fija y la de la misión— leen un
+`--page-max-w` que ya no es cierto. `.wa2-page` es un hijo dentro de un `.page`
+intacto, y la cabecera fija ni siquiera está dentro de él: cuelga directamente
+de `.page`. Copiarlas aquí repetiría el error que `app/console.css` ya documenta
+haber cometido una vez en esta misma pantalla — alimentar la fórmula con un tope
+al que `.page` nunca estuvo sujeto, y dejar la escena 20px corta por los dos
+lados.
+
+**Lo que garantiza que no vuelva a pasar.** `tests/console-page-width.test.ts`
+lee las dos hojas y exige los cuatro peldaños a las **siete** columnas. Es un
+contrato a nivel de fuente, sin navegador, del mismo tipo que
+`tests/mission-parity.test.ts` (§168): la clase de fallo que ataca es la que no
+rompe nada, y ésa no la coge ni un test de render ni una captura. Comprobado en
+las dos direcciones — con el arreglo revertido, falla nombrando el peldaño que
+falta; con él, pasa. **Añadir una pantalla nueva con su propia clase de columna
+significa añadirla a ese fichero**, o vuelve a no enterarse nadie.
+
+**Lo que NO se ha tocado.** El bleed de la cabecera fija sigue como estaba (§150)
+— llega al borde de `.dash-content` en las ocho pantallas, y alinear su
+CONTENIDO con la columna estrecha sigue siendo la decisión aparte que ya
+declaraba fuera de alcance el §150. Ningún cambio en el interior de la
+auditoría: las tarjetas simplemente disponen del ancho que les correspondía.
+
+**Nota de numeración, dos veces.** Nació como §173 sobre una `main` que llegaba
+al §172. Mientras seguía abierta entraron #481, #489, #480, #490 y el propio
+#484, que dejaron `main` en el §176, y el §177 ya estaba reservado por otra rama
+(#491), así que acabó en el §178. Se renumeró ESTA —la que no estaba en `main`—
+con todas sus referencias (`grep -rn "§178"`: la regla de ruta, el test y el
+propio CSS).
+
+Cinco secciones ajenas en una mañana no es mala suerte: es el límite que
+`tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con cuatro
+ramas abiertas a la vez. Hizo su trabajo cada vez, parando el choque en la que
+mergeaba después.
+
+**Trazabilidad.** `app/console.css` (`.wa2-page`);
+`app/dashboard/projects/[projectId]/web-audit/page.tsx` (el comentario que ya
+prometía la escalera); `tests/console-page-width.test.ts`; §5, §119, §150, §168.
