@@ -17532,7 +17532,7 @@ dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
 
 ---
 
-## 181. "Cita a un rival" en Páginas citadas sólo significaba "citada donde también apareció un rival" (CITATIONS-HONESTY-1, 2026-08-27)
+## 182. "Cita a un rival" en Páginas citadas sólo significaba "citada donde también apareció un rival" (CITATIONS-HONESTY-1, 2026-08-27)
 
 **Origen.** Fase 8 de `docs/external-audit-2026-08.md` (auditoría externa
 2026-08-26, hallazgo P0-09): *"fuente que cita a un rival" sobreafirma —
@@ -17601,8 +17601,9 @@ página menciona...". Tampoco cambia la lista completa "Todas las fuentes"
 concretamente el bloque de Oportunidades, y agrupar por dominio ahí donde no
 hay un problema de escala habría sido una reestructuración sin motivo.
 
-**Nota de numeración.** Toma el §181 porque el §180 ya estaba reclamado por
-dos ramas abiertas en el momento de escribir esto (#492 y #494).
+**Nota de numeración.** Toma el §182 porque el §180 ya estaba reclamado por
+dos ramas abiertas en el momento de escribir esto (#492 y #494), y el §181 lo
+reclamó después RECS-LOOP-1 (#492) al mergear a `main` antes que esta rama.
 
 **Trazabilidad.** `lib/citations/aggregate-citations.ts`
 (`groupOpportunitiesByDomain`, `OpportunityDomainGroup`, doc comment de
