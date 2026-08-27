@@ -3,7 +3,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
 
-import { RecCard, SolutionPanel, overlayCopyLocal, type Recommendation } from "./recommendations-client";
+import {
+  RecCard,
+  SolutionPanel,
+  overlayCopyLocal,
+  predictionVerdictLine,
+  type Recommendation,
+  type ResolvedHistoryItem
+} from "./recommendations-client";
 import { overlayCopy } from "@/lib/recommendations/coverage-overlay";
 
 /**
@@ -177,5 +184,72 @@ describe("RecCard — el overlay de cobertura dice lo correcto según el tipo", 
       />
     );
     expect(html).toContain("publica una página que responda esta pregunta en las dos primeras frases");
+  });
+});
+
+describe("predictionVerdictLine — RECS-LOOP-1 Fase A", () => {
+  const historyItem = (over: Partial<ResolvedHistoryItem> = {}): ResolvedHistoryItem => ({
+    id: "h1",
+    title: "Título",
+    description: "Descripción",
+    recommendation_type: "increase_brand_visibility",
+    status: "resolved",
+    updated_at: "2026-08-25T00:00:00Z",
+    ...over
+  });
+
+  it("silencio (null) cuando no hay veredicto", () => {
+    expect(predictionVerdictLine(historyItem({ verification: { status: "no_verdict" } }))).toBeNull();
+    expect(predictionVerdictLine(historyItem({ verification: null }))).toBeNull();
+    expect(predictionVerdictLine(historyItem())).toBeNull();
+  });
+
+  it("silencio (null) para una fila 'dismissed', incluso si por error llevara un veredicto", () => {
+    expect(
+      predictionVerdictLine(
+        historyItem({
+          status: "dismissed",
+          verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 1, totalCount: 1 } }
+        })
+      )
+    ).toBeNull();
+  });
+
+  it("presence, cumplida en todas: nunca dice 'ya apareces' (afirmación permanente)", () => {
+    const line = predictionVerdictLine(
+      historyItem({ verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 1, totalCount: 1 } } })
+    );
+    expect(line).toContain("En el escaneo que lo confirmó");
+    expect(line).toContain("te nombró");
+    expect(line).not.toContain("ya apareces");
+  });
+
+  it("presence, no cumplida en ninguna: lo dice, no lo esconde", () => {
+    const line = predictionVerdictLine(
+      historyItem({ verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 0, totalCount: 1 } } })
+    );
+    expect(line).toContain("no te nombró");
+  });
+
+  it("prominence usa su propio texto — 'aparecer por detrás', nunca el de presence", () => {
+    const line = predictionVerdictLine(
+      historyItem({
+        recommendation_type: "increase_brand_prominence",
+        verification: { status: "verified", verdict: { kind: "prominence", fulfilledCount: 2, totalCount: 2 } }
+      })
+    );
+    expect(line).toContain("dejaste de aparecer por detrás");
+    expect(line).not.toContain("te nombró");
+  });
+
+  it("authority usa su propio texto — 'quedó citada', nunca el de presence ni prominence", () => {
+    const line = predictionVerdictLine(
+      historyItem({
+        recommendation_type: "add_citation_block",
+        verification: { status: "verified", verdict: { kind: "authority", fulfilledCount: 3, totalCount: 4 } }
+      })
+    );
+    expect(line).toContain("quedó citada");
+    expect(line).toContain("3 de 4");
   });
 });

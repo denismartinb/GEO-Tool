@@ -10,6 +10,12 @@ import { COVERAGE_OVERLAY_TYPES, computeCoverageOverlay, type CoverageOverlayEnt
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
 import {
+  verifyRecommendationPredictions,
+  type RecommendationToVerify,
+  type RecommendationVerification,
+  type VerificationRow
+} from "@/lib/recommendations/prediction-verification";
+import {
   computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
   computeRunScoresFromResults,
@@ -213,7 +219,9 @@ export default async function RecommendationsPage({
         // cleaned up via project hard-delete).
         supabase
           .from("recommendations")
-          .select("id, title, description, recommendation_type, status, updated_at")
+          .select(
+            "id, title, description, recommendation_type, status, updated_at, run_id, resolved_in_run_id, evidence_json",
+          )
           .eq("project_id", projectId)
           .in("status", ["resolved", "dismissed"])
           .order("updated_at", { ascending: false })
@@ -251,16 +259,125 @@ export default async function RecommendationsPage({
       recommendation_type: string;
     }>,
   );
-  const resolvedHistory = dedupeByTitle(
-    (history ?? []) as Array<{
-      id: string;
-      title: string;
-      description: string;
-      recommendation_type: string;
-      status: "resolved" | "dismissed";
-      updated_at: string;
-    }>,
+
+  type HistoryRow = {
+    id: string;
+    title: string;
+    description: string;
+    recommendation_type: string;
+    status: "resolved" | "dismissed";
+    updated_at: string;
+    run_id: string;
+    resolved_in_run_id: string | null;
+    evidence_json: { affected_prompt_details?: Array<{ id: string; competitors: string[] }> } | null;
+  };
+
+  // RECS-LOOP-1 Fase A: dedupeByTitle alone would collapse a real, distinct
+  // event — a gap that closed, reopened, and closed again — because it only
+  // keys on the normalized title, keeping whichever row sorts first
+  // (newest). That erases exactly the history this phase exists to show.
+  // Keying on title + the run that closed it (or, for a dismissed row with
+  // no such run, the row's own id) still collapses the same-title,
+  // same-confirming-run duplicate dedupeByTitle was built for (one logical
+  // prompt scored by two engines), without erasing a separate resolution.
+  function dedupeResolvedHistory(rows: HistoryRow[]): HistoryRow[] {
+    const seen = new Set<string>();
+    const out: HistoryRow[] = [];
+    for (const row of rows) {
+      const key = `${row.title.trim().toLowerCase()}:${row.status === "resolved" ? (row.resolved_in_run_id ?? "") : row.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(row);
+    }
+    return out;
+  }
+
+  const resolvedHistory = dedupeResolvedHistory((history ?? []) as HistoryRow[]);
+
+  // RECS-LOOP-1 Fase A: verify, for each auto-resolved history row, whether
+  // the specific mutation its potential-points estimate assumed actually
+  // happened in the run that confirmed the gap gone — never a score delta
+  // (see lib/recommendations/prediction-verification.ts for why). Dismissed
+  // rows never get a verdict here: dismissRecommendationCore never sets
+  // resolved_in_run_id, so there is no confirming run to check against yet
+  // (RECS-LOOP-1 Fase B, not this phase).
+  const verificationByRecId = new Map<string, RecommendationVerification>();
+  const resolvedRows = resolvedHistory.filter(
+    (r): r is HistoryRow & { resolved_in_run_id: string } => r.status === "resolved" && Boolean(r.resolved_in_run_id),
   );
+  if (resolvedRows.length > 0) {
+    const oldRunIds = Array.from(new Set(resolvedRows.map((r) => r.run_id)));
+    const newRunIds = Array.from(new Set(resolvedRows.map((r) => r.resolved_in_run_id)));
+    const oldResultIds = Array.from(
+      new Set(resolvedRows.flatMap((r) => r.evidence_json?.affected_prompt_details?.map((d) => d.id) ?? [])),
+    );
+
+    if (oldResultIds.length > 0) {
+      const { data: oldRows } = await supabase
+        .from("scan_prompt_results")
+        .select("id, prompt_id")
+        .eq("project_id", projectId)
+        .in("run_id", oldRunIds)
+        .in("id", oldResultIds);
+
+      const oldResultIdToPromptId = new Map(
+        ((oldRows ?? []) as Array<{ id: string; prompt_id: string | null }>)
+          .filter((row): row is { id: string; prompt_id: string } => Boolean(row.prompt_id))
+          .map((row) => [row.id, row.prompt_id]),
+      );
+
+      const promptIds = Array.from(new Set(oldResultIdToPromptId.values()));
+      const { data: newRows } =
+        promptIds.length > 0
+          ? await supabase
+              .from("scan_prompt_results")
+              .select("run_id, prompt_id, provider, brand_mentioned, citation_found, extracted_json")
+              .eq("project_id", projectId)
+              .in("run_id", newRunIds)
+              .in("prompt_id", promptIds)
+          : { data: [] as Array<{ run_id: string; prompt_id: string | null } & VerificationRow> };
+
+      const newRunRowsByRunAndPrompt = new Map<string, VerificationRow[]>();
+      for (const row of (newRows ?? []) as Array<{ run_id: string; prompt_id: string | null } & VerificationRow>) {
+        if (!row.prompt_id) continue;
+        const key = `${row.run_id}:${row.prompt_id}`;
+        const existing = newRunRowsByRunAndPrompt.get(key) ?? [];
+        existing.push(row);
+        newRunRowsByRunAndPrompt.set(key, existing);
+      }
+
+      const toVerify: RecommendationToVerify[] = resolvedRows.map((r) => ({
+        id: r.id,
+        recommendationType: r.recommendation_type,
+        resolvedInRunId: r.resolved_in_run_id,
+        affectedPrompts: (r.evidence_json?.affected_prompt_details ?? []).map((d) => ({
+          resultId: d.id,
+          competitors: d.competitors ?? [],
+        })),
+      }));
+
+      for (const [recId, verdict] of verifyRecommendationPredictions({
+        recommendations: toVerify,
+        oldResultIdToPromptId,
+        newRunRowsByRunAndPrompt,
+        projectDomain: project.domain,
+      })) {
+        verificationByRecId.set(recId, verdict);
+      }
+    }
+  }
+
+  // Trimmed to what the client actually renders — evidence_json/run_id stay
+  // server-side, never sent over the wire for a compact history row.
+  const resolvedHistoryForClient = resolvedHistory.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    recommendation_type: r.recommendation_type,
+    status: r.status,
+    updated_at: r.updated_at,
+    verification: verificationByRecId.get(r.id) ?? null,
+  }));
 
   // Attach the latest sanitized AI-generated solution (if any) for each
   // recommendation. These live in `generated_solutions` (never on the
@@ -695,24 +812,20 @@ export default async function RecommendationsPage({
               </Link>
             </div>
           ) : recs.length === 0 ? (
+            // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
+            // "Ver detalle del escaneo" link to /runs/[runId] is retired from
+            // this empty state, same reasoning as Citas — the route is no
+            // longer part of the end-user console, only /debug.
             <div className="section-empty" style={{ marginTop: 20 }}>
               <div className="section-empty-title">Nada que corregir ahora mismo</div>
               <div className="section-empty-desc">
                 Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
               </div>
-              <Link
-                href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-                className="btn btn-ghost btn-sm"
-                style={{ marginTop: 14, display: "inline-flex" }}
-              >
-                Ver detalle del escaneo
-                <Icon name="arrRight" size={14} />
-              </Link>
             </div>
           ) : (
             <RecommendationsClient
               recommendations={recs}
-              resolvedHistory={resolvedHistory}
+              resolvedHistory={resolvedHistoryForClient}
               recentWinsCount={recentWins.length}
               projectId={projectId}
               jointPoints={jointPoints}

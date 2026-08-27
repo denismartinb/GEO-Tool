@@ -9,7 +9,16 @@
  * limitación que Peec AI — sus páginas oficiales de precios devolvieron 403,
  * así que ningún dato viene de fuente primaria de primera mano. Precios
  * tratados como orientativos ("desde aprox."), nunca como cifra cerrada.
+ *
+ * TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2): el precio de
+ * GenScore era la única excepción a "no se reescriben cifras a mano aquí" —
+ * `pricingNote` llevaba el literal "45 €/mes". Ahora lee `PLANS`, como el
+ * resto de comparativas.
  */
+import { PLANS } from "@/app/pricing/plans-data";
+
+const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
+
 export const PILLAR_RESEARCH_DATE = "12 de agosto de 2026";
 
 /**
@@ -65,7 +74,7 @@ export const TOOLS: ToolProfile[] = [
       "Mide y mejora cómo aparece tu marca en respuestas de ChatGPT, Gemini y Claude, con plan gratuito permanente.",
     distinctiveFeature:
       "La única de esta lista que no se detiene en el diagnóstico: genera recomendaciones con evidencia y un solucionador que redacta el borrador (FAQ, schema, briefs) desde el plan Pro.",
-    pricingNote: "Gratis (escaneo permanente, sin tarjeta); planes de pago desde 45 €/mes.",
+    pricingNote: `Gratis (escaneo permanente, sin tarjeta); planes de pago desde ${STARTER_PRICE} €/mes.`,
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     bestFor:
       "Equipos hispanohablantes que quieren empezar gratis y que la herramienta no solo señale el problema, sino que proponga la solución."

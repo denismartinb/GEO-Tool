@@ -163,6 +163,20 @@ export type Recommendation = {
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority" | "resolved";
 
+/**
+ * RECS-LOOP-1 Fase A — mirrors lib/recommendations/prediction-verification.ts
+ * `PredictionVerdict` on the client (server-only module, same reason
+ * CoverageOverlay/GeneratedSolution are defined locally too). Pure data, no
+ * duplicated logic — the server never generates copy text, only these three
+ * fields — so there is nothing here that can drift and no parity test is
+ * needed, unlike overlayCopyLocal.
+ */
+export type PredictionVerdict = {
+  kind: "presence" | "prominence" | "authority";
+  fulfilledCount: number;
+  totalCount: number;
+};
+
 export type ResolvedHistoryItem = {
   id: string;
   title: string;
@@ -170,7 +184,46 @@ export type ResolvedHistoryItem = {
   recommendation_type: string;
   status: "resolved" | "dismissed";
   updated_at: string;
+  /** Only ever set for status="resolved" — a dismissed row has no confirming
+   * scan yet (RECS-LOOP-1 Fase B, not built). */
+  verification?: { status: "verified"; verdict: PredictionVerdict } | { status: "no_verdict" } | null;
 };
+
+/**
+ * Observational, dated copy — never "ya apareces" (a permanent-sounding
+ * present tense the next scan's non-determinism could contradict), always
+ * "en el escaneo que lo confirmó, ..." (docs/adr/0017 §5's promised
+ * verification, RECS-LOOP-1 Fase A). Silent (returns null) for anything
+ * short of a real verdict — a history row with nothing to show says nothing,
+ * never an invented or placeholder line.
+ */
+export function predictionVerdictLine(item: ResolvedHistoryItem): string | null {
+  if (item.status !== "resolved" || !item.verification || item.verification.status !== "verified") return null;
+  const { kind, fulfilledCount, totalCount } = item.verification.verdict;
+  const scope = totalCount === 1 ? "la consulta de esta tarjeta" : `${totalCount} consultas de esta tarjeta`;
+  const of = totalCount === 1 ? "" : ` (${fulfilledCount} de ${totalCount})`;
+
+  if (kind === "presence") {
+    return fulfilledCount === totalCount
+      ? `En el escaneo que lo confirmó, la IA te nombró en ${scope}.`
+      : fulfilledCount === 0
+        ? `En el escaneo que lo confirmó, la IA no te nombró en ${scope}.`
+        : `En el escaneo que lo confirmó, la IA te nombró${of}.`;
+  }
+  if (kind === "prominence") {
+    return fulfilledCount === totalCount
+      ? `En el escaneo que lo confirmó, dejaste de aparecer por detrás en ${scope}.`
+      : fulfilledCount === 0
+        ? `En el escaneo que lo confirmó, seguiste apareciendo por detrás en ${scope}.`
+        : `En el escaneo que lo confirmó, dejaste de aparecer por detrás${of}.`;
+  }
+  // authority
+  return fulfilledCount === totalCount
+    ? `En el escaneo que lo confirmó, tu web quedó citada en ${scope}.`
+    : fulfilledCount === 0
+      ? `En el escaneo que lo confirmó, tu web no quedó citada en ${scope}.`
+      : `En el escaneo que lo confirmó, tu web quedó citada${of}.`;
+}
 
 function impactToN(val: string): number {
   if (val === "high") return 5;
@@ -386,6 +439,7 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
     year: "numeric",
     timeZone: "Europe/Madrid",
   });
+  const verdictLine = predictionVerdictLine(item);
 
   return (
     <div className="rec-card">
@@ -407,6 +461,11 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
             {item.title}
           </div>
           <div className="rec-problem">{dateLabel}</div>
+          {verdictLine && (
+            <div className="rec-problem" style={{ marginTop: 4, color: "var(--ink-3)" }}>
+              {verdictLine}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -27,6 +27,18 @@ export type NotificationPayloadByType = {
     runId: string;
     promptsProcessed: number;
     providers: string[];
+    /** TRUST-METRICS-1: the windowed "Puntuación GEO" — the only figure this
+     *  notification may headline. `undefined` for rows persisted before this
+     *  field existed; `render.ts` falls back to `visibilityScore` for those,
+     *  never the reverse. */
+    geoScore?: number;
+    /** Kept as the documented fallback for notification rows persisted
+     *  before `geoScore` existed in this payload, and for the delta's icon
+     *  direction — never rendered as the number under "Puntuación GEO"
+     *  (docs/external-audit-2026-08.md, Fase 1). NOT for `weekly-digest.ts`:
+     *  that reads `run_scores` directly via `getEffectiveGeoScore` and never
+     *  touches this notification payload at all (corrected during review —
+     *  the original comment here named the wrong consumer). */
     visibilityScore: number | null;
     visibilityDelta: number | null;
     newRecommendations: number;

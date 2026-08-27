@@ -447,7 +447,8 @@ function buildClients(
     notificationsBehavior = "ok",
     promptJobSampleIndex,
     engineFlags,
-    recurringScans
+    recurringScans,
+    scoreWindowRows
   }: {
     promptJobMaxAttempts: number;
     /** SAMPLING-1: the repetition this prompt job belongs to. Omitted -> no
@@ -483,6 +484,15 @@ function buildClients(
      * option existed changes behavior.
      */
     recurringScans?: { currentValue?: boolean; completedRunCount?: number; ownerEmail?: string | null };
+    /**
+     * TRUST-METRICS-1: rows the completion notification's windowed-score read
+     * (`service.from("run_scores").select(...).order(...).limit(...)`) sees.
+     * Omitted -> falls through to `noopTable()` (data: []), which is the
+     * "fewer than DEFAULT_SCORE_WINDOW_SIZE rows exist yet" shape every test
+     * written before this option existed already exercises: `geoScore` in the
+     * emitted payload falls back to `Math.round(scores.visibility_score)`.
+     */
+    scoreWindowRows?: Array<{ run_id: string; created_at: string; visibility_score: number | null; details_json: unknown }>;
   },
   existingProviders: string[] | Record<number, string[]> = []
 ) {
@@ -545,6 +555,22 @@ function buildClients(
       if (table === "scan_prompt_results") return scanPromptResultsTable.table;
       if (table === "recommendations") return recommendationsTable.table;
       if (table === "notifications") return notificationsTable.table;
+      if (table === "run_scores" && scoreWindowRows) {
+        // Extends noopTable() rather than replacing it: executePendingScan
+        // ALSO calls `.from("run_scores").upsert(...)` earlier, to persist
+        // this run's own score row — a select-only stub here broke that call
+        // (`upsert is not a function`) for every test, not just this one.
+        return {
+          ...noopTable(),
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: () => Promise.resolve({ data: scoreWindowRows, error: null })
+              })
+            })
+          })
+        };
+      }
       if (table === "profiles") {
         return {
           select: () => ({
@@ -1304,6 +1330,53 @@ describe("executePendingScan — notifications (NOTIF-SERVER-1a)", () => {
       dedupe_key: `scan_completed:${RUN_ID}`
     });
     expect(scanCompleted[0].payload_json).toMatchObject({ runId: RUN_ID, promptsProcessed: 1 });
+  });
+
+  /**
+   * TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1) — the audit's
+   * exact P0-01 divergence, reproduced and closed: a windowed median (8) that
+   * differs from this run's own raw visibility_score (2) must reach the
+   * notification payload as `geoScore`, never silently collapsed to the raw
+   * value under a "Puntuación GEO" label.
+   */
+  it("resolves geoScore from the windowed median across comparable runs, not the raw visibility_score", async () => {
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      scoreWindowRows: [
+        {
+          run_id: RUN_ID,
+          created_at: "2026-08-27T00:00:00.000Z",
+          visibility_score: 2,
+          details_json: { total_results: 45, geo_score: { score: 10, composite_version: "v4", inputs_used: ["visibility"] } }
+        },
+        {
+          run_id: PREVIOUS_RUN_ID,
+          created_at: "2026-08-26T00:00:00.000Z",
+          visibility_score: 2,
+          details_json: { total_results: 45, geo_score: { score: 6, composite_version: "v4", inputs_used: ["visibility"] } }
+        }
+      ]
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const scanCompleted = notificationsTable.calls.filter((c) => c.type === "scan_completed");
+    expect(scanCompleted[0].payload_json).toMatchObject({ geoScore: 8 }); // median(10, 6)
+    expect((scanCompleted[0].payload_json as { geoScore: number }).geoScore).not.toBe(2);
+  });
+
+  it("falls back to this run's own composite when fewer than two comparable runs exist (no run_scores rows seeded)", async () => {
+    const { service, supabase, notificationsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const scanCompleted = notificationsTable.calls.filter((c) => c.type === "scan_completed");
+    const payload = scanCompleted[0].payload_json as { geoScore: number; visibilityScore: number };
+    expect(payload.geoScore).toBe(Math.round(payload.visibilityScore));
   });
 
   it("emits scan_failed when no jobs exist for the run (the non-catch-block failure path)", async () => {
