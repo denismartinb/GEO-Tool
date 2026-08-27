@@ -220,6 +220,53 @@ paths:
   hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
   `ScanStatePill` del sticky-header, nunca tapando el backlog.
 
+## Verificación de la predicción (RECS-LOOP-1 Fase A, ADR 0041, log §173)
+
+- **Nunca un delta de score entre dos runs.** Se evaluó y se rechazó
+  explícitamente: no es atribuible (el compuesto/componente se mueve por
+  cualquier prompt y por cualquier otra tarjeta resuelta en la misma
+  ventana, no sólo por ésta) y casi nunca pasaría `resolveDelta`/
+  `compareRuns` (`.claude/rules/scoring.md`, DELTA-GUARD-1) entre dos runs
+  consecutivos reales. La única verificación permitida es fáctica: si la
+  mutación concreta que la promesa asumía (`getRecommendationPotentialKind`
+  — el MISMO mapa de `lib/scoring/run-scoring.ts` que generó el "hasta +X
+  pt", nunca uno independiente) ocurrió de verdad en los prompts que la
+  tarjeta citó, en el run que confirmó la brecha resuelta. Ver ADR 0041 para
+  el razonamiento completo de por qué.
+- **Es observación, no estimación.** Sin banda de confianza, sin suelo de
+  muestra — no extrapola a una población, así que una sola fila comprobada
+  es una respuesta completa. No reutilices `MIN_RESPONSES_FOR_BAND` ni
+  `resolveDelta` aquí: esas capas existen para inferencias, esto no lo es.
+- **Nunca una cifra de puntos.** El veredicto es "cumplida en N de M
+  consultas", nunca comparado ni presentado junto al "hasta +X pt" del
+  contrafactual — son respuestas a preguntas distintas, y ponerlas una al
+  lado de la otra es la promesa que ADR 0041 existe para no hacer.
+- **`prominence` no exige la posición 1 del contrafactual.** Esa es su techo
+  optimista, no un veredicto realista — exigirla haría que la tarjeta
+  dijera "no se cumplió" casi siempre que sí ayudó. El check real es: deja
+  de estar por detrás del competidor concreto que la propia evidencia de la
+  tarjeta nombró (`evidence_json.affected_prompt_details[].competitors`),
+  no de cualquier competidor.
+- **`affected_prompt_details[].id` no es estable entre runs** — es
+  `scan_prompt_results.id`, una fila nueva cada escaneo (RECS-DEDUPE-1).
+  Cualquier cruce entre el run que prometió y el run que confirma pasa por
+  `project_prompts.id`, con una consulta anclada a `project_id` y al
+  `run_id` de la tarjeta — nunca sin ese anclaje. Un prompt borrado desde
+  entonces (`prompt_id` a null) falla cerrado hacia "sin veredicto".
+- **Sin migración, y a propósito.** La promesa es derivable:
+  `computeRecommendationPotentialPoints` es pura y `scan_prompt_results` es
+  inmutable tras completar el run. No se congela nada en una columna nueva.
+- **Una fila `dismissed` no tiene veredicto — no es lo mismo que "sin
+  confirmar todavía".** `dismissRecommendationCore` nunca escribe
+  `resolved_in_run_id`, así que no hay run contra el que comprobar nada.
+  Fase B, con Task Intake propio, no una extensión silenciosa de ésta.
+- **El dedupe del historial de "Resueltas" incluye `resolved_in_run_id` en
+  su clave**, no sólo el título — de lo contrario una brecha que se
+  resolvió, reabrió y se resolvió otra vez se colapsa en una sola tarjeta,
+  perdiendo la más antigua. El duplicado de dos motores sobre el mismo
+  prompt (la razón original del dedupe por título) sigue colapsando porque
+  comparte el mismo `resolved_in_run_id`.
+
 ## Honestidad de lo que se genera (RECS-USEFULNESS-1 Fase C, log §128)
 
 - **Nombrar a un competidor sí; decir que somos mejores que él, no.** Se rechaza
