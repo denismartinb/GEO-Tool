@@ -7,6 +7,7 @@ import { getPlanForUser } from "@/lib/billing";
 import type { Plan } from "@/app/pricing/plans-data";
 import { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
 import { readComparableRun, resolveDelta, type ComparableRun } from "@/lib/scoring/score-reliability";
+import { resolveGeoScore, type GeoScoreRunRow } from "@/lib/metrics/run-metrics";
 
 export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
 
@@ -327,6 +328,13 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
   const latestScoreByProject: Record<string, number | null> = {};
   const scoreDeltaByProject: Record<string, number | null> = {};
   const seenScoresByProject = new Map<string, Array<{ score: number; comparable: ComparableRun }>>();
+  // TRUST-METRICS-1: a SEPARATE cap of 3, not 2 — DEFAULT_SCORE_WINDOW_SIZE
+  // in lib/scoring/score-window.ts. The delta above only ever compares two
+  // raw runs and keeps its own 2-row cap untouched; the headline score is a
+  // different quantity (the window median) and needs a third row to be
+  // eligible for it. Same `scores` rows, ordered newest-first by the query
+  // above — no second round trip to Supabase.
+  const rawRunsByProject = new Map<string, GeoScoreRunRow[]>();
 
   for (const s of scores ?? []) {
     const value = Number(s.visibility_score ?? NaN);
@@ -336,16 +344,34 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
       seen.push({ score: Math.round(value), comparable: readComparableRun(s.details_json) });
       seenScoresByProject.set(s.project_id, seen);
     }
+
+    const raw = rawRunsByProject.get(s.project_id) ?? [];
+    if (raw.length < 3) {
+      raw.push({
+        run_id: s.run_id,
+        created_at: s.created_at,
+        visibility_score: s.visibility_score,
+        details_json: s.details_json
+      });
+      rawRunsByProject.set(s.project_id, raw);
+    }
   }
 
   for (const [projectId, seen] of seenScoresByProject.entries()) {
-    latestScoreByProject[projectId] = seen[0]?.score ?? null;
+    // TRUST-METRICS-1: the headline is `resolveGeoScore` — window-first, the
+    // same rule "Puntuación GEO" obeys everywhere else in the product — never
+    // the raw `visibility_score` this map used to expose directly. That
+    // divergence (6 on Overview, 2 here, same scan) was the audit's P0-01.
+    const rawRuns = rawRunsByProject.get(projectId);
+    latestScoreByProject[projectId] = rawRuns && rawRuns.length > 0 ? resolveGeoScore(rawRuns).value : null;
 
     // Antes: `seen[0] - seen[1]`. Una resta cruda de dos puntuaciones no dice
     // nada por sí sola — es un cambio real de visibilidad sólo si los dos
     // escaneos tienen respuestas suficientes Y midieron lo mismo (ADR 0024).
     // Es exactamente el fallo que DELTA-GUARD-1 corrigió en el historial de
-    // escaneos, y esta función lo seguía cometiendo.
+    // escaneos, y esta función lo seguía cometiendo. Delta sigue siendo una
+    // magnitud distinta de la puntuación de titular (badge de tendencia, no
+    // "Puntuación GEO") y queda fuera del alcance de TRUST-METRICS-1.
     if (seen.length < 2) {
       scoreDeltaByProject[projectId] = null;
       continue;

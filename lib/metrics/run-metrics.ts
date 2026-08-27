@@ -65,7 +65,7 @@ export type GeoScoreBasis =
    *  label, because it is the best estimate available and invents nothing. */
   | "single_run";
 
-export type GeoScore = {
+export type GeoScoreResult = {
   /** Always this constant — every consumer renders the same label. */
   label: typeof GEO_SCORE_LABEL;
   /** 0–100, rounded. Never `visibility_score`. */
@@ -89,7 +89,7 @@ export type GeoScore = {
  * caller error, not a valid "no scans yet" state: every caller of this
  * function already knows a completed run exists.
  */
-export function resolveGeoScore(runs: readonly GeoScoreRunRow[]): GeoScore {
+export function resolveGeoScore(runs: readonly GeoScoreRunRow[]): GeoScoreResult {
   if (runs.length === 0) {
     throw new Error("resolveGeoScore: at least one completed run is required");
   }
