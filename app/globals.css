@@ -7714,6 +7714,23 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    variantes que aún no existen. */
 .legal-body a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 
+/* El fundador, mirando un artículo en una pantalla ancha: la columna de
+   texto (.blog-body, 760px) colgaba del borde izquierdo de .lp-inner
+   (1124px de contenido) en vez de centrarse, dejando un hueco muerto a la
+   derecha — y la portada/el rastro de miga, sin max-width propio, se
+   quedaban más anchos que el propio texto que envolvían. `:has()` en vez de
+   una clase envolvente nueva: .lp-inner es compartido por TODO el sitio
+   público, así que la regla sólo debe alcanzar a las páginas que de verdad
+   tienen `.blog-body` (los 17 artículos y las 6 páginas de /comparativas) —
+   nunca a /docs, /glosario, el comprobador gratuito o /que-es-genscore, que
+   comparten el mismo `.lp-inner` con un layout distinto. Sólo fija
+   margin-left/margin-right (no `margin` en corto), así que no pisa los
+   margin-top/bottom que ya reparten el ritmo vertical más arriba en este
+   fichero (`.blog-cover-compact + h1`, `h1 + .blog-post-meta`, etc.) —
+   ninguno de ellos declara el eje horizontal, así que no hay pelea de
+   especificidad que resolver. */
+.lp-inner:has(> .blog-body) > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+
 .blog-body { max-width: 760px; }
 .blog-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
 .blog-body h2:first-child { margin-top: 0; }
@@ -7775,13 +7792,114 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    Las reglas van acotadas al artículo a propósito: `.blog-cover-compact`
    solo se usa aquí (el índice y los hubs usan la portada normal dentro de
    una tarjeta), y `.blog-post-meta` sí se comparte con las tarjetas del
-   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`. */
+   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`.
+
+   BLOG-INDEX-CARDS-2026-08 Fase 2: el rastro de miga (`.breadcrumb-trail`,
+   ver más abajo) ahora es el primer hijo real de `.lp-inner` en todo
+   artículo y toda página de `/comparativas/<slug>`, así que
+   `.blog-cover-compact` deja de ser `:first-child` — el tirón de -36px que
+   compensaba el padding de `.lp-section` se traslada a lo que SÍ es el
+   primer hijo ahora. La regla original se deja intacta por si algún día
+   existe una portada sin rastro delante; hoy no ocurre, así que es
+   inofensiva, no muerta. */
 .lp-inner > .blog-cover-compact:first-child { margin-top: -36px; border-radius: var(--r-md); }
+.lp-inner > .breadcrumb-trail:first-child { margin-top: -36px; }
 .blog-cover-compact { margin-bottom: 24px; }
 .blog-cover-compact + h1 { margin: 0 0 14px; line-height: 1.22; }
 h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
+
+/* BLOG-INDEX-CARDS-2026-08 Fase 2: rastro de miga visible en artículos y
+   páginas de /comparativas (founder request — la portada de un artículo
+   sólo llevaba el BreadcrumbList invisible de schema.org). Opt-in vía la
+   prop `breadcrumb` de `BlogPageShell`: las demás superficies que
+   comparten el shell (/docs, /glosario, el comprobador gratuito,
+   /que-es-genscore) no la pasan y no cambian. `--ink-3` aprueba AA aquí
+   porque `.lp` pinta blanco puro (#fff), no `--canvas` — ver
+   `.claude/rules/styles.md`, "--ink-3 sólo aprueba AA sobre blanco puro". */
+.breadcrumb-trail { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 13px; font-weight: 600; }
+.breadcrumb-item { display: inline-flex; align-items: center; gap: 8px; }
+.breadcrumb-trail a { color: var(--brand-blue); }
+.breadcrumb-trail a:hover { text-decoration: underline; }
+.breadcrumb-sep { color: var(--ink-4); }
+
+/* BLOG-COVERS-2026-08: el índice de /blog deja de mostrar `<BlogCover>` por
+   tarjeta (imagen o degradado+icono) y pasa a tarjetas de color plano por
+   clúster, sin portada. Sólo toca el ÍNDICE (`app/blog/page.tsx`) — la
+   portada de cabecera de cada artículo (`.blog-cover-compact`) y las
+   tarjetas de `app/blog/[cluster]/page.tsx` (`.blog-index-card`, sin tocar)
+   siguen exactamente igual. El color no es decorativo: identifica el
+   clúster, así que se repite como acento en la cabecera del carril
+   (`.blog-rail-dot`) y en cada tarjeta de ese clúster. */
+.blog-subtitle { margin: 14px 0 0; font-size: 19px; font-weight: 700; color: var(--ink-2); line-height: 1.4; letter-spacing: -.005em; }
+
+.blog-rail { margin-top: 48px; }
+.blog-rail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.blog-rail-head-left { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.blog-rail-head-left h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
+.blog-rail-head-left p { margin: 0; font-size: 14px; color: var(--ink-3); }
+.blog-rail-dot { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+.blog-rail-more { flex: none; font-size: 13.5px; font-weight: 700; color: var(--brand-blue); white-space: nowrap; }
+.blog-rail-more:hover { text-decoration: underline; }
+.blog-rail-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 22px; }
+@media (max-width: 760px) {
+  .blog-rail-grid { grid-template-columns: 1fr; }
+}
+
+.blog-tile { display: flex; flex-direction: column; border-radius: var(--r-lg); padding: 26px; }
+.blog-tile h2 { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.28; letter-spacing: -.01em; }
+.blog-tile p { margin: 10px 0 0; font-size: 14px; line-height: 1.5; }
+.blog-tile time { display: block; margin-top: 16px; font-size: 12.5px; font-weight: 600; letter-spacing: .01em; }
+
+.blog-tile--fundamentos { background: #E3ECFE; }
+.blog-tile--fundamentos p { color: #23345C; }
+.blog-tile--fundamentos time { color: #4863A8; }
+.blog-tile--medicion { background: #DEF6F8; }
+.blog-tile--medicion p { color: #0D4A52; }
+.blog-tile--medicion time { color: #167985; }
+.blog-tile--playbooks { background: #ECEEF3; }
+.blog-tile--playbooks p { color: #2C3542; }
+.blog-tile--playbooks time { color: #56606F; }
+.blog-tile--sectores { background: #DBDFFC; }
+.blog-tile--sectores p { color: #2A3170; }
+.blog-tile--sectores time { color: #454FB0; }
+.blog-tile--comparativas { background: #D3F0E6; }
+.blog-tile--comparativas p { color: #114F44; }
+
+/* `color` explícito aquí, aunque cada hijo (tag/h2/p/time) ya declara el
+   suyo: sin esto el ancla hereda la tinta oscura ambiente de la página
+   mientras su propio fondo es marino — el piloto audita el color computado
+   del CONTROL entero (`getComputedStyle(el).color`, no el de sus hijos)
+   contra su fondo resuelto, así que sin este color propio lee "tinta oscura
+   sobre marino" (1,08:1) aunque nada se pinte realmente así
+   (`.claude/rules/styles.md`, patrón "un modificador suelto no gana a su
+   contexto" — mismo tipo de bug, esta vez en el color base de un ancla
+   entera en vez de un modificador). */
+.blog-featured { position: relative; display: block; margin-top: 40px; border-radius: var(--r-xl); padding: 44px 48px; background: var(--brand-surface-dark); color: var(--brand-ink-on-dark); overflow: hidden; }
+.blog-featured-ring { position: absolute; right: -70px; top: -90px; opacity: .16; pointer-events: none; }
+.blog-featured-content { position: relative; max-width: 640px; }
+.blog-featured-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.blog-featured h2 { margin: 18px 0 0; font-size: 32px; font-weight: 800; letter-spacing: -.02em; line-height: 1.18; color: var(--brand-ink-on-dark); }
+.blog-featured p { margin: 14px 0 0; font-size: 15px; line-height: 1.6; color: rgba(247,248,251,.78); }
+.blog-featured time { display: block; margin-top: 20px; font-size: 12.5px; font-weight: 600; color: rgba(247,248,251,.55); }
+@media (max-width: 760px) {
+  .blog-featured { padding: 30px 26px; }
+  .blog-featured h2 { font-size: 23px; }
+}
+
+.blog-banner { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 40px; margin-top: 64px; border-radius: 20px; padding: 48px; background: var(--brand-surface-dark); overflow: hidden; }
+.blog-banner-ring { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); opacity: .18; pointer-events: none; }
+.blog-banner-content { position: relative; max-width: 620px; }
+.blog-banner h2 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; color: var(--brand-ink-on-dark); }
+.blog-banner p { margin: 12px 0 0; font-size: 15.5px; line-height: 1.6; color: rgba(247,248,251,.78); }
+.blog-banner .link-mini { color: #fff; font-weight: 700; text-decoration: underline; }
+.blog-banner-cta { display: inline-flex; align-items: center; height: 46px; padding: 0 26px; margin-top: 26px; border-radius: 999px; background: #fff; color: var(--brand-surface-dark); font-size: 14.5px; font-weight: 700; }
+@media (max-width: 760px) {
+  .blog-banner { flex-direction: column; align-items: flex-start; padding: 30px 26px; }
+  .blog-banner-ring { display: none; }
+  .blog-banner h2 { font-size: 22px; }
+}
 
 /* GROWTH-2 Fase 2.3: /docs sidebar layout. */
 .docs-layout { display: flex; flex-direction: column; gap: 32px; align-items: flex-start; }
@@ -7964,7 +8082,12 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .price-price { display: flex; align-items: baseline; gap: 4px; margin: 16px 0 0; }
 .price-amount { font-size: 40px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
 .price-was { font-size: 18px; font-weight: 650; color: var(--ink-4); text-decoration: line-through; text-decoration-color: var(--ink-4); margin-right: 2px; }
-.price-per { font-size: 15px; font-weight: 650; color: var(--ink-4); }
+.price-per { font-size: 15px; font-weight: 650; color: var(--ink-4); white-space: nowrap; }
+/* La duración de la promo, en su propia línea — ver el comentario en
+   `components/pricing/pricing-page.tsx`. `--ink-3` y no el `--ink-4` de sus
+   vecinas: es texto nuevo, y sobre el blanco de la tarjeta da 4,76:1 (AA)
+   frente al 2,5:1 de `--ink-4`. */
+.price-term { display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
 .price-who { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; font-weight: 550; min-height: 34px; }
 .price-cta { width: 100%; margin-top: 14px; }
 .price-card.price-rec .price-cta.btn-ghost { border-color: var(--accent-ring); }

@@ -16322,7 +16322,242 @@ la que ya esté en `main`) y con ella todas sus referencias
 (`grep -rn "§168"`). Mismo protocolo que documentan los §159, §161 y §163.
 ---
 
-## 169. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
+## 169. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
+
+**Propuesta del fundador** (referencia: el listado de blog de Semrush —
+tarjetas de color plano, sin portada, título + subtítulo), iterada en un
+artefacto de diseño antes de tocar código y aprobada con Task Intake Report
+explícito. Fase 1 de 2: sólo el índice de `/blog` (`app/blog/page.tsx`). La
+Fase 2 (mega menú "Recursos" en `components/marketing/public-header.tsx`,
+compartido por las 8 superficies públicas) queda para un PR aparte, por
+radio de impacto.
+
+**Qué cambia:**
+
+- Cada tarjeta del índice deja de renderizar `<BlogCover>` (imagen o
+  degradado+icono) y pasa a un color plano por clúster —azul (Fundamentos),
+  cian (Metodología), gris pizarra (Playbooks), índigo (GEO por sector),
+  verde-azulado (Comparativas). El color no es decorativo: identifica el
+  clúster de origen, repetido como punto en la cabecera del carril.
+- Un carril "destacado" a todo ancho, en marino, con el artículo publicado
+  más recientemente (`getMostRecentPost()`, nuevo en `lib/blog/posts.ts`),
+  excluido de su propio carril de clúster para no repetirse.
+- **Comparativas pasa de párrafo suelto a carril de primer nivel**, con el
+  mismo patrón de tarjetas que los clústeres — mueve al final de la página,
+  justo antes del banner (el fundador lo pidió explícitamente después de
+  ver la primera versión, que lo dejaba arriba). Su lista de páginas vivía
+  sólo como un array local en `app/comparativas/page.tsx`; ahora es
+  `lib/comparativas/index.ts` (`COMPARATIVAS_INDEX`), y las dos superficies
+  la comparten — mismo motivo que `BLOG_CLUSTERS`/`BLOG_POSTS`: un slug o
+  título que cambie no puede desincronizarse entre dos copias.
+- Cada carril enseña como mucho 3 tarjetas. Si el clúster (o Comparativas)
+  tiene más, un enlace **"Ver más →" genérico**, sin cifra — el índice del
+  blog no publica un recuento de artículos (regla ya existente,
+  `growth-content.md`, log §61) — hacia `/blog/[cluster]` o `/comparativas`.
+  Se descartó un carrusel: no hacía falta construir nada nuevo (esas rutas
+  ya existen), y un control interactivo nuevo es una superficie más que
+  puede fallar en el barrido del `ux-pilot`.
+- El subtítulo bajo "Blog" pasa de `.legal-updated` (13px, `--ink-3`) a
+  `.blog-subtitle` (19px, negrita, `--ink-2`, ancho completo) — el fundador
+  lo encontró demasiado parecido a texto plano.
+- Los enlaces de RSS y del comprobador gratuito, antes bajo el título, bajan
+  a un banner a todo ancho al final de la página (marino, con CTA "Comprobar
+  gratis" hacia `/gratis/aparece-mi-marca-en-chatgpt` y el enlace de RSS
+  dentro, con `.link-mini` — lo exige
+  `marketing-content-links.test.ts`, "el enlace lleva una clase de enlace,
+  no el color heredado del texto").
+
+**Qué NO cambia, y por qué.** La portada real de cada artículo
+(`.blog-cover-compact` en la cabecera de `app/blog/<slug>/page.mdx`), su uso
+en Open Graph/redes y en el schema, y las tarjetas de
+`app/blog/[cluster]/page.tsx` (`.blog-index-card`, sin tocar) siguen
+exactamente igual — esta fase toca sólo el listado del índice. `ADR 0028`
+("Ningún visual es decorativo: todos son evidencia") sigue vigente para el
+cuerpo y la portada de un artículo; nunca exigió que el ÍNDICE mostrara esa
+portada, así que retirarla del listado no es una excepción a la política, es
+una superficie que esa política nunca gobernó. Aun así se lo señalé al
+fundador antes de implementar, por si lo veía de otra forma — lo aprobó.
+
+**Colores elegidos y por qué no son un arcoíris.** La primera pasada usó un
+tinte azul pálido para Fundamentos y otro casi idéntico para GEO por sector
+— indistinguibles a primera vista. Corregido dando a cada carril un matiz
+realmente distinto dentro de la familia azul/cian/marino de la marca (nunca
+ámbar: `--brand-warm` es exclusivo del punto del logo, `docs/brand/
+brand-guidelines.md`), en vez de rotar por más tonos.
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835 — 5 tests nuevos:
+`getMostRecentPost` en `lib/blog/posts.test.ts`, `lib/comparativas/
+index.test.ts`), `pnpm run typecheck`, `pnpm run lint`, `pnpm run build`
+(incluye `/blog` prerenderizado como estático), todo en verde. Verificado a
+mano en el HTML generado que "Ver más →" sale exactamente en Metodología,
+Playbooks y Comparativas — no en Fundamentos ni en GEO por sector, que caben
+en 3 tarjetas.
+
+**Addendum, mismo día — lo cazó el `ux-pilot` en el PR: `PILOT FAIL` por
+contraste en las tres anchuras, la tarjeta destacada.** `.blog-featured`
+(`<Link>` que envuelve toda la tarjeta) declaraba `background: var(--brand-
+surface-dark)` pero nunca su propio `color` — cada hijo (`.blog-featured-tag`,
+`h2`, `p`, `time`) sí pintaba el suyo en claro, así que visualmente todo se
+leía bien. El auditor del piloto (`tests/pilot/support/page-audit.ts`) no mira
+eso: lee `getComputedStyle(el).color` del CONTROL entero (aquí, el `<a>`), que
+sin `color` propio hereda la tinta oscura ambiente de la página, contra el
+primer fondo opaco resolviendo hacia arriba (el marino de la propia tarjeta)
+— tinta oscura sobre marino, 1,08:1. Mismo patrón que ya documenta
+`.claude/rules/styles.md` ("un modificador suelto no gana a su contexto"),
+esta vez en el color base de un ancla entera envolviendo contenido con
+colores propios, no en un modificador de sección. Arreglado dando a
+`.blog-featured` su propio `color: var(--brand-ink-on-dark)` — no cambia nada
+visible (los hijos ya pintaban así), cierra el hueco que el auditor sí ve.
+`pnpm test` (204/204, 2.835/2.835) y `pnpm run validate` en verde tras el
+arreglo.
+
+**Segundo addendum, mismo día — Fase 2 del propio Task Intake, pedida por el
+fundador tras revisar el preview: rastro de miga visible en artículos y
+comparativas.** Hasta ahora sólo existía el `BreadcrumbList` invisible de
+schema.org (`<BreadcrumbSchema>`); la cabecera de un artículo no enseñaba de
+qué clúster venía. Ejemplo del fundador: "blog -> Fundamentos GEO".
+
+- `lib/blog/posts.ts`: `blogPostBreadcrumb(post)` (Blog → su clúster, se
+  detiene ahí a propósito — el título ya es el `<h1>` justo debajo, repetirlo
+  en el rastro diría lo mismo dos veces) y `blogPostBreadcrumbSchema(post)`
+  (la misma cadena, con "Inicio" delante y el propio artículo detrás, para el
+  `<BreadcrumbSchema>` existente). El JSON-LD de los 17 artículos pasa de
+  Inicio→Blog→título a Inicio→Blog→Clúster→título — se saltaba el clúster
+  antes también en la estructura invisible, no sólo en la visible.
+- `lib/comparativas/index.ts`: `COMPARATIVAS_BREADCRUMB` (un único cruce,
+  "Comparativas" → `/comparativas`), compartida por las 5 páginas de
+  comparativa — su JSON-LD ya incluía ese nivel, no hacía falta tocarlo.
+- `components/blog/blog-page-shell.tsx`: prop opcional `breadcrumb` — **opt-in
+  a propósito**, porque este shell también lo usan `/docs`, `/glosario`, el
+  comprobador gratuito y `/que-es-genscore`, y ninguna de esas pidió esto. Sin
+  la prop, cero cambio de render.
+- `app/globals.css`: `.breadcrumb-trail` (13px, `--ink-3` — aprueba AA porque
+  `.lp` pinta blanco puro, no `--canvas`; ver `.claude/rules/styles.md`). El
+  rastro pasa a ser el primer hijo real de `.lp-inner` en todo artículo, así
+  que `.blog-cover-compact` deja de ser `:first-child` — el tirón de -36px que
+  compensaba el padding de `.lp-section` se trasladó a
+  `.breadcrumb-trail:first-child`; la regla original se deja (inofensiva, no
+  muerta) por si algún día hay una portada sin rastro delante.
+- 17 `page.mdx` de artículo + 5 `page.tsx` de comparativa: cada uno pasa
+  `breadcrumb={blogPostBreadcrumb(post)}` / `breadcrumb={COMPARATIVAS_BREADCRUMB}`
+  al `<BlogPageShell>` y `items={blogPostBreadcrumbSchema(post)}` al
+  `<BreadcrumbSchema>` existente (los 5 de comparativas no tocan su schema,
+  ya llevaba el nivel de "Comparativas").
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde. Verificado a mano en
+el HTML generado de `geo-para-saas-b2b` ("Blog / GEO por sector", como pidió
+el fundador) y de `genscore-vs-otterly` ("Comparativas"), y que el JSON-LD del
+primero ya incluye el nivel de clúster.
+
+**Tercer addendum, mismo día — el fundador vio un artículo real y preguntó
+por qué el texto quedaba pegado a la izquierda con un hueco vacío a la
+derecha en pantallas anchas.** `.blog-body` ya llevaba `max-width: 760px`,
+pero sin `margin: 0 auto` esa caja se queda alineada al borde izquierdo de
+`.lp-inner` (que sí es ancho completo) en vez de centrarse — visible sólo a
+partir de donde `.lp-inner` supera los 760px, que es exactamente el caso en
+1280px de escritorio. El mismo hueco afectaba a lo que va delante del
+cuerpo (el rastro de miga nuevo de este PR, la portada compacta, el `<h1>`,
+la meta del post) porque esos elementos son hermanos de `.blog-body`, no
+hijos suyos — centrar sólo `.blog-body` habría dejado la cabecera pegada a
+la izquierda encima de un cuerpo centrado.
+
+- `app/globals.css`: `.lp-inner:has(> .blog-body) > * { max-width: 760px;
+  margin-left: auto; margin-right: auto; }` — se ancla con `:has()` al
+  contenedor que de verdad tiene un `.blog-body` como hijo directo, así que
+  sólo alcanza a artículos y comparativas (los únicos que renderizan ese
+  bloque) y no a las páginas pilar de clúster (`/blog/[cluster]`), que no lo
+  usan y se comprobó por grep que no lo tienen. Aplicar el ancho y el
+  centrado a **todos** los hijos directos de ese `.lp-inner` —no sólo a
+  `.blog-body`— es lo que centra también el rastro de miga y la cabecera sin
+  necesitar un `<div>` envoltorio nuevo ni tocar el marcado de dos tipos de
+  página con cabeceras distintas (artículo: `<h1>` suelto +
+  `.blog-cover-compact` + `.blog-post-meta`; comparativa: `<h1
+  className="lp-h2">` + `.legal-updated`).
+- No afecta a `/blog` (el índice de este PR no usa `.blog-body`, usa sus
+  propios carriles a ancho completo) ni a ninguna otra superficie que
+  comparta `.lp-inner` (docs, glosario, comprobador gratuito, legal): todas
+  esas quedan fuera del selector porque ninguna tiene `.blog-body` como
+  hijo.
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build` — confirmado en el CSS compilado
+(`.next/static/chunks/*.css`) que la regla
+`lp-inner:has(>.blog-body)>*{max-width:760px;margin-left:auto;margin-right:auto}`
+se generó tal cual — y `git diff --check`, todo en verde.
+
+---
+
+## 170. La consola cotizaba 179 € mientras /precios decía 59 € (PROMO-CONSOLE-PARITY-1, 2026-08-27)
+
+**Lo que vio el fundador**, con una cuenta recién creada en prueba Pro gratuita:
+*"El precio promocionado no se ve en la consola. Un usuario recién creado con
+la prueba Pro gratuita tiene que ver los 59€. Sí los ve en la pantalla de
+cambio de plan y en /precios"*.
+
+**Por qué pasaba.** Hay **dos** promociones distintas y la consola sólo conocía
+una:
+
+| | de dónde sale | qué afirma |
+|---|---|---|
+| **contratada** | cupón vivo en una suscripción real de Stripe, con su fecha leída de la propia suscripción (`getActiveSubscriptionPromo`, §152) | lo que el cliente **ya paga** |
+| **ofrecida** | la campaña abierta (`getActivePromoPlanIds`: fecha **y** cupón configurado) | lo que pagaría **si contrata** antes del cierre |
+
+«Tu plan» y el índice de Ajustes leían sólo `usage.subscriptionPromo`, que es
+la primera. Quien está en prueba **no tiene suscripción**, así que ahí valía
+`null` y las dos pantallas caían al precio de tarifa. `/precios` y el modal de
+cambio de plan sí miran la campaña, y por eso decían 59 €. Misma cuenta, mismo
+instante, dos precios a dos clics.
+
+**El arreglo.** `resolveShownPromoPrice` (`app/pricing/plans-data.ts`, junto a
+`PROMO_ENDS_AT` y `PROMO_DURATION_MONTHS`) decide en **un solo sitio** qué
+precio enseña una pantalla, y devuelve **cuál de las dos promociones es**. Lo
+llaman las dos superficies de consola. Que devuelva el tipo no es adorno: el
+copy no puede ser el mismo.
+
+- contratada → «Precio de lanzamiento hasta el **{fecha de tu suscripción}**»
+  (sin cambios, §152).
+- ofrecida → «Precio de lanzamiento **si contratas** antes del **1 de
+  septiembre**: 59 €/mes durante 6 meses, después 179 €/mes».
+
+Colapsarlas en un `??` le habría dicho a alguien en prueba gratuita que ya
+paga 59 €, que es justo el modo de fallo sobre el que este repositorio lleva
+escribiendo reglas. La prueba que lo fija está escrita como tal
+(`app/pricing/promo-display.test.ts`, «never labels an offer as contracted»).
+
+Y la campaña cerrada silencia **la oferta**, nunca **lo contratado**: quien
+canjeó el cupón antes del cierre conserva sus 6 meses mucho después, así que un
+`promoPlanIds` vacío no puede borrar el precio que de verdad está pagando.
+
+**Dos arreglos menores de `/precios`, del mismo reporte:**
+
+- **«6 meses» partía de línea.** Iba pegado al precio como `/mes · 6 meses` y
+  se rompía entre el «6» y «meses» en la tarjeta recomendada, la más estrecha
+  por su galón. Baja a su propia línea (`.price-term`) en vez de forzar
+  `nowrap`, que sólo cambia un corte por un desbordamiento. `--ink-3` y no el
+  `--ink-4` de sus vecinas: es texto nuevo y sobre el blanco de la tarjeta da
+  4,76:1 (AA) frente a 2,5:1.
+- **Amazon Pay y Klarna** entran en la fila de métodos de pago, con los
+  trazados reales de simple-icons. En **tono neutro oscuro**, el mismo trato
+  que ya reciben Apple Pay y Google Pay en esa fila: el rosa de marca de Klarna
+  (#FFB3C7) da ~1,4:1 sobre la superficie tintada de `.lp-section.alt` y no se
+  ve. El nombre va en texto al lado del glifo, así que la marca nunca es la
+  única pista.
+
+**Pendiente de comprobar por el fundador, y no lo puede comprobar el código:**
+esa fila afirma qué ofrece Stripe Checkout. Amazon Pay y Klarna sólo aparecen
+de verdad si están **activados en el Dashboard de Stripe** para esta cuenta y
+para EUR. Si no lo están, la insignia promete un método que el checkout no
+enseña — mismo tipo de falsedad que las reglas de esta casa persiguen en las
+métricas.
+
+**Comprobado.** `pnpm test` 206/206 (2.861/2.861, 6 nuevos), `pnpm run validate`
+y `git diff --check` en verde.
+
+---
+
+## 171. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
 
 **Lo que vio el fundador.** En la panorámica competitiva de Visión general, con
 un escaneo de 30 respuestas: *"no tiene ningún sentido que Euskaltel aparezca
@@ -16391,3 +16626,11 @@ acumulada y viviendo en Competidores etiquetada como tal (§11); la panorámica
 sigue publicando la mención del último escaneo (§36). No se han unificado las
 dos poblaciones — la regla de ruta pide decisión explícita para eso, y el
 diagnóstico de arriba dice que no hacía falta.
+
+
+**Nota de renumeración.** Esta sección nació como §169 sobre una `main` que
+todavía no tenía ni el §169 de BLOG-INDEX-CARDS (#479) ni el §170 de
+PROMO-CONSOLE-PARITY-1 (#485). Ambos aterrizaron antes, así que al fusionar se
+renumeró ESTA —la que no estaba en `main`— y con ella sus referencias en
+`CLAUDE.md` y `.claude/rules/competitors.md` (`grep -rn "§171"`). Mismo
+protocolo que documentan los §159, §161, §163 y §168.

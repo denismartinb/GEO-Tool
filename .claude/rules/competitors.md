@@ -114,7 +114,7 @@ propia marca cuando caía fuera del top 5.
   que comparar n=1 con n=26 no es un matiz: Euskaltel salió UNA vez en 30, fue
   primero en esa respuesta y encabezó las dos pantallas con un 1,00, por delante
   de Movistar (26 de 30) — «Euskaltel 1º · 3% de mención» (fundador,
-  2026-08-27, log §169). El suelo vive en `rankLatestPositions`
+  2026-08-27, log §171). El suelo vive en `rankLatestPositions`
   (`MIN_MENTION_RATE_FOR_RANK` 10%, `MIN_MENTIONS_FOR_RANK` 2) y por tanto
   arregla las dos pantallas a la vez, que es para lo que ese módulo existe.
   **Es un suelo, no un filtro**: por debajo la entidad conserva fila, media y

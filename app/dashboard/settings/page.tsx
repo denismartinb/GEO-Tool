@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { getUsageSummary } from "@/lib/billing";
+import { getActivePromoPlanIds } from "@/lib/stripe";
 import { deriveNameFromEmail } from "@/lib/derive-name-from-email";
-import { PLANS } from "@/app/pricing/plans-data";
+import { PLANS, resolveShownPromoPrice } from "@/app/pricing/plans-data";
 import { AccountSection } from "@/components/settings/account-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
@@ -79,17 +80,29 @@ export default async function SettingsPage({
   // PRICING-PROMO-1: same struck-through/promo-price convention as "Tu plan"
   // below (plan-billing-section.tsx) — usage.subscriptionPromo is already the
   // real, Stripe-verified discount for this exact subscription.
+  //
+  // PROMO-CONSOLE-PARITY-1: and when there is no subscription yet (a free Pro
+  // trial), the launch price this account WOULD pay. Without it this index read
+  // "Pro · 179 €/mes" while `/precios` and the change-plan modal said 59 €
+  // (founder, 2026-08-27). Same gate as the card — `getActivePromoPlanIds`
+  // needs the campaign date AND a configured Stripe coupon, so this line can
+  // never quote a discount checkout would refuse.
+  const shownPromo = resolveShownPromoPrice({
+    plan,
+    activePromoPrice: usage?.subscriptionPromo?.promoPrice,
+    promoPlanIds: getActivePromoPlanIds()
+  });
   const planLabel =
     isAdmin && plan
       ? (plan.priceLabel ??
-        (usage?.subscriptionPromo ? (
+        (shownPromo ? (
           <>
             {plan.name} ·{" "}
             <span className="was">
               {plan.price}&nbsp;€/{plan.period}
             </span>{" "}
             <span className="now">
-              {usage.subscriptionPromo.promoPrice}&nbsp;€/{plan.period}
+              {shownPromo.price}&nbsp;€/{plan.period}
             </span>
           </>
         ) : (
