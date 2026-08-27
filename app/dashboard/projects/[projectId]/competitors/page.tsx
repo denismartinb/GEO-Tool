@@ -10,7 +10,7 @@ import { ManageCompetitorsPanel } from "./manage-competitors-panel";
 import { ManageBrandAliasesPanel } from "./manage-brand-aliases-panel";
 import { PromptGapSection } from "./prompt-gap-section";
 import { SuggestedCompetitorsSection } from "./suggested-competitors-section";
-import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
+import { DEFAULT_VISIBLE, PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import {
   computeEntityEngineBreakdown,
@@ -21,7 +21,7 @@ import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-window";
-import { orderByLatestRank, rankLatestPositions } from "@/lib/competitors/latest-positions";
+import { defaultVisibleSeriesKeys, orderByLatestRank, rankLatestPositions } from "@/lib/competitors/latest-positions";
 import {
   MEAN_RANK_COLUMN_LABEL,
   MEAN_RANK_LIST_HEADLINE,
@@ -507,6 +507,16 @@ export default async function CompetitorsPage({
     color: TREND_SERIES_COLORS[i % TREND_SERIES_COLORS.length]
   }));
 
+  // Cuáles nacen encendidas es OTRA pregunta que en qué orden se listan, y la
+  // primera pasada las confundió: con la marca propia siempre primera, encender
+  // «las cuatro primeras» dejaba fuera al 4º de la clasificación cuando tu marca
+  // era 5ª — o sea, escondía a alguien que te gana (fundador, 2026-08-27; §177).
+  const chartVisibleKeys = defaultVisibleSeriesKeys({
+    rankedKeys: latestPositions.map((entry) => entry.key),
+    brandKey: "brand",
+    cap: DEFAULT_VISIBLE
+  });
+
   // COMPETITOR-SUGGESTIONS-1: unlike the emerging-brands block it replaced,
   // this is unconditional — it derives from the business profile, not from
   // scan output, so it has something to say even before the first scan and
@@ -857,7 +867,12 @@ export default async function CompetitorsPage({
                   <div className={`card cm2-pos-card${hasTrendData ? "" : " list-only"}`}>
                     {hasTrendData ? (
                       <div className="cm2-pos-chart">
-                        <PositionTrendChart series={chartSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
+                        <PositionTrendChart
+                          series={chartSeries}
+                          data={chartTrendData}
+                          maxPosition={maxTrendPosition}
+                          defaultVisibleKeys={chartVisibleKeys}
+                        />
                       </div>
                     ) : null}
                     {latestPositions.length > 0 ? (

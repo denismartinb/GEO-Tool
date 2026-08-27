@@ -137,3 +137,45 @@ export function orderByLatestRank<T extends { key: string; isBrand?: boolean }>(
 
   return [...brand, ...ranked, ...unranked];
 }
+
+/**
+ * MEAN-RANK-READS-TRUE-1, segunda pasada (2026-08-27, log §177) — qué series
+ * nacen encendidas en el gráfico de puestos.
+ *
+ * **El fallo que arregla, que introdujo la primera pasada.** `orderByLatestRank`
+ * pone la marca propia primera, y el gráfico encendía las cuatro primeras. Si tu
+ * marca es 5ª, esas cuatro son *tú + los tres primeros*, así que **el 4º se
+ * apaga — y el 4º es alguien que te está ganando**. En el proyecto Mozilla del
+ * fundador: Amazon 1º, Proton VPN 2º, Chrome 3º, **Brave 4º**, Mozilla 5º, y
+ * Brave no salía:
+ *
+ * > *"¿no debería salir también Brave si está encima de Mozilla?"*
+ * > — fundador, 2026-08-27
+ *
+ * Sí. Esconder por defecto a una marca que te adelanta es justo lo contrario de
+ * para qué se mira este bloque.
+ *
+ * **La regla, ahora:** los `cap` primeros de la clasificación, **más tu marca si
+ * no está entre ellos**. La marca propia deja de gastar un hueco de contexto y
+ * pasa a sumarse: 4 líneas cuando estás dentro del corte, 5 cuando no.
+ *
+ * **Por qué esa quinta línea vale su coste.** `DEFAULT_VISIBLE` es 4 porque ocho
+ * líneas superpuestas no las lee nadie y porque a partir de ahí las etiquetas de
+ * final de línea empiezan a chocar. Pero el caso que produce la quinta es
+ * precisamente el que más importa —estás fuera del podio y quieres ver a quién
+ * tienes delante— y una línea de más es un precio menor que ocultar a un rival
+ * que te gana. La paleta tiene seis tonos, así que la quinta sigue teniendo
+ * color propio.
+ */
+export function defaultVisibleSeriesKeys({
+  rankedKeys,
+  brandKey,
+  cap
+}: {
+  rankedKeys: readonly string[];
+  brandKey: string;
+  cap: number;
+}): string[] {
+  const top = rankedKeys.slice(0, cap);
+  return top.includes(brandKey) ? top : [...top, brandKey];
+}

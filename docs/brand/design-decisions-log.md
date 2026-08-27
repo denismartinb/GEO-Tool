@@ -16764,6 +16764,22 @@ que mide.**
    (`orderByLatestRank`), con la marca propia siempre primera para que su línea
    nunca nazca apagada. Las series sin puesto en el último escaneo conservan la
    suya, detrás: pueden tenerlo en escaneos anteriores.
+
+   **Segunda pasada, y hacía falta.** Poner la marca primera y encender «las
+   cuatro primeras» confundía dos preguntas distintas —en qué orden se listan y
+   cuáles nacen encendidas— y el resultado era que la marca propia **gastaba un
+   hueco de contexto**: con Mozilla 5ª, las cuatro encendidas eran ella y los
+   tres primeros, así que **Brave, 4º, nacía apagado**. El fundador lo vio en el
+   preview: *"¿no debería salir también Brave si está encima de Mozilla?"*. Sí:
+   esconder por defecto a quien te adelanta es lo contrario de para qué se mira
+   este bloque. La regla pasa a ser **los `cap` primeros de la clasificación
+   más tu marca si no está entre ellos** (`defaultVisibleSeriesKeys`), de modo
+   que la marca deja de competir por un hueco y se suma: 4 líneas si estás
+   dentro del corte, 5 si no. Esa quinta línea vale su coste precisamente en el
+   caso que la produce —estás fuera del podio y quieres ver a quién tienes
+   delante— y la paleta tiene seis tonos, así que sigue teniendo color propio.
+   El gráfico gana un `defaultVisibleKeys` opcional: sin él se comporta como
+   siempre, porque sólo la pantalla sabe cuál es la marca propia.
 4. **El color se asigna DESPUÉS de reordenar.** La paleta está ordenada de más a
    menos distinguible entre sí; asignarla antes habría dejado a las cuatro
    visibles con los tonos 0, 3, 5 y 7 en vez de con los cuatro elegidos para

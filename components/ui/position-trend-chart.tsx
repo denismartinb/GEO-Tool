@@ -19,6 +19,11 @@ type PositionTrendChartProps = {
   series: TrendSeries[];
   data: TrendPoint[];
   maxPosition: number;
+  /**
+   * Qué series nacen encendidas. Omitirlo = las primeras `DEFAULT_VISIBLE`,
+   * que es lo que hacía antes de log §177.
+   */
+  defaultVisibleKeys?: readonly string[];
 };
 
 const W = 640;
@@ -37,14 +42,32 @@ const PAD_BOTTOM = 28;
  * the same blue ramp. Four is the point where distinct hues stay
  * distinguishable (including under colour-vision deficiency) and where end
  * labels still fit without colliding.
+ *
+ * Es el número de series de CONTEXTO. La marca propia puede sumarse a mayores
+ * (`defaultVisibleKeys`), así que el máximo real por defecto es 5 — ver
+ * `defaultVisibleSeriesKeys` en `lib/competitors/latest-positions.ts` para por
+ * qué esa quinta línea vale su coste.
  */
-const DEFAULT_VISIBLE = 4;
+export const DEFAULT_VISIBLE = 4;
 
-export function PositionTrendChart({ series, data, maxPosition }: PositionTrendChartProps) {
+export function PositionTrendChart({
+  series,
+  data,
+  maxPosition,
+  defaultVisibleKeys
+}: PositionTrendChartProps) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const [hidden, setHidden] = useState<Set<string>>(
-    () => new Set(series.slice(DEFAULT_VISIBLE).map((s) => s.key))
-  );
+  // `defaultVisibleKeys` gana cuando viene, porque «qué se enciende» y «en qué
+  // orden se listan las pastillas» son dos preguntas distintas y la pantalla
+  // sabe responder mejor la primera: sólo ella conoce cuál es la marca propia y
+  // qué puesto ocupa (log §177). Sin ella, el comportamiento de siempre.
+  const [hidden, setHidden] = useState<Set<string>>(() => {
+    if (defaultVisibleKeys) {
+      const on = new Set(defaultVisibleKeys);
+      return new Set(series.filter((s) => !on.has(s.key)).map((s) => s.key));
+    }
+    return new Set(series.slice(DEFAULT_VISIBLE).map((s) => s.key));
+  });
 
   if (data.length < MIN_TREND_POINTS) return null;
 

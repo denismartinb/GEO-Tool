@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { orderByLatestRank, rankLatestPositions, type LatestPositionEntity } from "./latest-positions";
+import { defaultVisibleSeriesKeys, orderByLatestRank, rankLatestPositions, type LatestPositionEntity } from "./latest-positions";
 import type { PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
 
 function entry(
@@ -232,5 +232,53 @@ describe("orderByLatestRank", () => {
       rankedKeys: ["fantasma", ...TABLE_ORDER]
     });
     expect(ordered.slice(0, 4).map((s) => s.key)).toEqual(["brand", "amazon", "chrome", "brave"]);
+  });
+});
+
+/**
+ * MEAN-RANK-READS-TRUE-1, segunda pasada (log §177).
+ *
+ * El fallo que fijan lo encontró el fundador mirando el preview de la primera:
+ * Brave era 4º y Mozilla 5ª, y Brave no salía encendido. Con la marca propia
+ * ocupando el primer hueco, encender «las cuatro primeras» del orden dejaba
+ * fuera al 4º de la clasificación — alguien que te está ganando.
+ */
+describe("defaultVisibleSeriesKeys", () => {
+  /** El orden de la tabla en el escaneo real de Mozilla. */
+  const TABLE_ORDER = ["amazon", "proton", "chrome", "brave", "brand", "edge", "safari"];
+
+  it("el caso del fundador: Brave (4º) se enciende aunque la marca sea 5ª", () => {
+    const visible = defaultVisibleSeriesKeys({ rankedKeys: TABLE_ORDER, brandKey: "brand", cap: 4 });
+    expect(visible).toContain("brave");
+    expect(visible).toEqual(["amazon", "proton", "chrome", "brave", "brand"]);
+  });
+
+  it("nadie que te adelante nace apagado", () => {
+    const visible = new Set(defaultVisibleSeriesKeys({ rankedKeys: TABLE_ORDER, brandKey: "brand", cap: 4 }));
+    const brandRank = TABLE_ORDER.indexOf("brand");
+    for (const key of TABLE_ORDER.slice(0, brandRank)) {
+      expect(visible.has(key), `${key} va por delante de la marca y nacía apagado`).toBe(true);
+    }
+  });
+
+  it("la marca propia nunca nace apagada", () => {
+    for (const order of [TABLE_ORDER, ["brand", ...TABLE_ORDER.filter((k) => k !== "brand")], []]) {
+      expect(defaultVisibleSeriesKeys({ rankedKeys: order, brandKey: "brand", cap: 4 })).toContain("brand");
+    }
+  });
+
+  it("dentro del corte no gasta una quinta línea", () => {
+    const order = ["amazon", "brand", "chrome", "brave", "edge"];
+    const visible = defaultVisibleSeriesKeys({ rankedKeys: order, brandKey: "brand", cap: 4 });
+    expect(visible).toHaveLength(4);
+    expect(visible).toEqual(["amazon", "brand", "chrome", "brave"]);
+  });
+
+  it("nunca duplica la marca ni pasa de cap + 1", () => {
+    for (const cap of [1, 2, 3, 4, 6]) {
+      const visible = defaultVisibleSeriesKeys({ rankedKeys: TABLE_ORDER, brandKey: "brand", cap });
+      expect(new Set(visible).size).toBe(visible.length);
+      expect(visible.length).toBeLessThanOrEqual(cap + 1);
+    }
   });
 });
