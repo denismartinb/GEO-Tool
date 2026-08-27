@@ -16639,3 +16639,38 @@ escaneo, ese aviso ya no le sale a una cuenta nueva de todos modos.
 **Comprobado (3ª pasada).** `pnpm test` (207/207, 2.872/2.872), `pnpm run
 validate` (build + typecheck + lint), `git diff --check` y
 `bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Addendum, mismo día: segunda corrección tras probar el preview, y una
+premisa equivocada de la primera corrección.** El fundador creó una cuenta
+nueva (no excluida) en el preview del PR, dio de alta un dominio y lo
+escaneó: los seis interruptores de proyecto salieron bien, pero el switch
+"Ocultar aviso «seguimiento diario»" seguía apagado, y el banner "Tu
+histórico se está construyendo. Escaneo 1 de 5" (estado `accumulating` de
+`computeDataMaturity`) seguía visible.
+
+Eso contradice lo que decía el addendum anterior: *"con el seguimiento diario
+ahora auto-activándose tras el primer escaneo, ese aviso ya no le sale a una
+cuenta nueva de todos modos"* — **incorrecto**. Esa frase confundía los dos
+estados informativos de `DataMaturityBanner`: `no_tracking` (el que
+desaparece cuando el seguimiento se activa solo) y `accumulating` (el que
+aparece *precisamente cuando* el seguimiento ya está activo pero aún no hay 5
+escaneos — el estado normal de toda cuenta nueva ahora que nace con
+seguimiento). El switch nunca cubrió `accumulating`, así que la premisa de
+que "ya no hacía falta" era doblemente equivocada.
+
+**Petición del fundador, textual:** que el switch controle los dos avisos, y
+que nazca encendido siempre.
+
+**Qué cambió.** `noTrackingHiddenKey` (`components/data-maturity-banner.tsx`)
+pasa a cubrir ambos estados (`no_tracking` **y** `accumulating`), y su
+semántica se invierte: la ausencia de valor en `localStorage` significaba
+"mostrar" (default anterior, `false`); ahora significa "ocultar" (default
+nuevo, `true`) — sólo un `"0"` explícito, escrito al apagar el switch a mano,
+vuelve a mostrar los avisos. Mismo cambio reflejado en
+`no-tracking-banner-toggle.tsx` (`/debug`), cuya copia ahora nombra los dos
+mensajes. Ninguna fila de base de datos ni server action tocada: sigue siendo
+una preferencia de `localStorage` por navegador, sin migración.
+
+**Comprobado (4ª pasada).** `pnpm test` (208/208, 2.880/2.880), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
