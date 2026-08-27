@@ -380,15 +380,22 @@ primer escaneo.
 quedan dos cosas que ese cambio no cubre y que siguen siendo P0-08:
 
 1. **Los proyectos que YA existen.** El disparo es `completedRunCount === 1`, y
-   es correcto que lo sea: es justo lo que evita reencender lo que alguien
-   apagó. Pero significa que **ningún proyecto con dos o más escaneos completados
-   lo recibe nunca**, y ésos son precisamente los clientes actuales — incluida la
+   es correcto que lo sea. Pero significa que **ningún proyecto con dos o más
+   escaneos completados lo recibe nunca** — los clientes actuales, incluida la
    cuenta Pro desde la que el auditor leyó "Tu análisis de hoy no se repetirá".
-   Hay que decidir entre rellenar hacia atrás (migración de datos acotada a
-   proyectos de plan de pago, con el interruptor apagado y sin apagado manual
-   registrado) o asumir que esos proyectos lo activan a mano. **Decisión del
-   fundador**; la recomendación es rellenar, porque el fallo que la auditoría
-   encontró vive exactamente ahí.
+   El propio PR #480 lo dice: *"Ningún proyecto/dominio existente se toca —
+   sólo altas nuevas y el primer escaneo de cada una."* Mergeado el 2026-08-27,
+   así que el hueco es firme, no una suposición.
+
+   **El riesgo que tenía el relleno ha desaparecido** (fundador, 2026-08-27):
+   `/debug` se cierra al lanzar a cliente final, y el cliente **nunca** puede
+   apagar el escaneo. Sin apagados manuales que respetar, un `UPDATE` sobre los
+   proyectos de plan de pago con el interruptor apagado no puede pisar la
+   decisión de nadie. Queda una sola pregunta, y es de coste: cuántos proyectos
+   de pago existen hoy con escaneos completados y el interruptor en `false`. Si
+   son pocos o ninguno —beta privada— el hueco se cierra solo según esos
+   proyectos escaneen, y no hace falta migración.
+
 2. **La cadencia sigue sin verse.** Encenderla no la hace visible: allá donde se
    afirme una cadencia hay que mostrar **la próxima ejecución con fecha**, no un
    adjetivo. Es de esta fase, y alimenta el calendario de la Fase 3.
