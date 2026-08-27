@@ -245,7 +245,7 @@ function noopTable() {
   return builder;
 }
 
-function makeScanRunsTable(previousRunId: string | null = null) {
+function makeScanRunsTable(previousRunId: string | null = null, completedRunCount?: number) {
   // Distinguishes the pre-existing "update(...).select('id').maybeSingle()"
   // pattern (confirms a status transition applied, keyed by .eq("id", runId))
   // from RECS-3's new read-only "find the immediately preceding completed
@@ -271,8 +271,13 @@ function makeScanRunsTable(previousRunId: string | null = null) {
       }
       return Promise.resolve({ data: { id: RUN_ID }, error: null });
     },
-    then: (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
-      Promise.resolve({ data: [], error: null }).then(resolve)
+    // PROJECT-DEFAULTS-BY-ACCOUNT-1's `completedRunCount` query
+    // (`.select("id", {count:"exact",head:true}).eq().eq()`) is the only
+    // caller in executor.ts that awaits a `scan_runs` chain directly without
+    // ever calling `.maybeSingle()`/`.order()` — so it's safe to fold `count`
+    // into this same generic `then` without touching any pre-existing test.
+    then: (resolve: (value: { data: unknown[]; error: null; count?: number }) => unknown) =>
+      Promise.resolve({ data: [], error: null, count: completedRunCount }).then(resolve)
   };
   return builder;
 }
@@ -441,7 +446,8 @@ function buildClients(
     ownerPlan,
     notificationsBehavior = "ok",
     promptJobSampleIndex,
-    engineFlags
+    engineFlags,
+    recurringScans
   }: {
     promptJobMaxAttempts: number;
     /** SAMPLING-1: the repetition this prompt job belongs to. Omitted -> no
@@ -465,6 +471,18 @@ function buildClients(
      * it — resolving to "no project override" (all engines stay enabled).
      */
     engineFlags?: { gemini?: boolean; claude?: boolean; openai?: boolean };
+    /**
+     * PROJECT-DEFAULTS-BY-ACCOUNT-1: the auto-activation-after-first-scan
+     * block's three isolated reads (`projects.recurring_scans_enabled`, the
+     * `scan_runs` completed count, and the owner's email via
+     * `auth.admin.getUserById`). Omitted -> `service.from("projects")` falls
+     * through to `noopTable()` for this query (data: null), the same
+     * "migration not applied / unread" shape every pre-existing test
+     * exercises without knowing it — the block's outer `if (recurringFlagRow
+     * && ...)` guard makes that a no-op, so no test written before this
+     * option existed changes behavior.
+     */
+    recurringScans?: { currentValue?: boolean; completedRunCount?: number; ownerEmail?: string | null };
   },
   existingProviders: string[] | Record<number, string[]> = []
 ) {
@@ -511,10 +529,14 @@ function buildClients(
     }
   ]);
 
-  const scanRunsTable = makeScanRunsTable(previousRunId);
+  const scanRunsTable = makeScanRunsTable(previousRunId, recurringScans?.completedRunCount);
   const scanPromptResultsTable = makeScanPromptResultsTable(existingProviders);
   const recommendationsTable = makeRecommendationsTable(previousRecommendationRows);
   const notificationsTable = makeNotificationsTable(notificationsBehavior);
+  // PROJECT-DEFAULTS-BY-ACCOUNT-1: every `projects.update(...)` call the
+  // finalize block issues, so tests can assert whether (and to what)
+  // `recurring_scans_enabled` was written.
+  const projectsUpdates: Array<Record<string, unknown>> = [];
 
   const service = {
     from(table: string) {
@@ -536,24 +558,42 @@ function buildClients(
           })
         };
       }
-      if (table === "projects" && engineFlags) {
+      if (table === "projects" && (engineFlags || recurringScans)) {
         return {
           select: () => ({
             eq: () => ({
               maybeSingle: () =>
                 Promise.resolve({
                   data: {
-                    engine_gemini_enabled: engineFlags.gemini,
-                    engine_claude_enabled: engineFlags.claude,
-                    engine_openai_enabled: engineFlags.openai
+                    ...(engineFlags
+                      ? {
+                          engine_gemini_enabled: engineFlags.gemini,
+                          engine_claude_enabled: engineFlags.claude,
+                          engine_openai_enabled: engineFlags.openai
+                        }
+                      : {}),
+                    ...(recurringScans ? { recurring_scans_enabled: recurringScans.currentValue } : {})
                   },
                   error: null
                 })
             })
-          })
+          }),
+          update: (patch: Record<string, unknown>) => {
+            projectsUpdates.push(patch);
+            return { eq: () => Promise.resolve({ error: null }) };
+          }
         };
       }
       return noopTable();
+    },
+    // PROJECT-DEFAULTS-BY-ACCOUNT-1: the finalize block's owner-email lookup.
+    // Omitted `recurringScans` -> never reached (the outer guard above
+    // short-circuits first), so this is safe to always provide.
+    auth: {
+      admin: {
+        getUserById: (_id: string) =>
+          Promise.resolve({ data: { user: { email: recurringScans?.ownerEmail ?? null } }, error: null })
+      }
     }
   } as unknown as ServiceClient;
 
@@ -609,7 +649,16 @@ function buildClients(
     }
   } as unknown as SupabaseClient;
 
-  return { service, supabase, jobsTable, scanRunsTable, scanPromptResultsTable, recommendationsTable, notificationsTable };
+  return {
+    service,
+    supabase,
+    jobsTable,
+    scanRunsTable,
+    scanPromptResultsTable,
+    recommendationsTable,
+    notificationsTable,
+    projectsUpdates
+  };
 }
 
 const SUCCESS_RESPONSE = {
@@ -2224,5 +2273,104 @@ describe("executePendingScan — extraction shares one invocation-wide deadline"
     // each pass began.
     expect(deadlines[0]).toBeGreaterThanOrEqual(before + SCAN_INVOCATION_WORK_BUDGET_MS);
     expect(deadlines[0]).toBeLessThanOrEqual(after + SCAN_INVOCATION_WORK_BUDGET_MS);
+  });
+});
+
+/**
+ * PROJECT-DEFAULTS-BY-ACCOUNT-1 (founder-approved 2026-08-25, log §167).
+ * `recurring_scans_enabled` cannot be set at project creation — its own
+ * `/debug` precondition requires a completed scan to already exist — so a
+ * real customer account gets it turned on here, the first moment that
+ * precondition is met. The `ux-pilot` agent flagged this exact path as
+ * structurally invisible to the always-on read-only pilot (it lives behind
+ * `/debug`, never captured by the default journey set, and behind a write
+ * path the pilot cannot exercise) and recommended these unit tests carry the
+ * verification instead.
+ */
+describe("executePendingScan — auto-enables recurring scans after the first completed run (PROJECT-DEFAULTS-BY-ACCOUNT-1)", () => {
+  const ORIGINAL_INTERNAL_TEST_EMAILS = process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(generateRecommendationsForRun).mockClear().mockReturnValue([]);
+    delete process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_INTERNAL_TEST_EMAILS === undefined) delete process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+    else process.env.INTERNAL_TEST_ACCOUNT_EMAILS = ORIGINAL_INTERNAL_TEST_EMAILS;
+  });
+
+  it("turns recurring_scans_enabled on when this is the project's first completed run and the owner is not an internal test account", async () => {
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: false, completedRunCount: 1, ownerEmail: "customer@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toContainEqual({ recurring_scans_enabled: true });
+  });
+
+  it("leaves recurring_scans_enabled off for an internal test account, even on the first completed run", async () => {
+    process.env.INTERNAL_TEST_ACCOUNT_EMAILS = "founder@example.com";
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: false, completedRunCount: 1, ownerEmail: "founder@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toEqual([]);
+  });
+
+  it("does not touch recurring_scans_enabled once this is the project's second (or later) completed run", async () => {
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: false, completedRunCount: 2, ownerEmail: "customer@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toEqual([]);
+  });
+
+  it("never re-writes recurring_scans_enabled once it is already on — a customer who turned it off manually is not silently re-enabled by a later scan", async () => {
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: true, completedRunCount: 1, ownerEmail: "customer@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toEqual([]);
+  });
+
+  it("fails soft: a broken owner-email lookup never stops the run from completing", async () => {
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: false, completedRunCount: 1, ownerEmail: "customer@example.com" }
+    });
+    // Break only the owner-email lookup this block depends on — proving this
+    // one side effect can't sink an otherwise-successful scan, the same
+    // fail-soft contract the web-audit enqueue and scan-health-alert calls
+    // right around it in executor.ts already carry.
+    (service as unknown as { auth: { admin: { getUserById: () => Promise<never> } } }).auth.admin.getUserById = () =>
+      Promise.reject(new Error("network"));
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(notificationsTable.calls.some((c) => c.type === "scan_completed")).toBe(true);
   });
 });

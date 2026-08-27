@@ -6,15 +6,20 @@ import { maturityBannerHiddenKey } from "@/components/data-maturity-banner";
 
 /**
  * DEBUG-HIDE-NO-TRACKING-1, ampliado en MATURITY-BANNER-HIDE-ALL-1 (2026-08-27,
- * log §174): switch de esta pantalla para silenciar la banda de madurez de
+ * log §179): switch de esta pantalla para silenciar la banda de madurez de
  * datos (`DataMaturityBanner`, alimentada por `computeDataMaturity` en
  * `lib/project-workspace.ts`) sin tocar ningún ajuste real del proyecto.
  *
- * **Silencia la banda entera.** Nació cubriendo sólo "Tu análisis de hoy no se
- * repetirá" y el fundador pidió que cubriera también "el de histórico
- * construyendo y cualquier similar que haya" (2026-08-27). No enumera estados:
- * la comprobación vive antes del reparto por `kind`, así que un estado nuevo
- * queda cubierto sin que nadie tenga que acordarse.
+ * **Silencia todos los avisos informativos, no una lista de ellos.** Nació
+ * cubriendo sólo "Tu análisis de hoy no se repetirá" y el fundador pidió que
+ * cubriera también "el de histórico construyendo y cualquier similar que haya"
+ * (2026-08-27). La clave está en ese "cualquier similar": la puerta enumera las
+ * EXCEPCIONES (`NEVER_SILENCED`, hoy sólo `free`), no los cubiertos, así que un
+ * `kind` futuro queda silenciado por no hacer nada.
+ *
+ * **Y nace encendido**: la ausencia de valor significa oculto, y sólo un `"0"`
+ * explícito revela los avisos (PROJECT-DEFAULTS-BY-ACCOUNT-1, §173, tras la
+ * prueba del fundador con una cuenta nueva).
  *
  * Preferencia puramente local (`localStorage`, misma clave que lee
  * `DataMaturityBanner`) — no hay migración detrás, igual que el "ya visto" del
@@ -26,10 +31,12 @@ import { maturityBannerHiddenKey } from "@/components/data-maturity-banner";
  * exige que sólo aparezcan bajo `app/dashboard/**`.
  */
 export function MaturityBannerToggle({ projectId }: { projectId: string }) {
-  const [hidden, setHidden] = useState(false);
+  // Encendido por defecto: la ausencia de valor significa OCULTO y sólo un
+  // `"0"` explícito revela los avisos (PROJECT-DEFAULTS-BY-ACCOUNT-1, §173).
+  const [hidden, setHidden] = useState(true);
 
   useEffect(() => {
-    setHidden(window.localStorage.getItem(maturityBannerHiddenKey(projectId)) === "1");
+    setHidden(window.localStorage.getItem(maturityBannerHiddenKey(projectId)) !== "0");
   }, [projectId]);
 
   function toggle() {
@@ -46,9 +53,10 @@ export function MaturityBannerToggle({ projectId }: { projectId: string }) {
       <div className="dbg-switch-txt">
         <b>Ocultar los avisos de la banda superior</b>
         <small>
-          Silencia en este navegador toda la banda de avisos de la consola: «Tu análisis de hoy no se
-          repetirá», «Tu histórico se está construyendo», el aviso del plan Free y cualquiera que se
-          añada más adelante. No cambia ningún ajuste del proyecto — sólo oculta los avisos.
+          Silencia en este navegador los avisos informativos de la consola: «Tu análisis de hoy no se
+          repetirá», «Tu histórico se está construyendo» y cualquiera que se añada más adelante. El
+          aviso del plan Free no se calla nunca — ése tiene su propia X. No cambia ningún ajuste del
+          proyecto, sólo oculta los avisos. <b>Encendido por defecto.</b>
         </small>
       </div>
       <button

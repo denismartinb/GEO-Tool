@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeCoverageOverlay } from "./coverage-overlay";
+import { computeCoverageOverlay, overlayCopy } from "./coverage-overlay";
 import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE } from "./domain-coverage";
 
 function rec(overrides: Partial<{
@@ -80,9 +80,21 @@ describe("computeCoverageOverlay", () => {
     expect(overlay.has("rec-1")).toBe(false);
   });
 
-  it("ignores recommendation types other than add_citation_block", () => {
+  it("Fase B: also enriches increase_brand_visibility, anchored by the same promptId join", () => {
     const overlay = computeCoverageOverlay({
       recommendations: [rec({ recommendationType: "increase_brand_visibility" })],
+      resultIdToPromptId: new Map([["result-1", "prompt-1"]]),
+      coverageTopics: [{ promptId: "prompt-1", topic: "x", found: true, pages: [{ url: "https://acme.com/a", title: "A" }], note: "n" }]
+    });
+    expect(overlay.get("rec-1")?.state).toBe("confirmed_surfacing_gap");
+  });
+
+  it("still ignores a run-wide type with no single prompt to join against", () => {
+    // create_faq_section fires from the run's aggregate (visibility/citation
+    // scores + informational-prompt count), not from one scan_prompt_results
+    // row — there is no single topic it could ever match.
+    const overlay = computeCoverageOverlay({
+      recommendations: [rec({ recommendationType: "create_faq_section" })],
       resultIdToPromptId: new Map([["result-1", "prompt-1"]]),
       coverageTopics: [{ promptId: "prompt-1", topic: "x", found: true, pages: [], note: "n" }]
     });
@@ -137,5 +149,42 @@ describe("computeCoverageOverlay", () => {
     expect(overlay.get("rec-a")?.state).toBe("confirmed_surfacing_gap");
     expect(overlay.get("rec-b")?.state).toBe("possible_content_gap");
     expect(overlay.has("rec-c")).toBe(false);
+  });
+});
+
+describe("overlayCopy", () => {
+  it("add_citation_block, found: talks about citation, matching its real trigger (mentioned but not cited)", () => {
+    const copy = overlayCopy("add_citation_block", "confirmed_surfacing_gap");
+    expect(copy?.whatWeFound).toContain("no lo está citando");
+    expect(copy?.whatToDo).toContain("no crees una página nueva");
+  });
+
+  it("increase_brand_visibility, found: talks about not appearing in the answer, NOT about citation", () => {
+    // The regression this fase exists to avoid: this card's real trigger is
+    // "not mentioned at all", so claiming "the AI isn't citing it as a
+    // source" here would be a category error — there is no mention to cite.
+    const copy = overlayCopy("increase_brand_visibility", "confirmed_surfacing_gap");
+    expect(copy?.whatWeFound).not.toContain("citando");
+    expect(copy?.whatWeFound).toContain("no está apareciendo en la respuesta");
+    expect(copy?.whatToDo).toContain("no crees una página nueva");
+  });
+
+  it("increase_brand_visibility, not-found: reuses rule_visibility_001's own first_step verbatim", () => {
+    // recommendation-engine.ts's firstStep for this rule, character for
+    // character — the overlay must never invent a different call to action
+    // for the same gap.
+    const copy = overlayCopy("increase_brand_visibility", "possible_content_gap");
+    expect(copy?.whatToDo).toBe(
+      "publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+    );
+  });
+
+  it("add_citation_block, not-found: unchanged from before Fase B", () => {
+    const copy = overlayCopy("add_citation_block", "possible_content_gap");
+    expect(copy?.whatToDo).toContain("plantéate crear una página");
+  });
+
+  it("returns null for a state of none — nothing to say", () => {
+    expect(overlayCopy("add_citation_block", "none")).toBeNull();
   });
 });

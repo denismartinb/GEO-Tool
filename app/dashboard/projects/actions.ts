@@ -11,6 +11,7 @@ import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { createProjectCore } from "@/lib/projects/create-project";
+import { newProjectDefaults } from "@/lib/projects/new-project-defaults";
 import {
   cleanDomain,
   deriveBrandFromDomain,
@@ -186,51 +187,6 @@ export async function generateMorePrompts(input: {
   }
 }
 
-/**
- * Column defaults applied ONLY outside production, so the founder can exercise
- * the first-scan mission end to end on a preview without paying for it.
- *
- * Why this exists: the mission's audit half (the band, and the re-entry beat
- * on Auditoría web) needs a `web_audit` job, and `enqueueWebAuditJob` only
- * creates one when the project has the audit switched on. WEB-AUDIT-AUTO-SPLIT-1
- * (log §52) made both halves default to `false` — a deliberate cost decision —
- * so every new domain is born unable to show that half of the mission. And the
- * switch lives in `/debug`, which cannot be reached before the project exists:
- * by the time it can be flipped, the scan has finished and the auto-audit
- * moment has passed. The founder burned several real scans on that loop
- * (2026-08-11) before we found it.
- *
- * Gated on `VERCEL_ENV` rather than a comment asking someone to remember: this
- * CANNOT reach production even if the branch merges, which is the only version
- * of "temporary" that is actually true. Production keeps the founder's
- * defaults exactly as WEB-AUDIT-AUTO-SPLIT-1 set them.
- *
- * - **Technical audit on, coverage off.** The technical half spends no LLM at
- *   all (ADR 0035) and is what the re-entry beat narrates — the sixteen checks.
- *   Coverage is grounded Gemini calls, one per active prompt, so it stays off:
- *   the point of this is to make testing cheap, not to move the bill.
- * - **Gemini only.** One engine instead of three cuts a test scan's LLM cost to
- *   a third.
- */
-function previewTestingDefaults(): Record<string, boolean> {
-  // Allow-list, not a deny-list, and the direction matters. Written as "if
-  // production, do nothing" it failed OPEN: an unset or renamed `VERCEL_ENV`
-  // would have handed production the cheap defaults — the one environment the
-  // founder was explicit about ("en main nada de lo de probar barato",
-  // 2026-08-11). Now anything that is not demonstrably a preview or a local
-  // dev server behaves exactly like production.
-  const env = process.env.VERCEL_ENV;
-  if (env !== "preview" && env !== "development") return {};
-
-  return {
-    auto_technical_audit_enabled: true,
-    auto_coverage_audit_enabled: false,
-    engine_gemini_enabled: true,
-    engine_claude_enabled: false,
-    engine_openai_enabled: false
-  };
-}
-
 export async function createProject(formData: FormData) {
   const { supabase, user } = await requireUser();
   const plan = await getPlanForUser(supabase, user.id);
@@ -254,7 +210,7 @@ export async function createProject(formData: FormData) {
     plan,
     supabase,
     user,
-    extraProjectColumns: previewTestingDefaults()
+    extraProjectColumns: newProjectDefaults(user.email)
   });
 
   if (result.status === "project_limit_reached") {
@@ -339,6 +295,57 @@ export async function deleteProject(projectId: string): Promise<DeleteProjectRes
   revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/projects");
   revalidatePath(`/dashboard/projects/${parsedProjectId.data}`);
+
+  return { success: true };
+}
+
+export type DeleteProjectsResult = { success: true } | { success: false; error: string };
+
+const deleteProjectIdsSchema = z.array(z.string().uuid()).min(1).max(50);
+
+/**
+ * Bulk variant of `deleteProject` for the domain-overage gate
+ * (DOMAINS-OVERAGE-GATE-1, founder-approved Task Intake): permanently
+ * deletes several projects in one call — same cascade, same
+ * `owner_user_id` scoping, same irreversibility, no soft-delete fallback —
+ * then re-verifies server-side that the account is actually back within its
+ * plan's domain cap, the same defense-in-depth `changePlan` already does
+ * after archiving. Never trusts the client's own count of what it selected.
+ */
+export async function deleteProjects(projectIds: string[]): Promise<DeleteProjectsResult> {
+  const parsed = deleteProjectIdsSchema.safeParse(projectIds);
+  if (!parsed.success) {
+    return { success: false, error: "No se pudieron eliminar los dominios seleccionados." };
+  }
+
+  const { supabase, user } = await requireUser();
+
+  const { error, count } = await supabase
+    .from("projects")
+    .delete({ count: "exact" })
+    .in("id", parsed.data)
+    .eq("owner_user_id", user.id);
+
+  if (error || count !== parsed.data.length) {
+    return { success: false, error: "No se pudieron eliminar los dominios seleccionados. Inténtalo de nuevo." };
+  }
+
+  const plan = await getPlanForUser(supabase, user.id);
+  const { count: remainingCount, error: countError } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false);
+
+  if (countError || (remainingCount ?? 0) > plan.caps.projects) {
+    return {
+      success: false,
+      error: "Los dominios se eliminaron, pero todavía tienes más de los que permite tu plan. Recarga la página."
+    };
+  }
+
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/projects");
 
   return { success: true };
 }

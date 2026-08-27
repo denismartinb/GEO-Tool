@@ -128,7 +128,7 @@ describe("requireActiveProject", () => {
 });
 
 /**
- * MATURITY-BANNER-HIDE-ALL-1 (2026-08-27, log §174).
+ * MATURITY-BANNER-HIDE-ALL-1 (2026-08-27, log §179).
  *
  * El fallo que fijan: el switch de `/debug` decía "ocultar aviso «seguimiento
  * diario»" y hacía exactamente eso — el usuario lo encendía y le seguía
@@ -144,22 +144,33 @@ describe("visibleDataMaturityState", () => {
     cadenceUnit: "días",
     etaCount: 3
   };
-  /** Todos los estados que pintan algo, que son los que el switch debe callar. */
   const VISIBLES: DataMaturityState[] = [{ kind: "free" }, { kind: "no_tracking" }, ACCUMULATING];
+  /** Los informativos: piden esperar o encender algo. Son los que el switch calla. */
+  const SILENCIABLES: DataMaturityState[] = [{ kind: "no_tracking" }, ACCUMULATING];
 
-  it("deja pasar cada estado visible cuando no hay preferencia puesta", () => {
+  it("con el switch apagado a mano, pasa cada estado visible", () => {
     for (const state of VISIBLES) {
       expect(visibleDataMaturityState({ state, dismissed: false, hidden: false })).toEqual(state);
     }
   });
 
-  it("el switch calla TODOS los estados, no sólo «seguimiento diario»", () => {
-    for (const state of VISIBLES) {
+  it("el switch calla los informativos, no sólo «seguimiento diario»", () => {
+    for (const state of SILENCIABLES) {
       expect(
         visibleDataMaturityState({ state, dismissed: false, hidden: true }),
         `el switch dejó pasar el estado ${state.kind}: es justo el fallo que esto arregla`
       ).toBeNull();
     }
+  });
+
+  /**
+   * `free` no pide esperar: vende un plan y lleva su propia X. Se dejó fuera a
+   * propósito al combinar esta rama con lo que ya estaba en `main` (§173), y el
+   * fundador lo confirmó explícitamente antes del merge.
+   */
+  it("el aviso del plan Free NO se calla nunca", () => {
+    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: false, hidden: true }))
+      .toEqual({ kind: "free" });
   });
 
   /**
@@ -170,6 +181,12 @@ describe("visibleDataMaturityState", () => {
    * pasa porque no hay ninguna lista — `hidden` se resuelve antes de mirar
    * `kind`.
    */
+  /**
+   * La garantía que de verdad pidió el fundador con "cualquier similar que
+   * haya" es sobre los estados que TODAVÍA NO EXISTEN, y por eso la puerta
+   * enumera EXCEPCIONES en vez de cubiertos: un `kind` nuevo nace silenciado.
+   * Si alguien invierte esa lista, este test cae.
+   */
   it("calla también un estado que aún no existe", () => {
     const futuro = { kind: "algo_que_todavia_no_existe" } as unknown as DataMaturityState;
     expect(visibleDataMaturityState({ state: futuro, dismissed: false, hidden: true })).toBeNull();
@@ -177,9 +194,12 @@ describe("visibleDataMaturityState", () => {
   });
 
   it("`hidden` es del proyecto y `dismissed` de la X: ninguna anula a la otra", () => {
+    // La X descarta incluso `free`, que el switch no calla: son preferencias
+    // distintas y cada una manda en lo suyo.
     expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: true, hidden: false })).toBeNull();
-    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: false, hidden: true })).toBeNull();
     expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: true, hidden: true })).toBeNull();
+    expect(visibleDataMaturityState({ state: ACCUMULATING, dismissed: true, hidden: false })).toBeNull();
+    expect(visibleDataMaturityState({ state: ACCUMULATING, dismissed: false, hidden: true })).toBeNull();
   });
 
   it("`hidden` nunca pinta nada, ni siquiera con un estado ausente o `hidden`", () => {

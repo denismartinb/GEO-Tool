@@ -614,7 +614,7 @@ export default async function RunsPage({
       </div>
 
       {/* DEBUG-HIDE-NO-TRACKING-1, ampliado en MATURITY-BANNER-HIDE-ALL-1 (log
-          §174) — preferencia local, no un flag de proyecto: silencia la banda
+          §179) — preferencia local, no un flag de proyecto: silencia la banda
           de avisos de arriba ENTERA (`DataMaturityBanner`, cualquier estado)
           sin tocar `recurring_scans_enabled`. Sigue aquí, junto al switch de
           seguimiento diario, porque el aviso que más se quiere callar es el

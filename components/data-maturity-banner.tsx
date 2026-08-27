@@ -15,7 +15,7 @@ function dismissedKey(projectId: string): string {
 
 /**
  * DEBUG-HIDE-NO-TRACKING-1, ampliado en MATURITY-BANNER-HIDE-ALL-1 (2026-08-27,
- * log §174): preferencia local (no hay migración detrás) que silencia **toda**
+ * log §179): preferencia local (no hay migración detrás) que silencia **toda**
  * esta banda, sea cual sea su estado. Se activa desde un switch en
  * `/dashboard/projects/[projectId]/debug`
  * (`app/dashboard/projects/[projectId]/debug/maturity-banner-toggle.tsx`), que
@@ -30,6 +30,12 @@ function dismissedKey(projectId: string): string {
  * nuevo, y nadie se enteraría — el aviso simplemente reaparecería. Así que la
  * comprobación va **antes** del reparto por `kind`, y un estado nuevo queda
  * cubierto por no hacer nada.
+ *
+ * **La ausencia de valor significa OCULTO** (PROJECT-DEFAULTS-BY-ACCOUNT-1,
+ * §173, tras la prueba del fundador con una cuenta nueva): sólo un `"0"`
+ * explícito revela los avisos. `free` es la única excepción y nunca se calla —
+ * vende un plan y lleva su propia X, no pide esperar (ver `NEVER_SILENCED` en
+ * `lib/data-maturity.ts`).
  *
  * **La clave de `localStorage` conserva su nombre viejo a propósito.**
  * Renombrarla dejaría a quien ya tenga el switch encendido con la banda de
@@ -62,23 +68,29 @@ export function DataMaturityBanner({
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
   const [dismissed, setDismissed] = useState(false);
-  const [bannerHidden, setBannerHidden] = useState(false);
+  // Nace en `true`: la ausencia de valor en `localStorage` significa OCULTO, y
+  // sólo un `"0"` explícito —el switch apagado a mano en `/debug`— revela los
+  // avisos. Lo decidió el fundador probando una cuenta nueva de verdad
+  // (PROJECT-DEFAULTS-BY-ACCOUNT-1, §173): con el seguimiento ya activo desde el
+  // primer escaneo, «Tu histórico se está construyendo» sale en toda cuenta real
+  // y resultó tan ruidoso como el que ya se silenciaba.
+  const [bannerHidden, setBannerHidden] = useState(true);
 
   useEffect(() => {
     if (!projectId || typeof window === "undefined") {
       setDismissed(false);
-      setBannerHidden(false);
+      setBannerHidden(true);
       return;
     }
     setDismissed(window.localStorage.getItem(dismissedKey(projectId)) === "1");
-    setBannerHidden(window.localStorage.getItem(maturityBannerHiddenKey(projectId)) === "1");
+    setBannerHidden(window.localStorage.getItem(maturityBannerHiddenKey(projectId)) !== "0");
   }, [projectId]);
 
   if (!projectId) return null;
   // Una sola puerta, y vive en `lib/project-workspace.ts` con su test. El
   // switch de `/debug` silencia la BANDA, no uno de sus mensajes, así que la
   // decisión se toma antes de mirar `kind` y un estado futuro queda cubierto
-  // sin que nadie tenga que acordarse (log §174).
+  // sin que nadie tenga que acordarse (log §179).
   const state = visibleDataMaturityState({
     state: dataMaturityByProject[projectId],
     dismissed,

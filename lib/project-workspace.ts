@@ -12,7 +12,7 @@ export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
 
 /**
  * La máquina de estados de la banda de madurez vive en `lib/data-maturity.ts`
- * desde MATURITY-BANNER-HIDE-ALL-1 (log §174): un componente cliente necesita
+ * desde MATURITY-BANNER-HIDE-ALL-1 (log §179): un componente cliente necesita
  * llamarla, y este fichero abre el cliente de servicio de Supabase. Se
  * reexporta para que ningún consumidor de servidor tenga que cambiar el
  * import.

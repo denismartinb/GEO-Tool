@@ -2,7 +2,7 @@
  * La máquina de estados de la banda de madurez de datos, y nada más.
  *
  * **Por qué vive aquí y no en `lib/project-workspace.ts`, donde nació**
- * (MATURITY-BANNER-HIDE-ALL-1, 2026-08-27, log §174). `DataMaturityBanner` es
+ * (MATURITY-BANNER-HIDE-ALL-1, 2026-08-27, log §179). `DataMaturityBanner` es
  * un componente cliente, y mientras sólo importaba el TIPO daba igual dónde
  * estuviera: `import type` se borra al compilar. En cuanto tuvo que importar
  * una FUNCIÓN, el build se rompió — `project-workspace.ts` abre el cliente de
@@ -87,25 +87,37 @@ export function computeDataMaturity({
 export type VisibleDataMaturityState = Exclude<DataMaturityState, { kind: "hidden" }>;
 
 /**
- * MATURITY-BANNER-HIDE-ALL-1 (2026-08-27, log §174) — qué banda toca pintar,
- * si es que toca alguna. Es la ÚNICA puerta: el componente pregunta una vez y
- * pinta lo que salga.
+ * Los avisos que el switch de `/debug` NO silencia.
  *
- * **Por qué es una función y no tres `if` en el componente.** El switch de
- * `/debug` nació silenciando sólo `no_tracking`, y el fundador pidió que
- * silenciara "ese y el de histórico construyendo y cualquier similar que
- * haya" (2026-08-27). Ese "cualquier similar" es lo que decide la forma: con
- * la comprobación repartida entre las ramas de `kind`, cubrir un estado nuevo
- * depende de que alguien se acuerde de añadir la condición en el sitio nuevo
- * — y si no se acuerda no falla nada, simplemente el aviso reaparece y el
- * switch pasa a mentir en silencio. Aquí `hidden` se resuelve ANTES de mirar
- * `kind`, así que un `kind` futuro queda cubierto por no hacer nada.
+ * Hoy sólo `free`, y por una razón que no es cosmética: no pide esperar ni
+ * activar nada, **vende un plan** y lleva su propia X para descartarlo. Los
+ * demás son informativos —«espera a tener más escaneos», «enciende el
+ * seguimiento»— y el fundador los encontró ruidosos probando una cuenta nueva
+ * de verdad (PROJECT-DEFAULTS-BY-ACCOUNT-1, §173).
  *
- * Las dos preferencias son distintas a propósito: `dismissed` es el descarte
- * de la X (por proyecto, un aviso), `hidden` es el switch de `/debug` (por
- * proyecto, todos). Se leen las dos de `localStorage`, así que en el servidor
- * ambas llegan `false` y la banda se pinta hasta que el efecto del cliente
- * dice otra cosa — el mismo parpadeo que ya tenía, no uno nuevo.
+ * **La lista es de excepciones, no de cubiertos, y esa dirección es el arreglo.**
+ * Enumerar lo que SÍ se calla deja fuera a cualquier `kind` futuro sin que falle
+ * nada: el aviso reaparece y el switch pasa a mentir en silencio. Enumerando lo
+ * que NO se calla, un estado nuevo queda cubierto por no hacer nada — que es
+ * literalmente lo que pidió el fundador: *"ese y el de histórico construyendo y
+ * cualquier similar que haya"* (2026-08-27).
+ */
+const NEVER_SILENCED: ReadonlySet<DataMaturityState["kind"]> = new Set(["free"]);
+
+/**
+ * MATURITY-BANNER-HIDE-ALL-1 (2026-08-27, log §179) — qué banda toca pintar, si
+ * es que toca alguna. Es la ÚNICA puerta: el componente pregunta una vez y pinta
+ * lo que salga.
+ *
+ * **`hidden` llega ya resuelto, y su valor por defecto es `true`.** Lo decidió el
+ * fundador probando el flujo real con una cuenta nueva (§173): la ausencia de
+ * valor en `localStorage` significa **oculto**, y sólo un `"0"` explícito —el
+ * switch apagado a mano— revela los avisos. Esta función no lee `localStorage`;
+ * eso vive en el componente, que es quien puede.
+ *
+ * **Las dos preferencias son distintas a propósito:** `dismissed` es el descarte
+ * de la X (por proyecto, un aviso, un render), `hidden` es el switch de `/debug`
+ * (por proyecto, persistente, todos los silenciables).
  */
 export function visibleDataMaturityState({
   state,
@@ -116,8 +128,8 @@ export function visibleDataMaturityState({
   dismissed: boolean;
   hidden: boolean;
 }): VisibleDataMaturityState | null {
-  if (hidden) return null;
   if (!state || state.kind === "hidden") return null;
   if (dismissed) return null;
+  if (hidden && !NEVER_SILENCED.has(state.kind)) return null;
   return state;
 }
