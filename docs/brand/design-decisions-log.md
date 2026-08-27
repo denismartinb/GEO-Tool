@@ -16194,14 +16194,30 @@ atribuir eso al dashboard (mismo motivo por el que las clases de la pantalla
 de notificaciones tampoco viven en `console.css` — cabecera de ese fichero).
 Se intentó primero en `console.css` y el test lo cazó.
 
-**Pendiente, explícito.** El `ux-pilot` siempre-activo no puede ver este
-estado: la cuenta piloto de solo-lectura nunca está sobre su cupo. Verificarlo
-de verdad exige un journey de escritura nuevo (dominio de sobra + downgrade)
-bajo `tests/pilot/journeys/write/`, con su propio Task Intake si amplía el
-alcance ya aprobado en CLAUDE.md ("Pilot write scope"). Este PR no lo incluye
-— queda para una fase siguiente, y el pase del piloto en este PR no cubre esta
-pantalla (`ContentExpectation` no puede afirmarse sin datos reales de
-overage).
+**Pendiente, explícito — corregido tras ver el piloto real.** La suposición
+original de este párrafo era que la cuenta piloto de solo-lectura "nunca está
+sobre su cupo" y que verificar el gate exigiría un journey de escritura nuevo.
+**Era falsa.** Los tres primeros pases de `ux-pilot` contra esta rama fallaron
+en cascada (~10 timeouts por pasada, pantallas sin relación entre sí) porque la
+cuenta piloto real **ya tenía 5 dominios activos en un plan Starter (cupo
+1)** — de siempre, sólo que nada lo comprobaba hasta este PR. El gate hizo
+exactamente lo que debía: bloquear la consola de una cuenta sobre su cupo,
+scrim incluido, y ese scrim interceptó cada clic de cada journey posterior
+(confirmado leyendo `error-context.md` de la rama `pilot-evidence/pr-481` —
+la captura del snapshot de página muestra literalmente "Tienes 5 dominios
+activos y tu plan Starter permite 1").
+
+No se corrigió en código — hacerlo habría sido el mismo antipatrón ya
+documentado en este repositorio (el piloto saltándose a sí mismo, log §120):
+el piloto tiene que comportarse como un usuario real, y un usuario real en
+esa situación vería el mismo bloqueo. El arreglo real es de datos, no de
+código: subir el plan de la cuenta piloto (Starter → Pro o superior) para que
+cubra sus 5 dominios reales, pedido al fundador fuera de este PR. Con eso
+resuelto, el pase normal del piloto SÍ cubre el estado "sin overage" en todas
+las pantallas que toca este PR — lo que sigue sin verificar automáticamente es
+el propio flujo de retirar/subir de plan dentro del gate (eso sí exige el
+journey de escritura nuevo bajo `tests/pilot/journeys/write/`, con su propio
+Task Intake, que sigue siendo trabajo de una fase siguiente).
 
 **Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run typecheck`,
 `pnpm run lint`, `pnpm run build`, todo en verde.
