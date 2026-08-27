@@ -1364,6 +1364,11 @@ export default async function ProjectDetailPage({
                           <div className="t">
                             {row.name}
                             {row.isBrand && <span className="ov2-cmp-tag">Tú</span>}
+                            {/* SAMPLE-FLOOR-1: last because its mean rests on
+                                too few answers to compare, not because the AI
+                                ranked it last. An unexplained demotion is as
+                                misleading as the 1º it replaces. */}
+                            {!row.qualified && <span className="ov2-cmp-thin">pocas menciones</span>}
                           </div>
                         </div>
                         <div className="ov2-cmp-sov">
