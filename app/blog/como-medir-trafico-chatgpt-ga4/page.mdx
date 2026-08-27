@@ -18,7 +18,7 @@ import {
   ArticleCta,
   PostMeta
 } from "@/components/blog/article";
-import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 import { GA4_AI_SOURCE_REGEX } from "@/lib/blog/ga4-source-regex";
 
 export const post = getBlogPost("como-medir-trafico-chatgpt-ga4");
@@ -50,11 +50,11 @@ export const faqItems = [
 
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
 
-<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell>
+<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
 
 <BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
 
