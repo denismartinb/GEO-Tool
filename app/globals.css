@@ -4845,6 +4845,53 @@ a.notif-row:hover {
 .lp-nav-links a.active { background: var(--accent-soft); color: var(--accent-ink); }
 .lp-nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
+/* HEADER-RECURSOS-MEGA-1 (log §169): mega menú "Recursos", Versión B del
+   artefacto aprobado (`docs/design-reference/header-recursos-mega-1/`). Vive
+   dentro de `.lp-nav-links`, así que hereda su color base (`--ink-2`) igual
+   que los demás enlaces de la barra — incluido en `.lp-nav--hero`, que sólo
+   sobrescribe la tipografía de esa regla (arriba), nunca el color. */
+.lp-resmenu { position: relative; }
+.lp-resmenu-trigger {
+  display: flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 8px;
+  font-size: 13.5px; font-weight: 600; color: var(--ink-2); font-family: inherit;
+  background: none; border: none; cursor: pointer;
+}
+.lp-resmenu-trigger:hover, .lp-resmenu-trigger[aria-expanded="true"] { background: var(--surface-2); color: var(--ink); }
+.lp-resmenu-chevron { transition: transform .15s; }
+.lp-resmenu-trigger[aria-expanded="true"] .lp-resmenu-chevron { transform: rotate(180deg); }
+.lp-resmenu-panel {
+  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: 0 24px 56px rgba(16,24,40,.16), 0 6px 16px rgba(16,24,40,.07);
+  padding: 10px; z-index: 60;
+}
+.lp-resmenu-col { display: flex; flex-direction: column; gap: 2px; }
+/* `.lp-nav-links a` (0,1,1) already styles every anchor inside this bar —
+   these two are `<Link>`s nested in `.lp-nav-links`, so the selectors below
+   are qualified with that ancestor to outrank it (0,2,0/0,3,0), not to
+   restate it. Same trap as `.blog-body a` / `.lp-mobnav a` in styles.md —
+   an unqualified `.lp-resmenu-link {...}` would lose its own padding and
+   border-radius to the ancestor rule silently. */
+.lp-nav-links .lp-resmenu-link { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--r-md); }
+.lp-nav-links .lp-resmenu-link:hover { background: var(--surface-2); }
+.lp-resmenu-link .t { font-size: 14px; font-weight: 700; color: var(--ink); }
+.lp-resmenu-link .s { font-size: 12.5px; color: var(--ink-2); }
+.lp-nav-links .lp-resmenu-promo {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin-top: 8px; padding: 16px; border-radius: var(--r-md); background: var(--brand-surface-dark);
+}
+/* `.lp-nav-links a:hover` (0,2,1) ties the base rule above on the "classes"
+   specificity column and wins on the element tiebreak — without this, the
+   dark promo card flashes to `--surface-2` on hover. */
+.lp-nav-links .lp-resmenu-promo:hover { background: var(--brand-surface-dark); }
+.lp-resmenu-promo .tag { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: rgba(247,248,251,.6); }
+.lp-resmenu-promo h3 { margin: 4px 0 0; font-size: 14px; font-weight: 700; color: var(--brand-ink-on-dark); line-height: 1.3; }
+.lp-resmenu-promo p { margin: 3px 0 0; font-size: 12px; color: rgba(247,248,251,.65); }
+.lp-resmenu-promo .cta {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 14px;
+  border-radius: 999px; background: var(--brand-blue); color: #fff; font-size: 12px; font-weight: 700;
+}
+
 /* --- Mobile nav: hamburger + slide-in drawer, same look and feel as the
    dashboard sidebar's mobile drawer (.sb / .mob-scrim). --- */
 .lp-burger { display: none; }
@@ -5441,6 +5488,7 @@ a.notif-row:hover {
    headline (.lp-h1) keeps the site's existing display weight untouched. */
 .lp-hero--home .lp-lead,
 .lp-nav--hero .lp-nav-links a,
+.lp-nav--hero .lp-resmenu-trigger,
 .lp-nav-btn,
 .lp-field-input,
 .lp-field-ghost,

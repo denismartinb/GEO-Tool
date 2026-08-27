@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/ui/brand-logo";
@@ -100,6 +101,81 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
   { href: "/blog", label: "Blog" }
 ];
 
+const FREE_CHECKER_HREF = "/gratis/aparece-mi-marca-en-chatgpt";
+
+/**
+ * HEADER-RECURSOS-MEGA-1 (Fase 2 de BLOG-INDEX-CARDS-2026-08, log §169):
+ * contenido publicado que no vive en `PUBLIC_NAV_ITEMS` porque ya tiene
+ * dueño ahí (Blog) o nunca lo tuvo (Comparativas, salió de la barra el
+ * 2026-08-24; Documentación y Glosario, nunca estuvieron). El desplegable
+ * "Recursos" es la Versión B aprobada por el fundador en el artefacto de
+ * diseño (`docs/design-reference/header-recursos-mega-1/`): la barra no
+ * cambia, este panel es lo único nuevo.
+ */
+const RESOURCES_MENU_ITEMS: { href: string; title: string; description: string }[] = [
+  { href: "/blog", title: "Blog", description: "Metodología, guías y análisis" },
+  { href: "/comparativas", title: "Comparativas", description: "GenScore frente a otras herramientas" },
+  { href: "/docs", title: "Documentación", description: "Referencia técnica del producto" },
+  { href: "/glosario", title: "Glosario", description: "Términos GEO explicados" }
+];
+
+/**
+ * Desktop-only mega menú — vive dentro de `.lp-nav-links`, así que el
+ * `@media (max-width: 900px) { .lp-nav-links { display: none; } }` ya
+ * existente lo oculta en móvil sin una regla nueva; el acceso móvil lo dan
+ * los enlaces planos añadidos al cajón (`mobileLinks` en `PublicHeader`).
+ */
+function ResourcesMenu() {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent) {
+        if (e.key === "Escape") setOpen(false);
+        return;
+      }
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  return (
+    <div className="lp-resmenu" ref={rootRef}>
+      <button type="button" className="lp-resmenu-trigger" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        Recursos
+        <Icon name="chevronDown" size={12} className="lp-resmenu-chevron" />
+      </button>
+      {open && (
+        <div className="lp-resmenu-panel">
+          <div className="lp-resmenu-col">
+            {RESOURCES_MENU_ITEMS.map((item) => (
+              <Link key={item.href} href={item.href} className="lp-resmenu-link" onClick={() => setOpen(false)}>
+                <span className="t">{item.title}</span>
+                <span className="s">{item.description}</span>
+              </Link>
+            ))}
+          </div>
+          <Link href={FREE_CHECKER_HREF} className="lp-resmenu-promo" onClick={() => setOpen(false)}>
+            <div>
+              <span className="tag">Gratis</span>
+              <h3>¿Aparece tu marca en ChatGPT?</h3>
+              <p>Compruébalo sin registro</p>
+            </div>
+            <span className="cta">Comprobar ahora</span>
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * `hero` mirrors the home hero repaint (BRAND-5b). Hasta HEADER-FLAT-1
  * también decidía el fondo de la barra, y cada superficie no-portada
@@ -144,6 +220,18 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
       : { href: item.href, label: item.label, isAnchor: false }
   );
 
+  // El cajón móvil no tiene mega menú (patrón de enlace plano, ver
+  // MarketingMobileNav) — así que los tres recursos que no viven ya en
+  // `links` (Blog sí vive) se añaden planos al final, mismo orden que el
+  // panel de escritorio.
+  const mobileLinks = [
+    ...links,
+    ...RESOURCES_MENU_ITEMS.filter((item) => item.href !== "/blog").map((item) => ({
+      href: item.href,
+      label: item.title
+    }))
+  ];
+
   return (
     <>
       {/* PROMO-EVERYWHERE-1 (fundador, 2026-08-25: "lleva la misma tira de
@@ -178,6 +266,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
             </Link>
           )
         )}
+        <ResourcesMenu />
       </div>
       <div className="lp-nav-right">
         <SessionSkeleton />
@@ -204,7 +293,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
         )}
       </div>
       <MarketingMobileNav
-        links={links}
+        links={mobileLinks}
         twoLine
         brand={
           <Link href="/" className="lp-mobnav-brandmark">

@@ -16554,3 +16554,63 @@ métricas.
 
 **Comprobado.** `pnpm test` 206/206 (2.861/2.861, 6 nuevos), `pnpm run validate`
 y `git diff --check` en verde.
+
+---
+
+## 171. Mega menú "Recursos" en la cabecera pública (HEADER-RECURSOS-MEGA-1, 2026-08-27)
+
+**Fase 2 de BLOG-INDEX-CARDS-2026-08** (Fase 1: rediseño del índice de
+`/blog`, PR #479, log §169) — se dejó aparte en su momento porque
+`components/marketing/public-header.tsx` lo comparten las ~8 superficies
+públicas del sitio (home, `/geo`, `/pricing`, `/blog` + 17 artículos,
+`/comparativas` + 5 páginas, `/glosario`, `/docs`, legales), mayor radio de
+impacto que justificaba su propio Task Intake y su propia pasada de piloto.
+Aprobado por Task Intake el mismo día.
+
+**Qué implementa.** La **Versión B** del artefacto de diseño original,
+aprobada explícitamente por el fundador durante la Fase 1 ("En el menú la
+opción B"). El HTML de ese artboard se recuperó del historial de versiones
+del propio artefacto de Claude Design — no era accesible como URL de chat
+desde esta sesión, sólo el marcado que ya vivía dentro — y se comitea en este
+mismo PR en `docs/design-reference/header-recursos-mega-1/`.
+
+- La barra pública no cambia: sigue siendo Producto · Cómo funciona · Qué es
+  GEO · Precios · Blog. Se añade un disparador **"Recursos"** al final
+  (`components/marketing/public-header.tsx`, nuevo componente
+  `ResourcesMenu`), fiel a la nota del propio artboard: *"la barra actual se
+  mantiene igual; el desplegable añade 'Recursos' para Comparativas, Docs y
+  Glosario sin ocupar sitio en la barra"*. **No** se implementó la columna
+  "Producto" que el mockup también mostraba superpuesta — es ilustrativa del
+  artboard, no una navegación de Producto que hoy exista como desplegable, y
+  la nota textual del propio diseño la deja fuera del alcance real.
+- El panel enseña **Blog, Comparativas, Documentación y Glosario** (título +
+  descripción de una línea cada uno, texto literal del artboard) más la
+  tarjeta del comprobador gratuito (`/gratis/aparece-mi-marca-en-chatgpt`) —
+  sin contenido inventado: las cuatro páginas ya existen.
+- Accesible: `<button aria-expanded>` con `Escape` y clic-fuera para cerrar
+  (mismo patrón que el propio prototipo del artefacto ya tenía en JS).
+- Móvil: `MarketingMobileNav` es una lista plana sin acordeón, así que no se
+  construyó un componente nuevo — los tres recursos que no vivían ya en la
+  barra (Comparativas, Documentación, Glosario) se añaden como enlaces planos
+  al final del cajón existente, detrás de Blog.
+
+**Trampa de especificidad encontrada y corregida antes de empujar** (mismo
+patrón que documenta `.claude/rules/styles.md`, dos veces ya: `.blog-body a`
+/ `.lp-mobnav a`). `ResourcesMenu` vive dentro de `.lp-nav-links` para heredar
+el `display:none` del `@media (max-width:900px)` existente sin una regla
+nueva — pero eso también lo pone bajo `.lp-nav-links a` (0,1,1), que ya fija
+`padding`/`border-radius`/`color` en cada ancla de la barra. Sin cualificar,
+`.lp-resmenu-link`/`.lp-resmenu-promo` (0,1,0) habrían perdido su propio
+padding en silencio, y `.lp-resmenu-promo` habría colapsado a un cajón
+estrecho en vez de la tarjeta de 16px de relleno del mockup. Corregido
+cualificando ambos con `.lp-nav-links` por delante (`.lp-nav-links
+.lp-resmenu-link`, 0,2,0). Un segundo empate de especificidad apareció en
+`:hover`: `.lp-nav-links a:hover` (0,2,1) empataba en la columna de clases
+con `.lp-nav-links .lp-resmenu-promo` (0,2,0) sin hover y ganaba por el
+desempate de elemento, así que la tarjeta oscura del comprobador gratuito
+parpadeaba a gris claro al pasar el ratón — arreglado con un
+`.lp-nav-links .lp-resmenu-promo:hover` explícito. Verificado contra la
+salida compilada (`.next/static/chunks/*.css`), no sólo leído en la fuente.
+
+**Comprobado.** `pnpm test` 207/207 (2.869/2.869), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build`, `git diff --check`, todo en verde.
