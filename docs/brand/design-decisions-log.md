@@ -17552,3 +17552,97 @@ dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
 **Sigue abierto, y no es de esta fase.** El relleno hacia atrás de `recurring_scans_enabled` para proyectos de pago que ya existen (P0-08, la otra mitad de la Fase 2 original) — decisión del fundador aún pendiente sobre cuántos proyectos hay hoy en esa situación.
 
 **Comprobado.** `pnpm test` (213/213, 2.935/2.935), `pnpm run validate` (build + typecheck + lint), todo en verde.
+
+---
+
+## 183. Una sola Puntuación GEO en todo el producto: TRUST-METRICS-1, Fase 1 de la auditoría externa (2026-08-27)
+
+**Origen.** Auditoría de producto externa (26-08-2026, `docs/Informe_auditoria_GenScore_20260826.docx`), hallazgo P0-01: el mismo escaneo mostraba 6/100 en Visión general, "2 Puntuación GEO" en Dominios y "Visibilidad 2" en la notificación de fin de escaneo. Plan de corrección completo en `docs/external-audit-2026-08.md`; diagnóstico de por qué el sistema agéntico no lo encontró en `docs/agentic-blind-spots-2026-08.md`. Decisión del fundador (2026-08-27): una sola puntuación GEO en todo el producto, y es la puntuación con ventana (`SCORE-WINDOW-1`, ADR 0036) — nunca `visibility_score` crudo. Ejecutado con el protocolo reforzado que el fundador pidió explícitamente: *"hazlo con mucho mimo, cuidado y revisión; la nota GEO Score es el core de la herramienta"*.
+
+**Por qué divergían.** Visión general ya leía el compuesto (`details_json.geo_score.score`, con la ventana encima desde SCORE-WINDOW-1). Dominios y la notificación de fin de escaneo leían `run_scores.visibility_score` directamente — una de las cuatro componentes del compuesto, nunca un score en sí misma. Las dos lecturas eran correctas por separado; la contradicción sólo existía entre pantallas, que es exactamente el punto ciego que el análisis de puntos ciegos señala como estructural (Causa 1).
+
+**El módulo, `lib/metrics/run-metrics.ts`.** Nace con sus tests (11) y **cero consumidores**, en su propio commit, antes de tocar una sola pantalla — primera regla del protocolo reforzado. `resolveGeoScore()` es la única función que cualquier "Puntuación GEO" del producto puede llamar: ventana primero (mediana sobre runs comparables, vía `computeWindowedScore`/`readWindowRun` de `lib/scoring/score-window.ts`, sin tocar ni la mediana ni `MIN_RUNS_FOR_WINDOW` ni las reglas de comparabilidad — SCORE-WINDOW-1 queda fuera de alcance a propósito), caída al compuesto del propio run bajo la misma etiqueta cuando hay menos de dos runs comparables. Estructuralmente no puede devolver `visibility_score`. `mentionRateByAnswer`/`promptCoverage`/`citationRate`/`answerCountLabel` dan a cada porcentaje su denominador de fábrica, para el segundo hallazgo (P0-02).
+
+**Cinco superficies migradas, un commit por superficie:**
+
+- **Dominios** (`lib/project-workspace.ts`): `latestScoreByProject` pasa de la visibilidad cruda del run más reciente a `resolveGeoScore` sobre las últimas 3 filas por proyecto (antes 2 — `DEFAULT_SCORE_WINDOW_SIZE` exige una fila más para que la ventana pueda publicar). El badge de delta (DELTA-GUARD-1) sigue leyendo visibilidad cruda sin tocar: es una magnitud run-a-run distinta, no un "Puntuación GEO".
+- **Notificación de fin de escaneo** (`lib/scan/executor.ts` + `lib/notifications/render.ts`): el payload lleva ahora `geoScore` (resuelto vía `resolveGeoScore` sobre las últimas filas de `run_scores`, fail-soft — un fallo ahí nunca bloquea la notificación de un escaneo que ya terminó bien). El copy cambia de "Visibilidad NN (+delta)" a **"Escaneo actualizado: Puntuación GEO NN"** — la redacción exacta que pidió el fundador, porque con ventana la notificación ya no puede afirmar honestamente que NN sea el resultado de ESE escaneo, sólo que ese escaneo actualizó la cifra. El delta antiguo se retira en vez de reutilizarse: comparaba dos visibilidades crudas, una base distinta de la ventana, y mostrar los dos juntos habría repetido el mismo fallo que esta fase existe para quitar. La dirección del icono sigue derivándose de esa magnitud, nunca mostrada como número.
+- **`weekly-digest.ts` — el cálculo estaba bien, el correo que envía no.** El plan lo listaba como cuarta superficie con el mismo bug; una relectura del fichero durante la implementación mostró que ya usaba `getEffectiveGeoScore` (el compuesto con su caída, no la visibilidad cruda) para su comparación semana-a-semana — una magnitud legítimamente distinta (cambio entre los dos runs más recientes, no la posición actual estabilizada) que no necesitaba tocarse. Esa conclusión se quedó corta: nadie había mirado el HTML que de verdad sale por correo. `lib/email/transactional.ts` seguía rotulando ese número **"Tu GEO Score"** — asunto, cabecera y `preheader`, en el resumen semanal Y en la alerta de caída sostenida (`sendScoreDropAlertEmail`) — exactamente la etiqueta que el fundador reservó para la ventana. Encontrado en una tercera pasada de revisión, después de que las dos rondas de `data-guardian`/`geo-strategy` dieran ACEPTAR: ninguna de las dos abrió el fichero de plantillas de correo, sólo el módulo de datos. Corregido sin tocar el cálculo — la alerta de caída necesita de verdad una señal sin suavizar, ceder eso a la ventana la volvería más lenta justo cuando la velocidad es el punto — sólo el rótulo: "Tu GEO Score" → "Puntuación de este escaneo" en el resumen; el asunto y la cabecera de la alerta dejan de decir "GEO Score" sin más. Ningún test cubría esta copia (los tests de `weekly-digest.ts`/`score-alert.ts` sólo comprueban los argumentos que reciben las funciones de envío, nunca el HTML que producen), así que el hallazgo no tenía manera de salir de una lectura humana del fichero.
+- **Competidores** (P0-02 y P1-03): "45 prompts" (en realidad respuestas prompt × motor, acumuladas en toda la historia del proyecto) pasa a `answerCountLabel` → "45 respuestas · 15 prompts en 3 motores", sin signo «×» — se descubrió en revisión que "×" afirma una igualdad aritmética que sólo se sostiene con un único escaneo; ver más abajo. `brandMentionRate`/`brandCitationRate` se leen del módulo con su fracción real como `title`. La tabla por motor dejaba de mostrar un motor sin ninguna mención de marca NI de competidor (`filterComparableEngines`) — así desapareció Claude entero de la tabla en el escaneo real que auditó el informe externo, aunque había respondido a las 15 preguntas. `matrixEngines` pasa a ser `brandEngineBreakdown` directamente: todo motor con al menos una fila, cero incluido. El principio que la función retirada defendía —nunca inventar una fila para un motor que no corrió— se mantiene intacto; lo que cambia es que un cero real ya no se oculta. `filterComparableEngines` sigue viva y testeada en `lib/competitors/engine-share.ts` por si algún día hace falta esa otra pregunta ("motores donde alguien puntuó"), simplemente ya no la hace esta pantalla.
+- **`/runs/[runId]` sale de la consola del usuario final** (decisión del fundador, 2026-08-27: *"quiero tener una única cifra GEO Score porque si no es un lío"*). Se retiran los dos enlaces "Ver detalle del escaneo", en Páginas citadas y en Recomendaciones — los dos dentro de estados vacíos, así que un proyecto con datos reales nunca podía llegar a un escaneo por ahí (el propio `debug/page.tsx` ya lo documentaba). La ruta sigue viva, alcanzable sólo desde `/debug`, que ya la enlaza desde la fecha de cada fila.
+
+**Guardas nuevas:**
+
+- `tests/metric-contract.test.ts` — mismo patrón que `tests/mission-parity.test.ts`: comprobaciones a nivel de fuente sobre los ficheros concretos que esta fase arregló (no un barrido genérico sobre todo el repo, que daría falsos positivos en todo el cálculo de porcentajes legítimo que el resto del producto hace fuera de este alcance).
+- `tests/pilot/journeys/geo-score-consistency.spec.ts` — la aserción cruzada del piloto (Corrección B del análisis de puntos ciegos): visita Visión general y Dominios del mismo proyecto en la misma pasada y falla si el número del medidor difiere. Cierra la brecha exacta que ningún test unitario puede cerrar por sí solo — que el módulo esté bien no garantiza que las dos pantallas, con React y Supabase reales de por medio, sigan de acuerdo.
+
+**Revisión reforzada — dos rondas, no una.** `data-guardian` revisó scoping,
+coste y fail-soft de las lecturas nuevas; `geo-strategy` revisó si ocultar-vs-
+mostrar un motor sin menciones y el fallback sin ventana siguen siendo
+honestos desde la metodología GEO. **Ambos devolvieron BLOQUEAR** en la
+primera pasada — el protocolo reforzado que pidió el fundador hizo
+exactamente lo que tenía que hacer, y encontró tres fallos reales antes del
+Human Gate, no después:
+
+1. **`answerCountLabel` afirmaba una multiplicación falsa desde el segundo
+   escaneo** (hallado por los dos agentes, independientemente).
+   `totalResultsCount` acumula TODOS los escaneos completados del proyecto;
+   `promptCount`/`engineCount` son del momento actual. "45 respuestas (15
+   prompts × 3 motores)" sólo cuadraba en la cuenta del auditor porque tenía
+   un único escaneo. Arreglo: se retira el signo «×» — "45 respuestas · 15
+   prompts en 3 motores" — porque no hay forma honesta de mantener una
+   igualdad aritmética entre tres cantidades de tres ventanas temporales
+   distintas.
+2. **Visión general seguía enseñando DOS "Puntuación GEO" en la misma
+   pantalla** (geo-strategy). El medidor mostraba la ventana (`gaugeScore`,
+   correcto); una frase de la misma pantalla, dos dedos más abajo, seguía
+   diciendo "con una puntuación GEO de {`perRunScore`}/100" — el compuesto de
+   ESTE escaneo, no la ventana. Es el hallazgo P0-01 de la auditoría, sin
+   haber salido de la pantalla. Arreglo: la frase deja de afirmar una
+   puntuación; el medidor ya la dice una vez, bien.
+3. **El fallback de la notificación, en su ruta de fallo, volvía a publicar
+   `visibility_score` bajo "Puntuación GEO"** (hallado por los dos agentes).
+   Si la consulta de ventana fallaba, `geoScoreForNotification` caía a
+   `Math.round(scores.visibility_score)` — el número prohibido, en el único
+   camino que nadie mira porque casi nunca falla. Arreglo: cae a
+   `getEffectiveGeoScore(scores)` (el compuesto de este run, sin consulta
+   extra — ya estaba en scope), que es exactamente lo que `resolveGeoScore`
+   devolvería con un solo run disponible.
+
+**Un cuarto hallazgo cambió una pieza que el plan daba por terminada.**
+Dominios y Visión general leían profundidades distintas de historial (7 filas
+la una, 3 la otra) antes de resolver la ventana — con un run incomparable
+mezclado entre los primeros, una pantalla podía publicar mediana y la otra
+caer a `single_run`, la misma divergencia P0-01 un nivel más abajo. Se
+introdujo `GEO_SCORE_LOOKBACK_ROWS = 7` en `lib/metrics/run-metrics.ts`
+—igualando la profundidad que Visión general ya tenía establecida— y las tres
+superficies (Dominios, notificación, y Visión general si se migra) leen la
+misma constante.
+
+**Y un quinto que revierte parcialmente algo de esta misma fase.** El delta
+de Dominios (DELTA-GUARD-1, comparaba dos `visibility_score` crudos) quedó
+sentado junto al nuevo `score` con ventana — misma forma del fallo,
+otra vez, sin que ninguno de los dos agentes lo llamara igual la primera vez
+que uno de ellos lo vio. Se descartó la opción de retirar el badge (el diseño
+aprobado de esta pantalla, DOMAINS-REDESIGN-1, es explícito: "sólo la
+puntuación GEO y su delta, ninguna segunda métrica" — quitarlo sin más
+tocaría ese invariante) y en su lugar se recalculó como **ventana sobre
+ventana**, misma construcción que el `gaugeDelta` de Visión general
+(`previousWindow`): se publica sólo cuando las dos resoluciones son ventanas
+reales; si no, ausencia honesta.
+
+**Lo que se dejó fuera de esta fase, con conformidad de ambos agentes en la
+segunda pasada:** un cero de un motor cuya extracción falló entera
+(`extraction_error`) se sigue viendo igual que un cero real de un motor que
+respondió y no mencionó a nadie — son dos hechos distintos y merecen una
+distinción propia (`unreadable` en `EntityEngineBreakdown`), pero es trabajo
+nuevo, no una corrección de esta fase. Y `promptCoverage()` existe en el
+módulo, está testado, y **no tiene consumidor todavía** — la mitad "cobertura
+de prompts" de P0-02 sigue sin verse en ninguna pantalla; el hueco natural es
+Prompts, en una fase futura.
+
+**Segunda pasada: ambos agentes, ACEPTAR.**
+
+**Riesgo conocido y aceptado.** El primer escaneo de un proyecto no tiene ventana (`MIN_RUNS_FOR_WINDOW` es 2): cae al compuesto del propio run, misma etiqueta, y el marcador de fiabilidad existente (`hasSufficientSample`) sigue siendo la única señal de que la cifra puede moverse cuando llegue el segundo escaneo. No se inventó ningún indicador nuevo para anunciarlo — aceptado explícitamente por el fundador.
+
+**Comprobado.** `pnpm test` (213/213, 2.934/2.934), `pnpm run validate` (build + typecheck + lint), todo en verde. Cada superficie en su propio commit, revertible por separado.

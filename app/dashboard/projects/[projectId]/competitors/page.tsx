@@ -12,11 +12,9 @@ import { PromptGapSection } from "./prompt-gap-section";
 import { SuggestedCompetitorsSection } from "./suggested-competitors-section";
 import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
 import { ScanStatePill } from "@/components/scan-state-pill";
-import {
-  computeEntityEngineBreakdown,
-  filterComparableEngines,
-  type EntityEngineBreakdown
-} from "@/lib/competitors/engine-share";
+import { computeEntityEngineBreakdown, type EntityEngineBreakdown } from "@/lib/competitors/engine-share";
+import { answerCountLabel, citationRate, mentionRateByAnswer } from "@/lib/metrics/run-metrics";
+import { normalizeProvider } from "@/lib/scan/engine-meta";
 import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
@@ -224,6 +222,15 @@ export default async function CompetitorsPage({
   const competitorCitationMap = new Map<string, number>(); // key → count of results citing that competitor's domain
   let brandCitations = 0; // prompts where project domain appears in citations
   let totalResultsCount = results.length;
+  // P0-02: the real prompt count and engine count, kept SEPARATE from
+  // totalResultsCount (prompt × engine answer rows) — the audit found this
+  // screen calling 45 answer rows "45 prompts" against Prompts' own count of
+  // 15. `projectPrompts` is the active-prompt list fetched above; engineCount
+  // is the number of distinct providers that actually produced a row, not a
+  // configured/expected count, so a partially-failed engine is not counted
+  // as if it ran cleanly.
+  const promptCount = projectPrompts?.length ?? 0;
+  const engineCount = new Set(results.map((r) => normalizeProvider(r.provider as string | null))).size;
 
   const projectDomainNorm = normalizeDomain(project.domain ?? "");
 
@@ -286,13 +293,15 @@ export default async function CompetitorsPage({
       ? Math.round((brandMentions / configuredMentionTotal) * 100)
       : 0;
 
-  // Brand mention rate (% of prompts where brand mentioned)
-  const brandMentionRate =
-    totalResultsCount > 0 ? Math.round((brandMentions / totalResultsCount) * 100) : 0;
-
-  // Brand citation rate
-  const brandCitationRate =
-    totalResultsCount > 0 ? Math.round((brandCitations / totalResultsCount) * 100) : 0;
+  // TRUST-METRICS-1: routed through lib/metrics/run-metrics.ts instead of
+  // computed inline — the module owns both the percentage AND the
+  // denominator that produced it, so a rendering site can't silently drop
+  // the "de cuántas respuestas" half the way this screen's headline number
+  // did before the audit.
+  const brandMentionRateMetric = mentionRateByAnswer(brandMentions, totalResultsCount);
+  const brandMentionRate = brandMentionRateMetric.percent;
+  const brandCitationRateMetric = citationRate(brandCitations, totalResultsCount);
+  const brandCitationRate = brandCitationRateMetric.percent;
 
   // ENGINES-VALUE-3: per-engine mention breakdown, computed once for the
   // brand and once per active competitor by reusing the same rows with a
@@ -463,12 +472,20 @@ export default async function CompetitorsPage({
 
   const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
 
-  // Engine columns worth showing — see filterComparableEngines
-  // (lib/competitors/engine-share.ts) for the rule and its tests.
-  const matrixEngines = filterComparableEngines({
-    brandBreakdown: brandEngineBreakdown,
-    competitorBreakdowns: competitorRows.map((c) => c.engineBreakdown)
-  });
+  // P1-03 (docs/external-audit-2026-08.md, Fase 1): this used to be
+  // `filterComparableEngines({ brandBreakdown, competitorBreakdowns })`, which
+  // drops an engine when NEITHER the brand NOR any tracked competitor was
+  // mentioned on it — so a motor that genuinely ran and answered every prompt
+  // vanished from the table entirely if its mention rate was a real zero. The
+  // audit caught it directly: Claude was part of the scan and missing from
+  // this table. `brandEngineBreakdown` already lists every engine that
+  // produced at least one row (`computeEntityEngineBreakdown` never invents a
+  // row-less engine — see that function's own header), mentioned or not, so
+  // it IS the full column set with no extra filtering. `filterComparableEngines`
+  // stays in lib/competitors/engine-share.ts, tested, for the day a screen
+  // legitimately needs "engines where SOMEONE scored" rather than "engines
+  // that ran" — just not this one.
+  const matrixEngines = brandEngineBreakdown;
 
   // Latest standing per entity, read from the same run_scores ranking the
   // trend chart plots — surfaced as a compact ranked list beside the chart so
@@ -597,10 +614,17 @@ export default async function CompetitorsPage({
               <>
                 <b>{project.brand}</b> aparece en{" "}
                 <span className={brandMentionRate >= 50 ? "" : "neg"}>
-                  <b>{brandMentionRate}% de los prompts</b>
+                  <b>{brandMentionRate}% de las respuestas</b>
                 </span>
-                {" "}analizados
-                {totalResultsCount > 0 && <> ({totalResultsCount} prompts en total)</>}.
+                {/* P0-02 (docs/external-audit-2026-08.md, Fase 1): esto era
+                    "45 prompts", y 45 es promptCount × engineCount — cada
+                    prompt cuenta una vez por motor, no una. `answerCountLabel`
+                    es la única función que compone esta frase, para que no
+                    vuelva a escribirse suelta en ningún otro sitio. */}
+                {" "}analizadas
+                {totalResultsCount > 0 && promptCount > 0 && engineCount > 0 && (
+                  <> ({answerCountLabel(promptCount, engineCount, totalResultsCount)})</>
+                )}.
                 {topCompetitor && topCompetitor.sov > brandSov ? (
                   <>
                     {" "}Tu competidor más fuerte es <b>{topCompetitor.name}</b>, con{" "}
@@ -794,11 +818,11 @@ export default async function CompetitorsPage({
                     <div className="cm2-rank-dm">{project.domain}</div>
                   </div>
                   <div className="cm2-rank-extra men">
-                    <div className="v">{brandMentionRate}%</div>
+                    <div className="v" title={`${brandMentionRateMetric.denominatorLabel} respuestas`}>{brandMentionRate}%</div>
                     <div className="l">Mención</div>
                   </div>
                   <div className="cm2-rank-extra cit">
-                    <div className="v">{brandCitationRate}%</div>
+                    <div className="v" title={`${brandCitationRateMetric.denominatorLabel} respuestas`}>{brandCitationRate}%</div>
                     <div className="l">Cita</div>
                   </div>
                   <div className="cm2-rank-bar-wrap">
@@ -935,10 +959,17 @@ export default async function CompetitorsPage({
                 </>
               )}
 
-              {/* Presencia por motor. Columns come from `matrixEngines`, which
-                  drops any engine nobody was mentioned in — an all-zero column
-                  is dead space, not a comparison (founder feedback). Needs >= 2
-                  surviving columns to still be a comparison at all. */}
+              {/* Presencia por motor. Columns come from `matrixEngines` — TODOS
+                  los motores con al menos una fila (P1-03, docs/external-audit-2026-08.md
+                  Fase 1). Antes se ocultaba un motor sin ninguna mención de
+                  marca ni de competidor, y eso escondía a Claude entero de esta
+                  tabla en el escaneo real que auditó ChatGPT: corrió, respondió
+                  a las 15 preguntas, y su columna desaparecía por dar 0 % en
+                  todas. Ocultar un cero real es justo lo que miente — el
+                  principio que `filterComparableEngines` defendía (no
+                  INVENTAR un cero para un motor que no corrió) se mantiene:
+                  sigue sin aparecer un motor sin filas. Needs >= 2 columns to
+                  still be a comparison at all. */}
               {matrixEngines.length >= 2 ? (
                 <>
                   <div className="cm2-sec-lbl">Presencia por motor · tasa de mención</div>
@@ -957,7 +988,14 @@ export default async function CompetitorsPage({
                           <td>{project.brand}</td>
                           {matrixEngines.map((e) => (
                             <td key={e.provider}>
-                              <span className={`cm2-mxc h${Math.min(5, Math.floor(e.mentionRate / 17))}`}>{e.mentionRate}</span>
+                              {/* title: el denominador real detrás del %, sin
+                                  rediseñar la celda — "2 de 15 respuestas". */}
+                              <span
+                                className={`cm2-mxc h${Math.min(5, Math.floor(e.mentionRate / 17))}`}
+                                title={`${e.mentions} de ${e.total} respuestas`}
+                              >
+                                {e.mentionRate}
+                              </span>
                             </td>
                           ))}
                         </tr>
@@ -967,9 +1005,19 @@ export default async function CompetitorsPage({
                             {matrixEngines.map((brandE) => {
                               const match = c.engineBreakdown.find((e) => e.provider === brandE.provider);
                               const rate = match?.mentionRate ?? 0;
+                              // TRUST-METRICS-1: la fila de marca ya lleva el
+                              // denominador real en `title` — esta fila se
+                              // había quedado sin él (hallazgo de revisión,
+                              // data-guardian, Human Gate). `match` es undefined
+                              // cuando el competidor no tiene fila alguna en ese
+                              // motor; el título lo dice explícitamente en vez
+                              // de fingir un "0 de 0".
+                              const title = match ? `${match.mentions} de ${match.total} respuestas` : "sin datos en este motor";
                               return (
                                 <td key={brandE.provider}>
-                                  <span className={`cm2-mxc h${Math.min(5, Math.floor(rate / 17))}`}>{rate}</span>
+                                  <span className={`cm2-mxc h${Math.min(5, Math.floor(rate / 17))}`} title={title}>
+                                    {rate}
+                                  </span>
                                 </td>
                               );
                             })}
