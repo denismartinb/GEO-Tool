@@ -17532,6 +17532,29 @@ dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
 
 ---
 
+## 182. TRUST-PROMISES-1: los precios dejan de citarse a mano fuera de la consola (Fase 2 de la auditoría externa, 2026-08-27)
+
+**Origen.** `docs/external-audit-2026-08.md`, Fase 2 (P0-06): "179 €" escrito a mano en cinco sitios distintos, cada uno con su propia probabilidad de quedarse atrás si el precio cambia en Stripe. `PROMO-CONSOLE-PARITY-1` (log §170) ya había arreglado la peor instancia — la consola cotizando 179 € a quien `/precios` ya le decía 59 € — e introdujo `resolveShownPromoPrice`, un solo sitio que decide qué precio muestra una pantalla. Esta fase hereda ese mecanismo en vez de reescribirlo y cierra el resto: todo lo que citaba un precio de plan **fuera** de la consola.
+
+**El patrón que se repetía.** Cinco ficheros llevaban un comentario propio prometiendo sincronía con `app/pricing/plans-data.ts` — "no se reescriben cifras a mano aquí" — y ninguno la cumplía de verdad: el número vivía como texto suelto, correcto el día que se escribió, sin nada que lo atara al catálogo si `PLANS` cambiaba. Es la misma forma exacta del fallo que §170 ya había nombrado, sólo que en comentarios en vez de en la interfaz — una promesa documental que el código no hacía cumplir.
+
+**Seis ficheros corregidos, todos leyendo `PLANS` directamente:**
+
+- **`components/landing/session-ctas.tsx`** — la tira de promoción del hero (`PromoStrip`) tenía los cuatro números (179, 59, 45, 19) Y la fecha de corte ("hasta 1 sept.") escritos a mano. Ahora lee `PLANS` para los precios y calcula el porcentaje de descuento en vez de citarlo, y `PROMO_ENDS_AT` con `Intl.DateTimeFormat` para la fecha — con `timeZone: "Europe/Madrid"` explícito, porque sin él el servidor (UTC en Vercel) corre la fecha un día hacia atrás para cualquier hora de corte antes del mediodía peninsular. Es la misma clase de fallo que esta fase persigue, sólo que en la zona horaria en vez de en el precio, y se corrigió sin que nadie lo pidiera porque de otro modo el arreglo habría introducido uno nuevo.
+- **`app/pricing/page.tsx`** — la metadescripción SEO citaba "45 €"/"179 €" a mano, con un comentario que decía que venía de `plans-data.ts` y `pricing-metadata.test.ts` sólo podía comprobar que los dos números coincidieran por casualidad, nunca impedir que uno se editara solo. Ahora es un template literal sobre `PLANS`.
+- **`lib/comparativas/genscore-vs-otterly.ts`**, **`lib/comparativas/alternativas-a-otterly.ts`**, **`lib/comparativas/mejores-herramientas-geo.ts`** — mismo patrón en sus filas de datos (`genscore`/`pricingNote`/`context`).
+- **`app/comparativas/alternativas-a-otterly/page.tsx`** — dos párrafos de FAQ y de veredicto en JSX citaban "179 €/mes" directamente; la corrección de los datos no los alcanzaba porque viven en la página, no en el módulo.
+
+**Guarda nueva.** `tests/promise-parity.test.ts`, mismo patrón que `tests/mission-parity.test.ts`: contratos a nivel de fuente sobre los seis ficheros concretos que esta fase tocó — que importen `PLANS` y que no vuelvan a citar el precio actual de Pro o Starter como texto suelto. Los comentarios que citan el precio antiguo a propósito (la nota histórica de este mismo cambio, una cita literal de lo que pidió el fundador) se descartan antes de buscar, para que documentar el arreglo no dispare el propio test. Verificado que el test realmente atrapa una regresión: revertido un fichero a mano, el test falló; restaurado, volvió a pasar.
+
+**Deliberadamente NO en esta fase.** No se crea `lib/plans/catalog.ts` ni se mueve `plans-data.ts` — el plan lo proponía como fuente única nueva, pero `PROMO-CONSOLE-PARITY-1` ya construyó esa fuente única en el sitio donde vivía, y moverla habría sido una reorganización cosmética de alto riesgo (toca los imports de toda pantalla de precios) por un beneficio que `resolveShownPromoPrice` + esta fase ya entregan. Tampoco se toca "mostrar la próxima ejecución con fecha" allá donde se afirma la cadencia diaria — el plan lo asigna a la Fase 3 (`RECURRING-VALUE-1`), que es su dueño natural porque ahí vive el calendario visible completo.
+
+**Sigue abierto, y no es de esta fase.** El relleno hacia atrás de `recurring_scans_enabled` para proyectos de pago que ya existen (P0-08, la otra mitad de la Fase 2 original) — decisión del fundador aún pendiente sobre cuántos proyectos hay hoy en esa situación.
+
+**Comprobado.** `pnpm test` (213/213, 2.935/2.935), `pnpm run validate` (build + typecheck + lint), todo en verde.
+
+---
+
 ## 183. Una sola Puntuación GEO en todo el producto: TRUST-METRICS-1, Fase 1 de la auditoría externa (2026-08-27)
 
 **Origen.** Auditoría de producto externa (26-08-2026, `docs/Informe_auditoria_GenScore_20260826.docx`), hallazgo P0-01: el mismo escaneo mostraba 6/100 en Visión general, "2 Puntuación GEO" en Dominios y "Visibilidad 2" en la notificación de fin de escaneo. Plan de corrección completo en `docs/external-audit-2026-08.md`; diagnóstico de por qué el sistema agéntico no lo encontró en `docs/agentic-blind-spots-2026-08.md`. Decisión del fundador (2026-08-27): una sola puntuación GEO en todo el producto, y es la puntuación con ventana (`SCORE-WINDOW-1`, ADR 0036) — nunca `visibility_score` crudo. Ejecutado con el protocolo reforzado que el fundador pidió explícitamente: *"hazlo con mucho mimo, cuidado y revisión; la nota GEO Score es el core de la herramienta"*.

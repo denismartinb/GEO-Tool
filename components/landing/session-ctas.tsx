@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { showsPromoStrip } from "@/lib/account-chip";
 import { useSessionUser } from "@/lib/use-session-user";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
+import { PLANS, PROMO_DURATION_MONTHS, PROMO_ENDS_AT } from "@/app/pricing/plans-data";
 
 /**
  * Three small client islands, one per session-aware fragment — kept
@@ -58,7 +59,41 @@ import { HeroDomainField } from "@/components/landing/hero-domain-field";
  * decir en el CTA que la promo de pro a 59€ dura 6 meses"). Sin el segundo
  * dato, "hasta el 1 de septiembre" se podía leer como que el precio sube
  * ese mismo día para quien ya se había apuntado.
+ *
+ * TRUST-METRICS-1/TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2):
+ * los cuatro números y la fecha de corte estaban escritos a mano — 179, 59,
+ * 45, 19, "hasta 1 sept" — exactamente el mismo fallo que
+ * PROMO-CONSOLE-PARITY-1 (log §170) ya encontró y arregló para la consola:
+ * un precio real, correcto el día que se escribió, con nada que lo ate a
+ * `plans-data.ts` si el cupón de Stripe cambia. Ahora se leen de `PLANS` (el
+ * `price`/`promoPrice` de cada plan) y de `PROMO_ENDS_AT` — la misma
+ * constante que ya gobierna el cupón real y la consola — así que esta tira
+ * no puede quedarse desincronizada de las otras dos superficies sin que las
+ * tres cambien a la vez. El porcentaje de descuento se calcula, no se copia:
+ * es lo que impidió que un "−67%" único para un mensaje combinado fuera una
+ * cifra falsa para Starter (ver arriba) — la misma razón por la que no puede
+ * ser una constante tampoco.
  */
+const PRO_PLAN = PLANS.find((p) => p.id === "pro")!;
+const STARTER_PLAN = PLANS.find((p) => p.id === "starter")!;
+
+function promoDiscountLabel(plan: { price: number; promoPrice?: number }): string {
+  if (plan.promoPrice === undefined) return "";
+  return `−${Math.round(((plan.price - plan.promoPrice) / plan.price) * 100)}%`;
+}
+
+// `timeZone` explícito: PROMO_ENDS_AT lleva su propio offset (+02:00,
+// Madrid), y sin fijarlo aquí `Intl.DateTimeFormat` cae al huso del
+// servidor — en Vercel, UTC — que corre la fecha un día hacia atrás ("31
+// ago" en vez de "1 sept") para cualquier hora de corte antes del mediodía
+// peninsular. Es la misma clase de fallo que esta fase existe para quitar,
+// sólo que en la zona horaria en vez de en el precio.
+const PROMO_ENDS_LABEL = new Intl.DateTimeFormat("es-ES", {
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/Madrid"
+}).format(new Date(PROMO_ENDS_AT));
+
 export function PromoStrip() {
   const user = useSessionUser();
   if (!showsPromoStrip(user?.planId)) return null;
@@ -70,12 +105,18 @@ export function PromoStrip() {
           <span>7 días de Pro</span>
         </span>
         <span className="lp-promo-row b">
-          <span className="lp-promo-pill">−67%</span>
-          <span>Pro <s>179&nbsp;€</s> <b>59&nbsp;€/mes</b>, 6 meses · hasta 1 sept.</span>
+          <span className="lp-promo-pill">{promoDiscountLabel(PRO_PLAN)}</span>
+          <span>
+            Pro <s>{PRO_PLAN.price}&nbsp;€</s> <b>{PRO_PLAN.promoPrice}&nbsp;€/mes</b>, {PROMO_DURATION_MONTHS} meses
+            · hasta {PROMO_ENDS_LABEL}.
+          </span>
         </span>
         <span className="lp-promo-row c">
-          <span className="lp-promo-pill">−58%</span>
-          <span>Starter <s>45&nbsp;€</s> <b>19&nbsp;€/mes</b>, 6 meses · hasta 1 sept.</span>
+          <span className="lp-promo-pill">{promoDiscountLabel(STARTER_PLAN)}</span>
+          <span>
+            Starter <s>{STARTER_PLAN.price}&nbsp;€</s> <b>{STARTER_PLAN.promoPrice}&nbsp;€/mes</b>,{" "}
+            {PROMO_DURATION_MONTHS} meses · hasta {PROMO_ENDS_LABEL}.
+          </span>
         </span>
       </span>
     </div>
