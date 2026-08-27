@@ -89,3 +89,24 @@ export function selectTrendWindow<T extends TrendWindowPoint>(input: {
   const informative = input.points.filter(carriesData);
   return limit > 0 && informative.length > limit ? informative.slice(-limit) : informative;
 }
+
+/**
+ * Cuántas series de CONTEXTO dibuja el gráfico antes de que el resto haya que
+ * encenderlas a mano.
+ *
+ * Ocho líneas superpuestas no las lee nadie —la captura del fundador era la
+ * marca más siete competidores, todos escalones del mismo azul— y cuatro es
+ * donde los tonos siguen distinguiéndose (también bajo daltonismo) y las
+ * etiquetas de final de línea todavía caben sin chocar.
+ *
+ * **Vive aquí y no en `position-trend-chart.tsx` a la fuerza** (log §177): ese
+ * fichero es `"use client"`, y Next convierte los exports de un módulo cliente
+ * en referencias de cliente cuando los importa un componente de servidor. La
+ * página la usaba como número para calcular qué series nacen encendidas, le
+ * llegaba algo que no era 4, `slice(0, cap)` devolvía vacío y **el gráfico
+ * salía con una sola línea**. Ni el typecheck ni los tests lo ven: los tipos
+ * son correctos y los tests no cruzan la frontera servidor/cliente. Sólo se ve
+ * mirando la pantalla. Una constante que lee el servidor no se importa de un
+ * módulo cliente.
+ */
+export const DEFAULT_VISIBLE_SERIES = 4;

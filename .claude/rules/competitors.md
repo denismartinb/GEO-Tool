@@ -193,3 +193,36 @@ propia marca cuando caía fuera del top 5.
 - El botón **"Gestionar" va en la etiqueta de sección**, nunca en la cabecera
   fija: todas las cabeceras de consola son iguales (log §3.2, decisión del
   fundador ya tomada dos veces).
+
+### El puesto es una MEDIA, y el rótulo tiene que decirlo
+
+`avg_position_when_mentioned` promedia **sólo las respuestas donde la marca
+aparece**, así que una marca nombrada pocas veces pero siempre la primera queda
+por delante de otra nombrada en muchas más. Es correcto y es contraintuitivo:
+en el proyecto Mozilla, Amazon salía 1ª con un 14% de mención y Mozilla 4ª con
+un 48% (log §177). **Ningún rótulo de esta cifra puede decir «Puesto» a secas**
+— eso se lee como una clasificación general — y la frase que lo explica va
+pegada a la cifra, nunca en un tooltip: el malentendido se encuentra mirando la
+pantalla, así que la explicación tiene que estar donde el ojo ya está.
+
+**Los rótulos viven en `lib/competitors/mean-rank-copy.ts` y en ningún otro
+sitio.** §36 arregló que las dos pantallas ORDENARAN esta cifra distinto y
+`rankLatestPositions` impide desde entonces que los números diverjan; ese
+fichero impide que diverjan las palabras. Copy nuevo sobre el puesto medio va
+ahí, no en el JSX.
+
+### El gráfico y la tabla de la misma tarjeta enseñan el mismo conjunto
+
+`PositionTrendChart` sólo enciende cuatro series por defecto, así que el orden
+en que se le pasan **decide qué marcas se ven**. Se ordenan por la tabla que
+tienen debajo (`orderByLatestRank`), no por cuota de voz acumulada: con lo
+segundo el gráfico dibujaba Mozilla/Chrome/Safari/Edge mientras la tabla
+encabezaba con Amazon/Chrome/Brave, en la misma tarjeta y sin nada que lo dijera
+(log §177). Dos reglas que van con eso:
+
+- **La marca propia va siempre primera**, aunque la clasificación la ponga
+  séptima. Es la línea más gruesa y la única que el lector ha venido a ver;
+  nacer apagada no es una opción.
+- **El color se asigna DESPUÉS de reordenar.** `TREND_SERIES_COLORS` está
+  ordenada de más a menos distinguible entre sí (y bajo daltonismo). Asignarla
+  antes deja a las cuatro visibles con los tonos 0, 3, 5 y 7.

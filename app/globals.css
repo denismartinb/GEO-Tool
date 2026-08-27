@@ -908,6 +908,32 @@ a {
 .cit2-kpis,
 .cit2-split-key,
 .wa2-diag-title,
+/* MEAN-RANK-READS-TRUE-1 (2026-08-27, log §177). La nota que explica que el
+   puesto es una MEDIA sobre las respuestas donde la marca sale, y no una
+   clasificación general. Va pegada a la cifra en las dos pantallas y con el
+   mismo aspecto en ambas, porque es la misma frase del mismo fichero
+   (`lib/competitors/mean-rank-copy.ts`) — si se vieran distinto volveríamos a
+   tener dos versiones de lo mismo, que es lo que §36 arregló para los números.
+
+   No es un tooltip a propósito: el malentendido lo encontró el fundador
+   mirando la pantalla, así que la explicación tiene que estar donde él estaba
+   mirando. Un `info-tip` aquí lo habría dejado sin leer exactamente igual. */
+.cm2-pos-note,
+.ov2-cmp-note {
+  margin: -2px 0 9px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-4);
+  /* En px, NUNCA en `ch`. Esta pareja de clases vive en dos ámbitos con
+     tipografías distintas —`.cm2-scope` redeclara `--font-body` a Figtree,
+     `.ov2-scope` cae a la del `body`— y un `ch` habría medido distinto en cada
+     pantalla, que es exactamente cómo `30ch` acabó partiendo la cifra de la
+     misión en dos líneas sólo en algunas secciones (log §168). Una medida
+     tipográfica en una clase compartida por dos ámbitos no es una medida
+     compartida. */
+  max-width: 620px;
+}
+
 .cm2-pos-list-hd {
   position: relative;
 }
