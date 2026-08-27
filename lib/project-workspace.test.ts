@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DATA_MATURITY_TARGET_SCANS, computeDataMaturity } from "./project-workspace";
+import {
+  DATA_MATURITY_TARGET_SCANS,
+  computeDataMaturity,
+  visibleDataMaturityState,
+  type DataMaturityState
+} from "./data-maturity";
 
 describe("computeDataMaturity", () => {
   it("hides while a run is pending or running, regardless of plan/history", () => {
@@ -119,5 +124,68 @@ describe("requireActiveProject", () => {
 
     expect(select, "no se encontró el .select() de requireActiveProject").toBeDefined();
     expect(select!.split(",").map((column) => column.trim())).toEqual(ALLOWED_COLUMNS);
+  });
+});
+
+/**
+ * MATURITY-BANNER-HIDE-ALL-1 (2026-08-27, log §174).
+ *
+ * El fallo que fijan: el switch de `/debug` decía "ocultar aviso «seguimiento
+ * diario»" y hacía exactamente eso — el usuario lo encendía y le seguía
+ * saliendo «Tu histórico se está construyendo» en la misma banda, en el mismo
+ * sitio, con la misma pinta. El fundador: *"tiene que ocultar ese y el de
+ * histórico construyendo y cualquier similar que haya"*.
+ */
+describe("visibleDataMaturityState", () => {
+  const ACCUMULATING: DataMaturityState = {
+    kind: "accumulating",
+    completed: 2,
+    target: 5,
+    cadenceUnit: "días",
+    etaCount: 3
+  };
+  /** Todos los estados que pintan algo, que son los que el switch debe callar. */
+  const VISIBLES: DataMaturityState[] = [{ kind: "free" }, { kind: "no_tracking" }, ACCUMULATING];
+
+  it("deja pasar cada estado visible cuando no hay preferencia puesta", () => {
+    for (const state of VISIBLES) {
+      expect(visibleDataMaturityState({ state, dismissed: false, hidden: false })).toEqual(state);
+    }
+  });
+
+  it("el switch calla TODOS los estados, no sólo «seguimiento diario»", () => {
+    for (const state of VISIBLES) {
+      expect(
+        visibleDataMaturityState({ state, dismissed: false, hidden: true }),
+        `el switch dejó pasar el estado ${state.kind}: es justo el fallo que esto arregla`
+      ).toBeNull();
+    }
+  });
+
+  /**
+   * La garantía que de verdad pidió el fundador con "cualquier similar que
+   * haya" es sobre los estados que TODAVÍA NO EXISTEN. Se comprueba con uno
+   * inventado: si algún día `computeDataMaturity` devuelve un `kind` nuevo y
+   * alguien tuvo que acordarse de añadirlo a una lista, este test lo caza. Hoy
+   * pasa porque no hay ninguna lista — `hidden` se resuelve antes de mirar
+   * `kind`.
+   */
+  it("calla también un estado que aún no existe", () => {
+    const futuro = { kind: "algo_que_todavia_no_existe" } as unknown as DataMaturityState;
+    expect(visibleDataMaturityState({ state: futuro, dismissed: false, hidden: true })).toBeNull();
+    expect(visibleDataMaturityState({ state: futuro, dismissed: false, hidden: false })).toEqual(futuro);
+  });
+
+  it("`hidden` es del proyecto y `dismissed` de la X: ninguna anula a la otra", () => {
+    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: true, hidden: false })).toBeNull();
+    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: false, hidden: true })).toBeNull();
+    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: true, hidden: true })).toBeNull();
+  });
+
+  it("`hidden` nunca pinta nada, ni siquiera con un estado ausente o `hidden`", () => {
+    for (const state of [null, undefined, { kind: "hidden" } as DataMaturityState]) {
+      expect(visibleDataMaturityState({ state, dismissed: false, hidden: false })).toBeNull();
+      expect(visibleDataMaturityState({ state, dismissed: false, hidden: true })).toBeNull();
+    }
   });
 });

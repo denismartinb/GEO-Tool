@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import type { DataMaturityState } from "@/lib/project-workspace";
+import { visibleDataMaturityState, type DataMaturityState } from "@/lib/data-maturity";
 import { setRecurringScans } from "@/app/dashboard/projects/[projectId]/actions";
 
 function getProjectId(pathname: string): string | null {
@@ -14,23 +14,41 @@ function dismissedKey(projectId: string): string {
 }
 
 /**
- * DEBUG-HIDE-NO-TRACKING-1: preferencia local (no hay migración detrás) que
- * silencia el aviso "Tu análisis de hoy no se repetirá" del estado
- * `no_tracking`. Se activa desde un switch en `/dashboard/projects/
- * [projectId]/debug` (`components/no-tracking-banner-toggle.tsx`), que
- * importa esta misma función para no duplicar el formato de la clave entre
- * los dos ficheros. A diferencia de `dismissedKey` (un descarte de un solo
- * render, por `useState`), esta persiste hasta que se apague el switch — el
- * aviso seguiría reapareciendo en cada carga si sólo se pudiera descartar.
+ * DEBUG-HIDE-NO-TRACKING-1, ampliado en MATURITY-BANNER-HIDE-ALL-1 (2026-08-27,
+ * log §174): preferencia local (no hay migración detrás) que silencia **toda**
+ * esta banda, sea cual sea su estado. Se activa desde un switch en
+ * `/dashboard/projects/[projectId]/debug`
+ * (`app/dashboard/projects/[projectId]/debug/maturity-banner-toggle.tsx`), que
+ * importa esta misma función para no duplicar el formato de la clave entre los
+ * dos ficheros.
+ *
+ * **Silencia la banda entera, no un estado.** Nació cubriendo sólo
+ * `no_tracking` y el fundador pidió que cubriera también "el de histórico
+ * construyendo y cualquier similar que haya" (2026-08-27). Ese "cualquier
+ * similar" es la parte que decide la forma del arreglo: enumerar los estados
+ * de hoy dejaría el switch mintiendo en cuanto `computeDataMaturity` gane uno
+ * nuevo, y nadie se enteraría — el aviso simplemente reaparecería. Así que la
+ * comprobación va **antes** del reparto por `kind`, y un estado nuevo queda
+ * cubierto por no hacer nada.
+ *
+ * **La clave de `localStorage` conserva su nombre viejo a propósito.**
+ * Renombrarla dejaría a quien ya tenga el switch encendido con la banda de
+ * vuelta en la cara sin haber tocado nada — justo lo contrario de lo que se
+ * pide aquí. El nombre queda desalineado con lo que hace; este comentario es
+ * el que impide que eso se lea como un descuido.
+ *
+ * A diferencia de `dismissedKey` (un descarte de un solo render, por
+ * `useState`), ésta persiste hasta que se apague el switch — el aviso seguiría
+ * reapareciendo en cada carga si sólo se pudiera descartar.
  */
-export function noTrackingHiddenKey(projectId: string): string {
+export function maturityBannerHiddenKey(projectId: string): string {
   return `dmb-hide-no-tracking:${projectId}`;
 }
 
 /**
  * DATA-MATURITY-1: explains the gap between "your score today is real" and
  * "trends/competitor comparisons need more history" instead of leaving that
- * gap silent (see lib/project-workspace.ts computeDataMaturity for the state
+ * gap silent (see lib/data-maturity.ts computeDataMaturity for the state
  * machine). Lives once per dashboard shell (app/dashboard/layout.tsx) rather
  * than per project page, reading the current project id off the URL like
  * WorkspaceTopbar already does — every project-scoped page gets it for free
@@ -44,22 +62,29 @@ export function DataMaturityBanner({
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
   const [dismissed, setDismissed] = useState(false);
-  const [noTrackingHidden, setNoTrackingHidden] = useState(false);
+  const [bannerHidden, setBannerHidden] = useState(false);
 
   useEffect(() => {
     if (!projectId || typeof window === "undefined") {
       setDismissed(false);
-      setNoTrackingHidden(false);
+      setBannerHidden(false);
       return;
     }
     setDismissed(window.localStorage.getItem(dismissedKey(projectId)) === "1");
-    setNoTrackingHidden(window.localStorage.getItem(noTrackingHiddenKey(projectId)) === "1");
+    setBannerHidden(window.localStorage.getItem(maturityBannerHiddenKey(projectId)) === "1");
   }, [projectId]);
 
   if (!projectId) return null;
-  const state = dataMaturityByProject[projectId];
-  if (!state || state.kind === "hidden" || dismissed) return null;
-  if (state.kind === "no_tracking" && noTrackingHidden) return null;
+  // Una sola puerta, y vive en `lib/project-workspace.ts` con su test. El
+  // switch de `/debug` silencia la BANDA, no uno de sus mensajes, así que la
+  // decisión se toma antes de mirar `kind` y un estado futuro queda cubierto
+  // sin que nadie tenga que acordarse (log §174).
+  const state = visibleDataMaturityState({
+    state: dataMaturityByProject[projectId],
+    dismissed,
+    hidden: bannerHidden
+  });
+  if (!state) return null;
 
   function dismiss() {
     if (projectId && typeof window !== "undefined") {

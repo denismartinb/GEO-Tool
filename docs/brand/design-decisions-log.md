@@ -16554,3 +16554,83 @@ métricas.
 
 **Comprobado.** `pnpm test` 206/206 (2.861/2.861, 6 nuevos), `pnpm run validate`
 y `git diff --check` en verde.
+---
+
+## 174. El switch de «ocultar aviso» ocultaba un aviso de tres (MATURITY-BANNER-HIDE-ALL-1, 2026-08-27)
+
+**Lo que pidió el fundador.** *"El interruptor de ocultar aviso de seguimiento
+diario tiene que ocultar ese y el de histórico construyendo y cualquier similar
+que haya"*.
+
+**Qué pasaba.** DEBUG-HIDE-NO-TRACKING-1 (§161) puso en `/debug` un switch que
+silenciaba «Tu análisis de hoy no se repetirá» — y sólo eso. Pero esa banda
+(`DataMaturityBanner`) tiene tres mensajes visibles, no uno: el del plan Free,
+el de seguimiento diario y «Tu histórico se está construyendo». Así que quien
+encendía el switch seguía viendo una banda **en el mismo sitio, del mismo
+tamaño y con la misma pinta**, y el switch parecía roto sin estarlo: hacía
+exactamente lo que su etiqueta decía, y su etiqueta describía un tercio del
+problema.
+
+**Qué se decidió: silencia la banda, no un mensaje.** Y la parte que decide la
+forma del arreglo es *"cualquier similar que haya"* — o sea, los estados que
+todavía no existen. Enumerar los tres de hoy habría dejado el switch mintiendo
+en cuanto `computeDataMaturity` gane un `kind` nuevo, **sin que fallara nada**:
+el aviso simplemente reaparecería y nadie relacionaría las dos cosas.
+
+Así que la decisión sale del componente y pasa a una función pura,
+`visibleDataMaturityState` (`lib/project-workspace.ts`, junto a la máquina de
+estados que la alimenta). Resuelve `hidden` **antes** de mirar `kind`, de modo
+que un estado futuro queda cubierto por no hacer nada. El componente pregunta
+una vez y pinta lo que salga: ya no hay tres sitios donde acordarse.
+
+**La clave de `localStorage` conserva su nombre viejo**
+(`dmb-hide-no-tracking:<id>`) aunque ya no describa lo que hace. Renombrarla
+dejaría a quien tuviera el switch encendido con la banda de vuelta en la cara
+sin haber tocado nada, que es justo lo contrario de lo que se pide. Queda
+desalineado a sabiendas, y anotado en los dos ficheros para que no se lea como
+un descuido — el mismo tipo de trampa que el §173 documenta desde el otro lado
+(allí el comentario prometía más de lo que el código hacía; aquí el nombre
+promete menos).
+
+Lo demás se renombra para que la pantalla no siga mintiendo: el fichero
+(`maturity-banner-toggle.tsx`), el componente (`MaturityBannerToggle`), la
+función de la clave (`maturityBannerHiddenKey`), el rótulo («Ocultar los avisos
+de la banda superior») y su texto, que ahora enumera los tres mensajes y dice
+que cubre los que se añadan.
+
+**Y de paso, la máquina de estados sale de `lib/project-workspace.ts`.** No
+por limpieza: **el build se rompió**. Mientras el componente sólo importaba el
+TIPO daba igual dónde viviera —`import type` se borra al compilar— pero en
+cuanto tuvo que importar una FUNCIÓN, `project-workspace.ts` entero se iba
+detrás al paquete del navegador, y ese fichero abre el cliente de **servicio**
+de Supabase. `next build` lo cazó en el sitio (`pnpm run validate`), que es
+exactamente donde se quiere que salte.
+
+Así que `lib/data-maturity.ts`: la máquina de estados y esta puerta, todo puro,
+sin `async`, sin red, sin `window`. Es el argumento que `.claude/rules/scan.md`
+ya da para `lib/scan/` — si un símbolo lo importa alguien que no hace lo que
+hace ese módulo, casi siempre está en el sitio equivocado. Había dos cosas en un
+fichero (una máquina de estados y una capa de acceso a datos) y sólo una puede
+cruzar al cliente. `project-workspace.ts` la reexporta, así que ningún consumidor
+de servidor cambia de import.
+
+**Lo que garantiza que no vuelva a estrecharse.** Cinco tests en
+`lib/project-workspace.test.ts`, y uno de ellos es el que importa: **silencia un
+`kind` inventado que no existe en el tipo**. Si algún día alguien reintroduce
+una lista de estados, ese test cae. Comprobado en las dos direcciones —
+restaurada la semántica vieja (`hidden && kind === "no_tracking"`), fallan tres
+de los cinco nombrando el estado que se coló.
+
+**Lo que NO se ha tocado.** La X de descarte del aviso del plan Free sigue
+siendo otra preferencia, con otra clave y otro alcance (un aviso, ese render);
+las dos conviven y ninguna anula a la otra, fijado por test. No se ha tocado
+`computeDataMaturity`: qué banda toca es exactamente lo que era. Sigue sin haber
+migración detrás — es una preferencia local de navegador, con el coste ya
+asumido en §161 de que no viaja entre dispositivos.
+
+**Trazabilidad.** `lib/data-maturity.ts` (`visibleDataMaturityState`);
+`lib/project-workspace.ts` (la reexporta);
+`components/data-maturity-banner.tsx`;
+`app/dashboard/projects/[projectId]/debug/maturity-banner-toggle.tsx`;
+`lib/project-workspace.test.ts`; §161 (el switch original), §173 (la misma
+trampa por el otro lado).
