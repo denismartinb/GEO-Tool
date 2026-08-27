@@ -17457,7 +17457,7 @@ dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
 
 ---
 
-## 181. La confianza de pago llega también al pie de página, sin duplicar la fila (FOOTER-PAYMENT-TRUST-1, 2026-08-27)
+## 182. La confianza de pago llega también al pie de página, sin duplicar la fila (FOOTER-PAYMENT-TRUST-1, 2026-08-27)
 
 **Lo que pidió el fundador.** *"Ahora quiero que lleves un bloque de pago
 seguro similar al footer para transmitir confianza"* — la fila «Pagos seguros
@@ -17514,6 +17514,14 @@ escrito este fichero sobre medir la distancia, no leerla a ojo.
 falla también si `/precios` vuelve a declarar `PAYMENT_BADGES` a mano en vez de
 importarlo. Comprobado en las dos direcciones: con los seis footers revertidos,
 fallan los siete tests nombrando cada fichero al que le falta la fila.
+
+**Nota de numeración.** Nació como §181 sobre una `main` que llegaba al §180
+(PRICING-PAY-BADGES-CENTER-1, #495). Mientras esta rama seguía abierta, RECS-
+LOOP-1 Fase A (#492) reclamó ese mismo §181 y mergeó primero, así que esta
+sección —la que no estaba en `main`— renumera a **§182**, con todas sus
+referencias (`grep -rn "§182"`: `CLAUDE.md` y `.claude/rules/styles.md`).
+Mismo protocolo que ya documentan los §159/§161/§163/§173/§175/§178 de este
+mismo fichero.
 
 **Trazabilidad.** `components/marketing/payment-badges.tsx` ·
 `components/marketing-content-links.ts` (`MARKETING_SHELLS`) ·
