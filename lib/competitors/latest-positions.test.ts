@@ -248,4 +248,29 @@ describe("rankLatestPositions", () => {
       ["ConCifras", true]
     ]);
   });
+
+  it("16. judges the floor on the ROUNDED rate the row actually prints", () => {
+    // 9,6% renders as "10%". Judged raw it would sit last carrying "pocas
+    // menciones" beside a figure that reads as meeting the floor exactly —
+    // the screen contradicting itself in one line (Apple Safari, proyecto
+    // Mozilla, 2026-08-27).
+    const out = rankLatestPositions({
+      entities: [rival("Redondea"), rival("Justo")],
+      ranking: [entry("Redondea", 1.0, 9.6, false, 5), entry("Justo", 2.0, 40, false, 20)]
+    });
+    expect(out.map((r) => [r.label, r.qualified])).toEqual([
+      ["Redondea", true],
+      ["Justo", true]
+    ]);
+
+    // Y 9,4% se pinta como "9%", que sí contradice el suelo a la vista.
+    const below = rankLatestPositions({
+      entities: [rival("Baja"), rival("Justo")],
+      ranking: [entry("Baja", 1.0, 9.4, false, 5), entry("Justo", 2.0, 40, false, 20)]
+    });
+    expect(below.map((r) => [r.label, r.qualified])).toEqual([
+      ["Justo", true],
+      ["Baja", false]
+    ]);
+  });
 });

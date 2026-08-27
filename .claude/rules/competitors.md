@@ -123,7 +123,11 @@ propia marca cuando caía fuera del top 5.
   **tasa** y no en cuenta a propósito — 3 menciones son el 10% de 30 respuestas
   y el 0,6% de 500 —, y el suelo absoluto sólo cubre el otro extremo. Una
   entrada sin ninguna de las dos cifras se deja cualificada: degradar por una
-  clave que nunca se escribió es inventar un veredicto sobre un hueco.
+  clave que nunca se escribió es inventar un veredicto sobre un hueco. **Y se
+  compara la tasa REDONDEADA**, la que la fila imprime: un 9,6% se pinta como
+  «10%» y, juzgado en crudo, llevaría la etiqueta «pocas menciones» al lado de
+  una cifra que a la vista cumple el suelo exactamente. La regla que el usuario
+  puede comprobar es la que ve en pantalla.
 - **La posición mide rango, no frecuencia** (ADR 0026 `position-when-mentioned`).
   No reintroducir el promedio con penalización `N+1` de ADR 0005: producía que
   una marca poco mencionada quedase por encima de Chrome o Safari.

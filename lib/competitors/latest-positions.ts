@@ -94,7 +94,12 @@ export const MIN_MENTIONS_FOR_RANK = 2;
 function qualifiesForRank(entry: PersistedRankingEntry | null | undefined): boolean {
   const rate = entry?.mention_rate;
   const count = entry?.mention_count;
-  if (typeof rate === "number" && rate < MIN_MENTION_RATE_FOR_RANK) return false;
+  // Compared ROUNDED, because rounded is what the row prints. A 9,6% renders
+  // as "10%" and, judged raw, would carry the "pocas menciones" tag next to a
+  // figure that reads as exactly meeting the floor — a screen contradicting
+  // itself in the space of one line (Apple Safari, proyecto Mozilla,
+  // 2026-08-27). The rule the user can verify is the one on screen.
+  if (typeof rate === "number" && Math.round(rate) < MIN_MENTION_RATE_FOR_RANK) return false;
   if (typeof count === "number" && count < MIN_MENTIONS_FOR_RANK) return false;
   return true;
 }

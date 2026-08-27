@@ -16373,6 +16373,12 @@ ausencia; el dato es real, lo que está en duda es su comparabilidad.
   entrada escrita a medias — y degradar una fila por una clave que nunca se
   escribió sería inventar un veredicto a partir de un hueco.
 
+**Addendum del mismo día — el suelo se juzga sobre la cifra REDONDEADA.** En el
+preview, el fundador vio Apple Safari con «10%» **y** la etiqueta «pocas
+menciones»: su tasa real era 9,6%, que la fila imprime redondeada a 10. La
+pantalla se contradecía en el espacio de una línea. Se compara `Math.round`,
+porque la regla que el usuario puede comprobar es la que tiene delante.
+
 **Comprobado.** `lib/competitors/latest-positions.test.ts` fija el caso real de
 movistar.es (Movistar 1º … Euskaltel 7º, `qualified: false`, cifras intactas),
 los dos extremos del rango de tamaño y la dirección de fallo. El test 12
