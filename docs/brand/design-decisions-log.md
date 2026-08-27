@@ -12464,6 +12464,12 @@ de zonas, la fuente que esta tabla espeja).
 
 ---
 
+---
+
+
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -16177,7 +16183,7 @@ decisión del fundador, ya no por coste sino por criterio de producto; el
 interruptor está en la consola de operador (`/admin/users`, «Auditoría de
 cobertura IA»).
 
-------
+---
 
 ## 168. La misión del primer escaneo era seis misiones distintas (ANIMATION-PARITY-1, 2026-08-26)
 
@@ -16554,9 +16560,559 @@ métricas.
 
 **Comprobado.** `pnpm test` 206/206 (2.861/2.861, 6 nuevos), `pnpm run validate`
 y `git diff --check` en verde.
+
 ---
 
-## 173. Auditoría web se quedó en el primer peldaño de la escalera (WEB-AUDIT-WIDTH-1, 2026-08-27)
+## 171. Gate bloqueante de dominios al exceder el plan: DOMAINS-OVERAGE-GATE-1 (2026-08-25)
+
+**El problema.** El fundador enseñó una captura de Facturación con "Tienes 4
+dominios activos y tu plan Starter permite 1" y preguntó si de verdad se podían
+seguir usando los 4. Inspección del código: sí — ese aviso era (y el mecanismo
+que sigue siéndolo para el flujo que no toca esta fase) puramente informativo.
+`isOverCapacity` sólo se calculaba en cliente en `plan-billing-section.tsx`
+para pintar un banner; nada en `lib/scan/cron.ts`, `run-creation.ts` ni
+`executor.ts` comprobaba el recuento de dominios activos contra el cupo del
+plan — sólo `is_archived`. Un downgrade hecho desde el portal de Stripe deja el
+recuento sobrado a propósito (`changePlan`/`createPortalSession`,
+`app/dashboard/settings/billing/actions.ts`: "el fundador quiere que el dueño
+elija qué dominios mantener, nunca decidirlo por él") y nada más lo obligaba a
+resolverlo.
+
+**Task Intake aprobado**, con maqueta interactiva previa (Artifact, 6 estados)
+para validar el flujo antes de tocar código. Cuatro decisiones explícitas del
+fundador, cada una contraria a mi recomendación por defecto salvo la primera:
+
+1. **Borrado duro, no archivado** — a diferencia del flujo ya existente y
+   **deliberadamente intacto** de "Elegir dominios" (`ChangePlanModal`,
+   `overageOnly`), que sigue archivando (reversible) exactamente igual que
+   antes de este PR. El gate nuevo es un componente separado
+   (`components/billing/domain-overage-gate.tsx`) precisamente para no
+   cambiar la semántica de ese flujo ya enviado sin su propio Task Intake.
+2. **Salida a "subir de plan"** dentro del propio gate — sin ella, alguien que
+   bajó de plan por error quedaría atrapado entre borrar dominios o nada.
+3. **El bloqueo cubre toda la consola, incluida Facturación** — sólo tiene
+   sentido combinado con la decisión 2.
+4. **`/admin` queda exento** — es una zona aparte (`admin.md`), no una
+   pantalla del propio cliente.
+
+**Qué se construyó:**
+
+- `lib/billing.ts` → `getDomainOverage()`: consulta dedicada y barata (un
+  `COUNT`) que corre en cada carga de `app/dashboard/layout.tsx` — a
+  propósito NO `getUsageSummary()` (cuatro consultas en paralelo, hasta 500
+  filas de resultados de escaneo y una consulta a Stripe), que habría sido
+  trabajo desperdiciado en cada navegación para la inmensa mayoría de cuentas
+  que nunca están sobre su cupo. Sólo dispara la segunda consulta (los
+  dominios) cuando la primera confirma overage. Falla hacia "no hay overage"
+  — mismo sentido de fallo que `SAMPLING-DEBUG-TOGGLE-1`
+  (`.claude/rules/scan.md`): un error de lectura transitorio nunca puede
+  bloquear la consola entera.
+- `app/dashboard/projects/actions.ts` → `deleteProjects(ids)`: variante en
+  lote de la ya existente `deleteProject`, mismo cascade, mismo scoping por
+  `owner_user_id`, misma irreversibilidad — y revalida en servidor que el
+  recuento final cabe en el plan, igual que ya hace `changePlan` tras
+  archivar.
+- `components/billing/domain-overage-gate.tsx`: cinco pasos —
+  elegir camino → seleccionar a retirar → confirmar con fricción extra
+  (lista qué se pierde por dominio, checkbox obligatorio "entiendo que no se
+  puede deshacer" antes de habilitar el botón de peligro, con salida a
+  "subir de plan" incluso ahí) → hecho; o elegir camino → plan que ya cubre
+  el recuento (reutiliza `createCheckoutSession`/`createPortalSession`) →
+  redirección a Stripe. Reutiliza el cromado `.cp-*` de `ChangePlanModal`
+  (`app/globals.css`) para el shell/tipografía; sólo el selector de dos
+  caminos y el tratamiento de peligro son clases nuevas (`.dog-*`). Sin botón
+  de cerrar, sin `Escape`, sin clic-fuera — el `scrim` no lleva `onClick`.
+- `app/dashboard/layout.tsx`: monta el gate cuando `role === "admin"` (mismo
+  gate que ya usa Ajustes para la sección Plan) y `getDomainOverage()`
+  reporta overage, por encima de todo lo demás — Sidebar incluido.
+
+**Las clases nuevas del componente viven en `app/globals.css`, no en
+`app/console.css`**, aunque el gate es exclusivamente de consola: sus clases
+se escriben desde `components/`, y `tests/console-css-scope.test.ts` no puede
+atribuir eso al dashboard (mismo motivo por el que las clases de la pantalla
+de notificaciones tampoco viven en `console.css` — cabecera de ese fichero).
+Se intentó primero en `console.css` y el test lo cazó.
+
+**Pendiente, explícito — corregido tras ver el piloto real.** La suposición
+original de este párrafo era que la cuenta piloto de solo-lectura "nunca está
+sobre su cupo" y que verificar el gate exigiría un journey de escritura nuevo.
+**Era falsa.** Los tres primeros pases de `ux-pilot` contra esta rama fallaron
+en cascada (~10 timeouts por pasada, pantallas sin relación entre sí) porque la
+cuenta piloto real **ya tenía 5 dominios activos en un plan Starter (cupo
+1)** — de siempre, sólo que nada lo comprobaba hasta este PR. El gate hizo
+exactamente lo que debía: bloquear la consola de una cuenta sobre su cupo,
+scrim incluido, y ese scrim interceptó cada clic de cada journey posterior
+(confirmado leyendo `error-context.md` de la rama `pilot-evidence/pr-481` —
+la captura del snapshot de página muestra literalmente "Tienes 5 dominios
+activos y tu plan Starter permite 1").
+
+No se corrigió en código — hacerlo habría sido el mismo antipatrón ya
+documentado en este repositorio (el piloto saltándose a sí mismo, log §120):
+el piloto tiene que comportarse como un usuario real, y un usuario real en
+esa situación vería el mismo bloqueo. El arreglo real es de datos, no de
+código: subir el plan de la cuenta piloto (Starter → Pro o superior) para que
+cubra sus 5 dominios reales, pedido al fundador fuera de este PR. Con eso
+resuelto, el pase normal del piloto SÍ cubre el estado "sin overage" en todas
+las pantallas que toca este PR — lo que sigue sin verificar automáticamente es
+el propio flujo de retirar/subir de plan dentro del gate (eso sí exige el
+journey de escritura nuevo bajo `tests/pilot/journeys/write/`, con su propio
+Task Intake, que sigue siendo trabajo de una fase siguiente).
+
+**Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build`, todo en verde.
+## 172. La tarjeta más frecuente de Recomendaciones apunta por fin a una URL tuya (AUDIT-RECS-JOIN-1 Fase B, 2026-08-27)
+
+**El hueco.** Fase A (§167) hizo que la pantalla señalara lo que impide
+citarte. Faltaba lo otro: que una tarjeta de **contenido** dijera «tu página
+`/precios` ya cubre esto, mejórala» en vez de «publica una página nueva». El
+puente ya estaba construido desde COMPETITOR-GROUNDING-2
+(`lib/recommendations/coverage-overlay.ts`, RECS-COVERAGE-OVERLAY-1) — pero
+sólo alimentaba `add_citation_block`, uno de los quince tipos. El más
+frecuente, `increase_brand_visibility` («Aparece en "..."», la tarjeta que
+sale primero en casi cualquier proyecto), no estaba conectado.
+
+**Por qué no era sólo "añadir un tipo al filtro".** `add_citation_block`
+dispara cuando la marca SÍ se menciona y no se cita; `increase_brand_visibility`
+dispara cuando NO se menciona en absoluto. El copy existente del hallazgo
+confirmado decía literalmente *«el problema no es que te falte contenido,
+sino que la IA no lo está citando como fuente»* — cierto para el primer tipo,
+**falso** para el segundo: si no hay mención, no hay nada que citar. Copiar el
+texto tal cual habría sido la misma clase de error que motivó el gate de
+honestidad de RECS-USEFULNESS-1 Fase C (§128), sólo que en código nuestro en
+vez de en la salida de un modelo.
+
+**Decisión.** `overlayCopy(recommendationType, state)` — nueva, en el mismo
+módulo — resuelve el texto por tipo. `add_citation_block` conserva su copy
+verbatim. `increase_brand_visibility` habla de "no aparece en la respuesta",
+nunca de citación, y su `whatToDo` para el caso "sin cobertura propia" **reusa
+el `firstStep` real de `rule_visibility_001`** carácter a carácter, en vez de
+inventar una segunda redacción del mismo consejo. `COVERAGE_OVERLAY_TYPES` se
+exporta como conjunto único de tipos soportados, para que el server no
+duplique la lista.
+
+**Deliberadamente NO extendido** a `create_faq_section` /
+`strengthen_brand_entity_clarity`: son reglas de ámbito de campaña (disparan
+sobre el agregado del run), no de un prompt — no hay un único tema con el que
+cruzarlas.
+
+**Duplicación con guardián, otra vez.** El overlay es server-only
+(`domain-coverage.ts` arrastra `import "server-only"`), así que el cliente no
+puede importarlo — mismo motivo por el que `CoverageOverlay`/`GeneratedSolution`
+ya vivían duplicados en `recommendations-client.tsx`. En vez de sumar una
+tercera duplicación sin red, `overlayCopyLocal` lleva un test que compara las
+dos funciones **campo a campo para cada combinación de tipo y estado**, mismo
+patrón que el guardián de tres vías de `GROUNDED_PROVIDERS` (§130). Verificado
+que puede fallar: rompiendo un texto a propósito, el test cae.
+
+**Lo que sigue sin resolverse, con conocimiento de causa.** El join exige
+`coverage.scanId === latestCompletedRun.id` (invariante de honestidad ya
+existente, sin tocar en esta fase): cobertura y recomendaciones tienen que ser
+del **mismo** escaneo. La primera vez que esto rinda en un proyecto real será
+tras su próximo escaneo completo, no antes — no es un fallo, es la garantía de
+que nunca reengancha una fila de cobertura vieja.
+
+---
+
+---
+
+
+---
+
+## 173. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
+
+**Nota de renumeración.** Esta sección nació como §165 en su propia rama; mientras se abría el PR, `main` avanzó y reclamó ese número y el siguiente (§165/§166, BILLING-INVOICE-FIELDS-1, PR #478) — pasó a **§167** en una primera fusión. `main` volvió a avanzar mientras el PR seguía abierto, esta vez con AUDIT-RECS-JOIN-1 reclamando ese §167 recién liberado, así que en esta segunda fusión pasa a §168 — pero `main` avanzó una TERCERA vez, esta vez con ANIMATION-PARITY-1 reclamando ese mismo §168, así que en esta tercera fusión pasa a §169 — y una CUARTA vez, con BLOG-INDEX-CARDS-2026-08 reclamando ese §169, pasó a §170 — y una QUINTA vez, con PROMO-CONSOLE-PARITY-1 reclamando ese mismo §170, pasó a §171 — y una SEXTA vez, con DOMAINS-OVERAGE-GATE-1 reclamando ese mismo §171 (y la misma fila del mapa de zonas, "Dominios y depuración"), pasó a §172 — y una SÉPTIMA vez, con AUDIT-RECS-JOIN-1 Fase B reclamando ese mismo §172, así que acaba en **§173**, el primero libre. Siete colisiones en la misma sección: el número es un identificador, no un contador, y esta rama es el caso de manual. Mismo protocolo que describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión en cadena que ya documentan los §159/§161/§163 de este mismo fichero.
+
+
+**Lo que pidió el fundador.** Que la configuración de `/debug` que hoy es
+manual (`sampling_enabled`, `auto_coverage_audit_enabled`,
+`auto_technical_audit_enabled`, `recurring_scans_enabled`) nazca en ON para
+toda cuenta, salvo tres direcciones de correo que siguen siendo sus propias
+cuentas de prueba interna. Aprobado vía Task Intake, con tres preguntas de
+alcance resueltas explícitamente antes de tocar código:
+
+1. **Sólo altas nuevas.** Ningún proyecto ya existente se toca. Nada de
+   `UPDATE` retroactivo — eso queda como una fase aparte si algún día se pide.
+2. **`auto_technical_audit_enabled` entra también**, no sólo las dos que
+   gastan Gemini: no cuesta IA y hoy congela un componente del GEO Score si
+   está apagada.
+3. **`recurring_scans_enabled` se activa solo, tras el primer escaneo**, no en
+   el alta — es la única de las cuatro cuya propia UI exige un escaneo
+   completado antes de poder encenderse, así que no puede nacer en ON.
+
+**Por qué esto NO era "cambiar dos booleanos".** Las tres migraciones que
+tocan (0031, 0032, 0033) documentan sus defaults en `false` como decisiones
+de coste deliberadas — el propio comentario de 0032 dice literalmente que la
+pregunta de qué hacer "cuando lleguen clientes reales" queda abierta a
+propósito. Encender `sampling_enabled` multiplica hasta ×5 las llamadas de
+un escaneo; `auto_coverage_audit_enabled` añade una llamada a Gemini por
+prompt activo tras cada escaneo. No es ajuste de UI, es una decisión de coste
+recurrente sobre toda cuenta real — de ahí el Task Intake Report en vez de
+implementación directa.
+
+**Mecanismo, dos sitios distintos porque el precondicionante es distinto:**
+
+- **Alta del proyecto** (`lib/projects/new-project-defaults.ts`,
+  `newProjectDefaults`): los flags que sí pueden nacer en ON se pasan como
+  `extraProjectColumns` a `createProjectCore`. **La bifurcación es la CUENTA,
+  nunca el entorno** — ver el addendum del 2026-08-27 más abajo, que es
+  justo lo que se corrigió.
+- **Fin del primer escaneo** (`lib/scan/executor.ts`, tras el `UPDATE` que
+  marca `scan_runs.status = 'completed'`): `recurring_scans_enabled` se lee
+  en su propia consulta aislada (mismo patrón que `engineFlagsRow` un poco
+  más arriba, ADR 0029/0033) y sólo se enciende si el proyecto tiene
+  exactamente un escaneo completado — la primera vez que la propia
+  precondición de `/debug` queda satisfecha. Deliberadamente NO se reevalúa
+  en escaneos posteriores: un cliente que lo apague a mano después no vuelve
+  a encenderse solo en el siguiente escaneo. Todo el bloque es fail-soft
+  (`try/catch`, mismo patrón que la cola de auditoría web un poco más abajo
+  en el mismo fichero): un fallo aquí nunca tumba un escaneo que ya terminó
+  bien.
+
+**La exclusión es por email, no por `auth.users.id`, y es una desviación
+consciente de `ADMIN_USER_IDS`.** El contrato de entorno (`docs/
+environment-contract.md`) es explícito en que `/admin` gatea por ID
+precisamente porque un email es cambiable por el propio usuario desde
+Ajustes — ahí ese cambio compraría acceso. Aquí el fallo de ese mismo cambio
+es "una cuenta de prueba recibe por descuido los defaults caros en su
+siguiente alta", barato de notar y corregir, no una brecha. Vive en
+`lib/projects/internal-test-accounts.ts`, leída desde la variable de entorno
+nueva `INTERNAL_TEST_ACCOUNT_EMAILS` (lista separada por comas) — nunca
+hardcodeada en el código fuente, y falla cerrado: sin la variable, nadie
+queda exento y toda cuenta nueva recibe los defaults de producción.
+
+**Pendiente / fuera de alcance, explícitamente.** Ningún dominio existente
+cambia con este PR. Si en el futuro se decide aplicar esto retroactivamente
+a cuentas reales que ya están escaneando, es una fase nueva con su propio
+Task Intake — cambia el gasto de clientes que no lo pidieron, no sólo el de
+altas nuevas.
+
+**Comprobado.** `pnpm test` (204/204, 2.832/2.832, incluye los 5 tests nuevos
+de `internal-test-accounts.test.ts`), `pnpm run validate` (build + typecheck
++ lint), `git diff --check` y `bash scripts/agentic-handoff-check.sh`, todo
+en verde.
+
+**Addendum, mismo día: cobertura de test para el bloque de `executor.ts`, a
+petición del propio piloto.** El agente `ux-pilot`, lanzado a juzgar el
+preview de este PR, devolvió `INCONCLUSIVE` para el comportamiento que esta
+fase implementa — no por un fallo suyo, sino porque es estructuralmente
+invisible al piloto siempre-on: vive detrás de `/debug` (fuera del recorrido
+por defecto) y detrás de un camino de escritura (creación de proyecto), y el
+piloto siempre-on es de sólo lectura por diseño (`CLAUDE.md`, "Pilot write
+scope"). Su recomendación explícita fue apoyar el Human Gate en tests
+unitarios en vez de en la pasada visual para esta pieza concreta.
+
+`lib/scan/executor.test.ts` ganó cinco tests nuevos sobre el bloque de
+auto-activación (primer escaneo completado → `recurring_scans_enabled = true`
+salvo cuenta interna de prueba; segundo escaneo en adelante → no se toca; ya
+encendido → no se reescribe; fallo del lookup de email → el escaneo igual
+completa). La decisión de defaults del alta se dejó **sin test dedicado**, con
+el argumento de que era «un wrapper de tres líneas» sobre
+`isInternalTestAccountEmail`. Ese argumento resultó ser falso al día
+siguiente: ver el addendum de abajo.
+
+**Comprobado (2ª pasada).** `pnpm test` (204/204, 2.847/2.847, +15 tests sobre
+la primera pasada: 5 de `internal-test-accounts.test.ts` + 5 nuevos de
+`executor.test.ts` para este addendum, más los que ya sumó `main` en
+BILLING-INVOICE-FIELDS-1), `pnpm run validate`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+**Segundo addendum (2026-08-27): la bifurcación era el ENTORNO y tenía que ser
+la CUENTA.** El fundador creó una cuenta nueva en el preview, dio de alta un
+dominio, lo escaneó, y encontró cuatro interruptores apagados: Cobertura por
+IA, Suelo de muestreo, Motor Claude y Motor OpenAI. *"Tienen que estar TODOS
+encendidos."*
+
+**No era un fallo, era el diseño — y el diseño estaba mal.** La primera
+versión daba prioridad a `previewTestingDefaults()` sobre los defaults nuevos:
+en cualquier preview, para cualquiera. Los cuatro apagados son exactamente el
+conjunto barato de esa función (`auto_coverage_audit_enabled: false`,
+`engine_claude/openai_enabled: false`, y `sampling_enabled` cayendo a su
+`default false` del esquema porque esa función no lo menciona). Hizo lo que
+estaba escrito; lo escrito no era lo que la fase quería.
+
+Dos cosas estaban mal en esa precedencia, y la segunda es la que importa:
+
+1. **El preview es donde esta fase se verifica antes del Human Gate.** Una
+   condición de entorno que apaga precisamente lo que la fase enciende deja el
+   cambio imposible de comprobar donde se comprueba todo lo demás.
+2. **Una cuenta real es una cuenta real, la haya creado quien la haya creado y
+   en el host que sea.** El entorno no dice nada sobre quién es el dueño.
+
+**La bifurcación pasa a ser la cuenta** (`newProjectDefaults`): cuenta interna
+de prueba → conjunto barato (que además sigue con su propia guarda de
+`VERCEL_ENV`, así que **sigue sin poder llegar a producción**, tal y como pidió
+el fundador el 2026-08-11: *"en main nada de lo de probar barato"*); cuenta
+real → todo encendido, en producción, en preview y en local. Los tres
+`engine_*_enabled` pasan a declararse **explícitamente** aunque la migración
+0033 ya los ponga en `true`: que esta función sea la respuesta completa a «con
+qué nace un proyecto» es justo lo que faltaba para que nadie tuviera que
+cruzarla con el esquema y con lo que pudiera estrecharla después.
+
+**Y por qué no lo cazó nada.** Las tres funciones vivían dentro de
+`app/dashboard/projects/actions.ts`, que es `"use server"`: ahí **todo export
+tiene que ser una server action asíncrona**, así que no se podían exportar y
+por tanto no se podían testear. El «wrapper de tres líneas» de la 2ª pasada no
+era intestable por poco importante, era intestable por dónde estaba. Se mudan
+a `lib/projects/new-project-defaults.ts` con siete tests, tres de los cuales
+**fallan si se restaura la precedencia vieja** (comprobado revirtiéndola).
+
+**Fuera de alcance, dicho explícitamente:** «Ocultar aviso «seguimiento
+diario»» sigue apagado y **no se toca**. No es un flag de proyecto sino una
+preferencia de `localStorage` por navegador, y encenderla por defecto
+silenciaría un aviso legítimo para las cuentas que sí tengan el seguimiento
+apagado. Con el seguimiento diario ahora auto-activándose tras el primer
+escaneo, ese aviso ya no le sale a una cuenta nueva de todos modos.
+
+**Comprobado (3ª pasada).** `pnpm test` (207/207, 2.872/2.872), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Addendum, mismo día: segunda corrección tras probar el preview, y una
+premisa equivocada de la primera corrección.** El fundador creó una cuenta
+nueva (no excluida) en el preview del PR, dio de alta un dominio y lo
+escaneó: los seis interruptores de proyecto salieron bien, pero el switch
+"Ocultar aviso «seguimiento diario»" seguía apagado, y el banner "Tu
+histórico se está construyendo. Escaneo 1 de 5" (estado `accumulating` de
+`computeDataMaturity`) seguía visible.
+
+Eso contradice lo que decía el addendum anterior: *"con el seguimiento diario
+ahora auto-activándose tras el primer escaneo, ese aviso ya no le sale a una
+cuenta nueva de todos modos"* — **incorrecto**. Esa frase confundía los dos
+estados informativos de `DataMaturityBanner`: `no_tracking` (el que
+desaparece cuando el seguimiento se activa solo) y `accumulating` (el que
+aparece *precisamente cuando* el seguimiento ya está activo pero aún no hay 5
+escaneos — el estado normal de toda cuenta nueva ahora que nace con
+seguimiento). El switch nunca cubrió `accumulating`, así que la premisa de
+que "ya no hacía falta" era doblemente equivocada.
+
+**Petición del fundador, textual:** que el switch controle los dos avisos, y
+que nazca encendido siempre.
+
+**Qué cambió.** `noTrackingHiddenKey` (`components/data-maturity-banner.tsx`)
+pasa a cubrir ambos estados (`no_tracking` **y** `accumulating`), y su
+semántica se invierte: la ausencia de valor en `localStorage` significaba
+"mostrar" (default anterior, `false`); ahora significa "ocultar" (default
+nuevo, `true`) — sólo un `"0"` explícito, escrito al apagar el switch a mano,
+vuelve a mostrar los avisos. Mismo cambio reflejado en
+`no-tracking-banner-toggle.tsx` (`/debug`), cuya copia ahora nombra los dos
+mensajes. Ninguna fila de base de datos ni server action tocada: sigue siendo
+una preferencia de `localStorage` por navegador, sin migración.
+
+**Comprobado (4ª pasada).** `pnpm test` (208/208, 2.880/2.880), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 174. El comprobador gratuito cerraba un resultado positivo con un texto escrito para uno negativo (CHECKER-COPY-1, 2026-08-27)
+
+**Fase 6 del plan de `docs/external-audit-2026-08.md`. Va primera de las once
+pese a ser la sexta en severidad**, por una razón de negocio y no de ingeniería:
+es un día de trabajo en el punto exacto donde alguien decide si se registra.
+
+**Lo que encontró la auditoría externa** (P0-07, 26-08-2026, probando
+`genscore.es`, que sí aparece): el bloque de aviso *"Esto es una respuesta, no
+un veredicto"* se renderizaba **incondicionalmente**, y su texto estaba escrito
+para un resultado negativo — *"Con una consulta no se puede decir que no
+aparezcas — sólo que en ésta no apareciste."* Detrás de un resultado positivo,
+con la marca nombrada y a veces su propia web citada como fuente, ese párrafo
+contradice al titular que hay tres bloques más arriba.
+
+**Por qué estaba mal escrito, que no es lo que parece.** No fue una decisión
+equivocada sobre qué decir. La verdad que este aviso defiende es una sola —una
+consulta no generaliza— y **tiene dos direcciones**: tras un "no apareciste" el
+error a mano es creerse ausente; tras un "apareciste", creerse presente. Escribir
+sólo la mitad negativa no era prudencia: era medir la modestia por el signo del
+resultado, que está exactamente igual de sesgado que escribir sólo la positiva.
+
+**Qué se ha hecho.** Las dos variantes viven en
+`lib/free-checker/result-copy.ts`, no en el componente, y comparten a propósito
+la primera frase (la causa: recuperación en vivo, no determinista) y la última
+(el remedio: varias preguntas repetidas en el tiempo). Sólo cambia la frase del
+medio, que es la única que depende del resultado. Que compartan causa y remedio
+es lo que deja ver que el aviso **no se adapta al resultado para suavizarlo**.
+
+**Por qué en `lib/` y no en el JSX.** Es la única forma de que el caso positivo
+tenga una prueba. El fallo no vivió meses por descuido: vivió porque **nadie
+podía ejercitar esa rama sin un dominio que apareciese de verdad**, y ningún
+test podía tocarla estando el texto incrustado en el componente. Mismo argumento
+que `lib/projects/new-project-defaults.ts` dejó escrito para su propio bug
+("shipped precisely because nothing could assert on it"). `result-copy.test.ts`
+cubre las dos direcciones y, sobre todo, **assertea la ausencia**: el texto
+negativo no puede aparecer con `brandMentioned: true`, que es lo único que
+impide que vuelva a colarse en un copy-paste.
+
+**Lo que NO se ha tocado.** El titular, que ya era condicional y correcto. El
+bloque de "Además" con la cita del propio dominio, que ya sólo se pinta cuando
+es verdad. Y el upsell, cuyo texto ("Has visto 1 pregunta en 1 motor") es cierto
+en las dos direcciones.
+
+**Comprobado.** `pnpm test` (208/208, 2.875/2.875), `pnpm run validate`
+(build + typecheck + lint), todo en verde.
+
+---
+
+## 175. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
+
+**Lo que vio el fundador.** En la panorámica competitiva de Visión general, con
+un escaneo de 30 respuestas: *"no tiene ningún sentido que Euskaltel aparezca
+primero que Movistar. Ya solo por lógica un operador como Movistar debe estar
+primero, y además viendo que solo tiene un 3% de mención no se entiende"*.
+
+**Lo que propuso, y por qué no era el arreglo.** Su idea era ordenar la
+panorámica con los datos de «Cuota de voz en IA» de Competidores, que en sus
+capturas sí ponía a Movistar primero. Comprobado antes de tocar nada:
+
+- Las **dos** pantallas publican este puesto desde el mismo módulo,
+  `rankLatestPositions` — así que la lista «Puesto en el último escaneo» de
+  **Competidores tenía exactamente el mismo Euskaltel 1º**. Lo que él comparó
+  era otro bloque de esa misma pantalla, con otra ventana (cuota de voz es
+  **acumulado de todos los escaneos**; la panorámica es el **último**).
+- Ordenar sólo la panorámica por cuota de voz habría dejado Movistar 1º en
+  Visión general y Euskaltel 1º en Competidores: **literalmente el fallo que
+  PANORAMA-PARITY-1 arregló** (§36), reintroducido por la puerta de al lado.
+- Y habría dejado mintiendo al rótulo «ÚLTIMO ESCANEO» y al titular «Tu puesto
+  cuando apareces», que son puesto-cuando-apareces, no cuota de voz.
+
+**La causa real.** `avg_position_when_mentioned` es honesto por respuesta y
+engañoso entre entidades, porque **nada en él dice sobre cuántas respuestas
+promedia**. Euskaltel salió **una vez** en 30, fue primero en esa única
+respuesta, y con eso encabezó la clasificación con un 1,00 — por delante de
+Movistar, nombrado en 26 de 30. No es un fallo de cálculo: es una comparación
+entre una media de n=1 y otra de n=26.
+
+**El arreglo: un suelo, no un filtro.** En `rankLatestPositions`, una entidad
+necesita salir en al menos el **10% de las respuestas** (y en **2** como
+mínimo) para disputar el orden. Por debajo **conserva su fila, su tasa de
+mención y su media reales**, y se ordena detrás, con el motivo escrito en la
+fila («pocas menciones»). Esconderla cambiaría una impresión falsa por una
+ausencia; el dato es real, lo que está en duda es su comparabilidad.
+
+- **Se expresa en tasa, no en cuenta**, porque tiene que aguantar los dos
+  extremos: 3 menciones son el 10% de un escaneo de 30 y el 0,6% de uno de 500.
+  El suelo absoluto sólo cubre el otro extremo — en un primer escaneo de 10
+  respuestas, el 10% es una sola respuesta, justo lo que esto existe para
+  impedir.
+- **Arregla las dos pantallas a la vez** por estar en el módulo compartido, que
+  es la razón de que ese módulo exista (§36).
+- **Sin migración ni reescaneo**: `mention_count` y `mention_rate` ya se
+  persisten en `run_scores.details_json`.
+- **Dirección de fallo deliberada**: una entrada que no lleva ninguna de las dos
+  cifras se considera cualificada. Las anteriores a geo-score-v3 ya se
+  descartan por no tener posición (ADR 0026), así que esto sólo cubre una
+  entrada escrita a medias — y degradar una fila por una clave que nunca se
+  escribió sería inventar un veredicto a partir de un hueco.
+
+**Addendum del mismo día — el suelo se juzga sobre la cifra REDONDEADA.** En el
+preview, el fundador vio Apple Safari con «10%» **y** la etiqueta «pocas
+menciones»: su tasa real era 9,6%, que la fila imprime redondeada a 10. La
+pantalla se contradecía en el espacio de una línea. Se compara `Math.round`,
+porque la regla que el usuario puede comprobar es la que tiene delante.
+
+**Comprobado.** `lib/competitors/latest-positions.test.ts` fija el caso real de
+movistar.es (Movistar 1º … Euskaltel 7º, `qualified: false`, cifras intactas),
+los dos extremos del rango de tamaño y la dirección de fallo. El test 12
+—paridad entre las dos pantallas— sigue verde: lo que cambió es el orden
+literal que fija, y ese cambio **es** el arreglo. `pnpm test` 205/205
+(2.858/2.858) y `pnpm run validate` en verde.
+
+**Lo que NO se ha tocado, y sigue siendo cierto:** cuota de voz sigue siendo
+acumulada y viviendo en Competidores etiquetada como tal (§11); la panorámica
+sigue publicando la mención del último escaneo (§36). No se han unificado las
+dos poblaciones — la regla de ruta pide decisión explícita para eso, y el
+diagnóstico de arriba dice que no hacía falta.
+
+
+**Nota de renumeración, dos veces.** Esta sección nació como §169 sobre una
+`main` que todavía no tenía ni el §169 de BLOG-INDEX-CARDS (#479) ni el §170 de
+PROMO-CONSOLE-PARITY-1 (#485); se renumeró a §171. Mientras seguía abierta
+entraron **también** #481 (§171) y #489 (§172), así que hubo que moverla otra
+vez, ahora al §175. Las dos veces se renumeró ESTA —la que no estaba en
+`main`— y con ella sus referencias en `CLAUDE.md` y
+`.claude/rules/competitors.md` (`grep -rn "§175"`). Mismo protocolo que
+documentan los §159, §161, §163 y §168.
+
+Que haya hecho falta dos veces en una mañana no es mala suerte: es el límite
+que `tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con
+cuatro ramas abiertas a la vez. El guardián hizo su trabajo las dos veces: paró
+el choque en la que mergeaba después.
+
+---
+
+## 176. El cajón móvil estaba cerrado y la aserción no sabía verlo (PILOT-DRAWER-VIEWPORT-1, 2026-08-27)
+
+**Qué pasó.** `«¿Qué es el GEO?» reabre el tour con contenido real, avanza y
+cierra` falló en `[mobile]` sobre el PR #484 con `TimeoutError: locator.click:
+Timeout 15000ms exceeded`. El registro de la llamada es la pista entera:
+
+```
+- locator resolved to <button type="button" class="nav-item">…</button>
+- element is visible, enabled and stable
+- scrolling into view if needed
+- done scrolling
+- element is outside of the viewport
+```
+
+Un elemento **visible, estable y fuera de la pantalla** después de intentar
+llevarlo a ella es, casi siempre, un elemento dentro de algo desplazado con
+`transform`.
+
+**Por qué.** Bajo 760px la barra lateral es un cajón `position: fixed` que vive
+en `translateX(-100%)` y sólo entra cuando `MobileShellProvider` pone
+`mobnav-open` (`app/globals.css`, `components/mobile-shell.tsx`). Sus botones
+están en el DOM y pintados **todo** el tiempo — simplemente fuera de pantalla
+por la izquierda. Para Playwright eso es «visible»: la definición es caja no
+vacía y sin `visibility: hidden`, no «se ve». Así que
+`await expect(reopen).toBeVisible()` **pasaba con el menú cerrado**, y el fallo
+reaparecía un renglón más abajo, en el clic, con un mensaje sobre el viewport
+que no menciona el cajón.
+
+Y el menú estaba cerrado porque la guarda de arriba era
+`if (await burger.isVisible().catch(() => false))`: una sola pregunta, hecha una
+sola vez. En un preview frío la cabecera puede no haber pintado todavía, la
+pregunta se contesta que no, y el `if` entero se salta en silencio. Es la misma
+familia que PILOT-HYDRATION-CLICK-1 (§136), un escalón más allá: allí el clic
+se perdía por llegar antes de hidratar, aquí ni siquiera se intenta.
+
+**Qué se decidió.** Dos cambios, y ninguno afloja nada:
+
+1. **La condición deja de ser «¿hay hamburguesa?» y pasa a ser «¿se alcanza la
+   entrada del menú?»** (`toBeInViewport`). Es la pregunta que de verdad
+   importa, no depende del ancho ni de que la cabecera haya pintado, y vale
+   igual en escritorio —donde la barra es una columna estática y no hay cajón
+   que abrir— que en móvil.
+2. **El clic se reintenta hasta que el cajón trae el botón a la pantalla**
+   (`expect(...).toPass`), sin espera fija. Seguro de repetir porque el botón
+   hace `setMobileNavOpen(true)`, no un alternar
+   (`components/workspace-topbar.tsx`) — la misma comprobación que hizo seguro
+   el remedio del §136.
+
+**Lo que esto NO era.** No era un fallo del producto ni del PR que lo destapó
+(#484 toca el módulo de puestos de competidores y dos clases CSS de fila; no
+toca la barra lateral, ni el cajón, ni el tour). Era una aserción incapaz de
+distinguir dos estados, latente desde que la escena se escribió: sólo fallaba
+cuando la carrera de hidratación salía del lado malo, que es exactamente el
+perfil de lo que se despacha como «flake» y se vuelve a ejecutar. Se
+diagnosticó en vez de reintentarse.
+
+**Lo que se deja anotado y NO se toca aquí.** El resto de la suite sigue usando
+`toBeVisible()` sobre elementos que podrían estar dentro de un contenedor
+desplazado. Esta pasada era la única que abría el cajón de la consola
+(`grep -rn "Abrir menú de navegación" tests/`), así que no hay más sitios con
+esta forma exacta; barrer el patrón entero es otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/onboarding-tour.spec.ts`;
+`components/mobile-shell.tsx` y `components/workspace-topbar.tsx` (por qué el
+clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
+está fuera de pantalla estando «visible»); §136 (el precedente).
+
+---
+
+---
+
+## 178. Auditoría web se quedó en el primer peldaño de la escalera (WEB-AUDIT-WIDTH-1, 2026-08-27)
 
 **Lo que vio el fundador.** *"Auditoría web se ve mal. Está centrado el
 contenido como si fuera mobile"*. Es literal: en escritorio la pantalla pintaba
@@ -16612,10 +17168,17 @@ CONTENIDO con la columna estrecha sigue siendo la decisión aparte que ya
 declaraba fuera de alcance el §150. Ningún cambio en el interior de la
 auditoría: las tarjetas simplemente disponen del ancho que les correspondía.
 
-**Nota de numeración.** Esta sección toma el §173 y no el §171 porque los §171
-(SAMPLE-FLOOR-1) y §172 (PILOT-DRAWER-VIEWPORT-1) están reservados por una rama
-abierta a la vez que ésta. El hueco es deliberado; `tests/log-numbering.test.ts`
-vigila duplicados y referencias rotas, no saltos.
+**Nota de numeración, dos veces.** Nació como §173 sobre una `main` que llegaba
+al §172. Mientras seguía abierta entraron #481, #489, #480, #490 y el propio
+#484, que dejaron `main` en el §176, y el §177 ya estaba reservado por otra rama
+(#491), así que acabó en el §178. Se renumeró ESTA —la que no estaba en `main`—
+con todas sus referencias (`grep -rn "§178"`: la regla de ruta, el test y el
+propio CSS).
+
+Cinco secciones ajenas en una mañana no es mala suerte: es el límite que
+`tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con cuatro
+ramas abiertas a la vez. Hizo su trabajo cada vez, parando el choque en la que
+mergeaba después.
 
 **Trazabilidad.** `app/console.css` (`.wa2-page`);
 `app/dashboard/projects/[projectId]/web-audit/page.tsx` (el comentario que ya

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * WEB-AUDIT-WIDTH-1 (2026-08-27, log §173) — las columnas de la consola suben
+ * WEB-AUDIT-WIDTH-1 (2026-08-27, log §178) — las columnas de la consola suben
  * los mismos cuatro peldaños, y eso se comprueba aquí.
  *
  * **Por qué existe.** Auditoría web se quedó meses en el primer peldaño (460px,
@@ -134,7 +134,7 @@ describe("las columnas de la consola suben los mismos peldaños", () => {
       expect(
         steps!.get(breakpoint),
         `${selector} debería medir ${expected}px ${where}. ` +
-          `Le falta un peldaño de la escalera 460/640/1200/1280 (log §5, §119, §173): ` +
+          `Le falta un peldaño de la escalera 460/640/1200/1280 (log §5, §119, §178): ` +
           `una pantalla a la que le falte se queda en ancho de móvil en escritorio sin que falle nada.`
       ).toBe(expected);
     }

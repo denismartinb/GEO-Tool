@@ -52,14 +52,45 @@ test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra",
   // menú tiene que funcionar en cualquiera de los dos estados de partida.
   await dismissWelcomeTour(page);
 
-  const burger = page.getByRole("button", { name: "Abrir menú de navegación" });
-  if (await burger.isVisible().catch(() => false)) {
-    await burger.click();
-    await page.waitForTimeout(400);
+  const reopen = page.getByRole("button", { name: /Qué es el GEO/i });
+
+  // PILOT-DRAWER-VIEWPORT-1 (2026-08-27, log §176). Bajo 760px la barra
+  // lateral es un cajón `position: fixed` que vive en `translateX(-100%)`
+  // hasta que la clase `mobnav-open` lo trae; sus botones están en el DOM y
+  // pintados TODO el tiempo, sólo que fuera de pantalla por la izquierda. Para
+  // Playwright eso es «visible» —caja no vacía, sin `visibility: hidden`—, así
+  // que `toBeVisible()` no distingue el cajón abierto del cerrado y pasaba
+  // igual con el menú cerrado; el fallo aparecía un renglón más abajo, en el
+  // clic, como «element is outside of the viewport» tras 15s. La aserción que
+  // sí sabe la diferencia es `toBeInViewport()`, y es la que va aquí.
+  //
+  // Así que la condición ya no es «¿hay hamburguesa?» —que en un preview frío
+  // se preguntaba antes de que la cabecera pintara y se contestaba que no— sino
+  // «¿se alcanza la entrada del menú?». Si no, hay cajón que abrir, lo diga el
+  // ancho o lo diga la hidratación.
+  await expect(reopen, "«¿Qué es el GEO?» desapareció del menú lateral").toBeVisible();
+  const needsDrawer = await expect(reopen)
+    .toBeInViewport({ timeout: 1_000 })
+    .then(
+      () => false,
+      () => true
+    );
+
+  if (needsDrawer) {
+    // El clic se reintenta hasta que el cajón llega de verdad, sin espera fija
+    // — mismo remedio y misma razón que PILOT-HYDRATION-CLICK-1 (log §136): el
+    // `onClick` no existe hasta que React hidrata y un clic anterior no se
+    // encola, se pierde. Repetirlo es seguro porque el botón hace
+    // `setMobileNavOpen(true)`, no un alternar (`components/workspace-topbar.tsx`).
+    const burger = page.getByRole("button", { name: "Abrir menú de navegación" });
+    await expect(async () => {
+      await burger.click();
+      await expect(reopen).toBeInViewport();
+    }, "el cajón de navegación móvil no llegó a traer «¿Qué es el GEO?» a la pantalla").toPass({
+      timeout: 15_000
+    });
   }
 
-  const reopen = page.getByRole("button", { name: /Qué es el GEO/i });
-  await expect(reopen, "«¿Qué es el GEO?» desapareció del menú lateral").toBeVisible();
   await reopen.click();
 
   const scrim = page.locator(WELCOME_TOUR_SCRIM);

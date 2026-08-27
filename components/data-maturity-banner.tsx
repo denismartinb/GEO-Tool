@@ -15,13 +15,20 @@ function dismissedKey(projectId: string): string {
 
 /**
  * DEBUG-HIDE-NO-TRACKING-1: preferencia local (no hay migración detrás) que
- * silencia el aviso "Tu análisis de hoy no se repetirá" del estado
- * `no_tracking`. Se activa desde un switch en `/dashboard/projects/
+ * silencia los dos avisos puramente informativos de abajo — "Tu análisis de
+ * hoy no se repetirá" (`no_tracking`) y "Tu histórico se está construyendo"
+ * (`accumulating`) — ninguno corrige algo roto, sólo piden esperar o activar
+ * el seguimiento. Se activa desde un switch en `/dashboard/projects/
  * [projectId]/debug` (`components/no-tracking-banner-toggle.tsx`), que
  * importa esta misma función para no duplicar el formato de la clave entre
  * los dos ficheros. A diferencia de `dismissedKey` (un descarte de un solo
  * render, por `useState`), esta persiste hasta que se apague el switch — el
  * aviso seguiría reapareciendo en cada carga si sólo se pudiera descartar.
+ *
+ * PROJECT-DEFAULTS-BY-ACCOUNT-1 (corrección tras prueba del fundador,
+ * 2026-08-27): oculto por defecto. La ausencia de valor ya no significa
+ * "mostrar" — sólo un `"0"` explícito (switch apagado a mano) revela los
+ * avisos de nuevo.
  */
 export function noTrackingHiddenKey(projectId: string): string {
   return `dmb-hide-no-tracking:${projectId}`;
@@ -44,22 +51,30 @@ export function DataMaturityBanner({
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
   const [dismissed, setDismissed] = useState(false);
-  const [noTrackingHidden, setNoTrackingHidden] = useState(false);
+  // PROJECT-DEFAULTS-BY-ACCOUNT-1 (corrección tras prueba del fundador,
+  // 2026-08-27): oculto por defecto — la ausencia de valor en `localStorage`
+  // ya no significa "mostrar". Un `"0"` explícito (switch apagado a mano en
+  // `/debug`) es lo único que revela los dos avisos informativos de abajo.
+  const [noTrackingHidden, setNoTrackingHidden] = useState(true);
 
   useEffect(() => {
     if (!projectId || typeof window === "undefined") {
       setDismissed(false);
-      setNoTrackingHidden(false);
+      setNoTrackingHidden(true);
       return;
     }
     setDismissed(window.localStorage.getItem(dismissedKey(projectId)) === "1");
-    setNoTrackingHidden(window.localStorage.getItem(noTrackingHiddenKey(projectId)) === "1");
+    setNoTrackingHidden(window.localStorage.getItem(noTrackingHiddenKey(projectId)) !== "0");
   }, [projectId]);
 
   if (!projectId) return null;
   const state = dataMaturityByProject[projectId];
   if (!state || state.kind === "hidden" || dismissed) return null;
-  if (state.kind === "no_tracking" && noTrackingHidden) return null;
+  // Los dos estados puramente informativos (piden esperar o activar el
+  // seguimiento, no corrigen nada roto) se apagan juntos con el mismo
+  // switch — el fundador probó el flujo real y encontró el banner de
+  // progreso ("Escaneo N de 5") tan ruidoso como el de `no_tracking`.
+  if ((state.kind === "no_tracking" || state.kind === "accumulating") && noTrackingHidden) return null;
 
   function dismiss() {
     if (projectId && typeof window !== "undefined") {

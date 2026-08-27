@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
-import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
+import { COVERAGE_OVERLAY_TYPES, computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
 import {
@@ -291,14 +291,17 @@ export default async function RecommendationsPage({
     }
   }
 
-  // RECS-COVERAGE-OVERLAY-1: read-time enrichment of add_citation_block cards
-  // with already-persisted domain-coverage data (DOMAIN-COVERAGE-1) for the
-  // CURRENT scan only — never the recommendation engine or scan pipeline. See
-  // lib/recommendations/coverage-overlay.ts for the join/degradation rules.
-  const addCitationRecs = baseRecs.filter((r) => r.recommendation_type === "add_citation_block");
+  // RECS-COVERAGE-OVERLAY-1 (extended in AUDIT-RECS-JOIN-1 Fase B): read-time
+  // enrichment of COVERAGE_OVERLAY_TYPES cards with already-persisted domain-
+  // coverage data (DOMAIN-COVERAGE-1) for the CURRENT scan only — never the
+  // recommendation engine or scan pipeline. See
+  // lib/recommendations/coverage-overlay.ts for the join/degradation rules
+  // and for why only these two (of fifteen) types are anchored to a single
+  // prompt and can therefore ever match a coverage topic.
+  const overlayEligibleRecs = baseRecs.filter((r) => COVERAGE_OVERLAY_TYPES.has(r.recommendation_type));
   const coverageOverlayByRecId = new Map<string, CoverageOverlayEntry>();
-  if (addCitationRecs.length > 0 && latestCompletedRun) {
-    const resultIds = addCitationRecs
+  if (overlayEligibleRecs.length > 0 && latestCompletedRun) {
+    const resultIds = overlayEligibleRecs
       .map((r) => r.evidence_json?.affected_prompt_details?.[0]?.id)
       .filter((id): id is string => Boolean(id));
 

@@ -397,7 +397,7 @@ que las otras seis columnas de la consola. No es una elección de esta pantalla:
 es el estándar aprobado en CITATIONS-REDESIGN-1 (log §5) y ratificado en
 OV-DESKTOP-2 (log §119). Esta pantalla declaró **sólo el primer peldaño**
 durante meses y se veía en escritorio como una columna de móvil centrada, sin
-que fallara nada — el fundador lo encontró a ojo (log §173). Lo fija
+que fallara nada — el fundador lo encontró a ojo (log §178). Lo fija
 `tests/console-page-width.test.ts`, que exige los cuatro a las siete columnas.
 
 **Y NO lleva `--ov-hdr-page-cap` ni `--mrk-page-cap` junto a esos anchos.** Esas
@@ -407,4 +407,4 @@ dos variables sólo hacen falta donde la clase estrecha va COMBINADA sobre
 siquiera está dentro de él— así que las dos fórmulas de bleed ya leen el tope de
 verdad. Copiarlas repetiría un error ya cometido y documentado en esta misma
 pantalla: alimentar la fórmula con un tope al que `.page` nunca estuvo sujeto y
-dejar la escena 20px corta por los dos lados (`app/console.css`, log §173).
+dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).

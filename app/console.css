@@ -840,7 +840,7 @@
 
 .wa2-page { max-width: 460px; margin: 0 auto; }
 
-/* WEB-AUDIT-WIDTH-1 (2026-08-27, log §173). Hasta aquí llegaba la regla: un
+/* WEB-AUDIT-WIDTH-1 (2026-08-27, log §178). Hasta aquí llegaba la regla: un
    único escalón de 460px, sin escalera. En escritorio eso dejaba la auditoría
    en una columna de ancho de móvil centrada bajo una cabecera que sí bleedea
    hasta el borde — el fundador lo describió como "está centrado el contenido
