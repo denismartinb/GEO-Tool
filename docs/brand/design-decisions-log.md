@@ -16634,3 +16634,72 @@ PROMO-CONSOLE-PARITY-1 (#485). Ambos aterrizaron antes, así que al fusionar se
 renumeró ESTA —la que no estaba en `main`— y con ella sus referencias en
 `CLAUDE.md` y `.claude/rules/competitors.md` (`grep -rn "§171"`). Mismo
 protocolo que documentan los §159, §161, §163 y §168.
+
+---
+
+## 172. El cajón móvil estaba cerrado y la aserción no sabía verlo (PILOT-DRAWER-VIEWPORT-1, 2026-08-27)
+
+**Qué pasó.** `«¿Qué es el GEO?» reabre el tour con contenido real, avanza y
+cierra` falló en `[mobile]` sobre el PR #484 con `TimeoutError: locator.click:
+Timeout 15000ms exceeded`. El registro de la llamada es la pista entera:
+
+```
+- locator resolved to <button type="button" class="nav-item">…</button>
+- element is visible, enabled and stable
+- scrolling into view if needed
+- done scrolling
+- element is outside of the viewport
+```
+
+Un elemento **visible, estable y fuera de la pantalla** después de intentar
+llevarlo a ella es, casi siempre, un elemento dentro de algo desplazado con
+`transform`.
+
+**Por qué.** Bajo 760px la barra lateral es un cajón `position: fixed` que vive
+en `translateX(-100%)` y sólo entra cuando `MobileShellProvider` pone
+`mobnav-open` (`app/globals.css`, `components/mobile-shell.tsx`). Sus botones
+están en el DOM y pintados **todo** el tiempo — simplemente fuera de pantalla
+por la izquierda. Para Playwright eso es «visible»: la definición es caja no
+vacía y sin `visibility: hidden`, no «se ve». Así que
+`await expect(reopen).toBeVisible()` **pasaba con el menú cerrado**, y el fallo
+reaparecía un renglón más abajo, en el clic, con un mensaje sobre el viewport
+que no menciona el cajón.
+
+Y el menú estaba cerrado porque la guarda de arriba era
+`if (await burger.isVisible().catch(() => false))`: una sola pregunta, hecha una
+sola vez. En un preview frío la cabecera puede no haber pintado todavía, la
+pregunta se contesta que no, y el `if` entero se salta en silencio. Es la misma
+familia que PILOT-HYDRATION-CLICK-1 (§136), un escalón más allá: allí el clic
+se perdía por llegar antes de hidratar, aquí ni siquiera se intenta.
+
+**Qué se decidió.** Dos cambios, y ninguno afloja nada:
+
+1. **La condición deja de ser «¿hay hamburguesa?» y pasa a ser «¿se alcanza la
+   entrada del menú?»** (`toBeInViewport`). Es la pregunta que de verdad
+   importa, no depende del ancho ni de que la cabecera haya pintado, y vale
+   igual en escritorio —donde la barra es una columna estática y no hay cajón
+   que abrir— que en móvil.
+2. **El clic se reintenta hasta que el cajón trae el botón a la pantalla**
+   (`expect(...).toPass`), sin espera fija. Seguro de repetir porque el botón
+   hace `setMobileNavOpen(true)`, no un alternar
+   (`components/workspace-topbar.tsx`) — la misma comprobación que hizo seguro
+   el remedio del §136.
+
+**Lo que esto NO era.** No era un fallo del producto ni del PR que lo destapó
+(#484 toca el módulo de puestos de competidores y dos clases CSS de fila; no
+toca la barra lateral, ni el cajón, ni el tour). Era una aserción incapaz de
+distinguir dos estados, latente desde que la escena se escribió: sólo fallaba
+cuando la carrera de hidratación salía del lado malo, que es exactamente el
+perfil de lo que se despacha como «flake» y se vuelve a ejecutar. Se
+diagnosticó en vez de reintentarse.
+
+**Lo que se deja anotado y NO se toca aquí.** El resto de la suite sigue usando
+`toBeVisible()` sobre elementos que podrían estar dentro de un contenedor
+desplazado. Esta pasada era la única que abría el cajón de la consola
+(`grep -rn "Abrir menú de navegación" tests/`), así que no hay más sitios con
+esta forma exacta; barrer el patrón entero es otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/onboarding-tour.spec.ts`;
+`components/mobile-shell.tsx` y `components/workspace-topbar.tsx` (por qué el
+clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
+está fuera de pantalla estando «visible»); §136 (el precedente).
