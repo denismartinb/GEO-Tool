@@ -13,6 +13,11 @@ import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
+import {
+  MEAN_RANK_BRAND_HEADLINE,
+  MEAN_RANK_COLUMN_LABEL,
+  MEAN_RANK_NOTE
+} from "@/lib/competitors/mean-rank-copy";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
@@ -1294,7 +1299,7 @@ export default async function ProjectDetailPage({
               <>
                 {posbarsData.length > 0 && (
                   <div className="card" style={{ padding: "17px 16px 6px" }}>
-                    <div className="ov2-pm-lbl">Tu puesto cuando apareces</div>
+                    <div className="ov2-pm-lbl">{MEAN_RANK_BRAND_HEADLINE}</div>
                     <div className="ov2-pm-val">
                       {brandRank !== null ? (
                         <>{brandRank}<small> / {totalRanked}</small></>
@@ -1330,6 +1335,11 @@ export default async function ProjectDetailPage({
                       the layout changes under it. The panorama had NO headers at
                       all, which is how a share-of-voice percentage passed for the
                       mention rate shown on the other screen. */}
+                  {/* MEAN-RANK-READS-TRUE-1 (log §177): misma frase, mismo
+                      fichero, que en Competidores. Sólo cuando hay columna de
+                      puesto — sin ella no hay nada que explicar, y una nota
+                      sobre una columna ausente es ruido. */}
+                  {panoramaRanked ? <p className="ov2-cmp-note">{MEAN_RANK_NOTE}</p> : null}
                   <div className="ov2-cmp-hd">
                     <span className="ov2-cmp-hd-nm">Último escaneo</span>
                     <span className="ov2-cmp-sov">Mención</span>
@@ -1338,7 +1348,7 @@ export default async function ProjectDetailPage({
                         empty column reads as a broken screen, an absent one reads
                         as what it is (log §15, "ni etiqueta ni tarjeta si no hay
                         nada debajo"). */}
-                    {panoramaRanked ? <span className="ov2-cmp-sc">Puesto</span> : null}
+                    {panoramaRanked ? <span className="ov2-cmp-sc">{MEAN_RANK_COLUMN_LABEL}</span> : null}
                   </div>
                   {panoramaListRows.flatMap((row, i) => {
                     const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
-import { buildSeriesPaths, MIN_TREND_POINTS } from "@/lib/competitors/trend-window";
+import { buildSeriesPaths, DEFAULT_VISIBLE_SERIES, MIN_TREND_POINTS } from "@/lib/competitors/trend-window";
 
 export type TrendSeries = {
   key: string;
@@ -19,6 +19,11 @@ type PositionTrendChartProps = {
   series: TrendSeries[];
   data: TrendPoint[];
   maxPosition: number;
+  /**
+   * Qué series nacen encendidas. Omitirlo = las primeras `DEFAULT_VISIBLE`,
+   * que es lo que hacía antes de log §177.
+   */
+  defaultVisibleKeys?: readonly string[];
 };
 
 const W = 640;
@@ -29,22 +34,27 @@ const PAD_RIGHT = 96;
 const PAD_TOP = 16;
 const PAD_BOTTOM = 28;
 
-/**
- * How many series are drawn before the rest have to be opted into.
- *
- * Eight overlapping lines is not a chart anyone reads — the founder's own
- * screenshot was the brand plus seven competitors, every one of them a step of
- * the same blue ramp. Four is the point where distinct hues stay
- * distinguishable (including under colour-vision deficiency) and where end
- * labels still fit without colliding.
- */
-const DEFAULT_VISIBLE = 4;
+/** Alias local: la constante vive en `trend-window.ts` — ver allí por qué. */
+const DEFAULT_VISIBLE = DEFAULT_VISIBLE_SERIES;
 
-export function PositionTrendChart({ series, data, maxPosition }: PositionTrendChartProps) {
+export function PositionTrendChart({
+  series,
+  data,
+  maxPosition,
+  defaultVisibleKeys
+}: PositionTrendChartProps) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const [hidden, setHidden] = useState<Set<string>>(
-    () => new Set(series.slice(DEFAULT_VISIBLE).map((s) => s.key))
-  );
+  // `defaultVisibleKeys` gana cuando viene, porque «qué se enciende» y «en qué
+  // orden se listan las pastillas» son dos preguntas distintas y la pantalla
+  // sabe responder mejor la primera: sólo ella conoce cuál es la marca propia y
+  // qué puesto ocupa (log §177). Sin ella, el comportamiento de siempre.
+  const [hidden, setHidden] = useState<Set<string>>(() => {
+    if (defaultVisibleKeys) {
+      const on = new Set(defaultVisibleKeys);
+      return new Set(series.filter((s) => !on.has(s.key)).map((s) => s.key));
+    }
+    return new Set(series.slice(DEFAULT_VISIBLE).map((s) => s.key));
+  });
 
   if (data.length < MIN_TREND_POINTS) return null;
 
