@@ -28,7 +28,7 @@ y decirlo importa tanto como arreglar el resto.
 | P0-05 | Auditoría web sin botón para iniciarla | Cierto y **deliberado**: `AUDIT-NO-BUTTON-1` (fundador, 2026-08-05) lo retiró porque la auditoría corre sola tras cada escaneo | **Confirmado, con matiz.** El fallo real es que el camino automático falló y no quedaba salida. |
 | P0-06 | Precio/promo/trial discrepan entre web, FAQ y cuenta | "179" escrito a mano en ≥5 sitios: `plans-data.ts:115`, `pricing/page.tsx:34`, `session-ctas.tsx:74`, dos comparativas | **Confirmado. Estructural.** |
 | P0-07 | El checker cierra un resultado positivo con copy negativo | `free-checker-result.tsx` — el panel "Con una consulta no se puede decir que no aparezcas" se renderiza **incondicionalmente** | **Confirmado. Arreglo barato.** |
-| P0-08 | Pro anuncia diario; la consola dice que no se repetirá | `/pricing` promete "Diario"; `recurring_scans_enabled` nace `false` (`cron.ts:255`), y el banner es correcto respecto a ese `false` | **Confirmado.** Contradicción producto↔promesa, no bug. |
+| P0-08 | Pro anuncia diario; la consola dice que no se repetirá | `/pricing` promete "Diario"; `recurring_scans_enabled` nace `false` (`cron.ts:255`) | **Confirmado, y resuelto para altas nuevas** por PROJECT-DEFAULTS-BY-ACCOUNT-1 (se enciende al completarse el primer escaneo). Sigue abierto para los proyectos ya existentes. |
 | P0-09 | "Fuente que cita a un rival" sobreafirma | `aggregate-citations.ts:39-48` — `competitors` son los rivales nombrados **en la respuesta** donde se citó la página, no en la página | **Confirmado. Semántico.** |
 | P1-01 | Pestaña de escaneo clavada en "finalizando" | `ANIMATION-PARITY-1` (#482, 2026-08-27) movió el sondeo y el `router.refresh()` al propio `ScanMissionRocket` en las 6 pantallas | **Probablemente ya arreglado tras la auditoría. Verificar, no reimplementar.** |
 | P1-02 | ChatGPT sugerido como competidor; "GEO Score" como alias | No existe ninguna lista de términos genéricos en `lib/competitors/` ni en `lib/brand-aliases/` | **Confirmado.** |
@@ -357,18 +357,41 @@ arriba sobre la ventana:
 en cinco sitios; y la cadencia prometida en `/pricing` ("Diario" en Pro) no es la
 que el producto hace por defecto (`recurring_scans_enabled = false`).
 
-**Decisión de producto necesaria (tuya):** para P0-08, dos salidas.
+**Decisión de producto — RESUELTA, y ya implementada** (fundador, 2026-08-27).
+El producto cumple la promesa: `recurring_scans_enabled` queda encendido por
+defecto para cuentas reales.
 
-- **(a) Recomendada — el producto cumple la promesa.** Un proyecto de plan de
-  pago nace con `recurring_scans_enabled = true`. El banner "Tu análisis de hoy
-  no se repetirá" deja de salir a quien paga, porque deja de ser verdad. Requiere
-  comprobar el coste: un Pro con 100 prompts × 3 motores × diario es la línea que
-  hay que mirar contra `docs/llm-cost-analysis-2026-08.md` antes de decidir.
-- (b) La promesa se ajusta al producto: `/pricing` dice "diario, activable desde
-  el proyecto". Es honesto, gratis y peor comercialmente.
+**Cómo, que no es como este plan suponía.** No puede nacer en `ON` con el
+proyecto: la columna tiene precondición propia —la UI de `/debug` exige al menos
+un escaneo completado antes de poder activarla— así que forzarlo en el alta
+sería un botón roto. Va enganchado al primer escaneo: `executePendingScan`
+(`lib/scan/executor.ts`, PROJECT-DEFAULTS-BY-ACCOUNT-1, rama
+`claude/default-account-config-x956ex`) lo enciende solo cuando el primer run
+llega a `completed`, **sólo esa primera vez** —cuenta runs completados y exige
+exactamente 1— para que quien luego lo apague a mano no se lo encuentre
+reencendido en el escaneo siguiente. Las cuentas internas de prueba quedan
+excluidas, y el bloque es fail-soft: si falla, el escaneo ya ha terminado bien.
 
-En ambos casos, allá donde se afirme una cadencia se muestra **la próxima
-ejecución con fecha**, no un adjetivo.
+Efecto práctico en un alta nueva: los otros cinco interruptores nacen
+encendidos, y éste se enciende solo unos segundos después, al completarse el
+primer escaneo.
+
+**Lo que esta fase HEREDA y lo que le QUEDA.** Hereda el mecanismo entero. Le
+quedan dos cosas que ese cambio no cubre y que siguen siendo P0-08:
+
+1. **Los proyectos que YA existen.** El disparo es `completedRunCount === 1`, y
+   es correcto que lo sea: es justo lo que evita reencender lo que alguien
+   apagó. Pero significa que **ningún proyecto con dos o más escaneos completados
+   lo recibe nunca**, y ésos son precisamente los clientes actuales — incluida la
+   cuenta Pro desde la que el auditor leyó "Tu análisis de hoy no se repetirá".
+   Hay que decidir entre rellenar hacia atrás (migración de datos acotada a
+   proyectos de plan de pago, con el interruptor apagado y sin apagado manual
+   registrado) o asumir que esos proyectos lo activan a mano. **Decisión del
+   fundador**; la recomendación es rellenar, porque el fallo que la auditoría
+   encontró vive exactamente ahí.
+2. **La cadencia sigue sin verse.** Encenderla no la hace visible: allá donde se
+   afirme una cadencia hay que mostrar **la próxima ejecución con fecha**, no un
+   adjetivo. Es de esta fase, y alimenta el calendario de la Fase 3.
 
 **Adelantado por trabajo ordinario (2026-08-27).** `PROMO-CONSOLE-PARITY-1`
 (#485, log §170) se mergeó mientras este plan estaba en revisión y ya cierra
