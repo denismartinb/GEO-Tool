@@ -972,12 +972,20 @@ export default async function RunsPage({
 
                         {/* Date — also the only way into the run detail page.
                             Before this, `/runs/[runId]` was reachable from
-                            exactly two links, both of which live inside EMPTY
+                            exactly two links, both of which lived inside EMPTY
                             states ("no citations", "no recommendations"), so a
                             project with real data could not open a scan at all.
                             A whole <tr> cannot be wrapped in an anchor without
                             invalid markup, so the date — the row's natural
-                            identifier — carries the link. */}
+                            identifier — carries the link.
+
+                            TRUST-METRICS-1 (docs/external-audit-2026-08.md,
+                            Fase 1): those two links are gone now, not just
+                            insufficient — the founder retired /runs/[runId]
+                            from the end-user console entirely ("una única
+                            cifra GEO Score porque si no es un lío"). This row
+                            here, under /debug, is the ONLY way into a run's
+                            detail page today. */}
                         <td>
                           <Link
                             href={`/dashboard/projects/${projectId}/runs/${run.id}`}
