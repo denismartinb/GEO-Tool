@@ -16486,3 +16486,71 @@ la izquierda encima de un cuerpo centrado.
 (`.next/static/chunks/*.css`) que la regla
 `lp-inner:has(>.blog-body)>*{max-width:760px;margin-left:auto;margin-right:auto}`
 se generó tal cual — y `git diff --check`, todo en verde.
+
+---
+
+## 170. La consola cotizaba 179 € mientras /precios decía 59 € (PROMO-CONSOLE-PARITY-1, 2026-08-27)
+
+**Lo que vio el fundador**, con una cuenta recién creada en prueba Pro gratuita:
+*"El precio promocionado no se ve en la consola. Un usuario recién creado con
+la prueba Pro gratuita tiene que ver los 59€. Sí los ve en la pantalla de
+cambio de plan y en /precios"*.
+
+**Por qué pasaba.** Hay **dos** promociones distintas y la consola sólo conocía
+una:
+
+| | de dónde sale | qué afirma |
+|---|---|---|
+| **contratada** | cupón vivo en una suscripción real de Stripe, con su fecha leída de la propia suscripción (`getActiveSubscriptionPromo`, §152) | lo que el cliente **ya paga** |
+| **ofrecida** | la campaña abierta (`getActivePromoPlanIds`: fecha **y** cupón configurado) | lo que pagaría **si contrata** antes del cierre |
+
+«Tu plan» y el índice de Ajustes leían sólo `usage.subscriptionPromo`, que es
+la primera. Quien está en prueba **no tiene suscripción**, así que ahí valía
+`null` y las dos pantallas caían al precio de tarifa. `/precios` y el modal de
+cambio de plan sí miran la campaña, y por eso decían 59 €. Misma cuenta, mismo
+instante, dos precios a dos clics.
+
+**El arreglo.** `resolveShownPromoPrice` (`app/pricing/plans-data.ts`, junto a
+`PROMO_ENDS_AT` y `PROMO_DURATION_MONTHS`) decide en **un solo sitio** qué
+precio enseña una pantalla, y devuelve **cuál de las dos promociones es**. Lo
+llaman las dos superficies de consola. Que devuelva el tipo no es adorno: el
+copy no puede ser el mismo.
+
+- contratada → «Precio de lanzamiento hasta el **{fecha de tu suscripción}**»
+  (sin cambios, §152).
+- ofrecida → «Precio de lanzamiento **si contratas** antes del **1 de
+  septiembre**: 59 €/mes durante 6 meses, después 179 €/mes».
+
+Colapsarlas en un `??` le habría dicho a alguien en prueba gratuita que ya
+paga 59 €, que es justo el modo de fallo sobre el que este repositorio lleva
+escribiendo reglas. La prueba que lo fija está escrita como tal
+(`app/pricing/promo-display.test.ts`, «never labels an offer as contracted»).
+
+Y la campaña cerrada silencia **la oferta**, nunca **lo contratado**: quien
+canjeó el cupón antes del cierre conserva sus 6 meses mucho después, así que un
+`promoPlanIds` vacío no puede borrar el precio que de verdad está pagando.
+
+**Dos arreglos menores de `/precios`, del mismo reporte:**
+
+- **«6 meses» partía de línea.** Iba pegado al precio como `/mes · 6 meses` y
+  se rompía entre el «6» y «meses» en la tarjeta recomendada, la más estrecha
+  por su galón. Baja a su propia línea (`.price-term`) en vez de forzar
+  `nowrap`, que sólo cambia un corte por un desbordamiento. `--ink-3` y no el
+  `--ink-4` de sus vecinas: es texto nuevo y sobre el blanco de la tarjeta da
+  4,76:1 (AA) frente a 2,5:1.
+- **Amazon Pay y Klarna** entran en la fila de métodos de pago, con los
+  trazados reales de simple-icons. En **tono neutro oscuro**, el mismo trato
+  que ya reciben Apple Pay y Google Pay en esa fila: el rosa de marca de Klarna
+  (#FFB3C7) da ~1,4:1 sobre la superficie tintada de `.lp-section.alt` y no se
+  ve. El nombre va en texto al lado del glifo, así que la marca nunca es la
+  única pista.
+
+**Pendiente de comprobar por el fundador, y no lo puede comprobar el código:**
+esa fila afirma qué ofrece Stripe Checkout. Amazon Pay y Klarna sólo aparecen
+de verdad si están **activados en el Dashboard de Stripe** para esta cuenta y
+para EUR. Si no lo están, la insignia promete un método que el checkout no
+enseña — mismo tipo de falsedad que las reglas de esta casa persiguen en las
+métricas.
+
+**Comprobado.** `pnpm test` 206/206 (2.861/2.861, 6 nuevos), `pnpm run validate`
+y `git diff --check` en verde.
