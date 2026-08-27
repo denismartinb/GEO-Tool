@@ -109,7 +109,7 @@ cosas incomparables.
   muestran el score del último escaneo y por tanto pueden discrepar del
   titular. Hueco declarado, pendiente de decisión.
 
-## 7 · Adenda TRUST-METRICS-1 (2026-08-27, log §179) — el hueco de §6 se cierra, parcialmente
+## 7 · Adenda TRUST-METRICS-1 (2026-08-27, log §183) — el hueco de §6 se cierra, parcialmente
 
 **Contexto.** Auditoría externa de producto (26-08-2026): el mismo escaneo
 mostraba 6/100 en Visión general y "2 Puntuación GEO" en Dominios. El hueco

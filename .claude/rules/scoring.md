@@ -130,7 +130,7 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
   meterlas detrás de una mediana las retrasaría dos escaneos justo cuando
   llegar tarde importa.
 
-## Una sola Puntuación GEO en todo el producto (TRUST-METRICS-1, log §179)
+## Una sola Puntuación GEO en todo el producto (TRUST-METRICS-1, log §183)
 
 - **Toda superficie que use la etiqueta "Puntuación GEO" (o equivalente,
   "GEO Score") pasa por `lib/metrics/run-metrics.ts`, sin excepción.**
@@ -167,5 +167,5 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
 `docs/geo-methodology-audit-2026-07.md` (hallazgos abiertos),
 `docs/geo-score-variability-2026-08.md` (sensibilidad por plan),
 `docs/brand/design-decisions-log.md` §8b (cómo se muestra la incertidumbre),
-§179 (TRUST-METRICS-1) · `docs/external-audit-2026-08.md` Fase 1 ·
+§183 (TRUST-METRICS-1) · `docs/external-audit-2026-08.md` Fase 1 ·
 ADR 0036 (adenda TRUST-METRICS-1).
