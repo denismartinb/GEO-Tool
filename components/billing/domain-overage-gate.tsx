@@ -135,9 +135,6 @@ export function DomainOverageGate({
                 </p>
               )}
             </div>
-            <div className="cp-foot">
-              <span className="cp-foot-note">No puedes seguir usando la consola hasta resolverlo.</span>
-            </div>
           </>
         )}
 
