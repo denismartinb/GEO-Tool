@@ -49,21 +49,51 @@ primero; un motor nuevo no la construye, así que va fuera del camino crítico.
 
 | Fase | Nombre | Cubre | Tamaño | Bloquea lanzamiento |
 |---|---|---|---|---|
-| 0 | `AUDIT-REPRO-1` | P0-04 (clasificar), correcciones D y E | 1-2 días | Sí — sin esto la Fase 3 no se puede planificar |
-| 1 | `TRUST-METRICS-1` | P0-01, P0-02, P1-03, correcciones A y B | 3-5 días | **Sí** |
-| 2 | `TRUST-PROMISES-1` | P0-06, P0-08, correcciones F y G | 3-4 días | **Sí** |
-| 3 | `ACTIONS-OBSERVABLE-1` | P0-04, correcciones C y H | 4-6 días | **Sí** |
-| 4 | `AUDIT-RUNNABLE-1` | P0-05 | 2-3 días | **Sí** |
-| 5 | `CHECKER-COPY-1` | P0-07 | 1 día | **Sí** (es el punto de conversión) |
-| 6 | `RECS-EVIDENCE-2` | P0-03 | 3-4 días | Sí |
-| 7 | `CITATIONS-HONESTY-1` | P0-09 | 2-3 días | Sí |
-| 8 | `ENTITY-HYGIENE-1` | P1-02 | 2 días | No |
-| 9 | `SCREEN-POLISH-1` | P1/P2 del §6 del informe | 2-3 días | No |
-| — | Diferenciadores 7-12 semanas | §10 del informe | — | **No.** Explícitamente fuera. |
+| 0 | `AUDIT-REPRO-1` | P0-04 (clasificar), correcciones D y E | 1-2 días | Sí — sin esto la Fase 4 no se puede planificar |
+| 1 | `TRUST-METRICS-1` | P0-01, P0-02, P1-03, correcciones A y B | 5-7 días | **Sí** |
+| 2 | `TRUST-PROMISES-1` | P0-06, P0-08, correcciones F y G | 2-3 días | **Sí** |
+| 3 | `RECURRING-VALUE-1` | "histórico verificable", alertas, calendario | 3-4 días | **Sí** |
+| 4 | `ACTIONS-OBSERVABLE-1` | P0-04, correcciones C y H | 4-6 días | **Sí** |
+| 5 | `AUDIT-RUNNABLE-1` | P0-05 | 2-3 días | **Sí** |
+| 6 | `CHECKER-COPY-1` | P0-07 | 1 día | **Sí** (es el punto de conversión) |
+| 7 | `RECS-EVIDENCE-2` | P0-03 | 3-4 días | Sí |
+| 8 | `CITATIONS-HONESTY-1` | P0-09 | 2-3 días | Sí |
+| 9 | `ENTITY-HYGIENE-1` | P1-02 | 2 días | No |
+| 10 | `SCREEN-POLISH-1` | P1/P2 del §6 del informe | 2-3 días | No |
+| — | Diferenciadores 7-12 semanas | §10 del informe · tabla «1 bis» | — | **No.** Explícitamente fuera. |
 
-**Máximo 3 PRs abiertos a la vez** (`BUILD-BUDGET-1`). Las fases 1, 2 y 5 son
-independientes entre sí y pueden ir en paralelo; 3 depende de 0; 4 depende de
-diagnosticar por qué la auditoría técnica quedó en N/A.
+**Máximo 3 PRs abiertos a la vez** (`BUILD-BUDGET-1`). Las fases 1, 2 y 6 son
+independientes entre sí y pueden ir en paralelo; 4 depende de 0; 3 depende de 2
+(su calendario sale de ahí); 5 depende de diagnosticar por qué la auditoría
+técnica quedó en N/A.
+
+---
+
+## 1 bis. Las capacidades que el auditor considera necesarias para cobrar
+
+Segunda tanda de material (capturas "Lo necesario para poder cobrar",
+2026-08-27). Se recoge entera **con una columna añadida**: qué dice el código,
+porque tres de las diez filas describen algo que ya existe y que su sesión no
+podía ver.
+
+| Capacidad | Lo que dice el auditor | Verificado | Dónde cae |
+|---|---|---|---|
+| Seguimiento recurrente | No pudo confirmar ejecuciones diarias, próxima fecha ni histórico | **Cierto.** `recurring_scans_enabled` nace `false` | Fase 2 + Fase 3 |
+| Histórico y evolución | "Sólo existe la fotografía del escaneo actual" | **Falso sobre el producto**: sparkline, delta con guardas, tendencia de SoV y digest semanal existen. Cierto sobre su sesión: tenía un escaneo | Fase 3 |
+| Métricas fiables | Score 6, score 2 y visibilidad 2 para el mismo análisis | **Cierto y estructural** | Fase 1 |
+| Auditoría ejecutable | Pantalla sin botón para iniciarla | **Cierto**, y deliberado (`AUDIT-NO-BUTTON-1`) | Fase 5 |
+| Acciones que se completan | FAQ, brief, comparativa, exportar y marcar hecho no respondieron | **Sin reproducir**: el código tiene spinner y error | Fase 0 → Fase 4 |
+| Investigación de prompts | Sin demanda, intención, dificultad ni priorización | **Cierto.** No existe nada de eso | **Fuera** — diferenciador |
+| Más motores | Tres frente a los siete de Otterly | **Cierto** | **Fuera** — diferenciador |
+| Alertas útiles | Activación poco clara y sin calendario visible | **Cierto a medias**: hay notificaciones y alerta de cambio de score (`lib/scan/score-alert.ts`), sin umbral ni calendario | Fase 3 |
+| Exportación e informes | La exportación no terminó visiblemente | **Sin reproducir** (mismo caso que las acciones) | Fase 0 → Fase 4 |
+| Integraciones y atribución | No disponibles | **Cierto** | **Fuera** — diferenciador |
+
+Seis de las diez caen dentro del plan de lanzamiento. Tres son los
+diferenciadores que ya estaban fuera del camino crítico y siguen estándolo. Y
+una —el histórico— cambia de naturaleza al verificarla: deja de ser una
+funcionalidad que falta y pasa a ser una que **no se ve cuando importa**, que es
+la Fase 3.
 
 ---
 
@@ -71,7 +101,7 @@ diagnosticar por qué la auditoría técnica quedó en N/A.
 
 **Problema.** El hallazgo peor puntuado del informe (fiabilidad funcional 4,0)
 descansa en seis CTAs que "no dieron feedback". El código dice que tienen estado
-de carga, estado de error y efecto. **No podemos planificar la Fase 3 sin saber
+de carga, estado de error y efecto. **No podemos planificar la Fase 4 sin saber
 cuál de las tres explicaciones posibles es la verdadera**, y las tres piden
 arreglos distintos:
 
@@ -194,7 +224,7 @@ datos, no sólo por cambio de visibilidad.
   con `label` y `denominatorLabel` propios. Ninguna pantalla vuelve a calcular un
   porcentaje.
 - Migración de las superficies: Visión general, Dominios, Prompts, Competidores,
-  notificaciones y resumen semanal. Y de la exportación, cuando exista (Fase 3,
+  notificaciones y resumen semanal. Y de la exportación, cuando exista (Fase 4,
   `ACTIONS-OBSERVABLE-1`).
 - Retirada de los dos enlaces a `/runs/[runId]` de Páginas citadas y
   Recomendaciones; la ruta se queda accesible sólo desde `/debug`, sin tocar la
@@ -292,7 +322,76 @@ que sí incluyo: cuando la tomes, se toca un fichero.
 
 ---
 
-## Fase 3 — `ACTIONS-OBSERVABLE-1`: ninguna acción silenciosa (P0-04)
+## Fase 3 — `RECURRING-VALUE-1`: el valor recurrente se ve antes de tenerlo
+
+**Origen.** Segunda tanda de material del auditor (capturas "Lo necesario para
+poder cobrar" y "La funcionalidad más importante que falta", 2026-08-27). Su
+titular es que **falta el histórico verificable** — qué cambió desde el escaneo
+anterior, qué recomendación se aplicó, cuándo se volvió a medir, en qué motor
+mejoró — y que sin ese ciclo el producto "se parece más a un informe puntual
+que a una suscripción SaaS".
+
+**La afirmación es falsa sobre el producto y cierta sobre su sesión, y eso la
+hace más grave, no menos.** Verificado: la capa de evolución existe y está
+construida con cuidado — sparkline sobre los últimos N escaneos y su rótulo
+("Últimos N escaneos"), delta con guardas de comparabilidad (DELTA-GUARD-1,
+ADR 0024), tendencia de share of voice (`lib/competitors/trend-window.ts`,
+`sov-delta.ts`) y resumen semanal (`lib/scan/weekly-digest.ts`). El auditor no
+vio nada de eso porque tenía **un solo escaneo**, y con uno el producto retira
+correctamente todo lo temporal: `page.tsx:938-939` muestra literalmente "La
+tendencia estará disponible con ≥2 escaneos".
+
+Es decir: **no falta la funcionalidad, falta que exista datos cuando alguien
+decide si paga.** Un evaluador hace un escaneo, no ve evolución, y concluye
+exactamente lo que concluyó el auditor. La honestidad de retirar lo que no se
+puede afirmar —que es correcta y no se toca— tiene como efecto secundario que
+la mitad recurrente del producto sea invisible precisamente en la sesión que
+decide la conversión.
+
+**Y se compone con P0-08.** Sin `recurring_scans_enabled`, el segundo escaneo no
+llega solo: no es que la evolución tarde un día en aparecer, es que puede no
+aparecer nunca. Los dos fallos juntos producen un producto que parece un informe
+puntual de forma permanente. Por eso esta fase va inmediatamente después de
+`TRUST-PROMISES-1` y no antes.
+
+**Entregables.**
+- **Anunciar la evolución con fecha, no con condición.** "La tendencia estará
+  disponible con ≥2 escaneos" describe un requisito; se sustituye por lo que el
+  usuario necesita saber: *"tu próxima medición es el <fecha>; entonces verás
+  cuánto ha cambiado"*. Es la misma verdad, dicha desde el producto y no desde
+  su implementación. No inventa ningún dato — la fecha sale del calendario real
+  de la Fase 2.
+- **El calendario visible de seguimiento**, heredado de la Fase 2: última
+  ejecución, próxima ejecución y cadencia, en la pantalla donde se promete.
+- **El ciclo acción → reescaneo → cambio, cerrado y legible.** Una recomendación
+  marcada como hecha registra cuándo, y el siguiente escaneo comparable dice si
+  se movió lo que esa acción tocaba. Sin atribución causal inventada: se muestra
+  qué cambió y cuándo se aplicó qué, y la relación la establece el usuario.
+  Cualquier afirmación más fuerte sería una métrica falsa.
+- **Alertas con umbral y destinatario claros** (fila "Alertas útiles" de la
+  tabla del auditor). Hoy existen notificaciones y una alerta de cambio de score
+  (`lib/scan/score-alert.ts`), pero sin umbral configurable ni calendario a la
+  vista, así que se leen como ruido en vez de como vigilancia.
+
+**Lo que esta fase NO hace.** No adelanta datos que no existen, no simula un
+histórico, y no toca la retirada de lo temporal con un solo escaneo: esa
+retirada es correcta y protegerla es el motivo por el que la fase se llama
+"que se vea antes de tenerlo" y no "que se vea".
+
+**Nota sobre `/runs`.** La retirada del detalle de escaneo de la consola
+(Fase 1) y esta fase se rozan pero no se contradicen: el auditor no pedía la
+ficha de un run concreto, pedía **evolución entre runs**, que vive en Visión
+general y en Competidores. La ficha per-run seguía siendo la única pantalla
+incapaz de mostrar la cifra única, y su sitio es `/debug`.
+
+**Criterio de aceptación.** En una cuenta con un solo escaneo, ninguna pantalla
+describe la evolución como un requisito técnico sin decir cuándo llega. En una
+cuenta con dos escaneos comparables, el usuario puede responder sin ayuda: qué
+cambió, cuándo se midió y qué acción había en medio.
+
+---
+
+## Fase 4 — `ACTIONS-OBSERVABLE-1`: ninguna acción silenciosa (P0-04)
 
 **Alcance definido por la Fase 0.** Lo que sigue es el marco; el reparto exacto
 sale de la clasificación.
@@ -321,7 +420,7 @@ terminan en éxito o error visible. 100 % E2E.
 
 ---
 
-## Fase 4 — `AUDIT-RUNNABLE-1`: la auditoría web tiene salida (P0-05)
+## Fase 5 — `AUDIT-RUNNABLE-1`: la auditoría web tiene salida (P0-05)
 
 **Dos trabajos, y el segundo es el importante.**
 
@@ -342,7 +441,7 @@ hallazgos y actualiza el score técnico. p95 < 5 min.
 
 ---
 
-## Fase 5 — `CHECKER-COPY-1`: el aviso deja de contradecir al resultado (P0-07)
+## Fase 6 — `CHECKER-COPY-1`: el aviso deja de contradecir al resultado (P0-07)
 
 **Problema.** Verificado: el panel "Con una consulta no se puede decir que no
 aparezcas — sólo que en ésta no apareciste" se renderiza siempre, incluso tras un
@@ -361,7 +460,7 @@ de mayor valor comercial: **si sólo se hiciera una cosa esta semana, sería és
 
 ---
 
-## Fase 6 — `RECS-EVIDENCE-2`: cada acción dice de qué motor habla (P0-03)
+## Fase 7 — `RECS-EVIDENCE-2`: cada acción dice de qué motor habla (P0-03)
 
 **Entregables.**
 - Toda recomendación lleva `prompt`, `motor`, `fecha`, `evidencia`, `competidor`
@@ -378,7 +477,7 @@ duplica otra. >95 % sin duplicado.
 
 ---
 
-## Fase 7 — `CITATIONS-HONESTY-1`: decir sólo lo que se ha comprobado (P0-09)
+## Fase 8 — `CITATIONS-HONESTY-1`: decir sólo lo que se ha comprobado (P0-09)
 
 **Entregables.**
 - Renombrar la afirmación a lo que de verdad se ha medido: no "fuente que cita a
@@ -395,7 +494,7 @@ duplica otra. >95 % sin duplicado.
 
 ---
 
-## Fase 8 — `ENTITY-HYGIENE-1` (P1-02)
+## Fase 9 — `ENTITY-HYGIENE-1` (P1-02)
 
 Lista de términos genéricos y reglas de entidad para que ni "ChatGPT" se sugiera
 como competidor ni "GEO Score" como alias de marca. Falso positivo barato de
@@ -403,7 +502,7 @@ evitar y caro de dejar: contamina competidores, SOV y recomendaciones a la vez.
 
 ---
 
-## Fase 9 — `SCREEN-POLISH-1` (P1/P2 del §6 del informe)
+## Fase 10 — `SCREEN-POLISH-1` (P1/P2 del §6 del informe)
 
 "Topics" → "Temas". Sentimiento en N/A cuando la marca no aparece (hoy dice
 positivo, que es afirmar sobre algo que no ocurrió). Filas clicables como
