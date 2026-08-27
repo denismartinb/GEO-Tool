@@ -812,19 +812,15 @@ export default async function RecommendationsPage({
               </Link>
             </div>
           ) : recs.length === 0 ? (
+            // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
+            // "Ver detalle del escaneo" link to /runs/[runId] is retired from
+            // this empty state, same reasoning as Citas — the route is no
+            // longer part of the end-user console, only /debug.
             <div className="section-empty" style={{ marginTop: 20 }}>
               <div className="section-empty-title">Nada que corregir ahora mismo</div>
               <div className="section-empty-desc">
                 Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
               </div>
-              <Link
-                href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-                className="btn btn-ghost btn-sm"
-                style={{ marginTop: 14, display: "inline-flex" }}
-              >
-                Ver detalle del escaneo
-                <Icon name="arrRight" size={14} />
-              </Link>
             </div>
           ) : (
             <RecommendationsClient

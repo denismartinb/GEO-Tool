@@ -15,7 +15,7 @@ import {
   resolveTechnicalComponent,
   TECHNICAL_SNAPSHOT_LOOKUP_LIMIT
 } from "@/lib/scoring/geo-score-technical";
-import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
+import { computeRunScoresFromResults, getEffectiveGeoScore, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -31,6 +31,7 @@ import { triggerScanContinuation } from "@/lib/scan/continuation";
 import { ProjectActionError, type JobRow } from "@/lib/scan/types";
 import type { AuthenticatedContext } from "@/lib/auth";
 import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
+import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore } from "@/lib/metrics/run-metrics";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
@@ -1111,6 +1112,47 @@ export async function executePendingScan({
       finalizeJobId: finalizeJob.id
     });
 
+    // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
+    // completion notification used to headline `visibility_score` directly —
+    // "Visibilidad 2" beside a "Puntuación GEO" of 6 on the very same scan
+    // (the audit's P0-01). It now carries the SAME windowed score every other
+    // "Puntuación GEO" surface shows, resolved from this project's most
+    // recent completed runs (this one included — it was upserted into
+    // run_scores just above). `DEFAULT_SCORE_WINDOW_SIZE` rows is what
+    // `resolveGeoScore` needs to judge comparability; a project's own history
+    // never grows past what its plan allows, so this is a small, bounded read.
+    //
+    // Fail-soft and separate from the notification's own payload build below:
+    // a scoring-history read must never block the notification that reports a
+    // scan the product already knows finished.
+    // Caught in review (data-guardian, TRUST-METRICS-1 Human Gate pass): the
+    // fallback below used to be `Math.round(scores.visibility_score)` — the
+    // raw component, exactly the figure this whole phase exists to stop
+    // publishing under "Puntuación GEO". A failed or empty read here would
+    // have silently reintroduced P0-01 on the error path. `getEffectiveGeoScore`
+    // reads `scores.details_json` already in scope (no extra query) and is
+    // the same composite-with-fallback `resolveGeoScore` itself would compute
+    // with only this one run to look at (basis: "single_run") — the correct
+    // fallback, not a shortcut around the rule.
+    let geoScoreForNotification: number = Math.round(getEffectiveGeoScore(scores));
+    try {
+      const { data: recentScoreRows } = await service
+        .from("run_scores")
+        .select("run_id, created_at, visibility_score, details_json")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(GEO_SCORE_LOOKBACK_ROWS);
+      if (recentScoreRows && recentScoreRows.length > 0) {
+        geoScoreForNotification = resolveGeoScore(recentScoreRows).value;
+      }
+    } catch (geoScoreError) {
+      console.error("[scan-runner] failed to resolve the windowed GEO score for the completion notification", {
+        projectId,
+        runId,
+        message: geoScoreError instanceof Error ? geoScoreError.message : "unknown"
+      });
+    }
+
     // Emitted only after the run's own status update above is durable — a
     // notification must never describe a state that hasn't actually landed.
     await emitNotification(service, {
@@ -1123,6 +1165,11 @@ export async function executePendingScan({
         runId,
         promptsProcessed: totalSuccessCount ?? 0,
         providers,
+        // `geoScore` is the ONLY figure `lib/notifications/render.ts` may
+        // headline under "Escaneo actualizado" — never `visibilityScore`
+        // below, kept only so `lib/scan/weekly-digest.ts` and any consumer
+        // reading historical payloads still has the raw component.
+        geoScore: geoScoreForNotification,
         visibilityScore: scores.visibility_score,
         visibilityDelta:
           previousVisibilityScore !== null ? scores.visibility_score - previousVisibilityScore : null,

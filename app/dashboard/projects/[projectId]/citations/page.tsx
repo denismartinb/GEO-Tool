@@ -222,6 +222,14 @@ export default async function CitationsPage({
           </Link>
         </div>
       ) : !hasStructuredCitations ? (
+        // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): this used
+        // to link to `/runs/${latestRun.id}` ("Ver detalle del escaneo"). The
+        // founder retired /runs/[runId] from the end-user console entirely —
+        // one GEO score everywhere means a screen that by definition talks
+        // about a single run cannot also exist for users to browse. The route
+        // itself is untouched and stays reachable from /debug, which already
+        // links every row by its date; this empty state just stops sending
+        // users somewhere the product no longer wants them to go.
         <div className="section-empty" style={{ marginTop: 20 }}>
           <div className="section-empty-title">Este escaneo respondió sin citar fuentes</div>
           <div className="section-empty-desc">
@@ -229,14 +237,6 @@ export default async function CitationsPage({
             lo que ya sabe (sin consultar el buscador), no hay ninguna URL que citar. Vuelve a
             comprobarlo tras el próximo escaneo.
           </div>
-          <Link
-            href={`/dashboard/projects/${projectId}/runs/${latestRun.id}`}
-            className="btn btn-ghost btn-sm"
-            style={{ marginTop: 14, display: "inline-flex" }}
-          >
-            Ver detalle del escaneo
-            <Icon name="arrRight" size={14} />
-          </Link>
         </div>
       ) : (
         <CitationsClient
