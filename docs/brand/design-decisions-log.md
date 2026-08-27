@@ -17108,7 +17108,7 @@ esta forma exacta; barrer el patrón entero es otro PR.
 clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
 está fuera de pantalla estando «visible»); §136 (el precedente).
 
-## 180. La pestaña "Resueltas" verifica si la predicción se cumplió — nunca mide un delta de score (RECS-LOOP-1 Fase A, ADR 0041, 2026-08-27)
+## 181. La pestaña "Resueltas" verifica si la predicción se cumplió — nunca mide un delta de score (RECS-LOOP-1 Fase A, ADR 0041, 2026-08-27)
 
 **El hueco.** ADR 0017 §5 prometió que "el próximo escaneo verifica" la
 predicción de puntos potenciales de una tarjeta. Nunca se construyó: una
