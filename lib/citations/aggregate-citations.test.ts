@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aggregateCitations,
   compareOpportunityRows,
+  groupOpportunitiesByDomain,
   type CitationInputRow,
   type CitationRow
 } from "@/lib/citations/aggregate-citations";
@@ -610,5 +611,92 @@ describe("aggregateCitations", () => {
     expect(row2.competitors).toEqual([]);
     // The row-level aggregate (unchanged behavior) still unions across both.
     expect(citationRows[0].competitors).toEqual(["Rival"]);
+  });
+});
+
+describe("groupOpportunitiesByDomain (CITATIONS-HONESTY-1)", () => {
+  function citationRow(overrides: Partial<CitationRow> = {}): CitationRow {
+    return {
+      id: overrides.domain ?? "x.com",
+      title: "Title",
+      url: "",
+      domain: "x.com",
+      category: "third_party",
+      brandMentioned: "no",
+      competitors: [],
+      otherBrands: [],
+      cited: 1,
+      prompts: [],
+      engines: [{ provider: "gemini", cited: 1 }],
+      ...overrides
+    };
+  }
+
+  it("groups distinct pages on the same domain into one entry, summing cited and merging engines/prompts", () => {
+    const rows: CitationRow[] = [
+      citationRow({
+        id: "https://xataka.com/a",
+        domain: "xataka.com",
+        url: "https://xataka.com/a",
+        cited: 3,
+        engines: [{ provider: "gemini", cited: 3 }],
+        prompts: [{ text: "prompt A", brandMentioned: false, provider: "gemini", rawResponseText: null, competitors: [], otherBrands: [] }]
+      }),
+      citationRow({
+        id: "https://xataka.com/b",
+        domain: "xataka.com",
+        url: "https://xataka.com/b",
+        cited: 2,
+        engines: [{ provider: "openai", cited: 2 }],
+        prompts: [{ text: "prompt B", brandMentioned: false, provider: "openai", rawResponseText: null, competitors: [], otherBrands: [] }]
+      })
+    ];
+
+    const groups = groupOpportunitiesByDomain(rows);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].domain).toBe("xataka.com");
+    expect(groups[0].pages).toHaveLength(2);
+    expect(groups[0].totalCited).toBe(5);
+    // Most-cited page first within the group.
+    expect(groups[0].pages.map((p) => p.id)).toEqual(["https://xataka.com/a", "https://xataka.com/b"]);
+    expect(groups[0].engines).toEqual([
+      { provider: "gemini", cited: 3 },
+      { provider: "openai", cited: 2 }
+    ]);
+    expect(groups[0].promptTexts.sort()).toEqual(["prompt A", "prompt B"]);
+  });
+
+  it("keeps co-cited competitor names as a separate, unverified field — never a qualifying filter", () => {
+    const rows: CitationRow[] = [
+      citationRow({ domain: "reddit.com", competitors: ["Rival"] }),
+      citationRow({ id: "reddit-noise", domain: "reddit.com", competitors: [] })
+    ];
+
+    const groups = groupOpportunitiesByDomain(rows);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].coCitedCompetitors).toEqual(["Rival"]);
+    // A domain with zero co-cited competitors still groups — the field is
+    // informational, not a gate on inclusion.
+    const noCompetitor = groupOpportunitiesByDomain([citationRow({ domain: "neutral.com", competitors: [] })]);
+    expect(noCompetitor[0].coCitedCompetitors).toEqual([]);
+  });
+
+  it("orders groups by distinct-engine count first, then total cited — same priority rule as compareOpportunityRows", () => {
+    const rows: CitationRow[] = [
+      citationRow({ domain: "one-engine.com", cited: 10, engines: [{ provider: "gemini", cited: 10 }] }),
+      citationRow({ domain: "many-engines.com", cited: 2, engines: [{ provider: "gemini", cited: 1 }] }),
+      citationRow({
+        id: "many-engines-2",
+        domain: "many-engines.com",
+        cited: 2,
+        engines: [{ provider: "openai", cited: 2 }]
+      })
+    ];
+
+    const groups = groupOpportunitiesByDomain(rows);
+
+    expect(groups.map((g) => g.domain)).toEqual(["many-engines.com", "one-engine.com"]);
   });
 });

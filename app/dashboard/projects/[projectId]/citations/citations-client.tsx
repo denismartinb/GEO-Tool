@@ -5,7 +5,12 @@ import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
 import { FormattedResponse } from "@/components/ui/formatted-response";
 import { classifySourceType, SOURCE_TYPE_LABEL } from "@/lib/citations/source-type";
-import type { CitationRow, ImpactBreakdown, SourceTypeSlice } from "@/lib/citations/aggregate-citations";
+import type {
+  CitationRow,
+  ImpactBreakdown,
+  OpportunityDomainGroup,
+  SourceTypeSlice
+} from "@/lib/citations/aggregate-citations";
 
 export type { CitationRow };
 
@@ -92,11 +97,13 @@ function PromptEvidenceList({ prompts, brand }: { prompts: CitationRow["prompts"
                 <span>{p.text}</span>
               </div>
               {/* What THIS specific answer named — scoped to this one
-                  (prompt, provider) result, not the row-level union. Makes a
-                  row's "Cita a un competidor" claim checkable against the
-                  actual evidence right below it, instead of a row-wide
-                  label with no visible source (founder review, 2026-08-01:
-                  a claim with no attributable answer read as unsubstantiated).
+                  (prompt, provider) result, not the row-level union. Makes an
+                  aggregate "cited alongside a competitor" claim (the
+                  OpportunitiesBlock group-level line, CITATIONS-HONESTY-1)
+                  checkable against the actual evidence right below it,
+                  instead of a row-wide label with no visible source (founder
+                  review, 2026-08-01: a claim with no attributable answer read
+                  as unsubstantiated).
                   One pill PER name, not one joined-by-commas pill: a single
                   `white-space: nowrap` pill listing five brands ran off the
                   edge of the 320px opportunities rail — genuinely past the
@@ -356,15 +363,26 @@ function SourceDonut({ breakdown }: { breakdown: SourceTypeSlice[] }) {
 
 const OPP_PAGE_SIZE = 5;
 
-function OpportunitiesBlock({ rows, brandLabel }: { rows: CitationRow[]; brandLabel: string }) {
+/**
+ * CITATIONS-HONESTY-1 (P0-09): this used to be one row per cited URL,
+ * qualified by whether a tracked competitor was named in the answer that
+ * cited it — a claim about the answer, not the page. It now groups by
+ * domain (Fase 8, deliverable 5 — a project can have well over a hundred
+ * distinct outreach-eligible URLs once the competitor gate is gone) and
+ * qualifies purely on reachability: the AI cites this domain and you're not
+ * in those answers yet. A co-cited competitor name, when there is one,
+ * renders as a separate, explicitly unverified line — never the reason the
+ * group is shown.
+ */
+function OpportunitiesBlock({ groups, brandLabel }: { groups: OpportunityDomainGroup[]; brandLabel: string }) {
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
-  const pageCount = Math.max(1, Math.ceil(rows.length / OPP_PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(groups.length / OPP_PAGE_SIZE));
   // Clamp rather than reset to 0: a page that's now out of range (e.g. the
   // underlying row set shrank) falls back to the last real page instead of
   // silently jumping the reader back to the top.
   const currentPage = Math.min(page, pageCount - 1);
-  const visible = rows.slice(currentPage * OPP_PAGE_SIZE, currentPage * OPP_PAGE_SIZE + OPP_PAGE_SIZE);
+  const visible = groups.slice(currentPage * OPP_PAGE_SIZE, currentPage * OPP_PAGE_SIZE + OPP_PAGE_SIZE);
 
   return (
     <div className="cit2-block cit2-opps">
@@ -372,42 +390,52 @@ function OpportunitiesBlock({ rows, brandLabel }: { rows: CitationRow[]; brandLa
           (founder, 2026-08-01). Both now carry an explicit eyebrow saying
           which subset they show, so "a shortlist of outreach targets" can't
           be mistaken for "the full list of cited pages" below it. */}
-      <div className="cit2-blk-eyebrow">Oportunidades · subconjunto</div>
+      <div className="cit2-blk-eyebrow">Fuentes alcanzables · subconjunto</div>
       <div className="cit2-blk-t">
-        {rows.length > 0
-          ? `${rows.length} ${rows.length === 1 ? "fuente cita" : "fuentes citan"} a un rival y no a ${brandLabel}`
-          : "Sin oportunidades pendientes"}
+        {groups.length > 0
+          ? `${groups.length} ${groups.length === 1 ? "dominio" : "dominios"} de terceros que la IA ya cita y no te mencionan`
+          : "Sin fuentes alcanzables pendientes"}
       </div>
-      {rows.length === 0 ? (
-        <div className="cit2-opps-empty">
-          Ninguna fuente de terceros cita a un competidor sin citar también a {brandLabel}.
-        </div>
+      {groups.length === 0 ? (
+        <div className="cit2-opps-empty">Ninguna fuente de terceros te deja fuera todavía.</div>
       ) : (
         <>
           <div className="cit2-opps-list">
             {/* Same click-to-expand behavior as the full list below (founder
-                request, 2026-08-01): a row here is a real CitationRow, so it
-                carries the same prompts/evidence — no reason the two tables
-                should behave differently. */}
-            {visible.map((row) => {
-              const isOpen = open === row.id;
+                request, 2026-08-01): expanding merges the prompts/evidence
+                of every page in the domain, so the two tables keep behaving
+                the same way even though this one groups by domain first. */}
+            {visible.map((group) => {
+              const isOpen = open === group.domain;
+              const allPrompts = group.pages.flatMap((p) => p.prompts);
               return (
-                <div className={`cit2-opp-item${isOpen ? " open" : ""}`} key={row.id}>
+                <div className={`cit2-opp-item${isOpen ? " open" : ""}`} key={group.domain}>
                   <button
                     type="button"
                     className="cit2-opp-row"
-                    onClick={() => setOpen((o) => (o === row.id ? null : row.id))}
+                    onClick={() => setOpen((o) => (o === group.domain ? null : group.domain))}
                     aria-expanded={isOpen}
                   >
-                    <span className="cit2-fav sm" style={{ background: avatarColor(row.domain) }}>
-                      {avatarInitial(row)}
+                    <span className="cit2-fav sm" style={{ background: avatarColor(group.domain) }}>
+                      {group.domain.slice(0, 1).toUpperCase()}
                     </span>
                     <span className="cit2-opp-body">
-                      <span className="cit2-opp-domain">{row.domain}</span>
+                      <span className="cit2-opp-domain">{group.domain}</span>
                       <span className="cit2-opp-why">
-                        Cita a <b>{row.competitors.slice(0, 2).join(", ")}</b> ·{" "}
-                        {row.engines.length} {row.engines.length === 1 ? "motor" : "motores"}
+                        {group.totalCited} {group.totalCited === 1 ? "cita" : "citas"}
+                        {group.pages.length > 1 ? ` en ${group.pages.length} páginas` : ""} ·{" "}
+                        {group.engines.length} {group.engines.length === 1 ? "motor" : "motores"}
                       </span>
+                      {/* The competitor signal survives, but demoted to a
+                          labeled aside: it says what the ANSWER named, never
+                          what this domain publishes (see `coCitedCompetitors`
+                          doc comment in aggregate-citations.ts). */}
+                      {group.coCitedCompetitors.length > 0 && (
+                        <span className="cit2-opp-why cit2-opp-unverified">
+                          Citada en una respuesta donde también apareció{" "}
+                          <b>{group.coCitedCompetitors.slice(0, 2).join(", ")}</b> — sin verificar en la página
+                        </span>
+                      )}
                     </span>
                     <span className="cit2-chev" style={isOpen ? undefined : { transform: "rotate(180deg)" }}>
                       <Icon name={isOpen ? "chevDown" : "chevronLeft"} size={14} />
@@ -415,7 +443,7 @@ function OpportunitiesBlock({ rows, brandLabel }: { rows: CitationRow[]; brandLa
                   </button>
                   {isOpen && (
                     <div className="cit2-detail">
-                      <PromptEvidenceList prompts={row.prompts} brand={brandLabel} />
+                      <PromptEvidenceList prompts={allPrompts} brand={brandLabel} />
                     </div>
                   )}
                 </div>
@@ -460,7 +488,7 @@ function OpportunitiesBlock({ rows, brandLabel }: { rows: CitationRow[]; brandLa
 
 export function CitationsClient({
   citationRows,
-  opportunityRows,
+  opportunityGroups,
   impactBreakdown,
   sourceTypeBreakdown,
   totalUrls,
@@ -470,7 +498,7 @@ export function CitationsClient({
   brandLabel
 }: {
   citationRows: CitationRow[];
-  opportunityRows: CitationRow[];
+  opportunityGroups: OpportunityDomainGroup[];
   impactBreakdown: ImpactBreakdown;
   sourceTypeBreakdown: SourceTypeSlice[];
   totalUrls: number;
@@ -546,10 +574,10 @@ export function CitationsClient({
           <Icon name="info" size={15} />
           <span>
             Ninguna de las {totalCited} citas apunta a {brandLabel}.{" "}
-            {opportunityRows.length > 0 ? (
+            {opportunityGroups.length > 0 ? (
               <>
-                Las <b>{opportunityRows.length} fuentes</b> de «Oportunidades» son terceros que la IA ya
-                cita y donde todavía no apareces — es por donde se empieza.
+                Los <b>{opportunityGroups.length} dominios</b> de «Fuentes alcanzables» son terceros que la
+                IA ya cita y donde todavía no apareces — es por donde se empieza.
               </>
             ) : (
               <>
@@ -577,7 +605,7 @@ export function CitationsClient({
 
       <div className="cit2-cols">
         <div className="cit2-rail">
-          <OpportunitiesBlock rows={opportunityRows} brandLabel={brandLabel} />
+          <OpportunitiesBlock groups={opportunityGroups} brandLabel={brandLabel} />
         </div>
         <div className="cit2-main">
           <div className="cit2-listtitle">

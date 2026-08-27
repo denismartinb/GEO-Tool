@@ -2278,6 +2278,11 @@ a {
 .cit2-opp-domain { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent); }
 .cit2-opp-why { font-size: 10.5px; color: var(--ink-3); }
 .cit2-opp-why b { color: var(--neg-ink); }
+/* CITATIONS-HONESTY-1: the co-cited-competitor line is a labeled, unverified
+   aside — never the reason a domain is listed (that's the plain `.cit2-opp-why`
+   line above it, frequency + engines). Italic sets it apart at a glance as
+   "extra context", not a second fact of the same weight. */
+.cit2-opp-unverified { font-style: italic; opacity: .85; }
 .cit2-opps-empty { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
 .cit2-btn-mini { font-size: 11px; font-weight: 750; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 8px; padding: 7px 10px; white-space: nowrap; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; text-decoration: none; }
 .cit2-btn-mini:hover { filter: brightness(0.96); }

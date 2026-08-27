@@ -17418,3 +17418,86 @@ entraron en `main` antes).
 `app/dashboard/projects/[projectId]/{competitors/,}page.tsx` ·
 `app/globals.css` (`.cm2-pos-note`/`.ov2-cmp-note`) ·
 `lib/competitors/latest-positions.test.ts`; §11, §36, §168, §175.
+
+---
+
+## 181. "Cita a un rival" en Páginas citadas sólo significaba "citada donde también apareció un rival" (CITATIONS-HONESTY-1, 2026-08-27)
+
+**Origen.** Fase 8 de `docs/external-audit-2026-08.md` (auditoría externa
+2026-08-26, hallazgo P0-09): *"fuente que cita a un rival" sobreafirma —
+`competitors` en `aggregate-citations.ts` son los rivales nombrados EN LA
+RESPUESTA donde se citó la página, no en la propia página. La pantalla nunca
+lee el contenido de ninguna URL citada.*
+
+**Qué pasaba.** El bloque "Oportunidades" de Páginas citadas mostraba filas
+como *"Cita a Rival · 2 motores"* y las contaba como *"N fuentes citan a un
+rival y no a {marca}"*. Ese "cita a" es un verbo sobre la PÁGINA que el
+producto nunca comprobó: el dato real es que un motor, al responder un
+prompt, usó esa página como fuente Y en esa misma respuesta nombró a un
+competidor trackeado — dos hechos sobre la respuesta, no uno sobre la página.
+Además, el filtro exigía `competitors.length > 0` para que una fuente
+apareciera como "oportunidad", así que el propio criterio de qué es
+accionable dependía del dato sobreafirmado.
+
+**Qué se decidió.**
+
+1. **La afirmación se renombra a lo único que se ha medido.** El texto pasa de
+   "Cita a X" a "Citada en una respuesta donde también apareció X", con una
+   nota explícita de "sin verificar en la página" — nunca una frase que lea
+   como un hecho sobre el contenido de la URL.
+2. **El criterio de "alcanzable para outreach" se separa del de "competidor
+   co-citado".** Antes de esto una fuente sólo entraba en «Oportunidades» si
+   un competidor trackeado aparecía en la misma respuesta; ahora entra
+   cualquier fuente de terceros que la IA cita, con dominio resuelto, sin
+   mencionar a la marca — el hecho comprobable ("la IA cita esto y tú no
+   apareces ahí") deja de depender del hecho no comprobable ("esa respuesta
+   nombró a un rival"). El nombre del competidor co-citado se sigue
+   mostrando, pero como aviso aparte y explícitamente sin verificar, nunca
+   como el motivo por el que la fuente aparece en la lista.
+3. **Se deja de recomendar "consigue que te mencionen" como conclusión de un
+   dato no verificado.** El bloque ya no enmarca la lista como un veredicto
+   sobre lo que la página dice, sólo como lo que es comprobable: quién cita,
+   con qué frecuencia, con qué motores.
+4. **Agrupación mínima por dominio** (`groupOpportunitiesByDomain`,
+   `lib/citations/aggregate-citations.ts`): al quitar el filtro de
+   competidor, la lista de fuentes alcanzables puede crecer mucho — el propio
+   informe hablaba de 240 URLs en la cuenta auditada. Agrupar por dominio
+   (frecuencia total, motores que citan, consultas asociadas) es lo mínimo
+   para que eso sea priorizable en vez de una lista plana de URLs. La
+   relevancia editorial completa (`relevance_score` frente a sector y
+   mercado) queda fuera — es la fase de diferenciación, no ésta.
+
+**El tercer estado que pide el informe — "fuente que menciona a un competidor
+verificado A NIVEL DE PÁGINA" — no se implementa con datos reales en esta
+fase, y es deliberado.** Verificarlo exigiría leer el contenido real de cada
+URL citada, y eso es un crawler: está en la lista de prohibido de `CLAUDE.md`
+sin aprobación explícita del fundador, y esta fase no la tiene. Construir un
+campo `verified` que sólo puede valer `false` (o `undefined`) habría sido
+peor que no tenerlo — la misma lección que ya deja escrita
+`.claude/rules/web-audit.md` sobre el tri-estado de `PageCheckResult`: un
+campo que nace y nunca puede afirmar nada no es una función nueva, es un
+compromiso sin cumplir. Lo que SÍ se hizo fue dejar de fingir que el segundo
+estado (competidor co-citado) era ese tercero: ahora se declara sin verificar
+en cada sitio donde aparece, en vez de leerse como si lo estuviera.
+Verificación real de contenido de página es una fase futura y propia, con su
+propio Task Intake y su propia revisión de data-guardian.
+
+**Lo que NO se ha tocado.** El cálculo de `impactBreakdown` (favorable/
+adverse/otherBrands/neutral) no cambia — esas etiquetas ya eran honestas: "La
+respuesta mencionó..." (`citations-client.tsx`, `ImpactBar`), nunca "la
+página menciona...". Tampoco cambia la lista completa "Todas las fuentes"
+(sección principal de la pantalla, sin agrupar): el informe señalaba
+concretamente el bloque de Oportunidades, y agrupar por dominio ahí donde no
+hay un problema de escala habría sido una reestructuración sin motivo.
+
+**Nota de numeración.** Toma el §181 porque el §180 ya estaba reclamado por
+dos ramas abiertas en el momento de escribir esto (#492 y #494).
+
+**Trazabilidad.** `lib/citations/aggregate-citations.ts`
+(`groupOpportunitiesByDomain`, `OpportunityDomainGroup`, doc comment de
+`CitationRow.competitors`) · `app/dashboard/projects/[projectId]/citations/
+page.tsx` (filtro de `opportunityRows`) · `app/dashboard/projects/
+[projectId]/citations/citations-client.tsx` (`OpportunitiesBlock`) ·
+`app/globals.css` (`.cit2-opp-unverified`) ·
+`lib/citations/aggregate-citations.test.ts` ·
+`.claude/rules/citations.md` · `docs/external-audit-2026-08.md` Fase 8.
