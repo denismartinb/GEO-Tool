@@ -16654,3 +16654,55 @@ Task Intake, que sigue siendo trabajo de una fase siguiente).
 
 **Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run typecheck`,
 `pnpm run lint`, `pnpm run build`, todo en verde.
+## 172. La tarjeta más frecuente de Recomendaciones apunta por fin a una URL tuya (AUDIT-RECS-JOIN-1 Fase B, 2026-08-27)
+
+**El hueco.** Fase A (§167) hizo que la pantalla señalara lo que impide
+citarte. Faltaba lo otro: que una tarjeta de **contenido** dijera «tu página
+`/precios` ya cubre esto, mejórala» en vez de «publica una página nueva». El
+puente ya estaba construido desde COMPETITOR-GROUNDING-2
+(`lib/recommendations/coverage-overlay.ts`, RECS-COVERAGE-OVERLAY-1) — pero
+sólo alimentaba `add_citation_block`, uno de los quince tipos. El más
+frecuente, `increase_brand_visibility` («Aparece en "..."», la tarjeta que
+sale primero en casi cualquier proyecto), no estaba conectado.
+
+**Por qué no era sólo "añadir un tipo al filtro".** `add_citation_block`
+dispara cuando la marca SÍ se menciona y no se cita; `increase_brand_visibility`
+dispara cuando NO se menciona en absoluto. El copy existente del hallazgo
+confirmado decía literalmente *«el problema no es que te falte contenido,
+sino que la IA no lo está citando como fuente»* — cierto para el primer tipo,
+**falso** para el segundo: si no hay mención, no hay nada que citar. Copiar el
+texto tal cual habría sido la misma clase de error que motivó el gate de
+honestidad de RECS-USEFULNESS-1 Fase C (§128), sólo que en código nuestro en
+vez de en la salida de un modelo.
+
+**Decisión.** `overlayCopy(recommendationType, state)` — nueva, en el mismo
+módulo — resuelve el texto por tipo. `add_citation_block` conserva su copy
+verbatim. `increase_brand_visibility` habla de "no aparece en la respuesta",
+nunca de citación, y su `whatToDo` para el caso "sin cobertura propia" **reusa
+el `firstStep` real de `rule_visibility_001`** carácter a carácter, en vez de
+inventar una segunda redacción del mismo consejo. `COVERAGE_OVERLAY_TYPES` se
+exporta como conjunto único de tipos soportados, para que el server no
+duplique la lista.
+
+**Deliberadamente NO extendido** a `create_faq_section` /
+`strengthen_brand_entity_clarity`: son reglas de ámbito de campaña (disparan
+sobre el agregado del run), no de un prompt — no hay un único tema con el que
+cruzarlas.
+
+**Duplicación con guardián, otra vez.** El overlay es server-only
+(`domain-coverage.ts` arrastra `import "server-only"`), así que el cliente no
+puede importarlo — mismo motivo por el que `CoverageOverlay`/`GeneratedSolution`
+ya vivían duplicados en `recommendations-client.tsx`. En vez de sumar una
+tercera duplicación sin red, `overlayCopyLocal` lleva un test que compara las
+dos funciones **campo a campo para cada combinación de tipo y estado**, mismo
+patrón que el guardián de tres vías de `GROUNDED_PROVIDERS` (§130). Verificado
+que puede fallar: rompiendo un texto a propósito, el test cae.
+
+**Lo que sigue sin resolverse, con conocimiento de causa.** El join exige
+`coverage.scanId === latestCompletedRun.id` (invariante de honestidad ya
+existente, sin tocar en esta fase): cobertura y recomendaciones tienen que ser
+del **mismo** escaneo. La primera vez que esto rinda en un proyecto real será
+tras su próximo escaneo completo, no antes — no es un fallo, es la garantía de
+que nunca reengancha una fila de cobertura vieja.
+
+---
