@@ -2,6 +2,7 @@
 
 import { AnswerMarkdown } from "@/components/free-checker/answer-markdown";
 import { PUBLIC_CHECK_MESSAGES, type PublicCheckResponse } from "@/lib/free-checker/api-contract";
+import { variabilityNotice } from "@/lib/free-checker/result-copy";
 
 /**
  * FREE-CHECKER-1 — la pantalla de resultado.
@@ -81,6 +82,7 @@ export function FreeCheckerResult({
   const { brand, prompt, engineLabel, answer, brandMentioned, otherBrands, sources } = response;
   const { citedOwnDomain } = response;
   const isOwnSource = (sourceDomain: string) => sourceDomain === domain || sourceDomain.endsWith(`.${domain}`);
+  const notice = variabilityNotice({ engineLabel, brandMentioned });
 
   return (
     <div className="fc-result">
@@ -163,14 +165,16 @@ export function FreeCheckerResult({
 
       {/* No es letra pequeña: con una sola respuesta esto es la mitad del
           resultado. El producto no da una banda de confianza por debajo de
-          diez respuestas, así que aquí tampoco se insinúa una. */}
+          diez respuestas, así que aquí tampoco se insinúa una.
+
+          CHECKER-COPY-1: el texto se elige por el resultado. Hasta el
+          2026-08-27 era uno solo, escrito para un "no apareciste", y cerraba
+          también los resultados positivos contradiciendo al titular. El
+          razonamiento de las dos variantes vive junto a ellas, en
+          `lib/free-checker/result-copy.ts`. */}
       <div className="fc-panel fc-panel-warn">
-        <span className="fc-lbl">Esto es una respuesta, no un veredicto</span>
-        <p>
-          La misma pregunta mañana puede dar otras marcas: {engineLabel} busca en tiempo real y no
-          es determinista. Con una consulta no se puede decir que no aparezcas — sólo que en ésta no
-          apareciste. Para saberlo de verdad hacen falta varias preguntas repetidas en el tiempo.
-        </p>
+        <span className="fc-lbl">{notice.label}</span>
+        <p>{notice.body}</p>
       </div>
 
       <div className="fc-upsell">

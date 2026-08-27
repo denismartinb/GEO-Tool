@@ -12464,6 +12464,12 @@ de zonas, la fuente que esta tabla espeja).
 
 ---
 
+---
+
+
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -16654,3 +16660,51 @@ Task Intake, que sigue siendo trabajo de una fase siguiente).
 
 **Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run typecheck`,
 `pnpm run lint`, `pnpm run build`, todo en verde.
+
+---
+
+## 172. El comprobador gratuito cerraba un resultado positivo con un texto escrito para uno negativo (CHECKER-COPY-1, 2026-08-27)
+
+**Fase 6 del plan de `docs/external-audit-2026-08.md`. Va primera de las once
+pese a ser la sexta en severidad**, por una razón de negocio y no de ingeniería:
+es un día de trabajo en el punto exacto donde alguien decide si se registra.
+
+**Lo que encontró la auditoría externa** (P0-07, 26-08-2026, probando
+`genscore.es`, que sí aparece): el bloque de aviso *"Esto es una respuesta, no
+un veredicto"* se renderizaba **incondicionalmente**, y su texto estaba escrito
+para un resultado negativo — *"Con una consulta no se puede decir que no
+aparezcas — sólo que en ésta no apareciste."* Detrás de un resultado positivo,
+con la marca nombrada y a veces su propia web citada como fuente, ese párrafo
+contradice al titular que hay tres bloques más arriba.
+
+**Por qué estaba mal escrito, que no es lo que parece.** No fue una decisión
+equivocada sobre qué decir. La verdad que este aviso defiende es una sola —una
+consulta no generaliza— y **tiene dos direcciones**: tras un "no apareciste" el
+error a mano es creerse ausente; tras un "apareciste", creerse presente. Escribir
+sólo la mitad negativa no era prudencia: era medir la modestia por el signo del
+resultado, que está exactamente igual de sesgado que escribir sólo la positiva.
+
+**Qué se ha hecho.** Las dos variantes viven en
+`lib/free-checker/result-copy.ts`, no en el componente, y comparten a propósito
+la primera frase (la causa: recuperación en vivo, no determinista) y la última
+(el remedio: varias preguntas repetidas en el tiempo). Sólo cambia la frase del
+medio, que es la única que depende del resultado. Que compartan causa y remedio
+es lo que deja ver que el aviso **no se adapta al resultado para suavizarlo**.
+
+**Por qué en `lib/` y no en el JSX.** Es la única forma de que el caso positivo
+tenga una prueba. El fallo no vivió meses por descuido: vivió porque **nadie
+podía ejercitar esa rama sin un dominio que apareciese de verdad**, y ningún
+test podía tocarla estando el texto incrustado en el componente. Mismo argumento
+que `lib/projects/new-project-defaults.ts` dejó escrito para su propio bug
+("shipped precisely because nothing could assert on it"). `result-copy.test.ts`
+cubre las dos direcciones y, sobre todo, **assertea la ausencia**: el texto
+negativo no puede aparecer con `brandMentioned: true`, que es lo único que
+impide que vuelva a colarse en un copy-paste.
+
+**Lo que NO se ha tocado.** El titular, que ya era condicional y correcto. El
+bloque de "Además" con la cita del propio dominio, que ya sólo se pinta cuando
+es verdad. Y el upsell, cuyo texto ("Has visto 1 pregunta en 1 motor") es cierto
+en las dos direcciones.
+
+**Comprobado.** `pnpm test` (208/208, 2.875/2.875), `pnpm run validate`
+(build + typecheck + lint), todo en verde.
