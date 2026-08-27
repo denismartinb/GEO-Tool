@@ -16356,12 +16356,11 @@ implementación directa.
 
 **Mecanismo, dos sitios distintos porque el precondicionante es distinto:**
 
-- **Alta del proyecto** (`app/dashboard/projects/actions.ts`,
-  `productionDefaultsForAccount`): los tres flags que sí pueden nacer en ON
-  se pasan como `extraProjectColumns` a `createProjectCore`, exactamente
-  igual que `previewTestingDefaults` — que sigue mandando primero: preview/dev
-  conserva sus defaults baratos pase lo que pase, y sólo cuando no aplica (o
-  sea, en producción) entra la lógica nueva.
+- **Alta del proyecto** (`lib/projects/new-project-defaults.ts`,
+  `newProjectDefaults`): los flags que sí pueden nacer en ON se pasan como
+  `extraProjectColumns` a `createProjectCore`. **La bifurcación es la CUENTA,
+  nunca el entorno** — ver el addendum del 2026-08-27 más abajo, que es
+  justo lo que se corrigió.
 - **Fin del primer escaneo** (`lib/scan/executor.ts`, tras el `UPDATE` que
   marca `scan_runs.status = 'completed'`): `recurring_scans_enabled` se lee
   en su propia consulta aislada (mismo patrón que `engineFlagsRow` un poco
@@ -16411,15 +16410,66 @@ unitarios en vez de en la pasada visual para esta pieza concreta.
 auto-activación (primer escaneo completado → `recurring_scans_enabled = true`
 salvo cuenta interna de prueba; segundo escaneo en adelante → no se toca; ya
 encendido → no se reescribe; fallo del lookup de email → el escaneo igual
-completa). `productionDefaultsForAccount` (`app/dashboard/projects/
-actions.ts`) se queda sin test dedicado a propósito: es un wrapper de tres
-líneas sobre `isInternalTestAccountEmail` —que sí tiene sus 5 tests propios—
-y su hermana `previewTestingDefaults`, con la misma forma, tampoco los tiene;
-darle cobertura sólo a la nueva rompería la simetría sin razón nueva que lo
-justifique.
+completa). La decisión de defaults del alta se dejó **sin test dedicado**, con
+el argumento de que era «un wrapper de tres líneas» sobre
+`isInternalTestAccountEmail`. Ese argumento resultó ser falso al día
+siguiente: ver el addendum de abajo.
 
 **Comprobado (2ª pasada).** `pnpm test` (204/204, 2.847/2.847, +15 tests sobre
 la primera pasada: 5 de `internal-test-accounts.test.ts` + 5 nuevos de
 `executor.test.ts` para este addendum, más los que ya sumó `main` en
 BILLING-INVOICE-FIELDS-1), `pnpm run validate`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+**Segundo addendum (2026-08-27): la bifurcación era el ENTORNO y tenía que ser
+la CUENTA.** El fundador creó una cuenta nueva en el preview, dio de alta un
+dominio, lo escaneó, y encontró cuatro interruptores apagados: Cobertura por
+IA, Suelo de muestreo, Motor Claude y Motor OpenAI. *"Tienen que estar TODOS
+encendidos."*
+
+**No era un fallo, era el diseño — y el diseño estaba mal.** La primera
+versión daba prioridad a `previewTestingDefaults()` sobre los defaults nuevos:
+en cualquier preview, para cualquiera. Los cuatro apagados son exactamente el
+conjunto barato de esa función (`auto_coverage_audit_enabled: false`,
+`engine_claude/openai_enabled: false`, y `sampling_enabled` cayendo a su
+`default false` del esquema porque esa función no lo menciona). Hizo lo que
+estaba escrito; lo escrito no era lo que la fase quería.
+
+Dos cosas estaban mal en esa precedencia, y la segunda es la que importa:
+
+1. **El preview es donde esta fase se verifica antes del Human Gate.** Una
+   condición de entorno que apaga precisamente lo que la fase enciende deja el
+   cambio imposible de comprobar donde se comprueba todo lo demás.
+2. **Una cuenta real es una cuenta real, la haya creado quien la haya creado y
+   en el host que sea.** El entorno no dice nada sobre quién es el dueño.
+
+**La bifurcación pasa a ser la cuenta** (`newProjectDefaults`): cuenta interna
+de prueba → conjunto barato (que además sigue con su propia guarda de
+`VERCEL_ENV`, así que **sigue sin poder llegar a producción**, tal y como pidió
+el fundador el 2026-08-11: *"en main nada de lo de probar barato"*); cuenta
+real → todo encendido, en producción, en preview y en local. Los tres
+`engine_*_enabled` pasan a declararse **explícitamente** aunque la migración
+0033 ya los ponga en `true`: que esta función sea la respuesta completa a «con
+qué nace un proyecto» es justo lo que faltaba para que nadie tuviera que
+cruzarla con el esquema y con lo que pudiera estrecharla después.
+
+**Y por qué no lo cazó nada.** Las tres funciones vivían dentro de
+`app/dashboard/projects/actions.ts`, que es `"use server"`: ahí **todo export
+tiene que ser una server action asíncrona**, así que no se podían exportar y
+por tanto no se podían testear. El «wrapper de tres líneas» de la 2ª pasada no
+era intestable por poco importante, era intestable por dónde estaba. Se mudan
+a `lib/projects/new-project-defaults.ts` con siete tests, tres de los cuales
+**fallan si se restaura la precedencia vieja** (comprobado revirtiéndola).
+
+**Fuera de alcance, dicho explícitamente:** «Ocultar aviso «seguimiento
+diario»» sigue apagado y **no se toca**. No es un flag de proyecto sino una
+preferencia de `localStorage` por navegador, y encenderla por defecto
+silenciaría un aviso legítimo para las cuentas que sí tengan el seguimiento
+apagado. Con el seguimiento diario ahora auto-activándose tras el primer
+escaneo, ese aviso ya no le sale a una cuenta nueva de todos modos.
+
+**Comprobado (3ª pasada).** `pnpm test` (207/207, 2.872/2.872), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
 `bash scripts/agentic-handoff-check.sh`, todo en verde.
