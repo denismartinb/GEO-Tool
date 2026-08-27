@@ -16320,3 +16320,68 @@ con su propia pasada de piloto, no colgando de este PR.
 `tests/log-numbering.test.ts` salta al fusionar, se renumera ESTA sección (no
 la que ya esté en `main`) y con ella todas sus referencias
 (`grep -rn "§168"`). Mismo protocolo que documentan los §159, §161 y §163.
+---
+
+## 169. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
+
+**Lo que vio el fundador.** En la panorámica competitiva de Visión general, con
+un escaneo de 30 respuestas: *"no tiene ningún sentido que Euskaltel aparezca
+primero que Movistar. Ya solo por lógica un operador como Movistar debe estar
+primero, y además viendo que solo tiene un 3% de mención no se entiende"*.
+
+**Lo que propuso, y por qué no era el arreglo.** Su idea era ordenar la
+panorámica con los datos de «Cuota de voz en IA» de Competidores, que en sus
+capturas sí ponía a Movistar primero. Comprobado antes de tocar nada:
+
+- Las **dos** pantallas publican este puesto desde el mismo módulo,
+  `rankLatestPositions` — así que la lista «Puesto en el último escaneo» de
+  **Competidores tenía exactamente el mismo Euskaltel 1º**. Lo que él comparó
+  era otro bloque de esa misma pantalla, con otra ventana (cuota de voz es
+  **acumulado de todos los escaneos**; la panorámica es el **último**).
+- Ordenar sólo la panorámica por cuota de voz habría dejado Movistar 1º en
+  Visión general y Euskaltel 1º en Competidores: **literalmente el fallo que
+  PANORAMA-PARITY-1 arregló** (§36), reintroducido por la puerta de al lado.
+- Y habría dejado mintiendo al rótulo «ÚLTIMO ESCANEO» y al titular «Tu puesto
+  cuando apareces», que son puesto-cuando-apareces, no cuota de voz.
+
+**La causa real.** `avg_position_when_mentioned` es honesto por respuesta y
+engañoso entre entidades, porque **nada en él dice sobre cuántas respuestas
+promedia**. Euskaltel salió **una vez** en 30, fue primero en esa única
+respuesta, y con eso encabezó la clasificación con un 1,00 — por delante de
+Movistar, nombrado en 26 de 30. No es un fallo de cálculo: es una comparación
+entre una media de n=1 y otra de n=26.
+
+**El arreglo: un suelo, no un filtro.** En `rankLatestPositions`, una entidad
+necesita salir en al menos el **10% de las respuestas** (y en **2** como
+mínimo) para disputar el orden. Por debajo **conserva su fila, su tasa de
+mención y su media reales**, y se ordena detrás, con el motivo escrito en la
+fila («pocas menciones»). Esconderla cambiaría una impresión falsa por una
+ausencia; el dato es real, lo que está en duda es su comparabilidad.
+
+- **Se expresa en tasa, no en cuenta**, porque tiene que aguantar los dos
+  extremos: 3 menciones son el 10% de un escaneo de 30 y el 0,6% de uno de 500.
+  El suelo absoluto sólo cubre el otro extremo — en un primer escaneo de 10
+  respuestas, el 10% es una sola respuesta, justo lo que esto existe para
+  impedir.
+- **Arregla las dos pantallas a la vez** por estar en el módulo compartido, que
+  es la razón de que ese módulo exista (§36).
+- **Sin migración ni reescaneo**: `mention_count` y `mention_rate` ya se
+  persisten en `run_scores.details_json`.
+- **Dirección de fallo deliberada**: una entrada que no lleva ninguna de las dos
+  cifras se considera cualificada. Las anteriores a geo-score-v3 ya se
+  descartan por no tener posición (ADR 0026), así que esto sólo cubre una
+  entrada escrita a medias — y degradar una fila por una clave que nunca se
+  escribió sería inventar un veredicto a partir de un hueco.
+
+**Comprobado.** `lib/competitors/latest-positions.test.ts` fija el caso real de
+movistar.es (Movistar 1º … Euskaltel 7º, `qualified: false`, cifras intactas),
+los dos extremos del rango de tamaño y la dirección de fallo. El test 12
+—paridad entre las dos pantallas— sigue verde: lo que cambió es el orden
+literal que fija, y ese cambio **es** el arreglo. `pnpm test` 205/205
+(2.858/2.858) y `pnpm run validate` en verde.
+
+**Lo que NO se ha tocado, y sigue siendo cierto:** cuota de voz sigue siendo
+acumulada y viviendo en Competidores etiquetada como tal (§11); la panorámica
+sigue publicando la mención del último escaneo (§36). No se han unificado las
+dos poblaciones — la regla de ruta pide decisión explícita para eso, y el
+diagnóstico de arriba dice que no hacía falta.

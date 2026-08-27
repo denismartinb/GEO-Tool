@@ -1393,6 +1393,19 @@ a {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .ov2-cmp-tag { font-size: 9.5px; font-weight: 750; color: var(--brand-blue); background: var(--brand-blue-soft-2); padding: 1px 6px; border-radius: 999px; flex: 0 0 auto; }
+/* SAMPLE-FLOOR-1 (2026-08-27, log §169): why a row sits last despite a good
+   mean — it rests on too few answers to compare. Neutral, never alarming: the
+   figure is real, only its comparability is in question.
+   `--ink-2` and not `--ink-3` on purpose. This tag can land on `.you`, whose
+   row is tinted, and `--ink-3` only clears AA over pure white (4,76:1 there,
+   4,44:1 the moment the surface is not white) — the rule `.claude/rules/
+   styles.md` states three times over. `--ink-2` is 7,50:1 and holds on every
+   surface this row can have. */
+.ov2-cmp-thin {
+  font-size: 9.5px; font-weight: 650; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  padding: 1px 6px; border-radius: 999px; flex: 0 0 auto; white-space: nowrap;
+}
 .ov2-cmp-sov { width: 54px; flex: 0 0 auto; }
 .ov2-cmp-sov .track { height: 5px; background: var(--line-soft); border-radius: 99px; overflow: hidden; }
 .ov2-cmp-sov .track > i { display: block; height: 100%; border-radius: 99px; }
@@ -1998,6 +2011,14 @@ a {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cm2-pos-row.you .cm2-pos-nm { color: var(--brand-blue); }
+/* SAMPLE-FLOOR-1 — same tag, same reasoning, as `.ov2-cmp-thin` above; the two
+   screens publish this standing from one module and must explain it the same
+   way. `flex: 0 0 auto` keeps it out of the ellipsis that `.cm2-pos-nm` runs. */
+.cm2-pos-thin {
+  flex: 0 0 auto; font-size: 9.5px; font-weight: 650; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  padding: 1px 6px; border-radius: 999px; white-space: nowrap;
+}
 /* The mean-rank value ("2,18º") used to live here. Removed with the switch to
    a plain 1..N ranking (log §15): a mean is almost never 1,00, so the column
    read as "nobody is in first place". The mention rate takes its place at the

@@ -109,6 +109,21 @@ propia marca cuando caía fuera del top 5.
   como último criterio sólo para que el orden sea estable entre renders. El
   porcentaje que desempata se muestra en la fila, para que el criterio sea
   visible y no arbitrario.
+- **Una media sobre pocas respuestas no adelanta a una media sobre muchas.**
+  `avg_position_when_mentioned` no dice sobre cuántas respuestas promedia, así
+  que comparar n=1 con n=26 no es un matiz: Euskaltel salió UNA vez en 30, fue
+  primero en esa respuesta y encabezó las dos pantallas con un 1,00, por delante
+  de Movistar (26 de 30) — «Euskaltel 1º · 3% de mención» (fundador,
+  2026-08-27, log §169). El suelo vive en `rankLatestPositions`
+  (`MIN_MENTION_RATE_FOR_RANK` 10%, `MIN_MENTIONS_FOR_RANK` 2) y por tanto
+  arregla las dos pantallas a la vez, que es para lo que ese módulo existe.
+  **Es un suelo, no un filtro**: por debajo la entidad conserva fila, media y
+  tasa reales, se ordena detrás y la fila DICE por qué («pocas menciones»).
+  Esconderla cambiaría una impresión falsa por una ausencia. Se expresa en
+  **tasa** y no en cuenta a propósito — 3 menciones son el 10% de 30 respuestas
+  y el 0,6% de 500 —, y el suelo absoluto sólo cubre el otro extremo. Una
+  entrada sin ninguna de las dos cifras se deja cualificada: degradar por una
+  clave que nunca se escribió es inventar un veredicto sobre un hueco.
 - **La posición mide rango, no frecuencia** (ADR 0026 `position-when-mentioned`).
   No reintroducir el promedio con penalización `N+1` de ADR 0005: producía que
   una marca poco mencionada quedase por encima de Chrome o Safari.

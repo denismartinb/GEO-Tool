@@ -6,13 +6,15 @@ function entry(
   name: string,
   avg: number | null | undefined,
   mentionRate?: number,
-  isBrand = false
+  isBrand = false,
+  mentionCount?: number
 ): PersistedRankingEntry {
   return {
     name,
     is_brand: isBrand,
     ...(avg === undefined ? {} : { avg_position_when_mentioned: avg }),
-    ...(mentionRate === undefined ? {} : { mention_rate: mentionRate })
+    ...(mentionRate === undefined ? {} : { mention_rate: mentionRate }),
+    ...(mentionCount === undefined ? {} : { mention_count: mentionCount })
   };
 }
 
@@ -40,20 +42,22 @@ describe("rankLatestPositions", () => {
   });
 
   it("2. breaks a tie by mention rate — the real case that made two screens disagree", () => {
-    // Proton VPN and Amazon both average 1,00 on the founder's Mozilla project.
-    // Ordered by position alone the winner is whoever the array happened to
-    // hold first, which is how the Overview showed Proton VPN 1º while
-    // Competidores showed Amazon 1º for the same scan.
+    // Both average 1,00. Ordered by position alone the winner is whoever the
+    // array happened to hold first, which is how the Overview showed Proton VPN
+    // 1º while Competidores showed Amazon 1º for the same scan.
+    // Both are above the sample floor here, so this exercises the tiebreak and
+    // only the tiebreak — the original pair (5% vs 14%) now separates one step
+    // earlier, on the floor, and would have stopped testing this.
     const out = rankLatestPositions({
       entities: [rival("Proton VPN"), rival("Amazon")],
-      ranking: [entry("Proton VPN", 1.0, 5), entry("Amazon", 1.0, 14)]
+      ranking: [entry("Proton VPN", 1.0, 11), entry("Amazon", 1.0, 14)]
     });
 
     expect(out.map((r) => r.label)).toEqual(["Amazon", "Proton VPN"]);
   });
 
   it("3. is stable regardless of the caller's array order", () => {
-    const ranking = [entry("Proton VPN", 1.0, 5), entry("Amazon", 1.0, 14)];
+    const ranking = [entry("Proton VPN", 1.0, 11), entry("Amazon", 1.0, 14)];
     const a = rankLatestPositions({ entities: [rival("Proton VPN"), rival("Amazon")], ranking });
     const b = rankLatestPositions({ entities: [rival("Amazon"), rival("Proton VPN")], ranking });
 
@@ -163,10 +167,85 @@ describe("rankLatestPositions", () => {
     );
     expect(overview.map((r) => `${r.rank}º ${r.label}`)).toEqual([
       "1º Amazon",
-      "2º Proton VPN",
-      "3º Google Chrome",
-      "4º Brave",
-      "5º Mozilla"
+      "2º Google Chrome",
+      "3º Brave",
+      "4º Mozilla",
+      // Proton VPN averages 1,00 — the best mean on the board — over 5% of the
+      // answers. SAMPLE-FLOOR-1 puts it last instead of first (it used to be
+      // 2º here purely because the mention-rate tiebreak ran after position).
+      "5º Proton VPN"
+    ]);
+  });
+
+  it("13. SAMPLE-FLOOR-1: the movistar.es scan the founder reported", () => {
+    // 30 answers. Euskaltel was named ONCE, came first in that one answer, and
+    // therefore led both screens at 1,00 — above Movistar, named in 26 of the
+    // 30. "Euskaltel 1º · 3% de mención" is not a sentence any reader parses
+    // as "we saw it once" (founder, 2026-08-27).
+    const out = rankLatestPositions({
+      entities: [
+        { key: "b", label: "Movistar", isBrand: true },
+        rival("Vodafone España"),
+        rival("Orange España"),
+        rival("MásMóvil"),
+        rival("Digi"),
+        rival("O2"),
+        rival("Euskaltel")
+      ],
+      ranking: [
+        entry("Movistar", 1.4, 87, true, 26),
+        entry("Vodafone España", 1.8, 73, false, 22),
+        entry("Orange España", 2.1, 57, false, 17),
+        entry("MásMóvil", 2.6, 33, false, 10),
+        entry("Digi", 2.9, 30, false, 9),
+        entry("O2", 3.4, 20, false, 6),
+        entry("Euskaltel", 1.0, 3, false, 1)
+      ]
+    });
+
+    expect(out.map((r) => `${r.rank}º ${r.label}`)).toEqual([
+      "1º Movistar",
+      "2º Vodafone España",
+      "3º Orange España",
+      "4º MásMóvil",
+      "5º Digi",
+      "6º O2",
+      "7º Euskaltel"
+    ]);
+    // Demoted, never dropped, and its real figures are untouched — the row has
+    // to be able to explain itself.
+    expect(out.at(-1)).toMatchObject({ label: "Euskaltel", qualified: false, position: 1.0, mentionRate: 3 });
+    expect(out.slice(0, -1).every((r) => r.qualified)).toBe(true);
+  });
+
+  it("14. the floor is a rate, so it holds at both ends of the scan-size range", () => {
+    // 3 mentions is 10% of a 30-answer scan and 0,6% of a 500-answer one. A
+    // fixed count would have called the second one qualified.
+    const big = rankLatestPositions({
+      entities: [rival("Ruido"), rival("Real")],
+      ranking: [entry("Ruido", 1.0, 0.6, false, 3), entry("Real", 2.0, 40, false, 200)]
+    });
+    expect(big.map((r) => r.label)).toEqual(["Real", "Ruido"]);
+
+    // And the absolute half guards the other extreme: on a 10-answer first
+    // scan, 10% is a single answer — the very thing the floor exists to stop.
+    const small = rankLatestPositions({
+      entities: [rival("UnaVez"), rival("Constante")],
+      ranking: [entry("UnaVez", 1.0, 10, false, 1), entry("Constante", 2.0, 60, false, 6)]
+    });
+    expect(small.map((r) => r.label)).toEqual(["Constante", "UnaVez"]);
+  });
+
+  it("15. an entry carrying neither figure is left qualified, not demoted on a gap", () => {
+    // Demoting for a key that was never written would be inventing a verdict
+    // out of missing data — the opposite fail direction from the one we want.
+    const out = rankLatestPositions({
+      entities: [rival("SinCifras"), rival("ConCifras")],
+      ranking: [entry("SinCifras", 1.0), entry("ConCifras", 2.0, 50, false, 15)]
+    });
+    expect(out.map((r) => [r.label, r.qualified])).toEqual([
+      ["SinCifras", true],
+      ["ConCifras", true]
     ]);
   });
 });
