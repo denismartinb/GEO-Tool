@@ -842,14 +842,23 @@ export default async function ProjectDetailPage({
             <p className="ov2-insight-txt">
               {/* "prompts" here counted prompt × engine rows, not prompts: a
                   project with 1 prompt scanned on 3 engines read "3 de 3
-                  prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1). */}
+                  prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1).
+
+                  TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1):
+                  this sentence used to close with "con una puntuación GEO de
+                  {perRunScore}/100" — this scan's own composite, a different
+                  number from the windowed gaugeScore the gauge two inches
+                  above shows under the same literal label. Caught in review
+                  (geo-strategy, Human Gate pass): two "puntuación GEO" on one
+                  screen is the audit's P0-01 exactly, just moved from
+                  cross-screen to same-screen. The founder's rule is that only
+                  the windowed figure may carry that label anywhere — so this
+                  sentence stops claiming a score at all; the gauge already
+                  states it once, correctly, and doesn't need a second,
+                  differently-sourced echo. */}
               GenScore detectó que <b>{project.brand}</b> aparece en{" "}
               <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
-              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
-              {/* perRunScore, not gaugeScore: this sentence is about THIS
-                  scan's responses, so pairing them with the windowed median
-                  would attribute a figure to data that did not produce it. */}
-              <b>puntuación GEO de {perRunScore}/100</b>.
+              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}).
               {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
                   {" "}Tu rival más visible,{" "}
