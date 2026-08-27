@@ -139,3 +139,23 @@ worse than no rule, because a future session will obey it anyway.
   fake-scan shape "no mute rows" already forbids. Both call sites reject
   outright (`no_engines_enabled`) rather than create or run that scan
   (`docs/brand/design-decisions-log.md` §54).
+- **Any fetch that follows a redirect to a host this codebase doesn't control
+  needs the same SSRF guard as `lib/web-audit/fetch-page.ts`, imported —
+  never reimplemented.** `resolveGroundingRedirect` followed Gemini's
+  grounding redirects with a plain `redirect: "follow"` for months: no
+  resolved-IP check, no hop-by-hop reverification, the exact gap
+  `fetch-page.ts`'s own header explains is unsafe for a host you don't
+  control. Found by `data-guardian` while scoping CITED-DIFF-1, fixed as
+  CITATION-REDIRECT-SSRF-1 regardless of that phase's own fate — severity was
+  medium (the response body is never read, only `response.url`), but any
+  future phase that DOES read the body would turn this into an exfiltration
+  channel, so it does not wait to become urgent (`docs/brand/
+  design-decisions-log.md` §184). Unlike `fetch-page.ts`, this resolver has
+  no domain allowlist — landing on any public site is the point — so the
+  guard here is `hostnameResolvesToPublicIp` alone (imported, not copied),
+  never `isAllowedAuditHost`. And unlike a per-hop timeout, the budget is one
+  absolute deadline computed once per attempt (HEAD, then separately GET) and
+  threaded through every hop — the same "budget against the invocation, not
+  against itself" lesson ADR 0029 already established, since ADR 0006 already
+  named redirect resolution as the dominant risk to the scan's 60s budget
+  (ADR 0003) before any of this.
