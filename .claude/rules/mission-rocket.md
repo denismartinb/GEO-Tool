@@ -60,21 +60,21 @@ porque una sesión futura la obedecerá igual.
   por lo mismo, **ninguna medida de esta pantalla se expresa en unidades de
   métrica tipográfica**: `30ch` resolvía 269px bajo Hanken y 308px bajo
   Figtree, y esos 39px eran los que decidían si "36 de 78" cabía en una línea
-  (`docs/brand/design-decisions-log.md` §167).
+  (`docs/brand/design-decisions-log.md` §168).
 - **La misión cuelga DIRECTAMENTE de `.page.mrk-fill`, en las seis.** Los dos
   únicos envoltorios permitidos entre medias son los que ya existen y son
   `display: contents` con `mrk-fill` propio (`.cm2-scope`,
   `.wa2-scope.wa2-page`). Cualquier otra caja intermedia es un ítem flex de
   altura `auto` que se come el `flex: 1`, y la escena se queda en su tope de
   altura mínima con página gris debajo — sin error, sin aviso: es lo que
-  llevaba Prompts (§167, §160). Antes de añadir algo al lado de la misión:
+  llevaba Prompts (§168, §160). Antes de añadir algo al lado de la misión:
   va en la rama `else`, nunca entre `.page` y `<FirstScanTakeover>`.
 - **El componente que ocupa la pantalla es el que la devuelve.** El
   `router.refresh()` del final del escaneo lo dispara `ScanMissionRocket` desde
   su propio sondeo, no un `ScanProgressPoller` montado por la página —
   precisamente porque ese sólo lo montaba Visión general y en las otras cinco
   la misión se quedaba clavada en "Casi está" hasta que alguien recargaba a
-  mano (§167). Mismas tres condiciones de salida que ya usaba aquél: estado
+  mano (§168). Mismas tres condiciones de salida que ya usaba aquél: estado
   terminal, id de run que ya no es el nuestro, o ningún run activo. Y
   **refresca en el sitio, no redirige**: la sección que el usuario está
   leyendo es la que se rellena.
@@ -82,7 +82,7 @@ porque una sesión futura la obedecerá igual.
   Son contratos a nivel de fuente sobre las propiedades que eran por-pantalla.
   La prueba en píxeles es un fixture de Playwright construido desde la salida
   compilada **con las webfonts reales servidas** — sin ellas las seis pantallas
-  caen a la misma familia y el fallo no se reproduce (§167).
+  caen a la misma familia y el fallo no se reproduce (§168).
 - **El mapeo de esta regla a sus ficheros vive en la tabla «Path-scoped rules»
   de `CLAUDE.md`, y en ningún otro sitio.** No hay frontmatter ni configuración
   que lo declare. Si mueves o renombras cualquiera de los tres ficheros sin

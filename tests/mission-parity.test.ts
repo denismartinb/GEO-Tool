@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * ANIMATION-PARITY-1 (2026-08-26, `docs/brand/design-decisions-log.md` §167).
+ * ANIMATION-PARITY-1 (2026-08-26, `docs/brand/design-decisions-log.md` §168).
  *
  * The first-scan mission is ONE component mounted on SIX screens, and the
  * founder's report was that it did not look or behave like one component:
