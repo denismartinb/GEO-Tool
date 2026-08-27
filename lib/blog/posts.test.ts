@@ -6,6 +6,7 @@ import {
   getBlogCluster,
   getBlogPost,
   getMetaDescription,
+  getMostRecentPost,
   getPostsByCluster,
   getSeoTitle,
   type BlogPost
@@ -83,6 +84,19 @@ describe("getPostsByCluster", () => {
   it("every post is reachable from exactly one cluster (no post is orphaned)", () => {
     const total = BLOG_CLUSTERS.reduce((sum, c) => sum + getPostsByCluster(c.key).length, 0);
     expect(total).toBe(BLOG_POSTS.length);
+  });
+});
+
+describe("getMostRecentPost", () => {
+  it("devuelve el post real con datePublished más alto de BLOG_POSTS", () => {
+    const expected = [...BLOG_POSTS].sort((a, b) => (a.datePublished > b.datePublished ? -1 : 1))[0];
+    expect(getMostRecentPost().slug).toBe(expected.slug);
+  });
+
+  it("no muta BLOG_POSTS al ordenar", () => {
+    const before = BLOG_POSTS.map((p) => p.slug);
+    getMostRecentPost();
+    expect(BLOG_POSTS.map((p) => p.slug)).toEqual(before);
   });
 });
 
