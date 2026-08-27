@@ -144,10 +144,8 @@ contra 2 es enteramente confusión compuesto↔visibilidad.)*
 1. **El primer escaneo no tiene ventana.** `MIN_RUNS_FOR_WINDOW` es 2, y ése es
    exactamente el momento en que se dispara la notificación y en que Dominios
    enseña su primer número. Se mantiene la caída actual al compuesto del run,
-   con la misma etiqueta — es la mejor estimación disponible y no inventa nada —
-   pero el marcador de fiabilidad que ya existe pasa a ser **obligatorio**
-   mientras no haya ventana, para que el salto al llegar el segundo escaneo esté
-   anunciado antes de ocurrir.
+   con la misma etiqueta — es la mejor estimación disponible y no inventa nada.
+   Aceptado explícitamente por el fundador; ver más abajo.
 2. **`getWorkspaceCounters` sólo guarda dos runs por proyecto**
    (`lib/project-workspace.ts:332-340`) y la ventana necesita tres. Dominios
    lista varios proyectos, así que es una consulta por proyecto, no una global:
@@ -161,14 +159,33 @@ contra 2 es enteramente confusión compuesto↔visibilidad.)*
 `lib/scan/weekly-digest.ts` también publica `visibility_score`. Entra en el
 alcance de esta fase por el mismo argumento que las otras cuatro.
 
-**Excepción acotada: la pantalla de detalle de un escaneo** (`/runs/[runId]`).
-El fundador la dio por no visible para el usuario final; **sí lo es**: se llega
-desde el botón "Ver detalle del escaneo" de dos estados vacíos, en Páginas
-citadas (`citations/page.tsx:220`) y en Recomendaciones
-(`recommendations/page.tsx:701`). Como trata de un run concreto por definición,
-la salida es que **hable de "este escaneo" y no llame "Puntuación GEO" a nada**,
-en lugar de retirar los dos enlaces — que son la única salida de esos dos
-estados vacíos.
+**El detalle de escaneo sale de la consola del usuario final** (decisión del
+fundador, 2026-08-27). `/runs/[runId]` deja de ser alcanzable desde el producto:
+se retiran los dos enlaces "Ver detalle del escaneo" de Páginas citadas
+(`citations/page.tsx:220`) y de Recomendaciones (`recommendations/page.tsx:701`),
+y la ruta queda accesible **sólo desde `/debug`**, que ya la enlaza desde la
+fecha de cada fila. Razón: *"quiero tener una única cifra GEO Score porque si no
+es un lío"* — una pantalla que por definición habla de un run concreto es la
+única que no puede mostrar la ventana, así que o contradice al resto o pide al
+usuario sostener dos cantidades. Retirarla del recorrido lo cierra de raíz.
+
+El coste es menor de lo que parecía cuando se planteó como excepción. Esos dos
+enlaces viven **dentro de estados vacíos** ("sin citas", "sin recomendaciones"),
+como ya documenta el comentario de `debug/page.tsx:971-974`: un proyecto con
+datos reales nunca podía abrir un escaneo desde ahí. No eran un camino
+diseñado, eran un accidente de colocación, y `/debug` es desde entonces la vía
+real. Los dos estados vacíos se quedan sin botón y con su texto actual, que ya
+dice lo único cierto: vuelve tras el próximo escaneo.
+
+**El primer escaneo sin ventana se acepta tal cual** (decisión del fundador,
+2026-08-27: *"no pasa nada; la ventana evita la variabilidad cuando hay más de
+uno"*). Se mantiene la caída al compuesto del run bajo la misma etiqueta, y no
+se inventa ningún indicador nuevo para anunciarla: el producto ya distingue una
+muestra insuficiente (`hasSufficientSample`, `MIN_RESPONSES_FOR_BAND` en
+`lib/scoring/score-reliability.ts`) y esta fase se limita a **no contradecir ese
+marcador donde ya existe**. Queda anotado como riesgo conocido y aceptado: entre
+el primer y el segundo escaneo la cifra puede moverse por cambio de cantidad de
+datos, no sólo por cambio de visibilidad.
 
 **Entregables.**
 - `lib/metrics/run-metrics.ts` — módulo único, sin I/O, dueño de: `geoScore`,
@@ -177,8 +194,18 @@ estados vacíos.
   con `label` y `denominatorLabel` propios. Ninguna pantalla vuelve a calcular un
   porcentaje.
 - Migración de las superficies: Visión general, Dominios, Prompts, Competidores,
-  notificaciones, resumen semanal y detalle de escaneo. Y de la exportación,
-  cuando exista (Fase 3, `ACTIONS-OBSERVABLE-1`).
+  notificaciones y resumen semanal. Y de la exportación, cuando exista (Fase 3,
+  `ACTIONS-OBSERVABLE-1`).
+- Retirada de los dos enlaces a `/runs/[runId]` de Páginas citadas y
+  Recomendaciones; la ruta se queda accesible sólo desde `/debug`, sin tocar la
+  pantalla en sí.
+- **Este trabajo se hace con revisión reforzada** (petición explícita del
+  fundador: *"hazlo con mucho mimo, cuidado y revisión; la nota GEO Score es el
+  core de la herramienta"*). En la práctica: `run-metrics.ts` nace con sus tests
+  antes que sus consumidores; cada superficie se migra en un commit propio y
+  legible; y ninguna migración entra sin una captura del antes y el después
+  sobre el mismo proyecto, porque un número correcto bajo una etiqueta
+  equivocada es invisible para cualquier test.
 - **Todo porcentaje se publica con su denominador al lado**: "2 % de respuestas
   (1/45)", "7 % de prompts (1/15)". Sin excepción.
 - Competidores: `results.length` deja de rotularse "prompts" → "45 respuestas
