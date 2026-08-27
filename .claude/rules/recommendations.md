@@ -220,7 +220,7 @@ paths:
   hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
   `ScanStatePill` del sticky-header, nunca tapando el backlog.
 
-## Verificación de la predicción (RECS-LOOP-1 Fase A, ADR 0041, log §173)
+## Verificación de la predicción (RECS-LOOP-1 Fase A, ADR 0041, log §174)
 
 - **Nunca un delta de score entre dos runs.** Se evaluó y se rechazó
   explícitamente: no es atribuible (el compuesto/componente se mueve por

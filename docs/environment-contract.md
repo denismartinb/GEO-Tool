@@ -158,6 +158,21 @@ The cron only ever processes projects with `projects.recurring_scans_enabled = t
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
 
+### Cuentas internas de prueba (PROJECT-DEFAULTS-BY-ACCOUNT-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `INTERNAL_TEST_ACCOUNT_EMAILS` | No (unset = nadie está exento) | Vercel + local `.env.local` | lista de emails separados por comas, p. ej. `founder@example.com,tester@example.com` |
+
+Allow-list, no deny-list, y falla cerrado a propósito: sin esta variable
+**ninguna** cuenta queda exenta, así que toda cuenta nueva recibe los defaults
+de producción (`sampling_enabled`, `auto_coverage_audit_enabled`,
+`auto_technical_audit_enabled` en `true`) — el error más barato es "una cuenta
+de prueba recibe por descuido los defaults caros", no al revés
+(`lib/projects/internal-test-accounts.ts`). Comparación por email, no por
+`auth.users.id` como `ADMIN_USER_IDS`: aquí el fallo de un email cambiado por
+el propio usuario es barato de notar y corregir, no una brecha de acceso.
+
 ### Comprobador gratuito anónimo (FREE-CHECKER-1 Fase B)
 
 | Variable | Required | Where | Expected shape |

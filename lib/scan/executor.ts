@@ -30,6 +30,7 @@ import { computeStaggerDelaysMs } from "@/lib/scan/pacing";
 import { triggerScanContinuation } from "@/lib/scan/continuation";
 import { ProjectActionError, type JobRow } from "@/lib/scan/types";
 import type { AuthenticatedContext } from "@/lib/auth";
+import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
@@ -1043,6 +1044,58 @@ export async function executePendingScan({
       })
       .eq("id", runId)
       .eq("project_id", projectId);
+
+    // PROJECT-DEFAULTS-BY-ACCOUNT-1 (founder-approved 2026-08-25) —
+    // `recurring_scans_enabled` cannot be turned on at project creation: its
+    // own precondition (`/debug`'s UI, `lib/projects/automation-toggles.ts`)
+    // requires at least one completed scan to already exist, which is
+    // impossible before the project's first run has finished. So for a real
+    // customer account (not an internal test account), it is turned on HERE,
+    // the first moment the precondition is actually met — not on every
+    // completion, only the project's first, so a customer who later turns it
+    // back off from `/debug` is never silently re-enabled by a later scan.
+    //
+    // Own isolated query, re-read fresh rather than carried from `project`
+    // above: same "own query, own migration guard" shape `engineFlagsRow`
+    // uses a few lines up, and the column is only needed in this one,
+    // rarely-hit branch — not worth adding to every batch invocation's shared
+    // project select.
+    try {
+      const { data: recurringFlagRow } = await service
+        .from("projects")
+        .select("recurring_scans_enabled")
+        .eq("id", projectId)
+        .maybeSingle();
+
+      if (recurringFlagRow && recurringFlagRow.recurring_scans_enabled !== true) {
+        const { count: completedRunCount } = await service
+          .from("scan_runs")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId)
+          .eq("status", "completed");
+
+        if ((completedRunCount ?? 0) === 1) {
+          const { data: ownerAuthUser } = await service.auth.admin.getUserById(
+            project.owner_user_id as string
+          );
+
+          if (!isInternalTestAccountEmail(ownerAuthUser?.user?.email)) {
+            await service
+              .from("projects")
+              .update({ recurring_scans_enabled: true })
+              .eq("id", projectId);
+          }
+        }
+      }
+    } catch (autoRecurringError) {
+      // Fail-soft, like every other post-scan side effect here: the scan
+      // itself already completed successfully above.
+      console.error("[scan-runner] failed to auto-enable recurring scans after the first completed run", {
+        projectId,
+        runId,
+        message: autoRecurringError instanceof Error ? autoRecurringError.message : "unknown"
+      });
+    }
 
     // EXTRACTION-RELIABILITY-1 Fase B: a run can reach `completed` and still
     // have lost a whole engine's data — that is precisely how OpenAI's 429s

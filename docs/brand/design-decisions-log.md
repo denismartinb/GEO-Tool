@@ -16177,7 +16177,7 @@ decisión del fundador, ya no por coste sino por criterio de producto; el
 interruptor está en la consola de operador (`/admin/users`, «Auditoría de
 cobertura IA»).
 
-------
+---
 
 ## 168. La misión del primer escaneo era seis misiones distintas (ANIMATION-PARITY-1, 2026-08-26)
 
@@ -16707,7 +16707,198 @@ que nunca reengancha una fila de cobertura vieja.
 
 ---
 
-## 173. La pestaña "Resueltas" verifica si la predicción se cumplió — nunca mide un delta de score (RECS-LOOP-1 Fase A, ADR 0041, 2026-08-27)
+---
+
+
+---
+
+## 173. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
+
+**Nota de renumeración.** Esta sección nació como §165 en su propia rama; mientras se abría el PR, `main` avanzó y reclamó ese número y el siguiente (§165/§166, BILLING-INVOICE-FIELDS-1, PR #478) — pasó a **§167** en una primera fusión. `main` volvió a avanzar mientras el PR seguía abierto, esta vez con AUDIT-RECS-JOIN-1 reclamando ese §167 recién liberado, así que en esta segunda fusión pasa a §168 — pero `main` avanzó una TERCERA vez, esta vez con ANIMATION-PARITY-1 reclamando ese mismo §168, así que en esta tercera fusión pasa a §169 — y una CUARTA vez, con BLOG-INDEX-CARDS-2026-08 reclamando ese §169, pasó a §170 — y una QUINTA vez, con PROMO-CONSOLE-PARITY-1 reclamando ese mismo §170, pasó a §171 — y una SEXTA vez, con DOMAINS-OVERAGE-GATE-1 reclamando ese mismo §171 (y la misma fila del mapa de zonas, "Dominios y depuración"), pasó a §172 — y una SÉPTIMA vez, con AUDIT-RECS-JOIN-1 Fase B reclamando ese mismo §172, así que acaba en **§173**, el primero libre. Siete colisiones en la misma sección: el número es un identificador, no un contador, y esta rama es el caso de manual. Mismo protocolo que describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión en cadena que ya documentan los §159/§161/§163 de este mismo fichero.
+
+
+**Lo que pidió el fundador.** Que la configuración de `/debug` que hoy es
+manual (`sampling_enabled`, `auto_coverage_audit_enabled`,
+`auto_technical_audit_enabled`, `recurring_scans_enabled`) nazca en ON para
+toda cuenta, salvo tres direcciones de correo que siguen siendo sus propias
+cuentas de prueba interna. Aprobado vía Task Intake, con tres preguntas de
+alcance resueltas explícitamente antes de tocar código:
+
+1. **Sólo altas nuevas.** Ningún proyecto ya existente se toca. Nada de
+   `UPDATE` retroactivo — eso queda como una fase aparte si algún día se pide.
+2. **`auto_technical_audit_enabled` entra también**, no sólo las dos que
+   gastan Gemini: no cuesta IA y hoy congela un componente del GEO Score si
+   está apagada.
+3. **`recurring_scans_enabled` se activa solo, tras el primer escaneo**, no en
+   el alta — es la única de las cuatro cuya propia UI exige un escaneo
+   completado antes de poder encenderse, así que no puede nacer en ON.
+
+**Por qué esto NO era "cambiar dos booleanos".** Las tres migraciones que
+tocan (0031, 0032, 0033) documentan sus defaults en `false` como decisiones
+de coste deliberadas — el propio comentario de 0032 dice literalmente que la
+pregunta de qué hacer "cuando lleguen clientes reales" queda abierta a
+propósito. Encender `sampling_enabled` multiplica hasta ×5 las llamadas de
+un escaneo; `auto_coverage_audit_enabled` añade una llamada a Gemini por
+prompt activo tras cada escaneo. No es ajuste de UI, es una decisión de coste
+recurrente sobre toda cuenta real — de ahí el Task Intake Report en vez de
+implementación directa.
+
+**Mecanismo, dos sitios distintos porque el precondicionante es distinto:**
+
+- **Alta del proyecto** (`lib/projects/new-project-defaults.ts`,
+  `newProjectDefaults`): los flags que sí pueden nacer en ON se pasan como
+  `extraProjectColumns` a `createProjectCore`. **La bifurcación es la CUENTA,
+  nunca el entorno** — ver el addendum del 2026-08-27 más abajo, que es
+  justo lo que se corrigió.
+- **Fin del primer escaneo** (`lib/scan/executor.ts`, tras el `UPDATE` que
+  marca `scan_runs.status = 'completed'`): `recurring_scans_enabled` se lee
+  en su propia consulta aislada (mismo patrón que `engineFlagsRow` un poco
+  más arriba, ADR 0029/0033) y sólo se enciende si el proyecto tiene
+  exactamente un escaneo completado — la primera vez que la propia
+  precondición de `/debug` queda satisfecha. Deliberadamente NO se reevalúa
+  en escaneos posteriores: un cliente que lo apague a mano después no vuelve
+  a encenderse solo en el siguiente escaneo. Todo el bloque es fail-soft
+  (`try/catch`, mismo patrón que la cola de auditoría web un poco más abajo
+  en el mismo fichero): un fallo aquí nunca tumba un escaneo que ya terminó
+  bien.
+
+**La exclusión es por email, no por `auth.users.id`, y es una desviación
+consciente de `ADMIN_USER_IDS`.** El contrato de entorno (`docs/
+environment-contract.md`) es explícito en que `/admin` gatea por ID
+precisamente porque un email es cambiable por el propio usuario desde
+Ajustes — ahí ese cambio compraría acceso. Aquí el fallo de ese mismo cambio
+es "una cuenta de prueba recibe por descuido los defaults caros en su
+siguiente alta", barato de notar y corregir, no una brecha. Vive en
+`lib/projects/internal-test-accounts.ts`, leída desde la variable de entorno
+nueva `INTERNAL_TEST_ACCOUNT_EMAILS` (lista separada por comas) — nunca
+hardcodeada en el código fuente, y falla cerrado: sin la variable, nadie
+queda exento y toda cuenta nueva recibe los defaults de producción.
+
+**Pendiente / fuera de alcance, explícitamente.** Ningún dominio existente
+cambia con este PR. Si en el futuro se decide aplicar esto retroactivamente
+a cuentas reales que ya están escaneando, es una fase nueva con su propio
+Task Intake — cambia el gasto de clientes que no lo pidieron, no sólo el de
+altas nuevas.
+
+**Comprobado.** `pnpm test` (204/204, 2.832/2.832, incluye los 5 tests nuevos
+de `internal-test-accounts.test.ts`), `pnpm run validate` (build + typecheck
++ lint), `git diff --check` y `bash scripts/agentic-handoff-check.sh`, todo
+en verde.
+
+**Addendum, mismo día: cobertura de test para el bloque de `executor.ts`, a
+petición del propio piloto.** El agente `ux-pilot`, lanzado a juzgar el
+preview de este PR, devolvió `INCONCLUSIVE` para el comportamiento que esta
+fase implementa — no por un fallo suyo, sino porque es estructuralmente
+invisible al piloto siempre-on: vive detrás de `/debug` (fuera del recorrido
+por defecto) y detrás de un camino de escritura (creación de proyecto), y el
+piloto siempre-on es de sólo lectura por diseño (`CLAUDE.md`, "Pilot write
+scope"). Su recomendación explícita fue apoyar el Human Gate en tests
+unitarios en vez de en la pasada visual para esta pieza concreta.
+
+`lib/scan/executor.test.ts` ganó cinco tests nuevos sobre el bloque de
+auto-activación (primer escaneo completado → `recurring_scans_enabled = true`
+salvo cuenta interna de prueba; segundo escaneo en adelante → no se toca; ya
+encendido → no se reescribe; fallo del lookup de email → el escaneo igual
+completa). La decisión de defaults del alta se dejó **sin test dedicado**, con
+el argumento de que era «un wrapper de tres líneas» sobre
+`isInternalTestAccountEmail`. Ese argumento resultó ser falso al día
+siguiente: ver el addendum de abajo.
+
+**Comprobado (2ª pasada).** `pnpm test` (204/204, 2.847/2.847, +15 tests sobre
+la primera pasada: 5 de `internal-test-accounts.test.ts` + 5 nuevos de
+`executor.test.ts` para este addendum, más los que ya sumó `main` en
+BILLING-INVOICE-FIELDS-1), `pnpm run validate`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+**Segundo addendum (2026-08-27): la bifurcación era el ENTORNO y tenía que ser
+la CUENTA.** El fundador creó una cuenta nueva en el preview, dio de alta un
+dominio, lo escaneó, y encontró cuatro interruptores apagados: Cobertura por
+IA, Suelo de muestreo, Motor Claude y Motor OpenAI. *"Tienen que estar TODOS
+encendidos."*
+
+**No era un fallo, era el diseño — y el diseño estaba mal.** La primera
+versión daba prioridad a `previewTestingDefaults()` sobre los defaults nuevos:
+en cualquier preview, para cualquiera. Los cuatro apagados son exactamente el
+conjunto barato de esa función (`auto_coverage_audit_enabled: false`,
+`engine_claude/openai_enabled: false`, y `sampling_enabled` cayendo a su
+`default false` del esquema porque esa función no lo menciona). Hizo lo que
+estaba escrito; lo escrito no era lo que la fase quería.
+
+Dos cosas estaban mal en esa precedencia, y la segunda es la que importa:
+
+1. **El preview es donde esta fase se verifica antes del Human Gate.** Una
+   condición de entorno que apaga precisamente lo que la fase enciende deja el
+   cambio imposible de comprobar donde se comprueba todo lo demás.
+2. **Una cuenta real es una cuenta real, la haya creado quien la haya creado y
+   en el host que sea.** El entorno no dice nada sobre quién es el dueño.
+
+**La bifurcación pasa a ser la cuenta** (`newProjectDefaults`): cuenta interna
+de prueba → conjunto barato (que además sigue con su propia guarda de
+`VERCEL_ENV`, así que **sigue sin poder llegar a producción**, tal y como pidió
+el fundador el 2026-08-11: *"en main nada de lo de probar barato"*); cuenta
+real → todo encendido, en producción, en preview y en local. Los tres
+`engine_*_enabled` pasan a declararse **explícitamente** aunque la migración
+0033 ya los ponga en `true`: que esta función sea la respuesta completa a «con
+qué nace un proyecto» es justo lo que faltaba para que nadie tuviera que
+cruzarla con el esquema y con lo que pudiera estrecharla después.
+
+**Y por qué no lo cazó nada.** Las tres funciones vivían dentro de
+`app/dashboard/projects/actions.ts`, que es `"use server"`: ahí **todo export
+tiene que ser una server action asíncrona**, así que no se podían exportar y
+por tanto no se podían testear. El «wrapper de tres líneas» de la 2ª pasada no
+era intestable por poco importante, era intestable por dónde estaba. Se mudan
+a `lib/projects/new-project-defaults.ts` con siete tests, tres de los cuales
+**fallan si se restaura la precedencia vieja** (comprobado revirtiéndola).
+
+**Fuera de alcance, dicho explícitamente:** «Ocultar aviso «seguimiento
+diario»» sigue apagado y **no se toca**. No es un flag de proyecto sino una
+preferencia de `localStorage` por navegador, y encenderla por defecto
+silenciaría un aviso legítimo para las cuentas que sí tengan el seguimiento
+apagado. Con el seguimiento diario ahora auto-activándose tras el primer
+escaneo, ese aviso ya no le sale a una cuenta nueva de todos modos.
+
+**Comprobado (3ª pasada).** `pnpm test` (207/207, 2.872/2.872), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Addendum, mismo día: segunda corrección tras probar el preview, y una
+premisa equivocada de la primera corrección.** El fundador creó una cuenta
+nueva (no excluida) en el preview del PR, dio de alta un dominio y lo
+escaneó: los seis interruptores de proyecto salieron bien, pero el switch
+"Ocultar aviso «seguimiento diario»" seguía apagado, y el banner "Tu
+histórico se está construyendo. Escaneo 1 de 5" (estado `accumulating` de
+`computeDataMaturity`) seguía visible.
+
+Eso contradice lo que decía el addendum anterior: *"con el seguimiento diario
+ahora auto-activándose tras el primer escaneo, ese aviso ya no le sale a una
+cuenta nueva de todos modos"* — **incorrecto**. Esa frase confundía los dos
+estados informativos de `DataMaturityBanner`: `no_tracking` (el que
+desaparece cuando el seguimiento se activa solo) y `accumulating` (el que
+aparece *precisamente cuando* el seguimiento ya está activo pero aún no hay 5
+escaneos — el estado normal de toda cuenta nueva ahora que nace con
+seguimiento). El switch nunca cubrió `accumulating`, así que la premisa de
+que "ya no hacía falta" era doblemente equivocada.
+
+**Petición del fundador, textual:** que el switch controle los dos avisos, y
+que nazca encendido siempre.
+
+**Qué cambió.** `noTrackingHiddenKey` (`components/data-maturity-banner.tsx`)
+pasa a cubrir ambos estados (`no_tracking` **y** `accumulating`), y su
+semántica se invierte: la ausencia de valor en `localStorage` significaba
+"mostrar" (default anterior, `false`); ahora significa "ocultar" (default
+nuevo, `true`) — sólo un `"0"` explícito, escrito al apagar el switch a mano,
+vuelve a mostrar los avisos. Mismo cambio reflejado en
+`no-tracking-banner-toggle.tsx` (`/debug`), cuya copia ahora nombra los dos
+mensajes. Ninguna fila de base de datos ni server action tocada: sigue siendo
+una preferencia de `localStorage` por navegador, sin migración.
+
+**Comprobado (4ª pasada).** `pnpm test` (208/208, 2.880/2.880), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+## 174. La pestaña "Resueltas" verifica si la predicción se cumplió — nunca mide un delta de score (RECS-LOOP-1 Fase A, ADR 0041, 2026-08-27)
 
 **El hueco.** ADR 0017 §5 prometió que "el próximo escaneo verifica" la
 predicción de puntos potenciales de una tarjeta. Nunca se construyó: una
