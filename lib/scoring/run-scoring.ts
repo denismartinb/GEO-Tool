@@ -112,7 +112,12 @@ export const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
  */
 const CLEAN_COVERAGE_FLOOR = 0.8;
 
-function isGroundedRow(row: ScoreInputRow): boolean {
+/**
+ * Narrowed to the one field it reads (RECS-LOOP-1 Fase A) so callers outside
+ * this module — verifying a real row, not scoring a whole run — don't need to
+ * fabricate an entire ScoreInputRow just to satisfy the parameter type.
+ */
+export function isGroundedRow(row: Pick<ScoreInputRow, "provider">): boolean {
   return !row.provider || GROUNDED_PROVIDERS.has(row.provider);
 }
 
@@ -137,7 +142,10 @@ function readCitations(value: unknown): ExtractedCitation[] {
  * (docs/adr/0010) — see docs/adr/0013-own-domain-citation-score.md for why
  * citation_score requires this instead of "any citation present".
  */
-function hasOwnDomainCitation(row: ScoreInputRow, projectDomainNormalized: string): boolean {
+export function hasOwnDomainCitation(
+  row: Pick<ScoreInputRow, "extracted_json">,
+  projectDomainNormalized: string
+): boolean {
   if (!projectDomainNormalized) return false;
   for (const citation of readCitations(row.extracted_json)) {
     if (citation.source !== "grounding") continue;
@@ -154,12 +162,12 @@ function hasOwnDomainCitation(row: ScoreInputRow, projectDomainNormalized: strin
  * extractionOutputSchema's brand/competitor objects
  * (lib/extraction/schema.ts).
  */
-type ExtractedEntity = {
+export type ExtractedEntity = {
   mentioned: boolean;
   position: number | null;
 };
 
-type ExtractedJsonShape = {
+export type ExtractedJsonShape = {
   brand: ExtractedEntity;
   competitors: Array<ExtractedEntity & { name: string }>;
 };
@@ -169,7 +177,7 @@ type ExtractedJsonShape = {
  * ExtractionOutput. Returns null if the shape doesn't look like a valid
  * extraction (e.g. older runs, or extraction_error rows).
  */
-function readExtractedJson(value: unknown): ExtractedJsonShape | null {
+export function readExtractedJson(value: unknown): ExtractedJsonShape | null {
   if (!value || typeof value !== "object") return null;
   const obj = value as Record<string, unknown>;
   const brand = obj.brand;
@@ -823,6 +831,20 @@ const RECOMMENDATION_POTENTIAL_KIND: Record<string, "presence" | "prominence" | 
 
 export function isQuantifiableRecommendationType(recommendationType: string): boolean {
   return recommendationType in RECOMMENDATION_POTENTIAL_KIND;
+}
+
+/**
+ * The single accessor for RECOMMENDATION_POTENTIAL_KIND — the map itself
+ * stays private so there is exactly one place that decides which mutation a
+ * type promises. RECS-LOOP-1 Fase A (lib/recommendations/
+ * prediction-verification.ts) reads this to know WHICH mutation to check for
+ * on a resolved recommendation, instead of re-deciding it independently and
+ * risking drift from the map that generated the promise in the first place.
+ */
+export function getRecommendationPotentialKind(
+  recommendationType: string
+): "presence" | "prominence" | "authority" | null {
+  return RECOMMENDATION_POTENTIAL_KIND[recommendationType] ?? null;
 }
 
 type CounterfactualMutation = {
