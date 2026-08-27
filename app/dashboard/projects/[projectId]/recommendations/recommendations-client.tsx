@@ -48,17 +48,81 @@ type EvidenceJson = {
 };
 
 /**
- * Read-time enrichment of an `add_citation_block` card with already-persisted
- * domain-coverage data (RECS-COVERAGE-OVERLAY-1). Defined locally rather than
- * imported from the server-only lib/recommendations/coverage-overlay.ts, same
- * reason GeneratedSolution is defined locally. Absent/null means "render this
- * card exactly as before" — coverage data is optional and sparse by design.
+ * Read-time enrichment of a card with already-persisted domain-coverage data
+ * (RECS-COVERAGE-OVERLAY-1, extended to increase_brand_visibility in
+ * AUDIT-RECS-JOIN-1 Fase B). Defined locally rather than imported from the
+ * server-only lib/recommendations/coverage-overlay.ts, same reason
+ * GeneratedSolution is defined locally. Absent/null means "render this card
+ * exactly as before" — coverage data is optional and sparse by design.
  */
 export type CoverageOverlay = {
   state: "confirmed_surfacing_gap" | "possible_content_gap" | "none";
   verifiedPage: { url: string; title: string } | null;
   confidenceOverride: "low" | "medium" | "high" | null;
 };
+
+/**
+ * Duplicated verbatim from lib/recommendations/coverage-overlay.ts's
+ * `overlayCopy` — same reason the type above is duplicated, and same risk:
+ * nothing stops the two from drifting except a test. `recommendations-
+ * client.test.tsx`'s "overlay copy stays in sync with the server" guards it,
+ * comparing every (type, state) pair against the server function directly —
+ * same discipline as GROUNDED_PROVIDERS' three-way parity guard
+ * (log §130): a duplication with no test is the one that drifts in silence.
+ * If you change the wording here, change it there too, or the test will say
+ * so.
+ */
+export function overlayCopyLocal(
+  recommendationType: string,
+  state: CoverageOverlay["state"]
+): { whatWeFound: string; whatToDo: string } | null {
+  if (state === "confirmed_surfacing_gap") {
+    if (recommendationType === "increase_brand_visibility") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que esa página no está apareciendo en la respuesta de la IA.",
+        whatToDo:
+          "no crees una página nueva. Refuerza la que ya tienes: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta, para que sea más fácil de extraer."
+      };
+    }
+    if (recommendationType === "add_citation_block") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que la IA no lo está citando como fuente.",
+        whatToDo:
+          "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar."
+      };
+    }
+    return {
+      whatWeFound: "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta.",
+      whatToDo: "revisa esa página y refuérzala en vez de crear una nueva."
+    };
+  }
+
+  if (state === "possible_content_gap") {
+    if (recommendationType === "increase_brand_visibility") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
+        whatToDo: "publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+      };
+    }
+    if (recommendationType === "add_citation_block") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta. Puede que el problema no sea de citación, sino que todavía no has publicado contenido sobre esto.",
+        whatToDo:
+          "antes de intentar que te citen, plantéate crear una página que responda a esta consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo."
+      };
+    }
+    return {
+      whatWeFound: "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
+      whatToDo: "plantéate crear una página que responda a esta consulta."
+    };
+  }
+
+  return null;
+}
 
 export type Recommendation = {
   id: string;
@@ -665,12 +729,10 @@ export function RecCard({
                 Sí tienes una página sobre este tema
               </div>
               <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-                Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema
-                no es que te falte contenido, sino que la IA no lo está citando como fuente.
+                {overlayCopyLocal(rec.recommendation_type, "confirmed_surfacing_gap")?.whatWeFound}
               </p>
               <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
-                <b>Qué hacer:</b> no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar —
-                añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar.
+                <b>Qué hacer:</b> {overlayCopyLocal(rec.recommendation_type, "confirmed_surfacing_gap")?.whatToDo}
               </p>
               {overlay.verifiedPage && (
                 <a
@@ -714,12 +776,10 @@ export function RecCard({
                 No encontramos contenido tuyo sobre este tema
               </div>
               <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-                Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta. Puede
-                que el problema no sea de citación, sino que todavía no has publicado contenido sobre esto.
+                {overlayCopyLocal(rec.recommendation_type, "possible_content_gap")?.whatWeFound}
               </p>
               <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
-                <b>Qué hacer:</b> antes de intentar que te citen, plantéate crear una página que responda a esta
-                consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo.
+                <b>Qué hacer:</b> {overlayCopyLocal(rec.recommendation_type, "possible_content_gap")?.whatToDo}
               </p>
             </div>
           )}
