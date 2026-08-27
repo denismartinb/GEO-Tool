@@ -49,6 +49,40 @@ porque una sesión futura la obedecerá igual.
   desaparece en el recorte vertical de una pantalla panorámica o en el lateral
   de un móvil. Cualquier elemento nuevo se comprueba en 375, 768 y 1280 px
   antes de darlo por bueno (`docs/design-reference/not-found-rocket-1/`).
+- **Un componente montado en seis pantallas no puede heredar NADA que decida
+  cómo se ve.** `.mrk-full` fija su propia tipografía (`var(--font-body)`,
+  Figtree) y su propia rampa `--ink-*` (`--brand-ink-*`) porque dos de las seis
+  pantallas lo envuelven en un ámbito de marca que redeclara ambas
+  (`.cm2-scope` en Competidores, `.wa2-scope` en Auditoría web) y las otras
+  cuatro caen a `body`. Eso daba dos renderizados del mismo componente, y el
+  peor de los dos estaba **por debajo de AA** (`--ink-3` da 4,08:1 sobre el
+  extremo oscuro del degradado de esta pantalla; `--brand-ink-3`, 4,64:1). Y
+  por lo mismo, **ninguna medida de esta pantalla se expresa en unidades de
+  métrica tipográfica**: `30ch` resolvía 269px bajo Hanken y 308px bajo
+  Figtree, y esos 39px eran los que decidían si "36 de 78" cabía en una línea
+  (`docs/brand/design-decisions-log.md` §168).
+- **La misión cuelga DIRECTAMENTE de `.page.mrk-fill`, en las seis.** Los dos
+  únicos envoltorios permitidos entre medias son los que ya existen y son
+  `display: contents` con `mrk-fill` propio (`.cm2-scope`,
+  `.wa2-scope.wa2-page`). Cualquier otra caja intermedia es un ítem flex de
+  altura `auto` que se come el `flex: 1`, y la escena se queda en su tope de
+  altura mínima con página gris debajo — sin error, sin aviso: es lo que
+  llevaba Prompts (§168, §160). Antes de añadir algo al lado de la misión:
+  va en la rama `else`, nunca entre `.page` y `<FirstScanTakeover>`.
+- **El componente que ocupa la pantalla es el que la devuelve.** El
+  `router.refresh()` del final del escaneo lo dispara `ScanMissionRocket` desde
+  su propio sondeo, no un `ScanProgressPoller` montado por la página —
+  precisamente porque ese sólo lo montaba Visión general y en las otras cinco
+  la misión se quedaba clavada en "Casi está" hasta que alguien recargaba a
+  mano (§168). Mismas tres condiciones de salida que ya usaba aquél: estado
+  terminal, id de run que ya no es el nuestro, o ningún run activo. Y
+  **refresca en el sitio, no redirige**: la sección que el usuario está
+  leyendo es la que se rellena.
+- **Lo que garantiza todo esto sin navegador es `tests/mission-parity.test.ts`.**
+  Son contratos a nivel de fuente sobre las propiedades que eran por-pantalla.
+  La prueba en píxeles es un fixture de Playwright construido desde la salida
+  compilada **con las webfonts reales servidas** — sin ellas las seis pantallas
+  caen a la misma familia y el fallo no se reproduce (§168).
 - **El mapeo de esta regla a sus ficheros vive en la tabla «Path-scoped rules»
   de `CLAUDE.md`, y en ningún otro sitio.** No hay frontmatter ni configuración
   que lo declare. Si mueves o renombras cualquiera de los tres ficheros sin

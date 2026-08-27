@@ -12,12 +12,23 @@ import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/ma
  */
 export function BlogPageShell({
   activeHref = "/blog",
+  breadcrumb,
   children
 }: {
   /** Which unified nav link to mark active. Defaults to Blog — pass "/comparativas"
    * or "/glosario" from those surfaces, which share this shell but aren't
    * themselves nav items, so they render with none highlighted. */
   activeHref?: string;
+  /**
+   * Optional visible breadcrumb trail (BLOG-INDEX-CARDS-2026-08, founder
+   * request: "los artículos y comparativas deberían tener rastro de miga").
+   * Opt-in on purpose: this shell also renders /docs, /glosario, the free
+   * checker and `/que-es-genscore`, none of which asked for this, so an
+   * unset prop must change nothing for them. Pair with
+   * `blogPostBreadcrumb()`/`COMPARATIVAS_BREADCRUMB` — never hand-write a
+   * trail at the call site.
+   */
+  breadcrumb?: { label: string; href: string }[];
   children: ReactNode;
 }) {
   return (
@@ -26,7 +37,23 @@ export function BlogPageShell({
 
       <main>
         <section className="lp-section">
-          <div className="lp-inner">{children}</div>
+          <div className="lp-inner">
+            {breadcrumb && breadcrumb.length > 0 && (
+              <nav className="breadcrumb-trail" aria-label="Migas de pan">
+                {breadcrumb.map((item, index) => (
+                  <span key={item.href} className="breadcrumb-item">
+                    {index > 0 && (
+                      <span className="breadcrumb-sep" aria-hidden="true">
+                        /
+                      </span>
+                    )}
+                    <Link href={item.href}>{item.label}</Link>
+                  </span>
+                ))}
+              </nav>
+            )}
+            {children}
+          </div>
         </section>
       </main>
 

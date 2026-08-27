@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { COMPARATIVAS_BREADCRUMB } from "@/lib/comparativas";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { KeyTakeaway, Verdict, CompareTable, Pill, ArticleCta } from "@/components/blog/article";
 import {
@@ -67,7 +68,7 @@ function reasonLabel(id: string): string {
 
 export default function AlternativasAOtterlyPage() {
   return (
-    <BlogPageShell>
+    <BlogPageShell breadcrumb={COMPARATIVAS_BREADCRUMB}>
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },

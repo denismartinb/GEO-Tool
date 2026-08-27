@@ -15,7 +15,7 @@ import {
   ProductMock,
   PostMeta
 } from "@/components/blog/article";
-import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("que-es-el-geo-score");
 
@@ -31,9 +31,9 @@ export const mockRows = [
 
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
 
-<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
 
-<BlogPageShell>
+<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
 
 <BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
 

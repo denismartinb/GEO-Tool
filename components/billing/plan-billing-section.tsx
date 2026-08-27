@@ -5,7 +5,13 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { PLANS, type Plan } from "@/app/pricing/plans-data";
+import {
+  PLANS,
+  PROMO_DURATION_MONTHS,
+  PROMO_ENDS_AT,
+  resolveShownPromoPrice,
+  type Plan
+} from "@/app/pricing/plans-data";
 import { ChangePlanModal } from "@/components/billing/change-plan-modal";
 import {
   changePlan,
@@ -143,6 +149,40 @@ export function PlanBillingSection({
       )
     : null;
 
+  /**
+   * PROMO-CONSOLE-PARITY-1 (2026-08-27) — the launch price a NON-subscriber
+   * would pay, on the one screen that was still hiding it.
+   *
+   * `activePromo` comes from Stripe and only exists once there is a real
+   * subscription carrying the coupon. Someone on the free Pro trial has no
+   * subscription yet, so this card, the settings index and the header pill all
+   * quoted the list price — 179 €/mes — while `/precios` and the change-plan
+   * modal, two clicks away, quoted 59 €. Same account, same instant, two
+   * prices (founder, 2026-08-27).
+   *
+   * Deliberately a SEPARATE value from `activePromo`, never a fallback merged
+   * into it, because the two say different things and the copy below has to
+   * differ: `activePromo` is "what you are being charged, until this date read
+   * off your own subscription" (§152), and this is "what you would be charged
+   * if you subscribed before the campaign closes". Collapsing them would tell
+   * a trial user they are already paying 59 €, which is the fake-metric
+   * failure mode this codebase keeps writing rules about.
+   *
+   * Gated on `promoPlanIds`, not on `isPromoActive()` alone: that helper
+   * requires the date AND a configured Stripe coupon, so the screen can never
+   * advertise a discount checkout would fail to apply.
+   */
+  const shownPromo = resolveShownPromoPrice({
+    plan: current,
+    activePromoPrice: activePromo?.promoPrice,
+    promoPlanIds
+  });
+  const offeredPromoPrice = shownPromo?.kind === "offered" ? shownPromo.price : null;
+  const promoCampaignEndsDate = new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "long"
+  }).format(new Date(PROMO_ENDS_AT));
+
   return (
     <>
       {/* CONSOLE-REDESIGN-1: these two banners used four hand-written hexes
@@ -216,13 +256,13 @@ export function PlanBillingSection({
               <p className="text-lg font-bold text-[var(--ink)]">
                 {current.priceLabel ? (
                   current.priceLabel
-                ) : activePromo ? (
+                ) : activePromo || offeredPromoPrice !== null ? (
                   <span className="pb-current-promo">
                     <span className="was">
                       {current.price}&nbsp;€/{current.period}
                     </span>
                     <span className="now">
-                      {activePromo.promoPrice}&nbsp;€/{current.period}
+                      {shownPromo?.price}&nbsp;€/{current.period}
                     </span>
                   </span>
                 ) : (
@@ -238,6 +278,18 @@ export function PlanBillingSection({
                 <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
                 Precio de lanzamiento hasta el <b>{promoEndsDate}</b> — después vuelve a {current.price}&nbsp;€/
                 {current.period}.
+              </p>
+            )}
+            {offeredPromoPrice !== null && (
+              /* Futuro, no presente: quien lee esto todavía no paga nada. Los
+                 dos datos son reales — la fecha es `PROMO_ENDS_AT`, el mismo
+                 `redeem_by` del cupón de Stripe, y los meses son su
+                 `duration_in_months`. */
+              <p className="sub mt-1">
+                <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
+                Precio de lanzamiento si contratas antes del <b>{promoCampaignEndsDate}</b>:{" "}
+                {offeredPromoPrice}&nbsp;€/{current.period} durante {PROMO_DURATION_MONTHS} meses, después{" "}
+                {current.price}&nbsp;€/{current.period}.
               </p>
             )}
           </CardHeader>

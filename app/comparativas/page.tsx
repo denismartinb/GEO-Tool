@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { COMPARATIVAS_INDEX } from "@/lib/comparativas";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
@@ -17,15 +18,11 @@ export const metadata: Metadata = contentMetadata({
  * existía como página real, solo como referencia dentro del BreadcrumbSchema
  * de genscore-vs-otterly y genscore-vs-peec-ai (Fase 2.4/2.6c) — datos
  * estructurados declarando una URL que no resolvía a nada.
+ *
+ * La lista vive en `lib/comparativas/index.ts` (BLOG-COVERS-2026-08): el
+ * carril de Comparativas de `/blog` la reutiliza, así que un slug o título
+ * que cambie no puede desincronizarse entre las dos superficies.
  */
-const COMPARISONS = [
-  { href: "/comparativas/mejores-herramientas-geo-en-espanol", title: "Las mejores herramientas GEO en 2026" },
-  { href: "/comparativas/genscore-vs-otterly", title: "GenScore vs Otterly" },
-  { href: "/comparativas/genscore-vs-peec-ai", title: "GenScore vs Peec AI" },
-  { href: "/comparativas/genscore-vs-profound", title: "GenScore vs Profound" },
-  { href: "/comparativas/alternativas-a-otterly", title: "Alternativas a Otterly en 2026" }
-];
-
 export default function ComparativasIndexPage() {
   return (
     <BlogPageShell activeHref="/comparativas">
@@ -37,7 +34,7 @@ export default function ComparativasIndexPage() {
       </p>
       <div className="legal-body">
         <ul>
-          {COMPARISONS.map((c) => (
+          {COMPARATIVAS_INDEX.map((c) => (
             <li key={c.href}>
               <Link href={c.href}>{c.title}</Link>
             </li>
