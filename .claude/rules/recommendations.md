@@ -187,6 +187,26 @@ paths:
   pantalla y se manda a arreglarlo donde se arregla. Los otros trece checks
   técnicos **no** suben aquí; si algún día sube un cuarto bloqueo, tiene que
   ser porque impide la cita, no porque reste puntos.
+- **El overlay de cobertura sólo alimenta tipos anclados a UN prompt**
+  (`COVERAGE_OVERLAY_TYPES`, `lib/recommendations/coverage-overlay.ts`,
+  AUDIT-RECS-JOIN-1 Fase B, log §171). Hoy: `add_citation_block` (mencionado,
+  no citado) e `increase_brand_visibility` (no mencionado en absoluto). Un
+  tipo de ámbito de campaña (`create_faq_section`,
+  `strengthen_brand_entity_clarity`) no entra: no hay un único tema con el
+  que cruzarlo.
+- **El copy del overlay es por tipo, nunca compartido a ciegas.**
+  `add_citation_block` y `increase_brand_visibility` disparan por motivos
+  incompatibles —mencionado-sin-citar vs. no-mencionado— así que "la IA no lo
+  está citando como fuente" es cierto para uno y falso para el otro. Un tipo
+  nuevo en `COVERAGE_OVERLAY_TYPES` sin decidir su propio `overlayCopy` hereda
+  el fallback genérico, nunca el texto de otro tipo.
+- **`overlayCopyLocal` (cliente) es una copia deliberada de `overlayCopy`
+  (servidor), y lleva su propio test de paridad campo a campo.** El overlay
+  es server-only (arrastra `domain-coverage.ts`, que importa `"server-only"`),
+  así que el cliente no puede importarlo — mismo motivo que ya duplicaba
+  `CoverageOverlay`/`GeneratedSolution` ahí. Ninguna duplicación nueva se
+  añade sin el test que la blinda: mismo principio que el guardián de tres
+  vías de `GROUNDED_PROVIDERS` (`.claude/rules/web-audit.md`, log §130).
 - **Este módulo sólo afirma problemas, nunca «está bien».** Es lo que hace
   segura la ausencia de un campo en una instantánea vieja: «nunca medido» se
   excluye solo, sin necesidad de un `isMeasured` propio. Si alguna vez se le
