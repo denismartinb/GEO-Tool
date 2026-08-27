@@ -11,6 +11,23 @@ import { readComparableRun, resolveDelta, type ComparableRun } from "@/lib/scori
 export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
 
 /**
+ * La máquina de estados de la banda de madurez vive en `lib/data-maturity.ts`
+ * desde MATURITY-BANNER-HIDE-ALL-1 (log §179): un componente cliente necesita
+ * llamarla, y este fichero abre el cliente de servicio de Supabase. Se
+ * reexporta para que ningún consumidor de servidor tenga que cambiar el
+ * import.
+ */
+import { computeDataMaturity, type DataMaturityState } from "./data-maturity";
+
+export {
+  DATA_MATURITY_TARGET_SCANS,
+  computeDataMaturity,
+  visibleDataMaturityState,
+  type DataMaturityState,
+  type VisibleDataMaturityState
+} from "./data-maturity";
+
+/**
  * Cargador compartido de las pantallas de proyecto (Prompts, Competidores,
  * Páginas citadas, Recomendaciones, Auditoría web y /debug).
  *
@@ -97,71 +114,6 @@ function mapNotificationRow(n: NotificationSelectRow): WorkspaceNotification {
     payloadJson: n.payload_json,
     readAt: n.read_at,
     createdAt: n.created_at
-  };
-}
-
-/**
- * DATA-MATURITY-1: how many completed scans a project needs before its
- * trend/comparison surfaces (sparkline, delta, competitor trend) are treated
- * as done — matches the "Escaneo N de 5" banner shown until then. Not tied
- * to `run-scoring.ts`'s per-run `confidence` (that's about sample size
- * *within* one run's results, already high on day one for a healthy scan);
- * this is about *cross-run* history, which needs multiple completed runs no
- * matter how confident any single one is.
- */
-export const DATA_MATURITY_TARGET_SCANS = 5;
-
-export type DataMaturityState =
-  | { kind: "hidden" }
-  | { kind: "free" }
-  | { kind: "no_tracking" }
-  | { kind: "accumulating"; completed: number; target: number; cadenceUnit: "días" | "semanas"; etaCount: number };
-
-/**
- * Pure decision function behind the data-maturity banner (`components/
- * data-maturity-banner.tsx`). Kept side-effect-free and separate from the
- * Supabase fetch in `getWorkspaceCounters` so every branch is unit-testable
- * without mocking a client — the DB/plan inputs are already computed there.
- *
- * Order matters: an active run and a full 5-scan history both fully hide the
- * banner (checked first) before the plan/tracking branches, which only ever
- * apply to a project with a real, terminal, partial history.
- */
-export function computeDataMaturity({
-  completedScans,
-  latestStatus,
-  recurringEnabled,
-  planId
-}: {
-  completedScans: number;
-  latestStatus: string | null | undefined;
-  recurringEnabled: boolean;
-  planId: string;
-}): DataMaturityState {
-  const hasActiveRun = latestStatus === "pending" || latestStatus === "running";
-  if (hasActiveRun) return { kind: "hidden" };
-
-  // No completed scan yet (project brand-new, or every attempt so far
-  // failed): nothing real to report, and `setRecurringScans` itself refuses
-  // to enable tracking without a completed run — showing the "no_tracking"
-  // CTA here would offer an action that fails.
-  if (completedScans <= 0) return { kind: "hidden" };
-
-  if (completedScans >= DATA_MATURITY_TARGET_SCANS) return { kind: "hidden" };
-
-  if (planId === "free") return { kind: "free" };
-
-  if (!recurringEnabled) return { kind: "no_tracking" };
-
-  return {
-    kind: "accumulating",
-    completed: completedScans,
-    target: DATA_MATURITY_TARGET_SCANS,
-    // Starter is the only weekly-cadence plan (lib/scan/cron.ts,
-    // RECURRING_INTERVAL_MS_BY_PLAN) — free never reaches this branch
-    // (returned above), so every other plan id scans daily.
-    cadenceUnit: planId === "starter" ? "semanas" : "días",
-    etaCount: DATA_MATURITY_TARGET_SCANS - completedScans
   };
 }
 

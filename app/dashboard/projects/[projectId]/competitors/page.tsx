@@ -899,6 +899,15 @@ export default async function CompetitorsPage({
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
                             <span className="cm2-pos-nm">{entry.label}</span>
+                            {/* SAMPLE-FLOOR-1: this row is last because its mean
+                                rests on too few answers to compare, not because
+                                the AI ranked it last. Saying so is the point —
+                                an unexplained demotion misleads as much as the
+                                1º it replaces. Sibling of `.cm2-pos-nm`, not
+                                nested inside it: that span truncates with an
+                                ellipsis, and the tag would be the first thing
+                                to disappear. Same shape as `.ov2-cmp-tag`. */}
+                            {!entry.qualified && <span className="cm2-pos-thin">pocas menciones</span>}
                             {/* Also the tiebreaker for the order, so a shared
                                 mean rank never resolves invisibly. */}
                             <span className="cm2-pos-rate">

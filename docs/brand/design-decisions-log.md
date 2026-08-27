@@ -12464,6 +12464,12 @@ de zonas, la fuente que esta tabla espeja).
 
 ---
 
+---
+
+
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -16177,7 +16183,7 @@ decisión del fundador, ya no por coste sino por criterio de producto; el
 interruptor está en la consola de operador (`/admin/users`, «Auditoría de
 cobertura IA»).
 
-------
+---
 
 ## 168. La misión del primer escaneo era seis misiones distintas (ANIMATION-PARITY-1, 2026-08-26)
 
@@ -16706,6 +16712,583 @@ tras su próximo escaneo completo, no antes — no es un fallo, es la garantía 
 que nunca reengancha una fila de cobertura vieja.
 
 ---
+
+---
+
+
+---
+
+## 173. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
+
+**Nota de renumeración.** Esta sección nació como §165 en su propia rama; mientras se abría el PR, `main` avanzó y reclamó ese número y el siguiente (§165/§166, BILLING-INVOICE-FIELDS-1, PR #478) — pasó a **§167** en una primera fusión. `main` volvió a avanzar mientras el PR seguía abierto, esta vez con AUDIT-RECS-JOIN-1 reclamando ese §167 recién liberado, así que en esta segunda fusión pasa a §168 — pero `main` avanzó una TERCERA vez, esta vez con ANIMATION-PARITY-1 reclamando ese mismo §168, así que en esta tercera fusión pasa a §169 — y una CUARTA vez, con BLOG-INDEX-CARDS-2026-08 reclamando ese §169, pasó a §170 — y una QUINTA vez, con PROMO-CONSOLE-PARITY-1 reclamando ese mismo §170, pasó a §171 — y una SEXTA vez, con DOMAINS-OVERAGE-GATE-1 reclamando ese mismo §171 (y la misma fila del mapa de zonas, "Dominios y depuración"), pasó a §172 — y una SÉPTIMA vez, con AUDIT-RECS-JOIN-1 Fase B reclamando ese mismo §172, así que acaba en **§173**, el primero libre. Siete colisiones en la misma sección: el número es un identificador, no un contador, y esta rama es el caso de manual. Mismo protocolo que describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión en cadena que ya documentan los §159/§161/§163 de este mismo fichero.
+
+
+**Lo que pidió el fundador.** Que la configuración de `/debug` que hoy es
+manual (`sampling_enabled`, `auto_coverage_audit_enabled`,
+`auto_technical_audit_enabled`, `recurring_scans_enabled`) nazca en ON para
+toda cuenta, salvo tres direcciones de correo que siguen siendo sus propias
+cuentas de prueba interna. Aprobado vía Task Intake, con tres preguntas de
+alcance resueltas explícitamente antes de tocar código:
+
+1. **Sólo altas nuevas.** Ningún proyecto ya existente se toca. Nada de
+   `UPDATE` retroactivo — eso queda como una fase aparte si algún día se pide.
+2. **`auto_technical_audit_enabled` entra también**, no sólo las dos que
+   gastan Gemini: no cuesta IA y hoy congela un componente del GEO Score si
+   está apagada.
+3. **`recurring_scans_enabled` se activa solo, tras el primer escaneo**, no en
+   el alta — es la única de las cuatro cuya propia UI exige un escaneo
+   completado antes de poder encenderse, así que no puede nacer en ON.
+
+**Por qué esto NO era "cambiar dos booleanos".** Las tres migraciones que
+tocan (0031, 0032, 0033) documentan sus defaults en `false` como decisiones
+de coste deliberadas — el propio comentario de 0032 dice literalmente que la
+pregunta de qué hacer "cuando lleguen clientes reales" queda abierta a
+propósito. Encender `sampling_enabled` multiplica hasta ×5 las llamadas de
+un escaneo; `auto_coverage_audit_enabled` añade una llamada a Gemini por
+prompt activo tras cada escaneo. No es ajuste de UI, es una decisión de coste
+recurrente sobre toda cuenta real — de ahí el Task Intake Report en vez de
+implementación directa.
+
+**Mecanismo, dos sitios distintos porque el precondicionante es distinto:**
+
+- **Alta del proyecto** (`lib/projects/new-project-defaults.ts`,
+  `newProjectDefaults`): los flags que sí pueden nacer en ON se pasan como
+  `extraProjectColumns` a `createProjectCore`. **La bifurcación es la CUENTA,
+  nunca el entorno** — ver el addendum del 2026-08-27 más abajo, que es
+  justo lo que se corrigió.
+- **Fin del primer escaneo** (`lib/scan/executor.ts`, tras el `UPDATE` que
+  marca `scan_runs.status = 'completed'`): `recurring_scans_enabled` se lee
+  en su propia consulta aislada (mismo patrón que `engineFlagsRow` un poco
+  más arriba, ADR 0029/0033) y sólo se enciende si el proyecto tiene
+  exactamente un escaneo completado — la primera vez que la propia
+  precondición de `/debug` queda satisfecha. Deliberadamente NO se reevalúa
+  en escaneos posteriores: un cliente que lo apague a mano después no vuelve
+  a encenderse solo en el siguiente escaneo. Todo el bloque es fail-soft
+  (`try/catch`, mismo patrón que la cola de auditoría web un poco más abajo
+  en el mismo fichero): un fallo aquí nunca tumba un escaneo que ya terminó
+  bien.
+
+**La exclusión es por email, no por `auth.users.id`, y es una desviación
+consciente de `ADMIN_USER_IDS`.** El contrato de entorno (`docs/
+environment-contract.md`) es explícito en que `/admin` gatea por ID
+precisamente porque un email es cambiable por el propio usuario desde
+Ajustes — ahí ese cambio compraría acceso. Aquí el fallo de ese mismo cambio
+es "una cuenta de prueba recibe por descuido los defaults caros en su
+siguiente alta", barato de notar y corregir, no una brecha. Vive en
+`lib/projects/internal-test-accounts.ts`, leída desde la variable de entorno
+nueva `INTERNAL_TEST_ACCOUNT_EMAILS` (lista separada por comas) — nunca
+hardcodeada en el código fuente, y falla cerrado: sin la variable, nadie
+queda exento y toda cuenta nueva recibe los defaults de producción.
+
+**Pendiente / fuera de alcance, explícitamente.** Ningún dominio existente
+cambia con este PR. Si en el futuro se decide aplicar esto retroactivamente
+a cuentas reales que ya están escaneando, es una fase nueva con su propio
+Task Intake — cambia el gasto de clientes que no lo pidieron, no sólo el de
+altas nuevas.
+
+**Comprobado.** `pnpm test` (204/204, 2.832/2.832, incluye los 5 tests nuevos
+de `internal-test-accounts.test.ts`), `pnpm run validate` (build + typecheck
++ lint), `git diff --check` y `bash scripts/agentic-handoff-check.sh`, todo
+en verde.
+
+**Addendum, mismo día: cobertura de test para el bloque de `executor.ts`, a
+petición del propio piloto.** El agente `ux-pilot`, lanzado a juzgar el
+preview de este PR, devolvió `INCONCLUSIVE` para el comportamiento que esta
+fase implementa — no por un fallo suyo, sino porque es estructuralmente
+invisible al piloto siempre-on: vive detrás de `/debug` (fuera del recorrido
+por defecto) y detrás de un camino de escritura (creación de proyecto), y el
+piloto siempre-on es de sólo lectura por diseño (`CLAUDE.md`, "Pilot write
+scope"). Su recomendación explícita fue apoyar el Human Gate en tests
+unitarios en vez de en la pasada visual para esta pieza concreta.
+
+`lib/scan/executor.test.ts` ganó cinco tests nuevos sobre el bloque de
+auto-activación (primer escaneo completado → `recurring_scans_enabled = true`
+salvo cuenta interna de prueba; segundo escaneo en adelante → no se toca; ya
+encendido → no se reescribe; fallo del lookup de email → el escaneo igual
+completa). La decisión de defaults del alta se dejó **sin test dedicado**, con
+el argumento de que era «un wrapper de tres líneas» sobre
+`isInternalTestAccountEmail`. Ese argumento resultó ser falso al día
+siguiente: ver el addendum de abajo.
+
+**Comprobado (2ª pasada).** `pnpm test` (204/204, 2.847/2.847, +15 tests sobre
+la primera pasada: 5 de `internal-test-accounts.test.ts` + 5 nuevos de
+`executor.test.ts` para este addendum, más los que ya sumó `main` en
+BILLING-INVOICE-FIELDS-1), `pnpm run validate`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+**Segundo addendum (2026-08-27): la bifurcación era el ENTORNO y tenía que ser
+la CUENTA.** El fundador creó una cuenta nueva en el preview, dio de alta un
+dominio, lo escaneó, y encontró cuatro interruptores apagados: Cobertura por
+IA, Suelo de muestreo, Motor Claude y Motor OpenAI. *"Tienen que estar TODOS
+encendidos."*
+
+**No era un fallo, era el diseño — y el diseño estaba mal.** La primera
+versión daba prioridad a `previewTestingDefaults()` sobre los defaults nuevos:
+en cualquier preview, para cualquiera. Los cuatro apagados son exactamente el
+conjunto barato de esa función (`auto_coverage_audit_enabled: false`,
+`engine_claude/openai_enabled: false`, y `sampling_enabled` cayendo a su
+`default false` del esquema porque esa función no lo menciona). Hizo lo que
+estaba escrito; lo escrito no era lo que la fase quería.
+
+Dos cosas estaban mal en esa precedencia, y la segunda es la que importa:
+
+1. **El preview es donde esta fase se verifica antes del Human Gate.** Una
+   condición de entorno que apaga precisamente lo que la fase enciende deja el
+   cambio imposible de comprobar donde se comprueba todo lo demás.
+2. **Una cuenta real es una cuenta real, la haya creado quien la haya creado y
+   en el host que sea.** El entorno no dice nada sobre quién es el dueño.
+
+**La bifurcación pasa a ser la cuenta** (`newProjectDefaults`): cuenta interna
+de prueba → conjunto barato (que además sigue con su propia guarda de
+`VERCEL_ENV`, así que **sigue sin poder llegar a producción**, tal y como pidió
+el fundador el 2026-08-11: *"en main nada de lo de probar barato"*); cuenta
+real → todo encendido, en producción, en preview y en local. Los tres
+`engine_*_enabled` pasan a declararse **explícitamente** aunque la migración
+0033 ya los ponga en `true`: que esta función sea la respuesta completa a «con
+qué nace un proyecto» es justo lo que faltaba para que nadie tuviera que
+cruzarla con el esquema y con lo que pudiera estrecharla después.
+
+**Y por qué no lo cazó nada.** Las tres funciones vivían dentro de
+`app/dashboard/projects/actions.ts`, que es `"use server"`: ahí **todo export
+tiene que ser una server action asíncrona**, así que no se podían exportar y
+por tanto no se podían testear. El «wrapper de tres líneas» de la 2ª pasada no
+era intestable por poco importante, era intestable por dónde estaba. Se mudan
+a `lib/projects/new-project-defaults.ts` con siete tests, tres de los cuales
+**fallan si se restaura la precedencia vieja** (comprobado revirtiéndola).
+
+**Fuera de alcance, dicho explícitamente:** «Ocultar aviso «seguimiento
+diario»» sigue apagado y **no se toca**. No es un flag de proyecto sino una
+preferencia de `localStorage` por navegador, y encenderla por defecto
+silenciaría un aviso legítimo para las cuentas que sí tengan el seguimiento
+apagado. Con el seguimiento diario ahora auto-activándose tras el primer
+escaneo, ese aviso ya no le sale a una cuenta nueva de todos modos.
+
+**Comprobado (3ª pasada).** `pnpm test` (207/207, 2.872/2.872), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Addendum, mismo día: segunda corrección tras probar el preview, y una
+premisa equivocada de la primera corrección.** El fundador creó una cuenta
+nueva (no excluida) en el preview del PR, dio de alta un dominio y lo
+escaneó: los seis interruptores de proyecto salieron bien, pero el switch
+"Ocultar aviso «seguimiento diario»" seguía apagado, y el banner "Tu
+histórico se está construyendo. Escaneo 1 de 5" (estado `accumulating` de
+`computeDataMaturity`) seguía visible.
+
+Eso contradice lo que decía el addendum anterior: *"con el seguimiento diario
+ahora auto-activándose tras el primer escaneo, ese aviso ya no le sale a una
+cuenta nueva de todos modos"* — **incorrecto**. Esa frase confundía los dos
+estados informativos de `DataMaturityBanner`: `no_tracking` (el que
+desaparece cuando el seguimiento se activa solo) y `accumulating` (el que
+aparece *precisamente cuando* el seguimiento ya está activo pero aún no hay 5
+escaneos — el estado normal de toda cuenta nueva ahora que nace con
+seguimiento). El switch nunca cubrió `accumulating`, así que la premisa de
+que "ya no hacía falta" era doblemente equivocada.
+
+**Petición del fundador, textual:** que el switch controle los dos avisos, y
+que nazca encendido siempre.
+
+**Qué cambió.** `noTrackingHiddenKey` (`components/data-maturity-banner.tsx`)
+pasa a cubrir ambos estados (`no_tracking` **y** `accumulating`), y su
+semántica se invierte: la ausencia de valor en `localStorage` significaba
+"mostrar" (default anterior, `false`); ahora significa "ocultar" (default
+nuevo, `true`) — sólo un `"0"` explícito, escrito al apagar el switch a mano,
+vuelve a mostrar los avisos. Mismo cambio reflejado en
+`no-tracking-banner-toggle.tsx` (`/debug`), cuya copia ahora nombra los dos
+mensajes. Ninguna fila de base de datos ni server action tocada: sigue siendo
+una preferencia de `localStorage` por navegador, sin migración.
+
+**Comprobado (4ª pasada).** `pnpm test` (208/208, 2.880/2.880), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 174. El comprobador gratuito cerraba un resultado positivo con un texto escrito para uno negativo (CHECKER-COPY-1, 2026-08-27)
+
+**Fase 6 del plan de `docs/external-audit-2026-08.md`. Va primera de las once
+pese a ser la sexta en severidad**, por una razón de negocio y no de ingeniería:
+es un día de trabajo en el punto exacto donde alguien decide si se registra.
+
+**Lo que encontró la auditoría externa** (P0-07, 26-08-2026, probando
+`genscore.es`, que sí aparece): el bloque de aviso *"Esto es una respuesta, no
+un veredicto"* se renderizaba **incondicionalmente**, y su texto estaba escrito
+para un resultado negativo — *"Con una consulta no se puede decir que no
+aparezcas — sólo que en ésta no apareciste."* Detrás de un resultado positivo,
+con la marca nombrada y a veces su propia web citada como fuente, ese párrafo
+contradice al titular que hay tres bloques más arriba.
+
+**Por qué estaba mal escrito, que no es lo que parece.** No fue una decisión
+equivocada sobre qué decir. La verdad que este aviso defiende es una sola —una
+consulta no generaliza— y **tiene dos direcciones**: tras un "no apareciste" el
+error a mano es creerse ausente; tras un "apareciste", creerse presente. Escribir
+sólo la mitad negativa no era prudencia: era medir la modestia por el signo del
+resultado, que está exactamente igual de sesgado que escribir sólo la positiva.
+
+**Qué se ha hecho.** Las dos variantes viven en
+`lib/free-checker/result-copy.ts`, no en el componente, y comparten a propósito
+la primera frase (la causa: recuperación en vivo, no determinista) y la última
+(el remedio: varias preguntas repetidas en el tiempo). Sólo cambia la frase del
+medio, que es la única que depende del resultado. Que compartan causa y remedio
+es lo que deja ver que el aviso **no se adapta al resultado para suavizarlo**.
+
+**Por qué en `lib/` y no en el JSX.** Es la única forma de que el caso positivo
+tenga una prueba. El fallo no vivió meses por descuido: vivió porque **nadie
+podía ejercitar esa rama sin un dominio que apareciese de verdad**, y ningún
+test podía tocarla estando el texto incrustado en el componente. Mismo argumento
+que `lib/projects/new-project-defaults.ts` dejó escrito para su propio bug
+("shipped precisely because nothing could assert on it"). `result-copy.test.ts`
+cubre las dos direcciones y, sobre todo, **assertea la ausencia**: el texto
+negativo no puede aparecer con `brandMentioned: true`, que es lo único que
+impide que vuelva a colarse en un copy-paste.
+
+**Lo que NO se ha tocado.** El titular, que ya era condicional y correcto. El
+bloque de "Además" con la cita del propio dominio, que ya sólo se pinta cuando
+es verdad. Y el upsell, cuyo texto ("Has visto 1 pregunta en 1 motor") es cierto
+en las dos direcciones.
+
+**Comprobado.** `pnpm test` (208/208, 2.875/2.875), `pnpm run validate`
+(build + typecheck + lint), todo en verde.
+
+---
+
+## 175. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
+
+**Lo que vio el fundador.** En la panorámica competitiva de Visión general, con
+un escaneo de 30 respuestas: *"no tiene ningún sentido que Euskaltel aparezca
+primero que Movistar. Ya solo por lógica un operador como Movistar debe estar
+primero, y además viendo que solo tiene un 3% de mención no se entiende"*.
+
+**Lo que propuso, y por qué no era el arreglo.** Su idea era ordenar la
+panorámica con los datos de «Cuota de voz en IA» de Competidores, que en sus
+capturas sí ponía a Movistar primero. Comprobado antes de tocar nada:
+
+- Las **dos** pantallas publican este puesto desde el mismo módulo,
+  `rankLatestPositions` — así que la lista «Puesto en el último escaneo» de
+  **Competidores tenía exactamente el mismo Euskaltel 1º**. Lo que él comparó
+  era otro bloque de esa misma pantalla, con otra ventana (cuota de voz es
+  **acumulado de todos los escaneos**; la panorámica es el **último**).
+- Ordenar sólo la panorámica por cuota de voz habría dejado Movistar 1º en
+  Visión general y Euskaltel 1º en Competidores: **literalmente el fallo que
+  PANORAMA-PARITY-1 arregló** (§36), reintroducido por la puerta de al lado.
+- Y habría dejado mintiendo al rótulo «ÚLTIMO ESCANEO» y al titular «Tu puesto
+  cuando apareces», que son puesto-cuando-apareces, no cuota de voz.
+
+**La causa real.** `avg_position_when_mentioned` es honesto por respuesta y
+engañoso entre entidades, porque **nada en él dice sobre cuántas respuestas
+promedia**. Euskaltel salió **una vez** en 30, fue primero en esa única
+respuesta, y con eso encabezó la clasificación con un 1,00 — por delante de
+Movistar, nombrado en 26 de 30. No es un fallo de cálculo: es una comparación
+entre una media de n=1 y otra de n=26.
+
+**El arreglo: un suelo, no un filtro.** En `rankLatestPositions`, una entidad
+necesita salir en al menos el **10% de las respuestas** (y en **2** como
+mínimo) para disputar el orden. Por debajo **conserva su fila, su tasa de
+mención y su media reales**, y se ordena detrás, con el motivo escrito en la
+fila («pocas menciones»). Esconderla cambiaría una impresión falsa por una
+ausencia; el dato es real, lo que está en duda es su comparabilidad.
+
+- **Se expresa en tasa, no en cuenta**, porque tiene que aguantar los dos
+  extremos: 3 menciones son el 10% de un escaneo de 30 y el 0,6% de uno de 500.
+  El suelo absoluto sólo cubre el otro extremo — en un primer escaneo de 10
+  respuestas, el 10% es una sola respuesta, justo lo que esto existe para
+  impedir.
+- **Arregla las dos pantallas a la vez** por estar en el módulo compartido, que
+  es la razón de que ese módulo exista (§36).
+- **Sin migración ni reescaneo**: `mention_count` y `mention_rate` ya se
+  persisten en `run_scores.details_json`.
+- **Dirección de fallo deliberada**: una entrada que no lleva ninguna de las dos
+  cifras se considera cualificada. Las anteriores a geo-score-v3 ya se
+  descartan por no tener posición (ADR 0026), así que esto sólo cubre una
+  entrada escrita a medias — y degradar una fila por una clave que nunca se
+  escribió sería inventar un veredicto a partir de un hueco.
+
+**Addendum del mismo día — el suelo se juzga sobre la cifra REDONDEADA.** En el
+preview, el fundador vio Apple Safari con «10%» **y** la etiqueta «pocas
+menciones»: su tasa real era 9,6%, que la fila imprime redondeada a 10. La
+pantalla se contradecía en el espacio de una línea. Se compara `Math.round`,
+porque la regla que el usuario puede comprobar es la que tiene delante.
+
+**Comprobado.** `lib/competitors/latest-positions.test.ts` fija el caso real de
+movistar.es (Movistar 1º … Euskaltel 7º, `qualified: false`, cifras intactas),
+los dos extremos del rango de tamaño y la dirección de fallo. El test 12
+—paridad entre las dos pantallas— sigue verde: lo que cambió es el orden
+literal que fija, y ese cambio **es** el arreglo. `pnpm test` 205/205
+(2.858/2.858) y `pnpm run validate` en verde.
+
+**Lo que NO se ha tocado, y sigue siendo cierto:** cuota de voz sigue siendo
+acumulada y viviendo en Competidores etiquetada como tal (§11); la panorámica
+sigue publicando la mención del último escaneo (§36). No se han unificado las
+dos poblaciones — la regla de ruta pide decisión explícita para eso, y el
+diagnóstico de arriba dice que no hacía falta.
+
+
+**Nota de renumeración, dos veces.** Esta sección nació como §169 sobre una
+`main` que todavía no tenía ni el §169 de BLOG-INDEX-CARDS (#479) ni el §170 de
+PROMO-CONSOLE-PARITY-1 (#485); se renumeró a §171. Mientras seguía abierta
+entraron **también** #481 (§171) y #489 (§172), así que hubo que moverla otra
+vez, ahora al §175. Las dos veces se renumeró ESTA —la que no estaba en
+`main`— y con ella sus referencias en `CLAUDE.md` y
+`.claude/rules/competitors.md` (`grep -rn "§175"`). Mismo protocolo que
+documentan los §159, §161, §163 y §168.
+
+Que haya hecho falta dos veces en una mañana no es mala suerte: es el límite
+que `tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con
+cuatro ramas abiertas a la vez. El guardián hizo su trabajo las dos veces: paró
+el choque en la que mergeaba después.
+
+---
+
+## 176. El cajón móvil estaba cerrado y la aserción no sabía verlo (PILOT-DRAWER-VIEWPORT-1, 2026-08-27)
+
+**Qué pasó.** `«¿Qué es el GEO?» reabre el tour con contenido real, avanza y
+cierra` falló en `[mobile]` sobre el PR #484 con `TimeoutError: locator.click:
+Timeout 15000ms exceeded`. El registro de la llamada es la pista entera:
+
+```
+- locator resolved to <button type="button" class="nav-item">…</button>
+- element is visible, enabled and stable
+- scrolling into view if needed
+- done scrolling
+- element is outside of the viewport
+```
+
+Un elemento **visible, estable y fuera de la pantalla** después de intentar
+llevarlo a ella es, casi siempre, un elemento dentro de algo desplazado con
+`transform`.
+
+**Por qué.** Bajo 760px la barra lateral es un cajón `position: fixed` que vive
+en `translateX(-100%)` y sólo entra cuando `MobileShellProvider` pone
+`mobnav-open` (`app/globals.css`, `components/mobile-shell.tsx`). Sus botones
+están en el DOM y pintados **todo** el tiempo — simplemente fuera de pantalla
+por la izquierda. Para Playwright eso es «visible»: la definición es caja no
+vacía y sin `visibility: hidden`, no «se ve». Así que
+`await expect(reopen).toBeVisible()` **pasaba con el menú cerrado**, y el fallo
+reaparecía un renglón más abajo, en el clic, con un mensaje sobre el viewport
+que no menciona el cajón.
+
+Y el menú estaba cerrado porque la guarda de arriba era
+`if (await burger.isVisible().catch(() => false))`: una sola pregunta, hecha una
+sola vez. En un preview frío la cabecera puede no haber pintado todavía, la
+pregunta se contesta que no, y el `if` entero se salta en silencio. Es la misma
+familia que PILOT-HYDRATION-CLICK-1 (§136), un escalón más allá: allí el clic
+se perdía por llegar antes de hidratar, aquí ni siquiera se intenta.
+
+**Qué se decidió.** Dos cambios, y ninguno afloja nada:
+
+1. **La condición deja de ser «¿hay hamburguesa?» y pasa a ser «¿se alcanza la
+   entrada del menú?»** (`toBeInViewport`). Es la pregunta que de verdad
+   importa, no depende del ancho ni de que la cabecera haya pintado, y vale
+   igual en escritorio —donde la barra es una columna estática y no hay cajón
+   que abrir— que en móvil.
+2. **El clic se reintenta hasta que el cajón trae el botón a la pantalla**
+   (`expect(...).toPass`), sin espera fija. Seguro de repetir porque el botón
+   hace `setMobileNavOpen(true)`, no un alternar
+   (`components/workspace-topbar.tsx`) — la misma comprobación que hizo seguro
+   el remedio del §136.
+
+**Lo que esto NO era.** No era un fallo del producto ni del PR que lo destapó
+(#484 toca el módulo de puestos de competidores y dos clases CSS de fila; no
+toca la barra lateral, ni el cajón, ni el tour). Era una aserción incapaz de
+distinguir dos estados, latente desde que la escena se escribió: sólo fallaba
+cuando la carrera de hidratación salía del lado malo, que es exactamente el
+perfil de lo que se despacha como «flake» y se vuelve a ejecutar. Se
+diagnosticó en vez de reintentarse.
+
+**Lo que se deja anotado y NO se toca aquí.** El resto de la suite sigue usando
+`toBeVisible()` sobre elementos que podrían estar dentro de un contenedor
+desplazado. Esta pasada era la única que abría el cajón de la consola
+(`grep -rn "Abrir menú de navegación" tests/`), así que no hay más sitios con
+esta forma exacta; barrer el patrón entero es otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/onboarding-tour.spec.ts`;
+`components/mobile-shell.tsx` y `components/workspace-topbar.tsx` (por qué el
+clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
+está fuera de pantalla estando «visible»); §136 (el precedente).
+
+---
+
+---
+
+## 178. Auditoría web se quedó en el primer peldaño de la escalera (WEB-AUDIT-WIDTH-1, 2026-08-27)
+
+**Lo que vio el fundador.** *"Auditoría web se ve mal. Está centrado el
+contenido como si fuera mobile"*. Es literal: en escritorio la pantalla pintaba
+una columna de 460px centrada bajo una cabecera fija que sí llega hasta el borde
+de la ventana.
+
+**Por qué.** La consola tiene un estándar de ancho aprobado desde
+CITATIONS-REDESIGN-1 (§5) y ratificado en OV-DESKTOP-2 (§119): **460 / 640 a
+900px / 1200 a 1200px / 1280 a 1600px**. Seis de las siete columnas de la
+consola lo suben entero (`.ov2-scope`, `.pr2-page`, `.cm2-page`, `.cit2-page`,
+`.rec2-scope`, `.dm2-page`). `.wa2-page` declaraba **sólo el primer peldaño** y
+ninguna media query.
+
+Lo caro del fallo no es la línea que faltaba, es que **la intención sí estaba
+escrita**: el comentario del `page.tsx` que monta ese div dice, palabra por
+palabra, *"the founder-approved 640/1200/1280px console width standard
+(CITATIONS-REDESIGN-1, §5)"*. El comentario prometía la escalera y el CSS tenía
+un escalón. Nadie leyendo ese diff habría notado la diferencia — el comentario
+lee como la implementación.
+
+Y no falló nada por el camino: la página cargaba, los tests pasaban, el piloto
+la fotografiaba a tres anchuras y ninguna captura decía *"esto debería medir el
+triple"*. Un ancho equivocado no lanza excepciones. Hizo falta que un humano lo
+mirara y lo dijera a ojo, meses después.
+
+**Qué se decidió.** Los mismos tres cortes, con los mismos valores, copiados de
+sus seis hermanas. Cero decisiones de diseño nuevas: esto es aplicar un estándar
+que ya estaba aprobado, no elegir un ancho.
+
+**Sin `--ov-hdr-page-cap` ni `--mrk-page-cap` acompañándolos, a propósito.** Esas
+dos existen porque en Competidores la clase estrecha va COMBINADA sobre `.page`
+(`<div class="page cm2-page">`), así que baja el tope real de `.page` y las dos
+fórmulas de bleed —la de la cabecera fija y la de la misión— leen un
+`--page-max-w` que ya no es cierto. `.wa2-page` es un hijo dentro de un `.page`
+intacto, y la cabecera fija ni siquiera está dentro de él: cuelga directamente
+de `.page`. Copiarlas aquí repetiría el error que `app/console.css` ya documenta
+haber cometido una vez en esta misma pantalla — alimentar la fórmula con un tope
+al que `.page` nunca estuvo sujeto, y dejar la escena 20px corta por los dos
+lados.
+
+**Lo que garantiza que no vuelva a pasar.** `tests/console-page-width.test.ts`
+lee las dos hojas y exige los cuatro peldaños a las **siete** columnas. Es un
+contrato a nivel de fuente, sin navegador, del mismo tipo que
+`tests/mission-parity.test.ts` (§168): la clase de fallo que ataca es la que no
+rompe nada, y ésa no la coge ni un test de render ni una captura. Comprobado en
+las dos direcciones — con el arreglo revertido, falla nombrando el peldaño que
+falta; con él, pasa. **Añadir una pantalla nueva con su propia clase de columna
+significa añadirla a ese fichero**, o vuelve a no enterarse nadie.
+
+**Lo que NO se ha tocado.** El bleed de la cabecera fija sigue como estaba (§150)
+— llega al borde de `.dash-content` en las ocho pantallas, y alinear su
+CONTENIDO con la columna estrecha sigue siendo la decisión aparte que ya
+declaraba fuera de alcance el §150. Ningún cambio en el interior de la
+auditoría: las tarjetas simplemente disponen del ancho que les correspondía.
+
+**Nota de numeración, dos veces.** Nació como §173 sobre una `main` que llegaba
+al §172. Mientras seguía abierta entraron #481, #489, #480, #490 y el propio
+#484, que dejaron `main` en el §176, y el §177 ya estaba reservado por otra rama
+(#491), así que acabó en el §178. Se renumeró ESTA —la que no estaba en `main`—
+con todas sus referencias (`grep -rn "§178"`: la regla de ruta, el test y el
+propio CSS).
+
+Cinco secciones ajenas en una mañana no es mala suerte: es el límite que
+`tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con cuatro
+ramas abiertas a la vez. Hizo su trabajo cada vez, parando el choque en la que
+mergeaba después.
+
+**Trazabilidad.** `app/console.css` (`.wa2-page`);
+`app/dashboard/projects/[projectId]/web-audit/page.tsx` (el comentario que ya
+prometía la escalera); `tests/console-page-width.test.ts`; §5, §119, §150, §168.
+
+---
+
+## 179. El switch de «ocultar aviso» ocultaba un aviso de tres (MATURITY-BANNER-HIDE-ALL-1, 2026-08-27)
+
+**Lo que pidió el fundador.** *"El interruptor de ocultar aviso de seguimiento
+diario tiene que ocultar ese y el de histórico construyendo y cualquier similar
+que haya"*.
+
+**Qué pasaba.** DEBUG-HIDE-NO-TRACKING-1 (§161) puso en `/debug` un switch que
+silenciaba «Tu análisis de hoy no se repetirá» — y sólo eso. Pero esa banda
+(`DataMaturityBanner`) tiene tres mensajes visibles, no uno: el del plan Free,
+el de seguimiento diario y «Tu histórico se está construyendo». Así que quien
+encendía el switch seguía viendo una banda **en el mismo sitio, del mismo
+tamaño y con la misma pinta**, y el switch parecía roto sin estarlo: hacía
+exactamente lo que su etiqueta decía, y su etiqueta describía un tercio del
+problema.
+
+**Qué se decidió: silencia los avisos informativos, no un mensaje concreto.** Y la parte que decide la
+forma del arreglo es *"cualquier similar que haya"* — o sea, los estados que
+todavía no existen. Enumerar los tres de hoy habría dejado el switch mintiendo
+en cuanto `computeDataMaturity` gane un `kind` nuevo, **sin que fallara nada**:
+el aviso simplemente reaparecería y nadie relacionaría las dos cosas.
+
+Así que la decisión sale del componente y pasa a una función pura,
+`visibleDataMaturityState` (`lib/project-workspace.ts`, junto a la máquina de
+estados que la alimenta). Resuelve `hidden` **antes** de mirar `kind`, de modo
+que un estado futuro queda cubierto por no hacer nada. El componente pregunta
+una vez y pinta lo que salga: ya no hay tres sitios donde acordarse.
+
+**La clave de `localStorage` conserva su nombre viejo**
+(`dmb-hide-no-tracking:<id>`) aunque ya no describa lo que hace. Renombrarla
+dejaría a quien tuviera el switch encendido con la banda de vuelta en la cara
+sin haber tocado nada, que es justo lo contrario de lo que se pide. Queda
+desalineado a sabiendas, y anotado en los dos ficheros para que no se lea como
+un descuido — el mismo tipo de trampa que el §173 documenta desde el otro lado
+(allí el comentario prometía más de lo que el código hacía; aquí el nombre
+promete menos).
+
+Lo demás se renombra para que la pantalla no siga mintiendo: el fichero
+(`maturity-banner-toggle.tsx`), el componente (`MaturityBannerToggle`), la
+función de la clave (`maturityBannerHiddenKey`), el rótulo («Ocultar los avisos
+de la banda superior») y su texto, que ahora enumera los tres mensajes y dice
+que cubre los que se añadan.
+
+**Y de paso, la máquina de estados sale de `lib/project-workspace.ts`.** No
+por limpieza: **el build se rompió**. Mientras el componente sólo importaba el
+TIPO daba igual dónde viviera —`import type` se borra al compilar— pero en
+cuanto tuvo que importar una FUNCIÓN, `project-workspace.ts` entero se iba
+detrás al paquete del navegador, y ese fichero abre el cliente de **servicio**
+de Supabase. `next build` lo cazó en el sitio (`pnpm run validate`), que es
+exactamente donde se quiere que salte.
+
+Así que `lib/data-maturity.ts`: la máquina de estados y esta puerta, todo puro,
+sin `async`, sin red, sin `window`. Es el argumento que `.claude/rules/scan.md`
+ya da para `lib/scan/` — si un símbolo lo importa alguien que no hace lo que
+hace ese módulo, casi siempre está en el sitio equivocado. Había dos cosas en un
+fichero (una máquina de estados y una capa de acceso a datos) y sólo una puede
+cruzar al cliente. `project-workspace.ts` la reexporta, así que ningún consumidor
+de servidor cambia de import.
+
+**Lo que garantiza que no vuelva a estrecharse.** Cinco tests en
+`lib/project-workspace.test.ts`, y uno de ellos es el que importa: **silencia un
+`kind` inventado que no existe en el tipo**. Si algún día alguien reintroduce
+una lista de estados, ese test cae. Comprobado en las dos direcciones —
+restaurada la semántica vieja (`hidden && kind === "no_tracking"`), fallan tres
+de los cinco nombrando el estado que se coló.
+
+### Cómo acabó, tras chocar con `main`
+
+Mientras esta rama estaba abierta, **otra sesión metió en `main` (PR #480, §173)
+un cambio sobre estos mismos ficheros**, después de que el fundador probara el
+flujo real con una cuenta nueva. Lo que traía: los avisos **nacen ocultos** —la
+ausencia de valor en `localStorage` ya no significa «mostrar», sólo un `"0"`
+explícito los revela— y el switch cubre `no_tracking` **y** `accumulating`,
+enumerados a mano, dejando `free` fuera a propósito.
+
+Los dos lados cambiaron la misma lógica y quedarse con cualquiera perdía algo:
+con esta rama se revertía el «ocultos por defecto» que el fundador acababa de
+pedir en vivo; con `main` se perdía la garantía para estados futuros y el rótulo
+del switch seguía diciendo «Ocultar aviso "seguimiento diario"» aunque ya
+ocultara dos. **Se paró el merge y se preguntó** (fundador, 2026-08-27:
+combinar). Resultado:
+
+- **De `main`: la semántica.** Oculto por defecto, `"0"` revela, y **`free` no se
+  calla nunca** — no pide esperar, vende un plan y lleva su propia X.
+- **De esta rama: la estructura.** La puerta enumera **excepciones**
+  (`NEVER_SILENCED`, hoy sólo `free`), **no cubiertos**. Esa dirección es el
+  arreglo: enumerando lo que sí se calla, un `kind` futuro se escapa sin que
+  falle nada; enumerando lo que no, queda cubierto por no hacer nada. Es
+  literalmente lo que se pidió con *"cualquier similar que haya"*.
+- **Y el rótulo deja de mentir**: dice qué calla, qué no, y que nace encendido.
+
+**Lo que NO se ha tocado.** La X de descarte del aviso del plan Free sigue
+siendo otra preferencia, con otra clave y otro alcance (un aviso, ese render);
+las dos conviven y ninguna anula a la otra, fijado por test. No se ha tocado
+`computeDataMaturity`: qué banda toca es exactamente lo que era. Sigue sin haber
+migración detrás — es una preferencia local de navegador, con el coste ya
+asumido en §161 de que no viaja entre dispositivos.
+
+**Trazabilidad.** `lib/data-maturity.ts` (`visibleDataMaturityState`);
+`lib/project-workspace.ts` (la reexporta);
+`components/data-maturity-banner.tsx`;
+`app/dashboard/projects/[projectId]/debug/maturity-banner-toggle.tsx`;
+`lib/project-workspace.test.ts`; §161 (el switch original), §173 (la misma
+trampa por el otro lado).
 
 ---
 

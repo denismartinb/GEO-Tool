@@ -27,6 +27,8 @@
  *   depending on the caller's array order.
  * - **No rank means no row.** Under geo-score-v3 an entity the AI never named
  *   has no position at all (docs/adr/0026), and giving it one would invent data.
+ * - **A mean over too few answers does not outrank a mean over many**
+ *   (SAMPLE-FLOOR-1, see `MIN_MENTION_RATE_FOR_RANK` below).
  */
 
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
@@ -48,7 +50,59 @@ export type LatestPositionRow<T> = T & {
   mentionRate: number | null;
   /** 1..N standing among the entities the AI actually named in this scan. */
   rank: number;
+  /**
+   * Whether this row's mean rank rests on enough answers to be compared with
+   * the others (SAMPLE-FLOOR-1). `false` rows keep their real figures and
+   * their row, sorted last — the renderer must say why rather than hide them.
+   */
+  qualified: boolean;
 };
+
+/**
+ * SAMPLE-FLOOR-1 (2026-08-27) — how much evidence a mean rank needs before it
+ * is allowed to outrank another.
+ *
+ * `avg_position_when_mentioned` is honest per answer and misleading across
+ * entities, because nothing in it says how many answers it averages. On the
+ * founder's movistar.es scan (30 answers) Euskaltel was named **once**, came
+ * first in that single answer, and therefore led the standings at 1,00 — above
+ * Movistar, named in 26 of the 30. Both screens published it: "Euskaltel 1º ·
+ * 3% de mención", which no reader parses as "we saw it once".
+ *
+ * A floor, not a filter. An entity below it keeps its row, its mention rate
+ * and its real mean — it simply cannot jump the queue on one lucky answer.
+ * Hiding it would trade one wrong impression for a missing one.
+ *
+ * Expressed as a RATE because it has to hold at both ends of the scan-size
+ * range: a fixed count of 3 is 10% of a 30-answer scan and 0,6% of a
+ * 500-answer one, which is noise. The absolute companion floor only guards the
+ * other extreme — on a 10-answer first scan, 10% is a single answer, which is
+ * the very thing this exists to stop.
+ */
+export const MIN_MENTION_RATE_FOR_RANK = 10;
+export const MIN_MENTIONS_FOR_RANK = 2;
+
+/**
+ * Reads the floor off what the run actually persisted.
+ *
+ * Fail direction is deliberate: an entry that carries NEITHER figure is
+ * treated as qualified. Pre-v3 runs (docs/adr/0026) are already dropped for
+ * having no position at all, so this only ever covers a partially-written
+ * entry — and demoting a row for a key that was never stored would be
+ * inventing a verdict out of a gap in the data.
+ */
+function qualifiesForRank(entry: PersistedRankingEntry | null | undefined): boolean {
+  const rate = entry?.mention_rate;
+  const count = entry?.mention_count;
+  // Compared ROUNDED, because rounded is what the row prints. A 9,6% renders
+  // as "10%" and, judged raw, would carry the "pocas menciones" tag next to a
+  // figure that reads as exactly meeting the floor — a screen contradicting
+  // itself in the space of one line (Apple Safari, proyecto Mozilla,
+  // 2026-08-27). The rule the user can verify is the one on screen.
+  if (typeof rate === "number" && Math.round(rate) < MIN_MENTION_RATE_FOR_RANK) return false;
+  if (typeof count === "number" && count < MIN_MENTIONS_FOR_RANK) return false;
+  return true;
+}
 
 function normKey(name: string): string {
   return name.trim().toLowerCase();
@@ -78,12 +132,16 @@ export function rankLatestPositions<T extends LatestPositionEntity>({
       return {
         ...entity,
         position: readPosition(match),
-        mentionRate: typeof match?.mention_rate === "number" ? match.mention_rate : null
+        mentionRate: typeof match?.mention_rate === "number" ? match.mention_rate : null,
+        qualified: qualifiesForRank(match)
       };
     })
     .filter((row): row is typeof row & { position: number } => row.position !== null)
     .sort(
       (a, b) =>
+        // The floor outranks the mean itself: a 1,00 over one answer sits
+        // behind a 1,50 over twenty-six, which is the whole of SAMPLE-FLOOR-1.
+        Number(b.qualified) - Number(a.qualified) ||
         a.position - b.position ||
         (b.mentionRate ?? -1) - (a.mentionRate ?? -1) ||
         a.label.localeCompare(b.label, "es")
