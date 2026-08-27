@@ -1,5 +1,5 @@
 /**
- * FOOTER-PAYMENT-TRUST-1 (2026-08-27, log §182).
+ * FOOTER-PAYMENT-TRUST-1 (2026-08-27, log §184).
  *
  * La fila «Pagos seguros con» nació en `/precios` (PRICING-PAY-BADGES-CENTER-1,
  * #495) y el fundador pidió llevarla también al pie de página, para que la

@@ -17108,7 +17108,82 @@ esta forma exacta; barrer el patrón entero es otro PR.
 clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
 está fuera de pantalla estando «visible»); §136 (el precedente).
 
----
+## 181. La pestaña "Resueltas" verifica si la predicción se cumplió — nunca mide un delta de score (RECS-LOOP-1 Fase A, ADR 0041, 2026-08-27)
+
+**El hueco.** ADR 0017 §5 prometió que "el próximo escaneo verifica" la
+predicción de puntos potenciales de una tarjeta. Nunca se construyó: una
+recomendación pasaba a `resolved` (o el usuario la marcaba «hecha») y el
+producto nunca decía si lo que prometía había pasado de verdad.
+
+**La opción obvia se descartó antes de escribir código.** Un delta de score
+compuesto o de componente entre el run donde la tarjeta estaba activa
+(`run_id`) y el que la confirmó resuelta (`resolved_in_run_id`) parecía la
+lectura natural de "puntos recuperados". Se consultó a `geo-strategy` y a
+`data-guardian` en paralelo (Task Intake RECS-LOOP-1 Fase A) y los dos lo
+rechazaron por caminos independientes: **no es atribuible** (`presence` se
+mueve por cualquier prompt, no sólo los de esta tarjeta; otra tarjeta resuelta
+en la misma ventana contamina el mismo número), **casi nunca es publicable**
+(`resolveDelta`/`compareRuns`, DELTA-GUARD-1, exige igualdad de
+`composite_version`/`inputs_used`/motores/respuestas entre dos runs, y
+`rescore-run.ts` puede reescribir retroactivamente el `run_scores` de un run ya
+completado cuando su auditoría llega tarde) y **contradice SCORE-WINDOW-1**
+(el titular que el usuario ya ve es la mediana de 3 escaneos, no el score de
+un run). El detalle completo, con las dos lecturas, vive en ADR 0041.
+
+**Lo que se construyó en su lugar.** `lib/recommendations/
+prediction-verification.ts` comprueba, sobre los MISMOS prompts que la
+tarjeta citó como evidencia, si la mutación concreta que su promesa asumía
+(`getRecommendationPotentialKind`, el mismo mapa de `run-scoring.ts` que ya
+generaba el número — nunca uno nuevo) ocurrió de verdad en el run que
+confirmó la brecha resuelta: mención (`presence`), dejar de estar por detrás
+del competidor nombrado en la propia evidencia de la tarjeta (`prominence`,
+sin exigir el "posición 1" optimista del contrafactual — sería casi siempre
+falso), o cita del dominio propio en fila de motor con grounding
+(`authority`). Es una observación sobre un puñado de filas fijas, no una
+inferencia sobre una población: no necesita banda de confianza, y una sola
+fila comprobada es una respuesta completa.
+
+**Cruzar de un run a otro no es trivial.** `evidence_json.
+affected_prompt_details[].id` es `scan_prompt_results.id` — una fila nueva
+cada escaneo (RECS-DEDUPE-1), no el id estable del prompt. Hace falta
+traducirlo vía `project_prompts.id` con una consulta anclada al `project_id` y
+`run_id` de la tarjeta antes de poder buscar la fila correspondiente en el run
+que la confirmó. Un prompt borrado desde entonces (`prompt_id` a null por el
+`on delete set null`) falla cerrado hacia "sin veredicto", nunca se asume.
+
+**Sin migración.** `data-guardian` confirmó que la promesa es derivable: la
+misma `computeRecommendationPotentialPoints` que ya existía es pura, y
+`scan_prompt_results` es inmutable tras completarse el run (`rescore-run.ts`
+sólo reescribe `run_scores`, nunca esa tabla). No hace falta congelar nada. El
+único cambio de lectura es ampliar el `select` de la pestaña "Resueltas" a
+`run_id`/`resolved_in_run_id`/`evidence_json` — columnas que ya existían.
+
+**Efecto colateral que había que arreglar de paso.** `dedupeByTitle` colapsaba
+por título normalizado sin más — necesario para el duplicado de dos motores
+sobre el mismo prompt, pero también borraba en silencio una brecha que se
+resolvió, reabrió y se resolvió otra vez, quedándose sólo con la más
+reciente. `dedupeResolvedHistory` añade `resolved_in_run_id` (o el `id` propio
+para una fila `dismissed`) a la clave: el duplicado de dos motores sigue
+colapsando, la reapertura ya no.
+
+**Deliberadamente fuera de esta fase — SIEMPRE queda en Task Intake propio.**
+Una fila `dismissed` nunca recibe `resolved_in_run_id`
+(`dismissRecommendationCore` sólo escribe `status`), así que no tiene run de
+confirmación contra el que comprobar nada — RECS-LOOP-1 Fase B. Y
+`data-guardian` encontró, de pasada, que el `delete()` de recomendaciones
+activas en `executor.ts` no captura errores: si el finalize de un run se
+reintenta después de que el usuario haya marcado una tarjeta de ese run como
+hecha, el descarte se pierde y la tarjeta reaparece activa. Es un bug ya en
+producción, independiente de esta fase — reportado al fundador, sin arreglar
+aquí.
+
+**Nunca una cifra de puntos.** El veredicto es "cumplida en N de M consultas",
+nunca comparado con el "hasta +X pt" original — son respuestas a preguntas
+distintas ("cuál es el mejor caso" vs. "¿pasó lo que el mejor caso
+afirmaba?") y presentarlas como la misma cosa habría sido la promesa que este
+ADR existe para no hacer. El copy es observacional y fechado — "en el
+escaneo que lo confirmó, la IA te nombró..." — nunca "ya apareces": el
+no-determinismo del siguiente escaneo puede revertirlo.
 
 ---
 
@@ -17457,7 +17532,124 @@ dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
 
 ---
 
-## 182. La confianza de pago llega también al pie de página, sin duplicar la fila (FOOTER-PAYMENT-TRUST-1, 2026-08-27)
+## 182. TRUST-PROMISES-1: los precios dejan de citarse a mano fuera de la consola (Fase 2 de la auditoría externa, 2026-08-27)
+
+**Origen.** `docs/external-audit-2026-08.md`, Fase 2 (P0-06): "179 €" escrito a mano en cinco sitios distintos, cada uno con su propia probabilidad de quedarse atrás si el precio cambia en Stripe. `PROMO-CONSOLE-PARITY-1` (log §170) ya había arreglado la peor instancia — la consola cotizando 179 € a quien `/precios` ya le decía 59 € — e introdujo `resolveShownPromoPrice`, un solo sitio que decide qué precio muestra una pantalla. Esta fase hereda ese mecanismo en vez de reescribirlo y cierra el resto: todo lo que citaba un precio de plan **fuera** de la consola.
+
+**El patrón que se repetía.** Cinco ficheros llevaban un comentario propio prometiendo sincronía con `app/pricing/plans-data.ts` — "no se reescriben cifras a mano aquí" — y ninguno la cumplía de verdad: el número vivía como texto suelto, correcto el día que se escribió, sin nada que lo atara al catálogo si `PLANS` cambiaba. Es la misma forma exacta del fallo que §170 ya había nombrado, sólo que en comentarios en vez de en la interfaz — una promesa documental que el código no hacía cumplir.
+
+**Seis ficheros corregidos, todos leyendo `PLANS` directamente:**
+
+- **`components/landing/session-ctas.tsx`** — la tira de promoción del hero (`PromoStrip`) tenía los cuatro números (179, 59, 45, 19) Y la fecha de corte ("hasta 1 sept.") escritos a mano. Ahora lee `PLANS` para los precios y calcula el porcentaje de descuento en vez de citarlo, y `PROMO_ENDS_AT` con `Intl.DateTimeFormat` para la fecha — con `timeZone: "Europe/Madrid"` explícito, porque sin él el servidor (UTC en Vercel) corre la fecha un día hacia atrás para cualquier hora de corte antes del mediodía peninsular. Es la misma clase de fallo que esta fase persigue, sólo que en la zona horaria en vez de en el precio, y se corrigió sin que nadie lo pidiera porque de otro modo el arreglo habría introducido uno nuevo.
+- **`app/pricing/page.tsx`** — la metadescripción SEO citaba "45 €"/"179 €" a mano, con un comentario que decía que venía de `plans-data.ts` y `pricing-metadata.test.ts` sólo podía comprobar que los dos números coincidieran por casualidad, nunca impedir que uno se editara solo. Ahora es un template literal sobre `PLANS`.
+- **`lib/comparativas/genscore-vs-otterly.ts`**, **`lib/comparativas/alternativas-a-otterly.ts`**, **`lib/comparativas/mejores-herramientas-geo.ts`** — mismo patrón en sus filas de datos (`genscore`/`pricingNote`/`context`).
+- **`app/comparativas/alternativas-a-otterly/page.tsx`** — dos párrafos de FAQ y de veredicto en JSX citaban "179 €/mes" directamente; la corrección de los datos no los alcanzaba porque viven en la página, no en el módulo.
+
+**Guarda nueva.** `tests/promise-parity.test.ts`, mismo patrón que `tests/mission-parity.test.ts`: contratos a nivel de fuente sobre los seis ficheros concretos que esta fase tocó — que importen `PLANS` y que no vuelvan a citar el precio actual de Pro o Starter como texto suelto. Los comentarios que citan el precio antiguo a propósito (la nota histórica de este mismo cambio, una cita literal de lo que pidió el fundador) se descartan antes de buscar, para que documentar el arreglo no dispare el propio test. Verificado que el test realmente atrapa una regresión: revertido un fichero a mano, el test falló; restaurado, volvió a pasar.
+
+**Deliberadamente NO en esta fase.** No se crea `lib/plans/catalog.ts` ni se mueve `plans-data.ts` — el plan lo proponía como fuente única nueva, pero `PROMO-CONSOLE-PARITY-1` ya construyó esa fuente única en el sitio donde vivía, y moverla habría sido una reorganización cosmética de alto riesgo (toca los imports de toda pantalla de precios) por un beneficio que `resolveShownPromoPrice` + esta fase ya entregan. Tampoco se toca "mostrar la próxima ejecución con fecha" allá donde se afirma la cadencia diaria — el plan lo asigna a la Fase 3 (`RECURRING-VALUE-1`), que es su dueño natural porque ahí vive el calendario visible completo.
+
+**Sigue abierto, y no es de esta fase.** El relleno hacia atrás de `recurring_scans_enabled` para proyectos de pago que ya existen (P0-08, la otra mitad de la Fase 2 original) — decisión del fundador aún pendiente sobre cuántos proyectos hay hoy en esa situación.
+
+**Comprobado.** `pnpm test` (213/213, 2.935/2.935), `pnpm run validate` (build + typecheck + lint), todo en verde.
+
+---
+
+## 183. Una sola Puntuación GEO en todo el producto: TRUST-METRICS-1, Fase 1 de la auditoría externa (2026-08-27)
+
+**Origen.** Auditoría de producto externa (26-08-2026, `docs/Informe_auditoria_GenScore_20260826.docx`), hallazgo P0-01: el mismo escaneo mostraba 6/100 en Visión general, "2 Puntuación GEO" en Dominios y "Visibilidad 2" en la notificación de fin de escaneo. Plan de corrección completo en `docs/external-audit-2026-08.md`; diagnóstico de por qué el sistema agéntico no lo encontró en `docs/agentic-blind-spots-2026-08.md`. Decisión del fundador (2026-08-27): una sola puntuación GEO en todo el producto, y es la puntuación con ventana (`SCORE-WINDOW-1`, ADR 0036) — nunca `visibility_score` crudo. Ejecutado con el protocolo reforzado que el fundador pidió explícitamente: *"hazlo con mucho mimo, cuidado y revisión; la nota GEO Score es el core de la herramienta"*.
+
+**Por qué divergían.** Visión general ya leía el compuesto (`details_json.geo_score.score`, con la ventana encima desde SCORE-WINDOW-1). Dominios y la notificación de fin de escaneo leían `run_scores.visibility_score` directamente — una de las cuatro componentes del compuesto, nunca un score en sí misma. Las dos lecturas eran correctas por separado; la contradicción sólo existía entre pantallas, que es exactamente el punto ciego que el análisis de puntos ciegos señala como estructural (Causa 1).
+
+**El módulo, `lib/metrics/run-metrics.ts`.** Nace con sus tests (11) y **cero consumidores**, en su propio commit, antes de tocar una sola pantalla — primera regla del protocolo reforzado. `resolveGeoScore()` es la única función que cualquier "Puntuación GEO" del producto puede llamar: ventana primero (mediana sobre runs comparables, vía `computeWindowedScore`/`readWindowRun` de `lib/scoring/score-window.ts`, sin tocar ni la mediana ni `MIN_RUNS_FOR_WINDOW` ni las reglas de comparabilidad — SCORE-WINDOW-1 queda fuera de alcance a propósito), caída al compuesto del propio run bajo la misma etiqueta cuando hay menos de dos runs comparables. Estructuralmente no puede devolver `visibility_score`. `mentionRateByAnswer`/`promptCoverage`/`citationRate`/`answerCountLabel` dan a cada porcentaje su denominador de fábrica, para el segundo hallazgo (P0-02).
+
+**Cinco superficies migradas, un commit por superficie:**
+
+- **Dominios** (`lib/project-workspace.ts`): `latestScoreByProject` pasa de la visibilidad cruda del run más reciente a `resolveGeoScore` sobre las últimas 3 filas por proyecto (antes 2 — `DEFAULT_SCORE_WINDOW_SIZE` exige una fila más para que la ventana pueda publicar). El badge de delta (DELTA-GUARD-1) sigue leyendo visibilidad cruda sin tocar: es una magnitud run-a-run distinta, no un "Puntuación GEO".
+- **Notificación de fin de escaneo** (`lib/scan/executor.ts` + `lib/notifications/render.ts`): el payload lleva ahora `geoScore` (resuelto vía `resolveGeoScore` sobre las últimas filas de `run_scores`, fail-soft — un fallo ahí nunca bloquea la notificación de un escaneo que ya terminó bien). El copy cambia de "Visibilidad NN (+delta)" a **"Escaneo actualizado: Puntuación GEO NN"** — la redacción exacta que pidió el fundador, porque con ventana la notificación ya no puede afirmar honestamente que NN sea el resultado de ESE escaneo, sólo que ese escaneo actualizó la cifra. El delta antiguo se retira en vez de reutilizarse: comparaba dos visibilidades crudas, una base distinta de la ventana, y mostrar los dos juntos habría repetido el mismo fallo que esta fase existe para quitar. La dirección del icono sigue derivándose de esa magnitud, nunca mostrada como número.
+- **`weekly-digest.ts` — el cálculo estaba bien, el correo que envía no.** El plan lo listaba como cuarta superficie con el mismo bug; una relectura del fichero durante la implementación mostró que ya usaba `getEffectiveGeoScore` (el compuesto con su caída, no la visibilidad cruda) para su comparación semana-a-semana — una magnitud legítimamente distinta (cambio entre los dos runs más recientes, no la posición actual estabilizada) que no necesitaba tocarse. Esa conclusión se quedó corta: nadie había mirado el HTML que de verdad sale por correo. `lib/email/transactional.ts` seguía rotulando ese número **"Tu GEO Score"** — asunto, cabecera y `preheader`, en el resumen semanal Y en la alerta de caída sostenida (`sendScoreDropAlertEmail`) — exactamente la etiqueta que el fundador reservó para la ventana. Encontrado en una tercera pasada de revisión, después de que las dos rondas de `data-guardian`/`geo-strategy` dieran ACEPTAR: ninguna de las dos abrió el fichero de plantillas de correo, sólo el módulo de datos. Corregido sin tocar el cálculo — la alerta de caída necesita de verdad una señal sin suavizar, ceder eso a la ventana la volvería más lenta justo cuando la velocidad es el punto — sólo el rótulo: "Tu GEO Score" → "Puntuación de este escaneo" en el resumen; el asunto y la cabecera de la alerta dejan de decir "GEO Score" sin más. Ningún test cubría esta copia (los tests de `weekly-digest.ts`/`score-alert.ts` sólo comprueban los argumentos que reciben las funciones de envío, nunca el HTML que producen), así que el hallazgo no tenía manera de salir de una lectura humana del fichero.
+- **Competidores** (P0-02 y P1-03): "45 prompts" (en realidad respuestas prompt × motor, acumuladas en toda la historia del proyecto) pasa a `answerCountLabel` → "45 respuestas · 15 prompts en 3 motores", sin signo «×» — se descubrió en revisión que "×" afirma una igualdad aritmética que sólo se sostiene con un único escaneo; ver más abajo. `brandMentionRate`/`brandCitationRate` se leen del módulo con su fracción real como `title`. La tabla por motor dejaba de mostrar un motor sin ninguna mención de marca NI de competidor (`filterComparableEngines`) — así desapareció Claude entero de la tabla en el escaneo real que auditó el informe externo, aunque había respondido a las 15 preguntas. `matrixEngines` pasa a ser `brandEngineBreakdown` directamente: todo motor con al menos una fila, cero incluido. El principio que la función retirada defendía —nunca inventar una fila para un motor que no corrió— se mantiene intacto; lo que cambia es que un cero real ya no se oculta. `filterComparableEngines` sigue viva y testeada en `lib/competitors/engine-share.ts` por si algún día hace falta esa otra pregunta ("motores donde alguien puntuó"), simplemente ya no la hace esta pantalla.
+- **`/runs/[runId]` sale de la consola del usuario final** (decisión del fundador, 2026-08-27: *"quiero tener una única cifra GEO Score porque si no es un lío"*). Se retiran los dos enlaces "Ver detalle del escaneo", en Páginas citadas y en Recomendaciones — los dos dentro de estados vacíos, así que un proyecto con datos reales nunca podía llegar a un escaneo por ahí (el propio `debug/page.tsx` ya lo documentaba). La ruta sigue viva, alcanzable sólo desde `/debug`, que ya la enlaza desde la fecha de cada fila.
+
+**Guardas nuevas:**
+
+- `tests/metric-contract.test.ts` — mismo patrón que `tests/mission-parity.test.ts`: comprobaciones a nivel de fuente sobre los ficheros concretos que esta fase arregló (no un barrido genérico sobre todo el repo, que daría falsos positivos en todo el cálculo de porcentajes legítimo que el resto del producto hace fuera de este alcance).
+- `tests/pilot/journeys/geo-score-consistency.spec.ts` — la aserción cruzada del piloto (Corrección B del análisis de puntos ciegos): visita Visión general y Dominios del mismo proyecto en la misma pasada y falla si el número del medidor difiere. Cierra la brecha exacta que ningún test unitario puede cerrar por sí solo — que el módulo esté bien no garantiza que las dos pantallas, con React y Supabase reales de por medio, sigan de acuerdo.
+
+**Revisión reforzada — dos rondas, no una.** `data-guardian` revisó scoping,
+coste y fail-soft de las lecturas nuevas; `geo-strategy` revisó si ocultar-vs-
+mostrar un motor sin menciones y el fallback sin ventana siguen siendo
+honestos desde la metodología GEO. **Ambos devolvieron BLOQUEAR** en la
+primera pasada — el protocolo reforzado que pidió el fundador hizo
+exactamente lo que tenía que hacer, y encontró tres fallos reales antes del
+Human Gate, no después:
+
+1. **`answerCountLabel` afirmaba una multiplicación falsa desde el segundo
+   escaneo** (hallado por los dos agentes, independientemente).
+   `totalResultsCount` acumula TODOS los escaneos completados del proyecto;
+   `promptCount`/`engineCount` son del momento actual. "45 respuestas (15
+   prompts × 3 motores)" sólo cuadraba en la cuenta del auditor porque tenía
+   un único escaneo. Arreglo: se retira el signo «×» — "45 respuestas · 15
+   prompts en 3 motores" — porque no hay forma honesta de mantener una
+   igualdad aritmética entre tres cantidades de tres ventanas temporales
+   distintas.
+2. **Visión general seguía enseñando DOS "Puntuación GEO" en la misma
+   pantalla** (geo-strategy). El medidor mostraba la ventana (`gaugeScore`,
+   correcto); una frase de la misma pantalla, dos dedos más abajo, seguía
+   diciendo "con una puntuación GEO de {`perRunScore`}/100" — el compuesto de
+   ESTE escaneo, no la ventana. Es el hallazgo P0-01 de la auditoría, sin
+   haber salido de la pantalla. Arreglo: la frase deja de afirmar una
+   puntuación; el medidor ya la dice una vez, bien.
+3. **El fallback de la notificación, en su ruta de fallo, volvía a publicar
+   `visibility_score` bajo "Puntuación GEO"** (hallado por los dos agentes).
+   Si la consulta de ventana fallaba, `geoScoreForNotification` caía a
+   `Math.round(scores.visibility_score)` — el número prohibido, en el único
+   camino que nadie mira porque casi nunca falla. Arreglo: cae a
+   `getEffectiveGeoScore(scores)` (el compuesto de este run, sin consulta
+   extra — ya estaba en scope), que es exactamente lo que `resolveGeoScore`
+   devolvería con un solo run disponible.
+
+**Un cuarto hallazgo cambió una pieza que el plan daba por terminada.**
+Dominios y Visión general leían profundidades distintas de historial (7 filas
+la una, 3 la otra) antes de resolver la ventana — con un run incomparable
+mezclado entre los primeros, una pantalla podía publicar mediana y la otra
+caer a `single_run`, la misma divergencia P0-01 un nivel más abajo. Se
+introdujo `GEO_SCORE_LOOKBACK_ROWS = 7` en `lib/metrics/run-metrics.ts`
+—igualando la profundidad que Visión general ya tenía establecida— y las tres
+superficies (Dominios, notificación, y Visión general si se migra) leen la
+misma constante.
+
+**Y un quinto que revierte parcialmente algo de esta misma fase.** El delta
+de Dominios (DELTA-GUARD-1, comparaba dos `visibility_score` crudos) quedó
+sentado junto al nuevo `score` con ventana — misma forma del fallo,
+otra vez, sin que ninguno de los dos agentes lo llamara igual la primera vez
+que uno de ellos lo vio. Se descartó la opción de retirar el badge (el diseño
+aprobado de esta pantalla, DOMAINS-REDESIGN-1, es explícito: "sólo la
+puntuación GEO y su delta, ninguna segunda métrica" — quitarlo sin más
+tocaría ese invariante) y en su lugar se recalculó como **ventana sobre
+ventana**, misma construcción que el `gaugeDelta` de Visión general
+(`previousWindow`): se publica sólo cuando las dos resoluciones son ventanas
+reales; si no, ausencia honesta.
+
+**Lo que se dejó fuera de esta fase, con conformidad de ambos agentes en la
+segunda pasada:** un cero de un motor cuya extracción falló entera
+(`extraction_error`) se sigue viendo igual que un cero real de un motor que
+respondió y no mencionó a nadie — son dos hechos distintos y merecen una
+distinción propia (`unreadable` en `EntityEngineBreakdown`), pero es trabajo
+nuevo, no una corrección de esta fase. Y `promptCoverage()` existe en el
+módulo, está testado, y **no tiene consumidor todavía** — la mitad "cobertura
+de prompts" de P0-02 sigue sin verse en ninguna pantalla; el hueco natural es
+Prompts, en una fase futura.
+
+**Segunda pasada: ambos agentes, ACEPTAR.**
+
+**Riesgo conocido y aceptado.** El primer escaneo de un proyecto no tiene ventana (`MIN_RUNS_FOR_WINDOW` es 2): cae al compuesto del propio run, misma etiqueta, y el marcador de fiabilidad existente (`hasSufficientSample`) sigue siendo la única señal de que la cifra puede moverse cuando llegue el segundo escaneo. No se inventó ningún indicador nuevo para anunciarlo — aceptado explícitamente por el fundador.
+
+**Comprobado.** `pnpm test` (213/213, 2.934/2.934), `pnpm run validate` (build + typecheck + lint), todo en verde. Cada superficie en su propio commit, revertible por separado.
+
+---
+
+## 184. La confianza de pago llega también al pie de página, sin duplicar la fila (FOOTER-PAYMENT-TRUST-1, 2026-08-27)
 
 **Lo que pidió el fundador.** *"Ahora quiero que lleves un bloque de pago
 seguro similar al footer para transmitir confianza"* — la fila «Pagos seguros
@@ -17527,13 +17719,16 @@ la fila de pagos. Fijado por un test propio, no por entrar en la lista
 compartida (mismo `footerBlockOf`, comprobado en las dos direcciones: sin la
 fila, falla nombrando el fichero).
 
-**Nota de numeración.** Nació como §181 sobre una `main` que llegaba al §180
-(PRICING-PAY-BADGES-CENTER-1, #495). Mientras esta rama seguía abierta, RECS-
-LOOP-1 Fase A (#492) reclamó ese mismo §181 y mergeó primero, así que esta
-sección —la que no estaba en `main`— renumera a **§182**, con todas sus
-referencias (`grep -rn "§182"`: `CLAUDE.md` y `.claude/rules/styles.md`).
-Mismo protocolo que ya documentan los §159/§161/§163/§173/§175/§178 de este
-mismo fichero.
+**Nota de numeración, dos veces.** Nació como §181 sobre una `main` que
+llegaba al §180 (PRICING-PAY-BADGES-CENTER-1, #495). Mientras esta rama
+seguía abierta, RECS-LOOP-1 Fase A (#492) reclamó ese mismo §181 y mergeó
+primero, así que una primera pasada renumeró a §182. Mientras esta rama
+seguía abierta una segunda vez, TRUST-PROMISES-1 (#494) y TRUST-METRICS-1
+(#493) reclamaron ese §182 (y el §183 siguiente) y mergearon antes también,
+así que esta sección —la que no estaba en `main`— renumera de nuevo, ahora a
+**§184**, con todas sus referencias (`grep -rn "§184"`: `CLAUDE.md` y
+`.claude/rules/styles.md`). Mismo protocolo que ya documentan los
+§159/§161/§163/§173/§175/§178 de este mismo fichero.
 
 **Trazabilidad.** `components/marketing/payment-badges.tsx` ·
 `components/marketing-content-links.ts` (`MARKETING_SHELLS`) ·

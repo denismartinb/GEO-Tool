@@ -357,7 +357,7 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   «centrado».** Un `.price-pay-badges` centrado midió 9,875px de margen
   izquierdo y 9,89px de derecho a 768px — prácticamente idénticos — y a
   simple vista parecía alineado a la izquierda comparado con las capturas de
-  al lado, donde el contenido dejaba más aire (log §182). El contenido casi
+  al lado, donde el contenido dejaba más aire (log §184). El contenido casi
   llenaba el contenedor disponible (692 de 712px), así que el margen real era
   correcto pero demasiado pequeño para que el ojo lo distinguiera del cero.
   Antes de descartar un centrado por «se ve a la izquierda», mide

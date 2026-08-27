@@ -5,7 +5,7 @@ import { MARKETING_SHELLS } from "../marketing-content-links";
 import { PAYMENT_BADGES } from "./payment-badges";
 
 /**
- * FOOTER-PAYMENT-TRUST-1 (2026-08-27, log §182).
+ * FOOTER-PAYMENT-TRUST-1 (2026-08-27, log §184).
  *
  * El fundador pidió llevar la fila «Pagos seguros con» de `/precios` también
  * al pie de página, para que la confianza no dependa de haber llegado hasta
