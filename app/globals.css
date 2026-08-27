@@ -8760,6 +8760,72 @@ select.set-field {
 .cp-done p { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); margin: 9px auto 0; max-width: 400px; }
 .cp-done p b { color: var(--ink); font-weight: 750; }
 
+/* ============================================================
+   DOMAINS-OVERAGE-GATE-1 — components/billing/domain-overage-gate.tsx.
+   Reuses the .cp-* chrome above for the shell/typography; only the bits
+   that don't already exist there — the two-path chooser and the
+   hard-delete danger treatment — get new classes. Lives here rather than
+   in app/console.css (dashboard-only) because its classes are written from
+   components/, which tests/console-css-scope.test.ts cannot attribute to
+   the dashboard — same reason the notifications screen's classes live here
+   too (app/console.css's own header comment).
+   ============================================================ */
+.dog-scrim { cursor: default; }
+
+.dog-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dog-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  padding: 15px 16px;
+  border-radius: var(--r-lg);
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color .14s, background .14s;
+}
+.dog-opt:hover { border-color: var(--accent-ring); background: var(--surface-2); }
+.dog-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dog-opt-ic {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center;
+}
+.dog-danger-ic { background: var(--neg-soft); color: var(--neg-ink); }
+.dog-opt-t { font-size: 14px; font-weight: 750; color: var(--ink); }
+.dog-opt-d { font-size: 12px; color: var(--ink-3); font-weight: 500; line-height: 1.45; }
+
+/* Danger variant of .cp-diff above — same shape, red instead of the amber
+   used for a reversible plan-change diff, so an irreversible delete reads
+   differently at a glance. */
+.dog-diff-danger { border: 1px solid var(--neg-soft); border-radius: var(--r-lg); padding: 12px 14px; background: var(--neg-soft); }
+.dog-diff-danger .cp-diff-h { color: var(--neg-ink); }
+.dog-diff-danger .cp-diff-h .ico { color: var(--neg-ink); }
+.dog-diff-danger .cp-diff-list .k { color: var(--neg-ink); }
+.dog-diff-danger .cp-diff-list .from { color: var(--ink-2); font-weight: 500; }
+
+.dog-confirm-check {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 14px; font-size: 12.5px; color: var(--ink-2); font-weight: 550;
+  cursor: pointer; line-height: 1.4;
+}
+.dog-confirm-check input { margin-top: 2px; }
+
+.dog-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 12.5px; font-weight: 650; color: var(--accent);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.dog-link:disabled { opacity: .5; cursor: not-allowed; }
+
+.dog-sales-full { width: 100%; }
+
+@media (max-width: 560px) {
+  .dog-opts { grid-template-columns: 1fr; }
+}
+
 @keyframes modalIn {
   from { opacity: 0; transform: translateY(10px) scale(.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
