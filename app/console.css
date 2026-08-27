@@ -840,6 +840,38 @@
 
 .wa2-page { max-width: 460px; margin: 0 auto; }
 
+/* WEB-AUDIT-WIDTH-1 (2026-08-27, log §173). Hasta aquí llegaba la regla: un
+   único escalón de 460px, sin escalera. En escritorio eso dejaba la auditoría
+   en una columna de ancho de móvil centrada bajo una cabecera que sí bleedea
+   hasta el borde — el fundador lo describió como "está centrado el contenido
+   como si fuera mobile", y es literalmente eso.
+
+   No es una decisión de ancho nueva: el comentario del propio
+   `web-audit/page.tsx` que monta este div ya dice "the founder-approved
+   640/1200/1280px console width standard (CITATIONS-REDESIGN-1, log §5)". La
+   escalera estaba escrita en la intención y no en el CSS, así que esta
+   pantalla se quedó en el primer peldaño mientras sus cuatro hermanas
+   —`.ov2-scope`, `.pr2-page`, `.cm2-page`, `.cit2-page`— subían los otros
+   tres. Aquí sólo se copian los mismos tres cortes, con los mismos valores.
+
+   Sin `--ov-hdr-page-cap` ni `--mrk-page-cap` acompañándolos, a diferencia de
+   `.cm2-page`: aquellos existen porque en Competidores la clase estrecha va
+   COMBINADA sobre `.page`, así que baja el tope real de `.page` y las dos
+   fórmulas de bleed leen un `--page-max-w` que ya no es cierto. `.wa2-page` es
+   un hijo dentro de un `.page` intacto —la cabecera fija ni siquiera está
+   dentro de él, cuelga de `.page`— así que ambas fórmulas siguen leyendo el
+   tope de verdad. Es la misma asimetría que ya razona el bloque de
+   `display: contents` de más abajo, y por la misma razón. */
+@media (min-width: 900px) {
+  .wa2-page { max-width: 640px; }
+}
+@media (min-width: 1200px) {
+  .wa2-page { max-width: 1200px; }
+}
+@media (min-width: 1600px) {
+  .wa2-page { max-width: 1280px; }
+}
+
 /* SCAN-FULLSCREEN-HEADER-1 continuation (2026-08-25, log §153): `.wa2-scope
    .wa2-page` sits BETWEEN `.page` and `FirstScanTakeover`/`ReentryMission`
    (Auditoría web is the only screen among the 6 where the narrow-column
