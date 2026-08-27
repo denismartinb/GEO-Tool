@@ -120,7 +120,9 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   STRIPE_COUPON_ID_STARTER_PROMO: "el checkout de Starter cobra el precio normal, sin la promo",
   STRIPE_COUPON_ID_PRO_PROMO: "el checkout de Pro cobra el precio normal, sin la promo",
   ADMIN_USER_IDS: "/admin es inalcanzable (404 para todo el mundo)",
-  GOOGLE_SITE_VERIFICATION: "no se emite la meta de verificación de Search Console"
+  GOOGLE_SITE_VERIFICATION: "no se emite la meta de verificación de Search Console",
+  INTERNAL_TEST_ACCOUNT_EMAILS:
+    "ninguna cuenta queda exenta: todo alta nueva recibe los defaults de producción (sampling y auditoría por IA encendidos)"
 };
 
 /**
@@ -173,7 +175,8 @@ export const envSchema = z.object({
   STRIPE_COUPON_ID_PRO_PROMO: optionalText,
 
   ADMIN_USER_IDS: optionalText,
-  GOOGLE_SITE_VERIFICATION: optionalText
+  GOOGLE_SITE_VERIFICATION: optionalText,
+  INTERNAL_TEST_ACCOUNT_EMAILS: optionalText
 });
 
 export type Env = z.infer<typeof envSchema>;
