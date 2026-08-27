@@ -16123,12 +16123,61 @@ Retirado a petición del fundador (`components/settings/notifications-section.ts
 Sin tests que dependieran del texto. `.set-quiet` (`app/globals.css`) se deja
 tal cual: es una clase de utilidad genérica, no exclusiva de este párrafo.
 `pnpm test` (203/203, 2.837/2.837) y `pnpm run validate` en verde.
+## 167. Recomendaciones nombra por fin una URL tuya: los tres bloqueos que impiden la cita (AUDIT-RECS-JOIN-1 Fase A, 2026-08-22)
+
+**El hueco.** Tras RECS-ACCION-1, la pantalla ya nombra su entregable, declara
+el control y ordena bien — pero **ninguna recomendación decía nunca «edita
+ESTA página tuya»**. Todas hablaban de consultas («publica una página que
+responda esto»), nunca de una URL concreta del cliente. Era el pendiente
+declarado en §127 y §140.
+
+**Lo que había, y estaba a un tercio.** La pantalla ya sacaba UN bloqueo de la
+auditoría —los bots rastreadores— con esta justificación escrita en su propio
+comentario: *«mientras un rastreador de IA esté bloqueado, las acciones de
+contenido de abajo no pueden rendir en ese motor»*. El razonamiento vale
+idéntico para los otros dos bloqueos duros, y ninguno se enseñaba:
+
+- **`noindex`** (peso 10, `hardBlock`): la página no puede indexarse, así que
+  no puede citarse por buena que sea.
+- **`nosnippet` / `max-snippet:0`** (§131): el motor puede rastrearla e
+  indexarla y aun así tener prohibido reproducir un fragmento. Sin fragmento no
+  hay cita.
+
+**Decisión.** `findCitationBlockers` (`lib/recommendations/citation-blockers.ts`)
+lee la última instantánea de la auditoría y devuelve los tres, **cada uno con
+sus URLs**. El banner deja de ser uno y pasa a ser una lista.
+
+**Por qué NO rompe el reparto de zonas** («La Auditoría arregla tu web;
+Recomendaciones consigue que te citen», `lib/web-audit/issues.ts`). No duplica
+el catálogo de la auditoría ni convierte sus hallazgos en recomendaciones:
+señala los tres hechos que hacen **imposible** el objetivo de esta pantalla y
+manda a arreglarlos donde se arreglan. Es la excepción que ya estaba tomada y
+justificada, aplicada entera en vez de a un tercio. Los otros trece checks
+técnicos siguen viviendo sólo en la auditoría.
+
+**Tri-estado, otra vez.** Un campo ausente en una instantánea anterior a la
+fase que lo introdujo es «nunca medido», no «limpio». Aquí sale gratis porque
+este módulo **sólo afirma problemas** y nunca declara que algo esté bien — pero
+está en su test, porque la próxima persona que añada un bloqueo no tiene por
+qué deducirlo.
+
+**Lo que sigue pendiente, y por qué.** La otra mitad de AUDIT-RECS-JOIN-1 —que
+una recomendación de contenido diga «tu página `/precios` ya responde esto,
+mejórala» en vez de «publica algo»— necesita el **mapa de cobertura**, que hoy
+nace apagado (`auto_coverage_audit_enabled = false`, migración 0031). Medido en
+esta sesión: **encenderlo no cuesta prácticamente nada** — una campaña cubre 4
+prompts (`BATCH_TOPICS_PER_CALL`), no todos, y Gemini no paga grounding en el
+tramo actual (1.500 peticiones/día gratis). La cifra de ~$0,28 que se manejó
+antes era errónea: asumía un barrido completo y grounding de pago. Queda como
+decisión del fundador, ya no por coste sino por criterio de producto; el
+interruptor está en la consola de operador (`/admin/users`, «Auditoría de
+cobertura IA»).
 
 ---
 
-## 167. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
+## 168. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
 
-**Nota de renumeración.** Esta sección nació como §165 en su propia rama; mientras se abría el PR, `main` avanzó y reclamó ese número y el siguiente (§165/§166, BILLING-INVOICE-FIELDS-1, PR #478). Pasa a **§167**, el primero libre al fusionar. Mismo protocolo que describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión que ya documentan los §159/§161/§163 de este mismo fichero.
+**Nota de renumeración.** Esta sección nació como §165 en su propia rama; mientras se abría el PR, `main` avanzó y reclamó ese número y el siguiente (§165/§166, BILLING-INVOICE-FIELDS-1, PR #478) — pasó a **§167** en una primera fusión. `main` volvió a avanzar mientras el PR seguía abierto, esta vez con AUDIT-RECS-JOIN-1 reclamando ese §167 recién liberado, así que en esta segunda fusión pasa a **§168**, el primero libre. Mismo protocolo que describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión en cadena que ya documentan los §159/§161/§163 de este mismo fichero.
 
 
 **Lo que pidió el fundador.** Que la configuración de `/debug` que hoy es
