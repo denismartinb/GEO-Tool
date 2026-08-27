@@ -19,6 +19,44 @@ export const PROMO_ENDS_AT = "2026-09-01T00:00:00+02:00";
  */
 export const PROMO_DURATION_MONTHS = 6;
 
+/**
+ * PROMO-CONSOLE-PARITY-1 (2026-08-27) — qué precio promocional enseña una
+ * pantalla, en un solo sitio.
+ *
+ * Hay DOS promociones distintas y la consola sólo conocía una:
+ *
+ * - la **contratada**: un cupón vivo en una suscripción real de Stripe, con su
+ *   fecha de fin leída de la propia suscripción (`getActiveSubscriptionPromo`,
+ *   §152). Es lo que el cliente YA paga.
+ * - la **ofrecida**: la campaña abierta, para quien todavía no tiene
+ *   suscripción. Es lo que pagaría si contrata antes de `PROMO_ENDS_AT`.
+ *
+ * Quien está probando Pro gratis no tiene suscripción, así que no tenía la
+ * primera — y la consola le cotizaba 179 €/mes mientras `/precios` y el modal
+ * de cambio de plan, a dos clics, le decían 59 € (fundador, 2026-08-27).
+ *
+ * Devuelve el precio y CUÁL de las dos es, porque el copy no puede ser el
+ * mismo: confundirlas le diría a alguien en prueba que ya está pagando 59 €.
+ * `promoPlanIds` viene de `getActivePromoPlanIds()`, que exige fecha **y**
+ * cupón configurado en Stripe — así ninguna pantalla anuncia un descuento que
+ * el checkout no aplicaría.
+ */
+export function resolveShownPromoPrice({
+  plan,
+  activePromoPrice,
+  promoPlanIds
+}: {
+  plan: Pick<Plan, "id" | "promoPrice"> | null | undefined;
+  /** De la suscripción real, vía `usage.subscriptionPromo`. */
+  activePromoPrice?: number | null;
+  promoPlanIds: readonly string[];
+}): { price: number; kind: "contracted" | "offered" } | null {
+  if (typeof activePromoPrice === "number") return { price: activePromoPrice, kind: "contracted" };
+  if (!plan || plan.promoPrice === undefined) return null;
+  if (!promoPlanIds.includes(plan.id)) return null;
+  return { price: plan.promoPrice, kind: "offered" };
+}
+
 export function isPromoActive(now: Date = new Date()): boolean {
   return now.getTime() < new Date(PROMO_ENDS_AT).getTime();
 }
