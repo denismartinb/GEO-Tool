@@ -17885,3 +17885,92 @@ suite completa en verde), `pnpm run validate` (build + typecheck + lint).
 **Trazabilidad.** `scripts/cited-diff-validation.ts` ·
 `scripts/cited-diff-validation.test.ts` · `package.json`
 (`cited-diff:validate`); §39, §185.
+
+---
+
+## 187. AUDIT-REPRO-1: las seis acciones de Recomendaciones dejan de ser "no sabemos" (Fase 0, 2026-08-27)
+
+**El problema.** El hallazgo peor puntuado del informe de auditoría externa
+(fiabilidad funcional 4,0) decía que seis CTAs de Recomendaciones — generar
+FAQ/brief/comparativa, exportar el plan, marcar como hecho, activar
+seguimiento diario — "no dieron feedback ni resultado" durante la prueba. El
+código decía otra cosa: `handleRewrite` y `handleDismiss` sí tienen estado de
+carga y de error visibles (`recommendations-client.tsx`). `docs/external-
+audit-2026-08.md` (Fase 0) llamó a esto lo que era: dos lecturas incompatibles
+que el plan no podía resolver sin instrumentación real, y clasificó la Fase 4
+(el arreglo) como bloqueada hasta que existiera un veredicto por acción con
+evidencia.
+
+**Qué se ha construido.** `tests/pilot/journeys/actions/recommendation-
+actions.spec.ts` — un journey nuevo del piloto, aislado como su propio
+proyecto de Playwright (`playwright.config.ts`), alcanzable sólo por
+`--journeys actions` (`scripts/pilot.mjs`, `PROJECT_SETS`), nunca por el
+piloto siempre-activo. Recorre las cuatro superficies reales de las seis
+acciones sobre el proyecto de escritura reservado y clasifica cada una como
+`real` (efecto observable con su tiempo), `invisible` (sin efecto, reproduce
+el hallazgo del auditor) o `entorno` (posible falso positivo del navegador
+headless, documentado igualmente porque es real para cualquier usuario con el
+mismo bloqueo).
+
+**Un matiz que el plan original no tenía.** "Generar FAQ/brief/comparativa"
+no son tres botones: son tres de ~12 etiquetas posibles de UN handler
+(`handleRewrite`), cuya etiqueta depende de `recommendation_type` — y qué
+tipos existan depende de lo que produjo el último escaneo del proyecto
+reservado, que no es controlable desde el journey. El spec prueba el
+generador que exista, no los tres por nombre, y lo deja escrito en el propio
+fichero para que una sesión futura no lo lea como una omisión.
+
+**Decisión del fundador sobre «Marcar como hecho»** (2026-08-27, vía
+AskUserQuestion): el producto no tiene deshacer para esta acción hoy — eso lo
+añade la Fase 4 — así que probarla de verdad consume una recomendación real
+del proyecto reservado, sin restauración posible desde la UI hasta el
+próximo escaneo completo. Tres alternativas sobre la mesa: clasificar sólo
+por lectura de código (no prueba nada nuevo); pulsarla y aceptar la pérdida;
+o añadir una escritura directa a Supabase para revertirla (rompería la
+convención del piloto de actuar sólo por clics reales). El fundador eligió
+pulsarla y aceptar la pérdida. Queda documentado como **tercera excepción
+aprobada** al alcance de escritura del piloto (`CLAUDE.md`, junto a UX-
+PILOT-2a y UX-PILOT-3) — y es la primera que rompe deliberadamente la regla
+de idempotencia que las otras dos sostienen, con esa ruptura anotada
+explícitamente en vez de glosada.
+
+**Cerradura estructural, no de convención**, mismo patrón que UX-PILOT-3:
+`checkActionsLockout` (`scripts/pilot-selfcheck-checks.mjs`, cubierta en
+`tests/pilot/support/selfcheck-checks.test.ts`) prueba que el run por defecto
+del piloto nunca alcanza el journey nuevo, y `scripts/pilot-selfcheck.mjs` lo
+ejecuta en cada pasada del self-check.
+
+**Lo que esta fase NO hace.** No arregla ninguna de las seis acciones — ni
+añade el contrato de acción uniforme, ni el deshacer de «Marcar como hecho»,
+ni la salida alternativa de exportación. Eso es la Fase 4
+(`ACTIONS-OBSERVABLE-1`), que estaba bloqueada precisamente por no tener este
+veredicto y ahora puede planificarse sobre datos reales en vez de sobre las
+dos lecturas contradictorias del informe.
+
+**Regla de premisa** (Corrección E, ya escrita en `CLAUDE.md`, "Cierre de
+fase"): esta fase no retira ningún camino de recuperación, así que no le
+aplica — se anota aquí sólo para dejar constancia de que se comprobó.
+
+**Comprobado.** `pnpm test` (213/213, 2.938/2.938), `pnpm run validate`
+(build + typecheck + lint), todo en verde. El self-check real del piloto
+(`pnpm pilot:selfcheck`) no se ha ejecutado en esta sesión — depende de un
+servidor de fixtures y de Playwright con red, fuera del alcance de este
+entorno; lo ejecutará CI sobre el PR.
+
+**Trazabilidad.** `tests/pilot/journeys/actions/recommendation-
+actions.spec.ts`; `playwright.config.ts` (proyecto `actions`); `scripts/
+pilot.mjs` (`PROJECT_SETS.actions`, `isActions` en `writeSummaryMarkdown`);
+`scripts/pilot-selfcheck-checks.mjs` (`checkActionsLockout`); `scripts/pilot-
+selfcheck.mjs`; `tests/pilot/support/selfcheck-checks.test.ts`; `CLAUDE.md`
+("Cierre de fase" regla 4, "cobertura no vista", tercera excepción de
+escritura); `docs/external-audit-2026-08.md` Fase 0.
+
+**Nota de numeración.** Nació como §181 sobre una `main` que llegaba al §180
+(PRICING-PAY-BADGES-CENTER-1, #495), y ha ido perdiendo esa carrera cuatro
+veces mientras la rama seguía abierta — §181→§182 (RECS-LOOP-1 Fase A, #492),
+§182→§184 (TRUST-PROMISES-1 #494 + TRUST-METRICS-1 #493 mergearon primero),
+§184→§185 (FOOTER-PAYMENT-TRUST-1, #496), y ahora §185→**§187**
+(CITATION-REDIRECT-SSRF-1 #499 y CITED-DIFF-1 Fase 0 #500 mergearon primero,
+reclamando §185 y §186), con todas sus referencias (`grep -rn "§187"`). Mismo
+protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185 de
+este mismo fichero.

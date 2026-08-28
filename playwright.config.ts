@@ -145,6 +145,26 @@ export default defineConfig({
         isMobile: false,
         storageState: ".pilot/auth.json"
       }
+    },
+    {
+      // AUDIT-REPRO-1 (Fase 0). Su propio proyecto, no un fichero dentro de
+      // `write` — mismo argumento que `scan` frente a `write`: el flag que lo
+      // alcanza (`--journeys actions`) tiene que ser una cosa del código, no
+      // de convención, y `PROJECT_SETS` en `scripts/pilot.mjs` sólo lo añade
+      // cuando alguien lo pide explícitamente. El siempre-activo nunca lo
+      // toca. Reutiliza el proyecto de escritura como objetivo (mismo
+      // `storageState`, mismo dominio reservado) — el aislamiento es de
+      // ejecución, no de destino.
+      name: "actions",
+      testMatch: "**/journeys/actions/*.spec.ts",
+      dependencies: ["auth"],
+      timeout: 90_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: VIEWPORTS[2].width, height: VIEWPORTS[2].height },
+        isMobile: false,
+        storageState: ".pilot/auth.json"
+      }
     }
   ]
 });

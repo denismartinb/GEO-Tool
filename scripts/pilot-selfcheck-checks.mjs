@@ -97,3 +97,32 @@ export function checkScanLockout(findings) {
 
   return { ok: true, message: `default read run reached 0 scan journeys across ${findings.length} pages` };
 }
+
+/**
+ * Did the always-on, per-deploy run stay away from the one journey that
+ * dismisses a real recommendation with no undo (AUDIT-REPRO-1, Fase 0 of
+ * docs/external-audit-2026-08.md)?
+ *
+ * Same shape as `checkScanLockout`, deliberately: `journeys/actions/*.spec.ts`
+ * is matched only by the `actions` Playwright project, which `PROJECT_SETS`
+ * in scripts/pilot.mjs includes only for an explicit `--journeys actions` —
+ * structural until this behavioural check on the default invocation proves
+ * it holds. Money and irreversible product state get the same treatment: an
+ * exclusion list one refactor away from silently widening is not a lock.
+ */
+export function checkActionsLockout(findings) {
+  const leaked = findings.filter(
+    (f) => f.label?.startsWith("actions-") || f.viewport === "actions" || f.path?.includes("/actions")
+  );
+
+  if (leaked.length > 0) {
+    return {
+      ok: false,
+      message:
+        `the default read run reached ${leaked.length} actions journey page(s) — ` +
+        `e.g. "${leaked[0].label}". The per-deploy pilot must never dismiss a real recommendation.`
+    };
+  }
+
+  return { ok: true, message: `default read run reached 0 actions journeys across ${findings.length} pages` };
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error -- plain .mjs module, no types; the self-check is not TypeScript.
-import { checkCaptureDepth, checkScanLockout, pngHeightFrom } from "../../../scripts/pilot-selfcheck-checks.mjs";
+import { checkActionsLockout, checkCaptureDepth, checkScanLockout, pngHeightFrom } from "../../../scripts/pilot-selfcheck-checks.mjs";
 
 /**
  * The self-check guards the harness; these guard the self-check.
@@ -95,6 +95,37 @@ describe("checkScanLockout", () => {
     expect(checkScanLockout([{ label: "anything", viewport: "desktop", path: "/scan/whatever" }]).ok).toBe(
       false
     );
+  });
+});
+
+describe("checkActionsLockout", () => {
+  it("passes when the default read run touched no actions journey", () => {
+    const result = checkActionsLockout([
+      { label: "overview", viewport: "desktop", path: "/dashboard/projects/1" },
+      { label: "recommendations", viewport: "mobile", path: "/dashboard/projects/1/recommendations" }
+    ]);
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("0 actions journeys");
+  });
+
+  it("FAILS when the actions journey leaked into the per-deploy set — a real recommendation would be dismissed on every preview", () => {
+    const result = checkActionsLockout([
+      { label: "overview", viewport: "desktop", path: "/dashboard/projects/1" },
+      { label: "actions-recommendations", viewport: "actions", path: "/dashboard/projects/1/recommendations" }
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("actions-recommendations");
+    expect(result.message).toContain("must never dismiss a real recommendation");
+  });
+
+  it("catches the leak by viewport as well as by label", () => {
+    expect(checkActionsLockout([{ label: "runs", viewport: "actions", path: "/x" }]).ok).toBe(false);
+  });
+
+  it("catches it by path, so a renamed label cannot hide it", () => {
+    expect(
+      checkActionsLockout([{ label: "anything", viewport: "desktop", path: "/actions/whatever" }]).ok
+    ).toBe(false);
   });
 });
 
