@@ -220,7 +220,7 @@ paths:
   hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
   `ScanStatePill` del sticky-header, nunca tapando el backlog.
 
-## Verificación de la predicción (RECS-LOOP-1 Fase A, ADR 0041, log §181)
+## Verificación de la predicción (RECS-LOOP-1 Fase A+B, ADR 0041, log §181, §189)
 
 - **Nunca un delta de score entre dos runs.** Se evaluó y se rechazó
   explícitamente: no es atribuible (el compuesto/componente se mueve por
@@ -256,16 +256,63 @@ paths:
 - **Sin migración, y a propósito.** La promesa es derivable:
   `computeRecommendationPotentialPoints` es pura y `scan_prompt_results` es
   inmutable tras completar el run. No se congela nada en una columna nueva.
-- **Una fila `dismissed` no tiene veredicto — no es lo mismo que "sin
-  confirmar todavía".** `dismissRecommendationCore` nunca escribe
-  `resolved_in_run_id`, así que no hay run contra el que comprobar nada.
-  Fase B, con Task Intake propio, no una extensión silenciosa de ésta.
 - **El dedupe del historial de "Resueltas" incluye `resolved_in_run_id` en
   su clave**, no sólo el título — de lo contrario una brecha que se
   resolvió, reabrió y se resolvió otra vez se colapsa en una sola tarjeta,
   perdiendo la más antigua. El duplicado de dos motores sobre el mismo
   prompt (la razón original del dedupe por título) sigue colapsando porque
   comparte el mismo `resolved_in_run_id`.
+- **Una fila `dismissed` sí tiene veredicto (Fase B, `lib/recommendations/
+  dismissal-recurrence.ts`), pero nunca vía `resolved_in_run_id`.**
+  `dismissRecommendationCore` no lo escribe — dismissal es un clic manual, no
+  algo que el sistema detecte re-escaneando — así que el ancla es el PRIMER
+  `scan_runs` completado con `created_at` posterior al `updated_at` de la
+  fila descartada (nunca `finished_at`: un run en vuelo en el momento del
+  clic no cuenta como observación posterior a él). Fijo una vez, nunca una
+  comprobación rodante contra "el run más reciente" — mismo principio que
+  Fase A ya fija su propio ancla y no la vuelve a mover.
+- **El campo que lleva esa ancla en `prediction-verification.ts` se llama
+  `anchorRunId`, no `resolvedInRunId`.** Sirve a los dos llamadores (Fase A:
+  el run que confirmó una resolución automática; Fase B: el run ancla de una
+  recurrencia) y el nombre viejo mentiría sobre el segundo caso. No renombrar
+  de vuelta aunque un solo llamador parezca más simple.
+- **Un run ancla sin ninguna fila de `recommendations` → sin veredicto,
+  nunca "la brecha se fue".** Indistinguible desde este módulo de un fallo
+  del `INSERT` de finalize (RECS-FINALIZE-DURABILITY-1 ya sabe que puede
+  ocurrir, registrado, no fatal) — leer un run vacío como "resuelto"
+  publicaría una victoria causada por un fallo de persistencia.
+- **La reaparición se afirma; la conclusión sobre lo que el usuario hizo o
+  dejó de hacer, nunca.** Que la brecha vuelva es evidencia de que sigue ahí
+  — no de que el usuario no hiciera el trabajo (publicar algo el día 12
+  puede no haber propagado a un motor el día 13, y en un motor no-grounded
+  puede no propagar nunca). Ningún umbral de espera artificial ("dale 7
+  días") compensa esto: sería una constante fabricada sin dato detrás.
+- **El detalle de mutación de Fase A y el veredicto de recurrencia de Fase B
+  nunca se muestran juntos para la rama "volvió".** Si la brecha reapareció,
+  "la IA te nombró en 1 de 2 consultas" es una respuesta a una pregunta que
+  ya no importa — sólo se calcula/enseña el detalle de mutación en la rama
+  "no volvió".
+- **El copy de una fila `dismissed` nunca dice "en el escaneo que lo
+  confirmó"** (esa frase es de Fase A, algo se confirmó de verdad ahí):
+  nombra la fecha del propio run ancla ("El escaneo del 25 ago 2026 ya no la
+  encontró"), distinta a propósito de `dateLabel` (la fecha del descarte)
+  que ya lleva la tarjeta — dos fechas, dos hechos, nunca fundidas.
+- **La tarjeta activa que vuelve lleva su propia memoria, con la fecha del
+  descarte, no la del run ancla.** `recommendation-history.ts` reinicia
+  `consecutive_runs_open` a 1 correctamente cuando una fila `dismissed`
+  reaparece (es una racha nueva) — pero sin la insignia "La marcaste como
+  hecha el 12 ago 2026" la tarjeta se ve como si fuera nueva de verdad, y el
+  usuario pierde el contexto de que ya la marcó una vez. Keyed on
+  `dedupe_key`, nunca en el id de la fila descartada (una fila nueva cada
+  vez que la brecha reaparece).
+- **La asimetría que motivó Fase B, para no reintroducirla:**
+  `computeRecommendationTransition`'s `resolvedDedupeKeys` ya excluye
+  `status === "dismissed"` (correcto — una fila descartada no es una
+  resolución automática), pero eso significa que arreglar una brecha SIN
+  pulsar "Marcar como hecho" cuenta como Victoria reciente y arreglar la
+  MISMA brecha pulsándolo no cuenta nunca. Cualquier cambio futuro a esa
+  exclusión tiene que preservar que el botón nunca deje al usuario peor que
+  no haberlo pulsado.
 
 ## Honestidad de lo que se genera (RECS-USEFULNESS-1 Fase C, log §128)
 

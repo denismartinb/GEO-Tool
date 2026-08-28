@@ -23,10 +23,17 @@ import {
  * What this module checks instead is narrower and factual: did the SPECIFIC
  * mutation the potential-points estimate assumed (lib/scoring/run-scoring.ts,
  * getRecommendationPotentialKind) actually occur, on the SAME prompts this
- * card cited, in the run that confirmed the gap gone? That is an observation
- * over n rows, not an inference over a population — no confidence band is
- * computed or needed, and a single verified prompt is a valid, complete
- * answer to "did it happen".
+ * card cited, in one specific later run? That is an observation over n rows,
+ * not an inference over a population — no confidence band is computed or
+ * needed, and a single verified prompt is a valid, complete answer to "did it
+ * happen".
+ *
+ * That later run is `anchorRunId` — for a `resolved` row (Fase A) it's
+ * `resolved_in_run_id`, the run the system itself detected as confirming the
+ * gap gone; for a `dismissed` row (Fase B, lib/recommendations/dismissal-
+ * recurrence.ts) it's the first completed run after the dismissal, since a
+ * manual dismissal has no equivalent system-detected confirming event. Same
+ * mechanism either way — this module never needs to know which case it is.
  */
 
 export type VerificationRow = {
@@ -62,7 +69,9 @@ export type AffectedPromptContext = {
 export type RecommendationToVerify = {
   id: string;
   recommendationType: string;
-  resolvedInRunId: string | null;
+  /** The later run to check against — see the module doc for what this is
+   *  per caller (Fase A's `resolved_in_run_id` vs Fase B's computed anchor). */
+  anchorRunId: string | null;
   affectedPrompts: readonly AffectedPromptContext[];
 };
 
@@ -120,7 +129,7 @@ export function verifyRecommendationPredictions(opts: {
 
   for (const rec of opts.recommendations) {
     const kind = getRecommendationPotentialKind(rec.recommendationType);
-    if (!kind || !rec.resolvedInRunId || rec.affectedPrompts.length === 0) {
+    if (!kind || !rec.anchorRunId || rec.affectedPrompts.length === 0) {
       out.set(rec.id, { status: "no_verdict" });
       continue;
     }
@@ -132,8 +141,8 @@ export function verifyRecommendationPredictions(opts: {
       const promptId = opts.oldResultIdToPromptId.get(affected.resultId);
       if (!promptId) continue; // prompt deleted since, or untranslatable — fail closed, skip
 
-      const rows = opts.newRunRowsByRunAndPrompt.get(`${rec.resolvedInRunId}:${promptId}`);
-      if (!rows || rows.length === 0) continue; // no matching row in the confirming run — skip
+      const rows = opts.newRunRowsByRunAndPrompt.get(`${rec.anchorRunId}:${promptId}`);
+      if (!rows || rows.length === 0) continue; // no matching row in the anchor run — skip
 
       for (const row of rows) {
         totalCount += 1;

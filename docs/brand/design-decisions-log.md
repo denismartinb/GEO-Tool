@@ -18046,3 +18046,93 @@ no tienen:
 
 **Trazabilidad.** `lib/scan/executor.ts` · `lib/scan/executor.test.ts`;
 consulta previa a `data-guardian` sin código propio, sólo el hallazgo.
+
+---
+
+## 189. RECS-LOOP-1 Fase B: la brecha marcada como hecha que vuelve deja de parecer nueva (ADR 0041 adenda, 2026-08-28)
+
+**El encargo llegó como "el hueco que dejó Fase A"**, y `geo-strategy` corrigió
+el planteamiento antes de escribir una línea de código. Primer error propio:
+el botón no dice "descartar" — dice **"Marcar como hecho"**
+(`recommendations-client.tsx:986`, badge del historial "Marcada como hecha").
+No hay un "no me aplica" en el producto; `dismiss` es sólo el nombre interno
+de la columna. Eso disuelve la duda de si verificar una fila descartada
+cuestiona un juicio de negocio del usuario: no lo hace, comprueba una
+afirmación fáctica ("esto está hecho"), exactamente lo que ADR 0017 §5
+prometió y Fase A ya hace para las resueltas.
+
+**El hueco real no estaba donde yo lo buscaba.** No es que la pestaña
+"Resueltas" se quede muda en una fila descartada (aunque también) — es una
+asimetría de producto verificada en código:
+`lib/recommendations/recommendation-history.ts:42` excluye explícitamente
+`status !== "dismissed"` de `resolvedDedupeKeys`, así que una brecha que se
+arregla SIN pulsar el botón cuenta como "Victoria reciente" con su veredicto
+(Fase A); la misma brecha arreglada PULSANDO el botón no cuenta nunca. **El
+producto penalizaba usar su propio botón.** Y el reverso, verificado en la
+línea 50 del mismo fichero: cuando una brecha marcada como hecha reaparece,
+la racha (`consecutive_runs_open`) se reinicia a 1 correctamente — pero la
+tarjeta activa vuelve sin ninguna marca que diga "esto ya se intentó", así
+que se ve como si fuera nueva.
+
+**El mecanismo, sin inventar un criterio de "verificado" nuevo.** La señal es
+la misma que `computeRecommendationTransition` ya usa para decidir
+"resuelta": ¿reapareció el `dedupe_key`? Aplicada a un solo run fijo en vez de
+cada run futuro, para que la respuesta sea una observación fechada y no una
+cifra que cambia de veredicto bajo una fila ya renderizada (mismo principio
+que ADR 0041 §6 ya fijó para Fase A). El ancla:
+`lib/recommendations/dismissal-recurrence.ts`, primer `scan_runs` completado
+con `created_at` posterior al `updated_at` de la fila descartada —
+`created_at`, no `finished_at`, para que ningún run en vuelo en el momento
+del clic cuente como observación posterior al clic. `updated_at` de una fila
+`dismissed` es fiable porque, tras RECS-FINALIZE-DURABILITY-1 (§188), ninguna
+escritura de finalize toca una fila que no sea `status='active'`.
+
+**Tres guardas fail-closed, la más importante de las tres:** un run ancla sin
+ninguna fila de `recommendations` en absoluto → sin veredicto, nunca "la
+brecha se fue". Un run con cero filas es indistinguible desde este módulo de
+un fallo del `INSERT` que RECS-FINALIZE-DURABILITY-1 ya sabe que puede
+ocurrir (registrado, no fatal) — leerlo como "brecha resuelta" publicaría una
+victoria causada por un fallo de persistencia. Las otras dos: `dedupe_key`
+vacío (filas anteriores a RECS-3) → sin veredicto permanente; sin escaneo
+completado todavía tras el descarte → silencio, nunca un placeholder.
+
+**Dos superficies, un solo cálculo.** La pestaña "Resueltas" enseña la
+observación fechada ("El escaneo del 25 ago 2026 ya no la encontró" / "...
+volvió a encontrarla") — nunca "en el escaneo que lo confirmó", porque aquí
+no confirmó nadie nada, sólo se observó más tarde. El detalle de Fase A
+(mutación concreta: presencia/prominencia/autoridad) sólo se añade en la
+rama "no volvió" — mostrar "la IA te nombró en 1 de 2" junto a "volvió a
+aparecer" respondería una pregunta que nadie hizo mientras entierra la que
+importa. Y la tarjeta ACTIVA que vuelve lleva su propia insignia, con la
+fecha del descarte (no la del run ancla): "La marcaste como hecha el 12 ago
+2026" — dos fechas distintas a propósito, la del clic y la de la
+observación, nunca fundidas en una.
+
+**Lo que Fase B no hace.** No escribe `resolved_in_run_id` en una fila
+descartada — cambiaría el significado de la columna y volvería ambiguas las
+dos insignias del historial. No captura motivo del descarte ni añade
+deshacer — eso es esquema/migración y el deshacer ya está adjudicado a la
+Fase 4 de `docs/external-audit-2026-08.md` (decisión del fundador,
+2026-08-27). Sólo lecturas, sin migración.
+
+**Renombrado, no comportamiento nuevo.** `RecommendationToVerify.resolvedInRunId`
+pasa a `anchorRunId` en `lib/recommendations/prediction-verification.ts`: el
+mismo mecanismo sirve ahora a dos llamadores (el run que confirmó una
+resolución automática, o el run ancla de una recurrencia comprobada), y el
+nombre antiguo mentiría sobre el segundo caso — "resolved" cuando nada se
+resolvió. `verifyRecommendationPredictions` en sí no cambia.
+
+**Comprobado.** `lib/recommendations/dismissal-recurrence.test.ts` (9 tests:
+las dos ramas, las tres guardas, selección del run más temprano tras el
+descarte, filas independientes en una sola llamada) · tests nuevos en
+`recommendations-client.test.tsx` (las tres formas de la línea de veredicto,
+la insignia de la tarjeta activa) · `pnpm test` (3.032/3.032) · `pnpm run
+validate` (build + typecheck + lint).
+
+**Trazabilidad.** `lib/recommendations/dismissal-recurrence.ts` ·
+`lib/recommendations/dismissal-recurrence.test.ts` ·
+`lib/recommendations/prediction-verification.ts` (renombrado) ·
+`app/dashboard/projects/[projectId]/recommendations/page.tsx` ·
+`app/dashboard/projects/[projectId]/recommendations/recommendations-client.tsx` ·
+`docs/adr/0041-recommendation-prediction-verification.md` (adenda); §181,
+§188. Consulta previa a `geo-strategy`.

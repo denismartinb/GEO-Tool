@@ -253,3 +253,76 @@ describe("predictionVerdictLine — RECS-LOOP-1 Fase A", () => {
     expect(line).toContain("3 de 4");
   });
 });
+
+describe("predictionVerdictLine — RECS-LOOP-1 Fase B (fila dismissed)", () => {
+  const dismissedItem = (over: Partial<ResolvedHistoryItem> = {}): ResolvedHistoryItem => ({
+    id: "h1",
+    title: "Título",
+    description: "Descripción",
+    recommendation_type: "increase_brand_visibility",
+    status: "dismissed",
+    updated_at: "2026-08-10T00:00:00Z",
+    ...over
+  });
+
+  it("silencio (null) cuando no hay recurrence, o es no_verdict", () => {
+    expect(predictionVerdictLine(dismissedItem())).toBeNull();
+    expect(predictionVerdictLine(dismissedItem({ recurrence: null }))).toBeNull();
+    expect(predictionVerdictLine(dismissedItem({ recurrence: { status: "no_verdict" } }))).toBeNull();
+  });
+
+  it("recurred: nombra la fecha del escaneo ancla, nunca 'el escaneo que lo confirmó' (aquí no confirmó nadie nada)", () => {
+    const line = predictionVerdictLine(
+      dismissedItem({
+        recurrence: { status: "recurred", anchorRunId: "run-a", anchorRunCreatedAt: "2026-08-15T00:00:00Z" }
+      })
+    );
+    expect(line).toContain("volvió a encontrarla");
+    expect(line).not.toContain("En el escaneo que lo confirmó");
+  });
+
+  it("did_not_recur sin detalle de Fase A: sólo la observación fechada", () => {
+    const line = predictionVerdictLine(
+      dismissedItem({
+        recurrence: { status: "did_not_recur", anchorRunId: "run-a", anchorRunCreatedAt: "2026-08-15T00:00:00Z" }
+      })
+    );
+    expect(line).toContain("ya no la encontró");
+    expect(line).not.toContain("volvió");
+  });
+
+  it("did_not_recur CON detalle de Fase A: la observación fechada más la cláusula de mutación, nunca las dos fechas confundidas", () => {
+    const line = predictionVerdictLine(
+      dismissedItem({
+        recurrence: { status: "did_not_recur", anchorRunId: "run-a", anchorRunCreatedAt: "2026-08-15T00:00:00Z" },
+        verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 1, totalCount: 1 } }
+      })
+    );
+    expect(line).toContain("ya no la encontró");
+    expect(line).toContain("La IA te nombró");
+  });
+
+  it("recurred NUNCA lleva el detalle de Fase A, aunque venga un veredicto verificado por error", () => {
+    const line = predictionVerdictLine(
+      dismissedItem({
+        recurrence: { status: "recurred", anchorRunId: "run-a", anchorRunCreatedAt: "2026-08-15T00:00:00Z" },
+        verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 1, totalCount: 1 } }
+      })
+    );
+    expect(line).toBe("El escaneo del 15 ago 2026 volvió a encontrarla.");
+  });
+});
+
+describe("RecCard — insignia de reaparición (RECS-LOOP-1 Fase B)", () => {
+  it("no pinta nada para una tarjeta que nunca se marcó como hecha", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec()} />);
+    expect(html).not.toContain("La marcaste como hecha");
+  });
+
+  it("pinta la fecha del descarte cuando la brecha volvió tras marcarse como hecha", () => {
+    const html = renderToStaticMarkup(
+      <RecCard projectId="p1" rec={baseRec({ previouslyMarkedDoneAt: "2026-08-12T00:00:00Z" })} />
+    );
+    expect(html).toContain("La marcaste como hecha el 12 ago 2026");
+  });
+});

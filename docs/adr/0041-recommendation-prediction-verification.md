@@ -157,3 +157,43 @@ column: the promise is derivable on demand from immutable
 - `evidence_json.affected_prompt_details[].competitors` becomes load-bearing
   for a second purpose (prominence verification, not just original-evidence
   display) for `increase_brand_prominence` cards specifically.
+
+## Addendum (2026-08-28) — both "Deferred" items closed, one corrected
+
+**"A live durability bug" was not live.** Re-investigated by `data-guardian`
+before RECS-LOOP-1 Fase B, with the specific reproduction path this ADR
+implied — a finalize retry racing a user's dismissal — traced end to end.
+It does not exist: `executePendingScan` returns for any terminal run before
+it ever reads the `jobs` table (its own entry guard, in place since
+2026-08-13, PR #394), so finalize cannot re-run against a run a user could
+already have dismissed a card from. What WAS real, found in the same pass:
+the delete lacked the `status='active'` scope its two neighbors already had,
+and neither the delete nor the insert checked its error — a latent hazard
+(safe only by depending on an unrelated guard) plus a live-but-different bug
+(an unchecked failure could silently duplicate or zero out a run's
+recommendations). Fixed as RECS-FINALIZE-DURABILITY-1 regardless of the
+original claim being wrong (log §188) — this correction exists so a future
+session reads this ADR's original "Deferred" line as superseded, not as
+still-open.
+
+**`dismissed` rows now get a verdict — RECS-LOOP-1 Fase B (log §189).** Not
+via `resolved_in_run_id` (still never written for a dismissed row, and
+still correctly excluded from `resolvedDedupeKeys`) — via a second anchor
+mechanism, `lib/recommendations/dismissal-recurrence.ts`: the first
+completed run after the dismissal, checking whether the gap's `dedupe_key`
+reappeared. Same "pin once" shape as §54 above (Fase A never re-checks a
+resolved row either), same fail-closed guard shape as §5 (an anchor run with
+zero recommendation rows is indistinguishable from a persistence failure,
+so it stays "no verdict" rather than reading as "the gap is gone"). See
+`.claude/rules/recommendations.md` "Verificación de la predicción" for the
+full mechanism and the copy rules (never "en el escaneo que lo confirmó" for
+a dismissed row — nothing was confirmed by a manual click).
+
+The methodology question Fase B actually turned on was not "does dismissal
+deserve a verdict" but a concrete product asymmetry
+`recommendation-history.ts:42` already encoded: a gap that resolves without
+the "Marcar como hecho" button counts as a win; the same gap resolved BY the
+button never did. `RecommendationToVerify.resolvedInRunId` renamed to
+`anchorRunId` (pure rename, `verifyRecommendationPredictions` itself
+unchanged) since the field now serves both callers and the old name would
+misdescribe the second one.

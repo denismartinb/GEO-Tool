@@ -17,7 +17,7 @@ function rec(overrides: Partial<RecommendationToVerify> = {}): RecommendationToV
   return {
     id: "rec-1",
     recommendationType: "increase_brand_visibility",
-    resolvedInRunId: RUN_B,
+    anchorRunId: RUN_B,
     affectedPrompts: [{ resultId: "result-a1", competitors: [] }],
     ...overrides
   };
@@ -224,7 +224,7 @@ describe("verifyRecommendationPredictions", () => {
 
   it("no_verdict when there is no confirming run (dismissed, never auto-resolved)", () => {
     const out = verifyRecommendationPredictions({
-      recommendations: [rec({ resolvedInRunId: null })],
+      recommendations: [rec({ anchorRunId: null })],
       oldResultIdToPromptId: new Map([["result-a1", "prompt-1"]]),
       newRunRowsByRunAndPrompt: new Map(),
       projectDomain: "example.com"
