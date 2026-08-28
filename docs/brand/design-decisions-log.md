@@ -17734,3 +17734,82 @@ así que esta sección —la que no estaba en `main`— renumera de nuevo, ahora
 `components/marketing-content-links.ts` (`MARKETING_SHELLS`) ·
 `app/globals.css` (`.lp-footer-pay`) ·
 `components/marketing/payment-badges.test.ts`; §36, §46, §148, §149, §177, §180.
+
+---
+
+## 185. `resolveGroundingRedirect` seguía redirecciones de terceros sin guardián SSRF (CITATION-REDIRECT-SSRF-1, 2026-08-27)
+
+**El hallazgo, encontrado de pasada.** Investigando la viabilidad de CITED-DIFF-1
+(traer el contenido de la página citada de un competidor), `data-guardian`
+comparó `lib/scan/citation-resolution.ts` con `lib/web-audit/fetch-page.ts` —
+el único otro módulo de este repo que sigue redirecciones de un host que no
+controlamos — y encontró que el primero usa `fetch(uri, { redirect: "follow" })`
+sin ninguna verificación de host: ni resolución de IP previa, ni rechazo de
+IP privada/reservada, ni reverificación salto a salto. `fetch-page.ts` sí
+tiene las tres, y su propia cabecera explica por qué hacen falta: *"the
+audited domain's own server ... can redirect anywhere, including an internal
+address. Every hop is verified BEFORE it's followed, not after."* Mismo
+razonamiento, mismo repositorio, un módulo lo aplicaba y el otro no.
+
+**Severidad: media, no crítica.** El cuerpo de la respuesta nunca se lee —
+sólo `response.url` — así que es SSRF ciego con reflexión de URL, no un canal
+de lectura. Por la ruta de `extraction.ts` la URL final resuelta acaba
+persistida como `domain` de la cita, visible en "Páginas fuente más citadas";
+por la de `technical-audit.ts` se descarta tras usarse. Explotarlo exige
+influir en qué indexa/cita un motor con grounding — costoso, no una frontera
+de seguridad rota hoy.
+
+**Por qué se arregla ahora y no como deuda aparte.** Ninguna fase nueva lo
+exige todavía —CITED-DIFF-1 sigue sin aprobar más allá de su Fase 0—, pero
+**cualquier fase que llegue a leer el CUERPO de esa respuesta convertiría este
+mismo hueco en un canal de exfiltración**, y el arreglo es barato e
+independiente: importar los guardianes que `fetch-page.ts` ya exporta y
+expone probados (`hostnameResolvesToPublicIp`), nunca reimplementarlos.
+
+**La decisión.** `resolveGroundingRedirect` pasa a seguir redirecciones a
+mano, verificando cada salto con `hostnameResolvesToPublicIp` (importado, no
+copiado) antes de conectar, exactamente como `fetchPageSafely`. Dos
+diferencias deliberadas frente a ese módulo, porque el problema no es el
+mismo:
+
+- **Sin lista de dominio permitido.** `fetch-page.ts` sólo permite el dominio
+  propio del proyecto; este resolver, por diseño, tiene que poder aterrizar
+  en cualquier sitio público legítimo — es lo que hace útil resolver una
+  cita. Lo único que se rechaza es una IP privada/reservada o un host
+  IP-literal, nunca un dominio por no ser el nuestro.
+- **Un único plazo absoluto por intento (HEAD, luego GET), no uno nuevo por
+  salto.** ADR 0006 ya señalaba la resolución de redirecciones como el riesgo
+  dominante del presupuesto síncrono de 60s del escaneo (ADR 0003); sumarle
+  una comprobación DNS de hasta 3s por cada uno de varios saltos sin un techo
+  compartido repetiría la lección de ADR 0029 que `.claude/rules/scan.md` ya
+  tiene escrita: *"budget against the invocation, not against itself"*. El
+  plazo se calcula una vez al entrar en cada intento y se reparte entre todos
+  sus saltos — mismo techo total que antes (~2500ms por intento), nunca más.
+
+**Deliberadamente descartada la opción barata.** Aprovechar este mismo fetch
+para traer también el cuerpo de la página (el "atajo" que CITED-DIFF-1
+consideraba para su fase permanente) se descartó explícitamente: lo que hace
+barato ese atajo es justo `redirect: "follow"`, la propiedad que este PR
+quita. Sin ella deja de ser un atajo — es el fetcher genérico completo, y
+pagarlo aquí sería pagarlo en el peor sitio (dentro del presupuesto síncrono
+del escaneo).
+
+**Cero cambio de comportamiento observable.** Mismo contrato de salida
+(`{ resolvedUrl }` o `null`), mismos dos intentos (HEAD con fallback a GET),
+mismo criterio de "seguimos en el host de redirección de Google = fallo". Lo
+único que cambia es que ahora cada salto se verifica antes de conectarse, y
+un salto a IP privada/reservada devuelve `null` en vez de completarse.
+
+**Comprobado.** `pnpm test` (2.984/2.984), `pnpm run validate` (build +
+typecheck + lint), todo en verde. 19 tests nuevos/reescritos en
+`citation-resolution.test.ts`, incluido uno que verifica el rechazo real de
+una IP tipo `169.254.169.254` (metadata de nube) inyectada como destino de
+redirección.
+
+**Nota de numeración.** Nació como §184 sobre una `main` que llegaba al §183.
+Mientras esta rama seguía abierta, FOOTER-PAYMENT-TRUST-1 (#496) reclamó ese
+mismo §184 y mergeó primero, así que esta sección —la que no estaba en
+`main`— renumera a **§185**, con todas sus referencias (`grep -rn "§184"`
+apuntando a este PR: `CLAUDE.md` y `.claude/rules/scan.md`). Mismo protocolo
+que ya documentan los §159/§161/§163/§173/§175/§178/§182 de este mismo
+fichero.
