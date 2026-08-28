@@ -12,6 +12,7 @@ import { CitationsClient } from "./citations-client";
 import {
   aggregateCitations,
   compareOpportunityRows,
+  groupOpportunitiesByDomain,
   normalizeDomain,
   type CitationInputRow,
   type CitationRow
@@ -122,19 +123,31 @@ export default async function CitationsPage({
   // Competitor domains (already tracked in project_competitors) are excluded:
   // a brand will never earn a citation on a rival's own site. Unresolved
   // grounding citations (no domain) are excluded too: there's no address to
-  // reach out to. `competitors.length > 0` requires an actually TRACKED
-  // competitor to have been named in the evidence — founder review,
-  // 2026-08-02: rows that only mentioned an untracked "other brand" were
-  // slipping in here too, padding the list and forcing the row's "Cita a un
-  // competidor" fallback text to paper over having nothing real to name.
-  // Ranked by number of distinct engines citing the domain first
+  // reach out to.
+  //
+  // CITATIONS-HONESTY-1 (P0-09): this used to also require
+  // `competitors.length > 0` — an actually TRACKED competitor named in the
+  // same answer that cited the row. The external audit flagged that as an
+  // overstatement: `competitors` is what the ANSWER said, never what the
+  // PAGE says (see the field's doc comment in aggregate-citations.ts), so
+  // gating "this is a good outreach target" on it read as "this page already
+  // covers your rival" when nobody had read the page. A domain now qualifies
+  // on the one fact that IS checkable — the AI cites it and your domain is
+  // absent from those answers — and the competitor signal survives only as
+  // labeled, unverified context inside each group (see `coCitedCompetitors`
+  // below). Ranked by number of distinct engines citing the domain first
   // (ENGINES-VALUE-2), then by cited count — a source both Gemini and
   // ChatGPT cite is a stronger outreach target than one only one engine uses.
   const opportunityRows: CitationRow[] = citationRows
-    .filter(
-      (r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain && r.competitors.length > 0
-    )
+    .filter((r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain)
     .sort(compareOpportunityRows);
+
+  // Fase 8 deliverable 5: minimal prioritization of the (now much larger,
+  // since the competitor gate above was removed) outreach list — grouped by
+  // domain with frequency, engines and associated queries, instead of one
+  // row per URL. Full editorial `relevance_score` against sector/market is a
+  // later differentiation phase, not this one.
+  const opportunityGroups = groupOpportunitiesByDomain(opportunityRows);
 
   const scoreDetails =
     score?.details_json && typeof score.details_json === "object"
@@ -228,7 +241,7 @@ export default async function CitationsPage({
       ) : (
         <CitationsClient
           citationRows={citationRows}
-          opportunityRows={opportunityRows}
+          opportunityGroups={opportunityGroups}
           impactBreakdown={impactBreakdown}
           sourceTypeBreakdown={sourceTypeBreakdown}
           totalUrls={totalUrls}
