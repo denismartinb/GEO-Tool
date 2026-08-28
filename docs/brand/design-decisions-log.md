@@ -17737,7 +17737,158 @@ así que esta sección —la que no estaba en `main`— renumera de nuevo, ahora
 
 ---
 
-## 185. AUDIT-REPRO-1: las seis acciones de Recomendaciones dejan de ser "no sabemos" (Fase 0, 2026-08-27)
+## 185. `resolveGroundingRedirect` seguía redirecciones de terceros sin guardián SSRF (CITATION-REDIRECT-SSRF-1, 2026-08-27)
+
+**El hallazgo, encontrado de pasada.** Investigando la viabilidad de CITED-DIFF-1
+(traer el contenido de la página citada de un competidor), `data-guardian`
+comparó `lib/scan/citation-resolution.ts` con `lib/web-audit/fetch-page.ts` —
+el único otro módulo de este repo que sigue redirecciones de un host que no
+controlamos — y encontró que el primero usa `fetch(uri, { redirect: "follow" })`
+sin ninguna verificación de host: ni resolución de IP previa, ni rechazo de
+IP privada/reservada, ni reverificación salto a salto. `fetch-page.ts` sí
+tiene las tres, y su propia cabecera explica por qué hacen falta: *"the
+audited domain's own server ... can redirect anywhere, including an internal
+address. Every hop is verified BEFORE it's followed, not after."* Mismo
+razonamiento, mismo repositorio, un módulo lo aplicaba y el otro no.
+
+**Severidad: media, no crítica.** El cuerpo de la respuesta nunca se lee —
+sólo `response.url` — así que es SSRF ciego con reflexión de URL, no un canal
+de lectura. Por la ruta de `extraction.ts` la URL final resuelta acaba
+persistida como `domain` de la cita, visible en "Páginas fuente más citadas";
+por la de `technical-audit.ts` se descarta tras usarse. Explotarlo exige
+influir en qué indexa/cita un motor con grounding — costoso, no una frontera
+de seguridad rota hoy.
+
+**Por qué se arregla ahora y no como deuda aparte.** Ninguna fase nueva lo
+exige todavía —CITED-DIFF-1 sigue sin aprobar más allá de su Fase 0—, pero
+**cualquier fase que llegue a leer el CUERPO de esa respuesta convertiría este
+mismo hueco en un canal de exfiltración**, y el arreglo es barato e
+independiente: importar los guardianes que `fetch-page.ts` ya exporta y
+expone probados (`hostnameResolvesToPublicIp`), nunca reimplementarlos.
+
+**La decisión.** `resolveGroundingRedirect` pasa a seguir redirecciones a
+mano, verificando cada salto con `hostnameResolvesToPublicIp` (importado, no
+copiado) antes de conectar, exactamente como `fetchPageSafely`. Dos
+diferencias deliberadas frente a ese módulo, porque el problema no es el
+mismo:
+
+- **Sin lista de dominio permitido.** `fetch-page.ts` sólo permite el dominio
+  propio del proyecto; este resolver, por diseño, tiene que poder aterrizar
+  en cualquier sitio público legítimo — es lo que hace útil resolver una
+  cita. Lo único que se rechaza es una IP privada/reservada o un host
+  IP-literal, nunca un dominio por no ser el nuestro.
+- **Un único plazo absoluto por intento (HEAD, luego GET), no uno nuevo por
+  salto.** ADR 0006 ya señalaba la resolución de redirecciones como el riesgo
+  dominante del presupuesto síncrono de 60s del escaneo (ADR 0003); sumarle
+  una comprobación DNS de hasta 3s por cada uno de varios saltos sin un techo
+  compartido repetiría la lección de ADR 0029 que `.claude/rules/scan.md` ya
+  tiene escrita: *"budget against the invocation, not against itself"*. El
+  plazo se calcula una vez al entrar en cada intento y se reparte entre todos
+  sus saltos — mismo techo total que antes (~2500ms por intento), nunca más.
+
+**Deliberadamente descartada la opción barata.** Aprovechar este mismo fetch
+para traer también el cuerpo de la página (el "atajo" que CITED-DIFF-1
+consideraba para su fase permanente) se descartó explícitamente: lo que hace
+barato ese atajo es justo `redirect: "follow"`, la propiedad que este PR
+quita. Sin ella deja de ser un atajo — es el fetcher genérico completo, y
+pagarlo aquí sería pagarlo en el peor sitio (dentro del presupuesto síncrono
+del escaneo).
+
+**Cero cambio de comportamiento observable.** Mismo contrato de salida
+(`{ resolvedUrl }` o `null`), mismos dos intentos (HEAD con fallback a GET),
+mismo criterio de "seguimos en el host de redirección de Google = fallo". Lo
+único que cambia es que ahora cada salto se verifica antes de conectarse, y
+un salto a IP privada/reservada devuelve `null` en vez de completarse.
+
+**Comprobado.** `pnpm test` (2.984/2.984), `pnpm run validate` (build +
+typecheck + lint), todo en verde. 19 tests nuevos/reescritos en
+`citation-resolution.test.ts`, incluido uno que verifica el rechazo real de
+una IP tipo `169.254.169.254` (metadata de nube) inyectada como destino de
+redirección.
+
+**Nota de numeración.** Nació como §184 sobre una `main` que llegaba al §183.
+Mientras esta rama seguía abierta, FOOTER-PAYMENT-TRUST-1 (#496) reclamó ese
+mismo §184 y mergeó primero, así que esta sección —la que no estaba en
+`main`— renumera a **§185**, con todas sus referencias (`grep -rn "§184"`
+apuntando a este PR: `CLAUDE.md` y `.claude/rules/scan.md`). Mismo protocolo
+que ya documentan los §159/§161/§163/§173/§175/§178/§182 de este mismo
+fichero.
+
+---
+
+## 186. CITED-DIFF-1 Fase 0: script de validación barata antes de construir nada permanente (2026-08-28)
+
+**La pregunta que CITED-DIFF-1 quiere responder.** Cuando un competidor sale
+citado en una respuesta de IA, ¿el contenido real de esa página citada tiene
+algo que de verdad valga la pena mostrarle a un usuario ("esto cubre que tú no
+cubres"), o la diferencia es marginal la mayoría de las veces? No hay forma de
+saberlo sin mirar páginas reales — y construir la feature permanente primero
+para averiguarlo es exactamente el orden que ya salió caro una vez.
+
+**El precedente que fija el orden.** FAVICON-QUALITY-1 Fase 3b (log §39) tenía
+la misma forma —traer contenido fijo de hosts de terceros arbitrarios, "no es
+un crawler" por el mismo test de `.claude/rules/web-audit.md`— y se construyó
+entera, pasó revisión de seguridad sin hallazgos, y se revirtió EL MISMO DÍA:
+no por seguridad, sino porque 9 de cada 10 pruebas reales daban un resultado
+indistinguible del anterior y la que cambiaba salía peor. El coste de
+mantenimiento (guardián SSRF, hueco de DNS-rebinding aceptado, latencia) no
+compensaba un valor marginal que sólo se descubrió después de construirlo.
+Este Fase 0 existe para tener esa respuesta ANTES, con un script de usar y
+tirar en vez de una feature permanente.
+
+**Lo que hace.** `scripts/cited-diff-validation.ts`
+(`pnpm cited-diff:validate --domain tudominio.es --limit N`): muestrea citas
+reales de `scan_prompt_results` (lectura, `.select()` únicamente), reporta el
+reparto Gemini/OpenAI de URL real recuperable —un primer resultado en sí
+mismo: `citation.url` es siempre el wrapper de redirección de Google para
+Gemini, así que si ese reparto sale muy bajo, el techo de la feature ya está
+ahí sin mirar ni una página—, y trae una muestra pequeña de páginas reales con
+los mismos guardianes SSRF que CITATION-REDIRECT-SSRF-1 (§185): `resolveCitation`
+(`lib/citations/aggregate-citations.ts`), `hostnameResolvesToPublicIp` y
+`readBodyCapped` (`lib/web-audit/fetch-page.ts`) y `sanitizeField`
+(`lib/text/sanitize.ts`) — los cuatro importados, ninguno reimplementado. El
+texto saneado se imprime en la terminal de quien lo ejecuta para que lo juzgue
+él mismo; el script no emite veredicto.
+
+**Lo que nunca hace, ni de usar y tirar.** No persiste HTML en ningún sitio
+compartido, no llama a ningún LLM, no escribe en Supabase (`cited-diff-
+validation.test.ts` comprueba por código fuente que no aparece `.insert(`,
+`.update(`, `.upsert(` ni `.delete(`), y no comprueba `robots.txt` del
+competidor —el módulo existente sólo entiende `Disallow: /` completo, y
+usarlo para una ruta concreta sería peor que no comprobar nada— aceptado
+conscientemente para una validación de una sola vez, no para una fase
+permanente futura.
+
+**Sólo se ejecuta desde la máquina del fundador, nunca desde un agente.**
+Comprobado con `data-guardian`: el proxy de este entorno devuelve 403 en el
+CONNECT a un host arbitrario, así que un agente que lo ejecutara vería fallar
+todas las páginas y confundiría eso con una respuesta real a la pregunta de
+negocio. El propio fichero lo dice en su cabecera, no en una nota al pie.
+
+**Una desviación del Task Intake aprobado, dicha en voz alta.** El Task Intake
+decía que el script viviría en el scratchpad de la sesión, no en el
+repositorio. Se implementó como `scripts/cited-diff-validation.ts` en su
+lugar, siguiendo el mismo precedente que `scripts/extraction-bench.ts`
+(`NODE_OPTIONS=--conditions=react-server`, guardia de ejecución directa
+idéntica): un scratchpad no sobrevive a la sesión, y el fundador necesita
+poder ejecutarlo de verdad, más de una vez si hace falta.
+
+**Alcance del Task Intake, explícito.** Aprobado: el arreglo SSRF (§185) y este
+script. **No aprobado:** la fase permanente de CITED-DIFF-1 (traer el
+contenido citado dentro del producto). Eso depende de que el fundador ejecute
+este script y juzgue el resultado — decisión suya, no de esta sesión, y sin
+fecha todavía.
+
+**Comprobado.** `pnpm test` (17 tests nuevos en `cited-diff-validation.test.ts`,
+suite completa en verde), `pnpm run validate` (build + typecheck + lint).
+
+**Trazabilidad.** `scripts/cited-diff-validation.ts` ·
+`scripts/cited-diff-validation.test.ts` · `package.json`
+(`cited-diff:validate`); §39, §185.
+
+---
+
+## 187. AUDIT-REPRO-1: las seis acciones de Recomendaciones dejan de ser "no sabemos" (Fase 0, 2026-08-27)
 
 **El problema.** El hallazgo peor puntuado del informe de auditoría externa
 (fiabilidad funcional 4,0) decía que seis CTAs de Recomendaciones — generar
@@ -17814,9 +17965,12 @@ selfcheck.mjs`; `tests/pilot/support/selfcheck-checks.test.ts`; `CLAUDE.md`
 ("Cierre de fase" regla 4, "cobertura no vista", tercera excepción de
 escritura); `docs/external-audit-2026-08.md` Fase 0.
 
-**Nota de numeración.** Nació como §184 sobre una `main` que llegaba al §183
-(TRUST-METRICS-1, #493). Mientras esta rama seguía abierta, FOOTER-PAYMENT-
-TRUST-1 (#496) reclamó ese mismo §184 y mergeó primero, así que esta
-sección —la que no estaba en `main`— renumera a **§185**, con todas sus
-referencias (`grep -rn "§185"`). Mismo protocolo que ya documentan los
-§159/§161/§163/§173/§175/§178/§184 de este mismo fichero.
+**Nota de numeración.** Nació como §181 sobre una `main` que llegaba al §180
+(PRICING-PAY-BADGES-CENTER-1, #495), y ha ido perdiendo esa carrera cuatro
+veces mientras la rama seguía abierta — §181→§182 (RECS-LOOP-1 Fase A, #492),
+§182→§184 (TRUST-PROMISES-1 #494 + TRUST-METRICS-1 #493 mergearon primero),
+§184→§185 (FOOTER-PAYMENT-TRUST-1, #496), y ahora §185→**§187**
+(CITATION-REDIRECT-SSRF-1 #499 y CITED-DIFF-1 Fase 0 #500 mergearon primero,
+reclamando §185 y §186), con todas sus referencias (`grep -rn "§187"`). Mismo
+protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185 de
+este mismo fichero.
