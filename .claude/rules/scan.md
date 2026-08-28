@@ -150,7 +150,7 @@ worse than no rule, because a future session will obey it anyway.
   medium (the response body is never read, only `response.url`), but any
   future phase that DOES read the body would turn this into an exfiltration
   channel, so it does not wait to become urgent (`docs/brand/
-  design-decisions-log.md` §184). Unlike `fetch-page.ts`, this resolver has
+  design-decisions-log.md` §185). Unlike `fetch-page.ts`, this resolver has
   no domain allowlist — landing on any public site is the point — so the
   guard here is `hostnameResolvesToPublicIp` alone (imported, not copied),
   never `isAllowedAuditHost`. And unlike a per-hop timeout, the budget is one
