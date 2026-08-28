@@ -9,7 +9,7 @@ es peor que ninguna, porque una sesión futura la obedecerá igual.
   RESPUESTA, nunca sobre la PÁGINA.** `aggregate-citations.ts` los llena con
   los nombres que el modelo mencionó en la misma respuesta donde citó esa
   página — la pantalla no lee el contenido de ninguna URL citada, y no existe
-  ningún mecanismo que lo haga (CITATIONS-HONESTY-1, P0-09, log §184). Un
+  ningún mecanismo que lo haga (CITATIONS-HONESTY-1, P0-09, log §186). Un
   texto de UI que diga "cita a X" sobre estos campos es la sobreafirmación
   exacta que la auditoría externa encontró. La forma correcta es "citada en
   una respuesta donde también apareció X", con un aviso explícito de que no

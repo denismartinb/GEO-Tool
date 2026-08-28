@@ -7711,6 +7711,15 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-footer .links a:hover { color: var(--ink); }
 .lp-footer .copy { font-size: 12.5px; color: var(--ink-4); margin-top: 18px; }
 
+/* FOOTER-PAYMENT-TRUST-1 (2026-08-27, log §181). `.price-pay-badges` no trae
+   su propio espaciado vertical — en `/precios` lo da la `<section>` que la
+   envuelve — así que aquí necesita el suyo, a juego con el resto del pie
+   (mismo `padding-top`/`border-top` que ya usa `.lp-footer` para separarse
+   de lo que hay encima). Sin este wrapper la fila de insignias quedaría
+   pegada al `row1` de arriba, sin respirar y sin leerse como su propio
+   bloque. */
+.lp-footer-pay { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line-soft); }
+
 /* Mismo caso y misma corrección que `.blog-post-meta` abajo: `--ink-4`
    (#98a0b0) da 2.63:1 sobre blanco, `--ink-3` da 4.76:1. Aquí lo cogió el
    chequeo de contraste del piloto (Fase Q5b, log §55) sobre el enlace «Blog»

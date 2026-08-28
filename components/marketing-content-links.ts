@@ -38,3 +38,31 @@ export const MARKETING_CONTENT_LINKS: ReadonlyArray<{ href: string; label: strin
 export const MARKETING_ENTITY_LINKS: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/que-es-genscore", label: "Qué es GenScore" }
 ];
+
+/**
+ * Los shells de marketing con un pie de página público completo — la lista
+ * que `marketing-content-links.test.ts` y `payment-badges.test.ts` recorren
+ * para comprobar que su footer no se ha quedado atrás. Vive aquí, en el
+ * módulo fuente y no en un `.test.ts`, para que los dos tests lean la MISMA
+ * lista en vez de mantener cada uno su propia copia — es el mismo argumento
+ * por el que `MARKETING_CONTENT_LINKS` existe: una lista compartida, no
+ * varias que se desincronizan de una en una (log §46).
+ *
+ * `components/not-found-mission.tsx` SÍ entra (NOT-FOUND-ROCKET-1): la 404
+ * pública tiene su propio shell —no reutiliza `BlogPageShell` porque
+ * `.lp-inner` impide la escena a sangre— así que es una superficie más con
+ * pie público, justo la clase de sitio donde se olvidan las cuatro capas de
+ * contenido.
+ *
+ * `app/geo/page.tsx` queda fuera a propósito: su pie ya es una versión
+ * reducida a mano (sin `MARKETING_CONTENT_LINKS` ni `MARKETING_ENTITY_LINKS`)
+ * — una divergencia anterior a esta lista y fuera de lo que aquí se arregla.
+ */
+export const MARKETING_SHELLS: readonly string[] = [
+  "components/landing/landing-page.tsx",
+  "components/pricing/pricing-page.tsx",
+  "components/blog/blog-page-shell.tsx",
+  "components/docs/docs-page-shell.tsx",
+  "components/legal-page-shell.tsx",
+  "components/not-found-mission.tsx"
+];

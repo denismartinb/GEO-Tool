@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
+import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { ProcessFlow } from "@/components/blog/process-flow";
 import { contentMetadata } from "@/lib/seo/metadata";
 
@@ -388,6 +389,9 @@ export default function GeoExplainerPage() {
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
             </div>
+          </div>
+          <div className="lp-footer-pay">
+            <PaymentBadgesRow />
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
