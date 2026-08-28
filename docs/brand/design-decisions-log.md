@@ -18129,10 +18129,23 @@ descarte, filas independientes en una sola llamada) · tests nuevos en
 la insignia de la tarjeta activa) · `pnpm test` (3.032/3.032) · `pnpm run
 validate` (build + typecheck + lint).
 
+**El propio piloto de esta PR encontró un hueco de cobertura en sí mismo, y
+se cerró en la misma PR.** `ux-pilot` devolvió INCONCLUSIVE, no PASS: ni el
+barrido genérico ni `recommendations-interactions.spec.ts` (el journey
+dedicado a esta pantalla) abrían nunca la pestaña "Resueltas" — el único
+sitio donde renderiza absolutamente todo lo que construye esta fase, Fase A
+incluida. No es un fallo de este cambio; es que el journey nació antes de
+que "Resueltas" existiera como pestaña con contenido propio que probar, y
+nadie volvió a por él. Añadido el mismo paso que ya usan "Alta prioridad" y
+"Técnico" (clic por texto, captura, vuelta a "Todas") para no dejar la fase
+sin una sola captura que la enseñe — el mismo fallo, un peldaño distinto, que
+ya corrigieron PILOT-PROJECT-PICK-1/2 y PILOT-HYDRATION-CLICK-1 en su momento.
+
 **Trazabilidad.** `lib/recommendations/dismissal-recurrence.ts` ·
 `lib/recommendations/dismissal-recurrence.test.ts` ·
 `lib/recommendations/prediction-verification.ts` (renombrado) ·
 `app/dashboard/projects/[projectId]/recommendations/page.tsx` ·
 `app/dashboard/projects/[projectId]/recommendations/recommendations-client.tsx` ·
-`docs/adr/0041-recommendation-prediction-verification.md` (adenda); §181,
-§188. Consulta previa a `geo-strategy`.
+`docs/adr/0041-recommendation-prediction-verification.md` (adenda) ·
+`tests/pilot/journeys/recommendations-interactions.spec.ts`; §181, §188.
+Consulta previa a `geo-strategy`.
