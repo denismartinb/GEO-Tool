@@ -198,7 +198,11 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
     const historyCards = await page.locator(".rec-card").count();
     const empty = await page.locator(".section-empty").count();
     expect(historyCards + empty, "'Resueltas' deja la pantalla en blanco").toBeGreaterThan(0);
-    await captureInteraction(page, testInfo, "recs-resueltas");
+    // fullContent: el bloque de "acciones prioritarias" se queda pintado
+    // encima de esta lista en cualquier pestaña, así que una captura de sólo
+    // el viewport deja fuera casi todo el historial — el propio piloto de
+    // esta PR sólo llegó a ver 1-3 filas de las que hubiera en la cuenta real.
+    await captureInteraction(page, testInfo, "recs-resueltas", { fullContent: true });
     await tabs.first().click();
   }
 

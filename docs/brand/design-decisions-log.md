@@ -18140,6 +18140,18 @@ nadie volvió a por él. Añadido el mismo paso que ya usan "Alta prioridad" y
 "Técnico" (clic por texto, captura, vuelta a "Todas") para no dejar la fase
 sin una sola captura que la enseñe — el mismo fallo, un peldaño distinto, que
 ya corrigieron PILOT-PROJECT-PICK-1/2 y PILOT-HYDRATION-CLICK-1 en su momento.
+Segunda pasada del mismo piloto, ya sobre ese arreglo: capturas reales
+confirmadas (PASS), pero sólo del viewport — el bloque de "acciones
+prioritarias" se queda pintado encima de la lista en cualquier pestaña, así
+que sólo cabían 1-3 filas del historial real. `captureInteraction` pasa a
+`{ fullContent: true }` en esta captura, mismo mecanismo que ya usa la
+guía generada de `llms.txt` para el mismo problema (fila más alta que el
+fold). Con datos reales de la cuenta piloto en ese momento (un proyecto con
+sólo resoluciones automáticas, ninguna marcada como hecha), ninguna de las
+dos pasadas llegó a ver renderizada la línea de veredicto en ningún estado
+—ni la de Fase A, ni ninguna rama de Fase B— así que esa cobertura sigue
+declarada como pendiente, no como probada; ver la propuesta de un journey de
+escritura dedicado (`--journeys write`) en el informe del piloto de la PR.
 
 **Trazabilidad.** `lib/recommendations/dismissal-recurrence.ts` ·
 `lib/recommendations/dismissal-recurrence.test.ts` ·
