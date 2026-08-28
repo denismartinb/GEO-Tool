@@ -305,7 +305,14 @@ type RecFilter =
  * current run's rows) — real filtering (not just chain-shape passthrough),
  * so tests can assert on actual row transitions.
  */
-function makeRecommendationsTable(seed: RecRow[] = []) {
+function makeRecommendationsTable(
+  seed: RecRow[] = [],
+  // RECS-FINALIZE-DURABILITY-1: lets a test simulate the delete or insert of
+  // the current run's own rows failing, independent of each other — the two
+  // error paths executor.ts now handles differently (a failed delete skips
+  // the insert entirely; a failed insert just logs).
+  options: { deleteError?: string; insertError?: string } = {}
+) {
   const rows: RecRow[] = seed.map((r) => ({ ...r }));
   const insertedRows: RecRow[] = [];
   let nextId = 1;
@@ -324,7 +331,7 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
       eq: (col: string, val: unknown) => chain(mode, patch, [...filters, { type: "eq", col, val }]),
       neq: (col: string, val: unknown) => chain(mode, patch, [...filters, { type: "neq", col, val }]),
       in: (col: string, vals: unknown[]) => chain(mode, patch, [...filters, { type: "in", col, vals }]),
-      then: (resolve: (value: { data: RecRow[] | null; error: null }) => unknown) => {
+      then: (resolve: (value: { data: RecRow[] | null; error: { message: string } | null }) => unknown) => {
         if (mode === "select") {
           const data = rows.filter((r) => matches(r, filters));
           return Promise.resolve({ data, error: null }).then(resolve);
@@ -332,6 +339,9 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
         if (mode === "update") {
           for (const row of rows) if (matches(row, filters)) Object.assign(row, patch);
           return Promise.resolve({ data: null, error: null }).then(resolve);
+        }
+        if (options.deleteError) {
+          return Promise.resolve({ data: null, error: { message: options.deleteError } }).then(resolve);
         }
         for (let i = rows.length - 1; i >= 0; i -= 1) if (matches(rows[i], filters)) rows.splice(i, 1);
         return Promise.resolve({ data: null, error: null }).then(resolve);
@@ -345,6 +355,9 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
     update: (patch: Partial<RecRow>) => chain("update", patch, []),
     delete: () => chain("delete", null, []),
     insert: (payload: Partial<RecRow> | Partial<RecRow>[]) => {
+      if (options.insertError) {
+        return Promise.resolve({ error: { message: options.insertError } });
+      }
       const toInsert = (Array.isArray(payload) ? payload : [payload]).map((r) => ({
         id: `rec-${nextId++}`,
         ...r
@@ -356,6 +369,21 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
   };
 
   return { rows, insertedRows, table };
+}
+
+/** Captures every row `logJob` writes to `job_logs`, so a test can assert a
+ * failure was actually made diagnosable rather than only swallowed. */
+function makeJobLogsTable() {
+  const inserted: Array<Record<string, unknown>> = [];
+  return {
+    inserted,
+    table: {
+      insert: (row: Record<string, unknown>) => {
+        inserted.push(row);
+        return Promise.resolve({ error: null });
+      }
+    }
+  };
 }
 
 /**
@@ -448,7 +476,9 @@ function buildClients(
     promptJobSampleIndex,
     engineFlags,
     recurringScans,
-    scoreWindowRows
+    scoreWindowRows,
+    recommendationsDeleteError,
+    recommendationsInsertError
   }: {
     promptJobMaxAttempts: number;
     /** SAMPLING-1: the repetition this prompt job belongs to. Omitted -> no
@@ -493,6 +523,11 @@ function buildClients(
      * emitted payload falls back to `Math.round(scores.visibility_score)`.
      */
     scoreWindowRows?: Array<{ run_id: string; created_at: string; visibility_score: number | null; details_json: unknown }>;
+    /** RECS-FINALIZE-DURABILITY-1: simulate the current run's own delete/insert
+     *  of `recommendations` failing. Omitted -> both succeed, same as every
+     *  test written before this option existed. */
+    recommendationsDeleteError?: string;
+    recommendationsInsertError?: string;
   },
   existingProviders: string[] | Record<number, string[]> = []
 ) {
@@ -541,7 +576,11 @@ function buildClients(
 
   const scanRunsTable = makeScanRunsTable(previousRunId, recurringScans?.completedRunCount);
   const scanPromptResultsTable = makeScanPromptResultsTable(existingProviders);
-  const recommendationsTable = makeRecommendationsTable(previousRecommendationRows);
+  const recommendationsTable = makeRecommendationsTable(previousRecommendationRows, {
+    deleteError: recommendationsDeleteError,
+    insertError: recommendationsInsertError
+  });
+  const jobLogsTable = makeJobLogsTable();
   const notificationsTable = makeNotificationsTable(notificationsBehavior);
   // PROJECT-DEFAULTS-BY-ACCOUNT-1: every `projects.update(...)` call the
   // finalize block issues, so tests can assert whether (and to what)
@@ -554,6 +593,7 @@ function buildClients(
       if (table === "scan_runs") return scanRunsTable;
       if (table === "scan_prompt_results") return scanPromptResultsTable.table;
       if (table === "recommendations") return recommendationsTable.table;
+      if (table === "job_logs") return jobLogsTable.table;
       if (table === "notifications") return notificationsTable.table;
       if (table === "run_scores" && scoreWindowRows) {
         // Extends noopTable() rather than replacing it: executePendingScan
@@ -682,6 +722,7 @@ function buildClients(
     scanRunsTable,
     scanPromptResultsTable,
     recommendationsTable,
+    jobLogsTable,
     notificationsTable,
     projectsUpdates
   };
@@ -1302,6 +1343,76 @@ describe("executePendingScan — recommendation history across runs (RECS-3)", (
     const genuinelyFixedRow = recommendationsTable.rows.find((r) => r.id === "old-genuinely-fixed")!;
     expect(genuinelyFixedRow.status).toBe("resolved");
     expect(genuinelyFixedRow.resolved_in_run_id).toBe(RUN_ID);
+  });
+});
+
+describe("executePendingScan — recommendation delete/insert durability (RECS-FINALIZE-DURABILITY-1)", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce([
+      {
+        priority_rank: 1,
+        title: "Te mencionan pero no citan tu dominio",
+        description: "desc",
+        rule_id: "rule_citations_001",
+        recommendation_type: "add_citation_block",
+        impact: "medium",
+        effort: "low",
+        confidence: "high",
+        source_type: "rule",
+        evidence_json: {},
+        dedupe_key: "add_citation_block:p1"
+      } as unknown as ReturnType<typeof generateRecommendationsForRun>[number]
+    ]);
+  });
+
+  it("logs and skips the insert when clearing this run's prior recommendations fails, instead of duplicating the backlog", async () => {
+    const { service, supabase, recommendationsTable, jobLogsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      recommendationsDeleteError: "connection reset"
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    // Fail-soft: a delete failure must not sink the scan.
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).resolves.not.toThrow();
+
+    // Nothing inserted on top of the rows the failed delete left untouched —
+    // this is the whole point: a naive "insert regardless" would duplicate
+    // the backlog instead.
+    expect(recommendationsTable.insertedRows).toHaveLength(0);
+
+    const errorLog = jobLogsTable.inserted.find(
+      (row) => row.level === "error" && String(row.message).includes("clear this run's prior active recommendation")
+    );
+    expect(errorLog).toBeDefined();
+    expect(errorLog?.run_id).toBe(RUN_ID);
+    expect((errorLog?.context_json as Record<string, unknown>)?.message).toBe("connection reset");
+  });
+
+  it("logs when inserting this run's fresh recommendations fails, leaving the run with zero recommendations rather than a silent gap", async () => {
+    const { service, supabase, recommendationsTable, jobLogsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      recommendationsInsertError: "constraint violation"
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).resolves.not.toThrow();
+
+    // The delete succeeded (no prior rows existed to fail on); the insert did
+    // not, so nothing landed for this run.
+    expect(recommendationsTable.insertedRows).toHaveLength(0);
+    expect(recommendationsTable.rows.find((r) => r.run_id === RUN_ID)).toBeUndefined();
+
+    const errorLog = jobLogsTable.inserted.find(
+      (row) => row.level === "error" && String(row.message).includes("insert this run's recommendation rows")
+    );
+    expect(errorLog).toBeDefined();
+    expect(errorLog?.run_id).toBe(RUN_ID);
+    expect((errorLog?.context_json as Record<string, unknown>)?.message).toBe("constraint violation");
+    expect((errorLog?.context_json as Record<string, unknown>)?.attempted).toBe(1);
   });
 });
 
