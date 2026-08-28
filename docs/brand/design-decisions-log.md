@@ -17816,7 +17816,79 @@ fichero.
 
 ---
 
-## 186. "Cita a un rival" en Páginas citadas sólo significaba "citada donde también apareció un rival" (CITATIONS-HONESTY-1, 2026-08-27)
+## 186. CITED-DIFF-1 Fase 0: script de validación barata antes de construir nada permanente (2026-08-28)
+
+**La pregunta que CITED-DIFF-1 quiere responder.** Cuando un competidor sale
+citado en una respuesta de IA, ¿el contenido real de esa página citada tiene
+algo que de verdad valga la pena mostrarle a un usuario ("esto cubre que tú no
+cubres"), o la diferencia es marginal la mayoría de las veces? No hay forma de
+saberlo sin mirar páginas reales — y construir la feature permanente primero
+para averiguarlo es exactamente el orden que ya salió caro una vez.
+
+**El precedente que fija el orden.** FAVICON-QUALITY-1 Fase 3b (log §39) tenía
+la misma forma —traer contenido fijo de hosts de terceros arbitrarios, "no es
+un crawler" por el mismo test de `.claude/rules/web-audit.md`— y se construyó
+entera, pasó revisión de seguridad sin hallazgos, y se revirtió EL MISMO DÍA:
+no por seguridad, sino porque 9 de cada 10 pruebas reales daban un resultado
+indistinguible del anterior y la que cambiaba salía peor. El coste de
+mantenimiento (guardián SSRF, hueco de DNS-rebinding aceptado, latencia) no
+compensaba un valor marginal que sólo se descubrió después de construirlo.
+Este Fase 0 existe para tener esa respuesta ANTES, con un script de usar y
+tirar en vez de una feature permanente.
+
+**Lo que hace.** `scripts/cited-diff-validation.ts`
+(`pnpm cited-diff:validate --domain tudominio.es --limit N`): muestrea citas
+reales de `scan_prompt_results` (lectura, `.select()` únicamente), reporta el
+reparto Gemini/OpenAI de URL real recuperable —un primer resultado en sí
+mismo: `citation.url` es siempre el wrapper de redirección de Google para
+Gemini, así que si ese reparto sale muy bajo, el techo de la feature ya está
+ahí sin mirar ni una página—, y trae una muestra pequeña de páginas reales con
+los mismos guardianes SSRF que CITATION-REDIRECT-SSRF-1 (§185): `resolveCitation`
+(`lib/citations/aggregate-citations.ts`), `hostnameResolvesToPublicIp` y
+`readBodyCapped` (`lib/web-audit/fetch-page.ts`) y `sanitizeField`
+(`lib/text/sanitize.ts`) — los cuatro importados, ninguno reimplementado. El
+texto saneado se imprime en la terminal de quien lo ejecuta para que lo juzgue
+él mismo; el script no emite veredicto.
+
+**Lo que nunca hace, ni de usar y tirar.** No persiste HTML en ningún sitio
+compartido, no llama a ningún LLM, no escribe en Supabase (`cited-diff-
+validation.test.ts` comprueba por código fuente que no aparece `.insert(`,
+`.update(`, `.upsert(` ni `.delete(`), y no comprueba `robots.txt` del
+competidor —el módulo existente sólo entiende `Disallow: /` completo, y
+usarlo para una ruta concreta sería peor que no comprobar nada— aceptado
+conscientemente para una validación de una sola vez, no para una fase
+permanente futura.
+
+**Sólo se ejecuta desde la máquina del fundador, nunca desde un agente.**
+Comprobado con `data-guardian`: el proxy de este entorno devuelve 403 en el
+CONNECT a un host arbitrario, así que un agente que lo ejecutara vería fallar
+todas las páginas y confundiría eso con una respuesta real a la pregunta de
+negocio. El propio fichero lo dice en su cabecera, no en una nota al pie.
+
+**Una desviación del Task Intake aprobado, dicha en voz alta.** El Task Intake
+decía que el script viviría en el scratchpad de la sesión, no en el
+repositorio. Se implementó como `scripts/cited-diff-validation.ts` en su
+lugar, siguiendo el mismo precedente que `scripts/extraction-bench.ts`
+(`NODE_OPTIONS=--conditions=react-server`, guardia de ejecución directa
+idéntica): un scratchpad no sobrevive a la sesión, y el fundador necesita
+poder ejecutarlo de verdad, más de una vez si hace falta.
+
+**Alcance del Task Intake, explícito.** Aprobado: el arreglo SSRF (§185) y este
+script. **No aprobado:** la fase permanente de CITED-DIFF-1 (traer el
+contenido citado dentro del producto). Eso depende de que el fundador ejecute
+este script y juzgue el resultado — decisión suya, no de esta sesión, y sin
+fecha todavía.
+
+**Comprobado.** `pnpm test` (17 tests nuevos en `cited-diff-validation.test.ts`,
+suite completa en verde), `pnpm run validate` (build + typecheck + lint).
+
+**Trazabilidad.** `scripts/cited-diff-validation.ts` ·
+`scripts/cited-diff-validation.test.ts` · `package.json`
+(`cited-diff:validate`); §39, §185.
+
+---
+
+## 187. "Cita a un rival" en Páginas citadas sólo significaba "citada donde también apareció un rival" (CITATIONS-HONESTY-1, 2026-08-27)
 
 **Origen.** Fase 8 de `docs/external-audit-2026-08.md` (auditoría externa
 2026-08-26, hallazgo P0-09): *"fuente que cita a un rival" sobreafirma —
@@ -17885,17 +17957,20 @@ página menciona...". Tampoco cambia la lista completa "Todas las fuentes"
 concretamente el bloque de Oportunidades, y agrupar por dominio ahí donde no
 hay un problema de escala habría sido una reestructuración sin motivo.
 
-**Nota de numeración.** Toma el §186 tras seis renumeraciones sucesivas
+**Nota de numeración.** Toma el §187 tras siete renumeraciones sucesivas
 mientras esta rama seguía abierta: §180 y §181 ya estaban reclamados por dos
 ramas abiertas al escribir la primera versión de esta entrada (#492 y #494);
 RECS-LOOP-1 (#492) mergeó a `main` reclamando el §181 antes que esta rama, así
 que pasó a §182; TRUST-PROMISES-1 (#494) mergeó justo después reclamando ESE
 §182, así que pasó a §183; TRUST-METRICS-1 (#493) mergeó justo después
 reclamando ESE §183, así que pasó a §184; FOOTER-PAYMENT-TRUST-1 (#496)
-mergeó justo después reclamando ESE §184, así que pasó a §185; y
+mergeó justo después reclamando ESE §184, así que pasó a §185;
 CITATION-REDIRECT-SSRF-1 (#499) mergeó justo después reclamando ESE §185, así
-que esta entrada pasa a §186. Seis PRs de la misma auditoría mergeando en
-las mismas horas explican la carrera.
+que pasó a §186; y CITED-DIFF-1 Fase 0 (#500) mergeó justo después
+reclamando ESE §186 — y la misma fila de "Páginas citadas" en el mapa de
+zonas, resuelta a mano combinando las dos entradas —, así que esta entrada
+pasa a §187. Siete PRs de la misma auditoría mergeando en las mismas horas
+explican la carrera.
 
 **Trazabilidad.** `lib/citations/aggregate-citations.ts`
 (`groupOpportunitiesByDomain`, `OpportunityDomainGroup`, doc comment de
