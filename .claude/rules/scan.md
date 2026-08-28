@@ -159,3 +159,21 @@ worse than no rule, because a future session will obey it anyway.
   against itself" lesson ADR 0029 already established, since ADR 0006 already
   named redirect resolution as the dominant risk to the scan's 60s budget
   (ADR 0003) before any of this.
+- **A run's own recommendation rows are user state, not regenerable scratch —
+  clear them the same way their neighbors already do.** The finalize block's
+  delete+insert of the current run's `recommendations` (right after the
+  resolve/supersede writes for OTHER runs, both scoped to `status='active'`)
+  had neither that scope nor an error check, unlike those two neighbors. It
+  was not a live bug — `executePendingScan` returns for any terminal run
+  before it ever reads the `jobs` table (this function's own entry guard), so
+  finalize cannot re-run against a run a user could have already acted on —
+  but it depended entirely on that guard, not on anything local to this
+  write, to stay safe. Fixed regardless as RECS-FINALIZE-DURABILITY-1: the
+  delete now scopes to `status='active'` like its neighbors, and both the
+  delete and the insert check their error and log it via `logJob` — a failed
+  delete skips the insert (the thing that would otherwise duplicate the run's
+  whole backlog on top of untouched old rows), and a failed insert is at
+  least diagnosable instead of a bare `console.error`
+  (`docs/brand/design-decisions-log.md` §188). No unique constraint on
+  `(project_id, run_id, dedupe_key)` exists yet to close this at the schema
+  level — accepted residual risk, not this phase's scope.

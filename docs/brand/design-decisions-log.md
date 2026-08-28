@@ -17974,3 +17974,75 @@ veces mientras la rama seguía abierta — §181→§182 (RECS-LOOP-1 Fase A, #4
 reclamando §185 y §186), con todas sus referencias (`grep -rn "§187"`). Mismo
 protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185 de
 este mismo fichero.
+
+---
+
+## 188. El borrado de recomendaciones del propio run no filtraba por estado ni comprobaba error (RECS-FINALIZE-DURABILITY-1, 2026-08-28)
+
+**El encargo del fundador, tal y como llegó: "el bug de durabilidad del
+finalize" — un hallazgo de `data-guardian` de una sesión anterior (compactada),
+descrito entonces como "un dismiss se puede revertir en silencio por un reintento
+del finalize".** Antes de planificar nada se le pidió a `data-guardian` que
+reconstruyera el mecanismo exacto, con mi propio rastreo del código como punto
+de partida. **No existe tal reproducción.** `executePendingScan`
+(`lib/scan/executor.ts:130-135`) corta cualquier invocación tardía o duplicada
+sobre un run ya terminal ANTES de leer siquiera la tabla `jobs` — ese guardián
+lleva desde el 2026-08-13 (PR #394). El camino de reclamo del lease de
+finalize (`FINALIZE_LOCK_LEASE_MS`, 90s) sólo puede tomar un job todavía
+`running`, nunca uno ya `completed`, y el job de finalize se marca `completed`
+antes de que `scan_runs.status` pase a `completed` — así que para cuando un
+usuario puede ver (y por tanto descartar) una recomendación, el finalize de
+ese run ya es inmune a cualquier reintento. Se corrige aquí la afirmación:
+**no había fuga activa que arreglar**, y decirlo así, antes del Task Intake,
+era obligado en vez de plegar la corrección dentro del propio plan.
+
+**Lo que sí encontró data-guardian, real y con líneas concretas.** El bloque
+de finalize borra e reinserta las recomendaciones del run actual
+(`lib/scan/executor.ts`, entonces líneas 950/952) con dos huecos que sus dos
+vecinos inmediatos (resolver brechas, superseder recomendaciones previas) ya
+no tienen:
+
+1. **El `DELETE` no filtraba por `status`.** Las dos operaciones justo encima
+   sí excluyen `status='active'` a propósito, precisamente para no tocar una
+   fila ya `dismissed`. Hoy es inofensivo sólo porque el guardián de arriba
+   impide un segundo paso por este bloque sobre un run ya completado — pero esa
+   protección existe para no repetir trabajo, no para proteger datos del
+   usuario. Un cambio futuro en ese guardián, o un segundo punto de entrada al
+   bloque de finalize, reintroduciría la pérdida en silencio — incluida, en
+   cascada, cualquier propuesta de IA generada sobre esa recomendación
+   (`ON DELETE CASCADE`, `0005_generated_solutions.sql:95-98`).
+2. **Ni el `DELETE` ni el `INSERT` comprobaban su error**, a diferencia de las
+   dos escrituras de arriba. Sin restricción de unicidad en
+   `(project_id, run_id, dedupe_key)` —sólo un índice normal
+   (`0010_recommendations_history.sql:63`)—, un `DELETE` que falla seguido de
+   un `INSERT` que funciona **duplicaba en silencio todo el backlog del run**,
+   y un `DELETE` que funciona seguido de un `INSERT` que falla **completaba el
+   run con cero recomendaciones**, sin aviso — ambos tragados por el `catch`
+   genérico de más abajo hacia un simple `console.error`. Esto sí era
+   alcanzable, en cualquier escaneo, con sólo un fallo transitorio de red en el
+   momento exacto.
+
+**La corrección, mínima y sin cambio de comportamiento hoy.**
+
+- `.eq("status", "active")` añadido al `DELETE`, mismo patrón que ya usan las
+  dos operaciones vecinas. Cero filas afectadas de forma distinta en el único
+  camino de ejecución que existe hoy (nunca hay una fila no-activa con ese
+  `run_id` antes de este punto).
+- Error del `DELETE` comprobado: si falla, se registra con `logJob` (nivel
+  `error`, persistido en `job_logs`, diagnosticable — no sólo un
+  `console.error` de vida corta) y **se salta el `INSERT`**, que es lo que
+  evita la duplicación.
+- Error del `INSERT` comprobado y registrado igual, si el borrado sí funcionó
+  pero la reinserción falla — el run termina con cero recomendaciones nuevas
+  en vez de con una mezcla silenciosa.
+- **Explícitamente fuera de alcance** (aprobado así): ninguna migración, ninguna
+  restricción de unicidad nueva — la que de verdad cerraría el hueco de raíz es
+  una mejora real pero mayor (migración de schema) y queda como riesgo residual
+  aceptado, no como deuda de esta fase.
+
+**Comprobado.** Dos tests nuevos en `executor.test.ts` (fallo del `DELETE` →
+`INSERT` saltado + log; fallo del `INSERT` → cero filas + log), `pnpm test`
+(3.016/3.016), `pnpm run validate` (build + typecheck + lint).
+
+**Trazabilidad.** `lib/scan/executor.ts` · `lib/scan/executor.test.ts`;
+consulta previa a `data-guardian` sin código propio, sólo el hallazgo.
