@@ -947,9 +947,34 @@ export async function executePendingScan({
         });
       }
 
-      await service.from("recommendations").delete().eq("project_id", projectId).eq("run_id", runId);
-      if (recommendationRows.length) {
-        await service.from("recommendations").insert(
+      // RECS-FINALIZE-DURABILITY-1: scoped to status='active', same as the
+      // resolve/supersede writes just above — a dismissed row for this run_id
+      // is user state, not regenerable scratch. Unreachable to delete today
+      // (finalize can never re-run against an already-completed run, guarded
+      // at this function's entry), but the scope must not depend on that
+      // guard holding forever. And unlike the two writes above, a failure
+      // here is not safe to shrug off: skipping the insert on a failed
+      // delete is what stops a duplicated backlog (delete fails, insert
+      // still runs on top of the untouched old rows).
+      const { error: deleteError } = await service
+        .from("recommendations")
+        .delete()
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "active");
+
+      if (deleteError) {
+        await logJob(service, {
+          jobId: finalizeJob.id,
+          projectId,
+          runId,
+          level: "error",
+          message:
+            "Failed to clear this run's prior active recommendation rows before reinserting; skipping insert to avoid duplicating the backlog.",
+          context: { message: deleteError.message }
+        });
+      } else if (recommendationRows.length) {
+        const { error: insertError } = await service.from("recommendations").insert(
           recommendationRows.map((rec) => ({
             run_id: runId,
             project_id: projectId,
@@ -968,6 +993,18 @@ export async function executePendingScan({
             consecutive_runs_open: consecutiveRunsByDedupeKey.get(rec.dedupe_key) ?? 1
           }))
         );
+
+        if (insertError) {
+          await logJob(service, {
+            jobId: finalizeJob.id,
+            projectId,
+            runId,
+            level: "error",
+            message:
+              "Failed to insert this run's recommendation rows after clearing the prior ones; run completes with zero recommendations.",
+            context: { message: insertError.message, attempted: recommendationRows.length }
+          });
+        }
       }
 
       // gap_pending: fire exactly on the run where a gap CROSSES 3
