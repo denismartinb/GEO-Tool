@@ -30,6 +30,7 @@ import { triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { loadWebAuditPageData } from "@/lib/web-audit/page-data";
 import { WebAuditProvider } from "./web-audit-context";
 import { WebAuditDriveNotice } from "./web-audit-drive-notice";
+import { WebAuditRunButton } from "./web-audit-run-button";
 import { AuditTabsProvider, AuditTabBar, AuditTabPanel } from "./audit-tabs";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
@@ -264,6 +265,29 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           one is about work that did start and then stopped. */}
       <WebAuditDriveNotice />
 
+      {/* AUDIT-RUNNABLE-1 (docs/external-audit-2026-08.md, Fase 5): the one
+          recovery path this screen had until AUDIT-NO-BUTTON-1 (log §25),
+          reinstated — in the body, not the sticky header, per the design
+          rule that removal's own PR confirmed against Citations/Prompts
+          (log §17: "ninguna cabecera v3 lleva controles interactivos, sólo
+          badges/pills pasivos"). Gated on `hasCompletedScan` — before that
+          there is nothing to audit against and the empty state below already
+          explains why (`NO_SCAN_FAILURE` is what clicking early would
+          surface), and hidden during the mission takeover for the same
+          reason (`!hasCompletedScan` is exactly its condition too).
+          `alreadyRunning` only blocks on a campaign that is really moving
+          (`auditing`), not `pending` — a queued job is not a reason to
+          refuse an explicit click. */}
+      {hasCompletedScan && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+          <WebAuditRunButton
+            projectId={projectId}
+            canAuditCoverage={canAuditCoverage}
+            alreadyRunning={auditIsRunning || (canAuditCoverage && auditPillState === "auditing")}
+          />
+        </div>
+      )}
+
       {activeCampaignProgress && !canAuditCoverage && (
           <div className="firstscan-banner">
             <div className="fb-ico">
@@ -345,8 +369,9 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             </p>
           ) : (
             <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
-              La salud técnica de tu web se audita sola tras cada escaneo — vuelve en unos minutos. Comparar lo que
-              publicas con lo que la IA cita en sus respuestas es una función del plan Pro.
+              La salud técnica de tu web se audita sola tras cada escaneo — vuelve en unos minutos, o pulsa
+              &#34;Auditar ahora&#34; arriba si no aparece. Comparar lo que publicas con lo que la IA cita en sus
+              respuestas es una función del plan Pro.
             </p>
           )}
           <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginBottom: 16 }}>Hasta 5 auditorías al día por proyecto.</p>
@@ -451,7 +476,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     hint={
                       technicalSnapshot
                         ? `Media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"}`
-                        : "Se audita sola tras cada escaneo"
+                        : "Se audita sola tras cada escaneo, o pulsa \"Auditar ahora\""
                     }
                     delta={null}
                     pct={technicalSnapshot?.readiness_score ?? null}
@@ -609,13 +634,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             ) : (
               <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
                 <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
-                  {/* "no has auditado" ya no es cierto: nadie audita a mano
-                      desde AUDIT-NO-BUTTON-1. Unconditional now
-                      (WEB-AUDIT-TECH-ALL-PLANS-1): this used to only claim
-                      "se comprueba sola" for canAudit (Pro) accounts, but the
-                      technical half isn't plan-gated at all any more — it
-                      auto-checks after every scan on every plan. */}
-                  Todavía no se ha auditado la salud técnica de tu web. Se comprueba sola tras cada escaneo.
+                  {/* AUDIT-RUNNABLE-1: "se comprueba sola" volvió a dejar de
+                      ser la única verdad — el botón "Auditar ahora" de la
+                      cabecera es la escotilla manual que AUDIT-NO-BUTTON-1
+                      había retirado. Unconditional (WEB-AUDIT-TECH-ALL-
+                      PLANS-1): la mitad técnica sigue sin gate de plan. */}
+                  Todavía no se ha auditado la salud técnica de tu web. Se comprueba sola tras cada escaneo, o pulsa
+                  &#34;Auditar ahora&#34; arriba.
                 </p>
               </div>
             )}

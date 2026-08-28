@@ -1215,6 +1215,56 @@ export async function executePendingScan({
       }
     });
 
+    // AUDIT-RUNNABLE-1 (docs/external-audit-2026-08.md, Fase 5) — closes the
+    // gap PROJECT-DEFAULTS-BY-ACCOUNT-1 left open for every project created
+    // BEFORE it (2026-08-25): `auto_technical_audit_enabled` defaults to
+    // `false` in the schema (migration 0031), `createProject` only started
+    // setting it `true` for real accounts on that date, and nothing has ever
+    // flipped it for a project that already existed then. Those projects'
+    // technical GEO Score component stays N/A forever — not from a failure,
+    // but from a flag nobody could reach (the switch lives in `/debug`, and
+    // no automatic path ever set it). The external audit's P0-05 is this,
+    // reproduced.
+    //
+    // Fixed the same place PROJECT-DEFAULTS-BY-ACCOUNT-1 fixes the analogous
+    // gap for `recurring_scans_enabled`: at the first moment after a scan
+    // completes, for a real (non-internal-test) account. No "first scan only"
+    // gate here, unlike that block — this isn't a precondition newly being
+    // met, it's a stale default that stays stale until something touches it,
+    // so every completion re-checks until it flips once. Own isolated query,
+    // same "own query, own migration guard" shape as `engineFlagsRow` and the
+    // recurring-scans read a few lines up. Placed BEFORE the enqueue block
+    // below so a project fixed here gets ITS OWN completed scan audited too,
+    // not just the next one.
+    try {
+      const { data: auditFlagRow } = await service
+        .from("projects")
+        .select("auto_technical_audit_enabled")
+        .eq("id", projectId)
+        .maybeSingle();
+
+      if (auditFlagRow && auditFlagRow.auto_technical_audit_enabled !== true) {
+        const { data: ownerAuthUserForAudit } = await service.auth.admin.getUserById(
+          project.owner_user_id as string
+        );
+
+        if (!isInternalTestAccountEmail(ownerAuthUserForAudit?.user?.email)) {
+          await service
+            .from("projects")
+            .update({ auto_technical_audit_enabled: true })
+            .eq("id", projectId);
+        }
+      }
+    } catch (autoTechnicalAuditError) {
+      // Fail-soft, like every other post-scan side effect here: the scan
+      // itself already completed successfully above.
+      console.error("[scan-runner] failed to auto-enable the technical audit for an existing project", {
+        projectId,
+        runId,
+        message: autoTechnicalAuditError instanceof Error ? autoTechnicalAuditError.message : "unknown"
+      });
+    }
+
     // AUDIT-AFTER-SCAN-1: the web audit is no longer something a human has to
     // remember to click. Queued here, after the run is durably 'completed',
     // because the audit reads the run's persisted results — queueing earlier

@@ -16,7 +16,8 @@ orden — el orden lo fija la columna `#`.
 | 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | ⚠️ Parcial — ver fila 6a | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
 | 6a | Auditoría automática tras cada escaneo | AUDIT-AFTER-SCAN-1 | ADR 0027 · log §18 | ✅ Implementada (PR #322) — migración 0027 aplicada 2026-08-04 | Cron adicional + rol de servicio en ambos núcleos | Aprobada por el fundador 2026-08-04 |
 | 6b | La auditoría, visible en Escaneos | AUDIT-IN-RUNS-1 | log §22 | ✅ Implementada (2026-08-05) | Ninguno (sólo datos ya persistidos) | Human Gate |
-| 6c | Fuera el botón «Auditar ahora» | AUDIT-NO-BUTTON-1 | log §25 | ✅ Implementada (2026-08-05) | Ninguno | Petición directa del fundador |
+| 6c | Fuera el botón «Auditar ahora» | AUDIT-NO-BUTTON-1 | log §25 | ⛔ **Revertida en el punto del botón (2026-08-28, log §189, AUDIT-RUNNABLE-1)** — la auditoría externa encontró el callejón sin salida que §25 ya daba como riesgo asumido | Ninguno | Petición directa del fundador |
+| 6d | El botón vuelve, y el flag real se activa para proyectos existentes | AUDIT-RUNNABLE-1 | log §189, `docs/external-audit-2026-08.md` Fase 5 | ✅ Implementada (2026-08-28) | Ninguno (sin schema/migración) | Human Gate |
 
 ### Fila 6 — qué se implementó y qué no (2026-08-04)
 

@@ -478,7 +478,8 @@ function buildClients(
     recurringScans,
     scoreWindowRows,
     recommendationsDeleteError,
-    recommendationsInsertError
+    recommendationsInsertError,
+    autoTechnicalAudit
   }: {
     promptJobMaxAttempts: number;
     /** SAMPLING-1: the repetition this prompt job belongs to. Omitted -> no
@@ -514,6 +515,15 @@ function buildClients(
      * option existed changes behavior.
      */
     recurringScans?: { currentValue?: boolean; completedRunCount?: number; ownerEmail?: string | null };
+    /**
+     * AUDIT-RUNNABLE-1 (docs/external-audit-2026-08.md, Fase 5): the
+     * backfill block's own isolated read (`projects.auto_technical_audit_enabled`)
+     * and its owner-email lookup. Omitted -> `service.from("projects")` falls
+     * through to `noopTable()` for this query (data: null), same "migration
+     * not applied / unread" shape as `recurringScans` above — the block's
+     * outer `if (auditFlagRow && ...)` guard makes that a no-op.
+     */
+    autoTechnicalAudit?: { currentValue?: boolean; ownerEmail?: string | null };
     /**
      * TRUST-METRICS-1: rows the completion notification's windowed-score read
      * (`service.from("run_scores").select(...).order(...).limit(...)`) sees.
@@ -624,24 +634,46 @@ function buildClients(
           })
         };
       }
-      if (table === "projects" && (engineFlags || recurringScans)) {
+      if (table === "projects" && (engineFlags || recurringScans || autoTechnicalAudit)) {
         return {
-          select: () => ({
+          // Keyed off the requested columns, not merged unconditionally:
+          // `executePendingScan` issues three SEPARATE `.select(...)` calls
+          // against this table (engine flags, recurring-scans, technical-
+          // audit), each its own isolated read. A test that only configures
+          // `recurringScans` must not have the technical-audit block see a
+          // truthy row with `auto_technical_audit_enabled: undefined` — which
+          // reads as "off" by the real fail-closed rule and would flip it,
+          // exactly the false positive this branch used to produce before
+          // AUDIT-RUNNABLE-1 added its own option here. So an unconfigured
+          // concern returns `data: null` for its own query, same "falls
+          // through as unread" shape `noopTable()` gives every other table.
+          select: (columns: string) => ({
             eq: () => ({
-              maybeSingle: () =>
-                Promise.resolve({
-                  data: {
-                    ...(engineFlags
-                      ? {
-                          engine_gemini_enabled: engineFlags.gemini,
-                          engine_claude_enabled: engineFlags.claude,
-                          engine_openai_enabled: engineFlags.openai
-                        }
-                      : {}),
-                    ...(recurringScans ? { recurring_scans_enabled: recurringScans.currentValue } : {})
-                  },
-                  error: null
-                })
+              maybeSingle: () => {
+                if (columns.includes("engine_") && engineFlags) {
+                  return Promise.resolve({
+                    data: {
+                      engine_gemini_enabled: engineFlags.gemini,
+                      engine_claude_enabled: engineFlags.claude,
+                      engine_openai_enabled: engineFlags.openai
+                    },
+                    error: null
+                  });
+                }
+                if (columns.includes("recurring_scans_enabled") && recurringScans) {
+                  return Promise.resolve({
+                    data: { recurring_scans_enabled: recurringScans.currentValue },
+                    error: null
+                  });
+                }
+                if (columns.includes("auto_technical_audit_enabled") && autoTechnicalAudit) {
+                  return Promise.resolve({
+                    data: { auto_technical_audit_enabled: autoTechnicalAudit.currentValue },
+                    error: null
+                  });
+                }
+                return Promise.resolve({ data: null, error: null });
+              }
             })
           }),
           update: (patch: Record<string, unknown>) => {
@@ -653,12 +685,16 @@ function buildClients(
       return noopTable();
     },
     // PROJECT-DEFAULTS-BY-ACCOUNT-1: the finalize block's owner-email lookup.
-    // Omitted `recurringScans` -> never reached (the outer guard above
-    // short-circuits first), so this is safe to always provide.
+    // Omitted `recurringScans`/`autoTechnicalAudit` -> never reached (the
+    // outer guards above short-circuit first), so this is safe to always
+    // provide.
     auth: {
       admin: {
         getUserById: (_id: string) =>
-          Promise.resolve({ data: { user: { email: recurringScans?.ownerEmail ?? null } }, error: null })
+          Promise.resolve({
+            data: { user: { email: recurringScans?.ownerEmail ?? autoTechnicalAudit?.ownerEmail ?? null } },
+            error: null
+          })
       }
     }
   } as unknown as ServiceClient;
@@ -2548,6 +2584,88 @@ describe("executePendingScan — auto-enables recurring scans after the first co
     // one side effect can't sink an otherwise-successful scan, the same
     // fail-soft contract the web-audit enqueue and scan-health-alert calls
     // right around it in executor.ts already carry.
+    (service as unknown as { auth: { admin: { getUserById: () => Promise<never> } } }).auth.admin.getUserById = () =>
+      Promise.reject(new Error("network"));
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(notificationsTable.calls.some((c) => c.type === "scan_completed")).toBe(true);
+  });
+});
+
+/**
+ * AUDIT-RUNNABLE-1 (docs/external-audit-2026-08.md, Fase 5). Every project
+ * created before PROJECT-DEFAULTS-BY-ACCOUNT-1 (2026-08-25) still has
+ * `auto_technical_audit_enabled = false` from the migration 0031 default, and
+ * nothing has ever flipped it — the switch lives behind `/debug`, and no
+ * automatic path ever set it for a project created before that date. This
+ * block closes that gap the same place PROJECT-DEFAULTS-BY-ACCOUNT-1 closes
+ * the analogous one for `recurring_scans_enabled`. Unlike that block, there
+ * is no "first completed run only" gate: this isn't a precondition newly
+ * met, it's a stale default that stays stale until something touches it.
+ */
+describe("executePendingScan — auto-enables the technical audit for a project that predates PROJECT-DEFAULTS-BY-ACCOUNT-1 (AUDIT-RUNNABLE-1)", () => {
+  const ORIGINAL_INTERNAL_TEST_EMAILS = process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(generateRecommendationsForRun).mockClear().mockReturnValue([]);
+    delete process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_INTERNAL_TEST_EMAILS === undefined) delete process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+    else process.env.INTERNAL_TEST_ACCOUNT_EMAILS = ORIGINAL_INTERNAL_TEST_EMAILS;
+  });
+
+  it("turns auto_technical_audit_enabled on for a real account whose project still has it off", async () => {
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      autoTechnicalAudit: { currentValue: false, ownerEmail: "customer@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toContainEqual({ auto_technical_audit_enabled: true });
+  });
+
+  it("leaves auto_technical_audit_enabled off for an internal test account", async () => {
+    process.env.INTERNAL_TEST_ACCOUNT_EMAILS = "founder@example.com";
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      autoTechnicalAudit: { currentValue: false, ownerEmail: "founder@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toEqual([]);
+  });
+
+  it("never re-writes auto_technical_audit_enabled once it is already on — a customer who turned it off manually is not silently re-enabled by a later scan", async () => {
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      autoTechnicalAudit: { currentValue: true, ownerEmail: "customer@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toEqual([]);
+  });
+
+  it("fails soft: a broken owner-email lookup never stops the run from completing", async () => {
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      autoTechnicalAudit: { currentValue: false, ownerEmail: "customer@example.com" }
+    });
     (service as unknown as { auth: { admin: { getUserById: () => Promise<never> } } }).auth.admin.getUserById = () =>
       Promise.reject(new Error("network"));
     serviceClientHolder.current = service;

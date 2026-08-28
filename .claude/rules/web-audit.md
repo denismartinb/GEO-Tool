@@ -99,6 +99,33 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   escaneo termina, `hasCompletedScan` pasa a `true` y `ReentryMission` ya
   cubre "primera auditoría, en marcha" por su cuenta (SCAN-STATES-3, log §57).
 
+### La pantalla siempre tiene una escotilla manual (AUDIT-RUNNABLE-1, log §189)
+
+`AUDIT-NO-BUTTON-1` (2026-08-05, §25) retiró el botón «Auditar ahora» sobre
+una premisa cierta ese día — la auditoría corre sola tras cada escaneo — y el
+propio §25 anotó el riesgo: sin escotilla manual, un fallo del disparo
+automático deja al usuario sin nada que hacer. La auditoría externa encontró
+exactamente eso: el componente técnico estancado en N/A, sin botón, sin
+error, sin explicación (P0-05). El botón volvió.
+
+- **Un solo botón, en el cuerpo, nunca en `.ov-sticky-header`.** Ese fue el
+  error real de la primera versión (Human Gate 2026-08-02, log §17): ninguna
+  cabecera v3 lleva controles interactivos, sólo badges/pills pasivos. Vive
+  en `WebAuditRunButton` (junto a `web-audit-context.tsx`, no en
+  `_components/`), llama a `useWebAuditRunner().drive()` para una cuenta Pro
+  (cobertura + técnica en el mismo clic, WEB-AUDIT-R2) y directamente a
+  `runTechnicalAuditAction` para una cuenta no-Pro — nunca a través de
+  `drive()`, que pasaría primero por el gate de plan de la cobertura y
+  devolvería un error de plan por pedir lo único que sí tiene.
+- **El botón manual no depende de `auto_technical_audit_enabled`.** Sólo lo
+  lee el camino automático (`enqueueWebAuditJob`/`runWebAuditJob`); un clic
+  directo en `runTechnicalAuditAction` corre siempre que quede cupo del
+  límite de 5/día. Es lo que hace segura la escotilla incluso para un
+  proyecto con el flag todavía en `false`.
+- **`role="button"`/nombre accesible "Auditar ahora" es un contrato fijo.**
+  `tests/pilot/journeys/write/seed-web-audit.spec.ts` (UX-PILOT-2b) depende
+  de ese texto exacto para sembrar datos reales en la cuenta piloto.
+
 ### Las dos mitades tienen interruptor propio, y por defecto están apagadas
 
 WEB-AUDIT-AUTO-SPLIT-1 (migración 0031) sustituye el interruptor único de la
@@ -129,6 +156,21 @@ Consecuencias, y son reglas:
 - **`auto_web_audit_enabled` (0030) sigue en el esquema y ya no lo lee nadie.**
   No es un respaldo: no reintroducir lecturas. Se dejó porque tirar una columna
   es un cambio destructivo con su propia aprobación.
+- **`auto_technical_audit_enabled` se autoactiva para cuentas reales que ya
+  existían, sin migración SQL.** `PROJECT-DEFAULTS-BY-ACCOUNT-1` sólo lo pone
+  en `true` al CREAR un proyecto (2026-08-25 en adelante); todo lo anterior se
+  quedó en `false` para siempre, sin nada que lo tocara. `AUDIT-RUNNABLE-1`
+  (log §189) cierra ese hueco en `lib/scan/executor.ts`, junto al bloque de
+  `recurring_scans_enabled`: al completar un escaneo, si el flag sigue en
+  `false` y el dueño no es una cuenta interna de prueba, se enciende — antes
+  del `enqueueWebAuditJob` de la misma función, para que ese mismo escaneo
+  también se audite. Sin la restricción de "sólo el primer escaneo" que sí
+  lleva el bloque de recurrentes: esto no es una precondición que se cumple
+  una vez, es un valor por defecto obsoleto que se re-comprueba en cada
+  finalize hasta que se apaga solo. Deliberadamente gratis de aprobar: la
+  auditoría técnica no gasta LLM (ADR 0035), así que no hay decisión de coste
+  que este cambio esté revirtiendo — a diferencia de `auto_coverage_audit_enabled`,
+  que sigue en `false` por defecto y sin tocar.
 
 ### Los componentes de presentación viven en `_components/`, no en `page.tsx`
 

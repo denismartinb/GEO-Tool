@@ -2362,6 +2362,12 @@ desigual de filas, y dividir daría una cifra falsa justo cuando algo salió mal
 
 ## 25. Fuera el botón «Auditar ahora» (AUDIT-NO-BUTTON-1, 2026-08-05)
 
+**Superseded por §189 (AUDIT-RUNNABLE-1, 2026-08-28) en el punto concreto del
+botón**: la auditoría externa encontró el callejón sin salida que este mismo
+§25 ya daba como riesgo asumido, y el botón volvió — en el cuerpo, no en la
+cabecera. El análisis del pill redundante y de `WebAuditProvider` sigue
+vigente y no cambia.
+
 **Estado: implementada.** Petición directa del fundador: *"quita el botón
 auditar ahora y pon la fecha en auditoría actualizada"*. Cierra la secuencia
 que él mismo fijó el 2026-08-04 al aprobar §18 — primero que la auditoría
@@ -18046,3 +18052,93 @@ no tienen:
 
 **Trazabilidad.** `lib/scan/executor.ts` · `lib/scan/executor.test.ts`;
 consulta previa a `data-guardian` sin código propio, sólo el hallazgo.
+
+---
+
+## 189. La auditoría web recupera su escotilla manual y su interruptor real (AUDIT-RUNNABLE-1, Fase 5, 2026-08-28)
+
+**El hallazgo del auditor externo (P0-05).** El componente técnico del GEO
+Score se quedaba en N/A tras un escaneo real, sin botón, sin error, sin
+explicación — un callejón sin salida. `docs/external-audit-2026-08.md` pedía
+dos cosas: diagnosticar por qué el disparo automático podía dejar el
+componente así, y devolver un camino de recuperación explícito.
+
+**Diagnóstico (agente `Explore`, sin escribir código).** `AUDIT-AFTER-SCAN-1`
+en sí es sólido — encolado en línea, reconciliado por `backfillMissingWebAuditJobs`,
+reintentado con backoff, alertado al operador si agota intentos. La causa real
+es otra: `auto_technical_audit_enabled` (migración 0031, `WEB-AUDIT-AUTO-SPLIT-1`)
+nace `false` por defecto, y **hasta `PROJECT-DEFAULTS-BY-ACCOUNT-1` (2026-08-25)
+nada lo ponía nunca en `true` para una cuenta real** — el interruptor vive tras
+`/debug`, que no se puede tocar antes de que exista el proyecto. `runWebAuditJob`
+lee el flag, lo ve en `false`, y se salta la auditoría técnica sin error ni log:
+el job se marca `completed` con `technicalSnapshot` en null para siempre. Todo
+proyecto creado antes de esa fecha se quedó así, permanentemente, y nada lo
+volvería a tocar.
+
+**Regla de premisa** (Corrección E, "Cierre de fase" en `CLAUDE.md`) —
+obligatoria porque esta fase retira exactamente el camino de recuperación que
+`AUDIT-NO-BUTTON-1` (§25, 2026-08-05) había quitado. La premisa que sostenía
+quitarlo era cierta ese día — *"la auditoría ya corre sola tras cada
+escaneo"* — y el propio §25 ya avisaba del riesgo asumido: *"si la auditoría
+automática falla, el usuario no puede forzarla"*. Lo que falló no fue el
+disparo en sí (ya lo diagnosticó el propio §25 que reintenta y alerta), sino
+la premisa un nivel más abajo: que el interruptor que hace falta para que el
+disparo automático *sirva de algo* estuviera encendido. §25 queda marcado
+**superseded por §189** para el punto concreto del botón, no en su análisis
+del pill redundante ni de `WebAuditProvider`, que siguen vigentes.
+
+**Dos entregas, no una.**
+
+1. **El botón «Auditar ahora» vuelve — un solo botón, en el cuerpo, no en la
+   cabecera fija.** La ubicación original en `.ov-sticky-header` fue un error
+   que el propio Human Gate de 2026-08-02 corrigió (log §17: *"ninguna
+   cabecera v3 lleva controles interactivos, sólo badges/pills pasivos"*) —
+   repetirlo habría reintroducido ese defecto. `WebAuditRunButton` (nuevo,
+   junto a `web-audit-context.tsx`/`web-audit-drive-notice.tsx`, no en
+   `_components/`, mismo criterio de ubicación que esos dos) reutiliza
+   `useWebAuditRunner().drive()` para cuentas Pro — coverage y técnica en el
+   mismo clic, como ya hacía WEB-AUDIT-R2 — y llama a
+   `runTechnicalAuditAction` directamente para cuentas no-Pro, para no pasar
+   por el gate de plan de la campaña de cobertura al pedir sólo lo que sí
+   tienen. `role="button"`/nombre accesible "Auditar ahora" no es una
+   elección nueva: `tests/pilot/journeys/write/seed-web-audit.spec.ts`
+   (UX-PILOT-2b) ya buscaba exactamente ese control desde antes de que
+   existiera — este PR lo hace real, no lo inventa.
+2. **`auto_technical_audit_enabled` se activa también para proyectos que ya
+   existían.** `lib/scan/executor.ts`, junto al bloque de
+   `PROJECT-DEFAULTS-BY-ACCOUNT-1`: al completar un escaneo, si el flag sigue
+   en `false` y el dueño no es una cuenta interna de prueba, se enciende —
+   antes del `enqueueWebAuditJob` de más abajo, así que el escaneo que lo
+   despierta audita también su propia ejecución. Sin el "sólo el primer
+   escaneo" que sí lleva el bloque de recurrentes: esto no es una precondición
+   que se cumple una vez, es un valor por defecto obsoleto que se queda
+   obsoleto hasta que algo lo toque — cada finalize lo vuelve a comprobar. Es
+   deliberadamente gratis: la auditoría técnica no gasta LLM (ADR 0035), así
+   que no hay decisión de coste que respetar, a diferencia de la cobertura
+   (grounding, sigue en `false` por defecto, sin tocar) o de la cadencia de
+   escaneo recurrente que sí llevó ese matiz.
+
+**Por qué no hace falta backfill SQL aparte.** El botón manual no lee
+`auto_technical_audit_enabled` en absoluto — sólo lo lee el camino
+automático — así que cualquier proyecto estancado hoy ya tiene salida
+inmediata con un clic, sin esperar a su próximo escaneo. Y el bloque del
+punto 2 cierra el resto: en cuanto ese proyecto complete OTRO escaneo
+(incluido el que dispare el propio botón, si genera uno), el interruptor
+queda encendido para siempre. Ningún script de una sola vez, ninguna
+migración SQL manual.
+
+**Textos corregidos, otra vez.** Los tres que §25 había reescrito a "se
+audita sola" ahora añaden la escotilla: *"vuelve en unos minutos, o pulsa
+'Auditar ahora' arriba si no aparece"*.
+
+**Comprobado.** `pnpm test` (3.020/3.020, incluidos 8 tests nuevos en
+`executor.test.ts` para el bloque de backfill), `pnpm run validate` (build +
+typecheck + lint). Sin test de render para `WebAuditRunButton` — mismo
+criterio ya establecido para `web-audit-context.tsx`/`web-audit-drive-notice.tsx`,
+ninguno de los dos lleva uno tampoco: dependen de `useRouter`/contexto de
+router de Next, no de la regla de `_components/`.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/web-audit/web-audit-run-button.tsx`
+(nuevo) · `app/dashboard/projects/[projectId]/web-audit/page.tsx` ·
+`lib/scan/executor.ts` · `lib/scan/executor.test.ts`; §17, §25 (superseded
+parcialmente), `docs/external-audit-2026-08.md` Fase 5.
