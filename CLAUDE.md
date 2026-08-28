@@ -206,6 +206,21 @@ hypothetical: on 2026-08-02 a full redesign of Auditoría web shipped with a
 green pilot and ✅ on three viewports because the pilot account had no audit
 data, so every capture showed "Todavía no has auditado tu web".
 
+**La cobertura no vista es una salida del piloto, no una promesa.** Cada
+pasada declara, explícitamente en su informe — no en prosa del Human Gate—,
+los controles que existían en la página y no ha ejercitado, y las pantallas
+alcanzables que no ha visitado. Es la generalización de una clase de fallo que
+este mismo documento lleva cinco incidentes corrigiendo uno por uno sin
+subirla nunca de nivel: capturas vacías del 2026-08-02 (arriba), el piloto
+saltándose a sí mismo (log §120), el cajón móvil pulsado antes de hidratar
+(log §136), el selector de proyecto roto (log §138), el piloto siempre-on de
+sólo lectura no pudiendo alcanzar ninguna de las seis acciones de
+Recomendaciones (auditoría externa P0-04, `docs/external-audit-2026-08.md`
+Corrección H) — cada vez el veredicto fue "PASS" sobre algo que el arnés nunca
+había mirado. Un `PILOT PASS` con esa lista vacía es raro y merece
+desconfianza; con la lista llena es honesto y accionable. **Un ✅ sobre una
+superficie no cubierta no es un pase silencioso: es un hueco sin declarar.**
+
 **Two mandatory inputs before a pilot run can mean anything** (both were
 missing in that incident, which is why it produced a meaningless pass):
 
@@ -294,6 +309,25 @@ control. What that trades away, stated rather than glossed: nothing in code
 distinguishes a human pressing the button from an agent dispatching it. It presses the project's own scan button and
 nothing else. Its output is captures, not a verdict — the `ux-pilot` agent
 still has to judge them. Anything wider still needs its own Task Intake.
+
+**Third approved exception: AUDIT-REPRO-1** (Fase 0 of
+`docs/external-audit-2026-08.md`, founder decision 2026-08-27) — the pilot may
+dismiss a real recommendation on the write-project to classify the recovery-
+action CTAs the external audit found unreproducible from code alone
+(generate/export/dismiss/activate-recurring). It deliberately breaks one of
+the three write-scope rules above: **not idempotent**. `handleDismiss` has no
+undo in the product today (the Human Gate has to keep that in mind reading
+this journey's report — Fase 4 adds one), so every run of
+`--journeys actions` permanently consumes one active recommendation of the
+reserved project, restored only by that project's next full scan. The
+founder chose this over classifying by code reading alone or adding a direct
+Supabase write from the test to reverse it — the latter would have broken
+the pilot's own convention of acting only through real clicks. Same lock
+shape as `scan`: its own Playwright project
+(`tests/pilot/journeys/actions/*.spec.ts`), reached only by `--journeys
+actions`, asserted absent from the default read run by `checkActionsLockout`
+in the self-check. No secret gates it, same reasoning as UX-PILOT-3 —
+dispatching it already requires repository write access.
 
 ---
 
@@ -408,7 +442,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Dominios y depuración  | — *(sin regla propia todavía)*  | **TRUST-METRICS-1: la puntuación pasa a leer la ventana (antes visibilidad cruda), su delta pasa a ventana-sobre-ventana, y `/runs/[runId]` sale de la consola — sólo accesible desde `/debug` (2026-08-27, log §183)** · **MATURITY-BANNER-HIDE-ALL-1: el switch de `/debug` silencia todos los avisos informativos —la puerta enumera excepciones, no cubiertos— y el aviso del plan Free nunca se calla (2026-08-27, log §179)** · PROJECT-DEFAULTS-BY-ACCOUNT-1: sampling, auditoría por IA y los avisos de historial en construcción nacen en ON/ocultos para cuentas reales, salvo un allow-list de cuentas internas de prueba (2026-08-25/27, log §173) · DOMAINS-OVERAGE-GATE-1: gate bloqueante en toda la consola cuando la cuenta tiene más dominios activos de los que permite el plan — retirar (borrado duro) o subir de plan (2026-08-25, log §171) · Retirado el enlace "Volver a competidores" del paso de prompts, redundante con el botón "Atrás" del propio formulario (2026-08-25, log §164) · DEBUG-HIDE-NO-TRACKING-1: switch local en `/debug` para silenciar el aviso de seguimiento diario (2026-08-25, log §161) · ONBOARDING-DOMAIN-REDESIGN-1: rediseño del asistente de alta de dominio a la dirección "Consola" (2026-08-20, log §162) · DOMAINS-LIVE-SELECT-1 (2026-08-20, log §122) · DOMAINS-ARCHIVE-RETIRE-1 (2026-08-15, log §104) · PRELAUNCH-HARDENING-1 Fase Q1: `createProjectCore` + tests (2026-08-15, log §89) · DOMAINS-CLIENT-DELETE-1 (2026-08-09) · DOMAINS-ACTIVE-COOKIE-1 (2026-08-07) · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39, §41, §89, §104, §122, §161, §162, §164, §171, §173, §179, §183 · `docs/design-reference/domains-redesign-1/` · `docs/design-reference/onboarding-domain-redesign-1/` · `docs/external-audit-2026-08.md` |
 | Visión general   | — *(sin regla propia todavía)*   | **TRUST-METRICS-1: la frase del resumen deja de enseñar una segunda 'puntuación GEO' distinta de la del medidor (2026-08-27, log §183)** · **MEAN-RANK-READS-TRUE-1: «Puesto» pasa a «Puesto medio», con la frase que lo explica pegada a la cifra, y el gráfico se ordena por la tabla que tiene debajo (2026-08-27, log §177)** · SAMPLE-FLOOR-1: una media sobre pocas respuestas deja de adelantar a una sobre muchas (2026-08-27, log §175) · ANIMATION-PARITY-1: la misión del primer escaneo se ve y termina igual en las 6 secciones (2026-08-26, log §168) · SCAN-FULLSCREEN-HEADER-1: la cabecera fija se oculta mientras dura la misión del primer escaneo (2026-08-25, log §160) · HEADER-FULL-WIDTH-1: la cabecera de página ya no se recorta en ventanas anchas (2026-08-21, log §150) · OV-DESKTOP-2: cabecera alineada, desglose 2/3 + motores, filas con icono/medidor (2026-08-20, log §119) · Retirada la banda «Revisando tu web» (2026-08-16, log §111) · Corrección del banner `scan_started` stale (2026-08-16, log §112) · PRELAUNCH-HARDENING-1 Fase R7 2/2 (2026-08-14, log §84) · SCAN-STATES-2 (2026-08-10) · ONBOARDING-ROCKET-1 Fase 1 (2026-08-08) | log §4, §6, §8b, §55, §56, §84, §112, §111, §119, §150, §160, §168, §175, §177, §183 · `docs/external-audit-2026-08.md` |
 | Prompts | — *(sin regla propia todavía)* | **ANIMATION-PARITY-1: la misión del primer escaneo se ve y termina igual en las 6 secciones (2026-08-26, log §168)** · SCAN-FULLSCREEN-HEADER-1: la cabecera fija se oculta mientras dura la misión del primer escaneo (2026-08-25, log §160) · PROMPT-DRAWER-TRUTH-1 (2026-08-23, log §147) · SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24, §147, §160, §168 · ADR 0021/0030 |
-| Páginas citadas | `citations.md` | **CITED-DIFF-1 Fase 0: script de validación barata (`pnpm cited-diff:validate`, sólo ejecutable por el fundador) antes de construir la fase permanente — aún sin aprobar (2026-08-28, log §186)** · **CITATIONS-HONESTY-1: "cita a un rival" pasa a "citada en una respuesta donde también apareció X", el filtro de outreach deja de exigir competidor co-citado y las fuentes alcanzables se agrupan por dominio (2026-08-27, Fase 8 de la auditoría externa, log §187)** · ANIMATION-PARITY-1: la misión del primer escaneo se ve y termina igual en las 6 secciones (2026-08-26, log §168) · SCAN-FULLSCREEN-HEADER-1: la cabecera fija se oculta mientras dura la misión del primer escaneo (2026-08-25, log §160) · HEADER-FULL-WIDTH-1: la cabecera adopta el patrón compartido de las otras 6 pantallas (2026-08-25, log §151) · Fix: tarjeta de Impacto recortada sin donut (2026-08-17, log §114) · CITATIONS-REDESIGN-1 (2026-08-01) | log §8, §39, §114, §151, §160, §168, §186, §187 · ADR 0010/0012/0013/0023 · `docs/external-audit-2026-08.md` Fase 8 |
+| Páginas citadas | `citations.md` | **CITED-DIFF-1 Fase 0: script de validación barata (`pnpm cited-diff:validate`, sólo ejecutable por el fundador) antes de construir la fase permanente — aún sin aprobar (2026-08-28, log §186)** · **CITATIONS-HONESTY-1: "cita a un rival" pasa a "citada en una respuesta donde también apareció X", el filtro de outreach deja de exigir competidor co-citado y las fuentes alcanzables se agrupan por dominio (2026-08-27, Fase 8 de la auditoría externa, log §188)** · ANIMATION-PARITY-1: la misión del primer escaneo se ve y termina igual en las 6 secciones (2026-08-26, log §168) · SCAN-FULLSCREEN-HEADER-1: la cabecera fija se oculta mientras dura la misión del primer escaneo (2026-08-25, log §160) · HEADER-FULL-WIDTH-1: la cabecera adopta el patrón compartido de las otras 6 pantallas (2026-08-25, log §151) · Fix: tarjeta de Impacto recortada sin donut (2026-08-17, log §114) · CITATIONS-REDESIGN-1 (2026-08-01) | log §8, §39, §114, §151, §160, §168, §186, §188 · ADR 0010/0012/0013/0023 · `docs/external-audit-2026-08.md` Fase 8 |
 | Notificaciones | — *(sin regla propia todavía)* | **TRUST-METRICS-1: el aviso de fin de escaneo pasa de "Visibilidad N (+delta)" a "Escaneo actualizado: Puntuación GEO N" — la misma ventana que el resto del producto, nunca visibilidad cruda (2026-08-27, log §183)** · NOTIF-AUTOREAD-1 (2026-08-05) | log §28, §183 · `docs/specs/notifications/notifications-v1.md` · `docs/external-audit-2026-08.md` |
 | Correos transaccionales | — *(sin regla propia todavía)* | **TRUST-METRICS-1: la alerta de caída y el resumen semanal dejan de llamar "GEO Score" a un compuesto por-run que no es la ventana — sólo copy, el cálculo de ninguno de los dos se toca (2026-08-27, log §183)** · WELCOME-EMAIL-FRESHNESS-FIX-1 (2026-08-20, ADR 0040) · PRELAUNCH-HARDENING-1 Fase Q2: primeros tests (2026-08-15, log §93) | ADR 0040 · log §93, §183 · `lib/email/transactional.ts` · `docs/external-audit-2026-08.md` |
 | Onboarding (tour) | `onboarding.md` | **ONBOARDING-TOUR-PERSIST-1 (2026-08-25, log §153)** — la marca de «ya visto» pasa de `localStorage` a `profiles.onboarding_tour_seen_at` · El tour sale de la portada y se queda en el popup de la consola (2026-08-23, log §157) · ONBOARDING-TOUR-1 Fase A (2026-08-08) | log §40, §153, §157 · `docs/design-reference/onboarding-tour-1/` |
@@ -419,7 +453,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Navegación pública (cabecera) | — *(sin regla propia todavía)* | **Skeleton de pre-hidratación cierra el flicker residual (2026-08-20, log §118)** · Badge Pro alineado junto al email + flicker de sesión sólo en la primera recarga por pestaña (2026-08-17, log §117) · HEADER-FLAT-1 (2026-08-15) · HEADER-CONSISTENCY-1 (2026-08-15) · GENSCORE-HEADER-2 (2026-08-12) · GENSCORE-HEADER-1 (2026-08-11) | log §1, §63, §65, §101, §109, §117, §118 |
 | Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **PRELAUNCH-HARDENING-1 Fase R5 (2026-08-14, log §78/§79/§80)** · LLM-RESILIENCE-1 Fases A+B (2026-08-09) | log §45, §78–§80 · ADR 0029 |
 | Rendimiento (velocidad de carga) | `styles.md` | **PUBLIC-SCROLL-CLIP-1: la zona pública era imposible de scrollear en Chrome (2026-08-20, log §124)** · A11Y-PSI-1: landmark, contraste y área táctil del sitio público (2026-08-20, log §116) · PRELAUNCH-HARDENING-1 Fase V: V4+V5 (2026-08-10) · V0a/V1/V2/V3/V6/V7/V8 (2026-08-09) | log §54, §116, §124 · `docs/prelaunch-hardening-plan.md` §Fase V |
-| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PILOT-DRAWER-VIEWPORT-1: el cajón móvil de la consola estaba cerrado y `toBeVisible()` no sabía verlo (2026-08-27, log §176)** · PRELAUNCH-HARDENING-1 Fase P3: matriz de definición ↔ pantalla (2026-08-21, log §139) · PILOT-PROJECT-PICK-2: el piloto exigía contenido real al proyecto que saliera primero (2026-08-21, log §135) · PILOT-HYDRATION-CLICK-1: el cajón móvil se pulsaba antes de hidratar (2026-08-20, log §136) · PRELAUNCH-HARDENING-1 Fase P2: el piloto abre `/signup` y `/forgot-password` (2026-08-20, log §129) · PILOT-PROJECT-PICK-1: el piloto elegía proyecto por un enlace retirado (2026-08-20, log §138) · PILOT-PR-LOOKUP-1: el piloto se saltaba a sí mismo y publicaba verde (2026-08-20, log §120) · LOG-NUMBERING-AUTOFIX-1 (2026-08-16, log §110) · CI-REDUNDANCY-1 (2026-08-16, log §108) · CODEX-BUILD-FIX-1 (2026-08-16, log §105) · PRELAUNCH-HARDENING-1 Fase Q5 (2026-08-15, log §97) · Fase Q5b (2026-08-11) · Fase 0 (2026-08-09) · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42, §49, §55, §65, §97, §105, §108, §110, §120, §129, §135, §136, §138, §139, §176 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` · `docs/agentic-user-pilot.md` |
+| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **AUDIT-REPRO-1: journey nuevo `--journeys actions` clasifica las seis acciones de Recomendaciones con veredicto real/invisible/entorno (Fase 0, 2026-08-27, log §187)** · PILOT-DRAWER-VIEWPORT-1: el cajón móvil de la consola estaba cerrado y `toBeVisible()` no sabía verlo (2026-08-27, log §176) · PRELAUNCH-HARDENING-1 Fase P3: matriz de definición ↔ pantalla (2026-08-21, log §139) · PILOT-PROJECT-PICK-2: el piloto exigía contenido real al proyecto que saliera primero (2026-08-21, log §135) · PILOT-HYDRATION-CLICK-1: el cajón móvil se pulsaba antes de hidratar (2026-08-20, log §136) · PRELAUNCH-HARDENING-1 Fase P2: el piloto abre `/signup` y `/forgot-password` (2026-08-20, log §129) · PILOT-PROJECT-PICK-1: el piloto elegía proyecto por un enlace retirado (2026-08-20, log §138) · PILOT-PR-LOOKUP-1: el piloto se saltaba a sí mismo y publicaba verde (2026-08-20, log §120) · LOG-NUMBERING-AUTOFIX-1 (2026-08-16, log §110) · CI-REDUNDANCY-1 (2026-08-16, log §108) · CODEX-BUILD-FIX-1 (2026-08-16, log §105) · PRELAUNCH-HARDENING-1 Fase Q5 (2026-08-15, log §97) · Fase Q5b (2026-08-11) · Fase 0 (2026-08-09) · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42, §49, §55, §65, §97, §105, §108, §110, §120, §129, §135, §136, §138, §139, §176, §187 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` · `docs/agentic-user-pilot.md` |
 | Autenticación (login/registro/recuperación) | — *(sin regla propia todavía)* | **WELCOME-EMAIL-FRESHNESS-FIX-1: `isFreshSignup` ya no depende de la velocidad de clic del usuario (2026-08-20, ADR 0040)** · AUTH-ERRORS-ES-1 (2026-08-12) | ADR 0039/0040 |
 | Metadata y títulos de pantalla | `growth-content.md` | **ROOT-METADATA-1 (2026-08-15, log §103)** | log §46, §47, §103 · `lib/seo/metadata.ts` · `lib/seo/console-metadata.ts` |
 | Consola de operador | `admin.md` | **ADMIN-CONSOLE-UX-1 (2026-08-15)** · ADMIN-CONSOLE-2b (2026-08-13) · ADMIN-CONSOLE-2a (2026-08-12) · corrección del arranque de MFA (2026-08-13, §72) · ADMIN-CONSOLE-1 Fase 1 (2026-08-11) | log §64, §71, §72, §98, §99 · `docs/design-reference/admin-console-1/` |
@@ -458,6 +492,16 @@ posterior:
    es peor que ninguna, porque una sesión futura la obedecerá igual.
 3. **Mapa de zonas** — actualizar la celda "Última fase cerrada" de la zona en
    la tabla de arriba. Si la zona no existía, añadir su fila.
+4. **Regla de premisa, si la fase retira un camino de recuperación** — un
+   botón, un reintento manual, una salida de error. Toda fase así anota, en el
+   histórico: la premisa que sostiene retirarlo, qué la verifica hoy, y qué
+   pantalla se queda sin salida si esa premisa falla. `AUDIT-NO-BUTTON-1`
+   (2026-08-05) retiró el botón "Auditar ahora" de Auditoría web con una razón
+   cierta ese día — *"la auditoría ya corre sola tras cada escaneo"* — y nadie
+   anotó de qué premisa quedaba colgando el producto. El día que el disparo
+   automático falló, la pantalla no tuvo ni botón ni error ni explicación: un
+   callejón sin salida (auditoría externa P0-05, `docs/external-audit-2026-08.md`
+   Causa 5). Sin este paso, la fase no está cerrada.
 
 **El número de sección del histórico es un identificador, no un contador.**
 Antes de mergear, comprueba que el tuyo no lo haya reclamado otra rama
