@@ -18140,7 +18140,128 @@ page.tsx` (filtro de `opportunityRows`) · `app/dashboard/projects/
 
 ---
 
-## 190. Dos motores de acuerdo sobre el mismo prompt dejaban de verse — cada tarjeta pasa a decir qué motor habla (RECS-EVIDENCE-2, Fase 7, 2026-08-28)
+## 190. RECS-LOOP-1 Fase B: la brecha marcada como hecha que vuelve deja de parecer nueva (ADR 0041 adenda, 2026-08-28)
+
+**El encargo llegó como "el hueco que dejó Fase A"**, y `geo-strategy` corrigió
+el planteamiento antes de escribir una línea de código. Primer error propio:
+el botón no dice "descartar" — dice **"Marcar como hecho"**
+(`recommendations-client.tsx:986`, badge del historial "Marcada como hecha").
+No hay un "no me aplica" en el producto; `dismiss` es sólo el nombre interno
+de la columna. Eso disuelve la duda de si verificar una fila descartada
+cuestiona un juicio de negocio del usuario: no lo hace, comprueba una
+afirmación fáctica ("esto está hecho"), exactamente lo que ADR 0017 §5
+prometió y Fase A ya hace para las resueltas.
+
+**El hueco real no estaba donde yo lo buscaba.** No es que la pestaña
+"Resueltas" se quede muda en una fila descartada (aunque también) — es una
+asimetría de producto verificada en código:
+`lib/recommendations/recommendation-history.ts:42` excluye explícitamente
+`status !== "dismissed"` de `resolvedDedupeKeys`, así que una brecha que se
+arregla SIN pulsar el botón cuenta como "Victoria reciente" con su veredicto
+(Fase A); la misma brecha arreglada PULSANDO el botón no cuenta nunca. **El
+producto penalizaba usar su propio botón.** Y el reverso, verificado en la
+línea 50 del mismo fichero: cuando una brecha marcada como hecha reaparece,
+la racha (`consecutive_runs_open`) se reinicia a 1 correctamente — pero la
+tarjeta activa vuelve sin ninguna marca que diga "esto ya se intentó", así
+que se ve como si fuera nueva.
+
+**El mecanismo, sin inventar un criterio de "verificado" nuevo.** La señal es
+la misma que `computeRecommendationTransition` ya usa para decidir
+"resuelta": ¿reapareció el `dedupe_key`? Aplicada a un solo run fijo en vez de
+cada run futuro, para que la respuesta sea una observación fechada y no una
+cifra que cambia de veredicto bajo una fila ya renderizada (mismo principio
+que ADR 0041 §6 ya fijó para Fase A). El ancla:
+`lib/recommendations/dismissal-recurrence.ts`, primer `scan_runs` completado
+con `created_at` posterior al `updated_at` de la fila descartada —
+`created_at`, no `finished_at`, para que ningún run en vuelo en el momento
+del clic cuente como observación posterior al clic. `updated_at` de una fila
+`dismissed` es fiable porque, tras RECS-FINALIZE-DURABILITY-1 (§188), ninguna
+escritura de finalize toca una fila que no sea `status='active'`.
+
+**Tres guardas fail-closed, la más importante de las tres:** un run ancla sin
+ninguna fila de `recommendations` en absoluto → sin veredicto, nunca "la
+brecha se fue". Un run con cero filas es indistinguible desde este módulo de
+un fallo del `INSERT` que RECS-FINALIZE-DURABILITY-1 ya sabe que puede
+ocurrir (registrado, no fatal) — leerlo como "brecha resuelta" publicaría una
+victoria causada por un fallo de persistencia. Las otras dos: `dedupe_key`
+vacío (filas anteriores a RECS-3) → sin veredicto permanente; sin escaneo
+completado todavía tras el descarte → silencio, nunca un placeholder.
+
+**Dos superficies, un solo cálculo.** La pestaña "Resueltas" enseña la
+observación fechada ("El escaneo del 25 ago 2026 ya no la encontró" / "...
+volvió a encontrarla") — nunca "en el escaneo que lo confirmó", porque aquí
+no confirmó nadie nada, sólo se observó más tarde. El detalle de Fase A
+(mutación concreta: presencia/prominencia/autoridad) sólo se añade en la
+rama "no volvió" — mostrar "la IA te nombró en 1 de 2" junto a "volvió a
+aparecer" respondería una pregunta que nadie hizo mientras entierra la que
+importa. Y la tarjeta ACTIVA que vuelve lleva su propia insignia, con la
+fecha del descarte (no la del run ancla): "La marcaste como hecha el 12 ago
+2026" — dos fechas distintas a propósito, la del clic y la de la
+observación, nunca fundidas en una.
+
+**Lo que Fase B no hace.** No escribe `resolved_in_run_id` en una fila
+descartada — cambiaría el significado de la columna y volvería ambiguas las
+dos insignias del historial. No captura motivo del descarte ni añade
+deshacer — eso es esquema/migración y el deshacer ya está adjudicado a la
+Fase 4 de `docs/external-audit-2026-08.md` (decisión del fundador,
+2026-08-27). Sólo lecturas, sin migración.
+
+**Renombrado, no comportamiento nuevo.** `RecommendationToVerify.resolvedInRunId`
+pasa a `anchorRunId` en `lib/recommendations/prediction-verification.ts`: el
+mismo mecanismo sirve ahora a dos llamadores (el run que confirmó una
+resolución automática, o el run ancla de una recurrencia comprobada), y el
+nombre antiguo mentiría sobre el segundo caso — "resolved" cuando nada se
+resolvió. `verifyRecommendationPredictions` en sí no cambia.
+
+**Comprobado.** `lib/recommendations/dismissal-recurrence.test.ts` (9 tests:
+las dos ramas, las tres guardas, selección del run más temprano tras el
+descarte, filas independientes en una sola llamada) · tests nuevos en
+`recommendations-client.test.tsx` (las tres formas de la línea de veredicto,
+la insignia de la tarjeta activa) · `pnpm test` (3.032/3.032) · `pnpm run
+validate` (build + typecheck + lint).
+
+**El propio piloto de esta PR encontró un hueco de cobertura en sí mismo, y
+se cerró en la misma PR.** `ux-pilot` devolvió INCONCLUSIVE, no PASS: ni el
+barrido genérico ni `recommendations-interactions.spec.ts` (el journey
+dedicado a esta pantalla) abrían nunca la pestaña "Resueltas" — el único
+sitio donde renderiza absolutamente todo lo que construye esta fase, Fase A
+incluida. No es un fallo de este cambio; es que el journey nació antes de
+que "Resueltas" existiera como pestaña con contenido propio que probar, y
+nadie volvió a por él. Añadido el mismo paso que ya usan "Alta prioridad" y
+"Técnico" (clic por texto, captura, vuelta a "Todas") para no dejar la fase
+sin una sola captura que la enseñe — el mismo fallo, un peldaño distinto, que
+ya corrigieron PILOT-PROJECT-PICK-1/2 y PILOT-HYDRATION-CLICK-1 en su momento.
+Segunda pasada del mismo piloto, ya sobre ese arreglo: capturas reales
+confirmadas (PASS), pero sólo del viewport — el bloque de "acciones
+prioritarias" se queda pintado encima de la lista en cualquier pestaña, así
+que sólo cabían 1-3 filas del historial real. `captureInteraction` pasa a
+`{ fullContent: true }` en esta captura, mismo mecanismo que ya usa la
+guía generada de `llms.txt` para el mismo problema (fila más alta que el
+fold). Tercera pasada, ya con la captura completa: confirmado que la lista
+mostrada es la ENTERA (idéntica en las tres anchuras pese a alturas de
+imagen muy distintas), no un recorte — dos filas, las dos resueltas
+automáticamente, ninguna marcada como hecha. La razón de fondo, encontrada en
+esta pasada: el único journey de escritura que descarta una recomendación
+real (`--journeys actions`, AUDIT-REPRO-1) opera exclusivamente sobre el
+proyecto Mozilla, y el journey de lectura que abre "Resueltas" visita
+Genscore — dos proyectos que nunca se cruzan en la misma pasada. Así que esta
+cobertura sigue declarada como pendiente, no como probada, y ahora con causa
+raíz conocida en vez de una simple ausencia de datos; propuestas concretas en
+los tres informes del piloto de la PR (la más barata: comprobar si el propio
+`--journeys actions` ya deja el caso servido tras su siguiente escaneo).
+
+**Trazabilidad.** `lib/recommendations/dismissal-recurrence.ts` ·
+`lib/recommendations/dismissal-recurrence.test.ts` ·
+`lib/recommendations/prediction-verification.ts` (renombrado) ·
+`app/dashboard/projects/[projectId]/recommendations/page.tsx` ·
+`app/dashboard/projects/[projectId]/recommendations/recommendations-client.tsx` ·
+`docs/adr/0041-recommendation-prediction-verification.md` (adenda) ·
+`tests/pilot/journeys/recommendations-interactions.spec.ts`; §181, §188.
+Consulta previa a `geo-strategy`.
+
+---
+
+## 191. Dos motores de acuerdo sobre el mismo prompt dejaban de verse — cada tarjeta pasa a decir qué motor habla (RECS-EVIDENCE-2, Fase 7, 2026-08-28)
 
 **El hallazgo del auditor externo (P0-03).** Ninguna recomendación decía qué
 motor (Gemini/ChatGPT/Claude) respaldaba su evidencia, y dos acciones sobre
@@ -18210,3 +18331,10 @@ discrepancia entre motores y el registro de `provider`), `pnpm run validate`
 `perPromptGapCards`) · `lib/recommendations/recommendation-engine.test.ts` ·
 `lib/scan/executor.ts` · `app/dashboard/projects/[projectId]/recommendations/
 recommendations-client.tsx` · `docs/external-audit-2026-08.md` Fase 7.
+
+**Nota de numeración.** Nació como §190 sobre una `main` que llegaba al §189.
+Mientras esta rama seguía abierta, RECS-LOOP-1 Fase B (#503) reclamó ese
+mismo §190 y mergeó primero, así que esta sección —la que no estaba en
+`main`— renumera a **§191**, con todas sus referencias (`grep -rn "§191"`).
+Mismo protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185/§187
+de este mismo fichero.

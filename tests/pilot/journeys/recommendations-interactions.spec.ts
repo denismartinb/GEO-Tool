@@ -179,6 +179,33 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
     await tabs.first().click();
   }
 
+  // "Resueltas" — RECS-LOOP-1 Fase A+B. Único sitio donde renderiza la línea
+  // de veredicto (Fase A: mutación cumplida; Fase B: la brecha volvió o no
+  // tras marcarse como hecha) y donde vive la prueba de que el histórico
+  // existe. Ninguna otra parte de este journey ni del barrido genérico abría
+  // esta pestaña — sin este bloque, las dos fases se quedaban sin una sola
+  // captura que las enseñara; lo encontró el propio piloto de esta PR
+  // (docs/brand/design-decisions-log.md §190). `ResolvedHistoryCard`
+  // comparte clase `.rec-card` con las tarjetas activas, así que la cuenta
+  // de abajo es válida sin un selector nuevo.
+  const resolvedTab = tabs.filter({ hasText: "Resueltas" });
+  if (await resolvedTab.count()) {
+    await resolvedTab.first().click();
+    expect(
+      await page.locator(".rec2-group").count(),
+      "'Resueltas' no debería agrupar en acordeones"
+    ).toBe(0);
+    const historyCards = await page.locator(".rec-card").count();
+    const empty = await page.locator(".section-empty").count();
+    expect(historyCards + empty, "'Resueltas' deja la pantalla en blanco").toBeGreaterThan(0);
+    // fullContent: el bloque de "acciones prioritarias" se queda pintado
+    // encima de esta lista en cualquier pestaña, así que una captura de sólo
+    // el viewport deja fuera casi todo el historial — el propio piloto de
+    // esta PR sólo llegó a ver 1-3 filas de las que hubiera en la cuenta real.
+    await captureInteraction(page, testInfo, "recs-resueltas", { fullContent: true });
+    await tabs.first().click();
+  }
+
   // --- 5 · "Ver más": el detalle de una prioritaria se abre ----------------
   await priority.first().locator(".rec-main").click();
   await expect(

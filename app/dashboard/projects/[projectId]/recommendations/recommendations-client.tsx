@@ -138,6 +138,11 @@ export type Recommendation = {
   status: string;
   source_type: string;
   evidence_json: EvidenceJson | null;
+  /** The gap's stable identity across runs (RECS-DEDUPE-1) — used to detect
+   * whether this exact gap was previously marked done, see
+   * previouslyMarkedDoneAt below. Optional/undefined on a host screen that
+   * doesn't select it (the web-audit page reuses RecCard). */
+  dedupe_key?: string;
   /**
    * The latest AI-generated solution for this recommendation (null until the
    * user generates one). Drives both the button state and the "Plan de acción"
@@ -150,6 +155,14 @@ export type Recommendation = {
    * to the user once it has persisted across at least one prior scan.
    */
   consecutive_runs_open?: number;
+  /**
+   * RECS-LOOP-1 Fase B — set when this exact gap (dedupe_key) was marked
+   * done once before and came back: the date it was dismissed, so the card
+   * carries that memory instead of silently re-teaching a gap the user
+   * already acted on. Null/undefined for a brand-new gap or a host screen
+   * that doesn't compute it.
+   */
+  previouslyMarkedDoneAt?: string | null;
   /** RECS-COVERAGE-OVERLAY-1 — null/undefined for every card type except a
    * matched `add_citation_block` card for the current scan. */
   coverageOverlay?: CoverageOverlay | null;
@@ -179,6 +192,14 @@ export type PredictionVerdict = {
   totalCount: number;
 };
 
+/** RECS-LOOP-1 Fase B — mirrors lib/recommendations/dismissal-recurrence.ts
+ * `RecurrenceVerdict` on the client, same reason PredictionVerdict is
+ * mirrored above. */
+export type RecurrenceVerdict =
+  | { status: "recurred"; anchorRunId: string; anchorRunCreatedAt: string }
+  | { status: "did_not_recur"; anchorRunId: string; anchorRunCreatedAt: string }
+  | { status: "no_verdict" };
+
 export type ResolvedHistoryItem = {
   id: string;
   title: string;
@@ -186,45 +207,97 @@ export type ResolvedHistoryItem = {
   recommendation_type: string;
   status: "resolved" | "dismissed";
   updated_at: string;
-  /** Only ever set for status="resolved" — a dismissed row has no confirming
-   * scan yet (RECS-LOOP-1 Fase B, not built). */
+  /** Only ever set for status="resolved" — the specific-mutation check
+   * (RECS-LOOP-1 Fase A), or for a "dismissed" row whose gap did NOT recur
+   * (Fase B: recurrence.status === "did_not_recur"). Never both a "came
+   * back" recurrence line and a mutation-detail line for the same row —
+   * see predictionVerdictLine. */
   verification?: { status: "verified"; verdict: PredictionVerdict } | { status: "no_verdict" } | null;
+  /** RECS-LOOP-1 Fase B — only ever set for status="dismissed". */
+  recurrence?: RecurrenceVerdict | null;
 };
 
-/**
- * Observational, dated copy — never "ya apareces" (a permanent-sounding
- * present tense the next scan's non-determinism could contradict), always
- * "en el escaneo que lo confirmó, ..." (docs/adr/0017 §5's promised
- * verification, RECS-LOOP-1 Fase A). Silent (returns null) for anything
- * short of a real verdict — a history row with nothing to show says nothing,
- * never an invented or placeholder line.
- */
-export function predictionVerdictLine(item: ResolvedHistoryItem): string | null {
-  if (item.status !== "resolved" || !item.verification || item.verification.status !== "verified") return null;
-  const { kind, fulfilledCount, totalCount } = item.verification.verdict;
+/** Same day/month/year format used for a history row's own dateLabel below —
+ * shared so the two never drift into displaying dates in different shapes on
+ * the same card. */
+function formatHistoryDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Madrid",
+  });
+}
+
+/** The presence/prominence/authority clause shared by both a resolved card's
+ * verdict ("en el escaneo que lo confirmó, ...") and a dismissed card's whose
+ * gap did not recur ("... ya no la encontró. ..." — see predictionVerdictLine).
+ * Lowercase-leading: the resolved case appends it after a comma, the
+ * dismissed case capitalizes it itself as a new sentence. */
+function verdictClause(kind: PredictionVerdict["kind"], fulfilledCount: number, totalCount: number): string {
   const scope = totalCount === 1 ? "la consulta de esta tarjeta" : `${totalCount} consultas de esta tarjeta`;
   const of = totalCount === 1 ? "" : ` (${fulfilledCount} de ${totalCount})`;
 
   if (kind === "presence") {
     return fulfilledCount === totalCount
-      ? `En el escaneo que lo confirmó, la IA te nombró en ${scope}.`
+      ? `la IA te nombró en ${scope}`
       : fulfilledCount === 0
-        ? `En el escaneo que lo confirmó, la IA no te nombró en ${scope}.`
-        : `En el escaneo que lo confirmó, la IA te nombró${of}.`;
+        ? `la IA no te nombró en ${scope}`
+        : `la IA te nombró${of}`;
   }
   if (kind === "prominence") {
     return fulfilledCount === totalCount
-      ? `En el escaneo que lo confirmó, dejaste de aparecer por detrás en ${scope}.`
+      ? `dejaste de aparecer por detrás en ${scope}`
       : fulfilledCount === 0
-        ? `En el escaneo que lo confirmó, seguiste apareciendo por detrás en ${scope}.`
-        : `En el escaneo que lo confirmó, dejaste de aparecer por detrás${of}.`;
+        ? `seguiste apareciendo por detrás en ${scope}`
+        : `dejaste de aparecer por detrás${of}`;
   }
   // authority
   return fulfilledCount === totalCount
-    ? `En el escaneo que lo confirmó, tu web quedó citada en ${scope}.`
+    ? `tu web quedó citada en ${scope}`
     : fulfilledCount === 0
-      ? `En el escaneo que lo confirmó, tu web no quedó citada en ${scope}.`
-      : `En el escaneo que lo confirmó, tu web quedó citada${of}.`;
+      ? `tu web no quedó citada en ${scope}`
+      : `tu web quedó citada${of}`;
+}
+
+/**
+ * Observational, dated copy — never "ya apareces" (a permanent-sounding
+ * present tense the next scan's non-determinism could contradict). A
+ * resolved row reads "en el escaneo que lo confirmó, ..." (docs/adr/0017 §5's
+ * promised verification, RECS-LOOP-1 Fase A) — something WAS confirmed there,
+ * the system detected the gap gone. A dismissed row never uses that phrase
+ * (RECS-LOOP-1 Fase B): nothing was confirmed by a manual click, only
+ * observed later, so it names the anchor scan's own date instead — a date
+ * distinct from the card's dateLabel (the dismissal date), and that
+ * difference is the point: "El escaneo del 25 ago 2026 ya no la encontró"
+ * next to a card dated "12 ago 2026" tells you two things happened on two
+ * different days. Silent (returns null) for anything short of a real
+ * verdict — a history row with nothing to show says nothing, never an
+ * invented or placeholder line.
+ */
+export function predictionVerdictLine(item: ResolvedHistoryItem): string | null {
+  if (item.status === "resolved") {
+    if (!item.verification || item.verification.status !== "verified") return null;
+    const { kind, fulfilledCount, totalCount } = item.verification.verdict;
+    return `En el escaneo que lo confirmó, ${verdictClause(kind, fulfilledCount, totalCount)}.`;
+  }
+
+  // dismissed
+  if (!item.recurrence || item.recurrence.status === "no_verdict") return null;
+  const anchorDate = formatHistoryDate(item.recurrence.anchorRunCreatedAt);
+
+  if (item.recurrence.status === "recurred") {
+    return `El escaneo del ${anchorDate} volvió a encontrarla.`;
+  }
+
+  // did_not_recur — the mutation detail is a second sentence, only when there
+  // is one; never paired with "recurred" above (see the type doc).
+  if (item.verification?.status !== "verified") {
+    return `El escaneo del ${anchorDate} ya no la encontró.`;
+  }
+  const { kind, fulfilledCount, totalCount } = item.verification.verdict;
+  const clause = verdictClause(kind, fulfilledCount, totalCount);
+  return `El escaneo del ${anchorDate} ya no la encontró. ${clause.charAt(0).toUpperCase()}${clause.slice(1)}.`;
 }
 
 function impactToN(val: string): number {
@@ -435,12 +508,7 @@ function ExampleBlock({ example, showCaption }: { example: GeneratedSolutionExam
  * manually-dismissed (the user marked it done/not applicable) items.
  */
 function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
-  const dateLabel = new Date(item.updated_at).toLocaleDateString("es-ES", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Europe/Madrid",
-  });
+  const dateLabel = formatHistoryDate(item.updated_at);
   const verdictLine = predictionVerdictLine(item);
 
   return (
@@ -613,6 +681,7 @@ export function RecCard({
             priorityLevel(rec) === "high" ||
             quickWin ||
             (rec.consecutive_runs_open ?? 1) > 1 ||
+            Boolean(rec.previouslyMarkedDoneAt) ||
             control === "third_party" ||
             control === "in_app") && (
             <div
@@ -634,6 +703,16 @@ export function RecCard({
               )}
               {(rec.consecutive_runs_open ?? 1) > 1 && (
                 <span className="badge badge-outline">Abierta {rec.consecutive_runs_open} escaneos</span>
+              )}
+              {/* RECS-LOOP-1 Fase B — this exact gap was marked done before and
+                  came back. Without this the card looks brand new, and the
+                  user who already clicked "Marcar como hecho" once gets no
+                  memory of having done so. */}
+              {rec.previouslyMarkedDoneAt && (
+                <span className="badge badge-outline">
+                  <Icon name="clock" size={11} />
+                  La marcaste como hecha el {formatHistoryDate(rec.previouslyMarkedDoneAt)}
+                </span>
               )}
               {/* RECS-ACCION-1 — sólo se marca la EXCEPCIÓN. "En tu web" es lo
                   que el usuario ya da por supuesto en 11 de los 15 tipos, y
