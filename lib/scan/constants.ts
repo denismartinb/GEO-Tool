@@ -428,6 +428,6 @@ export const PROMPT_JOB_STAGGER_MIN_REMAINING_MS = 20_000;
  * Vercel then kills it before the response — and because BOTH continuations
  * (the sweep's next link and each scan's own next batch) are registered with
  * `after()`, which never runs without a response, one overrun silently ends
- * the whole day's sweep (RECURRING-CADENCE-1, log §191).
+ * the whole day's sweep (RECURRING-CADENCE-1, log §192).
  */
 export const SWEEP_SAFE_CEILING_MS = 55_000;

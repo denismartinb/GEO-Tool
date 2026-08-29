@@ -40,7 +40,7 @@ describe("canStartAnotherScanInvocation", () => {
 });
 
 /**
- * RECURRING-CADENCE-1 (log §191). The recurring-scan sweep had the same
+ * RECURRING-CADENCE-1 (log §192). The recurring-scan sweep had the same
  * "after" bug one level up: `if (elapsed > 45_000) break`, which let a batch
  * start at 44.9s and spend another SCAN_INVOCATION_WORST_CASE_MS.
  */

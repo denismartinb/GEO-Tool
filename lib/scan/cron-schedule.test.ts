@@ -7,7 +7,7 @@ import {
 } from "@/lib/scan/cron";
 
 /**
- * RECURRING-CADENCE-1 (log §191). Recurring-scan eligibility is anchored to
+ * RECURRING-CADENCE-1 (log §192). Recurring-scan eligibility is anchored to
  * the cron's fixed firing time instead of a rolling window measured backwards
  * from `Date.now()`. These are the parts of that decision verifiable without a
  * database: the anchor arithmetic, and the fact that the anchor still matches

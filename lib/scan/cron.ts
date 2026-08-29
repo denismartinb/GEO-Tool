@@ -72,7 +72,7 @@ export const RECURRING_CRON_UTC_HOUR = 6;
  * The most recent scheduled firing of the daily sweep, at or before `now`.
  *
  * Eligibility is anchored to this fixed instant instead of measured backwards
- * from `Date.now()` (RECURRING-CADENCE-1, log §191). The rolling-window form
+ * from `Date.now()` (RECURRING-CADENCE-1, log §192). The rolling-window form
  * it replaces asked "was the last run less than 24h ago?", which is the wrong
  * question for a job that fires once a day at a fixed hour: any run that
  * happened *off* that schedule — a manual scan, an auto-retry from

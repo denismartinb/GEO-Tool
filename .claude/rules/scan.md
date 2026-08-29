@@ -52,7 +52,7 @@ worse than no rule, because a future session will obey it anyway.
   un reintento de `reconciliation.ts`— caía dentro de ella en el disparo
   siguiente y le costaba al proyecto un día entero de su cadencia; un escaneo
   manual a las 13:08 del 27 dejó a un proyecto de plan diario sin escaneo el 28
-  (`docs/brand/design-decisions-log.md` §191). El margen de seguridad que había
+  (`docs/brand/design-decisions-log.md` §192). El margen de seguridad que había
   antes (`CRON_DRIFT_SAFETY_MARGIN_MS`) parcheaba el problema simétrico —la
   deriva del propio disparo— y no podía cubrir éste: un margen sólo mueve el
   borde de una ventana que sigue siendo móvil. `mostRecentCronFiringAt` +
@@ -70,7 +70,7 @@ worse than no rule, because a future session will obey it anyway.
   **antes** de una iteración si su peor caso entero cabe, y lo pregunta a una
   función de ese módulo (`canStartAnotherScanInvocation`,
   `canStartAnotherSweepBatch`), nunca a una comparación escrita a mano
-  (`docs/brand/design-decisions-log.md` §191). El coste de acertar aquí es
+  (`docs/brand/design-decisions-log.md` §192). El coste de acertar aquí es
   mayor que perder un lote: en el barrido, las DOS cadenas de continuación
   —la del barrido y la de cada escaneo— viven en `after()`, que no corre si
   Vercel mata la función antes de responder, así que un desbordamiento no
@@ -106,7 +106,7 @@ worse than no rule, because a future session will obey it anyway.
   está un nivel por encima y hacía exactamente lo mismo mal: un `await fetch`
   pelado, la cadena de proyectos parada en un eslabón y
   `continuationScheduled: true` en el log de resumen de todas formas
-  (`docs/brand/design-decisions-log.md` §191). **Toda** auto-llamada del
+  (`docs/brand/design-decisions-log.md` §192). **Toda** auto-llamada del
   pipeline, no sólo la que motivó la regla.
 - **A failure the operator can fix must reach the operator.** Persisting a
   categorized error is half the job; if nothing reads it, the incident is still
