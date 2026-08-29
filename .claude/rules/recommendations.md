@@ -7,6 +7,35 @@ paths:
 
 # Recomendaciones — invariantes
 
+## Motor (RECS-EVIDENCE-2, Fase 7, log §190)
+
+- **`perPromptGapCards` agrupa por prompt ANTES de decidir el hallazgo, nunca
+  al revés.** Un run ejecuta varios motores por prompt (migración 0009), así
+  que iterar `promptResults` fila a fila y dejar que el dedupe final se
+  quede sólo con la de mayor severidad pierde en silencio la evidencia de
+  los motores perdedores cuando dos coinciden en el mismo hallazgo. Agrupar
+  primero por `stableId` (`project_prompts.id`) y evaluar la condición sobre
+  el grupo entero es lo que hace que el agrupamiento sea automático en vez de
+  depender del dedupe genérico para no perder datos.
+- **Nunca separar el dedupe por motor.** Se consideró y se descartó: convierte
+  cada coincidencia entre motores en tarjetas adicionales, exactamente lo
+  contrario de lo que pide "agrupación de acciones equivalentes,
+  >95% sin duplicado". El motor es un atributo de la evidencia dentro de una
+  tarjeta, no una dimensión nueva de identidad de la tarjeta.
+- **`AffectedPromptDetail.provider`/`PromptResultInput.provider` viajan por
+  `evidence_json`, nunca por una columna propia.** No hace falta migración:
+  `evidence_json` ya es jsonb y ya guarda `prompt`/`competitors`/`domains`
+  del mismo modo.
+- **El glifo de motor en pantalla es SIEMPRE `getEngineMeta`/`EngineGlyph`
+  (`lib/scan/engine-meta.ts`), nunca una copia local.** Es el mismo módulo
+  que ya comparten Prompts y Overview — un motor nuevo sólo necesita una
+  entrada ahí.
+- **Ausencia de `provider` no se rellena con Gemini por defecto.** A
+  diferencia de `normalizeProvider` (pensado para filas de escaneo reales,
+  que nunca tienen `provider` null legítimamente), la evidencia persistida
+  antes de esta fase simplemente no lo tiene — se pinta sin glifo, nunca se
+  inventa.
+
 ## Puntos potenciales
 
 - **Se calculan por recomputación contrafactual del score real**, nunca por el

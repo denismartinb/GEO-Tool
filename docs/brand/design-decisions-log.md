@@ -18137,3 +18137,76 @@ page.tsx` (filtro de `opportunityRows`) · `app/dashboard/projects/
 `app/globals.css` (`.cit2-opp-unverified`) ·
 `lib/citations/aggregate-citations.test.ts` ·
 `.claude/rules/citations.md` · `docs/external-audit-2026-08.md` Fase 8.
+
+---
+
+## 190. Dos motores de acuerdo sobre el mismo prompt dejaban de verse — cada tarjeta pasa a decir qué motor habla (RECS-EVIDENCE-2, Fase 7, 2026-08-28)
+
+**El hallazgo del auditor externo (P0-03).** Ninguna recomendación decía qué
+motor (Gemini/ChatGPT/Claude) respaldaba su evidencia, y dos acciones sobre
+el mismo prompt podían leerse como contradictorias sin esa dimensión. El
+informe también señalaba 22 recomendaciones con duplicados como ruido, y una
+cabecera "hasta +14 puntos" que no cuadraba con las tarjetas visibles
+(+11 y +4).
+
+**Diagnóstico (agente `Explore`, sólo lectura), y una corrección de rumbo a
+mitad de implementación.** De los seis campos que pide el informe, cuatro ya
+existían (fecha, evidencia, prompt, competidor — dentro de `evidence_json`).
+Sólo faltaban dos: **motor**, que el executor ya leía de
+`scan_prompt_results` pero descartaba antes de pasarlo al generador; y
+**respuesta objetivo**, sin cambios en esta fase. El plan aprobado inicial
+decía *"el dedupe pasa a ser por prompt+motor"* — al implementarlo se vio que
+eso estaba mal: `perPromptGapCards` genera un candidato por CADA fila de
+`scan_prompt_results` (una por prompt+motor desde que un run ejecuta varios
+motores, migración 0009), y el paso de dedupe final sólo conservaba el de
+mayor severidad — cuando dos o tres motores coincidían en el mismo hallazgo
+sobre el mismo prompt, sólo sobrevivía UNO, perdiendo la evidencia de los
+demás en silencio. Separar el dedupe por motor habría IDO EN CONTRA del
+propio criterio de aceptación del informe (">95% sin duplicado", "agrupación
+de acciones equivalentes") multiplicando tarjetas en vez de agruparlas.
+
+**La corrección real: agrupar por prompt ANTES de decidir el hallazgo, no
+después.** `perPromptGapCards` ahora agrupa `promptResults` por
+`stableId` (el mismo `project_prompts.id` que ya usaba RECS-DEDUPE-1) y
+evalúa cada condición (visibilidad, cita) sobre el GRUPO, no fila a fila. El
+resultado: como mucho una tarjeta de cada tipo por prompt (nunca más de
+antes), y esa tarjeta agrega la evidencia de TODOS los motores que
+coincidieron — nunca menos que antes. Cuando los motores discrepan (uno ve
+la marca mencionada, otro no), el prompt puede legítimamente sacar dos
+tarjetas distintas — visibilidad para los motores que no vieron nada, cita
+para los que sí — cada una con su propia evidencia, sin mezclarlas.
+
+**Motor viaja de principio a fin.** `PromptResultInput.provider` (nuevo,
+opcional) → `AffectedPromptDetail.provider` (nuevo, no-opcional dentro del
+tipo pero `null` cuando el llamador no lo da) → `lib/scan/executor.ts` lo
+pasa desde la misma fila que ya seleccionaba para `engineCoverage`/scores,
+cero consultas nuevas. En la pantalla, cada línea de prompt afectado del
+panel expandido lleva el glifo de motor compartido (`EngineGlyph`,
+`getEngineMeta` — `lib/scan/engine-meta.ts`, el mismo que usan Prompts y
+Overview), nunca una copia local. Filas de evidencia persistidas antes de
+esta fase simplemente no llevan glifo — tri-estado, como toda esta zona: no
+se asume Gemini por defecto para evidencia histórica, aunque
+`normalizeProvider` sí lo haga para filas de escaneo reales que nunca tienen
+`provider` null legítimamente.
+
+**Lo que esta fase NO toca.** La cabecera "hasta +N puntos" no es un bug —
+ADR 0017 §3 ya documenta que es un techo conjunto sobre la UNIÓN de prompts
+afectados, deliberadamente distinto de la suma ingenua de las tarjetas
+(que contaría dos veces un prompt compartido por dos reglas). Explicar esa
+relación en pantalla es la Fase 7b, con Task Intake propio, no una extensión
+silenciosa de ésta. Tampoco se añade "respuesta objetivo" como campo nuevo
+—`affected_prompt_details[].id` ya es el id de la fila de respuesta
+concreta (`scan_prompt_results.id`)— ni se tocan las reglas de agregación
+(`close_competitor_gap` y similares), que ya aceptaban filas de varios
+motores sin este problema porque nunca fueron una tarjeta por fila.
+
+**Comprobado.** `pnpm test` (219/219 ficheros, 3.022/3.022 tests, 3 tests
+nuevos en `recommendation-engine.test.ts` que prueban la fusión, la
+discrepancia entre motores y el registro de `provider`), `pnpm run validate`
+(build + typecheck + lint).
+
+**Trazabilidad.** `lib/recommendations/recommendation-engine.ts`
+(`PromptResultInput.provider`, `AffectedPromptDetail.provider`,
+`perPromptGapCards`) · `lib/recommendations/recommendation-engine.test.ts` ·
+`lib/scan/executor.ts` · `app/dashboard/projects/[projectId]/recommendations/
+recommendations-client.tsx` · `docs/external-audit-2026-08.md` Fase 7.

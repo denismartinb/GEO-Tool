@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
+import { EngineGlyph } from "@/components/ui/engine-glyph";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
@@ -865,7 +867,31 @@ export function RecCard({
                   <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: 0, listStyle: "none" }}>
                     {promptDetails.slice(0, 4).map((p) => (
                       <li key={p.id} style={{ marginBottom: 6 }}>
-                        <div>{p.prompt}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          {/* RECS-EVIDENCE-2 (docs/external-audit-2026-08.md,
+                              Fase 7) — de qué motor viene esta evidencia
+                              concreta. `p.provider` falta en filas persistidas
+                              antes de esta fase; nada se pinta en ese caso,
+                              nunca se asume Gemini por defecto aquí (a
+                              diferencia de `normalizeProvider`, pensado para
+                              filas de escaneo reales, no para evidencia
+                              histórica que nunca lo registró). */}
+                          {p.provider && (
+                            <span
+                              style={{
+                                color: getEngineMeta(p.provider).color,
+                                display: "inline-flex",
+                                width: 12,
+                                height: 12,
+                                flexShrink: 0
+                              }}
+                              title={getEngineMeta(p.provider).label}
+                            >
+                              <EngineGlyph provider={p.provider} />
+                            </span>
+                          )}
+                          <span>{p.prompt}</span>
+                        </div>
                         {(p.competitors.length > 0 || p.domains.length > 0) && (
                           <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
                             {p.competitors.length > 0 && <span>Gana: {p.competitors.join(", ")}</span>}
