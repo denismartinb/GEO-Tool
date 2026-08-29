@@ -15,6 +15,7 @@ import {
   type RecommendationVerification,
   type VerificationRow
 } from "@/lib/recommendations/prediction-verification";
+import { computeDismissalRecurrence, type RecurrenceVerdict } from "@/lib/recommendations/dismissal-recurrence";
 import {
   computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
@@ -195,7 +196,7 @@ export default async function RecommendationsPage({
         supabase
           .from("recommendations")
           .select(
-            "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open",
+            "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open, dedupe_key",
           )
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
@@ -220,7 +221,7 @@ export default async function RecommendationsPage({
         supabase
           .from("recommendations")
           .select(
-            "id, title, description, recommendation_type, status, updated_at, run_id, resolved_in_run_id, evidence_json",
+            "id, title, description, recommendation_type, status, updated_at, run_id, resolved_in_run_id, evidence_json, dedupe_key",
           )
           .eq("project_id", projectId)
           .in("status", ["resolved", "dismissed"])
@@ -270,6 +271,7 @@ export default async function RecommendationsPage({
     run_id: string;
     resolved_in_run_id: string | null;
     evidence_json: { affected_prompt_details?: Array<{ id: string; competitors: string[] }> } | null;
+    dedupe_key: string;
   };
 
   // RECS-LOOP-1 Fase A: dedupeByTitle alone would collapse a real, distinct
@@ -294,22 +296,103 @@ export default async function RecommendationsPage({
 
   const resolvedHistory = dedupeResolvedHistory((history ?? []) as HistoryRow[]);
 
-  // RECS-LOOP-1 Fase A: verify, for each auto-resolved history row, whether
-  // the specific mutation its potential-points estimate assumed actually
-  // happened in the run that confirmed the gap gone — never a score delta
-  // (see lib/recommendations/prediction-verification.ts for why). Dismissed
-  // rows never get a verdict here: dismissRecommendationCore never sets
-  // resolved_in_run_id, so there is no confirming run to check against yet
-  // (RECS-LOOP-1 Fase B, not this phase).
-  const verificationByRecId = new Map<string, RecommendationVerification>();
-  const resolvedRows = resolvedHistory.filter(
-    (r): r is HistoryRow & { resolved_in_run_id: string } => r.status === "resolved" && Boolean(r.resolved_in_run_id),
+  // RECS-LOOP-1 Fase B: for each dismissed history row, did the gap
+  // (dedupe_key) come back in the first completed scan after the dismissal?
+  // Same recurrence signal computeRecommendationTransition already uses to
+  // decide "resolved" (recommendation-history.ts), applied to one pinned
+  // later run instead of every subsequent one — see
+  // lib/recommendations/dismissal-recurrence.ts for why the anchor is fixed
+  // rather than a rolling "most recent run" check.
+  const recurrenceByRecId = new Map<string, RecurrenceVerdict>();
+  const dismissedRowsWithKey = resolvedHistory.filter(
+    (r): r is HistoryRow & { dedupe_key: string } => r.status === "dismissed" && Boolean(r.dedupe_key),
   );
-  if (resolvedRows.length > 0) {
-    const oldRunIds = Array.from(new Set(resolvedRows.map((r) => r.run_id)));
-    const newRunIds = Array.from(new Set(resolvedRows.map((r) => r.resolved_in_run_id)));
+  if (dismissedRowsWithKey.length > 0) {
+    const earliestDismissedAt = dismissedRowsWithKey.reduce(
+      (min, r) => (r.updated_at < min ? r.updated_at : min),
+      dismissedRowsWithKey[0].updated_at,
+    );
+
+    const { data: candidateRunRows } = await supabase
+      .from("scan_runs")
+      .select("id, created_at")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .gt("created_at", earliestDismissedAt)
+      .order("created_at", { ascending: true });
+
+    const candidateRuns = (candidateRunRows ?? []) as Array<{ id: string; created_at: string }>;
+
+    if (candidateRuns.length > 0) {
+      const { data: candidateRecRows } = await supabase
+        .from("recommendations")
+        .select("run_id, dedupe_key")
+        .eq("project_id", projectId)
+        .in(
+          "run_id",
+          candidateRuns.map((r) => r.id),
+        );
+
+      const dedupeKeysByRunId = new Map<string, Set<string>>();
+      for (const row of (candidateRecRows ?? []) as Array<{ run_id: string; dedupe_key: string }>) {
+        const set = dedupeKeysByRunId.get(row.run_id) ?? new Set<string>();
+        set.add(row.dedupe_key);
+        dedupeKeysByRunId.set(row.run_id, set);
+      }
+
+      for (const [recId, verdict] of computeDismissalRecurrence({
+        dismissedRows: dismissedRowsWithKey.map((r) => ({ id: r.id, dedupeKey: r.dedupe_key, dismissedAt: r.updated_at })),
+        candidateRuns: candidateRuns.map((r) => ({ id: r.id, createdAt: r.created_at })),
+        dedupeKeysByRunId,
+      })) {
+        recurrenceByRecId.set(recId, verdict);
+      }
+    }
+  }
+
+  // RECS-LOOP-1 Fase B, active-card memory: if the currently-active backlog
+  // holds the same dedupe_key as a dismissal that recurred, the card carries
+  // when it was previously marked done — so it does not silently re-teach a
+  // gap the user already acted on once. Keyed on dedupe_key (not recId,
+  // which is a fresh row every time the gap reappears), keeping the most
+  // recent dismissal per key since `history` is already newest-first.
+  const recurredDismissalByDedupeKey = new Map<string, string>();
+  for (const r of dismissedRowsWithKey) {
+    if (recurrenceByRecId.get(r.id)?.status !== "recurred") continue;
+    if (!recurredDismissalByDedupeKey.has(r.dedupe_key)) {
+      recurredDismissalByDedupeKey.set(r.dedupe_key, r.updated_at);
+    }
+  }
+
+  // RECS-LOOP-1 Fase A+B: verify, for each history row with a later run to
+  // check against, whether the specific mutation its potential-points
+  // estimate assumed actually happened — never a score delta (see
+  // lib/recommendations/prediction-verification.ts for why). A `resolved`
+  // row's later run is `resolved_in_run_id` (the system detected the gap
+  // gone); a `dismissed` row's is the anchor run above, only when the gap
+  // did NOT recur there — showing the mutation detail next to "it came back"
+  // would answer a question nobody asked while burying the one that matters.
+  const verificationByRecId = new Map<string, RecommendationVerification>();
+  const verifiableRows: Array<{ id: string; recommendation_type: string; run_id: string; anchor_run_id: string; evidence_json: HistoryRow["evidence_json"] }> = [
+    ...resolvedHistory
+      .filter((r): r is HistoryRow & { resolved_in_run_id: string } => r.status === "resolved" && Boolean(r.resolved_in_run_id))
+      .map((r) => ({ id: r.id, recommendation_type: r.recommendation_type, run_id: r.run_id, anchor_run_id: r.resolved_in_run_id, evidence_json: r.evidence_json })),
+    ...dismissedRowsWithKey
+      .filter((r) => recurrenceByRecId.get(r.id)?.status === "did_not_recur")
+      .map((r) => ({
+        id: r.id,
+        recommendation_type: r.recommendation_type,
+        run_id: r.run_id,
+        anchor_run_id: (recurrenceByRecId.get(r.id) as { status: "did_not_recur"; anchorRunId: string }).anchorRunId,
+        evidence_json: r.evidence_json,
+      })),
+  ];
+
+  if (verifiableRows.length > 0) {
+    const oldRunIds = Array.from(new Set(verifiableRows.map((r) => r.run_id)));
+    const newRunIds = Array.from(new Set(verifiableRows.map((r) => r.anchor_run_id)));
     const oldResultIds = Array.from(
-      new Set(resolvedRows.flatMap((r) => r.evidence_json?.affected_prompt_details?.map((d) => d.id) ?? [])),
+      new Set(verifiableRows.flatMap((r) => r.evidence_json?.affected_prompt_details?.map((d) => d.id) ?? [])),
     );
 
     if (oldResultIds.length > 0) {
@@ -346,10 +429,10 @@ export default async function RecommendationsPage({
         newRunRowsByRunAndPrompt.set(key, existing);
       }
 
-      const toVerify: RecommendationToVerify[] = resolvedRows.map((r) => ({
+      const toVerify: RecommendationToVerify[] = verifiableRows.map((r) => ({
         id: r.id,
         recommendationType: r.recommendation_type,
-        resolvedInRunId: r.resolved_in_run_id,
+        anchorRunId: r.anchor_run_id,
         affectedPrompts: (r.evidence_json?.affected_prompt_details ?? []).map((d) => ({
           resultId: d.id,
           competitors: d.competitors ?? [],
@@ -377,6 +460,7 @@ export default async function RecommendationsPage({
     status: r.status,
     updated_at: r.updated_at,
     verification: verificationByRecId.get(r.id) ?? null,
+    recurrence: r.status === "dismissed" ? (recurrenceByRecId.get(r.id) ?? null) : null,
   }));
 
   // Attach the latest sanitized AI-generated solution (if any) for each
@@ -528,6 +612,11 @@ export default async function RecommendationsPage({
     ...r,
     solution: solutionByRecId.get(r.id) ?? null,
     coverageOverlay: coverageOverlayByRecId.get(r.id) ?? null,
+    // RECS-LOOP-1 Fase B: this exact gap came back after being marked done
+    // once before — see recurredDismissalByDedupeKey above for why this is
+    // keyed on dedupe_key (stable across the gap's re-occurrences) rather
+    // than any row id (a fresh one every time the gap reappears).
+    previouslyMarkedDoneAt: r.dedupe_key ? (recurredDismissalByDedupeKey.get(r.dedupe_key) ?? null) : null,
     potentialPoints:
       scoreInputRows.length > 0
         ? (computeRecommendationPotentialPoints(
