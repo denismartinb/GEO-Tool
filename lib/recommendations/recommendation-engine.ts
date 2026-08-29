@@ -43,6 +43,18 @@ type PromptResultInput = {
    * fall back to keyword matching (see isComparativePrompt/isInformationalPrompt).
    */
   category?: string | null;
+  /**
+   * RECS-EVIDENCE-2 (docs/external-audit-2026-08.md, Fase 7). The engine that
+   * produced this specific `scan_prompt_results` row (`gemini`/`claude`/
+   * `openai`) — a run now executes multiple engines per prompt
+   * (`scan_prompt_results_run_prompt_provider_uniq`, migration 0009), so this
+   * is what lets a card say WHICH engine saw the gap, and what lets two
+   * engines agreeing on the same prompt+gap merge into one card instead of
+   * each other's evidence silently disappearing behind `dedupeKey`'s
+   * highest-severity pick. Optional/nullable only for callers that don't have
+   * it (none today) — never omitted by `lib/scan/executor.ts`.
+   */
+  provider?: string | null;
 };
 
 export type AffectedPromptDetail = {
@@ -51,6 +63,8 @@ export type AffectedPromptDetail = {
   competitors: string[];
   domains: string[];
   snippet: string | null;
+  /** RECS-EVIDENCE-2 — see `PromptResultInput.provider`. */
+  provider: string | null;
 };
 
 type RecommendationRow = {
@@ -246,7 +260,8 @@ function toAffectedPromptDetails(prompts: PromptResultInput[]): AffectedPromptDe
       prompt: p.prompt_text_snapshot,
       competitors: ev.competitors,
       domains: ev.domains,
-      snippet: ev.brandSnippet ?? ev.competitorSnippet
+      snippet: ev.brandSnippet ?? ev.competitorSnippet,
+      provider: p.provider ?? null
     };
   });
 }
@@ -501,10 +516,18 @@ function perPromptGapCards(opts: {
   const { promptResults, runScore, scoreDetails } = opts;
   const cards: CandidateRec[] = [];
 
+  // RECS-EVIDENCE-2 (docs/external-audit-2026-08.md, Fase 7). Grouped by the
+  // PROMPT before deciding a gap, not one candidate per `scan_prompt_results`
+  // row. A run now executes multiple engines per prompt (migration 0009), so
+  // without this grouping two (or three) engines agreeing on the same gap on
+  // the same prompt each pushed their own candidate under the identical
+  // `dedupeKey` — and the later highest-severity dedup pass kept exactly one,
+  // silently discarding the other engines' evidence. Grouping first means
+  // this function only ever emits ONE dedupeKey per (prompt, gap type), with
+  // every agreeing engine's row folded into that single card's evidence —
+  // never fewer facts, never more cards.
+  const byPrompt = new Map<string, PromptResultInput[]>();
   for (const result of promptResults) {
-    const ev = promptEvidence(result);
-    const hasCompetitor = ev.competitors.length > 0;
-    const label = shortPrompt(result.prompt_text_snapshot);
     // RECS-DEDUPE-1: identify the gap by the PROMPT, not by this run's result
     // row — result.id is a fresh scan_prompt_results.id every run, so keying
     // on it made every per-prompt gap look "resolved" on the very next scan
@@ -513,8 +536,24 @@ function perPromptGapCards(opts: {
     // from project_prompts) — dedupe stability degrades for that one row,
     // which no longer matters since it won't be scanned again either.
     const stableId = result.promptId ?? result.id;
+    const group = byPrompt.get(stableId);
+    if (group) group.push(result);
+    else byPrompt.set(stableId, [result]);
+  }
 
-    if (!result.brand_mentioned && !hasCompetitor) {
+  for (const [stableId, group] of byPrompt) {
+    const label = shortPrompt(group[0].prompt_text_snapshot);
+
+    // Two engines can disagree about the SAME prompt (one sees the brand
+    // mentioned, another doesn't) — each condition is checked independently
+    // over the group, so a prompt can legitimately surface both a visibility
+    // card (for the engines that saw nothing) and a citation card (for the
+    // engines that saw a mention without a citation) in the same run.
+    const visibilityAffected = group.filter((result) => {
+      const ev = promptEvidence(result);
+      return !result.brand_mentioned && ev.competitors.length === 0;
+    });
+    if (visibilityAffected.length > 0) {
       cards.push({
         title: `Aparece en "${label}"`,
         description:
@@ -526,13 +565,13 @@ function perPromptGapCards(opts: {
         effort: "medium",
         confidence: runScore.confidence,
         source_type: "rule",
-        affectedCount: 1,
+        affectedCount: visibilityAffected.length,
         severityScore: 48 + confWeight(runScore.confidence) * 4,
         evidence_json: buildEvidenceJson({
           ruleId: "rule_visibility_001",
           scoreDetails,
           runScore,
-          affected: [result],
+          affected: visibilityAffected,
           assumptions: ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
           whyThisMatters:
             "Nadie ocupa todavía esta consulta. Entrar ahora es más barato que disputarla cuando un competidor ya se haya asentado.",
@@ -541,7 +580,10 @@ function perPromptGapCards(opts: {
           snippetSource: "brand"
         })
       });
-    } else if (result.brand_mentioned && !result.citation_found) {
+    }
+
+    const citationAffected = group.filter((result) => result.brand_mentioned && !result.citation_found);
+    if (citationAffected.length > 0) {
       cards.push({
         title: `Consigue que te citen en "${label}"`,
         description:
@@ -553,13 +595,13 @@ function perPromptGapCards(opts: {
         effort: "low",
         confidence: runScore.confidence,
         source_type: "rule",
-        affectedCount: 1,
+        affectedCount: citationAffected.length,
         severityScore: 44 + confWeight(runScore.confidence) * 4,
         evidence_json: buildEvidenceJson({
           ruleId: "rule_citations_001",
           scoreDetails,
           runScore,
-          affected: [result],
+          affected: citationAffected,
           assumptions: ["Una mención sin cita indica contenido que la IA conoce pero no referencia como fuente."],
           whyThisMatters:
             "Que te nombren sin citarte deja la autoridad en otra web. La cita es lo que convierte la mención en tráfico y en confianza.",

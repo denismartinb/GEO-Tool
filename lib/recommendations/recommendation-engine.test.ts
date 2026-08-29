@@ -790,6 +790,74 @@ describe("generateRecommendationsForRun", () => {
     expect(rec.dedupe_key).toBe("increase_brand_visibility:orphan-result");
   });
 
+  describe("RECS-EVIDENCE-2 (docs/external-audit-2026-08.md, Fase 7)", () => {
+    it("merges two engines agreeing on the same prompt's gap into ONE card, not two colliding on the same dedupeKey", () => {
+      const recs = run([
+        prompt({
+          id: "gemini-result",
+          promptId: "prompt-stable-1",
+          prompt_text_snapshot: "best running shoes",
+          brand_mentioned: false,
+          provider: "gemini"
+        }),
+        prompt({
+          id: "openai-result",
+          promptId: "prompt-stable-1",
+          prompt_text_snapshot: "best running shoes",
+          brand_mentioned: false,
+          provider: "openai"
+        })
+      ]);
+
+      const visibilityRecs = recs.filter((r) => r.recommendation_type === "increase_brand_visibility");
+      expect(visibilityRecs.length).toBe(1);
+      expect(visibilityRecs[0].evidence_json.affected_prompt_ids).toEqual(["gemini-result", "openai-result"]);
+      const details = visibilityRecs[0].evidence_json.affected_prompt_details as Array<{ provider: string | null }>;
+      expect(details.map((d) => d.provider)).toEqual(["gemini", "openai"]);
+    });
+
+    it("keeps each engine's evidence when engines disagree — one prompt can surface both a visibility and a citation card", () => {
+      const recs = run([
+        prompt({
+          id: "gemini-result",
+          promptId: "prompt-stable-1",
+          prompt_text_snapshot: "best running shoes",
+          brand_mentioned: false,
+          provider: "gemini"
+        }),
+        prompt({
+          id: "claude-result",
+          promptId: "prompt-stable-1",
+          prompt_text_snapshot: "best running shoes",
+          brand_mentioned: true,
+          citation_found: false,
+          provider: "claude"
+        })
+      ]);
+
+      const visibilityRec = recs.find((r) => r.recommendation_type === "increase_brand_visibility");
+      const citationRec = recs.find((r) => r.recommendation_type === "add_citation_block");
+      expect(visibilityRec?.evidence_json.affected_prompt_ids).toEqual(["gemini-result"]);
+      expect(citationRec?.evidence_json.affected_prompt_ids).toEqual(["claude-result"]);
+    });
+
+    it("records provider per affected prompt, absent when the caller didn't supply one", () => {
+      const recs = run([
+        prompt({ id: "p1", prompt_text_snapshot: "best running shoes", brand_mentioned: false, provider: "gemini" }),
+        prompt({ id: "p2", prompt_text_snapshot: "cheap running shoes", brand_mentioned: false })
+      ]);
+
+      const visibilityRecs = recs.filter((r) => r.recommendation_type === "increase_brand_visibility");
+      const detailsById = new Map(
+        visibilityRecs.flatMap(
+          (r) => r.evidence_json.affected_prompt_details as Array<{ id: string; provider: string | null }>
+        ).map((d) => [d.id, d.provider])
+      );
+      expect(detailsById.get("p1")).toBe("gemini");
+      expect(detailsById.get("p2")).toBeNull();
+    });
+  });
+
   it("maps recommendation types to the right UI category", () => {
     expect(categoryForType("improve_citation_readiness")).toBe("authority");
     expect(categoryForType("add_citation_block")).toBe("authority");
