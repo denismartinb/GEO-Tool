@@ -411,3 +411,23 @@ export const PROMPT_JOB_STAGGER_TOTAL_MAX_MS = 2_000;
  * altogether. Pacing is a nicety; finishing the batch is not.
  */
 export const PROMPT_JOB_STAGGER_MIN_REMAINING_MS = 20_000;
+
+/**
+ * How far into its `maxDuration=60s` budget the recurring-scan sweep
+ * (`runDailyCronScan`) may still *start* another batch of projects.
+ *
+ * Sibling of AUTO_EXECUTE_SAFE_CEILING_MS, with a different tail: the sweep's
+ * is its summary log, the JSON response, and firing the `after()` dispatch of
+ * the next chain link. Same value, stated separately rather than shared, so
+ * that re-tuning one driver's headroom cannot silently re-tune the other's.
+ *
+ * The sweep used to bound itself with `if (elapsed > 45s) break` — the "after"
+ * form this codebase has now been bitten by twice (docs/adr/0029 Addendum,
+ * docs/adr/0037). A batch starting at 44.9s could still spend
+ * SCAN_INVOCATION_WORST_CASE_MS, putting the invocation ~35s past the ceiling.
+ * Vercel then kills it before the response — and because BOTH continuations
+ * (the sweep's next link and each scan's own next batch) are registered with
+ * `after()`, which never runs without a response, one overrun silently ends
+ * the whole day's sweep (RECURRING-CADENCE-1, log §191).
+ */
+export const SWEEP_SAFE_CEILING_MS = 55_000;
