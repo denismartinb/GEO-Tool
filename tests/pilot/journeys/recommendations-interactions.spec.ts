@@ -185,7 +185,7 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
   // existe. Ninguna otra parte de este journey ni del barrido genérico abría
   // esta pestaña — sin este bloque, las dos fases se quedaban sin una sola
   // captura que las enseñara; lo encontró el propio piloto de esta PR
-  // (docs/brand/design-decisions-log.md §189). `ResolvedHistoryCard`
+  // (docs/brand/design-decisions-log.md §190). `ResolvedHistoryCard`
   // comparte clase `.rec-card` con las tarjetas activas, así que la cuenta
   // de abajo es válida sin un selector nuevo.
   const resolvedTab = tabs.filter({ hasText: "Resueltas" });

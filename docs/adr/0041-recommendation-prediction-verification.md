@@ -176,7 +176,7 @@ original claim being wrong (log §188) — this correction exists so a future
 session reads this ADR's original "Deferred" line as superseded, not as
 still-open.
 
-**`dismissed` rows now get a verdict — RECS-LOOP-1 Fase B (log §189).** Not
+**`dismissed` rows now get a verdict — RECS-LOOP-1 Fase B (log §190).** Not
 via `resolved_in_run_id` (still never written for a dismissed row, and
 still correctly excluded from `resolvedDedupeKeys`) — via a second anchor
 mechanism, `lib/recommendations/dismissal-recurrence.ts`: the first
