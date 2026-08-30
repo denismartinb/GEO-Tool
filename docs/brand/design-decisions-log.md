@@ -18338,3 +18338,111 @@ mismo §190 y mergeó primero, así que esta sección —la que no estaba en
 `main`— renumera a **§191**, con todas sus referencias (`grep -rn "§191"`).
 Mismo protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185/§187
 de este mismo fichero.
+
+---
+
+## 192. Un escaneo manual se comía el escaneo recurrente del día siguiente (RECURRING-CADENCE-1 Fase A, 2026-08-29)
+
+**El síntoma que lo abrió.** El fundador: *"hay días que el escaneo recurrente
+parece que no funciona bien"*. Su propio historial de Movistar (plan Pro,
+cadencia diaria) lo enseñaba sin necesidad de logs: **27 ago 13:08** y **29 ago
+08:03**, sin nada el 28. No era una sensación.
+
+**Causa 1 — la elegibilidad se medía con una ventana móvil, no contra el
+horario del cron.** `vercel.json` dispara `/api/cron/weekly-scans` a las `0 6
+* * *` UTC (08:00 peninsular — de ahí el escaneo del 29 a las 08:03). Pero
+`processCandidate` no comparaba contra ese horario: comparaba contra
+`Date.now() - (24h - CRON_DRIFT_SAFETY_MARGIN_MS)`, o sea las últimas 22 horas.
+El 28 a las 08:00 ese corte caía en el 27 a las 10:00, y el escaneo del 27 fue
+a las 13:08 → `skipped_recent`, y el día perdido.
+
+Lo importante es de dónde salía ese 13:08: **no de un disparo del cron**. Un
+escaneo manual, o un reintento automático de `reconciliation.ts`. Cualquier run
+*fuera del horario* caía dentro de la ventana del disparo siguiente y le
+costaba al proyecto un día entero de su cadencia. Un usuario que entraba por la
+tarde a lanzar un escaneo a mano estaba cancelando el automático de mañana sin
+saberlo — y sin nada en pantalla que lo dijera.
+
+El margen de 2h no era el error: fue un parche correcto para el problema
+simétrico (el escaneo de un disparo aterriza minutos después de la hora fija, y
+contra un límite de 24h exactas la comparación cae al lado equivocado un día sí
+y otro no). Pero parcheaba el síntoma de una pregunta mal planteada. La
+pregunta correcta no es *"¿hace menos de 24h del último escaneo?"* sino
+**"¿se ha escaneado este proyecto desde el disparo anterior?"** — que ninguna
+deriva y ningún run fuera de horario pueden responder mal. `RECURRING_CRON_UTC_HOUR`
++ `mostRecentCronFiringAt` sustituyen al margen, que desaparece.
+
+Para la cadencia semanal de Starter el corte es *el disparo menos seis días*,
+no "hace 7×24h": así el límite sigue siendo un instante fijo y un escaneo de
+hace 7 días cualifica a cualquier hora que se hiciera.
+
+**Causa 2 — el barrido podía empezar un proyecto que no le cabía.** El bucle se
+acotaba con `if (Date.now() - startedAt > TIME_BUDGET_MS) break` — la forma
+*"después"*, sobre el pasado, que este repositorio ya lleva dos incidentes
+prohibiendo (ADR 0029 Adenda, ADR 0037) y que `lib/scan/drive-budget.ts` ya
+resolvía bien **para el driver de primer plano y sólo para él**. Un lote que
+arrancaba a los 44s con un `executePendingScan` de hasta 50s
+(`SCAN_INVOCATION_WORST_CASE_MS`) llegaba a ~94s en una función de
+`maxDuration = 60`.
+
+Y lo que hacía eso especialmente caro aquí: Vercel mata la función antes de la
+respuesta, y **las dos continuaciones viven en `after()`**, que no corre sin
+respuesta. Un solo desbordamiento se llevaba por delante la cadena del barrido
+*y* la del propio escaneo: los proyectos del último lote quedaban `running`
+hasta que el barrido del día siguiente los reconciliaba como timeout, y el día
+se quedaba en ≤5 proyectos. `canStartAnotherSweepBatch` vive en el mismo módulo
+que `canStartAnotherScanInvocation` precisamente para que el próximo arreglo no
+vuelva a aterrizar en uno de los dos y no en el otro.
+
+**Causa 3 — la continuación del barrido no comprobaba `response.ok`.** Un
+`await fetch` pelado: un 401 de deployment protection, un 404 por un
+`getSiteUrl()` obsoleto, un 400 del esquema del receptor o un 500 resuelven
+igual que un éxito, y el log de resumen escribía `continuationScheduled: true`
+de todas formas. La cadena se paraba en un eslabón, el barrido servía como
+mucho `MAX_PROJECTS_PER_CRON_RUN` proyectos al día, y no había en ningún sitio
+una sola línea diciéndolo. Es **literalmente la lección de ADR 0037**, aprendida
+un nivel más abajo en `lib/scan/continuation.ts` —con su comentario explicando
+por qué— y nunca aplicada a la cadena de proyectos que está justo encima.
+
+**Lo que esto cuesta, dicho y no maquillado.** Con la aritmética correcta, un
+lote de 2 proyectos en paralelo consume el presupuesto de la invocación: en la
+práctica el barrido hace **un lote por invocación** y encadena. El techo real
+pasa a ser `MAX_SWEEP_CHAIN_INVOCATIONS × BATCH_CONCURRENCY` ≈ 40 proyectos al
+día, frente a los 100 que la configuración anterior *decía* permitir. Ese 100
+nunca fue real —era justo el número que los desbordamientos de la causa 2
+impedían alcanzar—, pero el 40 sí es un techo nuevo y explícito. Se sube con
+`MAX_SWEEP_CHAIN_INVOCATIONS` cuando haga falta; hoy no hace falta.
+
+**Lo que NO entra en esta fase, y sigue abierto.** Los encontró el mismo
+análisis y esperan a la Fase B (alerta por correo, ya pedida por el fundador el
+2026-08-29):
+
+1. **`skipped_failure_streak` no tiene salida.** Tres runs fallidos seguidos y
+   el proyecto queda fuera del recurrente **para siempre**: la rama sale antes
+   de `attemptScan`, así que ni siquiera pasa por `reconcileStuckScanRuns`
+   (que sólo se invoca desde `run-creation.ts`). Sólo lo desbloquea un escaneo
+   manual con éxito, y nadie se entera.
+2. **No hay alerta a nivel de barrido.** `checkAndSendScanHealthAlert` cubre
+   bien lo que pasa *dentro* de un run, pero un barrido que devuelve
+   `scanned: 0`, una cadena cortada o un proyecto congelado por el punto 1 sólo
+   existen como un `console.info` en un log efímero — justo lo que la regla
+   "un fallo que el operador puede arreglar tiene que llegar al operador"
+   (ADR 0029 Fase B) prohíbe, aplicada al run y no al barrido.
+3. **Menor, para cuando haya volumen:** el `Promise.all` sobre todos los
+   proyectos elegibles lanza una consulta por proyecto sin límite de
+   concurrencia y antes de cualquier control de presupuesto.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación: no
+quita botones ni reintentos. Sí *estrecha* el presupuesto del barrido, y la
+premisa que sostiene ese estrechamiento es que la cadena de continuación
+funciona. Si esa cadena se rompe, el barrido sirve 2 proyectos al día en vez de
+40 — más silencioso que antes, no menos. Lo que verifica esa premisa hoy es la
+causa 3 de esta misma fase (el `response.ok` ahora deja rastro), y lo que la
+verificará de verdad es la Fase B: hasta que exista, el rastro sigue siendo un
+log que hay que ir a mirar.
+
+**Trazabilidad.** `lib/scan/cron.ts` · `lib/scan/cron.test.ts` ·
+`lib/scan/cron-schedule.test.ts` (nuevo, ancla el horario contra `vercel.json`) ·
+`lib/scan/drive-budget.ts` · `lib/scan/drive-budget.test.ts` ·
+`lib/scan/constants.ts` (`SWEEP_SAFE_CEILING_MS`); ADR 0016, ADR 0029 Adenda,
+ADR 0037. Análisis a petición del fundador, Task Intake aprobado 2026-08-29.

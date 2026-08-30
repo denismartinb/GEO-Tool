@@ -194,11 +194,13 @@ describe("runDailyCronScan", () => {
     expect(order).toEqual(["never-scanned", "scanned-2-days-ago", "scanned-recently-ish"]);
   });
 
-  it("skips a project scanned within the last 24h", async () => {
+  it("skips a project already scanned since this morning's firing", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // Firing is 06:00Z, "now" is 08:00Z: a run at 07:00Z happened after this
+    // firing's anchor, so the project has already had its scan today.
     const service = fakeServiceClient({
       projects: [{ id: "p1" }],
-      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 2 * HOUR_MS).toISOString() }]
+      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 1 * HOUR_MS).toISOString() }]
     });
 
     const result = await runDailyCronScan({ service });
@@ -207,8 +209,14 @@ describe("runDailyCronScan", () => {
     expect(createPendingScanRunForCron).not.toHaveBeenCalled();
   });
 
-  it("still skips a project scanned well within the drift-adjusted interval (20h ago)", async () => {
+  it("scans a project whose last run was yesterday afternoon (RECURRING-CADENCE-1 regression)", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // The founder-visible bug: an off-schedule run — a manual scan, or an
+    // auto-retry from reconciliation.ts — landed inside the old rolling
+    // 22h window and cost the project a whole day of its daily cadence
+    // (27-08 13:08 manual, no scan on 28-08, next scan 29-08). 20h before
+    // 08:00Z is yesterday at 12:00Z, comfortably before this firing's
+    // 06:00Z anchor, so it is eligible.
     const service = fakeServiceClient({
       projects: [{ id: "p1" }],
       scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 20 * HOUR_MS).toISOString() }]
@@ -216,8 +224,23 @@ describe("runDailyCronScan", () => {
 
     const result = await runDailyCronScan({ service });
 
+    expect(result.results).toEqual([{ projectId: "p1", status: "scanned" }]);
+  });
+
+  it("skips a project scanned by an earlier link of this same sweep chain (convergence)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // A chained link runs minutes after the firing. The project link 0
+    // scanned at 06:01Z must read as skipped_recent here, or the chain
+    // would rescan the same projects instead of converging.
+    const firingAt = Date.parse("2026-06-20T06:01:00.000Z");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }],
+      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(firingAt).toISOString() }]
+    });
+
+    const result = await runDailyCronScan({ service, chainIndex: 1 });
+
     expect(result.results).toEqual([{ projectId: "p1", status: "skipped_recent" }]);
-    expect(createPendingScanRunForCron).not.toHaveBeenCalled();
   });
 
   it("scans a project last run 23h45m ago instead of skipping it to a zero-margin 24h boundary (cron-drift regression)", async () => {
@@ -310,6 +333,29 @@ describe("runDailyCronScan", () => {
     expect(statuses.filter((s) => s === "skipped_budget")).toHaveLength(2);
     expect(result.deferred).toBe(2);
     expect(result.continuationScheduled).toBe(true);
+  });
+
+  it("never starts a batch whose worst case would overrun maxDuration (RECURRING-CADENCE-1 regression)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // The exact shape of the bug: the first batch ends at 44s. The old
+    // `if (elapsed > 45_000) break` let a second batch start there and spend
+    // another 50s — ~94s inside a 60s function. Vercel kills it before the
+    // response, so neither `after()` continuation (this sweep's next link,
+    // nor each scan's own next batch) is ever dispatched.
+    executePendingScan.mockImplementation(async () => {
+      nowMs += 44_000;
+    });
+
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }, { id: "p3" }, { id: "p4" }],
+      scanRuns: []
+    });
+
+    const result = await runDailyCronScan({ service, maxProjects: 10 });
+
+    expect(result.scanned).toBe(2);
+    expect(result.results.filter((r) => r.status === "skipped_budget")).toHaveLength(2);
+    expect(result.deferred).toBe(2);
   });
 
   it("reconciles a stuck run instead of skipping outright: a stale pending/running latest run that createPendingScanRunForCron clears results in a real scan", async () => {
@@ -537,6 +583,30 @@ describe("runDailyCronScan — self-chaining sweep (ASYNC-SCAN-1a)", () => {
     expect(result.continuationScheduled).toBe(false);
     await flushAfterCallbacks();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("logs a rejected sweep continuation instead of reading it as delivered (RECURRING-CADENCE-1)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // A 401 from deployment protection, a 404 from a stale getSiteUrl(), a
+    // 500 — `fetch` resolves for all of them, and before this check every one
+    // looked exactly like a dispatch that worked while the summary log said
+    // `continuationScheduled: true`.
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    fetchMock.mockResolvedValue({ ok: false, status: 401 });
+
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }],
+      scanRuns: []
+    });
+
+    await runDailyCronScan({ service, maxProjects: 1 });
+    await flushAfterCallbacks();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledWith(
+      "[geo:scan:cron] sweep continuation was rejected",
+      expect.objectContaining({ status: 401, url: "http://test.local/api/cron/sweep-continue" })
+    );
   });
 
   it("skips the dispatch (logged only) when CRON_SECRET is missing at fire time", async () => {
