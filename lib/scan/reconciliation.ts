@@ -462,7 +462,7 @@ export async function reconcileStuckScanRuns({
           // avisaba al operador al agotar el reintento, y esta rama no. Mismo
           // estado terminal —un run fallido que no se va a reintentar solo— y
           // el mismo motivo para avisar; era un olvido, no una decisión
-          // (`docs/brand/design-decisions-log.md` §193).
+          // (`docs/brand/design-decisions-log.md` §194).
           await checkAndSendScanHealthAlert({
             service,
             projectId,

@@ -18449,7 +18449,71 @@ ADR 0037. Análisis a petición del fundador, Task Intake aprobado 2026-08-29.
 
 ---
 
-## 193. El barrido recurrente fallaba y nadie se enteraba (RECURRING-CADENCE-1 Fase B, 2026-08-30)
+## 193. AUDIT-REPRO-1 tenía el journey de clasificación pero nadie podía dispararlo (ACTIONS-OBSERVABLE-1a, 2026-08-30)
+
+**El hueco.** `AUDIT-REPRO-1` (Fase 0, log §187) dejó terminado el journey de
+Playwright que clasifica las seis acciones de Recomendaciones como `real` /
+`invisible` / `entorno` (`tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`), aislado tras `--journeys actions` y con su
+cerradura en el self-check. Pero a diferencia de `scan` (`ux-pilot-scan.yml`,
+UX-PILOT-3) y `write` (`ux-pilot-write.yml`, UX-PILOT-2a), nunca se le dio un
+workflow de `workflow_dispatch` que lo pudiera lanzar contra un preview real.
+El journey existía y no lo había ejecutado nadie.
+
+Esto importaba porque Fase 4 (`ACTIONS-OBSERVABLE-1`, el arreglo de las seis
+acciones) no se puede acotar sin ese veredicto — el propio plan
+(`docs/external-audit-2026-08.md`) dice explícitamente "el reparto exacto sale
+de la clasificación", y la clasificación no existía todavía. Detectado al
+hacer Task Intake de Fase 4: antes de proponer alcance, se comprobó que el
+mecanismo para medirlo de verdad faltaba.
+
+**Qué se ha añadido.** `.github/workflows/ux-pilot-actions.yml`, calcado de
+`ux-pilot-write.yml` (mismo proyecto reservado vía `PILOT_WRITE_PROJECT_ID`,
+mismo arreglo de `pr_number` como `string` en vez de `number`, mismo patrón de
+rama de evidencia `pilot-evidence/pr-<N>-actions`), con `--journeys actions`
+en vez de `write`. Cero cambios de producto — `scripts/pilot.mjs` ya soportaba
+el flag desde Fase 0.
+
+**Mismas garantías que `scan`, sin secreto.** `workflow_dispatch` únicamente
+(sin `deployment_status`, así que ningún deploy de preview puede dispararlo
+solo), y el flag `--journeys actions` sigue sin ser alcanzable por el piloto
+de cada deploy — `checkActionsLockout` (ya existente desde Fase 0) lo sigue
+comprobando sin cambios. Ningún secreto nuevo gatea el dispatch, mismo
+razonamiento que UX-PILOT-3: quien tiene acceso de escritura al repositorio ya
+puede dispararlo, así que un secreto adicional sólo añadiría fricción, no
+control de acceso.
+
+**Recordatorio que viaja con el propio workflow.** Una de las seis acciones
+(«Marcar como hecho») es destructiva y sin deshacer hoy — consume una
+recomendación real del proyecto de escritura reservado, coste ya aceptado por
+el fundador el 2026-08-27 (log §187). El comentario de cabecera del workflow
+lo repite para que quien lo dispare no lo descubra a mitad de ejecución.
+
+**Lo que esta fase NO hace.** No clasifica nada por sí sola — el resultado
+depende de que el fundador dispare el workflow a mano contra el preview de
+algún PR vivo, exactamente igual que ya hace con `ux-pilot-scan.yml`. No
+propone ni implementa ningún arreglo de las seis acciones: eso es
+`ACTIONS-OBSERVABLE-1b`, cuyo alcance concreto sale de ese dispatch, no de
+este PR.
+
+**Comprobado.** `pnpm test` (220/220 ficheros, 3.035/3.035 tests, incluida
+`tests/pilot/support/selfcheck-checks.test.ts` sobre `checkActionsLockout`),
+`pnpm run validate` (build + typecheck + lint), todo en verde. El propio PR no
+llevó pasada de `ux-pilot` con juicio visual — no hay pantalla nueva que
+pilotar, es un workflow de CI — pero sí recibió un build de Vercel real (todo
+push a una rama nueva construye por no tener `VERCEL_GIT_PREVIOUS_SHA` contra
+qué comparar, corrección hecha en el propio PR sobre una afirmación inicial
+equivocada) y el piloto de lectura por defecto pasó limpio sobre él.
+
+**Trazabilidad.** `.github/workflows/ux-pilot-actions.yml`;
+`tests/pilot/journeys/actions/recommendation-actions.spec.ts` (sin cambios,
+ya existía); `scripts/pilot.mjs` (`PROJECT_SETS.actions`, sin cambios);
+`scripts/pilot-selfcheck-checks.mjs` (`checkActionsLockout`, sin cambios);
+`docs/external-audit-2026-08.md` Fase 4; PR #507.
+
+---
+
+## 194. El barrido recurrente fallaba y nadie se enteraba (RECURRING-CADENCE-1 Fase B, 2026-08-30)
 
 **Lo que pidió el fundador**, justo después de aprobar la Fase A: *"quiero un
 email alerta si vuelve a fallar un escaneo diario de cualquier cuenta"*.

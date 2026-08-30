@@ -856,7 +856,7 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
  * cron dispara una vez al día, así que el propio disparo es el deduplicador.
  * El precio, dicho y no escondido: si los fallos se reparten entre varios
  * eslabones de la cadena de continuación, ese día salen dos o tres correos en
- * vez de uno (`docs/brand/design-decisions-log.md` §193).
+ * vez de uno (`docs/brand/design-decisions-log.md` §194).
  *
  * Dirección de operador, nunca la del cliente: misma regla que el resto de
  * este fichero — el dueño de la cuenta no puede arreglar que nuestro cron se

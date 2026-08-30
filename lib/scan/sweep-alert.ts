@@ -5,7 +5,7 @@ import { isOpsAlertConfigured, sendSweepHealthAlertEmail } from "@/lib/email/tra
 import type { CronResult } from "@/lib/scan/cron";
 
 /**
- * RECURRING-CADENCE-1 Fase B (`docs/brand/design-decisions-log.md` §193).
+ * RECURRING-CADENCE-1 Fase B (`docs/brand/design-decisions-log.md` §194).
  *
  * `checkAndSendScanHealthAlert` alerta sobre lo que pasa DENTRO de un run
  * terminado — un motor sin cuota, una extracción que no produjo nada, un run

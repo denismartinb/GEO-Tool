@@ -642,7 +642,7 @@ describe("runDailyCronScan — self-chaining sweep (ASYNC-SCAN-1a)", () => {
 });
 
 /**
- * RECURRING-CADENCE-1 Fase B (log §193). El resultado de una pasada moría en
+ * RECURRING-CADENCE-1 Fase B (log §194). El resultado de una pasada moría en
  * un `console.info`: un escaneo del cron que reventaba, o un proyecto expulsado
  * del recurrente por racha de fallos, no llegaban a nadie.
  */

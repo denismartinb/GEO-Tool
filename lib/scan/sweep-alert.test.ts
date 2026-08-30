@@ -3,7 +3,7 @@ import { collectSweepFindings } from "@/lib/scan/sweep-alert";
 import type { CronResult } from "@/lib/scan/cron";
 
 /**
- * RECURRING-CADENCE-1 Fase B (log §193). Lo que decide qué despierta al
+ * RECURRING-CADENCE-1 Fase B (log §194). Lo que decide qué despierta al
  * operador es esta función; el resto es fontanería. Los silencios se prueban
  * tan explícitamente como los avisos: una alerta que llega todos los días es
  * una alerta que se aprende a ignorar, que es peor que no tener ninguna.

@@ -115,7 +115,7 @@ worse than no rule, because a future session will obey it anyway.
   pasada que aplaza trabajo sin escanear nada o una cadena de continuación
   rechazada no producen filas de `scan_prompt_results`, así que
   `checkAndSendScanHealthAlert` no puede verlos — vivían en un `console.info`
-  (`docs/brand/design-decisions-log.md` §193). `collectSweepFindings` decide
+  (`docs/brand/design-decisions-log.md` §194). `collectSweepFindings` decide
   qué despierta al operador y es pura: **los silencios se prueban igual que
   los avisos**, porque `skipped_recent`, `skipped_plan_ineligible` y
   `skipped_active_run` son el funcionamiento normal y alertar de ellos sería
