@@ -18,7 +18,6 @@ import {
   MEAN_RANK_COLUMN_LABEL,
   MEAN_RANK_NOTE
 } from "@/lib/competitors/mean-rank-copy";
-import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
@@ -774,16 +773,6 @@ export default async function ProjectDetailPage({
       {ENABLE_SYNC_SCAN_EXECUTION && activeRun ? (
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
       ) : null}
-      {/* Not while the mission owns the screen: since ANIMATION-PARITY-1
-          (2026-08-26) `ScanMissionRocket` fires the terminal `router.refresh()`
-          itself, on all six sections, so mounting this one too here would just
-          request the same RSC payload twice a few hundred ms apart. Still
-          mounted for every OTHER state of this page (`ScanInProgressLive`, the
-          data view with a refresh in flight), which is what it was written for. */}
-      {activeRun && !showMissionTakeover ? (
-        <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} />
-      ) : null}
-
       {/* Sticky page header — hidden while the first-scan mission takeover
           (below) owns the screen, so the rocket animation reads as full
           screen instead of sitting under a second chrome band. */}
