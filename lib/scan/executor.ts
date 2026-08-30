@@ -835,7 +835,11 @@ export async function executePendingScan({
           sentiment: row.sentiment,
           extracted_json: row.extracted_json,
           raw_response_text: row.raw_response_text,
-          category: row.prompt_id ? categoryByPromptId.get(row.prompt_id) ?? null : null
+          category: row.prompt_id ? categoryByPromptId.get(row.prompt_id) ?? null : null,
+          // RECS-EVIDENCE-2 (docs/external-audit-2026-08.md, Fase 7): already
+          // selected above for engineCoverage/scores — threaded through so the
+          // engine can say WHICH provider's response backs each recommendation.
+          provider: row.provider
         }))
       });
       newRecommendationsCount = recommendationRows.length;

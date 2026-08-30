@@ -44,6 +44,37 @@ worse than no rule, because a future session will obey it anyway.
   whether time has already run out — a `do { … } while (elapsed < budget)` lets
   an iteration start at 39s and run another 45 (`docs/adr/0037`,
   `lib/scan/drive-budget.ts`).
+- **La elegibilidad de un trabajo programado se ancla a SU horario, nunca a una
+  ventana móvil hacia atrás desde `Date.now()`.** El barrido recurrente
+  preguntaba "¿hace menos de 24h del último escaneo?" cuando la pregunta que
+  contesta bien es "¿se ha escaneado desde el disparo anterior?". Con la
+  ventana móvil, cualquier run *fuera del horario del cron* —un escaneo manual,
+  un reintento de `reconciliation.ts`— caía dentro de ella en el disparo
+  siguiente y le costaba al proyecto un día entero de su cadencia; un escaneo
+  manual a las 13:08 del 27 dejó a un proyecto de plan diario sin escaneo el 28
+  (`docs/brand/design-decisions-log.md` §192). El margen de seguridad que había
+  antes (`CRON_DRIFT_SAFETY_MARGIN_MS`) parcheaba el problema simétrico —la
+  deriva del propio disparo— y no podía cubrir éste: un margen sólo mueve el
+  borde de una ventana que sigue siendo móvil. `mostRecentCronFiringAt` +
+  `resolveEligibilityCutoffIso` son el ancla, y `RECURRING_CRON_UTC_HOUR`
+  **tiene que seguir a `vercel.json`**: un desajuste ahí es invisible en
+  ejecución y desplaza la elegibilidad de todos los proyectos, así que lo
+  vigila `lib/scan/cron-schedule.test.ts` contra el propio fichero.
+- **La aritmética de "¿cabe otra invocación?" tiene UN dueño:
+  `lib/scan/drive-budget.ts`.** No es una preferencia de organización: la forma
+  "después" (`if (elapsed > budget) break`) se arregló en el driver de primer
+  plano en ADR 0037 y se quedó sin arreglar en el barrido recurrente, un nivel
+  por encima y en otro fichero, durante meses — el mismo fallo que ADR 0029
+  Adenda ya había documentado un nivel por debajo. Tres pisos, dos arreglos, un
+  agujero. Todo driver que llame a `executePendingScan` en bucle pregunta
+  **antes** de una iteración si su peor caso entero cabe, y lo pregunta a una
+  función de ese módulo (`canStartAnotherScanInvocation`,
+  `canStartAnotherSweepBatch`), nunca a una comparación escrita a mano
+  (`docs/brand/design-decisions-log.md` §192). El coste de acertar aquí es
+  mayor que perder un lote: en el barrido, las DOS cadenas de continuación
+  —la del barrido y la de cada escaneo— viven en `after()`, que no corre si
+  Vercel mata la función antes de responder, así que un desbordamiento no
+  retrasa trabajo, lo hace desaparecer.
 - **Any claim held across a step long enough to be killed needs a lease.**
   `reconcileStuckScanRuns` only ever touches `scan_runs`, never `jobs`, so a
   job left `running` by a dead invocation is stranded forever unless something
@@ -70,7 +101,13 @@ worse than no rule, because a future session will obey it anyway.
   401/404/500 and rejects only on transport failure, so an unchecked
   `await fetch(...)` reports a blocked self-call as a successful hand-off — and
   a safety net that cannot be seen failing is not a safety net. Check
-  `response.ok` and log the status and the URL (`docs/adr/0037`).
+  `response.ok` and log the status and the URL (`docs/adr/0037`). Escrita para
+  `triggerScanContinuation` y no aplicada a `triggerSweepContinuation`, que
+  está un nivel por encima y hacía exactamente lo mismo mal: un `await fetch`
+  pelado, la cadena de proyectos parada en un eslabón y
+  `continuationScheduled: true` en el log de resumen de todas formas
+  (`docs/brand/design-decisions-log.md` §192). **Toda** auto-llamada del
+  pipeline, no sólo la que motivó la regla.
 - **A failure the operator can fix must reach the operator.** Persisting a
   categorized error is half the job; if nothing reads it, the incident is still
   invisible — OpenAI's 429s ran four days and Claude's ran unnoticed entirely
