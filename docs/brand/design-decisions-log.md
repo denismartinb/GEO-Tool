@@ -18518,7 +18518,10 @@ reciba sepa que esa fila no se arregla sola.
 **Regla de premisa.** Esta fase no retira ningún camino de recuperación, pero
 **toda ella cuelga de una premisa que no se puede verificar desde el código**:
 que `OPS_ALERT_EMAIL` esté configurada en Vercel. Si no lo está, no sale un
-solo correo. Lo que la verifica hoy: `isOpsAlertConfigured()` se comprueba
+solo correo. **El fundador confirmó el 2026-08-30 que `OPS_ALERT_EMAIL` y
+`RESEND_API_KEY` están puestas en Vercel** — dato con fecha, no supuesto: una
+variable de entorno puede cambiar y esta anotación caduca. Lo demás que la
+verifica: `isOpsAlertConfigured()` se comprueba
 antes de cada envío y, si falla, registra los hallazgos completos en vez de
 tragárselos (con su test). Lo que se queda sin salida si la premisa falla: nada
 nuevo — se vuelve al estado anterior a esta fase, un log que hay que ir a
