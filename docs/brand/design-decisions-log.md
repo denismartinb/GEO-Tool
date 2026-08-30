@@ -18446,3 +18446,41 @@ log que hay que ir a mirar.
 `lib/scan/drive-budget.ts` · `lib/scan/drive-budget.test.ts` ·
 `lib/scan/constants.ts` (`SWEEP_SAFE_CEILING_MS`); ADR 0016, ADR 0029 Adenda,
 ADR 0037. Análisis a petición del fundador, Task Intake aprobado 2026-08-29.
+
+---
+
+## 193. La pestaña "Resueltas" tenía el icono de check desalineado del texto (2026-08-29)
+
+**El hallazgo, a ojo, en una captura del preview de RECURRING-VALUE-1.** El
+fundador vio un hueco enorme entre el icono de check y el resto de la fila en
+cada tarjeta de la pestaña "Resueltas" de Recomendaciones — no era una
+apreciación subjetiva: el icono y el texto ni siquiera estaban en la misma
+columna de grid.
+
+**Causa.** `RECS-REDESIGN-1` quitó el chip de rango (`.rec-rank`) de la
+tarjeta activa (`RecCard`) hace tiempo, dejando `.rec-main` con **un solo**
+hijo directo. `.rec2-scope .rec-main { grid-template-columns: 1fr }` (el
+repintado de esta pantalla) está calculado para ese único hijo — el propio
+comentario del CSS lo dice: *"no rank chip"*. `ResolvedHistoryCard`
+(`RECS-3`, la fila de solo lectura de "Resueltas") nunca se actualizó cuando
+se quitó el chip en el resto de la pantalla: seguía metiendo el icono de
+check como un SEGUNDO hijo de `.rec-main`, colándose como su propio ítem en
+un grid pensado para uno solo.
+
+**La corrección.** El icono se mueve dentro del único hijo de `.rec-main`,
+en línea junto a las insignias ("Marcada como hecha" / "Resuelta
+automáticamente"), en vez de ser un ítem de grid aparte — mismo contrato que
+ya cumple `RecCard`. Reducido de 34×34 a 20×20 para no competir en altura con
+las insignias de la misma fila.
+
+**Por qué no lo cazó el `ux-pilot`.** El barrido de lectura por defecto no
+visita la pestaña "Resueltas" en su journey genérico de Recomendaciones —
+mismo hueco de cobertura que ya documenta §190 (RECS-LOOP-1 Fase B) sobre esa
+misma pestaña, y que su propia PR dejó anotado como pendiente en vez de
+resuelto.
+
+**Comprobado.** `pnpm test` (221/221 ficheros, 3.053/3.053 tests), `pnpm run
+validate` (build + typecheck + lint).
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+recommendations-client.tsx` (`ResolvedHistoryCard`); §190.

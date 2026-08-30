@@ -513,15 +513,30 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
 
   return (
     <div className="rec-card">
+      {/* Single `.rec-main` child, matching RecCard's contract since
+          RECS-REDESIGN-1 dropped the rank chip: `.rec2-scope .rec-main` is a
+          one-column grid now, sized for exactly one grid item. This card was
+          the one place still passing the check icon as a SECOND child —
+          landing it in its own implicit row/column instead of beside the
+          text, which is what threw the badges/title/date far to the right
+          with a dead gap where the icon used to sit (founder screenshot,
+          2026-08-29). The icon moves inside the single child, inline with
+          the badges, instead of being its own grid item. */}
       <div className="rec-main" style={{ cursor: "default" }}>
-        <div
-          className="rec-rank low"
-          style={{ background: "var(--pos-soft, #f0faf3)", color: "var(--pos-ink, #1a7a49)" }}
-        >
-          <Icon name="check" size={16} />
-        </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7, flexWrap: "wrap" }}>
+            <span
+              className="rec-rank low"
+              style={{
+                width: 20,
+                height: 20,
+                background: "var(--pos-soft, #f0faf3)",
+                color: "var(--pos-ink, #1a7a49)",
+                flexShrink: 0
+              }}
+            >
+              <Icon name="check" size={12} />
+            </span>
             <span className="badge badge-pos">
               {item.status === "resolved" ? "Resuelta automáticamente" : "Marcada como hecha"}
             </span>
