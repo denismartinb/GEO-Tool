@@ -108,6 +108,22 @@ worse than no rule, because a future session will obey it anyway.
   `continuationScheduled: true` en el log de resumen de todas formas
   (`docs/brand/design-decisions-log.md` §192). **Toda** auto-llamada del
   pipeline, no sólo la que motivó la regla.
+- **El barrido tiene sus propios fallos, y también tienen que llegar al
+  operador.** La regla de abajo se escribió para lo que pasa DENTRO de un run
+  y se aplicó sólo ahí: un escaneo del cron que revienta antes de existir como
+  run, un proyecto expulsado del recurrente por `skipped_failure_streak`, una
+  pasada que aplaza trabajo sin escanear nada o una cadena de continuación
+  rechazada no producen filas de `scan_prompt_results`, así que
+  `checkAndSendScanHealthAlert` no puede verlos — vivían en un `console.info`
+  (`docs/brand/design-decisions-log.md` §194). `collectSweepFindings` decide
+  qué despierta al operador y es pura: **los silencios se prueban igual que
+  los avisos**, porque `skipped_recent`, `skipped_plan_ineligible` y
+  `skipped_active_run` son el funcionamiento normal y alertar de ellos sería
+  el correo diario que se aprende a ignorar. Y **el barrido no puede usar
+  `job_logs` como almacén de deduplicado**: esa tabla exige una FK real a
+  `(job_id, run_id, project_id)` y el barrido no tiene job, así que el
+  deduplicador es el propio disparo diario (un correo por pasada, no por
+  proyecto).
 - **A failure the operator can fix must reach the operator.** Persisting a
   categorized error is half the job; if nothing reads it, the incident is still
   invisible — OpenAI's 429s ran four days and Claude's ran unnoticed entirely
