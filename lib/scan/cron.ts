@@ -3,13 +3,15 @@ import "server-only";
 import { after } from "next/server";
 import { resolvePlan } from "@/lib/billing";
 import { createPendingScanRunForCron } from "@/lib/scan/run-creation";
+import { canStartAnotherSweepBatch } from "@/lib/scan/drive-budget";
+import { checkAndSendSweepAlert } from "@/lib/scan/sweep-alert";
+import { sendChainRejectedAlertEmail } from "@/lib/email/transactional";
 import { executePendingScan, getSiteUrl } from "@/lib/scan/executor";
 import { ProjectActionError } from "@/lib/scan/types";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { serverEnv } from "@/lib/env";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const TIME_BUDGET_MS = 45_000;
 const FAILURE_STREAK_LIMIT = 3;
 const DEFAULT_MAX_PROJECTS_PER_RUN = 5;
 
@@ -48,30 +50,70 @@ export function resolveMaxSweepChainInvocations(): number {
  * refuses a second run for a free-plan project outright, see
  * `run-creation.ts`). Kept explicit rather than falling through to a default
  * so a missing branch is a type error, not a silent wrong cadence.
+ *
+ * In DAYS, not milliseconds, since RECURRING-CADENCE-1: eligibility is now
+ * anchored to the cron's own firing schedule (see resolveEligibilityCutoffIso)
+ * rather than measured as a rolling window backwards from `Date.now()`.
  */
-const RECURRING_INTERVAL_MS_BY_PLAN: Record<string, number> = {
-  free: DAY_MS,
-  starter: 7 * DAY_MS,
-  pro: DAY_MS,
-  agency: DAY_MS
+const RECURRING_INTERVAL_DAYS_BY_PLAN: Record<string, number> = {
+  free: 1,
+  starter: 7,
+  pro: 1,
+  agency: 1
 };
 
 /**
- * Vercel Hobby fires `/api/cron/weekly-scans` at a fixed wall-clock time, but
- * a given project's actual scan `created_at` lands a few minutes to tens of
- * minutes after that (candidate-eligibility queries, `BATCH_CONCURRENCY`
- * queue position, or a deep link in the self-chaining sweep). Comparing
- * "now - interval" against yesterday's exact `created_at` with a zero-margin
- * interval means that lag alone can push the comparison to the wrong side of
- * the boundary every other firing — a project scans, drifts a few minutes
- * later than the fixed cron time, gets skipped the next day for being just
- * under the interval, then catches up and repeats, producing an every-other-
- * day cadence instead of daily/weekly (see founder report: a project last
- * scanned two days apart instead of one). Subtracting a safety margin well
- * above any realistic drift keeps eligibility anchored to the cron's fixed
- * firing time instead of drifting with it.
+ * The UTC hour `/api/cron/weekly-scans` is scheduled to fire at. MUST match
+ * the `crons` entry in `vercel.json` — `cron-schedule.test.ts` asserts it
+ * against that file, because a mismatch here is invisible at runtime and
+ * shifts every project's eligibility by the difference.
  */
-const CRON_DRIFT_SAFETY_MARGIN_MS = 2 * 60 * 60 * 1000;
+export const RECURRING_CRON_UTC_HOUR = 6;
+
+/**
+ * The most recent scheduled firing of the daily sweep, at or before `now`.
+ *
+ * Eligibility is anchored to this fixed instant instead of measured backwards
+ * from `Date.now()` (RECURRING-CADENCE-1, log §192). The rolling-window form
+ * it replaces asked "was the last run less than 24h ago?", which is the wrong
+ * question for a job that fires once a day at a fixed hour: any run that
+ * happened *off* that schedule — a manual scan, an auto-retry from
+ * `reconciliation.ts` — sat inside the window at the next firing and skipped
+ * the project for a whole day. A founder-visible instance: a project scanned
+ * manually on 27-08 at 13:08 was skipped by the 28-08 firing and next scanned
+ * on 29-08, two days apart on a daily plan.
+ *
+ * A 2h `CRON_DRIFT_SAFETY_MARGIN_MS` used to paper over the same class of
+ * problem from the other direction (a firing whose own scan lands minutes
+ * after the fixed cron time, drifting the next comparison to the wrong side of
+ * an exact 24h boundary). The anchor removes the need for a margin at all: the
+ * question is now "has this project been scanned since the last firing?",
+ * which no amount of drift, and no off-schedule run, can answer wrongly.
+ */
+export function mostRecentCronFiringAt(now: number): number {
+  const at = new Date(now);
+  const todaysFiring = Date.UTC(
+    at.getUTCFullYear(),
+    at.getUTCMonth(),
+    at.getUTCDate(),
+    RECURRING_CRON_UTC_HOUR
+  );
+
+  return todaysFiring <= now ? todaysFiring : todaysFiring - DAY_MS;
+}
+
+/**
+ * The instant a project's latest run must predate to be eligible this firing.
+ *
+ * For a daily plan that is the firing itself. For Starter's weekly cadence it
+ * is `intervalDays - 1` days earlier, so the comparison still lands on a fixed
+ * firing instant: a project scanned 7 days ago qualifies whatever time of day
+ * that scan happened, and one scanned 6 days ago does not.
+ */
+export function resolveEligibilityCutoffIso({ planId, now }: { planId: string; now: number }): string {
+  const intervalDays = RECURRING_INTERVAL_DAYS_BY_PLAN[planId] ?? 1;
+  return new Date(mostRecentCronFiringAt(now) - (intervalDays - 1) * DAY_MS).toISOString();
+}
 
 /**
  * How many projects are scanned concurrently within a single cron
@@ -176,12 +218,53 @@ async function triggerSweepContinuation({ chainIndex }: { chainIndex: number }):
     return;
   }
 
+  const url = `${getSiteUrl()}/api/cron/sweep-continue`;
+
   try {
-    await fetch(`${getSiteUrl()}/api/cron/sweep-continue`, {
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
       body: JSON.stringify({ chainIndex })
     });
+
+    // `fetch` only rejects on a transport failure: a 401 from Vercel's
+    // deployment protection, a 404 from a stale `getSiteUrl()`, a 400 from a
+    // chainIndex the callee's schema rejects, a 500 — every one of them
+    // resolves, and without this check reads exactly like a dispatch that
+    // worked, while `continuationScheduled: true` goes into the summary log.
+    // The chain then ends after one link and the sweep serves at most
+    // MAX_PROJECTS_PER_CRON_RUN projects a day, with nothing anywhere saying
+    // so. `triggerScanContinuation` learned this one level down in
+    // docs/adr/0037 and the sweep was never revisited (RECURRING-CADENCE-1).
+    //
+    // The await itself may not survive: this runs inside `after()`, and the
+    // callee only responds once its own whole sweep is done, so a slow link
+    // can outlive this invocation. That is harmless — the callee is an
+    // independent invocation and keeps going — and it does not weaken the
+    // check, because every rejection above returns immediately.
+    if (!response.ok) {
+      console.error("[geo:scan:cron] sweep continuation was rejected", {
+        chainIndex,
+        status: response.status,
+        url
+      });
+
+      // RECURRING-CADENCE-1 Fase B: comprobar el estado hizo el fallo
+      // visible en el log; esto lo hace visible para alguien. Una cadena
+      // cortada deja al barrido sirviendo como mucho
+      // MAX_PROJECTS_PER_CRON_RUN proyectos al día, y es exactamente el tipo
+      // de avería que sólo el operador puede arreglar. Sin deduplicar: sólo
+      // puede dispararse una vez por eslabón, y un eslabón roto corta la
+      // cadena, así que su propio fallo lo acota.
+      await sendChainRejectedAlertEmail({ chainIndex, status: response.status, url, detectedAt: new Date() }).catch(
+        (alertError: unknown) => {
+          console.error("[geo:scan:cron] chain-rejected alert failed", {
+            chainIndex,
+            message: alertError instanceof Error ? alertError.message : String(alertError)
+          });
+        }
+      );
+    }
   } catch (error) {
     console.error("[geo:scan:cron] failed to dispatch sweep continuation", {
       chainIndex,
@@ -203,7 +286,9 @@ async function triggerSweepContinuation({ chainIndex }: { chainIndex: number }):
  *
  * Candidates are then processed in small concurrent batches
  * (BATCH_CONCURRENCY) rather than strictly sequentially, so more projects
- * fit inside the 45s soft budget / 60s Vercel maxDuration per invocation.
+ * fit inside the 60s Vercel maxDuration per invocation — a batch is only
+ * started while a whole worst-case `executePendingScan` still fits under
+ * SWEEP_SAFE_CEILING_MS (canStartAnotherSweepBatch).
  *
  * A candidate whose latest run looks pending/running from this snapshot is
  * not skipped outright: it still goes through attemptScan (via
@@ -297,8 +382,7 @@ export async function runDailyCronScan({
         .limit(FAILURE_STREAK_LIMIT);
 
       const planId = planIdByOwnerId.get(project.owner_user_id as string) ?? "pro";
-      const intervalMs = (RECURRING_INTERVAL_MS_BY_PLAN[planId] ?? DAY_MS) - CRON_DRIFT_SAFETY_MARGIN_MS;
-      const cutoffIso = new Date(Date.now() - intervalMs).toISOString();
+      const cutoffIso = resolveEligibilityCutoffIso({ planId, now: Date.now() });
 
       return { id: project.id, recentRuns: recentRuns ?? [], cutoffIso };
     })
@@ -316,7 +400,9 @@ export async function runDailyCronScan({
   while (index < candidates.length) {
     if (scannedCount >= maxProjects) break;
 
-    if (Date.now() - startedAt > TIME_BUDGET_MS) {
+    // Asked BEFORE the batch, about that batch's worst case — never after one
+    // about the past. See canStartAnotherSweepBatch / SWEEP_SAFE_CEILING_MS.
+    if (!canStartAnotherSweepBatch({ elapsedMs: Date.now() - startedAt })) {
       for (const remaining of candidates.slice(index)) {
         results.push({ projectId: remaining.id, status: "skipped_budget" });
       }
@@ -351,6 +437,17 @@ export async function runDailyCronScan({
     const nextChainIndex = chainIndex + 1;
     after(() => triggerSweepContinuation({ chainIndex: nextChainIndex }));
   }
+
+  // RECURRING-CADENCE-1 Fase B: hasta aquí el resultado de la pasada moría en
+  // el `console.info` de abajo. Después del reparto de continuación y antes
+  // del log, para que el correo describa exactamente lo que se registra.
+  await checkAndSendSweepAlert({
+    service,
+    results,
+    scanned: scannedCount,
+    deferred: deferredCount,
+    chainIndex
+  });
 
   console.info("[geo:scan:cron] daily scan run summary", {
     elapsedMs: Date.now() - startedAt,
