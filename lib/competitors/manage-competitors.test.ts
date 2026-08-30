@@ -175,6 +175,33 @@ describe("createCompetitorCore", () => {
     expect(competitors).toHaveLength(1); // still one row, updated not duplicated
     expect(competitors[0].is_active).toBe(true);
   });
+
+  it("5. a generic AI assistant is refused, no write attempted (ENTITY-HYGIENE-1)", async () => {
+    const { client, competitors } = makeFakeSupabase({});
+    const result = await createCompetitorCore({
+      projectId: PROJECT_ID,
+      name: "ChatGPT",
+      domain: "chatgpt.com",
+      supabase: client,
+      user: USER
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/no un competidor real/i);
+    expect(competitors).toHaveLength(0);
+  });
+
+  it("6. a real competitor whose domain matches a known AI tool's is refused (ENTITY-HYGIENE-1)", async () => {
+    const { client, competitors } = makeFakeSupabase({});
+    const result = await createCompetitorCore({
+      projectId: PROJECT_ID,
+      name: "Bing AI",
+      domain: "bing.com",
+      supabase: client,
+      user: USER
+    });
+    expect(result.success).toBe(false);
+    expect(competitors).toHaveLength(0);
+  });
 });
 
 describe("updateCompetitorCore", () => {
@@ -232,6 +259,22 @@ describe("updateCompetitorCore", () => {
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.competitor.name).toBe("New Name");
+  });
+
+  it("5. renaming a tracked competitor to a generic AI assistant is refused (ENTITY-HYGIENE-1)", async () => {
+    const { client, competitors } = makeFakeSupabase({
+      competitors: [{ id: COMPETITOR_ID, project_id: PROJECT_ID, domain: "old.com", is_active: true, name: "Old Name" }]
+    });
+    const result = await updateCompetitorCore({
+      projectId: PROJECT_ID,
+      competitorId: COMPETITOR_ID,
+      name: "ChatGPT",
+      domain: "old.com",
+      supabase: client,
+      user: USER
+    });
+    expect(result.success).toBe(false);
+    expect(competitors[0].name).toBe("Old Name"); // untouched
   });
 });
 

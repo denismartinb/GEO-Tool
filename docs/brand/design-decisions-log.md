@@ -18599,3 +18599,92 @@ el día en que se escribió.
 `lib/email/transactional.ts` (`sendSweepHealthAlertEmail`,
 `sendChainRejectedAlertEmail`); §192, ADR 0029 Fase B. Task Intake aprobado por
 el fundador el 2026-08-30.
+
+---
+
+## 195. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
+
+**Origen.** P1-02 del informe de auditoría externa
+(`docs/external-audit-2026-08.md`, Fase 9): "GEO Score" se sugería como
+alias de marca y nada en el producto impedía que "ChatGPT" —el medio que se
+mide, no un rival del cliente— se tratara como competidor. El plan lo daba
+por un solo hallazgo; la investigación previa a implementar encontró **cinco**
+puntos de entrada reales, no uno, y dos zonas sin cobertura hoy
+(`lib/competitors/**`, con regla de ruta; `lib/brand-aliases/**` y
+`lib/projects/brand-aliases.ts`, sin ninguna).
+
+**Qué se decidió.**
+
+1. **Módulo nuevo, `lib/entity-hygiene/generic-entities.ts`**, sin I/O,
+   compartido por las tres zonas que lo necesitan (Competidores, alias de
+   marca, Recomendaciones) — mismo patrón que `lib/domains/brand-domain.ts`
+   para el matching de dominio propio. Dos listas cerradas: asistentes/
+   motores de IA conocidos (ChatGPT, Gemini, Claude, Copilot, Perplexity,
+   DeepSeek, Grok, Mistral...) y jerga genérica del sector GEO/IA (GEO Score,
+   SEO, AEO, Share of Voice, Visibility Score, LLM...), más una lista corta de
+   dominios propios de esas herramientas (chatgpt.com, bing.com...) para el
+   caso en que el nombre mostrado difiera del nombre de la herramienta.
+2. **Match por FRASE COMPLETA normalizada, nunca por token.** Deliberadamente
+   distinto de `GENERIC_ALIAS_TERMS` (`lib/projects/brand-aliases.ts`), que
+   rechaza por solapamiento de token y no habría atrapado "GEO Score" — ni
+   "geo" ni "score" están ahí, y no deberían estarlo sueltos: existen empresas
+   reales llamadas así (The GEO Group). Las dos listas se quedan separadas a
+   propósito; unificarlas reabriría el hueco.
+3. **Los cinco puntos de entrada, cerrados en el mismo PR:**
+   - `filterSuggestions` (`lib/competitors/suggest-competitors.ts`) — filtra
+     EN LECTURA, como ya hace toda esa función, así que una sugerencia
+     cacheada antes de esta fase también se limpia sin necesidad de purgar
+     nada.
+   - `createCompetitorCore`/`updateCompetitorCore`
+     (`lib/competitors/manage-competitors.ts`) — alta y edición manual.
+   - `selectVerifiableAliases` (`lib/projects/brand-aliases.ts`) — alias
+     auto-derivado, nuevo motivo de rechazo `generic_entity` (distinto de
+     `generic`, el de solapamiento de token, que ya existía).
+   - `validateNewAlias` (`lib/brand-aliases/normalize-aliases.ts`) — alias
+     manual. **Este camino no tenía NINGÚN filtro de genericidad antes de
+     esta fase**, ni siquiera el de token — más débil que el automático.
+   - `computeEmergingCompetitors` (`lib/recommendations/recommendation-engine.ts`)
+     — camino independiente de los otros cuatro: lee `other_brands_mentioned`
+     (salida del modelo, con sólo una instrucción blanda de "excluye términos
+     genéricos" en el prompt de extracción, nunca aplicada en código hasta
+     ahora) y podía recomendar literalmente "Añade a ChatGPT como
+     competidor" sin pasar nunca por la sugerencia basada en `business_profile`
+     que ADR 0020/0022 protege — un camino de contaminación que el propio ADR
+     no cubre porque no es una sugerencia, es una recomendación.
+4. **Por qué importaba más allá de la pantalla de Competidores.** SOV
+   (`sov-delta.ts`, `engine-share.ts`) lee `project_competitors` directamente
+   para su denominador y sus series — un "ChatGPT" trackeado no se queda en
+   una fila fea, infla el denominador y produce una barra entera para una
+   entidad que no compite con nada. Recomendaciones lee el mismo dato para
+   `computeCompetitorDominance`/`computeProminenceGap`. Arreglar la entrada
+   arregla las tres superficies sin tocar ninguna fórmula de scoring.
+
+**Lo que NO se ha tocado.** Ninguna fórmula de SOV ni de scoring — sólo dejan
+de recibir basura. `lib/scan/extraction.ts` (verificación de mención) no
+cambia — el arreglo es aguas arriba, en qué entra en las listas, no en cómo se
+hace el matching de una mención. Los prompts de extracción de
+`other_brands_mentioned` mantienen su instrucción blanda tal cual; el filtro
+de código es lo que ahora hace cumplir lo que el prompt sólo pedía.
+
+**Riesgo de sobre-bloqueo, cubierto por diseño y por test.** El match es por
+frase completa, nunca por token: "Geotab", "Scoreboard Inc" o "ChatGPT
+Wrapper Co" no caen en la lista aunque compartan una palabra con ella.
+Deliberadamente NO se incluyó "geo" a secas en la jerga genérica, por el mismo
+motivo — sólo la frase completa "GEO Score" está en la lista.
+
+**Comprobado.** `pnpm test` en verde sobre los 6 ficheros tocados (módulo
+nuevo + 5 puntos de integración, cada uno con su propio test nuevo); `pnpm run
+validate` (build + typecheck + lint).
+
+**Trazabilidad.** `lib/entity-hygiene/generic-entities.ts` (nuevo) +
+`.test.ts`; `lib/competitors/suggest-competitors.ts` (`filterSuggestions`);
+`lib/competitors/manage-competitors.ts`
+(`createCompetitorCore`/`updateCompetitorCore`); `lib/projects/brand-aliases.ts`
+(`selectVerifiableAliases`, motivo `generic_entity`);
+`lib/brand-aliases/normalize-aliases.ts` (`validateNewAlias`);
+`lib/recommendations/recommendation-engine.ts` (`computeEmergingCompetitors`);
+`.claude/rules/competitors.md` (nueva sección + ampliación de su alcance de
+ruta a `lib/brand-aliases/**`, `lib/projects/brand-aliases.ts`,
+`lib/entity-hygiene/**`); `.claude/rules/recommendations.md` (referencia
+cruzada); `docs/external-audit-2026-08.md` Fase 9. Task Intake aprobado por
+el fundador el 2026-08-30.

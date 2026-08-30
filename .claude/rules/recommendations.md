@@ -139,6 +139,16 @@ paths:
   mensaje sigue siendo propio y saneado — nunca el error del proveedor
   (`.claude/rules/gemini.md`).
 
+## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §195)
+
+- **`computeEmergingCompetitors` nunca recomienda seguir un asistente de IA
+  como competidor.** Filtra por `isGenericEntityName`
+  (`lib/entity-hygiene/generic-entities.ts`) antes de aceptar cualquier
+  nombre de `other_brands_mentioned` — ese campo es salida cruda del modelo
+  con sólo una instrucción blanda en el prompt de extracción, nunca una
+  garantía de código. Detalle completo, y por qué la lista vive en un módulo
+  compartido en vez de aquí, en `.claude/rules/competitors.md`.
+
 ## Escrituras
 
 - `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario

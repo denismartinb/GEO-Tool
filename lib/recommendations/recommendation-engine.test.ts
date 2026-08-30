@@ -1126,6 +1126,23 @@ describe("generateRecommendationsForRun", () => {
     expect(recs.some((r) => r.recommendation_type === "track_emerging_competitor")).toBe(false);
   });
 
+  it("never recommends tracking a generic AI assistant as an emerging competitor (N6, ENTITY-HYGIENE-1)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "q1",
+        extracted_json: extractedWith({ otherBrandsMentioned: ["ChatGPT"] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "q2",
+        extracted_json: extractedWith({ otherBrandsMentioned: ["ChatGPT"] })
+      })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "track_emerging_competitor")).toBe(false);
+  });
+
   it("does not quote a citation title that is just the domain repeated", () => {
     const recs = run([
       prompt({

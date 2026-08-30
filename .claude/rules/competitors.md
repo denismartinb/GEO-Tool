@@ -188,6 +188,61 @@ propia marca cuando caía fuera del top 5.
   suave y va acompañado de una pista explícita. Un interruptor que parece
   muerto no lo pulsa nadie.
 
+## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §195)
+
+- **Un asistente de IA nunca es un competidor, y un término genérico del
+  sector nunca es un alias de marca.** El auditor externo encontró "ChatGPT"
+  sugerido como competidor y "GEO Score" aceptado como alias — el medio que se
+  mide y el nombre de la propia métrica, tratados como si fueran hechos sobre
+  el negocio del cliente. La contaminación no se queda en una pantalla: SOV
+  (`sov-delta.ts`, `engine-share.ts`) lee `project_competitors` directamente
+  para su denominador y sus series, y Recomendaciones
+  (`computeCompetitorDominance`, `computeProminenceGap`,
+  `computeEmergingCompetitors`) genera copy sobre lo que sea que esté en esa
+  tabla o en `other_brands_mentioned` — "Disputa a ChatGPT X consultas" es una
+  frase real que el motor podía producir antes de esta fase.
+- **La comprobación vive en `lib/entity-hygiene/generic-entities.ts`, un
+  módulo propio y deliberadamente separado de `GENERIC_ALIAS_TERMS`
+  (`lib/projects/brand-aliases.ts`).** Son dos listas con un criterio
+  distinto: `GENERIC_ALIAS_TERMS` rechaza por SOLAPAMIENTO DE TOKEN (todo
+  token del candidato es un sustantivo de categoría suelto — "app",
+  "platform") y sirve para eso; `generic-entities.ts` compara la FRASE
+  COMPLETA normalizada contra una lista cerrada de asistentes/motores de IA y
+  jerga del sector. "GEO Score" no cae en ningún token de
+  `GENERIC_ALIAS_TERMS` (ni "geo" ni "score" están ahí, y no deberían estarlo
+  sueltos — The GEO Group es una empresa real), así que sólo el chequeo de
+  frase completa lo atrapa. Unificar las dos listas reabriría exactamente ese
+  hueco.
+- **Cinco puntos de entrada, los cinco comprueban `isGenericEntity`/
+  `isGenericEntityName` antes de aceptar nada — ninguno queda fuera si se
+  añade un sexto:** sugerencia de competidor (`filterSuggestions`,
+  `lib/competitors/suggest-competitors.ts`, filtrado EN LECTURA como el resto
+  de esa función — así una entrada ya cacheada antes de esta fase también se
+  limpia), alta y edición manual de competidor
+  (`createCompetitorCore`/`updateCompetitorCore`,
+  `lib/competitors/manage-competitors.ts`), alias auto-derivado
+  (`selectVerifiableAliases`, motivo `generic_entity`, distinto de
+  `generic`), alias manual (`validateNewAlias`,
+  `lib/brand-aliases/normalize-aliases.ts` — este camino no tenía NINGÚN
+  filtro de genericidad antes de esta fase, ni siquiera el de token, lo que lo
+  hacía más débil que el automático) y la recomendación de competidor
+  emergente (`computeEmergingCompetitors`,
+  `lib/recommendations/recommendation-engine.ts` — camino independiente de
+  los otros cuatro: lee `other_brands_mentioned` con sólo una instrucción
+  blanda de "excluye términos genéricos" en el prompt de extracción, nunca
+  aplicada en código hasta ahora).
+- **La lista es de FRASE, nunca de token suelto, y con motivo escrito para
+  cada exclusión deliberada.** "geo" a secas no está en la lista aunque "GEO
+  Score" sí — un competidor real puede llamarse "Geo" algo (The GEO Group). Al
+  añadir un término nuevo a `generic-entities.ts`, comprobar primero si
+  existe una marca real que lo use como nombre completo antes de bloquearlo.
+- **`lib/entity-hygiene/**` no tiene dueño único entre las tres zonas que lo
+  importan** (Competidores, alias de marca, Recomendaciones) — es una
+  primitiva compartida sin I/O, mismo patrón que `lib/domains/brand-domain.ts`
+  para el matching de dominio propio. Un símbolo nuevo aquí se añade sólo si
+  de verdad lo necesita más de una de esas tres zonas; si sólo lo necesita una,
+  va en el módulo de esa zona, no aquí.
+
 ## Layout
 
 - El botón **"Gestionar" va en la etiqueta de sección**, nunca en la cabecera
