@@ -18449,7 +18449,7 @@ ADR 0037. Análisis a petición del fundador, Task Intake aprobado 2026-08-29.
 
 ---
 
-## 193. La pestaña "Resueltas" tenía el icono de check desalineado del texto (2026-08-29)
+## 196. La pestaña "Resueltas" tenía el icono de check desalineado del texto (2026-08-29)
 
 **El hallazgo, a ojo, en una captura del preview de RECURRING-VALUE-1.** El
 fundador vio un hueco enorme entre el icono de check y el resto de la fila en
@@ -18484,3 +18484,164 @@ validate` (build + typecheck + lint).
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
 recommendations-client.tsx` (`ResolvedHistoryCard`); §190.
+
+**Nota de numeración.** Nació como §193 sobre una `main` que llegaba al §192.
+Antes de que esta rama pudiera mergear, RECURRING-CADENCE-1 Fase B (#511) y
+la propia RECURRING-VALUE-1 (#506, log §195) mergearon primero y reclamaron
+§193/§194/§195, así que esta sección —la que sigue sin estar en `main`—
+renumera a **§196**, con todas sus referencias (`grep -rn "§196"`). Mismo
+protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185/§187/§191/§195
+de este mismo fichero.
+
+---
+
+## 193. AUDIT-REPRO-1 tenía el journey de clasificación pero nadie podía dispararlo (ACTIONS-OBSERVABLE-1a, 2026-08-30)
+
+**El hueco.** `AUDIT-REPRO-1` (Fase 0, log §187) dejó terminado el journey de
+Playwright que clasifica las seis acciones de Recomendaciones como `real` /
+`invisible` / `entorno` (`tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`), aislado tras `--journeys actions` y con su
+cerradura en el self-check. Pero a diferencia de `scan` (`ux-pilot-scan.yml`,
+UX-PILOT-3) y `write` (`ux-pilot-write.yml`, UX-PILOT-2a), nunca se le dio un
+workflow de `workflow_dispatch` que lo pudiera lanzar contra un preview real.
+El journey existía y no lo había ejecutado nadie.
+
+Esto importaba porque Fase 4 (`ACTIONS-OBSERVABLE-1`, el arreglo de las seis
+acciones) no se puede acotar sin ese veredicto — el propio plan
+(`docs/external-audit-2026-08.md`) dice explícitamente "el reparto exacto sale
+de la clasificación", y la clasificación no existía todavía. Detectado al
+hacer Task Intake de Fase 4: antes de proponer alcance, se comprobó que el
+mecanismo para medirlo de verdad faltaba.
+
+**Qué se ha añadido.** `.github/workflows/ux-pilot-actions.yml`, calcado de
+`ux-pilot-write.yml` (mismo proyecto reservado vía `PILOT_WRITE_PROJECT_ID`,
+mismo arreglo de `pr_number` como `string` en vez de `number`, mismo patrón de
+rama de evidencia `pilot-evidence/pr-<N>-actions`), con `--journeys actions`
+en vez de `write`. Cero cambios de producto — `scripts/pilot.mjs` ya soportaba
+el flag desde Fase 0.
+
+**Mismas garantías que `scan`, sin secreto.** `workflow_dispatch` únicamente
+(sin `deployment_status`, así que ningún deploy de preview puede dispararlo
+solo), y el flag `--journeys actions` sigue sin ser alcanzable por el piloto
+de cada deploy — `checkActionsLockout` (ya existente desde Fase 0) lo sigue
+comprobando sin cambios. Ningún secreto nuevo gatea el dispatch, mismo
+razonamiento que UX-PILOT-3: quien tiene acceso de escritura al repositorio ya
+puede dispararlo, así que un secreto adicional sólo añadiría fricción, no
+control de acceso.
+
+**Recordatorio que viaja con el propio workflow.** Una de las seis acciones
+(«Marcar como hecho») es destructiva y sin deshacer hoy — consume una
+recomendación real del proyecto de escritura reservado, coste ya aceptado por
+el fundador el 2026-08-27 (log §187). El comentario de cabecera del workflow
+lo repite para que quien lo dispare no lo descubra a mitad de ejecución.
+
+**Lo que esta fase NO hace.** No clasifica nada por sí sola — el resultado
+depende de que el fundador dispare el workflow a mano contra el preview de
+algún PR vivo, exactamente igual que ya hace con `ux-pilot-scan.yml`. No
+propone ni implementa ningún arreglo de las seis acciones: eso es
+`ACTIONS-OBSERVABLE-1b`, cuyo alcance concreto sale de ese dispatch, no de
+este PR.
+
+**Comprobado.** `pnpm test` (220/220 ficheros, 3.035/3.035 tests, incluida
+`tests/pilot/support/selfcheck-checks.test.ts` sobre `checkActionsLockout`),
+`pnpm run validate` (build + typecheck + lint), todo en verde. El propio PR no
+llevó pasada de `ux-pilot` con juicio visual — no hay pantalla nueva que
+pilotar, es un workflow de CI — pero sí recibió un build de Vercel real (todo
+push a una rama nueva construye por no tener `VERCEL_GIT_PREVIOUS_SHA` contra
+qué comparar, corrección hecha en el propio PR sobre una afirmación inicial
+equivocada) y el piloto de lectura por defecto pasó limpio sobre él.
+
+**Trazabilidad.** `.github/workflows/ux-pilot-actions.yml`;
+`tests/pilot/journeys/actions/recommendation-actions.spec.ts` (sin cambios,
+ya existía); `scripts/pilot.mjs` (`PROJECT_SETS.actions`, sin cambios);
+`scripts/pilot-selfcheck-checks.mjs` (`checkActionsLockout`, sin cambios);
+`docs/external-audit-2026-08.md` Fase 4; PR #507.
+
+---
+
+## 194. El barrido recurrente fallaba y nadie se enteraba (RECURRING-CADENCE-1 Fase B, 2026-08-30)
+
+**Lo que pidió el fundador**, justo después de aprobar la Fase A: *"quiero un
+email alerta si vuelve a fallar un escaneo diario de cualquier cuenta"*.
+Destinatario decidido por él el mismo día: su propia dirección, vía
+`OPS_ALERT_EMAIL`. **Sólo operador, nunca el cliente** — misma regla que el
+resto de `lib/email/transactional.ts`: el dueño de la cuenta no puede arreglar
+que nuestro cron se quedara sin presupuesto de invocación.
+
+**Lo que ya existía y no se ha duplicado.** `checkAndSendScanHealthAlert`
+(ADR 0029 Fase B) ya avisaba de lo que pasa DENTRO de un run terminado: un
+motor sin cuota o mal configurado, un motor que no responde o del que no se
+extrae nada, y un run caducado por timeout que ya gastó su reintento. Esta fase
+no toca nada de eso.
+
+**Los cuatro agujeros, todos un piso por encima de lo que aquello cubría:**
+
+1. **Un escaneo del cron que revienta no avisaba a nadie.** Si
+   `createPendingScanRunForCron` o `executePendingScan` lanzaban, el barrido
+   apuntaba `status: "failed"` en su resumen y seguía. El resumen era un
+   `console.info`. Es literalmente el caso que el fundador describió.
+2. **`skipped_failure_streak` era un callejón sin salida silencioso.** Tres
+   runs fallidos seguidos y el proyecto sale del recurrente para siempre; la
+   rama sale antes de `attemptScan`, así que ni siquiera pasa por
+   `reconcileStuckScanRuns`. Sólo lo desbloquea un escaneo manual con éxito.
+3. **El run que falla con cero resultados y agota reintentos marcaba la fila y
+   no avisaba** (`reconciliation.ts`, rama `capReached` del bloque de
+   cero-resultados). Su hermano de timeout, veinte líneas más arriba, sí
+   avisaba desde ADR 0029. Olvido, no decisión — corregido aquí.
+4. **Nada avisaba a nivel de barrido.** Una pasada que no escanea nada teniendo
+   trabajo aplazado, o una cadena de continuación rechazada (que la Fase A
+   acababa de hacer *visible en el log*), seguían sin despertar a nadie.
+
+**Por qué un correo por PASADA y no por proyecto.** El deduplicado de
+`sendScanHealthAlertEmail` se apoya en `job_logs`, y esa tabla exige una FK
+real a `(job_id, run_id, project_id)` (migración 0001). El barrido opera por
+encima de los jobs y no tiene ninguno: no puede escribir ahí sin una migración,
+y las migraciones están en la lista de prohibido sin aprobación explícita. La
+salida elegida no es un almacén distinto sino **no necesitar almacén**: un
+resumen por pasada, con el propio disparo diario haciendo de deduplicador. De
+paso se lee mejor — "estos 3 dominios no se escanearon hoy" en un correo, en
+vez de tres correos.
+
+**El precio, dicho y no escondido:** si los fallos se reparten entre varios
+eslabones de la cadena de continuación, ese día salen dos o tres correos en vez
+de uno. Acotado (el techo son `MAX_SWEEP_CHAIN_INVOCATIONS` eslabones) y raro.
+La alternativa sin ese defecto era una migración de esquema, y no compensa.
+
+**Los silencios son tan deliberados como los avisos.** `skipped_recent`,
+`skipped_plan_ineligible` y `skipped_active_run` son el funcionamiento normal y
+no alertan nunca. Y `sweep_no_progress` exige `deferred > 0`: una pasada que
+escanea cero porque todos sus candidatos estaban al día es exactamente lo que
+debe pasar la mayoría de los días; lo anómalo es quedarse trabajo sin hacer Y
+no haber avanzado nada, que es cuando el guardián de progreso corta la cadena.
+Ambos casos tienen su test negativo en `sweep-alert.test.ts`, porque una alerta
+que llega todos los días es una que se aprende a ignorar — peor que ninguna
+(ADR 0029: "dedupe across projects: an alert that fires twenty times is one
+that gets ignored").
+
+**Lo que esta fase NO hace, a propósito.** No le devuelve una salida automática
+a `skipped_failure_streak`: lo hace *visible*, no lo reintenta solo. Convertir
+ese guardián en un bucle de reintentos es un cambio de comportamiento con su
+propia decisión detrás, y con el aviso en el buzón el fundador lo desbloquea
+con un clic. El texto del correo lo dice explícitamente, para que quien lo
+reciba sepa que esa fila no se arregla sola.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación, pero
+**toda ella cuelga de una premisa que no se puede verificar desde el código**:
+que `OPS_ALERT_EMAIL` esté configurada en Vercel. Si no lo está, no sale un
+solo correo. **El fundador confirmó el 2026-08-30 que `OPS_ALERT_EMAIL` y
+`RESEND_API_KEY` están puestas en Vercel** — dato con fecha, no supuesto: una
+variable de entorno puede cambiar y esta anotación caduca. Lo demás que la
+verifica: `isOpsAlertConfigured()` se comprueba
+antes de cada envío y, si falla, registra los hallazgos completos en vez de
+tragárselos (con su test). Lo que se queda sin salida si la premisa falla: nada
+nuevo — se vuelve al estado anterior a esta fase, un log que hay que ir a
+mirar. No es hipotético: el 2026-08-05 se descubrió que la variable llevaba sin
+configurar desde siempre y la alerta de AUDIT-AFTER-SCAN-1 estaba inerte desde
+el día en que se escribió.
+
+**Trazabilidad.** `lib/scan/sweep-alert.ts` (nuevo) ·
+`lib/scan/sweep-alert.test.ts` (nuevo) · `lib/scan/cron.ts` ·
+`lib/scan/cron.test.ts` · `lib/scan/reconciliation.ts` ·
+`lib/email/transactional.ts` (`sendSweepHealthAlertEmail`,
+`sendChainRejectedAlertEmail`); §192, ADR 0029 Fase B. Task Intake aprobado por
+el fundador el 2026-08-30.
