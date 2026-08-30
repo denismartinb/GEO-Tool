@@ -1097,6 +1097,18 @@ export function RecCard({
                 {dismissError}
               </p>
             )}
+            {/* RECURRING-VALUE-1 (docs/external-audit-2026-08.md, Fase 3):
+                closes the loop this button opens — RECS-LOOP-1 already
+                verifies on the next comparable scan whether a dismissed gap
+                actually closed (pestaña "Resueltas"), but nothing on the
+                active card said that check was coming. No date: the exact
+                schedule is a separate deliverable (calendario visible), this
+                is just the promise that a scan will judge it. */}
+            {!dismissError && (
+              <p style={{ margin: 0, fontSize: 11.5, color: "var(--ink-4)" }}>
+                La verás reflejada en tu próximo escaneo.
+              </p>
+            )}
           </div>
 
           {/* Plan de acción — asset saneado generado por IA, aditivo: no
