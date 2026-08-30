@@ -11,6 +11,7 @@ import { FaviconImg } from "@/components/ui/favicon-img";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
+import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import {
@@ -772,6 +773,19 @@ export default async function ProjectDetailPage({
           re-renders. */}
       {ENABLE_SYNC_SCAN_EXECUTION && activeRun ? (
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
+      ) : null}
+      {/* VERCEL-COST-1 (2026-08-30, fixed after `qa` caught it before Human
+          Gate): a rescan on a project that already has data renders the
+          `hasData` branch below, which mounts neither `ScanInProgressLive`
+          nor any other live component — both only live in the `!hasData`
+          empty-state branch. Without a poller here, that branch never
+          detects the run going terminal and the page is stuck showing stale
+          data with a perpetual "Escaneando…" pill. Scoped to exactly this
+          gap so it never runs alongside `ScanInProgressLive` (which already
+          owns the empty-state branch) or `ScanMissionRocket` (owns the
+          takeover). */}
+      {hasData && activeRun && !showMissionTakeover ? (
+        <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} />
       ) : null}
       {/* Sticky page header — hidden while the first-scan mission takeover
           (below) owns the screen, so the rocket animation reads as full
