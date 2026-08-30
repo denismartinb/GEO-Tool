@@ -889,11 +889,6 @@ export default async function ProjectDetailPage({
                   para mejorar tu presencia en las respuestas de IA.
                 </>
               ) : null}
-              {completedRunsCount < 2 && (
-                <span style={{ color: "var(--ink-4)", fontStyle: "italic", fontSize: 13 }}>
-                  {" "}(Muestra inicial — la tendencia estará disponible con ≥2 escaneos.)
-                </span>
-              )}
             </p>
           </div>
 
@@ -949,9 +944,7 @@ export default async function ProjectDetailPage({
                 </>
               ) : sampleNudge(gaugeDeltaVerdict) ? (
                 <div className="ov2-gauge-trend-cap">{sampleNudge(gaugeDeltaVerdict)}</div>
-              ) : geoTrend.length >= 2 ? null : (
-                <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
-              )}
+              ) : null}
             </div>
           </div>
           </div>
