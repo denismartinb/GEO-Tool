@@ -843,3 +843,129 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
     )
   );
 }
+
+/**
+ * RECURRING-CADENCE-1 Fase B: el resumen de una pasada del barrido recurrente
+ * que dejó proyectos sin escanear.
+ *
+ * **Por qué un resumen y no un correo por proyecto.** El deduplicado de
+ * `sendScanHealthAlertEmail` se apoya en `job_logs`, y esa tabla exige una FK
+ * real a `(job_id, run_id, project_id)`: el barrido opera por encima de los
+ * jobs y no tiene ninguno, así que no puede escribir ahí sin una migración.
+ * Un correo por *pasada* no necesita almacén de deduplicado en absoluto — el
+ * cron dispara una vez al día, así que el propio disparo es el deduplicador.
+ * El precio, dicho y no escondido: si los fallos se reparten entre varios
+ * eslabones de la cadena de continuación, ese día salen dos o tres correos en
+ * vez de uno (`docs/brand/design-decisions-log.md` §193).
+ *
+ * Dirección de operador, nunca la del cliente: misma regla que el resto de
+ * este fichero — el dueño de la cuenta no puede arreglar que nuestro cron se
+ * quedara sin presupuesto de invocación.
+ */
+export async function sendSweepHealthAlertEmail(input: {
+  findings: ReadonlyArray<{ domain: string; projectId: string; headline: string; detail: string }>;
+  chainIndex: number;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+  if (input.findings.length === 0) return;
+
+  const findingHtml = input.findings
+    .map(
+      (finding) => `
+    <tr>
+      <td style="padding:12px 0;border-top:1px solid #EEF1F6;vertical-align:top;">
+        <div style="font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(finding.domain)}</div>
+        <div style="font-size:13px;color:#0B1426;margin-top:4px;font-weight:600;">${escapeHtml(finding.headline)}</div>
+        <div style="font-size:12.5px;color:#5B6B82;margin-top:3px;">${escapeHtml(finding.detail)}</div>
+        <div style="font-size:11.5px;color:#8A97A8;margin-top:5px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">${escapeHtml(finding.projectId)}</div>
+      </td>
+    </tr>`
+    )
+    .join("");
+
+  const count = input.findings.length;
+  const subject =
+    count === 1
+      ? `[GenScore] Escaneo recurrente: 1 dominio sin escanear — ${input.findings[0].domain}`
+      : `[GenScore] Escaneo recurrente: ${count} dominios sin escanear`;
+
+  await sendEmail(
+    to,
+    subject,
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading(count === 1 ? "Un dominio se ha quedado sin su escaneo" : `${count} dominios se han quedado sin su escaneo`)}
+      ${paragraph(
+        "El barrido recurrente de hoy ha terminado dejando esto sin resolver. Cada línea dice qué pasó y qué mirar."
+      )}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${findingHtml}
+      </table>
+      ${subtext(
+        `Pasada ${input.chainIndex} de la cadena del barrido · detectado ${escapeHtml(input.detectedAt.toISOString())}. Un dominio con tres escaneos fallidos seguidos queda fuera del recurrente hasta que alguien lo escanee a mano con éxito: eso no se arregla solo.`
+      )}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: count === 1 ? `${input.findings[0].domain}: ${input.findings[0].headline}` : `${count} dominios sin escanear hoy`
+      }
+    )
+  );
+}
+
+/**
+ * RECURRING-CADENCE-1 Fase B: la cadena de continuación del barrido devolvió
+ * un estado que no es 2xx.
+ *
+ * La Fase A hizo que ese rechazo dejara de leerse como un envío correcto; esto
+ * es la mitad que hace que alguien se entere. Un eslabón caído deja al barrido
+ * sirviendo como mucho `MAX_PROJECTS_PER_CRON_RUN` proyectos al día, en
+ * silencio, y sólo el operador puede arreglarlo (un 401 de deployment
+ * protection, un `getSiteUrl()` obsoleto). Sin deduplicar a propósito: sólo
+ * puede dispararse una vez por eslabón, y un eslabón roto corta la cadena.
+ */
+export async function sendChainRejectedAlertEmail(input: {
+  chainIndex: number;
+  status: number;
+  url: string;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  await sendEmail(
+    to,
+    `[GenScore] La cadena del barrido se ha cortado — HTTP ${input.status}`,
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading("El barrido recurrente no pudo continuar")}
+      ${paragraph(
+        "Una pasada del barrido intentó pasarle el testigo a la siguiente y el destino contestó con un error. Los proyectos que quedaban aplazados NO se han escaneado hoy: esperan al disparo de mañana."
+      )}
+      ${paragraph(
+        "Las causas típicas son un 401 de la protección de despliegue de Vercel, una URL de sitio obsoleta, o un fallo del propio endpoint interno."
+      )}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${dataRow("Estado HTTP", String(input.status))}
+        ${dataRow("Destino", input.url)}
+        ${dataRow("Eslabón", String(input.chainIndex))}
+        ${dataRow("Detectado", input.detectedAt.toISOString())}
+      </table>
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `La cadena del barrido se cortó con HTTP ${input.status}`
+      }
+    )
+  );
+}

@@ -18446,3 +18446,89 @@ log que hay que ir a mirar.
 `lib/scan/drive-budget.ts` · `lib/scan/drive-budget.test.ts` ·
 `lib/scan/constants.ts` (`SWEEP_SAFE_CEILING_MS`); ADR 0016, ADR 0029 Adenda,
 ADR 0037. Análisis a petición del fundador, Task Intake aprobado 2026-08-29.
+
+---
+
+## 193. El barrido recurrente fallaba y nadie se enteraba (RECURRING-CADENCE-1 Fase B, 2026-08-30)
+
+**Lo que pidió el fundador**, justo después de aprobar la Fase A: *"quiero un
+email alerta si vuelve a fallar un escaneo diario de cualquier cuenta"*.
+Destinatario decidido por él el mismo día: su propia dirección, vía
+`OPS_ALERT_EMAIL`. **Sólo operador, nunca el cliente** — misma regla que el
+resto de `lib/email/transactional.ts`: el dueño de la cuenta no puede arreglar
+que nuestro cron se quedara sin presupuesto de invocación.
+
+**Lo que ya existía y no se ha duplicado.** `checkAndSendScanHealthAlert`
+(ADR 0029 Fase B) ya avisaba de lo que pasa DENTRO de un run terminado: un
+motor sin cuota o mal configurado, un motor que no responde o del que no se
+extrae nada, y un run caducado por timeout que ya gastó su reintento. Esta fase
+no toca nada de eso.
+
+**Los cuatro agujeros, todos un piso por encima de lo que aquello cubría:**
+
+1. **Un escaneo del cron que revienta no avisaba a nadie.** Si
+   `createPendingScanRunForCron` o `executePendingScan` lanzaban, el barrido
+   apuntaba `status: "failed"` en su resumen y seguía. El resumen era un
+   `console.info`. Es literalmente el caso que el fundador describió.
+2. **`skipped_failure_streak` era un callejón sin salida silencioso.** Tres
+   runs fallidos seguidos y el proyecto sale del recurrente para siempre; la
+   rama sale antes de `attemptScan`, así que ni siquiera pasa por
+   `reconcileStuckScanRuns`. Sólo lo desbloquea un escaneo manual con éxito.
+3. **El run que falla con cero resultados y agota reintentos marcaba la fila y
+   no avisaba** (`reconciliation.ts`, rama `capReached` del bloque de
+   cero-resultados). Su hermano de timeout, veinte líneas más arriba, sí
+   avisaba desde ADR 0029. Olvido, no decisión — corregido aquí.
+4. **Nada avisaba a nivel de barrido.** Una pasada que no escanea nada teniendo
+   trabajo aplazado, o una cadena de continuación rechazada (que la Fase A
+   acababa de hacer *visible en el log*), seguían sin despertar a nadie.
+
+**Por qué un correo por PASADA y no por proyecto.** El deduplicado de
+`sendScanHealthAlertEmail` se apoya en `job_logs`, y esa tabla exige una FK
+real a `(job_id, run_id, project_id)` (migración 0001). El barrido opera por
+encima de los jobs y no tiene ninguno: no puede escribir ahí sin una migración,
+y las migraciones están en la lista de prohibido sin aprobación explícita. La
+salida elegida no es un almacén distinto sino **no necesitar almacén**: un
+resumen por pasada, con el propio disparo diario haciendo de deduplicador. De
+paso se lee mejor — "estos 3 dominios no se escanearon hoy" en un correo, en
+vez de tres correos.
+
+**El precio, dicho y no escondido:** si los fallos se reparten entre varios
+eslabones de la cadena de continuación, ese día salen dos o tres correos en vez
+de uno. Acotado (el techo son `MAX_SWEEP_CHAIN_INVOCATIONS` eslabones) y raro.
+La alternativa sin ese defecto era una migración de esquema, y no compensa.
+
+**Los silencios son tan deliberados como los avisos.** `skipped_recent`,
+`skipped_plan_ineligible` y `skipped_active_run` son el funcionamiento normal y
+no alertan nunca. Y `sweep_no_progress` exige `deferred > 0`: una pasada que
+escanea cero porque todos sus candidatos estaban al día es exactamente lo que
+debe pasar la mayoría de los días; lo anómalo es quedarse trabajo sin hacer Y
+no haber avanzado nada, que es cuando el guardián de progreso corta la cadena.
+Ambos casos tienen su test negativo en `sweep-alert.test.ts`, porque una alerta
+que llega todos los días es una que se aprende a ignorar — peor que ninguna
+(ADR 0029: "dedupe across projects: an alert that fires twenty times is one
+that gets ignored").
+
+**Lo que esta fase NO hace, a propósito.** No le devuelve una salida automática
+a `skipped_failure_streak`: lo hace *visible*, no lo reintenta solo. Convertir
+ese guardián en un bucle de reintentos es un cambio de comportamiento con su
+propia decisión detrás, y con el aviso en el buzón el fundador lo desbloquea
+con un clic. El texto del correo lo dice explícitamente, para que quien lo
+reciba sepa que esa fila no se arregla sola.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación, pero
+**toda ella cuelga de una premisa que no se puede verificar desde el código**:
+que `OPS_ALERT_EMAIL` esté configurada en Vercel. Si no lo está, no sale un
+solo correo. Lo que la verifica hoy: `isOpsAlertConfigured()` se comprueba
+antes de cada envío y, si falla, registra los hallazgos completos en vez de
+tragárselos (con su test). Lo que se queda sin salida si la premisa falla: nada
+nuevo — se vuelve al estado anterior a esta fase, un log que hay que ir a
+mirar. No es hipotético: el 2026-08-05 se descubrió que la variable llevaba sin
+configurar desde siempre y la alerta de AUDIT-AFTER-SCAN-1 estaba inerte desde
+el día en que se escribió.
+
+**Trazabilidad.** `lib/scan/sweep-alert.ts` (nuevo) ·
+`lib/scan/sweep-alert.test.ts` (nuevo) · `lib/scan/cron.ts` ·
+`lib/scan/cron.test.ts` · `lib/scan/reconciliation.ts` ·
+`lib/email/transactional.ts` (`sendSweepHealthAlertEmail`,
+`sendChainRejectedAlertEmail`); §192, ADR 0029 Fase B. Task Intake aprobado por
+el fundador el 2026-08-30.

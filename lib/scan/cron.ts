@@ -4,6 +4,8 @@ import { after } from "next/server";
 import { resolvePlan } from "@/lib/billing";
 import { createPendingScanRunForCron } from "@/lib/scan/run-creation";
 import { canStartAnotherSweepBatch } from "@/lib/scan/drive-budget";
+import { checkAndSendSweepAlert } from "@/lib/scan/sweep-alert";
+import { sendChainRejectedAlertEmail } from "@/lib/email/transactional";
 import { executePendingScan, getSiteUrl } from "@/lib/scan/executor";
 import { ProjectActionError } from "@/lib/scan/types";
 import type { createServiceClient } from "@/lib/supabase/service";
@@ -246,6 +248,22 @@ async function triggerSweepContinuation({ chainIndex }: { chainIndex: number }):
         status: response.status,
         url
       });
+
+      // RECURRING-CADENCE-1 Fase B: comprobar el estado hizo el fallo
+      // visible en el log; esto lo hace visible para alguien. Una cadena
+      // cortada deja al barrido sirviendo como mucho
+      // MAX_PROJECTS_PER_CRON_RUN proyectos al día, y es exactamente el tipo
+      // de avería que sólo el operador puede arreglar. Sin deduplicar: sólo
+      // puede dispararse una vez por eslabón, y un eslabón roto corta la
+      // cadena, así que su propio fallo lo acota.
+      await sendChainRejectedAlertEmail({ chainIndex, status: response.status, url, detectedAt: new Date() }).catch(
+        (alertError: unknown) => {
+          console.error("[geo:scan:cron] chain-rejected alert failed", {
+            chainIndex,
+            message: alertError instanceof Error ? alertError.message : String(alertError)
+          });
+        }
+      );
     }
   } catch (error) {
     console.error("[geo:scan:cron] failed to dispatch sweep continuation", {
@@ -419,6 +437,17 @@ export async function runDailyCronScan({
     const nextChainIndex = chainIndex + 1;
     after(() => triggerSweepContinuation({ chainIndex: nextChainIndex }));
   }
+
+  // RECURRING-CADENCE-1 Fase B: hasta aquí el resultado de la pasada moría en
+  // el `console.info` de abajo. Después del reparto de continuación y antes
+  // del log, para que el correo describa exactamente lo que se registra.
+  await checkAndSendSweepAlert({
+    service,
+    results,
+    scanned: scannedCount,
+    deferred: deferredCount,
+    chainIndex
+  });
 
   console.info("[geo:scan:cron] daily scan run summary", {
     elapsedMs: Date.now() - startedAt,

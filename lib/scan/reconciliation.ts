@@ -457,6 +457,18 @@ export async function reconcileStuckScanRuns({
             `${RECONCILE_LOG_PREFIX} zero-result run retry cap reached, marked retry-exhausted`,
             { projectId, runId: run.id }
           );
+
+          // RECURRING-CADENCE-1 Fase B: su hermano de timeout (arriba) sí
+          // avisaba al operador al agotar el reintento, y esta rama no. Mismo
+          // estado terminal —un run fallido que no se va a reintentar solo— y
+          // el mismo motivo para avisar; era un olvido, no una decisión
+          // (`docs/brand/design-decisions-log.md` §193).
+          await checkAndSendScanHealthAlert({
+            service,
+            projectId,
+            runId: run.id as string,
+            runFailedWithoutRetry: true
+          });
           continue;
         }
 
