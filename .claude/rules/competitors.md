@@ -3,6 +3,9 @@ description: Invariantes de la zona de Competidores (pantalla, sugerencias y mé
 paths:
   - "app/dashboard/projects/*/competitors/**"
   - "lib/competitors/**"
+  - "lib/brand-aliases/**"
+  - "lib/projects/brand-aliases.ts"
+  - "lib/entity-hygiene/**"
 ---
 
 # Competidores — invariantes
@@ -188,7 +191,7 @@ propia marca cuando caía fuera del top 5.
   suave y va acompañado de una pista explícita. Un interruptor que parece
   muerto no lo pulsa nadie.
 
-## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §195)
+## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §196)
 
 - **Un asistente de IA nunca es un competidor, y un término genérico del
   sector nunca es un alias de marca.** El auditor externo encontró "ChatGPT"

@@ -18341,6 +18341,73 @@ de este mismo fichero.
 
 ---
 
+## 195. La tendencia deja de anunciarse como requisito técnico (RECURRING-VALUE-1, Fase 3, primer recorte, 2026-08-29)
+
+**El hallazgo del auditor externo, y por qué era cierto sobre su sesión y
+falso sobre el producto.** La segunda tanda de material decía que "falta el
+histórico verificable" — pero el auditor sólo tuvo un escaneo, y con uno el
+producto retira correctamente todo lo temporal. El problema real no era la
+falta de funcionalidad (sparkline, delta con guardas, tendencia de SoV y
+resumen semanal ya existen), sino que **"La tendencia estará disponible con
+≥2 escaneos" describe un requisito técnico en vez de decir algo útil al
+usuario que decide si paga**.
+
+**Decisión del fundador: sin fecha.** El diagnóstico inicial (agente
+`Explore`) proponía sustituir esa frase por una fecha concreta ("tu próxima
+medición es el 5 sep"), calculada desde la cadencia del plan
+(`RECURRING_INTERVAL_MS_BY_PLAN`, `lib/scan/cron.ts`) — pero no existe hoy
+ningún cálculo de "próximo escaneo" en el producto, y el cron puede diferir
+un ciclo por presupuesto o racha de fallos, así que una fecha con esa
+provisionalidad habría sido una promesa que a veces se incumple. El fundador
+cortó por lo sano: **quitar la frase y no poner nada** en Visión general, y
+en Recomendaciones un texto sin fecha, "La verás reflejada en tu próximo
+escaneo" — la misma promesa honesta, sin comprometerse a un día. Esto reduce
+el primer PR de la fase a copy puro: sin módulo nuevo, sin cálculo de fecha,
+sin migración.
+
+**Dos sitios, dos frases retiradas.** `app/dashboard/projects/[projectId]/
+page.tsx` tenía la condición **dos veces**: el subtítulo del resumen
+("Muestra inicial — la tendencia estará disponible con ≥2 escaneos.") y el
+pie del gauge cuando no hay tendencia ni matiz de muestra
+(`sampleNudge`). Las dos desaparecen sin sustituto — mismo criterio que
+`AUDIT-NO-BUTTON-1` (§25) ya dejó escrito una vez: *"al quitar un control, la
+tentación es sustituirlo por algo. A veces el hueco es la respuesta."*
+
+**Recomendaciones: la promesa se cuelga del botón que la activa.** Junto a
+"Marcar como hecho", cada tarjeta activa lleva ahora "La verás reflejada en
+tu próximo escaneo" — cierra el círculo con lo que RECS-LOOP-1 (§181, §190)
+ya hace de verdad: el siguiente escaneo comparable verifica si la brecha
+marcada se movió, y la pestaña "Resueltas" enseña el veredicto. Lo único que
+faltaba era que la tarjeta activa lo anunciara antes de que el usuario
+pulsara el botón.
+
+**Lo que esta fase NO hace, todavía.** El calendario visible (última
+ejecución, próxima ejecución, cadencia) y las alertas con umbral configurable
+—los otros dos entregables de `docs/external-audit-2026-08.md` Fase 3— quedan
+para PRs separados: el primero es superficie nueva de UI, el segundo necesita
+migración y una decisión de producto sobre el valor por defecto del umbral.
+Ninguno de los dos se demora por falta de plan — el diagnóstico ya está
+hecho — sino por la regla de un PR por fase de `CLAUDE.md`.
+
+**Comprobado.** `pnpm test` (220/220 ficheros, 3.035/3.035 tests), `pnpm run
+validate` (build + typecheck + lint).
+
+**Nota de numeración.** Nació como §191 sobre una `main` que llegaba al §190.
+Mientras esta rama seguía abierta, RECS-EVIDENCE-2 (#504) reclamó ese mismo
+§191 y mergeó primero, renumerando esta sección a §192. Antes de que esta
+rama pudiera mergear ese §192, RECURRING-CADENCE-1 Fases A y B (#505, #511) y
+ACTIONS-OBSERVABLE-1a (#507) reclamaron sucesivamente §192, §193 y §194 y
+mergearon primero, así que esta sección —la que sigue sin estar en `main`—
+renumera de nuevo a **§195**, con todas sus referencias (`grep -rn "§195"`).
+Mismo protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185/§187/§191
+de este mismo fichero.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/page.tsx` ·
+`app/dashboard/projects/[projectId]/recommendations/recommendations-client.tsx`
+· `docs/external-audit-2026-08.md` Fase 3.
+
+---
+
 ## 192. Un escaneo manual se comía el escaneo recurrente del día siguiente (RECURRING-CADENCE-1 Fase A, 2026-08-29)
 
 **El síntoma que lo abrió.** El fundador: *"hay días que el escaneo recurrente
@@ -18602,7 +18669,7 @@ el fundador el 2026-08-30.
 
 ---
 
-## 195. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
+## 196. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
 
 **Origen.** P1-02 del informe de auditoría externa
 (`docs/external-audit-2026-08.md`, Fase 9): "GEO Score" se sugería como
