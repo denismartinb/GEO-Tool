@@ -18516,6 +18516,52 @@ ADR 0037. Análisis a petición del fundador, Task Intake aprobado 2026-08-29.
 
 ---
 
+## 196. La pestaña "Resueltas" tenía el icono de check desalineado del texto (2026-08-29)
+
+**El hallazgo, a ojo, en una captura del preview de RECURRING-VALUE-1.** El
+fundador vio un hueco enorme entre el icono de check y el resto de la fila en
+cada tarjeta de la pestaña "Resueltas" de Recomendaciones — no era una
+apreciación subjetiva: el icono y el texto ni siquiera estaban en la misma
+columna de grid.
+
+**Causa.** `RECS-REDESIGN-1` quitó el chip de rango (`.rec-rank`) de la
+tarjeta activa (`RecCard`) hace tiempo, dejando `.rec-main` con **un solo**
+hijo directo. `.rec2-scope .rec-main { grid-template-columns: 1fr }` (el
+repintado de esta pantalla) está calculado para ese único hijo — el propio
+comentario del CSS lo dice: *"no rank chip"*. `ResolvedHistoryCard`
+(`RECS-3`, la fila de solo lectura de "Resueltas") nunca se actualizó cuando
+se quitó el chip en el resto de la pantalla: seguía metiendo el icono de
+check como un SEGUNDO hijo de `.rec-main`, colándose como su propio ítem en
+un grid pensado para uno solo.
+
+**La corrección.** El icono se mueve dentro del único hijo de `.rec-main`,
+en línea junto a las insignias ("Marcada como hecha" / "Resuelta
+automáticamente"), en vez de ser un ítem de grid aparte — mismo contrato que
+ya cumple `RecCard`. Reducido de 34×34 a 20×20 para no competir en altura con
+las insignias de la misma fila.
+
+**Por qué no lo cazó el `ux-pilot`.** El barrido de lectura por defecto no
+visita la pestaña "Resueltas" en su journey genérico de Recomendaciones —
+mismo hueco de cobertura que ya documenta §190 (RECS-LOOP-1 Fase B) sobre esa
+misma pestaña, y que su propia PR dejó anotado como pendiente en vez de
+resuelto.
+
+**Comprobado.** `pnpm test` (221/221 ficheros, 3.053/3.053 tests), `pnpm run
+validate` (build + typecheck + lint).
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+recommendations-client.tsx` (`ResolvedHistoryCard`); §190.
+
+**Nota de numeración.** Nació como §193 sobre una `main` que llegaba al §192.
+Antes de que esta rama pudiera mergear, RECURRING-CADENCE-1 Fase B (#511) y
+la propia RECURRING-VALUE-1 (#506, log §195) mergearon primero y reclamaron
+§193/§194/§195, así que esta sección —la que sigue sin estar en `main`—
+renumera a **§196**, con todas sus referencias (`grep -rn "§196"`). Mismo
+protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185/§187/§191/§195
+de este mismo fichero.
+
+---
+
 ## 193. AUDIT-REPRO-1 tenía el journey de clasificación pero nadie podía dispararlo (ACTIONS-OBSERVABLE-1a, 2026-08-30)
 
 **El hueco.** `AUDIT-REPRO-1` (Fase 0, log §187) dejó terminado el journey de
@@ -18669,7 +18715,7 @@ el fundador el 2026-08-30.
 
 ---
 
-## 196. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
+## 197. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
 
 **Origen.** P1-02 del informe de auditoría externa
 (`docs/external-audit-2026-08.md`, Fase 9): "GEO Score" se sugería como
