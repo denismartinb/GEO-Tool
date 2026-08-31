@@ -112,7 +112,14 @@ export const config = {
      *   (getProjectIdFromPathname/getProjectIdFromDomainsQuery only ever
      *   match /dashboard/** paths, so they are unaffected either way), and
      *   not one of the three names middleware.test.ts requires covered.
+     *
+     *   Each literal is bounded to a full path segment — `(?:/|$)` after the
+     *   group, `$` after each fixed filename — on purpose: `qa` caught that
+     *   a bare prefix (e.g. `geo`) would also silently swallow a future
+     *   `/geoscore` or `/docsxyz` route that actually needs the session
+     *   refresh. No such route exists today, but this repo has a documented
+     *   history of exactly this class of silent matcher mistake.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore|feed\\.xml|llms\\.txt|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore)(?:/|$)|feed\\.xml$|llms\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
