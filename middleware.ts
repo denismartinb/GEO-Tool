@@ -91,7 +91,35 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - common static asset extensions
+     * - VERCEL-COST-1 Fase 3-b (2026-08-31): a subset of the pure
+     *   public-marketing surface — comparativas, docs, glosario, gratis + its
+     *   API, geo, cookies, privacidad, terminos, que-es-genscore, feed.xml,
+     *   llms.txt, robots.txt, sitemap.xml. None of these read the auth
+     *   cookie server-side — verified no `supabase`/`getUser`/`getClaims`
+     *   usage under any of these route trees — and the public header already
+     *   resolves session via its own `fetch('/api/me')` call
+     *   (`lib/use-session-user.ts`), a separate request that still passes
+     *   through this middleware regardless of whether the page route does.
+     *   Every request to this Edge Function is a billed Observability event
+     *   regardless of what the handler does.
+     *
+     *   Deliberately does NOT include `/`, `/blog` or `/pricing`:
+     *   `middleware.test.ts` (PRELAUNCH-HARDENING-1 Fase Q4) asserts those
+     *   three stay covered, and that invariant isn't revisited here — this
+     *   phase only takes the routes the existing test doesn't protect.
+     *   Adding a new top-level route to this list needs the same check
+     *   first: no Supabase auth read, no ACTIVE_PROJECT_COOKIE dependency
+     *   (getProjectIdFromPathname/getProjectIdFromDomainsQuery only ever
+     *   match /dashboard/** paths, so they are unaffected either way), and
+     *   not one of the three names middleware.test.ts requires covered.
+     *
+     *   Each literal is bounded to a full path segment — `(?:/|$)` after the
+     *   group, `$` after each fixed filename — on purpose: `qa` caught that
+     *   a bare prefix (e.g. `geo`) would also silently swallow a future
+     *   `/geoscore` or `/docsxyz` route that actually needs the session
+     *   refresh. No such route exists today, but this repo has a documented
+     *   history of exactly this class of silent matcher mistake.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore)(?:/|$)|feed\\.xml$|llms\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
