@@ -24,8 +24,10 @@ function delay(ms: number) {
  * multi-batch campaign completes end-to-end from the user's own authenticated
  * session, without depending on the secret-gated `/api/scan/continue`
  * self-fetch (docs/adr/0014). Progress is shown by the separately-mounted
- * `ScanProgressPoller`; this component only drives execution and refreshes once
- * the loop finishes.
+ * `ScanInProgressLive` / `LiveRunStatusCells` / `ScanProgressPoller`
+ * (VERCEL-COST-1, 2026-08-30 — which of the three depends on the page and
+ * whether the project already has data); this component only drives
+ * execution and refreshes once the loop finishes.
  */
 export function AutoExecuteScan({ projectId, runId }: { projectId: string; runId: string }) {
   const router = useRouter();

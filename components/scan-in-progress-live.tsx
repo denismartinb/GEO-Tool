@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ScanInProgress, type ActiveScanRun } from "@/components/scan-in-progress";
 
 type LiveRun = ActiveScanRun & { id: string };
@@ -9,15 +10,17 @@ const POLL_INTERVAL_MS = 3000;
 
 /**
  * Client-polling wrapper around the presentational `ScanInProgress`, so the
- * live "X de Y prompts" counter keeps animating without the page-level
- * `router.refresh()` that `ScanProgressPoller` now only fires once, on
- * terminal transition (docs/architecture-audit-2026-07.md, PERF-3b).
+ * live "X de Y prompts" counter keeps animating.
  *
- * Ignores responses for a different run id (superseded by an auto-retry) —
- * the sibling `ScanProgressPoller` detects that case and refreshes the whole
- * page, which remounts this component with the new run as `initial`.
+ * VERCEL-COST-1 (2026-08-30): also owns the terminal/superseded-transition
+ * `router.refresh()` that a separate sibling, `ScanProgressPoller`, used to
+ * fire on the same page — two independent intervals hitting the same
+ * endpoint for no reason (each Edge/Function invocation is a billed
+ * Observability event). Mirrors the single-poller pattern
+ * `ScanMissionRocket` already uses for the first-scan takeover.
  */
 export function ScanInProgressLive({ projectId, initial }: { projectId: string; initial: LiveRun }) {
+  const router = useRouter();
   const [run, setRun] = useState<LiveRun>(initial);
 
   useEffect(() => {
@@ -29,12 +32,17 @@ export function ScanInProgressLive({ projectId, initial }: { projectId: string; 
         if (!res.ok || cancelled) return;
 
         const data: { run: LiveRun | null } = await res.json();
-        if (!data.run || data.run.id !== initial.id) return;
+        const live = data.run;
+        const isTerminal = !live || (live.status !== "pending" && live.status !== "running");
+        const isSuperseded = Boolean(live) && live!.id !== initial.id;
 
-        setRun(data.run);
-        if (data.run.status !== "pending" && data.run.status !== "running") {
+        if (isTerminal || isSuperseded) {
           clearInterval(id);
+          if (!cancelled) router.refresh();
+          return;
         }
+
+        if (live) setRun(live);
       } catch {
         // Transient network error — the next tick retries.
       }
@@ -44,7 +52,7 @@ export function ScanInProgressLive({ projectId, initial }: { projectId: string; 
       cancelled = true;
       clearInterval(id);
     };
-  }, [projectId, initial.id]);
+  }, [projectId, initial.id, router]);
 
   return <ScanInProgress activeRun={run} />;
 }
