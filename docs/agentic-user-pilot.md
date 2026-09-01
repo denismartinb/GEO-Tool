@@ -648,7 +648,7 @@ the founder's real prompts, touch competitors or billing, or use the
 unrestricted "Lanzar escaneo" button. Any of those needs its own approved
 phase — not a quiet extension of this one.
 
-### Why it's opt-in, not part of the automatic per-deploy pilot
+### Why it's opt-in, and separate from the default read pilot
 
 A real scan costs real money against Gemini / OpenAI / Anthropic. Running it on
 every preview deploy of every PR would be an unbounded, silently growing bill.

@@ -1,8 +1,9 @@
 name: Agentic User Pilot
 
-# Runs the read-only user pilot against every Vercel preview deployment, so the
-# gate no longer depends on which kind of session the founder happens to be
-# working from. Claude Code's remote/web sessions cannot reach *.vercel.app
+# Runs the read-only user pilot against a Vercel preview deployment on GitHub's
+# runners, so the gate does not depend on which kind of session the founder
+# happens to be working from. Since Fase 5 (see below) it is dispatched by hand
+# rather than fired by every deployment. Claude Code's remote/web sessions cannot reach *.vercel.app
 # (egress policy), but GitHub's runners can — the agent then downloads the
 # screenshots artifact and does the visual judging.
 #
@@ -103,12 +104,18 @@ jobs:
           # El despliegue de preview de ESE commit, no el último del proyecto.
           # `environment_url` sale del estado `success`, que es el único que
           # lleva la URL ya servible.
+          # `|| true` en las dos llamadas: bajo `set -e`, un `gh api` que
+          # devuelva no-cero para UN deployment mataría el paso entero y el job
+          # moriría sin el `::error::` explicativo de abajo — un mensaje peor
+          # para el mismo rojo. Que una consulta falle es justo el caso que el
+          # bucle de reintentos existe para absorber.
           url=""
           for attempt in 1 2 3; do
-            for dep in $(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${sha}&per_page=100" \
-                          --jq '.[] | select(.environment == "Preview") | .id' 2>/dev/null); do
+            deps="$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${sha}&per_page=100" \
+                      --jq '.[] | select(.environment == "Preview") | .id' 2>/dev/null || true)"
+            for dep in $deps; do
               url="$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${dep}/statuses?per_page=100" \
-                      --jq 'map(select(.state == "success")) | .[0].environment_url // empty' 2>/dev/null)"
+                      --jq 'map(select(.state == "success")) | .[0].environment_url // empty' 2>/dev/null || true)"
               [ -n "$url" ] && break
             done
             [ -n "$url" ] && break

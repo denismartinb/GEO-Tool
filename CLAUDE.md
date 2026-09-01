@@ -254,7 +254,8 @@ missing in that incident, which is why it produced a meaningless pass):
 
 ### Pilot write scope (expanded 2026-08-02, founder-approved)
 
-The always-on pilot (every preview deploy) stays strictly **read-only**: no
+The default read pilot (dispatched by hand since Fase 5, log §198 — hasta
+entonces, en cada deploy de preview) stays strictly **read-only**: no
 scan launches, no project creation, no writing forms, no billing — enforced in
 code by an allow-list, not by convention.
 
