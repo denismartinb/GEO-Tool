@@ -119,9 +119,11 @@ describe("vercel-should-build", () => {
   });
 
   it("builds when the pilot itself changes — it needs a preview to run against", () => {
-    // The pilot only runs on `deployment_status`, so a skipped build means the
+    // The pilot only ever runs against a preview, so a skipped build means the
     // change to it is never exercised (2026-08-05: a fix to the interaction
-    // sweep deployed "Ignored" and no pilot ran).
+    // sweep deployed "Ignored" and no pilot ran). Still true after
+    // VERCEL-COST-1 Fase 5 made the pilot hand-dispatched: dispatching it needs
+    // a preview of that commit to point at.
     const { code, output } = decideFor([
       "docs/agentic-user-pilot.md",
       "tests/pilot/support/explore.ts"
@@ -136,9 +138,10 @@ describe("vercel-should-build", () => {
     // Se cambió porque la suposición costó una pasada: el 2026-08-11 el piloto
     // se agotó a los 20 min, el commit que subía el techo a 30 sólo tocaba
     // `.github/` y `docs/`, no hubo build, no hubo preview, y el arreglo del
-    // timeout no se pudo ejercitar (log §55). Un workflow que SÓLO se dispara
-    // con `deployment_status` necesita un deployment igual que lo necesita el
-    // código del piloto.
+    // timeout no se pudo ejercitar (log §55). Un workflow que sólo sabe pilotar
+    // un preview necesita un deployment igual que lo necesita el código del
+    // piloto — sigue siendo cierto desde que se dispara a mano (Fase 5,
+    // log §199): sin preview de ese commit, el dispatch se cae.
     const { code, output } = decideFor([
       "docs/agentic-user-pilot.md",
       ".github/workflows/ux-pilot.yml"
