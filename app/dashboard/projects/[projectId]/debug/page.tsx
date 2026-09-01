@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
-import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
@@ -520,7 +519,6 @@ export default async function RunsPage({
   return (
     <div className="page">
       {shouldDrive && activeRun ? <AutoExecuteScan projectId={projectId} runId={activeRun.id} /> : null}
-      {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
       {/* Sticky header */}
       <div className="ov-sticky-header">
@@ -1009,9 +1007,8 @@ export default async function RunsPage({
                         </td>
 
                         {run.status === "pending" || run.status === "running" ? (
-                          /* Live cells (PERF-3b): poll independently instead of relying on
-                             the page-level router.refresh() the sibling ScanProgressPoller
-                             now only fires once, on terminal transition. */
+                          /* Live cells (PERF-3b): poll independently and own their own
+                             terminal-transition refresh (VERCEL-COST-1, 2026-08-30). */
                           <LiveRunStatusCells
                             projectId={projectId}
                             initial={{

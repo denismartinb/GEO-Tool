@@ -191,7 +191,7 @@ propia marca cuando caía fuera del top 5.
   suave y va acompañado de una pista explícita. Un interruptor que parece
   muerto no lo pulsa nadie.
 
-## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §197)
+## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §198)
 
 - **Un asistente de IA nunca es un competidor, y un término genérico del
   sector nunca es un alias de marca.** El auditor externo encontró "ChatGPT"

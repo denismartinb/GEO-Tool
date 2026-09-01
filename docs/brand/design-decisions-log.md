@@ -18715,7 +18715,44 @@ el fundador el 2026-08-30.
 
 ---
 
-## 197. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
+## 197. El test de la promo de Checkout dependía del reloj real y rompió al cerrarse la ventana (2026-09-01)
+
+**El problema.** `app/dashboard/settings/billing/actions.test.ts` — "applies
+the promo coupon to the Checkout Session..." — llamaba a `createCheckoutSession`
+sin mockear `isPromoActive()` (`app/pricing/plans-data.ts`), que lee
+`Date.now()` contra `PROMO_ENDS_AT` real
+("2026-09-01T00:00:00+02:00", PRICING-PROMO-1, log §152). El propio test lo
+avisaba en un comentario: *"estos tests sólo significan algo mientras la
+ventana de promo (hasta 2026-09-01) esté abierta"* — y dejó de significar algo
+en el momento exacto en que esa fecha llegó, bloqueando `tests · typecheck ·
+lint` en `main` y por tanto el merge de cualquier PR abierto ese día
+(descubierto arreglando `ENTITY-HYGIENE-1`, PR #512, sin relación alguna con
+precios).
+
+**No es un bug de producto.** `isPromoActive()` hizo exactamente lo que tenía
+que hacer — la promo real ha terminado. El fallo era enteramente del test:
+afirmaba sobre una salida derivada del reloj real sin controlarlo.
+
+**La corrección.** `isPromoActive` se mockea igual que `getPromoCouponIdForPlan`
+(`@/lib/stripe`) — con `vi.mock("@/app/pricing/plans-data", importOriginal)`,
+que mantiene `PLANS` real (`planIdSchema` se construye desde ahí al cargar el
+módulo, `actions.ts:18`) y sólo sustituye `isPromoActive` por un mock
+controlable, con valor por defecto `true` en `beforeEach`. Añadido también el
+caso simétrico que antes sólo se cubría por accidente cuando la ventana
+estaba cerrada: cupón configurado pero `isPromoActive() === false` → sin
+`discounts`. Ningún fichero de producto se toca; `PROMO_ENDS_AT` y
+`isPromoActive` quedan igual.
+
+**Comprobado.** `pnpm test` (222/222 ficheros, 3.070/3.070 tests) y `pnpm run
+validate` en verde.
+
+**Trazabilidad.** `app/dashboard/settings/billing/actions.test.ts`;
+`app/pricing/plans-data.ts` (`isPromoActive`, `PROMO_ENDS_AT`, sin cambios);
+log §152 (PRICING-PROMO-1 Fase C).
+
+---
+
+## 198. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
 
 **Origen.** P1-02 del informe de auditoría externa
 (`docs/external-audit-2026-08.md`, Fase 9): "GEO Score" se sugería como

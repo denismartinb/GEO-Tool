@@ -139,7 +139,7 @@ paths:
   mensaje sigue siendo propio y saneado — nunca el error del proveedor
   (`.claude/rules/gemini.md`).
 
-## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §197)
+## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §198)
 
 - **`computeEmergingCompetitors` nunca recomienda seguir un asistente de IA
   como competidor.** Filtra por `isGenericEntityName`
