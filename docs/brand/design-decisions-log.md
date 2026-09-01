@@ -18712,3 +18712,56 @@ el día en que se escribió.
 `lib/email/transactional.ts` (`sendSweepHealthAlertEmail`,
 `sendChainRejectedAlertEmail`); §192, ADR 0029 Fase B. Task Intake aprobado por
 el fundador el 2026-08-30.
+
+---
+
+## 197. El journey de clasificación de acciones nunca abría la tarjeta antes de buscar "Marcar como hecho" (2026-09-01)
+
+**El síntoma.** Dos disparos reales de `ux-pilot-actions.yml` contra el
+preview de PR #512 (2026-08-31 y 2026-09-01) terminaron en `PILOT FAIL` en
+la acción 3 — `TimeoutError: locator.click: Timeout 15000ms exceeded`, con
+el mismo log de Playwright en las dos pasadas: `<div>…</div> from <div
+tabindex="0" role="button" class="rec-main" aria-expanded="false">…</div>
+subtree intercepts pointer events`. Reproducible al 100%, no un flake.
+
+**La causa, no el síntoma.** "Marcar como hecho" vive dentro de
+`.rec-detail`, colapsado a `max-height: 0; overflow: hidden` hasta que la
+tarjeta se abre (`.rec-card.open .rec-detail { max-height: 4000px; }`,
+`app/globals.css`). `card.getByRole("button", { name: /marcar como
+hecho/i })` lo encuentra en el árbol de accesibilidad y
+`dismissButton.isVisible()` devuelve `true` — el elemento no es
+`display:none` ni `visibility:hidden`, sólo está clipado por su ancestro —
+pero el punto de clic real cae sobre `.rec-main`, el toggle colapsado que
+sigue cubriendo esa zona (`aria-expanded="false"` en el log de las dos
+pasadas). La acción 1 del mismo journey ya abría su tarjeta antes de
+interactuar (`await card.click(); // abre la tarjeta`); la acción 3 nunca lo
+hacía — un olvido de autoría del test, no un bug de producto.
+
+**Por qué NO es P0 nuevo.** Un usuario real llega a "Marcar como hecho"
+haciendo clic en la tarjeta o en "Ver más" primero — el propio flujo de la
+pantalla obliga a abrirla para leer el detalle antes de decidir. El fallo
+vive enteramente en el guion del piloto, que saltaba directo al botón sin
+pasar por ese paso.
+
+**La corrección.** `tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`, acción 3: comprueba `aria-expanded` en
+`.rec-main` y, si la tarjeta no está ya abierta, la abre y espera a
+`aria-expanded="true"` antes de buscar el botón — mismo patrón que la
+acción 1, extraído a guardia explícita en vez de repetido a ciegas.
+
+**Lo que esto deja pendiente.** Las dos pasadas fallidas se pararon en la
+acción 3, así que las acciones 5 y 6 (dos de las tres variantes de
+"generar" y "activar seguimiento recurrente" ya tienen veredicto; faltan
+las que dependían de completar la 3 en la misma pasada) siguen sin
+clasificar. Hace falta un tercer disparo de `ux-pilot-actions.yml` con este
+arreglo para completar la Fase 4.
+
+**Comprobado.** `pnpm exec tsc --noEmit` limpio. `pnpm test` — 221/222
+ficheros verdes; el único rojo (`app/dashboard/settings/billing/
+actions.test.ts`) es preexistente en `main` y ajeno a este cambio (viene de
+`7e83034`, `pricing: real promo mechanism`, no tocado aquí).
+
+**Trazabilidad.** `tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`; runs de GitHub Actions #33390047627
+(2026-08-31) y #33481552447 (2026-09-01); `docs/external-audit-2026-08.md`
+Fase 4.
