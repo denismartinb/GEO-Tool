@@ -18802,3 +18802,62 @@ validate` en verde.
 **Trazabilidad.** `app/dashboard/settings/billing/actions.test.ts`;
 `app/pricing/plans-data.ts` (`isPromoActive`, `PROMO_ENDS_AT`, sin cambios);
 log §152 (PRICING-PROMO-1 Fase C).
+
+---
+
+## 199. "Marcar como hecho" volvía a fallar tras el arreglo del clic — pero era el mismo test, no el producto (2026-09-01)
+
+**Lo que pasó tras §198.** Con el clic ya llegando al botón, un tercer
+disparo real de `ux-pilot-actions.yml` contra un preview con el arreglo
+clasificó "marcar como hecho" como `real` — pero con la misma lectura del
+informe externo: *"la tarjeta siguió visible 15080ms después del clic, sin
+error visible"*. Antes de tratarlo como un hallazgo de producto nuevo, se
+revisó el código del propio botón.
+
+**El código del botón está bien.** `handleDismiss` → `dismissRecommendationAction`
+→ `dismissRecommendationCore` (`lib/recommendations/dismiss-recommendation.ts`)
+reverifica propiedad, actualiza `status='dismissed'` con el cliente de
+servicio y devuelve `{success:true}`; el cliente llama a `router.refresh()`.
+Nada en esa cadena explica un fallo silencioso — y la propia evidencia lo
+confirma: *"sin error visible"* significa que `dismissError` nunca se
+rellenó, lo que sólo pasa si el servidor respondió con éxito.
+
+**La causa real, otra vez en el propio test.** `const card = page.locator(".rec-card").first()`
+no es una foto fija de la tarjeta pulsada — es un localizador perezoso que
+Playwright vuelve a resolver cada vez que se usa. El proyecto de escritura
+reservado corre con varias recomendaciones activas; al desaparecer la que se
+acaba de descartar, **otra tarjeta pasa a ser "la primera"**, y esa sigue
+perfectamente visible. `expect(card).toBeHidden()` nunca se cumplía —no
+porque el descarte fallara, sino porque el selector `.rec-card:first` seguía
+encontrando *algo*, sólo que ya no la misma tarjeta.
+
+**La corrección.** El veredicto de éxito pasa a leerse del **recuento total**
+de `.rec-card` (`expect(page.locator(".rec-card")).toHaveCount(before - 1)`),
+que no depende de qué tarjeta concreta ocupe la primera posición. Para el
+caso de error (rama que sí necesita inspeccionar la tarjeta ORIGINAL) se
+captura un `elementHandle()` antes del clic — no un localizador que puede
+haber empezado a apuntar a otro sitio.
+
+**Por qué no se disparó un cuarto pase para confirmarlo.** Cada pasada real
+de `--journeys actions` consume una recomendación activa del proyecto
+reservado (coste ya aceptado, log §187) — con dos pasadas ya gastadas
+confirmando el mismo patrón de fallo, lanzar una tercera sólo para validar
+esta hipótesis habría gastado una recomendación más sin necesidad, cuando el
+razonamiento desde el propio código y desde la evidencia ("sin error
+visible") ya era concluyente.
+
+**Mismo patrón que §198, en el mismo journey.** Dos localizadores perezosos
+(`.rec-main` colapsado en §198, `.rec-card.first()` en éste) tratados como si
+apuntaran a un elemento fijo, cuando en Playwright no lo hacen. Cualquier
+paso nuevo de este journey que necesite "seguir" un elemento concreto tras
+una mutación del DOM captura su identidad (`elementHandle()` o un atributo
+estable) antes de mutar, nunca confía en que un localizador posicional siga
+apuntando a lo mismo.
+
+**Comprobado.** `pnpm exec tsc --noEmit` limpio, `pnpm test` (222/222
+ficheros, 3.070/3.070 tests), `pnpm run validate` en verde. No verificado
+todavía contra un disparo real — pendiente el próximo `--journeys actions`.
+
+**Trazabilidad.** `tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`; `lib/recommendations/dismiss-recommendation.ts`
+(leído, sin cambios); log §198; `docs/external-audit-2026-08.md` Fase 4.
