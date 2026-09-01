@@ -192,6 +192,21 @@ test("las acciones de Recomendaciones producen (o no) un efecto observable", asy
     const card = page.locator(".rec-card").first();
     const activeCountBefore = await page.locator(".rec-card").count();
 
+    // "Marcar como hecho" vive en `.rec-detail`, colapsado a `max-height: 0`
+    // hasta que la tarjeta se abre (mismo acordeón que `.rec-card.open
+    // .rec-detail`, app/globals.css). Sin abrirla primero, Playwright
+    // encuentra el botón "visible" en el árbol de accesibilidad pero el clic
+    // real cae sobre `.rec-main` — el toggle que sigue cubriendo esa zona
+    // mientras el panel está colapsado — y el test falla con "intercepts
+    // pointer events" sin haber probado nada de la acción. La acción 1 ya
+    // abre su propia tarjeta antes de interactuar; ésta no lo hacía.
+    const toggle = card.locator(".rec-main");
+    const alreadyOpen = (await toggle.getAttribute("aria-expanded")) === "true";
+    if (!alreadyOpen) {
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    }
+
     const dismissButton = card.getByRole("button", { name: /marcar como hecho/i });
     const isVisible = await dismissButton.isVisible().catch(() => false);
     if (!isVisible) {
