@@ -18749,3 +18749,67 @@ validate` en verde.
 **Trazabilidad.** `app/dashboard/settings/billing/actions.test.ts`;
 `app/pricing/plans-data.ts` (`isPromoActive`, `PROMO_ENDS_AT`, sin cambios);
 log §152 (PRICING-PROMO-1 Fase C).
+
+## 198. El piloto dejó de correr solo: ahora lo decide el fundador (VERCEL-COST-1 Fase 5, 2026-08-31)
+
+**Qué se decidió.** `.github/workflows/ux-pilot.yml` deja de dispararse con
+`deployment_status` y pasa a `workflow_dispatch` con el número de PR como
+entrada obligatoria. Ningún despliegue lanza ya una pasada. El Director
+**pregunta al fundador antes de cada Human Gate** si quiere piloto, y sólo
+entonces lo dispara.
+
+**Por qué.** La factura real de agosto (NYP8N3QJ-0005) puso números a lo que
+hasta ahora era teoría: subtotal $53,84, del que **Build CPU Minutes $24,02
+(4d 22h 32m) y Observability Events $18,09 (15.072.081 eventos) son el 79%**.
+6.616.404 Edge Requests en un mes, 220.000 al día, 2,5 por segundo sostenidos
+— en una beta privada sin tráfico orgánico. Eso no es tráfico de clientes: una
+pasada del piloto son ~225 cargas de página (75 pantallas × 3 anchuras) y cada
+carga arrastra 20-50 peticiones entre JS, CSS y fuentes, o sea **~6.750
+peticiones por pasada**; a ~30 despliegues diarios salen ~6M al mes, que clava
+la cifra facturada. El fundador (2026-08-31), al verlo: *"que siempre se me
+pregunte a mí si se lanza el pilot, porque muchas veces no es necesario o no
+hay nada que probar en UI"*.
+
+**Regla de premisa (CLAUDE.md, "Cierre de fase" punto 4).** Esta fase retira una
+garantía automática, así que queda escrito de qué premisa cuelga:
+
+- **Premisa:** el Director pregunta antes de cada Human Gate y el fundador
+  decide con criterio (muchos PRs no tocan UI y no necesitan pasada).
+- **Qué la verifica hoy:** nada automático. Sólo la propia disciplina del
+  Director y las dos líneas añadidas a la sección "Agentic User Pilot" de
+  CLAUDE.md.
+- **Qué se queda sin salida si la premisa falla:** un PR llega al Human Gate sin
+  ninguna verificación visual **y nada lo señala**. Antes, la ausencia de
+  piloto era visible (faltaba el check); ahora la ausencia es el estado por
+  defecto y es indistinguible de "no hacía falta". Es un cambio real de riesgo,
+  no una optimización neutra, y se acepta a cambio de ~$18/mes y de dejar de
+  barrer 20 artículos de blog que no han cambiado.
+
+**Efecto colateral bueno.** Desaparece la clase de fallo del log §115: el
+`deployment_status` que llegaba antes de que el PR existiera hacía que el job
+no resolviera PR, se saltara todo y **publicara el check en verde sin haber
+abierto un navegador**. Se vio dos veces el 2026-08-30 en el PR #511. Con el
+número de PR como entrada no hay nada que resolver, y si el preview de ese
+commit no existe el job **falla con un error explícito** en vez de pasar de
+puntillas.
+
+**Lo que NO cambia.** El piloto sigue siendo obligatorio para dar un PR por
+verificado; el ✅ del workflow sigue sin ser el veredicto (lo da el agente
+`ux-pilot` abriendo capturas); y las excepciones aprobadas (`--journeys scan`,
+`--journeys write`, `--journeys actions`) siguen exactamente igual, ya eran
+`workflow_dispatch`.
+
+**Lo que se consideró y se descartó.** Gatear por etiqueta en el PR en vez de
+por dispatch: una etiqueta no genera un `deployment_status` nuevo, así que
+ponerla no lanzaría nada hasta el siguiente push — justo lo contrario de "lo
+lanzo cuando lo pido". Y un barrido selectivo por diff (sólo las pantallas que
+toca el PR): buena idea en abstracto, marginal una vez que el número de pasadas
+lo decide una persona; queda anotada por si el volumen vuelve a subir.
+
+**Comprobado.** `pnpm test` y `pnpm run validate` en verde;
+`.github/workflows/ux-pilot.yml` parsea y conserva sus 12 pasos.
+
+**Trazabilidad.** `.github/workflows/ux-pilot.yml`; `CLAUDE.md` (Presupuesto de
+builds, Agentic Operating Model paso 9, sección Agentic User Pilot);
+`scripts/vercel-should-build.sh` y su test; log §55, §115 (la clase de fallo que
+esto cierra), §97.
