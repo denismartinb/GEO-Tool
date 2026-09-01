@@ -130,7 +130,7 @@ no longer depends on which kind of session the founder is working from (Claude
 Code's remote sessions cannot reach `*.vercel.app`; the runners can).
 
 **It is dispatched by hand, not by a deploy** (VERCEL-COST-1 Fase 5,
-2026-08-31, log §198). Until then it fired on every preview deployment, which
+2026-08-31, log §199). Until then it fired on every preview deployment, which
 at ~6.750 HTTP requests per pass was the single largest driver of the two
 biggest lines on the Vercel invoice. The founder asked to decide each pass
 himself, because most PRs have nothing to look at. **The Director must ask

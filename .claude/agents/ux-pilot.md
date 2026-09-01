@@ -46,7 +46,7 @@ founder stops checking.
 
 **First check whether CI already ran the pilot for this commit.**
 `.github/workflows/ux-pilot.yml` is `workflow_dispatch` only since
-VERCEL-COST-1 Fase 5 (2026-08-31, log §198) — **no deploy starts it any more**,
+VERCEL-COST-1 Fase 5 (2026-08-31, log §199) — **no deploy starts it any more**,
 so most commits will have no run at all, and finding none is the normal case
 rather than a signal that something broke. If a
 `<!-- agentic:ux-pilot-result -->` comment does exist for the current head SHA,

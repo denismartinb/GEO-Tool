@@ -141,7 +141,7 @@ describe("vercel-should-build", () => {
     // timeout no se pudo ejercitar (log §55). Un workflow que sólo sabe pilotar
     // un preview necesita un deployment igual que lo necesita el código del
     // piloto — sigue siendo cierto desde que se dispara a mano (Fase 5,
-    // log §198): sin preview de ese commit, el dispatch se cae.
+    // log §199): sin preview de ese commit, el dispatch se cae.
     const { code, output } = decideFor([
       "docs/agentic-user-pilot.md",
       ".github/workflows/ux-pilot.yml"
