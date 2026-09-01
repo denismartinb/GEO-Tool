@@ -18805,7 +18805,7 @@ log §152 (PRICING-PROMO-1 Fase C).
 
 ---
 
-## 198. La promo de lanzamiento se extiende hasta el 15 de septiembre (2026-09-01)
+## 199. La promo de lanzamiento se extiende hasta el 15 de septiembre (2026-09-01)
 
 **Decisión del fundador**, tomada al ver que `PROMO_ENDS_AT` había caducado
 de verdad a medianoche y tumbado el CI del repo entero (§197): extender la
