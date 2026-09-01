@@ -8,21 +8,21 @@ const POLL_INTERVAL_MS = 4000;
 type ScanStatusRun = { id: string; status: string } | null;
 
 /**
- * Watches the project's latest scan run while one is active, so the
- * Overview/Escaneos pages naturally reflect completion without the user
- * manually reloading. Previously this polled by calling `router.refresh()`
- * on a fixed timer, which re-rendered the whole layout + page — including
- * the unbounded `getWorkspaceCounters` query — every 4s for as long as a
- * scan campaign ran (docs/architecture-audit-2026-07.md, finding 1.5).
+ * Watches the project's latest scan run while one is active, so the page
+ * naturally reflects completion without the user manually reloading.
  *
- * Now it polls the lightweight `/api/projects/[projectId]/scan-status`
- * endpoint instead, and only triggers a real `router.refresh()` once: when
- * the run transitions to a terminal status (completed/failed/cancelled), or
- * is superseded by a different run id (e.g. SCAN-ROBUST-1's auto-retry
- * creating a fresh pending run). Live progress numbers while the scan is
- * still in flight are rendered separately by `ScanInProgressLive` /
- * `LiveRunStatusCells`, which poll the same endpoint independently — this
- * component itself renders nothing.
+ * VERCEL-COST-1 (2026-08-30) narrowed this to a single mount point: Overview's
+ * `hasData` branch (a rescan on a project that already has a completed run/
+ * score). Every other branch now owns its own terminal-refresh directly —
+ * `ScanInProgressLive` in Overview's empty-state branch, `LiveRunStatusCells`
+ * on Debug/Escaneos — so this no longer runs alongside either of them. It
+ * used to be mounted unconditionally whenever `activeRun` existed, which is
+ * exactly what let it cover the `hasData` branch; removing it outright (the
+ * original VERCEL-COST-1 change) silently dropped that branch's only
+ * terminal-transition detector, since neither of the other two live-display
+ * components mounts there — caught by `qa` before Human Gate, not by
+ * `pnpm test` (no test file covers either live-display component) or the
+ * default pilot journeys (none force a rescan on a project with prior data).
  */
 export function ScanProgressPoller({ projectId, initialRunId }: { projectId: string; initialRunId: string }) {
   const router = useRouter();
