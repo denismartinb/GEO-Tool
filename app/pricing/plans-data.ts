@@ -9,7 +9,7 @@
  * pantalla, para que ambas cosas dejen de anunciar la promo el mismo instante
  * en vez de depender de que alguien recuerde apagar dos sitios.
  */
-export const PROMO_ENDS_AT = "2026-09-01T00:00:00+02:00";
+export const PROMO_ENDS_AT = "2026-09-15T00:00:00+02:00";
 
 /**
  * Duración real del descuento en los cupones de Stripe (`duration: repeating`,

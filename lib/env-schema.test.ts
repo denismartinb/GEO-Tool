@@ -124,7 +124,7 @@ describe("reglas condicionales", () => {
       STRIPE_PRICE_ID_PRO: "price_b"
     };
     const duringPromo = new Date("2026-08-25T00:00:00Z");
-    const afterPromo = new Date("2026-09-02T00:00:00Z");
+    const afterPromo = new Date("2026-09-16T00:00:00Z");
     const promoVars = ["STRIPE_COUPON_ID_STARTER_PROMO", "STRIPE_COUPON_ID_PRO_PROMO"];
     // Sólo las dos variables de la promo — healthy() ya dispara otros avisos
     // ajenos (PUBLIC_CHECK_IP_SALT) que no vienen a cuento aquí.

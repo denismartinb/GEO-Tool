@@ -18803,6 +18803,50 @@ validate` en verde.
 `app/pricing/plans-data.ts` (`isPromoActive`, `PROMO_ENDS_AT`, sin cambios);
 log §152 (PRICING-PROMO-1 Fase C).
 
+## 200. La promo de lanzamiento se extiende hasta el 15 de septiembre (2026-09-01)
+
+**Decisión del fundador**, tomada al ver que `PROMO_ENDS_AT` había caducado
+de verdad a medianoche y tumbado el CI del repo entero (§197): extender la
+ventana en vez de dejarla cerrada. `PROMO_ENDS_AT`
+(`app/pricing/plans-data.ts`) pasa de `2026-09-01T00:00:00+02:00` a
+`2026-09-15T00:00:00+02:00`.
+
+**Lo que este cambio NO hace, y por qué importa decirlo.** El comentario que
+ya llevaba la constante advierte que el cupón real de Stripe
+(`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO`, `lib/stripe.ts`) se creó **a
+mano en el panel de Stripe**, con su propio `redeem_by` puesto a la misma
+fecha que esta constante — no derivado de ella en código. Cambiar sólo
+`PROMO_ENDS_AT` hace que la pantalla vuelva a anunciar el precio rebajado,
+pero si el `redeem_by` del cupón en Stripe no se actualiza también a mano,
+el checkout mostrará 59€/19€ y Stripe rechazará el cupón al cobrar —peor que
+no tener promo, porque es una promesa visible que no se cumple al pagar.
+**Acción pendiente fuera de este repo**: actualizar `redeem_by` de los dos
+cupones en el panel de Stripe a `2026-09-15`.
+
+**Copy derivado, no tocado.** `PromoStrip` (`components/landing/
+session-ctas.tsx`) ya lee la fecha de `PROMO_ENDS_AT` vía
+`Intl.DateTimeFormat` (TRUST-PROMISES-1, log §182) — el "hasta el 15 de
+septiembre" sale solo, sin ningún literal que cambiar. Un grep de
+`2026-09-01`/`septiembre` fuera de `plans-data.ts` sólo encontró una cita de
+un informe externo ajeno (`app/blog/geo-para-agencias/page.mdx`), no copy de
+producto.
+
+**Efecto colateral encontrado y corregido.** `lib/env-schema.test.ts` fijaba
+`afterPromo` a `2026-09-02T00:00:00Z` para probar el caso "fuera de la
+ventana, no hay nada que avisar" — con la nueva fecha, ese instante vuelve a
+estar DENTRO de la ventana y el test dejaba de probar lo que decía probar
+(no falló por casualidad: el aviso que comprueba sólo se dispara si faltan
+las variables de cupón, y el entorno de prueba las tenía todas). Movido a
+`2026-09-16T00:00:00Z`, después del nuevo cierre.
+
+**Comprobado.** `pnpm test` (222/222 ficheros, 3.070/3.070 tests), `pnpm run
+validate` (build + typecheck + lint), ambos en verde.
+
+**Trazabilidad.** `app/pricing/plans-data.ts` (`PROMO_ENDS_AT`);
+`lib/env-schema.test.ts`; log §152, §182, §197.
+
+---
+
 ## 199. El piloto dejó de correr solo: ahora lo decide el fundador (VERCEL-COST-1 Fase 5, 2026-08-31)
 
 **Qué se decidió.** `.github/workflows/ux-pilot.yml` deja de dispararse con
