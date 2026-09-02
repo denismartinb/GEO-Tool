@@ -125,19 +125,27 @@ from raw terminal output.
 
 ## Automatic runs in CI (UX-PILOT-1b)
 
-`.github/workflows/ux-pilot.yml` runs the pilot on **every Vercel preview
-deployment**, so the gate no longer depends on which kind of session the founder
-is working from.
+`.github/workflows/ux-pilot.yml` runs the pilot on GitHub's runners, so the gate
+no longer depends on which kind of session the founder is working from (Claude
+Code's remote sessions cannot reach `*.vercel.app`; the runners can).
+
+**It is dispatched by hand, not by a deploy** (VERCEL-COST-1 Fase 5,
+2026-08-31, log §199). Until then it fired on every preview deployment, which
+at ~6.750 HTTP requests per pass was the single largest driver of the two
+biggest lines on the Vercel invoice. The founder asked to decide each pass
+himself, because most PRs have nothing to look at. **The Director must ask
+before every Human Gate** — with no automatic run, nobody else will notice a
+missing pilot.
 
 How it is wired:
 
-- **Trigger:** `deployment_status`, filtered to `state == 'success'` and
-  `environment == 'Preview'`. Verified against this repo — Vercel publishes real
-  GitHub Deployments and puts the preview URL in `environment_url`, so nothing
-  scrapes bot comments.
+- **Trigger:** `workflow_dispatch` with a required `pr_number`. The job reads
+  that PR's head SHA and finds the successful `Preview` deployment for exactly
+  that commit; if there is none it **fails loudly** instead of skipping, because
+  piloting whatever preview happens to be around is how you judge a screen that
+  isn't the commit's.
 - **Never `pull_request_target`.** That event would expose the pilot account's
-  credentials to code from any fork. `deployment_status` runs only against
-  commits already deployed from this repo.
+  credentials to code from any fork.
 - **Output:** a `<!-- agentic:ux-pilot-result -->` comment with the verdict and a
   per-screen × per-viewport table, plus a `pilot-screenshots` artifact
   (screenshots, `findings.jsonl`, `report.json`), retained 14 days.
@@ -503,10 +511,12 @@ made the capability harder to use than pressing the button by hand.
 **What still holds, in code rather than by convention:**
 
 1. **`workflow_dispatch` only.** `.github/workflows/ux-pilot-scan.yml` has no
-   `deployment_status` trigger, so no preview deploy can ever start it.
+   `deployment_status` trigger, so no preview deploy can ever start it. (Since
+   Fase 5 the read-only pilot has no such trigger either — this lock predates
+   that and is unaffected by it.)
 2. **`--journeys scan`.** `scripts/pilot.mjs` includes the `scan` Playwright
-   project only for that explicit flag. The per-deploy workflow runs the
-   default read set and cannot reach `tests/pilot/journeys/scan/**` at all.
+   project only for that explicit flag. The default read set cannot reach
+   `tests/pilot/journeys/scan/**` at all.
    The self-check asserts this every run.
 3. **The target is never discovered.** `project_id` is a required workflow
    input with no default, and `tests/pilot/support/scan-authorization.ts`
@@ -638,7 +648,7 @@ the founder's real prompts, touch competitors or billing, or use the
 unrestricted "Lanzar escaneo" button. Any of those needs its own approved
 phase — not a quiet extension of this one.
 
-### Why it's opt-in, not part of the automatic per-deploy pilot
+### Why it's opt-in, and separate from the default read pilot
 
 A real scan costs real money against Gemini / OpenAI / Anthropic. Running it on
 every preview deploy of every PR would be an unbounded, silently growing bill.
