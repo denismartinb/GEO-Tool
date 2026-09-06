@@ -18982,3 +18982,110 @@ igual). P2 — polish visual, no bloqueante de flujo.
 
 **Trazabilidad.** `components/billing/plan-billing-section.tsx`;
 `components/ui/button.tsx` (acepta `className` como override, sin cambios).
+
+---
+
+## 202. SCREEN-POLISH-1 Fase A: la pantalla de Prompts deja de afirmar sentimiento sobre marcas ausentes y se puede usar con teclado (2026-09-06)
+
+**Origen.** Fase 10 (UX/consistencia de pantalla) del informe de auditoría
+externa — vive sólo en el PR #483, sin mergear en `main` a fecha de este
+cierre, así que este párrafo cita el hallazgo tal cual en vez de asumir que
+quien lea esto puede abrirlo: en la pantalla de Prompts, varias filas
+mostraban una insignia "Ausente" (la marca no fue mencionada) junto a una
+insignia de sentimiento ("Positivo"/"Negativo"/etc.) calculada sin filtrar por
+si la marca había aparecido — afirmar un sentimiento sobre algo que no ocurrió
+("no fake metrics", `CLAUDE.md`). Task Intake aprobado por el fundador antes
+de implementar; tres arreglos P1/P2, alcance cerrado.
+
+**Qué se decidió — 1. Sentimiento honesto.**
+
+- **`lib/metrics/brand-sentiment.ts` (nuevo)**, sin I/O — dueño único de "cuál
+  es el sentimiento dominante de marca sobre un grupo de filas de
+  `scan_prompt_results`", contando SÓLO filas con `brand_mentioned === true`.
+  Copia deliberadamente la semántica de empate (orden de inserción, primera
+  vista gana) de `lib/scan/engine-breakdown.ts`'s `dominantSentiment` por
+  motor y del KPI de sentimiento de Visión general
+  (`app/dashboard/projects/[projectId]/page.tsx`) — ambos ya auditados bajo
+  TRUST-METRICS-1 y ya correctos; Prompts había crecido tres copias del mismo
+  cálculo que nunca aplicaron el filtro. `lib/metrics/` y no `lib/scan/`
+  porque TRUST-METRICS-1 ya estableció ese directorio como el dueño de "una
+  sola definición en todo el producto", y `.claude/rules/scan.md` prohíbe
+  meter en `lib/scan/` vocabulario que módulos no-escaneo importan. Un
+  `sentiment: "unknown"` (valor real de extracción, `lib/extraction/
+  schema.ts`) no cuenta para ningún cubo, igual que en las otras dos
+  implementaciones ya existentes — ni siquiera cuando la marca sí se
+  mencionó. Test propio (`brand-sentiment.test.ts`): filas mixtas, cero
+  menciones → `null`, empates, `unknown` excluido, vacío → `null`.
+- **Las tres copias sustituidas** por la función centralizada: la agregación
+  por topic en `app/dashboard/projects/[projectId]/prompts/page.tsx` (server),
+  la función local `dominantSentiment` de `prompts-client.tsx` (agregado por
+  prompt), y la de `components/prompts/prompt-drawer.tsx` (usada para la fila
+  "Tú" del ranking de marcas del cajón).
+- **Estado explícito "No aplica"**, distinto a propósito de "Neutral" — que ya
+  existe en el código y significa otra cosa (`sentiment: "unknown"` leído como
+  "Neutral" para no filtrar el valor crudo en inglés, decisión previa del
+  fundador). Reutilizar "Neutral" para "sin mención" habría sido la misma
+  mentira con otro nombre. Badge `badge-outline` (visualmente distinto de
+  `badge-neutral`, que sigue siendo "Neutral" de verdad) y sin el glifo de
+  cara de sentimiento — ese glifo dibuja una expresión facial real
+  (`components/ui/icon.tsx`, `sentimentPos/Neutral/Neg/Mixed`) y ponerlo junto
+  a "No aplica" habría seguido afirmando una lectura emocional inexistente.
+  Aplicado en los cinco puntos donde se renderizaba la insignia: la fila de
+  prompt y el acordeón de tema en `prompts-client.tsx`; la lista "Por motor",
+  la tabla de la pestaña "Respuestas" y (implícitamente, por omisión — ver
+  abajo) la fila "Tú" del ranking en `prompt-drawer.tsx`.
+- **Decisión de interpretación — la fila "Tú" del ranking no lleva "No
+  aplica" explícito.** Ya estaba condicionada a `row.isOwn && row.sentiment`:
+  con la función centralizada, `sentiment` es simplemente `null` cuando no hay
+  mención y la insignia no se pinta — igual que ya hacen las filas de
+  competidores, que nunca muestran sentimiento. Añadir un badge "No aplica"
+  ahí habría sido inconsistente con esas filas vecinas sin aportar nada que la
+  ausencia de badge no dijera ya.
+
+**Qué se decidió — 2. Filas accesibles por teclado.** `.pr2-prow` (fila de
+prompt, abre el cajón) y `.pr2-trow` (acordeón de tema) eran `<div onClick>`
+sin `role`, `tabIndex` ni manejo de teclado — inalcanzables con Tab. Mismo
+patrón que `.rec-main` en `recommendations-client.tsx`: `role="button"` +
+`tabIndex={0}` + `onKeyDown` en Enter/Espacio con `preventDefault`, y
+`aria-expanded={isOpen}` en `.pr2-trow` por ser acordeón. Los `<div>` no se
+convierten en `<button>` — llevan badges y texto multilínea anidados, y
+`<button>` rompería ese layout flex. Foco visible nuevo en `app/globals.css`
+(`.pr2-prow:focus-visible`, `.pr2-trow:focus-visible`, `outline: 2px solid
+var(--accent); outline-offset: -2px`) junto a las reglas ya existentes de esas
+clases.
+
+**Qué se decidió — 3. "Topics" → "Temas".** Cuatro cadenas visibles en
+`prompts-client.tsx` (el contador "en N topics", el estado vacío que
+mencionaba "topics" dos veces, la etiqueta de sección "Topics", el mensaje de
+"sin resultados" con "topic") pasan a "tema"/"temas". En
+`add-prompts-button.tsx`, las dos menciones de "categoría" (mismo concepto,
+`project_prompts.category`) pasan también a "tema", por consistencia de
+vocabulario dentro de la misma pantalla — Competidores ya dice "tema" en su
+propio copy ("Terreno por tema", `competitors/page.tsx`). Ningún identificador
+de código se toca (`hasTopics`, `topicGroups`, `expandedTopics`,
+`TopicGroup`, `totalTopics` siguen en inglés): es sólo copy visible.
+
+**Desviación deliberada y aprobada del prototipo de diseño de referencia.**
+`docs/design-reference/geo-suite-2/prompts.jsx` usa literalmente "Topics" en
+inglés. El fundador aprobó explícitamente el cambio a "Temas" pese a esa
+diferencia en el Task Intake de esta fase — si una pasada futura del
+`ux-pilot` lo señala como desviación de diseño, no es un fallo de esta
+implementación, está aprobado y queda anotado aquí para que quede trazado.
+
+**Lo que NO se ha tocado.** Ningún cálculo de score
+(`lib/scoring/**`), ninguna extracción (`lib/llm/**`,
+`lib/extraction/schema.ts`), nada de `lib/scan/**` — el arreglo del
+sentimiento es enteramente de presentación, sobre datos ya persistidos.
+`lib/competitors/**` sólo se leyó como referencia de copy, sin tocarlo.
+
+**Comprobado.** `pnpm test` en verde (incluye `lib/metrics/
+brand-sentiment.test.ts`, 7 casos nuevos); `pnpm run validate` (build +
+typecheck + lint) en verde; `git diff --check` sin avisos.
+
+**Trazabilidad.** `lib/metrics/brand-sentiment.ts` (nuevo) + `.test.ts`;
+`app/dashboard/projects/[projectId]/prompts/page.tsx`;
+`app/dashboard/projects/[projectId]/prompts/prompts-client.tsx`;
+`app/dashboard/projects/[projectId]/prompts/add-prompts-button.tsx`;
+`components/prompts/prompt-drawer.tsx`; `app/globals.css`
+(`.pr2-prow:focus-visible`, `.pr2-trow:focus-visible`). Task Intake aprobado
+por el fundador antes de implementar.
