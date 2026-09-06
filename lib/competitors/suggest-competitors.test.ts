@@ -151,6 +151,18 @@ describe("filterSuggestions", () => {
     });
     expect(out).toHaveLength(1);
   });
+
+  it("18. never suggests a generic AI assistant/engine (ENTITY-HYGIENE-1)", () => {
+    const out = filterSuggestions({
+      ...base,
+      items: [
+        { name: "ChatGPT", domain: "chatgpt.com" },
+        { name: "Bing AI", domain: "bing.com" },
+        { name: "Brave", domain: "brave.com" }
+      ]
+    });
+    expect(out).toEqual([{ name: "Brave", domain: "brave.com" }]);
+  });
 });
 
 describe("parseCachedSuggestions", () => {

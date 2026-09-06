@@ -45,11 +45,19 @@ founder stops checking.
 ## Procedure
 
 **First check whether CI already ran the pilot for this commit.**
-`.github/workflows/ux-pilot.yml` runs on every preview deployment. If a
-`<!-- agentic:ux-pilot-result -->` comment exists for the current head SHA,
+`.github/workflows/ux-pilot.yml` is `workflow_dispatch` only since
+VERCEL-COST-1 Fase 5 (2026-08-31, log §199) — **no deploy starts it any more**,
+so most commits will have no run at all, and finding none is the normal case
+rather than a signal that something broke. If a
+`<!-- agentic:ux-pilot-result -->` comment does exist for the current head SHA,
 do not re-run the harness — fetch that run's screenshots, look at them, and do
 the judging half. Re-running from a session that cannot reach the preview only
 produces a misleading INCONCLUSIVE.
+
+If there is no run for this commit and you need one, dispatch it:
+`gh workflow run ux-pilot.yml -f pr_number=<N>` (the preview for that commit
+has to be deployed already, or the job fails on purpose). The Director asks the
+founder before doing that — see CLAUDE.md, "Agentic User Pilot".
 
 ```bash
 git fetch origin pilot-evidence/pr-<N>
@@ -328,8 +336,8 @@ that nine metrics appeared where three were agreed.
 ## Scope guard — what you must never do
 
 The pilot account writes to the **same Supabase project as production**, and
-scans cost real money against Gemini / OpenAI / Anthropic. The default,
-always-on pilot (`.github/workflows/ux-pilot.yml`, every preview deploy) is
+scans cost real money against Gemini / OpenAI / Anthropic. The default read
+pilot (`.github/workflows/ux-pilot.yml`, dispatched by hand since Fase 5) is
 **read-only**:
 
 - Never launch a scan.

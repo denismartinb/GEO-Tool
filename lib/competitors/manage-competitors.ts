@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { normalizeDomain } from "@/lib/domains/brand-domain";
+import { isGenericEntity } from "@/lib/entity-hygiene/generic-entities";
 import type { AuthenticatedContext } from "@/lib/auth";
 
 /**
@@ -60,6 +61,11 @@ export type DeactivateCompetitorResult = { success: true } | { success: false; e
 
 const GENERIC_WRITE_FAILURE = "No se pudo guardar el cambio. Inténtalo de nuevo en unos minutos.";
 const PROJECT_NOT_FOUND = "No se ha encontrado el proyecto.";
+// ENTITY-HYGIENE-1 (P1-02): "ChatGPT" is not a competitor GenScore can lose
+// or win visibility against — it's the medium being measured, not a rival in
+// it. Same message for both create and update, both name and domain match.
+const GENERIC_ENTITY_ERROR =
+  "Esto es un asistente de IA o un término genérico del sector, no un competidor real. No se puede seguir.";
 
 async function verifyProjectOwnership(
   supabase: AuthenticatedContext["supabase"],
@@ -87,6 +93,10 @@ export async function createCompetitorCore(input: {
 
   if (!(await verifyProjectOwnership(supabase, projectId, user.id))) {
     return { success: false, error: PROJECT_NOT_FOUND };
+  }
+
+  if (isGenericEntity({ name, domain })) {
+    return { success: false, error: GENERIC_ENTITY_ERROR };
   }
 
   const { data: existing } = await supabase
@@ -144,6 +154,10 @@ export async function updateCompetitorCore(input: {
 
   if (!(await verifyProjectOwnership(supabase, projectId, user.id))) {
     return { success: false, error: PROJECT_NOT_FOUND };
+  }
+
+  if (isGenericEntity({ name, domain })) {
+    return { success: false, error: GENERIC_ENTITY_ERROR };
   }
 
   const { data, error } = await supabase

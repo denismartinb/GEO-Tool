@@ -18805,7 +18805,189 @@ log §152 (PRICING-PROMO-1 Fase C).
 
 ---
 
-## 199. "Marcar como hecho" volvía a fallar tras el arreglo del clic — pero era el mismo test, no el producto (2026-09-01)
+## 199. El piloto dejó de correr solo: ahora lo decide el fundador (VERCEL-COST-1 Fase 5, 2026-08-31)
+
+**Qué se decidió.** `.github/workflows/ux-pilot.yml` deja de dispararse con
+`deployment_status` y pasa a `workflow_dispatch` con el número de PR como
+entrada obligatoria. Ningún despliegue lanza ya una pasada. El Director
+**pregunta al fundador antes de cada Human Gate** si quiere piloto, y sólo
+entonces lo dispara.
+
+**Por qué.** La factura real de agosto (NYP8N3QJ-0005) puso números a lo que
+hasta ahora era teoría: subtotal $53,84, del que **Build CPU Minutes $24,02
+(4d 22h 32m) y Observability Events $18,09 (15.072.081 eventos) son el 79%**.
+6.616.404 Edge Requests en un mes, 220.000 al día, 2,5 por segundo sostenidos
+— en una beta privada sin tráfico orgánico. Eso no es tráfico de clientes: una
+pasada del piloto son ~225 cargas de página (75 pantallas × 3 anchuras) y cada
+carga arrastra 20-50 peticiones entre JS, CSS y fuentes, o sea **~6.750
+peticiones por pasada**; a ~30 despliegues diarios salen ~6M al mes, que clava
+la cifra facturada. El fundador (2026-08-31), al verlo: *"que siempre se me
+pregunte a mí si se lanza el pilot, porque muchas veces no es necesario o no
+hay nada que probar en UI"*.
+
+**Regla de premisa (CLAUDE.md, "Cierre de fase" punto 4).** Esta fase retira una
+garantía automática, así que queda escrito de qué premisa cuelga:
+
+- **Premisa:** el Director pregunta antes de cada Human Gate y el fundador
+  decide con criterio (muchos PRs no tocan UI y no necesitan pasada).
+- **Qué la verifica hoy:** nada automático. Sólo la propia disciplina del
+  Director y las dos líneas añadidas a la sección "Agentic User Pilot" de
+  CLAUDE.md.
+- **Qué se queda sin salida si la premisa falla:** un PR llega al Human Gate sin
+  ninguna verificación visual **y nada lo señala**. Antes, la ausencia de
+  piloto era visible (faltaba el check); ahora la ausencia es el estado por
+  defecto y es indistinguible de "no hacía falta". Es un cambio real de riesgo,
+  no una optimización neutra, y se acepta a cambio de ~$18/mes y de dejar de
+  barrer 20 artículos de blog que no han cambiado.
+
+**Efecto colateral bueno.** Desaparece la clase de fallo del log §115: el
+`deployment_status` que llegaba antes de que el PR existiera hacía que el job
+no resolviera PR, se saltara todo y **publicara el check en verde sin haber
+abierto un navegador**. Se vio dos veces el 2026-08-30 en el PR #511. Con el
+número de PR como entrada no hay nada que resolver, y si el preview de ese
+commit no existe el job **falla con un error explícito** en vez de pasar de
+puntillas.
+
+**Lo que NO cambia.** El piloto sigue siendo obligatorio para dar un PR por
+verificado; el ✅ del workflow sigue sin ser el veredicto (lo da el agente
+`ux-pilot` abriendo capturas); y las excepciones aprobadas (`--journeys scan`,
+`--journeys write`, `--journeys actions`) siguen exactamente igual, ya eran
+`workflow_dispatch`.
+
+**Lo que se consideró y se descartó.** Gatear por etiqueta en el PR en vez de
+por dispatch: una etiqueta no genera un `deployment_status` nuevo, así que
+ponerla no lanzaría nada hasta el siguiente push — justo lo contrario de "lo
+lanzo cuando lo pido". Y un barrido selectivo por diff (sólo las pantallas que
+toca el PR): buena idea en abstracto, marginal una vez que el número de pasadas
+lo decide una persona; queda anotada por si el volumen vuelve a subir.
+
+**Comprobado.** `pnpm test` y `pnpm run validate` en verde;
+`.github/workflows/ux-pilot.yml` parsea y conserva sus 12 pasos.
+
+**Trazabilidad.** `.github/workflows/ux-pilot.yml`; `CLAUDE.md` (Presupuesto de
+builds, Agentic Operating Model paso 9, sección Agentic User Pilot);
+`scripts/vercel-should-build.sh` y su test; log §55, §115 (la clase de fallo que
+esto cierra), §97.
+
+---
+
+## 200. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
+
+**Origen.** P1-02 del informe de auditoría externa
+(`docs/external-audit-2026-08.md`, Fase 9): "GEO Score" se sugería como
+alias de marca y nada en el producto impedía que "ChatGPT" —el medio que se
+mide, no un rival del cliente— se tratara como competidor. El plan lo daba
+por un solo hallazgo; la investigación previa a implementar encontró **cinco**
+puntos de entrada reales, no uno, y dos zonas sin cobertura hoy
+(`lib/competitors/**`, con regla de ruta; `lib/brand-aliases/**` y
+`lib/projects/brand-aliases.ts`, sin ninguna).
+
+**Qué se decidió.**
+
+1. **Módulo nuevo, `lib/entity-hygiene/generic-entities.ts`**, sin I/O,
+   compartido por las tres zonas que lo necesitan (Competidores, alias de
+   marca, Recomendaciones) — mismo patrón que `lib/domains/brand-domain.ts`
+   para el matching de dominio propio. Dos listas cerradas: asistentes/
+   motores de IA conocidos (ChatGPT, Gemini, Claude, Copilot, Perplexity,
+   DeepSeek, Grok, Mistral...) y jerga genérica del sector GEO/IA (GEO Score,
+   SEO, AEO, Share of Voice, Visibility Score, LLM...), más una lista corta de
+   dominios propios de esas herramientas (chatgpt.com, bing.com...) para el
+   caso en que el nombre mostrado difiera del nombre de la herramienta.
+2. **Match por FRASE COMPLETA normalizada, nunca por token.** Deliberadamente
+   distinto de `GENERIC_ALIAS_TERMS` (`lib/projects/brand-aliases.ts`), que
+   rechaza por solapamiento de token y no habría atrapado "GEO Score" — ni
+   "geo" ni "score" están ahí, y no deberían estarlo sueltos: existen empresas
+   reales llamadas así (The GEO Group). Las dos listas se quedan separadas a
+   propósito; unificarlas reabriría el hueco.
+3. **Los cinco puntos de entrada, cerrados en el mismo PR:**
+   - `filterSuggestions` (`lib/competitors/suggest-competitors.ts`) — filtra
+     EN LECTURA, como ya hace toda esa función, así que una sugerencia
+     cacheada antes de esta fase también se limpia sin necesidad de purgar
+     nada.
+   - `createCompetitorCore`/`updateCompetitorCore`
+     (`lib/competitors/manage-competitors.ts`) — alta y edición manual.
+   - `selectVerifiableAliases` (`lib/projects/brand-aliases.ts`) — alias
+     auto-derivado, nuevo motivo de rechazo `generic_entity` (distinto de
+     `generic`, el de solapamiento de token, que ya existía).
+   - `validateNewAlias` (`lib/brand-aliases/normalize-aliases.ts`) — alias
+     manual. **Este camino no tenía NINGÚN filtro de genericidad antes de
+     esta fase**, ni siquiera el de token — más débil que el automático.
+   - `computeEmergingCompetitors` (`lib/recommendations/recommendation-engine.ts`)
+     — camino independiente de los otros cuatro: lee `other_brands_mentioned`
+     (salida del modelo, con sólo una instrucción blanda de "excluye términos
+     genéricos" en el prompt de extracción, nunca aplicada en código hasta
+     ahora) y podía recomendar literalmente "Añade a ChatGPT como
+     competidor" sin pasar nunca por la sugerencia basada en `business_profile`
+     que ADR 0020/0022 protege — un camino de contaminación que el propio ADR
+     no cubre porque no es una sugerencia, es una recomendación.
+4. **Por qué importaba más allá de la pantalla de Competidores.** SOV
+   (`sov-delta.ts`, `engine-share.ts`) lee `project_competitors` directamente
+   para su denominador y sus series — un "ChatGPT" trackeado no se queda en
+   una fila fea, infla el denominador y produce una barra entera para una
+   entidad que no compite con nada. Recomendaciones lee el mismo dato para
+   `computeCompetitorDominance`/`computeProminenceGap`. Arreglar la entrada
+   arregla las tres superficies sin tocar ninguna fórmula de scoring.
+
+**Lo que NO se ha tocado.** Ninguna fórmula de SOV ni de scoring — sólo dejan
+de recibir basura. `lib/scan/extraction.ts` (verificación de mención) no
+cambia — el arreglo es aguas arriba, en qué entra en las listas, no en cómo se
+hace el matching de una mención. Los prompts de extracción de
+`other_brands_mentioned` mantienen su instrucción blanda tal cual; el filtro
+de código es lo que ahora hace cumplir lo que el prompt sólo pedía.
+
+**Riesgo de sobre-bloqueo, cubierto por diseño y por test.** El match es por
+frase completa, nunca por token: "Geotab", "Scoreboard Inc" o "ChatGPT
+Wrapper Co" no caen en la lista aunque compartan una palabra con ella.
+Deliberadamente NO se incluyó "geo" a secas en la jerga genérica, por el mismo
+motivo — sólo la frase completa "GEO Score" está en la lista.
+
+**Comprobado.** `pnpm test` en verde sobre los 6 ficheros tocados (módulo
+nuevo + 5 puntos de integración, cada uno con su propio test nuevo); `pnpm run
+validate` (build + typecheck + lint).
+
+**Trazabilidad.** `lib/entity-hygiene/generic-entities.ts` (nuevo) +
+`.test.ts`; `lib/competitors/suggest-competitors.ts` (`filterSuggestions`);
+`lib/competitors/manage-competitors.ts`
+(`createCompetitorCore`/`updateCompetitorCore`); `lib/projects/brand-aliases.ts`
+(`selectVerifiableAliases`, motivo `generic_entity`);
+`lib/brand-aliases/normalize-aliases.ts` (`validateNewAlias`);
+`lib/recommendations/recommendation-engine.ts` (`computeEmergingCompetitors`);
+`.claude/rules/competitors.md` (nueva sección + ampliación de su alcance de
+ruta a `lib/brand-aliases/**`, `lib/projects/brand-aliases.ts`,
+`lib/entity-hygiene/**`); `.claude/rules/recommendations.md` (referencia
+cruzada); `docs/external-audit-2026-08.md` Fase 9. Task Intake aprobado por
+el fundador el 2026-08-30.
+
+---
+
+## 201. Los tres botones de "Plan y facturación" se amontonaban en móvil (2026-09-06)
+
+**Qué se decidió.** En `components/billing/plan-billing-section.tsx`, la fila
+de acciones ("Cambiar de plan", "Facturas y pago", "Cancelar suscripción")
+pasa de `flex flex-wrap gap-2` (ancho automático por botón) a apilarse a ancho
+completo en móvil y volver a fila sólo desde `sm:` — `flex flex-col gap-2 ...
+sm:flex-row sm:flex-wrap`, con `className="w-full sm:w-auto"` en cada
+`Button`. Mismo patrón `sm:flex-row` que ya usan los dos avisos de esta misma
+pantalla más arriba en el fichero.
+
+**Por qué.** El fundador, viendo la pantalla en móvil (2026-09-06): "Funciona
+bien, pero esos 3 botones ahí descolocados no me gustan". Con ancho automático
+y `flex-wrap`, tres botones de longitud desigual envuelven de forma
+desequilibrada bajo ~400px — no rompía nada, pero no es la barra de acciones
+que el resto de la consola usa en pantallas estrechas.
+
+**Alcance.** Sólo CSS/clases en un componente ya existente; sin cambio de
+comportamiento, sin tocar `handleManageBilling`/`handleCancelSubscription` ni
+la lógica de qué botones se muestran (`usage.hasStripeCustomer` /
+`usage.hasStripeSubscription` siguen decidiendo la visibilidad exactamente
+igual). P2 — polish visual, no bloqueante de flujo.
+
+**Trazabilidad.** `components/billing/plan-billing-section.tsx`;
+`components/ui/button.tsx` (acepta `className` como override, sin cambios).
+
+---
+
+## 202. "Marcar como hecho" volvía a fallar tras el arreglo del clic — pero era el mismo test, no el producto (2026-09-01)
 
 **Lo que pasó tras §198.** Con el clic ya llegando al botón, un tercer
 disparo real de `ux-pilot-actions.yml` contra un preview con el arreglo

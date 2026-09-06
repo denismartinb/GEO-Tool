@@ -29,6 +29,8 @@
  * Everything here is pure so both rules are testable without a live LLM.
  */
 
+import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
+
 /**
  * Shortest acceptable alias. `namesPlausiblyMatch` accepts a substring match
  * in EITHER direction, so a 2-3 character alias ("HP", "3M") would match
@@ -141,6 +143,7 @@ export type AliasRejection = {
     | "too_short"
     | "too_long"
     | "generic"
+    | "generic_entity"
     | "not_in_evidence"
     | "same_as_brand"
     | "redundant_with_alias"
@@ -213,6 +216,16 @@ export function selectVerifiableAliases(
     }
     if (key.split(" ").every((token) => GENERIC_ALIAS_TERMS.has(token))) {
       reject("generic");
+      continue;
+    }
+    // ENTITY-HYGIENE-1 (P1-02): a FULL-PHRASE check, distinct from the
+    // token-overlap one above. "GEO Score" would pass the GENERIC_ALIAS_TERMS
+    // check — neither "geo" nor "score" is in that set — because it's not a
+    // bare category noun, it's this discipline's own generic industry term.
+    // See lib/entity-hygiene/generic-entities.ts for why the two lists stay
+    // separate.
+    if (isGenericEntityName(alias)) {
+      reject("generic_entity");
       continue;
     }
     if (seen.has(key)) {
