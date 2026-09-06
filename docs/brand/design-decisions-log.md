@@ -18955,3 +18955,30 @@ ruta a `lib/brand-aliases/**`, `lib/projects/brand-aliases.ts`,
 `lib/entity-hygiene/**`); `.claude/rules/recommendations.md` (referencia
 cruzada); `docs/external-audit-2026-08.md` Fase 9. Task Intake aprobado por
 el fundador el 2026-08-30.
+
+---
+
+## 201. Los tres botones de "Plan y facturación" se amontonaban en móvil (2026-09-06)
+
+**Qué se decidió.** En `components/billing/plan-billing-section.tsx`, la fila
+de acciones ("Cambiar de plan", "Facturas y pago", "Cancelar suscripción")
+pasa de `flex flex-wrap gap-2` (ancho automático por botón) a apilarse a ancho
+completo en móvil y volver a fila sólo desde `sm:` — `flex flex-col gap-2 ...
+sm:flex-row sm:flex-wrap`, con `className="w-full sm:w-auto"` en cada
+`Button`. Mismo patrón `sm:flex-row` que ya usan los dos avisos de esta misma
+pantalla más arriba en el fichero.
+
+**Por qué.** El fundador, viendo la pantalla en móvil (2026-09-06): "Funciona
+bien, pero esos 3 botones ahí descolocados no me gustan". Con ancho automático
+y `flex-wrap`, tres botones de longitud desigual envuelven de forma
+desequilibrada bajo ~400px — no rompía nada, pero no es la barra de acciones
+que el resto de la consola usa en pantallas estrechas.
+
+**Alcance.** Sólo CSS/clases en un componente ya existente; sin cambio de
+comportamiento, sin tocar `handleManageBilling`/`handleCancelSubscription` ni
+la lógica de qué botones se muestran (`usage.hasStripeCustomer` /
+`usage.hasStripeSubscription` siguen decidiendo la visibilidad exactamente
+igual). P2 — polish visual, no bloqueante de flujo.
+
+**Trazabilidad.** `components/billing/plan-billing-section.tsx`;
+`components/ui/button.tsx` (acepta `className` como override, sin cambios).
