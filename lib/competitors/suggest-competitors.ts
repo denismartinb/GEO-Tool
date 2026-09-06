@@ -5,6 +5,7 @@ import { normalizeDomain } from "@/lib/domains/brand-domain";
 import type { SuggestedCompetitor } from "@/lib/llm/gemini";
 import type { BusinessProfile } from "@/lib/llm/contracts";
 import { resolveAndCacheBusinessProfile } from "@/lib/projects/business-profile";
+import { isGenericEntity } from "@/lib/entity-hygiene/generic-entities";
 import type { AuthenticatedContext } from "@/lib/auth";
 
 /**
@@ -102,6 +103,11 @@ export function filterSuggestions(input: {
     if (!name || !domain) continue;
     if (!DOMAIN_FORMAT.test(domain) || domain.length < 3 || domain.length > 255) continue;
     if (blockedDomains.has(domain) || blockedNames.has(normName(name))) continue;
+    // ENTITY-HYGIENE-1 (P1-02): a generic AI assistant/engine is never a real
+    // competitor. Checked here, at read time, so it also scrubs anything a
+    // stale cache already persisted before this filter existed — same
+    // "cache is raw, filter on read" design this function already relies on.
+    if (isGenericEntity({ name, domain })) continue;
     if (seen.has(domain)) continue;
     seen.add(domain);
     out.push({ name, domain });
