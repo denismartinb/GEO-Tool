@@ -22,6 +22,11 @@ import {
   type DismissRecommendationResult
 } from "@/lib/recommendations/dismiss-recommendation";
 import {
+  restoreRecommendationCore,
+  restoreRecommendationInputSchema,
+  type RestoreRecommendationResult
+} from "@/lib/recommendations/restore-recommendation";
+import {
   auditDomainCoverageCore,
   domainCoverageInputSchema,
   type DomainCoverageResult
@@ -737,6 +742,29 @@ export async function dismissRecommendationAction(input: {
   }
 
   return result;
+}
+
+/**
+ * "Deshacer" on "Marcar como hecho" (ACTIONS-OBSERVABLE-1 slice 4a,
+ * docs/external-audit-2026-08.md, Fase 4). Called from the same ephemeral
+ * "Deshacer" affordance that replaces the previous silent-disappearance
+ * behavior of dismissRecommendationAction — see restoreRecommendationCore's
+ * doc comment for why this is NOT anchored to a run id. No `revalidatePath`
+ * on success: the caller already reflects "active" locally without waiting
+ * for a refetch, same as it already showed "dismissed" locally before this.
+ */
+export async function restoreRecommendationAction(input: {
+  projectId: string;
+  recommendationId: string;
+}): Promise<RestoreRecommendationResult> {
+  const parsed = restoreRecommendationInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const service = createServiceClient();
+  return restoreRecommendationCore({ ...parsed.data, supabase, service, user });
 }
 
 /**
