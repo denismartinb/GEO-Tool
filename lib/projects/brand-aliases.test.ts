@@ -64,6 +64,20 @@ describe("selectVerifiableAliases", () => {
     expect(rejected.every((r) => r.reason === "too_short")).toBe(true);
   });
 
+  it("rejects a GEO-industry generic term even when it's genuinely on the brand's own homepage (ENTITY-HYGIENE-1)", () => {
+    // The exact case the audit found: GenScore's own homepage necessarily
+    // mentions "GEO Score" (its own metric), so the evidence check alone
+    // would accept it — no bare token in GENERIC_ALIAS_TERMS covers "geo" or
+    // "score" individually, only the full phrase does.
+    const { accepted, rejected } = selectVerifiableAliases(
+      ["GEO Score"],
+      "GenScore",
+      "GenScore mide tu GEO Score, la puntuación de visibilidad en IA."
+    );
+    expect(accepted).toEqual([]);
+    expect(rejected).toEqual([{ alias: "GEO Score", reason: "generic_entity" }]);
+  });
+
   it("rejects an alias already covered by the tracked brand string", () => {
     const { rejected } = selectVerifiableAliases(["Mozilla"], "Mozilla Corporation", "Mozilla Corporation builds Firefox.");
     expect(rejected).toEqual([{ alias: "Mozilla", reason: "same_as_brand" }]);

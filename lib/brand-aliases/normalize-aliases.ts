@@ -18,6 +18,7 @@
  */
 
 import { MAX_ALIAS_LENGTH, MAX_ALIASES, MIN_ALIAS_LENGTH } from "@/lib/projects/brand-aliases";
+import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 
 export { MAX_ALIAS_LENGTH, MAX_ALIASES, MIN_ALIAS_LENGTH };
 
@@ -70,6 +71,17 @@ export function validateNewAlias(input: {
   const brandKey = normalizeKey(input.brand);
   if (key === brandKey || brandKey.includes(key) || key.includes(brandKey)) {
     return { ok: false, error: "Ya cuenta como mención a través del nombre de tu marca — no hace falta añadirlo." };
+  }
+
+  // ENTITY-HYGIENE-1 (P1-02): this manual path had NO genericness filter at
+  // all before this — weaker than the auto-derived path's GENERIC_ALIAS_TERMS
+  // check, which itself would not have caught this anyway (see
+  // lib/entity-hygiene/generic-entities.ts).
+  if (isGenericEntityName(alias)) {
+    return {
+      ok: false,
+      error: "Es un asistente de IA o un término genérico del sector, no un nombre real de tu marca."
+    };
   }
 
   for (const existing of input.existingAliases) {
