@@ -1604,6 +1604,10 @@ a {
 }
 .pr2-trow:last-child { border-bottom: none; }
 .pr2-trow.open { background: var(--surface-2); }
+/* SCREEN-POLISH-1 Fase A: keyboard-reachable accordion row (role="button" +
+   tabIndex in prompts-client.tsx) needs its own visible focus ring — it has
+   no native focus style of its own. */
+.pr2-trow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pr2-trow-main { flex: 1; min-width: 0; }
 .pr2-trow-title { font-size: 13.5px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; }
 .pr2-trow-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -1631,6 +1635,9 @@ a {
 }
 .pr2-prow:last-child { border-bottom: none; }
 .pr2-prow:hover { background: var(--surface-2); }
+/* SCREEN-POLISH-1 Fase A: same reasoning as .pr2-trow above — role="button"
+   rows need their own focus ring, there is no native one on a div. */
+.pr2-prow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pr2-prow-main { min-width: 0; }
 .pr2-prow-text {
   font-size: 13px; color: var(--ink); line-height: 1.45; font-weight: 500;

@@ -6,6 +6,7 @@ import { getPlanForUser } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { computeDominantBrandSentiment } from "@/lib/metrics/brand-sentiment";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
@@ -229,19 +230,11 @@ export default async function PromptsPage({
             (sum, r) => sum + (r.citations_count ?? 0),
             0
           );
-          const sentimentCounts = new Map<string, number>();
-          for (const r of catResults) {
-            if (!r.sentiment) continue;
-            sentimentCounts.set(r.sentiment, (sentimentCounts.get(r.sentiment) ?? 0) + 1);
-          }
-          let sentimentDominant: string | null = null;
-          let topCount = 0;
-          for (const [sentiment, count] of sentimentCounts) {
-            if (count > topCount) {
-              topCount = count;
-              sentimentDominant = sentiment;
-            }
-          }
+          // SCREEN-POLISH-1 Fase A: only over rows that actually mention the
+          // brand — a row's sentiment is populated by the LLM regardless of
+          // mention, so counting it unfiltered affirmed a brand sentiment on
+          // responses that never named the brand (lib/metrics/brand-sentiment.ts).
+          const sentimentDominant = computeDominantBrandSentiment(catResults);
           return {
             category: cat,
             results: catResults,

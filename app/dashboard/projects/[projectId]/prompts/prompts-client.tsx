@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { PromptDrawer } from "@/components/prompts/prompt-drawer";
 import { citationsLabel, sampleCountOf } from "@/lib/scan/sample-display";
+import { computeDominantBrandSentiment } from "@/lib/metrics/brand-sentiment";
 import { Icon } from "@/components/ui/icon";
 import { Gauge } from "@/components/ui/gauge";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
@@ -46,6 +47,14 @@ type PromptGroup = {
   sentimentDominant: string | null;
 };
 
+// SCREEN-POLISH-1 Fase A: distinct from "Neutral" on purpose. "Neutral" is
+// what an actually-computed neutral/unknown sentiment reads as (below); this
+// is the separate case where there is no brand sentiment to report at all,
+// because the brand was never mentioned in these rows in the first place.
+// Conflating the two would still be affirming a sentiment reading that
+// doesn't exist — the same "no fake metrics" issue this phase fixes.
+const SENTIMENT_NA_LABEL = "No aplica";
+
 function sentimentLabel(s: string | null): string {
   const map: Record<string, string> = {
     positive: "Positivo",
@@ -78,26 +87,6 @@ function sentimentIconName(s: string | null): string {
 function parseExtracted(raw: unknown): ExtractedJsonShape {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as ExtractedJsonShape;
-}
-
-// Mirrors the sentiment-mode aggregation already used server-side for topic
-// groups (page.tsx) — same logic, applied across an individual prompt's
-// per-engine rows instead of a whole category's rows.
-function dominantSentiment(rows: ResultRow[]): string | null {
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    if (!r.sentiment) continue;
-    counts.set(r.sentiment, (counts.get(r.sentiment) ?? 0) + 1);
-  }
-  let dominant: string | null = null;
-  let topCount = 0;
-  for (const [sentiment, count] of counts) {
-    if (count > topCount) {
-      topCount = count;
-      dominant = sentiment;
-    }
-  }
-  return dominant;
 }
 
 // Union (not sum) across engines: the same competitor mentioned by both
@@ -186,7 +175,7 @@ function groupByPrompt(rows: ResultRow[]): PromptGroup[] {
       responseCount: engines.length,
       citationsTotal: engines.reduce((sum, r) => sum + (r.citations_count ?? 0), 0),
       competitorsCount: mentionedCompetitorsUnion(engines),
-      sentimentDominant: dominantSentiment(engines),
+      sentimentDominant: computeDominantBrandSentiment(engines),
     };
   });
 }
@@ -208,17 +197,38 @@ function PromptRow({
   onClick: () => void;
 }) {
   return (
-    <div className="pr2-prow" style={indent ? { paddingLeft: 34 } : undefined} onClick={onClick}>
+    <div
+      className="pr2-prow"
+      style={indent ? { paddingLeft: 34 } : undefined}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       <div className="pr2-prow-main">
         <div className="pr2-prow-text">{group.promptText ?? "—"}</div>
         <div className="pr2-prow-tags">
           <span className={`badge ${group.brandMentioned ? "badge-pos" : "badge-neg"}`}>
             {group.brandMentioned ? "Mencionada" : "Ausente"}
           </span>
-          <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <Icon name={sentimentIconName(group.sentimentDominant)} size={12} />
-            {sentimentLabel(group.sentimentDominant)}
-          </span>
+          {group.brandMentioned ? (
+            <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <Icon name={sentimentIconName(group.sentimentDominant)} size={12} />
+              {sentimentLabel(group.sentimentDominant)}
+            </span>
+          ) : (
+            // No brand mention → no brand sentiment to report (SCREEN-POLISH-1
+            // Fase A). Distinct badge style (outline, no face glyph) so it
+            // never reads as an actual "Neutral" sentiment reading.
+            <span className="badge badge-outline" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              {SENTIMENT_NA_LABEL}
+            </span>
+          )}
           <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
             {group.competitorsCount} competidores ·{" "}
             {citationsLabel(group.citationsTotal, group.responseCount, group.sampleCount)}
@@ -321,7 +331,7 @@ export function PromptsClient({
         </div>
         <p className="pr2-insight-txt">
           GenScore monitoriza <b>{totalPrompts} {totalPrompts === 1 ? "prompt" : "prompts"}</b>
-          {hasTopics ? <> en <b>{totalTopics} topics</b></> : null}.{" "}
+          {hasTopics ? <> en <b>{totalTopics} temas</b></> : null}.{" "}
           {scannedGroups > 0 ? (
             <>
               Tu marca aparece en <b>{brandPresent} de {scannedGroups}</b> ({presentPct}%)
@@ -399,8 +409,8 @@ export function PromptsClient({
                   marginTop: 16,
                 }}
               >
-                Tus prompts no tienen topics asignados todavía. Cuando GenScore genere
-                topics automáticamente, aparecerán agrupados aquí.
+                Tus prompts no tienen temas asignados todavía. Cuando GenScore genere
+                temas automáticamente, aparecerán agrupados aquí.
               </div>
 
               <div className="pr2-listhead">
@@ -444,7 +454,7 @@ export function PromptsClient({
           {hasTopics && (
             <>
               <div className="pr2-listhead">
-                <span className="pr2-sec-lbl">Topics</span>
+                <span className="pr2-sec-lbl">Temas</span>
                 <div className="pr2-listhead-actions">
                   <label className="pr2-search pr2-search-listhead">
                     <Icon name="search" size={14} />
@@ -462,7 +472,7 @@ export function PromptsClient({
               <div className="card">
                 {filteredTopicGroups.length === 0 ? (
                   <p style={{ padding: 16, fontSize: 13, color: "var(--ink-4)" }}>
-                    Ningún topic o prompt coincide con «{query}».
+                    Ningún tema o prompt coincide con «{query}».
                   </p>
                 ) : (
                   filteredTopicGroups.map((group) => {
@@ -473,6 +483,15 @@ export function PromptsClient({
                         <div
                           className={`pr2-trow${isOpen ? " open" : ""}`}
                           onClick={() => toggleTopic(group.category)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              toggleTopic(group.category);
+                            }
+                          }}
+                          aria-expanded={isOpen}
                         >
                           <div className="pr2-ring">
                             <Gauge value={group.visibilidad} size={46} stroke={6} label="" />
@@ -490,9 +509,15 @@ export function PromptsClient({
                                   in group.results but is still 1 prompt). */}
                               {promptsInTopic.length} {promptsInTopic.length === 1 ? "prompt" : "prompts"}
                               <span className="pr2-trow-sep" />
-                              <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ fontSize: 10.5, padding: "1px 7px" }}>
-                                {sentimentLabel(group.sentimentDominant)}
-                              </span>
+                              {group.menciones > 0 ? (
+                                <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ fontSize: 10.5, padding: "1px 7px" }}>
+                                  {sentimentLabel(group.sentimentDominant)}
+                                </span>
+                              ) : (
+                                <span className="badge badge-outline" style={{ fontSize: 10.5, padding: "1px 7px" }}>
+                                  {SENTIMENT_NA_LABEL}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="pr2-trow-mentions">

@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { FormattedResponse } from "@/components/ui/formatted-response";
 import { buildRanking } from "@/components/prompts/mention-coverage";
+import { computeDominantBrandSentiment } from "@/lib/metrics/brand-sentiment";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 import { sampleCountOf, sampleLabel } from "@/lib/scan/sample-display";
 import { matchDisplayName } from "@/lib/brand-aliases/match-display-name";
@@ -54,6 +55,12 @@ const sentimentLabels: Record<string, string> = {
   unknown: "Neutral",
 };
 
+// SCREEN-POLISH-1 Fase A: distinct from "Neutral" above on purpose — this is
+// not a computed neutral/unknown sentiment, it's "no brand mention, so no
+// brand sentiment to report at all". Reusing "Neutral" here would still be
+// affirming a sentiment reading that doesn't exist.
+const SENTIMENT_NA_LABEL = "No aplica";
+
 function sentimentBadgeClass(s: string | null | undefined): string {
   if (s === "positive") return "badge-pos";
   if (s === "negative") return "badge-neg";
@@ -84,26 +91,6 @@ function parseExtracted(raw: unknown): ExtractedJson | null {
   return raw && typeof raw === "object" && !Array.isArray(raw)
     ? (raw as ExtractedJson)
     : null;
-}
-
-// Mirrors the sentiment-mode aggregation used in prompts-client.tsx and
-// page.tsx's topic groups: the most frequent non-null sentiment across this
-// prompt's per-engine rows.
-function dominantSentiment(rows: ResultRow[]): string | null {
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    if (!r.sentiment) continue;
-    counts.set(r.sentiment, (counts.get(r.sentiment) ?? 0) + 1);
-  }
-  let dominant: string | null = null;
-  let topCount = 0;
-  for (const [sentiment, count] of counts) {
-    if (count > topCount) {
-      topCount = count;
-      dominant = sentiment;
-    }
-  }
-  return dominant;
 }
 
 export function PromptDrawer({ projectId, projectDomain, projectBrand, results, competitors, onClose }: Props) {
@@ -199,7 +186,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
     extractedList,
     competitors,
     brandEvidence,
-    brandSentiment: dominantSentiment(results),
+    brandSentiment: computeDominantBrandSentiment(results),
     brandName: projectBrand,
   });
 
@@ -355,11 +342,18 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                         <span className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
                           {r.brand_mentioned ? "Mencionada" : "Ausente"}
                         </span>
-                        {r.sentiment ? (
-                          <span className={`badge ${sentimentBadgeClass(r.sentiment)}`}>
-                            {sentimentLabels[r.sentiment] ?? r.sentiment}
-                          </span>
-                        ) : null}
+                        {r.brand_mentioned ? (
+                          r.sentiment ? (
+                            <span className={`badge ${sentimentBadgeClass(r.sentiment)}`}>
+                              {sentimentLabels[r.sentiment] ?? r.sentiment}
+                            </span>
+                          ) : null
+                        ) : (
+                          // SCREEN-POLISH-1 Fase A: no brand mention on this
+                          // row → no brand sentiment to report, however the
+                          // LLM filled `sentiment` for it.
+                          <span className="badge badge-outline">{SENTIMENT_NA_LABEL}</span>
+                        )}
                         <span className="pr2-erow-cit">
                           {r.citations_count ?? 0} {r.citations_count === 1 ? "cita" : "citas"}
                         </span>
@@ -566,12 +560,18 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                             </span>
                           </td>
                           <td>
-                            {r.sentiment ? (
-                              <span className={`badge ${sentimentBadgeClass(r.sentiment)}`}>
-                                {sentimentLabels[r.sentiment] ?? r.sentiment}
-                              </span>
+                            {r.brand_mentioned ? (
+                              r.sentiment ? (
+                                <span className={`badge ${sentimentBadgeClass(r.sentiment)}`}>
+                                  {sentimentLabels[r.sentiment] ?? r.sentiment}
+                                </span>
+                              ) : (
+                                <span style={{ color: "var(--ink-4)" }}>—</span>
+                              )
                             ) : (
-                              <span style={{ color: "var(--ink-4)" }}>—</span>
+                              // SCREEN-POLISH-1 Fase A: no mention, no brand
+                              // sentiment to report.
+                              <span className="badge badge-outline">{SENTIMENT_NA_LABEL}</span>
                             )}
                           </td>
                         </tr>

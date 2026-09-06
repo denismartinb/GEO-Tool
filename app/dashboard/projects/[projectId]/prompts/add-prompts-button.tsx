@@ -32,7 +32,7 @@ const METHODS: Array<{ id: Method; icon: string; title: string; desc: string }> 
     id: "manual",
     icon: "prompts",
     title: "Manual",
-    desc: "Escribe tus propios prompts; la IA les asigna categoría y los escanea."
+    desc: "Escribe tus propios prompts; la IA les asigna tema y los escanea."
   }
 ];
 
@@ -311,7 +311,7 @@ export function AddPromptsButton({
               {method === "manual" ? (
                 <>
                   <p className="add-prompts-modal-desc">
-                    Escribe tus propios prompts. La IA les asignará categoría automáticamente antes de escanearlos.
+                    Escribe tus propios prompts. La IA les asignará tema automáticamente antes de escanearlos.
                   </p>
                   <label className="field-label" htmlFor="add-prompts-manual-input">
                     Nuevo prompt
