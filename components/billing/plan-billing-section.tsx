@@ -314,8 +314,8 @@ export function PlanBillingSection({
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2 border-t border-[var(--line-soft)] pt-4">
-                <Button type="button" onClick={() => setModal({})}>
+              <div className="flex flex-col gap-2 border-t border-[var(--line-soft)] pt-4 sm:flex-row sm:flex-wrap">
+                <Button type="button" className="w-full sm:w-auto" onClick={() => setModal({})}>
                   <Icon name="arrUp" size={14} />
                   Cambiar de plan
                 </Button>
@@ -324,13 +324,25 @@ export function PlanBillingSection({
                     an account with a Stripe customer would have lost its only
                     route to invoices and payment method. */}
                 {usage.hasStripeCustomer && (
-                  <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleManageBilling}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    disabled={isPortalPending}
+                    onClick={handleManageBilling}
+                  >
                     <Icon name="card" size={14} />
                     {isPortalPending ? "Abriendo…" : "Facturas y pago"}
                   </Button>
                 )}
                 {usage.hasStripeSubscription && (
-                  <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleCancelSubscription}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    disabled={isPortalPending}
+                    onClick={handleCancelSubscription}
+                  >
                     {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
                   </Button>
                 )}
