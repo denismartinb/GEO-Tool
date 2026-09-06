@@ -18982,3 +18982,94 @@ igual). P2 — polish visual, no bloqueante de flujo.
 
 **Trazabilidad.** `components/billing/plan-billing-section.tsx`;
 `components/ui/button.tsx` (acepta `className` como override, sin cambios).
+
+---
+
+## 203. "Generar" y "marcar como hecho" dejan de terminar en silencio (ACTIONS-OBSERVABLE-1 slice 4a, 2026-09-06)
+
+**Origen.** Fase 4 del plan de la auditoría externa
+(`docs/external-audit-2026-08.md`, "ACTIONS-OBSERVABLE-1: ninguna acción
+silenciosa", P0-04), con el reparto exacto ya resuelto por la Fase 0
+(AUDIT-REPRO-1, log §187/§193/§198/§202): de las seis acciones de
+Recomendaciones, "generar" (FAQ/brief/comparativa) y "activar seguimiento
+recurrente" quedaron clasificadas `invisible`; "exportar plan" y "marcar como
+hecho" `real` — la segunda sin ninguna vía de deshacer. Task Intake aprobado
+por el fundador el 2026-09-06, con el reparto en cuatro slices (4a-4d) y 4a
+primero: el contrato de acción compartido más las dos acciones de la propia
+tarjeta. 4b ("exportar plan" + "activar seguimiento") queda fuera a
+propósito — toca `DataMaturityBanner`, montado en las seis pantallas de la
+consola, y mezclarlo aquí habría producido el PR grande que `CLAUDE.md`
+prohíbe.
+
+**Qué se decidió.**
+
+1. **Contrato de acción compartido**, `lib/ui/action-feedback.ts` (reducer
+   puro: `idle | pending | success | error`, testeable sin DOM — misma
+   disciplina que `lib/onboarding/tour-steps.ts`) + `components/ui/
+   action-feedback.tsx` (el hook `useActionFeedback` que envuelve el reducer
+   en `useReducer`/`useTransition`, y `ActionAnnouncement`, que pinta el
+   acuse/error con `role="status"` `aria-live="polite"` — ninguna de las seis
+   acciones anunciaba nada hasta ahora). `RecCard` migra sus dos acciones
+   (`handleRewrite`, `handleDismiss`) a este hook en vez de un par
+   `useState`+`useTransition` propio cada una.
+2. **"Generar propuesta con IA"**: el éxito muestra un acuse en el propio
+   punto del clic (`ActionAnnouncement`, "Propuesta generada.") antes de que
+   `router.refresh()` traiga la fila `solution` real y la insignia
+   "Propuesta generada" la sustituya. No estaba realmente "en un panel
+   plegado" — el botón sólo es alcanzable con la tarjeta ya abierta — pero el
+   éxito no daba ninguna señal en el punto del clic, sólo un cambio de icono
+   a varias líneas de distancia.
+3. **"Marcar como hecho" gana deshacer.** `lib/recommendations/
+   restore-recommendation.ts` es el espejo exacto de `dismiss-
+   recommendation.ts` (misma reverificación de propiedad con el cliente de
+   usuario, misma escritura service-role, mismo patrón de idempotencia) y
+   revierte `status` a `'active'`. **Sin migración**: `rec_status_chk`
+   (`0010_recommendations_history.sql`) ya admite `'active'`.
+4. **La ventana de deshacer es efímera y local al cliente, no anclada a
+   `run_id`.** El Task Intake original proponía condicionar el deshacer a
+   que la tarjeta siguiera perteneciendo al último escaneo completado — mirar
+   el código reveló que el cliente no recibe `run_id` por recomendación hoy
+   (`recommendations/page.tsx` lo recorta antes de pasar props), así que
+   anclarlo ahí habría ensanchado el scope de esta fase. La solución más
+   simple es también más segura: al marcar como hecho, la tarjeta NO se
+   quita de la pantalla (no hay `router.refresh()` en el éxito de
+   `handleDismiss`, a diferencia de las otras acciones de esta misma
+   tarjeta) — se sustituye in situ por el acuse + "Deshacer". El riesgo que
+   motivaba anclar a `run_id` (deshacer una fila después de que un escaneo
+   MÁS NUEVO ya la diera por resuelta) no puede darse dentro de un deshacer
+   efímero de la misma sesión de render: la fila nunca llegó a desaparecer
+   del DOM, así que no hay nada que reconciliar después. Si el usuario
+   navega sin pulsar "Deshacer", la próxima carga real ya la excluye
+   (filtro `status='active'` de siempre) — no hace falta ningún temporizador
+   ni `router.refresh()` adicional.
+5. **Pulsar "Deshacer" no llama a `router.refresh()`.** Como el dismiss
+   nunca refrescó la lista, restaurar sólo necesita volver el estado local a
+   `idle` (`dismissFeedback.reset()`) para que la tarjeta vuelva a mostrar
+   sus botones normales — ya coincide con lo que el servidor tiene.
+
+**Lo que NO se ha tocado en este slice (4b, aparte).** "Exportar plan" sigue
+sin acuse ni salida alternativa a la descarga; "activar seguimiento
+recurrente" sigue redirigiendo a `/debug` en éxito y en error. Ambas tocan
+`DataMaturityBanner`/`app/dashboard/projects/[projectId]/actions.ts`
+(`setRecurringScans`), fuera del alcance aprobado para 4a.
+
+**Límite de cobertura, declarado explícitamente.** `recommendations-
+client.test.tsx` sólo puede afirmar el estado INICIAL de la tarjeta
+(`renderToStaticMarkup` no ejecuta clics) — que "Deshacer" no aparece antes
+de ningún clic, y que la promesa de la próxima medición se ve sin ningún
+error de fondo. La transición real a "éxito" (el acuse, el "Deshacer"
+funcionando de verdad) sólo la puede verificar una pasada de
+`--journeys actions` contra un preview real, todavía no disparada para este
+PR — el fundador decide cuándo, por su instrucción explícita del
+2026-09-06 sobre el piloto en general.
+
+**Comprobado.** `pnpm test` (3101/3101), `pnpm run validate` (build +
+typecheck + lint) en verde.
+
+**Trazabilidad.** `lib/ui/action-feedback.ts` + `.test.ts` (nuevo);
+`components/ui/action-feedback.tsx` (nuevo); `lib/recommendations/
+restore-recommendation.ts` + `.test.ts` (nuevo); `app/dashboard/projects/
+[projectId]/actions.ts` (`restoreRecommendationAction`); `app/dashboard/
+projects/[projectId]/recommendations/recommendations-client.tsx`
+(`RecCard`); su test; `docs/external-audit-2026-08.md` Fase 4; log §187,
+§193, §198, §202.

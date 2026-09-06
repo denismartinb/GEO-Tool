@@ -151,8 +151,51 @@ paths:
 
 ## Escrituras
 
-- `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario
-  antes de cualquier escritura con service-role (patrón data-guardian C5).
+- `dismiss`/`rewrite`/`restore` verifican propiedad en servidor con el cliente
+  de usuario antes de cualquier escritura con service-role (patrón
+  data-guardian C5).
+
+## Contrato de acción (ACTIONS-OBSERVABLE-1 slice 4a, docs/external-audit-2026-08.md Fase 4, log §203)
+
+- **Ninguna acción de `RecCard` termina en nada.** Las dos acciones propias de
+  la tarjeta (`handleRewrite`, `handleDismiss`) pasan por `useActionFeedback`
+  (`components/ui/action-feedback.tsx`), que envuelve el reducer puro de
+  `lib/ui/action-feedback.ts` — `idle | pending | success | error`, nunca un
+  cuarto estado. Cualquier acción nueva en esta pantalla usa el mismo hook en
+  vez de un `useState`+`useTransition` propio.
+- **El acuse de éxito se anuncia con `role="status"` `aria-live="polite"`**
+  (`ActionAnnouncement`). Antes de esta fase ninguna de las seis acciones de
+  Recomendaciones anunciaba nada — ni siquiera visualmente, y menos aún para
+  un lector de pantalla.
+- **"Marcar como hecho" no llama a `router.refresh()` en su propio éxito, a
+  diferencia de todas las demás acciones de esta tarjeta.** Refrescar
+  reharía el fetch de activas (`status='active'`) y la tarjeta desaparecería
+  antes de que su "Deshacer" pudiera pintarse — la desaparición silenciosa e
+  inmediata era exactamente el hallazgo P0-04 del auditor. La tarjeta se
+  sustituye in situ por el acuse + "Deshacer" y sigue montada.
+- **La ventana de deshacer es efímera y del cliente, deliberadamente NO
+  anclada a `run_id`/`latestCompletedRun`.** El cliente no recibe `run_id`
+  por recomendación hoy (`recommendations/page.tsx` lo recorta antes de
+  pasar props) — anclar el deshacer ahí habría exigido ensanchar ese recorte,
+  fuera del alcance de esta fase. Es seguro porque la fila nunca se quita del
+  DOM mientras el deshacer sigue disponible: no hay nada que reconciliar
+  contra un escaneo más nuevo, porque no hubo un intervalo en el que la fila
+  desapareciera y pudiera volver a aparecer desincronizada. Si el usuario
+  navega sin pulsar "Deshacer", el siguiente fetch real ya la excluye por el
+  filtro de siempre — ningún temporizador nuevo, ningún `router.refresh()`
+  adicional.
+- **`restore-recommendation.ts` es un espejo exacto de `dismiss-
+  recommendation.ts`**, sin migración: `rec_status_chk`
+  (`0010_recommendations_history.sql`) ya admite `'active'`. Cualquier
+  cambio a uno de los dos se revisa contra el otro.
+- **Lo que `react-dom/server` no puede probar se declara, no se calla.**
+  `renderToStaticMarkup` no ejecuta clics, así que `recommendations-
+  client.test.tsx` sólo afirma el estado INICIAL de la tarjeta (sin
+  "Deshacer", sin acuse). La transición real a "éxito" sólo la verifica
+  `tests/pilot/journeys/actions/recommendation-actions.spec.ts`
+  (`--journeys actions`) contra un preview real — mismo principio que ya
+  protege el chip de control y la insignia de estado del artefacto más
+  arriba en este fichero.
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 

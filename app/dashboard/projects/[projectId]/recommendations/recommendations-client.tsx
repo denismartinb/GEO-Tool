@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
+import { useActionFeedback, ActionAnnouncement } from "@/components/ui/action-feedback";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
-import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
+import {
+  rewriteRecommendationAction,
+  dismissRecommendationAction,
+  restoreRecommendationAction
+} from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
 import {
   GROUP_PREVIEW_SIZE,
@@ -587,45 +592,45 @@ export function RecCard({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [isRewriting, startRewrite] = useTransition();
-  const [rewriteError, setRewriteError] = useState<string | null>(null);
-  const [isDismissing, startDismiss] = useTransition();
-  const [dismissError, setDismissError] = useState<string | null>(null);
   const router = useRouter();
+
+  // ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4,
+  // P0-04) — both actions on this card now go through the shared contract
+  // (pending / success with acknowledgement / categorized error, never
+  // nothing) instead of a hand-rolled useState+useTransition pair each.
+  const rewriteFeedback = useActionFeedback();
+  const dismissFeedback = useActionFeedback();
+  const restoreFeedback = useActionFeedback();
 
   function handleRewrite(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setRewriteError(null);
-    startRewrite(async () => {
-      try {
-        const result = await rewriteRecommendationAction({ projectId, recommendationId: rec.id });
-        if (!result.success) {
-          setRewriteError(result.error);
-          return;
-        }
-        router.refresh();
-      } catch {
-        setRewriteError("No se ha podido generar la propuesta en este momento. Inténtalo de nuevo en unos minutos.");
-      }
+    rewriteFeedback.run(() => rewriteRecommendationAction({ projectId, recommendationId: rec.id }), {
+      successMessage: "Propuesta generada.",
+      onSuccess: () => router.refresh()
     });
   }
 
   function handleDismiss(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setDismissError(null);
-    startDismiss(async () => {
-      try {
-        const result = await dismissRecommendationAction({ projectId, recommendationId: rec.id });
-        if (!result.success) {
-          setDismissError(result.error);
-          return;
-        }
-        router.refresh();
-      } catch {
-        setDismissError("No se ha podido actualizar la recomendación en este momento. Inténtalo de nuevo en unos minutos.");
-      }
+    // Deliberately no router.refresh() here (unlike every other action on
+    // this card): refreshing would re-fetch the active list and make the
+    // card disappear before its "Deshacer" ever renders — the exact
+    // "silent success that reads like a failure" the auditor found (P0-04).
+    // The card stays mounted, still reflecting `status='active'` visually,
+    // until the user navigates elsewhere and the next real fetch excludes it.
+    dismissFeedback.run(() => dismissRecommendationAction({ projectId, recommendationId: rec.id }), {
+      successMessage: "Marcada como hecha."
+    });
+  }
+
+  function handleRestore(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    restoreFeedback.run(() => restoreRecommendationAction({ projectId, recommendationId: rec.id }), {
+      successMessage: "Restaurada.",
+      onSuccess: () => dismissFeedback.reset()
     });
   }
 
@@ -1063,12 +1068,22 @@ export function RecCard({
           </div>
 
           {/* Mejorar redacción con IA — el botón solo aparece mientras no haya
-              una solución generada; una vez generada, se muestra la insignia. */}
+              una solución generada; una vez generada, se muestra la insignia.
+              El acuse de éxito (ActionAnnouncement) se enseña en el mismo
+              punto del clic, no sólo en el resultado que aparece más abajo
+              (ACTIONS-OBSERVABLE-1 slice 4a — "generar" era invisible según
+              la clasificación de la Fase 0, docs/external-audit-2026-08.md
+              Fase 4, P0-04). */}
           <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             {!rec.solution ? (
               <>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
-                  {isRewriting ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleRewrite}
+                  disabled={rewriteFeedback.isPending}
+                >
+                  {rewriteFeedback.isPending ? (
                     <>
                       <span className="btn-spinner" /> Generando…
                     </>
@@ -1079,11 +1094,7 @@ export function RecCard({
                     </>
                   )}
                 </button>
-                {rewriteError && (
-                  <p className="feedback error" style={{ margin: 0 }}>
-                    {rewriteError}
-                  </p>
-                )}
+                <ActionAnnouncement state={rewriteFeedback.state} />
               </>
             ) : (
               <span className="badge badge-outline">
@@ -1092,37 +1103,68 @@ export function RecCard({
               </span>
             )}
 
-            {/* Marcar como hecho (RECS-3) — dismisses the recommendation;
-                router.refresh() removes it from view since the page only
-                fetches status='active' rows. */}
-            <button type="button" className="btn btn-ghost btn-sm" onClick={handleDismiss} disabled={isDismissing}>
-              {isDismissing ? (
-                <>
-                  <span className="btn-spinner" /> Actualizando…
-                </>
-              ) : (
-                <>
+            {/* Marcar como hecho (RECS-3). A diferencia de antes, un éxito NO
+                llama a router.refresh() de inmediato: la tarjeta se sustituye
+                por un acuse con "Deshacer" y sigue montada hasta que el
+                usuario navegue — la desaparición silenciosa e inmediata era
+                indistinguible de un fallo (ACTIONS-OBSERVABLE-1 slice 4a,
+                docs/external-audit-2026-08.md Fase 4, P0-04). */}
+            {dismissFeedback.state.status === "success" ? (
+              <>
+                <span className="feedback success" role="status" aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <Icon name="check" size={13} />
-                  Marcar como hecho
-                </>
-              )}
-            </button>
-            {dismissError && (
-              <p className="feedback error" style={{ margin: 0 }}>
-                {dismissError}
-              </p>
-            )}
-            {/* RECURRING-VALUE-1 (docs/external-audit-2026-08.md, Fase 3):
-                closes the loop this button opens — RECS-LOOP-1 already
-                verifies on the next comparable scan whether a dismissed gap
-                actually closed (pestaña "Resueltas"), but nothing on the
-                active card said that check was coming. No date: the exact
-                schedule is a separate deliverable (calendario visible), this
-                is just the promise that a scan will judge it. */}
-            {!dismissError && (
-              <p style={{ margin: 0, fontSize: 11.5, color: "var(--ink-4)" }}>
-                La verás reflejada en tu próximo escaneo.
-              </p>
+                  Marcada como hecha.
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleRestore}
+                  disabled={restoreFeedback.isPending}
+                >
+                  {restoreFeedback.isPending ? (
+                    <>
+                      <span className="btn-spinner" /> Deshaciendo…
+                    </>
+                  ) : (
+                    "Deshacer"
+                  )}
+                </button>
+                {restoreFeedback.state.status === "error" && <ActionAnnouncement state={restoreFeedback.state} />}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleDismiss}
+                  disabled={dismissFeedback.isPending}
+                >
+                  {dismissFeedback.isPending ? (
+                    <>
+                      <span className="btn-spinner" /> Actualizando…
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="check" size={13} />
+                      Marcar como hecho
+                    </>
+                  )}
+                </button>
+                {dismissFeedback.state.status === "error" && <ActionAnnouncement state={dismissFeedback.state} />}
+                {/* RECURRING-VALUE-1 (docs/external-audit-2026-08.md, Fase 3):
+                    closes the loop this button opens — RECS-LOOP-1 already
+                    verifies on the next comparable scan whether a dismissed
+                    gap actually closed (pestaña "Resueltas"), but nothing on
+                    the active card said that check was coming. No date: the
+                    exact schedule is a separate deliverable (calendario
+                    visible), this is just the promise that a scan will judge
+                    it. */}
+                {dismissFeedback.state.status !== "error" && (
+                  <p style={{ margin: 0, fontSize: 11.5, color: "var(--ink-4)" }}>
+                    La verás reflejada en tu próximo escaneo.
+                  </p>
+                )}
+              </>
             )}
           </div>
 

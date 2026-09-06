@@ -95,6 +95,31 @@ describe("SolutionPanel — insignia de estado del artefacto", () => {
   });
 });
 
+/**
+ * ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4,
+ * P0-04). `renderToStaticMarkup` no ejecuta clics — sólo puede afirmar el
+ * estado INICIAL (ocioso) de la tarjeta, nunca la transición a "éxito" que
+ * dispara `useActionFeedback` tras un clic real. Esa transición sólo la
+ * ejercita `tests/pilot/journeys/actions/recommendation-actions.spec.ts`
+ * (`--journeys actions`, log §187/§198/§202) contra un preview real — es la
+ * "cobertura no vista" que se declara, no una promesa de que este test la
+ * cubre.
+ */
+describe("RecCard — estado inicial del contrato de acción", () => {
+  it("enseña el botón normal, nunca el acuse de 'Deshacer' antes de ningún clic", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec()} />);
+    expect(html).toContain("Marcar como hecho");
+    expect(html).not.toContain("Deshacer");
+    expect(html).not.toContain("Marcada como hecha.");
+  });
+
+  it("enseña la promesa de la próxima medición, no un mensaje de error sin que nada haya fallado", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec()} />);
+    expect(html).toContain("La verás reflejada en tu próximo escaneo.");
+    expect(html).not.toContain("feedback error");
+  });
+});
+
 describe("RecCard — CTA y chip de control", () => {
   it("nombra el entregable en el botón, no la mecánica", () => {
     const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "create_faq_section" })} />);
