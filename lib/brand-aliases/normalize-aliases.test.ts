@@ -65,6 +65,11 @@ describe("validateNewAlias", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("rejects a generic AI assistant/GEO-industry term (ENTITY-HYGIENE-1) — this path had no such guard before", () => {
+    expect(validateNewAlias({ raw: "ChatGPT", ...base }).ok).toBe(false);
+    expect(validateNewAlias({ raw: "GEO Score", brand: "GenScore", existingAliases: [] }).ok).toBe(false);
+  });
+
   it("rejects an alias redundant with one already accepted (bidirectional substring)", () => {
     const narrower = validateNewAlias({ raw: "Firefox Focus", brand: "Mozilla", existingAliases: ["Firefox"] });
     expect(narrower.ok).toBe(false);

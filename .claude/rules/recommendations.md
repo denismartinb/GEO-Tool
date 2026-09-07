@@ -139,10 +139,79 @@ paths:
   mensaje sigue siendo propio y saneado — nunca el error del proveedor
   (`.claude/rules/gemini.md`).
 
+## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §200)
+
+- **`computeEmergingCompetitors` nunca recomienda seguir un asistente de IA
+  como competidor.** Filtra por `isGenericEntityName`
+  (`lib/entity-hygiene/generic-entities.ts`) antes de aceptar cualquier
+  nombre de `other_brands_mentioned` — ese campo es salida cruda del modelo
+  con sólo una instrucción blanda en el prompt de extracción, nunca una
+  garantía de código. Detalle completo, y por qué la lista vive en un módulo
+  compartido en vez de aquí, en `.claude/rules/competitors.md`.
+
 ## Escrituras
 
-- `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario
-  antes de cualquier escritura con service-role (patrón data-guardian C5).
+- `dismiss`/`rewrite`/`restore` verifican propiedad en servidor con el cliente
+  de usuario antes de cualquier escritura con service-role (patrón
+  data-guardian C5).
+
+## Contrato de acción (ACTIONS-OBSERVABLE-1 slice 4a, docs/external-audit-2026-08.md Fase 4, log §203)
+
+- **Ninguna acción de `RecCard` termina en nada.** Las dos acciones propias de
+  la tarjeta (`handleRewrite`, `handleDismiss`) pasan por `useActionFeedback`
+  (`components/ui/action-feedback.tsx`), que envuelve el reducer puro de
+  `lib/ui/action-feedback.ts` — `idle | pending | success | error`, nunca un
+  cuarto estado. Cualquier acción nueva en esta pantalla usa el mismo hook en
+  vez de un `useState`+`useTransition` propio.
+- **El acuse de éxito se anuncia con `role="status"` `aria-live="polite"`**
+  (`ActionAnnouncement`). Antes de esta fase ninguna de las seis acciones de
+  Recomendaciones anunciaba nada — ni siquiera visualmente, y menos aún para
+  un lector de pantalla.
+- **"Marcar como hecho" llama a `router.refresh()` en su propio éxito, igual
+  que todas las demás acciones de esta tarjeta.** Una primera versión no lo
+  hacía a propósito, para dejar sitio a un "Deshacer" en la propia tarjeta —
+  el fundador la probó en el preview y la rechazó: un deshacer que sólo vive
+  mientras la tarjeta sigue montada, y desaparece en cuanto navegas,
+  "no sirve de nada" (2026-09-07). El deshacer real vive en otro sitio (ver
+  abajo); esta tarjeta vuelve a comportarse como las demás.
+- **El "Deshacer" de verdad vive en `ResolvedHistoryCard`, bajo "Resueltas",
+  nunca en la tarjeta activa.** Es la única forma de que sobreviva a un
+  refresco o a una navegación — que es precisamente lo que la versión
+  anterior no conseguía. Se ofrece SÓLO cuando `item.status === 'dismissed'
+  && item.run_id === latestCompletedRunId`: la lista activa filtra por
+  `run_id = latestCompletedRun.id AND status='active'`
+  (`recommendations/page.tsx`), así que restaurar una fila de un run más
+  antiguo volvería su `status` a `'active'` pero la dejaría invisible en
+  todas partes — ni en la lista activa (su `run_id` no es el vigente), ni ya
+  en "Resueltas" (dejó de tener el `status` que esa pestaña lista). Esto
+  exigió sacar `run_id` del recorte que `page.tsx` aplicaba antes de mandar
+  `ResolvedHistoryItem` al cliente y pasar `latestCompletedRunId` como prop
+  nueva — antes ninguno de los dos cruzaba la red.
+- **`restore-recommendation.ts` es un espejo exacto de `dismiss-
+  recommendation.ts`**, sin migración: `rec_status_chk`
+  (`0010_recommendations_history.sql`) ya admite `'active'`. Cualquier
+  cambio a uno de los dos se revisa contra el otro.
+- **El vacío de nivel superior de la pantalla (`page.tsx`) sólo dispara
+  cuando de verdad no hay nada en ningún sitio.** Antes bastaba
+  `recs.length === 0`: marcar como hecha la única recomendación activa
+  desmontaba `RecommendationsClient` entero, con él la pestaña "Resueltas" y
+  sus datos ya pedidos al servidor — el fundador lo vio como una pantalla que
+  "borraba" su acción. La condición es `recs.length === 0 &&
+  resolvedHistoryForClient.length === 0`; con historial pero sin activas,
+  `RecommendationsClient` sigue montado y su propio vacío interno («Nada que
+  corregir ahora mismo») señala la pestaña "Resueltas" en vez de repetir el
+  genérico "vuelve a Todas" (que sería falso: ya se está en Todas).
+- **Lo que `react-dom/server` no puede probar se declara, no se calla.**
+  `renderToStaticMarkup` no ejecuta clics, así que ningún test afirma que un
+  clic real en "Deshacer" restaura la fila. Lo que sí se prueba por render
+  (`ResolvedHistoryCard`, exportada igual que `RecCard`): las cuatro
+  combinaciones de la condición de arriba — se ofrece del run vigente, no se
+  ofrece de un run viejo, no se ofrece sobre una fila `resolved`, no se
+  ofrece sin `latestCompletedRunId`. La transición real a "éxito" sólo la
+  verifica `tests/pilot/journeys/actions/recommendation-actions.spec.ts`
+  (`--journeys actions`) contra un preview real — mismo principio que ya
+  protege el chip de control y la insignia de estado del artefacto más
+  arriba en este fichero.
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 

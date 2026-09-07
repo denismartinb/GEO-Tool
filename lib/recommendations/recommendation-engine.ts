@@ -1,4 +1,5 @@
 import { classifySourceType, type SourceType } from "@/lib/citations/source-type";
+import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 
 type ProjectInput = {
   brand: string;
@@ -406,6 +407,13 @@ function computeEmergingCompetitors(
       if (!name) continue;
       const key = name.toLowerCase();
       if (key === brandNormalized || trackedNormalized.has(key) || seenInThisPrompt.has(key)) continue;
+      // ENTITY-HYGIENE-1 (P1-02): other_brands_mentioned is raw model output
+      // with only a soft "exclude generic terms" instruction in the
+      // extraction prompt — nothing stops a real, specific brand name like
+      // "ChatGPT" from surfacing here and being recommended as a competitor
+      // to track, independent of (and without going through) the
+      // business-profile-derived suggestion path ADR 0020/0022 protects.
+      if (isGenericEntityName(name)) continue;
       seenInThisPrompt.add(key);
       const entry = byName.get(key) ?? { competitor: name, prompts: [] };
       entry.prompts.push(result);
