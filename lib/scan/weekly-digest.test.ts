@@ -143,6 +143,7 @@ describe("runWeeklyDigest", () => {
       currentScore: 70,
       previousScore: 80,
       subScores: { visibility: 70, citation: 40, standing: null },
+      previousSubScores: { visibility: 80, citation: 50, standing: null },
       topMover: null,
       recommendation: null,
       activeRecommendationsCount: 3,
@@ -177,6 +178,41 @@ describe("runWeeklyDigest", () => {
       "founder@example.com",
       "acme.com",
       expect.objectContaining({ subScores: { visibility: 70, citation: 40, standing: 55.5 } })
+    );
+  });
+
+  it("reads previousSubScores from the previous run, independently of the current run's standing", async () => {
+    const service = fakeService({
+      projects: [{ id: "p1", domain: "acme.com", owner_user_id: "u1" }],
+      profiles: [{ id: "u1", email: "founder@example.com", notify_weekly_digest: true }],
+      runScoresByProject: {
+        p1: [
+          {
+            run_id: "r2",
+            visibility_score: 70,
+            citation_score: 40,
+            details_json: { geo_score: { components: { standing: { value: 55.5 } } } }
+          },
+          {
+            run_id: "r1",
+            visibility_score: 80,
+            citation_score: 50,
+            details_json: { geo_score: { components: { standing: { value: 33.2 } } } }
+          }
+        ]
+      },
+      recommendationByRunId: { r2: null }
+    });
+
+    await runWeeklyDigest({ service: service as never });
+
+    expect(sendWeeklyDigestEmail).toHaveBeenCalledWith(
+      "founder@example.com",
+      "acme.com",
+      expect.objectContaining({
+        subScores: { visibility: 70, citation: 40, standing: 55.5 },
+        previousSubScores: { visibility: 80, citation: 50, standing: 33.2 }
+      })
     );
   });
 

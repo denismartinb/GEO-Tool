@@ -327,14 +327,43 @@ export async function sendScoreDropAlertEmail(
 const sectionLabel = (text: string) =>
   `<div style="margin:30px 0 12px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5B6B82;">${text}</div>`;
 
-const statCell = (value: string, label: string, stackClass: string) => `
+const statCell = (value: string, label: string, stackClass: string, delta?: DeltaPill | null) => `
   <td width="33%" class="${stackClass}" style="padding:14px 6px;text-align:center;">
     <div style="font-size:21px;font-weight:800;color:#0B1426;line-height:1;font-variant-numeric:tabular-nums;">${value}</div>
     <div style="font-size:11px;color:#5B6B82;margin-top:5px;">${label}</div>
+    ${delta ? `<div style="font-size:10.5px;font-weight:700;color:${delta.ink};margin-top:4px;">${delta.label}</div>` : ""}
   </td>`;
 
 const statRow = (cells: string) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr>${cells}</tr></table>`;
+
+type DeltaPill = { bg: string; ink: string; label: string };
+
+/**
+ * WEEKLY-DIGEST-VISUAL-1: same green/red/gray semantics as everywhere else a
+ * score delta is shown in the product — never a new color scale invented for
+ * this one email.
+ */
+const deltaPill = (delta: number): DeltaPill =>
+  delta > 0
+    ? { bg: "#E7F6EE", ink: "#15915A", label: `▲ +${delta} pts` }
+    : delta < 0
+      ? { bg: "#FDECEE", ink: "#D23B48", label: `▼ ${delta} pts` }
+      : { bg: "#EEF1F6", ink: "#5B6B82", label: "Sin cambios" };
+
+/**
+ * A table-based horizontal bar, not an SVG or CSS gradient — email clients
+ * (Outlook in particular) don't render either reliably. `percent` is clamped
+ * defensively even though `getEffectiveGeoScore` is already a 0-100 composite.
+ */
+const scoreBar = (percent: number, color: string) => {
+  const filled = Math.max(0, Math.min(100, percent));
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;"><tr>
+      <td style="background:${color};width:${filled}%;height:6px;font-size:0;line-height:0;border-radius:3px 0 0 3px;">&nbsp;</td>
+      <td style="background:#E7EAF0;width:${100 - filled}%;height:6px;font-size:0;line-height:0;border-radius:0 3px 3px 0;">&nbsp;</td>
+    </tr></table>`;
+};
 
 /**
  * TRUST-METRICS-1: digest.currentScore es el compuesto del run más reciente
@@ -353,6 +382,7 @@ export async function sendWeeklyDigestEmail(
     currentScore: number;
     previousScore: number;
     subScores: { visibility: number | null; citation: number | null; standing: number | null };
+    previousSubScores: { visibility: number | null; citation: number | null; standing: number | null };
     topMover: { name: string; mentionDelta: number } | null;
     recommendation: { title: string; description: string } | null;
     activeRecommendationsCount: number;
@@ -362,27 +392,48 @@ export async function sendWeeklyDigestEmail(
   }
 ): Promise<void> {
   const delta = Math.round(digest.currentScore) - Math.round(digest.previousScore);
-  const pill =
-    delta > 0
-      ? { bg: "#E7F6EE", ink: "#15915A", label: `▲ +${delta} pts` }
-      : delta < 0
-        ? { bg: "#FDECEE", ink: "#D23B48", label: `▼ ${delta} pts` }
-        : { bg: "#EEF1F6", ink: "#5B6B82", label: "Sin cambios" };
+  const pill = deltaPill(delta);
+
+  /**
+   * A sub-score delta only exists when BOTH runs computed that component —
+   * e.g. no grounded provider rows for authority drops it to null, and a
+   * delta against a missing baseline is not a real comparison.
+   */
+  const subScoreDelta = (current: number | null, previous: number | null): DeltaPill | null =>
+    current !== null && previous !== null ? deltaPill(Math.round(current) - Math.round(previous)) : null;
 
   // Only components this run actually computed — an unavailable one (e.g. no
   // grounded provider rows for authority) is omitted, never shown as 0.
   const subScoreEntries = [
-    digest.subScores.visibility !== null ? { label: "Presencia", value: `${Math.round(digest.subScores.visibility)}%` } : null,
-    digest.subScores.standing !== null ? { label: "Cuota de voz", value: `${Math.round(digest.subScores.standing)}%` } : null,
-    digest.subScores.citation !== null ? { label: "Autoridad", value: `${Math.round(digest.subScores.citation)}%` } : null
-  ].filter((e): e is { label: string; value: string } => e !== null);
+    digest.subScores.visibility !== null
+      ? {
+          label: "Presencia",
+          value: `${Math.round(digest.subScores.visibility)}%`,
+          delta: subScoreDelta(digest.subScores.visibility, digest.previousSubScores.visibility)
+        }
+      : null,
+    digest.subScores.standing !== null
+      ? {
+          label: "Cuota de voz",
+          value: `${Math.round(digest.subScores.standing)}%`,
+          delta: subScoreDelta(digest.subScores.standing, digest.previousSubScores.standing)
+        }
+      : null,
+    digest.subScores.citation !== null
+      ? {
+          label: "Autoridad",
+          value: `${Math.round(digest.subScores.citation)}%`,
+          delta: subScoreDelta(digest.subScores.citation, digest.previousSubScores.citation)
+        }
+      : null
+  ].filter((e): e is { label: string; value: string; delta: DeltaPill | null } => e !== null);
 
   const subScoreHtml = subScoreEntries.length
     ? `
       ${sectionLabel("Visión general")}
       ${statRow(
         subScoreEntries
-          .map((e, i) => statCell(e.value, e.label, i === 0 ? "em-stack-td" : "em-stack-td em-stack-second"))
+          .map((e, i) => statCell(e.value, e.label, i === 0 ? "em-stack-td" : "em-stack-td em-stack-second", e.delta))
           .join("")
       )}`
     : "";
@@ -444,6 +495,7 @@ export async function sendWeeklyDigestEmail(
             <div class="em-score-num" style="font-size:46px;font-weight:800;color:#0B1426;line-height:1;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums;">${Math.round(
               digest.currentScore
             )}</div>
+            ${scoreBar(Math.round(digest.currentScore), pill.ink)}
           </td>
           <td class="em-stack-td em-stack-second em-align-left-mobile" style="padding:22px 24px;vertical-align:middle;text-align:right;">
             <span style="display:inline-block;background:${pill.bg};color:${pill.ink};font-weight:700;font-size:14px;padding:7px 13px;border-radius:999px;">${pill.label}</span>
