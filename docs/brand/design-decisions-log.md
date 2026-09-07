@@ -18982,3 +18982,51 @@ igual). P2 — polish visual, no bloqueante de flujo.
 
 **Trazabilidad.** `components/billing/plan-billing-section.tsx`;
 `components/ui/button.tsx` (acepta `className` como override, sin cambios).
+
+## 202. Un comentario de código se envió tal cual dentro del correo de resumen semanal (2026-09-07)
+
+**Qué se decidió.** El fundador reportó (adjuntando el correo real recibido)
+que el resumen semanal de `sendWeeklyDigestEmail` (`lib/email/
+transactional.ts`) mostraba, visible en el cuerpo del correo, un bloque de
+texto con forma de comentario JSX: `{/* TRUST-METRICS-1: digest.currentScore
+es el compuesto del run más reciente... */}`. La causa: ese comentario, escrito
+al cerrar TRUST-METRICS-1 (§183, PR #493) para documentar por qué
+`digest.currentScore` es el compuesto del run y no la puntuación con ventana,
+se escribió dentro del template literal de HTML que compone el correo —
+`wrap(\`...\`)` es una cadena de texto plano, no JSX, así que `{/* ... */}` no
+es sintaxis de comentario ahí: es texto literal que se interpola tal cual y
+sale en el HTML que recibe el cliente. Se movió el comentario fuera del
+template literal, como JSDoc real sobre `sendWeeklyDigestEmail`, conservando
+el mismo contenido explicativo. Se añadió un test de regresión en
+`lib/email/transactional.test.ts` que envía el resumen semanal y comprueba que
+el HTML no contiene `{/*` — la misma clase de comprobación que ya existía para
+"el error del proveedor sale escapado", aplicada a esta forma nueva de fuga.
+
+**Por qué.** Nadie miró el HTML renderizado del correo tras TRUST-METRICS-1 —
+sólo el comentario de la capa de datos (`getSubScores`, `getEffectiveGeoScore`)
+en la revisión de aquel PR — así que un comentario perfectamente razonable en
+código se convirtió en ruido visible para cada cliente que recibe el resumen
+semanal desde el 2026-08-27. El síntoma es idéntico en forma al patrón que
+`docs/brand/design-decisions-log.md` ya lleva años corrigiendo caso por caso en
+otras zonas (una capa se revisa, la superficie que el usuario ve realmente no):
+aquí la superficie es un correo, no una pantalla, y por eso no lo capturaba
+ningún pilotaje de UI.
+
+**Alcance.** Un solo fichero de producción (`lib/email/transactional.ts`, la
+única aparición de `{/*` en el módulo — comprobado) más su test. Sin cambio de
+datos, de destinatario ni de maquetado visual; el correo dice exactamente lo
+mismo que decía, menos el comentario colado. P0 de facto para la zona de
+correos transaccionales — es el único módulo del repositorio cuyo fallo llega
+a la bandeja del cliente y no se puede deshacer (nota ya existente al principio
+de `lib/email/transactional.test.ts`).
+
+**Pendiente.** El correo semanal fue, además, la ocasión para que el fundador
+comparta como referencia el "Site Audit" que envía Semrush — sugiriendo un
+indicador más visual (tipo barra/gráfico de color) para las métricas del
+resumen en vez de sólo cifras. Es una propuesta de diseño para una superficie
+nueva (el propio correo), no una consecuencia necesaria de este bug — queda
+fuera de este PR y pendiente de Task Intake propio.
+
+**Trazabilidad.** `lib/email/transactional.ts` (`sendWeeklyDigestEmail`);
+`lib/email/transactional.test.ts`; §183 (TRUST-METRICS-1, origen del
+comentario).
