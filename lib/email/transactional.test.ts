@@ -263,6 +263,7 @@ describe("contenido: lo que sería un fallo de verdad", () => {
       currentScore: 62,
       previousScore: 58,
       subScores: { visibility: 40, citation: 30, standing: 20 },
+      previousSubScores: { visibility: 40, citation: 30, standing: 20 },
       topMover: null,
       recommendation: null,
       activeRecommendationsCount: 0,
@@ -274,5 +275,86 @@ describe("contenido: lo que sería un fallo de verdad", () => {
     const { html } = lastPayload();
     expect(html).not.toContain("{/*");
     expect(html).toContain("Puntuación de este escaneo");
+  });
+});
+
+describe("WEEKLY-DIGEST-VISUAL-1: indicador visual y deltas por sub-score", () => {
+  it("la barra de la puntuación principal se rellena en proporción a la cifra, en verde cuando sube", async () => {
+    await sendWeeklyDigestEmail(CUSTOMER, "ejemplo.com", {
+      currentScore: 70,
+      previousScore: 50,
+      subScores: { visibility: null, citation: null, standing: null },
+      previousSubScores: { visibility: null, citation: null, standing: null },
+      topMover: null,
+      recommendation: null,
+      activeRecommendationsCount: 0,
+      promptsCount: 0,
+      competitorsCount: 0,
+      scansThisWeek: 0
+    });
+
+    const { html } = lastPayload();
+    expect(html).toContain("width:70%");
+    expect(html).toContain("width:30%");
+    expect(html).toContain("#15915A"); // verde: mismo color que el pill "▲ +20 pts"
+  });
+
+  it("la barra usa el rojo del pill cuando la puntuación baja", async () => {
+    await sendWeeklyDigestEmail(CUSTOMER, "ejemplo.com", {
+      currentScore: 40,
+      previousScore: 60,
+      subScores: { visibility: null, citation: null, standing: null },
+      previousSubScores: { visibility: null, citation: null, standing: null },
+      topMover: null,
+      recommendation: null,
+      activeRecommendationsCount: 0,
+      promptsCount: 0,
+      competitorsCount: 0,
+      scansThisWeek: 0
+    });
+
+    const { html } = lastPayload();
+    expect(html).toContain("width:40%");
+    expect(html).toContain("#D23B48"); // rojo: mismo color que el pill "▼ -20 pts"
+  });
+
+  it("cada sub-score muestra su propio delta semana-sobre-semana", async () => {
+    await sendWeeklyDigestEmail(CUSTOMER, "ejemplo.com", {
+      currentScore: 62,
+      previousScore: 58,
+      subScores: { visibility: 45, citation: 30, standing: 20 },
+      previousSubScores: { visibility: 40, citation: 30, standing: 25 },
+      topMover: null,
+      recommendation: null,
+      activeRecommendationsCount: 0,
+      promptsCount: 0,
+      competitorsCount: 0,
+      scansThisWeek: 0
+    });
+
+    const { html } = lastPayload();
+    expect(html).toContain("▲ +5 pts"); // Presencia: 45 vs 40
+    expect(html).toContain("Sin cambios"); // Cuota de voz: 30 vs 30 — coincide con el pill principal, no lo confunde
+    expect(html).toContain("▼ -5 pts"); // Autoridad: 20 vs 25
+  });
+
+  it("no muestra delta de un sub-score cuando falta el valor anterior — no inventa una comparación", async () => {
+    await sendWeeklyDigestEmail(CUSTOMER, "ejemplo.com", {
+      currentScore: 60,
+      previousScore: 60, // sin cambio en la puntuación principal, para aislar el comportamiento del sub-score
+      subScores: { visibility: 45, citation: null, standing: null },
+      previousSubScores: { visibility: null, citation: null, standing: null },
+      topMover: null,
+      recommendation: null,
+      activeRecommendationsCount: 0,
+      promptsCount: 0,
+      competitorsCount: 0,
+      scansThisWeek: 0
+    });
+
+    const { html } = lastPayload();
+    expect(html).toContain("45%");
+    expect(html).not.toContain("▲");
+    expect(html).not.toContain("▼");
   });
 });
