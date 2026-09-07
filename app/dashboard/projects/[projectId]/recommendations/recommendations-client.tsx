@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
+import { useActionFeedback, ActionAnnouncement } from "@/components/ui/action-feedback";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
-import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
+import {
+  rewriteRecommendationAction,
+  dismissRecommendationAction,
+  restoreRecommendationAction
+} from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
 import {
   GROUP_PREVIEW_SIZE,
@@ -215,6 +220,17 @@ export type ResolvedHistoryItem = {
   verification?: { status: "verified"; verdict: PredictionVerdict } | { status: "no_verdict" } | null;
   /** RECS-LOOP-1 Fase B — only ever set for status="dismissed". */
   recurrence?: RecurrenceVerdict | null;
+  /**
+   * ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4) —
+   * gates the durable "Deshacer" on a dismissed row. The active list filters
+   * `run_id = latestCompletedRun.id AND status='active'`
+   * (recommendations/page.tsx), so restoring a row whose `run_id` belongs to
+   * an OLDER run flips its status but leaves it invisible everywhere — not
+   * in the current active list (wrong run_id), not in history anymore
+   * (status changed). "Deshacer" only ever renders when this matches the
+   * screen's own `latestCompletedRunId` prop.
+   */
+  run_id: string;
 };
 
 /** Same day/month/year format used for a history row's own dateLabel below —
@@ -502,14 +518,37 @@ function ExampleBlock({ example, showCaption }: { example: GeneratedSolutionExam
 }
 
 /**
- * Read-only row for the "Resueltas" tab (RECS-3) — no expand, no evidence, no
- * action buttons; this is history, not the active backlog. Covers both
- * automatically-resolved (the gap stopped recurring in a later scan) and
- * manually-dismissed (the user marked it done/not applicable) items.
+ * Read-only row for the "Resueltas" tab (RECS-3) — no expand, no evidence.
+ * Covers both automatically-resolved (the gap stopped recurring in a later
+ * scan) and manually-dismissed (the user marked it done/not applicable)
+ * items. The one action it DOES carry — "Deshacer" on a dismissed row — is
+ * deliberately here and not on the active card: it's the durable landing
+ * spot for the action that just moved this row here, not an ephemeral flash
+ * that vanishes the moment the user does anything else (ACTIONS-OBSERVABLE-1
+ * slice 4a, founder feedback 2026-09-07).
  */
-function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
+export function ResolvedHistoryCard({
+  item,
+  projectId,
+  latestCompletedRunId
+}: {
+  item: ResolvedHistoryItem;
+  projectId: string;
+  /** See ResolvedHistoryItem.run_id's own doc comment for why this gates it. */
+  latestCompletedRunId: string | null;
+}) {
   const dateLabel = formatHistoryDate(item.updated_at);
   const verdictLine = predictionVerdictLine(item);
+  const router = useRouter();
+  const restoreFeedback = useActionFeedback();
+  const canUndo = item.status === "dismissed" && item.run_id === latestCompletedRunId;
+
+  function handleRestore() {
+    restoreFeedback.run(() => restoreRecommendationAction({ projectId, recommendationId: item.id }), {
+      successMessage: "Restaurada.",
+      onSuccess: () => router.refresh()
+    });
+  }
 
   return (
     <div className="rec-card">
@@ -553,6 +592,30 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
           )}
         </div>
       </div>
+      {/* Sibling of `.rec-main`, never a second child inside it — that grid
+          expects exactly one (see the comment above). Only rendered for a
+          dismissed row from the CURRENT run; see canUndo's own doc comment
+          on ResolvedHistoryItem.run_id for why an older run can't offer this
+          safely. */}
+      {canUndo && (
+        <div style={{ padding: "0 16px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={handleRestore}
+            disabled={restoreFeedback.isPending}
+          >
+            {restoreFeedback.isPending ? (
+              <>
+                <span className="btn-spinner" /> Deshaciendo…
+              </>
+            ) : (
+              "Deshacer"
+            )}
+          </button>
+          <ActionAnnouncement state={restoreFeedback.state} />
+        </div>
+      )}
     </div>
   );
 }
@@ -587,45 +650,38 @@ export function RecCard({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [isRewriting, startRewrite] = useTransition();
-  const [rewriteError, setRewriteError] = useState<string | null>(null);
-  const [isDismissing, startDismiss] = useTransition();
-  const [dismissError, setDismissError] = useState<string | null>(null);
   const router = useRouter();
+
+  // ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4,
+  // P0-04) — both actions on this card now go through the shared contract
+  // (pending / success with acknowledgement / categorized error, never
+  // nothing) instead of a hand-rolled useState+useTransition pair each.
+  const rewriteFeedback = useActionFeedback();
+  const dismissFeedback = useActionFeedback();
 
   function handleRewrite(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setRewriteError(null);
-    startRewrite(async () => {
-      try {
-        const result = await rewriteRecommendationAction({ projectId, recommendationId: rec.id });
-        if (!result.success) {
-          setRewriteError(result.error);
-          return;
-        }
-        router.refresh();
-      } catch {
-        setRewriteError("No se ha podido generar la propuesta en este momento. Inténtalo de nuevo en unos minutos.");
-      }
+    rewriteFeedback.run(() => rewriteRecommendationAction({ projectId, recommendationId: rec.id }), {
+      successMessage: "Propuesta generada.",
+      onSuccess: () => router.refresh()
     });
   }
 
   function handleDismiss(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setDismissError(null);
-    startDismiss(async () => {
-      try {
-        const result = await dismissRecommendationAction({ projectId, recommendationId: rec.id });
-        if (!result.success) {
-          setDismissError(result.error);
-          return;
-        }
-        router.refresh();
-      } catch {
-        setDismissError("No se ha podido actualizar la recomendación en este momento. Inténtalo de nuevo en unos minutos.");
-      }
+    // Same pattern as handleRewrite: an ephemeral "Deshacer" that lived only
+    // on THIS card (no refresh, until navigation) tested confusing — it read
+    // as "gone after a second" the moment the user did anything else, and a
+    // deshacer that doesn't survive leaving the screen isn't one (founder,
+    // 2026-09-07). The durable "Deshacer" now lives on the tarjeta's landing
+    // spot instead — ResolvedHistoryCard, under "Resueltas" — gated to the
+    // current run so it can't restore a row the active list can no longer
+    // show (see that component's own comment for the exact condition).
+    dismissFeedback.run(() => dismissRecommendationAction({ projectId, recommendationId: rec.id }), {
+      successMessage: "Marcada como hecha.",
+      onSuccess: () => router.refresh()
     });
   }
 
@@ -1063,12 +1119,22 @@ export function RecCard({
           </div>
 
           {/* Mejorar redacción con IA — el botón solo aparece mientras no haya
-              una solución generada; una vez generada, se muestra la insignia. */}
+              una solución generada; una vez generada, se muestra la insignia.
+              El acuse de éxito (ActionAnnouncement) se enseña en el mismo
+              punto del clic, no sólo en el resultado que aparece más abajo
+              (ACTIONS-OBSERVABLE-1 slice 4a — "generar" era invisible según
+              la clasificación de la Fase 0, docs/external-audit-2026-08.md
+              Fase 4, P0-04). */}
           <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             {!rec.solution ? (
               <>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
-                  {isRewriting ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleRewrite}
+                  disabled={rewriteFeedback.isPending}
+                >
+                  {rewriteFeedback.isPending ? (
                     <>
                       <span className="btn-spinner" /> Generando…
                     </>
@@ -1079,11 +1145,7 @@ export function RecCard({
                     </>
                   )}
                 </button>
-                {rewriteError && (
-                  <p className="feedback error" style={{ margin: 0 }}>
-                    {rewriteError}
-                  </p>
-                )}
+                <ActionAnnouncement state={rewriteFeedback.state} />
               </>
             ) : (
               <span className="badge badge-outline">
@@ -1092,11 +1154,22 @@ export function RecCard({
               </span>
             )}
 
-            {/* Marcar como hecho (RECS-3) — dismisses the recommendation;
-                router.refresh() removes it from view since the page only
-                fetches status='active' rows. */}
-            <button type="button" className="btn btn-ghost btn-sm" onClick={handleDismiss} disabled={isDismissing}>
-              {isDismissing ? (
+            {/* Marcar como hecho (RECS-3). El acuse de éxito se ve en el
+                punto del clic (ActionAnnouncement) antes de que
+                router.refresh() la quite de la lista de activas — mismo
+                patrón que "Generar". El deshacer NO vive aquí: una versión
+                efímera que sólo sobrevivía mientras la tarjeta seguía
+                montada resultó confusa ("aparece un segundo y ya está en
+                Resueltas", founder 2026-09-07) — vive de forma durable en
+                ResolvedHistoryCard, bajo la pestaña "Resueltas", donde de
+                verdad sigue disponible después de refrescar. */}
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={handleDismiss}
+              disabled={dismissFeedback.isPending}
+            >
+              {dismissFeedback.isPending ? (
                 <>
                   <span className="btn-spinner" /> Actualizando…
                 </>
@@ -1107,19 +1180,16 @@ export function RecCard({
                 </>
               )}
             </button>
-            {dismissError && (
-              <p className="feedback error" style={{ margin: 0 }}>
-                {dismissError}
-              </p>
-            )}
+            <ActionAnnouncement state={dismissFeedback.state} />
             {/* RECURRING-VALUE-1 (docs/external-audit-2026-08.md, Fase 3):
                 closes the loop this button opens — RECS-LOOP-1 already
-                verifies on the next comparable scan whether a dismissed gap
-                actually closed (pestaña "Resueltas"), but nothing on the
-                active card said that check was coming. No date: the exact
-                schedule is a separate deliverable (calendario visible), this
-                is just the promise that a scan will judge it. */}
-            {!dismissError && (
+                verifies on the next comparable scan whether a dismissed
+                gap actually closed (pestaña "Resueltas"), but nothing on
+                the active card said that check was coming. No date: the
+                exact schedule is a separate deliverable (calendario
+                visible), this is just the promise that a scan will judge
+                it. */}
+            {dismissFeedback.state.status === "idle" && (
               <p style={{ margin: 0, fontSize: 11.5, color: "var(--ink-4)" }}>
                 La verás reflejada en tu próximo escaneo.
               </p>
@@ -1290,6 +1360,7 @@ export function RecommendationsClient({
   planIds = [],
   planPoints = null,
   domain = "",
+  latestCompletedRunId = null,
 }: {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
@@ -1303,6 +1374,11 @@ export function RecommendationsClient({
   /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
   planPoints?: number | null;
   domain?: string;
+  /** Gates "Deshacer" on a dismissed row in "Resueltas" — see
+   * ResolvedHistoryItem.run_id's doc comment. Null on any host screen that
+   * doesn't pass it (e.g. web-audit's embedded RecCard usage never renders
+   * ResolvedHistoryCard, so it never needs this). */
+  latestCompletedRunId?: string | null;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
@@ -1469,8 +1545,39 @@ export function RecommendationsClient({
       {filter !== "resolved" &&
         (filtered.length === 0 ? (
           <div className="section-empty">
-            <div className="section-empty-title">Nada con este filtro</div>
-            <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
+            {filter === "all" ? (
+              <>
+                {/* "Todas" is the superset — reaching zero here means zero
+                    active recommendations, not "wrong filter" (that's the
+                    branch below). ACTIONS-OBSERVABLE-1 slice 4a: this is
+                    exactly the state a user lands in right after marking
+                    their last active recommendation done, so it points at
+                    where that action actually went instead of reading like
+                    it vanished (founder feedback 2026-09-07). */}
+                <div className="section-empty-title">Nada que corregir ahora mismo</div>
+                <div className="section-empty-desc">
+                  {resolvedHistory.length > 0
+                    ? "Lo que ya has resuelto está en la pestaña “Resueltas”."
+                    : "Vuelve tras tu próximo escaneo."}
+                </div>
+                {resolvedHistory.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ marginTop: 14 }}
+                    onClick={() => setFilter("resolved")}
+                  >
+                    Ver Resueltas
+                    <Icon name="arrRight" size={14} />
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="section-empty-title">Nada con este filtro</div>
+                <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
+              </>
+            )}
           </div>
         ) : filter === "all" ? (
           groupByType(filtered).map(({ type, items }) => (
@@ -1488,7 +1595,14 @@ export function RecommendationsClient({
 
       {filter === "resolved" &&
         (resolvedHistory.length > 0 ? (
-          resolvedHistory.map((item) => <ResolvedHistoryCard key={item.id} item={item} />)
+          resolvedHistory.map((item) => (
+            <ResolvedHistoryCard
+              key={item.id}
+              item={item}
+              projectId={projectId}
+              latestCompletedRunId={latestCompletedRunId}
+            />
+          ))
         ) : (
           <div className="section-empty">
             <div className="section-empty-title">Todavía no hay nada resuelto</div>
