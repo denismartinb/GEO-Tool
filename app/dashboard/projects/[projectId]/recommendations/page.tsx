@@ -450,8 +450,11 @@ export default async function RecommendationsPage({
     }
   }
 
-  // Trimmed to what the client actually renders — evidence_json/run_id stay
+  // Trimmed to what the client actually renders — evidence_json stays
   // server-side, never sent over the wire for a compact history row.
+  // `run_id` DOES cross now (ACTIONS-OBSERVABLE-1 slice 4a): it's what gates
+  // the durable "Deshacer" on a dismissed row to the current run — see
+  // ResolvedHistoryItem.run_id's own doc comment in recommendations-client.tsx.
   const resolvedHistoryForClient = resolvedHistory.map((r) => ({
     id: r.id,
     title: r.title,
@@ -459,6 +462,7 @@ export default async function RecommendationsPage({
     recommendation_type: r.recommendation_type,
     status: r.status,
     updated_at: r.updated_at,
+    run_id: r.run_id,
     verification: verificationByRecId.get(r.id) ?? null,
     recurrence: r.status === "dismissed" ? (recurrenceByRecId.get(r.id) ?? null) : null,
   }));
@@ -900,11 +904,19 @@ export default async function RecommendationsPage({
                 <Icon name="arrRight" size={14} />
               </Link>
             </div>
-          ) : recs.length === 0 ? (
+          ) : recs.length === 0 && resolvedHistoryForClient.length === 0 ? (
             // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
             // "Ver detalle del escaneo" link to /runs/[runId] is retired from
             // this empty state, same reasoning as Citas — the route is no
             // longer part of the end-user console, only /debug.
+            //
+            // ACTIONS-OBSERVABLE-1 slice 4a (founder feedback 2026-09-07):
+            // this branch used to fire on `recs.length === 0` alone, which
+            // meant `RecommendationsClient` never even mounted the moment the
+            // last active recommendation was marked done — losing the
+            // "Resueltas" tab (and its data, already fetched) entirely, with
+            // no way back to what the user just did. Now it only fires when
+            // there is truly nothing anywhere, active or historical.
             <div className="section-empty" style={{ marginTop: 20 }}>
               <div className="section-empty-title">Nada que corregir ahora mismo</div>
               <div className="section-empty-desc">
@@ -922,6 +934,7 @@ export default async function RecommendationsPage({
               planIds={planIds}
               planPoints={planPoints}
               domain={project.domain}
+              latestCompletedRunId={latestCompletedRun.id}
             />
           )}
         </div>

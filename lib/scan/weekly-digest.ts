@@ -155,6 +155,7 @@ export async function runWeeklyDigest({
     const currentScore = getEffectiveGeoScore(currentRow);
     const previousScore = getEffectiveGeoScore(previousRow);
     const subScores = getSubScores(currentRow);
+    const previousSubScores = getSubScores(previousRow);
     const topMover = getTopCompetitorMover(currentRow, previousRow);
 
     const scansSinceIso = new Date(Date.now() - SCANS_THIS_WEEK_WINDOW_MS).toISOString();
@@ -193,6 +194,7 @@ export async function runWeeklyDigest({
       currentScore,
       previousScore,
       subScores,
+      previousSubScores,
       topMover,
       recommendation: topRecommendation ?? null,
       activeRecommendationsCount: activeRecommendationsCount ?? 0,

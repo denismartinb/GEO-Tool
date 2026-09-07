@@ -18987,7 +18987,7 @@ igual). P2 — polish visual, no bloqueante de flujo.
 
 ---
 
-## 202. "Marcar como hecho" volvía a fallar tras el arreglo del clic — pero era el mismo test, no el producto (2026-09-01)
+## 207. "Marcar como hecho" volvía a fallar tras el arreglo del clic — pero era el mismo test, no el producto (2026-09-01)
 
 **Lo que pasó tras §198.** Con el clic ya llegando al botón, un tercer
 disparo real de `ux-pilot-actions.yml` contra un preview con el arreglo
@@ -19043,3 +19043,357 @@ todavía contra un disparo real — pendiente el próximo `--journeys actions`.
 **Trazabilidad.** `tests/pilot/journeys/actions/
 recommendation-actions.spec.ts`; `lib/recommendations/dismiss-recommendation.ts`
 (leído, sin cambios); log §198; `docs/external-audit-2026-08.md` Fase 4.
+
+---
+
+## 202. Un comentario de código se envió tal cual dentro del correo de resumen semanal (2026-09-07)
+
+**Qué se decidió.** El fundador reportó (adjuntando el correo real recibido)
+que el resumen semanal de `sendWeeklyDigestEmail` (`lib/email/
+transactional.ts`) mostraba, visible en el cuerpo del correo, un bloque de
+texto con forma de comentario JSX: `{/* TRUST-METRICS-1: digest.currentScore
+es el compuesto del run más reciente... */}`. La causa: ese comentario, escrito
+al cerrar TRUST-METRICS-1 (§183, PR #493) para documentar por qué
+`digest.currentScore` es el compuesto del run y no la puntuación con ventana,
+se escribió dentro del template literal de HTML que compone el correo —
+`wrap(\`...\`)` es una cadena de texto plano, no JSX, así que `{/* ... */}` no
+es sintaxis de comentario ahí: es texto literal que se interpola tal cual y
+sale en el HTML que recibe el cliente. Se movió el comentario fuera del
+template literal, como JSDoc real sobre `sendWeeklyDigestEmail`, conservando
+el mismo contenido explicativo. Se añadió un test de regresión en
+`lib/email/transactional.test.ts` que envía el resumen semanal y comprueba que
+el HTML no contiene `{/*` — la misma clase de comprobación que ya existía para
+"el error del proveedor sale escapado", aplicada a esta forma nueva de fuga.
+
+**Por qué.** Nadie miró el HTML renderizado del correo tras TRUST-METRICS-1 —
+sólo el comentario de la capa de datos (`getSubScores`, `getEffectiveGeoScore`)
+en la revisión de aquel PR — así que un comentario perfectamente razonable en
+código se convirtió en ruido visible para cada cliente que recibe el resumen
+semanal desde el 2026-08-27. El síntoma es idéntico en forma al patrón que
+`docs/brand/design-decisions-log.md` ya lleva años corrigiendo caso por caso en
+otras zonas (una capa se revisa, la superficie que el usuario ve realmente no):
+aquí la superficie es un correo, no una pantalla, y por eso no lo capturaba
+ningún pilotaje de UI.
+
+**Alcance.** Un solo fichero de producción (`lib/email/transactional.ts`, la
+única aparición de `{/*` en el módulo — comprobado) más su test. Sin cambio de
+datos, de destinatario ni de maquetado visual; el correo dice exactamente lo
+mismo que decía, menos el comentario colado. P0 de facto para la zona de
+correos transaccionales — es el único módulo del repositorio cuyo fallo llega
+a la bandeja del cliente y no se puede deshacer (nota ya existente al principio
+de `lib/email/transactional.test.ts`).
+
+**Pendiente.** El correo semanal fue, además, la ocasión para que el fundador
+comparta como referencia el "Site Audit" que envía Semrush — sugiriendo un
+indicador más visual (tipo barra/gráfico de color) para las métricas del
+resumen en vez de sólo cifras. Es una propuesta de diseño para una superficie
+nueva (el propio correo), no una consecuencia necesaria de este bug — queda
+fuera de este PR y pendiente de Task Intake propio.
+
+**Trazabilidad.** `lib/email/transactional.ts` (`sendWeeklyDigestEmail`);
+`lib/email/transactional.test.ts`; §183 (TRUST-METRICS-1, origen del
+comentario).
+
+---
+
+## 203. "Generar" y "marcar como hecho" dejan de terminar en silencio (ACTIONS-OBSERVABLE-1 slice 4a, 2026-09-06)
+
+**Origen.** Fase 4 del plan de la auditoría externa
+(`docs/external-audit-2026-08.md`, "ACTIONS-OBSERVABLE-1: ninguna acción
+silenciosa", P0-04), con el reparto exacto ya resuelto por la Fase 0
+(AUDIT-REPRO-1, log §187/§193/§198/§207): de las seis acciones de
+Recomendaciones, "generar" (FAQ/brief/comparativa) y "activar seguimiento
+recurrente" quedaron clasificadas `invisible`; "exportar plan" y "marcar como
+hecho" `real` — la segunda sin ninguna vía de deshacer. Task Intake aprobado
+por el fundador el 2026-09-06, con el reparto en cuatro slices (4a-4d) y 4a
+primero: el contrato de acción compartido más las dos acciones de la propia
+tarjeta. 4b ("exportar plan" + "activar seguimiento") queda fuera a
+propósito — toca `DataMaturityBanner`, montado en las seis pantallas de la
+consola, y mezclarlo aquí habría producido el PR grande que `CLAUDE.md`
+prohíbe.
+
+**Qué se decidió.**
+
+1. **Contrato de acción compartido**, `lib/ui/action-feedback.ts` (reducer
+   puro: `idle | pending | success | error`, testeable sin DOM — misma
+   disciplina que `lib/onboarding/tour-steps.ts`) + `components/ui/
+   action-feedback.tsx` (el hook `useActionFeedback` que envuelve el reducer
+   en `useReducer`/`useTransition`, y `ActionAnnouncement`, que pinta el
+   acuse/error con `role="status"` `aria-live="polite"` — ninguna de las seis
+   acciones anunciaba nada hasta ahora). `RecCard` migra sus dos acciones
+   (`handleRewrite`, `handleDismiss`) a este hook en vez de un par
+   `useState`+`useTransition` propio cada una.
+2. **"Generar propuesta con IA"**: el éxito muestra un acuse en el propio
+   punto del clic (`ActionAnnouncement`, "Propuesta generada.") antes de que
+   `router.refresh()` traiga la fila `solution` real y la insignia
+   "Propuesta generada" la sustituya. No estaba realmente "en un panel
+   plegado" — el botón sólo es alcanzable con la tarjeta ya abierta — pero el
+   éxito no daba ninguna señal en el punto del clic, sólo un cambio de icono
+   a varias líneas de distancia.
+3. **"Marcar como hecho" gana deshacer — pero no en la tarjeta activa.**
+   `lib/recommendations/restore-recommendation.ts` es el espejo exacto de
+   `dismiss-recommendation.ts` (misma reverificación de propiedad con el
+   cliente de usuario, misma escritura service-role, mismo patrón de
+   idempotencia) y revierte `status` a `'active'`. **Sin migración**:
+   `rec_status_chk` (`0010_recommendations_history.sql`) ya admite `'active'`.
+   La primera versión de esta fase probó un deshacer **efímero**: al marcar
+   como hecho, la tarjeta activa no llamaba a `router.refresh()` y se
+   sustituía in situ por un acuse + "Deshacer", vivo hasta que el usuario
+   navegara. El fundador lo probó en el preview y lo rechazó de inmediato
+   (2026-09-07): *"aparece deshacer un segundo y la recomendación se va ya a
+   la pestaña resueltas. Debe aparecer el botón de deshacer en la pestaña
+   resueltas, sino no sirve de nada"* — un deshacer que no sobrevive a nada
+   no es un deshacer, es una animación. `handleDismiss` vuelve a llamar a
+   `router.refresh()` en su éxito, como el resto de acciones de la tarjeta;
+   el "Deshacer" real vive en `ResolvedHistoryCard`, bajo "Resueltas" —
+   donde la fila aterriza de verdad y donde sigue estando disponible después
+   de recargar.
+4. **El deshacer en "Resueltas" se ofrece SÓLO para una fila descartada del
+   run vigente** (`item.status === 'dismissed' && item.run_id ===
+   latestCompletedRunId`). La lista activa filtra por
+   `run_id = latestCompletedRun.id AND status='active'`
+   (`recommendations/page.tsx`): restaurar una fila de un run más antiguo
+   volvería su `status` a `'active'` pero la dejaría invisible en todas
+   partes — no en la lista activa (su `run_id` no es el del run vigente), y
+   ya no en "Resueltas" (dejó de tener un `status` que la tabla lista). Esto
+   exigió sacar `run_id` del recorte que `page.tsx` aplicaba antes de pasar
+   `ResolvedHistoryItem` al cliente (comentario "stays server-side" ya
+   desactualizado) y pasar `latestCompletedRunId` como prop nueva a
+   `RecommendationsClient`.
+5. **El deshacer llama a `router.refresh()` en su éxito, sin excepción.** A
+   diferencia del diseño efímero descartado, aquí SÍ se quiere que la
+   pantalla entera se resincronice: la fila tiene que desaparecer de
+   "Resueltas" y la lista activa tiene que volver a incluirla.
+6. **Efecto colateral encontrado por el fundador al probarlo, corregido en el
+   mismo PR.** Antes de esta fase, `page.tsx` montaba el estado vacío de
+   nivel superior ("Nada que corregir ahora mismo") en cuanto `recs.length
+   === 0`, sin mirar si había historial — así que marcar como hecha la
+   ÚNICA recomendación activa de una cuenta hacía desaparecer
+   `RecommendationsClient` entero, con él la pestaña "Resueltas" y sus
+   datos (ya pedidos al servidor, simplemente descartados). El fundador lo
+   vio primero como una pantalla que parecía haber "borrado" su acción. La
+   condición pasa a `recs.length === 0 && resolvedHistoryForClient.length
+   === 0` — el vacío de nivel superior sólo dispara cuando de verdad no hay
+   nada en ningún sitio — y el vacío interno de `RecommendationsClient`
+   (para cuando llega aquí con cero activas pero sí historial) cambia de
+   "Nada con este filtro / Vuelve a Todas" — incorrecto, ya se está en
+   "Todas" — a un mensaje que señala dónde está lo que se acaba de hacer,
+   con un botón directo a "Resueltas".
+
+**Lo que NO se ha tocado en este slice (4b, aparte).** "Exportar plan" sigue
+sin acuse ni salida alternativa a la descarga; "activar seguimiento
+recurrente" sigue redirigiendo a `/debug` en éxito y en error. Ambas tocan
+`DataMaturityBanner`/`app/dashboard/projects/[projectId]/actions.ts`
+(`setRecurringScans`), fuera del alcance aprobado para 4a.
+
+**Límite de cobertura, declarado explícitamente.** `renderToStaticMarkup` no
+ejecuta clics, así que ningún test puede afirmar que un clic real en
+"Deshacer" restaura la fila y refresca la pantalla. Lo que SÍ se prueba por
+render, exportando `ResolvedHistoryCard` igual que ya se exporta `RecCard`:
+las cuatro combinaciones de la condición de la regla 4 — se ofrece para una
+fila descartada del run vigente; NO se ofrece para una fila de un run más
+antiguo; NO se ofrece sobre una fila resuelta automáticamente (sólo aplica a
+un descarte manual); NO se ofrece cuando la pantalla no tiene
+`latestCompletedRunId`. La transición real a "éxito" tras el clic sólo la
+puede verificar una pasada de `--journeys actions` contra un preview real,
+todavía no disparada para este PR — el fundador decide cuándo.
+
+**Comprobado.** `pnpm test` (3105/3105), `pnpm run validate` (build +
+typecheck + lint) en verde.
+
+**Trazabilidad.** `lib/ui/action-feedback.ts` + `.test.ts` (nuevo);
+`components/ui/action-feedback.tsx` (nuevo); `lib/recommendations/
+restore-recommendation.ts` + `.test.ts` (nuevo); `app/dashboard/projects/
+[projectId]/actions.ts` (`restoreRecommendationAction`); `app/dashboard/
+projects/[projectId]/recommendations/page.tsx` (`resolvedHistoryForClient`
+lleva `run_id`, condición del vacío de nivel superior, prop
+`latestCompletedRunId`); `app/dashboard/projects/[projectId]/recommendations/
+recommendations-client.tsx` (`RecCard`, `ResolvedHistoryCard` — ahora
+exportada); su test; `docs/external-audit-2026-08.md` Fase 4; log §187,
+§193, §198, §207.
+
+---
+
+## 204. Indicadores visuales en el correo de resumen semanal (WEEKLY-DIGEST-VISUAL-1, 2026-09-07)
+
+**Qué se decidió.** El fundador compartió como referencia el correo de "Site
+Audit" de Semrush — cifras acompañadas de una barra de color proporcional — y
+preguntó si merecía la pena algo similar en el resumen semanal de GenScore.
+Tras Task Intake aprobado, se añadieron dos cosas a `sendWeeklyDigestEmail`
+(`lib/email/transactional.ts`):
+
+1. Una barra horizontal de color bajo "Puntuación de este escaneo"
+   (`scoreBar`), rellena en proporción a la cifra (0–100) y coloreada con el
+   mismo verde/rojo/gris que ya usaba el pill de delta — nunca una escala de
+   color nueva. Implementada con una tabla de dos `td` (ancho en % +
+   `background-color`), no SVG ni gradiente CSS: los clientes de correo
+   (Outlook en particular) no renderizan ninguno de los dos de forma fiable.
+2. Un delta semana-sobre-semana en cada una de las tres sub-scores
+   (Presencia, Cuota de voz, Autoridad) — dato que ya existía sin usar:
+   `runWeeklyDigest` (`lib/scan/weekly-digest.ts`) lee `previousRow` para
+   calcular `previousScore`, pero nunca le aplicaba `getSubScores`. Ahora se
+   calcula `previousSubScores` de la misma fila ya leída — sin query nueva —
+   y se pasa a `sendWeeklyDigestEmail`, que sólo muestra el delta de un
+   sub-score cuando AMBOS runs lo calcularon (nunca compara contra un
+   componente ausente, mismo principio que ya aplicaba `subScoreEntries` para
+   decidir si mostrar la cifra en sí).
+
+Se extrajo `deltaPill(delta)` como función compartida entre el pill principal
+y los tres nuevos deltas — antes la lógica ▲/▼/"Sin cambios" sólo existía
+inline para la puntuación principal.
+
+**Por qué.** El correo ya calculaba todos estos números; sólo los mostraba
+como cifras planas. Añadir la barra y los deltas no inventa ninguna métrica
+—CLAUDE.md lo prohíbe explícitamente ("fake metrics")— sólo hace visible una
+comparación que los datos ya sostenían. Se descartó, dentro del mismo Task
+Intake, replicar secciones de Semrush sin equivalente real en GenScore hoy
+("Crawled Pages", "Top Issues"): forzarían a definir una categoría de dato
+nueva desde cero, que es una fase aparte.
+
+**Alcance.** `lib/email/transactional.ts`, `lib/email/transactional.test.ts`,
+`lib/scan/weekly-digest.ts`, `lib/scan/weekly-digest.test.ts`. Sin cambios de
+datos/scoring, sin tocar Gemini/Supabase/auth/schema/pipeline. P2 — mejora
+visual en un canal secundario, no bloquea el flujo core.
+
+**Validación no cubierta por el piloto.** `ux-pilot` no cubre correos (ya
+confirmado en QA de §202) — la verificación visual se hizo generando el HTML
+real (mock del cliente de Resend) y capturándolo con Chromium headless; la
+captura se compartió con el fundador junto con este PR en vez de vía preview
+de Vercel.
+
+**Trazabilidad.** `lib/email/transactional.ts` (`scoreBar`, `deltaPill`,
+`statCell`); `lib/scan/weekly-digest.ts` (`previousSubScores`); §202 (origen
+de la conversación, mismo fichero).
+
+---
+
+## 205. SCREEN-POLISH-1 Fase A: la pantalla de Prompts deja de afirmar sentimiento sobre marcas ausentes y se puede usar con teclado (2026-09-06)
+
+**Origen.** Fase 10 (UX/consistencia de pantalla) del informe de auditoría
+externa — vive sólo en el PR #483, sin mergear en `main` a fecha de este
+cierre, así que este párrafo cita el hallazgo tal cual en vez de asumir que
+quien lea esto puede abrirlo: en la pantalla de Prompts, varias filas
+mostraban una insignia "Ausente" (la marca no fue mencionada) junto a una
+insignia de sentimiento ("Positivo"/"Negativo"/etc.) calculada sin filtrar por
+si la marca había aparecido — afirmar un sentimiento sobre algo que no ocurrió
+("no fake metrics", `CLAUDE.md`). Task Intake aprobado por el fundador antes
+de implementar; tres arreglos P1/P2, alcance cerrado.
+
+**Qué se decidió — 1. Sentimiento honesto.**
+
+- **`lib/metrics/brand-sentiment.ts` (nuevo)**, sin I/O — dueño único de "cuál
+  es el sentimiento dominante de marca sobre un grupo de filas de
+  `scan_prompt_results`", contando SÓLO filas con `brand_mentioned === true`.
+  Copia deliberadamente la semántica de empate (orden de inserción, primera
+  vista gana) de `lib/scan/engine-breakdown.ts`'s `dominantSentiment` por
+  motor y del KPI de sentimiento de Visión general
+  (`app/dashboard/projects/[projectId]/page.tsx`) — ambos ya auditados bajo
+  TRUST-METRICS-1 y ya correctos; Prompts había crecido tres copias del mismo
+  cálculo que nunca aplicaron el filtro. `lib/metrics/` y no `lib/scan/`
+  porque TRUST-METRICS-1 ya estableció ese directorio como el dueño de "una
+  sola definición en todo el producto", y `.claude/rules/scan.md` prohíbe
+  meter en `lib/scan/` vocabulario que módulos no-escaneo importan. Un
+  `sentiment: "unknown"` (valor real de extracción, `lib/extraction/
+  schema.ts`) no cuenta para ningún cubo, igual que en las otras dos
+  implementaciones ya existentes — ni siquiera cuando la marca sí se
+  mencionó. Test propio (`brand-sentiment.test.ts`): filas mixtas, cero
+  menciones → `null`, empates, `unknown` excluido, vacío → `null`.
+- **Las tres copias sustituidas** por la función centralizada: la agregación
+  por topic en `app/dashboard/projects/[projectId]/prompts/page.tsx` (server),
+  la función local `dominantSentiment` de `prompts-client.tsx` (agregado por
+  prompt), y la de `components/prompts/prompt-drawer.tsx` (usada para la fila
+  "Tú" del ranking de marcas del cajón).
+- **Estado explícito "No aplica"**, distinto a propósito de "Neutral" — que ya
+  existe en el código y significa otra cosa (`sentiment: "unknown"` leído como
+  "Neutral" para no filtrar el valor crudo en inglés, decisión previa del
+  fundador). Reutilizar "Neutral" para "sin mención" habría sido la misma
+  mentira con otro nombre. Badge `badge-outline` (visualmente distinto de
+  `badge-neutral`, que sigue siendo "Neutral" de verdad) y sin el glifo de
+  cara de sentimiento — ese glifo dibuja una expresión facial real
+  (`components/ui/icon.tsx`, `sentimentPos/Neutral/Neg/Mixed`) y ponerlo junto
+  a "No aplica" habría seguido afirmando una lectura emocional inexistente.
+  Aplicado en los cinco puntos donde se renderizaba la insignia: la fila de
+  prompt y el acordeón de tema en `prompts-client.tsx`; la lista "Por motor",
+  la tabla de la pestaña "Respuestas" y (implícitamente, por omisión — ver
+  abajo) la fila "Tú" del ranking en `prompt-drawer.tsx`.
+- **Decisión de interpretación — la fila "Tú" del ranking no lleva "No
+  aplica" explícito.** Ya estaba condicionada a `row.isOwn && row.sentiment`:
+  con la función centralizada, `sentiment` es simplemente `null` cuando no hay
+  mención y la insignia no se pinta — igual que ya hacen las filas de
+  competidores, que nunca muestran sentimiento. Añadir un badge "No aplica"
+  ahí habría sido inconsistente con esas filas vecinas sin aportar nada que la
+  ausencia de badge no dijera ya.
+- **Corrección tras revisión del fundador (mismo PR, antes de mergear, dos
+  rondas).** Con "Ausente" y "No aplica" uno junto al otro, el fundador
+  señaló que ningún usuario real sabe a qué se refiere cada literal por
+  separado. Los dos textos pasan a ser autoexplicativos sin depender de un
+  rótulo aparte ni de un tooltip (que `.claude/rules/competitors.md` ya
+  desaconseja para este tipo de aclaración — "sin InfoTip", texto pegado al
+  dato, nunca una burbuja). Primera ronda: "Ausente"/"Mencionada" → "Marca
+  ausente"/"Marca mencionada", `SENTIMENT_NA_LABEL` → "Sentimiento no
+  aplica". Segunda ronda, a petición del fundador: "Marca ausente" →
+  **"Marca no mencionada"** (par gramatical de "Marca mencionada", en vez de
+  un antónimo distinto) y `SENTIMENT_NA_LABEL` → **"Sin sentimiento"** (más
+  corto que "Sentimiento no aplica"). El fundador propuso "Sentimiento
+  neutro" para este segundo; se rechazó porque "Neutral" ya está tomado en
+  esta misma pantalla para `sentiment: "unknown"` (marca mencionada, tono
+  indeterminado) — usar "neutro" aquí habría hecho indistinguibles dos
+  estados distintos (sin mención vs. mención con tono indeterminado) y
+  resucitado exactamente la afirmación-sobre-algo-que-no-ocurrió que esta
+  fase existe para eliminar. "Sin sentimiento" no colisiona con ese
+  vocabulario. Único cambio en `prompts-client.tsx` y `prompt-drawer.tsx`
+  (la constante, más el texto del badge de marca en `PromptRow` y en la
+  lista "Por motor" del cajón); la tabla de la pestaña "Respuestas" ya tenía
+  columnas con cabecera ("Marca", "Sentimiento") y no sufría la misma
+  ambigüedad, pero usa la misma constante — una sola etiqueta, no dos que
+  hoy coinciden por casualidad. Ambos contenedores (`.pr2-prow-tags`,
+  `.pr2-trow-meta`) ya tenían `flex-wrap: wrap`, así que el texto más largo
+  envuelve en vez de recortarse en 375px.
+
+**Qué se decidió — 2. Filas accesibles por teclado.** `.pr2-prow` (fila de
+prompt, abre el cajón) y `.pr2-trow` (acordeón de tema) eran `<div onClick>`
+sin `role`, `tabIndex` ni manejo de teclado — inalcanzables con Tab. Mismo
+patrón que `.rec-main` en `recommendations-client.tsx`: `role="button"` +
+`tabIndex={0}` + `onKeyDown` en Enter/Espacio con `preventDefault`, y
+`aria-expanded={isOpen}` en `.pr2-trow` por ser acordeón. Los `<div>` no se
+convierten en `<button>` — llevan badges y texto multilínea anidados, y
+`<button>` rompería ese layout flex. Foco visible nuevo en `app/globals.css`
+(`.pr2-prow:focus-visible`, `.pr2-trow:focus-visible`, `outline: 2px solid
+var(--accent); outline-offset: -2px`) junto a las reglas ya existentes de esas
+clases.
+
+**Qué se decidió — 3. "Topics" → "Temas".** Cuatro cadenas visibles en
+`prompts-client.tsx` (el contador "en N topics", el estado vacío que
+mencionaba "topics" dos veces, la etiqueta de sección "Topics", el mensaje de
+"sin resultados" con "topic") pasan a "tema"/"temas". En
+`add-prompts-button.tsx`, las dos menciones de "categoría" (mismo concepto,
+`project_prompts.category`) pasan también a "tema", por consistencia de
+vocabulario dentro de la misma pantalla — Competidores ya dice "tema" en su
+propio copy ("Terreno por tema", `competitors/page.tsx`). Ningún identificador
+de código se toca (`hasTopics`, `topicGroups`, `expandedTopics`,
+`TopicGroup`, `totalTopics` siguen en inglés): es sólo copy visible.
+
+**Desviación deliberada y aprobada del prototipo de diseño de referencia.**
+`docs/design-reference/geo-suite-2/prompts.jsx` usa literalmente "Topics" en
+inglés. El fundador aprobó explícitamente el cambio a "Temas" pese a esa
+diferencia en el Task Intake de esta fase — si una pasada futura del
+`ux-pilot` lo señala como desviación de diseño, no es un fallo de esta
+implementación, está aprobado y queda anotado aquí para que quede trazado.
+
+**Lo que NO se ha tocado.** Ningún cálculo de score
+(`lib/scoring/**`), ninguna extracción (`lib/llm/**`,
+`lib/extraction/schema.ts`), nada de `lib/scan/**` — el arreglo del
+sentimiento es enteramente de presentación, sobre datos ya persistidos.
+`lib/competitors/**` sólo se leyó como referencia de copy, sin tocarlo.
+
+**Comprobado.** `pnpm test` en verde (incluye `lib/metrics/
+brand-sentiment.test.ts`, 7 casos nuevos); `pnpm run validate` (build +
+typecheck + lint) en verde; `git diff --check` sin avisos.
+
+**Trazabilidad.** `lib/metrics/brand-sentiment.ts` (nuevo) + `.test.ts`;
+`app/dashboard/projects/[projectId]/prompts/page.tsx`;
+`app/dashboard/projects/[projectId]/prompts/prompts-client.tsx`;
+`app/dashboard/projects/[projectId]/prompts/add-prompts-button.tsx`;
+`components/prompts/prompt-drawer.tsx`; `app/globals.css`
+(`.pr2-prow:focus-visible`, `.pr2-trow:focus-visible`). Task Intake aprobado
+por el fundador antes de implementar.
