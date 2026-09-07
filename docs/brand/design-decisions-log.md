@@ -19388,7 +19388,7 @@ por el fundador antes de implementar.
 
 ---
 
-## 206. SCREEN-POLISH-1 Fase B: el asistente deja de prometer 15 prompts que sólo generaba 10 (2026-09-07)
+## 208. SCREEN-POLISH-1 Fase B: el asistente deja de prometer 15 prompts que sólo generaba 10 (2026-09-07)
 
 **Origen.** Fase 10 del plan de la auditoría externa — vive sólo en el PR
 #483, sin mergear en `main`, así que este párrafo cita el hallazgo tal cual:
