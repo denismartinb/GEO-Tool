@@ -336,6 +336,16 @@ const statCell = (value: string, label: string, stackClass: string) => `
 const statRow = (cells: string) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr>${cells}</tr></table>`;
 
+/**
+ * TRUST-METRICS-1: digest.currentScore es el compuesto del run más reciente
+ * (getEffectiveGeoScore), no la puntuación con ventana del panel — un número
+ * real, pero de otra base. Se etiqueta "Puntuación de este escaneo", nunca
+ * "Tu GEO Score" (esa etiqueta la reserva el fundador para la única cifra
+ * con ventana del producto). No pongas este tipo de comentario dentro de un
+ * template literal de HTML: `wrap(...)` no es JSX, así que `{/* ... *\/}` no
+ * se elimina — se envía tal cual en el cuerpo del correo (encontrado en
+ * producción el 2026-09-06 tras TRUST-METRICS-1, log §202).
+ */
 export async function sendWeeklyDigestEmail(
   to: string,
   projectDomain: string,
@@ -430,13 +440,6 @@ export async function sendWeeklyDigestEmail(
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;">
         <tr>
           <td class="em-stack-td" style="padding:22px 24px;vertical-align:middle;">
-            {/* TRUST-METRICS-1: digest.currentScore es el compuesto del run más
-                reciente (getEffectiveGeoScore), no la puntuación con ventana
-                del panel — un número real, pero de otra base. Se etiquetaba
-                "Tu GEO Score", la etiqueta que el fundador reservó para una
-                única cifra en todo el producto. Encontrado en la revisión del
-                Human Gate de TRUST-METRICS-1: nadie había mirado el HTML
-                renderizado, sólo el comentario de la capa de datos. */}
             <div style="font-size:12.5px;color:#5B6B82;font-weight:600;">Puntuación de este escaneo</div>
             <div class="em-score-num" style="font-size:46px;font-weight:800;color:#0B1426;line-height:1;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums;">${Math.round(
               digest.currentScore
