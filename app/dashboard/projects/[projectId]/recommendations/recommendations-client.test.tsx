@@ -5,6 +5,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }))
 
 import {
   RecCard,
+  ResolvedHistoryCard,
   SolutionPanel,
   overlayCopyLocal,
   predictionVerdictLine,
@@ -120,6 +121,62 @@ describe("RecCard — estado inicial del contrato de acción", () => {
   });
 });
 
+/**
+ * ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4).
+ * El "Deshacer" durable vive en ResolvedHistoryCard (bajo "Resueltas"), no en
+ * la tarjeta activa — un deshacer efímero que sólo sobrevivía mientras la
+ * tarjeta seguía montada resultó confuso en la práctica (founder, 2026-09-07:
+ * "aparece deshacer un segundo y la recomendación se va ya a la pestaña
+ * resueltas"). Se ofrece SÓLO cuando la fila pertenece al run que también es
+ * `latestCompletedRunId` — restaurar una fila de un run más viejo la dejaría
+ * invisible en todas partes (ver el comentario de `run_id` en
+ * `ResolvedHistoryItem`).
+ */
+describe("ResolvedHistoryCard — deshacer se ofrece sólo del run vigente", () => {
+  const historyRow = (over: Partial<Parameters<typeof ResolvedHistoryCard>[0]["item"]> = {}) => ({
+    id: "h1",
+    title: "Título",
+    description: "Descripción",
+    recommendation_type: "increase_brand_visibility",
+    status: "dismissed" as const,
+    updated_at: "2026-09-06T00:00:00Z",
+    run_id: "run-current",
+    ...over
+  });
+
+  it("ofrece Deshacer cuando la fila descartada pertenece al último run completado", () => {
+    const html = renderToStaticMarkup(
+      <ResolvedHistoryCard item={historyRow()} projectId="p1" latestCompletedRunId="run-current" />
+    );
+    expect(html).toContain("Deshacer");
+  });
+
+  it("NO ofrece Deshacer para una fila de un run más antiguo — restaurarla la dejaría invisible", () => {
+    const html = renderToStaticMarkup(
+      <ResolvedHistoryCard item={historyRow({ run_id: "run-old" })} projectId="p1" latestCompletedRunId="run-current" />
+    );
+    expect(html).not.toContain("Deshacer");
+  });
+
+  it("NO ofrece Deshacer sobre una fila resuelta automáticamente — sólo aplica a un descarte manual", () => {
+    const html = renderToStaticMarkup(
+      <ResolvedHistoryCard
+        item={historyRow({ status: "resolved", run_id: "run-current" })}
+        projectId="p1"
+        latestCompletedRunId="run-current"
+      />
+    );
+    expect(html).not.toContain("Deshacer");
+  });
+
+  it("NO ofrece Deshacer cuando la pantalla no tiene run vigente (latestCompletedRunId null)", () => {
+    const html = renderToStaticMarkup(
+      <ResolvedHistoryCard item={historyRow()} projectId="p1" latestCompletedRunId={null} />
+    );
+    expect(html).not.toContain("Deshacer");
+  });
+});
+
 describe("RecCard — CTA y chip de control", () => {
   it("nombra el entregable en el botón, no la mecánica", () => {
     const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "create_faq_section" })} />);
@@ -220,6 +277,7 @@ describe("predictionVerdictLine — RECS-LOOP-1 Fase A", () => {
     recommendation_type: "increase_brand_visibility",
     status: "resolved",
     updated_at: "2026-08-25T00:00:00Z",
+    run_id: "run-1",
     ...over
   });
 
@@ -287,6 +345,7 @@ describe("predictionVerdictLine — RECS-LOOP-1 Fase B (fila dismissed)", () => 
     recommendation_type: "increase_brand_visibility",
     status: "dismissed",
     updated_at: "2026-08-10T00:00:00Z",
+    run_id: "run-1",
     ...over
   });
 

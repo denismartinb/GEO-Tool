@@ -19019,33 +19019,55 @@ prohíbe.
    plegado" — el botón sólo es alcanzable con la tarjeta ya abierta — pero el
    éxito no daba ninguna señal en el punto del clic, sólo un cambio de icono
    a varias líneas de distancia.
-3. **"Marcar como hecho" gana deshacer.** `lib/recommendations/
-   restore-recommendation.ts` es el espejo exacto de `dismiss-
-   recommendation.ts` (misma reverificación de propiedad con el cliente de
-   usuario, misma escritura service-role, mismo patrón de idempotencia) y
-   revierte `status` a `'active'`. **Sin migración**: `rec_status_chk`
-   (`0010_recommendations_history.sql`) ya admite `'active'`.
-4. **La ventana de deshacer es efímera y local al cliente, no anclada a
-   `run_id`.** El Task Intake original proponía condicionar el deshacer a
-   que la tarjeta siguiera perteneciendo al último escaneo completado — mirar
-   el código reveló que el cliente no recibe `run_id` por recomendación hoy
-   (`recommendations/page.tsx` lo recorta antes de pasar props), así que
-   anclarlo ahí habría ensanchado el scope de esta fase. La solución más
-   simple es también más segura: al marcar como hecho, la tarjeta NO se
-   quita de la pantalla (no hay `router.refresh()` en el éxito de
-   `handleDismiss`, a diferencia de las otras acciones de esta misma
-   tarjeta) — se sustituye in situ por el acuse + "Deshacer". El riesgo que
-   motivaba anclar a `run_id` (deshacer una fila después de que un escaneo
-   MÁS NUEVO ya la diera por resuelta) no puede darse dentro de un deshacer
-   efímero de la misma sesión de render: la fila nunca llegó a desaparecer
-   del DOM, así que no hay nada que reconciliar después. Si el usuario
-   navega sin pulsar "Deshacer", la próxima carga real ya la excluye
-   (filtro `status='active'` de siempre) — no hace falta ningún temporizador
-   ni `router.refresh()` adicional.
-5. **Pulsar "Deshacer" no llama a `router.refresh()`.** Como el dismiss
-   nunca refrescó la lista, restaurar sólo necesita volver el estado local a
-   `idle` (`dismissFeedback.reset()`) para que la tarjeta vuelva a mostrar
-   sus botones normales — ya coincide con lo que el servidor tiene.
+3. **"Marcar como hecho" gana deshacer — pero no en la tarjeta activa.**
+   `lib/recommendations/restore-recommendation.ts` es el espejo exacto de
+   `dismiss-recommendation.ts` (misma reverificación de propiedad con el
+   cliente de usuario, misma escritura service-role, mismo patrón de
+   idempotencia) y revierte `status` a `'active'`. **Sin migración**:
+   `rec_status_chk` (`0010_recommendations_history.sql`) ya admite `'active'`.
+   La primera versión de esta fase probó un deshacer **efímero**: al marcar
+   como hecho, la tarjeta activa no llamaba a `router.refresh()` y se
+   sustituía in situ por un acuse + "Deshacer", vivo hasta que el usuario
+   navegara. El fundador lo probó en el preview y lo rechazó de inmediato
+   (2026-09-07): *"aparece deshacer un segundo y la recomendación se va ya a
+   la pestaña resueltas. Debe aparecer el botón de deshacer en la pestaña
+   resueltas, sino no sirve de nada"* — un deshacer que no sobrevive a nada
+   no es un deshacer, es una animación. `handleDismiss` vuelve a llamar a
+   `router.refresh()` en su éxito, como el resto de acciones de la tarjeta;
+   el "Deshacer" real vive en `ResolvedHistoryCard`, bajo "Resueltas" —
+   donde la fila aterriza de verdad y donde sigue estando disponible después
+   de recargar.
+4. **El deshacer en "Resueltas" se ofrece SÓLO para una fila descartada del
+   run vigente** (`item.status === 'dismissed' && item.run_id ===
+   latestCompletedRunId`). La lista activa filtra por
+   `run_id = latestCompletedRun.id AND status='active'`
+   (`recommendations/page.tsx`): restaurar una fila de un run más antiguo
+   volvería su `status` a `'active'` pero la dejaría invisible en todas
+   partes — no en la lista activa (su `run_id` no es el del run vigente), y
+   ya no en "Resueltas" (dejó de tener un `status` que la tabla lista). Esto
+   exigió sacar `run_id` del recorte que `page.tsx` aplicaba antes de pasar
+   `ResolvedHistoryItem` al cliente (comentario "stays server-side" ya
+   desactualizado) y pasar `latestCompletedRunId` como prop nueva a
+   `RecommendationsClient`.
+5. **El deshacer llama a `router.refresh()` en su éxito, sin excepción.** A
+   diferencia del diseño efímero descartado, aquí SÍ se quiere que la
+   pantalla entera se resincronice: la fila tiene que desaparecer de
+   "Resueltas" y la lista activa tiene que volver a incluirla.
+6. **Efecto colateral encontrado por el fundador al probarlo, corregido en el
+   mismo PR.** Antes de esta fase, `page.tsx` montaba el estado vacío de
+   nivel superior ("Nada que corregir ahora mismo") en cuanto `recs.length
+   === 0`, sin mirar si había historial — así que marcar como hecha la
+   ÚNICA recomendación activa de una cuenta hacía desaparecer
+   `RecommendationsClient` entero, con él la pestaña "Resueltas" y sus
+   datos (ya pedidos al servidor, simplemente descartados). El fundador lo
+   vio primero como una pantalla que parecía haber "borrado" su acción. La
+   condición pasa a `recs.length === 0 && resolvedHistoryForClient.length
+   === 0` — el vacío de nivel superior sólo dispara cuando de verdad no hay
+   nada en ningún sitio — y el vacío interno de `RecommendationsClient`
+   (para cuando llega aquí con cero activas pero sí historial) cambia de
+   "Nada con este filtro / Vuelve a Todas" — incorrecto, ya se está en
+   "Todas" — a un mensaje que señala dónde está lo que se acaba de hacer,
+   con un botón directo a "Resueltas".
 
 **Lo que NO se ha tocado en este slice (4b, aparte).** "Exportar plan" sigue
 sin acuse ni salida alternativa a la descarga; "activar seguimiento
@@ -19053,23 +19075,28 @@ recurrente" sigue redirigiendo a `/debug` en éxito y en error. Ambas tocan
 `DataMaturityBanner`/`app/dashboard/projects/[projectId]/actions.ts`
 (`setRecurringScans`), fuera del alcance aprobado para 4a.
 
-**Límite de cobertura, declarado explícitamente.** `recommendations-
-client.test.tsx` sólo puede afirmar el estado INICIAL de la tarjeta
-(`renderToStaticMarkup` no ejecuta clics) — que "Deshacer" no aparece antes
-de ningún clic, y que la promesa de la próxima medición se ve sin ningún
-error de fondo. La transición real a "éxito" (el acuse, el "Deshacer"
-funcionando de verdad) sólo la puede verificar una pasada de
-`--journeys actions` contra un preview real, todavía no disparada para este
-PR — el fundador decide cuándo, por su instrucción explícita del
-2026-09-06 sobre el piloto en general.
+**Límite de cobertura, declarado explícitamente.** `renderToStaticMarkup` no
+ejecuta clics, así que ningún test puede afirmar que un clic real en
+"Deshacer" restaura la fila y refresca la pantalla. Lo que SÍ se prueba por
+render, exportando `ResolvedHistoryCard` igual que ya se exporta `RecCard`:
+las cuatro combinaciones de la condición de la regla 4 — se ofrece para una
+fila descartada del run vigente; NO se ofrece para una fila de un run más
+antiguo; NO se ofrece sobre una fila resuelta automáticamente (sólo aplica a
+un descarte manual); NO se ofrece cuando la pantalla no tiene
+`latestCompletedRunId`. La transición real a "éxito" tras el clic sólo la
+puede verificar una pasada de `--journeys actions` contra un preview real,
+todavía no disparada para este PR — el fundador decide cuándo.
 
-**Comprobado.** `pnpm test` (3101/3101), `pnpm run validate` (build +
+**Comprobado.** `pnpm test` (3105/3105), `pnpm run validate` (build +
 typecheck + lint) en verde.
 
 **Trazabilidad.** `lib/ui/action-feedback.ts` + `.test.ts` (nuevo);
 `components/ui/action-feedback.tsx` (nuevo); `lib/recommendations/
 restore-recommendation.ts` + `.test.ts` (nuevo); `app/dashboard/projects/
 [projectId]/actions.ts` (`restoreRecommendationAction`); `app/dashboard/
-projects/[projectId]/recommendations/recommendations-client.tsx`
-(`RecCard`); su test; `docs/external-audit-2026-08.md` Fase 4; log §187,
+projects/[projectId]/recommendations/page.tsx` (`resolvedHistoryForClient`
+lleva `run_id`, condición del vacío de nivel superior, prop
+`latestCompletedRunId`); `app/dashboard/projects/[projectId]/recommendations/
+recommendations-client.tsx` (`RecCard`, `ResolvedHistoryCard` — ahora
+exportada); su test; `docs/external-audit-2026-08.md` Fase 4; log §187,
 §193, §198, §202.
