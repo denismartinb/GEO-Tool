@@ -217,37 +217,54 @@ test("las acciones de Recomendaciones producen (o no) un efecto observable", asy
       return;
     }
 
+    // Ninguna tarjeta sin prioridad lleva `id="rec-<uuid>"` (recommendations-
+    // client.tsx: `priorityRank ? undefined : rec-${rec.id}`) cuando SÍ tiene
+    // prioridad — y la primera tarjeta del proyecto reservado suele tenerla
+    // (`rec2-priority`). Sin un identificador estable no hay forma de "seguir"
+    // a la tarjeta concreta que se descarta: `card`/`dismissButton` son
+    // localizadores perezosos que Playwright vuelve a resolver en cada uso, así
+    // que si queda OTRA tarjeta activa después del descarte, ".rec-card".first()
+    // pasa a apuntar a ESA — visible y sin relación con la que se pulsó — y
+    // `expect(card).toBeHidden()` fallaría por timeout aunque el descarte
+    // hubiera funcionado de verdad en el servidor. El veredicto correcto se
+    // lee del RECUENTO total de tarjetas activas, no de la visibilidad de un
+    // localizador que puede haber empezado a apuntar a otro sitio.
+    const cardHandle = await card.elementHandle();
+
     const start = Date.now();
     await dismissButton.click();
 
-    const disappeared = await expect(card)
-      .toBeHidden({ timeout: 15_000 })
+    const countDropped = await expect(page.locator(".rec-card"))
+      .toHaveCount(Math.max(activeCountBefore - 1, 0), { timeout: 15_000 })
       .then(() => true)
       .catch(() => false);
     const elapsedMs = Date.now() - start;
 
-    // No hay retry ni reintento del clic: si `disappeared` es falso, el CTA
+    // No hay retry ni reintento del clic: si `countDropped` es falso, el CTA
     // sigue en su forma anterior (nunca en un estado a medias) y no hay
     // segunda escritura sobre la recomendación.
-    if (disappeared) {
+    if (countDropped) {
       const activeCountAfter = await page.locator(".rec-card").count();
       verdicts["marcar como hecho"] = {
         verdict: "real",
         evidence:
-          `la tarjeta desapareció de la lista activa en ${elapsedMs}ms ` +
-          `(${activeCountBefore} → ${activeCountAfter} tarjetas activas). ` +
+          `la lista activa bajó de ${activeCountBefore} a ${activeCountAfter} tarjetas en ${elapsedMs}ms. ` +
           "Coste aceptado: 1 recomendación del proyecto reservado, sin deshacer hasta el próximo escaneo (Fase 4 lo añade)."
       };
     } else {
-      const errorVisible = await card
-        .locator(".feedback.error")
-        .isVisible()
-        .catch(() => false);
+      // Comprobar la tarjeta original vía el `elementHandle` capturado antes
+      // del clic — no un localizador que ya puede apuntar a otra parte.
+      const errorVisible = cardHandle
+        ? await cardHandle
+            .$(".feedback.error")
+            .then((el) => (el ? el.isVisible() : false))
+            .catch(() => false)
+        : false;
       verdicts["marcar como hecho"] = {
         verdict: "real",
         evidence: errorVisible
           ? `terminó en error visible tras ${elapsedMs}ms`
-          : `la tarjeta siguió visible ${elapsedMs}ms después del clic, sin error visible — el hallazgo del auditor se reproduce`
+          : `el recuento de tarjetas activas no bajó ${elapsedMs}ms después del clic, sin error visible — el hallazgo del auditor se reproduce`
       };
     }
     await captureStep(page, "dismiss-attempted");

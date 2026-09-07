@@ -102,7 +102,7 @@ describe("SolutionPanel — insignia de estado del artefacto", () => {
  * estado INICIAL (ocioso) de la tarjeta, nunca la transición a "éxito" que
  * dispara `useActionFeedback` tras un clic real. Esa transición sólo la
  * ejercita `tests/pilot/journeys/actions/recommendation-actions.spec.ts`
- * (`--journeys actions`, log §187/§198/§202) contra un preview real — es la
+ * (`--journeys actions`, log §187/§198/§207) contra un preview real — es la
  * "cobertura no vista" que se declara, no una promesa de que este test la
  * cubre.
  */
