@@ -53,7 +53,7 @@ type PromptGroup = {
 // because the brand was never mentioned in these rows in the first place.
 // Conflating the two would still be affirming a sentiment reading that
 // doesn't exist — the same "no fake metrics" issue this phase fixes.
-const SENTIMENT_NA_LABEL = "No aplica";
+const SENTIMENT_NA_LABEL = "Sentimiento no aplica";
 
 function sentimentLabel(s: string | null): string {
   const map: Record<string, string> = {
@@ -214,7 +214,7 @@ function PromptRow({
         <div className="pr2-prow-text">{group.promptText ?? "—"}</div>
         <div className="pr2-prow-tags">
           <span className={`badge ${group.brandMentioned ? "badge-pos" : "badge-neg"}`}>
-            {group.brandMentioned ? "Mencionada" : "Ausente"}
+            {group.brandMentioned ? "Marca mencionada" : "Marca ausente"}
           </span>
           {group.brandMentioned ? (
             <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>

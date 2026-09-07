@@ -59,7 +59,7 @@ const sentimentLabels: Record<string, string> = {
 // not a computed neutral/unknown sentiment, it's "no brand mention, so no
 // brand sentiment to report at all". Reusing "Neutral" here would still be
 // affirming a sentiment reading that doesn't exist.
-const SENTIMENT_NA_LABEL = "No aplica";
+const SENTIMENT_NA_LABEL = "Sentimiento no aplica";
 
 function sentimentBadgeClass(s: string | null | undefined): string {
   if (s === "positive") return "badge-pos";
@@ -340,7 +340,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                           ) : null}
                         </span>
                         <span className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
-                          {r.brand_mentioned ? "Mencionada" : "Ausente"}
+                          {r.brand_mentioned ? "Marca mencionada" : "Marca ausente"}
                         </span>
                         {r.brand_mentioned ? (
                           r.sentiment ? (
