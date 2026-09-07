@@ -19391,3 +19391,69 @@ sin avisos.
 `lib/projects/project-form.test.ts`; `components/onboarding-wizard.tsx`
 (`nextPromptPlan`, copy del paso de prompts). Task Intake aprobado por el
 fundador el 2026-09-07.
+
+---
+
+## 207. Fase 5 de la auditoría externa (AUDIT-RUNNABLE-1) se cierra sin el botón — riesgo aceptado por el fundador, premisa corregida (2026-09-07)
+
+**Origen.** Fase 5 del plan de la auditoría externa (`docs/external-audit-2026-08.md`,
+vive sólo en el PR #483, sin mergear en `main`) pedía dos cosas ante P0-05: (1)
+diagnosticar por qué el componente técnico se quedó en N/A tras un escaneo
+real pese a que `AUDIT-AFTER-SCAN-1` la dispara sola, y (2) devolver un
+"Auditar ahora" explícito — revirtiendo `AUDIT-NO-BUTTON-1` (§25,
+2026-08-05), con el propio plan exigiendo que la reversión no se tocase sin
+visto bueno del fundador en este mismo plan.
+
+**Qué se decidió.** El fundador cierra la fase sin traer el botón. Antes de
+escribir esto, la premisa inicial que propuso — "el usuario va a tener
+siempre la auditoría activada automáticamente" — se verificó y **no es cierta
+hoy**: cualquier dueño de proyecto puede apagar `auto_technical_audit_enabled`/
+`auto_coverage_audit_enabled` sin restricción desde `/debug`
+(`app/dashboard/projects/[projectId]/actions.ts`, `setAutoAuditHalf`), y
+existe un interruptor equivalente en la consola de operador
+(`lib/admin/automation.ts`). El fundador, informado de esto, sustituyó la
+premisa por una operativa: *"cuando salga a producción habrá que activar la
+auditoría automática tras el escaneo automático todos los días. Si falla será
+una incidencia y habrá que resolverlo. Pero para el cliente debe ser
+transparente"* — es decir, el fallo se gestiona como incidencia interna, no
+como algo que el cliente tenga que ver o accionar.
+
+**Qué verifica esto hoy.** La mitad operativa ya existe y es real: el job del
+auto-disparo reintenta 6 veces con backoff (~12,5h de ventana,
+`lib/web-audit/audit-job.ts`) y, si falla del todo, avisa por email al
+operador (`sendWebAuditFailedAlertEmail` → `getOpsAlertAddress()`,
+`audit-job-runner.ts:872-917`) — el mismo patrón que ya usa el resto del
+pipeline (`.claude/rules/scan.md`, "Un fallo que el operador puede arreglar
+tiene que llegarle"). Lo que NO existe todavía es la otra mitad de la frase
+del fundador — que el cierre de esa incidencia sea rutina de producción, no
+sólo de código: eso es proceso operativo, no algo que este PR pueda cerrar
+por su cuenta.
+
+**Riesgo aceptado, dicho claro (regla de premisa, `CLAUDE.md` "Cierre de
+fase" punto 4).** Mientras el `/debug` real siga permitiendo apagar la
+auditoría sin restricción, o mientras un fallo agote los 6 reintentos antes
+de que el operador actúe sobre la alerta, el componente técnico se queda en
+N/A **indefinidamente**, y la pantalla de Auditoría web sigue mostrando el
+mismo mensaje genérico ("se audita sola, vuelve en unos minutos") sin
+distinguir "todavía reintentando" de "falló ya del todo" — no hay botón, no
+hay explicación distinta, no hay salida en la propia pantalla. Es el mismo
+callejón sin salida que motivó P0-05, aceptado ahora explícitamente en vez de
+tácitamente: la mitigación es el proceso de operación (alerta + reintento +
+alguien que responda), no una vía en el producto.
+
+**Lo que NO se ha tocado.** Ningún código — `/debug` sigue permitiendo
+desactivar la auditoría, la pantalla sigue sin distinguir reintentando de
+fallo definitivo, y `AUDIT-NO-BUTTON-1` sigue vigente sin revertir. Si se
+quiere cerrar el hueco real más adelante, las dos vías más baratas que
+revertir el botón son: restringir quién puede apagar el toggle en `/debug`
+para cuentas reales, o hacer que la pantalla distinga visualmente
+"reintentando" de "falló definitivamente" — ninguna de las dos está
+implementada ni aprobada, quedan propuestas.
+
+**Trazabilidad.** `docs/external-audit-2026-08.md` Fase 5 (P0-05);
+`AUDIT-NO-BUTTON-1` (§25); `lib/web-audit/audit-job.ts`,
+`lib/web-audit/audit-job-runner.ts` (reintentos + alerta al operador, ya
+existentes, sin cambios); `app/dashboard/projects/[projectId]/actions.ts`
+(`setAutoAuditHalf`); `lib/admin/automation.ts`. Decisión del fundador,
+2026-09-07 — sin Task Intake de implementación porque no hay código que
+implementar, sólo el cierre documental de la fase.
