@@ -19336,3 +19336,58 @@ typecheck + lint) en verde; `git diff --check` sin avisos.
 `components/prompts/prompt-drawer.tsx`; `app/globals.css`
 (`.pr2-prow:focus-visible`, `.pr2-trow:focus-visible`). Task Intake aprobado
 por el fundador antes de implementar.
+
+---
+
+## 206. SCREEN-POLISH-1 Fase B: el asistente deja de prometer 15 prompts que sólo generaba 10 (2026-09-07)
+
+**Origen.** Fase 10 del plan de la auditoría externa — vive sólo en el PR
+#483, sin mergear en `main`, así que este párrafo cita el hallazgo tal cual:
+el paso de prompts del asistente de alta de dominio decía "recomendamos al
+menos 15 para obtener mejores datos" para todo el mundo, pero
+`MAX_INITIAL_PROMPTS` (10) topaba lo que el sistema le pedía a Gemini que
+generase — nadie, en ningún plan, veía nunca 15 sugerencias automáticas.
+Task Intake aprobado por el fundador (opción (b) de tres: subir el tope y
+hacer el copy consciente del plan, en vez de (a) subir el tope sin tocar el
+copy o (c) bajar el copy a 10).
+
+**Qué se decidió.**
+
+1. **`MAX_INITIAL_PROMPTS` (`lib/projects/project-form.ts`) sube de 10 a
+   15.** No cambia lo que Gemini es CAPAZ de generar — `suggestPrompts`
+   (`lib/projects/prompt-suggestions-llm.ts:44`) ya recorta a 15 pase lo que
+   pase; sólo cambia cuánto se le pide. Se sigue combinando con
+   `Math.min(plan.caps.prompts, MAX_INITIAL_PROMPTS)`
+   (`app/dashboard/projects/actions.ts:76`), así que el plan Free (tope 10)
+   sigue recibiendo 10 sugerencias reales — nunca 15 que su plan no
+   sostendría — y Starter/Pro/Agencia (25/100/300) reciben las 15 completas.
+2. **El copy deja de ser el mismo para todos los planes.** `promptCap`
+   (el tope real del plan, ya llegaba como prop desde
+   `usage.promptCap` en `page.tsx` — no hizo falta enhebrar nada nuevo) decide
+   qué frase se muestra: si el plan cubre 15 o más, se mantiene "recomendamos
+   al menos 15 para obtener mejores datos" (Starter/Pro/Agencia). Si no
+   (Free, único caso hoy), la frase pasa a decir la verdad — "Tu plan cubre
+   hasta 10" — y nombra un plan concreto al que subir en vez de una vaguedad:
+   `nextPromptPlan` busca en `PLANS` (`app/pricing/plans-data.ts`, ya
+   ordenado por tope de prompts) el primer plan cuyo tope supere el actual, y
+   la frase dice "con Starter monitorizas 25". Nunca se inventa un tope: si
+   algún día no hay plan superior, la frase simplemente no lo menciona.
+3. **Coste real, medido en `docs/llm-cost-analysis-2026-08.md`**: pasar de 10
+   a 15 prompts en las cuentas que ya podían recibirlos son ~+$0,10 por
+   escaneo, ~+3€/mes por proyecto a cadencia diaria (Pro). Ninguna cuenta
+   nueva del plan Free ve ese coste — sigue en 10.
+
+**Lo que NO se ha tocado.** `plan.caps.prompts` (los topes reales por plan,
+`app/pricing/plans-data.ts`) no cambia — sólo cuántas sugerencias iniciales
+pide el asistente. `createProject` sigue aceptando hasta el tope real del
+plan del dueño para prompts añadidos a mano, como ya hacía.
+
+**Comprobado.** `pnpm test` (226/226 archivos, 3.118/3.118 tests, incluidos
+los dos tests de `project-form.test.ts` actualizados a la nueva constante);
+`pnpm run validate` (build + typecheck + lint) en verde; `git diff --check`
+sin avisos.
+
+**Trazabilidad.** `lib/projects/project-form.ts` (`MAX_INITIAL_PROMPTS`);
+`lib/projects/project-form.test.ts`; `components/onboarding-wizard.tsx`
+(`nextPromptPlan`, copy del paso de prompts). Task Intake aprobado por el
+fundador el 2026-09-07.
