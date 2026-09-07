@@ -32,6 +32,7 @@ import {
   sendPaymentFailedEmail,
   sendScanHealthAlertEmail,
   sendScoreDropAlertEmail,
+  sendWeeklyDigestEmail,
   sendWebAuditFailedAlertEmail,
   sendWelcomeEmail
 } from "./transactional";
@@ -249,5 +250,29 @@ describe("contenido: lo que sería un fallo de verdad", () => {
   it("sale desde la dirección verificada, no desde una inventada", async () => {
     await sendWelcomeEmail(CUSTOMER);
     expect(send.mock.calls.at(-1)?.[0]).toMatchObject({ from: "GenScore <no-reply@genscore.es>" });
+  });
+
+  /**
+   * Regresión del bug real de 2026-09-06: un comentario de estilo JSX
+   * (`{/* ... *\/}`) escrito dentro de un template literal de HTML (que no es
+   * JSX) no se elimina — sale tal cual, visible, en el cuerpo del correo que
+   * recibe el cliente. Cualquier correo que rompa esto vuelve a fallar aquí.
+   */
+  it("ningún correo lleva un comentario de código colado en el HTML enviado", async () => {
+    await sendWeeklyDigestEmail(CUSTOMER, "ejemplo.com", {
+      currentScore: 62,
+      previousScore: 58,
+      subScores: { visibility: 40, citation: 30, standing: 20 },
+      topMover: null,
+      recommendation: null,
+      activeRecommendationsCount: 0,
+      promptsCount: 5,
+      competitorsCount: 3,
+      scansThisWeek: 1
+    });
+
+    const { html } = lastPayload();
+    expect(html).not.toContain("{/*");
+    expect(html).toContain("Puntuación de este escaneo");
   });
 });
