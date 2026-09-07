@@ -19041,22 +19041,32 @@ de implementar; tres arreglos P1/P2, alcance cerrado.
   competidores, que nunca muestran sentimiento. Añadir un badge "No aplica"
   ahí habría sido inconsistente con esas filas vecinas sin aportar nada que la
   ausencia de badge no dijera ya.
-- **Corrección tras revisión del fundador (mismo PR, antes de mergear).** Con
-  "Ausente" y "No aplica" uno junto al otro, el fundador señaló que ningún
-  usuario real sabe a qué se refiere cada literal por separado. Los dos
-  textos pasan a ser autoexplicativos sin depender de un rótulo aparte ni de
-  un tooltip (que `.claude/rules/competitors.md` ya desaconseja para este
-  tipo de aclaración — "sin InfoTip", texto pegado al dato, nunca una
-  burbuja): "Ausente"/"Mencionada" → **"Marca ausente"/"Marca mencionada"**,
-  y `SENTIMENT_NA_LABEL` → **"Sentimiento no aplica"**. Único cambio en
-  `prompts-client.tsx` y `prompt-drawer.tsx` (la constante, más el texto del
-  badge de marca en `PromptRow` y en la lista "Por motor" del cajón); la
-  tabla de la pestaña "Respuestas" ya tenía columnas con cabecera ("Marca",
-  "Sentimiento") y no sufría la misma ambigüedad, pero usa la misma
-  constante — una sola etiqueta, no dos que hoy coinciden por casualidad.
-  Ambos contenedores (`.pr2-prow-tags`, `.pr2-trow-meta`) ya tenían
-  `flex-wrap: wrap`, así que el texto más largo envuelve en vez de recortarse
-  en 375px.
+- **Corrección tras revisión del fundador (mismo PR, antes de mergear, dos
+  rondas).** Con "Ausente" y "No aplica" uno junto al otro, el fundador
+  señaló que ningún usuario real sabe a qué se refiere cada literal por
+  separado. Los dos textos pasan a ser autoexplicativos sin depender de un
+  rótulo aparte ni de un tooltip (que `.claude/rules/competitors.md` ya
+  desaconseja para este tipo de aclaración — "sin InfoTip", texto pegado al
+  dato, nunca una burbuja). Primera ronda: "Ausente"/"Mencionada" → "Marca
+  ausente"/"Marca mencionada", `SENTIMENT_NA_LABEL` → "Sentimiento no
+  aplica". Segunda ronda, a petición del fundador: "Marca ausente" →
+  **"Marca no mencionada"** (par gramatical de "Marca mencionada", en vez de
+  un antónimo distinto) y `SENTIMENT_NA_LABEL` → **"Sin sentimiento"** (más
+  corto que "Sentimiento no aplica"). El fundador propuso "Sentimiento
+  neutro" para este segundo; se rechazó porque "Neutral" ya está tomado en
+  esta misma pantalla para `sentiment: "unknown"` (marca mencionada, tono
+  indeterminado) — usar "neutro" aquí habría hecho indistinguibles dos
+  estados distintos (sin mención vs. mención con tono indeterminado) y
+  resucitado exactamente la afirmación-sobre-algo-que-no-ocurrió que esta
+  fase existe para eliminar. "Sin sentimiento" no colisiona con ese
+  vocabulario. Único cambio en `prompts-client.tsx` y `prompt-drawer.tsx`
+  (la constante, más el texto del badge de marca en `PromptRow` y en la
+  lista "Por motor" del cajón); la tabla de la pestaña "Respuestas" ya tenía
+  columnas con cabecera ("Marca", "Sentimiento") y no sufría la misma
+  ambigüedad, pero usa la misma constante — una sola etiqueta, no dos que
+  hoy coinciden por casualidad. Ambos contenedores (`.pr2-prow-tags`,
+  `.pr2-trow-meta`) ya tenían `flex-wrap: wrap`, así que el texto más largo
+  envuelve en vez de recortarse en 375px.
 
 **Qué se decidió — 2. Filas accesibles por teclado.** `.pr2-prow` (fila de
 prompt, abre el cajón) y `.pr2-trow` (acordeón de tema) eran `<div onClick>`
