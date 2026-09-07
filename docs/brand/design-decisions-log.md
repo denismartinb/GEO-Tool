@@ -19035,8 +19035,6 @@ comentario).
 
 ---
 
----
-
 ## 203. "Generar" y "marcar como hecho" dejan de terminar en silencio (ACTIONS-OBSERVABLE-1 slice 4a, 2026-09-06)
 
 **Origen.** Fase 4 del plan de la auditoría externa
