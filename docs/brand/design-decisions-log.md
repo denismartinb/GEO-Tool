@@ -19150,3 +19150,56 @@ lleva `run_id`, condición del vacío de nivel superior, prop
 recommendations-client.tsx` (`RecCard`, `ResolvedHistoryCard` — ahora
 exportada); su test; `docs/external-audit-2026-08.md` Fase 4; log §187,
 §193, §198, §202.
+
+---
+
+## 204. Indicadores visuales en el correo de resumen semanal (WEEKLY-DIGEST-VISUAL-1, 2026-09-07)
+
+**Qué se decidió.** El fundador compartió como referencia el correo de "Site
+Audit" de Semrush — cifras acompañadas de una barra de color proporcional — y
+preguntó si merecía la pena algo similar en el resumen semanal de GenScore.
+Tras Task Intake aprobado, se añadieron dos cosas a `sendWeeklyDigestEmail`
+(`lib/email/transactional.ts`):
+
+1. Una barra horizontal de color bajo "Puntuación de este escaneo"
+   (`scoreBar`), rellena en proporción a la cifra (0–100) y coloreada con el
+   mismo verde/rojo/gris que ya usaba el pill de delta — nunca una escala de
+   color nueva. Implementada con una tabla de dos `td` (ancho en % +
+   `background-color`), no SVG ni gradiente CSS: los clientes de correo
+   (Outlook en particular) no renderizan ninguno de los dos de forma fiable.
+2. Un delta semana-sobre-semana en cada una de las tres sub-scores
+   (Presencia, Cuota de voz, Autoridad) — dato que ya existía sin usar:
+   `runWeeklyDigest` (`lib/scan/weekly-digest.ts`) lee `previousRow` para
+   calcular `previousScore`, pero nunca le aplicaba `getSubScores`. Ahora se
+   calcula `previousSubScores` de la misma fila ya leída — sin query nueva —
+   y se pasa a `sendWeeklyDigestEmail`, que sólo muestra el delta de un
+   sub-score cuando AMBOS runs lo calcularon (nunca compara contra un
+   componente ausente, mismo principio que ya aplicaba `subScoreEntries` para
+   decidir si mostrar la cifra en sí).
+
+Se extrajo `deltaPill(delta)` como función compartida entre el pill principal
+y los tres nuevos deltas — antes la lógica ▲/▼/"Sin cambios" sólo existía
+inline para la puntuación principal.
+
+**Por qué.** El correo ya calculaba todos estos números; sólo los mostraba
+como cifras planas. Añadir la barra y los deltas no inventa ninguna métrica
+—CLAUDE.md lo prohíbe explícitamente ("fake metrics")— sólo hace visible una
+comparación que los datos ya sostenían. Se descartó, dentro del mismo Task
+Intake, replicar secciones de Semrush sin equivalente real en GenScore hoy
+("Crawled Pages", "Top Issues"): forzarían a definir una categoría de dato
+nueva desde cero, que es una fase aparte.
+
+**Alcance.** `lib/email/transactional.ts`, `lib/email/transactional.test.ts`,
+`lib/scan/weekly-digest.ts`, `lib/scan/weekly-digest.test.ts`. Sin cambios de
+datos/scoring, sin tocar Gemini/Supabase/auth/schema/pipeline. P2 — mejora
+visual en un canal secundario, no bloquea el flujo core.
+
+**Validación no cubierta por el piloto.** `ux-pilot` no cubre correos (ya
+confirmado en QA de §202) — la verificación visual se hizo generando el HTML
+real (mock del cliente de Resend) y capturándolo con Chromium headless; la
+captura se compartió con el fundador junto con este PR en vez de vía preview
+de Vercel.
+
+**Trazabilidad.** `lib/email/transactional.ts` (`scoreBar`, `deltaPill`,
+`statCell`); `lib/scan/weekly-digest.ts` (`previousSubScores`); §202 (origen
+de la conversación, mismo fichero).
