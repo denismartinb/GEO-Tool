@@ -18803,6 +18803,53 @@ validate` en verde.
 `app/pricing/plans-data.ts` (`isPromoActive`, `PROMO_ENDS_AT`, sin cambios);
 log §152 (PRICING-PROMO-1 Fase C).
 
+## 206. La promo de lanzamiento se extiende hasta el 30 de septiembre (2026-09-01, ampliada 2026-09-07)
+
+**Decisión del fundador**, tomada al ver que `PROMO_ENDS_AT` había caducado
+de verdad a medianoche y tumbado el CI del repo entero (§197): extender la
+ventana en vez de dejarla cerrada. Primera extensión (2026-09-01) al 15 de
+septiembre; el fundador la amplió de nuevo el 2026-09-07, al cerrar la Fase
+4a, directamente al **30 de septiembre** — misma decisión, una sola
+constante, sin pasar por el 15 en producción. `PROMO_ENDS_AT`
+(`app/pricing/plans-data.ts`) pasa de `2026-09-01T00:00:00+02:00` a
+`2026-09-30T00:00:00+02:00`.
+
+**Lo que este cambio NO hace, y por qué importa decirlo.** El comentario que
+ya llevaba la constante advierte que el cupón real de Stripe
+(`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO`, `lib/stripe.ts`) se creó **a
+mano en el panel de Stripe**, con su propio `redeem_by` puesto a la misma
+fecha que esta constante — no derivado de ella en código. Cambiar sólo
+`PROMO_ENDS_AT` hace que la pantalla vuelva a anunciar el precio rebajado,
+pero si el `redeem_by` del cupón en Stripe no se actualiza también a mano,
+el checkout mostrará 59€/19€ y Stripe rechazará el cupón al cobrar —peor que
+no tener promo, porque es una promesa visible que no se cumple al pagar.
+**Acción pendiente fuera de este repo**: actualizar `redeem_by` de los dos
+cupones a `2026-09-30`. Los objetos `Coupon` de Stripe son inmutables salvo
+`name`/`metadata` — la API no permite editar `redeem_by` tras crearlos, así
+que la vía probable es crear dos cupones nuevos con la misma configuración y
+`redeem_by` al 30, y apuntar `STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO` a
+los IDs nuevos en Vercel. El fundador lo gestiona directamente.
+
+**Copy derivado, no tocado.** `PromoStrip` (`components/landing/
+session-ctas.tsx`) ya lee la fecha de `PROMO_ENDS_AT` vía
+`Intl.DateTimeFormat` (TRUST-PROMISES-1, log §182) — el "hasta el 30 de
+septiembre" sale solo, sin ningún literal que cambiar. Un grep de
+`2026-09-01`/`2026-09-15`/`septiembre` fuera de `plans-data.ts` sólo
+encontró una cita de un informe externo ajeno
+(`app/blog/geo-para-agencias/page.mdx`), no copy de producto.
+
+**Efecto colateral encontrado y corregido (primera extensión, sigue
+aplicando).** `lib/env-schema.test.ts` fijaba `afterPromo` a
+`2026-09-02T00:00:00Z` para probar el caso "fuera de la ventana, no hay nada
+que avisar" — con cualquiera de las dos extensiones ese instante cae DENTRO
+de la ventana. Movido a `2026-10-01T00:00:00Z`, después del cierre vigente.
+
+**Comprobado.** `pnpm test`, `pnpm run validate` (build + typecheck + lint),
+ambos en verde.
+
+**Trazabilidad.** `app/pricing/plans-data.ts` (`PROMO_ENDS_AT`);
+`lib/env-schema.test.ts`; log §152, §182, §197.
+
 ---
 
 ## 199. El piloto dejó de correr solo: ahora lo decide el fundador (VERCEL-COST-1 Fase 5, 2026-08-31)
