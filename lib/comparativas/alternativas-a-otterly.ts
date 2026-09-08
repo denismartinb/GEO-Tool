@@ -17,7 +17,16 @@
  *
  * Los datos de GenScore vienen de `app/pricing/plans-data.ts`, la misma fuente
  * que usa /pricing — no se reescriben a mano.
+ *
+ * TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2): esa última
+ * frase no era cierta todavía — `pricingNote` de GenScore era el literal
+ * "179 €/mes", igual que la comparativa 1:1 tenía el suyo. Corregido ahí y
+ * aquí a la vez.
  */
+import { PLANS } from "@/app/pricing/plans-data";
+
+const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
+const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 export const RESEARCH_DATE = "12 de agosto de 2026";
 
 /**
@@ -65,7 +74,7 @@ export const OTTERLY_STRENGTHS: { claim: string; context: string }[] = [
   {
     claim: "El precio de entrada de pago más bajo de la categoría.",
     context:
-      "De pago. GenScore empieza en cero, sin tarjeta y sin fecha de caducidad, así que la comparación de entrada no es 29 $ contra 45 €: es 29 $ contra poder medir antes de decidir si pagas."
+      `De pago. GenScore empieza en cero, sin tarjeta y sin fecha de caducidad, así que la comparación de entrada no es 29 $ contra ${STARTER_PRICE} €: es 29 $ contra poder medir antes de decidir si pagas.`
   }
 ];
 
@@ -138,7 +147,7 @@ export const ALTERNATIVES: Alternative[] = [
     oneLiner:
       "Mide cómo apareces en ChatGPT, Gemini y Claude, y genera el borrador de la solución (FAQ, datos estructurados, briefs) desde el plan Pro.",
     pricingNote:
-      "Gratis permanente sin tarjeta; Pro 179 €/mes con ~100 prompts — el escalón comparable al Standard de 189 $ de Otterly, sin add-ons por motor.",
+      `Gratis permanente sin tarjeta; Pro ${PRO_PRICE} €/mes con ~100 prompts — el escalón comparable al Standard de 189 $ de Otterly, sin add-ons por motor.`,
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     tradeoff:
       "No ejecuta Perplexity ni Copilot —sí ChatGPT, Gemini y Claude, los tres incluidos en todos los planes de pago, sin add-ons— y no desglosa la puntuación por país. Si tu negocio se juega en comparar mercados uno a uno, esa pieza concreta la cubre mejor Otterly.",

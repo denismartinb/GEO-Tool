@@ -107,7 +107,10 @@ describe("computeEntityEngineBreakdown", () => {
 
 describe("filterComparableEngines", () => {
   function eng(provider: string, mentionRate: number): EntityEngineBreakdown {
-    return { provider, mentions: mentionRate > 0 ? 1 : 0, mentionRate };
+    // `total` isn't exercised by filterComparableEngines itself — an
+    // arbitrary positive value, consistent with `mentions` always being 0 or
+    // 1 out of it here.
+    return { provider, mentions: mentionRate > 0 ? 1 : 0, total: 1, mentionRate };
   }
 
   it("1. an engine where nobody was mentioned is dropped", () => {

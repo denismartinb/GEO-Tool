@@ -1,9 +1,9 @@
 import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 
 /**
- * RECS-COVERAGE-OVERLAY-1: read-time enrichment of already-persisted
- * `add_citation_block` recommendation cards with already-persisted domain-
- * coverage data, joined by `promptId`. This is deliberately NOT a
+ * RECS-COVERAGE-OVERLAY-1 (extended in AUDIT-RECS-JOIN-1 Fase B): read-time
+ * enrichment of already-persisted recommendation cards with already-persisted
+ * domain-coverage data, joined by `promptId`. This is deliberately NOT a
  * recommendation-engine input: recommendations are generated the instant a
  * scan run completes (lib/scan/executor.ts), while coverage is generated
  * later, only if the user manually triggers it — so at rule-evaluation time
@@ -12,13 +12,25 @@ import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageTopic } fro
  * explicitly out of scope here. This module has no side effects and performs
  * no I/O; all data comes in as plain arguments.
  *
- * Join path: `add_citation_block` recommendations don't carry
- * project_prompts.id directly — their evidence is anchored to a
- * scan_prompt_results row (see recommendation-engine.ts's
- * `dedupeKey: add_citation_block:${result.id}` / evidence_json's
- * affected_prompt_details[0].id). The caller resolves that
- * scan_prompt_results.id -> project_prompts.id mapping (a simple, already-
- * project-scoped query) and passes it in as `resultIdToPromptId`.
+ * Join path: a supported recommendation doesn't carry project_prompts.id
+ * directly — its evidence is anchored to a scan_prompt_results row (see
+ * recommendation-engine.ts's `dedupeKey: <type>:${result.id}` /
+ * evidence_json's affected_prompt_details[0].id, identical for every
+ * per-prompt rule). The caller resolves that scan_prompt_results.id ->
+ * project_prompts.id mapping (a simple, already-project-scoped query) and
+ * passes it in as `resultIdToPromptId`.
+ *
+ * Fase B added `increase_brand_visibility` alongside `add_citation_block`.
+ * Both anchor by the same promptId, so the join is unchanged — what differs
+ * is what the overlay MEANS: `add_citation_block` fires when the brand IS
+ * mentioned but not cited (evidence_json.snippetSource: "brand"), while
+ * `increase_brand_visibility` fires when the brand is NOT mentioned at all.
+ * A page found on the client's own domain therefore explains a different
+ * gap in each case ("it's not being cited as a source" vs. "it's not
+ * showing up in the answer at all"), so the copy is per-type — see
+ * `overlayCopy` below. Deliberately NOT extended to every per-prompt type:
+ * `create_faq_section`/`strengthen_brand_entity_clarity` are run-wide, not
+ * anchored to one prompt, so there is no single topic to join against.
  */
 
 export type CoverageOverlayState = "confirmed_surfacing_gap" | "possible_content_gap" | "none";
@@ -35,7 +47,15 @@ export type CoverageOverlayEntry = {
   confidenceOverride: "low" | "medium" | "high" | null;
 };
 
-const ADD_CITATION_BLOCK_TYPE = "add_citation_block";
+/**
+ * Recommendation types this overlay can enrich. A type not in this set gets
+ * no entry, ever — same fail-closed default as `deliverableForType`'s
+ * fallback: an unclassified case makes no claim rather than a wrong one.
+ */
+export const COVERAGE_OVERLAY_TYPES: ReadonlySet<string> = new Set([
+  "add_citation_block",
+  "increase_brand_visibility"
+]);
 
 function bumpConfidence(confidence: "low" | "medium" | "high"): "low" | "medium" | "high" {
   if (confidence === "low") return "medium";
@@ -72,7 +92,7 @@ export function computeCoverageOverlay(params: {
   const topicByPromptId = new Map(params.coverageTopics.map((t) => [t.promptId, t]));
 
   for (const rec of params.recommendations) {
-    if (rec.recommendationType !== ADD_CITATION_BLOCK_TYPE) continue;
+    if (!COVERAGE_OVERLAY_TYPES.has(rec.recommendationType)) continue;
     if (!rec.resultId) continue;
 
     const promptId = params.resultIdToPromptId.get(rec.resultId);
@@ -96,4 +116,71 @@ export function computeCoverageOverlay(params: {
   }
 
   return overlay;
+}
+
+
+/**
+ * Plain-language explanation shown on the card once an overlay state is
+ * known. `add_citation_block`'s original copy is preserved verbatim (its
+ * card fires on "mentioned but not cited", so "the AI isn't citing it as a
+ * source" is exactly true). `increase_brand_visibility`'s card fires on "not
+ * mentioned at all", so the same sentence would be false — the copy for it
+ * talks about not showing up in the answer, and its `whatToDo` for the
+ * not-found case reuses `rule_visibility_001`'s own first_step verbatim
+ * (recommendation-engine.ts) rather than inventing new advice.
+ *
+ * Only called for types in `COVERAGE_OVERLAY_TYPES`, so the fallback branch
+ * is unreachable in practice — kept anyway so a future type added to the set
+ * without updating this function degrades to a generic, still-true
+ * sentence instead of throwing.
+ */
+export type OverlayCopy = { whatWeFound: string; whatToDo: string };
+
+export function overlayCopy(recommendationType: string, state: CoverageOverlayState): OverlayCopy | null {
+  if (state === "confirmed_surfacing_gap") {
+    if (recommendationType === "increase_brand_visibility") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que esa página no está apareciendo en la respuesta de la IA.",
+        whatToDo:
+          "no crees una página nueva. Refuerza la que ya tienes: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta, para que sea más fácil de extraer."
+      };
+    }
+    if (recommendationType === "add_citation_block") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que la IA no lo está citando como fuente.",
+        whatToDo:
+          "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar."
+      };
+    }
+    return {
+      whatWeFound: "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta.",
+      whatToDo: "revisa esa página y refuérzala en vez de crear una nueva."
+    };
+  }
+
+  if (state === "possible_content_gap") {
+    if (recommendationType === "increase_brand_visibility") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
+        whatToDo: "publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+      };
+    }
+    if (recommendationType === "add_citation_block") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta. Puede que el problema no sea de citación, sino que todavía no has publicado contenido sobre esto.",
+        whatToDo:
+          "antes de intentar que te citen, plantéate crear una página que responda a esta consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo."
+      };
+    }
+    return {
+      whatWeFound: "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
+      whatToDo: "plantéate crear una página que responda a esta consulta."
+    };
+  }
+
+  return null;
 }

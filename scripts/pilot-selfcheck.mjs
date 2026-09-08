@@ -15,7 +15,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
-import { checkCaptureDepth, checkScanLockout, pngHeightFrom } from "./pilot-selfcheck-checks.mjs";
+import { checkActionsLockout, checkCaptureDepth, checkScanLockout, pngHeightFrom } from "./pilot-selfcheck-checks.mjs";
 
 const PORT = process.env.PILOT_FIXTURE_PORT ?? "4321";
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -183,6 +183,14 @@ function verifyDeployRunCannotScan() {
   return report("scan lockout", checkScanLockout(findings));
 }
 
+/** Same argument as verifyDeployRunCannotScan, for the journey that dismisses
+ *  a real recommendation with no undo (AUDIT-REPRO-1, Fase 0). */
+function verifyDeployRunCannotDismissRecommendations() {
+  const findings = readHealthyFindings();
+  if (!findings) return report("actions lockout", { ok: false, message: "no findings.jsonl to inspect" });
+  return report("actions lockout", checkActionsLockout(findings));
+}
+
 rmSync(ARCHIVE_DIR, { recursive: true, force: true });
 
 const results = [];
@@ -191,6 +199,7 @@ results.push(
 );
 results.push(verifyCaptureDepth());
 results.push(verifyDeployRunCannotScan());
+results.push(verifyDeployRunCannotDismissRecommendations());
 results.push(
   await runCase({
     label: "overflowing fixture → PILOT FAIL",

@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
-import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
@@ -31,7 +30,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { setAutoAuditHalf, setEngineEnabled, setRecurringScans, setSamplingEnabled } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
-import { NoTrackingBannerToggle } from "./no-tracking-banner-toggle";
+import { MaturityBannerToggle } from "./maturity-banner-toggle";
 
 // Server Actions inherit the maxDuration of the page they're invoked from
 // (docs/adr/0003). `autoExecutePendingScan` needs the full 60s Vercel budget:
@@ -520,7 +519,6 @@ export default async function RunsPage({
   return (
     <div className="page">
       {shouldDrive && activeRun ? <AutoExecuteScan projectId={projectId} runId={activeRun.id} /> : null}
-      {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
       {/* Sticky header */}
       <div className="ov-sticky-header">
@@ -613,11 +611,13 @@ export default async function RunsPage({
         </form>
       </div>
 
-      {/* DEBUG-HIDE-NO-TRACKING-1 — preferencia local, no un flag de proyecto:
-          silencia el aviso de la banda de arriba (`DataMaturityBanner`, estado
-          `no_tracking`) sin tocar `recurring_scans_enabled`. Va junto al
-          switch de seguimiento diario porque hablan del mismo aviso. */}
-      <NoTrackingBannerToggle projectId={projectId} />
+      {/* DEBUG-HIDE-NO-TRACKING-1, ampliado en MATURITY-BANNER-HIDE-ALL-1 (log
+          §179) — preferencia local, no un flag de proyecto: silencia la banda
+          de avisos de arriba ENTERA (`DataMaturityBanner`, cualquier estado)
+          sin tocar `recurring_scans_enabled`. Sigue aquí, junto al switch de
+          seguimiento diario, porque el aviso que más se quiere callar es el
+          suyo — pero ya no es el único que calla. */}
+      <MaturityBannerToggle projectId={projectId} />
 
       {/* WEB-AUDIT-AUTO-SPLIT-1 — dos interruptores, no uno. Las dos mitades de
           la auditoría tienen coste opuesto (ADR 0035): la cobertura son
@@ -972,12 +972,20 @@ export default async function RunsPage({
 
                         {/* Date — also the only way into the run detail page.
                             Before this, `/runs/[runId]` was reachable from
-                            exactly two links, both of which live inside EMPTY
+                            exactly two links, both of which lived inside EMPTY
                             states ("no citations", "no recommendations"), so a
                             project with real data could not open a scan at all.
                             A whole <tr> cannot be wrapped in an anchor without
                             invalid markup, so the date — the row's natural
-                            identifier — carries the link. */}
+                            identifier — carries the link.
+
+                            TRUST-METRICS-1 (docs/external-audit-2026-08.md,
+                            Fase 1): those two links are gone now, not just
+                            insufficient — the founder retired /runs/[runId]
+                            from the end-user console entirely ("una única
+                            cifra GEO Score porque si no es un lío"). This row
+                            here, under /debug, is the ONLY way into a run's
+                            detail page today. */}
                         <td>
                           <Link
                             href={`/dashboard/projects/${projectId}/runs/${run.id}`}
@@ -999,9 +1007,8 @@ export default async function RunsPage({
                         </td>
 
                         {run.status === "pending" || run.status === "running" ? (
-                          /* Live cells (PERF-3b): poll independently instead of relying on
-                             the page-level router.refresh() the sibling ScanProgressPoller
-                             now only fires once, on terminal transition. */
+                          /* Live cells (PERF-3b): poll independently and own their own
+                             terminal-transition refresh (VERCEL-COST-1, 2026-08-30). */
                           <LiveRunStatusCells
                             projectId={projectId}
                             initial={{

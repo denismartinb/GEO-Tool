@@ -32,6 +32,18 @@ vi.mock("@/lib/stripe", () => ({
   isSelfServePlan: (...args: [string]) => isSelfServePlan(...args)
 }));
 
+// isPromoActive() reads the real wall clock (PROMO_ENDS_AT, app/pricing/plans-data.ts).
+// A test asserting on its output can't depend on that without breaking the
+// instant the real promo window closes — which is exactly what happened here
+// on 2026-09-01. PLANS stays real (planIdSchema is built from it at module
+// load, app/dashboard/settings/billing/actions.ts:18) — only isPromoActive is
+// made deterministic.
+const isPromoActive = vi.fn(() => true);
+vi.mock("@/app/pricing/plans-data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/app/pricing/plans-data")>();
+  return { ...actual, isPromoActive: () => isPromoActive() };
+});
+
 const USER_ID = "user-1";
 
 type Row = Record<string, unknown>;
@@ -87,6 +99,8 @@ beforeEach(() => {
   getPriceIdForPlan.mockReset();
   getPromoCouponIdForPlan.mockReset();
   getPromoCouponIdForPlan.mockReturnValue(null);
+  isPromoActive.mockReset();
+  isPromoActive.mockReturnValue(true);
   createServiceClient.mockReset();
   resetHeaderEntries();
 });
@@ -188,9 +202,11 @@ describe("createCheckoutSession", () => {
     );
   });
 
-  // PRICING-PROMO-1. isPromoActive() reads the real wall clock — these tests
-  // only mean something while the promo window (until 2026-09-01) is open,
-  // same limitation as any other time-boxed product behavior in this repo.
+  // PRICING-PROMO-1. isPromoActive() is mocked above (deterministic true by
+  // default) instead of depending on the real wall clock against the real
+  // PROMO_ENDS_AT — the previous version of this comment warned that these
+  // tests "only mean something while the promo window is open", and that is
+  // exactly what broke them the instant it closed on 2026-09-01.
   it("applies the promo coupon to the Checkout Session when one is configured for the plan", async () => {
     const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
     getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
@@ -214,6 +230,24 @@ describe("createCheckoutSession", () => {
     getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
     getPriceIdForPlan.mockReturnValue("price_pro_test");
     // getPromoCouponIdForPlan defaults to null in beforeEach — nothing to set.
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    await createCheckoutSession("pro");
+
+    const sessionParams = create.mock.calls[0][0];
+    expect(sessionParams).not.toHaveProperty("discounts");
+  });
+
+  it("does not add a discounts param once the promo window has closed, even with a coupon configured", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    getPromoCouponIdForPlan.mockReturnValue("promo_pro_test");
+    isPromoActive.mockReturnValue(false);
     requireUser.mockResolvedValue({
       supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
       user: { id: USER_ID, email: "founder@example.com" }

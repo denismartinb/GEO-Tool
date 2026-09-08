@@ -44,6 +44,37 @@ worse than no rule, because a future session will obey it anyway.
   whether time has already run out — a `do { … } while (elapsed < budget)` lets
   an iteration start at 39s and run another 45 (`docs/adr/0037`,
   `lib/scan/drive-budget.ts`).
+- **La elegibilidad de un trabajo programado se ancla a SU horario, nunca a una
+  ventana móvil hacia atrás desde `Date.now()`.** El barrido recurrente
+  preguntaba "¿hace menos de 24h del último escaneo?" cuando la pregunta que
+  contesta bien es "¿se ha escaneado desde el disparo anterior?". Con la
+  ventana móvil, cualquier run *fuera del horario del cron* —un escaneo manual,
+  un reintento de `reconciliation.ts`— caía dentro de ella en el disparo
+  siguiente y le costaba al proyecto un día entero de su cadencia; un escaneo
+  manual a las 13:08 del 27 dejó a un proyecto de plan diario sin escaneo el 28
+  (`docs/brand/design-decisions-log.md` §192). El margen de seguridad que había
+  antes (`CRON_DRIFT_SAFETY_MARGIN_MS`) parcheaba el problema simétrico —la
+  deriva del propio disparo— y no podía cubrir éste: un margen sólo mueve el
+  borde de una ventana que sigue siendo móvil. `mostRecentCronFiringAt` +
+  `resolveEligibilityCutoffIso` son el ancla, y `RECURRING_CRON_UTC_HOUR`
+  **tiene que seguir a `vercel.json`**: un desajuste ahí es invisible en
+  ejecución y desplaza la elegibilidad de todos los proyectos, así que lo
+  vigila `lib/scan/cron-schedule.test.ts` contra el propio fichero.
+- **La aritmética de "¿cabe otra invocación?" tiene UN dueño:
+  `lib/scan/drive-budget.ts`.** No es una preferencia de organización: la forma
+  "después" (`if (elapsed > budget) break`) se arregló en el driver de primer
+  plano en ADR 0037 y se quedó sin arreglar en el barrido recurrente, un nivel
+  por encima y en otro fichero, durante meses — el mismo fallo que ADR 0029
+  Adenda ya había documentado un nivel por debajo. Tres pisos, dos arreglos, un
+  agujero. Todo driver que llame a `executePendingScan` en bucle pregunta
+  **antes** de una iteración si su peor caso entero cabe, y lo pregunta a una
+  función de ese módulo (`canStartAnotherScanInvocation`,
+  `canStartAnotherSweepBatch`), nunca a una comparación escrita a mano
+  (`docs/brand/design-decisions-log.md` §192). El coste de acertar aquí es
+  mayor que perder un lote: en el barrido, las DOS cadenas de continuación
+  —la del barrido y la de cada escaneo— viven en `after()`, que no corre si
+  Vercel mata la función antes de responder, así que un desbordamiento no
+  retrasa trabajo, lo hace desaparecer.
 - **Any claim held across a step long enough to be killed needs a lease.**
   `reconcileStuckScanRuns` only ever touches `scan_runs`, never `jobs`, so a
   job left `running` by a dead invocation is stranded forever unless something
@@ -70,7 +101,29 @@ worse than no rule, because a future session will obey it anyway.
   401/404/500 and rejects only on transport failure, so an unchecked
   `await fetch(...)` reports a blocked self-call as a successful hand-off — and
   a safety net that cannot be seen failing is not a safety net. Check
-  `response.ok` and log the status and the URL (`docs/adr/0037`).
+  `response.ok` and log the status and the URL (`docs/adr/0037`). Escrita para
+  `triggerScanContinuation` y no aplicada a `triggerSweepContinuation`, que
+  está un nivel por encima y hacía exactamente lo mismo mal: un `await fetch`
+  pelado, la cadena de proyectos parada en un eslabón y
+  `continuationScheduled: true` en el log de resumen de todas formas
+  (`docs/brand/design-decisions-log.md` §192). **Toda** auto-llamada del
+  pipeline, no sólo la que motivó la regla.
+- **El barrido tiene sus propios fallos, y también tienen que llegar al
+  operador.** La regla de abajo se escribió para lo que pasa DENTRO de un run
+  y se aplicó sólo ahí: un escaneo del cron que revienta antes de existir como
+  run, un proyecto expulsado del recurrente por `skipped_failure_streak`, una
+  pasada que aplaza trabajo sin escanear nada o una cadena de continuación
+  rechazada no producen filas de `scan_prompt_results`, así que
+  `checkAndSendScanHealthAlert` no puede verlos — vivían en un `console.info`
+  (`docs/brand/design-decisions-log.md` §194). `collectSweepFindings` decide
+  qué despierta al operador y es pura: **los silencios se prueban igual que
+  los avisos**, porque `skipped_recent`, `skipped_plan_ineligible` y
+  `skipped_active_run` son el funcionamiento normal y alertar de ellos sería
+  el correo diario que se aprende a ignorar. Y **el barrido no puede usar
+  `job_logs` como almacén de deduplicado**: esa tabla exige una FK real a
+  `(job_id, run_id, project_id)` y el barrido no tiene job, así que el
+  deduplicador es el propio disparo diario (un correo por pasada, no por
+  proyecto).
 - **A failure the operator can fix must reach the operator.** Persisting a
   categorized error is half the job; if nothing reads it, the incident is still
   invisible — OpenAI's 429s ran four days and Claude's ran unnoticed entirely
@@ -139,3 +192,41 @@ worse than no rule, because a future session will obey it anyway.
   fake-scan shape "no mute rows" already forbids. Both call sites reject
   outright (`no_engines_enabled`) rather than create or run that scan
   (`docs/brand/design-decisions-log.md` §54).
+- **Any fetch that follows a redirect to a host this codebase doesn't control
+  needs the same SSRF guard as `lib/web-audit/fetch-page.ts`, imported —
+  never reimplemented.** `resolveGroundingRedirect` followed Gemini's
+  grounding redirects with a plain `redirect: "follow"` for months: no
+  resolved-IP check, no hop-by-hop reverification, the exact gap
+  `fetch-page.ts`'s own header explains is unsafe for a host you don't
+  control. Found by `data-guardian` while scoping CITED-DIFF-1, fixed as
+  CITATION-REDIRECT-SSRF-1 regardless of that phase's own fate — severity was
+  medium (the response body is never read, only `response.url`), but any
+  future phase that DOES read the body would turn this into an exfiltration
+  channel, so it does not wait to become urgent (`docs/brand/
+  design-decisions-log.md` §185). Unlike `fetch-page.ts`, this resolver has
+  no domain allowlist — landing on any public site is the point — so the
+  guard here is `hostnameResolvesToPublicIp` alone (imported, not copied),
+  never `isAllowedAuditHost`. And unlike a per-hop timeout, the budget is one
+  absolute deadline computed once per attempt (HEAD, then separately GET) and
+  threaded through every hop — the same "budget against the invocation, not
+  against itself" lesson ADR 0029 already established, since ADR 0006 already
+  named redirect resolution as the dominant risk to the scan's 60s budget
+  (ADR 0003) before any of this.
+- **A run's own recommendation rows are user state, not regenerable scratch —
+  clear them the same way their neighbors already do.** The finalize block's
+  delete+insert of the current run's `recommendations` (right after the
+  resolve/supersede writes for OTHER runs, both scoped to `status='active'`)
+  had neither that scope nor an error check, unlike those two neighbors. It
+  was not a live bug — `executePendingScan` returns for any terminal run
+  before it ever reads the `jobs` table (this function's own entry guard), so
+  finalize cannot re-run against a run a user could have already acted on —
+  but it depended entirely on that guard, not on anything local to this
+  write, to stay safe. Fixed regardless as RECS-FINALIZE-DURABILITY-1: the
+  delete now scopes to `status='active'` like its neighbors, and both the
+  delete and the insert check their error and log it via `logJob` — a failed
+  delete skips the insert (the thing that would otherwise duplicate the run's
+  whole backlog on top of untouched old rows), and a failed insert is at
+  least diagnosable instead of a bare `console.error`
+  (`docs/brand/design-decisions-log.md` §188). No unique constraint on
+  `(project_id, run_id, dedupe_key)` exists yet to close this at the schema
+  level — accepted residual risk, not this phase's scope.

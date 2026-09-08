@@ -271,6 +271,19 @@ export async function sendCancellationScheduledEmail(to: string, activeUntil: Da
   );
 }
 
+/**
+ * TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the two figures
+ * here are `getEffectiveGeoScore` of two SPECIFIC consecutive runs, on
+ * purpose — checkAndSendScoreDropAlert (lib/scan/score-alert.ts) needs a
+ * fast, un-smoothed signal to catch a sustained drop within two scans, and
+ * `SCORE-WINDOW-1`'s median would blunt exactly that (its own documented
+ * cost: a real step change takes ceil(K/2) runs to fully move). That makes
+ * this a legitimately different quantity from the dashboard's windowed
+ * "Puntuación GEO" — found in the TRUST-METRICS-1 Human Gate review still
+ * calling it "Tu GEO Score" in the subject and heading, which is the one
+ * thing the founder's single-score rule forbids: it is never that figure,
+ * so it never gets that label. Copy only; the detection math is untouched.
+ */
 export async function sendScoreDropAlertEmail(
   to: string,
   projectDomain: string,
@@ -279,11 +292,11 @@ export async function sendScoreDropAlertEmail(
 ): Promise<void> {
   await sendEmail(
     to,
-    `Tu GEO Score de ${projectDomain} ha bajado`,
+    `${projectDomain}: tu puntuación ha bajado`,
     wrap(
       `
       ${eyebrow("Aviso de visibilidad", "#D23B48")}
-      ${heading(`Tu GEO Score de ${projectDomain} ha bajado`)}
+      ${heading(`Tu puntuación en ${projectDomain} ha bajado`)}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;">
         <tr><td style="padding:20px 24px;text-align:center;">
           <span class="em-score-num" style="font-size:34px;font-weight:800;color:#5B6B82;letter-spacing:-.03em;font-variant-numeric:tabular-nums;">${Math.round(
@@ -306,7 +319,7 @@ export async function sendScoreDropAlertEmail(
       )}
       ${button("https://www.genscore.es/dashboard", "Revisar qué ha cambiado")}
     `,
-      { footerHtml: notificationsFooter("este aviso"), preheader: `Tu GEO Score ha pasado de ${Math.round(previousScore)} a ${Math.round(currentScore)}.` }
+      { footerHtml: notificationsFooter("este aviso"), preheader: `Tu puntuación ha pasado de ${Math.round(previousScore)} a ${Math.round(currentScore)} en los dos últimos escaneos.` }
     )
   );
 }
@@ -314,15 +327,54 @@ export async function sendScoreDropAlertEmail(
 const sectionLabel = (text: string) =>
   `<div style="margin:30px 0 12px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5B6B82;">${text}</div>`;
 
-const statCell = (value: string, label: string, stackClass: string) => `
+const statCell = (value: string, label: string, stackClass: string, delta?: DeltaPill | null) => `
   <td width="33%" class="${stackClass}" style="padding:14px 6px;text-align:center;">
     <div style="font-size:21px;font-weight:800;color:#0B1426;line-height:1;font-variant-numeric:tabular-nums;">${value}</div>
     <div style="font-size:11px;color:#5B6B82;margin-top:5px;">${label}</div>
+    ${delta ? `<div style="font-size:10.5px;font-weight:700;color:${delta.ink};margin-top:4px;">${delta.label}</div>` : ""}
   </td>`;
 
 const statRow = (cells: string) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr>${cells}</tr></table>`;
 
+type DeltaPill = { bg: string; ink: string; label: string };
+
+/**
+ * WEEKLY-DIGEST-VISUAL-1: same green/red/gray semantics as everywhere else a
+ * score delta is shown in the product — never a new color scale invented for
+ * this one email.
+ */
+const deltaPill = (delta: number): DeltaPill =>
+  delta > 0
+    ? { bg: "#E7F6EE", ink: "#15915A", label: `▲ +${delta} pts` }
+    : delta < 0
+      ? { bg: "#FDECEE", ink: "#D23B48", label: `▼ ${delta} pts` }
+      : { bg: "#EEF1F6", ink: "#5B6B82", label: "Sin cambios" };
+
+/**
+ * A table-based horizontal bar, not an SVG or CSS gradient — email clients
+ * (Outlook in particular) don't render either reliably. `percent` is clamped
+ * defensively even though `getEffectiveGeoScore` is already a 0-100 composite.
+ */
+const scoreBar = (percent: number, color: string) => {
+  const filled = Math.max(0, Math.min(100, percent));
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;"><tr>
+      <td style="background:${color};width:${filled}%;height:6px;font-size:0;line-height:0;border-radius:3px 0 0 3px;">&nbsp;</td>
+      <td style="background:#E7EAF0;width:${100 - filled}%;height:6px;font-size:0;line-height:0;border-radius:0 3px 3px 0;">&nbsp;</td>
+    </tr></table>`;
+};
+
+/**
+ * TRUST-METRICS-1: digest.currentScore es el compuesto del run más reciente
+ * (getEffectiveGeoScore), no la puntuación con ventana del panel — un número
+ * real, pero de otra base. Se etiqueta "Puntuación de este escaneo", nunca
+ * "Tu GEO Score" (esa etiqueta la reserva el fundador para la única cifra
+ * con ventana del producto). No pongas este tipo de comentario dentro de un
+ * template literal de HTML: `wrap(...)` no es JSX, así que `{/* ... *\/}` no
+ * se elimina — se envía tal cual en el cuerpo del correo (encontrado en
+ * producción el 2026-09-06 tras TRUST-METRICS-1, log §202).
+ */
 export async function sendWeeklyDigestEmail(
   to: string,
   projectDomain: string,
@@ -330,6 +382,7 @@ export async function sendWeeklyDigestEmail(
     currentScore: number;
     previousScore: number;
     subScores: { visibility: number | null; citation: number | null; standing: number | null };
+    previousSubScores: { visibility: number | null; citation: number | null; standing: number | null };
     topMover: { name: string; mentionDelta: number } | null;
     recommendation: { title: string; description: string } | null;
     activeRecommendationsCount: number;
@@ -339,27 +392,48 @@ export async function sendWeeklyDigestEmail(
   }
 ): Promise<void> {
   const delta = Math.round(digest.currentScore) - Math.round(digest.previousScore);
-  const pill =
-    delta > 0
-      ? { bg: "#E7F6EE", ink: "#15915A", label: `▲ +${delta} pts` }
-      : delta < 0
-        ? { bg: "#FDECEE", ink: "#D23B48", label: `▼ ${delta} pts` }
-        : { bg: "#EEF1F6", ink: "#5B6B82", label: "Sin cambios" };
+  const pill = deltaPill(delta);
+
+  /**
+   * A sub-score delta only exists when BOTH runs computed that component —
+   * e.g. no grounded provider rows for authority drops it to null, and a
+   * delta against a missing baseline is not a real comparison.
+   */
+  const subScoreDelta = (current: number | null, previous: number | null): DeltaPill | null =>
+    current !== null && previous !== null ? deltaPill(Math.round(current) - Math.round(previous)) : null;
 
   // Only components this run actually computed — an unavailable one (e.g. no
   // grounded provider rows for authority) is omitted, never shown as 0.
   const subScoreEntries = [
-    digest.subScores.visibility !== null ? { label: "Presencia", value: `${Math.round(digest.subScores.visibility)}%` } : null,
-    digest.subScores.standing !== null ? { label: "Cuota de voz", value: `${Math.round(digest.subScores.standing)}%` } : null,
-    digest.subScores.citation !== null ? { label: "Autoridad", value: `${Math.round(digest.subScores.citation)}%` } : null
-  ].filter((e): e is { label: string; value: string } => e !== null);
+    digest.subScores.visibility !== null
+      ? {
+          label: "Presencia",
+          value: `${Math.round(digest.subScores.visibility)}%`,
+          delta: subScoreDelta(digest.subScores.visibility, digest.previousSubScores.visibility)
+        }
+      : null,
+    digest.subScores.standing !== null
+      ? {
+          label: "Cuota de voz",
+          value: `${Math.round(digest.subScores.standing)}%`,
+          delta: subScoreDelta(digest.subScores.standing, digest.previousSubScores.standing)
+        }
+      : null,
+    digest.subScores.citation !== null
+      ? {
+          label: "Autoridad",
+          value: `${Math.round(digest.subScores.citation)}%`,
+          delta: subScoreDelta(digest.subScores.citation, digest.previousSubScores.citation)
+        }
+      : null
+  ].filter((e): e is { label: string; value: string; delta: DeltaPill | null } => e !== null);
 
   const subScoreHtml = subScoreEntries.length
     ? `
       ${sectionLabel("Visión general")}
       ${statRow(
         subScoreEntries
-          .map((e, i) => statCell(e.value, e.label, i === 0 ? "em-stack-td" : "em-stack-td em-stack-second"))
+          .map((e, i) => statCell(e.value, e.label, i === 0 ? "em-stack-td" : "em-stack-td em-stack-second", e.delta))
           .join("")
       )}`
     : "";
@@ -417,10 +491,11 @@ export async function sendWeeklyDigestEmail(
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;">
         <tr>
           <td class="em-stack-td" style="padding:22px 24px;vertical-align:middle;">
-            <div style="font-size:12.5px;color:#5B6B82;font-weight:600;">Tu GEO Score</div>
+            <div style="font-size:12.5px;color:#5B6B82;font-weight:600;">Puntuación de este escaneo</div>
             <div class="em-score-num" style="font-size:46px;font-weight:800;color:#0B1426;line-height:1;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums;">${Math.round(
               digest.currentScore
             )}</div>
+            ${scoreBar(Math.round(digest.currentScore), pill.ink)}
           </td>
           <td class="em-stack-td em-stack-second em-align-left-mobile" style="padding:22px 24px;vertical-align:middle;text-align:right;">
             <span style="display:inline-block;background:${pill.bg};color:${pill.ink};font-weight:700;font-size:14px;padding:7px 13px;border-radius:999px;">${pill.label}</span>
@@ -434,7 +509,7 @@ export async function sendWeeklyDigestEmail(
       ${recommendationHtml}
       ${button("https://www.genscore.es/dashboard", "Ver el detalle completo")}
     `,
-      { footerHtml: notificationsFooter("este resumen"), preheader: `Tu GEO Score es ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
+      { footerHtml: notificationsFooter("este resumen"), preheader: `Puntuación de este escaneo: ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
     )
   );
 }
@@ -819,6 +894,132 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
       {
         footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
         preheader: `${input.operatorEmail} cambió ${input.change} en ${input.domain}`
+      }
+    )
+  );
+}
+
+/**
+ * RECURRING-CADENCE-1 Fase B: el resumen de una pasada del barrido recurrente
+ * que dejó proyectos sin escanear.
+ *
+ * **Por qué un resumen y no un correo por proyecto.** El deduplicado de
+ * `sendScanHealthAlertEmail` se apoya en `job_logs`, y esa tabla exige una FK
+ * real a `(job_id, run_id, project_id)`: el barrido opera por encima de los
+ * jobs y no tiene ninguno, así que no puede escribir ahí sin una migración.
+ * Un correo por *pasada* no necesita almacén de deduplicado en absoluto — el
+ * cron dispara una vez al día, así que el propio disparo es el deduplicador.
+ * El precio, dicho y no escondido: si los fallos se reparten entre varios
+ * eslabones de la cadena de continuación, ese día salen dos o tres correos en
+ * vez de uno (`docs/brand/design-decisions-log.md` §194).
+ *
+ * Dirección de operador, nunca la del cliente: misma regla que el resto de
+ * este fichero — el dueño de la cuenta no puede arreglar que nuestro cron se
+ * quedara sin presupuesto de invocación.
+ */
+export async function sendSweepHealthAlertEmail(input: {
+  findings: ReadonlyArray<{ domain: string; projectId: string; headline: string; detail: string }>;
+  chainIndex: number;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+  if (input.findings.length === 0) return;
+
+  const findingHtml = input.findings
+    .map(
+      (finding) => `
+    <tr>
+      <td style="padding:12px 0;border-top:1px solid #EEF1F6;vertical-align:top;">
+        <div style="font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(finding.domain)}</div>
+        <div style="font-size:13px;color:#0B1426;margin-top:4px;font-weight:600;">${escapeHtml(finding.headline)}</div>
+        <div style="font-size:12.5px;color:#5B6B82;margin-top:3px;">${escapeHtml(finding.detail)}</div>
+        <div style="font-size:11.5px;color:#8A97A8;margin-top:5px;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">${escapeHtml(finding.projectId)}</div>
+      </td>
+    </tr>`
+    )
+    .join("");
+
+  const count = input.findings.length;
+  const subject =
+    count === 1
+      ? `[GenScore] Escaneo recurrente: 1 dominio sin escanear — ${input.findings[0].domain}`
+      : `[GenScore] Escaneo recurrente: ${count} dominios sin escanear`;
+
+  await sendEmail(
+    to,
+    subject,
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading(count === 1 ? "Un dominio se ha quedado sin su escaneo" : `${count} dominios se han quedado sin su escaneo`)}
+      ${paragraph(
+        "El barrido recurrente de hoy ha terminado dejando esto sin resolver. Cada línea dice qué pasó y qué mirar."
+      )}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${findingHtml}
+      </table>
+      ${subtext(
+        `Pasada ${input.chainIndex} de la cadena del barrido · detectado ${escapeHtml(input.detectedAt.toISOString())}. Un dominio con tres escaneos fallidos seguidos queda fuera del recurrente hasta que alguien lo escanee a mano con éxito: eso no se arregla solo.`
+      )}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: count === 1 ? `${input.findings[0].domain}: ${input.findings[0].headline}` : `${count} dominios sin escanear hoy`
+      }
+    )
+  );
+}
+
+/**
+ * RECURRING-CADENCE-1 Fase B: la cadena de continuación del barrido devolvió
+ * un estado que no es 2xx.
+ *
+ * La Fase A hizo que ese rechazo dejara de leerse como un envío correcto; esto
+ * es la mitad que hace que alguien se entere. Un eslabón caído deja al barrido
+ * sirviendo como mucho `MAX_PROJECTS_PER_CRON_RUN` proyectos al día, en
+ * silencio, y sólo el operador puede arreglarlo (un 401 de deployment
+ * protection, un `getSiteUrl()` obsoleto). Sin deduplicar a propósito: sólo
+ * puede dispararse una vez por eslabón, y un eslabón roto corta la cadena.
+ */
+export async function sendChainRejectedAlertEmail(input: {
+  chainIndex: number;
+  status: number;
+  url: string;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  await sendEmail(
+    to,
+    `[GenScore] La cadena del barrido se ha cortado — HTTP ${input.status}`,
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading("El barrido recurrente no pudo continuar")}
+      ${paragraph(
+        "Una pasada del barrido intentó pasarle el testigo a la siguiente y el destino contestó con un error. Los proyectos que quedaban aplazados NO se han escaneado hoy: esperan al disparo de mañana."
+      )}
+      ${paragraph(
+        "Las causas típicas son un 401 de la protección de despliegue de Vercel, una URL de sitio obsoleta, o un fallo del propio endpoint interno."
+      )}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${dataRow("Estado HTTP", String(input.status))}
+        ${dataRow("Destino", input.url)}
+        ${dataRow("Eslabón", String(input.chainIndex))}
+        ${dataRow("Detectado", input.detectedAt.toISOString())}
+      </table>
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `La cadena del barrido se cortó con HTTP ${input.status}`
       }
     )
   );

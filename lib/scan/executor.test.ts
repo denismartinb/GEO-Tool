@@ -245,7 +245,7 @@ function noopTable() {
   return builder;
 }
 
-function makeScanRunsTable(previousRunId: string | null = null) {
+function makeScanRunsTable(previousRunId: string | null = null, completedRunCount?: number) {
   // Distinguishes the pre-existing "update(...).select('id').maybeSingle()"
   // pattern (confirms a status transition applied, keyed by .eq("id", runId))
   // from RECS-3's new read-only "find the immediately preceding completed
@@ -271,8 +271,13 @@ function makeScanRunsTable(previousRunId: string | null = null) {
       }
       return Promise.resolve({ data: { id: RUN_ID }, error: null });
     },
-    then: (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
-      Promise.resolve({ data: [], error: null }).then(resolve)
+    // PROJECT-DEFAULTS-BY-ACCOUNT-1's `completedRunCount` query
+    // (`.select("id", {count:"exact",head:true}).eq().eq()`) is the only
+    // caller in executor.ts that awaits a `scan_runs` chain directly without
+    // ever calling `.maybeSingle()`/`.order()` — so it's safe to fold `count`
+    // into this same generic `then` without touching any pre-existing test.
+    then: (resolve: (value: { data: unknown[]; error: null; count?: number }) => unknown) =>
+      Promise.resolve({ data: [], error: null, count: completedRunCount }).then(resolve)
   };
   return builder;
 }
@@ -300,7 +305,14 @@ type RecFilter =
  * current run's rows) — real filtering (not just chain-shape passthrough),
  * so tests can assert on actual row transitions.
  */
-function makeRecommendationsTable(seed: RecRow[] = []) {
+function makeRecommendationsTable(
+  seed: RecRow[] = [],
+  // RECS-FINALIZE-DURABILITY-1: lets a test simulate the delete or insert of
+  // the current run's own rows failing, independent of each other — the two
+  // error paths executor.ts now handles differently (a failed delete skips
+  // the insert entirely; a failed insert just logs).
+  options: { deleteError?: string; insertError?: string } = {}
+) {
   const rows: RecRow[] = seed.map((r) => ({ ...r }));
   const insertedRows: RecRow[] = [];
   let nextId = 1;
@@ -319,7 +331,7 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
       eq: (col: string, val: unknown) => chain(mode, patch, [...filters, { type: "eq", col, val }]),
       neq: (col: string, val: unknown) => chain(mode, patch, [...filters, { type: "neq", col, val }]),
       in: (col: string, vals: unknown[]) => chain(mode, patch, [...filters, { type: "in", col, vals }]),
-      then: (resolve: (value: { data: RecRow[] | null; error: null }) => unknown) => {
+      then: (resolve: (value: { data: RecRow[] | null; error: { message: string } | null }) => unknown) => {
         if (mode === "select") {
           const data = rows.filter((r) => matches(r, filters));
           return Promise.resolve({ data, error: null }).then(resolve);
@@ -327,6 +339,9 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
         if (mode === "update") {
           for (const row of rows) if (matches(row, filters)) Object.assign(row, patch);
           return Promise.resolve({ data: null, error: null }).then(resolve);
+        }
+        if (options.deleteError) {
+          return Promise.resolve({ data: null, error: { message: options.deleteError } }).then(resolve);
         }
         for (let i = rows.length - 1; i >= 0; i -= 1) if (matches(rows[i], filters)) rows.splice(i, 1);
         return Promise.resolve({ data: null, error: null }).then(resolve);
@@ -340,6 +355,9 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
     update: (patch: Partial<RecRow>) => chain("update", patch, []),
     delete: () => chain("delete", null, []),
     insert: (payload: Partial<RecRow> | Partial<RecRow>[]) => {
+      if (options.insertError) {
+        return Promise.resolve({ error: { message: options.insertError } });
+      }
       const toInsert = (Array.isArray(payload) ? payload : [payload]).map((r) => ({
         id: `rec-${nextId++}`,
         ...r
@@ -351,6 +369,21 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
   };
 
   return { rows, insertedRows, table };
+}
+
+/** Captures every row `logJob` writes to `job_logs`, so a test can assert a
+ * failure was actually made diagnosable rather than only swallowed. */
+function makeJobLogsTable() {
+  const inserted: Array<Record<string, unknown>> = [];
+  return {
+    inserted,
+    table: {
+      insert: (row: Record<string, unknown>) => {
+        inserted.push(row);
+        return Promise.resolve({ error: null });
+      }
+    }
+  };
 }
 
 /**
@@ -441,7 +474,11 @@ function buildClients(
     ownerPlan,
     notificationsBehavior = "ok",
     promptJobSampleIndex,
-    engineFlags
+    engineFlags,
+    recurringScans,
+    scoreWindowRows,
+    recommendationsDeleteError,
+    recommendationsInsertError
   }: {
     promptJobMaxAttempts: number;
     /** SAMPLING-1: the repetition this prompt job belongs to. Omitted -> no
@@ -465,6 +502,32 @@ function buildClients(
      * it — resolving to "no project override" (all engines stay enabled).
      */
     engineFlags?: { gemini?: boolean; claude?: boolean; openai?: boolean };
+    /**
+     * PROJECT-DEFAULTS-BY-ACCOUNT-1: the auto-activation-after-first-scan
+     * block's three isolated reads (`projects.recurring_scans_enabled`, the
+     * `scan_runs` completed count, and the owner's email via
+     * `auth.admin.getUserById`). Omitted -> `service.from("projects")` falls
+     * through to `noopTable()` for this query (data: null), the same
+     * "migration not applied / unread" shape every pre-existing test
+     * exercises without knowing it — the block's outer `if (recurringFlagRow
+     * && ...)` guard makes that a no-op, so no test written before this
+     * option existed changes behavior.
+     */
+    recurringScans?: { currentValue?: boolean; completedRunCount?: number; ownerEmail?: string | null };
+    /**
+     * TRUST-METRICS-1: rows the completion notification's windowed-score read
+     * (`service.from("run_scores").select(...).order(...).limit(...)`) sees.
+     * Omitted -> falls through to `noopTable()` (data: []), which is the
+     * "fewer than DEFAULT_SCORE_WINDOW_SIZE rows exist yet" shape every test
+     * written before this option existed already exercises: `geoScore` in the
+     * emitted payload falls back to `Math.round(scores.visibility_score)`.
+     */
+    scoreWindowRows?: Array<{ run_id: string; created_at: string; visibility_score: number | null; details_json: unknown }>;
+    /** RECS-FINALIZE-DURABILITY-1: simulate the current run's own delete/insert
+     *  of `recommendations` failing. Omitted -> both succeed, same as every
+     *  test written before this option existed. */
+    recommendationsDeleteError?: string;
+    recommendationsInsertError?: string;
   },
   existingProviders: string[] | Record<number, string[]> = []
 ) {
@@ -511,10 +574,18 @@ function buildClients(
     }
   ]);
 
-  const scanRunsTable = makeScanRunsTable(previousRunId);
+  const scanRunsTable = makeScanRunsTable(previousRunId, recurringScans?.completedRunCount);
   const scanPromptResultsTable = makeScanPromptResultsTable(existingProviders);
-  const recommendationsTable = makeRecommendationsTable(previousRecommendationRows);
+  const recommendationsTable = makeRecommendationsTable(previousRecommendationRows, {
+    deleteError: recommendationsDeleteError,
+    insertError: recommendationsInsertError
+  });
+  const jobLogsTable = makeJobLogsTable();
   const notificationsTable = makeNotificationsTable(notificationsBehavior);
+  // PROJECT-DEFAULTS-BY-ACCOUNT-1: every `projects.update(...)` call the
+  // finalize block issues, so tests can assert whether (and to what)
+  // `recurring_scans_enabled` was written.
+  const projectsUpdates: Array<Record<string, unknown>> = [];
 
   const service = {
     from(table: string) {
@@ -522,7 +593,24 @@ function buildClients(
       if (table === "scan_runs") return scanRunsTable;
       if (table === "scan_prompt_results") return scanPromptResultsTable.table;
       if (table === "recommendations") return recommendationsTable.table;
+      if (table === "job_logs") return jobLogsTable.table;
       if (table === "notifications") return notificationsTable.table;
+      if (table === "run_scores" && scoreWindowRows) {
+        // Extends noopTable() rather than replacing it: executePendingScan
+        // ALSO calls `.from("run_scores").upsert(...)` earlier, to persist
+        // this run's own score row — a select-only stub here broke that call
+        // (`upsert is not a function`) for every test, not just this one.
+        return {
+          ...noopTable(),
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: () => Promise.resolve({ data: scoreWindowRows, error: null })
+              })
+            })
+          })
+        };
+      }
       if (table === "profiles") {
         return {
           select: () => ({
@@ -536,24 +624,42 @@ function buildClients(
           })
         };
       }
-      if (table === "projects" && engineFlags) {
+      if (table === "projects" && (engineFlags || recurringScans)) {
         return {
           select: () => ({
             eq: () => ({
               maybeSingle: () =>
                 Promise.resolve({
                   data: {
-                    engine_gemini_enabled: engineFlags.gemini,
-                    engine_claude_enabled: engineFlags.claude,
-                    engine_openai_enabled: engineFlags.openai
+                    ...(engineFlags
+                      ? {
+                          engine_gemini_enabled: engineFlags.gemini,
+                          engine_claude_enabled: engineFlags.claude,
+                          engine_openai_enabled: engineFlags.openai
+                        }
+                      : {}),
+                    ...(recurringScans ? { recurring_scans_enabled: recurringScans.currentValue } : {})
                   },
                   error: null
                 })
             })
-          })
+          }),
+          update: (patch: Record<string, unknown>) => {
+            projectsUpdates.push(patch);
+            return { eq: () => Promise.resolve({ error: null }) };
+          }
         };
       }
       return noopTable();
+    },
+    // PROJECT-DEFAULTS-BY-ACCOUNT-1: the finalize block's owner-email lookup.
+    // Omitted `recurringScans` -> never reached (the outer guard above
+    // short-circuits first), so this is safe to always provide.
+    auth: {
+      admin: {
+        getUserById: (_id: string) =>
+          Promise.resolve({ data: { user: { email: recurringScans?.ownerEmail ?? null } }, error: null })
+      }
     }
   } as unknown as ServiceClient;
 
@@ -609,7 +715,17 @@ function buildClients(
     }
   } as unknown as SupabaseClient;
 
-  return { service, supabase, jobsTable, scanRunsTable, scanPromptResultsTable, recommendationsTable, notificationsTable };
+  return {
+    service,
+    supabase,
+    jobsTable,
+    scanRunsTable,
+    scanPromptResultsTable,
+    recommendationsTable,
+    jobLogsTable,
+    notificationsTable,
+    projectsUpdates
+  };
 }
 
 const SUCCESS_RESPONSE = {
@@ -1230,6 +1346,76 @@ describe("executePendingScan — recommendation history across runs (RECS-3)", (
   });
 });
 
+describe("executePendingScan — recommendation delete/insert durability (RECS-FINALIZE-DURABILITY-1)", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce([
+      {
+        priority_rank: 1,
+        title: "Te mencionan pero no citan tu dominio",
+        description: "desc",
+        rule_id: "rule_citations_001",
+        recommendation_type: "add_citation_block",
+        impact: "medium",
+        effort: "low",
+        confidence: "high",
+        source_type: "rule",
+        evidence_json: {},
+        dedupe_key: "add_citation_block:p1"
+      } as unknown as ReturnType<typeof generateRecommendationsForRun>[number]
+    ]);
+  });
+
+  it("logs and skips the insert when clearing this run's prior recommendations fails, instead of duplicating the backlog", async () => {
+    const { service, supabase, recommendationsTable, jobLogsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      recommendationsDeleteError: "connection reset"
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    // Fail-soft: a delete failure must not sink the scan.
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).resolves.not.toThrow();
+
+    // Nothing inserted on top of the rows the failed delete left untouched —
+    // this is the whole point: a naive "insert regardless" would duplicate
+    // the backlog instead.
+    expect(recommendationsTable.insertedRows).toHaveLength(0);
+
+    const errorLog = jobLogsTable.inserted.find(
+      (row) => row.level === "error" && String(row.message).includes("clear this run's prior active recommendation")
+    );
+    expect(errorLog).toBeDefined();
+    expect(errorLog?.run_id).toBe(RUN_ID);
+    expect((errorLog?.context_json as Record<string, unknown>)?.message).toBe("connection reset");
+  });
+
+  it("logs when inserting this run's fresh recommendations fails, leaving the run with zero recommendations rather than a silent gap", async () => {
+    const { service, supabase, recommendationsTable, jobLogsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      recommendationsInsertError: "constraint violation"
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).resolves.not.toThrow();
+
+    // The delete succeeded (no prior rows existed to fail on); the insert did
+    // not, so nothing landed for this run.
+    expect(recommendationsTable.insertedRows).toHaveLength(0);
+    expect(recommendationsTable.rows.find((r) => r.run_id === RUN_ID)).toBeUndefined();
+
+    const errorLog = jobLogsTable.inserted.find(
+      (row) => row.level === "error" && String(row.message).includes("insert this run's recommendation rows")
+    );
+    expect(errorLog).toBeDefined();
+    expect(errorLog?.run_id).toBe(RUN_ID);
+    expect((errorLog?.context_json as Record<string, unknown>)?.message).toBe("constraint violation");
+    expect((errorLog?.context_json as Record<string, unknown>)?.attempted).toBe(1);
+  });
+});
+
 describe("executePendingScan — notifications (NOTIF-SERVER-1a)", () => {
   beforeEach(() => {
     generateGeminiVisibilityAnswer.mockReset();
@@ -1255,6 +1441,53 @@ describe("executePendingScan — notifications (NOTIF-SERVER-1a)", () => {
       dedupe_key: `scan_completed:${RUN_ID}`
     });
     expect(scanCompleted[0].payload_json).toMatchObject({ runId: RUN_ID, promptsProcessed: 1 });
+  });
+
+  /**
+   * TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1) — the audit's
+   * exact P0-01 divergence, reproduced and closed: a windowed median (8) that
+   * differs from this run's own raw visibility_score (2) must reach the
+   * notification payload as `geoScore`, never silently collapsed to the raw
+   * value under a "Puntuación GEO" label.
+   */
+  it("resolves geoScore from the windowed median across comparable runs, not the raw visibility_score", async () => {
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      scoreWindowRows: [
+        {
+          run_id: RUN_ID,
+          created_at: "2026-08-27T00:00:00.000Z",
+          visibility_score: 2,
+          details_json: { total_results: 45, geo_score: { score: 10, composite_version: "v4", inputs_used: ["visibility"] } }
+        },
+        {
+          run_id: PREVIOUS_RUN_ID,
+          created_at: "2026-08-26T00:00:00.000Z",
+          visibility_score: 2,
+          details_json: { total_results: 45, geo_score: { score: 6, composite_version: "v4", inputs_used: ["visibility"] } }
+        }
+      ]
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const scanCompleted = notificationsTable.calls.filter((c) => c.type === "scan_completed");
+    expect(scanCompleted[0].payload_json).toMatchObject({ geoScore: 8 }); // median(10, 6)
+    expect((scanCompleted[0].payload_json as { geoScore: number }).geoScore).not.toBe(2);
+  });
+
+  it("falls back to this run's own composite when fewer than two comparable runs exist (no run_scores rows seeded)", async () => {
+    const { service, supabase, notificationsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const scanCompleted = notificationsTable.calls.filter((c) => c.type === "scan_completed");
+    const payload = scanCompleted[0].payload_json as { geoScore: number; visibilityScore: number };
+    expect(payload.geoScore).toBe(Math.round(payload.visibilityScore));
   });
 
   it("emits scan_failed when no jobs exist for the run (the non-catch-block failure path)", async () => {
@@ -2224,5 +2457,104 @@ describe("executePendingScan — extraction shares one invocation-wide deadline"
     // each pass began.
     expect(deadlines[0]).toBeGreaterThanOrEqual(before + SCAN_INVOCATION_WORK_BUDGET_MS);
     expect(deadlines[0]).toBeLessThanOrEqual(after + SCAN_INVOCATION_WORK_BUDGET_MS);
+  });
+});
+
+/**
+ * PROJECT-DEFAULTS-BY-ACCOUNT-1 (founder-approved 2026-08-25, log §167).
+ * `recurring_scans_enabled` cannot be set at project creation — its own
+ * `/debug` precondition requires a completed scan to already exist — so a
+ * real customer account gets it turned on here, the first moment that
+ * precondition is met. The `ux-pilot` agent flagged this exact path as
+ * structurally invisible to the always-on read-only pilot (it lives behind
+ * `/debug`, never captured by the default journey set, and behind a write
+ * path the pilot cannot exercise) and recommended these unit tests carry the
+ * verification instead.
+ */
+describe("executePendingScan — auto-enables recurring scans after the first completed run (PROJECT-DEFAULTS-BY-ACCOUNT-1)", () => {
+  const ORIGINAL_INTERNAL_TEST_EMAILS = process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(generateRecommendationsForRun).mockClear().mockReturnValue([]);
+    delete process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_INTERNAL_TEST_EMAILS === undefined) delete process.env.INTERNAL_TEST_ACCOUNT_EMAILS;
+    else process.env.INTERNAL_TEST_ACCOUNT_EMAILS = ORIGINAL_INTERNAL_TEST_EMAILS;
+  });
+
+  it("turns recurring_scans_enabled on when this is the project's first completed run and the owner is not an internal test account", async () => {
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: false, completedRunCount: 1, ownerEmail: "customer@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toContainEqual({ recurring_scans_enabled: true });
+  });
+
+  it("leaves recurring_scans_enabled off for an internal test account, even on the first completed run", async () => {
+    process.env.INTERNAL_TEST_ACCOUNT_EMAILS = "founder@example.com";
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: false, completedRunCount: 1, ownerEmail: "founder@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toEqual([]);
+  });
+
+  it("does not touch recurring_scans_enabled once this is the project's second (or later) completed run", async () => {
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: false, completedRunCount: 2, ownerEmail: "customer@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toEqual([]);
+  });
+
+  it("never re-writes recurring_scans_enabled once it is already on — a customer who turned it off manually is not silently re-enabled by a later scan", async () => {
+    const { service, supabase, projectsUpdates } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: true, completedRunCount: 1, ownerEmail: "customer@example.com" }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(projectsUpdates).toEqual([]);
+  });
+
+  it("fails soft: a broken owner-email lookup never stops the run from completing", async () => {
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      recurringScans: { currentValue: false, completedRunCount: 1, ownerEmail: "customer@example.com" }
+    });
+    // Break only the owner-email lookup this block depends on — proving this
+    // one side effect can't sink an otherwise-successful scan, the same
+    // fail-soft contract the web-audit enqueue and scan-health-alert calls
+    // right around it in executor.ts already carry.
+    (service as unknown as { auth: { admin: { getUserById: () => Promise<never> } } }).auth.admin.getUserById = () =>
+      Promise.reject(new Error("network"));
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(notificationsTable.calls.some((c) => c.type === "scan_completed")).toBe(true);
   });
 });

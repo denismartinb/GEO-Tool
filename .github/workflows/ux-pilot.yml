@@ -1,8 +1,9 @@
 name: Agentic User Pilot
 
-# Runs the read-only user pilot against every Vercel preview deployment, so the
-# gate no longer depends on which kind of session the founder happens to be
-# working from. Claude Code's remote/web sessions cannot reach *.vercel.app
+# Runs the read-only user pilot against a Vercel preview deployment on GitHub's
+# runners, so the gate does not depend on which kind of session the founder
+# happens to be working from. Since Fase 5 (see below) it is dispatched by hand
+# rather than fired by every deployment. Claude Code's remote/web sessions cannot reach *.vercel.app
 # (egress policy), but GitHub's runners can — the agent then downloads the
 # screenshots artifact and does the visual judging.
 #
@@ -10,12 +11,42 @@ name: Agentic User Pilot
 # environment "Preview" and the preview URL in `environment_url`, so no comment
 # scraping is needed.
 #
-# Deliberately triggered by `deployment_status` and NOT `pull_request_target`:
-# this job holds the pilot account's credentials, and pull_request_target would
-# expose them to code from any fork.
+# Deliberately NOT triggered by `pull_request_target`: this job holds the pilot
+# account's credentials, and pull_request_target would expose them to code from
+# any fork.
+#
+# VERCEL-COST-1 Fase 5 (2026-08-31): **ya no corre solo.** Hasta hoy se
+# disparaba con `deployment_status`, es decir una pasada completa —75 pantallas
+# x 3 anchuras, ~6.750 peticiones HTTP contra el preview— por cada despliegue,
+# hubiera o no algo que mirar. Medido en la factura real de agosto: 6,6M de
+# Edge Requests y 15,1M de Observability Events ($18,09), con el grueso
+# atribuible a este barrido, sobre un producto en beta privada sin tráfico
+# orgánico. El fundador (2026-08-31) pidió decidir él cada pasada: "muchas
+# veces no es necesario o no hay nada que probar en UI".
+#
+# **La premisa que sostiene retirarlo, y qué se rompe si falla.** El piloto
+# sigue siendo obligatorio antes del Human Gate (CLAUDE.md); lo que cambia es
+# quién lo lanza. La premisa es que el Director PREGUNTA antes de cada Human
+# Gate y el fundador decide. Si esa premisa falla —una sesión que no pregunta,
+# o un "no" por prisa— un PR llega al Human Gate sin ninguna verificación
+# visual y **nada lo señala**, porque ya no queda ninguna señal automática que
+# eche de menos. Antes, la ausencia de piloto era visible (no había check);
+# ahora la ausencia es el estado por defecto. Ese es el precio, y se paga a
+# cambio de ~$18/mes y de dejar de barrer 20 artículos de blog que no han
+# cambiado.
+#
+# Efecto colateral bueno: desaparece la carrera de `deployment_status` que
+# publicaba checks verdes sin haber pilotado nada cuando el deploy se creaba
+# antes que el PR (log §115, y visto dos veces el 2026-08-30 en el PR #511).
+# Con un número de PR de entrada no hay nada que resolver ni que pueda fallar
+# en silencio.
 
 on:
-  deployment_status:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Número del PR a pilotar (su preview tiene que estar ya desplegado)"
+        required: true
 
 permissions:
   # `contents: write` is needed only to publish screenshots to a
@@ -25,17 +56,11 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: ux-pilot-${{ github.event.deployment.sha }}
+  group: ux-pilot-pr-${{ github.event.inputs.pr_number }}
   cancel-in-progress: true
 
 jobs:
   pilot:
-    # Preview deployments only, and only once Vercel reports success. Production
-    # deployments are never piloted: the journeys log in as a real user and this
-    # phase has no business touching production.
-    if: >-
-      github.event.deployment_status.state == 'success' &&
-      github.event.deployment.environment == 'Preview'
     runs-on: ubuntu-latest
     # 2026-08-12: era 20 y el barrido de PR #388 tardó 19m04s, así que el job
     # murió en el paso del veredicto justo al cumplirse el minuto 20. El
@@ -53,113 +78,95 @@ jobs:
     timeout-minutes: 35
 
     steps:
-      - name: Check out the deployed commit
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.deployment.sha }}
-
-      # Dos búsquedas, no una, y con reintentos — porque un salto silencioso
-      # aquí es indistinguible de un aprobado.
-      #
-      # 2026-08-17 (PR #433, log §115): `commits/{sha}/pulls` devolvió lista
-      # vacía para un commit CON un PR abierto, **treinta minutos después** del
-      # push — o sea, no es una carrera de indexación, ese índice sencillamente
-      # no respondió. El job tomó entonces la rama de "no hay PR", se saltó
-      # todos los pasos restantes y **publicó el check en VERDE**: el PR mostró
-      # un `pilot` aprobado para una pasada que no llegó a abrir un navegador.
-      # Es exactamente el fallo que este repositorio no deja de pagar — una
-      # garantía que no se puede ver fallar no es una garantía
-      # (`.claude/rules/scan.md`; log §65, §55).
-      #
-      # `pulls?head=` consulta la lista de PRs directamente en vez del índice
-      # commit→PR, así que no depende de que ese índice funcione; se comprobó
-      # a mano ese mismo día que devuelve el PR correcto cuando el otro no.
-      # Va primero, y la búsqueda por commit queda de reserva para deployments
-      # cuyo `ref` no sea un nombre de rama.
-      - name: Resolve the pull request for this deployment
+      # El PR viene dado por la entrada del dispatch, así que aquí no queda
+      # nada que "resolver" y por tanto nada que pueda fallar en silencio: se
+      # acabó la clase de fallo del log §115 (índice commit→PR que devuelve
+      # vacío y el job publica verde sin haber pilotado). Lo que sí hay que
+      # localizar es el preview YA desplegado de ese PR, y eso sí puede no
+      # existir — y cuando no existe, este job se cae con un mensaje claro en
+      # vez de pasar de puntillas: pilotar "lo que haya" es exactamente cómo se
+      # juzga una pantalla que no es la del commit.
+      - name: Resolve the pull request and its preview deployment
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SHA: ${{ github.event.deployment.sha }}
-          REF: ${{ github.event.deployment.ref }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
         run: |
-          # Sin `-e` a propósito: el bucle de abajo TIENE que sobrevivir a que
-          # una de las dos llamadas falle, que es el caso que estamos cubriendo.
-          set -uo pipefail
+          set -euo pipefail
 
-          owner="${GITHUB_REPOSITORY%%/*}"
+          sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+          if [ -z "$sha" ] || [ "$sha" = "null" ]; then
+            echo "::error::No se pudo leer el head del PR #${PR_NUMBER}. ¿Existe?" >&2
+            exit 1
+          fi
+          echo "PR #${PR_NUMBER} → head ${sha}"
 
-          by_ref() {
-            [ -n "${REF:-}" ] || return 0
-            # Un `ref` que es un SHA de 40 hex no es una rama; no preguntes por él.
-            printf '%s' "$REF" | grep -Eq '^[0-9a-f]{40}$' && return 0
-            gh api "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${owner}:${REF}&per_page=100" \
-              --jq '.[0].number // empty' 2>/dev/null
-          }
-          by_sha() {
-            gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls?per_page=100" \
-              --jq 'map(select(.state == "open")) | .[0].number // empty' 2>/dev/null
-          }
-
-          number=""
-          for attempt in 1 2 3 4 5; do
-            number="$(by_ref)"
-            [ -n "$number" ] || number="$(by_sha)"
-            if [ -n "$number" ]; then
-              echo "PR #${number} resuelto para ${SHA} (intento ${attempt})."
-              break
-            fi
-            if [ "$attempt" -lt 5 ]; then
-              echo "Todavía sin PR abierto para ${SHA} (ref '${REF:-}', intento ${attempt}/5); reintentando."
-              sleep $((attempt * 8))
+          # El despliegue de preview de ESE commit, no el último del proyecto.
+          # `environment_url` sale del estado `success`, que es el único que
+          # lleva la URL ya servible.
+          # `|| true` en las dos llamadas: bajo `set -e`, un `gh api` que
+          # devuelva no-cero para UN deployment mataría el paso entero y el job
+          # moriría sin el `::error::` explicativo de abajo — un mensaje peor
+          # para el mismo rojo. Que una consulta falle es justo el caso que el
+          # bucle de reintentos existe para absorber.
+          url=""
+          for attempt in 1 2 3; do
+            deps="$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${sha}&per_page=100" \
+                      --jq '.[] | select(.environment == "Preview") | .id' 2>/dev/null || true)"
+            for dep in $deps; do
+              url="$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${dep}/statuses?per_page=100" \
+                      --jq 'map(select(.state == "success")) | .[0].environment_url // empty' 2>/dev/null || true)"
+              [ -n "$url" ] && break
+            done
+            [ -n "$url" ] && break
+            if [ "$attempt" -lt 3 ]; then
+              echo "Todavía sin preview desplegado para ${sha} (intento ${attempt}/3); reintentando."
+              sleep $((attempt * 15))
             fi
           done
 
-          if [ -z "$number" ]; then
-            # `::warning::` sale en el resumen del run, no sólo enterrado en el
-            # log del paso. El check seguirá en verde —un preview de una rama
-            # sin PR es legítimo y no debe pintarse en rojo— así que este aviso
-            # es lo ÚNICO que distingue ese caso de una pasada saltada por
-            # avería. Si esto aparece en un PR abierto, el verde no vale nada.
-            echo "::warning::Ningún PR abierto resuelto para ${SHA} tras 5 intentos (ref '${REF:-}'). El piloto NO se ha ejecutado: si este deployment sí pertenece a un PR abierto, el check verde de abajo no ha pilotado nada (log §115)."
-            echo "No open PR for ${SHA}; nothing to report on."
+          if [ -z "$url" ]; then
+            echo "::error::No hay ningún preview de Vercel desplegado con éxito para ${sha} (PR #${PR_NUMBER}). Espera a que termine el despliegue y vuelve a lanzar el piloto." >&2
+            exit 1
           fi
-          echo "number=${number}" >> "$GITHUB_OUTPUT"
 
-      - name: Stop early when the deployment has no open PR
-        if: steps.pr.outputs.number == ''
-        run: echo "Skipping pilot — deployment is not attached to an open pull request."
+          echo "Preview: ${url}"
+          {
+            echo "number=${PR_NUMBER}"
+            echo "sha=${sha}"
+            echo "url=${url}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check out the deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
 
       - name: Set up pnpm
-        if: steps.pr.outputs.number != ''
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Set up Node
-        if: steps.pr.outputs.number != ''
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
-        if: steps.pr.outputs.number != ''
         run: pnpm install --frozen-lockfile
 
       - name: Install Chromium
-        if: steps.pr.outputs.number != ''
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run the pilot
         id: run
-        if: steps.pr.outputs.number != ''
         continue-on-error: true
         env:
           PILOT_EMAIL: ${{ secrets.PILOT_EMAIL }}
           PILOT_PASSWORD: ${{ secrets.PILOT_PASSWORD }}
           PILOT_PROJECT_ID: ${{ secrets.PILOT_PROJECT_ID }}
-          PILOT_COMMIT_SHA: ${{ github.event.deployment.sha }}
+          PILOT_COMMIT_SHA: ${{ steps.pr.outputs.sha }}
           PILOT_PR_NUMBER: ${{ steps.pr.outputs.number }}
           # Optional. Only needed if Vercel Deployment Protection stays enabled
           # for preview deployments.
@@ -167,12 +174,11 @@ jobs:
         run: |
           set +e
           node scripts/pilot.mjs \
-            --url "${{ github.event.deployment_status.environment_url }}" \
+            --url "${{ steps.pr.outputs.url }}" \
             --summary-md .pilot/summary.md
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
 
       - name: Upload screenshots and signals
-        if: steps.pr.outputs.number != ''
         uses: actions/upload-artifact@v4
         with:
           name: pilot-screenshots
@@ -198,10 +204,10 @@ jobs:
       # a login failure is exactly when the evidence matters most, and job logs
       # are served from a host agent sandboxes cannot reach either.
       - name: Publish screenshots to an evidence branch
-        if: steps.pr.outputs.number != '' && hashFiles('.pilot/**') != ''
+        if: hashFiles('.pilot/**') != ''
         env:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
-          SHA: ${{ github.event.deployment.sha }}
+          SHA: ${{ steps.pr.outputs.sha }}
         run: |
           set -euo pipefail
           branch="pilot-evidence/pr-${PR_NUMBER}"
@@ -236,11 +242,10 @@ jobs:
           echo "Evidence pushed to ${branch}"
 
       - name: Post the verdict on the pull request
-        if: steps.pr.outputs.number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
-          PILOT_SHA: ${{ github.event.deployment.sha }}
+          PILOT_SHA: ${{ steps.pr.outputs.sha }}
         run: |
           set -euo pipefail
           if [ ! -f .pilot/summary.md ]; then
@@ -290,7 +295,6 @@ jobs:
           gh pr comment "$PR_NUMBER" --body-file .pilot/summary.md
 
       - name: Fail the check unless the pilot passed
-        if: steps.pr.outputs.number != ''
         env:
           EXIT_CODE: ${{ steps.run.outputs.exit_code }}
         run: |
@@ -324,7 +328,7 @@ jobs:
       # código de escaneo: una garantía que no se puede ver fallar no es una
       # garantía (log §65).
       - name: Announce a run that was cut off before it could gate
-        if: cancelled() && steps.pr.outputs.number != ''
+        if: cancelled()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}

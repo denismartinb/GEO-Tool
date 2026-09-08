@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { COMPARATIVAS_BREADCRUMB } from "@/lib/comparativas";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { KeyTakeaway, Verdict, CompareTable, Pill, ArticleCta } from "@/components/blog/article";
 import {
@@ -12,6 +13,14 @@ import {
   RESEARCH_DATE
 } from "@/lib/comparativas/alternativas-a-otterly";
 import { contentMetadata } from "@/lib/seo/metadata";
+import { PLANS } from "@/app/pricing/plans-data";
+
+// TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2): dos frases de
+// esta página citaban "179 €/mes" a mano — mismo fallo que ya se corrigió en
+// los datos de la comparativa (lib/comparativas/alternativas-a-otterly.ts),
+// que esta página importa; el propio texto de la página se había quedado
+// fuera de esa pasada porque vive en JSX, no en el módulo de datos.
+const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/alternativas-a-otterly`;
@@ -32,7 +41,7 @@ const faqItems = [
   {
     question: "¿Cuál es la alternativa más barata a Otterly?",
     answer:
-      "GenScore, y no por poco: es la única de esta lista con plan gratuito permanente, sin tarjeta y sin caducidad, frente a los 29 $/mes de la entrada de Otterly. En el escalón de ~100 prompts la comparación es 179 €/mes de GenScore Pro —con ChatGPT, Gemini y Claude incluidos— frente a 189 $/mes de Otterly Standard más los add-ons de Gemini y Google AI Mode, que se cobran aparte en todos los niveles."
+      `GenScore, y no por poco: es la única de esta lista con plan gratuito permanente, sin tarjeta y sin caducidad, frente a los 29 $/mes de la entrada de Otterly. En el escalón de ~100 prompts la comparación es ${PRO_PRICE} €/mes de GenScore Pro —con ChatGPT, Gemini y Claude incluidos— frente a 189 $/mes de Otterly Standard más los add-ons de Gemini y Google AI Mode, que se cobran aparte en todos los niveles.`
   },
   {
     question: "¿Puedo probar una alternativa sin dejar Otterly?",
@@ -67,7 +76,7 @@ function reasonLabel(id: string): string {
 
 export default function AlternativasAOtterlyPage() {
   return (
-    <BlogPageShell>
+    <BlogPageShell breadcrumb={COMPARATIVAS_BREADCRUMB}>
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },
@@ -212,7 +221,7 @@ export default function AlternativasAOtterlyPage() {
           datos estructurados, briefs— desde el plan Pro: es donde el resto de esta lista se detiene,
           incluida Otterly. Y si tu equipo trabaja en castellano, es la única con interfaz y soporte
           nativos, sin traducir un panel en inglés cada mañana. Al escalón de ~100 prompts, Pro cuesta
-          179 €/mes con los tres motores dentro, frente a 189 $ más add-ons.
+          {PRO_PRICE} €/mes con los tres motores dentro, frente a 189 $ más add-ons.
         </Verdict>
 
         <p>

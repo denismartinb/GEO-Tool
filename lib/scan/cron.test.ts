@@ -7,6 +7,15 @@ vi.mock("@/lib/scan/run-creation", () => ({
   createPendingScanRunForCron: (...args: unknown[]) => createPendingScanRunForCron(...args)
 }));
 
+const sendSweepHealthAlertEmail = vi.fn();
+const sendChainRejectedAlertEmail = vi.fn();
+const isOpsAlertConfigured = vi.fn(() => true);
+vi.mock("@/lib/email/transactional", () => ({
+  isOpsAlertConfigured: () => isOpsAlertConfigured(),
+  sendSweepHealthAlertEmail: (...args: unknown[]) => sendSweepHealthAlertEmail(...args),
+  sendChainRejectedAlertEmail: (...args: unknown[]) => sendChainRejectedAlertEmail(...args)
+}));
+
 const executePendingScan = vi.fn();
 vi.mock("@/lib/scan/executor", () => ({
   executePendingScan: (...args: unknown[]) => executePendingScan(...args),
@@ -62,6 +71,13 @@ function fakeServiceClient({
           },
           eq() {
             return builder;
+          },
+          // Resolución de dominios de `checkAndSendSweepAlert` (Fase B).
+          in(_column: string, ids: string[]) {
+            return Promise.resolve({
+              data: ids.map((id) => ({ id, domain: `${id}.example` })),
+              error: null
+            });
           },
           then(resolve: (value: { data: ProjectRow[]; error: null }) => unknown) {
             const rows = projects.map((p) => ({ owner_user_id: p.id, ...p }));
@@ -194,11 +210,13 @@ describe("runDailyCronScan", () => {
     expect(order).toEqual(["never-scanned", "scanned-2-days-ago", "scanned-recently-ish"]);
   });
 
-  it("skips a project scanned within the last 24h", async () => {
+  it("skips a project already scanned since this morning's firing", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // Firing is 06:00Z, "now" is 08:00Z: a run at 07:00Z happened after this
+    // firing's anchor, so the project has already had its scan today.
     const service = fakeServiceClient({
       projects: [{ id: "p1" }],
-      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 2 * HOUR_MS).toISOString() }]
+      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 1 * HOUR_MS).toISOString() }]
     });
 
     const result = await runDailyCronScan({ service });
@@ -207,8 +225,14 @@ describe("runDailyCronScan", () => {
     expect(createPendingScanRunForCron).not.toHaveBeenCalled();
   });
 
-  it("still skips a project scanned well within the drift-adjusted interval (20h ago)", async () => {
+  it("scans a project whose last run was yesterday afternoon (RECURRING-CADENCE-1 regression)", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // The founder-visible bug: an off-schedule run — a manual scan, or an
+    // auto-retry from reconciliation.ts — landed inside the old rolling
+    // 22h window and cost the project a whole day of its daily cadence
+    // (27-08 13:08 manual, no scan on 28-08, next scan 29-08). 20h before
+    // 08:00Z is yesterday at 12:00Z, comfortably before this firing's
+    // 06:00Z anchor, so it is eligible.
     const service = fakeServiceClient({
       projects: [{ id: "p1" }],
       scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 20 * HOUR_MS).toISOString() }]
@@ -216,8 +240,23 @@ describe("runDailyCronScan", () => {
 
     const result = await runDailyCronScan({ service });
 
+    expect(result.results).toEqual([{ projectId: "p1", status: "scanned" }]);
+  });
+
+  it("skips a project scanned by an earlier link of this same sweep chain (convergence)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // A chained link runs minutes after the firing. The project link 0
+    // scanned at 06:01Z must read as skipped_recent here, or the chain
+    // would rescan the same projects instead of converging.
+    const firingAt = Date.parse("2026-06-20T06:01:00.000Z");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }],
+      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(firingAt).toISOString() }]
+    });
+
+    const result = await runDailyCronScan({ service, chainIndex: 1 });
+
     expect(result.results).toEqual([{ projectId: "p1", status: "skipped_recent" }]);
-    expect(createPendingScanRunForCron).not.toHaveBeenCalled();
   });
 
   it("scans a project last run 23h45m ago instead of skipping it to a zero-margin 24h boundary (cron-drift regression)", async () => {
@@ -310,6 +349,29 @@ describe("runDailyCronScan", () => {
     expect(statuses.filter((s) => s === "skipped_budget")).toHaveLength(2);
     expect(result.deferred).toBe(2);
     expect(result.continuationScheduled).toBe(true);
+  });
+
+  it("never starts a batch whose worst case would overrun maxDuration (RECURRING-CADENCE-1 regression)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // The exact shape of the bug: the first batch ends at 44s. The old
+    // `if (elapsed > 45_000) break` let a second batch start there and spend
+    // another 50s — ~94s inside a 60s function. Vercel kills it before the
+    // response, so neither `after()` continuation (this sweep's next link,
+    // nor each scan's own next batch) is ever dispatched.
+    executePendingScan.mockImplementation(async () => {
+      nowMs += 44_000;
+    });
+
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }, { id: "p3" }, { id: "p4" }],
+      scanRuns: []
+    });
+
+    const result = await runDailyCronScan({ service, maxProjects: 10 });
+
+    expect(result.scanned).toBe(2);
+    expect(result.results.filter((r) => r.status === "skipped_budget")).toHaveLength(2);
+    expect(result.deferred).toBe(2);
   });
 
   it("reconciles a stuck run instead of skipping outright: a stale pending/running latest run that createPendingScanRunForCron clears results in a real scan", async () => {
@@ -539,6 +601,30 @@ describe("runDailyCronScan — self-chaining sweep (ASYNC-SCAN-1a)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("logs a rejected sweep continuation instead of reading it as delivered (RECURRING-CADENCE-1)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // A 401 from deployment protection, a 404 from a stale getSiteUrl(), a
+    // 500 — `fetch` resolves for all of them, and before this check every one
+    // looked exactly like a dispatch that worked while the summary log said
+    // `continuationScheduled: true`.
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    fetchMock.mockResolvedValue({ ok: false, status: 401 });
+
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }],
+      scanRuns: []
+    });
+
+    await runDailyCronScan({ service, maxProjects: 1 });
+    await flushAfterCallbacks();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledWith(
+      "[geo:scan:cron] sweep continuation was rejected",
+      expect.objectContaining({ status: 401, url: "http://test.local/api/cron/sweep-continue" })
+    );
+  });
+
   it("skips the dispatch (logged only) when CRON_SECRET is missing at fire time", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
     vi.stubEnv("CRON_SECRET", "");
@@ -552,5 +638,146 @@ describe("runDailyCronScan — self-chaining sweep (ASYNC-SCAN-1a)", () => {
     expect(result.continuationScheduled).toBe(true);
     await flushAfterCallbacks();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * RECURRING-CADENCE-1 Fase B (log §194). El resultado de una pasada moría en
+ * un `console.info`: un escaneo del cron que reventaba, o un proyecto expulsado
+ * del recurrente por racha de fallos, no llegaban a nadie.
+ */
+describe("runDailyCronScan — alerta de barrido al operador (RECURRING-CADENCE-1 Fase B)", () => {
+  let nowMs: number;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    nowMs = Date.parse("2026-06-20T08:00:00.000Z");
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    createPendingScanRunForCron.mockReset().mockResolvedValue("run-id");
+    executePendingScan.mockReset().mockResolvedValue(undefined);
+    sendSweepHealthAlertEmail.mockReset().mockResolvedValue(undefined);
+    sendChainRejectedAlertEmail.mockReset().mockResolvedValue(undefined);
+    isOpsAlertConfigured.mockReset().mockReturnValue(true);
+    afterCallbacks.length = 0;
+    fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("CRON_SECRET", "test-cron-secret");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("manda un resumen con el dominio cuando un escaneo del cron revienta", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    executePendingScan.mockRejectedValue(new Error("boom"));
+
+    const service = fakeServiceClient({ projects: [{ id: "p1" }], scanRuns: [] });
+    await runDailyCronScan({ service });
+
+    expect(sendSweepHealthAlertEmail).toHaveBeenCalledTimes(1);
+    const [payload] = sendSweepHealthAlertEmail.mock.calls[0] as [
+      { findings: Array<{ domain: string; projectId: string; headline: string }> }
+    ];
+    expect(payload.findings).toHaveLength(1);
+    expect(payload.findings[0].projectId).toBe("p1");
+    expect(payload.findings[0].domain).toBe("p1.example");
+  });
+
+  it("manda un resumen del proyecto expulsado por racha de fallos", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const oldIso = new Date(nowMs - 40 * HOUR_MS).toISOString();
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }],
+      scanRuns: [
+        { project_id: "p1", status: "failed", created_at: oldIso },
+        { project_id: "p1", status: "failed", created_at: new Date(nowMs - 64 * HOUR_MS).toISOString() },
+        { project_id: "p1", status: "failed", created_at: new Date(nowMs - 88 * HOUR_MS).toISOString() }
+      ]
+    });
+
+    await runDailyCronScan({ service });
+
+    const [payload] = sendSweepHealthAlertEmail.mock.calls[0] as [
+      { findings: Array<{ projectId: string; headline: string }> }
+    ];
+    expect(payload.findings[0]).toMatchObject({ projectId: "p1" });
+    expect(payload.findings[0].headline).toContain("racha de fallos");
+  });
+
+  it("no manda nada en una pasada sana", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({ projects: [{ id: "p1" }], scanRuns: [] });
+
+    await runDailyCronScan({ service });
+
+    expect(sendSweepHealthAlertEmail).not.toHaveBeenCalled();
+  });
+
+  it("no manda nada cuando todos los candidatos están al día", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }],
+      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 1 * HOUR_MS).toISOString() }]
+    });
+
+    await runDailyCronScan({ service });
+
+    expect(sendSweepHealthAlertEmail).not.toHaveBeenCalled();
+  });
+
+  it("registra los hallazgos, sin tragárselos, cuando el canal no está configurado", async () => {
+    // OPS_ALERT_EMAIL llevaba meses sin poner cuando se descubrió, y la alerta
+    // de auditoría estaba inerte desde el día que se escribió: un canal mudo
+    // no puede volver a hacer desaparecer un incidente.
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    isOpsAlertConfigured.mockReturnValue(false);
+    executePendingScan.mockRejectedValue(new Error("boom"));
+
+    const service = fakeServiceClient({ projects: [{ id: "p1" }], scanRuns: [] });
+    await runDailyCronScan({ service });
+
+    expect(sendSweepHealthAlertEmail).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("alert channel is not deliverable"),
+      expect.objectContaining({ findings: ["p1:scan_failed"] })
+    );
+  });
+
+  it("avisa cuando la cadena de continuación es rechazada", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    fetchMock.mockResolvedValue({ ok: false, status: 401 });
+
+    const service = fakeServiceClient({ projects: [{ id: "p1" }, { id: "p2" }], scanRuns: [] });
+    await runDailyCronScan({ service, maxProjects: 1 });
+    await flushAfterCallbacks();
+
+    expect(sendChainRejectedAlertEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 401, chainIndex: 1 })
+    );
+  });
+
+  it("no avisa cuando la cadena se entrega bien", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({ projects: [{ id: "p1" }, { id: "p2" }], scanRuns: [] });
+
+    await runDailyCronScan({ service, maxProjects: 1 });
+    await flushAfterCallbacks();
+
+    expect(sendChainRejectedAlertEmail).not.toHaveBeenCalled();
+  });
+
+  it("una alerta que falla no puede hundir el barrido", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    sendSweepHealthAlertEmail.mockRejectedValue(new Error("resend caído"));
+    executePendingScan.mockRejectedValue(new Error("boom"));
+
+    const service = fakeServiceClient({ projects: [{ id: "p1" }], scanRuns: [] });
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual([{ projectId: "p1", status: "failed" }]);
   });
 });

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { COMPARATIVAS_BREADCRUMB } from "@/lib/comparativas";
 import { KeyTakeaway, Verdict, CompareTable, Pill, ArticleCta } from "@/components/blog/article";
 import { COMPARISON_ROWS, PEEC_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-peec-ai";
 import { contentMetadata } from "@/lib/seo/metadata";
@@ -30,7 +31,7 @@ function itemListSchema() {
 
 export default function GenscoreVsPeecAiPage() {
   return (
-    <BlogPageShell activeHref="/comparativas">
+    <BlogPageShell activeHref="/comparativas" breadcrumb={COMPARATIVAS_BREADCRUMB}>
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },

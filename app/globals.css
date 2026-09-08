@@ -908,6 +908,32 @@ a {
 .cit2-kpis,
 .cit2-split-key,
 .wa2-diag-title,
+/* MEAN-RANK-READS-TRUE-1 (2026-08-27, log §177). La nota que explica que el
+   puesto es una MEDIA sobre las respuestas donde la marca sale, y no una
+   clasificación general. Va pegada a la cifra en las dos pantallas y con el
+   mismo aspecto en ambas, porque es la misma frase del mismo fichero
+   (`lib/competitors/mean-rank-copy.ts`) — si se vieran distinto volveríamos a
+   tener dos versiones de lo mismo, que es lo que §36 arregló para los números.
+
+   No es un tooltip a propósito: el malentendido lo encontró el fundador
+   mirando la pantalla, así que la explicación tiene que estar donde él estaba
+   mirando. Un `info-tip` aquí lo habría dejado sin leer exactamente igual. */
+.cm2-pos-note,
+.ov2-cmp-note {
+  margin: -2px 0 9px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-4);
+  /* En px, NUNCA en `ch`. Esta pareja de clases vive en dos ámbitos con
+     tipografías distintas —`.cm2-scope` redeclara `--font-body` a Figtree,
+     `.ov2-scope` cae a la del `body`— y un `ch` habría medido distinto en cada
+     pantalla, que es exactamente cómo `30ch` acabó partiendo la cifra de la
+     misión en dos líneas sólo en algunas secciones (log §168). Una medida
+     tipográfica en una clase compartida por dos ámbitos no es una medida
+     compartida. */
+  max-width: 620px;
+}
+
 .cm2-pos-list-hd {
   position: relative;
 }
@@ -1393,6 +1419,19 @@ a {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .ov2-cmp-tag { font-size: 9.5px; font-weight: 750; color: var(--brand-blue); background: var(--brand-blue-soft-2); padding: 1px 6px; border-radius: 999px; flex: 0 0 auto; }
+/* SAMPLE-FLOOR-1 (2026-08-27, log §169): why a row sits last despite a good
+   mean — it rests on too few answers to compare. Neutral, never alarming: the
+   figure is real, only its comparability is in question.
+   `--ink-2` and not `--ink-3` on purpose. This tag can land on `.you`, whose
+   row is tinted, and `--ink-3` only clears AA over pure white (4,76:1 there,
+   4,44:1 the moment the surface is not white) — the rule `.claude/rules/
+   styles.md` states three times over. `--ink-2` is 7,50:1 and holds on every
+   surface this row can have. */
+.ov2-cmp-thin {
+  font-size: 9.5px; font-weight: 650; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  padding: 1px 6px; border-radius: 999px; flex: 0 0 auto; white-space: nowrap;
+}
 .ov2-cmp-sov { width: 54px; flex: 0 0 auto; }
 .ov2-cmp-sov .track { height: 5px; background: var(--line-soft); border-radius: 99px; overflow: hidden; }
 .ov2-cmp-sov .track > i { display: block; height: 100%; border-radius: 99px; }
@@ -1565,6 +1604,10 @@ a {
 }
 .pr2-trow:last-child { border-bottom: none; }
 .pr2-trow.open { background: var(--surface-2); }
+/* SCREEN-POLISH-1 Fase A: keyboard-reachable accordion row (role="button" +
+   tabIndex in prompts-client.tsx) needs its own visible focus ring — it has
+   no native focus style of its own. */
+.pr2-trow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pr2-trow-main { flex: 1; min-width: 0; }
 .pr2-trow-title { font-size: 13.5px; font-weight: 650; color: var(--ink); letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; }
 .pr2-trow-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -1592,6 +1635,9 @@ a {
 }
 .pr2-prow:last-child { border-bottom: none; }
 .pr2-prow:hover { background: var(--surface-2); }
+/* SCREEN-POLISH-1 Fase A: same reasoning as .pr2-trow above — role="button"
+   rows need their own focus ring, there is no native one on a div. */
+.pr2-prow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pr2-prow-main { min-width: 0; }
 .pr2-prow-text {
   font-size: 13px; color: var(--ink); line-height: 1.45; font-weight: 500;
@@ -1998,6 +2044,14 @@ a {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cm2-pos-row.you .cm2-pos-nm { color: var(--brand-blue); }
+/* SAMPLE-FLOOR-1 — same tag, same reasoning, as `.ov2-cmp-thin` above; the two
+   screens publish this standing from one module and must explain it the same
+   way. `flex: 0 0 auto` keeps it out of the ellipsis that `.cm2-pos-nm` runs. */
+.cm2-pos-thin {
+  flex: 0 0 auto; font-size: 9.5px; font-weight: 650; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  padding: 1px 6px; border-radius: 999px; white-space: nowrap;
+}
 /* The mean-rank value ("2,18º") used to live here. Removed with the switch to
    a plain 1..N ranking (log §15): a mean is almost never 1,00, so the column
    read as "nobody is in first place". The mention rate takes its place at the
@@ -2231,6 +2285,11 @@ a {
 .cit2-opp-domain { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent); }
 .cit2-opp-why { font-size: 10.5px; color: var(--ink-3); }
 .cit2-opp-why b { color: var(--neg-ink); }
+/* CITATIONS-HONESTY-1: the co-cited-competitor line is a labeled, unverified
+   aside — never the reason a domain is listed (that's the plain `.cit2-opp-why`
+   line above it, frequency + engines). Italic sets it apart at a glance as
+   "extra context", not a second fact of the same weight. */
+.cit2-opp-unverified { font-style: italic; opacity: .85; }
 .cit2-opps-empty { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
 .cit2-btn-mini { font-size: 11px; font-weight: 750; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 8px; padding: 7px 10px; white-space: nowrap; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; text-decoration: none; }
 .cit2-btn-mini:hover { filter: brightness(0.96); }
@@ -7659,6 +7718,15 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-footer .links a:hover { color: var(--ink); }
 .lp-footer .copy { font-size: 12.5px; color: var(--ink-4); margin-top: 18px; }
 
+/* FOOTER-PAYMENT-TRUST-1 (2026-08-27, log §181). `.price-pay-badges` no trae
+   su propio espaciado vertical — en `/precios` lo da la `<section>` que la
+   envuelve — así que aquí necesita el suyo, a juego con el resto del pie
+   (mismo `padding-top`/`border-top` que ya usa `.lp-footer` para separarse
+   de lo que hay encima). Sin este wrapper la fila de insignias quedaría
+   pegada al `row1` de arriba, sin respirar y sin leerse como su propio
+   bloque. */
+.lp-footer-pay { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line-soft); }
+
 /* Mismo caso y misma corrección que `.blog-post-meta` abajo: `--ink-4`
    (#98a0b0) da 2.63:1 sobre blanco, `--ink-3` da 4.76:1. Aquí lo cogió el
    chequeo de contraste del piloto (Fase Q5b, log §55) sobre el enlace «Blog»
@@ -7692,6 +7760,23 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    regla siempre quiso decir —esto va de enlaces de prosa— y deja cubiertas las
    variantes que aún no existen. */
 .legal-body a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
+
+/* El fundador, mirando un artículo en una pantalla ancha: la columna de
+   texto (.blog-body, 760px) colgaba del borde izquierdo de .lp-inner
+   (1124px de contenido) en vez de centrarse, dejando un hueco muerto a la
+   derecha — y la portada/el rastro de miga, sin max-width propio, se
+   quedaban más anchos que el propio texto que envolvían. `:has()` en vez de
+   una clase envolvente nueva: .lp-inner es compartido por TODO el sitio
+   público, así que la regla sólo debe alcanzar a las páginas que de verdad
+   tienen `.blog-body` (los 17 artículos y las 6 páginas de /comparativas) —
+   nunca a /docs, /glosario, el comprobador gratuito o /que-es-genscore, que
+   comparten el mismo `.lp-inner` con un layout distinto. Sólo fija
+   margin-left/margin-right (no `margin` en corto), así que no pisa los
+   margin-top/bottom que ya reparten el ritmo vertical más arriba en este
+   fichero (`.blog-cover-compact + h1`, `h1 + .blog-post-meta`, etc.) —
+   ninguno de ellos declara el eje horizontal, así que no hay pelea de
+   especificidad que resolver. */
+.lp-inner:has(> .blog-body) > * { max-width: 760px; margin-left: auto; margin-right: auto; }
 
 .blog-body { max-width: 760px; }
 .blog-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
@@ -7754,13 +7839,114 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    Las reglas van acotadas al artículo a propósito: `.blog-cover-compact`
    solo se usa aquí (el índice y los hubs usan la portada normal dentro de
    una tarjeta), y `.blog-post-meta` sí se comparte con las tarjetas del
-   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`. */
+   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`.
+
+   BLOG-INDEX-CARDS-2026-08 Fase 2: el rastro de miga (`.breadcrumb-trail`,
+   ver más abajo) ahora es el primer hijo real de `.lp-inner` en todo
+   artículo y toda página de `/comparativas/<slug>`, así que
+   `.blog-cover-compact` deja de ser `:first-child` — el tirón de -36px que
+   compensaba el padding de `.lp-section` se traslada a lo que SÍ es el
+   primer hijo ahora. La regla original se deja intacta por si algún día
+   existe una portada sin rastro delante; hoy no ocurre, así que es
+   inofensiva, no muerta. */
 .lp-inner > .blog-cover-compact:first-child { margin-top: -36px; border-radius: var(--r-md); }
+.lp-inner > .breadcrumb-trail:first-child { margin-top: -36px; }
 .blog-cover-compact { margin-bottom: 24px; }
 .blog-cover-compact + h1 { margin: 0 0 14px; line-height: 1.22; }
 h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
+
+/* BLOG-INDEX-CARDS-2026-08 Fase 2: rastro de miga visible en artículos y
+   páginas de /comparativas (founder request — la portada de un artículo
+   sólo llevaba el BreadcrumbList invisible de schema.org). Opt-in vía la
+   prop `breadcrumb` de `BlogPageShell`: las demás superficies que
+   comparten el shell (/docs, /glosario, el comprobador gratuito,
+   /que-es-genscore) no la pasan y no cambian. `--ink-3` aprueba AA aquí
+   porque `.lp` pinta blanco puro (#fff), no `--canvas` — ver
+   `.claude/rules/styles.md`, "--ink-3 sólo aprueba AA sobre blanco puro". */
+.breadcrumb-trail { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 13px; font-weight: 600; }
+.breadcrumb-item { display: inline-flex; align-items: center; gap: 8px; }
+.breadcrumb-trail a { color: var(--brand-blue); }
+.breadcrumb-trail a:hover { text-decoration: underline; }
+.breadcrumb-sep { color: var(--ink-4); }
+
+/* BLOG-COVERS-2026-08: el índice de /blog deja de mostrar `<BlogCover>` por
+   tarjeta (imagen o degradado+icono) y pasa a tarjetas de color plano por
+   clúster, sin portada. Sólo toca el ÍNDICE (`app/blog/page.tsx`) — la
+   portada de cabecera de cada artículo (`.blog-cover-compact`) y las
+   tarjetas de `app/blog/[cluster]/page.tsx` (`.blog-index-card`, sin tocar)
+   siguen exactamente igual. El color no es decorativo: identifica el
+   clúster, así que se repite como acento en la cabecera del carril
+   (`.blog-rail-dot`) y en cada tarjeta de ese clúster. */
+.blog-subtitle { margin: 14px 0 0; font-size: 19px; font-weight: 700; color: var(--ink-2); line-height: 1.4; letter-spacing: -.005em; }
+
+.blog-rail { margin-top: 48px; }
+.blog-rail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.blog-rail-head-left { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.blog-rail-head-left h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
+.blog-rail-head-left p { margin: 0; font-size: 14px; color: var(--ink-3); }
+.blog-rail-dot { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+.blog-rail-more { flex: none; font-size: 13.5px; font-weight: 700; color: var(--brand-blue); white-space: nowrap; }
+.blog-rail-more:hover { text-decoration: underline; }
+.blog-rail-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 22px; }
+@media (max-width: 760px) {
+  .blog-rail-grid { grid-template-columns: 1fr; }
+}
+
+.blog-tile { display: flex; flex-direction: column; border-radius: var(--r-lg); padding: 26px; }
+.blog-tile h2 { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.28; letter-spacing: -.01em; }
+.blog-tile p { margin: 10px 0 0; font-size: 14px; line-height: 1.5; }
+.blog-tile time { display: block; margin-top: 16px; font-size: 12.5px; font-weight: 600; letter-spacing: .01em; }
+
+.blog-tile--fundamentos { background: #E3ECFE; }
+.blog-tile--fundamentos p { color: #23345C; }
+.blog-tile--fundamentos time { color: #4863A8; }
+.blog-tile--medicion { background: #DEF6F8; }
+.blog-tile--medicion p { color: #0D4A52; }
+.blog-tile--medicion time { color: #167985; }
+.blog-tile--playbooks { background: #ECEEF3; }
+.blog-tile--playbooks p { color: #2C3542; }
+.blog-tile--playbooks time { color: #56606F; }
+.blog-tile--sectores { background: #DBDFFC; }
+.blog-tile--sectores p { color: #2A3170; }
+.blog-tile--sectores time { color: #454FB0; }
+.blog-tile--comparativas { background: #D3F0E6; }
+.blog-tile--comparativas p { color: #114F44; }
+
+/* `color` explícito aquí, aunque cada hijo (tag/h2/p/time) ya declara el
+   suyo: sin esto el ancla hereda la tinta oscura ambiente de la página
+   mientras su propio fondo es marino — el piloto audita el color computado
+   del CONTROL entero (`getComputedStyle(el).color`, no el de sus hijos)
+   contra su fondo resuelto, así que sin este color propio lee "tinta oscura
+   sobre marino" (1,08:1) aunque nada se pinte realmente así
+   (`.claude/rules/styles.md`, patrón "un modificador suelto no gana a su
+   contexto" — mismo tipo de bug, esta vez en el color base de un ancla
+   entera en vez de un modificador). */
+.blog-featured { position: relative; display: block; margin-top: 40px; border-radius: var(--r-xl); padding: 44px 48px; background: var(--brand-surface-dark); color: var(--brand-ink-on-dark); overflow: hidden; }
+.blog-featured-ring { position: absolute; right: -70px; top: -90px; opacity: .16; pointer-events: none; }
+.blog-featured-content { position: relative; max-width: 640px; }
+.blog-featured-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.blog-featured h2 { margin: 18px 0 0; font-size: 32px; font-weight: 800; letter-spacing: -.02em; line-height: 1.18; color: var(--brand-ink-on-dark); }
+.blog-featured p { margin: 14px 0 0; font-size: 15px; line-height: 1.6; color: rgba(247,248,251,.78); }
+.blog-featured time { display: block; margin-top: 20px; font-size: 12.5px; font-weight: 600; color: rgba(247,248,251,.55); }
+@media (max-width: 760px) {
+  .blog-featured { padding: 30px 26px; }
+  .blog-featured h2 { font-size: 23px; }
+}
+
+.blog-banner { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 40px; margin-top: 64px; border-radius: 20px; padding: 48px; background: var(--brand-surface-dark); overflow: hidden; }
+.blog-banner-ring { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); opacity: .18; pointer-events: none; }
+.blog-banner-content { position: relative; max-width: 620px; }
+.blog-banner h2 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; color: var(--brand-ink-on-dark); }
+.blog-banner p { margin: 12px 0 0; font-size: 15.5px; line-height: 1.6; color: rgba(247,248,251,.78); }
+.blog-banner .link-mini { color: #fff; font-weight: 700; text-decoration: underline; }
+.blog-banner-cta { display: inline-flex; align-items: center; height: 46px; padding: 0 26px; margin-top: 26px; border-radius: 999px; background: #fff; color: var(--brand-surface-dark); font-size: 14.5px; font-weight: 700; }
+@media (max-width: 760px) {
+  .blog-banner { flex-direction: column; align-items: flex-start; padding: 30px 26px; }
+  .blog-banner-ring { display: none; }
+  .blog-banner h2 { font-size: 22px; }
+}
 
 /* GROWTH-2 Fase 2.3: /docs sidebar layout. */
 .docs-layout { display: flex; flex-direction: column; gap: 32px; align-items: flex-start; }
@@ -7943,7 +8129,12 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .price-price { display: flex; align-items: baseline; gap: 4px; margin: 16px 0 0; }
 .price-amount { font-size: 40px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
 .price-was { font-size: 18px; font-weight: 650; color: var(--ink-4); text-decoration: line-through; text-decoration-color: var(--ink-4); margin-right: 2px; }
-.price-per { font-size: 15px; font-weight: 650; color: var(--ink-4); }
+.price-per { font-size: 15px; font-weight: 650; color: var(--ink-4); white-space: nowrap; }
+/* La duración de la promo, en su propia línea — ver el comentario en
+   `components/pricing/pricing-page.tsx`. `--ink-3` y no el `--ink-4` de sus
+   vecinas: es texto nuevo, y sobre el blanco de la tarjeta da 4,76:1 (AA)
+   frente al 2,5:1 de `--ink-4`. */
+.price-term { display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
 .price-who { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; font-weight: 550; min-height: 34px; }
 .price-cta { width: 100%; margin-top: 14px; }
 .price-card.price-rec .price-cta.btn-ghost { border-color: var(--accent-ring); }
@@ -7964,7 +8155,20 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 
 .price-pay-badges { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
 .price-pay-label { font-size: 12.5px; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
-.price-pay-icons { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+/* PRICING-PAY-BADGES-CENTER-1 (2026-08-27, log §180). `.price-pay-icons` es un
+   flex container ANIDADO dentro de `.price-pay-badges` (su único hermano es
+   `.price-pay-label`). En desktop y tablet las 5 insignias caben en una sola
+   fila, y esa fila se centra porque es el único ítem de su línea en
+   `.price-pay-badges` (que sí tiene `justify-content: center`). En móvil, las
+   5 no caben y `.price-pay-icons` envuelve POR DENTRO en dos filas propias —
+   y el centrado del padre sólo centra esa caja como bloque, nunca las líneas
+   que se generan dentro de ella. Sin `justify-content` aquí, cada línea caía
+   por defecto a `flex-start`: Stripe/Apple Pay/Google Pay pegados al borde
+   izquierdo, Amazon Pay/Klarna debajo, también a la izquierda — confirmado
+   con un fixture Playwright a 375px reproduciendo la captura del fundador
+   (visible sólo bajo 560px; a 768 y 1280 ya cabía en una línea y se veía
+   bien, así que el fallo pasaba inadvertido en tablet/desktop). */
+.price-pay-icons { display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap; }
 .price-pay-icon { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 650; color: var(--ink-2); }
 .price-pay-icon svg { flex: 0 0 auto; }
 @media (max-width: 560px) { .price-pay-badges { gap: 10px 16px; } .price-pay-icons { gap: 16px; } }
@@ -8636,6 +8840,72 @@ select.set-field {
 .cp-done h3 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin: 0; }
 .cp-done p { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); margin: 9px auto 0; max-width: 400px; }
 .cp-done p b { color: var(--ink); font-weight: 750; }
+
+/* ============================================================
+   DOMAINS-OVERAGE-GATE-1 — components/billing/domain-overage-gate.tsx.
+   Reuses the .cp-* chrome above for the shell/typography; only the bits
+   that don't already exist there — the two-path chooser and the
+   hard-delete danger treatment — get new classes. Lives here rather than
+   in app/console.css (dashboard-only) because its classes are written from
+   components/, which tests/console-css-scope.test.ts cannot attribute to
+   the dashboard — same reason the notifications screen's classes live here
+   too (app/console.css's own header comment).
+   ============================================================ */
+.dog-scrim { cursor: default; }
+
+.dog-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dog-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  padding: 15px 16px;
+  border-radius: var(--r-lg);
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color .14s, background .14s;
+}
+.dog-opt:hover { border-color: var(--accent-ring); background: var(--surface-2); }
+.dog-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dog-opt-ic {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center;
+}
+.dog-danger-ic { background: var(--neg-soft); color: var(--neg-ink); }
+.dog-opt-t { font-size: 14px; font-weight: 750; color: var(--ink); }
+.dog-opt-d { font-size: 12px; color: var(--ink-3); font-weight: 500; line-height: 1.45; }
+
+/* Danger variant of .cp-diff above — same shape, red instead of the amber
+   used for a reversible plan-change diff, so an irreversible delete reads
+   differently at a glance. */
+.dog-diff-danger { border: 1px solid var(--neg-soft); border-radius: var(--r-lg); padding: 12px 14px; background: var(--neg-soft); }
+.dog-diff-danger .cp-diff-h { color: var(--neg-ink); }
+.dog-diff-danger .cp-diff-h .ico { color: var(--neg-ink); }
+.dog-diff-danger .cp-diff-list .k { color: var(--neg-ink); }
+.dog-diff-danger .cp-diff-list .from { color: var(--ink-2); font-weight: 500; }
+
+.dog-confirm-check {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 14px; font-size: 12.5px; color: var(--ink-2); font-weight: 550;
+  cursor: pointer; line-height: 1.4;
+}
+.dog-confirm-check input { margin-top: 2px; }
+
+.dog-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 12.5px; font-weight: 650; color: var(--accent);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.dog-link:disabled { opacity: .5; cursor: not-allowed; }
+
+.dog-sales-full { width: 100%; }
+
+@media (max-width: 560px) {
+  .dog-opts { grid-template-columns: 1fr; }
+}
 
 @keyframes modalIn {
   from { opacity: 0; transform: translateY(10px) scale(.98); }

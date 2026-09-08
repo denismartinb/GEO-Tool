@@ -11,9 +11,14 @@ import { FaviconImg } from "@/components/ui/favicon-img";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
+import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
-import { ScanProgressPoller } from "@/components/scan-progress-poller";
+import {
+  MEAN_RANK_BRAND_HEADLINE,
+  MEAN_RANK_COLUMN_LABEL,
+  MEAN_RANK_NOTE
+} from "@/lib/competitors/mean-rank-copy";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
@@ -769,16 +774,19 @@ export default async function ProjectDetailPage({
       {ENABLE_SYNC_SCAN_EXECUTION && activeRun ? (
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
       ) : null}
-      {/* Not while the mission owns the screen: since ANIMATION-PARITY-1
-          (2026-08-26) `ScanMissionRocket` fires the terminal `router.refresh()`
-          itself, on all six sections, so mounting this one too here would just
-          request the same RSC payload twice a few hundred ms apart. Still
-          mounted for every OTHER state of this page (`ScanInProgressLive`, the
-          data view with a refresh in flight), which is what it was written for. */}
-      {activeRun && !showMissionTakeover ? (
+      {/* VERCEL-COST-1 (2026-08-30, fixed after `qa` caught it before Human
+          Gate): a rescan on a project that already has data renders the
+          `hasData` branch below, which mounts neither `ScanInProgressLive`
+          nor any other live component — both only live in the `!hasData`
+          empty-state branch. Without a poller here, that branch never
+          detects the run going terminal and the page is stuck showing stale
+          data with a perpetual "Escaneando…" pill. Scoped to exactly this
+          gap so it never runs alongside `ScanInProgressLive` (which already
+          owns the empty-state branch) or `ScanMissionRocket` (owns the
+          takeover). */}
+      {hasData && activeRun && !showMissionTakeover ? (
         <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} />
       ) : null}
-
       {/* Sticky page header — hidden while the first-scan mission takeover
           (below) owns the screen, so the rocket animation reads as full
           screen instead of sitting under a second chrome band. */}
@@ -842,14 +850,23 @@ export default async function ProjectDetailPage({
             <p className="ov2-insight-txt">
               {/* "prompts" here counted prompt × engine rows, not prompts: a
                   project with 1 prompt scanned on 3 engines read "3 de 3
-                  prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1). */}
+                  prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1).
+
+                  TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1):
+                  this sentence used to close with "con una puntuación GEO de
+                  {perRunScore}/100" — this scan's own composite, a different
+                  number from the windowed gaugeScore the gauge two inches
+                  above shows under the same literal label. Caught in review
+                  (geo-strategy, Human Gate pass): two "puntuación GEO" on one
+                  screen is the audit's P0-01 exactly, just moved from
+                  cross-screen to same-screen. The founder's rule is that only
+                  the windowed figure may carry that label anywhere — so this
+                  sentence stops claiming a score at all; the gauge already
+                  states it once, correctly, and doesn't need a second,
+                  differently-sourced echo. */}
               GenScore detectó que <b>{project.brand}</b> aparece en{" "}
               <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
-              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
-              {/* perRunScore, not gaugeScore: this sentence is about THIS
-                  scan's responses, so pairing them with the windowed median
-                  would attribute a figure to data that did not produce it. */}
-              <b>puntuación GEO de {perRunScore}/100</b>.
+              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}).
               {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
                   {" "}Tu rival más visible,{" "}
@@ -875,11 +892,6 @@ export default async function ProjectDetailPage({
                   para mejorar tu presencia en las respuestas de IA.
                 </>
               ) : null}
-              {completedRunsCount < 2 && (
-                <span style={{ color: "var(--ink-4)", fontStyle: "italic", fontSize: 13 }}>
-                  {" "}(Muestra inicial — la tendencia estará disponible con ≥2 escaneos.)
-                </span>
-              )}
             </p>
           </div>
 
@@ -935,9 +947,7 @@ export default async function ProjectDetailPage({
                 </>
               ) : sampleNudge(gaugeDeltaVerdict) ? (
                 <div className="ov2-gauge-trend-cap">{sampleNudge(gaugeDeltaVerdict)}</div>
-              ) : geoTrend.length >= 2 ? null : (
-                <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
-              )}
+              ) : null}
             </div>
           </div>
           </div>
@@ -1285,7 +1295,7 @@ export default async function ProjectDetailPage({
               <>
                 {posbarsData.length > 0 && (
                   <div className="card" style={{ padding: "17px 16px 6px" }}>
-                    <div className="ov2-pm-lbl">Tu puesto cuando apareces</div>
+                    <div className="ov2-pm-lbl">{MEAN_RANK_BRAND_HEADLINE}</div>
                     <div className="ov2-pm-val">
                       {brandRank !== null ? (
                         <>{brandRank}<small> / {totalRanked}</small></>
@@ -1321,6 +1331,11 @@ export default async function ProjectDetailPage({
                       the layout changes under it. The panorama had NO headers at
                       all, which is how a share-of-voice percentage passed for the
                       mention rate shown on the other screen. */}
+                  {/* MEAN-RANK-READS-TRUE-1 (log §177): misma frase, mismo
+                      fichero, que en Competidores. Sólo cuando hay columna de
+                      puesto — sin ella no hay nada que explicar, y una nota
+                      sobre una columna ausente es ruido. */}
+                  {panoramaRanked ? <p className="ov2-cmp-note">{MEAN_RANK_NOTE}</p> : null}
                   <div className="ov2-cmp-hd">
                     <span className="ov2-cmp-hd-nm">Último escaneo</span>
                     <span className="ov2-cmp-sov">Mención</span>
@@ -1329,7 +1344,7 @@ export default async function ProjectDetailPage({
                         empty column reads as a broken screen, an absent one reads
                         as what it is (log §15, "ni etiqueta ni tarjeta si no hay
                         nada debajo"). */}
-                    {panoramaRanked ? <span className="ov2-cmp-sc">Puesto</span> : null}
+                    {panoramaRanked ? <span className="ov2-cmp-sc">{MEAN_RANK_COLUMN_LABEL}</span> : null}
                   </div>
                   {panoramaListRows.flatMap((row, i) => {
                     const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
@@ -1364,6 +1379,11 @@ export default async function ProjectDetailPage({
                           <div className="t">
                             {row.name}
                             {row.isBrand && <span className="ov2-cmp-tag">Tú</span>}
+                            {/* SAMPLE-FLOOR-1: last because its mean rests on
+                                too few answers to compare, not because the AI
+                                ranked it last. An unexplained demotion is as
+                                misleading as the 1º it replaces. */}
+                            {!row.qualified && <span className="ov2-cmp-thin">pocas menciones</span>}
                           </div>
                         </div>
                         <div className="ov2-cmp-sov">

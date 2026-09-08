@@ -5,7 +5,14 @@ const PROJECT_ID = "project-1";
 const DOMAINS = { [PROJECT_ID]: "acme.com" };
 
 describe("renderNotification", () => {
-  it("renders scan_completed with score, positive delta and both clauses", () => {
+  // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
+  // notification used to headline the raw `visibilityScore` under
+  // "Visibilidad NN (+delta)" — the audit's P0-01 (6 on the panel, "Visibilidad
+  // 2" on this same scan's own notification). It now headlines `geoScore`,
+  // the same windowed figure every "Puntuación GEO" surface shows, under
+  // "Escaneo actualizado" — and the raw visibilityScore/visibilityDelta stay
+  // in the payload only as icon direction and a fallback for historical rows.
+  it("renders scan_completed with geoScore under 'Escaneo actualizado' and both clauses", () => {
     const r = renderNotification(
       {
         type: "scan_completed",
@@ -15,7 +22,8 @@ describe("renderNotification", () => {
           runId: "run-1",
           promptsProcessed: 20,
           providers: ["gemini"],
-          visibilityScore: 64,
+          geoScore: 64,
+          visibilityScore: 58,
           visibilityDelta: 6,
           newRecommendations: 5,
           resolvedGaps: 2
@@ -25,14 +33,38 @@ describe("renderNotification", () => {
     );
 
     expect(r.title).toBe("Escaneo completado");
-    expect(r.body).toBe("Visibilidad 64 (+6). 5 acciones nuevas y 2 brechas cerradas.");
+    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 64 · 5 acciones nuevas y 2 brechas cerradas.");
     expect(r.targetLabel).toBe("acme.com · 20 prompts");
     expect(r.icon).toBe("trendUp");
     expect(r.tone).toBe("pos");
   });
 
-  it("rounds a floating-point visibility delta instead of printing it raw", () => {
-    // Caught by the pilot on PR #336: the bell showed "(+2.780000000000001)".
+  it("NEVER shows visibilityScore's value when geoScore differs from it — the audit's exact P0-01", () => {
+    const r = renderNotification(
+      {
+        type: "scan_completed",
+        severity: "success",
+        project_id: PROJECT_ID,
+        payload_json: {
+          runId: "run-1",
+          promptsProcessed: 45,
+          providers: ["gemini"],
+          geoScore: 6,
+          visibilityScore: 2,
+          visibilityDelta: null,
+          newRecommendations: 0,
+          resolvedGaps: 0
+        }
+      },
+      DOMAINS
+    );
+
+    expect(r.body).toContain("Puntuación GEO 6");
+    expect(r.body).not.toContain("Puntuación GEO 2");
+    expect(r.body).not.toContain("2%");
+  });
+
+  it("falls back to visibilityScore when geoScore is absent — a notification row persisted before this field existed", () => {
     const r = renderNotification(
       {
         type: "scan_completed",
@@ -51,32 +83,10 @@ describe("renderNotification", () => {
       DOMAINS
     );
 
-    expect(r.body).toBe("Visibilidad 75 (+3). 13 acciones nuevas y 6 brechas cerradas.");
+    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 75 · 13 acciones nuevas y 6 brechas cerradas.");
   });
 
-  it("drops the parenthetical entirely for a sub-point delta rather than printing '(+0)'", () => {
-    const r = renderNotification(
-      {
-        type: "scan_completed",
-        severity: "success",
-        project_id: PROJECT_ID,
-        payload_json: {
-          runId: "run-1",
-          promptsProcessed: 6,
-          providers: ["gemini"],
-          visibilityScore: 75,
-          visibilityDelta: 0.4,
-          newRecommendations: 0,
-          resolvedGaps: 0
-        }
-      },
-      DOMAINS
-    );
-
-    expect(r.body).toBe("Visibilidad 75.");
-  });
-
-  it("renders scan_completed with a negative delta as trendDown/neg", () => {
+  it("renders scan_completed with a negative visibilityDelta as trendDown/neg (icon direction only, never a shown number)", () => {
     const r = renderNotification(
       {
         type: "scan_completed",
@@ -86,6 +96,7 @@ describe("renderNotification", () => {
           runId: "run-1",
           promptsProcessed: 10,
           providers: ["gemini"],
+          geoScore: 40,
           visibilityScore: 40,
           visibilityDelta: -8,
           newRecommendations: 0,
@@ -95,12 +106,16 @@ describe("renderNotification", () => {
       DOMAINS
     );
 
-    expect(r.body).toBe("Visibilidad 40 (-8).");
+    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 40.");
+    expect(r.body).not.toContain("-8");
     expect(r.icon).toBe("trendDown");
     expect(r.tone).toBe("neg");
   });
 
-  it("omits the delta parenthetical and the new/resolved clauses when they're null or zero", () => {
+  it("a null visibilityDelta (no previous run — the project's first scan) shows a neutral icon/tone, never trendUp/pos", () => {
+    // Caught in review (geo-strategy, TRUST-METRICS-1 Human Gate pass): this
+    // used to default null to trendUp/pos, asserting improvement on a scan
+    // that had nothing to compare against yet.
     const r = renderNotification(
       {
         type: "scan_completed",
@@ -110,6 +125,7 @@ describe("renderNotification", () => {
           runId: "run-1",
           promptsProcessed: 5,
           providers: ["gemini"],
+          geoScore: 70,
           visibilityScore: 70,
           visibilityDelta: null,
           newRecommendations: 0,
@@ -119,7 +135,31 @@ describe("renderNotification", () => {
       DOMAINS
     );
 
-    expect(r.body).toBe("Visibilidad 70.");
+    expect(r.icon).toBe("check");
+    expect(r.tone).toBe("blue");
+  });
+
+  it("omits the new/resolved clauses when they're zero", () => {
+    const r = renderNotification(
+      {
+        type: "scan_completed",
+        severity: "success",
+        project_id: PROJECT_ID,
+        payload_json: {
+          runId: "run-1",
+          promptsProcessed: 5,
+          providers: ["gemini"],
+          geoScore: 70,
+          visibilityScore: 70,
+          visibilityDelta: null,
+          newRecommendations: 0,
+          resolvedGaps: 0
+        }
+      },
+      DOMAINS
+    );
+
+    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 70.");
   });
 
   it("uses singular wording for exactly one new recommendation", () => {
@@ -132,6 +172,7 @@ describe("renderNotification", () => {
           runId: "run-1",
           promptsProcessed: 5,
           providers: ["gemini"],
+          geoScore: 70,
           visibilityScore: 70,
           visibilityDelta: null,
           newRecommendations: 1,
@@ -141,7 +182,7 @@ describe("renderNotification", () => {
       DOMAINS
     );
 
-    expect(r.body).toBe("Visibilidad 70. 1 acción nueva.");
+    expect(r.body).toBe("Escaneo actualizado: Puntuación GEO 70 · 1 acción nueva.");
   });
 
   it("renders scan_failed with the sanitized error summary", () => {
@@ -428,12 +469,15 @@ describe("dayLabel / groupByDay", () => {
   });
 });
 
-describe("scan_completed — visibility delta rounding", () => {
+describe("scan_completed — the shown score is always rounded, and the raw float delta is never shown at all", () => {
   // Surfaced in a real notification on the founder's phone (2026-08-05):
-  // "Visibilidad 72 (+5.549999999999997)". The payload carries the raw float
-  // difference of two scores; the score beside it was already rounded, the
-  // delta was not.
-  it("rounds the delta like the score it sits next to", () => {
+  // "Visibilidad 72 (+5.549999999999997)". TRUST-METRICS-1 (Fase 1) removed
+  // the delta parenthetical entirely — it compared two raw visibility_score
+  // values, a different basis than the windowed geoScore now shown, and
+  // pairing them would repeat the same "two quantities under one label"
+  // mistake this phase exists to fix. This test is kept, retargeted: no float
+  // may ever reach the body, whichever field supplied the score.
+  it("rounds a fallback geoScore (from a float visibilityScore on a historical row) and shows no raw float anywhere", () => {
     const rendered = renderNotification(
       {
         id: "n1",
@@ -455,7 +499,8 @@ describe("scan_completed — visibility delta rounding", () => {
       { p1: "mozilla.org" }
     );
 
-    expect(rendered.body).toContain("Visibilidad 72 (+6)");
+    expect(rendered.body).toBe("Escaneo actualizado: Puntuación GEO 72.");
+    expect(rendered.body).not.toContain("72.4");
     expect(rendered.body).not.toContain("5.54");
   });
 });

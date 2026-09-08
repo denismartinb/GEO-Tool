@@ -3,7 +3,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
 
-import { RecCard, SolutionPanel, type Recommendation } from "./recommendations-client";
+import {
+  RecCard,
+  ResolvedHistoryCard,
+  SolutionPanel,
+  overlayCopyLocal,
+  predictionVerdictLine,
+  type Recommendation,
+  type ResolvedHistoryItem
+} from "./recommendations-client";
+import { overlayCopy } from "@/lib/recommendations/coverage-overlay";
 
 /**
  * Estas dos cosas el `ux-pilot` NO las puede ver, y por eso se prueban aquí.
@@ -87,6 +96,87 @@ describe("SolutionPanel — insignia de estado del artefacto", () => {
   });
 });
 
+/**
+ * ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4,
+ * P0-04). `renderToStaticMarkup` no ejecuta clics — sólo puede afirmar el
+ * estado INICIAL (ocioso) de la tarjeta, nunca la transición a "éxito" que
+ * dispara `useActionFeedback` tras un clic real. Esa transición sólo la
+ * ejercita `tests/pilot/journeys/actions/recommendation-actions.spec.ts`
+ * (`--journeys actions`, log §187/§198/§207) contra un preview real — es la
+ * "cobertura no vista" que se declara, no una promesa de que este test la
+ * cubre.
+ */
+describe("RecCard — estado inicial del contrato de acción", () => {
+  it("enseña el botón normal, nunca el acuse de 'Deshacer' antes de ningún clic", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec()} />);
+    expect(html).toContain("Marcar como hecho");
+    expect(html).not.toContain("Deshacer");
+    expect(html).not.toContain("Marcada como hecha.");
+  });
+
+  it("enseña la promesa de la próxima medición, no un mensaje de error sin que nada haya fallado", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec()} />);
+    expect(html).toContain("La verás reflejada en tu próximo escaneo.");
+    expect(html).not.toContain("feedback error");
+  });
+});
+
+/**
+ * ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4).
+ * El "Deshacer" durable vive en ResolvedHistoryCard (bajo "Resueltas"), no en
+ * la tarjeta activa — un deshacer efímero que sólo sobrevivía mientras la
+ * tarjeta seguía montada resultó confuso en la práctica (founder, 2026-09-07:
+ * "aparece deshacer un segundo y la recomendación se va ya a la pestaña
+ * resueltas"). Se ofrece SÓLO cuando la fila pertenece al run que también es
+ * `latestCompletedRunId` — restaurar una fila de un run más viejo la dejaría
+ * invisible en todas partes (ver el comentario de `run_id` en
+ * `ResolvedHistoryItem`).
+ */
+describe("ResolvedHistoryCard — deshacer se ofrece sólo del run vigente", () => {
+  const historyRow = (over: Partial<Parameters<typeof ResolvedHistoryCard>[0]["item"]> = {}) => ({
+    id: "h1",
+    title: "Título",
+    description: "Descripción",
+    recommendation_type: "increase_brand_visibility",
+    status: "dismissed" as const,
+    updated_at: "2026-09-06T00:00:00Z",
+    run_id: "run-current",
+    ...over
+  });
+
+  it("ofrece Deshacer cuando la fila descartada pertenece al último run completado", () => {
+    const html = renderToStaticMarkup(
+      <ResolvedHistoryCard item={historyRow()} projectId="p1" latestCompletedRunId="run-current" />
+    );
+    expect(html).toContain("Deshacer");
+  });
+
+  it("NO ofrece Deshacer para una fila de un run más antiguo — restaurarla la dejaría invisible", () => {
+    const html = renderToStaticMarkup(
+      <ResolvedHistoryCard item={historyRow({ run_id: "run-old" })} projectId="p1" latestCompletedRunId="run-current" />
+    );
+    expect(html).not.toContain("Deshacer");
+  });
+
+  it("NO ofrece Deshacer sobre una fila resuelta automáticamente — sólo aplica a un descarte manual", () => {
+    const html = renderToStaticMarkup(
+      <ResolvedHistoryCard
+        item={historyRow({ status: "resolved", run_id: "run-current" })}
+        projectId="p1"
+        latestCompletedRunId="run-current"
+      />
+    );
+    expect(html).not.toContain("Deshacer");
+  });
+
+  it("NO ofrece Deshacer cuando la pantalla no tiene run vigente (latestCompletedRunId null)", () => {
+    const html = renderToStaticMarkup(
+      <ResolvedHistoryCard item={historyRow()} projectId="p1" latestCompletedRunId={null} />
+    );
+    expect(html).not.toContain("Deshacer");
+  });
+});
+
 describe("RecCard — CTA y chip de control", () => {
   it("nombra el entregable en el botón, no la mecánica", () => {
     const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "create_faq_section" })} />);
@@ -109,5 +199,214 @@ describe("RecCard — CTA y chip de control", () => {
   it("marca como interno lo que se resuelve dentro del producto", () => {
     const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "track_emerging_competitor" })} />);
     expect(html).toContain("Aquí en GenScore");
+  });
+});
+
+/**
+ * AUDIT-RECS-JOIN-1 Fase B. `overlayCopyLocal` (cliente) es una copia
+ * verbatim de `overlayCopy` (lib/recommendations/coverage-overlay.ts,
+ * server-only) — el mismo patrón que ya usaba `CoverageOverlay`/
+ * `GeneratedSolution` en este fichero, por el mismo motivo: un componente
+ * cliente no puede importar un módulo que arrastra `import "server-only"`.
+ * Nada impide que las dos diverjan salvo este test — misma disciplina que el
+ * guardián de paridad de tres vías de GROUNDED_PROVIDERS (log §130): una
+ * duplicación sin test es la que se queda atrás en silencio.
+ */
+describe("overlayCopyLocal — en paridad con el servidor", () => {
+  const TYPES = ["add_citation_block", "increase_brand_visibility", "algún_tipo_sin_clasificar"] as const;
+  const STATES = ["confirmed_surfacing_gap", "possible_content_gap", "none"] as const;
+
+  it("coincide literalmente con overlayCopy para cada combinación de tipo y estado", () => {
+    for (const type of TYPES) {
+      for (const state of STATES) {
+        expect(overlayCopyLocal(type, state), `${type} / ${state}`).toEqual(overlayCopy(type, state));
+      }
+    }
+  });
+});
+
+describe("RecCard — el overlay de cobertura dice lo correcto según el tipo", () => {
+  const overlay = (state: "confirmed_surfacing_gap" | "possible_content_gap") => ({
+    state,
+    verifiedPage: state === "confirmed_surfacing_gap" ? { url: "https://acme.com/precios", title: "Precios" } : null,
+    confidenceOverride: null
+  });
+
+  it("increase_brand_visibility, hallazgo confirmado: habla de no aparecer en la respuesta, NUNCA de citación", () => {
+    // La regresión que este test existe para impedir: este tipo dispara
+    // cuando la marca no se menciona en absoluto, así que "la IA no lo está
+    // citando como fuente" (el texto de add_citation_block) sería falso aquí
+    // — no hay mención que citar.
+    const html = renderToStaticMarkup(
+      <RecCard
+        projectId="p1"
+        rec={baseRec({ recommendation_type: "increase_brand_visibility", coverageOverlay: overlay("confirmed_surfacing_gap") })}
+      />
+    );
+    expect(html).toContain("no está apareciendo en la respuesta de la IA");
+    expect(html).not.toContain("no lo está citando como fuente");
+    expect(html).toContain("https://acme.com/precios");
+  });
+
+  it("add_citation_block, hallazgo confirmado: conserva su texto original sobre citación", () => {
+    const html = renderToStaticMarkup(
+      <RecCard
+        projectId="p1"
+        rec={baseRec({ recommendation_type: "add_citation_block", coverageOverlay: overlay("confirmed_surfacing_gap") })}
+      />
+    );
+    expect(html).toContain("no lo está citando como fuente");
+  });
+
+  it("increase_brand_visibility, sin cobertura propia: reusa el first_step real de la regla, no un texto inventado", () => {
+    const html = renderToStaticMarkup(
+      <RecCard
+        projectId="p1"
+        rec={baseRec({ recommendation_type: "increase_brand_visibility", coverageOverlay: overlay("possible_content_gap") })}
+      />
+    );
+    expect(html).toContain("publica una página que responda esta pregunta en las dos primeras frases");
+  });
+});
+
+describe("predictionVerdictLine — RECS-LOOP-1 Fase A", () => {
+  const historyItem = (over: Partial<ResolvedHistoryItem> = {}): ResolvedHistoryItem => ({
+    id: "h1",
+    title: "Título",
+    description: "Descripción",
+    recommendation_type: "increase_brand_visibility",
+    status: "resolved",
+    updated_at: "2026-08-25T00:00:00Z",
+    run_id: "run-1",
+    ...over
+  });
+
+  it("silencio (null) cuando no hay veredicto", () => {
+    expect(predictionVerdictLine(historyItem({ verification: { status: "no_verdict" } }))).toBeNull();
+    expect(predictionVerdictLine(historyItem({ verification: null }))).toBeNull();
+    expect(predictionVerdictLine(historyItem())).toBeNull();
+  });
+
+  it("silencio (null) para una fila 'dismissed', incluso si por error llevara un veredicto", () => {
+    expect(
+      predictionVerdictLine(
+        historyItem({
+          status: "dismissed",
+          verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 1, totalCount: 1 } }
+        })
+      )
+    ).toBeNull();
+  });
+
+  it("presence, cumplida en todas: nunca dice 'ya apareces' (afirmación permanente)", () => {
+    const line = predictionVerdictLine(
+      historyItem({ verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 1, totalCount: 1 } } })
+    );
+    expect(line).toContain("En el escaneo que lo confirmó");
+    expect(line).toContain("te nombró");
+    expect(line).not.toContain("ya apareces");
+  });
+
+  it("presence, no cumplida en ninguna: lo dice, no lo esconde", () => {
+    const line = predictionVerdictLine(
+      historyItem({ verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 0, totalCount: 1 } } })
+    );
+    expect(line).toContain("no te nombró");
+  });
+
+  it("prominence usa su propio texto — 'aparecer por detrás', nunca el de presence", () => {
+    const line = predictionVerdictLine(
+      historyItem({
+        recommendation_type: "increase_brand_prominence",
+        verification: { status: "verified", verdict: { kind: "prominence", fulfilledCount: 2, totalCount: 2 } }
+      })
+    );
+    expect(line).toContain("dejaste de aparecer por detrás");
+    expect(line).not.toContain("te nombró");
+  });
+
+  it("authority usa su propio texto — 'quedó citada', nunca el de presence ni prominence", () => {
+    const line = predictionVerdictLine(
+      historyItem({
+        recommendation_type: "add_citation_block",
+        verification: { status: "verified", verdict: { kind: "authority", fulfilledCount: 3, totalCount: 4 } }
+      })
+    );
+    expect(line).toContain("quedó citada");
+    expect(line).toContain("3 de 4");
+  });
+});
+
+describe("predictionVerdictLine — RECS-LOOP-1 Fase B (fila dismissed)", () => {
+  const dismissedItem = (over: Partial<ResolvedHistoryItem> = {}): ResolvedHistoryItem => ({
+    id: "h1",
+    title: "Título",
+    description: "Descripción",
+    recommendation_type: "increase_brand_visibility",
+    status: "dismissed",
+    updated_at: "2026-08-10T00:00:00Z",
+    run_id: "run-1",
+    ...over
+  });
+
+  it("silencio (null) cuando no hay recurrence, o es no_verdict", () => {
+    expect(predictionVerdictLine(dismissedItem())).toBeNull();
+    expect(predictionVerdictLine(dismissedItem({ recurrence: null }))).toBeNull();
+    expect(predictionVerdictLine(dismissedItem({ recurrence: { status: "no_verdict" } }))).toBeNull();
+  });
+
+  it("recurred: nombra la fecha del escaneo ancla, nunca 'el escaneo que lo confirmó' (aquí no confirmó nadie nada)", () => {
+    const line = predictionVerdictLine(
+      dismissedItem({
+        recurrence: { status: "recurred", anchorRunId: "run-a", anchorRunCreatedAt: "2026-08-15T00:00:00Z" }
+      })
+    );
+    expect(line).toContain("volvió a encontrarla");
+    expect(line).not.toContain("En el escaneo que lo confirmó");
+  });
+
+  it("did_not_recur sin detalle de Fase A: sólo la observación fechada", () => {
+    const line = predictionVerdictLine(
+      dismissedItem({
+        recurrence: { status: "did_not_recur", anchorRunId: "run-a", anchorRunCreatedAt: "2026-08-15T00:00:00Z" }
+      })
+    );
+    expect(line).toContain("ya no la encontró");
+    expect(line).not.toContain("volvió");
+  });
+
+  it("did_not_recur CON detalle de Fase A: la observación fechada más la cláusula de mutación, nunca las dos fechas confundidas", () => {
+    const line = predictionVerdictLine(
+      dismissedItem({
+        recurrence: { status: "did_not_recur", anchorRunId: "run-a", anchorRunCreatedAt: "2026-08-15T00:00:00Z" },
+        verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 1, totalCount: 1 } }
+      })
+    );
+    expect(line).toContain("ya no la encontró");
+    expect(line).toContain("La IA te nombró");
+  });
+
+  it("recurred NUNCA lleva el detalle de Fase A, aunque venga un veredicto verificado por error", () => {
+    const line = predictionVerdictLine(
+      dismissedItem({
+        recurrence: { status: "recurred", anchorRunId: "run-a", anchorRunCreatedAt: "2026-08-15T00:00:00Z" },
+        verification: { status: "verified", verdict: { kind: "presence", fulfilledCount: 1, totalCount: 1 } }
+      })
+    );
+    expect(line).toBe("El escaneo del 15 ago 2026 volvió a encontrarla.");
+  });
+});
+
+describe("RecCard — insignia de reaparición (RECS-LOOP-1 Fase B)", () => {
+  it("no pinta nada para una tarjeta que nunca se marcó como hecha", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec()} />);
+    expect(html).not.toContain("La marcaste como hecha");
+  });
+
+  it("pinta la fecha del descarte cuando la brecha volvió tras marcarse como hecha", () => {
+    const html = renderToStaticMarkup(
+      <RecCard projectId="p1" rec={baseRec({ previouslyMarkedDoneAt: "2026-08-12T00:00:00Z" })} />
+    );
+    expect(html).toContain("La marcaste como hecha el 12 ago 2026");
   });
 });

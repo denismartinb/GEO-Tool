@@ -15,7 +15,7 @@ import {
   resolveTechnicalComponent,
   TECHNICAL_SNAPSHOT_LOOKUP_LIMIT
 } from "@/lib/scoring/geo-score-technical";
-import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
+import { computeRunScoresFromResults, getEffectiveGeoScore, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -30,6 +30,8 @@ import { computeStaggerDelaysMs } from "@/lib/scan/pacing";
 import { triggerScanContinuation } from "@/lib/scan/continuation";
 import { ProjectActionError, type JobRow } from "@/lib/scan/types";
 import type { AuthenticatedContext } from "@/lib/auth";
+import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
+import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore } from "@/lib/metrics/run-metrics";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
@@ -833,7 +835,11 @@ export async function executePendingScan({
           sentiment: row.sentiment,
           extracted_json: row.extracted_json,
           raw_response_text: row.raw_response_text,
-          category: row.prompt_id ? categoryByPromptId.get(row.prompt_id) ?? null : null
+          category: row.prompt_id ? categoryByPromptId.get(row.prompt_id) ?? null : null,
+          // RECS-EVIDENCE-2 (docs/external-audit-2026-08.md, Fase 7): already
+          // selected above for engineCoverage/scores — threaded through so the
+          // engine can say WHICH provider's response backs each recommendation.
+          provider: row.provider
         }))
       });
       newRecommendationsCount = recommendationRows.length;
@@ -945,9 +951,34 @@ export async function executePendingScan({
         });
       }
 
-      await service.from("recommendations").delete().eq("project_id", projectId).eq("run_id", runId);
-      if (recommendationRows.length) {
-        await service.from("recommendations").insert(
+      // RECS-FINALIZE-DURABILITY-1: scoped to status='active', same as the
+      // resolve/supersede writes just above — a dismissed row for this run_id
+      // is user state, not regenerable scratch. Unreachable to delete today
+      // (finalize can never re-run against an already-completed run, guarded
+      // at this function's entry), but the scope must not depend on that
+      // guard holding forever. And unlike the two writes above, a failure
+      // here is not safe to shrug off: skipping the insert on a failed
+      // delete is what stops a duplicated backlog (delete fails, insert
+      // still runs on top of the untouched old rows).
+      const { error: deleteError } = await service
+        .from("recommendations")
+        .delete()
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "active");
+
+      if (deleteError) {
+        await logJob(service, {
+          jobId: finalizeJob.id,
+          projectId,
+          runId,
+          level: "error",
+          message:
+            "Failed to clear this run's prior active recommendation rows before reinserting; skipping insert to avoid duplicating the backlog.",
+          context: { message: deleteError.message }
+        });
+      } else if (recommendationRows.length) {
+        const { error: insertError } = await service.from("recommendations").insert(
           recommendationRows.map((rec) => ({
             run_id: runId,
             project_id: projectId,
@@ -966,6 +997,18 @@ export async function executePendingScan({
             consecutive_runs_open: consecutiveRunsByDedupeKey.get(rec.dedupe_key) ?? 1
           }))
         );
+
+        if (insertError) {
+          await logJob(service, {
+            jobId: finalizeJob.id,
+            projectId,
+            runId,
+            level: "error",
+            message:
+              "Failed to insert this run's recommendation rows after clearing the prior ones; run completes with zero recommendations.",
+            context: { message: insertError.message, attempted: recommendationRows.length }
+          });
+        }
       }
 
       // gap_pending: fire exactly on the run where a gap CROSSES 3
@@ -1044,6 +1087,58 @@ export async function executePendingScan({
       .eq("id", runId)
       .eq("project_id", projectId);
 
+    // PROJECT-DEFAULTS-BY-ACCOUNT-1 (founder-approved 2026-08-25) —
+    // `recurring_scans_enabled` cannot be turned on at project creation: its
+    // own precondition (`/debug`'s UI, `lib/projects/automation-toggles.ts`)
+    // requires at least one completed scan to already exist, which is
+    // impossible before the project's first run has finished. So for a real
+    // customer account (not an internal test account), it is turned on HERE,
+    // the first moment the precondition is actually met — not on every
+    // completion, only the project's first, so a customer who later turns it
+    // back off from `/debug` is never silently re-enabled by a later scan.
+    //
+    // Own isolated query, re-read fresh rather than carried from `project`
+    // above: same "own query, own migration guard" shape `engineFlagsRow`
+    // uses a few lines up, and the column is only needed in this one,
+    // rarely-hit branch — not worth adding to every batch invocation's shared
+    // project select.
+    try {
+      const { data: recurringFlagRow } = await service
+        .from("projects")
+        .select("recurring_scans_enabled")
+        .eq("id", projectId)
+        .maybeSingle();
+
+      if (recurringFlagRow && recurringFlagRow.recurring_scans_enabled !== true) {
+        const { count: completedRunCount } = await service
+          .from("scan_runs")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId)
+          .eq("status", "completed");
+
+        if ((completedRunCount ?? 0) === 1) {
+          const { data: ownerAuthUser } = await service.auth.admin.getUserById(
+            project.owner_user_id as string
+          );
+
+          if (!isInternalTestAccountEmail(ownerAuthUser?.user?.email)) {
+            await service
+              .from("projects")
+              .update({ recurring_scans_enabled: true })
+              .eq("id", projectId);
+          }
+        }
+      }
+    } catch (autoRecurringError) {
+      // Fail-soft, like every other post-scan side effect here: the scan
+      // itself already completed successfully above.
+      console.error("[scan-runner] failed to auto-enable recurring scans after the first completed run", {
+        projectId,
+        runId,
+        message: autoRecurringError instanceof Error ? autoRecurringError.message : "unknown"
+      });
+    }
+
     // EXTRACTION-RELIABILITY-1 Fase B: a run can reach `completed` and still
     // have lost a whole engine's data — that is precisely how OpenAI's 429s
     // stayed invisible for four days. Checked here, after the run's own
@@ -1058,6 +1153,47 @@ export async function executePendingScan({
       finalizeJobId: finalizeJob.id
     });
 
+    // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
+    // completion notification used to headline `visibility_score` directly —
+    // "Visibilidad 2" beside a "Puntuación GEO" of 6 on the very same scan
+    // (the audit's P0-01). It now carries the SAME windowed score every other
+    // "Puntuación GEO" surface shows, resolved from this project's most
+    // recent completed runs (this one included — it was upserted into
+    // run_scores just above). `DEFAULT_SCORE_WINDOW_SIZE` rows is what
+    // `resolveGeoScore` needs to judge comparability; a project's own history
+    // never grows past what its plan allows, so this is a small, bounded read.
+    //
+    // Fail-soft and separate from the notification's own payload build below:
+    // a scoring-history read must never block the notification that reports a
+    // scan the product already knows finished.
+    // Caught in review (data-guardian, TRUST-METRICS-1 Human Gate pass): the
+    // fallback below used to be `Math.round(scores.visibility_score)` — the
+    // raw component, exactly the figure this whole phase exists to stop
+    // publishing under "Puntuación GEO". A failed or empty read here would
+    // have silently reintroduced P0-01 on the error path. `getEffectiveGeoScore`
+    // reads `scores.details_json` already in scope (no extra query) and is
+    // the same composite-with-fallback `resolveGeoScore` itself would compute
+    // with only this one run to look at (basis: "single_run") — the correct
+    // fallback, not a shortcut around the rule.
+    let geoScoreForNotification: number = Math.round(getEffectiveGeoScore(scores));
+    try {
+      const { data: recentScoreRows } = await service
+        .from("run_scores")
+        .select("run_id, created_at, visibility_score, details_json")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(GEO_SCORE_LOOKBACK_ROWS);
+      if (recentScoreRows && recentScoreRows.length > 0) {
+        geoScoreForNotification = resolveGeoScore(recentScoreRows).value;
+      }
+    } catch (geoScoreError) {
+      console.error("[scan-runner] failed to resolve the windowed GEO score for the completion notification", {
+        projectId,
+        runId,
+        message: geoScoreError instanceof Error ? geoScoreError.message : "unknown"
+      });
+    }
+
     // Emitted only after the run's own status update above is durable — a
     // notification must never describe a state that hasn't actually landed.
     await emitNotification(service, {
@@ -1070,6 +1206,11 @@ export async function executePendingScan({
         runId,
         promptsProcessed: totalSuccessCount ?? 0,
         providers,
+        // `geoScore` is the ONLY figure `lib/notifications/render.ts` may
+        // headline under "Escaneo actualizado" — never `visibilityScore`
+        // below, kept only so `lib/scan/weekly-digest.ts` and any consumer
+        // reading historical payloads still has the raw component.
+        geoScore: geoScoreForNotification,
         visibilityScore: scores.visibility_score,
         visibilityDelta:
           previousVisibilityScore !== null ? scores.visibility_score - previousVisibilityScore : null,

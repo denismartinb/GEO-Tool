@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { COMPARATIVAS_BREADCRUMB } from "@/lib/comparativas";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { KeyTakeaway, CompareTable, ArticleCta } from "@/components/blog/article";
 import { TOOLS, PILLAR_RESEARCH_DATE } from "@/lib/comparativas/mejores-herramientas-geo";
@@ -52,7 +53,7 @@ function itemListSchema() {
 
 export default function MejoresHerramientasGeoPage() {
   return (
-    <BlogPageShell activeHref="/comparativas">
+    <BlogPageShell activeHref="/comparativas" breadcrumb={COMPARATIVAS_BREADCRUMB}>
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },

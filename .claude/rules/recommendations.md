@@ -7,6 +7,35 @@ paths:
 
 # Recomendaciones — invariantes
 
+## Motor (RECS-EVIDENCE-2, Fase 7, log §191)
+
+- **`perPromptGapCards` agrupa por prompt ANTES de decidir el hallazgo, nunca
+  al revés.** Un run ejecuta varios motores por prompt (migración 0009), así
+  que iterar `promptResults` fila a fila y dejar que el dedupe final se
+  quede sólo con la de mayor severidad pierde en silencio la evidencia de
+  los motores perdedores cuando dos coinciden en el mismo hallazgo. Agrupar
+  primero por `stableId` (`project_prompts.id`) y evaluar la condición sobre
+  el grupo entero es lo que hace que el agrupamiento sea automático en vez de
+  depender del dedupe genérico para no perder datos.
+- **Nunca separar el dedupe por motor.** Se consideró y se descartó: convierte
+  cada coincidencia entre motores en tarjetas adicionales, exactamente lo
+  contrario de lo que pide "agrupación de acciones equivalentes,
+  >95% sin duplicado". El motor es un atributo de la evidencia dentro de una
+  tarjeta, no una dimensión nueva de identidad de la tarjeta.
+- **`AffectedPromptDetail.provider`/`PromptResultInput.provider` viajan por
+  `evidence_json`, nunca por una columna propia.** No hace falta migración:
+  `evidence_json` ya es jsonb y ya guarda `prompt`/`competitors`/`domains`
+  del mismo modo.
+- **El glifo de motor en pantalla es SIEMPRE `getEngineMeta`/`EngineGlyph`
+  (`lib/scan/engine-meta.ts`), nunca una copia local.** Es el mismo módulo
+  que ya comparten Prompts y Overview — un motor nuevo sólo necesita una
+  entrada ahí.
+- **Ausencia de `provider` no se rellena con Gemini por defecto.** A
+  diferencia de `normalizeProvider` (pensado para filas de escaneo reales,
+  que nunca tienen `provider` null legítimamente), la evidencia persistida
+  antes de esta fase simplemente no lo tiene — se pinta sin glifo, nunca se
+  inventa.
+
 ## Puntos potenciales
 
 - **Se calculan por recomputación contrafactual del score real**, nunca por el
@@ -110,10 +139,79 @@ paths:
   mensaje sigue siendo propio y saneado — nunca el error del proveedor
   (`.claude/rules/gemini.md`).
 
+## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §200)
+
+- **`computeEmergingCompetitors` nunca recomienda seguir un asistente de IA
+  como competidor.** Filtra por `isGenericEntityName`
+  (`lib/entity-hygiene/generic-entities.ts`) antes de aceptar cualquier
+  nombre de `other_brands_mentioned` — ese campo es salida cruda del modelo
+  con sólo una instrucción blanda en el prompt de extracción, nunca una
+  garantía de código. Detalle completo, y por qué la lista vive en un módulo
+  compartido en vez de aquí, en `.claude/rules/competitors.md`.
+
 ## Escrituras
 
-- `dismiss`/`rewrite` verifican propiedad en servidor con el cliente de usuario
-  antes de cualquier escritura con service-role (patrón data-guardian C5).
+- `dismiss`/`rewrite`/`restore` verifican propiedad en servidor con el cliente
+  de usuario antes de cualquier escritura con service-role (patrón
+  data-guardian C5).
+
+## Contrato de acción (ACTIONS-OBSERVABLE-1 slice 4a, docs/external-audit-2026-08.md Fase 4, log §203)
+
+- **Ninguna acción de `RecCard` termina en nada.** Las dos acciones propias de
+  la tarjeta (`handleRewrite`, `handleDismiss`) pasan por `useActionFeedback`
+  (`components/ui/action-feedback.tsx`), que envuelve el reducer puro de
+  `lib/ui/action-feedback.ts` — `idle | pending | success | error`, nunca un
+  cuarto estado. Cualquier acción nueva en esta pantalla usa el mismo hook en
+  vez de un `useState`+`useTransition` propio.
+- **El acuse de éxito se anuncia con `role="status"` `aria-live="polite"`**
+  (`ActionAnnouncement`). Antes de esta fase ninguna de las seis acciones de
+  Recomendaciones anunciaba nada — ni siquiera visualmente, y menos aún para
+  un lector de pantalla.
+- **"Marcar como hecho" llama a `router.refresh()` en su propio éxito, igual
+  que todas las demás acciones de esta tarjeta.** Una primera versión no lo
+  hacía a propósito, para dejar sitio a un "Deshacer" en la propia tarjeta —
+  el fundador la probó en el preview y la rechazó: un deshacer que sólo vive
+  mientras la tarjeta sigue montada, y desaparece en cuanto navegas,
+  "no sirve de nada" (2026-09-07). El deshacer real vive en otro sitio (ver
+  abajo); esta tarjeta vuelve a comportarse como las demás.
+- **El "Deshacer" de verdad vive en `ResolvedHistoryCard`, bajo "Resueltas",
+  nunca en la tarjeta activa.** Es la única forma de que sobreviva a un
+  refresco o a una navegación — que es precisamente lo que la versión
+  anterior no conseguía. Se ofrece SÓLO cuando `item.status === 'dismissed'
+  && item.run_id === latestCompletedRunId`: la lista activa filtra por
+  `run_id = latestCompletedRun.id AND status='active'`
+  (`recommendations/page.tsx`), así que restaurar una fila de un run más
+  antiguo volvería su `status` a `'active'` pero la dejaría invisible en
+  todas partes — ni en la lista activa (su `run_id` no es el vigente), ni ya
+  en "Resueltas" (dejó de tener el `status` que esa pestaña lista). Esto
+  exigió sacar `run_id` del recorte que `page.tsx` aplicaba antes de mandar
+  `ResolvedHistoryItem` al cliente y pasar `latestCompletedRunId` como prop
+  nueva — antes ninguno de los dos cruzaba la red.
+- **`restore-recommendation.ts` es un espejo exacto de `dismiss-
+  recommendation.ts`**, sin migración: `rec_status_chk`
+  (`0010_recommendations_history.sql`) ya admite `'active'`. Cualquier
+  cambio a uno de los dos se revisa contra el otro.
+- **El vacío de nivel superior de la pantalla (`page.tsx`) sólo dispara
+  cuando de verdad no hay nada en ningún sitio.** Antes bastaba
+  `recs.length === 0`: marcar como hecha la única recomendación activa
+  desmontaba `RecommendationsClient` entero, con él la pestaña "Resueltas" y
+  sus datos ya pedidos al servidor — el fundador lo vio como una pantalla que
+  "borraba" su acción. La condición es `recs.length === 0 &&
+  resolvedHistoryForClient.length === 0`; con historial pero sin activas,
+  `RecommendationsClient` sigue montado y su propio vacío interno («Nada que
+  corregir ahora mismo») señala la pestaña "Resueltas" en vez de repetir el
+  genérico "vuelve a Todas" (que sería falso: ya se está en Todas).
+- **Lo que `react-dom/server` no puede probar se declara, no se calla.**
+  `renderToStaticMarkup` no ejecuta clics, así que ningún test afirma que un
+  clic real en "Deshacer" restaura la fila. Lo que sí se prueba por render
+  (`ResolvedHistoryCard`, exportada igual que `RecCard`): las cuatro
+  combinaciones de la condición de arriba — se ofrece del run vigente, no se
+  ofrece de un run viejo, no se ofrece sobre una fila `resolved`, no se
+  ofrece sin `latestCompletedRunId`. La transición real a "éxito" sólo la
+  verifica `tests/pilot/journeys/actions/recommendation-actions.spec.ts`
+  (`--journeys actions`) contra un preview real — mismo principio que ya
+  protege el chip de control y la insignia de estado del artefacto más
+  arriba en este fichero.
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 
@@ -187,6 +285,26 @@ paths:
   pantalla y se manda a arreglarlo donde se arregla. Los otros trece checks
   técnicos **no** suben aquí; si algún día sube un cuarto bloqueo, tiene que
   ser porque impide la cita, no porque reste puntos.
+- **El overlay de cobertura sólo alimenta tipos anclados a UN prompt**
+  (`COVERAGE_OVERLAY_TYPES`, `lib/recommendations/coverage-overlay.ts`,
+  AUDIT-RECS-JOIN-1 Fase B, log §172). Hoy: `add_citation_block` (mencionado,
+  no citado) e `increase_brand_visibility` (no mencionado en absoluto). Un
+  tipo de ámbito de campaña (`create_faq_section`,
+  `strengthen_brand_entity_clarity`) no entra: no hay un único tema con el
+  que cruzarlo.
+- **El copy del overlay es por tipo, nunca compartido a ciegas.**
+  `add_citation_block` y `increase_brand_visibility` disparan por motivos
+  incompatibles —mencionado-sin-citar vs. no-mencionado— así que "la IA no lo
+  está citando como fuente" es cierto para uno y falso para el otro. Un tipo
+  nuevo en `COVERAGE_OVERLAY_TYPES` sin decidir su propio `overlayCopy` hereda
+  el fallback genérico, nunca el texto de otro tipo.
+- **`overlayCopyLocal` (cliente) es una copia deliberada de `overlayCopy`
+  (servidor), y lleva su propio test de paridad campo a campo.** El overlay
+  es server-only (arrastra `domain-coverage.ts`, que importa `"server-only"`),
+  así que el cliente no puede importarlo — mismo motivo que ya duplicaba
+  `CoverageOverlay`/`GeneratedSolution` ahí. Ninguna duplicación nueva se
+  añade sin el test que la blinda: mismo principio que el guardián de tres
+  vías de `GROUNDED_PROVIDERS` (`.claude/rules/web-audit.md`, log §130).
 - **Este módulo sólo afirma problemas, nunca «está bien».** Es lo que hace
   segura la ausencia de un campo en una instantánea vieja: «nunca medido» se
   excluye solo, sin necesidad de un `isMeasured` propio. Si alguna vez se le
@@ -199,6 +317,100 @@ paths:
   pantalla completa (`FirstScanTakeover`) sólo sustituye la pantalla cuando NO
   hay un `latestCompletedRun` — con datos, un escaneo en curso se refleja en la
   `ScanStatePill` del sticky-header, nunca tapando el backlog.
+
+## Verificación de la predicción (RECS-LOOP-1 Fase A+B, ADR 0041, log §181, §190)
+
+- **Nunca un delta de score entre dos runs.** Se evaluó y se rechazó
+  explícitamente: no es atribuible (el compuesto/componente se mueve por
+  cualquier prompt y por cualquier otra tarjeta resuelta en la misma
+  ventana, no sólo por ésta) y casi nunca pasaría `resolveDelta`/
+  `compareRuns` (`.claude/rules/scoring.md`, DELTA-GUARD-1) entre dos runs
+  consecutivos reales. La única verificación permitida es fáctica: si la
+  mutación concreta que la promesa asumía (`getRecommendationPotentialKind`
+  — el MISMO mapa de `lib/scoring/run-scoring.ts` que generó el "hasta +X
+  pt", nunca uno independiente) ocurrió de verdad en los prompts que la
+  tarjeta citó, en el run que confirmó la brecha resuelta. Ver ADR 0041 para
+  el razonamiento completo de por qué.
+- **Es observación, no estimación.** Sin banda de confianza, sin suelo de
+  muestra — no extrapola a una población, así que una sola fila comprobada
+  es una respuesta completa. No reutilices `MIN_RESPONSES_FOR_BAND` ni
+  `resolveDelta` aquí: esas capas existen para inferencias, esto no lo es.
+- **Nunca una cifra de puntos.** El veredicto es "cumplida en N de M
+  consultas", nunca comparado ni presentado junto al "hasta +X pt" del
+  contrafactual — son respuestas a preguntas distintas, y ponerlas una al
+  lado de la otra es la promesa que ADR 0041 existe para no hacer.
+- **`prominence` no exige la posición 1 del contrafactual.** Esa es su techo
+  optimista, no un veredicto realista — exigirla haría que la tarjeta
+  dijera "no se cumplió" casi siempre que sí ayudó. El check real es: deja
+  de estar por detrás del competidor concreto que la propia evidencia de la
+  tarjeta nombró (`evidence_json.affected_prompt_details[].competitors`),
+  no de cualquier competidor.
+- **`affected_prompt_details[].id` no es estable entre runs** — es
+  `scan_prompt_results.id`, una fila nueva cada escaneo (RECS-DEDUPE-1).
+  Cualquier cruce entre el run que prometió y el run que confirma pasa por
+  `project_prompts.id`, con una consulta anclada a `project_id` y al
+  `run_id` de la tarjeta — nunca sin ese anclaje. Un prompt borrado desde
+  entonces (`prompt_id` a null) falla cerrado hacia "sin veredicto".
+- **Sin migración, y a propósito.** La promesa es derivable:
+  `computeRecommendationPotentialPoints` es pura y `scan_prompt_results` es
+  inmutable tras completar el run. No se congela nada en una columna nueva.
+- **El dedupe del historial de "Resueltas" incluye `resolved_in_run_id` en
+  su clave**, no sólo el título — de lo contrario una brecha que se
+  resolvió, reabrió y se resolvió otra vez se colapsa en una sola tarjeta,
+  perdiendo la más antigua. El duplicado de dos motores sobre el mismo
+  prompt (la razón original del dedupe por título) sigue colapsando porque
+  comparte el mismo `resolved_in_run_id`.
+- **Una fila `dismissed` sí tiene veredicto (Fase B, `lib/recommendations/
+  dismissal-recurrence.ts`), pero nunca vía `resolved_in_run_id`.**
+  `dismissRecommendationCore` no lo escribe — dismissal es un clic manual, no
+  algo que el sistema detecte re-escaneando — así que el ancla es el PRIMER
+  `scan_runs` completado con `created_at` posterior al `updated_at` de la
+  fila descartada (nunca `finished_at`: un run en vuelo en el momento del
+  clic no cuenta como observación posterior a él). Fijo una vez, nunca una
+  comprobación rodante contra "el run más reciente" — mismo principio que
+  Fase A ya fija su propio ancla y no la vuelve a mover.
+- **El campo que lleva esa ancla en `prediction-verification.ts` se llama
+  `anchorRunId`, no `resolvedInRunId`.** Sirve a los dos llamadores (Fase A:
+  el run que confirmó una resolución automática; Fase B: el run ancla de una
+  recurrencia) y el nombre viejo mentiría sobre el segundo caso. No renombrar
+  de vuelta aunque un solo llamador parezca más simple.
+- **Un run ancla sin ninguna fila de `recommendations` → sin veredicto,
+  nunca "la brecha se fue".** Indistinguible desde este módulo de un fallo
+  del `INSERT` de finalize (RECS-FINALIZE-DURABILITY-1 ya sabe que puede
+  ocurrir, registrado, no fatal) — leer un run vacío como "resuelto"
+  publicaría una victoria causada por un fallo de persistencia.
+- **La reaparición se afirma; la conclusión sobre lo que el usuario hizo o
+  dejó de hacer, nunca.** Que la brecha vuelva es evidencia de que sigue ahí
+  — no de que el usuario no hiciera el trabajo (publicar algo el día 12
+  puede no haber propagado a un motor el día 13, y en un motor no-grounded
+  puede no propagar nunca). Ningún umbral de espera artificial ("dale 7
+  días") compensa esto: sería una constante fabricada sin dato detrás.
+- **El detalle de mutación de Fase A y el veredicto de recurrencia de Fase B
+  nunca se muestran juntos para la rama "volvió".** Si la brecha reapareció,
+  "la IA te nombró en 1 de 2 consultas" es una respuesta a una pregunta que
+  ya no importa — sólo se calcula/enseña el detalle de mutación en la rama
+  "no volvió".
+- **El copy de una fila `dismissed` nunca dice "en el escaneo que lo
+  confirmó"** (esa frase es de Fase A, algo se confirmó de verdad ahí):
+  nombra la fecha del propio run ancla ("El escaneo del 25 ago 2026 ya no la
+  encontró"), distinta a propósito de `dateLabel` (la fecha del descarte)
+  que ya lleva la tarjeta — dos fechas, dos hechos, nunca fundidas.
+- **La tarjeta activa que vuelve lleva su propia memoria, con la fecha del
+  descarte, no la del run ancla.** `recommendation-history.ts` reinicia
+  `consecutive_runs_open` a 1 correctamente cuando una fila `dismissed`
+  reaparece (es una racha nueva) — pero sin la insignia "La marcaste como
+  hecha el 12 ago 2026" la tarjeta se ve como si fuera nueva de verdad, y el
+  usuario pierde el contexto de que ya la marcó una vez. Keyed on
+  `dedupe_key`, nunca en el id de la fila descartada (una fila nueva cada
+  vez que la brecha reaparece).
+- **La asimetría que motivó Fase B, para no reintroducirla:**
+  `computeRecommendationTransition`'s `resolvedDedupeKeys` ya excluye
+  `status === "dismissed"` (correcto — una fila descartada no es una
+  resolución automática), pero eso significa que arreglar una brecha SIN
+  pulsar "Marcar como hecho" cuenta como Victoria reciente y arreglar la
+  MISMA brecha pulsándolo no cuenta nunca. Cualquier cambio futuro a esa
+  exclusión tiene que preservar que el botón nunca deje al usuario peor que
+  no haberlo pulsado.
 
 ## Honestidad de lo que se genera (RECS-USEFULNESS-1 Fase C, log §128)
 

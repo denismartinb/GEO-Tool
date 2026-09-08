@@ -6,9 +6,16 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
-import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
+import { COVERAGE_OVERLAY_TYPES, computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
+import {
+  verifyRecommendationPredictions,
+  type RecommendationToVerify,
+  type RecommendationVerification,
+  type VerificationRow
+} from "@/lib/recommendations/prediction-verification";
+import { computeDismissalRecurrence, type RecurrenceVerdict } from "@/lib/recommendations/dismissal-recurrence";
 import {
   computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
@@ -189,7 +196,7 @@ export default async function RecommendationsPage({
         supabase
           .from("recommendations")
           .select(
-            "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open",
+            "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open, dedupe_key",
           )
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
@@ -213,7 +220,9 @@ export default async function RecommendationsPage({
         // cleaned up via project hard-delete).
         supabase
           .from("recommendations")
-          .select("id, title, description, recommendation_type, status, updated_at")
+          .select(
+            "id, title, description, recommendation_type, status, updated_at, run_id, resolved_in_run_id, evidence_json, dedupe_key",
+          )
           .eq("project_id", projectId)
           .in("status", ["resolved", "dismissed"])
           .order("updated_at", { ascending: false })
@@ -251,16 +260,212 @@ export default async function RecommendationsPage({
       recommendation_type: string;
     }>,
   );
-  const resolvedHistory = dedupeByTitle(
-    (history ?? []) as Array<{
-      id: string;
-      title: string;
-      description: string;
-      recommendation_type: string;
-      status: "resolved" | "dismissed";
-      updated_at: string;
-    }>,
+
+  type HistoryRow = {
+    id: string;
+    title: string;
+    description: string;
+    recommendation_type: string;
+    status: "resolved" | "dismissed";
+    updated_at: string;
+    run_id: string;
+    resolved_in_run_id: string | null;
+    evidence_json: { affected_prompt_details?: Array<{ id: string; competitors: string[] }> } | null;
+    dedupe_key: string;
+  };
+
+  // RECS-LOOP-1 Fase A: dedupeByTitle alone would collapse a real, distinct
+  // event — a gap that closed, reopened, and closed again — because it only
+  // keys on the normalized title, keeping whichever row sorts first
+  // (newest). That erases exactly the history this phase exists to show.
+  // Keying on title + the run that closed it (or, for a dismissed row with
+  // no such run, the row's own id) still collapses the same-title,
+  // same-confirming-run duplicate dedupeByTitle was built for (one logical
+  // prompt scored by two engines), without erasing a separate resolution.
+  function dedupeResolvedHistory(rows: HistoryRow[]): HistoryRow[] {
+    const seen = new Set<string>();
+    const out: HistoryRow[] = [];
+    for (const row of rows) {
+      const key = `${row.title.trim().toLowerCase()}:${row.status === "resolved" ? (row.resolved_in_run_id ?? "") : row.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(row);
+    }
+    return out;
+  }
+
+  const resolvedHistory = dedupeResolvedHistory((history ?? []) as HistoryRow[]);
+
+  // RECS-LOOP-1 Fase B: for each dismissed history row, did the gap
+  // (dedupe_key) come back in the first completed scan after the dismissal?
+  // Same recurrence signal computeRecommendationTransition already uses to
+  // decide "resolved" (recommendation-history.ts), applied to one pinned
+  // later run instead of every subsequent one — see
+  // lib/recommendations/dismissal-recurrence.ts for why the anchor is fixed
+  // rather than a rolling "most recent run" check.
+  const recurrenceByRecId = new Map<string, RecurrenceVerdict>();
+  const dismissedRowsWithKey = resolvedHistory.filter(
+    (r): r is HistoryRow & { dedupe_key: string } => r.status === "dismissed" && Boolean(r.dedupe_key),
   );
+  if (dismissedRowsWithKey.length > 0) {
+    const earliestDismissedAt = dismissedRowsWithKey.reduce(
+      (min, r) => (r.updated_at < min ? r.updated_at : min),
+      dismissedRowsWithKey[0].updated_at,
+    );
+
+    const { data: candidateRunRows } = await supabase
+      .from("scan_runs")
+      .select("id, created_at")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .gt("created_at", earliestDismissedAt)
+      .order("created_at", { ascending: true });
+
+    const candidateRuns = (candidateRunRows ?? []) as Array<{ id: string; created_at: string }>;
+
+    if (candidateRuns.length > 0) {
+      const { data: candidateRecRows } = await supabase
+        .from("recommendations")
+        .select("run_id, dedupe_key")
+        .eq("project_id", projectId)
+        .in(
+          "run_id",
+          candidateRuns.map((r) => r.id),
+        );
+
+      const dedupeKeysByRunId = new Map<string, Set<string>>();
+      for (const row of (candidateRecRows ?? []) as Array<{ run_id: string; dedupe_key: string }>) {
+        const set = dedupeKeysByRunId.get(row.run_id) ?? new Set<string>();
+        set.add(row.dedupe_key);
+        dedupeKeysByRunId.set(row.run_id, set);
+      }
+
+      for (const [recId, verdict] of computeDismissalRecurrence({
+        dismissedRows: dismissedRowsWithKey.map((r) => ({ id: r.id, dedupeKey: r.dedupe_key, dismissedAt: r.updated_at })),
+        candidateRuns: candidateRuns.map((r) => ({ id: r.id, createdAt: r.created_at })),
+        dedupeKeysByRunId,
+      })) {
+        recurrenceByRecId.set(recId, verdict);
+      }
+    }
+  }
+
+  // RECS-LOOP-1 Fase B, active-card memory: if the currently-active backlog
+  // holds the same dedupe_key as a dismissal that recurred, the card carries
+  // when it was previously marked done — so it does not silently re-teach a
+  // gap the user already acted on once. Keyed on dedupe_key (not recId,
+  // which is a fresh row every time the gap reappears), keeping the most
+  // recent dismissal per key since `history` is already newest-first.
+  const recurredDismissalByDedupeKey = new Map<string, string>();
+  for (const r of dismissedRowsWithKey) {
+    if (recurrenceByRecId.get(r.id)?.status !== "recurred") continue;
+    if (!recurredDismissalByDedupeKey.has(r.dedupe_key)) {
+      recurredDismissalByDedupeKey.set(r.dedupe_key, r.updated_at);
+    }
+  }
+
+  // RECS-LOOP-1 Fase A+B: verify, for each history row with a later run to
+  // check against, whether the specific mutation its potential-points
+  // estimate assumed actually happened — never a score delta (see
+  // lib/recommendations/prediction-verification.ts for why). A `resolved`
+  // row's later run is `resolved_in_run_id` (the system detected the gap
+  // gone); a `dismissed` row's is the anchor run above, only when the gap
+  // did NOT recur there — showing the mutation detail next to "it came back"
+  // would answer a question nobody asked while burying the one that matters.
+  const verificationByRecId = new Map<string, RecommendationVerification>();
+  const verifiableRows: Array<{ id: string; recommendation_type: string; run_id: string; anchor_run_id: string; evidence_json: HistoryRow["evidence_json"] }> = [
+    ...resolvedHistory
+      .filter((r): r is HistoryRow & { resolved_in_run_id: string } => r.status === "resolved" && Boolean(r.resolved_in_run_id))
+      .map((r) => ({ id: r.id, recommendation_type: r.recommendation_type, run_id: r.run_id, anchor_run_id: r.resolved_in_run_id, evidence_json: r.evidence_json })),
+    ...dismissedRowsWithKey
+      .filter((r) => recurrenceByRecId.get(r.id)?.status === "did_not_recur")
+      .map((r) => ({
+        id: r.id,
+        recommendation_type: r.recommendation_type,
+        run_id: r.run_id,
+        anchor_run_id: (recurrenceByRecId.get(r.id) as { status: "did_not_recur"; anchorRunId: string }).anchorRunId,
+        evidence_json: r.evidence_json,
+      })),
+  ];
+
+  if (verifiableRows.length > 0) {
+    const oldRunIds = Array.from(new Set(verifiableRows.map((r) => r.run_id)));
+    const newRunIds = Array.from(new Set(verifiableRows.map((r) => r.anchor_run_id)));
+    const oldResultIds = Array.from(
+      new Set(verifiableRows.flatMap((r) => r.evidence_json?.affected_prompt_details?.map((d) => d.id) ?? [])),
+    );
+
+    if (oldResultIds.length > 0) {
+      const { data: oldRows } = await supabase
+        .from("scan_prompt_results")
+        .select("id, prompt_id")
+        .eq("project_id", projectId)
+        .in("run_id", oldRunIds)
+        .in("id", oldResultIds);
+
+      const oldResultIdToPromptId = new Map(
+        ((oldRows ?? []) as Array<{ id: string; prompt_id: string | null }>)
+          .filter((row): row is { id: string; prompt_id: string } => Boolean(row.prompt_id))
+          .map((row) => [row.id, row.prompt_id]),
+      );
+
+      const promptIds = Array.from(new Set(oldResultIdToPromptId.values()));
+      const { data: newRows } =
+        promptIds.length > 0
+          ? await supabase
+              .from("scan_prompt_results")
+              .select("run_id, prompt_id, provider, brand_mentioned, citation_found, extracted_json")
+              .eq("project_id", projectId)
+              .in("run_id", newRunIds)
+              .in("prompt_id", promptIds)
+          : { data: [] as Array<{ run_id: string; prompt_id: string | null } & VerificationRow> };
+
+      const newRunRowsByRunAndPrompt = new Map<string, VerificationRow[]>();
+      for (const row of (newRows ?? []) as Array<{ run_id: string; prompt_id: string | null } & VerificationRow>) {
+        if (!row.prompt_id) continue;
+        const key = `${row.run_id}:${row.prompt_id}`;
+        const existing = newRunRowsByRunAndPrompt.get(key) ?? [];
+        existing.push(row);
+        newRunRowsByRunAndPrompt.set(key, existing);
+      }
+
+      const toVerify: RecommendationToVerify[] = verifiableRows.map((r) => ({
+        id: r.id,
+        recommendationType: r.recommendation_type,
+        anchorRunId: r.anchor_run_id,
+        affectedPrompts: (r.evidence_json?.affected_prompt_details ?? []).map((d) => ({
+          resultId: d.id,
+          competitors: d.competitors ?? [],
+        })),
+      }));
+
+      for (const [recId, verdict] of verifyRecommendationPredictions({
+        recommendations: toVerify,
+        oldResultIdToPromptId,
+        newRunRowsByRunAndPrompt,
+        projectDomain: project.domain,
+      })) {
+        verificationByRecId.set(recId, verdict);
+      }
+    }
+  }
+
+  // Trimmed to what the client actually renders — evidence_json stays
+  // server-side, never sent over the wire for a compact history row.
+  // `run_id` DOES cross now (ACTIONS-OBSERVABLE-1 slice 4a): it's what gates
+  // the durable "Deshacer" on a dismissed row to the current run — see
+  // ResolvedHistoryItem.run_id's own doc comment in recommendations-client.tsx.
+  const resolvedHistoryForClient = resolvedHistory.map((r) => ({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    recommendation_type: r.recommendation_type,
+    status: r.status,
+    updated_at: r.updated_at,
+    run_id: r.run_id,
+    verification: verificationByRecId.get(r.id) ?? null,
+    recurrence: r.status === "dismissed" ? (recurrenceByRecId.get(r.id) ?? null) : null,
+  }));
 
   // Attach the latest sanitized AI-generated solution (if any) for each
   // recommendation. These live in `generated_solutions` (never on the
@@ -291,14 +496,17 @@ export default async function RecommendationsPage({
     }
   }
 
-  // RECS-COVERAGE-OVERLAY-1: read-time enrichment of add_citation_block cards
-  // with already-persisted domain-coverage data (DOMAIN-COVERAGE-1) for the
-  // CURRENT scan only — never the recommendation engine or scan pipeline. See
-  // lib/recommendations/coverage-overlay.ts for the join/degradation rules.
-  const addCitationRecs = baseRecs.filter((r) => r.recommendation_type === "add_citation_block");
+  // RECS-COVERAGE-OVERLAY-1 (extended in AUDIT-RECS-JOIN-1 Fase B): read-time
+  // enrichment of COVERAGE_OVERLAY_TYPES cards with already-persisted domain-
+  // coverage data (DOMAIN-COVERAGE-1) for the CURRENT scan only — never the
+  // recommendation engine or scan pipeline. See
+  // lib/recommendations/coverage-overlay.ts for the join/degradation rules
+  // and for why only these two (of fifteen) types are anchored to a single
+  // prompt and can therefore ever match a coverage topic.
+  const overlayEligibleRecs = baseRecs.filter((r) => COVERAGE_OVERLAY_TYPES.has(r.recommendation_type));
   const coverageOverlayByRecId = new Map<string, CoverageOverlayEntry>();
-  if (addCitationRecs.length > 0 && latestCompletedRun) {
-    const resultIds = addCitationRecs
+  if (overlayEligibleRecs.length > 0 && latestCompletedRun) {
+    const resultIds = overlayEligibleRecs
       .map((r) => r.evidence_json?.affected_prompt_details?.[0]?.id)
       .filter((id): id is string => Boolean(id));
 
@@ -408,6 +616,11 @@ export default async function RecommendationsPage({
     ...r,
     solution: solutionByRecId.get(r.id) ?? null,
     coverageOverlay: coverageOverlayByRecId.get(r.id) ?? null,
+    // RECS-LOOP-1 Fase B: this exact gap came back after being marked done
+    // once before — see recurredDismissalByDedupeKey above for why this is
+    // keyed on dedupe_key (stable across the gap's re-occurrences) rather
+    // than any row id (a fresh one every time the gap reappears).
+    previouslyMarkedDoneAt: r.dedupe_key ? (recurredDismissalByDedupeKey.get(r.dedupe_key) ?? null) : null,
     potentialPoints:
       scoreInputRows.length > 0
         ? (computeRecommendationPotentialPoints(
@@ -691,25 +904,29 @@ export default async function RecommendationsPage({
                 <Icon name="arrRight" size={14} />
               </Link>
             </div>
-          ) : recs.length === 0 ? (
+          ) : recs.length === 0 && resolvedHistoryForClient.length === 0 ? (
+            // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
+            // "Ver detalle del escaneo" link to /runs/[runId] is retired from
+            // this empty state, same reasoning as Citas — the route is no
+            // longer part of the end-user console, only /debug.
+            //
+            // ACTIONS-OBSERVABLE-1 slice 4a (founder feedback 2026-09-07):
+            // this branch used to fire on `recs.length === 0` alone, which
+            // meant `RecommendationsClient` never even mounted the moment the
+            // last active recommendation was marked done — losing the
+            // "Resueltas" tab (and its data, already fetched) entirely, with
+            // no way back to what the user just did. Now it only fires when
+            // there is truly nothing anywhere, active or historical.
             <div className="section-empty" style={{ marginTop: 20 }}>
               <div className="section-empty-title">Nada que corregir ahora mismo</div>
               <div className="section-empty-desc">
                 Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
               </div>
-              <Link
-                href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-                className="btn btn-ghost btn-sm"
-                style={{ marginTop: 14, display: "inline-flex" }}
-              >
-                Ver detalle del escaneo
-                <Icon name="arrRight" size={14} />
-              </Link>
             </div>
           ) : (
             <RecommendationsClient
               recommendations={recs}
-              resolvedHistory={resolvedHistory}
+              resolvedHistory={resolvedHistoryForClient}
               recentWinsCount={recentWins.length}
               projectId={projectId}
               jointPoints={jointPoints}
@@ -717,6 +934,7 @@ export default async function RecommendationsPage({
               planIds={planIds}
               planPoints={planPoints}
               domain={project.domain}
+              latestCompletedRunId={latestCompletedRun.id}
             />
           )}
         </div>

@@ -1,0 +1,223 @@
+name: Agentic User Pilot (actions)
+
+# AUDIT-REPRO-1 (Fase 0, docs/external-audit-2026-08.md). The external audit's
+# worst-scored finding (functional reliability 4.0) claimed six Recomendaciones
+# CTAs "gave no feedback". The code says otherwise for three of them, so this
+# journey exists to replace that contradiction with a real, per-action verdict
+# instead of guessing from either side. Fase 4 (`ACTIONS-OBSERVABLE-1`) fixes
+# whatever this finds; it cannot be scoped without this run first.
+#
+# Same isolation shape as ux-pilot-scan.yml and ux-pilot-write.yml, deliberately:
+#   1. workflow_dispatch only. No deployment_status trigger, so no preview
+#      deploy can ever start this on its own.
+#   2. --journeys actions. scripts/pilot.mjs only includes the `actions`
+#      Playwright project for this explicit flag (PROJECT_SETS.actions); the
+#      per-deploy workflow passes --journeys read (the default) and cannot
+#      reach tests/pilot/journeys/actions/**. Asserted absent from the default
+#      run by checkActionsLockout in the self-check.
+#
+# ONE OF THE SIX ACTIONS IS DESTRUCTIVE, WITH NO UNDO TODAY (founder decision,
+# 2026-08-27, via AskUserQuestion — see tests/pilot/journeys/actions/
+# recommendation-actions.spec.ts). "Marcar como hecho" consumes one real,
+# active recommendation from the reserved write-project, restored only by that
+# project's next full scan. This is the third approved exception to the
+# pilot's write scope (CLAUDE.md, "Pilot write scope"), and the first that
+# deliberately breaks the idempotency the other two hold to. Run this only
+# when you mean to spend that recommendation.
+#
+# NO SECRET GATES THIS, same reasoning as UX-PILOT-3 (founder, 2026-08-03:
+# "tiene que dar al botón como si le diera yo, sin claves ni secretos") —
+# dispatching a workflow already requires repository write access, so an
+# extra secret would only add friction, not access control.
+#
+# Same fork-safety reasoning as the other pilot workflows: no
+# pull_request_target — this job holds real credentials and spends a real,
+# unrecoverable recommendation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number whose preview to test"
+        required: true
+        # See ux-pilot-write.yml's comment on this same input: "number" gets
+        # float-coerced by workflow_dispatch (289 -> "289.0"), which broke a
+        # later `gh pr comment` call. "string" avoids it.
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # Global, not per-PR: every run classifies the SAME reserved write-project.
+  # Two at once would race on "one active run" and on the single recommendation
+  # "marcar como hecho" consumes. Queue rather than cancel — cancelling mid-run
+  # could skip the summary after the destructive step already happened.
+  group: ux-pilot-actions
+  cancel-in-progress: false
+
+jobs:
+  pilot-actions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Resolve the pull request and its deployed commit
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+          if [ -z "$sha" ] || [ "$sha" = "null" ]; then
+            echo "::error::Could not resolve a head commit for PR #${PR_NUMBER}."
+            exit 1
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve the Preview deployment for that commit
+        id: deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.pr.outputs.sha }}
+        run: |
+          set -euo pipefail
+          deployment_id="$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${SHA}&environment=Preview&per_page=1" \
+            --jq '.[0].id // empty')"
+          if [ -z "$deployment_id" ]; then
+            echo "::error::No Preview deployment found for commit ${SHA}. Has Vercel finished deploying this PR?"
+            exit 1
+          fi
+          url="$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=1" \
+            --jq '.[0] | select(.state == "success") | .environment_url // empty')"
+          if [ -z "$url" ]; then
+            echo "::error::Latest status for deployment ${deployment_id} is not a successful Preview. Wait for it to finish."
+            exit 1
+          fi
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the actions-classification journey
+        id: run
+        continue-on-error: true
+        env:
+          PILOT_EMAIL: ${{ secrets.PILOT_EMAIL }}
+          PILOT_PASSWORD: ${{ secrets.PILOT_PASSWORD }}
+          # Optional override. When unset (the normal case) the journey finds
+          # the project matching PILOT_WRITE_DOMAIN and creates it on first run
+          # — same reserved project the write journey uses.
+          PILOT_WRITE_PROJECT_ID: ${{ secrets.PILOT_WRITE_PROJECT_ID }}
+          PILOT_COMMIT_SHA: ${{ steps.pr.outputs.sha }}
+          PILOT_PR_NUMBER: ${{ inputs.pr_number }}
+          PILOT_VERCEL_BYPASS: ${{ secrets.PILOT_VERCEL_BYPASS }}
+        run: |
+          set +e
+          node scripts/pilot.mjs \
+            --url "${{ steps.deploy.outputs.url }}" \
+            --journeys actions \
+            --summary-md .pilot/summary.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload screenshots and signals
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-actions-screenshots
+          path: |
+            .pilot/screens/
+            .pilot/output/
+            .pilot/findings.jsonl
+            .pilot/report.json
+            .pilot/summary.md
+          retention-days: 14
+          if-no-files-found: warn
+
+      # Its own branch suffix, so an actions run never clobbers the read-only
+      # pilot's evidence or the scan/write pilots' evidence.
+      - name: Publish screenshots to an evidence branch
+        if: hashFiles('.pilot/**') != ''
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          SHA: ${{ steps.pr.outputs.sha }}
+        run: |
+          set -euo pipefail
+          branch="pilot-evidence/pr-${PR_NUMBER}-actions"
+          staging="$(mktemp -d)"
+          cp -r .pilot/screens "$staging/screens" 2>/dev/null || true
+          cp -r .pilot/output "$staging/output" 2>/dev/null || true
+          cp .pilot/findings.jsonl "$staging/" 2>/dev/null || true
+          cp .pilot/summary.md "$staging/" 2>/dev/null || true
+          printf 'Actions-classification pilot evidence for PR #%s at commit %s\n\nGenerated by .github/workflows/ux-pilot-actions.yml. Force-pushed each run.\n' \
+            "$PR_NUMBER" "$SHA" > "$staging/README.md"
+
+          cd "$staging"
+          git init -q
+          git checkout -q -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "actions-pilot evidence: PR #${PR_NUMBER} @ ${SHA}"
+          git push -q --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$branch"
+          echo "Evidence pushed to ${branch}"
+
+      - name: Post the verdict on the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          if [ ! -f .pilot/summary.md ]; then
+            printf '%s\n' \
+              '<!-- agentic:ux-pilot-actions-result -->' \
+              '## Agentic User Pilot — Clasificación de acciones (AUDIT-REPRO-1) — PILOT INCONCLUSIVE' \
+              '' \
+              'El runner terminó sin producir un resumen. Revisa los logs del workflow —' \
+              'el paso `actions` imprime el veredicto por acción (real / invisible / entorno).' \
+              '' \
+              '---' \
+              '_Generated by [Claude Code](https://claude.ai/code)_' > .pilot/summary.md
+          fi
+          gh pr comment "$PR_NUMBER" --body-file .pilot/summary.md
+
+      - name: Fail the run unless the classification completed
+        env:
+          EXIT_CODE: ${{ steps.run.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          case "$EXIT_CODE" in
+            0)
+              echo "Classification completed. See the job log above (step 'Run the actions-classification journey') for the per-action verdict table."
+              ;;
+            78)
+              echo "::error::PILOT INCONCLUSIVE (actions) — the journey never reached the product, or the reserved project had no active recommendations."
+              exit 1
+              ;;
+            *)
+              echo "::error::PILOT FAIL (actions) — see the PR comment and the pilot-actions-screenshots artifact."
+              exit 1
+              ;;
+          esac

@@ -3,6 +3,9 @@ description: Invariantes de la zona de Competidores (pantalla, sugerencias y mé
 paths:
   - "app/dashboard/projects/*/competitors/**"
   - "lib/competitors/**"
+  - "lib/brand-aliases/**"
+  - "lib/projects/brand-aliases.ts"
+  - "lib/entity-hygiene/**"
 ---
 
 # Competidores — invariantes
@@ -109,6 +112,25 @@ propia marca cuando caía fuera del top 5.
   como último criterio sólo para que el orden sea estable entre renders. El
   porcentaje que desempata se muestra en la fila, para que el criterio sea
   visible y no arbitrario.
+- **Una media sobre pocas respuestas no adelanta a una media sobre muchas.**
+  `avg_position_when_mentioned` no dice sobre cuántas respuestas promedia, así
+  que comparar n=1 con n=26 no es un matiz: Euskaltel salió UNA vez en 30, fue
+  primero en esa respuesta y encabezó las dos pantallas con un 1,00, por delante
+  de Movistar (26 de 30) — «Euskaltel 1º · 3% de mención» (fundador,
+  2026-08-27, log §175). El suelo vive en `rankLatestPositions`
+  (`MIN_MENTION_RATE_FOR_RANK` 10%, `MIN_MENTIONS_FOR_RANK` 2) y por tanto
+  arregla las dos pantallas a la vez, que es para lo que ese módulo existe.
+  **Es un suelo, no un filtro**: por debajo la entidad conserva fila, media y
+  tasa reales, se ordena detrás y la fila DICE por qué («pocas menciones»).
+  Esconderla cambiaría una impresión falsa por una ausencia. Se expresa en
+  **tasa** y no en cuenta a propósito — 3 menciones son el 10% de 30 respuestas
+  y el 0,6% de 500 —, y el suelo absoluto sólo cubre el otro extremo. Una
+  entrada sin ninguna de las dos cifras se deja cualificada: degradar por una
+  clave que nunca se escribió es inventar un veredicto sobre un hueco. **Y se
+  compara la tasa REDONDEADA**, la que la fila imprime: un 9,6% se pinta como
+  «10%» y, juzgado en crudo, llevaría la etiqueta «pocas menciones» al lado de
+  una cifra que a la vista cumple el suelo exactamente. La regla que el usuario
+  puede comprobar es la que ve en pantalla.
 - **La posición mide rango, no frecuencia** (ADR 0026 `position-when-mentioned`).
   No reintroducir el promedio con penalización `N+1` de ADR 0005: producía que
   una marca poco mencionada quedase por encima de Chrome o Safari.
@@ -169,8 +191,96 @@ propia marca cuando caía fuera del top 5.
   suave y va acompañado de una pista explícita. Un interruptor que parece
   muerto no lo pulsa nadie.
 
+## Higiene de entidad (ENTITY-HYGIENE-1, P1-02, log §200)
+
+- **Un asistente de IA nunca es un competidor, y un término genérico del
+  sector nunca es un alias de marca.** El auditor externo encontró "ChatGPT"
+  sugerido como competidor y "GEO Score" aceptado como alias — el medio que se
+  mide y el nombre de la propia métrica, tratados como si fueran hechos sobre
+  el negocio del cliente. La contaminación no se queda en una pantalla: SOV
+  (`sov-delta.ts`, `engine-share.ts`) lee `project_competitors` directamente
+  para su denominador y sus series, y Recomendaciones
+  (`computeCompetitorDominance`, `computeProminenceGap`,
+  `computeEmergingCompetitors`) genera copy sobre lo que sea que esté en esa
+  tabla o en `other_brands_mentioned` — "Disputa a ChatGPT X consultas" es una
+  frase real que el motor podía producir antes de esta fase.
+- **La comprobación vive en `lib/entity-hygiene/generic-entities.ts`, un
+  módulo propio y deliberadamente separado de `GENERIC_ALIAS_TERMS`
+  (`lib/projects/brand-aliases.ts`).** Son dos listas con un criterio
+  distinto: `GENERIC_ALIAS_TERMS` rechaza por SOLAPAMIENTO DE TOKEN (todo
+  token del candidato es un sustantivo de categoría suelto — "app",
+  "platform") y sirve para eso; `generic-entities.ts` compara la FRASE
+  COMPLETA normalizada contra una lista cerrada de asistentes/motores de IA y
+  jerga del sector. "GEO Score" no cae en ningún token de
+  `GENERIC_ALIAS_TERMS` (ni "geo" ni "score" están ahí, y no deberían estarlo
+  sueltos — The GEO Group es una empresa real), así que sólo el chequeo de
+  frase completa lo atrapa. Unificar las dos listas reabriría exactamente ese
+  hueco.
+- **Cinco puntos de entrada, los cinco comprueban `isGenericEntity`/
+  `isGenericEntityName` antes de aceptar nada — ninguno queda fuera si se
+  añade un sexto:** sugerencia de competidor (`filterSuggestions`,
+  `lib/competitors/suggest-competitors.ts`, filtrado EN LECTURA como el resto
+  de esa función — así una entrada ya cacheada antes de esta fase también se
+  limpia), alta y edición manual de competidor
+  (`createCompetitorCore`/`updateCompetitorCore`,
+  `lib/competitors/manage-competitors.ts`), alias auto-derivado
+  (`selectVerifiableAliases`, motivo `generic_entity`, distinto de
+  `generic`), alias manual (`validateNewAlias`,
+  `lib/brand-aliases/normalize-aliases.ts` — este camino no tenía NINGÚN
+  filtro de genericidad antes de esta fase, ni siquiera el de token, lo que lo
+  hacía más débil que el automático) y la recomendación de competidor
+  emergente (`computeEmergingCompetitors`,
+  `lib/recommendations/recommendation-engine.ts` — camino independiente de
+  los otros cuatro: lee `other_brands_mentioned` con sólo una instrucción
+  blanda de "excluye términos genéricos" en el prompt de extracción, nunca
+  aplicada en código hasta ahora).
+- **La lista es de FRASE, nunca de token suelto, y con motivo escrito para
+  cada exclusión deliberada.** "geo" a secas no está en la lista aunque "GEO
+  Score" sí — un competidor real puede llamarse "Geo" algo (The GEO Group). Al
+  añadir un término nuevo a `generic-entities.ts`, comprobar primero si
+  existe una marca real que lo use como nombre completo antes de bloquearlo.
+- **`lib/entity-hygiene/**` no tiene dueño único entre las tres zonas que lo
+  importan** (Competidores, alias de marca, Recomendaciones) — es una
+  primitiva compartida sin I/O, mismo patrón que `lib/domains/brand-domain.ts`
+  para el matching de dominio propio. Un símbolo nuevo aquí se añade sólo si
+  de verdad lo necesita más de una de esas tres zonas; si sólo lo necesita una,
+  va en el módulo de esa zona, no aquí.
+
 ## Layout
 
 - El botón **"Gestionar" va en la etiqueta de sección**, nunca en la cabecera
   fija: todas las cabeceras de consola son iguales (log §3.2, decisión del
   fundador ya tomada dos veces).
+
+### El puesto es una MEDIA, y el rótulo tiene que decirlo
+
+`avg_position_when_mentioned` promedia **sólo las respuestas donde la marca
+aparece**, así que una marca nombrada pocas veces pero siempre la primera queda
+por delante de otra nombrada en muchas más. Es correcto y es contraintuitivo:
+en el proyecto Mozilla, Amazon salía 1ª con un 14% de mención y Mozilla 4ª con
+un 48% (log §177). **Ningún rótulo de esta cifra puede decir «Puesto» a secas**
+— eso se lee como una clasificación general — y la frase que lo explica va
+pegada a la cifra, nunca en un tooltip: el malentendido se encuentra mirando la
+pantalla, así que la explicación tiene que estar donde el ojo ya está.
+
+**Los rótulos viven en `lib/competitors/mean-rank-copy.ts` y en ningún otro
+sitio.** §36 arregló que las dos pantallas ORDENARAN esta cifra distinto y
+`rankLatestPositions` impide desde entonces que los números diverjan; ese
+fichero impide que diverjan las palabras. Copy nuevo sobre el puesto medio va
+ahí, no en el JSX.
+
+### El gráfico y la tabla de la misma tarjeta enseñan el mismo conjunto
+
+`PositionTrendChart` sólo enciende cuatro series por defecto, así que el orden
+en que se le pasan **decide qué marcas se ven**. Se ordenan por la tabla que
+tienen debajo (`orderByLatestRank`), no por cuota de voz acumulada: con lo
+segundo el gráfico dibujaba Mozilla/Chrome/Safari/Edge mientras la tabla
+encabezaba con Amazon/Chrome/Brave, en la misma tarjeta y sin nada que lo dijera
+(log §177). Dos reglas que van con eso:
+
+- **La marca propia va siempre primera**, aunque la clasificación la ponga
+  séptima. Es la línea más gruesa y la única que el lector ha venido a ver;
+  nacer apagada no es una opción.
+- **El color se asigna DESPUÉS de reordenar.** `TREND_SERIES_COLORS` está
+  ordenada de más a menos distinguible entre sí (y bajo daltonismo). Asignarla
+  antes deja a las cuatro visibles con los tonos 0, 3, 5 y 7.

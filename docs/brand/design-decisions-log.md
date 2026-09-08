@@ -12464,6 +12464,12 @@ de zonas, la fuente que esta tabla espeja).
 
 ---
 
+---
+
+
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
@@ -16177,7 +16183,7 @@ decisión del fundador, ya no por coste sino por criterio de producto; el
 interruptor está en la consola de operador (`/admin/users`, «Auditoría de
 cobertura IA»).
 
-------
+---
 
 ## 168. La misión del primer escaneo era seis misiones distintas (ANIMATION-PARITY-1, 2026-08-26)
 
@@ -16320,3 +16326,3121 @@ con su propia pasada de piloto, no colgando de este PR.
 `tests/log-numbering.test.ts` salta al fusionar, se renumera ESTA sección (no
 la que ya esté en `main`) y con ella todas sus referencias
 (`grep -rn "§168"`). Mismo protocolo que documentan los §159, §161 y §163.
+---
+
+## 169. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
+
+**Propuesta del fundador** (referencia: el listado de blog de Semrush —
+tarjetas de color plano, sin portada, título + subtítulo), iterada en un
+artefacto de diseño antes de tocar código y aprobada con Task Intake Report
+explícito. Fase 1 de 2: sólo el índice de `/blog` (`app/blog/page.tsx`). La
+Fase 2 (mega menú "Recursos" en `components/marketing/public-header.tsx`,
+compartido por las 8 superficies públicas) queda para un PR aparte, por
+radio de impacto.
+
+**Qué cambia:**
+
+- Cada tarjeta del índice deja de renderizar `<BlogCover>` (imagen o
+  degradado+icono) y pasa a un color plano por clúster —azul (Fundamentos),
+  cian (Metodología), gris pizarra (Playbooks), índigo (GEO por sector),
+  verde-azulado (Comparativas). El color no es decorativo: identifica el
+  clúster de origen, repetido como punto en la cabecera del carril.
+- Un carril "destacado" a todo ancho, en marino, con el artículo publicado
+  más recientemente (`getMostRecentPost()`, nuevo en `lib/blog/posts.ts`),
+  excluido de su propio carril de clúster para no repetirse.
+- **Comparativas pasa de párrafo suelto a carril de primer nivel**, con el
+  mismo patrón de tarjetas que los clústeres — mueve al final de la página,
+  justo antes del banner (el fundador lo pidió explícitamente después de
+  ver la primera versión, que lo dejaba arriba). Su lista de páginas vivía
+  sólo como un array local en `app/comparativas/page.tsx`; ahora es
+  `lib/comparativas/index.ts` (`COMPARATIVAS_INDEX`), y las dos superficies
+  la comparten — mismo motivo que `BLOG_CLUSTERS`/`BLOG_POSTS`: un slug o
+  título que cambie no puede desincronizarse entre dos copias.
+- Cada carril enseña como mucho 3 tarjetas. Si el clúster (o Comparativas)
+  tiene más, un enlace **"Ver más →" genérico**, sin cifra — el índice del
+  blog no publica un recuento de artículos (regla ya existente,
+  `growth-content.md`, log §61) — hacia `/blog/[cluster]` o `/comparativas`.
+  Se descartó un carrusel: no hacía falta construir nada nuevo (esas rutas
+  ya existen), y un control interactivo nuevo es una superficie más que
+  puede fallar en el barrido del `ux-pilot`.
+- El subtítulo bajo "Blog" pasa de `.legal-updated` (13px, `--ink-3`) a
+  `.blog-subtitle` (19px, negrita, `--ink-2`, ancho completo) — el fundador
+  lo encontró demasiado parecido a texto plano.
+- Los enlaces de RSS y del comprobador gratuito, antes bajo el título, bajan
+  a un banner a todo ancho al final de la página (marino, con CTA "Comprobar
+  gratis" hacia `/gratis/aparece-mi-marca-en-chatgpt` y el enlace de RSS
+  dentro, con `.link-mini` — lo exige
+  `marketing-content-links.test.ts`, "el enlace lleva una clase de enlace,
+  no el color heredado del texto").
+
+**Qué NO cambia, y por qué.** La portada real de cada artículo
+(`.blog-cover-compact` en la cabecera de `app/blog/<slug>/page.mdx`), su uso
+en Open Graph/redes y en el schema, y las tarjetas de
+`app/blog/[cluster]/page.tsx` (`.blog-index-card`, sin tocar) siguen
+exactamente igual — esta fase toca sólo el listado del índice. `ADR 0028`
+("Ningún visual es decorativo: todos son evidencia") sigue vigente para el
+cuerpo y la portada de un artículo; nunca exigió que el ÍNDICE mostrara esa
+portada, así que retirarla del listado no es una excepción a la política, es
+una superficie que esa política nunca gobernó. Aun así se lo señalé al
+fundador antes de implementar, por si lo veía de otra forma — lo aprobó.
+
+**Colores elegidos y por qué no son un arcoíris.** La primera pasada usó un
+tinte azul pálido para Fundamentos y otro casi idéntico para GEO por sector
+— indistinguibles a primera vista. Corregido dando a cada carril un matiz
+realmente distinto dentro de la familia azul/cian/marino de la marca (nunca
+ámbar: `--brand-warm` es exclusivo del punto del logo, `docs/brand/
+brand-guidelines.md`), en vez de rotar por más tonos.
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835 — 5 tests nuevos:
+`getMostRecentPost` en `lib/blog/posts.test.ts`, `lib/comparativas/
+index.test.ts`), `pnpm run typecheck`, `pnpm run lint`, `pnpm run build`
+(incluye `/blog` prerenderizado como estático), todo en verde. Verificado a
+mano en el HTML generado que "Ver más →" sale exactamente en Metodología,
+Playbooks y Comparativas — no en Fundamentos ni en GEO por sector, que caben
+en 3 tarjetas.
+
+**Addendum, mismo día — lo cazó el `ux-pilot` en el PR: `PILOT FAIL` por
+contraste en las tres anchuras, la tarjeta destacada.** `.blog-featured`
+(`<Link>` que envuelve toda la tarjeta) declaraba `background: var(--brand-
+surface-dark)` pero nunca su propio `color` — cada hijo (`.blog-featured-tag`,
+`h2`, `p`, `time`) sí pintaba el suyo en claro, así que visualmente todo se
+leía bien. El auditor del piloto (`tests/pilot/support/page-audit.ts`) no mira
+eso: lee `getComputedStyle(el).color` del CONTROL entero (aquí, el `<a>`), que
+sin `color` propio hereda la tinta oscura ambiente de la página, contra el
+primer fondo opaco resolviendo hacia arriba (el marino de la propia tarjeta)
+— tinta oscura sobre marino, 1,08:1. Mismo patrón que ya documenta
+`.claude/rules/styles.md` ("un modificador suelto no gana a su contexto"),
+esta vez en el color base de un ancla entera envolviendo contenido con
+colores propios, no en un modificador de sección. Arreglado dando a
+`.blog-featured` su propio `color: var(--brand-ink-on-dark)` — no cambia nada
+visible (los hijos ya pintaban así), cierra el hueco que el auditor sí ve.
+`pnpm test` (204/204, 2.835/2.835) y `pnpm run validate` en verde tras el
+arreglo.
+
+**Segundo addendum, mismo día — Fase 2 del propio Task Intake, pedida por el
+fundador tras revisar el preview: rastro de miga visible en artículos y
+comparativas.** Hasta ahora sólo existía el `BreadcrumbList` invisible de
+schema.org (`<BreadcrumbSchema>`); la cabecera de un artículo no enseñaba de
+qué clúster venía. Ejemplo del fundador: "blog -> Fundamentos GEO".
+
+- `lib/blog/posts.ts`: `blogPostBreadcrumb(post)` (Blog → su clúster, se
+  detiene ahí a propósito — el título ya es el `<h1>` justo debajo, repetirlo
+  en el rastro diría lo mismo dos veces) y `blogPostBreadcrumbSchema(post)`
+  (la misma cadena, con "Inicio" delante y el propio artículo detrás, para el
+  `<BreadcrumbSchema>` existente). El JSON-LD de los 17 artículos pasa de
+  Inicio→Blog→título a Inicio→Blog→Clúster→título — se saltaba el clúster
+  antes también en la estructura invisible, no sólo en la visible.
+- `lib/comparativas/index.ts`: `COMPARATIVAS_BREADCRUMB` (un único cruce,
+  "Comparativas" → `/comparativas`), compartida por las 5 páginas de
+  comparativa — su JSON-LD ya incluía ese nivel, no hacía falta tocarlo.
+- `components/blog/blog-page-shell.tsx`: prop opcional `breadcrumb` — **opt-in
+  a propósito**, porque este shell también lo usan `/docs`, `/glosario`, el
+  comprobador gratuito y `/que-es-genscore`, y ninguna de esas pidió esto. Sin
+  la prop, cero cambio de render.
+- `app/globals.css`: `.breadcrumb-trail` (13px, `--ink-3` — aprueba AA porque
+  `.lp` pinta blanco puro, no `--canvas`; ver `.claude/rules/styles.md`). El
+  rastro pasa a ser el primer hijo real de `.lp-inner` en todo artículo, así
+  que `.blog-cover-compact` deja de ser `:first-child` — el tirón de -36px que
+  compensaba el padding de `.lp-section` se trasladó a
+  `.breadcrumb-trail:first-child`; la regla original se deja (inofensiva, no
+  muerta) por si algún día hay una portada sin rastro delante.
+- 17 `page.mdx` de artículo + 5 `page.tsx` de comparativa: cada uno pasa
+  `breadcrumb={blogPostBreadcrumb(post)}` / `breadcrumb={COMPARATIVAS_BREADCRUMB}`
+  al `<BlogPageShell>` y `items={blogPostBreadcrumbSchema(post)}` al
+  `<BreadcrumbSchema>` existente (los 5 de comparativas no tocan su schema,
+  ya llevaba el nivel de "Comparativas").
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde. Verificado a mano en
+el HTML generado de `geo-para-saas-b2b` ("Blog / GEO por sector", como pidió
+el fundador) y de `genscore-vs-otterly` ("Comparativas"), y que el JSON-LD del
+primero ya incluye el nivel de clúster.
+
+**Tercer addendum, mismo día — el fundador vio un artículo real y preguntó
+por qué el texto quedaba pegado a la izquierda con un hueco vacío a la
+derecha en pantallas anchas.** `.blog-body` ya llevaba `max-width: 760px`,
+pero sin `margin: 0 auto` esa caja se queda alineada al borde izquierdo de
+`.lp-inner` (que sí es ancho completo) en vez de centrarse — visible sólo a
+partir de donde `.lp-inner` supera los 760px, que es exactamente el caso en
+1280px de escritorio. El mismo hueco afectaba a lo que va delante del
+cuerpo (el rastro de miga nuevo de este PR, la portada compacta, el `<h1>`,
+la meta del post) porque esos elementos son hermanos de `.blog-body`, no
+hijos suyos — centrar sólo `.blog-body` habría dejado la cabecera pegada a
+la izquierda encima de un cuerpo centrado.
+
+- `app/globals.css`: `.lp-inner:has(> .blog-body) > * { max-width: 760px;
+  margin-left: auto; margin-right: auto; }` — se ancla con `:has()` al
+  contenedor que de verdad tiene un `.blog-body` como hijo directo, así que
+  sólo alcanza a artículos y comparativas (los únicos que renderizan ese
+  bloque) y no a las páginas pilar de clúster (`/blog/[cluster]`), que no lo
+  usan y se comprobó por grep que no lo tienen. Aplicar el ancho y el
+  centrado a **todos** los hijos directos de ese `.lp-inner` —no sólo a
+  `.blog-body`— es lo que centra también el rastro de miga y la cabecera sin
+  necesitar un `<div>` envoltorio nuevo ni tocar el marcado de dos tipos de
+  página con cabeceras distintas (artículo: `<h1>` suelto +
+  `.blog-cover-compact` + `.blog-post-meta`; comparativa: `<h1
+  className="lp-h2">` + `.legal-updated`).
+- No afecta a `/blog` (el índice de este PR no usa `.blog-body`, usa sus
+  propios carriles a ancho completo) ni a ninguna otra superficie que
+  comparta `.lp-inner` (docs, glosario, comprobador gratuito, legal): todas
+  esas quedan fuera del selector porque ninguna tiene `.blog-body` como
+  hijo.
+
+**Comprobado.** `pnpm test` (204/204, 2.835/2.835), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build` — confirmado en el CSS compilado
+(`.next/static/chunks/*.css`) que la regla
+`lp-inner:has(>.blog-body)>*{max-width:760px;margin-left:auto;margin-right:auto}`
+se generó tal cual — y `git diff --check`, todo en verde.
+
+---
+
+## 170. La consola cotizaba 179 € mientras /precios decía 59 € (PROMO-CONSOLE-PARITY-1, 2026-08-27)
+
+**Lo que vio el fundador**, con una cuenta recién creada en prueba Pro gratuita:
+*"El precio promocionado no se ve en la consola. Un usuario recién creado con
+la prueba Pro gratuita tiene que ver los 59€. Sí los ve en la pantalla de
+cambio de plan y en /precios"*.
+
+**Por qué pasaba.** Hay **dos** promociones distintas y la consola sólo conocía
+una:
+
+| | de dónde sale | qué afirma |
+|---|---|---|
+| **contratada** | cupón vivo en una suscripción real de Stripe, con su fecha leída de la propia suscripción (`getActiveSubscriptionPromo`, §152) | lo que el cliente **ya paga** |
+| **ofrecida** | la campaña abierta (`getActivePromoPlanIds`: fecha **y** cupón configurado) | lo que pagaría **si contrata** antes del cierre |
+
+«Tu plan» y el índice de Ajustes leían sólo `usage.subscriptionPromo`, que es
+la primera. Quien está en prueba **no tiene suscripción**, así que ahí valía
+`null` y las dos pantallas caían al precio de tarifa. `/precios` y el modal de
+cambio de plan sí miran la campaña, y por eso decían 59 €. Misma cuenta, mismo
+instante, dos precios a dos clics.
+
+**El arreglo.** `resolveShownPromoPrice` (`app/pricing/plans-data.ts`, junto a
+`PROMO_ENDS_AT` y `PROMO_DURATION_MONTHS`) decide en **un solo sitio** qué
+precio enseña una pantalla, y devuelve **cuál de las dos promociones es**. Lo
+llaman las dos superficies de consola. Que devuelva el tipo no es adorno: el
+copy no puede ser el mismo.
+
+- contratada → «Precio de lanzamiento hasta el **{fecha de tu suscripción}**»
+  (sin cambios, §152).
+- ofrecida → «Precio de lanzamiento **si contratas** antes del **1 de
+  septiembre**: 59 €/mes durante 6 meses, después 179 €/mes».
+
+Colapsarlas en un `??` le habría dicho a alguien en prueba gratuita que ya
+paga 59 €, que es justo el modo de fallo sobre el que este repositorio lleva
+escribiendo reglas. La prueba que lo fija está escrita como tal
+(`app/pricing/promo-display.test.ts`, «never labels an offer as contracted»).
+
+Y la campaña cerrada silencia **la oferta**, nunca **lo contratado**: quien
+canjeó el cupón antes del cierre conserva sus 6 meses mucho después, así que un
+`promoPlanIds` vacío no puede borrar el precio que de verdad está pagando.
+
+**Dos arreglos menores de `/precios`, del mismo reporte:**
+
+- **«6 meses» partía de línea.** Iba pegado al precio como `/mes · 6 meses` y
+  se rompía entre el «6» y «meses» en la tarjeta recomendada, la más estrecha
+  por su galón. Baja a su propia línea (`.price-term`) en vez de forzar
+  `nowrap`, que sólo cambia un corte por un desbordamiento. `--ink-3` y no el
+  `--ink-4` de sus vecinas: es texto nuevo y sobre el blanco de la tarjeta da
+  4,76:1 (AA) frente a 2,5:1.
+- **Amazon Pay y Klarna** entran en la fila de métodos de pago, con los
+  trazados reales de simple-icons. En **tono neutro oscuro**, el mismo trato
+  que ya reciben Apple Pay y Google Pay en esa fila: el rosa de marca de Klarna
+  (#FFB3C7) da ~1,4:1 sobre la superficie tintada de `.lp-section.alt` y no se
+  ve. El nombre va en texto al lado del glifo, así que la marca nunca es la
+  única pista.
+
+**Pendiente de comprobar por el fundador, y no lo puede comprobar el código:**
+esa fila afirma qué ofrece Stripe Checkout. Amazon Pay y Klarna sólo aparecen
+de verdad si están **activados en el Dashboard de Stripe** para esta cuenta y
+para EUR. Si no lo están, la insignia promete un método que el checkout no
+enseña — mismo tipo de falsedad que las reglas de esta casa persiguen en las
+métricas.
+
+**Comprobado.** `pnpm test` 206/206 (2.861/2.861, 6 nuevos), `pnpm run validate`
+y `git diff --check` en verde.
+
+---
+
+## 171. Gate bloqueante de dominios al exceder el plan: DOMAINS-OVERAGE-GATE-1 (2026-08-25)
+
+**El problema.** El fundador enseñó una captura de Facturación con "Tienes 4
+dominios activos y tu plan Starter permite 1" y preguntó si de verdad se podían
+seguir usando los 4. Inspección del código: sí — ese aviso era (y el mecanismo
+que sigue siéndolo para el flujo que no toca esta fase) puramente informativo.
+`isOverCapacity` sólo se calculaba en cliente en `plan-billing-section.tsx`
+para pintar un banner; nada en `lib/scan/cron.ts`, `run-creation.ts` ni
+`executor.ts` comprobaba el recuento de dominios activos contra el cupo del
+plan — sólo `is_archived`. Un downgrade hecho desde el portal de Stripe deja el
+recuento sobrado a propósito (`changePlan`/`createPortalSession`,
+`app/dashboard/settings/billing/actions.ts`: "el fundador quiere que el dueño
+elija qué dominios mantener, nunca decidirlo por él") y nada más lo obligaba a
+resolverlo.
+
+**Task Intake aprobado**, con maqueta interactiva previa (Artifact, 6 estados)
+para validar el flujo antes de tocar código. Cuatro decisiones explícitas del
+fundador, cada una contraria a mi recomendación por defecto salvo la primera:
+
+1. **Borrado duro, no archivado** — a diferencia del flujo ya existente y
+   **deliberadamente intacto** de "Elegir dominios" (`ChangePlanModal`,
+   `overageOnly`), que sigue archivando (reversible) exactamente igual que
+   antes de este PR. El gate nuevo es un componente separado
+   (`components/billing/domain-overage-gate.tsx`) precisamente para no
+   cambiar la semántica de ese flujo ya enviado sin su propio Task Intake.
+2. **Salida a "subir de plan"** dentro del propio gate — sin ella, alguien que
+   bajó de plan por error quedaría atrapado entre borrar dominios o nada.
+3. **El bloqueo cubre toda la consola, incluida Facturación** — sólo tiene
+   sentido combinado con la decisión 2.
+4. **`/admin` queda exento** — es una zona aparte (`admin.md`), no una
+   pantalla del propio cliente.
+
+**Qué se construyó:**
+
+- `lib/billing.ts` → `getDomainOverage()`: consulta dedicada y barata (un
+  `COUNT`) que corre en cada carga de `app/dashboard/layout.tsx` — a
+  propósito NO `getUsageSummary()` (cuatro consultas en paralelo, hasta 500
+  filas de resultados de escaneo y una consulta a Stripe), que habría sido
+  trabajo desperdiciado en cada navegación para la inmensa mayoría de cuentas
+  que nunca están sobre su cupo. Sólo dispara la segunda consulta (los
+  dominios) cuando la primera confirma overage. Falla hacia "no hay overage"
+  — mismo sentido de fallo que `SAMPLING-DEBUG-TOGGLE-1`
+  (`.claude/rules/scan.md`): un error de lectura transitorio nunca puede
+  bloquear la consola entera.
+- `app/dashboard/projects/actions.ts` → `deleteProjects(ids)`: variante en
+  lote de la ya existente `deleteProject`, mismo cascade, mismo scoping por
+  `owner_user_id`, misma irreversibilidad — y revalida en servidor que el
+  recuento final cabe en el plan, igual que ya hace `changePlan` tras
+  archivar.
+- `components/billing/domain-overage-gate.tsx`: cinco pasos —
+  elegir camino → seleccionar a retirar → confirmar con fricción extra
+  (lista qué se pierde por dominio, checkbox obligatorio "entiendo que no se
+  puede deshacer" antes de habilitar el botón de peligro, con salida a
+  "subir de plan" incluso ahí) → hecho; o elegir camino → plan que ya cubre
+  el recuento (reutiliza `createCheckoutSession`/`createPortalSession`) →
+  redirección a Stripe. Reutiliza el cromado `.cp-*` de `ChangePlanModal`
+  (`app/globals.css`) para el shell/tipografía; sólo el selector de dos
+  caminos y el tratamiento de peligro son clases nuevas (`.dog-*`). Sin botón
+  de cerrar, sin `Escape`, sin clic-fuera — el `scrim` no lleva `onClick`.
+- `app/dashboard/layout.tsx`: monta el gate cuando `role === "admin"` (mismo
+  gate que ya usa Ajustes para la sección Plan) y `getDomainOverage()`
+  reporta overage, por encima de todo lo demás — Sidebar incluido.
+
+**Las clases nuevas del componente viven en `app/globals.css`, no en
+`app/console.css`**, aunque el gate es exclusivamente de consola: sus clases
+se escriben desde `components/`, y `tests/console-css-scope.test.ts` no puede
+atribuir eso al dashboard (mismo motivo por el que las clases de la pantalla
+de notificaciones tampoco viven en `console.css` — cabecera de ese fichero).
+Se intentó primero en `console.css` y el test lo cazó.
+
+**Pendiente, explícito — corregido tras ver el piloto real.** La suposición
+original de este párrafo era que la cuenta piloto de solo-lectura "nunca está
+sobre su cupo" y que verificar el gate exigiría un journey de escritura nuevo.
+**Era falsa.** Los tres primeros pases de `ux-pilot` contra esta rama fallaron
+en cascada (~10 timeouts por pasada, pantallas sin relación entre sí) porque la
+cuenta piloto real **ya tenía 5 dominios activos en un plan Starter (cupo
+1)** — de siempre, sólo que nada lo comprobaba hasta este PR. El gate hizo
+exactamente lo que debía: bloquear la consola de una cuenta sobre su cupo,
+scrim incluido, y ese scrim interceptó cada clic de cada journey posterior
+(confirmado leyendo `error-context.md` de la rama `pilot-evidence/pr-481` —
+la captura del snapshot de página muestra literalmente "Tienes 5 dominios
+activos y tu plan Starter permite 1").
+
+No se corrigió en código — hacerlo habría sido el mismo antipatrón ya
+documentado en este repositorio (el piloto saltándose a sí mismo, log §120):
+el piloto tiene que comportarse como un usuario real, y un usuario real en
+esa situación vería el mismo bloqueo. El arreglo real es de datos, no de
+código: subir el plan de la cuenta piloto (Starter → Pro o superior) para que
+cubra sus 5 dominios reales, pedido al fundador fuera de este PR. Con eso
+resuelto, el pase normal del piloto SÍ cubre el estado "sin overage" en todas
+las pantallas que toca este PR — lo que sigue sin verificar automáticamente es
+el propio flujo de retirar/subir de plan dentro del gate (eso sí exige el
+journey de escritura nuevo bajo `tests/pilot/journeys/write/`, con su propio
+Task Intake, que sigue siendo trabajo de una fase siguiente).
+
+**Comprobado.** `pnpm test` (203/203, 2.837/2.837), `pnpm run typecheck`,
+`pnpm run lint`, `pnpm run build`, todo en verde.
+## 172. La tarjeta más frecuente de Recomendaciones apunta por fin a una URL tuya (AUDIT-RECS-JOIN-1 Fase B, 2026-08-27)
+
+**El hueco.** Fase A (§167) hizo que la pantalla señalara lo que impide
+citarte. Faltaba lo otro: que una tarjeta de **contenido** dijera «tu página
+`/precios` ya cubre esto, mejórala» en vez de «publica una página nueva». El
+puente ya estaba construido desde COMPETITOR-GROUNDING-2
+(`lib/recommendations/coverage-overlay.ts`, RECS-COVERAGE-OVERLAY-1) — pero
+sólo alimentaba `add_citation_block`, uno de los quince tipos. El más
+frecuente, `increase_brand_visibility` («Aparece en "..."», la tarjeta que
+sale primero en casi cualquier proyecto), no estaba conectado.
+
+**Por qué no era sólo "añadir un tipo al filtro".** `add_citation_block`
+dispara cuando la marca SÍ se menciona y no se cita; `increase_brand_visibility`
+dispara cuando NO se menciona en absoluto. El copy existente del hallazgo
+confirmado decía literalmente *«el problema no es que te falte contenido,
+sino que la IA no lo está citando como fuente»* — cierto para el primer tipo,
+**falso** para el segundo: si no hay mención, no hay nada que citar. Copiar el
+texto tal cual habría sido la misma clase de error que motivó el gate de
+honestidad de RECS-USEFULNESS-1 Fase C (§128), sólo que en código nuestro en
+vez de en la salida de un modelo.
+
+**Decisión.** `overlayCopy(recommendationType, state)` — nueva, en el mismo
+módulo — resuelve el texto por tipo. `add_citation_block` conserva su copy
+verbatim. `increase_brand_visibility` habla de "no aparece en la respuesta",
+nunca de citación, y su `whatToDo` para el caso "sin cobertura propia" **reusa
+el `firstStep` real de `rule_visibility_001`** carácter a carácter, en vez de
+inventar una segunda redacción del mismo consejo. `COVERAGE_OVERLAY_TYPES` se
+exporta como conjunto único de tipos soportados, para que el server no
+duplique la lista.
+
+**Deliberadamente NO extendido** a `create_faq_section` /
+`strengthen_brand_entity_clarity`: son reglas de ámbito de campaña (disparan
+sobre el agregado del run), no de un prompt — no hay un único tema con el que
+cruzarlas.
+
+**Duplicación con guardián, otra vez.** El overlay es server-only
+(`domain-coverage.ts` arrastra `import "server-only"`), así que el cliente no
+puede importarlo — mismo motivo por el que `CoverageOverlay`/`GeneratedSolution`
+ya vivían duplicados en `recommendations-client.tsx`. En vez de sumar una
+tercera duplicación sin red, `overlayCopyLocal` lleva un test que compara las
+dos funciones **campo a campo para cada combinación de tipo y estado**, mismo
+patrón que el guardián de tres vías de `GROUNDED_PROVIDERS` (§130). Verificado
+que puede fallar: rompiendo un texto a propósito, el test cae.
+
+**Lo que sigue sin resolverse, con conocimiento de causa.** El join exige
+`coverage.scanId === latestCompletedRun.id` (invariante de honestidad ya
+existente, sin tocar en esta fase): cobertura y recomendaciones tienen que ser
+del **mismo** escaneo. La primera vez que esto rinda en un proyecto real será
+tras su próximo escaneo completo, no antes — no es un fallo, es la garantía de
+que nunca reengancha una fila de cobertura vieja.
+
+---
+
+---
+
+
+---
+
+## 173. Los defaults de sampling y auditoría por IA pasan a ON para cuentas reales; el escaneo diario se activa solo tras el primer escaneo (PROJECT-DEFAULTS-BY-ACCOUNT-1, 2026-08-25)
+
+**Nota de renumeración.** Esta sección nació como §165 en su propia rama; mientras se abría el PR, `main` avanzó y reclamó ese número y el siguiente (§165/§166, BILLING-INVOICE-FIELDS-1, PR #478) — pasó a **§167** en una primera fusión. `main` volvió a avanzar mientras el PR seguía abierto, esta vez con AUDIT-RECS-JOIN-1 reclamando ese §167 recién liberado, así que en esta segunda fusión pasa a §168 — pero `main` avanzó una TERCERA vez, esta vez con ANIMATION-PARITY-1 reclamando ese mismo §168, así que en esta tercera fusión pasa a §169 — y una CUARTA vez, con BLOG-INDEX-CARDS-2026-08 reclamando ese §169, pasó a §170 — y una QUINTA vez, con PROMO-CONSOLE-PARITY-1 reclamando ese mismo §170, pasó a §171 — y una SEXTA vez, con DOMAINS-OVERAGE-GATE-1 reclamando ese mismo §171 (y la misma fila del mapa de zonas, "Dominios y depuración"), pasó a §172 — y una SÉPTIMA vez, con AUDIT-RECS-JOIN-1 Fase B reclamando ese mismo §172, así que acaba en **§173**, el primero libre. Siete colisiones en la misma sección: el número es un identificador, no un contador, y esta rama es el caso de manual. Mismo protocolo que describe la sección "Cierre de fase" de `CLAUDE.md`, y el mismo patrón de colisión en cadena que ya documentan los §159/§161/§163 de este mismo fichero.
+
+
+**Lo que pidió el fundador.** Que la configuración de `/debug` que hoy es
+manual (`sampling_enabled`, `auto_coverage_audit_enabled`,
+`auto_technical_audit_enabled`, `recurring_scans_enabled`) nazca en ON para
+toda cuenta, salvo tres direcciones de correo que siguen siendo sus propias
+cuentas de prueba interna. Aprobado vía Task Intake, con tres preguntas de
+alcance resueltas explícitamente antes de tocar código:
+
+1. **Sólo altas nuevas.** Ningún proyecto ya existente se toca. Nada de
+   `UPDATE` retroactivo — eso queda como una fase aparte si algún día se pide.
+2. **`auto_technical_audit_enabled` entra también**, no sólo las dos que
+   gastan Gemini: no cuesta IA y hoy congela un componente del GEO Score si
+   está apagada.
+3. **`recurring_scans_enabled` se activa solo, tras el primer escaneo**, no en
+   el alta — es la única de las cuatro cuya propia UI exige un escaneo
+   completado antes de poder encenderse, así que no puede nacer en ON.
+
+**Por qué esto NO era "cambiar dos booleanos".** Las tres migraciones que
+tocan (0031, 0032, 0033) documentan sus defaults en `false` como decisiones
+de coste deliberadas — el propio comentario de 0032 dice literalmente que la
+pregunta de qué hacer "cuando lleguen clientes reales" queda abierta a
+propósito. Encender `sampling_enabled` multiplica hasta ×5 las llamadas de
+un escaneo; `auto_coverage_audit_enabled` añade una llamada a Gemini por
+prompt activo tras cada escaneo. No es ajuste de UI, es una decisión de coste
+recurrente sobre toda cuenta real — de ahí el Task Intake Report en vez de
+implementación directa.
+
+**Mecanismo, dos sitios distintos porque el precondicionante es distinto:**
+
+- **Alta del proyecto** (`lib/projects/new-project-defaults.ts`,
+  `newProjectDefaults`): los flags que sí pueden nacer en ON se pasan como
+  `extraProjectColumns` a `createProjectCore`. **La bifurcación es la CUENTA,
+  nunca el entorno** — ver el addendum del 2026-08-27 más abajo, que es
+  justo lo que se corrigió.
+- **Fin del primer escaneo** (`lib/scan/executor.ts`, tras el `UPDATE` que
+  marca `scan_runs.status = 'completed'`): `recurring_scans_enabled` se lee
+  en su propia consulta aislada (mismo patrón que `engineFlagsRow` un poco
+  más arriba, ADR 0029/0033) y sólo se enciende si el proyecto tiene
+  exactamente un escaneo completado — la primera vez que la propia
+  precondición de `/debug` queda satisfecha. Deliberadamente NO se reevalúa
+  en escaneos posteriores: un cliente que lo apague a mano después no vuelve
+  a encenderse solo en el siguiente escaneo. Todo el bloque es fail-soft
+  (`try/catch`, mismo patrón que la cola de auditoría web un poco más abajo
+  en el mismo fichero): un fallo aquí nunca tumba un escaneo que ya terminó
+  bien.
+
+**La exclusión es por email, no por `auth.users.id`, y es una desviación
+consciente de `ADMIN_USER_IDS`.** El contrato de entorno (`docs/
+environment-contract.md`) es explícito en que `/admin` gatea por ID
+precisamente porque un email es cambiable por el propio usuario desde
+Ajustes — ahí ese cambio compraría acceso. Aquí el fallo de ese mismo cambio
+es "una cuenta de prueba recibe por descuido los defaults caros en su
+siguiente alta", barato de notar y corregir, no una brecha. Vive en
+`lib/projects/internal-test-accounts.ts`, leída desde la variable de entorno
+nueva `INTERNAL_TEST_ACCOUNT_EMAILS` (lista separada por comas) — nunca
+hardcodeada en el código fuente, y falla cerrado: sin la variable, nadie
+queda exento y toda cuenta nueva recibe los defaults de producción.
+
+**Pendiente / fuera de alcance, explícitamente.** Ningún dominio existente
+cambia con este PR. Si en el futuro se decide aplicar esto retroactivamente
+a cuentas reales que ya están escaneando, es una fase nueva con su propio
+Task Intake — cambia el gasto de clientes que no lo pidieron, no sólo el de
+altas nuevas.
+
+**Comprobado.** `pnpm test` (204/204, 2.832/2.832, incluye los 5 tests nuevos
+de `internal-test-accounts.test.ts`), `pnpm run validate` (build + typecheck
++ lint), `git diff --check` y `bash scripts/agentic-handoff-check.sh`, todo
+en verde.
+
+**Addendum, mismo día: cobertura de test para el bloque de `executor.ts`, a
+petición del propio piloto.** El agente `ux-pilot`, lanzado a juzgar el
+preview de este PR, devolvió `INCONCLUSIVE` para el comportamiento que esta
+fase implementa — no por un fallo suyo, sino porque es estructuralmente
+invisible al piloto siempre-on: vive detrás de `/debug` (fuera del recorrido
+por defecto) y detrás de un camino de escritura (creación de proyecto), y el
+piloto siempre-on es de sólo lectura por diseño (`CLAUDE.md`, "Pilot write
+scope"). Su recomendación explícita fue apoyar el Human Gate en tests
+unitarios en vez de en la pasada visual para esta pieza concreta.
+
+`lib/scan/executor.test.ts` ganó cinco tests nuevos sobre el bloque de
+auto-activación (primer escaneo completado → `recurring_scans_enabled = true`
+salvo cuenta interna de prueba; segundo escaneo en adelante → no se toca; ya
+encendido → no se reescribe; fallo del lookup de email → el escaneo igual
+completa). La decisión de defaults del alta se dejó **sin test dedicado**, con
+el argumento de que era «un wrapper de tres líneas» sobre
+`isInternalTestAccountEmail`. Ese argumento resultó ser falso al día
+siguiente: ver el addendum de abajo.
+
+**Comprobado (2ª pasada).** `pnpm test` (204/204, 2.847/2.847, +15 tests sobre
+la primera pasada: 5 de `internal-test-accounts.test.ts` + 5 nuevos de
+`executor.test.ts` para este addendum, más los que ya sumó `main` en
+BILLING-INVOICE-FIELDS-1), `pnpm run validate`, `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+**Segundo addendum (2026-08-27): la bifurcación era el ENTORNO y tenía que ser
+la CUENTA.** El fundador creó una cuenta nueva en el preview, dio de alta un
+dominio, lo escaneó, y encontró cuatro interruptores apagados: Cobertura por
+IA, Suelo de muestreo, Motor Claude y Motor OpenAI. *"Tienen que estar TODOS
+encendidos."*
+
+**No era un fallo, era el diseño — y el diseño estaba mal.** La primera
+versión daba prioridad a `previewTestingDefaults()` sobre los defaults nuevos:
+en cualquier preview, para cualquiera. Los cuatro apagados son exactamente el
+conjunto barato de esa función (`auto_coverage_audit_enabled: false`,
+`engine_claude/openai_enabled: false`, y `sampling_enabled` cayendo a su
+`default false` del esquema porque esa función no lo menciona). Hizo lo que
+estaba escrito; lo escrito no era lo que la fase quería.
+
+Dos cosas estaban mal en esa precedencia, y la segunda es la que importa:
+
+1. **El preview es donde esta fase se verifica antes del Human Gate.** Una
+   condición de entorno que apaga precisamente lo que la fase enciende deja el
+   cambio imposible de comprobar donde se comprueba todo lo demás.
+2. **Una cuenta real es una cuenta real, la haya creado quien la haya creado y
+   en el host que sea.** El entorno no dice nada sobre quién es el dueño.
+
+**La bifurcación pasa a ser la cuenta** (`newProjectDefaults`): cuenta interna
+de prueba → conjunto barato (que además sigue con su propia guarda de
+`VERCEL_ENV`, así que **sigue sin poder llegar a producción**, tal y como pidió
+el fundador el 2026-08-11: *"en main nada de lo de probar barato"*); cuenta
+real → todo encendido, en producción, en preview y en local. Los tres
+`engine_*_enabled` pasan a declararse **explícitamente** aunque la migración
+0033 ya los ponga en `true`: que esta función sea la respuesta completa a «con
+qué nace un proyecto» es justo lo que faltaba para que nadie tuviera que
+cruzarla con el esquema y con lo que pudiera estrecharla después.
+
+**Y por qué no lo cazó nada.** Las tres funciones vivían dentro de
+`app/dashboard/projects/actions.ts`, que es `"use server"`: ahí **todo export
+tiene que ser una server action asíncrona**, así que no se podían exportar y
+por tanto no se podían testear. El «wrapper de tres líneas» de la 2ª pasada no
+era intestable por poco importante, era intestable por dónde estaba. Se mudan
+a `lib/projects/new-project-defaults.ts` con siete tests, tres de los cuales
+**fallan si se restaura la precedencia vieja** (comprobado revirtiéndola).
+
+**Fuera de alcance, dicho explícitamente:** «Ocultar aviso «seguimiento
+diario»» sigue apagado y **no se toca**. No es un flag de proyecto sino una
+preferencia de `localStorage` por navegador, y encenderla por defecto
+silenciaría un aviso legítimo para las cuentas que sí tengan el seguimiento
+apagado. Con el seguimiento diario ahora auto-activándose tras el primer
+escaneo, ese aviso ya no le sale a una cuenta nueva de todos modos.
+
+**Comprobado (3ª pasada).** `pnpm test` (207/207, 2.872/2.872), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+**Addendum, mismo día: segunda corrección tras probar el preview, y una
+premisa equivocada de la primera corrección.** El fundador creó una cuenta
+nueva (no excluida) en el preview del PR, dio de alta un dominio y lo
+escaneó: los seis interruptores de proyecto salieron bien, pero el switch
+"Ocultar aviso «seguimiento diario»" seguía apagado, y el banner "Tu
+histórico se está construyendo. Escaneo 1 de 5" (estado `accumulating` de
+`computeDataMaturity`) seguía visible.
+
+Eso contradice lo que decía el addendum anterior: *"con el seguimiento diario
+ahora auto-activándose tras el primer escaneo, ese aviso ya no le sale a una
+cuenta nueva de todos modos"* — **incorrecto**. Esa frase confundía los dos
+estados informativos de `DataMaturityBanner`: `no_tracking` (el que
+desaparece cuando el seguimiento se activa solo) y `accumulating` (el que
+aparece *precisamente cuando* el seguimiento ya está activo pero aún no hay 5
+escaneos — el estado normal de toda cuenta nueva ahora que nace con
+seguimiento). El switch nunca cubrió `accumulating`, así que la premisa de
+que "ya no hacía falta" era doblemente equivocada.
+
+**Petición del fundador, textual:** que el switch controle los dos avisos, y
+que nazca encendido siempre.
+
+**Qué cambió.** `noTrackingHiddenKey` (`components/data-maturity-banner.tsx`)
+pasa a cubrir ambos estados (`no_tracking` **y** `accumulating`), y su
+semántica se invierte: la ausencia de valor en `localStorage` significaba
+"mostrar" (default anterior, `false`); ahora significa "ocultar" (default
+nuevo, `true`) — sólo un `"0"` explícito, escrito al apagar el switch a mano,
+vuelve a mostrar los avisos. Mismo cambio reflejado en
+`no-tracking-banner-toggle.tsx` (`/debug`), cuya copia ahora nombra los dos
+mensajes. Ninguna fila de base de datos ni server action tocada: sigue siendo
+una preferencia de `localStorage` por navegador, sin migración.
+
+**Comprobado (4ª pasada).** `pnpm test` (208/208, 2.880/2.880), `pnpm run
+validate` (build + typecheck + lint), `git diff --check` y
+`bash scripts/agentic-handoff-check.sh`, todo en verde.
+
+---
+
+## 174. El comprobador gratuito cerraba un resultado positivo con un texto escrito para uno negativo (CHECKER-COPY-1, 2026-08-27)
+
+**Fase 6 del plan de `docs/external-audit-2026-08.md`. Va primera de las once
+pese a ser la sexta en severidad**, por una razón de negocio y no de ingeniería:
+es un día de trabajo en el punto exacto donde alguien decide si se registra.
+
+**Lo que encontró la auditoría externa** (P0-07, 26-08-2026, probando
+`genscore.es`, que sí aparece): el bloque de aviso *"Esto es una respuesta, no
+un veredicto"* se renderizaba **incondicionalmente**, y su texto estaba escrito
+para un resultado negativo — *"Con una consulta no se puede decir que no
+aparezcas — sólo que en ésta no apareciste."* Detrás de un resultado positivo,
+con la marca nombrada y a veces su propia web citada como fuente, ese párrafo
+contradice al titular que hay tres bloques más arriba.
+
+**Por qué estaba mal escrito, que no es lo que parece.** No fue una decisión
+equivocada sobre qué decir. La verdad que este aviso defiende es una sola —una
+consulta no generaliza— y **tiene dos direcciones**: tras un "no apareciste" el
+error a mano es creerse ausente; tras un "apareciste", creerse presente. Escribir
+sólo la mitad negativa no era prudencia: era medir la modestia por el signo del
+resultado, que está exactamente igual de sesgado que escribir sólo la positiva.
+
+**Qué se ha hecho.** Las dos variantes viven en
+`lib/free-checker/result-copy.ts`, no en el componente, y comparten a propósito
+la primera frase (la causa: recuperación en vivo, no determinista) y la última
+(el remedio: varias preguntas repetidas en el tiempo). Sólo cambia la frase del
+medio, que es la única que depende del resultado. Que compartan causa y remedio
+es lo que deja ver que el aviso **no se adapta al resultado para suavizarlo**.
+
+**Por qué en `lib/` y no en el JSX.** Es la única forma de que el caso positivo
+tenga una prueba. El fallo no vivió meses por descuido: vivió porque **nadie
+podía ejercitar esa rama sin un dominio que apareciese de verdad**, y ningún
+test podía tocarla estando el texto incrustado en el componente. Mismo argumento
+que `lib/projects/new-project-defaults.ts` dejó escrito para su propio bug
+("shipped precisely because nothing could assert on it"). `result-copy.test.ts`
+cubre las dos direcciones y, sobre todo, **assertea la ausencia**: el texto
+negativo no puede aparecer con `brandMentioned: true`, que es lo único que
+impide que vuelva a colarse en un copy-paste.
+
+**Lo que NO se ha tocado.** El titular, que ya era condicional y correcto. El
+bloque de "Además" con la cita del propio dominio, que ya sólo se pinta cuando
+es verdad. Y el upsell, cuyo texto ("Has visto 1 pregunta en 1 motor") es cierto
+en las dos direcciones.
+
+**Comprobado.** `pnpm test` (208/208, 2.875/2.875), `pnpm run validate`
+(build + typecheck + lint), todo en verde.
+
+---
+
+## 175. Euskaltel era 1º con un 3% de mención: una media sobre una respuesta (SAMPLE-FLOOR-1, 2026-08-27)
+
+**Lo que vio el fundador.** En la panorámica competitiva de Visión general, con
+un escaneo de 30 respuestas: *"no tiene ningún sentido que Euskaltel aparezca
+primero que Movistar. Ya solo por lógica un operador como Movistar debe estar
+primero, y además viendo que solo tiene un 3% de mención no se entiende"*.
+
+**Lo que propuso, y por qué no era el arreglo.** Su idea era ordenar la
+panorámica con los datos de «Cuota de voz en IA» de Competidores, que en sus
+capturas sí ponía a Movistar primero. Comprobado antes de tocar nada:
+
+- Las **dos** pantallas publican este puesto desde el mismo módulo,
+  `rankLatestPositions` — así que la lista «Puesto en el último escaneo» de
+  **Competidores tenía exactamente el mismo Euskaltel 1º**. Lo que él comparó
+  era otro bloque de esa misma pantalla, con otra ventana (cuota de voz es
+  **acumulado de todos los escaneos**; la panorámica es el **último**).
+- Ordenar sólo la panorámica por cuota de voz habría dejado Movistar 1º en
+  Visión general y Euskaltel 1º en Competidores: **literalmente el fallo que
+  PANORAMA-PARITY-1 arregló** (§36), reintroducido por la puerta de al lado.
+- Y habría dejado mintiendo al rótulo «ÚLTIMO ESCANEO» y al titular «Tu puesto
+  cuando apareces», que son puesto-cuando-apareces, no cuota de voz.
+
+**La causa real.** `avg_position_when_mentioned` es honesto por respuesta y
+engañoso entre entidades, porque **nada en él dice sobre cuántas respuestas
+promedia**. Euskaltel salió **una vez** en 30, fue primero en esa única
+respuesta, y con eso encabezó la clasificación con un 1,00 — por delante de
+Movistar, nombrado en 26 de 30. No es un fallo de cálculo: es una comparación
+entre una media de n=1 y otra de n=26.
+
+**El arreglo: un suelo, no un filtro.** En `rankLatestPositions`, una entidad
+necesita salir en al menos el **10% de las respuestas** (y en **2** como
+mínimo) para disputar el orden. Por debajo **conserva su fila, su tasa de
+mención y su media reales**, y se ordena detrás, con el motivo escrito en la
+fila («pocas menciones»). Esconderla cambiaría una impresión falsa por una
+ausencia; el dato es real, lo que está en duda es su comparabilidad.
+
+- **Se expresa en tasa, no en cuenta**, porque tiene que aguantar los dos
+  extremos: 3 menciones son el 10% de un escaneo de 30 y el 0,6% de uno de 500.
+  El suelo absoluto sólo cubre el otro extremo — en un primer escaneo de 10
+  respuestas, el 10% es una sola respuesta, justo lo que esto existe para
+  impedir.
+- **Arregla las dos pantallas a la vez** por estar en el módulo compartido, que
+  es la razón de que ese módulo exista (§36).
+- **Sin migración ni reescaneo**: `mention_count` y `mention_rate` ya se
+  persisten en `run_scores.details_json`.
+- **Dirección de fallo deliberada**: una entrada que no lleva ninguna de las dos
+  cifras se considera cualificada. Las anteriores a geo-score-v3 ya se
+  descartan por no tener posición (ADR 0026), así que esto sólo cubre una
+  entrada escrita a medias — y degradar una fila por una clave que nunca se
+  escribió sería inventar un veredicto a partir de un hueco.
+
+**Addendum del mismo día — el suelo se juzga sobre la cifra REDONDEADA.** En el
+preview, el fundador vio Apple Safari con «10%» **y** la etiqueta «pocas
+menciones»: su tasa real era 9,6%, que la fila imprime redondeada a 10. La
+pantalla se contradecía en el espacio de una línea. Se compara `Math.round`,
+porque la regla que el usuario puede comprobar es la que tiene delante.
+
+**Comprobado.** `lib/competitors/latest-positions.test.ts` fija el caso real de
+movistar.es (Movistar 1º … Euskaltel 7º, `qualified: false`, cifras intactas),
+los dos extremos del rango de tamaño y la dirección de fallo. El test 12
+—paridad entre las dos pantallas— sigue verde: lo que cambió es el orden
+literal que fija, y ese cambio **es** el arreglo. `pnpm test` 205/205
+(2.858/2.858) y `pnpm run validate` en verde.
+
+**Lo que NO se ha tocado, y sigue siendo cierto:** cuota de voz sigue siendo
+acumulada y viviendo en Competidores etiquetada como tal (§11); la panorámica
+sigue publicando la mención del último escaneo (§36). No se han unificado las
+dos poblaciones — la regla de ruta pide decisión explícita para eso, y el
+diagnóstico de arriba dice que no hacía falta.
+
+
+**Nota de renumeración, dos veces.** Esta sección nació como §169 sobre una
+`main` que todavía no tenía ni el §169 de BLOG-INDEX-CARDS (#479) ni el §170 de
+PROMO-CONSOLE-PARITY-1 (#485); se renumeró a §171. Mientras seguía abierta
+entraron **también** #481 (§171) y #489 (§172), así que hubo que moverla otra
+vez, ahora al §175. Las dos veces se renumeró ESTA —la que no estaba en
+`main`— y con ella sus referencias en `CLAUDE.md` y
+`.claude/rules/competitors.md` (`grep -rn "§175"`). Mismo protocolo que
+documentan los §159, §161, §163 y §168.
+
+Que haya hecho falta dos veces en una mañana no es mala suerte: es el límite
+que `tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con
+cuatro ramas abiertas a la vez. El guardián hizo su trabajo las dos veces: paró
+el choque en la que mergeaba después.
+
+---
+
+## 176. El cajón móvil estaba cerrado y la aserción no sabía verlo (PILOT-DRAWER-VIEWPORT-1, 2026-08-27)
+
+**Qué pasó.** `«¿Qué es el GEO?» reabre el tour con contenido real, avanza y
+cierra` falló en `[mobile]` sobre el PR #484 con `TimeoutError: locator.click:
+Timeout 15000ms exceeded`. El registro de la llamada es la pista entera:
+
+```
+- locator resolved to <button type="button" class="nav-item">…</button>
+- element is visible, enabled and stable
+- scrolling into view if needed
+- done scrolling
+- element is outside of the viewport
+```
+
+Un elemento **visible, estable y fuera de la pantalla** después de intentar
+llevarlo a ella es, casi siempre, un elemento dentro de algo desplazado con
+`transform`.
+
+**Por qué.** Bajo 760px la barra lateral es un cajón `position: fixed` que vive
+en `translateX(-100%)` y sólo entra cuando `MobileShellProvider` pone
+`mobnav-open` (`app/globals.css`, `components/mobile-shell.tsx`). Sus botones
+están en el DOM y pintados **todo** el tiempo — simplemente fuera de pantalla
+por la izquierda. Para Playwright eso es «visible»: la definición es caja no
+vacía y sin `visibility: hidden`, no «se ve». Así que
+`await expect(reopen).toBeVisible()` **pasaba con el menú cerrado**, y el fallo
+reaparecía un renglón más abajo, en el clic, con un mensaje sobre el viewport
+que no menciona el cajón.
+
+Y el menú estaba cerrado porque la guarda de arriba era
+`if (await burger.isVisible().catch(() => false))`: una sola pregunta, hecha una
+sola vez. En un preview frío la cabecera puede no haber pintado todavía, la
+pregunta se contesta que no, y el `if` entero se salta en silencio. Es la misma
+familia que PILOT-HYDRATION-CLICK-1 (§136), un escalón más allá: allí el clic
+se perdía por llegar antes de hidratar, aquí ni siquiera se intenta.
+
+**Qué se decidió.** Dos cambios, y ninguno afloja nada:
+
+1. **La condición deja de ser «¿hay hamburguesa?» y pasa a ser «¿se alcanza la
+   entrada del menú?»** (`toBeInViewport`). Es la pregunta que de verdad
+   importa, no depende del ancho ni de que la cabecera haya pintado, y vale
+   igual en escritorio —donde la barra es una columna estática y no hay cajón
+   que abrir— que en móvil.
+2. **El clic se reintenta hasta que el cajón trae el botón a la pantalla**
+   (`expect(...).toPass`), sin espera fija. Seguro de repetir porque el botón
+   hace `setMobileNavOpen(true)`, no un alternar
+   (`components/workspace-topbar.tsx`) — la misma comprobación que hizo seguro
+   el remedio del §136.
+
+**Lo que esto NO era.** No era un fallo del producto ni del PR que lo destapó
+(#484 toca el módulo de puestos de competidores y dos clases CSS de fila; no
+toca la barra lateral, ni el cajón, ni el tour). Era una aserción incapaz de
+distinguir dos estados, latente desde que la escena se escribió: sólo fallaba
+cuando la carrera de hidratación salía del lado malo, que es exactamente el
+perfil de lo que se despacha como «flake» y se vuelve a ejecutar. Se
+diagnosticó en vez de reintentarse.
+
+**Lo que se deja anotado y NO se toca aquí.** El resto de la suite sigue usando
+`toBeVisible()` sobre elementos que podrían estar dentro de un contenedor
+desplazado. Esta pasada era la única que abría el cajón de la consola
+(`grep -rn "Abrir menú de navegación" tests/`), así que no hay más sitios con
+esta forma exacta; barrer el patrón entero es otro PR.
+
+**Trazabilidad.** `tests/pilot/journeys/onboarding-tour.spec.ts`;
+`components/mobile-shell.tsx` y `components/workspace-topbar.tsx` (por qué el
+clic es seguro de repetir); `app/globals.css` `.sb` bajo 760px (por qué el botón
+está fuera de pantalla estando «visible»); §136 (el precedente).
+
+## 181. La pestaña "Resueltas" verifica si la predicción se cumplió — nunca mide un delta de score (RECS-LOOP-1 Fase A, ADR 0041, 2026-08-27)
+
+**El hueco.** ADR 0017 §5 prometió que "el próximo escaneo verifica" la
+predicción de puntos potenciales de una tarjeta. Nunca se construyó: una
+recomendación pasaba a `resolved` (o el usuario la marcaba «hecha») y el
+producto nunca decía si lo que prometía había pasado de verdad.
+
+**La opción obvia se descartó antes de escribir código.** Un delta de score
+compuesto o de componente entre el run donde la tarjeta estaba activa
+(`run_id`) y el que la confirmó resuelta (`resolved_in_run_id`) parecía la
+lectura natural de "puntos recuperados". Se consultó a `geo-strategy` y a
+`data-guardian` en paralelo (Task Intake RECS-LOOP-1 Fase A) y los dos lo
+rechazaron por caminos independientes: **no es atribuible** (`presence` se
+mueve por cualquier prompt, no sólo los de esta tarjeta; otra tarjeta resuelta
+en la misma ventana contamina el mismo número), **casi nunca es publicable**
+(`resolveDelta`/`compareRuns`, DELTA-GUARD-1, exige igualdad de
+`composite_version`/`inputs_used`/motores/respuestas entre dos runs, y
+`rescore-run.ts` puede reescribir retroactivamente el `run_scores` de un run ya
+completado cuando su auditoría llega tarde) y **contradice SCORE-WINDOW-1**
+(el titular que el usuario ya ve es la mediana de 3 escaneos, no el score de
+un run). El detalle completo, con las dos lecturas, vive en ADR 0041.
+
+**Lo que se construyó en su lugar.** `lib/recommendations/
+prediction-verification.ts` comprueba, sobre los MISMOS prompts que la
+tarjeta citó como evidencia, si la mutación concreta que su promesa asumía
+(`getRecommendationPotentialKind`, el mismo mapa de `run-scoring.ts` que ya
+generaba el número — nunca uno nuevo) ocurrió de verdad en el run que
+confirmó la brecha resuelta: mención (`presence`), dejar de estar por detrás
+del competidor nombrado en la propia evidencia de la tarjeta (`prominence`,
+sin exigir el "posición 1" optimista del contrafactual — sería casi siempre
+falso), o cita del dominio propio en fila de motor con grounding
+(`authority`). Es una observación sobre un puñado de filas fijas, no una
+inferencia sobre una población: no necesita banda de confianza, y una sola
+fila comprobada es una respuesta completa.
+
+**Cruzar de un run a otro no es trivial.** `evidence_json.
+affected_prompt_details[].id` es `scan_prompt_results.id` — una fila nueva
+cada escaneo (RECS-DEDUPE-1), no el id estable del prompt. Hace falta
+traducirlo vía `project_prompts.id` con una consulta anclada al `project_id` y
+`run_id` de la tarjeta antes de poder buscar la fila correspondiente en el run
+que la confirmó. Un prompt borrado desde entonces (`prompt_id` a null por el
+`on delete set null`) falla cerrado hacia "sin veredicto", nunca se asume.
+
+**Sin migración.** `data-guardian` confirmó que la promesa es derivable: la
+misma `computeRecommendationPotentialPoints` que ya existía es pura, y
+`scan_prompt_results` es inmutable tras completarse el run (`rescore-run.ts`
+sólo reescribe `run_scores`, nunca esa tabla). No hace falta congelar nada. El
+único cambio de lectura es ampliar el `select` de la pestaña "Resueltas" a
+`run_id`/`resolved_in_run_id`/`evidence_json` — columnas que ya existían.
+
+**Efecto colateral que había que arreglar de paso.** `dedupeByTitle` colapsaba
+por título normalizado sin más — necesario para el duplicado de dos motores
+sobre el mismo prompt, pero también borraba en silencio una brecha que se
+resolvió, reabrió y se resolvió otra vez, quedándose sólo con la más
+reciente. `dedupeResolvedHistory` añade `resolved_in_run_id` (o el `id` propio
+para una fila `dismissed`) a la clave: el duplicado de dos motores sigue
+colapsando, la reapertura ya no.
+
+**Deliberadamente fuera de esta fase — SIEMPRE queda en Task Intake propio.**
+Una fila `dismissed` nunca recibe `resolved_in_run_id`
+(`dismissRecommendationCore` sólo escribe `status`), así que no tiene run de
+confirmación contra el que comprobar nada — RECS-LOOP-1 Fase B. Y
+`data-guardian` encontró, de pasada, que el `delete()` de recomendaciones
+activas en `executor.ts` no captura errores: si el finalize de un run se
+reintenta después de que el usuario haya marcado una tarjeta de ese run como
+hecha, el descarte se pierde y la tarjeta reaparece activa. Es un bug ya en
+producción, independiente de esta fase — reportado al fundador, sin arreglar
+aquí.
+
+**Nunca una cifra de puntos.** El veredicto es "cumplida en N de M consultas",
+nunca comparado con el "hasta +X pt" original — son respuestas a preguntas
+distintas ("cuál es el mejor caso" vs. "¿pasó lo que el mejor caso
+afirmaba?") y presentarlas como la misma cosa habría sido la promesa que este
+ADR existe para no hacer. El copy es observacional y fechado — "en el
+escaneo que lo confirmó, la IA te nombró..." — nunca "ya apareces": el
+no-determinismo del siguiente escaneo puede revertirlo.
+
+---
+
+## 178. Auditoría web se quedó en el primer peldaño de la escalera (WEB-AUDIT-WIDTH-1, 2026-08-27)
+
+**Lo que vio el fundador.** *"Auditoría web se ve mal. Está centrado el
+contenido como si fuera mobile"*. Es literal: en escritorio la pantalla pintaba
+una columna de 460px centrada bajo una cabecera fija que sí llega hasta el borde
+de la ventana.
+
+**Por qué.** La consola tiene un estándar de ancho aprobado desde
+CITATIONS-REDESIGN-1 (§5) y ratificado en OV-DESKTOP-2 (§119): **460 / 640 a
+900px / 1200 a 1200px / 1280 a 1600px**. Seis de las siete columnas de la
+consola lo suben entero (`.ov2-scope`, `.pr2-page`, `.cm2-page`, `.cit2-page`,
+`.rec2-scope`, `.dm2-page`). `.wa2-page` declaraba **sólo el primer peldaño** y
+ninguna media query.
+
+Lo caro del fallo no es la línea que faltaba, es que **la intención sí estaba
+escrita**: el comentario del `page.tsx` que monta ese div dice, palabra por
+palabra, *"the founder-approved 640/1200/1280px console width standard
+(CITATIONS-REDESIGN-1, §5)"*. El comentario prometía la escalera y el CSS tenía
+un escalón. Nadie leyendo ese diff habría notado la diferencia — el comentario
+lee como la implementación.
+
+Y no falló nada por el camino: la página cargaba, los tests pasaban, el piloto
+la fotografiaba a tres anchuras y ninguna captura decía *"esto debería medir el
+triple"*. Un ancho equivocado no lanza excepciones. Hizo falta que un humano lo
+mirara y lo dijera a ojo, meses después.
+
+**Qué se decidió.** Los mismos tres cortes, con los mismos valores, copiados de
+sus seis hermanas. Cero decisiones de diseño nuevas: esto es aplicar un estándar
+que ya estaba aprobado, no elegir un ancho.
+
+**Sin `--ov-hdr-page-cap` ni `--mrk-page-cap` acompañándolos, a propósito.** Esas
+dos existen porque en Competidores la clase estrecha va COMBINADA sobre `.page`
+(`<div class="page cm2-page">`), así que baja el tope real de `.page` y las dos
+fórmulas de bleed —la de la cabecera fija y la de la misión— leen un
+`--page-max-w` que ya no es cierto. `.wa2-page` es un hijo dentro de un `.page`
+intacto, y la cabecera fija ni siquiera está dentro de él: cuelga directamente
+de `.page`. Copiarlas aquí repetiría el error que `app/console.css` ya documenta
+haber cometido una vez en esta misma pantalla — alimentar la fórmula con un tope
+al que `.page` nunca estuvo sujeto, y dejar la escena 20px corta por los dos
+lados.
+
+**Lo que garantiza que no vuelva a pasar.** `tests/console-page-width.test.ts`
+lee las dos hojas y exige los cuatro peldaños a las **siete** columnas. Es un
+contrato a nivel de fuente, sin navegador, del mismo tipo que
+`tests/mission-parity.test.ts` (§168): la clase de fallo que ataca es la que no
+rompe nada, y ésa no la coge ni un test de render ni una captura. Comprobado en
+las dos direcciones — con el arreglo revertido, falla nombrando el peldaño que
+falta; con él, pasa. **Añadir una pantalla nueva con su propia clase de columna
+significa añadirla a ese fichero**, o vuelve a no enterarse nadie.
+
+**Lo que NO se ha tocado.** El bleed de la cabecera fija sigue como estaba (§150)
+— llega al borde de `.dash-content` en las ocho pantallas, y alinear su
+CONTENIDO con la columna estrecha sigue siendo la decisión aparte que ya
+declaraba fuera de alcance el §150. Ningún cambio en el interior de la
+auditoría: las tarjetas simplemente disponen del ancho que les correspondía.
+
+**Nota de numeración, dos veces.** Nació como §173 sobre una `main` que llegaba
+al §172. Mientras seguía abierta entraron #481, #489, #480, #490 y el propio
+#484, que dejaron `main` en el §176, y el §177 ya estaba reservado por otra rama
+(#491), así que acabó en el §178. Se renumeró ESTA —la que no estaba en `main`—
+con todas sus referencias (`grep -rn "§178"`: la regla de ruta, el test y el
+propio CSS).
+
+Cinco secciones ajenas en una mañana no es mala suerte: es el límite que
+`tests/log-numbering.test.ts` declara de sí mismo —sólo ve una rama— con cuatro
+ramas abiertas a la vez. Hizo su trabajo cada vez, parando el choque en la que
+mergeaba después.
+
+**Trazabilidad.** `app/console.css` (`.wa2-page`);
+`app/dashboard/projects/[projectId]/web-audit/page.tsx` (el comentario que ya
+prometía la escalera); `tests/console-page-width.test.ts`; §5, §119, §150, §168.
+
+---
+
+## 179. El switch de «ocultar aviso» ocultaba un aviso de tres (MATURITY-BANNER-HIDE-ALL-1, 2026-08-27)
+
+**Lo que pidió el fundador.** *"El interruptor de ocultar aviso de seguimiento
+diario tiene que ocultar ese y el de histórico construyendo y cualquier similar
+que haya"*.
+
+**Qué pasaba.** DEBUG-HIDE-NO-TRACKING-1 (§161) puso en `/debug` un switch que
+silenciaba «Tu análisis de hoy no se repetirá» — y sólo eso. Pero esa banda
+(`DataMaturityBanner`) tiene tres mensajes visibles, no uno: el del plan Free,
+el de seguimiento diario y «Tu histórico se está construyendo». Así que quien
+encendía el switch seguía viendo una banda **en el mismo sitio, del mismo
+tamaño y con la misma pinta**, y el switch parecía roto sin estarlo: hacía
+exactamente lo que su etiqueta decía, y su etiqueta describía un tercio del
+problema.
+
+**Qué se decidió: silencia los avisos informativos, no un mensaje concreto.** Y la parte que decide la
+forma del arreglo es *"cualquier similar que haya"* — o sea, los estados que
+todavía no existen. Enumerar los tres de hoy habría dejado el switch mintiendo
+en cuanto `computeDataMaturity` gane un `kind` nuevo, **sin que fallara nada**:
+el aviso simplemente reaparecería y nadie relacionaría las dos cosas.
+
+Así que la decisión sale del componente y pasa a una función pura,
+`visibleDataMaturityState` (`lib/project-workspace.ts`, junto a la máquina de
+estados que la alimenta). Resuelve `hidden` **antes** de mirar `kind`, de modo
+que un estado futuro queda cubierto por no hacer nada. El componente pregunta
+una vez y pinta lo que salga: ya no hay tres sitios donde acordarse.
+
+**La clave de `localStorage` conserva su nombre viejo**
+(`dmb-hide-no-tracking:<id>`) aunque ya no describa lo que hace. Renombrarla
+dejaría a quien tuviera el switch encendido con la banda de vuelta en la cara
+sin haber tocado nada, que es justo lo contrario de lo que se pide. Queda
+desalineado a sabiendas, y anotado en los dos ficheros para que no se lea como
+un descuido — el mismo tipo de trampa que el §173 documenta desde el otro lado
+(allí el comentario prometía más de lo que el código hacía; aquí el nombre
+promete menos).
+
+Lo demás se renombra para que la pantalla no siga mintiendo: el fichero
+(`maturity-banner-toggle.tsx`), el componente (`MaturityBannerToggle`), la
+función de la clave (`maturityBannerHiddenKey`), el rótulo («Ocultar los avisos
+de la banda superior») y su texto, que ahora enumera los tres mensajes y dice
+que cubre los que se añadan.
+
+**Y de paso, la máquina de estados sale de `lib/project-workspace.ts`.** No
+por limpieza: **el build se rompió**. Mientras el componente sólo importaba el
+TIPO daba igual dónde viviera —`import type` se borra al compilar— pero en
+cuanto tuvo que importar una FUNCIÓN, `project-workspace.ts` entero se iba
+detrás al paquete del navegador, y ese fichero abre el cliente de **servicio**
+de Supabase. `next build` lo cazó en el sitio (`pnpm run validate`), que es
+exactamente donde se quiere que salte.
+
+Así que `lib/data-maturity.ts`: la máquina de estados y esta puerta, todo puro,
+sin `async`, sin red, sin `window`. Es el argumento que `.claude/rules/scan.md`
+ya da para `lib/scan/` — si un símbolo lo importa alguien que no hace lo que
+hace ese módulo, casi siempre está en el sitio equivocado. Había dos cosas en un
+fichero (una máquina de estados y una capa de acceso a datos) y sólo una puede
+cruzar al cliente. `project-workspace.ts` la reexporta, así que ningún consumidor
+de servidor cambia de import.
+
+**Lo que garantiza que no vuelva a estrecharse.** Cinco tests en
+`lib/project-workspace.test.ts`, y uno de ellos es el que importa: **silencia un
+`kind` inventado que no existe en el tipo**. Si algún día alguien reintroduce
+una lista de estados, ese test cae. Comprobado en las dos direcciones —
+restaurada la semántica vieja (`hidden && kind === "no_tracking"`), fallan tres
+de los cinco nombrando el estado que se coló.
+
+### Cómo acabó, tras chocar con `main`
+
+Mientras esta rama estaba abierta, **otra sesión metió en `main` (PR #480, §173)
+un cambio sobre estos mismos ficheros**, después de que el fundador probara el
+flujo real con una cuenta nueva. Lo que traía: los avisos **nacen ocultos** —la
+ausencia de valor en `localStorage` ya no significa «mostrar», sólo un `"0"`
+explícito los revela— y el switch cubre `no_tracking` **y** `accumulating`,
+enumerados a mano, dejando `free` fuera a propósito.
+
+Los dos lados cambiaron la misma lógica y quedarse con cualquiera perdía algo:
+con esta rama se revertía el «ocultos por defecto» que el fundador acababa de
+pedir en vivo; con `main` se perdía la garantía para estados futuros y el rótulo
+del switch seguía diciendo «Ocultar aviso "seguimiento diario"» aunque ya
+ocultara dos. **Se paró el merge y se preguntó** (fundador, 2026-08-27:
+combinar). Resultado:
+
+- **De `main`: la semántica.** Oculto por defecto, `"0"` revela, y **`free` no se
+  calla nunca** — no pide esperar, vende un plan y lleva su propia X.
+- **De esta rama: la estructura.** La puerta enumera **excepciones**
+  (`NEVER_SILENCED`, hoy sólo `free`), **no cubiertos**. Esa dirección es el
+  arreglo: enumerando lo que sí se calla, un `kind` futuro se escapa sin que
+  falle nada; enumerando lo que no, queda cubierto por no hacer nada. Es
+  literalmente lo que se pidió con *"cualquier similar que haya"*.
+- **Y el rótulo deja de mentir**: dice qué calla, qué no, y que nace encendido.
+
+**Lo que NO se ha tocado.** La X de descarte del aviso del plan Free sigue
+siendo otra preferencia, con otra clave y otro alcance (un aviso, ese render);
+las dos conviven y ninguna anula a la otra, fijado por test. No se ha tocado
+`computeDataMaturity`: qué banda toca es exactamente lo que era. Sigue sin haber
+migración detrás — es una preferencia local de navegador, con el coste ya
+asumido en §161 de que no viaja entre dispositivos.
+
+**Trazabilidad.** `lib/data-maturity.ts` (`visibleDataMaturityState`);
+`lib/project-workspace.ts` (la reexporta);
+`components/data-maturity-banner.tsx`;
+`app/dashboard/projects/[projectId]/debug/maturity-banner-toggle.tsx`;
+`lib/project-workspace.test.ts`; §161 (el switch original), §173 (la misma
+trampa por el otro lado).
+
+---
+
+## 177. «Puesto» no era un ranking, y el rótulo decía que sí (MEAN-RANK-READS-TRUE-1, 2026-08-27)
+
+**Lo que vio el fundador.** En Competidores del proyecto Mozilla: *"la tabla de
+puestos no es consistente con el gráfico. Mozilla puesto 4 y en el gráfico 1,5
+(puesto 2)"*. Mirando la captura del piloto, la tabla decía esto:
+
+| | mención | puesto |
+|---|---|---|
+| Amazon | 14% | 1º |
+| Google Chrome | 19% | 2º |
+| Brave | 14% | 3º |
+| **Mozilla** | **48%** | **4º** |
+
+**No era un fallo de cálculo, y ésa es la parte importante.**
+`avg_position_when_mentioned` promedia **sólo las respuestas donde la marca
+sale**. Amazon aparece en pocas y en ésas es la primera —domina el prompt de
+compra online—; Mozilla aparece en muchas más y promedia cuarta entre bastantes
+marcas. Los dos números son correctos para lo que miden. Lo que fallaba era el
+rótulo: la columna se llamaba «Puesto» y el titular «Tu puesto cuando
+apareces», y las dos cosas se leen como una clasificación general.
+
+**Y encima había dos incoherencias, no una.** La segunda la destapó la misma
+captura: el gráfico y la tabla comparten tarjeta y **no compartían conjunto**.
+`trendSeries` iba ordenado por cuota de voz **acumulada** y el gráfico sólo
+enciende cuatro series por defecto, así que dibujaba Mozilla / Chrome / Safari
+/ Edge mientras la tabla de debajo encabezaba con Amazon / Chrome / Brave. Ni
+las mismas marcas ni la misma magnitud (media cruda contra puesto 1..N), a
+cuatro centímetros una de otra, sin nada que lo dijera.
+
+### Lo que se descartó, y por qué
+
+- **Ordenar por tasa de mención.** Convierte esta tabla en cuota de voz, que ya
+  vive en Competidores etiquetada como tal (§11), y deja mintiendo al titular.
+  Dos bloques midiendo lo mismo es peor que uno mal rotulado.
+- **Subir el suelo de SAMPLE-FLOOR-1 (§175).** No llega: para dejar fuera a
+  Amazon y Brave (14%) habría que subirlo tanto que se lleva por delante a
+  Chrome y Edge (19%). Sobreviviría Mozilla sola, que no es una clasificación.
+
+**Decisión del fundador, tras ver las tres opciones: arreglar cómo se lee, no lo
+que mide.**
+
+### Lo que se hizo
+
+1. **Los rótulos dicen que es una media.** «Puesto» → «Puesto medio»; «Tu puesto
+   cuando apareces» → «Tu puesto medio cuando apareces».
+2. **Una frase pegada a la cifra**, en las dos pantallas, que explica el
+   mecanismo con el caso real en vez de con una definición: *«Cuenta solo las
+   respuestas donde la marca aparece: una nombrada pocas veces pero siempre la
+   primera queda por delante de otra nombrada en muchas más.»* No es un tooltip
+   a propósito — el malentendido lo encontró el fundador **mirando la
+   pantalla**, así que la explicación tiene que estar donde él estaba mirando.
+3. **El gráfico se ordena por la tabla que tiene debajo**
+   (`orderByLatestRank`), con la marca propia siempre primera para que su línea
+   nunca nazca apagada. Las series sin puesto en el último escaneo conservan la
+   suya, detrás: pueden tenerlo en escaneos anteriores.
+
+   **Segunda pasada, y hacía falta.** Poner la marca primera y encender «las
+   cuatro primeras» confundía dos preguntas distintas —en qué orden se listan y
+   cuáles nacen encendidas— y el resultado era que la marca propia **gastaba un
+   hueco de contexto**: con Mozilla 5ª, las cuatro encendidas eran ella y los
+   tres primeros, así que **Brave, 4º, nacía apagado**. El fundador lo vio en el
+   preview: *"¿no debería salir también Brave si está encima de Mozilla?"*. Sí:
+   esconder por defecto a quien te adelanta es lo contrario de para qué se mira
+   este bloque. La regla pasa a ser **los `cap` primeros de la clasificación
+   más tu marca si no está entre ellos** (`defaultVisibleSeriesKeys`), de modo
+   que la marca deja de competir por un hueco y se suma: 4 líneas si estás
+   dentro del corte, 5 si no. Esa quinta línea vale su coste precisamente en el
+   caso que la produce —estás fuera del podio y quieres ver a quién tienes
+   delante— y la paleta tiene seis tonos, así que sigue teniendo color propio.
+   El gráfico gana un `defaultVisibleKeys` opcional: sin él se comporta como
+   siempre, porque sólo la pantalla sabe cuál es la marca propia.
+
+   **Y esa segunda pasada salió rota, con un fallo que merece su propio
+   párrafo.** El primer intento importaba el tope (`DEFAULT_VISIBLE`, un `= 4`)
+   desde `components/ui/position-trend-chart.tsx`, que es `"use client"`. Next
+   convierte los exports de un módulo cliente en **referencias de cliente**
+   cuando los pide un componente de servidor, así que lo que llegaba a la
+   página no era el número 4: `rankedKeys.slice(0, cap)` devolvía vacío, la
+   función caía en su rama de «no hay nadie clasificado» y el gráfico salía
+   **con una sola línea** — peor que el fallo que iba a arreglar.
+
+   Lo importante es todo lo que NO lo detectó: el typecheck pasa (los tipos son
+   correctos a los dos lados de la frontera), los tests unitarios pasan (no la
+   cruzan), `next build` compila, y el piloto marcó `competitors ✅ ✅ ✅` porque
+   la pantalla carga sin errores. Se vio abriendo la captura y contando líneas
+   —una donde debían salir cinco—, que es exactamente la razón por la que el
+   Human Gate pide qué capturas se abrieron y no la tabla de ✅.
+
+   La constante se muda a `lib/competitors/trend-window.ts`, que no es cliente y
+   que el gráfico ya importaba. Y lo fija `tests/server-client-constants.test.ts`,
+   que recorre los componentes de servidor y falla si alguno importa un **valor**
+   —no un tipo, no un componente— de un módulo `"use client"`. Comprobado en las
+   dos direcciones: con el import viejo falla nombrando fichero y símbolo.
+4. **El color se asigna DESPUÉS de reordenar.** La paleta está ordenada de más a
+   menos distinguible entre sí; asignarla antes habría dejado a las cuatro
+   visibles con los tonos 0, 3, 5 y 7 en vez de con los cuatro elegidos para
+   verse juntos.
+
+**Los rótulos viven en un solo fichero** (`lib/competitors/mean-rank-copy.ts`).
+§36 ya tuvo que arreglar que las dos pantallas ORDENARAN esta cifra distinto, y
+`rankLatestPositions` impide desde entonces que los números diverjan; esto
+impide que diverjan las palabras. Un rótulo que dice una cosa en una pantalla y
+otra en la de al lado es el mismo fallo con otra piel.
+
+**Una trampa esquivada por los pelos, y merece constar.** La nota se escribió
+primero con `max-width: 62ch`. Sus dos clases viven en ámbitos distintos —
+`.cm2-scope` redeclara `--font-body` a Figtree, `.ov2-scope` cae a la del
+`body`— así que ese `ch` habría medido distinto en cada pantalla: exactamente
+cómo `30ch` acabó partiendo en dos líneas la cifra de la misión sólo en algunas
+secciones (§168). **Una medida tipográfica en una clase compartida por dos
+ámbitos no es una medida compartida.** Está en px.
+
+**Lo que NO se ha tocado.** Ni el cálculo, ni el orden de la tabla, ni el suelo
+de §175, ni la cuota de voz (§11), ni la paridad entre las dos pantallas (§36),
+que sigue garantizada por el mismo módulo. Esto es copy y orden de pintado.
+
+**Nota de numeración.** Toma el §177 porque §173, §174, §175 y §176 están
+reservados por tres ramas abiertas a la vez que ésta (#486, #488 y #484, que
+además tuvo que renumerar del §171/§172 al §175/§176 cuando #481 y #489
+entraron en `main` antes).
+
+**Trazabilidad.** `lib/competitors/mean-rank-copy.ts` ·
+`lib/competitors/latest-positions.ts` (`orderByLatestRank`) ·
+`app/dashboard/projects/[projectId]/{competitors/,}page.tsx` ·
+`app/globals.css` (`.cm2-pos-note`/`.ov2-cmp-note`) ·
+`lib/competitors/latest-positions.test.ts`; §11, §36, §168, §175.
+
+---
+
+## 180. Las insignias de pago se envolvían pegadas a la izquierda en móvil (PRICING-PAY-BADGES-CENTER-1, 2026-08-27)
+
+**Lo que vio el fundador.** Captura real de `/precios` en móvil, con Amazon Pay
+y Klarna ya desplegados (PROMO-CONSOLE-PARITY-1, #485): *"Maqueta bien
+centrados en todos los viewport"*. La fila «PAGOS SEGUROS CON» se veía
+centrada; debajo, Stripe/Apple Pay/Google Pay en una línea y Amazon Pay/Klarna
+en otra, las dos pegadas al borde izquierdo.
+
+**Por qué.** `.price-pay-icons` es un flex container ANIDADO dentro de
+`.price-pay-badges` (label + icons son sus dos únicos hijos). En desktop y
+tablet las 5 insignias caben en una sola línea, y esa línea se centra porque es
+el único ítem de su fila dentro de `.price-pay-badges` (que sí lleva
+`justify-content: center`). En móvil no caben: `.price-pay-icons` envuelve POR
+DENTRO en dos filas propias, y el centrado del padre sólo centra esa caja como
+bloque — nunca las líneas que se generan dentro de ella. Sin `justify-content`
+en `.price-pay-icons`, cada fila interior caía a `flex-start` por defecto.
+
+El fallo era invisible en tablet y desktop: una sola línea no revela un
+`justify-content` ausente. Sólo se ve en el ancho donde de verdad envuelve —
+confirmado reproduciendo la captura exacta del fundador en un fixture Playwright
+a 375px (con el CSS real de `app/globals.css`) antes de tocar nada, y
+comprobando después que tablet y desktop quedaban pixel-idénticos al «antes».
+
+**El arreglo:** `justify-content: center;` en `.price-pay-icons`. Una línea.
+Sin migración, sin tocar la lista de insignias, sin tocar `.price-pay-badges`.
+
+**Fijado por test** (`tests/pricing-payment-badges.test.ts`), comprobado en las
+dos direcciones: sin la propiedad, falla nombrando exactamente el mecanismo
+(«las filas caen a flex-start»); con ella, pasa.
+
+**Trazabilidad.** `app/globals.css` (`.price-pay-icons`);
+`components/pricing/pricing-page.tsx` (`PAYMENT_BADGES`, sin cambios);
+`tests/pricing-payment-badges.test.ts`; §148, §149 (Fase A+B de precios).
+
+---
+
+## 182. TRUST-PROMISES-1: los precios dejan de citarse a mano fuera de la consola (Fase 2 de la auditoría externa, 2026-08-27)
+
+**Origen.** `docs/external-audit-2026-08.md`, Fase 2 (P0-06): "179 €" escrito a mano en cinco sitios distintos, cada uno con su propia probabilidad de quedarse atrás si el precio cambia en Stripe. `PROMO-CONSOLE-PARITY-1` (log §170) ya había arreglado la peor instancia — la consola cotizando 179 € a quien `/precios` ya le decía 59 € — e introdujo `resolveShownPromoPrice`, un solo sitio que decide qué precio muestra una pantalla. Esta fase hereda ese mecanismo en vez de reescribirlo y cierra el resto: todo lo que citaba un precio de plan **fuera** de la consola.
+
+**El patrón que se repetía.** Cinco ficheros llevaban un comentario propio prometiendo sincronía con `app/pricing/plans-data.ts` — "no se reescriben cifras a mano aquí" — y ninguno la cumplía de verdad: el número vivía como texto suelto, correcto el día que se escribió, sin nada que lo atara al catálogo si `PLANS` cambiaba. Es la misma forma exacta del fallo que §170 ya había nombrado, sólo que en comentarios en vez de en la interfaz — una promesa documental que el código no hacía cumplir.
+
+**Seis ficheros corregidos, todos leyendo `PLANS` directamente:**
+
+- **`components/landing/session-ctas.tsx`** — la tira de promoción del hero (`PromoStrip`) tenía los cuatro números (179, 59, 45, 19) Y la fecha de corte ("hasta 1 sept.") escritos a mano. Ahora lee `PLANS` para los precios y calcula el porcentaje de descuento en vez de citarlo, y `PROMO_ENDS_AT` con `Intl.DateTimeFormat` para la fecha — con `timeZone: "Europe/Madrid"` explícito, porque sin él el servidor (UTC en Vercel) corre la fecha un día hacia atrás para cualquier hora de corte antes del mediodía peninsular. Es la misma clase de fallo que esta fase persigue, sólo que en la zona horaria en vez de en el precio, y se corrigió sin que nadie lo pidiera porque de otro modo el arreglo habría introducido uno nuevo.
+- **`app/pricing/page.tsx`** — la metadescripción SEO citaba "45 €"/"179 €" a mano, con un comentario que decía que venía de `plans-data.ts` y `pricing-metadata.test.ts` sólo podía comprobar que los dos números coincidieran por casualidad, nunca impedir que uno se editara solo. Ahora es un template literal sobre `PLANS`.
+- **`lib/comparativas/genscore-vs-otterly.ts`**, **`lib/comparativas/alternativas-a-otterly.ts`**, **`lib/comparativas/mejores-herramientas-geo.ts`** — mismo patrón en sus filas de datos (`genscore`/`pricingNote`/`context`).
+- **`app/comparativas/alternativas-a-otterly/page.tsx`** — dos párrafos de FAQ y de veredicto en JSX citaban "179 €/mes" directamente; la corrección de los datos no los alcanzaba porque viven en la página, no en el módulo.
+
+**Guarda nueva.** `tests/promise-parity.test.ts`, mismo patrón que `tests/mission-parity.test.ts`: contratos a nivel de fuente sobre los seis ficheros concretos que esta fase tocó — que importen `PLANS` y que no vuelvan a citar el precio actual de Pro o Starter como texto suelto. Los comentarios que citan el precio antiguo a propósito (la nota histórica de este mismo cambio, una cita literal de lo que pidió el fundador) se descartan antes de buscar, para que documentar el arreglo no dispare el propio test. Verificado que el test realmente atrapa una regresión: revertido un fichero a mano, el test falló; restaurado, volvió a pasar.
+
+**Deliberadamente NO en esta fase.** No se crea `lib/plans/catalog.ts` ni se mueve `plans-data.ts` — el plan lo proponía como fuente única nueva, pero `PROMO-CONSOLE-PARITY-1` ya construyó esa fuente única en el sitio donde vivía, y moverla habría sido una reorganización cosmética de alto riesgo (toca los imports de toda pantalla de precios) por un beneficio que `resolveShownPromoPrice` + esta fase ya entregan. Tampoco se toca "mostrar la próxima ejecución con fecha" allá donde se afirma la cadencia diaria — el plan lo asigna a la Fase 3 (`RECURRING-VALUE-1`), que es su dueño natural porque ahí vive el calendario visible completo.
+
+**Sigue abierto, y no es de esta fase.** El relleno hacia atrás de `recurring_scans_enabled` para proyectos de pago que ya existen (P0-08, la otra mitad de la Fase 2 original) — decisión del fundador aún pendiente sobre cuántos proyectos hay hoy en esa situación.
+
+**Comprobado.** `pnpm test` (213/213, 2.935/2.935), `pnpm run validate` (build + typecheck + lint), todo en verde.
+
+---
+
+## 183. Una sola Puntuación GEO en todo el producto: TRUST-METRICS-1, Fase 1 de la auditoría externa (2026-08-27)
+
+**Origen.** Auditoría de producto externa (26-08-2026, `docs/Informe_auditoria_GenScore_20260826.docx`), hallazgo P0-01: el mismo escaneo mostraba 6/100 en Visión general, "2 Puntuación GEO" en Dominios y "Visibilidad 2" en la notificación de fin de escaneo. Plan de corrección completo en `docs/external-audit-2026-08.md`; diagnóstico de por qué el sistema agéntico no lo encontró en `docs/agentic-blind-spots-2026-08.md`. Decisión del fundador (2026-08-27): una sola puntuación GEO en todo el producto, y es la puntuación con ventana (`SCORE-WINDOW-1`, ADR 0036) — nunca `visibility_score` crudo. Ejecutado con el protocolo reforzado que el fundador pidió explícitamente: *"hazlo con mucho mimo, cuidado y revisión; la nota GEO Score es el core de la herramienta"*.
+
+**Por qué divergían.** Visión general ya leía el compuesto (`details_json.geo_score.score`, con la ventana encima desde SCORE-WINDOW-1). Dominios y la notificación de fin de escaneo leían `run_scores.visibility_score` directamente — una de las cuatro componentes del compuesto, nunca un score en sí misma. Las dos lecturas eran correctas por separado; la contradicción sólo existía entre pantallas, que es exactamente el punto ciego que el análisis de puntos ciegos señala como estructural (Causa 1).
+
+**El módulo, `lib/metrics/run-metrics.ts`.** Nace con sus tests (11) y **cero consumidores**, en su propio commit, antes de tocar una sola pantalla — primera regla del protocolo reforzado. `resolveGeoScore()` es la única función que cualquier "Puntuación GEO" del producto puede llamar: ventana primero (mediana sobre runs comparables, vía `computeWindowedScore`/`readWindowRun` de `lib/scoring/score-window.ts`, sin tocar ni la mediana ni `MIN_RUNS_FOR_WINDOW` ni las reglas de comparabilidad — SCORE-WINDOW-1 queda fuera de alcance a propósito), caída al compuesto del propio run bajo la misma etiqueta cuando hay menos de dos runs comparables. Estructuralmente no puede devolver `visibility_score`. `mentionRateByAnswer`/`promptCoverage`/`citationRate`/`answerCountLabel` dan a cada porcentaje su denominador de fábrica, para el segundo hallazgo (P0-02).
+
+**Cinco superficies migradas, un commit por superficie:**
+
+- **Dominios** (`lib/project-workspace.ts`): `latestScoreByProject` pasa de la visibilidad cruda del run más reciente a `resolveGeoScore` sobre las últimas 3 filas por proyecto (antes 2 — `DEFAULT_SCORE_WINDOW_SIZE` exige una fila más para que la ventana pueda publicar). El badge de delta (DELTA-GUARD-1) sigue leyendo visibilidad cruda sin tocar: es una magnitud run-a-run distinta, no un "Puntuación GEO".
+- **Notificación de fin de escaneo** (`lib/scan/executor.ts` + `lib/notifications/render.ts`): el payload lleva ahora `geoScore` (resuelto vía `resolveGeoScore` sobre las últimas filas de `run_scores`, fail-soft — un fallo ahí nunca bloquea la notificación de un escaneo que ya terminó bien). El copy cambia de "Visibilidad NN (+delta)" a **"Escaneo actualizado: Puntuación GEO NN"** — la redacción exacta que pidió el fundador, porque con ventana la notificación ya no puede afirmar honestamente que NN sea el resultado de ESE escaneo, sólo que ese escaneo actualizó la cifra. El delta antiguo se retira en vez de reutilizarse: comparaba dos visibilidades crudas, una base distinta de la ventana, y mostrar los dos juntos habría repetido el mismo fallo que esta fase existe para quitar. La dirección del icono sigue derivándose de esa magnitud, nunca mostrada como número.
+- **`weekly-digest.ts` — el cálculo estaba bien, el correo que envía no.** El plan lo listaba como cuarta superficie con el mismo bug; una relectura del fichero durante la implementación mostró que ya usaba `getEffectiveGeoScore` (el compuesto con su caída, no la visibilidad cruda) para su comparación semana-a-semana — una magnitud legítimamente distinta (cambio entre los dos runs más recientes, no la posición actual estabilizada) que no necesitaba tocarse. Esa conclusión se quedó corta: nadie había mirado el HTML que de verdad sale por correo. `lib/email/transactional.ts` seguía rotulando ese número **"Tu GEO Score"** — asunto, cabecera y `preheader`, en el resumen semanal Y en la alerta de caída sostenida (`sendScoreDropAlertEmail`) — exactamente la etiqueta que el fundador reservó para la ventana. Encontrado en una tercera pasada de revisión, después de que las dos rondas de `data-guardian`/`geo-strategy` dieran ACEPTAR: ninguna de las dos abrió el fichero de plantillas de correo, sólo el módulo de datos. Corregido sin tocar el cálculo — la alerta de caída necesita de verdad una señal sin suavizar, ceder eso a la ventana la volvería más lenta justo cuando la velocidad es el punto — sólo el rótulo: "Tu GEO Score" → "Puntuación de este escaneo" en el resumen; el asunto y la cabecera de la alerta dejan de decir "GEO Score" sin más. Ningún test cubría esta copia (los tests de `weekly-digest.ts`/`score-alert.ts` sólo comprueban los argumentos que reciben las funciones de envío, nunca el HTML que producen), así que el hallazgo no tenía manera de salir de una lectura humana del fichero.
+- **Competidores** (P0-02 y P1-03): "45 prompts" (en realidad respuestas prompt × motor, acumuladas en toda la historia del proyecto) pasa a `answerCountLabel` → "45 respuestas · 15 prompts en 3 motores", sin signo «×» — se descubrió en revisión que "×" afirma una igualdad aritmética que sólo se sostiene con un único escaneo; ver más abajo. `brandMentionRate`/`brandCitationRate` se leen del módulo con su fracción real como `title`. La tabla por motor dejaba de mostrar un motor sin ninguna mención de marca NI de competidor (`filterComparableEngines`) — así desapareció Claude entero de la tabla en el escaneo real que auditó el informe externo, aunque había respondido a las 15 preguntas. `matrixEngines` pasa a ser `brandEngineBreakdown` directamente: todo motor con al menos una fila, cero incluido. El principio que la función retirada defendía —nunca inventar una fila para un motor que no corrió— se mantiene intacto; lo que cambia es que un cero real ya no se oculta. `filterComparableEngines` sigue viva y testeada en `lib/competitors/engine-share.ts` por si algún día hace falta esa otra pregunta ("motores donde alguien puntuó"), simplemente ya no la hace esta pantalla.
+- **`/runs/[runId]` sale de la consola del usuario final** (decisión del fundador, 2026-08-27: *"quiero tener una única cifra GEO Score porque si no es un lío"*). Se retiran los dos enlaces "Ver detalle del escaneo", en Páginas citadas y en Recomendaciones — los dos dentro de estados vacíos, así que un proyecto con datos reales nunca podía llegar a un escaneo por ahí (el propio `debug/page.tsx` ya lo documentaba). La ruta sigue viva, alcanzable sólo desde `/debug`, que ya la enlaza desde la fecha de cada fila.
+
+**Guardas nuevas:**
+
+- `tests/metric-contract.test.ts` — mismo patrón que `tests/mission-parity.test.ts`: comprobaciones a nivel de fuente sobre los ficheros concretos que esta fase arregló (no un barrido genérico sobre todo el repo, que daría falsos positivos en todo el cálculo de porcentajes legítimo que el resto del producto hace fuera de este alcance).
+- `tests/pilot/journeys/geo-score-consistency.spec.ts` — la aserción cruzada del piloto (Corrección B del análisis de puntos ciegos): visita Visión general y Dominios del mismo proyecto en la misma pasada y falla si el número del medidor difiere. Cierra la brecha exacta que ningún test unitario puede cerrar por sí solo — que el módulo esté bien no garantiza que las dos pantallas, con React y Supabase reales de por medio, sigan de acuerdo.
+
+**Revisión reforzada — dos rondas, no una.** `data-guardian` revisó scoping,
+coste y fail-soft de las lecturas nuevas; `geo-strategy` revisó si ocultar-vs-
+mostrar un motor sin menciones y el fallback sin ventana siguen siendo
+honestos desde la metodología GEO. **Ambos devolvieron BLOQUEAR** en la
+primera pasada — el protocolo reforzado que pidió el fundador hizo
+exactamente lo que tenía que hacer, y encontró tres fallos reales antes del
+Human Gate, no después:
+
+1. **`answerCountLabel` afirmaba una multiplicación falsa desde el segundo
+   escaneo** (hallado por los dos agentes, independientemente).
+   `totalResultsCount` acumula TODOS los escaneos completados del proyecto;
+   `promptCount`/`engineCount` son del momento actual. "45 respuestas (15
+   prompts × 3 motores)" sólo cuadraba en la cuenta del auditor porque tenía
+   un único escaneo. Arreglo: se retira el signo «×» — "45 respuestas · 15
+   prompts en 3 motores" — porque no hay forma honesta de mantener una
+   igualdad aritmética entre tres cantidades de tres ventanas temporales
+   distintas.
+2. **Visión general seguía enseñando DOS "Puntuación GEO" en la misma
+   pantalla** (geo-strategy). El medidor mostraba la ventana (`gaugeScore`,
+   correcto); una frase de la misma pantalla, dos dedos más abajo, seguía
+   diciendo "con una puntuación GEO de {`perRunScore`}/100" — el compuesto de
+   ESTE escaneo, no la ventana. Es el hallazgo P0-01 de la auditoría, sin
+   haber salido de la pantalla. Arreglo: la frase deja de afirmar una
+   puntuación; el medidor ya la dice una vez, bien.
+3. **El fallback de la notificación, en su ruta de fallo, volvía a publicar
+   `visibility_score` bajo "Puntuación GEO"** (hallado por los dos agentes).
+   Si la consulta de ventana fallaba, `geoScoreForNotification` caía a
+   `Math.round(scores.visibility_score)` — el número prohibido, en el único
+   camino que nadie mira porque casi nunca falla. Arreglo: cae a
+   `getEffectiveGeoScore(scores)` (el compuesto de este run, sin consulta
+   extra — ya estaba en scope), que es exactamente lo que `resolveGeoScore`
+   devolvería con un solo run disponible.
+
+**Un cuarto hallazgo cambió una pieza que el plan daba por terminada.**
+Dominios y Visión general leían profundidades distintas de historial (7 filas
+la una, 3 la otra) antes de resolver la ventana — con un run incomparable
+mezclado entre los primeros, una pantalla podía publicar mediana y la otra
+caer a `single_run`, la misma divergencia P0-01 un nivel más abajo. Se
+introdujo `GEO_SCORE_LOOKBACK_ROWS = 7` en `lib/metrics/run-metrics.ts`
+—igualando la profundidad que Visión general ya tenía establecida— y las tres
+superficies (Dominios, notificación, y Visión general si se migra) leen la
+misma constante.
+
+**Y un quinto que revierte parcialmente algo de esta misma fase.** El delta
+de Dominios (DELTA-GUARD-1, comparaba dos `visibility_score` crudos) quedó
+sentado junto al nuevo `score` con ventana — misma forma del fallo,
+otra vez, sin que ninguno de los dos agentes lo llamara igual la primera vez
+que uno de ellos lo vio. Se descartó la opción de retirar el badge (el diseño
+aprobado de esta pantalla, DOMAINS-REDESIGN-1, es explícito: "sólo la
+puntuación GEO y su delta, ninguna segunda métrica" — quitarlo sin más
+tocaría ese invariante) y en su lugar se recalculó como **ventana sobre
+ventana**, misma construcción que el `gaugeDelta` de Visión general
+(`previousWindow`): se publica sólo cuando las dos resoluciones son ventanas
+reales; si no, ausencia honesta.
+
+**Lo que se dejó fuera de esta fase, con conformidad de ambos agentes en la
+segunda pasada:** un cero de un motor cuya extracción falló entera
+(`extraction_error`) se sigue viendo igual que un cero real de un motor que
+respondió y no mencionó a nadie — son dos hechos distintos y merecen una
+distinción propia (`unreadable` en `EntityEngineBreakdown`), pero es trabajo
+nuevo, no una corrección de esta fase. Y `promptCoverage()` existe en el
+módulo, está testado, y **no tiene consumidor todavía** — la mitad "cobertura
+de prompts" de P0-02 sigue sin verse en ninguna pantalla; el hueco natural es
+Prompts, en una fase futura.
+
+**Segunda pasada: ambos agentes, ACEPTAR.**
+
+**Riesgo conocido y aceptado.** El primer escaneo de un proyecto no tiene ventana (`MIN_RUNS_FOR_WINDOW` es 2): cae al compuesto del propio run, misma etiqueta, y el marcador de fiabilidad existente (`hasSufficientSample`) sigue siendo la única señal de que la cifra puede moverse cuando llegue el segundo escaneo. No se inventó ningún indicador nuevo para anunciarlo — aceptado explícitamente por el fundador.
+
+**Comprobado.** `pnpm test` (213/213, 2.934/2.934), `pnpm run validate` (build + typecheck + lint), todo en verde. Cada superficie en su propio commit, revertible por separado.
+
+---
+
+## 184. La confianza de pago llega también al pie de página, sin duplicar la fila (FOOTER-PAYMENT-TRUST-1, 2026-08-27)
+
+**Lo que pidió el fundador.** *"Ahora quiero que lleves un bloque de pago
+seguro similar al footer para transmitir confianza"* — la fila «Pagos seguros
+con» que ya vivía en `/precios` (PRICING-PAY-BADGES-CENTER-1, #495), también en
+el pie de página, para que la confianza no dependa de haber llegado hasta ahí.
+
+**Por qué no era «copiar el bloque a seis sitios».** La fila existía como un
+array (`PAYMENT_BADGES`) y un bloque de JSX declarados a mano dentro de
+`pricing-page.tsx`. En cuanto un segundo sitio la necesita —y aquí son seis,
+uno por cada shell de marketing con pie completo— pegar la misma copia en cada
+uno es exactamente el fallo que este repositorio ya ha pagado por duplicado
+más de una vez hoy: dos cosas con el mismo significado que pueden divergir en
+silencio en cuanto alguien edite una sin acordarse de la otra (§36, §177, "dos
+números con el mismo significado y distinto valor es un fallo").
+
+**Lo que se hizo.**
+
+1. **`components/marketing/payment-badges.tsx`** — nuevo. `PAYMENT_BADGES` y un
+   componente `PaymentBadgesRow` que renderiza la fila entera, sin su propio
+   padding de sección (lo decide quien la envuelve — es lo que la hace
+   portable entre `/precios` y el pie).
+2. **`/precios` deja de declarar su propia copia** y pasa a importar
+   `PaymentBadgesRow`.
+3. **Los seis shells de marketing con pie completo** —`landing-page.tsx`,
+   `pricing-page.tsx`, `blog-page-shell.tsx`, `docs-page-shell.tsx`,
+   `legal-page-shell.tsx`, `not-found-mission.tsx`— renderizan
+   `<PaymentBadgesRow />` dentro de un nuevo `.lp-footer-pay`, con su propio
+   separador (`margin-top`/`padding-top`/`border-top`, a juego con el resto del
+   pie). `app/geo/page.tsx` queda fuera a propósito: su pie ya era una versión
+   reducida a mano, una divergencia anterior a esta lista y fuera de lo que
+   aquí se arregla.
+4. **`MARKETING_SHELLS`** —la lista de esos seis ficheros— sale del
+   `.test.ts` donde vivía sólo para `marketing-content-links.test.ts` y pasa a
+   `marketing-content-links.ts`, para que el test nuevo de las insignias lea la
+   MISMA lista en vez de mantener su propia copia (mismo argumento que
+   `MARKETING_CONTENT_LINKS`, log §46).
+
+**`/precios` conserva su fila a media página, además de la del pie — a
+propósito, no por descuido.** La de media página responde "¿puedo fiarme del
+checkout de ESTA pantalla, ahora que estoy decidiendo?"; la del pie responde
+"¿es un negocio real, en cualquier página del sitio?". Son dos preguntas
+distintas y las dos siguen mereciendo respuesta.
+
+**Una falsa alarma que merece constar.** La primera captura a 768px se veía
+pegada a la izquierda comparada con la de 375px y la de 1280px — pero medido
+con `getBoundingClientRect()`, el margen izquierdo y el derecho eran 9,875px y
+9,89px, prácticamente idénticos. A esa anchura el contenido casi llena el
+`.lp-inner` disponible (692 de 712px), así que el margen simétrico es tan
+pequeño que el ojo no lo distingue del borde — el mismo aviso que ya deja
+escrito este fichero sobre medir la distancia, no leerla a ojo.
+
+**Lo que garantiza que no vuelva a faltar.** `payment-badges.test.ts` recorre
+`MARKETING_SHELLS` y falla si a algún pie le falta `<PaymentBadgesRow`, y
+falla también si `/precios` vuelve a declarar `PAYMENT_BADGES` a mano en vez de
+importarlo. Comprobado en las dos direcciones: con los seis footers revertidos,
+fallan los siete tests nombrando cada fichero al que le falta la fila.
+
+**Human Gate, dos preguntas cerradas por el fundador (2026-08-27).** El PR
+dejaba dos abiertas: si `/precios` debía dejar de repetir la fila (mitad de
+página + pie) y si `/geo` debía llevarla también. Respuesta: *"1 me vale / 2
+también"* — la duplicación en `/precios` queda tal cual (a propósito, no por
+descuido, según el propio razonamiento de arriba), y `app/geo/page.tsx` gana
+la fila. `/geo` sigue **fuera de `MARKETING_SHELLS`**: su pie sigue siendo la
+versión reducida a mano (sin `MARKETING_CONTENT_LINKS`/`MARKETING_ENTITY_LINKS`),
+una divergencia anterior a esta lista que el fundador no pidió arreglar — sólo
+la fila de pagos. Fijado por un test propio, no por entrar en la lista
+compartida (mismo `footerBlockOf`, comprobado en las dos direcciones: sin la
+fila, falla nombrando el fichero).
+
+**Nota de numeración, dos veces.** Nació como §181 sobre una `main` que
+llegaba al §180 (PRICING-PAY-BADGES-CENTER-1, #495). Mientras esta rama
+seguía abierta, RECS-LOOP-1 Fase A (#492) reclamó ese mismo §181 y mergeó
+primero, así que una primera pasada renumeró a §182. Mientras esta rama
+seguía abierta una segunda vez, TRUST-PROMISES-1 (#494) y TRUST-METRICS-1
+(#493) reclamaron ese §182 (y el §183 siguiente) y mergearon antes también,
+así que esta sección —la que no estaba en `main`— renumera de nuevo, ahora a
+**§184**, con todas sus referencias (`grep -rn "§184"`: `CLAUDE.md` y
+`.claude/rules/styles.md`). Mismo protocolo que ya documentan los
+§159/§161/§163/§173/§175/§178 de este mismo fichero.
+
+**Trazabilidad.** `components/marketing/payment-badges.tsx` ·
+`components/marketing-content-links.ts` (`MARKETING_SHELLS`) ·
+`app/globals.css` (`.lp-footer-pay`) ·
+`components/marketing/payment-badges.test.ts`; §36, §46, §148, §149, §177, §180.
+
+---
+
+## 185. `resolveGroundingRedirect` seguía redirecciones de terceros sin guardián SSRF (CITATION-REDIRECT-SSRF-1, 2026-08-27)
+
+**El hallazgo, encontrado de pasada.** Investigando la viabilidad de CITED-DIFF-1
+(traer el contenido de la página citada de un competidor), `data-guardian`
+comparó `lib/scan/citation-resolution.ts` con `lib/web-audit/fetch-page.ts` —
+el único otro módulo de este repo que sigue redirecciones de un host que no
+controlamos — y encontró que el primero usa `fetch(uri, { redirect: "follow" })`
+sin ninguna verificación de host: ni resolución de IP previa, ni rechazo de
+IP privada/reservada, ni reverificación salto a salto. `fetch-page.ts` sí
+tiene las tres, y su propia cabecera explica por qué hacen falta: *"the
+audited domain's own server ... can redirect anywhere, including an internal
+address. Every hop is verified BEFORE it's followed, not after."* Mismo
+razonamiento, mismo repositorio, un módulo lo aplicaba y el otro no.
+
+**Severidad: media, no crítica.** El cuerpo de la respuesta nunca se lee —
+sólo `response.url` — así que es SSRF ciego con reflexión de URL, no un canal
+de lectura. Por la ruta de `extraction.ts` la URL final resuelta acaba
+persistida como `domain` de la cita, visible en "Páginas fuente más citadas";
+por la de `technical-audit.ts` se descarta tras usarse. Explotarlo exige
+influir en qué indexa/cita un motor con grounding — costoso, no una frontera
+de seguridad rota hoy.
+
+**Por qué se arregla ahora y no como deuda aparte.** Ninguna fase nueva lo
+exige todavía —CITED-DIFF-1 sigue sin aprobar más allá de su Fase 0—, pero
+**cualquier fase que llegue a leer el CUERPO de esa respuesta convertiría este
+mismo hueco en un canal de exfiltración**, y el arreglo es barato e
+independiente: importar los guardianes que `fetch-page.ts` ya exporta y
+expone probados (`hostnameResolvesToPublicIp`), nunca reimplementarlos.
+
+**La decisión.** `resolveGroundingRedirect` pasa a seguir redirecciones a
+mano, verificando cada salto con `hostnameResolvesToPublicIp` (importado, no
+copiado) antes de conectar, exactamente como `fetchPageSafely`. Dos
+diferencias deliberadas frente a ese módulo, porque el problema no es el
+mismo:
+
+- **Sin lista de dominio permitido.** `fetch-page.ts` sólo permite el dominio
+  propio del proyecto; este resolver, por diseño, tiene que poder aterrizar
+  en cualquier sitio público legítimo — es lo que hace útil resolver una
+  cita. Lo único que se rechaza es una IP privada/reservada o un host
+  IP-literal, nunca un dominio por no ser el nuestro.
+- **Un único plazo absoluto por intento (HEAD, luego GET), no uno nuevo por
+  salto.** ADR 0006 ya señalaba la resolución de redirecciones como el riesgo
+  dominante del presupuesto síncrono de 60s del escaneo (ADR 0003); sumarle
+  una comprobación DNS de hasta 3s por cada uno de varios saltos sin un techo
+  compartido repetiría la lección de ADR 0029 que `.claude/rules/scan.md` ya
+  tiene escrita: *"budget against the invocation, not against itself"*. El
+  plazo se calcula una vez al entrar en cada intento y se reparte entre todos
+  sus saltos — mismo techo total que antes (~2500ms por intento), nunca más.
+
+**Deliberadamente descartada la opción barata.** Aprovechar este mismo fetch
+para traer también el cuerpo de la página (el "atajo" que CITED-DIFF-1
+consideraba para su fase permanente) se descartó explícitamente: lo que hace
+barato ese atajo es justo `redirect: "follow"`, la propiedad que este PR
+quita. Sin ella deja de ser un atajo — es el fetcher genérico completo, y
+pagarlo aquí sería pagarlo en el peor sitio (dentro del presupuesto síncrono
+del escaneo).
+
+**Cero cambio de comportamiento observable.** Mismo contrato de salida
+(`{ resolvedUrl }` o `null`), mismos dos intentos (HEAD con fallback a GET),
+mismo criterio de "seguimos en el host de redirección de Google = fallo". Lo
+único que cambia es que ahora cada salto se verifica antes de conectarse, y
+un salto a IP privada/reservada devuelve `null` en vez de completarse.
+
+**Comprobado.** `pnpm test` (2.984/2.984), `pnpm run validate` (build +
+typecheck + lint), todo en verde. 19 tests nuevos/reescritos en
+`citation-resolution.test.ts`, incluido uno que verifica el rechazo real de
+una IP tipo `169.254.169.254` (metadata de nube) inyectada como destino de
+redirección.
+
+**Nota de numeración.** Nació como §184 sobre una `main` que llegaba al §183.
+Mientras esta rama seguía abierta, FOOTER-PAYMENT-TRUST-1 (#496) reclamó ese
+mismo §184 y mergeó primero, así que esta sección —la que no estaba en
+`main`— renumera a **§185**, con todas sus referencias (`grep -rn "§184"`
+apuntando a este PR: `CLAUDE.md` y `.claude/rules/scan.md`). Mismo protocolo
+que ya documentan los §159/§161/§163/§173/§175/§178/§182 de este mismo
+fichero.
+
+---
+
+## 186. CITED-DIFF-1 Fase 0: script de validación barata antes de construir nada permanente (2026-08-28)
+
+**La pregunta que CITED-DIFF-1 quiere responder.** Cuando un competidor sale
+citado en una respuesta de IA, ¿el contenido real de esa página citada tiene
+algo que de verdad valga la pena mostrarle a un usuario ("esto cubre que tú no
+cubres"), o la diferencia es marginal la mayoría de las veces? No hay forma de
+saberlo sin mirar páginas reales — y construir la feature permanente primero
+para averiguarlo es exactamente el orden que ya salió caro una vez.
+
+**El precedente que fija el orden.** FAVICON-QUALITY-1 Fase 3b (log §39) tenía
+la misma forma —traer contenido fijo de hosts de terceros arbitrarios, "no es
+un crawler" por el mismo test de `.claude/rules/web-audit.md`— y se construyó
+entera, pasó revisión de seguridad sin hallazgos, y se revirtió EL MISMO DÍA:
+no por seguridad, sino porque 9 de cada 10 pruebas reales daban un resultado
+indistinguible del anterior y la que cambiaba salía peor. El coste de
+mantenimiento (guardián SSRF, hueco de DNS-rebinding aceptado, latencia) no
+compensaba un valor marginal que sólo se descubrió después de construirlo.
+Este Fase 0 existe para tener esa respuesta ANTES, con un script de usar y
+tirar en vez de una feature permanente.
+
+**Lo que hace.** `scripts/cited-diff-validation.ts`
+(`pnpm cited-diff:validate --domain tudominio.es --limit N`): muestrea citas
+reales de `scan_prompt_results` (lectura, `.select()` únicamente), reporta el
+reparto Gemini/OpenAI de URL real recuperable —un primer resultado en sí
+mismo: `citation.url` es siempre el wrapper de redirección de Google para
+Gemini, así que si ese reparto sale muy bajo, el techo de la feature ya está
+ahí sin mirar ni una página—, y trae una muestra pequeña de páginas reales con
+los mismos guardianes SSRF que CITATION-REDIRECT-SSRF-1 (§185): `resolveCitation`
+(`lib/citations/aggregate-citations.ts`), `hostnameResolvesToPublicIp` y
+`readBodyCapped` (`lib/web-audit/fetch-page.ts`) y `sanitizeField`
+(`lib/text/sanitize.ts`) — los cuatro importados, ninguno reimplementado. El
+texto saneado se imprime en la terminal de quien lo ejecuta para que lo juzgue
+él mismo; el script no emite veredicto.
+
+**Lo que nunca hace, ni de usar y tirar.** No persiste HTML en ningún sitio
+compartido, no llama a ningún LLM, no escribe en Supabase (`cited-diff-
+validation.test.ts` comprueba por código fuente que no aparece `.insert(`,
+`.update(`, `.upsert(` ni `.delete(`), y no comprueba `robots.txt` del
+competidor —el módulo existente sólo entiende `Disallow: /` completo, y
+usarlo para una ruta concreta sería peor que no comprobar nada— aceptado
+conscientemente para una validación de una sola vez, no para una fase
+permanente futura.
+
+**Sólo se ejecuta desde la máquina del fundador, nunca desde un agente.**
+Comprobado con `data-guardian`: el proxy de este entorno devuelve 403 en el
+CONNECT a un host arbitrario, así que un agente que lo ejecutara vería fallar
+todas las páginas y confundiría eso con una respuesta real a la pregunta de
+negocio. El propio fichero lo dice en su cabecera, no en una nota al pie.
+
+**Una desviación del Task Intake aprobado, dicha en voz alta.** El Task Intake
+decía que el script viviría en el scratchpad de la sesión, no en el
+repositorio. Se implementó como `scripts/cited-diff-validation.ts` en su
+lugar, siguiendo el mismo precedente que `scripts/extraction-bench.ts`
+(`NODE_OPTIONS=--conditions=react-server`, guardia de ejecución directa
+idéntica): un scratchpad no sobrevive a la sesión, y el fundador necesita
+poder ejecutarlo de verdad, más de una vez si hace falta.
+
+**Alcance del Task Intake, explícito.** Aprobado: el arreglo SSRF (§185) y este
+script. **No aprobado:** la fase permanente de CITED-DIFF-1 (traer el
+contenido citado dentro del producto). Eso depende de que el fundador ejecute
+este script y juzgue el resultado — decisión suya, no de esta sesión, y sin
+fecha todavía.
+
+**Comprobado.** `pnpm test` (17 tests nuevos en `cited-diff-validation.test.ts`,
+suite completa en verde), `pnpm run validate` (build + typecheck + lint).
+
+**Trazabilidad.** `scripts/cited-diff-validation.ts` ·
+`scripts/cited-diff-validation.test.ts` · `package.json`
+(`cited-diff:validate`); §39, §185.
+
+---
+
+## 187. AUDIT-REPRO-1: las seis acciones de Recomendaciones dejan de ser "no sabemos" (Fase 0, 2026-08-27)
+
+**El problema.** El hallazgo peor puntuado del informe de auditoría externa
+(fiabilidad funcional 4,0) decía que seis CTAs de Recomendaciones — generar
+FAQ/brief/comparativa, exportar el plan, marcar como hecho, activar
+seguimiento diario — "no dieron feedback ni resultado" durante la prueba. El
+código decía otra cosa: `handleRewrite` y `handleDismiss` sí tienen estado de
+carga y de error visibles (`recommendations-client.tsx`). `docs/external-
+audit-2026-08.md` (Fase 0) llamó a esto lo que era: dos lecturas incompatibles
+que el plan no podía resolver sin instrumentación real, y clasificó la Fase 4
+(el arreglo) como bloqueada hasta que existiera un veredicto por acción con
+evidencia.
+
+**Qué se ha construido.** `tests/pilot/journeys/actions/recommendation-
+actions.spec.ts` — un journey nuevo del piloto, aislado como su propio
+proyecto de Playwright (`playwright.config.ts`), alcanzable sólo por
+`--journeys actions` (`scripts/pilot.mjs`, `PROJECT_SETS`), nunca por el
+piloto siempre-activo. Recorre las cuatro superficies reales de las seis
+acciones sobre el proyecto de escritura reservado y clasifica cada una como
+`real` (efecto observable con su tiempo), `invisible` (sin efecto, reproduce
+el hallazgo del auditor) o `entorno` (posible falso positivo del navegador
+headless, documentado igualmente porque es real para cualquier usuario con el
+mismo bloqueo).
+
+**Un matiz que el plan original no tenía.** "Generar FAQ/brief/comparativa"
+no son tres botones: son tres de ~12 etiquetas posibles de UN handler
+(`handleRewrite`), cuya etiqueta depende de `recommendation_type` — y qué
+tipos existan depende de lo que produjo el último escaneo del proyecto
+reservado, que no es controlable desde el journey. El spec prueba el
+generador que exista, no los tres por nombre, y lo deja escrito en el propio
+fichero para que una sesión futura no lo lea como una omisión.
+
+**Decisión del fundador sobre «Marcar como hecho»** (2026-08-27, vía
+AskUserQuestion): el producto no tiene deshacer para esta acción hoy — eso lo
+añade la Fase 4 — así que probarla de verdad consume una recomendación real
+del proyecto reservado, sin restauración posible desde la UI hasta el
+próximo escaneo completo. Tres alternativas sobre la mesa: clasificar sólo
+por lectura de código (no prueba nada nuevo); pulsarla y aceptar la pérdida;
+o añadir una escritura directa a Supabase para revertirla (rompería la
+convención del piloto de actuar sólo por clics reales). El fundador eligió
+pulsarla y aceptar la pérdida. Queda documentado como **tercera excepción
+aprobada** al alcance de escritura del piloto (`CLAUDE.md`, junto a UX-
+PILOT-2a y UX-PILOT-3) — y es la primera que rompe deliberadamente la regla
+de idempotencia que las otras dos sostienen, con esa ruptura anotada
+explícitamente en vez de glosada.
+
+**Cerradura estructural, no de convención**, mismo patrón que UX-PILOT-3:
+`checkActionsLockout` (`scripts/pilot-selfcheck-checks.mjs`, cubierta en
+`tests/pilot/support/selfcheck-checks.test.ts`) prueba que el run por defecto
+del piloto nunca alcanza el journey nuevo, y `scripts/pilot-selfcheck.mjs` lo
+ejecuta en cada pasada del self-check.
+
+**Lo que esta fase NO hace.** No arregla ninguna de las seis acciones — ni
+añade el contrato de acción uniforme, ni el deshacer de «Marcar como hecho»,
+ni la salida alternativa de exportación. Eso es la Fase 4
+(`ACTIONS-OBSERVABLE-1`), que estaba bloqueada precisamente por no tener este
+veredicto y ahora puede planificarse sobre datos reales en vez de sobre las
+dos lecturas contradictorias del informe.
+
+**Regla de premisa** (Corrección E, ya escrita en `CLAUDE.md`, "Cierre de
+fase"): esta fase no retira ningún camino de recuperación, así que no le
+aplica — se anota aquí sólo para dejar constancia de que se comprobó.
+
+**Comprobado.** `pnpm test` (213/213, 2.938/2.938), `pnpm run validate`
+(build + typecheck + lint), todo en verde. El self-check real del piloto
+(`pnpm pilot:selfcheck`) no se ha ejecutado en esta sesión — depende de un
+servidor de fixtures y de Playwright con red, fuera del alcance de este
+entorno; lo ejecutará CI sobre el PR.
+
+**Trazabilidad.** `tests/pilot/journeys/actions/recommendation-
+actions.spec.ts`; `playwright.config.ts` (proyecto `actions`); `scripts/
+pilot.mjs` (`PROJECT_SETS.actions`, `isActions` en `writeSummaryMarkdown`);
+`scripts/pilot-selfcheck-checks.mjs` (`checkActionsLockout`); `scripts/pilot-
+selfcheck.mjs`; `tests/pilot/support/selfcheck-checks.test.ts`; `CLAUDE.md`
+("Cierre de fase" regla 4, "cobertura no vista", tercera excepción de
+escritura); `docs/external-audit-2026-08.md` Fase 0.
+
+**Nota de numeración.** Nació como §181 sobre una `main` que llegaba al §180
+(PRICING-PAY-BADGES-CENTER-1, #495), y ha ido perdiendo esa carrera cuatro
+veces mientras la rama seguía abierta — §181→§182 (RECS-LOOP-1 Fase A, #492),
+§182→§184 (TRUST-PROMISES-1 #494 + TRUST-METRICS-1 #493 mergearon primero),
+§184→§185 (FOOTER-PAYMENT-TRUST-1, #496), y ahora §185→**§187**
+(CITATION-REDIRECT-SSRF-1 #499 y CITED-DIFF-1 Fase 0 #500 mergearon primero,
+reclamando §185 y §186), con todas sus referencias (`grep -rn "§187"`). Mismo
+protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185 de
+este mismo fichero.
+
+---
+
+## 188. El borrado de recomendaciones del propio run no filtraba por estado ni comprobaba error (RECS-FINALIZE-DURABILITY-1, 2026-08-28)
+
+**El encargo del fundador, tal y como llegó: "el bug de durabilidad del
+finalize" — un hallazgo de `data-guardian` de una sesión anterior (compactada),
+descrito entonces como "un dismiss se puede revertir en silencio por un reintento
+del finalize".** Antes de planificar nada se le pidió a `data-guardian` que
+reconstruyera el mecanismo exacto, con mi propio rastreo del código como punto
+de partida. **No existe tal reproducción.** `executePendingScan`
+(`lib/scan/executor.ts:130-135`) corta cualquier invocación tardía o duplicada
+sobre un run ya terminal ANTES de leer siquiera la tabla `jobs` — ese guardián
+lleva desde el 2026-08-13 (PR #394). El camino de reclamo del lease de
+finalize (`FINALIZE_LOCK_LEASE_MS`, 90s) sólo puede tomar un job todavía
+`running`, nunca uno ya `completed`, y el job de finalize se marca `completed`
+antes de que `scan_runs.status` pase a `completed` — así que para cuando un
+usuario puede ver (y por tanto descartar) una recomendación, el finalize de
+ese run ya es inmune a cualquier reintento. Se corrige aquí la afirmación:
+**no había fuga activa que arreglar**, y decirlo así, antes del Task Intake,
+era obligado en vez de plegar la corrección dentro del propio plan.
+
+**Lo que sí encontró data-guardian, real y con líneas concretas.** El bloque
+de finalize borra e reinserta las recomendaciones del run actual
+(`lib/scan/executor.ts`, entonces líneas 950/952) con dos huecos que sus dos
+vecinos inmediatos (resolver brechas, superseder recomendaciones previas) ya
+no tienen:
+
+1. **El `DELETE` no filtraba por `status`.** Las dos operaciones justo encima
+   sí excluyen `status='active'` a propósito, precisamente para no tocar una
+   fila ya `dismissed`. Hoy es inofensivo sólo porque el guardián de arriba
+   impide un segundo paso por este bloque sobre un run ya completado — pero esa
+   protección existe para no repetir trabajo, no para proteger datos del
+   usuario. Un cambio futuro en ese guardián, o un segundo punto de entrada al
+   bloque de finalize, reintroduciría la pérdida en silencio — incluida, en
+   cascada, cualquier propuesta de IA generada sobre esa recomendación
+   (`ON DELETE CASCADE`, `0005_generated_solutions.sql:95-98`).
+2. **Ni el `DELETE` ni el `INSERT` comprobaban su error**, a diferencia de las
+   dos escrituras de arriba. Sin restricción de unicidad en
+   `(project_id, run_id, dedupe_key)` —sólo un índice normal
+   (`0010_recommendations_history.sql:63`)—, un `DELETE` que falla seguido de
+   un `INSERT` que funciona **duplicaba en silencio todo el backlog del run**,
+   y un `DELETE` que funciona seguido de un `INSERT` que falla **completaba el
+   run con cero recomendaciones**, sin aviso — ambos tragados por el `catch`
+   genérico de más abajo hacia un simple `console.error`. Esto sí era
+   alcanzable, en cualquier escaneo, con sólo un fallo transitorio de red en el
+   momento exacto.
+
+**La corrección, mínima y sin cambio de comportamiento hoy.**
+
+- `.eq("status", "active")` añadido al `DELETE`, mismo patrón que ya usan las
+  dos operaciones vecinas. Cero filas afectadas de forma distinta en el único
+  camino de ejecución que existe hoy (nunca hay una fila no-activa con ese
+  `run_id` antes de este punto).
+- Error del `DELETE` comprobado: si falla, se registra con `logJob` (nivel
+  `error`, persistido en `job_logs`, diagnosticable — no sólo un
+  `console.error` de vida corta) y **se salta el `INSERT`**, que es lo que
+  evita la duplicación.
+- Error del `INSERT` comprobado y registrado igual, si el borrado sí funcionó
+  pero la reinserción falla — el run termina con cero recomendaciones nuevas
+  en vez de con una mezcla silenciosa.
+- **Explícitamente fuera de alcance** (aprobado así): ninguna migración, ninguna
+  restricción de unicidad nueva — la que de verdad cerraría el hueco de raíz es
+  una mejora real pero mayor (migración de schema) y queda como riesgo residual
+  aceptado, no como deuda de esta fase.
+
+**Comprobado.** Dos tests nuevos en `executor.test.ts` (fallo del `DELETE` →
+`INSERT` saltado + log; fallo del `INSERT` → cero filas + log), `pnpm test`
+(3.016/3.016), `pnpm run validate` (build + typecheck + lint).
+
+**Trazabilidad.** `lib/scan/executor.ts` · `lib/scan/executor.test.ts`;
+consulta previa a `data-guardian` sin código propio, sólo el hallazgo.
+
+---
+
+## 189. "Cita a un rival" en Páginas citadas sólo significaba "citada donde también apareció un rival" (CITATIONS-HONESTY-1, 2026-08-27)
+
+**Origen.** Fase 8 de `docs/external-audit-2026-08.md` (auditoría externa
+2026-08-26, hallazgo P0-09): *"fuente que cita a un rival" sobreafirma —
+`competitors` en `aggregate-citations.ts` son los rivales nombrados EN LA
+RESPUESTA donde se citó la página, no en la propia página. La pantalla nunca
+lee el contenido de ninguna URL citada.*
+
+**Qué pasaba.** El bloque "Oportunidades" de Páginas citadas mostraba filas
+como *"Cita a Rival · 2 motores"* y las contaba como *"N fuentes citan a un
+rival y no a {marca}"*. Ese "cita a" es un verbo sobre la PÁGINA que el
+producto nunca comprobó: el dato real es que un motor, al responder un
+prompt, usó esa página como fuente Y en esa misma respuesta nombró a un
+competidor trackeado — dos hechos sobre la respuesta, no uno sobre la página.
+Además, el filtro exigía `competitors.length > 0` para que una fuente
+apareciera como "oportunidad", así que el propio criterio de qué es
+accionable dependía del dato sobreafirmado.
+
+**Qué se decidió.**
+
+1. **La afirmación se renombra a lo único que se ha medido.** El texto pasa de
+   "Cita a X" a "Citada en una respuesta donde también apareció X", con una
+   nota explícita de "sin verificar en la página" — nunca una frase que lea
+   como un hecho sobre el contenido de la URL.
+2. **El criterio de "alcanzable para outreach" se separa del de "competidor
+   co-citado".** Antes de esto una fuente sólo entraba en «Oportunidades» si
+   un competidor trackeado aparecía en la misma respuesta; ahora entra
+   cualquier fuente de terceros que la IA cita, con dominio resuelto, sin
+   mencionar a la marca — el hecho comprobable ("la IA cita esto y tú no
+   apareces ahí") deja de depender del hecho no comprobable ("esa respuesta
+   nombró a un rival"). El nombre del competidor co-citado se sigue
+   mostrando, pero como aviso aparte y explícitamente sin verificar, nunca
+   como el motivo por el que la fuente aparece en la lista.
+3. **Se deja de recomendar "consigue que te mencionen" como conclusión de un
+   dato no verificado.** El bloque ya no enmarca la lista como un veredicto
+   sobre lo que la página dice, sólo como lo que es comprobable: quién cita,
+   con qué frecuencia, con qué motores.
+4. **Agrupación mínima por dominio** (`groupOpportunitiesByDomain`,
+   `lib/citations/aggregate-citations.ts`): al quitar el filtro de
+   competidor, la lista de fuentes alcanzables puede crecer mucho — el propio
+   informe hablaba de 240 URLs en la cuenta auditada. Agrupar por dominio
+   (frecuencia total, motores que citan, consultas asociadas) es lo mínimo
+   para que eso sea priorizable en vez de una lista plana de URLs. La
+   relevancia editorial completa (`relevance_score` frente a sector y
+   mercado) queda fuera — es la fase de diferenciación, no ésta.
+
+**El tercer estado que pide el informe — "fuente que menciona a un competidor
+verificado A NIVEL DE PÁGINA" — no se implementa con datos reales en esta
+fase, y es deliberado.** Verificarlo exigiría leer el contenido real de cada
+URL citada, y eso es un crawler: está en la lista de prohibido de `CLAUDE.md`
+sin aprobación explícita del fundador, y esta fase no la tiene. Construir un
+campo `verified` que sólo puede valer `false` (o `undefined`) habría sido
+peor que no tenerlo — la misma lección que ya deja escrita
+`.claude/rules/web-audit.md` sobre el tri-estado de `PageCheckResult`: un
+campo que nace y nunca puede afirmar nada no es una función nueva, es un
+compromiso sin cumplir. Lo que SÍ se hizo fue dejar de fingir que el segundo
+estado (competidor co-citado) era ese tercero: ahora se declara sin verificar
+en cada sitio donde aparece, en vez de leerse como si lo estuviera.
+Verificación real de contenido de página es una fase futura y propia, con su
+propio Task Intake y su propia revisión de data-guardian.
+
+**Lo que NO se ha tocado.** El cálculo de `impactBreakdown` (favorable/
+adverse/otherBrands/neutral) no cambia — esas etiquetas ya eran honestas: "La
+respuesta mencionó..." (`citations-client.tsx`, `ImpactBar`), nunca "la
+página menciona...". Tampoco cambia la lista completa "Todas las fuentes"
+(sección principal de la pantalla, sin agrupar): el informe señalaba
+concretamente el bloque de Oportunidades, y agrupar por dominio ahí donde no
+hay un problema de escala habría sido una reestructuración sin motivo.
+
+**Nota de numeración.** Toma el §189 tras nueve renumeraciones sucesivas —
+§180 a §188 se reclamaron uno detrás de otro por ocho PRs de la misma
+auditoría (#492, #494, #493, #496, #499, #500, AUDIT-REPRO-1 Fase 0,
+RECS-FINALIZE-DURABILITY-1) mergeando a `main` mientras esta rama seguía
+abierta esperando el piloto, cada uno reclamando el número que el anterior
+acababa de liberar. Un caso (§186/CITED-DIFF-1 Fase 0) chocó además en la
+misma fila de "Páginas citadas" del mapa de zonas, resuelta a mano
+combinando las dos entradas. El detalle completo de cada renumeración, para
+quien lo necesite, está en el historial de commits de esta rama
+(`claude/citations-honesty-1`), no repetido aquí once veces.
+
+**Trazabilidad.** `lib/citations/aggregate-citations.ts`
+(`groupOpportunitiesByDomain`, `OpportunityDomainGroup`, doc comment de
+`CitationRow.competitors`) · `app/dashboard/projects/[projectId]/citations/
+page.tsx` (filtro de `opportunityRows`) · `app/dashboard/projects/
+[projectId]/citations/citations-client.tsx` (`OpportunitiesBlock`) ·
+`app/globals.css` (`.cit2-opp-unverified`) ·
+`lib/citations/aggregate-citations.test.ts` ·
+`.claude/rules/citations.md` · `docs/external-audit-2026-08.md` Fase 8.
+
+---
+
+## 190. RECS-LOOP-1 Fase B: la brecha marcada como hecha que vuelve deja de parecer nueva (ADR 0041 adenda, 2026-08-28)
+
+**El encargo llegó como "el hueco que dejó Fase A"**, y `geo-strategy` corrigió
+el planteamiento antes de escribir una línea de código. Primer error propio:
+el botón no dice "descartar" — dice **"Marcar como hecho"**
+(`recommendations-client.tsx:986`, badge del historial "Marcada como hecha").
+No hay un "no me aplica" en el producto; `dismiss` es sólo el nombre interno
+de la columna. Eso disuelve la duda de si verificar una fila descartada
+cuestiona un juicio de negocio del usuario: no lo hace, comprueba una
+afirmación fáctica ("esto está hecho"), exactamente lo que ADR 0017 §5
+prometió y Fase A ya hace para las resueltas.
+
+**El hueco real no estaba donde yo lo buscaba.** No es que la pestaña
+"Resueltas" se quede muda en una fila descartada (aunque también) — es una
+asimetría de producto verificada en código:
+`lib/recommendations/recommendation-history.ts:42` excluye explícitamente
+`status !== "dismissed"` de `resolvedDedupeKeys`, así que una brecha que se
+arregla SIN pulsar el botón cuenta como "Victoria reciente" con su veredicto
+(Fase A); la misma brecha arreglada PULSANDO el botón no cuenta nunca. **El
+producto penalizaba usar su propio botón.** Y el reverso, verificado en la
+línea 50 del mismo fichero: cuando una brecha marcada como hecha reaparece,
+la racha (`consecutive_runs_open`) se reinicia a 1 correctamente — pero la
+tarjeta activa vuelve sin ninguna marca que diga "esto ya se intentó", así
+que se ve como si fuera nueva.
+
+**El mecanismo, sin inventar un criterio de "verificado" nuevo.** La señal es
+la misma que `computeRecommendationTransition` ya usa para decidir
+"resuelta": ¿reapareció el `dedupe_key`? Aplicada a un solo run fijo en vez de
+cada run futuro, para que la respuesta sea una observación fechada y no una
+cifra que cambia de veredicto bajo una fila ya renderizada (mismo principio
+que ADR 0041 §6 ya fijó para Fase A). El ancla:
+`lib/recommendations/dismissal-recurrence.ts`, primer `scan_runs` completado
+con `created_at` posterior al `updated_at` de la fila descartada —
+`created_at`, no `finished_at`, para que ningún run en vuelo en el momento
+del clic cuente como observación posterior al clic. `updated_at` de una fila
+`dismissed` es fiable porque, tras RECS-FINALIZE-DURABILITY-1 (§188), ninguna
+escritura de finalize toca una fila que no sea `status='active'`.
+
+**Tres guardas fail-closed, la más importante de las tres:** un run ancla sin
+ninguna fila de `recommendations` en absoluto → sin veredicto, nunca "la
+brecha se fue". Un run con cero filas es indistinguible desde este módulo de
+un fallo del `INSERT` que RECS-FINALIZE-DURABILITY-1 ya sabe que puede
+ocurrir (registrado, no fatal) — leerlo como "brecha resuelta" publicaría una
+victoria causada por un fallo de persistencia. Las otras dos: `dedupe_key`
+vacío (filas anteriores a RECS-3) → sin veredicto permanente; sin escaneo
+completado todavía tras el descarte → silencio, nunca un placeholder.
+
+**Dos superficies, un solo cálculo.** La pestaña "Resueltas" enseña la
+observación fechada ("El escaneo del 25 ago 2026 ya no la encontró" / "...
+volvió a encontrarla") — nunca "en el escaneo que lo confirmó", porque aquí
+no confirmó nadie nada, sólo se observó más tarde. El detalle de Fase A
+(mutación concreta: presencia/prominencia/autoridad) sólo se añade en la
+rama "no volvió" — mostrar "la IA te nombró en 1 de 2" junto a "volvió a
+aparecer" respondería una pregunta que nadie hizo mientras entierra la que
+importa. Y la tarjeta ACTIVA que vuelve lleva su propia insignia, con la
+fecha del descarte (no la del run ancla): "La marcaste como hecha el 12 ago
+2026" — dos fechas distintas a propósito, la del clic y la de la
+observación, nunca fundidas en una.
+
+**Lo que Fase B no hace.** No escribe `resolved_in_run_id` en una fila
+descartada — cambiaría el significado de la columna y volvería ambiguas las
+dos insignias del historial. No captura motivo del descarte ni añade
+deshacer — eso es esquema/migración y el deshacer ya está adjudicado a la
+Fase 4 de `docs/external-audit-2026-08.md` (decisión del fundador,
+2026-08-27). Sólo lecturas, sin migración.
+
+**Renombrado, no comportamiento nuevo.** `RecommendationToVerify.resolvedInRunId`
+pasa a `anchorRunId` en `lib/recommendations/prediction-verification.ts`: el
+mismo mecanismo sirve ahora a dos llamadores (el run que confirmó una
+resolución automática, o el run ancla de una recurrencia comprobada), y el
+nombre antiguo mentiría sobre el segundo caso — "resolved" cuando nada se
+resolvió. `verifyRecommendationPredictions` en sí no cambia.
+
+**Comprobado.** `lib/recommendations/dismissal-recurrence.test.ts` (9 tests:
+las dos ramas, las tres guardas, selección del run más temprano tras el
+descarte, filas independientes en una sola llamada) · tests nuevos en
+`recommendations-client.test.tsx` (las tres formas de la línea de veredicto,
+la insignia de la tarjeta activa) · `pnpm test` (3.032/3.032) · `pnpm run
+validate` (build + typecheck + lint).
+
+**El propio piloto de esta PR encontró un hueco de cobertura en sí mismo, y
+se cerró en la misma PR.** `ux-pilot` devolvió INCONCLUSIVE, no PASS: ni el
+barrido genérico ni `recommendations-interactions.spec.ts` (el journey
+dedicado a esta pantalla) abrían nunca la pestaña "Resueltas" — el único
+sitio donde renderiza absolutamente todo lo que construye esta fase, Fase A
+incluida. No es un fallo de este cambio; es que el journey nació antes de
+que "Resueltas" existiera como pestaña con contenido propio que probar, y
+nadie volvió a por él. Añadido el mismo paso que ya usan "Alta prioridad" y
+"Técnico" (clic por texto, captura, vuelta a "Todas") para no dejar la fase
+sin una sola captura que la enseñe — el mismo fallo, un peldaño distinto, que
+ya corrigieron PILOT-PROJECT-PICK-1/2 y PILOT-HYDRATION-CLICK-1 en su momento.
+Segunda pasada del mismo piloto, ya sobre ese arreglo: capturas reales
+confirmadas (PASS), pero sólo del viewport — el bloque de "acciones
+prioritarias" se queda pintado encima de la lista en cualquier pestaña, así
+que sólo cabían 1-3 filas del historial real. `captureInteraction` pasa a
+`{ fullContent: true }` en esta captura, mismo mecanismo que ya usa la
+guía generada de `llms.txt` para el mismo problema (fila más alta que el
+fold). Tercera pasada, ya con la captura completa: confirmado que la lista
+mostrada es la ENTERA (idéntica en las tres anchuras pese a alturas de
+imagen muy distintas), no un recorte — dos filas, las dos resueltas
+automáticamente, ninguna marcada como hecha. La razón de fondo, encontrada en
+esta pasada: el único journey de escritura que descarta una recomendación
+real (`--journeys actions`, AUDIT-REPRO-1) opera exclusivamente sobre el
+proyecto Mozilla, y el journey de lectura que abre "Resueltas" visita
+Genscore — dos proyectos que nunca se cruzan en la misma pasada. Así que esta
+cobertura sigue declarada como pendiente, no como probada, y ahora con causa
+raíz conocida en vez de una simple ausencia de datos; propuestas concretas en
+los tres informes del piloto de la PR (la más barata: comprobar si el propio
+`--journeys actions` ya deja el caso servido tras su siguiente escaneo).
+
+**Trazabilidad.** `lib/recommendations/dismissal-recurrence.ts` ·
+`lib/recommendations/dismissal-recurrence.test.ts` ·
+`lib/recommendations/prediction-verification.ts` (renombrado) ·
+`app/dashboard/projects/[projectId]/recommendations/page.tsx` ·
+`app/dashboard/projects/[projectId]/recommendations/recommendations-client.tsx` ·
+`docs/adr/0041-recommendation-prediction-verification.md` (adenda) ·
+`tests/pilot/journeys/recommendations-interactions.spec.ts`; §181, §188.
+Consulta previa a `geo-strategy`.
+
+---
+
+## 191. Dos motores de acuerdo sobre el mismo prompt dejaban de verse — cada tarjeta pasa a decir qué motor habla (RECS-EVIDENCE-2, Fase 7, 2026-08-28)
+
+**El hallazgo del auditor externo (P0-03).** Ninguna recomendación decía qué
+motor (Gemini/ChatGPT/Claude) respaldaba su evidencia, y dos acciones sobre
+el mismo prompt podían leerse como contradictorias sin esa dimensión. El
+informe también señalaba 22 recomendaciones con duplicados como ruido, y una
+cabecera "hasta +14 puntos" que no cuadraba con las tarjetas visibles
+(+11 y +4).
+
+**Diagnóstico (agente `Explore`, sólo lectura), y una corrección de rumbo a
+mitad de implementación.** De los seis campos que pide el informe, cuatro ya
+existían (fecha, evidencia, prompt, competidor — dentro de `evidence_json`).
+Sólo faltaban dos: **motor**, que el executor ya leía de
+`scan_prompt_results` pero descartaba antes de pasarlo al generador; y
+**respuesta objetivo**, sin cambios en esta fase. El plan aprobado inicial
+decía *"el dedupe pasa a ser por prompt+motor"* — al implementarlo se vio que
+eso estaba mal: `perPromptGapCards` genera un candidato por CADA fila de
+`scan_prompt_results` (una por prompt+motor desde que un run ejecuta varios
+motores, migración 0009), y el paso de dedupe final sólo conservaba el de
+mayor severidad — cuando dos o tres motores coincidían en el mismo hallazgo
+sobre el mismo prompt, sólo sobrevivía UNO, perdiendo la evidencia de los
+demás en silencio. Separar el dedupe por motor habría IDO EN CONTRA del
+propio criterio de aceptación del informe (">95% sin duplicado", "agrupación
+de acciones equivalentes") multiplicando tarjetas en vez de agruparlas.
+
+**La corrección real: agrupar por prompt ANTES de decidir el hallazgo, no
+después.** `perPromptGapCards` ahora agrupa `promptResults` por
+`stableId` (el mismo `project_prompts.id` que ya usaba RECS-DEDUPE-1) y
+evalúa cada condición (visibilidad, cita) sobre el GRUPO, no fila a fila. El
+resultado: como mucho una tarjeta de cada tipo por prompt (nunca más de
+antes), y esa tarjeta agrega la evidencia de TODOS los motores que
+coincidieron — nunca menos que antes. Cuando los motores discrepan (uno ve
+la marca mencionada, otro no), el prompt puede legítimamente sacar dos
+tarjetas distintas — visibilidad para los motores que no vieron nada, cita
+para los que sí — cada una con su propia evidencia, sin mezclarlas.
+
+**Motor viaja de principio a fin.** `PromptResultInput.provider` (nuevo,
+opcional) → `AffectedPromptDetail.provider` (nuevo, no-opcional dentro del
+tipo pero `null` cuando el llamador no lo da) → `lib/scan/executor.ts` lo
+pasa desde la misma fila que ya seleccionaba para `engineCoverage`/scores,
+cero consultas nuevas. En la pantalla, cada línea de prompt afectado del
+panel expandido lleva el glifo de motor compartido (`EngineGlyph`,
+`getEngineMeta` — `lib/scan/engine-meta.ts`, el mismo que usan Prompts y
+Overview), nunca una copia local. Filas de evidencia persistidas antes de
+esta fase simplemente no llevan glifo — tri-estado, como toda esta zona: no
+se asume Gemini por defecto para evidencia histórica, aunque
+`normalizeProvider` sí lo haga para filas de escaneo reales que nunca tienen
+`provider` null legítimamente.
+
+**Lo que esta fase NO toca.** La cabecera "hasta +N puntos" no es un bug —
+ADR 0017 §3 ya documenta que es un techo conjunto sobre la UNIÓN de prompts
+afectados, deliberadamente distinto de la suma ingenua de las tarjetas
+(que contaría dos veces un prompt compartido por dos reglas). Explicar esa
+relación en pantalla es la Fase 7b, con Task Intake propio, no una extensión
+silenciosa de ésta. Tampoco se añade "respuesta objetivo" como campo nuevo
+—`affected_prompt_details[].id` ya es el id de la fila de respuesta
+concreta (`scan_prompt_results.id`)— ni se tocan las reglas de agregación
+(`close_competitor_gap` y similares), que ya aceptaban filas de varios
+motores sin este problema porque nunca fueron una tarjeta por fila.
+
+**Comprobado.** `pnpm test` (219/219 ficheros, 3.022/3.022 tests, 3 tests
+nuevos en `recommendation-engine.test.ts` que prueban la fusión, la
+discrepancia entre motores y el registro de `provider`), `pnpm run validate`
+(build + typecheck + lint).
+
+**Trazabilidad.** `lib/recommendations/recommendation-engine.ts`
+(`PromptResultInput.provider`, `AffectedPromptDetail.provider`,
+`perPromptGapCards`) · `lib/recommendations/recommendation-engine.test.ts` ·
+`lib/scan/executor.ts` · `app/dashboard/projects/[projectId]/recommendations/
+recommendations-client.tsx` · `docs/external-audit-2026-08.md` Fase 7.
+
+**Nota de numeración.** Nació como §190 sobre una `main` que llegaba al §189.
+Mientras esta rama seguía abierta, RECS-LOOP-1 Fase B (#503) reclamó ese
+mismo §190 y mergeó primero, así que esta sección —la que no estaba en
+`main`— renumera a **§191**, con todas sus referencias (`grep -rn "§191"`).
+Mismo protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185/§187
+de este mismo fichero.
+
+---
+
+## 195. La tendencia deja de anunciarse como requisito técnico (RECURRING-VALUE-1, Fase 3, primer recorte, 2026-08-29)
+
+**El hallazgo del auditor externo, y por qué era cierto sobre su sesión y
+falso sobre el producto.** La segunda tanda de material decía que "falta el
+histórico verificable" — pero el auditor sólo tuvo un escaneo, y con uno el
+producto retira correctamente todo lo temporal. El problema real no era la
+falta de funcionalidad (sparkline, delta con guardas, tendencia de SoV y
+resumen semanal ya existen), sino que **"La tendencia estará disponible con
+≥2 escaneos" describe un requisito técnico en vez de decir algo útil al
+usuario que decide si paga**.
+
+**Decisión del fundador: sin fecha.** El diagnóstico inicial (agente
+`Explore`) proponía sustituir esa frase por una fecha concreta ("tu próxima
+medición es el 5 sep"), calculada desde la cadencia del plan
+(`RECURRING_INTERVAL_MS_BY_PLAN`, `lib/scan/cron.ts`) — pero no existe hoy
+ningún cálculo de "próximo escaneo" en el producto, y el cron puede diferir
+un ciclo por presupuesto o racha de fallos, así que una fecha con esa
+provisionalidad habría sido una promesa que a veces se incumple. El fundador
+cortó por lo sano: **quitar la frase y no poner nada** en Visión general, y
+en Recomendaciones un texto sin fecha, "La verás reflejada en tu próximo
+escaneo" — la misma promesa honesta, sin comprometerse a un día. Esto reduce
+el primer PR de la fase a copy puro: sin módulo nuevo, sin cálculo de fecha,
+sin migración.
+
+**Dos sitios, dos frases retiradas.** `app/dashboard/projects/[projectId]/
+page.tsx` tenía la condición **dos veces**: el subtítulo del resumen
+("Muestra inicial — la tendencia estará disponible con ≥2 escaneos.") y el
+pie del gauge cuando no hay tendencia ni matiz de muestra
+(`sampleNudge`). Las dos desaparecen sin sustituto — mismo criterio que
+`AUDIT-NO-BUTTON-1` (§25) ya dejó escrito una vez: *"al quitar un control, la
+tentación es sustituirlo por algo. A veces el hueco es la respuesta."*
+
+**Recomendaciones: la promesa se cuelga del botón que la activa.** Junto a
+"Marcar como hecho", cada tarjeta activa lleva ahora "La verás reflejada en
+tu próximo escaneo" — cierra el círculo con lo que RECS-LOOP-1 (§181, §190)
+ya hace de verdad: el siguiente escaneo comparable verifica si la brecha
+marcada se movió, y la pestaña "Resueltas" enseña el veredicto. Lo único que
+faltaba era que la tarjeta activa lo anunciara antes de que el usuario
+pulsara el botón.
+
+**Lo que esta fase NO hace, todavía.** El calendario visible (última
+ejecución, próxima ejecución, cadencia) y las alertas con umbral configurable
+—los otros dos entregables de `docs/external-audit-2026-08.md` Fase 3— quedan
+para PRs separados: el primero es superficie nueva de UI, el segundo necesita
+migración y una decisión de producto sobre el valor por defecto del umbral.
+Ninguno de los dos se demora por falta de plan — el diagnóstico ya está
+hecho — sino por la regla de un PR por fase de `CLAUDE.md`.
+
+**Comprobado.** `pnpm test` (220/220 ficheros, 3.035/3.035 tests), `pnpm run
+validate` (build + typecheck + lint).
+
+**Nota de numeración.** Nació como §191 sobre una `main` que llegaba al §190.
+Mientras esta rama seguía abierta, RECS-EVIDENCE-2 (#504) reclamó ese mismo
+§191 y mergeó primero, renumerando esta sección a §192. Antes de que esta
+rama pudiera mergear ese §192, RECURRING-CADENCE-1 Fases A y B (#505, #511) y
+ACTIONS-OBSERVABLE-1a (#507) reclamaron sucesivamente §192, §193 y §194 y
+mergearon primero, así que esta sección —la que sigue sin estar en `main`—
+renumera de nuevo a **§195**, con todas sus referencias (`grep -rn "§195"`).
+Mismo protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185/§187/§191
+de este mismo fichero.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/page.tsx` ·
+`app/dashboard/projects/[projectId]/recommendations/recommendations-client.tsx`
+· `docs/external-audit-2026-08.md` Fase 3.
+
+---
+
+## 192. Un escaneo manual se comía el escaneo recurrente del día siguiente (RECURRING-CADENCE-1 Fase A, 2026-08-29)
+
+**El síntoma que lo abrió.** El fundador: *"hay días que el escaneo recurrente
+parece que no funciona bien"*. Su propio historial de Movistar (plan Pro,
+cadencia diaria) lo enseñaba sin necesidad de logs: **27 ago 13:08** y **29 ago
+08:03**, sin nada el 28. No era una sensación.
+
+**Causa 1 — la elegibilidad se medía con una ventana móvil, no contra el
+horario del cron.** `vercel.json` dispara `/api/cron/weekly-scans` a las `0 6
+* * *` UTC (08:00 peninsular — de ahí el escaneo del 29 a las 08:03). Pero
+`processCandidate` no comparaba contra ese horario: comparaba contra
+`Date.now() - (24h - CRON_DRIFT_SAFETY_MARGIN_MS)`, o sea las últimas 22 horas.
+El 28 a las 08:00 ese corte caía en el 27 a las 10:00, y el escaneo del 27 fue
+a las 13:08 → `skipped_recent`, y el día perdido.
+
+Lo importante es de dónde salía ese 13:08: **no de un disparo del cron**. Un
+escaneo manual, o un reintento automático de `reconciliation.ts`. Cualquier run
+*fuera del horario* caía dentro de la ventana del disparo siguiente y le
+costaba al proyecto un día entero de su cadencia. Un usuario que entraba por la
+tarde a lanzar un escaneo a mano estaba cancelando el automático de mañana sin
+saberlo — y sin nada en pantalla que lo dijera.
+
+El margen de 2h no era el error: fue un parche correcto para el problema
+simétrico (el escaneo de un disparo aterriza minutos después de la hora fija, y
+contra un límite de 24h exactas la comparación cae al lado equivocado un día sí
+y otro no). Pero parcheaba el síntoma de una pregunta mal planteada. La
+pregunta correcta no es *"¿hace menos de 24h del último escaneo?"* sino
+**"¿se ha escaneado este proyecto desde el disparo anterior?"** — que ninguna
+deriva y ningún run fuera de horario pueden responder mal. `RECURRING_CRON_UTC_HOUR`
++ `mostRecentCronFiringAt` sustituyen al margen, que desaparece.
+
+Para la cadencia semanal de Starter el corte es *el disparo menos seis días*,
+no "hace 7×24h": así el límite sigue siendo un instante fijo y un escaneo de
+hace 7 días cualifica a cualquier hora que se hiciera.
+
+**Causa 2 — el barrido podía empezar un proyecto que no le cabía.** El bucle se
+acotaba con `if (Date.now() - startedAt > TIME_BUDGET_MS) break` — la forma
+*"después"*, sobre el pasado, que este repositorio ya lleva dos incidentes
+prohibiendo (ADR 0029 Adenda, ADR 0037) y que `lib/scan/drive-budget.ts` ya
+resolvía bien **para el driver de primer plano y sólo para él**. Un lote que
+arrancaba a los 44s con un `executePendingScan` de hasta 50s
+(`SCAN_INVOCATION_WORST_CASE_MS`) llegaba a ~94s en una función de
+`maxDuration = 60`.
+
+Y lo que hacía eso especialmente caro aquí: Vercel mata la función antes de la
+respuesta, y **las dos continuaciones viven en `after()`**, que no corre sin
+respuesta. Un solo desbordamiento se llevaba por delante la cadena del barrido
+*y* la del propio escaneo: los proyectos del último lote quedaban `running`
+hasta que el barrido del día siguiente los reconciliaba como timeout, y el día
+se quedaba en ≤5 proyectos. `canStartAnotherSweepBatch` vive en el mismo módulo
+que `canStartAnotherScanInvocation` precisamente para que el próximo arreglo no
+vuelva a aterrizar en uno de los dos y no en el otro.
+
+**Causa 3 — la continuación del barrido no comprobaba `response.ok`.** Un
+`await fetch` pelado: un 401 de deployment protection, un 404 por un
+`getSiteUrl()` obsoleto, un 400 del esquema del receptor o un 500 resuelven
+igual que un éxito, y el log de resumen escribía `continuationScheduled: true`
+de todas formas. La cadena se paraba en un eslabón, el barrido servía como
+mucho `MAX_PROJECTS_PER_CRON_RUN` proyectos al día, y no había en ningún sitio
+una sola línea diciéndolo. Es **literalmente la lección de ADR 0037**, aprendida
+un nivel más abajo en `lib/scan/continuation.ts` —con su comentario explicando
+por qué— y nunca aplicada a la cadena de proyectos que está justo encima.
+
+**Lo que esto cuesta, dicho y no maquillado.** Con la aritmética correcta, un
+lote de 2 proyectos en paralelo consume el presupuesto de la invocación: en la
+práctica el barrido hace **un lote por invocación** y encadena. El techo real
+pasa a ser `MAX_SWEEP_CHAIN_INVOCATIONS × BATCH_CONCURRENCY` ≈ 40 proyectos al
+día, frente a los 100 que la configuración anterior *decía* permitir. Ese 100
+nunca fue real —era justo el número que los desbordamientos de la causa 2
+impedían alcanzar—, pero el 40 sí es un techo nuevo y explícito. Se sube con
+`MAX_SWEEP_CHAIN_INVOCATIONS` cuando haga falta; hoy no hace falta.
+
+**Lo que NO entra en esta fase, y sigue abierto.** Los encontró el mismo
+análisis y esperan a la Fase B (alerta por correo, ya pedida por el fundador el
+2026-08-29):
+
+1. **`skipped_failure_streak` no tiene salida.** Tres runs fallidos seguidos y
+   el proyecto queda fuera del recurrente **para siempre**: la rama sale antes
+   de `attemptScan`, así que ni siquiera pasa por `reconcileStuckScanRuns`
+   (que sólo se invoca desde `run-creation.ts`). Sólo lo desbloquea un escaneo
+   manual con éxito, y nadie se entera.
+2. **No hay alerta a nivel de barrido.** `checkAndSendScanHealthAlert` cubre
+   bien lo que pasa *dentro* de un run, pero un barrido que devuelve
+   `scanned: 0`, una cadena cortada o un proyecto congelado por el punto 1 sólo
+   existen como un `console.info` en un log efímero — justo lo que la regla
+   "un fallo que el operador puede arreglar tiene que llegar al operador"
+   (ADR 0029 Fase B) prohíbe, aplicada al run y no al barrido.
+3. **Menor, para cuando haya volumen:** el `Promise.all` sobre todos los
+   proyectos elegibles lanza una consulta por proyecto sin límite de
+   concurrencia y antes de cualquier control de presupuesto.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación: no
+quita botones ni reintentos. Sí *estrecha* el presupuesto del barrido, y la
+premisa que sostiene ese estrechamiento es que la cadena de continuación
+funciona. Si esa cadena se rompe, el barrido sirve 2 proyectos al día en vez de
+40 — más silencioso que antes, no menos. Lo que verifica esa premisa hoy es la
+causa 3 de esta misma fase (el `response.ok` ahora deja rastro), y lo que la
+verificará de verdad es la Fase B: hasta que exista, el rastro sigue siendo un
+log que hay que ir a mirar.
+
+**Trazabilidad.** `lib/scan/cron.ts` · `lib/scan/cron.test.ts` ·
+`lib/scan/cron-schedule.test.ts` (nuevo, ancla el horario contra `vercel.json`) ·
+`lib/scan/drive-budget.ts` · `lib/scan/drive-budget.test.ts` ·
+`lib/scan/constants.ts` (`SWEEP_SAFE_CEILING_MS`); ADR 0016, ADR 0029 Adenda,
+ADR 0037. Análisis a petición del fundador, Task Intake aprobado 2026-08-29.
+
+---
+
+## 196. La pestaña "Resueltas" tenía el icono de check desalineado del texto (2026-08-29)
+
+**El hallazgo, a ojo, en una captura del preview de RECURRING-VALUE-1.** El
+fundador vio un hueco enorme entre el icono de check y el resto de la fila en
+cada tarjeta de la pestaña "Resueltas" de Recomendaciones — no era una
+apreciación subjetiva: el icono y el texto ni siquiera estaban en la misma
+columna de grid.
+
+**Causa.** `RECS-REDESIGN-1` quitó el chip de rango (`.rec-rank`) de la
+tarjeta activa (`RecCard`) hace tiempo, dejando `.rec-main` con **un solo**
+hijo directo. `.rec2-scope .rec-main { grid-template-columns: 1fr }` (el
+repintado de esta pantalla) está calculado para ese único hijo — el propio
+comentario del CSS lo dice: *"no rank chip"*. `ResolvedHistoryCard`
+(`RECS-3`, la fila de solo lectura de "Resueltas") nunca se actualizó cuando
+se quitó el chip en el resto de la pantalla: seguía metiendo el icono de
+check como un SEGUNDO hijo de `.rec-main`, colándose como su propio ítem en
+un grid pensado para uno solo.
+
+**La corrección.** El icono se mueve dentro del único hijo de `.rec-main`,
+en línea junto a las insignias ("Marcada como hecha" / "Resuelta
+automáticamente"), en vez de ser un ítem de grid aparte — mismo contrato que
+ya cumple `RecCard`. Reducido de 34×34 a 20×20 para no competir en altura con
+las insignias de la misma fila.
+
+**Por qué no lo cazó el `ux-pilot`.** El barrido de lectura por defecto no
+visita la pestaña "Resueltas" en su journey genérico de Recomendaciones —
+mismo hueco de cobertura que ya documenta §190 (RECS-LOOP-1 Fase B) sobre esa
+misma pestaña, y que su propia PR dejó anotado como pendiente en vez de
+resuelto.
+
+**Comprobado.** `pnpm test` (221/221 ficheros, 3.053/3.053 tests), `pnpm run
+validate` (build + typecheck + lint).
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+recommendations-client.tsx` (`ResolvedHistoryCard`); §190.
+
+**Nota de numeración.** Nació como §193 sobre una `main` que llegaba al §192.
+Antes de que esta rama pudiera mergear, RECURRING-CADENCE-1 Fase B (#511) y
+la propia RECURRING-VALUE-1 (#506, log §195) mergearon primero y reclamaron
+§193/§194/§195, así que esta sección —la que sigue sin estar en `main`—
+renumera a **§196**, con todas sus referencias (`grep -rn "§196"`). Mismo
+protocolo que ya documentan los §159/§161/§163/§173/§175/§178/§184/§185/§187/§191/§195
+de este mismo fichero.
+
+---
+
+## 193. AUDIT-REPRO-1 tenía el journey de clasificación pero nadie podía dispararlo (ACTIONS-OBSERVABLE-1a, 2026-08-30)
+
+**El hueco.** `AUDIT-REPRO-1` (Fase 0, log §187) dejó terminado el journey de
+Playwright que clasifica las seis acciones de Recomendaciones como `real` /
+`invisible` / `entorno` (`tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`), aislado tras `--journeys actions` y con su
+cerradura en el self-check. Pero a diferencia de `scan` (`ux-pilot-scan.yml`,
+UX-PILOT-3) y `write` (`ux-pilot-write.yml`, UX-PILOT-2a), nunca se le dio un
+workflow de `workflow_dispatch` que lo pudiera lanzar contra un preview real.
+El journey existía y no lo había ejecutado nadie.
+
+Esto importaba porque Fase 4 (`ACTIONS-OBSERVABLE-1`, el arreglo de las seis
+acciones) no se puede acotar sin ese veredicto — el propio plan
+(`docs/external-audit-2026-08.md`) dice explícitamente "el reparto exacto sale
+de la clasificación", y la clasificación no existía todavía. Detectado al
+hacer Task Intake de Fase 4: antes de proponer alcance, se comprobó que el
+mecanismo para medirlo de verdad faltaba.
+
+**Qué se ha añadido.** `.github/workflows/ux-pilot-actions.yml`, calcado de
+`ux-pilot-write.yml` (mismo proyecto reservado vía `PILOT_WRITE_PROJECT_ID`,
+mismo arreglo de `pr_number` como `string` en vez de `number`, mismo patrón de
+rama de evidencia `pilot-evidence/pr-<N>-actions`), con `--journeys actions`
+en vez de `write`. Cero cambios de producto — `scripts/pilot.mjs` ya soportaba
+el flag desde Fase 0.
+
+**Mismas garantías que `scan`, sin secreto.** `workflow_dispatch` únicamente
+(sin `deployment_status`, así que ningún deploy de preview puede dispararlo
+solo), y el flag `--journeys actions` sigue sin ser alcanzable por el piloto
+de cada deploy — `checkActionsLockout` (ya existente desde Fase 0) lo sigue
+comprobando sin cambios. Ningún secreto nuevo gatea el dispatch, mismo
+razonamiento que UX-PILOT-3: quien tiene acceso de escritura al repositorio ya
+puede dispararlo, así que un secreto adicional sólo añadiría fricción, no
+control de acceso.
+
+**Recordatorio que viaja con el propio workflow.** Una de las seis acciones
+(«Marcar como hecho») es destructiva y sin deshacer hoy — consume una
+recomendación real del proyecto de escritura reservado, coste ya aceptado por
+el fundador el 2026-08-27 (log §187). El comentario de cabecera del workflow
+lo repite para que quien lo dispare no lo descubra a mitad de ejecución.
+
+**Lo que esta fase NO hace.** No clasifica nada por sí sola — el resultado
+depende de que el fundador dispare el workflow a mano contra el preview de
+algún PR vivo, exactamente igual que ya hace con `ux-pilot-scan.yml`. No
+propone ni implementa ningún arreglo de las seis acciones: eso es
+`ACTIONS-OBSERVABLE-1b`, cuyo alcance concreto sale de ese dispatch, no de
+este PR.
+
+**Comprobado.** `pnpm test` (220/220 ficheros, 3.035/3.035 tests, incluida
+`tests/pilot/support/selfcheck-checks.test.ts` sobre `checkActionsLockout`),
+`pnpm run validate` (build + typecheck + lint), todo en verde. El propio PR no
+llevó pasada de `ux-pilot` con juicio visual — no hay pantalla nueva que
+pilotar, es un workflow de CI — pero sí recibió un build de Vercel real (todo
+push a una rama nueva construye por no tener `VERCEL_GIT_PREVIOUS_SHA` contra
+qué comparar, corrección hecha en el propio PR sobre una afirmación inicial
+equivocada) y el piloto de lectura por defecto pasó limpio sobre él.
+
+**Trazabilidad.** `.github/workflows/ux-pilot-actions.yml`;
+`tests/pilot/journeys/actions/recommendation-actions.spec.ts` (sin cambios,
+ya existía); `scripts/pilot.mjs` (`PROJECT_SETS.actions`, sin cambios);
+`scripts/pilot-selfcheck-checks.mjs` (`checkActionsLockout`, sin cambios);
+`docs/external-audit-2026-08.md` Fase 4; PR #507.
+
+---
+
+## 194. El barrido recurrente fallaba y nadie se enteraba (RECURRING-CADENCE-1 Fase B, 2026-08-30)
+
+**Lo que pidió el fundador**, justo después de aprobar la Fase A: *"quiero un
+email alerta si vuelve a fallar un escaneo diario de cualquier cuenta"*.
+Destinatario decidido por él el mismo día: su propia dirección, vía
+`OPS_ALERT_EMAIL`. **Sólo operador, nunca el cliente** — misma regla que el
+resto de `lib/email/transactional.ts`: el dueño de la cuenta no puede arreglar
+que nuestro cron se quedara sin presupuesto de invocación.
+
+**Lo que ya existía y no se ha duplicado.** `checkAndSendScanHealthAlert`
+(ADR 0029 Fase B) ya avisaba de lo que pasa DENTRO de un run terminado: un
+motor sin cuota o mal configurado, un motor que no responde o del que no se
+extrae nada, y un run caducado por timeout que ya gastó su reintento. Esta fase
+no toca nada de eso.
+
+**Los cuatro agujeros, todos un piso por encima de lo que aquello cubría:**
+
+1. **Un escaneo del cron que revienta no avisaba a nadie.** Si
+   `createPendingScanRunForCron` o `executePendingScan` lanzaban, el barrido
+   apuntaba `status: "failed"` en su resumen y seguía. El resumen era un
+   `console.info`. Es literalmente el caso que el fundador describió.
+2. **`skipped_failure_streak` era un callejón sin salida silencioso.** Tres
+   runs fallidos seguidos y el proyecto sale del recurrente para siempre; la
+   rama sale antes de `attemptScan`, así que ni siquiera pasa por
+   `reconcileStuckScanRuns`. Sólo lo desbloquea un escaneo manual con éxito.
+3. **El run que falla con cero resultados y agota reintentos marcaba la fila y
+   no avisaba** (`reconciliation.ts`, rama `capReached` del bloque de
+   cero-resultados). Su hermano de timeout, veinte líneas más arriba, sí
+   avisaba desde ADR 0029. Olvido, no decisión — corregido aquí.
+4. **Nada avisaba a nivel de barrido.** Una pasada que no escanea nada teniendo
+   trabajo aplazado, o una cadena de continuación rechazada (que la Fase A
+   acababa de hacer *visible en el log*), seguían sin despertar a nadie.
+
+**Por qué un correo por PASADA y no por proyecto.** El deduplicado de
+`sendScanHealthAlertEmail` se apoya en `job_logs`, y esa tabla exige una FK
+real a `(job_id, run_id, project_id)` (migración 0001). El barrido opera por
+encima de los jobs y no tiene ninguno: no puede escribir ahí sin una migración,
+y las migraciones están en la lista de prohibido sin aprobación explícita. La
+salida elegida no es un almacén distinto sino **no necesitar almacén**: un
+resumen por pasada, con el propio disparo diario haciendo de deduplicador. De
+paso se lee mejor — "estos 3 dominios no se escanearon hoy" en un correo, en
+vez de tres correos.
+
+**El precio, dicho y no escondido:** si los fallos se reparten entre varios
+eslabones de la cadena de continuación, ese día salen dos o tres correos en vez
+de uno. Acotado (el techo son `MAX_SWEEP_CHAIN_INVOCATIONS` eslabones) y raro.
+La alternativa sin ese defecto era una migración de esquema, y no compensa.
+
+**Los silencios son tan deliberados como los avisos.** `skipped_recent`,
+`skipped_plan_ineligible` y `skipped_active_run` son el funcionamiento normal y
+no alertan nunca. Y `sweep_no_progress` exige `deferred > 0`: una pasada que
+escanea cero porque todos sus candidatos estaban al día es exactamente lo que
+debe pasar la mayoría de los días; lo anómalo es quedarse trabajo sin hacer Y
+no haber avanzado nada, que es cuando el guardián de progreso corta la cadena.
+Ambos casos tienen su test negativo en `sweep-alert.test.ts`, porque una alerta
+que llega todos los días es una que se aprende a ignorar — peor que ninguna
+(ADR 0029: "dedupe across projects: an alert that fires twenty times is one
+that gets ignored").
+
+**Lo que esta fase NO hace, a propósito.** No le devuelve una salida automática
+a `skipped_failure_streak`: lo hace *visible*, no lo reintenta solo. Convertir
+ese guardián en un bucle de reintentos es un cambio de comportamiento con su
+propia decisión detrás, y con el aviso en el buzón el fundador lo desbloquea
+con un clic. El texto del correo lo dice explícitamente, para que quien lo
+reciba sepa que esa fila no se arregla sola.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación, pero
+**toda ella cuelga de una premisa que no se puede verificar desde el código**:
+que `OPS_ALERT_EMAIL` esté configurada en Vercel. Si no lo está, no sale un
+solo correo. **El fundador confirmó el 2026-08-30 que `OPS_ALERT_EMAIL` y
+`RESEND_API_KEY` están puestas en Vercel** — dato con fecha, no supuesto: una
+variable de entorno puede cambiar y esta anotación caduca. Lo demás que la
+verifica: `isOpsAlertConfigured()` se comprueba
+antes de cada envío y, si falla, registra los hallazgos completos en vez de
+tragárselos (con su test). Lo que se queda sin salida si la premisa falla: nada
+nuevo — se vuelve al estado anterior a esta fase, un log que hay que ir a
+mirar. No es hipotético: el 2026-08-05 se descubrió que la variable llevaba sin
+configurar desde siempre y la alerta de AUDIT-AFTER-SCAN-1 estaba inerte desde
+el día en que se escribió.
+
+**Trazabilidad.** `lib/scan/sweep-alert.ts` (nuevo) ·
+`lib/scan/sweep-alert.test.ts` (nuevo) · `lib/scan/cron.ts` ·
+`lib/scan/cron.test.ts` · `lib/scan/reconciliation.ts` ·
+`lib/email/transactional.ts` (`sendSweepHealthAlertEmail`,
+`sendChainRejectedAlertEmail`); §192, ADR 0029 Fase B. Task Intake aprobado por
+el fundador el 2026-08-30.
+
+---
+
+## 198. El journey de clasificación de acciones nunca abría la tarjeta antes de buscar "Marcar como hecho" (2026-09-01)
+
+**El síntoma.** Dos disparos reales de `ux-pilot-actions.yml` contra el
+preview de PR #512 (2026-08-31 y 2026-09-01) terminaron en `PILOT FAIL` en
+la acción 3 — `TimeoutError: locator.click: Timeout 15000ms exceeded`, con
+el mismo log de Playwright en las dos pasadas: `<div>…</div> from <div
+tabindex="0" role="button" class="rec-main" aria-expanded="false">…</div>
+subtree intercepts pointer events`. Reproducible al 100%, no un flake.
+
+**La causa, no el síntoma.** "Marcar como hecho" vive dentro de
+`.rec-detail`, colapsado a `max-height: 0; overflow: hidden` hasta que la
+tarjeta se abre (`.rec-card.open .rec-detail { max-height: 4000px; }`,
+`app/globals.css`). `card.getByRole("button", { name: /marcar como
+hecho/i })` lo encuentra en el árbol de accesibilidad y
+`dismissButton.isVisible()` devuelve `true` — el elemento no es
+`display:none` ni `visibility:hidden`, sólo está clipado por su ancestro —
+pero el punto de clic real cae sobre `.rec-main`, el toggle colapsado que
+sigue cubriendo esa zona (`aria-expanded="false"` en el log de las dos
+pasadas). La acción 1 del mismo journey ya abría su tarjeta antes de
+interactuar (`await card.click(); // abre la tarjeta`); la acción 3 nunca lo
+hacía — un olvido de autoría del test, no un bug de producto.
+
+**Por qué NO es P0 nuevo.** Un usuario real llega a "Marcar como hecho"
+haciendo clic en la tarjeta o en "Ver más" primero — el propio flujo de la
+pantalla obliga a abrirla para leer el detalle antes de decidir. El fallo
+vive enteramente en el guion del piloto, que saltaba directo al botón sin
+pasar por ese paso.
+
+**La corrección.** `tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`, acción 3: comprueba `aria-expanded` en
+`.rec-main` y, si la tarjeta no está ya abierta, la abre y espera a
+`aria-expanded="true"` antes de buscar el botón — mismo patrón que la
+acción 1, extraído a guardia explícita en vez de repetido a ciegas.
+
+**Lo que esto deja pendiente.** Las dos pasadas fallidas se pararon en la
+acción 3, así que las acciones 5 y 6 (dos de las tres variantes de
+"generar" y "activar seguimiento recurrente" ya tienen veredicto; faltan
+las que dependían de completar la 3 en la misma pasada) siguen sin
+clasificar. Hace falta un tercer disparo de `ux-pilot-actions.yml` con este
+arreglo para completar la Fase 4.
+
+**Comprobado.** `pnpm exec tsc --noEmit` limpio. `pnpm test` — 221/222
+ficheros verdes; el único rojo (`app/dashboard/settings/billing/
+actions.test.ts`) es preexistente en `main` y ajeno a este cambio (viene de
+`7e83034`, `pricing: real promo mechanism`, no tocado aquí).
+
+**Trazabilidad.** `tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`; runs de GitHub Actions #33390047627
+(2026-08-31) y #33481552447 (2026-09-01); `docs/external-audit-2026-08.md`
+Fase 4.
+
+---
+
+## 197. El test de la promo de Checkout dependía del reloj real y rompió al cerrarse la ventana (2026-09-01)
+
+**El problema.** `app/dashboard/settings/billing/actions.test.ts` — "applies
+the promo coupon to the Checkout Session..." — llamaba a `createCheckoutSession`
+sin mockear `isPromoActive()` (`app/pricing/plans-data.ts`), que lee
+`Date.now()` contra `PROMO_ENDS_AT` real
+("2026-09-01T00:00:00+02:00", PRICING-PROMO-1, log §152). El propio test lo
+avisaba en un comentario: *"estos tests sólo significan algo mientras la
+ventana de promo (hasta 2026-09-01) esté abierta"* — y dejó de significar algo
+en el momento exacto en que esa fecha llegó, bloqueando `tests · typecheck ·
+lint` en `main` y por tanto el merge de cualquier PR abierto ese día
+(descubierto arreglando `ENTITY-HYGIENE-1`, PR #512, sin relación alguna con
+precios).
+
+**No es un bug de producto.** `isPromoActive()` hizo exactamente lo que tenía
+que hacer — la promo real ha terminado. El fallo era enteramente del test:
+afirmaba sobre una salida derivada del reloj real sin controlarlo.
+
+**La corrección.** `isPromoActive` se mockea igual que `getPromoCouponIdForPlan`
+(`@/lib/stripe`) — con `vi.mock("@/app/pricing/plans-data", importOriginal)`,
+que mantiene `PLANS` real (`planIdSchema` se construye desde ahí al cargar el
+módulo, `actions.ts:18`) y sólo sustituye `isPromoActive` por un mock
+controlable, con valor por defecto `true` en `beforeEach`. Añadido también el
+caso simétrico que antes sólo se cubría por accidente cuando la ventana
+estaba cerrada: cupón configurado pero `isPromoActive() === false` → sin
+`discounts`. Ningún fichero de producto se toca; `PROMO_ENDS_AT` y
+`isPromoActive` quedan igual.
+
+**Comprobado.** `pnpm test` (222/222 ficheros, 3.070/3.070 tests) y `pnpm run
+validate` en verde.
+
+**Trazabilidad.** `app/dashboard/settings/billing/actions.test.ts`;
+`app/pricing/plans-data.ts` (`isPromoActive`, `PROMO_ENDS_AT`, sin cambios);
+log §152 (PRICING-PROMO-1 Fase C).
+
+## 206. La promo de lanzamiento se extiende hasta el 30 de septiembre (2026-09-01, ampliada 2026-09-07)
+
+**Decisión del fundador**, tomada al ver que `PROMO_ENDS_AT` había caducado
+de verdad a medianoche y tumbado el CI del repo entero (§197): extender la
+ventana en vez de dejarla cerrada. Primera extensión (2026-09-01) al 15 de
+septiembre; el fundador la amplió de nuevo el 2026-09-07, al cerrar la Fase
+4a, directamente al **30 de septiembre** — misma decisión, una sola
+constante, sin pasar por el 15 en producción. `PROMO_ENDS_AT`
+(`app/pricing/plans-data.ts`) pasa de `2026-09-01T00:00:00+02:00` a
+`2026-09-30T00:00:00+02:00`.
+
+**Lo que este cambio NO hace, y por qué importa decirlo.** El comentario que
+ya llevaba la constante advierte que el cupón real de Stripe
+(`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO`, `lib/stripe.ts`) se creó **a
+mano en el panel de Stripe**, con su propio `redeem_by` puesto a la misma
+fecha que esta constante — no derivado de ella en código. Cambiar sólo
+`PROMO_ENDS_AT` hace que la pantalla vuelva a anunciar el precio rebajado,
+pero si el `redeem_by` del cupón en Stripe no se actualiza también a mano,
+el checkout mostrará 59€/19€ y Stripe rechazará el cupón al cobrar —peor que
+no tener promo, porque es una promesa visible que no se cumple al pagar.
+**Acción pendiente fuera de este repo**: actualizar `redeem_by` de los dos
+cupones a `2026-09-30`. Los objetos `Coupon` de Stripe son inmutables salvo
+`name`/`metadata` — la API no permite editar `redeem_by` tras crearlos, así
+que la vía probable es crear dos cupones nuevos con la misma configuración y
+`redeem_by` al 30, y apuntar `STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO` a
+los IDs nuevos en Vercel. El fundador lo gestiona directamente.
+
+**Copy derivado, no tocado.** `PromoStrip` (`components/landing/
+session-ctas.tsx`) ya lee la fecha de `PROMO_ENDS_AT` vía
+`Intl.DateTimeFormat` (TRUST-PROMISES-1, log §182) — el "hasta el 30 de
+septiembre" sale solo, sin ningún literal que cambiar. Un grep de
+`2026-09-01`/`2026-09-15`/`septiembre` fuera de `plans-data.ts` sólo
+encontró una cita de un informe externo ajeno
+(`app/blog/geo-para-agencias/page.mdx`), no copy de producto.
+
+**Efecto colateral encontrado y corregido (primera extensión, sigue
+aplicando).** `lib/env-schema.test.ts` fijaba `afterPromo` a
+`2026-09-02T00:00:00Z` para probar el caso "fuera de la ventana, no hay nada
+que avisar" — con cualquiera de las dos extensiones ese instante cae DENTRO
+de la ventana. Movido a `2026-10-01T00:00:00Z`, después del cierre vigente.
+
+**Comprobado.** `pnpm test`, `pnpm run validate` (build + typecheck + lint),
+ambos en verde.
+
+**Trazabilidad.** `app/pricing/plans-data.ts` (`PROMO_ENDS_AT`);
+`lib/env-schema.test.ts`; log §152, §182, §197.
+
+---
+
+## 199. El piloto dejó de correr solo: ahora lo decide el fundador (VERCEL-COST-1 Fase 5, 2026-08-31)
+
+**Qué se decidió.** `.github/workflows/ux-pilot.yml` deja de dispararse con
+`deployment_status` y pasa a `workflow_dispatch` con el número de PR como
+entrada obligatoria. Ningún despliegue lanza ya una pasada. El Director
+**pregunta al fundador antes de cada Human Gate** si quiere piloto, y sólo
+entonces lo dispara.
+
+**Por qué.** La factura real de agosto (NYP8N3QJ-0005) puso números a lo que
+hasta ahora era teoría: subtotal $53,84, del que **Build CPU Minutes $24,02
+(4d 22h 32m) y Observability Events $18,09 (15.072.081 eventos) son el 79%**.
+6.616.404 Edge Requests en un mes, 220.000 al día, 2,5 por segundo sostenidos
+— en una beta privada sin tráfico orgánico. Eso no es tráfico de clientes: una
+pasada del piloto son ~225 cargas de página (75 pantallas × 3 anchuras) y cada
+carga arrastra 20-50 peticiones entre JS, CSS y fuentes, o sea **~6.750
+peticiones por pasada**; a ~30 despliegues diarios salen ~6M al mes, que clava
+la cifra facturada. El fundador (2026-08-31), al verlo: *"que siempre se me
+pregunte a mí si se lanza el pilot, porque muchas veces no es necesario o no
+hay nada que probar en UI"*.
+
+**Regla de premisa (CLAUDE.md, "Cierre de fase" punto 4).** Esta fase retira una
+garantía automática, así que queda escrito de qué premisa cuelga:
+
+- **Premisa:** el Director pregunta antes de cada Human Gate y el fundador
+  decide con criterio (muchos PRs no tocan UI y no necesitan pasada).
+- **Qué la verifica hoy:** nada automático. Sólo la propia disciplina del
+  Director y las dos líneas añadidas a la sección "Agentic User Pilot" de
+  CLAUDE.md.
+- **Qué se queda sin salida si la premisa falla:** un PR llega al Human Gate sin
+  ninguna verificación visual **y nada lo señala**. Antes, la ausencia de
+  piloto era visible (faltaba el check); ahora la ausencia es el estado por
+  defecto y es indistinguible de "no hacía falta". Es un cambio real de riesgo,
+  no una optimización neutra, y se acepta a cambio de ~$18/mes y de dejar de
+  barrer 20 artículos de blog que no han cambiado.
+
+**Efecto colateral bueno.** Desaparece la clase de fallo del log §115: el
+`deployment_status` que llegaba antes de que el PR existiera hacía que el job
+no resolviera PR, se saltara todo y **publicara el check en verde sin haber
+abierto un navegador**. Se vio dos veces el 2026-08-30 en el PR #511. Con el
+número de PR como entrada no hay nada que resolver, y si el preview de ese
+commit no existe el job **falla con un error explícito** en vez de pasar de
+puntillas.
+
+**Lo que NO cambia.** El piloto sigue siendo obligatorio para dar un PR por
+verificado; el ✅ del workflow sigue sin ser el veredicto (lo da el agente
+`ux-pilot` abriendo capturas); y las excepciones aprobadas (`--journeys scan`,
+`--journeys write`, `--journeys actions`) siguen exactamente igual, ya eran
+`workflow_dispatch`.
+
+**Lo que se consideró y se descartó.** Gatear por etiqueta en el PR en vez de
+por dispatch: una etiqueta no genera un `deployment_status` nuevo, así que
+ponerla no lanzaría nada hasta el siguiente push — justo lo contrario de "lo
+lanzo cuando lo pido". Y un barrido selectivo por diff (sólo las pantallas que
+toca el PR): buena idea en abstracto, marginal una vez que el número de pasadas
+lo decide una persona; queda anotada por si el volumen vuelve a subir.
+
+**Comprobado.** `pnpm test` y `pnpm run validate` en verde;
+`.github/workflows/ux-pilot.yml` parsea y conserva sus 12 pasos.
+
+**Trazabilidad.** `.github/workflows/ux-pilot.yml`; `CLAUDE.md` (Presupuesto de
+builds, Agentic Operating Model paso 9, sección Agentic User Pilot);
+`scripts/vercel-should-build.sh` y su test; log §55, §115 (la clase de fallo que
+esto cierra), §97.
+
+---
+
+## 200. Un asistente de IA como competidor, un término genérico como alias de marca (ENTITY-HYGIENE-1, Fase 9, 2026-08-30)
+
+**Origen.** P1-02 del informe de auditoría externa
+(`docs/external-audit-2026-08.md`, Fase 9): "GEO Score" se sugería como
+alias de marca y nada en el producto impedía que "ChatGPT" —el medio que se
+mide, no un rival del cliente— se tratara como competidor. El plan lo daba
+por un solo hallazgo; la investigación previa a implementar encontró **cinco**
+puntos de entrada reales, no uno, y dos zonas sin cobertura hoy
+(`lib/competitors/**`, con regla de ruta; `lib/brand-aliases/**` y
+`lib/projects/brand-aliases.ts`, sin ninguna).
+
+**Qué se decidió.**
+
+1. **Módulo nuevo, `lib/entity-hygiene/generic-entities.ts`**, sin I/O,
+   compartido por las tres zonas que lo necesitan (Competidores, alias de
+   marca, Recomendaciones) — mismo patrón que `lib/domains/brand-domain.ts`
+   para el matching de dominio propio. Dos listas cerradas: asistentes/
+   motores de IA conocidos (ChatGPT, Gemini, Claude, Copilot, Perplexity,
+   DeepSeek, Grok, Mistral...) y jerga genérica del sector GEO/IA (GEO Score,
+   SEO, AEO, Share of Voice, Visibility Score, LLM...), más una lista corta de
+   dominios propios de esas herramientas (chatgpt.com, bing.com...) para el
+   caso en que el nombre mostrado difiera del nombre de la herramienta.
+2. **Match por FRASE COMPLETA normalizada, nunca por token.** Deliberadamente
+   distinto de `GENERIC_ALIAS_TERMS` (`lib/projects/brand-aliases.ts`), que
+   rechaza por solapamiento de token y no habría atrapado "GEO Score" — ni
+   "geo" ni "score" están ahí, y no deberían estarlo sueltos: existen empresas
+   reales llamadas así (The GEO Group). Las dos listas se quedan separadas a
+   propósito; unificarlas reabriría el hueco.
+3. **Los cinco puntos de entrada, cerrados en el mismo PR:**
+   - `filterSuggestions` (`lib/competitors/suggest-competitors.ts`) — filtra
+     EN LECTURA, como ya hace toda esa función, así que una sugerencia
+     cacheada antes de esta fase también se limpia sin necesidad de purgar
+     nada.
+   - `createCompetitorCore`/`updateCompetitorCore`
+     (`lib/competitors/manage-competitors.ts`) — alta y edición manual.
+   - `selectVerifiableAliases` (`lib/projects/brand-aliases.ts`) — alias
+     auto-derivado, nuevo motivo de rechazo `generic_entity` (distinto de
+     `generic`, el de solapamiento de token, que ya existía).
+   - `validateNewAlias` (`lib/brand-aliases/normalize-aliases.ts`) — alias
+     manual. **Este camino no tenía NINGÚN filtro de genericidad antes de
+     esta fase**, ni siquiera el de token — más débil que el automático.
+   - `computeEmergingCompetitors` (`lib/recommendations/recommendation-engine.ts`)
+     — camino independiente de los otros cuatro: lee `other_brands_mentioned`
+     (salida del modelo, con sólo una instrucción blanda de "excluye términos
+     genéricos" en el prompt de extracción, nunca aplicada en código hasta
+     ahora) y podía recomendar literalmente "Añade a ChatGPT como
+     competidor" sin pasar nunca por la sugerencia basada en `business_profile`
+     que ADR 0020/0022 protege — un camino de contaminación que el propio ADR
+     no cubre porque no es una sugerencia, es una recomendación.
+4. **Por qué importaba más allá de la pantalla de Competidores.** SOV
+   (`sov-delta.ts`, `engine-share.ts`) lee `project_competitors` directamente
+   para su denominador y sus series — un "ChatGPT" trackeado no se queda en
+   una fila fea, infla el denominador y produce una barra entera para una
+   entidad que no compite con nada. Recomendaciones lee el mismo dato para
+   `computeCompetitorDominance`/`computeProminenceGap`. Arreglar la entrada
+   arregla las tres superficies sin tocar ninguna fórmula de scoring.
+
+**Lo que NO se ha tocado.** Ninguna fórmula de SOV ni de scoring — sólo dejan
+de recibir basura. `lib/scan/extraction.ts` (verificación de mención) no
+cambia — el arreglo es aguas arriba, en qué entra en las listas, no en cómo se
+hace el matching de una mención. Los prompts de extracción de
+`other_brands_mentioned` mantienen su instrucción blanda tal cual; el filtro
+de código es lo que ahora hace cumplir lo que el prompt sólo pedía.
+
+**Riesgo de sobre-bloqueo, cubierto por diseño y por test.** El match es por
+frase completa, nunca por token: "Geotab", "Scoreboard Inc" o "ChatGPT
+Wrapper Co" no caen en la lista aunque compartan una palabra con ella.
+Deliberadamente NO se incluyó "geo" a secas en la jerga genérica, por el mismo
+motivo — sólo la frase completa "GEO Score" está en la lista.
+
+**Comprobado.** `pnpm test` en verde sobre los 6 ficheros tocados (módulo
+nuevo + 5 puntos de integración, cada uno con su propio test nuevo); `pnpm run
+validate` (build + typecheck + lint).
+
+**Trazabilidad.** `lib/entity-hygiene/generic-entities.ts` (nuevo) +
+`.test.ts`; `lib/competitors/suggest-competitors.ts` (`filterSuggestions`);
+`lib/competitors/manage-competitors.ts`
+(`createCompetitorCore`/`updateCompetitorCore`); `lib/projects/brand-aliases.ts`
+(`selectVerifiableAliases`, motivo `generic_entity`);
+`lib/brand-aliases/normalize-aliases.ts` (`validateNewAlias`);
+`lib/recommendations/recommendation-engine.ts` (`computeEmergingCompetitors`);
+`.claude/rules/competitors.md` (nueva sección + ampliación de su alcance de
+ruta a `lib/brand-aliases/**`, `lib/projects/brand-aliases.ts`,
+`lib/entity-hygiene/**`); `.claude/rules/recommendations.md` (referencia
+cruzada); `docs/external-audit-2026-08.md` Fase 9. Task Intake aprobado por
+el fundador el 2026-08-30.
+
+---
+
+## 201. Los tres botones de "Plan y facturación" se amontonaban en móvil (2026-09-06)
+
+**Qué se decidió.** En `components/billing/plan-billing-section.tsx`, la fila
+de acciones ("Cambiar de plan", "Facturas y pago", "Cancelar suscripción")
+pasa de `flex flex-wrap gap-2` (ancho automático por botón) a apilarse a ancho
+completo en móvil y volver a fila sólo desde `sm:` — `flex flex-col gap-2 ...
+sm:flex-row sm:flex-wrap`, con `className="w-full sm:w-auto"` en cada
+`Button`. Mismo patrón `sm:flex-row` que ya usan los dos avisos de esta misma
+pantalla más arriba en el fichero.
+
+**Por qué.** El fundador, viendo la pantalla en móvil (2026-09-06): "Funciona
+bien, pero esos 3 botones ahí descolocados no me gustan". Con ancho automático
+y `flex-wrap`, tres botones de longitud desigual envuelven de forma
+desequilibrada bajo ~400px — no rompía nada, pero no es la barra de acciones
+que el resto de la consola usa en pantallas estrechas.
+
+**Alcance.** Sólo CSS/clases en un componente ya existente; sin cambio de
+comportamiento, sin tocar `handleManageBilling`/`handleCancelSubscription` ni
+la lógica de qué botones se muestran (`usage.hasStripeCustomer` /
+`usage.hasStripeSubscription` siguen decidiendo la visibilidad exactamente
+igual). P2 — polish visual, no bloqueante de flujo.
+
+**Trazabilidad.** `components/billing/plan-billing-section.tsx`;
+`components/ui/button.tsx` (acepta `className` como override, sin cambios).
+
+---
+
+## 207. "Marcar como hecho" volvía a fallar tras el arreglo del clic — pero era el mismo test, no el producto (2026-09-01)
+
+**Lo que pasó tras §198.** Con el clic ya llegando al botón, un tercer
+disparo real de `ux-pilot-actions.yml` contra un preview con el arreglo
+clasificó "marcar como hecho" como `real` — pero con la misma lectura del
+informe externo: *"la tarjeta siguió visible 15080ms después del clic, sin
+error visible"*. Antes de tratarlo como un hallazgo de producto nuevo, se
+revisó el código del propio botón.
+
+**El código del botón está bien.** `handleDismiss` → `dismissRecommendationAction`
+→ `dismissRecommendationCore` (`lib/recommendations/dismiss-recommendation.ts`)
+reverifica propiedad, actualiza `status='dismissed'` con el cliente de
+servicio y devuelve `{success:true}`; el cliente llama a `router.refresh()`.
+Nada en esa cadena explica un fallo silencioso — y la propia evidencia lo
+confirma: *"sin error visible"* significa que `dismissError` nunca se
+rellenó, lo que sólo pasa si el servidor respondió con éxito.
+
+**La causa real, otra vez en el propio test.** `const card = page.locator(".rec-card").first()`
+no es una foto fija de la tarjeta pulsada — es un localizador perezoso que
+Playwright vuelve a resolver cada vez que se usa. El proyecto de escritura
+reservado corre con varias recomendaciones activas; al desaparecer la que se
+acaba de descartar, **otra tarjeta pasa a ser "la primera"**, y esa sigue
+perfectamente visible. `expect(card).toBeHidden()` nunca se cumplía —no
+porque el descarte fallara, sino porque el selector `.rec-card:first` seguía
+encontrando *algo*, sólo que ya no la misma tarjeta.
+
+**La corrección.** El veredicto de éxito pasa a leerse del **recuento total**
+de `.rec-card` (`expect(page.locator(".rec-card")).toHaveCount(before - 1)`),
+que no depende de qué tarjeta concreta ocupe la primera posición. Para el
+caso de error (rama que sí necesita inspeccionar la tarjeta ORIGINAL) se
+captura un `elementHandle()` antes del clic — no un localizador que puede
+haber empezado a apuntar a otro sitio.
+
+**Por qué no se disparó un cuarto pase para confirmarlo.** Cada pasada real
+de `--journeys actions` consume una recomendación activa del proyecto
+reservado (coste ya aceptado, log §187) — con dos pasadas ya gastadas
+confirmando el mismo patrón de fallo, lanzar una tercera sólo para validar
+esta hipótesis habría gastado una recomendación más sin necesidad, cuando el
+razonamiento desde el propio código y desde la evidencia ("sin error
+visible") ya era concluyente.
+
+**Mismo patrón que §198, en el mismo journey.** Dos localizadores perezosos
+(`.rec-main` colapsado en §198, `.rec-card.first()` en éste) tratados como si
+apuntaran a un elemento fijo, cuando en Playwright no lo hacen. Cualquier
+paso nuevo de este journey que necesite "seguir" un elemento concreto tras
+una mutación del DOM captura su identidad (`elementHandle()` o un atributo
+estable) antes de mutar, nunca confía en que un localizador posicional siga
+apuntando a lo mismo.
+
+**Comprobado.** `pnpm exec tsc --noEmit` limpio, `pnpm test` (222/222
+ficheros, 3.070/3.070 tests), `pnpm run validate` en verde. No verificado
+todavía contra un disparo real — pendiente el próximo `--journeys actions`.
+
+**Trazabilidad.** `tests/pilot/journeys/actions/
+recommendation-actions.spec.ts`; `lib/recommendations/dismiss-recommendation.ts`
+(leído, sin cambios); log §198; `docs/external-audit-2026-08.md` Fase 4.
+
+---
+
+## 202. Un comentario de código se envió tal cual dentro del correo de resumen semanal (2026-09-07)
+
+**Qué se decidió.** El fundador reportó (adjuntando el correo real recibido)
+que el resumen semanal de `sendWeeklyDigestEmail` (`lib/email/
+transactional.ts`) mostraba, visible en el cuerpo del correo, un bloque de
+texto con forma de comentario JSX: `{/* TRUST-METRICS-1: digest.currentScore
+es el compuesto del run más reciente... */}`. La causa: ese comentario, escrito
+al cerrar TRUST-METRICS-1 (§183, PR #493) para documentar por qué
+`digest.currentScore` es el compuesto del run y no la puntuación con ventana,
+se escribió dentro del template literal de HTML que compone el correo —
+`wrap(\`...\`)` es una cadena de texto plano, no JSX, así que `{/* ... */}` no
+es sintaxis de comentario ahí: es texto literal que se interpola tal cual y
+sale en el HTML que recibe el cliente. Se movió el comentario fuera del
+template literal, como JSDoc real sobre `sendWeeklyDigestEmail`, conservando
+el mismo contenido explicativo. Se añadió un test de regresión en
+`lib/email/transactional.test.ts` que envía el resumen semanal y comprueba que
+el HTML no contiene `{/*` — la misma clase de comprobación que ya existía para
+"el error del proveedor sale escapado", aplicada a esta forma nueva de fuga.
+
+**Por qué.** Nadie miró el HTML renderizado del correo tras TRUST-METRICS-1 —
+sólo el comentario de la capa de datos (`getSubScores`, `getEffectiveGeoScore`)
+en la revisión de aquel PR — así que un comentario perfectamente razonable en
+código se convirtió en ruido visible para cada cliente que recibe el resumen
+semanal desde el 2026-08-27. El síntoma es idéntico en forma al patrón que
+`docs/brand/design-decisions-log.md` ya lleva años corrigiendo caso por caso en
+otras zonas (una capa se revisa, la superficie que el usuario ve realmente no):
+aquí la superficie es un correo, no una pantalla, y por eso no lo capturaba
+ningún pilotaje de UI.
+
+**Alcance.** Un solo fichero de producción (`lib/email/transactional.ts`, la
+única aparición de `{/*` en el módulo — comprobado) más su test. Sin cambio de
+datos, de destinatario ni de maquetado visual; el correo dice exactamente lo
+mismo que decía, menos el comentario colado. P0 de facto para la zona de
+correos transaccionales — es el único módulo del repositorio cuyo fallo llega
+a la bandeja del cliente y no se puede deshacer (nota ya existente al principio
+de `lib/email/transactional.test.ts`).
+
+**Pendiente.** El correo semanal fue, además, la ocasión para que el fundador
+comparta como referencia el "Site Audit" que envía Semrush — sugiriendo un
+indicador más visual (tipo barra/gráfico de color) para las métricas del
+resumen en vez de sólo cifras. Es una propuesta de diseño para una superficie
+nueva (el propio correo), no una consecuencia necesaria de este bug — queda
+fuera de este PR y pendiente de Task Intake propio.
+
+**Trazabilidad.** `lib/email/transactional.ts` (`sendWeeklyDigestEmail`);
+`lib/email/transactional.test.ts`; §183 (TRUST-METRICS-1, origen del
+comentario).
+
+---
+
+## 203. "Generar" y "marcar como hecho" dejan de terminar en silencio (ACTIONS-OBSERVABLE-1 slice 4a, 2026-09-06)
+
+**Origen.** Fase 4 del plan de la auditoría externa
+(`docs/external-audit-2026-08.md`, "ACTIONS-OBSERVABLE-1: ninguna acción
+silenciosa", P0-04), con el reparto exacto ya resuelto por la Fase 0
+(AUDIT-REPRO-1, log §187/§193/§198/§207): de las seis acciones de
+Recomendaciones, "generar" (FAQ/brief/comparativa) y "activar seguimiento
+recurrente" quedaron clasificadas `invisible`; "exportar plan" y "marcar como
+hecho" `real` — la segunda sin ninguna vía de deshacer. Task Intake aprobado
+por el fundador el 2026-09-06, con el reparto en cuatro slices (4a-4d) y 4a
+primero: el contrato de acción compartido más las dos acciones de la propia
+tarjeta. 4b ("exportar plan" + "activar seguimiento") queda fuera a
+propósito — toca `DataMaturityBanner`, montado en las seis pantallas de la
+consola, y mezclarlo aquí habría producido el PR grande que `CLAUDE.md`
+prohíbe.
+
+**Qué se decidió.**
+
+1. **Contrato de acción compartido**, `lib/ui/action-feedback.ts` (reducer
+   puro: `idle | pending | success | error`, testeable sin DOM — misma
+   disciplina que `lib/onboarding/tour-steps.ts`) + `components/ui/
+   action-feedback.tsx` (el hook `useActionFeedback` que envuelve el reducer
+   en `useReducer`/`useTransition`, y `ActionAnnouncement`, que pinta el
+   acuse/error con `role="status"` `aria-live="polite"` — ninguna de las seis
+   acciones anunciaba nada hasta ahora). `RecCard` migra sus dos acciones
+   (`handleRewrite`, `handleDismiss`) a este hook en vez de un par
+   `useState`+`useTransition` propio cada una.
+2. **"Generar propuesta con IA"**: el éxito muestra un acuse en el propio
+   punto del clic (`ActionAnnouncement`, "Propuesta generada.") antes de que
+   `router.refresh()` traiga la fila `solution` real y la insignia
+   "Propuesta generada" la sustituya. No estaba realmente "en un panel
+   plegado" — el botón sólo es alcanzable con la tarjeta ya abierta — pero el
+   éxito no daba ninguna señal en el punto del clic, sólo un cambio de icono
+   a varias líneas de distancia.
+3. **"Marcar como hecho" gana deshacer — pero no en la tarjeta activa.**
+   `lib/recommendations/restore-recommendation.ts` es el espejo exacto de
+   `dismiss-recommendation.ts` (misma reverificación de propiedad con el
+   cliente de usuario, misma escritura service-role, mismo patrón de
+   idempotencia) y revierte `status` a `'active'`. **Sin migración**:
+   `rec_status_chk` (`0010_recommendations_history.sql`) ya admite `'active'`.
+   La primera versión de esta fase probó un deshacer **efímero**: al marcar
+   como hecho, la tarjeta activa no llamaba a `router.refresh()` y se
+   sustituía in situ por un acuse + "Deshacer", vivo hasta que el usuario
+   navegara. El fundador lo probó en el preview y lo rechazó de inmediato
+   (2026-09-07): *"aparece deshacer un segundo y la recomendación se va ya a
+   la pestaña resueltas. Debe aparecer el botón de deshacer en la pestaña
+   resueltas, sino no sirve de nada"* — un deshacer que no sobrevive a nada
+   no es un deshacer, es una animación. `handleDismiss` vuelve a llamar a
+   `router.refresh()` en su éxito, como el resto de acciones de la tarjeta;
+   el "Deshacer" real vive en `ResolvedHistoryCard`, bajo "Resueltas" —
+   donde la fila aterriza de verdad y donde sigue estando disponible después
+   de recargar.
+4. **El deshacer en "Resueltas" se ofrece SÓLO para una fila descartada del
+   run vigente** (`item.status === 'dismissed' && item.run_id ===
+   latestCompletedRunId`). La lista activa filtra por
+   `run_id = latestCompletedRun.id AND status='active'`
+   (`recommendations/page.tsx`): restaurar una fila de un run más antiguo
+   volvería su `status` a `'active'` pero la dejaría invisible en todas
+   partes — no en la lista activa (su `run_id` no es el del run vigente), y
+   ya no en "Resueltas" (dejó de tener un `status` que la tabla lista). Esto
+   exigió sacar `run_id` del recorte que `page.tsx` aplicaba antes de pasar
+   `ResolvedHistoryItem` al cliente (comentario "stays server-side" ya
+   desactualizado) y pasar `latestCompletedRunId` como prop nueva a
+   `RecommendationsClient`.
+5. **El deshacer llama a `router.refresh()` en su éxito, sin excepción.** A
+   diferencia del diseño efímero descartado, aquí SÍ se quiere que la
+   pantalla entera se resincronice: la fila tiene que desaparecer de
+   "Resueltas" y la lista activa tiene que volver a incluirla.
+6. **Efecto colateral encontrado por el fundador al probarlo, corregido en el
+   mismo PR.** Antes de esta fase, `page.tsx` montaba el estado vacío de
+   nivel superior ("Nada que corregir ahora mismo") en cuanto `recs.length
+   === 0`, sin mirar si había historial — así que marcar como hecha la
+   ÚNICA recomendación activa de una cuenta hacía desaparecer
+   `RecommendationsClient` entero, con él la pestaña "Resueltas" y sus
+   datos (ya pedidos al servidor, simplemente descartados). El fundador lo
+   vio primero como una pantalla que parecía haber "borrado" su acción. La
+   condición pasa a `recs.length === 0 && resolvedHistoryForClient.length
+   === 0` — el vacío de nivel superior sólo dispara cuando de verdad no hay
+   nada en ningún sitio — y el vacío interno de `RecommendationsClient`
+   (para cuando llega aquí con cero activas pero sí historial) cambia de
+   "Nada con este filtro / Vuelve a Todas" — incorrecto, ya se está en
+   "Todas" — a un mensaje que señala dónde está lo que se acaba de hacer,
+   con un botón directo a "Resueltas".
+
+**Lo que NO se ha tocado en este slice (4b, aparte).** "Exportar plan" sigue
+sin acuse ni salida alternativa a la descarga; "activar seguimiento
+recurrente" sigue redirigiendo a `/debug` en éxito y en error. Ambas tocan
+`DataMaturityBanner`/`app/dashboard/projects/[projectId]/actions.ts`
+(`setRecurringScans`), fuera del alcance aprobado para 4a.
+
+**Límite de cobertura, declarado explícitamente.** `renderToStaticMarkup` no
+ejecuta clics, así que ningún test puede afirmar que un clic real en
+"Deshacer" restaura la fila y refresca la pantalla. Lo que SÍ se prueba por
+render, exportando `ResolvedHistoryCard` igual que ya se exporta `RecCard`:
+las cuatro combinaciones de la condición de la regla 4 — se ofrece para una
+fila descartada del run vigente; NO se ofrece para una fila de un run más
+antiguo; NO se ofrece sobre una fila resuelta automáticamente (sólo aplica a
+un descarte manual); NO se ofrece cuando la pantalla no tiene
+`latestCompletedRunId`. La transición real a "éxito" tras el clic sólo la
+puede verificar una pasada de `--journeys actions` contra un preview real,
+todavía no disparada para este PR — el fundador decide cuándo.
+
+**Comprobado.** `pnpm test` (3105/3105), `pnpm run validate` (build +
+typecheck + lint) en verde.
+
+**Trazabilidad.** `lib/ui/action-feedback.ts` + `.test.ts` (nuevo);
+`components/ui/action-feedback.tsx` (nuevo); `lib/recommendations/
+restore-recommendation.ts` + `.test.ts` (nuevo); `app/dashboard/projects/
+[projectId]/actions.ts` (`restoreRecommendationAction`); `app/dashboard/
+projects/[projectId]/recommendations/page.tsx` (`resolvedHistoryForClient`
+lleva `run_id`, condición del vacío de nivel superior, prop
+`latestCompletedRunId`); `app/dashboard/projects/[projectId]/recommendations/
+recommendations-client.tsx` (`RecCard`, `ResolvedHistoryCard` — ahora
+exportada); su test; `docs/external-audit-2026-08.md` Fase 4; log §187,
+§193, §198, §207.
+
+---
+
+## 204. Indicadores visuales en el correo de resumen semanal (WEEKLY-DIGEST-VISUAL-1, 2026-09-07)
+
+**Qué se decidió.** El fundador compartió como referencia el correo de "Site
+Audit" de Semrush — cifras acompañadas de una barra de color proporcional — y
+preguntó si merecía la pena algo similar en el resumen semanal de GenScore.
+Tras Task Intake aprobado, se añadieron dos cosas a `sendWeeklyDigestEmail`
+(`lib/email/transactional.ts`):
+
+1. Una barra horizontal de color bajo "Puntuación de este escaneo"
+   (`scoreBar`), rellena en proporción a la cifra (0–100) y coloreada con el
+   mismo verde/rojo/gris que ya usaba el pill de delta — nunca una escala de
+   color nueva. Implementada con una tabla de dos `td` (ancho en % +
+   `background-color`), no SVG ni gradiente CSS: los clientes de correo
+   (Outlook en particular) no renderizan ninguno de los dos de forma fiable.
+2. Un delta semana-sobre-semana en cada una de las tres sub-scores
+   (Presencia, Cuota de voz, Autoridad) — dato que ya existía sin usar:
+   `runWeeklyDigest` (`lib/scan/weekly-digest.ts`) lee `previousRow` para
+   calcular `previousScore`, pero nunca le aplicaba `getSubScores`. Ahora se
+   calcula `previousSubScores` de la misma fila ya leída — sin query nueva —
+   y se pasa a `sendWeeklyDigestEmail`, que sólo muestra el delta de un
+   sub-score cuando AMBOS runs lo calcularon (nunca compara contra un
+   componente ausente, mismo principio que ya aplicaba `subScoreEntries` para
+   decidir si mostrar la cifra en sí).
+
+Se extrajo `deltaPill(delta)` como función compartida entre el pill principal
+y los tres nuevos deltas — antes la lógica ▲/▼/"Sin cambios" sólo existía
+inline para la puntuación principal.
+
+**Por qué.** El correo ya calculaba todos estos números; sólo los mostraba
+como cifras planas. Añadir la barra y los deltas no inventa ninguna métrica
+—CLAUDE.md lo prohíbe explícitamente ("fake metrics")— sólo hace visible una
+comparación que los datos ya sostenían. Se descartó, dentro del mismo Task
+Intake, replicar secciones de Semrush sin equivalente real en GenScore hoy
+("Crawled Pages", "Top Issues"): forzarían a definir una categoría de dato
+nueva desde cero, que es una fase aparte.
+
+**Alcance.** `lib/email/transactional.ts`, `lib/email/transactional.test.ts`,
+`lib/scan/weekly-digest.ts`, `lib/scan/weekly-digest.test.ts`. Sin cambios de
+datos/scoring, sin tocar Gemini/Supabase/auth/schema/pipeline. P2 — mejora
+visual en un canal secundario, no bloquea el flujo core.
+
+**Validación no cubierta por el piloto.** `ux-pilot` no cubre correos (ya
+confirmado en QA de §202) — la verificación visual se hizo generando el HTML
+real (mock del cliente de Resend) y capturándolo con Chromium headless; la
+captura se compartió con el fundador junto con este PR en vez de vía preview
+de Vercel.
+
+**Trazabilidad.** `lib/email/transactional.ts` (`scoreBar`, `deltaPill`,
+`statCell`); `lib/scan/weekly-digest.ts` (`previousSubScores`); §202 (origen
+de la conversación, mismo fichero).
+
+---
+
+## 205. SCREEN-POLISH-1 Fase A: la pantalla de Prompts deja de afirmar sentimiento sobre marcas ausentes y se puede usar con teclado (2026-09-06)
+
+**Origen.** Fase 10 (UX/consistencia de pantalla) del informe de auditoría
+externa — vive sólo en el PR #483, sin mergear en `main` a fecha de este
+cierre, así que este párrafo cita el hallazgo tal cual en vez de asumir que
+quien lea esto puede abrirlo: en la pantalla de Prompts, varias filas
+mostraban una insignia "Ausente" (la marca no fue mencionada) junto a una
+insignia de sentimiento ("Positivo"/"Negativo"/etc.) calculada sin filtrar por
+si la marca había aparecido — afirmar un sentimiento sobre algo que no ocurrió
+("no fake metrics", `CLAUDE.md`). Task Intake aprobado por el fundador antes
+de implementar; tres arreglos P1/P2, alcance cerrado.
+
+**Qué se decidió — 1. Sentimiento honesto.**
+
+- **`lib/metrics/brand-sentiment.ts` (nuevo)**, sin I/O — dueño único de "cuál
+  es el sentimiento dominante de marca sobre un grupo de filas de
+  `scan_prompt_results`", contando SÓLO filas con `brand_mentioned === true`.
+  Copia deliberadamente la semántica de empate (orden de inserción, primera
+  vista gana) de `lib/scan/engine-breakdown.ts`'s `dominantSentiment` por
+  motor y del KPI de sentimiento de Visión general
+  (`app/dashboard/projects/[projectId]/page.tsx`) — ambos ya auditados bajo
+  TRUST-METRICS-1 y ya correctos; Prompts había crecido tres copias del mismo
+  cálculo que nunca aplicaron el filtro. `lib/metrics/` y no `lib/scan/`
+  porque TRUST-METRICS-1 ya estableció ese directorio como el dueño de "una
+  sola definición en todo el producto", y `.claude/rules/scan.md` prohíbe
+  meter en `lib/scan/` vocabulario que módulos no-escaneo importan. Un
+  `sentiment: "unknown"` (valor real de extracción, `lib/extraction/
+  schema.ts`) no cuenta para ningún cubo, igual que en las otras dos
+  implementaciones ya existentes — ni siquiera cuando la marca sí se
+  mencionó. Test propio (`brand-sentiment.test.ts`): filas mixtas, cero
+  menciones → `null`, empates, `unknown` excluido, vacío → `null`.
+- **Las tres copias sustituidas** por la función centralizada: la agregación
+  por topic en `app/dashboard/projects/[projectId]/prompts/page.tsx` (server),
+  la función local `dominantSentiment` de `prompts-client.tsx` (agregado por
+  prompt), y la de `components/prompts/prompt-drawer.tsx` (usada para la fila
+  "Tú" del ranking de marcas del cajón).
+- **Estado explícito "No aplica"**, distinto a propósito de "Neutral" — que ya
+  existe en el código y significa otra cosa (`sentiment: "unknown"` leído como
+  "Neutral" para no filtrar el valor crudo en inglés, decisión previa del
+  fundador). Reutilizar "Neutral" para "sin mención" habría sido la misma
+  mentira con otro nombre. Badge `badge-outline` (visualmente distinto de
+  `badge-neutral`, que sigue siendo "Neutral" de verdad) y sin el glifo de
+  cara de sentimiento — ese glifo dibuja una expresión facial real
+  (`components/ui/icon.tsx`, `sentimentPos/Neutral/Neg/Mixed`) y ponerlo junto
+  a "No aplica" habría seguido afirmando una lectura emocional inexistente.
+  Aplicado en los cinco puntos donde se renderizaba la insignia: la fila de
+  prompt y el acordeón de tema en `prompts-client.tsx`; la lista "Por motor",
+  la tabla de la pestaña "Respuestas" y (implícitamente, por omisión — ver
+  abajo) la fila "Tú" del ranking en `prompt-drawer.tsx`.
+- **Decisión de interpretación — la fila "Tú" del ranking no lleva "No
+  aplica" explícito.** Ya estaba condicionada a `row.isOwn && row.sentiment`:
+  con la función centralizada, `sentiment` es simplemente `null` cuando no hay
+  mención y la insignia no se pinta — igual que ya hacen las filas de
+  competidores, que nunca muestran sentimiento. Añadir un badge "No aplica"
+  ahí habría sido inconsistente con esas filas vecinas sin aportar nada que la
+  ausencia de badge no dijera ya.
+- **Corrección tras revisión del fundador (mismo PR, antes de mergear, dos
+  rondas).** Con "Ausente" y "No aplica" uno junto al otro, el fundador
+  señaló que ningún usuario real sabe a qué se refiere cada literal por
+  separado. Los dos textos pasan a ser autoexplicativos sin depender de un
+  rótulo aparte ni de un tooltip (que `.claude/rules/competitors.md` ya
+  desaconseja para este tipo de aclaración — "sin InfoTip", texto pegado al
+  dato, nunca una burbuja). Primera ronda: "Ausente"/"Mencionada" → "Marca
+  ausente"/"Marca mencionada", `SENTIMENT_NA_LABEL` → "Sentimiento no
+  aplica". Segunda ronda, a petición del fundador: "Marca ausente" →
+  **"Marca no mencionada"** (par gramatical de "Marca mencionada", en vez de
+  un antónimo distinto) y `SENTIMENT_NA_LABEL` → **"Sin sentimiento"** (más
+  corto que "Sentimiento no aplica"). El fundador propuso "Sentimiento
+  neutro" para este segundo; se rechazó porque "Neutral" ya está tomado en
+  esta misma pantalla para `sentiment: "unknown"` (marca mencionada, tono
+  indeterminado) — usar "neutro" aquí habría hecho indistinguibles dos
+  estados distintos (sin mención vs. mención con tono indeterminado) y
+  resucitado exactamente la afirmación-sobre-algo-que-no-ocurrió que esta
+  fase existe para eliminar. "Sin sentimiento" no colisiona con ese
+  vocabulario. Único cambio en `prompts-client.tsx` y `prompt-drawer.tsx`
+  (la constante, más el texto del badge de marca en `PromptRow` y en la
+  lista "Por motor" del cajón); la tabla de la pestaña "Respuestas" ya tenía
+  columnas con cabecera ("Marca", "Sentimiento") y no sufría la misma
+  ambigüedad, pero usa la misma constante — una sola etiqueta, no dos que
+  hoy coinciden por casualidad. Ambos contenedores (`.pr2-prow-tags`,
+  `.pr2-trow-meta`) ya tenían `flex-wrap: wrap`, así que el texto más largo
+  envuelve en vez de recortarse en 375px.
+
+**Qué se decidió — 2. Filas accesibles por teclado.** `.pr2-prow` (fila de
+prompt, abre el cajón) y `.pr2-trow` (acordeón de tema) eran `<div onClick>`
+sin `role`, `tabIndex` ni manejo de teclado — inalcanzables con Tab. Mismo
+patrón que `.rec-main` en `recommendations-client.tsx`: `role="button"` +
+`tabIndex={0}` + `onKeyDown` en Enter/Espacio con `preventDefault`, y
+`aria-expanded={isOpen}` en `.pr2-trow` por ser acordeón. Los `<div>` no se
+convierten en `<button>` — llevan badges y texto multilínea anidados, y
+`<button>` rompería ese layout flex. Foco visible nuevo en `app/globals.css`
+(`.pr2-prow:focus-visible`, `.pr2-trow:focus-visible`, `outline: 2px solid
+var(--accent); outline-offset: -2px`) junto a las reglas ya existentes de esas
+clases.
+
+**Qué se decidió — 3. "Topics" → "Temas".** Cuatro cadenas visibles en
+`prompts-client.tsx` (el contador "en N topics", el estado vacío que
+mencionaba "topics" dos veces, la etiqueta de sección "Topics", el mensaje de
+"sin resultados" con "topic") pasan a "tema"/"temas". En
+`add-prompts-button.tsx`, las dos menciones de "categoría" (mismo concepto,
+`project_prompts.category`) pasan también a "tema", por consistencia de
+vocabulario dentro de la misma pantalla — Competidores ya dice "tema" en su
+propio copy ("Terreno por tema", `competitors/page.tsx`). Ningún identificador
+de código se toca (`hasTopics`, `topicGroups`, `expandedTopics`,
+`TopicGroup`, `totalTopics` siguen en inglés): es sólo copy visible.
+
+**Desviación deliberada y aprobada del prototipo de diseño de referencia.**
+`docs/design-reference/geo-suite-2/prompts.jsx` usa literalmente "Topics" en
+inglés. El fundador aprobó explícitamente el cambio a "Temas" pese a esa
+diferencia en el Task Intake de esta fase — si una pasada futura del
+`ux-pilot` lo señala como desviación de diseño, no es un fallo de esta
+implementación, está aprobado y queda anotado aquí para que quede trazado.
+
+**Lo que NO se ha tocado.** Ningún cálculo de score
+(`lib/scoring/**`), ninguna extracción (`lib/llm/**`,
+`lib/extraction/schema.ts`), nada de `lib/scan/**` — el arreglo del
+sentimiento es enteramente de presentación, sobre datos ya persistidos.
+`lib/competitors/**` sólo se leyó como referencia de copy, sin tocarlo.
+
+**Comprobado.** `pnpm test` en verde (incluye `lib/metrics/
+brand-sentiment.test.ts`, 7 casos nuevos); `pnpm run validate` (build +
+typecheck + lint) en verde; `git diff --check` sin avisos.
+
+**Trazabilidad.** `lib/metrics/brand-sentiment.ts` (nuevo) + `.test.ts`;
+`app/dashboard/projects/[projectId]/prompts/page.tsx`;
+`app/dashboard/projects/[projectId]/prompts/prompts-client.tsx`;
+`app/dashboard/projects/[projectId]/prompts/add-prompts-button.tsx`;
+`components/prompts/prompt-drawer.tsx`; `app/globals.css`
+(`.pr2-prow:focus-visible`, `.pr2-trow:focus-visible`). Task Intake aprobado
+por el fundador antes de implementar.

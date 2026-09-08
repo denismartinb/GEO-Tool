@@ -36,8 +36,20 @@ export type CitationRow = {
   domain: string;
   category: CitationCategory;
   brandMentioned: "yes" | "no" | "na";
+  /**
+   * Tracked competitors named in the ANSWERS this page was cited in — never
+   * a claim about what the page itself says. `citation.source === "grounding"`
+   * only tells us the model consulted this page while composing an answer
+   * that happened to also name a competitor; nothing here reads the page
+   * (CITATIONS-HONESTY-1, P0-09). Rendering this as "cites a rival" was the
+   * exact overstatement the external audit flagged: two independent facts —
+   * "the model used this source" and "the model named a competitor" — were
+   * being collapsed into one about the page's content. Never gate an
+   * outreach recommendation on this field; see `groupOpportunitiesByDomain`.
+   */
   competitors: string[];
-  /** Untracked brands named in the answers this page was cited in. */
+  /** Untracked brands named in the answers this page was cited in — same
+   * unverified, answer-level signal as `competitors` above. */
   otherBrands: string[];
   cited: number;
   /** One entry per (prompt, provider) that cited this page. `rawResponseText`
@@ -262,6 +274,84 @@ function sortEngines(counts: Map<string, number>): CitationEngine[] {
  */
 export function compareOpportunityRows(a: CitationRow, b: CitationRow): number {
   return b.engines.length - a.engines.length || b.cited - a.cited;
+}
+
+/**
+ * One outreach-eligible domain, grouped from its individual cited pages.
+ * CITATIONS-HONESTY-1 (P0-09): the previous "Oportunidades" list qualified a
+ * row by whether a tracked competitor happened to be named in the same
+ * answer — a fact about the ANSWER, not the page, and the report flagged it
+ * as an overstatement. A domain now qualifies for outreach on a checkable
+ * fact instead: the AI cites it and the brand's own domain is absent from
+ * those answers (see the `reachable` filter callers apply before grouping).
+ * `coCitedCompetitors` keeps the competitor signal — it's still real,
+ * useful context — but demoted to a labeled, unverified aside rather than
+ * the qualifying reason, and grouped so a project with many long-tail URLs
+ * on the same domain reads as one prioritizable target, not one row per URL.
+ */
+export type OpportunityDomainGroup = {
+  domain: string;
+  /** Distinct cited pages under this domain, most-cited first. */
+  pages: CitationRow[];
+  /** Sum of `cited` across every page in this domain — the group's frequency. */
+  totalCited: number;
+  /** Order: grounded engines first, then cited desc. Never invented. */
+  engines: CitationEngine[];
+  /** Distinct prompt texts across every page in this domain. */
+  promptTexts: string[];
+  /**
+   * Union of tracked competitors named in ANY answer that cited a page in
+   * this domain. Same-answer co-occurrence only — never verified against the
+   * page's own content. Render with an explicit "sin verificar" qualifier,
+   * never as a claim about what the domain publishes.
+   */
+  coCitedCompetitors: string[];
+};
+
+/**
+ * Groups already-filtered outreach-eligible rows (see page.tsx's
+ * `opportunityRows`) by domain, for the priority list the external audit
+ * asked for (Fase 8, deliverable 5): frequency, engines, and associated
+ * queries per domain instead of one row per URL. A domain publishing many
+ * distinct cited pages (e.g. a comparator with several product reviews)
+ * reads as one prioritizable outreach target with N pages, not N
+ * indistinguishable rows.
+ */
+export function groupOpportunitiesByDomain(rows: CitationRow[]): OpportunityDomainGroup[] {
+  type Group = {
+    pages: CitationRow[];
+    engines: Map<string, number>;
+    prompts: Set<string>;
+    competitors: Set<string>;
+  };
+  const byDomain = new Map<string, Group>();
+
+  for (const row of rows) {
+    const key = row.domain || row.title;
+    let group = byDomain.get(key);
+    if (!group) {
+      group = { pages: [], engines: new Map(), prompts: new Set(), competitors: new Set() };
+      byDomain.set(key, group);
+    }
+    group.pages.push(row);
+    for (const e of row.engines) group.engines.set(e.provider, (group.engines.get(e.provider) ?? 0) + e.cited);
+    for (const p of row.prompts) group.prompts.add(p.text);
+    for (const c of row.competitors) group.competitors.add(c);
+  }
+
+  return Array.from(byDomain.entries())
+    .map(([domain, group]) => {
+      const pages = group.pages.slice().sort((a, b) => b.cited - a.cited);
+      return {
+        domain,
+        pages,
+        totalCited: pages.reduce((sum, p) => sum + p.cited, 0),
+        engines: sortEngines(group.engines),
+        promptTexts: Array.from(group.prompts),
+        coCitedCompetitors: Array.from(group.competitors)
+      };
+    })
+    .sort((a, b) => b.engines.length - a.engines.length || b.totalCited - a.totalCited);
 }
 
 export function aggregateCitations(input: {

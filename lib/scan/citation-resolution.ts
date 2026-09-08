@@ -1,5 +1,8 @@
 import "server-only";
 
+import { isIP } from "node:net";
+import { hostnameResolvesToPublicIp } from "@/lib/web-audit/fetch-page";
+
 /**
  * Resolves Gemini Google Search grounding redirect URIs
  * (`https://vertexaisearch.cloud.google.com/grounding-api-redirect/...`) to
@@ -7,11 +10,26 @@ import "server-only";
  * (e.g. `www.movistar.es`) instead of Google's redirect host.
  *
  * See docs/adr/0006-grounding-redirect-resolution.md.
+ *
+ * CITATION-REDIRECT-SSRF-1 (data-guardian review, 2026-08-27): this follows a
+ * redirect Google itself issues, to an arbitrary destination — unlike
+ * fetch-page.ts's own-domain-only fetches, landing on any public site is the
+ * whole point here. What it must never do is land on a PRIVATE one. Every hop
+ * is verified with hostnameResolvesToPublicIp() — imported from fetch-page.ts,
+ * never a second copy of that check — before being followed, mirroring
+ * fetchPageSafely's manual redirect loop: never `redirect: "follow"`, which
+ * sends the request to a redirect target before any check could run.
  */
 
-/** Per-fetch timeout. Bounded so a slow/unresponsive redirect target cannot
- * stall the synchronous scan pipeline (maxDuration=60, ADR 0003). */
+/** Per-attempt (HEAD, then separately GET) time budget — a single absolute
+ * deadline threaded through every hop and DNS check of that attempt, never a
+ * fresh allowance per hop (`.claude/rules/scan.md`, "budget against the
+ * invocation, not against itself"). Bounded so a slow/unresponsive redirect
+ * chain cannot stall the synchronous scan pipeline (maxDuration=60, ADR 0003). */
 export const REDIRECT_RESOLUTION_TIMEOUT_MS = 2500;
+
+/** Google's own redirect chain plus whatever the destination site adds. */
+const MAX_REDIRECTS = 5;
 
 export type CitationResolutionResult = {
   /** The final destination URL after following redirects, or `null` if
@@ -19,43 +37,93 @@ export type CitationResolutionResult = {
   resolvedUrl: string | null;
 };
 
+function isGoogleRedirectHost(url: URL): boolean {
+  return url.toString().includes("vertexaisearch.cloud.google.com");
+}
+
+async function isSafeToFetch(url: URL): Promise<boolean> {
+  if (url.protocol !== "https:") return false;
+  const hostname = url.hostname.toLowerCase();
+  if (isIP(hostname)) return false; // reject IP-literal hosts outright, never resolve/allow them
+  return hostnameResolvesToPublicIp(hostname);
+}
+
+/**
+ * Follows redirects for ONE method (HEAD or GET), verifying every hop's
+ * hostname before connecting to it, within a single absolute `deadline`.
+ * Returns the final destination URL, or `null` on any unsafe hop, network
+ * error, exhausted redirect budget, or a final URL still on Google's own
+ * redirect host (no real destination was reached).
+ */
+async function resolveWithMethod(uri: string, method: "HEAD" | "GET", deadline: number): Promise<string | null> {
+  let current: URL;
+  try {
+    current = new URL(uri);
+  } catch {
+    return null;
+  }
+
+  let reachedFinal = false;
+  for (let hop = 0; hop < MAX_REDIRECTS; hop++) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) return null;
+    if (!(await isSafeToFetch(current))) return null;
+
+    const timeLeft = deadline - Date.now();
+    if (timeLeft <= 0) return null;
+
+    let response: Response;
+    try {
+      response = await fetch(current.toString(), {
+        method,
+        redirect: "manual",
+        signal: AbortSignal.timeout(timeLeft)
+      });
+    } catch {
+      return null;
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) {
+        reachedFinal = true; // redirect status with no target — nothing more to follow
+        break;
+      }
+      try {
+        current = new URL(location, current);
+      } catch {
+        return null;
+      }
+      continue; // next iteration re-verifies the NEW host before following
+    }
+
+    reachedFinal = true; // not a redirect — this is the final response, ok or not
+    break;
+  }
+
+  if (!reachedFinal) return null; // exceeded MAX_REDIRECTS without landing on a final response
+  if (isGoogleRedirectHost(current)) return null;
+  return current.toString();
+}
+
 /**
  * Attempts to resolve a single grounding redirect URI to its final
  * destination URL. Never throws — returns `{ resolvedUrl: null }` on any
- * error, timeout, or non-OK-ish response so callers can apply the
+ * error, timeout, unsafe hop, or non-useful response so callers can apply the
  * documented fallback (domain: null, confidence: "low").
  *
- * Tries HEAD first (cheaper — no response body), falling back to GET if the
- * redirect target rejects HEAD (some servers return 405/403 for HEAD).
+ * Tries HEAD first (cheaper — no response body), falling back to GET if HEAD
+ * didn't reach a real destination (network error, or a final response still
+ * on Google's redirect host).
  */
 export async function resolveGroundingRedirect(uri: string): Promise<CitationResolutionResult> {
-  for (const method of ["HEAD", "GET"] as const) {
-    try {
-      const response = await fetch(uri, {
-        method,
-        redirect: "follow",
-        signal: AbortSignal.timeout(REDIRECT_RESOLUTION_TIMEOUT_MS)
-      });
+  const headDeadline = Date.now() + REDIRECT_RESOLUTION_TIMEOUT_MS;
+  const viaHead = await resolveWithMethod(uri, "HEAD", headDeadline);
+  if (viaHead) return { resolvedUrl: viaHead };
 
-      // A resolved URL that still points at Google's redirect host means we
-      // didn't actually get redirected anywhere useful — treat as failure.
-      if (response.url && !response.url.includes("vertexaisearch.cloud.google.com")) {
-        return { resolvedUrl: response.url };
-      }
-
-      // HEAD succeeded but didn't redirect anywhere useful; try GET before
-      // giving up.
-      if (method === "HEAD") continue;
-
-      return { resolvedUrl: null };
-    } catch {
-      // HEAD not supported / network error / timeout — try GET, or give up
-      // if this was already the GET attempt.
-      if (method === "GET") return { resolvedUrl: null };
-    }
-  }
-
-  return { resolvedUrl: null };
+  const getDeadline = Date.now() + REDIRECT_RESOLUTION_TIMEOUT_MS;
+  const viaGet = await resolveWithMethod(uri, "GET", getDeadline);
+  return { resolvedUrl: viaGet };
 }
 
 /**

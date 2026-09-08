@@ -1,11 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
+import { EngineGlyph } from "@/components/ui/engine-glyph";
+import { useActionFeedback, ActionAnnouncement } from "@/components/ui/action-feedback";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
-import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
+import {
+  rewriteRecommendationAction,
+  dismissRecommendationAction,
+  restoreRecommendationAction
+} from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
 import {
   GROUP_PREVIEW_SIZE,
@@ -48,17 +55,81 @@ type EvidenceJson = {
 };
 
 /**
- * Read-time enrichment of an `add_citation_block` card with already-persisted
- * domain-coverage data (RECS-COVERAGE-OVERLAY-1). Defined locally rather than
- * imported from the server-only lib/recommendations/coverage-overlay.ts, same
- * reason GeneratedSolution is defined locally. Absent/null means "render this
- * card exactly as before" — coverage data is optional and sparse by design.
+ * Read-time enrichment of a card with already-persisted domain-coverage data
+ * (RECS-COVERAGE-OVERLAY-1, extended to increase_brand_visibility in
+ * AUDIT-RECS-JOIN-1 Fase B). Defined locally rather than imported from the
+ * server-only lib/recommendations/coverage-overlay.ts, same reason
+ * GeneratedSolution is defined locally. Absent/null means "render this card
+ * exactly as before" — coverage data is optional and sparse by design.
  */
 export type CoverageOverlay = {
   state: "confirmed_surfacing_gap" | "possible_content_gap" | "none";
   verifiedPage: { url: string; title: string } | null;
   confidenceOverride: "low" | "medium" | "high" | null;
 };
+
+/**
+ * Duplicated verbatim from lib/recommendations/coverage-overlay.ts's
+ * `overlayCopy` — same reason the type above is duplicated, and same risk:
+ * nothing stops the two from drifting except a test. `recommendations-
+ * client.test.tsx`'s "overlay copy stays in sync with the server" guards it,
+ * comparing every (type, state) pair against the server function directly —
+ * same discipline as GROUNDED_PROVIDERS' three-way parity guard
+ * (log §130): a duplication with no test is the one that drifts in silence.
+ * If you change the wording here, change it there too, or the test will say
+ * so.
+ */
+export function overlayCopyLocal(
+  recommendationType: string,
+  state: CoverageOverlay["state"]
+): { whatWeFound: string; whatToDo: string } | null {
+  if (state === "confirmed_surfacing_gap") {
+    if (recommendationType === "increase_brand_visibility") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que esa página no está apareciendo en la respuesta de la IA.",
+        whatToDo:
+          "no crees una página nueva. Refuerza la que ya tienes: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta, para que sea más fácil de extraer."
+      };
+    }
+    if (recommendationType === "add_citation_block") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que la IA no lo está citando como fuente.",
+        whatToDo:
+          "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar."
+      };
+    }
+    return {
+      whatWeFound: "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta.",
+      whatToDo: "revisa esa página y refuérzala en vez de crear una nueva."
+    };
+  }
+
+  if (state === "possible_content_gap") {
+    if (recommendationType === "increase_brand_visibility") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
+        whatToDo: "publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+      };
+    }
+    if (recommendationType === "add_citation_block") {
+      return {
+        whatWeFound:
+          "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta. Puede que el problema no sea de citación, sino que todavía no has publicado contenido sobre esto.",
+        whatToDo:
+          "antes de intentar que te citen, plantéate crear una página que responda a esta consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo."
+      };
+    }
+    return {
+      whatWeFound: "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
+      whatToDo: "plantéate crear una página que responda a esta consulta."
+    };
+  }
+
+  return null;
+}
 
 export type Recommendation = {
   id: string;
@@ -72,6 +143,11 @@ export type Recommendation = {
   status: string;
   source_type: string;
   evidence_json: EvidenceJson | null;
+  /** The gap's stable identity across runs (RECS-DEDUPE-1) — used to detect
+   * whether this exact gap was previously marked done, see
+   * previouslyMarkedDoneAt below. Optional/undefined on a host screen that
+   * doesn't select it (the web-audit page reuses RecCard). */
+  dedupe_key?: string;
   /**
    * The latest AI-generated solution for this recommendation (null until the
    * user generates one). Drives both the button state and the "Plan de acción"
@@ -84,6 +160,14 @@ export type Recommendation = {
    * to the user once it has persisted across at least one prior scan.
    */
   consecutive_runs_open?: number;
+  /**
+   * RECS-LOOP-1 Fase B — set when this exact gap (dedupe_key) was marked
+   * done once before and came back: the date it was dismissed, so the card
+   * carries that memory instead of silently re-teaching a gap the user
+   * already acted on. Null/undefined for a brand-new gap or a host screen
+   * that doesn't compute it.
+   */
+  previouslyMarkedDoneAt?: string | null;
   /** RECS-COVERAGE-OVERLAY-1 — null/undefined for every card type except a
    * matched `add_citation_block` card for the current scan. */
   coverageOverlay?: CoverageOverlay | null;
@@ -99,6 +183,28 @@ export type Recommendation = {
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority" | "resolved";
 
+/**
+ * RECS-LOOP-1 Fase A — mirrors lib/recommendations/prediction-verification.ts
+ * `PredictionVerdict` on the client (server-only module, same reason
+ * CoverageOverlay/GeneratedSolution are defined locally too). Pure data, no
+ * duplicated logic — the server never generates copy text, only these three
+ * fields — so there is nothing here that can drift and no parity test is
+ * needed, unlike overlayCopyLocal.
+ */
+export type PredictionVerdict = {
+  kind: "presence" | "prominence" | "authority";
+  fulfilledCount: number;
+  totalCount: number;
+};
+
+/** RECS-LOOP-1 Fase B — mirrors lib/recommendations/dismissal-recurrence.ts
+ * `RecurrenceVerdict` on the client, same reason PredictionVerdict is
+ * mirrored above. */
+export type RecurrenceVerdict =
+  | { status: "recurred"; anchorRunId: string; anchorRunCreatedAt: string }
+  | { status: "did_not_recur"; anchorRunId: string; anchorRunCreatedAt: string }
+  | { status: "no_verdict" };
+
 export type ResolvedHistoryItem = {
   id: string;
   title: string;
@@ -106,7 +212,109 @@ export type ResolvedHistoryItem = {
   recommendation_type: string;
   status: "resolved" | "dismissed";
   updated_at: string;
+  /** Only ever set for status="resolved" — the specific-mutation check
+   * (RECS-LOOP-1 Fase A), or for a "dismissed" row whose gap did NOT recur
+   * (Fase B: recurrence.status === "did_not_recur"). Never both a "came
+   * back" recurrence line and a mutation-detail line for the same row —
+   * see predictionVerdictLine. */
+  verification?: { status: "verified"; verdict: PredictionVerdict } | { status: "no_verdict" } | null;
+  /** RECS-LOOP-1 Fase B — only ever set for status="dismissed". */
+  recurrence?: RecurrenceVerdict | null;
+  /**
+   * ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4) —
+   * gates the durable "Deshacer" on a dismissed row. The active list filters
+   * `run_id = latestCompletedRun.id AND status='active'`
+   * (recommendations/page.tsx), so restoring a row whose `run_id` belongs to
+   * an OLDER run flips its status but leaves it invisible everywhere — not
+   * in the current active list (wrong run_id), not in history anymore
+   * (status changed). "Deshacer" only ever renders when this matches the
+   * screen's own `latestCompletedRunId` prop.
+   */
+  run_id: string;
 };
+
+/** Same day/month/year format used for a history row's own dateLabel below —
+ * shared so the two never drift into displaying dates in different shapes on
+ * the same card. */
+function formatHistoryDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Madrid",
+  });
+}
+
+/** The presence/prominence/authority clause shared by both a resolved card's
+ * verdict ("en el escaneo que lo confirmó, ...") and a dismissed card's whose
+ * gap did not recur ("... ya no la encontró. ..." — see predictionVerdictLine).
+ * Lowercase-leading: the resolved case appends it after a comma, the
+ * dismissed case capitalizes it itself as a new sentence. */
+function verdictClause(kind: PredictionVerdict["kind"], fulfilledCount: number, totalCount: number): string {
+  const scope = totalCount === 1 ? "la consulta de esta tarjeta" : `${totalCount} consultas de esta tarjeta`;
+  const of = totalCount === 1 ? "" : ` (${fulfilledCount} de ${totalCount})`;
+
+  if (kind === "presence") {
+    return fulfilledCount === totalCount
+      ? `la IA te nombró en ${scope}`
+      : fulfilledCount === 0
+        ? `la IA no te nombró en ${scope}`
+        : `la IA te nombró${of}`;
+  }
+  if (kind === "prominence") {
+    return fulfilledCount === totalCount
+      ? `dejaste de aparecer por detrás en ${scope}`
+      : fulfilledCount === 0
+        ? `seguiste apareciendo por detrás en ${scope}`
+        : `dejaste de aparecer por detrás${of}`;
+  }
+  // authority
+  return fulfilledCount === totalCount
+    ? `tu web quedó citada en ${scope}`
+    : fulfilledCount === 0
+      ? `tu web no quedó citada en ${scope}`
+      : `tu web quedó citada${of}`;
+}
+
+/**
+ * Observational, dated copy — never "ya apareces" (a permanent-sounding
+ * present tense the next scan's non-determinism could contradict). A
+ * resolved row reads "en el escaneo que lo confirmó, ..." (docs/adr/0017 §5's
+ * promised verification, RECS-LOOP-1 Fase A) — something WAS confirmed there,
+ * the system detected the gap gone. A dismissed row never uses that phrase
+ * (RECS-LOOP-1 Fase B): nothing was confirmed by a manual click, only
+ * observed later, so it names the anchor scan's own date instead — a date
+ * distinct from the card's dateLabel (the dismissal date), and that
+ * difference is the point: "El escaneo del 25 ago 2026 ya no la encontró"
+ * next to a card dated "12 ago 2026" tells you two things happened on two
+ * different days. Silent (returns null) for anything short of a real
+ * verdict — a history row with nothing to show says nothing, never an
+ * invented or placeholder line.
+ */
+export function predictionVerdictLine(item: ResolvedHistoryItem): string | null {
+  if (item.status === "resolved") {
+    if (!item.verification || item.verification.status !== "verified") return null;
+    const { kind, fulfilledCount, totalCount } = item.verification.verdict;
+    return `En el escaneo que lo confirmó, ${verdictClause(kind, fulfilledCount, totalCount)}.`;
+  }
+
+  // dismissed
+  if (!item.recurrence || item.recurrence.status === "no_verdict") return null;
+  const anchorDate = formatHistoryDate(item.recurrence.anchorRunCreatedAt);
+
+  if (item.recurrence.status === "recurred") {
+    return `El escaneo del ${anchorDate} volvió a encontrarla.`;
+  }
+
+  // did_not_recur — the mutation detail is a second sentence, only when there
+  // is one; never paired with "recurred" above (see the type doc).
+  if (item.verification?.status !== "verified") {
+    return `El escaneo del ${anchorDate} ya no la encontró.`;
+  }
+  const { kind, fulfilledCount, totalCount } = item.verification.verdict;
+  const clause = verdictClause(kind, fulfilledCount, totalCount);
+  return `El escaneo del ${anchorDate} ya no la encontró. ${clause.charAt(0).toUpperCase()}${clause.slice(1)}.`;
+}
 
 function impactToN(val: string): number {
   if (val === "high") return 5;
@@ -310,30 +518,64 @@ function ExampleBlock({ example, showCaption }: { example: GeneratedSolutionExam
 }
 
 /**
- * Read-only row for the "Resueltas" tab (RECS-3) — no expand, no evidence, no
- * action buttons; this is history, not the active backlog. Covers both
- * automatically-resolved (the gap stopped recurring in a later scan) and
- * manually-dismissed (the user marked it done/not applicable) items.
+ * Read-only row for the "Resueltas" tab (RECS-3) — no expand, no evidence.
+ * Covers both automatically-resolved (the gap stopped recurring in a later
+ * scan) and manually-dismissed (the user marked it done/not applicable)
+ * items. The one action it DOES carry — "Deshacer" on a dismissed row — is
+ * deliberately here and not on the active card: it's the durable landing
+ * spot for the action that just moved this row here, not an ephemeral flash
+ * that vanishes the moment the user does anything else (ACTIONS-OBSERVABLE-1
+ * slice 4a, founder feedback 2026-09-07).
  */
-function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
-  const dateLabel = new Date(item.updated_at).toLocaleDateString("es-ES", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Europe/Madrid",
-  });
+export function ResolvedHistoryCard({
+  item,
+  projectId,
+  latestCompletedRunId
+}: {
+  item: ResolvedHistoryItem;
+  projectId: string;
+  /** See ResolvedHistoryItem.run_id's own doc comment for why this gates it. */
+  latestCompletedRunId: string | null;
+}) {
+  const dateLabel = formatHistoryDate(item.updated_at);
+  const verdictLine = predictionVerdictLine(item);
+  const router = useRouter();
+  const restoreFeedback = useActionFeedback();
+  const canUndo = item.status === "dismissed" && item.run_id === latestCompletedRunId;
+
+  function handleRestore() {
+    restoreFeedback.run(() => restoreRecommendationAction({ projectId, recommendationId: item.id }), {
+      successMessage: "Restaurada.",
+      onSuccess: () => router.refresh()
+    });
+  }
 
   return (
     <div className="rec-card">
+      {/* Single `.rec-main` child, matching RecCard's contract since
+          RECS-REDESIGN-1 dropped the rank chip: `.rec2-scope .rec-main` is a
+          one-column grid now, sized for exactly one grid item. This card was
+          the one place still passing the check icon as a SECOND child —
+          landing it in its own implicit row/column instead of beside the
+          text, which is what threw the badges/title/date far to the right
+          with a dead gap where the icon used to sit (founder screenshot,
+          2026-08-29). The icon moves inside the single child, inline with
+          the badges, instead of being its own grid item. */}
       <div className="rec-main" style={{ cursor: "default" }}>
-        <div
-          className="rec-rank low"
-          style={{ background: "var(--pos-soft, #f0faf3)", color: "var(--pos-ink, #1a7a49)" }}
-        >
-          <Icon name="check" size={16} />
-        </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7, flexWrap: "wrap" }}>
+            <span
+              className="rec-rank low"
+              style={{
+                width: 20,
+                height: 20,
+                background: "var(--pos-soft, #f0faf3)",
+                color: "var(--pos-ink, #1a7a49)",
+                flexShrink: 0
+              }}
+            >
+              <Icon name="check" size={12} />
+            </span>
             <span className="badge badge-pos">
               {item.status === "resolved" ? "Resuelta automáticamente" : "Marcada como hecha"}
             </span>
@@ -343,8 +585,37 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
             {item.title}
           </div>
           <div className="rec-problem">{dateLabel}</div>
+          {verdictLine && (
+            <div className="rec-problem" style={{ marginTop: 4, color: "var(--ink-3)" }}>
+              {verdictLine}
+            </div>
+          )}
         </div>
       </div>
+      {/* Sibling of `.rec-main`, never a second child inside it — that grid
+          expects exactly one (see the comment above). Only rendered for a
+          dismissed row from the CURRENT run; see canUndo's own doc comment
+          on ResolvedHistoryItem.run_id for why an older run can't offer this
+          safely. */}
+      {canUndo && (
+        <div style={{ padding: "0 16px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={handleRestore}
+            disabled={restoreFeedback.isPending}
+          >
+            {restoreFeedback.isPending ? (
+              <>
+                <span className="btn-spinner" /> Deshaciendo…
+              </>
+            ) : (
+              "Deshacer"
+            )}
+          </button>
+          <ActionAnnouncement state={restoreFeedback.state} />
+        </div>
+      )}
     </div>
   );
 }
@@ -379,45 +650,38 @@ export function RecCard({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [isRewriting, startRewrite] = useTransition();
-  const [rewriteError, setRewriteError] = useState<string | null>(null);
-  const [isDismissing, startDismiss] = useTransition();
-  const [dismissError, setDismissError] = useState<string | null>(null);
   const router = useRouter();
+
+  // ACTIONS-OBSERVABLE-1 slice 4a (docs/external-audit-2026-08.md, Fase 4,
+  // P0-04) — both actions on this card now go through the shared contract
+  // (pending / success with acknowledgement / categorized error, never
+  // nothing) instead of a hand-rolled useState+useTransition pair each.
+  const rewriteFeedback = useActionFeedback();
+  const dismissFeedback = useActionFeedback();
 
   function handleRewrite(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setRewriteError(null);
-    startRewrite(async () => {
-      try {
-        const result = await rewriteRecommendationAction({ projectId, recommendationId: rec.id });
-        if (!result.success) {
-          setRewriteError(result.error);
-          return;
-        }
-        router.refresh();
-      } catch {
-        setRewriteError("No se ha podido generar la propuesta en este momento. Inténtalo de nuevo en unos minutos.");
-      }
+    rewriteFeedback.run(() => rewriteRecommendationAction({ projectId, recommendationId: rec.id }), {
+      successMessage: "Propuesta generada.",
+      onSuccess: () => router.refresh()
     });
   }
 
   function handleDismiss(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setDismissError(null);
-    startDismiss(async () => {
-      try {
-        const result = await dismissRecommendationAction({ projectId, recommendationId: rec.id });
-        if (!result.success) {
-          setDismissError(result.error);
-          return;
-        }
-        router.refresh();
-      } catch {
-        setDismissError("No se ha podido actualizar la recomendación en este momento. Inténtalo de nuevo en unos minutos.");
-      }
+    // Same pattern as handleRewrite: an ephemeral "Deshacer" that lived only
+    // on THIS card (no refresh, until navigation) tested confusing — it read
+    // as "gone after a second" the moment the user did anything else, and a
+    // deshacer that doesn't survive leaving the screen isn't one (founder,
+    // 2026-09-07). The durable "Deshacer" now lives on the tarjeta's landing
+    // spot instead — ResolvedHistoryCard, under "Resueltas" — gated to the
+    // current run so it can't restore a row the active list can no longer
+    // show (see that component's own comment for the exact condition).
+    dismissFeedback.run(() => dismissRecommendationAction({ projectId, recommendationId: rec.id }), {
+      successMessage: "Marcada como hecha.",
+      onSuccess: () => router.refresh()
     });
   }
 
@@ -488,6 +752,7 @@ export function RecCard({
             priorityLevel(rec) === "high" ||
             quickWin ||
             (rec.consecutive_runs_open ?? 1) > 1 ||
+            Boolean(rec.previouslyMarkedDoneAt) ||
             control === "third_party" ||
             control === "in_app") && (
             <div
@@ -509,6 +774,16 @@ export function RecCard({
               )}
               {(rec.consecutive_runs_open ?? 1) > 1 && (
                 <span className="badge badge-outline">Abierta {rec.consecutive_runs_open} escaneos</span>
+              )}
+              {/* RECS-LOOP-1 Fase B — this exact gap was marked done before and
+                  came back. Without this the card looks brand new, and the
+                  user who already clicked "Marcar como hecho" once gets no
+                  memory of having done so. */}
+              {rec.previouslyMarkedDoneAt && (
+                <span className="badge badge-outline">
+                  <Icon name="clock" size={11} />
+                  La marcaste como hecha el {formatHistoryDate(rec.previouslyMarkedDoneAt)}
+                </span>
               )}
               {/* RECS-ACCION-1 — sólo se marca la EXCEPCIÓN. "En tu web" es lo
                   que el usuario ya da por supuesto en 11 de los 15 tipos, y
@@ -665,12 +940,10 @@ export function RecCard({
                 Sí tienes una página sobre este tema
               </div>
               <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-                Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema
-                no es que te falte contenido, sino que la IA no lo está citando como fuente.
+                {overlayCopyLocal(rec.recommendation_type, "confirmed_surfacing_gap")?.whatWeFound}
               </p>
               <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
-                <b>Qué hacer:</b> no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar —
-                añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar.
+                <b>Qué hacer:</b> {overlayCopyLocal(rec.recommendation_type, "confirmed_surfacing_gap")?.whatToDo}
               </p>
               {overlay.verifiedPage && (
                 <a
@@ -714,12 +987,10 @@ export function RecCard({
                 No encontramos contenido tuyo sobre este tema
               </div>
               <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-                Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta. Puede
-                que el problema no sea de citación, sino que todavía no has publicado contenido sobre esto.
+                {overlayCopyLocal(rec.recommendation_type, "possible_content_gap")?.whatWeFound}
               </p>
               <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
-                <b>Qué hacer:</b> antes de intentar que te citen, plantéate crear una página que responda a esta
-                consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo.
+                <b>Qué hacer:</b> {overlayCopyLocal(rec.recommendation_type, "possible_content_gap")?.whatToDo}
               </p>
             </div>
           )}
@@ -746,7 +1017,31 @@ export function RecCard({
                   <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: 0, listStyle: "none" }}>
                     {promptDetails.slice(0, 4).map((p) => (
                       <li key={p.id} style={{ marginBottom: 6 }}>
-                        <div>{p.prompt}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          {/* RECS-EVIDENCE-2 (docs/external-audit-2026-08.md,
+                              Fase 7) — de qué motor viene esta evidencia
+                              concreta. `p.provider` falta en filas persistidas
+                              antes de esta fase; nada se pinta en ese caso,
+                              nunca se asume Gemini por defecto aquí (a
+                              diferencia de `normalizeProvider`, pensado para
+                              filas de escaneo reales, no para evidencia
+                              histórica que nunca lo registró). */}
+                          {p.provider && (
+                            <span
+                              style={{
+                                color: getEngineMeta(p.provider).color,
+                                display: "inline-flex",
+                                width: 12,
+                                height: 12,
+                                flexShrink: 0
+                              }}
+                              title={getEngineMeta(p.provider).label}
+                            >
+                              <EngineGlyph provider={p.provider} />
+                            </span>
+                          )}
+                          <span>{p.prompt}</span>
+                        </div>
                         {(p.competitors.length > 0 || p.domains.length > 0) && (
                           <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
                             {p.competitors.length > 0 && <span>Gana: {p.competitors.join(", ")}</span>}
@@ -824,12 +1119,22 @@ export function RecCard({
           </div>
 
           {/* Mejorar redacción con IA — el botón solo aparece mientras no haya
-              una solución generada; una vez generada, se muestra la insignia. */}
+              una solución generada; una vez generada, se muestra la insignia.
+              El acuse de éxito (ActionAnnouncement) se enseña en el mismo
+              punto del clic, no sólo en el resultado que aparece más abajo
+              (ACTIONS-OBSERVABLE-1 slice 4a — "generar" era invisible según
+              la clasificación de la Fase 0, docs/external-audit-2026-08.md
+              Fase 4, P0-04). */}
           <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             {!rec.solution ? (
               <>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
-                  {isRewriting ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={handleRewrite}
+                  disabled={rewriteFeedback.isPending}
+                >
+                  {rewriteFeedback.isPending ? (
                     <>
                       <span className="btn-spinner" /> Generando…
                     </>
@@ -840,11 +1145,7 @@ export function RecCard({
                     </>
                   )}
                 </button>
-                {rewriteError && (
-                  <p className="feedback error" style={{ margin: 0 }}>
-                    {rewriteError}
-                  </p>
-                )}
+                <ActionAnnouncement state={rewriteFeedback.state} />
               </>
             ) : (
               <span className="badge badge-outline">
@@ -853,11 +1154,22 @@ export function RecCard({
               </span>
             )}
 
-            {/* Marcar como hecho (RECS-3) — dismisses the recommendation;
-                router.refresh() removes it from view since the page only
-                fetches status='active' rows. */}
-            <button type="button" className="btn btn-ghost btn-sm" onClick={handleDismiss} disabled={isDismissing}>
-              {isDismissing ? (
+            {/* Marcar como hecho (RECS-3). El acuse de éxito se ve en el
+                punto del clic (ActionAnnouncement) antes de que
+                router.refresh() la quite de la lista de activas — mismo
+                patrón que "Generar". El deshacer NO vive aquí: una versión
+                efímera que sólo sobrevivía mientras la tarjeta seguía
+                montada resultó confusa ("aparece un segundo y ya está en
+                Resueltas", founder 2026-09-07) — vive de forma durable en
+                ResolvedHistoryCard, bajo la pestaña "Resueltas", donde de
+                verdad sigue disponible después de refrescar. */}
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={handleDismiss}
+              disabled={dismissFeedback.isPending}
+            >
+              {dismissFeedback.isPending ? (
                 <>
                   <span className="btn-spinner" /> Actualizando…
                 </>
@@ -868,9 +1180,18 @@ export function RecCard({
                 </>
               )}
             </button>
-            {dismissError && (
-              <p className="feedback error" style={{ margin: 0 }}>
-                {dismissError}
+            <ActionAnnouncement state={dismissFeedback.state} />
+            {/* RECURRING-VALUE-1 (docs/external-audit-2026-08.md, Fase 3):
+                closes the loop this button opens — RECS-LOOP-1 already
+                verifies on the next comparable scan whether a dismissed
+                gap actually closed (pestaña "Resueltas"), but nothing on
+                the active card said that check was coming. No date: the
+                exact schedule is a separate deliverable (calendario
+                visible), this is just the promise that a scan will judge
+                it. */}
+            {dismissFeedback.state.status === "idle" && (
+              <p style={{ margin: 0, fontSize: 11.5, color: "var(--ink-4)" }}>
+                La verás reflejada en tu próximo escaneo.
               </p>
             )}
           </div>
@@ -1039,6 +1360,7 @@ export function RecommendationsClient({
   planIds = [],
   planPoints = null,
   domain = "",
+  latestCompletedRunId = null,
 }: {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
@@ -1052,6 +1374,11 @@ export function RecommendationsClient({
   /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
   planPoints?: number | null;
   domain?: string;
+  /** Gates "Deshacer" on a dismissed row in "Resueltas" — see
+   * ResolvedHistoryItem.run_id's doc comment. Null on any host screen that
+   * doesn't pass it (e.g. web-audit's embedded RecCard usage never renders
+   * ResolvedHistoryCard, so it never needs this). */
+  latestCompletedRunId?: string | null;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
@@ -1218,8 +1545,39 @@ export function RecommendationsClient({
       {filter !== "resolved" &&
         (filtered.length === 0 ? (
           <div className="section-empty">
-            <div className="section-empty-title">Nada con este filtro</div>
-            <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
+            {filter === "all" ? (
+              <>
+                {/* "Todas" is the superset — reaching zero here means zero
+                    active recommendations, not "wrong filter" (that's the
+                    branch below). ACTIONS-OBSERVABLE-1 slice 4a: this is
+                    exactly the state a user lands in right after marking
+                    their last active recommendation done, so it points at
+                    where that action actually went instead of reading like
+                    it vanished (founder feedback 2026-09-07). */}
+                <div className="section-empty-title">Nada que corregir ahora mismo</div>
+                <div className="section-empty-desc">
+                  {resolvedHistory.length > 0
+                    ? "Lo que ya has resuelto está en la pestaña “Resueltas”."
+                    : "Vuelve tras tu próximo escaneo."}
+                </div>
+                {resolvedHistory.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ marginTop: 14 }}
+                    onClick={() => setFilter("resolved")}
+                  >
+                    Ver Resueltas
+                    <Icon name="arrRight" size={14} />
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="section-empty-title">Nada con este filtro</div>
+                <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
+              </>
+            )}
           </div>
         ) : filter === "all" ? (
           groupByType(filtered).map(({ type, items }) => (
@@ -1237,7 +1595,14 @@ export function RecommendationsClient({
 
       {filter === "resolved" &&
         (resolvedHistory.length > 0 ? (
-          resolvedHistory.map((item) => <ResolvedHistoryCard key={item.id} item={item} />)
+          resolvedHistory.map((item) => (
+            <ResolvedHistoryCard
+              key={item.id}
+              item={item}
+              projectId={projectId}
+              latestCompletedRunId={latestCompletedRunId}
+            />
+          ))
         ) : (
           <div className="section-empty">
             <div className="section-empty-title">Todavía no hay nada resuelto</div>

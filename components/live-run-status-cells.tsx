@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const statusLabels: Record<string, string> = {
   pending: "Pendiente",
@@ -54,16 +55,22 @@ const POLL_INTERVAL_MS = 3000;
 /**
  * Replaces the status-badge and prompts-progress cells for the one Escaneos
  * row that is still pending/running, polling the lightweight status endpoint
- * independently instead of relying on the page-level `router.refresh()` —
- * which the sibling `ScanProgressPoller` now only triggers once, on terminal
- * transition (docs/architecture-audit-2026-07.md, PERF-3b). Completed/failed
- * rows never mount this; their data is static and server-rendered as before.
+ * independently. Completed/failed rows never mount this; their data is
+ * static and server-rendered as before.
+ *
+ * VERCEL-COST-1 (2026-08-30): also owns the terminal/superseded-transition
+ * `router.refresh()` that a separate sibling, `ScanProgressPoller`, used to
+ * fire on the same page — two independent intervals hitting the same
+ * endpoint for no reason (each Edge/Function invocation is a billed
+ * Observability event). Mirrors the single-poller pattern
+ * `ScanMissionRocket` already uses for the first-scan takeover.
  *
  * Mirrors `statusLabels`/`getStatusBadgeClass` from the Escaneos page rather
  * than importing them — that page module pulls in server-only code, which a
  * client component cannot import.
  */
 export function LiveRunStatusCells({ projectId, initial }: { projectId: string; initial: LiveRun }) {
+  const router = useRouter();
   const [run, setRun] = useState<LiveRun>(initial);
 
   useEffect(() => {
@@ -75,12 +82,17 @@ export function LiveRunStatusCells({ projectId, initial }: { projectId: string; 
         if (!res.ok || cancelled) return;
 
         const data: { run: LiveRun | null } = await res.json();
-        if (!data.run || data.run.id !== initial.id) return; // superseded — the page-level refresh handles it
+        const live = data.run;
+        const isTerminal = !live || (live.status !== "pending" && live.status !== "running");
+        const isSuperseded = Boolean(live) && live!.id !== initial.id;
 
-        setRun(data.run);
-        if (data.run.status !== "pending" && data.run.status !== "running") {
+        if (isTerminal || isSuperseded) {
           clearInterval(id);
+          if (!cancelled) router.refresh();
+          return;
         }
+
+        if (live) setRun(live);
       } catch {
         // Transient network error — the next tick retries.
       }
@@ -90,7 +102,7 @@ export function LiveRunStatusCells({ projectId, initial }: { projectId: string; 
       cancelled = true;
       clearInterval(id);
     };
-  }, [projectId, initial.id]);
+  }, [projectId, initial.id, router]);
 
   const analyzing = isAnalyzing(run);
   const total = Number(run.total_prompts ?? 0);

@@ -80,9 +80,11 @@ while IFS= read -r file; do
   [ -n "$file" ] || continue
   case "$file" in
     # Same argument as `scripts/` below, one level down: the pilot only ever
-    # runs against a preview deployment (`ux-pilot.yml` triggers on
-    # `deployment_status` and nothing else), so skipping the build for a change
-    # to the pilot itself means that change can never be exercised. It happened
+    # runs against a preview deployment (since VERCEL-COST-1 Fase 5 it is
+    # dispatched by hand rather than by `deployment_status`, but it still needs
+    # a preview of that commit to exist before it can pilot it), so skipping
+    # the build for a change to the pilot itself means that change can never be
+    # exercised. It happened
     # on 2026-08-05: a commit fixing the pilot's own interaction sweep was
     # deployed "Ignored", no preview, no pilot run, no way to know if the fix
     # worked. Unit tests under tests/ that run in CI are unaffected.

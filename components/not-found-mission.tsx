@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 
 /**
  * NOT-FOUND-ROCKET-1 — la 404 pública, «Fuera de trayectoria».
@@ -136,6 +137,9 @@ export function NotFoundMission() {
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
             </div>
+          </div>
+          <div className="lp-footer-pay">
+            <PaymentBadgesRow />
           </div>
           <div className="copy">
             © 2026 GenScore · Generative Engine Optimization para empresas y agencias.

@@ -389,3 +389,22 @@ despacho de más son llamadas reales de Gemini.
 hoy; la columna guarda lo que valía con los de entonces. Hacerlo leer la columna
 resucitaría la regresión fantasma que WEB-AUDIT-R3 y
 `TECHNICAL_CRITERIA_EXPANDED_AT` existen para explicar. Está fijado por test.
+
+### La columna sube los cuatro peldaños de la escalera de anchos
+
+`.wa2-page` mide **460 / 640 a 900px / 1200 a 1200px / 1280 a 1600px**, igual
+que las otras seis columnas de la consola. No es una elección de esta pantalla:
+es el estándar aprobado en CITATIONS-REDESIGN-1 (log §5) y ratificado en
+OV-DESKTOP-2 (log §119). Esta pantalla declaró **sólo el primer peldaño**
+durante meses y se veía en escritorio como una columna de móvil centrada, sin
+que fallara nada — el fundador lo encontró a ojo (log §178). Lo fija
+`tests/console-page-width.test.ts`, que exige los cuatro a las siete columnas.
+
+**Y NO lleva `--ov-hdr-page-cap` ni `--mrk-page-cap` junto a esos anchos.** Esas
+dos variables sólo hacen falta donde la clase estrecha va COMBINADA sobre
+`.page` y por lo tanto baja su tope real (hoy sólo `.cm2-page`). Aquí
+`.wa2-page` es un hijo dentro de un `.page` intacto —la cabecera fija ni
+siquiera está dentro de él— así que las dos fórmulas de bleed ya leen el tope de
+verdad. Copiarlas repetiría un error ya cometido y documentado en esta misma
+pantalla: alimentar la fórmula con un tope al que `.page` nunca estuvo sujeto y
+dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).

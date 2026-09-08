@@ -102,7 +102,12 @@ const PROJECT_SETS = {
   // per-deploy workflow never passes — and even then the journey refuses
   // without an explicitly named PILOT_SCAN_PROJECT_ID. Two independent locks,
   // on purpose: this is the one journey that spends money.
-  scan: ["auth", "scan"]
+  scan: ["auth", "scan"],
+  // AUDIT-REPRO-1 (Fase 0, docs/external-audit-2026-08.md). The one journey
+  // that dismisses a real recommendation with no undo (founder decision,
+  // 2026-08-27) — same isolation as `scan`: its own Playwright project,
+  // reached only by this explicit flag, never by the per-deploy read set.
+  actions: ["auth", "actions"]
 };
 
 function parseArgs(argv) {
@@ -177,6 +182,10 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
   // verdict comment in place and silently replace a screen-by-screen judgement
   // with a two-line cost report.
   const isScan = journeys === "scan";
+  // AUDIT-REPRO-1 (Fase 0). Reuses the write-project as its target (same
+  // env var), but gets its own marker/table like scan does — its subject is
+  // a per-action verdict, not a scenario or a screen grid.
+  const isActions = journeys === "actions";
   const findings = readFindings();
   const labels = [...new Set(findings.map((finding) => finding.label))];
 
@@ -192,7 +201,7 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
     [
       ["PILOT_EMAIL", Boolean(process.env.PILOT_EMAIL)],
       ["PILOT_PASSWORD", Boolean(process.env.PILOT_PASSWORD)],
-      isWrite
+      isWrite || isActions
         ? ["PILOT_WRITE_PROJECT_ID", Boolean(process.env.PILOT_WRITE_PROJECT_ID)]
         : isScan
           ? ["PILOT_SCAN_PROJECT_ID", Boolean(process.env.PILOT_SCAN_PROJECT_ID)]
@@ -203,8 +212,14 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
       .join(" · ") +
     "\n\n";
 
-  const marker = isWrite ? "write-" : isScan ? "scan-" : "";
-  const phase = isWrite ? " — Escritura (UX-PILOT-2a)" : isScan ? " — Escaneo autorizado (UX-PILOT-3)" : "";
+  const marker = isWrite ? "write-" : isScan ? "scan-" : isActions ? "actions-" : "";
+  const phase = isWrite
+    ? " — Escritura (UX-PILOT-2a)"
+    : isScan
+      ? " — Escaneo autorizado (UX-PILOT-3)"
+      : isActions
+        ? " — Clasificación de acciones (AUDIT-REPRO-1)"
+        : "";
   const header =
     `<!-- agentic:ux-pilot-${marker}result -->\n` +
     `## Agentic User Pilot${phase} — ${verdict}\n\n` +
@@ -231,6 +246,15 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
       failures.length === 0
         ? "✅ Se añadió un prompt de prueba y el escaneo restringido a él se completó.\n\n"
         : "_El escenario de escritura no se completó — ver fallos abajo._\n\n";
+  } else if (isActions) {
+    // The journey's own console.log carries the per-action verdict table
+    // (real / invisible / entorno, with evidence) — visible in the job log,
+    // not duplicated here. The PR comment states only whether the run
+    // finished, same shape as `write`.
+    table =
+      failures.length === 0
+        ? "✅ Las acciones alcanzables se ejecutaron y cada una quedó con veredicto (real / invisible / falso positivo del entorno). Veredicto completo en el log del job — ver el paso `actions`.\n\n"
+        : "_La clasificación no terminó — ver fallos abajo. Una acción sin veredicto no es un PASS de esta fase._\n\n";
   } else if (labels.length > 0) {
     table =
       `| Pantalla | Mobile 375 | Tablet 768 | Desktop 1280 |\n|---|---|---|---|\n` +

@@ -31,6 +31,14 @@ export type EntityEngineBreakdown = {
   provider: string;
   mentions: number;
   /**
+   * This engine's own row total — TRUST-METRICS-1 (docs/external-audit-2026-08.md,
+   * Fase 1): every percentage the product shows must carry the denominator
+   * that produced it ("0 % de 15 respuestas de Claude", never a bare "0 %").
+   * Added alongside `mentions`/`mentionRate` rather than replacing them, so
+   * existing callers keep compiling.
+   */
+  total: number;
+  /**
    * Over THIS engine's own row total, never the global row total across all
    * engines — an engine added mid-project history (e.g. ChatGPT via
    * ENGINES-2a) has fewer accumulated rows than Gemini, and dividing by the
@@ -106,6 +114,7 @@ export function computeEntityEngineBreakdown(input: {
   const entries: EntityEngineBreakdown[] = Array.from(byProvider.entries()).map(([provider, acc]) => ({
     provider,
     mentions: acc.mentioned,
+    total: acc.total,
     mentionRate: acc.total > 0 ? Math.round((acc.mentioned / acc.total) * 100) : 0
   }));
 

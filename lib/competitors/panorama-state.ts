@@ -63,6 +63,12 @@ export type PanoramaRow = {
   /** Mean rank when mentioned. Never published as a number — encode as a bar. */
   position: number | null;
   rank: number | null;
+  /**
+   * SAMPLE-FLOOR-1: whether this row's mean rank rests on enough answers to be
+   * compared with the others. `false` rows are real and sorted last; the
+   * renderer says why instead of dropping them.
+   */
+  qualified: boolean;
 };
 
 export type PanoramaState =
@@ -115,7 +121,10 @@ export function computePanoramaState({
       isBrand: e.isBrand,
       mentionRate: e.fallbackMentionRate,
       position: null,
-      rank: null
+      rank: null,
+      // Nothing is ranked in this state, so nothing can be out-ranked on thin
+      // evidence either — the floor has no opinion here.
+      qualified: true
     }));
     return { kind: "unranked", rows };
   }
@@ -144,6 +153,7 @@ function toPanoramaRow(row: LatestPositionRow<{ key: string; label: string; doma
     isBrand: Boolean(row.isBrand),
     mentionRate: row.mentionRate,
     position: row.position,
-    rank: row.rank
+    rank: row.rank,
+    qualified: row.qualified
   };
 }
