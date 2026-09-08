@@ -100,18 +100,18 @@ describe("parseProjectForm — onboarding input contract", () => {
   });
 
   it("respects a caller-supplied maxPrompts (plan cap) instead of the default MAX_INITIAL_PROMPTS", () => {
-    const promptsInput = Array.from({ length: 12 }, (_, i) => `prompt number ${i}`).join("\n");
+    const promptsInput = Array.from({ length: 17 }, (_, i) => `prompt number ${i}`).join("\n");
 
     const defaultResult = parseProjectForm(form({ domain: "acme.com", country: "ES", initial_prompts: promptsInput }));
     expect(defaultResult.ok).toBe(true);
-    if (defaultResult.ok) expect(defaultResult.value.initialPrompts).toHaveLength(10);
+    if (defaultResult.ok) expect(defaultResult.value.initialPrompts).toHaveLength(15);
 
     const starterResult = parseProjectForm(
       form({ domain: "acme.com", country: "ES", initial_prompts: promptsInput }),
       25
     );
     expect(starterResult.ok).toBe(true);
-    if (starterResult.ok) expect(starterResult.value.initialPrompts).toHaveLength(12);
+    if (starterResult.ok) expect(starterResult.value.initialPrompts).toHaveLength(17);
   });
 
   it("rejects when domain is missing", () => {
@@ -156,13 +156,13 @@ describe("project-form pure helpers", () => {
   });
 
   it("parseInitialPrompts caps at MAX_INITIAL_PROMPTS by default, but respects a higher maxPrompts (plan cap)", () => {
-    const promptsInput = Array.from({ length: 12 }, (_, i) => `prompt number ${i}`).join("\n");
+    const promptsInput = Array.from({ length: 17 }, (_, i) => `prompt number ${i}`).join("\n");
 
     const defaultCapped = parseInitialPrompts(promptsInput);
-    expect(defaultCapped).toHaveLength(10);
+    expect(defaultCapped).toHaveLength(15);
 
-    const planCapped = parseInitialPrompts(promptsInput, undefined, 12);
-    expect(planCapped).toHaveLength(12);
+    const planCapped = parseInitialPrompts(promptsInput, undefined, 17);
+    expect(planCapped).toHaveLength(17);
 
     const lowerCapped = parseInitialPrompts(promptsInput, undefined, 5);
     expect(lowerCapped).toHaveLength(5);

@@ -11,9 +11,10 @@ import { FaviconImg } from "@/components/ui/favicon-img";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { isWellFormedDomain, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
+import { isWellFormedDomain, MAX_INITIAL_PROMPTS, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { PLANS } from "@/app/pricing/plans-data";
 
 const DEFAULT_PROMPT_CAP = 10;
 const GENERATE_MORE_BATCH_SIZE = 5;
@@ -523,6 +524,11 @@ export function OnboardingWizard({
   generateMorePromptsAction,
   createAction
 }: OnboardingWizardProps) {
+  // SCREEN-POLISH-1 Fase B: only used in the copy below when promptCap is
+  // below MAX_INITIAL_PROMPTS (Free today) — the first plan tier (PLANS is
+  // already ordered by prompt cap, ascending) that covers more than this
+  // account's own cap, to name a concrete upgrade instead of a vague "more".
+  const nextPromptPlan = PLANS.find((p) => p.caps.prompts > promptCap);
   const [step, setStep] = useState(0);
   const [domain, setDomain] = useState("");
   const [country, setCountry] = useState("ES");
@@ -990,8 +996,25 @@ export function OnboardingWizard({
         <div>
           <h1 className="onb2-h1">Revisa tus prompts</h1>
           <p className="onb2-sub">
-            Cada prompt se lanza a los tres motores. Quita los que no te representen — recomendamos al menos{" "}
-            <b style={{ color: "var(--ink-2)" }}>15</b> para obtener mejores datos.
+            Cada prompt se lanza a los tres motores. Quita los que no te representen
+            {promptCap >= MAX_INITIAL_PROMPTS ? (
+              <>
+                {" "}— recomendamos al menos <b style={{ color: "var(--ink-2)" }}>{MAX_INITIAL_PROMPTS}</b> para
+                obtener mejores datos.
+              </>
+            ) : (
+              <>
+                . Tu plan cubre hasta <b style={{ color: "var(--ink-2)" }}>{promptCap}</b>
+                {nextPromptPlan ? (
+                  <>
+                    {" "}
+                    — con {nextPromptPlan.name} monitorizas {nextPromptPlan.caps.prompts}.
+                  </>
+                ) : (
+                  "."
+                )}
+              </>
+            )}
           </p>
         </div>
         {stepsBar}
