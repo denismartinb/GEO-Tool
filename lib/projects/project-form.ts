@@ -11,7 +11,16 @@ import { PROMPT_CATEGORIES } from "@/lib/projects/prompt-categories";
  * optional zod fields must accept that (null -> undefined).
  */
 
-export const MAX_INITIAL_PROMPTS = 10;
+/**
+ * SCREEN-POLISH-1 Fase B (2026-09-07): was 10 until the onboarding copy
+ * ("recomendamos al menos 15 para obtener mejores datos") started promising
+ * a number this constant couldn't deliver — Gemini was never asked for more
+ * than 10, no matter the plan. `suggestPrompts`'s own LLM call already
+ * clamps to 15 regardless of what it's asked for
+ * (`lib/projects/prompt-suggestions-llm.ts`), so raising this to 15 doesn't
+ * change what the model can produce, only what the product asks it for.
+ */
+export const MAX_INITIAL_PROMPTS = 15;
 
 /**
  * How many competitors the system asks Gemini to SUGGEST
