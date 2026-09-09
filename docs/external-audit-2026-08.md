@@ -30,7 +30,7 @@ y decirlo importa tanto como arreglar el resto.
 | P0-07 | El checker cierra un resultado positivo con copy negativo | `free-checker-result.tsx` — el panel "Con una consulta no se puede decir que no aparezcas" se renderiza **incondicionalmente** | **Confirmado. Arreglo barato.** |
 | P0-08 | Pro anuncia diario; la consola dice que no se repetirá | `/pricing` promete "Diario"; `recurring_scans_enabled` nace `false` (`cron.ts:255`) | **Confirmado, y resuelto para altas nuevas** por PROJECT-DEFAULTS-BY-ACCOUNT-1 (se enciende al completarse el primer escaneo). Sigue abierto para los proyectos ya existentes. |
 | P0-09 | "Fuente que cita a un rival" sobreafirma | `aggregate-citations.ts:39-48` — `competitors` son los rivales nombrados **en la respuesta** donde se citó la página, no en la página | **Confirmado. Semántico.** |
-| P1-01 | Pestaña de escaneo clavada en "finalizando" | `ANIMATION-PARITY-1` (#482, 2026-08-27) movió el sondeo y el `router.refresh()` al propio `ScanMissionRocket` en las 6 pantallas | **Probablemente ya arreglado tras la auditoría. Verificar, no reimplementar.** |
+| P1-01 | Pestaña de escaneo clavada en "finalizando" | `ANIMATION-PARITY-1` (#482, 2026-08-27) movió el sondeo y el `router.refresh()` al propio `ScanMissionRocket` en las 6 pantallas | **Cerrado — verificado por el fundador en producción, 2026-09-09 (log §212).** |
 | P1-02 | ChatGPT sugerido como competidor; "GEO Score" como alias | No existe ninguna lista de términos genéricos en `lib/competitors/` ni en `lib/brand-aliases/` | **Confirmado.** |
 | P1-03 | La tabla por motor de Competidores omitió Claude | `engine-share.ts:69-81` — `filterComparableEngines` elimina el motor donde nadie fue mencionado. **Deliberado** (no inventar un 0) | **Confirmado, con matiz.** La honestidad es correcta; la lectura resultante es falsa. |
 
@@ -682,15 +682,20 @@ y posición media. Rankings ordenables.
 
 ---
 
-## 2. Verificación de P1-01 (no es una fase)
+## 2. Verificación de P1-01 (no es una fase) — CERRADA (2026-09-09, log §212)
 
 El informe describe la pestaña de escaneo clavada en "finalizando" mientras otra
 pestaña ya mostraba resultados. `ANIMATION-PARITY-1` (#482, mergeado el
 2026-08-27, **un día después de la auditoría**) movió el sondeo y el
 `router.refresh()` al propio `ScanMissionRocket` en las seis pantallas, por esta
-misma razón. **Se verifica con una pasada de piloto antes de tocar nada.** Si
-sigue ocurriendo, entra como fase propia; si no, se anota como cerrado en el
-histórico con la referencia cruzada.
+misma razón.
+
+**Verificado por el fundador en producción, no por el piloto.** Con un
+escaneo real en curso y dos pestañas abiertas a la vez en pantallas
+distintas, las dos se resuelven solas al terminar el escaneo — ninguna se
+queda clavada en "Finalizando…" esperando una recarga manual. `P1-01` queda
+cerrado sin código nuevo: `ANIMATION-PARITY-1` ya lo había arreglado el
+2026-08-27, un día después de que la auditoría lo encontrara.
 
 ---
 

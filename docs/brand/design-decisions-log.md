@@ -19613,3 +19613,31 @@ en este mismo commit); log §195 (primer recorte de la misma fase);
 `lib/scan/score-alert.ts` (sin cambios). Decisión del fundador, 2026-09-08 y
 2026-09-09 — sin Task Intake de implementación adicional porque la fase se
 cierra sin código nuevo.
+
+---
+
+## 211. P1-01 verificado y cerrado: ninguna pestaña se queda clavada en "finalizando" (2026-09-09)
+
+**El hallazgo del auditor.** La pestaña con el escaneo en curso se quedaba en
+"Finalizando…" aunque otra pestaña, abierta a la vez, ya mostraba los
+resultados del mismo escaneo terminado.
+
+**Por qué ya se sospechaba cerrado sin volver a tocarlo.**
+`ANIMATION-PARITY-1` (#482) mergeó el 2026-08-27 — **un día después** de la
+auditoría — y movió el sondeo del estado del run más el `router.refresh()`
+final al propio `ScanMissionRocket`, montado en las seis pantallas por
+igual. Antes de esa fase sólo Visión general sondeaba de verdad; el resto se
+quedaba con el último estado que tuviera en el momento de montarse, que es
+exactamente la foto fija que describe el hallazgo.
+
+**Verificación.** El fundador reprodujo el escenario exacto del informe en
+producción: un escaneo real en curso, dos pestañas abiertas a la vez en
+pantallas distintas de la consola. Las dos se resolvieron solas al terminar
+el escaneo, sin necesidad de recargar ninguna a mano. Sin código nuevo — es
+una confirmación de que `ANIMATION-PARITY-1` ya cubría este caso, no una
+corrección.
+
+**Trazabilidad.** `docs/external-audit-2026-08.md`, sección "Verificación de
+P1-01" y fila `P1-01` de la tabla de hallazgos, ambas marcadas cerradas en
+este mismo commit; `ANIMATION-PARITY-1` (#482, log §168);
+`components/scan-mission-rocket.tsx`. Verificación del fundador, 2026-09-09.
