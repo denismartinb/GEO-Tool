@@ -259,9 +259,16 @@ aparece**, así que una marca nombrada pocas veces pero siempre la primera queda
 por delante de otra nombrada en muchas más. Es correcto y es contraintuitivo:
 en el proyecto Mozilla, Amazon salía 1ª con un 14% de mención y Mozilla 4ª con
 un 48% (log §177). **Ningún rótulo de esta cifra puede decir «Puesto» a secas**
-— eso se lee como una clasificación general — y la frase que lo explica va
-pegada a la cifra, nunca en un tooltip: el malentendido se encuentra mirando la
-pantalla, así que la explicación tiene que estar donde el ojo ya está.
+— eso se lee como una clasificación general —, así que el rótulo es siempre
+"Puesto medio", nunca "Puesto".
+
+**La frase larga que explicaba el mecanismo con el ejemplo Amazon/Mozilla se
+retiró (2026-09-09, log §212), sin sustituto.** Vivía pegada a la cifra en las
+dos pantallas (`MEAN_RANK_NOTE`) — el fundador la encontró mal maquetada
+revisando un preview y pidió quitarla directamente. **No añadas una frase
+explicativa nueva sin que el fundador la pida**: ya se probó y se descartó una
+vez: el rótulo "Puesto medio" es lo único que queda para señalar que no es un
+ranking.
 
 **Los rótulos viven en `lib/competitors/mean-rank-copy.ts` y en ningún otro
 sitio.** §36 arregló que las dos pantallas ORDENARAN esta cifra distinto y

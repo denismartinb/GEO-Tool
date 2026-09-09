@@ -9,8 +9,7 @@ import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/
 import {
   AUDIT_HALF_COLUMN,
   isMissingColumnError,
-  setRecurringScansCore,
-  type SetRecurringScansResult
+  setRecurringScansCore
 } from "@/lib/projects/automation-toggles";
 import {
   rewriteRecommendationCore,
@@ -319,13 +318,16 @@ export async function executeScan(formData: FormData) {
  * enabling requires at least one completed scan run, so the recurring cadence
  * always starts from a known-good baseline (geo-strategy guardrail).
  *
- * ACTIONS-OBSERVABLE-1 slice 4b.2 (docs/external-audit-2026-08.md, Fase 4,
- * P0-04) — the decision itself now lives in `setRecurringScansCore`
- * (`.claude/rules/server-actions.md`: "el desenlace se DEVUELVE, no se
- * decide con redirect()"). This action is only the translation table to a
- * redirect, kept for `/debug`'s own switch — the ONLY caller whose "you're
- * already here" destination is correct. `setRecurringScansAction` below is
- * the other translation, for a caller that is NOT already on `/debug`.
+ * `/debug`'s switch is the only remaining caller (log §211): the founder
+ * retired the other one, a "no_tracking" CTA in `DataMaturityBanner` that
+ * ACTIONS-OBSERVABLE-1 slice 4b.2 had just fixed to stop redirecting here —
+ * every real account gets recurring scans on by default at launch
+ * (PROJECT-DEFAULTS-BY-ACCOUNT-1, §173), so a manual "activate" banner isn't
+ * a control the product wants. The decision itself still lives in
+ * `setRecurringScansCore` (`.claude/rules/server-actions.md`: "el desenlace
+ * se DEVUELVE, no se decide con redirect()"); this action is only the
+ * translation table to a redirect, correct for `/debug` because that's
+ * where the user already is.
  */
 export async function setRecurringScans(formData: FormData) {
   const parsed = recurringScansSchema.safeParse({
@@ -350,53 +352,6 @@ export async function setRecurringScans(formData: FormData) {
     redirect(`/dashboard/projects/${projectId}/debug?error=${result.reason}`);
   }
   redirect(`/dashboard/projects/${projectId}/debug?success=${result.enabled ? "recurring_enabled" : "recurring_disabled"}`);
-}
-
-/** Categorized, self-authored copy for every `SetRecurringScansResult` failure
- * reason — never the raw provider/DB error (`.claude/rules/gemini.md`,
- * "Sanitize all errors"; same discipline `dismiss-recommendation.ts` already
- * applies). */
-const RECURRING_SCANS_ERROR_MESSAGES: Record<Extract<SetRecurringScansResult, { ok: false }>["reason"], string> = {
-  recurring_requires_completed_scan: "Necesitas al menos un escaneo completado antes de poder activarlo.",
-  recurring_update_failed: "No se ha podido actualizar el seguimiento diario en este momento. Inténtalo de nuevo en unos minutos.",
-  unexpected_error: "No se ha podido comprobar el estado del proyecto en este momento. Inténtalo de nuevo en unos minutos."
-};
-
-/**
- * ACTIONS-OBSERVABLE-1 slice 4b.2 — the version of the recurring-scans toggle
- * called directly by `DataMaturityBanner` (Visión general and every other
- * dashboard screen it mounts on), through `useActionFeedback` like every
- * other action this fase covers. Never redirects: the banner stays exactly
- * where the user already was, with its own pending/success/error
- * acknowledgement, instead of `setRecurringScans`'s three `redirect()`
- * branches that all land on `/debug` — a screen this caller never asked to
- * visit (docs/specs/actions-observable-1/remaining-slices.md, 4b.2).
- */
-export async function setRecurringScansAction(input: {
-  projectId: string;
-  enabled: boolean;
-}): Promise<{ success: true } | { success: false; error: string }> {
-  const parsed = recurringScansSchema.safeParse({
-    projectId: input.projectId,
-    enabled: input.enabled ? "true" : "false"
-  });
-  if (!parsed.success) {
-    return { success: false, error: "Proyecto no válido." };
-  }
-
-  const { projectId } = parsed.data;
-  const enabled = parsed.data.enabled === "true";
-  const { supabase, user } = await requireUser();
-
-  const result = await setRecurringScansCore(supabase, { projectId, ownerUserId: user.id, enabled });
-
-  revalidatePath(`/dashboard/projects/${projectId}`);
-  revalidatePath(`/dashboard/projects/${projectId}/debug`);
-
-  if (!result.ok) {
-    return { success: false, error: RECURRING_SCANS_ERROR_MESSAGES[result.reason] };
-  }
-  return { success: true };
 }
 
 /**

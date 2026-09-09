@@ -49,10 +49,16 @@ describe("computeDataMaturity", () => {
     ).toEqual({ kind: "free" });
   });
 
-  it("shows the no-tracking CTA for a non-free plan with recurring scans off", () => {
+  it("hides (never a CTA) for a non-free plan with recurring scans manually off", () => {
+    // Retired the same day it shipped correctly routed (ACTIONS-OBSERVABLE-1
+    // slice 4b.2, log §210) — the founder reviewed the preview and decided
+    // against any "activate" banner/button here at all: every real account
+    // gets recurring scans on by default at launch (PROJECT-DEFAULTS-BY-
+    // ACCOUNT-1, §173), so a manual toggle a user turned off on purpose isn't
+    // something this banner should be nagging them to turn back on (log §211).
     expect(
       computeDataMaturity({ completedScans: 1, latestStatus: "completed", recurringEnabled: false, planId: "pro" })
-    ).toEqual({ kind: "no_tracking" });
+    ).toEqual({ kind: "hidden" });
   });
 
   it("computes daily cadence for pro/agency and derives the correct ETA", () => {
@@ -144,9 +150,13 @@ describe("visibleDataMaturityState", () => {
     cadenceUnit: "días",
     etaCount: 3
   };
-  const VISIBLES: DataMaturityState[] = [{ kind: "free" }, { kind: "no_tracking" }, ACCUMULATING];
-  /** Los informativos: piden esperar o encender algo. Son los que el switch calla. */
-  const SILENCIABLES: DataMaturityState[] = [{ kind: "no_tracking" }, ACCUMULATING];
+  const VISIBLES: DataMaturityState[] = [{ kind: "free" }, ACCUMULATING];
+  /** Los informativos: piden esperar. Son los que el switch calla.
+   * `no_tracking` vivió aquí hasta que se retiró el estado entero (log §211) —
+   * dejar sólo `ACCUMULATING` sigue probando la misma garantía ("el switch
+   * calla lo informativo, no sólo un kind concreto"), ahora con un único
+   * miembro real. */
+  const SILENCIABLES: DataMaturityState[] = [ACCUMULATING];
 
   it("con el switch apagado a mano, pasa cada estado visible", () => {
     for (const state of VISIBLES) {
