@@ -539,6 +539,26 @@ describe la evolución como un requisito técnico sin decir cuándo llega. En un
 cuenta con dos escaneos comparables, el usuario puede responder sin ayuda: qué
 cambió, cuándo se midió y qué acción había en medio.
 
+**Estado — FASE CERRADA (2026-09-09, decisión del fundador, log §210).** El
+primer recorte ("anunciar sin fecha") y el ciclo acción → reescaneo → cambio
+ya estaban resueltos (§195, y RECS-LOOP-1 antes que esta fase). Los dos
+entregables restantes se **descartan explícitamente**, no se aplazan:
+
+- **Calendario visible de seguimiento.** Con cadencia diaria el usuario ve el
+  dato fresco cada vez que entra — un calendario no cambia ninguna decisión
+  suya. Sin valor añadido sobre lo que ya existe.
+- **Alertas con umbral configurable.** Se evaluó implementarlo (columna
+  `notify_score_drop_threshold`, migración 0036, UI en Ajustes) y se retiró
+  antes de abrir PR: el fundador decidió que el umbral no debe ser un ajuste
+  del usuario — el criterio de "caída significativa" es responsabilidad del
+  algoritmo del producto, no una perilla que se le entrega a quien no tiene
+  forma de calibrarla bien (referencia: SEMrush no expone esto, es parte de
+  su propio algoritmo). `lib/scan/score-alert.ts` sigue con su umbral fijo
+  (`SCORE_DROP_ALERT_THRESHOLD = 10`), sin cambios.
+
+Ninguna migración llegó a aplicarse ni a pushearse — el trabajo se descartó en
+rama local antes de abrir PR.
+
 ---
 
 ## Fase 4 — `ACTIONS-OBSERVABLE-1`: ninguna acción silenciosa (P0-04)
