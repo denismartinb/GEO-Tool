@@ -24,7 +24,6 @@ import { DEFAULT_VISIBLE_SERIES } from "@/lib/competitors/trend-window";
 import {
   MEAN_RANK_COLUMN_LABEL,
   MEAN_RANK_LIST_HEADLINE,
-  MEAN_RANK_NOTE,
   MEAN_RANK_TREND_HEADLINE
 } from "@/lib/competitors/mean-rank-copy";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
@@ -888,12 +887,6 @@ export default async function CompetitorsPage({
                   <div className="cm2-sec-lbl">
                     {hasTrendData ? MEAN_RANK_TREND_HEADLINE : MEAN_RANK_LIST_HEADLINE}
                   </div>
-                  {/* MEAN-RANK-READS-TRUE-1 (log §177): la frase va pegada a la
-                      cifra, no en un tooltip. El malentendido que arregla —una
-                      marca con 14% de mención por delante de otra con 48%— lo
-                      encontró el fundador mirando la pantalla, así que la
-                      explicación tiene que estar donde él estaba mirando. */}
-                  <p className="cm2-pos-note">{MEAN_RANK_NOTE}</p>
                   <div className={`card cm2-pos-card${hasTrendData ? "" : " list-only"}`}>
                     {hasTrendData ? (
                       <div className="cm2-pos-chart">

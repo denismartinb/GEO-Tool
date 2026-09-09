@@ -46,13 +46,11 @@ export const MEAN_RANK_LIST_HEADLINE = "Puesto medio cuando aparece cada marca";
 export const MEAN_RANK_TREND_HEADLINE = "Evolución del puesto medio de cada marca";
 
 /**
- * La frase que de verdad arregla el malentendido, y por eso va en las dos
- * pantallas pegada a la cifra.
- *
- * Dice el mecanismo con un ejemplo, no una definición: «media de la posición
- * condicionada a la aparición» es correcto y no lo entiende nadie. El caso que
- * describe es literalmente el de Amazon contra Mozilla.
+ * `MEAN_RANK_NOTE` vivió aquí (log §177): la frase que explicaba con un
+ * ejemplo por qué una marca nombrada pocas veces puede promediar por delante
+ * de otra nombrada en muchas más, pegada a la cifra en las dos pantallas. El
+ * fundador la retiró el 2026-09-09 mirando el preview de otro PR — "mal
+ * maquetada", pedido explícito de quitarla sin sustituto (log §212). El
+ * rótulo "Puesto medio" (arriba) se queda: sigue siendo lo que evita leer la
+ * cifra como un ranking. Lo que se retira es sólo la frase larga.
  */
-export const MEAN_RANK_NOTE =
-  "Cuenta solo las respuestas donde la marca aparece: una nombrada pocas veces " +
-  "pero siempre la primera queda por delante de otra nombrada en muchas más.";

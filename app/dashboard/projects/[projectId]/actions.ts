@@ -8,8 +8,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
 import {
   AUDIT_HALF_COLUMN,
-  checkRecurringScansPrecondition,
-  isMissingColumnError
+  isMissingColumnError,
+  setRecurringScansCore
 } from "@/lib/projects/automation-toggles";
 import {
   rewriteRecommendationCore,
@@ -317,6 +317,17 @@ export async function executeScan(formData: FormData) {
  * Enables/disables the daily automatic scan for a project. Opt-in only:
  * enabling requires at least one completed scan run, so the recurring cadence
  * always starts from a known-good baseline (geo-strategy guardrail).
+ *
+ * `/debug`'s switch is the only remaining caller (log §211): the founder
+ * retired the other one, a "no_tracking" CTA in `DataMaturityBanner` that
+ * ACTIONS-OBSERVABLE-1 slice 4b.2 had just fixed to stop redirecting here —
+ * every real account gets recurring scans on by default at launch
+ * (PROJECT-DEFAULTS-BY-ACCOUNT-1, §173), so a manual "activate" banner isn't
+ * a control the product wants. The decision itself still lives in
+ * `setRecurringScansCore` (`.claude/rules/server-actions.md`: "el desenlace
+ * se DEVUELVE, no se decide con redirect()"); this action is only the
+ * translation table to a redirect, correct for `/debug` because that's
+ * where the user already is.
  */
 export async function setRecurringScans(formData: FormData) {
   const parsed = recurringScansSchema.safeParse({
@@ -332,27 +343,15 @@ export async function setRecurringScans(formData: FormData) {
   const enabled = parsed.data.enabled === "true";
   const { supabase, user } = await requireUser();
 
-  if (enabled) {
-    const check = await checkRecurringScansPrecondition(supabase, projectId);
-    if (!check.ok) redirect(`/dashboard/projects/${projectId}/debug?error=${check.reason}`);
-  }
-
-  const { data, error } = await supabase
-    .from("projects")
-    .update({ recurring_scans_enabled: enabled })
-    .eq("id", projectId)
-    .eq("owner_user_id", user.id)
-    .eq("is_archived", false)
-    .select("id")
-    .maybeSingle();
-
-  if (error || !data) {
-    redirect(`/dashboard/projects/${projectId}/debug?error=recurring_update_failed`);
-  }
+  const result = await setRecurringScansCore(supabase, { projectId, ownerUserId: user.id, enabled });
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath(`/dashboard/projects/${projectId}/debug`);
-  redirect(`/dashboard/projects/${projectId}/debug?success=${enabled ? "recurring_enabled" : "recurring_disabled"}`);
+
+  if (!result.ok) {
+    redirect(`/dashboard/projects/${projectId}/debug?error=${result.reason}`);
+  }
+  redirect(`/dashboard/projects/${projectId}/debug?success=${result.enabled ? "recurring_enabled" : "recurring_disabled"}`);
 }
 
 /**
