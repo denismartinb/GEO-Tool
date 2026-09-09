@@ -33,7 +33,6 @@ export const DATA_MATURITY_TARGET_SCANS = 5;
 export type DataMaturityState =
   | { kind: "hidden" }
   | { kind: "free" }
-  | { kind: "no_tracking" }
   | { kind: "accumulating"; completed: number; target: number; cadenceUnit: "días" | "semanas"; etaCount: number };
 
 /**
@@ -70,7 +69,15 @@ export function computeDataMaturity({
 
   if (planId === "free") return { kind: "free" };
 
-  if (!recurringEnabled) return { kind: "no_tracking" };
+  // ACTIONS-OBSERVABLE-1 slice 4b.2 shipped a "no_tracking" CTA here
+  // ("Activar seguimiento diario"), then the founder retired it the same
+  // day reviewing the preview (log §211, superseding that half of §210):
+  // every real account gets recurring scans on by default at launch
+  // (PROJECT-DEFAULTS-BY-ACCOUNT-1, §173), so a manual "activate" banner
+  // is a control the product doesn't want, not a bug to route correctly.
+  // Falls through to `hidden` when a project has recurring manually
+  // disabled — same as "nothing to report yet", never a CTA.
+  if (!recurringEnabled) return { kind: "hidden" };
 
   return {
     kind: "accumulating",
