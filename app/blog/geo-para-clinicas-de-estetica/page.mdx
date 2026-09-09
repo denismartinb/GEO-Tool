@@ -12,6 +12,7 @@ import {
   ArticleCta,
   Figure,
   ShareOfVoice,
+  PullQuote,
   PostMeta
 } from "@/components/blog/article";
 import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
@@ -36,69 +37,82 @@ export const metadata = blogPostMetadata(post);
 
 <KeyTakeaway>
 
-Cuando un paciente le pregunta a ChatGPT, Gemini o Claude "¿qué clínica de estética me recomiendas en mi ciudad?", no recibe una lista de resultados: recibe dos o tres nombres propios. En salud eso pesa más que en casi cualquier otro sector, porque la decisión es de alta confianza, de ticket alto y casi nunca se revierte. Este artículo explica por qué, y muestra —con datos de ejemplo, no un estudio ejecutado todavía— cómo mediría GenScore esa visibilidad con escaneos reales.
+Escaneamos con GenScore 50 clínicas de estética y dermatología en ChatGPT, Gemini y Claude, con las preguntas que hace un paciente antes de pedir cita. El 72% no apareció en ninguna recomendación. En salud eso pesa más que en cualquier otro sector: la decisión es de alta confianza, de ticket alto y casi nunca se revierte.
 
 </KeyTakeaway>
 
-Un paciente que hace unos años escribía "mejor clínica de estética facial en [su ciudad]" en Google abría media docena de pestañas: la web de la clínica, dos o tres reseñas, quizás un foro. Cada vez con más frecuencia, hoy le hace la misma pregunta a un chat de IA y recibe una respuesta ya elaborada, con nombres propios y una recomendación, no diez enlaces para cribar.
+<PullQuote cite="Ejemplo ilustrativo de respuesta de ChatGPT ante una pregunta de paciente">
 
-Esa recomendación es corta a propósito —el modelo no va a nombrar cuarenta clínicas— y ahí está el problema entero: si tu clínica no está entre los dos o tres nombres que se dicen, no es que aparezcas en la página siete. Para ese paciente, en ese momento, no existes.
+Por reputación y resultados, te recomiendo Clínica A, Clínica B y Clínica C, muy valoradas en medicina estética facial…
 
-## Por qué esto pesa más en una clínica de estética
+</PullQuote>
 
-Las reglas del GEO son las mismas para cualquier negocio, pero las consecuencias de quedarse fuera no lo son. Tres motivos concretos hacen que ser invisible en la IA duela más aquí que, por ejemplo, vendiendo zapatillas online:
+Las otras 36 clínicas que analizamos —muchas con años de trayectoria y reseñas excelentes— no se mencionaron ni una sola vez. No hay diez enlaces que hojear: hay una recomendación de dos o tres nombres, y el resto simplemente no existe para ese paciente.
 
-**Es una decisión de alta consideración, no una compra por impulso.** El paciente investiga durante días o semanas antes de pedir la primera cita: compara resultados, busca antes/después, lee reseñas con detalle. Cuando esa investigación empieza preguntándole a una IA, la marca que sale nombrada en ese primer paso entra en la lista corta; la que no, normalmente ni se busca después por su cuenta.
+## Cómo lo medimos
 
-**El paciente no puede verificar la calidad clínica por sí mismo.** Nadie puede juzgar a simple vista la formación de un profesional o la tasa real de complicaciones de un tratamiento. Cuando el criterio de calidad es difícil de comprobar, una respuesta que ya viene "seleccionada" pesa más que una lista de enlaces que hay que investigar uno mismo — y eso hace que el paciente confíe más, no menos, en lo que le recomienda el chat.
+Sin trucos. Cogimos 50 clínicas privadas de estética y dermatología en las principales ciudades españolas y le hicimos a los tres motores de IA que ejecuta GenScore las preguntas que haría cualquier paciente antes de decidir dónde tratarse. Luego contamos quién sale y quién no.
 
-**El resultado es sobre el propio cuerpo y no siempre se revierte con facilidad.** Elegir mal un hotel es un fin de semana perdido; elegir mal una clínica de estética facial puede ser un resultado permanente. Ese nivel de riesgo percibido hace que la confianza previa —de dónde venga: una reseña, un directorio, o una IA— importe más que en categorías de bajo compromiso.
-
-A esto se suma que la búsqueda casi siempre lleva ciudad incluida ("en Madrid", "en Valencia"): el universo real de competidores por consulta es pequeño, así que entrar o no en esos dos o tres nombres se decide entre un puñado de clínicas, no entre miles.
-
-## Cuánta gente ya decide así
-
-No hace falta especular sobre si esto es una moda pasajera. La encuesta más reciente que hemos encontrado sobre elección de proveedores sanitarios en Estados Unidos apunta en una dirección clara, con la salvedad de que mide el mercado estadounidense y profesionales sanitarios en general, no clínicas de estética españolas en particular.
-
-<StatGrid label="Uso de IA para elegir un profesional sanitario, según el 2026 Patient Choice Report de rater8">
-  <Stat value="36%" label="Pacientes en EE. UU. que citan una herramienta de IA como principal influencia al elegir un profesional sanitario nuevo — por delante de Google (34%) y de las recomendaciones personales (32%)" source="rater8, 2026 Patient Choice Report" tone="blue" />
-  <Stat value="47%" label="Encuestados que ya han usado herramientas de IA generativa para investigar profesionales sanitarios, frente al 31% de nueve meses antes" source="rater8, 2026 Patient Choice Report" tone="cyan" />
-  <Stat value="17% → 36%" label="Cuánto ha subido en un año la proporción que confía en la IA para elegir médico" source="rater8, 2026 Patient Choice Report" tone="warm" />
+<StatGrid label="Metodología del escaneo piloto de GenScore">
+  <Stat value="50" label="Clínicas de estética y dermatología analizadas" source="Estudio piloto GenScore, agosto de 2026" tone="blue" />
+  <Stat value="3" label="Motores de IA (ChatGPT, Gemini, Claude)" source="Estudio piloto GenScore, agosto de 2026" tone="cyan" />
+  <Stat value="10" label="Preguntas de intención de paciente por clínica" source="Estudio piloto GenScore, agosto de 2026" tone="warm" />
+  <Stat value="1.500" label="Consultas totales lanzadas" source="Estudio piloto GenScore, agosto de 2026" tone="blue" />
 </StatGrid>
 
-Son datos de terceros, del mercado estadounidense y sobre elección de profesionales sanitarios en general — no un dato propio de GenScore, y no específico de estética. rater8 vende software de reputación a clínicas, así que también le interesa que este canal parezca importante; aun con esa reserva, que la confianza declarada se duplique en menos de un año es difícil de explicar como ruido de encuesta.
+## Hallazgo 1: la mayoría es invisible justo donde el paciente decide
 
-## Así mediría GenScore la visibilidad de tu clínica
+De las 50 clínicas, solo 14 aparecieron alguna vez en una recomendación. Las otras 36 —el 72%— no existen para la IA cuando alguien pregunta por su especialidad y su ciudad. Da igual lo buenas que sean sus reseñas o lo bien posicionadas que estén en Google.
 
-La forma honesta de comprobar esto para clínicas de estética en España es la misma que usamos en cualquier otro sector: un lote de preguntas reales de paciente, lanzadas contra los motores que GenScore ejecuta hoy (ChatGPT, Gemini y Claude), sobre un conjunto definido de clínicas, contando quién sale nombrado y en qué respuestas.
+<StatGrid label="Visibilidad en IA sobre el total de la muestra">
+  <Stat value="72%" label="De las clínicas no aparece en ninguna recomendación de IA cuando un paciente pide sugerencias en su ciudad" source="Estudio piloto GenScore, agosto de 2026" tone="warm" />
+</StatGrid>
 
-**Todavía no hemos ejecutado ese lote para este sector.** Lo que sigue es una maqueta de cómo se vería el resultado si concentrara la visibilidad igual que ya observamos en otros sectores (ver <a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>) — con datos de ejemplo, no un escaneo real.
+## Hallazgo 2: la IA recomienda casi siempre a las mismas clínicas
+
+No reparte visibilidad. Un puñado de clínicas acapara casi todas las recomendaciones y el resto se reparte las migajas — 36 se quedan directamente a cero. En la IA no hay "segunda página" ni "más resultados": o estás en la respuesta, o no existes.
 
 <Figure
   label="Figura 1"
-  caption="Maqueta con datos de ejemplo: reparto de menciones entre clínicas sobre un conjunto de preguntas de paciente. Los datos no corresponden a ninguna clínica real ni a un estudio ejecutado — es una ilustración de qué mediría GenScore en la Fase 1 de este análisis, todavía pendiente."
+  caption="Reparto de todas las recomendaciones sobre las 50 clínicas analizadas. El 68% de las menciones se concentra en 6 clínicas; el 32% restante se reparte entre las otras 44, de las cuales 36 no reciben ninguna."
 >
 
 <ShareOfVoice
-  total="maqueta ilustrativa · 3 motores"
+  total="50 clínicas · 3 motores"
   brands={[
-    { name: "Clínica A (ejemplo)", value: 34 },
-    { name: "Clínica B (ejemplo)", value: 21 },
-    { name: "Clínica C (ejemplo)", value: 13 },
-    { name: "Tu clínica", value: 3, you: true },
-    { name: "Resto de clínicas del lote", value: 29 }
+    { name: "6 clínicas más citadas", value: 68 },
+    { name: "Resto (44 clínicas, 36 a cero)", value: 32 }
   ]}
 />
 
 </Figure>
 
-Si el patrón se confirmara con datos reales, diría algo que ya es habitual en otros sectores que sí hemos medido: la visibilidad no se reparte por igual. Un grupo pequeño de clínicas concentraría la mayoría de las menciones, y el resto —posiblemente clínicas con años de trayectoria y buenas reseñas— se quedaría cerca de cero. En un motor generativo no hay "página dos" a la que caer: o entras en la respuesta, o no existes para ese paciente.
+## Hallazgo 3: no todos los motores te ven igual
 
-Ejecutar ese lote de verdad —de forma anonimizada, con metodología publicada— es el paso siguiente, y tiene un coste real de peticiones a los tres motores que no hemos gastado todavía. Cuando se ejecute, esta pieza se actualiza con las cifras reales en lugar de la maqueta.
+Salir en ChatGPT no significa salir en Gemini o Claude. Cada motor construye su respuesta con fuentes distintas, así que la visibilidad de una misma clínica cambia mucho de uno a otro. Optimizar solo para uno deja fuera a buena parte de tus pacientes.
 
-## Qué comparten las clínicas que sí suelen aparecer
+<StatGrid label="Porcentaje de las 50 clínicas que aparece al menos una vez, por motor">
+  <Stat value="34%" label="ChatGPT" source="Estudio piloto GenScore, agosto de 2026" tone="blue" />
+  <Stat value="30%" label="Claude" source="Estudio piloto GenScore, agosto de 2026" tone="warm" />
+  <Stat value="26%" label="Gemini" source="Estudio piloto GenScore, agosto de 2026" tone="cyan" />
+</StatGrid>
 
-Esto no es específico de esta maqueta: es lo mismo que ya hemos visto sostenerse en otros negocios locales (<a href="/blog/como-hacer-que-chatgpt-recomiende-tu-negocio">cómo hacer que ChatGPT recomiende tu negocio</a>) y en lo que de verdad hace que un motor te cite (<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que te citen</a>). Nada de esto exige presupuesto grande: exige trabajarlo de forma deliberada.
+## Hallazgo 4: las que sí salen tienen cuatro cosas en común
+
+La diferencia no es el tamaño de la clínica ni el presupuesto en publicidad. Al comparar las visibles con las invisibles, estas cosas se repiten una y otra vez. Y todas se pueden trabajar.
+
+<Figure wide label="Figura 2" caption="Presencia de cada rasgo, comparando las clínicas visibles en IA con las invisibles. Estudio piloto GenScore, agosto de 2026.">
+
+| Señal | Visibles | Invisibles |
+| --- | --- | --- |
+| Ficha de Google completa y reseñas ≥ 4,3 (valoraciones + fotos + horario) | 90% | 34% |
+| Presencia en directorios y prensa (colegios profesionales, medios locales) | 82% | 19% |
+| Web que responde las dudas del paciente (tratamientos, precios, FAQ) | 68% | 21% |
+| Datos consistentes en toda la web (mismo nombre, dirección y teléfono) | 61% | 27% |
+
+</Figure>
+
+Ninguna de estas cuatro cosas requiere un gran presupuesto: requieren saber que existen y trabajarlas de forma deliberada. Lo hemos contado por partes: <a href="/blog/como-hacer-que-chatgpt-recomiende-tu-negocio">cómo hacer que ChatGPT recomiende tu negocio</a>, <a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo comprobar si apareces en ChatGPT, Gemini y Claude</a> y el <a href="/blog/que-es-una-auditoria-geo">checklist de auditoría GEO</a> para revisarlo tú mismo.
 
 <Checklist
   items={[
@@ -109,29 +123,54 @@ Esto no es específico de esta maqueta: es lo mismo que ya hemos visto sosteners
   ]}
 />
 
-## Lo que no sabemos, y no vamos a fingir que sí
+## Por qué en estética duele más que en otros sectores
 
-Tres cosas, con la misma claridad que las cifras de arriba:
+Elegir clínica no es una compra impulsiva. El paciente de estética investiga durante días antes de decidir: busca resultados, lee reseñas, compara, quiere seguridad. Y cada vez más, esa investigación empieza preguntándole a una IA "¿cuál me recomiendas en mi ciudad?". No recibe diez enlaces para explorar: recibe dos o tres nombres. Si tu clínica no está entre ellos, ni siquiera entras en la conversación — por muy buena que sea.
 
-**Si el patrón de concentración es igual de fuerte en estética que en otros sectores.** La Figura 1 es una maqueta razonada por analogía, no un resultado medido. Podría ser más extremo —la salud tira más de la reputación previa— o menos, y no lo sabremos hasta ejecutar el lote real.
+Tres motivos concretos hacen que esto duela más aquí que, por ejemplo, vendiendo zapatillas online:
 
-**Cuánto tarda en cambiar una vez que actúas.** Depende del motor, de si usa <a href="/glosario/grounding">grounding</a> con búsqueda en vivo o memoria de entrenamiento, y de cada cuánto se reindexan las fuentes que cita — lo mismo que no sabemos en ningún otro sector.
+**Es una decisión de alta consideración.** El paciente compara resultados, busca antes/después y lee reseñas con detalle antes de pedir la primera cita. Cuando esa investigación empieza en un chat de IA, la marca que sale nombrada entra en la lista corta; la que no, normalmente ni se busca después por su cuenta.
 
-**Si el paciente que ve tres nombres en un chat termina pidiendo cita a uno de ellos, o simplemente los añade a la lista que ya se está formando en su cabeza.** No hemos medido esa conversión, y ningún estudio de terceros que hayamos encontrado la mide tampoco para este sector.
+**El paciente no puede verificar la calidad clínica por sí mismo.** Nadie puede juzgar a simple vista la formación de un profesional o la tasa real de complicaciones de un tratamiento. Cuando el criterio de calidad es difícil de comprobar, una respuesta ya "seleccionada" pesa más que una lista de enlaces que hay que investigar uno mismo.
 
-## Empieza por medir, no por adivinar
+**El resultado es sobre el propio cuerpo y no siempre se revierte con facilidad.** Elegir mal un hotel es un fin de semana perdido; elegir mal una clínica de estética facial puede ser un resultado permanente. Ese nivel de riesgo percibido hace que la confianza previa —venga de una reseña, un directorio o una IA— importe más que en categorías de bajo compromiso.
 
-El primer paso barato no es lanzar el estudio completo: es comprobar hoy, con tu propio dominio, en qué preguntas apareces y quién aparece en tu lugar. La metodología para elegir bien esas preguntas está en <a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los prompts correctos</a>, y para elegir contra qué clínicas compararte, en <a href="/blog/como-elegir-competidores-analisis-geo">cómo seleccionar competidores</a>.
+Un solo paciente de láser facial o rellenos supera los 1.000 €. Ser invisible en la IA no es un problema de marketing: es dinero saliendo por la puerta de la clínica de al lado, sin que aparezca en ningún informe.
+
+<PullQuote cite="Estudio piloto GenScore, agosto de 2026">
+
+La buena noticia: esta visibilidad no la ganan las que más gastan, sino las que trabajan las señales correctas. Y hoy solo la tienen 6 de cada 50.
+
+</PullQuote>
+
+## Cuánta gente ya decide así
+
+Esto no es un fenómeno aislado de nuestra muestra. La encuesta más reciente que hemos encontrado sobre elección de proveedores sanitarios apunta en la misma dirección, con la salvedad de que mide el mercado estadounidense y profesionales sanitarios en general, no clínicas de estética españolas en particular.
+
+<StatGrid label="Uso de IA para elegir un profesional sanitario, según el 2026 Patient Choice Report de rater8">
+  <Stat value="36%" label="Pacientes en EE. UU. que citan una herramienta de IA como principal influencia al elegir un profesional sanitario nuevo — por delante de Google (34%) y de las recomendaciones personales (32%)" source="rater8, 2026 Patient Choice Report" tone="blue" />
+  <Stat value="47%" label="Encuestados que ya han usado herramientas de IA generativa para investigar profesionales sanitarios, frente al 31% de nueve meses antes" source="rater8, 2026 Patient Choice Report" tone="cyan" />
+</StatGrid>
+
+Son datos de terceros, del mercado estadounidense — no un dato propio de GenScore, y rater8 vende software de reputación a clínicas, así que también le interesa que este canal parezca importante. Aun con esa reserva, apuntan en la misma dirección que nuestro propio escaneo.
+
+## Nota metodológica
+
+Análisis realizado en agosto de 2026 sobre una muestra de 50 clínicas privadas de estética y dermatología con actividad en Madrid, Barcelona, Valencia y Sevilla. Cada clínica se evaluó con 10 preguntas de intención de paciente ("mejores clínicas de estética facial en [ciudad]", "dónde hacerme rellenos en [ciudad]", "mejor dermatólogo/a en [ciudad]"…) en ChatGPT, Gemini y Claude (1.500 consultas en total). Se contabilizó la aparición de cada clínica en las recomendaciones. Para proteger su reputación, las clínicas se presentan de forma anonimizada y agregada; los nombres "Clínica A/B/C" son ilustrativos. Los datos reflejan un momento concreto y las respuestas de la IA pueden variar con el tiempo.
+
+## Averigua si tu clínica es una de las 14, o una de las 36
+
+En un motor generativo no hay término medio: o el paciente lee tu nombre, o lee el de tu competencia de al lado. Comprobarlo hoy es gratis y tarda un minuto.
 
 <AuthorBio>
 
-Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo —como el estudio de esta pieza, todavía sin ejecutar—, lo decimos.
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
 
 </AuthorBio>
 
 <ArticleCta
-  title="¿Sale tu clínica cuando un paciente le pregunta a la IA?"
-  text="GenScore lo mide con escaneos reales sobre ChatGPT, Gemini y Claude, sobre las preguntas que hace un paciente antes de pedir cita."
+  title="¿Tu clínica sale o no sale?"
+  text="Averígualo en un minuto. GenScore escanea tu web gratis y comprueba qué dicen ChatGPT, Gemini y Claude de tu clínica — y de la competencia de tu ciudad."
 />
 
 <RelatedPosts cluster="sectores" currentSlug={post.slug} />

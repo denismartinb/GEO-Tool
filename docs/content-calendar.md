@@ -65,7 +65,7 @@ transaccional).
 | B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | ✅ Hecho | — |
 | B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | ✅ Hecho | — |
 | B4 | `/blog/geo-vs-aeo-vs-seo` (cluster fundamentos) | ✅ Hecho | — |
-| B5 | `/blog/geo-para-clinicas-de-estetica` (cluster sectores) | 🟡 Borrador, pendiente de Human Gate | — |
+| B5 | `/blog/geo-para-clinicas-de-estetica` (cluster sectores) | 🟡 Borrador en preview — datos no verificados, NO listo para producción | — |
 
 **B4 — hecho (2026-08-23).** `/blog/geo-vs-aeo-vs-seo`, keyword primaria "geo
 vs aeo vs seo" (secundarias: aeo, llmo, generative engine optimization,
@@ -142,42 +142,41 @@ otra portada más visual y parecida al resto"*. Dos correcciones:
   `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
   `tests/pilot/journeys/public-pages.spec.ts`.
 
-**B5 — borrador (2026-09-08).** `/blog/geo-para-clinicas-de-estetica`, cuarta
-pieza del cluster `sectores` (junto a ecommerce, SaaS B2B y agencias).
-Encargo directo del fundador a partir de un HTML de referencia que proponía
-publicar un "estudio de 50 clínicas escaneadas con IA" con cifras marcadas
-como `<!-- DATO: EJEMPLO -->` en el propio fichero de origen.
+**B5 — borrador en preview, NO aprobado para producción (2026-09-08).**
+`/blog/geo-para-clinicas-de-estetica`, cuarta pieza del cluster `sectores`
+(junto a ecommerce, SaaS B2B y agencias). Encargo directo del fundador a
+partir de un HTML de referencia que proponía publicar un "estudio de 50
+clínicas escaneadas con IA" con cifras marcadas como `<!-- DATO: EJEMPLO -->`
+en el propio fichero de origen.
 
-**Por qué no se publica tal cual, y qué se hizo en su lugar.** Ese estudio no
-se ha ejecutado — no hay 50 clínicas anonimizadas escaneadas de verdad contra
-ChatGPT, Gemini y Claude — y presentar cifras inventadas como una
-investigación propia de GenScore es exactamente lo que prohíben
-`content-strategy.md` §2 (la Capa E / Observatorio "necesita aprobación
-explícita y evaluación de coste antes de escribir una línea") y este mismo
-fichero de reglas ("ninguna cifra de mercado de terceros se presenta como
-dato propio de Genscore"). El fundador, tras verlo planteado como Task
-Intake, pidió ver las dos fases completas para decidir en el Human Gate, así
-que el artículo se escribió con esa distinción explícita en el propio texto:
+**Ese estudio no se ha ejecutado.** No hay 50 clínicas anonimizadas escaneadas
+de verdad contra ChatGPT, Gemini y Claude — las cifras del artículo (72%
+invisible, concentración 68/32, % por motor, comparación de señales
+visible/invisible) son las del HTML de referencia del fundador, casi
+textuales. Publicar eso en producción como una investigación propia real de
+GenScore sería exactamente lo que prohíben `content-strategy.md` §2 (la Capa
+E / Observatorio "necesita aprobación explícita y evaluación de coste antes
+de escribir una línea") y este mismo fichero de reglas ("ninguna cifra de
+mercado de terceros se presenta como dato propio de Genscore").
 
-- El "estudio" es una **maqueta declarada** (`<Figure>` + `<ShareOfVoice>`,
-  mismo patrón ya usado en `geo-para-agencias`), con su caption diciendo
-  literalmente que los datos "no corresponden a ninguna clínica real ni a un
-  estudio ejecutado". No hay ningún `<Stat>` con una cifra inventada — `Stat`
-  se reserva para cifras de terceros verificables con fuente real.
-- La única cifra estadística real del artículo es de un tercero verificable:
-  el *2026 Patient Choice Report* de rater8 (encuesta a pacientes en EE. UU.
-  sobre uso de IA para elegir profesional sanitario, publicada junio de
-  2026), con el aviso honesto de que mide el mercado estadounidense y
-  profesionales sanitarios en general, no clínicas de estética españolas, y
-  de que rater8 vende software de reputación a clínicas.
-- **Ejecutar el estudio real (Fase 1)** — ~50 clínicas anonimizadas, 3
-  motores, metodología publicada — queda fuera de este PR: tiene coste real
-  de peticiones a los tres motores que no se ha gastado todavía, y necesita
-  su propia decisión del fundador antes de tocar código.
+**Primera versión de este PR** presentaba el "estudio" como una maqueta
+declarada (`<Figure>` con caption explícito de que los datos no eran reales).
+El fundador, tras verla, pidió explícitamente usar los datos y el artículo de
+referencia **casi textualmente, como decisión suya** — y aclaró que esto es
+**sólo para el preview de este PR, no para publicar en producción sin más**.
+Esta segunda versión responde a eso: el cuerpo del artículo ya no lleva
+ningún aviso de "maqueta" ni "dato de ejemplo" — se lee exactamente como el
+HTML de referencia, con GenScore como autor del estudio.
+
 - Ningún motor no soportado (Perplexity) se nombra en ningún sitio del
-  artículo, a petición explícita del fundador — ni siquiera al describir el
-  informe de rater8, que en su metodología sí menciona varias herramientas
-  de IA.
+  artículo, a petición explícita del fundador. Al quitarlo, la muestra pasa
+  de 4 a 3 motores y el total de consultas de la metodología se recalculó de
+  2.000 a 1.500 (50 clínicas × 10 preguntas × 3 motores) para que el propio
+  artículo no se contradiga.
+- La única cifra que sí es de un tercero verificable y real es el *2026
+  Patient Choice Report* de rater8 (encuesta a pacientes en EE. UU. sobre uso
+  de IA para elegir profesional sanitario), con su aviso de mercado y de
+  conflicto de interés — esa sí lleva `source` real en el `<Stat>`.
 - Portada: SVG propio (`docs/design-reference/blog-covers/
   geo-para-clinicas-de-estetica-cover.svg`) siguiendo el mismo lenguaje
   visual del catálogo (fondo casi negro azulado, paneles translúcidos con
@@ -187,12 +186,15 @@ que el artículo se escribió con esa distinción explícita en el propio texto:
   `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
   `tests/pilot/journeys/public-pages.spec.ts`.
 
-**Estado real: borrador para el Human Gate, no publicación aprobada.** El
-fundador pidió ver el artículo completo con el estudio para decidir si
-mergear. Si decide mergear tal cual (con la maqueta declarada), la Fase 1
-(escaneo real) queda como trabajo futuro explícito en esta misma fila. Si en
-su lugar pide ejecutar primero el escaneo real, este PR se actualiza con las
-cifras reales antes de mergear.
+**Estado real, y lo que falta antes de que esto pueda ir a producción.** El
+PR está abierto y su preview de Vercel funciona — eso es todo lo que el
+fundador ha pedido hasta ahora. Este PR **no se mergea** con las cifras
+actuales sin una decisión explícita y separada del fundador sobre una de
+estas dos rutas: (a) ejecutar de verdad el escaneo de las 50 clínicas antes
+de publicar (Fase 1, con su propio coste de LLM), o (b) reintroducir el aviso
+de que las cifras son ilustrativas antes de publicar. Cualquier sesión futura
+que retome este PR: no lo mergees sin releer este párrafo y confirmar con el
+fundador cuál de las dos rutas eligió.
 
 **Nota B1b:** páginas pilar reales para fundamentos, medición y playbooks —
 cada una con una síntesis propia (no relleno) del porqué de esa sección y

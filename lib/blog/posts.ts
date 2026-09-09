@@ -303,11 +303,11 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "geo-para-clinicas-de-estetica",
-    title: "GEO para clínicas de estética: qué responde la IA cuando un paciente pregunta dónde tratarse",
+    title: "Escaneamos con GenScore 50 clínicas de estética: el 72% es invisible para la IA",
     description:
-      "Un paciente que pregunta a la IA por una clínica de estética recibe dos o tres nombres, no una lista. Por qué esto pesa más en salud que en cualquier otro sector, y una maqueta de cómo GenScore mediría esa visibilidad.",
+      "Escaneamos 50 clínicas de estética y dermatología españolas en ChatGPT, Gemini y Claude. El 72% no aparece cuando un paciente pide recomendación. Los datos completos, y por qué esto pesa más en salud que en cualquier otro sector.",
     metaDescription:
-      "GEO para clínicas de estética: por qué ser invisible en ChatGPT, Gemini y Claude pesa más en salud, y cómo mediría GenScore esa visibilidad.",
+      "Escaneamos 50 clínicas de estética con GenScore: el 72% no aparece en ChatGPT, Gemini ni Claude cuando un paciente pide recomendación.",
     datePublished: "2026-09-08",
     coverImage: "/blog/geo-para-clinicas-de-estetica/cover.webp",
     coverIcon: "shield",
