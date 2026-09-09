@@ -19565,3 +19565,34 @@ existentes, sin cambios); `app/dashboard/projects/[projectId]/actions.ts`
 (`setAutoAuditHalf`); `lib/admin/automation.ts`. Decisión del fundador,
 2026-09-07 — sin Task Intake de implementación porque no hay código que
 implementar, sólo el cierre documental de la fase.
+
+## 210. La cabecera pública transparente se solapaba con el contenido al hacer scroll (HEADER-SCROLL-SOLID-1, 2026-09-09)
+
+**Qué se reportó.** El fundador, mirando `/blog`: "la cabecera transparente
+hace que se vea mal con el body de la página al hacer scroll".
+
+**Causa.** HEADER-FLAT-1 (2026-08-15, §63/§101) dejó `.lp-nav-wrap` con
+`background: transparent` de forma permanente en las 7 superficies públicas
+que comparten `PublicHeader`, para que la barra se fundiera con el hero de la
+home. Esa transparencia nunca tuvo un estado de scroll: la barra es
+`position: sticky`, así que en cuanto el usuario desplaza la página, el
+contenido pasa justo detrás de ella sin ningún fondo que los separe. En la
+home eso lo disimulaba el propio hero; en `/blog` (y previsiblemente `/geo`,
+`/pricing`, `/docs`, las legales, `/comparativas`, `/glosario` — cualquier
+superficie sin hero oscuro pegado arriba) el texto de la página se veía
+solapado con el logo/enlaces de la barra.
+
+**Arreglo.** `PublicHeader` añade una clase `is-scrolled` a `.lp-nav-wrap`
+cuando `window.scrollY > 8` (listener `scroll` pasivo, limpiado al
+desmontar). `app/globals.css` da a `.lp-nav-wrap.is-scrolled` un fondo blanco
+semitransparente + `backdrop-filter: blur` (mismo valor que ya usaba el
+`.topbar` de la consola), con una transición corta de `background-color`/
+`border-color`. El reposo de arriba del todo sigue transparente — no toca el
+diseño plano aprobado en HEADER-FLAT-1, sólo añade el estado que le faltaba.
+`.nf-page .lp-nav-wrap` (fondo `#fff` fijo sobre la escena oscura de la 404)
+sigue ganando por especificidad de selector + orden de fichero, así que no
+hace falta una regla aparte para esa superficie.
+
+**Trazabilidad.** `components/marketing/public-header.tsx`;
+`app/globals.css` (`.lp-nav-wrap`, `.lp-nav-wrap.is-scrolled`); HEADER-FLAT-1
+(§63/§101, decisión que esto complementa sin revertir).

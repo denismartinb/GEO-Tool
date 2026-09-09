@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { Icon } from "@/components/ui/icon";
@@ -135,6 +136,24 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   const isHome = pathname === "/";
   const user = useSessionUser();
 
+  /**
+   * HEADER-SCROLL-SOLID-1 (2026-09-09, founder-reported): HEADER-FLAT-1 made
+   * `.lp-nav-wrap` transparent at rest on all 7 public surfaces so it blends
+   * with the hero. It never had a scrolled state, so on any surface without
+   * a dark hero behind it (the blog, /geo, /pricing, /docs, legal pages) the
+   * page's own content scrolls past right behind the sticky nav with nothing
+   * separating them — text visibly overlapping the nav links/logo. This adds
+   * a solid+blurred background once scrolled past a small threshold, leaving
+   * the approved flat look untouched at the very top of the page.
+   */
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const goToLogin = () => router.push("/login");
   const goToSignup = () => router.push("/signup");
 
@@ -161,7 +180,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
           No es sticky: ocupa su propio alto y empuja `.lp-nav-wrap` hacia
           abajo, igual que hacía dentro de `.lp-hero--home`. */}
       <PromoStrip />
-      <div className="lp-nav-wrap">
+      <div className={scrolled ? "lp-nav-wrap is-scrolled" : "lp-nav-wrap"}>
       <nav className={hero ? "lp-nav lp-nav--hero" : "lp-nav"}>
       <Link href="/" className="lp-logo">
         <BrandLogo size={22} />
