@@ -212,6 +212,20 @@ paths:
   (`--journeys actions`) contra un preview real — mismo principio que ya
   protege el chip de control y la insignia de estado del artefacto más
   arriba en este fichero.
+- **"Exportar plan" es la primera acción puramente de cliente que entra a
+  este contrato** (ACTIONS-OBSERVABLE-1 slice 4b.1, log §210) — todas las
+  anteriores eran server actions. `handleExport` se envuelve en un `async`
+  que resuelve `{ success: true }` tras el "click" de descarga y captura
+  cualquier fallo en `{ success: false, error }`, sin ampliar
+  `lib/ui/action-feedback.ts` (que sólo espera una promesa). El constructor
+  del markdown vive aparte, en `lib/recommendations/export-plan.ts`, puro y
+  con test — nunca vuelva a ser un closure sin test dentro del componente.
+  Si la descarga falla, `ExportPlanModal` es la salida que sobrevive a un
+  entorno que la bloquea (política del navegador, un visor incrustado, un
+  sandbox): el markdown completo, seleccionable, con su propio "Copiar al
+  portapapeles". Riesgo residual conocido y aceptado: un navegador puede
+  bloquear la descarga SIN lanzar una excepción capturable, y en ese caso
+  el modal no se abre — el `try/catch` no puede detectar un fallo silencioso.
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 

@@ -21,6 +21,7 @@ import {
   rankGroupMembers,
   selectPlan
 } from "@/lib/recommendations/plan";
+import { buildExportPlanMarkdown, exportPlanFileName } from "@/lib/recommendations/export-plan";
 import {
   CONTROL_LABEL,
   classifySolutionReadiness,
@@ -372,6 +373,68 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
       <Icon name={copied ? "check" : "copy"} size={12} />
       {copied ? "Copiado" : label ?? "Copiar"}
     </button>
+  );
+}
+
+/**
+ * ACTIONS-OBSERVABLE-1 slice 4b.1 — salida alternativa de "Exportar plan"
+ * cuando la descarga vía `<a download>` no llega (política del navegador, un
+ * visor incrustado, un sandbox). El propio botón que la abre ya viene de un
+ * fallo detectado por `handleExport`, así que aparecer en pantalla es en sí
+ * mismo el acuse de que algo pasó; el mensaje propio ("Plan copiado al
+ * portapapeles.") es el segundo hecho distinto, anunciado sólo tras el clic.
+ */
+function ExportPlanModal({ markdown, onClose }: { markdown: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+    } catch {
+      // Portapapeles no disponible (contexto sin HTTPS, navegador antiguo) —
+      // el texto sigue seleccionable a mano en el propio cuadro.
+    }
+  }
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="export-plan-modal-title" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+        <h2 id="export-plan-modal-title" className="modal-title">
+          Copia el plan
+        </h2>
+        <p className="modal-body">
+          La descarga no se ha podido completar en este navegador. Copia el plan entero desde aquí.
+        </p>
+        <textarea
+          readOnly
+          value={markdown}
+          onFocus={(e) => e.currentTarget.select()}
+          style={{
+            width: "100%",
+            minHeight: 240,
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 12,
+            padding: 10,
+            border: "1px solid var(--line-1, #d8dde3)",
+            borderRadius: "var(--r-sm, 6px)",
+            resize: "vertical",
+          }}
+        />
+        <p role="status" aria-live="polite" style={{ minHeight: 16, margin: "8px 0 0", fontSize: 12, color: "var(--pos-ink, #1a7a49)" }}>
+          {copied ? "Plan copiado al portapapeles." : ""}
+        </p>
+        <div className="modal-actions">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
+            Cerrar
+          </button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={handleCopy}>
+            <Icon name="copy" size={13} />
+            Copiar al portapapeles
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1394,41 +1457,45 @@ export function RecommendationsClient({
   const planIdSet = new Set(plan.map((r) => r.id));
   const rest = recommendations.filter((r) => !planIdSet.has(r.id));
 
-  function handleExport() {
-    const lines: string[] = [
-      `# Plan de acción GEO — ${domain}`,
-      "",
-      `Generado por GenScore · ${new Date().toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })}`,
-      "",
-      `## Prioritarias (${plan.length})`,
-      "",
-    ];
-    const write = (rec: Recommendation, i: number) => {
-      const pts =
-        typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS
-          ? ` (+${formatPoints(rec.potentialPoints)} pt ${pointsCaption(rec.recommendation_type)})`
-          : "";
-      lines.push(`${i + 1}. **${rec.title}**${pts}`);
-      lines.push(`   ${rec.description}`);
-      const step = rec.evidence_json?.first_step;
-      if (step) lines.push(`   Empieza por aquí: ${step}`);
-      lines.push("");
-    };
-    plan.forEach(write);
-    if (rest.length > 0) {
-      lines.push(`## Resto (${rest.length})`, "");
-      rest.forEach(write);
-    }
+  // ACTIONS-OBSERVABLE-1 slice 4b.1 (docs/external-audit-2026-08.md, Fase 4,
+  // P0-04) — "Exportar plan" es la primera acción puramente de cliente que
+  // entra al contrato de useActionFeedback (todas las de 4a eran server
+  // actions). handleExport se envuelve en un async que resuelve {success:
+  // true} tras el "click" de descarga y captura cualquier fallo en {success:
+  // false, error} — sin ampliar el contrato de lib/ui/action-feedback.ts, que
+  // hoy sólo espera una promesa. La descarga bloqueada (política del
+  // navegador, un visor incrustado, un sandbox) abre ExportPlanModal como
+  // salida que sobrevive a un entorno que la bloquea; los dos caminos anuncian
+  // un hecho distinto ("Plan descargado." vs. el propio acuse del modal al
+  // copiar), nunca el mismo mensaje para dos cosas distintas.
+  const exportFeedback = useActionFeedback();
+  const [exportFallbackMarkdown, setExportFallbackMarkdown] = useState<string | null>(null);
 
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `plan-geo-${domain || "genscore"}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  function handleExport() {
+    exportFeedback.run(
+      async () => {
+        const markdown = buildExportPlanMarkdown({ domain, plan, rest });
+        try {
+          const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = exportPlanFileName(domain);
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          return { success: true };
+        } catch {
+          setExportFallbackMarkdown(markdown);
+          return {
+            success: false,
+            error: "No se ha podido descargar el fichero en este navegador. Copia el plan desde el cuadro que se ha abierto.",
+          };
+        }
+      },
+      { successMessage: "Plan descargado." }
+    );
   }
 
   // "Todas" is exactly that: every active recommendation, including the ones
@@ -1521,11 +1588,18 @@ export function RecommendationsClient({
           onClick={handleExport}
           className="btn btn-ghost btn-sm"
           style={{ padding: "5px 11px", fontSize: 12 }}
+          disabled={exportFeedback.isPending}
         >
           <Icon name="download" size={13} />
-          Exportar plan
+          {exportFeedback.isPending ? "Exportando…" : "Exportar plan"}
         </button>
       </div>
+      <div style={{ margin: "-6px 0 10px" }}>
+        <ActionAnnouncement state={exportFeedback.state} />
+      </div>
+      {exportFallbackMarkdown !== null && (
+        <ExportPlanModal markdown={exportFallbackMarkdown} onClose={() => setExportFallbackMarkdown(null)} />
+      )}
       <div className="filters">
         <div className="seg">
           {tabs.map(([key, label]) => (

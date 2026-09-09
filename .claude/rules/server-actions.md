@@ -38,3 +38,15 @@ by `core-flow`, `frontend`, and `data-guardian`.
   la razón por la que `createProject` pasó meses ejecutando el Core Target Flow
   sin una sola aserción (log §89, ADR 0022). La traducción debe ser una tabla —
   una variante, una redirección— y no interpretar nada.
+- **La misma acción puede necesitar DOS traducciones distintas — nunca una
+  tercera copia del core.** `setRecurringScansCore`
+  (`lib/projects/automation-toggles.ts`, ACTIONS-OBSERVABLE-1 slice 4b.2, log
+  §210) nació porque `setRecurringScans` terminaba en `redirect()` en sus TRES
+  ramas, incluida la de éxito, y las tres apuntaban a `/debug` — correcto para
+  el switch de esa pantalla (que ya está ahí), equivocado para
+  `DataMaturityBanner`, que la llama desde Visión general y con ese destino
+  sacaba al usuario de la pantalla en la que estaba para pulsar un botón. La
+  action de `/debug` sigue traduciendo el mismo core a `redirect()`;
+  `setRecurringScansAction` lo traduce a `{ success, error }` para
+  `useActionFeedback`. Un desenlace, dos tablas de traducción — nunca una
+  acción que redirige adivinando si quien la llama ya está en el destino.

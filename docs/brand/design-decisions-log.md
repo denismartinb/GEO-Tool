@@ -19565,3 +19565,112 @@ existentes, sin cambios); `app/dashboard/projects/[projectId]/actions.ts`
 (`setAutoAuditHalf`); `lib/admin/automation.ts`. Decisión del fundador,
 2026-09-07 — sin Task Intake de implementación porque no hay código que
 implementar, sólo el cierre documental de la fase.
+
+---
+
+## 210. ACTIONS-OBSERVABLE-1 slice 4b: las dos acciones que quedaban de la Fase 4 dejan de terminar en silencio o en /debug (2026-09-08)
+
+**Origen.** Fase 4 del plan de la auditoría externa
+(`docs/external-audit-2026-08.md`, "ACTIONS-OBSERVABLE-1: ninguna acción
+silenciosa", P0-04). La Fase 0 (`AUDIT-REPRO-1`, §187) clasificó seis
+acciones de Recomendaciones; 4a (§203) cerró las cuatro primeras. Este slice
+cierra las dos que quedaban — "Exportar plan" (`real`, silenciosa) y
+"Activar seguimiento diario" (`invisible`) —, siguiendo el reparto escrito en
+`docs/specs/actions-observable-1/remaining-slices.md` (PR #525, aprobado por
+el fundador el 2026-09-08).
+
+**4b.1 · "Exportar plan".** El constructor de markdown salía de un closure
+sin test dentro de `handleExport`
+(`recommendations-client.tsx`) y la acción era 100% cliente: `Blob` + `<a
+download>`, sin rama de error, sin pasar por el contrato de 4a. Ahora:
+
+1. El constructor vive en `lib/recommendations/export-plan.ts`
+   (`buildExportPlanMarkdown`, `exportPlanFileName`), puro y con su propio
+   test (`export-plan.test.ts`).
+2. `handleExport` pasa por `useActionFeedback` — la primera acción
+   puramente de cliente que entra al contrato (todas las de 4a eran server
+   actions). Se envuelve en un `async` que resuelve `{ success: true }` tras
+   el "click" de descarga y captura cualquier fallo en `{ success: false,
+   error }`, sin ampliar `lib/ui/action-feedback.ts`.
+3. Si la descarga falla (política del navegador, un visor incrustado, un
+   sandbox), se abre `ExportPlanModal`: el markdown completo en un
+   `<textarea>` de sólo lectura con "Copiar al portapapeles". Los dos
+   caminos anuncian un hecho distinto — "Plan descargado." en el primero, el
+   propio acuse `role="status"` del modal ("Plan copiado al portapapeles.")
+   en el segundo — nunca el mismo mensaje para dos cosas distintas.
+
+**Riesgo conocido y aceptado.** Un navegador puede bloquear la descarga SIN
+lanzar una excepción capturable (política silenciosa, en vez de un error) —
+en ese caso el `try/catch` no detecta el fallo y el modal no se abre. Es el
+diseño que pedía el plan de origen (try/catch, sin ampliar el contrato); no
+cubre ese caso silencioso concreto, que queda como riesgo residual explícito
+en vez de resuelto.
+
+**4b.2 · "Activar seguimiento diario".** El hallazgo del plan de origen SÍ
+se reprodujo leyendo el código: `setRecurringScans`
+(`app/dashboard/projects/[projectId]/actions.ts`) termina en `redirect()` en
+sus tres ramas, **incluida la de éxito**, y las tres apuntan a
+`/dashboard/projects/{id}/debug`. Correcto para el switch de esa pantalla
+(razón de ser de la acción); equivocado para `DataMaturityBanner`
+(`components/data-maturity-banner.tsx`), que la llama desde Visión general
+(y las otras cinco pantallas de la consola que montan el banner) y sacaba al
+usuario de la pantalla en la que estaba.
+
+**Alcanzabilidad, verificada antes de tocar nada.** `PROJECT-DEFAULTS-BY-ACCOUNT-1`
+(§173) activa `recurring_scans_enabled` en el primer escaneo completado de
+toda cuenta real no interna, así que a primera vista la rama `no_tracking`
+parecía inalcanzable. No lo es: un dueño de proyecto puede desactivar el
+seguimiento a mano desde `/debug` en cualquier momento, y mientras
+`completedScans` esté entre 1 y 4 (`lib/data-maturity.ts`,
+`computeDataMaturity`), el banner vuelve a mostrar `no_tracking` en Visión
+general con el mismo botón roto. Alcanzable por una cuenta real, no sólo
+hipotético.
+
+**Entregables.**
+
+1. `setRecurringScansCore` (`lib/projects/automation-toggles.ts`) — el
+   desenlace se DEVUELVE (`.claude/rules/server-actions.md`), nunca se
+   decide con `redirect()`. Mismo cheque (`checkRecurringScansPrecondition`,
+   sólo al activar) y misma escritura que antes vivían inline en la action;
+   ahora son testeables sin mockear `redirect`.
+2. `setRecurringScans` (la action de `/debug`) pasa a ser sólo la tabla de
+   traducción del resultado del core a `redirect()` — comportamiento
+   idéntico al de antes para ese único llamador.
+3. `setRecurringScansAction`, nueva, para `DataMaturityBanner`: nunca
+   redirige, devuelve `{ success, error }` con copy categorizado y saneado
+   (`RECURRING_SCANS_ERROR_MESSAGES`) — nunca el error crudo de Supabase.
+4. El banner pasa por `useActionFeedback` y llama a `router.refresh()` en su
+   propio éxito — mismo patrón que "Marcar como hecho" en `RecCard`: el
+   banner deja de mostrarse porque su `kind` se recalcula en el servidor
+   (`recurring_scans_enabled` ya es `true`), no por un booleano local
+   inventado en el componente.
+5. Tests nuevos de `setRecurringScansCore` (`automation-toggles.test.ts`):
+   precondición no cumplida, fallo inesperado de la precondición, activar
+   con éxito, desactivar sin consultar la precondición, fallo de escritura,
+   fila inexistente/ajena — ninguno existía antes de este slice.
+
+**Lo que NO se ha tocado.** El switch de `/debug` (`debug/page.tsx`) sigue
+llamando a `setRecurringScans` (FormData) y redirigiendo igual que siempre —
+el plan de origen pedía explícitamente conservarlo así. Sin migración, sin
+cambio de esquema, sin tocar el pipeline de escaneo.
+
+**CSS.** `.dmb-band form { flex: 0 0 auto; }` (`app/globals.css`) existía
+sólo porque el botón vivía dentro de un `<form>`; al desaparecer el `<form>`
+la regla queda muerta (`.dmb-cta` ya declara su propio `flex: 0 0 auto`) y se
+retira en el mismo PR en vez de dejarla mintiendo sobre un elemento que ya no
+existe.
+
+**Comprobado.** `pnpm test` (227/227 archivos, 3.133/3.133 tests, incluidos
+los seis tests nuevos de `setRecurringScansCore` y los ocho de
+`export-plan.test.ts`); `pnpm run validate` (build + typecheck + lint) en
+verde.
+
+**Trazabilidad.** `lib/recommendations/export-plan.ts` (+test);
+`app/dashboard/projects/[projectId]/recommendations/recommendations-client.tsx`
+(`handleExport`, `ExportPlanModal`); `lib/projects/automation-toggles.ts`
+(`setRecurringScansCore`, +test); `app/dashboard/projects/[projectId]/actions.ts`
+(`setRecurringScans`, `setRecurringScansAction`);
+`components/data-maturity-banner.tsx`; `app/globals.css` (`.dmb-band form`
+retirada). Task Intake de la fase completa aprobado por el fundador
+2026-09-06 (§203); plan de ejecución de 4b/4c/4d aprobado 2026-09-08 (PR
+#525, `docs/specs/actions-observable-1/remaining-slices.md`).

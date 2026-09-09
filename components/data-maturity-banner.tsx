@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { visibleDataMaturityState, type DataMaturityState } from "@/lib/data-maturity";
-import { setRecurringScans } from "@/app/dashboard/projects/[projectId]/actions";
+import { setRecurringScansAction } from "@/app/dashboard/projects/[projectId]/actions";
+import { useActionFeedback, ActionAnnouncement } from "@/components/ui/action-feedback";
 
 function getProjectId(pathname: string): string | null {
   return pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
@@ -66,6 +67,7 @@ export function DataMaturityBanner({
   dataMaturityByProject: Record<string, DataMaturityState>;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const projectId = getProjectId(pathname);
   const [dismissed, setDismissed] = useState(false);
   // Nace en `true`: la ausencia de valor en `localStorage` significa OCULTO, y
@@ -85,6 +87,11 @@ export function DataMaturityBanner({
     setDismissed(window.localStorage.getItem(dismissedKey(projectId)) === "1");
     setBannerHidden(window.localStorage.getItem(maturityBannerHiddenKey(projectId)) !== "0");
   }, [projectId]);
+
+  // ACTIONS-OBSERVABLE-1 slice 4b.2 (docs/external-audit-2026-08.md, Fase 4,
+  // P0-04) — declarado antes de cualquier `return` temprano (reglas de los
+  // hooks), aunque sólo lo use la rama `no_tracking` más abajo.
+  const recurringFeedback = useActionFeedback();
 
   if (!projectId) return null;
   // Una sola puerta, y vive en `lib/project-workspace.ts` con su test. El
@@ -131,6 +138,24 @@ export function DataMaturityBanner({
   }
 
   if (state.kind === "no_tracking") {
+    // ACTIONS-OBSERVABLE-1 slice 4b.2 — antes era un `<form
+    // action={setRecurringScans}>` sin estado de carga, sin acuse y sin rama
+    // de error, y `setRecurringScans` termina en `redirect()` en las tres
+    // (incluida la de éxito) hacia `/dashboard/projects/{id}/debug` — correcto
+    // para el switch de esa pantalla, no para este banner, que vive en Visión
+    // general y las otras cinco pantallas de la consola. `setRecurringScansAction`
+    // no redirige nunca: el usuario se queda donde estaba, con su propio acuse.
+    function handleEnableRecurring() {
+      recurringFeedback.run(() => setRecurringScansAction({ projectId: projectId as string, enabled: true }), {
+        successMessage: "Seguimiento diario activado.",
+        // Mismo patrón que "Marcar como hecho" en RecCard: el refresco es lo
+        // que hace que este banner deje de mostrarse — su `kind` depende de
+        // `recurring_scans_enabled`, recalculado en el servidor
+        // (getWorkspaceCounters), no de un booleano local inventado aquí.
+        onSuccess: () => router.refresh()
+      });
+    }
+
     return (
       <div className="dmb-band">
         <span className="dmb-ico" aria-hidden="true">
@@ -144,13 +169,21 @@ export function DataMaturityBanner({
           visibilidad frente a tus competidores.
         </span>
         <span className="dmb-sp" />
-        <form action={setRecurringScans}>
-          <input type="hidden" name="projectId" value={projectId} />
-          <input type="hidden" name="enabled" value="true" />
-          <button type="submit" className="dmb-cta">
-            Activar seguimiento diario
+        {/* Envuelto aparte (no como hijos sueltos de `.dmb-band`) para que el
+            acuse pueda ocupar su propia línea sin pelear por espacio con
+            `.dmb-txt`/`.dmb-sp` en anchuras intermedias — mismo patrón que la
+            fila de acciones de RecCard (recommendations-client.tsx). */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
+          <button
+            type="button"
+            className="dmb-cta"
+            onClick={handleEnableRecurring}
+            disabled={recurringFeedback.isPending}
+          >
+            {recurringFeedback.isPending ? "Activando…" : "Activar seguimiento diario"}
           </button>
-        </form>
+          <ActionAnnouncement state={recurringFeedback.state} />
+        </div>
       </div>
     );
   }
