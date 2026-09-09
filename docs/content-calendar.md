@@ -65,6 +65,7 @@ transaccional).
 | B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | ✅ Hecho | — |
 | B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | ✅ Hecho | — |
 | B4 | `/blog/geo-vs-aeo-vs-seo` (cluster fundamentos) | ✅ Hecho | — |
+| B5 | `/blog/geo-para-clinicas-de-estetica` (cluster sectores) | 🟡 Borrador, pendiente de Human Gate | — |
 
 **B4 — hecho (2026-08-23).** `/blog/geo-vs-aeo-vs-seo`, keyword primaria "geo
 vs aeo vs seo" (secundarias: aeo, llmo, generative engine optimization,
@@ -140,6 +141,58 @@ otra portada más visual y parecida al resto"*. Dos correcciones:
 - Añadido a las dos listas del piloto en este mismo PR: `BLOG_SLUGS` en
   `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
   `tests/pilot/journeys/public-pages.spec.ts`.
+
+**B5 — borrador (2026-09-08).** `/blog/geo-para-clinicas-de-estetica`, cuarta
+pieza del cluster `sectores` (junto a ecommerce, SaaS B2B y agencias).
+Encargo directo del fundador a partir de un HTML de referencia que proponía
+publicar un "estudio de 50 clínicas escaneadas con IA" con cifras marcadas
+como `<!-- DATO: EJEMPLO -->` en el propio fichero de origen.
+
+**Por qué no se publica tal cual, y qué se hizo en su lugar.** Ese estudio no
+se ha ejecutado — no hay 50 clínicas anonimizadas escaneadas de verdad contra
+ChatGPT, Gemini y Claude — y presentar cifras inventadas como una
+investigación propia de GenScore es exactamente lo que prohíben
+`content-strategy.md` §2 (la Capa E / Observatorio "necesita aprobación
+explícita y evaluación de coste antes de escribir una línea") y este mismo
+fichero de reglas ("ninguna cifra de mercado de terceros se presenta como
+dato propio de Genscore"). El fundador, tras verlo planteado como Task
+Intake, pidió ver las dos fases completas para decidir en el Human Gate, así
+que el artículo se escribió con esa distinción explícita en el propio texto:
+
+- El "estudio" es una **maqueta declarada** (`<Figure>` + `<ShareOfVoice>`,
+  mismo patrón ya usado en `geo-para-agencias`), con su caption diciendo
+  literalmente que los datos "no corresponden a ninguna clínica real ni a un
+  estudio ejecutado". No hay ningún `<Stat>` con una cifra inventada — `Stat`
+  se reserva para cifras de terceros verificables con fuente real.
+- La única cifra estadística real del artículo es de un tercero verificable:
+  el *2026 Patient Choice Report* de rater8 (encuesta a pacientes en EE. UU.
+  sobre uso de IA para elegir profesional sanitario, publicada junio de
+  2026), con el aviso honesto de que mide el mercado estadounidense y
+  profesionales sanitarios en general, no clínicas de estética españolas, y
+  de que rater8 vende software de reputación a clínicas.
+- **Ejecutar el estudio real (Fase 1)** — ~50 clínicas anonimizadas, 3
+  motores, metodología publicada — queda fuera de este PR: tiene coste real
+  de peticiones a los tres motores que no se ha gastado todavía, y necesita
+  su propia decisión del fundador antes de tocar código.
+- Ningún motor no soportado (Perplexity) se nombra en ningún sitio del
+  artículo, a petición explícita del fundador — ni siquiera al describir el
+  informe de rater8, que en su metodología sí menciona varias herramientas
+  de IA.
+- Portada: SVG propio (`docs/design-reference/blog-covers/
+  geo-para-clinicas-de-estetica-cover.svg`) siguiendo el mismo lenguaje
+  visual del catálogo (fondo casi negro azulado, paneles translúcidos con
+  neón, composición izquierda→lente→derecha), rasterizado a WebP con
+  Playwright + `sharp` (14,5 KB, dentro del presupuesto de `public/`).
+- Añadido a las dos listas del piloto en este mismo PR: `BLOG_SLUGS` en
+  `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
+  `tests/pilot/journeys/public-pages.spec.ts`.
+
+**Estado real: borrador para el Human Gate, no publicación aprobada.** El
+fundador pidió ver el artículo completo con el estudio para decidir si
+mergear. Si decide mergear tal cual (con la maqueta declarada), la Fase 1
+(escaneo real) queda como trabajo futuro explícito en esta misma fila. Si en
+su lugar pide ejecutar primero el escaneo real, este PR se actualiza con las
+cifras reales antes de mergear.
 
 **Nota B1b:** páginas pilar reales para fundamentos, medición y playbooks —
 cada una con una síntesis propia (no relleno) del porqué de esa sección y
