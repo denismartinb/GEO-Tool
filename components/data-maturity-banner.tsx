@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { visibleDataMaturityState, type DataMaturityState } from "@/lib/data-maturity";
-import { setRecurringScans } from "@/app/dashboard/projects/[projectId]/actions";
 
 function getProjectId(pathname: string): string | null {
   return pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
@@ -126,31 +125,6 @@ export function DataMaturityBanner({
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
-      </div>
-    );
-  }
-
-  if (state.kind === "no_tracking") {
-    return (
-      <div className="dmb-band">
-        <span className="dmb-ico" aria-hidden="true">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 7v5l3 2" />
-            <circle cx="12" cy="12" r="9" />
-          </svg>
-        </span>
-        <span className="dmb-txt">
-          <b>Tu análisis de hoy no se repetirá.</b> Activa el seguimiento diario para ver cómo evoluciona tu
-          visibilidad frente a tus competidores.
-        </span>
-        <span className="dmb-sp" />
-        <form action={setRecurringScans}>
-          <input type="hidden" name="projectId" value={projectId} />
-          <input type="hidden" name="enabled" value="true" />
-          <button type="submit" className="dmb-cta">
-            Activar seguimiento diario
-          </button>
-        </form>
       </div>
     );
   }

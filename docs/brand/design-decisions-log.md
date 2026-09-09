@@ -19566,7 +19566,263 @@ existentes, sin cambios); `app/dashboard/projects/[projectId]/actions.ts`
 2026-09-07 — sin Task Intake de implementación porque no hay código que
 implementar, sólo el cierre documental de la fase.
 
-## 210. La cabecera pública transparente se solapaba con el contenido al hacer scroll (HEADER-SCROLL-SOLID-1, 2026-09-09)
+---
+
+## 210. ACTIONS-OBSERVABLE-1 slice 4b: las dos acciones que quedaban de la Fase 4 dejan de terminar en silencio o en /debug (2026-09-08)
+
+**Origen.** Fase 4 del plan de la auditoría externa
+(`docs/external-audit-2026-08.md`, "ACTIONS-OBSERVABLE-1: ninguna acción
+silenciosa", P0-04). La Fase 0 (`AUDIT-REPRO-1`, §187) clasificó seis
+acciones de Recomendaciones; 4a (§203) cerró las cuatro primeras. Este slice
+cierra las dos que quedaban — "Exportar plan" (`real`, silenciosa) y
+"Activar seguimiento diario" (`invisible`) —, siguiendo el reparto escrito en
+`docs/specs/actions-observable-1/remaining-slices.md` (PR #525, aprobado por
+el fundador el 2026-09-08).
+
+**4b.1 · "Exportar plan".** El constructor de markdown salía de un closure
+sin test dentro de `handleExport`
+(`recommendations-client.tsx`) y la acción era 100% cliente: `Blob` + `<a
+download>`, sin rama de error, sin pasar por el contrato de 4a. Ahora:
+
+1. El constructor vive en `lib/recommendations/export-plan.ts`
+   (`buildExportPlanMarkdown`, `exportPlanFileName`), puro y con su propio
+   test (`export-plan.test.ts`).
+2. `handleExport` pasa por `useActionFeedback` — la primera acción
+   puramente de cliente que entra al contrato (todas las de 4a eran server
+   actions). Se envuelve en un `async` que resuelve `{ success: true }` tras
+   el "click" de descarga y captura cualquier fallo en `{ success: false,
+   error }`, sin ampliar `lib/ui/action-feedback.ts`.
+3. Si la descarga falla (política del navegador, un visor incrustado, un
+   sandbox), se abre `ExportPlanModal`: el markdown completo en un
+   `<textarea>` de sólo lectura con "Copiar al portapapeles". Los dos
+   caminos anuncian un hecho distinto — "Plan descargado." en el primero, el
+   propio acuse `role="status"` del modal ("Plan copiado al portapapeles.")
+   en el segundo — nunca el mismo mensaje para dos cosas distintas.
+
+**Riesgo conocido y aceptado.** Un navegador puede bloquear la descarga SIN
+lanzar una excepción capturable (política silenciosa, en vez de un error) —
+en ese caso el `try/catch` no detecta el fallo y el modal no se abre. Es el
+diseño que pedía el plan de origen (try/catch, sin ampliar el contrato); no
+cubre ese caso silencioso concreto, que queda como riesgo residual explícito
+en vez de resuelto.
+
+**4b.2 · "Activar seguimiento diario" — superseded por §211 el mismo día.**
+El fundador revisó el preview de este mismo PR y decidió retirar el botón
+entero en vez de dejarlo correctamente enrutado: ver §211. Lo que sigue
+describe lo que se implementó primero y por qué, porque el hallazgo de la
+redirección (§211 lo hereda) y el propio core (`setRecurringScansCore`, que
+§211 SÍ conserva) siguen siendo ciertos.
+
+El hallazgo del plan de origen SÍ
+se reprodujo leyendo el código: `setRecurringScans`
+(`app/dashboard/projects/[projectId]/actions.ts`) termina en `redirect()` en
+sus tres ramas, **incluida la de éxito**, y las tres apuntan a
+`/dashboard/projects/{id}/debug`. Correcto para el switch de esa pantalla
+(razón de ser de la acción); equivocado para `DataMaturityBanner`
+(`components/data-maturity-banner.tsx`), que la llama desde Visión general
+(y las otras cinco pantallas de la consola que montan el banner) y sacaba al
+usuario de la pantalla en la que estaba.
+
+**Alcanzabilidad, verificada antes de tocar nada.** `PROJECT-DEFAULTS-BY-ACCOUNT-1`
+(§173) activa `recurring_scans_enabled` en el primer escaneo completado de
+toda cuenta real no interna, así que a primera vista la rama `no_tracking`
+parecía inalcanzable. No lo es: un dueño de proyecto puede desactivar el
+seguimiento a mano desde `/debug` en cualquier momento, y mientras
+`completedScans` esté entre 1 y 4 (`lib/data-maturity.ts`,
+`computeDataMaturity`), el banner vuelve a mostrar `no_tracking` en Visión
+general con el mismo botón roto. Alcanzable por una cuenta real, no sólo
+hipotético.
+
+**Entregables.**
+
+1. `setRecurringScansCore` (`lib/projects/automation-toggles.ts`) — el
+   desenlace se DEVUELVE (`.claude/rules/server-actions.md`), nunca se
+   decide con `redirect()`. Mismo cheque (`checkRecurringScansPrecondition`,
+   sólo al activar) y misma escritura que antes vivían inline en la action;
+   ahora son testeables sin mockear `redirect`.
+2. `setRecurringScans` (la action de `/debug`) pasa a ser sólo la tabla de
+   traducción del resultado del core a `redirect()` — comportamiento
+   idéntico al de antes para ese único llamador.
+3. `setRecurringScansAction`, nueva, para `DataMaturityBanner`: nunca
+   redirige, devuelve `{ success, error }` con copy categorizado y saneado
+   (`RECURRING_SCANS_ERROR_MESSAGES`) — nunca el error crudo de Supabase.
+4. El banner pasa por `useActionFeedback` y llama a `router.refresh()` en su
+   propio éxito — mismo patrón que "Marcar como hecho" en `RecCard`: el
+   banner deja de mostrarse porque su `kind` se recalcula en el servidor
+   (`recurring_scans_enabled` ya es `true`), no por un booleano local
+   inventado en el componente.
+5. Tests nuevos de `setRecurringScansCore` (`automation-toggles.test.ts`):
+   precondición no cumplida, fallo inesperado de la precondición, activar
+   con éxito, desactivar sin consultar la precondición, fallo de escritura,
+   fila inexistente/ajena — ninguno existía antes de este slice.
+
+**Lo que NO se ha tocado.** El switch de `/debug` (`debug/page.tsx`) sigue
+llamando a `setRecurringScans` (FormData) y redirigiendo igual que siempre —
+el plan de origen pedía explícitamente conservarlo así. Sin migración, sin
+cambio de esquema, sin tocar el pipeline de escaneo.
+
+**CSS.** `.dmb-band form { flex: 0 0 auto; }` (`app/globals.css`) existía
+sólo porque el botón vivía dentro de un `<form>`; al desaparecer el `<form>`
+la regla queda muerta (`.dmb-cta` ya declara su propio `flex: 0 0 auto`) y se
+retira en el mismo PR en vez de dejarla mintiendo sobre un elemento que ya no
+existe.
+
+**Comprobado.** `pnpm test` (227/227 archivos, 3.133/3.133 tests, incluidos
+los seis tests nuevos de `setRecurringScansCore` y los ocho de
+`export-plan.test.ts`); `pnpm run validate` (build + typecheck + lint) en
+verde.
+
+**Trazabilidad.** `lib/recommendations/export-plan.ts` (+test);
+`app/dashboard/projects/[projectId]/recommendations/recommendations-client.tsx`
+(`handleExport`, `ExportPlanModal`); `lib/projects/automation-toggles.ts`
+(`setRecurringScansCore`, +test); `app/dashboard/projects/[projectId]/actions.ts`
+(`setRecurringScans`); `components/data-maturity-banner.tsx`;
+`app/globals.css` (`.dmb-band form` retirada). Task Intake de la fase
+completa aprobado por el fundador 2026-09-06 (§203); plan de ejecución de
+4b/4c/4d aprobado 2026-09-08 (PR #525,
+`docs/specs/actions-observable-1/remaining-slices.md`). La mitad 4b.2 de
+este entregable (el botón enrutado, `setRecurringScansAction`) se retiró
+horas después en la misma PR — ver §211.
+
+---
+
+## 211. El botón "Activar seguimiento diario" se retira, no se arregla — el default de lanzamiento lo hace innecesario (2026-09-08)
+
+**Origen.** El fundador revisó el preview de PR #527 (§210, ACTIONS-OBSERVABLE-1
+slice 4b) minutos después de abierta. No vio el banner `no_tracking` en su
+proyecto real, y su reacción no fue pedir reproducirlo: *"realmente no
+quiero poner un banner ni un botón para eso. Recuerda que cuando salga a
+mercado todo el mundo con la cuenta que lo soporte tendrá el seguimiento
+diario por defecto"*.
+
+**Por qué el arreglo de §210 se queda corto, no equivocado.** 4b.2 diagnosticó
+bien un bug real (`setRecurringScans` redirigía a `/debug` incluso en su
+rama de éxito) y lo corrigió bien (el core devuelve el desenlace, el banner
+deja de navegar). Pero arreglar el enrutado asume que el botón debe seguir
+existiendo. `PROJECT-DEFAULTS-BY-ACCOUNT-1` (§173) ya activa
+`recurring_scans_enabled` sola tras el primer escaneo completado de toda
+cuenta real; la única forma de ver `no_tracking` hoy es que el propio dueño
+lo haya apagado a mano desde `/debug`. Ofrecerle un botón para deshacer su
+propia decisión, en una banda que aparece sin que la haya pedido, es la
+UI que el fundador decidió que el producto no necesita — ni hoy, con el
+`no_tracking` como caso raro de un toggle manual, ni en producción, donde el
+escenario que lo originaba (una cuenta sin seguimiento) deja de existir por
+diseño.
+
+**Qué se retira.**
+
+1. El estado `"no_tracking"` sale de `DataMaturityState`
+   (`lib/data-maturity.ts`). `computeDataMaturity` devuelve `{ kind: "hidden" }`
+   cuando `recurringEnabled` es `false` — mismo desenlace que "sin escaneos
+   todavía" o "ya se alcanzó el objetivo de historial": nada que mostrar,
+   nunca un CTA.
+2. La rama `state.kind === "no_tracking"` de `DataMaturityBanner`
+   (`components/data-maturity-banner.tsx`) desaparece entera, con ella el
+   `useActionFeedback`/`router.refresh()` que sólo servía a ese botón.
+3. `setRecurringScansAction` (`app/dashboard/projects/[projectId]/actions.ts`)
+   se retira — sin caller, era la mitad de la traducción que sólo existía
+   para este botón.
+4. Los dos tests de `no_tracking` en `lib/project-workspace.test.ts` se
+   reescriben: el de `computeDataMaturity` ahora afirma `{ kind: "hidden" }`
+   para el mismo input, y `SILENCIABLES` pierde el miembro que ya no existe.
+
+**Qué NO se retira.** `setRecurringScansCore` y la propia `setRecurringScans`
+(la action de `/debug`) siguen exactamente igual — el switch de `/debug`
+sigue siendo la única forma soportada de tocar `recurring_scans_enabled` a
+mano, y ese camino no tenía ningún bug. El refactor de §210 ("el desenlace
+se devuelve, no se decide con redirect") sigue siendo el que corresponde:
+sin él, este PR no habría podido diagnosticar con un test que "desactivar
+nunca consulta la precondición", que es justo la propiedad que hace seguro
+retirar el otro llamador sin tocar éste.
+
+**Regla de premisa (`CLAUDE.md`, "Cierre de fase" punto 4).** Esto retira un
+camino de recuperación: hoy, un dueño que apagó el seguimiento a mano desde
+`/debug` no tiene NINGUNA forma de volver a encenderlo salvo volver a
+`/debug` — no hay CTA en Visión general ni en ninguna otra pantalla que se lo
+recuerde u ofrezca hacerlo con un clic. La premisa que sostiene esto:
+*"cuando salga a mercado todo el mundo con la cuenta que lo soporte tendrá
+el seguimiento diario por defecto"* — es decir, apagarlo a mano será una
+decisión deliberada y poco frecuente, no un estado en el que una cuenta real
+caiga por accidente. Si esa premisa cambia (por ejemplo, si un futuro fallo
+operativo apaga el seguimiento de muchas cuentas a la vez, o si el propio
+`/debug` deja de ser fácil de encontrar para un usuario no técnico), esta
+pantalla se queda sin salida y hay que reabrir esta decisión, no parchear el
+banner otra vez.
+
+**Comprobado.** `pnpm test` (227/227 archivos — mismo recuento que §210, sin
+tests nuevos: esto es retirada, no funcionalidad); `pnpm run validate`
+(build + typecheck + lint) en verde.
+
+**Trazabilidad.** `lib/data-maturity.ts` (`DataMaturityState`,
+`computeDataMaturity`); `components/data-maturity-banner.tsx`;
+`app/dashboard/projects/[projectId]/actions.ts` (`setRecurringScansAction`
+retirada); `lib/project-workspace.test.ts`. Decisión del fundador,
+2026-09-09, revisando el preview de PR #527 en vivo — sin Task Intake propio:
+es la corrección directa y de bajo riesgo de una decisión de producto sobre
+un PR todavía sin Human Gate, no una fase nueva.
+
+---
+
+## 212. La frase larga del "puesto medio" se retira sin sustituto — el fundador la encontró mal maquetada (2026-09-09)
+
+**Origen.** El fundador, en la misma sesión de revisión del preview de PR #527
+(§211), señaló una frase de Visión general (bajo "Top 5 posiciones"): *"esta
+frase mal maquetada: 'Cuenta solo las respuestas donde la marca aparece: una
+nombrada pocas veces pero siempre la primera queda por delante de otra
+nombrada en muchas más.' Quítala directamente."*
+
+**Qué era.** `MEAN_RANK_NOTE` (`lib/competitors/mean-rank-copy.ts`,
+MEAN-RANK-READS-TRUE-1, log §177) — la frase larga que explica, con el
+ejemplo real Amazon/Mozilla, por qué `avg_position_when_mentioned` puede
+poner a una marca poco mencionada por delante de otra mencionada muchas más
+veces. Se pintaba pegada a la cifra en las DOS pantallas que publican esta
+métrica (Visión general y Competidores), a propósito, con el mismo aspecto en
+ambas.
+
+**Qué se retira, sin sustituto.** El export `MEAN_RANK_NOTE` desaparece de
+`mean-rank-copy.ts`; sus dos puntos de render
+(`app/dashboard/projects/[projectId]/page.tsx`,
+`app/dashboard/projects/[projectId]/competitors/page.tsx`) se eliminan; las
+clases CSS dedicadas (`.ov2-cmp-note`, `.cm2-pos-note`) se retiran de
+`app/globals.css` — vivían combinadas en el mismo selector que
+`.info-tip-anchor`/`.cit2-kpis`/`.cit2-split-key`/`.wa2-diag-title`
+únicamente por compartir margin/font-size/color/max-width; quitarlas de la
+lista no cambia nada para esas otras cuatro.
+
+**Qué NO se retira.** El rótulo `MEAN_RANK_COLUMN_LABEL` ("Puesto medio", en
+vez de "Puesto" a secas) sigue en las dos pantallas — es la mitad de
+MEAN-RANK-READS-TRUE-1 que el fundador no cuestionó, y sigue siendo lo único
+que evita que la cifra se lea como un ranking absoluto. Sólo se retira la
+frase larga que la acompañaba.
+
+**Riesgo aceptado, dicho claro.** MEAN-RANK-READS-TRUE-1 existió porque el
+fundador mismo, mirando su propia pantalla, leyó mal la cifra ("la tabla de
+puestos no es consistente con el gráfico", §177) — la frase que se retira
+ahora era precisamente la explicación de ese malentendido. Quitarla reabre la
+posibilidad de que alguien (el fundador u otro usuario) vuelva a leerla como
+un ranking general. Es un riesgo aceptado explícitamente por el fundador al
+pedir el corte, no una omisión: prefiere una pantalla más limpia a una frase
+que él mismo encontró mal maquetada. Si el malentendido vuelve a producirse
+en el futuro, la primera pregunta no es "¿hace falta una frase?" — ya se
+probó y no gustó — sino qué otra forma (quizás visual, no textual) lo
+resuelve sin repetir el mismo bloque de texto largo.
+
+**Comprobado.** `pnpm test` (227/227 archivos — sin tests propios de
+`mean-rank-copy.ts`, ninguno que actualizar); `pnpm run validate` (build +
+typecheck + lint) en verde.
+
+**Trazabilidad.** `lib/competitors/mean-rank-copy.ts` (`MEAN_RANK_NOTE`
+retirado); `app/dashboard/projects/[projectId]/page.tsx`;
+`app/dashboard/projects/[projectId]/competitors/page.tsx`; `app/globals.css`
+(`.ov2-cmp-note`, `.cm2-pos-note` retiradas de la lista combinada de
+selectores); `.claude/rules/competitors.md` (sección "El puesto es una
+MEDIA"). Decisión del fundador, 2026-09-09, en vivo sobre el preview de PR
+#527 — sin Task Intake propio, corrección directa y de bajo riesgo de una
+frase de copy ya aprobada (MEAN-RANK-READS-TRUE-1, §177).
+
+---
+
+## 213. La cabecera pública transparente se solapaba con el contenido al hacer scroll (HEADER-SCROLL-SOLID-1, 2026-09-09)
 
 **Qué se reportó.** El fundador, mirando `/blog`: "la cabecera transparente
 hace que se vea mal con el body de la página al hacer scroll".

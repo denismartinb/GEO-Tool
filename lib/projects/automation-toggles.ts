@@ -43,6 +43,50 @@ export async function checkRecurringScansPrecondition(
   return { ok: true };
 }
 
+export type SetRecurringScansResult =
+  | { ok: true; enabled: boolean }
+  | { ok: false; reason: "unexpected_error" | "recurring_requires_completed_scan" | "recurring_update_failed" };
+
+/**
+ * ACTIONS-OBSERVABLE-1 slice 4b.2 (docs/external-audit-2026-08.md, Fase 4,
+ * P0-04) — el núcleo de "Activar/desactivar seguimiento diario", extraído de
+ * `setRecurringScans` (`app/dashboard/projects/[projectId]/actions.ts`) para
+ * que el desenlace se DEVUELVA en vez de decidirse con `redirect()`
+ * (`.claude/rules/server-actions.md`). El motivo no es sólo testabilidad: la
+ * action original termina en `redirect()` en TODAS sus ramas, incluida la de
+ * éxito, y las tres apuntan a `/dashboard/projects/{id}/debug` — correcto
+ * para el switch de esa pantalla, pero equivocado para
+ * `DataMaturityBanner`, que la llama desde Visión general y con ese destino
+ * literalmente saca al usuario de la pantalla en la que estaba para pulsar un
+ * botón (docs/specs/actions-observable-1/remaining-slices.md).
+ *
+ * Este core no sabe nada de `redirect` ni de rutas: la action de `/debug`
+ * sigue traduciendo su resultado a la misma redirección de siempre, y la
+ * nueva action del banner lo traduce a `{ success, error }` para
+ * `useActionFeedback`. Un solo cheque, una sola escritura, dos traducciones.
+ */
+export async function setRecurringScansCore(
+  supabase: SupabaseLike,
+  { projectId, ownerUserId, enabled }: { projectId: string; ownerUserId: string; enabled: boolean }
+): Promise<SetRecurringScansResult> {
+  if (enabled) {
+    const check = await checkRecurringScansPrecondition(supabase, projectId);
+    if (!check.ok) return { ok: false, reason: check.reason };
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ recurring_scans_enabled: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", ownerUserId)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) return { ok: false, reason: "recurring_update_failed" };
+  return { ok: true, enabled };
+}
+
 /** Qué columna escribe cada mitad de la auditoría automática (migración 0031). */
 export const AUDIT_HALF_COLUMN = {
   technical: "auto_technical_audit_enabled",
