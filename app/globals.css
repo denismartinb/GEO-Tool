@@ -9379,6 +9379,75 @@ select.set-field {
 .art-ans-src { color: var(--brand-pos); font-weight: 600; }
 .art-ans-nosrc { color: var(--ink-3); font-style: italic; }
 
+/* --- Hallazgo destacado (KeyFinding) -------------------------------------- */
+/* Mismo tratamiento visual que `.art-pull`, con acento de marca en vez de
+   cian: distingue a ojo un hallazgo propio de una cita textual de tercero. */
+.art-finding {
+  border-left: 3px solid var(--brand-blue); background: var(--brand-blue-soft, rgba(37,99,235,.07));
+  border-radius: 0 11px 11px 0; padding: 19px 24px; margin: 30px 0;
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 19px; font-weight: 600; line-height: 1.45; color: var(--ink); letter-spacing: -.01em;
+}
+.art-finding p { margin: 0; font: inherit; color: inherit; letter-spacing: inherit; }
+
+/* --- Maqueta rica de conversación (ChatAnswer) ---------------------------- */
+.art-chat { display: flex; flex-direction: column; gap: 14px; }
+.art-chat-q {
+  margin: 0; font-size: 14.5px; color: var(--ink-2); font-style: italic;
+  padding: 12px 16px; background: var(--surface-2); border-radius: 10px 10px 10px 2px;
+  align-self: flex-start; max-width: 92%;
+}
+.art-chat-a {
+  background: var(--brand-surface); border: 1px solid var(--line); border-radius: 2px 10px 10px 10px;
+  padding: 16px 18px; box-shadow: var(--brand-shadow-card); align-self: flex-end; max-width: 92%;
+}
+.art-chat-motor { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
+.art-chat-motor img { display: block; }
+.art-chat-motor span {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; font-weight: 700;
+  letter-spacing: .04em; color: var(--ink-3);
+}
+.art-chat-text { margin: 0; font-size: 15px; line-height: 1.6; color: var(--ink); }
+.art-chat-text mark {
+  background: var(--brand-pos-soft); color: var(--ink); border-radius: 4px; padding: 1px 5px;
+  font-weight: 650; font-family: var(--font-mono, ui-monospace, monospace); font-size: 13.5px;
+}
+.art-chat-miss {
+  display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; color: var(--ink-3);
+  border-top: 1px dashed var(--line); padding-top: 12px;
+}
+.art-chat-miss svg { flex: none; margin-top: 3px; color: var(--brand-neg); }
+@media (max-width: 560px) {
+  .art-chat-q, .art-chat-a { max-width: 100%; }
+}
+
+/* --- Rejilla on/off (EntityGrid) ------------------------------------------ */
+.art-picto { display: flex; flex-direction: column; gap: 16px; }
+.art-picto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 9px; }
+.art-picto-cell {
+  aspect-ratio: 1; border-radius: 9px; display: grid; place-items: center;
+  border: 1.5px dashed var(--line-strong, var(--ink-4)); color: var(--line-strong, var(--ink-4));
+}
+.art-picto-cell svg { width: 55%; height: 55%; }
+.art-picto-cell.on { background: var(--brand-pos-soft); border: 1.5px solid var(--brand-pos); color: var(--brand-pos); }
+.art-picto-key { display: flex; gap: 20px; font-size: 12.5px; color: var(--ink-3); flex-wrap: wrap; }
+.art-picto-key i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: -1px; border: 1.5px dashed var(--line-strong, var(--ink-4)); }
+.art-picto-key i.on { background: var(--brand-pos-soft); border: 1.5px solid var(--brand-pos); }
+
+/* --- Barras por motor (EngineBars) ---------------------------------------- */
+.art-ebars { display: flex; flex-direction: column; gap: 18px; }
+.art-ebar-row { display: grid; grid-template-columns: 110px 1fr 48px; gap: 14px; align-items: center; }
+.art-ebar-label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 650; color: var(--ink); }
+.art-ebar-track { height: 22px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+.art-ebar-fill { display: block; height: 100%; border-radius: 6px; }
+.art-ebar-v {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-weight: 800; font-size: 16px;
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+@media (max-width: 560px) {
+  .art-ebar-row { grid-template-columns: 84px 1fr 40px; gap: 10px; }
+}
+
 /* --- Maqueta de recomendación -------------------------------------------- */
 .art-rec {
   padding: 16px 17px; border-radius: 10px;
