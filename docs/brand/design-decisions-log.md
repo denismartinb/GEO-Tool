@@ -19970,3 +19970,79 @@ export-report.tsx` (logo oficial, pie de página al final del flujo);
 informe-consultoria.html` (referencia contra la que se comparó). Log §213
 (fase original), este log corrige y completa el mismo PR #529 antes del
 Human Gate.
+
+---
+
+## 215. PDF-EXPORT-PLAN-1: la portada se deformaba en un dispositivo real — el informe se monta por portal en `document.body` (2026-09-11)
+
+**Origen.** El fundador probó el PDF real (§214 ya corregido) en su iPhone:
+la portada salía con un círculo cian SÓLIDO cubriendo la mitad de la página
+y la fila de metadatos (Cliente/Fecha/Puntuación GEO) pegada muy abajo, con
+un hueco enorme en medio — nada que ver con el diseño aprobado, aunque el
+mismo componente había salido bien en las pruebas de Chromino headless de
+§214.
+
+**Por qué las pruebas de §214 no lo detectaron.** Ese arnés renderizaba
+`ExportReport` en un HTML aislado, sin ningún ancestro real de la consola.
+El componente real vive anidado dentro del layout completo del dashboard
+(barra lateral, cabecera fija, contenedores responsive con `overflow`,
+posiblemente `transform` en el drawer móvil). El CSS de aislamiento de
+impresión usaba `visibility: hidden` en cascada sobre `body *` para ocultar
+todo menos `.xrp-root` — pero `visibility` sólo oculta la PINTURA de un
+elemento, nunca anula su caja de layout: si un ancestro tiene `overflow:
+hidden` con una altura pequeña, o un `transform`, sigue constriñendo a sus
+descendientes exactamente igual aunque sean invisibles. El arnés de §214,
+al no tener esos ancestros, no podía reproducir el fallo.
+
+**Causa exacta.** `.xrp-cover-bg` (el resplandor decorativo) es
+`position: absolute; inset: 0`, con containing block el ancestro
+posicionado más cercano. Si algún ancestro real de la consola introduce su
+propio contexto de posicionamiento/tamaño (layout responsive, drawer),
+tanto el propio informe como su fondo heredaban dimensiones que no eran
+794×1123 reales, deformando el degradado (calculado en porcentajes) hasta
+convertirlo en un círculo sólido gigante y desplazando la fila de metadatos.
+
+**Corrección — dos cambios independientes, cada uno cierra un riesgo
+distinto:**
+1. **`ExportReport` se monta con `createPortal` en `document.body`**
+   (`export-report.tsx`), no en el sitio del árbol de React donde aparece
+   `<ExportReport>`. Como hijo directo de `body`, no hereda `overflow`,
+   `transform` ni ningún contexto de tamaño de la app — el CSS de
+   aislamiento de impresión se simplifica a `body > *:not(.xrp-root) {
+   display: none }`, ya no hace falta el truco de `visibility` en cascada.
+2. **El resplandor de la portada pasa de `background: radial-gradient(...)`
+   CSS a un `<svg>` con `<radialGradient>` propio.** Un degradado CSS con
+   canal alfa (`rgba`) es una fuente conocida de fallos al exportar/imprimir
+   en motores WebKit — se rasteriza como color sólido, perdiendo la
+   transparencia. Un gradiente definido en SVG (con `stop-opacity`) se
+   rasteriza con más fiabilidad en ese mismo camino. Defensa adicional,
+   independiente de la causa nº1 — ambas se corrigen porque cualquiera de
+   las dos por sí sola podría no ser la única causa en todos los motores.
+
+**Cómo se probó esta vez — reproduciendo el bug, no sólo el resultado
+feliz.** Se compiló el componente real (`export-report.tsx`) con esbuild a
+un bundle de navegador, montado con `ReactDOM.createRoot` dentro de un
+contenedor deliberadamente hostil (`overflow: hidden`, `transform`, tamaño
+de viewport de iPhone 390×844) que imita las restricciones de un layout de
+consola real — el mismo tipo de ancestro que el arnés de §214 no tenía.
+Abierto con Playwright/Chromium, se confirmó por código que `.xrp-root`
+termina como hijo directo de `<body>` (`el.parentElement ===
+document.body`) y, por captura, que la portada sale con las proporciones y
+el resplandor correctos incluso dentro de ese contenedor hostil.
+
+**Lo que sigue sin poder probarse desde aquí.** Esta sesión no tiene acceso
+a un iPhone/Safari real ni al layout completo de la consola con datos de
+sesión reales — la reproducción es una aproximación deliberada del tipo de
+restricción que causaba el fallo, no una repetición exacta del DOM real de
+`/dashboard/projects/[id]/recommendations`. El fundador es quien cierra
+esta verificación probando el PDF real en su dispositivo.
+
+**Comprobado.** `pnpm test`: 227/227 archivos, 3136/3136 tests (sin cambios
+de comportamiento fuera de `export-report.tsx`/`.css`). `pnpm run validate`
+(build + typecheck + lint) en verde.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+export-report.tsx` (`createPortal` a `document.body`, resplandor en SVG);
+`export-report.css` (aislamiento de impresión simplificado a `body > *`).
+Log §213 (fase original), §214 (primera corrección de fidelidad), este log
+corrige el mismo PR #529 antes del Human Gate, sobre el mismo componente.

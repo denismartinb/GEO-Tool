@@ -4,10 +4,12 @@
  * genéricos como "card"/"section" ya existen en globals.css y se pisarían en
  * ambos sentidos).
  *
- * .xrp-root está OCULTO en pantalla y sólo se hace visible dentro de
- * @media print — window.print() (recommendations-client.tsx) es quien la
- * dispara. Fuera de impresión, `display: none` evita que el informe A4 se
- * renderice (y se descargue) en la propia consola.
+ * .xrp-root se monta con `createPortal` directamente en `document.body`
+ * (export-report.tsx) — nunca en el sitio del árbol de React donde aparece
+ * `<ExportReport>` — y está OCULTO en pantalla, visible sólo dentro de
+ * @media print. `window.print()` (recommendations-client.tsx) es quien
+ * dispara la impresión; fuera de ella, `display: none` evita que el informe
+ * A4 se renderice en la propia consola.
  *
  * Las medidas de `.xrp-cover`/`.xrp-content` están en PX, a propósito, no en
  * mm: el artboard aprobado (`docs/design-reference/pdf-export-plan-1/
@@ -25,23 +27,21 @@
 
 @media print {
   /* Oculta el resto de la consola durante la impresión; sólo el informe
-     queda visible. `visibility` (no `display`) para no depender de dónde
-     cuelga `.xrp-root` en el árbol — funciona sea cual sea su padre real,
-     sin necesitar que sea hijo directo de `body`. */
-  body * {
-    visibility: hidden;
-  }
-
-  .xrp-root,
-  .xrp-root * {
-    visibility: visible;
+     queda visible. `.xrp-root` se monta con `createPortal` directamente en
+     `document.body` (export-report.tsx) — por eso esto puede ser un
+     selector directo `body > *`, sin necesitar el truco de
+     `visibility:hidden` en cascada sobre TODOS los descendientes: ese truco
+     oculta la pintura de los ancestros de `.xrp-root`, pero no anula su
+     caja de layout (`overflow`, `transform`, altura) — que es justo lo que
+     deformaba la portada cuando el informe vivía anidado dentro del layout
+     de la consola (log §215). Como hijo directo de `body`, no tiene
+     ancestros de la app de los que escapar. */
+  body > *:not(.xrp-root) {
+    display: none !important;
   }
 
   .xrp-root {
     display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
   }
 
   @page {
@@ -83,6 +83,7 @@
 /* ---- Portada — pixel-perfect contra informe-consultoria.html ---- */
 
 .xrp-cover {
+  position: relative;
   background: var(--brand-ink, #0b1426);
   color: #ffffff;
   padding: 56px 64px 56px 64px;
@@ -94,7 +95,9 @@
 .xrp-cover-bg {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 82% 12%, rgba(9, 197, 214, 0.22), transparent 55%);
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .xrp-cover-top,

@@ -270,6 +270,18 @@ paths:
   committeado — la fidelidad pixel-perfect contra
   `docs/design-reference/pdf-export-plan-1/` y la ausencia de recortes de
   contenido no son verificables leyendo el código a ojo.
+- **`ExportReport` se monta con `createPortal` en `document.body`, nunca
+  directamente donde aparece `<ExportReport>` en el árbol.** Anidado dentro
+  del layout de la consola (barra lateral, contenedores responsive), el
+  informe hereda `overflow`/`transform` de sus ancestros reales y su
+  portada se deforma — un fallo que un arnés de prueba sin esos ancestros
+  NO puede ver (log §215). Si algún día esto cambia, la prueba tiene que
+  reproducir un ancestro con `overflow: hidden` + `transform`, no sólo
+  renderizar el componente aislado.
+- **El resplandor decorativo de la portada es SVG (`<radialGradient>`),
+  nunca `background: radial-gradient()` de CSS.** Un degradado CSS con
+  canal alfa es una fuente conocida de fallos al exportar/imprimir en
+  motores WebKit — se rasteriza como color sólido (log §215).
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 

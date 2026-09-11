@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { MIN_VISIBLE_POINTS, formatPoints } from "@/lib/recommendations/plan";
 import { recommendationEngineLabels, type ExportPlanRecommendation } from "@/lib/recommendations/export-plan";
 import { pointsCaption } from "@/lib/recommendations/deliverable";
@@ -5,13 +7,24 @@ import { BrandLogo } from "@/components/ui/brand-logo";
 
 /**
  * PDF-EXPORT-PLAN-1 (docs/design-reference/pdf-export-plan-1/) — el informe
- * que sustituye al `.md` de "Exportar plan". Se monta siempre oculto
- * (`.xrp-root`) y sólo se hace visible por `@media print` en
- * export-report.css — `handleExport` en recommendations-client.tsx dispara
- * `window.print()`, nunca genera el PDF por sí mismo. Puramente
- * presentacional: no toca `Date.now()`, no decide qué es "plan" vs. "resto"
- * (eso lo decide `selectPlan` en el servidor, igual que el `.md` que
- * sustituye).
+ * que sustituye al `.md` de "Exportar plan". Sólo se hace visible por
+ * `@media print` en export-report.css — `handleExport` en
+ * recommendations-client.tsx dispara `window.print()`, nunca genera el PDF
+ * por sí mismo. Puramente presentacional: no toca `Date.now()`, no decide
+ * qué es "plan" vs. "resto" (eso lo decide `selectPlan` en el servidor,
+ * igual que el `.md` que sustituye).
+ *
+ * Se monta con `createPortal` directamente en `document.body`, no en el
+ * sitio donde `<ExportReport>` aparece en el árbol de React (dentro del
+ * layout de la consola, con su barra lateral, su cabecera fija y su
+ * contenedor responsive). Antes de esto la portada salía deformada en
+ * dispositivos reales (log §215) — probado en Chromium headless sobre un
+ * HTML aislado, donde SÍ salía bien, porque ese arnés no tenía ningún
+ * ancestro con `overflow`/`transform` que interfiriera. `visibility:hidden`
+ * en el resto de la página no protege de la caja de layout de esos
+ * ancestros — sólo de que se VEAN, no de que seguían constriñendo el
+ * tamaño/posición de todo lo que cuelga dentro. Como hijo directo de
+ * `body`, el informe no hereda nada de eso.
  */
 export function ExportReport({
   domain,
@@ -28,11 +41,19 @@ export function ExportReport({
   plan: ExportPlanRecommendation[];
   rest: ExportPlanRecommendation[];
 }) {
-  return (
+  // `document` no existe durante el render en servidor — el portal sólo se
+  // crea tras montar en el cliente, mismo patrón que cualquier otro uso de
+  // createPortal en Next.js App Router.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="xrp-root" aria-hidden="true">
       <ExportReportCover domain={domain} geoScore={geoScore} scanDateLabel={scanDateLabel} planCount={plan.length} />
       <ExportReportContent domain={domain} plan={plan} rest={rest} />
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -49,7 +70,20 @@ function ExportReportCover({
 }) {
   return (
     <section className="xrp-page xrp-cover">
-      <div className="xrp-cover-bg" />
+      {/* SVG, no CSS `radial-gradient` — un degradado con canal alfa
+          (`rgba`) en un fondo CSS es una fuente conocida de fallos al
+          exportar a PDF en motores WebKit (se rasteriza a color sólido,
+          perdiendo la transparencia). Un `<radialGradient>` de SVG se
+          rasteriza con más fiabilidad (log §215). */}
+      <svg className="xrp-cover-bg" viewBox="0 0 794 1123" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <radialGradient id="xrpGlow" cx="82%" cy="12%" r="55%">
+            <stop offset="0%" stopColor="#09c5d6" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#09c5d6" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect width="794" height="1123" fill="url(#xrpGlow)" />
+      </svg>
       <div className="xrp-cover-top">
         <BrandLogo size={20} onDark />
         <span className="xrp-cover-kicker">Informe confidencial</span>
