@@ -19936,3 +19936,78 @@ observable-1/remaining-slices.md` (slice 4d); `scripts/pilot.mjs`
 la aserción que ya existía), §191 (RECS-EVIDENCE-2, por qué la tercera no
 aplica), §199 (VERCEL-COST-1 Fase 5, la misma disciplina de medir antes de
 rutinizar). Decisión del fundador, 2026-09-11.
+
+## 215. Fase 1: los CTA de `/pricing` estando logado llevan directo al modal "Cambiar de plan" (PRECIO-BUTTONS-CONSOLE-1, 2026-09-11)
+
+**Origen.** El fundador, desde móvil: en `/pricing` estando logado, el botón
+de Pro decía "Probar Pro gratis" con el precio de promo (59 €), pero el modal
+real de la consola ("Cambiar de plan") mostraba el mismo plan a 59 €/mes sin
+mención de prueba gratis — dos superficies contando historias distintas del
+mismo precio a la misma cuenta. Además, pinchar el botón llevaba a `/signup`,
+reiniciando un onboarding que esa cuenta ya había completado, en vez de a
+donde el fundador realmente quería ir: la pantalla donde se contrata de
+verdad.
+
+**Task Intake.** Obligatorio: toca `/pricing` (pública) y la consola de
+billing a la vez, y linda con auth — tres de los disparadores explícitos del
+protocolo. El informe recomendó partir el trabajo en dos fases y ejecutar
+sólo la más segura primero; el fundador aprobó ("Sí") sobre esa recomendación,
+no sobre el paquete completo.
+
+**Qué entra en esta fase.** Sólo el deep-link: un CTA de plan en `/pricing`
+pinchado con sesión abierta ya no va a `/signup?plan=<id>`, va a
+`/dashboard/settings?openPlan=<id>#plan` y el modal "Cambiar de plan" se abre
+solo, preseleccionado en ese plan — la pantalla real donde la cuenta ve su
+precio real y contrata. Sin sesión, el botón sigue yendo a `/signup` como
+hasta ahora.
+
+**Qué NO entra (Fase 2, sin aprobar todavía).** El copy del propio botón en
+`/pricing` ("Probar X gratis" vs "Contratar X") sigue siendo fijo
+(`plan.cta`, `app/pricing/plans-data.ts`) — no distingue todavía si la cuenta
+logada ya gastó su trial. Corregirlo bien exige exponer `hasTrialExpired`
+(`lib/billing.ts`) fuera de la consola, y decidir qué significa eso para una
+página hoy estática — la sección "Cómo se mantiene `/pricing` estática" de
+abajo explica por qué no es trivial. El modal al que ya se llega en esta fase
+muestra el precio y el estado de trial reales sin ningún cambio adicional, así
+que la mentira de precio del reporte original queda resuelta en cuanto se
+llega ahí — sólo el copy previo del botón se queda desactualizado un click
+antes.
+
+**Cómo se mantiene `/pricing` estática.** La página sigue siendo un Server
+Component sin sesión, `revalidate = 3600` intacto (comentario de
+PRICING-PROMO-1 en `app/pricing/page.tsx`, sin tocar). Comprobar sesión ahí
+con `requireUser`/`createClient` habría forzado el render dinámico de toda la
+ruta — el mismo motivo por el que `PublicHeader` ya lee sesión desde el
+cliente (`lib/use-session-user.ts`, GENSCORE-HEADER-2). El CTA se extrajo a
+un componente cliente nuevo y pequeño (`components/pricing/plan-card-cta.tsx`,
+`PlanCardCta`) que reutiliza ese mismo hook — mientras la sesión resuelve
+(o para un visitante anónimo) el enlace por defecto es `/signup?plan=<id>`,
+igual que documenta `useSessionUser`: el coste de esa optimista ventana de un
+frame es aceptar el comportamiento actual, nunca uno peor. El build confirma
+`/pricing` sigue listada como `○` (estática) con `1h` de revalidate.
+
+**El deep-link, `?openPlan=<id>`.** Validado contra `PLANS` en
+`app/dashboard/settings/page.tsx` antes de pasarlo más abajo — un id que no
+existe en el catálogo se descarta silenciosamente en vez de llegar como
+string arbitrario a `ChangePlanModal`. Se lee una sola vez en el
+`useState` inicial de `PlanBillingSection` (`components/billing/
+plan-billing-section.tsx`), no en un efecto: un efecto habría pintado la
+tarjeta cerrada un frame antes de abrir el modal.
+
+**Regla de premisa.** No se retira ningún camino de recuperación — al
+contrario, esta fase añade uno (el deep-link) sin quitar el flujo manual
+existente ("Cambiar de plan" sigue abriéndose igual desde dentro de la
+consola).
+
+**Comprobado.** `pnpm test` (227/227, 3133 tests) y `pnpm run validate`
+(build + typecheck + lint) en verde. Sin journey de piloto nueva: el cambio
+es puramente de navegación entre dos pantallas ya cubiertas por journeys de
+lectura existentes; el fundador decide si merece una pasada manual del piloto
+antes del Human Gate.
+
+**Trazabilidad.** `app/pricing/page.tsx`, `components/pricing/pricing-page.tsx`,
+`components/pricing/plan-card-cta.tsx` (nuevo), `app/dashboard/settings/
+page.tsx`, `components/billing/billing-content.tsx`, `components/billing/
+plan-billing-section.tsx`; `lib/use-session-user.ts` (GENSCORE-HEADER-2,
+reutilizado sin tocar); log §152/§170/§182/§197 (precio y promo,
+`plans-data.ts`). Task Intake y aprobación del fundador, 2026-09-11.
