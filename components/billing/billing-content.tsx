@@ -5,6 +5,7 @@ import { getActivePromoPlanIds } from "@/lib/stripe";
 import { PlanBillingSection } from "@/components/billing/plan-billing-section";
 import { CheckoutSuccessPoller } from "@/components/billing/checkout-success-poller";
 import { SUPPORT_EMAIL } from "@/lib/support";
+import type { Plan } from "@/app/pricing/plans-data";
 
 /**
  * CONSOLE-REDESIGN-1: this is the "Plan" section of the single settings page.
@@ -22,10 +23,18 @@ import { SUPPORT_EMAIL } from "@/lib/support";
  * to «Datos de empresa».
  */
 export async function BillingContent({
-  checkoutStatus
+  checkoutStatus,
+  openPlanId
 }: {
   /** BILLING-STRIPE-1: `?checkout=success|cancelled` from the Stripe Checkout redirect. */
   checkoutStatus?: string;
+  /**
+   * PRECIO-BUTTONS-CONSOLE-1: `?openPlan=<id>` from a `/pricing` CTA clicked
+   * while logged in — opens "Cambiar de plan" straight into that plan
+   * instead of requiring a second click inside the console. Already
+   * validated against `PLANS` by the caller (`app/dashboard/settings/page.tsx`).
+   */
+  openPlanId?: Plan["id"];
 }) {
   const usage = await getUsageSummary();
   // PRICING-PROMO-1: computed server-side (needs STRIPE_COUPON_ID_*, which
@@ -54,6 +63,7 @@ export async function BillingContent({
         usage={usage}
         activeProjects={usage.activeProjects}
         promoPlanIds={promoPlanIds}
+        openPlanId={openPlanId}
       />
 
       <Card>
