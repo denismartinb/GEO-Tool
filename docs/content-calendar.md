@@ -65,6 +65,7 @@ transaccional).
 | B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | ✅ Hecho | — |
 | B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | ✅ Hecho | — |
 | B4 | `/blog/geo-vs-aeo-vs-seo` (cluster fundamentos) | ✅ Hecho | — |
+| B5 | `/blog/geo-para-clinicas-de-estetica` (cluster sectores) | 🟡 Borrador en preview — datos no verificados, NO listo para producción | — |
 
 **B4 — hecho (2026-08-23).** `/blog/geo-vs-aeo-vs-seo`, keyword primaria "geo
 vs aeo vs seo" (secundarias: aeo, llmo, generative engine optimization,
@@ -140,6 +141,108 @@ otra portada más visual y parecida al resto"*. Dos correcciones:
 - Añadido a las dos listas del piloto en este mismo PR: `BLOG_SLUGS` en
   `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
   `tests/pilot/journeys/public-pages.spec.ts`.
+
+**B5 — borrador en preview, NO aprobado para producción (2026-09-08).**
+`/blog/geo-para-clinicas-de-estetica`, cuarta pieza del cluster `sectores`
+(junto a ecommerce, SaaS B2B y agencias). Encargo directo del fundador a
+partir de un HTML de referencia que proponía publicar un "estudio de 50
+clínicas escaneadas con IA" con cifras marcadas como `<!-- DATO: EJEMPLO -->`
+en el propio fichero de origen.
+
+**Ese estudio no se ha ejecutado.** No hay 50 clínicas anonimizadas escaneadas
+de verdad contra ChatGPT, Gemini y Claude — las cifras del artículo (72%
+invisible, concentración 68/32, % por motor, comparación de señales
+visible/invisible) son las del HTML de referencia del fundador, casi
+textuales. Publicar eso en producción como una investigación propia real de
+GenScore sería exactamente lo que prohíben `content-strategy.md` §2 (la Capa
+E / Observatorio "necesita aprobación explícita y evaluación de coste antes
+de escribir una línea") y este mismo fichero de reglas ("ninguna cifra de
+mercado de terceros se presenta como dato propio de Genscore").
+
+**Primera versión de este PR** presentaba el "estudio" como una maqueta
+declarada (`<Figure>` con caption explícito de que los datos no eran reales).
+El fundador, tras verla, pidió explícitamente usar los datos y el artículo de
+referencia **casi textualmente, como decisión suya** — y aclaró que esto es
+**sólo para el preview de este PR, no para publicar en producción sin más**.
+Esta segunda versión responde a eso: el cuerpo del artículo ya no lleva
+ningún aviso de "maqueta" ni "dato de ejemplo" — se lee exactamente como el
+HTML de referencia, con GenScore como autor del estudio.
+
+- Ningún motor no soportado (Perplexity) se nombra en ningún sitio del
+  artículo, a petición explícita del fundador. Al quitarlo, la muestra pasa
+  de 4 a 3 motores y el total de consultas de la metodología se recalculó de
+  2.000 a 1.500 (50 clínicas × 10 preguntas × 3 motores) para que el propio
+  artículo no se contradiga.
+- La única cifra que sí es de un tercero verificable y real es el *2026
+  Patient Choice Report* de rater8 (encuesta a pacientes en EE. UU. sobre uso
+  de IA para elegir profesional sanitario), con su aviso de mercado y de
+  conflicto de interés — esa sí lleva `source` real en el `<Stat>`.
+- Portada: SVG propio (`docs/design-reference/blog-covers/
+  geo-para-clinicas-de-estetica-cover.svg`) siguiendo el mismo lenguaje
+  visual del catálogo (fondo casi negro azulado, paneles translúcidos con
+  neón, composición izquierda→lente→derecha), rasterizado a WebP con
+  Playwright + `sharp` (14,5 KB, dentro del presupuesto de `public/`).
+- Añadido a las dos listas del piloto en este mismo PR: `BLOG_SLUGS` en
+  `tests/pilot/fixtures/server.mjs` y `BLOG_POSTS_BY_CLUSTER` en
+  `tests/pilot/journeys/public-pages.spec.ts`.
+
+**Estado real, y lo que falta antes de que esto pueda ir a producción.** El
+PR está abierto y su preview de Vercel funciona — eso es todo lo que el
+fundador ha pedido hasta ahora. Este PR **no se mergea** con las cifras
+actuales sin una decisión explícita y separada del fundador sobre una de
+estas dos rutas: (a) ejecutar de verdad el escaneo de las 50 clínicas antes
+de publicar (Fase 1, con su propio coste de LLM), o (b) reintroducir el aviso
+de que las cifras son ilustrativas antes de publicar. Cualquier sesión futura
+que retome este PR: no lo mergees sin releer este párrafo y confirmar con el
+fundador cuál de las dos rutas eligió.
+
+**Tercera iteración (2026-09-10) — sube el riesgo, no lo resuelve.** El
+fundador pidió mejoras de diseño y contenido (título literal del HTML de
+referencia, una maqueta rica tipo "chat" para el ejemplo de respuesta con
+nombres de clínica inventados pero realistas, más recuadros destacados para
+los hallazgos, gráficos más ricos — pictograma y barras por motor con
+logotipo — y una introducción más didáctica sobre qué es el GEO y por qué
+importa a cualquier negocio) y **dijo explícitamente que este artículo se
+usará para captar leads: se enviarán contactos desde el CRM a esta URL.**
+Eso no cambia la conclusión del párrafo de arriba — al contrario, la refuerza:
+un estudio no ejecutado presentado como real, enviado deliberadamente a
+negocios reales (dueños de clínicas), es el escenario exacto que la regla de
+"no fake metrics" existe para evitar, con más gente potencialmente expuesta
+que si sólo se quedara en `/blog` a la espera de tráfico orgánico. Se
+implementaron las mejoras pedidas (son buenas independientemente de cómo se
+resuelva la cifra) y se volvió a plantear la pregunta de fondo al fundador en
+el mismo turno — no se ha dado por resuelta por trabajar encima.
+
+Componentes nuevos de esta iteración, añadidos al sistema de diseño de
+artículos (`docs/brand/article-design-system.md`) y al barril
+`components/blog/article/index.ts`:
+
+- `KeyFinding` (`components/blog/article/blocks.tsx`) — mismo peso visual que
+  `PullQuote` pero SIN `cite`, para un hallazgo propio del artículo en vez de
+  una cita de alguien. Se creó porque la versión anterior de esta pieza usaba
+  `PullQuote` con una cita inventada (el ejemplo de respuesta de ChatGPT) y
+  con una frase editorial propia atribuida a "Estudio piloto GenScore" — las
+  dos son exactamente el fallo que `docs/brand/article-design-system.md` ya
+  documentaba como incidente cerrado ("se coló una paráfrasis... atribuida a
+  una persona concreta como si fueran sus palabras"). Corregido en el mismo
+  PR que lo introdujo.
+- `ChatAnswer`, `EntityGrid`, `EngineBars` (`components/blog/article/figure.tsx`)
+  — maquetas ricas (chat con logotipo de motor, rejilla on/off, barras por
+  motor). Mismo principio que `AnswerSample`: el texto de `ChatAnswer` es
+  **siempre ilustrativo**, nunca la respuesta real de un motor verificada
+  palabra por palabra — lo que cambia con esta iteración es que ahora usa
+  nombres de clínica inventados pero con sonido realista ("Clínica
+  Velázquez", "Instituto Dermalux", "Clínica Aura") en vez de "Clínica
+  A/B/C", a petición del fundador ("aunque sean inventadas, es un ejemplo
+  ilustrativo"). Todos wrapeados en `<Figure>`, como exige la regla 1 del
+  sistema de diseño ("nunca metas un visual sin Figure").
+- **Pendiente, no hecho en este PR:** el `ux-pilot` no se ha ejecutado sobre
+  esta pieza. `docs/brand/article-design-system.md` §5 dice que es obligatorio
+  antes de cada revisión del fundador; `CLAUDE.md` (VERCEL-COST-1 Fase 5, más
+  reciente) dice que se lanza a mano y que el Director pregunta primero por
+  el coste. Se le preguntó al fundador en el mismo turno en vez de lanzarlo
+  sin más — queda anotado aquí para que la siguiente sesión no lo dé por
+  hecho si la respuesta llega más tarde.
 
 **Nota B1b:** páginas pilar reales para fundamentos, medición y playbooks —
 cada una con una síntesis propia (no relleno) del porqué de esa sección y
