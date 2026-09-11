@@ -19819,3 +19819,87 @@ selectores); `.claude/rules/competitors.md` (sección "El puesto es una
 MEDIA"). Decisión del fundador, 2026-09-09, en vivo sobre el preview de PR
 #527 — sin Task Intake propio, corrección directa y de bajo riesgo de una
 frase de copy ya aprobada (MEAN-RANK-READS-TRUE-1, §177).
+
+---
+
+## 213. "Exportar plan" pasa de un `.md` a un informe con marca, vía `window.print()` (2026-09-11)
+
+**Origen.** Task Intake Report `PDF-EXPORT-PLAN-1`, aprobado por el fundador
+el 2026-09-11 sobre un canvas de tres plantillas (Ejecutiva, Checklist
+operativa, Informe de consultoría) — eligió la **Informe de consultoría**
+(portada editorial oscura + secciones numeradas) y confirmó que el PDF
+**sustituye** al `.md`, no convive con él, y que la Puntuación GEO se enseña
+en la portada.
+
+**Qué cambia.** `handleExport` (`recommendations-client.tsx`) deja de crear
+un `Blob`/`<a download>` con el markdown de `buildExportPlanMarkdown` y pasa
+a invocar `window.print()` sobre un informe HTML con marca
+(`export-report.tsx`, montado siempre oculto y sólo visible por
+`@media print` en `export-report.css`). El botón sigue llamándose "Exportar
+plan"; el resultado ahora es "Guardar como PDF" desde el diálogo de
+impresión del navegador, en vez de una descarga directa de fichero.
+
+**Datos nuevos que llegan a la pantalla.**
+- **Puntuación GEO** (`page.tsx`): se añade una consulta a `run_scores` de
+  las últimas `GEO_SCORE_LOOKBACK_ROWS` filas del proyecto y se resuelve con
+  `resolveGeoScore` (`lib/metrics/run-metrics.ts`, único dueño desde
+  TRUST-METRICS-1, §183) — la MISMA cifra que el medidor de Visión general
+  para el mismo proyecto, nunca recalculada aquí. `null` cuando no hay
+  suficientes runs; la portada omite la cifra en ese caso, no inventa un
+  número.
+- **Motor que respalda cada recomendación**: `recommendationEngineLabels`
+  (`lib/recommendations/export-plan.ts`), pura, lee
+  `evidence_json.affected_prompt_details[].provider` — el mismo campo que ya
+  pinta `RecCard` — y lo traduce con `getEngineMeta` (`lib/scan/
+  engine-meta.ts`), nunca una lista de motores propia. Ausencia de
+  `provider` (evidencia persistida antes de RECS-EVIDENCE-2) se omite, nunca
+  se asume Gemini por defecto.
+- **Fecha del escaneo**: reutiliza `lastScanDate`, ya calculado en
+  `page.tsx` para `ScanStatePill` — el informe y la consola nunca dicen
+  fechas distintas.
+
+**Regla de premisa (retira un camino de recuperación — CLAUDE.md, "Cierre de
+fase").** El `.md` descargable era en sí mismo un respaldo: ACTIONS-OBSERVABLE-1
+slice 4b.1 (§210) documentó que un `<a download>` sintético puede ser
+bloqueado por el navegador SIN lanzar una excepción capturable, y por eso
+existía `ExportPlanModal` (markdown completo + copiar al portapapeles) como
+salida que sobrevive a ese bloqueo silencioso.
+
+Retirar el `.md` como formato PRINCIPAL es seguro porque la premisa que lo
+sostiene es distinta de la premisa que sostenía el `<a download>`:
+`window.print()` es una API nativa del navegador invocada directamente
+(nunca un elemento sintético con un evento de click programático), así que
+no tiene el modo de fallo silencioso que motivó el modal en primer lugar. El
+modo de fallo que SÍ puede tener — un entorno sin `window.print` (un visor
+incrustado, un navegador muy antiguo, un sandbox) — es detectable en código
+antes de intentarlo (`typeof window.print !== "function"`), a diferencia de
+aquél. `ExportPlanModal` **no se retira**: sigue siendo el respaldo, con el
+mismo `buildExportPlanMarkdown` de siempre, ahora gateado tras esa
+comprobación de disponibilidad en vez de tras un `try/catch` alrededor de la
+descarga.
+
+**Lo que sí queda pendiente y no se resuelve en este PR**: un navegador que
+SÍ tiene `window.print` pero cuyo usuario cancela el diálogo del sistema, o
+cuya política de impresión lo bloquea sin lanzar una excepción, no cae al
+modal — `window.print()` no expone esa distinción al código que lo llama.
+Riesgo residual conocido, mismo tipo (aunque no la misma causa) que el que
+ACTIONS-OBSERVABLE-1 slice 4b.1 ya documentó como aceptado para la descarga
+de fichero.
+
+**Fuera de alcance, explícito.** Las otras dos plantillas del canvas
+(Ejecutiva, Checklist operativa); generación server-side (Playwright/
+puppeteer); envío del PDF por email; nombre de marca derivado en vez del
+dominio crudo en la portada.
+
+**Comprobado.** `pnpm test`: 227/227 archivos, 3136/3136 tests (3 nuevos en
+`lib/recommendations/export-plan.test.ts` para `recommendationEngineLabels`).
+`pnpm run validate` (build + typecheck + lint) en verde.
+
+**Trazabilidad.** `lib/recommendations/export-plan.ts`
+(`recommendationEngineLabels` nuevo); `app/dashboard/projects/[projectId]/
+recommendations/export-report.tsx` y `export-report.css` (nuevos);
+`recommendations-client.tsx` (`handleExport`, botón, montaje de
+`ExportReport`); `app/dashboard/projects/[projectId]/recommendations/
+page.tsx` (consulta de `run_scores` + `resolveGeoScore`);
+`docs/design-reference/pdf-export-plan-1/` (diseño aprobado). Task Intake
+Report `PDF-EXPORT-PLAN-1`, aprobado por el fundador 2026-09-11.

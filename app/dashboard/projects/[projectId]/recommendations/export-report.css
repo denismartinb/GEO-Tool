@@ -1,0 +1,289 @@
+/*
+ * PDF-EXPORT-PLAN-1 — estilos del informe imprimible de "Exportar plan".
+ * Prefijo `.xrp-` (mismo motivo que `.ptour`/`pt-` en onboarding.md: nombres
+ * genéricos como "card"/"section" ya existen en globals.css y se pisarían en
+ * ambos sentidos).
+ *
+ * .xrp-root está OCULTO en pantalla y sólo se hace visible dentro de
+ * @media print — window.print() (recommendations-client.tsx) es quien la
+ * dispara. Fuera de impresión, `display: none` evita que el informe A4 se
+ * renderice (y se descargue) en la propia consola.
+ */
+
+.xrp-root {
+  display: none;
+}
+
+@media print {
+  /* Oculta el resto de la consola durante la impresión; sólo el informe
+     queda visible. `visibility` (no `display`) para no depender de dónde
+     cuelga `.xrp-root` en el árbol — funciona sea cual sea su padre real,
+     sin necesitar que sea hijo directo de `body`. */
+  body * {
+    visibility: hidden;
+  }
+
+  .xrp-root,
+  .xrp-root * {
+    visibility: visible;
+  }
+
+  .xrp-root {
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .xrp-page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden;
+    position: relative;
+    background: #ffffff;
+    color: #0b1426;
+    font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .xrp-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}
+
+/* ---- Marca ---- */
+
+.xrp-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.xrp-brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--brand-blue, #2563eb), var(--brand-cyan, #09c5d6));
+  flex-shrink: 0;
+}
+
+.xrp-brand-mark-sm {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.xrp-brand-name {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.xrp-brand-sm .xrp-brand-name {
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+/* ---- Portada ---- */
+
+.xrp-cover {
+  background: var(--brand-ink, #0b1426);
+  color: #ffffff;
+  padding: 15mm 18mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.xrp-cover-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 82% 12%, rgba(9, 197, 214, 0.22), transparent 55%);
+}
+
+.xrp-cover-top,
+.xrp-cover-mid,
+.xrp-cover-meta {
+  position: relative;
+}
+
+.xrp-cover-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.xrp-cover-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-ink-4, #98a2b3);
+}
+
+.xrp-cover-eyebrow {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-cyan, #09c5d6);
+  margin-bottom: 16px;
+}
+
+.xrp-cover-title {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 0;
+  max-width: 130mm;
+}
+
+.xrp-cover-sub {
+  font-size: 14px;
+  color: #c7cedb;
+  margin: 18px 0 0;
+  max-width: 115mm;
+  line-height: 1.55;
+}
+
+.xrp-cover-meta {
+  display: flex;
+  gap: 32px;
+}
+
+.xrp-cover-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.xrp-cover-meta-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-ink-4, #98a2b3);
+}
+
+.xrp-cover-meta-value {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.xrp-cover-meta-accent {
+  color: var(--brand-cyan, #09c5d6);
+}
+
+/* ---- Contenido ---- */
+
+.xrp-content {
+  padding: 15mm 18mm;
+}
+
+.xrp-content-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eceff4;
+  margin-bottom: 20px;
+}
+
+.xrp-content-head-context {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-ink-4, #98a2b3);
+}
+
+.xrp-section {
+  margin-bottom: 22px;
+}
+
+.xrp-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.xrp-section-index {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--brand-blue, #2563eb);
+}
+
+.xrp-section-title {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.xrp-items {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.xrp-item {
+  padding-left: 14px;
+  border-left: 2px solid var(--brand-blue, #2563eb);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.xrp-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.xrp-item-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.xrp-item-pts {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #0d9488;
+  background: #e6f9f4;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.xrp-item-desc {
+  font-size: 12.5px;
+  color: var(--brand-ink-3, #5b6b82);
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
+.xrp-item-step {
+  font-size: 12px;
+  color: var(--brand-ink-2, #3b4759);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.xrp-item-engines {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--brand-ink-4, #98a2b3);
+  margin: 5px 0 0;
+}

@@ -215,17 +215,40 @@ paths:
 - **"Exportar plan" es la primera acción puramente de cliente que entra a
   este contrato** (ACTIONS-OBSERVABLE-1 slice 4b.1, log §210) — todas las
   anteriores eran server actions. `handleExport` se envuelve en un `async`
-  que resuelve `{ success: true }` tras el "click" de descarga y captura
-  cualquier fallo en `{ success: false, error }`, sin ampliar
-  `lib/ui/action-feedback.ts` (que sólo espera una promesa). El constructor
-  del markdown vive aparte, en `lib/recommendations/export-plan.ts`, puro y
-  con test — nunca vuelva a ser un closure sin test dentro del componente.
-  Si la descarga falla, `ExportPlanModal` es la salida que sobrevive a un
-  entorno que la bloquea (política del navegador, un visor incrustado, un
-  sandbox): el markdown completo, seleccionable, con su propio "Copiar al
-  portapapeles". Riesgo residual conocido y aceptado: un navegador puede
-  bloquear la descarga SIN lanzar una excepción capturable, y en ese caso
-  el modal no se abre — el `try/catch` no puede detectar un fallo silencioso.
+  que resuelve `{ success: true }` y captura cualquier fallo en
+  `{ success: false, error }`, sin ampliar `lib/ui/action-feedback.ts` (que
+  sólo espera una promesa).
+- **PDF-EXPORT-PLAN-1 (log §213): el `.md` descargable ya NO es el formato
+  principal.** `handleExport` invoca `window.print()` sobre `ExportReport`
+  (`export-report.tsx`/`.css`, montado siempre oculto y visible sólo por
+  `@media print`) en vez de crear un `Blob`/`<a download>`. El constructor
+  del markdown (`buildExportPlanMarkdown`, `lib/recommendations/
+  export-plan.ts`, puro y con test) sigue vivo, pero sólo como contenido del
+  respaldo. `ExportPlanModal` **sigue siendo obligatorio**: si
+  `typeof window.print !== "function"` (visor incrustado, sandbox, navegador
+  sin soporte), se abre con el markdown completo y "Copiar al portapapeles"
+  — la premisa que permite retirar la descarga de fichero como formato
+  principal es que `window.print()` es una API nativa invocada directamente,
+  sin el modo de fallo silencioso de un `<a download>` sintético bloqueado
+  por política del navegador (motivo original del modal); un entorno SIN
+  `window.print` sí es detectable en código, a diferencia de aquél. Riesgo
+  residual conocido y aceptado, de otra naturaleza: un usuario que cancela
+  el diálogo del sistema, o una política de impresión que lo bloquea sin
+  lanzar excepción, no cae al modal — `window.print()` no distingue eso del
+  código que lo llama.
+- **El motor que respalda cada recomendación en el informe exportable viene
+  de `recommendationEngineLabels`** (`lib/recommendations/export-plan.ts`),
+  que lee `evidence_json.affected_prompt_details[].provider` — el mismo
+  campo que ya pinta `RecCard` en pantalla — y lo traduce con
+  `getEngineMeta`. Nunca una lista de motores propia; ausencia de
+  `provider` se omite, nunca se asume Gemini por defecto (mismo principio
+  que RECS-EVIDENCE-2, arriba).
+- **La Puntuación GEO de la portada del informe exportable se lee de
+  `resolveGeoScore` (`lib/metrics/run-metrics.ts`)**, nunca recalculada en
+  esta pantalla — TRUST-METRICS-1 (log §183) es la regla que esto obedece.
+  `page.tsx` lee `GEO_SCORE_LOOKBACK_ROWS` filas de `run_scores`, igual que
+  cualquier otro consumidor del módulo; `null` cuando no hay suficientes
+  runs, la portada omite la cifra en vez de inventarla.
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 

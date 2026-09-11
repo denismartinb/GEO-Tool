@@ -14,14 +14,35 @@
 
 import { MIN_VISIBLE_POINTS, formatPoints } from "@/lib/recommendations/plan";
 import { pointsCaption } from "@/lib/recommendations/deliverable";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 export type ExportPlanRecommendation = {
   title: string;
   description: string;
   recommendation_type: string;
   potentialPoints?: number | null;
-  evidence_json?: { first_step?: string | null } | null;
+  evidence_json?: {
+    first_step?: string | null;
+    affected_prompt_details?: Array<{ provider?: string | null }> | null;
+  } | null;
 };
+
+/**
+ * PDF-EXPORT-PLAN-1 — qué motor respalda una recomendación, para la portada
+ * del informe. Misma fuente que ya pinta `RecCard` (`evidence_json.
+ * affected_prompt_details[].provider`) y el mismo `getEngineMeta` que usa
+ * toda la pantalla — nunca una lista de motores propia. Ausencia de
+ * `provider` en una fila (evidencia persistida antes de RECS-EVIDENCE-2) se
+ * omite, nunca se asume Gemini por defecto (mismo motivo que RecCard).
+ */
+export function recommendationEngineLabels(rec: ExportPlanRecommendation): string[] {
+  const details = rec.evidence_json?.affected_prompt_details ?? [];
+  const labels = new Set<string>();
+  for (const d of details) {
+    if (d.provider) labels.add(getEngineMeta(d.provider).label);
+  }
+  return [...labels];
+}
 
 function writeRecommendation(lines: string[], rec: ExportPlanRecommendation, index: number): void {
   const pts =

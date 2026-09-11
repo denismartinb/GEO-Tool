@@ -21,7 +21,9 @@ import {
   rankGroupMembers,
   selectPlan
 } from "@/lib/recommendations/plan";
-import { buildExportPlanMarkdown, exportPlanFileName } from "@/lib/recommendations/export-plan";
+import { buildExportPlanMarkdown } from "@/lib/recommendations/export-plan";
+import { ExportReport } from "./export-report";
+import "./export-report.css";
 import {
   CONTROL_LABEL,
   classifySolutionReadiness,
@@ -377,12 +379,13 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 }
 
 /**
- * ACTIONS-OBSERVABLE-1 slice 4b.1 — salida alternativa de "Exportar plan"
- * cuando la descarga vía `<a download>` no llega (política del navegador, un
- * visor incrustado, un sandbox). El propio botón que la abre ya viene de un
- * fallo detectado por `handleExport`, así que aparecer en pantalla es en sí
- * mismo el acuse de que algo pasó; el mensaje propio ("Plan copiado al
- * portapapeles.") es el segundo hecho distinto, anunciado sólo tras el clic.
+ * ACTIONS-OBSERVABLE-1 slice 4b.1, adaptado por PDF-EXPORT-PLAN-1 — salida
+ * alternativa de "Exportar informe" cuando `window.print()` no está
+ * disponible (un navegador sin soporte, un visor incrustado, un sandbox). El
+ * propio botón que la abre ya viene de un fallo detectado por `handleExport`,
+ * así que aparecer en pantalla es en sí mismo el acuse de que algo pasó; el
+ * mensaje propio ("Plan copiado al portapapeles.") es el segundo hecho
+ * distinto, anunciado sólo tras el clic.
  */
 function ExportPlanModal({ markdown, onClose }: { markdown: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -404,7 +407,7 @@ function ExportPlanModal({ markdown, onClose }: { markdown: string; onClose: () 
           Copia el plan
         </h2>
         <p className="modal-body">
-          La descarga no se ha podido completar en este navegador. Copia el plan entero desde aquí.
+          El informe no se ha podido generar en este navegador. Copia el plan entero desde aquí.
         </p>
         <textarea
           readOnly
@@ -1424,6 +1427,8 @@ export function RecommendationsClient({
   planPoints = null,
   domain = "",
   latestCompletedRunId = null,
+  geoScore = null,
+  scanDateLabel = null,
 }: {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
@@ -1437,6 +1442,15 @@ export function RecommendationsClient({
   /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
   planPoints?: number | null;
   domain?: string;
+  /** PDF-EXPORT-PLAN-1 — Puntuación GEO para la portada del informe
+   *  exportable, resuelta en el servidor por `resolveGeoScore`
+   *  (lib/metrics/run-metrics.ts, único dueño). `null` cuando no se pudo
+   *  resolver: la portada omite la cifra, nunca inventa una. */
+  geoScore?: number | null;
+  /** Fecha del escaneo vigente, ya formateada `es-ES` — la misma que pinta
+   *  `ScanStatePill` en esta pantalla, para que el informe y la consola
+   *  nunca digan fechas distintas. */
+  scanDateLabel?: string | null;
   /** Gates "Deshacer" on a dismissed row in "Resueltas" — see
    * ResolvedHistoryItem.run_id's doc comment. Null on any host screen that
    * doesn't pass it (e.g. web-audit's embedded RecCard usage never renders
@@ -1457,44 +1471,38 @@ export function RecommendationsClient({
   const planIdSet = new Set(plan.map((r) => r.id));
   const rest = recommendations.filter((r) => !planIdSet.has(r.id));
 
-  // ACTIONS-OBSERVABLE-1 slice 4b.1 (docs/external-audit-2026-08.md, Fase 4,
-  // P0-04) — "Exportar plan" es la primera acción puramente de cliente que
-  // entra al contrato de useActionFeedback (todas las de 4a eran server
-  // actions). handleExport se envuelve en un async que resuelve {success:
-  // true} tras el "click" de descarga y captura cualquier fallo en {success:
-  // false, error} — sin ampliar el contrato de lib/ui/action-feedback.ts, que
-  // hoy sólo espera una promesa. La descarga bloqueada (política del
-  // navegador, un visor incrustado, un sandbox) abre ExportPlanModal como
-  // salida que sobrevive a un entorno que la bloquea; los dos caminos anuncian
-  // un hecho distinto ("Plan descargado." vs. el propio acuse del modal al
-  // copiar), nunca el mismo mensaje para dos cosas distintas.
+  // PDF-EXPORT-PLAN-1 (aprobado 2026-09-11) — "Exportar plan" deja de
+  // descargar un `.md` y pasa a abrir el diálogo de impresión del navegador
+  // sobre el informe con marca (`ExportReport`, montado más abajo y oculto
+  // fuera de impresión por export-report.css). El fundador aprobó
+  // explícitamente sustituir el `.md`, no hacerlo convivir con el PDF — pero
+  // la regla de premisa de CLAUDE.md exige que ningún camino de recuperación
+  // desaparezca sin sustituto: si `window.print` no existe en este entorno
+  // (un visor incrustado, un navegador sin soporte), ExportPlanModal sigue
+  // ahí con el markdown de siempre como respaldo copiable. La premisa que
+  // sostiene retirar la descarga de fichero es que `window.print()` es una
+  // API nativa del navegador, no un `<a download>` sintético — no tiene el
+  // modo de fallo silencioso (política de descargas bloqueada sin excepción
+  // capturable) que motivó el modal en ACTIONS-OBSERVABLE-1 slice 4b.1; el
+  // modo de fallo que sí puede tener (entorno sin `window.print`) es
+  // detectable en código, a diferencia de aquél.
   const exportFeedback = useActionFeedback();
   const [exportFallbackMarkdown, setExportFallbackMarkdown] = useState<string | null>(null);
 
   function handleExport() {
     exportFeedback.run(
       async () => {
-        const markdown = buildExportPlanMarkdown({ domain, plan, rest });
-        try {
-          const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = exportPlanFileName(domain);
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          return { success: true };
-        } catch {
-          setExportFallbackMarkdown(markdown);
+        if (typeof window === "undefined" || typeof window.print !== "function") {
+          setExportFallbackMarkdown(buildExportPlanMarkdown({ domain, plan, rest }));
           return {
             success: false,
-            error: "No se ha podido descargar el fichero en este navegador. Copia el plan desde el cuadro que se ha abierto.",
+            error: "Este navegador no puede generar el informe. Copia el plan desde el cuadro que se ha abierto.",
           };
         }
+        window.print();
+        return { success: true };
       },
-      { successMessage: "Plan descargado." }
+      { successMessage: "Informe listo para guardar como PDF." }
     );
   }
 
@@ -1600,6 +1608,7 @@ export function RecommendationsClient({
       {exportFallbackMarkdown !== null && (
         <ExportPlanModal markdown={exportFallbackMarkdown} onClose={() => setExportFallbackMarkdown(null)} />
       )}
+      <ExportReport domain={domain} geoScore={geoScore} scanDateLabel={scanDateLabel} plan={plan} rest={rest} />
       <div className="filters">
         <div className="seg">
           {tabs.map(([key, label]) => (
