@@ -1,0 +1,140 @@
+name: Agentic User Pilot — Full (weekly, production)
+
+# ACTIONS-OBSERVABLE-1 slice 4d (docs/external-audit-2026-08.md, Fase 4,
+# Corrección C), founder-approved 2026-09-11.
+#
+# WHAT THIS IS. Every other pilot workflow (ux-pilot.yml, -write, -scan,
+# -actions) targets a PR's Vercel preview. This is the one exception: it runs
+# the SAME read journeys (`--journeys full`, identical Playwright projects to
+# the default `read` set — see scripts/pilot.mjs) against PRODUCTION
+# (https://www.genscore.es), on a weekly schedule, with the dedicated pilot
+# test account. Never a real customer, never write access — see CLAUDE.md,
+# "Pilot production scope".
+#
+# WHY IT HAS TO BE PRODUCTION AND NOT ANOTHER PREVIEW. The per-PR pilot
+# already covers every screen a given PR touches, against that PR's own
+# preview. What nothing covers is the product as a whole, end to end, on the
+# actual thing customers use — a shared env var, a migration applied out of
+# order, a stale cache, anything that a PR-scoped preview cannot reproduce
+# because it never shares production's real state. `docs/agentic-blind-
+# spots-2026-08.md`, Causa 3: "nadie recorre el producto entero, nunca."
+#
+# WHY WEEKLY AND NOT PER-DEPLOY. VERCEL-COST-1 Fase 5 (log §199) killed the
+# per-deploy pilot specifically because of its Observability Events and Build
+# CPU cost. A weekly production sweep is a new, separate cost and has to earn
+# its keep the same way: measured, not assumed. The founder approved the
+# design (production, dedicated account, cost measured) but NOT a specific
+# schedule yet beyond "weekly" — the first few real runs' cost (Vercel
+# dashboard: Edge Requests / Observability Events attributable to this job)
+# needs to be written to docs/brand/design-decisions-log.md before this is
+# treated as routine and left unattended indefinitely.
+#
+# LOCKS, same shape as scan/actions in scripts/pilot.mjs:
+# - `workflow_dispatch` + `schedule` ONLY. No `push`, no `pull_request`, no
+#   `deployment_status` — nothing in the normal PR flow can trigger a
+#   production run.
+# - `--journeys full`, its own named Playwright project set, never the
+#   default `read` invoked by ux-pilot.yml.
+# - Read-only: `full` reuses the exact same journeys as `read` (nothing new
+#   to write), so there is no write surface to lock down beyond what the
+#   default pilot account already can't do.
+#
+# NOT DONE HERE, on purpose: no email/Slack alert on failure. This is a new
+# surface and the founder has not asked for an operator alert on it yet —
+# adding one would be inventing a notification channel nobody requested. The
+# run's own summary (step summary + uploaded artifact) is the record; check
+# it by hand until that changes.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Sundays 07:00 UTC — before the week's work starts, same spirit as
+    # pilot-selfcheck.yml's Monday slot but a day earlier so a broken
+    # production sweep is visible before Monday's PRs start landing.
+    - cron: "0 7 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ux-pilot-full
+  cancel-in-progress: false
+
+jobs:
+  pilot-full:
+    runs-on: ubuntu-latest
+    # Same order of magnitude as the per-PR read sweep (ux-pilot.yml: 35 min,
+    # measured against ~53+ screens x 3 viewports). Generous on purpose, same
+    # reasoning as pilot-selfcheck.yml: truncating a run before its real
+    # duration is known defeats the point of measuring it.
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the full pilot against production
+        id: run
+        continue-on-error: true
+        env:
+          PILOT_EMAIL: ${{ secrets.PILOT_EMAIL }}
+          PILOT_PASSWORD: ${{ secrets.PILOT_PASSWORD }}
+          PILOT_PROJECT_ID: ${{ secrets.PILOT_PROJECT_ID }}
+          PILOT_COMMIT_SHA: ${{ github.sha }}
+          # No PILOT_VERCEL_BYPASS: production is not behind Vercel Deployment
+          # Protection (only previews are — docs/environment-contract.md).
+        run: |
+          set +e
+          node scripts/pilot.mjs \
+            --url "https://www.genscore.es" \
+            --journeys full \
+            --summary-md .pilot/summary.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Publish verdict to the step summary
+        if: always()
+        run: |
+          if [ -f .pilot/summary.md ]; then
+            cat .pilot/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "El piloto no produjo .pilot/summary.md — arranque fallido, ver el log del paso anterior." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload screenshots and signals
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-full-screenshots
+          path: |
+            .pilot/screens/
+            .pilot/findings.jsonl
+            .pilot/interactions.jsonl
+            .pilot/report.json
+            .pilot/summary.md
+          # Weekly cadence, not per-PR: keep a month of history so a
+          # regression found on run N can be compared against N-1..N-3.
+          retention-days: 35
+          if-no-files-found: warn
+
+      - name: Fail the job on PILOT FAIL or PILOT INCONCLUSIVE
+        if: steps.run.outputs.exit_code != '0'
+        run: |
+          echo "::error::Piloto completo contra producción: veredicto no-PASS (exit ${{ steps.run.outputs.exit_code }}). Ver el resumen del job y .pilot/summary.md." >&2
+          exit 1
