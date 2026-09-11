@@ -70,20 +70,10 @@ function ExportReportCover({
 }) {
   return (
     <section className="xrp-page xrp-cover">
-      {/* SVG, no CSS `radial-gradient` — un degradado con canal alfa
-          (`rgba`) en un fondo CSS es una fuente conocida de fallos al
-          exportar a PDF en motores WebKit (se rasteriza a color sólido,
-          perdiendo la transparencia). Un `<radialGradient>` de SVG se
-          rasteriza con más fiabilidad (log §215). */}
-      <svg className="xrp-cover-bg" viewBox="0 0 794 1123" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <radialGradient id="xrpGlow" cx="82%" cy="12%" r="55%">
-            <stop offset="0%" stopColor="#09c5d6" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="#09c5d6" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <rect width="794" height="1123" fill="url(#xrpGlow)" />
-      </svg>
+      {/* El resplandor del artboard es una imagen incrustada (data URI) en
+          `.xrp-cover` — ver export-report.css. Ni SVG ni degradado CSS:
+          los dos dependen de que el motor de impresión sepa rasterizar un
+          gradiente con alfa, y WebKit no siempre lo hace (log §215, §216). */}
       <div className="xrp-cover-top">
         <BrandLogo size={20} onDark />
         <span className="xrp-cover-kicker">Informe confidencial</span>

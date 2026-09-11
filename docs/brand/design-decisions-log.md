@@ -20046,3 +20046,85 @@ export-report.tsx` (`createPortal` a `document.body`, resplandor en SVG);
 `export-report.css` (aislamiento de impresión simplificado a `body > *`).
 Log §213 (fase original), §214 (primera corrección de fidelidad), este log
 corrige el mismo PR #529 antes del Human Gate, sobre el mismo componente.
+
+---
+
+## 216. PDF-EXPORT-PLAN-1: la portada ocupaba página y media — faltaba `box-sizing`, y la paginación se rehace entera (2026-09-11)
+
+**Origen.** El fundador, sobre el PDF real: *"la portada ahora ocupa dos
+páginas, una y media en concreto. Revisa todo desde cero. Haz que la portada
+se ajuste al diseño del artefacto con la imagen degradada que habíamos
+visto, y el resto del informe se genere bien."*
+
+**Causa raíz, y por qué las dos correcciones anteriores no la vieron.**
+`export-report.css` nunca declaró `box-sizing: border-box`. Con
+`height: 1123px` y `padding: 56px` arriba y abajo, la caja de la portada
+medía **1235px** — un 10% más que un A4 — así que al escalar para caber en
+el ancho del papel (Safari hace shrink-to-fit al imprimir) el sobrante caía
+a una segunda página. Ni §214 ni §215 lo detectaron porque **ninguna de las
+dos miró las páginas del PDF**: §214 capturó el elemento `.xrp-cover` con
+Playwright (una captura de elemento sale bien mida lo que mida: no tiene
+noción de página) y §215 comprobó dónde colgaba `.xrp-root` en el DOM. El
+"Página 1 de 4" que se leía en la propia captura del fundador ya decía que
+había un desbordamiento, y nadie lo leyó.
+
+**Las otras tres cosas que estaban mal, encontradas al revisarlo entero:**
+1. **Doble salto de página.** La portada declaraba `page-break-after:
+   always` y el contenido `page-break-before: always` — dos saltos entre los
+   mismos dos bloques, que en algunos motores meten una página en blanco.
+   Queda uno solo.
+2. **Las páginas 3 y siguientes salían con el texto pegado al borde del
+   papel.** Con `@page { margin: 0 }`, el margen del contenido lo daba un
+   `padding` de `.xrp-content` — y un padding se aplica UNA vez, al
+   principio del bloque, no en cada página que ese bloque ocupa. Se
+   resuelve con una **página con nombre** (`@page xrp-content-page`) que
+   lleva los márgenes del artboard y que sólo usa el contenido; la portada
+   sigue usando la página por defecto, sin márgenes, para sangrar.
+   *Se intentó antes lo contrario* —márgenes en el `@page` general y
+   márgenes negativos en la portada para sangrar— y **no funciona**: Chrome
+   recorta el pintado al área de contenido y la portada salía con un marco
+   blanco. Verificado rasterizando el PDF, no razonado.
+3. **`.xrp-items` era un contenedor flex con `gap`.** Un contenedor flex no
+   reparte sus hijos entre páginas impresas: los mantiene en un bloque. El
+   espaciado pasa a `margin-bottom` de cada tarjeta, que sí sobrevive a un
+   salto de página.
+
+**La imagen degradada del artboard.** El resplandor cian vuelve a ser
+exactamente el del artefacto aprobado, pero ya no como `radial-gradient`
+CSS (§215: WebKit lo rasteriza como color sólido al imprimir) ni como SVG
+(§215, defensa que tampoco bastaba): es un **PNG generado desde el propio
+degradado del artboard e incrustado como data URI** (7 KB, 160×226
+escalados con `background-size: 100% 100%` — un degradado suave no pierde
+nada al escalar). Incrustado y no servido desde `/public` a propósito: una
+imagen de fondo que depende de una petición de red puede no haber llegado
+cuando se abre el diálogo de impresión.
+
+**Cómo se probó esta vez — mirando el PDF, que es lo que faltaba.** Se
+instaló `poppler-utils` en el entorno y el arnés ahora: compila el
+componente real con esbuild, lo monta con `ReactDOM.createRoot` dentro de un
+contenedor hostil (`overflow`+`transform`, viewport de iPhone), genera el
+PDF con `page.pdf()`, lee `pdfinfo` para contar páginas y tamaño, y
+**rasteriza cada página con `pdftoppm` para abrirlas una a una**. Dos casos:
+- 3 recomendaciones → **2 páginas** (portada + contenido). Si la portada
+  desbordara, serían 3. Es la aserción que cierra el fallo del fundador.
+- 21 recomendaciones → **4 páginas**, las 21 tarjetas presentes, ninguna
+  partida, márgenes correctos en las páginas 2, 3 y 4, pie al final.
+Altura de la caja de la portada medida bajo `emulateMedia({media:"print"})`:
+**1122px** (A4 a 96dpi menos 1px para absorber redondeos subpíxel que
+meterían una página en blanco), no los 1235px de antes.
+
+**Lo que sigue sin poder probarse desde aquí.** Las webfonts no cargaron en
+la prueba (la política de egress del entorno bloqueó `fonts.googleapis.com`),
+así que las capturas muestran la familia de reserva: la geometría y la
+paginación están verificadas, la fidelidad tipográfica no. Y sigue sin haber
+un iPhone/Safari real: `page.pdf()` de Chromium es el mismo camino de
+renderizado que `window.print()`, pero no es WebKit.
+
+**Comprobado.** `pnpm test`: 227/227 archivos, 3136/3136 tests.
+`pnpm run validate` (build + typecheck + lint) en verde.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+export-report.css` (reescrito: `box-sizing`, `@page` con nombre, fondo PNG
+incrustado, tarjetas sin flex); `export-report.tsx` (fuera el SVG del
+fondo). Log §213 (fase), §214 (fidelidad), §215 (portal), este cierra la
+paginación. Mismo PR #529, antes del Human Gate.

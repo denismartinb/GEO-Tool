@@ -263,13 +263,32 @@ paths:
   fallo que `.claude/rules/scan.md` prohíbe para el pipeline bajo "Never cap
   the work by row count", aplicada aquí a páginas de un documento.
 - **Cualquier cambio a `export-report.tsx`/`.css` se prueba generando el PDF
-  de verdad antes de darlo por bueno** (log §214) — `renderToStaticMarkup`
-  del componente + Playwright/Chromium (`/opt/pw-browsers` en este entorno)
-  + `page.pdf({ printBackground: true, preferCSSPageSize: true })`, la
-  misma ruta de renderizado que `window.print()`. Un arnés desechable, no
-  committeado — la fidelidad pixel-perfect contra
-  `docs/design-reference/pdf-export-plan-1/` y la ausencia de recortes de
-  contenido no son verificables leyendo el código a ojo.
+  de verdad Y ABRIENDO SUS PÁGINAS, no capturando elementos** (log §216).
+  El arnés: compilar el componente con esbuild, montarlo con
+  `ReactDOM.createRoot` dentro de un contenedor con `overflow`+`transform`
+  (§215), `page.pdf({ printBackground: true, preferCSSPageSize: true })`,
+  `pdfinfo` para contar páginas y `pdftoppm` para rasterizarlas y mirarlas
+  una a una. **La aserción que cierra el fallo del fundador: con 3
+  recomendaciones el PDF tiene exactamente 2 páginas** — si la portada
+  desborda, son 3. Una captura de elemento (`locator.screenshot()`) NO vale:
+  sale bien mida lo que mida, porque no tiene noción de página, y por eso
+  §214 y §215 dieron por bueno un informe cuya portada ocupaba página y
+  media.
+- **`box-sizing: border-box` en todo `.xrp-root`, y la portada mide 1122px**
+  (A4 a 96dpi menos 1px, para absorber redondeos subpíxel que meterían una
+  página en blanco). Su ausencia hizo que la caja midiera 1235px —altura +
+  padding— y desbordara a una segunda página (log §216).
+- **Los márgenes de las páginas de contenido van en una `@page` CON NOMBRE
+  (`@page xrp-content-page`), nunca en un `padding` del contenedor.** Un
+  padding se aplica una vez, al principio del bloque: las páginas 3 y
+  siguientes salían con el texto pegado al borde del papel. La portada usa
+  la página por defecto (`margin: 0`) para sangrar. **No intentes lo
+  contrario** —márgenes en el `@page` general + márgenes negativos en la
+  portada—: Chrome recorta el pintado al área de contenido y la portada sale
+  con marco blanco (probado y descartado, log §216).
+- **Ningún contenedor flex entre la lista y sus tarjetas.** Un flex no
+  reparte sus hijos entre páginas impresas; el espaciado entre tarjetas es
+  `margin-bottom`, no `gap` (log §216).
 - **`ExportReport` se monta con `createPortal` en `document.body`, nunca
   directamente donde aparece `<ExportReport>` en el árbol.** Anidado dentro
   del layout de la consola (barra lateral, contenedores responsive), el
@@ -278,10 +297,13 @@ paths:
   NO puede ver (log §215). Si algún día esto cambia, la prueba tiene que
   reproducir un ancestro con `overflow: hidden` + `transform`, no sólo
   renderizar el componente aislado.
-- **El resplandor decorativo de la portada es SVG (`<radialGradient>`),
-  nunca `background: radial-gradient()` de CSS.** Un degradado CSS con
-  canal alfa es una fuente conocida de fallos al exportar/imprimir en
-  motores WebKit — se rasteriza como color sólido (log §215).
+- **El resplandor decorativo de la portada es un PNG incrustado como data
+  URI en `export-report.css`, ni degradado CSS ni SVG** (log §216). Un
+  `radial-gradient` con canal alfa se rasteriza como color sólido en el
+  camino de impresión de WebKit (§215), y el SVG fue una defensa que no
+  bastó; un PNG se imprime idéntico en todos los motores. Incrustado y no
+  servido desde `/public`: una imagen de fondo que depende de una petición
+  de red puede no haber llegado cuando se abre el diálogo de impresión.
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 
