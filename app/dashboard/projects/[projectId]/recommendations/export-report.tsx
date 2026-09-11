@@ -1,6 +1,7 @@
 import { MIN_VISIBLE_POINTS, formatPoints } from "@/lib/recommendations/plan";
 import { recommendationEngineLabels, type ExportPlanRecommendation } from "@/lib/recommendations/export-plan";
 import { pointsCaption } from "@/lib/recommendations/deliverable";
+import { BrandLogo } from "@/components/ui/brand-logo";
 
 /**
  * PDF-EXPORT-PLAN-1 (docs/design-reference/pdf-export-plan-1/) — el informe
@@ -50,10 +51,7 @@ function ExportReportCover({
     <section className="xrp-page xrp-cover">
       <div className="xrp-cover-bg" />
       <div className="xrp-cover-top">
-        <div className="xrp-brand">
-          <span className="xrp-brand-mark" />
-          <span className="xrp-brand-name">GenScore</span>
-        </div>
+        <BrandLogo size={20} onDark />
         <span className="xrp-cover-kicker">Informe confidencial</span>
       </div>
 
@@ -98,10 +96,7 @@ function ExportReportContent({
   return (
     <section className="xrp-page xrp-content">
       <header className="xrp-content-head">
-        <div className="xrp-brand xrp-brand-sm">
-          <span className="xrp-brand-mark xrp-brand-mark-sm" />
-          <span className="xrp-brand-name">GenScore</span>
-        </div>
+        <BrandLogo size={15} />
         <span className="xrp-content-head-context">
           {domain || "—"} · Plan de acción GEO
         </span>
@@ -109,6 +104,11 @@ function ExportReportContent({
 
       <ExportReportSection index="01" title="Alta prioridad" items={plan} numberPrefix="1" />
       {rest.length > 0 && <ExportReportSection index="02" title="Resto de recomendaciones" items={rest} numberPrefix="2" />}
+
+      <div className="xrp-footer">
+        <span>Generado por GenScore · genscore.ai</span>
+        <span>{domain || "—"} · Plan de acción GEO</span>
+      </div>
     </section>
   );
 }

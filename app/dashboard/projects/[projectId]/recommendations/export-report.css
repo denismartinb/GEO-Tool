@@ -8,6 +8,15 @@
  * @media print — window.print() (recommendations-client.tsx) es quien la
  * dispara. Fuera de impresión, `display: none` evita que el informe A4 se
  * renderice (y se descargue) en la propia consola.
+ *
+ * Las medidas de `.xrp-cover`/`.xrp-content` están en PX, a propósito, no en
+ * mm: el artboard aprobado (`docs/design-reference/pdf-export-plan-1/
+ * informe-consultoria.html`) se autoría a 794×1123px (96 css-px/pulgada,
+ * exactamente A4 a 96dpi — `artifact-design`). Usar mm aquí habría vuelto a
+ * medir la página a mano y habría dejado de ser pixel-perfect contra ese
+ * artboard; en px, `.xrp-page` a 794×1123 y `@page { size: A4 }` son la
+ * MISMA magnitud física, así que cada valor copiado del artboard (padding,
+ * tamaños de letra, gaps) cae exactamente donde cayó ahí.
  */
 
 .xrp-root {
@@ -41,11 +50,7 @@
   }
 
   .xrp-page {
-    width: 210mm;
-    height: 297mm;
-    page-break-after: always;
-    break-after: page;
-    overflow: hidden;
+    width: 794px;
     position: relative;
     background: #ffffff;
     color: #0b1426;
@@ -54,52 +59,33 @@
     print-color-adjust: exact;
   }
 
-  .xrp-page:last-child {
-    page-break-after: auto;
-    break-after: auto;
+  /* La portada es SIEMPRE una única página fija (794×1123, igual que el
+     artboard aprobado) — overflow:hidden es seguro ahí porque su contenido
+     nunca varía en longitud. El contenido (recomendaciones) NO lleva altura
+     fija ni overflow:hidden: una lista larga tiene que fluir a tantas
+     páginas como haga falta, nunca recortarse en silencio — la misma regla
+     de honestidad que ya obliga a `lib/scan/**` a no acotar trabajo por
+     recuento de filas (.claude/rules/scan.md, "Never cap the work by row
+     count"), aplicada aquí a páginas en vez de a filas de base de datos. */
+  .xrp-cover {
+    height: 1123px;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .xrp-content {
+    page-break-before: always;
+    break-before: page;
   }
 }
 
-/* ---- Marca ---- */
-
-.xrp-brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.xrp-brand-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, var(--brand-blue, #2563eb), var(--brand-cyan, #09c5d6));
-  flex-shrink: 0;
-}
-
-.xrp-brand-mark-sm {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-}
-
-.xrp-brand-name {
-  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.xrp-brand-sm .xrp-brand-name {
-  font-size: 12.5px;
-  font-weight: 800;
-}
-
-/* ---- Portada ---- */
+/* ---- Portada — pixel-perfect contra informe-consultoria.html ---- */
 
 .xrp-cover {
   background: var(--brand-ink, #0b1426);
   color: #ffffff;
-  padding: 15mm 18mm;
+  padding: 56px 64px 56px 64px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -137,51 +123,54 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--brand-cyan, #09c5d6);
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .xrp-cover-title {
   font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
-  font-size: 42px;
+  font-size: 52px;
   font-weight: 800;
-  line-height: 1.08;
+  line-height: 1.06;
   letter-spacing: -0.02em;
   margin: 0;
-  max-width: 130mm;
+  max-width: 560px;
 }
 
 .xrp-cover-sub {
-  font-size: 14px;
+  font-size: 16px;
   color: #c7cedb;
-  margin: 18px 0 0;
-  max-width: 115mm;
+  margin: 22px 0 0;
+  max-width: 480px;
   line-height: 1.55;
 }
 
 .xrp-cover-meta {
   display: flex;
-  gap: 32px;
+  gap: 48px;
 }
 
 .xrp-cover-meta-item {
   display: flex;
   flex-direction: column;
-  gap: 5px;
 }
 
 .xrp-cover-meta-label {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--brand-ink-4, #98a2b3);
+  color: var(--brand-ink-3, #5b6b82);
 }
 
 .xrp-cover-meta-value {
-  font-size: 14.5px;
+  font-size: 16px;
   font-weight: 700;
+  margin-top: 6px;
 }
 
+/* La métrica resaltada (Puntuación GEO) — mismo tratamiento que el artboard
+   aprobado: color cian de marca, nada más distinto (ni tamaño, ni peso) del
+   resto de los datos de la portada. */
 .xrp-cover-meta-accent {
   color: var(--brand-cyan, #09c5d6);
 }
@@ -189,16 +178,16 @@
 /* ---- Contenido ---- */
 
 .xrp-content {
-  padding: 15mm 18mm;
+  padding: 52px 64px 0 64px;
 }
 
 .xrp-content-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 12px;
+  padding-bottom: 18px;
   border-bottom: 1px solid #eceff4;
-  margin-bottom: 20px;
+  margin-bottom: 34px;
 }
 
 .xrp-content-head-context {
@@ -208,14 +197,14 @@
 }
 
 .xrp-section {
-  margin-bottom: 22px;
+  margin-bottom: 30px;
 }
 
 .xrp-section-head {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .xrp-section-index {
@@ -227,7 +216,7 @@
 
 .xrp-section-title {
   font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.01em;
   margin: 0;
@@ -236,11 +225,11 @@
 .xrp-items {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .xrp-item {
-  padding-left: 14px;
+  padding-left: 23px;
   border-left: 2px solid var(--brand-blue, #2563eb);
   break-inside: avoid;
   page-break-inside: avoid;
@@ -254,7 +243,7 @@
 }
 
 .xrp-item-title {
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 700;
 }
 
@@ -268,10 +257,10 @@
 }
 
 .xrp-item-desc {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--brand-ink-3, #5b6b82);
   margin: 4px 0 0;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .xrp-item-step {
@@ -282,8 +271,28 @@
 }
 
 .xrp-item-engines {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--brand-ink-4, #98a2b3);
   margin: 5px 0 0;
+}
+
+/* ---- Pie ----
+ * Bloque normal al final del flujo, no posicionado — `.xrp-content` ya no
+ * tiene una altura fija sobre la que anclar un pie por página (ver
+ * export-report.css, `@media print`), así que el pie cierra el documento
+ * una vez, después de la última recomendación. */
+
+.xrp-footer {
+  margin: 40px 0 30px 0;
+  padding-top: 24px;
+  padding-right: 0;
+  padding-left: 0;
+  border-top: 1px solid #eceff4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--brand-ink-4, #98a2b3);
 }

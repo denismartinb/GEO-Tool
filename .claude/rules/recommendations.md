@@ -249,6 +249,27 @@ paths:
   `page.tsx` lee `GEO_SCORE_LOOKBACK_ROWS` filas de `run_scores`, igual que
   cualquier otro consumidor del módulo; `null` cuando no hay suficientes
   runs, la portada omite la cifra en vez de inventarla.
+- **El informe exportable usa el logo oficial (`BrandLogo`,
+  `components/ui/brand-logo.tsx`), nunca una aproximación dibujada a mano**
+  (log §214) — un cuadrado con degradado + texto no es la marca, por mucho
+  que use los mismos colores.
+- **`.xrp-cover` es la ÚNICA parte de `export-report.css` con altura fija y
+  `overflow: hidden`** — es segura porque su contenido nunca varía en
+  longitud. `.xrp-content` NUNCA lleva altura fija: una lista de
+  recomendaciones que no cabe en una página tiene que fluir a la siguiente
+  (`page-break-before: always` al empezar, `break-inside: avoid` por
+  tarjeta), nunca recortarse en silencio. Fijar su altura recortó
+  recomendaciones reales sin error ni aviso (log §214) — la misma clase de
+  fallo que `.claude/rules/scan.md` prohíbe para el pipeline bajo "Never cap
+  the work by row count", aplicada aquí a páginas de un documento.
+- **Cualquier cambio a `export-report.tsx`/`.css` se prueba generando el PDF
+  de verdad antes de darlo por bueno** (log §214) — `renderToStaticMarkup`
+  del componente + Playwright/Chromium (`/opt/pw-browsers` en este entorno)
+  + `page.pdf({ printBackground: true, preferCSSPageSize: true })`, la
+  misma ruta de renderizado que `window.print()`. Un arnés desechable, no
+  committeado — la fidelidad pixel-perfect contra
+  `docs/design-reference/pdf-export-plan-1/` y la ausencia de recortes de
+  contenido no son verificables leyendo el código a ojo.
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 

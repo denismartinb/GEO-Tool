@@ -19903,3 +19903,70 @@ recommendations/export-report.tsx` y `export-report.css` (nuevos);
 page.tsx` (consulta de `run_scores` + `resolveGeoScore`);
 `docs/design-reference/pdf-export-plan-1/` (diseño aprobado). Task Intake
 Report `PDF-EXPORT-PLAN-1`, aprobado por el fundador 2026-09-11.
+
+---
+
+## 214. PDF-EXPORT-PLAN-1: portada pixel-perfect, logo oficial, y el contenido dejaba de recortarse en silencio (2026-09-11)
+
+**Origen.** El fundador, mirando el PDF real del PR #529, pidió tres cosas:
+portada pixel-perfect contra el artboard aprobado (§213), la métrica
+resaltada (Puntuación GEO) fiel a ese mismo artboard, y el logo oficial en
+vez de una aproximación — y pidió explícitamente que el PDF generado se
+probara antes de devolverlo la próxima vez.
+
+**Qué estaba mal.**
+1. **Logo aproximado, no el oficial.** `export-report.tsx` dibujaba un
+   cuadrado con degradado + texto "GenScore" en Bricolage Grotesque, en vez
+   de `BrandLogo` (`components/ui/brand-logo.tsx`) — el wordmark real de la
+   marca, con su propia geometría de trazado. Sustituido en la portada
+   (`onDark`) y en la cabecera del contenido.
+2. **Medidas en mm, no en px.** El artboard aprobado se autoría a
+   794×1123px (96 css-px/pulgada — la misma convención que documenta
+   `artifact-design`). `export-report.css` había reescalado esas medidas a
+   mm a mano (padding `15mm 18mm`, título `42px` en vez de `52px`, meta
+   `gap: 32px` en vez de `48px`...) — no eran un redondeo menor, eran una
+   plantilla distinta. Todas las medidas de `.xrp-cover`/`.xrp-content`
+   pasan a los valores px exactos del artboard.
+3. **Un fallo de correctitud más grave, encontrado al construir el arnés de
+   prueba que el fundador pidió**: `.xrp-page` tenía `height: 1123px;
+   overflow: hidden` — cualquier lista de recomendaciones que no cupiera en
+   una sola página A4 se recortaba EN SILENCIO, sin error, sin aviso. Con
+   los datos de ejemplo del arnés (16 recomendaciones), sólo 5-6 cabían;
+   el resto desaparecía del PDF. Es la misma clase de fallo que
+   `.claude/rules/scan.md` prohíbe para el pipeline de escaneo ("Never cap
+   the work by row count") — aquí aplicado a páginas en vez de a filas de
+   base de datos. Corregido: la portada (`.xrp-cover`) sigue siendo una
+   página fija de 794×1123 con `overflow: hidden` — es segura porque su
+   contenido nunca varía en longitud — pero `.xrp-content` ya NO tiene
+   altura fija ni `overflow: hidden`: fluye a tantas páginas impresas como
+   haga falta (`page-break-before: always` al empezar, `break-inside:
+   avoid` en cada tarjeta). El pie de página pasa de estar `position:
+   absolute` (anclado a una altura de página que ya no existe) a ser un
+   bloque normal al final del documento.
+
+**Cómo se probó, antes de devolver el PDF** (arnés desechable, no
+committeado): `renderToStaticMarkup(ExportReport(...))` con datos de
+ejemplo (16 recomendaciones, para forzar el salto de página) envuelto en un
+HTML con Google Fonts + `export-report.css`, abierto con Playwright +
+Chromium (`/opt/pw-browsers`, ya preinstalado en el entorno) y generado con
+`page.pdf({ printBackground: true, preferCSSPageSize: true })` — la MISMA
+ruta de renderizado que `window.print()` usa en un navegador real, no una
+aproximación. El PDF resultante tiene 3 páginas reales (1 portada + 2 de
+contenido, confirmado contando objetos `/Type /Page` en el PDF binario) y
+las capturas de cada `.xrp-page` bajo `emulateMedia({media:'print'})`
+confirman visualmente: el logo oficial, la tipografía y tamaños del
+artboard, la Puntuación GEO en cian sobre la portada, y las 16
+recomendaciones completas repartidas en dos páginas de contenido en vez de
+recortadas a las primeras 5-6.
+
+**Comprobado.** `pnpm test`: 227/227 archivos, 3136/3136 tests (sin cambios
+de comportamiento en el `.md`, que no se tocó). `pnpm run validate` (build +
+typecheck + lint) en verde.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+export-report.tsx` (logo oficial, pie de página al final del flujo);
+`export-report.css` (medidas px 1:1 contra el artboard, `.xrp-cover` fija /
+`.xrp-content` fluida). `docs/design-reference/pdf-export-plan-1/
+informe-consultoria.html` (referencia contra la que se comparó). Log §213
+(fase original), este log corrige y completa el mismo PR #529 antes del
+Human Gate.
