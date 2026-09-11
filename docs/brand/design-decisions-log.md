@@ -19822,7 +19822,121 @@ frase de copy ya aprobada (MEAN-RANK-READS-TRUE-1, §177).
 
 ---
 
-## 213. "Exportar plan" pasa de un `.md` a un informe con marca, vía `window.print()` (2026-09-11)
+## 213. La cabecera pública transparente se solapaba con el contenido al hacer scroll (HEADER-SCROLL-SOLID-1, 2026-09-09)
+
+**Qué se reportó.** El fundador, mirando `/blog`: "la cabecera transparente
+hace que se vea mal con el body de la página al hacer scroll".
+
+**Causa.** HEADER-FLAT-1 (2026-08-15, §63/§101) dejó `.lp-nav-wrap` con
+`background: transparent` de forma permanente en las 7 superficies públicas
+que comparten `PublicHeader`, para que la barra se fundiera con el hero de la
+home. Esa transparencia nunca tuvo un estado de scroll: la barra es
+`position: sticky`, así que en cuanto el usuario desplaza la página, el
+contenido pasa justo detrás de ella sin ningún fondo que los separe. En la
+home eso lo disimulaba el propio hero; en `/blog` (y previsiblemente `/geo`,
+`/pricing`, `/docs`, las legales, `/comparativas`, `/glosario` — cualquier
+superficie sin hero oscuro pegado arriba) el texto de la página se veía
+solapado con el logo/enlaces de la barra.
+
+**Arreglo.** `PublicHeader` añade una clase `is-scrolled` a `.lp-nav-wrap`
+cuando `window.scrollY > 8` (listener `scroll` pasivo, limpiado al
+desmontar). `app/globals.css` da a `.lp-nav-wrap.is-scrolled` un fondo blanco
+semitransparente + `backdrop-filter: blur` (mismo valor que ya usaba el
+`.topbar` de la consola), con una transición corta de `background-color`/
+`border-color`. El reposo de arriba del todo sigue transparente — no toca el
+diseño plano aprobado en HEADER-FLAT-1, sólo añade el estado que le faltaba.
+`.nf-page .lp-nav-wrap` (fondo `#fff` fijo sobre la escena oscura de la 404)
+sigue ganando por especificidad de selector + orden de fichero, así que no
+hace falta una regla aparte para esa superficie.
+
+**Trazabilidad.** `components/marketing/public-header.tsx`;
+`app/globals.css` (`.lp-nav-wrap`, `.lp-nav-wrap.is-scrolled`); HEADER-FLAT-1
+(§63/§101, decisión que esto complementa sin revertir).
+
+---
+
+## 214. ACTIONS-OBSERVABLE-1 slice 4d: barrido semanal completo contra producción (2026-09-11)
+
+**Origen.** Última pieza de la Fase 4 del plan de la auditoría externa
+(`docs/external-audit-2026-08.md`, P0-04) — Corrección C de
+`docs/agentic-blind-spots-2026-08.md`, Causa 3: "nadie recorre el producto
+entero, nunca". El piloto por-PR sólo ve el preview de cada PR; nada
+ejercita el producto de verdad, en producción, de forma continua. 4c
+(Corrección H, la cobertura no vista del arnés) se descartó explícitamente
+por el fundador el mismo día — no entra en este PR.
+
+**Las dos decisiones que bloqueaban esto, respondidas por el fundador
+(2026-09-11):**
+1. **¿Contra qué corre?** "Producción, con una cuenta de prueba" — nunca un
+   cliente real, la misma cuenta piloto dedicada que ya usan `read`/`write`/
+   `scan`/`actions`.
+2. **¿Se acepta el coste?** "Sí, midamos el coste" — medido, no estimado,
+   antes de tratar el schedule como rutina (ver más abajo).
+
+**Verificado antes de construir nada — y cambió el alcance real.** El texto
+literal de Corrección B (las "aserciones cruzadas") cita tres ejemplos: score
+de Dominios == score de Visión general; denominador de Competidores ==
+Prompts × motores; suma de la cabecera de Recomendaciones == suma de sus
+tarjetas. Verificado contra el código:
+
+- **La primera ya existe y ya corre en cada pilotaje por defecto** —
+  `tests/pilot/journeys/geo-score-consistency.spec.ts`, construida en
+  TRUST-METRICS-1 (Fase 1, log §183) precisamente para esto. Nada que
+  añadir.
+- **La segunda es una identidad que este mismo repositorio ya declaró
+  falsa a propósito.** `lib/metrics/run-metrics.ts` (`answerCountLabel`),
+  comentario propio: `promptCount × engineCount` NO es `answerCount` desde
+  el segundo escaneo en adelante — son tres magnitudes de tres ventanas
+  temporales distintas. Construir esta aserción tal cual habría fallado en
+  cualquier cuenta con más de un escaneo, por diseño correcto del propio
+  producto.
+- **La tercera compara contra un elemento que ya no existe.** RECS-EVIDENCE-2
+  (Fase 7, log §191) retiró la cabecera "hasta +N puntos" de Recomendaciones
+  en vez de conciliarla con las tarjetas — no hay cabecera con la que
+  comparar.
+
+Sólo la primera sigue siendo real, y ya estaba construida. El "conjunto de
+aserciones cruzadas" que la corrección pedía no necesitaba código nuevo —
+necesitaba dejar de asumir que el resto seguía siendo cierto sin comprobarlo,
+que es exactamente el tipo de fallo que este plan entero existe para
+corregir.
+
+**Lo que sí faltaba, y es lo que construye este PR.** No una aserción nueva,
+sino la infraestructura para correr las que ya existen contra el sitio real:
+`--journeys full` en `scripts/pilot.mjs` (mismos proyectos de Playwright que
+`read` — ninguna pantalla nueva que visitar, `geo-score-consistency.spec.ts`
+incluida) y `.github/workflows/ux-pilot-full.yml`, con `workflow_dispatch` +
+`schedule` semanal (domingos 07:00 UTC), apuntando a
+`https://www.genscore.es` con la cuenta piloto dedicada — nunca
+`deployment_status` ni `pull_request`, mismo candado estructural que ya
+protege `scan`/`actions`.
+
+**El coste sigue sin medir — a propósito, no es un olvido.** Este PR no
+dispara la primera pasada real. El coste de una pasada semanal contra
+producción (peticiones reales contra `www.genscore.es`) se mide desde el
+panel de Vercel después de que corran las primeras pasadas de verdad, y esa
+cifra se escribe aquí antes de que este schedule se trate como rutina
+desatendida — mismo principio que ya aplicó `scan` (UX-PILOT-3) y que
+`VERCEL-COST-1` Fase 5 (log §199) dejó por escrito tras la factura real de
+agosto: la cifra va antes de encender, nunca después.
+
+**Sin regla de premisa que anotar.** No se retira ningún camino de
+recuperación — es una vigilancia nueva, no la salida de una existente.
+
+**Comprobado.** `pnpm test`, `pnpm run validate` (build + typecheck + lint)
+en verde. Sin journey nueva que testear: `full` reutiliza exactamente las
+mismas specs que `read`, así que el self-check existente
+(`pnpm pilot:selfcheck`) ya cubre su superficie real.
+
+**Trazabilidad.** `docs/external-audit-2026-08.md` Fase 4 (Corrección C);
+`docs/agentic-blind-spots-2026-08.md` Causa 3; `docs/specs/actions-
+observable-1/remaining-slices.md` (slice 4d); `scripts/pilot.mjs`
+(`PROJECT_SETS.full`, `isFull`); `.github/workflows/ux-pilot-full.yml`
+(nuevo); `CLAUDE.md` ("Pilot production scope"); log §183 (TRUST-METRICS-1,
+la aserción que ya existía), §191 (RECS-EVIDENCE-2, por qué la tercera no
+aplica), §199 (VERCEL-COST-1 Fase 5, la misma disciplina de medir antes de
+rutinizar). Decisión del fundador, 2026-09-11.
+## 215. "Exportar plan" pasa de un `.md` a un informe con marca, vía `window.print()` (2026-09-11)
 
 **Origen.** Task Intake Report `PDF-EXPORT-PLAN-1`, aprobado por el fundador
 el 2026-09-11 sobre un canvas de tres plantillas (Ejecutiva, Checklist
@@ -19906,10 +20020,10 @@ Report `PDF-EXPORT-PLAN-1`, aprobado por el fundador 2026-09-11.
 
 ---
 
-## 214. PDF-EXPORT-PLAN-1: portada pixel-perfect, logo oficial, y el contenido dejaba de recortarse en silencio (2026-09-11)
+## 216. PDF-EXPORT-PLAN-1: portada pixel-perfect, logo oficial, y el contenido dejaba de recortarse en silencio (2026-09-11)
 
 **Origen.** El fundador, mirando el PDF real del PR #529, pidió tres cosas:
-portada pixel-perfect contra el artboard aprobado (§213), la métrica
+portada pixel-perfect contra el artboard aprobado (§215), la métrica
 resaltada (Puntuación GEO) fiel a ese mismo artboard, y el logo oficial en
 vez de una aproximación — y pidió explícitamente que el PDF generado se
 probara antes de devolverlo la próxima vez.
@@ -19967,22 +20081,22 @@ typecheck + lint) en verde.
 export-report.tsx` (logo oficial, pie de página al final del flujo);
 `export-report.css` (medidas px 1:1 contra el artboard, `.xrp-cover` fija /
 `.xrp-content` fluida). `docs/design-reference/pdf-export-plan-1/
-informe-consultoria.html` (referencia contra la que se comparó). Log §213
+informe-consultoria.html` (referencia contra la que se comparó). Log §215
 (fase original), este log corrige y completa el mismo PR #529 antes del
 Human Gate.
 
 ---
 
-## 215. PDF-EXPORT-PLAN-1: la portada se deformaba en un dispositivo real — el informe se monta por portal en `document.body` (2026-09-11)
+## 217. PDF-EXPORT-PLAN-1: la portada se deformaba en un dispositivo real — el informe se monta por portal en `document.body` (2026-09-11)
 
-**Origen.** El fundador probó el PDF real (§214 ya corregido) en su iPhone:
+**Origen.** El fundador probó el PDF real (§216 ya corregido) en su iPhone:
 la portada salía con un círculo cian SÓLIDO cubriendo la mitad de la página
 y la fila de metadatos (Cliente/Fecha/Puntuación GEO) pegada muy abajo, con
 un hueco enorme en medio — nada que ver con el diseño aprobado, aunque el
 mismo componente había salido bien en las pruebas de Chromino headless de
-§214.
+§216.
 
-**Por qué las pruebas de §214 no lo detectaron.** Ese arnés renderizaba
+**Por qué las pruebas de §216 no lo detectaron.** Ese arnés renderizaba
 `ExportReport` en un HTML aislado, sin ningún ancestro real de la consola.
 El componente real vive anidado dentro del layout completo del dashboard
 (barra lateral, cabecera fija, contenedores responsive con `overflow`,
@@ -19991,7 +20105,7 @@ impresión usaba `visibility: hidden` en cascada sobre `body *` para ocultar
 todo menos `.xrp-root` — pero `visibility` sólo oculta la PINTURA de un
 elemento, nunca anula su caja de layout: si un ancestro tiene `overflow:
 hidden` con una altura pequeña, o un `transform`, sigue constriñendo a sus
-descendientes exactamente igual aunque sean invisibles. El arnés de §214,
+descendientes exactamente igual aunque sean invisibles. El arnés de §216,
 al no tener esos ancestros, no podía reproducir el fallo.
 
 **Causa exacta.** `.xrp-cover-bg` (el resplandor decorativo) es
@@ -20024,7 +20138,7 @@ feliz.** Se compiló el componente real (`export-report.tsx`) con esbuild a
 un bundle de navegador, montado con `ReactDOM.createRoot` dentro de un
 contenedor deliberadamente hostil (`overflow: hidden`, `transform`, tamaño
 de viewport de iPhone 390×844) que imita las restricciones de un layout de
-consola real — el mismo tipo de ancestro que el arnés de §214 no tenía.
+consola real — el mismo tipo de ancestro que el arnés de §216 no tenía.
 Abierto con Playwright/Chromium, se confirmó por código que `.xrp-root`
 termina como hijo directo de `<body>` (`el.parentElement ===
 document.body`) y, por captura, que la portada sale con las proporciones y
@@ -20044,12 +20158,12 @@ de comportamiento fuera de `export-report.tsx`/`.css`). `pnpm run validate`
 **Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
 export-report.tsx` (`createPortal` a `document.body`, resplandor en SVG);
 `export-report.css` (aislamiento de impresión simplificado a `body > *`).
-Log §213 (fase original), §214 (primera corrección de fidelidad), este log
+Log §215 (fase original), §216 (primera corrección de fidelidad), este log
 corrige el mismo PR #529 antes del Human Gate, sobre el mismo componente.
 
 ---
 
-## 216. PDF-EXPORT-PLAN-1: la portada ocupaba página y media — faltaba `box-sizing`, y la paginación se rehace entera (2026-09-11)
+## 218. PDF-EXPORT-PLAN-1: la portada ocupaba página y media — faltaba `box-sizing`, y la paginación se rehace entera (2026-09-11)
 
 **Origen.** El fundador, sobre el PDF real: *"la portada ahora ocupa dos
 páginas, una y media en concreto. Revisa todo desde cero. Haz que la portada
@@ -20061,10 +20175,10 @@ visto, y el resto del informe se genere bien."*
 `height: 1123px` y `padding: 56px` arriba y abajo, la caja de la portada
 medía **1235px** — un 10% más que un A4 — así que al escalar para caber en
 el ancho del papel (Safari hace shrink-to-fit al imprimir) el sobrante caía
-a una segunda página. Ni §214 ni §215 lo detectaron porque **ninguna de las
-dos miró las páginas del PDF**: §214 capturó el elemento `.xrp-cover` con
+a una segunda página. Ni §216 ni §217 lo detectaron porque **ninguna de las
+dos miró las páginas del PDF**: §216 capturó el elemento `.xrp-cover` con
 Playwright (una captura de elemento sale bien mida lo que mida: no tiene
-noción de página) y §215 comprobó dónde colgaba `.xrp-root` en el DOM. El
+noción de página) y §217 comprobó dónde colgaba `.xrp-root` en el DOM. El
 "Página 1 de 4" que se leía en la propia captura del fundador ya decía que
 había un desbordamiento, y nadie lo leyó.
 
@@ -20091,8 +20205,8 @@ había un desbordamiento, y nadie lo leyó.
 
 **La imagen degradada del artboard.** El resplandor cian vuelve a ser
 exactamente el del artefacto aprobado, pero ya no como `radial-gradient`
-CSS (§215: WebKit lo rasteriza como color sólido al imprimir) ni como SVG
-(§215, defensa que tampoco bastaba): es un **PNG generado desde el propio
+CSS (§217: WebKit lo rasteriza como color sólido al imprimir) ni como SVG
+(§217, defensa que tampoco bastaba): es un **PNG generado desde el propio
 degradado del artboard e incrustado como data URI** (7 KB, 160×226
 escalados con `background-size: 100% 100%` — un degradado suave no pierde
 nada al escalar). Incrustado y no servido desde `/public` a propósito: una
@@ -20126,5 +20240,5 @@ renderizado que `window.print()`, pero no es WebKit.
 **Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
 export-report.css` (reescrito: `box-sizing`, `@page` con nombre, fondo PNG
 incrustado, tarjetas sin flex); `export-report.tsx` (fuera el SVG del
-fondo). Log §213 (fase), §214 (fidelidad), §215 (portal), este cierra la
+fondo). Log §215 (fase), §216 (fidelidad), §217 (portal), este cierra la
 paginación. Mismo PR #529, antes del Human Gate.

@@ -218,7 +218,7 @@ paths:
   que resuelve `{ success: true }` y captura cualquier fallo en
   `{ success: false, error }`, sin ampliar `lib/ui/action-feedback.ts` (que
   sólo espera una promesa).
-- **PDF-EXPORT-PLAN-1 (log §213): el `.md` descargable ya NO es el formato
+- **PDF-EXPORT-PLAN-1 (log §215): el `.md` descargable ya NO es el formato
   principal.** `handleExport` invoca `window.print()` sobre `ExportReport`
   (`export-report.tsx`/`.css`, montado siempre oculto y visible sólo por
   `@media print`) en vez de crear un `Blob`/`<a download>`. El constructor
@@ -251,7 +251,7 @@ paths:
   runs, la portada omite la cifra en vez de inventarla.
 - **El informe exportable usa el logo oficial (`BrandLogo`,
   `components/ui/brand-logo.tsx`), nunca una aproximación dibujada a mano**
-  (log §214) — un cuadrado con degradado + texto no es la marca, por mucho
+  (log §216) — un cuadrado con degradado + texto no es la marca, por mucho
   que use los mismos colores.
 - **`.xrp-cover` es la ÚNICA parte de `export-report.css` con altura fija y
   `overflow: hidden`** — es segura porque su contenido nunca varía en
@@ -259,25 +259,25 @@ paths:
   recomendaciones que no cabe en una página tiene que fluir a la siguiente
   (`page-break-before: always` al empezar, `break-inside: avoid` por
   tarjeta), nunca recortarse en silencio. Fijar su altura recortó
-  recomendaciones reales sin error ni aviso (log §214) — la misma clase de
+  recomendaciones reales sin error ni aviso (log §216) — la misma clase de
   fallo que `.claude/rules/scan.md` prohíbe para el pipeline bajo "Never cap
   the work by row count", aplicada aquí a páginas de un documento.
 - **Cualquier cambio a `export-report.tsx`/`.css` se prueba generando el PDF
-  de verdad Y ABRIENDO SUS PÁGINAS, no capturando elementos** (log §216).
+  de verdad Y ABRIENDO SUS PÁGINAS, no capturando elementos** (log §218).
   El arnés: compilar el componente con esbuild, montarlo con
   `ReactDOM.createRoot` dentro de un contenedor con `overflow`+`transform`
-  (§215), `page.pdf({ printBackground: true, preferCSSPageSize: true })`,
+  (§217), `page.pdf({ printBackground: true, preferCSSPageSize: true })`,
   `pdfinfo` para contar páginas y `pdftoppm` para rasterizarlas y mirarlas
   una a una. **La aserción que cierra el fallo del fundador: con 3
   recomendaciones el PDF tiene exactamente 2 páginas** — si la portada
   desborda, son 3. Una captura de elemento (`locator.screenshot()`) NO vale:
   sale bien mida lo que mida, porque no tiene noción de página, y por eso
-  §214 y §215 dieron por bueno un informe cuya portada ocupaba página y
+  §216 y §217 dieron por bueno un informe cuya portada ocupaba página y
   media.
 - **`box-sizing: border-box` en todo `.xrp-root`, y la portada mide 1122px**
   (A4 a 96dpi menos 1px, para absorber redondeos subpíxel que meterían una
   página en blanco). Su ausencia hizo que la caja midiera 1235px —altura +
-  padding— y desbordara a una segunda página (log §216).
+  padding— y desbordara a una segunda página (log §218).
 - **Los márgenes de las páginas de contenido van en una `@page` CON NOMBRE
   (`@page xrp-content-page`), nunca en un `padding` del contenedor.** Un
   padding se aplica una vez, al principio del bloque: las páginas 3 y
@@ -285,22 +285,22 @@ paths:
   la página por defecto (`margin: 0`) para sangrar. **No intentes lo
   contrario** —márgenes en el `@page` general + márgenes negativos en la
   portada—: Chrome recorta el pintado al área de contenido y la portada sale
-  con marco blanco (probado y descartado, log §216).
+  con marco blanco (probado y descartado, log §218).
 - **Ningún contenedor flex entre la lista y sus tarjetas.** Un flex no
   reparte sus hijos entre páginas impresas; el espaciado entre tarjetas es
-  `margin-bottom`, no `gap` (log §216).
+  `margin-bottom`, no `gap` (log §218).
 - **`ExportReport` se monta con `createPortal` en `document.body`, nunca
   directamente donde aparece `<ExportReport>` en el árbol.** Anidado dentro
   del layout de la consola (barra lateral, contenedores responsive), el
   informe hereda `overflow`/`transform` de sus ancestros reales y su
   portada se deforma — un fallo que un arnés de prueba sin esos ancestros
-  NO puede ver (log §215). Si algún día esto cambia, la prueba tiene que
+  NO puede ver (log §217). Si algún día esto cambia, la prueba tiene que
   reproducir un ancestro con `overflow: hidden` + `transform`, no sólo
   renderizar el componente aislado.
 - **El resplandor decorativo de la portada es un PNG incrustado como data
-  URI en `export-report.css`, ni degradado CSS ni SVG** (log §216). Un
+  URI en `export-report.css`, ni degradado CSS ni SVG** (log §218). Un
   `radial-gradient` con canal alfa se rasteriza como color sólido en el
-  camino de impresión de WebKit (§215), y el SVG fue una defensa que no
+  camino de impresión de WebKit (§217), y el SVG fue una defensa que no
   bastó; un PNG se imprime idéntico en todos los motores. Incrustado y no
   servido desde `/public`: una imagen de fondo que depende de una petición
   de red puede no haber llegado cuando se abre el diálogo de impresión.

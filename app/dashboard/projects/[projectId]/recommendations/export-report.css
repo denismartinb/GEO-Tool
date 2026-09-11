@@ -11,20 +11,24 @@
  * dispara la impresión; fuera de ella, `display: none` evita que el informe
  * A4 se renderice en la propia consola.
  *
- * CÓMO SE PAGINA (log §216, tras dos correcciones fallidas):
+ * CÓMO SE PAGINA (log §218, tras dos correcciones fallidas):
  *
- * 1. `@page` lleva los márgenes REALES del documento (52/64/40px), no 0.
- *    Son exactamente los paddings del artboard aprobado, así que el ancho de
- *    contenido sale 794-128 = 666px, idéntico al suyo. Ponerlos en `@page`
- *    en vez de en un padding del contenedor es lo único que hace que la
- *    página 3 tenga el mismo margen superior que la 2: un padding sólo se
- *    aplica una vez, al principio del bloque, y las páginas siguientes
- *    salían con el texto pegado al borde del papel.
- * 2. La PORTADA sangra a los bordes con márgenes negativos que compensan
- *    esos márgenes de `@page` — técnica estándar de "full bleed" en
- *    impresión. Su altura (1122px ≈ A4 a 96dpi, 1px menos para absorber
- *    redondeos subpíxel que meterían una página en blanco) ya incluye su
- *    propio padding gracias a `box-sizing: border-box`.
+ * 1. DOS páginas declaradas, no una. La por defecto (`@page`) va SIN
+ *    márgenes y es la que usa la portada, que sangra a los bordes. Una
+ *    página CON NOMBRE (`@page xrp-content-page`) lleva los márgenes reales
+ *    del documento (52/64/40px — los paddings del artboard aprobado, así
+ *    que el ancho de contenido sale 794-128 = 666px, idéntico al suyo) y la
+ *    usa sólo el contenido. Ponerlos en una `@page` en vez de en un padding
+ *    del contenedor es lo único que hace que la página 3 tenga el mismo
+ *    margen superior que la 2: un padding sólo se aplica una vez, al
+ *    principio del bloque, y las páginas siguientes salían con el texto
+ *    pegado al borde del papel.
+ * 2. La portada mide 1122px de alto (≈ A4 a 96dpi, 1px menos para absorber
+ *    redondeos subpíxel que meterían una página en blanco), padding
+ *    incluido gracias a `box-sizing: border-box`. **No se sangra con
+ *    márgenes negativos**: se probó sobre un `@page` con márgenes y NO
+ *    funciona — Chrome recorta el pintado al área de contenido y la portada
+ *    sale con marco blanco (verificado rasterizando el PDF, no razonado).
  * 3. `box-sizing: border-box` en todo el informe. Su ausencia fue el fallo
  *    que el fundador vio como "la portada ocupa página y media": con
  *    `height: 1123px` + `padding: 56px` arriba y abajo, la caja medía en
@@ -59,7 +63,7 @@
      oculta la pintura de los ancestros de `.xrp-root`, pero no anula su
      caja de layout (`overflow`, `transform`, altura) — que es justo lo que
      deformaba la portada cuando el informe vivía anidado dentro del layout
-     de la consola (log §215). Como hijo directo de `body`, no tiene
+     de la consola (log §217). Como hijo directo de `body`, no tiene
      ancestros de la app de los que escapar. */
   body > *:not(.xrp-root) {
     display: none !important;
@@ -125,7 +129,7 @@
   /* El resplandor del artboard va como PNG incrustado, no como
      `radial-gradient` CSS: un degradado CSS con canal alfa se rasteriza
      como color sólido en el camino de impresión de WebKit — el "círculo
-     cian gigante" que el fundador vio en su iPhone (log §215). Incrustado
+     cian gigante" que el fundador vio en su iPhone (log §217). Incrustado
      como data URI (y no como fichero en /public) para que no dependa de una
      petición de red que puede no haber terminado cuando se abre el diálogo
      de impresión. */

@@ -18,7 +18,7 @@ import { BrandLogo } from "@/components/ui/brand-logo";
  * sitio donde `<ExportReport>` aparece en el árbol de React (dentro del
  * layout de la consola, con su barra lateral, su cabecera fija y su
  * contenedor responsive). Antes de esto la portada salía deformada en
- * dispositivos reales (log §215) — probado en Chromium headless sobre un
+ * dispositivos reales (log §217) — probado en Chromium headless sobre un
  * HTML aislado, donde SÍ salía bien, porque ese arnés no tenía ningún
  * ancestro con `overflow`/`transform` que interfiriera. `visibility:hidden`
  * en el resto de la página no protege de la caja de layout de esos
@@ -73,7 +73,7 @@ function ExportReportCover({
       {/* El resplandor del artboard es una imagen incrustada (data URI) en
           `.xrp-cover` — ver export-report.css. Ni SVG ni degradado CSS:
           los dos dependen de que el motor de impresión sepa rasterizar un
-          gradiente con alfa, y WebKit no siempre lo hace (log §215, §216). */}
+          gradiente con alfa, y WebKit no siempre lo hace (log §217, §218). */}
       <div className="xrp-cover-top">
         <BrandLogo size={20} onDark />
         <span className="xrp-cover-kicker">Informe confidencial</span>
