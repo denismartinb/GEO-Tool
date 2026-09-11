@@ -351,6 +351,36 @@ actions`, asserted absent from the default read run by `checkActionsLockout`
 in the self-check. No secret gates it, same reasoning as UX-PILOT-3 —
 dispatching it already requires repository write access.
 
+### Pilot production scope (UX-PILOT-4, ACTIONS-OBSERVABLE-1 slice 4d, founder-approved 2026-09-11)
+
+Every pilot invocation above targets a PR's Vercel **preview**. This is the
+one exception: `ux-pilot-full.yml` runs `--journeys full` — the same
+Playwright projects as the default `read` set, so no new journey files —
+against **production** (`https://www.genscore.es`), on a weekly schedule,
+with the same dedicated pilot account every other invocation already uses.
+**Never a real customer's account, never write access.** It exists because
+nothing else ever exercises the product end to end on what customers
+actually use — the per-PR pilot only ever sees a PR-scoped preview, which
+cannot reproduce a shared-env-var or out-of-order-migration class of bug
+(`docs/agentic-blind-spots-2026-08.md`, Causa 3: "nadie recorre el producto
+entero, nunca").
+
+**Locks, same shape as `scan`/`actions`:** `workflow_dispatch` + `schedule`
+only — no `push`, `pull_request`, or `deployment_status` can trigger a
+production run; its own workflow file; `--journeys full`, never reachable
+from the default per-PR invocation. Read-only by construction: `full` is
+literally the same journeys `read` already runs, so there is no new write
+surface to lock down.
+
+**Cost is measured, not assumed — same discipline as `scan`.** VERCEL-COST-1
+Fase 5 (log §199) killed the per-deploy pilot over its Observability
+Events/Build CPU cost. A weekly production sweep is a new cost and has to
+earn its keep the same way: the founder checks Vercel's dashboard after the
+first real runs (Edge Requests / Observability Events attributable to this
+job) and that figure gets written to
+`docs/brand/design-decisions-log.md` before this schedule is treated as
+routine and left unattended indefinitely — not before.
+
 ---
 
 ## Human Gate
@@ -475,7 +505,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Navegación pública (cabecera) | — *(sin regla propia todavía)* | **HEADER-SCROLL-SOLID-1: `.lp-nav-wrap` gana un fondo blanco + blur al hacer scroll (`is-scrolled`), sin tocar el fondo plano de HEADER-FLAT-1 en reposo — la barra transparente se solapaba con el contenido de páginas sin hero, empezando por `/blog` (2026-09-09, log §213)** · Skeleton de pre-hidratación cierra el flicker residual (2026-08-20, log §118) · Badge Pro alineado junto al email + flicker de sesión sólo en la primera recarga por pestaña (2026-08-17, log §117) · HEADER-FLAT-1 (2026-08-15) · HEADER-CONSISTENCY-1 (2026-08-15) · GENSCORE-HEADER-2 (2026-08-12) · GENSCORE-HEADER-1 (2026-08-11) | log §1, §63, §65, §101, §109, §117, §118, §213 |
 | Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **PRELAUNCH-HARDENING-1 Fase R5 (2026-08-14, log §78/§79/§80)** · LLM-RESILIENCE-1 Fases A+B (2026-08-09) | log §45, §78–§80 · ADR 0029 |
 | Rendimiento (velocidad de carga) | `styles.md` | **PUBLIC-SCROLL-CLIP-1: la zona pública era imposible de scrollear en Chrome (2026-08-20, log §124)** · A11Y-PSI-1: landmark, contraste y área táctil del sitio público (2026-08-20, log §116) · PRELAUNCH-HARDENING-1 Fase V: V4+V5 (2026-08-10) · V0a/V1/V2/V3/V6/V7/V8 (2026-08-09) | log §54, §116, §124 · `docs/prelaunch-hardening-plan.md` §Fase V |
-| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **El veredicto de "marcar como hecho" leía la visibilidad de un localizador perezoso que podía apuntar a otra tarjeta tras el descarte — pasa a leerse del recuento de tarjetas activas (2026-09-01, log §207)** · VERCEL-COST-1 Fase 5: el piloto deja de correr en cada deploy y pasa a `workflow_dispatch`; el Director pregunta al fundador antes de cada Human Gate (2026-08-31, log §199) · El journey de clasificación de acciones nunca abría la tarjeta antes de buscar "Marcar como hecho" — reproducible en dos disparos reales, corregido con la misma guardia de apertura que ya usaba la acción 1 (2026-09-01, log §198) · ACTIONS-OBSERVABLE-1a: `ux-pilot-actions.yml` — el workflow de dispatch que faltaba para poder ejecutar el journey de clasificación que Fase 0 ya había construido (2026-08-30, log §193) · AUDIT-REPRO-1: journey nuevo `--journeys actions` clasifica las seis acciones de Recomendaciones con veredicto real/invisible/entorno (Fase 0, 2026-08-27, log §187) · PILOT-DRAWER-VIEWPORT-1: el cajón móvil de la consola estaba cerrado y `toBeVisible()` no sabía verlo (2026-08-27, log §176) · PRELAUNCH-HARDENING-1 Fase P3: matriz de definición ↔ pantalla (2026-08-21, log §139) · PILOT-PROJECT-PICK-2: el piloto exigía contenido real al proyecto que saliera primero (2026-08-21, log §135) · PILOT-HYDRATION-CLICK-1: el cajón móvil se pulsaba antes de hidratar (2026-08-20, log §136) · PRELAUNCH-HARDENING-1 Fase P2: el piloto abre `/signup` y `/forgot-password` (2026-08-20, log §129) · PILOT-PROJECT-PICK-1: el piloto elegía proyecto por un enlace retirado (2026-08-20, log §138) · PILOT-PR-LOOKUP-1: el piloto se saltaba a sí mismo y publicaba verde (2026-08-20, log §120) · LOG-NUMBERING-AUTOFIX-1 (2026-08-16, log §110) · CI-REDUNDANCY-1 (2026-08-16, log §108) · CODEX-BUILD-FIX-1 (2026-08-16, log §105) · PRELAUNCH-HARDENING-1 Fase Q5 (2026-08-15, log §97) · Fase Q5b (2026-08-11) · Fase 0 (2026-08-09) · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42, §49, §55, §65, §97, §105, §108, §110, §120, §129, §135, §136, §138, §139, §176, §187, §193, §198, §199, §207 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` · `docs/agentic-user-pilot.md` |
+| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **ACTIONS-OBSERVABLE-1 slice 4d: `ux-pilot-full.yml` — barrido semanal de los journeys de lectura contra producción, no un preview, con la cuenta piloto dedicada; coste sin medir todavía a propósito (2026-09-11, log §214)** · El veredicto de "marcar como hecho" leía la visibilidad de un localizador perezoso que podía apuntar a otra tarjeta tras el descarte — pasa a leerse del recuento de tarjetas activas (2026-09-01, log §207) · VERCEL-COST-1 Fase 5: el piloto deja de correr en cada deploy y pasa a `workflow_dispatch`; el Director pregunta al fundador antes de cada Human Gate (2026-08-31, log §199) · El journey de clasificación de acciones nunca abría la tarjeta antes de buscar "Marcar como hecho" — reproducible en dos disparos reales, corregido con la misma guardia de apertura que ya usaba la acción 1 (2026-09-01, log §198) · ACTIONS-OBSERVABLE-1a: `ux-pilot-actions.yml` — el workflow de dispatch que faltaba para poder ejecutar el journey de clasificación que Fase 0 ya había construido (2026-08-30, log §193) · AUDIT-REPRO-1: journey nuevo `--journeys actions` clasifica las seis acciones de Recomendaciones con veredicto real/invisible/entorno (Fase 0, 2026-08-27, log §187) · PILOT-DRAWER-VIEWPORT-1: el cajón móvil de la consola estaba cerrado y `toBeVisible()` no sabía verlo (2026-08-27, log §176) · PRELAUNCH-HARDENING-1 Fase P3: matriz de definición ↔ pantalla (2026-08-21, log §139) · PILOT-PROJECT-PICK-2: el piloto exigía contenido real al proyecto que saliera primero (2026-08-21, log §135) · PILOT-HYDRATION-CLICK-1: el cajón móvil se pulsaba antes de hidratar (2026-08-20, log §136) · PRELAUNCH-HARDENING-1 Fase P2: el piloto abre `/signup` y `/forgot-password` (2026-08-20, log §129) · PILOT-PROJECT-PICK-1: el piloto elegía proyecto por un enlace retirado (2026-08-20, log §138) · PILOT-PR-LOOKUP-1: el piloto se saltaba a sí mismo y publicaba verde (2026-08-20, log §120) · LOG-NUMBERING-AUTOFIX-1 (2026-08-16, log §110) · CI-REDUNDANCY-1 (2026-08-16, log §108) · CODEX-BUILD-FIX-1 (2026-08-16, log §105) · PRELAUNCH-HARDENING-1 Fase Q5 (2026-08-15, log §97) · Fase Q5b (2026-08-11) · Fase 0 (2026-08-09) · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42, §49, §55, §65, §97, §105, §108, §110, §120, §129, §135, §136, §138, §139, §176, §187, §191, §193, §198, §199, §207, §214 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` · `docs/agentic-user-pilot.md` |
 | Autenticación (login/registro/recuperación) | — *(sin regla propia todavía)* | **WELCOME-EMAIL-FRESHNESS-FIX-1: `isFreshSignup` ya no depende de la velocidad de clic del usuario (2026-08-20, ADR 0040)** · AUTH-ERRORS-ES-1 (2026-08-12) | ADR 0039/0040 |
 | Metadata y títulos de pantalla | `growth-content.md` | **ROOT-METADATA-1 (2026-08-15, log §103)** | log §46, §47, §103 · `lib/seo/metadata.ts` · `lib/seo/console-metadata.ts` |
 | Consola de operador | `admin.md` | **ADMIN-CONSOLE-UX-1 (2026-08-15)** · ADMIN-CONSOLE-2b (2026-08-13) · ADMIN-CONSOLE-2a (2026-08-12) · corrección del arranque de MFA (2026-08-13, §72) · ADMIN-CONSOLE-1 Fase 1 (2026-08-11) | log §64, §71, §72, §98, §99 · `docs/design-reference/admin-console-1/` |

@@ -107,7 +107,19 @@ const PROJECT_SETS = {
   // that dismisses a real recommendation with no undo (founder decision,
   // 2026-08-27) — same isolation as `scan`: its own Playwright project,
   // reached only by this explicit flag, never by the per-deploy read set.
-  actions: ["auth", "actions"]
+  actions: ["auth", "actions"],
+  // ACTIONS-OBSERVABLE-1 slice 4d (docs/external-audit-2026-08.md, Fase 4,
+  // Corrección C), founder-approved 2026-09-11. Same projects as `read` —
+  // the per-PR read set already runs every journey under
+  // tests/pilot/journeys/*.spec.ts end to end, `geo-score-consistency.spec.ts`
+  // (TRUST-METRICS-1) included, so there is no separate journey file to add.
+  // What `full` changes is WHERE it points: the one pilot invocation allowed
+  // to target production instead of a PR preview (see CLAUDE.md, "Pilot
+  // production scope"), on a weekly schedule via `ux-pilot-full.yml`, never
+  // via `deployment_status` or `pull_request`. A distinct set name keeps that
+  // intent visible in every log line and PR/step-summary marker instead of a
+  // production run being indistinguishable from an ordinary `read` one.
+  full: ["auth", "mobile", "tablet", "desktop"]
 };
 
 function parseArgs(argv) {
@@ -186,6 +198,11 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
   // env var), but gets its own marker/table like scan does — its subject is
   // a per-action verdict, not a scenario or a screen grid.
   const isActions = journeys === "actions";
+  // ACTIONS-OBSERVABLE-1 slice 4d. Same screen × viewport grid as the default
+  // read run (same journeys, same findings shape) — its own marker exists
+  // only so a production sweep's comment/summary is never confused with an
+  // ordinary preview one, since the two can otherwise look identical.
+  const isFull = journeys === "full";
   const findings = readFindings();
   const labels = [...new Set(findings.map((finding) => finding.label))];
 
@@ -212,14 +229,16 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
       .join(" · ") +
     "\n\n";
 
-  const marker = isWrite ? "write-" : isScan ? "scan-" : isActions ? "actions-" : "";
+  const marker = isWrite ? "write-" : isScan ? "scan-" : isActions ? "actions-" : isFull ? "full-" : "";
   const phase = isWrite
     ? " — Escritura (UX-PILOT-2a)"
     : isScan
       ? " — Escaneo autorizado (UX-PILOT-3)"
       : isActions
         ? " — Clasificación de acciones (AUDIT-REPRO-1)"
-        : "";
+        : isFull
+          ? " — Barrido semanal completo, contra producción (ACTIONS-OBSERVABLE-1 slice 4d)"
+          : "";
   const header =
     `<!-- agentic:ux-pilot-${marker}result -->\n` +
     `## Agentic User Pilot${phase} — ${verdict}\n\n` +
@@ -257,6 +276,11 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
         : "_La clasificación no terminó — ver fallos abajo. Una acción sin veredicto no es un PASS de esta fase._\n\n";
   } else if (labels.length > 0) {
     table =
+      (isFull
+        ? "**Este barrido corrió contra producción**, con la cuenta piloto dedicada — nunca un cliente real. " +
+          "El coste de cada pasada es real (peticiones contra `www.genscore.es`, no un preview) y se mide en el " +
+          "panel de Vercel, no aquí — ver CLAUDE.md, \"Pilot production scope\".\n\n"
+        : "") +
       `| Pantalla | Mobile 375 | Tablet 768 | Desktop 1280 |\n|---|---|---|---|\n` +
       labels
         .map((label) => {
