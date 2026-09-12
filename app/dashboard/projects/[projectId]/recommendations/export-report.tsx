@@ -48,11 +48,18 @@ export function ExportReport({
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
+  // Portada y contenido son DOS hijos directos de `body`, no hermanos dentro
+  // de un `.xrp-root` envolvente. Lo exige la portada: mide `height: 100%`
+  // (ver export-report.css) y un porcentaje sólo resuelve si TODOS sus
+  // ancestros tienen altura definida — con un `div` intermedio sin altura,
+  // el 100% cae a `auto` y la portada se queda del tamaño de su contenido.
+  // Al contenido, en cambio, no se le puede dar altura ninguna: tiene que
+  // fluir a tantas páginas como haga falta (log §219).
   return createPortal(
-    <div className="xrp-root" aria-hidden="true">
+    <>
       <ExportReportCover domain={domain} geoScore={geoScore} scanDateLabel={scanDateLabel} planCount={plan.length} />
       <ExportReportContent domain={domain} plan={plan} rest={rest} />
-    </div>,
+    </>,
     document.body,
   );
 }
@@ -69,7 +76,7 @@ function ExportReportCover({
   planCount: number;
 }) {
   return (
-    <section className="xrp-page xrp-cover">
+    <section className="xrp-page xrp-cover" aria-hidden="true">
       {/* El resplandor del artboard es una imagen incrustada (data URI) en
           `.xrp-cover` — ver export-report.css. Ni SVG ni degradado CSS:
           los dos dependen de que el motor de impresión sepa rasterizar un
@@ -118,7 +125,7 @@ function ExportReportContent({
   rest: ExportPlanRecommendation[];
 }) {
   return (
-    <section className="xrp-page xrp-content">
+    <section className="xrp-page xrp-content" aria-hidden="true">
       <header className="xrp-content-head">
         <BrandLogo size={15} />
         <span className="xrp-content-head-context">

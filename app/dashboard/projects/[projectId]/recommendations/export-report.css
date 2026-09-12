@@ -23,12 +23,17 @@
  *    margen superior que la 2: un padding sólo se aplica una vez, al
  *    principio del bloque, y las páginas siguientes salían con el texto
  *    pegado al borde del papel.
- * 2. La portada mide 1122px de alto (≈ A4 a 96dpi, 1px menos para absorber
- *    redondeos subpíxel que meterían una página en blanco), padding
- *    incluido gracias a `box-sizing: border-box`. **No se sangra con
- *    márgenes negativos**: se probó sobre un `@page` con márgenes y NO
- *    funciona — Chrome recorta el pintado al área de contenido y la portada
- *    sale con marco blanco (verificado rasterizando el PDF, no razonado).
+ * 2. La portada mide `height: 100%`, NUNCA una altura fija en px, y para
+ *    que ese porcentaje resuelva cuelga directamente de `body` (ver
+ *    export-report.tsx) con `html, body { height: 100% }`. El área
+ *    imprimible real la decide el navegador: Safari en iOS ignora
+ *    `@page { margin: 0 }` y reserva espacio para su cabecera y pie, así
+ *    que una portada de A4 completo desbordaba a una segunda página y se
+ *    llevaba la fila de metadatos — medido en el PDF real del fundador
+ *    (log §219). **No se sangra con márgenes negativos**: se probó sobre un
+ *    `@page` con márgenes y NO funciona — Chrome recorta el pintado al área
+ *    de contenido y la portada sale con marco blanco (verificado
+ *    rasterizando el PDF, no razonado).
  * 3. `box-sizing: border-box` en todo el informe. Su ausencia fue el fallo
  *    que el fundador vio como "la portada ocupa página y media": con
  *    `height: 1123px` + `padding: 56px` arriba y abajo, la caja medía en
@@ -41,16 +46,21 @@
  *    intermedia en algunos motores.
  */
 
-.xrp-root {
+.xrp-cover,
+.xrp-content {
   display: none;
 }
 
 /* El informe mide siempre con border-box: su caja externa es la que se
-   compara contra el papel. Ver punto 3 de la cabecera. */
-.xrp-root,
-.xrp-root *,
-.xrp-root *::before,
-.xrp-root *::after {
+   compara contra el área de página. Ver punto 3 de la cabecera. */
+.xrp-cover,
+.xrp-content,
+.xrp-cover *,
+.xrp-content *,
+.xrp-cover *::before,
+.xrp-content *::before,
+.xrp-cover *::after,
+.xrp-content *::after {
   box-sizing: border-box;
 }
 
@@ -65,12 +75,31 @@
      deformaba la portada cuando el informe vivía anidado dentro del layout
      de la consola (log §217). Como hijo directo de `body`, no tiene
      ancestros de la app de los que escapar. */
-  body > *:not(.xrp-root) {
+  body > *:not(.xrp-cover):not(.xrp-content) {
     display: none !important;
   }
 
-  .xrp-root {
+  /* Cada uno recupera SU display, no un `block` común: la portada es un flex
+     column con `space-between` (es lo que reparte cabecera / titular /
+     metadatos a lo alto de la página) y un `display: block !important` aquí
+     lo destruía, apiñando los tres bloques arriba y solapándolos. */
+  .xrp-cover {
+    display: flex !important;
+  }
+
+  .xrp-content {
     display: block !important;
+  }
+
+  /* La cadena de alturas que hace resolver el `height: 100%` de la portada.
+     `overflow: visible` es obligatorio y no cosmético: con `body` a una
+     altura de una página, cualquier recorte se comería las recomendaciones
+     que van después — el fallo que log §216 ya arregló una vez. Al
+     desbordar, el motor de impresión pagina, que es lo que queremos. */
+  html,
+  body {
+    height: 100%;
+    overflow: visible !important;
   }
 
   /* Página por defecto: SIN márgenes. Es la que usa la portada, que va a
@@ -114,9 +143,18 @@
      `lib/scan/**` a no acotar trabajo por recuento de filas
      (.claude/rules/scan.md, "Never cap the work by row count"), aplicada
      aquí a páginas en vez de a filas de base de datos. */
+  /* `height: 100%`, NUNCA una altura fija en px. El área imprimible real la
+     decide el navegador, no el CSS: Safari en iOS reserva espacio para su
+     propia cabecera y pie e IGNORA `@page { margin: 0 }`, así que el área
+     útil es bastante menor que un A4. Una portada de 1122px (A4 completo)
+     desbordaba ~20% y la fila de metadatos —Cliente / Fecha / Puntuación
+     GEO— caía a una segunda página, medido en el PDF real del fundador
+     (log §219). Con 100% la portada mide exactamente lo que cada motor
+     conceda: a sangre en Chrome con márgenes 0, y ajustada dentro del área
+     útil de Safari. `overflow: hidden` se retira: era lo que convertía el
+     desbordamiento en un recorte silencioso. */
   .xrp-cover {
-    height: 1122px;
-    overflow: hidden;
+    height: 100%;
     page-break-after: always;
     break-after: page;
   }

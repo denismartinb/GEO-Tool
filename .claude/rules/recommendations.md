@@ -272,12 +272,37 @@ paths:
   recomendaciones el PDF tiene exactamente 2 páginas** — si la portada
   desborda, son 3. Una captura de elemento (`locator.screenshot()`) NO vale:
   sale bien mida lo que mida, porque no tiene noción de página, y por eso
-  §216 y §217 dieron por bueno un informe cuya portada ocupaba página y
+  §216 y §218 dieron por bueno un informe cuya portada ocupaba página y
   media.
-- **`box-sizing: border-box` en todo `.xrp-root`, y la portada mide 1122px**
-  (A4 a 96dpi menos 1px, para absorber redondeos subpíxel que meterían una
-  página en blanco). Su ausencia hizo que la caja midiera 1235px —altura +
-  padding— y desbordara a una segunda página (log §218).
+- **El arnés incluye un escenario `safari-like` y un CONTROL NEGATIVO, o no
+  vale nada** (log §219). El escenario inyecta
+  `@page { margin: 12mm 10mm 18mm 10mm }` para reproducir la causa real del
+  fallo — que el motor imponga márgenes de página aunque el CSS pida 0,
+  como hace Safari iOS. El control fuerza el código anterior (altura fija
+  de 1122px) bajo ese mismo `@page` y **exige que salgan 3 páginas**: si no
+  las saca, el arnés no discrimina y su "2 páginas" no prueba nada. §216 y
+  §218 pasaron sin este control y las dos dieron por arreglado algo que
+  seguía roto.
+- **La portada mide `height: 100%`, JAMÁS una altura fija en px** (log
+  §219). El área imprimible no la decide el CSS: Safari en iOS ignora
+  `@page { margin: 0 }` y reserva espacio para su cabecera y pie, así que
+  un A4 completo (1122px) desbordaba y se llevaba la fila de metadatos a
+  una segunda página. §216 puso 1123px y §218 lo "corrigió" a 1122px con
+  `box-sizing`: dos iteraciones discutiendo el número cuando el error era
+  la unidad. Para que ese porcentaje resuelva, **portada y contenido son
+  hijos directos de `body`** (un Fragment en el `createPortal`) con
+  `html, body { height: 100% }` — un envoltorio intermedio sin altura
+  rompe la cadena, y al contenido no se le puede dar altura porque tiene
+  que fluir. `overflow: visible !important` en `html, body` no es
+  cosmético: con `body` a una página, un recorte se comería las
+  recomendaciones siguientes.
+- **`box-sizing: border-box` en todo el informe** — sin él la caja mide
+  altura + padding (log §218).
+- **El aislamiento de impresión devuelve a cada bloque SU display** —
+  `flex` a la portada, `block` al contenido — nunca un `block` común: un
+  `display: block !important` sobre la portada destruye su
+  `justify-content: space-between` y apiña cabecera, titular y metadatos
+  arriba, solapados (log §219).
 - **Los márgenes de las páginas de contenido van en una `@page` CON NOMBRE
   (`@page xrp-content-page`), nunca en un `padding` del contenedor.** Un
   padding se aplica una vez, al principio del bloque: las páginas 3 y

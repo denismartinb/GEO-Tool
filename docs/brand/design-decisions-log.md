@@ -20242,3 +20242,79 @@ export-report.css` (reescrito: `box-sizing`, `@page` con nombre, fondo PNG
 incrustado, tarjetas sin flex); `export-report.tsx` (fuera el SVG del
 fondo). Log §215 (fase), §216 (fidelidad), §217 (portal), este cierra la
 paginación. Mismo PR #529, antes del Human Gate.
+---
+
+## 219. PDF-EXPORT-PLAN-1: la portada seguía desbordando en Safari iOS — una altura fija en px nunca puede ser correcta (2026-09-12)
+
+**Origen.** El fundador subió el PDF real generado desde su iPhone
+("se sigue viendo la portada cortada"). Rasterizado con `pdftoppm`, el
+diagnóstico fue inmediato y distinto del de §218: **la fila de metadatos
+—Cliente / Fecha del escaneo / Puntuación GEO— no estaba en la portada**.
+Estaba en la página 2, sobre una banda vacía. 6 páginas para 3
+recomendaciones.
+
+**Causa raíz.** `Producer: iOS Version 26.6.1 Quartz PDFContext`,
+`Creator: Safari`: **Safari en iOS ignora `@page { margin: 0 }`** y reserva
+espacio para su propia cabecera y pie (la URL y "Página 1 de 6" se ven
+impresas en el PDF). El área imprimible real es bastante menor que un A4,
+así que la portada de `height: 1122px` —A4 completo, correcta tras el
+arreglo de `box-sizing` de §218— seguía sin caber, desbordaba ~20% y
+`overflow: hidden` convertía ese desbordamiento en un recorte silencioso
+que se comía los metadatos.
+
+**La lección, que §216 y §218 no vieron:** *cualquier* altura fija en px es
+incorrecta por construcción, porque el área imprimible no la decide el CSS
+sino el navegador, y no es conocible. §216 puso 1123px, §218 la corrigió a
+1122px con `box-sizing` — ambas iteraciones discutían el número equivocado
+en vez de la unidad. La portada ahora mide **`height: 100%`**: un
+porcentaje contra el área de página, que ya descuenta lo que cada motor
+reserve. A sangre en Chrome con márgenes 0; ajustada dentro del área útil
+en Safari. Y `overflow: hidden` se retira: era lo que hacía silencioso el
+fallo.
+
+**Dos cambios estructurales que ese `100%` exige:**
+1. **Portada y contenido son dos hijos DIRECTOS de `body`** (un Fragment en
+   el `createPortal`), no hermanos dentro de un `.xrp-root`. Un porcentaje
+   sólo resuelve si todos los ancestros tienen altura definida, y el `div`
+   envolvente no podía tenerla: al contenido no se le puede dar altura
+   ninguna, tiene que fluir a tantas páginas como haga falta. Con
+   `html, body { height: 100% }` la cadena queda limpia para la portada y
+   libre para el contenido. `overflow: visible !important` en `html, body`
+   es obligatorio ahí: con `body` a la altura de una página, cualquier
+   recorte se comería las recomendaciones siguientes — el fallo de §216
+   otra vez.
+2. **El aislamiento de impresión devuelve a cada uno SU display**
+   (`flex` a la portada, `block` al contenido), no un `block` común. Un
+   `display: block !important` sobre la portada destruye su
+   `justify-content: space-between` —que es lo que reparte cabecera,
+   titular y metadatos a lo alto de la página— y apiña los tres bloques
+   arriba, solapados. Se introdujo y se detectó en la misma sesión, en la
+   captura del propio arnés.
+
+**El arnés ahora tiene poder de detección, y se comprobó.** Las pasadas de
+§216 y §218 daban por bueno el resultado sin saber si el arnés era capaz de
+ver el fallo. Ahora: (a) hay un escenario **safari-like** que inyecta
+`@page { margin: 12mm 10mm 18mm 10mm }` para reproducir que el motor
+imponga márgenes, y (b) un **control negativo** que fuerza la altura fija de
+1122px del código anterior bajo ese mismo `@page` y **exige** que el PDF
+salga con 3 páginas en vez de 2. Sale con 3: el arnés discrimina. Sin ese
+control, "2 páginas" no habría significado nada.
+
+**Comprobado.** Chrome (márgenes 0) y safari-like, con 3 y con 21
+recomendaciones: 2 y 4 páginas respectivamente, las 21 tarjetas presentes,
+los 3 bloques de metadatos en la portada, márgenes correctos en las páginas
+de contenido. `pnpm test`: 227/227 archivos, 3136/3136 tests.
+`pnpm run validate` en verde.
+
+**Lo que sigue sin estar verificado.** Que esto se vea bien en el Safari
+real del fundador. El escenario safari-like reproduce *la causa* (el motor
+impone márgenes de página) sobre Chromium, no el motor de WebKit. Y las
+webfonts siguen sin cargar en el entorno de pruebas, así que la tipografía
+de las capturas es la de reserva. Lo cierra el fundador con su PDF, como
+esta vez.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+export-report.css` (`height: 100%`, cadena `html, body`, display por
+elemento); `export-report.tsx` (portal a un Fragment, `aria-hidden` en cada
+sección). Log §215 (fase), §216, §217, §218 (iteraciones previas). Mismo
+PR #529, antes del Human Gate.
