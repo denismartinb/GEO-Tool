@@ -911,19 +911,19 @@ export default async function ProjectDetailPage({
             <div className="ov2-gauge-info">
               <div className="ov2-gauge-lbl">Puntuación GEO</div>
               <div className="ov2-gauge-badges">
-                {/* The qualitative band asserts where the brand sits on a
-                    70/40 scale. Below MIN_RESPONSES_FOR_BAND responses a
-                    single AI answer moves the score by more than 7 points, so
-                    the band is not a claim the sample can support — the score
-                    itself is still shown, only its interpretation is withheld.
-                    Withheld means ABSENT, not labelled: a screen carrying four
-                    "sin comparación"/"muestra insuficiente" notices reads as
-                    broken rather than as careful (founder decision,
-                    2026-08-03). The single actionable line under the gauge
-                    below is what keeps the absence explainable. */}
-                {sampleSufficient ? (
-                  <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
-                ) : null}
+                {/* GEO-BAND-ALWAYS-1 (founder decision, 2026-09-12): the band
+                    is derived straight from the score the gauge already shows
+                    (getBandLabel/getBandTone are pure functions of gaugeScore,
+                    same 70/40 cuts as every other screen), so it never states
+                    anything the visible number doesn't already — unlike the
+                    delta and sparkline below, it isn't a claim about a
+                    comparison across runs, so the sample-floor gate that
+                    protects THOSE doesn't apply here. Kept unconditional on
+                    purpose: the first-scan card was reading as broken with
+                    nothing next to the number (founder, 2026-09-11/12). Delta
+                    and trend stay gated on sampleSufficient below — this
+                    change touches only the band. */}
+                <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
                 {gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
                   <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
                 )}

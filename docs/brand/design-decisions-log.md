@@ -19936,3 +19936,71 @@ observable-1/remaining-slices.md` (slice 4d); `scripts/pilot.mjs`
 la aserción que ya existía), §191 (RECS-EVIDENCE-2, por qué la tercera no
 aplica), §199 (VERCEL-COST-1 Fase 5, la misma disciplina de medir antes de
 rutinizar). Decisión del fundador, 2026-09-11.
+
+---
+
+## 215. GEO-BAND-ALWAYS-1: la franja cualitativa deja de ocultarse en muestras pequeñas — sólo la franja, nada más (2026-09-12)
+
+**Origen.** El fundador vio la tarjeta principal de Visión general en su
+propio teléfono con un proyecto recién creado (Vodafone, primer escaneo,
+3 de 3 respuestas): sólo el aro con "82/100" y la etiqueta "Puntuación GEO",
+sin nada más. Su lectura: *"si queda de simplona sin información va a
+parecer que es un error o no va a tener un efecto guau"* — la tarjeta más
+importante de la consola, vista por un cliente nuevo en el momento más
+importante (el primer escaneo), se veía rota.
+
+**Qué ocultaba, y por qué se diseñó así.** Desde ADR-0024
+(`score-reliability-layer`), por debajo de `MIN_RESPONSES_FOR_BAND` (10
+respuestas totales) la tarjeta oculta tres cosas a la vez: la franja
+cualitativa (badge "Franja «competitivo»"/"«emergente»"/"«inicial»"), el
+delta entre escaneos y el sparkline de tendencia. Las tres se ocultaban bajo
+el mismo `sampleSufficient`, con la misma justificación: por debajo del
+suelo, una sola respuesta de IA puede mover el score más de 7 puntos, así
+que afirmar una comparación (¿subió?, ¿bajó?, ¿hay tendencia?) sería una
+afirmación que la muestra no sostiene.
+
+**Por qué la franja no es el mismo caso que el delta y el sparkline.** El
+delta y el sparkline afirman algo que la muestra pequeña realmente no puede
+sostener: una comparación *entre* escaneos, o una tendencia a lo largo de
+varios. La franja no compara nada — es una función pura del propio score que
+el aro ya enseña en grande (`getBandLabel`/`getBandTone`, mismos cortes 70/40
+que usa el resto del producto). Si el número "82" ya está en pantalla, decir
+que 82 cae en la "franja «competitivo»" no añade ninguna afirmación nueva
+sobre la fiabilidad del dato — sólo nombra en palabras lo que el número ya
+dice. Ocultarla junto al delta y al sparkline agrupaba tres casos distintos
+bajo una sola condición.
+
+**Decisión del fundador, explícita y acotada.** Confirmada por
+`AskUserQuestion` entre tres alternativas (cuenta atrás visible / franja
+provisional marcada / historia con datos ya fiables, ver artefacto de
+diseño de la sesión): *"Solo la franja real. Ningún texto más. ESO no es
+fake metrics. Mi decisión."* — variante mínima de la opción 2 del artefacto,
+sin el marcado "provisional" ni el aviso de margen que sí llevaba el mockup,
+y sin tocar ningún otro texto de la tarjeta.
+
+**Qué cambia y qué no.** `app/dashboard/projects/[projectId]/page.tsx`:
+el badge de franja (`ov2-gauge-badges`) deja de estar condicionado a
+`sampleSufficient` y se muestra siempre que hay un `gaugeScore`. El delta
+(`Delta`) y el sparkline (`Sparkline` + su leyenda "Últimos N escaneos")
+siguen exactamente igual que antes, gateados por `gaugeDeltaVerdict?.kind
+=== "publish"` — el `sampleNudge` bajo el gauge también sigue intacto. No se
+toca `MIN_RESPONSES_FOR_BAND`, `hasSufficientSample` ni ningún otro
+consumidor de `sampleSufficient` en el fichero (la muestra insuficiente
+sigue ocultando el margen de error del texto insight, la banda de presión
+competitiva, y la fila de "Top 5 posiciones" — sin cambios).
+
+**Regla de premisa.** Esto no retira ningún camino de recuperación ni
+introduce un estado sin salida — es la inversa: añade información donde
+antes no había nada. No aplica la sección de "regla de premisa" del cierre
+de fase.
+
+**Comprobado.** `pnpm test` (227 archivos, 3133 tests, verde) y
+`pnpm run validate` (build + typecheck + lint) en verde. No existía ningún
+test que fijara el badge oculto bajo muestra insuficiente en esta pantalla,
+así que no hay cobertura que romper ni que reescribir.
+
+**Trazabilidad.** `ADR 0024` (`score-reliability-layer`, origen de
+`MIN_RESPONSES_FOR_BAND` y de agrupar franja+delta+trend bajo
+`sampleSufficient`); `SAMPLE-FLOOR-1` (log §175, un fallo distinto — ranking
+de Competidores/Panorámica — que no se toca aquí); decisión del fundador,
+2026-09-12, sesión de consola vía captura de pantalla.
