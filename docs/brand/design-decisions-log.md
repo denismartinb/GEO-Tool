@@ -19936,3 +19936,79 @@ observable-1/remaining-slices.md` (slice 4d); `scripts/pilot.mjs`
 la aserción que ya existía), §191 (RECS-EVIDENCE-2, por qué la tercera no
 aplica), §199 (VERCEL-COST-1 Fase 5, la misma disciplina de medir antes de
 rutinizar). Decisión del fundador, 2026-09-11.
+
+---
+
+## 215. Fase 3 de la auditoría externa (RECURRING-VALUE-1) se cierra — calendario y umbral configurable, descartados (2026-09-09)
+
+**Qué quedaba.** Del primer recorte de esta fase (§195, 2026-08-29) quedaban
+dos entregables sin implementar: un calendario visible de seguimiento (última
+ejecución, próxima ejecución, cadencia) y umbral configurable para la alerta
+de caída de GEO Score. Los dos se descartan hoy, no se aplazan.
+
+**Calendario visible — descartado sin llegar a Task Intake.** El fundador:
+*"El usuario sabe que el escaneo es diario, y cuando acceda cada día verá el
+dato fresco. No necesita conocer calendario."* Con cadencia diaria, mostrar
+"próxima ejecución" no cambia ninguna decisión del usuario — es información
+que el propio hábito de entrar cada día ya sustituye.
+
+**Umbral configurable — implementado en rama local y retirado antes de
+abrir PR.** Se llegó a construir completo: migración 0036
+(`profiles.notify_score_drop_threshold`, entero, default 10, `check (between
+1 and 50)`), `lib/scan/score-alert.ts` leyendo el umbral por perfil en vez de
+la constante fija, validación con zod en
+`app/dashboard/settings/notifications/actions.ts`, campo numérico en Ajustes
+→ Notificaciones bajo el switch de "Cambios de visibilidad", y tests (227
+ficheros, 3.128 tests, todos en verde). El `git push` de la rama quedó
+bloqueado por el clasificador de permisos de la sesión, y al pedir
+aprobación explícita el fundador reconsideró la fase entera: *"no veo
+necesario poder configurar los puntos para la alerta, en semrush no ocurre,
+tiene su propio algoritmo y reglas"*. El criterio de qué es una "caída
+significativa" es responsabilidad del algoritmo del producto, no un ajuste
+que se le entrega a un usuario sin manera de calibrarlo bien — mismo
+argumento, en sentido inverso, al que ya usa este documento para exigir que
+las cifras del producto sean reales y no inventadas: un umbral mal elegido
+por el usuario sería tan poco fiable como una cifra fabricada.
+
+**Nada de esto llegó a `main`.** El commit vivió sólo en una rama local
+(`claude/score-alert-threshold-1`), nunca se hizo push, ninguna migración se
+aplicó. `lib/scan/score-alert.ts` sigue exactamente como estaba:
+`SCORE_DROP_ALERT_THRESHOLD = 10`, fijo, igual para toda cuenta.
+
+**Sin regla de premisa que anotar.** No se retira ningún camino de
+recuperación existente — la alerta de caída sigue funcionando exactamente
+igual que antes de evaluar esta fase.
+
+**Trazabilidad.** `docs/external-audit-2026-08.md` Fase 3 (marcada CERRADA
+en este mismo commit); log §195 (primer recorte de la misma fase);
+`lib/scan/score-alert.ts` (sin cambios). Decisión del fundador, 2026-09-08 y
+2026-09-09 — sin Task Intake de implementación adicional porque la fase se
+cierra sin código nuevo.
+
+---
+
+## 216. P1-01 verificado y cerrado: ninguna pestaña se queda clavada en "finalizando" (2026-09-09)
+
+**El hallazgo del auditor.** La pestaña con el escaneo en curso se quedaba en
+"Finalizando…" aunque otra pestaña, abierta a la vez, ya mostraba los
+resultados del mismo escaneo terminado.
+
+**Por qué ya se sospechaba cerrado sin volver a tocarlo.**
+`ANIMATION-PARITY-1` (#482) mergeó el 2026-08-27 — **un día después** de la
+auditoría — y movió el sondeo del estado del run más el `router.refresh()`
+final al propio `ScanMissionRocket`, montado en las seis pantallas por
+igual. Antes de esa fase sólo Visión general sondeaba de verdad; el resto se
+quedaba con el último estado que tuviera en el momento de montarse, que es
+exactamente la foto fija que describe el hallazgo.
+
+**Verificación.** El fundador reprodujo el escenario exacto del informe en
+producción: un escaneo real en curso, dos pestañas abiertas a la vez en
+pantallas distintas de la consola. Las dos se resolvieron solas al terminar
+el escaneo, sin necesidad de recargar ninguna a mano. Sin código nuevo — es
+una confirmación de que `ANIMATION-PARITY-1` ya cubría este caso, no una
+corrección.
+
+**Trazabilidad.** `docs/external-audit-2026-08.md`, sección "Verificación de
+P1-01" y fila `P1-01` de la tabla de hallazgos, ambas marcadas cerradas en
+este mismo commit; `ANIMATION-PARITY-1` (#482, log §168);
+`components/scan-mission-rocket.tsx`. Verificación del fundador, 2026-09-09.
