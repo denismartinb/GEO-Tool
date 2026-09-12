@@ -1,0 +1,376 @@
+/*
+ * PDF-EXPORT-PLAN-1 — estilos del informe imprimible de "Exportar plan".
+ * Prefijo `.xrp-` (mismo motivo que `.ptour`/`pt-` en onboarding.md: nombres
+ * genéricos como "card"/"section" ya existen en globals.css y se pisarían en
+ * ambos sentidos).
+ *
+ * .xrp-root se monta con `createPortal` directamente en `document.body`
+ * (export-report.tsx) — nunca en el sitio del árbol de React donde aparece
+ * `<ExportReport>` — y está OCULTO en pantalla, visible sólo dentro de
+ * @media print. `window.print()` (recommendations-client.tsx) es quien
+ * dispara la impresión; fuera de ella, `display: none` evita que el informe
+ * A4 se renderice en la propia consola.
+ *
+ * CÓMO SE PAGINA (log §218, tras dos correcciones fallidas):
+ *
+ * 1. DOS páginas declaradas, no una. La por defecto (`@page`) va SIN
+ *    márgenes y es la que usa la portada, que sangra a los bordes. Una
+ *    página CON NOMBRE (`@page xrp-content-page`) lleva los márgenes reales
+ *    del documento (52/64/40px — los paddings del artboard aprobado, así
+ *    que el ancho de contenido sale 794-128 = 666px, idéntico al suyo) y la
+ *    usa sólo el contenido. Ponerlos en una `@page` en vez de en un padding
+ *    del contenedor es lo único que hace que la página 3 tenga el mismo
+ *    margen superior que la 2: un padding sólo se aplica una vez, al
+ *    principio del bloque, y las páginas siguientes salían con el texto
+ *    pegado al borde del papel.
+ * 2. La portada mide `height: 100%`, NUNCA una altura fija en px, y para
+ *    que ese porcentaje resuelva cuelga directamente de `body` (ver
+ *    export-report.tsx) con `html, body { height: 100% }`. El área
+ *    imprimible real la decide el navegador: Safari en iOS ignora
+ *    `@page { margin: 0 }` y reserva espacio para su cabecera y pie, así
+ *    que una portada de A4 completo desbordaba a una segunda página y se
+ *    llevaba la fila de metadatos — medido en el PDF real del fundador
+ *    (log §219). **No se sangra con márgenes negativos**: se probó sobre un
+ *    `@page` con márgenes y NO funciona — Chrome recorta el pintado al área
+ *    de contenido y la portada sale con marco blanco (verificado
+ *    rasterizando el PDF, no razonado).
+ * 3. `box-sizing: border-box` en todo el informe. Su ausencia fue el fallo
+ *    que el fundador vio como "la portada ocupa página y media": con
+ *    `height: 1123px` + `padding: 56px` arriba y abajo, la caja medía en
+ *    realidad 1235px — un 10% más que un A4 — y al escalar para caber en el
+ *    ancho del papel (Safari hace shrink-to-fit) el sobrante caía a una
+ *    segunda página.
+ * 4. UN solo salto de página entre portada y contenido
+ *    (`page-break-after` en la portada). Declararlo también como
+ *    `page-break-before` en el contenido arriesga una página en blanco
+ *    intermedia en algunos motores.
+ */
+
+.xrp-cover,
+.xrp-content {
+  display: none;
+}
+
+/* El informe mide siempre con border-box: su caja externa es la que se
+   compara contra el área de página. Ver punto 3 de la cabecera. */
+.xrp-cover,
+.xrp-content,
+.xrp-cover *,
+.xrp-content *,
+.xrp-cover *::before,
+.xrp-content *::before,
+.xrp-cover *::after,
+.xrp-content *::after {
+  box-sizing: border-box;
+}
+
+@media print {
+  /* Oculta el resto de la consola durante la impresión; sólo el informe
+     queda visible. `.xrp-root` se monta con `createPortal` directamente en
+     `document.body` (export-report.tsx) — por eso esto puede ser un
+     selector directo `body > *`, sin necesitar el truco de
+     `visibility:hidden` en cascada sobre TODOS los descendientes: ese truco
+     oculta la pintura de los ancestros de `.xrp-root`, pero no anula su
+     caja de layout (`overflow`, `transform`, altura) — que es justo lo que
+     deformaba la portada cuando el informe vivía anidado dentro del layout
+     de la consola (log §217). Como hijo directo de `body`, no tiene
+     ancestros de la app de los que escapar. */
+  body > *:not(.xrp-cover):not(.xrp-content) {
+    display: none !important;
+  }
+
+  /* Cada uno recupera SU display, no un `block` común: la portada es un flex
+     column con `space-between` (es lo que reparte cabecera / titular /
+     metadatos a lo alto de la página) y un `display: block !important` aquí
+     lo destruía, apiñando los tres bloques arriba y solapándolos. */
+  .xrp-cover {
+    display: flex !important;
+  }
+
+  .xrp-content {
+    display: block !important;
+  }
+
+  /* La cadena de alturas que hace resolver el `height: 100%` de la portada.
+     `overflow: visible` es obligatorio y no cosmético: con `body` a una
+     altura de una página, cualquier recorte se comería las recomendaciones
+     que van después — el fallo que log §216 ya arregló una vez. Al
+     desbordar, el motor de impresión pagina, que es lo que queremos. */
+  html,
+  body {
+    height: 100%;
+    overflow: visible !important;
+  }
+
+  /* Página por defecto: SIN márgenes. Es la que usa la portada, que va a
+     sangre — y es la que usaría cualquier motor que no soporte páginas con
+     nombre, así que la portada (lo que se mira primero) sale bien en todos.
+     Se probó antes con márgenes negativos para sangrar sobre un `@page` con
+     márgenes: NO funciona, Chrome recorta el pintado al área de contenido y
+     la portada salía con marco blanco (verificado rasterizando el PDF). */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  /* Página con nombre, sólo para el contenido: los paddings del artboard
+     aplicados por el motor de impresión a TODAS sus páginas. Es lo único
+     que hace que la página 3 tenga el mismo margen superior que la 2 — un
+     padding del contenedor sólo se aplica una vez, al principio del bloque,
+     y las siguientes salían con el texto pegado al borde del papel. */
+  @page xrp-content-page {
+    size: A4;
+    margin: 52px 64px 40px 64px;
+  }
+
+  .xrp-content {
+    page: xrp-content-page;
+  }
+
+  .xrp-page {
+    position: relative;
+    background: #ffffff;
+    color: #0b1426;
+    font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* La portada es SIEMPRE una única página, a sangre. El contenido
+     (recomendaciones) NO lleva altura fija ni overflow:hidden: una lista
+     larga tiene que fluir a tantas páginas como haga falta, nunca
+     recortarse en silencio — la misma regla de honestidad que ya obliga a
+     `lib/scan/**` a no acotar trabajo por recuento de filas
+     (.claude/rules/scan.md, "Never cap the work by row count"), aplicada
+     aquí a páginas en vez de a filas de base de datos. */
+  /* `height: 100%`, NUNCA una altura fija en px. El área imprimible real la
+     decide el navegador, no el CSS: Safari en iOS reserva espacio para su
+     propia cabecera y pie e IGNORA `@page { margin: 0 }`, así que el área
+     útil es bastante menor que un A4. Una portada de 1122px (A4 completo)
+     desbordaba ~20% y la fila de metadatos —Cliente / Fecha / Puntuación
+     GEO— caía a una segunda página, medido en el PDF real del fundador
+     (log §219). Con 100% la portada mide exactamente lo que cada motor
+     conceda: a sangre en Chrome con márgenes 0, y ajustada dentro del área
+     útil de Safari. `overflow: hidden` se retira: era lo que convertía el
+     desbordamiento en un recorte silencioso. */
+  .xrp-cover {
+    height: 100%;
+    page-break-after: always;
+    break-after: page;
+  }
+}
+
+/* ---- Portada — pixel-perfect contra informe-consultoria.html ---- */
+
+.xrp-cover {
+  position: relative;
+  /* El resplandor del artboard va como PNG incrustado, no como
+     `radial-gradient` CSS: un degradado CSS con canal alfa se rasteriza
+     como color sólido en el camino de impresión de WebKit — el "círculo
+     cian gigante" que el fundador vio en su iPhone (log §217). Incrustado
+     como data URI (y no como fichero en /public) para que no dependa de una
+     petición de red que puede no haber terminado cuando se abre el diálogo
+     de impresión. */
+  background-color: var(--brand-ink, #0b1426);
+  background-image: url("data:image/png;base64,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");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  color: #ffffff;
+  padding: 56px 64px 56px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.xrp-cover-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.xrp-cover-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-ink-4, #98a2b3);
+}
+
+.xrp-cover-eyebrow {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-cyan, #09c5d6);
+  margin-bottom: 18px;
+}
+
+.xrp-cover-title {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  margin: 0;
+  max-width: 560px;
+}
+
+.xrp-cover-sub {
+  font-size: 16px;
+  color: #c7cedb;
+  margin: 22px 0 0;
+  max-width: 480px;
+  line-height: 1.55;
+}
+
+.xrp-cover-meta {
+  display: flex;
+  gap: 48px;
+}
+
+.xrp-cover-meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.xrp-cover-meta-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-ink-3, #5b6b82);
+}
+
+.xrp-cover-meta-value {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+/* La métrica resaltada (Puntuación GEO) — mismo tratamiento que el artboard
+   aprobado: color cian de marca, nada más distinto (ni tamaño, ni peso) del
+   resto de los datos de la portada. */
+.xrp-cover-meta-accent {
+  color: var(--brand-cyan, #09c5d6);
+}
+
+/* ---- Contenido ----
+ * Sin padding propio: los márgenes de página los pone `@page`, que es lo
+ * único que los aplica a TODAS las páginas y no sólo a la primera. */
+
+.xrp-content-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eceff4;
+  margin-bottom: 34px;
+}
+
+.xrp-content-head-context {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-ink-4, #98a2b3);
+}
+
+.xrp-section {
+  margin-bottom: 30px;
+}
+
+.xrp-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 16px;
+  /* Un encabezado de sección nunca se queda solo al final de una página. */
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.xrp-section-index {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--brand-blue, #2563eb);
+}
+
+.xrp-section-title {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* Sin flex/gap aquí: un contenedor flex no reparte sus hijos entre páginas
+   impresas — los mantiene en un solo bloque y el sobrante se pierde. El
+   espaciado entre tarjetas pasa a ser `margin-bottom` de cada una, que sí
+   sobrevive a un salto de página. */
+.xrp-item {
+  padding-left: 23px;
+  margin-bottom: 18px;
+  border-left: 2px solid var(--brand-blue, #2563eb);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.xrp-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.xrp-item-title {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.xrp-item-pts {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #0d9488;
+  background: #e6f9f4;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.xrp-item-desc {
+  font-size: 13px;
+  color: var(--brand-ink-3, #5b6b82);
+  margin: 4px 0 0;
+  line-height: 1.6;
+}
+
+.xrp-item-step {
+  font-size: 12px;
+  color: var(--brand-ink-2, #3b4759);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.xrp-item-engines {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-ink-4, #98a2b3);
+  margin: 5px 0 0;
+}
+
+/* ---- Pie ----
+ * Bloque normal al final del flujo: `.xrp-content` no tiene altura fija
+ * sobre la que anclar un pie por página, así que el pie cierra el documento
+ * una vez, después de la última recomendación. */
+
+.xrp-footer {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid #eceff4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--brand-ink-4, #98a2b3);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
