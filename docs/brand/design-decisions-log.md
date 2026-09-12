@@ -19822,7 +19822,124 @@ frase de copy ya aprobada (MEAN-RANK-READS-TRUE-1, §177).
 
 ---
 
-## 213. Fase 3 de la auditoría externa (RECURRING-VALUE-1) se cierra — calendario y umbral configurable, descartados (2026-09-09)
+## 213. La cabecera pública transparente se solapaba con el contenido al hacer scroll (HEADER-SCROLL-SOLID-1, 2026-09-09)
+
+**Qué se reportó.** El fundador, mirando `/blog`: "la cabecera transparente
+hace que se vea mal con el body de la página al hacer scroll".
+
+**Causa.** HEADER-FLAT-1 (2026-08-15, §63/§101) dejó `.lp-nav-wrap` con
+`background: transparent` de forma permanente en las 7 superficies públicas
+que comparten `PublicHeader`, para que la barra se fundiera con el hero de la
+home. Esa transparencia nunca tuvo un estado de scroll: la barra es
+`position: sticky`, así que en cuanto el usuario desplaza la página, el
+contenido pasa justo detrás de ella sin ningún fondo que los separe. En la
+home eso lo disimulaba el propio hero; en `/blog` (y previsiblemente `/geo`,
+`/pricing`, `/docs`, las legales, `/comparativas`, `/glosario` — cualquier
+superficie sin hero oscuro pegado arriba) el texto de la página se veía
+solapado con el logo/enlaces de la barra.
+
+**Arreglo.** `PublicHeader` añade una clase `is-scrolled` a `.lp-nav-wrap`
+cuando `window.scrollY > 8` (listener `scroll` pasivo, limpiado al
+desmontar). `app/globals.css` da a `.lp-nav-wrap.is-scrolled` un fondo blanco
+semitransparente + `backdrop-filter: blur` (mismo valor que ya usaba el
+`.topbar` de la consola), con una transición corta de `background-color`/
+`border-color`. El reposo de arriba del todo sigue transparente — no toca el
+diseño plano aprobado en HEADER-FLAT-1, sólo añade el estado que le faltaba.
+`.nf-page .lp-nav-wrap` (fondo `#fff` fijo sobre la escena oscura de la 404)
+sigue ganando por especificidad de selector + orden de fichero, así que no
+hace falta una regla aparte para esa superficie.
+
+**Trazabilidad.** `components/marketing/public-header.tsx`;
+`app/globals.css` (`.lp-nav-wrap`, `.lp-nav-wrap.is-scrolled`); HEADER-FLAT-1
+(§63/§101, decisión que esto complementa sin revertir).
+
+---
+
+## 214. ACTIONS-OBSERVABLE-1 slice 4d: barrido semanal completo contra producción (2026-09-11)
+
+**Origen.** Última pieza de la Fase 4 del plan de la auditoría externa
+(`docs/external-audit-2026-08.md`, P0-04) — Corrección C de
+`docs/agentic-blind-spots-2026-08.md`, Causa 3: "nadie recorre el producto
+entero, nunca". El piloto por-PR sólo ve el preview de cada PR; nada
+ejercita el producto de verdad, en producción, de forma continua. 4c
+(Corrección H, la cobertura no vista del arnés) se descartó explícitamente
+por el fundador el mismo día — no entra en este PR.
+
+**Las dos decisiones que bloqueaban esto, respondidas por el fundador
+(2026-09-11):**
+1. **¿Contra qué corre?** "Producción, con una cuenta de prueba" — nunca un
+   cliente real, la misma cuenta piloto dedicada que ya usan `read`/`write`/
+   `scan`/`actions`.
+2. **¿Se acepta el coste?** "Sí, midamos el coste" — medido, no estimado,
+   antes de tratar el schedule como rutina (ver más abajo).
+
+**Verificado antes de construir nada — y cambió el alcance real.** El texto
+literal de Corrección B (las "aserciones cruzadas") cita tres ejemplos: score
+de Dominios == score de Visión general; denominador de Competidores ==
+Prompts × motores; suma de la cabecera de Recomendaciones == suma de sus
+tarjetas. Verificado contra el código:
+
+- **La primera ya existe y ya corre en cada pilotaje por defecto** —
+  `tests/pilot/journeys/geo-score-consistency.spec.ts`, construida en
+  TRUST-METRICS-1 (Fase 1, log §183) precisamente para esto. Nada que
+  añadir.
+- **La segunda es una identidad que este mismo repositorio ya declaró
+  falsa a propósito.** `lib/metrics/run-metrics.ts` (`answerCountLabel`),
+  comentario propio: `promptCount × engineCount` NO es `answerCount` desde
+  el segundo escaneo en adelante — son tres magnitudes de tres ventanas
+  temporales distintas. Construir esta aserción tal cual habría fallado en
+  cualquier cuenta con más de un escaneo, por diseño correcto del propio
+  producto.
+- **La tercera compara contra un elemento que ya no existe.** RECS-EVIDENCE-2
+  (Fase 7, log §191) retiró la cabecera "hasta +N puntos" de Recomendaciones
+  en vez de conciliarla con las tarjetas — no hay cabecera con la que
+  comparar.
+
+Sólo la primera sigue siendo real, y ya estaba construida. El "conjunto de
+aserciones cruzadas" que la corrección pedía no necesitaba código nuevo —
+necesitaba dejar de asumir que el resto seguía siendo cierto sin comprobarlo,
+que es exactamente el tipo de fallo que este plan entero existe para
+corregir.
+
+**Lo que sí faltaba, y es lo que construye este PR.** No una aserción nueva,
+sino la infraestructura para correr las que ya existen contra el sitio real:
+`--journeys full` en `scripts/pilot.mjs` (mismos proyectos de Playwright que
+`read` — ninguna pantalla nueva que visitar, `geo-score-consistency.spec.ts`
+incluida) y `.github/workflows/ux-pilot-full.yml`, con `workflow_dispatch` +
+`schedule` semanal (domingos 07:00 UTC), apuntando a
+`https://www.genscore.es` con la cuenta piloto dedicada — nunca
+`deployment_status` ni `pull_request`, mismo candado estructural que ya
+protege `scan`/`actions`.
+
+**El coste sigue sin medir — a propósito, no es un olvido.** Este PR no
+dispara la primera pasada real. El coste de una pasada semanal contra
+producción (peticiones reales contra `www.genscore.es`) se mide desde el
+panel de Vercel después de que corran las primeras pasadas de verdad, y esa
+cifra se escribe aquí antes de que este schedule se trate como rutina
+desatendida — mismo principio que ya aplicó `scan` (UX-PILOT-3) y que
+`VERCEL-COST-1` Fase 5 (log §199) dejó por escrito tras la factura real de
+agosto: la cifra va antes de encender, nunca después.
+
+**Sin regla de premisa que anotar.** No se retira ningún camino de
+recuperación — es una vigilancia nueva, no la salida de una existente.
+
+**Comprobado.** `pnpm test`, `pnpm run validate` (build + typecheck + lint)
+en verde. Sin journey nueva que testear: `full` reutiliza exactamente las
+mismas specs que `read`, así que el self-check existente
+(`pnpm pilot:selfcheck`) ya cubre su superficie real.
+
+**Trazabilidad.** `docs/external-audit-2026-08.md` Fase 4 (Corrección C);
+`docs/agentic-blind-spots-2026-08.md` Causa 3; `docs/specs/actions-
+observable-1/remaining-slices.md` (slice 4d); `scripts/pilot.mjs`
+(`PROJECT_SETS.full`, `isFull`); `.github/workflows/ux-pilot-full.yml`
+(nuevo); `CLAUDE.md` ("Pilot production scope"); log §183 (TRUST-METRICS-1,
+la aserción que ya existía), §191 (RECS-EVIDENCE-2, por qué la tercera no
+aplica), §199 (VERCEL-COST-1 Fase 5, la misma disciplina de medir antes de
+rutinizar). Decisión del fundador, 2026-09-11.
+
+---
+
+## 215. Fase 3 de la auditoría externa (RECURRING-VALUE-1) se cierra — calendario y umbral configurable, descartados (2026-09-09)
 
 **Qué quedaba.** Del primer recorte de esta fase (§195, 2026-08-29) quedaban
 dos entregables sin implementar: un calendario visible de seguimiento (última
@@ -19870,7 +19987,7 @@ cierra sin código nuevo.
 
 ---
 
-## 214. P1-01 verificado y cerrado: ninguna pestaña se queda clavada en "finalizando" (2026-09-09)
+## 216. P1-01 verificado y cerrado: ninguna pestaña se queda clavada en "finalizando" (2026-09-09)
 
 **El hallazgo del auditor.** La pestaña con el escaneo en curso se quedaba en
 "Finalizando…" aunque otra pestaña, abierta a la vez, ya mostraba los

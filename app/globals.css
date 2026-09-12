@@ -4870,7 +4870,18 @@ a.notif-row:hover {
    `overflow`, no tocar la raíz. Importa dejarlo escrito porque la versión
    anterior habría mandado a una sesión futura a pelearse con el elemento
    equivocado. */
-.lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: transparent; border-bottom: 1px solid transparent; }
+.lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: transparent; border-bottom: 1px solid transparent;
+  transition: background-color .15s ease, border-color .15s ease; }
+/* HEADER-SCROLL-SOLID-1 (2026-09-09): sin esto, el contenido de cualquier
+   superficie pública sin hero oscuro debajo (blog, /geo, /pricing, /docs,
+   legales) scrollea directamente detrás de la barra pegajosa transparente y
+   se solapa visualmente con el logo/enlaces. `.is-scrolled` la marca
+   `PublicHeader` en cuanto `window.scrollY > 8`, dejando el fondo plano
+   aprobado (HEADER-FLAT-1) intacto en el reposo de arriba del todo. */
+.lp-nav-wrap.is-scrolled {
+  background: rgba(255,255,255,.86); border-bottom-color: var(--line-soft);
+  backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
+}
 .lp-nav { max-width: 1180px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
 .lp-logo { display: flex; align-items: center; gap: 10px; }
 .lp-nav-links { display: flex; align-items: center; gap: 4px; margin-left: 22px; }
