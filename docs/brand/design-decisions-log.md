@@ -19936,3 +19936,385 @@ observable-1/remaining-slices.md` (slice 4d); `scripts/pilot.mjs`
 la aserción que ya existía), §191 (RECS-EVIDENCE-2, por qué la tercera no
 aplica), §199 (VERCEL-COST-1 Fase 5, la misma disciplina de medir antes de
 rutinizar). Decisión del fundador, 2026-09-11.
+## 215. "Exportar plan" pasa de un `.md` a un informe con marca, vía `window.print()` (2026-09-11)
+
+**Origen.** Task Intake Report `PDF-EXPORT-PLAN-1`, aprobado por el fundador
+el 2026-09-11 sobre un canvas de tres plantillas (Ejecutiva, Checklist
+operativa, Informe de consultoría) — eligió la **Informe de consultoría**
+(portada editorial oscura + secciones numeradas) y confirmó que el PDF
+**sustituye** al `.md`, no convive con él, y que la Puntuación GEO se enseña
+en la portada.
+
+**Qué cambia.** `handleExport` (`recommendations-client.tsx`) deja de crear
+un `Blob`/`<a download>` con el markdown de `buildExportPlanMarkdown` y pasa
+a invocar `window.print()` sobre un informe HTML con marca
+(`export-report.tsx`, montado siempre oculto y sólo visible por
+`@media print` en `export-report.css`). El botón sigue llamándose "Exportar
+plan"; el resultado ahora es "Guardar como PDF" desde el diálogo de
+impresión del navegador, en vez de una descarga directa de fichero.
+
+**Datos nuevos que llegan a la pantalla.**
+- **Puntuación GEO** (`page.tsx`): se añade una consulta a `run_scores` de
+  las últimas `GEO_SCORE_LOOKBACK_ROWS` filas del proyecto y se resuelve con
+  `resolveGeoScore` (`lib/metrics/run-metrics.ts`, único dueño desde
+  TRUST-METRICS-1, §183) — la MISMA cifra que el medidor de Visión general
+  para el mismo proyecto, nunca recalculada aquí. `null` cuando no hay
+  suficientes runs; la portada omite la cifra en ese caso, no inventa un
+  número.
+- **Motor que respalda cada recomendación**: `recommendationEngineLabels`
+  (`lib/recommendations/export-plan.ts`), pura, lee
+  `evidence_json.affected_prompt_details[].provider` — el mismo campo que ya
+  pinta `RecCard` — y lo traduce con `getEngineMeta` (`lib/scan/
+  engine-meta.ts`), nunca una lista de motores propia. Ausencia de
+  `provider` (evidencia persistida antes de RECS-EVIDENCE-2) se omite, nunca
+  se asume Gemini por defecto.
+- **Fecha del escaneo**: reutiliza `lastScanDate`, ya calculado en
+  `page.tsx` para `ScanStatePill` — el informe y la consola nunca dicen
+  fechas distintas.
+
+**Regla de premisa (retira un camino de recuperación — CLAUDE.md, "Cierre de
+fase").** El `.md` descargable era en sí mismo un respaldo: ACTIONS-OBSERVABLE-1
+slice 4b.1 (§210) documentó que un `<a download>` sintético puede ser
+bloqueado por el navegador SIN lanzar una excepción capturable, y por eso
+existía `ExportPlanModal` (markdown completo + copiar al portapapeles) como
+salida que sobrevive a ese bloqueo silencioso.
+
+Retirar el `.md` como formato PRINCIPAL es seguro porque la premisa que lo
+sostiene es distinta de la premisa que sostenía el `<a download>`:
+`window.print()` es una API nativa del navegador invocada directamente
+(nunca un elemento sintético con un evento de click programático), así que
+no tiene el modo de fallo silencioso que motivó el modal en primer lugar. El
+modo de fallo que SÍ puede tener — un entorno sin `window.print` (un visor
+incrustado, un navegador muy antiguo, un sandbox) — es detectable en código
+antes de intentarlo (`typeof window.print !== "function"`), a diferencia de
+aquél. `ExportPlanModal` **no se retira**: sigue siendo el respaldo, con el
+mismo `buildExportPlanMarkdown` de siempre, ahora gateado tras esa
+comprobación de disponibilidad en vez de tras un `try/catch` alrededor de la
+descarga.
+
+**Lo que sí queda pendiente y no se resuelve en este PR**: un navegador que
+SÍ tiene `window.print` pero cuyo usuario cancela el diálogo del sistema, o
+cuya política de impresión lo bloquea sin lanzar una excepción, no cae al
+modal — `window.print()` no expone esa distinción al código que lo llama.
+Riesgo residual conocido, mismo tipo (aunque no la misma causa) que el que
+ACTIONS-OBSERVABLE-1 slice 4b.1 ya documentó como aceptado para la descarga
+de fichero.
+
+**Fuera de alcance, explícito.** Las otras dos plantillas del canvas
+(Ejecutiva, Checklist operativa); generación server-side (Playwright/
+puppeteer); envío del PDF por email; nombre de marca derivado en vez del
+dominio crudo en la portada.
+
+**Comprobado.** `pnpm test`: 227/227 archivos, 3136/3136 tests (3 nuevos en
+`lib/recommendations/export-plan.test.ts` para `recommendationEngineLabels`).
+`pnpm run validate` (build + typecheck + lint) en verde.
+
+**Trazabilidad.** `lib/recommendations/export-plan.ts`
+(`recommendationEngineLabels` nuevo); `app/dashboard/projects/[projectId]/
+recommendations/export-report.tsx` y `export-report.css` (nuevos);
+`recommendations-client.tsx` (`handleExport`, botón, montaje de
+`ExportReport`); `app/dashboard/projects/[projectId]/recommendations/
+page.tsx` (consulta de `run_scores` + `resolveGeoScore`);
+`docs/design-reference/pdf-export-plan-1/` (diseño aprobado). Task Intake
+Report `PDF-EXPORT-PLAN-1`, aprobado por el fundador 2026-09-11.
+
+---
+
+## 216. PDF-EXPORT-PLAN-1: portada pixel-perfect, logo oficial, y el contenido dejaba de recortarse en silencio (2026-09-11)
+
+**Origen.** El fundador, mirando el PDF real del PR #529, pidió tres cosas:
+portada pixel-perfect contra el artboard aprobado (§215), la métrica
+resaltada (Puntuación GEO) fiel a ese mismo artboard, y el logo oficial en
+vez de una aproximación — y pidió explícitamente que el PDF generado se
+probara antes de devolverlo la próxima vez.
+
+**Qué estaba mal.**
+1. **Logo aproximado, no el oficial.** `export-report.tsx` dibujaba un
+   cuadrado con degradado + texto "GenScore" en Bricolage Grotesque, en vez
+   de `BrandLogo` (`components/ui/brand-logo.tsx`) — el wordmark real de la
+   marca, con su propia geometría de trazado. Sustituido en la portada
+   (`onDark`) y en la cabecera del contenido.
+2. **Medidas en mm, no en px.** El artboard aprobado se autoría a
+   794×1123px (96 css-px/pulgada — la misma convención que documenta
+   `artifact-design`). `export-report.css` había reescalado esas medidas a
+   mm a mano (padding `15mm 18mm`, título `42px` en vez de `52px`, meta
+   `gap: 32px` en vez de `48px`...) — no eran un redondeo menor, eran una
+   plantilla distinta. Todas las medidas de `.xrp-cover`/`.xrp-content`
+   pasan a los valores px exactos del artboard.
+3. **Un fallo de correctitud más grave, encontrado al construir el arnés de
+   prueba que el fundador pidió**: `.xrp-page` tenía `height: 1123px;
+   overflow: hidden` — cualquier lista de recomendaciones que no cupiera en
+   una sola página A4 se recortaba EN SILENCIO, sin error, sin aviso. Con
+   los datos de ejemplo del arnés (16 recomendaciones), sólo 5-6 cabían;
+   el resto desaparecía del PDF. Es la misma clase de fallo que
+   `.claude/rules/scan.md` prohíbe para el pipeline de escaneo ("Never cap
+   the work by row count") — aquí aplicado a páginas en vez de a filas de
+   base de datos. Corregido: la portada (`.xrp-cover`) sigue siendo una
+   página fija de 794×1123 con `overflow: hidden` — es segura porque su
+   contenido nunca varía en longitud — pero `.xrp-content` ya NO tiene
+   altura fija ni `overflow: hidden`: fluye a tantas páginas impresas como
+   haga falta (`page-break-before: always` al empezar, `break-inside:
+   avoid` en cada tarjeta). El pie de página pasa de estar `position:
+   absolute` (anclado a una altura de página que ya no existe) a ser un
+   bloque normal al final del documento.
+
+**Cómo se probó, antes de devolver el PDF** (arnés desechable, no
+committeado): `renderToStaticMarkup(ExportReport(...))` con datos de
+ejemplo (16 recomendaciones, para forzar el salto de página) envuelto en un
+HTML con Google Fonts + `export-report.css`, abierto con Playwright +
+Chromium (`/opt/pw-browsers`, ya preinstalado en el entorno) y generado con
+`page.pdf({ printBackground: true, preferCSSPageSize: true })` — la MISMA
+ruta de renderizado que `window.print()` usa en un navegador real, no una
+aproximación. El PDF resultante tiene 3 páginas reales (1 portada + 2 de
+contenido, confirmado contando objetos `/Type /Page` en el PDF binario) y
+las capturas de cada `.xrp-page` bajo `emulateMedia({media:'print'})`
+confirman visualmente: el logo oficial, la tipografía y tamaños del
+artboard, la Puntuación GEO en cian sobre la portada, y las 16
+recomendaciones completas repartidas en dos páginas de contenido en vez de
+recortadas a las primeras 5-6.
+
+**Comprobado.** `pnpm test`: 227/227 archivos, 3136/3136 tests (sin cambios
+de comportamiento en el `.md`, que no se tocó). `pnpm run validate` (build +
+typecheck + lint) en verde.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+export-report.tsx` (logo oficial, pie de página al final del flujo);
+`export-report.css` (medidas px 1:1 contra el artboard, `.xrp-cover` fija /
+`.xrp-content` fluida). `docs/design-reference/pdf-export-plan-1/
+informe-consultoria.html` (referencia contra la que se comparó). Log §215
+(fase original), este log corrige y completa el mismo PR #529 antes del
+Human Gate.
+
+---
+
+## 217. PDF-EXPORT-PLAN-1: la portada se deformaba en un dispositivo real — el informe se monta por portal en `document.body` (2026-09-11)
+
+**Origen.** El fundador probó el PDF real (§216 ya corregido) en su iPhone:
+la portada salía con un círculo cian SÓLIDO cubriendo la mitad de la página
+y la fila de metadatos (Cliente/Fecha/Puntuación GEO) pegada muy abajo, con
+un hueco enorme en medio — nada que ver con el diseño aprobado, aunque el
+mismo componente había salido bien en las pruebas de Chromino headless de
+§216.
+
+**Por qué las pruebas de §216 no lo detectaron.** Ese arnés renderizaba
+`ExportReport` en un HTML aislado, sin ningún ancestro real de la consola.
+El componente real vive anidado dentro del layout completo del dashboard
+(barra lateral, cabecera fija, contenedores responsive con `overflow`,
+posiblemente `transform` en el drawer móvil). El CSS de aislamiento de
+impresión usaba `visibility: hidden` en cascada sobre `body *` para ocultar
+todo menos `.xrp-root` — pero `visibility` sólo oculta la PINTURA de un
+elemento, nunca anula su caja de layout: si un ancestro tiene `overflow:
+hidden` con una altura pequeña, o un `transform`, sigue constriñendo a sus
+descendientes exactamente igual aunque sean invisibles. El arnés de §216,
+al no tener esos ancestros, no podía reproducir el fallo.
+
+**Causa exacta.** `.xrp-cover-bg` (el resplandor decorativo) es
+`position: absolute; inset: 0`, con containing block el ancestro
+posicionado más cercano. Si algún ancestro real de la consola introduce su
+propio contexto de posicionamiento/tamaño (layout responsive, drawer),
+tanto el propio informe como su fondo heredaban dimensiones que no eran
+794×1123 reales, deformando el degradado (calculado en porcentajes) hasta
+convertirlo en un círculo sólido gigante y desplazando la fila de metadatos.
+
+**Corrección — dos cambios independientes, cada uno cierra un riesgo
+distinto:**
+1. **`ExportReport` se monta con `createPortal` en `document.body`**
+   (`export-report.tsx`), no en el sitio del árbol de React donde aparece
+   `<ExportReport>`. Como hijo directo de `body`, no hereda `overflow`,
+   `transform` ni ningún contexto de tamaño de la app — el CSS de
+   aislamiento de impresión se simplifica a `body > *:not(.xrp-root) {
+   display: none }`, ya no hace falta el truco de `visibility` en cascada.
+2. **El resplandor de la portada pasa de `background: radial-gradient(...)`
+   CSS a un `<svg>` con `<radialGradient>` propio.** Un degradado CSS con
+   canal alfa (`rgba`) es una fuente conocida de fallos al exportar/imprimir
+   en motores WebKit — se rasteriza como color sólido, perdiendo la
+   transparencia. Un gradiente definido en SVG (con `stop-opacity`) se
+   rasteriza con más fiabilidad en ese mismo camino. Defensa adicional,
+   independiente de la causa nº1 — ambas se corrigen porque cualquiera de
+   las dos por sí sola podría no ser la única causa en todos los motores.
+
+**Cómo se probó esta vez — reproduciendo el bug, no sólo el resultado
+feliz.** Se compiló el componente real (`export-report.tsx`) con esbuild a
+un bundle de navegador, montado con `ReactDOM.createRoot` dentro de un
+contenedor deliberadamente hostil (`overflow: hidden`, `transform`, tamaño
+de viewport de iPhone 390×844) que imita las restricciones de un layout de
+consola real — el mismo tipo de ancestro que el arnés de §216 no tenía.
+Abierto con Playwright/Chromium, se confirmó por código que `.xrp-root`
+termina como hijo directo de `<body>` (`el.parentElement ===
+document.body`) y, por captura, que la portada sale con las proporciones y
+el resplandor correctos incluso dentro de ese contenedor hostil.
+
+**Lo que sigue sin poder probarse desde aquí.** Esta sesión no tiene acceso
+a un iPhone/Safari real ni al layout completo de la consola con datos de
+sesión reales — la reproducción es una aproximación deliberada del tipo de
+restricción que causaba el fallo, no una repetición exacta del DOM real de
+`/dashboard/projects/[id]/recommendations`. El fundador es quien cierra
+esta verificación probando el PDF real en su dispositivo.
+
+**Comprobado.** `pnpm test`: 227/227 archivos, 3136/3136 tests (sin cambios
+de comportamiento fuera de `export-report.tsx`/`.css`). `pnpm run validate`
+(build + typecheck + lint) en verde.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+export-report.tsx` (`createPortal` a `document.body`, resplandor en SVG);
+`export-report.css` (aislamiento de impresión simplificado a `body > *`).
+Log §215 (fase original), §216 (primera corrección de fidelidad), este log
+corrige el mismo PR #529 antes del Human Gate, sobre el mismo componente.
+
+---
+
+## 218. PDF-EXPORT-PLAN-1: la portada ocupaba página y media — faltaba `box-sizing`, y la paginación se rehace entera (2026-09-11)
+
+**Origen.** El fundador, sobre el PDF real: *"la portada ahora ocupa dos
+páginas, una y media en concreto. Revisa todo desde cero. Haz que la portada
+se ajuste al diseño del artefacto con la imagen degradada que habíamos
+visto, y el resto del informe se genere bien."*
+
+**Causa raíz, y por qué las dos correcciones anteriores no la vieron.**
+`export-report.css` nunca declaró `box-sizing: border-box`. Con
+`height: 1123px` y `padding: 56px` arriba y abajo, la caja de la portada
+medía **1235px** — un 10% más que un A4 — así que al escalar para caber en
+el ancho del papel (Safari hace shrink-to-fit al imprimir) el sobrante caía
+a una segunda página. Ni §216 ni §217 lo detectaron porque **ninguna de las
+dos miró las páginas del PDF**: §216 capturó el elemento `.xrp-cover` con
+Playwright (una captura de elemento sale bien mida lo que mida: no tiene
+noción de página) y §217 comprobó dónde colgaba `.xrp-root` en el DOM. El
+"Página 1 de 4" que se leía en la propia captura del fundador ya decía que
+había un desbordamiento, y nadie lo leyó.
+
+**Las otras tres cosas que estaban mal, encontradas al revisarlo entero:**
+1. **Doble salto de página.** La portada declaraba `page-break-after:
+   always` y el contenido `page-break-before: always` — dos saltos entre los
+   mismos dos bloques, que en algunos motores meten una página en blanco.
+   Queda uno solo.
+2. **Las páginas 3 y siguientes salían con el texto pegado al borde del
+   papel.** Con `@page { margin: 0 }`, el margen del contenido lo daba un
+   `padding` de `.xrp-content` — y un padding se aplica UNA vez, al
+   principio del bloque, no en cada página que ese bloque ocupa. Se
+   resuelve con una **página con nombre** (`@page xrp-content-page`) que
+   lleva los márgenes del artboard y que sólo usa el contenido; la portada
+   sigue usando la página por defecto, sin márgenes, para sangrar.
+   *Se intentó antes lo contrario* —márgenes en el `@page` general y
+   márgenes negativos en la portada para sangrar— y **no funciona**: Chrome
+   recorta el pintado al área de contenido y la portada salía con un marco
+   blanco. Verificado rasterizando el PDF, no razonado.
+3. **`.xrp-items` era un contenedor flex con `gap`.** Un contenedor flex no
+   reparte sus hijos entre páginas impresas: los mantiene en un bloque. El
+   espaciado pasa a `margin-bottom` de cada tarjeta, que sí sobrevive a un
+   salto de página.
+
+**La imagen degradada del artboard.** El resplandor cian vuelve a ser
+exactamente el del artefacto aprobado, pero ya no como `radial-gradient`
+CSS (§217: WebKit lo rasteriza como color sólido al imprimir) ni como SVG
+(§217, defensa que tampoco bastaba): es un **PNG generado desde el propio
+degradado del artboard e incrustado como data URI** (7 KB, 160×226
+escalados con `background-size: 100% 100%` — un degradado suave no pierde
+nada al escalar). Incrustado y no servido desde `/public` a propósito: una
+imagen de fondo que depende de una petición de red puede no haber llegado
+cuando se abre el diálogo de impresión.
+
+**Cómo se probó esta vez — mirando el PDF, que es lo que faltaba.** Se
+instaló `poppler-utils` en el entorno y el arnés ahora: compila el
+componente real con esbuild, lo monta con `ReactDOM.createRoot` dentro de un
+contenedor hostil (`overflow`+`transform`, viewport de iPhone), genera el
+PDF con `page.pdf()`, lee `pdfinfo` para contar páginas y tamaño, y
+**rasteriza cada página con `pdftoppm` para abrirlas una a una**. Dos casos:
+- 3 recomendaciones → **2 páginas** (portada + contenido). Si la portada
+  desbordara, serían 3. Es la aserción que cierra el fallo del fundador.
+- 21 recomendaciones → **4 páginas**, las 21 tarjetas presentes, ninguna
+  partida, márgenes correctos en las páginas 2, 3 y 4, pie al final.
+Altura de la caja de la portada medida bajo `emulateMedia({media:"print"})`:
+**1122px** (A4 a 96dpi menos 1px para absorber redondeos subpíxel que
+meterían una página en blanco), no los 1235px de antes.
+
+**Lo que sigue sin poder probarse desde aquí.** Las webfonts no cargaron en
+la prueba (la política de egress del entorno bloqueó `fonts.googleapis.com`),
+así que las capturas muestran la familia de reserva: la geometría y la
+paginación están verificadas, la fidelidad tipográfica no. Y sigue sin haber
+un iPhone/Safari real: `page.pdf()` de Chromium es el mismo camino de
+renderizado que `window.print()`, pero no es WebKit.
+
+**Comprobado.** `pnpm test`: 227/227 archivos, 3136/3136 tests.
+`pnpm run validate` (build + typecheck + lint) en verde.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+export-report.css` (reescrito: `box-sizing`, `@page` con nombre, fondo PNG
+incrustado, tarjetas sin flex); `export-report.tsx` (fuera el SVG del
+fondo). Log §215 (fase), §216 (fidelidad), §217 (portal), este cierra la
+paginación. Mismo PR #529, antes del Human Gate.
+---
+
+## 219. PDF-EXPORT-PLAN-1: la portada seguía desbordando en Safari iOS — una altura fija en px nunca puede ser correcta (2026-09-12)
+
+**Origen.** El fundador subió el PDF real generado desde su iPhone
+("se sigue viendo la portada cortada"). Rasterizado con `pdftoppm`, el
+diagnóstico fue inmediato y distinto del de §218: **la fila de metadatos
+—Cliente / Fecha del escaneo / Puntuación GEO— no estaba en la portada**.
+Estaba en la página 2, sobre una banda vacía. 6 páginas para 3
+recomendaciones.
+
+**Causa raíz.** `Producer: iOS Version 26.6.1 Quartz PDFContext`,
+`Creator: Safari`: **Safari en iOS ignora `@page { margin: 0 }`** y reserva
+espacio para su propia cabecera y pie (la URL y "Página 1 de 6" se ven
+impresas en el PDF). El área imprimible real es bastante menor que un A4,
+así que la portada de `height: 1122px` —A4 completo, correcta tras el
+arreglo de `box-sizing` de §218— seguía sin caber, desbordaba ~20% y
+`overflow: hidden` convertía ese desbordamiento en un recorte silencioso
+que se comía los metadatos.
+
+**La lección, que §216 y §218 no vieron:** *cualquier* altura fija en px es
+incorrecta por construcción, porque el área imprimible no la decide el CSS
+sino el navegador, y no es conocible. §216 puso 1123px, §218 la corrigió a
+1122px con `box-sizing` — ambas iteraciones discutían el número equivocado
+en vez de la unidad. La portada ahora mide **`height: 100%`**: un
+porcentaje contra el área de página, que ya descuenta lo que cada motor
+reserve. A sangre en Chrome con márgenes 0; ajustada dentro del área útil
+en Safari. Y `overflow: hidden` se retira: era lo que hacía silencioso el
+fallo.
+
+**Dos cambios estructurales que ese `100%` exige:**
+1. **Portada y contenido son dos hijos DIRECTOS de `body`** (un Fragment en
+   el `createPortal`), no hermanos dentro de un `.xrp-root`. Un porcentaje
+   sólo resuelve si todos los ancestros tienen altura definida, y el `div`
+   envolvente no podía tenerla: al contenido no se le puede dar altura
+   ninguna, tiene que fluir a tantas páginas como haga falta. Con
+   `html, body { height: 100% }` la cadena queda limpia para la portada y
+   libre para el contenido. `overflow: visible !important` en `html, body`
+   es obligatorio ahí: con `body` a la altura de una página, cualquier
+   recorte se comería las recomendaciones siguientes — el fallo de §216
+   otra vez.
+2. **El aislamiento de impresión devuelve a cada uno SU display**
+   (`flex` a la portada, `block` al contenido), no un `block` común. Un
+   `display: block !important` sobre la portada destruye su
+   `justify-content: space-between` —que es lo que reparte cabecera,
+   titular y metadatos a lo alto de la página— y apiña los tres bloques
+   arriba, solapados. Se introdujo y se detectó en la misma sesión, en la
+   captura del propio arnés.
+
+**El arnés ahora tiene poder de detección, y se comprobó.** Las pasadas de
+§216 y §218 daban por bueno el resultado sin saber si el arnés era capaz de
+ver el fallo. Ahora: (a) hay un escenario **safari-like** que inyecta
+`@page { margin: 12mm 10mm 18mm 10mm }` para reproducir que el motor
+imponga márgenes, y (b) un **control negativo** que fuerza la altura fija de
+1122px del código anterior bajo ese mismo `@page` y **exige** que el PDF
+salga con 3 páginas en vez de 2. Sale con 3: el arnés discrimina. Sin ese
+control, "2 páginas" no habría significado nada.
+
+**Comprobado.** Chrome (márgenes 0) y safari-like, con 3 y con 21
+recomendaciones: 2 y 4 páginas respectivamente, las 21 tarjetas presentes,
+los 3 bloques de metadatos en la portada, márgenes correctos en las páginas
+de contenido. `pnpm test`: 227/227 archivos, 3136/3136 tests.
+`pnpm run validate` en verde.
+
+**Lo que sigue sin estar verificado.** Que esto se vea bien en el Safari
+real del fundador. El escenario safari-like reproduce *la causa* (el motor
+impone márgenes de página) sobre Chromium, no el motor de WebKit. Y las
+webfonts siguen sin cargar en el entorno de pruebas, así que la tipografía
+de las capturas es la de reserva. Lo cierra el fundador con su PDF, como
+esta vez.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/recommendations/
+export-report.css` (`height: 100%`, cadena `html, body`, display por
+elemento); `export-report.tsx` (portal a un Fragment, `aria-hidden` en cada
+sección). Log §215 (fase), §216, §217, §218 (iteraciones previas). Mismo
+PR #529, antes del Human Gate.

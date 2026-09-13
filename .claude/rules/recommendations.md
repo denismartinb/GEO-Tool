@@ -215,17 +215,120 @@ paths:
 - **"Exportar plan" es la primera acción puramente de cliente que entra a
   este contrato** (ACTIONS-OBSERVABLE-1 slice 4b.1, log §210) — todas las
   anteriores eran server actions. `handleExport` se envuelve en un `async`
-  que resuelve `{ success: true }` tras el "click" de descarga y captura
-  cualquier fallo en `{ success: false, error }`, sin ampliar
-  `lib/ui/action-feedback.ts` (que sólo espera una promesa). El constructor
-  del markdown vive aparte, en `lib/recommendations/export-plan.ts`, puro y
-  con test — nunca vuelva a ser un closure sin test dentro del componente.
-  Si la descarga falla, `ExportPlanModal` es la salida que sobrevive a un
-  entorno que la bloquea (política del navegador, un visor incrustado, un
-  sandbox): el markdown completo, seleccionable, con su propio "Copiar al
-  portapapeles". Riesgo residual conocido y aceptado: un navegador puede
-  bloquear la descarga SIN lanzar una excepción capturable, y en ese caso
-  el modal no se abre — el `try/catch` no puede detectar un fallo silencioso.
+  que resuelve `{ success: true }` y captura cualquier fallo en
+  `{ success: false, error }`, sin ampliar `lib/ui/action-feedback.ts` (que
+  sólo espera una promesa).
+- **PDF-EXPORT-PLAN-1 (log §215): el `.md` descargable ya NO es el formato
+  principal.** `handleExport` invoca `window.print()` sobre `ExportReport`
+  (`export-report.tsx`/`.css`, montado siempre oculto y visible sólo por
+  `@media print`) en vez de crear un `Blob`/`<a download>`. El constructor
+  del markdown (`buildExportPlanMarkdown`, `lib/recommendations/
+  export-plan.ts`, puro y con test) sigue vivo, pero sólo como contenido del
+  respaldo. `ExportPlanModal` **sigue siendo obligatorio**: si
+  `typeof window.print !== "function"` (visor incrustado, sandbox, navegador
+  sin soporte), se abre con el markdown completo y "Copiar al portapapeles"
+  — la premisa que permite retirar la descarga de fichero como formato
+  principal es que `window.print()` es una API nativa invocada directamente,
+  sin el modo de fallo silencioso de un `<a download>` sintético bloqueado
+  por política del navegador (motivo original del modal); un entorno SIN
+  `window.print` sí es detectable en código, a diferencia de aquél. Riesgo
+  residual conocido y aceptado, de otra naturaleza: un usuario que cancela
+  el diálogo del sistema, o una política de impresión que lo bloquea sin
+  lanzar excepción, no cae al modal — `window.print()` no distingue eso del
+  código que lo llama.
+- **El motor que respalda cada recomendación en el informe exportable viene
+  de `recommendationEngineLabels`** (`lib/recommendations/export-plan.ts`),
+  que lee `evidence_json.affected_prompt_details[].provider` — el mismo
+  campo que ya pinta `RecCard` en pantalla — y lo traduce con
+  `getEngineMeta`. Nunca una lista de motores propia; ausencia de
+  `provider` se omite, nunca se asume Gemini por defecto (mismo principio
+  que RECS-EVIDENCE-2, arriba).
+- **La Puntuación GEO de la portada del informe exportable se lee de
+  `resolveGeoScore` (`lib/metrics/run-metrics.ts`)**, nunca recalculada en
+  esta pantalla — TRUST-METRICS-1 (log §183) es la regla que esto obedece.
+  `page.tsx` lee `GEO_SCORE_LOOKBACK_ROWS` filas de `run_scores`, igual que
+  cualquier otro consumidor del módulo; `null` cuando no hay suficientes
+  runs, la portada omite la cifra en vez de inventarla.
+- **El informe exportable usa el logo oficial (`BrandLogo`,
+  `components/ui/brand-logo.tsx`), nunca una aproximación dibujada a mano**
+  (log §216) — un cuadrado con degradado + texto no es la marca, por mucho
+  que use los mismos colores.
+- **`.xrp-cover` es la ÚNICA parte de `export-report.css` con altura fija y
+  `overflow: hidden`** — es segura porque su contenido nunca varía en
+  longitud. `.xrp-content` NUNCA lleva altura fija: una lista de
+  recomendaciones que no cabe en una página tiene que fluir a la siguiente
+  (`page-break-before: always` al empezar, `break-inside: avoid` por
+  tarjeta), nunca recortarse en silencio. Fijar su altura recortó
+  recomendaciones reales sin error ni aviso (log §216) — la misma clase de
+  fallo que `.claude/rules/scan.md` prohíbe para el pipeline bajo "Never cap
+  the work by row count", aplicada aquí a páginas de un documento.
+- **Cualquier cambio a `export-report.tsx`/`.css` se prueba generando el PDF
+  de verdad Y ABRIENDO SUS PÁGINAS, no capturando elementos** (log §218).
+  El arnés: compilar el componente con esbuild, montarlo con
+  `ReactDOM.createRoot` dentro de un contenedor con `overflow`+`transform`
+  (§217), `page.pdf({ printBackground: true, preferCSSPageSize: true })`,
+  `pdfinfo` para contar páginas y `pdftoppm` para rasterizarlas y mirarlas
+  una a una. **La aserción que cierra el fallo del fundador: con 3
+  recomendaciones el PDF tiene exactamente 2 páginas** — si la portada
+  desborda, son 3. Una captura de elemento (`locator.screenshot()`) NO vale:
+  sale bien mida lo que mida, porque no tiene noción de página, y por eso
+  §216 y §218 dieron por bueno un informe cuya portada ocupaba página y
+  media.
+- **El arnés incluye un escenario `safari-like` y un CONTROL NEGATIVO, o no
+  vale nada** (log §219). El escenario inyecta
+  `@page { margin: 12mm 10mm 18mm 10mm }` para reproducir la causa real del
+  fallo — que el motor imponga márgenes de página aunque el CSS pida 0,
+  como hace Safari iOS. El control fuerza el código anterior (altura fija
+  de 1122px) bajo ese mismo `@page` y **exige que salgan 3 páginas**: si no
+  las saca, el arnés no discrimina y su "2 páginas" no prueba nada. §216 y
+  §218 pasaron sin este control y las dos dieron por arreglado algo que
+  seguía roto.
+- **La portada mide `height: 100%`, JAMÁS una altura fija en px** (log
+  §219). El área imprimible no la decide el CSS: Safari en iOS ignora
+  `@page { margin: 0 }` y reserva espacio para su cabecera y pie, así que
+  un A4 completo (1122px) desbordaba y se llevaba la fila de metadatos a
+  una segunda página. §216 puso 1123px y §218 lo "corrigió" a 1122px con
+  `box-sizing`: dos iteraciones discutiendo el número cuando el error era
+  la unidad. Para que ese porcentaje resuelva, **portada y contenido son
+  hijos directos de `body`** (un Fragment en el `createPortal`) con
+  `html, body { height: 100% }` — un envoltorio intermedio sin altura
+  rompe la cadena, y al contenido no se le puede dar altura porque tiene
+  que fluir. `overflow: visible !important` en `html, body` no es
+  cosmético: con `body` a una página, un recorte se comería las
+  recomendaciones siguientes.
+- **`box-sizing: border-box` en todo el informe** — sin él la caja mide
+  altura + padding (log §218).
+- **El aislamiento de impresión devuelve a cada bloque SU display** —
+  `flex` a la portada, `block` al contenido — nunca un `block` común: un
+  `display: block !important` sobre la portada destruye su
+  `justify-content: space-between` y apiña cabecera, titular y metadatos
+  arriba, solapados (log §219).
+- **Los márgenes de las páginas de contenido van en una `@page` CON NOMBRE
+  (`@page xrp-content-page`), nunca en un `padding` del contenedor.** Un
+  padding se aplica una vez, al principio del bloque: las páginas 3 y
+  siguientes salían con el texto pegado al borde del papel. La portada usa
+  la página por defecto (`margin: 0`) para sangrar. **No intentes lo
+  contrario** —márgenes en el `@page` general + márgenes negativos en la
+  portada—: Chrome recorta el pintado al área de contenido y la portada sale
+  con marco blanco (probado y descartado, log §218).
+- **Ningún contenedor flex entre la lista y sus tarjetas.** Un flex no
+  reparte sus hijos entre páginas impresas; el espaciado entre tarjetas es
+  `margin-bottom`, no `gap` (log §218).
+- **`ExportReport` se monta con `createPortal` en `document.body`, nunca
+  directamente donde aparece `<ExportReport>` en el árbol.** Anidado dentro
+  del layout de la consola (barra lateral, contenedores responsive), el
+  informe hereda `overflow`/`transform` de sus ancestros reales y su
+  portada se deforma — un fallo que un arnés de prueba sin esos ancestros
+  NO puede ver (log §217). Si algún día esto cambia, la prueba tiene que
+  reproducir un ancestro con `overflow: hidden` + `transform`, no sólo
+  renderizar el componente aislado.
+- **El resplandor decorativo de la portada es un PNG incrustado como data
+  URI en `export-report.css`, ni degradado CSS ni SVG** (log §218). Un
+  `radial-gradient` con canal alfa se rasteriza como color sólido en el
+  camino de impresión de WebKit (§217), y el SVG fue una defensa que no
+  bastó; un PNG se imprime idéntico en todos los motores. Incrustado y no
+  servido desde `/public`: una imagen de fondo que depende de una petición
+  de red puede no haber llegado cuando se abre el diálogo de impresión.
 
 ## Pantalla — "copiloto GEO" (RECS-REDESIGN-1, log §115)
 
