@@ -6,6 +6,7 @@ import { PublicHeader } from "@/components/marketing/public-header";
 import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
+import { PlanCardCta } from "@/components/pricing/plan-card-cta";
 import { supportMailto } from "@/lib/support";
 import { PLANS, PLAN_MATRIX, PROMO_DURATION_MONTHS, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 import { getActivePromoPlanIds } from "@/lib/stripe";
@@ -64,10 +65,7 @@ function PlanCard({ plan, promoActive }: { plan: Plan; promoActive: boolean }) {
           {plan.cta}
         </a>
       ) : (
-        <Link className={ctaClass} href={`/signup?plan=${plan.id}`}>
-          {plan.cta}
-          {plan.ctaStyle === "primary" ? <Icon name="arrRight" size={15} /> : null}
-        </Link>
+        <PlanCardCta planId={plan.id} cta={plan.cta} className={ctaClass} primary={plan.ctaStyle === "primary"} />
       )}
       <ul className="price-feats">
         {plan.highlights.map((h) => (

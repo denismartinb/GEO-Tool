@@ -4,7 +4,7 @@ import { getAccountRole } from "@/lib/account-role";
 import { getUsageSummary } from "@/lib/billing";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 import { deriveNameFromEmail } from "@/lib/derive-name-from-email";
-import { PLANS, resolveShownPromoPrice } from "@/app/pricing/plans-data";
+import { PLANS, resolveShownPromoPrice, type Plan } from "@/app/pricing/plans-data";
 import { AccountSection } from "@/components/settings/account-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
@@ -31,13 +31,13 @@ export const metadata: Metadata = consoleMetadata("Ajustes");
 export default async function SettingsPage({
   searchParams
 }: {
-  searchParams: Promise<{ checkout?: string }>;
+  searchParams: Promise<{ checkout?: string; openPlan?: string }>;
 }) {
   const { supabase, user } = await requireUser();
   const role = await getAccountRole();
   const isAdmin = role === "admin";
 
-  const { checkout } = await searchParams;
+  const { checkout, openPlan } = await searchParams;
 
   const email = user.email ?? "";
   const initials = email.slice(0, 2).toUpperCase();
@@ -156,7 +156,10 @@ export default async function SettingsPage({
                 <h2 className="set-sech sp" id="plan">
                   Plan
                 </h2>
-                <BillingContent checkoutStatus={checkout} />
+                <BillingContent
+                  checkoutStatus={checkout}
+                  openPlanId={PLANS.some((p) => p.id === openPlan) ? (openPlan as Plan["id"]) : undefined}
+                />
               </>
             )}
 

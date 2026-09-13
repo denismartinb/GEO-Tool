@@ -69,7 +69,8 @@ export function PlanBillingSection({
   agencyPlanId,
   usage,
   activeProjects,
-  promoPlanIds = []
+  promoPlanIds = [],
+  openPlanId
 }: {
   currentPlanId: Plan["id"];
   agencyPlanId: Plan["id"];
@@ -77,10 +78,20 @@ export function PlanBillingSection({
   activeProjects: ActiveProjectSummary[];
   /** PRICING-PROMO-1: plans with an active, Stripe-backed promo right now — see billing-content.tsx. */
   promoPlanIds?: string[];
+  /**
+   * PRECIO-BUTTONS-CONSOLE-1: opens "Cambiar de plan" on this plan as soon as
+   * the section mounts — the deep link from a `/pricing` CTA clicked while
+   * logged in (`?openPlan=<id>`, validated by the page). Read once into the
+   * initial state below, not in an effect: an effect would flash the closed
+   * card for a frame before opening the modal.
+   */
+  openPlanId?: Plan["id"];
 }) {
   const [planId, setPlanId] = useState<Plan["id"]>(currentPlanId);
   const [projects, setProjects] = useState<ActiveProjectSummary[]>(activeProjects);
-  const [modal, setModal] = useState<{ initialTargetId?: Plan["id"]; overageOnly?: boolean } | null>(null);
+  const [modal, setModal] = useState<{ initialTargetId?: Plan["id"]; overageOnly?: boolean } | null>(
+    openPlanId ? { initialTargetId: openPlanId } : null
+  );
   const [portalError, setPortalError] = useState<string | null>(null);
   const [isPortalPending, startPortalTransition] = useTransition();
 
