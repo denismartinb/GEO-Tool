@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireOperator } from "@/lib/admin/operator";
-import { isProOrAbove } from "@/lib/billing";
+import { isProOrAbove, resolveEffectivePlanId } from "@/lib/billing";
 import { sendAdminAutomationChangeAlertEmail } from "@/lib/email/transactional";
 import { AUDIT_HALF_COLUMN, checkRecurringScansPrecondition } from "@/lib/projects/automation-toggles";
 
@@ -192,7 +192,7 @@ export async function setAutoAuditHalfAsOperator(formData: FormData) {
 
   const owner = await loadOwnerProfile(service, project.owner_user_id);
 
-  if (enabled && half === "coverage" && !isProOrAbove(owner?.current_plan)) {
+  if (enabled && half === "coverage" && !isProOrAbove(resolveEffectivePlanId(owner?.current_plan, owner?.email))) {
     redirect(adminUsersUrl(project.owner_user_id, { q, status, admin_error: "coverage_plan_ineffective" }));
   }
 

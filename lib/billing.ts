@@ -6,9 +6,11 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import { getActiveSubscriptionPromo } from "@/lib/stripe";
+import { isCompedAccountEmail } from "@/lib/billing/comped-accounts";
 import type { AuthenticatedContext } from "@/lib/auth";
 
 const DEFAULT_PLAN_ID: Plan["id"] = "pro";
+const COMPED_PLAN_ID: Plan["id"] = "agency";
 
 export type ActiveProjectSummary = { id: string; name: string; domain: string };
 
@@ -114,6 +116,26 @@ export function resolvePlan(planId: string | null | undefined): Plan {
 }
 
 /**
+ * BILLING-COMPED-1: overrides a raw `profiles.current_plan` value to the
+ * comped plan when the account's email is on the `isCompedAccountEmail`
+ * allow-list. The single place every plan-resolution call site applies the
+ * override, so a comped account reads the same plan everywhere — usage
+ * caps, the domain-overage gate, and every `isProOrAbove()` feature gate —
+ * instead of drifting between "comped for caps" and "still paywalled for a
+ * feature" depending on which query happened to check.
+ *
+ * Never writes to `profiles.current_plan`: this is a read-time override, so
+ * it can never race with or be undone by the Stripe webhook, and an account
+ * that later gets a real subscription just stops needing it.
+ */
+export function resolveEffectivePlanId(
+  rawCurrentPlan: string | null | undefined,
+  email: string | null | undefined
+): string | null | undefined {
+  return isCompedAccountEmail(email) ? COMPED_PLAN_ID : rawCurrentPlan;
+}
+
+/**
  * Raw Pro-tier check for feature gates (as opposed to the numeric-caps UI,
  * which uses `resolvePlan`/`getPlanForUser`). Deliberately does NOT go
  * through `resolvePlan`: that function defaults a missing/unrecognized value
@@ -159,7 +181,7 @@ export const getPlanForUser = cache(async function getPlanForUser(
     .eq("id", userId)
     .maybeSingle();
   const effectivePlanId = await applyTrialExpiry(userId, data);
-  return resolvePlan(effectivePlanId as Plan["id"] | undefined);
+  return resolvePlan(resolveEffectivePlanId(effectivePlanId, data?.email) as Plan["id"] | undefined);
 });
 
 /**
@@ -187,7 +209,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
   ]);
 
   const effectivePlanId = await applyTrialExpiry(user.id, profile);
-  const plan = resolvePlan(effectivePlanId as Plan["id"] | undefined);
+  const plan = resolvePlan(resolveEffectivePlanId(effectivePlanId, profile?.email) as Plan["id"] | undefined);
   const trialExpired = effectivePlanId !== profile?.current_plan;
 
   const engineSet = new Set((results ?? []).map((r) => r.provider).filter(Boolean));
@@ -256,7 +278,7 @@ export async function getDomainOverage(): Promise<DomainOverage> {
 
   const { data: profileRow, error: profileError } = await supabase
     .from("profiles")
-    .select("current_plan, stripe_subscription_id")
+    .select("current_plan, stripe_subscription_id, email")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -274,7 +296,9 @@ export async function getDomainOverage(): Promise<DomainOverage> {
     };
   }
 
-  const plan = resolvePlan(profileRow.current_plan as Plan["id"] | undefined);
+  const plan = resolvePlan(
+    resolveEffectivePlanId(profileRow.current_plan, profileRow.email) as Plan["id"] | undefined
+  );
   const hasStripeSubscription = Boolean(profileRow.stripe_subscription_id);
 
   const { count: activeCount, error: countError } = await supabase

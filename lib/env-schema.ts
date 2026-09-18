@@ -122,7 +122,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   ADMIN_USER_IDS: "/admin es inalcanzable (404 para todo el mundo)",
   GOOGLE_SITE_VERIFICATION: "no se emite la meta de verificación de Search Console",
   INTERNAL_TEST_ACCOUNT_EMAILS:
-    "ninguna cuenta queda exenta: todo alta nueva recibe los defaults de producción (sampling y auditoría por IA encendidos)"
+    "ninguna cuenta queda exenta: todo alta nueva recibe los defaults de producción (sampling y auditoría por IA encendidos)",
+  COMPED_ACCOUNT_EMAILS: "ninguna cuenta queda exenta de pagar: todo el mundo lee su plan real, incluido cualquiera pensado como comped"
 };
 
 /**
@@ -176,7 +177,8 @@ export const envSchema = z.object({
 
   ADMIN_USER_IDS: optionalText,
   GOOGLE_SITE_VERIFICATION: optionalText,
-  INTERNAL_TEST_ACCOUNT_EMAILS: optionalText
+  INTERNAL_TEST_ACCOUNT_EMAILS: optionalText,
+  COMPED_ACCOUNT_EMAILS: optionalText
 });
 
 export type Env = z.infer<typeof envSchema>;

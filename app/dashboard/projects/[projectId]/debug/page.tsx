@@ -7,7 +7,7 @@ import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
-import { isProOrAbove } from "@/lib/billing";
+import { isProOrAbove, resolveEffectivePlanId } from "@/lib/billing";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import {
@@ -398,10 +398,13 @@ export default async function RunsPage({
   // Raw `profiles.current_plan` via isProOrAbove, per .claude/rules/web-audit.md.
   const { data: planRow } = await supabase
     .from("profiles")
-    .select("current_plan")
+    .select("current_plan, email")
     .eq("id", user.id)
     .maybeSingle();
-  const coverageIncludedInPlan = isProOrAbove((planRow as { current_plan?: string } | null)?.current_plan);
+  const planRowTyped = planRow as { current_plan?: string; email?: string } | null;
+  const coverageIncludedInPlan = isProOrAbove(
+    resolveEffectivePlanId(planRowTyped?.current_plan, planRowTyped?.email)
+  );
 
   /* WEB-AUDIT-AUTO-SPLIT-1: «esperada» es plan Y interruptor, no sólo plan. Una
      mitad apagada a mano no deja la auditoría «Parcial» — no falta nada, no se

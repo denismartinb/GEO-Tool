@@ -1,7 +1,7 @@
 import "server-only";
 
 import { parseCoverageMap, type DomainCoverageMap } from "@/lib/web-audit/coverage-map";
-import { isProOrAbove } from "@/lib/billing";
+import { isProOrAbove, resolveEffectivePlanId } from "@/lib/billing";
 import { buildLlmsTxt, publishSteps, type LlmsTxtResult, type PublishStep } from "@/lib/web-audit/llms-txt";
 import { sitemapSteps, type SitemapStep } from "@/lib/web-audit/sitemap";
 import {
@@ -199,7 +199,7 @@ export async function loadWebAuditPageData({
     { data: technicalHistoryRows },
     { data: activeCampaignRow }
   ] = await Promise.all([
-    supabase.from("profiles").select("current_plan").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("current_plan, email").eq("id", userId).maybeSingle(),
     supabase
       .from("scan_runs")
       .select("id, finished_at, created_at")
@@ -270,7 +270,12 @@ export async function loadWebAuditPageData({
   // same call the other four sections make.
   const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : null;
 
-  const canAuditCoverage = isProOrAbove(profileRow?.current_plan as string | undefined);
+  const canAuditCoverage = isProOrAbove(
+    resolveEffectivePlanId(
+      (profileRow as { current_plan?: string; email?: string } | null)?.current_plan,
+      (profileRow as { current_plan?: string; email?: string } | null)?.email
+    )
+  );
 
   const technicalHistory = (technicalHistoryRows ?? []) as TechnicalSnapshotRow[];
   const technicalSnapshot = technicalHistory[0] ?? null;
