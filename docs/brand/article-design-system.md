@@ -91,6 +91,7 @@ import { KeyTakeaway, NumberedSection, QuickAction } from "@/components/blog/art
 | `Verdict` | Cuando la respuesta honesta a "¿esto funciona?" **no** es un sí limpio. | Para dar una opinión sin evidencia detrás. |
 | `Figure` | Contenedor de todo lo visual: marco, pie, fuente. | Nunca metas un visual sin `Figure`. |
 | `PullQuote` | Cita **textual y verificable** de una fuente identificable. | Para una paráfrasis. Ver el aviso de abajo. |
+| `KeyFinding` | Mismo peso visual que `PullQuote`, para un hallazgo propio del artículo (no una cita de nadie). | Si lo que quieres destacar es en realidad una cita — entonces es `PullQuote`, con `cite`. |
 | `Stat` / `StatGrid` | Cifra concreta con su fuente. | Si no puedes citar de dónde sale la cifra. |
 | `CodeBlock` | Fichero o fragmento reproducible por el lector. | Para pseudocódigo ilustrativo. |
 
@@ -102,6 +103,9 @@ import { KeyTakeaway, NumberedSection, QuickAction } from "@/components/blog/art
 | `ShareOfVoice` | Reparto de menciones entre marcas, con la tuya marcada. | Sin decir sobre cuántos prompts se calcula (`total` es obligatorio). |
 | `PromptSet` | Conjunto de prompts de ejemplo con su intención. | Para un solo prompt — eso va en prosa, en cursiva. |
 | `AnswerSample` / `AnswerPair` | La forma de una respuesta generativa, con o sin fuente. Enseña la diferencia mención/citación de un golpe. | **Nunca** para reproducir la respuesta real de un motor: sería atribuirle palabras sin verificar. Igual que `PullQuote`. |
+| `ChatAnswer` | Maqueta rica en formato chat de una pregunta + respuesta con nombres resaltados. Mismo texto siempre ilustrativo que `AnswerSample`. | Igual que `AnswerSample`: nunca para una respuesta real verificada palabra por palabra. |
+| `EntityGrid` | Rejilla de iconos on/off — cuántas entidades de un total aparecen en IA. | Para más de ~50 celdas — deja de leerse de un vistazo. |
+| `EngineBars` | Barras por motor con su logotipo, cuando se comparan los tres motores entre sí. | Para comparar marcas — eso es `ShareOfVoice`. |
 | `RecommendationSample` | Maqueta de una recomendación del producto. | Sin `confidence` — no compila. Una recomendación que no declara su confianza es una opinión disfrazada de dato. |
 | `CompareTable` + `Pill` | Comparación multi-eje con veredicto codificado en color. | Para dos filas — eso es un párrafo. |
 | `Checklist` | Cosas que el lector debe comprobar una a una. | Para enumerar conceptos — eso es `<ul>`. |

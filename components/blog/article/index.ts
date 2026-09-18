@@ -14,6 +14,7 @@ export {
   NumberedSection,
   QuickAction,
   PullQuote,
+  KeyFinding,
   Checklist,
   Stat,
   StatGrid,
@@ -25,4 +26,16 @@ export {
   PostMeta
 } from "./blocks";
 
-export { Figure, ProductMock, ShareOfVoice, PromptSet, AnswerSample, AnswerPair, RecommendationSample, type MockRow } from "./figure";
+export {
+  Figure,
+  ProductMock,
+  ShareOfVoice,
+  PromptSet,
+  AnswerSample,
+  AnswerPair,
+  ChatAnswer,
+  EntityGrid,
+  EngineBars,
+  RecommendationSample,
+  type MockRow
+} from "./figure";

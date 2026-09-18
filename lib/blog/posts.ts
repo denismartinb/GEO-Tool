@@ -300,6 +300,19 @@ export const BLOG_POSTS: BlogPost[] = [
     coverIcon: "users",
     primaryKeyword: "geo para agencias",
     cluster: "sectores"
+  },
+  {
+    slug: "geo-para-clinicas-de-estetica",
+    title: "Preguntamos a la IA por las mejores clínicas de estética. 7 de cada 10 no aparecieron.",
+    description:
+      "Escaneamos con GenScore 50 clínicas de estética y dermatología españolas en ChatGPT, Gemini y Claude con las preguntas que hace un paciente antes de pedir cita. El 72% no aparece cuando un paciente pide recomendación. Los datos completos.",
+    metaDescription:
+      "Escaneamos 50 clínicas de estética con GenScore: el 72% no aparece en ChatGPT, Gemini ni Claude cuando un paciente pide recomendación.",
+    datePublished: "2026-09-08",
+    coverImage: "/blog/geo-para-clinicas-de-estetica/cover.webp",
+    coverIcon: "shield",
+    primaryKeyword: "geo para clínicas de estética",
+    cluster: "sectores"
   }
 ];
 

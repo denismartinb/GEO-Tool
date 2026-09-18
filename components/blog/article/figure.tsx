@@ -130,6 +130,141 @@ export function AnswerPair({ children }: { children: ReactNode }) {
   return <div className="art-ans-pair">{children}</div>;
 }
 
+const ENGINE_LABEL: Record<"chatgpt" | "gemini" | "claude", string> = {
+  chatgpt: "ChatGPT",
+  gemini: "Gemini",
+  claude: "Claude"
+};
+
+/** Logo de motor desde `public/brand/engines/`, reutilizado tal cual en toda la app. */
+function EngineMark({ engine, size = 16 }: { engine: "chatgpt" | "gemini" | "claude"; size?: number }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={`/brand/engines/${engine}.svg`} alt="" width={size} height={size} />
+  );
+}
+
+/**
+ * Maqueta rica de una conversación con un motor, en formato chat en vez de la
+ * tarjeta plana de `AnswerSample`. Existe para el caso "un paciente/comprador
+ * pregunta y la IA nombra un puñado de marcas" — mismo principio de
+ * `AnswerSample`: el texto es **siempre ilustrativo**, nunca la respuesta real
+ * de un motor verificada palabra por palabra. `mentioned` marca qué nombres
+ * del texto resaltar (deben aparecer tal cual en `answer`).
+ */
+export function ChatAnswer({
+  engine,
+  question,
+  answer,
+  mentioned,
+  missing
+}: {
+  engine: "chatgpt" | "gemini" | "claude";
+  question: string;
+  answer: string;
+  /** Nombres a resaltar dentro de `answer` — tienen que aparecer tal cual en el texto. */
+  mentioned: string[];
+  /** Línea inferior opcional: cuántos/qué queda fuera de la respuesta. */
+  missing?: string;
+}) {
+  const parts = mentioned.length
+    ? answer.split(new RegExp(`(${mentioned.map((m) => m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g"))
+    : [answer];
+  return (
+    <div className="art-chat">
+      <p className="art-chat-q">{question}</p>
+      <div className="art-chat-a">
+        <div className="art-chat-motor">
+          <EngineMark engine={engine} />
+          <span>{ENGINE_LABEL[engine]}</span>
+        </div>
+        <p className="art-chat-text">
+          {parts.map((part, i) => (mentioned.includes(part) ? <mark key={i}>{part}</mark> : <span key={i}>{part}</span>))}
+        </p>
+      </div>
+      {missing ? (
+        <div className="art-chat-miss">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          {missing}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Rejilla de iconos on/off — cuántas entidades de un total aparecen en IA y
+ * cuántas no. Traduce un porcentaje a algo que se cuenta con los ojos, igual
+ * que el pictograma del hallazgo 1 de un estudio de datos.
+ */
+export function EntityGrid({
+  total,
+  visible,
+  visibleLabel,
+  invisibleLabel
+}: {
+  total: number;
+  visible: number;
+  visibleLabel: string;
+  invisibleLabel: string;
+}) {
+  return (
+    <div className="art-picto">
+      <div className="art-picto-grid" role="img" aria-label={`${visible} de ${total}: ${visibleLabel}`}>
+        {Array.from({ length: total }, (_, i) => (
+          <div key={i} className={i < visible ? "art-picto-cell on" : "art-picto-cell"}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M12 21s-7-4.35-7-10a7 7 0 0 1 14 0c0 5.65-7 10-7 10z" />
+              <path d="M12 8v6M9 11h6" />
+            </svg>
+          </div>
+        ))}
+      </div>
+      <div className="art-picto-key">
+        <span>
+          <i className="on" />
+          {visibleLabel}
+        </span>
+        <span>
+          <i />
+          {invisibleLabel}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Barras horizontales por motor, con su logotipo — la versión "rica" de un
+ * `StatGrid` cuando lo que se compara son los tres motores entre sí. Reusa
+ * los mismos SVG de marca que el resto de la app (`public/brand/engines/`).
+ */
+export function EngineBars({
+  rows
+}: {
+  rows: { engine: "chatgpt" | "gemini" | "claude"; value: number; tone?: "blue" | "blue2" | "cyan" | "warm" }[];
+}) {
+  const max = Math.max(...rows.map((r) => r.value));
+  return (
+    <div className="art-ebars">
+      {rows.map((r) => (
+        <div className="art-ebar-row" key={r.engine}>
+          <span className="art-ebar-label">
+            <EngineMark engine={r.engine} size={18} />
+            {ENGINE_LABEL[r.engine]}
+          </span>
+          <span className="art-ebar-track">
+            <span className={`art-ebar-fill art-tone-bg-${r.tone ?? "blue"}`} style={{ width: `${(r.value / max) * 100}%` }} />
+          </span>
+          <span className="art-ebar-v">{r.value}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Maqueta de una recomendación del producto.
  *

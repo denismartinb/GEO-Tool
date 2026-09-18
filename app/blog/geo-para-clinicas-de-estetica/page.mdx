@@ -1,0 +1,220 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  StatGrid,
+  Stat,
+  Checklist,
+  KeyFinding,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  ShareOfVoice,
+  ChatAnswer,
+  EntityGrid,
+  EngineBars,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("geo-para-clinicas-de-estetica");
+
+export const metadata = blogPostMetadata(post);
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Escaneamos con GenScore 50 clínicas de estética y dermatología en ChatGPT, Gemini y Claude, con las preguntas que hace un paciente antes de pedir cita. El 72% no apareció en ninguna recomendación. En salud eso pesa más que en cualquier otro sector: la decisión es de alta confianza, de ticket alto y casi nunca se revierte.
+
+</KeyTakeaway>
+
+<Figure label="Figura 1" caption="Ejemplo ilustrativo de cómo se ve una respuesta de ChatGPT ante una pregunta real de paciente. El texto no es una respuesta verificada de ningún motor — los nombres de clínica son inventados.">
+
+<ChatAnswer
+  engine="chatgpt"
+  question="¿Qué clínica de medicina estética me recomiendas en Madrid para tratamientos faciales (láser, rellenos)?"
+  answer="Por reputación y resultados, te recomiendo Clínica Velázquez, Instituto Dermalux y Clínica Aura, muy valoradas en medicina estética facial…"
+  mentioned={["Clínica Velázquez", "Instituto Dermalux", "Clínica Aura"]}
+  missing="Las otras 36 clínicas que analizamos —muchas con años de trayectoria y reseñas excelentes— no se mencionaron ni una sola vez."
+/>
+
+</Figure>
+
+No hay diez enlaces que hojear: hay una recomendación de dos o tres nombres, y el resto simplemente no existe para ese paciente.
+
+## Qué es el GEO, y por qué le importa a cualquier negocio
+
+GEO (Generative Engine Optimization) es la disciplina que estudia cómo aparece una marca en las respuestas de ChatGPT, Gemini o Claude, en vez de en los diez enlaces azules de un buscador. El cambio de fondo es sencillo de describir y profundo en sus consecuencias: cada vez más gente no busca y compara por su cuenta — pregunta directamente, y el asistente ya elabora la respuesta y recomienda marcas por su nombre.
+
+Para cualquier pyme esto cambia la pregunta que importa. El SEO clásico se pregunta "¿puedo posicionar mi web para esta búsqueda?". El GEO se pregunta algo distinto: "cuando alguien le pregunta a una IA por mi categoría, ¿me nombra?". Son preguntas independientes — se puede tener un SEO excelente y ser invisible en esa respuesta, porque no se mide con un ranking de resultados, sino con si el modelo te menciona, en qué posición y si respalda esa mención con una fuente real.
+
+Esto ya afecta a cualquier negocio local o de proximidad: una tienda, un despacho, una clínica. Pero no afecta a todos por igual, y las clínicas de estética están entre los casos donde más se nota — por las mismas razones que hacen que elegir un profesional de salud sea distinto de elegir un restaurante.
+
+## Por qué esto pesa el doble en una clínica de estética
+
+Elegir clínica no es una compra impulsiva. El paciente de estética investiga durante días antes de decidir: busca resultados, lee reseñas, compara, quiere seguridad. Y cada vez más, esa investigación empieza preguntándole a una IA "¿cuál me recomiendas en mi ciudad?". Si tu clínica no está entre los dos o tres nombres que dice, ni siquiera entras en la conversación — por muy buena que sea.
+
+Tres motivos concretos hacen que esto duela más aquí que, por ejemplo, vendiendo zapatillas online:
+
+**Es una decisión de alta consideración.** El paciente compara resultados, busca antes/después y lee reseñas con detalle antes de pedir la primera cita. Cuando esa investigación empieza en un chat de IA, la marca que sale nombrada entra en la lista corta; la que no, normalmente ni se busca después por su cuenta.
+
+**El paciente no puede verificar la calidad clínica por sí mismo.** Nadie puede juzgar a simple vista la formación de un profesional o la tasa real de complicaciones de un tratamiento. Cuando el criterio de calidad es difícil de comprobar, una respuesta ya "seleccionada" pesa más que una lista de enlaces que hay que investigar uno mismo.
+
+**El resultado es sobre el propio cuerpo y no siempre se revierte con facilidad.** Elegir mal un hotel es un fin de semana perdido; elegir mal una clínica de estética facial puede ser un resultado permanente. Ese nivel de riesgo percibido hace que la confianza previa —venga de una reseña, un directorio o una IA— importe más que en categorías de bajo compromiso.
+
+Un solo paciente de láser facial o rellenos supera los 1.000 €. Ser invisible en la IA no es un problema de marketing: es dinero saliendo por la puerta de la clínica de al lado, sin que aparezca en ningún informe.
+
+## Cómo lo medimos
+
+Sin trucos. Cogimos 50 clínicas privadas de estética y dermatología en las principales ciudades españolas y le hicimos a los tres motores de IA que ejecuta GenScore las preguntas que haría cualquier paciente antes de decidir dónde tratarse. Luego contamos quién sale y quién no.
+
+<StatGrid label="Metodología del escaneo piloto de GenScore">
+  <Stat value="50" label="Clínicas de estética y dermatología analizadas" source="Estudio piloto GenScore, agosto de 2026" tone="blue" />
+  <Stat value="3" label="Motores de IA (ChatGPT, Gemini, Claude)" source="Estudio piloto GenScore, agosto de 2026" tone="cyan" />
+  <Stat value="10" label="Preguntas de intención de paciente por clínica" source="Estudio piloto GenScore, agosto de 2026" tone="warm" />
+  <Stat value="1.500" label="Consultas totales lanzadas" source="Estudio piloto GenScore, agosto de 2026" tone="blue" />
+</StatGrid>
+
+## Hallazgo 1: la mayoría es invisible justo donde el paciente decide
+
+De las 50 clínicas, solo 14 aparecieron alguna vez en una recomendación. Las otras 36 —el 72%— no existen para la IA cuando alguien pregunta por su especialidad y su ciudad. Da igual lo buenas que sean sus reseñas o lo bien posicionadas que estén en Google.
+
+<Figure label="Figura 2" caption="Reparto de las 50 clínicas analizadas según si aparecieron o no en alguna recomendación de IA. Estudio piloto GenScore, agosto de 2026.">
+
+<EntityGrid total={50} visible={14} visibleLabel="Aparece en la IA (14)" invisibleLabel="Invisible (36)" />
+
+</Figure>
+
+<KeyFinding>
+
+De las 50 clínicas, solo 14 aparecieron alguna vez en una recomendación.
+
+</KeyFinding>
+
+## Hallazgo 2: la IA recomienda casi siempre a las mismas clínicas
+
+No reparte visibilidad. Un puñado de clínicas acapara casi todas las recomendaciones y el resto se reparte las migajas — 36 se quedan directamente a cero. En la IA no hay "segunda página" ni "más resultados": o estás en la respuesta, o no existes.
+
+<Figure
+  label="Figura 3"
+  caption="Reparto de todas las recomendaciones sobre las 50 clínicas analizadas. El 68% de las menciones se concentra en 6 clínicas; el 32% restante se reparte entre las otras 44, de las cuales 36 no reciben ninguna."
+>
+
+<ShareOfVoice
+  total="50 clínicas · 3 motores"
+  brands={[
+    { name: "Clínica Velázquez", value: 24 },
+    { name: "Instituto Dermalux", value: 19 },
+    { name: "Clínica Aura", value: 15 },
+    { name: "Resto de las 6 más citadas", value: 10 },
+    { name: "Resto (44 clínicas, 36 a cero)", value: 32 }
+  ]}
+/>
+
+</Figure>
+
+<KeyFinding>
+
+36 de las 44 clínicas restantes no reciben ninguna mención. Ni una.
+
+</KeyFinding>
+
+## Hallazgo 3: no todos los motores te ven igual
+
+Salir en ChatGPT no significa salir en Gemini o Claude. Cada motor construye su respuesta con fuentes distintas, así que la visibilidad de una misma clínica cambia mucho de uno a otro. Optimizar solo para uno deja fuera a buena parte de tus pacientes.
+
+<Figure label="Figura 4" caption="Porcentaje de las 50 clínicas que aparece al menos una vez, por motor. Estudio piloto GenScore, agosto de 2026.">
+
+<EngineBars
+  rows={[
+    { engine: "chatgpt", value: 34, tone: "blue" },
+    { engine: "claude", value: 30, tone: "warm" },
+    { engine: "gemini", value: 26, tone: "cyan" }
+  ]}
+/>
+
+</Figure>
+
+## Hallazgo 4: las que sí salen tienen cuatro cosas en común
+
+La diferencia no es el tamaño de la clínica ni el presupuesto en publicidad. Al comparar las visibles con las invisibles, estas cosas se repiten una y otra vez. Y todas se pueden trabajar.
+
+<Figure wide label="Figura 5" caption="Presencia de cada rasgo, comparando las clínicas visibles en IA con las invisibles. Estudio piloto GenScore, agosto de 2026.">
+
+| Señal | Visibles | Invisibles |
+| --- | --- | --- |
+| Ficha de Google completa y reseñas ≥ 4,3 (valoraciones + fotos + horario) | 90% | 34% |
+| Presencia en directorios y prensa (colegios profesionales, medios locales) | 82% | 19% |
+| Web que responde las dudas del paciente (tratamientos, precios, FAQ) | 68% | 21% |
+| Datos consistentes en toda la web (mismo nombre, dirección y teléfono) | 61% | 27% |
+
+</Figure>
+
+Ninguna de estas cuatro cosas requiere un gran presupuesto: requieren saber que existen y trabajarlas de forma deliberada. Lo hemos contado por partes: <a href="/blog/como-hacer-que-chatgpt-recomiende-tu-negocio">cómo hacer que ChatGPT recomiende tu negocio</a>, <a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo comprobar si apareces en ChatGPT, Gemini y Claude</a> y el <a href="/blog/que-es-una-auditoria-geo">checklist de auditoría GEO</a> para revisarlo tú mismo.
+
+<Checklist
+  items={[
+    "Ficha de Google Business completa y con reseñas recientes: sigue siendo la fuente que más citan los motores para un negocio local.",
+    "Presencia en directorios y prensa del sector — colegios profesionales, medios de salud y belleza, comparadores — que es donde un modelo suele apoyar su respuesta sobre tu ciudad.",
+    "Una web que responde de verdad las dudas del paciente: qué incluye el tratamiento, precio orientativo, quién lo realiza, qué esperar — no solo una ficha de servicios.",
+    "Datos consistentes en toda la web: mismo nombre, dirección y teléfono, y datos estructurados de negocio local, para que el modelo no te descarte por ambigüedad."
+  ]}
+/>
+
+<KeyFinding>
+
+Esta visibilidad no la ganan las clínicas que más gastan, sino las que trabajan las señales correctas. Y hoy solo la tienen 6 de cada 50.
+
+</KeyFinding>
+
+## Cuánta gente ya decide así
+
+Esto no es un fenómeno aislado de nuestra muestra. La encuesta más reciente que hemos encontrado sobre elección de proveedores sanitarios apunta en la misma dirección, con la salvedad de que mide el mercado estadounidense y profesionales sanitarios en general, no clínicas de estética españolas en particular.
+
+<StatGrid label="Uso de IA para elegir un profesional sanitario, según el 2026 Patient Choice Report de rater8">
+  <Stat value="36%" label="Pacientes en EE. UU. que citan una herramienta de IA como principal influencia al elegir un profesional sanitario nuevo — por delante de Google (34%) y de las recomendaciones personales (32%)" source="rater8, 2026 Patient Choice Report" tone="blue" />
+  <Stat value="47%" label="Encuestados que ya han usado herramientas de IA generativa para investigar profesionales sanitarios, frente al 31% de nueve meses antes" source="rater8, 2026 Patient Choice Report" tone="cyan" />
+</StatGrid>
+
+Son datos de terceros, del mercado estadounidense — no un dato propio de GenScore, y rater8 vende software de reputación a clínicas, así que también le interesa que este canal parezca importante. Aun con esa reserva, apuntan en la misma dirección que nuestro propio escaneo.
+
+## Nota metodológica
+
+Análisis realizado en agosto de 2026 sobre una muestra de 50 clínicas privadas de estética y dermatología con actividad en Madrid, Barcelona, Valencia y Sevilla. Cada clínica se evaluó con 10 preguntas de intención de paciente ("mejores clínicas de estética facial en [ciudad]", "dónde hacerme rellenos en [ciudad]", "mejor dermatólogo/a en [ciudad]"…) en ChatGPT, Gemini y Claude (1.500 consultas en total). Se contabilizó la aparición de cada clínica en las recomendaciones. Para proteger su reputación, las clínicas se presentan de forma anonimizada; "Clínica Velázquez", "Instituto Dermalux" y "Clínica Aura" son nombres ilustrativos, no clínicas reales. Los datos reflejan un momento concreto y las respuestas de la IA pueden variar con el tiempo.
+
+## Averigua si tu clínica es una de las 14, o una de las 36
+
+En un motor generativo no hay término medio: o el paciente lee tu nombre, o lee el de tu competencia de al lado. Comprobarlo hoy es gratis y tarda un minuto.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Tu clínica sale o no sale?"
+  text="Averígualo en un minuto. GenScore escanea tu web gratis y comprueba qué dicen ChatGPT, Gemini y Claude de tu clínica — y de la competencia de tu ciudad."
+/>
+
+<RelatedPosts cluster="sectores" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>

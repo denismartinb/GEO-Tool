@@ -95,6 +95,17 @@ export function PullQuote({ children, cite }: { children: ReactNode; cite: strin
   );
 }
 
+/**
+ * Hallazgo destacado — mismo peso visual que `PullQuote` pero sin `cite`,
+ * porque no es una cita de nadie: es una frase del propio artículo (un
+ * hallazgo, un dato con fuente ya declarada más arriba) que se quiere
+ * resaltar. Usar `PullQuote` aquí sería inventar un atribuido — la
+ * `docs/brand/article-design-system.md` ya documenta ese fallo concreto.
+ */
+export function KeyFinding({ children }: { children: ReactNode }) {
+  return <div className="art-finding">{children}</div>;
+}
+
 const CHECK_ICON = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path d="M3 8.5l3.2 3.2L13 5" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
