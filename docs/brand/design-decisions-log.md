@@ -20461,3 +20461,84 @@ page.tsx`, `components/billing/billing-content.tsx`, `components/billing/
 plan-billing-section.tsx`; `lib/use-session-user.ts` (GENSCORE-HEADER-2,
 reutilizado sin tocar); log §152/§170/§182/§197 (precio y promo,
 `plans-data.ts`). Task Intake y aprobación del fundador, 2026-09-11.
+
+## 222. Fase 1: cuentas comped, exentas de pago sin tocar Stripe (BILLING-COMPED-1, 2026-09-18)
+
+**Contexto.** El fundador pidió pasar `STRIPE_SECRET_KEY` a modo live
+manteniendo algunas cuentas de prueba sin coste. Task Intake antes de tocar
+código porque billing está en la lista de "Forbidden Without Explicit
+Approval" de `CLAUDE.md` más allá del alcance ya cubierto por
+BILLING-STRIPE-1: aprobado ("sí") 2026-09-18, con el pase a claves live
+("Fase 2") dejado explícitamente **tal cual está** — sigue bloqueado por el
+go-live checklist de `docs/launch-plan.md` Fase 4 (alta autónomo y decisión
+VeriFactu, ninguna resuelta todavía). Esta fase es sólo el mecanismo de
+cuentas exentas; no toca `STRIPE_SECRET_KEY` ni ninguna clave.
+
+**El hallazgo que decidió el diseño.** No existe forma de que una cuenta
+concreta compre contra el Stripe de test mientras el resto de la app corre en
+modo live: `getStripeClient()` (`lib/stripe.ts`) es un único cliente
+construido desde una única `STRIPE_SECRET_KEY`, y enrutar cuentas a un
+segundo cliente de test exigiría un segundo juego de price IDs, un segundo
+webhook, y mezclaría suscripciones reales y ficticias bajo la misma columna
+`profiles.stripe_customer_id`. La alternativa correcta, y la implementada, es
+un override de plan en tiempo de lectura que nunca llama a Stripe: una cuenta
+comped se lee como plan `agency` en todo punto que resuelve el plan de la
+cuenta, sin checkout, sin suscripción, sin fila nueva en `profiles`.
+
+**Qué se construyó.** `isCompedAccountEmail` (`lib/billing/
+comped-accounts.ts`) es el mismo patrón de allow-list por email, fail-closed,
+que ya usaba `isInternalTestAccountEmail`
+(`lib/projects/internal-test-accounts.ts`, PROJECT-DEFAULTS-BY-ACCOUNT-1)
+para los defaults de escaneo — deliberadamente un mecanismo nuevo y no una
+reutilización del mismo: aquél exime de defaults caros al crear un proyecto,
+éste exime de pagar, y son decisiones de producto distintas que no deben
+compartir una sola variable de entorno. Encima de eso,
+`resolveEffectivePlanId(rawCurrentPlan, email)` (`lib/billing.ts`) es el único
+punto que aplica el override — nunca escribe en `profiles.current_plan`, así
+que no puede competir con el webhook de Stripe ni con `applyTrialExpiry`, y
+una cuenta que más adelante consigue una suscripción real simplemente deja de
+necesitarlo.
+
+**Por qué toca siete ficheros y no uno.** `current_plan` se lee crudo en
+cuatro sitios más además de `getPlanForUser` — `getUsageSummary` y
+`getDomainOverage` (`lib/billing.ts`), y tres gates de `isProOrAbove()` que
+cada uno hace su propia consulta a `profiles` sin pasar por
+`getPlanForUser`/`resolvePlan` a propósito
+(`lib/recommendations/domain-coverage.ts`,
+`lib/web-audit/page-data.ts`, `lib/admin/automation-actions.ts`,
+`app/dashboard/projects/[projectId]/debug/page.tsx`). Aplicar el override
+sólo en `getPlanForUser` habría dejado una cuenta comped viendo caps de
+Agency pero seguir topándose con el muro Pro de la auditoría de cobertura —
+"comped a medias" no es comped. Cada uno de esos cinco call sites ahora
+selecciona `email` junto a `current_plan` (antes sólo el segundo) y pasa
+ambos por `resolveEffectivePlanId` antes de `isProOrAbove`/`resolvePlan`.
+`isProOrAbove` en sí no cambia: sigue siendo el check crudo fail-closed que ya
+era, ahora alimentado con el plan ya resuelto.
+
+**Lo que NO se tocó.** Ningún schema, ninguna migración, ninguna escritura a
+`/admin`. `STRIPE_SECRET_KEY` y el resto del checklist de go-live de
+`docs/launch-plan.md` Fase 4 siguen exactamente como estaban — Fase 2 de este
+Task Intake queda pendiente hasta que el fundador resuelva alta autónomo y
+VeriFactu con su gestor.
+
+**Riesgo residual conocido.** Si una cuenta comped tuviera un
+`trial_ends_at` vencido en su fila real, `applyTrialExpiry` seguiría
+degradándola a `free` en la base de datos y mandando el email de "trial
+terminado" antes de que el override la vuelva a leer como `agency` — el
+override es de lectura, no impide ese efecto lateral aguas arriba. Aceptado:
+las cuentas de esta lista las cura el fundador a mano, no pasan por el alta
+con reverse trial.
+
+**Comprobado.** `pnpm exec vitest run lib/billing.test.ts
+lib/billing/comped-accounts.test.ts lib/recommendations lib/web-audit
+lib/admin lib/projects/internal-test-accounts.test.ts` (49 ficheros, 786
+tests) en verde; `pnpm run typecheck` y `pnpm run lint` en verde. Sin cambio
+de UI — no aplica pasada de `ux-pilot`.
+
+**Trazabilidad.** `lib/billing/comped-accounts.ts` (nuevo),
+`lib/billing/comped-accounts.test.ts` (nuevo), `lib/billing.ts`,
+`lib/billing.test.ts`, `lib/recommendations/domain-coverage.ts`,
+`lib/web-audit/page-data.ts`, `lib/admin/automation-actions.ts`,
+`app/dashboard/projects/[projectId]/debug/page.tsx`,
+`docs/environment-contract.md` (`COMPED_ACCOUNT_EMAILS`). Task Intake y
+aprobación del fundador, 2026-09-18.

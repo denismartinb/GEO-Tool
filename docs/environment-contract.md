@@ -173,6 +173,25 @@ de prueba recibe por descuido los defaults caros", no al revés
 `auth.users.id` como `ADMIN_USER_IDS`: aquí el fallo de un email cambiado por
 el propio usuario es barato de notar y corregir, no una brecha de acceso.
 
+### Cuentas comped (BILLING-COMPED-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `COMPED_ACCOUNT_EMAILS` | No (unset = nadie está exento) | Vercel + local `.env.local` | lista de emails separados por comas, p. ej. `founder@example.com,pilot@example.com` |
+
+Allow-list, no deny-list, y falla cerrado igual que
+`INTERNAL_TEST_ACCOUNT_EMAILS`: sin esta variable **ninguna** cuenta está
+exenta de pagar. Una cuenta en esta lista se lee como plan `agency` en todo
+punto que resuelve el plan (`resolveEffectivePlanId`, `lib/billing.ts`) —
+caps de uso, la puerta de dominios y todo `isProOrAbove()` — sin tocar Stripe
+ni escribir en `profiles.current_plan`. Existe porque el modo de Stripe
+(test/live) lo decide una única `STRIPE_SECRET_KEY` para toda la app: no hay
+forma de que una cuenta concreta compre en Stripe de test mientras el resto
+paga de verdad sin duplicar clientes, price IDs y webhooks. Comparación por
+email, no por `auth.users.id` como `ADMIN_USER_IDS`: el fallo aquí es "una
+cuenta ve un muro de pago que no debería", barato de notar y corregir, no una
+brecha de acceso.
+
 ### Comprobador gratuito anónimo (FREE-CHECKER-1 Fase B)
 
 | Variable | Required | Where | Expected shape |

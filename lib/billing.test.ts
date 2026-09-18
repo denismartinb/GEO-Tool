@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireUser = vi.fn();
 vi.mock("@/lib/auth", () => ({ requireUser: (...args: unknown[]) => requireUser(...args) }));
@@ -16,7 +16,34 @@ vi.mock("@/lib/stripe", () => ({
   getActiveSubscriptionPromo: (...args: unknown[]) => getActiveSubscriptionPromo(...args)
 }));
 
-import { getPlanForUser, getUsageSummary, isProOrAbove } from "./billing";
+import { getPlanForUser, getUsageSummary, isProOrAbove, resolveEffectivePlanId } from "./billing";
+
+describe("resolveEffectivePlanId (BILLING-COMPED-1)", () => {
+  const ORIGINAL = process.env.COMPED_ACCOUNT_EMAILS;
+
+  beforeEach(() => {
+    process.env.COMPED_ACCOUNT_EMAILS = "comped@example.com";
+  });
+
+  afterEach(() => {
+    process.env.COMPED_ACCOUNT_EMAILS = ORIGINAL;
+  });
+
+  it("overrides to agency for a comped email regardless of the stored plan", () => {
+    expect(resolveEffectivePlanId("free", "comped@example.com")).toBe("agency");
+    expect(resolveEffectivePlanId(null, "Comped@Example.com")).toBe("agency");
+  });
+
+  it("passes the raw plan through unchanged for a non-comped email", () => {
+    expect(resolveEffectivePlanId("starter", "customer@example.com")).toBe("starter");
+    expect(resolveEffectivePlanId(null, "customer@example.com")).toBeNull();
+  });
+
+  it("fails closed (no override) when the env var is unset", () => {
+    delete process.env.COMPED_ACCOUNT_EMAILS;
+    expect(resolveEffectivePlanId("free", "comped@example.com")).toBe("free");
+  });
+});
 
 describe("isProOrAbove", () => {
   it("allows pro and agency", () => {
@@ -171,6 +198,22 @@ describe("getPlanForUser — reverse trial expiry", () => {
     expect(plan.id).toBe("starter");
     expect(createServiceClient).not.toHaveBeenCalled();
   });
+
+  it("reads a comped account as agency regardless of its stored plan (BILLING-COMPED-1)", async () => {
+    const ORIGINAL = process.env.COMPED_ACCOUNT_EMAILS;
+    process.env.COMPED_ACCOUNT_EMAILS = "comped@example.com";
+    const supabase = fakeProfileClient({
+      current_plan: "free",
+      trial_ends_at: null,
+      stripe_subscription_id: null,
+      email: "comped@example.com"
+    });
+
+    const plan = await getPlanForUser(supabase as never, "user-1");
+
+    expect(plan.id).toBe("agency");
+    process.env.COMPED_ACCOUNT_EMAILS = ORIGINAL;
+  });
 });
 
 function fakeUsageSupabase(profile: Row | null) {
@@ -253,6 +296,26 @@ describe("getUsageSummary — trial fields", () => {
     const usage = await getUsageSummary();
 
     expect(usage.cancelAt).toBeNull();
+  });
+});
+
+describe("getUsageSummary — comped accounts (BILLING-COMPED-1)", () => {
+  it("reports agency caps for a comped email even on the free plan", async () => {
+    const ORIGINAL = process.env.COMPED_ACCOUNT_EMAILS;
+    process.env.COMPED_ACCOUNT_EMAILS = "comped@example.com";
+    const supabase = fakeUsageSupabase({
+      current_plan: "free",
+      trial_ends_at: null,
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+      email: "comped@example.com"
+    });
+    requireUser.mockResolvedValue({ supabase, user: { id: "user-1" } });
+
+    const usage = await getUsageSummary();
+
+    expect(usage.planId).toBe("agency");
+    process.env.COMPED_ACCOUNT_EMAILS = ORIGINAL;
   });
 });
 

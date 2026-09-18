@@ -4,7 +4,7 @@ import { z } from "zod";
 import { auditDomainContent } from "@/lib/llm/gemini";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { checkGenerationRateLimit, type GenerationRateLimitConfig } from "@/lib/recommendations/generation-rate-limit";
-import { isProOrAbove } from "@/lib/billing";
+import { isProOrAbove, resolveEffectivePlanId } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import { type createServiceClient } from "@/lib/supabase/service";
@@ -407,10 +407,11 @@ export async function auditDomainCoverageCore({
 
     // Plan gate — invariant 2. Raw column value, never via resolvePlan.
     const { data: profileRaw } = await withTimeout(
-      supabase.from("profiles").select("current_plan").eq("id", user.id).maybeSingle(),
+      supabase.from("profiles").select("current_plan, email").eq("id", user.id).maybeSingle(),
       "load_plan"
     );
-    if (!isProOrAbove((profileRaw as { current_plan?: string } | null)?.current_plan)) {
+    const profileForPlanGate = profileRaw as { current_plan?: string; email?: string } | null;
+    if (!isProOrAbove(resolveEffectivePlanId(profileForPlanGate?.current_plan, profileForPlanGate?.email))) {
       return { success: false, error: PLAN_REQUIRED_FAILURE, reason: "plan_required" };
     }
 
