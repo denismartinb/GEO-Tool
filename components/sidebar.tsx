@@ -10,6 +10,7 @@ import { useTour } from "@/components/tour-provider";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { avatarInitials as deriveAvatarInitials, showsPlanBadge } from "@/lib/account-chip";
 import { resolveSelectedProject } from "@/lib/active-project-cookie";
+import { writeCachedSessionUser } from "@/lib/use-session-user";
 
 type WorkspaceProject = {
   id: string;
@@ -301,7 +302,15 @@ export function Sidebar({
             )}
           </div>
         </Link>
-        <form action={signOutAction} className="sb-signout">
+        {/* header-flicker-prehydration-2: clears the public header's identity
+            cache before handing over, so the signed-out visitor's next public
+            page doesn't paint the account they just left. Same reasoning as
+            the console header's own sign-out — see components/session-cache-sync.tsx. */}
+        <form
+          action={signOutAction}
+          className="sb-signout"
+          onSubmit={() => writeCachedSessionUser(null)}
+        >
           <button type="submit" className="nav-item" style={{ width: "100%" }}>
             <Icon name="settings" size={15} />
             <span>Cerrar sesión</span>

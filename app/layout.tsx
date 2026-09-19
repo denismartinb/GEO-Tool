@@ -4,7 +4,12 @@ import { Hanken_Grotesk, Bricolage_Grotesque, Figtree, JetBrains_Mono } from "ne
 import { PostHogProvider } from "@/components/posthog-provider";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
 import { CANONICAL_DEFINITION } from "@/lib/brand/canonical-definition";
-import { SESSION_CACHE_KEY } from "@/lib/session-hint";
+import {
+  NON_PUBLIC_PATH_PATTERN,
+  SESSION_CACHE_KEY,
+  SESSION_HINT_ATTR,
+  SESSION_PREFETCH_PROP
+} from "@/lib/session-hint";
 
 // TODO(BRAND-5b): Hanken Grotesk is the outgoing UI typeface (BRAND-5,
 // docs/brand/brand-guidelines.md). It stays until 5b repaints the UI onto
@@ -131,12 +136,30 @@ export const viewport: Viewport = {
  * layout effect (`lib/use-session-user.ts`) clears it. It never writes a
  * name, a plan, anything — only whether *something* was cached, which is why
  * it can run this early without risking stale or wrong content on screen.
- * Runs on every page, dashboard included: harmless there (one `sessionStorage`
- * read, no matching selectors in the console DOM), and splitting it out to a
+ * Runs on every page, dashboard included: harmless there (one storage read,
+ * no matching selectors in the console DOM), and splitting it out to a
  * public-only layout isn't worth a second `<html>`/`<body>` shell for what's
  * already a no-op.
+ *
+ * header-flicker-prehydration-2 (2026-09-19, founder: "aún tarda mucho en
+ * aparecer, se ve el parpadeo", en móvil y escritorio). Two additions, both
+ * explained at length in `lib/session-hint.ts`:
+ *
+ * 1. The cache it reads is `localStorage`, not `sessionStorage` — the hint
+ *    was per-tab, so it was absent on every phone journey that opens the site
+ *    fresh, which is most of them.
+ * 2. It now STARTS the `/api/me` request itself and parks the promise on
+ *    `window`, instead of leaving it for `useSessionUser` to issue after
+ *    hydration. The skeleton only ever hid the anonymous CTAs; what made the
+ *    chip "tardar mucho" was that the request waited on the page's JS
+ *    bundle. Skipped on non-public paths (`NON_PUBLIC_PATH_PATTERN`) so the
+ *    console never pays for a response nothing there reads.
+ *
+ * The promise is created with a `.catch` attached in the same expression, so
+ * a failing prefetch can never surface as an unhandled rejection even if
+ * React never mounts to adopt it.
  */
-const SESSION_HINT_SCRIPT = `(function(){try{if(sessionStorage.getItem(${JSON.stringify(SESSION_CACHE_KEY)})){document.documentElement.setAttribute('data-session-hint','1')}}catch(e){}})();`;
+const SESSION_HINT_SCRIPT = `(function(){try{var k=${JSON.stringify(SESSION_CACHE_KEY)};try{if(localStorage.getItem(k)){document.documentElement.setAttribute(${JSON.stringify(SESSION_HINT_ATTR)},'1')}}catch(e){}if(!new RegExp(${JSON.stringify(NON_PUBLIC_PATH_PATTERN)}).test(location.pathname)){window[${JSON.stringify(SESSION_PREFETCH_PROP)}]=fetch('/api/me',{credentials:'same-origin'}).then(function(r){return r.ok?r.json():null}).catch(function(){return null})}}catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
