@@ -478,6 +478,106 @@ SEO-POS-1 Fase C.
 
 ---
 
+---
+
+## GROWTH-2, 5 artículos nuevos (2026-09-19)
+
+Task Intake aprobado por el fundador. Investigados y priorizados por
+`seo-geo-research`, implementados por `growth-content`. Etiquetas "Nx" para no
+chocar con las Wx/Sx/Cx ya tomadas. Publicados en tandas apiladas
+(BUILD-BUDGET-1): N1+N2 en esta tanda, N3+N4 y N5 en tandas posteriores.
+
+**N3 se retiró de este PR a petición del fundador (2026-09-19)** — mergeado
+todo menos `agencia-geo-vs-herramienta-geo`. Queda pendiente de un PR propio,
+sin fecha; el motivo del aplazamiento no se registró en esta sesión, así que
+la siguiente que retome N3 debe confirmarlo con el fundador antes de
+reescribirlo o publicarlo tal cual.
+
+| # | Pieza | Cluster | Keyword primaria | Estado | PR |
+|---|---|---|---|---|---|
+| N1 | Cuando ChatGPT dice algo falso o desactualizado de tu empresa | `playbooks` | chatgpt da información incorrecta de mi empresa | ✅ Publicado | #536 |
+| N2 | AI Overviews de Google vs. ChatGPT, Gemini y Claude | `fundamentos` | ai overviews vs chatgpt diferencia | ✅ Publicado | #536 |
+| N3 | Agencia GEO vs herramienta de monitorización GEO | `fundamentos` | agencia geo vs herramienta geo | 🔲 Pendiente (retirado del PR #536) | — |
+| N4 | GEO para negocios locales y servicios profesionales | `sectores` | geo negocios locales españa | ✅ Publicado | #536 |
+| N5 | Tu marca es nueva y la IA no la conoce todavía | `playbooks` | mi marca no aparece en chatgpt por qué | ✅ Publicado | #536 |
+
+**N1 — `chatgpt-informacion-incorrecta-de-tu-empresa`.** El brief original
+pedía verificar contra el código si GenScore "detecta" una discrepancia
+factual (precio viejo, producto discontinuado) antes de prometerlo. Revisado
+`lib/recommendations/recommendation-engine.ts` y el resto de
+`lib/recommendations/**`: las señales reales son `brand_mentioned`,
+`citation_found`, `sentiment`, `mentioned_competitors_count` y posición — no
+existe ninguna comparación entre el dato que da una respuesta y un valor de
+referencia (precio real, catálogo real). El producto **no puede** distinguir
+"dato ausente" de "dato incorrecto" de forma automática. El gancho se
+reformuló tal y como pedía el brief: el artículo no promete detección, sino
+que un escaneo periódico te enseña la respuesta real y completa para que un
+dato mal puesto lo detectes leyendo tú, en vez de que te lo diga primero un
+cliente confundido. Un `Verdict` lo dice explícito ("Ninguna herramienta te
+avisa sola de un dato incorrecto").
+
+**N2 — `ai-overviews-vs-chatgpt-diferencia`.** Traza la frontera de motores a
+`docs/launch-plan.md` Fase 8 (ENGINES-2): Gemini, Claude y ChatGPT son los
+tres motores reales; AI Overviews, Perplexity y Copilot quedan fuera, sin
+fecha comprometida. Nombra Perplexity por su motivo legítimo (frontera de
+mercado, no promesa de soporte) — añadido a `ALLOWED_TO_MENTION_PERPLEXITY`
+en `lib/blog/article-honesty.test.ts` con su justificación en el propio test,
+mismo patrón que `como-aparecer-en-perplexity` y `como-medir-trafico-chatgpt-
+ga4`. Ni el CTA ni la metadata (`title`/`description`/`metaDescription`)
+nombran Perplexity — sólo AI Overviews y los tres motores reales.
+
+**Cobertura de test.** Las dos pasan `article-honesty.test.ts`,
+`article-recipes.test.ts` y `covers.test.ts`. Portadas propias en WebP (mismo
+lenguaje visual del catálogo: fondo casi negro azulado, chips dispersos
+convergiendo en una lente hacia un panel resuelto), generadas en SVG y
+rasterizadas con `sharp` — resuelto vía ruta directa a
+`node_modules/.pnpm/sharp@.../node_modules/sharp/lib/index.js` en vez de
+`import sharp from "sharp"`, porque `sharp` es una dependencia transitiva sin
+entrada propia en `node_modules/` bajo pnpm estricto (Playwright no puede
+descargar Chromium en este entorno, mismo workaround que piezas anteriores).
+Añadidas a `BLOG_SLUGS` (`tests/pilot/fixtures/server.mjs`) y
+`BLOG_POSTS_BY_CLUSTER` (`tests/pilot/journeys/public-pages.spec.ts`) en el
+mismo PR.
+
+**N3 — `agencia-geo-vs-herramienta-geo` — retirado del PR #536, no
+publicado.** Estaba escrito y validado (alojado en `/blog`, cluster
+`fundamentos`, mismo criterio que el resto de la tanda: ningún precio de
+agencia como cifra verificada, sólo estructura de coste), pero el fundador
+pidió excluirlo al aprobar el merge de las otras cuatro piezas. El contenido
+no queda en el repo — se retiró el artículo, su portada y todas sus
+referencias en el mismo commit que lo excluyó. Si se retoma, hay que rehacerlo
+desde cero o recuperarlo del historial de este PR.
+
+**N4 — `geo-negocios-locales-servicios-profesionales`.** Cierra el hueco del
+cluster `sectores` (hoy solo tenía ecommerce, SaaS B2B, agencias). Verificado
+contra `lib/projects/prompt-suggestions-llm.ts`: el asistente de prompts
+sugiere por seis categorías fijas (Comparación, Alternativas, Cómo hacer/guía,
+Precio y planes, Reseñas y opiniones, Casos de uso) — ninguna dedicada a
+intención local, y el prompt que se le manda a Gemini no pide variantes con
+ciudad/barrio. El artículo declara esta limitación real de forma explícita en
+un bloque `Verdict` ("El asistente de prompts de GenScore no genera variantes
+de intención local hoy") y recomienda el remedio real que sí existe en el
+producto: escribir prompts personalizados con la zona exacta, vía
+`createPrompt` (`app/dashboard/projects/[projectId]/actions.ts`).
+
+**Cobertura de test (N4).** Mismos tres tests que N1+N2, mismo patrón de
+portada y mismas dos listas del piloto actualizadas en este PR.
+
+**N5 — `mi-marca-no-aparece-en-chatgpt-por-que`.** Distinto de
+`como-hacer-que-chatgpt-recomiende-tu-negocio` (S9, que asume ya hay un
+negocio local con datos que ordenar) y de W5 (pendiente en cola, "te
+mencionan pero recomiendan a otro"): aquí el punto de partida es cero
+menciones totales, sin historial. Reencuadra el primer escaneo de GenScore
+como línea base positiva ("0 de 15 no es un mal resultado, es tu punto de
+partida"), conectando con el Core Target Flow de `CLAUDE.md`. No compromete
+ningún plazo concreto de cuánto tarda en aparecer una marca nueva — se declara
+explícitamente que no hay cifra fiable para eso.
+
+**Con N5 se cierra la tanda completa de los 5 artículos aprobados por Task
+Intake el 2026-09-19.**
+
+---
+
 ## Capa E — Observatorio
 
 Requiere Task Intake y aprobación propia (coste de escaneos + metodología

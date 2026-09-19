@@ -269,6 +269,54 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "playbooks"
   },
   {
+    slug: "chatgpt-informacion-incorrecta-de-tu-empresa",
+    title: "Cuando ChatGPT dice algo falso o desactualizado de tu empresa: cómo corregirlo",
+    description:
+      "Un precio viejo, un producto que ya no vendes, una dirección equivocada: sí apareces, pero con un dato mal. Qué hacer cuando la IA te menciona con información incorrecta.",
+    metaDescription:
+      "Qué hacer cuando ChatGPT da información incorrecta de tu empresa: cómo verlo, de dónde sale el dato y cómo corregir la fuente.",
+    datePublished: "2026-09-19",
+    coverIcon: "search",
+    coverImage: "/blog/chatgpt-informacion-incorrecta-de-tu-empresa/cover.webp",
+    primaryKeyword: "chatgpt da información incorrecta de mi empresa",
+    cluster: "playbooks"
+  },
+  {
+    slug: "ai-overviews-vs-chatgpt-diferencia",
+    title: "AI Overviews de Google vs. ChatGPT, Gemini y Claude: qué mide GenScore y qué no",
+    description:
+      "AI Overviews es una función de los resultados de Google; ChatGPT, Gemini y Claude son productos conversacionales aparte. Qué mide GenScore hoy, y qué queda fuera.",
+    metaDescription:
+      "Diferencia entre AI Overviews de Google y ChatGPT: qué es cada uno y qué motores escanea GenScore hoy.",
+    datePublished: "2026-09-19",
+    coverIcon: "compass",
+    coverImage: "/blog/ai-overviews-vs-chatgpt-diferencia/cover.webp",
+    primaryKeyword: "ai overviews vs chatgpt diferencia",
+    cluster: "fundamentos"
+  },
+  {
+    slug: "geo-negocios-locales-servicios-profesionales",
+    title: "GEO para negocios locales y servicios profesionales: cómo aparecer cuando te buscan por ciudad",
+    description:
+      "Un motor generativo no usa proximidad como un mapa: cita entidades verificables. Qué mover si eres una clínica, una asesoría o cualquier servicio que se busca por zona.",
+    datePublished: "2026-09-19",
+    coverImage: "/blog/geo-negocios-locales-servicios-profesionales/cover.webp",
+    coverIcon: "target",
+    primaryKeyword: "geo negocios locales españa",
+    cluster: "sectores"
+  },
+  {
+    slug: "mi-marca-no-aparece-en-chatgpt-por-que",
+    title: "Tu marca es nueva y la IA no la conoce todavía: por dónde empezar con GEO",
+    description:
+      "Cero menciones no es un fallo, es el punto de partida. Los pasos reales para que un motor generativo empiece a reconocer tu marca: entidad, primeras fuentes, y por qué tarda.",
+    datePublished: "2026-09-19",
+    coverImage: "/blog/mi-marca-no-aparece-en-chatgpt-por-que/cover.webp",
+    coverIcon: "compass",
+    primaryKeyword: "mi marca no aparece en chatgpt por qué",
+    cluster: "playbooks"
+  },
+  {
     slug: "geo-para-ecommerce",
     title: "GEO para ecommerce: cómo aparecer cuando la IA recomienda productos",
     description:
