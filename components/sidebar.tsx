@@ -38,6 +38,11 @@ const actLinks = [
   { segment: "/recommendations", label: "Recomendaciones", icon: "recs", countKey: "recs" as null | string },
 ];
 
+// "Aprender" no depende del dominio activo — a diferencia de Analizar/Actuar,
+// enlaza al blog público (fuera de /dashboard), así que no lleva countKey ni
+// se deshabilita nunca por falta de proyecto.
+const learnLinks = [{ href: "/blog", label: "Manuales GEO", icon: "fileText" }];
+
 function getProjectId(pathname: string) {
   return pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
 }
@@ -232,6 +237,23 @@ export function Sidebar({
               {count > 0 && (
                 <span className="nav-count hide-collapsed">{count}</span>
               )}
+            </Link>
+          );
+        })}
+
+        <div className="nav-group-label hide-collapsed">Aprender</div>
+        {learnLinks.map((link) => {
+          const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+          return (
+            <Link
+              key={link.label}
+              href={link.href}
+              className={`nav-item ${active ? "active" : ""}`}
+              onClick={handleNavSelect}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon name={link.icon} size={17} />
+              <span className="hide-collapsed">{link.label}</span>
             </Link>
           );
         })}
