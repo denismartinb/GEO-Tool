@@ -307,7 +307,7 @@ export async function sendTrialEndedEmail(to: string): Promise<void> {
       ${eyebrow("Tu prueba ha terminado", "#5B6B82")}
       ${heading("Se acabaron tus 7 días de Pro")}
       ${paragraph(
-        "Tus 7 días de prueba de <b style=\"color:#0B1426;\">Pro</b> han terminado y tu cuenta ha pasado a <b style=\"color:#0B1426;\">Free</b>. Tus dominios y escaneos siguen intactos — no hemos borrado nada."
+        "Tus 7 días de prueba de <b style=\"color:#0B1426;\">Pro</b> han terminado y tu cuenta ha pasado a <b style=\"color:#0B1426;\">Free</b>. No hemos borrado nada. Tus dominios y escaneos siguen intactos."
       )}
       ${
         promoLive
