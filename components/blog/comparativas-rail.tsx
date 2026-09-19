@@ -28,11 +28,6 @@ export function ComparativasRail({
           <h2>Comparativas</h2>
           <p>GenScore frente a otras herramientas de visibilidad en IA, de forma honesta.</p>
         </div>
-        {hasMore && (
-          <button type="button" className="blog-rail-more" onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}>
-            Ver más →
-          </button>
-        )}
       </div>
       <div className="blog-rail-grid">
         {shown.map((c) => (
@@ -42,6 +37,11 @@ export function ComparativasRail({
           </Link>
         ))}
       </div>
+      {hasMore && (
+        <button type="button" className="blog-rail-more" onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}>
+          Ver más →
+        </button>
+      )}
     </section>
   );
 }

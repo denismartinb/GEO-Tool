@@ -41,11 +41,6 @@ export function BlogClusterRail({
           <h2>{title}</h2>
           <p>{description}</p>
         </div>
-        {hasMore && (
-          <button type="button" className="blog-rail-more" onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}>
-            Ver más →
-          </button>
-        )}
       </div>
       {shown.length > 0 ? (
         <div className="blog-rail-grid">
@@ -59,6 +54,11 @@ export function BlogClusterRail({
         </div>
       ) : (
         <p className="blog-cluster-soon">Próximamente.</p>
+      )}
+      {hasMore && (
+        <button type="button" className="blog-rail-more" onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}>
+          Ver más →
+        </button>
       )}
     </section>
   );

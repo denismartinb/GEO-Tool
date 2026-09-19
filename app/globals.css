@@ -7868,13 +7868,18 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-subtitle { margin: 14px 0 0; font-size: 19px; font-weight: 700; color: var(--ink-2); line-height: 1.4; letter-spacing: -.005em; }
 
 .blog-rail { margin-top: 48px; }
-.blog-rail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.blog-rail-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 18px; }
 .blog-rail-head-left { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .blog-rail-head-left h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
 .blog-rail-head-left p { margin: 0; font-size: 14px; color: var(--ink-3); }
 .blog-rail-dot { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+/* "Ver más" vive DEBAJO de la rejilla de tarjetas, en las dos anchuras — no
+   en la cabecera junto a un título que puede envolver. Como elemento de
+   bloque normal tras `.blog-rail-grid` (nunca dentro de un flex/grid que lo
+   estire), su ancho de `inline-block` de `<button>` lo deja alineado al
+   margen izquierdo estándar de la página, sin necesitar `align-self`. */
 .blog-rail-more {
-  flex: none; font-size: 13.5px; font-weight: 700; color: var(--brand-blue); white-space: nowrap;
+  display: inline-block; margin-top: 18px; font-size: 13.5px; font-weight: 700; color: var(--brand-blue); white-space: nowrap;
   background: none; border: none; padding: 0; cursor: pointer; font-family: inherit;
 }
 .blog-rail-more:hover { text-decoration: underline; }
@@ -7886,19 +7891,10 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 /* Móvil: el subtítulo deja de compartir fila con el punto+título (se
    quedaba comprimido en una columna estrecha) y pasa a su propia línea a
    todo el ancho, alineado al borde izquierdo estándar de la página — no
-   bajo el título. "Ver más" deja de ir arriba, junto a un título que a
-   veces ocupa tres líneas, y pasa al final del carril, debajo de las
-   tarjetas: `.blog-rail-head` pasa a `display: contents` para que sus dos
-   hijos (`.blog-rail-head-left`, `.blog-rail-more`) se conviertan en ítems
-   directos del propio `.blog-rail` (ya flex-columna) y puedan reordenarse
-   con `order` alrededor de `.blog-rail-grid`. */
+   bajo el título. */
 @media (max-width: 760px) {
-  .blog-rail { display: flex; flex-direction: column; }
-  .blog-rail-head { display: contents; }
-  .blog-rail-head-left { order: 1; flex-wrap: wrap; row-gap: 4px; margin-bottom: 18px; }
+  .blog-rail-head-left { flex-wrap: wrap; row-gap: 4px; }
   .blog-rail-head-left p { flex-basis: 100%; margin-left: 0; }
-  .blog-rail-grid { order: 2; }
-  .blog-rail-more { order: 3; align-self: flex-start; margin-top: 14px; }
 }
 
 .blog-tile { display: flex; flex-direction: column; border-radius: var(--r-lg); padding: 26px; }
