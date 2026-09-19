@@ -20628,3 +20628,33 @@ public-pages.spec.ts`, `docs/content-calendar.md`, dos portadas en
 `public/blog/<slug>/cover.webp` y sus SVG fuente en
 `docs/design-reference/blog-covers/`. Task Intake y aprobación del fundador,
 2026-09-19.
+
+## 225. GROWTH-2: N5, tercera y última tanda de 5 artículos nuevos del blog (2026-09-19)
+
+Tercera tanda apilada sobre §223 y §224 (BUILD-BUDGET-1); cierra la tanda
+completa de 5 artículos aprobada por Task Intake del fundador el 2026-09-19.
+Detalle completo en `docs/content-calendar.md` ("GROWTH-2, 5 artículos
+nuevos").
+
+**N5 no compromete ningún plazo de cuánto tarda una marca nueva en
+aparecer.** `mi-marca-no-aparece-en-chatgpt-por-que` lo declara explícito en
+un `Verdict`: no hay cifra fiable, y dar una inventada sería peor que no dar
+ninguna. Reencuadra el primer escaneo con 0 de 15 menciones como línea base,
+no como veredicto — conecta con el Core Target Flow de `CLAUDE.md`. Distinto
+de `como-hacer-que-chatgpt-recomiende-tu-negocio` (que asume ya hay un
+negocio con datos que ordenar) y de W5, pendiente en la cola semanal ("te
+mencionan pero recomiendan a otro") — aquí el punto de partida es cero
+menciones totales.
+
+**Comprobado.** `pnpm test` (228 ficheros, 3.215 tests) en verde;
+`pnpm run typecheck`, `pnpm run lint` y `pnpm run build` en verde, con las
+cinco rutas nuevas de esta tanda completa listadas como estáticas (`○`) en la
+salida del build. Sin pasada de `ux-pilot` en este PR — pendiente de que el
+fundador decida lanzarla antes del Human Gate.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `app/blog/mi-marca-no-aparece-en-
+chatgpt-por-que/page.mdx`, `tests/pilot/fixtures/server.mjs`,
+`tests/pilot/journeys/public-pages.spec.ts`, `docs/content-calendar.md`, una
+portada en `public/blog/mi-marca-no-aparece-en-chatgpt-por-que/cover.webp` y
+su SVG fuente en `docs/design-reference/blog-covers/`. Task Intake y
+aprobación del fundador, 2026-09-19.

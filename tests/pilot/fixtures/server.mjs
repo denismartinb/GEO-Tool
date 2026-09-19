@@ -82,7 +82,9 @@ const BLOG_SLUGS = [
   "ai-overviews-vs-chatgpt-diferencia",
   // GROWTH-2, N3+N4 (2026-09-19).
   "agencia-geo-vs-herramienta-geo",
-  "geo-negocios-locales-servicios-profesionales"
+  "geo-negocios-locales-servicios-profesionales",
+  // GROWTH-2, N5 (2026-09-19).
+  "mi-marca-no-aparece-en-chatgpt-por-que"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

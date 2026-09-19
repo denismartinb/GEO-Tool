@@ -493,7 +493,7 @@ chocar con las Wx/Sx/Cx ya tomadas. Publicados en tandas apiladas
 | N2 | AI Overviews de Google vs. ChatGPT, Gemini y Claude | `fundamentos` | ai overviews vs chatgpt diferencia | ✅ Publicado | #(este) |
 | N3 | Agencia GEO vs herramienta de monitorización GEO | `fundamentos` | agencia geo vs herramienta geo | ✅ Publicado | #(este) |
 | N4 | GEO para negocios locales y servicios profesionales | `sectores` | geo negocios locales españa | ✅ Publicado | #(este) |
-| N5 | Tu marca es nueva y la IA no la conoce todavía | `playbooks` | mi marca no aparece en chatgpt por qué | 🔲 Pendiente | — |
+| N5 | Tu marca es nueva y la IA no la conoce todavía | `playbooks` | mi marca no aparece en chatgpt por qué | ✅ Publicado | #(este) |
 
 **N1 — `chatgpt-informacion-incorrecta-de-tu-empresa`.** El brief original
 pedía verificar contra el código si GenScore "detecta" una discrepancia
@@ -557,6 +557,19 @@ producto: escribir prompts personalizados con la zona exacta, vía
 
 **Cobertura de test (N3+N4).** Mismos tres tests que N1+N2, mismo patrón de
 portada y mismas dos listas del piloto actualizadas en este PR.
+
+**N5 — `mi-marca-no-aparece-en-chatgpt-por-que`.** Distinto de
+`como-hacer-que-chatgpt-recomiende-tu-negocio` (S9, que asume ya hay un
+negocio local con datos que ordenar) y de W5 (pendiente en cola, "te
+mencionan pero recomiendan a otro"): aquí el punto de partida es cero
+menciones totales, sin historial. Reencuadra el primer escaneo de GenScore
+como línea base positiva ("0 de 15 no es un mal resultado, es tu punto de
+partida"), conectando con el Core Target Flow de `CLAUDE.md`. No compromete
+ningún plazo concreto de cuánto tarda en aparecer una marca nueva — se declara
+explícitamente que no hay cifra fiable para eso.
+
+**Con N5 se cierra la tanda completa de los 5 artículos aprobados por Task
+Intake el 2026-09-19.**
 
 ---
 

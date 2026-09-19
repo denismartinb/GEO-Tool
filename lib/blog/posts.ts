@@ -319,6 +319,17 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "sectores"
   },
   {
+    slug: "mi-marca-no-aparece-en-chatgpt-por-que",
+    title: "Tu marca es nueva y la IA no la conoce todavía: por dónde empezar con GEO",
+    description:
+      "Cero menciones no es un fallo, es el punto de partida. Los pasos reales para que un motor generativo empiece a reconocer tu marca: entidad, primeras fuentes, y por qué tarda.",
+    datePublished: "2026-09-19",
+    coverImage: "/blog/mi-marca-no-aparece-en-chatgpt-por-que/cover.webp",
+    coverIcon: "compass",
+    primaryKeyword: "mi marca no aparece en chatgpt por qué",
+    cluster: "playbooks"
+  },
+  {
     slug: "geo-para-ecommerce",
     title: "GEO para ecommerce: cómo aparecer cuando la IA recomienda productos",
     description:
