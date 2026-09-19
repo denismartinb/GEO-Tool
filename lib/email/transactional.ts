@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getResendClient, getEmailFromAddress } from "@/lib/email/resend";
+import { PLANS, PROMO_ENDS_AT, isPromoActive, type Plan } from "@/app/pricing/plans-data";
 
 /**
  * Every send* function here is fire-and-forget from the caller's point of
@@ -67,7 +68,7 @@ const FONT_STACK = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica
 // to never hit this; a full-width banner does).
 const HEADER_ROW = `
   <tr><td style="background:#FFFFFF;font-size:0;line-height:0;">
-    <img src="https://www.genscore.es/brand/genscore-email-header.png" width="600" height="120" alt="GenScore — Generative Engine Optimization" style="display:block;border:0;outline:none;width:100%;max-width:600px;height:auto;color:#0B1426;font-family:${FONT_STACK};font-size:14px;font-weight:700;">
+    <img src="https://www.genscore.es/brand/genscore-email-header.png" width="600" height="120" alt="GenScore — Generative Engine Optimization" style="display:block;border:0;outline:none;width:100%;max-width:600px;height:auto;max-height:120px;aspect-ratio:5/1;color:#0B1426;font-family:${FONT_STACK};font-size:14px;font-weight:700;">
   </td></tr>
   <tr><td style="background:#2563EB;height:3px;line-height:3px;font-size:0;">&nbsp;</td></tr>`;
 
@@ -158,6 +159,8 @@ const featureRow = (html: string) => `
     </tr></table>
   </td></tr>`;
 
+const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
+
 export async function sendWelcomeEmail(to: string): Promise<void> {
   await sendEmail(
     to,
@@ -229,26 +232,153 @@ export async function sendPaymentFailedEmail(to: string): Promise<void> {
   );
 }
 
+/**
+ * Único sitio donde este email decide el % de ahorro — nunca escrito a mano,
+ * calculado de los dos precios reales de `plans-data.ts` (mismo patrón que
+ * TRUST-PROMISES-1, log §182: ningún precio se repite a mano fuera de esa
+ * única fuente).
+ */
+const savingsPercent = (price: number, promoPrice: number) => Math.round((1 - promoPrice / price) * 100);
+
+/**
+ * Tarjeta de un plan con precio de lanzamiento: precio grande, tachado más
+ * grande y pegado, pill de ahorro y CTA "Activar". Sólo se renderiza si el
+ * plan tiene `promoPrice` — nunca inventa un descuento que `plans-data.ts`
+ * no tenga configurado.
+ */
+function planPromoCard(
+  plan: Plan,
+  { highlight, badge, ctaLabel }: { highlight: boolean; badge?: string; ctaLabel?: string }
+): string {
+  if (plan.promoPrice === undefined) return "";
+  const savings = savingsPercent(plan.price, plan.promoPrice);
+  const borderColor = highlight ? "#2563EB" : "#E2E8F0";
+  const bg = highlight ? "#F8FAFF" : "#ffffff";
+  const priceSize = highlight ? "36px" : "26px";
+  const strikeSize = highlight ? "19px" : "15px";
+  const ctaBg = highlight ? "#2563EB" : "#ffffff";
+  const ctaColor = highlight ? "#ffffff" : "#2563EB";
+  const ctaBorderStyle = highlight ? "" : "border:1.5px solid #2563EB;";
+  const ctaText = ctaLabel ?? `Activar ${plan.name} por ${plan.promoPrice} €/mes →`;
+
+  return `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:${
+    highlight ? "22px" : "14px"
+  } 0 0;border:2px solid ${borderColor};border-radius:14px;background:${bg};">
+    <tr><td style="padding:20px 22px;">
+      ${
+        badge
+          ? `<div style="display:inline-block;background:#2563EB;color:#ffffff;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:10px;">${badge}</div>`
+          : ""
+      }
+      <div style="font-size:15px;font-weight:800;color:#0B1426;margin-bottom:6px;">${plan.name}</div>
+      <div>
+        <span style="font-size:${priceSize};font-weight:800;color:#0B1426;">${plan.promoPrice}&nbsp;€</span>
+        <span style="font-size:14px;color:#5B6B82;">/${plan.period}</span>
+        <span style="font-size:${strikeSize};color:#94A3B8;text-decoration:line-through;margin-left:8px;">${
+          plan.price
+        }&nbsp;€</span>
+        <span style="display:inline-block;background:#DCFCE7;color:#15803D;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;margin-left:8px;">Ahorras ${savings}%</span>
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;"><tr>
+        <td align="center" bgcolor="${ctaBg}" style="border-radius:10px;${ctaBorderStyle}">
+          <a href="https://www.genscore.es/dashboard/settings?openPlan=${plan.id}#plan" style="display:block;padding:13px 0;font-family:${FONT_STACK};font-weight:700;font-size:15px;color:${ctaColor};text-decoration:none;border-radius:10px;">${ctaText}</a>
+        </td>
+      </tr></table>
+    </td></tr>
+  </table>`;
+}
+
 export async function sendTrialEndedEmail(to: string): Promise<void> {
+  const proPlan = PLANS.find((plan) => plan.id === "pro");
+  const starterPlan = PLANS.find((plan) => plan.id === "starter");
+  const promoLive =
+    isPromoActive() && proPlan?.promoPrice !== undefined && starterPlan?.promoPrice !== undefined;
+  const promoEndsLabel = dateFormatter.format(new Date(PROMO_ENDS_AT));
+
   await sendEmail(
     to,
     "Tu prueba de Pro ha terminado",
     wrap(
       `
+      ${
+        promoLive
+          ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:#FDECEE;border:1px solid #F6D2D6;border-radius:12px;"><tr><td style="padding:12px 18px;text-align:center;font-size:13px;font-weight:700;color:#B42318;">⏳ El precio de lanzamiento termina el ${promoEndsLabel}</td></tr></table>`
+          : ""
+      }
       ${eyebrow("Tu prueba ha terminado", "#5B6B82")}
       ${heading("Se acabaron tus 7 días de Pro")}
       ${paragraph(
-        "Tus 7 días de prueba de <b style=\"color:#0B1426;\">Pro</b> han terminado y tu cuenta ha pasado a <b style=\"color:#0B1426;\">Free</b>. Tus dominios y escaneos siguen intactos — no hemos borrado nada."
+        "Tus 7 días de prueba de <b style=\"color:#0B1426;\">Pro</b> han terminado y tu cuenta ha pasado a <b style=\"color:#0B1426;\">Free</b>. No hemos borrado nada. Tus dominios y escaneos siguen intactos."
       )}
-      ${paragraph("¿Te ha resultado útil ver cómo te menciona la IA? Recupera el acceso completo cuando quieras.")}
-      ${button("https://www.genscore.es/dashboard/settings/billing", "Ver planes")}
+      ${
+        promoLive
+          ? `
+            ${paragraph("Activa ahora y aprovecha el precio de lanzamiento antes de que suba.")}
+            ${planPromoCard(proPlan!, { highlight: true, badge: "Recomendado · el que probaste" })}
+            ${planPromoCard(starterPlan!, { highlight: false })}
+            ${subtext("Sin permanencia · cancelas cuando quieras.")}
+          `
+          : `
+            ${paragraph("¿Te ha resultado útil ver cómo te menciona la IA? Recupera el acceso completo cuando quieras.")}
+            ${button("https://www.genscore.es/dashboard/settings/billing", "Ver planes")}
+          `
+      }
     `,
-      { preheader: "Tu cuenta ha pasado a Free — tus datos siguen intactos." }
+      {
+        preheader: promoLive
+          ? `Precio de lanzamiento hasta el ${promoEndsLabel} — activa Pro o Starter con descuento.`
+          : "Tu cuenta ha pasado a Free — tus datos siguen intactos."
+      }
     )
   );
 }
 
-const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
+/**
+ * TRIAL-REMINDER-3D-1 (founder-approved 2026-09-19) — aviso proactivo 3 días
+ * antes de que el trial reverse de Pro termine, disparado por
+ * `/api/cron/trial-reminders` (nunca por una lectura perezosa: a diferencia
+ * de `applyTrialExpiry`, este correo tiene que llegar aunque el usuario no
+ * abra la consola en esa ventana exacta).
+ *
+ * Tono deliberadamente distinto de `sendTrialEndedEmail`: aquí el usuario
+ * TODAVÍA tiene acceso completo, así que el CTA es "Seguir con Pro", nunca
+ * "Activar" o "Recuperar" — nada se ha desactivado todavía. Sin Starter ni
+ * franja de urgencia agresiva: quien ya está en Pro no necesita que le
+ * vendan un plan más barato que descartó al elegir éste.
+ */
+export async function sendTrialEndingSoonEmail(to: string, trialEndsAt: Date): Promise<void> {
+  const proPlan = PLANS.find((plan) => plan.id === "pro");
+  const promoLive = isPromoActive() && proPlan?.promoPrice !== undefined;
+  const trialEndsLabel = dateFormatter.format(trialEndsAt);
+
+  await sendEmail(
+    to,
+    "Tu prueba de Pro termina en 3 días",
+    wrap(
+      `
+      ${eyebrow("Tu prueba termina pronto", "#B45309")}
+      ${heading("Tu prueba de Pro termina en 3 días")}
+      ${paragraph(
+        `El <b style="color:#0B1426;">${trialEndsLabel}</b> tu cuenta pasará a <b style="color:#0B1426;">Free</b> automáticamente: dejarás de tener escaneo diario, 3 motores de IA y el bucle de acción completo. Aún puedes seguir con Pro sin perder nada.`
+      )}
+      ${
+        promoLive
+          ? planPromoCard(proPlan!, {
+              highlight: true,
+              badge: "Precio de lanzamiento",
+              ctaLabel: `Seguir con Pro por ${proPlan!.promoPrice} €/mes →`
+            })
+          : button("https://www.genscore.es/dashboard/settings/billing", "Seguir con Pro")
+      }
+      ${subtext(
+        "Si no haces nada, no pasa nada malo: tu cuenta simplemente pasa a Free y tus dominios/escaneos siguen intactos. Este es sólo un aviso para que decidas con tiempo."
+      )}
+    `,
+      { preheader: `Tu cuenta pasa a Free el ${trialEndsLabel} si no sigues con Pro antes.` }
+    )
+  );
+}
 
 export async function sendCancellationScheduledEmail(to: string, activeUntil: Date): Promise<void> {
   await sendEmail(

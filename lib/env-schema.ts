@@ -109,6 +109,7 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   CRON_SECRET: "OBLIGATORIA con CRON_SCANS_ENABLED=true — sin ella el cron responde 401 y no escanea nada",
   CRON_SCANS_ENABLED: "interruptor del escaneo recurrente; apagado por defecto",
   CRON_DIGEST_ENABLED: "interruptor del resumen por correo; apagado por defecto",
+  CRON_TRIAL_REMINDER_ENABLED: "interruptor del aviso de fin de prueba a 3 días; apagado por defecto",
   AUTO_WEB_AUDIT_ENABLED: "interruptor de la auditoría automática; encendido por defecto",
   OPS_ALERT_EMAIL: "los avisos de operador no se envían a nadie",
   RESEND_API_KEY: "no se envía ningún correo transaccional",
@@ -162,6 +163,7 @@ export const envSchema = z.object({
   CRON_SECRET: optionalText,
   CRON_SCANS_ENABLED: optInFlag,
   CRON_DIGEST_ENABLED: optInFlag,
+  CRON_TRIAL_REMINDER_ENABLED: optInFlag,
   AUTO_WEB_AUDIT_ENABLED: optOutFlag,
 
   OPS_ALERT_EMAIL: optionalText,
@@ -236,6 +238,10 @@ export function checkEnvRules(env: Env, raw: RawEnv = {}, now: Date = new Date()
 
   if (env.CRON_DIGEST_ENABLED && !env.CRON_SECRET) {
     add("CRON_SECRET", "error", "CRON_DIGEST_ENABLED=true sin CRON_SECRET: el resumen responderá 401.");
+  }
+
+  if (env.CRON_TRIAL_REMINDER_ENABLED && !env.CRON_SECRET) {
+    add("CRON_SECRET", "error", "CRON_TRIAL_REMINDER_ENABLED=true sin CRON_SECRET: el aviso responderá 401.");
   }
 
   // Los motores declarados tienen que tener con qué llamar. Se lee la lista

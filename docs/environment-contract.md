@@ -282,6 +282,24 @@ log fires when either is missing.
 | `CRON_DIGEST_ENABLED` | No (defaults to disabled) | Vercel | `true` to enable; any other value (or unset) is a no-op kill switch |
 | `MAX_PROJECTS_PER_DIGEST_RUN` | No (defaults to `200`) | Vercel | positive integer |
 
+### Trial-ending-soon reminder (TRIAL-REMINDER-3D-1, 2026-09-19)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `CRON_TRIAL_REMINDER_ENABLED` | No (defaults to disabled) | Vercel | `true` to enable; any other value (or unset) is a no-op kill switch |
+
+`GET /api/cron/trial-reminders` (`0 9 * * *`) sends `sendTrialEndingSoonEmail`
+to every reverse-trial account with 3 days or less left on `trial_ends_at`
+and no real Stripe subscription — the same account-selection guard
+`isTrialElapsed` already uses. Idempotency is `profiles.trial_reminder_sent_at`
+(migration 0036), set right after a successful send; a write failure there
+risks one duplicate email on the next daily pass, never a silently-skipped
+account. Own kill switch, independent of `CRON_DIGEST_ENABLED` and
+`CRON_SCANS_ENABLED` for the same reason as the weekly digest: this endpoint
+writes to customer inboxes, so it must never turn on as a side effect of
+another cron's flag. Reuses `CRON_SECRET` and `RESEND_API_KEY` like every
+other cron/email pair.
+
 Reuses `CRON_SECRET` (same one as `/api/cron/weekly-scans`) — Vercel sends
 it automatically to `/api/cron/weekly-digest` too. `vercel.json` schedules
 it weekly (`0 8 * * 1`, every Monday). As of January 2026 Vercel allows up

@@ -20542,3 +20542,135 @@ de UI — no aplica pasada de `ux-pilot`.
 `app/dashboard/projects/[projectId]/debug/page.tsx`,
 `docs/environment-contract.md` (`COMPED_ACCOUNT_EMAILS`). Task Intake y
 aprobación del fundador, 2026-09-18.
+
+## 223. El email de fin de prueba pasa a enseñar la promo de lanzamiento de Pro y Starter (TRIAL-EMAIL-PROMO-1, 2026-09-19)
+
+**Contexto.** `sendTrialEndedEmail` avisaba de que la cuenta había pasado a
+Free con un único CTA neutro ("Ver planes"), sin mencionar el precio de
+lanzamiento que el resto del producto ya muestra (hero, `/pricing`, consola —
+TRUST-PROMISES-1, log §182). El fundador pidió una versión con foco en
+conversión: las dos promos (Pro y Starter), urgencia por la fecha de fin,
+precios más grandes con el tachado también grande, una pill de % de ahorro, y
+CTA "Activar" en vez de "Ver planes"/"Recuperar". Tres opciones de diseño se
+presentaron primero como Artifact (canvas con mockups A/B/C) antes de tocar
+código, y el fundador eligió A (urgencia) con los ajustes de arriba.
+
+**Qué se construyó.** `sendTrialEndedEmail` (`lib/email/transactional.ts`)
+bifurca en `isPromoActive()` (de `app/pricing/plans-data.ts`, ya usada por
+`/pricing` y la consola):
+
+- **Promo activa** (`isPromoActive()` true y ambos planes tienen
+  `promoPrice`): franja roja fija con la fecha real (`PROMO_ENDS_AT`,
+  formateada) antes de la cabecera de contenido, y una tarjeta por plan
+  (`planPromoCard`) — Pro primero y destacada ("Recomendado · el que
+  probaste"), Starter debajo sin destacar. Cada tarjeta calcula su propio %
+  de ahorro (`savingsPercent`, `1 - promoPrice/price`, nunca escrito a mano)
+  y su CTA enlaza a `/dashboard/settings?openPlan=<id>#plan` — el deep-link
+  que PRECIO-BUTTONS-CONSOLE-1 (log §221) ya dejó preparado para abrir
+  "Cambiar de plan" preseleccionado.
+- **Sin promo** (caducada, o Stripe sin el cupón configurado): cae al aviso
+  original — sin franja, sin precios tachados, CTA "Ver planes" a
+  `/dashboard/settings/billing` sin plan preseleccionado. Es el mismo
+  fail-safe que ya usa `resolveShownPromoPrice`/`isPromoActive` en el resto
+  del producto: el email nunca anuncia un descuento que el checkout ya no
+  aplicaría.
+
+**Ningún precio ni fecha se escribe a mano.** `planPromoCard` lee
+`plan.price`/`plan.promoPrice` de `PLANS`, la franja de urgencia lee
+`PROMO_ENDS_AT` con el mismo `Intl.DateTimeFormat("es-ES", …)` que ya usaba
+`sendCancellationScheduledEmail` — si la promo cambia en `plans-data.ts` (otro
+precio, otra fecha, se apaga), este email cambia solo, sin tocar
+`transactional.ts`. Mismo patrón que TRUST-PROMISES-1 (log §182); ver
+`.claude/rules` — la invariante queda anotada en el mapa de zonas de
+CLAUDE.md, sección "Correos transaccionales".
+
+**Cabecera y layout compartidos, sin tocar.** `HEADER_ROW` y `wrap()` (el
+esqueleto de tabla que comparten los 8 emails transaccionales, incluidos los
+dos meta de dark-mode y el `@media` de 600px) no se modifican — la franja de
+urgencia y las tarjetas de promo son contenido dentro de `bodyHtml`, como
+cualquier otro bloque de un email concreto, exactamente como ya hacía la caja
+roja de `sendPaymentFailedEmail`.
+
+**Comprobado.** `pnpm test` (3150 tests, incluidos 4 nuevos casos:
+precios/CTA reales de ambos planes, % de ahorro calculado, fecha real de
+`PROMO_ENDS_AT`, y el fallback sin promo activa) en verde; `pnpm run
+validate` (build + typecheck + lint) en verde.
+
+**Pendiente / no cubierto por esta fase.** No hay pasada de `ux-pilot`
+posible: es un email transaccional, no una pantalla de la consola — el
+piloto no envía ni renderiza correos. La revisión visual queda en manos del
+fundador sobre el HTML real (o un envío de prueba) antes del Human Gate.
+
+**Trazabilidad.** `lib/email/transactional.ts`,
+`lib/email/transactional.test.ts`. Sin cambios en `plans-data.ts`,
+`lib/stripe.ts` ni ningún schema. Task Intake vía Artifact (3 opciones) y
+aprobación del fundador, 2026-09-19.
+
+## 224. Aviso "tu prueba termina en 3 días" — el hueco que CLAUDE.md llevaba semanas señalando (TRIAL-REMINDER-3D-1, 2026-09-19)
+
+**Contexto.** El fundador preguntó si existía un aviso antes de que terminara
+el trial reverse de Pro. No existía: `sendTrialEndedEmail` sólo avisa el
+mismo día que termina, sin margen para decidir con tiempo — y `CLAUDE.md` ya
+lo dejaba escrito como pendiente desde `BILLING-STRIPE-1`: *"el aviso de
+'3 días antes' es aparte, todavía necesita su propia aprobación de
+schema/cron"*. Task Intake Report presentado (con Artifact — mockup del
+email nuevo junto al informe) y aprobado por el fundador el mismo día.
+
+**Por qué no podía ser perezoso, como el resto de billing.**
+`applyTrialExpiry` (`lib/billing.ts`) comprueba el trial de forma perezosa,
+sólo cuando alguien lee el plan de esa cuenta — funciona para "¿ya terminó?"
+porque cualquier lectura tardía sigue siendo correcta. Un aviso "3 días
+antes" no tiene esa propiedad: si nadie lee esa cuenta en la ventana exacta,
+el aviso nunca se dispara. Necesitaba un proceso que empuje — un cron diario
+nuevo — de ahí que tocara dos puntos de "Forbidden Without Explicit
+Approval" a la vez (background scheduler + billing fuera del alcance ya
+aprobado).
+
+**Qué se construyó:**
+- **Migración 0036** — `profiles.trial_reminder_sent_at` (timestamptz,
+  nullable). Mismo patrón que `onboarding_tour_seen_at` (0035): sólo la
+  escribe el service role (el cron), ninguna policy de RLS nueva hace falta.
+- **`lib/billing/trial-reminders.ts`** (`runTrialReminders`) — candidatas:
+  `trial_ends_at` a 3 días o menos, `stripe_subscription_id IS NULL` (mismo
+  guard que `isTrialElapsed`, nunca avisar a quien ya convirtió a pago) y
+  `trial_reminder_sent_at IS NULL`. La ventana de elegibilidad es ancha a
+  propósito ("3 días o menos, nunca avisado") en vez de una ventana estrecha
+  del mismo día — la columna es la guardia real de una sola vez, no la
+  ventana, así que no hace falta que el cron caiga en el instante exacto cada
+  día.
+- **Orden de escritura deliberado: envía, LUEGO marca.** Si el marcado falla
+  tras un envío exitoso, el peor caso es un correo duplicado en la siguiente
+  pasada diaria — aceptado explícitamente en el Task Intake. La alternativa
+  (marcar antes de enviar) cambiaría el riesgo a "aviso nunca enviado si el
+  envío falla después de marcado", que es justo el fallo que esta fase existe
+  para eliminar. Un duplicado barato y visible gana a un silencio.
+- **`GET /api/cron/trial-reminders`** (`vercel.json`, `0 9 * * *`) — mismo
+  patrón de autorización que `/api/cron/weekly-digest`
+  (`isAuthorizedInternalRequest` + `CRON_SECRET`), con su **propio**
+  interruptor `CRON_TRIAL_REMINDER_ENABLED`, independiente de
+  `CRON_SCANS_ENABLED`/`CRON_DIGEST_ENABLED` — encender cualquiera de los
+  otros dos no puede encender éste, porque este endpoint escribe a bandejas
+  de clientes. **Nace apagado**, igual que el resumen semanal nació apagado
+  hasta que el fundador lo enciende a mano en Vercel.
+- **`sendTrialEndingSoonEmail`** (`lib/email/transactional.ts`) — reutiliza
+  `planPromoCard` de TRIAL-EMAIL-PROMO-1 (§223), con un `ctaLabel` nuevo
+  parametrizable porque el tono es deliberadamente distinto: "Seguir con
+  Pro", nunca "Activar" o "Recuperar" — nada se ha desactivado todavía, el
+  usuario sigue en Pro completo cuando le llega este correo. Sin Starter ni
+  franja de urgencia agresiva: quien ya eligió Pro no necesita que le vendan
+  un plan más barato que ya descartó. Mismo fail-safe de `isPromoActive()`
+  que el resto de la familia — sin promo viva, cae a un botón simple sin
+  precio tachado.
+
+**Comprobado.** 43 tests nuevos/afectados entre
+`lib/billing/trial-reminders.test.ts` (5),
+`app/api/cron/trial-reminders/route.test.ts` (6) y las 4 ampliaciones de
+`lib/email/transactional.test.ts` para `sendTrialEndingSoonEmail`; suite
+completa (3166 tests) y `pnpm run validate` (build + typecheck + lint) en
+verde.
+
+**Trazabilidad.** `supabase/migrations/0036_profile_trial_reminder_sent.sql`,
+`lib/billing/trial-reminders.ts` (+test), `lib/email/transactional.ts`
+(+test), `app/api/cron/trial-reminders/route.ts` (+test), `vercel.json`,
+`lib/env-schema.ts`, `docs/environment-contract.md`. Task Intake vía
+Artifact (mockup + informe) y aprobación del fundador, 2026-09-19.
