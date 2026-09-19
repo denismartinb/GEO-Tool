@@ -246,7 +246,10 @@ const savingsPercent = (price: number, promoPrice: number) => Math.round((1 - pr
  * plan tiene `promoPrice` — nunca inventa un descuento que `plans-data.ts`
  * no tenga configurado.
  */
-function planPromoCard(plan: Plan, { highlight, badge }: { highlight: boolean; badge?: string }): string {
+function planPromoCard(
+  plan: Plan,
+  { highlight, badge, ctaLabel }: { highlight: boolean; badge?: string; ctaLabel?: string }
+): string {
   if (plan.promoPrice === undefined) return "";
   const savings = savingsPercent(plan.price, plan.promoPrice);
   const borderColor = highlight ? "#2563EB" : "#E2E8F0";
@@ -256,6 +259,7 @@ function planPromoCard(plan: Plan, { highlight, badge }: { highlight: boolean; b
   const ctaBg = highlight ? "#2563EB" : "#ffffff";
   const ctaColor = highlight ? "#ffffff" : "#2563EB";
   const ctaBorderStyle = highlight ? "" : "border:1.5px solid #2563EB;";
+  const ctaText = ctaLabel ?? `Activar ${plan.name} por ${plan.promoPrice} €/mes →`;
 
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:${
@@ -278,9 +282,7 @@ function planPromoCard(plan: Plan, { highlight, badge }: { highlight: boolean; b
       </div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;"><tr>
         <td align="center" bgcolor="${ctaBg}" style="border-radius:10px;${ctaBorderStyle}">
-          <a href="https://www.genscore.es/dashboard/settings?openPlan=${plan.id}#plan" style="display:block;padding:13px 0;font-family:${FONT_STACK};font-weight:700;font-size:15px;color:${ctaColor};text-decoration:none;border-radius:10px;">Activar ${
-            plan.name
-          } por ${plan.promoPrice} €/mes →</a>
+          <a href="https://www.genscore.es/dashboard/settings?openPlan=${plan.id}#plan" style="display:block;padding:13px 0;font-family:${FONT_STACK};font-weight:700;font-size:15px;color:${ctaColor};text-decoration:none;border-radius:10px;">${ctaText}</a>
         </td>
       </tr></table>
     </td></tr>
@@ -328,6 +330,52 @@ export async function sendTrialEndedEmail(to: string): Promise<void> {
           ? `Precio de lanzamiento hasta el ${promoEndsLabel} — activa Pro o Starter con descuento.`
           : "Tu cuenta ha pasado a Free — tus datos siguen intactos."
       }
+    )
+  );
+}
+
+/**
+ * TRIAL-REMINDER-3D-1 (founder-approved 2026-09-19) — aviso proactivo 3 días
+ * antes de que el trial reverse de Pro termine, disparado por
+ * `/api/cron/trial-reminders` (nunca por una lectura perezosa: a diferencia
+ * de `applyTrialExpiry`, este correo tiene que llegar aunque el usuario no
+ * abra la consola en esa ventana exacta).
+ *
+ * Tono deliberadamente distinto de `sendTrialEndedEmail`: aquí el usuario
+ * TODAVÍA tiene acceso completo, así que el CTA es "Seguir con Pro", nunca
+ * "Activar" o "Recuperar" — nada se ha desactivado todavía. Sin Starter ni
+ * franja de urgencia agresiva: quien ya está en Pro no necesita que le
+ * vendan un plan más barato que descartó al elegir éste.
+ */
+export async function sendTrialEndingSoonEmail(to: string, trialEndsAt: Date): Promise<void> {
+  const proPlan = PLANS.find((plan) => plan.id === "pro");
+  const promoLive = isPromoActive() && proPlan?.promoPrice !== undefined;
+  const trialEndsLabel = dateFormatter.format(trialEndsAt);
+
+  await sendEmail(
+    to,
+    "Tu prueba de Pro termina en 3 días",
+    wrap(
+      `
+      ${eyebrow("Tu prueba termina pronto", "#B45309")}
+      ${heading("Tu prueba de Pro termina en 3 días")}
+      ${paragraph(
+        `El <b style="color:#0B1426;">${trialEndsLabel}</b> tu cuenta pasará a <b style="color:#0B1426;">Free</b> automáticamente: dejarás de tener escaneo diario, 3 motores de IA y el bucle de acción completo. Aún puedes seguir con Pro sin perder nada.`
+      )}
+      ${
+        promoLive
+          ? planPromoCard(proPlan!, {
+              highlight: true,
+              badge: "Precio de lanzamiento",
+              ctaLabel: `Seguir con Pro por ${proPlan!.promoPrice} €/mes →`
+            })
+          : button("https://www.genscore.es/dashboard/settings/billing", "Seguir con Pro")
+      }
+      ${subtext(
+        "Si no haces nada, no pasa nada malo: tu cuenta simplemente pasa a Free y tus dominios/escaneos siguen intactos. Este es sólo un aviso para que decidas con tiempo."
+      )}
+    `,
+      { preheader: `Tu cuenta pasa a Free el ${trialEndsLabel} si no sigues con Pro antes.` }
     )
   );
 }

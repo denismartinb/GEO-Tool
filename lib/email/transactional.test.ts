@@ -50,6 +50,7 @@ import {
   sendScanHealthAlertEmail,
   sendScoreDropAlertEmail,
   sendTrialEndedEmail,
+  sendTrialEndingSoonEmail,
   sendWeeklyDigestEmail,
   sendWebAuditFailedAlertEmail,
   sendWelcomeEmail
@@ -442,5 +443,54 @@ describe("sendTrialEndedEmail: precio de lanzamiento", () => {
     expect(html).not.toContain("Activar Starter");
     expect(html).not.toContain("text-decoration:line-through");
     expect(html).toContain("Ver planes");
+  });
+});
+
+describe("sendTrialEndingSoonEmail: aviso 3 días antes (TRIAL-REMINDER-3D-1)", () => {
+  const proPlan = PLANS.find((plan) => plan.id === "pro")!;
+  const trialEndsAt = new Date("2026-09-22T09:00:00Z");
+
+  it("con la promo activa, sólo enseña Pro con CTA 'Seguir con Pro', nunca Starter ni 'Activar'", async () => {
+    promoActiveOverride = true;
+    await sendTrialEndingSoonEmail(CUSTOMER, trialEndsAt);
+    const { html, subject } = lastPayload();
+
+    expect(subject).toContain("3 días");
+    expect(html).toContain(`Seguir con Pro por ${proPlan.promoPrice} €/mes`);
+    expect(html).not.toContain("Activar Pro");
+    expect(html).not.toContain("Starter");
+    expect(html).toContain(`${proPlan.promoPrice}&nbsp;€`);
+    expect(html).toContain(`${proPlan.price}&nbsp;€`);
+  });
+
+  it("dice la fecha real de fin del trial que le pasan, no una fija", async () => {
+    promoActiveOverride = true;
+    await sendTrialEndingSoonEmail(CUSTOMER, trialEndsAt);
+    const { html } = lastPayload();
+
+    const expectedLabel = new Intl.DateTimeFormat("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }).format(trialEndsAt);
+    expect(html).toContain(expectedLabel);
+  });
+
+  it("sin promo activa, cae a un botón simple 'Seguir con Pro' sin tarjeta ni tachado", async () => {
+    promoActiveOverride = false;
+    await sendTrialEndingSoonEmail(CUSTOMER, trialEndsAt);
+    const { html } = lastPayload();
+
+    expect(html).toContain("Seguir con Pro");
+    expect(html).not.toContain("text-decoration:line-through");
+    expect(html).not.toContain("Ahorras");
+  });
+
+  it("deja claro que no hacer nada no rompe nada — el tono no es de urgencia agresiva", async () => {
+    promoActiveOverride = true;
+    await sendTrialEndingSoonEmail(CUSTOMER, trialEndsAt);
+    const { html } = lastPayload();
+
+    expect(html).toContain("no pasa nada malo");
   });
 });
