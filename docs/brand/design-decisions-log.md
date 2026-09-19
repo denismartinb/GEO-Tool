@@ -20590,10 +20590,21 @@ public-pages.spec.ts`, `docs/content-calendar.md`, dos portadas en
 `docs/design-reference/blog-covers/`. Task Intake y aprobación del fundador,
 2026-09-19.
 
-## 224. GROWTH-2: N3+N4, segunda tanda de 5 artículos nuevos del blog (2026-09-19)
+## 224. GROWTH-2: N4, segunda tanda de 5 artículos nuevos del blog (2026-09-19)
 
-Segunda tanda apilada sobre §223 (BUILD-BUDGET-1). Detalle completo en
+Segunda tanda apilada sobre §223 (BUILD-BUDGET-1). Se preparó como N3+N4, pero
+al aprobar el merge del PR #536 el fundador pidió excluir N3
+(`agencia-geo-vs-herramienta-geo`) de las cuatro piezas que sí se publicaban —
+esta entrada documenta el estado final, sólo N4. Detalle completo en
 `docs/content-calendar.md` ("GROWTH-2, 5 artículos nuevos").
+
+**N3 (`agencia-geo-vs-herramienta-geo`) no se publicó.** Estaba escrito,
+validado y trazado a `genscore-vs-profound` en su tratamiento de precio de
+agencia — no fue descartado por un problema de honestidad ni de calidad, el
+fundador simplemente lo excluyó del merge sin dar motivo en esta sesión. Su
+artículo, portada y todas las referencias (código, fixtures del piloto,
+calendario) se retiraron en el mismo commit que lo excluyó, para no dejar
+contenido a medias en `main`. Queda pendiente de un PR propio si se retoma.
 
 **N4 declara una limitación real del asistente de prompts, no inventada para
 la ocasión.** `geo-negocios-locales-servicios-profesionales` necesitaba saber
@@ -20607,27 +20618,18 @@ en el producto — prompts personalizados vía `createPrompt`
 (`app/dashboard/projects/[projectId]/actions.ts`) — en vez de callar la
 limitación o prometer algo que el asistente no hace.
 
-**N3 se alojó en `/blog`, no en `/comparativas`.** `agencia-geo-vs-
-herramienta-geo` compara dos categorías de servicio, no dos productos
-competidores, así que el sistema de bloques del blog (`CompareTable`,
-`Verdict`, `Checklist`) encaja mejor que el patrón de tabla de victorias por
-fila que usa cada comparativa 1:1. Ningún precio de agencia se publica como
-cifra verificada — sólo estructura de coste, mismo principio que
-`genscore-vs-profound` ya aplicó con el precio de Profound.
-
 **Comprobado.** `pnpm exec vitest run lib/blog lib/glosario tests/pilot/
 fixtures/fixture-drift.test.ts` en verde; `pnpm run typecheck`, `pnpm run
-lint` y `pnpm run build` en verde, con las dos rutas nuevas listadas como
-estáticas (`○`) en la salida del build. Sin pasada de `ux-pilot` en este PR —
-pendiente de que el fundador decida lanzarla antes del Human Gate.
+lint` y `pnpm run build` en verde, con la ruta nueva de N4 listada como
+estática (`○`) en la salida del build tras retirar N3.
 
-**Trazabilidad.** `lib/blog/posts.ts`, `app/blog/agencia-geo-vs-herramienta-
-geo/page.mdx`, `app/blog/geo-negocios-locales-servicios-profesionales/
-page.mdx`, `tests/pilot/fixtures/server.mjs`, `tests/pilot/journeys/
-public-pages.spec.ts`, `docs/content-calendar.md`, dos portadas en
-`public/blog/<slug>/cover.webp` y sus SVG fuente en
-`docs/design-reference/blog-covers/`. Task Intake y aprobación del fundador,
-2026-09-19.
+**Trazabilidad.** `lib/blog/posts.ts`,
+`app/blog/geo-negocios-locales-servicios-profesionales/page.mdx`,
+`tests/pilot/fixtures/server.mjs`, `tests/pilot/journeys/
+public-pages.spec.ts`, `docs/content-calendar.md`, portada en
+`public/blog/geo-negocios-locales-servicios-profesionales/cover.webp` y su SVG
+fuente en `docs/design-reference/blog-covers/`. Task Intake y aprobación del
+fundador, 2026-09-19.
 
 ## 225. GROWTH-2: N5, tercera y última tanda de 5 artículos nuevos del blog (2026-09-19)
 

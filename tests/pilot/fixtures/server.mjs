@@ -80,8 +80,8 @@ const BLOG_SLUGS = [
   // GROWTH-2, N1+N2 (2026-09-19).
   "chatgpt-informacion-incorrecta-de-tu-empresa",
   "ai-overviews-vs-chatgpt-diferencia",
-  // GROWTH-2, N3+N4 (2026-09-19).
-  "agencia-geo-vs-herramienta-geo",
+  // GROWTH-2, N4 (2026-09-19). N3 (agencia-geo-vs-herramienta-geo) retirado de
+  // esta tanda a petición del fundador — sin publicar todavía.
   "geo-negocios-locales-servicios-profesionales",
   // GROWTH-2, N5 (2026-09-19).
   "mi-marca-no-aparece-en-chatgpt-por-que"
