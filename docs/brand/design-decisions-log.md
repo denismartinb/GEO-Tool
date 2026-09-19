@@ -20660,3 +20660,119 @@ chatgpt-por-que/page.mdx`, `tests/pilot/fixtures/server.mjs`,
 portada en `public/blog/mi-marca-no-aparece-en-chatgpt-por-que/cover.webp` y
 su SVG fuente en `docs/design-reference/blog-covers/`. Task Intake y
 aprobación del fundador, 2026-09-19.
+
+---
+
+## 226. Cabecera pública: la caché de sesión sale de la pestaña y la petición sale antes del bundle (header-flicker-prehydration-2, 2026-09-19)
+
+**Origen.** El fundador, con una captura del cajón móvil en 4G: *"¿Puedes
+mejorar el flickering del usuario en la zona pública? Aún tarda mucho en
+aparecer, se ve el parpadeo. En móvil y desktop"*. Tercera pasada sobre el
+mismo defecto: §117 (pro-badge-alignment-flickering-v4brfv) y §118
+(header-flicker-skeleton-prehydration) ya lo habían atacado.
+
+**Causa, y por qué las dos pasadas anteriores no bastaron.** §117 y §118
+atacaron la misma mitad del problema —**qué se pinta mientras se espera**— y
+dejaron intacta la otra: **la espera misma**. De ahí que el arreglo no
+acabara de sentirse como tal. Tres agujeros concretos, todos activos a la
+vez:
+
+1. **La caché era `sessionStorage`, o sea por pestaña.** El hint de §118
+   sólo existía en una segunda navegación *dentro de la misma pestaña*.
+   Todas las formas en las que un teléfono abre de verdad un sitio —un
+   enlace desde otra app, una pestaña nueva, tras cerrar el navegador—
+   empezaban con la caché vacía, sin hint, sin skeleton y con el destello
+   anónimo entero. Es exactamente el escenario de la captura.
+2. **La petición `/api/me` no arrancaba hasta después de hidratar.** Vivía
+   en un `useEffect`, así que no podía empezar hasta que el JS de la página
+   se hubiera descargado, parseado e hidratado. En la portada, en un móvil
+   sobre 4G, eso son segundos: el *"tarda mucho en aparecer"* literal. El
+   skeleton nunca tocó esto — sólo tapaba la espera.
+3. **Nadie sembraba la caché desde la consola.** La única cosa que la
+   escribía era una página pública, así que la primera superficie pública
+   que abría alguien recién logado era siempre un fallo de caché *por
+   construcción*: te registras, aterrizas en la consola, pulsas "Manuales
+   GEO" en el menú lateral (la sección "Aprender", 2026-09-19) y ese
+   primer `/blog` parpadea. Para cada cuenta nueva, siempre.
+
+**Arreglo.** Los tres, en el mismo PR porque son el mismo defecto:
+
+1. La caché pasa a `localStorage` (`lib/use-session-user.ts`, misma clave
+   `gs_session_user_hint`). Sigue siendo **sólo una pista de pintado, nunca
+   autoridad**: `/api/me` corre en cada carga y la sobrescribe, así que lo
+   peor que puede hacer un valor obsoleto es pintar mal el instante que
+   tarda la respuesta — nunca conceder nada. Mismo trato que ya aceptaba
+   §117, sin cambios.
+2. El script inline bloqueante de `app/layout.tsx` **dispara él mismo** el
+   `fetch('/api/me')` y aparca la promesa en `window.__gsSessionPrefetch`;
+   `fetchSessionUser()` la adopta en vez de emitir la suya. Una sola
+   petición por carga, igual que antes — pero empezada en el primer byte en
+   vez de después de hidratar. Se salta en las rutas donde nadie lee la
+   respuesta (`NON_PUBLIC_PATH_PATTERN`: dashboard, admin, mfa, login,
+   signup, api), para que la consola no pague por un cuerpo que nadie
+   consume. La promesa se lee una vez y se borra de `window`: responde por
+   UNA carga, y dejarla ahí permitiría que un montaje posterior adoptara
+   una respuesta anterior a lo que hubiera pasado entre medias.
+3. `components/session-cache-sync.tsx` siembra la caché desde
+   `app/dashboard/layout.tsx`, donde la identidad ya está resuelta en
+   servidor (es la que pinta el chip del menú lateral): coste cero, sin
+   petición, una escritura. Y el mismo módulo aporta `SignOutForm`, que
+   **borra la caché al cerrar sesión** — con `localStorage` el hint
+   sobrevive al redirect, así que sin esto la siguiente página pública
+   pintaría el chip de la cuenta que se acaba de abandonar. No se filtra
+   nada (la caché sólo guarda lo que ese mismo navegador ya enseñaba, y el
+   chip no da acceso a nada), pero enseñarle su propio email a alguien que
+   acaba de salir es el defecto exacto —*"un producto que no sabe quién
+   está mirando"*— que empezó GENSCORE-HEADER-2.
+
+**Corrección menor de honestidad del skeleton.** `useSessionUser` quitaba
+`data-session-hint` incondicionalmente en su `useLayoutEffect`. Con el
+atributo puesto pero la caché ilegible (JSON corrupto, caché medio
+limpiada) eso cambiaba el skeleton por los CTAs anónimos y, un momento
+después, por el chip: dos pintados y un destello, justo lo que el skeleton
+existe para evitar. Ahora se retira **sólo cuando hay algo cierto en
+pantalla**: con caché, en ese mismo commit pre-pintado; sin ella, cuando
+llega la respuesta. Va en un `useLayoutEffect` propio con clave `resolved`
+y no en el `.then`: ahí el atributo saldría de forma síncrona mientras el
+re-render de `setUser` seguía sólo programado, y la corrección dependería
+de que el navegador no pintase entre un microtask y su vaciado. Como
+`fetchSessionUser` nunca rechaza (su propio `.catch` resuelve a `null`),
+`resolved` llega siempre y el skeleton **no puede quedarse permanente**.
+
+**Premisa que sostiene esto, anotada a propósito.** Todo el mecanismo
+descansa en que `/api/me` siga siendo la única autoridad y corra en cada
+carga pública. Si algún día alguien "optimiza" saltándose esa petición
+cuando hay caché, esto deja de ser una pista optimista y pasa a ser una
+fuente de verdad en `localStorage`, editable por quien quiera, y el chip
+—hoy inofensivo— pasaría a afirmar un plan que nadie ha verificado. La
+petición no es el coste del mecanismo: es su garantía.
+
+**Pendiente / roto conocido, sin maquillar.** Un visitante con el
+almacenamiento no disponible o limpiado (navegación privada, dispositivo
+recién borrado) **sigue viendo primero los CTAs anónimos**. No hay forma de
+evitarlo mientras las páginas públicas se sirvan en estático, que es una
+decisión deliberada por SEO (§65, GENSCORE-HEADER-2) y que este PR no
+revierte. Lo que cambia para ese caso es sólo el punto (2): la espera se
+acorta, y se queda acortada.
+
+**Comprobado.** `pnpm test` (228 ficheros, 3.206 tests) en verde;
+`pnpm run build`, `pnpm run typecheck` y `pnpm run lint` en verde. Y —la
+lección de §118, que `pnpm run validate` no coge sola— **inspeccionado el
+HTML real construido** por `next build` (`.next/server/app/blog.html`): el
+script sale con la clave, el atributo, el patrón de rutas y el `fetch`
+literales, no `undefined`. Tests nuevos: `lib/session-hint.test.ts` asegura
+que el script inline lee `localStorage` y nunca `sessionStorage`, que
+arranca la petición y que el patrón de rutas acierta en ambas direcciones
+(incluido `/loginfo`, que empieza por "login" y sí es pública);
+`lib/use-session-user.test.ts` guarda que la caché sobrevive a cerrar la
+pestaña — una vuelta silenciosa a `sessionStorage` no rompería nada en
+local y sólo se vería en el teléfono de alguien.
+
+**Trazabilidad.** §117 (el primer intento, `sessionStorage` + layout
+effect), §118 (el skeleton pre-hidratación, cuyo "pendiente/roto conocido"
+esta sección cierra a medias), §65 (GENSCORE-HEADER-2, el estático que no
+se revierte). Ficheros: `lib/session-hint.ts`, `lib/use-session-user.ts`,
+`app/layout.tsx`, `components/session-cache-sync.tsx` (nuevo),
+`app/dashboard/layout.tsx`, `components/sidebar.tsx`, y los dos ficheros de
+test citados arriba. Petición directa del fundador con captura,
+2026-09-19.

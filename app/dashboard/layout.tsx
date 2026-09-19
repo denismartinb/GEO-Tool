@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { MobileShellProvider } from "@/components/mobile-shell";
 import { TourProvider } from "@/components/tour-provider";
+import { SessionCacheSync, SignOutForm } from "@/components/session-cache-sync";
 import { signOut } from "./actions";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -74,6 +75,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <MobileShellProvider>
+      {/* header-flicker-prehydration-2 — seeds the public header's identity
+          cache from the identity this layout already resolved server-side,
+          so the first public page this visitor opens (the sidebar's own
+          "Manuales GEO" link goes straight to /blog) paints the account chip
+          instead of flashing the anonymous CTAs. Renders nothing; see
+          components/session-cache-sync.tsx. */}
+      <SessionCacheSync email={user.email ?? ""} planId={plan.id} planName={plan.name} />
       {/* Blocking on purpose: no close button, no Escape, no click-outside.
           Rendered above everything else in the console — Sidebar included —
           for as long as the account holds more active domains than its plan
@@ -112,12 +120,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
           />
           <div className="dash-header-actions">
             <NotificationBell notifications={notifications} projects={projects ?? []} />
-            <form action={signOut}>
+            <SignOutForm action={signOut}>
               <Button variant="outline" type="submit">
                 <Icon name="settings" size={14} />
                 Cerrar sesión
               </Button>
-            </form>
+            </SignOutForm>
           </div>
         </ConsoleHeader>
         <DataMaturityBanner dataMaturityByProject={dataMaturityByProject} />
