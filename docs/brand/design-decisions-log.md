@@ -20542,3 +20542,66 @@ de UI — no aplica pasada de `ux-pilot`.
 `app/dashboard/projects/[projectId]/debug/page.tsx`,
 `docs/environment-contract.md` (`COMPED_ACCOUNT_EMAILS`). Task Intake y
 aprobación del fundador, 2026-09-18.
+
+## 223. El email de fin de prueba pasa a enseñar la promo de lanzamiento de Pro y Starter (TRIAL-EMAIL-PROMO-1, 2026-09-19)
+
+**Contexto.** `sendTrialEndedEmail` avisaba de que la cuenta había pasado a
+Free con un único CTA neutro ("Ver planes"), sin mencionar el precio de
+lanzamiento que el resto del producto ya muestra (hero, `/pricing`, consola —
+TRUST-PROMISES-1, log §182). El fundador pidió una versión con foco en
+conversión: las dos promos (Pro y Starter), urgencia por la fecha de fin,
+precios más grandes con el tachado también grande, una pill de % de ahorro, y
+CTA "Activar" en vez de "Ver planes"/"Recuperar". Tres opciones de diseño se
+presentaron primero como Artifact (canvas con mockups A/B/C) antes de tocar
+código, y el fundador eligió A (urgencia) con los ajustes de arriba.
+
+**Qué se construyó.** `sendTrialEndedEmail` (`lib/email/transactional.ts`)
+bifurca en `isPromoActive()` (de `app/pricing/plans-data.ts`, ya usada por
+`/pricing` y la consola):
+
+- **Promo activa** (`isPromoActive()` true y ambos planes tienen
+  `promoPrice`): franja roja fija con la fecha real (`PROMO_ENDS_AT`,
+  formateada) antes de la cabecera de contenido, y una tarjeta por plan
+  (`planPromoCard`) — Pro primero y destacada ("Recomendado · el que
+  probaste"), Starter debajo sin destacar. Cada tarjeta calcula su propio %
+  de ahorro (`savingsPercent`, `1 - promoPrice/price`, nunca escrito a mano)
+  y su CTA enlaza a `/dashboard/settings?openPlan=<id>#plan` — el deep-link
+  que PRECIO-BUTTONS-CONSOLE-1 (log §221) ya dejó preparado para abrir
+  "Cambiar de plan" preseleccionado.
+- **Sin promo** (caducada, o Stripe sin el cupón configurado): cae al aviso
+  original — sin franja, sin precios tachados, CTA "Ver planes" a
+  `/dashboard/settings/billing` sin plan preseleccionado. Es el mismo
+  fail-safe que ya usa `resolveShownPromoPrice`/`isPromoActive` en el resto
+  del producto: el email nunca anuncia un descuento que el checkout ya no
+  aplicaría.
+
+**Ningún precio ni fecha se escribe a mano.** `planPromoCard` lee
+`plan.price`/`plan.promoPrice` de `PLANS`, la franja de urgencia lee
+`PROMO_ENDS_AT` con el mismo `Intl.DateTimeFormat("es-ES", …)` que ya usaba
+`sendCancellationScheduledEmail` — si la promo cambia en `plans-data.ts` (otro
+precio, otra fecha, se apaga), este email cambia solo, sin tocar
+`transactional.ts`. Mismo patrón que TRUST-PROMISES-1 (log §182); ver
+`.claude/rules` — la invariante queda anotada en el mapa de zonas de
+CLAUDE.md, sección "Correos transaccionales".
+
+**Cabecera y layout compartidos, sin tocar.** `HEADER_ROW` y `wrap()` (el
+esqueleto de tabla que comparten los 8 emails transaccionales, incluidos los
+dos meta de dark-mode y el `@media` de 600px) no se modifican — la franja de
+urgencia y las tarjetas de promo son contenido dentro de `bodyHtml`, como
+cualquier otro bloque de un email concreto, exactamente como ya hacía la caja
+roja de `sendPaymentFailedEmail`.
+
+**Comprobado.** `pnpm test` (3150 tests, incluidos 4 nuevos casos:
+precios/CTA reales de ambos planes, % de ahorro calculado, fecha real de
+`PROMO_ENDS_AT`, y el fallback sin promo activa) en verde; `pnpm run
+validate` (build + typecheck + lint) en verde.
+
+**Pendiente / no cubierto por esta fase.** No hay pasada de `ux-pilot`
+posible: es un email transaccional, no una pantalla de la consola — el
+piloto no envía ni renderiza correos. La revisión visual queda en manos del
+fundador sobre el HTML real (o un envío de prueba) antes del Human Gate.
+
+**Trazabilidad.** `lib/email/transactional.ts`,
+`lib/email/transactional.test.ts`. Sin cambios en `plans-data.ts`,
+`lib/stripe.ts` ni ningún schema. Task Intake vía Artifact (3 opciones) y
+aprobación del fundador, 2026-09-19.

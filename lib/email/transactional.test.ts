@@ -25,6 +25,23 @@ vi.mock("@/lib/email/resend", () => ({
   getEmailFromAddress: () => "GenScore <no-reply@genscore.es>"
 }));
 
+/**
+ * `sendTrialEndedEmail` decide su rama (promo vs. fallback) leyendo
+ * `isPromoActive()` — el resto del módulo (`PLANS`, `PROMO_ENDS_AT`) se deja
+ * intacto para que los tests comprueben los precios REALES de
+ * `plans-data.ts`, no una copia inventada en el test.
+ */
+let promoActiveOverride: boolean | null = null;
+vi.mock("@/app/pricing/plans-data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/app/pricing/plans-data")>();
+  return {
+    ...actual,
+    isPromoActive: (...args: Parameters<typeof actual.isPromoActive>) =>
+      promoActiveOverride ?? actual.isPromoActive(...args)
+  };
+});
+
+import { PLANS, PROMO_ENDS_AT } from "@/app/pricing/plans-data";
 import {
   isOpsAlertConfigured,
   sendLlmIncidentAlertEmail,
@@ -32,6 +49,7 @@ import {
   sendPaymentFailedEmail,
   sendScanHealthAlertEmail,
   sendScoreDropAlertEmail,
+  sendTrialEndedEmail,
   sendWeeklyDigestEmail,
   sendWebAuditFailedAlertEmail,
   sendWelcomeEmail
@@ -47,6 +65,7 @@ function lastPayload() {
 beforeEach(() => {
   vi.clearAllMocks();
   clientAvailable = true;
+  promoActiveOverride = null;
   send.mockResolvedValue({ error: null });
   process.env.OPS_ALERT_EMAIL = OPS;
 });
@@ -356,5 +375,72 @@ describe("WEEKLY-DIGEST-VISUAL-1: indicador visual y deltas por sub-score", () =
     expect(html).toContain("45%");
     expect(html).not.toContain("▲");
     expect(html).not.toContain("▼");
+  });
+});
+
+describe("sendTrialEndedEmail: precio de lanzamiento", () => {
+  const proPlan = PLANS.find((plan) => plan.id === "pro")!;
+  const starterPlan = PLANS.find((plan) => plan.id === "starter")!;
+
+  /**
+   * Ningún precio ni fecha se repite a mano en este test — se comprueba
+   * contra `PLANS`/`PROMO_ENDS_AT` reales, el mismo principio que el propio
+   * email respeta (`.claude/rules` de precios/facturación, TRUST-PROMISES-1,
+   * log §182): si `plans-data.ts` cambia, este test sigue en verde sin
+   * tocarlo, y sólo se rompe si el EMAIL deja de leer esa fuente.
+   */
+  it("con la promo activa, enseña las dos ofertas con sus precios reales y CTA 'Activar'", async () => {
+    promoActiveOverride = true;
+    await sendTrialEndedEmail(CUSTOMER);
+    const { html } = lastPayload();
+
+    expect(html).toContain(`${proPlan.promoPrice}&nbsp;€`);
+    expect(html).toContain(`${proPlan.price}&nbsp;€`);
+    expect(html).toContain(`${starterPlan.promoPrice}&nbsp;€`);
+    expect(html).toContain(`${starterPlan.price}&nbsp;€`);
+    expect(html).toContain(`Activar ${proPlan.name} por ${proPlan.promoPrice} €/mes`);
+    expect(html).toContain(`Activar ${starterPlan.name} por ${starterPlan.promoPrice} €/mes`);
+    expect(html).toContain(`?openPlan=${proPlan.id}#plan`);
+    expect(html).toContain(`?openPlan=${starterPlan.id}#plan`);
+  });
+
+  it("el % de ahorro de cada tarjeta se calcula de los precios reales, no se escribe a mano", async () => {
+    promoActiveOverride = true;
+    await sendTrialEndedEmail(CUSTOMER);
+    const { html } = lastPayload();
+
+    const proSavings = Math.round((1 - proPlan.promoPrice! / proPlan.price) * 100);
+    const starterSavings = Math.round((1 - starterPlan.promoPrice! / starterPlan.price) * 100);
+    expect(html).toContain(`Ahorras ${proSavings}%`);
+    expect(html).toContain(`Ahorras ${starterSavings}%`);
+  });
+
+  it("muestra la fecha de fin real de la promo (PROMO_ENDS_AT), no una fija en el copy", async () => {
+    promoActiveOverride = true;
+    await sendTrialEndedEmail(CUSTOMER);
+    const { html } = lastPayload();
+
+    const expectedLabel = new Intl.DateTimeFormat("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }).format(new Date(PROMO_ENDS_AT));
+    expect(html).toContain(expectedLabel);
+  });
+
+  /**
+   * Fail-safe: si la promo caduca (o Stripe no la tiene configurada,
+   * `isPromoActive() === false`), el email cae al aviso neutro de siempre —
+   * nunca anuncia un descuento que el checkout ya no aplicaría.
+   */
+  it("sin promo activa, vuelve al aviso neutro sin precios tachados ni CTA de Activar", async () => {
+    promoActiveOverride = false;
+    await sendTrialEndedEmail(CUSTOMER);
+    const { html } = lastPayload();
+
+    expect(html).not.toContain("Activar Pro");
+    expect(html).not.toContain("Activar Starter");
+    expect(html).not.toContain("text-decoration:line-through");
+    expect(html).toContain("Ver planes");
   });
 });
