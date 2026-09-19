@@ -56,7 +56,10 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // SEO-POS-1 Fase C, S9 (2026-08-15).
   "como-hacer-que-chatgpt-recomiende-tu-negocio": "playbooks",
   // Cluster "fundamentos" (2026-08-23): la confusión de nomenclatura GEO/AEO/SEO/LLMO.
-  "geo-vs-aeo-vs-seo": "fundamentos"
+  "geo-vs-aeo-vs-seo": "fundamentos",
+  // GROWTH-2, N1+N2 (2026-09-19).
+  "chatgpt-informacion-incorrecta-de-tu-empresa": "playbooks",
+  "ai-overviews-vs-chatgpt-diferencia": "fundamentos"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

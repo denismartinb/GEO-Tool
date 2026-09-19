@@ -76,7 +76,10 @@ const BLOG_SLUGS = [
   // SEO-POS-1 Fase C, S9 (2026-08-15).
   "como-hacer-que-chatgpt-recomiende-tu-negocio",
   // Cluster "fundamentos" (2026-08-23): la confusión de nomenclatura GEO/AEO/SEO/LLMO.
-  "geo-vs-aeo-vs-seo"
+  "geo-vs-aeo-vs-seo",
+  // GROWTH-2, N1+N2 (2026-09-19).
+  "chatgpt-informacion-incorrecta-de-tu-empresa",
+  "ai-overviews-vs-chatgpt-diferencia"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

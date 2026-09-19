@@ -269,6 +269,32 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "playbooks"
   },
   {
+    slug: "chatgpt-informacion-incorrecta-de-tu-empresa",
+    title: "Cuando ChatGPT dice algo falso o desactualizado de tu empresa: cómo corregirlo",
+    description:
+      "Un precio viejo, un producto que ya no vendes, una dirección equivocada: sí apareces, pero con un dato mal. Qué hacer cuando la IA te menciona con información incorrecta.",
+    metaDescription:
+      "Qué hacer cuando ChatGPT da información incorrecta de tu empresa: cómo verlo, de dónde sale el dato y cómo corregir la fuente.",
+    datePublished: "2026-09-19",
+    coverIcon: "search",
+    coverImage: "/blog/chatgpt-informacion-incorrecta-de-tu-empresa/cover.webp",
+    primaryKeyword: "chatgpt da información incorrecta de mi empresa",
+    cluster: "playbooks"
+  },
+  {
+    slug: "ai-overviews-vs-chatgpt-diferencia",
+    title: "AI Overviews de Google vs. ChatGPT, Gemini y Claude: qué mide GenScore y qué no",
+    description:
+      "AI Overviews es una función de los resultados de Google; ChatGPT, Gemini y Claude son productos conversacionales aparte. Qué mide GenScore hoy, y qué queda fuera.",
+    metaDescription:
+      "Diferencia entre AI Overviews de Google y ChatGPT: qué es cada uno y qué motores escanea GenScore hoy.",
+    datePublished: "2026-09-19",
+    coverIcon: "compass",
+    coverImage: "/blog/ai-overviews-vs-chatgpt-diferencia/cover.webp",
+    primaryKeyword: "ai overviews vs chatgpt diferencia",
+    cluster: "fundamentos"
+  },
+  {
     slug: "geo-para-ecommerce",
     title: "GEO para ecommerce: cómo aparecer cuando la IA recomienda productos",
     description:

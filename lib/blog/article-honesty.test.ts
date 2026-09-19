@@ -39,7 +39,16 @@ const ALLOWED_TO_MENTION_PERPLEXITY = new Set<string>([
   // metadata no lo menciona, que es donde la regla de motores muerde
   // (`.claude/rules/growth-content.md`, "La metadata no nombra motores que el
   // producto no ejecuta").
-  "como-medir-trafico-chatgpt-ga4"
+  "como-medir-trafico-chatgpt-ga4",
+  // GROWTH-2 (2026-09-19). El artículo existe justo para trazar la frontera
+  // entre AI Overviews/Perplexity/Copilot (motores de mercado, no soportados)
+  // y Gemini/Claude/ChatGPT (los tres que GenScore sí escanea). Nombrar
+  // Perplexity aquí es el propósito de la pieza, no un desliz — mismo
+  // razonamiento que "como-aparecer-en-perplexity" y
+  // "como-medir-trafico-chatgpt-ga4" ya sentaron. Un `Verdict` explícito dice
+  // qué motores escanea GenScore hoy, sin fecha comprometida para el resto, y
+  // ni el CTA ni la metadata lo nombran.
+  "ai-overviews-vs-chatgpt-diferencia"
 ]);
 
 function readArticle(slug: string): string {
