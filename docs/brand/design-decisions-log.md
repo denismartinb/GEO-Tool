@@ -20542,3 +20542,121 @@ de UI — no aplica pasada de `ux-pilot`.
 `app/dashboard/projects/[projectId]/debug/page.tsx`,
 `docs/environment-contract.md` (`COMPED_ACCOUNT_EMAILS`). Task Intake y
 aprobación del fundador, 2026-09-18.
+
+## 223. GROWTH-2: N1+N2, primera tanda de 5 artículos nuevos del blog (2026-09-19)
+
+Task Intake aprobado por el fundador. Investigados y priorizados por
+`seo-geo-research`, implementados por `growth-content`. Primera de tres tandas
+apiladas (BUILD-BUDGET-1); N3+N4 y N5 quedan en tandas posteriores. Detalle
+completo en `docs/content-calendar.md` ("GROWTH-2, 5 artículos nuevos").
+
+**El gancho de N1 se reformuló tras revisar el código, tal y como pedía el
+brief.** El encargo original era escribir sobre "cuando la IA da información
+incorrecta de tu empresa" y verificar antes de prometer que GenScore lo
+"detecta". Revisado `lib/recommendations/recommendation-engine.ts` y el resto
+de `lib/recommendations/**`: las señales reales que persiste un escaneo son
+`brand_mentioned`, `citation_found`, `sentiment`, `mentioned_competitors_count`
+y posición. No hay ninguna comparación entre lo que dice una respuesta y un
+valor de referencia real (precio actual, catálogo actual, ubicación real) —
+el producto no tiene, y nunca ha tenido, una capacidad de "detectar dato
+incorrecto" distinta de "detectar ausencia". `chatgpt-informacion-incorrecta-
+de-tu-empresa` no promete esa detección: dice, con un `Verdict` explícito,
+que ningún producto de monitorización GEO (el nuestro incluido) verifica
+hechos automáticamente, y que lo que sí aporta un escaneo periódico es ver la
+respuesta real con tus propios ojos en vez de enterarte por un cliente.
+
+**N2 traza la frontera de motores a Fase 8 del launch plan, no de memoria.**
+`ai-overviews-vs-chatgpt-diferencia` declara explícitamente que GenScore
+escanea Gemini, Claude y ChatGPT, y que AI Overviews, Perplexity y Copilot
+quedan fuera sin fecha comprometida — coincide con
+`docs/launch-plan.md` Fase 8 (ENGINES-2). Nombra Perplexity con motivo
+legítimo (frontera de mercado, mismo patrón que S7/S8), añadido a
+`ALLOWED_TO_MENTION_PERPLEXITY` en `lib/blog/article-honesty.test.ts`. Ni la
+metadata ni el CTA lo nombran.
+
+**Comprobado.** `pnpm exec vitest run lib/blog lib/glosario tests/pilot/
+fixtures/fixture-drift.test.ts` en verde; `pnpm run typecheck`, `pnpm run
+lint` y `pnpm run build` en verde, con las dos rutas nuevas listadas como
+estáticas (`○`) en la salida del build. Sin pasada de `ux-pilot` en este PR —
+pendiente de que el fundador decida lanzarla antes del Human Gate, según el
+protocolo de VERCEL-COST-1 Fase 5.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `app/blog/chatgpt-informacion-
+incorrecta-de-tu-empresa/page.mdx`, `app/blog/ai-overviews-vs-chatgpt-
+diferencia/page.mdx`, `lib/blog/article-honesty.test.ts` (allow-list de
+Perplexity), `tests/pilot/fixtures/server.mjs`, `tests/pilot/journeys/
+public-pages.spec.ts`, `docs/content-calendar.md`, dos portadas en
+`public/blog/<slug>/cover.webp` y sus SVG fuente en
+`docs/design-reference/blog-covers/`. Task Intake y aprobación del fundador,
+2026-09-19.
+
+## 224. GROWTH-2: N4, segunda tanda de 5 artículos nuevos del blog (2026-09-19)
+
+Segunda tanda apilada sobre §223 (BUILD-BUDGET-1). Se preparó como N3+N4, pero
+al aprobar el merge del PR #536 el fundador pidió excluir N3
+(`agencia-geo-vs-herramienta-geo`) de las cuatro piezas que sí se publicaban —
+esta entrada documenta el estado final, sólo N4. Detalle completo en
+`docs/content-calendar.md` ("GROWTH-2, 5 artículos nuevos").
+
+**N3 (`agencia-geo-vs-herramienta-geo`) no se publicó.** Estaba escrito,
+validado y trazado a `genscore-vs-profound` en su tratamiento de precio de
+agencia — no fue descartado por un problema de honestidad ni de calidad, el
+fundador simplemente lo excluyó del merge sin dar motivo en esta sesión. Su
+artículo, portada y todas las referencias (código, fixtures del piloto,
+calendario) se retiraron en el mismo commit que lo excluyó, para no dejar
+contenido a medias en `main`. Queda pendiente de un PR propio si se retoma.
+
+**N4 declara una limitación real del asistente de prompts, no inventada para
+la ocasión.** `geo-negocios-locales-servicios-profesionales` necesitaba saber
+si el asistente que sugiere prompts (`lib/projects/prompt-suggestions-llm.ts`)
+genera variantes de intención local ("cerca de mí", "en [ciudad]"). No lo
+hace: la taxonomía fija de `PROMPT_CATEGORIES` es Comparación / Alternativas /
+Cómo hacer-guía / Precio y planes / Reseñas y opiniones / Casos de uso, y el
+prompt que se le manda a Gemini no pide contexto geográfico. El artículo lo
+dice en un bloque `Verdict` propio y ofrece el remedio real que sí existe hoy
+en el producto — prompts personalizados vía `createPrompt`
+(`app/dashboard/projects/[projectId]/actions.ts`) — en vez de callar la
+limitación o prometer algo que el asistente no hace.
+
+**Comprobado.** `pnpm exec vitest run lib/blog lib/glosario tests/pilot/
+fixtures/fixture-drift.test.ts` en verde; `pnpm run typecheck`, `pnpm run
+lint` y `pnpm run build` en verde, con la ruta nueva de N4 listada como
+estática (`○`) en la salida del build tras retirar N3.
+
+**Trazabilidad.** `lib/blog/posts.ts`,
+`app/blog/geo-negocios-locales-servicios-profesionales/page.mdx`,
+`tests/pilot/fixtures/server.mjs`, `tests/pilot/journeys/
+public-pages.spec.ts`, `docs/content-calendar.md`, portada en
+`public/blog/geo-negocios-locales-servicios-profesionales/cover.webp` y su SVG
+fuente en `docs/design-reference/blog-covers/`. Task Intake y aprobación del
+fundador, 2026-09-19.
+
+## 225. GROWTH-2: N5, tercera y última tanda de 5 artículos nuevos del blog (2026-09-19)
+
+Tercera tanda apilada sobre §223 y §224 (BUILD-BUDGET-1); cierra la tanda
+completa de 5 artículos aprobada por Task Intake del fundador el 2026-09-19.
+Detalle completo en `docs/content-calendar.md` ("GROWTH-2, 5 artículos
+nuevos").
+
+**N5 no compromete ningún plazo de cuánto tarda una marca nueva en
+aparecer.** `mi-marca-no-aparece-en-chatgpt-por-que` lo declara explícito en
+un `Verdict`: no hay cifra fiable, y dar una inventada sería peor que no dar
+ninguna. Reencuadra el primer escaneo con 0 de 15 menciones como línea base,
+no como veredicto — conecta con el Core Target Flow de `CLAUDE.md`. Distinto
+de `como-hacer-que-chatgpt-recomiende-tu-negocio` (que asume ya hay un
+negocio con datos que ordenar) y de W5, pendiente en la cola semanal ("te
+mencionan pero recomiendan a otro") — aquí el punto de partida es cero
+menciones totales.
+
+**Comprobado.** `pnpm test` (228 ficheros, 3.215 tests) en verde;
+`pnpm run typecheck`, `pnpm run lint` y `pnpm run build` en verde, con las
+cinco rutas nuevas de esta tanda completa listadas como estáticas (`○`) en la
+salida del build. Sin pasada de `ux-pilot` en este PR — pendiente de que el
+fundador decida lanzarla antes del Human Gate.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `app/blog/mi-marca-no-aparece-en-
+chatgpt-por-que/page.mdx`, `tests/pilot/fixtures/server.mjs`,
+`tests/pilot/journeys/public-pages.spec.ts`, `docs/content-calendar.md`, una
+portada en `public/blog/mi-marca-no-aparece-en-chatgpt-por-que/cover.webp` y
+su SVG fuente en `docs/design-reference/blog-covers/`. Task Intake y
+aprobación del fundador, 2026-09-19.

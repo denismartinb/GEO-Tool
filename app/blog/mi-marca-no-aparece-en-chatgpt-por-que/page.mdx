@@ -1,0 +1,215 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  AnswerSample,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("mi-marca-no-aparece-en-chatgpt-por-que");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Por qué mi marca no aparece en ChatGPT ni en Gemini?",
+    answer:
+      "Porque un modelo generativo solo puede mencionar lo que ha visto — en su entrenamiento o al buscar en la web. Una marca nueva, sin historial de menciones externas ni una entidad clara y verificable en su propia web, sencillamente no está en ese material. No es un castigo ni un fallo técnico: es que todavía no hay suficiente para que el modelo te reconozca."
+  },
+  {
+    question: "¿Cuánto tarda una marca nueva en empezar a aparecer?",
+    answer:
+      "No hay un plazo fijo, y cualquier cifra concreta sería inventada. Depende de cuánto contenido publiques, de si consigues menciones externas verificables y de cuándo cada motor vuelva a rastrear o actualizar lo que sabe. Es un proceso de construcción de autoridad, no una acción única con fecha de efecto."
+  },
+  {
+    question: "¿Sirve de algo llms.txt para una marca que empieza de cero?",
+    answer:
+      "Ayuda a que un motor que sí visita tu web entienda tu contenido con más claridad, pero no sustituye a tener contenido y menciones externas que encontrar en primer lugar. Es una pieza de la estructura técnica, no un atajo que genere visibilidad por sí solo."
+  },
+  {
+    question: "¿0 de 15 prompts en el primer escaneo es un mal resultado?",
+    answer:
+      "Es el resultado esperable para una marca nueva sin historial, y es útil precisamente por eso: te dice desde qué punto exacto partes, para poder medir si lo que haces después mueve la aguja. Es una línea base, no un veredicto sobre tu marca."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Si tu marca es nueva, es normal que un motor generativo no te mencione
+todavía: un modelo solo puede citar lo que ha visto, y una marca sin
+historial de contenido ni menciones externas sencillamente no está en ese
+material. No es un fallo que corregir en una tarde — es un punto de partida
+desde el que construir: una entidad clara en tu web, un fichero llms.txt,
+las primeras menciones externas verificables, y tiempo. El primer escaneo con
+cero menciones no es un mal resultado: es tu línea base.
+
+</KeyTakeaway>
+
+## Por qué una marca nueva no aparece, y no es un castigo
+
+Un modelo generativo no "decide" ignorarte. Responde con lo que ha visto —
+durante su entrenamiento, o al buscar en la web en el momento de la
+respuesta. Una marca con dos meses de vida, sin apenas contenido publicado y
+sin que nadie fuera de tu propia web la haya mencionado todavía, no tiene
+casi ningún material del que el modelo pueda tirar. La pregunta correcta no
+es "¿por qué me ignora la IA?" — es "¿qué hay ahí fuera, hoy, que un modelo
+pudiera encontrar sobre mi marca?". Para la mayoría de marcas nuevas, la
+respuesta honesta es: casi nada todavía.
+
+<Figure
+  label="Figura 1."
+  caption="Diferencia ilustrativa entre una marca sin historial y una con contenido y menciones acumuladas: la primera queda fuera de la respuesta, no por sentimiento negativo, sino por ausencia total de material que citar. No es una respuesta real capturada."
+>
+  <AnswerSample
+    verdict="Respuesta sin ninguna fuente sobre la marca nueva"
+    text="Para gestión de proyectos en equipos pequeños, las opciones más mencionadas son Ejemplo Software A y Ejemplo Software B, ambas con presencia consolidada y buenas reseñas en el sector."
+  />
+</Figure>
+
+Fíjate en lo que falta en esa respuesta: no dice nada malo de la marca nueva
+— simplemente no la nombra, porque no hay nada que citar. Es la diferencia
+con el escenario que tratamos en
+<a href="/blog/chatgpt-informacion-incorrecta-de-tu-empresa">cuando la IA
+dice algo falso o desactualizado de tu empresa</a>: ahí el problema es un
+dato mal puesto sobre una marca que sí aparece. Aquí el punto de partida es
+más atrás — no hay nada que corregir todavía, hay que construir primero.
+
+## Los tres frentes para empezar
+
+<NumberedSection n={1} title="Deja tu entidad clara en tu propia web">
+
+Antes de perseguir menciones externas, asegúrate de que quien busca
+información sobre tu marca — humano o modelo — encuentra una respuesta
+inequívoca a lo básico: qué eres, qué vendes, a quién, y desde cuándo existes.
+Una página "sobre nosotros" completa, con tu nombre de marca exacto repetido
+de forma consistente, y datos de contacto y ubicación correctos si aplica, es
+la base sobre la que se apoya todo lo demás.
+
+<QuickAction>Revisa tu página de inicio y tu "sobre nosotros": ¿alguien que no te conociera de nada entendería en 30 segundos qué haces y para quién?</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Publica un fichero llms.txt">
+
+Es un fichero de texto en la raíz de tu dominio que ayuda a un motor que
+visita tu web a entender tu contenido con más claridad — una guía de qué hay
+y dónde. No genera visibilidad por sí solo ni sustituye a tener contenido
+real que encontrar: es la estructura que hace más fácil de leer lo que ya
+publicas, no un atajo mágico. Cómo construirlo paso a paso está en
+<a href="/blog/llms-txt-guia-practica">llms.txt: guía práctica</a>, incluida
+la respuesta honesta a si de verdad mejora cuánto te citan.
+
+<QuickAction>Publica tu primer llms.txt esta semana — es un fichero de texto plano, no exige desarrollo complejo.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Consigue las primeras menciones externas verificables">
+
+Es el frente que más tarda y el que más importa: un modelo confía más en lo
+que un tercero dice sobre ti que en lo que dices tú de ti mismo. Para una
+marca nueva, esto no significa una campaña de relaciones públicas cara —
+significa presencia selectiva y real: un directorio de tu sector, una reseña
+genuina, una mención en un medio o foro especializado, una respuesta útil en
+una comunidad donde de verdad participas.
+
+<QuickAction>Identifica tres sitios reales de tu sector (directorio, comunidad, medio especializado) donde conseguir tu primera mención verificable — no comprada, no genérica.</QuickAction>
+
+</NumberedSection>
+
+## Por qué esto tarda, y por qué no hay un atajo
+
+<Verdict title="No hay una acción única que resuelva esto de golpe">
+
+Construir la entidad de una marca nueva no es como arreglar un dato mal
+puesto — no hay una sola fuente que corregir y esperar. Es acumular, con el
+tiempo, suficiente contenido propio, suficientes menciones externas y
+suficiente consistencia como para que un modelo tenga algo real de lo que
+tirar. No publicamos un plazo concreto porque no lo conocemos con precisión
+— depende de tu sector, de cuánto publiques y de cuándo cada motor actualice
+lo que sabe — y dar una cifra inventada sería peor que no dar ninguna.
+
+</Verdict>
+
+## Usa tu primer escaneo como línea base, no como veredicto
+
+Si ahora mismo escaneas tu marca y el resultado es 0 de 15 prompts con
+mención, no es un mal resultado — es exactamente lo esperable para una marca
+sin historial, y es la información más útil que puedes tener en este momento:
+te dice desde qué punto exacto partes. El primer escaneo en GenScore existe
+para esto — no para decirte que has fallado, sino para darte un número real
+desde el que medir si lo que haces en las próximas semanas mueve algo.
+
+<Checklist
+  items={[
+    "Lanza tu primer escaneo aunque esperes un resultado bajo — es el punto de referencia contra el que vas a medir todo lo que hagas después.",
+    "Vuelve a escanear cada pocas semanas, no cada día — construir entidad es lento, y escanear con demasiada frecuencia solo mide ruido.",
+    "Ordena tus tres frentes por lo que puedas hacer ya: la entidad de tu propia web es la que tienes más bajo control, así que suele ir primero.",
+    "Guarda cada resultado — pasar de 0 a 2 de 15 en dos meses es una señal real de progreso, aunque siga siendo un número pequeño."
+  ]}
+/>
+
+<Checklist
+  tone="evitar"
+  items={[
+    "No compres menciones ni reseñas para acelerar esto: una mención falsa no construye la clase de autoridad que un modelo generativo valora, y se descubre con facilidad.",
+    "No esperes un cambio de un escaneo a otro con solo unos días de diferencia — la construcción de entidad no funciona a esa velocidad.",
+    "No confundas cero menciones con sentimiento negativo: son cosas distintas, y la segunda es un problema aparte."
+  ]}
+/>
+
+## Cuándo esto deja de ser un problema de cero y pasa a ser otra cosa
+
+Si con el tiempo empiezas a aparecer pero la IA recomienda antes a un
+competidor, ese es un problema distinto del que trata este artículo — lo
+cubrimos en profundidad en
+<a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>,
+donde se explica la diferencia entre no aparecer y aparecer en peor posición
+que otro. Y si tu negocio es local, el mismo punto de partida tiene matices
+propios que desarrollamos en
+<a href="/blog/geo-negocios-locales-servicios-profesionales">GEO para
+negocios locales y servicios profesionales</a>.
+
+<ArticleCta
+  title="Averigua desde qué punto partes de verdad"
+  text="El primer escaneo de GenScore te dice, con preguntas reales en Gemini, Claude y ChatGPT, cuántas de ellas te mencionan hoy — la línea base desde la que medir todo lo que hagas después."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

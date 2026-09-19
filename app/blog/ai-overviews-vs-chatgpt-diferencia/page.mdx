@@ -1,0 +1,196 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Verdict,
+  Checklist,
+  CompareTable,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  AnswerSample,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("ai-overviews-vs-chatgpt-diferencia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿AI Overviews de Google es lo mismo que ChatGPT?",
+    answer:
+      "No. AI Overviews es un panel de resumen generado por IA que aparece dentro de los resultados de búsqueda de Google — sigues en una página de resultados, con enlaces debajo. ChatGPT es un producto conversacional aparte: una conversación de principio a fin, sin lista de resultados detrás."
+  },
+  {
+    question: "¿GenScore mide AI Overviews?",
+    answer:
+      "No hoy. GenScore escanea Gemini, Claude y ChatGPT con preguntas reales. AI Overviews, Perplexity y Copilot no están soportados — quedan fuera de lo que medimos, sin fecha comprometida de cuándo podrían añadirse."
+  },
+  {
+    question: "¿Por qué GenScore no mide AI Overviews si también es de Google?",
+    answer:
+      "Porque técnicamente es una superficie distinta de Gemini como producto conversacional: aparece dentro de la búsqueda normal, no tiene una interfaz de chat propia donde lanzar una pregunta controlada, y no expone una forma equivalente de repetir la misma consulta de forma sistemática. Medirlo con el mismo método que un chat exigiría una aproximación distinta que hoy no hemos construido."
+  },
+  {
+    question: "¿Vale la pena optimizar para AI Overviews aunque GenScore no lo mida?",
+    answer:
+      "Sí, y no son esfuerzos opuestos: lo que mejora que un motor conversacional te cite —estructura clara, datos verificables, autoridad— es en gran parte lo mismo que ayuda en AI Overviews, porque ambos dependen de contenido que un sistema pueda entender y verificar con facilidad."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+AI Overviews es una función dentro de los resultados de búsqueda de Google:
+sigues en una página de resultados, con un resumen generado por IA arriba y
+enlaces normales debajo. ChatGPT, Gemini y Claude son productos
+conversacionales distintos: una conversación de principio a fin, sin lista de
+resultados detrás. GenScore escanea Gemini, Claude y ChatGPT — no AI
+Overviews, ni Perplexity, ni Copilot. Esta pieza explica la diferencia real
+entre ambos tipos de superficie y traza exactamente esa frontera.
+
+</KeyTakeaway>
+
+## ¿Qué es AI Overviews y en qué se diferencia de un chat?
+
+AI Overviews es la función que Google añadió a su página de resultados: al
+buscar, en la parte superior aparece un resumen generado por IA que responde
+la pregunta directamente, con enlaces a las fuentes que usó, y debajo sigue la
+lista de resultados tradicional. Es una capa nueva sobre la búsqueda que ya
+conocías, no un producto distinto.
+
+Un motor conversacional —ChatGPT, Gemini, Claude— es otra cosa: abres una
+conversación, escribes una pregunta con tus propias palabras, y recibes una
+respuesta completa sin una lista de enlaces al lado. Puedes seguir preguntando
+en el mismo hilo, y el sistema recuerda el contexto de lo que ya has dicho. No
+hay "resultados" en el sentido clásico — hay una respuesta.
+
+<CompareTable>
+
+| | AI Overviews (Google) | Producto conversacional (ChatGPT, Gemini, Claude) |
+|---|---|---|
+| **Dónde vive** | Dentro de la página de resultados de búsqueda | App o web propia, sin resultados de búsqueda al lado |
+| **Formato de entrada** | Una búsqueda, como siempre | Una conversación, con contexto entre preguntas |
+| **Qué hay debajo de la respuesta** | La lista de resultados orgánicos de siempre | Nada — la respuesta es el producto final |
+| **¿GenScore lo escanea hoy?** | No | Sí (Gemini, Claude, ChatGPT) |
+
+</CompareTable>
+
+La fila que más importa es la última, y es exactamente lo que el resto de
+este artículo desarrolla: cuáles son las superficies reales del mercado de
+"motores generativos" y cuáles mide GenScore.
+
+## El mapa completo de motores, y dónde cae cada uno
+
+Es fácil hablar de "la IA" como si fuera una sola cosa. En la práctica hay
+varias superficies distintas, con comportamientos distintos, y confundirlas
+lleva a medir la equivocada o a prometer una cobertura que no existe.
+
+<Figure
+  label="Figura 1."
+  caption="Ejemplo ilustrativo de cómo puede diferir la respuesta a la misma pregunta según la superficie: un resumen breve con enlaces (AI Overviews) frente a una respuesta conversacional completa (un motor de chat). No son capturas reales."
+>
+  <AnswerSample
+    verdict="AI Overviews — resumen dentro de la búsqueda"
+    text="Varias opciones destacan en esta categoría, entre ellas Ejemplo Software y otras dos alternativas. Ver resultados relacionados debajo."
+    source="google.com/search?q=..."
+  />
+</Figure>
+
+<Checklist
+  items={[
+    "ChatGPT (OpenAI) — motor soportado por GenScore, con búsqueda web activada.",
+    "Gemini (Google) — motor soportado por GenScore.",
+    "Claude (Anthropic) — motor soportado por GenScore.",
+    "AI Overviews (Google) — función dentro de la búsqueda, no soportada por GenScore hoy.",
+    "Perplexity — producto de búsqueda conversacional con citas ancladas, tratado como tema de mercado; no soportado por GenScore hoy.",
+    "Microsoft Copilot — asistente de Microsoft; no soportado por GenScore hoy."
+  ]}
+/>
+
+<Verdict title="Lo que GenScore escanea hoy, sin ambigüedad">
+
+GenScore ejecuta escaneos reales contra **Gemini, Claude y ChatGPT** — los
+tres aparecen en cada informe del producto. **AI Overviews, Perplexity y
+Copilot no están soportados hoy**, y no hay fecha comprometida de cuándo
+podrían incorporarse: no es una promesa aplazada, es simplemente lo que el
+producto hace y lo que no hace en este momento.
+
+</Verdict>
+
+## Por qué AI Overviews es más difícil de medir que un chat
+
+No es que hayamos elegido ignorarlo — es una diferencia técnica real. Un
+motor conversacional tiene una interfaz de chat donde puedes lanzar la misma
+pregunta de forma controlada y repetible, y recibir una respuesta que puedes
+analizar como una unidad completa. AI Overviews aparece incrustado dentro de
+una página de resultados de búsqueda normal, cambia según la consulta, la
+localización y la sesión de cada usuario, y Google no ofrece una vía
+equivalente y estable para lanzar la misma búsqueda de forma sistemática y
+repetible como sí permite la API de un chat. Medirlo con rigor exigiría un
+método distinto del que usamos hoy para los tres motores conversacionales, y
+eso no está construido todavía.
+
+## ¿Debería preocuparme por AI Overviews si GenScore no lo mide?
+
+Sí — pero no como un esfuerzo aparte. Lo que hace que un motor conversacional
+te cite es, en gran medida, lo mismo que hace que AI Overviews te use como
+fuente: contenido con estructura clara, datos verificables, y autoridad
+demostrable en tu tema. La lista de <a href="/blog/como-conseguir-que-chatgpt-te-cite">
+cómo conseguir que ChatGPT te cite</a> no es exclusiva de ChatGPT — es la
+base técnica que ayuda en cualquier sistema que genera una respuesta a partir
+de lo que encuentra en la web, incluido AI Overviews.
+
+Lo que no puedes hacer es comprobar el efecto de ese trabajo en AI Overviews
+con GenScore. Para eso, hoy, no hay más opción que revisarlo tú mismo
+buscando en Google y mirando qué aparece en el panel.
+
+## Motores de mercado, no motores soportados
+
+Es una distinción que aplicamos también a Perplexity — lo tratamos con más
+detalle en <a href="/blog/como-aparecer-en-perplexity">cómo aparecer en
+Perplexity</a> — y que vale igual para Copilot y para AI Overviews: hablar de
+cómo funcionan, qué los diferencia y qué influye en que te citen es información
+útil aunque no los midamos. Lo que no hacemos es prometer que los medimos
+cuando no es cierto — es el mismo principio que llevó a corregir a tiempo el
+título de <a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo saber
+si tu marca aparece en ChatGPT, Gemini y Claude</a>, que en un primer borrador
+mencionaba un motor que no ejecutamos.
+
+<ArticleCta
+  title="¿Sabes cómo te ve tu marca en los tres motores que sí puedes controlar?"
+  text="GenScore escanea con preguntas reales en Gemini, Claude y ChatGPT, y te enseña la respuesta completa en cada uno."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>
