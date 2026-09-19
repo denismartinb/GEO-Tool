@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { BlogClusterRail } from "@/components/blog/blog-cluster-rail";
+import { ComparativasRail } from "@/components/blog/comparativas-rail";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { BLOG_CLUSTERS, getBlogCluster, getMostRecentPost, getPostsByCluster, type BlogCluster } from "@/lib/blog/posts";
 import { COMPARATIVAS_INDEX } from "@/lib/comparativas";
@@ -16,7 +18,7 @@ export const metadata: Metadata = contentMetadata({
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
-/** Cuántas tarjetas se enseñan por carril antes de pasar a "Ver más →". */
+/** Cuántas tarjetas se enseñan por carril al cargar la página, antes del primer clic en "Ver más →". */
 const RAIL_SIZE = 3;
 
 /**
@@ -83,63 +85,22 @@ export default function BlogIndexPage() {
         // El destacado ya se enseña arriba — no se repite en el carril de su propio clúster.
         const posts = getPostsByCluster(cluster.key).filter((p) => p.slug !== featured.slug);
         const sorted = [...posts].sort((a, b) => b.datePublished.localeCompare(a.datePublished));
-        const shown = sorted.slice(0, RAIL_SIZE);
-        const hasMore = sorted.length > RAIL_SIZE;
 
         return (
-          <section key={cluster.key} className="blog-rail">
-            <div className="blog-rail-head">
-              <div className="blog-rail-head-left">
-                <span className="blog-rail-dot" style={{ background: CLUSTER_DOT_COLOR[cluster.key] }} />
-                <h2>{cluster.title}</h2>
-                <p>— {cluster.description}</p>
-              </div>
-              {hasMore && (
-                <Link href={`/blog/${cluster.key}`} className="blog-rail-more">
-                  Ver más →
-                </Link>
-              )}
-            </div>
-            {shown.length > 0 ? (
-              <div className="blog-rail-grid">
-                {shown.map((post) => (
-                  <Link key={post.slug} href={`/blog/${post.slug}`} className={`blog-tile ${CLUSTER_TILE_CLASS[cluster.key]}`}>
-                    <h2>{post.title}</h2>
-                    <p>{post.description}</p>
-                    <time dateTime={post.datePublished}>{dateFormatter.format(new Date(post.datePublished))}</time>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="blog-cluster-soon">Próximamente.</p>
-            )}
-          </section>
+          <BlogClusterRail
+            key={cluster.key}
+            title={cluster.title}
+            description={cluster.description}
+            dotColor={CLUSTER_DOT_COLOR[cluster.key]}
+            tileClass={CLUSTER_TILE_CLASS[cluster.key]}
+            posts={sorted}
+            initialCount={RAIL_SIZE}
+          />
         );
       })}
 
       {/* Comparativas — carril de primer nivel, mismo patrón que los clústeres de arriba. */}
-      <section className="blog-rail">
-        <div className="blog-rail-head">
-          <div className="blog-rail-head-left">
-            <span className="blog-rail-dot" style={{ background: COMPARATIVAS_DOT_COLOR }} />
-            <h2>Comparativas</h2>
-            <p>— GenScore frente a otras herramientas de visibilidad en IA, de forma honesta.</p>
-          </div>
-          {COMPARATIVAS_INDEX.length > RAIL_SIZE && (
-            <Link href="/comparativas" className="blog-rail-more">
-              Ver más →
-            </Link>
-          )}
-        </div>
-        <div className="blog-rail-grid">
-          {COMPARATIVAS_INDEX.slice(0, RAIL_SIZE).map((c) => (
-            <Link key={c.href} href={c.href} className="blog-tile blog-tile--comparativas">
-              <h2>{c.title}</h2>
-              <p>{c.blurb}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <ComparativasRail dotColor={COMPARATIVAS_DOT_COLOR} items={COMPARATIVAS_INDEX} initialCount={RAIL_SIZE} />
 
       {/* RSS + comprobador gratuito, al final de la página. Antes vivían como
           dos enlaces bajo el título; el fundador pidió llevarlos aquí como un
