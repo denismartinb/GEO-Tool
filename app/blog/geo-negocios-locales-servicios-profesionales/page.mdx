@@ -1,0 +1,208 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Verdict,
+  Stat,
+  StatGrid,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  AnswerSample,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("geo-negocios-locales-servicios-profesionales");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Los motores de IA usan la cercanía como Google Maps?",
+    answer:
+      "No de la misma forma. Google Maps resuelve por proximidad geográfica real (tu posición GPS, distancia en metros). Un modelo generativo no tiene esa señal — decide con lo que encuentra al buscar: si tu nombre, dirección y teléfono coinciden en toda la web, si tienes reseñas recientes, y si tu contenido responde con la misma especificidad con la que pregunta el cliente."
+  },
+  {
+    question: "¿GenScore genera automáticamente prompts con mi ciudad o mi barrio?",
+    answer:
+      "No hoy. El asistente de prompts de GenScore sugiere preguntas por comparación, alternativas, cómo hacer, precio, reseñas y casos de uso — ninguna categoría está dedicada a intención local. Si quieres medir cómo respondería la IA a \"dentista en Chamberí que abra el domingo\", tienes que escribir ese prompt tú mismo como prompt personalizado."
+  },
+  {
+    question: "¿Sirve de algo tener muchas reseñas antiguas?",
+    answer:
+      "Menos de lo que parece. Un motor que busca en tiempo real da más peso a lo reciente. Diez reseñas genuinas de los últimos meses pesan más que cien de hace dos años."
+  },
+  {
+    question: "¿Necesito estar en directorios de pago para aparecer?",
+    answer:
+      "No es necesario, y comprar presencia en directorios sin filtro de calidad no ayuda: lo que un motor generativo valora es la consistencia de tus datos y la relevancia real del directorio para tu sector y tu zona, no el número de sitios donde apareces."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Un negocio local o un servicio profesional no compite por "el mejor de
+España" — compite por "el mejor cerca de mí, disponible ahora". Pero un
+modelo generativo no resuelve esa pregunta como un mapa: no tiene tu
+posición GPS ni mide distancia en metros. Decide con lo que encuentra al
+buscar — consistencia de tus datos, reseñas recientes, y contenido que
+responda con la misma especificidad con la que pregunta el cliente. Y hay una
+limitación real que conviene decir desde el principio: los prompts que
+GenScore te sugiere automáticamente hoy no incluyen variantes de intención
+local — esas las escribes tú.
+
+</KeyTakeaway>
+
+## Por qué "cerca de mí" no funciona igual en un chat que en un mapa
+
+Cuando escribes "dentista cerca de mí" en Google Maps, la respuesta se
+resuelve con tu posición GPS y una lista ordenada por distancia real, en
+metros. Es una señal que Maps tiene y que un modelo conversacional
+sencillamente no tiene disponible de la misma forma: ChatGPT, Gemini o Claude
+no conocen tu ubicación exacta salvo que la escribas en la pregunta, y aunque
+la escribas, no resuelven con coordenadas — resuelven buscando y leyendo lo
+que encuentran sobre negocios de esa zona.
+
+Eso cambia por completo qué es lo que gana. No gana quien está objetivamente
+más cerca — gana quien tiene la información más clara, más consistente y más
+reciente sobre esa zona y ese servicio.
+
+<Figure
+  label="Figura 1."
+  caption="Ejemplo ilustrativo de una respuesta a una pregunta local: nombra dos negocios concretos con el motivo de cada uno, no una lista ordenada por distancia. No es una respuesta real capturada."
+>
+  <AnswerSample
+    verdict="Respuesta a una pregunta local"
+    text="Para una urgencia dental el domingo en Chamberí, Clínica Ejemplo Norte abre de 10 a 14h y tiene reseñas recientes bien valoradas en atención de urgencias; Clínica Ejemplo Centro está algo más lejos pero con disponibilidad toda la tarde."
+    source="ejemplo-clinica.com/urgencias-domingo"
+  />
+</Figure>
+
+## Las tres señales que sí mueven la respuesta
+
+<StatGrid label="Qué determina si un motor generativo te cita en una pregunta local, según los mismos criterios que ya influyen en cómo te encuentra un cliente que busca de verdad">
+  <Stat value="1" label="Consistencia de nombre, dirección y teléfono en toda tu presencia online — la misma base que usa cualquier sistema para confiar en un dato sobre un negocio" source="Criterio observable, no una cifra de mercado" tone="blue" />
+  <Stat value="2" label="Reseñas genuinas y recientes: un motor que busca en tiempo real pesa más lo de los últimos meses que lo acumulado en años" source="Criterio observable, no una cifra de mercado" tone="cyan" />
+  <Stat value="3" label="Contenido propio con la misma especificidad que la pregunta del cliente: zona, servicio, disponibilidad, precio orientativo" source="Criterio observable, no una cifra de mercado" tone="warm" />
+</StatGrid>
+
+No publicamos un porcentaje de cuánto pesa cada señal frente a las otras: no
+existe un estudio fiable que mida eso para preguntas locales en motores
+generativos, y no vamos a inventar un número para dar la impresión de más
+precisión de la que tenemos. Lo que sí está bien establecido es el orden de lo
+que se comprueba primero — sin datos consistentes, ni las mejores reseñas ni
+el mejor contenido tienen dónde apoyarse.
+
+## Directorios y presencia de terceros: selectivo, no masivo
+
+Un directorio local real, una asociación de tu gremio, un medio de tu zona:
+son sitios que un motor generativo puede encontrar al buscar, y que además
+sirven para contrastar que tu información es correcta desde una fuente
+distinta a tu propia web. La clave es la palabra "real" — un directorio
+genérico sin ningún filtro de calidad, o comprado solo para acumular
+menciones, no aporta lo mismo que uno que de verdad indexa negocios de tu
+sector y tu zona.
+
+<Checklist
+  items={[
+    "Completa tu ficha de Google Business Profile entera: horario, categoría exacta, dirección con el mismo formato que en tu web, fotos reales.",
+    "Revisa que nombre, dirección y teléfono coincidan letra por letra entre tu web, tu ficha de Google y cualquier directorio donde aparezcas.",
+    "Pide reseñas a tus últimos clientes satisfechos, sin ofrecer nada a cambio — lo reciente pesa más que lo acumulado.",
+    "Escribe una página que responda la pregunta más específica y frecuente de tu zona, con el mismo nivel de detalle que le darías en persona."
+  ]}
+/>
+
+<Checklist
+  tone="evitar"
+  items={[
+    "No compres reseñas ni listados masivos en directorios sin filtro: se detecta con facilidad y la reputación falsa se cae en cuanto un cliente real la contradice.",
+    "No repitas el nombre de tu ciudad o barrio como palabra clave a machacar en cada frase — la especificidad se demuestra respondiendo bien, no repitiendo el nombre del lugar.",
+    "No dejes tus datos de contacto distintos entre tu web y tus perfiles externos: esa inconsistencia pesa más de lo que parece."
+  ]}
+/>
+
+## La limitación real que no vamos a esconder
+
+<Verdict title="El asistente de prompts de GenScore no genera variantes de intención local hoy">
+
+Cuando das de alta un proyecto, GenScore sugiere prompts automáticamente por
+comparación, alternativas, cómo hacer, precio y planes, reseñas y opiniones, y
+casos de uso — esa es la taxonomía completa que usa el asistente hoy. Ninguna
+de esas categorías está pensada específicamente para intención local
+("[servicio] en [ciudad/barrio]", "cerca de mí"), así que el conjunto sugerido
+por defecto puede no representar bien cómo pregunta de verdad un cliente que
+busca algo cercano.
+
+La solución no es esperar a que el producto lo resuelva solo: es escribir tú
+mismo esos prompts como prompts personalizados, con tu ciudad, tu barrio y tu
+servicio exactos, exactamente como preguntaría un cliente real. El escaneo
+los trata igual que a cualquier otro prompt de tu proyecto — la limitación
+está en la sugerencia automática, no en la medición.
+
+</Verdict>
+
+<Checklist
+  items={[
+    "Escribe entre 3 y 5 prompts propios con tu zona exacta: \"[servicio] en [barrio/ciudad]\", \"mejor [categoría] cerca de [zona] que [condición: abra domingo, atienda urgencias, etc.]\".",
+    "Repite el ejercicio con las zonas o barrios donde de verdad operas, no solo con el nombre de tu ciudad entera.",
+    "Combina intención local con las categorías que sí sugiere el asistente automáticamente (reseñas, comparación) para no perder cobertura del resto de preguntas."
+  ]}
+/>
+
+## Servicios profesionales: la misma lógica, otro vocabulario
+
+Todo lo anterior aplica igual a una asesoría, un despacho de abogados o una
+clínica, con un matiz: la pregunta suele llevar una restricción más
+específica que "cerca de mí" — un tipo de caso, una especialidad, una
+urgencia. "Abogado laboralista en Valencia especializado en despidos
+colectivos" tiene el mismo patrón que la pregunta de un dentista de guardia:
+pocas respuestas posibles, y gana quien tiene el dato más claro y el
+contenido más específico, no quien tiene la web más grande.
+
+Si tu negocio es puramente local orientado a consumidor —restauración,
+comercio, servicios a domicilio— el mismo criterio de datos consistentes y
+reseñas recientes se desarrolla con más ejemplos en
+<a href="/blog/como-hacer-que-chatgpt-recomiende-tu-negocio">cómo hacer que
+ChatGPT recomiende tu negocio</a>. Y para entender cómo se construye bien un
+conjunto de prompts en general, antes de añadir los locales,
+<a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los
+prompts correctos</a> cubre la metodología completa.
+
+<ArticleCta
+  title="¿Sabes qué responde la IA cuando alguien te busca por tu zona?"
+  text="GenScore mide con escaneos reales en Gemini, Claude y ChatGPT — añade tus propios prompts con tu ciudad o barrio para ver exactamente esa respuesta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="sectores" currentSlug={post.slug} />
+
+</BlogPageShell>

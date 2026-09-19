@@ -59,7 +59,10 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "geo-vs-aeo-vs-seo": "fundamentos",
   // GROWTH-2, N1+N2 (2026-09-19).
   "chatgpt-informacion-incorrecta-de-tu-empresa": "playbooks",
-  "ai-overviews-vs-chatgpt-diferencia": "fundamentos"
+  "ai-overviews-vs-chatgpt-diferencia": "fundamentos",
+  // GROWTH-2, N3+N4 (2026-09-19).
+  "agencia-geo-vs-herramienta-geo": "fundamentos",
+  "geo-negocios-locales-servicios-profesionales": "sectores"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

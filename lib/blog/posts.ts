@@ -295,6 +295,30 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "fundamentos"
   },
   {
+    slug: "agencia-geo-vs-herramienta-geo",
+    title: "Agencia GEO vs herramienta de monitorización GEO: cuál necesitas (y cuándo las dos)",
+    description:
+      "No es una comparación de precios: es qué hace cada una y qué no puede hacer sin la otra. Un criterio objetivo para decidir entre contratar una agencia o medir tú mismo.",
+    metaDescription:
+      "Agencia GEO vs herramienta GEO: qué hace cada una, cuándo necesitas una, la otra, o las dos a la vez.",
+    datePublished: "2026-09-19",
+    coverIcon: "users",
+    coverImage: "/blog/agencia-geo-vs-herramienta-geo/cover.webp",
+    primaryKeyword: "agencia geo vs herramienta geo",
+    cluster: "fundamentos"
+  },
+  {
+    slug: "geo-negocios-locales-servicios-profesionales",
+    title: "GEO para negocios locales y servicios profesionales: cómo aparecer cuando te buscan por ciudad",
+    description:
+      "Un motor generativo no usa proximidad como un mapa: cita entidades verificables. Qué mover si eres una clínica, una asesoría o cualquier servicio que se busca por zona.",
+    datePublished: "2026-09-19",
+    coverImage: "/blog/geo-negocios-locales-servicios-profesionales/cover.webp",
+    coverIcon: "target",
+    primaryKeyword: "geo negocios locales españa",
+    cluster: "sectores"
+  },
+  {
     slug: "geo-para-ecommerce",
     title: "GEO para ecommerce: cómo aparecer cuando la IA recomienda productos",
     description:

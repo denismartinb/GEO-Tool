@@ -20589,3 +20589,42 @@ public-pages.spec.ts`, `docs/content-calendar.md`, dos portadas en
 `public/blog/<slug>/cover.webp` y sus SVG fuente en
 `docs/design-reference/blog-covers/`. Task Intake y aprobación del fundador,
 2026-09-19.
+
+## 224. GROWTH-2: N3+N4, segunda tanda de 5 artículos nuevos del blog (2026-09-19)
+
+Segunda tanda apilada sobre §223 (BUILD-BUDGET-1). Detalle completo en
+`docs/content-calendar.md` ("GROWTH-2, 5 artículos nuevos").
+
+**N4 declara una limitación real del asistente de prompts, no inventada para
+la ocasión.** `geo-negocios-locales-servicios-profesionales` necesitaba saber
+si el asistente que sugiere prompts (`lib/projects/prompt-suggestions-llm.ts`)
+genera variantes de intención local ("cerca de mí", "en [ciudad]"). No lo
+hace: la taxonomía fija de `PROMPT_CATEGORIES` es Comparación / Alternativas /
+Cómo hacer-guía / Precio y planes / Reseñas y opiniones / Casos de uso, y el
+prompt que se le manda a Gemini no pide contexto geográfico. El artículo lo
+dice en un bloque `Verdict` propio y ofrece el remedio real que sí existe hoy
+en el producto — prompts personalizados vía `createPrompt`
+(`app/dashboard/projects/[projectId]/actions.ts`) — en vez de callar la
+limitación o prometer algo que el asistente no hace.
+
+**N3 se alojó en `/blog`, no en `/comparativas`.** `agencia-geo-vs-
+herramienta-geo` compara dos categorías de servicio, no dos productos
+competidores, así que el sistema de bloques del blog (`CompareTable`,
+`Verdict`, `Checklist`) encaja mejor que el patrón de tabla de victorias por
+fila que usa cada comparativa 1:1. Ningún precio de agencia se publica como
+cifra verificada — sólo estructura de coste, mismo principio que
+`genscore-vs-profound` ya aplicó con el precio de Profound.
+
+**Comprobado.** `pnpm exec vitest run lib/blog lib/glosario tests/pilot/
+fixtures/fixture-drift.test.ts` en verde; `pnpm run typecheck`, `pnpm run
+lint` y `pnpm run build` en verde, con las dos rutas nuevas listadas como
+estáticas (`○`) en la salida del build. Sin pasada de `ux-pilot` en este PR —
+pendiente de que el fundador decida lanzarla antes del Human Gate.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `app/blog/agencia-geo-vs-herramienta-
+geo/page.mdx`, `app/blog/geo-negocios-locales-servicios-profesionales/
+page.mdx`, `tests/pilot/fixtures/server.mjs`, `tests/pilot/journeys/
+public-pages.spec.ts`, `docs/content-calendar.md`, dos portadas en
+`public/blog/<slug>/cover.webp` y sus SVG fuente en
+`docs/design-reference/blog-covers/`. Task Intake y aprobación del fundador,
+2026-09-19.

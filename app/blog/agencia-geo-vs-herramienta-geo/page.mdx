@@ -1,0 +1,208 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Verdict,
+  Checklist,
+  CompareTable,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  PostMeta
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("agencia-geo-vs-herramienta-geo");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Necesito una agencia GEO o me basta con una herramienta?",
+    answer:
+      "Depende de si tienes quien ejecute el trabajo, no de tu presupuesto. Una herramienta te dice qué está pasando: si apareces, con qué posición, qué fuentes se citan en tu lugar. No escribe contenido ni construye enlaces por ti. Si ya tienes un equipo de contenido o SEO que puede actuar sobre esos datos, una herramienta basta. Si no tienes a nadie que ejecute, una agencia aporta las manos que faltan — pero necesita, igualmente, algo que le diga si su trabajo funciona."
+  },
+  {
+    question: "¿Una agencia GEO ya incluye la medición?",
+    answer:
+      "Algunas sí ofrecen informes propios, con su propia metodología y sin que puedas verificarla desde fuera. Otras no miden en absoluto, o miden solo lo que a ellas les interesa reportar. En cualquiera de los dos casos, una herramienta de monitorización independiente te da un número que no depende de quien te está facturando por el trabajo."
+  },
+  {
+    question: "¿Cuánto cuesta una agencia GEO frente a una herramienta?",
+    answer:
+      "Una herramienta de monitorización GEO suele ser una suscripción mensual fija, del mismo orden que cualquier herramienta SEO. Una agencia trabaja por proyecto o por retainer mensual, con un coste que depende de las horas de estrategia y ejecución que incluya — normalmente varias veces el precio de una herramienta, porque paga trabajo humano, no solo software. No publicamos cifras concretas de agencias porque varían mucho de una a otra y no tenemos una fuente propia verificada."
+  },
+  {
+    question: "¿Puedo usar una herramienta y una agencia a la vez?",
+    answer:
+      "Es la combinación más común entre quien ya invierte en esto en serio: la agencia ejecuta —contenido, estructura, autoridad— y la herramienta mide si ese trabajo se traduce en más menciones, mejor posición o más citaciones, con un criterio independiente de quien lo está ejecutando."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
+
+# {post.title}
+
+<PostMeta post={post} />
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Una agencia GEO ejecuta: escribe, estructura, construye autoridad. Una
+herramienta de monitorización GEO mide: te dice si apareces, con qué
+posición, y qué fuentes se citan en tu lugar. No son sustitutas — resuelven
+preguntas distintas. El criterio para decidir no es el precio, es si ya
+tienes quien ejecute el trabajo. Y casi nadie que invierte en esto en serio
+usa solo una de las dos.
+
+</KeyTakeaway>
+
+## Dos preguntas distintas, no una comparación de precios
+
+"¿Contrato una agencia o me compro una herramienta?" suena a una decisión de
+presupuesto, pero en realidad son dos preguntas separadas que conviene no
+mezclar:
+
+- **¿Quién hace el trabajo?** Escribir contenido, reestructurar una web,
+  conseguir que terceros te mencionen — eso lo ejecuta alguien, sea tu propio
+  equipo o una agencia.
+- **¿Cómo sé si el trabajo está funcionando?** Eso lo responde una medición
+  — con preguntas reales, en los motores reales, de forma repetida — y no
+  depende de quién hizo el trabajo.
+
+Confundir las dos preguntas lleva a un error habitual: pagar por una agencia
+que también te da "sus" métricas, sin ninguna forma de verificarlas desde
+fuera. O al contrario: comprar una herramienta esperando que sustituya al
+trabajo de ejecución, cuando lo único que hace es decirte qué está pasando.
+
+<CompareTable>
+
+| | Agencia GEO | Herramienta de monitorización GEO |
+|---|---|---|
+| **Qué hace** | Ejecuta: contenido, estructura técnica, autoridad, relaciones con medios | Mide: presencia, posición, fuentes citadas, en escaneos repetidos |
+| **Quién pone las manos** | Su equipo | El tuyo, con lo que la herramienta te enseña |
+| **Independencia de la medición** | Su propio informe, si lo ofrece — no siempre verificable desde fuera | Un número que no depende de quien ejecuta el trabajo |
+| **Coste típico** | Retainer o proyecto — varía mucho, coste de trabajo humano | Suscripción fija, del orden de una herramienta SEO |
+| **Sin la otra pieza** | Ejecuta sin saber si funciona | Mide sin poder actuar por ti |
+
+</CompareTable>
+
+<Figure
+  wide
+  label="Figura 1."
+  caption="Las dos preguntas que conviene separar antes de contratar nada: quién ejecuta el trabajo y cómo sabes si ha funcionado. Cada una la responde una pieza distinta."
+>
+
+| Pregunta | Quién la responde |
+|---|---|
+| ¿Quién escribe el contenido, reestructura la web, consigue menciones? | Una agencia — o tu propio equipo |
+| ¿Está funcionando ese trabajo? | Una medición independiente, no quien lo ejecutó |
+
+</Figure>
+
+## Cuándo una herramienta te basta
+
+Si ya tienes quien pueda actuar sobre lo que descubres —un equipo de
+contenido, de SEO, o tú mismo con tiempo para escribir y ajustar tu web—, una
+herramienta de monitorización es la pieza que falta. Te dice en qué preguntas
+apareces y en cuáles no, qué fuentes está citando el motor en tu lugar, y si
+un cambio que hiciste tuvo efecto real la siguiente vez que escaneas.
+
+<Checklist
+  items={[
+    "Tienes un equipo o una persona que ya escribe y publica contenido con regularidad.",
+    "Sabes hacer cambios técnicos en tu web (estructura, datos, velocidad) o tienes a quien pedírselo.",
+    "Lo que necesitas es saber DÓNDE enfocar ese trabajo, no quién lo haga.",
+    "Quieres un número que no dependa de quien te esté facturando por el resultado."
+  ]}
+/>
+
+## Cuándo una agencia aporta algo que una herramienta no
+
+Una herramienta no escribe una sola palabra de contenido ni consigue que un
+medio del sector te mencione. Si no tienes a nadie que pueda ejecutar ese
+trabajo —ni tiempo, ni el conocimiento de qué hace falta escribir o
+estructurar—, ese es el hueco real que cubre una agencia.
+
+<Checklist
+  items={[
+    "No tienes equipo de contenido ni de SEO, y no tienes tiempo para improvisarlo.",
+    "Necesitas trabajo de relaciones con medios o directorios del sector, que exige contactos y tiempo que no tienes.",
+    "Quieres una estrategia completa diseñada por alguien con experiencia en la categoría, no solo ejecución suelta.",
+    "Puedes verificar su trabajo con una medición independiente — la tuya, no la que ellos te entreguen."
+  ]}
+/>
+
+## Por qué casi nadie serio elige solo una de las dos
+
+<Verdict title="La combinación más habitual entre quien invierte de verdad en esto">
+
+Quien contrata una agencia GEO y de verdad quiere saber si funciona acaba,
+tarde o temprano, con una herramienta de monitorización aparte — porque el
+informe de la propia agencia tiene un conflicto de interés estructural: es
+quien te cobra reportando si su propio trabajo sirve. Y quien solo tiene una
+herramienta y ve un hueco real que no sabe cómo cerrar —falta de contenido,
+de estructura, de menciones externas— acaba buscando quien lo ejecute. Las
+dos preguntas de arriba no desaparecen solo porque contrates una de las dos
+piezas: siguen ahí hasta que algo las responde.
+
+</Verdict>
+
+## Lo que no vamos a hacer: ponerle una cifra a una agencia
+
+No publicamos un precio concreto de "lo que cuesta una agencia GEO". Varía
+demasiado según el alcance —desde una consultoría puntual hasta un retainer
+mensual con contenido, técnico y relaciones con medios incluidos— y no tenemos
+una fuente propia verificada que se pueda citar con honestidad. Lo que sí es
+consistente entre fuentes del sector es la estructura del coste: una agencia
+cobra por horas de trabajo humano, así que su precio se mueve varias veces por
+encima de una suscripción de software; una herramienta de monitorización cobra
+por acceso a un producto, con un coste fijo y predecible mes a mes, del mismo
+orden que cualquier otra herramienta de SEO o analítica que ya uses.
+
+## Un criterio, no una tabla de precios
+
+La pregunta que de verdad decide esto no es "¿cuál es más barata?", es
+**"¿tengo ya quien ejecute el trabajo que hace falta?"** Si la respuesta es
+sí, empieza midiendo — con eso sabrás dónde enfocar a ese equipo, y
+probablemente lo necesites antes de gastar en nada más. Si la respuesta es
+no, una agencia cubre ese hueco, y una medición independiente sigue siendo lo
+que te dice si el gasto está dando resultado.
+
+Para entender primero qué se puede medir de verdad antes de decidir entre
+las dos —posición, cuota de voz, citación— revisa
+<a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>. Y
+si tu duda es cómo elegir a qué preguntas prestar atención antes de contratar
+a nadie, la metodología está en
+<a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los
+prompts correctos</a>.
+
+<ArticleCta
+  title="Empieza por saber dónde estás, antes de decidir quién ejecuta"
+  text="GenScore mide con escaneos reales en Gemini, Claude y ChatGPT si tu marca aparece, con qué posición y qué fuentes se citan en tu lugar — el mismo criterio con el que juzgar a una agencia o a tu propio equipo."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>

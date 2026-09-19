@@ -491,8 +491,8 @@ chocar con las Wx/Sx/Cx ya tomadas. Publicados en tandas apiladas
 |---|---|---|---|---|---|
 | N1 | Cuando ChatGPT dice algo falso o desactualizado de tu empresa | `playbooks` | chatgpt da información incorrecta de mi empresa | ✅ Publicado | #(este) |
 | N2 | AI Overviews de Google vs. ChatGPT, Gemini y Claude | `fundamentos` | ai overviews vs chatgpt diferencia | ✅ Publicado | #(este) |
-| N3 | Agencia GEO vs herramienta de monitorización GEO | `fundamentos` | agencia geo vs herramienta geo | 🔲 Pendiente | — |
-| N4 | GEO para negocios locales y servicios profesionales | `sectores` | geo negocios locales españa | 🔲 Pendiente | — |
+| N3 | Agencia GEO vs herramienta de monitorización GEO | `fundamentos` | agencia geo vs herramienta geo | ✅ Publicado | #(este) |
+| N4 | GEO para negocios locales y servicios profesionales | `sectores` | geo negocios locales españa | ✅ Publicado | #(este) |
 | N5 | Tu marca es nueva y la IA no la conoce todavía | `playbooks` | mi marca no aparece en chatgpt por qué | 🔲 Pendiente | — |
 
 **N1 — `chatgpt-informacion-incorrecta-de-tu-empresa`.** El brief original
@@ -532,6 +532,31 @@ descargar Chromium en este entorno, mismo workaround que piezas anteriores).
 Añadidas a `BLOG_SLUGS` (`tests/pilot/fixtures/server.mjs`) y
 `BLOG_POSTS_BY_CLUSTER` (`tests/pilot/journeys/public-pages.spec.ts`) en el
 mismo PR.
+
+**N3 — `agencia-geo-vs-herramienta-geo`.** Alojado en `/blog` (cluster
+`fundamentos`), no en `/comparativas`: no compara dos productos competidores
+sino dos categorías de servicio, así que el sistema de bloques del blog
+(`CompareTable`, `Verdict`, `Checklist`) encaja mejor que el patrón de
+comparativa 1:1 con tabla de victorias por fila. Ningún precio de agencia se
+publica como cifra verificada — el texto explica la estructura del coste
+(trabajo humano por horas/retainer frente a suscripción de software) sin
+comprometer una cifra concreta, mismo principio que ya aplicó
+`genscore-vs-profound` con el precio de Profound.
+
+**N4 — `geo-negocios-locales-servicios-profesionales`.** Cierra el hueco del
+cluster `sectores` (hoy solo tenía ecommerce, SaaS B2B, agencias). Verificado
+contra `lib/projects/prompt-suggestions-llm.ts`: el asistente de prompts
+sugiere por seis categorías fijas (Comparación, Alternativas, Cómo hacer/guía,
+Precio y planes, Reseñas y opiniones, Casos de uso) — ninguna dedicada a
+intención local, y el prompt que se le manda a Gemini no pide variantes con
+ciudad/barrio. El artículo declara esta limitación real de forma explícita en
+un bloque `Verdict` ("El asistente de prompts de GenScore no genera variantes
+de intención local hoy") y recomienda el remedio real que sí existe en el
+producto: escribir prompts personalizados con la zona exacta, vía
+`createPrompt` (`app/dashboard/projects/[projectId]/actions.ts`).
+
+**Cobertura de test (N3+N4).** Mismos tres tests que N1+N2, mismo patrón de
+portada y mismas dos listas del piloto actualizadas en este PR.
 
 ---
 
