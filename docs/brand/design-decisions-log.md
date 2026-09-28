@@ -21025,3 +21025,54 @@ destapó tres cosas:
 PRICING-TRUTH-1. Ficheros: `lib/billing.ts`, `lib/scan/cron.ts`,
 `lib/scan/run-creation.ts`, `lib/scan/executor.ts`, `lib/scan/watchdog.ts`,
 `lib/scan/reconciliation.ts`, `lib/scan/constants.ts` y sus tests.
+
+## 230. ADMIN-HEALTH-1: columna "Error" en /admin — qué cuentas no están recibiendo sus datos ahora mismo (2026-09-28)
+
+**Qué se pidió.** Fase 2 del plan aprobado en §227. El fundador, tras seis
+días de alberdiderma.es fallando sin que nada lo dijera: *"igual merece la
+pena incluir en /admin una columna de error SÍ/NO para saber si hay algún
+error en alguna cuenta"*. Los correos del vigilante (§227) avisan en el
+momento; esta columna responde a otra pregunta: *¿qué está roto ahora
+mismo?*, consultada cuando uno quiere.
+
+**Qué se decide.**
+
+- **Nueva columna "Error"** en la tabla de usuarios, entre "Estado" y
+  "Dominios". Muestra "Sí · N" en rojo (N = dominios afectados) o "No" en
+  gris. El motivo va en la ficha de la cuenta, en una caja roja "Errores
+  ahora mismo", una línea por dominio. No se deja sólo en el `title` de la
+  celda porque un tooltip no existe en el móvil desde el que el fundador lee
+  `/admin`.
+- **Mismo criterio que los correos** (`lib/admin/account-health.ts`,
+  `deriveAccountHealth`), para que la columna y los avisos nunca discrepen:
+  - último escaneo fallido hace ≤7 días, lanzado por una persona o en una
+    cuenta con plan de escaneo;
+  - escaneo en curso sin avanzar desde hace >30 min;
+  - recurrente activo, plan de escaneo y sin escaneo completado en su
+    ciclo (misma función `evaluateRecurringFreshness` que el vigilante).
+- **Plan efectivo** (`resolveSystemPlanId`, §229), también para el recuento
+  de "Recurrente". Una prueba caducada ya se muestra como "sin efecto", igual
+  que la trata el barrido.
+- **Sin escrituras, sin columnas nuevas.** Se amplía la lectura de
+  `scan_runs` ya existente con `status`, `updated_at`, `error_summary` y
+  `triggered_by_user_id` (columnas de 0001/0008, no de una migración
+  pendiente), y la de `projects` con `domain`.
+
+**Pendiente / roto conocido.**
+
+- **El listado lee 30 días de escaneos.** Si un proyecto recurrente no tiene
+  ninguno completado en esa ventana, dice "ningún escaneo completado
+  reciente", nunca "nunca".
+- **La columna no dice qué motor falló** (cuota, configuración); eso sigue
+  llegando por correo. Añadirlo exigiría leer `scan_prompt_results` de toda
+  la plataforma en cada carga del listado.
+- `lib/admin` importa dos funciones de `lib/scan/watchdog.ts`. Es deliberado:
+  compartir el criterio es el objetivo, y una copia se desincronizaría.
+- **Diseño:** no hay artboard aprobado; sigue los estilos existentes de
+  píldoras de `/admin`.
+
+**Trazabilidad.** §227 (petición), §229 (alcance de los avisos y plan
+efectivo), §64/§71/§99 (consola de operador). Ficheros:
+`lib/admin/account-health.ts` (nuevo) y su test, `lib/admin/users.ts` y su
+test, `app/admin/users/users-table.tsx`, `app/admin/users/shared.tsx`,
+`app/admin/admin.css`.
