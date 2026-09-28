@@ -20868,6 +20868,11 @@ cualquier tipo, sin depender de que el run termine ni de que alguien mire.
   sólo se aplica cuando el usuario entra. PR pequeño aparte.
 - **Coste sin medir:** 96 invocaciones al día más, casi todas sólo
   consultas. Se mide en el panel de Vercel después de la primera semana.
+- **Una pasada tiene techo de tiempo** (30 s para reconciliar, 45 s para
+  el resto de lecturas): en una caída general, con muchos runs activos o
+  muchos proyectos a la vez sin datos, lo que no quepa se revisa en la
+  pasada siguiente, 15 min después, en vez de arriesgar que la invocación
+  muera antes de enviar (señalado por la QA del PR).
 - **Duplicados posibles, aceptados:** un run que agota su reintento sigue
   disparando también la alerta `run_failed` de siempre. Mejor dos correos
   que ninguno (misma regla que `checkAndSendScanHealthAlert`).

@@ -68,6 +68,21 @@ export const WATCHDOG_STALE_DATA_GRACE_HOURS = 3;
  */
 const WATCHDOG_RECONCILE_BUDGET_MS = 30_000;
 
+/**
+ * Ceiling for the per-run / per-project read loops after reconciliation. A
+ * provider-wide outage is exactly when many runs are active and many projects
+ * go stale at once — the case this module exists for — so those loops stop
+ * starting new items past this point and leave the rest to the next pass,
+ * which keeps the send step inside the route's 60s `maxDuration`.
+ */
+const WATCHDOG_READ_BUDGET_MS = 45_000;
+
+function readBudgetSpent(startedAt: number, what: string, remaining: number): boolean {
+  if (Date.now() - startedAt <= WATCHDOG_READ_BUDGET_MS) return false;
+  console.warn(`[geo:scan:watchdog] read budget spent during ${what}; the rest waits for the next pass`, { remaining });
+  return true;
+}
+
 const HOUR_MS = 60 * 60 * 1000;
 
 /** The route's schedule (`vercel.json`). Only used to bound alerts that have no dedupe anchor. */
@@ -84,6 +99,7 @@ export type WatchdogFailedRun = {
   successfulPrompts: number;
   totalPrompts: number;
   finishedAt: string | null;
+  /** Any later run exists for the project: an auto-retry, the next day's sweep, or a manual scan. */
   retryStarted: boolean;
   engineIssues: string[];
 };
@@ -224,7 +240,7 @@ async function reconcileStalledRuns(service: Service, startedAt: number): Promis
  * are NOT checked here: on a run still in flight, "no rows extracted yet" is
  * progress, not a dead engine.
  */
-async function checkActiveRunsForProviderTrouble(service: Service): Promise<void> {
+async function checkActiveRunsForProviderTrouble(service: Service, startedAt: number): Promise<void> {
   const { data: activeRuns } = await service
     .from("scan_runs")
     .select("id, project_id")
@@ -238,7 +254,8 @@ async function checkActiveRunsForProviderTrouble(service: Service): Promise<void
     runs.map((run) => run.id)
   );
 
-  for (const run of runs) {
+  for (const [index, run] of runs.entries()) {
+    if (readBudgetSpent(startedAt, "provider-trouble check", runs.length - index)) break;
     await checkAndSendScanHealthAlert({
       service,
       projectId: run.project_id,
@@ -278,7 +295,8 @@ async function loadOwners(service: Service, projectIds: readonly string[]) {
 
 async function collectUnalertedFailedRuns(
   service: Service,
-  now: number
+  now: number,
+  startedAt: number
 ): Promise<{ failedRuns: WatchdogFailedRun[]; anchors: Map<string, string> }> {
   const sinceIso = new Date(now - WATCHDOG_FAILED_RUN_LOOKBACK_HOURS * HOUR_MS).toISOString();
 
@@ -336,11 +354,17 @@ async function collectUnalertedFailedRuns(
     const project = projectById.get(row.project_id);
     const owner = project ? ownerById.get(project.ownerUserId) : undefined;
 
-    const { data: rows } = await service
-      .from("scan_prompt_results")
-      .select("provider, status, raw_response_text, extraction_version, extraction_error")
-      .eq("project_id", row.project_id)
-      .eq("run_id", row.id);
+    // Past the read budget the run is still reported — only its per-engine
+    // detail is skipped. Dropping the run itself would trade a missing line
+    // in an email for a missing alert.
+    const { data: rows } =
+      Date.now() - startedAt > WATCHDOG_READ_BUDGET_MS
+        ? { data: [] }
+        : await service
+            .from("scan_prompt_results")
+            .select("provider, status, raw_response_text, extraction_version, extraction_error")
+            .eq("project_id", row.project_id)
+            .eq("run_id", row.id);
 
     failedRuns.push({
       runId: row.id,
@@ -363,7 +387,8 @@ async function collectUnalertedFailedRuns(
 
 async function collectUnalertedStaleProjects(
   service: Service,
-  now: number
+  now: number,
+  startedAt: number
 ): Promise<{ staleProjects: WatchdogStaleProject[]; anchors: Map<string, string> }> {
   const { data: projects } = await service
     .from("projects")
@@ -385,7 +410,8 @@ async function collectUnalertedStaleProjects(
 
   const candidates: Array<WatchdogStaleProject & { latestRunId: string | null }> = [];
 
-  for (const project of projectRows) {
+  for (const [index, project] of projectRows.entries()) {
+    if (readBudgetSpent(startedAt, "stale-data check", projectRows.length - index)) break;
     const owner = ownerById.get(project.owner_user_id);
     // Same plan read and same Free exclusion as the sweep itself (cron.ts):
     // a project the sweep deliberately never scans is not "without data".
@@ -476,7 +502,7 @@ export async function runScanWatchdog({ service }: { service: Service }): Promis
   const reconciledProjects = await reconcileStalledRuns(service, startedAt);
 
   try {
-    await checkActiveRunsForProviderTrouble(service);
+    await checkActiveRunsForProviderTrouble(service, startedAt);
   } catch (error) {
     console.error("[geo:scan:watchdog] provider-trouble check failed", {
       message: error instanceof Error ? error.message : String(error)
@@ -485,8 +511,8 @@ export async function runScanWatchdog({ service }: { service: Service }): Promis
 
   const now = Date.now();
   const [{ failedRuns, anchors: failedAnchors }, { staleProjects, anchors: staleAnchors }] = await Promise.all([
-    collectUnalertedFailedRuns(service, now),
-    collectUnalertedStaleProjects(service, now)
+    collectUnalertedFailedRuns(service, now, startedAt),
+    collectUnalertedStaleProjects(service, now, startedAt)
   ]);
 
   const summary = {

@@ -1076,7 +1076,7 @@ export async function sendWatchdogAlertEmail(input: {
         <div style="font-size:13px;color:#0B1426;margin-top:6px;font-weight:600;">${escapeHtml(run.reason)}</div>
         <div style="font-size:12.5px;color:#5B6B82;margin-top:3px;">${escapeHtml(
           `${run.successfulPrompts}/${run.totalPrompts} prompts respondidos · ${
-            run.retryStarted ? "hay un escaneo posterior en marcha o hecho" : "NO se ha lanzado ningún reintento"
+            run.retryStarted ? "ya existe un escaneo posterior (reintento, barrido o manual)" : "NO hay ningún escaneo posterior: nadie lo ha reintentado"
           }`
         )}</div>
         ${run.engineIssues
