@@ -407,6 +407,16 @@ export const SCAN_RESUME_MAX_RUN_AGE_HOURS = 6;
 export const SCAN_RESUME_LOG_MESSAGE = "scan_resumed_by_reconcile";
 
 /**
+ * A resume younger than this is treated as still in flight: its continuation
+ * has not landed yet, so the run can still look stale (a `pending` run is
+ * stale by `created_at`, which the resume cannot bump). Two page views inside
+ * this window resume once, not twice. Comfortably longer than one dispatch,
+ * shorter than the 15-minute watchdog pass that would retry a resume that
+ * genuinely went nowhere.
+ */
+export const SCAN_RESUME_IN_FLIGHT_MS = 3 * 60 * 1000;
+
+/**
  * Marker written to `job_logs` whenever an operator scan-health alert is sent
  * (EXTRACTION-RELIABILITY-1 Fase B, docs/adr/0029). Doubles as the dedupe
  * store's lookup key — see `alreadyAlerted` in lib/scan/scan-health-alert.ts

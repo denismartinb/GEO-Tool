@@ -20947,6 +20947,12 @@ lectura que explica los datos, no una traza vista.
   2,5 s por salto) no se ha revisado contra el deadline.
 - **No se avisa al operador de cada reanudación.** Queda en `job_logs`. Si
   un run agota las 3, termina fallando y el vigilante lo avisa (§227).
+- **Corregido tras la QA:** un run `pending` sigue pareciendo parado (por
+  `created_at`, que la reanudación no puede mover) hasta que su tramo llega a
+  ejecutarse. Dos visitas a la pantalla en ese hueco lo habrían reanudado dos
+  veces, gastando el tope en un solo parón. Una reanudación de hace menos de
+  `SCAN_RESUME_IN_FLIGHT_MS` (3 min) se da por en curso: no se repite y
+  tampoco se falla el run.
 
 **Trazabilidad.** §227 (el incidente y el vigilante), ADR 0029 Adenda
 ("presupuestar contra la invocación"), ADR 0037 (la cadena y los leases de

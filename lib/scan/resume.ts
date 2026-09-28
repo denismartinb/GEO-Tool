@@ -3,6 +3,7 @@ import "server-only";
 import {
   RECONCILE_LOG_PREFIX,
   SCAN_RESUME_CAP,
+  SCAN_RESUME_IN_FLIGHT_MS,
   SCAN_RESUME_LOG_MESSAGE,
   SCAN_RESUME_MAX_RUN_AGE_HOURS
 } from "@/lib/scan/constants";
@@ -67,11 +68,11 @@ export async function tryResumeStalledRun(input: {
   const { service, projectId, run } = input;
 
   try {
-    const [{ data: jobs, error: jobsError }, { count: priorResumes, error: logsError }] = await Promise.all([
+    const [{ data: jobs, error: jobsError }, { data: resumeMarkers, error: logsError }] = await Promise.all([
       service.from("jobs").select("id, job_type, status").eq("project_id", projectId).eq("run_id", run.id),
       service
         .from("job_logs")
-        .select("id", { count: "exact", head: true })
+        .select("created_at")
         .eq("project_id", projectId)
         .eq("run_id", run.id)
         .eq("message", SCAN_RESUME_LOG_MESSAGE)
@@ -79,11 +80,22 @@ export async function tryResumeStalledRun(input: {
 
     if (jobsError || logsError || !jobs) return false;
 
+    const markers = (resumeMarkers ?? []) as Array<{ created_at: string }>;
+    const priorResumes = markers.length;
+
+    // A resume dispatched moments ago is still on its way: its continuation
+    // runs in `after()`, so a `pending` run stays `pending` (and `created_at`
+    // -stale) until it lands. A second page view in that window must not
+    // resume it again — that would spend the cap on one stall. Report it as
+    // handled so the caller does not fail a run that is being resumed.
+    const lastResumeAt = markers.reduce((max, marker) => Math.max(max, Date.parse(marker.created_at)), 0);
+    if (lastResumeAt && Date.now() - lastResumeAt < SCAN_RESUME_IN_FLIGHT_MS) return true;
+
     const jobRows = jobs as Array<{ id: string; job_type: string; status: string }>;
     const decision = decideResume({
       runCreatedAt: run.created_at,
       now: Date.now(),
-      priorResumes: priorResumes ?? 0,
+      priorResumes,
       jobs: jobRows
     });
 
@@ -103,7 +115,7 @@ export async function tryResumeStalledRun(input: {
       run_id: run.id,
       level: "warn",
       message: SCAN_RESUME_LOG_MESSAGE,
-      context_json: { resume_number: (priorResumes ?? 0) + 1 }
+      context_json: { resume_number: priorResumes + 1 }
     });
     if (markerError) return false;
 
@@ -121,7 +133,7 @@ export async function tryResumeStalledRun(input: {
     console.info(`${RECONCILE_LOG_PREFIX} resumed stalled run`, {
       projectId,
       runId: run.id,
-      resumeNumber: (priorResumes ?? 0) + 1
+      resumeNumber: priorResumes + 1
     });
     return true;
   } catch (error) {

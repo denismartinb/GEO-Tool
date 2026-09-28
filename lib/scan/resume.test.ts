@@ -82,7 +82,7 @@ describe("decideResume", () => {
 });
 
 type Filters = Record<string, unknown>;
-function fakeService(opts: { jobs: unknown[]; priorResumes: number; insertError?: unknown }) {
+function fakeService(opts: { jobs: unknown[]; priorResumes: number; lastResumeAgoMs?: number; insertError?: unknown }) {
   const inserts: unknown[] = [];
   const updates: unknown[] = [];
   const service = {
@@ -111,7 +111,12 @@ function fakeService(opts: { jobs: unknown[]; priorResumes: number; insertError?
         if (op === "insert") return Promise.resolve({ error: opts.insertError ?? null }).then(resolve);
         if (op === "update") return Promise.resolve({ error: null }).then(resolve);
         if (table === "jobs") return Promise.resolve({ data: opts.jobs, error: null }).then(resolve);
-        if (table === "job_logs") return Promise.resolve({ count: opts.priorResumes, error: null }).then(resolve);
+        if (table === "job_logs") {
+          const markers = Array.from({ length: opts.priorResumes }, () => ({
+            created_at: new Date(Date.now() - (opts.lastResumeAgoMs ?? 60 * 60 * 1000)).toISOString()
+          }));
+          return Promise.resolve({ data: markers, error: null }).then(resolve);
+        }
         return Promise.resolve({ data: null, error: null }).then(resolve);
       };
       return builder;
@@ -143,6 +148,17 @@ describe("tryResumeStalledRun", () => {
     ]);
     expect(updates).toEqual([expect.objectContaining({ table: "scan_runs" })]);
     expect(scheduleScanContinuation).toHaveBeenCalledWith({ projectId: "proj-1", runId: "run-9" });
+    vi.useRealTimers();
+  });
+
+  // QA finding on #540: a `pending` run stays created_at-stale until the
+  // dispatched continuation lands, so two quick page views could both resume.
+  it("does not resume again while a resume from moments ago is still landing", async () => {
+    const { service, inserts } = fakeService({ jobs, priorResumes: 1, lastResumeAgoMs: 20_000 });
+
+    expect(await tryResumeStalledRun({ service, projectId: "proj-1", run: { id: "run-9", created_at: created } })).toBe(true);
+    expect(inserts).toEqual([]);
+    expect(scheduleScanContinuation).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 
