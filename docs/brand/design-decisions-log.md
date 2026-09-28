@@ -21076,3 +21076,37 @@ efectivo), §64/§71/§99 (consola de operador). Ficheros:
 `lib/admin/account-health.ts` (nuevo) y su test, `lib/admin/users.ts` y su
 test, `app/admin/users/users-table.tsx`, `app/admin/users/shared.tsx`,
 `app/admin/admin.css`.
+
+## 231. La promo de lanzamiento se extiende hasta el 31 de octubre (PROMO-EXTEND-OCT-1, 2026-09-28)
+
+**Decisión del fundador** (2026-09-28), tomada al revisar el plan de emails de
+ciclo de vida: los recordatorios de fin de prueba y de recuperación se
+apoyan en el precio de lanzamiento, y la ventana cerraba el 30 de
+septiembre, antes de que nada de ese plan pudiera estar en producción.
+`PROMO_ENDS_AT` (`app/pricing/plans-data.ts`) pasa de
+`2026-09-30T00:00:00+02:00` a `2026-10-31T23:59:59+01:00`.
+
+**Dos detalles de la fecha, deliberados.** El offset es `+01:00`, no
+`+02:00`: el 25 de octubre España vuelve a horario de invierno, y copiar el
+offset de la fecha anterior habría adelantado el corte una hora. Y el corte
+es al final del día 31, no a su medianoche inicial: las superficies que
+pintan la fecha (`PromoStrip`, `components/landing/session-ctas.tsx`) dicen
+"31 oct", y con `T00:00` la promo habría terminado un día antes de lo
+anunciado. Las anteriores (§206) tenían ese mismo desfase de un día; no se
+corrigen retroactivamente porque ya cerraron.
+
+**Lo que este cambio NO hace — mismo aviso que §206.** El cupón real de
+Stripe (`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO`) lleva su propio
+`redeem_by`, fijado a mano en el panel de Stripe e inmutable por API. Sin
+cupones nuevos con `redeem_by` al 31 de octubre (23:59 Madrid) y las dos
+variables de Vercel apuntando a sus IDs, el checkout anunciará 59 €/19 € y
+Stripe rechazará el cupón al cobrar. **Acción pendiente fuera del repo, la
+gestiona el fundador.** `getActivePromoPlanIds()` ya exige cupón configurado
+además de la fecha, así que un cupón ausente apaga la promo en pantalla; uno
+presente pero caducado, no.
+
+**Un test que rompía en cada ampliación.** `lib/env-schema.test.ts` fijaba
+"después de la promo" como `2026-10-01` a mano; con la ventana al 31 de
+octubre esa fecha pasaba a caer dentro y el test fallaba. Ahora se deriva de
+`PROMO_ENDS_AT` + 1 día — misma lección que §197 (un test atado al reloj o a
+una fecha escrita a mano rompe cuando la decisión de negocio cambia).
