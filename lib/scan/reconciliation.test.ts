@@ -40,6 +40,17 @@ vi.mock("@/lib/scan/run-creation", () => ({
  * internal route — neither of which exists under Vitest.
  */
 const scheduleScanContinuation = vi.fn();
+
+/**
+ * SCAN-RELAY-1: reconciliation first tries to resume a stalled run. The
+ * resume decision has its own tests (`resume.test.ts`); here it is stubbed to
+ * "could not resume" so these tests keep exercising the fail/auto-retry path
+ * they were written for, plus one test for the resumed branch.
+ */
+const tryResumeStalledRun = vi.fn(async () => false);
+vi.mock("@/lib/scan/resume", () => ({
+  tryResumeStalledRun: (...args: unknown[]) => tryResumeStalledRun(...(args as []))
+}));
 vi.mock("@/lib/scan/continuation", () => ({
   scheduleScanContinuation: (...args: unknown[]) => scheduleScanContinuation(...args)
 }));
@@ -153,6 +164,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
     createPendingScanRunCore.mockResolvedValue("new-run-id");
     scheduleScanContinuation.mockReset();
     scheduleScanContinuation.mockResolvedValue(undefined);
+    tryResumeStalledRun.mockClear();
     // Every test in this block seeds rows with fixed 2026-06-13 timestamps
     // and reasons about staleness/lookback windows relative to "now" (the
     // pending/running timeout cutoffs, the 24h auto-retry lookback). Pinning
@@ -359,6 +371,36 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
     expect(rows[0].status).toBe("failed");
     expect(rows[0].error_summary).toBe(SCAN_TIMEOUT_ERROR_SUMMARY);
     expect(createPendingScanRunCore).toHaveBeenCalledTimes(1);
+  });
+
+  it("resumes a stalled run instead of failing it when resume succeeds (SCAN-RELAY-1)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-13T12:00:00.000Z"));
+    tryResumeStalledRun.mockResolvedValueOnce(true);
+
+    const { service, rows } = fakeServiceClient([
+      {
+        id: "run-1",
+        project_id: PROJECT_ID,
+        status: "running",
+        error_summary: null,
+        started_at: "2026-06-13T11:00:00.000Z",
+        created_at: "2026-06-13T11:00:00.000Z",
+        updated_at: "2026-06-13T11:50:00.000Z",
+        finished_at: null
+      }
+    ]);
+
+    const { reconcileStuckScanRuns } = await import("./reconciliation");
+    const result = await reconcileStuckScanRuns({ projectId: PROJECT_ID, service });
+
+    expect(result.reconciledCount).toBe(0);
+    expect(rows[0].status).toBe("running");
+    expect(tryResumeStalledRun).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: PROJECT_ID, run: { id: "run-1", created_at: "2026-06-13T11:00:00.000Z" } })
+    );
+    // A resumed run is not a failure: no replacement run is created.
+    expect(createPendingScanRunCore).not.toHaveBeenCalled();
   });
 
   it("does NOT reconcile a running campaign whose started_at is stale but updated_at is recent (SCAN-CHAIN-1: an actively self-chaining multi-batch campaign)", async () => {

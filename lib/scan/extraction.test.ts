@@ -411,6 +411,66 @@ describe("runStructuredExtractionForRun", () => {
     expect(update.citations_count).toBeUndefined();
   });
 
+  // SCAN-RELAY-1: a row cut by THIS invocation's budget must stay eligible
+  // for the next one. Persisting it as `timeout:` would drop it for good.
+  it("leaves a row unprocessed when its timeout is the invocation deadline, not the provider", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({ selectResult: { data: [baseRow()], error: null }, updateCalls });
+    const deadlineAt = Date.now() + 9_000;
+
+    vi.mocked(extractGeminiStructuredData).mockImplementation(async () => {
+      vi.setSystemTime(deadlineAt);
+      throw new ExtractionError("timeout", "Gemini API request timed out.");
+    });
+    vi.useFakeTimers({ toFake: ["Date"] });
+
+    try {
+      const summary = await runStructuredExtractionForRun({
+        service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+        projectId: "project-1",
+        runId: "run-1",
+        deadlineAt
+      });
+
+      expect(updateCalls).toHaveLength(0);
+      expect(summary).toMatchObject({ attempted: 1, succeeded: 0, failed: 0, remaining: 1 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still records a real provider timeout that happened with budget to spare", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({ selectResult: { data: [baseRow()], error: null }, updateCalls });
+
+    vi.mocked(extractGeminiStructuredData).mockRejectedValue(new ExtractionError("timeout", "Gemini API request timed out."));
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1",
+      deadlineAt: Date.now() + 40_000
+    });
+
+    expect(updateCalls).toEqual([{ extraction_error: "timeout: Gemini API request timed out." }]);
+  });
+
+  it("does not start a row without enough budget for one real call", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({ selectResult: { data: [baseRow()], error: null }, updateCalls });
+    vi.mocked(extractGeminiStructuredData).mockClear();
+
+    const summary = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1",
+      deadlineAt: Date.now() + 2_000
+    });
+
+    expect(extractGeminiStructuredData).not.toHaveBeenCalled();
+    expect(summary).toMatchObject({ attempted: 0, remaining: 1 });
+  });
+
   it("flattens an uncategorized failure instead of persisting its raw message", async () => {
     const updateCalls: Array<Record<string, unknown>> = [];
     const service = createServiceMock({

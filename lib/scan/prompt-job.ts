@@ -7,7 +7,12 @@ import type { GeminiVisibilityResponse } from "@/lib/llm/contracts";
 import { delay } from "@/lib/llm/http";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { LLMScanProvider } from "@/lib/scan/providers";
-import { PROMPT_RETRY_DELAY_MS, PROMPT_RETRY_MAX_TOTAL_ATTEMPTS, PROMPT_VERSION } from "@/lib/scan/constants";
+import {
+  GENERATION_RETRY_MIN_REMAINING_MS,
+  PROMPT_RETRY_DELAY_MS,
+  PROMPT_RETRY_MAX_TOTAL_ATTEMPTS,
+  PROMPT_VERSION
+} from "@/lib/scan/constants";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import type { JobRow } from "@/lib/scan/types";
@@ -71,7 +76,8 @@ export async function processPromptJob({
   job,
   project,
   competitors,
-  providers
+  providers,
+  deadlineAt
 }: {
   service: ReturnType<typeof createServiceClient>;
   projectId: string;
@@ -80,6 +86,12 @@ export async function processPromptJob({
   project: { brand: string; brand_aliases?: string[] | null; country: string; language: string };
   competitors: { name: string; domain: string }[];
   providers: LLMScanProvider[];
+  /**
+   * The invocation's absolute work deadline (`executor.ts`). Gates the retry
+   * round only — see GENERATION_RETRY_MIN_REMAINING_MS. Optional so direct
+   * callers without an invocation budget keep today's behavior.
+   */
+  deadlineAt?: number;
 }): Promise<PromptJobOutcome> {
   const baseAttemptCount = job.attempt_count;
 
@@ -187,6 +199,22 @@ export async function processPromptJob({
 
   for (let attempt = 1; attempt <= totalAttempts && remaining.size > 0; attempt += 1) {
     if (attempt > 1) {
+      // SCAN-RELAY-1: a retry round that cannot finish inside the invocation
+      // does not buy a result — it gets the invocation killed mid-call, and
+      // with it the hand-off to the next batch. The engines still missing
+      // are treated as failed for this prompt, exactly as if the round had
+      // run and failed; the rest of the campaign keeps its chain.
+      if (deadlineAt !== undefined && deadlineAt - Date.now() < GENERATION_RETRY_MIN_REMAINING_MS) {
+        await logJob(service, {
+          jobId: job.id,
+          projectId,
+          runId,
+          level: "warn",
+          message: "Skipped prompt retry: not enough invocation budget left.",
+          context: { prompt_id: promptId, providers: Array.from(remaining), remaining_ms: deadlineAt - Date.now() }
+        });
+        break;
+      }
       await delay(PROMPT_RETRY_DELAY_MS);
       await service
         .from("jobs")

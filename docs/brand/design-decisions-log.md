@@ -20883,3 +20883,76 @@ run), ADR 0037 (la cadena de continuación). Ficheros:
 `lib/scan/watchdog.ts` (nuevo), `lib/scan/watchdog.test.ts` (nuevo),
 `app/api/cron/scan-watchdog/route.ts` (nuevo), `lib/scan/scan-health-alert.ts`,
 `lib/scan/constants.ts`, `lib/email/transactional.ts`, `vercel.json`.
+
+## 228. SCAN-RELAY-1: la cadena de un escaneo deja de romperse por pasarse de tiempo, y la que se rompe se reanuda (2026-09-28)
+
+**Qué se descubrió.** Fase 3 del plan aprobado en §227. El dato que la
+decidió (consulta del fundador, filas de OpenAI con `quota:` por día): el
+**22 y el 23 de septiembre hubo 0 errores de cuota** y aun así esos runs
+murieron, y del 9 al 11 hubo muchos y aquellos runs terminaron. La cuota no
+era la causa, sino un agravante. La causa estaba en el presupuesto de la
+invocación: `SCAN_INVOCATION_WORK_BUDGET_MS` (45 s) sólo se consultaba antes
+de **empezar** algo, nunca se imponía a lo que ya estaba en vuelo:
+
+- una llamada de extracción empezada a los 44 s conservaba sus 20 s de
+  timeout y llevaba la invocación a ~64 s;
+- una tanda de generación cuyo primer intento se comía ~20 s en timeouts de
+  Gemini hacía de todas formas su ronda de reintento (~42 s en total), y la
+  extracción arrancaba después con 3 s de margen.
+
+Pasados los 60 s de `maxDuration`, Vercel mata la invocación **antes** del
+`after()` que entrega el siguiente tramo, y nada vuelve a arrancar la cadena
+hasta el barrido del día siguiente. Encaja con las tres formas vistas en los
+datos: 20 prompts sin empezar (22 y 26), finalize `running` con el bloqueo
+huérfano (23) y finalize `pending` sin un log después (24, 25, 27, 28). **No
+confirmado con logs de Vercel** (sin acceso desde esta sesión): es la
+lectura que explica los datos, no una traza vista.
+
+**Qué se decide.**
+
+1. **Lo que está en vuelo acaba en el deadline.** `fetchExtractionWithRetry`
+   limita cada intento a `min(timeoutMs, deadlineAt - now)`. Una fila no se
+   empieza con menos de `EXTRACTION_ROW_MIN_REMAINING_MS` (8 s). Una fila
+   cortada por el presupuesto (timeout a ≤ `EXTRACTION_DEADLINE_SLACK_MS` del
+   deadline) **se deja sin procesar**, no se marca `timeout:`: marcarla la
+   sacaba para siempre del conjunto elegible, y con eso un límite de
+   planificación se convertía en pérdida de datos. Finalize ya aplaza
+   mientras quede una fila así, que es el contrato de "no mute rows".
+2. **La ronda de reintento de un prompt sólo empieza si cabe.**
+   `processPromptJob` recibe el `workDeadlineAt` y se salta el reintento con
+   menos de `GENERATION_RETRY_MIN_REMAINING_MS` (23 s): los motores que
+   faltan cuentan como fallidos para ese prompt, igual que si la ronda
+   hubiera fallado. Queda registrado en `job_logs` ("Skipped prompt retry").
+3. **La cadena que se rompe se reanuda, no se reemplaza.**
+   `reconcileStuckScanRuns` llama primero a `tryResumeStalledRun`
+   (`lib/scan/resume.ts`). Un run parado con trabajo reclamable, de menos de
+   6 h y reanudado menos de 3 veces recibe una marca
+   `scan_resumed_by_reconcile` en `job_logs`, un bump de `updated_at` y un
+   nuevo tramo. Antes se marcaba `failed` y se creaba un run nuevo desde
+   cero, tirando todas las respuestas ya pagadas. Con el vigilante de §227,
+   una cadena muerta se reanuda en ≤15 min aunque nadie mire. Si no se puede
+   reanudar, todo sigue como antes (fallo, reintento con tope y aviso).
+
+**Pendiente / roto conocido, sin maquillar.**
+
+- **Primer tramo del barrido diario.** El run nace a las 06:00:31 todos los
+  días. No he podido determinar si esos 31 s son trabajo del propio barrido
+  o un arranque tardío del cron de Vercel. El barrido ya pregunta antes de
+  cada lote si su peor caso cabe (`canStartAnotherSweepBatch`, §192), y con
+  1 y 2 ese peor caso vuelve a ser cierto. Si aun así muere, lo recoge el
+  punto 3. Sacar la ejecución del primer lote a una invocación propia queda
+  sin hacer: dispararía todos los proyectos del día en el mismo minuto,
+  justo la ráfaga que prohíbe `.claude/rules/scan.md`.
+- **La resolución de redirecciones de las citas** (`buildGroundedCitations`,
+  2,5 s por salto) no se ha revisado contra el deadline.
+- **No se avisa al operador de cada reanudación.** Queda en `job_logs`. Si
+  un run agota las 3, termina fallando y el vigilante lo avisa (§227).
+
+**Trazabilidad.** §227 (el incidente y el vigilante), ADR 0029 Adenda
+("presupuestar contra la invocación"), ADR 0037 (la cadena y los leases de
+jobs), §192. Ficheros: `lib/llm/extraction-fetch.ts`,
+`lib/scan/extraction.ts`, `lib/scan/prompt-job.ts`, `lib/scan/executor.ts`,
+`lib/scan/resume.ts` (nuevo), `lib/scan/reconciliation.ts`,
+`lib/scan/constants.ts`, `docs/scan-lifecycle.md`, y sus tests
+(`resume.test.ts` nuevo, `extraction.test.ts`, `extraction-fetch.test.ts`,
+`executor.test.ts`, `reconciliation.test.ts`).

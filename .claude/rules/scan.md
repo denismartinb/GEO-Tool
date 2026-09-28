@@ -44,6 +44,25 @@ worse than no rule, because a future session will obey it anyway.
   whether time has already run out — a `do { … } while (elapsed < budget)` lets
   an iteration start at 39s and run another 45 (`docs/adr/0037`,
   `lib/scan/drive-budget.ts`).
+- **El presupuesto se impone a lo que está en vuelo, no sólo a lo que
+  empieza.** Preguntar "¿queda tiempo?" antes de lanzar una llamada no basta
+  si esa llamada conserva su timeout completo: una extracción empezada a los
+  44 s duraba hasta los 64 s, Vercel mataba la invocación antes del
+  `after()` del siguiente tramo, y la cadena de alberdiderma.es murió así
+  seis días, dos de ellos sin ningún problema de proveedor
+  (`docs/brand/design-decisions-log.md` §228). Toda llamada nueva dentro de
+  `executePendingScan` recorta su timeout al deadline (patrón de
+  `fetchExtractionWithRetry`) y no se empieza sin margen para una llamada
+  real. Y lo que el presupuesto corta **no se persiste como error del
+  proveedor**: una fila marcada `timeout:` por falta de tiempo sale para
+  siempre del conjunto elegible, y eso es pérdida de datos.
+- **Una cadena rota se reanuda antes de reemplazarse.** Un run parado con
+  trabajo reclamable se re-despacha donde se quedó (`lib/scan/resume.ts`,
+  con tope de reanudaciones y de antigüedad), en vez de marcarlo `failed` y
+  empezar uno nuevo que repite todas las llamadas ya pagadas (§228). El tope
+  vive en `job_logs` y **se escribe antes del despacho**: un run que nunca
+  se puede reanudar con éxito tiene que llegar igualmente al tope y caer al
+  camino de fallo y aviso.
 - **La elegibilidad de un trabajo programado se ancla a SU horario, nunca a una
   ventana móvil hacia atrás desde `Date.now()`.** El barrido recurrente
   preguntaba "¿hace menos de 24h del último escaneo?" cuando la pregunta que

@@ -97,6 +97,28 @@ describe("fetchExtractionWithRetry", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // SCAN-RELAY-1: an attempt started near the deadline used to keep its full
+  // timeout and run the invocation past Vercel's 60s ceiling.
+  it("cuts an in-flight attempt at the deadline instead of its full timeout", async () => {
+    const fetchMock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+        })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const startedAt = Date.now();
+    await expect(
+      fetchExtractionWithRetry(
+        "https://provider.test",
+        {},
+        { ...OPTIONS, maxAttempts: 1, timeoutMs: 20_000, deadlineAt: Date.now() + 30 }
+      )
+    ).rejects.toMatchObject({ category: "timeout" });
+    expect(Date.now() - startedAt).toBeLessThan(5_000);
+  });
+
   it("does not sleep past the deadline before a retry", async () => {
     const fetchMock = vi.fn().mockResolvedValue(response(429));
     vi.stubGlobal("fetch", fetchMock);

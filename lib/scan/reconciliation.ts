@@ -15,6 +15,7 @@ import {
   SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS
 } from "@/lib/scan/constants";
 import { scheduleScanContinuation } from "@/lib/scan/continuation";
+import { tryResumeStalledRun } from "@/lib/scan/resume";
 import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -266,6 +267,11 @@ export async function reconcileStuckScanRuns({
     });
   } else if (staleRunningRuns?.length) {
     for (const run of staleRunningRuns) {
+      // SCAN-RELAY-1: carry on where it stopped before giving up on it.
+      if (await tryResumeStalledRun({ service, projectId, run: { id: run.id, created_at: run.created_at } })) {
+        continue;
+      }
+
       const capReached = priorRecoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
       const errorSummary = capReached
         ? SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
@@ -326,6 +332,12 @@ export async function reconcileStuckScanRuns({
     });
   } else if (stalePendingRuns?.length) {
     for (const run of stalePendingRuns) {
+      // SCAN-RELAY-1: a `pending` run nobody started (a lost first dispatch)
+      // is started, not replaced by an identical new one.
+      if (await tryResumeStalledRun({ service, projectId, run: { id: run.id, created_at: run.created_at } })) {
+        continue;
+      }
+
       const capReached = priorRecoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
       const errorSummary = capReached
         ? SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
