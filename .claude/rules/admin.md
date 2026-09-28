@@ -193,3 +193,11 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   `cost-model.ts` (§99). If a future admin screen needs the same split,
   this is the pattern — split the presentation-safe half out, don't remove
   the guard from the file that has real internal numbers in it.
+- **The "Error" column asks exactly what the scan watchdog asks.** Its
+  criteria live in `lib/admin/account-health.ts` and reuse
+  `describeFailedRunReason`/`evaluateRecurringFreshness` from
+  `lib/scan/watchdog.ts` rather than restating them: the column and the
+  operator emails must never disagree about what counts as a problem, and
+  both read the EFFECTIVE plan (`resolveSystemPlanId`), never the raw
+  `current_plan` (`docs/brand/design-decisions-log.md` §229, §230). A change
+  to what the watchdog alerts on changes this column with it, in the same PR.

@@ -8,6 +8,7 @@ import { relativeTime } from "@/lib/notifications/render";
 import {
   AutomationCell,
   Cost,
+  HealthCell,
   STATUS_LABEL,
   UserDetailPanel,
   buildQuery,
@@ -118,6 +119,7 @@ export function UsersTable({
               <th>Usuario</th>
               <th>Alta</th>
               <th>Estado</th>
+              <th>Error</th>
               <th className="adm-num">Dominios</th>
               <th className="adm-num">Escaneos 30d</th>
               <th>Recurrente</th>
@@ -147,6 +149,9 @@ export function UsersTable({
                   <td>
                     <span className={`adm-pill adm-pill-${row.status}`}>{STATUS_LABEL[row.status](row)}</span>
                   </td>
+                  <td>
+                    <HealthCell health={row.health} />
+                  </td>
                   <td className="adm-num">{row.projectCount}</td>
                   <td className="adm-num">{row.scanCount30d}</td>
                   <td>
@@ -171,7 +176,7 @@ export function UsersTable({
                     lee desplazando la tabla, cortado a los lados en móvil. */}
                 {row.id === selectedId ? (
                   <tr className="adm-detail-row">
-                    <td colSpan={9} className="adm-detail-cell">
+                    <td colSpan={10} className="adm-detail-cell">
                       <div className="adm-detail-sticky">{renderDetail(row.id)}</div>
                     </td>
                   </tr>

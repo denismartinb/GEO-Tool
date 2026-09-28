@@ -3,6 +3,8 @@ import "server-only";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { PLANS } from "@/app/pricing/plans-data";
 import { loadAutomationSnapshot, type AccountAutomation, type ProjectAutomation } from "@/lib/admin/automation";
+import { deriveAccountHealth, type AccountHealth, type HealthRun } from "@/lib/admin/account-health";
+import { resolvePlan, resolveSystemPlanId } from "@/lib/billing";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -26,6 +28,8 @@ export type AdminUserRow = {
    * parecería una respuesta.
    */
   automation: AccountAutomation | null;
+  /** ADMIN-HEALTH-1 (§230): is any domain of this account not getting the data it should, right now? */
+  health: AccountHealth;
 };
 
 export type AdminUsersPage = {
@@ -111,7 +115,8 @@ function toRow(
   lastSignInAt: string | null,
   projectCount: number,
   scanCount30d: number,
-  automation: AccountAutomation | null = null
+  automation: AccountAutomation | null = null,
+  health: AccountHealth = { hasError: false, reasons: [] }
 ): AdminUserRow {
   const planId = profile.current_plan ?? "free";
   return {
@@ -126,8 +131,42 @@ function toRow(
     trialEndsAt: profile.trial_ends_at ?? null,
     projectCount,
     scanCount30d,
-    automation
+    automation,
+    health
   };
+}
+
+type HealthScanRow = HealthRun & { project_id: string };
+
+/** Columns `deriveAccountHealth` needs from `scan_runs`, plus `project_id` to group them. */
+const HEALTH_SCAN_COLUMNS = "project_id, status, created_at, updated_at, error_summary, triggered_by_user_id";
+
+/**
+ * Groups runs by project (keeping newest-first order) and derives one
+ * account's health. The plan is the EFFECTIVE one (§229): an expired trial
+ * reads as Free here exactly as it does for the sweep and the watchdog.
+ */
+function healthFor(input: {
+  profile: { current_plan: string | null; trial_ends_at: string | null; stripe_subscription_id: string | null; email: string };
+  projects: ReadonlyArray<{ id: string; domain: string }>;
+  runs: readonly HealthScanRow[];
+  recurringEnabledByProject: (projectId: string) => boolean;
+}): AccountHealth {
+  const runsByProject = new Map<string, HealthScanRow[]>();
+  for (const run of input.runs) {
+    const list = runsByProject.get(run.project_id) ?? [];
+    list.push(run);
+    runsByProject.set(run.project_id, list);
+  }
+  return deriveAccountHealth({
+    planId: resolvePlan(resolveSystemPlanId(input.profile) as string | undefined).id,
+    now: Date.now(),
+    projects: input.projects.map((project) => ({
+      domain: project.domain,
+      recurringEnabled: input.recurringEnabledByProject(project.id),
+      runs: runsByProject.get(project.id) ?? []
+    }))
+  });
 }
 
 /**
@@ -146,8 +185,11 @@ export async function listOperatorUsers(service: ServiceClient): Promise<AdminUs
       .select("id, email, created_at, current_plan, trial_ends_at, stripe_subscription_id")
       .order("created_at", { ascending: false }),
     service.auth.admin.listUsers({ page: 1, perPage: AUTH_USERS_FETCH_CAP }),
-    service.from("projects").select("id, owner_user_id, is_archived"),
-    service.from("scan_runs").select("project_id, created_at").gte("created_at", cutoffIso)
+    service.from("projects").select("id, owner_user_id, is_archived, domain"),
+    service
+      .from("scan_runs")
+      .select(HEALTH_SCAN_COLUMNS)
+      .gte("created_at", cutoffIso)
   ]);
 
   if (profilesResult.error) {
@@ -193,10 +235,38 @@ export async function listOperatorUsers(service: ServiceClient): Promise<AdminUs
   // ADMIN-CONSOLE-2a. Después de `profiles` porque necesita el plan de cada
   // dueño para saber si su escaneo recurrente surte efecto — el barrido
   // descarta los proyectos Free.
+  // ALERTS-SCOPE-1 / ADMIN-HEALTH-1: the effective plan, so an expired trial
+  // reads "recurrente sin efecto" here exactly as the sweep treats it (§229).
   const planIdByOwnerId = new Map(
-    (profilesResult.data ?? []).map((profile) => [profile.id, profile.current_plan ?? "free"])
+    (profilesResult.data ?? []).map((profile) => [
+      profile.id,
+      resolvePlan(resolveSystemPlanId(profile) as string | undefined).id
+    ])
   );
   const automation = await loadAutomationSnapshot(service, planIdByOwnerId);
+
+  // ADMIN-HEALTH-1: active projects and their recent runs, grouped by owner.
+  const activeProjectsByOwner = new Map<string, Array<{ id: string; domain: string }>>();
+  for (const project of projectsResult.data ?? []) {
+    if (project.is_archived) continue;
+    const list = activeProjectsByOwner.get(project.owner_user_id) ?? [];
+    list.push({ id: project.id, domain: project.domain as string });
+    activeProjectsByOwner.set(project.owner_user_id, list);
+  }
+  const runsByOwner = new Map<string, HealthScanRow[]>();
+  // Newest first: `deriveAccountHealth` reads each project's first run as its latest.
+  const scansNewestFirst = [...((scansResult.data ?? []) as HealthScanRow[])].sort((a, b) =>
+    b.created_at.localeCompare(a.created_at)
+  );
+  for (const scan of scansNewestFirst) {
+    const owner = projectOwnerById.get(scan.project_id);
+    if (!owner) continue;
+    const list = runsByOwner.get(owner) ?? [];
+    list.push(scan);
+    runsByOwner.set(owner, list);
+  }
+  const recurringEnabledByProject = (projectId: string) =>
+    automation.availability === "ok" ? automation.byProject.get(projectId)?.recurringScansEnabled === true : false;
 
   const users = (profilesResult.data ?? []).map((profile) =>
     toRow(
@@ -217,7 +287,13 @@ export async function listOperatorUsers(service: ServiceClient): Promise<AdminUs
             provenance: "estimado" as const,
             availability: "ok" as const
           }
-        : null
+        : null,
+      healthFor({
+        profile,
+        projects: activeProjectsByOwner.get(profile.id) ?? [],
+        runs: runsByOwner.get(profile.id) ?? [],
+        recurringEnabledByProject
+      })
     )
   );
 
@@ -254,12 +330,13 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
 
   const latestScanByProject = new Map<string, { status: string; createdAt: string }>();
   let scanCount30d = 0;
+  let detailRuns: HealthScanRow[] = [];
 
   if (projectIds.length > 0) {
     const cutoffMs = Date.now() - THIRTY_DAYS_MS;
     const { data: scans, error: scansError } = await service
       .from("scan_runs")
-      .select("project_id, status, created_at")
+      .select(HEALTH_SCAN_COLUMNS)
       .in("project_id", projectIds)
       .order("created_at", { ascending: false });
 
@@ -267,7 +344,8 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
       throw new Error(`admin user detail: failed to read scan_runs — ${scansError.message}`);
     }
 
-    for (const scan of scans ?? []) {
+    detailRuns = (scans ?? []) as HealthScanRow[];
+    for (const scan of detailRuns) {
       if (!latestScanByProject.has(scan.project_id)) {
         latestScanByProject.set(scan.project_id, { status: scan.status, createdAt: scan.created_at });
       }
@@ -279,7 +357,7 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
   // proyectos de la plataforma (señalado por la QA de ADMIN-CONSOLE-2a).
   const automation = await loadAutomationSnapshot(
     service,
-    new Map([[userId, profile.current_plan ?? "free"]]),
+    new Map([[userId, resolvePlan(resolveSystemPlanId(profile) as string | undefined).id]]),
     userId
   );
 
@@ -288,7 +366,14 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
     authResult.data?.user?.last_sign_in_at ?? null,
     projects.filter((project) => !project.is_archived).length,
     scanCount30d,
-    automation.availability === "ok" ? automation.byOwner.get(userId) ?? null : null
+    automation.availability === "ok" ? automation.byOwner.get(userId) ?? null : null,
+    healthFor({
+      profile,
+      projects: projects.filter((project) => !project.is_archived),
+      runs: detailRuns,
+      recurringEnabledByProject: (projectId) =>
+        automation.availability === "ok" ? automation.byProject.get(projectId)?.recurringScansEnabled === true : false
+    })
   );
 
   return {

@@ -174,6 +174,21 @@ function AutomationToggleForm({
  * de antes de ADMIN-CONSOLE-UX-1 (corrección "no recargar la página"): quien
  * la usa decide si cerrar navega o sólo limpia estado local.
  */
+/**
+ * ADMIN-HEALTH-1 (§230): "Sí" in red when any domain of the account is not
+ * getting the data it should; the reasons live in the account's detail panel
+ * (a tooltip alone is invisible on the phone the founder reads this from).
+ */
+export function HealthCell({ health }: { health: AdminUserRow["health"] }) {
+  return health.hasError ? (
+    <span className="adm-pill adm-pill-error" title={health.reasons.join("\n")}>
+      Sí · {health.reasons.length}
+    </span>
+  ) : (
+    <span className="adm-dim">No</span>
+  );
+}
+
 export function UserDetailPanel({
   detail,
   q,
@@ -217,6 +232,16 @@ export function UserDetailPanel({
         <p className="feedback error" style={{ margin: "14px 20px 0" }}>
           {ADMIN_ERROR_MESSAGES[adminError] ?? "No se pudo completar el cambio."}
         </p>
+      ) : null}
+      {detail.health.hasError ? (
+        <div className="adm-health-box" role="alert">
+          <p className="adm-mini-title">Errores ahora mismo</p>
+          <ul>
+            {detail.health.reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </div>
       ) : null}
       <div className="adm-drawer-cols">
         <div>

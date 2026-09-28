@@ -238,6 +238,11 @@
 .adm-pill-trial_expired { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
 .adm-pill-paid { background: var(--brand-pos-soft); color: var(--brand-pos); border-color: #b9e5cd; }
 .adm-pill-free { background: var(--surface-2); color: var(--ink-3); border-color: var(--line); }
+/* ADMIN-HEALTH-1 (§230): la columna "Error" y su detalle en la ficha. */
+.adm-pill-error { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
+.adm-health-box { margin: 14px 20px 0; padding: 12px 14px; border: 1px solid #f6c6cb; border-radius: 10px; background: var(--brand-neg-soft); color: var(--brand-neg); }
+.adm-health-box .adm-mini-title { color: var(--brand-neg); margin: 0 0 6px; }
+.adm-health-box ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
 
 /* ADMIN-CONSOLE-2a — automatismos y coste */
 
