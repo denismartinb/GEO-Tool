@@ -403,6 +403,30 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
     expect(createPendingScanRunCore).not.toHaveBeenCalled();
   });
 
+  // ALERTS-SCOPE-1: the first watchdog pass reconciled runs stuck for weeks
+  // and bought each of them a whole new scan.
+  it("fails a zombie run (created days ago) without auto-retrying it", async () => {
+    const { service, rows } = fakeServiceClient([
+      {
+        id: "run-zombie",
+        project_id: PROJECT_ID,
+        status: "running",
+        error_summary: null,
+        started_at: "2026-05-20T06:00:00.000Z",
+        created_at: "2026-05-20T06:00:00.000Z",
+        updated_at: "2026-05-20T06:05:00.000Z",
+        finished_at: null
+      }
+    ]);
+
+    const { reconcileStuckScanRuns } = await import("./reconciliation");
+    const result = await reconcileStuckScanRuns({ projectId: PROJECT_ID, service });
+
+    expect(result.reconciledCount).toBe(1);
+    expect(rows[0].status).toBe("failed");
+    expect(createPendingScanRunCore).not.toHaveBeenCalled();
+  });
+
   it("does NOT reconcile a running campaign whose started_at is stale but updated_at is recent (SCAN-CHAIN-1: an actively self-chaining multi-batch campaign)", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-13T12:00:00.000Z"));

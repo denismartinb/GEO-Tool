@@ -163,6 +163,16 @@ worse than no rule, because a future session will obey it anyway.
   se añade ahí o se asegura que ahí se vea; nunca sólo en un camino que
   requiere que el run acabe. Y la marca de deduplicado se escribe **después**
   del envío, nunca antes: si el canal falla, la siguiente pasada repite.
+- **El código de sistema actúa sobre el plan EFECTIVO, nunca sobre
+  `current_plan` crudo.** La caducidad de la prueba es perezosa (se aplica
+  cuando el usuario abre la consola), así que leer la columna tal cual hizo
+  que el barrido escaneara durante diez días cuentas con la prueba caducada
+  (§229). Barrido, creación de escaneos, reintento automático, ejecutor y
+  vigilante resuelven el plan con `resolveSystemPlanId` (`lib/billing.ts`),
+  que aplica caducidad y comped sin escribir nada. Y un aviso de fallo sólo
+  sale si alguien espera ese dato: runs de ≤48 h, lanzados por una persona o
+  de una cuenta con plan que incluye escaneos. Un run parado de hace días
+  (zombi) se falla sin reintento ni aviso.
 - **An alert's own failure must be diagnosable where you already work.** A
   `console.error` in a short-lived runtime log is not a diagnosis — persist the
   reason (`docs/adr/0029`, "What the first real delivery cost to learn"). And a

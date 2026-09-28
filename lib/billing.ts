@@ -136,6 +136,35 @@ export function resolveEffectivePlanId(
 }
 
 /**
+ * ALERTS-SCOPE-1 (`docs/brand/design-decisions-log.md` §229): the plan an
+ * account is ACTUALLY on, for system code with no user session — the daily
+ * sweep, scan creation from cron or auto-retry, the executor's engine set,
+ * the scan watchdog.
+ *
+ * Those paths used to read `profiles.current_plan` raw. Trial expiry is
+ * lazy — `applyTrialExpiry` only downgrades when the user next opens the
+ * console — so an expired trial nobody came back to stayed `pro` for the
+ * system indefinitely: azotea.cl and rideflumserberg.ch were scanned every
+ * day for ten days after their trials ended, with the recurring switch on
+ * and nobody paying, and the watchdog reported them as "plan pro". Comped
+ * accounts (BILLING-COMPED-1) had the opposite gap: the console read them as
+ * Agency, the sweep as whatever `current_plan` said.
+ *
+ * Read-only on purpose: no downgrade write and no "trial ended" email from a
+ * cron. Enforcement stays where it is (`applyTrialExpiry`, on the user's own
+ * plan read); this only stops the system from acting on a plan the account
+ * no longer has.
+ */
+export function resolveSystemPlanId(row: TrialFields | null | undefined): string | null | undefined {
+  if (row && isCompedAccountEmail(row.email)) return COMPED_PLAN_ID;
+  if (isTrialElapsed(row)) return "free";
+  return row?.current_plan;
+}
+
+/** Columns `resolveSystemPlanId` needs; select these wherever it is used. */
+export const SYSTEM_PLAN_COLUMNS = "current_plan, trial_ends_at, stripe_subscription_id, email";
+
+/**
  * Raw Pro-tier check for feature gates (as opposed to the numeric-caps UI,
  * which uses `resolvePlan`/`getPlanForUser`). Deliberately does NOT go
  * through `resolvePlan`: that function defaults a missing/unrecognized value
