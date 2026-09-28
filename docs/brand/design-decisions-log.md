@@ -20776,3 +20776,110 @@ se revierte). Ficheros: `lib/session-hint.ts`, `lib/use-session-user.ts`,
 `app/dashboard/layout.tsx`, `components/sidebar.tsx`, y los dos ficheros de
 test citados arriba. Petición directa del fundador con captura,
 2026-09-19.
+
+## 227. ALERTS-ALWAYS-1: un vigilante cada 15 minutos para que un cliente sin datos no pase inadvertido (2026-09-28)
+
+**Qué pasó.** La cuenta de alberdiderma.es (plan de prueba Pro, luego Free)
+no completó ni un escaneo del 22 al 28 de septiembre de 2026 y **no salió
+ni una alerta**. Diagnóstico con datos reales (consultas del fundador en
+Supabase):
+
+- OpenAI sin cuota en la **extracción**: 0 filas de OpenAI extraídas en
+  todos los runs, todas con `quota: OpenAI API quota or rate limit reached`
+  (la generación de OpenAI sí respondía). El 28, además, Gemini dio
+  timeouts de generación (10 de 30 respuestas perdidas).
+- Con cada fila de OpenAI gastando tres intentos con espera, la extracción
+  avanzaba ~20 filas por invocación (`unprocessed` 68 → 47), así que un run
+  de ~90 respuestas necesitaba 7-8 invocaciones encadenadas.
+- La cadena se cortó en todos: `scan_finalize` quedó `pending` con 2
+  intentos y sin un log después (24, 25, 27, 28), `running` con el lock
+  del 23 a las 06:03:13 (invocación muerta a mitad), o 20 `scan_prompt`
+  `pending` tras la primera tanda (22 y 26). Lectura más probable —**no
+  confirmada con los logs de Vercel, a los que esta sesión no tenía
+  acceso**—: la invocación se pasa del `maxDuration` de 60 s y muere antes
+  de llegar al `after()` que dispara el siguiente eslabón. El run creado por
+  el cron nace a las 06:00:31, así que ese primer eslabón ya empieza con
+  31 s gastados antes de sus 45 s de trabajo.
+- Nada reanudaba la cadena: `reconcileStuckScanRuns` sólo corre al abrir una
+  pantalla del proyecto, al crear un run o en el barrido del día siguiente.
+  Cada run quedaba `running` ~24 h (86.398 s el del 27).
+
+**Por qué no llegó ninguna alerta.** Tres agujeros a la vez:
+
+1. La alerta de cuota (`checkAndSendScanHealthAlert`) sólo se evalúa al
+   finalizar el run, y la cuota era justo lo que impedía finalizar.
+2. La alerta de "run fallido sin reintentos" sólo salta al marcarse
+   `_retry_exhausted`. El tope de reintentos contaba fallos por
+   `created_at` en una ventana de 24 h, y cada fallo se detectaba ~24 h
+   después de crearse: el del día anterior quedaba fuera **por segundos,
+   todos los días**, así que el tope nunca se alcanzaba.
+3. El barrido lo veía como normal: tras el reintento automático el proyecto
+   tenía un run activo (`skipped_active_run`, silencio por diseño, §194) y
+   la regla de los tres fallos seguidos exige que el último no esté activo.
+
+**Qué se decide (fundador, Task Intake aprobado el 2026-09-28).** Toda
+alerta de que un cliente deja de recibir datos tiene que llegar, de
+cualquier tipo, sin depender de que el run termine ni de que alguien mire.
+
+- **`/api/cron/scan-watchdog`, cada 15 min** (`vercel.json`, posible desde
+  que la cuenta es Vercel Pro). `lib/scan/watchdog.ts`, sobre **todos** los
+  proyectos:
+  1. reconcilia los runs parados (reutiliza `reconcileStuckScanRuns`, con un
+     tope de 30 s para que la parte que avisa quepa siempre en la
+     invocación);
+  2. revisa los runs en curso buscando sólo `quota`/`config` (nueva opción
+     `onlyReasons` de `checkAndSendScanHealthAlert`) — en un run a medias,
+     "nada extraído todavía" es progreso, no un motor caído;
+  3. avisa de **todo run que acabe `failed`**, se reintente o no, diciendo
+     de qué cuenta es, cuántos prompts respondió, si hay reintento en marcha
+     y qué motor falló;
+  4. avisa de **todo proyecto con recurrente activo que pase un ciclo
+     entero sin un escaneo completado** (3 h de gracia tras el disparo de
+     las 06:00 UTC, anclado igual que la elegibilidad del barrido, §192). Es
+     la señal "a esta persona le ha dejado de aparecer", sea cual sea la
+     causa, incluidas las que nadie ha previsto. Se excluyen los proyectos
+     Free (el barrido tampoco los escanea) y los que tienen un run en
+     curso (su fallo ya tendrá aviso propio).
+- **Un correo por pasada**, al `OPS_ALERT_EMAIL`, nunca al cliente
+  (`sendWatchdogAlertEmail`).
+- **Deduplicado en `job_logs`**, sin migración: `watchdog_alert_sent` con
+  `kind = failed_run` por run, o `kind = stale_data` + `cutoff` por proyecto
+  y ciclo. La marca se escribe **sólo después** de enviar: si el canal no
+  está configurado o el envío falla, la siguiente pasada lo reintenta. Un
+  run o proyecto sin ningún job al que colgar la marca se avisa una sola
+  vez por la pasada en cuyo intervalo cae.
+- **`SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS` pasa de 24 a 48 h**, para que dos
+  fallos seguidos de un plan diario sí agoten el reintento y no se relance
+  un escaneo completo cada día indefinidamente.
+
+**Pendiente / roto conocido, sin maquillar.**
+
+- **Esto avisa y reintenta, no arregla la cadena.** La causa de que los
+  eslabones mueran (el traspaso va al final, detrás de trabajo que puede
+  pasarse de 60 s) es la fase 3 aprobada del mismo plan, SCAN-RELAY-1, en
+  PR aparte. Hasta entonces, un proveedor lento o sin cuota seguirá
+  pudiendo tumbar escaneos; la diferencia es que ahora se sabe en ≤15 min.
+- **Columna "Error" en `/admin`** (ADMIN-HEALTH-1): fase 2 aprobada, PR
+  aparte.
+- **Sin tocar, fuera de alcance:** el mensaje "Reintentando tu escaneo
+  automáticamente…" sigue saliendo aunque el reintento haya sido rechazado
+  (el 28, por el tope del plan Free tras caducar la prueba), y el barrido
+  sigue leyendo `current_plan` sin aplicar la caducidad de la prueba, que
+  sólo se aplica cuando el usuario entra. PR pequeño aparte.
+- **Coste sin medir:** 96 invocaciones al día más, casi todas sólo
+  consultas. Se mide en el panel de Vercel después de la primera semana.
+- **Una pasada tiene techo de tiempo** (30 s para reconciliar, 45 s para
+  el resto de lecturas): en una caída general, con muchos runs activos o
+  muchos proyectos a la vez sin datos, lo que no quepa se revisa en la
+  pasada siguiente, 15 min después, en vez de arriesgar que la invocación
+  muera antes de enviar (señalado por la QA del PR).
+- **Duplicados posibles, aceptados:** un run que agota su reintento sigue
+  disparando también la alerta `run_failed` de siempre. Mejor dos correos
+  que ninguno (misma regla que `checkAndSendScanHealthAlert`).
+
+**Trazabilidad.** §192 (ancla de elegibilidad del barrido), §194 (alertas
+del barrido y silencios deliberados), ADR 0029 Fase B (alertas de salud del
+run), ADR 0037 (la cadena de continuación). Ficheros:
+`lib/scan/watchdog.ts` (nuevo), `lib/scan/watchdog.test.ts` (nuevo),
+`app/api/cron/scan-watchdog/route.ts` (nuevo), `lib/scan/scan-health-alert.ts`,
+`lib/scan/constants.ts`, `lib/email/transactional.ts`, `vercel.json`.

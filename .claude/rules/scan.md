@@ -130,6 +130,20 @@ worse than no rule, because a future session will obey it anyway.
   (`docs/adr/0029`, Fase B). Alert on what is actionable (`quota`, `config`, a
   dead engine, a run out of retries), stay silent about model noise, and dedupe
   across projects: an alert that fires twenty times is one that gets ignored.
+- **Un aviso no puede depender de que el run termine ni de que alguien
+  mire.** Hasta ALERTS-ALWAYS-1 todas las alertas colgaban del final de un
+  run (finalize) o de una reconciliación que sólo corre al abrir una
+  pantalla, crear un run o pasar el barrido diario — y un run cuya cadena
+  muere no termina nunca, así que alberdiderma.es falló seis días seguidos
+  sin un solo correo (`docs/brand/design-decisions-log.md` §227). El
+  vigilante (`lib/scan/watchdog.ts`, cada 15 min) es el sitio donde vive
+  "¿hay algún cliente que haya dejado de recibir datos?": reconcilia runs
+  parados de TODOS los proyectos, busca `quota`/`config` en runs en curso,
+  avisa de todo run `failed` y de todo proyecto recurrente sin escaneo
+  completado en su último ciclo. Un fallo nuevo que el operador deba conocer
+  se añade ahí o se asegura que ahí se vea; nunca sólo en un camino que
+  requiere que el run acabe. Y la marca de deduplicado se escribe **después**
+  del envío, nunca antes: si el canal falla, la siguiente pasada repite.
 - **An alert's own failure must be diagnosable where you already work.** A
   `console.error` in a short-lived runtime log is not a diagnosis — persist the
   reason (`docs/adr/0029`, "What the first real delivery cost to learn"). And a

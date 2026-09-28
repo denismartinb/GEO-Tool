@@ -342,11 +342,20 @@ export const SCAN_TIMEOUT_AUTO_RETRY_CAP = 1;
 
 /**
  * Lookback window for counting prior timeout-failures when enforcing
- * SCAN_TIMEOUT_AUTO_RETRY_CAP. 24h is long enough to catch a same-day retry
- * storm but short enough that a project which had a one-off timeout
- * yesterday gets a fresh auto-retry budget today.
+ * SCAN_TIMEOUT_AUTO_RETRY_CAP.
+ *
+ * Was 24h, on the reasoning that "a one-off timeout yesterday gets a fresh
+ * budget today". What that missed (ALERTS-ALWAYS-1, log §227): a daily-plan
+ * run that stalls is usually only detected by the NEXT day's sweep, ~24h
+ * after it was created, and the lookback counts by `created_at` — so the
+ * previous day's failure sat a few seconds outside the window every single
+ * day, the cap was never reached, the run was never marked
+ * `_retry_exhausted`, and the operator alert hanging off that state never
+ * fired. alberdiderma.es failed six days in a row that way. 48h covers one
+ * full daily cycle plus the detection delay; a genuinely one-off failure is
+ * still retried, two in a row are not.
  */
-export const SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS = 24;
+export const SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS = 48;
 
 export const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
 
@@ -357,6 +366,14 @@ export const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
  * for why `job_logs` rather than `notifications` or a new table.
  */
 export const SCAN_HEALTH_ALERT_LOG_MESSAGE = "scan_health_alert_sent";
+
+/**
+ * `job_logs.message` marking that the scan watchdog (ALERTS-ALWAYS-1,
+ * `lib/scan/watchdog.ts`) already told the operator about a failed run
+ * (`context_json.kind = "failed_run"`) or about a recurring project without
+ * data for one cycle (`kind = "stale_data"`, `cutoff = <cycle anchor>`).
+ */
+export const WATCHDOG_ALERT_LOG_MESSAGE = "watchdog_alert_sent";
 
 /**
  * Written to `job_logs` when a run HAS alert-worthy findings but the channel
