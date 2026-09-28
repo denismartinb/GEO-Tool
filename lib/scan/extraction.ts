@@ -5,8 +5,14 @@ import type { BusinessProfile } from "@/lib/llm/contracts";
 import { extractClaudeStructuredData } from "@/lib/llm/claude";
 import { extractOpenAIStructuredData } from "@/lib/llm/openai";
 import { parsePersistedBusinessProfile } from "@/lib/projects/business-profile";
-import { formatExtractionError } from "@/lib/llm/extraction-errors";
-import { EXTRACTION_CONCURRENCY, EXTRACTION_VERSION, SCAN_INVOCATION_WORK_BUDGET_MS } from "@/lib/scan/constants";
+import { ExtractionError, formatExtractionError } from "@/lib/llm/extraction-errors";
+import {
+  EXTRACTION_CONCURRENCY,
+  EXTRACTION_DEADLINE_SLACK_MS,
+  EXTRACTION_ROW_MIN_REMAINING_MS,
+  EXTRACTION_VERSION,
+  SCAN_INVOCATION_WORK_BUDGET_MS
+} from "@/lib/scan/constants";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ScanPromptResultRow } from "@/lib/scan/types";
@@ -344,7 +350,7 @@ async function extractAndPersistRow(input: {
   profile?: BusinessProfile;
   /** Absolute epoch-ms budget for this pass, threaded down to the provider's retry loop. */
   deadlineAt?: number;
-}): Promise<boolean> {
+}): Promise<boolean | null> {
   const { service, projectId, runId, row, profile, deadlineAt } = input;
   const rawResponseText = row.raw_response_text;
   if (!rawResponseText) return false;
@@ -429,6 +435,22 @@ async function extractAndPersistRow(input: {
 
     return true;
   } catch (extractError) {
+    // SCAN-RELAY-1: a timeout that happened because THIS invocation ran out
+    // of budget says nothing about the row — the next invocation, with a
+    // fresh budget, may well extract it. Persisting it as `timeout:` would
+    // take the row out of the eligible set for good (a row with an
+    // `extraction_error` is never re-queued), turning a scheduling limit into
+    // permanent data loss. Left unprocessed instead: finalize defers while it
+    // exists, which is exactly the "no mute rows" contract.
+    if (
+      deadlineAt !== undefined &&
+      Date.now() >= deadlineAt - EXTRACTION_DEADLINE_SLACK_MS &&
+      extractError instanceof ExtractionError &&
+      extractError.category === "timeout"
+    ) {
+      return null;
+    }
+
     // EXTRACTION-RELIABILITY-1: persist a categorized, sanitized reason
     // (`quota: …`, `timeout: …`, `schema: …`) instead of whatever message the
     // thrown value happened to carry. The category is what makes "the
@@ -601,7 +623,11 @@ export async function runStructuredExtractionForRun(input: {
   let failed = 0;
 
   const outcomes = await mapWithConcurrency(rowsToProcess, EXTRACTION_CONCURRENCY, async (row) => {
-    if (Date.now() >= deadlineAt) return null;
+    // SCAN-RELAY-1: not "is there any time left" but "is there enough for one
+    // call to have a real chance". A row started with 2s left is cut at the
+    // deadline and deferred anyway — it only spent budget the invocation
+    // needed for its own hand-off.
+    if (deadlineAt - Date.now() < EXTRACTION_ROW_MIN_REMAINING_MS) return null;
     attempted += 1;
     return extractAndPersistRow({
       service: input.service,
@@ -617,8 +643,10 @@ export async function runStructuredExtractionForRun(input: {
     if (outcome === true) succeeded += 1;
     else if (outcome === false) failed += 1;
   }
+  const deferred = outcomes.filter((outcome) => outcome === null).length;
 
-  const remaining = rowsToProcess.length - attempted;
+  // Rows never started plus rows cut by the deadline: both stay eligible.
+  const remaining = deferred;
   if (remaining > 0) {
     // Loud on purpose: budget exhaustion means the run is not finishable in
     // this invocation, and a silent version of exactly this is what shipped

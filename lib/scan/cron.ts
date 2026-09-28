@@ -1,7 +1,7 @@
 import "server-only";
 
 import { after } from "next/server";
-import { resolvePlan } from "@/lib/billing";
+import { SYSTEM_PLAN_COLUMNS, resolvePlan, resolveSystemPlanId } from "@/lib/billing";
 import { createPendingScanRunForCron } from "@/lib/scan/run-creation";
 import { canStartAnotherSweepBatch } from "@/lib/scan/drive-budget";
 import { checkAndSendSweepAlert } from "@/lib/scan/sweep-alert";
@@ -347,10 +347,15 @@ export async function runDailyCronScan({
 
   const ownerIds = Array.from(new Set((candidateProjects ?? []).map((project) => project.owner_user_id as string)));
   const { data: profileRows } = ownerIds.length
-    ? await service.from("profiles").select("id, current_plan").in("id", ownerIds)
+    ? await service.from("profiles").select(`id, ${SYSTEM_PLAN_COLUMNS}`).in("id", ownerIds)
     : { data: [] as Array<{ id: string; current_plan: string | null }> };
+  // ALERTS-SCOPE-1: the plan the account is actually on, not the raw column —
+  // an expired trial nobody came back to used to be scanned daily as Pro.
   const planIdByOwnerId = new Map(
-    (profileRows ?? []).map((row) => [row.id, resolvePlan(row.current_plan as string | undefined).id])
+    (profileRows ?? []).map((row) => [
+      row.id,
+      resolvePlan(resolveSystemPlanId(row as Parameters<typeof resolveSystemPlanId>[0]) as string | undefined).id
+    ])
   );
 
   const results: CronResult[] = [];

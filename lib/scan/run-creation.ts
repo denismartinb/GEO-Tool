@@ -1,6 +1,6 @@
 import "server-only";
 
-import { resolvePlan } from "@/lib/billing";
+import { SYSTEM_PLAN_COLUMNS, resolvePlan, resolveSystemPlanId } from "@/lib/billing";
 import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
 import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
 import { computeSampleCount } from "@/lib/scan/sampling";
@@ -232,10 +232,13 @@ export async function createPendingScanRunCore({
   // have no authenticated user/RLS-scoped session to read `profiles` through.
   const { data: profileRow } = await service
     .from("profiles")
-    .select("current_plan")
+    .select(SYSTEM_PLAN_COLUMNS)
     .eq("id", project.owner_user_id as string)
     .maybeSingle();
-  const plan = resolvePlan(profileRow?.current_plan as string | undefined);
+  // ALERTS-SCOPE-1: effective plan (trial expiry + comped), not the raw
+  // column — otherwise an expired trial passes as Pro here and the
+  // reconciliation auto-retry creates scans for an account that has none.
+  const plan = resolvePlan(resolveSystemPlanId(profileRow) as string | undefined);
   const campaignCap = plan.caps.prompts;
 
   // PRICING-TRUTH-1 (PR b): Free is "1 escaneo puntual" (see /pricing) — a

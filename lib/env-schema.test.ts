@@ -126,7 +126,7 @@ describe("reglas condicionales", () => {
     };
     const duringPromo = new Date("2026-08-25T00:00:00Z");
     // Derivada de PROMO_ENDS_AT, no escrita a mano: una fecha fija aquí
-    // rompía este test en cada ampliación de la promo (log §228).
+    // rompía este test en cada ampliación de la promo (log §231).
     const afterPromo = new Date(new Date(PROMO_ENDS_AT).getTime() + 24 * 60 * 60 * 1000);
     const promoVars = ["STRIPE_COUPON_ID_STARTER_PROMO", "STRIPE_COUPON_ID_PRO_PROMO"];
     // Sólo las dos variables de la promo — healthy() ya dispara otros avisos

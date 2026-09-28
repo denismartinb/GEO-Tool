@@ -72,6 +72,31 @@ function fakeListService(options: {
 }
 
 describe("listOperatorUsers", () => {
+  // ADMIN-HEALTH-1 (§230): the "Error" column, end to end through the listing.
+  it("marks an account whose domain's latest scan failed, and leaves a healthy one alone", async () => {
+    const service = fakeListService({
+      profiles: [
+        { id: "u1", email: "broken@example.com", created_at: daysAgo(10), current_plan: "pro", trial_ends_at: null, stripe_subscription_id: "sub_1" },
+        { id: "u2", email: "fine@example.com", created_at: daysAgo(10), current_plan: "pro", trial_ends_at: null, stripe_subscription_id: "sub_2" }
+      ],
+      projects: [
+        { id: "p1", owner_user_id: "u1", is_archived: false, domain: "broken.es" },
+        { id: "p2", owner_user_id: "u2", is_archived: false, domain: "fine.es" }
+      ],
+      scans: [
+        { project_id: "p1", created_at: daysAgo(1), status: "failed", updated_at: daysAgo(1), error_summary: "scan_timeout", triggered_by_user_id: null },
+        { project_id: "p2", created_at: daysAgo(1), status: "completed", updated_at: daysAgo(1), error_summary: null, triggered_by_user_id: null }
+      ]
+    });
+
+    const { users } = await listOperatorUsers(service as never);
+    const byEmail = new Map(users.map((user) => [user.email, user]));
+
+    expect(byEmail.get("broken@example.com")?.health.hasError).toBe(true);
+    expect(byEmail.get("broken@example.com")?.health.reasons[0]).toMatch(/^broken\.es:/);
+    expect(byEmail.get("fine@example.com")?.health).toEqual({ hasError: false, reasons: [] });
+  });
+
   it("joins profiles with last sign-in, active project count and 30-day scan count", async () => {
     const service = fakeListService({
       profiles: [

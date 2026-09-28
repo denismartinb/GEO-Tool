@@ -325,6 +325,19 @@ without being mistaken for stuck: `updated_at` is bumped by the DB's own
 has genuinely stopped advancing — not one that is still working through its
 prompts — ever looks stale by this check.
 
+**Resume before failing (SCAN-RELAY-1, 2026-09-28, log §228).** Before either
+transition above, reconciliation first tries to *resume* the stale run
+(`lib/scan/resume.ts`): if it still has claimable work (prompt jobs or the
+finalize job `pending`/`running`), is younger than
+`SCAN_RESUME_MAX_RUN_AGE_HOURS` (6h) and has been resumed fewer than
+`SCAN_RESUME_CAP` (3) times, a `scan_resumed_by_reconcile` marker is written to
+`job_logs`, `updated_at` is bumped and a continuation is dispatched — the run
+carries on where it stopped instead of being failed and replaced from zero.
+Only when a resume is not possible does the timeout transition below apply.
+Since ALERTS-ALWAYS-1 (log §227) reconciliation also runs every 15 minutes
+across every project (`/api/cron/scan-watchdog`), so a dead chain is picked up
+within ~15 minutes even with nobody looking.
+
 This reconciliation is what unblocks the "one active scan per project"
 invariant: a stuck run no longer permanently blocks new scans, because it
 becomes terminal (`failed`) on the next pass instead of remaining
@@ -332,7 +345,7 @@ becomes terminal (`failed`) on the next pass instead of remaining
 
 **Auto-retry with cap (PR #78):** when a run is marked `failed` due to
 timeout, `reconcileStuckScanRuns` counts prior timeout-failed runs for the
-same project within `SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS` (24h). If that count
+same project within `SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS` (48h since log §227; 24h before). If that count
 is below `SCAN_TIMEOUT_AUTO_RETRY_CAP` (1), a fresh `pending` run is created
 automatically (`trigger_source: "cron"`) **and started** — a continuation is
 dispatched for it, because nothing else on the server executes a `pending` run

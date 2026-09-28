@@ -20884,7 +20884,200 @@ run), ADR 0037 (la cadena de continuación). Ficheros:
 `app/api/cron/scan-watchdog/route.ts` (nuevo), `lib/scan/scan-health-alert.ts`,
 `lib/scan/constants.ts`, `lib/email/transactional.ts`, `vercel.json`.
 
-## 228. La promo de lanzamiento se extiende hasta el 31 de octubre (PROMO-EXTEND-OCT-1, 2026-09-28)
+## 228. SCAN-RELAY-1: la cadena de un escaneo deja de romperse por pasarse de tiempo, y la que se rompe se reanuda (2026-09-28)
+
+**Qué se descubrió.** Fase 3 del plan aprobado en §227. El dato que la
+decidió (consulta del fundador, filas de OpenAI con `quota:` por día): el
+**22 y el 23 de septiembre hubo 0 errores de cuota** y aun así esos runs
+murieron, y del 9 al 11 hubo muchos y aquellos runs terminaron. La cuota no
+era la causa, sino un agravante. La causa estaba en el presupuesto de la
+invocación: `SCAN_INVOCATION_WORK_BUDGET_MS` (45 s) sólo se consultaba antes
+de **empezar** algo, nunca se imponía a lo que ya estaba en vuelo:
+
+- una llamada de extracción empezada a los 44 s conservaba sus 20 s de
+  timeout y llevaba la invocación a ~64 s;
+- una tanda de generación cuyo primer intento se comía ~20 s en timeouts de
+  Gemini hacía de todas formas su ronda de reintento (~42 s en total), y la
+  extracción arrancaba después con 3 s de margen.
+
+Pasados los 60 s de `maxDuration`, Vercel mata la invocación **antes** del
+`after()` que entrega el siguiente tramo, y nada vuelve a arrancar la cadena
+hasta el barrido del día siguiente. Encaja con las tres formas vistas en los
+datos: 20 prompts sin empezar (22 y 26), finalize `running` con el bloqueo
+huérfano (23) y finalize `pending` sin un log después (24, 25, 27, 28). **No
+confirmado con logs de Vercel** (sin acceso desde esta sesión): es la
+lectura que explica los datos, no una traza vista.
+
+**Qué se decide.**
+
+1. **Lo que está en vuelo acaba en el deadline.** `fetchExtractionWithRetry`
+   limita cada intento a `min(timeoutMs, deadlineAt - now)`. Una fila no se
+   empieza con menos de `EXTRACTION_ROW_MIN_REMAINING_MS` (8 s). Una fila
+   cortada por el presupuesto (timeout a ≤ `EXTRACTION_DEADLINE_SLACK_MS` del
+   deadline) **se deja sin procesar**, no se marca `timeout:`: marcarla la
+   sacaba para siempre del conjunto elegible, y con eso un límite de
+   planificación se convertía en pérdida de datos. Finalize ya aplaza
+   mientras quede una fila así, que es el contrato de "no mute rows".
+2. **La ronda de reintento de un prompt sólo empieza si cabe.**
+   `processPromptJob` recibe el `workDeadlineAt` y se salta el reintento con
+   menos de `GENERATION_RETRY_MIN_REMAINING_MS` (23 s): los motores que
+   faltan cuentan como fallidos para ese prompt, igual que si la ronda
+   hubiera fallado. Queda registrado en `job_logs` ("Skipped prompt retry").
+3. **La cadena que se rompe se reanuda, no se reemplaza.**
+   `reconcileStuckScanRuns` llama primero a `tryResumeStalledRun`
+   (`lib/scan/resume.ts`). Un run parado con trabajo reclamable, de menos de
+   6 h y reanudado menos de 3 veces recibe una marca
+   `scan_resumed_by_reconcile` en `job_logs`, un bump de `updated_at` y un
+   nuevo tramo. Antes se marcaba `failed` y se creaba un run nuevo desde
+   cero, tirando todas las respuestas ya pagadas. Con el vigilante de §227,
+   una cadena muerta se reanuda en ≤15 min aunque nadie mire. Si no se puede
+   reanudar, todo sigue como antes (fallo, reintento con tope y aviso).
+
+**Pendiente / roto conocido, sin maquillar.**
+
+- **Primer tramo del barrido diario.** El run nace a las 06:00:31 todos los
+  días. No he podido determinar si esos 31 s son trabajo del propio barrido
+  o un arranque tardío del cron de Vercel. El barrido ya pregunta antes de
+  cada lote si su peor caso cabe (`canStartAnotherSweepBatch`, §192), y con
+  1 y 2 ese peor caso vuelve a ser cierto. Si aun así muere, lo recoge el
+  punto 3. Sacar la ejecución del primer lote a una invocación propia queda
+  sin hacer: dispararía todos los proyectos del día en el mismo minuto,
+  justo la ráfaga que prohíbe `.claude/rules/scan.md`.
+- **La resolución de redirecciones de las citas** (`buildGroundedCitations`,
+  2,5 s por salto) no se ha revisado contra el deadline.
+- **No se avisa al operador de cada reanudación.** Queda en `job_logs`. Si
+  un run agota las 3, termina fallando y el vigilante lo avisa (§227).
+- **Corregido tras la QA:** un run `pending` sigue pareciendo parado (por
+  `created_at`, que la reanudación no puede mover) hasta que su tramo llega a
+  ejecutarse. Dos visitas a la pantalla en ese hueco lo habrían reanudado dos
+  veces, gastando el tope en un solo parón. Una reanudación de hace menos de
+  `SCAN_RESUME_IN_FLIGHT_MS` (3 min) se da por en curso: no se repite y
+  tampoco se falla el run.
+
+**Trazabilidad.** §227 (el incidente y el vigilante), ADR 0029 Adenda
+("presupuestar contra la invocación"), ADR 0037 (la cadena y los leases de
+jobs), §192. Ficheros: `lib/llm/extraction-fetch.ts`,
+`lib/scan/extraction.ts`, `lib/scan/prompt-job.ts`, `lib/scan/executor.ts`,
+`lib/scan/resume.ts` (nuevo), `lib/scan/reconciliation.ts`,
+`lib/scan/constants.ts`, `docs/scan-lifecycle.md`, y sus tests
+(`resume.test.ts` nuevo, `extraction.test.ts`, `extraction-fetch.test.ts`,
+`executor.test.ts`, `reconciliation.test.ts`).
+
+## 229. ALERTS-SCOPE-1: el sistema deja de escanear pruebas caducadas y los avisos dejan de hablar de escaneos zombis (2026-09-28)
+
+**Qué pasó.** La primera pasada real del vigilante (§227, 2026-09-28
+12:15 UTC) mandó un correo con 8 escaneos fallidos y 2 dominios sin datos, y
+el fundador preguntó lo obvio: *muchas de esas cuentas tienen el recurrente
+apagado o la prueba caducada, ¿por qué avisa?* Tenía razón, y la pregunta
+destapó tres cosas:
+
+1. **Escaneos zombis.** kickingeleven.com, remaxplus.es y otros tenían runs
+   parados desde hacía días o semanas, que nadie reconciliaba porque nadie
+   abría sus pantallas. El vigilante los encontró todos de golpe, los marcó
+   `failed` y avisó de ellos como si fueran de hoy.
+2. **El reintento automático les compró escaneos nuevos.** Al marcarlos
+   fallidos, `reconcileStuckScanRuns` lanzó para cada uno un run nuevo
+   completo, en cuentas con la prueba caducada y sin nadie esperando.
+3. **El sistema leía `current_plan` crudo.** La caducidad de la prueba es
+   perezosa: `applyTrialExpiry` sólo degrada cuando el usuario vuelve a abrir
+   la consola. azotea.cl y rideflumserberg.ch ("Prueba caducada" en
+   `/admin`, 10 días sin entrar) seguían como `pro` para el barrido, el
+   reintento y el vigilante. **Se escanearon cada día durante diez días sin
+   pagar.** Las cuentas comped (§222) tenían el hueco contrario: Agency para
+   la consola, su `current_plan` crudo para el barrido.
+
+**Qué se decide (founder-approved 2026-09-28).**
+
+- **`resolveSystemPlanId`** (`lib/billing.ts`): el plan que la cuenta tiene
+  de verdad, para el código de sistema. Aplica la lista comped y la
+  caducidad de la prueba **sin escribir nada ni mandar el correo de fin de
+  prueba**: eso sigue ocurriendo sólo en la lectura del propio usuario. Lo
+  usan el barrido (`cron.ts`), la creación de escaneos (`run-creation.ts`,
+  y con ella el reintento automático), el conjunto de motores del ejecutor y
+  el vigilante. Resultado: una prueba caducada ya no se escanea, no se
+  reintenta y no produce avisos de "sin datos"; una cuenta comped sí recibe
+  su escaneo automático.
+- **Avisos de escaneo fallido, sólo de lo que alguien espera**
+  (`shouldAlertFailedRun`):
+  - sólo runs **creados** en las últimas 48 h
+    (`WATCHDOG_FAILED_RUN_MAX_RUN_AGE_HOURS`);
+  - lanzados por una persona (`triggered_by_user_id`), **sea cual sea su
+    plan**: el único escaneo de un usuario Free que falla es un posible
+    cliente que no ve nada;
+  - o lanzados por el sistema en una cuenta con plan que incluye escaneos.
+- **Zombis sin reintento ni aviso.** Un run parado creado hace más de 48 h
+  (`SCAN_ZOMBIE_RUN_AGE_HOURS`) se marca fallido como agotado, sin comprarle
+  un escaneo nuevo y sin alerta `run_failed`.
+
+**Pendiente / roto conocido.**
+
+- Los escaneos nuevos que la pasada de las 12:15 lanzó para esas cuentas ya
+  están creados. Con este cambio, si se atascan se tratan como cualquier
+  run de una cuenta Free lanzado por el sistema: se reanudan (§228) o fallan,
+  sin aviso ni nuevo reintento.
+- El interruptor de recurrente de las cuentas con la prueba caducada sigue
+  encendido. Ya no tiene efecto (el barrido las salta como
+  `skipped_plan_ineligible`), pero no se apaga solo.
+- Mensaje "Reintentando…" cuando el reintento se rechaza: sigue sin tocar,
+  como en §227.
+
+**Trazabilidad.** §227 (el vigilante), §228 (reanudación), §222 (comped),
+PRICING-TRUTH-1. Ficheros: `lib/billing.ts`, `lib/scan/cron.ts`,
+`lib/scan/run-creation.ts`, `lib/scan/executor.ts`, `lib/scan/watchdog.ts`,
+`lib/scan/reconciliation.ts`, `lib/scan/constants.ts` y sus tests.
+
+## 230. ADMIN-HEALTH-1: columna "Error" en /admin — qué cuentas no están recibiendo sus datos ahora mismo (2026-09-28)
+
+**Qué se pidió.** Fase 2 del plan aprobado en §227. El fundador, tras seis
+días de alberdiderma.es fallando sin que nada lo dijera: *"igual merece la
+pena incluir en /admin una columna de error SÍ/NO para saber si hay algún
+error en alguna cuenta"*. Los correos del vigilante (§227) avisan en el
+momento; esta columna responde a otra pregunta: *¿qué está roto ahora
+mismo?*, consultada cuando uno quiere.
+
+**Qué se decide.**
+
+- **Nueva columna "Error"** en la tabla de usuarios, entre "Estado" y
+  "Dominios". Muestra "Sí · N" en rojo (N = dominios afectados) o "No" en
+  gris. El motivo va en la ficha de la cuenta, en una caja roja "Errores
+  ahora mismo", una línea por dominio. No se deja sólo en el `title` de la
+  celda porque un tooltip no existe en el móvil desde el que el fundador lee
+  `/admin`.
+- **Mismo criterio que los correos** (`lib/admin/account-health.ts`,
+  `deriveAccountHealth`), para que la columna y los avisos nunca discrepen:
+  - último escaneo fallido hace ≤7 días, lanzado por una persona o en una
+    cuenta con plan de escaneo;
+  - escaneo en curso sin avanzar desde hace >30 min;
+  - recurrente activo, plan de escaneo y sin escaneo completado en su
+    ciclo (misma función `evaluateRecurringFreshness` que el vigilante).
+- **Plan efectivo** (`resolveSystemPlanId`, §229), también para el recuento
+  de "Recurrente". Una prueba caducada ya se muestra como "sin efecto", igual
+  que la trata el barrido.
+- **Sin escrituras, sin columnas nuevas.** Se amplía la lectura de
+  `scan_runs` ya existente con `status`, `updated_at`, `error_summary` y
+  `triggered_by_user_id` (columnas de 0001/0008, no de una migración
+  pendiente), y la de `projects` con `domain`.
+
+**Pendiente / roto conocido.**
+
+- **El listado lee 30 días de escaneos.** Si un proyecto recurrente no tiene
+  ninguno completado en esa ventana, dice "ningún escaneo completado
+  reciente", nunca "nunca".
+- **La columna no dice qué motor falló** (cuota, configuración); eso sigue
+  llegando por correo. Añadirlo exigiría leer `scan_prompt_results` de toda
+  la plataforma en cada carga del listado.
+- `lib/admin` importa dos funciones de `lib/scan/watchdog.ts`. Es deliberado:
+  compartir el criterio es el objetivo, y una copia se desincronizaría.
+- **Diseño:** no hay artboard aprobado; sigue los estilos existentes de
+  píldoras de `/admin`.
+
+**Trazabilidad.** §227 (petición), §229 (alcance de los avisos y plan
+efectivo), §64/§71/§99 (consola de operador). Ficheros:
+`lib/admin/account-health.ts` (nuevo) y su test, `lib/admin/users.ts` y su
+test, `app/admin/users/users-table.tsx`, `app/admin/users/shared.tsx`,
+`app/admin/admin.css`.
+
+## 231. La promo de lanzamiento se extiende hasta el 31 de octubre (PROMO-EXTEND-OCT-1, 2026-09-28)
 
 **Decisión del fundador** (2026-09-28), tomada al revisar el plan de emails de
 ciclo de vida: los recordatorios de fin de prueba y de recuperación se
