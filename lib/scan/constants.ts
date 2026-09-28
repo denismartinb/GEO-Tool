@@ -61,6 +61,39 @@ export const EXTRACTION_CONCURRENCY = 4;
 export const SCAN_INVOCATION_WORK_BUDGET_MS = 45_000;
 
 /**
+ * SCAN-RELAY-1 (`docs/brand/design-decisions-log.md` §228). The work budget
+ * above was only ever checked before STARTING something, never enforced on
+ * what was already in flight: a provider call started at 44s kept its full
+ * 20s timeout and ran the invocation past Vercel's 60s `maxDuration`, which
+ * killed it before `after()` could hand the scan to the next invocation. The
+ * chain then stopped with nothing to restart it — alberdiderma.es, 22–28
+ * Sept 2026, including two days with no provider trouble at all. These three
+ * bound the in-flight half.
+ *
+ * Minimum time left before an extraction row is started. Below this, the row
+ * would be cut at the deadline and deferred anyway; starting it only spends
+ * budget the invocation needs for its own hand-off.
+ */
+export const EXTRACTION_ROW_MIN_REMAINING_MS = 8_000;
+
+/**
+ * How close to the deadline an extraction timeout must land to count as "cut
+ * by the budget" rather than "the provider timed out". A budget-cut row is
+ * left unprocessed for the next invocation instead of being marked `timeout:`
+ * for good.
+ */
+export const EXTRACTION_DEADLINE_SLACK_MS = 500;
+
+/**
+ * Minimum time left before a prompt job starts its retry round. One round is
+ * at worst one provider call (20s timeout) or a fast 429 plus its 1.5s wait
+ * and a second call (~21.5s), plus PROMPT_RETRY_DELAY_MS. Without this gate a
+ * batch whose first round hit Gemini timeouts (~20s each) retried anyway and
+ * finished at ~42s, leaving the invocation no room for anything after it.
+ */
+export const GENERATION_RETRY_MIN_REMAINING_MS = 23_000;
+
+/**
  * What one `executePendingScan` call may cost its caller in the worst case:
  * the work budget above, plus the bookkeeping that is deliberately outside it
  * (the finalize claim, scoring, recommendations, the run's own status write).
@@ -358,6 +391,30 @@ export const SCAN_TIMEOUT_AUTO_RETRY_CAP = 1;
 export const SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS = 48;
 
 export const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
+
+/**
+ * SCAN-RELAY-1: how many times reconciliation may resume the SAME stalled run
+ * (re-dispatch it where it stopped) before falling back to failing it. A run
+ * whose chain dies for a reason that recurs every time — a poison job, a
+ * provider that always overruns — must not be resumed forever.
+ */
+export const SCAN_RESUME_CAP = 3;
+
+/** A run older than this is failed as before instead of resumed: its data would be stale by the time it finished. */
+export const SCAN_RESUME_MAX_RUN_AGE_HOURS = 6;
+
+/** `job_logs.message` for a resume, and the counter SCAN_RESUME_CAP is checked against. */
+export const SCAN_RESUME_LOG_MESSAGE = "scan_resumed_by_reconcile";
+
+/**
+ * A resume younger than this is treated as still in flight: its continuation
+ * has not landed yet, so the run can still look stale (a `pending` run is
+ * stale by `created_at`, which the resume cannot bump). Two page views inside
+ * this window resume once, not twice. Comfortably longer than one dispatch,
+ * shorter than the 15-minute watchdog pass that would retry a resume that
+ * genuinely went nowhere.
+ */
+export const SCAN_RESUME_IN_FLIGHT_MS = 3 * 60 * 1000;
 
 /**
  * Marker written to `job_logs` whenever an operator scan-health alert is sent

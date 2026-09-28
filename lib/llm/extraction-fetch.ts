@@ -129,9 +129,20 @@ export async function fetchExtractionWithRetry(
       throw new ExtractionError("timeout", options.timeoutMessage);
     }
 
+    // SCAN-RELAY-1: an attempt started just before the deadline used to keep
+    // its full `timeoutMs` (20s) and run straight past it — and past Vercel's
+    // 60s `maxDuration`, which killed the invocation before it could hand the
+    // scan to the next one. The attempt now ends at the deadline at the
+    // latest; the caller tells a budget-cut attempt apart from a real
+    // provider timeout by checking the deadline itself.
+    const attemptTimeoutMs =
+      options.deadlineAt !== undefined
+        ? Math.max(1, Math.min(options.timeoutMs, options.deadlineAt - Date.now()))
+        : options.timeoutMs;
+
     let response: Response | null = null;
     try {
-      response = await fetchOnce(url, init, options.timeoutMs, options.timeoutMessage, transportMessage);
+      response = await fetchOnce(url, init, attemptTimeoutMs, options.timeoutMessage, transportMessage);
     } catch (error) {
       lastError = error instanceof ExtractionError ? error : new ExtractionError("unknown", transportMessage);
       if (!isRetryableExtractionCategory(lastError.category) || attempt === options.maxAttempts) throw lastError;

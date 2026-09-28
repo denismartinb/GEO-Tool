@@ -455,7 +455,8 @@ export async function executePendingScan({
             job,
             project,
             competitors: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain })),
-            providers
+            providers,
+            deadlineAt: workDeadlineAt
           });
         })
       );

@@ -797,6 +797,28 @@ describe("executePendingScan — per-prompt retry (SCAN-ROBUST-1)", () => {
     expect(promptJob.last_error).toBe("No se pudo completar la ejecución del escaneo.");
   });
 
+  // SCAN-RELAY-1: a retry round that cannot finish inside the invocation got
+  // the invocation killed mid-call, and the hand-off to the next batch with it.
+  it("skips the retry round when the first one left too little invocation budget", async () => {
+    generateGeminiVisibilityAnswer.mockImplementationOnce(async () => {
+      // A slow first round: 30s gone of the 45s work budget.
+      vi.setSystemTime(Date.now() + 30_000);
+      throw new Error("Gemini API request timed out.");
+    });
+
+    const { service, supabase, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+
+    const runPromise = executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase }).catch((e) => e);
+    await vi.advanceTimersByTimeAsync(PROMPT_RETRY_DELAY_MS);
+    await runPromise;
+
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!.status).toBe("failed");
+  });
+
   it("respects job.max_attempts=1 by not retrying at all", async () => {
     generateGeminiVisibilityAnswer.mockRejectedValue(new Error("Gemini API request failed with status 500."));
 
