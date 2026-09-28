@@ -12,7 +12,8 @@ import {
   SCAN_TIMEOUT_AUTO_RETRY_CAP,
   SCAN_TIMEOUT_ERROR_SUMMARY,
   SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
-  SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS
+  SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS,
+  SCAN_ZOMBIE_RUN_AGE_HOURS
 } from "@/lib/scan/constants";
 import { scheduleScanContinuation } from "@/lib/scan/continuation";
 import { tryResumeStalledRun } from "@/lib/scan/resume";
@@ -230,6 +231,11 @@ export async function reconcileStuckScanRuns({
   const now = Date.now();
   const runningCutoffIso = new Date(now - SCAN_RUNNING_TIMEOUT_SECONDS * 1000).toISOString();
   const pendingCutoffIso = new Date(now - SCAN_PENDING_TIMEOUT_SECONDS * 1000).toISOString();
+  // ALERTS-SCOPE-1 (log §229): a run created longer ago than this and only
+  // now found stale is a zombie — stuck for days with nobody waiting on it.
+  // It is failed without an auto-retry (which would buy a whole new scan for
+  // a result nobody is expecting) and without an operator alert.
+  const zombieCutoffIso = new Date(now - SCAN_ZOMBIE_RUN_AGE_HOURS * 60 * 60 * 1000).toISOString();
   const nowIso = new Date(now).toISOString();
 
   let reconciledCount = 0;
@@ -272,7 +278,8 @@ export async function reconcileStuckScanRuns({
         continue;
       }
 
-      const capReached = priorRecoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
+      const isZombie = run.created_at < zombieCutoffIso;
+      const capReached = isZombie || priorRecoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
       const errorSummary = capReached
         ? SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
         : SCAN_TIMEOUT_ERROR_SUMMARY;
@@ -310,7 +317,7 @@ export async function reconcileStuckScanRuns({
       if (!capReached && !autoRetryTriggered) {
         autoRetryTriggered = true;
         await attemptAutoRetry({ projectId, service, reason: errorSummary });
-      } else if (capReached) {
+      } else if (capReached && !isZombie) {
         // EXTRACTION-RELIABILITY-1 Fase B: a run that timed out AND has spent
         // its auto-retry will not fix itself, so it is the operator's problem
         // now. This is the exact shape of the 2026-08-04 IKEA failure, which
@@ -338,7 +345,7 @@ export async function reconcileStuckScanRuns({
         continue;
       }
 
-      const capReached = priorRecoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
+      const capReached = run.created_at < zombieCutoffIso || priorRecoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
       const errorSummary = capReached
         ? SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
         : SCAN_PENDING_TIMEOUT_ERROR_SUMMARY;

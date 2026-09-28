@@ -1,6 +1,6 @@
 import "server-only";
 
-import { resolvePlan } from "@/lib/billing";
+import { SYSTEM_PLAN_COLUMNS, resolvePlan, resolveSystemPlanId } from "@/lib/billing";
 import { isOpsAlertConfigured, sendWatchdogAlertEmail } from "@/lib/email/transactional";
 import {
   RETRY_EXHAUSTED_ERROR_SUMMARIES,
@@ -51,6 +51,28 @@ import type { createServiceClient } from "@/lib/supabase/service";
 
 /** How far back a failed run is still worth alerting about if no alert went out yet. */
 export const WATCHDOG_FAILED_RUN_LOOKBACK_HOURS = 24;
+
+/**
+ * ALERTS-SCOPE-1: a failed run is only reported if it was CREATED within this
+ * window. Anything older that is only now marked failed has been stuck for
+ * days with nobody waiting on it.
+ */
+export const WATCHDOG_FAILED_RUN_MAX_RUN_AGE_HOURS = 48;
+
+/**
+ * ALERTS-SCOPE-1 (log §229): whether a failed run is someone's problem.
+ *
+ * - A person launched it (`triggered_by_user_id` set): always — whatever the
+ *   plan. A Free user's one scan failing is a prospect who sees nothing.
+ * - The system launched it (daily sweep, auto-retry): only while the account
+ *   is on a plan that includes scans. The system should not be scanning a
+ *   Free or expired-trial account at all; if it did, that is a bug to fix in
+ *   plan resolution, not an alert to send every day.
+ */
+export function shouldAlertFailedRun(input: { triggeredByUserId: string | null; ownerPlanId: string }): boolean {
+  if (input.triggeredByUserId) return true;
+  return input.ownerPlanId !== "free";
+}
 
 /**
  * How long after the daily sweep fires a recurring project may still lack
@@ -268,7 +290,7 @@ async function checkActiveRunsForProviderTrouble(service: Service, startedAt: nu
 
 async function loadOwners(service: Service, projectIds: readonly string[]) {
   const projectById = new Map<string, { domain: string; ownerUserId: string }>();
-  const ownerById = new Map<string, { email: string | null; currentPlan: string | null }>();
+  const ownerById = new Map<string, { email: string | null; planId: string }>();
   if (projectIds.length === 0) return { projectById, ownerById };
 
   const { data: projects } = await service
@@ -281,11 +303,11 @@ async function loadOwners(service: Service, projectIds: readonly string[]) {
 
   const ownerIds = Array.from(new Set(Array.from(projectById.values()).map((p) => p.ownerUserId)));
   if (ownerIds.length) {
-    const { data: profiles } = await service.from("profiles").select("id, email, current_plan").in("id", ownerIds);
+    const { data: profiles } = await service.from("profiles").select(`id, ${SYSTEM_PLAN_COLUMNS}`).in("id", ownerIds);
     for (const row of profiles ?? []) {
       ownerById.set(row.id as string, {
         email: (row.email as string | null) ?? null,
-        currentPlan: (row.current_plan as string | null) ?? null
+        planId: resolvePlan(resolveSystemPlanId(row as Parameters<typeof resolveSystemPlanId>[0]) as string | undefined).id
       });
     }
   }
@@ -302,11 +324,17 @@ async function collectUnalertedFailedRuns(
 
   const { data: failed } = await service
     .from("scan_runs")
-    .select("id, project_id, created_at, finished_at, error_summary, successful_prompts, total_prompts")
+    .select("id, project_id, created_at, finished_at, error_summary, successful_prompts, total_prompts, triggered_by_user_id")
     .eq("status", "failed")
     .gte("finished_at", sinceIso);
 
-  const failedRows = (failed ?? []) as Array<{
+  // ALERTS-SCOPE-1: a run created long ago and only now marked failed is a
+  // "zombie" — stuck for weeks with nobody looking. The first watchdog pass
+  // found eight of them at once (kickingeleven.com, remaxplus.es…), on
+  // accounts whose trials had ended and whose recurring scans were off:
+  // alerting about those is noise about something nobody expects.
+  const maxRunAgeCutoffIso = new Date(now - WATCHDOG_FAILED_RUN_MAX_RUN_AGE_HOURS * HOUR_MS).toISOString();
+  const failedRows = ((failed ?? []) as Array<{
     id: string;
     project_id: string;
     created_at: string;
@@ -314,7 +342,8 @@ async function collectUnalertedFailedRuns(
     error_summary: string | null;
     successful_prompts: number | null;
     total_prompts: number | null;
-  }>;
+    triggered_by_user_id: string | null;
+  }>).filter((row) => row.created_at >= maxRunAgeCutoffIso);
   if (failedRows.length === 0) return { failedRuns: [], anchors: new Map() };
 
   const runIds = failedRows.map((row) => row.id);
@@ -353,6 +382,10 @@ async function collectUnalertedFailedRuns(
   for (const row of pending) {
     const project = projectById.get(row.project_id);
     const owner = project ? ownerById.get(project.ownerUserId) : undefined;
+
+    if (!shouldAlertFailedRun({ triggeredByUserId: row.triggered_by_user_id, ownerPlanId: owner?.planId ?? "pro" })) {
+      continue;
+    }
 
     // Past the read budget the run is still reported — only its per-engine
     // detail is skipped. Dropping the run itself would trade a missing line
@@ -400,11 +433,15 @@ async function collectUnalertedStaleProjects(
   if (projectRows.length === 0) return { staleProjects: [], anchors: new Map() };
 
   const ownerIds = Array.from(new Set(projectRows.map((row) => row.owner_user_id)));
-  const { data: profiles } = await service.from("profiles").select("id, email, current_plan").in("id", ownerIds);
+  const { data: profiles } = await service.from("profiles").select(`id, ${SYSTEM_PLAN_COLUMNS}`).in("id", ownerIds);
   const ownerById = new Map(
     (profiles ?? []).map((row) => [
       row.id as string,
-      { email: (row.email as string | null) ?? null, planId: resolvePlan(row.current_plan as string | undefined).id }
+      {
+        email: (row.email as string | null) ?? null,
+        // ALERTS-SCOPE-1: effective plan — an expired trial is Free here too.
+        planId: resolvePlan(resolveSystemPlanId(row as Parameters<typeof resolveSystemPlanId>[0]) as string | undefined).id
+      }
     ])
   );
 

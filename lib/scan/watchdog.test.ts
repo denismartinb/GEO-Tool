@@ -20,6 +20,7 @@ vi.mock("next/server", () => ({ after: vi.fn() }));
 import { EXTRACTION_VERSION, SCAN_TIMEOUT_ERROR_SUMMARY, WATCHDOG_ALERT_LOG_MESSAGE } from "@/lib/scan/constants";
 import {
   WATCHDOG_INTERVAL_MINUTES,
+  shouldAlertFailedRun,
   describeFailedRunReason,
   evaluateRecurringFreshness,
   runScanWatchdog,
@@ -103,6 +104,17 @@ describe("summarizeEngineIssues", () => {
   });
 });
 
+describe("shouldAlertFailedRun", () => {
+  it("always alerts a run a person launched, whatever the plan", () => {
+    expect(shouldAlertFailedRun({ triggeredByUserId: "user-1", ownerPlanId: "free" })).toBe(true);
+  });
+
+  it("alerts a system run only while the account has a scanning plan", () => {
+    expect(shouldAlertFailedRun({ triggeredByUserId: null, ownerPlanId: "pro" })).toBe(true);
+    expect(shouldAlertFailedRun({ triggeredByUserId: null, ownerPlanId: "free" })).toBe(false);
+  });
+});
+
 describe("vercel.json", () => {
   it("schedules the watchdog at the interval its dedupe fallback assumes", () => {
     const config = JSON.parse(readFileSync(new URL("../../vercel.json", import.meta.url), "utf8")) as {
@@ -154,7 +166,8 @@ describe("runScanWatchdog", () => {
   const failedRun = {
     id: "run-9",
     project_id: "proj-1",
-    created_at: "2026-09-28T06:00:31.000Z",
+    created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    triggered_by_user_id: null as string | null,
     finished_at: new Date().toISOString(),
     error_summary: SCAN_TIMEOUT_ERROR_SUMMARY,
     successful_prompts: 30,
@@ -202,6 +215,35 @@ describe("runScanWatchdog", () => {
         rows: [expect.objectContaining({ job_id: "job-finalize", run_id: "run-9", context_json: { kind: "failed_run" } })]
       }
     ]);
+  });
+
+  // ALERTS-SCOPE-1: the first real pass alerted about eight runs stuck for
+  // weeks on accounts whose trials had ended and recurring was off.
+  it("stays silent about a zombie run created days ago and only now failed", async () => {
+    const { service } = fakeService((table, _op, filters) => {
+      if (table === "scan_runs" && filters["eq:status"] === "failed")
+        return [{ ...failedRun, created_at: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString() }];
+      return [];
+    });
+
+    expect((await runScanWatchdog({ service })).failedRunsAlerted).toBe(0);
+    expect(sendWatchdogAlertEmail).not.toHaveBeenCalled();
+  });
+
+  it("stays silent about a system-launched run on an account without a scanning plan", async () => {
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { service } = fakeService((table, _op, filters) => {
+      if (table === "scan_runs" && filters["eq:status"] === "failed") return [failedRun];
+      if (table === "jobs") return [{ id: "job-finalize", run_id: "run-9", job_type: "scan_finalize" }];
+      if (table === "projects" && filters["eq:recurring_scans_enabled"]) return [];
+      if (table === "projects") return [{ id: "proj-1", domain: "azotea.cl", owner_user_id: "user-1" }];
+      // Expired trial never revisited: `current_plan` still says pro.
+      if (table === "profiles") return [{ id: "user-1", email: "o@example.com", current_plan: "pro", trial_ends_at: past }];
+      return [];
+    });
+
+    expect((await runScanWatchdog({ service })).failedRunsAlerted).toBe(0);
+    expect(sendWatchdogAlertEmail).not.toHaveBeenCalled();
   });
 
   it("says each failed run once", async () => {

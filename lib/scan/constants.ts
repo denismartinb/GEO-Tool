@@ -390,6 +390,15 @@ export const SCAN_TIMEOUT_AUTO_RETRY_CAP = 1;
  */
 export const SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS = 48;
 
+/**
+ * ALERTS-SCOPE-1 (log §229): a stale run CREATED longer ago than this is a
+ * "zombie" — stuck for days with nobody waiting on it. Reconciliation fails
+ * it without an auto-retry and without an operator alert. Found by the first
+ * watchdog pass, which reconciled runs stuck for weeks on accounts whose
+ * trials had ended and bought each of them a brand-new scan.
+ */
+export const SCAN_ZOMBIE_RUN_AGE_HOURS = 48;
+
 export const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
 
 /**

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { after } from "next/server";
-import { resolvePlan } from "@/lib/billing";
+import { SYSTEM_PLAN_COLUMNS, resolvePlan, resolveSystemPlanId } from "@/lib/billing";
 import { delay } from "@/lib/llm/http";
 import { processPromptJob } from "@/lib/scan/prompt-job";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
@@ -245,10 +245,10 @@ export async function executePendingScan({
   // engine count the sampling was sized from is the same one executed here.
   const { data: ownerProfile } = await service
     .from("profiles")
-    .select("current_plan")
+    .select(SYSTEM_PLAN_COLUMNS)
     .eq("id", project.owner_user_id as string)
     .maybeSingle();
-  const plan = resolvePlan(ownerProfile?.current_plan as string | undefined);
+  const plan = resolvePlan(resolveSystemPlanId(ownerProfile) as string | undefined);
 
   /**
    * `engine_{gemini,claude,openai}_enabled` (ENGINE-DEBUG-TOGGLE-1, migration

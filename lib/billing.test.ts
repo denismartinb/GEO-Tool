@@ -16,7 +16,7 @@ vi.mock("@/lib/stripe", () => ({
   getActiveSubscriptionPromo: (...args: unknown[]) => getActiveSubscriptionPromo(...args)
 }));
 
-import { getPlanForUser, getUsageSummary, isProOrAbove, resolveEffectivePlanId } from "./billing";
+import { getPlanForUser, getUsageSummary, isProOrAbove, resolveEffectivePlanId, resolveSystemPlanId } from "./billing";
 
 describe("resolveEffectivePlanId (BILLING-COMPED-1)", () => {
   const ORIGINAL = process.env.COMPED_ACCOUNT_EMAILS;
@@ -349,5 +349,47 @@ describe("getUsageSummary — subscriptionPromo (PRICING-PROMO-1)", () => {
 
     expect(usage.subscriptionPromo).toEqual({ promoPrice: 59, endsAt: "2027-01-01T00:00:00.000Z" });
     expect(getActiveSubscriptionPromo).toHaveBeenCalledWith("sub_123", "pro");
+  });
+});
+
+/**
+ * ALERTS-SCOPE-1 (log §229): the plan system code (sweep, scan creation,
+ * watchdog) acts on. azotea.cl and rideflumserberg.ch were scanned daily for
+ * ten days after their trials ended, because the sweep read `current_plan`
+ * raw and trial expiry only lands when the user opens the console.
+ */
+describe("resolveSystemPlanId (ALERTS-SCOPE-1)", () => {
+  const ORIGINAL = process.env.COMPED_ACCOUNT_EMAILS;
+  const past = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  beforeEach(() => {
+    process.env.COMPED_ACCOUNT_EMAILS = "comped@example.com";
+  });
+
+  afterEach(() => {
+    process.env.COMPED_ACCOUNT_EMAILS = ORIGINAL;
+  });
+
+  it("reads an expired, never-revisited trial as Free", () => {
+    expect(resolveSystemPlanId({ current_plan: "pro", trial_ends_at: past, email: "a@example.com" })).toBe("free");
+  });
+
+  it("keeps a trial that is still running", () => {
+    expect(resolveSystemPlanId({ current_plan: "pro", trial_ends_at: future, email: "a@example.com" })).toBe("pro");
+  });
+
+  it("never downgrades an account that converted to a paid subscription", () => {
+    expect(
+      resolveSystemPlanId({ current_plan: "pro", trial_ends_at: past, stripe_subscription_id: "sub_1", email: "a@example.com" })
+    ).toBe("pro");
+  });
+
+  it("reads a comped account as Agency, like the console does", () => {
+    expect(resolveSystemPlanId({ current_plan: "free", trial_ends_at: null, email: "comped@example.com" })).toBe("agency");
+  });
+
+  it("passes a plain plan through", () => {
+    expect(resolveSystemPlanId({ current_plan: "starter", trial_ends_at: null, email: "a@example.com" })).toBe("starter");
   });
 });

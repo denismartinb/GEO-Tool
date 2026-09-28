@@ -20962,3 +20962,66 @@ jobs), §192. Ficheros: `lib/llm/extraction-fetch.ts`,
 `lib/scan/constants.ts`, `docs/scan-lifecycle.md`, y sus tests
 (`resume.test.ts` nuevo, `extraction.test.ts`, `extraction-fetch.test.ts`,
 `executor.test.ts`, `reconciliation.test.ts`).
+
+## 229. ALERTS-SCOPE-1: el sistema deja de escanear pruebas caducadas y los avisos dejan de hablar de escaneos zombis (2026-09-28)
+
+**Qué pasó.** La primera pasada real del vigilante (§227, 2026-09-28
+12:15 UTC) mandó un correo con 8 escaneos fallidos y 2 dominios sin datos, y
+el fundador preguntó lo obvio: *muchas de esas cuentas tienen el recurrente
+apagado o la prueba caducada, ¿por qué avisa?* Tenía razón, y la pregunta
+destapó tres cosas:
+
+1. **Escaneos zombis.** kickingeleven.com, remaxplus.es y otros tenían runs
+   parados desde hacía días o semanas, que nadie reconciliaba porque nadie
+   abría sus pantallas. El vigilante los encontró todos de golpe, los marcó
+   `failed` y avisó de ellos como si fueran de hoy.
+2. **El reintento automático les compró escaneos nuevos.** Al marcarlos
+   fallidos, `reconcileStuckScanRuns` lanzó para cada uno un run nuevo
+   completo, en cuentas con la prueba caducada y sin nadie esperando.
+3. **El sistema leía `current_plan` crudo.** La caducidad de la prueba es
+   perezosa: `applyTrialExpiry` sólo degrada cuando el usuario vuelve a abrir
+   la consola. azotea.cl y rideflumserberg.ch ("Prueba caducada" en
+   `/admin`, 10 días sin entrar) seguían como `pro` para el barrido, el
+   reintento y el vigilante. **Se escanearon cada día durante diez días sin
+   pagar.** Las cuentas comped (§222) tenían el hueco contrario: Agency para
+   la consola, su `current_plan` crudo para el barrido.
+
+**Qué se decide (founder-approved 2026-09-28).**
+
+- **`resolveSystemPlanId`** (`lib/billing.ts`): el plan que la cuenta tiene
+  de verdad, para el código de sistema. Aplica la lista comped y la
+  caducidad de la prueba **sin escribir nada ni mandar el correo de fin de
+  prueba**: eso sigue ocurriendo sólo en la lectura del propio usuario. Lo
+  usan el barrido (`cron.ts`), la creación de escaneos (`run-creation.ts`,
+  y con ella el reintento automático), el conjunto de motores del ejecutor y
+  el vigilante. Resultado: una prueba caducada ya no se escanea, no se
+  reintenta y no produce avisos de "sin datos"; una cuenta comped sí recibe
+  su escaneo automático.
+- **Avisos de escaneo fallido, sólo de lo que alguien espera**
+  (`shouldAlertFailedRun`):
+  - sólo runs **creados** en las últimas 48 h
+    (`WATCHDOG_FAILED_RUN_MAX_RUN_AGE_HOURS`);
+  - lanzados por una persona (`triggered_by_user_id`), **sea cual sea su
+    plan**: el único escaneo de un usuario Free que falla es un posible
+    cliente que no ve nada;
+  - o lanzados por el sistema en una cuenta con plan que incluye escaneos.
+- **Zombis sin reintento ni aviso.** Un run parado creado hace más de 48 h
+  (`SCAN_ZOMBIE_RUN_AGE_HOURS`) se marca fallido como agotado, sin comprarle
+  un escaneo nuevo y sin alerta `run_failed`.
+
+**Pendiente / roto conocido.**
+
+- Los escaneos nuevos que la pasada de las 12:15 lanzó para esas cuentas ya
+  están creados. Con este cambio, si se atascan se tratan como cualquier
+  run de una cuenta Free lanzado por el sistema: se reanudan (§228) o fallan,
+  sin aviso ni nuevo reintento.
+- El interruptor de recurrente de las cuentas con la prueba caducada sigue
+  encendido. Ya no tiene efecto (el barrido las salta como
+  `skipped_plan_ineligible`), pero no se apaga solo.
+- Mensaje "Reintentando…" cuando el reintento se rechaza: sigue sin tocar,
+  como en §227.
+
+**Trazabilidad.** §227 (el vigilante), §228 (reanudación), §222 (comped),
+PRICING-TRUTH-1. Ficheros: `lib/billing.ts`, `lib/scan/cron.ts`,
+`lib/scan/run-creation.ts`, `lib/scan/executor.ts`, `lib/scan/watchdog.ts`,
+`lib/scan/reconciliation.ts`, `lib/scan/constants.ts` y sus tests.
