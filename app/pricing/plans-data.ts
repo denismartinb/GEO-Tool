@@ -9,7 +9,10 @@
  * pantalla, para que ambas cosas dejen de anunciar la promo el mismo instante
  * en vez de depender de que alguien recuerde apagar dos sitios.
  */
-export const PROMO_ENDS_AT = "2026-09-30T00:00:00+02:00";
+// PROMO-EXTEND-OCT-1 (fundador, 2026-09-28, log §228): hasta el final del
+// 31 de octubre. +01:00 porque el 25 de octubre España ya ha vuelto a horario
+// de invierno; 23:59:59 para que el día anunciado ("31 oct") sea válido entero.
+export const PROMO_ENDS_AT = "2026-10-31T23:59:59+01:00";
 
 /**
  * Duración real del descuento en los cupones de Stripe (`duration: repeating`,
