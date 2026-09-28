@@ -1024,3 +1024,131 @@ export async function sendChainRejectedAlertEmail(input: {
     )
   );
 }
+
+/**
+ * ALERTS-ALWAYS-1 (`docs/brand/design-decisions-log.md` §227): what the scan
+ * watchdog found in one pass — runs that ended `failed` and recurring projects
+ * that went a whole cycle without a completed scan.
+ *
+ * One email per pass, never one per project: the watchdog runs every 15
+ * minutes and a provider outage takes out many projects at once. Each line
+ * says whose account it is, because the question the founder asked was "is
+ * someone no longer seeing their data?" — the account is the unit that
+ * matters, not the run id.
+ *
+ * Operator address only, same rule as every other alert here.
+ */
+export async function sendWatchdogAlertEmail(input: {
+  failedRuns: ReadonlyArray<{
+    runId: string;
+    projectId: string;
+    domain: string;
+    ownerEmail: string | null;
+    reason: string;
+    successfulPrompts: number;
+    totalPrompts: number;
+    finishedAt: string | null;
+    retryStarted: boolean;
+    engineIssues: readonly string[];
+  }>;
+  staleProjects: ReadonlyArray<{
+    projectId: string;
+    domain: string;
+    ownerEmail: string | null;
+    planId: string;
+    lastCompletedAt: string | null;
+  }>;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+  if (input.failedRuns.length === 0 && input.staleProjects.length === 0) return;
+
+  const mono = "font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;";
+
+  const failedHtml = input.failedRuns
+    .map(
+      (run) => `
+    <tr>
+      <td style="padding:12px 0;border-top:1px solid #EEF1F6;vertical-align:top;">
+        <div style="font-size:13px;color:#0B1426;${mono}word-break:break-all;">${escapeHtml(run.domain)}</div>
+        <div style="font-size:12.5px;color:#5B6B82;margin-top:2px;">${escapeHtml(run.ownerEmail ?? "cuenta sin email")}</div>
+        <div style="font-size:13px;color:#0B1426;margin-top:6px;font-weight:600;">${escapeHtml(run.reason)}</div>
+        <div style="font-size:12.5px;color:#5B6B82;margin-top:3px;">${escapeHtml(
+          `${run.successfulPrompts}/${run.totalPrompts} prompts respondidos · ${
+            run.retryStarted ? "hay un escaneo posterior en marcha o hecho" : "NO se ha lanzado ningún reintento"
+          }`
+        )}</div>
+        ${run.engineIssues
+          .map((issue) => `<div style="font-size:12.5px;color:#D23B48;margin-top:3px;">${escapeHtml(issue)}</div>`)
+          .join("")}
+        <div style="font-size:11.5px;color:#8A97A8;margin-top:5px;${mono}">${escapeHtml(
+          `run ${run.runId} · fin ${run.finishedAt ?? "—"}`
+        )}</div>
+      </td>
+    </tr>`
+    )
+    .join("");
+
+  const staleHtml = input.staleProjects
+    .map(
+      (project) => `
+    <tr>
+      <td style="padding:12px 0;border-top:1px solid #EEF1F6;vertical-align:top;">
+        <div style="font-size:13px;color:#0B1426;${mono}word-break:break-all;">${escapeHtml(project.domain)}</div>
+        <div style="font-size:12.5px;color:#5B6B82;margin-top:2px;">${escapeHtml(
+          `${project.ownerEmail ?? "cuenta sin email"} · plan ${project.planId}`
+        )}</div>
+        <div style="font-size:12.5px;color:#5B6B82;margin-top:3px;">${escapeHtml(
+          `Último escaneo completado: ${project.lastCompletedAt ?? "ninguno"}`
+        )}</div>
+      </td>
+    </tr>`
+    )
+    .join("");
+
+  const failedCount = input.failedRuns.length;
+  const staleCount = input.staleProjects.length;
+  const parts = [
+    failedCount ? `${failedCount} escaneo${failedCount === 1 ? "" : "s"} fallido${failedCount === 1 ? "" : "s"}` : null,
+    staleCount ? `${staleCount} dominio${staleCount === 1 ? "" : "s"} sin datos nuevos` : null
+  ].filter(Boolean);
+  const firstDomain = input.failedRuns[0]?.domain ?? input.staleProjects[0]?.domain ?? "";
+  const subject =
+    failedCount + staleCount === 1
+      ? `[GenScore] ${parts[0]} — ${firstDomain}`
+      : `[GenScore] ${parts.join(" · ")}`;
+
+  await sendEmail(
+    to,
+    subject,
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading("Hay clientes que no están recibiendo sus datos")}
+      ${paragraph(
+        "El vigilante de escaneos revisa todos los proyectos cada 15 minutos. Esto es lo que ha encontrado desde el último aviso."
+      )}
+      ${
+        failedCount
+          ? `${paragraph(`<strong>Escaneos fallidos (${failedCount})</strong>`)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 0;">${failedHtml}</table>`
+          : ""
+      }
+      ${
+        staleCount
+          ? `${paragraph(`<strong>Escaneo automático activo pero sin datos nuevos en su último ciclo (${staleCount})</strong>`)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 0;">${staleHtml}</table>`
+          : ""
+      }
+      ${subtext(
+        `Detectado ${escapeHtml(input.detectedAt.toISOString())}. Cada escaneo y cada dominio se avisa una sola vez por ciclo; si el problema sigue mañana, vuelve a llegar.`
+      )}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: parts.join(" · ")
+      }
+    )
+  );
+}

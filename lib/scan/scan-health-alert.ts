@@ -234,6 +234,12 @@ export async function checkAndSendScanHealthAlert(input: {
   /** Set when the run itself ended `failed` with no auto-retry left. */
   runFailedWithoutRetry?: boolean;
   finalizeJobId?: string | null;
+  /**
+   * Only report these reasons. The scan watchdog (ALERTS-ALWAYS-1) checks runs
+   * still in flight for `quota`/`config`, where "no rows extracted yet" is
+   * progress, not `engine_down`.
+   */
+  onlyReasons?: readonly ScanHealthReason[];
 }): Promise<void> {
   try {
     const { data: rows, error } = await input.service
@@ -251,7 +257,9 @@ export async function checkAndSendScanHealthAlert(input: {
       return;
     }
 
-    const findings = analyzeRunHealth((rows ?? []) as HealthRow[], input.expectedEngines ?? []);
+    const findings = analyzeRunHealth((rows ?? []) as HealthRow[], input.expectedEngines ?? []).filter(
+      (finding) => !input.onlyReasons || input.onlyReasons.includes(finding.reason)
+    );
 
     if (input.runFailedWithoutRetry) {
       const totalRows = rows?.length ?? 0;

@@ -158,6 +158,16 @@ The cron only ever processes projects with `projects.recurring_scans_enabled = t
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
 
+**Scan watchdog (ALERTS-ALWAYS-1, log §227).** `/api/cron/scan-watchdog`
+runs every 15 minutes (`*/15 * * * *`). No new variables: it reuses
+`CRON_SECRET` for auth, and its alerts need `OPS_ALERT_EMAIL` +
+`RESEND_API_KEY` like every other operator alert — without both, it logs
+the findings and writes no dedupe marker, so they go out once the channel
+works. **Not** gated on `CRON_SCANS_ENABLED`: it mostly reads and alerts; the
+only thing it can start is an auto-retry from `reconcileStuckScanRuns`,
+which any page view already does. A sub-daily schedule needs Vercel Pro (the
+account is Pro since 2026-08-04).
+
 ### Cuentas internas de prueba (PROJECT-DEFAULTS-BY-ACCOUNT-1)
 
 | Variable | Required | Where | Expected shape |
