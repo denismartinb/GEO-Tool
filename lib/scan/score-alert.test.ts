@@ -136,7 +136,7 @@ describe("checkAndSendScoreDropAlert", () => {
       currentRow: v2Row(55)
     });
 
-    expect(sendScoreDropAlertEmail).toHaveBeenCalledWith("founder@example.com", "acme.com", 70, 55);
+    expect(sendScoreDropAlertEmail).toHaveBeenCalledWith("founder@example.com", "acme.com", 70, 55, expect.any(String));
   });
 
   it("never compares runs scored under different composite versions (v1 -> v2 methodology step, ADR 0015)", async () => {
@@ -174,7 +174,7 @@ describe("checkAndSendScoreDropAlert", () => {
       currentRow: mixed(55)
     });
 
-    expect(sendScoreDropAlertEmail).toHaveBeenCalledWith("founder@example.com", "acme.com", 70, 55);
+    expect(sendScoreDropAlertEmail).toHaveBeenCalledWith("founder@example.com", "acme.com", 70, 55, expect.any(String));
   });
 
   it("doesn't send when the owner has opted out", async () => {

@@ -1,6 +1,8 @@
 import "server-only";
 
 import { getResendClient, getEmailFromAddress } from "@/lib/email/resend";
+import { CATEGORY_COPY, type OptionalEmailCategory } from "@/lib/email/categories";
+import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
 
 /**
  * Every send* function here is fire-and-forget from the caller's point of
@@ -8,12 +10,23 @@ import { getResendClient, getEmailFromAddress } from "@/lib/email/resend";
  * is logged and swallowed — a broken email must never break signup,
  * checkout, or the trial-expiry downgrade it's attached to.
  */
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  headers?: Record<string, string>
+): Promise<void> {
   const resend = getResendClient();
   if (!resend) return;
 
   try {
-    const { error } = await resend.emails.send({ from: getEmailFromAddress(), to, subject, html });
+    const { error } = await resend.emails.send({
+      from: getEmailFromAddress(),
+      to,
+      subject,
+      html,
+      ...(headers ? { headers } : {})
+    });
     if (error) {
       console.error("[geo:email] Resend rejected the send", { to, subject, message: error.message });
     }
@@ -71,10 +84,45 @@ const HEADER_ROW = `
   </td></tr>
   <tr><td style="background:#2563EB;height:3px;line-height:3px;font-size:0;">&nbsp;</td></tr>`;
 
-const SUPPORT_FOOTER = `¿Dudas? Escríbenos a <a href="mailto:soporte@genscore.es" style="color:#2563EB;text-decoration:none;font-weight:600;">soporte@genscore.es</a>.<br>GenScore · Visibilidad de marca en respuestas de IA · genscore.es`;
+const FOOTER_LINK_STYLE = "color:#2563EB;text-decoration:none;font-weight:600;";
+const PREFERENCES_URL = "https://www.genscore.es/dashboard/settings/notifications";
+
+// EMAIL-UNSUB-1 (log §232): service emails cannot be unsubscribed from — they
+// are what the account needs to work — but every one of them still says where
+// the optional ones are managed.
+const SUPPORT_FOOTER = `¿Dudas? Escríbenos a <a href="mailto:soporte@genscore.es" style="${FOOTER_LINK_STYLE}">soporte@genscore.es</a> · <a href="${PREFERENCES_URL}" style="${FOOTER_LINK_STYLE}">Preferencias de email</a><br>GenScore · Visibilidad de marca en respuestas de IA · genscore.es`;
 
 const notificationsFooter = (what: string) =>
-  `Puedes desactivar ${what} en <a href="https://www.genscore.es/dashboard/settings/notifications" style="color:#2563EB;text-decoration:none;font-weight:600;">Ajustes → Notificaciones</a>.<br>GenScore · genscore.es`;
+  `Puedes desactivar ${what} en <a href="${PREFERENCES_URL}" style="${FOOTER_LINK_STYLE}">Ajustes → Notificaciones</a>.<br>GenScore · genscore.es`;
+
+/**
+ * EMAIL-UNSUB-1 (log §232). The footer and headers of every OPTIONAL email.
+ *
+ * With a signed link: a visible one-click unsubscribe in the footer plus the
+ * RFC 8058 headers that make Gmail/Yahoo/Apple Mail show their own
+ * "Cancelar suscripción" button, which POSTs to `oneClickUrl` directly.
+ *
+ * Without one (no `EMAIL_UNSUBSCRIBE_SECRET`, or no account id for the
+ * recipient) it falls back to the settings footer these alerts always had —
+ * an alert the customer asked for is still worth sending. The `lifecycle`
+ * category will not have that fallback: it is commercial, and a commercial
+ * email with no working way out is not sent at all.
+ */
+export function optionalEmailEnvelope(
+  userId: string | undefined,
+  category: OptionalEmailCategory
+): { footerHtml: string; headers?: Record<string, string> } {
+  const links = userId ? buildUnsubscribeLinks(userId, category) : null;
+  if (!links) return { footerHtml: notificationsFooter(CATEGORY_COPY[category].noun) };
+
+  return {
+    footerHtml: `¿No quieres recibir ${CATEGORY_COPY[category].noun}? <a href="${links.pageUrl}" style="${FOOTER_LINK_STYLE}">Darme de baja en un clic</a> · <a href="${PREFERENCES_URL}" style="${FOOTER_LINK_STYLE}">Preferencias de email</a><br>GenScore · genscore.es`,
+    headers: {
+      "List-Unsubscribe": `<${links.oneClickUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+    }
+  };
+}
 
 function wrap(bodyHtml: string, opts: { footerHtml?: string; preheader?: string } = {}): string {
   const { footerHtml = SUPPORT_FOOTER, preheader } = opts;
@@ -288,8 +336,10 @@ export async function sendScoreDropAlertEmail(
   to: string,
   projectDomain: string,
   previousScore: number,
-  currentScore: number
+  currentScore: number,
+  userId?: string
 ): Promise<void> {
+  const envelope = optionalEmailEnvelope(userId, "score_drop");
   await sendEmail(
     to,
     `${projectDomain}: tu puntuación ha bajado`,
@@ -319,8 +369,9 @@ export async function sendScoreDropAlertEmail(
       )}
       ${button("https://www.genscore.es/dashboard", "Revisar qué ha cambiado")}
     `,
-      { footerHtml: notificationsFooter("este aviso"), preheader: `Tu puntuación ha pasado de ${Math.round(previousScore)} a ${Math.round(currentScore)} en los dos últimos escaneos.` }
-    )
+      { footerHtml: envelope.footerHtml, preheader: `Tu puntuación ha pasado de ${Math.round(previousScore)} a ${Math.round(currentScore)} en los dos últimos escaneos.` }
+    ),
+    envelope.headers
   );
 }
 
@@ -389,8 +440,10 @@ export async function sendWeeklyDigestEmail(
     promptsCount: number;
     competitorsCount: number;
     scansThisWeek: number;
-  }
+  },
+  userId?: string
 ): Promise<void> {
+  const envelope = optionalEmailEnvelope(userId, "weekly_digest");
   const delta = Math.round(digest.currentScore) - Math.round(digest.previousScore);
   const pill = deltaPill(delta);
 
@@ -509,8 +562,9 @@ export async function sendWeeklyDigestEmail(
       ${recommendationHtml}
       ${button("https://www.genscore.es/dashboard", "Ver el detalle completo")}
     `,
-      { footerHtml: notificationsFooter("este resumen"), preheader: `Puntuación de este escaneo: ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
-    )
+      { footerHtml: envelope.footerHtml, preheader: `Puntuación de este escaneo: ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
+    ),
+    envelope.headers
   );
 }
 

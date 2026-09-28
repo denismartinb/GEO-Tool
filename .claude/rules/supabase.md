@@ -22,8 +22,11 @@ These invariants apply automatically when touching Supabase code. Owned by the
   fichero de `app/` que use `createServiceClient()` tiene que establecer
   identidad en servidor —`requireUser`, `requireActiveProject`,
   `isAuthorizedInternalRequest` o la firma de Stripe—, y un fichero nuevo entra
-  en el alcance solo. Añadir una quinta forma a esa lista es una decisión, no un
-  trámite: es el momento de preguntarse si de verdad hace falta. La guarda ve
+  en el alcance solo. Hoy son cinco formas: la quinta, `verifyUnsubscribeToken`
+  (el enlace firmado de baja de un correo), entró el 2026-09-28 porque darse
+  de baja no puede exigir sesión (log §232, `.claude/rules/email.md`). Añadir
+  una sexta es una decisión, no un trámite: es el momento de preguntarse si
+  de verdad hace falta. La guarda ve
   que hay identidad, **no** que se aplique al dato que se toca; eso sigue
   siendo revisión de `data-guardian`.
 - **No raw Postgres errors in the UI.** Sanitize and map to safe messages.

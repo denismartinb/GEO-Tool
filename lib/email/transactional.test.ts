@@ -358,3 +358,75 @@ describe("WEEKLY-DIGEST-VISUAL-1: indicador visual y deltas por sub-score", () =
     expect(html).not.toContain("▼");
   });
 });
+
+/**
+ * EMAIL-UNSUB-1 (log §232). Un correo opcional sin enlace de baja que
+ * funcione es un incumplimiento (LSSI art. 21) y, para Gmail/Yahoo, una razón
+ * para mandarlo a spam. Lo que se fija: con secreto, pie con baja en un clic y
+ * cabeceras RFC 8058 apuntando a esa misma cuenta y categoría; sin secreto,
+ * el pie de Ajustes de siempre y ninguna cabecera que prometa algo que no hay.
+ */
+describe("baja en un clic en los correos opcionales", () => {
+  const USER_ID = "11111111-2222-4333-8444-555555555555";
+
+  afterEach(() => {
+    delete process.env.EMAIL_UNSUBSCRIBE_SECRET;
+  });
+
+  function lastHeaders() {
+    return (send.mock.calls.at(-1)?.[0] as { headers?: Record<string, string> }).headers;
+  }
+
+  it("con secreto, el aviso de caída lleva pie de baja y cabeceras one-click de su categoría", async () => {
+    process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
+    await sendScoreDropAlertEmail(CUSTOMER, "ejemplo.com", 62, 41, USER_ID);
+
+    const headers = lastHeaders();
+    expect(headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+    expect(headers?.["List-Unsubscribe"]).toMatch(
+      new RegExp(`^<https://www\\.genscore\\.es/api/email/unsubscribe\\?u=${USER_ID}&c=score_drop&t=[A-Za-z0-9_-]+>$`)
+    );
+    expect(lastPayload().html).toContain("Darme de baja en un clic");
+    expect(lastPayload().html).toContain(`/baja?u=${USER_ID}&amp;c=score_drop`.replace("&amp;", "&"));
+  });
+
+  it("el resumen semanal firma su propia categoría, no la del aviso", async () => {
+    process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
+    await sendWeeklyDigestEmail(
+      CUSTOMER,
+      "ejemplo.com",
+      {
+        currentScore: 50,
+        previousScore: 45,
+        subScores: { visibility: 40, citation: null, standing: 30 },
+        previousSubScores: { visibility: 35, citation: null, standing: 28 },
+        topMover: null,
+        recommendation: null,
+        activeRecommendationsCount: 0,
+        promptsCount: 10,
+        competitorsCount: 3,
+        scansThisWeek: 1
+      },
+      USER_ID
+    );
+
+    expect(lastHeaders()?.["List-Unsubscribe"]).toContain("c=weekly_digest");
+  });
+
+  it("sin secreto, cae al pie de Ajustes y no manda cabeceras", async () => {
+    await sendScoreDropAlertEmail(CUSTOMER, "ejemplo.com", 62, 41, USER_ID);
+
+    expect(lastHeaders()).toBeUndefined();
+    expect(lastPayload().html).toContain("Ajustes → Notificaciones");
+    expect(lastPayload().html).not.toContain("Darme de baja");
+  });
+
+  it("los correos de servicio no llevan baja, pero sí el enlace a preferencias", async () => {
+    process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
+    await sendWelcomeEmail(CUSTOMER);
+
+    expect(lastHeaders()).toBeUndefined();
+    expect(lastPayload().html).toContain("Preferencias de email");
+    expect(lastPayload().html).not.toContain("Darme de baja");
+  });
+});

@@ -201,7 +201,7 @@ export async function runWeeklyDigest({
       promptsCount: promptsCount ?? 0,
       competitorsCount: competitorsCount ?? 0,
       scansThisWeek: scansThisWeek ?? 0
-    });
+    }, project.owner_user_id as string);
     sent += 1;
   }
 

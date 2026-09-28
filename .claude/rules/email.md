@@ -1,0 +1,57 @@
+---
+description: Invariantes de los correos al cliente, sus categorías y la baja.
+paths:
+  - "lib/email/**"
+  - "app/baja/**"
+  - "app/api/email/**"
+---
+
+# Correos al cliente y baja
+
+Se inyectan solos al tocar el envío de correos, la página `/baja` o la ruta de
+baja en un clic. Cada regla es trazable a un documento — una regla que nadie
+puede justificar es peor que ninguna, porque una sesión futura la obedecerá
+igual.
+
+- **Todo correo al cliente pertenece a UNA categoría de
+  `lib/email/categories.ts`, y la categoría decide la baja, no la plantilla.**
+  `service` (alta, facturación, cambios de plan, borrado) no se puede
+  desactivar porque es lo que la cuenta necesita para funcionar; el resto
+  —`score_drop`, `weekly_digest`, `first_scan`, `lifecycle`— se corresponde
+  con una columna de `profiles` y lleva pie de baja y cabeceras
+  `List-Unsubscribe` vía `optionalEmailEnvelope`
+  (`docs/brand/design-decisions-log.md` §232). Un correo opcional nuevo
+  añade su categoría ahí, con su columna y su texto, en el mismo PR.
+- **Un correo que incluye una oferta ya no es sólo de servicio.** El fin de
+  prueba con precio de lanzamiento lleva baja aunque su motivo principal sea
+  informativo (§232).
+- **Nunca un correo comercial sin una baja que funcione.** Sin
+  `EMAIL_UNSUBSCRIBE_SECRET` no se firma ningún enlace; los avisos que el
+  cliente pidió caen al pie de Ajustes de siempre, pero la categoría
+  `lifecycle` no se envía en absoluto (§232; art. 21 LSSI).
+- **Darse de baja no puede exigir sesión, y por eso el token ES la
+  identidad.** HMAC de `(cuenta, categoría)` con versión (`v1:`), sin tabla ni
+  caducidad: un enlace de un correo de hace seis meses tiene que seguir
+  funcionando. `verifyUnsubscribeToken` es la quinta puerta de identidad de
+  `tests/service-role-identity.test.ts`, y sólo autoriza
+  `setEmailPreferenceAsService`: una columna de preferencia de esa cuenta,
+  nada más. Rotar el secreto invalida todos los enlaces ya enviados.
+- **Un GET nunca da de baja a nadie.** Los antivirus y las vistas previas
+  abren enlaces solos. El pie lleva a `/baja`, que pide confirmar; la ruta
+  `/api/email/unsubscribe` sólo aplica en POST (RFC 8058, el botón de Gmail) y
+  un GET redirige a `/baja` (§232).
+- **Cada cambio de preferencia deja fila en `email_preference_events`**, venga
+  de Ajustes, del enlace o del botón del cliente de correo. Es la única prueba
+  de que una baja se respetó. Se escribe DESPUÉS del flag, y si falla se
+  registra en el log sin deshacer la baja que la persona pidió.
+- **La base legal de los correos de ciclo de vida es la relación contractual
+  y el interés legítimo, no un consentimiento** (fundador, 2026-09-28, §232):
+  el alta informa, sin casilla, y la baja está en Ajustes y en cada correo.
+  No se reescribe como "aceptas recibir…" dentro de las condiciones: un
+  consentimiento metido en las condiciones generales no vale como tal para el
+  RGPD.
+- **Las alertas de operador nunca van al cliente** (`OPS_ALERT_EMAIL`); regla
+  heredada de `.claude/rules/scan.md`.
+- **Nada con forma de comentario JSX dentro de un template literal de HTML.**
+  `wrap(...)` no es JSX: `{/* … */}` sale tal cual en la bandeja del cliente
+  (log §202).

@@ -499,6 +499,7 @@ actions.
 |---|---|---|---|
 | `RESEND_API_KEY` | No | Vercel + local `.env.local` | Resend API key (`re_...`) |
 | `RESEND_FROM_EMAIL` | No (defaults to `GenScore <onboarding@resend.dev>`, Resend's own shared test sender) | Vercel | `"GenScore <noreply@genscore.es>"` once a sending domain is verified in the Resend dashboard |
+| `EMAIL_UNSUBSCRIBE_SECRET` | No, but required before any "consejos y ofertas" email can go out | Vercel (Production; Preview optional) | Random string, ≥32 chars (`openssl rand -base64 32`). EMAIL-UNSUB-1 (log §232) |
 
 Both optional by design: `lib/email/resend.ts`'s `getResendClient()` returns
 `null` when `RESEND_API_KEY` is unset, and every `lib/email/transactional.ts`
@@ -509,6 +510,15 @@ this PR; until they do and verify a sending domain (SPF/DKIM DNS records),
 no emails actually go out. Stripe's webhook endpoint must also be
 subscribed to the `invoice.payment_failed` event in the Stripe Dashboard
 for the payment-failed email to fire.
+
+`EMAIL_UNSUBSCRIBE_SECRET` signs the one-click unsubscribe links
+(`lib/email/unsubscribe.ts`): an HMAC of `(account id, category)`, no expiry,
+no token table. **Rotating it invalidates every unsubscribe link in every email
+already sent** — only rotate if it leaked, and expect people who click an old
+link to land on "este enlace no es válido" with a pointer to Ajustes. Unset,
+optional alerts fall back to the old "desactívalo en Ajustes" footer and the
+`lifecycle` category is never sent (a commercial email with no working way out
+is worse than no email).
 
 ---
 

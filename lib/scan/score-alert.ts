@@ -99,7 +99,7 @@ export async function checkAndSendScoreDropAlert({
     // The email reports the pre-drop baseline -> current, the comparison the
     // user actually cares about ("you were at 70, you've been at 55 for two
     // scans"), not the intermediate run.
-    await sendScoreDropAlertEmail(profile.email, projectDomain, baselineScore, currentScore);
+    await sendScoreDropAlertEmail(profile.email, projectDomain, baselineScore, currentScore, ownerUserId);
   } catch (error) {
     console.error("[geo:alerts] failed to check/send score-drop alert", {
       projectId,

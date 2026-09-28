@@ -113,6 +113,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   OPS_ALERT_EMAIL: "los avisos de operador no se envían a nadie",
   RESEND_API_KEY: "no se envía ningún correo transaccional",
   RESEND_FROM_EMAIL: "se usa el remitente compartido de pruebas de Resend",
+  EMAIL_UNSUBSCRIBE_SECRET:
+    "los correos no llevan enlace de baja en un clic (los avisos caen al pie de Ajustes) y los de consejos y ofertas no se envían",
   STRIPE_SECRET_KEY: "no se puede cobrar ni abrir el portal de cliente",
   STRIPE_WEBHOOK_SECRET: "los webhooks de Stripe se rechazan por firma inválida",
   STRIPE_PRICE_ID_STARTER: "el checkout del plan Starter no se puede crear",
@@ -167,6 +169,7 @@ export const envSchema = z.object({
   OPS_ALERT_EMAIL: optionalText,
   RESEND_API_KEY: optionalText,
   RESEND_FROM_EMAIL: optionalText,
+  EMAIL_UNSUBSCRIBE_SECRET: optionalText,
 
   STRIPE_SECRET_KEY: optionalText,
   STRIPE_WEBHOOK_SECRET: optionalText,
@@ -305,6 +308,13 @@ export function checkEnvRules(env: Env, raw: RawEnv = {}, now: Date = new Date()
   // Avisos: nada se rompe, pero el operador debería saberlo.
   if (!env.OPS_ALERT_EMAIL) {
     add("OPS_ALERT_EMAIL", "warning", "Sin buzón de operador: los avisos de fallo de LLM no llegan a nadie.");
+  }
+  if (env.RESEND_API_KEY && !env.EMAIL_UNSUBSCRIBE_SECRET) {
+    add(
+      "EMAIL_UNSUBSCRIBE_SECRET",
+      "warning",
+      "Sin secreto de baja: los correos opcionales salen sin enlace de baja en un clic y los de consejos y ofertas no se envían."
+    );
   }
   if (env.RESEND_API_KEY && !env.RESEND_FROM_EMAIL) {
     add("RESEND_FROM_EMAIL", "warning", "Se enviarán correos desde el remitente compartido de pruebas de Resend.");

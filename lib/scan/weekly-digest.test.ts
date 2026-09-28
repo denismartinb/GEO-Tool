@@ -150,7 +150,7 @@ describe("runWeeklyDigest", () => {
       promptsCount: 8,
       competitorsCount: 4,
       scansThisWeek: 2
-    });
+    }, expect.any(String));
     expect(result).toEqual({ processed: 1, sent: 1, skipped: 0 });
   });
 
@@ -177,7 +177,7 @@ describe("runWeeklyDigest", () => {
     expect(sendWeeklyDigestEmail).toHaveBeenCalledWith(
       "founder@example.com",
       "acme.com",
-      expect.objectContaining({ subScores: { visibility: 70, citation: 40, standing: 55.5 } })
+      expect.objectContaining({ subScores: { visibility: 70, citation: 40, standing: 55.5 } }), expect.any(String)
     );
   });
 
@@ -212,7 +212,7 @@ describe("runWeeklyDigest", () => {
       expect.objectContaining({
         subScores: { visibility: 70, citation: 40, standing: 55.5 },
         previousSubScores: { visibility: 80, citation: 50, standing: 33.2 }
-      })
+      }), expect.any(String)
     );
   });
 
@@ -265,7 +265,7 @@ describe("runWeeklyDigest", () => {
         previousScore: 80,
         topMover: { name: "Rival", mentionDelta: 5 },
         recommendation: { title: "Añade una página de comparativa", description: "..." }
-      })
+      }), expect.any(String)
     );
   });
 
@@ -345,6 +345,6 @@ describe("runWeeklyDigest", () => {
 
     await runWeeklyDigest({ service: service as never });
 
-    expect(sendWeeklyDigestEmail).toHaveBeenCalledWith("founder@example.com", "acme.com", expect.objectContaining(ZERO_EXTRAS));
+    expect(sendWeeklyDigestEmail).toHaveBeenCalledWith("founder@example.com", "acme.com", expect.objectContaining(ZERO_EXTRAS), expect.any(String));
   });
 });

@@ -37,7 +37,7 @@ import { readFileSync } from "node:fs";
  */
 
 /**
- * Las cuatro formas legítimas de establecer identidad en servidor, hoy:
+ * Las cinco formas legítimas de establecer identidad en servidor, hoy:
  *
  * - `requireUser()` — sesión del usuario (`lib/auth.ts`).
  * - `requireActiveProject()` — sesión + propiedad del proyecto, con `notFound()`.
@@ -45,6 +45,13 @@ import { readFileSync } from "node:fs";
  *   (crons y auto-llamadas), que no tienen usuario por construcción.
  * - `constructEvent(` — la firma del webhook de Stripe, que es lo que prueba
  *   que la petición viene de Stripe y no de cualquiera.
+ * - `verifyUnsubscribeToken(` — la firma HMAC del enlace de baja de un email
+ *   (EMAIL-UNSUB-1, log §232). Quinta forma, añadida a conciencia: darse de
+ *   baja NO puede exigir iniciar sesión (lo esperan la LSSI y el botón
+ *   "Cancelar suscripción" de Gmail, que hace un POST sin cookies), así que
+ *   no hay sesión que pedir. El token está atado a (cuenta, categoría) y sólo
+ *   deja cambiar UNA columna de preferencia de ESA cuenta
+ *   (`setEmailPreferenceAsService`, `lib/email/unsubscribe.ts`).
  *
  * Añadir una quinta forma a esta lista es una decisión, no un trámite: es
  * exactamente el momento de preguntarse si de verdad hace falta.
@@ -53,7 +60,8 @@ const IDENTITY_GATES = [
   "requireUser(",
   "requireActiveProject(",
   "isAuthorizedInternalRequest(",
-  "constructEvent("
+  "constructEvent(",
+  "verifyUnsubscribeToken("
 ] as const;
 
 /**
