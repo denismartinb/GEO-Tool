@@ -12,12 +12,12 @@ de marca va incrustada como data URI, así que se abre sin red.
 
 | Pieza | Fase | PR |
 |---|---|---|
-| Pantalla `/baja` (confirmar + deshacer) | B · EMAIL-UNSUB-1 | este |
-| Ajustes → Notificaciones (4 interruptores + fila fija de cuenta) | B | este |
-| Línea legal del alta, sin casilla | B | este |
-| Apartado «Comunicaciones comerciales» de /privacidad | B | este |
-| Pie de baja + cabeceras `List-Unsubscribe` en los avisos | B | este |
-| Bienvenida ajustada, Primer escaneo listo, D1, D3, D5 | C · LIFECYCLE-TRIAL-1 | pendiente |
+| Pantalla `/baja` (confirmar + deshacer) | B · EMAIL-UNSUB-1 | #544 |
+| Ajustes → Notificaciones (4 interruptores + fila fija de cuenta) | B | #544 |
+| Línea legal del alta, sin casilla | B | #544 |
+| Apartado «Comunicaciones comerciales» de /privacidad | B | #544 |
+| Pie de baja + cabeceras `List-Unsubscribe` en los avisos | B | #544 |
+| Bienvenida ajustada, Primer escaneo listo, D1, D3, D5 | C · LIFECYCLE-TRIAL-1 | log §233 |
 | Fin de prueba (y variante «tardía»), D+3, D+10 (dos variantes) | D · LIFECYCLE-WINBACK-1 | pendiente |
 
 ## Invariantes de diseño que el piloto debe comprobar

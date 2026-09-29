@@ -21202,3 +21202,71 @@ supabase.md` apunta a la quinta puerta. Ficheros: `lib/email/categories.ts`,
 `components/settings/notifications-section.tsx`, `app/signup/page.tsx`,
 `app/privacidad/page.tsx`, `lib/scan/{score-alert,weekly-digest}.ts`,
 `lib/env-schema.ts`, `docs/environment-contract.md`.
+
+## 233. LIFECYCLE-TRIAL-1: la secuencia de la prueba Pro — primer escaneo listo, D1, D3 y D5 (Fase C de LIFECYCLE-EMAILS-1, 2026-09-29)
+
+**Qué es.** La Fase C del plan aprobado el 2026-09-28 (§232): los correos que
+acompañan los 7 días de prueba, con las plantillas del diseño aprobado
+(`docs/design-reference/lifecycle-emails-1/`). Sale **apagada**: nada de lo
+de esta fase envía un correo hasta que el fundador encienda
+`LIFECYCLE_EMAILS_ENABLED` en Vercel, y ni siquiera entonces sin
+`EMAIL_UNSUBSCRIBE_SECRET` (`isLifecycleEmailEnabled`,
+`lib/email/lifecycle/flag.ts`).
+
+**Qué se decide.**
+
+- **Reglas en una función pura** (`decideTrialEmail`,
+  `lib/email/lifecycle/schedule.ts`), probada sin base de datos: D1 (día 1,
+  sólo sin escaneo completado; variante sin dominio o sin escaneo), D3 (día 3;
+  recomendación real o variante sin escaneo) y D5 (entre 36 y 60 h antes del
+  fin de la prueba). Nunca a cuentas de pago, comped o internas, ni a quien se
+  dio de baja de «consejos y ofertas», ni con la prueba ya terminada (eso es
+  la Fase D). Un correo de ciclo de vida cada 48 h como máximo, y D1/D3 no
+  salen los lunes (son del resumen semanal); D5 se salta ambas reglas porque
+  lleva una fecha que no espera. Cada ventana mide al menos 24 h, así que un
+  cron diario cae en cada una exactamente una vez.
+- **Primer escaneo listo** se envía al completarse el **primer** escaneo de
+  la cuenta, contado entre todos sus proyectos: una cuenta que escanea desde
+  hace meses no lo recibe en su próximo escaneo rutinario. Es categoría
+  `first_scan` (aviso de producto, con su propio interruptor en Ajustes), no
+  comercial. Se engancha en el ejecutor dentro de `after()` y sólo si el
+  interruptor está encendido; el módulo de correos se carga bajo demanda, así
+  el escaneo no depende de las plantillas.
+- **Cifras de verdad o ninguna.** Puntuación GEO con la misma ventana que el
+  panel (`resolveGeoScore`); menciones sobre **respuestas**, del ranking del
+  propio run (`brand_position`), nunca sobre prompts (§183); competidor más
+  mencionado del mismo ranking; recomendación activa de mayor prioridad con
+  los motores que la respaldan (`recommendationEngineLabels`, §191). Sin
+  ranking, el correo de primer escaneo no sale.
+- **Precios leídos al enviar**: `PLANS` y la promo sólo mientras
+  `getActivePromoPlanIds()` la dé por aplicable en el checkout (fecha y
+  cupón). La tabla Pro/Free sale del `meter` de cada plan. Único testimonio,
+  Nordika Home (§146).
+- **Un envío se anota sólo si Resend lo aceptó** (`sendEmail` devuelve ahora
+  si se entregó). Tabla nueva `email_sends` (migración 0037, aprobada en el
+  plan), una fila por (cuenta, tipo), escrita con rol de servicio desde el
+  cron y el finalizador, sin políticas para `authenticated`.
+- **Cron nuevo** `/api/cron/lifecycle-emails` a las 07:45 UTC (09:45 en
+  Madrid en verano, 08:45 en invierno), aprobado en el plan; misma
+  autenticación que el resto de crons y un presupuesto de 45 s — lo que no
+  cabe queda para el día siguiente.
+- **La bienvenida cambia** al diseño aprobado: fecha real de fin de prueba,
+  tres pasos, un único botón «Añadir mi dominio». La frase «Te avisaremos 2
+  días antes» sólo se escribe con el interruptor encendido: la versión
+  anterior prometía «Te avisaremos antes» sin nada detrás.
+
+**Premisa que no se retira, pero se anota.** El comportamiento cuando el
+cliente escanea el mismo día del alta (el caso más común): recibe bienvenida y
+primer escaneo listo, **no** recibe D1, y sí D3 y D5 (fundador, 2026-09-28).
+
+**Pendiente.** Fase D (fin de prueba enviado por el servidor, D+3, D+10 y las
+5 pruebas ya caducadas, con la variante «tardía»), Fase E (medición y columna
+«Baja» en `/admin`). Fuera del repo: aplicar la migración 0037, y encender
+`LIFECYCLE_EMAILS_ENABLED` sólo tras la validación legal de §232.
+
+**Trazabilidad.** `.claude/rules/email.md` gana las reglas de esta fase.
+Ficheros: `lib/email/lifecycle/{flag,schedule,templates,offers,runner}.ts`
+(+tests), `app/api/cron/lifecycle-emails/route.ts`, `lib/email/transactional.ts`,
+`lib/scan/executor.ts`, `supabase/migrations/0037_email_sends.sql`,
+`vercel.json`, `vercel-crons.test.ts`, `lib/env-schema.ts`,
+`docs/environment-contract.md`.

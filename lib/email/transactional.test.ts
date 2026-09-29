@@ -430,3 +430,34 @@ describe("baja en un clic en los correos opcionales", () => {
     expect(lastPayload().html).not.toContain("Darme de baja");
   });
 });
+
+/**
+ * LIFECYCLE-TRIAL-1 (log §233). The welcome used to promise "Te avisaremos
+ * antes" with no email behind it. It now names the real end date, and only
+ * promises the warning while the trial emails are switched on.
+ */
+describe("bienvenida", () => {
+  afterEach(() => {
+    delete process.env.LIFECYCLE_EMAILS_ENABLED;
+    delete process.env.EMAIL_UNSUBSCRIBE_SECRET;
+  });
+
+  it("names the trial's real end date and asks to add the domain", async () => {
+    await sendWelcomeEmail(CUSTOMER, new Date("2026-09-28T10:00:00Z"));
+    const { html } = lastPayload();
+    expect(html).toContain("5 de octubre");
+    expect(html).toContain("Añadir mi dominio");
+  });
+
+  it("does not promise a warning while the trial emails are off", async () => {
+    await sendWelcomeEmail(CUSTOMER, new Date("2026-09-28T10:00:00Z"));
+    expect(lastPayload().html).not.toContain("Te avisaremos");
+  });
+
+  it("promises it once they are on", async () => {
+    process.env.LIFECYCLE_EMAILS_ENABLED = "true";
+    process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
+    await sendWelcomeEmail(CUSTOMER, new Date("2026-09-28T10:00:00Z"));
+    expect(lastPayload().html).toContain("Te avisaremos 2 días antes");
+  });
+});

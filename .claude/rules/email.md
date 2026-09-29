@@ -55,3 +55,19 @@ igual.
 - **Nada con forma de comentario JSX dentro de un template literal de HTML.**
   `wrap(...)` no es JSX: `{/* … */}` sale tal cual en la bandeja del cliente
   (log §202).
+- **Los correos de la prueba no salen sin su interruptor.** Todo lo de
+  `lib/email/lifecycle/` pasa por `isLifecycleEmailEnabled()`
+  (`LIFECYCLE_EMAILS_ENABLED` + secreto de baja); el ejecutor ni siquiera
+  programa el correo de primer escaneo con el interruptor apagado (§233).
+- **Las reglas de envío viven en `decideTrialEmail`, que es pura.** Una regla
+  nueva (ventana, silencio, prioridad) se escribe ahí y se prueba ahí; el
+  runner sólo lee datos y ejecuta la decisión (§233).
+- **Un envío se anota en `email_sends` sólo si Resend lo aceptó.** Anotar
+  antes convierte un fallo de envío en un correo perdido para siempre (§233;
+  misma regla que el deduplicado de avisos de `.claude/rules/scan.md`).
+- **Cifras de verdad o variante sin cifra.** Menciones sobre respuestas, no
+  sobre prompts; la Puntuación GEO con `resolveGeoScore`; precios de `PLANS`
+  y promo sólo si `getActivePromoPlanIds()` la incluye. Ninguna plantilla
+  tiene un número por defecto (§233, §183, §182).
+- **Todo texto que viene de fuera va por `escapeHtml`**: dominio, nombre de
+  competidor, título y descripción de una recomendación (§233).

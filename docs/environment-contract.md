@@ -500,6 +500,7 @@ actions.
 | `RESEND_API_KEY` | No | Vercel + local `.env.local` | Resend API key (`re_...`) |
 | `RESEND_FROM_EMAIL` | No (defaults to `GenScore <onboarding@resend.dev>`, Resend's own shared test sender) | Vercel | `"GenScore <noreply@genscore.es>"` once a sending domain is verified in the Resend dashboard |
 | `EMAIL_UNSUBSCRIBE_SECRET` | No, but required before any "consejos y ofertas" email can go out | Vercel (Production; Preview optional) | Random string, ≥32 chars (`openssl rand -base64 32`). EMAIL-UNSUB-1 (log §232) |
+| `LIFECYCLE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the trial sequence (first scan ready, D1, D3, D5). Ignored while `EMAIL_UNSUBSCRIBE_SECRET` is unset. LIFECYCLE-TRIAL-1 (log §233) |
 
 Both optional by design: `lib/email/resend.ts`'s `getResendClient()` returns
 `null` when `RESEND_API_KEY` is unset, and every `lib/email/transactional.ts`

@@ -50,6 +50,13 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
     // for audits queued by the day's automatic scans, so it has to run after
     // those scans have finished queueing them.
     why: "post-scan web audit queue, one hour after the scan sweep — ADR 0027"
+  },
+  {
+    path: "/api/cron/lifecycle-emails",
+    schedule: "45 7 * * *",
+    // 09:45 Madrid in summer / 08:45 in winter: a morning inbox, and off the
+    // round hour on purpose (Vercel crons on :00 queue behind everyone else's).
+    why: "trial lifecycle emails D1/D3/D5 — LIFECYCLE-TRIAL-1, log §233"
   }
 ];
 

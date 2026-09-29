@@ -36,6 +36,7 @@ import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 import { emitNotification } from "@/lib/notifications/emit";
+import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
 import { getSiteUrl } from "@/lib/site-url";
 import { enqueueWebAuditJob } from "@/lib/web-audit/audit-job-runner";
 import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
@@ -1219,6 +1220,25 @@ export async function executePendingScan({
         resolvedGaps: resolvedGapsCount
       }
     });
+
+    // LIFECYCLE-TRIAL-1 (log §233): the "primer escaneo listo" email, only
+    // for the account's FIRST completed scan (checked inside, across all its
+    // projects). Nothing is scheduled while the lifecycle switch is off. In
+    // `after()` like the audit dispatch below: it reads the rows this run just
+    // made durable and must not spend this invocation's budget; it never
+    // throws — an email that fails is not a failed scan. The module is loaded
+    // on demand so the scan pipeline does not depend on the email templates
+    // (`.claude/rules/scan.md`: the scan knows it sends, not how).
+    if (isLifecycleEmailEnabled()) {
+      after(async () => {
+        const { maybeSendFirstScanReadyEmail } = await import("@/lib/email/lifecycle/runner");
+        await maybeSendFirstScanReadyEmail(service, {
+          ownerUserId: project.owner_user_id as string,
+          projectId,
+          projectDomain: project.domain as string
+        });
+      });
+    }
 
     // AUDIT-AFTER-SCAN-1: the web audit is no longer something a human has to
     // remember to click. Queued here, after the run is durably 'completed',
