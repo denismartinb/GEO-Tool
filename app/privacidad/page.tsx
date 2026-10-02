@@ -11,7 +11,7 @@ export const metadata: Metadata = contentMetadata({
 
 export default function PrivacidadPage() {
   return (
-    <LegalPageShell title="Política de Privacidad" updated="11 de julio de 2026" activeHref="/privacidad">
+    <LegalPageShell title="Política de Privacidad" updated="28 de septiembre de 2026" activeHref="/privacidad">
       <h2>Responsable del tratamiento</h2>
       <p>
         El responsable del tratamiento de los datos personales recogidos a través de GenScore es{" "}
@@ -38,6 +38,18 @@ export default function PrivacidadPage() {
         consulta para poder responderte (interés legítimo en atenderte, art. 6.1.f RGPD).
       </p>
 
+      <h2>Comunicaciones comerciales</h2>
+      <p>
+        Si tienes una cuenta en GenScore, te enviaremos por email consejos para sacar partido al
+        servicio, novedades del producto y ofertas sobre nuestros planes. Lo hacemos al amparo del
+        art. 21.2 de la Ley 34/2002 (LSSI), por tratarse de productos similares a los que ya usas,
+        y de nuestro interés legítimo (art. 6.1.f RGPD). Puedes oponerte en cualquier momento desde
+        Ajustes → Notificaciones o con el enlace «Darme de baja» que incluye cada email, sin coste
+        y sin necesidad de iniciar sesión. Los emails necesarios para prestar el servicio
+        (seguridad, facturación y cambios de plan) no son comunicaciones comerciales y se envían
+        mientras tengas cuenta.
+      </p>
+
       <h2>A quién comunicamos tus datos (encargados del tratamiento)</h2>
       <p>Para prestar el servicio, algunos datos se comparten con los siguientes proveedores, que actúan como encargados del tratamiento:</p>
       <ul>
@@ -46,7 +58,7 @@ export default function PrivacidadPage() {
         <li><strong>Google (Gemini API)</strong> — procesa los prompts de tu proyecto para simular y analizar respuestas de IA. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Anthropic (Claude API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>OpenAI (ChatGPT API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo, con búsqueda web para obtener fuentes citadas. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
-        <li><strong>Resend</strong> — envía los correos transaccionales de tu cuenta (bienvenida, confirmación de plan contratado, avisos de facturación y de tu periodo de prueba).</li>
+        <li><strong>Resend</strong> — envía los correos de tu cuenta (bienvenida, confirmación de plan contratado, avisos de facturación y de tu periodo de prueba), los avisos que tengas activados y las comunicaciones comerciales descritas arriba.</li>
         <li><strong>Stripe</strong> — procesa los pagos de tu suscripción (datos de facturación y de tu tarjeta; nunca almacenamos ni vemos el número completo de tu tarjeta, lo gestiona Stripe directamente). Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>PostHog</strong> (infraestructura en la Unión Europea) — analítica de producto para entender el uso de la aplicación. Funciona sin cookies (no te identifica entre sesiones ni dispositivos).</li>
         <li><strong>Sentry</strong> — monitorización de errores técnicos de la aplicación, para detectar y corregir fallos.</li>

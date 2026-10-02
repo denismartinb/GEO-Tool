@@ -62,9 +62,24 @@ export default async function SettingsPage({
     .eq("id", user.id)
     .maybeSingle();
 
-  const scoreDropAlert = profile?.notify_score_drop_alert ?? true;
-  const weeklyDigest = profile?.notify_weekly_digest ?? true;
-  const activeAlerts = [scoreDropAlert, weeklyDigest].filter(Boolean).length;
+  // EMAIL-UNSUB-1 (log §232): the two newer columns (migration 0036) in their
+  // own query, same reason as the scan's `sampling_enabled`: a column
+  // PostgREST doesn't know yet fails the WHOLE select, and that must not take
+  // the two older toggles down with it. Missing reads as "subscribed", which
+  // is the default the column itself carries.
+  const { data: newerPrefs } = await supabase
+    .from("profiles")
+    .select("notify_first_scan, notify_lifecycle")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const emailPreferences = {
+    score_drop: profile?.notify_score_drop_alert ?? true,
+    weekly_digest: profile?.notify_weekly_digest ?? true,
+    first_scan: newerPrefs?.notify_first_scan ?? true,
+    lifecycle: newerPrefs?.notify_lifecycle ?? true
+  };
+  const activeAlerts = Object.values(emailPreferences).filter(Boolean).length;
 
   // Only fetched for an admin: the section it feeds is admin-only, and so is
   // the plan pill in the header. A non-admin never triggers the query.
@@ -166,7 +181,7 @@ export default async function SettingsPage({
             <h2 className="set-sech sp" id="avisos">
               Notificaciones
             </h2>
-            <NotificationsSection initialScoreDropAlert={scoreDropAlert} initialWeeklyDigest={weeklyDigest} />
+            <NotificationsSection initial={emailPreferences} />
 
             {/* Last block on the page and deliberately not in the index: an
                 irreversible action is reached by scrolling, not by one click

@@ -1,0 +1,682 @@
+<title>Plantillas de ciclo de vida</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#F2F4F8; --paper:#FFFFFF; --ink:#0B1426; --ink-2:#3B4759; --ink-3:#5B6B82;
+  --line:#E3E8F0; --blue:#2563EB; --blue-soft:#E9EFFD; --neg:#C8323F; --neg-soft:#FDECEE;
+  --pos:#15915A; --pos-soft:#E4F5EC; --warn:#A8660B; --warn-soft:#FDF3E1; --chip:#EEF1F6;
+  --stage:#E6EAF1;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0A101C; --paper:#111A2B; --ink:#EDF1F8; --ink-2:#C3CCDA; --ink-3:#8D9AB0;
+    --line:#223049; --blue:#6E9BFF; --blue-soft:#172748; --neg:#FF7A85; --neg-soft:#3A1A20;
+    --pos:#4FD18E; --pos-soft:#133325; --warn:#F2B35A; --warn-soft:#3A2A12; --chip:#1A2539; --stage:#0E1626;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0A101C; --paper:#111A2B; --ink:#EDF1F8; --ink-2:#C3CCDA; --ink-3:#8D9AB0;
+  --line:#223049; --blue:#6E9BFF; --blue-soft:#172748; --neg:#FF7A85; --neg-soft:#3A1A20;
+  --pos:#4FD18E; --pos-soft:#133325; --warn:#F2B35A; --warn-soft:#3A2A12; --chip:#1A2539; --stage:#0E1626;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink-2);font-family:var(--sans);font-size:15px;line-height:1.6;padding-inline:16px;padding-block:0 64px}
+.wrap{max-width:1180px;margin:0 auto}
+h1,h2,h3,h4{color:var(--ink);text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(28px,4.4vw,40px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:24px;font-weight:800;letter-spacing:-.01em}
+h3{font-size:18px;font-weight:800}
+h4{font-size:14.5px;font-weight:700}
+p{margin:0}
+a{color:var(--blue)}
+code{font-family:var(--mono);font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:4px;color:var(--ink)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--blue)}
+header.top{padding-block:40px 24px;display:grid;gap:14px;border-bottom:1px solid var(--line)}
+.lead{font-size:17px;max-width:70ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--ink-3)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:12px;border-bottom:1px solid var(--line)}
+.bar nav{display:flex;flex-wrap:wrap;gap:6px;margin-right:auto}
+.bar nav a{font-size:12.5px;font-weight:600;text-decoration:none;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+.bar nav a:hover,.bar nav a:focus-visible{border-color:var(--blue);color:var(--blue);outline:none}
+.seg{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{font:600 13px var(--sans);border:0;background:transparent;color:var(--ink-3);padding:6px 12px;border-radius:7px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+section{padding-block:40px 8px;display:grid;gap:18px}
+.sec-head{display:grid;gap:6px}
+.sec-head p{max-width:74ch;color:var(--ink-3)}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.03em;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.t-neg{background:var(--neg-soft);color:var(--neg)} .t-warn{background:var(--warn-soft);color:var(--warn)}
+.t-pos{background:var(--pos-soft);color:var(--pos)} .t-blue{background:var(--blue-soft);color:var(--blue)} .t-grey{background:var(--chip);color:var(--ink-3)}
+.callout{border-radius:12px;padding:14px 18px;font-size:14px;display:grid;gap:6px;color:var(--ink)}
+.callout.warn{background:var(--warn-soft)} .callout.blue{background:var(--blue-soft)}
+.levers{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.lever{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:13.5px;display:grid;gap:4px;align-content:start}
+
+/* template rows */
+.tpl{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:20px;align-items:start;padding-block:26px;border-top:1px solid var(--line)}
+.tpl-meta{display:grid;gap:12px;position:sticky;top:76px}
+.tpl-meta .tags{display:flex;flex-wrap:wrap;gap:6px}
+.kv{display:grid;gap:8px;font-size:13.5px}
+.kv div{display:grid;gap:1px}
+.kv dt{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.kv dd{margin:0;color:var(--ink)}
+.why{font-size:13.5px;margin:0;padding-left:18px;display:grid;gap:3px}
+.stage{background:var(--stage);border-radius:14px;padding:18px;display:flex;justify-content:center;overflow-x:auto}
+.inbox{width:100%;max-width:640px;display:grid;gap:10px}
+.phoneMode .inbox{max-width:375px}
+.inbox-row{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:grid;gap:1px;font-size:13px}
+.inbox-row .from{font-weight:700;color:var(--ink);display:flex;justify-content:space-between;gap:8px}
+.inbox-row .from span{font-weight:500;color:var(--ink-3);font-size:12px}
+.inbox-row .subj{color:var(--ink);font-weight:600}
+.inbox-row .pre{color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+iframe.mail{width:100%;border:0;border-radius:10px;background:#F7F8FB;display:block;height:900px}
+.variant-note{font-size:13px;background:var(--paper);border:1px dashed var(--line);border-radius:10px;padding:10px 12px;color:var(--ink-2)}
+
+/* UI mocks */
+.mocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.mock{background:var(--stage);border-radius:14px;padding:18px;display:grid;gap:10px;align-content:start}
+.mock > h4{font-size:13px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.07em}
+.ui{background:#fff;color:#0B1426;border:1px solid #E7EAF0;border-radius:14px;padding:22px;font-family:var(--sans);display:grid;gap:12px;color-scheme:light}
+.ui .t{font-size:20px;font-weight:800;letter-spacing:-.01em}
+.ui .s{font-size:13.5px;color:#5B6B82}
+.ui .field{display:grid;gap:4px;font-size:13px;font-weight:600;color:#3B4759}
+.ui .inp{border:1px solid #D9DFE8;border-radius:10px;padding:10px 12px;font-size:14px;color:#94A1B5;font-weight:400}
+.ui .btn{background:#2563EB;color:#fff;border-radius:10px;padding:11px;text-align:center;font-weight:700;font-size:14px}
+.ui .btn.ghost{background:#fff;color:#0B1426;border:1px solid #D9DFE8}
+.ui .chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#3B4759;line-height:1.45}
+.ui .box{flex:none;width:18px;height:18px;border:1.5px solid #B9C3D3;border-radius:5px;margin-top:1px;background:#fff}
+.ui .legal{font-size:12px;color:#5B6B82;line-height:1.5}
+.ui .legal a{color:#2563EB;font-weight:600;text-decoration:none}
+.ui .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #EEF1F6;font-size:13.5px}
+.ui .row:first-of-type{border-top:0}
+.ui .row b{display:block;color:#0B1426}
+.ui .row span{color:#5B6B82;font-size:12.5px}
+.ui .sw{flex:none;width:38px;height:22px;border-radius:999px;background:#2563EB;position:relative}
+.ui .sw::after{content:"";position:absolute;right:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff}
+.ui .sw.lock{background:#C9D1DD}
+.ui .ok{width:40px;height:40px;border-radius:12px;background:#E4F5EC;color:#15915A;font-weight:800;display:grid;place-items:center;font-size:20px}
+.ui .divider{display:flex;align-items:center;gap:10px;font-size:12px;color:#94A1B5}
+.ui .divider::before,.ui .divider::after{content:"";flex:1;height:1px;background:#E7EAF0}
+.policy{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 20px;font-size:14px;display:grid;gap:8px;max-width:78ch}
+
+/* plan */
+.phases{display:grid;gap:12px}
+.ph{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:grid;grid-template-columns:64px 1fr;gap:16px}
+.ph .n{font-family:var(--mono);font-weight:600;font-size:20px;color:var(--blue)}
+.ph .body{display:grid;gap:8px;font-size:14px}
+.ph ul{margin:0;padding-left:18px;display:grid;gap:3px}
+.ph .tags{display:flex;flex-wrap:wrap;gap:6px}
+.ph.done .n{color:var(--pos)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+table.grid{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
+table.grid th{text-align:left;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--bg)}
+table.grid td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+table.grid tr:last-child td{border-bottom:0}
+table.grid td:first-child{color:var(--ink);font-weight:600}
+.closing{margin-top:28px;padding:20px 22px;border-radius:12px;background:var(--ink);color:var(--paper);font-weight:700;font-size:16px}
+
+@media (max-width:860px){
+  .tpl{grid-template-columns:1fr}
+  .tpl-meta{position:static}
+  .stage{padding:10px}
+}
+@media (max-width:560px){ .ph{grid-template-columns:1fr;gap:4px} }
+@media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Para aprobar · diseño y plan · 28 sept 2026</span>
+  <h1>Plantillas de email, consentimiento y baja</h1>
+  <p class="lead">Las plantillas nuevas y las ajustadas, montadas con el mismo sistema de <code>lib/email/transactional.ts</code> (cabecera de marca, tarjeta de 600 px, tipografía del sistema, azul #2563EB). Debajo, las pantallas de consentimiento y baja, y el plan completo por fases.</p>
+  <div class="meta">
+    <span>Datos de ejemplo: <b>clinicaaurora.es</b> y sus competidores son inventados. En producción cada cifra se lee del escaneo real.</span>
+    <span>Promo: hasta el 31 oct (<a href="https://github.com/denismartinb/GEO-Tool/pull/541">PR #541</a>)</span>
+  </div>
+</header>
+
+<div class="bar">
+  <nav aria-label="Secciones">
+    <a href="#palancas">Palancas</a>
+    <a href="#prueba">Durante la prueba</a>
+    <a href="#despues">Después de la prueba</a>
+    <a href="#consentimiento">Consentimiento y baja</a>
+    <a href="#plan">Plan por fases</a>
+  </nav>
+  <div class="seg" role="group" aria-label="Ancho de la vista previa">
+    <button type="button" id="w-desk" aria-pressed="true">Escritorio</button>
+    <button type="button" id="w-phone" aria-pressed="false">Móvil 375</button>
+  </div>
+</div>
+
+<section id="palancas">
+  <div class="sec-head">
+    <span class="eyebrow">Criterio</span>
+    <h2>Qué hace que estas plantillas conviertan</h2>
+    <p>El diseño es el de siempre. Lo que cambia es el orden del contenido y el lenguaje. Todas las palancas se apoyan en datos reales: no hay urgencia inventada, contadores falsos ni testimonios nuevos.</p>
+  </div>
+  <div class="levers">
+    <div class="lever"><h4>Su dato en el asunto</h4><p>«clinicaaurora.es: la IA te menciona en 6 de 45 respuestas» se abre más que «Tu escaneo ha terminado». Si falta el dato, el asunto cambia a su versión sin cifra.</p></div>
+    <div class="lever"><h4>Un botón, un destino</h4><p>Cada email tiene un solo CTA principal que lleva directo a la pantalla del dato: Visión general, Recomendaciones o el modal de plan con <code>?openPlan=pro</code>.</p></div>
+    <div class="lever"><h4>Comparación con un rival real</h4><p>Ver que un competidor aparece 3 veces más mueve más que cualquier puntuación suelta. Se usa el competidor más mencionado del último escaneo.</p></div>
+    <div class="lever"><h4>Pérdida concreta</h4><p>«De 3 motores a 1» y «sin escaneo diario», leído de <code>plans-data.ts</code>. Es lo que pasa de verdad al bajar a Free.</p></div>
+    <div class="lever"><h4>Precio anclado y fecha real</h4><p>179 € tachado, 59 €/mes durante 6 meses, −67 % calculado, hasta el 31 oct. La fecha y los precios salen de <code>PROMO_ENDS_AT</code> y <code>PLANS</code>.</p></div>
+    <div class="lever"><h4>Menos riesgo al decidir</h4><p>«Sin permanencia, cancelas desde Facturación» y «tus datos se conservan». Las dos cosas son ciertas hoy.</p></div>
+    <div class="lever"><h4>Prueba social verdadera</h4><p>Solo el testimonio de Nordika Home (+128 % de cuota de voz en 3 meses), el único confirmado como real (log §146).</p></div>
+    <div class="lever"><h4>Alternativa más barata</h4><p>Quien no llega a Pro ve Starter a 19 €/mes como enlace secundario. Es mejor que perderlo del todo.</p></div>
+  </div>
+</section>
+
+<section id="prueba">
+  <div class="sec-head">
+    <span class="eyebrow">Días 0 a 7 · Pro</span>
+    <h2>Durante la prueba</h2>
+  </div>
+  <div id="tpl-trial"></div>
+</section>
+
+<section id="despues">
+  <div class="sec-head">
+    <span class="eyebrow">Desde el día 7 · Free</span>
+    <h2>Fin de prueba y recuperación</h2>
+    <p>Las 5 cuentas ya caducadas entran aquí cuando todo esté aprobado e implementado: reciben la versión «tardía» del fin de prueba y después D+3 y D+10, contados desde ese envío.</p>
+  </div>
+  <div id="tpl-post"></div>
+</section>
+
+<section id="consentimiento">
+  <div class="sec-head">
+    <span class="eyebrow">Alta, ajustes y baja</span>
+    <h2>Consentimiento y baja</h2>
+    <p>Modelo decidido: <b>sin casilla en el alta</b>. El envío se apoya en la <b>relación contractual y el interés legítimo</b> (art. 21.2 LSSI y art. 6.1.f RGPD), no en un consentimiento: un «sí» incluido en las condiciones generales no valdría como consentimiento para el RGPD, que lo exige específico y separado. El alta lleva una línea que informa de los envíos y de cómo darse de baja. La baja está siempre en Ajustes → Notificaciones y en el pie de cada email. Cada baja o reactivación queda registrada con fecha y origen.</p>
+  </div>
+  <div class="mocks">
+    <div class="mock">
+      <h4>Alta · /signup</h4>
+      <div class="ui">
+        <div class="t">Crea tu cuenta</div>
+        <div class="s">7 días de Pro gratis. Sin tarjeta.</div>
+        <div class="field">Email<div class="inp">nombre@empresa.com</div></div>
+        <div class="field">Contraseña<div class="inp">Mínimo 8 caracteres</div></div>
+        <div class="btn">Crear cuenta</div>
+        <div class="divider">o</div>
+        <div class="btn ghost">Continuar con Google</div>
+                <div class="legal">Al continuar, aceptas los <a href="#consentimiento">Términos</a> y la <a href="#consentimiento">Política de privacidad</a>. Te enviaremos emails sobre tu cuenta y, como cliente, consejos para sacarle partido y ofertas de GenScore. Puedes darte de baja cuando quieras en Ajustes o desde cualquier email.</div>
+      </div>
+      <p style="font-size:13px">Sin casilla. La línea informativa sustituye a la actual («Al continuar, aceptas…») en las dos vías, email y Google. «Términos» y «Política de privacidad» pasan a ser enlaces; hoy no lo son.</p>
+    </div>
+    <div class="mock">
+      <h4>Ajustes → Notificaciones</h4>
+      <div class="ui">
+        <div class="t" style="font-size:17px">Emails</div>
+        <div class="row"><div><b>Caída de puntuación</b><span>Cuando tu puntuación baja 10 puntos o más en dos escaneos</span></div><span class="sw" aria-hidden="true"></span></div>
+        <div class="row"><div><b>Resumen semanal</b><span>Los lunes, la evolución de cada dominio</span></div><span class="sw" aria-hidden="true"></span></div>
+        <div class="row"><div><b>Primer escaneo listo</b><span>Una vez, cuando termina tu primer escaneo</span></div><span class="sw" aria-hidden="true"></span></div>
+        <div class="row"><div><b>Consejos, novedades y ofertas</b><span>Cómo sacarle partido a GenScore y promociones</span></div><span class="sw" aria-hidden="true"></span></div>
+        <div class="row"><div><b>Tu cuenta y facturación</b><span>Seguridad, pagos y cambios de plan. Siempre activos.</span></div><span class="sw lock" aria-hidden="true"></span></div>
+      </div>
+    </div>
+    <div class="mock">
+      <h4>Página de baja · /baja (sin sesión)</h4>
+      <div class="ui">
+        <div class="t" style="font-size:18px">¿Dejar de recibir consejos y ofertas?</div>
+        <div class="s">Se aplicará a <b style="color:#0B1426">ma•••@clinicaaurora.es</b>. Seguirás recibiendo los emails de tu cuenta: seguridad, pagos y cambios de plan.</div>
+        <div class="btn">Confirmar baja</div>
+        <div class="legal">¿Prefieres elegir qué recibes? <a href="#consentimiento">Gestionar mis preferencias</a></div>
+      </div>
+      <div class="ui">
+        <div class="ok" aria-hidden="true">✓</div>
+        <div class="t" style="font-size:18px">Hecho. No volverás a recibir consejos ni ofertas.</div>
+        <div class="s">El cambio ya está aplicado. Si ha sido sin querer, puedes deshacerlo.</div>
+        <div class="btn ghost">Volver a suscribirme</div>
+      </div>
+      <p style="font-size:13px">El botón de confirmar evita que los antivirus que abren enlaces den de baja a alguien sin querer. El botón «Cancelar suscripción» de Gmail usa un POST aparte y se aplica al momento.</p>
+    </div>
+  </div>
+
+  <div class="policy">
+    <h4>Nuevo apartado en /privacidad (borrador, a validar con tu asesor)</h4>
+    <p><b>Comunicaciones comerciales.</b> Si tienes una cuenta en GenScore, te enviaremos por email consejos para sacar partido al servicio, novedades del producto y ofertas sobre nuestros planes. Lo hacemos al amparo del art. 21.2 de la Ley 34/2002 (LSSI), por tratarse de productos similares a los que ya usas, y de nuestro interés legítimo (art. 6.1.f RGPD). Puedes oponerte en cualquier momento desde Ajustes → Notificaciones o con el enlace «Darme de baja» que incluye cada email, sin coste y sin iniciar sesión. Los emails necesarios para prestar el servicio (seguridad, facturación y cambios de plan) no son comunicaciones comerciales y se envían mientras tengas cuenta.</p>
+  </div>
+
+  <div class="callout warn">
+    <b>Riesgo que asumes con este modelo, dicho claro.</b> El art. 21.2 LSSI pide ofrecer la posibilidad de oponerse <i>también en el momento de recoger el email</i>, no solo en cada envío. Informar en el alta sin darle una forma de oponerse ahí mismo es la lectura menos conservadora de ese requisito. Mitigación: la línea del alta enlaza a las preferencias, y la baja está en un clic en cada email y en Ajustes. Conviene que tu asesor lo valide antes de encender los envíos, igual que el apartado de /privacidad.</div>
+</section>
+
+<section id="plan">
+  <div class="sec-head">
+    <span class="eyebrow">Implementación</span>
+    <h2>Plan por fases</h2>
+    <p>Quedan cuatro PR (B a E); la parte de coste de la Fase A ya está en main. Los envíos de ciclo de vida tienen un interruptor (<code>LIFECYCLE_EMAILS_ENABLED</code>) que está apagado hasta que tú lo enciendas. Así las 5 cuentas caducadas no reciben nada hasta que todo esté aprobado e implementado, como pediste.</p>
+  </div>
+
+  <div class="phases">
+    <div class="ph done"><span class="n">0</span><div class="body">
+      <h3>PROMO-EXTEND-OCT-1 · promo al 31 de octubre</h3>
+      <p>Hecho y abierto como <a href="https://github.com/denismartinb/GEO-Tool/pull/541">PR #541</a>. Hay que mergear antes de esta medianoche. <b>Pendiente tuyo en Stripe:</b> crear dos cupones nuevos con <code>redeem_by</code> = 31 oct 23:59 y poner sus IDs en Vercel.</p>
+      <div class="tags"><span class="tag t-pos">PR abierto</span><span class="tag t-warn">Urgente</span></div>
+    </div></div>
+
+    <div class="ph done"><span class="n">A</span><div class="body">
+      <h3>TRIAL-EXPIRY · la prueba deja de costar al caducar</h3>
+      <p><b>Ya resuelto en <code>main</code></b> por ALERTS-SCOPE-1 (<a href="https://github.com/denismartinb/GEO-Tool/pull/542">PR #542</a>, log §229), de otra sesión. <code>resolveSystemPlanId</code> hace que el barrido, el reintento y el vigilante lean el plan real: una prueba caducada ya no se escanea. azotea.cl y rideflumserberg.ch dejaron de costar hoy.</p>
+      <p>Lo que <b>no</b> hace, a propósito: no pasa la cuenta a Free ni envía el email de fin de prueba. Las dos cosas siguen ocurriendo solo cuando el usuario vuelve. El email de fin de prueba enviado desde el servidor pasa a la Fase D, detrás del interruptor. Ya no hace falta un PR propio para esta fase.</p>
+      <div class="tags"><span class="tag t-pos">Hecho en main</span><span class="tag t-grey">Sin PR propio</span></div>
+    </div></div>
+
+    <div class="ph"><span class="n">B</span><div class="body">
+      <h3>EMAIL-CONSENT-UNSUB-1 · consentimiento y baja</h3>
+      <ul>
+        <li><b>Migración 0036:</b> <code>profiles.notify_lifecycle</code> y <code>notify_first_scan</code> (boolean, true por defecto); tabla <code>email_consent_events</code> (usuario, categoría, baja o reactivación, origen: Ajustes, enlace o botón de Gmail, fecha) para poder demostrar cada baja; tabla <code>email_sends</code> con clave única <code>(user_id, kind)</code>. RLS: el dueño lee lo suyo y solo service-role escribe.</li>
+        <li><b>Alta:</b> sin casilla. Solo cambia el texto legal de <code>app/signup/page.tsx</code> (línea informativa y enlaces a Términos y Privacidad). No toca el flujo de <code>signUp</code> ni el de Google.</li>
+        <li><b>Baja:</b> <code>lib/email/unsubscribe.ts</code> (HMAC-SHA256 con <code>EMAIL_UNSUBSCRIBE_SECRET</code>, comparación en tiempo constante), <code>app/baja/page.tsx</code> con confirmar y deshacer, y <code>app/api/email/unsubscribe/route.ts</code> para el POST one-click (RFC 8058). La escritura service-role está limitada a una columna del usuario del token.</li>
+        <li><b>Envío:</b> <code>sendEmail</code> recibe <code>category</code> y <code>userId</code>, comprueba la preferencia, añade pie y cabeceras <code>List-Unsubscribe</code>, y nunca envía lo comercial sin secreto configurado. Un test obliga a declarar la categoría en cada <code>send*</code>.</li>
+        <li>Ajustes con tres interruptores nuevos, columna «Baja» en la consola de operador, apartado en /privacidad, variables en <code>environment-contract.md</code> y <code>env-schema.ts</code>.</li>
+        <li>Regla de ruta nueva <code>.claude/rules/email.md</code> para <code>lib/email/**</code>.</li>
+      </ul>
+      <div class="tags"><span class="tag t-warn">Migración</span><span class="tag t-warn">Escritura service-role</span><span class="tag t-grey">Secreto nuevo en Vercel</span><span class="tag t-grey">Revisión data-guardian</span></div>
+    </div></div>
+
+    <div class="ph"><span class="n">C</span><div class="body">
+      <h3>LIFECYCLE-TRIAL-1 · secuencia de prueba</h3>
+      <ul>
+        <li><code>lib/email/lifecycle/</code>: función pura <code>decideLifecycleEmail(perfil, envíos, datos, ahora)</code>. Devuelve qué email toca o nada. Cubre las reglas de 48 h, lunes, corte al contratar, comped y cuentas internas. Es donde se concentran los tests.</li>
+        <li>Cron nuevo <code>/api/cron/lifecycle-emails</code> a las 07:45 UTC (09:45 en Madrid en verano, 08:45 en invierno), con presupuesto de tiempo y reintento seguro gracias a <code>email_sends</code>.</li>
+        <li>Plantillas: bienvenida ajustada, D1 (dos variantes), D3 y D5.</li>
+        <li>«Primer escaneo listo»: se dispara al finalizar el primer run completado de la cuenta, desde el paso de finalizar del ejecutor, sin bloquearlo y con deduplicado en <code>email_sends</code>.</li>
+        <li>UTM en cada CTA (<code>utm_source=email&amp;utm_campaign=lifecycle_d3</code>).</li>
+      </ul>
+      <div class="tags"><span class="tag t-warn">Cron nuevo</span><span class="tag t-grey">Toca finalizar del escaneo</span></div>
+    </div></div>
+
+    <div class="ph"><span class="n">D</span><div class="body">
+      <h3>LIFECYCLE-WINBACK-1 · fin de prueba y recuperación</h3>
+      <ul>
+        <li>Fin de prueba nuevo, enviado por el cron el día que caduca. Versión «tardía» para quien caducó hace más de 48 h sin recibirlo: son las 5 cuentas actuales, y se detectan solas porque no tienen fila en <code>email_sends</code>.</li>
+        <li>D+3 y D+10 con variantes según haya promo o no.</li>
+        <li>Cuando mergees esta fase, activas <code>LIFECYCLE_EMAILS_ENABLED</code> y salen los primeros envíos. Recomiendo hacer antes un envío de prueba a tu propia cuenta con cada plantilla.</li>
+      </ul>
+      <div class="tags"><span class="tag t-grey">Sin migración nueva</span></div>
+    </div></div>
+
+    <div class="ph"><span class="n">E</span><div class="body">
+      <h3>LIFECYCLE-MEASURE-1 · medir</h3>
+      <ul>
+        <li>En la consola de operador, por usuario: último email de ciclo de vida, si volvió en las 48 h siguientes y si se dio de baja.</li>
+        <li>Revisión a las dos semanas con datos reales antes de tocar copys. Con 10 cuentas, lo que cuenta son los casos concretos, no los porcentajes.</li>
+      </ul>
+      <div class="tags"><span class="tag t-grey">Opcional</span></div>
+    </div></div>
+  </div>
+
+  <div class="tbl">
+    <table class="grid">
+      <thead><tr><th>Orden</th><th>PR abiertos a la vez</th><th>Qué necesita de ti</th></tr></thead>
+      <tbody>
+        <tr><td>0, y después B</td><td>2 como máximo (0 y B)</td><td>Merge de #541 hoy; cupones de Stripe; aprobar esta página</td></tr>
+        <tr><td>C cuando B esté mergeado</td><td>2</td><td>Human Gate de C; decidir si se lanza el piloto (texto del alta, Ajustes, /baja)</td></tr>
+        <tr><td>D cuando C esté mergeado</td><td>1</td><td>Human Gate de D; validación del asesor; encender el interruptor</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Lo que necesito que confirmes</h3>
+  <div class="phases">
+    <div class="ph"><span class="n">1</span><div class="body"><p><b>El diseño y los textos de esta página</b>, incluido el alta sin casilla con base en el interés legítimo. Si apruebas, el HTML se guarda en <code>docs/design-reference/lifecycle-emails-1/</code> dentro del PR que lo implementa, como pide CLAUDE.md.</p></div></div>
+    <div class="ph"><span class="n">2</span><div class="body"><p><b>Las áreas restringidas</b>: la migración 0036, la escritura service-role en la ruta de baja y el cron nuevo de ciclo de vida.</p></div></div>
+    <div class="ph"><span class="n">3</span><div class="body"><p><b>Remitente.</b> Por defecto, «GenScore». Propongo que el D+10 sin promo lo firmes tú, con respuesta a tu buzón. Dime el nombre y la dirección que quieres usar.</p></div></div>
+  </div>
+
+  <div class="closing">¿Apruebas este plan y estas plantillas? No implementaré las fases A a E hasta que confirmes.</div>
+</section>
+</div>
+
+<script>
+(function(){
+  var HDR = "data:image/png;base64,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";
+  var FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  var SITE = "https://www.genscore.es";
+
+  /* ---- Helpers copiados de lib/email/transactional.ts ---- */
+  function wrap(body, opts){
+    opts = opts || {};
+    var footer = opts.footer || SUPPORT_FOOTER;
+    return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">'+
+    '<style>body,table,td,a{-webkit-text-size-adjust:100%}table,td{mso-table-lspace:0;mso-table-rspace:0}img{border:0;outline:none}body{margin:0;padding:0;background:#F7F8FB}'+
+    '@media only screen and (max-width:600px){.em-card{width:100%!important;border-radius:0!important}.em-px{padding-left:20px!important;padding-right:20px!important}.em-stack-td{display:block!important;width:100%!important}.em-stack-td.em-stack-second{padding-top:12px!important}.em-align-left-mobile{text-align:left!important}.em-score-num{font-size:36px!important}.em-hide-mobile{display:none!important}}</style></head>'+
+    '<body style="margin:0;padding:0;background:#F7F8FB;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;"><tr><td align="center" style="padding:28px 14px;">'+
+    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" class="em-card" style="width:600px;max-width:600px;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E7EAF0;font-family:'+FONT+';">'+
+    '<tr><td style="background:#fff;font-size:0;line-height:0;"><img src="'+HDR+'" width="600" height="120" alt="GenScore — Generative Engine Optimization" style="display:block;width:100%;max-width:600px;height:auto;"></td></tr>'+
+    '<tr><td style="background:#2563EB;height:3px;line-height:3px;font-size:0;">&nbsp;</td></tr>'+
+    '<tr><td class="em-px" style="padding:36px 34px 6px;">'+body+'</td></tr>'+
+    '<tr><td class="em-px" style="padding:24px 34px 30px;"><div style="border-top:1px solid #EEF1F6;padding-top:18px;font-size:12.5px;line-height:1.6;color:#5B6B82;">'+footer+'</div></td></tr>'+
+    '</table></td></tr></table></body></html>';
+  }
+  var L = 'color:#2563EB;text-decoration:none;font-weight:600;';
+  var SUPPORT_FOOTER = '¿Dudas? Escríbenos a <a href="#" style="'+L+'">soporte@genscore.es</a>.<br>GenScore · Visibilidad de marca en respuestas de IA · genscore.es';
+  function eyebrow(t,c){return '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:'+(c||'#2563EB')+';">'+t+'</div>';}
+  function heading(t){return '<h1 style="margin:12px 0 0;font-size:24px;line-height:1.18;letter-spacing:-.02em;color:#0B1426;font-weight:800;">'+t+'</h1>';}
+  function para(h){return '<p style="margin:16px 0 0;font-size:15px;line-height:1.62;color:#3B4759;">'+h+'</p>';}
+  function button(label){return '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 6px;"><tr><td align="center" bgcolor="#2563EB" style="border-radius:10px;"><a href="#" style="display:inline-block;padding:14px 28px;font-family:'+FONT+';font-weight:700;font-size:15px;color:#fff;text-decoration:none;border-radius:10px;">'+label+'</a></td></tr></table>';}
+  function subtext(h){return '<p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#5B6B82;">'+h+'</p>';}
+  function sectionLabel(t){return '<div style="margin:30px 0 12px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5B6B82;">'+t+'</div>';}
+  function b(t){return '<b style="color:#0B1426;">'+t+'</b>';}
+  function statCell(v,l,cls){return '<td width="33%" class="'+cls+'" style="padding:14px 6px;text-align:center;"><div style="font-size:21px;font-weight:800;color:#0B1426;line-height:1;font-variant-numeric:tabular-nums;">'+v+'</div><div style="font-size:11px;color:#5B6B82;margin-top:5px;">'+l+'</div></td>';}
+  function statRow(c){return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr>'+c+'</tr></table>';}
+  function scoreBar(p,color){p=Math.max(0,Math.min(100,p));return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;"><tr><td style="background:'+color+';width:'+p+'%;height:6px;font-size:0;border-radius:3px 0 0 3px;">&nbsp;</td><td style="background:#E7EAF0;width:'+(100-p)+'%;height:6px;font-size:0;border-radius:0 3px 3px 0;">&nbsp;</td></tr></table>';}
+
+  /* ---- Piezas nuevas, mismo lenguaje visual ---- */
+  function link(t){return '<a href="#" style="'+L+'">'+t+'</a>';}
+  function lifecycleFooter(){return 'Recibes este email porque creaste una cuenta en GenScore. '+link('Darme de baja de consejos y ofertas')+' · '+link('Preferencias de email')+'<br>GenScore · Visibilidad de marca en respuestas de IA · genscore.es';}
+  function alertFooter(what){return '¿No quieres recibir '+what+'? '+link('Darme de baja en un clic')+' · '+link('Preferencias de email')+'<br>GenScore · genscore.es';}
+  function serviceFooter(){return SUPPORT_FOOTER.replace('<br>',' · '+link('Preferencias de email')+'<br>');}
+
+  function checklist(items){
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr><td style="padding:8px 18px;">'+
+      items.map(function(it,i){
+        var done = it[0]==='done', now = it[0]==='now';
+        var dot = done ? '<div style="width:22px;height:22px;border-radius:50%;background:#15915A;color:#fff;font-size:12px;font-weight:800;text-align:center;line-height:22px;">✓</div>'
+          : now ? '<div style="width:22px;height:22px;border-radius:50%;background:#2563EB;color:#fff;font-size:12px;font-weight:800;text-align:center;line-height:22px;">'+(i+1)+'</div>'
+          : '<div style="width:20px;height:20px;border-radius:50%;border:1px solid #C9D1DD;color:#94A1B5;font-size:12px;font-weight:700;text-align:center;line-height:20px;">'+(i+1)+'</div>';
+        var txt = done ? '<span style="color:#5B6B82;text-decoration:line-through;">'+it[1]+'</span>' : now ? '<b style="color:#0B1426;">'+it[1]+'</b>' : '<span style="color:#3B4759;">'+it[1]+'</span>';
+        var extra = it[2] ? '<div style="font-size:12.5px;color:#5B6B82;margin-top:2px;">'+it[2]+'</div>' : '';
+        return '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:10px 0;"><tr><td style="width:24px;vertical-align:top;">'+dot+'</td><td style="padding-left:12px;font-size:14.5px;line-height:1.45;">'+txt+extra+'</td></tr></table>';
+      }).join('')+'</td></tr></table>';
+  }
+
+  function versusBars(rows, caption){
+    var max = Math.max.apply(null, rows.map(function(r){return r[1];}));
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr><td style="padding:18px 20px 16px;">'+
+      '<div style="font-size:12.5px;color:#5B6B82;font-weight:600;margin-bottom:6px;">'+caption+'</div>'+
+      rows.map(function(r){
+        var p = Math.round(r[1]/max*100); var you = r[2];
+        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;"><tr>'+
+          '<td style="font-size:13.5px;color:'+(you?'#0B1426':'#3B4759')+';font-weight:'+(you?'800':'600')+';">'+r[0]+'</td>'+
+          '<td align="right" style="font-size:13.5px;font-weight:800;color:#0B1426;font-variant-numeric:tabular-nums;">'+r[1]+' <span style="font-weight:500;color:#5B6B82;">de '+r[3]+'</span></td></tr>'+
+          '<tr><td colspan="2" style="padding-top:6px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'+
+          '<td style="background:'+(you?'#2563EB':'#94A1B5')+';width:'+Math.max(p,2)+'%;height:8px;font-size:0;border-radius:4px 0 0 4px;">&nbsp;</td>'+
+          '<td style="background:#E7EAF0;width:'+(100-Math.max(p,2))+'%;height:8px;font-size:0;border-radius:0 4px 4px 0;">&nbsp;</td></tr></table></td></tr></table>';
+      }).join('')+'</td></tr></table>';
+  }
+
+  function priceBox(o){
+    var off = Math.round((o.list-o.promo)/o.list*100);
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;border:2px solid #2563EB;border-radius:16px;"><tr><td style="padding:20px 22px;">'+
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;">Precio de lanzamiento · '+o.plan+'</td>'+
+      '<td align="right"><span style="display:inline-block;background:#E7F6EE;color:#15915A;font-weight:800;font-size:12.5px;padding:4px 10px;border-radius:999px;">−'+off+'%</span></td></tr></table>'+
+      '<div style="margin-top:10px;"><span style="font-size:18px;color:#94A1B5;text-decoration:line-through;font-weight:700;">'+o.list+' €</span>'+
+      '<span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;padding-left:10px;">'+o.promo+' €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>'+
+      '<div style="font-size:13px;color:#3B4759;margin-top:4px;">Durante 6 meses. Después, '+o.list+' €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>'+
+      '<div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Disponible hasta el 31 de octubre</div>'+
+      '</td></tr></table>';
+  }
+
+  function lossTable(date){
+    var rows = [["Motores de IA","3 (Gemini, Claude, ChatGPT)","1"],["Prompts monitorizados","~100","~10"],["Escaneo","Diario","Sin monitorización"],["Recomendaciones","Bucle completo","3 acciones"],["Generador de soluciones","Incluido","—"]];
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #E7EAF0;border-radius:14px;overflow:hidden;">'+
+      '<tr><td style="padding:10px 14px;background:#F7F8FB;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5B6B82;"></td>'+
+      '<td style="padding:10px 14px;background:#F7F8FB;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#2563EB;">Pro, hoy</td>'+
+      '<td style="padding:10px 14px;background:#F7F8FB;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#D23B48;">Free, desde el '+date+'</td></tr>'+
+      rows.map(function(r){return '<tr><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#3B4759;">'+r[0]+'</td><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#0B1426;font-weight:700;">'+r[1]+'</td><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#5B6B82;">'+r[2]+'</td></tr>';}).join('')+
+      '</table>';
+  }
+
+  function quote(){
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 0;background:#F7F8FB;border-radius:14px;"><tr><td style="padding:18px 20px;">'+
+      '<div style="font-size:14.5px;line-height:1.55;color:#0B1426;">«No sabíamos si ChatGPT nos nombraba, y mucho menos por qué. En tres meses hemos subido un <b>128% nuestra cuota de voz en IA</b>.»</div>'+
+      '<div style="font-size:12.5px;color:#5B6B82;margin-top:8px;">Nerea Solís · Marketing digital en Nordika Home</div></td></tr></table>';
+  }
+
+  function recCard(){
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#E9EFFD;border-radius:14px;"><tr><td style="padding:18px 20px;">'+
+      '<span style="display:inline-block;background:#fff;color:#2563EB;font-weight:700;font-size:11.5px;padding:3px 9px;border-radius:999px;">Prioridad alta</span> '+
+      '<span style="display:inline-block;background:#fff;color:#3B4759;font-weight:600;font-size:11.5px;padding:3px 9px;border-radius:999px;">Respaldada por ChatGPT y Gemini</span>'+
+      '<div style="margin-top:12px;font-size:16px;line-height:1.4;color:#0B1426;font-weight:800;">Publica una página de tratamientos con precios orientativos</div>'+
+      '<div style="margin-top:6px;font-size:14px;line-height:1.55;color:#3B4759;">Cuando alguien pregunta «¿cuánto cuesta un implante dental en Bilbao?», la IA cita a quien publica rangos de precio. Clínica Sonrisa Norte los tiene; tú no.</div>'+
+      '</td></tr></table>';
+  }
+
+  function scoreCard(score, caption, pillHtml){
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr>'+
+      '<td class="em-stack-td" style="padding:22px 24px;vertical-align:middle;"><div style="font-size:12.5px;color:#5B6B82;font-weight:600;">'+caption+'</div>'+
+      '<div class="em-score-num" style="font-size:46px;font-weight:800;color:#0B1426;line-height:1;letter-spacing:-.03em;margin-top:6px;">'+score+'<span style="font-size:18px;color:#94A1B5;font-weight:700;"> / 100</span></div>'+scoreBar(score,'#2563EB')+'</td>'+
+      (pillHtml?'<td class="em-stack-td em-stack-second em-align-left-mobile" style="padding:22px 24px;vertical-align:middle;text-align:right;">'+pillHtml+'</td>':'')+
+      '</tr></table>';
+  }
+
+  var D = "clinicaaurora.es";
+
+  var TRIAL = [
+    {
+      id:"t-welcome", name:"Bienvenida", when:"D0 · al confirmar el alta", cat:["Servicio","t-grey"], state:["Ajustada","t-grey"],
+      subject:"Bienvenido a GenScore — tu prueba de Pro ya está activa",
+      pre:"3 pasos y 5 minutos para ver si ChatGPT, Gemini y Claude te recomiendan.",
+      variant:"Se envía siempre, en el instante del alta, antes de que exista ningún dominio: el CTA «Añadir mi dominio» es correcto en ese momento. Quien añade su dominio y escanea en esa misma sesión recibe además «Primer escaneo listo» y no recibe D1.",
+      why:["El CTA pasa de «Crear mi primer análisis» a «Añadir mi dominio»: dice exactamente qué pasa al pulsar.","Pasos numerados: el siguiente paso es obvio.","Fecha concreta de fin y promesa de aviso, que D5 cumple."],
+      data:"Fecha de fin de prueba (trial_ends_at).",
+      html: wrap(
+        eyebrow("Tu prueba Pro · 7 días")+
+        heading("En 5 minutos sabrás si la IA te recomienda")+
+        para("Tu cuenta tiene acceso completo a "+b("Pro")+" hasta el "+b("5 de octubre")+", sin tarjeta. Tres pasos y verás qué dicen de ti ChatGPT, Gemini y Claude, y a qué competidores recomiendan en tu lugar.")+
+        checklist([["done","Crear tu cuenta"],["now","Añadir tu dominio","Te sugerimos competidores y preguntas automáticamente."],["next","Lanzar tu primer escaneo","Tarda unos minutos. Te avisamos por email al terminar."]])+
+        button("Añadir mi dominio")+
+        subtext("Tu prueba termina el 5 de octubre. Te avisaremos 2 días antes y no se te cobra nada de forma automática."),
+        {footer:serviceFooter()}
+      )
+    },
+    {
+      id:"t-first", name:"Primer escaneo listo", when:"Evento · primer run completado", cat:["Alerta de producto","t-blue"], state:["Nueva","t-blue"],
+      subject:D+": la IA te menciona en 6 de 45 respuestas",
+      pre:"Tu primer escaneo ha terminado. Clínica Sonrisa Norte aparece en 19.",
+      why:["Su propio dato en el asunto: el mayor motivo para abrir.","La comparación con el rival crea tensión, y una puntuación sola no lo hace.","Un solo CTA a Visión general, donde está todo."],
+      data:"Puntuación GEO del run, respuestas con mención / total, competidor más mencionado, número de recomendaciones activas.",
+      variant:"Si la marca no aparece en ninguna respuesta: asunto «"+D+": la IA todavía no te nombra» y titular «Todavía no apareces. Es el mejor momento para empezar». Mismas barras, con la tuya a cero.",
+      html: wrap(
+        eyebrow("Primer escaneo listo","#15915A")+
+        heading("Ya sabemos cómo te ve la IA")+
+        para("Hemos preguntado a ChatGPT, Gemini y Claude lo que preguntan tus clientes. Esto es lo que respondieron sobre "+b(D)+".")+
+        scoreCard(34,"Puntuación GEO",'<span style="display:inline-block;background:#E9EFFD;color:#2563EB;font-weight:700;font-size:13px;padding:7px 13px;border-radius:999px;">Primer escaneo</span><div style="font-size:12.5px;color:#5B6B82;margin-top:8px;">45 respuestas · 15 prompts · 3 motores</div>')+
+        versusBars([["Clínica Sonrisa Norte",19,false,45],[D+" (tú)",6,true,45],["Dental Ría",11,false,45]],"Respuestas en las que aparece cada marca")+
+        para("Clínica Sonrisa Norte aparece "+b("3 veces más")+" que tú. Ya tienes "+b("6 recomendaciones")+" para cerrar esa distancia, ordenadas por impacto.")+
+        button("Ver mi informe completo"),
+        {footer:alertFooter("este aviso")}
+      )
+    },
+    {
+      id:"t-d1", name:"D1 · Activación", when:"Día 1 · sin escaneo completado", cat:["Consejos y ofertas","t-warn"], state:["Nueva","t-blue"],
+      subject:"Te falta un paso para ver cómo te menciona la IA",
+      pre:"Añade tu dominio: en 5 minutos sabrás si ChatGPT te recomienda. Te quedan 6 días de Pro.",
+      why:["Progreso visible: un paso hecho y dos por hacer. Da ganas de terminar.","Días de Pro que quedan: urgencia real, no inventada.","No se envía a quien ya tiene su escaneo: es el caso más habitual, porque la mayoría añade su dominio y escanea al registrarse."],
+      data:"Si hay proyecto, si hay run completado, días que quedan de prueba.",
+      variant:"Con dominio pero sin escaneo: el paso 2 aparece hecho, el 3 activo, asunto «Tu primer escaneo de "+D+" está a un clic» y CTA «Lanzar mi primer escaneo».",
+      html: wrap(
+        eyebrow("Te quedan 6 días de Pro","#A8660B")+
+        heading("Te falta un paso para ver cómo te menciona la IA")+
+        para("Ayer creaste tu cuenta, pero todavía no sabemos qué dominio analizar. Añádelo y en unos minutos verás si ChatGPT, Gemini y Claude te recomiendan, y a quién recomiendan en tu lugar.")+
+        checklist([["done","Crear tu cuenta"],["now","Añadir tu dominio","2 minutos. Competidores y preguntas se sugieren solos."],["next","Ver tu primer informe"]])+
+        button("Añadir mi dominio")+
+        subtext("Si algo no te encaja, responde a este email y te ayudamos."),
+        {footer:lifecycleFooter()}
+      )
+    },
+    {
+      id:"t-d3", name:"D3 · Primera acción", when:"Día 3 · con escaneo", cat:["Consejos y ofertas","t-warn"], state:["Nueva","t-blue"],
+      subject:"Lo primero que cambiaríamos en "+D,
+      pre:"Una acción concreta, respaldada por lo que responden ChatGPT y Gemini. Te quedan 4 días de Pro.",
+      why:["Pasa del dato a la acción: es donde el usuario ve el valor.","El «motor que la respalda» da credibilidad (RECS-EVIDENCE-2).","Presenta el generador, que solo tiene Pro: prepara la conversión."],
+      data:"Recomendación activa de mayor prioridad (título, descripción, motores), competidor que la motiva, número de recomendaciones.",
+      variant:"Sin escaneo a día 3: repite la estructura de D1 con otro ángulo («Tus clientes ya le preguntan a la IA por tu sector») y enlaza un artículo del blog.",
+      html: wrap(
+        eyebrow("Tu primera acción")+
+        heading("Lo primero que cambiaríamos en "+D)+
+        para("De todo lo que encontró tu escaneo, esta es la acción con más impacto:")+
+        recCard()+
+        para("Con Pro, GenScore te "+b("genera el contenido listo para publicar")+": la FAQ, el marcado schema o el brief para tu equipo. No tienes que empezar de cero.")+
+        button("Ver la recomendación y generarla")+
+        subtext("Tienes 5 recomendaciones más en tu panel. Te quedan 4 días de Pro."),
+        {footer:lifecycleFooter()}
+      )
+    },
+    {
+      id:"t-d5", name:"D5 · Quedan 2 días", when:"2 días antes de trial_ends_at", cat:["Consejos y ofertas","t-warn"], state:["Nueva","t-blue"],
+      subject:"Tu prueba de Pro termina el lunes",
+      pre:"Mantén el seguimiento diario de "+D+" por 59 €/mes (antes 179 €). Precio de lanzamiento hasta el 31 de octubre.",
+      why:["Pérdida concreta en tabla: qué deja de tener el día 5.","Precio anclado (179 € tachado), descuento calculado y fecha real.","Menos riesgo: sin permanencia. Testimonio real al final.","Alternativa Starter para quien Pro le queda grande."],
+      data:"Fecha de fin, estado de la promo en el momento del envío, precios de PLANS, dominio.",
+      variant:"Sin promo activa: la caja de precio muestra 179 €/mes sin tachado ni fecha, y el asunto no menciona precio.",
+      html: wrap(
+        eyebrow("Quedan 2 días","#D23B48")+
+        heading("Tu prueba de Pro termina el lunes 5 de octubre")+
+        para("Desde ese día, "+b(D)+" dejará de escanearse a diario. Si un competidor te adelanta en las respuestas de la IA, no lo verás.")+
+        lossTable("5 oct")+
+        priceBox({plan:"Pro",list:179,promo:59})+
+        button("Mantener Pro por 59 €/mes")+
+        subtext("¿Te basta con un escaneo semanal? "+link("Starter por 19 €/mes")+" (antes 45 €) durante 6 meses.")+
+        quote(),
+        {footer:lifecycleFooter()}
+      )
+    }
+  ];
+
+  var POST = [
+    {
+      id:"p-d7", name:"D7 · Fin de prueba", when:"Día de caducidad · cron", cat:["Servicio + oferta","t-warn"], state:["Rediseñada","t-grey"],
+      subject:"Tu prueba ha terminado. Tus datos de "+D+" siguen aquí",
+      pre:"Tu cuenta ha pasado a Free. Vuelve a Pro por 59 €/mes hasta el 31 de octubre.",
+      why:["Empieza con lo que tranquiliza: no se ha borrado nada.","Su última foto real y lo que ya no va a ver.","La misma oferta que D5, esta vez con el cambio ya hecho."],
+      data:"Fecha y puntuación del último run, respuestas con mención, estado de la promo.",
+      html: wrap(
+        eyebrow("Tu prueba ha terminado","#5B6B82")+
+        heading("Tu cuenta ha pasado a Free")+
+        para("Tus 7 días de "+b("Pro")+" han terminado. Tus dominios, escaneos y recomendaciones siguen intactos: no hemos borrado nada.")+
+        sectionLabel("Tu último escaneo · 4 de octubre")+
+        statRow(statCell("34","Puntuación GEO","em-stack-td")+statCell("6 de 45","respuestas te mencionan","em-stack-td em-stack-second")+statCell("6","recomendaciones abiertas","em-stack-td em-stack-second"))+
+        para("A partir de hoy ya no se escanea a diario. Si quieres seguir viendo cómo cambian las respuestas de la IA, vuelve cuando quieras:")+
+        priceBox({plan:"Pro",list:179,promo:59})+
+        button("Volver a Pro por 59 €/mes")+
+        subtext("¿Te basta con un escaneo semanal? "+link("Starter por 19 €/mes")+" durante 6 meses."),
+        {footer:lifecycleFooter()}
+      )
+    },
+    {
+      id:"p-late", name:"D7 tardía · las 5 cuentas caducadas", when:"Una vez · caducó hace más de 48 h sin aviso", cat:["Servicio + oferta","t-warn"], state:["Nueva","t-blue"],
+      subject:"Tu prueba de Pro terminó el 12 de septiembre (y no te avisamos)",
+      pre:"Tus datos de "+D+" siguen intactos. Te lo contamos, con una oferta hasta el 31 de octubre.",
+      why:["Reconoce el fallo: con 5 personas, la sinceridad convierte más que fingir.","La baja va solo en el pie, como en el resto de emails de la secuencia.","Igual que D7 en todo lo demás."],
+      data:"Fecha real de fin de prueba, último run, estado de la promo.",
+      html: wrap(
+        eyebrow("Un aviso que llega tarde","#5B6B82")+
+        heading("Tu prueba de Pro terminó el 12 de septiembre")+
+        para("Tendríamos que haberte escrito ese día y no lo hicimos. Perdona. Tu cuenta es ahora "+b("Free")+" y tus dominios, escaneos y recomendaciones siguen intactos.")+
+        sectionLabel("Tu último escaneo · 11 de septiembre")+
+        statRow(statCell("34","Puntuación GEO","em-stack-td")+statCell("6 de 45","respuestas te mencionan","em-stack-td em-stack-second")+statCell("6","recomendaciones abiertas","em-stack-td em-stack-second"))+
+        para("Si quieres retomarlo donde lo dejaste, el precio de lanzamiento sigue disponible unas semanas más:")+
+        priceBox({plan:"Pro",list:179,promo:59})+
+        button("Volver a Pro por 59 €/mes"),
+        {footer:lifecycleFooter()}
+      )
+    },
+    {
+      id:"p-d3", name:"D+3 · Tus datos siguen aquí", when:"3 días tras caducar · sigue en Free", cat:["Consejos y ofertas","t-warn"], state:["Nueva","t-blue"],
+      subject:"Clínica Sonrisa Norte aparece 3 veces más que tú en la IA",
+      pre:"Es tu último escaneo de "+D+". Desde entonces no lo estás midiendo.",
+      why:["El rival en el asunto: motiva más que una oferta.","Fecha visible del último dato: se ve que está envejeciendo.","La oferta aparece al final, después del porqué."],
+      data:"Competidor más mencionado y su recuento en el último run, fecha del run, estado de la promo.",
+      variant:"Si el usuario va por delante de todos: asunto «Vas por delante en la IA. ¿Sigues por delante?» y las mismas barras.",
+      html: wrap(
+        eyebrow("Tus datos siguen aquí")+
+        heading("Clínica Sonrisa Norte aparece 3 veces más que tú")+
+        versusBars([["Clínica Sonrisa Norte",19,false,45],[D+" (tú)",6,true,45]],"Respuestas en las que aparece · escaneo del 4 de octubre")+
+        para("Es el último dato que tienes. Desde el 5 de octubre "+D+" no se escanea, así que no sabes si esa distancia ha crecido o si has empezado a cerrarla.")+
+        priceBox({plan:"Pro",list:179,promo:59})+
+        button("Volver a medir a diario")+
+        subtext("O "+link("Starter por 19 €/mes")+", con un escaneo semanal."),
+        {footer:lifecycleFooter()}
+      )
+    },
+    {
+      id:"p-d10a", name:"D+10 · Últimos días del precio", when:"10 días tras caducar · promo termina en ≤ 14 días", cat:["Consejos y ofertas","t-warn"], state:["Nueva","t-blue"],
+      subject:"Últimos días: Pro a 59 €/mes hasta el 31 de octubre",
+      pre:"Después vuelve a 179 €/mes. Es el último email que te enviamos sobre esto.",
+      why:["Plazo real, sacado de PROMO_ENDS_AT.","«Último email»: cierra la secuencia de forma honesta y reduce bajas.","Corto: un dato, un precio y un botón."],
+      data:"PROMO_ENDS_AT, precios de PLANS.",
+      html: wrap(
+        eyebrow("Precio de lanzamiento · últimos días","#A8660B")+
+        heading("El 31 de octubre Pro vuelve a 179 €/mes")+
+        para("Hasta entonces puedes contratarlo a "+b("59 €/mes durante 6 meses")+" y seguir "+b(D)+" a diario en ChatGPT, Gemini y Claude. Es el último email que te enviamos sobre esto.")+
+        priceBox({plan:"Pro",list:179,promo:59})+
+        button("Contratar Pro por 59 €/mes"),
+        {footer:lifecycleFooter()}
+      )
+    },
+    {
+      id:"p-d10b", name:"D+10 · ¿Qué te faltó?", when:"10 días tras caducar · sin promo activa", cat:["Consejos y ofertas","t-warn"], state:["Nueva","t-blue"],
+      subject:"Una pregunta rápida sobre GenScore",
+      pre:"¿Qué te faltó para seguir? Respóndeme con una línea, lo leo yo.",
+      why:["Parece un email personal: se abre y se responde más que una promo.","Cada respuesta es información de producto que hoy no tienes.","Sin botón: la acción es responder."],
+      data:"Ninguno. Remitente y respuesta a tu buzón (pendiente tu decisión).",
+      html: wrap(
+        para("Hola,")+
+        para("Soy Denis, fundador de GenScore. Hace unos días terminó tu prueba de Pro con "+D+" y no has vuelto a entrar. Me ayudaría mucho saber por qué:")+
+        para(b("¿Qué te faltó para seguir usando GenScore?"))+
+        para("Basta con una línea: el precio, algo que no entendiste, un dato que no te cuadró o que simplemente no era el momento. Leo todas las respuestas personalmente.")+
+        para("Gracias,<br>Denis"),
+        {footer:lifecycleFooter()}
+      )
+    }
+  ];
+
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function render(list, mountId){
+    var mount = document.getElementById(mountId);
+    list.forEach(function(t){
+      var row = document.createElement('article');
+      row.className='tpl'; row.id=t.id;
+      row.innerHTML =
+        '<div class="tpl-meta">'+
+          '<div class="tags"><span class="tag '+t.state[1]+'">'+t.state[0]+'</span><span class="tag '+t.cat[1]+'">'+t.cat[0]+'</span></div>'+
+          '<h3>'+esc(t.name)+'</h3>'+
+          '<dl class="kv"><div><dt>Cuándo</dt><dd>'+esc(t.when)+'</dd></div>'+
+          '<div><dt>Datos reales que usa</dt><dd>'+esc(t.data)+'</dd></div></dl>'+
+          '<div><h4 style="margin-bottom:4px">Por qué convierte</h4><ul class="why">'+t.why.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul></div>'+
+          (t.variant?'<div class="variant-note"><b>Variante:</b> '+esc(t.variant)+'</div>':'')+
+        '</div>'+
+        '<div class="stage"><div class="inbox">'+
+          '<div class="inbox-row"><div class="from">'+(t.id==='p-d10b'?'Denis de GenScore':'GenScore')+'<span>09:45</span></div><div class="subj">'+esc(t.subject)+'</div><div class="pre">'+esc(t.pre)+'</div></div>'+
+          '<iframe class="mail" title="Vista previa: '+esc(t.name)+'" loading="lazy"></iframe>'+
+        '</div></div>';
+      mount.appendChild(row);
+      var fr = row.querySelector('iframe');
+      fr.addEventListener('load', function(){ fit(fr); });
+      fr.srcdoc = t.html;
+    });
+  }
+  function fit(fr){
+    try{
+      var d = fr.contentDocument; if(!d || !d.body) return;
+      fr.style.height = (d.documentElement.scrollHeight + 4) + 'px';
+    }catch(e){ /* sin acceso: se queda con la altura fija y scroll */ }
+  }
+  render(TRIAL,'tpl-trial');
+  render(POST,'tpl-post');
+
+  var desk = document.getElementById('w-desk'), phone = document.getElementById('w-phone');
+  function setMode(p){
+    document.body.classList.toggle('phoneMode', p);
+    desk.setAttribute('aria-pressed', String(!p)); phone.setAttribute('aria-pressed', String(p));
+    try{ localStorage.setItem('gs-tpl-width', p?'phone':'desk'); }catch(e){}
+    setTimeout(function(){ document.querySelectorAll('iframe.mail').forEach(fit); }, 60);
+  }
+  desk.addEventListener('click', function(){ setMode(false); });
+  phone.addEventListener('click', function(){ setMode(true); });
+  try{ if(localStorage.getItem('gs-tpl-width')==='phone') setMode(true); }catch(e){}
+  window.addEventListener('resize', function(){ document.querySelectorAll('iframe.mail').forEach(fit); });
+})();
+</script>

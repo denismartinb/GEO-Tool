@@ -4,62 +4,41 @@ import { useState, useTransition } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { SettingRow } from "@/components/settings/setting-row";
 import { Switch } from "@/components/settings/switch";
+import { updateNotificationPreference } from "@/app/dashboard/settings/notifications/actions";
 import {
-  updateNotificationPreference,
-  type NotificationPreferenceKey
-} from "@/app/dashboard/settings/notifications/actions";
+  CATEGORY_COPY,
+  OPTIONAL_EMAIL_CATEGORIES,
+  PREFERENCE_COLUMN,
+  type OptionalEmailCategory
+} from "@/lib/email/categories";
 
 /**
- * CONSOLE-REDESIGN-1. Only the two alerts that actually send an email are
- * rows now.
+ * CONSOLE-REDESIGN-1 → EMAIL-UNSUB-1 (log §232). One row per optional email
+ * category, named from `lib/email/categories.ts` so this screen, the email
+ * footers and `/baja` can never call the same thing two different names.
  *
- * The previous version listed six, four of them disabled behind a
- * "Próximamente" badge — a screen where two thirds of the controls are dead
- * reads as a roadmap, not as a setting. The four unbuilt ones are gone
- * outright now (founder, 2026-08-25): even a footer line promising them was
- * a roadmap commitment this screen shouldn't be making.
+ * CONSOLE-REDESIGN-1 removed four dead toggles that promised emails nobody
+ * sent. The two added here are different on purpose: they exist so a person
+ * can opt out BEFORE the first such email reaches them (the legal basis for
+ * the lifecycle emails is legitimate interest, and the way out has to exist
+ * from day one — founder, 2026-09-28). Their emails ship in Fases C/D.
  *
- * `visibility` sends the score-drop alert (Fase 6a) and `weekly` the Monday
- * digest (Fase 6b, gated behind CRON_DIGEST_ENABLED). Both persist server-side.
+ * The last row is fixed and disabled: account and billing emails are part of
+ * the service and cannot be turned off, and saying so here answers the
+ * question before someone writes to support to ask.
  */
-type NotificationKey = "visibility" | "weekly";
-
-const ROWS: { key: NotificationKey; persisted: NotificationPreferenceKey; title: string; desc: string }[] = [
-  {
-    key: "visibility",
-    persisted: "notify_score_drop_alert",
-    title: "Cambios de visibilidad",
-    desc: "Si tu GEO Score se mueve de forma significativa"
-  },
-  {
-    key: "weekly",
-    persisted: "notify_weekly_digest",
-    title: "Resumen semanal",
-    desc: "Cada lunes, cómo fue la semana"
-  }
-];
-
-export function NotificationsSection({
-  initialScoreDropAlert,
-  initialWeeklyDigest
-}: {
-  initialScoreDropAlert: boolean;
-  initialWeeklyDigest: boolean;
-}) {
-  const [state, setState] = useState<Record<NotificationKey, boolean>>({
-    visibility: initialScoreDropAlert,
-    weekly: initialWeeklyDigest
-  });
+export function NotificationsSection({ initial }: { initial: Record<OptionalEmailCategory, boolean> }) {
+  const [state, setState] = useState<Record<OptionalEmailCategory, boolean>>(initial);
   const [, startTransition] = useTransition();
 
-  const set = (key: NotificationKey, persisted: NotificationPreferenceKey) => (value: boolean) => {
-    const previous = state[key];
-    setState((current) => ({ ...current, [key]: value }));
+  const set = (category: OptionalEmailCategory) => (value: boolean) => {
+    const previous = state[category];
+    setState((current) => ({ ...current, [category]: value }));
 
     startTransition(async () => {
-      const result = await updateNotificationPreference(persisted, value);
+      const result = await updateNotificationPreference(PREFERENCE_COLUMN[category], value);
       if (!result.success) {
-        setState((current) => ({ ...current, [key]: previous }));
+        setState((current) => ({ ...current, [category]: previous }));
       }
     });
   };
@@ -67,11 +46,14 @@ export function NotificationsSection({
   return (
     <Card>
       <CardContent>
-        {ROWS.map((row, index) => (
-          <SettingRow key={row.key} title={row.title} desc={row.desc} last={index === ROWS.length - 1}>
-            <Switch on={state[row.key]} onChange={set(row.key, row.persisted)} />
+        {OPTIONAL_EMAIL_CATEGORIES.map((category) => (
+          <SettingRow key={category} title={CATEGORY_COPY[category].title} desc={CATEGORY_COPY[category].desc}>
+            <Switch on={state[category]} onChange={set(category)} />
           </SettingRow>
         ))}
+        <SettingRow title="Tu cuenta y facturación" desc="Seguridad, pagos y cambios de plan. Siempre activos." last>
+          <Switch on disabled onChange={() => {}} />
+        </SettingRow>
       </CardContent>
     </Card>
   );

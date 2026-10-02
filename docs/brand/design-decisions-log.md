@@ -21110,3 +21110,163 @@ presente pero caducado, no.
 octubre esa fecha pasaba a caer dentro y el test fallaba. Ahora se deriva de
 `PROMO_ENDS_AT` + 1 día — misma lección que §197 (un test atado al reloj o a
 una fecha escrita a mano rompe cuando la decisión de negocio cambia).
+
+## 232. EMAIL-UNSUB-1: baja en un clic en todos los correos opcionales, y el alta informa sin casilla (Fase B de LIFECYCLE-EMAILS-1, 2026-09-28)
+
+**De dónde viene.** Los usuarios que prueban Pro no vuelven, y el fundador
+pidió (2026-09-28) una secuencia de correos para la prueba y la recuperación,
+un mecanismo de baja en todos los correos y un inventario de comunicaciones.
+El plan completo y las plantillas se aprobaron por artefacto el mismo día
+(«Apruebo el plan»), con tres correcciones del fundador: el alta **sin
+casilla**, un solo enlace de baja por correo y el remitente del D+10
+personal `soporte@genscore.es`. El diseño vive en
+`docs/design-reference/lifecycle-emails-1/`. Fases: A (la prueba caducada
+deja de costar) ya la cubrió ALERTS-SCOPE-1 (§229); B es ésta; C (secuencia
+de prueba), D (fin de prueba y recuperación, con las 5 cuentas ya caducadas)
+y E (medición) siguen pendientes, en PRs propios.
+
+**Qué había.** Dos preferencias reales (`notify_score_drop_alert`,
+`notify_weekly_digest`) y un pie que mandaba a Ajustes, detrás de iniciar
+sesión. Ninguna baja en un clic, ninguna cabecera `List-Unsubscribe`.
+
+**Qué se decide.**
+
+- **Categorías, en un solo sitio** (`lib/email/categories.ts`): `service` sin
+  baja; `score_drop`, `weekly_digest`, `first_scan` y `lifecycle` con baja y
+  una columna cada una. Los nombres que ve el cliente en Ajustes, en `/baja`
+  y en el pie salen de ahí.
+- **Enlace firmado** (`lib/email/unsubscribe.ts`): HMAC-SHA256 de
+  `v1:(cuenta, categoría)` con `EMAIL_UNSUBSCRIBE_SECRET`. Sin tabla de
+  tokens y sin caducidad, a propósito: un enlace de un correo viejo tiene
+  que seguir funcionando, y un token que no se puede falsificar no necesita
+  ninguna de las dos cosas. Rotar el secreto invalida todos los enlaces
+  enviados.
+- **Dos puertas, un GET que no hace nada.** El pie lleva a `/baja`, que pide
+  confirmar (los antivirus abren enlaces solos) y permite deshacer. Las
+  cabeceras RFC 8058 apuntan a `/api/email/unsubscribe`, que aplica la baja
+  en POST — el botón «Cancelar suscripción» de Gmail/Yahoo/Apple Mail — y en
+  GET sólo redirige a `/baja`.
+- **Quinta puerta de identidad del rol de servicio.** `verifyUnsubscribeToken`
+  entra en `tests/service-role-identity.test.ts`: darse de baja no puede
+  exigir sesión, así que no hay sesión que pedir. El token sólo autoriza
+  `setEmailPreferenceAsService`, que cambia una columna de preferencia de
+  esa cuenta y escribe su fila de auditoría. Añadirla fue una decisión
+  explícita, no un trámite para poner el test en verde.
+- **Migración 0036** (`supabase/migrations/0036_email_preferences.sql`,
+  aprobada): `profiles.notify_first_scan` y `profiles.notify_lifecycle`
+  (ambas `true` por defecto) y la tabla `email_preference_events` (quién,
+  qué categoría, alta o baja, desde dónde, cuándo), con RLS de lectura e
+  inserción propias. La tabla `email_sends` para deduplicar la secuencia se
+  mueve a la Fase C, que es quien la usa: no se crea esquema sin consumidor.
+- **Ajustes → Notificaciones** pasa a cuatro interruptores más una fila fija
+  «Tu cuenta y facturación — siempre activos». Los dos nuevos existen antes
+  que sus correos a propósito: la base legal es el interés legítimo y la
+  salida tiene que estar disponible desde el primer día. Las dos columnas
+  nuevas se leen en su propia consulta (mismo patrón que
+  `sampling_enabled`, `.claude/rules/scan.md`), para que la migración sin
+  aplicar no tumbe los dos interruptores antiguos.
+- **Avisos existentes** (caída de puntuación, resumen semanal): pie «¿No
+  quieres recibir…? Darme de baja en un clic · Preferencias de email» y
+  cabeceras one-click. Sin secreto configurado caen al pie de Ajustes de
+  siempre. Los correos de servicio ganan un enlace a «Preferencias de email».
+- **Alta sin casilla** (decisión del fundador). La línea legal de `/signup`
+  informa de los correos de cuenta y de los consejos y ofertas «como
+  cliente», enlaza Términos y Privacidad (antes no eran enlaces) y dice dónde
+  darse de baja. `/privacidad` gana el apartado «Comunicaciones comerciales»
+  (art. 21.2 LSSI + interés legítimo, art. 6.1.f RGPD), y Resend en la
+  lista de encargados menciona ya los avisos y las comunicaciones.
+
+**Riesgo aceptado por el fundador, dicho claro.** El art. 21.2 LSSI pide
+ofrecer la posibilidad de oponerse **también al recoger el email**. Informar
+en el alta sin una opción ahí mismo es la lectura menos conservadora; la
+mitiga que la línea enlace a la política y que la baja esté en un clic en
+cada correo y en Ajustes. Pendiente: que el asesor del fundador valide el
+texto del alta y el apartado de /privacidad **antes de encender** los correos
+de `lifecycle` (Fases C/D, detrás de su propio interruptor).
+
+**Lo que falta, fuera del repo.** `EMAIL_UNSUBSCRIBE_SECRET` en Vercel
+(Production) y aplicar la migración 0036 a mano en Supabase. Sin la
+migración, los dos interruptores nuevos se ven activados y no guardan (el
+error vuelve el interruptor a su sitio); sin el secreto, los avisos salen con
+el pie antiguo.
+
+**Fuera de este PR, a propósito.** La columna «Baja» en la consola de
+operador pasa a la Fase E (medición), donde se junta con el resto de lo que
+se mide de la secuencia.
+
+**Trazabilidad.** Regla nueva `.claude/rules/email.md`; `.claude/rules/
+supabase.md` apunta a la quinta puerta. Ficheros: `lib/email/categories.ts`,
+`lib/email/unsubscribe.ts`, `lib/email/transactional.ts`,
+`app/api/email/unsubscribe/route.ts`, `app/baja/{page,actions,baja-form}.tsx`,
+`app/dashboard/settings/{page.tsx,notifications/actions.ts}`,
+`components/settings/notifications-section.tsx`, `app/signup/page.tsx`,
+`app/privacidad/page.tsx`, `lib/scan/{score-alert,weekly-digest}.ts`,
+`lib/env-schema.ts`, `docs/environment-contract.md`.
+
+## 233. LIFECYCLE-TRIAL-1: la secuencia de la prueba Pro — primer escaneo listo, D1, D3 y D5 (Fase C de LIFECYCLE-EMAILS-1, 2026-09-29)
+
+**Qué es.** La Fase C del plan aprobado el 2026-09-28 (§232): los correos que
+acompañan los 7 días de prueba, con las plantillas del diseño aprobado
+(`docs/design-reference/lifecycle-emails-1/`). Sale **apagada**: nada de lo
+de esta fase envía un correo hasta que el fundador encienda
+`LIFECYCLE_EMAILS_ENABLED` en Vercel, y ni siquiera entonces sin
+`EMAIL_UNSUBSCRIBE_SECRET` (`isLifecycleEmailEnabled`,
+`lib/email/lifecycle/flag.ts`).
+
+**Qué se decide.**
+
+- **Reglas en una función pura** (`decideTrialEmail`,
+  `lib/email/lifecycle/schedule.ts`), probada sin base de datos: D1 (día 1,
+  sólo sin escaneo completado; variante sin dominio o sin escaneo), D3 (día 3;
+  recomendación real o variante sin escaneo) y D5 (entre 36 y 60 h antes del
+  fin de la prueba). Nunca a cuentas de pago, comped o internas, ni a quien se
+  dio de baja de «consejos y ofertas», ni con la prueba ya terminada (eso es
+  la Fase D). Un correo de ciclo de vida cada 48 h como máximo, y D1/D3 no
+  salen los lunes (son del resumen semanal); D5 se salta ambas reglas porque
+  lleva una fecha que no espera. Cada ventana mide al menos 24 h, así que un
+  cron diario cae en cada una exactamente una vez.
+- **Primer escaneo listo** se envía al completarse el **primer** escaneo de
+  la cuenta, contado entre todos sus proyectos: una cuenta que escanea desde
+  hace meses no lo recibe en su próximo escaneo rutinario. Es categoría
+  `first_scan` (aviso de producto, con su propio interruptor en Ajustes), no
+  comercial. Se engancha en el ejecutor dentro de `after()` y sólo si el
+  interruptor está encendido; el módulo de correos se carga bajo demanda, así
+  el escaneo no depende de las plantillas.
+- **Cifras de verdad o ninguna.** Puntuación GEO con la misma ventana que el
+  panel (`resolveGeoScore`); menciones sobre **respuestas**, del ranking del
+  propio run (`brand_position`), nunca sobre prompts (§183); competidor más
+  mencionado del mismo ranking; recomendación activa de mayor prioridad con
+  los motores que la respaldan (`recommendationEngineLabels`, §191). Sin
+  ranking, el correo de primer escaneo no sale.
+- **Precios leídos al enviar**: `PLANS` y la promo sólo mientras
+  `getActivePromoPlanIds()` la dé por aplicable en el checkout (fecha y
+  cupón). La tabla Pro/Free sale del `meter` de cada plan. Único testimonio,
+  Nordika Home (§146).
+- **Un envío se anota sólo si Resend lo aceptó** (`sendEmail` devuelve ahora
+  si se entregó). Tabla nueva `email_sends` (migración 0037, aprobada en el
+  plan), una fila por (cuenta, tipo), escrita con rol de servicio desde el
+  cron y el finalizador, sin políticas para `authenticated`.
+- **Cron nuevo** `/api/cron/lifecycle-emails` a las 07:45 UTC (09:45 en
+  Madrid en verano, 08:45 en invierno), aprobado en el plan; misma
+  autenticación que el resto de crons y un presupuesto de 45 s — lo que no
+  cabe queda para el día siguiente.
+- **La bienvenida cambia** al diseño aprobado: fecha real de fin de prueba,
+  tres pasos, un único botón «Añadir mi dominio». La frase «Te avisaremos 2
+  días antes» sólo se escribe con el interruptor encendido: la versión
+  anterior prometía «Te avisaremos antes» sin nada detrás.
+
+**Premisa que no se retira, pero se anota.** El comportamiento cuando el
+cliente escanea el mismo día del alta (el caso más común): recibe bienvenida y
+primer escaneo listo, **no** recibe D1, y sí D3 y D5 (fundador, 2026-09-28).
+
+**Pendiente.** Fase D (fin de prueba enviado por el servidor, D+3, D+10 y las
+5 pruebas ya caducadas, con la variante «tardía»), Fase E (medición y columna
+«Baja» en `/admin`). Fuera del repo: aplicar la migración 0037, y encender
+`LIFECYCLE_EMAILS_ENABLED` sólo tras la validación legal de §232.
+
+**Trazabilidad.** `.claude/rules/email.md` gana las reglas de esta fase.
+Ficheros: `lib/email/lifecycle/{flag,schedule,templates,offers,runner}.ts`
+(+tests), `app/api/cron/lifecycle-emails/route.ts`, `lib/email/transactional.ts`,
+`lib/scan/executor.ts`, `supabase/migrations/0037_email_sends.sql`,
+`vercel.json`, `vercel-crons.test.ts`, `lib/env-schema.ts`,
+`docs/environment-contract.md`.

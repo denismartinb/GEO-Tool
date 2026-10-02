@@ -96,9 +96,16 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           <Link className="underline" href="/login">Inicia sesión</Link>
         </p>
 
-        {/* Términos */}
+        {/* Términos. EMAIL-UNSUB-1 (log §232): no checkbox, by founder decision
+            (2026-09-28) — lifecycle emails rest on the customer relationship
+            and legitimate interest (art. 21.2 LSSI), so this line INFORMS and
+            says where the way out is. It covers both sign-up paths (email and
+            Google) because it sits below both. */}
         <p className="auth-terms">
-          Al continuar, aceptas nuestros Términos y la Política de privacidad.
+          Al continuar, aceptas los <Link href="/terminos">Términos</Link> y la{" "}
+          <Link href="/privacidad">Política de privacidad</Link>. Te enviaremos emails sobre tu cuenta y, como
+          cliente, consejos para sacarle partido y ofertas de GenScore. Puedes darte de baja cuando quieras en
+          Ajustes o desde cualquier email.
         </p>
       </div>
     </main>

@@ -1,28 +1,49 @@
 import "server-only";
 
 import { getResendClient, getEmailFromAddress } from "@/lib/email/resend";
+import { CATEGORY_COPY, type OptionalEmailCategory } from "@/lib/email/categories";
+import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
+import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
 
 /**
  * Every send* function here is fire-and-forget from the caller's point of
  * view: it never throws. A failed or unconfigured (no RESEND_API_KEY) send
  * is logged and swallowed — a broken email must never break signup,
  * checkout, or the trial-expiry downgrade it's attached to.
+ *
+ * Returns whether Resend ACCEPTED the email. The lifecycle sequence (log
+ * §233) records a send only on `true`, so a failed send stays eligible for
+ * the next pass; every older caller ignores the value, as before.
  */
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  headers?: Record<string, string>
+): Promise<boolean> {
   const resend = getResendClient();
-  if (!resend) return;
+  if (!resend) return false;
 
   try {
-    const { error } = await resend.emails.send({ from: getEmailFromAddress(), to, subject, html });
+    const { error } = await resend.emails.send({
+      from: getEmailFromAddress(),
+      to,
+      subject,
+      html,
+      ...(headers ? { headers } : {})
+    });
     if (error) {
       console.error("[geo:email] Resend rejected the send", { to, subject, message: error.message });
+      return false;
     }
+    return true;
   } catch (sendError) {
     console.error("[geo:email] failed to send", {
       to,
       subject,
       message: sendError instanceof Error ? sendError.message : String(sendError)
     });
+    return false;
   }
 }
 
@@ -71,12 +92,47 @@ const HEADER_ROW = `
   </td></tr>
   <tr><td style="background:#2563EB;height:3px;line-height:3px;font-size:0;">&nbsp;</td></tr>`;
 
-const SUPPORT_FOOTER = `¿Dudas? Escríbenos a <a href="mailto:soporte@genscore.es" style="color:#2563EB;text-decoration:none;font-weight:600;">soporte@genscore.es</a>.<br>GenScore · Visibilidad de marca en respuestas de IA · genscore.es`;
+export const FOOTER_LINK_STYLE = "color:#2563EB;text-decoration:none;font-weight:600;";
+export const PREFERENCES_URL = "https://www.genscore.es/dashboard/settings/notifications";
+
+// EMAIL-UNSUB-1 (log §232): service emails cannot be unsubscribed from — they
+// are what the account needs to work — but every one of them still says where
+// the optional ones are managed.
+export const SUPPORT_FOOTER = `¿Dudas? Escríbenos a <a href="mailto:soporte@genscore.es" style="${FOOTER_LINK_STYLE}">soporte@genscore.es</a> · <a href="${PREFERENCES_URL}" style="${FOOTER_LINK_STYLE}">Preferencias de email</a><br>GenScore · Visibilidad de marca en respuestas de IA · genscore.es`;
 
 const notificationsFooter = (what: string) =>
-  `Puedes desactivar ${what} en <a href="https://www.genscore.es/dashboard/settings/notifications" style="color:#2563EB;text-decoration:none;font-weight:600;">Ajustes → Notificaciones</a>.<br>GenScore · genscore.es`;
+  `Puedes desactivar ${what} en <a href="${PREFERENCES_URL}" style="${FOOTER_LINK_STYLE}">Ajustes → Notificaciones</a>.<br>GenScore · genscore.es`;
 
-function wrap(bodyHtml: string, opts: { footerHtml?: string; preheader?: string } = {}): string {
+/**
+ * EMAIL-UNSUB-1 (log §232). The footer and headers of every OPTIONAL email.
+ *
+ * With a signed link: a visible one-click unsubscribe in the footer plus the
+ * RFC 8058 headers that make Gmail/Yahoo/Apple Mail show their own
+ * "Cancelar suscripción" button, which POSTs to `oneClickUrl` directly.
+ *
+ * Without one (no `EMAIL_UNSUBSCRIBE_SECRET`, or no account id for the
+ * recipient) it falls back to the settings footer these alerts always had —
+ * an alert the customer asked for is still worth sending. The `lifecycle`
+ * category will not have that fallback: it is commercial, and a commercial
+ * email with no working way out is not sent at all.
+ */
+export function optionalEmailEnvelope(
+  userId: string | undefined,
+  category: OptionalEmailCategory
+): { footerHtml: string; headers?: Record<string, string> } {
+  const links = userId ? buildUnsubscribeLinks(userId, category) : null;
+  if (!links) return { footerHtml: notificationsFooter(CATEGORY_COPY[category].noun) };
+
+  return {
+    footerHtml: `¿No quieres recibir ${CATEGORY_COPY[category].noun}? <a href="${links.pageUrl}" style="${FOOTER_LINK_STYLE}">Darme de baja en un clic</a> · <a href="${PREFERENCES_URL}" style="${FOOTER_LINK_STYLE}">Preferencias de email</a><br>GenScore · genscore.es`,
+    headers: {
+      "List-Unsubscribe": `<${links.oneClickUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+    }
+  };
+}
+
+export function wrap(bodyHtml: string, opts: { footerHtml?: string; preheader?: string } = {}): string {
   const { footerHtml = SUPPORT_FOOTER, preheader } = opts;
 
   // Hidden preview text shown next to the subject in the inbox list — mso-hide
@@ -131,53 +187,90 @@ ${preheaderHtml}
 </html>`;
 }
 
-const eyebrow = (text: string, color: string = "#2563EB") =>
+export const eyebrow = (text: string, color: string = "#2563EB") =>
   `<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:${color};">${text}</div>`;
 
-const heading = (text: string) =>
+export const heading = (text: string) =>
   `<h1 style="margin:12px 0 0;font-size:24px;line-height:1.18;letter-spacing:-.02em;color:#0B1426;font-weight:800;">${text}</h1>`;
 
-const paragraph = (html: string) =>
+export const paragraph = (html: string) =>
   `<p style="margin:16px 0 0;font-size:15px;line-height:1.62;color:#3B4759;">${html}</p>`;
 
-const button = (href: string, label: string) => `
+export const button = (href: string, label: string) => `
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 6px;"><tr>
     <td align="center" bgcolor="#2563EB" style="border-radius:10px;">
       <a href="${href}" style="display:inline-block;padding:14px 28px;font-family:${FONT_STACK};font-weight:700;font-size:15px;color:#ffffff;text-decoration:none;border-radius:10px;">${label}</a>
     </td>
   </tr></table>`;
 
-const subtext = (html: string) =>
+export const subtext = (html: string) =>
   `<p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#5B6B82;">${html}</p>`;
 
-const featureRow = (html: string) => `
-  <tr><td style="padding:9px 0;vertical-align:top;">
-    <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-      <td style="width:22px;vertical-align:top;"><div style="width:20px;height:20px;border-radius:6px;background:#E9EFFD;color:#2563EB;font-size:13px;font-weight:800;text-align:center;line-height:20px;">✓</div></td>
-      <td style="padding-left:12px;font-size:14.5px;line-height:1.5;color:#3B4759;">${html}</td>
-    </tr></table>
-  </td></tr>`;
+/**
+ * Numbered steps with done / current / next states — the progress block of
+ * the lifecycle design (docs/design-reference/lifecycle-emails-1/). Lives here
+ * rather than with the lifecycle templates because the welcome email uses it
+ * too, and those templates import this module (not the other way round).
+ */
+export function checklist(items: Array<{ state: "done" | "now" | "next"; text: string; hint?: string }>): string {
+  const rows = items
+    .map((item, index) => {
+      const dot =
+        item.state === "done"
+          ? `<div style="width:22px;height:22px;border-radius:50%;background:#15915A;color:#fff;font-size:12px;font-weight:800;text-align:center;line-height:22px;">✓</div>`
+          : item.state === "now"
+            ? `<div style="width:22px;height:22px;border-radius:50%;background:#2563EB;color:#fff;font-size:12px;font-weight:800;text-align:center;line-height:22px;">${index + 1}</div>`
+            : `<div style="width:20px;height:20px;border-radius:50%;border:1px solid #C9D1DD;color:#94A1B5;font-size:12px;font-weight:700;text-align:center;line-height:20px;">${index + 1}</div>`;
+      const text =
+        item.state === "done"
+          ? `<span style="color:#5B6B82;text-decoration:line-through;">${item.text}</span>`
+          : item.state === "now"
+            ? `<b style="color:#0B1426;">${item.text}</b>`
+            : `<span style="color:#3B4759;">${item.text}</span>`;
+      const hint = item.hint ? `<div style="font-size:12.5px;color:#5B6B82;margin-top:2px;">${item.hint}</div>` : "";
+      return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:10px 0;"><tr><td style="width:24px;vertical-align:top;">${dot}</td><td style="padding-left:12px;font-size:14.5px;line-height:1.45;">${text}${hint}</td></tr></table>`;
+    })
+    .join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr><td style="padding:8px 18px;">${rows}</td></tr></table>`;
+}
 
-export async function sendWelcomeEmail(to: string): Promise<void> {
+const TRIAL_LENGTH_MS = 7 * 24 * 60 * 60 * 1000; // handle_new_user(): interval '7 days' (0017)
+const welcomeDate = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" });
+
+/**
+ * LIFECYCLE-TRIAL-1 (log §233): the approved welcome — three numbered steps,
+ * one CTA that says exactly what it does, and the trial's real end date.
+ *
+ * It goes out at the moment of sign-up, before any domain exists, so "Añadir
+ * mi dominio" is always the right next step when it is read. The line that
+ * promises a warning before the trial ends is only written while the trial
+ * emails are actually switched on (`isLifecycleEmailEnabled`): the previous
+ * copy promised "Te avisaremos antes" with nothing behind it.
+ */
+export async function sendWelcomeEmail(to: string, now: Date = new Date()): Promise<void> {
+  const endLabel = welcomeDate.format(new Date(now.getTime() + TRIAL_LENGTH_MS));
+  const closing = isLifecycleEmailEnabled()
+    ? `Tu prueba termina el ${endLabel}. Te avisaremos 2 días antes y no se te cobra nada de forma automática.`
+    : `Tu prueba termina el ${endLabel}. No se te cobra nada de forma automática.`;
   await sendEmail(
     to,
     "Bienvenido a GenScore — tu prueba de Pro ya está activa",
     wrap(
       `
       ${eyebrow("Tu prueba Pro · 7 días")}
-      ${heading("Ya puedes ver cómo te menciona la IA")}
+      ${heading("En 5 minutos sabrás si la IA te recomienda")}
       ${paragraph(
-        "Tu cuenta está lista, con acceso completo a <b style=\"color:#0B1426;\">Pro</b> durante 7 días, sin tarjeta. Descubre cómo apareces en las respuestas de ChatGPT, Gemini y Claude, compárate con tu competencia y recibe recomendaciones para ganar visibilidad."
+        `Tu cuenta tiene acceso completo a <b style="color:#0B1426;">Pro</b> hasta el <b style="color:#0B1426;">${endLabel}</b>, sin tarjeta. Tres pasos y verás qué dicen de ti ChatGPT, Gemini y Claude, y a qué competidores recomiendan en tu lugar.`
       )}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 4px;">
-        ${featureRow("Monitoriza tus <b style=\"color:#0B1426;\">prompts</b> en los tres motores de IA")}
-        ${featureRow("Compárate con tus <b style=\"color:#0B1426;\">competidores</b> reales")}
-        ${featureRow("Recibe <b style=\"color:#0B1426;\">recomendaciones</b> accionables cada escaneo")}
-      </table>
-      ${button("https://www.genscore.es/dashboard", "Crear mi primer análisis")}
-      ${subtext("Tu prueba termina en 7 días. Te avisaremos antes; no se te cobra nada de forma automática.")}
+      ${checklist([
+        { state: "done", text: "Crear tu cuenta" },
+        { state: "now", text: "Añadir tu dominio", hint: "Te sugerimos competidores y preguntas automáticamente." },
+        { state: "next", text: "Lanzar tu primer escaneo", hint: "Tarda unos minutos. Te avisamos al terminar." }
+      ])}
+      ${button("https://www.genscore.es/dashboard/projects/new", "Añadir mi dominio")}
+      ${subtext(closing)}
     `,
-      { preheader: "Tu prueba de Pro ya está activa — sin tarjeta, 7 días completos." }
+      { preheader: "3 pasos y 5 minutos para ver si ChatGPT, Gemini y Claude te recomiendan." }
     )
   );
 }
@@ -288,8 +381,10 @@ export async function sendScoreDropAlertEmail(
   to: string,
   projectDomain: string,
   previousScore: number,
-  currentScore: number
+  currentScore: number,
+  userId?: string
 ): Promise<void> {
+  const envelope = optionalEmailEnvelope(userId, "score_drop");
   await sendEmail(
     to,
     `${projectDomain}: tu puntuación ha bajado`,
@@ -319,22 +414,23 @@ export async function sendScoreDropAlertEmail(
       )}
       ${button("https://www.genscore.es/dashboard", "Revisar qué ha cambiado")}
     `,
-      { footerHtml: notificationsFooter("este aviso"), preheader: `Tu puntuación ha pasado de ${Math.round(previousScore)} a ${Math.round(currentScore)} en los dos últimos escaneos.` }
-    )
+      { footerHtml: envelope.footerHtml, preheader: `Tu puntuación ha pasado de ${Math.round(previousScore)} a ${Math.round(currentScore)} en los dos últimos escaneos.` }
+    ),
+    envelope.headers
   );
 }
 
-const sectionLabel = (text: string) =>
+export const sectionLabel = (text: string) =>
   `<div style="margin:30px 0 12px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5B6B82;">${text}</div>`;
 
-const statCell = (value: string, label: string, stackClass: string, delta?: DeltaPill | null) => `
+export const statCell = (value: string, label: string, stackClass: string, delta?: DeltaPill | null) => `
   <td width="33%" class="${stackClass}" style="padding:14px 6px;text-align:center;">
     <div style="font-size:21px;font-weight:800;color:#0B1426;line-height:1;font-variant-numeric:tabular-nums;">${value}</div>
     <div style="font-size:11px;color:#5B6B82;margin-top:5px;">${label}</div>
     ${delta ? `<div style="font-size:10.5px;font-weight:700;color:${delta.ink};margin-top:4px;">${delta.label}</div>` : ""}
   </td>`;
 
-const statRow = (cells: string) =>
+export const statRow = (cells: string) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr>${cells}</tr></table>`;
 
 type DeltaPill = { bg: string; ink: string; label: string };
@@ -356,7 +452,7 @@ const deltaPill = (delta: number): DeltaPill =>
  * (Outlook in particular) don't render either reliably. `percent` is clamped
  * defensively even though `getEffectiveGeoScore` is already a 0-100 composite.
  */
-const scoreBar = (percent: number, color: string) => {
+export const scoreBar = (percent: number, color: string) => {
   const filled = Math.max(0, Math.min(100, percent));
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;"><tr>
@@ -389,8 +485,10 @@ export async function sendWeeklyDigestEmail(
     promptsCount: number;
     competitorsCount: number;
     scansThisWeek: number;
-  }
+  },
+  userId?: string
 ): Promise<void> {
+  const envelope = optionalEmailEnvelope(userId, "weekly_digest");
   const delta = Math.round(digest.currentScore) - Math.round(digest.previousScore);
   const pill = deltaPill(delta);
 
@@ -509,8 +607,9 @@ export async function sendWeeklyDigestEmail(
       ${recommendationHtml}
       ${button("https://www.genscore.es/dashboard", "Ver el detalle completo")}
     `,
-      { footerHtml: notificationsFooter("este resumen"), preheader: `Puntuación de este escaneo: ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
-    )
+      { footerHtml: envelope.footerHtml, preheader: `Puntuación de este escaneo: ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
+    ),
+    envelope.headers
   );
 }
 
@@ -566,7 +665,7 @@ function getOpsAlertAddress(): string | null {
  * alert about a failure must not become an injection vector into the
  * operator's own inbox.
  */
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

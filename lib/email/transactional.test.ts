@@ -358,3 +358,106 @@ describe("WEEKLY-DIGEST-VISUAL-1: indicador visual y deltas por sub-score", () =
     expect(html).not.toContain("▼");
   });
 });
+
+/**
+ * EMAIL-UNSUB-1 (log §232). Un correo opcional sin enlace de baja que
+ * funcione es un incumplimiento (LSSI art. 21) y, para Gmail/Yahoo, una razón
+ * para mandarlo a spam. Lo que se fija: con secreto, pie con baja en un clic y
+ * cabeceras RFC 8058 apuntando a esa misma cuenta y categoría; sin secreto,
+ * el pie de Ajustes de siempre y ninguna cabecera que prometa algo que no hay.
+ */
+describe("baja en un clic en los correos opcionales", () => {
+  const USER_ID = "11111111-2222-4333-8444-555555555555";
+
+  afterEach(() => {
+    delete process.env.EMAIL_UNSUBSCRIBE_SECRET;
+  });
+
+  function lastHeaders() {
+    return (send.mock.calls.at(-1)?.[0] as { headers?: Record<string, string> }).headers;
+  }
+
+  it("con secreto, el aviso de caída lleva pie de baja y cabeceras one-click de su categoría", async () => {
+    process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
+    await sendScoreDropAlertEmail(CUSTOMER, "ejemplo.com", 62, 41, USER_ID);
+
+    const headers = lastHeaders();
+    expect(headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+    expect(headers?.["List-Unsubscribe"]).toMatch(
+      new RegExp(`^<https://www\\.genscore\\.es/api/email/unsubscribe\\?u=${USER_ID}&c=score_drop&t=[A-Za-z0-9_-]+>$`)
+    );
+    expect(lastPayload().html).toContain("Darme de baja en un clic");
+    expect(lastPayload().html).toContain(`/baja?u=${USER_ID}&amp;c=score_drop`.replace("&amp;", "&"));
+  });
+
+  it("el resumen semanal firma su propia categoría, no la del aviso", async () => {
+    process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
+    await sendWeeklyDigestEmail(
+      CUSTOMER,
+      "ejemplo.com",
+      {
+        currentScore: 50,
+        previousScore: 45,
+        subScores: { visibility: 40, citation: null, standing: 30 },
+        previousSubScores: { visibility: 35, citation: null, standing: 28 },
+        topMover: null,
+        recommendation: null,
+        activeRecommendationsCount: 0,
+        promptsCount: 10,
+        competitorsCount: 3,
+        scansThisWeek: 1
+      },
+      USER_ID
+    );
+
+    expect(lastHeaders()?.["List-Unsubscribe"]).toContain("c=weekly_digest");
+  });
+
+  it("sin secreto, cae al pie de Ajustes y no manda cabeceras", async () => {
+    await sendScoreDropAlertEmail(CUSTOMER, "ejemplo.com", 62, 41, USER_ID);
+
+    expect(lastHeaders()).toBeUndefined();
+    expect(lastPayload().html).toContain("Ajustes → Notificaciones");
+    expect(lastPayload().html).not.toContain("Darme de baja");
+  });
+
+  it("los correos de servicio no llevan baja, pero sí el enlace a preferencias", async () => {
+    process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
+    await sendWelcomeEmail(CUSTOMER);
+
+    expect(lastHeaders()).toBeUndefined();
+    expect(lastPayload().html).toContain("Preferencias de email");
+    expect(lastPayload().html).not.toContain("Darme de baja");
+  });
+});
+
+/**
+ * LIFECYCLE-TRIAL-1 (log §233). The welcome used to promise "Te avisaremos
+ * antes" with no email behind it. It now names the real end date, and only
+ * promises the warning while the trial emails are switched on.
+ */
+describe("bienvenida", () => {
+  afterEach(() => {
+    delete process.env.LIFECYCLE_EMAILS_ENABLED;
+    delete process.env.EMAIL_UNSUBSCRIBE_SECRET;
+  });
+
+  it("names the trial's real end date and asks to add the domain", async () => {
+    await sendWelcomeEmail(CUSTOMER, new Date("2026-09-28T10:00:00Z"));
+    const { html } = lastPayload();
+    expect(html).toContain("5 de octubre");
+    expect(html).toContain("Añadir mi dominio");
+  });
+
+  it("does not promise a warning while the trial emails are off", async () => {
+    await sendWelcomeEmail(CUSTOMER, new Date("2026-09-28T10:00:00Z"));
+    expect(lastPayload().html).not.toContain("Te avisaremos");
+  });
+
+  it("promises it once they are on", async () => {
+    process.env.LIFECYCLE_EMAILS_ENABLED = "true";
+    process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
+    await sendWelcomeEmail(CUSTOMER, new Date("2026-09-28T10:00:00Z"));
+    expect(lastPayload().html).toContain("Te avisaremos 2 días antes");
+  });
+});
