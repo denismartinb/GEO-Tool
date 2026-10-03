@@ -13,7 +13,7 @@ vi.mock("@/lib/email/lifecycle/templates", () => ({
 }));
 vi.mock("@/lib/stripe", () => ({ getActivePromoPlanIds: () => ["pro", "starter"] }));
 
-import { maybeSendFirstScanReadyEmail, runLifecycleEmails } from "./runner";
+import { maybeSendFirstScanReadyEmail, runConfirmationReminders, runLifecycleEmails } from "./runner";
 
 /**
  * LIFECYCLE-TRIAL-1 (log §233). The runner's own contract, over a fake
@@ -175,5 +175,63 @@ describe("maybeSendFirstScanReadyEmail", () => {
     await maybeSendFirstScanReadyEmail(optedOut.service, { ownerUserId: USER, projectId: "p1", projectDomain: "d" });
 
     expect(sendFirstScanReadyEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("runConfirmationReminders (CONFIRM-REMINDER-1, log §234)", () => {
+  function authService(users: Array<Record<string, unknown>>, resendError: string | null = null) {
+    const resent: Array<Record<string, unknown>> = [];
+    const service = {
+      auth: {
+        admin: { listUsers: async () => ({ data: { users }, error: null }) },
+        resend: async (params: Record<string, unknown>) => {
+          resent.push(params);
+          return { error: resendError ? { message: resendError } : null };
+        }
+      }
+    } as never;
+    return { service, resent };
+  }
+
+  const user = (ageHours: number, overrides: Record<string, unknown> = {}) => ({
+    id: USER,
+    email: "nuevo@ejemplo.com",
+    created_at: new Date(NOW.getTime() - ageHours * HOUR).toISOString(),
+    email_confirmed_at: null,
+    ...overrides
+  });
+
+  it("re-sends Supabase's own confirmation to a day-old unconfirmed sign-up, back to the same callback", async () => {
+    const { service, resent } = authService([user(26)]);
+    expect(await runConfirmationReminders({ service, now: NOW })).toMatchObject({ status: "ok", reminded: 1, failed: 0 });
+    expect(resent).toHaveLength(1);
+    expect(resent[0]).toMatchObject({ type: "signup", email: "nuevo@ejemplo.com" });
+    expect((resent[0].options as { emailRedirectTo: string }).emailRedirectTo).toMatch(/\/auth\/callback$/);
+  });
+
+  it("leaves confirmed, too-new, too-old and excluded accounts alone", async () => {
+    process.env.COMPED_ACCOUNT_EMAILS = "comped@ejemplo.com";
+    const { service, resent } = authService([
+      user(26, { email_confirmed_at: NOW.toISOString() }),
+      user(5),
+      user(60),
+      user(26, { email: "comped@ejemplo.com" })
+    ]);
+    await runConfirmationReminders({ service, now: NOW });
+    expect(resent).toEqual([]);
+  });
+
+  it("counts a throttled resend as failed instead of retrying it", async () => {
+    const { service } = authService([user(26)], "email rate limit exceeded");
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await runConfirmationReminders({ service, now: NOW })).toMatchObject({ reminded: 0, failed: 1 });
+    spy.mockRestore();
+  });
+
+  it("does nothing while the lifecycle switch is off", async () => {
+    delete process.env.LIFECYCLE_EMAILS_ENABLED;
+    const { service, resent } = authService([user(26)]);
+    expect(await runConfirmationReminders({ service, now: NOW })).toEqual({ status: "disabled" });
+    expect(resent).toEqual([]);
   });
 });

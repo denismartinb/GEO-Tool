@@ -21270,3 +21270,41 @@ Ficheros: `lib/email/lifecycle/{flag,schedule,templates,offers,runner}.ts`
 `lib/scan/executor.ts`, `supabase/migrations/0037_email_sends.sql`,
 `vercel.json`, `vercel-crons.test.ts`, `lib/env-schema.ts`,
 `docs/environment-contract.md`.
+
+## 234. CONFIRM-REMINDER-1: un recordatorio a quien se registró y nunca confirmó su email (2026-10-02)
+
+**De dónde viene.** Revisando el registro de Resend con el fundador
+(2026-10-02) apareció una fuga que la secuencia de §233 no cubre: una cuenta
+recibió «Confirma tu cuenta en GenScore» y, nueve horas después, ni había
+confirmado ni tenía bienvenida. Toda la secuencia empieza **después** de
+confirmar, así que ese alta no recibía nada más. El fundador aprobó añadir el
+recordatorio el mismo día, junto con el merge de #544.
+
+**Qué se decide.**
+
+- **Se reenvía la confirmación de Supabase, no una plantilla nueva.**
+  `service.auth.resend({ type: "signup" })` vuelve a mandar el email
+  configurado en Supabase (sale por Resend), con un enlace nuevo y válido y el
+  mismo `emailRedirectTo` del alta (`/auth/callback`). Así el camino tras el
+  clic es exactamente el original, bienvenida incluida, y no hay un segundo
+  diseño que mantener. Coste aceptado: el asunto es el mismo que el primero.
+- **Una vez, sin migración.** `shouldRemindConfirmation`
+  (`lib/email/lifecycle/schedule.ts`, pura) abre una ventana de exactamente 24
+  h (de 20 h a 44 h tras el alta), así que el cron diario cae en ella una sola
+  vez; no hace falta un tipo nuevo en `email_sends` ni tocar la migración 0037.
+  Coste aceptado: si el cron se disparase dos veces en el mismo día, se
+  recordaría dos veces.
+- **Sólo altas con contraseña**: las de Google llegan confirmadas. Fuera
+  también las cuentas comped e internas.
+- **Categoría `service`** (es el email de la cuenta), sin baja. Va en el mismo
+  cron (`/api/cron/lifecycle-emails`) y detrás del mismo interruptor
+  `LIFECYCLE_EMAILS_ENABLED`: la secuencia se enciende entera de una vez.
+- **Un reenvío rechazado por el límite de Supabase se cuenta y se registra**,
+  no se reintenta en bucle contra el propio límite.
+
+**Pendiente.** Nada propio de esta fase. La lista de usuarios de auth se lee
+en una página de 1000, la misma escala que `/admin`; el resultado del cron
+dice `truncated: true` el día que deje de bastar.
+
+**Trazabilidad.** `lib/email/lifecycle/{schedule,runner}.ts` (+tests),
+`app/api/cron/lifecycle-emails/route.ts`, `.claude/rules/email.md`.
