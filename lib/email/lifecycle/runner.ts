@@ -6,7 +6,14 @@ import { isCompedAccountEmail } from "@/lib/billing/comped-accounts";
 import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
 import { recommendationEngineLabels } from "@/lib/recommendations/export-plan";
 import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
-import { decideTrialEmail, TRIAL_KINDS, trialDaysLeft, type TrialEmailDecision } from "@/lib/email/lifecycle/schedule";
+import {
+  decideTrialEmail,
+  shouldRemindConfirmation,
+  TRIAL_KINDS,
+  trialDaysLeft,
+  type TrialEmailDecision
+} from "@/lib/email/lifecycle/schedule";
+import { getSiteUrl } from "@/lib/site-url";
 import { proVsFreeRows, resolvePlanOffer } from "@/lib/email/lifecycle/offers";
 import {
   sendFirstScanReadyEmail,
@@ -334,4 +341,75 @@ async function sendDecision(
     starter: resolvePlanOffer("starter"),
     lossRows: proVsFreeRows()
   });
+}
+
+/* ------------------------------------------- recordatorio de confirmación */
+
+/** `auth.admin.listUsers` page size; same scale reasoning as lib/admin/users.ts. */
+const AUTH_USERS_PAGE = 1000;
+
+export type ConfirmationReminderResult =
+  | { status: "disabled" }
+  | { status: "query_failed" }
+  | { status: "ok"; reminded: number; failed: number; truncated: boolean };
+
+/**
+ * CONFIRM-REMINDER-1 (log §234). Re-sends Supabase's own confirmation email
+ * ("Confirma tu cuenta en GenScore", the template already configured in
+ * Supabase and delivered through Resend) to password sign-ups that never
+ * clicked the link. `auth.resend` issues a fresh, valid link and the same
+ * `emailRedirectTo` the sign-up used, so the flow after the click is exactly
+ * the original one — welcome email included.
+ *
+ * Account email, not commercial: category `service`, no unsubscribe. It
+ * still rides the lifecycle switch, so the whole sequence turns on at once.
+ */
+export async function runConfirmationReminders({
+  service,
+  now = new Date()
+}: {
+  service: Service;
+  now?: Date;
+}): Promise<ConfirmationReminderResult> {
+  if (!isLifecycleEmailEnabled()) return { status: "disabled" };
+
+  const { data, error } = await service.auth.admin.listUsers({ page: 1, perPage: AUTH_USERS_PAGE });
+  if (error || !data) {
+    console.error("[geo:lifecycle] failed to list auth users for confirmation reminders", { message: error?.message });
+    return { status: "query_failed" };
+  }
+
+  const due = data.users.filter(
+    (user) =>
+      typeof user.email === "string" &&
+      shouldRemindConfirmation(
+        {
+          createdAt: new Date(user.created_at),
+          emailConfirmedAt: user.email_confirmed_at ? new Date(user.email_confirmed_at) : null,
+          isExcluded: isExcludedAccount(user.email)
+        },
+        now
+      )
+  );
+
+  let reminded = 0;
+  let failed = 0;
+  for (const user of due) {
+    const { error: resendError } = await service.auth.resend({
+      type: "signup",
+      email: user.email as string,
+      options: { emailRedirectTo: `${getSiteUrl()}/auth/callback` }
+    });
+    if (resendError) {
+      // Supabase's own throttle is the usual cause; the account stays
+      // unconfirmed and simply gets no reminder — logged, never retried in a
+      // loop against a rate limit.
+      console.error("[geo:lifecycle] confirmation reminder failed", { message: resendError.message });
+      failed += 1;
+    } else {
+      reminded += 1;
+    }
+  }
+
+  return { status: "ok", reminded, failed, truncated: data.users.length >= AUTH_USERS_PAGE };
 }

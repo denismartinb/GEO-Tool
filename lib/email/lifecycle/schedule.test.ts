@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideTrialEmail, trialDaysLeft, type SentState, type TrialAccountState } from "./schedule";
+import { decideTrialEmail, shouldRemindConfirmation, trialDaysLeft, type SentState, type TrialAccountState } from "./schedule";
 
 /**
  * LIFECYCLE-TRIAL-1 (log §233). The approved rules, one by one. The silences
@@ -120,5 +120,30 @@ describe("trialDaysLeft", () => {
     expect(trialDaysLeft(new Date(WEDNESDAY.getTime() + 49 * HOUR), WEDNESDAY)).toBe(3);
     expect(trialDaysLeft(new Date(WEDNESDAY.getTime() + 48 * HOUR), WEDNESDAY)).toBe(2);
     expect(trialDaysLeft(new Date(WEDNESDAY.getTime() - HOUR), WEDNESDAY)).toBe(0);
+  });
+});
+
+describe("CONFIRM-REMINDER-1 · recordatorio de confirmación", () => {
+  const base = (ageHours: number, overrides: Partial<{ emailConfirmedAt: Date | null; isExcluded: boolean }> = {}) => ({
+    createdAt: new Date(WEDNESDAY.getTime() - ageHours * HOUR),
+    emailConfirmedAt: null,
+    isExcluded: false,
+    ...overrides
+  });
+
+  it("reminds an unconfirmed sign-up once it is a day old", () => {
+    expect(shouldRemindConfirmation(base(26), WEDNESDAY)).toBe(true);
+  });
+
+  it("is a 24 h window, so a daily cron reminds exactly once", () => {
+    expect(shouldRemindConfirmation(base(19), WEDNESDAY)).toBe(false);
+    expect(shouldRemindConfirmation(base(20), WEDNESDAY)).toBe(true);
+    expect(shouldRemindConfirmation(base(43.9), WEDNESDAY)).toBe(true);
+    expect(shouldRemindConfirmation(base(44), WEDNESDAY)).toBe(false);
+  });
+
+  it("never reminds a confirmed account (Google sign-ups included) nor an excluded one", () => {
+    expect(shouldRemindConfirmation(base(26, { emailConfirmedAt: new Date() }), WEDNESDAY)).toBe(false);
+    expect(shouldRemindConfirmation(base(26, { isExcluded: true }), WEDNESDAY)).toBe(false);
   });
 });

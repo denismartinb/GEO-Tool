@@ -71,3 +71,8 @@ igual.
   tiene un número por defecto (§233, §183, §182).
 - **Todo texto que viene de fuera va por `escapeHtml`**: dominio, nombre de
   competidor, título y descripción de una recomendación (§233).
+- **Recordar la confirmación es reenviar la de Supabase, una vez.**
+  `auth.resend({ type: "signup" })` con el mismo `emailRedirectTo` del alta,
+  dentro de una ventana de 24 h que el cron diario pisa una sola vez. No se
+  construye un enlace propio de confirmación: el flujo tras el clic tiene que
+  ser el de siempre (§234).

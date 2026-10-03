@@ -104,3 +104,26 @@ export function decideTrialEmail(account: TrialAccountState, sent: SentState, no
 export function trialDaysLeft(trialEndsAt: Date, now: Date): number {
   return Math.max(0, Math.ceil(hoursBetween(now, trialEndsAt) / 24));
 }
+
+/**
+ * CONFIRM-REMINDER-1 (log §234). One reminder to confirm the email address,
+ * to an account that signed up with a password and never clicked the link —
+ * the signup that never reaches the product, so every other email in this
+ * sequence (which starts after confirmation) misses it.
+ *
+ * Stateless on purpose: the window is exactly 24 h wide (20 h to 44 h after
+ * sign-up), so the daily cron lands in it once and only once — no new
+ * `email_sends` kind and no migration for a single email. The cost of that
+ * choice, stated: a cron fired twice inside the same day would remind twice.
+ * Google sign-ups are confirmed by Google and never match.
+ */
+export const CONFIRM_REMINDER_WINDOW_HOURS = { from: 20, to: 44 } as const;
+
+export function shouldRemindConfirmation(
+  account: { createdAt: Date; emailConfirmedAt: Date | null; isExcluded: boolean },
+  now: Date
+): boolean {
+  if (account.emailConfirmedAt || account.isExcluded) return false;
+  const age = hoursBetween(account.createdAt, now);
+  return age >= CONFIRM_REMINDER_WINDOW_HOURS.from && age < CONFIRM_REMINDER_WINDOW_HOURS.to;
+}
