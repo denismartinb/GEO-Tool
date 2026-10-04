@@ -21308,3 +21308,22 @@ dice `truncated: true` el día que deje de bastar.
 
 **Trazabilidad.** `lib/email/lifecycle/{schedule,runner}.ts` (+tests),
 `app/api/cron/lifecycle-emails/route.ts`, `.claude/rules/email.md`.
+
+## 235. PROMPTS-DELETED-GHOST-1: un prompt borrado desaparece de Prompts en vez de caer en «Sin categoría» (2026-10-04)
+
+**Qué pasaba.** `prompts/page.tsx` pinta las filas del último escaneo
+completado, y esas filas siguen existiendo tras «Borrar prompt»
+(`deactivatePrompt` sólo pone `is_active = false`). La categoría se busca en un
+mapa construido únicamente con prompts activos, así que la fila del prompt
+borrado no encontraba categoría y se agrupaba como «Sin categoría» — el
+fundador lo vio en Alberdiderma.
+
+**Decisión.** Las filas cuyo `prompt_id` ya no es un prompt activo se descartan
+antes de agrupar, filtrar por competidor y calcular agregados. Un prompt
+borrado deja de contar también en los totales del tema.
+
+**Pendiente.** Sin cambio de esquema. Otras pantallas que lean el último run
+sin cruzar con prompts activos (Visión general, Competidores) no se han
+revisado en esta fase.
+
+**Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.

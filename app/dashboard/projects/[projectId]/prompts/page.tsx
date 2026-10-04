@@ -174,10 +174,16 @@ export default async function PromptsPage({
     (projectPrompts ?? []).map((p) => [p.id, p.category as string | null])
   );
 
-  const allResults: ResultRow[] = (rawResults ?? []).map((r) => ({
-    ...r,
-    category: promptCategoryMap.get(r.prompt_id ?? "") ?? null,
-  }));
+  // The last run still holds rows for prompts deactivated since it ran. Those
+  // are gone from the user's point of view ("Borrar prompt"), so they must not
+  // render — and without an active prompt there is no category to look up, so
+  // they used to fall into "Sin categoría" instead of disappearing.
+  const allResults: ResultRow[] = (rawResults ?? [])
+    .filter((r) => promptCategoryMap.has(r.prompt_id ?? ""))
+    .map((r) => ({
+      ...r,
+      category: promptCategoryMap.get(r.prompt_id ?? "") ?? null,
+    }));
 
   // Filtro opcional por competidor (drilldown desde la página de Competidores)
   const results: ResultRow[] = competitorFilter
