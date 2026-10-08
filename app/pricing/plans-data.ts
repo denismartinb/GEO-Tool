@@ -267,10 +267,10 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "Sí, desde \"Plan y facturación\" en tu cuenta, sin esperar a nadie. Mientras no activemos la facturación real, cambiar de plan no tiene coste ni compromiso de permanencia."
+    a: "Sí, desde \"Plan y facturación\" en tu cuenta, sin esperar a nadie. No hay compromiso de permanencia."
   },
   {
     q: "¿Qué incluye la prueba de Pro?",
-    a: "Actualmente puedes activar Pro completo eligiendo ese plan al registrarte, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Mientras no lancemos la facturación no hay límite de tiempo automático — te avisaremos con antelación razonable antes de introducir el cobro."
+    a: "La prueba es opcional: 14 días de Pro completo, sin tarjeta, que puedes empezar después de tu primer diagnóstico. Si no la empiezas no pasa nada, y al terminar pasas a Free sin que se te cobre nada."
   }
 ];

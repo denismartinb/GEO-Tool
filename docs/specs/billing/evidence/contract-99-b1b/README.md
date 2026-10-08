@@ -23,7 +23,7 @@ el head exacto está en el informe del PR #549. Para repetirlo: `pnpm run build`
 | `pricing-1280.png`, `pricing-390.png` | `/pricing` entera: tarjetas, matriz, FAQ | dos tarjetas equilibradas; matriz de dos columnas **sin deslizar a 390 px**; sin Starter ni Agencia |
 | `docs-planes-1280.png`, `docs-planes-390.png` | `/docs/planes-y-limites` | tabla con Free y Pro; la escalera de subida ya no nombra Starter/Agencia |
 | `home-top-1280.png`, `home-top-390.png` | cabecera de la home con la tira promocional | la tira ya no anuncia descuento |
-| `hero-strip-1/2/3-{390,1280}.png` | las tres filas rotatorias de la tira, congeladas una a una | «Gratis · 7 días de Pro» · «99 €/mes, IVA incluido» · «3 dominios · 75 prompts · 3 motores · escaneo semanal» |
+| `hero-strip-1/2/3-{390,1280}.png` | las tres filas rotatorias de la tira, congeladas una a una | «14 días · de Pro, si quieres, sin tarjeta» (ronda 11: antes decía «Gratis · 7 días de Pro», que contradecía la propuesta de 14 días opt-in) · «99 €/mes, IVA incluido» · «3 dominios · 75 prompts · 3 motores · escaneo semanal» |
 
 ## Lo que estas capturas hicieron encontrar (y se corrigió)
 
@@ -60,3 +60,11 @@ La consola autenticada (selector «Cambiar de plan», puerta de exceso de domini
 asistente de alta): necesitan sesión y datos. El cambio en ellas es mínimo (Starter deja de
 ofrecerse y el que ya lo tiene lo sigue viendo; probado con tests unitarios de
 `plansOfferedTo`), pero **su aspecto no se ha visto**.
+
+## Límites de estas imágenes (no afirman más)
+
+Son capturas de un build local con Supabase ficticio: **no** demuestran un checkout, ni que la prueba
+de 14 días funcione (el texto va por delante del producto hasta B5: no desplegar antes), ni nada de
+Stripe. El Checkout real de 99 € con IVA incluido no se ha visto: el entorno no tiene salida a
+Stripe ni a Vercel (403 del proxy) y no hay clave; ver `../../stripe-live-procedure.md` §3.
+

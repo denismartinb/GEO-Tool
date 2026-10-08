@@ -88,8 +88,10 @@ const PRO_PLAN = PLANS.find((p) => p.id === "pro")!;
  * and a campaign date would announce something no checkout gives). The strip keeps its three
  * rows because the animation in globals.css (`lp-promo-cycle`, 9 s, delays 0/-3/-6) is measured
  * for exactly three; what changed is what they say, and every figure is read from `PLANS`.
- * The first row still says "7 días de Pro": that is what a new account gets TODAY, and it is the
- * one string to revisit when the optional 14-day trial replaces it (B5).
+ * The first row follows the approved trial proposal (optional, 14 days, no card, offered after
+ * the first diagnosis — contract-99-implementation.md §13) and NOT the 7-day automatic Pro that
+ * `handle_new_user` still grants today. That copy is ahead of the product until B5 (schema) ships;
+ * it must not be deployed before B5 does, or this strip promises a trial nothing yet offers.
  */
 export function PromoStrip() {
   const user = useSessionUser();
@@ -99,8 +101,8 @@ export function PromoStrip() {
     <div className="lp-promo">
       <span className="lp-promo-track">
         <span className="lp-promo-row a">
-          <span className="lp-promo-pill">Gratis</span>
-          <span>7 días de Pro</span>
+          <span className="lp-promo-pill">14 días</span>
+          <span>de Pro, si quieres, sin tarjeta.</span>
         </span>
         <span className="lp-promo-row b">
           <span className="lp-promo-pill">{PRO_PLAN.price}&nbsp;€</span>
