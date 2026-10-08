@@ -1,5 +1,5 @@
--- Rollback of Option A. NOTE: `create policy` takes ACCESS EXCLUSIVE on project_prompts for a moment (reads queue
--- behind it up to lock_timeout): quiet window. A2 restores exactly 0002's behaviour; A1 removes the function. No data changes.
+-- Rollback of Option A. NOTE: `DROP TRIGGER` and `create policy` both take ACCESS EXCLUSIVE on project_prompts
+-- for a moment (reads queue behind them up to lock_timeout): quiet window. A2 restores exactly 0002's behaviour; A1 removes the function. No data changes.
 begin;
 set local lock_timeout = '3s';
 drop trigger if exists trg_project_prompts_no_reactivation on public.project_prompts;

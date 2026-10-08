@@ -1,6 +1,15 @@
 -- Restores 0019's behaviour exactly (UPDATE-only trigger, no email guard). No data is changed.
+-- ORDER: roll back B FIRST (B_rollback_1_disable.sql). C_rollback reopens hole 1, and under an active B an
+-- account with no profile row could then self-insert 'agency' and obtain cap 300; the guard below refuses.
 begin;
 set local lock_timeout = '3s';
+do $$
+begin
+  if exists (select 1 from pg_trigger where tgrelid = 'public.project_prompts'::regclass
+             and tgname = 'trg_project_prompts_pool' and tgenabled <> 'D') then
+    raise exception 'Option B is active: run B_rollback_1_disable.sql before C_rollback.sql';
+  end if;
+end $$;
 create or replace function public.protect_billing_columns()
 returns trigger
 language plpgsql

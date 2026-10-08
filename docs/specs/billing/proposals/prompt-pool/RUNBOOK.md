@@ -32,7 +32,13 @@ Recomendación: **C → B1 → overrides → B2**. A solo si el dueño aprueba `
 | 8 | baja-media | Con `REPEATABLE READ` se llegaba a 76 | Arreglado: se rechaza si no es `READ COMMITTED` (también en 0039) |
 | 9 | baja | Posible *deadlock* con transacciones largas | **Riesgo, decisión del dueño pendiente** (nadie lo ha aceptado). Disponibilidad, no se salta el tope. **Reproducido con dos `UPDATE` de una sola sentencia** (`where id in (A,B)` frente a `where id in (B,C)`): el candado de fila se toma antes que el de cuenta. Se evita reactivando una fila por sentencia |
 | 10 | baja | B no limita filas **inactivas** (5.000 por REST) | **Abierto en B**, anterior a esta propuesta. **A2 lo cierra**: sin política de insert nadie inserta por REST |
-| 11 | baja | Huecos del postflight | Corregidos (`count = 2`, `tgfoid`, `tgtype`) |
+| 11 | baja | Huecos del postflight | Ampliados tras la cuarta revisión (ver filas 13-18). **El postflight es un chivato, no una prueba** |
+| 13 | alta | El postflight imprimía todo en verde con un trigger extra que voltea `is_active`, un trigger extra sobre `profiles`, una política extra permisiva, `is_project_owner` reescrita, RLS apagada, `session_replication_role` fijado por base de datos, otra clave primaria o un `TRUNCATE` concedido en la tabla de excepciones | **Corregido**: fija ahora el conjunto exacto de triggers y de políticas (nombre, comando, roles, expresiones) de `profiles` y `project_prompts`, RLS, el cuerpo de `is_project_owner`, los ajustes `session_replication_role`, y forma y privilegios completos (tabla y columna) de la tabla de excepciones. Cada ataque tiene prueba. **No ve el propietario de los objetos ni los cuerpos de `auth.role()`/`auth.uid()`** (se imprimen como `md5` para compararlos con el preflight) |
+| 14 | alta | Un abuso del agujero 1 anterior a C no se ve en el preflight 7c y sobrevive a C+B (la cuenta conserva tope 300) | **Parcial**: C congela `created_at`; 7c suma «id de suscripción que no parece de Stripe» y «suscripción sin cliente». **7c es de solo presencia: un 0 no es evidencia de que no pasó nada** (el perfil pudo editarse antes de C). Una cuenta ya forjada **no se repara** con este paquete: la reconciliación de §9 solo cubre el email |
+| 15 | alta | La guarda «C instalada» de B2 solo miraba el hash del cuerpo y el bit INSERT | **Corregido**: exige trigger habilitado, `BEFORE ROW`, sin `WHEN`, todas las columnas, función correcta, `SECURITY DEFINER` y `search_path`; una prueba por cada forma de romper C |
+| 16 | media | `C_rollback.sql` reabría el agujero 1 con B activa | **Corregido**: se niega si el trigger de B existe y no está desactivado; orden obligatorio: `B_rollback_1_disable.sql` antes que `C_rollback.sql` |
+| 17 | media | §9 comparaba solo el número de filas; plantilla de excepciones sin comprobación ni normalización | **Corregido** (§9 compara la lista de ids; §4 comprueba el recuento y no baja topes existentes) |
+| 18 | baja | 7b dará falsos positivos estables | **Documentado** en la propia fila |
 | 12 | baja | Pruebas que probaban menos de lo que decían | Reescritas; añadidas upsert, perfil ausente, email, `REPEATABLE READ`, B sin 0039, código de error |
 
 ## 3. Orden (si el dueño aprueba B)
@@ -62,8 +68,8 @@ cual (llama a `add_project_prompts`): **desplegar ese código sin 0039 deja a lo
    `false` (falla seguro).
 7. Prueba de humo del dueño con una cuenta propia: añadir un prompt con la bolsa llena debe dar el aviso de bolsa llena.
 
-**Reversión:** primero **`B_rollback_1_disable.sql`** (desactiva el trigger: reversión completa del comportamiento,
-sin tocar filas, instantánea y reversible; **no pega junto el paso 2**) y, si se quiere quitar del todo y en ventana
+**Orden de reversión obligatorio: B antes que C** (`C_rollback.sql` se niega si B sigue activa). **Reversión:** primero **`B_rollback_1_disable.sql`** (desactiva el trigger: reversión completa del comportamiento,
+sin tocar filas y reversible; espera detrás de las escrituras abiertas y puede agotar `lock_timeout`; **no pega junto el paso 2**) y, si se quiere quitar del todo y en ventana
 tranquila, `B_rollback_2_drop.sql`; `C_rollback.sql` restaura el trigger de 0019. No hay reversión de datos porque no
 se cambia ninguno. Si B2 da quejas: ejecutar solo el paso 1 (`disable`), nunca un `drop` directo.
 
@@ -74,12 +80,22 @@ El tope de B sale de `profiles.current_plan`; una cuenta comped (hoy plan Agency
 con los emails del dueño (no se pegan en tickets ni en comentarios):
 
 ```sql
-insert into public.account_prompt_cap_overrides (user_id, cap, note)
-select id, 300, 'comped'
-from auth.users
-where email_confirmed_at is not null and lower(email) in ('<email 1>', '<email 2>')   -- los de COMPED_ACCOUNT_EMAILS
-on conflict (user_id) do update set cap = excluded.cap;
--- Comprobar: el número de filas insertadas debe ser igual al número de emails.
+-- Escribir los emails EN MINÚSCULAS y sin espacios. <N> = cuántos emails has puesto. No baja un tope
+-- ya existente (p. ej. una Agencia «a medida» por encima de 300): `do nothing`.
+do $$
+declare found integer;
+begin
+  insert into public.account_prompt_cap_overrides (user_id, cap, note)
+  select id, 300, 'comped'
+  from auth.users
+  where email_confirmed_at is not null and lower(btrim(email)) in ('<email 1>', '<email 2>')
+  on conflict (user_id) do nothing;
+  select count(*) into found from public.account_prompt_cap_overrides o
+   where o.user_id in (select id from auth.users where email_confirmed_at is not null and lower(btrim(email)) in ('<email 1>', '<email 2>'));
+  if found <> <N> then
+    raise exception 'expected % comped accounts with an override, found % (unconfirmed, misspelt or missing?)', <N>, found;
+  end if;
+end $$;
 ```
 
 Se usa `auth.users.email` y no `profiles.email`; **`auth.users.email` se fija en el alta, antes de confirmar el
@@ -97,7 +113,7 @@ variable deje de usarse). Hasta entonces, una cuenta en la variable sin fila que
 | B1 | tabla nueva: ninguno relevante (**sin FK a `auth.users`**, que habría bloqueado altas y logins) | ninguno | no (borrar la tabla pierde las excepciones: exportarlas antes) |
 | B2 | `CREATE TRIGGER`: `SHARE ROW EXCLUSIVE` sobre `project_prompts` | las escrituras esperan; las lecturas no, salvo cola detrás de una escritura pendiente | no |
 | A2 | `DROP POLICY`: **`ACCESS EXCLUSIVE`** sobre `project_prompts` | las lecturas esperan | no |
-| `A_rollback` | `create policy`: **`ACCESS EXCLUSIVE`** sobre `project_prompts` | las lecturas esperan | no |
+| `A_rollback` | `DROP TRIGGER` y `create policy`: **`ACCESS EXCLUSIVE`** sobre `project_prompts` | las lecturas esperan | no |
 | `B_rollback_1_disable` | `ALTER TABLE … DISABLE TRIGGER`: `SHARE ROW EXCLUSIVE` | las lecturas siguen | no (reversible) |
 | `B_rollback_2_drop` | `DROP TRIGGER`: **`ACCESS EXCLUSIVE`** | las lecturas esperan | no |
 
@@ -172,21 +188,31 @@ no tiene email en `auth.users`, teléfono o SSO, porque un perfil que conserva u
    de clientes): `select pr.id, pr.email as old_email from public.profiles pr join auth.users u on u.id = pr.id where <predicado>;`
 3. **Revisar a mano**, sin escribir ningún email *comped* en GitHub ni en tickets, si alguna cuenta cambiaría de plan
    efectivo. Después del paso 4 solo se vuelve atrás con la copia del paso 2.
-4. **Una sola sentencia atómica** (sirve en el editor SQL aunque no se conserve una transacción interactiva): si el
-   número de filas no es N, **se lanza una excepción y no cambia nada** (también si `postgres` no se salta RLS y no
-   coincide ninguna fila):
+4. **Una sola sentencia atómica** (un bloque `DO` es una sentencia: si lanza una excepción no cambia nada, también
+   en el editor SQL). Compara **la lista de ids**, no solo cuántas filas: si entre el paso 2 y el 4 una fila converge y
+   otra diverge, el número puede coincidir y la fila nueva quedaría sobrescrita sin estar en la copia. Pegar en
+   `expected` los ids del paso 2 (ya ordenados). **Si N es 0 no hay nada que hacer: no ejecutar el bloque.**
    ```sql
    do $$
-   declare n integer;
+   declare
+     expected uuid[] := array['<id 1>', '<id 2>']::uuid[];
+     got uuid[];
    begin
-     update public.profiles pr set email = coalesce(u.email, '')
-     from auth.users u
-     where u.id = pr.id and <predicado>;
-     get diagnostics n = row_count;
-     if n <> <N> then raise exception 'expected % rows, updated %', <N>, n; end if;
+     with u as (
+       update public.profiles pr set email = coalesce(au.email, '')
+       from auth.users au
+       where au.id = pr.id and <predicado>
+       returning pr.id
+     )
+     select coalesce(array_agg(id order by id), array[]::uuid[]) into got from u;
+     if got is distinct from (select coalesce(array_agg(x order by x), array[]::uuid[]) from unnest(expected) x) then
+       raise exception 'the rows updated are not exactly the backed-up ids (updated %, expected %)', cardinality(got), cardinality(expected);
+     end if;
    end $$;
    ```
-   (`profiles.email` es `NOT NULL` y admite `''`; el guard de `C` deja pasar al rol `postgres` del editor.)
+   (`profiles.email` es `NOT NULL` y admite `''`; el guard de `C` deja pasar al rol `postgres` del editor. Que `postgres`
+   se salte RLS en Supabase **no está verificado**: si no lo hiciera, `got` saldría vacío y el bloque lanzaría la
+   excepción por no coincidir con `expected`, **siempre que `expected` no esté vacío** — por eso N = 0 no se ejecuta.)
 
 **Fuente de identidad fiable para «comped» (propuesta, no implementada):** mientras la app lea `profiles.email`, una
 alteración previa a `C` sigue sirviendo. Opciones, de menor a mayor cambio:
@@ -213,7 +239,7 @@ aprobación); (b) decidir «comped» solo por la tabla de excepciones (por `user
   `auth.users` (si faltaran, la rama INSERT de C falla cerrado), ni los permisos por defecto de `EXECUTE` (el paquete
   los revoca explícitamente), ni cómo traduce PostgREST un upsert o un PATCH masivo, ni cómo trata el editor SQL las
   transacciones.
-- Cada alta recibe 7 días de Pro con 75 prompts: los registros repetidos no están limitados (antiabuso diferido).
+- Cada alta recibe 7 días de Pro con 75 prompts: los registros repetidos no están limitados. El comentario del Director del 21:16 lo pospone; **la decisión de aceptar ese riesgo es del dueño**.
 - `lib/projects/prompt-pool.ts` toma del error de la base el tope que realmente se aplicó; si no puede leerlo, usa el
   de la app.
 

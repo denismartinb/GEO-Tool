@@ -44,6 +44,9 @@
 --     taken from auth.users, never from the request.
 --   * UPDATE by `authenticated`: the existing guard (plan, stripe ids, trial, cancel_at) PLUS `email`.
 --
+-- Also frozen for `authenticated`: `created_at` (see the function), so a profile self-inserted before C cannot
+-- erase its own trace afterwards. C still cannot DETECT past abuse: preflight 7c is a presence-only signal.
+--
 -- Cost, stated: an `authenticated` session can no longer change its own `profiles.email`. Nothing in
 -- app/ or lib/ does (grep: no profiles update touches email; the auth.updateUser calls set a
 -- password and `user_metadata`, never the email). If an email-change flow is added later, sync it from the server with the service role.
@@ -91,6 +94,12 @@ begin
 
   if auth.role() = 'authenticated' and new.email is distinct from old.email then
     raise exception 'email can only be changed by the service role';
+  end if;
+
+  -- created_at is the forensic signal of a profile that did not come from signup (preflight 7c): a user
+  -- must not be able to rewrite it after the fact.
+  if auth.role() = 'authenticated' and new.created_at is distinct from old.created_at then
+    raise exception 'created_at can only be changed by the service role';
   end if;
 
   return new;

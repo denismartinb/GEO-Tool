@@ -70,6 +70,9 @@ parallel_fill() { # n_workers rows_each
   wait "${pids[@]}"
 }
 
+# postflight row flagged false? usage: pf_false '<row prefix>'
+pf_false() { psql -At -f $DIR/postflight.sql | grep -F "$1" | grep -c '|f$'; }
+
 # ============================================================ B
 testB() {
   echo "== Option B (trigger, DB-derived cap, no service_role) =="
@@ -210,7 +213,7 @@ testB() {
 
   echo "-- postflight (B+C applied, A not): B and C rows true, only the A rows false"
   PF="$(psql -At -f $DIR/postflight.sql)"
-  eq "PF1 no B/C/untouched row is false" "$(echo "$PF" | grep -E '^(B:|C:|untouched)' | grep -c '|f$')" 0
+  eq "PF1 no B/C/untouched row is false" "$(echo "$PF" | grep -E '^(B:|C:|surface)' | grep -c '|f$')" 0
   eq "PF1 the three A rows are false (not applied)" "$(echo "$PF" | grep -E '^A' | grep -c '|f$')" 3
   q "create or replace trigger trg_profiles_protect_billing_columns after insert or update on public.profiles for each row execute function public.protect_billing_columns()" >/dev/null
   eq "PF2 a C trigger recreated as AFTER (hole 1 open again) is flagged by the postflight" "$(psql -At -f $DIR/postflight.sql | grep 'C: profiles trigger' | grep -c '|f$')" 1
@@ -233,9 +236,99 @@ testB() {
   q "drop trigger trg_project_prompts_pool on public.project_prompts; create trigger trg_project_prompts_pool before insert or update of is_active on public.project_prompts for each row execute function public.enforce_prompt_pool()" >/dev/null
   eq "PF6b ...and the genuine trigger reads clean again" "$(psql -At -f $DIR/postflight.sql | grep 'B: trigger present' | grep -c '|t$')" 1
   q "alter policy prompts_select_owner on public.project_prompts using (true)" >/dev/null
-  eq "PF7 a rewritten select policy (names unchanged) is flagged" "$(psql -At -f $DIR/postflight.sql | grep 'untouched' | grep -c '|f$')" 1
+  eq "PF7 a rewritten select policy (names unchanged) is flagged" "$(psql -At -f $DIR/postflight.sql | grep 'surface: project_prompts policies' | grep -c '|f$')" 1
   q "alter policy prompts_select_owner on public.project_prompts using (public.is_project_owner(project_id))" >/dev/null
-  eq "PF7b ...and the original reads clean" "$(psql -At -f $DIR/postflight.sql | grep 'untouched' | grep -c '|t$')" 1
+  eq "PF7b ...and the original reads clean" "$(psql -At -f $DIR/postflight.sql | grep 'surface: project_prompts policies' | grep -c '|t$')" 1
+
+  echo "-- postflight: surrounding-surface attacks found by the fourth review (each must read false, then be undone)"
+  q "create function public.zz_flip() returns trigger language plpgsql as \$\$ begin new.is_active:=true; return new; end \$\$; create trigger trg_project_prompts_zz before insert on public.project_prompts for each row execute function public.zz_flip()" >/dev/null
+  eq "PF8 an extra BEFORE trigger that flips is_active is flagged" "$(pf_false 'surface: no trigger')" 1
+  q "drop trigger trg_project_prompts_zz on public.project_prompts" >/dev/null
+  q "create function public.zz_plan() returns trigger language plpgsql as \$\$ begin new.current_plan:='agency'; return new; end \$\$; create trigger trg_profiles_zz before insert on public.profiles for each row execute function public.zz_plan()" >/dev/null
+  eq "PF8b an extra trigger on profiles that reopens hole 1 is flagged" "$(pf_false 'surface: no trigger')" 1
+  q "drop trigger trg_profiles_zz on public.profiles" >/dev/null
+  q "create policy zz_extra_read on public.project_prompts for select to authenticated using (true)" >/dev/null
+  eq "PF9 an extra permissive policy next to the originals is flagged" "$(pf_false 'surface: project_prompts policies')" 1
+  q "drop policy zz_extra_read on public.project_prompts" >/dev/null
+  q "alter policy prompts_update_owner on public.project_prompts to public" >/dev/null
+  eq "PF9b a policy re-targeted to PUBLIC is flagged (roles)" "$(pf_false 'surface: project_prompts policies')" 1
+  q "alter policy prompts_update_owner on public.project_prompts to authenticated" >/dev/null
+  q "create or replace function public.is_project_owner(p_project_id uuid) returns boolean language sql stable security definer set search_path=public as 'select true'" >/dev/null
+  eq "PF10 a rewritten is_project_owner (policy text unchanged) is flagged" "$(pf_false 'surface: is_project_owner')" 1
+  q "$(sed -n '1,/^revoke all on function public.is_project_owner/p' supabase/migrations/0002_v0_rls.sql | sed '$d')" >/dev/null
+  q "alter table public.project_prompts disable row level security" >/dev/null
+  eq "PF11 row-level security switched off is flagged" "$(pf_false 'surface: row-level security')" 1
+  q "alter table public.project_prompts enable row level security" >/dev/null
+  q "alter database $PGDATABASE set session_replication_role = replica" >/dev/null
+  eq "PF12 a database setting that switches triggers off is flagged" "$(pf_false 'surface: no database')" 1
+  q "alter database $PGDATABASE reset session_replication_role" >/dev/null
+  q "alter table public.account_prompt_cap_overrides drop constraint account_prompt_cap_overrides_pkey; alter table public.account_prompt_cap_overrides add primary key (user_id, cap)" >/dev/null
+  eq "PF13 an overrides table with a different primary key is flagged" "$(pf_false 'B: overrides table has the exact')" 1
+  q "alter table public.account_prompt_cap_overrides drop constraint account_prompt_cap_overrides_pkey; alter table public.account_prompt_cap_overrides add primary key (user_id)" >/dev/null
+  q "alter table public.account_prompt_cap_overrides add constraint zz_check check (cap is not null) not valid" >/dev/null
+  eq "PF13b an extra constraint on overrides is flagged" "$(pf_false 'B: overrides table has the exact')" 1
+  q "alter table public.account_prompt_cap_overrides drop constraint zz_check" >/dev/null
+  q "grant truncate on public.account_prompt_cap_overrides to authenticated" >/dev/null
+  eq "PF14 TRUNCATE granted on the overrides table is flagged" "$(pf_false 'B: anon/authenticated have no table')" 1
+  q "revoke truncate on public.account_prompt_cap_overrides from authenticated; grant select (user_id) on public.account_prompt_cap_overrides to anon" >/dev/null
+  eq "PF14b a COLUMN-level grant on the overrides table is flagged" "$(pf_false 'B: anon/authenticated have no table')" 1
+  q "revoke select (user_id) on public.account_prompt_cap_overrides from anon" >/dev/null
+  q "alter table public.project_prompts disable trigger trg_project_prompts_pool" >/dev/null
+  eq "PF15 a DISABLED B trigger is flagged (tgenabled)" "$(pf_false 'B: trigger present')" 1
+  q "alter table public.project_prompts enable trigger trg_project_prompts_pool" >/dev/null
+  eq "PF16 after undoing every attack the whole postflight (B and C and surface) is clean again" "$(psql -At -f $DIR/postflight.sql | grep -E '^(B:|C:|surface)' | grep -c '|f$')" 0
+
+  echo "-- B2 guard (C present): each way C can be broken must refuse activation"
+  q "drop trigger trg_project_prompts_pool on public.project_prompts" >/dev/null
+  for broken in "alter table public.profiles disable trigger trg_profiles_protect_billing_columns" \
+                "create or replace trigger trg_profiles_protect_billing_columns after insert or update on public.profiles for each row execute function public.protect_billing_columns()" \
+                "alter function public.protect_billing_columns() security invoker reset search_path"; do
+    q "$broken" >/dev/null
+    eq "B2G refuses when C is broken: ${broken:0:70}" "$(psql -q -f $DIR/B2_activate.sql 2>&1 | grep -c 'refusing to activate B2')" 1
+    psql -v ON_ERROR_STOP=1 -q -f $DIR/C_profiles_guards.sql >/dev/null
+    q "alter table public.profiles enable trigger trg_profiles_protect_billing_columns" >/dev/null
+  done
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B2_activate.sql >/dev/null; ok "B2 activates again once C is genuine"
+
+  echo "-- created_at freeze, C_rollback order guard, fail-closed unknown plan, inactive rows at the cap"
+  seed pro
+  eq "C2 an owner cannot rewrite profiles.created_at (forensic signal)" "$(as_user_err $U1 "update public.profiles set created_at='1999-01-01' where id='$U1'" | grep -c 'created_at can only')" 1
+  eq "C2 C_rollback refuses while B is active (it would reopen hole 1 under B)" "$(psql -q -f $DIR/C_rollback.sql 2>&1 | grep -c 'Option B is active')" 1
+  q "alter table public.profiles drop constraint profiles_current_plan_check" >/dev/null
+  q "set \"request.jwt.claim.role\" = 'service_role'; update public.profiles set current_plan='bogus' where id='$U1'" >/dev/null
+  eq "B12 an UNKNOWN plan value fails closed to the Free cap (10), not open" "$(q "select public.account_prompt_cap('$U1')")" 10
+  q "set \"request.jwt.claim.role\" = 'service_role'; update public.profiles set current_plan='pro' where id='$U1'" >/dev/null
+  q "alter table public.profiles add constraint profiles_current_plan_check check (current_plan in ('free','starter','pro','agency'))" >/dev/null
+  seed pro; fill $U1 $P1 75 >/dev/null
+  as_user $U1 "insert into public.project_prompts(project_id,prompt_text,is_active) select '$P2','inactive at the cap '||g||' xx',false from generate_series(1,3) g" >/dev/null
+  eq "B13 at the cap, inserting INACTIVE rows is still allowed (only growth of the ACTIVE pool is gated)" "$(q "select count(*) from public.project_prompts where not is_active")" 3
+  eq "B13 ...and the active pool stays 75" "$(active)" 75
+
+  echo "-- 7c preflight signals (presence-only)"
+  q "delete from public.profiles where id='$U2'" >/dev/null
+  q "alter table public.profiles disable trigger trg_profiles_protect_billing_columns" >/dev/null
+  q "insert into public.profiles(id,email,current_plan,stripe_subscription_id,created_at) values ('$U2','a2@x.test','agency','nonsense_id', now() + interval '1 hour')" >/dev/null
+  q "alter table public.profiles enable trigger trg_profiles_protect_billing_columns" >/dev/null
+  eq "PFE7c a forged agency profile is counted by the late-created row and by the fake-subscription row" "$(psql -At -f $DIR/preflight_readonly.sql | grep -E 'created more than 1 minute|does not look like a Stripe' | grep -c '|1$')" 2
+  seed pro
+
+  echo "-- RUNBOOK §9 reconciliation block and §4 overrides block, executed as written"
+  seed pro
+  q "update public.profiles set email='Altered@x.test' where id='$U1'" >/dev/null
+  WRONG="do \$\$ declare expected uuid[] := array['$U2']::uuid[]; got uuid[]; begin with u as (update public.profiles pr set email = coalesce(au.email,'') from auth.users au where au.id = pr.id and lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(coalesce(au.email,''))) returning pr.id) select coalesce(array_agg(id order by id), array[]::uuid[]) into got from u; if got is distinct from (select coalesce(array_agg(x order by x), array[]::uuid[]) from unnest(expected) x) then raise exception 'mismatch'; end if; end \$\$"
+  eq "S9 the reconciliation block REFUSES when the updated ids are not the backed-up ids" "$(psql -Atq -c "$WRONG" 2>&1 | grep -c mismatch)" 1
+  eq "S9 ...and the refusal changed nothing" "$(q "select email from public.profiles where id='$U1'")" "Altered@x.test"
+  RIGHT="${WRONG//$U2/$U1}"
+  psql -Atq -c "$RIGHT" >/dev/null 2>&1
+  eq "S9 with the right ids the block reconciles to auth.users" "$(q "select email from public.profiles where id='$U1'")" "a1@x.test"
+  OV="do \$\$ declare found integer; begin insert into public.account_prompt_cap_overrides (user_id, cap, note) select id, 300, 'comped' from auth.users where email_confirmed_at is not null and lower(btrim(email)) in ('a1@x.test') on conflict (user_id) do nothing; select count(*) into found from public.account_prompt_cap_overrides o where o.user_id in (select id from auth.users where email_confirmed_at is not null and lower(btrim(email)) in ('a1@x.test')); if found <> 1 then raise exception 'override count mismatch %', found; end if; end \$\$"
+  eq "S4 the overrides block refuses when the account is not email-confirmed" "$(psql -Atq -c "$OV" 2>&1 | grep -c 'override count mismatch')" 1
+  q "update auth.users set email_confirmed_at=now() where id='$U1'" >/dev/null
+  psql -Atq -c "$OV" >/dev/null 2>&1
+  eq "S4 once confirmed, the override row exists" "$(q "select cap from public.account_prompt_cap_overrides where user_id='$U1'")" 300
+  q "update public.account_prompt_cap_overrides set cap=500 where user_id='$U1'" >/dev/null; psql -Atq -c "$OV" >/dev/null 2>&1
+  eq "S4 re-running does NOT lower an existing larger cap" "$(q "select cap from public.account_prompt_cap_overrides where user_id='$U1'")" 500
+  seed pro
 
   echo "-- rollbacks"
   seed pro
@@ -246,6 +339,7 @@ testB() {
   eq "RB1c B_rollback_2 removes the trigger" "$(q "select count(*) from pg_trigger where tgname='trg_project_prompts_pool'")" 0
   psql -v ON_ERROR_STOP=1 -q -f $DIR/C_rollback.sql >/dev/null || bad "C_rollback runs" "error"
   eq "RB2 C_rollback restores the original function body byte for byte (md5)" "$(q "select md5(prosrc)='$ORIG_MD5' from pg_proc where proname='protect_billing_columns' and pronamespace='public'::regnamespace" | sed 's/t/true/;s/f/false/')" true
+  eq "RB2 ...and the original attributes (INVOKER, no search_path), as 0019" "$(q "select case when not prosecdef and proconfig is null then 'true' else 'false' end from pg_proc where proname='protect_billing_columns' and pronamespace='public'::regnamespace")" true
   eq "RB2 ...and the original UPDATE-only trigger" "$(q "select tgtype from pg_trigger where tgname='trg_profiles_protect_billing_columns'")" 19
 }
 
@@ -316,6 +410,7 @@ testA() {
   eq "A5b the SQL editor's postgres role is ALSO refused (cost stated in A2)" "$(psql -Atq -c "update public.project_prompts set is_active=false where project_id='$P1'" -c "update public.project_prompts set is_active=true where project_id='$P1'" 2>&1 | grep -c 're-activating')" 1
   echo "-- rollback restores 0002 behaviour"
   psql -v ON_ERROR_STOP=1 -q -f $DIR/A_rollback.sql >/dev/null; ok "A_rollback.sql runs"
+  eq "A9 A_rollback restores the ORIGINAL insert policy expression (not a permissive one)" "$(q "select pg_get_expr(polwithcheck,polrelid) from pg_policy where polname='prompts_insert_owner'")" "is_project_owner(project_id)"
   fill $U1 $P2 1 >/dev/null; eq "A8 after rollback REST insert works again" "$(q "select count(*) from public.project_prompts where project_id='$P2'")" 1
 }
 
