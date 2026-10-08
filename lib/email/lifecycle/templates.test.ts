@@ -138,7 +138,7 @@ describe("D5 prices", () => {
     expect(html).toContain("Durante 6 meses. Después, 179 €/mes.");
     expect(html).toContain("Disponible hasta el 31 de octubre");
     expect(html).toContain("−67%");
-    // No testimonial in any email until its original evidence and consent are on record (Director, #549).
+    // No testimonial in any email: the one that was here was invented (founder, 2026-10-08).
     expect(html).not.toMatch(/Nordika|Nerea|128\s?%/);
   });
 

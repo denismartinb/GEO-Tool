@@ -13247,6 +13247,17 @@ sitios.
 
 ## 146. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
 
+> **RECTIFICACIÓN (2026-10-08) — superseded por §237 (adenda «testimonio»).** Esta entrada presentó como **real**
+> el testimonio que sustituía al anterior (Nerea Solís · Nordika Home · «+128 %»), diciendo que el fundador había
+> confirmado que la cifra era una medición de esa cuenta. **Era falso**: el fundador ha confirmado el 2026-10-08, por
+> escrito, que ese testimonio es **inventado**. Es decir, la Fase C **cambió un testimonio inventado por otro
+> inventado**, y lo documentó como verificado; el comentario de código «confirmed as real (log §146)» también era
+> falso. Lo que sigue más abajo se conserva tal como se escribió, **para que quede constancia de que se presentó
+> como real**, y no debe leerse como evidencia de nada. No existe constancia en el repositorio de la persona, de la
+> empresa, de la cifra ni de ningún permiso. Retirado en la rama `feat/contract-99-local` (portada, fotos, correo D5,
+> estilos); **pendiente de merge y despliegue, que son del dueño** (hasta entonces sigue en producción lo que
+> estuviera desplegado). No se sustituye por ningún otro caso, no se anonimiza y no se conserva la cifra.
+
 Entran las tres últimas secciones del diseño aprobado —testimonio, FAQ y
 cierre— y con ellas se va algo que llevaba meses en producción sin que nadie lo
 mirase.
@@ -13264,7 +13275,7 @@ maqueta que se quedó puesto y se sirvió como si fuera real en la página que m
 tráfico recibe. CLAUDE.md prohíbe las métricas falsas desde su primera versión,
 y esto es la forma más directa de romperlo: una cita atribuida a alguien.
 
-**Lo sustituye uno real**: Nerea Solís, marketing digital en Nordika Home, y el
+**Lo sustituye uno real** *(RECTIFICADO 2026-10-08: no era real; ver el aviso al principio de esta entrada)*: Nerea Solís, marketing digital en Nordika Home, y el
 +128% de cuota de voz en IA, que el fundador confirmó el 2026-08-22 que es una
 medición de esa cuenta. La regla que queda escrita en el propio componente: si
 algún día ese testimonio deja de poder sostenerse, **la sección se retira
@@ -21424,8 +21435,8 @@ Pedida por el Director en #549 tras un correo recibido en la cuenta de prueba de
 (Pro 59/179, Starter 19/45, 5 dominios, ~100 prompts, diario, escasez del 31 de octubre).
 
 - **Decidido/hecho (local, sin envíos):** el testimonio de `nordikaQuote` (nombre, empresa y «+128 %», con el
-  comentario «confirmed as real (log §146)») se **retira** de todos los renders del correo D5: el repositorio no
-  acredita ni el original ni el permiso de uso, y **no se sustituye por otro cliente**. El correo D5 deja de poder
+  comentario «confirmed as real (log §146)», **falso**: el fundador confirmó que es inventado) se **retira** de todos
+  los renders del correo D5 y **no se sustituye por otro cliente**. El correo D5 deja de poder
   ofrecer Starter (plan que ya no se ofrece) y el cuadro de precio dice «IVA incluido». Un test renderiza todos los
   correos al cliente contra el contrato (sin precios antiguos, sin planes retirados, sin cadencia diaria, solo 99 €,
   sin testimonio, baja en los comerciales) y se prueba por mutación. Inventario completo, previews seguros y límites:
@@ -21435,8 +21446,11 @@ Pedida por el Director en #549 tras un correo recibido en la cuenta de prueba de
   bienvenida, «prueba terminada» y D1/D3/D5 dicen **7 días** y cuelgan de la fecha de alta, y la prueba aprobada es de
   14 días opt-in tras el diagnóstico: cambian con B5 (un test fija hoy el «7 días» **con un comentario** que obliga a
   cambiarlo con B5; verde no es aval). El correo de fallo de pago no menciona la gracia de 3 días (B6).
-- **Fuera de este cambio, decisión del dueño:** la portada pública muestra el mismo testimonio con nombre, foto y
-  captura de `nordikahome.es` (`components/landing/landing-page.tsx`).
+- **Actualización (mismo día):** el fundador confirmó que el testimonio es **inventado**. Se retira también de la
+  portada (sección entera, fotos `public/home/nerea.webp` y `nordika-home.webp`, y sus estilos `.lp-testi*`), se
+  rectifica §146 y se añade `tests/no-invented-customer-claims.test.ts`. No se sustituye por otro caso ni se anonimiza.
+  Sigue habiendo marcas reales (IKEA, Leroy Merlin, Kave Home, Maisons du Monde, El Mueble) con cifras **ilustrativas** en
+  la demo de la portada, declaradas así solo en comentarios de código: ver `docs/specs/billing/email-inventory.md` §7.
 - **Regla de premisa (retirada de un camino):** se retira la oferta de Starter dentro de D5. Premisa: Starter ya no se
   ofrece (`plansOfferedTo`, §237). Qué la verifica hoy: el test de contrato de correos. Qué queda sin salida si falla:
   ninguna pantalla; una cuenta con Starter existente sigue viéndolo en la consola.

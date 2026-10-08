@@ -51,8 +51,7 @@ Columna «Contrato»: ✅ coincide con el contrato de 99 €/3 dominios/75/seman
 
 ## 3. Qué se encontró y qué se hizo
 
-1. **Testimonio sin evidencia (`nordikaQuote`, correo D5).** Nombre, empresa y «+128 %» con el comentario «confirmed as real (log §146)». Ni el código ni el histórico acreditan el original ni el permiso. **Retirado de todos los renders** del correo; **no se sustituye** por otro cliente. Un correo solo vuelve a llevar testimonio cuando haya constancia del original y del consentimiento.
-   **Fuera de este cambio, y decisión del dueño:** la **portada pública** (`components/landing/landing-page.tsx`, líneas ~1189-1225) muestra el mismo testimonio con **nombre, foto y captura de `nordikahome.es`**. No se ha tocado.
+1. **Testimonio inventado (`nordikaQuote`, correo D5).** Nombre, empresa y una cifra de crecimiento, con el comentario «confirmed as real (log §146)». **El fundador confirmó el 2026-10-08 que era inventado**; el comentario era falso. **Retirado de todos los renders** del correo; **no se sustituye**, no se anonimiza y no se conserva la cifra. Un correo solo vuelve a llevar testimonio con el original y el permiso del cliente en el repositorio. La **portada pública** llevaba el mismo caso (cita, persona, dos imágenes, cifra): **retirada también** (ver §7).
 2. **Starter en D5.** El correo podía ofrecer «Starter por N €/mes» (plan que ya no se ofrece) si su cadencia difería de la de Pro. **Retirado**; D5 ya no recibe una oferta de Starter y el runner no la calcula.
 3. **Precio sin IVA.** El cuadro de precio de D5 decía «99 €/mes» sin «IVA incluido»; los precios públicos del contrato son con IVA incluido. **Corregido.**
 4. **Test de contrato sobre todos los renders** (`lib/email/email-claims.test.ts`): ningún precio antiguo (59/179/449/19/45 €), ningún plan retirado (Starter/Agencia), ninguna cuota antigua (5 dominios, ~100 prompts), ninguna cadencia diaria, ninguna fecha límite 31 de octubre, ningún testimonio, **solo el precio 99 €**, pie de baja en los comerciales y «IVA incluido» en D5. Probado por mutación: reintroducir cada defecto lo hace fallar.
@@ -69,7 +68,6 @@ Columna «Contrato»: ✅ coincide con el contrato de 99 €/3 dominios/75/seman
 - Reencuadrar D1/D3/D5 sobre `trial_ends_at` y el inicio real de la prueba, no sobre `created_at`.
 - Texto de fallo de pago cuando B6 exista: gracia de 3 días y solo lectura hasta pagar.
 - No registrar `to` en `sendEmail`.
-- Decidir qué hacer con el testimonio de la portada (retirar hasta tener el original y el permiso, o conservarlo con constancia).
 
 ## 5. Previews seguros
 
@@ -80,3 +78,29 @@ Columna «Contrato»: ✅ coincide con el contrato de 99 €/3 dominios/75/seman
 ## 6. Qué no se ha hecho
 
 Ninguna llamada a Resend ni a Supabase, ninguna lectura de configuración de producción, ninguna activación de variable, ningún envío de prueba, ningún cambio de SQL. No se ha usado Resend para el editor ni para *outreach*.
+
+## 7. Testimonio inventado: retirada en todo el repositorio y auditoría de otras afirmaciones de clientes
+
+Retirado (rama `feat/contract-99-local`, **pendiente de merge y despliegue, que son del dueño**): la sección de la portada
+(`components/landing/landing-page.tsx`), `public/home/nerea.webp`, `public/home/nordika-home.webp`, los estilos `.lp-testi*`
+de `app/globals.css`, `nordikaQuote` y sus tests. Rectificados: log §146 (que lo daba por real; se conserva el texto y se
+marca como falso), los README de `docs/design-reference/home-2026-08/` y `lifecycle-emails-1/`, el comentario de código
+y la celda de zona de CLAUDE.md. Vigilancia: `tests/no-invented-customer-claims.test.ts`.
+
+**Conservado a propósito:** los artboards `.dc.html` de `docs/design-reference/` (home, plantillas de correo y un diseño
+descartado) siguen conteniendo la sección. Son artefactos históricos de diseño, no contenido del producto; se anotó en sus
+README que no son fuente. Reescribirlos es borrar historia: decisión del dueño.
+
+**Auditoría del resto del contenido** (`app/`, `components/`, `lib/`, `public/`; búsqueda de casos de éxito, «nuestros
+clientes», testimonios, logos, reseñas, cifras de crecimiento):
+- Sin otros testimonios, logos de clientes, reseñas ni `aggregateRating` (el esquema SEO lo dice expresamente).
+- Las cifras del blog son de terceros **con fuente** (p. ej. Conductor 2026) o dicen «no hemos medido»; no he verificado
+  cada cita de cada artículo, solo que no hay cifras de clientes propios.
+- **Hallazgo abierto (no tocado):** la demo de la portada usa **marcas reales** (IKEA, Leroy Merlin, Kave Home, Maisons du
+  Monde, El Mueble) con **cifras ilustrativas inventadas**, declaradas «ilustrativas» solo en comentarios de código
+  (decisión del fundador del 2026-08-22); no encontré un rótulo visible para el visitante. Es la misma clase de riesgo
+  (métricas inventadas, ahora atribuidas a marcas reales). Agrava el caso que el titular de esa sección dice «Esto es
+  exactamente lo que tienes el primer día. Sin demos preparadas» justo encima de una maqueta de `ikea.es` con cifras de
+  ejemplo (visto en el render local de la rama). Decisión del dueño: rotular visiblemente («datos de
+  ejemplo»), usar marcas ficticias o dejarlo.
+- Los fixtures de tests y de los previews usan nombres ficticios etiquetados (`ejemplo-marca.test`).

@@ -1169,65 +1169,11 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* TESTIMONIO — HOME-2026-08 Fase C.
-          Sustituye a un testimonio INVENTADO que llevaba meses en producción:
-          «Aisha Robinson, Growth Lead, Beltway», con la cifra «del 9% al 21%
-          de citas». Ni la persona ni el dato existían, y CLAUDE.md prohíbe las
-          métricas falsas. Éste es real: el fundador confirmó el 2026-08-22 que
-          el +128% es una medición de esa cuenta. Si algún día deja de poder
-          sostenerse, la sección se retira entera; no se sustituye por otro
-          nombre inventado. */}
-      <section className="lp-section lp-testi">
-        <div className="lp-inner">
-          <div className="lp-kicker">Nuestros clientes</div>
-          <h2 className="lp-h2">Cómo se gana una recomendación</h2>
-
-          <div className="lp-testi-pair">
-            <figure className="lp-testi-quote">
-              <div className="lp-testi-brand">
-                <span className="mark">n</span>
-                <span className="name">nordika<span>&nbsp;Home</span></span>
-              </div>
-              <blockquote>
-                <svg width="22" height="18" viewBox="0 0 22 18" fill="none" aria-hidden="true">
-                  <path d="M0 18V9.5C0 4.3 3.2.8 8 0l1 2.6C6 3.6 4.4 5.4 4.3 7.9H8V18H0zm12 0V9.5C12 4.3 15.2.8 20 0l1 2.6c-3 1-4.6 2.8-4.7 5.3H20V18h-8z" fill="#7DA2F5" />
-                </svg>
-                <p>
-                  No sabíamos si ChatGPT nos nombraba, y mucho menos por qué. En tres meses hemos
-                  subido un <strong>128% nuestra cuota de voz en IA</strong>: lo que más ha cambiado no
-                  es el dato, es que sabemos qué estrategia de contenidos adoptar.
-                </p>
-              </blockquote>
-              <figcaption className="lp-testi-who">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/home/nerea.webp" alt="" width={52} height={52} />
-                <span>
-                  <span className="n">Nerea Solís</span>
-                  <span className="r">Marketing digital en Nordika Home</span>
-                </span>
-              </figcaption>
-            </figure>
-
-            <div className="lp-testi-metric">
-              <svg className="lp-testi-rayas" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                <defs>
-                  <pattern id="lp-testi-rayas" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                    <line x1="0" y1="0" x2="0" y2="6" stroke="#93b0f2" strokeWidth="2.4" />
-                  </pattern>
-                </defs>
-                <path d="M100 0 L100 100 L0 0 Z" fill="url(#lp-testi-rayas)" />
-              </svg>
-              <div className="lp-testi-num">+128%</div>
-              <p className="lp-testi-cap">Aumento de cuota<br />de voz en IA</p>
-              <div className="lp-testi-shot">
-                <div className="dom">nordikahome.es</div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/home/nordika-home.webp" alt="Portada de nordikahome.es" width={720} height={540} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* SIN TESTIMONIO. Esta sección llevaba una cita con nombre, foto, empresa y una cifra de crecimiento.
+          El fundador confirmó el 2026-10-08 que era INVENTADA (antes se presentó como real, log §146,
+          y sustituyó a otra inventada anterior). Se retira entera: ni se sustituye por otro caso, ni se
+          anonimiza, ni se conserva la cifra. Vuelve a haber un testimonio solo con el original y el
+          permiso del cliente en el repositorio. `tests/no-invented-customer-claims.test.ts` lo vigila. */}
 
       {/* FAQ — HOME-2026-08 Fase C. Abierta en escritorio, acordeón en móvil,
           como los dos artboards. El `FAQPage` sale de la MISMA constante que

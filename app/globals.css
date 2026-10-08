@@ -7244,54 +7244,6 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-prod-mpie { margin: 12px 0 0; font-size: 12px; color: var(--ink-4); }
 }
 
-/* --- Testimonio (HOME-2026-08 Fase C) -----------------------------------
-   Dos tarjetas de anchos distintos —1.62fr y 1fr— y no dos mitades: la cita
-   manda y la cifra la acompaña. `stretch` porque en el artboard las dos miden
-   lo mismo de alto, y dentro de cada una lo de abajo se pega al pie. */
-.lp-testi .lp-kicker { color: var(--ink-4); font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
-.lp-testi .lp-h2 { font-size: 38px; font-weight: 700; letter-spacing: -.03em; margin: 18px 0 42px; }
-.lp-testi-pair { display: grid; grid-template-columns: 1.62fr 1fr; gap: 22px; align-items: stretch; }
-.lp-testi-quote {
-  margin: 0; background: var(--ink); border-radius: 18px; padding: 34px 38px;
-  display: flex; flex-direction: column;
-}
-.lp-testi-brand { display: flex; align-items: center; gap: 12px; }
-.lp-testi-brand .mark {
-  width: 34px; height: 34px; border-radius: 9px; background: #fff; display: grid; place-items: center;
-  font-family: var(--font-display), inherit; font-size: 15px; font-weight: 700; color: var(--ink);
-}
-.lp-testi-brand .name { font-family: var(--font-display), inherit; font-size: 17px; font-weight: 600; color: #fff; }
-.lp-testi-brand .name span { font-weight: 400; opacity: .75; }
-.lp-testi-quote blockquote { display: flex; gap: 14px; margin: 26px 0 0; }
-.lp-testi-quote blockquote svg { flex: 0 0 auto; margin-top: 6px; }
-.lp-testi-quote blockquote p { margin: 0; font-size: 19px; line-height: 1.6; color: #fff; font-weight: 450; }
-.lp-testi-quote blockquote strong { font-weight: 700; }
-/* `margin-top: auto` empuja la firma al pie de la tarjeta. Aquí sí vale —a
-   diferencia de la banda del cambio de reglas— porque el hueco mínimo lo pone
-   su propio `padding-top`, no un margen que el `auto` se comería. */
-.lp-testi-who { display: flex; align-items: center; gap: 14px; margin-top: auto; padding-top: 34px; }
-.lp-testi-who img { width: 52px; height: 52px; border-radius: 999px; object-fit: cover; flex: 0 0 auto; background: #efede8; }
-.lp-testi-who .n { display: block; font-size: 15px; font-weight: 600; color: #fff; }
-.lp-testi-who .r { display: block; font-size: 14px; color: #93a3bd; margin-top: 2px; }
-.lp-testi-metric {
-  position: relative; overflow: hidden; background: var(--canvas); border-radius: 18px;
-  padding: 34px; display: flex; flex-direction: column;
-}
-.lp-testi-rayas { position: absolute; top: 0; right: 0; width: 230px; height: 230px; opacity: .5; }
-.lp-testi-num {
-  position: relative; font-family: var(--font-display), inherit; font-size: 56px; font-weight: 700;
-  letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums;
-}
-.lp-testi-cap { position: relative; margin: 14px 0 0; font-size: 16px; line-height: 1.5; color: var(--ink-3); }
-.lp-testi-shot { position: relative; margin-top: auto; padding-top: 26px; }
-.lp-testi-shot .dom {
-  font-size: 11.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--ink-4); margin-bottom: 10px;
-}
-.lp-testi-shot img {
-  display: block; width: 100%; height: auto; border-radius: 10px;
-  border: 1px solid var(--line); background: #fff;
-}
 
 /* --- FAQ (HOME-2026-08 Fase C) ------------------------------------------
    `<details>` de verdad, no un acordeón a mano: el teclado, el lector de
@@ -7462,27 +7414,6 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    aquí es que un tramo responsive se escribe junto a lo que corrige, no en el
    bloque de esa anchura que pille más cerca. */
 @media (max-width: 560px) {
-  /* Testimonio: las dos tarjetas se apilan y encogen a la escala del artboard
-     móvil (24/22 de relleno, cifra a 44, retrato a 46). */
-  .lp-testi .lp-h2 { font-size: 31px; line-height: 1.1; margin: 14px 0 26px; }
-  .lp-testi .lp-kicker { font-size: 11.5px; }
-  .lp-testi-pair { grid-template-columns: 1fr; gap: 12px; }
-  .lp-testi-quote { padding: 24px 22px; }
-  .lp-testi-brand .mark { width: 30px; height: 30px; border-radius: 8px; font-size: 14px; }
-  .lp-testi-brand .name { font-size: 15px; }
-  .lp-testi-quote blockquote { gap: 11px; margin-top: 20px; }
-  .lp-testi-quote blockquote p { font-size: 16px; }
-  .lp-testi-who { gap: 12px; padding-top: 24px; }
-  .lp-testi-who img { width: 46px; height: 46px; }
-  .lp-testi-who .n { font-size: 14.5px; }
-  .lp-testi-who .r { font-size: 13px; }
-  .lp-testi-metric { padding: 24px 22px; }
-  .lp-testi-rayas { width: 150px; height: 150px; }
-  .lp-testi-num { font-size: 44px; }
-  .lp-testi-cap { font-size: 15px; margin-top: 10px; }
-  .lp-testi-shot { padding-top: 20px; }
-  .lp-testi-shot .dom { font-size: 11px; margin-bottom: 8px; }
-
   /* FAQ: acordeón. La rejilla de dos columnas del escritorio no cabe, así que
      la pregunta y su galón comparten fila y la respuesta baja debajo. El galón
      SÍ se ve aquí, porque aquí sí despliega. */
@@ -7510,54 +7441,6 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-close-row { justify-content: flex-start; }
 }
 
-/* --- Testimonio (HOME-2026-08 Fase C) -----------------------------------
-   Dos tarjetas de anchos distintos —1.62fr y 1fr— y no dos mitades: la cita
-   manda y la cifra la acompaña. `stretch` porque en el artboard las dos miden
-   lo mismo de alto, y dentro de cada una lo de abajo se pega al pie. */
-.lp-testi .lp-kicker { color: var(--ink-4); font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
-.lp-testi .lp-h2 { font-size: 38px; font-weight: 700; letter-spacing: -.03em; margin: 18px 0 42px; }
-.lp-testi-pair { display: grid; grid-template-columns: 1.62fr 1fr; gap: 22px; align-items: stretch; }
-.lp-testi-quote {
-  margin: 0; background: var(--ink); border-radius: 18px; padding: 34px 38px;
-  display: flex; flex-direction: column;
-}
-.lp-testi-brand { display: flex; align-items: center; gap: 12px; }
-.lp-testi-brand .mark {
-  width: 34px; height: 34px; border-radius: 9px; background: #fff; display: grid; place-items: center;
-  font-family: var(--font-display), inherit; font-size: 15px; font-weight: 700; color: var(--ink);
-}
-.lp-testi-brand .name { font-family: var(--font-display), inherit; font-size: 17px; font-weight: 600; color: #fff; }
-.lp-testi-brand .name span { font-weight: 400; opacity: .75; }
-.lp-testi-quote blockquote { display: flex; gap: 14px; margin: 26px 0 0; }
-.lp-testi-quote blockquote svg { flex: 0 0 auto; margin-top: 6px; }
-.lp-testi-quote blockquote p { margin: 0; font-size: 19px; line-height: 1.6; color: #fff; font-weight: 450; }
-.lp-testi-quote blockquote strong { font-weight: 700; }
-/* `margin-top: auto` empuja la firma al pie de la tarjeta. Aquí sí vale —a
-   diferencia de la banda del cambio de reglas— porque el hueco mínimo lo pone
-   su propio `padding-top`, no un margen que el `auto` se comería. */
-.lp-testi-who { display: flex; align-items: center; gap: 14px; margin-top: auto; padding-top: 34px; }
-.lp-testi-who img { width: 52px; height: 52px; border-radius: 999px; object-fit: cover; flex: 0 0 auto; background: #efede8; }
-.lp-testi-who .n { display: block; font-size: 15px; font-weight: 600; color: #fff; }
-.lp-testi-who .r { display: block; font-size: 14px; color: #93a3bd; margin-top: 2px; }
-.lp-testi-metric {
-  position: relative; overflow: hidden; background: var(--canvas); border-radius: 18px;
-  padding: 34px; display: flex; flex-direction: column;
-}
-.lp-testi-rayas { position: absolute; top: 0; right: 0; width: 230px; height: 230px; opacity: .5; }
-.lp-testi-num {
-  position: relative; font-family: var(--font-display), inherit; font-size: 56px; font-weight: 700;
-  letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums;
-}
-.lp-testi-cap { position: relative; margin: 14px 0 0; font-size: 16px; line-height: 1.5; color: var(--ink-3); }
-.lp-testi-shot { position: relative; margin-top: auto; padding-top: 26px; }
-.lp-testi-shot .dom {
-  font-size: 11.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--ink-4); margin-bottom: 10px;
-}
-.lp-testi-shot img {
-  display: block; width: 100%; height: auto; border-radius: 10px;
-  border: 1px solid var(--line); background: #fff;
-}
 
 /* --- FAQ (HOME-2026-08 Fase C) ------------------------------------------
    `<details>` de verdad, no un acordeón a mano: el teclado, el lector de
@@ -7637,27 +7520,6 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    aquí es que un tramo responsive se escribe junto a lo que corrige, no en el
    bloque de esa anchura que pille más cerca. */
 @media (max-width: 560px) {
-  /* Testimonio: las dos tarjetas se apilan y encogen a la escala del artboard
-     móvil (24/22 de relleno, cifra a 44, retrato a 46). */
-  .lp-testi .lp-h2 { font-size: 31px; line-height: 1.1; margin: 14px 0 26px; }
-  .lp-testi .lp-kicker { font-size: 11.5px; }
-  .lp-testi-pair { grid-template-columns: 1fr; gap: 12px; }
-  .lp-testi-quote { padding: 24px 22px; }
-  .lp-testi-brand .mark { width: 30px; height: 30px; border-radius: 8px; font-size: 14px; }
-  .lp-testi-brand .name { font-size: 15px; }
-  .lp-testi-quote blockquote { gap: 11px; margin-top: 20px; }
-  .lp-testi-quote blockquote p { font-size: 16px; }
-  .lp-testi-who { gap: 12px; padding-top: 24px; }
-  .lp-testi-who img { width: 46px; height: 46px; }
-  .lp-testi-who .n { font-size: 14.5px; }
-  .lp-testi-who .r { font-size: 13px; }
-  .lp-testi-metric { padding: 24px 22px; }
-  .lp-testi-rayas { width: 150px; height: 150px; }
-  .lp-testi-num { font-size: 44px; }
-  .lp-testi-cap { font-size: 15px; margin-top: 10px; }
-  .lp-testi-shot { padding-top: 20px; }
-  .lp-testi-shot .dom { font-size: 11px; margin-bottom: 8px; }
-
   /* FAQ: acordeón. La rejilla de dos columnas del escritorio no cabe, así que
      la pregunta y su galón comparten fila y la respuesta baja debajo. El galón
      SÍ se ve aquí, porque aquí sí despliega. */

@@ -152,10 +152,10 @@ export function lossTable(rows: Array<{ label: string; pro: string; free: string
 }
 
 /*
- * No testimonial in any email. The quote that used to live here (name, company and a +128 % figure,
- * commented as "confirmed as real") has no verifiable original or permission of use in the repository
- * (Director, #549, 2026-10-08). It is NOT replaced with another customer or an invented one: an email
- * may carry a testimonial again only when the original evidence and consent are on record.
+ * No testimonial in any email. The quote that used to live here (a named person, a company and a
+ * growth figure, commented as "confirmed as real") was INVENTED — confirmed by the founder on 2026-10-08. It is NOT
+ * replaced with another customer, anonymised or kept as a figure: an email may carry a testimonial again only when
+ * the original evidence and the customer's consent are on record.
  */
 
 function recommendationCard(rec: TopRecommendation): string {

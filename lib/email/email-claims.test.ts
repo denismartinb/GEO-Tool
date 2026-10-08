@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * EMAIL-AUDIT-1 (Director, #549, 2026-10-08): every customer-facing email rendered against the CONTRACT-99
  * offer (one plan, 99 €/mes IVA incluido, 3 dominios · 75 prompts · 3 motores · semanal), with the checks that
  * would have caught the old offer (Pro 59/179, Starter 19/45, 5 dominios, ~100 prompts, diario, deadline 31 oct)
- * and the testimonial nobody can document. Nothing is sent: Resend is mocked and the HTML is only inspected.
+ * and the invented testimonial (confirmed as invented by the founder, 2026-10-08). Nothing is sent: Resend is mocked and the HTML is only inspected.
  *
  * Set EMAIL_PREVIEW_DIR to also write a SAFE preview of each render: fictitious fixtures, no recipient, and every
  * absolute link replaced by `#` (so no signed unsubscribe link or token can leak into a shared file).
@@ -144,7 +144,7 @@ describe("every customer-facing email follows the contract offer", () => {
     expect(renders.find((r) => r.name === "trial-d5")!.html).toContain("IVA incluido");
   });
 
-  it("carries no testimonial: nothing in the repository documents its original or its permission", () => {
+  it("carries no testimonial: the one that was here was invented and no real one is on record", () => {
     for (const r of renders) {
       expect(r.html, r.name).not.toMatch(/Nordika|Nerea|Sol[ií]s|128\s?%|cuota de voz en IA/i);
     }
