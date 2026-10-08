@@ -13264,7 +13264,9 @@ sitios.
 >
 > **Abierto, no tocado:** la demo de la portada usa marcas reales (IKEA, Leroy Merlin, Kave Home, Maisons du Monde,
 > El Mueble) con cifras **ilustrativas** inventadas, declaradas así solo en comentarios de código, y bajo un titular que
-> dice «Sin demos preparadas». Decisión del dueño: rotular visiblemente, usar marcas ficticias o dejarlo.
+> dice «Sin demos preparadas». **Decidido por el dueño (2026-10-09, 00:24, transmitido por el Director en #549): «No es
+> necesario. Se queda así».** No se cambia ni se vuelve a plantear; se conserva constancia de que las cifras de esa maqueta son
+> ilustrativas y **no son evidencia de ningún cliente**.
 
 Entran las tres últimas secciones del diseño aprobado —testimonio, FAQ y
 cierre— y con ellas se va algo que llevaba meses en producción sin que nadie lo

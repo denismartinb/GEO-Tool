@@ -1,0 +1,36 @@
+[
+  {
+    "viewport": "390",
+    "sections": [
+      "lp-section.lp-rules",
+      "lp-section.lp-how",
+      "lp-section.lp-prod",
+      "lp-section.lp-faq-sec",
+      "lp-close",
+      "lp-section.lp-blog"
+    ],
+    "prevClass": "lp-section lp-prod",
+    "gapPrevToFaq": 0,
+    "prevBg": "rgb(246, 247, 249)",
+    "faqBg": "rgba(0, 0, 0, 0)",
+    "testimonialInDom": false,
+    "docOverflowPx": 0
+  },
+  {
+    "viewport": "1280",
+    "sections": [
+      "lp-section.lp-rules",
+      "lp-section.lp-how",
+      "lp-section.lp-prod",
+      "lp-section.lp-faq-sec",
+      "lp-close",
+      "lp-section.lp-blog"
+    ],
+    "prevClass": "lp-section lp-prod",
+    "gapPrevToFaq": 0,
+    "prevBg": "rgb(246, 247, 249)",
+    "faqBg": "rgba(0, 0, 0, 0)",
+    "testimonialInDom": false,
+    "docOverflowPx": 0
+  }
+]
