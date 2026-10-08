@@ -2,7 +2,7 @@
 
 **Estado:** propuesta revisada de forma independiente (`data-guardian`) y corregida; **no aprobada, no aplicada**.
 Los SQL se escribieron y se probaron **solo en un Postgres local** (`scripts/verify-prompt-pool-proposals.sh`,
-la batería local de pruebas (el recuento exacto está en la salida del script); cada guarda se ha vuelto a probar quitándola para ver que la prueba falla).
+la batería local de pruebas (el recuento exacto está en la salida del script). Varias guardas se han probado quitándolas para comprobar que alguna prueba falla; **no todas**: la lista de las que se probaron y de las que se sabe que no, en §8b).
 B2 del contrato sigue **PARCIAL** hasta que el dueño aplique una opción y el postflight salga limpio.
 
 ## 1. Qué hay y qué elegir
@@ -37,7 +37,8 @@ Recomendación: **C → B1 → overrides → B2**. A solo si el dueño aprueba `
 
 ## 3. Orden (si el dueño aprueba B)
 
-Contexto: el **PR #549** trae la migración `0038` (registro de webhooks); es independiente de esta bolsa.
+Contexto: la migración `0038` (registro de webhooks) vive en la rama del **PR #549**; **no está en esta rama ni en
+`main`** y no se ha verificado desde aquí. Es independiente de esta bolsa.
 Orden global: **0038 → C → B1 → overrides → B2**. `0039` solo hace falta si se despliega el código de esta rama tal
 cual (llama a `add_project_prompts`): **desplegar ese código sin 0039 deja a los usuarios sin poder añadir prompts**
 (falla cerrado: `unavailable`, no escribe). Con B no hace falta 0039 para que el tope se cumpla.
@@ -55,12 +56,16 @@ cual (llama a `add_project_prompts`): **desplegar ese código sin 0039 deja a lo
 4. **Overrides** (§4). 
 5. **B2**: ventana tranquila; es el único paso con efecto visible.
 6. **Postflight** (`postflight.sql`): una rejilla; las filas de B y C deben decir `true`; las de A, `false` (no aplicadas).
-   El recuento final debe ser igual al del preflight.
+   Fijan el `md5` del cuerpo de cada función, `SECURITY DEFINER`, `search_path`, y de cada trigger su momento,
+   eventos, columnas y cláusula `WHEN`; **no ven el propietario de los objetos**. El recuento de filas del final es solo
+   informativo (el tráfico legítimo lo cambia). Pegar con saltos de línea LF: con CRLF el `md5` cambia y la fila sale
+   `false` (falla seguro).
 7. Prueba de humo del dueño con una cuenta propia: añadir un prompt con la bolsa llena debe dar el aviso de bolsa llena.
 
-**Reversión:** `B_rollback.sql` (quita el trigger: reversión completa del comportamiento, sin tocar filas) y
-`C_rollback.sql` (restaura el trigger de 0019). No hay reversión de datos porque no se cambia ninguno. Si B2 da
-quejas: ejecutar solo `drop trigger trg_project_prompts_pool on public.project_prompts;`.
+**Reversión:** primero **`B_rollback_1_disable.sql`** (desactiva el trigger: reversión completa del comportamiento,
+sin tocar filas, instantánea y reversible; **no pega junto el paso 2**) y, si se quiere quitar del todo y en ventana
+tranquila, `B_rollback_2_drop.sql`; `C_rollback.sql` restaura el trigger de 0019. No hay reversión de datos porque no
+se cambia ninguno. Si B2 da quejas: ejecutar solo el paso 1 (`disable`), nunca un `drop` directo.
 
 ## 4. Overrides (cuentas comped y «Agencia a medida»)
 
@@ -72,12 +77,14 @@ con los emails del dueño (no se pegan en tickets ni en comentarios):
 insert into public.account_prompt_cap_overrides (user_id, cap, note)
 select id, 300, 'comped'
 from auth.users
-where lower(email) in ('<email 1>', '<email 2>')   -- los de COMPED_ACCOUNT_EMAILS
+where email_confirmed_at is not null and lower(email) in ('<email 1>', '<email 2>')   -- los de COMPED_ACCOUNT_EMAILS
 on conflict (user_id) do update set cap = excluded.cap;
 -- Comprobar: el número de filas insertadas debe ser igual al número de emails.
 ```
 
-Se usa `auth.users.email` (verificado) y no `profiles.email`. **Abierto (hallazgo 5):** cada alta o baja de una
+Se usa `auth.users.email` y no `profiles.email`; **`auth.users.email` se fija en el alta, antes de confirmar el
+correo**, así que la plantilla de arriba añade `and email_confirmed_at is not null` (comprobar que el dominio de cada
+cuenta comped está confirmado) y el dueño decide si acepta cuentas sin confirmar. **Abierto (hallazgo 5):** cada alta o baja de una
 cuenta comped hay que hacerla **en los dos sitios** hasta que se decida una única fuente (por ejemplo, que la
 variable deje de usarse). Hasta entonces, una cuenta en la variable sin fila queda con su plan guardado (75 si es
 `pro`): el síntoma es el aviso de bolsa llena, no un fallo silencioso.
@@ -86,10 +93,13 @@ variable deje de usarse). Hasta entonces, una cuenta en la variable sin fila que
 
 | Paso | Bloqueo | Efecto | Irreversible |
 |---|---|---|---|
-| C | `DROP/CREATE TRIGGER` sobre `profiles`: `ACCESS EXCLUSIVE` breve | los inicios de sesión que leen el perfil esperan hasta `lock_timeout` | no |
+| C | `CREATE OR REPLACE TRIGGER` sobre `profiles` (medido): `SHARE ROW EXCLUSIVE` | las escrituras de perfil esperan brevemente; las lecturas (inicios de sesión) no. `C_rollback` igual | no |
 | B1 | tabla nueva: ninguno relevante (**sin FK a `auth.users`**, que habría bloqueado altas y logins) | ninguno | no (borrar la tabla pierde las excepciones: exportarlas antes) |
 | B2 | `CREATE TRIGGER`: `SHARE ROW EXCLUSIVE` sobre `project_prompts` | las escrituras esperan; las lecturas no, salvo cola detrás de una escritura pendiente | no |
 | A2 | `DROP POLICY`: **`ACCESS EXCLUSIVE`** sobre `project_prompts` | las lecturas esperan | no |
+| `A_rollback` | `create policy`: **`ACCESS EXCLUSIVE`** sobre `project_prompts` | las lecturas esperan | no |
+| `B_rollback_1_disable` | `ALTER TABLE … DISABLE TRIGGER`: `SHARE ROW EXCLUSIVE` | las lecturas siguen | no (reversible) |
+| `B_rollback_2_drop` | `DROP TRIGGER`: **`ACCESS EXCLUSIVE`** | las lecturas esperan | no |
 
 Coste de A2/0040 que debe conocer el dueño: el trigger de reactivación rechaza **a todos salvo `service_role`,
 incluido el rol `postgres` del editor SQL** (probado: A5b). Una corrección manual de una fila exige desactivar el
@@ -104,8 +114,9 @@ trigger durante esa sentencia.
 
 **Regla de activación (revisión independiente, F1):** B2 **solo** puede activarse junto con el código y los precios
 del contrato de 99 € (75 prompts por cuenta), o con topes derivados del contrato que esté vendiéndose en ese momento.
-El test que fija el SQL a `plans-data.ts` fija el de **esta rama**, no el de `main`. Antes de B2 hay que comprobar,
-en el preflight, qué contrato está desplegado; las cuentas Pro actuales de `main` además son la pregunta Q5 (¿qué pasa
+El test que fija el SQL a `plans-data.ts` fija el de **esta rama**, no el de `main`. **Ninguna fila del preflight sabe
+qué contrato está desplegado**: lo comprueba el dueño a mano antes de B2. B2 además se **niega a activarse** sin C
+(`B2_activate.sql` comprueba el cuerpo de la función y el trigger de C). Las cuentas Pro actuales de `main` son la pregunta Q5 (¿qué pasa
 con los clientes `pro` existentes?), que sigue abierta.
 
 Aclaración sobre `service_role` y 0039: la función `add_project_prompts` solo la ejecuta `service_role` (0039 revoca
@@ -151,17 +162,31 @@ tiene el camino de arriba. No se bloquea una identidad corrupta de forma permane
 
 **Tratamiento propuesto de discrepancias (no ejecutado, decide el dueño; no cambia nada hasta que lo ejecute):**
 
-Un **único predicado** en todos los pasos (insensible a mayúsculas y espacios, y solo donde `auth.users.email` no es
-nulo: los usuarios por teléfono o SSO no tienen email y escribir NULL fallaría):
-`pr.id = u.id and u.email is not null and lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(u.email))`.
+**Un único predicado** en el preflight 7b y en todos los pasos (sin distinguir mayúsculas ni espacios; incluye a quien
+no tiene email en `auth.users`, teléfono o SSO, porque un perfil que conserva un email ajeno sigue contando como
+«comped» en la app):
+`lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(coalesce(u.email,'')))` sobre `profiles pr join auth.users u on u.id = pr.id`.
 
-1. Listar, solo identificadores y recuento: `select pr.id from public.profiles pr join auth.users u on <predicado>;`
-2. Copiar a un CSV (id + email antiguo) **exactamente esas filas**, para poder deshacer.
-3. En el editor SQL (`postgres`: pasa el guard de `C`), **una transacción con comprobación antes de confirmar**:
-   `begin; update public.profiles pr set email = u.email from auth.users u where <predicado>;` — comprobar que el
-   número de filas actualizadas es **igual al del paso 1**; solo entonces `commit;` (si no, `rollback;`).
-4. Antes de confirmar, revisar a mano —**sin escribir los emails comped en GitHub ni en tickets**— si alguna cuenta
-   cambiaría de plan efectivo por la reconciliación; después ya no hay vuelta atrás sin el CSV.
+1. **Contar** (anotar el número N): `select count(*) from public.profiles pr join auth.users u on u.id = pr.id where <predicado>;`
+2. **Copia de seguridad de exactamente esas filas**, en un fichero local que no se sube a ningún sitio (contiene correos
+   de clientes): `select pr.id, pr.email as old_email from public.profiles pr join auth.users u on u.id = pr.id where <predicado>;`
+3. **Revisar a mano**, sin escribir ningún email *comped* en GitHub ni en tickets, si alguna cuenta cambiaría de plan
+   efectivo. Después del paso 4 solo se vuelve atrás con la copia del paso 2.
+4. **Una sola sentencia atómica** (sirve en el editor SQL aunque no se conserve una transacción interactiva): si el
+   número de filas no es N, **se lanza una excepción y no cambia nada** (también si `postgres` no se salta RLS y no
+   coincide ninguna fila):
+   ```sql
+   do $$
+   declare n integer;
+   begin
+     update public.profiles pr set email = coalesce(u.email, '')
+     from auth.users u
+     where u.id = pr.id and <predicado>;
+     get diagnostics n = row_count;
+     if n <> <N> then raise exception 'expected % rows, updated %', <N>, n; end if;
+   end $$;
+   ```
+   (`profiles.email` es `NOT NULL` y admite `''`; el guard de `C` deja pasar al rol `postgres` del editor.)
 
 **Fuente de identidad fiable para «comped» (propuesta, no implementada):** mientras la app lea `profiles.email`, una
 alteración previa a `C` sigue sirviendo. Opciones, de menor a mayor cambio:
@@ -172,6 +197,13 @@ aprobación); (b) decidir «comped» solo por la tabla de excepciones (por `user
 
 ## 8b. Límites conocidos de la revisión (no verificado)
 
+- **Qué se probó quitándolo.** Con una prueba que falla al quitarlo (comprobado por mutación en esta rama, incluidos
+  los seis que la tercera revisión encontró sin cubrir: `search_path` de C, aislamiento, candado y filtro de propietario
+  de A1, `tgattr` del postflight y el predicado de la 7b): candado y aislamiento de B y de A1, filtro de propietario de
+  A1, `security definer` y `search_path` de C, guarda de email, forzado de cada columna de facturación en C, trigger de
+  C solo en UPDATE / en AFTER / con `WHEN`, filtro de `service_role` de A2, comprobación de C en B2. **No se ha
+  intentado romper todo**: una mutación que no esté en esta lista puede seguir sin prueba. El postflight no ve el
+  propietario de los objetos.
 - Todas las guardas (0016/0019, C, A2) confían en `auth.role()`, que lee los ajustes `request.jwt.claim.*`.
   Reproducido en local: una sesión capaz de fijar ella misma esos ajustes (`set request.jwt.claim.role='service_role'`)
   salta cualquiera. **No es alcanzable por PostgREST hoy** (ninguna función expuesta ejecuta `set_config` ni SQL

@@ -45,7 +45,7 @@ describe("prompt-pool proposals: the reviewed files are the files that get paste
     const { createHash } = await import("node:crypto");
     const dir = join(process.cwd(), "docs/specs/billing/proposals/prompt-pool");
     const lines = readFileSync(join(dir, "SHA256SUMS"), "utf8").trim().split("\n");
-    expect(lines.length).toBeGreaterThanOrEqual(10);
+    expect(lines.length).toBeGreaterThanOrEqual(12);
     for (const line of lines) {
       const [hash, name] = line.split(/\s+/);
       const actual = createHash("sha256").update(readFileSync(join(dir, name))).digest("hex");

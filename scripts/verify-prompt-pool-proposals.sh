@@ -93,6 +93,11 @@ testB() {
   eq "C1 preflight 7b counts the divergence in aggregate and prints no email" "$(psql -At -f $DIR/preflight_readonly.sql | grep 'differs from auth.users' | grep -c '|1$')" 1
   eq "C1 preflight output contains no email address" "$(psql -At -f $DIR/preflight_readonly.sql | grep -c '@')" 0
   q "update public.profiles set email='a1@x.test' where id='$U1'" >/dev/null
+  q "update public.profiles set email='A1@X.TEST ' where id='$U1'" >/dev/null
+  eq "C1 preflight 7b ignores case and surrounding spaces (same predicate as the reconciliation)" "$(psql -At -f $DIR/preflight_readonly.sql | grep 'differs from auth.users' | grep -c '|0$')" 1
+  q "update public.profiles set email='a1@x.test' where id='$U1'; update auth.users set email=null where id='$U1'; update public.profiles set email='Founder@GenScore.es' where id='$U1'" >/dev/null
+  eq "C1 preflight 7b counts a profile that keeps an email while auth.users has none" "$(psql -At -f $DIR/preflight_readonly.sql | grep 'differs from auth.users' | grep -c '|1$')" 1
+  q "update auth.users set email='a1@x.test' where id='$U1'; update public.profiles set email='a1@x.test' where id='$U1'" >/dev/null
   eq "C1 signup path (no authenticated claim) still creates a profile with the trial" "$(q "insert into auth.users(id,email) values (gen_random_uuid(),'s@x.test'); select count(*) from public.profiles where email='s@x.test' and current_plan='pro' and trial_ends_at is not null")" 1
   eq "C1 owner can still update unrelated columns" "$(as_user $U1 "update public.profiles set onboarding_tour_seen_at=now() where id='$U1'; select (onboarding_tour_seen_at is not null)::text from public.profiles where id='$U1'")" true
   eq "C1 owner still cannot raise plan" "$(as_user_err $U1 "update public.profiles set current_plan='agency' where id='$U1'" | grep -c 'service role')" 1
@@ -104,6 +109,10 @@ testB() {
   ok "B1 installs (objects only)"
   seed pro; fill $U1 $P1 76 >/dev/null
   eq "B1 alone enforces nothing (76 accepted before step 2)" "$(active)" 76
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/C_rollback.sql >/dev/null
+  eq "B2 refuses to activate when C is not applied" "$(psql -q -f $DIR/B2_activate.sql 2>&1 | grep -c 'refusing to activate B2')" 1
+  eq "B2 left no trigger behind after the refusal" "$(q "select count(*) from pg_trigger where tgname='trg_project_prompts_pool'")" 0
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/C_profiles_guards.sql >/dev/null
   psql -v ON_ERROR_STOP=1 -q -f $DIR/B2_activate.sql >/dev/null || { bad "B2 installs" "sql error"; return; }
   ok "B2 activates on a fresh schema (0001..latest minus 0039)"
   eq "B2 re-running is refused instead of silently replacing the trigger" "$(psql -q -f $DIR/B2_activate.sql 2>&1 | grep -c 'already exists')" 1
@@ -205,16 +214,36 @@ testB() {
   eq "PF1 the three A rows are false (not applied)" "$(echo "$PF" | grep -E '^A' | grep -c '|f$')" 3
   q "create or replace trigger trg_profiles_protect_billing_columns after insert or update on public.profiles for each row execute function public.protect_billing_columns()" >/dev/null
   eq "PF2 a C trigger recreated as AFTER (hole 1 open again) is flagged by the postflight" "$(psql -At -f $DIR/postflight.sql | grep 'C: profiles trigger' | grep -c '|f$')" 1
+  q "create or replace trigger trg_profiles_protect_billing_columns before insert or update of current_plan on public.profiles for each row execute function public.protect_billing_columns()" >/dev/null
+  eq "PF2b a C trigger limited to one column is flagged (tgattr)" "$(psql -At -f $DIR/postflight.sql | grep 'C: profiles trigger' | grep -c '|f$')" 1
+  q "create or replace trigger trg_profiles_protect_billing_columns before insert or update on public.profiles for each row when (false) execute function public.protect_billing_columns()" >/dev/null
+  eq "PF2c a C trigger with WHEN (false) is flagged (tgqual)" "$(psql -At -f $DIR/postflight.sql | grep 'C: profiles trigger' | grep -c '|f$')" 1
   q "create or replace trigger trg_profiles_protect_billing_columns before insert or update on public.profiles for each row execute function public.protect_billing_columns()" >/dev/null
   q "create or replace function public.protect_billing_columns() returns trigger language plpgsql security definer set search_path='' as \$\$ begin if new.email is distinct from old.email then raise exception 'email can only be changed by the service role'; end if; return new; end \$\$" >/dev/null
-  eq "PF3 a C function with the email guard but no billing guard is flagged (body hash)" "$(psql -At -f $DIR/postflight.sql | grep 'C: function body' | grep -c '|f$')" 1
+  eq "PF3 a C function with the email guard but no billing guard is flagged (body hash)" "$(psql -At -f $DIR/postflight.sql | grep 'C: function is the reviewed' | grep -c '|f$')" 1
   psql -v ON_ERROR_STOP=1 -q -f $DIR/C_profiles_guards.sql >/dev/null
   eq "PF4 re-running C restores a clean postflight" "$(psql -At -f $DIR/postflight.sql | grep 'C:' | grep -c '|f$')" 0
+  q "create or replace function public.protect_billing_columns() returns trigger language plpgsql as \$\$ begin return new; end \$\$" >/dev/null
+  eq "PF4b C function without security definer / search_path / reviewed body is flagged" "$(psql -At -f $DIR/postflight.sql | grep 'C: function is the reviewed' | grep -c '|f$')" 1
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/C_profiles_guards.sql >/dev/null
+  q "drop trigger trg_project_prompts_pool on public.project_prompts; create trigger trg_project_prompts_pool before insert or update of is_active on public.project_prompts for each row when (false) execute function public.enforce_prompt_pool()" >/dev/null
+  eq "PF5 a B trigger with WHEN (false) is flagged" "$(psql -At -f $DIR/postflight.sql | grep 'B: trigger present' | grep -c '|f$')" 1
+  q "drop trigger trg_project_prompts_pool on public.project_prompts; create trigger trg_project_prompts_pool before insert or update on public.project_prompts for each row execute function public.enforce_prompt_pool()" >/dev/null
+  eq "PF6 a B trigger on every column update (no 'of is_active') is flagged (tgattr)" "$(psql -At -f $DIR/postflight.sql | grep 'B: trigger present' | grep -c '|f$')" 1
+  q "drop trigger trg_project_prompts_pool on public.project_prompts; create trigger trg_project_prompts_pool before insert or update of is_active on public.project_prompts for each row execute function public.enforce_prompt_pool()" >/dev/null
+  eq "PF6b ...and the genuine trigger reads clean again" "$(psql -At -f $DIR/postflight.sql | grep 'B: trigger present' | grep -c '|t$')" 1
+  q "alter policy prompts_select_owner on public.project_prompts using (true)" >/dev/null
+  eq "PF7 a rewritten select policy (names unchanged) is flagged" "$(psql -At -f $DIR/postflight.sql | grep 'untouched' | grep -c '|f$')" 1
+  q "alter policy prompts_select_owner on public.project_prompts using (public.is_project_owner(project_id))" >/dev/null
+  eq "PF7b ...and the original reads clean" "$(psql -At -f $DIR/postflight.sql | grep 'untouched' | grep -c '|t$')" 1
 
   echo "-- rollbacks"
   seed pro
-  psql -v ON_ERROR_STOP=1 -q -f $DIR/B_rollback.sql >/dev/null || bad "B_rollback runs" "error"
-  fill $U1 $P1 76 >/dev/null; eq "RB1 after B_rollback the trigger is gone (76 accepted again)" "$(active)" 76
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B_rollback_1_disable.sql >/dev/null || bad "B_rollback_1 runs" "error"
+  fill $U1 $P1 76 >/dev/null; eq "RB1 after B_rollback_1 (disable) enforcement is off (76 accepted)" "$(active)" 76
+  eq "RB1b B_rollback_1 takes no ACCESS EXCLUSIVE (it only disables)" "$(grep -ci 'drop trigger' $DIR/B_rollback_1_disable.sql | sed 's/[1-9]/has-drop/')" 0
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B_rollback_2_drop.sql >/dev/null || bad "B_rollback_2 runs" "error"
+  eq "RB1c B_rollback_2 removes the trigger" "$(q "select count(*) from pg_trigger where tgname='trg_project_prompts_pool'")" 0
   psql -v ON_ERROR_STOP=1 -q -f $DIR/C_rollback.sql >/dev/null || bad "C_rollback runs" "error"
   eq "RB2 C_rollback restores the original function body byte for byte (md5)" "$(q "select md5(prosrc)='$ORIG_MD5' from pg_proc where proname='protect_billing_columns' and pronamespace='public'::regnamespace" | sed 's/t/true/;s/f/false/')" true
   eq "RB2 ...and the original UPDATE-only trigger" "$(q "select tgtype from pg_trigger where tgname='trg_profiles_protect_billing_columns'")" 19
@@ -252,6 +281,18 @@ testA() {
   eq "A4 ...pool is exactly full" "$(active)" 75
   eq "A4 cross-owner ids are ignored" "$(as_service "select public.reactivate_project_prompts('$U2',$IDS,75)" | grep -c '"reactivated": 0')" 1
 
+  echo "-- reactivation: cross-tenant ids, isolation, race"
+  seed pro
+  q "insert into public.project_prompts(project_id,prompt_text,is_active) values ('$P1','own inactive prompt 0001',false),('$PX','foreign inactive prompt 01',false)" >/dev/null
+  as_service "select public.reactivate_project_prompts('$U1',(select array_agg(id) from public.project_prompts),75)" >/dev/null
+  eq "A4b mixed id array: the owner's prompt is reactivated" "$(q "select count(*) from public.project_prompts where project_id='$P1' and is_active")" 1
+  eq "A4b ...and ANOTHER account's prompt in the same array is NOT touched" "$(q "select count(*) from public.project_prompts where project_id='$PX' and is_active")" 0
+  eq "A4c reactivation refuses REPEATABLE READ callers" "$(psql -Atq -c "set role service_role; set \"request.jwt.claim.role\"='service_role'" -c "begin isolation level repeatable read; select 1; select public.reactivate_project_prompts('$U1',array[gen_random_uuid()],75); commit" 2>&1 | grep -c 'requires READ COMMITTED')" 1
+  seed pro
+  q "insert into public.project_prompts(project_id,prompt_text,is_active) select '$P1','active prompt '||g||' xxxxx',true from generate_series(1,70) g" >/dev/null
+  q "insert into public.project_prompts(project_id,prompt_text,is_active) select '$P2','inactive prompt '||g||' xxxx',false from generate_series(1,10) g" >/dev/null
+  pids=(); for i in $(seq 1 10); do ( as_service "select public.reactivate_project_prompts('$U1',(select array_agg(id) from (select id from public.project_prompts where project_id='$P2' and not is_active order by id offset $((i-1)) limit 1) s),75); select pg_sleep(0.4)" >/dev/null 2>&1 ) & pids+=($!); done; wait "${pids[@]}"
+  eq "A4d 10 concurrent single reactivations at 70/75: exactly 75 (the lock is real)" "$(active)" 75
   echo "-- closure (phase A2)"
   seed pro
   eq "A5 authenticated REST insert refused (policy dropped)" "$(as_user_err $U1 "insert into public.project_prompts(project_id,prompt_text) values ('$P1','rest insert prompt 000')" | grep -c 'row-level security')" 1
@@ -264,6 +305,10 @@ testA() {
   eq "A6 authenticated cannot execute add_project_prompts" "$(as_user_err $U1 "select public.add_project_prompts('$U1','$P1',9999,$(rowsj 1))" | grep -c 'permission denied')" 1
   eq "A6 authenticated cannot execute reactivate_project_prompts" "$(as_user_err $U1 "select public.reactivate_project_prompts('$U1',array[gen_random_uuid()],9999)" | grep -c 'permission denied')" 1
   eq "A6 anon cannot either" "$(psql -Atq -c "set role anon" -c "select public.add_project_prompts('$U1','$P1',9999,$(rowsj 1))" 2>&1 | grep -c 'permission denied')" 1
+  echo "-- postflight with A1+A2 applied (B/C not applied)"
+  PFA="$(psql -At -f $DIR/postflight.sql)"
+  eq "PFA the three A rows read true" "$(echo "$PFA" | grep -E '^A' | grep -c '|t$')" 3
+  eq "PFA the B and C rows read false (not applied here)" "$(echo "$PFA" | grep -E '^(B:|C:)' | grep -c '|f$')" 7
   echo "-- A's weak point, demonstrated (caller-supplied cap)"
   seed pro
   eq "A7 a compromised/buggy CALLER passing cap=9999 is believed (why B derives the cap in SQL)" "$(add 100 "$P1" 9999 >/dev/null; active)" 100

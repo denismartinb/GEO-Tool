@@ -24,7 +24,7 @@ over_cap as (
 ),
 checks(section, item, value) as (
   values
-    ('0 identity', 'database', current_database()),
+    ('0 identity', 'database (on Supabase this is always "postgres": confirm the PROJECT REF in the dashboard URL yourself)', current_database()),
     ('0 identity', 'at', now()::text),
     ('1 objects', 'project_prompts table', (to_regclass('public.project_prompts') is not null)::text),
     ('1 objects', 'projects table', (to_regclass('public.projects') is not null)::text),
@@ -55,6 +55,15 @@ checks(section, item, value) as (
           where lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(coalesce(u.email,''))))),
     ('7b identity for C (aggregates only, no emails)', 'profiles with an empty email', (select count(*)::text from public.profiles where coalesce(btrim(email),'') = '')),
     ('7b identity for C (aggregates only, no emails)', 'auth users with no email', (select count(*)::text from auth.users where coalesce(btrim(email),'') = '')),
+    ('7c possible PAST use of hole 1 (aggregates; C only blocks the future)', 'profiles created more than 1 minute after their auth user (a self-inserted profile is not created by the signup trigger)',
+        (select count(*)::text from public.profiles pr join auth.users u on u.id = pr.id where pr.created_at > u.created_at + interval '1 minute')),
+    ('7c possible PAST use of hole 1 (aggregates; C only blocks the future)', 'non-free plan, no subscription, and no 7-day trial window (read apart: legacy permanent-Pro accounts from the 0010 default also count)',
+        (select count(*)::text from public.profiles pr where pr.current_plan <> 'free' and pr.stripe_subscription_id is null
+            and (pr.trial_ends_at is null or pr.trial_ends_at > pr.created_at + interval '7 days 1 hour'))),
+    ('7c possible PAST use of hole 1 (aggregates; C only blocks the future)', 'both of the above at once (strongest signal)',
+        (select count(*)::text from public.profiles pr join auth.users u on u.id = pr.id
+          where pr.created_at > u.created_at + interval '1 minute' and pr.current_plan <> 'free' and pr.stripe_subscription_id is null
+            and (pr.trial_ends_at is null or pr.trial_ends_at > pr.created_at + interval '7 days 1 hour'))),
     ('7 orphans (expect 0)', 'prompts without a project', (select count(*)::text from public.project_prompts pp left join public.projects p on p.id = pp.project_id where p.id is null)),
     ('8 grandfathered under B', 'accounts above their derived cap', (select count(*)::text from over_cap where active > cap))
 )

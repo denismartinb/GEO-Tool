@@ -15,6 +15,23 @@
 begin;
 set local lock_timeout = '3s';
 
+-- Refuse to activate without C: without it an account that has no profile row can insert its own as
+-- 'agency' and obtain cap 300 (RUNBOOK.md §2, finding 1).
+do $$
+begin
+  if not exists (
+    select 1 from pg_proc p
+    where p.proname = 'protect_billing_columns' and p.pronamespace = 'public'::regnamespace
+      and md5(p.prosrc) = '51223ea4a5bed224b0af362ff1a4fa6c'
+  ) or not exists (
+    select 1 from pg_trigger t
+    where t.tgrelid = 'public.profiles'::regclass and t.tgname = 'trg_profiles_protect_billing_columns'
+      and (t.tgtype & 4) <> 0
+  ) then
+    raise exception 'C_profiles_guards.sql is not applied (or is not the reviewed version): refusing to activate B2';
+  end if;
+end $$;
+
 create trigger trg_project_prompts_pool
   before insert or update of is_active on public.project_prompts
   for each row execute function public.enforce_prompt_pool();
