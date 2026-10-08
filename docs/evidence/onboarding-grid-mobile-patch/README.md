@@ -31,6 +31,8 @@ Doce capturas: pasos 1 (dominio), 2 (competidores e identidad) y 3 (prompts) a 3
 
 - A 320 px el campo de dominio muestra «elcortei…»: el texto escrito queda truncado a la vista (sigue completo dentro del campo).
 - A 320 px los nombres de competidor se cortan junto al chip («Ama…», «Esp…»). El chip es previo a este parche; con el parche la columna es más estrecha que antes.
+- A 320 px, en el paso de prompts, el texto de cada prompt queda en una columna de ~100 px y se **trunca con puntos suspensivos** («diferenc…», «comerci…»): el chip de categoría
+  le quita el ancho. Con la página antes recortada no se llegaba a ver; con el parche sí. Mejora posible (no aplicada): colocar el chip bajo el texto en móvil.
 - Zonas táctiles por debajo de 44 px: país 34×38, idioma 94×32, botones de 36 de alto. Cumplen el mínimo de 24×24 de WCAG 2.2 AA; no la recomendación de 44.
 
 ## Qué NO se verificó
