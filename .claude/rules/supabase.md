@@ -16,6 +16,20 @@ These invariants apply automatically when touching Supabase code. Owned by the
 - **No schema changes without explicit phase approval.** Migrations are
   forbidden unless the founder has approved a dedicated backend phase.
 - **No RLS changes without explicit approval.**
+- **Every write of `project_prompts` goes through `add_project_prompts`
+  (`lib/projects/prompt-pool.ts`), never a direct `.insert()`.** The account-wide
+  prompt pool was enforced as a read followed by a write in three places — a
+  race by construction (twelve concurrent writers reached 120 against a cap of
+  75 in `scripts/verify-prompt-pool-sql.sh`; the function never passed 70). The
+  function counts and inserts in one transaction under a per-account advisory
+  lock and takes the cap as an argument computed from the EFFECTIVE plan, which
+  is why only `service_role` may execute it — exposing it to `authenticated`
+  would let any user pass a huge cap. That makes it a **service-role use in a
+  user-facing flow**, which this very file forbids without approval: it is a
+  founder gate, not a drive-by (`docs/brand/design-decisions-log.md` §237,
+  migration 0039, not applied). Open and NOT closed by it: RLS still lets an
+  owner insert or re-activate prompts through the REST API; closing that is a
+  separate RLS change that needs its own approval.
 - **No service-role shortcuts in user-facing flows.** The service role must not
   appear in paths reachable from user requests unless explicitly justified and
   approved. **Lo vigila `tests/service-role-identity.test.ts`** (log §92): todo

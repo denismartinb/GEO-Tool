@@ -6,6 +6,15 @@ import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 const generateAddedPromptsMock = vi.fn();
 const launchScanMock = vi.fn();
 const resolveAndCacheBusinessProfileMock = vi.fn();
+const addPromptsToPoolMock = vi.fn();
+
+// CONTRACT-99 B2: the prompts are no longer inserted by this module — they go
+// through the account pool (`add_project_prompts`, one transaction under a lock).
+// The mock records what the pool is asked to write so these tests keep asserting
+// what reaches the project, and `lib/projects/prompt-pool.test.ts` covers the pool.
+vi.mock("@/lib/projects/prompt-pool", () => ({
+  addPromptsToPool: (...args: unknown[]) => addPromptsToPoolMock(...args)
+}));
 
 vi.mock("@/lib/llm/gemini", () => ({
   generateAddedPrompts: (...args: unknown[]) => generateAddedPromptsMock(...args)
@@ -47,6 +56,24 @@ function freshId() {
   return `new-prompt-${nextId++}`;
 }
 
+/** Wired by `makeFakeSupabase`: where the pool mock records writes, and whether it should refuse. */
+let poolSink: Row[] = [];
+let poolForceError = false;
+
+beforeEach(() => {
+  poolSink = [];
+  poolForceError = false;
+  addPromptsToPoolMock.mockReset();
+  addPromptsToPoolMock.mockImplementation(
+    async ({ projectId, rows }: { projectId: string; rows: Array<{ prompt_text: string; category: string | null }> }) => {
+      if (poolForceError) return { ok: false, reason: "unavailable" };
+      const written = rows.map((row) => ({ id: freshId(), project_id: projectId, is_active: true, ...row }));
+      poolSink.push(...written);
+      return { ok: true, inserted: written.length, ids: written.map((r) => r.id) };
+    }
+  );
+});
+
 /**
  * Minimal in-memory fake covering exactly the query shapes `addPromptsCore`
  * issues against "projects" (single ownership-scoped read), "profiles"
@@ -63,6 +90,7 @@ function makeFakeSupabase({
   planId?: string;
 }) {
   const insertedRows: Row[] = [];
+  poolSink = insertedRows;
   const projectUpdateCalls: Row[] = [];
   let forceInsertError = false;
   let forceProjectUpdateError = false;
@@ -162,6 +190,7 @@ function makeFakeSupabase({
     projectUpdateCalls,
     setForceInsertError: (value: boolean) => {
       forceInsertError = value;
+      poolForceError = value;
     },
     setForceProjectUpdateError: (value: boolean) => {
       forceProjectUpdateError = value;
@@ -574,5 +603,73 @@ describe("addPromptsCore", () => {
       expect(resolveAndCacheBusinessProfileMock).not.toHaveBeenCalled();
       expect(generateAddedPromptsMock.mock.calls[0][0].profile).toBeUndefined();
     });
+  });
+});
+
+describe("addPromptsCore · bolsa de prompts de la cuenta (CONTRACT-99 B2)", () => {
+  beforeEach(() => {
+    // The mocks above accumulate calls across the file; these cases assert "no scan".
+    launchScanMock.mockReset();
+  });
+
+  const candidates = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ text: `¿Pregunta número ${i + 1} sobre la marca?`, category: "Comparación" }));
+  const active = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ is_active: true, prompt_text: `Existente ${i}`, category: "Comparación" }));
+
+  it("pasa a la bolsa el tope del plan EFECTIVO y el dueño, y la bolsa es quien escribe", async () => {
+    const { addPromptsCore } = await import("@/lib/projects/add-prompts");
+    generateAddedPromptsMock.mockResolvedValue(candidates(2));
+    const { client } = makeFakeSupabase({ project: PROJECT, activePrompts: [] });
+
+    await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
+
+    expect(addPromptsToPoolMock).toHaveBeenCalledTimes(1);
+    expect(addPromptsToPoolMock.mock.calls[0][0]).toMatchObject({
+      ownerId: USER.id,
+      projectId: PROJECT.id,
+      cap: 75
+    });
+  });
+
+  it("cerca del tope recorta el lote a lo que cabe, en vez de pasarse o de descartarlo entero", async () => {
+    const { addPromptsCore } = await import("@/lib/projects/add-prompts");
+    generateAddedPromptsMock.mockResolvedValue(candidates(5));
+    const { client, insertedRows } = makeFakeSupabase({ project: PROJECT, activePrompts: active(73) });
+
+    const result = await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
+
+    // 73 de 75 → caben 2, aunque Gemini devolviera 5.
+    expect(addPromptsToPoolMock.mock.calls[0][0].rows).toHaveLength(2);
+    expect(insertedRows).toHaveLength(2);
+    expect(result).toMatchObject({ success: true, addedCount: 2 });
+  });
+
+  it("una carrera: la lectura decía que cabía y la bolsa responde llena → límite alcanzado, sin escaneo", async () => {
+    const { addPromptsCore } = await import("@/lib/projects/add-prompts");
+    generateAddedPromptsMock.mockResolvedValue(candidates(2));
+    addPromptsToPoolMock.mockResolvedValue({ ok: false, reason: "pool_full", remaining: 0, cap: 75 });
+    const { client } = makeFakeSupabase({ project: PROJECT, activePrompts: active(10) });
+
+    const result = await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Has alcanzado el límite de prompts monitorizados de tu plan actual. Sube de plan para añadir más."
+    });
+    expect(launchScanMock).not.toHaveBeenCalled();
+  });
+
+  it("FALLA CERRADO: sin bolsa disponible no se guarda nada ni se lanza un escaneo", async () => {
+    const { addPromptsCore } = await import("@/lib/projects/add-prompts");
+    generateAddedPromptsMock.mockResolvedValue(candidates(2));
+    addPromptsToPoolMock.mockResolvedValue({ ok: false, reason: "unavailable" });
+    const { client, insertedRows } = makeFakeSupabase({ project: PROJECT, activePrompts: [] });
+
+    const result = await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
+
+    expect(result).toEqual({ success: false, error: "No se han podido guardar los nuevos prompts." });
+    expect(insertedRows).toHaveLength(0);
+    expect(launchScanMock).not.toHaveBeenCalled();
   });
 });

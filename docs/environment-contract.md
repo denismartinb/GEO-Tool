@@ -484,6 +484,12 @@ Vercel Pro, founder registered as autónomo (or fiscal vehicle chosen),
 VeriFactu/facturación decision made and applied, then swap `sk_test_...` /
 test-mode price ids for their live-mode equivalents.
 
+**Prompt pool (CONTRACT-99 B2, log §237 — local branch, not applied)**: writing project
+prompts goes through `public.add_project_prompts` (migration 0039), which needs the
+service-role key (`SUPABASE_SERVICE_ROLE_KEY`, already in the contract). No new env var.
+Apply 0039 **before** deploying the code that calls it; without it, adding prompts and
+creating a domain fail closed (nothing is written).
+
 **Customer Portal (BILLING-STRIPE-1 PR 2)**: no new env var — reuses
 `STRIPE_SECRET_KEY` via `stripe.billingPortal.sessions.create()`. Requires a
 one-time **founder configuration in the Stripe Dashboard** (Settings →

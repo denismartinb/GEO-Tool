@@ -5,6 +5,7 @@ import { getPlanForUser } from "@/lib/billing";
 import { generateAddedPrompts, type AddPromptsMode, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
 import type { BusinessProfile } from "@/lib/llm/contracts";
 import { resolveAndCacheBusinessProfile } from "@/lib/projects/business-profile";
+import { addPromptsToPool } from "@/lib/projects/prompt-pool";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 import { getActionErrorCode } from "@/lib/scan/errors";
@@ -202,19 +203,36 @@ export async function addPromptsCore({
     return { success: false, error: GENERIC_GENERATION_FAILURE };
   }
 
-  const { data: insertedRows, error: insertError } = await supabase
-    .from("project_prompts")
-    .insert(
-      candidates.map((candidate) => ({
-        project_id: projectId,
-        prompt_text: candidate.text,
-        category: candidate.category.slice(0, MAX_CATEGORY_LENGTH),
-        is_active: true
-      }))
-    )
-    .select("id");
+  // The pool is account-wide and its cap comes from the owner's EFFECTIVE plan.
+  // The count read at the top is only a hint: trim the batch to what appeared to
+  // fit so a near-full account gets the prompts that fit instead of nothing, and
+  // let `add_project_prompts` be the authority — it counts and inserts in one
+  // transaction under a per-account lock, so a simultaneous writer cannot push
+  // the pool past the cap (CONTRACT-99 B2, log §237).
+  if (!activePromptCountError) {
+    const remaining = Math.max(0, plan.caps.prompts - (activePromptCount ?? 0));
+    if (candidates.length > remaining) candidates = candidates.slice(0, remaining);
+  }
 
-  if (insertError || !insertedRows?.length) {
+  const poolResult = await addPromptsToPool({
+    ownerId: user.id,
+    projectId,
+    cap: plan.caps.prompts,
+    rows: candidates.map((candidate) => ({
+      prompt_text: candidate.text,
+      category: candidate.category.slice(0, MAX_CATEGORY_LENGTH)
+    }))
+  });
+
+  if (!poolResult.ok) {
+    if (poolResult.reason === "pool_full") {
+      return { success: false, error: feedbackErrorMessages.prompt_limit_reached };
+    }
+    return { success: false, error: "No se han podido guardar los nuevos prompts." };
+  }
+
+  const insertedIds = poolResult.ids;
+  if (!insertedIds.length) {
     return { success: false, error: "No se han podido guardar los nuevos prompts." };
   }
 
@@ -223,15 +241,15 @@ export async function addPromptsCore({
       projectId,
       supabase,
       user,
-      onlyPromptIds: insertedRows.map((row) => row.id as string)
+      onlyPromptIds: insertedIds
     });
 
-    return { success: true, addedCount: insertedRows.length, scanLaunched: true };
+    return { success: true, addedCount: insertedIds.length, scanLaunched: true };
   } catch (error) {
     const code = getActionErrorCode(error);
     return {
       success: true,
-      addedCount: insertedRows.length,
+      addedCount: insertedIds.length,
       scanLaunched: false,
       scanWarning: feedbackErrorMessages[code] ?? feedbackErrorMessages.unexpected_error
     };

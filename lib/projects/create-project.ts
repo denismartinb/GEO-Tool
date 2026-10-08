@@ -4,6 +4,7 @@ import { suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
 import type { BusinessProfile } from "@/lib/llm/contracts";
 import { deriveBrandAliases, resolveBusinessContext } from "@/lib/projects/business-profile";
 import { MAX_INITIAL_COMPETITORS, MAX_INITIAL_PROMPTS, type NormalizedProjectInput } from "@/lib/projects/project-form";
+import { addPromptsToPool, remainingPoolHint } from "@/lib/projects/prompt-pool";
 import { createPendingScanRun, getActionErrorCode } from "@/lib/scan/scan-runner";
 import type { AuthenticatedContext } from "@/lib/auth";
 import type { Plan } from "@/app/pricing/plans-data";
@@ -241,16 +242,31 @@ export async function createProjectCore(input: {
   const projectId = (data as { id: string }).id;
   let setupError = false;
 
+  // CONTRACT-99 B2 (log §237): the initial prompts count against the ACCOUNT's
+  // pool, not just against the plan cap per submission — a second domain used to
+  // arrive with a full cap of its own. The hint trims the batch to what appears
+  // to fit; `add_project_prompts` is the authority and fails closed (no write)
+  // if the migration or the service key is missing.
+  let savedPromptCount = 0;
   if (initialPrompts.length) {
-    const { error: promptInsertError } = await supabase.from("project_prompts").insert(
-      initialPrompts.map((prompt) => ({
-        project_id: projectId,
-        prompt_text: prompt.prompt_text,
-        category: prompt.category,
-        sort_order: prompt.sort_order
-      }))
-    );
-    if (promptInsertError) setupError = true;
+    const remaining = await remainingPoolHint(supabase, plan.caps.prompts);
+    const toInsert = remaining === null ? initialPrompts : initialPrompts.slice(0, remaining);
+    if (toInsert.length < initialPrompts.length) setupError = true;
+
+    if (toInsert.length) {
+      const pool = await addPromptsToPool({
+        ownerId: user.id,
+        projectId,
+        cap: plan.caps.prompts,
+        rows: toInsert.map((prompt) => ({
+          prompt_text: prompt.prompt_text,
+          category: prompt.category,
+          sort_order: prompt.sort_order
+        }))
+      });
+      if (pool.ok) savedPromptCount = pool.inserted;
+      else setupError = true;
+    }
   }
 
   if (initialCompetitors.length) {
@@ -266,8 +282,12 @@ export async function createProjectCore(input: {
 
   // Se comprueba ANTES de crear el run, y ese orden importa: sin prompts no
   // hay escaneo posible, así que pedirlo sería crear una fila condenada.
-  if (!initialPrompts.length) {
-    return { status: "created", projectId, outcome: { kind: "no_prompts" } };
+  if (!savedPromptCount) {
+    return {
+      status: "created",
+      projectId,
+      outcome: setupError ? { kind: "setup_partial" } : { kind: "no_prompts" }
+    };
   }
 
   // Se crea el run pendiente (rápido, sin llamadas a Gemini) y el usuario

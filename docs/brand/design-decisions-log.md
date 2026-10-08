@@ -21327,3 +21327,63 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 237. CONTRACT-99 (preparación local, rama aislada): plan único de 99 €/mes — config, cadencia semanal y bolsa de 75 prompts atómica (2026-10-08)
+
+**Estado: preparado en local, NO aplicado, NO mergeado.** Ninguna de estas piezas está en
+producción ni lo estará sin las puertas del dueño (Price y config de Stripe, fiscalidad y
+prueba real en TEST, efectos externos, merge/deploy, migraciones en producción).
+
+**Contrato (confirmado por el dueño; transmitido por el comentario «Director» del PR
+#549).** 99 €/mes, IVA incluido, para todos, sin cohorte *legacy*. 75 preguntas totales por
+cuenta, repartidas libremente entre hasta 3 dominios, sin mínimo por dominio (riesgo y coste
+del suelo de muestreo aceptados; el muestreo no se retira). 3 motores. Escaneo semanal más 1
+revisión manual al mes por cuenta (sin contar el primer escaneo ni los reintentos
+automáticos). Prueba opcional de 14 días tras el diagnóstico, nunca desde el registro ni sin
+opt-in. Gracia de 3 días si falla el pago. Delimitación completa en
+`docs/specs/billing/contract-99-implementation.md`.
+
+**Implementado en esta rama.**
+- **B1a**: `pro` pasa a ser el plan de pago único (99 €, 3 · 75 · 3 · semanal, sin promo),
+  reutilizando el ID técnico **sin conservar las cuotas anteriores** (5 · 100 · diario).
+- **B4**: `lib/plan-cadence.ts` es la única tabla de cadencia (`pro` y `starter` semanal,
+  `agency` diario) y la leen el cron, el vigilante, el aviso de madurez de datos y el copy.
+  El copy que afirmaba «diario» para todos los planes (tour, docs, avisos de escaneo
+  automático, correos de prueba) se neutraliza o pasa a leer la cadencia real.
+- **B2**: la bolsa de 75, hecha cumplir. **Corrección de un error mío**: el tope de prompts
+  YA se contaba por cuenta al añadir (RLS); lo que faltaba era hacerlo cumplir. Agujeros
+  verificados: `createProject` no restaba lo que la cuenta ya tenía; `addPromptsCore`
+  comprobaba `count >= tope` e insertaba un lote entero; la acción `createPrompt` insertaba
+  sin comprobación alguna; todo era lectura-luego-escritura. Ahora los tres caminos pasan por
+  `add_project_prompts` (migración 0039, propuesta): cuenta e inserta en una transacción bajo
+  un *advisory lock* por cuenta; falla cerrado si falta la función o la clave de servicio.
+  **Demostrado, no solo probado en la UI** (`scripts/verify-prompt-pool-sql.sh`, Postgres 16
+  local): 12 sesiones simultáneas dejan siempre 70 (7 lotes de 10), nunca más de 75, y el
+  patrón antiguo llega a **120** en las tres rondas.
+
+**Detenido, por detalles que cambian compromiso o cobro (se reportan, no se asumen).**
+B3 (revisión mensual), B5 (prueba opt-in; requiere esquema) y B6 (gracia de 3 días;
+requiere esquema): preguntas Q1–Q3 del documento del contrato. B1b (dejar de ofrecer
+Starter y Agencia en las superficies públicas): es UI y falta la vía de evidencia 390/1280.
+
+**Lo que NO cierra y queda abierto.**
+- **RLS no se ha tocado.** Un dueño sigue pudiendo insertar o reactivar prompts por la API
+  REST y saltarse la bolsa; cerrarlo es un cambio de RLS aparte que necesita su aprobación.
+- **Uso de `service_role` en un flujo de usuario**: la función recibe el tope como argumento
+  y exponerla a `authenticated` dejaría a cualquiera pasar uno enorme, así que solo la
+  ejecuta el servicio. Es un atajo de service-role (`CLAUDE.md`, «Forbidden Without Explicit
+  Approval»): **puerta del dueño y revisión de `data-guardian` antes de cualquier merge**.
+- Orden de despliegue: la migración 0039 debe estar aplicada **antes** que este código; sin
+  ella, `addPromptsCore`, `createProject` y `createPrompt` fallan cerrados (no escriben).
+- Los prompts de dominios archivados siguen contando en los 75 (comportamiento actual; Q4).
+- La atomicidad de la bolsa cubre los caminos de la aplicación, no la API REST (ver arriba).
+- Con `pro` semanal, las cuentas que hoy estén en `pro` cambian de cuotas; hace falta el
+  inventario de cuentas antes de aplicar nada en ningún entorno.
+- Los correos de la secuencia de prueba (apagados) siguen colgando del Pro de 7 días desde
+  el registro hasta B5.
+
+**Trazabilidad.** `app/pricing/plans-data.ts`, `lib/plan-cadence.ts`, `lib/scan/cron.ts`,
+`lib/data-maturity.ts`, `lib/projects/{prompt-pool,add-prompts,create-project}.ts`,
+`app/dashboard/projects/[projectId]/actions.ts`,
+`supabase/migrations/0039_add_project_prompts_pool.sql`,
+`scripts/verify-prompt-pool-sql.sh`, `.claude/rules/supabase.md`.

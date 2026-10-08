@@ -11,6 +11,10 @@ vi.mock("@/lib/projects/business-profile", () => ({
   resolveBusinessContext: vi.fn(),
   deriveBrandAliases: vi.fn()
 }));
+vi.mock("@/lib/projects/prompt-pool", () => ({
+  addPromptsToPool: vi.fn(),
+  remainingPoolHint: vi.fn()
+}));
 vi.mock("@/lib/scan/scan-runner", () => ({
   createPendingScanRun: vi.fn(),
   getActionErrorCode: (error: unknown) => (error instanceof Error ? error.message : "unexpected_error")
@@ -18,6 +22,7 @@ vi.mock("@/lib/scan/scan-runner", () => ({
 
 import { suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
 import { deriveBrandAliases, resolveBusinessContext } from "@/lib/projects/business-profile";
+import { addPromptsToPool, remainingPoolHint } from "@/lib/projects/prompt-pool";
 import { createPendingScanRun } from "@/lib/scan/scan-runner";
 import { createProjectCore } from "./create-project";
 
@@ -152,8 +157,16 @@ function makeFakeSupabase(opts: FakeOpts = {}) {
   return { client: client as unknown as SupabaseClient, inserted, updated };
 }
 
+/** Rows handed to the account prompt pool, in order — the prompts are no longer inserted directly. */
+function poolRows(): Row[] {
+  return vi.mocked(addPromptsToPool).mock.calls.flatMap((call) => call[0].rows as unknown as Row[]);
+}
+
 function run(opts: FakeOpts = {}, values = input(), plan: Plan = PLAN) {
   const { client, inserted, updated } = makeFakeSupabase(opts);
+  if (opts.promptInsertFails) {
+    vi.mocked(addPromptsToPool).mockResolvedValueOnce({ ok: false, reason: "unavailable" });
+  }
   return {
     inserted,
     updated,
@@ -163,6 +176,13 @@ function run(opts: FakeOpts = {}, values = input(), plan: Plan = PLAN) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: the pool accepts whatever it is given, and the read hint is "unknown" (no trimming).
+  vi.mocked(addPromptsToPool).mockImplementation(async ({ rows }) => ({
+    ok: true,
+    inserted: rows.length,
+    ids: rows.map((_, index) => `prompt-${index}`)
+  }));
+  vi.mocked(remainingPoolHint).mockResolvedValue(null);
   vi.mocked(deriveBrandAliases).mockResolvedValue([]);
   vi.mocked(createPendingScanRun).mockResolvedValue(undefined as never);
   vi.mocked(resolveBusinessContext).mockResolvedValue({ status: "unidentified" } as never);
@@ -296,7 +316,7 @@ describe("createProjectCore · sugerencias del sistema", () => {
 
     expect(outcome.status).toBe("created");
     expect(inserted.project_competitors).toHaveLength(0);
-    expect(inserted.project_prompts).toHaveLength(1);
+    expect(poolRows()).toHaveLength(1);
   });
 
   it("persiste el perfil de negocio sólo cuando esta rama lo calculó", async () => {
@@ -356,7 +376,7 @@ describe("createProjectCore · desenlaces tras crear el proyecto", () => {
 
     expect(outcome).toMatchObject({ status: "created", projectId: PROJECT_ID, outcome: { kind: "ready" } });
     expect(inserted.projects).toHaveLength(1);
-    expect(inserted.project_prompts).toHaveLength(1);
+    expect(poolRows()).toHaveLength(1);
     expect(inserted.project_competitors).toHaveLength(1);
     expect(createPendingScanRun).toHaveBeenCalledWith(expect.objectContaining({ projectId: PROJECT_ID }));
   });
@@ -404,5 +424,67 @@ describe("createProjectCore · lo que se persiste", () => {
     const plain = run();
     await plain.result;
     expect(plain.inserted.projects[0]).not.toHaveProperty("engine_gemini_enabled");
+  });
+});
+
+describe("createProjectCore · bolsa de prompts de la cuenta (CONTRACT-99 B2)", () => {
+  it("entrega los prompts a la bolsa con el tope del plan y el dueño, no los inserta directamente", async () => {
+    const { result, inserted } = run();
+    await result;
+
+    expect(inserted.project_prompts).toHaveLength(0);
+    expect(addPromptsToPool).toHaveBeenCalledWith(
+      expect.objectContaining({ ownerId: USER.id, projectId: PROJECT_ID, cap: PLAN.caps.prompts })
+    );
+  });
+
+  it("un segundo dominio NO llega con un tope propio: se recorta a lo que queda en la cuenta", async () => {
+    vi.mocked(remainingPoolHint).mockResolvedValue(1);
+    const values = input({
+      initialPrompts: [
+        { prompt_text: "primera pregunta de prueba", category: "a", sort_order: 0 },
+        { prompt_text: "segunda pregunta de prueba", category: "a", sort_order: 1 },
+        { prompt_text: "tercera pregunta de prueba", category: "a", sort_order: 2 }
+      ] as never
+    });
+
+    const { result } = run({}, values);
+    const outcome = await result;
+
+    expect(poolRows()).toHaveLength(1);
+    // Se guardó menos de lo pedido: el alta lo dice, no finge que todo está listo.
+    expect(outcome).toMatchObject({ status: "created", outcome: { kind: "setup_partial" } });
+  });
+
+  it("con la bolsa llena no se llama a la bolsa, no se crea escaneo y el alta lo dice", async () => {
+    vi.mocked(remainingPoolHint).mockResolvedValue(0);
+
+    const { result } = run();
+    const outcome = await result;
+
+    expect(addPromptsToPool).not.toHaveBeenCalled();
+    expect(createPendingScanRun).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ status: "created", outcome: { kind: "setup_partial" } });
+  });
+
+  it("FALLA CERRADO: si la bolsa no está disponible no se escribe ningún prompt ni se finge un escaneo", async () => {
+    vi.mocked(addPromptsToPool).mockResolvedValue({ ok: false, reason: "unavailable" });
+
+    const { result } = run();
+    const outcome = await result;
+
+    expect(createPendingScanRun).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ status: "created", outcome: { kind: "setup_partial" } });
+  });
+
+  it("una carrera: la lectura decía que cabían y la bolsa responde llena → parcial, sin escaneo", async () => {
+    vi.mocked(remainingPoolHint).mockResolvedValue(5);
+    vi.mocked(addPromptsToPool).mockResolvedValue({ ok: false, reason: "pool_full", remaining: 0, cap: PLAN.caps.prompts });
+
+    const { result } = run();
+    const outcome = await result;
+
+    expect(createPendingScanRun).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ outcome: { kind: "setup_partial" } });
   });
 });

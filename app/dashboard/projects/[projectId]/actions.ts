@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getPlanForUser } from "@/lib/billing";
 import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
+import { addPromptsToPool } from "@/lib/projects/prompt-pool";
 import {
   AUDIT_HALF_COLUMN,
   isMissingColumnError,
@@ -90,12 +92,20 @@ export async function createPrompt(formData: FormData) {
     category: formData.get("category")
   });
 
-  const { supabase } = await requireUser();
-  await supabase.from("project_prompts").insert({
-    project_id: payload.projectId,
-    prompt_text: payload.promptText,
-    category: payload.category || null
+  // CONTRACT-99 B2 (log §237): this action used to insert with NO cap check at
+  // all, and a server action is a callable endpoint whether or not a screen
+  // renders its form. It goes through the account pool like every other writer.
+  const { supabase, user } = await requireUser();
+  const plan = await getPlanForUser(supabase, user.id);
+  const poolResult = await addPromptsToPool({
+    ownerId: user.id,
+    projectId: payload.projectId,
+    cap: plan.caps.prompts,
+    rows: [{ prompt_text: payload.promptText, category: payload.category || null }]
   });
+  if (!poolResult.ok) {
+    console.warn("[geo:prompts] createPrompt refused", { projectId: payload.projectId, reason: poolResult.reason });
+  }
 
   revalidatePath(`/dashboard/projects/${payload.projectId}`);
 }
