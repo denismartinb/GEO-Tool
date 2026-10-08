@@ -1,15 +1,19 @@
 -- READ-ONLY postflight. ONE statement, ONE result set (the Supabase SQL editor shows only the last result).
--- Every row that belongs to what you applied must say ok = true; rows of options you did NOT apply are
--- expected false. IT IS A TRIPWIRE, NOT A PROOF: it pins the objects of this package AND the surrounding surface
--- (the exact set of triggers and policies on project_prompts and profiles, row-level security, the ownership
--- helper, database-level settings that switch triggers off, the overrides table's shape and privileges), so a
--- look-alike, an extra trigger or an extra permissive policy reads false. It does NOT see object ownership, the
--- bodies of auth.role()/auth.uid() (they differ between Supabase and the local stub: they are printed as
--- md5 rows to compare with the PREFLIGHT output), or anything outside this list. CRLF pasted into the editor
+-- Every row that belongs to what you applied must say ok = true; rows of options you did NOT apply are expected false.
+--
+-- IT IS A TRIPWIRE, NOT A PROOF. It pins the objects of this package AND, by definition (function, timing, columns, WHEN
+-- clause), every trigger on profiles / project_prompts / projects; the policies of those three tables; row-level security;
+-- inheritance and rewrite rules on them; the ownership helper (body, search_path, and that the policies depend on it);
+-- the owner of the package's functions; database/role settings that can change behaviour; the signup trigger function;
+-- and the overrides table's shape and privileges. It does NOT see: event triggers, publications, extensions, objects in
+-- other schemas, the bodies of auth.role()/auth.uid() beyond a fingerprint to compare with the PREFLIGHT, the path where
+-- an operator or the service role moves a project (and its active prompts) to another account with
+-- `update projects set owner_user_id` (no trigger fires), or anything outside this list. CRLF pasted into the editor
 -- changes the md5 and reads false: that fails safe (re-paste with LF).
 with
 is_active_attnum as (select attnum::text as a from pg_attribute where attrelid='public.project_prompts'::regclass and attname='is_active'),
 user_id_attnum as (select attnum from pg_attribute where attrelid = to_regclass('public.account_prompt_cap_overrides') and attname='user_id' and not attisdropped),
+tbl_owner as (select relowner from pg_class where oid='public.project_prompts'::regclass),
 f as (
   select
     exists (select 1 from pg_trigger t, is_active_attnum x where t.tgrelid='public.project_prompts'::regclass and t.tgname='trg_project_prompts_pool'
@@ -17,7 +21,7 @@ f as (
             and (t.tgtype & 3) = 3 and (t.tgtype & 4) <> 0 and (t.tgtype & 16) <> 0 and (t.tgtype & 40) = 0
             and t.tgattr::text = x.a) as b_trigger_ok,
     coalesce((select bool_and(prosecdef and proconfig = array['search_path=""']
-                 and md5(prosrc) = case proname when 'account_prompt_cap' then '497d365cdaaa971c4b3bf5f9d97d6eee' when 'enforce_prompt_pool' then '97322ba45fb4ba240a77c94a98fd0e5c' end)
+                 and md5(prosrc) = case proname when 'account_prompt_cap' then '497d365cdaaa971c4b3bf5f9d97d6eee' when 'enforce_prompt_pool' then '8f35cccfbe1fdadaffa91cd3547711f3' end)
        from pg_proc where proname in ('account_prompt_cap','enforce_prompt_pool') and pronamespace='public'::regnamespace), false)
       and (select count(*) from pg_proc where proname in ('account_prompt_cap','enforce_prompt_pool') and pronamespace='public'::regnamespace) = 2 as b_functions_ok,
     coalesce((select relrowsecurity from pg_class where oid = to_regclass('public.account_prompt_cap_overrides')), false)
@@ -56,16 +60,29 @@ f as (
     coalesce((select md5(prosrc)='306a01c000f93e362b4323bd7be1b604' and prosecdef and proconfig = array['search_path=""']
               from pg_proc where proname='protect_billing_columns' and pronamespace='public'::regnamespace), false) as c_function_ok,
     -- surrounding surface (independent of which option you applied)
-    coalesce((select bool_and(relrowsecurity) from pg_class where oid in ('public.profiles'::regclass,'public.project_prompts'::regclass)), false) as s_rls_on,
-    not exists (select 1 from pg_trigger where tgrelid='public.project_prompts'::regclass and not tgisinternal
-                and tgname not in ('trg_project_prompts_set_updated_at','trg_project_prompts_pool','trg_project_prompts_no_reactivation'))
-      and not exists (select 1 from pg_trigger where tgrelid='public.profiles'::regclass and not tgisinternal
-                and tgname not in ('trg_profiles_protect_billing_columns','trg_profiles_set_updated_at')) as s_no_extra_triggers,
+    coalesce((select bool_and(relrowsecurity and not relforcerowsecurity and relkind = 'r') from pg_class where oid in ('public.profiles'::regclass,'public.project_prompts'::regclass,'public.projects'::regclass)), false) as s_rls_on,
+    -- every trigger on the three tables is either a pinned set_updated_at trigger or one of the package's own (pinned above)
+    not exists (select 1 from pg_trigger t where t.tgrelid in ('public.profiles'::regclass,'public.project_prompts'::regclass,'public.projects'::regclass) and not t.tgisinternal and not (
+        (t.tgname in ('trg_profiles_set_updated_at','trg_projects_set_updated_at','trg_project_prompts_set_updated_at')
+          and t.tgfoid = 'public.set_updated_at()'::regprocedure and t.tgtype = 19 and t.tgqual is null and t.tgattr::text = '' and t.tgenabled = 'O')
+        or t.tgname in ('trg_project_prompts_pool','trg_project_prompts_no_reactivation','trg_profiles_protect_billing_columns')))
+      and (select count(*) from pg_trigger t where t.tgrelid in ('public.profiles'::regclass,'public.project_prompts'::regclass,'public.projects'::regclass) and t.tgname in ('trg_profiles_set_updated_at','trg_projects_set_updated_at','trg_project_prompts_set_updated_at')) = 3
+      and coalesce((select md5(prosrc)='9b1889f56258bf9d6554213c05019c76' and not prosecdef and proconfig is null from pg_proc where oid = 'public.set_updated_at()'::regprocedure), false) as s_triggers_pinned,
+    not exists (select 1 from pg_inherits where inhparent in ('public.profiles'::regclass,'public.project_prompts'::regclass,'public.projects'::regclass) or inhrelid in ('public.profiles'::regclass,'public.project_prompts'::regclass,'public.projects'::regclass)
+                 or inhparent = coalesce(to_regclass('public.account_prompt_cap_overrides'), 0::oid) or inhrelid = coalesce(to_regclass('public.account_prompt_cap_overrides'), 0::oid))
+      and not exists (select 1 from pg_rewrite where ev_class in ('public.profiles'::regclass,'public.project_prompts'::regclass,'public.projects'::regclass) or ev_class = coalesce(to_regclass('public.account_prompt_cap_overrides'), 0::oid)) as s_no_inherit_or_rules,
     (select coalesce(array_agg(polname||'|'||polcmd::text||'|'||polroles::regrole[]::text||'|'||polpermissive::text||'|'||coalesce(pg_get_expr(polqual,polrelid),'')||'|'||coalesce(pg_get_expr(polwithcheck,polrelid),'')), array[]::text[]) from pg_policy where polrelid='public.project_prompts'::regclass) <@ array['prompts_select_owner|r|{authenticated}|true|is_project_owner(project_id)|','prompts_update_owner|w|{authenticated}|true|is_project_owner(project_id)|is_project_owner(project_id)','prompts_insert_owner|a|{authenticated}|true||is_project_owner(project_id)']
       and (select coalesce(array_agg(polname||'|'||polcmd::text||'|'||polroles::regrole[]::text||'|'||polpermissive::text||'|'||coalesce(pg_get_expr(polqual,polrelid),'')||'|'||coalesce(pg_get_expr(polwithcheck,polrelid),'')), array[]::text[]) from pg_policy where polrelid='public.project_prompts'::regclass) @> array['prompts_select_owner|r|{authenticated}|true|is_project_owner(project_id)|','prompts_update_owner|w|{authenticated}|true|is_project_owner(project_id)|is_project_owner(project_id)'] as s_prompt_policies_ok,
     (select coalesce(array_agg(polname||'|'||polcmd::text||'|'||polroles::regrole[]::text||'|'||polpermissive::text||'|'||coalesce(pg_get_expr(polqual,polrelid),'')||'|'||coalesce(pg_get_expr(polwithcheck,polrelid),'')), array[]::text[]) from pg_policy where polrelid='public.profiles'::regclass) <@ array['profiles_select_own|r|{authenticated}|true|(id = auth.uid())|','profiles_update_own|w|{authenticated}|true|(id = auth.uid())|(id = auth.uid())','profiles_insert_own|a|{authenticated}|true||(id = auth.uid())'] and (select coalesce(array_agg(polname||'|'||polcmd::text||'|'||polroles::regrole[]::text||'|'||polpermissive::text||'|'||coalesce(pg_get_expr(polqual,polrelid),'')||'|'||coalesce(pg_get_expr(polwithcheck,polrelid),'')), array[]::text[]) from pg_policy where polrelid='public.profiles'::regclass) @> array['profiles_select_own|r|{authenticated}|true|(id = auth.uid())|','profiles_update_own|w|{authenticated}|true|(id = auth.uid())|(id = auth.uid())','profiles_insert_own|a|{authenticated}|true||(id = auth.uid())'] as s_profile_policies_ok,
-    coalesce((select md5(prosrc)='b096af36e83c9b9f57568630bc5e84ef' and prosecdef from pg_proc where proname='is_project_owner' and pronamespace='public'::regnamespace), false) as s_owner_helper_ok,
-    not exists (select 1 from pg_db_role_setting s, unnest(s.setconfig) c where c like 'session_replication_role%') as s_no_trigger_off_settings
+    (select coalesce(array_agg(polname||'|'||polcmd::text||'|'||polroles::regrole[]::text||'|'||polpermissive::text||'|'||coalesce(pg_get_expr(polqual,polrelid),'')||'|'||coalesce(pg_get_expr(polwithcheck,polrelid),'')), array[]::text[]) from pg_policy where polrelid='public.projects'::regclass) <@ array['projects_select_owner|r|{authenticated}|true|(owner_user_id = auth.uid())|','projects_update_owner|w|{authenticated}|true|(owner_user_id = auth.uid())|(owner_user_id = auth.uid())','projects_insert_owner|a|{authenticated}|true||(owner_user_id = auth.uid())','projects_delete_owner|d|{authenticated}|true|(owner_user_id = auth.uid())|'] and (select coalesce(array_agg(polname||'|'||polcmd::text||'|'||polroles::regrole[]::text||'|'||polpermissive::text||'|'||coalesce(pg_get_expr(polqual,polrelid),'')||'|'||coalesce(pg_get_expr(polwithcheck,polrelid),'')), array[]::text[]) from pg_policy where polrelid='public.projects'::regclass) @> array['projects_select_owner|r|{authenticated}|true|(owner_user_id = auth.uid())|','projects_update_owner|w|{authenticated}|true|(owner_user_id = auth.uid())|(owner_user_id = auth.uid())','projects_insert_owner|a|{authenticated}|true||(owner_user_id = auth.uid())','projects_delete_owner|d|{authenticated}|true|(owner_user_id = auth.uid())|'] as s_projects_policies_ok,
+    coalesce((select md5(prosrc)='b096af36e83c9b9f57568630bc5e84ef' and prosecdef and proconfig = array['search_path=public'] from pg_proc where oid = 'public.is_project_owner(uuid)'::regprocedure), false)
+      and (select count(*) from pg_policy p where p.polrelid='public.project_prompts'::regclass
+             and exists (select 1 from pg_depend d where d.classid='pg_policy'::regclass and d.objid = p.oid and d.refobjid = 'public.is_project_owner(uuid)'::regprocedure))
+          = (select count(*) from pg_policy where polrelid='public.project_prompts'::regclass) as s_owner_helper_ok,
+    not exists (select 1 from pg_db_role_setting s, unnest(s.setconfig) c where c ~* '^(session_replication_role|request\.jwt|search_path|row_security)') as s_no_risky_settings,
+    coalesce((select md5(prosrc)='0ccd1cb3c754f92af7b764e1cd685f68' and prosecdef and proconfig = array['search_path=public'] from pg_proc where proname='handle_new_user' and pronamespace='public'::regnamespace), false) as s_signup_fn_ok,
+    coalesce((select bool_and(p.proowner = (select relowner from tbl_owner) and exists (select 1 from pg_roles r where r.oid = p.proowner and (r.rolsuper or r.rolbypassrls)))
+                from pg_proc p where p.pronamespace='public'::regnamespace and p.proname in ('protect_billing_columns','account_prompt_cap','enforce_prompt_pool')), false) as s_functions_owner_ok
 )
 select 'B: trigger present, enabled, BEFORE ROW insert+update of is_active only, no WHEN' as check_name, b_trigger_ok as ok from f
 union all select 'B: both functions are the reviewed bodies, SECURITY DEFINER, search_path pinned', b_functions_ok from f
@@ -77,12 +94,15 @@ union all select 'A2: reactivation trigger and function are the reviewed ones', 
 union all select 'A1: reactivate fn is the reviewed body and service_role only', a1_fn_ok from f
 union all select 'C: profiles trigger BEFORE ROW insert+update, all columns, no WHEN, enabled', c_trigger_ok from f
 union all select 'C: function is the reviewed body, SECURITY DEFINER, search_path pinned', c_function_ok from f
-union all select 'surface: row-level security ON for profiles and project_prompts', s_rls_on from f
-union all select 'surface: no trigger other than the expected ones on profiles / project_prompts', s_no_extra_triggers from f
+union all select 'surface: row-level security ON and not FORCED, plain tables (profiles, project_prompts, projects)', s_rls_on from f
+union all select 'surface: every trigger on profiles/project_prompts/projects is pinned by definition (set_updated_at body pinned too)', s_triggers_pinned from f
+union all select 'surface: no inheritance and no rewrite rules on those tables or the overrides table', s_no_inherit_or_rules from f
 union all select 'surface: project_prompts policies are exactly the expected ones (name, command, roles, expressions)', s_prompt_policies_ok from f
 union all select 'surface: profiles policies are exactly the three originals', s_profile_policies_ok from f
-union all select 'surface: is_project_owner is the reviewed body', s_owner_helper_ok from f
-union all select 'surface: no database/role setting switches triggers off (session_replication_role)', s_no_trigger_off_settings from f
-union all select 'informational: md5 auth.role()=' || coalesce((select md5(prosrc) from pg_proc where proname='role' and pronamespace='auth'::regnamespace limit 1),'?')
-        || ' auth.uid()=' || coalesce((select md5(prosrc) from pg_proc where proname='uid' and pronamespace='auth'::regnamespace limit 1),'?') || ' (must equal the preflight rows)', true
+union all select 'surface: projects policies are exactly the four originals', s_projects_policies_ok from f
+union all select 'surface: is_project_owner is the reviewed body with search_path=public, and every project_prompts policy depends on that exact function', s_owner_helper_ok from f
+union all select 'surface: no database/role setting for session_replication_role, request.jwt.*, search_path or row_security', s_no_risky_settings from f
+union all select 'surface: handle_new_user (signup) is the reviewed body', s_signup_fn_ok from f
+union all select 'surface: package functions are owned by the table owner, which bypasses RLS', s_functions_owner_ok from f
+union all select 'informational: fingerprint of auth.role()/auth.uid() (body+config+owner) = ' || coalesce((select string_agg(p.proname || ':' || md5(p.prosrc || coalesce(p.proconfig::text,'') || p.prosecdef::text || p.proowner::text), ' ' order by p.proname, p.oid) from pg_proc p where p.pronamespace='auth'::regnamespace and p.proname in ('role','uid')),'?') || ' (must equal the preflight rows)', true
 union all select 'row count prompts_total=' || count(*) || ' active=' || count(*) filter (where is_active) || ' (informational: compare with the preflight; legitimate traffic may change it)', true from public.project_prompts;

@@ -1,13 +1,20 @@
 -- Restores 0019's behaviour exactly (UPDATE-only trigger, no email guard). No data is changed.
--- ORDER: roll back B FIRST (B_rollback_1_disable.sql). C_rollback reopens hole 1, and under an active B an
--- account with no profile row could then self-insert 'agency' and obtain cap 300; the guard below refuses.
+-- ORDER: roll back B COMPLETELY first (B_rollback_1_disable.sql, THEN B_rollback_2_drop.sql) and A before that.
+-- C_rollback reopens hole 1 (an account with no profile row self-inserts 'agency') and hole 2 (profiles.email);
+-- while B's trigger exists — even DISABLED, because it could be re-enabled over a rolled-back C — or A's closure
+-- objects exist, the guard below refuses.
 begin;
 set local lock_timeout = '3s';
 do $$
 begin
   if exists (select 1 from pg_trigger where tgrelid = 'public.project_prompts'::regclass
-             and tgname = 'trg_project_prompts_pool' and tgenabled <> 'D') then
-    raise exception 'Option B is active: run B_rollback_1_disable.sql before C_rollback.sql';
+             and tgname = 'trg_project_prompts_pool') then
+    raise exception 'Option B''s trigger still exists: run B_rollback_1_disable.sql and B_rollback_2_drop.sql before C_rollback.sql';
+  end if;
+  if exists (select 1 from pg_trigger where tgrelid = 'public.project_prompts'::regclass
+             and tgname = 'trg_project_prompts_no_reactivation')
+     or to_regprocedure('public.reactivate_project_prompts(uuid,uuid[],integer)') is not null then
+    raise exception 'Option A is applied: run A_rollback.sql before C_rollback.sql (A without C is not safe)';
   end if;
 end $$;
 create or replace function public.protect_billing_columns()

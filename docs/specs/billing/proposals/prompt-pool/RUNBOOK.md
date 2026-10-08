@@ -33,12 +33,18 @@ Recomendación: **C → B1 → overrides → B2**. A solo si el dueño aprueba `
 | 9 | baja | Posible *deadlock* con transacciones largas | **Riesgo, decisión del dueño pendiente** (nadie lo ha aceptado). Disponibilidad, no se salta el tope. **Reproducido con dos `UPDATE` de una sola sentencia** (`where id in (A,B)` frente a `where id in (B,C)`): el candado de fila se toma antes que el de cuenta. Se evita reactivando una fila por sentencia |
 | 10 | baja | B no limita filas **inactivas** (5.000 por REST) | **Abierto en B**, anterior a esta propuesta. **A2 lo cierra**: sin política de insert nadie inserta por REST |
 | 11 | baja | Huecos del postflight | Ampliados tras la cuarta revisión (ver filas 13-18). **El postflight es un chivato, no una prueba** |
-| 13 | alta | El postflight imprimía todo en verde con un trigger extra que voltea `is_active`, un trigger extra sobre `profiles`, una política extra permisiva, `is_project_owner` reescrita, RLS apagada, `session_replication_role` fijado por base de datos, otra clave primaria o un `TRUNCATE` concedido en la tabla de excepciones | **Corregido**: fija ahora el conjunto exacto de triggers y de políticas (nombre, comando, roles, expresiones) de `profiles` y `project_prompts`, RLS, el cuerpo de `is_project_owner`, los ajustes `session_replication_role`, y forma y privilegios completos (tabla y columna) de la tabla de excepciones. Cada ataque tiene prueba. **No ve el propietario de los objetos ni los cuerpos de `auth.role()`/`auth.uid()`** (se imprimen como `md5` para compararlos con el preflight) |
+| 13 | alta | El postflight imprimía todo en verde con un trigger extra que voltea `is_active`, un trigger extra sobre `profiles`, una política extra permisiva, `is_project_owner` reescrita, RLS apagada, `session_replication_role` fijado por base de datos, otra clave primaria o un `TRUNCATE` concedido en la tabla de excepciones | **Corregido en dos rondas.** Quinta revisión: fijaba triggers **por nombre** (se podía redirigir `set_updated_at` o repuntar su trigger), no veía herencia ni reglas, `is_project_owner` solo por cuerpo (cambiando su `search_path` o un look-alike en otro esquema la política seguía igual), ni el propietario de las funciones, ni `projects`, ni `handle_new_user`, ni `request.jwt.*`. Ahora fija cada trigger **por definición**, el cuerpo y atributos de `set_updated_at` y de `is_project_owner`, que cada política **dependa** de esa función exacta, herencia y reglas, que las funciones del paquete sean del propietario de la tabla y este se salte RLS, `projects`, el cuerpo de `handle_new_user` y los ajustes `session_replication_role`/`request.jwt.*`/`search_path`/`row_security`. Cada ataque tiene prueba. **Sigue sin verlo (y lo dice):** triggers de evento, publicaciones, extensiones, objetos de otros esquemas, el cuerpo de `auth.role()`/`auth.uid()` más allá de una huella, y el traspaso de un proyecto a otra cuenta con `update projects set owner_user_id` (no dispara ningún trigger) |
 | 14 | alta | Un abuso del agujero 1 anterior a C no se ve en el preflight 7c y sobrevive a C+B (la cuenta conserva tope 300) | **Parcial**: C congela `created_at`; 7c suma «id de suscripción que no parece de Stripe» y «suscripción sin cliente». **7c es de solo presencia: un 0 no es evidencia de que no pasó nada** (el perfil pudo editarse antes de C). Una cuenta ya forjada **no se repara** con este paquete: la reconciliación de §9 solo cubre el email |
-| 15 | alta | La guarda «C instalada» de B2 solo miraba el hash del cuerpo y el bit INSERT | **Corregido**: exige trigger habilitado, `BEFORE ROW`, sin `WHEN`, todas las columnas, función correcta, `SECURITY DEFINER` y `search_path`; una prueba por cada forma de romper C |
-| 16 | media | `C_rollback.sql` reabría el agujero 1 con B activa | **Corregido**: se niega si el trigger de B existe y no está desactivado; orden obligatorio: `B_rollback_1_disable.sql` antes que `C_rollback.sql` |
+| 15 | alta | La guarda «C instalada» de B2 solo miraba el hash del cuerpo y el bit INSERT | **Corregido**: exige trigger habilitado, `BEFORE ROW`, sin `WHEN`, todas las columnas, función correcta, `SECURITY DEFINER` y `search_path`; hay pruebas para trigger deshabilitado, `AFTER`, `WHEN (false)`, una sola columna, atributos de la función y cuerpo distinto (la quinta revisión encontró que las de `WHEN`, columnas y cuerpo no tenían prueba) |
+| 16 | media | `C_rollback.sql` reabría el agujero 1 con B activa | **Corregido en dos rondas**: se niega si el trigger de B **existe** (aunque esté deshabilitado: re-habilitarlo después correría B sobre una C ya revertida) o si hay objetos de A. Orden: A → `B_rollback_1` → `B_rollback_2` → `C_rollback` |
 | 17 | media | §9 comparaba solo el número de filas; plantilla de excepciones sin comprobación ni normalización | **Corregido** (§9 compara la lista de ids; §4 comprueba el recuento y no baja topes existentes) |
 | 18 | baja | 7b dará falsos positivos estables | **Documentado** en la propia fila |
+| 19 | media | **Oráculo entre cuentas en B**: el trigger corría antes que RLS, así que escribir en el proyecto de OTRA cuenta devolvía `prompt_pool_full` con `active=N cap=N` (plan y recuento ajenos) y tomaba su candado | **Corregido** (una línea: un JWT de usuario sobre un proyecto ajeno no se evalúa y RLS lo rechaza). Cambió el cuerpo de `enforce_prompt_pool`: hashes recalculados. Prueba que lo reproduce y comprueba que no hay fuga |
+| 20 | media | §9 paso 4 **no se ejecutaba tal cual** (alias `u` fuera de ámbito en el CTE) y la prueba usaba un texto distinto | **Corregido** (CTE `changed`) y la prueba ahora **extrae el bloque del propio RUNBOOK** y lo ejecuta (§9 y §4) |
+| 21 | media | Fijaba triggers y políticas por nombre; `handle_new_user` y `projects` sin fijar; propietario de las funciones sin fijar | Ver fila 13 |
+| 22 | baja | Un lector no esperó al `CREATE TRIGGER` bloqueado (medido 0,03 s); la escritura sí esperó 2,5 s hasta `lock_timeout` | **Corregido el texto**: se midió que las lecturas siguen mientras una escritura espera; no se midió bajo carga real |
+| 23 | baja | `auth.users.email` «se fija en el alta» es inexacto: puede cambiar con `updateUser` sin reiniciar `email_confirmed_at` | **Corregido el texto** (§4): el filtro de confirmación depende de la configuración de cambio de email de Auth, **no verificada** |
+| 24 | info | `projects.owner_user_id` puede cambiarse (operador o `service_role`) y los prompts activos viajan con el proyecto sin que ningún trigger actúe: una cuenta gratuita llegó a 85 | **Documentado como hueco conocido**, no cerrado por este paquete |
 | 12 | baja | Pruebas que probaban menos de lo que decían | Reescritas; añadidas upsert, perfil ausente, email, `REPEATABLE READ`, B sin 0039, código de error |
 
 ## 3. Orden (si el dueño aprueba B)
@@ -68,7 +74,7 @@ cual (llama a `add_project_prompts`): **desplegar ese código sin 0039 deja a lo
    `false` (falla seguro).
 7. Prueba de humo del dueño con una cuenta propia: añadir un prompt con la bolsa llena debe dar el aviso de bolsa llena.
 
-**Orden de reversión obligatorio: B antes que C** (`C_rollback.sql` se niega si B sigue activa). **Reversión:** primero **`B_rollback_1_disable.sql`** (desactiva el trigger: reversión completa del comportamiento,
+**Orden de reversión obligatorio: A → `B_rollback_1` → `B_rollback_2` → `C_rollback`** (`C_rollback.sql` se niega mientras exista el trigger de B —incluso deshabilitado— o haya objetos de A). **Reversión:** primero **`B_rollback_1_disable.sql`** (desactiva el trigger: reversión completa del comportamiento,
 sin tocar filas y reversible; espera detrás de las escrituras abiertas y puede agotar `lock_timeout`; **no pega junto el paso 2**) y, si se quiere quitar del todo y en ventana
 tranquila, `B_rollback_2_drop.sql`; `C_rollback.sql` restaura el trigger de 0019. No hay reversión de datos porque no
 se cambia ninguno. Si B2 da quejas: ejecutar solo el paso 1 (`disable`), nunca un `drop` directo.
@@ -98,8 +104,8 @@ begin
 end $$;
 ```
 
-Se usa `auth.users.email` y no `profiles.email`; **`auth.users.email` se fija en el alta, antes de confirmar el
-correo**, así que la plantilla de arriba añade `and email_confirmed_at is not null` (comprobar que el dominio de cada
+Se usa `auth.users.email` y no `profiles.email`; **`auth.users.email` nace en el alta, antes de confirmar el
+correo, y puede cambiar después con `updateUser` sin reiniciar `email_confirmed_at`** (depende de la configuración de cambio de email de Auth, **no verificada**), así que la plantilla de arriba añade `and email_confirmed_at is not null` (comprobar que el dominio de cada
 cuenta comped está confirmado) y el dueño decide si acepta cuentas sin confirmar. **Abierto (hallazgo 5):** cada alta o baja de una
 cuenta comped hay que hacerla **en los dos sitios** hasta que se decida una única fuente (por ejemplo, que la
 variable deje de usarse). Hasta entonces, una cuenta en la variable sin fila queda con su plan guardado (75 si es
@@ -111,7 +117,7 @@ variable deje de usarse). Hasta entonces, una cuenta en la variable sin fila que
 |---|---|---|---|
 | C | `CREATE OR REPLACE TRIGGER` sobre `profiles` (medido): `SHARE ROW EXCLUSIVE` | las escrituras de perfil esperan brevemente; las lecturas (inicios de sesión) no. `C_rollback` igual | no |
 | B1 | tabla nueva: ninguno relevante (**sin FK a `auth.users`**, que habría bloqueado altas y logins) | ninguno | no (borrar la tabla pierde las excepciones: exportarlas antes) |
-| B2 | `CREATE TRIGGER`: `SHARE ROW EXCLUSIVE` sobre `project_prompts` | las escrituras esperan; las lecturas no, salvo cola detrás de una escritura pendiente | no |
+| B2 | `CREATE TRIGGER`: `SHARE ROW EXCLUSIVE` sobre `project_prompts` | las escrituras esperan hasta `lock_timeout` (medido: 2,5 s); en la prueba las lecturas siguieron (0,03 s). No se midió bajo carga real | no |
 | A2 | `DROP POLICY`: **`ACCESS EXCLUSIVE`** sobre `project_prompts` | las lecturas esperan | no |
 | `A_rollback` | `DROP TRIGGER` y `create policy`: **`ACCESS EXCLUSIVE`** sobre `project_prompts` | las lecturas esperan | no |
 | `B_rollback_1_disable` | `ALTER TABLE … DISABLE TRIGGER`: `SHARE ROW EXCLUSIVE` | las lecturas siguen | no (reversible) |
@@ -198,13 +204,13 @@ no tiene email en `auth.users`, teléfono o SSO, porque un perfil que conserva u
      expected uuid[] := array['<id 1>', '<id 2>']::uuid[];
      got uuid[];
    begin
-     with u as (
-       update public.profiles pr set email = coalesce(au.email, '')
-       from auth.users au
-       where au.id = pr.id and <predicado>
+     with changed as (
+       update public.profiles pr set email = coalesce(u.email, '')
+       from auth.users u
+       where u.id = pr.id and <predicado>
        returning pr.id
      )
-     select coalesce(array_agg(id order by id), array[]::uuid[]) into got from u;
+     select coalesce(array_agg(id order by id), array[]::uuid[]) into got from changed;
      if got is distinct from (select coalesce(array_agg(x order by x), array[]::uuid[]) from unnest(expected) x) then
        raise exception 'the rows updated are not exactly the backed-up ids (updated %, expected %)', cardinality(got), cardinality(expected);
      end if;
@@ -230,6 +236,13 @@ aprobación); (b) decidir «comped» solo por la tabla de excepciones (por `user
   C solo en UPDATE / en AFTER / con `WHEN`, filtro de `service_role` de A2, comprobación de C en B2. **No se ha
   intentado romper todo**: una mutación que no esté en esta lista puede seguir sin prueba. El postflight no ve el
   propietario de los objetos.
+- **Quinta revisión (cinco ataques de la lista anterior más una veintena nuevos).** Con prueba que falla al quitarlo: el cruce de
+  cuentas de B, el trigger de C deshabilitado, las tres formas de romper C que B2 comprueba (`WHEN`, columnas, cuerpo), el cuerpo de
+  las funciones de B, las políticas de `profiles`, `projects` y `project_prompts`, `set_updated_at`, herencia/reglas,
+  `handle_new_user`, propietario de funciones, `FORCE RLS`, ajustes `request.jwt.*`, cuerpo y `search_path` de `is_project_owner`
+  y el reemplazo de su política por un look-alike, y el rechazo de un tope negativo en A1. **Siguen sin cubrirse (y no se aprueban
+  por silencio):** triggers de evento, publicaciones, extensiones, el traspaso de proyectos (`owner_user_id`), y que el
+  `auth.role()` real de Supabase lea otros ajustes de los que el stub local modela.
 - Todas las guardas (0016/0019, C, A2) confían en `auth.role()`, que lee los ajustes `request.jwt.claim.*`.
   Reproducido en local: una sesión capaz de fijar ella misma esos ajustes (`set request.jwt.claim.role='service_role'`)
   salta cualquiera. **No es alcanzable por PostgREST hoy** (ninguna función expuesta ejecuta `set_config` ni SQL

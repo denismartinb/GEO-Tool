@@ -111,6 +111,13 @@ begin
     return new; -- the foreign key reports the real problem
   end if;
 
+  -- A user JWT writing into SOMEONE ELSE'S project is refused by RLS right after this trigger. Without this line the
+  -- trigger ran first and answered `prompt_pool_full` with the victim's `active=N cap=N` in the DETAIL, and took the
+  -- victim's account lock: a cross-tenant oracle for plan tier and prompt count (found in review). Let RLS speak.
+  if auth.role() = 'authenticated' and v_owner is distinct from auth.uid() then
+    return new;
+  end if;
+
   -- One lock per ACCOUNT, held to the end of the transaction. The count below is a fresh statement
   -- after the lock, so it sees every row a previous holder committed and, inside one multi-row
   -- statement, the rows that statement already inserted.

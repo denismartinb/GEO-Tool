@@ -5,7 +5,7 @@
 -- Plain CREATE TRIGGER (no DROP … IF EXISTS): re-running it fails with "already exists" instead of
 -- silently taking an ACCESS EXCLUSIVE lock on project_prompts to replace the trigger.
 -- CREATE TRIGGER takes SHARE ROW EXCLUSIVE on project_prompts: writes wait, reads do not, but any
--- pending write queues readers behind it for up to lock_timeout. Run in a quiet window.
+-- pending write may delay readers (in the local test readers kept going; not measured under load). Run in a quiet window.
 --
 -- GRANDFATHERING: existing rows are never touched. An account above its derived cap can still edit
 -- and deactivate; it just cannot add or re-activate until back under the cap.
