@@ -22,6 +22,7 @@ export function BrandIdentityCard({
   pending,
   aliases,
   onAliasesChange,
+  onConfirmBrand,
   aliasesAutoFound
 }: {
   brand: string;
@@ -31,6 +32,8 @@ export function BrandIdentityCard({
   pending: boolean;
   aliases: string[];
   onAliasesChange: (next: string[]) => void;
+  /** «El nombre es correcto»: quita el aviso de pendiente sin cambiar nada. */
+  onConfirmBrand: () => void;
   /** Cuántos alias se propusieron a partir de la portada (0 → entrada manual). */
   aliasesAutoFound: number;
 }) {
@@ -61,7 +64,10 @@ export function BrandIdentityCard({
         <div className="add-hint" role="status" style={{ marginBottom: 10 }}>
           <span>
             <b>Identidad pendiente de confirmar.</b> Hemos sacado «{brand}» del dominio y puede estar mal escrito
-            (espacios, tildes). Revísalo: si no coincide con cómo te nombran, el escaneo puede medir cero.
+            (espacios, tildes). Revísalo: si no coincide con cómo te nombran, el escaneo puede medir cero.{" "}
+            <button type="button" className="onb2-back" onClick={onConfirmBrand}>
+              El nombre es correcto
+            </button>
           </span>
         </div>
       ) : null}

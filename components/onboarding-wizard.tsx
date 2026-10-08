@@ -13,6 +13,10 @@ import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/da
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { isWellFormedDomain, MAX_INITIAL_PROMPTS, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
+import { BrandIdentityCard } from "@/components/onboarding/brand-identity-card";
+import { DescriptionPrompt, shouldAskForDescription } from "@/components/onboarding/description-prompt";
+import { proposeBrand } from "@/lib/projects/brand-identity";
+import type { BusinessContextUnidentifiedReason } from "@/lib/projects/business-profile";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { PLANS } from "@/app/pricing/plans-data";
 
@@ -353,7 +357,7 @@ type OnboardingWizardProps = {
    * so a Starter/Pro/Agency user isn't stuck at a hardcoded 10 during
    * onboarding (SCAN-CHAIN-1 follow-up). */
   promptCap?: number;
-  suggestAction: (input: { domain: string; country: string }) => Promise<ProjectSetupSuggestion>;
+  suggestAction: (input: { domain: string; country: string; description?: string }) => Promise<ProjectSetupSuggestion>;
   generateMorePromptsAction: (input: {
     domain: string;
     country: string;
@@ -571,6 +575,17 @@ export function OnboardingWizard({
    * step with nothing to read.
    */
   const [suggestFailed, setSuggestFailed] = useState<Array<"competitors" | "prompts">>([]);
+  /**
+   * ONBOARDING-IDENTITY-1 (log §237): identidad de marca que se confirma antes
+   * del primer escaneo. `brandTouched` distingue «propuesta sin revisar» (aviso
+   * de identidad pendiente) de «la persona ya la miró y la dejó o la cambió».
+   */
+  const [brand, setBrand] = useState("");
+  const [brandPending, setBrandPending] = useState(false);
+  const [aliases, setAliases] = useState<string[]>([]);
+  const [aliasesAutoFound, setAliasesAutoFound] = useState(0);
+  const [description, setDescription] = useState("");
+  const [unidentifiedReason, setUnidentifiedReason] = useState<BusinessContextUnidentifiedReason | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isDomainFocused, setIsDomainFocused] = useState(false);
   const [showDomainErr, setShowDomainErr] = useState(false);
@@ -639,7 +654,7 @@ export function OnboardingWizard({
     return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
   }, [prompts]);
 
-  function generateSuggestions() {
+  function generateSuggestions(withDescription?: string) {
     if (atLimit) return;
     if (!domainIsValid) {
       setShowDomainErr(true);
@@ -649,8 +664,23 @@ export function OnboardingWizard({
     setSuggestError(null);
     setSuggestFailed([]);
     startTransition(async () => {
-      const result = await suggestAction({ domain, country });
+      const result = await suggestAction({ domain, country, description: withDescription });
+      setUnidentifiedReason(result.reason ?? null);
+      // Identidad: se propone SIEMPRE, también si no hubo sugerencias, porque
+      // el nombre mal escrito mide cero aunque todo lo demás vaya bien.
+      const proposal = result.brandProposal ?? proposeBrand(domain, null);
+      setBrand(proposal.brand);
+      setBrandPending(proposal.pending);
+      setAliases(result.proposedAliases ?? []);
+      setAliasesAutoFound((result.proposedAliases ?? []).length);
+
       if (!result.ok) {
+        // Portada ilegible y todavía sin descripción: nos quedamos aquí y
+        // pedimos esa frase, en vez de mandar a una pantalla vacía.
+        if (shouldAskForDescription(result.reason) && !withDescription) {
+          setLanguage((current) => result.language || current);
+          return;
+        }
         setSuggestError(
           "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
         );
@@ -675,6 +705,14 @@ export function OnboardingWizard({
       );
       setStep(1);
     });
+  }
+
+  /** «Continuar sin sugerencias»: la persona prefiere rellenarlo a mano. */
+  function continueWithoutSuggestions() {
+    setSuggestFailed(["competitors", "prompts"]);
+    setCompetitors([{ id: newId(), name: "", domain: "", source: "manual" }]);
+    setPrompts([{ id: newId(), text: "", category: null }]);
+    setStep(1);
   }
 
   function updateCompetitor(index: number, patch: Partial<Competitor>) {
@@ -797,7 +835,7 @@ export function OnboardingWizard({
                       ))}
                     </select>
                   </div>
-                  <Button type="button" className="onb-cta" onClick={generateSuggestions} disabled={isPending || atLimit}>
+                  <Button type="button" className="onb-cta" onClick={() => generateSuggestions()} disabled={isPending || atLimit}>
                     {isPending ? "Generando…" : "Continuar"}
                     <Icon name="arrRight" size={16} />
                   </Button>
@@ -834,6 +872,14 @@ export function OnboardingWizard({
                 </div>
               </div>
             )}
+            <DescriptionPrompt
+              reason={isPending ? null : unidentifiedReason}
+              value={description}
+              onChange={setDescription}
+              onSubmit={() => generateSuggestions(description)}
+              onSkip={continueWithoutSuggestions}
+              pending={isPending}
+            />
           </div>
 
           <LaunchSummaryPanel
@@ -877,6 +923,19 @@ export function OnboardingWizard({
 
         <div className="onb2-grid">
           <div>
+            <BrandIdentityCard
+              brand={brand}
+              onBrandChange={(value) => {
+                setBrand(value);
+                setBrandPending(false);
+              }}
+              domain={domain}
+              pending={brandPending}
+              aliases={aliases}
+              onAliasesChange={setAliases}
+              onConfirmBrand={() => setBrandPending(false)}
+              aliasesAutoFound={aliasesAutoFound}
+            />
             <div className="onb2-seclbl">
               {validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} (máximo {MAX_USER_COMPETITORS})
             </div>
@@ -1022,12 +1081,27 @@ export function OnboardingWizard({
 
       {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
       {suggestFailed.includes("prompts") ? <SuggestionGapNotice kind="prompts" /> : null}
+      {brandPending ? (
+        <div className="add-hint" role="status" style={{ marginBottom: 12 }}>
+          <Icon name="alertCircle" size={13} />
+          <span>
+            Identidad pendiente: «{brand.trim() || domain}» sale del dominio y no lo has confirmado. Puedes{" "}
+            <button type="button" className="onb2-back" onClick={() => setStep(1)}>
+              revisarlo ahora
+            </button>{" "}
+            o seguir y cambiarlo después.
+          </span>
+        </div>
+      ) : null}
 
       <div className="onb2-grid">
         <form action={createAction}>
           <input type="hidden" name="domain" value={domain} />
           <input type="hidden" name="country" value={country} />
           <input type="hidden" name="language" value={language} />
+          <input type="hidden" name="brand" value={brand.trim()} />
+          <input type="hidden" name="brand_aliases" value={JSON.stringify(aliases)} />
+          {description.trim() ? <input type="hidden" name="business_description" value={description.trim()} /> : null}
           <input type="hidden" name="initial_competitors" value={competitorsText} />
           <input type="hidden" name="initial_prompts" value={promptsText} />
           <input type="hidden" name="initial_prompt_categories" value={categoriesText} />

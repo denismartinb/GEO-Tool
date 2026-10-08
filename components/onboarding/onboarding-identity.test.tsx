@@ -52,7 +52,7 @@ describe("DescriptionPrompt · portada bloqueada", () => {
 });
 
 describe("BrandIdentityCard", () => {
-  const base = { onBrandChange: noop, onAliasesChange: vi.fn(), domain: "elcorteingles.es" };
+  const base = { onBrandChange: noop, onAliasesChange: vi.fn(), onConfirmBrand: noop, domain: "elcorteingles.es" };
 
   it("muestra el nombre editable, el dominio aparte y el aviso de identidad pendiente", () => {
     const html = renderToStaticMarkup(
@@ -63,6 +63,7 @@ describe("BrandIdentityCard", () => {
     expect(html).toContain("elcorteingles.es");
     expect(html).toContain("Identidad pendiente de confirmar");
     expect(html).toContain("No hemos encontrado ninguno en tu web");
+    expect(html).toContain("El nombre es correcto");
   });
 
   it("sin pendiente no avisa, y enseña los alias propuestos con su botón de quitar accesible", () => {
