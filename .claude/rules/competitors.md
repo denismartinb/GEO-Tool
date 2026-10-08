@@ -306,3 +306,11 @@ encabezaba con Amazon/Chrome/Brave, en la misma tarjeta y sin nada que lo dijera
 - **El color se asigna DESPUÉS de reordenar.** `TREND_SERIES_COLORS` está
   ordenada de más a menos distinguible entre sí (y bajo daltonismo). Asignarla
   antes deja a las cuatro visibles con los tonos 0, 3, 5 y 7.
+
+### Disposición del asistente tras la prueba real (ONBOARDING-UX-1, log §237 adenda 3)
+
+- **La honestidad baja de nivel, no desaparece.** Lo técnico (método, criterio, recuento estimado de intención/marca, 15 = cobertura) vive en «Cómo se han propuesto / elegido»; lo que queda a la vista es el aviso corto, los chips «con fuente/sin verificar» por fila y el aviso de «ninguna local». Quitar texto del primer plano **no** autoriza quitarlo del producto.
+- **«Confirmar nombre» es un botón hermano del campo**, nunca un enlace dentro de una frase; el mensaje de pendiente es breve y solo existe mientras haya algo que confirmar.
+- **Un recorte de texto nunca es la única forma de leerlo**: el prompt plegado va en hasta 3 líneas y, si no cabe (medido, no por número de caracteres), hay un «Ver completo» visible que abre el editor, que crece con el texto.
+- **Una evidencia visual de esta pantalla incluye `pending = true` y la portada ilegible**; un fixture con solo el caso feliz no cubre lo que ve un usuario real (log §237 adenda 3).
+- **El lector de portada no se toca desde aquí**: la causa del fallo y «Auditoría web no disponible» están en `docs/specs/web-audit/fetch-cause-and-audit-unavailable-proposal.md`; cualquier cambio en `lib/web-audit/fetch-page.ts` pasa por `data-guardian`.

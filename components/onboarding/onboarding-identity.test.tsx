@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { BrandIdentityCard } from "./brand-identity-card";
 import { DescriptionPrompt, shouldAskForDescription } from "./description-prompt";
+import { ClampedPromptText } from "./clamped-prompt-text";
 import { PromptsContext } from "./prompts-context";
 
 /**
@@ -55,25 +56,51 @@ describe("DescriptionPrompt · portada bloqueada", () => {
 describe("BrandIdentityCard", () => {
   const base = { onBrandChange: noop, onAliasesChange: vi.fn(), onConfirmBrand: noop, domain: "elcorteingles.es" };
 
-  it("muestra el nombre editable, el dominio aparte y el aviso de identidad pendiente", () => {
+  it("pendiente: campo, mensaje breve, botón «Confirmar nombre» PROPIO y dominio como línea secundaria", () => {
     const html = renderToStaticMarkup(
       <BrandIdentityCard {...base} brand="Elcorteingles" pending aliases={[]} aliasesAutoFound={0} />
     );
+    expect(html).toContain("Confirma tu marca");
     expect(html).toContain('id="brand-name"');
     expect(html).toContain('value="Elcorteingles"');
-    expect(html).toContain("elcorteingles.es");
-    expect(html).toContain("Identidad pendiente de confirmar");
-    expect(html).toContain("No hemos encontrado ninguno en tu web");
-    expect(html).toContain("El nombre es correcto");
+    expect(html).toContain("Revisa cómo se escribe tu marca");
+    expect(html).toContain('aria-describedby="brand-pending"');
+    // El botón es un <button> hermano del campo, NO un enlace dentro de una frase.
+    expect(html).toMatch(/<button[^>]*class="[^"]*onb2-confirm[^"]*"[^>]*>Confirmar nombre<\/button>/);
+    expect(html).not.toMatch(/<p[^>]*>[^<]*<button[^>]*>Confirmar nombre/);
+    expect(html).toContain('class="onb2-brand-domain mono"');
+    expect(html).not.toContain("Identidad pendiente de confirmar");
+    expect(html).not.toContain("El nombre es correcto");
   });
 
-  it("sin pendiente no avisa, y enseña los alias propuestos con su botón de quitar accesible", () => {
+  it("confirmado: sin mensaje ni botón de confirmar", () => {
     const html = renderToStaticMarkup(
+      <BrandIdentityCard {...base} brand="El Corte Inglés" pending={false} aliases={[]} aliasesAutoFound={0} />
+    );
+    expect(html).not.toContain("Revisa cómo se escribe tu marca");
+    expect(html).not.toContain("Confirmar nombre");
+    expect(html).not.toContain("brand-pending");
+  });
+
+  it("los alias van en un detalle: ABIERTO si hay propuestos y cerrado si no hay ninguno", () => {
+    const withProposals = renderToStaticMarkup(
       <BrandIdentityCard {...base} brand="El Corte Inglés" pending={false} aliases={["Club del Gourmet"]} aliasesAutoFound={1} />
     );
-    expect(html).not.toContain("Identidad pendiente de confirmar");
-    expect(html).toContain("Propuestos a partir de tu web (1)");
-    expect(html).toContain('aria-label="Quitar alias Club del Gourmet"');
+    expect(withProposals).toMatch(/<details[^>]*class="onb2-alias-details"[^>]*open=""/);
+    expect(withProposals).toContain("Propuestos a partir de tu web (1)");
+    expect(withProposals).toContain('aria-label="Quitar alias Club del Gourmet"');
+    const none = renderToStaticMarkup(
+      <BrandIdentityCard {...base} brand="Elcorteingles" pending aliases={[]} aliasesAutoFound={0} />
+    );
+    expect(none).not.toMatch(/<details[^>]*onb2-alias-details[^>]*open/);
+    expect(none).toContain("No hemos encontrado ninguno en tu web");
+  });
+
+  it("el campo de alias tiene etiqueta accesible aunque no se vea", () => {
+    const html = renderToStaticMarkup(
+      <BrandIdentityCard {...base} brand="X" pending={false} aliases={[]} aliasesAutoFound={0} />
+    );
+    expect(html).toMatch(/<label[^>]*for="brand-alias"[^>]*>Añadir otro nombre<\/label>/);
   });
 });
 
@@ -84,17 +111,30 @@ describe("PromptsContext", () => {
   ];
   const mix = { total: 15, informational: 12, commercial: 2, local: 1, branded: 0 };
 
-  it("hace visibles país e idioma, con selector manual, y dice que no son búsquedas reales", () => {
+  it("país e idioma son dos campos del mismo sistema visual, con etiqueta y selector manual", () => {
     const html = renderToStaticMarkup(
       <PromptsContext countryName="España" language="es" languageOptions={options} languageDetected onLanguageChange={noop} mix={mix} />
     );
+    expect((html.match(/class="field-sel[ "]/g) ?? []).length).toBe(2);
     expect(html).toContain("España");
     expect(html).toContain("Idioma (detectado)");
+    expect(html).toContain('id="prompts-language"');
     expect(html).toContain('aria-label="Idioma de las preguntas"');
-    expect(html).toContain("<option value=\"en\">Inglés</option>");
-    expect(html).toContain("no búsquedas reales");
-    expect(html).toContain("Estimado:");
-    expect(html).toContain("12 informativas");
+    expect(html).toContain('<option value="en">Inglés</option>');
+  });
+
+  it("lo visible es el aviso corto; el recuento estimado y las notas técnicas van bajo «Cómo se han elegido»", () => {
+    const html = renderToStaticMarkup(
+      <PromptsContext countryName="España" language="es" languageOptions={options} languageDetected onLanguageChange={noop} mix={mix} />
+    );
+    expect(html).toContain("Preguntas propuestas por IA, sin volumen de búsqueda medido.");
+    const outside = html.slice(0, html.indexOf("<details"));
+    expect(outside).not.toContain("Estimado:");
+    const inside = html.slice(html.indexOf("<details"));
+    expect(inside).toContain("Cómo se han elegido");
+    expect(inside).toContain("12 informativas");
+    expect(inside).toContain("no búsquedas reales");
+    expect(inside).toContain("no una garantía estadística");
   });
 
   it("si la persona cambia el idioma deja de decir «detectado»", () => {
@@ -104,7 +144,7 @@ describe("PromptsContext", () => {
     expect(html).not.toContain("(detectado)");
   });
 
-  it("avisa cuando ninguna pregunta es local", () => {
+  it("avisa, a la vista, cuando ninguna pregunta es local", () => {
     const html = renderToStaticMarkup(
       <PromptsContext
         countryName="España"
@@ -115,6 +155,22 @@ describe("PromptsContext", () => {
         mix={{ total: 15, informational: 13, commercial: 2, local: 0, branded: 0 }}
       />
     );
-    expect(html).toContain("Ninguna es local");
+    const outside = html.slice(0, html.indexOf("<details"));
+    expect(outside).toContain("Ninguna es local");
+  });
+});
+
+describe("ClampedPromptText", () => {
+  it("pinta el texto completo en el DOM (el recorte es de CSS) y nunca inventa «Ver completo» sin medir", () => {
+    const text = "¿Cuál es la mejor tienda online especializada en electrónica de consumo, informática y electrodomésticos?";
+    const html = renderToStaticMarkup(<ClampedPromptText text={text} onExpand={noop} expandLabel="Ver el prompt 1 completo" />);
+    expect(html).toContain(text);
+    expect(html).toContain('class="onb2-ptext"');
+    expect(html).not.toContain("Ver completo");
+  });
+
+  it("un prompt vacío se ve como «Prompt vacío»", () => {
+    const html = renderToStaticMarkup(<ClampedPromptText text="" onExpand={noop} expandLabel="x" />);
+    expect(html).toContain("Prompt vacío");
   });
 });

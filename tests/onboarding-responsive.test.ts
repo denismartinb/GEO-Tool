@@ -49,4 +49,22 @@ describe("asistente de alta en móvil", () => {
     expect(css).toMatch(/@media \(max-width: 760px\) \{\n  \.onb2-scope \.onb2-iconbtn \{ width: 44px; height: 44px; \}/);
     expect(css).toMatch(/\.onb2-scope \.eng-chip button::after \{ content: ""; position: absolute; inset: -10px; \}/);
   });
+
+  it("ONBOARDING-UX-1: el prompt plegado va en hasta tres líneas, con «Ver completo» y salida íntegra en móvil", () => {
+    expect(css).toMatch(/\.onb2-scope \.onb2-ptext \{ display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;/);
+    expect(css).toMatch(/white-space: normal; overflow: visible; text-overflow: clip;|overflow: visible; text-overflow: clip; white-space: normal;[^}]*-webkit-line-clamp: unset/);
+    expect(wizard).toContain("<ClampedPromptText");
+    expect(wizard).toContain("Ver el prompt ${index + 1} completo");
+  });
+
+  it("ONBOARDING-UX-1: país e idioma comparten caja de 44px con aro de foco en la caja (el select va transparente)", () => {
+    expect(css).toMatch(/\.onb2-scope \.field-sel \{[^}]*min-height: 44px;/);
+    expect(css).toMatch(/\.onb2-scope \.field-sel:focus-within \{ outline: 2px solid var\(--brand-blue\);/);
+    expect(css).toMatch(/\.onb2-scope \.field-sel select \{ position: absolute; inset: 0;[^}]*opacity: 0;/);
+  });
+
+  it("ONBOARDING-UX-1: «Confirmar nombre» y los resúmenes tienen 44px y foco visible", () => {
+    expect(css).toMatch(/\.onb2-scope \.onb2-confirm \{[^}]*min-height: 44px;/);
+    expect(css).toMatch(/summary:focus-visible,[\s\S]*\.onb2-confirm:focus-visible[\s\S]*outline: 2px solid var\(--brand-blue\)/);
+  });
 });

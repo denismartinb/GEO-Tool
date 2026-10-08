@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } f
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { FaviconImg } from "@/components/ui/favicon-img";
@@ -20,6 +19,8 @@ import {
 } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 import { BrandIdentityCard } from "@/components/onboarding/brand-identity-card";
+import { AutoGrowTextarea } from "@/components/onboarding/auto-grow-textarea";
+import { ClampedPromptText } from "@/components/onboarding/clamped-prompt-text";
 import { PromptsContext } from "@/components/onboarding/prompts-context";
 import { DescriptionPrompt, shouldAskForDescription } from "@/components/onboarding/description-prompt";
 import { proposeBrand } from "@/lib/projects/brand-identity";
@@ -28,8 +29,10 @@ import {
   COMPETITOR_CHIP_SOURCED,
   COMPETITOR_CHIP_UNVERIFIED,
   COMPETITORS_BASIS_LABEL,
+  COMPETITORS_DETAILS_LABEL,
+  COMPETITORS_SHORT,
   COMPETITORS_SUBTITLE,
-  COVERAGE_NOTE,
+  COMPETITOR_CHIPS_EXPLAINED,
   INTENT_ESTIMATE_NOTE,
   MARKET_LANGUAGE_NOTE,
   PROMPTS_NATURE_NOTE
@@ -475,7 +478,7 @@ function PromptsStepBody({
             <div key={row.id} className="onb2-row onb2-row--prompt align-top">
               {isOpen ? (
                 <div className="onb2-pedit">
-                  <Textarea
+                  <AutoGrowTextarea
                     aria-label={`Prompt ${index + 1}`}
                     rows={3}
                     className="onb-prompt-input onb2-prompt-edit"
@@ -487,7 +490,11 @@ function PromptsStepBody({
                 </div>
               ) : (
                 <span className="onb2-ptext-wrap">
-                  <span className="onb2-ptext">{row.text || "Prompt vacío"}</span>
+                  <ClampedPromptText
+                    text={row.text}
+                    onExpand={() => toggleOpenPrompt(row.id)}
+                    expandLabel={`Ver el prompt ${index + 1} completo`}
+                  />
                   {intentLabelFor && intentLabelFor(row.text) ? (
                     <span className="onb2-intent" title="Clasificación estimada, no guardada">
                       {intentLabelFor(row.text)}
@@ -944,26 +951,13 @@ export function OnboardingWizard({
         <div className="onb2-head">
           <div>
             <h1 className="onb2-h1">Tus competidores</h1>
-            <p className="onb2-sub">
-              <b style={{ color: "var(--ink-2)", fontFamily: "var(--mono)", fontWeight: 600 }}>
-                {domain || "tu dominio"}
-              </b>
-              . {COMPETITORS_SUBTITLE}
-            </p>
+            <p className="onb2-sub">{COMPETITORS_SHORT}</p>
           </div>
           {stepsBar}
         </div>
 
         {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
         {suggestFailed.includes("competitors") ? <SuggestionGapNotice kind="competitors" /> : null}
-        {basis ? (
-          <p className="add-hint" style={{ marginBottom: 12 }}>
-            <b>{COMPETITORS_BASIS_LABEL}:</b> {basis.sector}
-            {basis.subSector && basis.subSector !== basis.sector ? ` / ${basis.subSector}` : ""} · mercado{" "}
-            {COUNTRIES.find((c) => c.code === basis.country)?.name ?? basis.country} · idioma{" "}
-            {LANGUAGE_NAMES[language] ?? language}.
-          </p>
-        ) : null}
 
         <div className="onb2-grid">
           <div>
@@ -980,6 +974,20 @@ export function OnboardingWizard({
               onConfirmBrand={() => setBrandPending(false)}
               aliasesAutoFound={aliasesAutoFound}
             />
+            <details className="onb2-details onb2-details--page">
+              <summary>{COMPETITORS_DETAILS_LABEL}</summary>
+              <p>{COMPETITORS_SUBTITLE}</p>
+              {basis ? (
+                <p>
+                  <b>{COMPETITORS_BASIS_LABEL}:</b> {basis.sector}
+                  {basis.subSector && basis.subSector !== basis.sector ? ` / ${basis.subSector}` : ""} · mercado{" "}
+                  {COUNTRIES.find((c) => c.code === basis.country)?.name ?? basis.country} · idioma{" "}
+                  {LANGUAGE_NAMES[language] ?? language}.
+                </p>
+              ) : null}
+              <p>{COMPETITOR_CHIPS_EXPLAINED}</p>
+
+            </details>
             <div className="onb2-seclbl">
               {validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} (máximo {MAX_USER_COMPETITORS})
             </div>
@@ -1107,9 +1115,7 @@ export function OnboardingWizard({
           <p className="onb2-sub">
             Cada prompt se lanza a los tres motores. Quita los que no te representen
             {promptCap >= MAX_INITIAL_PROMPTS ? (
-              <>
-                . {COVERAGE_NOTE}
-              </>
+              "."
             ) : (
               <>
                 . Tu plan cubre hasta <b style={{ color: "var(--ink-2)" }}>{promptCap}</b>
@@ -1177,6 +1183,7 @@ export function OnboardingWizard({
             contextNode={
               <PromptsContext
                 countryName={selectedCountry.name}
+                countryFlag={<Flag code={selectedCountry.code.toLowerCase()} />}
                 language={language}
                 languageOptions={LANGUAGE_OPTIONS}
                 languageDetected={language === languageForCountry(country)}
@@ -1187,7 +1194,12 @@ export function OnboardingWizard({
             intentLabelFor={(text) => {
               if (!text.trim()) return null;
               const { intent, branded } = classifyPrompt(text, { brand: brand.trim() || domain, aliases });
-              return `${INTENT_LABEL[intent]} · ${branded ? "con marca" : "sin marca"} · estimado`;
+              // Solo cuando aporta: «sin marca» y «comercial/informativa» en cada fila era
+              // ruido; el recuento completo está en «Cómo se han elegido».
+              if (intent !== "local" && !branded) return null;
+              return [intent === "local" ? INTENT_LABEL[intent] : null, branded ? "con tu marca" : null, "estimado"]
+                .filter(Boolean)
+                .join(" · ");
             }}
           />
         </form>

@@ -15,6 +15,11 @@ import { addConfirmedAlias } from "@/lib/projects/brand-identity";
  * respuestas decían «El Corte Inglés». Aquí el nombre se ve, se edita y los
  * alias se confirman. Nada de esto cambia cómo compara el escaneo: cambia el
  * nombre que se le entrega.
+ *
+ * Disposición (corrección tras la prueba real de Denis): campo → botón propio
+ * «Confirmar nombre» (nunca un enlace dentro de una frase) → dominio como línea
+ * secundaria; los alias van en un detalle que se abre solo si hay propuestas.
+ * Menos texto, mismas confirmaciones y mismas validaciones.
  */
 export function BrandIdentityCard({
   brand,
@@ -33,13 +38,15 @@ export function BrandIdentityCard({
   pending: boolean;
   aliases: string[];
   onAliasesChange: (next: string[]) => void;
-  /** «El nombre es correcto»: quita el aviso de pendiente sin cambiar nada. */
+  /** «Confirmar nombre»: quita el aviso de pendiente sin cambiar nada. */
   onConfirmBrand: () => void;
   /** Cuántos alias se propusieron a partir de la portada (0 → entrada manual). */
   aliasesAutoFound: number;
 }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Abierto si hay algo que revisar (propuestos o ya añadidos); cerrado si no hay nada.
+  const [aliasesOpen, setAliasesOpen] = useState(aliasesAutoFound > 0 || aliases.length > 0);
 
   function add() {
     const result = addConfirmedAlias(aliases, draft, brand.trim() || domain);
@@ -53,58 +60,50 @@ export function BrandIdentityCard({
   }
 
   return (
-    <div className="card onb2-cpad" role="group" aria-labelledby="identity-title" style={{ marginBottom: 12 }}>
-      <h2 id="identity-title" className="field-label" style={{ marginBottom: 4 }}>
-        Tu marca
+    <div className="card onb2-cpad onb2-brand" role="group" aria-labelledby="identity-title">
+      <h2 id="identity-title" className="field-label">
+        Confirma tu marca
       </h2>
-      <p className="add-hint" style={{ margin: "0 0 10px" }}>
-        Así escribirán tu marca las IAs. Mídela con este nombre antes de lanzar el primer escaneo.
-      </p>
 
+      <label className="field-label" htmlFor="brand-name">
+        Nombre comercial
+      </label>
+      <Input
+        id="brand-name"
+        value={brand}
+        maxLength={120}
+        onChange={(event) => onBrandChange(event.target.value)}
+        spellCheck={false}
+        aria-describedby={pending ? "brand-pending" : undefined}
+      />
       {pending ? (
-        <div className="add-hint" role="status" style={{ marginBottom: 10 }}>
-          <span>
-            <b>Identidad pendiente de confirmar.</b> Hemos sacado «{brand}» del dominio y puede estar mal escrito
-            (espacios, tildes). Revísalo: si no coincide con cómo te nombran, el escaneo puede medir cero.{" "}
-            <Button type="button" variant="outline" onClick={onConfirmBrand} style={{ marginLeft: 6 }}>
-              El nombre es correcto
-            </Button>
-          </span>
-        </div>
+        <p id="brand-pending" role="status" className="onb2-brand-note">
+          Revisa cómo se escribe tu marca
+        </p>
       ) : null}
+      {pending ? (
+        <Button type="button" className="onb2-confirm" onClick={onConfirmBrand}>
+          Confirmar nombre
+        </Button>
+      ) : null}
+      <p className="onb2-brand-domain mono">{domain}</p>
 
-      <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-        <div>
-          <label className="field-label" htmlFor="brand-name">
-            Nombre comercial
-          </label>
-          <Input
-            id="brand-name"
-            value={brand}
-            maxLength={120}
-            onChange={(event) => onBrandChange(event.target.value)}
-            spellCheck={false}
-          />
-        </div>
-        <div>
-          <span className="field-label">Dominio</span>
-          <div className="mono" style={{ padding: "8px 0", color: "var(--ink-3)", overflowWrap: "anywhere" }}>
-            {domain}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <label className="field-label" htmlFor="brand-alias">
+      <details
+        className="onb2-alias-details"
+        open={aliasesOpen}
+        onToggle={(event) => setAliasesOpen((event.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary>
           Otros nombres con los que te nombran (opcional)
-        </label>
-        <p className="add-hint" style={{ margin: "0 0 8px" }}>
+          {aliases.length > 0 ? ` · ${aliases.length}` : ""}
+        </summary>
+        <p className="onb2-alias-hint">
           {aliasesAutoFound > 0
             ? `Propuestos a partir de tu web (${aliasesAutoFound}). Quita los que no sean tuyos.`
             : "No hemos encontrado ninguno en tu web. Añade los que conozcas: productos, sub-marcas, cómo te llaman."}
         </p>
         {aliases.length > 0 ? (
-          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 8px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <ul className="onb2-alias-list">
             {aliases.map((alias) => (
               <li key={alias} className="eng-chip">
                 {alias}
@@ -120,10 +119,12 @@ export function BrandIdentityCard({
             ))}
           </ul>
         ) : null}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="onb2-alias-add">
+          <label className="sr-only" htmlFor="brand-alias">
+            Añadir otro nombre
+          </label>
           <Input
             id="brand-alias"
-            style={{ flex: "1 1 200px" }}
             value={draft}
             maxLength={120}
             placeholder="Ej.: nombre de un producto"
@@ -149,7 +150,7 @@ export function BrandIdentityCard({
             {error}
           </div>
         ) : null}
-      </div>
+      </details>
     </div>
   );
 }
