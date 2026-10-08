@@ -390,6 +390,43 @@ PYX
   eq "X15 a weakened profiles policy is flagged" "$(pf_false 'surface: profiles policies')" 1
   q "alter policy profiles_update_own on public.profiles using (id = auth.uid())" >/dev/null
   eq "X16 after undoing all fifth-review attacks the whole postflight (B, C, surface) is clean again" "$(psql -At -f $DIR/postflight.sql | grep -E '^(B:|C:|surface)' | grep -c '|f$')" 0
+  echo "-- sixth-review attacks: each must read false in the postflight (then be undone)"
+  q "create function public.zz_forge() returns trigger language plpgsql as \$\$ begin new.current_plan:='agency'; return new; end \$\$; create trigger trg_project_prompts_pool before update on public.profiles for each row execute function public.zz_forge()" >/dev/null
+  eq "Y1 a trigger on profiles named like B's (forging the plan) is flagged: package names are bound to their table AND function" "$(pf_false 'surface: every trigger')" 1
+  q "drop trigger trg_project_prompts_pool on public.profiles; drop function public.zz_forge()" >/dev/null
+  q "create function public.zz_noop() returns trigger language plpgsql as \$\$ begin return new; end \$\$; create trigger trg_project_prompts_no_reactivation before update on public.project_prompts for each row execute function public.zz_noop()" >/dev/null
+  eq "Y2 a fake trigger sitting in A's unused slot makes the A-slots row false" "$(pf_false 'A slots')" 1
+  q "drop trigger trg_project_prompts_no_reactivation on public.project_prompts; drop function public.zz_noop()" >/dev/null
+  q "alter table public.projects owner to authenticated" >/dev/null
+  eq "Y3 a table owned by authenticated is flagged (owner pin)" "$(pf_false 'surface: profiles, projects and project_prompts have one owner')" 1
+  q "alter table public.projects owner to root" >/dev/null
+  q "alter role authenticated bypassrls" >/dev/null
+  eq "Y3 authenticated with BYPASSRLS is flagged (client-role pin)" "$(pf_false 'surface: anon/authenticated are not superuser')" 1
+  q "alter role authenticated nobypassrls" >/dev/null
+  q "grant root to authenticated" >/dev/null
+  eq "Y3 authenticated made a member of the table owner is flagged" "$(pf_false 'surface: anon/authenticated are not superuser')" 1
+  q "revoke root from authenticated" >/dev/null
+  q "alter role authenticated in database $PGDATABASE set pgrst.db_pre_request = 'public.zz_hook'" >/dev/null
+  eq "Y5 a pgrst.* role-in-database setting is flagged" "$(pf_false 'surface: no database/role setting')" 1
+  q "alter role authenticated in database $PGDATABASE reset pgrst.db_pre_request" >/dev/null
+  q "alter function public.protect_billing_columns() security invoker reset search_path" >/dev/null
+  eq "Y6 B2 refuses when C's function lost SECURITY DEFINER / search_path (prosecdef shape)" "$(psql -q -f $DIR/B2_activate.sql 2>&1 | grep -c 'refusing to activate B2')" 1
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/C_profiles_guards.sql >/dev/null
+  q "alter function public.handle_new_user() security invoker" >/dev/null
+  eq "Y7 a signup function turned SECURITY INVOKER is flagged" "$(pf_false 'surface: handle_new_user')" 1
+  q "alter function public.handle_new_user() security definer" >/dev/null
+  q "alter trigger trg_project_prompts_pool on public.project_prompts rename to zz_renamed" >/dev/null
+  eq "Y8 a RENAMED B trigger: C_rollback still refuses (detected by function, not only by name)" "$(psql -q -f $DIR/C_rollback.sql 2>&1 | grep -c 'trigger still exists')" 1
+  q "alter trigger zz_renamed on public.project_prompts rename to trg_project_prompts_pool" >/dev/null
+  psql -q -f $DIR/B1_objects.sql >/dev/null 2>&1
+  eq "Y9 after undoing all sixth-review attacks the whole postflight (B, C, surface) is clean again" "$(psql -At -f $DIR/postflight.sql | grep -E '^(B:|C:|surface|B slots)' | grep -c '|f$')" 0
+  eq "Y10 C forces created_at to now() on a self-insert (no backdating a forged profile)" "$(q "delete from public.profiles where id='$U2'" >/dev/null; psql -Atq -c "set role authenticated; set \"request.jwt.claim.sub\"='$U2'; set \"request.jwt.claim.role\"='authenticated'" -c "insert into public.profiles(id,email,created_at) values ('$U2','x@x.test','2000-01-01')" -c "select created_at > now() - interval '1 minute' from public.profiles where id='$U2'" 2>&1 | tail -1)" t
+  seed pro
+  eq "Y11 a view over project_prompts cannot be used to insert cross-tenant (42501, no row added)" "$(q "create view public.zz_v as select * from public.project_prompts" >/dev/null; B4=$(active $U2); as_user_err $U1 "insert into public.zz_v(project_id,prompt_text) values ('$PX','via view 000000000000')" | grep -c 'row-level security'; q "drop view public.zz_v" >/dev/null)" 1
+  q "update auth.users set email_confirmed_at=now() where id='$U1'" >/dev/null
+  eq "Y12 an existing override with a SMALLER cap is raised to 300 by the RUNBOOK block" "$(q "delete from public.account_prompt_cap_overrides; insert into public.account_prompt_cap_overrides(user_id,cap) values ('$U1',50)" >/dev/null; psql -Atq -c "$OV" >/dev/null 2>&1; q "select cap from public.account_prompt_cap_overrides where user_id='$U1'")" 300
+  seed pro
+
   echo "-- cross-tenant oracle (B): a user writing into ANOTHER account's project must get RLS, never the victim's cap"
   seed pro; q "set \"request.jwt.claim.role\" = 'service_role'; update public.profiles set current_plan='pro' where id='$U2'" >/dev/null
   q "insert into public.project_prompts(project_id,prompt_text) select '$PX','victim prompt '||g||' xxxxx' from generate_series(1,75) g" >/dev/null
@@ -415,6 +452,9 @@ PYX
   psql -v ON_ERROR_STOP=1 -q -f $DIR/B_rollback_2_drop.sql >/dev/null
   eq "RBO2 C_rollback refuses while Option A's function exists (A without C is not safe)" "$(psql -q -f $DIR/C_rollback.sql 2>&1 | grep -c 'Option A is applied')" 1
   q "drop function public.reactivate_project_prompts(uuid, uuid[], integer)" >/dev/null
+  q "create function public.zz_noop() returns trigger language plpgsql as \$\$ begin return new; end \$\$; create trigger trg_project_prompts_no_reactivation before update on public.project_prompts for each row execute function public.zz_noop()" >/dev/null
+  eq "RBO3 C_rollback refuses while a trigger bearing A's name exists, even a fake one" "$(psql -q -f $DIR/C_rollback.sql 2>&1 | grep -c 'Option A is applied')" 1
+  q "drop trigger trg_project_prompts_no_reactivation on public.project_prompts; drop function public.zz_noop()" >/dev/null
   psql -v ON_ERROR_STOP=1 -q -f $DIR/B2_activate.sql >/dev/null; seed pro
 
   echo "-- rollbacks"
@@ -489,8 +529,14 @@ testA() {
   eq "A6 anon cannot either" "$(psql -Atq -c "set role anon" -c "select public.add_project_prompts('$U1','$P1',9999,$(rowsj 1))" 2>&1 | grep -c 'permission denied')" 1
   echo "-- postflight with A1+A2 applied (B/C not applied)"
   PFA="$(psql -At -f $DIR/postflight.sql)"
-  eq "PFA the three A rows read true" "$(echo "$PFA" | grep -E '^A' | grep -c '|t$')" 3
+  eq "PFA the four A rows (three pins + stray-slot) read true" "$(echo "$PFA" | grep -E '^A' | grep -c '|t$')" 4
   eq "PFA the B and C rows read false (not applied here)" "$(echo "$PFA" | grep -E '^(B:|C:)' | grep -c '|f$')" 7
+  q "alter table public.project_prompts disable trigger trg_project_prompts_no_reactivation" >/dev/null
+  eq "PFA2 a DISABLED A trigger turns the A2 row false (tgenabled pinned)" "$(psql -At -f $DIR/postflight.sql | grep 'A2: reactivation trigger' | grep -c '|f$')" 1
+  q "alter table public.project_prompts enable trigger trg_project_prompts_no_reactivation" >/dev/null
+  q "grant execute on function public.reactivate_project_prompts(uuid,uuid[],integer) to authenticated" >/dev/null
+  eq "PFA3 EXECUTE granted to authenticated on A1 turns the A1 row false" "$(psql -At -f $DIR/postflight.sql | grep 'A1: reactivate fn' | grep -c '|f$')" 1
+  q "revoke execute on function public.reactivate_project_prompts(uuid,uuid[],integer) from authenticated" >/dev/null
   echo "-- A's weak point, demonstrated (caller-supplied cap)"
   seed pro
   eq "A7 a compromised/buggy CALLER passing cap=9999 is believed (why B derives the cap in SQL)" "$(add 100 "$P1" 9999 >/dev/null; active)" 100

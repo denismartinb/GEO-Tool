@@ -18,7 +18,7 @@ B2 del contrato sigue **PARCIAL** hasta que el dueño aplique una opción y el p
 Recomendación: **C → B1 → overrides → B2**. A solo si el dueño aprueba `service_role` en el flujo de usuario; y
 **A sin C no es segura** (hallazgo 2).
 
-## 2. Resultado de la revisión independiente (12 hallazgos)
+## 2. Resultado de las revisiones independientes (tabla de hallazgos, filas 1-27)
 
 | # | Gravedad | Hallazgo | Estado |
 |---|---|---|---|
@@ -33,7 +33,7 @@ Recomendación: **C → B1 → overrides → B2**. A solo si el dueño aprueba `
 | 9 | baja | Posible *deadlock* con transacciones largas | **Riesgo, decisión del dueño pendiente** (nadie lo ha aceptado). Disponibilidad, no se salta el tope. **Reproducido con dos `UPDATE` de una sola sentencia** (`where id in (A,B)` frente a `where id in (B,C)`): el candado de fila se toma antes que el de cuenta. Se evita reactivando una fila por sentencia |
 | 10 | baja | B no limita filas **inactivas** (5.000 por REST) | **Abierto en B**, anterior a esta propuesta. **A2 lo cierra**: sin política de insert nadie inserta por REST |
 | 11 | baja | Huecos del postflight | Ampliados tras la cuarta revisión (ver filas 13-18). **El postflight es un chivato, no una prueba** |
-| 13 | alta | El postflight imprimía todo en verde con un trigger extra que voltea `is_active`, un trigger extra sobre `profiles`, una política extra permisiva, `is_project_owner` reescrita, RLS apagada, `session_replication_role` fijado por base de datos, otra clave primaria o un `TRUNCATE` concedido en la tabla de excepciones | **Corregido en dos rondas.** Quinta revisión: fijaba triggers **por nombre** (se podía redirigir `set_updated_at` o repuntar su trigger), no veía herencia ni reglas, `is_project_owner` solo por cuerpo (cambiando su `search_path` o un look-alike en otro esquema la política seguía igual), ni el propietario de las funciones, ni `projects`, ni `handle_new_user`, ni `request.jwt.*`. Ahora fija cada trigger **por definición**, el cuerpo y atributos de `set_updated_at` y de `is_project_owner`, que cada política **dependa** de esa función exacta, herencia y reglas, que las funciones del paquete sean del propietario de la tabla y este se salte RLS, `projects`, el cuerpo de `handle_new_user` y los ajustes `session_replication_role`/`request.jwt.*`/`search_path`/`row_security`. Cada ataque tiene prueba. **Sigue sin verlo (y lo dice):** triggers de evento, publicaciones, extensiones, objetos de otros esquemas, el cuerpo de `auth.role()`/`auth.uid()` más allá de una huella, y el traspaso de un proyecto a otra cuenta con `update projects set owner_user_id` (no dispara ningún trigger) |
+| 13 | alta | El postflight imprimía todo en verde con un trigger extra que voltea `is_active`, un trigger extra sobre `profiles`, una política extra permisiva, `is_project_owner` reescrita, RLS apagada, `session_replication_role` fijado por base de datos, otra clave primaria o un `TRUNCATE` concedido en la tabla de excepciones | **Corregido en dos rondas.** Quinta revisión: fijaba triggers **por nombre** (se podía redirigir `set_updated_at` o repuntar su trigger), no veía herencia ni reglas, `is_project_owner` solo por cuerpo (cambiando su `search_path` o un look-alike en otro esquema la política seguía igual), ni el propietario de las funciones, ni `projects`, ni `handle_new_user`, ni `request.jwt.*`. Ahora fija cada trigger **por definición**, el cuerpo y atributos de `set_updated_at` y de `is_project_owner`, que cada política **dependa** de esa función exacta, herencia y reglas, que las funciones del paquete sean del propietario de la tabla y este se salte RLS, `projects`, el cuerpo de `handle_new_user` y los ajustes `session_replication_role`/`request.jwt.*`/`search_path`/`row_security`. Las pruebas cubren los ataques listados en el apartado «Qué se probó quitándolo»; lo que no está ahí no tiene prueba. **Sigue sin verlo (y lo dice):** triggers de evento, publicaciones, extensiones, objetos de otros esquemas, el cuerpo de `auth.role()`/`auth.uid()` más allá de una huella, y el traspaso de un proyecto a otra cuenta con `update projects set owner_user_id` (no dispara ningún trigger) |
 | 14 | alta | Un abuso del agujero 1 anterior a C no se ve en el preflight 7c y sobrevive a C+B (la cuenta conserva tope 300) | **Parcial**: C congela `created_at`; 7c suma «id de suscripción que no parece de Stripe» y «suscripción sin cliente». **7c es de solo presencia: un 0 no es evidencia de que no pasó nada** (el perfil pudo editarse antes de C). Una cuenta ya forjada **no se repara** con este paquete: la reconciliación de §9 solo cubre el email |
 | 15 | alta | La guarda «C instalada» de B2 solo miraba el hash del cuerpo y el bit INSERT | **Corregido**: exige trigger habilitado, `BEFORE ROW`, sin `WHEN`, todas las columnas, función correcta, `SECURITY DEFINER` y `search_path`; hay pruebas para trigger deshabilitado, `AFTER`, `WHEN (false)`, una sola columna, atributos de la función y cuerpo distinto (la quinta revisión encontró que las de `WHEN`, columnas y cuerpo no tenían prueba) |
 | 16 | media | `C_rollback.sql` reabría el agujero 1 con B activa | **Corregido en dos rondas**: se niega si el trigger de B **existe** (aunque esté deshabilitado: re-habilitarlo después correría B sobre una C ya revertida) o si hay objetos de A. Orden: A → `B_rollback_1` → `B_rollback_2` → `C_rollback` |
@@ -45,6 +45,9 @@ Recomendación: **C → B1 → overrides → B2**. A solo si el dueño aprueba `
 | 22 | baja | Un lector no esperó al `CREATE TRIGGER` bloqueado (medido 0,03 s); la escritura sí esperó 2,5 s hasta `lock_timeout` | **Corregido el texto**: se midió que las lecturas siguen mientras una escritura espera; no se midió bajo carga real |
 | 23 | baja | `auth.users.email` «se fija en el alta» es inexacto: puede cambiar con `updateUser` sin reiniciar `email_confirmed_at` | **Corregido el texto** (§4): el filtro de confirmación depende de la configuración de cambio de email de Auth, **no verificada** |
 | 24 | info | `projects.owner_user_id` puede cambiarse (operador o `service_role`) y los prompts activos viajan con el proyecto sin que ningún trigger actúe: una cuenta gratuita llegó a 85 | **Documentado como hueco conocido**, no cerrado por este paquete |
+| 25 | alta | Sexta revisión, postflight: un trigger con el nombre de B sobre `profiles` que falsea el plan pasaba por «presente»; un falso en el hueco de A se leía como «A no aplicada»; el propietario de las tablas no se fijaba; ajustes `pgrst.*` y los roles cliente (`BYPASSRLS`, miembro del propietario) quedaban sin mirar | **Corregido**: los nombres del paquete se fijan **a su tabla y a su función**; filas «A slots»/«B slots» (ausente o totalmente fijado); propietario único de las tres tablas, ninguno cliente; roles cliente sin superusuario/`BYPASSRLS`/membresía; regex de ajustes ampliada. Cada una con prueba (Y1-Y9, PFA2-3) |
+| 26 | media | `C_rollback.sql` detectaba el trigger de B por nombre: renombrarlo reabría el agujero 1 | **Corregido**: detecta por nombre **o** por función (también las de A). Pruebas Y8, RBO3 |
+| 27 | media | C no fijaba `created_at` en el alta propia (una cuenta falsificada podía retrasarlo y esconderse del 7c); B devolvía la fila ajena sin error en el caso entre cuentas; el bloque de excepciones §4 podía dejar un tope menor que 300 | **Corregido**: C fuerza `created_at := now()` al insertar; B lanza 42501 (como RLS) en el caso ajeno; §4 usa `greatest(...)` y cuenta solo topes ≥ 300. Pruebas Y10-Y12. **Residual 2, sin verificar:** el cambio de email de Auth sin confirmación puede alterar la fuente del filtro de §4 |
 | 12 | baja | Pruebas que probaban menos de lo que decían | Reescritas; añadidas upsert, perfil ausente, email, `REPEATABLE READ`, B sin 0039, código de error |
 
 ## 3. Orden (si el dueño aprueba B)
@@ -67,9 +70,9 @@ cual (llama a `add_project_prompts`): **desplegar ese código sin 0039 deja a lo
 3. **B1**: igual. Comprobar: `select count(*) from public.account_prompt_cap_overrides;` → 0.
 4. **Overrides** (§4). 
 5. **B2**: ventana tranquila; es el único paso con efecto visible.
-6. **Postflight** (`postflight.sql`): una rejilla; las filas de B y C deben decir `true`; las de A, `false` (no aplicadas).
+6. **Postflight** (`postflight.sql`): una rejilla; las filas de B y C deben decir `true`; las de A, `false` (no aplicadas) salvo la fila «A slots», que debe decir `true` (que ningún objeto con el nombre de A esté a medias).
    Fijan el `md5` del cuerpo de cada función, `SECURITY DEFINER`, `search_path`, y de cada trigger su momento,
-   eventos, columnas y cláusula `WHEN`; **no ven el propietario de los objetos**. El recuento de filas del final es solo
+   eventos, columnas y cláusula `WHEN`; fijan además el propietario de las tres tablas y de las funciones del paquete, y que `anon`/`authenticated` no sean superusuario, no salten RLS ni sean miembros de ese propietario. El recuento de filas del final es solo
    informativo (el tráfico legítimo lo cambia). Pegar con saltos de línea LF: con CRLF el `md5` cambia y la fila sale
    `false` (falla seguro).
 7. Prueba de humo del dueño con una cuenta propia: añadir un prompt con la bolsa llena debe dar el aviso de bolsa llena.
@@ -86,8 +89,8 @@ El tope de B sale de `profiles.current_plan`; una cuenta comped (hoy plan Agency
 con los emails del dueño (no se pegan en tickets ni en comentarios):
 
 ```sql
--- Escribir los emails EN MINÚSCULAS y sin espacios. <N> = cuántos emails has puesto. No baja un tope
--- ya existente (p. ej. una Agencia «a medida» por encima de 300): `do nothing`.
+-- Escribir los emails EN MINÚSCULAS y sin espacios. <N> = cuántos emails has puesto. Si ya existe un tope MENOR que 300
+-- (por ejemplo 50), lo SUBE a 300; si existe uno MAYOR (una Agencia «a medida»), lo conserva (`greatest`).
 do $$
 declare found integer;
 begin
@@ -95,11 +98,12 @@ begin
   select id, 300, 'comped'
   from auth.users
   where email_confirmed_at is not null and lower(btrim(email)) in ('<email 1>', '<email 2>')
-  on conflict (user_id) do nothing;
+  on conflict (user_id) do update set cap = greatest(public.account_prompt_cap_overrides.cap, excluded.cap);
   select count(*) into found from public.account_prompt_cap_overrides o
-   where o.user_id in (select id from auth.users where email_confirmed_at is not null and lower(btrim(email)) in ('<email 1>', '<email 2>'));
+   where o.cap >= 300
+     and o.user_id in (select id from auth.users where email_confirmed_at is not null and lower(btrim(email)) in ('<email 1>', '<email 2>'));
   if found <> <N> then
-    raise exception 'expected % comped accounts with an override, found % (unconfirmed, misspelt or missing?)', <N>, found;
+    raise exception 'expected % comped accounts with an override of at least 300, found % (unconfirmed, misspelt or missing?)', <N>, found;
   end if;
 end $$;
 ```
@@ -235,7 +239,7 @@ aprobación); (b) decidir «comped» solo por la tabla de excepciones (por `user
   A1, `security definer` y `search_path` de C, guarda de email, forzado de cada columna de facturación en C, trigger de
   C solo en UPDATE / en AFTER / con `WHEN`, filtro de `service_role` de A2, comprobación de C en B2. **No se ha
   intentado romper todo**: una mutación que no esté en esta lista puede seguir sin prueba. El postflight no ve el
-  propietario de los objetos.
+  propietario de los objetos en la quinta ronda; la sexta fija tablas, funciones y roles cliente.
 - **Quinta revisión (cinco ataques de la lista anterior más una veintena nuevos).** Con prueba que falla al quitarlo: el cruce de
   cuentas de B, el trigger de C deshabilitado, las tres formas de romper C que B2 comprueba (`WHEN`, columnas, cuerpo), el cuerpo de
   las funciones de B, las políticas de `profiles`, `projects` y `project_prompts`, `set_updated_at`, herencia/reglas,
@@ -245,8 +249,8 @@ aprobación); (b) decidir «comped» solo por la tabla de excepciones (por `user
   `auth.role()` real de Supabase lea otros ajustes de los que el stub local modela.
 - Todas las guardas (0016/0019, C, A2) confían en `auth.role()`, que lee los ajustes `request.jwt.claim.*`.
   Reproducido en local: una sesión capaz de fijar ella misma esos ajustes (`set request.jwt.claim.role='service_role'`)
-  salta cualquiera. **No es alcanzable por PostgREST hoy** (ninguna función expuesta ejecuta `set_config` ni SQL
-  dinámico, comprobado con grep en las migraciones), y es anterior a este paquete.
+  salta cualquiera. **No es alcanzable por PostgREST hoy** (ninguna función expuesta de las migraciones del repo ejecuta `set_config` ni SQL
+  dinámico; no se ha comprobado en la base real, donde puede haber objetos fuera del repo), y es anterior a este paquete.
 - El stub local de `auth` solo lee `request.jwt.claim.role`; el real también lee `request.jwt.claims`. No se ha
   probado contra Supabase real: ni el rol que posee las funciones `SECURITY DEFINER` ni sus permisos sobre
   `auth.users` (si faltaran, la rama INSERT de C falla cerrado), ni los permisos por defecto de `EXECUTE` (el paquete

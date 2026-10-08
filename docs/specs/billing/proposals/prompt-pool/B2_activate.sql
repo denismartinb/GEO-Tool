@@ -22,7 +22,7 @@ begin
   if not exists (
     select 1 from pg_proc p
     where p.proname = 'protect_billing_columns' and p.pronamespace = 'public'::regnamespace
-      and md5(p.prosrc) = '306a01c000f93e362b4323bd7be1b604' and p.prosecdef and p.proconfig = array['search_path=""']
+      and md5(p.prosrc) = '3a8bf45188e43ff6dbcccc72dc933d07' and p.prosecdef and p.proconfig = array['search_path=""']
   ) or not exists (
     select 1 from pg_trigger t
     where t.tgrelid = 'public.profiles'::regclass and t.tgname = 'trg_profiles_protect_billing_columns'

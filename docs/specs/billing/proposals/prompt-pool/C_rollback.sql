@@ -7,12 +7,13 @@ begin;
 set local lock_timeout = '3s';
 do $$
 begin
-  if exists (select 1 from pg_trigger where tgrelid = 'public.project_prompts'::regclass
-             and tgname = 'trg_project_prompts_pool') then
+  -- Detected by NAME and by the FUNCTION it runs (a renamed trigger still enforces B).
+  if exists (select 1 from pg_trigger where tgname = 'trg_project_prompts_pool'
+             or tgfoid = to_regproc('public.enforce_prompt_pool')) then
     raise exception 'Option B''s trigger still exists: run B_rollback_1_disable.sql and B_rollback_2_drop.sql before C_rollback.sql';
   end if;
-  if exists (select 1 from pg_trigger where tgrelid = 'public.project_prompts'::regclass
-             and tgname = 'trg_project_prompts_no_reactivation')
+  if exists (select 1 from pg_trigger where tgname = 'trg_project_prompts_no_reactivation'
+             or tgfoid = to_regproc('public.prevent_prompt_reactivation'))
      or to_regprocedure('public.reactivate_project_prompts(uuid,uuid[],integer)') is not null then
     raise exception 'Option A is applied: run A_rollback.sql before C_rollback.sql (A without C is not safe)';
   end if;
