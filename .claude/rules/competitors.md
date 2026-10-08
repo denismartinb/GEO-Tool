@@ -29,6 +29,21 @@ cada decisión: `docs/brand/design-decisions-log.md` §10 y §11.
   del usuario se refleja en la UI (botón deshabilitado, contador con el
   máximo) en el mismo cambio que lo introduce.
 
+## Propuestas del asistente de alta (ONBOARDING-PROPOSALS-1, log §237)
+
+- **Lo que el asistente afirma de un competidor propuesto es lo que el código
+  sabe**: que lo propuso un modelo y si una fuente consultada ES su sitio
+  (`sourceForDomain`, `lib/competitors/competitor-sources.ts`). Nunca «principales
+  competidores», nunca una fuente repartida: `groundingChunks` es una lista para
+  toda la respuesta, no una por rival. Sin fuente propia = «sin verificar». El
+  copy vive en `lib/projects/proposal-copy.ts`, vigilado por un test.
+- **El «por qué» que se enseña es el criterio de entrada** (sector, mercado,
+  idioma), no un motivo por rival: el modelo no lo devuelve, y fabricarlo sería
+  inventar evidencia.
+- **La identidad de marca se confirma antes del primer escaneo** y no se arregla
+  relajando la comparación de menciones (log §237): el nombre comercial (no el
+  derivado del dominio) y sus alias entran en `brand`/`brand_aliases`.
+
 ## Origen de las sugerencias
 
 - **Las sugerencias salen del `business_profile` real del proyecto** (perfil

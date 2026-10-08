@@ -21327,3 +21327,78 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 237. ONBOARDING-PROPOSALS-1 + ONBOARDING-IDENTITY-1: el asistente dice qué propone y quién lo propone, y confirma la identidad de marca antes de medir (2026-10-08)
+
+**Qué pasaba.** (1) El asistente presentaba como «tus principales competidores»
+lo que un modelo propone, sin motivo ni fuente, y vendía «al menos 15 prompts
+para obtener mejores datos» como si fuera una garantía. (2) En elcorteingles.es
+no sugirió nada y dejó la marca como «Elcorteingles»: la portada de una web
+grande con protección anti-bot no se lee (`homepage_unreadable`), el asistente
+no tenía campo para describir el negocio, y la marca se derivaba del dominio
+(`deriveBrandFromDomain`) sin que nadie la viera. Con ese nombre el escaneo
+midió cero aunque dos respuestas de Claude decían «El Corte Inglés».
+
+**Causa del cero (fixture `lib/scan/brand-identity-mention.test.ts`).** No es el
+verificador de menciones: `namesPlausiblyMatch` normaliza a `elcorteingles` y
+`el corte ingles`, y ninguno contiene al otro por el espacio. La corrección es
+dar al escaneo el nombre bien escrito, **no** relajar la comparación: quitar
+espacios para que casen aceptaría subcadenas arbitrarias de cualquier texto.
+Sólo se prueba esta causa; las otras respuestas de ese escaneo no se asumen.
+
+**Decisión (Fase 1, sin migración).**
+- *Identidad.* Nombre comercial editable y dominio separados; el nombre se
+  propone desde el título de la portada sólo si uno de sus tramos es la etiqueta
+  del dominio (`proposeBrand`), y si no, desde el dominio con aviso «identidad
+  pendiente de confirmar» (no bloquea). Alias: sólo los verificables en la
+  portada (misma regla que el alta automática) + entrada manual, con las mismas
+  reglas que el alta manual y la comprobación de términos genéricos que ese
+  camino no tenía (`isGenericAliasTerms`). Lo confirmado viaja en `brand` y
+  `brand_aliases` y `createProjectCore` lo usa en vez de derivar otra vez.
+- *Portada ilegible.* La acción devuelve el **motivo**. Sólo con
+  `homepage_unreadable` el asistente pide una descripción en una frase;
+  `profile_failed`/`profile_low_confidence` son fallos nuestros y no se achacan
+  a su web (`.claude/rules/gemini.md`). Sin portada no hay evidencia contra la
+  que verificar alias, así que no se proponen: nunca se rellenan de memoria del
+  modelo.
+- *Competidores.* «Propuesta del modelo, sin verificar» por defecto; «con
+  fuente» sólo si alguna fuente de `groundingChunks` **es el propio sitio** del
+  competidor (`sourceForDomain`). Gemini devuelve una lista única para toda la
+  respuesta, así que repartirla entre rivales sería inventar una relación. El
+  «por qué encaja» que se enseña es el criterio de entrada del modelo (sector,
+  subsector, mercado, idioma), no una afirmación sobre cada rival: el modelo no
+  devuelve motivo por rival y pedirlo es un cambio de contrato (Fase 3).
+- *Prompts.* País e idioma visibles con selector manual; 15 es «recomendación
+  de cobertura, no garantía estadística»; «preguntas propuestas, no búsquedas
+  reales, sin volumen medido». Intención (informativa/comercial/local) y
+  con/sin marca, **estimadas** con reglas de palabras y sin persistir. «Local»
+  es ciudad / «cerca de mí» / a domicilio; un país es el mercado, no una zona.
+  La marca no se añade a las preguntas.
+
+**Pendiente y límites.**
+- **Matching con límite de palabra**: `namesPlausiblyMatch` acepta subcadena en
+  ambos sentidos, así que «Zara» casaría con «Zaragoza». Cambiarlo toca
+  `lib/scan/extraction.ts` y mueve la puntuación de todos los proyectos: va en
+  su propia rama (hay un `it.todo`). Alcance: normalizar sin quitar espacios,
+  comparar por secuencia de palabras completas, probar colisiones y genéricos.
+- **`validateNewAlias` (alta manual en Dominios)** sigue sin el chequeo de
+  términos genéricos que sí tiene el camino del asistente.
+- **Cero competidores (petición del Director)**: sólo revisado por lectura. En
+  Competidores, «Lideras con X% de cuota de voz» únicamente sale si hay
+  `topCompetitor`, y existe el estado «No hay competidores configurados». **No
+  se ha comprobado Visión general ni se ha escrito un test**, así que no se
+  declara como invariante en la regla de ruta.
+- **Sin motivo por rival, sin persistencia de intención/fuente/branded**:
+  Fases 2-3 con esquema, no aprobadas.
+- **Hallazgo previo en `main`, no corregido aquí**: a 390 px la columna del
+  paso 1 (barra de dominio) mide 407 px antes de cualquier tarjeta nueva y
+  recorta «Continuar» y el resumen. Es CSS (`styles.md`).
+- Los alias confirmados se escriben al crear el proyecto; no hay migración de
+  los proyectos ya existentes (Elcorteingles ya creado se corrige desde Dominios).
+- Capturas con **datos simulados** (fixture local, sin Gemini ni Supabase); no
+  hay preview real todavía.
+
+**Trazabilidad.** `lib/projects/{brand-identity,prompt-intent,proposal-copy}.ts`,
+`lib/competitors/competitor-sources.ts`, `lib/llm/gemini-client.ts`,
+`app/dashboard/projects/actions.ts`, `lib/projects/create-project.ts`,
+`components/onboarding-wizard.tsx`, `components/onboarding/*`.
