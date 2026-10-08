@@ -52,7 +52,9 @@ paths:
   «tu dominio no figura entre las fuentes», nunca «no te mencionan».
 - **Ninguna cifra de «+N pt» ni «techo» se muestra al usuario** (pantalla,
   informe exportable ni markdown) hasta que exista respaldo medido. El cálculo
-  de abajo sigue vivo sólo como señal interna de orden.
+  de abajo sigue vivo sólo como señal interna de orden. **Ese orden
+  (`planScore`) es una regla de producto, no un retorno medido** (log §236):
+  nunca se presenta como «las que más rendirán».
 
 ## Puntos potenciales
 

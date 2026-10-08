@@ -21414,11 +21414,22 @@ Corregido: se re-deriva en CADA lectura, sin atajo, sin escribir en la base
 (el historial no se reescribe) y sin mutar el objeto leído. Test:
 `confidence.test.ts`.
 
-**Pendiente.** (a) `planScore` sigue ordenando por puntos ocultos: decidir si el
-orden debe pasar a no depender de ellos. (b) Los techos por tipo de
-`BASE_CEILING` son juicio de producto, sin datos; subirlos exige resultados
-medidos, no una opinión. (c) Si el número vuelve, vuelve etiquetado como
-estimación y con respaldo.
+**Orden del plan (decisión del Director, 2026-10-08).** `planScore` y el orden
+actual se mantienen. **Es una regla de producto, no un retorno medido**: ordena
+por una estimación interna (`potentialPoints`) que ya no se muestra y que no
+tiene resultados medidos detrás; elegir así las tres acciones prioritarias es un
+criterio de priorización, no una afirmación de que vayan a rendir más. Cambiarlo
+alteraría qué tres acciones salen primero y no es necesario para este parche de
+honestidad.
+
+**Verificación visual: pendiente.** Oportunidades completo y el preview no se
+han visto: el entorno de la sesión no alcanza `vercel.com` (política de salida)
+y no se lanzan escaneos para poblar datos. Build y tipado no cierran la UI.
+
+**Pendiente.** (a) Los techos por tipo de `BASE_CEILING` son juicio de
+producto, sin datos; subirlos exige resultados medidos, no una opinión. (b) Si
+el número de puntos vuelve a mostrarse, vuelve etiquetado como estimación y con
+respaldo.
 
 **Trazabilidad.** `lib/recommendations/{confidence,ceiling-copy,recommendation-engine}.ts`,
 `lib/prompts/{topic-contrast,presence-hint}.ts`, tests `unproven-claims`,
