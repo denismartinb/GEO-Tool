@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { BrandIdentityCard } from "./brand-identity-card";
 import { DescriptionPrompt, shouldAskForDescription } from "./description-prompt";
+import { PromptsContext } from "./prompts-context";
 
 /**
  * ONBOARDING-IDENTITY-1 — render de las piezas del asistente. El entorno es
@@ -73,5 +74,47 @@ describe("BrandIdentityCard", () => {
     expect(html).not.toContain("Identidad pendiente de confirmar");
     expect(html).toContain("Propuestos a partir de tu web (1)");
     expect(html).toContain('aria-label="Quitar alias Club del Gourmet"');
+  });
+});
+
+describe("PromptsContext", () => {
+  const options = [
+    { code: "es", name: "Español" },
+    { code: "en", name: "Inglés" }
+  ];
+  const mix = { total: 15, informational: 12, commercial: 2, local: 1, branded: 0 };
+
+  it("hace visibles país e idioma, con selector manual, y dice que no son búsquedas reales", () => {
+    const html = renderToStaticMarkup(
+      <PromptsContext countryName="España" language="es" languageOptions={options} languageDetected onLanguageChange={noop} mix={mix} />
+    );
+    expect(html).toContain("España");
+    expect(html).toContain("Idioma (detectado)");
+    expect(html).toContain('aria-label="Idioma de las preguntas"');
+    expect(html).toContain("<option value=\"en\">Inglés</option>");
+    expect(html).toContain("no búsquedas reales");
+    expect(html).toContain("Estimado:");
+    expect(html).toContain("12 informativas");
+  });
+
+  it("si la persona cambia el idioma deja de decir «detectado»", () => {
+    const html = renderToStaticMarkup(
+      <PromptsContext countryName="España" language="en" languageOptions={options} languageDetected={false} onLanguageChange={noop} mix={mix} />
+    );
+    expect(html).not.toContain("(detectado)");
+  });
+
+  it("avisa cuando ninguna pregunta es local", () => {
+    const html = renderToStaticMarkup(
+      <PromptsContext
+        countryName="España"
+        language="es"
+        languageOptions={options}
+        languageDetected
+        onLanguageChange={noop}
+        mix={{ total: 15, informational: 13, commercial: 2, local: 0, branded: 0 }}
+      />
+    );
+    expect(html).toContain("Ninguna es local");
   });
 });

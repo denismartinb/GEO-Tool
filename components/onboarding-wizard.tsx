@@ -11,11 +11,29 @@ import { FaviconImg } from "@/components/ui/favicon-img";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { isWellFormedDomain, MAX_INITIAL_PROMPTS, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
+import {
+  isWellFormedDomain,
+  languageForCountry,
+  MAX_INITIAL_PROMPTS,
+  MAX_USER_COMPETITORS,
+  sanitizePromptLineText
+} from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 import { BrandIdentityCard } from "@/components/onboarding/brand-identity-card";
+import { PromptsContext } from "@/components/onboarding/prompts-context";
 import { DescriptionPrompt, shouldAskForDescription } from "@/components/onboarding/description-prompt";
 import { proposeBrand } from "@/lib/projects/brand-identity";
+import { classifyPrompt, INTENT_LABEL, summarizePromptMix } from "@/lib/projects/prompt-intent";
+import {
+  COMPETITOR_CHIP_SOURCED,
+  COMPETITOR_CHIP_UNVERIFIED,
+  COMPETITORS_BASIS_LABEL,
+  COMPETITORS_SUBTITLE,
+  COVERAGE_NOTE,
+  INTENT_ESTIMATE_NOTE,
+  MARKET_LANGUAGE_NOTE,
+  PROMPTS_NATURE_NOTE
+} from "@/lib/projects/proposal-copy";
 import type { BusinessContextUnidentifiedReason } from "@/lib/projects/business-profile";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { PLANS } from "@/app/pricing/plans-data";
@@ -57,6 +75,8 @@ const LANGUAGE_NAMES: Record<string, string> = {
   pt: "Portugués"
 };
 
+const LANGUAGE_OPTIONS = Object.entries(LANGUAGE_NAMES).map(([code, name]) => ({ code, name }));
+
 // Colores decorativos del avatar de competidor (iniciales sobre círculo de
 // color) — puramente estéticos, ciclan por índice. No son favicons reales.
 const AVATAR_COLORS = ["#2563eb", "#7c3aed", "#0f9d8e", "#ff642d", "#d97706", "#db2777"];
@@ -92,7 +112,14 @@ const CREATE_PROJECT_STEPS = [
 // una identidad de UI local (asignada por `newId()` al montar cada fila,
 // nunca enviada al servidor) — sostiene qué filas están plegadas/desplegadas
 // sin depender del índice, que cambia al borrar una fila de en medio.
-type Competitor = { id: number; name: string; domain: string; source: "suggested" | "manual" };
+type Competitor = {
+  id: number;
+  name: string;
+  domain: string;
+  source: "suggested" | "manual";
+  /** Fuente consultada por Gemini que ES el sitio de este competidor; ausente = «sin verificar». */
+  evidence?: { uri: string; title?: string } | null;
+};
 type PromptRow = { id: number; text: string; category: PromptCategory | null };
 
 // Banderitas mini (mismas que onboarding.jsx) — solo los códigos definidos en
@@ -387,7 +414,9 @@ function PromptsStepBody({
   removePrompt,
   addPrompt,
   generateMorePromptsAutomatically,
-  goBack
+  goBack,
+  contextNode,
+  intentLabelFor
 }: {
   prompts: PromptRow[];
   promptCap: number;
@@ -404,6 +433,10 @@ function PromptsStepBody({
   addPrompt: () => void;
   generateMorePromptsAutomatically: () => void;
   goBack: () => void;
+  /** País, idioma y avisos de naturaleza de las preguntas (ONBOARDING-PROPOSALS-1). */
+  contextNode?: ReactNode;
+  /** Etiqueta estimada de intención y marca por prompt, o null si el texto está vacío. */
+  intentLabelFor?: (text: string) => string | null;
 }) {
   const { pending } = useFormStatus();
   const activeIndex = useStepCycle(CREATE_PROJECT_STEPS.length, !pending);
@@ -434,6 +467,7 @@ function PromptsStepBody({
       <div className="onb2-seclbl">
         {validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} · límite de tu plan: {promptCap}
       </div>
+      {contextNode}
       <div className="card" style={{ overflow: "hidden" }}>
         {prompts.map((row, index) => {
           const isOpen = openPrompts.has(row.id);
@@ -455,6 +489,11 @@ function PromptsStepBody({
                 <span className="onb2-ptext">{row.text || "Prompt vacío"}</span>
               )}
               {row.category ? <span className="onb2-chip n">{row.category}</span> : null}
+              {intentLabelFor && intentLabelFor(row.text) ? (
+                <span className="onb2-chip n" title="Clasificación estimada, no guardada">
+                  {intentLabelFor(row.text)}
+                </span>
+              ) : null}
               <button
                 type="button"
                 className="onb2-iconbtn"
@@ -585,6 +624,7 @@ export function OnboardingWizard({
   const [aliases, setAliases] = useState<string[]>([]);
   const [aliasesAutoFound, setAliasesAutoFound] = useState(0);
   const [description, setDescription] = useState("");
+  const [basis, setBasis] = useState<ProjectSetupSuggestion["basis"]>(null);
   const [unidentifiedReason, setUnidentifiedReason] = useState<BusinessContextUnidentifiedReason | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isDomainFocused, setIsDomainFocused] = useState(false);
@@ -666,6 +706,7 @@ export function OnboardingWizard({
     startTransition(async () => {
       const result = await suggestAction({ domain, country, description: withDescription });
       setUnidentifiedReason(result.reason ?? null);
+      setBasis(result.basis ?? null);
       // Identidad: se propone SIEMPRE, también si no hubo sugerencias, porque
       // el nombre mal escrito mide cero aunque todo lo demás vaya bien.
       const proposal = result.brandProposal ?? proposeBrand(domain, null);
@@ -695,7 +736,7 @@ export function OnboardingWizard({
       setSuggestFailed(result.failed);
       setCompetitors(
         result.competitors.length
-          ? result.competitors.map((c) => ({ id: newId(), ...c, source: "suggested" as const }))
+          ? result.competitors.map((c) => ({ id: newId(), name: c.name, domain: c.domain, evidence: c.source ?? null, source: "suggested" as const }))
           : [{ id: newId(), name: "", domain: "", source: "manual" }]
       );
       setPrompts(
@@ -907,12 +948,10 @@ export function OnboardingWizard({
           <div>
             <h1 className="onb2-h1">Tus competidores</h1>
             <p className="onb2-sub">
-              Analizamos{" "}
               <b style={{ color: "var(--ink-2)", fontFamily: "var(--mono)", fontWeight: 600 }}>
                 {domain || "tu dominio"}
-              </b>{" "}
-              e identificamos tus principales competidores para monitorizar cómo te comparas en las respuestas de
-              IA. Si algo no encaja, edítalo o elimínalo.
+              </b>
+              . {COMPETITORS_SUBTITLE}
             </p>
           </div>
           {stepsBar}
@@ -920,6 +959,14 @@ export function OnboardingWizard({
 
         {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
         {suggestFailed.includes("competitors") ? <SuggestionGapNotice kind="competitors" /> : null}
+        {basis ? (
+          <p className="add-hint" style={{ marginBottom: 12 }}>
+            <b>{COMPETITORS_BASIS_LABEL}:</b> {basis.sector}
+            {basis.subSector && basis.subSector !== basis.sector ? ` / ${basis.subSector}` : ""} · mercado{" "}
+            {COUNTRIES.find((c) => c.code === basis.country)?.name ?? basis.country} · idioma{" "}
+            {LANGUAGE_NAMES[language] ?? language}.
+          </p>
+        ) : null}
 
         <div className="onb2-grid">
           <div>
@@ -983,7 +1030,13 @@ export function OnboardingWizard({
                     {row.source === "suggested" ? (
                       <span className="onb2-chip">
                         <Icon name="sparkles" size={11} />
-                        sugerido
+                        {row.evidence ? (
+                          <a href={row.evidence.uri} target="_blank" rel="noopener noreferrer" title={row.evidence.title}>
+                            {COMPETITOR_CHIP_SOURCED}
+                          </a>
+                        ) : (
+                          COMPETITOR_CHIP_UNVERIFIED
+                        )}
                       </span>
                     ) : null}
                     <button
@@ -1058,8 +1111,7 @@ export function OnboardingWizard({
             Cada prompt se lanza a los tres motores. Quita los que no te representen
             {promptCap >= MAX_INITIAL_PROMPTS ? (
               <>
-                {" "}— recomendamos al menos <b style={{ color: "var(--ink-2)" }}>{MAX_INITIAL_PROMPTS}</b> para
-                obtener mejores datos.
+                . {COVERAGE_NOTE}
               </>
             ) : (
               <>
@@ -1125,6 +1177,21 @@ export function OnboardingWizard({
             }}
             generateMorePromptsAutomatically={generateMorePromptsAutomatically}
             goBack={() => setStep(1)}
+            contextNode={
+              <PromptsContext
+                countryName={selectedCountry.name}
+                language={language}
+                languageOptions={LANGUAGE_OPTIONS}
+                languageDetected={language === languageForCountry(country)}
+                onLanguageChange={setLanguage}
+                mix={summarizePromptMix(prompts.map((p) => p.text), { brand: brand.trim() || domain, aliases })}
+              />
+            }
+            intentLabelFor={(text) => {
+              if (!text.trim()) return null;
+              const { intent, branded } = classifyPrompt(text, { brand: brand.trim() || domain, aliases });
+              return `${INTENT_LABEL[intent]} · ${branded ? "con marca" : "sin marca"} · estimado`;
+            }}
           />
         </form>
 

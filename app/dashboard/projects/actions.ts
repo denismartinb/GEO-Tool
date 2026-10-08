@@ -33,7 +33,7 @@ export type ProjectSetupSuggestion = {
   ok: boolean;
   brand: string;
   language: string;
-  competitors: Array<{ name: string; domain: string }>;
+  competitors: Array<{ name: string; domain: string; source?: { uri: string; title?: string } | null }>;
   prompts: Array<{ text: string; category: PromptCategory }>;
   /**
    * LLM-RESILIENCE-1: which halves of the suggestion actually failed, as
@@ -60,6 +60,12 @@ export type ProjectSetupSuggestion = {
   brandProposal: BrandProposal;
   /** Alias verificables en la portada. Vacío si no se pudo leer o no hay: el asistente deja entrada manual. */
   proposedAliases: string[];
+  /**
+   * El criterio con el que se proponen competidores y preguntas: lo que el
+   * modelo recibió como entrada (sector y mercado), no una afirmación sobre
+   * cada rival. `null` si no se identificó el negocio.
+   */
+  basis: { sector: string; subSector: string; country: string } | null;
 };
 
 /**
@@ -96,7 +102,8 @@ export async function suggestProjectSetup(input: {
     failed: [],
     reason: null,
     brandProposal: fallbackProposal,
-    proposedAliases: []
+    proposedAliases: [],
+    basis: null
   };
 
   if (!isValidDomain(domain) || country.length < 2) {
@@ -135,7 +142,8 @@ export async function suggestProjectSetup(input: {
       failed: ["competitors", "prompts"],
       reason: context.reason,
       brandProposal,
-      proposedAliases: []
+      proposedAliases: [],
+      basis: null
     };
   }
 
@@ -174,7 +182,8 @@ export async function suggestProjectSetup(input: {
     failed,
     reason: null,
     brandProposal,
-    proposedAliases
+    proposedAliases,
+    basis: { sector: context.profile.sector, subSector: context.profile.subSector, country }
   };
 }
 
