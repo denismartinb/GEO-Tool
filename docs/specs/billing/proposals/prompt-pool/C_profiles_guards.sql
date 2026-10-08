@@ -12,6 +12,28 @@
 --   (lib/billing.ts resolveEffectivePlanId / resolveSystemPlanId, BILLING-COMPED-1). Anyone who
 --   knows a comped address gets Agency caps and every Pro-gated feature by editing their own row.
 --
+-- WHAT IS AND IS NOT ESTABLISHED. The shape of both holes comes from the repo's own migrations and
+-- policies (0002 profiles_insert_own / profiles_update_own, 0016-0019 guard without email, lib/billing.ts
+-- comped by profiles.email) and was REPRODUCED against a local Postgres built from them. Whether the LIVE
+-- Supabase database is in that state, and whether anyone has exploited it, has NOT been verified from
+-- here: preflight rows "6" and "7b" measure it read-only, in aggregate, without emails.
+--
+-- WHAT C DOES NOT DO: it blocks FUTURE writes only. A `profiles.email` already altered stays altered, and
+-- the app keeps trusting it for "comped" until the identity source is changed (RUNBOOK.md §9). C neither
+-- repairs nor deletes anything; it must not be read as having cleaned the data.
+--
+-- WHO WRITES profiles.email AND WHAT C DOES TO EACH (checked against the code and migrations):
+--   * signup (handle_new_user, trigger on auth.users)   -> runs from the auth service with no
+--       `authenticated` claim: unaffected, still creates the row with the 7-day trial (0017).
+--   * Stripe webhook / changePlan                        -> service role, and they do not write email: unaffected.
+--   * Supabase SQL editor (role `postgres`)              -> auth.role() is NULL: the email guard does NOT apply,
+--       so an operator CAN reconcile an email by hand (template in RUNBOOK.md §9, never run by the agent).
+--   * a legitimate change of email by the user           -> the app has NO such flow (only auth.updateUser
+--       for the password), and nothing syncs auth.users.email -> profiles.email on update. If a flow is added,
+--       its server side must write profiles.email with the service role. Until then a user whose profile
+--       email is wrong cannot fix it themselves: C makes that limitation explicit (clear error), it does not
+--       hide it, and the operator path above exists.
+--
 -- Fix, minimal and limited to the `authenticated` role (a user JWT). Server-side writers keep
 -- working unchanged: the service role (webhook, changePlan) and signup's `handle_new_user`, which
 -- runs from the auth service with no `authenticated` claim.

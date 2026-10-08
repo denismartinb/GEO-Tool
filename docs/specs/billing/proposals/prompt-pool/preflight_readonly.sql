@@ -45,6 +45,11 @@ checks(section, item, value) as (
     ('5 size and locks', 'open transactions older than 30 s (other sessions)', (select count(*)::text from pg_stat_activity
         where datname=current_database() and xact_start is not null and pid <> pg_backend_pid() and now() - xact_start > interval '30 seconds')),
     ('6 users without a profile row (C hole 1; expect 0)', 'count', (select count(*)::text from auth.users u left join public.profiles p on p.id = u.id where p.id is null)),
+    ('7b identity for C (aggregates only, no emails)', 'profiles whose email differs from auth.users email (case/space-insensitive)',
+        (select count(*)::text from public.profiles pr join auth.users u on u.id = pr.id
+          where lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(coalesce(u.email,''))))),
+    ('7b identity for C (aggregates only, no emails)', 'profiles with an empty email', (select count(*)::text from public.profiles where coalesce(btrim(email),'') = '')),
+    ('7b identity for C (aggregates only, no emails)', 'auth users with no email', (select count(*)::text from auth.users where coalesce(btrim(email),'') = '')),
     ('7 orphans (expect 0)', 'prompts without a project', (select count(*)::text from public.project_prompts pp left join public.projects p on p.id = pp.project_id where p.id is null)),
     ('8 grandfathered under B', 'accounts above their derived cap', (select count(*)::text from over_cap where active > cap))
 )

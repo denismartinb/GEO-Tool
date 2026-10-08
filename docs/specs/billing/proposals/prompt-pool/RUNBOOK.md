@@ -22,15 +22,15 @@ Recomendación: **C → B1 → overrides → B2**. A solo si el dueño aprueba `
 
 | # | Gravedad | Hallazgo | Estado |
 |---|---|---|---|
-| 1 | alta | Una cuenta **sin fila en `profiles`** puede insertar la suya con `current_plan='agency'` (el trigger de 0016 solo cubre UPDATE) → tope 300 en B. Reproducido | **Arreglado en `C`**; el preflight cuenta las cuentas sin perfil (debe dar 0) |
-| 2 | alta | `profiles_update_own` deja reescribir `profiles.email`, y la app decide «comped» por ese campo → cualquiera que conozca un email comped obtiene Agency. **Bug anterior (BILLING-COMPED-1), afecta al producto hoy, no solo a esta propuesta.** Reproducido | **Arreglado en `C`** (el email deja de poder cambiarse desde una sesión de usuario). Mientras `C` no esté aplicada, **sigue abierto en producción** |
+| 1 | alta | Una cuenta **sin fila en `profiles`** puede insertar la suya con `current_plan='agency'` (el trigger de 0016 solo cubre UPDATE) → tope 300 en B. **Reproducido en local sobre las migraciones del repo; el estado de Supabase LIVE no está verificado** | **Arreglado en `C`**; el preflight cuenta las cuentas sin perfil (debe dar 0) |
+| 2 | alta | `profiles_update_own` deja reescribir `profiles.email`, y la app decide «comped» por ese campo → cualquiera que conozca un email comped obtiene Agency. **Riesgo anterior a esta propuesta (BILLING-COMPED-1) en el código y las migraciones**; reproducido en local; **que esté abierto o se haya explotado en LIVE no está verificado desde aquí** (filas 6 y 7b del preflight lo miden en agregado, sin emails) | **`C` bloquea escrituras futuras, NO repara emails ya alterados** ni cambia la fuente de identidad: ver §9 |
 | 3 | alta (proceso) | Los ficheros no se podían pegar enteros y faltaba este documento | Separados por paso; este documento |
 | 4 | media | Bajo B, el código convertía «bolsa llena» en «servicio no disponible» | Corregido en `lib/projects/prompt-pool.ts` (23514 `prompt_pool_full` → `pool_full`), con test |
 | 5 | media | La lista *comped* vive en dos sitios (env por email, tabla por `user_id`) y divergirá | **Abierto**: documentado; hay que decidir una sola fuente (§4) |
 | 6 | media | Bloqueos subestimados | Corregido y medido (§5) |
 | 7 | media | Salida del preflight ilegible en el editor y con emails | Reescritos: **una sola consulta**, sin emails |
 | 8 | baja-media | Con `REPEATABLE READ` se llegaba a 76 | Arreglado: se rechaza si no es `READ COMMITTED` (también en 0039) |
-| 9 | baja | Posible *deadlock* con transacciones largas | **Aceptado y documentado** (disponibilidad, no se salta el tope) |
+| 9 | baja | Posible *deadlock* con transacciones largas | **Riesgo, decisión del dueño pendiente** (nadie lo ha aceptado). Disponibilidad, no se salta el tope; las escrituras de una sola sentencia de PostgREST no lo producen |
 | 10 | baja | B no limita filas **inactivas** (5.000 por REST) | **Abierto**, anterior a esta propuesta; A2 lo deja igual |
 | 11 | baja | Huecos del postflight | Corregidos (`count = 2`, `tgfoid`, `tgtype`) |
 | 12 | baja | Pruebas que probaban menos de lo que decían | Reescritas; añadidas upsert, perfil ausente, email, `REPEATABLE READ`, B sin 0039, código de error |
@@ -97,17 +97,67 @@ trigger durante esa sentencia.
 
 | Código desplegado | Base sin nada | + C | + B1 | + B2 | + 0039 |
 |---|---|---|---|---|---|
-| `main` (cliente de usuario inserta) | como hoy | igual | igual | **tope en la base**; el error sale como fallo de BD en las rutas que no lo traducen | igual |
+| `main` (cliente de usuario inserta; **sin** `service_role`) | como hoy | igual | igual | **tope en la base**; el error sale como fallo de BD en las rutas que no lo traducen | igual |
 | esta rama (RPC `add_project_prompts`, `service_role`) | **sin 0039: no se pueden añadir prompts (falla cerrado)** | ídem | ídem | ídem | funciona; el trigger puede rechazar con 23514 → se muestra como bolsa llena |
+
+Aclaración sobre `service_role` y 0039: la función `add_project_prompts` solo la ejecuta `service_role` (0039 revoca
+a `authenticated`). El código de esta rama la llama con `createServiceClient()`, es decir, **usa `service_role` en un
+flujo de usuario, que no está aprobado**. Con la opción B el tope lo hace la base y ese camino sobra: la app debería
+insertar con el cliente de usuario (no escrito). Sin aprobación de `service_role`, esta rama **no debe desplegarse**
+tal cual aunque 0039 esté aplicada.
 
 ## 7. Lo que sigue sin resolver (no se implementa por inferencia)
 
-- Una sola fuente de «comped» (hallazgo 5).
-- Filas inactivas ilimitadas (hallazgo 10) y *deadlock* con transacciones largas (hallazgo 9).
+- Una sola fuente de «comped» (hallazgo 5): **abierto**, y hoy son dos (`COMPED_ACCOUNT_EMAILS` por email y la tabla de
+  excepciones por `user_id`).
+- Filas inactivas ilimitadas (hallazgo 10): **abierto**. *Deadlock* con transacciones largas (hallazgo 9): riesgo con
+  decisión pendiente del dueño.
+- **Emails de `profiles` ya alterados y fuente de identidad de «comped»** (§9).
 - `service_role` en el flujo de usuario (solo A) y el cableado de la app para B (insertar con el cliente de usuario
   y traducir la reactivación): no escrito.
 - Contador/exención durable del primer escaneo, congelación de ejecuciones en curso y esquema de la prueba de 14
   días (B5/B6): siguen siendo fases con su propio Task Intake.
+
+## 9. Identidad: `profiles.email` frente a `auth.users.email` (C no repara lo ya escrito)
+
+**Lo que se sabe y lo que no.** Por el código: la app decide «comped» con `profiles.email` (`lib/billing.ts`:
+`resolveEffectivePlanId`, `resolveSystemPlanId`), y las políticas de 0002 permiten al propietario escribir su fila.
+Reproducido en local. **No se ha verificado** que LIVE tenga emails alterados ni que nadie lo haya explotado; el
+preflight (fila 7b) da tres recuentos agregados —perfiles cuyo email difiere del de `auth.users`, perfiles sin
+email, usuarios sin email—, sin emails ni identificadores. Un recuento distinto de 0 en la primera fila es un hecho
+que el dueño debe interpretar; 0 no prueba que nunca ocurriera (un valor pudo restaurarse después).
+
+**Quién escribe `profiles.email`, y qué le hace `C`:**
+
+| Escritor | Efecto de `C` |
+|---|---|
+| Alta (`handle_new_user`, trigger de `auth.users`, servicio de autenticación sin claim `authenticated`) | sin cambios: crea la fila con la prueba de 7 días |
+| Webhook de Stripe / `changePlan` (`service_role`) | sin cambios; además no escriben email |
+| Editor SQL de Supabase (`postgres`, `auth.role()` nulo) | **permitido**: es la vía del operador para reconciliar |
+| Cambio legítimo de email del usuario | **no existe flujo hoy** y nada sincroniza `auth.users` → `profiles` al actualizar. Si se añade, su parte de servidor escribe `profiles.email` con `service_role` |
+| Un usuario autenticado reescribiéndolo | **bloqueado** con el error «email can only be changed by the service role» |
+
+**Limitación visible, no oculta.** Tras `C`, quien tenga un email de perfil incorrecto (por una alteración previa
+o por un cambio de email en `auth.users`) **no puede corregirlo por sí mismo**; el error lo dice, y el operador
+tiene el camino de arriba. No se bloquea una identidad corrupta de forma permanente: se reconcilia a mano.
+
+**Tratamiento propuesto de discrepancias (no ejecutado, decide el dueño; no cambia nada hasta que lo ejecute):**
+
+1. Listar en el editor, solo identificadores, las filas con discrepancia:
+   `select pr.id from public.profiles pr join auth.users u on u.id = pr.id where lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(coalesce(u.email,'')));`
+2. Antes de tocar nada, copiar los valores actuales a un CSV (id + email antiguo) para poder deshacer.
+3. Reconciliar tomando la identidad de `auth.users` (la verificada por el proveedor de acceso), por ejemplo
+   `update public.profiles pr set email = u.email from auth.users u where u.id = pr.id and pr.email is distinct from u.email;`
+   en el editor SQL (`postgres`: pasa el guard de `C`).
+4. Revisar a mano, **sin escribir los emails comped en GitHub ni en tickets**, si alguna cuenta cambió de plan efectivo
+   por la reconciliación, antes de darla por buena.
+
+**Fuente de identidad fiable para «comped» (propuesta, no implementada):** mientras la app lea `profiles.email`, una
+alteración previa a `C` sigue sirviendo. Opciones, de menor a mayor cambio:
+(a) leer el email de la sesión (`auth.getUser()`, verificado) en `getPlanForUser` y en los lectores del plan; el
+barrido y el vigilante, sin sesión, lo leerían de `auth.users` con `service_role` (nueva lectura privilegiada, requiere
+aprobación); (b) decidir «comped» solo por la tabla de excepciones (por `user_id`) y retirar la variable
+`COMPED_ACCOUNT_EMAILS` (cierra a la vez el hallazgo 5). Ninguna está hecha; ambas cambian código de facturación.
 
 ## 8. Integridad
 

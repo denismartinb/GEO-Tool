@@ -331,9 +331,10 @@ las dos y se compruebe el postflight.
 **Revisión independiente (`data-guardian`) hecha: ninguna de las dos era entregable tal cual.** Hallazgos y estado en
 `proposals/prompt-pool/RUNBOOK.md` §2. Dos son agujeros **reproducidos** y previos a esta propuesta: una cuenta
 sin fila en `profiles` puede crear la suya con plan `agency`, y cualquier usuario puede reescribir `profiles.email`
-y hacerse pasar por una cuenta *comped* (la app lo decide por ese campo). Ambos se cierran con un tercer fichero,
-`C_profiles_guards.sql` (prerrequisito de B; **A sin C no es segura**), y **siguen abiertos en producción mientras C
-no se aplique**. Los ficheros se separaron por paso (`C`, `B1`, `B2`, `A1`, `A2`, reversiones) y llevan `SHA256SUMS`.
+y hacerse pasar por una cuenta *comped* (la app lo decide por ese campo). Ambos están **reproducidos en local** sobre las migraciones del repo; **que lo estén en el Supabase LIVE, o que se
+hayan explotado, no está verificado** (el preflight lo mide en agregado, sin emails). Un tercer fichero,
+`C_profiles_guards.sql` (prerrequisito de B; **A sin C no es segura**), **bloquea escrituras futuras pero no repara
+emails ya alterados ni cambia la fuente de identidad de «comped»** (`RUNBOOK.md` §9). Los ficheros se separaron por paso (`C`, `B1`, `B2`, `A1`, `A2`, reversiones) y llevan `SHA256SUMS`.
 
 Recomendación (mía, la decisión es del dueño): **B**. Cierra el hueco REST sin aprobar
 `service_role`, y es la única donde la cuenta no puede influir en su tope. Coste: un tope

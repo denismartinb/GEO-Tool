@@ -87,6 +87,11 @@ testB() {
   eq "C1 hole 1 closed: self-created profile is forced to free, email from auth.users" "$(as_user $U2 "insert into public.profiles(id,email,current_plan,trial_ends_at) values ('$U2','founder@genscore.es','agency', null); select current_plan||'/'||email from public.profiles where id='$U2'")" "free/a2@x.test"
   eq "C1 hole 2 closed: owner cannot rewrite email" "$(as_user_err $U1 "update public.profiles set email='founder@genscore.es' where id='$U1'" | grep -c 'email can only')" 1
   eq "C1 the service role still can" "$(as_service "update public.profiles set email='new@x.test' where id='$U1'; select email from public.profiles where id='$U1'")" new@x.test
+  eq "C1 the SQL editor role (postgres, no claim) CAN reconcile an email (operator path)" "$(q "update public.profiles set email='reconciled@x.test' where id='$U1'; select email from public.profiles where id='$U1'")" reconciled@x.test
+  q "update public.profiles set email='someone-else@x.test' where id='$U1'" >/dev/null
+  eq "C1 preflight 7b counts the divergence in aggregate and prints no email" "$(psql -At -f $DIR/preflight_readonly.sql | grep 'differs from auth.users' | grep -c '|1$')" 1
+  eq "C1 preflight output contains no email address" "$(psql -At -f $DIR/preflight_readonly.sql | grep -c '@')" 0
+  q "update public.profiles set email='a1@x.test' where id='$U1'" >/dev/null
   eq "C1 signup path (no authenticated claim) still creates a profile with the trial" "$(q "insert into auth.users(id,email) values (gen_random_uuid(),'s@x.test'); select count(*) from public.profiles where email='s@x.test' and current_plan='pro' and trial_ends_at is not null")" 1
   eq "C1 owner can still update unrelated columns" "$(as_user $U1 "update public.profiles set onboarding_tour_seen_at=now() where id='$U1'; select (onboarding_tour_seen_at is not null)::text from public.profiles where id='$U1'")" true
   eq "C1 owner still cannot raise plan" "$(as_user_err $U1 "update public.profiles set current_plan='agency' where id='$U1'" | grep -c 'service role')" 1
