@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
-import { getUsageSummary } from "@/lib/billing";
+import { requireUser } from "@/lib/auth";
+import { getUsageSummary, resolvePlan } from "@/lib/billing";
+import { newProjectDefaults } from "@/lib/projects/new-project-defaults";
+import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
 import { consoleMetadata } from "@/lib/seo/console-metadata";
 import { createProject, generateMorePrompts, suggestProjectSetup } from "../actions";
 
@@ -31,6 +34,23 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
   const usage = await getUsageSummary();
   const atProjectLimit = usage.projectCount >= usage.projectCap;
 
+  // SCAN-PLAN-UNITS-1: what the FIRST scan will actually run with, resolved
+  // through the same functions the scan uses (`newProjectDefaults` for the
+  // engines/sampling a new domain is born with, `resolveScanProvidersForPlan`
+  // for the plan cap), so the wizard's "respuestas esperadas" cannot drift
+  // from the mission's.
+  const { user } = await requireUser();
+  const defaults = newProjectDefaults(user.email);
+  const enabledEngines = (["gemini", "claude", "openai"] as const).filter(
+    (provider) => defaults[`engine_${provider}_enabled`] !== false
+  ) as LLMScanProvider[];
+  const providers = resolveScanProvidersForPlan(resolvePlan(usage.planId), enabledEngines);
+  const scanContext = {
+    planId: usage.planId,
+    providers,
+    samplingEnabled: defaults.sampling_enabled !== false
+  };
+
   const errorMessage = params.error ? errorMessages[params.error] : atProjectLimit ? errorMessages.project_limit_reached : null;
 
   return (
@@ -38,6 +58,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
       errorMessage={errorMessage}
       atLimit={atProjectLimit}
       promptCap={usage.promptCap}
+      scanContext={scanContext}
       suggestAction={suggestProjectSetup}
       generateMorePromptsAction={generateMorePrompts}
       createAction={createProject}

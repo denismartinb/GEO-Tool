@@ -36,6 +36,7 @@ import {
 } from "@/lib/projects/proposal-copy";
 import type { BusinessContextUnidentifiedReason } from "@/lib/projects/business-profile";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { describeRunPlan, runPlanFactors, runPlanWhy } from "@/lib/scan/run-plan";
 import { PLANS } from "@/app/pricing/plans-data";
 
 const DEFAULT_PROMPT_CAP = 10;
@@ -56,11 +57,6 @@ const COUNTRIES: Array<{ code: string; name: string }> = [
 ];
 
 const TYPE_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
-
-// Mismos motores, mismos glifos y colores que Visión general/Prompts
-// (lib/scan/engine-meta.ts, components/ui/engine-glyph.tsx) — no un set
-// paralelo de puntos de color inventado para este flujo.
-const ENGINE_PROVIDERS = ["gemini", "claude", "openai"] as const;
 
 // Nombres amigables para lo que devuelve `languageForCountry`
 // (lib/projects/project-form.ts) — sólo cubre los códigos que ese mapa puede
@@ -300,18 +296,31 @@ function LaunchSummaryPanel({
   domain,
   languageKnown,
   language,
-  engineCount,
+  scanContext,
   competitorsCount,
   promptsCount
 }: {
   domain: string;
   languageKnown: boolean;
   language: string;
-  engineCount: number;
+  scanContext: ScanContext;
   competitorsCount: number | null;
   promptsCount: number | null;
 }) {
-  const estimatedResponses = promptsCount !== null ? promptsCount * engineCount : null;
+  // SCAN-PLAN-UNITS-1: the SAME arithmetic the scan will run (pasadas
+  // included), so this figure and the mission's cannot disagree.
+  const engineCount = scanContext.providers.length;
+  const runPlan =
+    promptsCount !== null
+      ? describeRunPlan({
+          prompts: promptsCount,
+          engines: engineCount,
+          planId: scanContext.planId,
+          domain,
+          samplingEnabled: scanContext.samplingEnabled
+        })
+      : null;
+  const why = runPlan ? runPlanWhy(runPlan) : null;
   return (
     <div>
       <div className="onb2-seclbl">Resumen del lanzamiento</div>
@@ -357,13 +366,12 @@ function LaunchSummaryPanel({
           <span className={promptsCount === null ? "onb2-pv na" : "onb2-pv"}>{promptsCount === null ? "Pendiente" : promptsCount}</span>
         </div>
         <div className="onb2-est">
-          {estimatedResponses !== null ? (
+          {runPlan !== null ? (
             <>
-              <div className="onb2-est-n">{estimatedResponses}</div>
-              <div className="onb2-est-l">respuestas estimadas en el primer escaneo</div>
-              <div className="onb2-est-f">
-                {promptsCount} prompts × {engineCount} motores.
-              </div>
+              <div className="onb2-est-n">{runPlan.expectedResponses}</div>
+              <div className="onb2-est-l">respuestas esperadas en el primer escaneo</div>
+              <div className="onb2-est-f">{runPlanFactors(runPlan)}.</div>
+              {why ? <div className="onb2-est-f">{why}</div> : null}
             </>
           ) : (
             <div className="onb2-est-f" style={{ marginTop: 0 }}>
@@ -376,6 +384,13 @@ function LaunchSummaryPanel({
   );
 }
 
+export type ScanContext = {
+  planId: string;
+  /** Engines the first scan will fan out to, in order (plan cap and project defaults applied). */
+  providers: readonly string[];
+  samplingEnabled: boolean;
+};
+
 type OnboardingWizardProps = {
   errorMessage: string | null;
   atLimit?: boolean;
@@ -384,6 +399,9 @@ type OnboardingWizardProps = {
    * so a Starter/Pro/Agency user isn't stuck at a hardcoded 10 during
    * onboarding (SCAN-CHAIN-1 follow-up). */
   promptCap?: number;
+  /** What the first scan will actually run with, resolved on the server
+   * (SCAN-PLAN-UNITS-1) — never guessed from the client. */
+  scanContext: ScanContext;
   suggestAction: (input: { domain: string; country: string; description?: string }) => Promise<ProjectSetupSuggestion>;
   generateMorePromptsAction: (input: {
     domain: string;
@@ -565,6 +583,7 @@ export function OnboardingWizard({
   errorMessage,
   atLimit = false,
   promptCap = DEFAULT_PROMPT_CAP,
+  scanContext,
   suggestAction,
   generateMorePromptsAction,
   createAction
@@ -574,6 +593,11 @@ export function OnboardingWizard({
   // already ordered by prompt cap, ascending) that covers more than this
   // account's own cap, to name a concrete upgrade instead of a vague "more".
   const nextPromptPlan = PLANS.find((p) => p.caps.prompts > promptCap);
+  // Copy that names the engines follows the plan (a Free account runs one), not
+  // a hard-coded "tres" (SCAN-PLAN-UNITS-1).
+  const engineTotal = scanContext.providers.length;
+  const enginesIn = engineTotal === 1 ? "en el motor de tu plan" : `en los ${engineTotal} motores`;
+  const enginesTo = engineTotal === 1 ? "al motor de tu plan" : `a los ${engineTotal} motores`;
   const [step, setStep] = useState(0);
   const [domain, setDomain] = useState("");
   const [country, setCountry] = useState("ES");
@@ -808,7 +832,7 @@ export function OnboardingWizard({
             <p className="onb2-sub">
               {isPending
                 ? "Buscamos con quién compites y qué te preguntarían de verdad en un chat de IA. Unos 15 segundos — no cierres ni recargues esta pestaña."
-                : "Lo leemos, te proponemos competidores y prompts, y lanzamos el primer escaneo en los tres motores."}
+                : `Lo leemos, te proponemos competidores y prompts, y lanzamos el primer escaneo ${enginesIn}.`}
             </p>
           </div>
           {stepsBar}
@@ -896,7 +920,8 @@ export function OnboardingWizard({
 
                 <div className="add-engines">
                   <span className="cap">Motores</span>
-                  {ENGINE_PROVIDERS.map((provider) => {
+                  {/* Mismos glifos y colores que Visión general/Prompts (lib/scan/engine-meta.ts). */}
+                  {scanContext.providers.map((provider) => {
                     const meta = getEngineMeta(provider);
                     return (
                       <span className="eng-chip" key={provider}>
@@ -924,7 +949,7 @@ export function OnboardingWizard({
             domain={domain}
             languageKnown={false}
             language={language}
-            engineCount={ENGINE_PROVIDERS.length}
+            scanContext={scanContext}
             competitorsCount={null}
             promptsCount={null}
           />
@@ -1090,7 +1115,7 @@ export function OnboardingWizard({
             domain={domain}
             languageKnown
             language={language}
-            engineCount={ENGINE_PROVIDERS.length}
+            scanContext={scanContext}
             competitorsCount={validCompetitorCount}
             promptsCount={null}
           />
@@ -1105,7 +1130,7 @@ export function OnboardingWizard({
         <div>
           <h1 className="onb2-h1">Revisa tus prompts</h1>
           <p className="onb2-sub">
-            Cada prompt se lanza a los tres motores. Quita los que no te representen
+            Cada prompt se lanza {enginesTo}. Quita los que no te representen
             {promptCap >= MAX_INITIAL_PROMPTS ? (
               <>
                 . {COVERAGE_NOTE}
@@ -1196,7 +1221,7 @@ export function OnboardingWizard({
           domain={domain}
           languageKnown
           language={language}
-          engineCount={ENGINE_PROVIDERS.length}
+          scanContext={scanContext}
           competitorsCount={validCompetitorCount}
           promptsCount={validPromptCount}
         />

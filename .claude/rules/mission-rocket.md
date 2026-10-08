@@ -88,3 +88,15 @@ porque una sesión futura la obedecerá igual.
   que lo declare. Si mueves o renombras cualquiera de los tres ficheros sin
   actualizar esa fila, el aviso deja de dispararse **en silencio** — que es
   justo el fallo que esta regla existe para impedir.
+- **Las cifras del carril y de la nota de unidad salen de
+  `lib/scan/run-plan.ts`, nunca de aritmética local.** El carril imprime
+  `runPlanEquation` («15 prompts × 2 pasadas × 3 motores = 90 respuestas»), la
+  misma cadena que el asistente enseñó antes de lanzar, y el beat `ascenso`
+  define «lanzamiento» bajo el contador. Las pasadas se **leen** de
+  `scan_runs.sample_count` (consulta aislada en `first-scan-takeover.tsx`);
+  deducirlas de `total_prompts / prompts` fue lo que dejó al asistente y a la
+  misión contradiciéndose (log §236).
+- **La misión no promete lo que no puede cumplir.** «Esto no se cae.» se retiró
+  por promesa absoluta (fundador, 2026-10-08, log §236). Tampoco muestra un
+  tiempo estimado mientras no exista una duración medida de un escaneo
+  estándar: no se inventa una.

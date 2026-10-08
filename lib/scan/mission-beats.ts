@@ -7,15 +7,13 @@ import { computeScanStage, type ActiveScanRun } from "@/components/scan-in-progr
  * No new counters, no new query: every field this reads already exists on
  * `ActiveScanRun` / `withAnalysisProgress`.
  *
- * Deliberate deviation from the design reference, and the reason a future
- * session must not "fix" the copy back to it: the mockup showed
- * "90 respuestas" from `prompts × engines`. `total_prompts` counts
- * lanzamientos (jobs), not response rows (SAMPLING-1, ADR 0030) — multiplying
- * by an engine count here would need either `LLM_SCAN_PROVIDERS` (env-wide,
- * can overcount a plan capped below it) or the project owner's resolved plan
- * (a genuinely new read this page does not do). Both are deferred to the
- * per-engine breakdown phase. The `ascenso` beat stays in the same unnamed
- * lanzamiento unit `ScanInProgress` already uses today.
+ * Deviation from the design reference, and the reason a future session must
+ * not "fix" the copy back to it: the mockup showed "90 respuestas" from
+ * `prompts × engines`. `total_prompts` counts lanzamientos (jobs), not response
+ * rows (SAMPLING-1, ADR 0030), so this beat stays in the unnamed lanzamiento
+ * unit `ScanInProgress` uses. The multiplication the mockup wanted now lives in
+ * the mission's rail and unit note, from `lib/scan/run-plan.ts` (SCAN-PLAN-
+ * UNITS-1, log §236) — not here.
  *
  * `orbita` is the one beat that CAN honestly say "respuestas": once
  * generation ends, `responses_total`/`responses_processed`

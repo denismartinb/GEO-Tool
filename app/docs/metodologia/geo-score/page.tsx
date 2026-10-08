@@ -145,6 +145,52 @@ export default function GeoScoreMethodologyPage() {
         que la muestra no tiene.
       </p>
 
+      <h2>Por qué pedimos al menos 50 respuestas</h2>
+      <p>
+        Un escaneo apunta a reunir <strong>50 respuestas de IA</strong> antes de publicar una puntuación. Es una
+        decisión de producto con su coste a la vista, no un umbral mágico:
+      </p>
+      <ul>
+        <li>
+          <strong>Con pocas respuestas, una sola decide.</strong> En un proyecto de 1 prompt y 3 motores, que son 3
+          respuestas, cambiar una mueve la puntuación en torno a 24 puntos. Dos escaneos seguidos del mismo
+          proyecto, sin tocar nada, llegaron a diferir en 44.
+        </li>
+        <li>
+          <strong>Más respuestas ayudan, pero con rendimientos decrecientes.</strong> El margen de error baja con la
+          raíz del número de respuestas: pasar de 30 a 60 lo estrecha de unos ±18 a unos ±13 puntos, una mejora
+          real pero no una transformación. Reducirlo a la mitad exigiría del orden de 120. Con 50 la curva
+          deja de compensar lo que cuesta cada escaneo.
+        </li>
+        <li>
+          <strong>Es lo que permite mostrar una franja.</strong> Con 50 se supera con holgura el mínimo para
+          publicar la franja cualitativa y el listón de confianza alta. La puntuación sigue llevando su margen
+          al lado: el suelo no lo esconde.
+        </li>
+      </ul>
+      <p>
+        Cada respuesta es un prompt, preguntado a un motor, en una pasada:{" "}
+        <strong>respuestas = prompts × motores × pasadas</strong>. Si prompts × motores ya llega a 50, se hace una
+        sola pasada. Si no, repetimos el conjunto entero de prompts las veces necesarias, con un máximo de 5. Por
+        ejemplo, 15 prompts en 3 motores dan 45 respuestas, así que se hacen 2 pasadas y el escaneo reúne 90. Las
+        pasadas repiten la misma pregunta a propósito: los motores consultan la web en vivo y no siempre
+        contestan lo mismo, y esa variación es justo lo que la repetición mide.
+      </p>
+      <p>Lo que este suelo no hace:</p>
+      <ul>
+        <li>No cambia la fórmula del score: solo el tamaño de la muestra sobre la que se calcula.</li>
+        <li>No se aplica al plan Free, que hace un único escaneo con un motor y muestra su margen tal cual.</li>
+        <li>
+          No siempre se alcanza. Un proyecto con muy pocos prompts puede quedarse por debajo de 50 incluso con
+          el máximo de pasadas; en ese caso se publica igualmente, con el tamaño de muestra y el margen a la
+          vista.
+        </li>
+        <li>
+          No cuenta los reintentos como respuestas nuevas: si una llamada falla y se vuelve a intentar, el
+          reintento ocupa el sitio de esa respuesta en lugar de sumar otra.
+        </li>
+      </ul>
+
       <h2>Franjas de madurez</h2>
       <p>
         El indicador visual clasifica el score en tres franjas —«competitivo», «emergente» e «inicial»—
