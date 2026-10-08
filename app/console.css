@@ -468,21 +468,29 @@
   .ov2-cmp-sov .pct { font-size: 10.5px; }
   .ov2-cmp-sc { font-size: 14px; width: 62px; }
 
-  /* Oportunidades reads as a rail card, not a full-width strip. The
-     narrower column would truncate more titles than the phone layout
-     does, so rail items wrap to a 2nd line instead of a harder ellipsis. */
+  /* Oportunidades reads as a rail card, not a full-width strip. The wrap of
+     the title to a 2nd line is NOT here any more: it applies at every width
+     (see the block right after this media query). */
   .ov2-opps-hero { padding: 18px 18px 16px; }
   .ov2-opp { padding: 12px 13px; align-items: flex-start; }
   .ov2-opp-dot { margin-top: 5px; }
-  .ov2-opp-t { white-space: normal; line-height: 1.4; align-items: flex-start; }
-  .ov2-opp-t span {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
   .ov2-opp-quick { margin-top: 2px; }
   .ov2-opp-r { padding-top: 1px; }
+}
+
+/* Oportunidades · títulos de fila a 2 líneas en TODOS los anchos (UNPROVEN-CLAIMS-1,
+   log §236). Estaba dentro de `@media (min-width: 1200px)`: por debajo, el
+   título se cortaba con puntos suspensivos en una línea y la fila no es un
+   enlace ni tiene tooltip, así que el título completo no se podía leer ahí. Al
+   quitar «+N pt» de la columna derecha (log §236) el título perdió 26–40 px a
+   390 px, y el corte pasó a ser peor que antes. Sólo estas dos reglas; la
+   alineación, el relleno y el punto siguen siendo del breakpoint de escritorio. */
+.ov2-opp-t { white-space: normal; line-height: 1.4; align-items: flex-start; }
+.ov2-opp-t span {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* Wide desktop: a little more breathing room, no new structure */
