@@ -137,6 +137,19 @@ function normalizeHaystack(value: string): string {
     .trim();
 }
 
+/**
+ * True when EVERY token of the alias is a bare category noun
+ * (`GENERIC_ALIAS_TERMS`): "tienda", "app online". The same token-overlap test
+ * `selectVerifiableAliases` applies to derived aliases, exposed so a path that
+ * takes aliases from the user (the onboarding wizard, ONBOARDING-IDENTITY-1)
+ * does not end up weaker than the automatic one. Not a replacement for
+ * `isGenericEntityName`, which checks the full phrase against a different list.
+ */
+export function isGenericAliasTerms(alias: string): boolean {
+  const key = normalizeName(alias);
+  return key.length > 0 && key.split(" ").every((token) => GENERIC_ALIAS_TERMS.has(token));
+}
+
 export type AliasRejection = {
   alias: string;
   reason:
