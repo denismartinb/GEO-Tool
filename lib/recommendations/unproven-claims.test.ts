@@ -113,10 +113,24 @@ describe("unproven claims — every prompt at 0%", () => {
     }
   });
 
-  it("a card backed by a quoted competitor is still allowed to be high (the cap is evidence, not pessimism)", () => {
+  it("even a card backed by a quoted competitor is at most medium: the certainty belongs to the observed fact", () => {
     const gap = generateRecommendationsForRun(genscoreInput()).find((r) => r.recommendation_type === "close_competitor_gap");
     expect(gap?.evidence_json.evidence_kind).toBe("observation");
-    expect(gap?.confidence).toBe("high");
+    expect(gap?.confidence).toBe("medium");
+    expect(gap?.evidence_json.run_confidence).toBe("high");
+  });
+
+  it("no card of the first scan has high action confidence", () => {
+    for (const r of generateRecommendationsForRun(genscoreInput())) expect(r.confidence, r.title).not.toBe("high");
+  });
+
+  it("the amplify card no longer promises that copying is cheaper or safer", () => {
+    const input = genscoreInput();
+    const rows = input.promptResults.map((p) => ({ ...p, brand_mentioned: true, citation_found: true, sentiment: "neutral" as const }));
+    const recs = generateRecommendationsForRun({ ...input, promptResults: [...rows.slice(0, 3), ...input.promptResults.slice(3)] });
+    const amplify = recs.find((r) => r.recommendation_type === "amplify_positive_pattern");
+    expect(amplify).toBeDefined();
+    expect(String(amplify!.evidence_json.why_this_matters)).not.toMatch(/más barato|más seguro|probada/i);
   });
 });
 

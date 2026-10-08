@@ -29,14 +29,21 @@ describe("deriveRecommendationConfidence", () => {
     ).toBe("low");
   });
 
-  it("a cause the answer itself shows (named competitor ahead, with a quote) follows the run", () => {
-    expect(
-      deriveRecommendationConfidence({
-        diagnosisCertainty: "high",
-        type: "close_competitor_gap",
-        evidence: { ...quote, mentioned_competitors: ["Profound"] }
-      }).confidence
-    ).toBe("high");
+  it("a cause the answer itself shows is at most medium: an observed gap is not a measured result", () => {
+    const r = deriveRecommendationConfidence({
+      diagnosisCertainty: "high",
+      type: "close_competitor_gap",
+      evidence: { ...quote, mentioned_competitors: ["Profound"] }
+    });
+    expect(r.confidence).toBe("medium");
+    expect(r.reason).toMatch(/no hay resultados medidos/i);
+  });
+
+  it("no type and no evidence can ever reach high on the action's confidence", () => {
+    const rich = { ...quote, mentioned_competitors: ["X"], citation_domains: ["a.com"], other_brands: ["Y"] };
+    for (const type of Object.keys({ close_competitor_gap: 1, increase_brand_prominence: 1, add_comparison_content: 1, address_negative_narrative: 1, update_stale_content: 1, track_emerging_competitor: 1, pursue_media_sources: 1, add_citation_block: 1, amplify_positive_pattern: 1, increase_brand_visibility: 1, create_faq_section: 1, strengthen_brand_entity_clarity: 1, some_future_rule: 1 })) {
+      expect(deriveRecommendationConfidence({ diagnosisCertainty: "high", type, evidence: rich }).confidence, type).not.toBe("high");
+    }
   });
 
   it("never exceeds the diagnosis certainty: a small sample caps even a direct cause", () => {

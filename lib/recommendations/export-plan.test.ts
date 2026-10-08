@@ -50,26 +50,18 @@ describe("buildExportPlanMarkdown", () => {
     expect(md).not.toContain("## Resto");
   });
 
-  it("muestra los puntos potenciales sólo por encima del umbral visible", () => {
+  it("no enseña cifras de puntos: eran un techo sin resultados medidos (log §236)", () => {
     const md = buildExportPlanMarkdown({
       domain: "acme.com",
-      plan: [rec({ title: "Con puntos", potentialPoints: 5 }), rec({ title: "Sin puntos", potentialPoints: 0.01 })],
+      plan: [
+        rec({ title: "Con puntos", potentialPoints: 5 }),
+        rec({ title: "Externa", recommendation_type: "pursue_media_sources", potentialPoints: 11 })
+      ],
       rest: [],
       now: new Date("2026-09-08T10:00:00Z"),
     });
-    expect(md).toContain("**Con puntos** (+5 pt potenciales)");
-    expect(md).toContain("**Sin puntos**");
-    expect(md).not.toContain("**Sin puntos** (+");
-  });
-
-  it("etiqueta los puntos de una acción de terceros como condicionados", () => {
-    const md = buildExportPlanMarkdown({
-      domain: "acme.com",
-      plan: [rec({ title: "Externa", recommendation_type: "pursue_media_sources", potentialPoints: 11 })],
-      rest: [],
-      now: new Date("2026-09-08T10:00:00Z"),
-    });
-    expect(md).toContain("(+11 pt si te citan)");
+    expect(md).toContain("**Con puntos**");
+    expect(md).not.toMatch(/\+\d+ pt|potenciales|si te citan/);
   });
 
   it("incluye el primer paso cuando existe evidencia", () => {

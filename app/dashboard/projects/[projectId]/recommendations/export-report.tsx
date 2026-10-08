@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { MIN_VISIBLE_POINTS, formatPoints } from "@/lib/recommendations/plan";
 import { recommendationEngineLabels, type ExportPlanRecommendation } from "@/lib/recommendations/export-plan";
-import { pointsCaption } from "@/lib/recommendations/deliverable";
 import { BrandLogo } from "@/components/ui/brand-logo";
 
 /**
@@ -172,7 +170,6 @@ function ExportReportSection({
 }
 
 function ExportReportItem({ rec, number }: { rec: ExportPlanRecommendation; number: string }) {
-  const showPoints = typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS;
   const engines = recommendationEngineLabels(rec);
   const step = rec.evidence_json?.first_step;
 
@@ -182,11 +179,6 @@ function ExportReportItem({ rec, number }: { rec: ExportPlanRecommendation; numb
         <span className="xrp-item-title">
           {number} {rec.title}
         </span>
-        {showPoints && (
-          <span className="xrp-item-pts">
-            +{formatPoints(rec.potentialPoints as number)} pt {pointsCaption(rec.recommendation_type)}
-          </span>
-        )}
       </div>
       <p className="xrp-item-desc">{rec.description}</p>
       {step && <p className="xrp-item-step">Empieza por aquí: {step}</p>}

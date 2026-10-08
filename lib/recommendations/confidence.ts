@@ -19,7 +19,7 @@
  * evidencia que sostiene la causa:
  *
  *  - `direct`: la propia respuesta enseña la causa (un competidor nombrado por
- *    delante, un fragmento negativo, un dato desactualizado citado). Sin techo.
+ *    delante, un fragmento negativo, un dato desactualizado citado). Techo «media».
  *  - `contextual`: se observan fuentes u otras marcas, pero nada une eso con el
  *    efecto de la acción. Techo «media».
  *  - `none`: sólo hay ausencia (la marca no sale) o un argumento de formato.
@@ -118,8 +118,16 @@ export function evidenceCeilingFor(type: string, evidence: EvidenceLike | null |
   return "none";
 }
 
+/**
+ * Ninguna acción llega a «alta» (founder, 2026-10-08, log §236): «alta» mediría
+ * que la brecha está observada, no que la acción funcione, y no hay todavía
+ * ningún resultado medido de que una acción cierre una brecha. La certeza se
+ * reserva para el hecho observado (`run_confidence`). El día que haya
+ * resultados medidos (RECS-LOOP-1 los verifica por tarjeta, pero no agrega una
+ * tasa de éxito), este techo es lo que se revisa — con datos, no a ojo.
+ */
 const CEILING_CONFIDENCE: Record<EvidenceCeiling, Confidence> = {
-  direct: "high",
+  direct: "medium",
   contextual: "medium",
   none: "low"
 };
@@ -131,7 +139,7 @@ export type DerivedConfidence = {
 };
 
 const REASONS: Record<EvidenceCeiling, string> = {
-  direct: "La propia respuesta muestra la causa.",
+  direct: "La respuesta muestra la brecha, pero no hay resultados medidos de que esta acción la cierre.",
   contextual:
     "Se ven fuentes u otras marcas en las respuestas, pero ninguna prueba que esta acción cambie lo que dice la IA.",
   none: "Sólo se observa que tu marca no aparece: es una hipótesis de contenido sin fragmento que la respalde."

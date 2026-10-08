@@ -1437,7 +1437,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         affected: winningPrompts,
         assumptions: [`La IA te menciona y cita, sin narrativa negativa, en ${winningPrompts.length} consultas.`],
         whyThisMatters:
-          "Ya tienes la receta probada en tu propio dominio. Copiarla es más barato y más seguro que inventar un formato nuevo.",
+          "En estas consultas la IA ya te menciona y te cita; mirar qué tienen en común esas páginas te dice qué patrón se repite.",
         firstStep:
           "Abre las páginas que la IA cita en estas consultas y anota el patrón: formato, longitud y qué dato concreto usan.",
         snippetSource: "brand"

@@ -16,8 +16,6 @@ import {
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
 import {
   GROUP_PREVIEW_SIZE,
-  MIN_VISIBLE_POINTS,
-  formatPoints,
   rankGroupMembers,
   selectPlan
 } from "@/lib/recommendations/plan";
@@ -28,10 +26,8 @@ import {
   CONTROL_LABEL,
   classifySolutionReadiness,
   deliverableForType,
-  pointsCaption,
   readinessLabel
 } from "@/lib/recommendations/deliverable";
-import { planCeilingSuffix } from "@/lib/recommendations/ceiling-copy";
 
 // Re-exported (not redefined) so every existing `import { type GeneratedSolution } from "./recommendations-client"`
 // keeps working unchanged — lib/recommendations/generated-solution.ts is now
@@ -918,21 +914,14 @@ export function RecCard({
           }}
         >
           <div style={{ textAlign: "right" }}>
-            {typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS ? (
-              <>
-                <div className="rec2-pts">+{formatPoints(rec.potentialPoints)} pt</div>
-                <div className="rec2-pts-l">{pointsCaption(rec.recommendation_type)}</div>
-              </>
-            ) : (
-              /* Confidence deliberately NOT shown here (founder review): repeated
-                 down a list it read as the product hedging on every single card.
-                 It still qualifies the number — that is why a low-confidence run
-                 shows this qualitative label instead of a figure — and it stays
-                 visible inside the expanded detail. */
-              <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
-                {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
-              </div>
-            )}
+            {/* Sin cifra de puntos (founder, 2026-10-08, log §236): el "+N pt" era
+                un contrafactual sin resultados medidos que se leía como previsión.
+                Sólo se enseña el impacto cualitativo del motor. La confianza no
+                se muestra aquí (repetida en una lista parecía dudar de cada
+                tarjeta); vive en el detalle desplegado. */}
+            <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
+              {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
+            </div>
           </div>
           <button
             className="btn btn-ghost btn-sm"
@@ -1391,24 +1380,16 @@ function GroupedRecs({
   type,
   items,
   projectId,
-  jointPointsByType,
 }: {
   type: string;
   items: Recommendation[];
   projectId: string;
-  jointPointsByType?: Record<string, number | null>;
 }) {
   const [open, setOpen] = useState(false);
   // RECS-ACCION-1c — dentro del grupo se enseñan primero las que más mueven la
   // aguja, y el resto queda tras un clic. Un grupo de 30 tarjetas idénticas
   // salvo la consulta no es una lista de trabajo, es un muro.
   const [showAll, setShowAll] = useState(false);
-  // Never the SUM of the members' deltas: two gaps of the same type can share
-  // affected prompts and summing double-counts them (ADR 0017 §3). The number
-  // shown here is a single joint counterfactual computed server-side over the
-  // whole group; absent it, the group shows no figure at all.
-  const joint = jointPointsByType?.[type] ?? null;
-
   // Members of a group are, by construction, the same rule fired on different
   // prompts — so their description and first step are word-for-word identical.
   // Showing them once here and suppressing them on the cards is what keeps an
@@ -1428,11 +1409,6 @@ function GroupedRecs({
       <button type="button" className="rec2-group-h" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <Icon name={open ? "chevDown" : "chevRight"} size={15} />
         <span className="rec2-group-t">{labelForType(type)}</span>
-        {joint !== null && joint >= MIN_VISIBLE_POINTS && (
-          <span className="rec2-pts" style={{ fontSize: 13 }}>
-            +{formatPoints(joint)} pt
-          </span>
-        )}
         <span className="rec2-group-c">{items.length}</span>
       </button>
       {open && (
@@ -1489,10 +1465,7 @@ export function RecommendationsClient({
   resolvedHistory = [],
   recentWinsCount = 0,
   projectId,
-  jointPoints = null,
-  jointPointsByType,
   planIds = [],
-  planPoints = null,
   domain = "",
   latestCompletedRunId = null,
   geoScore = null,
@@ -1502,13 +1475,8 @@ export function RecommendationsClient({
   resolvedHistory?: ResolvedHistoryItem[];
   recentWinsCount?: number;
   projectId: string;
-  jointPoints?: number | null;
-  /** Joint counterfactual per recommendation type, computed server-side. */
-  jointPointsByType?: Record<string, number | null>;
   /** Ids de las acciones del plan, en orden, seleccionadas en el servidor. */
   planIds?: string[];
-  /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
-  planPoints?: number | null;
   domain?: string;
   /** PDF-EXPORT-PLAN-1 — Puntuación GEO para la portada del informe
    *  exportable, resuelta en el servidor por `resolveGeoScore`
@@ -1647,7 +1615,6 @@ export function RecommendationsClient({
                 "3 acciones prioritarias." y ese punto huérfano cantaba. */}
             <div className="rec2-plan-t">
               {plan.length} {plan.length === 1 ? "acción prioritaria" : "acciones prioritarias"}
-              {planPoints !== null && planPoints >= MIN_VISIBLE_POINTS ? planCeilingSuffix(plan.length, formatPoints(planPoints)) : ""}
             </div>
           </div>
           {plan.map((rec, i) => (
@@ -1737,7 +1704,6 @@ export function RecommendationsClient({
               type={type}
               items={items}
               projectId={projectId}
-              jointPointsByType={jointPointsByType}
             />
           ))
         ) : (

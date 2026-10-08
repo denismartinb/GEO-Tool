@@ -57,10 +57,10 @@ export const COVERAGE_OVERLAY_TYPES: ReadonlySet<string> = new Set([
   "increase_brand_visibility"
 ]);
 
+// A verified own page confirms the OBSERVED gap, not that the action will work:
+// action confidence never exceeds "medium" until measured results exist (log §236).
 function bumpConfidence(confidence: "low" | "medium" | "high"): "low" | "medium" | "high" {
-  if (confidence === "low") return "medium";
-  if (confidence === "medium") return "high";
-  return "high";
+  return confidence === "low" ? "medium" : confidence;
 }
 
 /**

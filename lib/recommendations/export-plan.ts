@@ -12,8 +12,6 @@
  * modal de respaldo.
  */
 
-import { MIN_VISIBLE_POINTS, formatPoints } from "@/lib/recommendations/plan";
-import { pointsCaption } from "@/lib/recommendations/deliverable";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 export type ExportPlanRecommendation = {
@@ -45,11 +43,7 @@ export function recommendationEngineLabels(rec: ExportPlanRecommendation): strin
 }
 
 function writeRecommendation(lines: string[], rec: ExportPlanRecommendation, index: number): void {
-  const pts =
-    typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS
-      ? ` (+${formatPoints(rec.potentialPoints)} pt ${pointsCaption(rec.recommendation_type)})`
-      : "";
-  lines.push(`${index + 1}. **${rec.title}**${pts}`);
+  lines.push(`${index + 1}. **${rec.title}**`);
   lines.push(`   ${rec.description}`);
   const step = rec.evidence_json?.first_step;
   if (step) lines.push(`   Empieza por aquí: ${step}`);

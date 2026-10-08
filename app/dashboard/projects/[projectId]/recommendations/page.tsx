@@ -653,65 +653,12 @@ export default async function RecommendationsPage({
         : null,
   }));
 
-  // Joint ceiling across every active recommendation — never the sum of the
-  // per-card deltas, which double-counts prompts shared by two rules (ADR 0017 §3).
-  const jointPotential =
-    scoreInputRows.length > 0
-      ? computeJointPotentialPoints(
-          scoreInputRows,
-          project.domain,
-          recs.map((r) => ({
-            recommendationType: r.recommendation_type,
-            affectedPromptIds: affectedPromptIds(r.evidence_json),
-          })),
-        )
-      : null;
-  const jointPoints =
-    jointPotential && Math.round(jointPotential.deltaPoints) > 0 ? Math.round(jointPotential.deltaPoints) : null;
-
-  // Per-type joint ceiling, for the collapsed group rows. Same rule as above:
-  // one counterfactual over the union of the group's prompts, never the sum of
-  // its members' individual deltas (ADR 0017 §3).
-  const jointPointsByType: Record<string, number | null> = {};
-  if (scoreInputRows.length > 0) {
-    const byType = new Map<string, Recommendation[]>();
-    for (const rec of recs) {
-      const bucket = byType.get(rec.recommendation_type) ?? [];
-      bucket.push(rec);
-      byType.set(rec.recommendation_type, bucket);
-    }
-    for (const [type, items] of byType) {
-      if (items.length < 2) continue;
-      const joint = computeJointPotentialPoints(
-        scoreInputRows,
-        project.domain,
-        items.map((r) => ({
-          recommendationType: r.recommendation_type,
-          affectedPromptIds: affectedPromptIds(r.evidence_json),
-        })),
-      );
-      jointPointsByType[type] = joint && Math.round(joint.deltaPoints) > 0 ? Math.round(joint.deltaPoints) : null;
-    }
-  }
-
   // El plan se selecciona AQUI, no en el cliente, porque su techo de puntos
   // tiene que ser un contrafactual conjunto sobre esas mismas acciones —
   // sumar los deltas de las tres tarjetas contaria dos veces los prompts que
   // compartan (ADR 0017 §3). Calcularlo en cliente obligaria a sumar.
   const plan = selectPlan(recs);
   const planIds = plan.map((r) => r.id);
-  const planJoint =
-    scoreInputRows.length > 0 && plan.length > 0
-      ? computeJointPotentialPoints(
-          scoreInputRows,
-          project.domain,
-          plan.map((r) => ({
-            recommendationType: r.recommendation_type,
-            affectedPromptIds: affectedPromptIds(r.evidence_json),
-          })),
-        )
-      : null;
-  const planPoints = planJoint ? planJoint.deltaPoints : null;
 
   /* Diagnóstico de por qué NO hay cifra de puntos — SOLO en logs de servidor.
    *
@@ -950,10 +897,7 @@ export default async function RecommendationsPage({
               resolvedHistory={resolvedHistoryForClient}
               recentWinsCount={recentWins.length}
               projectId={projectId}
-              jointPoints={jointPoints}
-              jointPointsByType={jointPointsByType}
               planIds={planIds}
-              planPoints={planPoints}
               domain={project.domain}
               latestCompletedRunId={latestCompletedRun.id}
               geoScore={geoScore}

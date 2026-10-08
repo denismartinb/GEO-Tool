@@ -21377,14 +21377,26 @@ no se leyó ningún dato real):
 (`confWeight`) y en «Prioridad alta»: las hipótesis sin fragmento bajan de
 puesto y de prioridad respecto a antes.
 
-**Decisión del fundador (2026-10-08, tras la primera entrega).** El titular
-«+87 / Techo teórico» de Visión general **se retira** hasta que haya datos
-reales de cumplimiento: la tarjeta de Oportunidades enseña el recuento de
-recomendaciones. Esto sustituye al «Techo teórico … no es una previsión» de
-arriba para esa pantalla; en Recomendaciones sigue el techo del plan, con ese
-nombre. Quedan **dos cifras de techo sin decidir**: el «+N pt» por fila de la
-lista de Oportunidades en Visión general y el «+N pt» por tarjeta en
-Recomendaciones (mismo contrafactual, mismo problema de lectura).
+**Decisiones del fundador (2026-10-08, tras la primera entrega).**
+- **Ninguna cifra de puntos se enseña.** Se retiran el «+87 / Techo teórico»
+  de Visión general, el «+N pt» por fila de Oportunidades, el «+N pt» por
+  tarjeta y por grupo, el «techo del plan» de Recomendaciones y los puntos del
+  informe exportable (PDF y markdown). Eran un contrafactual (ADR 0017) sin
+  resultados medidos que se leía como previsión. **Se mantiene el cálculo
+  interno**: `potentialPoints` sigue ordenando el plan (`planScore`), aunque
+  ya no se vea — ordenar por una estimación sin respaldo es una decisión
+  abierta (ver Pendiente). `formatPoints`/`pointsCaption` quedan sin uso a la
+  espera de que el número vuelva con respaldo medido. Esto sustituye al
+  «Techo teórico … no es una previsión» de más arriba.
+- **La confianza de la acción nunca es «alta».** «Alta» medía que la brecha
+  está observada, no que la acción funcione. Techo `medium` también para las
+  causas directas (`CEILING_CONFIDENCE.direct`) y para el empuje del overlay de
+  cobertura (`bumpConfidence`); la certeza se reserva para el hecho observado
+  (`run_confidence`, «Certeza del diagnóstico»).
+- Dos frases de copy retiradas: «Ejecútalas para recuperar visibilidad frente a
+  X» (resumen de Oportunidades) y «Copiarla es más barato y más seguro que
+  inventar un formato nuevo» (tarjeta «Repite lo que ya te funciona»): prometían
+  un resultado y un coste que nada del escaneo mide.
 
 **Revisión del «0 sin auditoría de web».** No existe en el código: el
 componente `technical` del score se descarta (`value: null`, peso 0, los otros
@@ -21395,8 +21407,11 @@ devuelve `null` sin páginas analizadas y `buildGlobalScore` excluye lo que es
 `global-score.test.ts`). Si en producción se vio un 0, no sale de estas rutas y
 hace falta el caso real para localizarlo.
 
-**Pendiente.** (a) Qué hacer con los dos «+N pt» por fila/tarjeta. (b) Los
-techos por tipo de `BASE_CEILING` son juicio de producto, sin datos.
+**Pendiente.** (a) `planScore` sigue ordenando por puntos ocultos: decidir si el
+orden debe pasar a no depender de ellos. (b) Los techos por tipo de
+`BASE_CEILING` son juicio de producto, sin datos; subirlos exige resultados
+medidos, no una opinión. (c) Si el número vuelve, vuelve etiquetado como
+estimación y con respaldo.
 
 **Trazabilidad.** `lib/recommendations/{confidence,ceiling-copy,recommendation-engine}.ts`,
 `lib/prompts/{topic-contrast,presence-hint}.ts`, tests `unproven-claims`,

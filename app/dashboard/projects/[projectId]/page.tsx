@@ -721,17 +721,6 @@ export default async function ProjectDetailPage({
     extraction_version: r.extraction_version
   }));
 
-  const potentialPointsByRecId = new Map<string, number | null>();
-  for (const rec of latestRecommendations ?? []) {
-    const points = computeRecommendationPotentialPoints(
-      scoreInputRows,
-      project.domain,
-      rec.recommendation_type,
-      affectedPromptIds(rec.evidence_json)
-    );
-    potentialPointsByRecId.set(rec.id, points?.deltaPoints ?? null);
-  }
-
   // UNPROVEN-CLAIMS-1 (founder decision 2026-10-08, log §236): the headline
   // "joint ceiling" figure is retired from the Overview. It was the score if
   // EVERY affected prompt ended up mentioned first and cited — a theoretical
@@ -1437,9 +1426,7 @@ export default async function ProjectDetailPage({
                         : "Acciones priorizadas para ti"}
                     </div>
                     <div className="ov2-opps-s">
-                      {topCompetitor && topCompetitor.mentionRate > computedMentionRate
-                        ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
-                        : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}
+                      Ordenadas por impacto en tu visibilidad en las respuestas de IA.
                     </div>
                   </div>
                 </div>
@@ -1449,8 +1436,6 @@ export default async function ProjectDetailPage({
                     const isQuick = effort === "low";
                     const impact = (rec.impact ?? "low").toLowerCase();
                     const impactLabel = impact === "high" ? "Alto" : impact === "medium" || impact === "med" ? "Medio" : "Bajo";
-                    const rawPoints = potentialPointsByRecId.get(rec.id);
-                    const displayPoints = rawPoints !== null && rawPoints !== undefined ? Math.round(rawPoints) : null;
                     return (
                       <div key={rec.id} className="ov2-opp">
                         <span className="ov2-opp-dot" style={{ background: isQuick ? "var(--pos)" : "var(--brand-neg)" }} />
@@ -1459,14 +1444,7 @@ export default async function ProjectDetailPage({
                           {isQuick && <span className="ov2-opp-quick">rápida</span>}
                         </span>
                         <span className="ov2-opp-r">
-                          {displayPoints !== null && displayPoints > 0 ? (
-                            <>
-                              <span className="n">+{displayPoints}</span>
-                              <span className="u">pt</span>
-                            </>
-                          ) : (
-                            <span className="impact-lbl">Impacto {impactLabel.toLowerCase()}</span>
-                          )}
+                          <span className="impact-lbl">Impacto {impactLabel.toLowerCase()}</span>
                         </span>
                       </div>
                     );

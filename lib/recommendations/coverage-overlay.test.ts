@@ -27,7 +27,7 @@ describe("computeCoverageOverlay", () => {
     expect(overlay.size).toBe(0);
   });
 
-  it("marks a confirmed surfacing gap when the topic is found:true, bumping confidence and attaching the verified page", () => {
+  it("marks a confirmed surfacing gap when the topic is found:true, keeping confidence at most medium and attaching the verified page", () => {
     const overlay = computeCoverageOverlay({
       recommendations: [rec({ confidence: "medium" })],
       resultIdToPromptId: new Map([["result-1", "prompt-1"]]),
@@ -38,7 +38,8 @@ describe("computeCoverageOverlay", () => {
     const entry = overlay.get("rec-1");
     expect(entry?.state).toBe("confirmed_surfacing_gap");
     expect(entry?.verifiedPage).toEqual({ url: "https://acme.com/a", title: "A" });
-    expect(entry?.confidenceOverride).toBe("high");
+    // A verified own page confirms the observed gap, not that the action works.
+    expect(entry?.confidenceOverride).toBe("medium");
   });
 
   it("bumps low confidence to medium (does not jump straight to high)", () => {
@@ -50,13 +51,13 @@ describe("computeCoverageOverlay", () => {
     expect(overlay.get("rec-1")?.confidenceOverride).toBe("medium");
   });
 
-  it("caps high confidence at high", () => {
+  it("never raises the action's confidence above medium", () => {
     const overlay = computeCoverageOverlay({
-      recommendations: [rec({ confidence: "high" })],
+      recommendations: [rec({ confidence: "medium" })],
       resultIdToPromptId: new Map([["result-1", "prompt-1"]]),
       coverageTopics: [{ promptId: "prompt-1", topic: "x", found: true, pages: [], note: "n" }]
     });
-    expect(overlay.get("rec-1")?.confidenceOverride).toBe("high");
+    expect(overlay.get("rec-1")?.confidenceOverride).toBe("medium");
   });
 
   it("marks a possible content gap when the topic is confirmed not-covered, without bumping confidence", () => {

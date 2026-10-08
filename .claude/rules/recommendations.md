@@ -42,15 +42,17 @@ paths:
   ausencia de competidores es relativo a `evidence_json.monitored_competitors`;
   nunca concluye competencia, coste ni ventaja del primero.
 - **La confianza de la acción se deriva de la evidencia, nunca se hereda del
-  run** (`lib/recommendations/confidence.ts`). El run es la *certeza del
-  diagnóstico* (`run_confidence`); una hipótesis de contenido sin fragmento no
-  pasa de «Baja», con fuentes/marcas observadas no pasa de «Media». Tipo nuevo
-  ⇒ decidir su techo en `BASE_CEILING` (sin entrada = contextual).
+  run, y NUNCA es «alta»** (`lib/recommendations/confidence.ts`, log §236). El
+  run es la *certeza del diagnóstico* (`run_confidence`); la acción es una
+  hipótesis hasta que haya resultados medidos: techo «media» con causa directa,
+  «media» con fuentes/marcas observadas, «baja» sin fragmento. Lo mismo vale
+  para el overlay de cobertura. Tipo nuevo ⇒ decidir su techo en
+  `BASE_CEILING` (sin entrada = contextual); subirlo exige datos medidos.
 - **Las fuentes citadas no son menciones verificadas** (ver `citations.md`):
   «tu dominio no figura entre las fuentes», nunca «no te mencionan».
-- **Los dos techos de puntos se llaman techo** (`ceiling-copy.ts`), nunca
-  «potenciales» ni promesa de que el próximo escaneo lo confirma. Las cifras
-  son contrafactuales conjuntos (ADR 0017 §3), no sumas.
+- **Ninguna cifra de «+N pt» ni «techo» se muestra al usuario** (pantalla,
+  informe exportable ni markdown) hasta que exista respaldo medido. El cálculo
+  de abajo sigue vivo sólo como señal interna de orden.
 
 ## Puntos potenciales
 
