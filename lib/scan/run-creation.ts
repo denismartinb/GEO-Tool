@@ -8,6 +8,9 @@ import { ProjectActionError } from "@/lib/scan/types";
 import type { AuthenticatedContext } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 
+/** Postgres SQLSTATE `unique_violation`. */
+const UNIQUE_VIOLATION = "23505";
+
 type CopyForwardResultRow = {
   prompt_id: string;
   prompt_text_snapshot: string;
@@ -390,6 +393,15 @@ export async function createPendingScanRunCore({
     })
     .select("id")
     .single();
+
+  // The active-run check above is a read followed by this insert, so two
+  // launches in flight can both pass it. `scan_runs_one_live_per_project_uniq`
+  // (migration 0039) lets only one insert win; the loser is the same situation
+  // the check reports, and says the same thing. Without the index this branch
+  // is never reached, so the code is safe to ship before the migration.
+  if (runError?.code === UNIQUE_VIOLATION) {
+    throw new ProjectActionError("active_run_exists");
+  }
 
   if (runError || !run) {
     throw new ProjectActionError("scan_failed");

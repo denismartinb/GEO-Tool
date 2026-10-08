@@ -1,0 +1,55 @@
+-- 0039_scan_runs_one_live_per_project.sql
+--
+-- Phase: SCAN-LIVE-RUN-INDEX-1 (founder-approved in principle 2026-10-08, on
+-- PR #550; integration gated behind security 01B and identity 07).
+-- NUMBER IS PROVISIONAL: 0038 is claimed by an open PR (#549) and 0036 by
+-- another (#534). Renumber when this is integrated.
+--
+-- Purpose: at most ONE live scan run per project, enforced by the database.
+-- `createPendingScanRunCore` guards this with a read ("is there a pending or
+-- running run?") followed by an insert. Two launches that overlap in flight
+-- (double click, two tabs, a user launch racing a cron or auto-retry launch)
+-- both pass the read and both insert, so a project ends up with two live runs
+-- chewing the same prompts and doubling the provider spend. A read cannot
+-- close that window; a unique index can.
+--
+-- What the index covers: `status IN ('pending', 'running')`, the same set the
+-- application's active-run check reads. The other three values allowed by
+-- scan_runs_status_chk (completed, failed, cancelled) are terminal and stay
+-- unconstrained, so any number of historical runs per project is unaffected.
+--
+-- What it does NOT change: no column, no data, no RLS, no policy. The code
+-- change that goes with it maps SQLSTATE 23505 on the run insert to the
+-- existing `active_run_exists` error, so a lost race looks to the user exactly
+-- like the pre-check that already exists. The code is safe to deploy BEFORE
+-- this index exists (it is then dead code) and the index is safe to create
+-- BEFORE the code is deployed (the loser then sees `scan_failed` instead of
+-- `active_run_exists` — a worse message, never a duplicate run).
+--
+-- PRE-FLIGHT (read-only, run first; must return ZERO rows). If it returns
+-- rows, creating the index fails with 23505 and changes nothing, because the
+-- statement below is a single atomic DDL. Resolve those projects by hand
+-- (decide which run is the real one) — this migration deliberately does not
+-- fail or delete runs on anyone's behalf:
+--
+--   select project_id, count(*) as live_runs, array_agg(id order by created_at) as run_ids
+--   from public.scan_runs
+--   where status in ('pending', 'running')
+--   group by project_id
+--   having count(*) > 1;
+--
+-- Lock: a plain CREATE INDEX takes a SHARE lock on scan_runs (blocks writes,
+-- not reads) for the time it takes to scan the table, which is one row per
+-- scan ever launched. Not CONCURRENTLY on purpose: that form cannot run inside
+-- the SQL editor's implicit transaction.
+--
+-- ROLLBACK (instant, no data impact):
+--
+--   drop index if exists public.scan_runs_one_live_per_project_uniq;
+--
+-- Apply manually in the Supabase SQL editor, after 0037 (and after whatever
+-- migration numbers are claimed by then).
+
+create unique index if not exists scan_runs_one_live_per_project_uniq
+  on public.scan_runs (project_id)
+  where status in ('pending', 'running');

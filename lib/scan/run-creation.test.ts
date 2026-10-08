@@ -29,7 +29,15 @@ function freshId() {
  * `createPendingScanRunCore` read/write the same backing tables here, mirroring
  * how they're really two connections to the same Postgres database.
  */
-function makeFakeDb(initial: Record<string, Row[]>) {
+function makeFakeDb(
+  initial: Record<string, Row[]>,
+  opts: {
+    /** Models `scan_runs_one_live_per_project_uniq` (migration 0039). */
+    liveRunIndex?: boolean;
+    /** Forces the next scan_runs insert to fail with this error. */
+    scanRunInsertError?: { code: string; message: string };
+  } = {}
+) {
   const tables: Record<string, Row[]> = {};
   for (const [name, rows] of Object.entries(initial)) {
     tables[name] = rows.map((r) => ({ ...r }));
@@ -79,7 +87,34 @@ function makeFakeDb(initial: Record<string, Row[]>) {
     return builder;
   }
 
-  function insertBuilder(rows: Row[], payload: Row | Row[]) {
+  const LIVE_STATUSES = ["pending", "running"];
+
+  function insertBuilder(rows: Row[], payload: Row | Row[], tableName = "") {
+    if (tableName === "scan_runs") {
+      const incoming = (Array.isArray(payload) ? payload : [payload])[0] ?? {};
+      const violatesIndex =
+        opts.liveRunIndex === true &&
+        LIVE_STATUSES.includes(String(incoming.status)) &&
+        rows.some((row) => row.project_id === incoming.project_id && LIVE_STATUSES.includes(String(row.status)));
+      const forced = opts.scanRunInsertError;
+      if (violatesIndex || forced) {
+        const error = violatesIndex
+          ? {
+              code: "23505",
+              message: 'duplicate key value violates unique constraint "scan_runs_one_live_per_project_uniq"'
+            }
+          : forced!;
+        // A rejected insert leaves no row behind, like Postgres.
+        return {
+          select(_cols: string) {
+            return { single: () => Promise.resolve({ data: null, error }) };
+          },
+          then(resolve: (value: { error: typeof error }) => unknown) {
+            return Promise.resolve({ error }).then(resolve);
+          }
+        };
+      }
+    }
     const toInsert = (Array.isArray(payload) ? payload : [payload]).map((row) => ({
       id: freshId(),
       created_at: new Date().toISOString(),
@@ -122,7 +157,7 @@ function makeFakeDb(initial: Record<string, Row[]>) {
       const rows = table(name);
       return {
         select: (_cols: string) => selectBuilder(rows),
-        insert: (payload: Row | Row[]) => insertBuilder(rows, payload),
+        insert: (payload: Row | Row[]) => insertBuilder(rows, payload, name),
         update: (patch: Row) => updateBuilder(rows, patch)
       };
     }
@@ -784,5 +819,95 @@ describe("createPendingScanRunCore — free plan scan limit (PRICING-TRUTH-1)", 
 
     expect(runId).toBeTruthy();
     expect(tables.scan_runs.some((r) => r.id === runId)).toBe(true);
+  });
+});
+
+/**
+ * SCAN-LIVE-RUN-INDEX-1 (migration 0039). The fake models the partial unique
+ * index, so these are deterministic: JS is single-threaded and both launches
+ * reach the insert after passing the same read, which is exactly the window
+ * the index closes.
+ */
+describe("createPendingScanRunCore — one live run per project, enforced by the index", () => {
+  beforeEach(() => {
+    nextId = 1;
+  });
+
+  const prompts = Array.from({ length: 5 }, (_, i) => ({
+    id: `prompt-${i}`,
+    project_id: PROJECT_ID,
+    prompt_text: `Prompt ${i}`,
+    is_active: true,
+    created_at: `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`
+  }));
+
+  const input = (client: unknown) => ({
+    projectId: PROJECT_ID,
+    readClient: client as SupabaseClient,
+    service: client as ServiceClient,
+    triggeredByUserId: "user-1",
+    triggerSource: "user" as const
+  });
+
+  it("two simultaneous launches create exactly one run; the loser is active_run_exists, not scan_failed", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts }), { liveRunIndex: true });
+
+    const results = await Promise.allSettled([
+      createPendingScanRunCore(input(client)),
+      createPendingScanRunCore(input(client))
+    ]);
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const lost = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(lost.reason).toMatchObject({ code: "active_run_exists" });
+
+    expect(tables.scan_runs).toHaveLength(1);
+    // The loser inserted no jobs either: every job belongs to the winning run.
+    const winner = tables.scan_runs[0]!.id;
+    expect(tables.jobs.length).toBeGreaterThan(0);
+    expect(tables.jobs.every((job) => job.run_id === winner)).toBe(true);
+  });
+
+  it.each(["completed", "failed", "cancelled"])(
+    "a %s run does not block a new launch (terminal statuses are outside the index)",
+    async (status) => {
+      const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+      const { client, tables } = makeFakeDb(
+        baseTables({
+          project_prompts: prompts,
+          scan_runs: [{ id: "old", project_id: PROJECT_ID, status, created_at: "2026-01-01T00:00:00.000Z" }]
+        }),
+        { liveRunIndex: true }
+      );
+
+      await expect(createPendingScanRunCore(input(client))).resolves.toBeTruthy();
+      expect(tables.scan_runs).toHaveLength(2);
+    }
+  );
+
+  it("another project's live run does not block this one", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+    const { client, tables } = makeFakeDb(
+      baseTables({
+        project_prompts: prompts,
+        scan_runs: [{ id: "other", project_id: "project-2", status: "running", created_at: "2026-01-01T00:00:00.000Z" }]
+      }),
+      { liveRunIndex: true }
+    );
+
+    await expect(createPendingScanRunCore(input(client))).resolves.toBeTruthy();
+    expect(tables.scan_runs).toHaveLength(2);
+  });
+
+  it("only SQLSTATE 23505 is reinterpreted: any other insert failure stays scan_failed", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts }), {
+      scanRunInsertError: { code: "23502", message: "null value in column" }
+    });
+
+    await expect(createPendingScanRunCore(input(client))).rejects.toMatchObject({ code: "scan_failed" });
+    expect(tables.scan_runs).toHaveLength(0);
+    expect(tables.jobs).toHaveLength(0);
   });
 });

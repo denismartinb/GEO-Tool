@@ -21327,3 +21327,78 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 240. SCAN-LIVE-RUN-INDEX-1: un solo run vivo por proyecto, garantizado por la base de datos (2026-10-08, PREPARADO, sin integrar)
+
+**Número provisional.** §236 lo reclaman a la vez #547, #548, #549, #550 y #552;
+éste se numera §240 para no sumar otra colisión y se renumera al integrar. La
+migración 0039 también es provisional (0038 la reclama #549, 0036 la reclama
+#534).
+
+**Estado.** Preparado en rama aparte, **sin aplicar y sin integrar**. Decisión
+del fundador (2026-10-08, en #550): sí, en PR aparte y en borrador, y no antes
+de que entren seguridad 01B e identidad 07. No se mezcla con el asistente
+(#550) ni con la corrección 23505 de #552 (`create-project.ts` no se toca).
+
+**Qué pasaba.** `createPendingScanRunCore` comprueba «¿hay un run `pending` o
+`running`?» con una lectura y después inserta. Dos lanzamientos que se solapan
+(doble clic, dos pestañas, un lanzamiento del usuario contra uno del cron o del
+auto-reintento) pasan los dos la lectura e insertan los dos: un proyecto con dos
+runs vivos sobre los mismos prompts, con el gasto de proveedor duplicado.
+Reproducido de forma determinista con un fake que modela el índice (#550 lo
+dejó fijado como `it.fails`).
+
+**Decisión.**
+- Índice único parcial `scan_runs_one_live_per_project_uniq` sobre
+  `(project_id) WHERE status IN ('pending','running')`.
+- **Incluye** `pending` y `running`, el mismo conjunto que lee la comprobación de
+  la aplicación (un test estático los ata). **Excluye** `completed`, `failed` y
+  `cancelled`: son terminales y un proyecto sigue pudiendo tener cualquier
+  número de runs históricos. El resto de valores de `scan_runs_status_chk` no
+  existen.
+- Código: SQLSTATE `23505` en el insert del run se traduce a `active_run_exists`
+  (el error que ya usa la comprobación previa), así que el perdedor de la
+  carrera ve lo mismo que hoy. El resto de errores de insert siguen siendo
+  `scan_failed`. Es seguro desplegar el código antes que el índice (rama
+  muerta) y crear el índice antes que el código (el perdedor ve `scan_failed`,
+  peor mensaje pero nunca un run duplicado).
+- Un único punto de inserción en `scan_runs` (`run-creation.ts`); cron, lanzador,
+  alta de proyecto y auto-reintento pasan todos por él. El auto-reintento crea
+  el run de reemplazo **después** de marcar el anterior como `failed`, así que
+  no choca con el índice. `resume.ts` y el paso `pending → running` del
+  ejecutor actúan sobre la misma fila y no cambian cuántas hay vivas.
+
+**Antes de aplicarla (pre-flight).** La consulta que lista proyectos con más de
+un run vivo está en la cabecera de la migración y debe devolver cero filas. Si
+devuelve alguna, `CREATE UNIQUE INDEX` falla con 23505 sin cambiar nada
+(DDL atómica): se resuelve a mano qué run es el real. La migración no falla ni
+borra runs por nadie. Bloqueo: `SHARE` sobre `scan_runs` el tiempo de leer la
+tabla (una fila por escaneo lanzado); sin `CONCURRENTLY`, que no corre dentro
+de la transacción del editor SQL.
+
+**Rollback.** `drop index if exists public.scan_runs_one_live_per_project_uniq;`
+— instantáneo, sin efecto sobre datos.
+
+**Conflictos conocidos al integrar.**
+1. `lib/scan/run-creation.test.ts`: #550 añade al final su bloque con el
+   `it.fails` «KNOWN GAP» y esta rama añade al final el suyo, además de
+   extender `makeFakeDb` con opciones. Conflicto textual en el final del
+   fichero. Al integrar, el `it.fails` de #550 se **promueve** (se borra: el
+   test determinista de esta rama lo sustituye).
+2. `.claude/rules/scan.md`: #550 añade la regla «el guardián de un solo run
+   vivo es una lectura seguida de un insert, y no hay índice». Al integrar esta
+   rama esa regla se **reescribe** (ya hay índice; el mapa 23505 → `active_run_exists`
+   es el invariante nuevo). No se toca aquí para no pelear con #550.
+3. `CLAUDE.md`, celda «Escaneo (pipeline)» del mapa de zonas, y `§` del log:
+   misma celda y misma numeración que reclaman #550 y los demás.
+4. Número de migración (arriba).
+
+**Pendiente.** Integrar tras 01B e identidad 07; renumerar; aplicar la migración
+a mano en Supabase tras ejecutar el pre-flight; cierre de fase (regla y mapa de
+zonas) en ese momento.
+
+**Premisa de retirada.** No se retira ningún camino de recuperación.
+
+**Trazabilidad.** `supabase/migrations/0039_scan_runs_one_live_per_project.sql`,
+`lib/scan/run-creation.ts`, `lib/scan/run-creation.test.ts`,
+`lib/scan/live-run-index.test.ts`.
