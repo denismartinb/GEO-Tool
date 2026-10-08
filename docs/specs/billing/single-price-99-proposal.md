@@ -182,9 +182,9 @@ el orden de magnitud, no para restar.
 | Precio | 99 €/mes, IVA incluido, para todos | **decidido** |
 | Dominios · preguntas · motores | 3 · 75 totales · 3 | candidato |
 | Cadencia | semanal + 1 recheck manual por dominio y mes | candidato |
-| Mínimo de preguntas por dominio / suelo de 50 | **sin definir** (ver §5.2) | abierto |
-| Prueba | 14 días, opt-in, iniciada tras el primer escaneo completado | propuesta |
-| Diagnóstico acotado previo | aparte de la prueba (hoy: escaneo Free y comprobador gratuito) | propuesta |
+| Mínimo de preguntas por dominio / suelo de 50 | **sin elegir**: tres opciones comparadas en §12.1 | abierto |
+| Prueba | **tres decisiones distintas, ninguna aprobada** (diagnóstico · comienzo de la prueba · opt-in de tarjeta/pago): ver §12.2 | abierto |
+| Diagnóstico acotado previo | aparte de la prueba (hoy: escaneo Free y comprobador gratuito) | abierto |
 | Fallo de pago | `past_due` visible, enlace al portal, **N días de gracia: sin definir**, corte al cancelar Stripe | propuesta |
 | Cancelación | al final del periodo, vía portal | mantiene lo actual |
 | Qué NO incluye | más dominios o preguntas; diario; soluciones ilimitadas: **sin definir** | abierto |
@@ -248,10 +248,10 @@ esquema. «Puerta» = aprobación expresa del dueño antes de tocarlo.
 |---|---|---|---|---|---|
 | 0 | **Inventario de cuentas** (§3) | — | consultas de solo lectura | no | sí (antes de todo) |
 | 1 | **ID técnico del plan**: reutilizar `pro` con otras cuotas o ID nuevo | 0, D1 | `plans-data.ts`, `lib/billing.ts` (`isProOrAbove`, `DEFAULT_PLAN_ID`, `COMPED_PLAN_ID`), 23 ficheros que ramifican por ID | **sí si ID nuevo** (`CHECK` de `0010_profile_current_plan.sql`); no si se reutiliza `pro` | sí |
-| 2 | **Bolsa de 75 preguntas por cuenta** | 1, D2 | `lib/projects/add-prompts.ts`, `app/dashboard/projects/actions.ts` (alta), `prompts/page.tsx` (`atPromptLimit`), `lib/scan/run-creation.ts` (`campaignCap`), `lib/billing.ts` (`promptCap`), asistente de alta | no si se cuenta sumando prompts activos de los proyectos del dueño; **atómico solo con trigger/constraint** (si no, dos altas simultáneas pueden pasarse) | sí |
+| 2 | **Bolsa de 75 preguntas por cuenta** | 1, D2 | `lib/projects/add-prompts.ts`, `app/dashboard/projects/actions.ts` (alta), `prompts/page.tsx` (`atPromptLimit`), `lib/scan/run-creation.ts` (`campaignCap`), `lib/billing.ts` (`promptCap`), asistente de alta | no si se cuenta en la aplicación; **esa cuenta NO es atómica** (ver §12.3): sin trigger o constraint la bolsa de 75 **no está garantizada** | sí |
 | 3 | **Mínimo por dominio / suelo de 50** | D2 | `lib/scan/sampling.ts` (`SAMPLING_EXCLUDED_PLAN_IDS` o un mínimo de preguntas por dominio) | no | sí |
 | 4 | **Cadencia semanal** | 1 | `lib/scan/cron.ts`, `lib/scan/cron-schedule.ts` (anclado al horario, §192), `lib/data-maturity.ts`, copy | no (ya existe la cadencia semanal de `starter`) | no |
-| 5 | **Recheck manual: 1 por dominio y mes** | 1, D3 | `lib/scan/run-creation.ts`, botón de escaneo, copy de agotado | **posiblemente no**: `scan_runs.trigger_source` ya distingue `user`/`cron`; contar `user` del mes por proyecto. Matices a resolver: el primer escaneo del dominio y los reintentos automáticos no deben consumirlo | sí |
+| 5 | **Recheck manual** (unidad propuesta: dominio; sin decidir, §12.4) | 1, D3 | `lib/scan/run-creation.ts`, botón de escaneo, copy de agotado | **posiblemente no**: `scan_runs.trigger_source` ya distingue `user`/`cron`; contar `user` del mes por proyecto. Matices a resolver: los reintentos automáticos ya salen como `cron` (`reconciliation.ts:138`); el primer escaneo del dominio y un reintento manual salen como `user` y no se distinguen de un recheck | sí |
 | 6 | **Prueba de 14 días opt-in tras el primer escaneo completado** | 1, D4 | `handle_new_user` (hoy: `pro` + 7 días al registrarse, migración 0017), nueva acción de servidor que fija `trial_ends_at`, `applyTrialExpiry`, correos del ciclo de vida (D1/D3/D5 colgados del registro), copy de registro/FAQ/bienvenida | **sí** (reemplazo del trigger; `trial_ends_at` ya existe y la protege el trigger de columnas protegidas, ampliado en la migración 0017) | sí |
 | 7 | **Estado de suscripción y fallo de pago visible** (`trialing`/`active`/`past_due`/`canceled`/`free`) | D5, D6 | webhook (`invoice.payment_failed` hoy solo envía correo), `lib/billing.ts`, «Tu plan», selector, enlace al portal | **sí** si se guarda `subscription_status`; no si se lee de Stripe al pintar (más lento, depende de la red) | sí |
 | 8 | **Stripe**: 1 Product/Price inclusivo, mapeo, archivar los antiguos | 0, D7, D8 | env `STRIPE_PRICE_ID_PRO`; **a mano en el Dashboard** | no | sí (y live aparte) |
@@ -279,9 +279,10 @@ envía correos o alertas**:
    cada cliente en Stripe que no coincidan con `profiles.stripe_subscription_id`. Salida:
    tabla para decisión humana. Sin escrituras en Stripe ni en la base.
 3. **Cortar el origen**: antes de crear un Checkout, comprobar con lecturas de Stripe que el
-   cliente no tenga ya una suscripción viva sin enlazar; y activar en el Dashboard la opción
-   de Stripe de limitar a un cliente a una suscripción (**verificar que existe en vuestra
-   versión del Dashboard**). Requiere que el cliente exista antes del Checkout; crear el
+   cliente no tenga ya una suscripción viva sin enlazar; y, **sujeto a que exista y se
+   verifique** en vuestro Dashboard, la opción de Stripe de limitar a un cliente a una
+   suscripción. **No sustituye** a la conciliación ni a las guardas del webhook: es una
+   barrera más, no una garantía. Requiere que el cliente exista antes del Checkout; crear el
    cliente es una escritura menor en Stripe que también necesita aprobación.
 4. **Más adelante, con aprobación expresa**: alerta a `OPS_ALERT_EMAIL` (nunca al cliente),
    una vez por evento y tras el commit. Decidir cuál suscripción es la correcta y cancelar
@@ -292,15 +293,78 @@ envía correos o alertas**:
 | ID | Decisión | Opciones | Recomendación |
 |---|---|---|---|
 | D1 | ID técnico del plan único | reutilizar `pro` · ID nuevo | reutilizar `pro` (sin migración); renombrar solo la presentación |
-| D2 | Bolsa de 75 y suelo de 50 | mínimo de preguntas por dominio · desactivar el suelo para este plan · aceptar hasta +43 % | **mínimo por dominio de 17** (así el suelo no actúa y el coste es lineal) |
-| D3 | Qué consume el recheck mensual | solo escaneos manuales · excluir el primer escaneo y los reintentos | excluir primer escaneo y reintentos automáticos |
-| D4 | Prueba | 14 días opt-in tras el primer escaneo · mantener 7 días desde el registro | decisión del dueño; si es opt-in, define si hay un diagnóstico previo distinto del escaneo Free |
+| D2 | Bolsa de 75 y suelo de 50 | distribución libre · mínimo por dominio · desactivar el suelo para este plan | **sin elegir** — comparación en §12.1 |
+| D3 | Recheck mensual: unidad y qué consume | por dominio · por cuenta; fallos y reintentos manuales: consumen / no consumen | **sin elegir** — opciones en §12.4 |
+| D4 | Prueba | tres decisiones separadas (§12.2) · mantener 7 días desde el registro | **sin elegir**; 99 € IVA incluido no la aprueba |
 | D5 | Fallo de pago | días de gracia con acceso · corte inmediato | acceso durante los reintentos de Stripe, con aviso visible; fijar el número de días |
 | D6 | Dónde vive el estado de suscripción | columna `subscription_status` · lectura de Stripe al pintar | columna (más rápido y verificable), con migración aprobada |
-| D7 | Una suscripción por cliente | activar el límite de Stripe + crear el cliente antes del Checkout | sí, tras verificar el ajuste |
+| D7 | Una suscripción por cliente | límite de Stripe (si existe) + crear el cliente antes del Checkout | **propuesta sujeta a existencia y verificación**; no sustituye la conciliación ni las guardas |
 | D8 | Fiscalidad | `tax_behavior: inclusive`, tax code, registros (OSS) | confirmar con el asesor y verificar en test |
 | D9 | Cuentas `starter`/`agency`/*comped* | mantener intactas · migrar | mantener hasta el inventario |
 | D10 | Orden de ejecución | el del §10 | el del §10 |
+
+
+### 12.0 Qué NO aprueba el precio
+
+**99 € al mes con IVA incluido no aprueba** la prueba, las cuotas, la gracia del fallo de
+pago, el recheck ni el suelo de muestreo. Es un precio; todo lo de este apartado sigue
+siendo propuesta.
+
+### 12.1 Bolsa de 75 y suelo de 50: tres opciones, ninguna elegida
+
+Supuestos: 3 motores, suelo de 50 respuestas por escaneo y dominio
+(`lib/scan/sampling.ts`), coste de referencia del §5.2. «Coste» = generación +
+extracción (+ auditoría, donde se indica).
+
+| | **A. Distribución libre** (hoy sería así) | **B. Mínimo de 17 preguntas por dominio** | **C. Sin suelo para este plan** |
+|---|---|---|---|
+| Flexibilidad del usuario | total: puede tener un dominio de 3 preguntas | menor: no hay dominio por debajo de 17 (con 75 totales: 4 dominios como máximo, 3 si se usan los 3) | total |
+| Coste nominal (25 + 25 + 25) | ≈ 22,0 USD/mes | ≈ 22,0 USD/mes | ≈ 22,0 USD/mes |
+| Peor reparto dentro de las 75 | hasta **+43 %** en generación + extracción (≈ 25,5 USD/mes si la auditoría no se repite; sin verificar) | ≈ 22,0 USD/mes: el suelo nunca actúa, el coste es lineal | por debajo del nominal: menos respuestas por escaneo |
+| Fiabilidad del score | mejor en dominios pequeños (más respuestas) | siempre ≥ 51 respuestas por escaneo | peor en dominios pequeños: se publica con su margen a la vista, como hoy hace el nivel Free |
+| Trabajo | ninguno | regla de mínimo en alta y edición de prompts | excluir el plan de `SAMPLING_EXCLUDED_PLAN_IDS` |
+
+Elegir una es una decisión de producto y de coste del dueño. **No se elige aquí.**
+
+### 12.2 Prueba de 14 días opt-in: tres decisiones que no son la misma
+
+| Decisión | Qué responde | Hoy | Opciones (sin elegir) |
+|---|---|---|---|
+| **Diagnóstico** | qué ve alguien antes de comprometerse a nada | escaneo Free (1 dominio, ~10 prompts, 1 motor) y comprobador gratuito | mantener tal cual · ampliarlo con un diagnóstico acotado aparte |
+| **Comienzo de la prueba** | cuándo empiezan los días | al registrarse, automático (Pro, 7 días, migración 0017) | al registrarse · al terminar el primer escaneo · solo cuando la persona la activa (opt-in) |
+| **Opt-in de tarjeta o pago** | si hace falta método de pago para empezar o para continuar | no se pide tarjeta; al terminar baja a Free sin cobrar | sin tarjeta, baja a Free · tarjeta al empezar · tarjeta antes del fin con aviso |
+
+Cada fila puede combinarse con cualquiera de las otras. Ninguna combinación está aprobada.
+
+### 12.3 La bolsa de 75, contada en la aplicación, no es atómica
+
+Contar los prompts activos de todos los proyectos del dueño antes de crear uno es una
+lectura seguida de una escritura. Dos altas simultáneas (dos pestañas, o el asistente y una
+importación) pueden leer ambas «74» y crear una cada una → 76. Sin un trigger o una
+constraint en la base de datos, **la bolsa de 75 no está garantizada**; es un límite
+«salvo carrera». Mantener este riesgo visible en cualquier copy y test: no se declara una
+bolsa garantizada sin el mecanismo. Añadir el mecanismo exige esquema y su propia
+aprobación.
+
+### 12.4 Recheck mensual: unidad y consumo, sin decidir
+
+- **Unidad propuesta: por dominio y mes natural** (como lo describe el candidato). La
+  alternativa es **por cuenta** (un pool para los 3 dominios). Cambian el comportamiento
+  y la complejidad; no está aprobada ninguna.
+- **Excluidos de la cuenta (propuesta):** el primer escaneo de cada dominio y los
+  reintentos automáticos.
+- **Sin decidir, y por tanto explícito:** si un escaneo manual que **falla** consume el
+  recheck, y si un **reintento manual** tras un fallo lo consume. Opciones: (i) consume
+  solo si el escaneo termina completado; (ii) consume al lanzarse; (iii) un fallo propio
+  del sistema no consume y uno del usuario sí. La más cercana al principio de no cobrar
+  por trabajo que no se entrega es (i), pero **no está elegida**.
+- Se puede derivar de `scan_runs.trigger_source = 'user'` sin esquema nuevo. Comprobado en
+  el código: los reintentos **automáticos** de la reconciliación se crean con
+  `triggerSource: "cron"` (`lib/scan/reconciliation.ts:138`), así que ya quedan fuera de
+  esa cuenta. Lo que **no** distingue la columna: el primer escaneo del dominio y un
+  reintento **manual** tras un fallo también salen como `user`, igual que un recheck. Para
+  excluir el primero y decidir el segundo hace falta otra señal (p. ej. «es el primer run
+  del proyecto» o un campo de motivo), y eso puede exigir esquema.
 
 ## 13. Qué prueban y qué no prueban las capturas de checkout aportadas
 
