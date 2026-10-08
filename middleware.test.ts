@@ -30,6 +30,9 @@ function request(pathname: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The pre-existing suites below test the NORMAL (production) behaviour. On this preview-only branch every
+  // other environment is locked (PREVIEW-LOCKDOWN-1): see the lockdown describe at the end.
+  process.env.VERCEL_ENV = "production";
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://proyecto.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
 });
@@ -114,13 +117,8 @@ describe("middleware · alcance", () => {
     // de la ruta y las exclusiones parecen no funcionar.
     const matcher = new RegExp(`^${config.matcher[0]}$`);
 
-    for (const excluded of [
-      "/_next/static/chunks/main.js",
-      "/_next/image",
-      "/favicon.ico",
-      "/brand/genscore-email-header.png",
-      "/logo.svg"
-    ]) {
+    // PREVIEW-LOCKDOWN-1: only Next's immutable output stays excluded; favicon and images now pass through the lock.
+    for (const excluded of ["/_next/static/chunks/main.js", "/_next/image"]) {
       expect(matcher.test(excluded), excluded).toBe(false);
     }
   });
@@ -135,3 +133,52 @@ describe("middleware · alcance", () => {
     }
   });
 });
+
+describe("PREVIEW-LOCKDOWN-1 · middleware en una vista previa (rama preview/contract-99-ui, nunca se fusiona)", () => {
+  beforeEach(() => {
+    process.env.VERCEL_ENV = "preview";
+  });
+
+  const req = (path: string, init?: RequestInit) => new NextRequest(new Request(`https://preview.example${path}`, init));
+
+  it("una ruta bloqueada NO crea el cliente de Supabase ni llama a nada: responde 403 antes", async () => {
+    for (const path of ["/dashboard", "/api/me", "/api/gratis/comprobar", "/login", "/signup", "/auth/callback", "/admin", "/baja"]) {
+      const response = await middleware(req(path));
+      expect(response.status, path).toBe(403);
+    }
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it("un POST (toda acción de servidor lo es) se bloquea incluso sobre una página permitida", async () => {
+    for (const path of ["/", "/pricing", "/docs/planes-y-limites", "/api/gratis/comprobar"]) {
+      expect((await middleware(req(path, { method: "POST" }))).status, path).toBe(403);
+    }
+    expect((await middleware(req("/", { method: "GET", headers: { "next-action": "abc" } }))).status).toBe(403);
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it("sirve las páginas públicas de solo lectura sin tocar Supabase, con CSP y noindex", async () => {
+    for (const path of ["/", "/pricing", "/docs/planes-y-limites", "/blog", "/preview/index.html", "/preview/emails/trial-d5.html"]) {
+      const response = await middleware(req(path));
+      expect(response.status, path).toBe(200);
+      expect(response.headers.get("content-security-policy"), path).toBe("connect-src 'self'; form-action 'self'");
+      expect(response.headers.get("x-robots-tag"), path).toContain("noindex");
+      expect(response.headers.get("x-preview-isolation"), path).toBe("locked");
+    }
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it("el matcher cubre rutas que el de producción dejaba fuera, y un segmento dinámico acabado en .png no se escapa", () => {
+    const matcher = new RegExp(`^${config.matcher[0]}$`);
+    for (const path of ["/api/gratis/comprobar", "/docs/x", "/comparativas/y", "/api/algo/cualquiera.png", "/robots.txt", "/favicon.ico"]) {
+      expect(matcher.test(path), path).toBe(true);
+    }
+  });
+
+  it("en producción NO bloquea nada (el bloqueo es solo para entornos que no son producción)", async () => {
+    process.env.VERCEL_ENV = "production";
+    expect((await middleware(req("/dashboard"))).status).toBe(200);
+    expect(getClaims).toHaveBeenCalledTimes(1);
+  });
+});
+

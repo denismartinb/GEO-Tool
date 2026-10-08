@@ -1,0 +1,105 @@
+[
+  {
+    "page": "/pricing",
+    "viewport": "390",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 33,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": [
+      "GET http://localhost:3111/api/me"
+    ]
+  },
+  {
+    "page": "/",
+    "viewport": "390",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 36,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": [
+      "GET http://localhost:3111/api/me",
+      "GET http://localhost:3111/api/favicon?domain=ikea.es&sz=32"
+    ]
+  },
+  {
+    "page": "/preview/index.html",
+    "viewport": "390",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 1,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": []
+  },
+  {
+    "page": "/preview/emails/trial-d5.html",
+    "viewport": "390",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 1,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": []
+  },
+  {
+    "page": "/pricing",
+    "viewport": "768",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 34,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": [
+      "GET http://localhost:3111/api/me"
+    ]
+  },
+  {
+    "page": "/pricing",
+    "viewport": "1280",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 48,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": [
+      "GET http://localhost:3111/api/me"
+    ]
+  },
+  {
+    "page": "/",
+    "viewport": "1280",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 51,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": [
+      "GET http://localhost:3111/api/me",
+      "GET http://localhost:3111/api/favicon?domain=ikea.es&sz=32"
+    ]
+  },
+  {
+    "page": "/preview/index.html",
+    "viewport": "1280",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 1,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": []
+  },
+  {
+    "page": "/preview/emails/trial-d5.html",
+    "viewport": "1280",
+    "status": 200,
+    "pageOverflowPx": 0,
+    "requests": 1,
+    "nonLocalAttempts": [],
+    "apiOrAuthAttempts": []
+  },
+  {
+    "ctaLinksSeen": [
+      "/login",
+      "/signup",
+      "/signup?plan=free",
+      "/signup?plan=pro"
+    ],
+    "ctaResult": "clicked → http://localhost:3111/signup status 403; body:  Vista previa aislada Esta ruta está desactivada en la vista previa: no escribe en ningún ",
+    "nonGetRequestsFromBrowser": []
+  }
+]

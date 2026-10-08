@@ -1,0 +1,38 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Vista previa aislada · 99 € y correos</title>
+<body style="font:16px/1.55 system-ui;max-width:44rem;margin:6vh auto;padding:0 20px;color:#0B1426">
+<h1 style="font-size:26px">Vista previa aislada</h1>
+<p style="background:#FFF7E6;border:1px solid #F2D48B;padding:12px 14px;border-radius:10px"><b>Es una vista previa de revisión, no el producto.</b> No hay sesión, no hay datos reales, no hay cobros, no se envía ningún correo y ninguna ruta que escriba responde. Los correos de abajo son <b>HTML estático con datos ficticios</b>, sin destinatario y sin enlaces.</p>
+<h2 style="font-size:19px">Qué probar</h2>
+<ol>
+<li><a href="/pricing">/pricing</a>: <b>99 €/mes, IVA incluido</b>, plan único, 3 dominios · 75 prompts en total · 3 motores · escaneo semanal. Mírala a <b>390</b> y a <b>1280</b> px: la matriz no debe recortar la columna Pro.</li>
+<li><a href="/">Portada</a>: la tira superior dice «14 días · de Pro, si quieres, sin tarjeta». <b>Eso aún no está implementado</b> (hoy el registro da 7 días de Pro): es el texto de la propuesta, que no debe desplegarse antes de B5. Y la sección del testimonio ya no existe.</li>
+<li><a href="/docs/planes-y-limites">/docs/planes-y-limites</a> y el resto de páginas públicas.</li>
+<li>Los correos corregidos (abajo): D5 sin testimonio, sin Starter y con «IVA incluido».</li>
+</ol>
+<h2 style="font-size:19px">Correos (fixture)</h2>
+<ul>
+<li><a href="/preview/emails/account-deleted.html">Cuenta eliminada</a></li>
+<li><a href="/preview/emails/cancellation-scheduled.html">Cancelación programada</a></li>
+<li><a href="/preview/emails/first-scan-no-mentions.html">Primer escaneo listo (sin menciones)</a></li>
+<li><a href="/preview/emails/first-scan-with-mentions.html">Primer escaneo listo (con menciones)</a></li>
+<li><a href="/preview/emails/payment-failed.html">Fallo de pago (no menciona aún la gracia de 3 días)</a></li>
+<li><a href="/preview/emails/plan-confirmed.html">Plan confirmado</a></li>
+<li><a href="/preview/emails/score-drop.html">Aviso de caída de puntuación</a></li>
+<li><a href="/preview/emails/trial-d1-no-domain.html">D1 · te falta un paso (sin dominio)</a></li>
+<li><a href="/preview/emails/trial-d1-no-scan.html">D1 · primer escaneo a un clic</a></li>
+<li><a href="/preview/emails/trial-d3-no-recommendation.html">D3 · primera acción</a></li>
+<li><a href="/preview/emails/trial-d5.html">D5 · quedan 2 días (99 € IVA incluido, sin testimonio, sin Starter)</a></li>
+<li><a href="/preview/emails/trial-ended.html">Prueba terminada (dice «7 días»)</a></li>
+<li><a href="/preview/emails/weekly-digest.html">Resumen semanal</a></li>
+<li><a href="/preview/emails/welcome.html">Bienvenida (dice «7 días»: cierto hoy, cambia con B5)</a></li>
+</ul>
+<h2 style="font-size:19px">Qué NO hace esta vista previa (barreras)</h2>
+<ul>
+<li>Solo se sirven GET/HEAD de una lista cerrada de páginas públicas. <b>Todo lo demás responde 403 antes de ejecutar código de la aplicación</b>: API, acciones de servidor (siempre POST), consola, administración, registro, acceso, callback de autenticación, baja de correo y crons.</li>
+<li>Las rutas bloqueadas ni siquiera crean el cliente de Supabase. Los enlaces a «Empezar gratis» o «Acceder» llevan a una página «Vista previa aislada» (es lo esperado).</li>
+<li>Cabecera <code>Content-Security-Policy: connect-src 'self'; form-action 'self'</code>: el navegador no puede hablar con Supabase, Stripe ni analítica desde estas páginas.</li>
+<li>Con <code>VERCEL_ENV=production</code> el bloqueo se desactiva: esta rama <b>no se fusiona</b> y no es una versión para producción.</li>
+</ul>
+<p style="color:#5B6B82;font-size:14px">Lo que esto no demuestra: checkout, IVA real de Stripe, la prueba de 14 días, webhooks, ni cómo se ve en un dispositivo real. Si te pide iniciar sesión en Vercel, es el acceso a la vista previa del equipo, no GenScore.</p>
+</body></html>

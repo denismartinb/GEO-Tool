@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { LOCKDOWN_HEADERS, decideLockdown, isLockdownActive, lockedBody } from "@/lib/preview-lockdown";
 import {
   ACTIVE_PROJECT_COOKIE,
   getProjectIdFromDomainsQuery,
@@ -15,6 +16,25 @@ import {
  * counterpart referenced by that file's comment.
  */
 export async function middleware(request: NextRequest) {
+  // PREVIEW-LOCKDOWN-1 (branch `preview/contract-99-ui` only, never merged): deny by default, BEFORE anything else —
+  // before the Supabase client exists, so a locked request makes no call to any backend.
+  if (isLockdownActive()) {
+    const decision = decideLockdown({
+      method: request.method,
+      pathname: request.nextUrl.pathname,
+      hasServerActionHeader: request.headers.has("next-action")
+    });
+    if (!decision.allow) {
+      return new NextResponse(lockedBody(decision.reason), {
+        status: 403,
+        headers: { ...LOCKDOWN_HEADERS, "content-type": "text/html; charset=utf-8" }
+      });
+    }
+    const passthrough = NextResponse.next({ request });
+    for (const [name, value] of Object.entries(LOCKDOWN_HEADERS)) passthrough.headers.set(name, value);
+    return passthrough;
+  }
+
   let response = NextResponse.next({
     request,
   });
@@ -120,6 +140,8 @@ export const config = {
      *   refresh. No such route exists today, but this repo has a documented
      *   history of exactly this class of silent matcher mistake.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore)(?:/|$)|feed\\.xml$|llms\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // PREVIEW-LOCKDOWN-1: EVERYTHING except Next's immutable static output. Deliberately no file-extension
+    // exclusion: a dynamic API segment ending in `.png` (`/api/x/anything.png`) would otherwise skip the lock.
+    "/((?!_next/static|_next/image).*)",
   ],
 };
