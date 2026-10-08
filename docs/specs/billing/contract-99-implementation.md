@@ -25,7 +25,7 @@ usa ese argumento.
 | Fallo de pago | **gracia de 3 días** |
 
 **Puertas que siguen siendo del dueño, por separado:** Price y configuración de Stripe;
-fiscalidad (asesor) y prueba real en TEST; efectos en cualquier entorno externo; merge y
+fiscalidad (asesor) y verificación en el Stripe real (LIVE, ver `stripe-live-procedure.md`); efectos en cualquier entorno externo; merge y
 deploy; migraciones en producción. El #549 mantiene sus `KNOWN LIMITATIONS` y su integración
 sigue sin verificar.
 
@@ -59,7 +59,7 @@ sigue sin verificar.
 | **B5** | Prueba opcional de 14 días tras el diagnóstico, única por cuenta, sin tarjeta | **sí**: reemplazar `handle_new_user` y una marca de «prueba ya usada» | **detenido**: propuesta de UX/onboarding en §13; el esquema necesita aprobación |
 | **B6** | Gracia de 3 días desde el primer pago fallido y después solo lectura hasta pagar | **sí**: guardar la fecha del primer fallo | **núcleo puro hecho** (`lib/billing/payment-grace.ts` + tests); el cableado depende del esquema y del webhook del PR #549 |
 | **B7** | Stripe: 1 Product/Price inclusivo, mapeo, archivar los antiguos | no (a mano en el Dashboard) | **fuera de esta rama** (puerta del dueño) |
-| **B8** | Verificación real en TEST (impuestos, renovación, prorrateo, guardas) | no | **bloqueada por entorno** |
+| **B8** | Verificación en el Stripe real, que es LIVE (impuestos, renovación, prorrateo, guardas): solo lectura desde herramientas y pasos del dueño con comprobación (`stripe-live-procedure.md`) | no | **bloqueada por entorno; procedimiento escrito, nada ejecutado** |
 
 ## 4. Reutilizar el ID `pro`: condiciones
 
@@ -134,7 +134,7 @@ siguen listados con sus precios hasta B1b; el JSON-LD y las comparativas se revi
    prueba y, con aprobación, en producción **antes** de desplegar este código.
 3. Cerrar el insert por REST de `project_prompts` (RLS): cambio aparte.
 4. Q1–Q5 (§5) y el inventario de cuentas del §4.
-5. Price y configuración de Stripe; fiscalidad con el asesor y prueba real en TEST;
+5. Price y configuración de Stripe; fiscalidad con el asesor y verificación en el Stripe real (LIVE);
    merge y deploy.
 
 ## 9. Revisión independiente de B2 (`data-guardian`) y lo que queda abierto
@@ -309,3 +309,35 @@ cambio mecánico. Con `pro` semanal y un solo precio, hoy son inexactas:
 - `/pricing`: titular «Paga solo por lo que necesitas» y las FAQ «¿Qué incluye la prueba de Pro?» y
   «¿Puedo cambiar de plan…?» (esta última y la de la prueba contienen las frases falsas sobre
   facturación que corrigen el PR de seguridad y el PR 2).
+
+## 18. Bolsa de prompts: decisión A/B para el dueño (propuesta; nada aplicado)
+
+Carpeta `docs/specs/billing/proposals/prompt-pool/` (SQL fuera de `supabase/migrations/` a
+propósito), prueba local `scripts/verify-prompt-pool-proposals.sh` y test de deriva
+`lib/projects/prompt-pool-sql.test.ts`. **B2 sigue PARCIAL** hasta que el dueño aplique una de
+las dos y se compruebe el postflight.
+
+| | **A — funciones `service_role`** | **B — trigger en la base, sin `service_role`** |
+|---|---|---|
+| Quién calcula el tope | el llamador (la app) | la base, desde `profiles` (+ tabla de excepciones) |
+| `service_role` en flujo de usuario | **sí** (no aprobado) | no |
+| Vía REST (insert / reactivar) | cerrada solo con la fase A2 (quita la política de insert + trigger) | cerrada por construcción: toda inserción y toda reactivación pasan por el mismo trigger |
+| Un llamador con bug o comprometido que pasa `cap=9999` | **creído** (demostrado en A7) | imposible: el tope no es un argumento |
+| Cuentas *comped* | las resuelve la app (env) | **necesitan fila en `account_prompt_cap_overrides` antes de activar** |
+| Cambia el código de la app | sí (todas las rutas por las funciones) | no para que funcione; opcional: traducir `prompt_pool_full` a mensaje amable |
+| Tope duplicado en SQL | no | sí → fijado a `plans-data.ts` por test |
+| Reversión | 2 fases, cada una en una transacción | borrar un trigger; los datos no se tocan |
+
+Recomendación (mía, la decisión es del dueño): **B**. Cierra el hueco REST sin aprobar
+`service_role`, y es la única donde la cuenta no puede influir en su tope. Coste: un tope
+duplicado (con test) y la lista de *comped*.
+
+Orden, riesgos, copia de seguridad, reversión y matriz vieja/nueva: `proposals/prompt-pool/RUNBOOK.md`.
+Los SQL se entregan al dueño; el agente no los ejecuta fuera de Postgres local.
+
+## 19. Procedimiento para el Stripe real (LIVE)
+
+`stripe-live-procedure.md`: inventario de solo lectura, pasos del dueño con comprobación,
+coste y consentimiento de cualquier cargo de prueba, y lista mínima de seguridad LIVE. Nada
+se ha ejecutado contra Stripe desde esta sesión.
+
