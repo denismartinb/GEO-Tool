@@ -18,15 +18,15 @@ imágenes no cambia código de producto. Decisiones y límites: `docs/brand/desi
 
 | Fichero | Viewport | Estado | Qué enseña |
 |---|---|---|---|
-| `390-blocked-1-descripcion.png` | 390 | Portada bloqueada (`homepage_unreadable`) | Aparece «No hemos podido leer tu web» con el campo de descripción. **Se ve el recorte de la barra de dominio a la derecha: ya está en `main` (la columna mide 407 px antes de cualquier tarjeta nueva).** |
-| `1280-blocked-1-descripcion.png` | 1280 | Ídem | Mismo estado en escritorio. |
-| `390-blocked-2-competidores.png` | 390 | Tras escribir una descripción | Identidad pendiente («Elcorteingles» sale del dominio), criterio de la propuesta, chips «con fuente» / «sin verificar». |
-| `1280-blocked-2-competidores.png` | 1280 | Ídem | Ídem en escritorio. |
-| `390-ok-2-competidores.png` | 390 | Portada legible | Nombre «El Corte Inglés» propuesto desde el título; sin aviso de pendiente; alias propuesto. |
-| `1280-ok-2-competidores.png` | 1280 | Ídem | Ídem en escritorio. |
-| `390-ok-3-prompts.png` | 390 | Paso de prompts | País e idioma con selector, avisos «no son búsquedas reales», resumen «Estimado», etiqueta por prompt. |
-| `1280-ok-3-prompts.png` | 1280 | Ídem | Ídem en escritorio. |
-| `390-blocked-3-prompts.png`, `1280-blocked-3-prompts.png` | 390 / 1280 | Prompts tras la ruta «bloqueada» | Mismo paso alcanzado por el otro camino. |
+| [390-blocked-1-descripcion.png](./390-blocked-1-descripcion.png) | 390 | Portada bloqueada (`homepage_unreadable`) | Aparece «No hemos podido leer tu web» con el campo de descripción. **Se ve el recorte de la barra de dominio a la derecha: ya está en `main` (la columna mide 407 px antes de cualquier tarjeta nueva).** |
+| [1280-blocked-1-descripcion.png](./1280-blocked-1-descripcion.png) | 1280 | Ídem | Mismo estado en escritorio. |
+| [390-blocked-2-competidores.png](./390-blocked-2-competidores.png) | 390 | Tras escribir una descripción | Identidad pendiente («Elcorteingles» sale del dominio), criterio de la propuesta, chips «con fuente» / «sin verificar». |
+| [1280-blocked-2-competidores.png](./1280-blocked-2-competidores.png) | 1280 | Ídem | Ídem en escritorio. |
+| [390-ok-2-competidores.png](./390-ok-2-competidores.png) | 390 | Portada legible | Nombre «El Corte Inglés» propuesto desde el título; sin aviso de pendiente; alias propuesto. |
+| [1280-ok-2-competidores.png](./1280-ok-2-competidores.png) | 1280 | Ídem | Ídem en escritorio. |
+| [390-ok-3-prompts.png](./390-ok-3-prompts.png) | 390 | Paso de prompts | País e idioma con selector, avisos «no son búsquedas reales», resumen «Estimado», etiqueta por prompt. |
+| [1280-ok-3-prompts.png](./1280-ok-3-prompts.png) | 1280 | Ídem | Ídem en escritorio. |
+| [390-blocked-3-prompts.png](./390-blocked-3-prompts.png), [1280-blocked-3-prompts.png](./1280-blocked-3-prompts.png) | 390 / 1280 | Prompts tras la ruta «bloqueada» | Mismo paso alcanzado por el otro camino. |
 
 ## Qué se verificó con interacción (guion de Playwright, contra el fixture)
 
@@ -69,3 +69,46 @@ Transcrito de la salida del guion, 390 y 1280, casos `blocked` y `ok`:
 - **El paso 1 a 390 px NO se da por válido como flujo móvil**, aunque `document.scrollWidth` no desborde: ahí se cortan
   «Continuar», la descripción y el resumen (heredado de `main`). La causa localizada y una corrección mínima, medida
   sólo con CSS inyectado en el navegador (sin tocar ficheros), se proponen en el informe de sesión de #553.
+
+## Capturas
+
+**1280-blocked-1-descripcion.png**
+
+![1280-blocked-1-descripcion (fixture)](./1280-blocked-1-descripcion.png)
+
+**1280-blocked-2-competidores.png**
+
+![1280-blocked-2-competidores (fixture)](./1280-blocked-2-competidores.png)
+
+**1280-blocked-3-prompts.png**
+
+![1280-blocked-3-prompts (fixture)](./1280-blocked-3-prompts.png)
+
+**1280-ok-2-competidores.png**
+
+![1280-ok-2-competidores (fixture)](./1280-ok-2-competidores.png)
+
+**1280-ok-3-prompts.png**
+
+![1280-ok-3-prompts (fixture)](./1280-ok-3-prompts.png)
+
+**390-blocked-1-descripcion.png**
+
+![390-blocked-1-descripcion (fixture)](./390-blocked-1-descripcion.png)
+
+**390-blocked-2-competidores.png**
+
+![390-blocked-2-competidores (fixture)](./390-blocked-2-competidores.png)
+
+**390-blocked-3-prompts.png**
+
+![390-blocked-3-prompts (fixture)](./390-blocked-3-prompts.png)
+
+**390-ok-2-competidores.png**
+
+![390-ok-2-competidores (fixture)](./390-ok-2-competidores.png)
+
+**390-ok-3-prompts.png**
+
+![390-ok-3-prompts (fixture)](./390-ok-3-prompts.png)
+

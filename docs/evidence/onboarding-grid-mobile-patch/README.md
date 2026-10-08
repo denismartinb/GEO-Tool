@@ -25,7 +25,9 @@ Doce capturas: pasos 1 (dominio), 2 (competidores e identidad) y 3 (prompts) a 3
   «Añadir» 68×36; selector de país **34×38** en móvil (112×38 en 1280); selector de idioma 94×32.
 - **País, accesible:** el selector es un `combobox` con nombre «País de análisis» y valor «España» (1 coincidencia por rol), y el contenedor lleva `title`. El orden de Tab en el paso 1
   es dominio → país → «Continuar».
-- **País, visible:** en móvil el nombre **se colapsa (0×0) y queda solo la bandera**; en 1280 se ve «España» (44×20). Es un efecto del parche: la barra ahora tiene que caber y el nombre es lo que cede.
+- **País, visible:** en móvil el nombre **está colapsado (0×0) y solo se ve la bandera**; en 1280 se ve «España» (44×20).
+  **Corrección:** una versión anterior de este documento decía que eso era «un efecto del parche». **Es falso**: una regla antigua de MOBILE-1 (`app/globals.css`, ~l. 8472, ≤ 760 px)
+  oculta el nombre y el chevron **a propósito**, con o sin este parche. El parche no lo causa ni lo arregla.
 
 ## Lo que se ve y no es agradable (no se esconde)
 
@@ -42,4 +44,63 @@ Doce capturas: pasos 1 (dominio), 2 (competidores e identidad) y 3 (prompts) a 3
 - Que otras pantallas que usen `.onb2-grid` no cambien: se midió solo este asistente.
 - Un escaneo ni una creación real.
 
-**El parche altera visualmente el selector de país (solo bandera en móvil).** Por eso se queda local y a la espera de decisión; no se integra.
+Este parche **solo corrige el desbordamiento**; deja intactos los problemas de legibilidad a 320 px (ver arriba). La alternativa que sí los aborda está en `docs/evidence/onboarding-responsive-local/`. Sigue local y sin integrar.
+
+## Capturas
+
+### 320 px
+
+**Paso 1 · dominio**
+
+![320 px · Paso 1 · dominio (fixture)](./320-paso1-dominio.png)
+
+**Paso 2 · competidores**
+
+![320 px · Paso 2 · competidores (fixture)](./320-paso2-competidores.png)
+
+**Paso 3 · prompts**
+
+![320 px · Paso 3 · prompts (fixture)](./320-paso3-prompts.png)
+
+### 360 px
+
+**Paso 1 · dominio**
+
+![360 px · Paso 1 · dominio (fixture)](./360-paso1-dominio.png)
+
+**Paso 2 · competidores**
+
+![360 px · Paso 2 · competidores (fixture)](./360-paso2-competidores.png)
+
+**Paso 3 · prompts**
+
+![360 px · Paso 3 · prompts (fixture)](./360-paso3-prompts.png)
+
+### 390 px
+
+**Paso 1 · dominio**
+
+![390 px · Paso 1 · dominio (fixture)](./390-paso1-dominio.png)
+
+**Paso 2 · competidores**
+
+![390 px · Paso 2 · competidores (fixture)](./390-paso2-competidores.png)
+
+**Paso 3 · prompts**
+
+![390 px · Paso 3 · prompts (fixture)](./390-paso3-prompts.png)
+
+### 1280 px
+
+**Paso 1 · dominio**
+
+![1280 px · Paso 1 · dominio (fixture)](./1280-paso1-dominio.png)
+
+**Paso 2 · competidores**
+
+![1280 px · Paso 2 · competidores (fixture)](./1280-paso2-competidores.png)
+
+**Paso 3 · prompts**
+
+![1280 px · Paso 3 · prompts (fixture)](./1280-paso3-prompts.png)
+

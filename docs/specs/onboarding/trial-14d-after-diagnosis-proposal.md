@@ -20,8 +20,10 @@ que sigue es lo que el Director transcribe) y estado real del código a fecha 20
   - el **primer escaneo de cada dominio nuevo no consume la «revisión manual» mensual**: solo **una vez por dominio**, **máximo 3 dominios activos**, y
     **archivar y volver a añadir no renueva esa exención**;
   - la explicación anterior («no gasta de las 75 preguntas del mes») era **incorrecta y no se implementa**.
-- **Antiabuso:** queda en **revisión del dueño**. Este documento no acepta ningún riesgo ni presupuesto de forma implícita, no añade reglas por
-  inferencia y no promete escaneos gratis.
+- **Antiabuso, decidido por el dueño (21:27:43, relayado por el Director en #549, comentario 6067469241):** acepta el riesgo actual con poco saldo prepago de APIs
+  (exposición deseada en torno a 30 €) y prefiere no penalizar la UX. **No se implementan ahora captcha, límites nuevos por IP ni otras barreras**: quedan como opciones
+  diferidas, no como requisitos del contrato. **Antes de publicidad pública** hay que revisar el email verificado y un techo global de gasto en euros. El saldo real, su alcance entre
+  proveedores y el corte efectivo **no están verificados**: 30 € **no** se presenta como un límite técnico ya aplicado. Este documento no añade ninguna regla antiabuso.
 
 ## 2. Cómo está hoy (verificado en el código)
 
@@ -72,7 +74,7 @@ webhook (`0038_stripe_webhook_events.sql`, **aplicar a mano antes de mergear**).
 ## 6. Fallos, reintentos y fallback
 
 - **Hoy:** un escaneo parado se reanuda solo (hasta 3 veces, <6 h) y el vigilante avisa al **operador**. Eso cubre la recuperación invisible.
-- **No hay** (por lo que he podido ver) un concepto de «revisión» ni un contador que se consuma: **hay que definir qué es una revisión** antes de decir que un fallo no la consume.
+- La «revisión» ya está definida por la regla 1 (1 revisión manual al mes por cuenta; los fallos y reintentos no la consumen). **En el código sigue sin existir** un contador mensual de revisiones: su diseño está en §10.
 - **Hueco a decidir:** qué ve el cliente si el fallo persiste tras los reintentos (hoy: estado de error genérico). Propuesta: un estado «seguimos trabajando en tu diagnóstico» y, pasado un umbral definido por producto, una salida explícita (avisarle por correo cuando esté listo, o ofrecer reintentar). **Nunca** un resultado o una puntuación inventados.
 - Una prueba **no debería empezar** si el diagnóstico no se completó; y si se perdió por un fallo nuestro, no se consume.
 
@@ -90,6 +92,11 @@ porque ya no existe nada que escanear. **Consecuencia que importa para la regla 
 escaneo, así que **eliminar y volver a crear reiniciaría la exención**, que la regla 1 dice que no debe renovarse. Archivar y reañadir no tiene ese
 problema (es la misma fila).
 
+**Regla 5 del dueño, congelar al archivar o eliminar:** programación, reintentos y resincronización, auditorías y generación pendiente dejan de gastar. Verificado hoy: barrido recurrente, vigilante del recurrente y
+resumen semanal excluyen proyectos archivados, y no se pueden crear escaneos ni añadir prompts a uno archivado. **Sin verificar:** si la reconciliación y la reanudación de runs parados, la auditoría web posterior
+al escaneo y la generación de recomendaciones también se detienen, y qué ocurre con un run **en curso** en el instante de archivar o eliminar. Congelar no es borrar datos: este documento no equipara las dos cosas, y el tratamiento del
+conteo de prompts archivados se confirma aparte.
+
 **Qué NO se propone cambiar:** el borrado duro ni la retención de historia. Solo se propone que la elegibilidad de la exención **no cuelgue
 de la fila del proyecto** (ver §9).
 
@@ -99,7 +106,7 @@ No hay en esta propuesta: esquema aplicado, migraciones, facturación, Stripe, e
 
 1. ¿Dónde se guarda el inicio de la prueba y su consumo? (columna en `profiles` o tabla propia: **esquema**).
 2. ¿Qué pasa con las cuentas que ya tienen o tuvieron el Pro de 7 días?
-3. La regla 1 habla de «1 revisión manual mensual»; en el código no hay un contador mensual de revisiones (sí límites diarios de escaneo manual). ¿Cómo se mide y qué la consume?
+3. ~~¿Qué es una «revisión»?~~ **Contestada** por la regla 1 y el contrato: es la **1 revisión manual al mes por cuenta**; no cuenta el primer escaneo de cada dominio ni los reintentos automáticos, y los fallos no la consumen (regla 2). Falta decidir la definición del **mes** (§10).
 4. ¿Qué umbral de fallo persistente activa el fallback visible?
 5. Tratamiento exacto de subdominios, país e idioma en la clave de elegibilidad (§9, propuesta).
 6. Revisión del dueño del antiabuso (no se acepta riesgo ni presupuesto aquí).
@@ -117,5 +124,35 @@ con **reserva atómica e idempotente** y **sin reiniciarse por archivar o elimin
   Subdominios: opción a decidir (compartir la clave del dominio registrable evita exenciones por variante; tratarlos como dominios distintos las multiplica).
 - **Cuándo se consume:** al reservar para un diagnóstico que **se completa**; un fallo o un reintento no consume (ver §6).
 - **No hace falta Stripe, ni secretos, ni entorno externo.** No ejecuta escaneos ni aprueba gasto nuevo.
+
+## 10. Diseño local del contador y la reserva (sin implementar; coordinado con #549 y la rama de contrato)
+
+Pedido por el Director: diseño de contador/reserva con la semántica de la regla 1. **No hay esquema aplicado ni código**. La implementación es de la rama de contrato (`feat/contract-99-local`, su bloque B3
+«revisión mensual», parado hasta tener estas respuestas) y de #549 en lo que toca a seguridad; este documento solo fija la semántica para que no la reinventen dos veces.
+
+**Por qué un registro propio y no `trigger_source`:** la otra sesión comprobó que `trigger_source = 'user'` no distingue el primer escaneo de un dominio ni un reintento manual tras un fallo de un recheck normal. La fuente de verdad del consumo tiene que ser un registro explícito.
+
+**Registro de reservas** (propuesta, por cuenta; **no** colgado de `projects`, para que sobreviva a la cascada del borrado):
+
+| Campo | Significado |
+|---|---|
+| `account_id`, `run_id` (único) | Una reserva por escaneo manual; idempotente por `run_id` |
+| `kind` | `first_scan_exempt` (exención del primer escaneo de un dominio) o `monthly` (la 1 revisión manual mensual) |
+| `canonical_domain` | Solo para `first_scan_exempt`; **único por `(account_id, canonical_domain)` para siempre** |
+| `period` | Solo para `monthly`; definición del mes **sin decidir** (mes natural frente a 30 días rodantes, y zona horaria) |
+| `state` | `reserved` → `consumed` o `released` |
+
+**Transiciones:**
+1. **Reservar al lanzar** un escaneo manual, de forma atómica: primero intenta la exención del dominio (inserción con la restricción única; si ya existe, no hay exención); si no, la mensual (rechaza si ya hay una `reserved` o `consumed` en el periodo). Un segundo intento con el mismo `run_id` no concede nada nuevo.
+2. **`consumed`** solo cuando el diagnóstico **se completa**. Idempotente.
+3. **`released`** si el escaneo falla por causa nuestra tras los reintentos, o si el proyecto se archiva o elimina antes de completarse (regla 5: sin gasto). **Una exención `released` queda disponible; una `consumed` no se reinicia nunca** (ni por archivar, ni por eliminar y volver a crear).
+4. **Los reintentos automáticos y el escaneo semanal no reservan nada** (contrato).
+5. **Fallo persistente:** pasado un umbral que define producto, se libera la reserva, el cliente ve «seguimos trabajando en tu diagnóstico» y se le avisa cuando esté listo; nunca un spinner infinito ni un resultado inventado.
+
+**Clave canónica del dominio (propuesta, a decidir):** dominio normalizado, sin esquema, `www.` ni ruta. País e idioma **no** forman parte de la clave (hoy un mismo dominio puede ser varios proyectos). Subdominios: compartir la clave del dominio registrable evita exenciones por variante de URL; tratarlos como dominios distintos las multiplica.
+
+**Tests que debería llevar (sin efectos externos):** reserva idempotente por `run_id`; con dos reservas concurrentes gana exactamente una (**esto no se demuestra con una prueba de lógica: necesita Postgres real y la restricción única**); fallo → `released` y la exención sigue disponible; completar → `consumed` y no se reinicia al archivar, eliminar y recrear; reintento automático y semanal no reservan; variantes de URL no generan exenciones nuevas; archivar con una reserva abierta la libera.
+
+**Límites que quedan visibles:** la cuenta de 75 preguntas activas **no es atómica** hoy (lectura y luego escritura) y esa carrera no se resuelve aquí; no hay esquema; no hay verificación con Stripe ni con datos reales.
 
 Do you approve this plan? I will not implement until you confirm.

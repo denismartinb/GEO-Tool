@@ -21402,3 +21402,11 @@ Sólo se prueba esta causa; las otras respuestas de ese escaneo no se asumen.
 `lib/competitors/competitor-sources.ts`, `lib/llm/gemini-client.ts`,
 `app/dashboard/projects/actions.ts`, `lib/projects/create-project.ts`,
 `components/onboarding-wizard.tsx`, `components/onboarding/*`.
+
+
+**Adenda 2026-10-08 (revisiones del Director en #553).** Sin código de producto nuevo en esta rama; todo lo que sigue está **local o en forma de propuesta**:
+- **Corrección de una afirmación mía:** el nombre del país **ya estaba oculto en móvil por diseño** (regla de MOBILE-1, `globals.css`, ≤ 760 px); no era un efecto del parche de la rejilla.
+- **Alternativa responsive** (rama local `claude/onb-responsive-1`, no integrada): barra de dominio en dos filas con el país visible, chips y acciones bajo el texto, texto de prompt completo en móvil, objetivos de 44 px hasta 760 px. Medida en 12 combinaciones; evidencia en `docs/evidence/onboarding-responsive-local/`. Cambia la semántica visual del país; sigue a la espera de decisión.
+- **Matching** (rama local `claude/matching-word-boundary-1`): propuesta de una regla compartida por el escaneo y el cajón (`docs/specs/scan/name-matching-rule-proposal.md`), con plegado de letras latinas (Ørsted = Orsted), paridad con lo anterior para escrituras sin espacios y alternativas de versionado. **`EXTRACTION_VERSION` no sirve de interruptor** (marcaría todo el histórico como sin procesar). Comparación real bloqueada por acceso.
+- **Prueba de 14 días** (`docs/specs/onboarding/trial-14d-after-diagnosis-proposal.md`): regla 1 y regla 5 del dueño recogidas, «no borrar historia» retractado por el Director, antiabuso decidido (sin barreras nuevas ahora; revisar email verificado y techo en euros antes de publicidad), y diseño local de contador y reserva. Sin esquema.
+- **Evidencia:** los README de `docs/evidence/` incrustan las imágenes con sintaxis real y `tests/evidence-readme-images.test.ts` impide nombres de `.png` entre backticks o imágenes que apunten a un fichero que no existe.
