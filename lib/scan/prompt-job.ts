@@ -14,6 +14,7 @@ import {
   PROMPT_VERSION
 } from "@/lib/scan/constants";
 import { getSanitizedScanError } from "@/lib/scan/errors";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { logJob } from "@/lib/scan/job-logging";
 import type { JobRow } from "@/lib/scan/types";
 
@@ -327,6 +328,11 @@ export async function processPromptJob({
           text: result.llmResult.text,
           total_tokens: result.llmResult.totalTokens,
           grounding_chunks: result.llmResult.groundingChunks ?? [],
+          // Snapshot of whether THIS call had live web search on, frozen at
+          // call time so a later change to the engine metadata cannot rewrite
+          // what an old row measured (MEASUREMENT-BASIS-1). Read back by
+          // `parseGroundingEnabled`; absent on rows written before this field.
+          grounding_enabled: getEngineMeta(result.provider).grounded,
           prompt_version: PROMPT_VERSION
         },
         tokens_in: result.llmResult.tokensIn,

@@ -65,10 +65,11 @@ export type WindowRunInput = {
   /** When the run finished, for ordering. ISO string. */
   finished_at: string | null;
   /**
-   * `details_json.measurement_basis` (MEASUREMENT-BASIS-1). Optional so every
-   * existing caller and fixture keeps compiling; absent means "not recorded".
+   * `details_json.measurement_basis` (MEASUREMENT-BASIS-1). `null` = not
+   * recorded, and a run with no recorded basis cannot be shown to match any
+   * other, so it is never folded into a window.
    */
-  measurement?: MeasurementBasis | null;
+  measurement: MeasurementBasis | null;
 };
 
 export type WindowedScoreVerdict =
@@ -89,6 +90,12 @@ export type WindowedScore = {
   latest: number | null;
   /** Requested window size. */
   windowSize: number;
+  /**
+   * Why the headline is the latest scan and not a median, when the verdict is
+   * "not_comparable": the first reason the next-newest run could not join the
+   * reference. Null in every other verdict.
+   */
+  reason: string | null;
 };
 
 function sameInputs(a: readonly string[] | null, b: readonly string[] | null): boolean {
@@ -115,24 +122,45 @@ export function isWindowEligible(
   reference: WindowRunInput,
   sampleTolerance = 0.5
 ): boolean {
-  if (!Number.isFinite(candidate.score)) return false;
-  if (candidate.composite_version !== reference.composite_version) return false;
-  if (!sameInputs(candidate.inputs_used, reference.inputs_used)) return false;
+  return whyNotWindowEligible(candidate, reference, sampleTolerance) === null;
+}
+
+/**
+ * The reason a run cannot share a window with the reference run, or null when
+ * it can. One definition behind both the yes/no gate and the sentence the
+ * screen shows when the headline falls back to the latest scan — so what the
+ * user is told is exactly what the gate decided.
+ */
+export function whyNotWindowEligible(
+  candidate: WindowRunInput,
+  reference: WindowRunInput,
+  sampleTolerance = 0.5
+): string | null {
+  if (!Number.isFinite(candidate.score)) return "uno de los escaneos no tiene puntuación";
+  if (candidate.composite_version !== reference.composite_version) {
+    return "la metodología de puntuación cambió entre estos escaneos";
+  }
+  if (!sameInputs(candidate.inputs_used, reference.inputs_used)) {
+    return "estos escaneos no pudieron medir los mismos componentes del score";
+  }
 
   // Same definition of "same measurement" the delta gate uses. Before this the
   // window checked version, components and sample size only, so a median could
   // fold together runs over different questions, engines or models while the
   // docs promised it never would.
-  if (!compareMeasurementBasis(candidate.measurement ?? null, reference.measurement ?? null).comparable) {
-    return false;
-  }
+  // The reference is the newest run, so it is the "current" side and a reason
+  // reads "de <older> a <newest>", the chronological order.
+  const basis = compareMeasurementBasis(reference.measurement, candidate.measurement);
+  if (!basis.comparable) return basis.reason;
 
   const candidateN = candidate.total_results ?? 0;
   const referenceN = reference.total_results ?? 0;
-  if (candidateN <= 0 || referenceN <= 0) return false;
+  if (candidateN <= 0 || referenceN <= 0) return "uno de los escaneos no tiene respuestas analizadas";
 
   const ratio = candidateN / referenceN;
-  return ratio >= 1 - sampleTolerance && ratio <= 1 / (1 - sampleTolerance);
+  return ratio >= 1 - sampleTolerance && ratio <= 1 / (1 - sampleTolerance)
+    ? null
+    : "el número de respuestas analizadas es muy distinto entre estos escaneos";
 }
 
 function median(values: number[]): number {
@@ -164,7 +192,7 @@ export function computeWindowedScore(
     });
 
   if (ordered.length === 0) {
-    return { verdict: "insufficient_runs", value: null, runsUsed: [], latest: null, windowSize };
+    return { verdict: "insufficient_runs", value: null, runsUsed: [], latest: null, windowSize, reason: null };
   }
 
   const reference = ordered[0];
@@ -181,7 +209,14 @@ export function computeWindowedScore(
       value: null,
       runsUsed: [],
       latest: reference.score,
-      windowSize
+      windowSize,
+      reason:
+        ordered.length >= MIN_RUNS_FOR_WINDOW
+          ? (ordered
+              .slice(1)
+              .map((run) => whyNotWindowEligible(run, reference, options?.sampleTolerance))
+              .find((reason): reason is string => reason !== null) ?? null)
+          : null
     };
   }
 
@@ -190,7 +225,8 @@ export function computeWindowedScore(
     value: Number(median(eligible.map((run) => run.score)).toFixed(2)),
     runsUsed: eligible.map((run) => run.run_id),
     latest: reference.score,
-    windowSize
+    windowSize,
+    reason: null
   };
 }
 

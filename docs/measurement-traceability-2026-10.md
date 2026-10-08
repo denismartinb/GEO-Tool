@@ -11,10 +11,10 @@ qué queda abierto.
 | Dato pedido | Dónde vive hoy | Estado |
 |---|---|---|
 | Prompt exacto | `scan_prompt_results.prompt_text_snapshot` | Registrado |
-| País / idioma | `country_snapshot`, `language_snapshot` | Registrado. **No entraban** en ninguna comparación; ahora sí |
+| País / idioma | `country_snapshot`, `language_snapshot` | Registrado. **No entraban** en ninguna comparación; ahora se comparan por celda (pregunta × motor), no como conjunto |
 | Motor | `provider` | Registrado |
 | Modelo | `model` (lo que devuelve el proveedor: `modelVersion` en Gemini, `OPENAI_MODEL` en ChatGPT, `data.model` en Claude) | Registrado por fila. **No entraba** en ninguna comparación; ahora sí. No es un identificador versionado garantizado (ADR 0036) |
-| Modo de búsqueda / grounding | **No se guarda por fila.** Es una propiedad fija de cada llamada (`lib/llm/*`): Gemini con Google Search, ChatGPT con `web_search` forzado, Claude sin búsqueda; se infiere de `GROUNDED_PROVIDERS` | Ahora se persiste el booleano por motor en `measurement_basis.by_engine[*].grounded`. Sigue sin registrarse el modo por fila |
+| Modo de búsqueda / grounding | **No se guardaba por fila.** Es una propiedad fija de cada llamada (`lib/llm/*`): Gemini con Google Search, ChatGPT con `web_search` forzado, Claude sin búsqueda; sólo se inferia del nombre del proveedor | **Cerrado para escaneos nuevos**: `raw_response_json.grounding_enabled` se congela al llamar y la base lo registra por celda (pregunta × motor). Las filas anteriores no lo tienen y **no se pueden verificar nunca** |
 | Fecha | `created_at` de la fila / `finished_at` del run | Registrado |
 | Resultado / error | Fila `completed` o **ninguna fila**: un motor que falla no escribe fila; su causa vive en `job_logs`. `extraction_error` por fila para fallos de extracción | **Abierto**: `expected − valid` dice cuántas faltan, no por qué |
 | Fuentes | `raw_response_json.grounding_chunks` + `extracted_json.citations` | Registrado |
@@ -23,6 +23,7 @@ qué queda abierto.
 | Cómo cambia el score si falla un motor | `engine_coverage` decía *cuál* faltaba, no cuánto pesaba | **Cerrado**: `engine_sensitivity` (recálculo sin cada motor) |
 | Fórmula / versionado comprobable | `geo_score.composite_version` + `geo_score.formula` (v4) | **Cerrado**: `formulas_used.geo_score` seguía diciendo los pesos de v3; ahora es el mismo texto |
 | Razón de la confianza | Sólo la etiqueta; el porqué estaba en un comentario de código | **Cerrado**: `confidence_reason` |
+| Preguntas pedidas frente a respondidas | `total_prompts / sample_count` se conocía, no se guardaba | **Cerrado**: `prompts.requested` (sólo si divide exacto) frente a `prompts.distinct`. No se puede saber el texto de una pregunta que no recibió respuesta |
 | Preguntas distintas frente a repeticiones | `sample_index` existe (SAMPLING-1); el score cuenta filas | **Cerrado a medias**: `prompts.distinct` / `max_samples` se registran y la razón de la confianza los cita. **Abierto**: la etiqueta de confianza sigue contando repeticiones como respuestas |
 
 ## 2. Discrepancias con la promesa pública
@@ -32,7 +33,10 @@ qué queda abierto.
    (`/docs/metodologia/geo-score`). `compareRuns` miraba versión, componentes,
    motores y *número* de respuestas; `isWindowEligible` ni los motores. Dos
    escaneos con preguntas distintas y el mismo recuento eran comparables.
-   **Cerrado** en este parche (una única definición compartida).
+   **Cerrado** en este parche: una única definición compartida, celda a celda,
+   en la que lo desconocido no cuenta como verificado. Efecto visible y
+   asumido: tras el despliegue el titular es el score del último escaneo, con
+   el motivo en la tarjeta, hasta que haya dos escaneos con base.
 2. **Los Términos** avisan de que las APIs no replican la interfaz de un
    usuario; el dashboard, las respuestas individuales y los informes no lo
    decían. **Cerrado en el dashboard** (nota «Base de esta medición»).

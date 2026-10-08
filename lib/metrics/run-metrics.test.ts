@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fixtureBasis } from "@/lib/scoring/measurement-basis.fixtures";
 
 import {
   answerCountLabel,
@@ -35,6 +36,9 @@ function run(input: {
     visibility_score: visibilityScore ?? score,
     details_json: {
       total_results: totalResults,
+      // A run that is "comparable" must carry the basis that shows it: without
+      // one it is unverified and never enters a window (MEASUREMENT-BASIS-1).
+      measurement_basis: fixtureBasis(),
       geo_score: { score, composite_version: compositeVersion, inputs_used: inputsUsed }
     }
   };

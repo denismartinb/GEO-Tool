@@ -53,6 +53,13 @@ export type ScoreInputRow = {
   language_snapshot?: string | null;
   /** Zero-based repetition index of this (prompt, engine) pair within its run (SAMPLING-1). */
   sample_index?: number | null;
+  /**
+   * Whether the call that produced this row had live web search on, as
+   * snapshotted at call time. `null`/absent = never recorded (unknown, not
+   * "off"): it makes the run's measurement basis unverifiable for web search
+   * rather than silently assuming a value.
+   */
+  grounding_enabled?: boolean | null;
 };
 
 /**
@@ -437,6 +444,8 @@ export function computeRunScoresFromResults(
      * it cannot be known: `null` is "unknown", never derived from the rows.
      */
     expectedResponses?: number | null;
+    /** Different questions the run asked for (`requestedPromptCount`); null when unknown. */
+    requestedPrompts?: number | null;
     /** Internal: set by the engine-sensitivity pass so it does not recurse. */
     skipSensitivity?: boolean;
   }
@@ -557,7 +566,7 @@ export function computeRunScoresFromResults(
   // the measurement, they do not feed it.
   const measurementBasis = buildMeasurementBasis(results, {
     expectedResponses: options?.expectedResponses ?? null,
-    groundedProviders: GROUNDED_PROVIDERS
+    requestedPrompts: options?.requestedPrompts ?? null
   });
   const confidenceReason =
     totalResults === 0

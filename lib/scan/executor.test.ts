@@ -3,6 +3,7 @@ import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/auth";
 import { FINALIZE_LOCK_LEASE_MS, PROMPT_RETRY_DELAY_MS, SCAN_INVOCATION_WORK_BUDGET_MS } from "@/lib/scan/constants";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
+import { fixtureBasis } from "@/lib/scoring/measurement-basis.fixtures";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 
 // `after()` schedules work outside the request lifecycle Next.js provides in
@@ -1480,13 +1481,13 @@ describe("executePendingScan — notifications (NOTIF-SERVER-1a)", () => {
           run_id: RUN_ID,
           created_at: "2026-08-27T00:00:00.000Z",
           visibility_score: 2,
-          details_json: { total_results: 45, geo_score: { score: 10, composite_version: "v4", inputs_used: ["visibility"] } }
+          details_json: { total_results: 45, measurement_basis: fixtureBasis(), geo_score: { score: 10, composite_version: "v4", inputs_used: ["visibility"] } }
         },
         {
           run_id: PREVIOUS_RUN_ID,
           created_at: "2026-08-26T00:00:00.000Z",
           visibility_score: 2,
-          details_json: { total_results: 45, geo_score: { score: 6, composite_version: "v4", inputs_used: ["visibility"] } }
+          details_json: { total_results: 45, measurement_basis: fixtureBasis(), geo_score: { score: 6, composite_version: "v4", inputs_used: ["visibility"] } }
         }
       ]
     });

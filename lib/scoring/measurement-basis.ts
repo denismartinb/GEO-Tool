@@ -12,20 +12,38 @@
  * window (`isWindowEligible`) did not look at engines at all. Two scans over
  * entirely different prompt sets, or over a different model behind the same
  * engine name, were comparable as long as they happened to hold the same
- * number of rows — and nothing recorded the question text, model, country or
- * language the number depended on.
+ * number of rows.
+ *
+ * THE UNIT IS THE CELL, NOT THE SET. A first version of this module compared
+ * the set of question texts, the set of engines and the set of locales
+ * separately. That cannot tell "same questions on the same engines" from "the
+ * same count of rows spread differently": two runs can share a question set and
+ * an engine set while one engine answered only half the questions. So every
+ * `(question, engine)` pair is recorded as a cell with its own model, web-search
+ * mode, country, language and repetition count, and two runs are comparable
+ * only when their cells match one to one.
+ *
+ * UNKNOWN IS NOT VERIFIED. A run with no recorded basis, a cell with no
+ * recorded model, or a row whose web-search mode was never written cannot be
+ * shown to match anything, and is reported as not comparable — the same rule
+ * `compareRuns` already applies to composite version, components and engines.
+ * The price, stated: for the first scans after this ships the headline falls
+ * back to the run's own score and says why, instead of a median nobody can
+ * vouch for.
  *
  * WHAT THIS IS NOT. It does not change a score, a weight, a threshold or the
  * confidence label (`.claude/rules/scoring.md`). It records the facts about
  * the measurement next to it, explains the confidence label that already
- * exists, and gives the two comparability gates one shared definition of
- * "same measurement".
+ * exists, and gives the two comparability gates one shared definition.
  *
  * WHAT IT DOES NOT CLAIM. The numbers come from model APIs, not from the
  * consumer product a person types into: the same model name behind an API and
  * behind a chat interface can differ in system prompt, tools, personalisation
  * and rollout. `MEASUREMENT_API_LIMIT_NOTICE` carries that limit so every
  * surface that shows these numbers can say it in the same words as the Terms.
+ * It also cannot prove WHICH questions were asked of an engine that never
+ * answered: it records how many questions were requested, and how many were
+ * answered, never the text of one that got no answer.
  */
 
 import { getEngineMeta } from "@/lib/scan/engine-meta";
@@ -48,17 +66,43 @@ export type MeasurementRow = {
   country_snapshot?: string | null;
   language_snapshot?: string | null;
   sample_index?: number | null;
+  /**
+   * Whether the call that produced this row had live web search enabled,
+   * snapshotted at call time (`raw_response_json.grounding_enabled`).
+   * `null`/absent = never recorded, which is "unknown", not "off".
+   */
+  grounding_enabled?: boolean | null;
   extracted_json: unknown;
   extraction_error: string | null;
+};
+
+/** One `(question, engine)` pair of a run, with everything its comparability depends on. */
+export type MeasurementCell = {
+  /** Fingerprint of the normalised question text. */
+  p: string;
+  /** Engine / provider id. */
+  e: string;
+  /** Web search on (`true`), off (`false`), or not recorded / mixed (`null`). */
+  g: boolean | null;
+  /** Country snapshot, lower-cased. Mixed values within a cell are joined with `|`. */
+  c: string;
+  /** Language snapshot, lower-cased. */
+  l: string;
+  /** Distinct model identifiers the provider reported, sorted. */
+  m: string[];
+  /** Responses in this cell (repetitions of the same question on the same engine). */
+  n: number;
 };
 
 export type MeasurementEngineBasis = {
   /** Valid responses (completed rows) this engine contributed. */
   responses: number;
+  /** Different questions this engine answered. */
+  distinct_prompts: number;
   /** Distinct model identifiers the provider reported, sorted. */
   models: string[];
-  /** Whether this engine's call includes live web search (and so can yield citations). */
-  grounded: boolean;
+  /** Web search on for every response (`true`), off for every one (`false`), or not recorded / mixed (`null`). */
+  grounded: boolean | null;
 };
 
 export type MeasurementBasis = {
@@ -79,14 +123,27 @@ export type MeasurementBasis = {
   };
   by_engine: Record<string, MeasurementEngineBasis>;
   prompts: {
-    /** Different questions asked. This, not `responses.valid`, is the breadth of the evidence. */
+    /** Different questions that got at least one response. This, not `responses.valid`, is the breadth of the evidence. */
     distinct: number;
+    /** Different questions the run asked for, or null when unknown. Never derived from what was answered. */
+    requested: number | null;
     /** Highest repetition count any single question reached (1 = no repetition). */
     max_samples: number;
-    /** Stable fingerprint of the exact set of question texts. */
-    set_key: string;
   };
+  /**
+   * True when every engine answered the same questions the same number of
+   * times. Unbalanced runs score over whatever arrived; the score is real but
+   * the engines are not evenly weighted.
+   */
+  balanced: boolean;
+  /**
+   * True only when the run is provably whole: its expected size is known and
+   * met, every requested question was answered, and the engines are balanced.
+   * Equal row counts never establish this.
+   */
+  complete: boolean;
   locale: { countries: string[]; languages: string[] };
+  cells: MeasurementCell[];
 };
 
 function normalizePromptText(text: string): string {
@@ -94,10 +151,10 @@ function normalizePromptText(text: string): string {
 }
 
 /**
- * FNV-1a, 32 bit, run twice with different seeds and concatenated. This is a
- * fingerprint for "same set of questions?", not a security primitive; the
- * only requirement is that it is deterministic across runtimes with no
- * dependency (`node:crypto` is not available to client-safe modules).
+ * FNV-1a, 32 bit, run twice with different seeds and concatenated. A
+ * fingerprint for "same question?", not a security primitive; the only
+ * requirement is that it is deterministic across runtimes with no dependency
+ * (`node:crypto` is not available to client-safe modules).
  */
 function fingerprint(value: string): string {
   const pass = (seed: number) => {
@@ -121,37 +178,75 @@ function sortedUnique(values: Iterable<string | null | undefined>): string[] {
   return [...seen].sort();
 }
 
+/** `raw_response_json->>grounding_enabled` arrives as the text "true"/"false", or null. */
+export function parseGroundingEnabled(value: unknown): boolean | null {
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  return null;
+}
+
+/**
+ * Different questions a run asked for. `total_prompts` counts JOBS (one per
+ * question per repetition, SAMPLING-1) and `sample_count` is the repetition
+ * count, so the quotient is the question count — but only when it divides
+ * exactly. Anything else is "unknown", never a rounded guess.
+ */
+export function requestedPromptCount(totalJobs: unknown, sampleCount: unknown): number | null {
+  if (typeof totalJobs !== "number" || !Number.isInteger(totalJobs) || totalJobs <= 0) return null;
+  const samples = typeof sampleCount === "number" && Number.isInteger(sampleCount) && sampleCount > 0 ? sampleCount : 1;
+  return totalJobs % samples === 0 ? totalJobs / samples : null;
+}
+
+function sameStrings(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
 export function buildMeasurementBasis(
   rows: readonly MeasurementRow[],
   options: {
     expectedResponses?: number | null;
-    groundedProviders: ReadonlySet<string>;
-  }
+    requestedPrompts?: number | null;
+  } = {}
 ): MeasurementBasis {
-  const byEngine: Record<string, MeasurementEngineBasis> = {};
-  const modelsByEngine = new Map<string, Set<string>>();
+  type CellAccumulator = {
+    p: string;
+    e: string;
+    grounding: Array<boolean | null>;
+    countries: Set<string>;
+    languages: Set<string>;
+    models: Set<string>;
+    n: number;
+  };
+
+  const cells = new Map<string, CellAccumulator>();
   const promptKeys = new Set<string>();
   let maxSamples = rows.length > 0 ? 1 : 0;
   let clean = 0;
 
   for (const row of rows) {
     const provider = row.provider ?? "unknown";
-    const entry = byEngine[provider] ?? {
-      responses: 0,
-      models: [],
-      grounded: options.groundedProviders.has(provider)
+    const promptKey = fingerprint(normalizePromptText(row.prompt_text_snapshot));
+    promptKeys.add(promptKey);
+
+    const key = `${promptKey}|${provider}`;
+    const cell = cells.get(key) ?? {
+      p: promptKey,
+      e: provider,
+      grounding: [],
+      countries: new Set<string>(),
+      languages: new Set<string>(),
+      models: new Set<string>(),
+      n: 0
     };
-    entry.responses += 1;
-    byEngine[provider] = entry;
-
+    cell.n += 1;
+    cell.grounding.push(row.grounding_enabled ?? null);
+    const country = row.country_snapshot?.trim().toLowerCase();
+    if (country) cell.countries.add(country);
+    const language = row.language_snapshot?.trim().toLowerCase();
+    if (language) cell.languages.add(language);
     const model = row.model?.trim();
-    if (model) {
-      const set = modelsByEngine.get(provider) ?? new Set<string>();
-      set.add(model);
-      modelsByEngine.set(provider, set);
-    }
-
-    promptKeys.add(normalizePromptText(row.prompt_text_snapshot));
+    if (model) cell.models.add(model);
+    cells.set(key, cell);
 
     const sample = typeof row.sample_index === "number" && row.sample_index >= 0 ? row.sample_index + 1 : 1;
     if (sample > maxSamples) maxSamples = sample;
@@ -159,13 +254,51 @@ export function buildMeasurementBasis(
     if (row.extracted_json && typeof row.extracted_json === "object" && !row.extraction_error) clean += 1;
   }
 
-  for (const [provider, models] of modelsByEngine) {
-    byEngine[provider].models = [...models].sort();
+  const outCells: MeasurementCell[] = [...cells.values()]
+    .map((cell) => {
+      const allOn = cell.grounding.every((value) => value === true);
+      const allOff = cell.grounding.every((value) => value === false);
+      return {
+        p: cell.p,
+        e: cell.e,
+        g: allOn ? true : allOff ? false : null,
+        c: [...cell.countries].sort().join("|"),
+        l: [...cell.languages].sort().join("|"),
+        m: [...cell.models].sort(),
+        n: cell.n
+      };
+    })
+    .sort((a, b) => (a.e === b.e ? a.p.localeCompare(b.p) : a.e.localeCompare(b.e)));
+
+  const byEngine: Record<string, MeasurementEngineBasis> = {};
+  for (const cell of outCells) {
+    const entry = byEngine[cell.e] ?? { responses: 0, distinct_prompts: 0, models: [], grounded: cell.g };
+    entry.responses += cell.n;
+    entry.distinct_prompts += 1;
+    entry.models = sortedUnique([...entry.models, ...cell.m]);
+    entry.grounded = entry.grounded === cell.g ? entry.grounded : null;
+    byEngine[cell.e] = entry;
   }
+
+  const engineIds = Object.keys(byEngine);
+  const balanced =
+    engineIds.length <= 1 ||
+    engineIds.every((engine) => {
+      const mine = outCells.filter((cell) => cell.e === engine);
+      const reference = outCells.filter((cell) => cell.e === engineIds[0]);
+      return (
+        mine.length === reference.length &&
+        mine.every((cell, index) => cell.p === reference[index].p && cell.n === reference[index].n)
+      );
+    });
 
   const expected =
     typeof options.expectedResponses === "number" && Number.isFinite(options.expectedResponses)
       ? Math.max(0, Math.floor(options.expectedResponses))
+      : null;
+  const requested =
+    typeof options.requestedPrompts === "number" && Number.isFinite(options.requestedPrompts)
+      ? Math.max(0, Math.floor(options.requestedPrompts))
       : null;
 
   return {
@@ -177,15 +310,15 @@ export function buildMeasurementBasis(
       missing: expected === null ? null : Math.max(0, expected - rows.length)
     },
     by_engine: byEngine,
-    prompts: {
-      distinct: promptKeys.size,
-      max_samples: maxSamples,
-      set_key: fingerprint([...promptKeys].sort().join("\u0001"))
-    },
+    prompts: { distinct: promptKeys.size, requested, max_samples: maxSamples },
+    balanced,
+    complete:
+      expected !== null && rows.length === expected && requested !== null && promptKeys.size === requested && balanced,
     locale: {
       countries: sortedUnique(rows.map((row) => row.country_snapshot?.toLowerCase())),
       languages: sortedUnique(rows.map((row) => row.language_snapshot?.toLowerCase()))
-    }
+    },
+    cells: outCells
   };
 }
 
@@ -197,113 +330,183 @@ function stringArray(value: unknown): string[] | null {
   return Array.isArray(value) && value.every((item) => typeof item === "string") ? (value as string[]) : null;
 }
 
+function nullableBoolean(value: unknown): boolean | null | undefined {
+  return value === null || typeof value === "boolean" ? value : undefined;
+}
+
 /**
  * Defensive read of `details_json.measurement_basis`. Runs scored before this
  * module existed have none, and the honest representation of that is `null` —
- * callers must treat it as "not recorded", not as "matches anything".
+ * `compareMeasurementBasis` treats it as "not verified", never as "matches
+ * anything".
  */
 export function readMeasurementBasis(detailsJson: unknown): MeasurementBasis | null {
   if (!isRecord(detailsJson)) return null;
   const raw = detailsJson.measurement_basis;
   if (!isRecord(raw) || typeof raw.version !== "string") return null;
 
-  const responses = raw.responses;
-  const prompts = raw.prompts;
-  const locale = raw.locale;
-  const byEngineRaw = raw.by_engine;
+  const { responses, prompts, locale, by_engine: byEngineRaw } = raw;
   if (!isRecord(responses) || !isRecord(prompts) || !isRecord(locale) || !isRecord(byEngineRaw)) return null;
-
   if (typeof responses.valid !== "number" || typeof responses.clean !== "number") return null;
   if (typeof prompts.distinct !== "number" || typeof prompts.max_samples !== "number") return null;
-  if (typeof prompts.set_key !== "string") return null;
+  if (typeof raw.balanced !== "boolean" || typeof raw.complete !== "boolean") return null;
   const countries = stringArray(locale.countries);
   const languages = stringArray(locale.languages);
-  if (!countries || !languages) return null;
+  if (!countries || !languages || !Array.isArray(raw.cells)) return null;
 
   const byEngine: Record<string, MeasurementEngineBasis> = {};
   for (const [provider, value] of Object.entries(byEngineRaw)) {
-    if (!isRecord(value) || typeof value.responses !== "number") return null;
+    if (!isRecord(value) || typeof value.responses !== "number" || typeof value.distinct_prompts !== "number") {
+      return null;
+    }
     const models = stringArray(value.models);
-    if (!models || typeof value.grounded !== "boolean") return null;
-    byEngine[provider] = { responses: value.responses, models, grounded: value.grounded };
+    const grounded = nullableBoolean(value.grounded);
+    if (!models || grounded === undefined) return null;
+    byEngine[provider] = { responses: value.responses, distinct_prompts: value.distinct_prompts, models, grounded };
   }
 
-  const expected = typeof responses.expected === "number" ? responses.expected : null;
-  const missing = typeof responses.missing === "number" ? responses.missing : null;
+  const cells: MeasurementCell[] = [];
+  for (const value of raw.cells) {
+    if (!isRecord(value)) return null;
+    const m = stringArray(value.m);
+    const g = nullableBoolean(value.g);
+    if (
+      typeof value.p !== "string" ||
+      typeof value.e !== "string" ||
+      typeof value.c !== "string" ||
+      typeof value.l !== "string" ||
+      typeof value.n !== "number" ||
+      !m ||
+      g === undefined
+    ) {
+      return null;
+    }
+    cells.push({ p: value.p, e: value.e, g, c: value.c, l: value.l, m, n: value.n });
+  }
 
   return {
     version: raw.version,
-    responses: { valid: responses.valid, clean: responses.clean, expected, missing },
+    responses: {
+      valid: responses.valid,
+      clean: responses.clean,
+      expected: typeof responses.expected === "number" ? responses.expected : null,
+      missing: typeof responses.missing === "number" ? responses.missing : null
+    },
     by_engine: byEngine,
-    prompts: { distinct: prompts.distinct, max_samples: prompts.max_samples, set_key: prompts.set_key },
-    locale: { countries, languages }
+    prompts: {
+      distinct: prompts.distinct,
+      requested: typeof prompts.requested === "number" ? prompts.requested : null,
+      max_samples: prompts.max_samples
+    },
+    balanced: raw.balanced,
+    complete: raw.complete,
+    locale: { countries, languages },
+    cells
   };
 }
 
-export type BasisComparison =
-  /** `checked: false` means at least one side recorded no basis, so nothing here could be verified. */
-  | { comparable: true; checked: boolean }
-  | { comparable: false; reason: string };
-
-function listKey(values: readonly string[]): string {
-  return [...values].sort().join(",");
-}
+export type BasisComparison = { comparable: true } | { comparable: false; reason: string };
 
 function engineLabel(provider: string): string {
   return getEngineMeta(provider).label || provider;
 }
 
+function describeGrounding(value: boolean): string {
+  return value ? "activada" : "desactivada";
+}
+
 /**
- * Whether two runs measured the same thing, as far as their recorded basis can
- * show. Single definition shared by the delta gate (`compareRuns`) and the
- * headline window (`isWindowEligible`), so the two cannot disagree again about
- * what "same measurement" means.
+ * Whether two runs measured the same thing, cell by cell. Single definition
+ * shared by the delta gate (`compareRuns`) and the headline window
+ * (`isWindowEligible`), so the two cannot disagree again about what "same
+ * measurement" means.
  *
- * Legacy runs have no basis. They are NOT rejected here: that would suppress
- * the headline and every delta for the first scans after this ships, for a
- * change that happened before anyone could record it. They pass unchecked,
- * and `checked: false` lets a caller say so. The limit is stated in the log
- * entry, not hidden: a prompt or model change that straddles the rollout is
- * still undetectable.
+ * Returns `comparable: true` ONLY when it could verify every dimension. A
+ * missing basis, a missing model, an unrecorded web-search mode or a different
+ * record format is reported as not comparable with its own reason — unknown is
+ * never verified. Equal row counts establish nothing here: two runs with the
+ * same number of responses are comparable only if each question was answered
+ * by the same engines with the same model, search mode, country, language and
+ * repetitions.
  */
 export function compareMeasurementBasis(
   current: MeasurementBasis | null,
   previous: MeasurementBasis | null
 ): BasisComparison {
-  if (!current || !previous || current.version !== previous.version) {
-    return { comparable: true, checked: false };
+  if (!current || !previous) {
+    return {
+      comparable: false,
+      reason: "uno de los escaneos no registró con qué preguntas, modelo y búsqueda web se midió"
+    };
+  }
+  if (current.version !== previous.version) {
+    return { comparable: false, reason: "el registro de la medición cambió de formato entre estos dos escaneos" };
   }
 
-  if (current.prompts.set_key !== previous.prompts.set_key) {
+  const currentPrompts = new Set(current.cells.map((cell) => cell.p));
+  const previousPrompts = new Set(previous.cells.map((cell) => cell.p));
+  const samePrompts =
+    currentPrompts.size === previousPrompts.size && [...currentPrompts].every((p) => previousPrompts.has(p));
+  if (!samePrompts) {
     return { comparable: false, reason: "las preguntas medidas cambiaron entre estos dos escaneos" };
   }
 
-  const currentEngines = listKey(Object.keys(current.by_engine));
-  const previousEngines = listKey(Object.keys(previous.by_engine));
-  if (currentEngines !== previousEngines) {
+  const currentEngines = [...new Set(current.cells.map((cell) => cell.e))].sort();
+  const previousEngines = [...new Set(previous.cells.map((cell) => cell.e))].sort();
+  if (!sameStrings(currentEngines, previousEngines)) {
     return { comparable: false, reason: "el conjunto de motores de IA cambió entre estos dos escaneos" };
   }
 
-  for (const provider of Object.keys(current.by_engine).sort()) {
-    const now = listKey(current.by_engine[provider].models);
-    const before = listKey(previous.by_engine[provider].models);
-    // An engine that reported no model on either side proves nothing either way.
-    if (now && before && now !== before) {
+  const previousByKey = new Map(previous.cells.map((cell) => [`${cell.p}|${cell.e}`, cell]));
+  if (current.cells.length !== previous.cells.length) {
+    return {
+      comparable: false,
+      reason: "las mismas preguntas no obtuvieron respuesta de los mismos motores en estos dos escaneos"
+    };
+  }
+
+  for (const cell of current.cells) {
+    const before = previousByKey.get(`${cell.p}|${cell.e}`);
+    if (!before) {
       return {
         comparable: false,
-        reason: `el modelo de ${engineLabel(provider)} cambió entre estos dos escaneos (${before} → ${now})`
+        reason: "las mismas preguntas no obtuvieron respuesta de los mismos motores en estos dos escaneos"
+      };
+    }
+    const label = engineLabel(cell.e);
+
+    if (cell.m.length === 0 || before.m.length === 0) {
+      return { comparable: false, reason: `no se registró el modelo de ${label} en uno de los escaneos` };
+    }
+    if (!sameStrings(cell.m, before.m)) {
+      return {
+        comparable: false,
+        reason: `el modelo de ${label} cambió entre estos dos escaneos (${before.m.join(", ")} → ${cell.m.join(", ")})`
+      };
+    }
+
+    if (cell.g === null || before.g === null) {
+      return { comparable: false, reason: `no se registró si ${label} usó búsqueda web en uno de los escaneos` };
+    }
+    if (cell.g !== before.g) {
+      return {
+        comparable: false,
+        reason: `la búsqueda web de ${label} pasó de ${describeGrounding(before.g)} a ${describeGrounding(cell.g)} entre estos dos escaneos`
+      };
+    }
+
+    if (cell.c !== before.c || cell.l !== before.l) {
+      return { comparable: false, reason: "el país o el idioma de la medición cambió entre estos dos escaneos" };
+    }
+    if (cell.n !== before.n) {
+      return {
+        comparable: false,
+        reason: "el número de repeticiones de una pregunta cambió entre estos dos escaneos"
       };
     }
   }
 
-  if (
-    listKey(current.locale.countries) !== listKey(previous.locale.countries) ||
-    listKey(current.locale.languages) !== listKey(previous.locale.languages)
-  ) {
-    return { comparable: false, reason: "el país o el idioma de la medición cambió entre estos dos escaneos" };
-  }
-
-  return { comparable: true, checked: true };
+  return { comparable: true };
 }
 
 /**
@@ -354,7 +557,8 @@ export function explainConfidence(input: {
 
 /**
  * Spanish lines for a surface that shows the score. Returns only facts that
- * were recorded; an unknown expected count produces no "de N esperadas".
+ * were recorded; an unknown expected count produces no "de N esperadas", and a
+ * run that is not provably whole says so instead of reading as complete.
  */
 export function describeMeasurementBasis(basis: MeasurementBasis | null): string[] {
   if (!basis) return [];
@@ -369,19 +573,31 @@ export function describeMeasurementBasis(basis: MeasurementBasis | null): string
         : `${valid} respuestas válidas de ${expected} esperadas.`
   );
 
+  const { distinct, requested, max_samples: maxSamples } = basis.prompts;
+  const questions = `${distinct} ${distinct === 1 ? "pregunta distinta" : "preguntas distintas"}`;
   lines.push(
-    `${basis.prompts.distinct} ${basis.prompts.distinct === 1 ? "pregunta distinta" : "preguntas distintas"}` +
-      (basis.prompts.max_samples > 1 ? `, cada una repetida hasta ${basis.prompts.max_samples} veces.` : ".")
+    requested !== null && distinct < requested
+      ? `${questions} con respuesta, de ${requested} pedidas` + (maxSamples > 1 ? `, repetidas hasta ${maxSamples} veces.` : ".")
+      : questions + (maxSamples > 1 ? `, cada una repetida hasta ${maxSamples} veces.` : ".")
   );
 
   const engines = Object.entries(basis.by_engine)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([provider, engine]) => {
-      const model = engine.models.length > 0 ? ` (${engine.models.join(", ")})` : "";
-      const mode = engine.grounded ? "con búsqueda web" : "sin búsqueda web";
+      const model = engine.models.length > 0 ? ` (${engine.models.join(", ")})` : " (modelo sin registrar)";
+      const mode =
+        engine.grounded === null ? "búsqueda web sin registrar" : engine.grounded ? "con búsqueda web" : "sin búsqueda web";
       return `${engineLabel(provider)}${model}: ${engine.responses}, ${mode}`;
     });
   if (engines.length > 0) lines.push(`Motores: ${engines.join(" · ")}.`);
+
+  if (!basis.complete) {
+    lines.push(
+      !basis.balanced
+        ? "Medición parcial: los motores no respondieron las mismas preguntas el mismo número de veces, así que no pesan por igual."
+        : "Medición parcial: no se puede afirmar que se hicieran todas las preguntas pedidas a todos los motores."
+    );
+  }
 
   return lines;
 }

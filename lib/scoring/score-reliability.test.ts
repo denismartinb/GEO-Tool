@@ -9,6 +9,7 @@ import {
   resolveDelta,
   type ComparableRun
 } from "@/lib/scoring/score-reliability";
+import { fixtureBasis } from "@/lib/scoring/measurement-basis.fixtures";
 
 /** A run that is comparable to itself — the baseline every case mutates. */
 function run(overrides: Partial<ComparableRun> = {}): ComparableRun {
@@ -17,6 +18,7 @@ function run(overrides: Partial<ComparableRun> = {}): ComparableRun {
     compositeVersion: "geo-score-v2",
     inputsUsed: ["presence", "prominence", "standing", "authority"],
     engines: ["gemini", "openai", "claude"],
+    basis: fixtureBasis(),
     ...overrides
   };
 }

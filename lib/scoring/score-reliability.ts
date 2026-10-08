@@ -128,10 +128,10 @@ export type ComparableRun = {
   /**
    * `details_json.measurement_basis` (MEASUREMENT-BASIS-1): the question set,
    * models and locale the score was measured over. `null` on runs scored before
-   * it existed — "not recorded", which `compareMeasurementBasis` passes
-   * through unchecked rather than rejecting (see its header for why).
+   * it existed — "not recorded", which `compareMeasurementBasis` reports as
+   * not comparable: unknown is never verified.
    */
-  basis?: MeasurementBasis | null;
+  basis: MeasurementBasis | null;
 };
 
 /**
@@ -258,7 +258,7 @@ export function compareRuns(current: ComparableRun, previous: ComparableRun): Ru
   // Placed before the response-count check on purpose: a changed question set
   // usually changes the count too, and "las preguntas cambiaron" is the more
   // actionable thing to tell the user than "el número de respuestas cambió".
-  const basisComparison = compareMeasurementBasis(current.basis ?? null, previous.basis ?? null);
+  const basisComparison = compareMeasurementBasis(current.basis, previous.basis);
   if (!basisComparison.comparable) {
     return { comparable: false, reason: basisComparison.reason };
   }

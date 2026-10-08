@@ -9,6 +9,7 @@ import {
   MIN_RUNS_FOR_WINDOW,
   type WindowRunInput
 } from "@/lib/scoring/score-window";
+import { fixtureBasis } from "@/lib/scoring/measurement-basis.fixtures";
 
 function run(overrides: Partial<WindowRunInput> & { run_id: string; score: number }): WindowRunInput {
   return {
@@ -16,6 +17,7 @@ function run(overrides: Partial<WindowRunInput> & { run_id: string; score: numbe
     inputs_used: ["presence", "prominence", "standing", "authority", "technical"],
     total_results: 60,
     finished_at: "2026-08-05T12:00:00.000Z",
+    measurement: fixtureBasis(),
     ...overrides
   };
 }

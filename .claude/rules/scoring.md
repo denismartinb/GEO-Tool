@@ -171,14 +171,30 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
   propio comentario y la metodología pública afirmaban. Una tercera puerta de
   comparabilidad se construye sobre esa función, nunca con otra lista de
   campos.
-- **Mismas preguntas, mismos motores, mismos modelos, mismo país e idioma.**
-  Mismo número de filas NO es misma medición. El conjunto de preguntas se
-  compara por huella (`prompts.set_key`), insensible a orden y espacios.
-- **Un run sin base registrada pasa sin comprobar; no se rechaza.** Rechazarlo
-  suprimiría el titular y los deltas de todos los proyectos tras el despliegue.
-  `checked: false` es la forma de decirlo. Cuando todos los runs vivos
-  tengan base, esta tolerancia se retira y «desconocido ≠ igual» vuelve a ser
-  absoluto, como ya lo es para versión, componentes y motores.
+- **La unidad de comparación es la celda (pregunta × motor), no el conjunto.**
+  Cada celda lleva modelo, búsqueda web, país, idioma y repeticiones, y dos
+  runs son comparables sólo si sus celdas coinciden una a una. Comparar
+  conjuntos (preguntas, motores, países por separado) deja pasar dos runs con
+  el mismo conjunto de cada cosa y respuestas distintas. Mismo número de filas
+  NO es misma medición.
+- **Desconocido no es verificado.** Un run sin base, una celda sin modelo, un
+  `grounding_enabled` nunca escrito o un formato distinto devuelven
+  `comparable: false` con su motivo — nunca «pasa sin comprobar». Es la misma
+  regla que `compareRuns` ya aplicaba a versión, componentes y motores.
+  Quien añada un campo a la base decide qué significa «no registrado» y lo
+  trata así, nunca como un valor por defecto.
+- **`complete` exige más que contar filas:** `expected` conocido y cumplido,
+  todas las preguntas pedidas respondidas (`requested`) y motores equilibrados.
+  La base nunca sabe qué texto tenía una pregunta sin respuestas; no lo finge.
+- **Cuando la ventana no puede publicar, desaparecen SÓLO la mediana, el
+  sparkline y la variación.** El score del último escaneo se queda en pantalla
+  y `WindowedScore.reason` / `GaugeHeadline.withheldReason` dicen por qué
+  (`lib/metrics/gauge-headline.ts`, `components/geo-score-gauge-card.tsx`,
+  probado con datos reales de scoring). La razón se redacta en orden
+  cronológico («de X a Y») y sale de la misma función que decide.
+- **`grounding_enabled` se congela al llamar** (`prompt-job.ts`,
+  `raw_response_json`), nunca se deriva después del nombre del proveedor: un
+  cambio posterior de metadatos reescribiría lo que midió una fila antigua.
 - **`measurement_basis` describe la medición, nunca la alimenta.** Nada en
   `computeRunScoresFromResults` lee de ahí para calcular un score. `expected`
   es `null` cuando se desconoce y nunca se deriva de las filas recibidas: eso

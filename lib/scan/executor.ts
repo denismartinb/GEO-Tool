@@ -10,6 +10,7 @@ import {
   type PreviousRecommendationRow
 } from "@/lib/recommendations/recommendation-history";
 import { computeEngineCoverage } from "@/lib/scan/engine-coverage";
+import { parseGroundingEnabled, requestedPromptCount } from "@/lib/scoring/measurement-basis";
 import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
 import {
   resolveTechnicalComponent,
@@ -696,7 +697,7 @@ export async function executePendingScan({
     const { data: promptResults } = await service
       .from("scan_prompt_results")
       .select(
-        "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, raw_response_text, extraction_version, model, country_snapshot, language_snapshot, sample_index"
+        "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, raw_response_text, extraction_version, model, country_snapshot, language_snapshot, sample_index, grounding_enabled:raw_response_json->>grounding_enabled"
       )
       .eq("project_id", projectId)
       .eq("run_id", runId);
@@ -750,7 +751,8 @@ export async function executePendingScan({
         model: row.model,
         country_snapshot: row.country_snapshot,
         language_snapshot: row.language_snapshot,
-        sample_index: row.sample_index
+        sample_index: row.sample_index,
+        grounding_enabled: parseGroundingEnabled((row as { grounding_enabled?: unknown }).grounding_enabled)
       })),
       project.domain,
       {
@@ -760,7 +762,8 @@ export async function executePendingScan({
         // prompts x samples (run.total_prompts counts jobs, one per sample)
         // x the engines this run was sized for. Unknown stays null.
         expectedResponses:
-          typeof run.total_prompts === "number" && run.total_prompts > 0 ? run.total_prompts * providers.length : null
+          typeof run.total_prompts === "number" && run.total_prompts > 0 ? run.total_prompts * providers.length : null,
+        requestedPrompts: requestedPromptCount(run.total_prompts, run.sample_count)
       }
     );
 

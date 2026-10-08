@@ -21347,11 +21347,19 @@ misma fila describía dos fórmulas.
 
 **Decisión.** Un módulo puro, `lib/scoring/measurement-basis.ts`, que registra
 en `details_json.measurement_basis` (jsonb, **sin migración**) respuestas
-válidas/limpias/esperadas, respuestas y modelos por motor, si el motor tiene
-búsqueda web, número de preguntas **distintas** frente a repeticiones, huella
-del conjunto de preguntas y país/idioma. Una sola función
-(`compareMeasurementBasis`) define «misma medición» y la usan **las dos
-puertas** —`compareRuns` y `isWindowEligible`—. `confidence_reason` explica en
+válidas/limpias/esperadas, preguntas **pedidas** frente a respondidas y
+distintas frente a repeticiones, y —la unidad real— una **celda por
+(pregunta, motor)** con su modelo, su modo de búsqueda web, su país, su idioma
+y sus repeticiones. Una sola función (`compareMeasurementBasis`) compara celda
+a celda y la usan **las dos puertas** —`compareRuns` y `isWindowEligible`—.
+La primera versión de esta fase comparaba conjuntos (preguntas, motores,
+países por separado) y la revisión del fundador lo tumbó con razón: dos runs
+pueden compartir conjunto de preguntas y de motores y aun así haber
+respondido cosas distintas con el mismo número de filas, y un país o un modo
+de búsqueda distinto en UNA pregunta no cambia el conjunto de valores.
+`prompt-job.ts` congela en `raw_response_json.grounding_enabled` si la llamada
+llevó búsqueda web, para que un cambio posterior de metadatos no reescriba lo
+que midió una fila vieja. `confidence_reason` explica en
 castellano por qué la etiqueta es la que es, escrita desde las mismas entradas
 que la bifurcación; `engine_sensitivity` recalcula el score sin cada motor
 (medido, no estimado). `formulas_used.geo_score` pasa a ser el mismo texto que
@@ -21364,10 +21372,29 @@ confianza (`.claude/rules/scoring.md`). El score de un run es idéntico al de
 antes; sólo cambia qué runs se consideran comparables entre sí.
 
 **Límites declarados.**
-- **Un run anterior a esta fase no registró su base**, y pasa sin comprobar
-  (`checked: false`) en vez de rechazarse: rechazarlo suprimiría el titular y
-  todos los deltas durante los primeros escaneos tras el despliegue. Coste: un
-  cambio de preguntas o de modelo que cruce el despliegue sigue sin detectarse.
+- **Lo desconocido no cuenta como verificado** (revisión del fundador, 2026-10-08;
+  sustituye a la primera versión, que dejaba pasar sin comprobar a un run sin
+  base). Un run sin base, una celda sin modelo, una fila cuyo modo de búsqueda
+  web nunca se escribió o un formato de registro distinto se declaran **no
+  comparables**, cada uno con su propio motivo. Coste, asumido: tras el
+  despliegue el titular cae al score del último escaneo, y la tarjeta lo dice,
+  hasta que haya dos escaneos con base; las filas anteriores a esta fase no
+  tienen `grounding_enabled`, así que **no se pueden verificar nunca** y
+  sólo salen de la ventana con el tiempo.
+- **Una celda no demuestra qué se PIDIÓ.** La base sabe cuántas preguntas se
+  pidieron (`total_prompts / sample_count`, sólo si divide exacto) y cuántas
+  tuvieron respuesta, nunca el texto de una pregunta que no recibió ninguna.
+  Por eso `complete` exige además `expected` conocido y cumplido, todas las
+  preguntas pedidas respondidas y motores equilibrados, y un run que no lo
+  cumple se describe como «Medición parcial». El mismo número de filas no
+  afirma nada.
+- **La tarjeta del medidor dice por qué falta la mediana.** Hasta aquí una
+  comparación no válida se pintaba como ausencia pura (decisión del fundador,
+  2026-08-03: cuatro avisos «sin comparación» en una pantalla parecían un
+  producto roto). La revisión del 2026-10-08 la corrige en UN sitio: si cambia
+  el modelo, las preguntas o la búsqueda web desaparecen **sólo** la mediana, el
+  sparkline y la variación; el score del último escaneo sigue visible y una
+  línea nombra el cambio. Los KPI siguen sin aviso propio.
 - **El modelo se compara por el identificador que devuelve el proveedor.** Si un
   proveedor rotase ese identificador sin avisar, la ventana dejaría de
   publicarse y el titular caería al score del run (el mismo fallo honesto que

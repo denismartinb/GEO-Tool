@@ -47,6 +47,8 @@ import { computePanoramaState } from "@/lib/competitors/panorama-state";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
+import { GeoScoreGaugeCard } from "@/components/geo-score-gauge-card";
+import { resolveGaugeHeadline } from "@/lib/metrics/gauge-headline";
 import { MeasurementBasisNote, type EngineSensitivity } from "@/components/measurement-basis-note";
 import { readMeasurementBasis } from "@/lib/scoring/measurement-basis";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
@@ -477,35 +479,9 @@ export default async function ProjectDetailPage({
   const windowRuns = trendHistory
     .map((r) => readWindowRun(r as { run_id?: string | null; created_at?: string | null; details_json?: unknown }))
     .filter((r): r is NonNullable<typeof r> => r !== null);
-  const scoreWindow = computeWindowedScore(windowRuns);
-  const windowPublished = scoreWindow.verdict === "published" && scoreWindow.value !== null;
-
-  /** The number the gauge shows: the window when it exists, the run otherwise. */
-  const gaugeScore = windowPublished ? Math.round(scoreWindow.value as number) : perRunScore;
-
-  // The sparkline must plot the same quantity as the gauge above it, or the
-  // two read as different metrics and the user cannot tell which the headline
-  // belongs to. Gaps (null) stay gaps — never zeroes.
-  const windowedSeries = computeWindowedSeries(windowRuns);
-  const geoTrend = windowPublished
-    ? windowedSeries.filter((v): v is number => v !== null).map((v) => Math.round(v))
-    : perRunTrend;
-
   const prevScore = trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
   const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;
   const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
-
-  // Window-over-window, not window-minus-run: subtracting last scan's raw
-  // score from this window's median would compare two different quantities
-  // and call the difference a change.
-  const previousWindow = computeWindowedScore(windowRuns.slice(0, -1));
-  const gaugeDelta = windowPublished
-    ? previousWindow.verdict === "published" && previousWindow.value !== null
-      ? Math.round(scoreWindow.value as number) - Math.round(previousWindow.value)
-      : 0
-    : perRunTrend.length >= 2
-      ? gaugeScore - perRunTrend[perRunTrend.length - 2]
-      : 0;
 
   /* ---- GEO-SCORE-RELIABILITY-1 — precision and comparability ----
    * Every "vs. escaneo anterior" number above is a raw subtraction of two
@@ -525,7 +501,19 @@ export default async function ProjectDetailPage({
   const sampleSufficient = hasSufficientSample(totalResults);
   const resolve = (value: number): DeltaVerdict | null =>
     previousRun ? resolveDelta(value, currentRun, previousRun) : null;
-  const gaugeDeltaVerdict = geoTrend.length >= 2 ? resolve(gaugeDelta) : null;
+  // The gauge's headline, trend, delta and the reason any of them is withheld
+  // come from one pure function (lib/metrics/gauge-headline.ts) so a test can
+  // drive it with real run data.
+  const gaugeHeadline = resolveGaugeHeadline({
+    windowRuns,
+    perRunScore,
+    perRunTrend,
+    currentRun,
+    previousRun
+  });
+  const gaugeScore = gaugeHeadline.score;
+  const geoTrend = gaugeHeadline.trend;
+  const gaugeDeltaVerdict = gaugeHeadline.deltaVerdict;
   const visDeltaVerdict = resolve(visDelta);
   const gapDeltaVerdict = resolve(gapDelta);
 
@@ -909,48 +897,17 @@ export default async function ProjectDetailPage({
               so the mobile/tablet layout is unchanged. */}
           <div className="ov2-gauge-block">
           <div className="ov2-sec-lbl ov2-gauge-sec-lbl">Puntuación GEO</div>
-          <div className="ov2-gauge-card">
-            <div className="ov2-gauge-ring">
-              <Gauge value={gaugeScore} size={96} stroke={10} />
-            </div>
-            <div className="ov2-gauge-info">
-              <div className="ov2-gauge-lbl">Puntuación GEO</div>
-              <div className="ov2-gauge-badges">
-                {/* GEO-BAND-ALWAYS-1 (founder decision, 2026-09-12): the band
-                    is derived straight from the score the gauge already shows
-                    (getBandLabel/getBandTone are pure functions of gaugeScore,
-                    same 70/40 cuts as every other screen), so it never states
-                    anything the visible number doesn't already — unlike the
-                    delta and sparkline below, it isn't a claim about a
-                    comparison across runs, so the sample-floor gate that
-                    protects THOSE doesn't apply here. Kept unconditional on
-                    purpose: the first-scan card was reading as broken with
-                    nothing next to the number (founder, 2026-09-11/12). Delta
-                    and trend stay gated on sampleSufficient below — this
-                    change touches only the band. */}
-                <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
-                {gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
-                  <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
-                )}
-              </div>
-              {/* The sparkline is the delta in graphical form: a line joining
-                  the last N scores asserts a trend between them just as
-                  literally as "+44 pt" does. Drawing a rising line directly
-                  under the words "sin comparación" would contradict them in
-                  the more persuasive medium — the founder's original report
-                  was a screenshot of exactly that rise. So the line is
-                  withheld under the same condition as the number, and the
-                  caption says why instead. */}
-              {geoTrend.length >= 2 && gaugeDeltaVerdict?.kind === "publish" ? (
-                <>
-                  <Sparkline data={geoTrend} w={200} h={30} color="var(--brand-blue)" />
-                  <div className="ov2-gauge-trend-cap">Últimos {geoTrend.length} escaneos</div>
-                </>
-              ) : sampleNudge(gaugeDeltaVerdict) ? (
-                <div className="ov2-gauge-trend-cap">{sampleNudge(gaugeDeltaVerdict)}</div>
-              ) : null}
-            </div>
-          </div>
+          {/* MEASUREMENT-BASIS-1: extracted to GeoScoreGaugeCard so its states
+              (comparable / not comparable / thin sample) can be rendered in a
+              test. When two scans did not measure the same thing the median
+              and the variation go away and the latest scan's own score stays,
+              with the reason. */}
+          <GeoScoreGaugeCard
+            headline={gaugeHeadline}
+            bandLabel={getBandLabel(gaugeScore)}
+            bandTone={getBandTone(gaugeScore)}
+            sampleNudge={sampleNudge(gaugeDeltaVerdict)}
+          />
           </div>
 
           {/* 3 · Indicadores clave — KPI carousel */}

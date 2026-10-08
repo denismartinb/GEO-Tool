@@ -5,6 +5,7 @@ import {
   resolveTechnicalComponent,
   TECHNICAL_SNAPSHOT_LOOKUP_LIMIT
 } from "@/lib/scoring/geo-score-technical";
+import { parseGroundingEnabled } from "@/lib/scoring/measurement-basis";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import type { createServiceClient } from "@/lib/supabase/service";
 
@@ -97,7 +98,7 @@ export async function rescoreRunWithTechnicalSnapshot(input: {
   const { data: promptResults } = await service
     .from("scan_prompt_results")
     .select(
-      "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, extraction_version, model, country_snapshot, language_snapshot, sample_index"
+      "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, extraction_version, model, country_snapshot, language_snapshot, sample_index, grounding_enabled:raw_response_json->>grounding_enabled"
     )
     .eq("project_id", projectId)
     .eq("run_id", runId);
@@ -134,7 +135,8 @@ export async function rescoreRunWithTechnicalSnapshot(input: {
       model: row.model,
       country_snapshot: row.country_snapshot,
       language_snapshot: row.language_snapshot,
-      sample_index: row.sample_index
+      sample_index: row.sample_index,
+      grounding_enabled: parseGroundingEnabled((row as { grounding_enabled?: unknown }).grounding_enabled)
     })),
     project.domain as string,
     {
@@ -144,7 +146,8 @@ export async function rescoreRunWithTechnicalSnapshot(input: {
       // Same reasoning as engineCoverage above: the expected size comes from the
       // plan and run at scan time, which this path cannot reconstruct. Carry
       // what the scan recorded; if it recorded nothing, record nothing.
-      expectedResponses: readExpectedResponses(existingScore?.details_json)
+      expectedResponses: readBasisNumber(existingScore?.details_json, "responses", "expected"),
+      requestedPrompts: readBasisNumber(existingScore?.details_json, "prompts", "requested")
     }
   );
 
@@ -184,12 +187,12 @@ function readEngineCoverage(details: unknown): EngineCoverage | null {
   return coverage as EngineCoverage;
 }
 
-function readExpectedResponses(details: unknown): number | null {
+function readBasisNumber(details: unknown, section: "responses" | "prompts", key: string): number | null {
   if (!details || typeof details !== "object") return null;
   const basis = (details as Record<string, unknown>).measurement_basis;
   if (!basis || typeof basis !== "object") return null;
-  const responses = (basis as Record<string, unknown>).responses;
-  if (!responses || typeof responses !== "object") return null;
-  const expected = (responses as Record<string, unknown>).expected;
-  return typeof expected === "number" ? expected : null;
+  const block = (basis as Record<string, unknown>)[section];
+  if (!block || typeof block !== "object") return null;
+  const value = (block as Record<string, unknown>)[key];
+  return typeof value === "number" ? value : null;
 }
