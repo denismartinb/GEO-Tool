@@ -12,20 +12,9 @@
  * consulta afectada acaba nombrándote primero y citándote. Es el límite
  * superior, no lo esperable.
  *
- * Aquí sólo viven las palabras. Las cifras no se tocan.
+ * Aquí sólo viven las palabras. Las cifras no se tocan. El titular de Visión
+ * general se retiró (log §236); queda el del plan en Recomendaciones.
  */
-export const CEILING_LABEL = "Techo teórico";
-
-export function overviewCeilingSubtitle(activeRecommendations: number | null): string {
-  const scope =
-    activeRecommendations === null
-      ? "las recomendaciones activas"
-      : activeRecommendations === 1
-        ? "la recomendación activa"
-        : `las ${activeRecommendations} recomendaciones activas`;
-  return `Lo máximo que subiría la puntuación si ${scope} se cumplieran en todas sus consultas. No es una previsión.`;
-}
-
 export function planCeilingSuffix(planSize: number, points: string): string {
   const scope = planSize === 1 ? "esta acción" : `estas ${planSize}`;
   return `. Techo teórico de ${scope}: +${points} pt`;

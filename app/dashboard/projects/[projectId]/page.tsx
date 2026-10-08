@@ -19,7 +19,6 @@ import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import {
-  computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
   getEffectiveGeoScore,
   isQuantifiableRecommendationType,
@@ -54,7 +53,6 @@ import {
   translateDroppedComponentReason,
   type GeoScoreEngineCoverage
 } from "./geo-score-breakdown";
-import { CEILING_LABEL, overviewCeilingSubtitle } from "@/lib/recommendations/ceiling-copy";
 
 /**
  * DOMAINS-REDESIGN-1: NOT optional, and not a copy-paste from the page this
@@ -734,24 +732,12 @@ export default async function ProjectDetailPage({
     potentialPointsByRecId.set(rec.id, points?.deltaPoints ?? null);
   }
 
-  // Joint ceiling over EVERY active recommendation (not just the top 3
-  // shown as cards) — summing standalone deltas would double-count any
-  // prompt shared by more than one recommendation (docs/adr/0017 §3).
-  const jointPotentialPoints = computeJointPotentialPoints(
-    scoreInputRows,
-    project.domain,
-    (activeRecommendations ?? []).map((rec) => ({
-      recommendationType: rec.recommendation_type,
-      affectedPromptIds: affectedPromptIds(rec.evidence_json)
-    }))
-  );
-  // Rounded for display (the mockup's "+14" is a clean integer, not
-  // "+13.87") — a delta that rounds down to 0 isn't worth headlining, so
-  // that case falls back to the real recommendation count instead.
-  const roundedJointPoints =
-    jointPotentialPoints && Math.round(jointPotentialPoints.deltaPoints) > 0
-      ? Math.round(jointPotentialPoints.deltaPoints)
-      : null;
+  // UNPROVEN-CLAIMS-1 (founder decision 2026-10-08, log §236): the headline
+  // "joint ceiling" figure is retired from the Overview. It was the score if
+  // EVERY affected prompt ended up mentioned first and cited — a theoretical
+  // maximum that read as a forecast, and there is no measured fulfilment rate
+  // to turn it into an expectation. The Oportunidades card shows the real
+  // recommendation count instead; the figure returns only with real data.
 
   /* ---- render ---- */
   return (
@@ -1439,19 +1425,10 @@ export default async function ProjectDetailPage({
               <div className="card ov2-opps">
                 <div className="ov2-opps-hero">
                   <div className="ov2-opps-gain">
-                    {roundedJointPoints !== null ? (
-                      <>
-                        <div className="ov2-opps-gain-n">+{roundedJointPoints}</div>
-                        <div className="ov2-opps-gain-l">{CEILING_LABEL}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="ov2-opps-gain-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
-                        <div className="ov2-opps-gain-l">
-                          {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "Recomendación" : "Recomendaciones"}
-                        </div>
-                      </>
-                    )}
+                    <div className="ov2-opps-gain-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
+                    <div className="ov2-opps-gain-l">
+                      {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "Recomendación" : "Recomendaciones"}
+                    </div>
                   </div>
                   <div>
                     <div className="ov2-opps-h">
@@ -1460,11 +1437,9 @@ export default async function ProjectDetailPage({
                         : "Acciones priorizadas para ti"}
                     </div>
                     <div className="ov2-opps-s">
-                      {roundedJointPoints !== null
-                        ? overviewCeilingSubtitle(activeRecommendationsCount)
-                        : topCompetitor && topCompetitor.mentionRate > computedMentionRate
-                          ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
-                          : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}
+                      {topCompetitor && topCompetitor.mentionRate > computedMentionRate
+                        ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
+                        : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}
                     </div>
                   </div>
                 </div>

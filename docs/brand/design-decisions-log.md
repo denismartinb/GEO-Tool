@@ -21377,12 +21377,26 @@ no se leyó ningún dato real):
 (`confWeight`) y en «Prioridad alta»: las hipótesis sin fragmento bajan de
 puesto y de prioridad respecto a antes.
 
-**Pendiente — decisión de negocio, no tomada.** (a) ¿Titular de Visión general
-con un techo teórico, o sin cifra hasta tener una tasa de cumplimiento medida?
-Una previsión esperada exige datos que no existen. (b) ¿Un 0 sin auditoría de
-web debe mostrarse como «sin medir» en vez de 0 en superficies fuera de las
-revisadas aquí? No se auditó. (c) Los umbrales de techo por tipo
-(`BASE_CEILING`) son un juicio de producto, no están calibrados con datos.
+**Decisión del fundador (2026-10-08, tras la primera entrega).** El titular
+«+87 / Techo teórico» de Visión general **se retira** hasta que haya datos
+reales de cumplimiento: la tarjeta de Oportunidades enseña el recuento de
+recomendaciones. Esto sustituye al «Techo teórico … no es una previsión» de
+arriba para esa pantalla; en Recomendaciones sigue el techo del plan, con ese
+nombre. Quedan **dos cifras de techo sin decidir**: el «+N pt» por fila de la
+lista de Oportunidades en Visión general y el «+N pt» por tarjeta en
+Recomendaciones (mismo contrafactual, mismo problema de lectura).
+
+**Revisión del «0 sin auditoría de web».** No existe en el código: el
+componente `technical` del score se descarta (`value: null`, peso 0, los otros
+cuatro renormalizan exactamente a v3) y Visión general lo pinta «No
+disponible»; Auditoría web pinta «Sin auditar» / «—»; `computeReadinessScore`
+devuelve `null` sin páginas analizadas y `buildGlobalScore` excluye lo que es
+`null` en vez de contarlo como 0. Ya hay tests (`run-scoring.test.ts`,
+`global-score.test.ts`). Si en producción se vio un 0, no sale de estas rutas y
+hace falta el caso real para localizarlo.
+
+**Pendiente.** (a) Qué hacer con los dos «+N pt» por fila/tarjeta. (b) Los
+techos por tipo de `BASE_CEILING` son juicio de producto, sin datos.
 
 **Trazabilidad.** `lib/recommendations/{confidence,ceiling-copy,recommendation-engine}.ts`,
 `lib/prompts/{topic-contrast,presence-hint}.ts`, tests `unproven-claims`,
