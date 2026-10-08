@@ -85,7 +85,9 @@ export async function addPromptsToPool(input: {
     // owner's plan) can be tighter than the one the caller computed, e.g. a comped account without an
     // override row. That is a full pool, not an outage, and must read as one.
     if (error.code === "23514" && /prompt_pool_full/.test(error.message ?? "")) {
-      return { ok: false, reason: "pool_full", remaining: 0, cap: input.cap };
+      // The trigger puts the cap it enforced in the error detail ("active=75 cap=75").
+      const enforced = Number(/cap=(\d+)/.exec(error.details ?? "")?.[1]);
+      return { ok: false, reason: "pool_full", remaining: 0, cap: Number.isFinite(enforced) ? enforced : input.cap };
     }
     // 42883 / PGRST202: the function is not there (migration 0039 not applied).
     console.error("[geo:prompt-pool] add_project_prompts failed, writing no prompts", {

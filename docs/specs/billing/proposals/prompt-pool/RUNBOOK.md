@@ -2,7 +2,7 @@
 
 **Estado:** propuesta revisada de forma independiente (`data-guardian`) y corregida; **no aprobada, no aplicada**.
 Los SQL se escribieron y se probaron **solo en un Postgres local** (`scripts/verify-prompt-pool-proposals.sh`,
-79 comprobaciones; cada guarda se ha vuelto a probar quitándola para ver que la prueba falla).
+la batería local de pruebas (el recuento exacto está en la salida del script); cada guarda se ha vuelto a probar quitándola para ver que la prueba falla).
 B2 del contrato sigue **PARCIAL** hasta que el dueño aplique una opción y el postflight salga limpio.
 
 ## 1. Qué hay y qué elegir
@@ -30,8 +30,8 @@ Recomendación: **C → B1 → overrides → B2**. A solo si el dueño aprueba `
 | 6 | media | Bloqueos subestimados | Corregido y medido (§5) |
 | 7 | media | Salida del preflight ilegible en el editor y con emails | Reescritos: **una sola consulta**, sin emails |
 | 8 | baja-media | Con `REPEATABLE READ` se llegaba a 76 | Arreglado: se rechaza si no es `READ COMMITTED` (también en 0039) |
-| 9 | baja | Posible *deadlock* con transacciones largas | **Riesgo, decisión del dueño pendiente** (nadie lo ha aceptado). Disponibilidad, no se salta el tope; las escrituras de una sola sentencia de PostgREST no lo producen |
-| 10 | baja | B no limita filas **inactivas** (5.000 por REST) | **Abierto**, anterior a esta propuesta; A2 lo deja igual |
+| 9 | baja | Posible *deadlock* con transacciones largas | **Riesgo, decisión del dueño pendiente** (nadie lo ha aceptado). Disponibilidad, no se salta el tope. **Reproducido con dos `UPDATE` de una sola sentencia** (`where id in (A,B)` frente a `where id in (B,C)`): el candado de fila se toma antes que el de cuenta. Se evita reactivando una fila por sentencia |
+| 10 | baja | B no limita filas **inactivas** (5.000 por REST) | **Abierto en B**, anterior a esta propuesta. **A2 lo cierra**: sin política de insert nadie inserta por REST |
 | 11 | baja | Huecos del postflight | Corregidos (`count = 2`, `tgfoid`, `tgtype`) |
 | 12 | baja | Pruebas que probaban menos de lo que decían | Reescritas; añadidas upsert, perfil ausente, email, `REPEATABLE READ`, B sin 0039, código de error |
 
@@ -44,7 +44,9 @@ cual (llama a `add_project_prompts`): **desplegar ese código sin 0039 deja a lo
 
 0. **Preflight** (`preflight_readonly.sql`): una consulta, devuelve la rejilla entera. No se pega ningún email.
    Parar si: faltan columnas (§1 del resultado), hay cuentas sin perfil, hay nombres ocupados, hay transacciones
-   abiertas de más de 30 s, o el trigger de `profiles` no es la versión de 0019.
+   abiertas de más de 30 s, o la fila «function body is byte-identical to the repo version from 0019» da `false`
+   (hay otra versión instalada: comparar antes de aplicar C). Los valores `md5` fijan el cuerpo exacto de cada función
+   de este paquete; en el postflight, un `false` en un cuerpo significa que lo instalado no es lo revisado.
 1. **Copia**: comprobar en el Dashboard de Supabase que existe copia diaria/PITR reciente y anotar la hora. Ningún
    paso modifica filas existentes, así que la reversión por SQL basta; la copia es la red de seguridad.
    Exportar a CSV `select id, project_id, is_active from public.project_prompts` (sin texto) para comparar recuentos.
@@ -97,8 +99,14 @@ trigger durante esa sentencia.
 
 | Código desplegado | Base sin nada | + C | + B1 | + B2 | + 0039 |
 |---|---|---|---|---|---|
-| `main` (cliente de usuario inserta; **sin** `service_role`) | como hoy | igual | igual | **tope en la base**; el error sale como fallo de BD en las rutas que no lo traducen | igual |
+| `main` (cliente de usuario inserta; **sin** `service_role`) | como hoy | igual | igual | **NO ACTIVAR B2 con `main` desplegado**: `main` vende Pro con **100 prompts y 5 dominios** y B1 cablea **75**; los clientes de Pro actuales quedarían con 75 y `createProjectCore`/`createPrompt` convertirían el rechazo en proyecto creado **sin prompts** (`setup_partial`) o error ignorado | igual |
 | esta rama (RPC `add_project_prompts`, `service_role`) | **sin 0039: no se pueden añadir prompts (falla cerrado)** | ídem | ídem | ídem | funciona; el trigger puede rechazar con 23514 → se muestra como bolsa llena |
+
+**Regla de activación (revisión independiente, F1):** B2 **solo** puede activarse junto con el código y los precios
+del contrato de 99 € (75 prompts por cuenta), o con topes derivados del contrato que esté vendiéndose en ese momento.
+El test que fija el SQL a `plans-data.ts` fija el de **esta rama**, no el de `main`. Antes de B2 hay que comprobar,
+en el preflight, qué contrato está desplegado; las cuentas Pro actuales de `main` además son la pregunta Q5 (¿qué pasa
+con los clientes `pro` existentes?), que sigue abierta.
 
 Aclaración sobre `service_role` y 0039: la función `add_project_prompts` solo la ejecuta `service_role` (0039 revoca
 a `authenticated`). El código de esta rama la llama con `createServiceClient()`, es decir, **usa `service_role` en un
@@ -143,14 +151,17 @@ tiene el camino de arriba. No se bloquea una identidad corrupta de forma permane
 
 **Tratamiento propuesto de discrepancias (no ejecutado, decide el dueño; no cambia nada hasta que lo ejecute):**
 
-1. Listar en el editor, solo identificadores, las filas con discrepancia:
-   `select pr.id from public.profiles pr join auth.users u on u.id = pr.id where lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(coalesce(u.email,'')));`
-2. Antes de tocar nada, copiar los valores actuales a un CSV (id + email antiguo) para poder deshacer.
-3. Reconciliar tomando la identidad de `auth.users` (la verificada por el proveedor de acceso), por ejemplo
-   `update public.profiles pr set email = u.email from auth.users u where u.id = pr.id and pr.email is distinct from u.email;`
-   en el editor SQL (`postgres`: pasa el guard de `C`).
-4. Revisar a mano, **sin escribir los emails comped en GitHub ni en tickets**, si alguna cuenta cambió de plan efectivo
-   por la reconciliación, antes de darla por buena.
+Un **único predicado** en todos los pasos (insensible a mayúsculas y espacios, y solo donde `auth.users.email` no es
+nulo: los usuarios por teléfono o SSO no tienen email y escribir NULL fallaría):
+`pr.id = u.id and u.email is not null and lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(u.email))`.
+
+1. Listar, solo identificadores y recuento: `select pr.id from public.profiles pr join auth.users u on <predicado>;`
+2. Copiar a un CSV (id + email antiguo) **exactamente esas filas**, para poder deshacer.
+3. En el editor SQL (`postgres`: pasa el guard de `C`), **una transacción con comprobación antes de confirmar**:
+   `begin; update public.profiles pr set email = u.email from auth.users u where <predicado>;` — comprobar que el
+   número de filas actualizadas es **igual al del paso 1**; solo entonces `commit;` (si no, `rollback;`).
+4. Antes de confirmar, revisar a mano —**sin escribir los emails comped en GitHub ni en tickets**— si alguna cuenta
+   cambiaría de plan efectivo por la reconciliación; después ya no hay vuelta atrás sin el CSV.
 
 **Fuente de identidad fiable para «comped» (propuesta, no implementada):** mientras la app lea `profiles.email`, una
 alteración previa a `C` sigue sirviendo. Opciones, de menor a mayor cambio:
@@ -158,6 +169,21 @@ alteración previa a `C` sigue sirviendo. Opciones, de menor a mayor cambio:
 barrido y el vigilante, sin sesión, lo leerían de `auth.users` con `service_role` (nueva lectura privilegiada, requiere
 aprobación); (b) decidir «comped» solo por la tabla de excepciones (por `user_id`) y retirar la variable
 `COMPED_ACCOUNT_EMAILS` (cierra a la vez el hallazgo 5). Ninguna está hecha; ambas cambian código de facturación.
+
+## 8b. Límites conocidos de la revisión (no verificado)
+
+- Todas las guardas (0016/0019, C, A2) confían en `auth.role()`, que lee los ajustes `request.jwt.claim.*`.
+  Reproducido en local: una sesión capaz de fijar ella misma esos ajustes (`set request.jwt.claim.role='service_role'`)
+  salta cualquiera. **No es alcanzable por PostgREST hoy** (ninguna función expuesta ejecuta `set_config` ni SQL
+  dinámico, comprobado con grep en las migraciones), y es anterior a este paquete.
+- El stub local de `auth` solo lee `request.jwt.claim.role`; el real también lee `request.jwt.claims`. No se ha
+  probado contra Supabase real: ni el rol que posee las funciones `SECURITY DEFINER` ni sus permisos sobre
+  `auth.users` (si faltaran, la rama INSERT de C falla cerrado), ni los permisos por defecto de `EXECUTE` (el paquete
+  los revoca explícitamente), ni cómo traduce PostgREST un upsert o un PATCH masivo, ni cómo trata el editor SQL las
+  transacciones.
+- Cada alta recibe 7 días de Pro con 75 prompts: los registros repetidos no están limitados (antiabuso diferido).
+- `lib/projects/prompt-pool.ts` toma del error de la base el tope que realmente se aplicó; si no puede leerlo, usa el
+  de la app.
 
 ## 8. Integridad
 

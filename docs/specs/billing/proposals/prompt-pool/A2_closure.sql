@@ -9,7 +9,8 @@
 --  * The reactivation trigger refuses everyone but service_role — INCLUDING the SQL editor's
 --    `postgres` role (auth.role() is NULL there). An operator fixing a row by hand must disable the
 --    trigger for that statement.
---  * Inactive rows stay unlimited via the owner's update policy; and an owner can still deactivate.
+--  * An owner can still deactivate, edit and delete; inserting ANY row over REST is closed (so, unlike
+--    option B, inactive rows are not unlimited).
 
 begin;
 set local lock_timeout = '3s';

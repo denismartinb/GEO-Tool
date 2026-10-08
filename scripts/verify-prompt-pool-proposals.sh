@@ -74,6 +74,7 @@ parallel_fill() { # n_workers rows_each
 testB() {
   echo "== Option B (trigger, DB-derived cap, no service_role) =="
   mkdb pp_b_test skip0039
+  ORIG_MD5="$(q "select md5(prosrc) from pg_proc where proname='protect_billing_columns' and pronamespace='public'::regnamespace")"
   # --- hole 1 and hole 2 of the review, reproduced BEFORE the C guards exist
   seed pro
   q "delete from public.profiles where id='$U2'" >/dev/null
@@ -95,6 +96,10 @@ testB() {
   eq "C1 signup path (no authenticated claim) still creates a profile with the trial" "$(q "insert into auth.users(id,email) values (gen_random_uuid(),'s@x.test'); select count(*) from public.profiles where email='s@x.test' and current_plan='pro' and trial_ends_at is not null")" 1
   eq "C1 owner can still update unrelated columns" "$(as_user $U1 "update public.profiles set onboarding_tour_seen_at=now() where id='$U1'; select (onboarding_tour_seen_at is not null)::text from public.profiles where id='$U1'")" true
   eq "C1 owner still cannot raise plan" "$(as_user_err $U1 "update public.profiles set current_plan='agency' where id='$U1'" | grep -c 'service role')" 1
+  seed pro; q "delete from public.profiles where id='$U2'" >/dev/null
+  as_user $U2 "insert into public.profiles(id,email,current_plan,stripe_customer_id,stripe_subscription_id,trial_ends_at,cancel_at) values ('$U2','x@y.z','agency','cus_x','sub_x',now()+interval '30 days',now()+interval '30 days')" >/dev/null
+  eq "C1 every billing column is forced on a self-created profile (customer, subscription, trial, cancel_at)" "$(q "select (current_plan='free' and stripe_customer_id is null and stripe_subscription_id is null and trial_ends_at is null and cancel_at is null)::text from public.profiles where id='$U2'")" true
+  eq "C1 the SQL editor role (postgres, no claim) is still refused on plan columns, as with 0019" "$(q "update public.profiles set current_plan='agency' where id='$U1'" | grep -c 'service role')" 1
   psql -v ON_ERROR_STOP=1 -q -f $DIR/B1_objects.sql >/dev/null || { bad "B1 installs" "sql error"; return; }
   ok "B1 installs (objects only)"
   seed pro; fill $U1 $P1 76 >/dev/null
@@ -193,6 +198,26 @@ testB() {
   eq "B11 0039 function still works under the trigger" "$(as_service "select public.add_project_prompts('$U1','$P1',75,(select jsonb_agg(jsonb_build_object('prompt_text','function prompt '||g||' xx')) from generate_series(1,10) g))" | grep -c '"ok": true')" 1
   eq "B11 ...with an app cap above the derived cap, the trigger wins with the stable code" "$(psql -Atq -c "set role service_role; set \"request.jwt.claim.role\"='service_role'" -c "select public.add_project_prompts('$U1','$P1',9999,(select jsonb_agg(jsonb_build_object('prompt_text','function prompt '||g||' xx')) from generate_series(1,70) g))" 2>&1 | grep -c 'prompt_pool_full')" 1
   eq "B11 ...and nothing was inserted by the refused call" "$(active)" 10
+
+  echo "-- postflight (B+C applied, A not): B and C rows true, only the A rows false"
+  PF="$(psql -At -f $DIR/postflight.sql)"
+  eq "PF1 no B/C/untouched row is false" "$(echo "$PF" | grep -E '^(B:|C:|untouched)' | grep -c '|f$')" 0
+  eq "PF1 the three A rows are false (not applied)" "$(echo "$PF" | grep -E '^A' | grep -c '|f$')" 3
+  q "create or replace trigger trg_profiles_protect_billing_columns after insert or update on public.profiles for each row execute function public.protect_billing_columns()" >/dev/null
+  eq "PF2 a C trigger recreated as AFTER (hole 1 open again) is flagged by the postflight" "$(psql -At -f $DIR/postflight.sql | grep 'C: profiles trigger' | grep -c '|f$')" 1
+  q "create or replace trigger trg_profiles_protect_billing_columns before insert or update on public.profiles for each row execute function public.protect_billing_columns()" >/dev/null
+  q "create or replace function public.protect_billing_columns() returns trigger language plpgsql security definer set search_path='' as \$\$ begin if new.email is distinct from old.email then raise exception 'email can only be changed by the service role'; end if; return new; end \$\$" >/dev/null
+  eq "PF3 a C function with the email guard but no billing guard is flagged (body hash)" "$(psql -At -f $DIR/postflight.sql | grep 'C: function body' | grep -c '|f$')" 1
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/C_profiles_guards.sql >/dev/null
+  eq "PF4 re-running C restores a clean postflight" "$(psql -At -f $DIR/postflight.sql | grep 'C:' | grep -c '|f$')" 0
+
+  echo "-- rollbacks"
+  seed pro
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B_rollback.sql >/dev/null || bad "B_rollback runs" "error"
+  fill $U1 $P1 76 >/dev/null; eq "RB1 after B_rollback the trigger is gone (76 accepted again)" "$(active)" 76
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/C_rollback.sql >/dev/null || bad "C_rollback runs" "error"
+  eq "RB2 C_rollback restores the original function body byte for byte (md5)" "$(q "select md5(prosrc)='$ORIG_MD5' from pg_proc where proname='protect_billing_columns' and pronamespace='public'::regnamespace" | sed 's/t/true/;s/f/false/')" true
+  eq "RB2 ...and the original UPDATE-only trigger" "$(q "select tgtype from pg_trigger where tgname='trg_profiles_protect_billing_columns'")" 19
 }
 
 # ============================================================ A

@@ -11,6 +11,9 @@
 -- HOLE 2 — an owner can rewrite `profiles.email`, and the app decides "comped" from that column
 --   (lib/billing.ts resolveEffectivePlanId / resolveSystemPlanId, BILLING-COMPED-1). Anyone who
 --   knows a comped address gets Agency caps and every Pro-gated feature by editing their own row.
+--   It is wider than billing: `profiles.email` is also the ADDRESS the product mails (weekly digest,
+--   score alert, trial-ended, lifecycle sequence) and decides the lifecycle-email exemption, so a
+--   rewritten value redirects customer mail to any address.
 --
 -- WHAT IS AND IS NOT ESTABLISHED. The shape of both holes comes from the repo's own migrations and
 -- policies (0002 profiles_insert_own / profiles_update_own, 0016-0019 guard without email, lib/billing.ts
@@ -28,8 +31,8 @@
 --   * Stripe webhook / changePlan                        -> service role, and they do not write email: unaffected.
 --   * Supabase SQL editor (role `postgres`)              -> auth.role() is NULL: the email guard does NOT apply,
 --       so an operator CAN reconcile an email by hand (template in RUNBOOK.md §9, never run by the agent).
---   * a legitimate change of email by the user           -> the app has NO such flow (only auth.updateUser
---       for the password), and nothing syncs auth.users.email -> profiles.email on update. If a flow is added,
+--   * a legitimate change of email by the user           -> the app has NO such flow (auth.updateUser is used
+--       for the password and user_metadata only), and nothing syncs auth.users.email -> profiles.email on update. If a flow is added,
 --       its server side must write profiles.email with the service role. Until then a user whose profile
 --       email is wrong cannot fix it themselves: C makes that limitation explicit (clear error), it does not
 --       hide it, and the operator path above exists.
@@ -42,8 +45,8 @@
 --   * UPDATE by `authenticated`: the existing guard (plan, stripe ids, trial, cancel_at) PLUS `email`.
 --
 -- Cost, stated: an `authenticated` session can no longer change its own `profiles.email`. Nothing in
--- app/ or lib/ does (grep: no profiles update touches email; the only auth.updateUser call sets a
--- password). If an email-change flow is added later, sync it from the server with the service role.
+-- app/ or lib/ does (grep: no profiles update touches email; the auth.updateUser calls set a
+-- password and `user_metadata`, never the email). If an email-change flow is added later, sync it from the server with the service role.
 --
 -- Depends on: 0002, 0016, 0017, 0019 (the version of protect_billing_columns below is 0019's plus
 -- the two guards; check preflight section "profiles trigger" first — if a later migration changed
@@ -94,11 +97,10 @@ begin
 end;
 $$;
 
--- CREATE OR REPLACE FUNCTION takes no table lock. The trigger is re-created to also fire on INSERT:
--- DROP/CREATE TRIGGER take a brief ACCESS EXCLUSIVE / SHARE ROW EXCLUSIVE lock on `profiles`
--- (every login that reads its profile queues behind it, up to lock_timeout).
-drop trigger if exists trg_profiles_protect_billing_columns on public.profiles;
-create trigger trg_profiles_protect_billing_columns
+-- CREATE OR REPLACE FUNCTION takes no table lock. The trigger is replaced with CREATE OR REPLACE
+-- TRIGGER (PostgreSQL 14+; Supabase runs 15+), which takes only SHARE ROW EXCLUSIVE on `profiles`:
+-- writes wait briefly, reads (every login) do not. A plain DROP TRIGGER would take ACCESS EXCLUSIVE.
+create or replace trigger trg_profiles_protect_billing_columns
 before insert or update on public.profiles
 for each row execute function public.protect_billing_columns();
 

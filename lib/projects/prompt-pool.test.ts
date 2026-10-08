@@ -7,7 +7,7 @@ import { addPromptsToPool, remainingPoolHint } from "./prompt-pool";
 
 type Service = ReturnType<typeof createServiceClient>;
 
-function serviceReturning(result: { data?: unknown; error?: { code?: string; message?: string } | null }) {
+function serviceReturning(result: { data?: unknown; error?: { code?: string; message?: string; details?: string } | null }) {
   const rpc = vi.fn().mockResolvedValue({ data: result.data ?? null, error: result.error ?? null });
   return { service: { rpc } as unknown as Service, rpc };
 }
@@ -59,6 +59,18 @@ describe("addPromptsToPool", () => {
       reason: "pool_full",
       remaining: 0,
       cap: 75
+    });
+  });
+
+  it("reports the cap the database enforced, not the one the app computed", async () => {
+    const { service } = serviceReturning({
+      error: { code: "23514", message: "prompt_pool_full", details: "active=10 cap=10" }
+    });
+    expect(await addPromptsToPool({ ownerId: "o", projectId: "p", cap: 75, rows, service })).toEqual({
+      ok: false,
+      reason: "pool_full",
+      remaining: 0,
+      cap: 10
     });
   });
 

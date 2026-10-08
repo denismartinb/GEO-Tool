@@ -1,7 +1,10 @@
 -- READ-ONLY preflight for the prompt-pool proposals (C, B, A). ONE statement, ONE result set:
 -- the Supabase SQL editor shows only the result of the last statement, so everything is combined
 -- below and nothing here is wrapped in a transaction that rolls back. It contains only SELECTs and
--- cannot change data. Send back the whole result grid. It prints NO emails (user ids only).
+-- cannot change data. Send back the whole result grid. It prints NO emails; section 8 prints user ids
+-- (pseudonymous identifiers: share them only with people who may see account ids).
+-- The md5 values pin the EXACT function bodies of this package (SHA256SUMS): if a hash says false the
+-- installed object is a different version than the one that was reviewed.
 with
 usage as (
   select p.owner_user_id as uid, count(*) as active
@@ -31,12 +34,14 @@ checks(section, item, value) as (
     ('1 objects', 'profiles columns present (expect 5)', (select count(*)::text from information_schema.columns
         where table_schema='public' and table_name='profiles'
           and column_name in ('current_plan','trial_ends_at','stripe_subscription_id','email','cancel_at'))),
-    ('2 profiles trigger', 'definition mentions cancel_at (0019 version; expect true)',
-        coalesce((select (pg_get_functiondef(p.oid) like '%cancel_at%')::text from pg_proc p where p.proname='protect_billing_columns' and p.pronamespace='public'::regnamespace), 'missing')),
-    ('2 profiles trigger', 'trigger fires on INSERT already (C applied?)',
-        coalesce((select ((tgtype & 4) <> 0)::text from pg_trigger where tgrelid='public.profiles'::regclass and tgname='trg_profiles_protect_billing_columns'), 'missing')),
-    ('3 protection today', 'policies on project_prompts', (select coalesce(string_agg(polname, ',' order by polname), 'none') from pg_policy where polrelid='public.project_prompts'::regclass)),
-    ('3 protection today', 'non-internal triggers on project_prompts', (select coalesce(string_agg(tgname, ',' order by tgname), 'none') from pg_trigger where tgrelid='public.project_prompts'::regclass and not tgisinternal)),
+    ('2 profiles trigger', 'function body is byte-identical to the repo version from 0019 (expect true; false = a different version is installed: STOP and compare before applying C)',
+        coalesce((select (md5(p.prosrc) = '8e47b8ec20a12a9ccec42a86501ea79f')::text from pg_proc p where p.proname='protect_billing_columns' and p.pronamespace='public'::regnamespace), 'missing')),
+    ('2 profiles trigger', 'function body is already the C version (true = C was applied)',
+        coalesce((select (md5(p.prosrc) = '51223ea4a5bed224b0af362ff1a4fa6c')::text from pg_proc p where p.proname='protect_billing_columns' and p.pronamespace='public'::regnamespace), 'missing')),
+    ('2 profiles trigger', 'trigger fires on INSERT already',
+        coalesce((select ((tgtype & 4) <> 0)::text from pg_trigger where tgrelid=to_regclass('public.profiles') and tgname='trg_profiles_protect_billing_columns'), 'missing')),
+    ('3 protection today', 'policies on project_prompts', (select coalesce(string_agg(polname, ',' order by polname), 'none') from pg_policy where polrelid=to_regclass('public.project_prompts'))),
+    ('3 protection today', 'non-internal triggers on project_prompts', (select coalesce(string_agg(tgname, ',' order by tgname), 'none') from pg_trigger where tgrelid=to_regclass('public.project_prompts') and not tgisinternal)),
     ('4 name clashes (expect none)', 'functions already named like ours', (select coalesce(string_agg(proname, ','), 'none') from pg_proc where pronamespace='public'::regnamespace
         and proname in ('account_prompt_cap','enforce_prompt_pool','prevent_prompt_reactivation','reactivate_project_prompts'))),
     ('5 size and locks', 'prompts total', (select count(*)::text from public.project_prompts)),

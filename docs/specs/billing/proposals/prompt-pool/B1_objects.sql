@@ -114,10 +114,11 @@ begin
   -- One lock per ACCOUNT, held to the end of the transaction. The count below is a fresh statement
   -- after the lock, so it sees every row a previous holder committed and, inside one multi-row
   -- statement, the rows that statement already inserted.
-  -- RISK, OWNER DECISION PENDING (not accepted by anyone): a multi-statement transaction that already
-  -- holds a row lock and then waits here can deadlock with one doing the reverse (Postgres aborts one
-  -- with 40P01). Availability, not a way past the cap; PostgREST single-statement writes cannot
-  -- produce it, direct clients and long service-code transactions can.
+  -- RISK, OWNER DECISION PENDING (not accepted by anyone): the row lock is taken BEFORE this trigger
+  -- asks for the account lock, so two concurrent re-activations that touch overlapping rows in
+  -- different orders can deadlock (Postgres aborts one with 40P01) — reproduced in review with two
+  -- single-statement UPDATEs (`where id in (A,B)` vs `where id in (B,C)`). Availability, not a way
+  -- past the cap. One row per statement avoids it.
   perform pg_advisory_xact_lock(hashtextextended('prompt_pool:' || v_owner::text, 0));
 
   select count(*) into v_active

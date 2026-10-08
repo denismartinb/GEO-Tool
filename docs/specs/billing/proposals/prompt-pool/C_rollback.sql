@@ -21,8 +21,7 @@ begin
   return new;
 end;
 $$;
-drop trigger if exists trg_profiles_protect_billing_columns on public.profiles;
-create trigger trg_profiles_protect_billing_columns
+create or replace trigger trg_profiles_protect_billing_columns
 before update on public.profiles
 for each row execute function public.protect_billing_columns();
 commit;
