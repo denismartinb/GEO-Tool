@@ -28,7 +28,10 @@ describe("OpportunitiesCard — sin cifras ni promesas (log §236)", () => {
 
   it("no promete recuperar visibilidad frente a nadie", () => {
     expect(html).not.toMatch(/ejecútalas|recuperar visibilidad/i);
-    expect(html).toContain("Ordenadas por impacto");
+    // "prioridad estimada", never "impacto en tu visibilidad": the order is a
+    // product rule (planScore), not a measured effect.
+    expect(html).toContain("Ordenadas por prioridad estimada.");
+    expect(html).not.toMatch(/impacto en tu visibilidad/i);
   });
 
   it("singular cuando hay una sola", () => {

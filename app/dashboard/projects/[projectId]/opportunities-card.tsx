@@ -10,7 +10,9 @@ type OpportunityRec = { id: string; title: string; impact: string | null; effort
  * Sin cifras de puntos (founder, 2026-10-08, log §236): el contrafactual de
  * ADR 0017 no tiene resultados medidos detrás y se leía como previsión. La
  * cabecera es el recuento real de recomendaciones activas; cada fila, el
- * impacto cualitativo del motor.
+ * impacto cualitativo del motor. «Prioridad estimada» y no «impacto en tu
+ * visibilidad»: el orden es `planScore` (regla de producto), no un efecto
+ * medido, y el texto no debe sugerir retorno.
  */
 export function OpportunitiesCard({
   projectId,
@@ -44,7 +46,7 @@ export function OpportunitiesCard({
                 ? `${highPriorityCount} ${highPriorityCount === 1 ? "acción" : "acciones"} de alta prioridad`
                 : "Acciones priorizadas para ti"}
             </div>
-            <div className="ov2-opps-s">Ordenadas por impacto en tu visibilidad en las respuestas de IA.</div>
+            <div className="ov2-opps-s">Ordenadas por prioridad estimada.</div>
           </div>
         </div>
         <div className="ov2-opps-list">
