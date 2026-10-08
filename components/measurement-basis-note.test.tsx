@@ -48,4 +48,51 @@ describe("MeasurementBasisNote", () => {
     const html = renderToStaticMarkup(<MeasurementBasisNote basis={basis} confidenceReason={null} sensitivity={null} />);
     expect(html).not.toMatch(/<details[^>]*\bopen\b/);
   });
+
+  describe("the opened detail", () => {
+    const sensitivity = { gemini: { score_without: 40.04, delta: -11.5 }, claude: { score_without: 58, delta: 6.46 } };
+    const open = () =>
+      renderToStaticMarkup(
+        <MeasurementBasisNote
+          basis={basis}
+          confidenceReason="Media: 16 respuestas, 16 analizadas sin error."
+          sensitivity={sensitivity}
+          defaultOpen
+        />
+      );
+
+    it("renders open, and every section of the detail is there when it is", () => {
+      const html = open();
+      expect(html).toMatch(/<details[^>]*\bopen(="")?[ >]/);
+      for (const text of [
+        "Base de esta medición",
+        "6 respuestas válidas de 12 esperadas",
+        "2 preguntas distintas con respuesta, de 3 pedidas",
+        "gemini-2.5-flash",
+        "claude-haiku-4-5-20251001",
+        "con búsqueda web",
+        "sin búsqueda web",
+        "Medición parcial",
+        "Confianza.",
+        "Si faltara un motor.",
+        "Sin Gemini: 40,0 (−11,5)",
+        "no es una predicción",
+        MEASUREMENT_API_LIMIT_NOTICE
+      ]) {
+        expect(html, text).toContain(text);
+      }
+    });
+
+    it("uses --ink-3 or darker for every line of text, never the faint --ink-4", () => {
+      expect(open()).not.toContain("ink-4");
+    });
+
+    it("stays collapsed unless asked, and has the same content either way", () => {
+      const closed = renderToStaticMarkup(
+        <MeasurementBasisNote basis={basis} confidenceReason="Media." sensitivity={sensitivity} />
+      );
+      expect(closed).not.toMatch(/<details[^>]*\bopen\b/);
+      expect(closed).toContain("Si faltara un motor.");
+    });
+  });
 });

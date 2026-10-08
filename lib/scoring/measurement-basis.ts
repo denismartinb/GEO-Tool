@@ -405,6 +405,32 @@ export function readMeasurementBasis(detailsJson: unknown): MeasurementBasis | n
   };
 }
 
+/**
+ * Reasons that mean "we cannot VERIFY these two scans measured the same thing"
+ * — as opposed to "we verified they differ". The first is nothing the user
+ * changed and nothing they can act on (a scan from before the basis was
+ * recorded); the second is a real change (another model, other questions) and
+ * is worth naming. The screen words them differently, so the distinction has
+ * one definition here.
+ */
+export const REASON_BASIS_UNRECORDED =
+  "uno de los escaneos no registró con qué preguntas, modelo y búsqueda web se midió";
+export const REASON_BASIS_FORMAT = "el registro de la medición cambió de formato entre estos dos escaneos";
+/** Pre-existing wording of `compareRuns`' own "unknown" gate (version/components/engines never recorded). */
+export const REASON_CONFIG_UNRECORDED = "uno de los escaneos no registró con qué configuración se midió";
+
+const UNVERIFIABLE_PREFIX = "no se registró";
+
+export function isUnverifiableReason(reason: string | null | undefined): boolean {
+  if (!reason) return false;
+  return (
+    reason === REASON_BASIS_UNRECORDED ||
+    reason === REASON_BASIS_FORMAT ||
+    reason === REASON_CONFIG_UNRECORDED ||
+    reason.startsWith(UNVERIFIABLE_PREFIX)
+  );
+}
+
 export type BasisComparison = { comparable: true } | { comparable: false; reason: string };
 
 function engineLabel(provider: string): string {
@@ -434,13 +460,10 @@ export function compareMeasurementBasis(
   previous: MeasurementBasis | null
 ): BasisComparison {
   if (!current || !previous) {
-    return {
-      comparable: false,
-      reason: "uno de los escaneos no registró con qué preguntas, modelo y búsqueda web se midió"
-    };
+    return { comparable: false, reason: REASON_BASIS_UNRECORDED };
   }
   if (current.version !== previous.version) {
-    return { comparable: false, reason: "el registro de la medición cambió de formato entre estos dos escaneos" };
+    return { comparable: false, reason: REASON_BASIS_FORMAT };
   }
 
   const currentPrompts = new Set(current.cells.map((cell) => cell.p));
@@ -476,7 +499,7 @@ export function compareMeasurementBasis(
     const label = engineLabel(cell.e);
 
     if (cell.m.length === 0 || before.m.length === 0) {
-      return { comparable: false, reason: `no se registró el modelo de ${label} en uno de los escaneos` };
+      return { comparable: false, reason: `${UNVERIFIABLE_PREFIX} el modelo de ${label} en uno de los escaneos` };
     }
     if (!sameStrings(cell.m, before.m)) {
       return {
@@ -486,7 +509,7 @@ export function compareMeasurementBasis(
     }
 
     if (cell.g === null || before.g === null) {
-      return { comparable: false, reason: `no se registró si ${label} usó búsqueda web en uno de los escaneos` };
+      return { comparable: false, reason: `${UNVERIFIABLE_PREFIX} si ${label} usó búsqueda web en uno de los escaneos` };
     }
     if (cell.g !== before.g) {
       return {

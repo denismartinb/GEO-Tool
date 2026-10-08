@@ -5,6 +5,7 @@ import {
   buildMeasurementBasis,
   compareMeasurementBasis,
   describeMeasurementBasis,
+  isUnverifiableReason,
   parseGroundingEnabled,
   readMeasurementBasis,
   requestedPromptCount,
@@ -489,6 +490,23 @@ describe("the headline window honours the same definition", () => {
     expect(result.verdict).toBe("not_comparable");
     expect(result.value).toBeNull();
     expect(result.reason).toBe("uno de los escaneos no registró con qué preguntas, modelo y búsqueda web se midió");
+  });
+});
+
+describe("unverifiable vs verified-different reasons", () => {
+  it("separates 'we cannot verify' from 'we verified they differ'", () => {
+    const stored = (options: FixtureRowOptions = {}) => readComparableRun(details({ expected: 12, requested: 4, ...options }));
+    const reasonOf = (a: ReturnType<typeof stored>, b: ReturnType<typeof stored>) => (compareRuns(a, b) as { reason: string }).reason;
+
+    // Cannot verify: nothing was recorded.
+    expect(isUnverifiableReason(reasonOf({ ...stored(), basis: null }, stored()))).toBe(true);
+    expect(isUnverifiableReason(reasonOf(stored({ grounding: { gemini: null, openai: true, claude: false } }), stored()))).toBe(true);
+    expect(isUnverifiableReason(reasonOf(stored({ models: { gemini: FIXTURE_MODELS.gemini } as Record<string, string> }), stored()))).toBe(true);
+    // Verified different: a real change worth naming.
+    expect(isUnverifiableReason(reasonOf(stored({ models: { ...FIXTURE_MODELS, openai: "gpt-5-mini" } }), stored()))).toBe(false);
+    expect(isUnverifiableReason(reasonOf(stored({ prompts: ["x1", "x2", "x3", "x4"] }), stored()))).toBe(false);
+    expect(isUnverifiableReason(reasonOf(stored({ language: "en" }), stored()))).toBe(false);
+    expect(isUnverifiableReason(null)).toBe(false);
   });
 });
 

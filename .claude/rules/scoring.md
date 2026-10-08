@@ -192,6 +192,15 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
   (`lib/metrics/gauge-headline.ts`, `components/geo-score-gauge-card.tsx`,
   probado con datos reales de scoring). La razón se redacta en orden
   cronológico («de X a Y») y sale de la misma función que decide.
+- **«No se pudo verificar» y «se verificó que cambió» se dicen distinto.**
+  `isUnverifiableReason` (`lib/scoring/measurement-basis.ts`) decide cuál es
+  cuál. Lo primero sale en lenguaje simple y **nunca promete que el próximo
+  escaneo lo arregle** (puede seguir sin haber runs comparables suficientes);
+  lo segundo nombra el cambio. Y el copy sólo ofrece «cómo se midió» si el
+  escaneo en pantalla tiene base que enseñar (`basisRecorded`) — log §236.
+- **Texto que explica por qué falta un número no usa `--ink-4`** (2,6:1 sobre
+  blanco, bajo AA). El piloto sólo audita controles interactivos, así que un
+  párrafo en ese gris pasa en verde sin cumplir AA: se mide con los tokens.
 - **`grounding_enabled` se congela al llamar** (`prompt-job.ts`,
   `raw_response_json`), nunca se deriva después del nombre del proveedor: un
   cambio posterior de metadatos reescribiría lo que midió una fila antigua.

@@ -21422,6 +21422,33 @@ respuesta individual y en el informe exportado; (4) separar salud técnica,
 menciones, citas, cuota de voz y resultado comercial como cinco lecturas
 distintas en lugar de un compuesto.
 
+**Revisión del Director sobre el copy de la tarjeta (2026-10-08, tras `PILOT FAIL`).**
+- **Un run sin base se dice en lenguaje simple y sin prometer nada:** «Todavía no
+  hay suficientes escaneos comparables para mostrar una tendencia. Puedes ver el
+  resultado de este escaneo y cómo se midió.» **Nunca «se resuelve con el próximo
+  escaneo»**: la ventana exige suficientes runs comparables y el siguiente puede
+  seguir sin cumplirlo. Un cambio **verificado** (otro modelo, otras preguntas,
+  búsqueda web distinta) sigue nombrándose tal cual, porque el fundador pidió el
+  motivo del cambio. `isUnverifiableReason` es la única definición de cuál es
+  cuál.
+- **El copy sólo ofrece «cómo se midió» si la nota puede enseñarlo.** Mirando la
+  captura renderizada —no un test— se vio que, con el escaneo en pantalla
+  anterior a esta fase, la tarjeta invitaba a un detalle que decía «no se puede
+  detallar aquí». `basisRecorded` elige la variante sin esa promesa.
+- **Legibilidad:** la línea pasa de 10,5 px en `--ink-4` (2,6:1, bajo AA; el
+  piloto no la marca porque sólo audita controles interactivos) a 12 px en
+  `--ink-3` (4,8:1 fuera de `.ov2-scope`, 5,4:1 dentro). `--ink-4` es también el
+  gris del fallo de `/signup`: es decoración, no texto que explique algo.
+- **Pasada del piloto (7 fallos, ninguno en este diff):** contraste de `/signup`
+  (`.auth-terms { color: var(--ink-4) }`, 2,63:1), test de «Exportar plan» que
+  aún espera un `.md` descargado cuando §215 lo cambió por impresión, y
+  cabecera de Visión general que sobresale con nombre + dominio largos
+  (reproducido con el CSS y el marcado de `main`: +43 px a 375, +28 px a 390; no
+  a 1280). Los tres se tratan en PRs propios.
+- **Límite que sigue en pie:** el piloto no vio el caso comparable (la cuenta
+  piloto sólo tiene escaneos sin base); queda verificado por tests con datos
+  reales de scoring y por capturas de **fixture rotulado**, no por el preview.
+
 **Trazabilidad.** `lib/scoring/measurement-basis.ts` (+test),
 `lib/scoring/{run-scoring,score-reliability,score-window,rescore-run}.ts`,
 `lib/scan/executor.ts`, `components/measurement-basis-note.tsx` (+test),

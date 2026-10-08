@@ -39,11 +39,14 @@ function formatPoints(value: number): string {
 export function MeasurementBasisNote({
   basis,
   confidenceReason,
-  sensitivity
+  sensitivity,
+  defaultOpen = false
 }: {
   basis: MeasurementBasis | null;
   confidenceReason: string | null;
   sensitivity: EngineSensitivity | null;
+  /** Collapsed in the product; open only for tests and review captures of its content. */
+  defaultOpen?: boolean;
 }) {
   const lines = describeMeasurementBasis(basis);
   const sensitivityEntries = Object.entries(sensitivity ?? {})
@@ -51,7 +54,7 @@ export function MeasurementBasisNote({
     .sort(([a], [b]) => a.localeCompare(b));
 
   return (
-    <details style={NOTE_STYLE} data-testid="measurement-basis-note">
+    <details style={NOTE_STYLE} data-testid="measurement-basis-note" open={defaultOpen}>
       <summary style={SUMMARY_STYLE}>Base de esta medición</summary>
       <div style={BODY_STYLE}>
         {basis ? (

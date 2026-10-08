@@ -31,6 +31,7 @@
  */
 
 import {
+  REASON_CONFIG_UNRECORDED,
   compareMeasurementBasis,
   readMeasurementBasis,
   type MeasurementBasis
@@ -223,7 +224,7 @@ export function compareRuns(current: ComparableRun, previous: ComparableRun): Ru
   if (unknown(current) || unknown(previous)) {
     return {
       comparable: false,
-      reason: "uno de los escaneos no registró con qué configuración se midió"
+      reason: REASON_CONFIG_UNRECORDED
     };
   }
 

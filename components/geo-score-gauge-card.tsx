@@ -2,6 +2,41 @@ import { Gauge } from "@/components/ui/gauge";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import type { GaugeHeadline } from "@/lib/metrics/gauge-headline";
+import { isUnverifiableReason } from "@/lib/scoring/measurement-basis";
+
+/**
+ * Copy for a scan that cannot be compared because nothing was recorded to
+ * compare against (a scan from before the measurement basis existed). Plain on
+ * purpose and with NO promise: whether the next scan fixes it depends on there
+ * being enough comparable runs, which a further scan may still not provide
+ * (Director, 2026-10-08). Never "se resuelve con el próximo escaneo".
+ */
+export const COPY_NOT_ENOUGH_COMPARABLE_SCANS =
+  "Todavía no hay suficientes escaneos comparables para mostrar una tendencia. Puedes ver el resultado de este escaneo y cómo se midió.";
+
+/**
+ * Same sentence for the case where THIS scan is itself from before the basis
+ * was recorded: the "Base de esta medición" note then has nothing to show about
+ * how it was measured ("no se puede detallar aquí"), so the copy must not offer
+ * it. Found by looking at the rendered card, not by a test: the first version
+ * invited the reader to a detail that said it did not exist.
+ */
+export const COPY_NOT_ENOUGH_COMPARABLE_SCANS_NO_BASIS =
+  "Todavía no hay suficientes escaneos comparables para mostrar una tendencia. Puedes ver el resultado de este escaneo.";
+
+/**
+ * The note's own type. NOT `.ov2-gauge-trend-cap` (10.5px, --ink-4): that grey
+ * is 2.6:1 on white — below WCAG AA — and was fine for a caption but not for
+ * the one sentence that explains why a number is missing. --ink-3 is 4.8:1 on
+ * white (5.4:1 inside `.ov2-scope`, where it remaps to --brand-ink-3).
+ */
+const WITHHELD_NOTE_STYLE = {
+  marginTop: 6,
+  fontSize: 12,
+  lineHeight: 1.45,
+  fontWeight: 500,
+  color: "var(--ink-3)"
+} as const;
 
 /**
  * The Overview's "Puntuación GEO" card: ring, band, variation and trend.
@@ -21,12 +56,15 @@ export function GeoScoreGaugeCard({
   headline,
   bandLabel,
   bandTone,
-  sampleNudge
+  sampleNudge,
+  basisRecorded
 }: {
   headline: GaugeHeadline;
   bandLabel: string;
   bandTone: string;
   sampleNudge: string | null;
+  /** Whether THIS scan recorded how it was measured (`details_json.measurement_basis`). */
+  basisRecorded: boolean;
 }) {
   const { score, trend, deltaVerdict, withheldReason, windowPublished } = headline;
   const trendVisible = trend.length >= 2 && deltaVerdict?.kind === "publish";
@@ -54,9 +92,15 @@ export function GeoScoreGaugeCard({
         ) : sampleNudge ? (
           <div className="ov2-gauge-trend-cap">{sampleNudge}</div>
         ) : withheldReason ? (
-          <div className="ov2-gauge-trend-cap" data-testid="gauge-withheld-reason">
-            {windowPublished ? "Sin variación" : "Sin mediana ni variación"}: {withheldReason}. Esta es la puntuación de
-            tu último escaneo.
+          <div style={WITHHELD_NOTE_STYLE} data-testid="gauge-withheld-reason">
+            {isUnverifiableReason(withheldReason) ? (
+              basisRecorded ? COPY_NOT_ENOUGH_COMPARABLE_SCANS : COPY_NOT_ENOUGH_COMPARABLE_SCANS_NO_BASIS
+            ) : (
+              <>
+                {windowPublished ? "Sin variación" : "Sin mediana ni variación"}: {withheldReason}. Esta es la
+                puntuación de tu último escaneo.
+              </>
+            )}
           </div>
         ) : null}
       </div>

@@ -907,6 +907,7 @@ export default async function ProjectDetailPage({
             bandLabel={getBandLabel(gaugeScore)}
             bandTone={getBandTone(gaugeScore)}
             sampleNudge={sampleNudge(gaugeDeltaVerdict)}
+            basisRecorded={measurementBasis !== null}
           />
           </div>
 
