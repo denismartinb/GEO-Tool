@@ -130,10 +130,18 @@ export async function applyStripeWebhookEvent(event: Stripe.Event, service: Serv
         // The account already holds a DIFFERENT subscription. If this one is
         // live in Stripe, it is billing a customer our data doesn't link to —
         // that needs a human, so it must be loud, not silent.
+        // Read who holds the link now, so an operator (or a future
+        // reconciliation job) has both sides of the conflict in one log line.
+        const { data: holder } = await service
+          .from("profiles")
+          .select("stripe_subscription_id")
+          .eq("id", userId)
+          .maybeSingle();
         console.error("[geo:billing:webhook] ORPHAN_SUBSCRIPTION_CANDIDATE: checkout completed for a subscription the profile does not hold; profile left untouched", {
           eventId: event.id,
           userId,
-          subscriptionId
+          unlinkedSubscriptionId: subscriptionId,
+          heldSubscriptionId: (holder?.stripe_subscription_id as string | null | undefined) ?? null
         });
         return IGNORED;
       }

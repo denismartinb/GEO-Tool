@@ -469,3 +469,120 @@ describe("processStripeWebhookEvent — an old checkout never overwrites the cur
     expect(profile).toMatchObject({ stripe_subscription_id: "sub_1" });
   });
 });
+
+/**
+ * KNOWN LIMITATIONS, pinned by tests so nobody mistakes them for solved
+ * (Director review of #549, 2026-10-08). These tests document what the code
+ * DOES today — "first checkout to arrive wins" — not what we would like. The
+ * guard only prevents OVERWRITING an already-linked subscription; it cannot
+ * know which of two paid subscriptions is the "right" one, and the loser is
+ * left billing a customer our data doesn't link to. Mitigation proposed in
+ * log §236 (reconciliation + operator alert); nothing here cancels or creates
+ * a subscription.
+ */
+describe("KNOWN LIMITATIONS — checkout ordering is first-arrival-wins", () => {
+  it("an OLD paid checkout that arrives BEFORE the new one wins the link; the new one is left unlinked (orphan candidate)", async () => {
+    const { processStripeWebhookEvent } = await import("./webhook-registry");
+    const { client, profile } = fakeDb();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await processStripeWebhookEvent(checkout("evt_old", 1000, "sub_old"), client);
+    const newer = await processStripeWebhookEvent(checkout("evt_new", 2000, "sub_new"), client);
+
+    expect(newer).toEqual({ status: "processed", outcome: "ignored" });
+    // The profile points at the OLDER one: ordering by event time is NOT applied across subscriptions.
+    expect(profile).toMatchObject({ stripe_subscription_id: "sub_old" });
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("ORPHAN_SUBSCRIPTION_CANDIDATE"),
+      expect.objectContaining({ unlinkedSubscriptionId: "sub_new", heldSubscriptionId: "sub_old" })
+    );
+  });
+
+  it("two DIFFERENT paid checkouts: the second is never linked and nothing retries it — it stays unlinked and billing", async () => {
+    const { processStripeWebhookEvent } = await import("./webhook-registry");
+    const { client, events, profile } = fakeDb();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await processStripeWebhookEvent(checkout("evt_a", 1000, "sub_a"), client);
+    await processStripeWebhookEvent(checkout("evt_b", 1001, "sub_b"), client);
+    // Stripe redelivers evt_b: it is a duplicate, so the conflict is never re-evaluated.
+    const redelivery = await processStripeWebhookEvent(checkout("evt_b", 1001, "sub_b"), client);
+
+    expect(redelivery).toEqual({ status: "duplicate" });
+    expect(profile).toMatchObject({ stripe_subscription_id: "sub_a" });
+    expect(events.get("evt_b")).toMatchObject({ outcome: "ignored" });
+  });
+
+  it("an old checkout arriving after the CURRENT link was deleted links the old subscription (nothing says it is dead), and its own delete later clears it", async () => {
+    const { processStripeWebhookEvent } = await import("./webhook-registry");
+    const { client, profile } = fakeDb();
+
+    await processStripeWebhookEvent(checkout("evt_new", 3000, "sub_new"), client);
+    await processStripeWebhookEvent(subscriptionEvent("evt_new_del", "deleted", 4000, "sub_new", "canceled"), client);
+    expect(profile).toMatchObject({ current_plan: "free", stripe_subscription_id: null });
+
+    // sub_old was never seen as deleted, so its (paid) checkout is accepted.
+    const old = await processStripeWebhookEvent(checkout("evt_old", 2000, "sub_old"), client);
+    expect(old).toEqual({ status: "processed", outcome: "applied" });
+    expect(profile).toMatchObject({ current_plan: "pro", stripe_subscription_id: "sub_old" });
+
+    // Self-heals only if Stripe really ends it: its delete scoped to sub_old clears the link.
+    await processStripeWebhookEvent(subscriptionEvent("evt_old_del", "deleted", 5000, "sub_old", "canceled"), client);
+    expect(profile).toMatchObject({ current_plan: "free", stripe_subscription_id: null });
+  });
+
+  it("a subscription.updated that arrives BEFORE the checkout that links it is ignored for good: its state (cancel_at) is never applied", async () => {
+    const { processStripeWebhookEvent } = await import("./webhook-registry");
+    const { client, events, profile } = fakeDb();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const updated = {
+      id: "evt_up",
+      type: "customer.subscription.updated",
+      created: 1000,
+      data: {
+        object: {
+          id: "sub_1",
+          status: "active",
+          cancel_at: 1_900_000_000,
+          metadata: { user_id: "user-1" },
+          items: { data: [{ price: { id: "price_pro_test" } }] }
+        }
+      }
+    } as unknown as Stripe.Event;
+
+    expect(await processStripeWebhookEvent(updated, client)).toEqual({ status: "processed", outcome: "ignored" });
+    await processStripeWebhookEvent(checkout("evt_co", 1001, "sub_1"), client);
+    expect(await processStripeWebhookEvent(updated, client)).toEqual({ status: "duplicate" });
+
+    expect(events.get("evt_up")).toMatchObject({ outcome: "ignored" });
+    expect(profile).toMatchObject({ stripe_subscription_id: "sub_1" });
+    expect(profile.cancel_at ?? null).toBeNull(); // the scheduled cancellation was lost
+  });
+
+  it("two updates with the SAME event.created (1 s resolution) delivered inverted both apply: the last ARRIVAL wins, not the last in time", async () => {
+    const { processStripeWebhookEvent } = await import("./webhook-registry");
+    const { client, profile } = fakeDb({ profile: { stripe_subscription_id: "sub_1", current_plan: "pro" } });
+    const mk = (id: string, cancelAt: number | null) =>
+      ({
+        id,
+        type: "customer.subscription.updated",
+        created: 1000,
+        data: {
+          object: {
+            id: "sub_1",
+            status: "active",
+            cancel_at: cancelAt,
+            metadata: { user_id: "user-1" },
+            items: { data: [{ price: { id: "price_pro_test" } }] }
+          }
+        }
+      }) as unknown as Stripe.Event;
+
+    // In reality "evt_later" (cancellation reverted) happened after "evt_earlier" (cancellation scheduled)…
+    await processStripeWebhookEvent(mk("evt_later", null), client);
+    await processStripeWebhookEvent(mk("evt_earlier", 1_900_000_000), client);
+
+    // …but both carry created=1000, so the older one overwrote the newer one.
+    expect(profile.cancel_at).toBe(new Date(1_900_000_000 * 1000).toISOString());
+  });
+});

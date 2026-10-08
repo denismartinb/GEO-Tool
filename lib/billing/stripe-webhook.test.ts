@@ -444,7 +444,10 @@ describe("handleStripeWebhookEvent", () => {
 
       expect(updates).toHaveLength(0);
       expect(sendPlanConfirmedEmail).not.toHaveBeenCalled();
-      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("ORPHAN_SUBSCRIPTION_CANDIDATE"), expect.anything());
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("ORPHAN_SUBSCRIPTION_CANDIDATE"),
+        expect.objectContaining({ unlinkedSubscriptionId: "sub_old", heldSubscriptionId: "sub_new" })
+      );
       errorSpy.mockRestore();
     });
 

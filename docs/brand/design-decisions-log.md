@@ -21411,6 +21411,38 @@ suscripción viva que seguía cobrando sin rastro en nuestros datos.
   `subscription.updated` que llegue antes del `checkout` que enlaza queda
   `ignored` para siempre (ya se perdía antes del registro; la corrección sería
   leer el estado de la suscripción desde Stripe al enlazar).
+- **Tercera ronda (Director, 2026-10-08) — limitaciones que NO están resueltas,
+  fijadas con tests de lo que el código hace hoy** (`describe("KNOWN LIMITATIONS")`
+  en `webhook-registry.test.ts`):
+  1. *Checkout antiguo antes del nuevo:* gana el primero que llega. La guarda
+     solo impide PISAR un enlace existente; no sabe cuál de dos suscripciones
+     pagadas es la correcta, y la perdedora queda sin enlazar **y cobrando**.
+  2. *Dos checkouts pagados distintos:* igual; el segundo queda `ignored` y su
+     reentrega es `duplicate`, así que el conflicto nunca se reevalúa.
+  3. *Checkout antiguo tras borrarse el vínculo actual:* se acepta (nada dice que
+     esté muerta) y enlaza la antigua; se autocorrige solo si Stripe acaba
+     emitiendo su `deleted`. «Viejo tras nuevo» (enlace vigente) está cubierto;
+     esto otro no, y no se da por cerrado.
+  4. *`updated` antes del checkout que enlaza:* queda `ignored` para siempre
+     (la reentrega es `duplicate`); su estado, p. ej. `cancel_at`, se pierde.
+  5. *Empate de `event.created`* (resolución de 1 s): dos `updated` invertidos
+     con el mismo segundo se aplican los dos y gana el último en LLEGAR.
+- **Propuesta (no implementada) de reconciliación y alerta de operador**, sin
+  cancelar ni crear suscripciones reales: (a) registrar el desenlace
+  `orphan_candidate` en `stripe_webhook_events.outcome` en vez de `ignored`, para
+  poder consultarlo; el log ya lleva `unlinkedSubscriptionId` y
+  `heldSubscriptionId`; (b) un correo a `OPS_ALERT_EMAIL` (nunca al cliente), una
+  vez por evento y tras el commit, con ambos ids; (c) un job de reconciliación
+  de solo lectura que, para cada cliente con >1 suscripción viva en Stripe o con
+  una viva sin enlazar, liste el caso para decisión humana; (d) al enlazar,
+  leer el estado de la suscripción desde Stripe, lo que recupera el caso 4.
+  Decidir cuál es la «correcta» y cancelar la otra es siempre una acción humana.
+- **Sobre el 99 €:** según el Director es la oferta Agencia candidata de un
+  nuevo plan comercial, **no** un mapeo confirmado al Agency de 449 € actual. No
+  se renombra ni se cambia ninguna suscripción legacy. El IVA incluido afecta a
+  precios públicos y promos; la lista final y el mapeo de Prices son decisión del
+  dueño. Renovación y prorrateo siguen sin probar: una preview de alta sin cupón
+  no los demuestra.
 - `scripts/stripe-tax-audit.mjs`: auditoría fiscal de solo lectura en modo test
   (rechaza claves que no sean de test). Sin ejecutar: este entorno no tiene
   clave de Stripe.
