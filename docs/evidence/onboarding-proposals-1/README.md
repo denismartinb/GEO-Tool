@@ -111,4 +111,3 @@ Transcrito de la salida del guion, 390 y 1280, casos `blocked` y `ok`:
 **390-ok-3-prompts.png**
 
 ![390-ok-3-prompts (fixture)](./390-ok-3-prompts.png)
-

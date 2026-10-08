@@ -103,4 +103,3 @@ Este parche **solo corrige el desbordamiento**; deja intactos los problemas de l
 **Paso 3 · prompts**
 
 ![1280 px · Paso 3 · prompts (fixture)](./1280-paso3-prompts.png)
-
