@@ -119,6 +119,37 @@ Y `fetchHomepageEvidence` reduce **todo lo que no sea `analyzed`** a `{ status: 
 
 ---
 
+## 4b. Complemento (Director, 6070280041): una portada que no se lee también deja sin auditoría web — y eso NO es la medición de IA
+
+**Tres cosas distintas que hoy se pueden confundir** (y una cuarta que no depende de ninguna):
+
+| | Qué es | Qué necesita | Si falla la lectura de la web |
+|---|---|---|---|
+| **A. Portada no leída** | El asistente no obtuvo HTML de `https://dominio` al dar de alta | `fetchPageSafely` | Pide descripción (§4) |
+| **B. Propuesta manual** | Competidores y prompts sugeridos a partir de una descripción escrita por la persona (`userDescription`) | Texto de la persona | **Funciona sin lectura**; sigue siendo «propuesta de IA», no verificada contra la web |
+| **C. Auditoría web (salud técnica / cobertura)** | `runTechnicalAuditCore` lee homepage + páginas del mapa de cobertura + URLs propias citadas por la IA con `fetchPageSafely`, más `robots.txt`/sitemap | La **misma lectura** que A | **No existe** si todas las páginas se descartan |
+| **D. Medición de IA** | El escaneo pregunta a los motores y busca el nombre confirmado y alias en las respuestas | Nombre confirmado + prompts | **Independiente de A y C**: se puede medir menciones con nombre confirmado aunque la web no se lea |
+
+**Lo que hace hoy el código cuando la lectura falla (verificado):**
+- `computeReadinessScore` devuelve **`null`** si ninguna página se analizó (no 0). La puntuación GEO **excluye** `technical` y renormaliza los otros cuatro pesos (`run-scoring.ts`: «un proyecto sin auditoría puntúa igual que en v3»). Es decir, **no se muestra 0 como resultado técnico**, pero tampoco se avisa de que ese componente falta por no poder leer.
+- La pantalla de Auditoría web pinta la tarjeta «Salud técnica» como **«—»** con el pie **«Media de 0 páginas clave»**: ni «no disponible», ni motivo, ni salida.
+- **Mensaje equivocado ya existente:** `fetchPageSafely` devuelve `skipped_offsite` para un HTTP 403 del propio dominio, y la fila de página lo etiqueta **«Descartada: fuera del dominio verificado»** (`page-audit-row.tsx`). Es falso para una web que sí es del dominio pero rechazó la lectura. El estado `skipped_error` («Descartada: no se ha podido cargar») **ya existe en el tipo y en las etiquetas, pero `fetchPageSafely` nunca lo devuelve**: usarlo para «no OK» y fallos de red corrige el texto **sin enum nuevo**. Efecto colateral a revisar: `regressions.ts` trata `skipped_timeout`/`skipped_error` como inalcanzables y podría emitir un aviso de regresión si una web antes legible pasa a rechazar; una primera auditoría sin lado anterior no avisa. Cambio en `lib/web-audit/**` → **solo con visto bueno del Director y `data-guardian`**; **no se implementa aquí.**
+- Aunque falle la portada, la auditoría puede analizar **otras** URLs propias (páginas del mapa de cobertura, URLs citadas por la IA): si la causa es un CDN que bloquea todo el dominio, lo normal es que fallen todas; si no, saldría una nota de **un subconjunto** que no equivale a la web entera. La pantalla ya dice «Media de N páginas clave», no «tu web».
+
+**Propuesta (estado explícito, sin tocar backend en este complemento):** una tarjeta/estado **«Auditoría web no disponible»** en lugar de «—» + «Media de 0 páginas», con cuatro campos:
+1. **Qué pasó (motivo seguro, solo si se conoce):** «La web rechazó la lectura automática» / «Tardó demasiado en responder» / «No encontramos contenido legible»; si no se sabe: «No hemos podido leer tu web». Nunca el mensaje del servidor, nunca atribuir a un CDN concreto.
+2. **Alcance no evaluado:** «No se han evaluado: salud técnica, robots/sitemap, ni la cobertura de contenido de tu web. **Tu puntuación GEO se calcula sin el componente técnico.**» (cierto: se renormaliza).
+3. **Lo que SÍ sigue valiendo:** «La medición en IAs (menciones, competidores, citas) no depende de leer tu web.»
+4. **Siguiente salida:** «Reintentar más tarde» (la auditoría ya se reintenta sola) y, si el producto lo permitiera en el futuro, aportar contenido o una URL alternativa **del mismo dominio**.
+
+**Alternativa acotada (NO existe hoy; solo se deja diseñada):** contenido aportado a mano o una URL pública alternativa **del mismo dominio**, validada **con las mismas reglas** que `fetchPageSafely` (HTTPS, `isAllowedAuditHost`, DNS pública, redirecciones verificadas por salto). Hoy **no hay importación manual**: los candidatos salen de la portada, del mapa de cobertura y de citas propias, nunca de la entrada de la persona. Si se hiciera, sería **una página concreta**, etiquetada «auditoría de una página aportada» y **jamás** «auditoría de tu web»: no implica cobertura del sitio entero ni equivale a la auditoría automática realizada. No se acepta URL arbitraria, no se relajan guardias.
+
+**Backlog (después del primer cliente, sin tocar ahora):** un proveedor de rastreo legítimo para webs con protección anti-bot; coste, cobertura y límites **a investigar entonces**. Sin bypass, sin rotación de IP/user-agent, sin escaneos de pago nuevos en este diagnóstico.
+
+**Separación en la UI (cuatro etiquetas, nunca mezcladas):** «Portada no leída» (asistente) · «Propuesta a partir de tu descripción» (asistente) · «Auditoría web no disponible» (pantalla de auditoría) · «Medición en IAs» (resto de la consola). Un copy que diga «con la descripción se resuelve todo» queda **prohibido**: la descripción habilita B y D, no C.
+
+---
+
 ## 5. Estados y anchos — dónde queda cada cosa
 
 Estados: **normal** (identidad confirmada, propuestas listas) · **pendiente** (marca sacada del dominio) · **error** (portada ilegible, con causa) · **texto largo** (marca de 85 caracteres, competidor de 86, prompt de 218).
@@ -144,7 +175,8 @@ Estados: **normal** (identidad confirmada, propuestas listas) · **pendiente** (
 
 1. **OK de alcance del Director** a los puntos 1–3 (UX, sin esquema, sin backend) y, por separado, al punto 4.
 2. **Revisión de `data-guardian`** si se toca `lib/web-audit/fetch-page.ts` (campo opcional de estado HTTP); si no se aprueba, el punto 4 usa solo las distinciones que existen.
-3. **Confirmación del dueño** del commit/deployment que Denis abrió (panel de Vercel) para dar el diagnóstico por cerrado sobre el producto real.
-4. Nada de esto requiere esquema, SQL, Stripe, configuración ni llamadas de pago; no se lanzan escaneos.
+3. **Para §4b:** decisión del Director sobre el estado «Auditoría web no disponible» y sobre usar `skipped_error` para «no OK»/red (con `data-guardian` y tests de `regressions.ts`); la alternativa manual/URL del mismo dominio y el proveedor de rastreo quedan **fuera** hasta después del primer cliente.
+4. **Confirmación del dueño** del commit/deployment que Denis abrió (panel de Vercel) para dar el diagnóstico por cerrado sobre el producto real.
+5. Nada de esto requiere esquema, SQL, Stripe, configuración ni llamadas de pago; no se lanzan escaneos.
 
 Do you approve this plan? I will not implement until you confirm.
