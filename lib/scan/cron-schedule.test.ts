@@ -64,15 +64,15 @@ describe("mostRecentCronFiringAt", () => {
 describe("resolveEligibilityCutoffIso", () => {
   const now = Date.parse("2026-06-20T08:00:00.000Z");
 
-  it("uses this firing itself for a daily plan", () => {
-    expect(resolveEligibilityCutoffIso({ planId: "pro", now })).toBe("2026-06-20T06:00:00.000Z");
+  it("uses this firing itself for a daily plan (Agencia, legacy)", () => {
     expect(resolveEligibilityCutoffIso({ planId: "agency", now })).toBe("2026-06-20T06:00:00.000Z");
   });
 
-  it("uses six days before this firing for Starter's weekly cadence", () => {
+  it("uses six days before this firing for the weekly plans: Starter and, since CONTRACT-99, Pro", () => {
     // So a scan 7 days ago qualifies whatever time of day it happened, and
     // one 6 days ago does not — the boundary is a firing, not a stopwatch.
     expect(resolveEligibilityCutoffIso({ planId: "starter", now })).toBe("2026-06-14T06:00:00.000Z");
+    expect(resolveEligibilityCutoffIso({ planId: "pro", now })).toBe("2026-06-14T06:00:00.000Z");
   });
 
   it("falls back to the daily cadence for an unknown plan id", () => {
@@ -82,11 +82,23 @@ describe("resolveEligibilityCutoffIso", () => {
   it("never lets an off-schedule run inside the previous interval block the next firing", () => {
     // The founder-visible bug, as a property: a run at ANY time of the day
     // before this firing is before the cutoff for a daily plan.
-    const cutoff = resolveEligibilityCutoffIso({ planId: "pro", now });
+    const cutoff = resolveEligibilityCutoffIso({ planId: "agency", now });
 
     for (const hour of [0, 6, 9, 13, 18, 23]) {
       const yesterdayRun = `2026-06-19T${String(hour).padStart(2, "0")}:08:00.000Z`;
       expect(yesterdayRun < cutoff, `a run at ${yesterdayRun} must not block the 06:00 firing`).toBe(true);
+    }
+  });
+
+  it("the same property for a weekly plan: a run 6 days back blocks, one 7 days back does not", () => {
+    const cutoff = resolveEligibilityCutoffIso({ planId: "pro", now });
+
+    for (const hour of [0, 6, 9, 13, 18, 23]) {
+      const sevenDaysAgo = `2026-06-13T${String(hour).padStart(2, "0")}:08:00.000Z`;
+      const sixDaysAgo = `2026-06-14T${String(hour).padStart(2, "0")}:08:00.000Z`;
+      expect(sevenDaysAgo < cutoff, `a run at ${sevenDaysAgo} must not block the firing`).toBe(true);
+      // The cutoff is 06-14T06:00: a run earlier that morning does not block, one after it does.
+      expect(sixDaysAgo < cutoff, `a run at ${sixDaysAgo}`).toBe(hour < 6);
     }
   });
 });

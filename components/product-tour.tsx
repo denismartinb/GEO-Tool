@@ -860,12 +860,15 @@ export function ProductTour({
                   <span className="pt-badge pt-badge-pos" data-pt="trenddelta" style={{ opacity: 0 }}>
                     +0 pt en 5 escaneos
                   </span>
-                  {/* Cierto, no una frase de folleto: `lib/scan/cron.ts`
-                      reescanea a diario en free/pro/agency y semanalmente en
-                      starter. Si esa cadencia cambia, este texto cambia. */}
+                  {/* Cierto, no una frase de folleto. La cadencia depende del plan
+                      (`lib/plan-cadence.ts`: semanal en pro y starter, diaria en
+                      agency) y el tour no sabe en cuál está quien lo mira, así
+                      que no nombra ninguna: «Escaneo automático» es cierto en
+                      todos. Si algún día el tour conoce el plan, que la lea de
+                      ahí, no que la escriba. */}
                   <span className="pt-badge pt-badge-mid">
                     <span className="pt-spin" style={{ width: 7, height: 7, borderWidth: 1.2 }} />
-                    Escaneo automático a diario
+                    Escaneo automático
                   </span>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { PLANS, PROMO_DURATION_MONTHS, PROMO_ENDS_AT, type Plan } from "@/app/pricing/plans-data";
+import { cadenceAdjective } from "@/lib/plan-cadence";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 import { formatDateLong, type PlanOffer } from "@/lib/email/lifecycle/templates";
 
@@ -23,6 +24,7 @@ export function resolvePlanOffer(id: "pro" | "starter"): PlanOffer {
   return {
     planName: p.name,
     price: p.price,
+    cadence: cadenceAdjective(id),
     promo: promoActive
       ? { price: p.promoPrice as number, months: PROMO_DURATION_MONTHS, endsLabel: formatDateLong(new Date(PROMO_ENDS_AT)) }
       : null

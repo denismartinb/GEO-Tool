@@ -72,17 +72,28 @@ describe("getActiveSubscriptionPromo", () => {
 
   it("returns the promo price and real end date when the matching coupon is applied", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_x";
-    process.env.STRIPE_COUPON_ID_PRO_PROMO = "promo_pro";
+    process.env.STRIPE_COUPON_ID_STARTER_PROMO = "promo_starter";
     const endTimestamp = Math.floor(new Date("2027-01-01T00:00:00Z").getTime() / 1000);
     retrieve.mockResolvedValue({
-      discounts: [{ id: "di_1", source: { type: "coupon", coupon: { id: "promo_pro" } }, end: endTimestamp }]
+      discounts: [{ id: "di_1", source: { type: "coupon", coupon: { id: "promo_starter" } }, end: endTimestamp }]
     });
     const getActiveSubscriptionPromo = await freshGetActiveSubscriptionPromo();
 
-    const result = await getActiveSubscriptionPromo("sub_1", "pro");
+    const result = await getActiveSubscriptionPromo("sub_1", "starter");
 
-    expect(result).toEqual({ promoPrice: 59, endsAt: new Date(endTimestamp * 1000).toISOString() });
+    expect(result).toEqual({ promoPrice: 19, endsAt: new Date(endTimestamp * 1000).toISOString() });
     expect(retrieve).toHaveBeenCalledWith("sub_1", { expand: ["discounts"] });
+  });
+
+  it("CONTRACT-99: Pro has no launch price, so even a leftover Pro coupon yields no promo", async () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    process.env.STRIPE_COUPON_ID_PRO_PROMO = "promo_pro";
+    retrieve.mockResolvedValue({
+      discounts: [{ id: "di_1", source: { type: "coupon", coupon: { id: "promo_pro" } }, end: 1893456000 }]
+    });
+    const getActiveSubscriptionPromo = await freshGetActiveSubscriptionPromo();
+
+    expect(await getActiveSubscriptionPromo("sub_1", "pro")).toBeNull();
   });
 
   it("matches a coupon returned as a bare string id, not just an expanded object", async () => {

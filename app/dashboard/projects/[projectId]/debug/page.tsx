@@ -590,7 +590,7 @@ export default async function RunsPage({
           <Icon name="runs" size={17} />
         </div>
         <div className="dbg-switch-txt">
-          <b>Escaneo automático diario</b>
+          <b>Escaneo automático</b>
           <small>
             {totalCompletedRuns === 0
               ? "Necesita al menos un escaneo completado antes de poder activarse."
@@ -608,7 +608,7 @@ export default async function RunsPage({
             className={`switch-toggle ${project.recurring_scans_enabled ? "on" : ""}`}
             role="switch"
             aria-checked={project.recurring_scans_enabled}
-            aria-label="Escaneo automático diario"
+            aria-label="Escaneo automático"
             disabled={totalCompletedRuns === 0 && !project.recurring_scans_enabled}
           />
         </form>

@@ -153,23 +153,27 @@ export const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Pro",
-    price: 179,
-    promoPrice: 59,
+    // CONTRACT-99 (log §237): el plan de pago ÚNICO. 99 €/mes con IVA incluido
+    // para todos, sin cohorte legacy y sin precio de lanzamiento (`promoPrice`
+    // fuera: sin él, `resolveShownPromoPrice` devuelve null y ninguna superficie
+    // pinta precio tachado). El ID técnico `pro` se reutiliza SIN conservar las
+    // cuotas anteriores (5 dominios · 100 prompts · diario).
+    price: 99,
     period: "mes",
-    tagline: "El bucle de acción completo",
-    who: "Equipo in-house o consultor avanzado",
+    tagline: "Monitoriza tu marca en las IA",
+    who: "Marca o consultor que quiere seguir su presencia en las IA",
     recommended: true,
     cta: "Probar Pro gratis",
     ctaStyle: "primary",
     highlights: [
-      "5 dominios · ~100 prompts",
-      "3 motores de IA (Gemini, Claude y ChatGPT) · escaneo diario",
+      "3 dominios · 75 prompts en total, repartidos como quieras",
+      "3 motores de IA (Gemini, Claude y ChatGPT) · escaneo semanal",
       "Nuevos motores incluidos sin coste extra cuando se publiquen",
       "Bucle de acción completo",
       "Generador de soluciones (FAQ, schema, briefs)"
     ],
-    meter: { projects: "5", prompts: 100, engines: 3, refresh: "Diario" },
-    caps: { projects: 5, prompts: 100, engines: 3 }
+    meter: { projects: "3", prompts: 75, engines: 3, refresh: "Semanal" },
+    caps: { projects: 3, prompts: 75, engines: 3 }
   },
   {
     id: "agency",
@@ -199,10 +203,10 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
   {
     group: "Medición",
     rows: [
-      { label: "Dominios", vals: ["1", "1", "5", "A medida"] },
-      { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
+      { label: "Dominios", vals: ["1", "1", "3", "A medida"] },
+      { label: "Prompts monitorizados", vals: ["~10", "~25", "75 en total", "~300"] },
       { label: "Motores de IA", vals: ["1", "3", "3", "3"] },
-      { label: "Frecuencia de escaneo", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
+      { label: "Frecuencia de escaneo", vals: ["Puntual", "Semanal", "Semanal", "Diario"] },
       { label: "Tendencia temporal", vals: [false, true, true, true] }
     ]
   },

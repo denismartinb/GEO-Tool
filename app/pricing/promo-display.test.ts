@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { PLANS, resolveShownPromoPrice } from "./plans-data";
 
+// CONTRACT-99: Pro no longer carries a launch price, so these cases run on
+// Starter (the only plan that still has one until the public surfaces drop it).
+const starter = PLANS.find((p) => p.id === "starter")!;
 const pro = PLANS.find((p) => p.id === "pro")!;
 const free = PLANS.find((p) => p.id === "free")!;
 
@@ -18,8 +21,8 @@ describe("resolveShownPromoPrice", () => {
   it("quotes the launch price to someone on the free Pro trial — the reported bug", () => {
     // No Stripe subscription yet, so no `subscriptionPromo`. The console showed
     // 179 €/mes while `/precios` and the change-plan modal showed 59 €.
-    expect(resolveShownPromoPrice({ plan: pro, activePromoPrice: undefined, promoPlanIds })).toEqual({
-      price: 59,
+    expect(resolveShownPromoPrice({ plan: starter, activePromoPrice: undefined, promoPlanIds })).toEqual({
+      price: 19,
       kind: "offered"
     });
   });
@@ -28,8 +31,8 @@ describe("resolveShownPromoPrice", () => {
     // A real subscriber's own coupon wins over the campaign: it is what they
     // are actually being charged, and its end date is read off the
     // subscription itself (§152), not off `PROMO_ENDS_AT`.
-    expect(resolveShownPromoPrice({ plan: pro, activePromoPrice: 59, promoPlanIds })).toEqual({
-      price: 59,
+    expect(resolveShownPromoPrice({ plan: starter, activePromoPrice: 19, promoPlanIds })).toEqual({
+      price: 19,
       kind: "contracted"
     });
   });
@@ -37,15 +40,20 @@ describe("resolveShownPromoPrice", () => {
   it("never labels an offer as contracted — the two drive different copy", () => {
     // Telling a trial user they are already paying 59 € is exactly the
     // fake-figure failure this repo keeps writing rules about.
-    const offered = resolveShownPromoPrice({ plan: pro, activePromoPrice: null, promoPlanIds });
+    const offered = resolveShownPromoPrice({ plan: starter, activePromoPrice: null, promoPlanIds });
     expect(offered?.kind).toBe("offered");
+  });
+
+  it("CONTRACT-99: Pro carries no launch price, so no screen can quote one for it", () => {
+    expect(pro.promoPrice).toBeUndefined();
+    expect(resolveShownPromoPrice({ plan: pro, activePromoPrice: undefined, promoPlanIds })).toBeNull();
   });
 
   it("stays silent when the campaign is closed or the Stripe coupon is missing", () => {
     // `promoPlanIds` comes from `getActivePromoPlanIds()`, which demands the
     // date AND a configured coupon — so an empty list is the one signal that
     // must silence every screen at once.
-    expect(resolveShownPromoPrice({ plan: pro, activePromoPrice: undefined, promoPlanIds: [] })).toBeNull();
+    expect(resolveShownPromoPrice({ plan: starter, activePromoPrice: undefined, promoPlanIds: [] })).toBeNull();
   });
 
   it("stays silent for a plan that has no promo price at all", () => {

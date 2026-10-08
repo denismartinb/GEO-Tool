@@ -72,11 +72,22 @@ describe("deriveAccountHealth", () => {
 
   it("flags a recurring project with no completed scan in its cycle", () => {
     const health = deriveAccountHealth({
-      planId: "pro",
+      planId: "agency",
       now: NOW,
       projects: [{ domain: "quiet.es", recurringEnabled: true, runs: [run({ created_at: hoursAgo(80) })] }]
     });
     expect(health.reasons[0]).toMatch(/^quiet\.es: sin datos nuevos desde/);
+  });
+
+  it("the weekly cycle of Pro (CONTRACT-99) is not flagged at 80 h, but is past 9 days", () => {
+    const quiet = (hours: number) =>
+      deriveAccountHealth({
+        planId: "pro",
+        now: NOW,
+        projects: [{ domain: "quiet.es", recurringEnabled: true, runs: [run({ created_at: hoursAgo(hours) })] }]
+      });
+    expect(quiet(80).reasons).toEqual([]);
+    expect(quiet(9 * 24).reasons[0]).toMatch(/^quiet\.es: sin datos nuevos desde/);
   });
 
   it("stays silent about Free / expired-trial accounts the system does not scan", () => {

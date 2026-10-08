@@ -61,10 +61,10 @@ describe("computeDataMaturity", () => {
     ).toEqual({ kind: "hidden" });
   });
 
-  it("computes daily cadence for pro/agency and derives the correct ETA", () => {
+  it("computes weekly cadence for pro (CONTRACT-99) and daily for agency, and derives the correct ETA", () => {
     expect(
       computeDataMaturity({ completedScans: 2, latestStatus: "completed", recurringEnabled: true, planId: "pro" })
-    ).toEqual({ kind: "accumulating", completed: 2, target: 5, cadenceUnit: "días", etaCount: 3 });
+    ).toEqual({ kind: "accumulating", completed: 2, target: 5, cadenceUnit: "semanas", etaCount: 3 });
     expect(
       computeDataMaturity({ completedScans: 4, latestStatus: "completed", recurringEnabled: true, planId: "agency" })
     ).toEqual({ kind: "accumulating", completed: 4, target: 5, cadenceUnit: "días", etaCount: 1 });

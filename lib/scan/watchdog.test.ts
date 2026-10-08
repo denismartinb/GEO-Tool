@@ -40,14 +40,14 @@ describe("evaluateRecurringFreshness", () => {
   it("counts a daily project as fresh when today's scan exists after the grace", () => {
     const now = Date.parse("2026-09-28T10:00:00.000Z");
     expect(
-      evaluateRecurringFreshness({ planId: "pro", lastCompletedAt: "2026-09-28T06:00:31.000Z", now })
+      evaluateRecurringFreshness({ planId: "agency", lastCompletedAt: "2026-09-28T06:00:31.000Z", now })
     ).toEqual({ stale: false, cutoffIso: "2026-09-28T06:00:00.000Z" });
   });
 
   it("flags a daily project whose last completed scan is from before today's firing", () => {
     // The real shape: last completed 20 Sept, checked on the 28th.
     const now = Date.parse("2026-09-28T10:00:00.000Z");
-    expect(evaluateRecurringFreshness({ planId: "pro", lastCompletedAt: "2026-09-20T06:01:26.000Z", now }).stale).toBe(
+    expect(evaluateRecurringFreshness({ planId: "agency", lastCompletedAt: "2026-09-20T06:01:26.000Z", now }).stale).toBe(
       true
     );
   });
@@ -57,7 +57,7 @@ describe("evaluateRecurringFreshness", () => {
     // question is still about yesterday's.
     const now = Date.parse("2026-09-28T08:00:00.000Z");
     expect(
-      evaluateRecurringFreshness({ planId: "pro", lastCompletedAt: "2026-09-27T06:00:31.000Z", now })
+      evaluateRecurringFreshness({ planId: "agency", lastCompletedAt: "2026-09-27T06:00:31.000Z", now })
     ).toEqual({ stale: false, cutoffIso: "2026-09-27T06:00:00.000Z" });
   });
 
@@ -67,6 +67,16 @@ describe("evaluateRecurringFreshness", () => {
       false
     );
     expect(evaluateRecurringFreshness({ planId: "starter", lastCompletedAt: "2026-09-21T06:00:31.000Z", now }).stale).toBe(
+      true
+    );
+  });
+
+  it("gives Pro (CONTRACT-99) the same weekly cadence: 6 days old is fresh, 7 days old is stale", () => {
+    const now = Date.parse("2026-09-28T10:00:00.000Z");
+    expect(evaluateRecurringFreshness({ planId: "pro", lastCompletedAt: "2026-09-22T06:00:31.000Z", now }).stale).toBe(
+      false
+    );
+    expect(evaluateRecurringFreshness({ planId: "pro", lastCompletedAt: "2026-09-21T06:00:31.000Z", now }).stale).toBe(
       true
     );
   });

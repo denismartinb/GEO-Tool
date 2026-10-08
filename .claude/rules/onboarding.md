@@ -68,8 +68,9 @@ obedecerá igual.
   garantizados» convierte el tour en una promesa que el producto no puede
   cumplir (CLAUDE.md, "no fake metrics").
 - **Lo que el tour afirma del producto tiene que ser cierto hoy.** «Se escanea
-  continuamente» se sostiene en `lib/scan/cron.ts` (diario en free/pro/agency,
-  semanal en starter) y la auditoría usa los pesos reales de
+  continuamente» se sostiene en `lib/plan-cadence.ts`, que también alimenta `lib/scan/cron.ts`
+  (desde CONTRACT-99, log §237: semanal en pro y starter, diaria en agency; el tour no nombra
+  ninguna cadencia porque no sabe en qué plan está quien lo mira) y la auditoría usa los pesos reales de
   `docs/design-reference/web-audit-issues-1/`. Si esa cadencia o esos pesos
   cambian, el texto del tour cambia con ellos.
 - **El dominio del hero llega al asistente, y se consume al leerlo.** La

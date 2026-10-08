@@ -10,6 +10,7 @@ import { executePendingScan, getSiteUrl } from "@/lib/scan/executor";
 import { ProjectActionError } from "@/lib/scan/types";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { serverEnv } from "@/lib/env";
+import { recurringIntervalDays } from "@/lib/plan-cadence";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FAILURE_STREAK_LIMIT = 3;
@@ -39,29 +40,13 @@ export function resolveMaxSweepChainInvocations(): number {
 }
 
 /**
- * PRICING-TRUTH-1 (PR b): recurring-scan cadence by the project owner's plan,
- * replacing the previous single hardcoded 24h interval applied to every
- * project regardless of plan — `/pricing` promises "Semanal" for Starter and
- * "Diario" for Pro/Agencia, but the cron ran every project daily. `free` is
- * listed only for completeness (its interval is never actually reached: a
- * free-plan project cannot have `recurring_scans_enabled=true` in practice —
- * enabling it requires a prior completed scan per
- * `recurring_requires_completed_scan`, and `createPendingScanRunCore` now
- * refuses a second run for a free-plan project outright, see
- * `run-creation.ts`). Kept explicit rather than falling through to a default
- * so a missing branch is a type error, not a silent wrong cadence.
- *
- * In DAYS, not milliseconds, since RECURRING-CADENCE-1: eligibility is now
- * anchored to the cron's own firing schedule (see resolveEligibilityCutoffIso)
- * rather than measured as a rolling window backwards from `Date.now()`.
+ * PRICING-TRUTH-1 (PR b) / RECURRING-CADENCE-1: recurring-scan cadence by the
+ * project owner's plan. The table itself moved to `lib/plan-cadence.ts` (pure,
+ * shared with the data-maturity banner and the copy that quotes a cadence);
+ * eligibility is anchored to the cron's own firing schedule (see
+ * `resolveEligibilityCutoffIso`) rather than measured as a rolling window
+ * backwards from `Date.now()`.
  */
-const RECURRING_INTERVAL_DAYS_BY_PLAN: Record<string, number> = {
-  free: 1,
-  starter: 7,
-  pro: 1,
-  agency: 1
-};
-
 /**
  * The UTC hour `/api/cron/weekly-scans` is scheduled to fire at. MUST match
  * the `crons` entry in `vercel.json` — `cron-schedule.test.ts` asserts it
@@ -111,7 +96,7 @@ export function mostRecentCronFiringAt(now: number): number {
  * that scan happened, and one scanned 6 days ago does not.
  */
 export function resolveEligibilityCutoffIso({ planId, now }: { planId: string; now: number }): string {
-  const intervalDays = RECURRING_INTERVAL_DAYS_BY_PLAN[planId] ?? 1;
+  const intervalDays = recurringIntervalDays(planId);
   return new Date(mostRecentCronFiringAt(now) - (intervalDays - 1) * DAY_MS).toISOString();
 }
 

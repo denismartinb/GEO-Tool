@@ -53,6 +53,8 @@ export type TopRecommendation = { title: string; description: string; engines: s
 export type PlanOffer = {
   planName: string;
   price: number;
+  /** How often the plan scans on its own — read from `lib/plan-cadence.ts`, never typed in copy. */
+  cadence: "semanal" | "diario";
   /** Present only while the launch promo can really be redeemed at checkout. */
   promo: { price: number; months: number; endsLabel: string } | null;
 };
@@ -357,18 +359,18 @@ export async function sendTrialD5Email(
     `
     ${eyebrow("Quedan 2 días", "#D23B48")}
     ${heading(`Tu prueba de Pro termina el ${endDay} ${endDate}`)}
-    ${paragraph(`Desde ese día, ${who} dejará de escanearse a diario. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
+    ${paragraph(`Desde ese día, ${who} dejará de escanearse ${input.pro.cadence === "semanal" ? "cada semana" : "a diario"}. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
     ${lossTable(input.lossRows, endDate)}
     ${priceBox(input.pro)}
     ${button(url("/dashboard/settings?openPlan=pro", "trial_d5"), `Mantener Pro por ${offerPriceLabel(input.pro)}`)}
-    ${subtext(`¿Te basta con un escaneo semanal? <a href="${url("/dashboard/settings?openPlan=starter", "trial_d5")}" style="${FOOTER_LINK_STYLE}">Starter por ${starterPrice}</a>.`)}
+    ${input.starter.cadence !== input.pro.cadence ? subtext(`¿Te basta con un escaneo semanal? <a href="${url("/dashboard/settings?openPlan=starter", "trial_d5")}" style="${FOOTER_LINK_STYLE}">Starter por ${starterPrice}</a>.`) : ""}
     ${nordikaQuote()}
     `,
     {
       footerHtml: envelope.footerHtml,
       preheader: input.pro.promo
         ? `Mantén Pro por ${input.pro.promo.price} €/mes (antes ${input.pro.price} €). Precio de lanzamiento hasta el ${input.pro.promo.endsLabel}.`
-        : `Tu prueba termina el ${endDate}. Elige tu plan para seguir midiendo a diario.`
+        : `Tu prueba termina el ${endDate}. Elige tu plan para seguir midiendo ${input.pro.cadence === "semanal" ? "cada semana" : "a diario"}.`
     }
   );
   return sendEmail(to, `Tu prueba de Pro termina el ${endDay}`, html, envelope.headers);

@@ -15,7 +15,7 @@ export const feedbackErrorMessages: Record<string, string> = {
   prompt_limit_reached: "Has alcanzado el límite de prompts monitorizados de tu plan actual. Sube de plan para añadir más.",
   prompts_required: "Añade al menos un prompt activo antes de escanear.",
   recurring_requires_completed_scan:
-    "Completa al menos un escaneo manual antes de activar el escaneo automático diario.",
+    "Completa al menos un escaneo manual antes de activar el escaneo automático.",
   recurring_update_failed: "No se ha podido actualizar el escaneo automático. Vuelve a intentarlo.",
   auto_audit_update_failed: "No se ha podido actualizar la auditoría automática. Vuelve a intentarlo.",
   // Sin "vuelve a intentarlo" a propósito: reintentar no crea una columna. Dice
@@ -51,8 +51,8 @@ export const feedbackSuccessMessages: Record<string, string> = {
   scan_started: "Dominio creado. Tu primer escaneo se está ejecutando — sigue el progreso aquí.",
   scan_completed: "Escaneo completado. Los resultados ya están disponibles en esta visión general.",
   scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno.",
-  recurring_enabled: "Escaneo automático diario activado. Este dominio se escaneará cada día.",
-  recurring_disabled: "Escaneo automático diario desactivado.",
+  recurring_enabled: "Escaneo automático activado. Este dominio se escaneará con la frecuencia de tu plan.",
+  recurring_disabled: "Escaneo automático desactivado.",
   // WEB-AUDIT-AUTO-SPLIT-1: una clave por mitad. Cada texto dice qué mitad y
   // qué cuesta, porque el fundador las apaga por coste y las dos no cuestan lo
   // mismo: la cobertura son llamadas a Gemini, la técnica no gasta LLM.

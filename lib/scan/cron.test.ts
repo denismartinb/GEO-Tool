@@ -48,15 +48,17 @@ type ProfileRow = { id: string; current_plan: string };
  *   - scan_runs: select(...).eq("project_id", id).order(...).limit(n)          -> array, newest first
  *
  * `owner_user_id` defaults to the project's own id when a test doesn't care
- * about plan-based behavior; `profiles` defaults to empty, which makes every
- * owner resolve to the default plan ("pro") via `resolvePlan` — preserving
- * the pre-PRICING-TRUTH-1 universal-24h cadence for every test that doesn't
- * explicitly opt into plan-cadence assertions.
+ * about plan-based behavior. When a test passes no `profiles`, every owner
+ * gets a DAILY plan (`agency`) so the universal-24h assertions (anchoring,
+ * ordering, failure streak) keep testing what they were written to test.
+ * This used to be "empty profiles → default plan pro"; since CONTRACT-99 (log
+ * §237) Pro is WEEKLY, so relying on that default would silently turn every
+ * one of these into a different test.
  */
 function fakeServiceClient({
   projects,
   scanRuns,
-  profiles = []
+  profiles
 }: {
   projects: ProjectRow[];
   scanRuns: ScanRunRow[];
@@ -93,7 +95,8 @@ function fakeServiceClient({
             return this;
           },
           in(_column: string, ids: string[]) {
-            return Promise.resolve({ data: profiles.filter((p) => ids.includes(p.id)), error: null });
+            const rows = profiles ?? ids.map((id) => ({ id, current_plan: "agency" }));
+            return Promise.resolve({ data: rows.filter((p) => ids.includes(p.id)), error: null });
           }
         };
       }
@@ -444,7 +447,7 @@ describe("runDailyCronScan — plan-based cadence and eligibility (PRICING-TRUTH
     expect(result.results).toEqual([{ projectId: "p1", status: "scanned" }]);
   });
 
-  it("still applies the daily cadence for Pro and Agency plans", async () => {
+  it("applies a weekly cadence to Pro (CONTRACT-99) and keeps Agencia daily", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
     const service = fakeServiceClient({
       projects: [{ id: "pro-project" }, { id: "agency-project" }],
@@ -462,10 +465,24 @@ describe("runDailyCronScan — plan-based cadence and eligibility (PRICING-TRUTH
 
     expect(result.results).toEqual(
       expect.arrayContaining([
-        { projectId: "pro-project", status: "scanned" },
+        // 30 h ago is inside Pro's weekly cycle, outside Agencia's daily one.
+        { projectId: "pro-project", status: "skipped_recent" },
         { projectId: "agency-project", status: "scanned" }
       ])
     );
+  });
+
+  it("scans a Pro project whose last run is 8 days old", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "pro-project" }],
+      profiles: [{ id: "pro-project", current_plan: "pro" }],
+      scanRuns: [{ project_id: "pro-project", status: "completed", created_at: new Date(nowMs - 8 * 24 * HOUR_MS).toISOString() }]
+    });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual([{ projectId: "pro-project", status: "scanned" }]);
   });
 
   it("filters out a free-plan project as skipped_plan_ineligible without attempting a scan", async () => {

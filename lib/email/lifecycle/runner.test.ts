@@ -115,9 +115,13 @@ describe("runLifecycleEmails", () => {
       email_sends: { data: [{ owner_user_id: USER, kind: "trial_d3", sent_at: new Date(NOW.getTime() - 50 * HOUR).toISOString() }] }
     });
     await runLifecycleEmails({ service, now: NOW });
-    const input = sendTrialD5Email.mock.calls[0][2] as { pro: { price: number; promo: { price: number } | null } };
-    expect(input.pro.price).toBe(179);
-    expect(input.pro.promo?.price).toBe(59);
+    const input = sendTrialD5Email.mock.calls[0][2] as {
+      pro: { price: number; cadence: string; promo: { price: number } | null };
+    };
+    // CONTRACT-99: one price for everyone, no launch promo, weekly scans.
+    expect(input.pro.price).toBe(99);
+    expect(input.pro.promo).toBeNull();
+    expect(input.pro.cadence).toBe("semanal");
   });
 });
 

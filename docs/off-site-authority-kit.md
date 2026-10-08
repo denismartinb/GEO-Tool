@@ -39,7 +39,7 @@ revisa nunca.
 |---|---|---|---|---|---|
 | Free / Scan | 0 € | 1 | 10 | 1 | Puntual |
 | Starter | 45 € | 1 | 25 | 3 | Semanal |
-| Pro | 179 € | 5 | 100 | 3 | Diario |
+| Pro | 99 € | 3 | 75 | 3 | Semanal |
 | Agencia | Plan a medida | A medida | 300 | 3 | Diario |
 
 **Los tres motores son ChatGPT, Gemini y Claude** (`lib/brand/canonical-definition.ts`).

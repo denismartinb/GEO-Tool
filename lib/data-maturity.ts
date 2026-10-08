@@ -19,6 +19,8 @@
  * Todo lo de este fichero es puro: sin `async`, sin red, sin `window`.
  */
 
+import { isWeeklyCadence } from "@/lib/plan-cadence";
+
 /**
  * DATA-MATURITY-1: how many completed scans a project needs before its
  * trend/comparison surfaces (sparkline, delta, competitor trend) are treated
@@ -83,10 +85,9 @@ export function computeDataMaturity({
     kind: "accumulating",
     completed: completedScans,
     target: DATA_MATURITY_TARGET_SCANS,
-    // Starter is the only weekly-cadence plan (lib/scan/cron.ts,
-    // RECURRING_INTERVAL_MS_BY_PLAN) — free never reaches this branch
-    // (returned above), so every other plan id scans daily.
-    cadenceUnit: planId === "starter" ? "semanas" : "días",
+    // The cadence comes from the one table that also drives the cron sweep
+    // (lib/plan-cadence.ts) — free never reaches this branch (returned above).
+    cadenceUnit: isWeeklyCadence(planId) ? "semanas" : "días",
     etaCount: DATA_MATURITY_TARGET_SCANS - completedScans
   };
 }
