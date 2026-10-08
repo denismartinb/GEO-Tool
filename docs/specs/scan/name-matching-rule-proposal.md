@@ -82,16 +82,16 @@ Ambas conservan intactos `raw_response_text` y el veredicto guardado (`brand_men
 
 | | **C. `matching_version`** | **D. guardar lo decidido** |
 |---|---|---|
-| Campo | `scan_prompt_results.matching_version smallint` (nulo/1 = regla antigua; 2 = regla nueva) | `scan_prompt_results.brand_match jsonb` p. ej. `{"name":"El Corte Inglés","kind":"alias","rule":2}`; nulo = «sin registrar» |
+| Campo | `scan_prompt_results.matching_version smallint` (nulo = «sin registrar»; 2 = regla nueva) | `scan_prompt_results.brand_match jsonb` p. ej. `{"name":"El Corte Inglés","kind":"alias","rule":2}`; nulo = «sin registrar» |
 | Coste | Una columna pequeña; el escaneo escribe una constante | Una columna jsonb por fila (decenas de bytes); el escaneo ya tiene el nombre que casó en `verifyMention` |
-| Relleno de lo existente | Ninguno obligatorio: nulo se lee como regla 1 (es exactamente lo que se aplicó) | Ninguno: lo anterior queda «sin registrar»; **no se inventa** un nombre retroactivo |
-| Qué enseña el cajón en filas antiguas | Re-deriva, pero **con la regla de la fila** (necesita conservar las dos implementaciones) | Lo guardado; sin dato, «sin registrar» y **sin re-derivar** |
+| Relleno de lo existente | Ninguno obligatorio. **Hipótesis, no hecho:** que todo el histórico nulo se calculó con una única «regla 1». No está demostrado: antes de leer nulo como «regla antigua» hay que inventariar los hitos de cambio de la verificación (MENTION-VERIFY-1 y posteriores) con evidencia en el histórico y el código; si no existe, nulo sigue siendo «sin registrar» | Ninguno: lo anterior queda «sin registrar»; **no se inventa** un nombre retroactivo |
+| Qué enseña el cajón en filas antiguas | Re-deriva, pero **con la regla de la fila** (necesita conservar las dos implementaciones) | Lo guardado; sin dato, «sin registrar» y **sin re-derivar**. **Ausencia de registro ≠ ausencia de mención:** `NULL` nunca se muestra como «sin mención»; el veredicto de mención sigue siendo `brand_mentioned` |
 | Qué enseña en filas nuevas | Re-deriva con la regla 2 | Lo guardado |
 | Riesgo | Hay que mantener la regla antigua en el código para siempre (o hasta purgar histórico) | El cajón deja de ser una explicación recalculable y pasa a ser un registro: más fiel, pero lo antiguo se ve más pobre |
 | Cambia el veredicto histórico | No | No |
 
 Ilustración (**no aplicada, no es una migración aprobada**): `alter table scan_prompt_results add column matching_version smallint;` para C; `... add column brand_match jsonb;` para D. Cualquiera de las dos exige aprobación de esquema y revisión de `data-guardian` (rutas de lectura/escritura y RLS: no cambian, pero hay que comprobarlo).
-**Lo que no se asume:** que perder plurales/derivados pegados («Mercadonas») esté aceptado, ni que se adopte una segmentación nueva para escrituras sin espacios.
+**Decisiones, SQL y comparación real siguen pendientes y no son ejecutables por esta revisión.** **Lo que no se asume:** que perder plurales/derivados pegados («Mercadonas») esté aceptado, ni que se adopte una segmentación nueva para escrituras sin espacios.
 
 ## 6. Escrituras sin espacios: alternativa para decidir más adelante
 
