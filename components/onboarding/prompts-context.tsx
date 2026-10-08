@@ -1,6 +1,6 @@
 "use client";
 
-import { INTENT_LABEL, type PromptMixSummary } from "@/lib/projects/prompt-intent";
+import type { PromptMixSummary } from "@/lib/projects/prompt-intent";
 import { INTENT_ESTIMATE_NOTE, MARKET_LANGUAGE_NOTE, PROMPTS_NATURE_NOTE } from "@/lib/projects/proposal-copy";
 
 /**
@@ -57,9 +57,8 @@ export function PromptsContext({
       </p>
       {mix.total > 0 ? (
         <p className="add-hint" style={{ margin: "6px 0 0" }}>
-          <b>Estimado:</b> {mix.informational} {INTENT_LABEL.informational.toLowerCase()}s · {mix.commercial}{" "}
-          {INTENT_LABEL.commercial.toLowerCase()}s · {mix.local} {INTENT_LABEL.local.toLowerCase()}s · {mix.branded} con
-          tu marca de {mix.total}. {INTENT_ESTIMATE_NOTE}
+          <b>Estimado:</b> {mix.informational} informativas · {mix.commercial} comerciales · {mix.local} locales ·{" "}
+          {mix.branded} con tu marca, de {mix.total}. {INTENT_ESTIMATE_NOTE}
           {mix.local === 0 ? " Ninguna es local: si tu negocio atiende a una zona, añade alguna a mano." : ""}
         </p>
       ) : null}

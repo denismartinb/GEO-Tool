@@ -32,14 +32,17 @@ function normalize(value: string): string {
     .trim();
 }
 
+/**
+ * «Local» = una zona concreta (ciudad, «cerca de mí», a domicilio). Un PAÍS no
+ * cuenta: es el mercado del proyecto, no una localidad, y marcaría como local
+ * casi toda pregunta de un negocio que opera en un solo país.
+ */
 const LOCAL_PATTERNS = [
   /\bcerca de (mi|aqui|ti)\b/,
   /\bnear me\b/,
   /\ben mi (zona|ciudad|barrio|pueblo)\b/,
   /\ba domicilio\b/,
   /\bmas cercan[oa]s?\b/,
-  /\ben (espana|mexico|argentina|colombia|chile|peru|francia|alemania|italia|portugal|brasil|reino unido|estados unidos)\b/,
-  /\bin (spain|mexico|germany|france|italy|portugal|brazil|the uk|the us|the united states)\b/,
   /\ben (madrid|barcelona|valencia|sevilla|bilbao|malaga|zaragoza|ciudad de mexico|buenos aires|bogota|santiago|lima)\b/
 ];
 

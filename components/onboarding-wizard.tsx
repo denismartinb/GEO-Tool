@@ -486,14 +486,16 @@ function PromptsStepBody({
                   />
                 </div>
               ) : (
-                <span className="onb2-ptext">{row.text || "Prompt vacío"}</span>
+                <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span className="onb2-ptext">{row.text || "Prompt vacío"}</span>
+                  {intentLabelFor && intentLabelFor(row.text) ? (
+                    <span style={{ color: "var(--ink-4)", fontSize: 12 }} title="Clasificación estimada, no guardada">
+                      {intentLabelFor(row.text)}
+                    </span>
+                  ) : null}
+                </span>
               )}
               {row.category ? <span className="onb2-chip n">{row.category}</span> : null}
-              {intentLabelFor && intentLabelFor(row.text) ? (
-                <span className="onb2-chip n" title="Clasificación estimada, no guardada">
-                  {intentLabelFor(row.text)}
-                </span>
-              ) : null}
               <button
                 type="button"
                 className="onb2-iconbtn"

@@ -13,8 +13,8 @@
 export const COMPETITORS_SUBTITLE =
   "Son propuestas de un modelo de IA a partir de tu web y de una búsqueda, no una lista verificada. Quita o edita las que no encajen y añade las que falten.";
 
-export const COMPETITOR_CHIP_UNVERIFIED = "propuesta · sin verificar";
-export const COMPETITOR_CHIP_SOURCED = "propuesta · con fuente";
+export const COMPETITOR_CHIP_UNVERIFIED = "sin verificar";
+export const COMPETITOR_CHIP_SOURCED = "con fuente";
 
 export const COMPETITORS_BASIS_LABEL = "Criterio de la propuesta";
 

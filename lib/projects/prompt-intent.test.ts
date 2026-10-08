@@ -18,7 +18,8 @@ describe("classifyPrompt", () => {
   it("local: cerca de mí, ciudad o país", () => {
     expect(classifyPrompt("¿Dónde comprar moda cerca de mí?", ID).intent).toBe("local");
     expect(classifyPrompt("Mejor agencia de marketing en Madrid", ID).intent).toBe("local");
-    expect(classifyPrompt("Herramientas GEO en España", ID).intent).toBe("local");
+    // Un país es el mercado del proyecto, no una zona: no cuenta como local.
+    expect(classifyPrompt("Herramientas GEO en España", ID).intent).toBe("informational");
   });
 
   it("branded sólo con la marca como palabra completa; tildes y mayúsculas no importan", () => {
@@ -53,7 +54,7 @@ describe("classifyPrompt", () => {
 describe("summarizePromptMix", () => {
   it("cuenta por intención y marca, ignorando filas vacías", () => {
     const mix = summarizePromptMix(
-      ["¿Qué es GEO?", "Mejores herramientas GEO", "Herramientas GEO en España", "", "  "],
+      ["¿Qué es GEO?", "Mejores herramientas GEO", "Herramientas GEO en Madrid", "", "  "],
       ID
     );
     expect(mix).toEqual({ total: 3, informational: 1, commercial: 1, local: 1, branded: 0 });

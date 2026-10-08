@@ -2,6 +2,7 @@
 
 import type { BusinessContextUnidentifiedReason } from "@/lib/projects/business-profile";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * ONBOARDING-IDENTITY-1 (log §237) — el campo de descripción del negocio.
@@ -46,11 +47,10 @@ export function DescriptionPrompt({
       <label className="field-label" htmlFor="business-description">
         Qué hace tu negocio
       </label>
-      <textarea
+      <Textarea
         id="business-description"
         name="business_description"
-        className="domain-input"
-        style={{ width: "100%", minHeight: 84, padding: 10, resize: "vertical" }}
+        rows={3}
         value={value}
         maxLength={DESCRIPTION_MAX}
         onChange={(event) => onChange(event.target.value)}

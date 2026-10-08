@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { addConfirmedAlias } from "@/lib/projects/brand-identity";
 
 /**
@@ -65,9 +66,9 @@ export function BrandIdentityCard({
           <span>
             <b>Identidad pendiente de confirmar.</b> Hemos sacado «{brand}» del dominio y puede estar mal escrito
             (espacios, tildes). Revísalo: si no coincide con cómo te nombran, el escaneo puede medir cero.{" "}
-            <button type="button" className="onb2-back" onClick={onConfirmBrand}>
+            <Button type="button" variant="outline" onClick={onConfirmBrand} style={{ marginLeft: 6 }}>
               El nombre es correcto
-            </button>
+            </Button>
           </span>
         </div>
       ) : null}
@@ -77,10 +78,8 @@ export function BrandIdentityCard({
           <label className="field-label" htmlFor="brand-name">
             Nombre comercial
           </label>
-          <input
+          <Input
             id="brand-name"
-            className="domain-input"
-            style={{ width: "100%", padding: "8px 10px" }}
             value={brand}
             maxLength={120}
             onChange={(event) => onBrandChange(event.target.value)}
@@ -122,10 +121,9 @@ export function BrandIdentityCard({
           </ul>
         ) : null}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <input
+          <Input
             id="brand-alias"
-            className="domain-input"
-            style={{ flex: "1 1 200px", padding: "8px 10px" }}
+            style={{ flex: "1 1 200px" }}
             value={draft}
             maxLength={120}
             placeholder="Ej.: nombre de un producto"
