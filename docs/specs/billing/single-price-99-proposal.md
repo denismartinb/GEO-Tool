@@ -90,21 +90,108 @@ Además: `COMPED_ACCOUNT_EMAILS` (qué plan técnico reciben) y las cuentas pilo
 - 1 Price: `unit_amount` 9900, EUR, mensual, **`tax_behavior: inclusive`**.
 - 0 cupones. Los Prices y cupones antiguos se **archivan**, no se borran.
 
-## 5. Decisiones de producto que NO se copian automáticamente
+## 5. Producto del precio único: cuadro de diferencias, coste y contrato mínimo
 
-«99 para todos» no dice qué incluye. Copiar los derechos de Agencia (449 €) a 99 € **no es
-neutral**: según `docs/llm-cost-analysis-2026-08.md` un plan a su tope cuesta ~**$61/mes**
-(Pro, 100 prompts) o ~**$184/mes** (Agencia, 300 prompts) en LLM; los ~81,8 € netos de un
-99 € con IVA al 21 % (ilustrativo: el tipo real lo calcula Stripe Tax por comprador) no
-cubren el segundo.
+> **Corrección (Director, 2026-10-08).** La primera redacción de este apartado comparó el
+> precio con «Pro a su tope» (~$61/mes) y «Agencia a su tope» (~$184/mes). Esas cifras
+> (`docs/llm-cost-analysis-2026-08.md`, «Proyección a tope de plan») son **por proyecto,
+> cadencia diaria, `samples: 1`, y solo generación + extracción**. No describen la oferta
+> semanal que se discute, y comparar «diario 300» con «semanal 75» como si fueran el mismo
+> producto era un error. Se retira la recomendación «cuotas de Pro actuales». Lo que sigue
+> es un **candidato a revisar**, no una decisión, y **no cambia ningún derecho ni cuota
+> en producción**.
 
-| Decisión | Opciones | Recomendación (a decidir por el dueño) |
+### 5.1 El candidato y lo que ya existe en el código
+
+| Elemento | Candidato (Director) | Hoy en el código | Trabajo nuevo si se adopta |
+|---|---|---|---|
+| Dominios | 3 | `caps.projects` (Free 1, Starter 1, Pro 5, Agencia 999) | un plan con `projects: 3` |
+| Preguntas | **75 TOTALES** (reparto libre entre dominios) | `caps.prompts` se aplica **por proyecto** (`lib/projects/add-prompts.ts`, `prompts/page.tsx`, `run-creation.ts`) | **una regla nueva de bolsa de cuenta**; hoy no existe |
+| Motores | 3 | `caps.engines` = 3 | ninguno |
+| Cadencia | semanal | `Starter` = semanal, el resto diario (`lib/scan/cron.ts`, `data-maturity.ts`) | cadencia por plan ya soportada; hay que decidir su ID técnico |
+| Recheck manual | 1 por dominio y mes | el botón de escaneo manual existe; **no hay contador mensual** | contador por dominio/mes (probablemente esquema) |
+| Prueba | **14 días, opt-in, iniciada tras el primer escaneo completado**, más un diagnóstico acotado aparte | **7 días de Pro sin tarjeta desde el registro** (`handle_new_user`, migración 0017) | cambio del disparador de la prueba (esquema/trigger) y del texto |
+| Fallo de pago | requiere una política | Stripe reintenta; acceso hasta que cancela; solo un correo (`invoice.payment_failed`) | `past_due` visible (aprobado para el PR 2) + política de gracia |
+
+Nada de esto se adopta por ser «lo actual». El 7 días diario de Pro **no** es la propuesta:
+es el estado de hoy.
+
+### 5.2 Coste: cómo se obtiene y qué no cubre
+
+Coeficientes del documento de costes (los mismos que usa el Director):
+- Generación + extracción por pregunta (3 motores): ≈ **$0,0203** (≈ $0,16/escaneo ÷
+  ≈ 7,9 preguntas; coincide con los 0,02036 del comentario). Ojo con la etiqueta: **es
+  generación y extracción juntas**, no solo generación.
+- Auditoría de cobertura IA: ≈ **$0,035** por pregunta (peor caso, $0,28 por ~8 preguntas;
+  el documento la marca como **no medida**).
+- Escaneos al mes por dominio: ≈ 4,33 semanales + 1 recheck ≈ **5,3**.
+
+| Concepto | Cálculo | USD/mes |
 |---|---|---|
-| **Cuotas** (dominios · prompts · motores · cadencia) | A) las de Pro actuales (5 · ~100 · 3 · diario). B) las de Agencia (999 · ~300 · 3 · diario). C) intermedias | **A**: B supera el ingreso neto en el peor caso. Revisar con datos reales de uso. |
-| **Prueba** | Mantener 7 días de Pro sin tarjeta (hoy, migración 0017) / cambiar duración | Mantener 7 días y definir su texto en la política única (PR 2). «Cero clientes» no justifica quitar la gracia futura. |
-| **Fallo de pago** | Acceso durante los reintentos de Stripe y corte al cancelarse (hoy) / corte inmediato | Mantener el comportamiento actual y mostrar `past_due` con aviso y enlace al portal (ya aprobado para el PR 2). Definir cuántos días de gracia. |
-| **Cancelación** | Efecto al final del periodo (hoy, vía portal) | Mantener. |
-| **Cuentas existentes** (`starter`/`agency`/*comped*) | Mantener como están hasta decidir | Mantener intactas; la migración de cuentas es decisión aparte, tras el §3. |
+| Generación + extracción | 3 dominios × 25 × 0,02036 × 5,3 | ≈ 8,09 |
+| Auditoría de cobertura | 3 × 25 × 0,035 × 5,3 | ≈ 13,91 |
+| **Suma** | | **≈ 22,0** |
+| Referencia: 99 € con IVA | ≈ 81,8 € netos **si fuese 21 %** (ilustrativo) | — |
+
+La suma es **~25-27 % de los netos** tomando 1 USD ≈ 1 € como aproximación gruesa. **No es
+una factura ni un margen asegurado:** no incluye comisiones de pago, soporte, onboarding,
+generador de soluciones, reintentos, ni el IVA real de cada comprador.
+
+**El suelo de 50 respuestas rompe la linealidad** (`lib/scan/sampling.ts`,
+`MIN_RESPONSES_PER_RUN = 50`, `MAX_PROMPT_SAMPLES = 5`): solo actúa por debajo de **17
+preguntas por dominio** (17 × 3 = 51), y entonces repite cada pregunta hasta llegar a 50
+(`samples = min(ceil(50 / (preguntas × motores)), 5)`).
+- 25 + 25 + 25 → todos cumplen el suelo → sin recargo.
+- Un dominio de 10 preguntas cuesta como 20; uno de 5, como 20; uno de 1, como 5.
+- **Peor reparto dentro de las 75 totales:** dos dominios de 16 (cuestan 32 cada uno) y
+  uno de 43 → ≈ **107 preguntas-equivalentes en vez de 75 (+43 %)** en generación y
+  extracción. Si la auditoría no se repite por muestra (**sin verificar**), el total
+  sube de ≈ 22,0 a ≈ 25,5 USD/mes.
+- Es decir: **menos preguntas por proyecto no abaratan, pueden encarecer.** Hay que decidir
+  si la bolsa de 75 impone un mínimo por dominio, si el suelo se desactiva para este plan, o
+  si se acepta el recargo.
+
+**Sin medir (y no se inventa):** p95 de respuestas por escaneo, de reintentos y de tokens
+por llamada, y la tasa real de uso de la auditoría. Hoy el documento de costes solo tiene
+medias. Consulta de solo lectura para el dueño, **no ejecutada** (los nombres de columna
+salen de `0001_v0_schema.sql`; revisarlos antes):
+
+```sql
+select percentile_cont(0.95) within group (order by n) as p95_respuestas_por_run
+from (select run_id, count(*) n from scan_prompt_results group by run_id) t;
+-- y lo mismo con sum(tokens_in + tokens_out) por run, y con la tasa de filas con extraction_error
+```
+
+### 5.3 Diferencias de producto (no son el mismo producto)
+
+| | Pro diario hasta su tope | Agencia diario hasta su tope | **Candidato semanal 75** |
+|---|---|---|---|
+| Dominios | 5 | 999 (a medida) | 3 |
+| Preguntas | ~100 **por proyecto** | ~300 **por proyecto** | 75 **en total** |
+| Cadencia | diaria | diaria | semanal + 1 recheck/dominio/mes |
+| Coste LLM de referencia* | ≈ $61/mes por proyecto | ≈ $184/mes por proyecto | ≈ $22/mes en total |
+
+\*Solo generación + extracción en las dos primeras columnas (el documento no incluye la
+auditoría); en la tercera sí incluye auditoría. No son cifras homogéneas: sirven para ver
+el orden de magnitud, no para restar.
+
+### 5.4 Contrato mínimo para revisión (propuesta; ningún valor está decidido)
+
+| Cláusula | Valor propuesto | Estado |
+|---|---|---|
+| Precio | 99 €/mes, IVA incluido, para todos | **decidido** |
+| Dominios · preguntas · motores | 3 · 75 totales · 3 | candidato |
+| Cadencia | semanal + 1 recheck manual por dominio y mes | candidato |
+| Mínimo de preguntas por dominio / suelo de 50 | **sin definir** (ver §5.2) | abierto |
+| Prueba | 14 días, opt-in, iniciada tras el primer escaneo completado | propuesta |
+| Diagnóstico acotado previo | aparte de la prueba (hoy: escaneo Free y comprobador gratuito) | propuesta |
+| Fallo de pago | `past_due` visible, enlace al portal, **N días de gracia: sin definir**, corte al cancelar Stripe | propuesta |
+| Cancelación | al final del periodo, vía portal | mantiene lo actual |
+| Qué NO incluye | más dominios o preguntas; diario; soluciones ilimitadas: **sin definir** | abierto |
+| Cuentas existentes (`starter`/`agency`/*comped*) | intactas hasta el inventario §3 | mantiene lo actual |
+
+«Cero clientes de pago» no elimina la necesidad de una política de fallo de pago: hace
+falta antes de activar Stripe live.
 
 ## 6. Impuestos y comprador
 
