@@ -21407,6 +21407,13 @@ devuelve `null` sin páginas analizadas y `buildGlobalScore` excluye lo que es
 `global-score.test.ts`). Si en producción se vio un 0, no sale de estas rutas y
 hace falta el caso real para localizarlo.
 
+**Filas guardadas por la primera entrega (419ad9a).** Ya llevaban
+`confidence_reason`, y `calibrateStoredRecommendation` devolvía intactas las que
+lo tenían, así que podían conservar «Alta» tras bajar el techo a «media».
+Corregido: se re-deriva en CADA lectura, sin atajo, sin escribir en la base
+(el historial no se reescribe) y sin mutar el objeto leído. Test:
+`confidence.test.ts`.
+
 **Pendiente.** (a) `planScore` sigue ordenando por puntos ocultos: decidir si el
 orden debe pasar a no depender de ellos. (b) Los techos por tipo de
 `BASE_CEILING` son juicio de producto, sin datos; subirlos exige resultados

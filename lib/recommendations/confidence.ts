@@ -172,18 +172,20 @@ type StoredRecommendation = {
 };
 
 /**
- * Rows written before this derivation carry the run's confidence as their own
- * (`confidence` = `run_confidence`), which is exactly the defect. This
- * re-derives it on read, from the evidence the row already stores, so an
- * old card and a new card of the same kind never disagree on screen.
+ * Re-derives the action confidence of a STORED row from the evidence it
+ * already holds, on every read. History is never rewritten: this is a read-time
+ * view, like the rest of the recommendations page.
  *
- * A row that already has `confidence_reason` was written by the new engine and
- * is returned untouched — the derivation is idempotent, but there is no reason
- * to re-run it, and the stored value is what the engine decided.
+ * Two generations of rows need it, not one. Rows from before this derivation
+ * carry the run's confidence as the card's own. And rows written by the first
+ * derivation (419ad9a, which allowed "high" for a direct cause) already hold a
+ * \`confidence_reason\`, so an early "this row is already calibrated" return
+ * left them showing "Alta" after the cap moved to "medium" (founder, 2026-10-08,
+ * log §236). The derivation is pure and idempotent, so there is no row it is
+ * safe to skip: whatever the current rule says is what the card shows.
  */
 export function calibrateStoredRecommendation<T extends StoredRecommendation>(rec: T): T {
   const ev = rec.evidence_json ?? {};
-  if (typeof ev.confidence_reason === "string") return rec;
   const diagnosisCertainty: Confidence = isConfidence(ev.run_confidence)
     ? ev.run_confidence
     : isConfidence(rec.confidence)

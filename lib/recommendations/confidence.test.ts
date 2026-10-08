@@ -90,14 +90,51 @@ describe("calibrateStoredRecommendation — rows written before this derivation"
     expect(ev.evidence_kind).toBe("content_hypothesis");
   });
 
-  it("leaves a row the new engine wrote untouched", () => {
-    const fresh = { ...legacy, confidence: "medium", evidence_json: { ...legacy.evidence_json, confidence_reason: "x" } };
-    expect(calibrateStoredRecommendation(fresh)).toBe(fresh);
+  it("a row written by 419ad9a (already has confidence_reason) that kept 'high' is recalibrated on read", () => {
+    const stored = {
+      confidence: "high",
+      recommendation_type: "close_competitor_gap",
+      evidence_json: {
+        ...quote,
+        mentioned_competitors: ["Profound"],
+        run_confidence: "high",
+        evidence_kind: "observation",
+        confidence_reason: "La propia respuesta muestra la causa."
+      }
+    };
+    const out = calibrateStoredRecommendation(stored);
+    expect(out.confidence).toBe("medium");
+    expect((out.evidence_json as Record<string, unknown>).confidence_reason).toMatch(/no hay resultados medidos/i);
+    // the input object (the stored history) is not mutated
+    expect(stored.confidence).toBe("high");
+    expect(stored.evidence_json.confidence_reason).toBe("La propia respuesta muestra la causa.");
+  });
+
+  it("a stored 'high' on a hypothesis row with confidence_reason also drops to low", () => {
+    const out = calibrateStoredRecommendation({
+      confidence: "high",
+      recommendation_type: "create_faq_section",
+      evidence_json: { ...none, run_confidence: "high", confidence_reason: "x", evidence_kind: "content_hypothesis" }
+    });
+    expect(out.confidence).toBe("low");
+  });
+
+  it("no stored row, of any generation, can come back as 'high'", () => {
+    for (const confidence of ["low", "medium", "high"]) {
+      for (const withReason of [false, true]) {
+        const out = calibrateStoredRecommendation({
+          confidence,
+          recommendation_type: "close_competitor_gap",
+          evidence_json: { ...quote, mentioned_competitors: ["X"], run_confidence: "high", ...(withReason ? { confidence_reason: "x" } : {}) }
+        });
+        expect(out.confidence, `${confidence}/${withReason}`).not.toBe("high");
+      }
+    }
   });
 
   it("is idempotent", () => {
     const once = calibrateStoredRecommendation(legacy);
-    expect(calibrateStoredRecommendation(once)).toBe(once);
+    expect(calibrateStoredRecommendation(once)).toEqual(once);
   });
 
   it("falls back to the stored confidence as the diagnosis when run_confidence is missing", () => {
