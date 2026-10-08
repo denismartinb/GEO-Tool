@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { proposeBrand, sanitizeBrandName, sanitizeConfirmedAliases } from "./brand-identity";
+import { parseConfirmedAliasesField, proposeBrand, sanitizeBrandName, sanitizeConfirmedAliases } from "./brand-identity";
 
 describe("proposeBrand", () => {
   it("usa el tramo del título que es la etiqueta del dominio", () => {
@@ -57,5 +57,29 @@ describe("sanitizeConfirmedAliases", () => {
   it("un asistente de IA no es un alias", () => {
     const { accepted } = sanitizeConfirmedAliases(["ChatGPT"], "Marca");
     expect(accepted).toEqual([]);
+  });
+});
+
+describe("parseConfirmedAliasesField (lo que llega del formulario)", () => {
+  it("ausente o vacío: la persona no confirmó nada y el alta deriva", () => {
+    expect(parseConfirmedAliasesField(undefined, "Marca")).toBeUndefined();
+    expect(parseConfirmedAliasesField(null, "Marca")).toBeUndefined();
+    expect(parseConfirmedAliasesField("", "Marca")).toBeUndefined();
+  });
+
+  it("JSON roto o que no es una lista: tampoco cuenta como confirmación", () => {
+    expect(parseConfirmedAliasesField("{no", "Marca")).toBeUndefined();
+    expect(parseConfirmedAliasesField('{"a":1}', "Marca")).toBeUndefined();
+    expect(parseConfirmedAliasesField('"texto"', "Marca")).toBeUndefined();
+  });
+
+  it("una lista vacía SÍ es una confirmación: sin más nombres", () => {
+    expect(parseConfirmedAliasesField("[]", "Marca")).toEqual([]);
+  });
+
+  it("filtra con las reglas del servidor y descarta lo que no es texto", () => {
+    expect(parseConfirmedAliasesField(JSON.stringify(["Club del Gourmet", "tienda", 7, null, "Club del Gourmet"]), "El Corte Inglés")).toEqual([
+      "Club del Gourmet"
+    ]);
   });
 });
