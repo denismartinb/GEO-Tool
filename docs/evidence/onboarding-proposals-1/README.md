@@ -52,3 +52,9 @@ Transcrito de la salida del guion, 390 y 1280, casos `blocked` y `ok`:
 - El paso 1 a 390 px en `main` sigue recortado: no se ha corregido (CSS, fuera de este PR).
 - Los dos mensajes de consola de hidratación que aparecieron en el caso `blocked` vienen de la página fixture (lee
   `window` al renderizar), no del producto; en el caso `ok` no aparecen.
+
+## Cosas que se ven en las capturas y NO son del producto
+
+- El distintivo rojo «N · 2 Issues» es el overlay de desarrollo de Next; viene de los avisos de hidratación de la página
+  fixture (ver arriba), no de un error del asistente.
+- Los favicons de los competidores salen rotos o vacíos: el fixture no tiene red y los servicios de favicon no responden.
