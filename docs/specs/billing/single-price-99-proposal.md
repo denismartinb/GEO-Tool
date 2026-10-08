@@ -106,7 +106,7 @@ Además: `COMPED_ACCOUNT_EMAILS` (qué plan técnico reciben) y las cuentas pilo
 | Elemento | Candidato (Director) | Hoy en el código | Trabajo nuevo si se adopta |
 |---|---|---|---|
 | Dominios | 3 | `caps.projects` (Free 1, Starter 1, Pro 5, Agencia 999) | un plan con `projects: 3` |
-| Preguntas | **75 TOTALES** (reparto libre entre dominios) | `caps.prompts` se aplica **por proyecto** (`lib/projects/add-prompts.ts`, `prompts/page.tsx`, `run-creation.ts`) | **una regla nueva de bolsa de cuenta**; hoy no existe |
+| Preguntas | **75 TOTALES** (reparto libre entre dominios) | **ya es un tope de cuenta al añadir**: `add-prompts.ts` y `prompts/page.tsx` cuentan los prompts activos de TODOS los proyectos del dueño (RLS), y `getUsageSummary` igual. *(Corrección: una versión anterior de este documento decía «por proyecto»; era un error.)* **Lo que falta no es la bolsa, sino hacerla cumplir:** `createProject` no resta lo que la cuenta ya tiene, `addPromptsCore` comprueba `count >= tope` y luego inserta un lote entero, la acción `addPrompt` de `[projectId]/actions.ts` inserta sin ninguna comprobación, y todo es lectura-luego-escritura (no atómico); además RLS deja insertar al dueño por la API REST | hacerla cumplir de forma atómica y a prueba de saltos de la UI |
 | Motores | 3 | `caps.engines` = 3 | ninguno |
 | Cadencia | semanal | `Starter` = semanal, el resto diario (`lib/scan/cron.ts`, `data-maturity.ts`) | cadencia por plan ya soportada; hay que decidir su ID técnico |
 | Recheck manual | 1 por dominio y mes | el botón de escaneo manual existe; **no hay contador mensual** | contador por dominio/mes (probablemente esquema) |
@@ -167,9 +167,9 @@ from (select run_id, count(*) n from scan_prompt_results group by run_id) t;
 | | Pro diario hasta su tope | Agencia diario hasta su tope | **Candidato semanal 75** |
 |---|---|---|---|
 | Dominios | 5 | 999 (a medida) | 3 |
-| Preguntas | ~100 **por proyecto** | ~300 **por proyecto** | 75 **en total** |
+| Preguntas | ~100 **por cuenta** | ~300 **por cuenta** | 75 **por cuenta** |
 | Cadencia | diaria | diaria | semanal + 1 recheck/dominio/mes |
-| Coste LLM de referencia* | ≈ $61/mes por proyecto | ≈ $184/mes por proyecto | ≈ $22/mes en total |
+| Coste LLM de referencia* | ≈ $61/mes (documento de costes: por proyecto al tope de 100) | ≈ $184/mes (por proyecto al tope de 300) | ≈ $22/mes en total |
 
 \*Solo generación + extracción en las dos primeras columnas (el documento no incluye la
 auditoría); en la tercera sí incluye auditoría. No son cifras homogéneas: sirven para ver
@@ -248,7 +248,7 @@ esquema. «Puerta» = aprobación expresa del dueño antes de tocarlo.
 |---|---|---|---|---|---|
 | 0 | **Inventario de cuentas** (§3) | — | consultas de solo lectura | no | sí (antes de todo) |
 | 1 | **ID técnico del plan**: reutilizar `pro` con otras cuotas o ID nuevo | 0, D1 | `plans-data.ts`, `lib/billing.ts` (`isProOrAbove`, `DEFAULT_PLAN_ID`, `COMPED_PLAN_ID`), 23 ficheros que ramifican por ID | **sí si ID nuevo** (`CHECK` de `0010_profile_current_plan.sql`); no si se reutiliza `pro` | sí |
-| 2 | **Bolsa de 75 preguntas por cuenta** | 1, D2 | `lib/projects/add-prompts.ts`, `app/dashboard/projects/actions.ts` (alta), `prompts/page.tsx` (`atPromptLimit`), `lib/scan/run-creation.ts` (`campaignCap`), `lib/billing.ts` (`promptCap`), asistente de alta | no si se cuenta en la aplicación; **esa cuenta NO es atómica** (ver §12.3): sin trigger o constraint la bolsa de 75 **no está garantizada** | sí |
+| 2 | **Bolsa de 75 preguntas por cuenta: hacerla cumplir** (el conteo de cuenta ya existe) | 1, D2 | `lib/projects/add-prompts.ts`, `lib/projects/create-project.ts`, `app/dashboard/projects/[projectId]/actions.ts` (inserción sin tope), `prompts/page.tsx`, `lib/scan/run-creation.ts` (`campaignCap`), asistente de alta | no si se cuenta en la aplicación; **esa cuenta NO es atómica** (ver §12.3): sin trigger o constraint la bolsa de 75 **no está garantizada** | sí |
 | 3 | **Mínimo por dominio / suelo de 50** | D2 | `lib/scan/sampling.ts` (`SAMPLING_EXCLUDED_PLAN_IDS` o un mínimo de preguntas por dominio) | no | sí |
 | 4 | **Cadencia semanal** | 1 | `lib/scan/cron.ts`, `lib/scan/cron-schedule.ts` (anclado al horario, §192), `lib/data-maturity.ts`, copy | no (ya existe la cadencia semanal de `starter`) | no |
 | 5 | **Recheck manual** (unidad propuesta: dominio; sin decidir, §12.4) | 1, D3 | `lib/scan/run-creation.ts`, botón de escaneo, copy de agotado | **posiblemente no**: `scan_runs.trigger_source` ya distingue `user`/`cron`; contar `user` del mes por proyecto. Matices a resolver: los reintentos automáticos ya salen como `cron` (`reconciliation.ts:138`); el primer escaneo del dominio y un reintento manual salen como `user` y no se distinguen de un recheck | sí |
