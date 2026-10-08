@@ -28,7 +28,7 @@ export function PromptsContext({
       <h2 id="prompts-context-title" className="field-label" style={{ marginBottom: 6 }}>
         Mercado e idioma
       </h2>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", fontSize: 13.5 }}>
         <span>
           <span style={{ color: "var(--ink-4)" }}>País: </span>
           <b>{countryName}</b>
@@ -39,7 +39,7 @@ export function PromptsContext({
             value={language}
             onChange={(event) => onLanguageChange(event.target.value)}
             aria-label="Idioma de las preguntas"
-            style={{ minHeight: 32 }}
+            className="onb2-lang-select"
           >
             {languageOptions.map((option) => (
               <option key={option.code} value={option.code}>
@@ -57,9 +57,11 @@ export function PromptsContext({
       </p>
       {mix.total > 0 ? (
         <p className="add-hint" style={{ margin: "6px 0 0" }}>
-          <b>Estimado:</b> {mix.informational} informativas · {mix.commercial} comerciales · {mix.local} locales ·{" "}
-          {mix.branded} con tu marca, de {mix.total}. {INTENT_ESTIMATE_NOTE}
-          {mix.local === 0 ? " Ninguna es local: si tu negocio atiende a una zona, añade alguna a mano." : ""}
+          <span>
+            <b>Estimado:</b> {mix.informational} informativas · {mix.commercial} comerciales · {mix.local} locales ·{" "}
+            {mix.branded} con tu marca, de {mix.total}. {INTENT_ESTIMATE_NOTE}
+            {mix.local === 0 ? " Ninguna es local: si tu negocio atiende a una zona, añade alguna a mano." : ""}
+          </span>
         </p>
       ) : null}
     </div>

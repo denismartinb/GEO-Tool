@@ -4762,6 +4762,29 @@ a.notif-row:hover {
 .country-sel:hover { border-color: var(--line-strong); background: var(--surface-sunk); }
 .country-sel select { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .onb-cta { height: 44px; padding: 0 20px; font-size: 14.5px; border-radius: 10px; flex: 0 0 auto; }
+/* Antes era un `style` en línea del TSX: un estilo en línea no se puede sobrescribir
+   desde un @media, y en móvil el nombre del país se colapsaba a 0px. */
+.country-sel-name { max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ONBOARDING-RESPONSIVE-1 (log §237): la barra de dominio pasa a DOS filas en móvil —
+   globo + campo arriba; país con nombre visible + «Continuar» debajo— en vez de apretar
+   cuatro cosas en una línea y dejar solo la bandera. Todo acotado a `.onb2-scope`: la
+   barra solo existe en el asistente. */
+/* MOBILE-1 (≈l.8472) esconde el nombre del país y el chevron hasta 760px «para que quepa en una
+   línea»; en el asistente el país es una decisión de mercado y tiene que verse el nombre. */
+@media (max-width: 760px) {
+  .onb2-scope .country-sel { gap: 8px; padding: 0 12px; }
+  .onb2-scope .country-sel-name { display: inline; }
+  .onb2-scope .country-sel .ico { display: inline-block; }
+}
+/* Hasta 900px, no 560: con el panel lateral en dos columnas (761–~880px) la columna del asistente
+   mide ~370–500px y el campo de dominio quedaba en 47px en una tableta vertical. */
+@media (max-width: 900px) {
+  .onb2-scope .domain-bar { flex-wrap: wrap; padding: 8px; row-gap: 8px; }
+  .onb2-scope .domain-input { flex: 1 1 calc(100% - 60px); }
+  .onb2-scope .country-sel { flex: 1 1 120px; min-width: 0; height: 44px; }
+  .onb2-scope .onb-cta { flex: 1 1 110px; height: 44px; justify-content: center; }
+  .onb2-scope .db-ghost { top: 8px; bottom: auto; height: 40px; right: 14px; }
+}
 
 .onb-engines { margin-top: 40px; display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
 .onb-engines .cap { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
@@ -11019,6 +11042,8 @@ select.set-field {
 .onb2-count b { color: var(--ink); }
 /* Prompt plegado: una línea de texto, recortada — todas las filas miden lo
    mismo. El gear despliega el textarea de edición. */
+.onb2-ptext-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.onb2-intent { color: var(--ink-4); font-size: 12px; }
 .onb2-ptext { flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; color: var(--ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Prompt desplegado: altura fija para las tres — sin auto-crecer ni permitir
@@ -11057,9 +11082,38 @@ select.set-field {
 .onb2-skelrow .onb2-fav { background: var(--surface-sunk); }
 
 @media (max-width: 760px) {
-  .onb2-grid { grid-template-columns: 1fr; }
+  .onb2-grid { grid-template-columns: minmax(0, 1fr); }
   .onb2-panel { position: static; }
   .onb2-h1 { font-size: 24px; }
   .onb2-editgrid { grid-template-columns: 1fr; }
   .onb2-rname, .onb2-rdom, .onb2-ptext { white-space: normal; }
+}
+
+/* ONBOARDING-RESPONSIVE-1 (log §237) — filas de competidores y prompts en móvil.
+   Texto a ancho completo y chips/acciones DEBAJO: antes el chip y los dos botones le
+   quitaban ~120px al texto de cada prompt, que quedaba en una columna de ~100px y se
+   cortaba («diferenc…»). Misma información y mismas acciones; solo cambia dónde caen. */
+@media (max-width: 560px) {
+  .onb2-scope .onb2-row { flex-wrap: wrap; row-gap: 8px; }
+  .onb2-scope .onb2-rmeta-static, .onb2-scope .onb2-editgrid { flex: 1 1 calc(100% - 50px); }
+  .onb2-scope .onb2-rname, .onb2-scope .onb2-rdom { white-space: normal; overflow-wrap: anywhere; }
+  .onb2-scope .onb2-row > .onb2-chip { margin-left: 39px; }
+  .onb2-scope .onb2-row > button.onb2-iconbtn:nth-last-of-type(2) { margin-left: auto; }
+  .onb2-scope .onb2-row--prompt > :first-child { flex: 1 1 100%; }
+  .onb2-scope .onb2-row--prompt > .onb2-chip { margin-left: 0; }
+  .onb2-scope .onb2-ptext { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
+}
+
+/* Objetivo de 44px hasta 760px (móvil, móvil apaisado y tableta pequeña) en lo que se usa a menudo
+   (botones de pie, filas, campos y selectores).
+   La × de quitar alias conserva su tamaño visual: se amplía solo el área pulsable. */
+.onb2-lang-select { min-height: 32px; }
+@media (max-width: 760px) {
+  .onb2-scope .onb2-iconbtn { width: 44px; height: 44px; }
+  .onb2-scope :is(.onb2-foot, .onb2-listfoot) button, .onb2-scope .onb2-back { min-height: 44px; }
+  .onb2-scope .onb2-cpad :is(input, textarea, select, button), .onb2-scope .onb2-lang-select { min-height: 44px; }
+  .onb2-scope .eng-chip button { min-height: 0; position: relative; }
+  .onb2-scope .eng-chip button::after { content: ""; position: absolute; inset: -10px; }
+  .onb2-scope .onb2-chip a { position: relative; }
+  .onb2-scope .onb2-chip a::after { content: ""; position: absolute; inset: -14px -10px; }
 }
