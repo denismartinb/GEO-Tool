@@ -156,4 +156,3 @@ como «no disponible»), y el comentario de `prompt-pool.ts` ya no afirma una ga
   con 0 prompts y un `setup_partial` genérico que no explica que la bolsa está llena.
 - `createPrompt` (sin pantalla que la use) traga el rechazo en silencio y no comprueba que el
   proyecto no esté archivado.
-
