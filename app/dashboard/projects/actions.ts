@@ -5,9 +5,16 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
-import { generateAddedPrompts, suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
+import { generateAddedPrompts, inferBrandAliases, suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
 import { reportLlmIncident } from "@/lib/llm/llm-incident";
-import { resolveBusinessContext } from "@/lib/projects/business-profile";
+import {
+  fetchHomepageEvidence,
+  resolveBusinessContext,
+  type BusinessContextUnidentifiedReason,
+  type HomepageEvidence
+} from "@/lib/projects/business-profile";
+import { selectVerifiableAliases } from "@/lib/projects/brand-aliases";
+import { parseConfirmedAliasesField, proposeBrand, type BrandProposal } from "@/lib/projects/brand-identity";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { createProjectCore } from "@/lib/projects/create-project";
@@ -41,6 +48,18 @@ export type ProjectSetupSuggestion = {
    * server says which one happened.
    */
   failed: Array<"competitors" | "prompts">;
+  /**
+   * ONBOARDING-IDENTITY-1 (log §237): por qué no se pudo identificar el negocio,
+   * cuando no se pudo. `homepage_unreadable` es el único motivo en el que la
+   * persona puede hacer algo —contarnos en una frase qué hace—, así que el
+   * asistente enseña el campo de descripción sólo entonces. `null` si se
+   * identificó.
+   */
+  reason: BusinessContextUnidentifiedReason | null;
+  /** Nombre comercial propuesto + si es sólo una inferencia del dominio (pendiente de confirmar). */
+  brandProposal: BrandProposal;
+  /** Alias verificables en la portada. Vacío si no se pudo leer o no hay: el asistente deja entrada manual. */
+  proposedAliases: string[];
 };
 
 /**
@@ -56,18 +75,34 @@ export type ProjectSetupSuggestion = {
  * docs/adr/0020-grounded-business-profile.md). When the business can't be
  * identified, returns the honest empty result instead of guessing.
  */
-export async function suggestProjectSetup(input: { domain: string; country: string }): Promise<ProjectSetupSuggestion> {
+export async function suggestProjectSetup(input: {
+  domain: string;
+  country: string;
+  /** Lo que la persona cuenta de su negocio cuando no se pudo leer su portada. */
+  description?: string;
+}): Promise<ProjectSetupSuggestion> {
   const { supabase, user } = await requireUser();
 
   const domain = cleanDomain(String(input.domain ?? ""));
   const country = String(input.country ?? "").trim();
-  const empty: ProjectSetupSuggestion = { ok: false, brand: "", language: "", competitors: [], prompts: [], failed: [] };
+  const description = String(input.description ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_BUSINESS_DESCRIPTION) || undefined;
+  const fallbackProposal = proposeBrand(domain, null);
+  const empty: ProjectSetupSuggestion = {
+    ok: false,
+    brand: "",
+    language: "",
+    competitors: [],
+    prompts: [],
+    failed: [],
+    reason: null,
+    brandProposal: fallbackProposal,
+    proposedAliases: []
+  };
 
   if (!isValidDomain(domain) || country.length < 2) {
     return empty;
   }
 
-  const brand = deriveBrandFromDomain(domain);
   const language = languageForCountry(country);
   const plan = await getPlanForUser(supabase, user.id);
   // suggestPrompts itself hard-caps at 15 (lib/llm/gemini.ts) regardless of
@@ -75,20 +110,38 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
   // allows when a lower-tier plan's cap is below that.
   const promptLimit = Math.min(plan.caps.prompts, MAX_INITIAL_PROMPTS);
 
-  const context = await resolveBusinessContext({ domain, country, language }).catch(
+  // La portada se lee UNA vez y sirve a tres cosas: el perfil de negocio, el
+  // nombre comercial propuesto y los alias verificables.
+  const evidence: HomepageEvidence = await fetchHomepageEvidence(domain).catch(() => ({ status: "unavailable" }) as const);
+  const brandProposal = proposeBrand(domain, evidence.status === "ok" ? evidence.title : null);
+  const brand = brandProposal.brand;
+
+  const context = await resolveBusinessContext({ domain, country, language, userDescription: description, evidence }).catch(
     () => ({ status: "unidentified", reason: "profile_failed" }) as const
   );
 
   if (context.status === "unidentified") {
     // Both halves are unreachable without a profile, so both count as failed —
     // `resolveBusinessContext` has already reported the incident if the cause
-    // was the provider rather than a genuinely unidentifiable site.
-    return { ok: false, brand, language, competitors: [], prompts: [], failed: ["competitors", "prompts"] };
+    // was the provider rather than a genuinely unidentifiable site. El motivo
+    // se devuelve: «no pudimos leer tu web» (pídele una descripción) y «falló
+    // nuestro modelo» (no culpes a su web) no se arreglan igual.
+    return {
+      ok: false,
+      brand,
+      language,
+      competitors: [],
+      prompts: [],
+      failed: ["competitors", "prompts"],
+      reason: context.reason,
+      brandProposal,
+      proposedAliases: []
+    };
   }
 
   const failed: Array<"competitors" | "prompts"> = [];
 
-  const [competitors, prompts] = await Promise.all([
+  const [competitors, prompts, proposedAliases] = await Promise.all([
     // suggestCompetitors reports its own incident (it is the grounded call and
     // owns the error) and answers [] either way, so the flag here records that
     // the half failed, not why.
@@ -102,7 +155,8 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
       failed.push("prompts");
       await reportLlmIncident({ surface: "onboarding_suggestions", provider: "gemini", error, domain });
       return [];
-    })
+    }),
+    proposeAliases({ brand, domain, evidence })
   ]);
 
   // A half that threw is a failure; a half that answered nothing is a failure
@@ -117,8 +171,31 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
     language,
     competitors,
     prompts,
-    failed
+    failed,
+    reason: null,
+    brandProposal,
+    proposedAliases
   };
+}
+
+const MAX_BUSINESS_DESCRIPTION = 500;
+
+/**
+ * Alias que la IA podría usar para esta marca y que además están escritos en su
+ * propia portada (misma regla que el alta automática). Sin portada legible no
+ * hay evidencia contra la que verificar nada, así que no se propone nada y el
+ * asistente deja la entrada manual: nunca se rellena con recuerdo del modelo.
+ */
+async function proposeAliases(input: { brand: string; domain: string; evidence: HomepageEvidence }): Promise<string[]> {
+  if (input.evidence.status !== "ok") return [];
+  const proposed = await inferBrandAliases({ brand: input.brand, domain: input.domain, evidence: input.evidence }).catch(
+    () => [] as string[]
+  );
+  if (!proposed.length) return [];
+  const evidenceText = [input.evidence.title, input.evidence.description, ...input.evidence.headings, input.evidence.excerpt]
+    .filter(Boolean)
+    .join("\n");
+  return selectVerifiableAliases(proposed, input.brand, evidenceText).accepted;
 }
 
 const generateMorePromptsSchema = z.object({
@@ -199,6 +276,14 @@ export async function createProject(formData: FormData) {
   if (!parsedForm.ok) {
     redirect(`/dashboard/projects/new?error=${parsedForm.error}`);
   }
+
+  // ONBOARDING-IDENTITY-1: alias que la persona confirmó en el asistente, con
+  // las mismas reglas que los derivados. Ausentes → el alta los deriva.
+  const rawAliases = formData.get("brand_aliases");
+  parsedForm.value.brandAliases = parseConfirmedAliasesField(
+    typeof rawAliases === "string" ? rawAliases : undefined,
+    parsedForm.value.brand
+  );
 
   // Fase Q1: toda la lógica vive en `createProjectCore` y devuelve un
   // resultado; lo único que queda aquí es traducirlo a revalidaciones y a un

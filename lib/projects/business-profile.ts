@@ -203,9 +203,15 @@ export async function resolveBusinessContext(input: {
   country: string;
   language: string;
   userDescription?: string;
+  /**
+   * ONBOARDING-IDENTITY-1: portada ya leída por el llamador (el asistente la
+   * necesita también para proponer la marca y los alias, y leerla tres veces
+   * es lo que hacía este flujo). Ausente → se lee aquí, como siempre.
+   */
+  evidence?: HomepageEvidence;
 }): Promise<BusinessContextResult> {
   const hasUserDescription = Boolean(input.userDescription?.trim());
-  const evidence = await fetchHomepageEvidence(input.domain);
+  const evidence = input.evidence ?? (await fetchHomepageEvidence(input.domain));
 
   if (evidence.status === "unavailable" && !hasUserDescription) {
     return { status: "unidentified", reason: "homepage_unreadable" };
