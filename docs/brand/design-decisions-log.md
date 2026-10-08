@@ -21422,9 +21422,15 @@ criterio de priorización, no una afirmación de que vayan a rendir más. Cambia
 alteraría qué tres acciones salen primero y no es necesario para este parche de
 honestidad.
 
-**Verificación visual: pendiente.** Oportunidades completo y el preview no se
-han visto: el entorno de la sesión no alcanza `vercel.com` (política de salida)
-y no se lanzan escaneos para poblar datos. Build y tipado no cierran la UI.
+**Verificación visual.** Oportunidades (extraído a `opportunities-card.tsx`,
+misma salida) se ha renderizado a 390 y 1280 px con el CSS real de la consola y
+la fixture del primer escaneo: sin «+N»/techo, recuento real, impacto
+cualitativo. A 390 px los títulos de fila se cortan con puntos suspensivos
+(`.ov2-opp-t`, CSS anterior a esta fase). **El preview real sigue sin verse**:
+su URL sale de GitHub Deployments (`environment_url` del despliegue `Preview`
+del head 5659849), pero el despliegue tiene protección de Vercel y el acceso lo
+resuelve el dueño; el entorno de la sesión tampoco alcanza `vercel.com`. No se
+lanzan escaneos para poblarlo. Build y tipado no cierran la UI.
 
 **Pendiente.** (a) Los techos por tipo de `BASE_CEILING` son juicio de
 producto, sin datos; subirlos exige resultados medidos, no una opinión. (b) Si

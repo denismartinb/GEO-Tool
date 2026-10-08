@@ -53,6 +53,7 @@ import {
   translateDroppedComponentReason,
   type GeoScoreEngineCoverage
 } from "./geo-score-breakdown";
+import { OpportunitiesCard } from "./opportunities-card";
 
 /**
  * DOMAINS-REDESIGN-1: NOT optional, and not a copy-paste from the page this
@@ -1396,65 +1397,16 @@ export default async function ProjectDetailPage({
           </div>
 
           <div className="ov2-rail">
-          {/* 6 · Oportunidades — resumen visual de Recomendaciones.
-              Cabecera: "hasta +Y pt" real (RECS-POTENTIAL-1, docs/adr/0017)
-              cuando hay recomendaciones cuantificables y confianza
-              suficiente; si no, cae al conteo real de recomendaciones
-              activas — nunca un número inventado. Cada tarjeta muestra su
-              propio "hasta +Xpt" cuando es cuantificable, o el impacto
-              cualitativo cuando no lo es. */}
+          {/* 6 · Oportunidades — resumen visual de Recomendaciones (componente
+              propio para poder renderizarlo con fixture; ver
+              opportunities-card.tsx). Sin cifras de puntos (log §236). */}
           {latestRecommendations?.length ? (
-            <>
-              <div className="ov2-sec-lbl">
-                Oportunidades
-                <Link href={`/dashboard/projects/${projectId}/recommendations`}>
-                  Ver todo <Icon name="arrRight" size={13} />
-                </Link>
-              </div>
-              <div className="card ov2-opps">
-                <div className="ov2-opps-hero">
-                  <div className="ov2-opps-gain">
-                    <div className="ov2-opps-gain-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
-                    <div className="ov2-opps-gain-l">
-                      {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "Recomendación" : "Recomendaciones"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="ov2-opps-h">
-                      {highPriorityCount > 0
-                        ? `${highPriorityCount} ${highPriorityCount === 1 ? "acción" : "acciones"} de alta prioridad`
-                        : "Acciones priorizadas para ti"}
-                    </div>
-                    <div className="ov2-opps-s">
-                      Ordenadas por impacto en tu visibilidad en las respuestas de IA.
-                    </div>
-                  </div>
-                </div>
-                <div className="ov2-opps-list">
-                  {latestRecommendations.map((rec) => {
-                    const effort = (rec.effort ?? "medium").toLowerCase();
-                    const isQuick = effort === "low";
-                    const impact = (rec.impact ?? "low").toLowerCase();
-                    const impactLabel = impact === "high" ? "Alto" : impact === "medium" || impact === "med" ? "Medio" : "Bajo";
-                    return (
-                      <div key={rec.id} className="ov2-opp">
-                        <span className="ov2-opp-dot" style={{ background: isQuick ? "var(--pos)" : "var(--brand-neg)" }} />
-                        <span className="ov2-opp-t">
-                          <span>{rec.title}</span>
-                          {isQuick && <span className="ov2-opp-quick">rápida</span>}
-                        </span>
-                        <span className="ov2-opp-r">
-                          <span className="impact-lbl">Impacto {impactLabel.toLowerCase()}</span>
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <Link href={`/dashboard/projects/${projectId}/recommendations`} className="ov2-opps-cta">
-                  Ver todas las recomendaciones <Icon name="arrRight" size={13} />
-                </Link>
-              </div>
-            </>
+            <OpportunitiesCard
+              projectId={projectId}
+              recommendations={latestRecommendations}
+              activeCount={activeRecommendationsCount}
+              highPriorityCount={highPriorityCount}
+            />
           ) : null}
           </div>
           </div>
