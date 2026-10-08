@@ -133,6 +133,19 @@ describe("describeRunPlanFromRun", () => {
     expect(describeRunPlanFromRun({ prompts: 0, engines: 3, launches: 0 })).toBeNull();
   });
 
+  it("a run that hit the cap of pasadas and stayed under 50 is described as capped, not as having reached it", () => {
+    // 2 prompts x 3 motores x 5 pasadas = 30: the mission must not say "para llegar al mínimo de 50".
+    const plan = describeRunPlanFromRun({ prompts: 2, engines: 3, launches: 10, sampleCount: 5 });
+    expect(plan).toMatchObject({ samples: 5, expectedResponses: 30, reason: "capped" });
+    expect(runPlanWhy(plan!)).toContain("Aun así quedan 30");
+  });
+
+  it("a run that repeated and reached the floor is not marked capped", () => {
+    const plan = describeRunPlanFromRun({ prompts: 15, engines: 3, launches: 30, sampleCount: 2 });
+    expect(plan?.reason).toBeNull();
+    expect(runPlanWhy(plan!)).toContain("mínimo de 50");
+  });
+
   it("a retry never adds expected responses: the figure is a function of the run's config only", () => {
     // Retries re-run the same lanzamiento and rewrite the same row; there is
     // no input here that could grow with them.

@@ -21379,8 +21379,11 @@ migración, que está prohibida sin aprobación.
 decisión de esquema. (2) Sin tiempo aproximado en pantalla: no hay duración
 medida de un escaneo estándar y no se inventa una. (3) Fallos por motor y
 parcial válido en la misión: fase aparte. (4) SCAN-STATES-2 no se reabre.
-(5) La nota de cabecera de `lib/scan/mission-beats.ts` sobre «90 respuestas»
-describe la situación previa; el carril ya imprime la cuenta.
+(5) Decisiones del fundador sobre #550 (2026-10-08): la migración del índice
+único parcial para el doble lanzamiento **sí**, en PR aparte en borrador y
+**no antes de que entren seguridad e identidad**; el piloto agéntico **no se
+lanza todavía** (tras identidad); el tiempo estimado en pantalla queda
+pendiente hasta tener una medición real.
 
 **Premisa de retirada.** No se retira ningún camino de recuperación.
 

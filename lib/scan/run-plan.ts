@@ -1,4 +1,4 @@
-import { computeSampleCount, MIN_RESPONSES_PER_RUN, type SamplingReason } from "@/lib/scan/sampling";
+import { computeSampleCount, MAX_PROMPT_SAMPLES, MIN_RESPONSES_PER_RUN, type SamplingReason } from "@/lib/scan/sampling";
 
 /**
  * SCAN-PLAN-UNITS-1 — the one place that says what a scan will do, in the
@@ -41,7 +41,10 @@ export type RunPlan = {
   expectedResponses: number;
   /** What one pass alone would produce: prompts x engines. */
   singlePassResponses: number;
-  /** Why `samples` is what it is. `null` when it came from a persisted run. */
+  /**
+   * Why `samples` is what it is. From a persisted run only the cap case can be
+   * recovered (`capped`); the other reasons need the plan and are `null`.
+   */
   reason: SamplingReason | null;
 };
 
@@ -92,14 +95,17 @@ export function describeRunPlanFromRun(input: {
     persisted != null && Number.isFinite(persisted) && persisted >= 1
       ? Math.floor(persisted)
       : Math.max(1, Math.round(launches / prompts));
+  const expectedResponses = launches * engines;
   return {
     prompts,
     samples,
     engines,
     launches,
-    expectedResponses: launches * engines,
+    expectedResponses,
     singlePassResponses: prompts * engines,
-    reason: null
+    // A run that used the whole allowance and still sits under the floor was
+    // capped: say so instead of claiming it reached the minimum.
+    reason: samples >= MAX_PROMPT_SAMPLES && expectedResponses < MIN_RESPONSES_PER_RUN ? "capped" : null
   };
 }
 

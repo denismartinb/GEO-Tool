@@ -357,8 +357,6 @@ export type ScanContext = {
   planId: string;
   /** Engines the first scan will fan out to, in order (plan cap and project defaults applied). */
   providers: readonly string[];
-  // Los chips de motor usan los mismos glifos y colores que Visión general/Prompts
-  // (lib/scan/engine-meta.ts, components/ui/engine-glyph.tsx).
   samplingEnabled: boolean;
 };
 
@@ -846,6 +844,7 @@ export function OnboardingWizard({
 
                 <div className="add-engines">
                   <span className="cap">Motores</span>
+                  {/* Mismos glifos y colores que Visión general/Prompts (lib/scan/engine-meta.ts). */}
                   {scanContext.providers.map((provider) => {
                     const meta = getEngineMeta(provider);
                     return (
