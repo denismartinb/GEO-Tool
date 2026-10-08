@@ -3,7 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { getStripeClient } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/service";
-import { handleStripeWebhookEvent } from "@/lib/billing/stripe-webhook";
+import { processStripeWebhookEvent } from "@/lib/billing/webhook-registry";
 
 export const dynamic = "force-dynamic";
 
@@ -35,18 +35,25 @@ export async function POST(request: Request) {
   const service = createServiceClient();
 
   try {
-    await handleStripeWebhookEvent(event, service);
+    const result = await processStripeWebhookEvent(event, service);
+    if (result.status === "in_progress") {
+      // Another invocation holds this event right now. Non-2xx so Stripe
+      // retries later instead of treating it as delivered.
+      return NextResponse.json({ received: false, reason: "in_progress" }, { status: 409 });
+    }
+    if (result.status === "duplicate") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
   } catch (error) {
     console.error("[geo:billing:webhook] handler failed", {
       eventType: event.type,
       eventId: event.id,
       message: error instanceof Error ? error.message : String(error)
     });
-    // Non-2xx so Stripe retries per its own backoff schedule (up to 3 days)
-    // — every write in handleStripeWebhookEvent is idempotent, so a retry of
-    // an already-partially-processed event is safe, and a transient failure
-    // (e.g. a momentary DB blip) gets a real chance to recover on its own
-    // instead of silently losing the plan sync forever.
+    // Non-2xx so Stripe retries per its own backoff schedule (up to 3 days).
+    // The registry marked the event `failed`, so the retry re-claims it; every
+    // database write is idempotent and scoped to its subscription, and emails
+    // only go out after a successful commit, so a retry never duplicates one.
     return NextResponse.json({ received: false }, { status: 500 });
   }
 

@@ -21327,3 +21327,81 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 236. SEC-CHANGEPLAN-1 + SEC-WEBHOOK-REGISTRY-1: `changePlan` ya no concede planes de pago, y el webhook de Stripe tiene memoria (2026-10-08)
+
+**Qué pasaba (reproducido con test antes de tocar nada).** La regla «los planes
+de pago se contratan solo por Checkout» vivía en el cliente
+(`change-plan-modal` enviaba Free→de pago a Checkout), mientras la server
+action `changePlan` validaba que el id de plan existiera y escribía
+`profiles.current_plan` con el service role **sin exigir pago**. Un usuario
+Free que llamase a la acción directamente (`changePlan("agency")`) obtenía el
+plan. Además, si había `stripe_subscription_id` y no había cliente de Stripe,
+se saltaba la cancelación y **se borraba** la suscripción de la BD: una
+suscripción viva que seguía cobrando sin rastro en nuestros datos.
+
+**Decisión (`changePlan`, fundador, 2026-10-08).**
+- La acción solo puede **bajar** derechos. Destinos admitidos, decididos con el
+  estado leído en servidor: `free` (bajada), el plan que ya tiene la cuenta
+  (solo archivar dominios — el flujo de exceso de dominios reenvía el plan
+  actual) y nada más. Cualquier otro se rechaza **antes** de archivar nada.
+- **Cancelar y cambiar derechos son dos pasos con dos fallos distintos.**
+  `cancelStripeSubscription` solo toca Stripe y exige que Stripe confirme
+  `status: "canceled"`; sin cliente de Stripe, con error de Stripe o con otra
+  respuesta, **falla y la BD queda intacta**. `revokePaidEntitlements` es la
+  escritura privilegiada: acotada a la suscripción exacta que se acaba de
+  cancelar (o a «sin suscripción») y debe tocar exactamente una fila; si el
+  perfil cambió entretanto (otra suscripción más nueva enlazada) no pisa nada.
+- Si Stripe canceló pero la escritura falla, el mensaje lo dice con honestidad
+  y el webhook `customer.subscription.deleted` (acotado por id) lo reconcilia.
+
+**Decisión (webhook).**
+- Registro de eventos `stripe_webhook_events` (migración 0038, **aplicar a
+  mano antes de mergear**; hasta entonces la ruta degrada a procesar sin
+  registro y lo registra con un error explícito, en vez de rechazar todos los
+  webhooks): un reintento de un evento procesado es no-op (`duplicate`, 200);
+  uno en curso responde 409 para que Stripe reintente; uno `failed` o con
+  reclamo caducado (5 min) se reclama de forma atómica.
+- **Orden por suscripción**: un evento más antiguo que otro ya aplicado para la
+  misma suscripción se salta (`skipped_stale`); tras el `deleted` de una
+  suscripción no se aplica nada más sobre ella (`skipped_terminal`). El
+  `deleted` nunca se salta por «antiguo».
+- **Toda escritura se acota por la suscripción del evento**: un `deleted` o un
+  `updated(canceled)` viejo no puede bajar de plan a quien ya tiene una nueva, y
+  un `updated(active)` solo cambia el plan si el perfil sostiene esa
+  suscripción (un «active» rezagado no resucita un plan tras una bajada). Solo
+  `checkout.session.completed` enlaza una suscripción a un perfil.
+- **Derechos siguen al dinero**: `checkout.session.completed` no concede plan
+  salvo `payment_status` `paid` o `no_payment_required`.
+- **Los emails salen una sola vez por evento**: la BD se escribe, el evento se
+  marca procesado y solo entonces se envían. Un fallo de email no devuelve 500
+  (no repetiría nada útil). Coste aceptado: un fallo del proceso entre ambos
+  pasos pierde un email, nunca lo duplica.
+
+**Pendiente / conocido.**
+- `checkout.session.async_payment_succeeded` no se gestiona: un método de pago
+  retardado (SEPA) que llegue como `unpaid` no concede el plan hasta que se
+  añada ese evento. Hoy se registra en el log. Decisión para el dueño.
+- Dos eventos distintos de la misma suscripción procesados a la vez no tienen
+  bloqueo entre sí (la marca de orden se lee antes de aplicar); las escrituras
+  acotadas por suscripción limitan el daño, no lo eliminan.
+- Revisión independiente (`data-guardian`): P1 corregido en este PR (un
+  `deleted` que llega antes que su checkout, registrado `ignored`, también
+  termina la suscripción — test incluido). P2 abierto: `event.created` tiene
+  resolución de segundos, así que dos `updated` del mismo segundo invertidos se
+  aplican los dos. P3 abierto: si Stripe ya canceló la suscripción que la BD
+  aún guarda, `cancel` falla y el usuario no puede bajar a Free sin operador.
+  P3 abierto previo a este PR: un checkout fallido durante horas permite una
+  segunda suscripción (doble cobro).
+- `resource_missing` al cancelar (suscripción borrada a mano en Stripe, o clave
+  de otro modo) falla cerrado: un caso así necesita intervención del operador.
+- El estado visible `past_due` (aviso + enlace al portal) y la política única
+  de prueba/promo son el PR 2: este PR no toca copy ni pantallas.
+- Verificado solo con tests locales (firmas generadas con
+  `generateTestHeaderString`); **no** se ha ejercitado Stripe sandbox ni la
+  migración contra una base real.
+
+**Trazabilidad.** `app/dashboard/settings/billing/actions.ts` (+test),
+`lib/billing/stripe-webhook.ts`, `lib/billing/webhook-registry.ts`,
+`app/api/webhooks/stripe/route.ts` (+tests),
+`supabase/migrations/0038_stripe_webhook_events.sql`.

@@ -484,6 +484,13 @@ Vercel Pro, founder registered as autónomo (or fiscal vehicle chosen),
 VeriFactu/facturación decision made and applied, then swap `sk_test_...` /
 test-mode price ids for their live-mode equivalents.
 
+**Webhook registry (SEC-WEBHOOK-REGISTRY-1, log §236)**: `/api/webhooks/stripe`
+records every event in `public.stripe_webhook_events` (migration 0038, applied
+by hand, service role only, RLS without policies) for idempotency and
+per-subscription ordering. No new env var. Apply 0038 **before** merging; until
+then the route processes events unregistered and logs
+`stripe_webhook_events unavailable … UNREGISTERED` on every delivery.
+
 **Customer Portal (BILLING-STRIPE-1 PR 2)**: no new env var — reuses
 `STRIPE_SECRET_KEY` via `stripe.billingPortal.sessions.create()`. Requires a
 one-time **founder configuration in the Stripe Dashboard** (Settings →

@@ -13,19 +13,60 @@ const ENDED_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
   "paused"
 ]);
 
+export type WebhookOutcome = "applied" | "ignored";
+
+export type WebhookApplyResult = {
+  outcome: WebhookOutcome;
+  /**
+   * Side effects that must happen AT MOST ONCE per Stripe event (emails). They
+   * are returned instead of run so the registry can mark the event processed
+   * first: a Stripe retry of a processed event then re-sends nothing, and a
+   * failed email never turns into a 500 that replays the (already committed)
+   * database write.
+   */
+  afterCommit: Array<() => Promise<unknown>>;
+};
+
+type Service = ReturnType<typeof createServiceClient>;
+
+const IGNORED: WebhookApplyResult = { outcome: "ignored", afterCommit: [] };
+
 /**
- * Pure event handler, kept separate from the route (app/api/webhooks/stripe/route.ts)
- * so it's unit-testable without a real HTTP request or Stripe signature.
- *
- * Every write here is naturally idempotent (setting the same columns to the
- * same values on a Stripe retry of an already-processed event is harmless),
- * so there's no separate "processed event ids" table — Stripe's own retry
- * schedule (2xx short-circuits it) is sufficient.
+ * The subscription an event is about — the key for per-subscription ordering
+ * (webhook-registry.ts). `null` for events that don't carry one.
  */
-export async function handleStripeWebhookEvent(
-  event: Stripe.Event,
-  service: ReturnType<typeof createServiceClient>
-): Promise<void> {
+export function getEventSubjectId(event: Stripe.Event): string | null {
+  const object = event.data.object as unknown as Record<string, unknown>;
+  switch (event.type) {
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+      return typeof object.id === "string" ? object.id : null;
+    case "checkout.session.completed": {
+      const subscription = object.subscription;
+      if (typeof subscription === "string") return subscription;
+      return typeof (subscription as { id?: unknown } | null)?.id === "string"
+        ? ((subscription as { id: string }).id)
+        : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Applies the DATABASE side of a Stripe event and returns the emails to send
+ * once it is committed. Kept separate from the route
+ * (app/api/webhooks/stripe/route.ts) and from the registry so it is
+ * unit-testable without an HTTP request or a Stripe signature.
+ *
+ * Every write is scoped to the exact subscription the event is about
+ * (SEC-WEBHOOK-REGISTRY-1): an event for a subscription the profile no longer
+ * points at — an old one cancelled by a downgrade, a replayed delete — cannot
+ * touch the plan of whatever the account has now. Only `checkout.session
+ * .completed` (the signed result of a payment we initiated) links a
+ * subscription to a profile.
+ */
+export async function applyStripeWebhookEvent(event: Stripe.Event, service: Service): Promise<WebhookApplyResult> {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -43,7 +84,18 @@ export async function handleStripeWebhookEvent(
           hasCustomerId: Boolean(customerId),
           hasSubscriptionId: Boolean(subscriptionId)
         });
-        return;
+        return IGNORED;
+      }
+
+      // Entitlements follow money, not a completed form: only a session Stripe
+      // reports as paid (or needing no payment, e.g. a 100% coupon) grants a
+      // plan. A delayed method that is still `unpaid` waits for its own event.
+      if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+        console.error("[geo:billing:webhook] checkout.session.completed not paid, not granting a plan", {
+          eventId: event.id,
+          paymentStatus: session.payment_status
+        });
+        return IGNORED;
       }
 
       const { error } = await service
@@ -62,11 +114,12 @@ export async function handleStripeWebhookEvent(
       if (error) throw new Error(`profiles update failed: ${error.message}`);
 
       const email = session.customer_details?.email;
+      const afterCommit: WebhookApplyResult["afterCommit"] = [];
       if (email) {
         const planName = PLANS.find((p) => p.id === planId)?.name ?? planId;
-        await sendPlanConfirmedEmail(email, planName);
+        afterCommit.push(() => sendPlanConfirmedEmail(email, planName));
       }
-      return;
+      return { outcome: "applied", afterCommit };
     }
 
     case "customer.subscription.updated": {
@@ -77,35 +130,45 @@ export async function handleStripeWebhookEvent(
           eventId: event.id,
           subscriptionId: subscription.id
         });
-        return;
+        return IGNORED;
       }
 
       if (ENDED_SUBSCRIPTION_STATUSES.has(subscription.status)) {
-        const { error } = await service
+        // Scoped to THIS subscription: a late "ended" for an old one must not
+        // downgrade an account that has since moved to a newer one.
+        const { data, error } = await service
           .from("profiles")
           .update({ current_plan: "free", stripe_subscription_id: null, cancel_at: null })
-          .eq("id", userId);
+          .eq("id", userId)
+          .eq("stripe_subscription_id", subscription.id)
+          .select("id");
         if (error) throw new Error(`profiles update failed: ${error.message}`);
-        return;
+        return data && data.length > 0 ? { outcome: "applied", afterCommit: [] } : IGNORED;
       }
 
       if (subscription.status === "active" || subscription.status === "trialing") {
         const priceId = subscription.items.data[0]?.price.id;
         const planId = priceId ? getPlanIdForPriceId(priceId) : null;
-        if (!planId) return;
+        if (!planId) return IGNORED;
 
-        // Read before writing, purely to email-notify a real plan change —
-        // this only fires for a genuine update to an already-existing
-        // subscription (e.g. a Portal-driven Starter<->Pro switch), never
-        // for the initial subscription a Checkout creates (that's a
-        // customer.subscription.created event, which this handler doesn't
-        // listen for at all — checkout.session.completed's own email covers
-        // that case, so there's no double-send risk here).
         const { data: profileRow } = await service
           .from("profiles")
-          .select("current_plan, email")
+          .select("current_plan, email, stripe_subscription_id")
           .eq("id", userId)
           .maybeSingle();
+
+        // Only the subscription the profile currently points at may change its
+        // plan. If the link is missing (checkout.session.completed not seen
+        // yet, or a downgrade cleared it) or points elsewhere, this event is
+        // about a subscription that is not the account's — granting a plan
+        // from it is how a stale "active" would resurrect a cancelled plan.
+        if (!profileRow || profileRow.stripe_subscription_id !== subscription.id) {
+          console.error("[geo:billing:webhook] subscription.updated for a subscription the profile doesn't hold, ignored", {
+            eventId: event.id,
+            subscriptionId: subscription.id
+          });
+          return IGNORED;
+        }
 
         // Mirrors Stripe's own cancel_at regardless of whether it's newly
         // set or being cleared (the owner reactivated) — the billing page
@@ -121,33 +184,42 @@ export async function handleStripeWebhookEvent(
         const { error } = await service
           .from("profiles")
           .update({ current_plan: planId, trial_ends_at: null, cancel_at: cancelAt })
-          .eq("id", userId);
+          .eq("id", userId)
+          .eq("stripe_subscription_id", subscription.id);
         if (error) throw new Error(`profiles update failed: ${error.message}`);
 
-        if (profileRow?.email) {
+        const afterCommit: WebhookApplyResult["afterCommit"] = [];
+        if (profileRow.email) {
+          const email = profileRow.email as string;
           if (profileRow.current_plan && profileRow.current_plan !== planId) {
             const planName = PLANS.find((p) => p.id === planId)?.name ?? planId;
-            await sendPlanConfirmedEmail(profileRow.email, planName);
+            afterCommit.push(() => sendPlanConfirmedEmail(email, planName));
           }
           if (cancelAt) {
-            await sendCancellationScheduledEmail(profileRow.email, new Date(cancelAt));
+            afterCommit.push(() => sendCancellationScheduledEmail(email, new Date(cancelAt)));
           }
         }
+        return { outcome: "applied", afterCommit };
       }
-      return;
+      return IGNORED;
     }
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.user_id;
-      if (!userId) return;
+      if (!userId) return IGNORED;
 
-      const { error } = await service
+      // Scoped to the deleted subscription: when a downgrade (or a replay)
+      // delivers this after the account already holds a newer subscription,
+      // nothing matches and the newer plan is left alone.
+      const { data, error } = await service
         .from("profiles")
         .update({ current_plan: "free", stripe_subscription_id: null, cancel_at: null })
-        .eq("id", userId);
+        .eq("id", userId)
+        .eq("stripe_subscription_id", subscription.id)
+        .select("id");
       if (error) throw new Error(`profiles update failed: ${error.message}`);
-      return;
+      return data && data.length > 0 ? { outcome: "applied", afterCommit: [] } : IGNORED;
     }
 
     // Purely a notification — no profile write. The plan itself only
@@ -156,13 +228,23 @@ export async function handleStripeWebhookEvent(
     // handled above), so this just warns the owner their card was declined.
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
-      if (invoice.customer_email) {
-        await sendPaymentFailedEmail(invoice.customer_email);
-      }
-      return;
+      const email = invoice.customer_email;
+      return email
+        ? { outcome: "applied", afterCommit: [() => sendPaymentFailedEmail(email)] }
+        : IGNORED;
     }
 
     default:
-      return;
+      return IGNORED;
   }
+}
+
+/**
+ * Apply + send, with no registry. Kept for callers (and tests) that want the
+ * old one-shot behaviour; the webhook route goes through
+ * `processStripeWebhookEvent` instead, which is idempotent and ordered.
+ */
+export async function handleStripeWebhookEvent(event: Stripe.Event, service: Service): Promise<void> {
+  const { afterCommit } = await applyStripeWebhookEvent(event, service);
+  for (const effect of afterCommit) await effect();
 }

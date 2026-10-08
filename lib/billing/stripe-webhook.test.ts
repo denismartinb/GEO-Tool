@@ -31,21 +31,43 @@ type Row = Record<string, unknown>;
 
 function fakeServiceClient(options: { updateError?: string; profile?: Row | null } = {}) {
   const updates: Update[] = [];
+  // The row the account "holds" for guarded writes. Defaults to being linked to
+  // sub_123 (what most fixtures use); a test overrides `stripe_subscription_id`
+  // to model an account that has moved on to another subscription.
+  const held: Row = { stripe_subscription_id: "sub_123", ...(options.profile ?? {}) };
 
   const client = {
     from(table: string) {
       if (table !== "profiles") throw new Error(`unexpected table ${table}`);
       return {
         select() {
-          return { eq: () => ({ maybeSingle: () => Promise.resolve({ data: options.profile ?? null, error: null }) }) };
+          return {
+            eq: () => ({
+              maybeSingle: () => Promise.resolve({ data: options.profile ? held : null, error: null })
+            })
+          };
         },
         update(patch: Record<string, unknown>) {
-          return {
-            eq(_column: string, id: string) {
-              updates.push({ patch, id });
-              return Promise.resolve({ error: options.updateError ? { message: options.updateError } : null });
+          const filters: Array<[string, unknown]> = [];
+          const builder = {
+            eq(column: string, value: unknown) {
+              filters.push([column, value]);
+              return builder;
+            },
+            select() {
+              return builder;
+            },
+            then(resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) {
+              if (options.updateError) {
+                return Promise.resolve({ data: null, error: { message: options.updateError } }).then(resolve, reject);
+              }
+              const matches = filters.every(([column, value]) => column === "id" || (held[column] ?? null) === value);
+              const idFilter = filters.find(([column]) => column === "id");
+              if (matches) updates.push({ patch, id: idFilter?.[1] as string });
+              return Promise.resolve({ data: matches ? [{ id: idFilter?.[1] }] : [], error: null }).then(resolve, reject);
             }
           };
+          return builder;
         }
       };
     }
@@ -65,6 +87,7 @@ describe("handleStripeWebhookEvent", () => {
 
     const event = makeEvent("checkout.session.completed", {
       metadata: { user_id: "user-1", plan_id: "pro" },
+      payment_status: "paid",
       customer: "cus_123",
       subscription: "sub_123",
       customer_details: { email: "founder@example.com" }
@@ -92,6 +115,7 @@ describe("handleStripeWebhookEvent", () => {
 
     const event = makeEvent("checkout.session.completed", {
       metadata: { user_id: "user-1", plan_id: "pro" },
+      payment_status: "paid",
       customer: "cus_123",
       subscription: "sub_123"
     });
@@ -124,6 +148,7 @@ describe("handleStripeWebhookEvent", () => {
 
     const event = makeEvent("checkout.session.completed", {
       metadata: { user_id: "user-1", plan_id: "pro" },
+      payment_status: "paid",
       customer: "cus_123",
       subscription: "sub_123"
     });
@@ -133,7 +158,7 @@ describe("handleStripeWebhookEvent", () => {
 
   it("customer.subscription.updated: resolves the plan from the subscription's price id when active", async () => {
     const { handleStripeWebhookEvent } = await import("./stripe-webhook");
-    const { client, updates } = fakeServiceClient();
+    const { client, updates } = fakeServiceClient({ profile: { current_plan: "pro", email: null } });
 
     const event = makeEvent("customer.subscription.updated", {
       id: "sub_123",
@@ -382,5 +407,74 @@ describe("handleStripeWebhookEvent", () => {
     await handleStripeWebhookEvent(event, client);
 
     expect(sendPaymentFailedEmail).not.toHaveBeenCalled();
+  });
+
+  describe("SEC-WEBHOOK-REGISTRY-1: scoped to the subscription the event is about", () => {
+    it("checkout.session.completed: does NOT grant a plan for an unpaid session", async () => {
+      const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+      const { client, updates } = fakeServiceClient();
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await handleStripeWebhookEvent(
+        makeEvent("checkout.session.completed", {
+          metadata: { user_id: "user-1", plan_id: "pro" },
+          payment_status: "unpaid",
+          customer: "cus_123",
+          subscription: "sub_123",
+          customer_details: { email: "a@b.c" }
+        }),
+        client
+      );
+
+      expect(updates).toHaveLength(0);
+      expect(sendPlanConfirmedEmail).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it("customer.subscription.deleted for an OLD subscription leaves the newer one untouched", async () => {
+      const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+      const { client, updates } = fakeServiceClient({ profile: { current_plan: "pro", stripe_subscription_id: "sub_new" } });
+
+      await handleStripeWebhookEvent(
+        makeEvent("customer.subscription.deleted", { id: "sub_old", metadata: { user_id: "user-1" } }),
+        client
+      );
+
+      expect(updates).toHaveLength(0);
+    });
+
+    it("customer.subscription.updated(ended) for an OLD subscription does not downgrade the newer one", async () => {
+      const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+      const { client, updates } = fakeServiceClient({ profile: { current_plan: "pro", stripe_subscription_id: "sub_new" } });
+
+      await handleStripeWebhookEvent(
+        makeEvent("customer.subscription.updated", { id: "sub_old", status: "canceled", metadata: { user_id: "user-1" } }),
+        client
+      );
+
+      expect(updates).toHaveLength(0);
+    });
+
+    it("a stale 'active' update cannot resurrect a plan after the account was downgraded (no subscription held)", async () => {
+      const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+      const { client, updates } = fakeServiceClient({
+        profile: { current_plan: "free", stripe_subscription_id: null, email: "a@b.c" }
+      });
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await handleStripeWebhookEvent(
+        makeEvent("customer.subscription.updated", {
+          id: "sub_123",
+          status: "active",
+          metadata: { user_id: "user-1" },
+          items: { data: [{ price: { id: "price_pro_test" } }] }
+        }),
+        client
+      );
+
+      expect(updates).toHaveLength(0);
+      expect(sendPlanConfirmedEmail).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
   });
 });

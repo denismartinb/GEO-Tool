@@ -41,14 +41,111 @@ async function getRequestSiteUrl(): Promise<string> {
 
 export type ChangePlanResult = { success: true } | { success: false; error: string };
 
+const CHANGE_PLAN_GENERIC_ERROR = "No se pudo guardar el cambio de plan. Inténtalo de nuevo.";
+
+type CancelSubscriptionResult = { ok: true } | { ok: false; error: string };
+
 /**
- * Changes the account's plan. If `archiveProjectIds` is given (downgrade
- * flow, when the account has more active domains than the target plan
- * allows), those domains are archived — never hard-deleted, reversible via
- * restoreProject — before the plan itself changes, so an account is never
- * left over its new plan's domain cap. If archiving succeeds but the plan
- * update then fails, the domains stay archived (reversible) and the plan
- * stays as it was; the user can just retry.
+ * Step 1 of a downgrade: stop the recurring charge in Stripe. Touches Stripe
+ * only — never the profile row — so "cancel the billing" and "change the
+ * entitlements" are two separate steps with two separate failure modes
+ * (SEC-CHANGEPLAN-1). Fails closed: no Stripe client, a Stripe error, or an
+ * answer that is not a cancelled subscription all return `ok: false`, and the
+ * caller leaves the database untouched. The old code skipped the cancellation
+ * when no client was configured and then NULLed `stripe_subscription_id`,
+ * orphaning a live subscription that kept billing with no trace in our data.
+ */
+async function cancelStripeSubscription(subscriptionId: string, userId: string): Promise<CancelSubscriptionResult> {
+  const stripe = getStripeClient();
+  if (!stripe) {
+    console.error("[geo:billing] cannot cancel subscription: Stripe client unavailable", { userId, subscriptionId });
+    return { ok: false, error: "La facturación no está disponible ahora mismo. No hemos cambiado tu plan; inténtalo más tarde." };
+  }
+
+  try {
+    const cancelled = await stripe.subscriptions.cancel(subscriptionId);
+    if (cancelled?.status !== "canceled") {
+      console.error("[geo:billing] Stripe did not confirm the cancellation", { userId, subscriptionId, status: cancelled?.status });
+      return { ok: false, error: "No se pudo cancelar la suscripción activa. Inténtalo de nuevo." };
+    }
+    return { ok: true };
+  } catch (stripeError) {
+    console.error("[geo:billing] failed to cancel Stripe subscription on downgrade", {
+      userId,
+      subscriptionId,
+      message: stripeError instanceof Error ? stripeError.message : String(stripeError)
+    });
+    return { ok: false, error: "No se pudo cancelar la suscripción activa. Inténtalo de nuevo." };
+  }
+}
+
+/**
+ * Step 2 of a downgrade: take the paid entitlements away. Privileged write
+ * (0016_protect_billing_columns.sql rejects it from anything but the service
+ * role), so it is also the last line of defence: it is scoped to the exact
+ * subscription we just cancelled (or to "no subscription" when there was none)
+ * and must touch exactly one row. If the profile moved on in the meantime — a
+ * newer subscription linked by a webhook — nothing is overwritten.
+ */
+async function revokePaidEntitlements(userId: string, cancelledSubscriptionId: string | null): Promise<boolean> {
+  let serviceClient: ReturnType<typeof createServiceClient>;
+  try {
+    serviceClient = createServiceClient();
+  } catch (configError) {
+    console.error("[geo:billing] service client unavailable for changePlan", {
+      userId,
+      message: configError instanceof Error ? configError.message : String(configError)
+    });
+    return false;
+  }
+
+  const base = serviceClient
+    .from("profiles")
+    .update({ current_plan: "free", stripe_subscription_id: null, cancel_at: null })
+    .eq("id", userId);
+  const guarded = cancelledSubscriptionId
+    ? base.eq("stripe_subscription_id", cancelledSubscriptionId)
+    : base.is("stripe_subscription_id", null);
+  const { data, error } = await guarded.select("id");
+
+  if (error) {
+    console.error("[geo:billing] failed to revoke entitlements", { userId, message: error.message });
+    return false;
+  }
+  if (!data || data.length !== 1) {
+    console.error("[geo:billing] entitlement revoke matched no row (profile changed concurrently)", {
+      userId,
+      cancelledSubscriptionId
+    });
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Self-serve plan change — SERVER-SIDE PAYMENT GATE (SEC-CHANGEPLAN-1).
+ *
+ * This action can only ever LOWER what an account is entitled to; it can
+ * never grant a paid plan. Paid plans are contracted exclusively through
+ * Stripe Checkout (`createCheckoutSession`) or the Customer Portal, and the
+ * entitlement only changes when the webhook confirms a real subscription. The
+ * rule used to live in the client (`change-plan-modal` routed Free -> paid to
+ * Checkout) while this action wrote `current_plan` with the service role for
+ * any valid plan id — so a Free user calling it directly got Agency for free.
+ *
+ * Accepted targets, decided from the account's state read on the server:
+ *  - `free`: downgrade. Cancels the real subscription first (if any), then
+ *    revokes the entitlements. Fails closed at every step.
+ *  - the plan the account already has: archive-only (the domain-overage flow
+ *    re-submits the current plan with the domains to archive). Never writes
+ *    the plan.
+ *  - anything else: rejected, before anything is archived.
+ *
+ * If `archiveProjectIds` is given, those domains are archived — never
+ * hard-deleted, reversible via restoreProject — before the plan itself
+ * changes, so an account is never left over its new plan's domain cap. If
+ * archiving succeeds but a later step fails, the domains stay archived
+ * (reversible) and the plan stays as it was; the user can just retry.
  */
 export async function changePlan(planId: string, archiveProjectIds: string[] = []): Promise<ChangePlanResult> {
   const parsedPlan = planIdSchema.safeParse(planId);
@@ -58,11 +155,35 @@ export async function changePlan(planId: string, archiveProjectIds: string[] = [
 
   const parsedArchiveIds = archiveIdsSchema.safeParse(archiveProjectIds);
   if (!parsedArchiveIds.success) {
-    return { success: false, error: "No se pudo guardar el cambio de plan. Inténtalo de nuevo." };
+    return { success: false, error: CHANGE_PLAN_GENERIC_ERROR };
   }
 
   const { supabase, user } = await requireUser();
   const targetPlan = PLANS.find((p) => p.id === parsedPlan.data)!;
+
+  // The account's own billing state, read on the server. Nothing the client
+  // sent about its current plan is trusted.
+  const { data: profileRow, error: profileError } = await supabase
+    .from("profiles")
+    .select("current_plan, stripe_subscription_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profileRow) {
+    return { success: false, error: CHANGE_PLAN_GENERIC_ERROR };
+  }
+
+  const currentPlanId = profileRow.current_plan as string | null | undefined;
+  const subscriptionId = (profileRow.stripe_subscription_id as string | null | undefined) ?? null;
+  const isArchiveOnly = targetPlan.id === currentPlanId;
+  const isDowngradeToFree = !isArchiveOnly && targetPlan.id === "free";
+
+  if (!isArchiveOnly && !isDowngradeToFree) {
+    return {
+      success: false,
+      error: "Los planes de pago se contratan desde el pago seguro de Stripe, no desde aquí."
+    };
+  }
 
   if (parsedArchiveIds.data.length > 0) {
     const { error: archiveError, count: archivedCount } = await supabase
@@ -96,59 +217,27 @@ export async function changePlan(planId: string, archiveProjectIds: string[] = [
     };
   }
 
-  // BILLING-STRIPE-1: a self-serve immediate plan change (this action) only
-  // ever targets a plan with no real Stripe price (today: only "free" — see
-  // the change-plan-modal's paid<->paid guard, which routes any Free->paid
-  // move through createCheckoutSession below instead). Cancel any real
-  // subscription for real before flipping the DB column, so downgrading
-  // actually stops the recurring charge rather than just relabeling the
-  // account while Stripe keeps billing it.
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("stripe_subscription_id")
-    .eq("id", user.id)
-    .maybeSingle();
+  if (isArchiveOnly) {
+    return { success: true };
+  }
 
-  const subscriptionId = profileRow?.stripe_subscription_id as string | null | undefined;
+  // Downgrade: cancel the real charge first, then take the entitlements away.
+  // Cancelling and changing entitlements are separate steps (SEC-CHANGEPLAN-1).
   if (subscriptionId) {
-    const stripe = getStripeClient();
-    if (stripe) {
-      try {
-        await stripe.subscriptions.cancel(subscriptionId);
-      } catch (stripeError) {
-        console.error("[geo:billing] failed to cancel Stripe subscription on downgrade", {
-          userId: user.id,
-          subscriptionId,
-          message: stripeError instanceof Error ? stripeError.message : String(stripeError)
-        });
-        return { success: false, error: "No se pudo cancelar la suscripción activa. Inténtalo de nuevo." };
-      }
+    const cancelled = await cancelStripeSubscription(subscriptionId, user.id);
+    if (!cancelled.ok) {
+      return { success: false, error: cancelled.error };
     }
   }
 
-  // 0016_protect_billing_columns.sql rejects a write to current_plan/
-  // stripe_subscription_id from anything but the service role — everything
-  // above this point (archiving, the domain-cap recheck, the real Stripe
-  // cancellation) still runs under the caller's own session; only this last,
-  // already-validated write is privileged.
-  let serviceClient: ReturnType<typeof createServiceClient>;
-  try {
-    serviceClient = createServiceClient();
-  } catch (configError) {
-    console.error("[geo:billing] service client unavailable for changePlan", {
-      userId: user.id,
-      message: configError instanceof Error ? configError.message : String(configError)
-    });
-    return { success: false, error: "No se pudo guardar el cambio de plan. Inténtalo de nuevo." };
-  }
-
-  const { error } = await serviceClient
-    .from("profiles")
-    .update({ current_plan: parsedPlan.data, stripe_subscription_id: null })
-    .eq("id", user.id);
-
-  if (error) {
-    return { success: false, error: "No se pudo guardar el cambio de plan. Inténtalo de nuevo." };
+  const revoked = await revokePaidEntitlements(user.id, subscriptionId);
+  if (!revoked) {
+    return {
+      success: false,
+      error: subscriptionId
+        ? "Hemos cancelado tu suscripción, pero no hemos podido actualizar tu plan todavía. Se actualizará en unos minutos; si no, escríbenos a soporte@genscore.es."
+        : CHANGE_PLAN_GENERIC_ERROR
+    };
   }
 
   revalidatePath("/dashboard/settings/billing");
