@@ -47,6 +47,8 @@ import { computePanoramaState } from "@/lib/competitors/panorama-state";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
+import { MeasurementBasisNote, type EngineSensitivity } from "@/components/measurement-basis-note";
+import { readMeasurementBasis } from "@/lib/scoring/measurement-basis";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import {
   GEO_SCORE_COMPONENT_META,
@@ -390,8 +392,11 @@ export default async function ProjectDetailPage({
           brand_mentioned_count?: number;
           brand_position?: BrandPositionDetails;
           geo_score?: GeoScoreDetails;
+          confidence_reason?: string;
+          engine_sensitivity?: EngineSensitivity;
         })
       : {};
+  const measurementBasis = readMeasurementBasis(latestScore?.details_json);
   const totalResults = n(scoreDetails.total_results ?? latestCompletedRun?.successful_prompts);
   const brandMentions = n(
     scoreDetails.brand_mentioned_count ??
@@ -1149,6 +1154,12 @@ export default async function ProjectDetailPage({
                   <p style={{ fontWeight: 650 }}>{engineCoverageNotice(parseEngineCoverage(geoScore.engine_coverage))}</p>
                 </div>
               ) : null}
+
+              <MeasurementBasisNote
+                basis={measurementBasis}
+                confidenceReason={scoreDetails.confidence_reason ?? null}
+                sensitivity={scoreDetails.engine_sensitivity ?? null}
+              />
 
               <div className="ov2-sec-lbl">
                 Desglose del GEO Score

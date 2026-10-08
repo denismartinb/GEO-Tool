@@ -696,7 +696,7 @@ export async function executePendingScan({
     const { data: promptResults } = await service
       .from("scan_prompt_results")
       .select(
-        "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, raw_response_text, extraction_version"
+        "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, raw_response_text, extraction_version, model, country_snapshot, language_snapshot, sample_index"
       )
       .eq("project_id", projectId)
       .eq("run_id", runId);
@@ -746,13 +746,21 @@ export async function executePendingScan({
         extraction_error: row.extraction_error,
         brand_snapshot: row.brand_snapshot,
         provider: row.provider,
-        extraction_version: row.extraction_version
+        extraction_version: row.extraction_version,
+        model: row.model,
+        country_snapshot: row.country_snapshot,
+        language_snapshot: row.language_snapshot,
+        sample_index: row.sample_index
       })),
       project.domain,
       {
         technical: technicalResolution.component,
         technicalReason: technicalResolution.reason,
-        engineCoverage
+        engineCoverage,
+        // prompts x samples (run.total_prompts counts jobs, one per sample)
+        // x the engines this run was sized for. Unknown stays null.
+        expectedResponses:
+          typeof run.total_prompts === "number" && run.total_prompts > 0 ? run.total_prompts * providers.length : null
       }
     );
 

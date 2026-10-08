@@ -159,7 +159,8 @@ describe("readComparableRun", () => {
       responses: 75,
       compositeVersion: "geo-score-v2",
       inputsUsed: ["presence", "prominence", "standing", "authority"],
-      engines: ["gemini", "openai", "claude"]
+      engines: ["gemini", "openai", "claude"],
+      basis: null
     });
   });
 
@@ -168,7 +169,10 @@ describe("readComparableRun", () => {
       responses: 8,
       compositeVersion: null,
       inputsUsed: null,
-      engines: null
+      engines: null,
+      // A run scored before MEASUREMENT-BASIS-1 recorded no question set,
+      // model or locale: "not recorded", never a default.
+      basis: null
     });
   });
 

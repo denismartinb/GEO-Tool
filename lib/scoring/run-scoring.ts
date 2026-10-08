@@ -2,6 +2,7 @@ import { isBrandDomain, normalizeDomain } from "@/lib/domains/brand-domain";
 import { EXTRACTION_VERSION } from "@/lib/scan/constants";
 import type { EngineCoverage } from "@/lib/scan/engine-coverage";
 import type { ResolvedTechnicalComponent } from "@/lib/scoring/geo-score-technical";
+import { buildMeasurementBasis, explainConfidence } from "@/lib/scoring/measurement-basis";
 import { MIN_RESPONSES_FOR_BAND } from "@/lib/scoring/score-reliability";
 
 export const SCORING_VERSION = "phase9-geo-score-v4";
@@ -41,6 +42,17 @@ export type ScoreInputRow = {
    * hasUntrustedCompetitorSet below for why this exists.
    */
   extraction_version?: string | null;
+  /**
+   * Provenance of the response, snapshotted on scan_prompt_results at scan
+   * time (MEASUREMENT-BASIS-1). All optional for backward compatibility: they
+   * feed `details_json.measurement_basis` only and never a score, so a caller
+   * that omits them gets exactly the numbers it got before.
+   */
+  model?: string | null;
+  country_snapshot?: string | null;
+  language_snapshot?: string | null;
+  /** Zero-based repetition index of this (prompt, engine) pair within its run (SAMPLING-1). */
+  sample_index?: number | null;
 };
 
 /**
@@ -111,6 +123,9 @@ export const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
  * above it made the branch unreachable, so the effective tolerance was zero.
  */
 const CLEAN_COVERAGE_FLOOR = 0.8;
+
+/** Clean responses a run needs before its confidence can be "high" (ADR 0015). */
+const HIGH_CONFIDENCE_CLEAN_RESPONSES = 20;
 
 /**
  * Narrowed to the one field it reads (RECS-LOOP-1 Fase A) so callers outside
@@ -376,6 +391,23 @@ function computeBrandPosition(results: ScoreInputRow[], totalResults: number): B
   };
 }
 
+/**
+ * The composite formula as persisted in `geo_score.formula` AND in
+ * `formulas_used.geo_score`. One string for both: `formulas_used.geo_score`
+ * kept saying "presence .40 / prominence .25 / standing .20 / authority .15"
+ * after v4 while `geo_score.composite_version` said "geo-score-v4", so the
+ * same row described two different formulas (MEASUREMENT-BASIS-1).
+ */
+const GEO_SCORE_FORMULA_TEXT =
+  "geo_score = Σ(component_value * normalized_weight); base weights presence .32 / prominence .20 / standing .16 / authority .12 / technical .20 " +
+  "(geo-score-v4, ADR 0033: the four v3 components keep their exact v3 ratios, scaled by 1-technical_weight, so dropping `technical` " +
+  "renormalizes them back to precisely .40/.25/.20/.15 and a project with no audit scores identically to v3); " +
+  "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
+  "(v1 formula 100 - competitor_gap_score kept as standing_v1 for comparison, ADR 0015); " +
+  "prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100, dropped unless the brand was mentioned in at least MIN_RESPONSES_FOR_BAND prompts (geo-score-v3); " +
+  "technical = web_audit_snapshots.readiness_score, a deterministic (no-LLM) measure of how readable the site is to AI engines (docs/adr/0033); " +
+  "absent components dropped and remaining weights renormalized.";
+
 export function computeRunScoresFromResults(
   results: ScoreInputRow[],
   projectDomain: string,
@@ -399,6 +431,14 @@ export function computeRunScoresFromResults(
      * from one that silently measured fewer.
      */
     engineCoverage?: EngineCoverage | null;
+    /**
+     * Responses the run was sized to produce (prompts x samples x engines),
+     * recorded next to the valid count so "N de M" is a stored fact. Omit when
+     * it cannot be known: `null` is "unknown", never derived from the rows.
+     */
+    expectedResponses?: number | null;
+    /** Internal: set by the engine-sensitivity pass so it does not recurse. */
+    skipSensitivity?: boolean;
   }
 ): RunScoreOutput {
   const totalResults = results.length;
@@ -506,11 +546,32 @@ export function computeRunScoresFromResults(
   let confidence: "low" | "medium" | "high" = "low";
   if (extractionCoverage < CLEAN_COVERAGE_FLOOR) {
     confidence = "low";
-  } else if (cleanResultsCount >= 20) {
+  } else if (cleanResultsCount >= HIGH_CONFIDENCE_CLEAN_RESPONSES) {
     confidence = "high";
   } else if (totalResults >= MIN_RESPONSES_FOR_BAND) {
     confidence = "medium";
   }
+
+  // MEASUREMENT-BASIS-1: record what the number was measured over, and say why
+  // the label above is what it is. Nothing below reads these — they describe
+  // the measurement, they do not feed it.
+  const measurementBasis = buildMeasurementBasis(results, {
+    expectedResponses: options?.expectedResponses ?? null,
+    groundedProviders: GROUNDED_PROVIDERS
+  });
+  const confidenceReason =
+    totalResults === 0
+      ? "Sin respuestas válidas: no hay nada sobre lo que medir."
+      : explainConfidence({
+          confidence,
+          totalResponses: totalResults,
+          cleanResponses: cleanResultsCount,
+          cleanCoverageFloor: CLEAN_COVERAGE_FLOOR,
+          minResponsesForBand: MIN_RESPONSES_FOR_BAND,
+          highConfidenceCleanResponses: HIGH_CONFIDENCE_CLEAN_RESPONSES,
+          distinctPrompts: measurementBasis.prompts.distinct,
+          maxSamples: measurementBasis.prompts.max_samples
+        });
 
   const sentimentDistribution = results.reduce<Record<string, number>>((acc, row) => {
     acc[row.sentiment] = (acc[row.sentiment] ?? 0) + 1;
@@ -654,6 +715,10 @@ export function computeRunScoresFromResults(
       score: round2(score),
       composite_version: COMPOSITE_VERSION,
       confidence: compositeConfidence,
+      confidence_reason:
+        compositeConfidence !== confidence
+          ? `${confidenceReason} El compuesto se limita a «media» porque al menos un componente no se pudo medir (ver cada componente).`
+          : confidenceReason,
       inputs_used: availableGeoScoreComponents.map((c) => c.key),
       // v1 standing (100 - competitor_gap_score), retained for comparison
       // only across the v1 -> v2 transition (ADR 0015) — not part of the score.
@@ -711,17 +776,33 @@ export function computeRunScoresFromResults(
               }
             : { value: round2(technicalScore), weight: normWeight(TECHNICAL_WEIGHT) }
       },
-      formula:
-        "geo_score = Σ(component_value * normalized_weight); base weights presence .32 / prominence .20 / standing .16 / authority .12 / technical .20 " +
-        "(geo-score-v4, ADR 0033: the four v3 components keep their exact v3 ratios, scaled by 1-technical_weight, so dropping `technical` " +
-        "renormalizes them back to precisely .40/.25/.20/.15 and a project with no audit scores identically to v3); " +
-        "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
-        "(v1 formula 100 - competitor_gap_score kept as standing_v1 for comparison, ADR 0015); " +
-        "prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100, dropped unless the brand was mentioned in at least MIN_RESPONSES_FOR_BAND prompts (geo-score-v3); " +
-        "technical = web_audit_snapshots.readiness_score, a deterministic (no-LLM) measure of how readable the site is to AI engines (docs/adr/0033); " +
-        "absent components dropped and remaining weights renormalized."
+      formula: GEO_SCORE_FORMULA_TEXT
     };
   }
+
+  // MEASUREMENT-BASIS-1: what the score would be WITHOUT each engine, computed
+  // by re-running this same function over the remaining rows. It answers "what
+  // changes if an engine fails" with a measured number instead of a guess, and
+  // it is why a partial run (`engine_coverage`) can be read: the delta shows how
+  // much of the headline rests on one engine. Never a prediction, never fed back
+  // into a score.
+  const engineSensitivity: Record<string, { score_without: number | null; delta: number | null }> | null = (() => {
+    if (options?.skipSensitivity || !geoScore) return null;
+    const providers = Object.keys(measurementBasis.by_engine);
+    if (providers.length < 2) return null;
+    const fullScore = geoScore.score as number;
+    const out: Record<string, { score_without: number | null; delta: number | null }> = {};
+    for (const provider of providers) {
+      const rest = results.filter((row) => (row.provider ?? "unknown") !== provider);
+      const without = computeRunScoresFromResults(rest, projectDomain, { ...options, skipSensitivity: true });
+      const value = (without.details_json as { geo_score?: { score?: number } }).geo_score?.score;
+      out[provider] =
+        typeof value === "number"
+          ? { score_without: value, delta: round2(value - fullScore) }
+          : { score_without: null, delta: null };
+    }
+    return out;
+  })();
 
   const assumptions = [
     "visibility_score = % prompts with brand_mentioned",
@@ -779,14 +860,12 @@ export function computeRunScoresFromResults(
           "avg_position_when_mentioned(entity) = mean(position over ONLY the prompts where that entity was mentioned), null when never mentioned (geo-score-v3, docs/adr/0026); " +
           "mention_rate(entity) = mention_count / prompt_count * 100, reported alongside so a rank is never read without knowing how often it was earned; " +
           "avg_position_penalized(entity) = mean(position if mentioned else N+1) with N = total tracked entities for that prompt — the pre-v3 figure, retained for comparison across the transition and read by nothing",
-        geo_score:
-          "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
-          "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
-          "(v1 formula 100 - competitor_gap_score kept as standing_v1 for comparison, ADR 0015); " +
-          "prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100, dropped unless the brand was mentioned in at least MIN_RESPONSES_FOR_BAND prompts (geo-score-v3); " +
-          "absent components dropped and remaining weights renormalized."
+        geo_score: GEO_SCORE_FORMULA_TEXT
       },
       assumptions,
+      measurement_basis: measurementBasis,
+      confidence_reason: confidenceReason,
+      ...(engineSensitivity ? { engine_sensitivity: engineSensitivity } : {}),
       per_prompt_summary: perPromptSummary,
       ...(brandPosition ? { brand_position: brandPosition } : {}),
       ...(geoScore ? { geo_score: geoScore } : {})

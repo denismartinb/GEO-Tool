@@ -21327,3 +21327,75 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 236. MEASUREMENT-BASIS-1: la comparabilidad de un escaneo mira lo que se midió, no sólo cuántas filas hay (2026-10-08)
+
+**Qué pasaba.** La metodología pública promete que la tendencia «nunca mezcla
+escaneos que no midan lo mismo» y que, si cambias prompts, motores o plan, el
+número vuelve a ser el de tu último escaneo. El código cumplía una versión más
+estrecha de esa promesa. `compareRuns` (deltas) miraba versión del compuesto,
+componentes, motores y **número** de respuestas, de modo que dos escaneos con
+preguntas distintas pero el mismo recuento se declaraban comparables.
+`isWindowEligible` (la cifra titular, mediana de 3 runs) ni siquiera miraba el
+conjunto de motores, aunque su comentario decía que rechazaba lo mismo que
+`compareRuns`. Ni el modelo, ni el país/idioma, ni el conjunto de preguntas
+entraban en ningún fingerprint, y no se guardaba «respuestas válidas frente a
+esperadas» ni la razón de la etiqueta de confianza. Además
+`details_json.formulas_used.geo_score` seguía diciendo `.40/.25/.20/.15` —los
+pesos de v3— mientras `geo_score.composite_version` decía `geo-score-v4`: la
+misma fila describía dos fórmulas.
+
+**Decisión.** Un módulo puro, `lib/scoring/measurement-basis.ts`, que registra
+en `details_json.measurement_basis` (jsonb, **sin migración**) respuestas
+válidas/limpias/esperadas, respuestas y modelos por motor, si el motor tiene
+búsqueda web, número de preguntas **distintas** frente a repeticiones, huella
+del conjunto de preguntas y país/idioma. Una sola función
+(`compareMeasurementBasis`) define «misma medición» y la usan **las dos
+puertas** —`compareRuns` y `isWindowEligible`—. `confidence_reason` explica en
+castellano por qué la etiqueta es la que es, escrita desde las mismas entradas
+que la bifurcación; `engine_sensitivity` recalcula el score sin cada motor
+(medido, no estimado). `formulas_used.geo_score` pasa a ser el mismo texto que
+`geo_score.formula`. La nota «Base de esta medición» (plegada) en el desglose de
+Visión general lo enseña, con el límite «medido con APIs, no con las
+aplicaciones de consumo» que hasta ahora sólo vivía en los Términos.
+
+**Lo que NO cambia, a propósito.** Ninguna fórmula, peso, umbral ni etiqueta de
+confianza (`.claude/rules/scoring.md`). El score de un run es idéntico al de
+antes; sólo cambia qué runs se consideran comparables entre sí.
+
+**Límites declarados.**
+- **Un run anterior a esta fase no registró su base**, y pasa sin comprobar
+  (`checked: false`) en vez de rechazarse: rechazarlo suprimiría el titular y
+  todos los deltas durante los primeros escaneos tras el despliegue. Coste: un
+  cambio de preguntas o de modelo que cruce el despliegue sigue sin detectarse.
+- **El modelo se compara por el identificador que devuelve el proveedor.** Si un
+  proveedor rotase ese identificador sin avisar, la ventana dejaría de
+  publicarse y el titular caería al score del run (el mismo fallo honesto que
+  ya existe para cualquier otra incomparabilidad). No se ha medido con qué
+  frecuencia ocurre; es lo primero que mirar si el titular desaparece.
+- **`expected` sólo existe en runs nuevos** (`total_prompts × motores`).
+  `rescoreRunWithTechnicalSnapshot` arrastra el que ya estaba y nunca lo deriva
+  de las filas observadas.
+- **La etiqueta de confianza sigue contando repeticiones como respuestas.** 4
+  preguntas × 3 motores × 5 repeticiones = 60 respuestas dan «alta» con 4
+  preguntas distintas. La razón ya lo dice, pero la etiqueta no se ha tocado:
+  cambiarla es una decisión de calibración (ADR 0015/0031) y no se hace aquí.
+- **No se persiste el motivo del fallo de un motor por fila.** Un motor que
+  falla no escribe fila; su causa vive en `job_logs`. `expected − valid` dice
+  que faltan respuestas, no por qué.
+
+**Pendiente propuesto (cada uno con su Task Intake):** (1) guarda dura contra
+datos inventados en artefactos generados —cifras, precios, testimonios,
+certificaciones— hoy sólo cubierta por una regla blanda del prompt
+(`recommendation-rewrite-llm.ts`); (2) campos explícitos de evidencia,
+dependencia y criterio de validación en la tarjeta de recomendación, y copy de
+«+X pt» que diga que es un techo contrafactual del score técnico, no un
+resultado; (3) límite de las APIs, modelo, fecha y fuentes en el cajón de cada
+respuesta individual y en el informe exportado; (4) separar salud técnica,
+menciones, citas, cuota de voz y resultado comercial como cinco lecturas
+distintas en lugar de un compuesto.
+
+**Trazabilidad.** `lib/scoring/measurement-basis.ts` (+test),
+`lib/scoring/{run-scoring,score-reliability,score-window,rescore-run}.ts`,
+`lib/scan/executor.ts`, `components/measurement-basis-note.tsx` (+test),
+`docs/measurement-traceability-2026-10.md`.

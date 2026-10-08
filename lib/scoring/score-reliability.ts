@@ -30,6 +30,11 @@
  * and the absence of any stated margin of error.
  */
 
+import {
+  compareMeasurementBasis,
+  readMeasurementBasis,
+  type MeasurementBasis
+} from "@/lib/scoring/measurement-basis";
 import { wilsonInterval } from "@/lib/stats/wilson";
 
 /**
@@ -120,6 +125,13 @@ export type ComparableRun = {
   inputsUsed: readonly string[] | null;
   /** Providers present in the run, from `details_json.citation_by_provider`. */
   engines: readonly string[] | null;
+  /**
+   * `details_json.measurement_basis` (MEASUREMENT-BASIS-1): the question set,
+   * models and locale the score was measured over. `null` on runs scored before
+   * it existed — "not recorded", which `compareMeasurementBasis` passes
+   * through unchecked rather than rejecting (see its header for why).
+   */
+  basis?: MeasurementBasis | null;
 };
 
 /**
@@ -154,7 +166,8 @@ export function readComparableRun(detailsJson: unknown): ComparableRun {
     compositeVersion:
       typeof geoScore?.composite_version === "string" ? (geoScore.composite_version as string) : null,
     inputsUsed,
-    engines: citationByProvider ? Object.keys(citationByProvider) : null
+    engines: citationByProvider ? Object.keys(citationByProvider) : null,
+    basis: readMeasurementBasis(detailsJson)
   };
 }
 
@@ -240,6 +253,14 @@ export function compareRuns(current: ComparableRun, previous: ComparableRun): Ru
       comparable: false,
       reason: "el conjunto de motores de IA cambió entre estos dos escaneos"
     };
+  }
+
+  // Placed before the response-count check on purpose: a changed question set
+  // usually changes the count too, and "las preguntas cambiaron" is the more
+  // actionable thing to tell the user than "el número de respuestas cambió".
+  const basisComparison = compareMeasurementBasis(current.basis ?? null, previous.basis ?? null);
+  if (!basisComparison.comparable) {
+    return { comparable: false, reason: basisComparison.reason };
   }
 
   if (current.responses !== previous.responses) {

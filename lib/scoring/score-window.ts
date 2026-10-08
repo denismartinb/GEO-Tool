@@ -35,6 +35,12 @@
  * stricter than "recent".
  */
 
+import {
+  compareMeasurementBasis,
+  readMeasurementBasis,
+  type MeasurementBasis
+} from "@/lib/scoring/measurement-basis";
+
 /** Runs considered for the window, newest first. */
 export const DEFAULT_SCORE_WINDOW_SIZE = 3;
 
@@ -58,6 +64,11 @@ export type WindowRunInput = {
   total_results: number | null;
   /** When the run finished, for ordering. ISO string. */
   finished_at: string | null;
+  /**
+   * `details_json.measurement_basis` (MEASUREMENT-BASIS-1). Optional so every
+   * existing caller and fixture keeps compiling; absent means "not recorded".
+   */
+  measurement?: MeasurementBasis | null;
 };
 
 export type WindowedScoreVerdict =
@@ -107,6 +118,14 @@ export function isWindowEligible(
   if (!Number.isFinite(candidate.score)) return false;
   if (candidate.composite_version !== reference.composite_version) return false;
   if (!sameInputs(candidate.inputs_used, reference.inputs_used)) return false;
+
+  // Same definition of "same measurement" the delta gate uses. Before this the
+  // window checked version, components and sample size only, so a median could
+  // fold together runs over different questions, engines or models while the
+  // docs promised it never would.
+  if (!compareMeasurementBasis(candidate.measurement ?? null, reference.measurement ?? null).comparable) {
+    return false;
+  }
 
   const candidateN = candidate.total_results ?? 0;
   const referenceN = reference.total_results ?? 0;
@@ -237,6 +256,7 @@ export function readWindowRun(row: {
     composite_version: typeof geo.composite_version === "string" ? geo.composite_version : null,
     inputs_used: inputsUsed,
     total_results: typeof totalResults === "number" ? totalResults : null,
-    finished_at: row.created_at ?? null
+    finished_at: row.created_at ?? null,
+    measurement: readMeasurementBasis(details)
   };
 }

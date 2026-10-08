@@ -97,7 +97,7 @@ export async function rescoreRunWithTechnicalSnapshot(input: {
   const { data: promptResults } = await service
     .from("scan_prompt_results")
     .select(
-      "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, extraction_version"
+      "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, extraction_version, model, country_snapshot, language_snapshot, sample_index"
     )
     .eq("project_id", projectId)
     .eq("run_id", runId);
@@ -130,13 +130,21 @@ export async function rescoreRunWithTechnicalSnapshot(input: {
       extraction_error: row.extraction_error,
       brand_snapshot: row.brand_snapshot,
       provider: row.provider,
-      extraction_version: row.extraction_version
+      extraction_version: row.extraction_version,
+      model: row.model,
+      country_snapshot: row.country_snapshot,
+      language_snapshot: row.language_snapshot,
+      sample_index: row.sample_index
     })),
     project.domain as string,
     {
       technical: technicalResolution.component,
       technicalReason: technicalResolution.reason,
-      engineCoverage
+      engineCoverage,
+      // Same reasoning as engineCoverage above: the expected size comes from the
+      // plan and run at scan time, which this path cannot reconstruct. Carry
+      // what the scan recorded; if it recorded nothing, record nothing.
+      expectedResponses: readExpectedResponses(existingScore?.details_json)
     }
   );
 
@@ -174,4 +182,14 @@ function readEngineCoverage(details: unknown): EngineCoverage | null {
   const coverage = (geoScore as Record<string, unknown>).engine_coverage;
   if (!coverage || typeof coverage !== "object") return null;
   return coverage as EngineCoverage;
+}
+
+function readExpectedResponses(details: unknown): number | null {
+  if (!details || typeof details !== "object") return null;
+  const basis = (details as Record<string, unknown>).measurement_basis;
+  if (!basis || typeof basis !== "object") return null;
+  const responses = (basis as Record<string, unknown>).responses;
+  if (!responses || typeof responses !== "object") return null;
+  const expected = (responses as Record<string, unknown>).expected;
+  return typeof expected === "number" ? expected : null;
 }

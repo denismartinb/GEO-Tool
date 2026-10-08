@@ -162,6 +162,43 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
   comparabilidad de la sección de arriba) no lo toca esta regla.** Se
   consume, nunca se modifica — es la sección de arriba, íntegra.
 
+## Qué se midió, y cuándo dos escaneos son «lo mismo» (MEASUREMENT-BASIS-1, log §236)
+
+- **La comparabilidad tiene UNA definición: `compareMeasurementBasis`
+  (`lib/scoring/measurement-basis.ts`).** La usan `compareRuns` (deltas) y
+  `isWindowEligible` (titular). Antes cada puerta miraba un subconjunto
+  distinto y la ventana ni miraba los motores — lo contrario de lo que su
+  propio comentario y la metodología pública afirmaban. Una tercera puerta de
+  comparabilidad se construye sobre esa función, nunca con otra lista de
+  campos.
+- **Mismas preguntas, mismos motores, mismos modelos, mismo país e idioma.**
+  Mismo número de filas NO es misma medición. El conjunto de preguntas se
+  compara por huella (`prompts.set_key`), insensible a orden y espacios.
+- **Un run sin base registrada pasa sin comprobar; no se rechaza.** Rechazarlo
+  suprimiría el titular y los deltas de todos los proyectos tras el despliegue.
+  `checked: false` es la forma de decirlo. Cuando todos los runs vivos
+  tengan base, esta tolerancia se retira y «desconocido ≠ igual» vuelve a ser
+  absoluto, como ya lo es para versión, componentes y motores.
+- **`measurement_basis` describe la medición, nunca la alimenta.** Nada en
+  `computeRunScoresFromResults` lee de ahí para calcular un score. `expected`
+  es `null` cuando se desconoce y nunca se deriva de las filas recibidas: eso
+  haría que todo run pareciera completo.
+- **La razón de la confianza se escribe desde las mismas entradas que la
+  bifurcación** (`explainConfidence`) y se prueba contra las tres etiquetas. Si
+  cambia un umbral de la etiqueta, cambia la frase con él.
+- **Las repeticiones de una pregunta no son preguntas distintas.** La razón de
+  la confianza lo dice (`prompts.distinct` frente a `max_samples`); la etiqueta
+  sigue contando respuestas (ADR 0030) y recalibrarla es ADR 0031, no un ajuste.
+- **`engine_sensitivity` es un recálculo, no una predicción.** Se obtiene
+  volviendo a ejecutar el mismo scorer sin las filas de cada motor
+  (`skipSensitivity` evita la recursión) y se rotula así donde se muestra.
+- **El límite «medido con APIs, no con las aplicaciones de consumo» es una
+  constante** (`MEASUREMENT_API_LIMIT_NOTICE`), la misma que los Términos
+  afirman. Cualquier superficie nueva que enseñe una puntuación o una
+  respuesta la importa; no la parafrasea.
+- **`formulas_used.geo_score` y `geo_score.formula` son el mismo texto**
+  (`GEO_SCORE_FORMULA_TEXT`). Cambiar la fórmula cambia una sola cadena.
+
 ## Referencias
 
 `docs/geo-methodology-audit-2026-07.md` (hallazgos abiertos),
