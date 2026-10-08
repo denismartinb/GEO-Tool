@@ -1,0 +1,83 @@
+-- PROPOSAL — NOT A MIGRATION. Prerequisite of Option B (and a fix in its own right).
+-- Tested ONLY against a local Postgres. Needs the owner's approval: it changes a trigger on
+-- `profiles` (RLS-adjacent). Found by the independent data-guardian review of the prompt-pool
+-- proposals; BOTH holes were reproduced locally before this file was written.
+--
+-- HOLE 1 — an account WITHOUT a `profiles` row can create its own with any plan.
+--   0016/0017/0019's trigger runs on UPDATE only; policy `profiles_insert_own` lets a user INSERT
+--   `(id = auth.uid())` with `current_plan='agency'`, any `trial_ends_at`, any `stripe_*`.
+--   Reachable only by accounts with no profile row (nobody can delete their own: no delete policy;
+--   `handle_new_user` creates one at signup) — preflight counts them.
+-- HOLE 2 — an owner can rewrite `profiles.email`, and the app decides "comped" from that column
+--   (lib/billing.ts resolveEffectivePlanId / resolveSystemPlanId, BILLING-COMPED-1). Anyone who
+--   knows a comped address gets Agency caps and every Pro-gated feature by editing their own row.
+--
+-- Fix, minimal and limited to the `authenticated` role (a user JWT). Server-side writers keep
+-- working unchanged: the service role (webhook, changePlan) and signup's `handle_new_user`, which
+-- runs from the auth service with no `authenticated` claim.
+--   * INSERT by `authenticated`: billing columns are forced to the Free defaults and `email` is
+--     taken from auth.users, never from the request.
+--   * UPDATE by `authenticated`: the existing guard (plan, stripe ids, trial, cancel_at) PLUS `email`.
+--
+-- Cost, stated: an `authenticated` session can no longer change its own `profiles.email`. Nothing in
+-- app/ or lib/ does (grep: no profiles update touches email; the only auth.updateUser call sets a
+-- password). If an email-change flow is added later, sync it from the server with the service role.
+--
+-- Depends on: 0002, 0016, 0017, 0019 (the version of protect_billing_columns below is 0019's plus
+-- the two guards; check preflight section "profiles trigger" first — if a later migration changed
+-- the function, merge instead of pasting).
+
+begin;
+set local lock_timeout = '3s';
+
+-- SECURITY DEFINER (new) only so the INSERT branch can read auth.users, which `authenticated` cannot;
+-- search_path is pinned and every reference is schema-qualified. The role checks use auth.role(),
+-- which reads the request's JWT claim, not the executing role, so nothing else changes.
+create or replace function public.protect_billing_columns()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.role() = 'service_role' then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    if auth.role() = 'authenticated' then
+      new.current_plan := 'free';
+      new.stripe_customer_id := null;
+      new.stripe_subscription_id := null;
+      new.trial_ends_at := null;
+      new.cancel_at := null;
+      new.email := coalesce((select u.email from auth.users u where u.id = new.id), '');
+    end if;
+    return new;
+  end if;
+
+  if new.current_plan is distinct from old.current_plan
+     or new.stripe_customer_id is distinct from old.stripe_customer_id
+     or new.stripe_subscription_id is distinct from old.stripe_subscription_id
+     or new.trial_ends_at is distinct from old.trial_ends_at
+     or new.cancel_at is distinct from old.cancel_at then
+    raise exception 'current_plan, stripe_customer_id, stripe_subscription_id, trial_ends_at and cancel_at can only be changed by the service role';
+  end if;
+
+  if auth.role() = 'authenticated' and new.email is distinct from old.email then
+    raise exception 'email can only be changed by the service role';
+  end if;
+
+  return new;
+end;
+$$;
+
+-- CREATE OR REPLACE FUNCTION takes no table lock. The trigger is re-created to also fire on INSERT:
+-- DROP/CREATE TRIGGER take a brief ACCESS EXCLUSIVE / SHARE ROW EXCLUSIVE lock on `profiles`
+-- (every login that reads its profile queues behind it, up to lock_timeout).
+drop trigger if exists trg_profiles_protect_billing_columns on public.profiles;
+create trigger trg_profiles_protect_billing_columns
+before insert or update on public.profiles
+for each row execute function public.protect_billing_columns();
+
+commit;

@@ -328,11 +328,18 @@ las dos y se compruebe el postflight.
 | Tope duplicado en SQL | no | sí → fijado a `plans-data.ts` por test |
 | Reversión | 2 fases, cada una en una transacción | borrar un trigger; los datos no se tocan |
 
+**Revisión independiente (`data-guardian`) hecha: ninguna de las dos era entregable tal cual.** Hallazgos y estado en
+`proposals/prompt-pool/RUNBOOK.md` §2. Dos son agujeros **reproducidos** y previos a esta propuesta: una cuenta
+sin fila en `profiles` puede crear la suya con plan `agency`, y cualquier usuario puede reescribir `profiles.email`
+y hacerse pasar por una cuenta *comped* (la app lo decide por ese campo). Ambos se cierran con un tercer fichero,
+`C_profiles_guards.sql` (prerrequisito de B; **A sin C no es segura**), y **siguen abiertos en producción mientras C
+no se aplique**. Los ficheros se separaron por paso (`C`, `B1`, `B2`, `A1`, `A2`, reversiones) y llevan `SHA256SUMS`.
+
 Recomendación (mía, la decisión es del dueño): **B**. Cierra el hueco REST sin aprobar
 `service_role`, y es la única donde la cuenta no puede influir en su tope. Coste: un tope
 duplicado (con test) y la lista de *comped*.
 
-Orden, riesgos, copia de seguridad, reversión y matriz vieja/nueva: `proposals/prompt-pool/RUNBOOK.md`.
+Orden (0038 → C → B1 → overrides → B2), riesgos con bloqueos medidos, copia de seguridad, reversión y matriz vieja/nueva: `proposals/prompt-pool/RUNBOOK.md`.
 Los SQL se entregan al dueño; el agente no los ejecuta fuera de Postgres local.
 
 ## 19. Procedimiento para el Stripe real (LIVE)

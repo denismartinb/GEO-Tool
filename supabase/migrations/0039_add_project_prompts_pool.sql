@@ -66,6 +66,12 @@ begin
     return jsonb_build_object('ok', true, 'inserted', 0);
   end if;
 
+  -- Under REPEATABLE READ / SERIALIZABLE the count below would use the transaction's old snapshot
+  -- and could miss rows committed while waiting for the lock (74 -> 76 reproduced in review).
+  if current_setting('transaction_isolation') <> 'read committed' then
+    raise exception 'prompt_pool requires READ COMMITTED' using errcode = '0A000';
+  end if;
+
   -- One lock per ACCOUNT, held until this transaction ends: every writer of the
   -- pool queues here, so the count below is the count the insert will see.
   perform pg_advisory_xact_lock(hashtextextended('prompt_pool:' || p_owner::text, 0));

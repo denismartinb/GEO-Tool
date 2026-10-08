@@ -31,6 +31,7 @@ mkdb() {
   export PGDATABASE=$1
   psql -v ON_ERROR_STOP=1 -q -f scripts/sql-local-auth-stub.sql >/dev/null
   for f in supabase/migrations/*.sql; do
+    [ "${2:-}" = "skip0039" ] && [[ "$f" == *0039_* ]] && continue
     psql -v ON_ERROR_STOP=1 -q -f "$f" >/dev/null 2>&1 || { echo "migration $f failed" >&2; exit 1; }
   done
 }
@@ -42,6 +43,8 @@ as_service() { psql -Atq -v ON_ERROR_STOP=1 -c "set role service_role; set \"req
 
 seed() { # plan trial_ends_at(sql) sub(sql)
   q "truncate public.project_prompts, public.projects cascade; truncate auth.users cascade;" >/dev/null
+  # No FK on the overrides table (by design), so a reused user id would inherit a stale row.
+  q "do \$\$ begin if to_regclass('public.account_prompt_cap_overrides') is not null then truncate public.account_prompt_cap_overrides; end if; end \$\$" >/dev/null
   q "insert into auth.users(id,email) values ('$U1','a1@x.test'),('$U2','a2@x.test');" >/dev/null
   # protect_billing_columns (0016) only lets service_role write the billing columns.
   q "set \"request.jwt.claim.role\" = 'service_role'; update public.profiles set current_plan='${1:-pro}', trial_ends_at=${2:-null}, stripe_subscription_id=${3:-null} where id='$U1'; update public.profiles set trial_ends_at=null where id='$U2'" >/dev/null
@@ -70,9 +73,30 @@ parallel_fill() { # n_workers rows_each
 # ============================================================ B
 testB() {
   echo "== Option B (trigger, DB-derived cap, no service_role) =="
-  mkdb pp_b_test
-  psql -v ON_ERROR_STOP=1 -q -f $DIR/B_trigger_no_service_role.sql >/dev/null || { bad "B installs" "sql error"; return; }
-  ok "B installs on a fresh schema (0001..latest)"
+  mkdb pp_b_test skip0039
+  # --- hole 1 and hole 2 of the review, reproduced BEFORE the C guards exist
+  seed pro
+  q "delete from public.profiles where id='$U2'" >/dev/null
+  eq "C0 hole 1 REPRODUCED: no-profile account inserts its own 'agency' profile" "$(as_user $U2 "insert into public.profiles(id,email,current_plan) values ('$U2','a2@x.test','agency'); select current_plan from public.profiles where id='$U2'")" agency
+  q "update public.profiles set current_plan='pro' where id='$U1'" >/dev/null
+  eq "C0 hole 2 REPRODUCED: owner rewrites profiles.email to a comped address" "$(as_user $U1 "update public.profiles set email='founder@genscore.es' where id='$U1'; select email from public.profiles where id='$U1'")" founder@genscore.es
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/C_profiles_guards.sql >/dev/null || { bad "C installs" "sql error"; return; }
+  ok "C installs"
+  seed pro
+  q "delete from public.profiles where id='$U2'" >/dev/null
+  eq "C1 hole 1 closed: self-created profile is forced to free, email from auth.users" "$(as_user $U2 "insert into public.profiles(id,email,current_plan,trial_ends_at) values ('$U2','founder@genscore.es','agency', null); select current_plan||'/'||email from public.profiles where id='$U2'")" "free/a2@x.test"
+  eq "C1 hole 2 closed: owner cannot rewrite email" "$(as_user_err $U1 "update public.profiles set email='founder@genscore.es' where id='$U1'" | grep -c 'email can only')" 1
+  eq "C1 the service role still can" "$(as_service "update public.profiles set email='new@x.test' where id='$U1'; select email from public.profiles where id='$U1'")" new@x.test
+  eq "C1 signup path (no authenticated claim) still creates a profile with the trial" "$(q "insert into auth.users(id,email) values (gen_random_uuid(),'s@x.test'); select count(*) from public.profiles where email='s@x.test' and current_plan='pro' and trial_ends_at is not null")" 1
+  eq "C1 owner can still update unrelated columns" "$(as_user $U1 "update public.profiles set onboarding_tour_seen_at=now() where id='$U1'; select (onboarding_tour_seen_at is not null)::text from public.profiles where id='$U1'")" true
+  eq "C1 owner still cannot raise plan" "$(as_user_err $U1 "update public.profiles set current_plan='agency' where id='$U1'" | grep -c 'service role')" 1
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B1_objects.sql >/dev/null || { bad "B1 installs" "sql error"; return; }
+  ok "B1 installs (objects only)"
+  seed pro; fill $U1 $P1 76 >/dev/null
+  eq "B1 alone enforces nothing (76 accepted before step 2)" "$(active)" 76
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B2_activate.sql >/dev/null || { bad "B2 installs" "sql error"; return; }
+  ok "B2 activates on a fresh schema (0001..latest minus 0039)"
+  eq "B2 re-running is refused instead of silently replacing the trigger" "$(psql -q -f $DIR/B2_activate.sql 2>&1 | grep -c 'already exists')" 1
 
   seed pro; fill $U1 $P1 75 >/dev/null
   eq "B1 pro: 75 sequential-in-one-statement rows accepted" "$(active)" 75
@@ -135,8 +159,14 @@ testB() {
   eq "B8 cannot raise own plan to dodge the cap" "$(as_user_err $U1 "update public.profiles set current_plan='agency' where id='$U1'" | grep -c .)" 1
   eq "B8 cannot insert into another account's project" "$(as_user_err $U1 "insert into public.project_prompts(project_id,prompt_text) values ('$PX','not my project 000000')" | grep -c 'row-level security')" 1
   eq "B8 cannot SET session_replication_role to skip triggers" "$(as_user_err $U1 "set session_replication_role = replica" | grep -c 'permission denied')" 1
-  fill $U1 $P1 3 >/dev/null
-  eq "B8 a spoofed jwt claim does not change the cap (cap is DB-derived)" "$(as_user $U1 "select set_config('request.jwt.claim.cap','9999',false)" >/dev/null; fill $U1 $P1 80 >/dev/null; active)" 3
+  seed pro; fill $U1 $P1 75 >/dev/null
+  as_user $U1 "insert into public.project_prompts(id,project_id,prompt_text,is_active) select id,project_id,prompt_text,true from public.project_prompts limit 1 on conflict (id) do update set is_active=true" >/dev/null
+  eq "B8 upsert ON CONFLICT DO UPDATE at the cap is refused (the proposed row counts) and the pool stays 75" "$(active)" 75
+  q "update public.project_prompts set is_active=false where id in (select id from public.project_prompts limit 5)" >/dev/null
+  eq "B8 upsert reactivating 5 inactive rows when 70 are active is accepted (room for 5)" "$(as_user $U1 "insert into public.project_prompts(id,project_id,prompt_text,is_active) select id,project_id,prompt_text,true from public.project_prompts where not is_active on conflict (id) do update set is_active=true; select count(*)::text from public.project_prompts where is_active")" 75
+  echo "-- isolation level (review finding 8)"
+  seed pro; fill $U1 $P1 74 >/dev/null
+  eq "B8b REPEATABLE READ writer is refused (would have reached 76)" "$(psql -Atq -c "set role authenticated; set \"request.jwt.claim.sub\"='$U1'; set \"request.jwt.claim.role\"='authenticated'" -c "begin isolation level repeatable read; select count(*) from public.project_prompts; insert into public.project_prompts(project_id,prompt_text) values ('$P1','repeatable read prompt 00'); commit" 2>&1 | grep -c 'requires READ COMMITTED')" 1
 
   echo "-- service_role is bounded too"
   seed pro
@@ -154,9 +184,10 @@ testB() {
   fill $U1 $P2 1 >/dev/null; eq "B10 ...but not above it" "$(active)" 75
   as_user $U1 "delete from public.projects where id='$P1'" >/dev/null 2>&1
   echo "-- compatibility with 0039"
-  seed pro; psql -v ON_ERROR_STOP=1 -q -f supabase/migrations/0039_add_project_prompts_pool.sql >/dev/null 2>&1
+  seed pro; psql -v ON_ERROR_STOP=1 -q -f supabase/migrations/0039_add_project_prompts_pool.sql >/dev/null 2>&1 && ok "B works WITHOUT 0039 (all of the above ran before it) and 0039 installs after it"
   eq "B11 0039 function still works under the trigger" "$(as_service "select public.add_project_prompts('$U1','$P1',75,(select jsonb_agg(jsonb_build_object('prompt_text','function prompt '||g||' xx')) from generate_series(1,10) g))" | grep -c '"ok": true')" 1
-  eq "B11 ...with an app cap above the derived cap, the trigger still wins" "$(as_service "select public.add_project_prompts('$U1','$P1',9999,(select jsonb_agg(jsonb_build_object('prompt_text','function prompt '||g||' xx')) from generate_series(1,70) g))" | grep -c 'ok": true')" 0
+  eq "B11 ...with an app cap above the derived cap, the trigger wins with the stable code" "$(psql -Atq -c "set role service_role; set \"request.jwt.claim.role\"='service_role'" -c "select public.add_project_prompts('$U1','$P1',9999,(select jsonb_agg(jsonb_build_object('prompt_text','function prompt '||g||' xx')) from generate_series(1,70) g))" 2>&1 | grep -c 'prompt_pool_full')" 1
+  eq "B11 ...and nothing was inserted by the refused call" "$(active)" 10
 }
 
 # ============================================================ A
@@ -164,8 +195,12 @@ testA() {
   echo "== Option A (service_role functions + closure) =="
   mkdb pp_a_test
   psql -v ON_ERROR_STOP=1 -q -f supabase/migrations/0039_add_project_prompts_pool.sql >/dev/null || { bad "A needs 0039" "error"; return; }
-  psql -v ON_ERROR_STOP=1 -q -f $DIR/A_service_role_unified.sql >/dev/null || { bad "A installs" "sql error"; return; }
-  ok "A installs on top of 0039"
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/A1_reactivate_fn.sql >/dev/null || { bad "A1 installs" "sql error"; return; }
+  ok "A1 installs on top of 0039"
+  seed pro; fill $U1 $P1 3 >/dev/null
+  eq "A1 alone leaves the REST insert open (phase split is real)" "$(active)" 3
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/A2_closure.sql >/dev/null || { bad "A2 installs" "sql error"; return; }
+  ok "A2 installs"
   rowsj() { echo "(select jsonb_agg(jsonb_build_object('prompt_text','function prompt '||g||' xx')) from generate_series(1,$1) g)"; }
   add() { as_service "select public.add_project_prompts('$U1','${2:-$P1}',${3:-75},$(rowsj "$1"))"; }
 
@@ -202,8 +237,10 @@ testA() {
   echo "-- A's weak point, demonstrated (caller-supplied cap)"
   seed pro
   eq "A7 a compromised/buggy CALLER passing cap=9999 is believed (why B derives the cap in SQL)" "$(add 100 "$P1" 9999 >/dev/null; active)" 100
+  eq "A7b A's isolation guard: REPEATABLE READ caller refused" "$(psql -Atq -c "set role service_role; set \"request.jwt.claim.role\"='service_role'" -c "begin isolation level repeatable read; select 1; select public.add_project_prompts('$U1','$P1',75,$(rowsj 1)); commit" 2>&1 | grep -c 'requires READ COMMITTED')" 1
+  eq "A5b the SQL editor's postgres role is ALSO refused (cost stated in A2)" "$(psql -Atq -c "update public.project_prompts set is_active=false where project_id='$P1'" -c "update public.project_prompts set is_active=true where project_id='$P1'" 2>&1 | grep -c 're-activating')" 1
   echo "-- rollback restores 0002 behaviour"
-  q "drop trigger trg_project_prompts_no_reactivation on public.project_prompts; drop function public.prevent_prompt_reactivation(); create policy prompts_insert_owner on public.project_prompts for insert to authenticated with check (public.is_project_owner(project_id));" >/dev/null
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/A_rollback.sql >/dev/null; ok "A_rollback.sql runs"
   fill $U1 $P2 1 >/dev/null; eq "A8 after rollback REST insert works again" "$(q "select count(*) from public.project_prompts where project_id='$P2'")" 1
 }
 

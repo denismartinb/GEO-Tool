@@ -52,6 +52,25 @@ describe("addPromptsToPool", () => {
     });
   });
 
+  it("reads the database's own prompt_pool_full (23514) as a full pool, not as an outage", async () => {
+    const { service } = serviceReturning({ error: { code: "23514", message: "prompt_pool_full" } });
+    expect(await addPromptsToPool({ ownerId: "o", projectId: "p", cap: 75, rows, service })).toEqual({
+      ok: false,
+      reason: "pool_full",
+      remaining: 0,
+      cap: 75
+    });
+  });
+
+  it("does not mistake an unrelated check violation for a full pool", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { service } = serviceReturning({ error: { code: "23514", message: "prompts_text_len_chk" } });
+    expect(await addPromptsToPool({ ownerId: "o", projectId: "p", cap: 75, rows, service })).toEqual({
+      ok: false,
+      reason: "unavailable"
+    });
+  });
+
   it("FAILS CLOSED on an unrecognised answer instead of assuming success", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { service } = serviceReturning({ data: { surprise: true } });
