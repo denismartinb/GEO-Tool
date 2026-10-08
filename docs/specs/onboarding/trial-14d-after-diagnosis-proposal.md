@@ -12,9 +12,16 @@ que sigue es lo que el Director transcribe) y estado real del código a fecha 20
 - Que empiece **solo por opt-in**, con fecha de fin visible, y con la alternativa de **ver el diagnóstico sin iniciar prueba**.
 - Fallos y reintentos **no consumen la revisión**; la recuperación es **backend, invisible para el cliente**.
 - Mostrar **preparación real**, sin errores técnicos y sin éxito ni resultados inventados; proponer un fallback si el fallo persiste.
-- Archivar o eliminar **congela** trabajo y gasto; **no** borra historia ni reactiva escaneos automáticamente.
-- **Sin decidir** (el dueño respondió «No lo entiendo» a la regla 1): quién financia/cuota el diagnóstico y si el primer escaneo queda exento. No
-  prometer escaneos gratis ni añadir una regla antiabuso por inferencia.
+- **Regla 5 del dueño: archivar o eliminar congela el trabajo y el gasto (gasto 0).** Nada más. «No borrar historia» fue una
+  **propuesta del Director, no un requisito literal del dueño** (corrección del Director en #553): este documento **no** cambia el
+  borrado duro ni la retención de historia por inferencia.
+- **Regla 1, ya aclarada** (WhatsApp 21:22:31, relayada por el Director en #549, comentario 6067378798):
+  - son **75 preguntas ACTIVAS totales por cuenta**, no 75 créditos mensuales;
+  - el **primer escaneo de cada dominio nuevo no consume la «revisión manual» mensual**: solo **una vez por dominio**, **máximo 3 dominios activos**, y
+    **archivar y volver a añadir no renueva esa exención**;
+  - la explicación anterior («no gasta de las 75 preguntas del mes») era **incorrecta y no se implementa**.
+- **Antiabuso:** queda en **revisión del dueño**. Este documento no acepta ningún riesgo ni presupuesto de forma implícita, no añade reglas por
+  inferencia y no promete escaneos gratis.
 
 ## 2. Cómo está hoy (verificado en el código)
 
@@ -69,20 +76,46 @@ webhook (`0038_stripe_webhook_events.sql`, **aplicar a mano antes de mergear**).
 - **Hueco a decidir:** qué ve el cliente si el fallo persiste tras los reintentos (hoy: estado de error genérico). Propuesta: un estado «seguimos trabajando en tu diagnóstico» y, pasado un umbral definido por producto, una salida explícita (avisarle por correo cuando esté listo, o ofrecer reintentar). **Nunca** un resultado o una puntuación inventados.
 - Una prueba **no debería empezar** si el diagnóstico no se completó; y si se perdió por un fallo nuestro, no se consume.
 
-## 7. Archivar y eliminar
+## 7. Archivar y eliminar: dos cosas distintas, con consecuencias distintas
 
-- Hoy eliminar un dominio es **borrado duro con cascada** (DATA-MGMT-1): borra su historia. Esto **contradice** «no borrar historia» y hay que decidir si el requisito aplica al borrado duro o solo a archivar.
-- Archivar existe como efecto de bajar de plan (`changePlan`); reañadir un dominio archivado lo **reactiva sin lanzar escaneo** (DOMAINS-ARCHIVE-RETIRE-1). Por verificar: que ningún interruptor recurrente quede activo al reactivar.
+**Archivar** (`projects.is_archived = true`). Verificado en el código: un proyecto archivado queda fuera del barrido recurrente
+(`lib/scan/cron.ts`), del vigilante (`lib/scan/watchdog.ts`), del resumen semanal (`lib/scan/weekly-digest.ts`), y no admite crear un escaneo
+(`lib/scan/run-creation.ts`) ni añadir prompts (`lib/projects/add-prompts.ts`). Es decir, **congela el trabajo y el gasto nuevos** y conserva la
+fila y su historia. Reañadir el mismo dominio+país+idioma **reactiva la misma fila** (`createProjectCore`, «restored») sin lanzar escaneo.
+Sin verificar: qué pasa con un escaneo **ya en curso** en el instante de archivar.
+
+**Eliminar** (`deleteProject`, DATA-MGMT-1). Es borrado duro con cascada: desaparecen el proyecto y todo lo que cuelga de él. Congela el gasto
+porque ya no existe nada que escanear. **Consecuencia que importa para la regla 1:** la única unicidad que hay hoy es la fila
+`projects (owner, domain, country, language)`. Al borrarla se pierde también cualquier huella de que ese dominio ya gozó de la exención del primer
+escaneo, así que **eliminar y volver a crear reiniciaría la exención**, que la regla 1 dice que no debe renovarse. Archivar y reañadir no tiene ese
+problema (es la misma fila).
+
+**Qué NO se propone cambiar:** el borrado duro ni la retención de historia. Solo se propone que la elegibilidad de la exención **no cuelgue
+de la fila del proyecto** (ver §9).
 
 ## 8. Fuera de alcance y preguntas abiertas
 
-No hay en esta propuesta: esquema, migraciones, facturación, Stripe, escaneos, merge ni despliegue.
+No hay en esta propuesta: esquema aplicado, migraciones, facturación, Stripe, entornos externos, escaneos, merge ni despliegue.
 
 1. ¿Dónde se guarda el inicio de la prueba y su consumo? (columna en `profiles` o tabla propia: **esquema**).
 2. ¿Qué pasa con las cuentas que ya tienen o tuvieron el Pro de 7 días?
-3. ¿Qué es una «revisión» y qué la consume?
+3. La regla 1 habla de «1 revisión manual mensual»; en el código no hay un contador mensual de revisiones (sí límites diarios de escaneo manual). ¿Cómo se mide y qué la consume?
 4. ¿Qué umbral de fallo persistente activa el fallback visible?
-5. Financiación/cuota del diagnóstico y exención del primer escaneo (sin decidir).
-6. ¿El requisito de «no borrar historia» aplica al borrado duro?
+5. Tratamiento exacto de subdominios, país e idioma en la clave de elegibilidad (§9, propuesta).
+6. Revisión del dueño del antiabuso (no se acepta riesgo ni presupuesto aquí).
+
+## 9. Elegibilidad durable de la exención (propuesta de diseño, sin implementar)
+
+Pedida por el Director: guardar la elegibilidad **por dominio canónico + cuenta**, de forma durable, **no solo por `projectId`** (que desaparece al eliminar),
+con **reserva atómica e idempotente** y **sin reiniciarse por archivar o eliminar**.
+
+- **Registro propio**, no una columna de `projects`: tiene que sobrevivir al borrado en cascada. Esquema nuevo: **sin aprobar**.
+- **Reserva atómica e idempotente:** una sola inserción con restricción de unicidad `(cuenta, dominio canónico)`; el segundo intento no concede nada.
+  La misma clase de problema que el 23505 de #552 (leer y luego insertar no es atómico).
+- **Dominio canónico (propuesta, a decidir):** dominio normalizado (sin esquema, sin `www.`, sin ruta, en minúsculas). **País e idioma NO forman parte de la
+  clave**: hoy el mismo dominio puede ser varios proyectos (país/idioma distintos) y cada uno daría una exención nueva por una variante de URL.
+  Subdominios: opción a decidir (compartir la clave del dominio registrable evita exenciones por variante; tratarlos como dominios distintos las multiplica).
+- **Cuándo se consume:** al reservar para un diagnóstico que **se completa**; un fallo o un reintento no consume (ver §6).
+- **No hace falta Stripe, ni secretos, ni entorno externo.** No ejecuta escaneos ni aprueba gasto nuevo.
 
 Do you approve this plan? I will not implement until you confirm.
