@@ -474,7 +474,7 @@ function PromptsStepBody({
           return (
             <div key={row.id} className="onb2-row onb2-row--prompt align-top">
               {isOpen ? (
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="onb2-pedit">
                   <Textarea
                     aria-label={`Prompt ${index + 1}`}
                     rows={3}

@@ -39,6 +39,12 @@ describe("asistente de alta en móvil", () => {
     expect(css).toMatch(/\.onb2-scope \.onb2-ptext \{ overflow: visible; text-overflow: clip; white-space: normal;/);
   });
 
+  it("el editor de un prompt abierto ocupa la fila entera en móvil (sin estilo en línea que gane al @media)", () => {
+    expect(wizard).toContain('className="onb2-pedit"');
+    expect(wizard).not.toMatch(/<div style=\{\{ flex: 1, minWidth: 0 \}\}>\s*<Textarea/);
+    expect(css).toMatch(/\.onb2-scope \.onb2-row--prompt > \.onb2-pedit \{ flex: 1 1 100%; \}/);
+  });
+
   it("los objetivos de 44px cubren hasta 760px y la × amplía solo el área pulsable", () => {
     expect(css).toMatch(/@media \(max-width: 760px\) \{\n  \.onb2-scope \.onb2-iconbtn \{ width: 44px; height: 44px; \}/);
     expect(css).toMatch(/\.onb2-scope \.eng-chip button::after \{ content: ""; position: absolute; inset: -10px; \}/);
