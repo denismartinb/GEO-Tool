@@ -16,6 +16,7 @@ import { matchDisplayName } from "@/lib/brand-aliases/match-display-name";
 // "Citada" here can never disagree with own_citation_share / citation_score
 // over what counts as the brand's own domain (BRAND-DOMAIN-1).
 import { isBrandDomain } from "@/lib/domains/brand-domain";
+import { brandMentionHint } from "@/lib/prompts/presence-hint";
 
 type Competitor = {
   id: string;
@@ -299,7 +300,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                   <div className="stmt" style={{ color: brandMentioned ? "var(--pos-ink)" : "var(--neg-ink)" }}>
                     {brandMentioned ? "La IA menciona tu marca" : "La IA no menciona tu marca"}
                   </div>
-                  <div className="hint">La IA te nombra por lo que ya sabe de tu marca, no por tu web.</div>
+                  <div className="hint">{brandMentionHint({ brandMentioned, hasOwnCitation })}</div>
                 </div>
                 <div className="pr2-presence-cell">
                   <div className="stmt" style={{ color: hasOwnCitation ? "var(--accent-ink)" : "var(--ink-4)" }}>

@@ -54,6 +54,7 @@ import {
   translateDroppedComponentReason,
   type GeoScoreEngineCoverage
 } from "./geo-score-breakdown";
+import { CEILING_LABEL, overviewCeilingSubtitle } from "@/lib/recommendations/ceiling-copy";
 
 /**
  * DOMAINS-REDESIGN-1: NOT optional, and not a copy-paste from the page this
@@ -1441,7 +1442,7 @@ export default async function ProjectDetailPage({
                     {roundedJointPoints !== null ? (
                       <>
                         <div className="ov2-opps-gain-n">+{roundedJointPoints}</div>
-                        <div className="ov2-opps-gain-l">Puntos potenciales</div>
+                        <div className="ov2-opps-gain-l">{CEILING_LABEL}</div>
                       </>
                     ) : (
                       <>
@@ -1460,7 +1461,7 @@ export default async function ProjectDetailPage({
                     </div>
                     <div className="ov2-opps-s">
                       {roundedJointPoints !== null
-                        ? "Techo optimista si resuelves estas acciones — tu próximo escaneo lo confirma."
+                        ? overviewCeilingSubtitle(activeRecommendationsCount)
                         : topCompetitor && topCompetitor.mentionRate > computedMentionRate
                           ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
                           : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}

@@ -1,5 +1,6 @@
 import { classifySourceType, type SourceType } from "@/lib/citations/source-type";
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
+import { deriveRecommendationConfidence, evidenceKindForType } from "@/lib/recommendations/confidence";
 
 type ProjectInput = {
   brand: string;
@@ -299,6 +300,9 @@ function aggregateEvidence(prompts: PromptResultInput[], snippetSource: "brand" 
   return {
     mentionedCompetitors: Array.from(competitors).slice(0, 8),
     citationDomains: Array.from(domains).slice(0, 8),
+    // The list above is capped for display; the real count is not hidden, so a
+    // card can say "cita 12 fuentes" while showing 8 (audit 2026-10-08).
+    citationDomainsTotal: domains.size,
     snippets: snippets.slice(0, 8)
   };
 }
@@ -338,6 +342,7 @@ function buildEvidenceJson(opts: {
     affected_prompt_details: toAffectedPromptDetails(opts.affected),
     mentioned_competitors: agg.mentionedCompetitors,
     citation_domains: agg.citationDomains,
+    citation_domains_total: agg.citationDomainsTotal,
     evidence_snippets: agg.snippets,
     assumptions: opts.assumptions,
     why_this_matters: opts.whyThisMatters,
@@ -494,6 +499,65 @@ function shortPrompt(text: string): string {
 }
 
 /**
+ * Real brands the AI named in the given answers that the project does not
+ * monitor (`other_brands_mentioned`, minus the project's own brand, minus the
+ * tracked competitors, minus generic terms and AI assistants). This is what
+ * makes "no tracked competitor appears" honest: it is a fact about the
+ * monitored list, and these are the names that list does not cover.
+ */
+function unmonitoredBrandsIn(prompts: PromptResultInput[], projectBrand: string, tracked: string[]): string[] {
+  const trackedNormalized = new Set(tracked.map((c) => c.trim().toLowerCase()).filter(Boolean));
+  const brandNormalized = projectBrand.trim().toLowerCase();
+  const seen = new Map<string, string>();
+  for (const result of prompts) {
+    for (const raw of getExtracted(result)?.other_brands_mentioned ?? []) {
+      const name = raw.trim();
+      const key = name.toLowerCase();
+      if (!name || key === brandNormalized || trackedNormalized.has(key) || isGenericEntityName(name)) continue;
+      if (!seen.has(key)) seen.set(key, name);
+    }
+  }
+  return Array.from(seen.values()).slice(0, 8);
+}
+
+function joinNames(names: string[]): string {
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
+}
+
+/**
+ * Description of the brand-absent card, calibrated to what was observed: the
+ * brand is missing from N answers, and NO MONITORED brand appears either. That
+ * is not "nobody occupies this query" — the answers may name other brands and
+ * cite many sources, and the card says so when they do (audit 2026-10-08,
+ * finding 1).
+ */
+function visibilityDescription(opts: {
+  answers: number;
+  monitored: string[];
+  otherBrands: string[];
+  sourcesTotal: number;
+}): string {
+  const { answers, monitored, otherBrands, sourcesTotal } = opts;
+  const answersLabel = answers === 1 ? "la respuesta" : `las ${answers} respuestas`;
+  const monitoredLabel =
+    monitored.length <= 4 ? `las ${monitored.length} marcas que monitorizas (${joinNames(monitored)})` : `ninguna de las ${monitored.length} marcas que monitorizas`;
+  const first =
+    monitored.length === 0
+      ? `Tu marca no aparece en ${answersLabel} de esta consulta. No monitorizas competidores, así que no podemos decir quién la ocupa.`
+      : `Tu marca no aparece en ${answersLabel} de esta consulta, y tampoco ${monitoredLabel}.`;
+
+  const parts: string[] = [];
+  if (otherBrands.length > 0) parts.push(`nombra a ${joinNames(otherBrands.slice(0, 4))}, que no monitorizas`);
+  if (sourcesTotal > 0) parts.push(`se apoya en ${sourcesTotal} ${sourcesTotal === 1 ? "fuente" : "fuentes"}`);
+  const second =
+    parts.length > 0
+      ? ` Eso no significa que no haya competencia: la IA sí ${parts.join(" y ")}.`
+      : " Tampoco vemos otras marcas ni fuentes en la respuesta.";
+  return `${first}${second}`;
+}
+
+/**
  * Per-prompt gap cards (Fase B2): instead of one broad card bundling every
  * brand-missing or uncited prompt — which mixes unrelated topics into a single
  * recommendation whose generated solution can only address one of them — emit
@@ -520,8 +584,10 @@ function perPromptGapCards(opts: {
   promptResults: PromptResultInput[];
   runScore: RunScoreInput;
   scoreDetails: Record<string, unknown>;
+  projectBrand: string;
+  monitoredCompetitors: string[];
 }): CandidateRec[] {
-  const { promptResults, runScore, scoreDetails } = opts;
+  const { promptResults, runScore, scoreDetails, projectBrand, monitoredCompetitors } = opts;
   const cards: CandidateRec[] = [];
 
   // RECS-EVIDENCE-2 (docs/external-audit-2026-08.md, Fase 7). Grouped by the
@@ -562,10 +628,16 @@ function perPromptGapCards(opts: {
       return !result.brand_mentioned && ev.competitors.length === 0;
     });
     if (visibilityAffected.length > 0) {
+      const otherBrands = unmonitoredBrandsIn(visibilityAffected, projectBrand, monitoredCompetitors);
+      const sourcesTotal = aggregateEvidence(visibilityAffected, "none").citationDomainsTotal;
       cards.push({
         title: `Aparece en "${label}"`,
-        description:
-          "Ni tú ni ningún competidor aparecéis en esta respuesta. Es una consulta libre: se la lleva quien publique primero la mejor respuesta.",
+        description: visibilityDescription({
+          answers: visibilityAffected.length,
+          monitored: monitoredCompetitors,
+          otherBrands,
+          sourcesTotal
+        }),
         rule_id: "rule_visibility_001",
         recommendation_type: "increase_brand_visibility",
         dedupeKey: `increase_brand_visibility:${stableId}`,
@@ -580,12 +652,16 @@ function perPromptGapCards(opts: {
           scoreDetails,
           runScore,
           affected: visibilityAffected,
-          assumptions: ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
+          assumptions: [
+            "La marca debería aparecer en la respuesta a esta consulta objetivo.",
+            "Que ninguna marca monitorizada aparezca no prueba que la consulta esté libre: se desconoce qué otras marcas la ocupan."
+          ],
           whyThisMatters:
-            "Nadie ocupa todavía esta consulta. Entrar ahora es más barato que disputarla cuando un competidor ya se haya asentado.",
+            "Hipótesis de contenido: una página tuya que responda esta pregunta de forma directa le daría a la IA una fuente tuya que citar. Ninguna respuesta del escaneo demuestra que eso cambie lo que dice.",
           firstStep:
             "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",
-          snippetSource: "brand"
+          snippetSource: "brand",
+          extra: { other_brands: otherBrands }
         })
       });
     }
@@ -595,7 +671,7 @@ function perPromptGapCards(opts: {
       cards.push({
         title: `Consigue que te citen en "${label}"`,
         description:
-          "La IA te nombra en esta respuesta, pero se apoya en otras webs como fuente. Para citarte necesita un dato tuyo que pueda verificar.",
+          "La IA te nombra en esta respuesta, pero no cita tu dominio entre sus fuentes. Un dato tuyo, con fecha y fuente, le daría algo tuyo que citar.",
         rule_id: "rule_citations_001",
         recommendation_type: "add_citation_block",
         dedupeKey: `add_citation_block:${stableId}`,
@@ -876,7 +952,15 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   // Per-prompt visibility ("increase_brand_visibility") and citation
   // ("add_citation_block") gaps — one focused card per affected query instead
   // of one bundled card mixing unrelated topics (Fase B2).
-  candidates.push(...perPromptGapCards({ promptResults, runScore, scoreDetails }));
+  candidates.push(
+    ...perPromptGapCards({
+      promptResults,
+      runScore,
+      scoreDetails,
+      projectBrand: input.project.brand,
+      monitoredCompetitors: input.competitors
+    })
+  );
 
   const dominantCompetitors = computeCompetitorDominance(promptResults, input.competitors);
   if (dominantCompetitors.length > 0) {
@@ -1035,7 +1119,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   if (runScore.visibility_score < 60 && runScore.citation_score < 50 && informationalPrompts.length > 0) {
     candidates.push({
       title: "Añade un bloque de preguntas y respuestas",
-      description: "Tus consultas informativas rinden por debajo. Un bloque de preguntas con respuestas de dos frases es lo que la IA extrae mejor.",
+      description: `Tu marca rinde por debajo en ${informationalPrompts.length} ${informationalPrompts.length === 1 ? "consulta informativa" : "consultas informativas"}. Hipótesis de formato: un bloque de preguntas con respuestas de dos frases es fácil de extraer para la IA, pero ninguna respuesta del escaneo demuestra que sea lo que te falta.`,
       rule_id: "rule_faq_001",
       recommendation_type: "create_faq_section",
       dedupeKey: "create_faq_section",
@@ -1051,7 +1135,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         runScore,
         affected: informationalPrompts,
         assumptions: ["Los prompts en forma de pregunta se benefician de estructuras concisas y fáciles de responder."],
-        whyThisMatters: "La IA construye sus respuestas con fragmentos. Cuanto más limpio sea el fragmento, más fácil es que use el tuyo.",
+        whyThisMatters: "Hipótesis de formato: la IA construye sus respuestas con fragmentos, y uno limpio es más fácil de usar. No hay una cita del escaneo que lo confirme para tu marca.",
         firstStep: "Coge las tres preguntas de la lista y respóndelas en tu web, cada una en dos frases, bajo un titular con la pregunta literal."
       })
     });
@@ -1129,7 +1213,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         ruleId: "rule_source_gap_comparator_001",
         title: (n) => (n === 1 ? "Entra en el comparador que cita la IA" : `Entra en los ${n} comparadores que cita la IA`),
         description: (domains) =>
-          `La IA se apoya en ${domains.slice(0, 3).join(", ")} para responder, y tu marca no está en esas fichas. Aparecer en un comparador te mete en todas las consultas que lo citan.`,
+          `La IA se apoya en ${domains.slice(0, 3).join(", ")} para responder, y tu dominio no figura entre sus fuentes citadas. No hemos comprobado si esas fichas te incluyen. Aparecer en un comparador te mete en las consultas que lo citan.`,
         why: "Los comparadores son la fuente más citada en consultas de decisión. Estar fuera de la tabla equivale a no existir en ellas.",
         firstStep: (top, domains) =>
           top
@@ -1142,7 +1226,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         ruleId: "rule_source_gap_community_001",
         title: (n) => (n === 1 ? "Participa en la comunidad que cita la IA" : `Participa en las ${n} comunidades que cita la IA`),
         description: (domains) =>
-          `La IA cita conversaciones de ${domains.slice(0, 3).join(", ")} donde tu marca no sale. Una respuesta útil y honesta ahí acaba en la respuesta de la IA.`,
+          `La IA cita conversaciones de ${domains.slice(0, 3).join(", ")} y tu dominio no figura entre sus fuentes citadas. No hemos comprobado si te nombran. Una respuesta útil y honesta ahí puede acabar en la respuesta de la IA.`,
         why: "Los foros pesan mucho en las respuestas de IA porque se leen como opinión real de usuarios, no como marketing.",
         firstStep: (top, domains) =>
           top
@@ -1155,7 +1239,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         ruleId: "rule_source_gap_media_001",
         title: (n) => (n === 1 ? "Consigue cobertura en el medio que cita la IA" : `Consigue cobertura en ${n} medios que cita la IA`),
         description: (domains) =>
-          `La IA se apoya en ${domains.slice(0, 3).join(", ")} y ninguno te menciona. Una sola pieza en estos medios entra en varias respuestas a la vez.`,
+          `La IA se apoya en ${domains.slice(0, 3).join(", ")} y tu dominio no figura entre sus fuentes citadas. No hemos comprobado si te mencionan. Una pieza en estos medios puede entrar en varias respuestas a la vez.`,
         why: "Un medio citado por la IA reparte autoridad a todas las marcas que nombra. Hoy ese reparto se hace sin ti.",
         firstStep: (top, domains) =>
           top
@@ -1168,7 +1252,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         ruleId: "rule_source_gap_001",
         title: (n) => (n === 1 ? "Consigue que la web que cita la IA te mencione" : `Consigue que ${n} webs que cita la IA te mencionen`),
         description: (domains) =>
-          `La IA se apoya en ${domains.slice(0, 3).join(", ")} en consultas donde tu dominio no aparece. Trabaja esas webs para que empiecen a citarte.`,
+          `La IA se apoya en ${domains.slice(0, 3).join(", ")} en consultas donde tu dominio no figura entre las fuentes. No hemos comprobado qué dicen de ti. Trabaja esas webs para que empiecen a citarte.`,
         why: "Entrar en las webs que los motores ya citan es la vía más corta para que empiecen a citarte a ti.",
         firstStep: (top, domains) =>
           top
@@ -1376,6 +1460,27 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   // was indistinguishable from a genuinely-fixed one, and got marked 'resolved'
   // even though nothing was actually fixed. Sort order is kept (still drives
   // priority_rank for display); only the truncation is gone.
+  // Audit 2026-10-08: every card used to inherit `runScore.confidence`, so a
+  // format hypothesis with no quote read "Confianza Alta" just because the
+  // sample was large. The run's confidence stays on the card as the
+  // DIAGNOSIS certainty (`run_confidence`); the card's own confidence is
+  // derived from the evidence behind its cause (lib/recommendations/
+  // confidence.ts). Done before the sort so priority follows what is shown.
+  for (const rec of byKey.values()) {
+    const derived = deriveRecommendationConfidence({
+      diagnosisCertainty: runScore.confidence,
+      type: rec.recommendation_type,
+      evidence: rec.evidence_json
+    });
+    rec.confidence = derived.confidence;
+    rec.evidence_json = {
+      ...rec.evidence_json,
+      evidence_kind: evidenceKindForType(rec.recommendation_type),
+      confidence_reason: derived.reason,
+      monitored_competitors: input.competitors
+    };
+  }
+
   const impactWeight = (impact: "low" | "medium" | "high") => (impact === "high" ? 3 : impact === "medium" ? 2 : 1);
   const deduped = Array.from(byKey.values()).sort((a, b) => {
     const aScore = a.severityScore + impactWeight(a.impact) * 10 + confWeight(a.confidence) * 5 + a.affectedCount;

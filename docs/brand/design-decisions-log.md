@@ -21327,3 +21327,63 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 236. UNPROVEN-CLAIMS-1: las recomendaciones dejan de afirmar lo que el escaneo no demuestra (2026-10-08)
+
+**Qué pasaba.** Primer escaneo de genscore.es, cinco hallazgos (reproducidos en
+una fixture sintética, `lib/recommendations/fixtures/genscore-first-scan.ts` —
+no se leyó ningún dato real):
+
+1. «Aparece en ¿Es rentable…?» concluía «Nadie ocupa todavía esta
+   consulta / Entrar ahora es más barato / se la lleva quien publique
+   primero» porque ninguna marca **monitorizada** salía, con 6 respuestas y 12
+   fuentes en su propia evidencia. La lista de marcas monitorizadas no es el
+   mercado, y nada del escaneo mide costes ni ventaja del primero.
+2. Esa tarjeta y la de FAQ salían con Confianza «Alta» sin ningún fragmento:
+   `confidence` era `runScore.confidence` copiado en todas.
+3. Prompts: con todos los temas al 0% decía «Fuerte en X (0%), floja en Y (0%)».
+4. Visión general «+87 potenciales» frente a «Hasta +22» en Recomendaciones.
+5. El cajón del prompt decía «La IA no menciona tu marca» y debajo «La IA te
+   nombra por lo que ya sabe de tu marca» (frase fija).
+
+**Decisión.**
+- Tres preguntas que compartían una palabra se separan: *certeza del
+  diagnóstico* (`evidence_json.run_confidence`, muestra del run), *confianza en la
+  acción* (derivada, `lib/recommendations/confidence.ts`: techo por evidencia
+  `direct`/`contextual`/`none`, nunca por encima del diagnóstico) e *impacto
+  estimado* (sin tocar, ADR 0017).
+- Las tarjetas de visibilidad, FAQ, bloque de cita y claridad de entidad se
+  marcan `evidence_kind = content_hypothesis`. La de visibilidad dice qué se
+  observó (N respuestas, marcas monitorizadas por nombre, otras marcas y
+  nº real de fuentes) y no concluye ausencia de competencia. Si no hay
+  competidores monitorizados, lo dice. `monitored_competitors` se guarda en la
+  evidencia: la afirmación es relativa a ese conjunto y puede cambiar entre
+  escaneos (el `dedupe_key` no cambia).
+- Las tarjetas `pursue_*` dejan de decir «ninguno te menciona / tu marca no
+  está en esas fichas»: sólo «tu dominio no figura entre las fuentes citadas;
+  no hemos comprobado si te mencionan» (`.claude/rules/citations.md`).
+- Las filas guardadas antes se recalibran al leer (`calibrateStoredRecommendation`),
+  sin migración ni reescritura de datos.
+- Prompts: `describeTopicContrast` (empate total ⇒ «Todavía no te nombra en
+  ningún tema»; empate ≠ 0 ⇒ «Mismo nivel»; «fuerte» pasa a «mejor/más floja»).
+  Cajón: `brandMentionHint` depende de las dos señales reales.
+- Techo: el +87 y el +22 son contrafactuales **conjuntos** sobre conjuntos
+  distintos (todas las recomendaciones vs. las 3 del plan); el solapamiento ya
+  estaba colapsado (`potential-ceiling.test.ts` lo fija). El fallo era el
+  nombre: pasa a «Techo teórico … No es una previsión» (`ceiling-copy.ts`).
+  **Ni score ni cifras se tocan.**
+
+**Efecto colateral conocido.** La confianza derivada entra en el orden
+(`confWeight`) y en «Prioridad alta»: las hipótesis sin fragmento bajan de
+puesto y de prioridad respecto a antes.
+
+**Pendiente — decisión de negocio, no tomada.** (a) ¿Titular de Visión general
+con un techo teórico, o sin cifra hasta tener una tasa de cumplimiento medida?
+Una previsión esperada exige datos que no existen. (b) ¿Un 0 sin auditoría de
+web debe mostrarse como «sin medir» en vez de 0 en superficies fuera de las
+revisadas aquí? No se auditó. (c) Los umbrales de techo por tipo
+(`BASE_CEILING`) son un juicio de producto, no están calibrados con datos.
+
+**Trazabilidad.** `lib/recommendations/{confidence,ceiling-copy,recommendation-engine}.ts`,
+`lib/prompts/{topic-contrast,presence-hint}.ts`, tests `unproven-claims`,
+`confidence`, `ceiling-copy`, `potential-ceiling`, `topic-contrast`, `presence-hint`.

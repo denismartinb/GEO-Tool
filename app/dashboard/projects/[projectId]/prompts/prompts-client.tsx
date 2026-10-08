@@ -10,6 +10,7 @@ import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 import { AddPromptsButton } from "./add-prompts-button";
 import type { ResultRow, TopicGroup } from "./page";
+import { describeTopicContrast } from "@/lib/prompts/topic-contrast";
 
 type Competitor = {
   id: string;
@@ -285,9 +286,7 @@ export function PromptsClient({
   const brandPresent = flatGroups.filter((g) => g.brandMentioned).length;
   const brandAbsent = scannedGroups - brandPresent;
   const presentPct = scannedGroups > 0 ? Math.round((brandPresent / scannedGroups) * 100) : 0;
-  const rankedTopics = [...topicGroups].sort((a, b) => b.visibilidad - a.visibilidad);
-  const bestTopic = rankedTopics[0] ?? null;
-  const worstTopic = rankedTopics.length > 1 ? rankedTopics[rankedTopics.length - 1] : null;
+  const topicContrast = describeTopicContrast(topicGroups);
 
   const filteredTopicGroups = hasTopics
     ? topicGroups
@@ -336,11 +335,17 @@ export function PromptsClient({
             <>
               Tu marca aparece en <b>{brandPresent} de {scannedGroups}</b> ({presentPct}%)
               {scannedPrompts < totalPrompts ? " escaneados" : ""}.
-              {hasTopics && bestTopic && worstTopic && bestTopic.category !== worstTopic.category ? (
+              {hasTopics && topicContrast.kind === "spread" ? (
                 <>
-                  {" "}Fuerte en <b>«{bestTopic.category}»</b> ({bestTopic.visibilidad}%), floja en{" "}
-                  <b>«{worstTopic.category}»</b> ({worstTopic.visibilidad}%).
+                  {" "}Mejor en <b>«{topicContrast.best.category}»</b> ({topicContrast.best.pct}%), más floja en{" "}
+                  <b>«{topicContrast.worst.category}»</b> ({topicContrast.worst.pct}%).
                 </>
+              ) : null}
+              {hasTopics && topicContrast.kind === "tie" ? (
+                <>{" "}Mismo nivel en todos los temas ({topicContrast.pct}%).</>
+              ) : null}
+              {hasTopics && topicContrast.kind === "all_zero" ? (
+                <>{" "}Todavía no te nombra en ningún tema.</>
               ) : null}
             </>
           ) : (

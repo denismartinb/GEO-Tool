@@ -30,6 +30,7 @@ import {
   blockerUrls,
   findCitationBlockers
 } from "@/lib/recommendations/citation-blockers";
+import { calibrateStoredRecommendation } from "@/lib/recommendations/confidence";
 import { selectPlan } from "@/lib/recommendations/plan";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
@@ -233,7 +234,9 @@ export default async function RecommendationsPage({
 
   const activeRun = await activeRunPromise;
 
-  const baseRecs = (recommendations ?? []) as Recommendation[];
+  // Confidence is re-derived from each row's own evidence (audit 2026-10-08):
+  // rows persisted before that carry the run's confidence as the card's.
+  const baseRecs = ((recommendations ?? []) as Recommendation[]).map((r) => calibrateStoredRecommendation(r));
 
   // A single logical prompt scanned by multiple LLM engines (Gemini + Claude)
   // produces one scan_prompt_results row per engine, so per-prompt gap cards

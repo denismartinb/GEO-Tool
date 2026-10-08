@@ -31,6 +31,7 @@ import {
   pointsCaption,
   readinessLabel
 } from "@/lib/recommendations/deliverable";
+import { planCeilingSuffix } from "@/lib/recommendations/ceiling-copy";
 
 // Re-exported (not redefined) so every existing `import { type GeneratedSolution } from "./recommendations-client"`
 // keeps working unchanged — lib/recommendations/generated-solution.ts is now
@@ -55,7 +56,25 @@ type EvidenceJson = {
   action_suggested?: string;
   /** RECS-REDESIGN-1 — bounded first move for this gap. */
   first_step?: string;
+  /**
+   * Audit 2026-10-08 — what the card is allowed to claim. `observation` reads
+   * a fact off the answers; `content_hypothesis` proposes a change whose effect
+   * no answer demonstrates. Never rendered as a number.
+   */
+  evidence_kind?: "observation" | "content_hypothesis";
+  /** Why the recommendation's confidence is what it is (lib/recommendations/confidence.ts). */
+  confidence_reason?: string;
+  /** Sample confidence of the run: how sure the DIAGNOSIS is, not the action. */
+  run_confidence?: "low" | "medium" | "high";
+  /** Real brands the AI named that the project does not monitor. */
+  other_brands?: string[];
+  /** Real number of distinct grounded sources; `citation_domains` is capped for display. */
+  citation_domains_total?: number;
+  /** The tracked competitors when this card was generated: the set its claims are relative to. */
+  monitored_competitors?: string[];
 };
+
+const CONFIDENCE_LABEL: Record<"low" | "medium" | "high", string> = { low: "Baja", medium: "Media", high: "Alta" };
 
 /**
  * Read-time enrichment of a card with already-persisted domain-coverage data
@@ -958,10 +977,23 @@ export function RecCard({
                 <DotMeter n={effortToN(rec.effort)} tone="m" />
               </div>
             </div>
+            {/* Audit 2026-10-08 — two different questions that used to share
+                one word. "Diagnóstico" is whether the gap is real (sample of
+                the run); "Confianza en la acción" is whether doing this is
+                known to work, and a content hypothesis without a quote cannot
+                be high. Impact above is the third: how much it could move. */}
+            {ev.run_confidence && (
+              <div className="rmetric" style={{ textAlign: "left" }}>
+                <div className="l">Certeza del diagnóstico</div>
+                <div className="v" style={{ justifyContent: "flex-start", fontSize: 12, fontWeight: 700 }}>
+                  {CONFIDENCE_LABEL[ev.run_confidence]}
+                </div>
+              </div>
+            )}
             <div className="rmetric" style={{ textAlign: "left" }}>
-              <div className="l">Confianza</div>
+              <div className="l">{ev.run_confidence ? "Confianza en la acción" : "Confianza"}</div>
               <div className="v" style={{ justifyContent: "flex-start", fontSize: 12, fontWeight: 700 }}>
-                {effectiveConfidence === "low" ? "Baja" : effectiveConfidence === "high" ? "Alta" : "Media"}
+                {CONFIDENCE_LABEL[effectiveConfidence as "low" | "medium" | "high"] ?? "Media"}
               </div>
             </div>
             <div className="rmetric" style={{ textAlign: "left" }}>
@@ -971,6 +1003,18 @@ export function RecCard({
               </div>
             </div>
           </div>
+
+          {ev.confidence_reason && (
+            <p
+              data-testid="rec-confidence-reason"
+              style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "-4px 0 12px" }}
+            >
+              {ev.evidence_kind === "content_hypothesis" && (
+                <span style={{ fontWeight: 700, color: "var(--ink-2)" }}>Hipótesis de contenido. </span>
+              )}
+              {ev.confidence_reason}
+            </p>
+          )}
 
           {/* Auditoría de cobertura del dominio (RECS-COVERAGE-OVERLAY-1) — shown
               FIRST because it reframes what this whole card means. Plain-language
@@ -1148,7 +1192,9 @@ export function RecCard({
                 ))
               ) : (
                 <p style={{ fontSize: 12.5, color: "var(--ink-4)", margin: 0 }}>
-                  Sin fragmentos de evidencia disponibles.
+                  {ev.evidence_kind === "content_hypothesis"
+                    ? "Sin fragmento que la respalde: esta tarjeta parte de que tu marca no aparece, no de una cita textual."
+                    : "Sin fragmentos de evidencia disponibles."}
                 </p>
               )}
               {sentimentDrivers.length > 0 && (
@@ -1163,10 +1209,32 @@ export function RecCard({
                   {competitors.join(", ")}
                 </p>
               )}
+              {ev.evidence_kind === "content_hypothesis" && competitors.length === 0 && (
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  <span style={{ fontWeight: 600 }}>Marcas monitorizadas que aparecen: </span>
+                  ninguna
+                  {(ev.monitored_competitors?.length ?? 0) > 0 ? ` (de ${ev.monitored_competitors?.length})` : ""}
+                </p>
+              )}
+              {(ev.other_brands?.length ?? 0) > 0 && (
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  <span style={{ fontWeight: 600 }}>Otras marcas que nombra la IA (no monitorizadas): </span>
+                  {ev.other_brands?.join(", ")}
+                </p>
+              )}
               {domains.length > 0 && (
                 <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
-                  <span style={{ fontWeight: 600 }}>Dominios: </span>
+                  <span style={{ fontWeight: 600 }}>
+                    Fuentes que cita la IA
+                    {typeof ev.citation_domains_total === "number" && ev.citation_domains_total > domains.length
+                      ? ` (${domains.length} de ${ev.citation_domains_total})`
+                      : ""}
+                    :{" "}
+                  </span>
                   {domains.join(", ")}
+                  <span style={{ display: "block", color: "var(--ink-4)", marginTop: 2 }}>
+                    No se ha comprobado si esas páginas mencionan tu marca.
+                  </span>
                 </p>
               )}
               {citationPages.length > 0 && (
@@ -1579,7 +1647,7 @@ export function RecommendationsClient({
                 "3 acciones prioritarias." y ese punto huérfano cantaba. */}
             <div className="rec2-plan-t">
               {plan.length} {plan.length === 1 ? "acción prioritaria" : "acciones prioritarias"}
-              {planPoints !== null && planPoints >= MIN_VISIBLE_POINTS ? `. Hasta +${formatPoints(planPoints)} puntos` : ""}
+              {planPoints !== null && planPoints >= MIN_VISIBLE_POINTS ? planCeilingSuffix(plan.length, formatPoints(planPoints)) : ""}
             </div>
           </div>
           {plan.map((rec, i) => (

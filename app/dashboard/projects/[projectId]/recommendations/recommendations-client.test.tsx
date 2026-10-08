@@ -410,3 +410,53 @@ describe("RecCard — insignia de reaparición (RECS-LOOP-1 Fase B)", () => {
     expect(html).toContain("La marcaste como hecha el 12 ago 2026");
   });
 });
+
+
+/**
+ * Audit 2026-10-08 — what a card says about its own evidence and confidence.
+ * Content, not look (the look is the pilot's).
+ */
+describe("RecCard — evidencia y confianza calibradas", () => {
+  const hypothesis = baseRec({
+    confidence: "medium",
+    evidence_json: {
+      evidence_kind: "content_hypothesis",
+      confidence_reason: "Se ven fuentes u otras marcas en las respuestas, pero ninguna prueba que esta acción cambie lo que dice la IA.",
+      run_confidence: "high",
+      evidence_snippets: [],
+      mentioned_competitors: [],
+      monitored_competitors: ["Profound", "Semrush"],
+      other_brands: ["Ahrefs", "Moz"],
+      citation_domains: ["xataka.com", "genbeta.com"],
+      citation_domains_total: 12
+    }
+  });
+
+  it("separa la certeza del diagnóstico de la confianza en la acción", () => {
+    const html = renderToStaticMarkup(<RecCard rec={hypothesis} projectId="p1" />);
+    expect(html).toContain("Certeza del diagnóstico");
+    expect(html).toContain("Confianza en la acción");
+  });
+
+  it("una tarjeta sin fragmento se declara hipótesis de contenido, no «sin evidencia» a secas", () => {
+    const html = renderToStaticMarkup(<RecCard rec={hypothesis} projectId="p1" />);
+    expect(html).toContain("Hipótesis de contenido.");
+    expect(html).toContain("Sin fragmento que la respalde");
+    expect(html).not.toContain("Sin fragmentos de evidencia disponibles");
+  });
+
+  it("enseña las marcas no monitorizadas y el total real de fuentes, y no afirma que no mencionen la marca", () => {
+    const html = renderToStaticMarkup(<RecCard rec={hypothesis} projectId="p1" />);
+    expect(html).toContain("Ahrefs, Moz");
+    expect(html).toContain("2 de 12");
+    expect(html).toContain("No se ha comprobado si esas páginas mencionan tu marca");
+    expect(html).toContain("ninguna");
+  });
+
+  it("una fila antigua (sin los campos nuevos) sigue pintando como antes", () => {
+    const html = renderToStaticMarkup(<RecCard rec={baseRec({ confidence: "high" })} projectId="p1" />);
+    expect(html).toContain("Sin fragmentos de evidencia disponibles");
+    expect(html).not.toContain("Certeza del diagnóstico");
+    expect(html).not.toContain("Hipótesis de contenido.");
+  });
+});

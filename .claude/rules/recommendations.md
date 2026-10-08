@@ -36,6 +36,22 @@ paths:
   antes de esta fase simplemente no lo tiene — se pinta sin glifo, nunca se
   inventa.
 
+## Qué puede afirmar una tarjeta (UNPROVEN-CLAIMS-1, log §236)
+
+- **«Ninguna marca monitorizada» no es «nadie».** Un hallazgo sobre la
+  ausencia de competidores es relativo a `evidence_json.monitored_competitors`;
+  nunca concluye competencia, coste ni ventaja del primero.
+- **La confianza de la acción se deriva de la evidencia, nunca se hereda del
+  run** (`lib/recommendations/confidence.ts`). El run es la *certeza del
+  diagnóstico* (`run_confidence`); una hipótesis de contenido sin fragmento no
+  pasa de «Baja», con fuentes/marcas observadas no pasa de «Media». Tipo nuevo
+  ⇒ decidir su techo en `BASE_CEILING` (sin entrada = contextual).
+- **Las fuentes citadas no son menciones verificadas** (ver `citations.md`):
+  «tu dominio no figura entre las fuentes», nunca «no te mencionan».
+- **Los dos techos de puntos se llaman techo** (`ceiling-copy.ts`), nunca
+  «potenciales» ni promesa de que el próximo escaneo lo confirma. Las cifras
+  son contrafactuales conjuntos (ADR 0017 §3), no sumas.
+
 ## Puntos potenciales
 
 - **Se calculan por recomputación contrafactual del score real**, nunca por el
