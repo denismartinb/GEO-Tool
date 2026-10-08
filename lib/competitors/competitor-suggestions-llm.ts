@@ -1,7 +1,8 @@
 import "server-only";
 
 import { z } from "zod";
-import { generateGroundedGeminiJson, toIncidentError } from "@/lib/llm/gemini-client";
+import { generateGroundedGeminiJsonWithSources, toIncidentError } from "@/lib/llm/gemini-client";
+import { sourceForDomain, type GroundedSource } from "@/lib/competitors/competitor-sources";
 import { reportLlmIncident } from "@/lib/llm/llm-incident";
 import { isBrandDomain } from "@/lib/domains/brand-domain";
 import type { BusinessProfile } from "@/lib/llm/contracts";
@@ -25,6 +26,9 @@ function normalizeDomain(value: string): string {
 
 
 export type SuggestedCompetitor = { name: string; domain: string };
+
+/** Una propuesta con su respaldo: la fuente consultada que ES su sitio, o `null` («no verificado»). */
+export type SuggestedCompetitorWithSource = SuggestedCompetitor & { source?: GroundedSource | null };
 
 const competitorsResponseSchema = z.object({
   competitors: z
@@ -57,7 +61,7 @@ export async function suggestCompetitors(input: {
   language: string;
   profile: BusinessProfile;
   limit?: number;
-}): Promise<SuggestedCompetitor[]> {
+}): Promise<SuggestedCompetitorWithSource[]> {
   const limit = Math.min(Math.max(input.limit ?? 5, 1), 8);
   const promptBlock = [
     "You are a GEO market analyst. Use Google Search to find the most relevant DIRECT competitors of this specific business.",
@@ -78,8 +82,11 @@ export async function suggestCompetitors(input: {
   ].join("\n");
 
   let raw: unknown;
+  let sources: GroundedSource[] = [];
   try {
-    raw = await generateGroundedGeminiJson(promptBlock);
+    const grounded = await generateGroundedGeminiJsonWithSources(promptBlock);
+    raw = grounded.json;
+    sources = grounded.sources;
   } catch (error) {
     // The other silent `catch`. This is the grounded call — the exact one that
     // returned 429 on 2026-08-09 — and an empty competitor list is
@@ -97,7 +104,7 @@ export async function suggestCompetitors(input: {
 
   const ownDomain = normalizeDomain(input.domain);
   const seen = new Set<string>();
-  const out: SuggestedCompetitor[] = [];
+  const out: SuggestedCompetitorWithSource[] = [];
 
   for (const item of parsed.data.competitors) {
     const name = item.name.trim();
@@ -111,7 +118,9 @@ export async function suggestCompetitors(input: {
     if (isBrandDomain(domain, ownDomain)) continue;
     if (seen.has(domain)) continue;
     seen.add(domain);
-    out.push({ name, domain });
+    // Sólo se escribe `source` cuando existe: su ausencia ES el estado «no verificado».
+    const source = sourceForDomain(domain, sources);
+    out.push(source ? { name, domain, source } : { name, domain });
     if (out.length >= limit) break;
   }
 

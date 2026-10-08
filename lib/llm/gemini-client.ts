@@ -207,6 +207,17 @@ export function parseLenientJson(text: string): unknown {
  * (log §78).
  */
 export async function generateGroundedGeminiJson(promptBlock: string): Promise<unknown> {
+  return (await generateGroundedGeminiJsonWithSources(promptBlock)).json;
+}
+
+/**
+ * Igual que `generateGroundedGeminiJson`, pero devuelve también las páginas que
+ * Gemini consultó (`groundingMetadata.groundingChunks`). Es lo único que
+ * cuenta como fuente de una propuesta: ONBOARDING-PROPOSALS-1, log §237.
+ */
+export async function generateGroundedGeminiJsonWithSources(
+  promptBlock: string
+): Promise<{ json: unknown; sources: Array<{ uri: string; title?: string }> }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
 
@@ -219,13 +230,23 @@ export async function generateGroundedGeminiJson(promptBlock: string): Promise<u
     })
   );
 
-  const text = firstCandidateText(await response.json());
+  const body = (await response.json()) as Parameters<typeof firstCandidateText>[0] & {
+    candidates?: Array<{
+      groundingMetadata?: { groundingChunks?: Array<{ web?: { uri?: string; title?: string } }> };
+    }>;
+  };
+  const text = firstCandidateText(body);
   if (!text) {
     throw new ExtractionError("empty", "Gemini suggestion returned empty JSON.");
   }
 
+  const sources = (body.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [])
+    .map((chunk) => chunk.web)
+    .filter((web): web is { uri: string; title?: string } => Boolean(web?.uri))
+    .map((web) => ({ uri: web.uri, ...(web.title ? { title: web.title } : {}) }));
+
   try {
-    return parseLenientJson(text);
+    return { json: parseLenientJson(text), sources };
   } catch {
     throw new ExtractionError("invalid_json", "Gemini suggestion returned invalid JSON.");
   }
