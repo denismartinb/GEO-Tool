@@ -472,7 +472,7 @@ function PromptsStepBody({
         {prompts.map((row, index) => {
           const isOpen = openPrompts.has(row.id);
           return (
-            <div key={row.id} className="onb2-row align-top">
+            <div key={row.id} className="onb2-row onb2-row--prompt align-top">
               {isOpen ? (
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Textarea
@@ -486,10 +486,10 @@ function PromptsStepBody({
                   />
                 </div>
               ) : (
-                <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                <span className="onb2-ptext-wrap">
                   <span className="onb2-ptext">{row.text || "Prompt vacío"}</span>
                   {intentLabelFor && intentLabelFor(row.text) ? (
-                    <span style={{ color: "var(--ink-4)", fontSize: 12 }} title="Clasificación estimada, no guardada">
+                    <span className="onb2-intent" title="Clasificación estimada, no guardada">
                       {intentLabelFor(row.text)}
                     </span>
                   ) : null}
@@ -858,12 +858,7 @@ export function OnboardingWizard({
                   ) : null}
                   <div className="country-sel" title="País de análisis">
                     <Flag code={selectedCountry.code.toLowerCase()} />
-                    <span
-                      className="country-sel-name"
-                      style={{ maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      {selectedCountry.name}
-                    </span>
+                    <span className="country-sel-name">{selectedCountry.name}</span>
                     <Icon name="chevDown" size={14} className="text-[var(--ink-4)]" />
                     <select
                       id="country"
