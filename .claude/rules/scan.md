@@ -273,3 +273,25 @@ worse than no rule, because a future session will obey it anyway.
   (`docs/brand/design-decisions-log.md` §188). No unique constraint on
   `(project_id, run_id, dedupe_key)` exists yet to close this at the schema
   level — accepted residual risk, not this phase's scope.
+- **La cuenta «prompts × pasadas × motores = respuestas» tiene UN dueño:
+  `lib/scan/run-plan.ts`, y nadie multiplica por su cuenta.** El asistente
+  prometió 45 respuestas y la misión anunció 90; en elcorteingles.es, 24
+  frente a 72. Cada sitio hacía su propia aritmética, uno ignorando las
+  pasadas del suelo de 50 y fijando tres motores aunque Free ejecuta uno, el
+  otro deduciendo las pasadas como `lanzamientos / prompts`
+  (`docs/brand/design-decisions-log.md` §236). Tres unidades, nombre fijo:
+  **respuesta** (fila de `scan_prompt_results`), **lanzamiento** (un prompt en
+  una pasada, a todos los motores; lo que cuenta `total_prompts`) y **pasada**
+  (`scan_runs.sample_count`). Antes de lanzar se usa `describeRunPlan`, que
+  envuelve `computeSampleCount`; después, `describeRunPlanFromRun`, que lee
+  `sample_count` y sólo cae al cociente en runs previos a la migración 0028.
+  Un reintento reescribe la misma fila y nunca suma al total esperado. Lo
+  vigilan `lib/scan/run-plan.test.ts`, la paridad contra el run real en
+  `run-creation.test.ts` y `tests/scan-plan-units.test.ts`.
+- **El guardián de «un solo run vivo» es una lectura seguida de un insert, y
+  `scan_runs` no tiene índice único parcial.** Dos lanzamientos simultáneos
+  crean dos runs; es un hueco conocido, fijado como `it.fails` en
+  `run-creation.test.ts` (§236). Cerrarlo exige una migración
+  (`UNIQUE (project_id) WHERE status IN ('pending','running')`), y las
+  migraciones están prohibidas sin aprobación del fundador: no lo arregles
+  «de pasada» en código, y si se cierra, promociona ese test.

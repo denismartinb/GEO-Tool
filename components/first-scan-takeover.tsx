@@ -3,6 +3,7 @@ import "server-only";
 import { getPlanForUser } from "@/lib/billing";
 import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
 import { createClient } from "@/lib/supabase/server";
+import { describeRunPlanFromRun } from "@/lib/scan/run-plan";
 import { ScanMissionRocket } from "@/components/scan-mission-rocket";
 import type { ActiveScanRun } from "@/components/scan-in-progress";
 
@@ -74,15 +75,27 @@ export async function FirstScanTakeover({
    * prompts" is incomprehensible to someone who typed 12 on the previous
    * screen — his words: "si son doce, son doce".
    *
-   * So the rail reports the three real quantities separately and lets the
-   * arithmetic be visible: 12 prompts x 2 pasadas x 3 motores = 72 respuestas.
-   * Every one of those is read, never assumed; any that cannot be resolved
-   * drops its own segment rather than being filled in.
+   * SCAN-PLAN-UNITS-1: the arithmetic now lives in `lib/scan/run-plan.ts`, the
+   * same module the onboarding uses before launch, and the pasadas are READ
+   * from `scan_runs.sample_count` instead of deduced as `launches / prompts`
+   * (which is wrong the moment the prompt count changes after launch). That
+   * column has its own query: if migration 0028 is not applied PostgREST fails
+   * the select, and this must degrade to the ratio, not take the screen down.
    */
   const launches = activeRun.total_prompts ?? null;
   const prompts = promptCount ?? null;
-  const samples = prompts !== null && prompts > 0 && launches !== null ? Math.round(launches / prompts) : null;
-  const expectedResponses = launches !== null && engines !== null ? launches * engines : null;
+  const { data: sampleRow } = await supabase
+    .from("scan_runs")
+    .select("sample_count")
+    .eq("id", activeRun.id)
+    .eq("project_id", projectId)
+    .maybeSingle();
+  const runPlan = describeRunPlanFromRun({
+    prompts,
+    engines,
+    launches,
+    sampleCount: (sampleRow as { sample_count?: number | null } | null)?.sample_count ?? null
+  });
 
   return (
     <ScanMissionRocket
@@ -90,9 +103,7 @@ export async function FirstScanTakeover({
       initial={activeRun}
       domain={domain}
       prompts={prompts}
-      samples={samples}
-      engines={engines}
-      expectedResponses={expectedResponses}
+      plan={runPlan}
     />
   );
 }

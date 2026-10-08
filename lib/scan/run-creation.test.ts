@@ -786,3 +786,155 @@ describe("createPendingScanRunCore — free plan scan limit (PRICING-TRUTH-1)", 
     expect(tables.scan_runs.some((r) => r.id === runId)).toBe(true);
   });
 });
+
+describe("createPendingScanRunCore — what the wizard promises is what the run creates (SCAN-PLAN-UNITS-1)", () => {
+  const ORIGINAL_LLM_SCAN_PROVIDERS = process.env.LLM_SCAN_PROVIDERS;
+
+  beforeEach(() => {
+    nextId = 1;
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_LLM_SCAN_PROVIDERS === undefined) {
+      delete process.env.LLM_SCAN_PROVIDERS;
+    } else {
+      process.env.LLM_SCAN_PROVIDERS = ORIGINAL_LLM_SCAN_PROVIDERS;
+    }
+  });
+
+  function promptsFor(count: number) {
+    return Array.from({ length: count }, (_, i) => ({
+      id: `prompt-${i}`,
+      project_id: PROJECT_ID,
+      prompt_text: `Prompt ${i}`,
+      is_active: true,
+      created_at: `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`
+    }));
+  }
+
+  // [prompts, plan, engines the plan allows, expected pasadas, expected respuestas]
+  const cases: Array<[number, string, number, number, number]> = [
+    // The 2026-10-08 prueba: the wizard said 45, the mission said 90.
+    [15, "pro", 3, 2, 90],
+    // elcorteingles.es: the wizard said 24, the launch was 72.
+    [8, "pro", 3, 3, 72],
+    // Free runs one engine and never repeats: 10, not the 30 the old estimate printed.
+    [10, "free", 1, 1, 10]
+  ];
+
+  it.each(cases)(
+    "%i prompts on %s (%i motores): the pre-launch plan equals what the created run holds",
+    async (promptCount, planId, engines, samples, responses) => {
+      const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+      const { describeRunPlan, describeRunPlanFromRun } = await import("@/lib/scan/run-plan");
+
+      const { client, tables } = makeFakeDb(
+        baseTables({
+          project_prompts: promptsFor(promptCount),
+          profiles: [{ id: OWNER_ID, current_plan: planId }]
+        })
+      );
+
+      const runId = await createPendingScanRunCore({
+        projectId: PROJECT_ID,
+        readClient: client as unknown as SupabaseClient,
+        service: client as unknown as ServiceClient,
+        triggeredByUserId: "user-1",
+        triggerSource: "user"
+      });
+
+      const run = tables.scan_runs.find((r) => r.id === runId)!;
+      const before = describeRunPlan({ prompts: promptCount, engines, planId });
+      const after = describeRunPlanFromRun({
+        prompts: promptCount,
+        engines,
+        launches: run.total_prompts as number,
+        sampleCount: run.sample_count as number
+      });
+
+      expect(run.sample_count).toBe(samples);
+      expect(after?.expectedResponses).toBe(responses);
+      expect(after).toMatchObject({
+        samples: before.samples,
+        launches: before.launches,
+        expectedResponses: before.expectedResponses
+      });
+      // Jobs are the unit the 0/N counter counts: one per prompt per pasada.
+      const jobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
+      expect(jobs).toHaveLength(before.launches);
+    }
+  );
+});
+
+/**
+ * Phase 2 of the scan-progress recovery work: characterization only. These pin
+ * what double-click / re-submit do TODAY so a later change cannot loosen them
+ * silently. No production code was touched to make them pass.
+ */
+describe("createPendingScanRunCore — a second launch while one is live (double click, back button)", () => {
+  beforeEach(() => {
+    nextId = 1;
+  });
+
+  const prompts = Array.from({ length: 5 }, (_, i) => ({
+    id: `prompt-${i}`,
+    project_id: PROJECT_ID,
+    prompt_text: `Prompt ${i}`,
+    is_active: true,
+    created_at: `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`
+  }));
+
+  const input = (client: unknown) => ({
+    projectId: PROJECT_ID,
+    readClient: client as SupabaseClient,
+    service: client as ServiceClient,
+    triggeredByUserId: "user-1",
+    triggerSource: "user" as const
+  });
+
+  it("the second, sequential launch is refused and creates no run and no jobs", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts }));
+
+    await createPendingScanRunCore(input(client));
+    const runsAfterFirst = tables.scan_runs.length;
+    const jobsAfterFirst = tables.jobs.length;
+
+    await expect(createPendingScanRunCore(input(client))).rejects.toMatchObject({ code: "active_run_exists" });
+
+    expect(tables.scan_runs).toHaveLength(runsAfterFirst);
+    expect(tables.jobs).toHaveLength(jobsAfterFirst);
+  });
+
+  it("a run that already finished no longer blocks a new launch", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts }));
+
+    const first = await createPendingScanRunCore(input(client));
+    tables.scan_runs.find((r) => r.id === first)!.status = "completed";
+
+    await expect(createPendingScanRunCore(input(client))).resolves.toBeTruthy();
+    expect(tables.scan_runs).toHaveLength(2);
+  });
+
+  /**
+   * KNOWN GAP, recorded rather than fixed (needs a schema change, which is
+   * forbidden without founder approval): the guard is a read followed by an
+   * insert, and `scan_runs` has no partial unique index on
+   * `(project_id) WHERE status IN ('pending','running')`
+   * (supabase/migrations: only `scan_runs_project_status_idx`, non-unique).
+   * Two launches that overlap in flight both pass the read.
+   *
+   * `it.fails` passes while the gap exists and turns RED the day it is closed,
+   * which is the prompt to delete this block and promote the assertion.
+   */
+  it.fails("KNOWN GAP: two launches in flight at the same instant create ONE run", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts }));
+
+    await Promise.allSettled([createPendingScanRunCore(input(client)), createPendingScanRunCore(input(client))]);
+
+    expect(tables.scan_runs).toHaveLength(1);
+  });
+});

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { computeMissionBeat, resolveDisplayBeat, IGNITION_HOLD_MS, type MissionBeat } from "@/lib/scan/mission-beats";
 import type { ActiveScanRun } from "@/components/scan-in-progress";
+import { launchUnitNote, runPlanEquation, runPlanWhy, type RunPlan } from "@/lib/scan/run-plan";
 
 type LiveRun = ActiveScanRun & { id: string };
 
@@ -41,17 +42,14 @@ export function ScanMissionRocket({
   initial,
   domain,
   prompts,
-  samples,
-  engines,
-  expectedResponses
+  plan
 }: {
   projectId: string;
   initial: LiveRun;
   domain: string;
   prompts: number | null;
-  samples: number | null;
-  engines: number | null;
-  expectedResponses: number | null;
+  /** `describeRunPlanFromRun` — null when any figure could not be resolved. */
+  plan: RunPlan | null;
 }) {
   const router = useRouter();
   const [run, setRun] = useState<LiveRun>(initial);
@@ -122,13 +120,7 @@ export function ScanMissionRocket({
 
   return (
     <section className={`mrk-full${night ? " night" : ""}`} aria-live="polite">
-      <MissionRail
-        domain={domain}
-        prompts={prompts}
-        samples={samples}
-        engines={engines}
-        expectedResponses={expectedResponses}
-      />
+      <MissionRail domain={domain} prompts={prompts} plan={plan} />
       <div className="mrk-canvas">
         <div className="mrk-scene-slot">
           <RocketScene beat={beat} />
@@ -138,6 +130,12 @@ export function ScanMissionRocket({
           <h2 className="mrk-title">{titleFor(beat)}</h2>
           {unitFor(beat) && <p className="mrk-unit">{unitFor(beat)}</p>}
           {subtitleFor(beat) && <p className="mrk-sub">{subtitleFor(beat)}</p>}
+          {beat.key === "ascenso" && plan && (
+            <>
+              <p className="mrk-sub">{launchUnitNote(plan)}</p>
+              {runPlanWhy(plan) && <p className="mrk-sub">{runPlanWhy(plan)}</p>}
+            </>
+          )}
           {beat.key !== "entrega" && <p className="mrk-joke">{jokeFor(beat)}</p>}
         </div>
       </div>
@@ -156,26 +154,22 @@ export function ScanMissionRocket({
 function MissionRail({
   domain,
   prompts,
-  samples,
-  engines,
-  expectedResponses
+  plan
 }: {
   domain: string;
   prompts: number | null;
-  samples: number | null;
-  engines: number | null;
-  expectedResponses: number | null;
+  plan: RunPlan | null;
 }) {
-  // Reads as the multiplication it is — 12 prompts x 2 pasadas x 3 motores =
-  // 72 respuestas — so the response count never looks conjured. "Pasadas" is
-  // dropped when the run does a single pass, which is the common case above
-  // ~17 prompts (SAMPLING-1's floor divided by three engines).
-  const facts = [
-    prompts !== null ? `${prompts} ${prompts === 1 ? "prompt" : "prompts"}` : null,
-    samples !== null && samples > 1 ? `${samples} pasadas` : null,
-    engines !== null ? `${engines} ${engines === 1 ? "motor" : "motores"}` : null,
-    expectedResponses !== null ? `${expectedResponses} respuestas` : null
-  ].filter(Boolean) as string[];
+  // Reads as the multiplication it is — 12 prompts × 2 pasadas × 3 motores =
+  // 72 respuestas — the same string the onboarding printed before launch
+  // (`lib/scan/run-plan.ts`, SCAN-PLAN-UNITS-1). When the plan cannot be fully
+  // resolved the segment is dropped rather than filled in; a known prompt
+  // count still shows on its own.
+  const facts = plan
+    ? runPlanEquation(plan)
+    : prompts !== null
+      ? `${prompts} ${prompts === 1 ? "prompt" : "prompts"}`
+      : null;
 
   return (
     <div className="mrk-rail">
@@ -187,7 +181,7 @@ function MissionRail({
         </span>
         <b>{domain}</b> dado de alta
       </span>
-      {facts.length > 0 && <span className="mrk-rail-right">{facts.join(" · ")}</span>}
+      {facts && <span className="mrk-rail-right">{facts}</span>}
     </div>
   );
 }
@@ -278,7 +272,7 @@ function jokeFor(beat: MissionBeat): string {
     case "ignicion":
       return "Los tres a la vez. Sí, se puede.";
     case "ascenso":
-      return "Esto no se cae.";
+      return "Si un motor no contesta, lo anotamos y seguimos con el resto.";
     case "orbita":
       return "Traerlas era la mitad del viaje.";
     default:

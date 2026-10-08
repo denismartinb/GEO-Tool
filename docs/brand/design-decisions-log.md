@@ -21327,3 +21327,65 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 236. SCAN-PLAN-UNITS-1: el asistente y la misión dicen la misma cuenta — prompts × pasadas × motores = respuestas (2026-10-08)
+
+**Qué pasaba (prueba del fundador, 2026-10-08).** El último paso del asistente
+anunciaba «45 respuestas estimadas» (15 prompts × 3 motores). Creado el
+proyecto, la misión del primer escaneo decía 15 prompts, 2 pasadas, 3 motores,
+90 respuestas y contaba `0/30`, `10/30`, `20/30` «lanzamientos». En
+elcorteingles.es: prometió 24 y el lanzamiento fueron 72 (8 × 3 × 3 pasadas).
+
+**Causa.** El backend no fallaba. SAMPLING-1 (ADR 0030) repite el set de
+prompts hasta `MIN_RESPONSES_PER_RUN` = 50 (15 × 3 = 45 < 50 → 2 pasadas;
+8 × 3 = 24 → 3 pasadas). Pero el asistente multiplicaba `prompts × 3` por su
+cuenta —sin pasadas y con los tres motores fijos, aunque Free ejecuta uno— y
+la misión **deducía** las pasadas como `lanzamientos / prompts` en vez de
+leerlas de `scan_runs.sample_count`. Las unidades (respuesta, lanzamiento,
+pasada) nunca se definían en pantalla.
+
+**Decisión (Fase 1, sólo presentación, aprobada por el fundador).**
+- `lib/scan/run-plan.ts` es el único dueño de la cuenta (`describeRunPlan`
+  antes de lanzar, `describeRunPlanFromRun` después), envolviendo
+  `computeSampleCount` sin tocarlo. Tres unidades con nombre fijo: **respuesta**
+  (fila de `scan_prompt_results`), **lanzamiento** (un prompt en una pasada,
+  enviado a todos los motores; lo que cuenta `total_prompts`) y **pasada** (una
+  vuelta al set; `sample_count`). Un reintento reescribe la misma fila: no es
+  una respuesta nueva ni suma al total esperado.
+- El asistente recibe del servidor plan, motores y muestreo
+  (`newProjectDefaults` + `resolveScanProvidersForPlan`, las mismas funciones
+  que usará el escaneo), y muestra «N respuestas esperadas» con
+  `15 prompts × 2 pasadas × 3 motores` y una frase de por qué hay pasadas.
+  Los chips de motor y el copy («los tres motores») siguen al plan.
+- La misión lee `sample_count` con consulta aislada (migración 0028 puede no
+  estar aplicada: degrada al cociente), imprime la misma ecuación en el carril
+  y define «lanzamiento» bajo el contador.
+- «Esto no se cae.» se retira (promesa absoluta, petición expresa); la línea
+  pasa a «Si un motor no contesta, lo anotamos y seguimos con el resto.»
+- La metodología pública (`/docs/metodologia/geo-score`) justifica el suelo de
+  50 con sus límites (rendimientos decrecientes, tope de 5 pasadas, Free
+  excluido, no siempre se alcanza). Las cifras publicadas se atan al código
+  con `tests/scan-plan-units.test.ts`.
+
+**Fase 2 (sólo tests, sin cambiar comportamiento) — hallazgo.** Un segundo
+lanzamiento secuencial con un run vivo se rechaza con `active_run_exists` y no
+crea run ni jobs. **Dos lanzamientos simultáneos sí crean dos runs**: la guarda
+es lectura + inserción y `scan_runs` no tiene índice único parcial sobre
+`(project_id) WHERE status IN ('pending','running')`. Queda fijado como
+`it.fails` («KNOWN GAP») en `lib/scan/run-creation.test.ts`; cerrarlo exige
+migración, que está prohibida sin aprobación.
+
+**Pendiente.** (1) El hueco de doble lanzamiento simultáneo, que necesita
+decisión de esquema. (2) Sin tiempo aproximado en pantalla: no hay duración
+medida de un escaneo estándar y no se inventa una. (3) Fallos por motor y
+parcial válido en la misión: fase aparte. (4) SCAN-STATES-2 no se reabre.
+(5) La nota de cabecera de `lib/scan/mission-beats.ts` sobre «90 respuestas»
+describe la situación previa; el carril ya imprime la cuenta.
+
+**Premisa de retirada.** No se retira ningún camino de recuperación.
+
+**Trazabilidad.** `lib/scan/run-plan.ts` (+test),
+`components/onboarding-wizard.tsx`, `app/dashboard/projects/new/page.tsx`,
+`components/first-scan-takeover.tsx`, `components/scan-mission-rocket.tsx`,
+`app/docs/metodologia/geo-score/page.tsx`, `tests/scan-plan-units.test.ts`,
+`lib/scan/run-creation.test.ts`, ADR 0030.
