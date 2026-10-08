@@ -96,11 +96,7 @@ clientes», testimonios, logos, reseñas, cifras de crecimiento):
 - Sin otros testimonios, logos de clientes, reseñas ni `aggregateRating` (el esquema SEO lo dice expresamente).
 - Las cifras del blog son de terceros **con fuente** (p. ej. Conductor 2026) o dicen «no hemos medido»; no he verificado
   cada cita de cada artículo, solo que no hay cifras de clientes propios.
-- **Hallazgo abierto (no tocado):** la demo de la portada usa **marcas reales** (IKEA, Leroy Merlin, Kave Home, Maisons du
-  Monde, El Mueble) con **cifras ilustrativas inventadas**, declaradas «ilustrativas» solo en comentarios de código
-  (decisión del fundador del 2026-08-22); no encontré un rótulo visible para el visitante. Es la misma clase de riesgo
-  (métricas inventadas, ahora atribuidas a marcas reales). Agrava el caso que el titular de esa sección dice «Esto es
-  exactamente lo que tienes el primer día. Sin demos preparadas» justo encima de una maqueta de `ikea.es` con cifras de
-  ejemplo (visto en el render local de la rama). Decisión del dueño: rotular visiblemente («datos de
-  ejemplo»), usar marcas ficticias o dejarlo.
+- **Demo de la portada (decidido por el dueño, 2026-10-09 00:24, vía Director en #549):** usa marcas reales (IKEA, Leroy Merlin, Kave Home,
+  Maisons du Monde, El Mueble) con cifras **ilustrativas** inventadas, rotuladas así solo en comentarios de código, bajo un titular que dice «Sin demos
+  preparadas». **«No es necesario. Se queda así»**: no se cambia ni se vuelve a plantear. Constancia: esas cifras **no son evidencia de ningún cliente**.
 - Los fixtures de tests y de los previews usan nombres ficticios etiquetados (`ejemplo-marca.test`).
