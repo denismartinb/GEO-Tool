@@ -6,9 +6,9 @@ de clientes ni PII; el contenido es la fixture sintética del primer escaneo de
 genscore.es (`lib/recommendations/fixtures/genscore-first-scan.ts`, construida a
 mano, sin leer ninguna fila de producción).
 
-**Código renderizado:** commit `0cc2692` (`0cc26929ce1322b597e7bc019bb293594121db0d`).
+**Código renderizado:** commit `c753d51` (`c753d51ebab91060cf1931cb4f1db3f908de5ff9`).
 El head del PR con esta carpeta es el commit que la añade (docs-only sobre
-`0cc2692`); el informe del PR cita el SHA exacto.
+`c753d51`); el informe del PR cita el SHA exacto.
 
 ## Cómo se generaron
 Los componentes reales (`OpportunitiesCard`, `RecCard`, el texto de los helpers
@@ -52,11 +52,37 @@ palabra de 80 caracteres sin espacios no puede envolver (igual que antes).
 Con «+N pt» (antes de §236) a 390 px el título medía 249 px; con «Impacto …»
 y sin este cambio, 209–223 px.
 
-| Antes (390) | Después (390) |
-|---|---|
-| `oportunidades-css-antes-390.jpg` | `oportunidades-css-despues-390.jpg` |
-| `oportunidades-css-antes-768.jpg` | `oportunidades-css-despues-768.jpg` |
-| `oportunidades-css-antes-1280.jpg` | `oportunidades-css-despues-1280.jpg` |
+### Antes (izquierda de cada par) y después, 390 / 768 / 1280 px
+
+Antes 390 px:
+
+![Antes, 390 px (fixture)](oportunidades-css-antes-390.jpg)
+
+Después 390 px:
+
+![Después, 390 px (fixture)](oportunidades-css-despues-390.jpg)
+
+Antes 768 px:
+
+![Antes, 768 px (fixture)](oportunidades-css-antes-768.jpg)
+
+Después 768 px:
+
+![Después, 768 px (fixture)](oportunidades-css-despues-768.jpg)
+
+Antes 1280 px:
+
+![Antes, 1280 px (fixture)](oportunidades-css-antes-1280.jpg)
+
+Después 1280 px:
+
+![Después, 1280 px (fixture)](oportunidades-css-despues-1280.jpg)
+
+## Copy causal del detalle (regenera solo las capturas afectadas)
+`recomendaciones-y-prompts-*` y `flujo-oportunidades-a-detalle-390` se
+regeneraron tras sustituir «Entrar en las webs que los motores ya citan es la
+vía más corta…» y «La verás reflejada en tu próximo escaneo» (log §236).
+`oportunidades-*` no cambian con ese copy.
 
 ## Qué NO prueba esto
 UI real en el preview, interacción real, datos reales ni el piloto de usuario.
