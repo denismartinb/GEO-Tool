@@ -216,7 +216,10 @@ export async function createProjectCore(input: {
   // recomiendan. Nunca bloquea el alta: `deriveBrandAliases` se traga sus
   // propios fallos y devuelve [], que además es el valor correcto para la
   // mayoría de marcas.
-  const brandAliases = await deriveBrandAliases({ brand, domain }).catch(() => [] as string[]);
+  // ONBOARDING-IDENTITY-1: si el usuario ya confirmó los alias en el asistente,
+  // son suyos y no se vuelven a derivar (ni se paga otra lectura de portada).
+  const brandAliases =
+    values.brandAliases ?? (await deriveBrandAliases({ brand, domain }).catch(() => [] as string[]));
 
   const { data, error } = await supabase
     .from("projects")

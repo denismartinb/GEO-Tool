@@ -385,6 +385,23 @@ describe("createProjectCore · lo que se persiste", () => {
     expect(failed.inserted.projects[0].brand_aliases).toEqual([]);
   });
 
+  // ONBOARDING-IDENTITY-1: lo que el usuario confirmó en el asistente es suyo.
+  it("usa los alias confirmados por el usuario y no los deriva otra vez", async () => {
+    vi.mocked(deriveBrandAliases).mockResolvedValue(["Derivado"]);
+    const { result, inserted } = run({}, input({ brand: "El Corte Inglés", brandAliases: ["ECI Gourmet"] }));
+    await result;
+    expect(inserted.projects[0].brand_aliases).toEqual(["ECI Gourmet"]);
+    expect(deriveBrandAliases).not.toHaveBeenCalled();
+  });
+
+  it("una confirmación vacía se respeta: sin alias, sin derivar", async () => {
+    vi.mocked(deriveBrandAliases).mockResolvedValue(["Derivado"]);
+    const { result, inserted } = run({}, input({ brandAliases: [] }));
+    await result;
+    expect(inserted.projects[0].brand_aliases).toEqual([]);
+    expect(deriveBrandAliases).not.toHaveBeenCalled();
+  });
+
   /**
    * Los defaults baratos de preview los decide la action (dependen de
    * `VERCEL_ENV`), y este núcleo se limita a escribir lo que le pasen — así

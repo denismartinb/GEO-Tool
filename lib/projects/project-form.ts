@@ -204,6 +204,14 @@ export type NormalizedProjectInput = {
   name: string;
   language: string;
   businessDescription?: string;
+  /**
+   * ONBOARDING-IDENTITY-1: aliases que el usuario confirmó en el asistente.
+   * `undefined` = no confirmó nada y el alta los deriva; `[]` = confirmó que no
+   * hay más nombres. Los rellena la server action, no `parseProjectForm`
+   * (`parseConfirmedAliasesField` importa de este fichero y no puede
+   * importarse de vuelta).
+   */
+  brandAliases?: string[];
   initialPrompts: Array<{ prompt_text: string; category: string | null; sort_order: number }>;
   initialCompetitors: Array<{ name: string; domain: string }>;
 };

@@ -100,3 +100,21 @@ export function sanitizeConfirmedAliases(
   }
   return { accepted, rejected };
 }
+
+/**
+ * Lee el campo `brand_aliases` del formulario (JSON de cadenas). Ausente o
+ * ilegible → `undefined`: «el usuario no confirmó nada» y el alta sigue
+ * derivándolos como siempre. Un array vacío SÍ es una confirmación («esta
+ * marca no tiene más nombres») y se respeta tal cual.
+ */
+export function parseConfirmedAliasesField(raw: string | null | undefined, brand: string): string[] | undefined {
+  if (raw == null || raw === "") return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (!Array.isArray(parsed)) return undefined;
+  return sanitizeConfirmedAliases(parsed.filter((item): item is string => typeof item === "string"), brand).accepted;
+}
