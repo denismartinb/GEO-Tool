@@ -62,6 +62,8 @@ type FakeOpts = {
   existing?: Row | null;
   existingError?: boolean;
   insertFails?: boolean;
+  /** SQLSTATE devuelto por el insert fallido (p. ej. `23505`, unicidad). */
+  insertErrorCode?: string;
   restoreFails?: boolean;
   promptInsertFails?: boolean;
   competitorInsertFails?: boolean;
@@ -101,7 +103,7 @@ function makeFakeSupabase(opts: FakeOpts = {}) {
             single: () =>
               Promise.resolve(
                 opts.insertFails
-                  ? { data: null, error: { message: "insert failed" } }
+                  ? { data: null, error: { message: "insert failed", code: opts.insertErrorCode } }
                   : { data: { id: PROJECT_ID }, error: null }
               )
           };
@@ -138,7 +140,7 @@ function makeFakeSupabase(opts: FakeOpts = {}) {
               single: () =>
                 Promise.resolve(
                   opts.insertFails
-                    ? { data: null, error: { message: "insert failed" } }
+                    ? { data: null, error: { message: "insert failed", code: opts.insertErrorCode } }
                     : { data: { id: PROJECT_ID }, error: null }
                 )
             }),
@@ -243,6 +245,21 @@ describe("createProjectCore · guardas antes de crear nada", () => {
 
   it("un insert fallido no deja el alta a medias ni finge éxito", async () => {
     const { result } = run({ insertFails: true });
+    expect((await result).status).toBe("insert_failed");
+  });
+
+  // Doble clic / dos pestañas: las dos peticiones pasan la lectura de duplicado
+  // y la segunda choca con la restricción única. El proyecto existe, así que no
+  // es «no se pudo crear».
+  it("una violación de unicidad en el insert se lee como dominio ya activo", async () => {
+    const { result, inserted } = run({ insertFails: true, insertErrorCode: "23505" });
+    expect((await result).status).toBe("already_active");
+    expect(inserted.project_prompts).toHaveLength(0);
+    expect(createPendingScanRun).not.toHaveBeenCalled();
+  });
+
+  it("otro código de error en el insert sigue siendo insert_failed", async () => {
+    const { result } = run({ insertFails: true, insertErrorCode: "23502" });
     expect((await result).status).toBe("insert_failed");
   });
 });
