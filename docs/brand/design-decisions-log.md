@@ -21417,3 +21417,26 @@ Starter y Agencia en las superficies públicas): es UI y falta la vía de eviden
 - **Sigue sin estar listo para cobrar:** Price y configuración de Stripe, fiscalidad y prueba real en
   TEST, cableado de la gracia (esquema y webhook del #549), B3, B5, B6 completos, cierre de la vía REST,
   aprobación del uso de `service_role`.
+
+### Adenda (2026-10-08): auditoría de correos — EMAIL-AUDIT-1
+
+Pedida por el Director en #549 tras un correo recibido en la cuenta de prueba del dueño con la oferta antigua
+(Pro 59/179, Starter 19/45, 5 dominios, ~100 prompts, diario, escasez del 31 de octubre).
+
+- **Decidido/hecho (local, sin envíos):** el testimonio de `nordikaQuote` (nombre, empresa y «+128 %», con el
+  comentario «confirmed as real (log §146)») se **retira** de todos los renders del correo D5: el repositorio no
+  acredita ni el original ni el permiso de uso, y **no se sustituye por otro cliente**. El correo D5 deja de poder
+  ofrecer Starter (plan que ya no se ofrece) y el cuadro de precio dice «IVA incluido». Un test renderiza todos los
+  correos al cliente contra el contrato (sin precios antiguos, sin planes retirados, sin cadencia diaria, solo 99 €,
+  sin testimonio, baja en los comerciales) y se prueba por mutación. Inventario completo, previews seguros y límites:
+  `docs/specs/billing/email-inventory.md`.
+- **Pendiente / no verificado:** el estado LIVE (flags, secreto de baja, migración 0036, remitente, destinatarios que
+  ya recibieron algo) es *unknown*: no hay acceso a Resend, Vercel ni Supabase de producción desde la sesión. La
+  bienvenida, «prueba terminada» y D1/D3/D5 dicen **7 días** y cuelgan de la fecha de alta, y la prueba aprobada es de
+  14 días opt-in tras el diagnóstico: cambian con B5 (un test fija hoy el «7 días» **con un comentario** que obliga a
+  cambiarlo con B5; verde no es aval). El correo de fallo de pago no menciona la gracia de 3 días (B6).
+- **Fuera de este cambio, decisión del dueño:** la portada pública muestra el mismo testimonio con nombre, foto y
+  captura de `nordikahome.es` (`components/landing/landing-page.tsx`).
+- **Regla de premisa (retirada de un camino):** se retira la oferta de Starter dentro de D5. Premisa: Starter ya no se
+  ofrece (`plansOfferedTo`, §237). Qué la verifica hoy: el test de contrato de correos. Qué queda sin salida si falla:
+  ninguna pantalla; una cuenta con Starter existente sigue viéndolo en la consola.

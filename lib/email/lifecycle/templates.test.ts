@@ -40,7 +40,6 @@ const snapshot: RunSnapshot = {
 
 const proWithPromo: PlanOffer = { planName: "Pro", price: 179, cadence: "diario", promo: { price: 59, months: 6, endsLabel: "31 de octubre" } };
 const proNoPromo: PlanOffer = { planName: "Pro", price: 179, cadence: "diario", promo: null };
-const starter: PlanOffer = { planName: "Starter", price: 45, cadence: "semanal", promo: { price: 19, months: 6, endsLabel: "31 de octubre" } };
 const lossRows = [{ label: "Motores de IA", pro: "3", free: "1" }];
 
 beforeEach(() => {
@@ -60,7 +59,7 @@ describe("commercial emails never go out without a working unsubscribe", () => {
       await sendTrialD3Email(TO, USER, { daysLeft: 4, projectId: null, domain: null, recommendation: null, otherRecommendations: 0 })
     ).toBe(false);
     expect(
-      await sendTrialD5Email(TO, USER, { trialEndsAt: new Date(), domain: null, pro: proWithPromo, starter, lossRows })
+      await sendTrialD5Email(TO, USER, { trialEndsAt: new Date(), domain: null, pro: proWithPromo, lossRows })
     ).toBe(false);
     expect(send).not.toHaveBeenCalled();
   });
@@ -131,7 +130,6 @@ describe("D5 prices", () => {
       trialEndsAt: new Date("2026-10-05T10:00:00Z"),
       domain: "clinicaaurora.es",
       pro: proWithPromo,
-      starter,
       lossRows
     });
     const { subject, html } = last();
@@ -140,35 +138,33 @@ describe("D5 prices", () => {
     expect(html).toContain("Durante 6 meses. Después, 179 €/mes.");
     expect(html).toContain("Disponible hasta el 31 de octubre");
     expect(html).toContain("−67%");
-    expect(html).toContain("Nordika Home");
+    // No testimonial in any email until its original evidence and consent are on record (Director, #549).
+    expect(html).not.toMatch(/Nordika|Nerea|128\s?%/);
   });
 
-  it("CONTRACT-99: says Pro scans weekly and drops the Starter 'weekly' upsell when both are weekly", async () => {
+  it("CONTRACT-99: says Pro scans weekly and never advertises Starter (it is no longer offered)", async () => {
     await sendTrialD5Email(TO, USER, {
       trialEndsAt: new Date("2026-10-05T10:00:00Z"),
       domain: null,
       pro: { planName: "Pro", price: 99, cadence: "semanal", promo: null },
-      starter,
       lossRows
     });
     const { html } = last();
     expect(html).toContain("dejará de escanearse cada semana");
     expect(html).not.toContain("a diario");
-    // Starter is weekly too, so "¿Te basta con un escaneo semanal?" would be a false contrast.
-    expect(html).not.toContain("¿Te basta con un escaneo semanal?");
+    expect(html).not.toMatch(/Starter|openPlan=starter|¿Te basta con un escaneo semanal\?/);
   });
 
-  it("keeps the daily wording and the Starter upsell when Pro would be daily and Starter weekly", async () => {
+  it("keeps the daily wording, and still no Starter upsell, when a Pro offer is daily", async () => {
     await sendTrialD5Email(TO, USER, {
       trialEndsAt: new Date("2026-10-05T10:00:00Z"),
       domain: null,
       pro: proNoPromo,
-      starter,
       lossRows
     });
     const { html } = last();
     expect(html).toContain("dejará de escanearse a diario");
-    expect(html).toContain("¿Te basta con un escaneo semanal?");
+    expect(html).not.toMatch(/Starter|openPlan=starter/);
   });
 
   it("quotes the list price, with no discount and no deadline, once the promo is gone", async () => {
@@ -176,7 +172,6 @@ describe("D5 prices", () => {
       trialEndsAt: new Date("2026-10-05T10:00:00Z"),
       domain: null,
       pro: proNoPromo,
-      starter: { planName: "Starter", price: 45, cadence: "semanal", promo: null },
       lossRows
     });
     const { html } = last();

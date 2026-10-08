@@ -338,7 +338,6 @@ async function sendDecision(
     trialEndsAt: ctx.trialEndsAt,
     domain: ctx.project?.domain ?? null,
     pro: resolvePlanOffer("pro"),
-    starter: resolvePlanOffer("starter"),
     lossRows: proVsFreeRows()
   });
 }
