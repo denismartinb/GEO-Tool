@@ -116,7 +116,8 @@ describe("RecCard — estado inicial del contrato de acción", () => {
 
   it("enseña la promesa de la próxima medición, no un mensaje de error sin que nada haya fallado", () => {
     const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec()} />);
-    expect(html).toContain("La verás reflejada en tu próximo escaneo.");
+    expect(html).toContain("Podrás revisar el resultado en un próximo escaneo; no se garantiza un cambio.");
+    expect(html).not.toContain("La verás reflejada");
     expect(html).not.toContain("feedback error");
   });
 });

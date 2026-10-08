@@ -1314,7 +1314,7 @@ export function RecCard({
                 it. */}
             {dismissFeedback.state.status === "idle" && (
               <p style={{ margin: 0, fontSize: 11.5, color: "var(--ink-4)" }}>
-                La verás reflejada en tu próximo escaneo.
+                Podrás revisar el resultado en un próximo escaneo; no se garantiza un cambio.
               </p>
             )}
           </div>

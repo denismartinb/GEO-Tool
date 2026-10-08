@@ -134,6 +134,18 @@ describe("unproven claims — every prompt at 0%", () => {
   });
 });
 
+describe("unproven claims — source cards do not promise that the AI will cite the brand", () => {
+  it("every pursue_* card says the sources are cited and that a mention does not guarantee a citation", () => {
+    const recs = generateRecommendationsForRun(genscoreInput()).filter((r) => r.recommendation_type.startsWith("pursue_"));
+    expect(recs.length).toBeGreaterThan(0);
+    for (const r of recs) {
+      const why = String(r.evidence_json.why_this_matters);
+      expect(why, r.title).toBe("Estas webs aparecen entre las fuentes citadas. Una mención en ellas no garantiza que la IA cite tu marca.");
+      expect(why + r.description, r.title).not.toMatch(/vía más corta|equivale a no existir|fuente más citada|reparte autoridad|te mete en/i);
+    }
+  });
+});
+
 describe("unproven claims — sanity of the fixture", () => {
   it("reproduces the audit's setup", () => {
     const input = genscoreInput();

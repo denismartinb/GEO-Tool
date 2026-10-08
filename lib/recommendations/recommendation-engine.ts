@@ -1213,8 +1213,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         ruleId: "rule_source_gap_comparator_001",
         title: (n) => (n === 1 ? "Entra en el comparador que cita la IA" : `Entra en los ${n} comparadores que cita la IA`),
         description: (domains) =>
-          `La IA se apoya en ${domains.slice(0, 3).join(", ")} para responder, y tu dominio no figura entre sus fuentes citadas. No hemos comprobado si esas fichas te incluyen. Aparecer en un comparador te mete en las consultas que lo citan.`,
-        why: "Los comparadores son la fuente más citada en consultas de decisión. Estar fuera de la tabla equivale a no existir en ellas.",
+          `La IA se apoya en ${domains.slice(0, 3).join(", ")} para responder, y tu dominio no figura entre sus fuentes citadas. No hemos comprobado si esas fichas te incluyen. Aparecer en un comparador puede meterte en las consultas que lo citan, sin garantía.`,
+        why: "Estas webs aparecen entre las fuentes citadas. Una mención en ellas no garantiza que la IA cite tu marca.",
         firstStep: (top, domains) =>
           top
             ? `Escribe a ${top.domain} para que te incluyan en "${top.title}". Es la página concreta que la IA está citando.`
@@ -1227,7 +1227,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         title: (n) => (n === 1 ? "Participa en la comunidad que cita la IA" : `Participa en las ${n} comunidades que cita la IA`),
         description: (domains) =>
           `La IA cita conversaciones de ${domains.slice(0, 3).join(", ")} y tu dominio no figura entre sus fuentes citadas. No hemos comprobado si te nombran. Una respuesta útil y honesta ahí puede acabar en la respuesta de la IA.`,
-        why: "Los foros pesan mucho en las respuestas de IA porque se leen como opinión real de usuarios, no como marketing.",
+        why: "Estas webs aparecen entre las fuentes citadas. Una mención en ellas no garantiza que la IA cite tu marca.",
         firstStep: (top, domains) =>
           top
             ? `Entra en "${top.title}" (${top.domain}) y responde aportando datos concretos, sin tono comercial.`
@@ -1240,7 +1240,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         title: (n) => (n === 1 ? "Consigue cobertura en el medio que cita la IA" : `Consigue cobertura en ${n} medios que cita la IA`),
         description: (domains) =>
           `La IA se apoya en ${domains.slice(0, 3).join(", ")} y tu dominio no figura entre sus fuentes citadas. No hemos comprobado si te mencionan. Una pieza en estos medios puede entrar en varias respuestas a la vez.`,
-        why: "Un medio citado por la IA reparte autoridad a todas las marcas que nombra. Hoy ese reparto se hace sin ti.",
+        why: "Estas webs aparecen entre las fuentes citadas. Una mención en ellas no garantiza que la IA cite tu marca.",
         firstStep: (top, domains) =>
           top
             ? `Ofrece a ${top.domain} un dato propio o un caso real para una pieza como "${top.title}".`
@@ -1253,7 +1253,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         title: (n) => (n === 1 ? "Consigue que la web que cita la IA te mencione" : `Consigue que ${n} webs que cita la IA te mencionen`),
         description: (domains) =>
           `La IA se apoya en ${domains.slice(0, 3).join(", ")} en consultas donde tu dominio no figura entre las fuentes. No hemos comprobado qué dicen de ti. Trabaja esas webs para que empiecen a citarte.`,
-        why: "Entrar en las webs que los motores ya citan es la vía más corta para que empiecen a citarte a ti.",
+        why: "Estas webs aparecen entre las fuentes citadas. Una mención en ellas no garantiza que la IA cite tu marca.",
         firstStep: (top, domains) =>
           top
             ? `Revisa "${top.title}" (${top.domain}) y contacta con quien la publica ofreciendo información útil.`

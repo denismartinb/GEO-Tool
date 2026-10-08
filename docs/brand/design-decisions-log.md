@@ -21422,6 +21422,20 @@ criterio de priorización, no una afirmación de que vayan a rendir más. Cambia
 alteraría qué tres acciones salen primero y no es necesario para este parche de
 honestidad.
 
+**Copy causal del detalle (Director, 2026-10-08).** «Entrar en las webs que los
+motores ya citan es la vía más corta para que empiecen a citarte a ti» (y sus
+tres variantes por familia: comparadores «equivale a no existir», foros «pesan
+mucho», medios «reparte autoridad») se sustituye en las cuatro tarjetas
+`pursue_*` por «Estas webs aparecen entre las fuentes citadas. Una mención en
+ellas no garantiza que la IA cite tu marca.»; «Aparecer en un comparador te
+mete en las consultas…» pasa a «puede meterte … sin garantía». «La verás
+reflejada en tu próximo escaneo» (RECURRING-VALUE-1, §195; **superseded por
+§236** en el texto, no en la decisión de enseñar una nota junto a «Marcar como
+hecho») pasa a «Podrás revisar el resultado en un próximo escaneo; no se
+garantiza un cambio.». **No tocado, otras zonas** (mismo patrón causal, sin
+decidir): Páginas citadas («comprobarlo tras el próximo escaneo»), Auditoría web
+(`llms-txt.ts`: «pasará a la pestaña Correcto»), tour (paso 8), FAQ de la home.
+
 **Verificación visual.** Oportunidades (extraído a `opportunities-card.tsx`,
 misma salida) se ha renderizado a 390 y 1280 px con el CSS real de la consola y
 la fixture del primer escaneo: sin «+N»/techo, recuento real, impacto
