@@ -21450,7 +21450,9 @@ Pedida por el Director en #549 tras un correo recibido en la cuenta de prueba de
   portada (sección entera, fotos `public/home/nerea.webp` y `nordika-home.webp`, y sus estilos `.lp-testi*`), se
   rectifica §146 y se añade `tests/no-invented-customer-claims.test.ts`. No se sustituye por otro caso ni se anonimiza.
   Sigue habiendo marcas reales (IKEA, Leroy Merlin, Kave Home, Maisons du Monde, El Mueble) con cifras **ilustrativas** en
-  la demo de la portada, declaradas así solo en comentarios de código: ver `docs/specs/billing/email-inventory.md` §7.
+  la demo de la portada, declaradas así solo en comentarios de código. **Decidido por el dueño (2026-10-09 00:24, vía el Director
+  en #549): «No es necesario. Se queda así».** Esas cifras no son evidencia de ningún cliente: ver `docs/specs/billing/email-inventory.md` §7
+  e inventario de superficies públicas en `docs/specs/billing/public-surfaces-inventory.md`.
 - **Regla de premisa (retirada de un camino):** se retira la oferta de Starter dentro de D5. Premisa: Starter ya no se
   ofrece (`plansOfferedTo`, §237). Qué la verifica hoy: el test de contrato de correos. Qué queda sin salida si falla:
   ninguna pantalla; una cuenta con Starter existente sigue viéndolo en la consola.

@@ -111,11 +111,13 @@ begin
     return new; -- the foreign key reports the real problem
   end if;
 
-  -- A user JWT writing into SOMEONE ELSE'S project is refused by RLS right after this trigger. Without this line the
-  -- trigger ran first and answered `prompt_pool_full` with the victim's `active=N cap=N` in the DETAIL, and took the
-  -- victim's account lock: a cross-tenant oracle for plan tier and prompt count (found in review). Let RLS speak.
+  -- A user JWT writing into SOMEONE ELSE'S project is refused HERE, with the same answer RLS gives for a project that is
+  -- not yours or does not exist. Without this the trigger ran first and answered `prompt_pool_full` with the victim's
+  -- `active=N cap=N` and took the victim's account lock: a cross-tenant oracle for plan tier and prompt count (review 5).
+  -- It RAISES instead of returning the row (review 6): returning left the cap unenforced for any path that bypasses RLS
+  -- under a user JWT (e.g. a view over the table), so the check must fail closed, not defer to RLS.
   if auth.role() = 'authenticated' and v_owner is distinct from auth.uid() then
-    return new;
+    raise exception 'new row violates row-level security policy for table "project_prompts"' using errcode = '42501';
   end if;
 
   -- One lock per ACCOUNT, held to the end of the transaction. The count below is a fresh statement

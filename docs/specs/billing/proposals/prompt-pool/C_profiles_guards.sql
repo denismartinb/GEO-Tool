@@ -79,6 +79,7 @@ begin
       new.stripe_subscription_id := null;
       new.trial_ends_at := null;
       new.cancel_at := null;
+      new.created_at := now();
       new.email := coalesce((select u.email from auth.users u where u.id = new.id), '');
     end if;
     return new;

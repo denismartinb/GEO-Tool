@@ -37,7 +37,7 @@ checks(section, item, value) as (
     ('2 profiles trigger', 'function body is byte-identical to the repo version from 0019 (expect true; false = a different version is installed: STOP and compare before applying C)',
         coalesce((select (md5(p.prosrc) = '8e47b8ec20a12a9ccec42a86501ea79f')::text from pg_proc p where p.proname='protect_billing_columns' and p.pronamespace='public'::regnamespace), 'missing')),
     ('2 profiles trigger', 'function body is already the C version (true = C was applied)',
-        coalesce((select (md5(p.prosrc) = '306a01c000f93e362b4323bd7be1b604')::text from pg_proc p where p.proname='protect_billing_columns' and p.pronamespace='public'::regnamespace), 'missing')),
+        coalesce((select (md5(p.prosrc) = '3a8bf45188e43ff6dbcccc72dc933d07')::text from pg_proc p where p.proname='protect_billing_columns' and p.pronamespace='public'::regnamespace), 'missing')),
     ('2 profiles trigger', 'trigger fires on INSERT already',
         coalesce((select ((tgtype & 4) <> 0)::text from pg_trigger where tgrelid=to_regclass('public.profiles') and tgname='trg_profiles_protect_billing_columns'), 'missing')),
     ('3 protection today', 'policies on project_prompts', (select coalesce(string_agg(polname, ',' order by polname), 'none') from pg_policy where polrelid=to_regclass('public.project_prompts'))),
