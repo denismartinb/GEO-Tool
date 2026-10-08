@@ -86,19 +86,28 @@ export function sanitizeConfirmedAliases(
   const rejected: Array<{ alias: string; error: string }> = [];
   for (const item of raw) {
     if (typeof item !== "string") continue;
-    if (accepted.length >= MAX_ALIASES) {
-      rejected.push({ alias: item, error: `Máximo de ${MAX_ALIASES} alias.` });
-      continue;
-    }
-    if (isGenericAliasTerms(item)) {
-      rejected.push({ alias: item, error: "Es una palabra genérica del sector, no un nombre de tu marca." });
-      continue;
-    }
-    const result = validateNewAlias({ raw: item, brand, existingAliases: accepted });
+    const result = addConfirmedAlias(accepted, item, brand);
     if (result.ok) accepted.push(result.alias);
     else rejected.push({ alias: item, error: result.error });
   }
   return { accepted, rejected };
+}
+
+/**
+ * Un alias más sobre la lista que la persona ya confirmó. Lo usan el servidor
+ * (`sanitizeConfirmedAliases`) y la pantalla, para que lo que el asistente
+ * acepta al teclear sea exactamente lo que el servidor acepta al crear.
+ */
+export function addConfirmedAlias(
+  existing: readonly string[],
+  raw: string,
+  brand: string
+): { ok: true; alias: string } | { ok: false; error: string } {
+  if (existing.length >= MAX_ALIASES) return { ok: false, error: `Máximo de ${MAX_ALIASES} alias.` };
+  if (isGenericAliasTerms(raw)) {
+    return { ok: false, error: "Es una palabra genérica del sector, no un nombre de tu marca." };
+  }
+  return validateNewAlias({ raw, brand, existingAliases: existing });
 }
 
 /**
