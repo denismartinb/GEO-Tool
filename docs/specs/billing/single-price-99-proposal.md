@@ -238,3 +238,81 @@ fusionar. El dueño aprueba cada puerta por separado: (1) inventario §3, (2) de
 2. PR 2 de «Unificar prueba, precios y estado de facturación» con el precio único ya
    dentro de la política (una sola cifra, un solo Price, `past_due` visible).
 3. Retirada de la maquinaria de promo y de los planes no listados, solo tras el inventario.
+
+## 10. Checklist de implementación del contrato candidato y sus dependencias
+
+**No se ha empezado ninguno.** Cada bloque lista de qué depende, qué toca y si exige
+esquema. «Puerta» = aprobación expresa del dueño antes de tocarlo.
+
+| # | Bloque | Depende de | Toca (orientativo) | ¿Esquema? | Puerta |
+|---|---|---|---|---|---|
+| 0 | **Inventario de cuentas** (§3) | — | consultas de solo lectura | no | sí (antes de todo) |
+| 1 | **ID técnico del plan**: reutilizar `pro` con otras cuotas o ID nuevo | 0, D1 | `plans-data.ts`, `lib/billing.ts` (`isProOrAbove`, `DEFAULT_PLAN_ID`, `COMPED_PLAN_ID`), 23 ficheros que ramifican por ID | **sí si ID nuevo** (`CHECK` de `0010_profile_current_plan.sql`); no si se reutiliza `pro` | sí |
+| 2 | **Bolsa de 75 preguntas por cuenta** | 1, D2 | `lib/projects/add-prompts.ts`, `app/dashboard/projects/actions.ts` (alta), `prompts/page.tsx` (`atPromptLimit`), `lib/scan/run-creation.ts` (`campaignCap`), `lib/billing.ts` (`promptCap`), asistente de alta | no si se cuenta sumando prompts activos de los proyectos del dueño; **atómico solo con trigger/constraint** (si no, dos altas simultáneas pueden pasarse) | sí |
+| 3 | **Mínimo por dominio / suelo de 50** | D2 | `lib/scan/sampling.ts` (`SAMPLING_EXCLUDED_PLAN_IDS` o un mínimo de preguntas por dominio) | no | sí |
+| 4 | **Cadencia semanal** | 1 | `lib/scan/cron.ts`, `lib/scan/cron-schedule.ts` (anclado al horario, §192), `lib/data-maturity.ts`, copy | no (ya existe la cadencia semanal de `starter`) | no |
+| 5 | **Recheck manual: 1 por dominio y mes** | 1, D3 | `lib/scan/run-creation.ts`, botón de escaneo, copy de agotado | **posiblemente no**: `scan_runs.trigger_source` ya distingue `user`/`cron`; contar `user` del mes por proyecto. Matices a resolver: el primer escaneo del dominio y los reintentos automáticos no deben consumirlo | sí |
+| 6 | **Prueba de 14 días opt-in tras el primer escaneo completado** | 1, D4 | `handle_new_user` (hoy: `pro` + 7 días al registrarse, migración 0017), nueva acción de servidor que fija `trial_ends_at`, `applyTrialExpiry`, correos del ciclo de vida (D1/D3/D5 colgados del registro), copy de registro/FAQ/bienvenida | **sí** (reemplazo del trigger; `trial_ends_at` ya existe y la protege el trigger de columnas protegidas, ampliado en la migración 0017) | sí |
+| 7 | **Estado de suscripción y fallo de pago visible** (`trialing`/`active`/`past_due`/`canceled`/`free`) | D5, D6 | webhook (`invoice.payment_failed` hoy solo envía correo), `lib/billing.ts`, «Tu plan», selector, enlace al portal | **sí** si se guarda `subscription_status`; no si se lee de Stripe al pintar (más lento, depende de la red) | sí |
+| 8 | **Stripe**: 1 Product/Price inclusivo, mapeo, archivar los antiguos | 0, D7, D8 | env `STRIPE_PRICE_ID_PRO`; **a mano en el Dashboard** | no | sí (y live aparte) |
+| 9 | **Superficies de precio**: `/precios`, hero, matriz, FAQ, comparativas, correos, consola | 1, 8 | `plans-data.ts` (lo demás lo lee), JSON-LD de `software-application-schema.tsx` (hoy solo publica la oferta gratuita de 0 €; comprobar que no haya que añadir la de pago) | no | no |
+| 10 | **Retirar la maquinaria de promo** | 9 | `isPromoActive`, `PROMO_ENDS_AT`, cupones, `getActivePromoPlanIds` y sus tests | no | no |
+| 11 | **Verificación real en Stripe test** | entorno + claves por vault | impuestos, alta, renovación, prorrateo, descuento, y las 3 guardas de suscripción | no | bloqueada por entorno |
+| 12 | **Cierre documental** | todos | log, regla de ruta, mapa de zonas | no | no |
+
+Orden sin esquema primero: 0 → decisiones → 4, 9 (copy, con `pro` reutilizado) → 2, 3, 5
+(cuotas) → 7 → 6 (el único que cambia el registro) → 8 → 11 → 10. Un cambio por PR.
+
+## 11. Mitigación propuesta para suscripciones huérfanas (sin cancelar, crear ni avisar)
+
+Qué pasa hoy: con dos checkouts pagados distintos, el segundo queda sin enlazar y puede
+seguir cobrando (§5 de este documento y `KNOWN LIMITATIONS` en `webhook-registry.test.ts`).
+**Los tests de comportamiento conocido no lo arreglan.** Propuesta, de menor a mayor
+intervención; **nada de esto está implementado ni cancela o crea suscripciones, ni
+envía correos o alertas**:
+
+1. **Dejar rastro consultable**: guardar el desenlace `orphan_candidate` en
+   `stripe_webhook_events.outcome` (columna de texto libre; sin esquema) en lugar de
+   `ignored`. Hoy solo queda en `console.error`.
+2. **Informe de conciliación de solo lectura, ejecutado por una persona**: lista los
+   eventos `orphan_candidate` y, con una clave de test/lectura, las suscripciones vivas de
+   cada cliente en Stripe que no coincidan con `profiles.stripe_subscription_id`. Salida:
+   tabla para decisión humana. Sin escrituras en Stripe ni en la base.
+3. **Cortar el origen**: antes de crear un Checkout, comprobar con lecturas de Stripe que el
+   cliente no tenga ya una suscripción viva sin enlazar; y activar en el Dashboard la opción
+   de Stripe de limitar a un cliente a una suscripción (**verificar que existe en vuestra
+   versión del Dashboard**). Requiere que el cliente exista antes del Checkout; crear el
+   cliente es una escritura menor en Stripe que también necesita aprobación.
+4. **Más adelante, con aprobación expresa**: alerta a `OPS_ALERT_EMAIL` (nunca al cliente),
+   una vez por evento y tras el commit. Decidir cuál suscripción es la correcta y cancelar
+   la otra es siempre una acción humana.
+
+## 12. Decisiones de producto, agrupadas (para el dueño, una sola vez)
+
+| ID | Decisión | Opciones | Recomendación |
+|---|---|---|---|
+| D1 | ID técnico del plan único | reutilizar `pro` · ID nuevo | reutilizar `pro` (sin migración); renombrar solo la presentación |
+| D2 | Bolsa de 75 y suelo de 50 | mínimo de preguntas por dominio · desactivar el suelo para este plan · aceptar hasta +43 % | **mínimo por dominio de 17** (así el suelo no actúa y el coste es lineal) |
+| D3 | Qué consume el recheck mensual | solo escaneos manuales · excluir el primer escaneo y los reintentos | excluir primer escaneo y reintentos automáticos |
+| D4 | Prueba | 14 días opt-in tras el primer escaneo · mantener 7 días desde el registro | decisión del dueño; si es opt-in, define si hay un diagnóstico previo distinto del escaneo Free |
+| D5 | Fallo de pago | días de gracia con acceso · corte inmediato | acceso durante los reintentos de Stripe, con aviso visible; fijar el número de días |
+| D6 | Dónde vive el estado de suscripción | columna `subscription_status` · lectura de Stripe al pintar | columna (más rápido y verificable), con migración aprobada |
+| D7 | Una suscripción por cliente | activar el límite de Stripe + crear el cliente antes del Checkout | sí, tras verificar el ajuste |
+| D8 | Fiscalidad | `tax_behavior: inclusive`, tax code, registros (OSS) | confirmar con el asesor y verificar en test |
+| D9 | Cuentas `starter`/`agency`/*comped* | mantener intactas · migrar | mantener hasta el inventario |
+| D10 | Orden de ejecución | el del §10 | el del §10 |
+
+## 13. Qué prueban y qué no prueban las capturas de checkout aportadas
+
+Según el comentario Director (no tengo las capturas): mostraban la **oferta antigua de
+Pro** (179 € con cupón de 120 € durante 6 meses = 59 € hoy), no el precio único de 99 €;
+no se ve si es modo TEST o LIVE; y un impuesto de 0 **no acredita** `tax_behavior:
+inclusive` ni una fiscalidad correcta. Una pantalla sin el contexto de facturación
+completo (país, tipo de comprador, NIF-IVA) **no prueba el IVA**. Renovación, prorrateo y
+las tres guardas de suscripción requieren una prueba en sandbox, no una captura.
+
+## 14. Estado
+
+Seguridad (#549): hecha con límites abiertos (§5 y `KNOWN LIMITATIONS`). Fiscalidad e
+integración: **bloqueadas por el entorno**. Producto: **espera la decisión agrupada del
+§12**. **No hay facturación lista para activar.** Sin merge, deploy, Price ni producción.
