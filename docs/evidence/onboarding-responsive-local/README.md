@@ -101,4 +101,3 @@ las filas de prompt llevan el modificador `onb2-row--prompt`. Todo el CSS nuevo 
 **Paso 3 · prompts**
 
 ![1280 px · Paso 3 · prompts (fixture)](./1280-paso3-prompts.png)
-
