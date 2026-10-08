@@ -9,9 +9,10 @@ const WEBHOOK_SECRET = "whsec_test_local_only";
 const stripeSigner = new Stripe("sk_test_local_only");
 
 const processStripeWebhookEvent = vi.fn();
-vi.mock("@/lib/billing/webhook-registry", () => ({
-  processStripeWebhookEvent: (...args: unknown[]) => processStripeWebhookEvent(...args)
-}));
+vi.mock("@/lib/billing/webhook-registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/billing/webhook-registry")>();
+  return { ...actual, processStripeWebhookEvent: (...args: unknown[]) => processStripeWebhookEvent(...args) };
+});
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => ({}) }));
 
 const ORIGINAL_ENV = { ...process.env };
@@ -109,5 +110,15 @@ describe("POST /api/webhooks/stripe", () => {
     processStripeWebhookEvent.mockRejectedValue(new Error("db down"));
     const { POST } = await import("./route");
     expect((await POST(signedRequest())).status).toBe(500);
+  });
+
+  it("answers a RETRYABLE 503 (not 200, not a silent skip) when the registry tables are missing", async () => {
+    const { WebhookRegistryUnavailableError } = await import("@/lib/billing/webhook-registry");
+    processStripeWebhookEvent.mockRejectedValue(new WebhookRegistryUnavailableError());
+    const { POST } = await import("./route");
+    const res = await POST(signedRequest());
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("60");
+    expect(await res.json()).toEqual({ received: false, reason: "registry_unavailable" });
   });
 });

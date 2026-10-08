@@ -20,10 +20,17 @@
 -- (the Stripe webhook has no user session). RLS on, and no policy for
 -- `authenticated`: nothing in the product lets a customer read or write it.
 --
--- Until this migration is applied the route degrades to the previous
--- behaviour (it logs loudly and processes the event unregistered) rather than
--- rejecting every webhook, so applying it is safe at any time but should
--- happen BEFORE merging. Apply manually in the Supabase SQL editor, after 0037.
+-- Also `stripe_subscription_locks`: a per-subscription lease, so two events
+-- about the same subscription are never applied concurrently (the ordering
+-- check reads history and then writes; without the lease two parallel
+-- invocations could both pass it).
+--
+-- FAILS CLOSED until this migration is applied: the webhook answers 503
+-- instead of processing events without idempotency/ordering. Stripe retries a
+-- non-2xx for ~3 days in LIVE mode but only a few times over a few hours in
+-- TEST mode, so events can be LOST if the code is deployed first. Apply it
+-- BEFORE deploying the code that needs it, and check the tables exist.
+-- Apply manually in the Supabase SQL editor, after 0037.
 
 create table if not exists public.stripe_webhook_events (
   event_id text primary key,
@@ -46,6 +53,15 @@ create index if not exists stripe_webhook_events_subject_idx
 
 alter table public.stripe_webhook_events enable row level security;
 
+create table if not exists public.stripe_subscription_locks (
+  subject_id text primary key,
+  event_id text not null,
+  locked_at timestamptz not null default now()
+);
+
+alter table public.stripe_subscription_locks enable row level security;
+
 -- Defense in depth: billing data, so also drop Supabase's default table grants
 -- (RLS without policies already denies; this removes the grant itself).
 revoke all on public.stripe_webhook_events from anon, authenticated;
+revoke all on public.stripe_subscription_locks from anon, authenticated;

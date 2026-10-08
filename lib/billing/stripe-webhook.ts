@@ -98,7 +98,18 @@ export async function applyStripeWebhookEvent(event: Stripe.Event, service: Serv
         return IGNORED;
       }
 
-      const { error } = await service
+      // Stripe ids are [A-Za-z0-9_]; refuse anything else before it is
+      // interpolated into a PostgREST filter expression.
+      if (!/^sub_[A-Za-z0-9]+$/.test(subscriptionId)) {
+        console.error("[geo:billing:webhook] checkout.session.completed with a malformed subscription id", { eventId: event.id });
+        return IGNORED;
+      }
+
+      // Link this subscription only if the profile holds none, or already holds
+      // this very one. An old checkout replayed or delayed after the account
+      // moved on to a newer subscription must not overwrite it — the guard is
+      // part of the UPDATE itself, so it can't race a concurrent link.
+      const { data: linked, error } = await service
         .from("profiles")
         .update({
           current_plan: planId,
@@ -109,9 +120,23 @@ export async function applyStripeWebhookEvent(event: Stripe.Event, service: Serv
           // immediately instead of lingering until the original trial date.
           trial_ends_at: null
         })
-        .eq("id", userId);
+        .eq("id", userId)
+        .or(`stripe_subscription_id.is.null,stripe_subscription_id.eq.${subscriptionId}`)
+        .select("id");
 
       if (error) throw new Error(`profiles update failed: ${error.message}`);
+
+      if (!linked || linked.length === 0) {
+        // The account already holds a DIFFERENT subscription. If this one is
+        // live in Stripe, it is billing a customer our data doesn't link to —
+        // that needs a human, so it must be loud, not silent.
+        console.error("[geo:billing:webhook] ORPHAN_SUBSCRIPTION_CANDIDATE: checkout completed for a subscription the profile does not hold; profile left untouched", {
+          eventId: event.id,
+          userId,
+          subscriptionId
+        });
+        return IGNORED;
+      }
 
       const email = session.customer_details?.email;
       const afterCommit: WebhookApplyResult["afterCommit"] = [];

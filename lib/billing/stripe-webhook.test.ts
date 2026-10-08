@@ -54,6 +54,15 @@ function fakeServiceClient(options: { updateError?: string; profile?: Row | null
               filters.push([column, value]);
               return builder;
             },
+            // Supports the one guard shape checkout uses: "col.is.null,col.eq.value".
+            or(expr: string) {
+              const terms = expr.split(",").map((term) => {
+                const [column, op, ...rest] = term.split(".");
+                return [column, op, rest.join(".")] as const;
+              });
+              filters.push(["__or", terms]);
+              return builder;
+            },
             select() {
               return builder;
             },
@@ -61,7 +70,14 @@ function fakeServiceClient(options: { updateError?: string; profile?: Row | null
               if (options.updateError) {
                 return Promise.resolve({ data: null, error: { message: options.updateError } }).then(resolve, reject);
               }
-              const matches = filters.every(([column, value]) => column === "id" || (held[column] ?? null) === value);
+              const matches = filters.every(([column, value]) => {
+                if (column === "__or") {
+                  return (value as ReadonlyArray<readonly [string, string, string]>).some(([c, op, v]) =>
+                    op === "is" ? (held[c] ?? null) === null : (held[c] ?? null) === v
+                  );
+                }
+                return column === "id" || (held[column] ?? null) === value;
+              });
               const idFilter = filters.find(([column]) => column === "id");
               if (matches) updates.push({ patch, id: idFilter?.[1] as string });
               return Promise.resolve({ data: matches ? [{ id: idFilter?.[1] }] : [], error: null }).then(resolve, reject);
@@ -410,6 +426,28 @@ describe("handleStripeWebhookEvent", () => {
   });
 
   describe("SEC-WEBHOOK-REGISTRY-1: scoped to the subscription the event is about", () => {
+    it("checkout.session.completed for an OLD subscription does not overwrite the one the profile holds", async () => {
+      const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+      const { client, updates } = fakeServiceClient({ profile: { current_plan: "pro", stripe_subscription_id: "sub_new" } });
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await handleStripeWebhookEvent(
+        makeEvent("checkout.session.completed", {
+          metadata: { user_id: "user-1", plan_id: "starter" },
+          payment_status: "paid",
+          customer: "cus_old",
+          subscription: "sub_old",
+          customer_details: { email: "a@b.c" }
+        }),
+        client
+      );
+
+      expect(updates).toHaveLength(0);
+      expect(sendPlanConfirmedEmail).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("ORPHAN_SUBSCRIPTION_CANDIDATE"), expect.anything());
+      errorSpy.mockRestore();
+    });
+
     it("checkout.session.completed: does NOT grant a plan for an unpaid session", async () => {
       const { handleStripeWebhookEvent } = await import("./stripe-webhook");
       const { client, updates } = fakeServiceClient();

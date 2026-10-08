@@ -23,9 +23,16 @@ type Service = ReturnType<typeof createServiceClient>;
  *    arriving after that subscription's `deleted`, is recorded as skipped and
  *    changes nothing (`customer.subscription.deleted` itself is never skipped:
  *    it is terminal truth);
+ *  - events about the SAME subscription are serialized by a per-subscription
+ *    lease (table stripe_subscription_locks): while one is being applied, any
+ *    other answers `in_progress` (409) and Stripe retries it later, so the
+ *    order check below can never race a concurrent apply;
  *  - DB writes happen, the event is marked processed, and ONLY THEN do emails
  *    go out — at most once per event. A crash between the two loses an email;
- *    it can never duplicate one. A failed email does not fail the webhook.
+ *    it can never duplicate one. A failed email does not fail the webhook;
+ *  - FAILS CLOSED when the registry tables are missing (migration 0038 not
+ *    applied): the route answers 503 and Stripe keeps retrying for days, so no
+ *    event is processed without idempotency/ordering and none is lost.
  */
 
 /** A `processing` claim older than this is considered abandoned (the invocation died). */
@@ -45,18 +52,31 @@ export type ProcessResult =
   | { status: "duplicate" }
   | { status: "in_progress" };
 
-type ClaimResult = { kind: "claimed" } | { kind: "duplicate" } | { kind: "in_progress" } | { kind: "unavailable" };
+type ClaimResult = { kind: "claimed" } | { kind: "duplicate" } | { kind: "in_progress" };
+
+const EVENTS_TABLE = "stripe_webhook_events";
+const LOCKS_TABLE = "stripe_subscription_locks";
+
+/**
+ * The registry tables don't exist (migration 0038 not applied) or are not
+ * reachable as tables. Retryable by design: the route turns it into a 503.
+ */
+export class WebhookRegistryUnavailableError extends Error {
+  constructor() {
+    super("stripe webhook registry unavailable (migration 0038 not applied?)");
+    this.name = "WebhookRegistryUnavailableError";
+  }
+}
 
 type DbError = { code?: string; message?: string } | null;
 
-/** The table doesn't exist yet (migration 0038 not applied): degrade, don't reject every webhook. */
+/** The table doesn't exist yet (migration 0038 not applied). */
 function isRegistryMissing(error: DbError): boolean {
   return error?.code === "42P01" || error?.code === "PGRST205" || error?.code === "PGRST200";
 }
 
 async function claimEvent(service: Service, event: Stripe.Event, subjectId: string | null): Promise<ClaimResult> {
-  const table = service.from("stripe_webhook_events");
-  const { error } = await table.insert({
+  const { error } = await service.from(EVENTS_TABLE).insert({
     event_id: event.id,
     event_type: event.type,
     subject_id: subjectId,
@@ -65,11 +85,11 @@ async function claimEvent(service: Service, event: Stripe.Event, subjectId: stri
   });
 
   if (!error) return { kind: "claimed" };
-  if (isRegistryMissing(error)) return { kind: "unavailable" };
+  if (isRegistryMissing(error)) throw new WebhookRegistryUnavailableError();
   if (error.code !== "23505") throw new Error(`webhook registry insert failed: ${error.message}`);
 
   const { data: existing, error: readError } = await service
-    .from("stripe_webhook_events")
+    .from(EVENTS_TABLE)
     .select("status, claimed_at, attempts")
     .eq("event_id", event.id)
     .maybeSingle();
@@ -84,7 +104,7 @@ async function claimEvent(service: Service, event: Stripe.Event, subjectId: stri
   // `failed`, or `processing` past its lease: take it over atomically. The
   // UPDATE only matches if nobody changed the row since we read it.
   const { data: taken, error: takeError } = await service
-    .from("stripe_webhook_events")
+    .from(EVENTS_TABLE)
     .update({
       status: "processing",
       claimed_at: new Date().toISOString(),
@@ -99,13 +119,59 @@ async function claimEvent(service: Service, event: Stripe.Event, subjectId: stri
   return taken && taken.length === 1 ? { kind: "claimed" } : { kind: "in_progress" };
 }
 
+/**
+ * Per-subscription lease. Returns false when another event for the same
+ * subscription is being applied right now (the caller answers `in_progress`).
+ * A lease older than CLAIM_LEASE_MS belongs to an invocation that died and is
+ * taken over with a compare-and-set, so one poison event can't block a
+ * subscription forever.
+ */
+async function acquireSubjectLock(service: Service, subjectId: string, eventId: string): Promise<boolean> {
+  const { error } = await service.from(LOCKS_TABLE).insert({ subject_id: subjectId, event_id: eventId });
+  if (!error) return true;
+  if (isRegistryMissing(error)) throw new WebhookRegistryUnavailableError();
+  if (error.code !== "23505") throw new Error(`webhook lock insert failed: ${error.message}`);
+
+  const { data: held, error: readError } = await service
+    .from(LOCKS_TABLE)
+    .select("event_id, locked_at")
+    .eq("subject_id", subjectId)
+    .maybeSingle();
+  if (readError) throw new Error(`webhook lock read failed: ${readError.message}`);
+  if (!held) return false; // released between our insert and read: let Stripe retry
+
+  const abandoned = Date.now() - new Date(held.locked_at as string).getTime() > CLAIM_LEASE_MS;
+  if (!abandoned) return false;
+
+  const { data: taken, error: takeError } = await service
+    .from(LOCKS_TABLE)
+    .update({ event_id: eventId, locked_at: new Date().toISOString() })
+    .eq("subject_id", subjectId)
+    .eq("event_id", held.event_id)
+    .eq("locked_at", held.locked_at)
+    .select("subject_id");
+  if (takeError) throw new Error(`webhook lock takeover failed: ${takeError.message}`);
+  return Boolean(taken && taken.length === 1);
+}
+
+async function releaseSubjectLock(service: Service, subjectId: string, eventId: string): Promise<void> {
+  const { error } = await service.from(LOCKS_TABLE).delete().eq("subject_id", subjectId).eq("event_id", eventId);
+  if (error) {
+    // Not fatal: the lease expires on its own. But it must be visible.
+    console.error("[geo:billing:webhook] could not release subscription lock (lease will expire)", {
+      eventId,
+      message: error.message
+    });
+  }
+}
+
 async function settleEvent(
   service: Service,
   eventId: string,
   patch: { status: "processed" | "failed"; outcome?: string; last_error?: string }
 ): Promise<void> {
   const { error } = await service
-    .from("stripe_webhook_events")
+    .from(EVENTS_TABLE)
     .update({ ...patch, ...(patch.status === "processed" ? { processed_at: new Date().toISOString() } : {}) })
     .eq("event_id", eventId);
   if (error) throw new Error(`webhook registry settle failed: ${error.message}`);
@@ -124,7 +190,7 @@ async function readSubjectHistory(
   subjectId: string
 ): Promise<{ latestCreatedMs: number | null; terminated: boolean }> {
   const { data, error } = await service
-    .from("stripe_webhook_events")
+    .from(EVENTS_TABLE)
     .select("event_type, stripe_created, outcome")
     .eq("subject_id", subjectId)
     .eq("status", "processed");
@@ -148,60 +214,71 @@ export async function processStripeWebhookEvent(event: Stripe.Event, service: Se
   if (claim.kind === "duplicate") return { status: "duplicate" };
   if (claim.kind === "in_progress") return { status: "in_progress" };
 
-  const registered = claim.kind === "claimed";
-  if (!registered) {
-    console.error(
-      "[geo:billing:webhook] stripe_webhook_events unavailable (migration 0038 not applied?) — processing UNREGISTERED: no event-level idempotency, no ordering",
-      { eventId: event.id, eventType: event.type }
-    );
-  }
+  const needsLock = Boolean(subjectId && ORDERED_EVENT_TYPES.has(event.type));
+  let locked = false;
+  let outcome = "applied";
+  let afterCommit: Array<() => Promise<unknown>> = [];
 
   try {
-    if (registered && subjectId && ORDERED_EVENT_TYPES.has(event.type) && event.type !== "customer.subscription.deleted") {
+    if (needsLock) {
+      locked = await acquireSubjectLock(service, subjectId!, event.id);
+      if (!locked) {
+        // Another event for this subscription is mid-apply. Give the claim
+        // back so Stripe's retry takes it immediately instead of waiting out
+        // the lease.
+        await settleEvent(service, event.id, { status: "failed", last_error: "subscription_busy" });
+        return { status: "in_progress" };
+      }
+    }
+
+    // Order check — now safe from races, because we hold the subscription's lease.
+    let skipReason: string | null = null;
+    if (subjectId && event.type !== "customer.subscription.deleted" && ORDERED_EVENT_TYPES.has(event.type)) {
       const history = await readSubjectHistory(service, subjectId);
       const createdMs = event.created * 1000;
-      const skipReason = history.terminated
+      skipReason = history.terminated
         ? "skipped_terminal"
         : history.latestCreatedMs !== null && createdMs < history.latestCreatedMs
           ? "skipped_stale"
           : null;
-      if (skipReason) {
-        await settleEvent(service, event.id, { status: "processed", outcome: skipReason });
-        return { status: "processed", outcome: skipReason };
-      }
     }
 
-    const { outcome, afterCommit } = await applyStripeWebhookEvent(event, service);
-
-    if (registered) {
-      await settleEvent(service, event.id, { status: "processed", outcome });
+    if (skipReason) {
+      outcome = skipReason;
+    } else {
+      const applied = await applyStripeWebhookEvent(event, service);
+      outcome = applied.outcome;
+      afterCommit = applied.afterCommit;
     }
-
-    for (const effect of afterCommit) {
-      try {
-        await effect();
-      } catch (emailError) {
-        // The DB write is committed and the event settled: surfacing this as a
-        // 500 would only make Stripe replay a write that already happened.
-        console.error("[geo:billing:webhook] post-commit side effect failed (not retried)", {
-          eventId: event.id,
-          eventType: event.type,
-          message: emailError instanceof Error ? emailError.message : String(emailError)
-        });
-      }
-    }
-    return { status: "processed", outcome };
+    await settleEvent(service, event.id, { status: "processed", outcome });
   } catch (error) {
-    if (registered) {
-      try {
-        await settleEvent(service, event.id, { status: "failed", last_error: HANDLER_FAILED });
-      } catch (settleError) {
-        console.error("[geo:billing:webhook] could not mark event failed (lease will expire)", {
-          eventId: event.id,
-          message: settleError instanceof Error ? settleError.message : String(settleError)
-        });
-      }
+    try {
+      await settleEvent(service, event.id, { status: "failed", last_error: HANDLER_FAILED });
+    } catch (settleError) {
+      console.error("[geo:billing:webhook] could not mark event failed (lease will expire)", {
+        eventId: event.id,
+        message: settleError instanceof Error ? settleError.message : String(settleError)
+      });
     }
     throw error;
+  } finally {
+    if (locked) await releaseSubjectLock(service, subjectId!, event.id);
   }
+
+  // Emails only after the write is committed, the event settled and the lease
+  // released: at most once per event, and never holding up the next event.
+  for (const effect of afterCommit) {
+    try {
+      await effect();
+    } catch (emailError) {
+      // The DB write is committed and the event settled: surfacing this as a
+      // 500 would only make Stripe replay a write that already happened.
+      console.error("[geo:billing:webhook] post-commit side effect failed (not retried)", {
+        eventId: event.id,
+        eventType: event.type,
+        message: emailError instanceof Error ? emailError.message : String(emailError)
+      });
+    }
+  }
+  return { status: "processed", outcome };
 }

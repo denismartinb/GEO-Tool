@@ -21357,9 +21357,7 @@ suscripción viva que seguía cobrando sin rastro en nuestros datos.
 
 **Decisión (webhook).**
 - Registro de eventos `stripe_webhook_events` (migración 0038, **aplicar a
-  mano antes de mergear**; hasta entonces la ruta degrada a procesar sin
-  registro y lo registra con un error explícito, en vez de rechazar todos los
-  webhooks): un reintento de un evento procesado es no-op (`duplicate`, 200);
+  mano ANTES de desplegar el código que la necesita**): un reintento de un evento procesado es no-op (`duplicate`, 200);
   uno en curso responde 409 para que Stripe reintente; uno `failed` o con
   reclamo caducado (5 min) se reclama de forma atómica.
 - **Orden por suscripción**: un evento más antiguo que otro ya aplicado para la
@@ -21378,13 +21376,52 @@ suscripción viva que seguía cobrando sin rastro en nuestros datos.
   (no repetiría nada útil). Coste aceptado: un fallo del proceso entre ambos
   pasos pierde un email, nunca lo duplica.
 
+**Segunda ronda (fundador, 2026-10-08).**
+- **Serialización por suscripción**, no solo por id de evento: tabla
+  `stripe_subscription_locks` (lease de 5 min con toma por compare-and-set). Un
+  segundo evento de la misma suscripción mientras otro se aplica responde 409
+  y devuelve su reclamo (`subscription_busy`) para que el reintento de Stripe
+  lo tome enseguida. La comprobación de orden se hace con el lease tomado, así
+  que ya no compite con una aplicación concurrente. Test determinista (sin
+  temporizadores): una compuerta mantiene el primer evento dentro de su
+  escritura; se comprobó que el test falla si se desactiva el lease.
+- **Guardia de `checkout.session.completed`**: enlaza la suscripción solo si el
+  perfil no tiene ninguna o ya tiene esa misma, dentro del propio UPDATE. Un
+  checkout viejo tras uno nuevo no pisa la suscripción actual
+  (test «viejo tras nuevo»). Si la suscripción descartada está viva en Stripe,
+  está cobrando a alguien que no enlazamos: se registra como
+  `ORPHAN_SUBSCRIPTION_CANDIDATE` (error de log, sin alerta automática todavía).
+- **Sin tabla, falla cerrado**: el webhook responde 503 reintentable
+  (`Retry-After: 60`) en vez de procesar sin idempotencia ni orden; Stripe
+  reintenta un 5xx unos 3 días en live, **pero en modo test solo unas pocas veces
+  durante unas horas** (corrección tras la revisión de `data-guardian`: la
+  primera redacción decía «días» sin distinguir), así que desplegar antes de la
+  migración puede PERDER eventos de test. Sustituye a la degradación anterior. Consecuencia operativa: **la migración 0038 debe
+  estar aplicada antes del despliegue**, o los webhooks dan 503 hasta que lo esté.
+- **Migración verificada ejecutándola** en un Postgres 16 local (no Supabase ni
+  PostgREST; roles `anon`/`authenticated`/`service_role` creados a mano con los
+  privilegios por defecto de Supabase): corre dos veces sin error, RLS activo y
+  sin políticas, ningún grant para `anon`/`authenticated` (permission denied),
+  23505 en id duplicado y en lease ocupado, 23514 en estado inválido, y el
+  compare-and-set de toma solo afecta a la fila sin cambios.
+- Revisión independiente de esta ronda (`data-guardian`): sin bloqueantes. Se
+  aplicó `maxDuration = 60` en la ruta (margen de 5× frente al lease) y la
+  validación `^sub_[A-Za-z0-9]+$` antes de interpolar el id en `.or()`. Abiertos:
+  alerta de operador para `ORPHAN_SUBSCRIPTION_CANDIDATE`; y un
+  `subscription.updated` que llegue antes del `checkout` que enlaza queda
+  `ignored` para siempre (ya se perdía antes del registro; la corrección sería
+  leer el estado de la suscripción desde Stripe al enlazar).
+- `scripts/stripe-tax-audit.mjs`: auditoría fiscal de solo lectura en modo test
+  (rechaza claves que no sean de test). Sin ejecutar: este entorno no tiene
+  clave de Stripe.
+
 **Pendiente / conocido.**
 - `checkout.session.async_payment_succeeded` no se gestiona: un método de pago
   retardado (SEPA) que llegue como `unpaid` no concede el plan hasta que se
   añada ese evento. Hoy se registra en el log. Decisión para el dueño.
-- Dos eventos distintos de la misma suscripción procesados a la vez no tienen
-  bloqueo entre sí (la marca de orden se lee antes de aplicar); las escrituras
-  acotadas por suscripción limitan el daño, no lo eliminan.
+- (Resuelto en la segunda ronda: eventos concurrentes de una misma suscripción
+  ya se serializan.) `event.created` sigue teniendo resolución de segundos: dos
+  `updated` del mismo segundo invertidos se aplican los dos, uno tras otro.
 - Revisión independiente (`data-guardian`): P1 corregido en este PR (un
   `deleted` que llega antes que su checkout, registrado `ignored`, también
   termina la suscripción — test incluido). P2 abierto: `event.created` tiene

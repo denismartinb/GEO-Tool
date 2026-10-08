@@ -3,9 +3,12 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { getStripeClient } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/service";
-import { processStripeWebhookEvent } from "@/lib/billing/webhook-registry";
+import { processStripeWebhookEvent, WebhookRegistryUnavailableError } from "@/lib/billing/webhook-registry";
 
 export const dynamic = "force-dynamic";
+// Bounded well under the registry lease (CLAIM_LEASE_MS = 5 min) so a live
+// invocation can never outlast the claim/lease it holds.
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const stripe = getStripeClient();
@@ -45,6 +48,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, duplicate: true });
     }
   } catch (error) {
+    if (error instanceof WebhookRegistryUnavailableError) {
+      // Fail closed: never process a billing event without idempotency and
+      // ordering. 503 is retried by Stripe, but only for a while: in LIVE mode
+      // up to ~3 days (and a long outage can get the endpoint disabled); in
+      // TEST mode only a few attempts over a few hours. So migration 0038 must
+      // be applied BEFORE this code is deployed — otherwise events can be lost.
+      console.error("[geo:billing:webhook] registry unavailable, refusing event (retryable)", {
+        eventType: event.type,
+        eventId: event.id
+      });
+      return NextResponse.json({ received: false, reason: "registry_unavailable" }, { status: 503, headers: { "Retry-After": "60" } });
+    }
     console.error("[geo:billing:webhook] handler failed", {
       eventType: event.type,
       eventId: event.id,

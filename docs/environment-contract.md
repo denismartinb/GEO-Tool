@@ -485,11 +485,14 @@ VeriFactu/facturación decision made and applied, then swap `sk_test_...` /
 test-mode price ids for their live-mode equivalents.
 
 **Webhook registry (SEC-WEBHOOK-REGISTRY-1, log §236)**: `/api/webhooks/stripe`
-records every event in `public.stripe_webhook_events` (migration 0038, applied
-by hand, service role only, RLS without policies) for idempotency and
-per-subscription ordering. No new env var. Apply 0038 **before** merging; until
-then the route processes events unregistered and logs
-`stripe_webhook_events unavailable … UNREGISTERED` on every delivery.
+records every event in `public.stripe_webhook_events` and serializes events of
+one subscription through `public.stripe_subscription_locks` (migration 0038,
+applied by hand, service role only, RLS without policies). No new env var.
+**Apply 0038 BEFORE deploying this code:** without the tables the route fails
+closed — `503` + `Retry-After: 60` — so no billing event is processed without
+idempotency/ordering. Stripe retries a 5xx ~3 days in live mode but only a few
+times over a few hours in test mode, so events can be lost if the code ships
+first: order matters.
 
 **Customer Portal (BILLING-STRIPE-1 PR 2)**: no new env var — reuses
 `STRIPE_SECRET_KEY` via `stripe.billingPortal.sessions.create()`. Requires a
