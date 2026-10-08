@@ -1,6 +1,6 @@
 # Evidencia · parche local ONBOARDING-GRID-MOBILE-1 (una declaración de CSS)
 
-**El parche NO está en esta rama ni en ningún PR.** Vive en la rama **local** `claude/onb-grid-minmax-1` (`ff13d5b0`, sin empujar). Para medirlo con las
+**Histórico, superado:** el parche NO se integró tal cual; su declaración de rejilla está incluida en la alternativa responsive, que **sí está en la rama de #553** (no fusionada en `main`). Al escribirse este README el parche vivía solo en una rama local. Vive en la rama **local** `claude/onb-grid-minmax-1` (`ff13d5b0`, sin empujar). Para medirlo con las
 tarjetas nuevas del asistente se aplicó la misma línea en el árbol de trabajo de la rama del wizard, se midió y **se revirtió sin commitear**.
 
 ```diff

@@ -1,6 +1,6 @@
-# Evidencia · alternativa responsive del asistente (LOCAL, sin integrar)
+# Evidencia · alternativa responsive del asistente (integrada en la rama de #553; histórica, previa a la integración)
 
-**Esto NO está integrado ni en un PR.** Vive en la rama **local** `claude/onb-responsive-1` (commit `f8e5f1b1`, sin empujar; corregida después, ver adenda), construida sobre el head del wizard `ae5a776f`. Respuesta al Director de #553 (revisión 6): «el overflow queda corregido pero el campo dominio/país y los textos de prompts/competidores no se pueden revisar bien a 320».
+**Estado actual (corregido):** este CSS/TSX **sí está ya en la rama de #553** (`claude/onboarding-proposal-quality-grq3xv`, commits `635eed97` y `05e2872f`); **NO está fusionado en `main`**. Lo que sigue se midió **antes** de integrarlo, sobre la rama local `claude/onb-responsive-1` (`f8e5f1b1`; el fallo del editor a 320 px se corrigió después en `12911fbd`, ver la adenda). Las capturas son fixture y no se han rehecho solo por la etiqueta. Evidencia de la rama ya integrada: `docs/evidence/onboarding-integrated/`.
 
 ## Qué son estas imágenes
 

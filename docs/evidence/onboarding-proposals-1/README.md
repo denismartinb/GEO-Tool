@@ -1,5 +1,7 @@
 # Evidencia · ONBOARDING-PROPOSALS-1 / ONBOARDING-IDENTITY-1
 
+> **Nota de estado:** estas capturas son **previas** a integrar el responsive en la rama de #553 (el «hallazgo previo en `main`» de 390 px sobre la columna del paso 1 ya está corregido en esta rama; **no en `main`**). Se conservan como estaban; la evidencia actual está en `docs/evidence/onboarding-integrated/`.
+
 Código de la UI: `bd732500` (rama `claude/onboarding-proposal-quality-grq3xv`, PR #553). El commit que añade estas
 imágenes no cambia código de producto. Decisiones y límites: `docs/brand/design-decisions-log.md` §237.
 
