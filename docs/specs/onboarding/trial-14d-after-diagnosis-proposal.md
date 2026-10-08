@@ -156,3 +156,13 @@ Pedido por el Director: diseño de contador/reserva con la semántica de la regl
 **Límites que quedan visibles:** la cuenta de 75 preguntas activas **no es atómica** hoy (lectura y luego escritura) y esa carrera no se resuelve aquí; no hay esquema; no hay verificación con Stripe ni con datos reales.
 
 Do you approve this plan? I will not implement until you confirm.
+
+## 11. Qué sigue siendo decisión (no es valor por defecto ejecutable) y puntos de coordinación con #549
+
+**Decisiones del propietario, sin valor por defecto en código:**
+
+- **Definición de «mes»** para el contador (mes natural en `Europe/Madrid`, 30 días móviles o ciclo de facturación): no se elige aquí; ningún test ni constante debe fijarlo hasta que se decida.
+- **Dominio canónico y subdominios:** si `www.x.es`, `tienda.x.es` y `x.es` cuentan como uno o como tres para la elegibilidad durable (§9). Mientras no se decida, el diseño solo habla de «dominio canónico» como concepto.
+- **Umbral de fallo persistente** (cuántos reintentos o cuánto tiempo antes de liberar una reserva o ceder el escaneo): es una cifra de producto, no un detalle técnico; los estados `reservado → consumido | liberado` (§10) no dependen de ella.
+
+**Coordinación con #549 (billing/seguridad):** (1) el contador y la reserva se apoyan en el plan **efectivo** que #549 endurece; no deben leer `current_plan` crudo. (2) Antes de integrar nada de esto se necesita la revisión de Seguridad 01B de #549. (3) El antiabuso queda como lo decidió el propietario (revisar correo verificado y techo global en EUR antes de anunciar; el umbral de ~30 € no es un límite técnico). (4) Nada de esta sección crea esquema, toca Stripe ni lanza escaneos.

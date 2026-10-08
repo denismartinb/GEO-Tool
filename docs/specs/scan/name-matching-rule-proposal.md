@@ -76,6 +76,23 @@ Una sola función pura, `decideMention({ claimed, names, rawText? })`, usada por
 
 **Recomendación:** C o D antes de integrar el matching; B solo como puente corto si hace falta publicar antes. **No** `EXTRACTION_VERSION` (§2).
 
+## 5b. Comparación mínima C vs D (sin SQL aplicado; ilustrativo)
+
+Ambas conservan intactos `raw_response_text` y el veredicto guardado (`brand_mentioned`, `extracted_json`): ninguna recalcula ni reescribe nada.
+
+| | **C. `matching_version`** | **D. guardar lo decidido** |
+|---|---|---|
+| Campo | `scan_prompt_results.matching_version smallint` (nulo/1 = regla antigua; 2 = regla nueva) | `scan_prompt_results.brand_match jsonb` p. ej. `{"name":"El Corte Inglés","kind":"alias","rule":2}`; nulo = «sin registrar» |
+| Coste | Una columna pequeña; el escaneo escribe una constante | Una columna jsonb por fila (decenas de bytes); el escaneo ya tiene el nombre que casó en `verifyMention` |
+| Relleno de lo existente | Ninguno obligatorio: nulo se lee como regla 1 (es exactamente lo que se aplicó) | Ninguno: lo anterior queda «sin registrar»; **no se inventa** un nombre retroactivo |
+| Qué enseña el cajón en filas antiguas | Re-deriva, pero **con la regla de la fila** (necesita conservar las dos implementaciones) | Lo guardado; sin dato, «sin registrar» y **sin re-derivar** |
+| Qué enseña en filas nuevas | Re-deriva con la regla 2 | Lo guardado |
+| Riesgo | Hay que mantener la regla antigua en el código para siempre (o hasta purgar histórico) | El cajón deja de ser una explicación recalculable y pasa a ser un registro: más fiel, pero lo antiguo se ve más pobre |
+| Cambia el veredicto histórico | No | No |
+
+Ilustración (**no aplicada, no es una migración aprobada**): `alter table scan_prompt_results add column matching_version smallint;` para C; `... add column brand_match jsonb;` para D. Cualquiera de las dos exige aprobación de esquema y revisión de `data-guardian` (rutas de lectura/escritura y RLS: no cambian, pero hay que comprobarlo).
+**Lo que no se asume:** que perder plurales/derivados pegados («Mercadonas») esté aceptado, ni que se adopte una segmentación nueva para escrituras sin espacios.
+
 ## 6. Escrituras sin espacios: alternativa para decidir más adelante
 
 `Intl.Segmenter` (ICU) segmenta bien japonés, chino y tailandés en el Node de este entorno (ICU 77.1), por ejemplo «トヨタは新型車を発表した。» → «トヨタ / は / 新型 / 車 / を / 発表 / した». Pero **depende de la versión de ICU del entorno**: el mismo texto
@@ -89,6 +106,21 @@ nada se exporta ni se sube sin esa decisión.**
 
 Resultado sobre el corpus **sintético** de 24 filas (los números no son tasas): mención `same_true` 9 · `same_false` 5 · estrechado 7 · ampliado 3; causas: subcadena dentro de palabra 7, alfabeto no latino 2, plegado de letras 1;
 cajón: igual 16 · pierde la coincidencia 5 · la gana 3 · cambia de objetivo 0. **Todo lo que se estrecha es subcadena dentro de una palabra; lo que se amplía es cirílico/griego y ß↔ss, nunca una subcadena nueva.**
+
+### Formato mínimo de exportación redactada (para que lo obtenga quien tiene el acceso)
+
+Un fichero **local**, nunca subido a GitHub ni al repo (nombrarlo `*.local.jsonl`; está pensado para no entrar en el control de versiones), una línea JSON por fila:
+
+```json
+{"id":"fila-0001","brand":"El Corte Inglés","aliases":["ECI"],"claimed":true,"raw":"…ventana de ±200 caracteres alrededor de cada candidato…"}
+```
+
+- `id`: identificador opaco y aleatorio, **no** el id de base de datos ni el de usuario.
+- `brand`, `aliases`: los de `brand_snapshot` / `brand_aliases_snapshot` (nombres de marca, no personas).
+- `claimed`: el `brand_mentioned` ya guardado (lo que decidió el escaneo).
+- `raw` (opcional): solo la ventana de texto alrededor de cada aparición candidata, con cualquier dato personal sustituido por `[X]`. Sin `raw` la herramienta compara solo nombres, que es lo que más importa.
+- **Fuera del fichero:** respuestas completas, URLs de usuario, correos, ids de proyecto/usuario, cualquier credencial. En GitHub solo se publican **recuentos agregados** (los de §7), nunca filas.
+- Quién lo genera y con qué acceso es decisión del propietario; este documento no busca credenciales ni presupone acceso a la base de datos.
 
 ## 8. Decisiones abiertas
 

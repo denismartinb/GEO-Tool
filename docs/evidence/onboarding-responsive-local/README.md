@@ -1,6 +1,6 @@
 # Evidencia · alternativa responsive del asistente (LOCAL, sin integrar)
 
-**Esto NO está integrado ni en un PR.** Vive en la rama **local** `claude/onb-responsive-1` (commit `f8e5f1b1`, sin empujar), construida sobre el head del wizard `ae5a776f`. Respuesta al Director de #553 (revisión 6): «el overflow queda corregido pero el campo dominio/país y los textos de prompts/competidores no se pueden revisar bien a 320».
+**Esto NO está integrado ni en un PR.** Vive en la rama **local** `claude/onb-responsive-1` (commit `f8e5f1b1`, sin empujar; corregida después, ver adenda), construida sobre el head del wizard `ae5a776f`. Respuesta al Director de #553 (revisión 6): «el overflow queda corregido pero el campo dominio/país y los textos de prompts/competidores no se pueden revisar bien a 320».
 
 ## Qué son estas imágenes
 
@@ -36,10 +36,9 @@ las filas de prompt llevan el modificador `onb2-row--prompt`. Todo el CSS nuevo 
 ## Qué NO se verificó
 
 - Dispositivo real, iOS Safari, Android, otros navegadores (solo Chromium sobre Linux); lector de pantalla.
-- Tab completo hasta los botones de pie en los pasos 2 y 3 (se midieron los primeros 8–9 tabuladores).
 - A **768 px** (tableta vertical) el texto del prompt sigue en una línea recortada (diseño original; 4 filas recortadas en la medición).
 - Una creación real o un escaneo.
-- El comportamiento con textos mucho más largos que los del fixture.
+- Un lector de pantalla leyendo el recorte (solo se midió el DOM y el teclado).
 
 ## Capturas
 
@@ -101,3 +100,76 @@ las filas de prompt llevan el modificador `onb2-row--prompt`. Todo el CSS nuevo 
 **Paso 3 · prompts**
 
 ![1280 px · Paso 3 · prompts (fixture)](./1280-paso3-prompts.png)
+
+## Adenda (informe 8) · 768 px, textos largos y Tab completo
+
+**FIXTURE — datos simulados, Chromium sobre Linux, sin dispositivo real.** Las imágenes no prueban interacción; la interacción está en las medidas. Commit local de la alternativa tras esta pasada: `12911fbd` (rama `claude/onb-responsive-1`, sin empujar).
+
+### Un fallo propio encontrado y corregido
+
+Al abrir el editor de un prompt (engranaje o Enter en «Editar prompt N») a **320 px el textarea medía 50 px** (una letra por línea): un `style` en línea en su contenedor ganaba al `@media`. Ahora usa la clase `.onb2-pedit` (fila entera en ≤ 560 px): **250 px a 320 px**, con test de contrato. La alternativa anterior (`f8e5f1b1`) tenía este fallo.
+
+### Tab completo hasta el pie (medido, ambos casos y ambos anchos)
+
+- Paso 2: marca → × del alias → campo de alias → «con fuente» → editar/quitar de cada competidor → «Añadir competidor» → «Atrás» → «Continuar a prompts»: **alcanzado** (12 Tab en el caso normal, 10 en el largo).
+- Paso 3: idioma → editar/quitar de cada prompt → «Generar 5 más» → «Añadir prompt» → «Atrás» → «Crear dominio y escanear»: **alcanzado** (12 / 10 Tab).
+- Sin trampas de foco y orden = orden visual en los cuatro recorridos.
+
+### Caso de texto largo (320 y 768 px)
+
+Dominio de 117 caracteres (etiquetas de 61 y 45), país «Estados Unidos» (el nombre más largo de la lista), marca de 85 caracteres, alias de 66, competidor de 86 caracteres con dominio de 68, prompts de 218 caracteres.
+
+| Elemento | 320 px | 768 px |
+|---|---|---|
+| Página | `scrollWidth` = ancho, 0 elementos fuera | igual |
+| Campo de dominio (paso 1) | **solo se ve el final** del texto; el dominio completo aparece debajo en el resumen del lanzamiento | igual (campo de 302 px) |
+| País «Estados Unidos» | visible entero | visible entero |
+| Nombre comercial (paso 2) | `input` de una línea: **recortado** (236/664); se lee entero desplazando el cursor con el teclado | recortado (342/584) |
+| Nombre y dominio del competidor | **se parten en varias líneas**, completos | **una línea con puntos suspensivos** (144/547); completos al pulsar el engranaje («Editar competidor N», por teclado) |
+| Texto del prompt | **completo**, varias líneas | **una línea con puntos suspensivos** (188/1280); completo en el textarea al activar «Editar prompt N» (Enter) |
+| Editor de prompt abierto | 250 px; **218 caracteres no caben en 3 filas: hace falta desplazar dentro del textarea** | 188 px, igual |
+| «Listo, prompt N» + Enter | cierra el editor | cierra el editor |
+
+**Límites que quedan:** el editor de prompt no crece con el texto (3 filas fijas, como antes); a 768 px el texto largo sigue recortado en la fila y solo se ve entero abriendo el editor. No se ha rediseñado nada más. Esta alternativa **mejora el móvil pero no resuelve todos los anchos intermedios**: entre 561 y 760 px el texto del prompt sigue en una línea.
+
+### Capturas a 768 px (caso normal)
+
+![768 px · Paso 1 (fixture)](./r8-normal-768-paso1.png)
+
+![768 px · Paso 2 (fixture)](./r8-normal-768-paso2.png)
+
+![768 px · Paso 3 (fixture)](./r8-normal-768-paso3.png)
+
+![768 px · Paso 3 con el editor del prompt 1 abierto (fixture)](./r8-normal-768-paso3-expandido.png)
+
+### Texto largo a 320 px
+
+![320 px · largo · Paso 1 (fixture)](./r8-largo-320-paso1.png)
+
+![320 px · largo · Paso 2 (fixture)](./r8-largo-320-paso2.png)
+
+![320 px · largo · Paso 3 (fixture)](./r8-largo-320-paso3.png)
+
+![320 px · largo · Paso 3 con el editor abierto (fixture)](./r8-largo-320-paso3-expandido.png)
+
+### Texto largo a 768 px
+
+![768 px · largo · Paso 1 (fixture)](./r8-largo-768-paso1.png)
+
+![768 px · largo · Paso 2 (fixture)](./r8-largo-768-paso2.png)
+
+![768 px · largo · Paso 3 (fixture)](./r8-largo-768-paso3.png)
+
+![768 px · largo · Paso 3 con el editor abierto (fixture)](./r8-largo-768-paso3-expandido.png)
+
+### 320 px · caso normal tras la corrección
+
+![320 px · Paso 3 con el editor abierto (fixture)](./r8-normal-320-paso3-expandido.png)
+
+Las tres siguientes son las mismas pantallas del apartado anterior, repetidas por la pasada de medición:
+
+![320 px · Paso 1 (fixture, pasada 8)](./r8-normal-320-paso1.png)
+
+![320 px · Paso 2 (fixture, pasada 8)](./r8-normal-320-paso2.png)
+
+![320 px · Paso 3 (fixture, pasada 8)](./r8-normal-320-paso3.png)
