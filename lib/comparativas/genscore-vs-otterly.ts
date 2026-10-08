@@ -32,9 +32,9 @@ export const COMPARISON_ROWS: {
     genscoreWins: true
   },
   {
-    label: "Precio equivalente a ~100 prompts",
-    genscore: `${PRO_PRICE} €/mes (plan Pro)`,
-    otterly: "189 $/mes (plan Standard)"
+    label: "Plan de pago comparable",
+    genscore: `${PRO_PRICE} €/mes (plan Pro, ${PLANS.find((p) => p.id === "pro")!.meter.prompts} prompts)`,
+    otterly: "189 $/mes (plan Standard, 100 prompts)"
   },
   {
     label: "Motores de IA cubiertos",

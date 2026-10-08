@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { SUPPORT_EMAIL } from "@/lib/support";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { PLANS, PROMO_DURATION_MONTHS, type Plan } from "@/app/pricing/plans-data";
+import { PLANS, PROMO_DURATION_MONTHS, plansOfferedTo, type Plan } from "@/app/pricing/plans-data";
 import type { ActiveProjectSummary } from "@/lib/billing";
 import type { CheckoutSessionResult, PortalIntent, PortalSessionResult } from "@/app/dashboard/settings/billing/actions";
 
@@ -140,7 +140,8 @@ export function ChangePlanModal({
   // something they could not have. It now renders as its own cell with a real
   // way out (SUPPORT_EMAIL), and `sel` can never hold it.
   const agencyPlan = PLANS.find((p) => p.id === "agency")!;
-  const selectablePlans = PLANS.filter((p) => p.id !== "agency");
+  // CONTRACT-99 B1b: Starter is no longer offered; an account already on it still sees it.
+  const selectablePlans = plansOfferedTo(currentId).filter((p) => p.id !== "agency");
 
   const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
 

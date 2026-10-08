@@ -49,7 +49,7 @@ export function DomainOverageGate({
   const [isPending, startTransition] = useTransition();
 
   const upgradeOptions = PLANS.filter(
-    (p) => (p.id === "starter" || p.id === "pro") && p.id !== planId && p.caps.projects >= activeCount
+    (p) => p.listed !== false && (p.id === "starter" || p.id === "pro") && p.id !== planId && p.caps.projects >= activeCount
   );
   const agencyPlan = PLANS.find((p) => p.id === "agency")!;
   const selectedRemoveDomains = domains.filter((project) => removeIds.has(project.id));

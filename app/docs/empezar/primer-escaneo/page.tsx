@@ -65,7 +65,7 @@ export default function PrimerEscaneoPage() {
       <p>
         El plan Free ejecuta un único escaneo instantáneo, sin tarjeta: 1 dominio, ~10 prompts, 1 motor de
         IA. Es suficiente para ver un GEO Score creíble y tres acciones concretas, pero no incluye
-        tendencia histórica ni monitorización continua — eso empieza en el plan Starter.
+        tendencia histórica ni monitorización continua — eso empieza en el plan Pro.
       </p>
 
       <h2>Preguntas frecuentes</h2>

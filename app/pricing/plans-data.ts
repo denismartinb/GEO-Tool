@@ -106,6 +106,12 @@ export type Plan = {
   cta: string;
   ctaStyle: "primary" | "ghost";
   recommended?: boolean;
+  /**
+   * CONTRACT-99 B1b: `false` = the plan still EXISTS (its technical id stays valid in
+   * `profiles.current_plan`, the webhook and the cadence table) but it is no longer OFFERED: it
+   * does not appear on /precios, in the docs table or in the hero. Omitted means offered.
+   */
+  listed?: boolean;
   highlights: string[];
   meter: PlanMeter;
   caps: PlanCaps;
@@ -133,6 +139,7 @@ export const PLANS: Plan[] = [
   {
     id: "starter",
     name: "Starter",
+    listed: false,
     price: 45,
     promoPrice: 19,
     period: "mes",
@@ -178,6 +185,7 @@ export const PLANS: Plan[] = [
   {
     id: "agency",
     name: "Agencia",
+    listed: false,
     price: 449,
     priceLabel: "Plan a medida",
     period: "mes",
@@ -195,6 +203,23 @@ export const PLANS: Plan[] = [
     caps: { projects: 999, prompts: 300, engines: 3 }
   }
 ];
+
+/** The plans a visitor can actually choose today. Everything that LISTS plans reads this; everything that RESOLVES a plan id keeps reading `PLANS`. */
+export const LISTED_PLANS: Plan[] = PLANS.filter((plan) => plan.listed !== false);
+
+/**
+ * What to OFFER an account that is on `currentPlanId`: the offered plans, plus the account's own
+ * plan if it is no longer offered — so a Starter subscriber still sees what they are on, while no
+ * one else is shown Starter as a choice. Kept in `PLANS` order.
+ */
+export function plansOfferedTo(currentPlanId: Plan["id"]): Plan[] {
+  return PLANS.filter((plan) => plan.listed !== false || plan.id === currentPlanId);
+}
+
+/** Index of a plan in `PLANS`, i.e. its column in `PLAN_MATRIX`. */
+export function matrixColumnOf(planId: Plan["id"]): number {
+  return PLANS.findIndex((plan) => plan.id === planId);
+}
 
 // Matriz de comparación, agrupada por bloque de valor.
 // Celdas: true = incluido · false = no · string = detalle/límite.
@@ -237,8 +262,8 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
     a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de GenScore antes de pagar nada."
   },
   {
-    q: "¿Por qué cobráis por prompts y motores?",
-    a: "Porque el valor está en cuánto monitorizas, no en un precio plano. Pagas por prompts × motores × frecuencia de escaneo — la unidad real de coste y de valor."
+    q: "¿Por qué hay un único plan de pago?",
+    a: `Para que el precio sea el mismo para todos y no haya que comparar escalones: un solo plan, ${PLANS.find((plan) => plan.id === "pro")!.price} € al mes con IVA incluido, con los límites que ves en la comparativa.`
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -247,9 +272,5 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   {
     q: "¿Qué incluye la prueba de Pro?",
     a: "Actualmente puedes activar Pro completo eligiendo ese plan al registrarte, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Mientras no lancemos la facturación no hay límite de tiempo automático — te avisaremos con antelación razonable antes de introducir el cobro."
-  },
-  {
-    q: "¿Qué incluye el plan Agencia?",
-    a: "Volumen de dominios y prompts a medida de tu cartera de clientes, con los mismos motores y frecuencia que Pro. Al ser un plan a medida, hablamos contigo antes de contratar para ajustar las condiciones a tu caso."
   }
 ];

@@ -17,7 +17,7 @@
  */
 import { PLANS } from "@/app/pricing/plans-data";
 
-const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
+const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 export const PILLAR_RESEARCH_DATE = "12 de agosto de 2026";
 
@@ -74,7 +74,7 @@ export const TOOLS: ToolProfile[] = [
       "Mide y mejora cómo aparece tu marca en respuestas de ChatGPT, Gemini y Claude, con plan gratuito permanente.",
     distinctiveFeature:
       "La única de esta lista que no se detiene en el diagnóstico: genera recomendaciones con evidencia y un solucionador que redacta el borrador (FAQ, schema, briefs) desde el plan Pro.",
-    pricingNote: `Gratis (escaneo permanente, sin tarjeta); planes de pago desde ${STARTER_PRICE} €/mes.`,
+    pricingNote: `Gratis (escaneo permanente, sin tarjeta); un único plan de pago, ${PRO_PRICE} €/mes (IVA incluido).`,
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     bestFor:
       "Equipos hispanohablantes que quieren empezar gratis y que la herramienta no solo señale el problema, sino que proponga la solución."

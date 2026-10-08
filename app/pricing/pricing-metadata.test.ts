@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { metadata as homeMetadata } from "../page";
 import { metadata as pricingMetadata } from "./page";
-import { PLANS } from "./plans-data";
+import { LISTED_PLANS, PLANS } from "./plans-data";
 
 /**
  * SEO-POS-1 (T1). Dos cosas que este test protege:
@@ -53,8 +53,16 @@ describe("metadata de /pricing", () => {
 
   it("cita los precios reales de plans-data", () => {
     const description = pricingMetadata.description ?? "";
-    expect(description).toContain(`${priceOf("Starter")} €`);
+    // CONTRACT-99 B1b: every OFFERED paid plan is quoted, and a plan that is no longer
+    // offered (Starter, Agencia) is not — a snippet advertising a price nobody can buy is
+    // the same lie PRICING-TRUTH-1 cleaned off the page.
     expect(description).toContain(`${priceOf("Pro")} €`);
+    for (const plan of LISTED_PLANS.filter((p) => p.price > 0)) {
+      expect(description).toContain(`${plan.price} €`);
+    }
+    for (const plan of PLANS.filter((p) => p.listed === false)) {
+      expect(description).not.toContain(`${plan.name} (`);
+    }
   });
 
   it("no nombra motores que el producto no ejecuta", () => {

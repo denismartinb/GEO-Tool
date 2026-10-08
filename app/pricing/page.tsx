@@ -4,7 +4,6 @@ import { contentMetadata } from "@/lib/seo/metadata";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { PLAN_FAQ, PLANS } from "./plans-data";
 
-const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 /**
@@ -38,7 +37,7 @@ export const revalidate = 3600;
  */
 export const metadata: Metadata = contentMetadata({
   title: "Precios de GenScore — planes de posicionamiento GEO desde 0 €",
-  description: `Empieza gratis con un escaneo puntual y sube a Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
+  description: `Empieza gratis con un escaneo puntual y sube a Pro (${PRO_PRICE} €/mes, IVA incluido) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
   path: "/pricing"
 });
 

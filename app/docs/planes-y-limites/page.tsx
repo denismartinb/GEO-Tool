@@ -3,7 +3,7 @@ import Link from "next/link";
 import { DocsPageShell } from "@/components/docs/docs-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { getDocPage } from "@/lib/docs/nav";
-import { PLANS } from "@/app/pricing/plans-data";
+import { LISTED_PLANS, PLANS } from "@/app/pricing/plans-data";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 const SLUG = "planes-y-limites";
@@ -31,8 +31,9 @@ export default function PlanesYLimitesPage() {
       <p className="docs-updated">Actualizado el 2 de agosto de 2026</p>
 
       <p>
-        GenScore cobra por cuánto monitorizas — dominios, prompts y motores de IA. Tu factura depende
-        de esas tres variables, nunca de un precio plano.
+        GenScore tiene un plan gratuito y un único plan de pago, Pro, al mismo precio para todos
+        ({proPlan.price} € al mes, IVA incluido). Lo que cambia entre uno y otro son los límites:
+        dominios, prompts y motores de IA.
       </p>
 
       <h2>Límites por plan</h2>
@@ -46,11 +47,11 @@ export default function PlanesYLimitesPage() {
             <th>Motores de IA</th>
             <th>Refresco</th>
           </tr>
-          {PLANS.map((plan) => (
+          {LISTED_PLANS.map((plan) => (
             <tr key={plan.id}>
               <td>{plan.name}</td>
               <td>{plan.meter.projects}</td>
-              <td>~{plan.meter.prompts}</td>
+              <td>{plan.id === "pro" ? plan.meter.prompts : `~${plan.meter.prompts}`}</td>
               <td>{plan.meter.engines}</td>
               <td>{plan.meter.refresh}</td>
             </tr>
@@ -61,9 +62,7 @@ export default function PlanesYLimitesPage() {
 
       <h2>Qué cambia al subir de plan</h2>
       <ul>
-        <li><strong>Free → Starter</strong>: pasas de un escaneo puntual a monitorización con escaneo semanal y evolución histórica.</li>
-        <li><strong>Starter → Pro</strong>: más dominios y prompts (hasta {proPlan.meter.projects} dominios y {proPlan.meter.prompts} prompts en total, repartidos como quieras) y el generador de soluciones (FAQ, schema, briefs listos para publicar). Pro escanea con frecuencia {proPlan.meter.refresh.toLowerCase()}.</li>
-        <li><strong>Pro → Agencia</strong>: volumen de dominios y prompts a medida de tu cartera de clientes y escaneo diario.</li>
+        <li><strong>Free → Pro</strong>: pasas de un escaneo puntual a monitorización con escaneo {proPlan.meter.refresh.toLowerCase()} y evolución histórica, con hasta {proPlan.meter.projects} dominios y {proPlan.meter.prompts} prompts en total (repartidos entre tus dominios como quieras), y el generador de soluciones (FAQ, schema, briefs listos para publicar).</li>
       </ul>
 
       <p>

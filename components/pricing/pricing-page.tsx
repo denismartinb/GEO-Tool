@@ -8,7 +8,7 @@ import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { PlanCardCta } from "@/components/pricing/plan-card-cta";
 import { supportMailto } from "@/lib/support";
-import { PLANS, PLAN_MATRIX, PROMO_DURATION_MONTHS, type Plan, type PlanCell } from "@/app/pricing/plans-data";
+import { LISTED_PLANS, PLAN_MATRIX, PROMO_DURATION_MONTHS, matrixColumnOf, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 
 
@@ -90,13 +90,13 @@ function MatrixCell({ v }: { v: PlanCell }) {
 function PlanMatrix({ promoActive }: { promoActive: boolean }) {
   return (
     <div className="price-matrix-outer">
-      <p className="price-matrix-hint">Desliza para ver los 4 planes →</p>
+      {LISTED_PLANS.length > 2 ? <p className="price-matrix-hint">Desliza para ver los {LISTED_PLANS.length} planes →</p> : null}
       <div className="price-matrix-wrap">
-      <table className="price-matrix">
+      <table className={"price-matrix" + (LISTED_PLANS.length <= 2 ? " price-matrix-n2" : "")}>
         <thead>
           <tr>
             <th className="price-mx-rowhead" />
-            {PLANS.map((p) => {
+            {LISTED_PLANS.map((p) => {
               const showPromo = promoActive && p.promoPrice !== undefined;
               return (
                 <th key={p.id} className={p.recommended ? "price-rec" : ""}>
@@ -120,14 +120,14 @@ function PlanMatrix({ promoActive }: { promoActive: boolean }) {
           {PLAN_MATRIX.map((grp) => (
             <Fragment key={grp.group}>
               <tr className="price-mx-grouprow">
-                <td colSpan={PLANS.length + 1}>{grp.group}</td>
+                <td colSpan={LISTED_PLANS.length + 1}>{grp.group}</td>
               </tr>
               {grp.rows.map((r) => (
                 <tr key={r.label} className="hoverable">
                   <td className="price-mx-rowhead">{r.label}</td>
-                  {r.vals.map((v, j) => (
-                    <td key={PLANS[j].id} className={"price-mx-cell" + (PLANS[j].recommended ? " price-rec" : "")}>
-                      <MatrixCell v={v} />
+                  {LISTED_PLANS.map((p) => (
+                    <td key={p.id} className={"price-mx-cell" + (p.recommended ? " price-rec" : "")}>
+                      <MatrixCell v={r.vals[matrixColumnOf(p.id)]} />
                     </td>
                   ))}
                 </tr>
@@ -180,12 +180,12 @@ export function PricingPage() {
           <div className="blob blob-2" /><div className="blob blob-3" />
         </div>
         <div className="lp-hero-content">
-          <span className="lp-eyebrow"><Icon name="card" size={14} />Planes que crecen contigo</span>
+          <span className="lp-eyebrow"><Icon name="card" size={14} />Un solo plan de pago</span>
           <h1 className="lp-h1" style={{ fontSize: 52 }}>
             Paga solo por <span className="grad">lo que necesitas</span>
           </h1>
           <p className="lp-lead">
-            Analiza tu presencia en IA y amplía prompts, motores y frecuencia a medida que creces.
+            Analiza tu presencia en IA con un único plan de pago: mismo precio para todos, IVA incluido.
           </p>
           <div className="lp-hero-note" style={{ marginTop: 22 }}>
             <span><Icon name="check" size={14} className="text-[var(--pos)]" />Primer escaneo gratis</span>
@@ -199,8 +199,8 @@ export function PricingPage() {
       {/* CARDS */}
       <section className="lp-section" style={{ paddingTop: 8 }}>
         <div className="lp-inner">
-          <div className="price-cards">
-            {PLANS.map((p) => (
+          <div className={`price-cards price-cards-n${LISTED_PLANS.length}`}>
+            {LISTED_PLANS.map((p) => (
               <PlanCard key={p.id} plan={p} promoActive={promoActive} />
             ))}
           </div>

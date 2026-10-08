@@ -12,6 +12,10 @@
 -- RLS policy `prompts_insert_owner` additionally lets an owner insert straight
 -- through the REST API, so no application-level check can be authoritative.
 --
+-- STATE: PARTIAL. It enforces the pool for every path of the APPLICATION; it does
+-- NOT stop an owner who calls the REST API directly (see below). Do not describe
+-- the pool as "enforced" or "jump-proof" without that caveat.
+--
 -- What this adds: ONE function that counts the owner's active prompts across ALL
 -- their projects and inserts the new rows in the same transaction, under a
 -- per-account advisory lock, so concurrent callers are serialized and the cap

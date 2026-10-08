@@ -20,7 +20,9 @@ import { PLANS } from "@/app/pricing/plans-data";
 // los datos de la comparativa (lib/comparativas/alternativas-a-otterly.ts),
 // que esta página importa; el propio texto de la página se había quedado
 // fuera de esa pasada porque vive en JSX, no en el módulo de datos.
-const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
+const PRO_PLAN = PLANS.find((p) => p.id === "pro")!;
+const PRO_PRICE = PRO_PLAN.price;
+const PRO_PROMPTS = PRO_PLAN.meter.prompts;
 
 const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/alternativas-a-otterly`;
@@ -220,8 +222,8 @@ export default function AlternativasAOtterlyPage() {
           te frena no es medir sino ejecutar, el generador de soluciones redacta el borrador —FAQ,
           datos estructurados, briefs— desde el plan Pro: es donde el resto de esta lista se detiene,
           incluida Otterly. Y si tu equipo trabaja en castellano, es la única con interfaz y soporte
-          nativos, sin traducir un panel en inglés cada mañana. Al escalón de ~100 prompts, Pro cuesta
-          {PRO_PRICE} €/mes con los tres motores dentro, frente a 189 $ más add-ons.
+          nativos, sin traducir un panel en inglés cada mañana. Con {PRO_PROMPTS} prompts, Pro cuesta
+          {PRO_PRICE} €/mes con los tres motores dentro, frente a los 189 $ del Standard de Otterly (100 prompts) más add-ons.
         </Verdict>
 
         <p>

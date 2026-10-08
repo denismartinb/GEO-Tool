@@ -8113,6 +8113,8 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .price-hero { padding: 70px 0 30px; }
 
 .price-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; align-items: stretch; }
+/* CONTRACT-99 B1b: with two offered plans (Free + Pro) four equal columns left half the row empty. Declared before the breakpoints below, with the same specificity, so they still win on small screens. */
+.price-cards-n2 { grid-template-columns: repeat(2, minmax(0, 420px)); justify-content: center; }
 .price-card {
   position: relative; display: flex; flex-direction: column;
   background: #fff; border: 1px solid var(--line); border-radius: var(--r-xl);
@@ -8219,6 +8221,8 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .price-faq-a p { margin: 0; padding: 0 20px 18px; font-size: 14px; line-height: 1.62; color: var(--ink-2); }
 
 .price-matrix-hint { display: none; }
+/* CONTRACT-99 B1b: with two columns the 680px floor (made for four) pushes the Pro column off-screen on a phone, with the swipe hint hidden. Two classes so it wins over the media query below whatever the source order. */
+.price-matrix.price-matrix-n2 { min-width: 0; }
 
 @media (max-width: 1000px) {
   .price-cards { grid-template-columns: repeat(2, 1fr); }

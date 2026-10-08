@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { showsPromoStrip } from "@/lib/account-chip";
 import { useSessionUser } from "@/lib/use-session-user";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
-import { PLANS, PROMO_DURATION_MONTHS, PROMO_ENDS_AT } from "@/app/pricing/plans-data";
+import { PLANS } from "@/app/pricing/plans-data";
 
 /**
  * Three small client islands, one per session-aware fragment — kept
@@ -22,6 +22,12 @@ import { PLANS, PROMO_DURATION_MONTHS, PROMO_ENDS_AT } from "@/app/pricing/plans
  */
 
 /**
+ * [SUPERSEDED por CONTRACT-99, log §237, en lo que dice de la REBAJA: ya no hay
+ * precio de lanzamiento ni segundo plan. Lo que sigue explica por qué son TRES
+ * filas y cómo se anima, y eso sigue vigente; la `PromoStrip` de abajo dice qué
+ * pone cada fila hoy. Las cifras 179/59/45/19, las fechas y el «−67%» de este
+ * párrafo son históricas.]
+ *
  * Rotación vertical entre TRES mensajes ciertos a la vez — el ensayo gratis
  * de siempre y la rebaja de lanzamiento en sus dos planes — en vez de
  * acortarlos para que quepan juntos en una línea. Un solo reloj CSS
@@ -75,28 +81,20 @@ import { PLANS, PROMO_DURATION_MONTHS, PROMO_ENDS_AT } from "@/app/pricing/plans
  * ser una constante tampoco.
  */
 const PRO_PLAN = PLANS.find((p) => p.id === "pro")!;
-const STARTER_PLAN = PLANS.find((p) => p.id === "starter")!;
 
-function promoDiscountLabel(plan: { price: number; promoPrice?: number }): string {
-  if (plan.promoPrice === undefined) return "";
-  return `−${Math.round(((plan.price - plan.promoPrice) / plan.price) * 100)}%`;
-}
-
-// `timeZone` explícito: PROMO_ENDS_AT lleva su propio offset (+02:00,
-// Madrid), y sin fijarlo aquí `Intl.DateTimeFormat` cae al huso del
-// servidor — en Vercel, UTC — que corre la fecha un día hacia atrás ("31
-// ago" en vez de "1 sept") para cualquier hora de corte antes del mediodía
-// peninsular. Es la misma clase de fallo que esta fase existe para quitar,
-// sólo que en la zona horaria en vez de en el precio.
-const PROMO_ENDS_LABEL = new Intl.DateTimeFormat("es-ES", {
-  day: "numeric",
-  month: "short",
-  timeZone: "Europe/Madrid"
-}).format(new Date(PROMO_ENDS_AT));
-
+/**
+ * CONTRACT-99 (log §237): the launch promo is gone — there is ONE paid plan at one price, VAT
+ * included — so the three rotating rows no longer advertise a discount (a struck-through price
+ * and a campaign date would announce something no checkout gives). The strip keeps its three
+ * rows because the animation in globals.css (`lp-promo-cycle`, 9 s, delays 0/-3/-6) is measured
+ * for exactly three; what changed is what they say, and every figure is read from `PLANS`.
+ * The first row still says "7 días de Pro": that is what a new account gets TODAY, and it is the
+ * one string to revisit when the optional 14-day trial replaces it (B5).
+ */
 export function PromoStrip() {
   const user = useSessionUser();
   if (!showsPromoStrip(user?.planId)) return null;
+  const { meter } = PRO_PLAN;
   return (
     <div className="lp-promo">
       <span className="lp-promo-track">
@@ -105,17 +103,16 @@ export function PromoStrip() {
           <span>7 días de Pro</span>
         </span>
         <span className="lp-promo-row b">
-          <span className="lp-promo-pill">{promoDiscountLabel(PRO_PLAN)}</span>
+          <span className="lp-promo-pill">{PRO_PLAN.price}&nbsp;€</span>
           <span>
-            Pro <s>{PRO_PLAN.price}&nbsp;€</s> <b>{PRO_PLAN.promoPrice}&nbsp;€/mes</b>, {PROMO_DURATION_MONTHS} meses
-            · hasta {PROMO_ENDS_LABEL}.
+            Un solo plan: <b>{PRO_PLAN.price}&nbsp;€/mes</b>, IVA incluido.
           </span>
         </span>
         <span className="lp-promo-row c">
-          <span className="lp-promo-pill">{promoDiscountLabel(STARTER_PLAN)}</span>
+          <span className="lp-promo-pill">Pro</span>
           <span>
-            Starter <s>{STARTER_PLAN.price}&nbsp;€</s> <b>{STARTER_PLAN.promoPrice}&nbsp;€/mes</b>,{" "}
-            {PROMO_DURATION_MONTHS} meses · hasta {PROMO_ENDS_LABEL}.
+            {meter.projects} dominios · {meter.prompts} prompts · {meter.engines} motores · escaneo{" "}
+            {meter.refresh.toLowerCase()}.
           </span>
         </span>
       </span>

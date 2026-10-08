@@ -16,8 +16,9 @@ These invariants apply automatically when touching Supabase code. Owned by the
 - **No schema changes without explicit phase approval.** Migrations are
   forbidden unless the founder has approved a dedicated backend phase.
 - **No RLS changes without explicit approval.**
-- **Every write of `project_prompts` goes through `add_project_prompts`
-  (`lib/projects/prompt-pool.ts`), never a direct `.insert()`.** The account-wide
+- **Every write of `project_prompts` FROM THE APPLICATION goes through
+  `add_project_prompts` (`lib/projects/prompt-pool.ts`), never a direct `.insert()`.
+  The pool is PARTIAL while RLS still allows REST inserts/re-activations.** The account-wide
   prompt pool was enforced as a read followed by a write in three places — a
   race by construction (twelve concurrent writers reached 120 against a cap of
   75 in `scripts/verify-prompt-pool-sql.sh`; the function never passed 70). The

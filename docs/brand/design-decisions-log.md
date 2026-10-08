@@ -21350,7 +21350,7 @@ opt-in. Gracia de 3 días si falla el pago. Delimitación completa en
   `agency` diario) y la leen el cron, el vigilante, el aviso de madurez de datos y el copy.
   El copy que afirmaba «diario» para todos los planes (tour, docs, avisos de escaneo
   automático, correos de prueba) se neutraliza o pasa a leer la cadencia real.
-- **B2**: la bolsa de 75, hecha cumplir. **Corrección de un error mío**: el tope de prompts
+- **B2 (PARCIAL)**: la bolsa de 75, cumplida por la aplicación (la API REST sigue pudiendo saltársela). **Corrección de un error mío**: el tope de prompts
   YA se contaba por cuenta al añadir (RLS); lo que faltaba era hacerlo cumplir. Agujeros
   verificados: `createProject` no restaba lo que la cuenta ya tenía; `addPromptsCore`
   comprobaba `count >= tope` e insertaba un lote entero; la acción `createPrompt` insertaba
@@ -21387,3 +21387,33 @@ Starter y Agencia en las superficies públicas): es UI y falta la vía de eviden
 `app/dashboard/projects/[projectId]/actions.ts`,
 `supabase/migrations/0039_add_project_prompts_pool.sql`,
 `scripts/verify-prompt-pool-sql.sh`, `.claude/rules/supabase.md`.
+
+**Segunda tanda (misma fecha), tras nuevas decisiones del dueño.**
+- **B2 queda PARCIAL, y así debe llamarse** mientras RLS permita escribir `project_prompts` por la API.
+  Propuesta mínima de RLS (quitar el insert directo y bloquear la reactivación con un trigger) y pruebas
+  de acceso directo en Postgres local: hoy **76** y **150** activos con tope 75; con la propuesta, el
+  insert y la reactivación se rechazan y lo legítimo sigue funcionando
+  (`docs/specs/billing/proposals/0040_*.sql`, `scripts/verify-prompt-rls-sql.sh`). No aplicada.
+- **Decidido por el dueño:** 75 preguntas ACTIVAS TOTALES por cuenta (no créditos mensuales); el primer
+  escaneo de cada dominio nuevo no consume la revisión (una vez por dominio, máximo 3 activos, archivar
+  y volver a añadir no la renueva); fallos y reintentos no consumen revisión y deben ser transparentes
+  para el cliente y recuperarse en backend; prueba de 14 días única por cuenta, sin tarjeta, tras el
+  diagnóstico; gracia de 3 días desde el primer pago fallido y después solo lectura hasta pagar;
+  dominios archivados o eliminados congelados (no gastan). **Diferido por el dueño:** captcha y límites
+  por IP. Estado por cláusula en `docs/specs/billing/contract-99-implementation.md` §11.
+- **Hecho en local:** B1b en las superficies públicas (`/pricing`, docs, tira del hero, asistente,
+  metadatos, `llms.txt`) y selector de la consola, con capturas a 390 y 1280 px **de un render local, no
+  del preview** (`docs/specs/billing/evidence/contract-99-b1b/`); núcleo puro de la gracia de 3 días
+  (`lib/billing/payment-grace.ts`); clave de dominio para la exención del primer escaneo
+  (`lib/projects/domain-key.ts`).
+- **Las capturas encontraron fallos reales:** la matriz de `/pricing` escondía la columna Pro a 390 px,
+  la FAQ seguía hablando de Agencia, y dos frases afirmaban un modelo de precio por prompts que ya no
+  existe. Corregidos.
+- **Auditoría del congelado:** barrido, creación de escaneos, vigilante, resumen semanal y auditoría
+  manual ya excluyen archivados; **no** lo hacen el ejecutor/`resume` con trabajo en curso ni el
+  ejecutor de auditorías automáticas, y `cancelled` existe pero nadie lo escribe.
+- **Pendiente de decisión:** el contenido editorial que cita Starter o cuotas antiguas (§17 del
+  documento), el titular y las FAQ de `/pricing`, y si «Hablar con ventas» sigue existiendo.
+- **Sigue sin estar listo para cobrar:** Price y configuración de Stripe, fiscalidad y prueba real en
+  TEST, cableado de la gracia (esquema y webhook del #549), B3, B5, B6 completos, cierre de la vía REST,
+  aprobación del uso de `service_role`.

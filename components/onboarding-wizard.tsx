@@ -14,7 +14,7 @@ import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { isWellFormedDomain, MAX_INITIAL_PROMPTS, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
-import { PLANS } from "@/app/pricing/plans-data";
+import { LISTED_PLANS } from "@/app/pricing/plans-data";
 
 const DEFAULT_PROMPT_CAP = 10;
 const GENERATE_MORE_BATCH_SIZE = 5;
@@ -528,7 +528,7 @@ export function OnboardingWizard({
   // below MAX_INITIAL_PROMPTS (Free today) — the first plan tier (PLANS is
   // already ordered by prompt cap, ascending) that covers more than this
   // account's own cap, to name a concrete upgrade instead of a vague "more".
-  const nextPromptPlan = PLANS.find((p) => p.caps.prompts > promptCap);
+  const nextPromptPlan = LISTED_PLANS.find((p) => p.caps.prompts > promptCap);
   const [step, setStep] = useState(0);
   const [domain, setDomain] = useState("");
   const [country, setCountry] = useState("ES");
