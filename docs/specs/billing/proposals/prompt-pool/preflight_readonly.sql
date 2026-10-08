@@ -68,11 +68,12 @@ checks(section, item, value) as (
         (select count(*)::text from public.profiles pr where (pr.stripe_subscription_id is not null and pr.stripe_subscription_id not like 'sub\_%')
             or (pr.stripe_subscription_id is not null and pr.stripe_customer_id is null))),
     ('7c reading rule', '7c rows are a PRESENCE-ONLY signal: a profile can have been forged and later edited, and before C the owner could rewrite created_at. A 0 here is NOT evidence that nothing happened', 'n/a'),
-    ('7d helpers to compare with the postflight', 'md5 auth.role()=' || coalesce((select md5(prosrc) from pg_proc where proname='role' and pronamespace='auth'::regnamespace limit 1),'?')
-        || ' auth.uid()=' || coalesce((select md5(prosrc) from pg_proc where proname='uid' and pronamespace='auth'::regnamespace limit 1),'?'), 'n/a'),
+    ('7d helpers to compare with the postflight', 'fingerprint of auth.role()/auth.uid() (body+config+owner)', coalesce((select string_agg(p.proname || ':' || md5(p.prosrc || coalesce(p.proconfig::text,'') || p.prosecdef::text || p.proowner::text), ' ' order by p.proname, p.oid) from pg_proc p where p.pronamespace='auth'::regnamespace and p.proname in ('role','uid')),'?')),
+    ('7d helpers to compare with the postflight', 'handle_new_user (signup) is the repo version (expect true)', coalesce((select (md5(prosrc)='0ccd1cb3c754f92af7b764e1cd685f68')::text from pg_proc where proname='handle_new_user' and pronamespace='public'::regnamespace),'missing')),
+    ('7d helpers to compare with the postflight', 'set_updated_at is the repo version (expect true)', coalesce((select (md5(prosrc)='9b1889f56258bf9d6554213c05019c76')::text from pg_proc where oid = to_regprocedure('public.set_updated_at()')),'missing')),
+    ('7d helpers to compare with the postflight', 'role/database settings that change behaviour (expect 0)', (select count(*)::text from pg_db_role_setting s, unnest(s.setconfig) c where c ~* '^(session_replication_role|request\.jwt|search_path|row_security)')),
     ('7d helpers to compare with the postflight', 'is_project_owner body is the reviewed one (expect true)', coalesce((select (md5(prosrc)='b096af36e83c9b9f57568630bc5e84ef')::text from pg_proc where proname='is_project_owner' and pronamespace='public'::regnamespace),'missing')),
     ('7d helpers to compare with the postflight', 'row-level security on profiles and project_prompts (expect true)', coalesce((select bool_and(relrowsecurity)::text from pg_class where oid in (to_regclass('public.profiles'), to_regclass('public.project_prompts'))),'missing')),
-    ('7d helpers to compare with the postflight', 'triggers switched off by a database/role setting (expect 0)', (select count(*)::text from pg_db_role_setting s, unnest(s.setconfig) c where c like 'session_replication_role%')),
     ('7 orphans (expect 0)', 'prompts without a project', (select count(*)::text from public.project_prompts pp left join public.projects p on p.id = pp.project_id where p.id is null)),
     ('8 grandfathered under B', 'accounts above their derived cap', (select count(*)::text from over_cap where active > cap))
 )

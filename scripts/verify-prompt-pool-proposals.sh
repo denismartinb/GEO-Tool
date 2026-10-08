@@ -242,10 +242,10 @@ testB() {
 
   echo "-- postflight: surrounding-surface attacks found by the fourth review (each must read false, then be undone)"
   q "create function public.zz_flip() returns trigger language plpgsql as \$\$ begin new.is_active:=true; return new; end \$\$; create trigger trg_project_prompts_zz before insert on public.project_prompts for each row execute function public.zz_flip()" >/dev/null
-  eq "PF8 an extra BEFORE trigger that flips is_active is flagged" "$(pf_false 'surface: no trigger')" 1
+  eq "PF8 an extra BEFORE trigger that flips is_active is flagged" "$(pf_false 'surface: every trigger')" 1
   q "drop trigger trg_project_prompts_zz on public.project_prompts" >/dev/null
   q "create function public.zz_plan() returns trigger language plpgsql as \$\$ begin new.current_plan:='agency'; return new; end \$\$; create trigger trg_profiles_zz before insert on public.profiles for each row execute function public.zz_plan()" >/dev/null
-  eq "PF8b an extra trigger on profiles that reopens hole 1 is flagged" "$(pf_false 'surface: no trigger')" 1
+  eq "PF8b an extra trigger on profiles that reopens hole 1 is flagged" "$(pf_false 'surface: every trigger')" 1
   q "drop trigger trg_profiles_zz on public.profiles" >/dev/null
   q "create policy zz_extra_read on public.project_prompts for select to authenticated using (true)" >/dev/null
   eq "PF9 an extra permissive policy next to the originals is flagged" "$(pf_false 'surface: project_prompts policies')" 1
@@ -293,7 +293,7 @@ testB() {
   echo "-- created_at freeze, C_rollback order guard, fail-closed unknown plan, inactive rows at the cap"
   seed pro
   eq "C2 an owner cannot rewrite profiles.created_at (forensic signal)" "$(as_user_err $U1 "update public.profiles set created_at='1999-01-01' where id='$U1'" | grep -c 'created_at can only')" 1
-  eq "C2 C_rollback refuses while B is active (it would reopen hole 1 under B)" "$(psql -q -f $DIR/C_rollback.sql 2>&1 | grep -c 'Option B is active')" 1
+  eq "C2 C_rollback refuses while B is active (it would reopen hole 1 under B)" "$(psql -q -f $DIR/C_rollback.sql 2>&1 | grep -c "trigger still exists")" 1
   q "alter table public.profiles drop constraint profiles_current_plan_check" >/dev/null
   q "set \"request.jwt.claim.role\" = 'service_role'; update public.profiles set current_plan='bogus' where id='$U1'" >/dev/null
   eq "B12 an UNKNOWN plan value fails closed to the Free cap (10), not open" "$(q "select public.account_prompt_cap('$U1')")" 10
@@ -312,23 +312,110 @@ testB() {
   eq "PFE7c a forged agency profile is counted by the late-created row and by the fake-subscription row" "$(psql -At -f $DIR/preflight_readonly.sql | grep -E 'created more than 1 minute|does not look like a Stripe' | grep -c '|1$')" 2
   seed pro
 
-  echo "-- RUNBOOK §9 reconciliation block and §4 overrides block, executed as written"
+  echo "-- RUNBOOK §9 reconciliation block and §4 overrides block: the text is EXTRACTED from RUNBOOK.md and executed"
+  rb_block() { python3 - "$1" "$2" <<'PYX'
+import re, sys
+text = open("docs/specs/billing/proposals/prompt-pool/RUNBOOK.md", encoding="utf-8").read()
+anchor, subst = sys.argv[1], sys.argv[2]
+i = text.index(anchor)
+m = re.search(r"```sql\n(.*?)```", text[i:], re.S)
+block = m.group(1)
+for pair in subst.split("|||"):
+    if pair:
+        k, v = pair.split("=>", 1)
+        block = block.replace(k, v)
+print(block)
+PYX
+  }
+  PRED="lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(coalesce(u.email,'')))"
   seed pro
   q "update public.profiles set email='Altered@x.test' where id='$U1'" >/dev/null
-  WRONG="do \$\$ declare expected uuid[] := array['$U2']::uuid[]; got uuid[]; begin with u as (update public.profiles pr set email = coalesce(au.email,'') from auth.users au where au.id = pr.id and lower(btrim(coalesce(pr.email,''))) is distinct from lower(btrim(coalesce(au.email,''))) returning pr.id) select coalesce(array_agg(id order by id), array[]::uuid[]) into got from u; if got is distinct from (select coalesce(array_agg(x order by x), array[]::uuid[]) from unnest(expected) x) then raise exception 'mismatch'; end if; end \$\$"
-  eq "S9 the reconciliation block REFUSES when the updated ids are not the backed-up ids" "$(psql -Atq -c "$WRONG" 2>&1 | grep -c mismatch)" 1
+  WRONG="$(rb_block '4. **Una sola sentencia atómica**' "<predicado>=>$PRED|||'<id 1>', '<id 2>'=>'$U2'")"
+  eq "S9 the reconciliation block (text from RUNBOOK) REFUSES when the updated ids are not the backed-up ids" "$(psql -Atq -c "$WRONG" 2>&1 | grep -c 'not exactly the backed-up ids')" 1
   eq "S9 ...and the refusal changed nothing" "$(q "select email from public.profiles where id='$U1'")" "Altered@x.test"
-  RIGHT="${WRONG//$U2/$U1}"
+  RIGHT="$(rb_block '4. **Una sola sentencia atómica**' "<predicado>=>$PRED|||'<id 1>', '<id 2>'=>'$U1'")"
   psql -Atq -c "$RIGHT" >/dev/null 2>&1
-  eq "S9 with the right ids the block reconciles to auth.users" "$(q "select email from public.profiles where id='$U1'")" "a1@x.test"
-  OV="do \$\$ declare found integer; begin insert into public.account_prompt_cap_overrides (user_id, cap, note) select id, 300, 'comped' from auth.users where email_confirmed_at is not null and lower(btrim(email)) in ('a1@x.test') on conflict (user_id) do nothing; select count(*) into found from public.account_prompt_cap_overrides o where o.user_id in (select id from auth.users where email_confirmed_at is not null and lower(btrim(email)) in ('a1@x.test')); if found <> 1 then raise exception 'override count mismatch %', found; end if; end \$\$"
-  eq "S4 the overrides block refuses when the account is not email-confirmed" "$(psql -Atq -c "$OV" 2>&1 | grep -c 'override count mismatch')" 1
+  eq "S9 with the right ids the block (as written) reconciles to auth.users" "$(q "select email from public.profiles where id='$U1'")" "a1@x.test"
+  OV="$(rb_block '## 4. Overrides' "<email 1>=>a1@x.test|||<email 2>=>a1@x.test|||<N>=>1")"
+  eq "S4 the overrides block (text from RUNBOOK) refuses when the account is not email-confirmed" "$(psql -Atq -c "$OV" 2>&1 | grep -c 'comped accounts with an override')" 1
   q "update auth.users set email_confirmed_at=now() where id='$U1'" >/dev/null
   psql -Atq -c "$OV" >/dev/null 2>&1
   eq "S4 once confirmed, the override row exists" "$(q "select cap from public.account_prompt_cap_overrides where user_id='$U1'")" 300
   q "update public.account_prompt_cap_overrides set cap=500 where user_id='$U1'" >/dev/null; psql -Atq -c "$OV" >/dev/null 2>&1
   eq "S4 re-running does NOT lower an existing larger cap" "$(q "select cap from public.account_prompt_cap_overrides where user_id='$U1'")" 500
   seed pro
+
+  echo "-- fifth-review attacks: each must read false in the postflight (then be undone), plus the cross-tenant oracle"
+  SAVED_SU="$(q "select pg_get_functiondef(oid) from pg_proc where proname='set_updated_at' and pronamespace='public'::regnamespace")"
+  q "create or replace function public.set_updated_at() returns trigger language plpgsql as \$\$ begin new.updated_at:=now(); if tg_table_name='project_prompts' then new.is_active:=true; end if; return new; end \$\$" >/dev/null
+  eq "X1 a tampered set_updated_at (re-activates prompts on any update) is flagged" "$(pf_false 'surface: every trigger')" 1
+  psql -q -c "$SAVED_SU" >/dev/null
+  q "drop function if exists public.zz_plan(); create function public.zz_plan() returns trigger language plpgsql as \$\$ begin new.current_plan:='agency'; return new; end \$\$; drop trigger trg_profiles_set_updated_at on public.profiles; create trigger trg_profiles_set_updated_at before update on public.profiles for each row execute function public.zz_plan()" >/dev/null
+  eq "X2 the profiles updated_at trigger re-pointed at a plan-forging function is flagged (pinned by definition, not by name)" "$(pf_false 'surface: every trigger')" 1
+  q "drop trigger trg_profiles_set_updated_at on public.profiles; create trigger trg_profiles_set_updated_at before update on public.profiles for each row execute function public.set_updated_at(); drop function public.zz_plan()" >/dev/null
+  q "create table public.pp_child () inherits (public.project_prompts)" >/dev/null
+  eq "X3 a table inheriting project_prompts is flagged" "$(pf_false 'surface: no inheritance')" 1
+  q "create rule zz_redirect as on insert to public.project_prompts do instead insert into public.pp_child values (new.*)" >/dev/null
+  eq "X4 an INSTEAD rule on project_prompts is flagged" "$(pf_false 'surface: no inheritance')" 1
+  q "drop rule zz_redirect on public.project_prompts; drop table public.pp_child" >/dev/null
+  q "alter function public.is_project_owner(uuid) set search_path = pg_catalog, public" >/dev/null
+  eq "X6 is_project_owner with a different search_path is flagged" "$(pf_false 'surface: is_project_owner')" 1
+  q "alter function public.is_project_owner(uuid) set search_path = public" >/dev/null
+  q "create schema if not exists lookalike; create function lookalike.is_project_owner(uuid) returns boolean language sql as 'select true'; alter policy prompts_select_owner on public.project_prompts using (lookalike.is_project_owner(project_id))" >/dev/null
+  eq "X7 a policy re-pointed at a look-alike function (same name, other schema) is flagged by the dependency check" "$(pf_false 'surface: is_project_owner')" 1
+  q "alter policy prompts_select_owner on public.project_prompts using (public.is_project_owner(project_id)); drop schema lookalike cascade" >/dev/null
+  q "create role dg_nobypass; grant create on schema public to dg_nobypass; alter function public.enforce_prompt_pool() owner to dg_nobypass" >/dev/null
+  eq "X13 a package function owned by a role that cannot bypass RLS is flagged" "$(pf_false 'surface: package functions are owned')" 1
+  q "alter function public.enforce_prompt_pool() owner to root; revoke create on schema public from dg_nobypass; drop role dg_nobypass" >/dev/null
+  q "alter table public.project_prompts force row level security" >/dev/null
+  eq "X12 FORCE row level security is flagged" "$(pf_false 'surface: row-level security')" 1
+  q "alter table public.project_prompts no force row level security" >/dev/null
+  q "alter database $PGDATABASE set \"request.jwt.claim.role\" = 'service_role'" >/dev/null
+  eq "X11 a database-level request.jwt.* default is flagged" "$(pf_false 'surface: no database/role setting')" 1
+  q "alter database $PGDATABASE reset \"request.jwt.claim.role\"" >/dev/null
+  q "alter policy projects_update_owner on public.projects with check (true)" >/dev/null
+  eq "X9 a weakened projects policy is flagged" "$(pf_false 'surface: projects policies')" 1
+  q "alter policy projects_update_owner on public.projects with check (owner_user_id = auth.uid())" >/dev/null
+  SAVED_HNU="$(q "select pg_get_functiondef(oid) from pg_proc where proname='handle_new_user' and pronamespace='public'::regnamespace")"
+  q "create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path=public as \$\$ begin insert into public.profiles(id,email,current_plan) values (new.id, coalesce(new.email,''), 'agency'); return new; end \$\$" >/dev/null
+  eq "X8 a tampered signup function (everyone gets agency) is flagged" "$(pf_false 'surface: handle_new_user')" 1
+  psql -q -c "$SAVED_HNU" >/dev/null
+  q "alter table public.profiles disable trigger trg_profiles_protect_billing_columns" >/dev/null
+  eq "X5 a DISABLED C trigger is flagged (tgenabled)" "$(pf_false 'C: profiles trigger')" 1
+  q "alter table public.profiles enable trigger trg_profiles_protect_billing_columns" >/dev/null
+  q "create or replace function public.account_prompt_cap(p_owner uuid) returns integer language plpgsql stable security definer set search_path = '' as \$\$ begin return 10000; end \$\$" >/dev/null
+  eq "X14 a B function with a different body (same attributes) is flagged" "$(pf_false 'B: both functions')" 1
+  psql -q -f $DIR/B1_objects.sql >/dev/null 2>&1
+  q "alter policy profiles_update_own on public.profiles using (true)" >/dev/null
+  eq "X15 a weakened profiles policy is flagged" "$(pf_false 'surface: profiles policies')" 1
+  q "alter policy profiles_update_own on public.profiles using (id = auth.uid())" >/dev/null
+  eq "X16 after undoing all fifth-review attacks the whole postflight (B, C, surface) is clean again" "$(psql -At -f $DIR/postflight.sql | grep -E '^(B:|C:|surface)' | grep -c '|f$')" 0
+  echo "-- cross-tenant oracle (B): a user writing into ANOTHER account's project must get RLS, never the victim's cap"
+  seed pro; q "set \"request.jwt.claim.role\" = 'service_role'; update public.profiles set current_plan='pro' where id='$U2'" >/dev/null
+  q "insert into public.project_prompts(project_id,prompt_text) select '$PX','victim prompt '||g||' xxxxx' from generate_series(1,75) g" >/dev/null
+  OR="$(as_user_err $U1 "insert into public.project_prompts(project_id,prompt_text) values ('$PX','probe prompt 0000000')")"
+  eq "O1 the cross-tenant insert is refused by RLS" "$(echo "$OR" | grep -c 'row-level security')" 1
+  eq "O1 ...and the victim's plan tier / prompt count is NOT leaked (no prompt_pool_full, no cap)" "$(psql -Atq -c "set role authenticated; set \"request.jwt.claim.sub\"='$U1'; set \"request.jwt.claim.role\"='authenticated'" -c "insert into public.project_prompts(project_id,prompt_text) values ('$PX','probe prompt 0000000')" 2>&1 | grep -c 'prompt_pool_full\|cap=')" 0
+  eq "O1 the victim's own insert at the cap is still refused with prompt_pool_full" "$(as_user_err $U2 "insert into public.project_prompts(project_id,prompt_text) values ('$PX','own prompt over the cap 00')" | grep -c prompt_pool_full)" 1
+  seed pro
+
+  echo "-- B2 guard shapes the review found unpinned (tgqual / tgattr / body hash), and rollback order"
+  q "drop trigger trg_project_prompts_pool on public.project_prompts" >/dev/null
+  for broken in "create or replace trigger trg_profiles_protect_billing_columns before insert or update on public.profiles for each row when (false) execute function public.protect_billing_columns()" \
+                "create or replace trigger trg_profiles_protect_billing_columns before insert or update of current_plan on public.profiles for each row execute function public.protect_billing_columns()" \
+                "create or replace function public.protect_billing_columns() returns trigger language plpgsql security definer set search_path='' as 'begin return new; end'"; do
+    q "$broken" >/dev/null
+    eq "B2G2 refuses when C is broken: ${broken:0:80}" "$(psql -q -f $DIR/B2_activate.sql 2>&1 | grep -c 'refusing to activate B2')" 1
+    psql -v ON_ERROR_STOP=1 -q -f $DIR/C_profiles_guards.sql >/dev/null
+  done
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B2_activate.sql >/dev/null; ok "B2 re-activated for the rollback-order tests"
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B_rollback_1_disable.sql >/dev/null
+  eq "RBO1 C_rollback STILL refuses while B's trigger exists but is only DISABLED (re-enabling would run B over a rolled-back C)" "$(psql -q -f $DIR/C_rollback.sql 2>&1 | grep -c 'trigger still exists')" 1
+  q "create function public.reactivate_project_prompts(uuid, uuid[], integer) returns jsonb language sql as \$\$ select '{}'::jsonb \$\$" >/dev/null
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B_rollback_2_drop.sql >/dev/null
+  eq "RBO2 C_rollback refuses while Option A's function exists (A without C is not safe)" "$(psql -q -f $DIR/C_rollback.sql 2>&1 | grep -c 'Option A is applied')" 1
+  q "drop function public.reactivate_project_prompts(uuid, uuid[], integer)" >/dev/null
+  psql -v ON_ERROR_STOP=1 -q -f $DIR/B2_activate.sql >/dev/null; seed pro
 
   echo "-- rollbacks"
   seed pro
@@ -387,6 +474,7 @@ testA() {
   q "insert into public.project_prompts(project_id,prompt_text,is_active) select '$P2','inactive prompt '||g||' xxxx',false from generate_series(1,10) g" >/dev/null
   pids=(); for i in $(seq 1 10); do ( as_service "select public.reactivate_project_prompts('$U1',(select array_agg(id) from (select id from public.project_prompts where project_id='$P2' and not is_active order by id offset $((i-1)) limit 1) s),75); select pg_sleep(0.4)" >/dev/null 2>&1 ) & pids+=($!); done; wait "${pids[@]}"
   eq "A4d 10 concurrent single reactivations at 70/75: exactly 75 (the lock is real)" "$(active)" 75
+  eq "A4e a negative cap is refused as invalid (guard pinned)" "$(as_service "select public.reactivate_project_prompts('$U1',array[gen_random_uuid()],-1)" | grep -c '"invalid"\|invalid')" 1
   echo "-- closure (phase A2)"
   seed pro
   eq "A5 authenticated REST insert refused (policy dropped)" "$(as_user_err $U1 "insert into public.project_prompts(project_id,prompt_text) values ('$P1','rest insert prompt 000')" | grep -c 'row-level security')" 1
