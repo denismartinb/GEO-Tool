@@ -58,3 +58,14 @@ Transcrito de la salida del guion, 390 y 1280, casos `blocked` y `ok`:
 - El distintivo rojo «N · 2 Issues» es el overlay de desarrollo de Next; viene de los avisos de hidratación de la página
   fixture (ver arriba), no de un error del asistente.
 - Los favicons de los competidores salen rotos o vacíos: el fixture no tiene red y los servicios de favicon no responden.
+
+## Dos aclaraciones sobre lo que enseñan estas capturas
+
+- **La cifra «24 respuestas estimadas» NO es la que verá el cliente tras integrar #550.** En el fixture el resumen usa la
+  fórmula de `main` (prompts × motores = 8 × 3 = 24, sin muestreo). #550 (SCAN-PLAN-UNITS-1) la sustituye por
+  `describeRunPlan`, que añade las pasadas: según la revisión del Director, para este caso son 8 × 3 pasadas × 3 motores
+  = **72 respuestas**. Esa cifra no se ha calculado aquí. Al reconciliar con #550 hay que conservar su `scanContext` y su
+  aritmética; `LaunchSummaryPanel` no se toca en este PR.
+- **El paso 1 a 390 px NO se da por válido como flujo móvil**, aunque `document.scrollWidth` no desborde: ahí se cortan
+  «Continuar», la descripción y el resumen (heredado de `main`). La causa localizada y una corrección mínima, medida
+  sólo con CSS inyectado en el navegador (sin tocar ficheros), se proponen en el informe de sesión de #553.
