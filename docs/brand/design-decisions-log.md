@@ -13247,6 +13247,25 @@ sitios.
 
 ## 146. La portada tenía un testimonio inventado, y se ha ido con la Fase C (HOME-2026-08 Fase C, 2026-08-22)
 
+> **RECTIFICACIÓN (2026-10-08).** Esta entrada presentó como **real** el testimonio que sustituía al anterior
+> (Nerea Solís · Nordika Home · «+128 %»), diciendo que el fundador había confirmado que la cifra era una medición de
+> esa cuenta. **Era falso**: el fundador ha confirmado el 2026-10-08, por escrito, que ese testimonio es **inventado**.
+> Es decir, la Fase C **cambió un testimonio inventado por otro inventado** y lo documentó como verificado; el comentario
+> de código «confirmed as real (log §146)» también era falso. Lo que sigue se conserva tal como se escribió, **para que
+> quede constancia de que se presentó como real**, y no es evidencia de nada. No existe constancia en el repositorio de
+> la persona, la empresa, la cifra ni ningún permiso.
+>
+> **Retirada** (rama `fix/remove-invented-testimonial`, separada del contrato de 99 € y de cualquier SQL; **pendiente de
+> merge y despliegue, que son del dueño**: hasta entonces sigue en producción lo que esté desplegado): la sección de la
+> portada, `public/home/nerea.webp` y `public/home/nordika-home.webp`, los estilos `.lp-testi*`, `nordikaQuote` del correo
+> D5 y su expectativa en los tests. **No se sustituye por otro caso, no se anonimiza y no se conserva la cifra.**
+> `tests/no-invented-customer-claims.test.ts` impide que vuelva. Los artboards de `docs/design-reference/` conservan la
+> sección como artefacto histórico (anotado en sus README), no como fuente.
+>
+> **Abierto, no tocado:** la demo de la portada usa marcas reales (IKEA, Leroy Merlin, Kave Home, Maisons du Monde,
+> El Mueble) con cifras **ilustrativas** inventadas, declaradas así solo en comentarios de código, y bajo un titular que
+> dice «Sin demos preparadas». Decisión del dueño: rotular visiblemente, usar marcas ficticias o dejarlo.
+
 Entran las tres últimas secciones del diseño aprobado —testimonio, FAQ y
 cierre— y con ellas se va algo que llevaba meses en producción sin que nadie lo
 mirase.
@@ -13264,7 +13283,7 @@ maqueta que se quedó puesto y se sirvió como si fuera real en la página que m
 tráfico recibe. CLAUDE.md prohíbe las métricas falsas desde su primera versión,
 y esto es la forma más directa de romperlo: una cita atribuida a alguien.
 
-**Lo sustituye uno real**: Nerea Solís, marketing digital en Nordika Home, y el
+**Lo sustituye uno real** *(RECTIFICADO 2026-10-08: no era real; ver el aviso al principio de esta entrada)*: Nerea Solís, marketing digital en Nordika Home, y el
 +128% de cuota de voz en IA, que el fundador confirmó el 2026-08-22 que es una
 medición de esa cuenta. La regla que queda escrita en el propio componente: si
 algún día ese testimonio deja de poder sostenerse, **la sección se retira
