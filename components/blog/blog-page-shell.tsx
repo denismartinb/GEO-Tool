@@ -14,6 +14,7 @@ import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 export function BlogPageShell({
   activeHref = "/blog",
   breadcrumb,
+  hero,
   children
 }: {
   /** Which unified nav link to mark active. Defaults to Blog — pass "/comparativas"
@@ -30,6 +31,15 @@ export function BlogPageShell({
    * trail at the call site.
    */
   breadcrumb?: { label: string; href: string }[];
+  /**
+   * BLOG-REDESIGN-1: full-bleed dark hero rendered above the body
+   * (`<ArticleHero post={post} />`). When set, the body section gets the
+   * `lp-article` scope that restyles the article blocks after the PDF study,
+   * and the hero carries its own breadcrumb — so `breadcrumb` is ignored.
+   * Blog articles and the /blog index pass it; /comparativas, /docs and
+   * /glosario keep the previous look.
+   */
+  hero?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -37,9 +47,10 @@ export function BlogPageShell({
       <PublicHeader activeHref={activeHref} />
 
       <main>
-        <section className="lp-section">
+        {hero}
+        <section className={hero ? "lp-section lp-article" : "lp-section"}>
           <div className="lp-inner">
-            {breadcrumb && breadcrumb.length > 0 && (
+            {!hero && breadcrumb && breadcrumb.length > 0 && (
               <nav className="breadcrumb-trail" aria-label="Migas de pan">
                 {breadcrumb.map((item, index) => (
                   <span key={item.href} className="breadcrumb-item">

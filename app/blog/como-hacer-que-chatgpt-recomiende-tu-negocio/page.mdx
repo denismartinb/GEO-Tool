@@ -3,7 +3,7 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   NumberedSection,
@@ -13,10 +13,9 @@ import {
   AnswerSample,
   AuthorBio,
   ArticleCta,
-  Figure,
-  PostMeta
+  Figure
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("como-hacer-que-chatgpt-recomiende-tu-negocio");
 
@@ -51,13 +50,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -178,16 +171,16 @@ dos o tres negocios reales, no con toda una categoría global. Y si vendes a
 otras empresas en vez de a consumidores locales, el mismo criterio cambia de
 forma: lo tratamos en <a href="/blog/geo-para-saas-b2b">GEO para SaaS B2B</a>.
 
-<ArticleCta
-  title="¿Sabes si tu negocio aparece cuando alguien pregunta por tu categoría?"
-  text="GenScore mide con escaneos reales si tu marca aparece en ChatGPT, Gemini y Claude para las preguntas que hacen tus clientes. Prueba Pro 7 días gratis, sin tarjeta."
-/>
-
 <AuthorBio>
 
 Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
 
 </AuthorBio>
+
+<ArticleCta
+  title="¿Sabes si tu negocio aparece cuando alguien pregunta por tu categoría?"
+  text="GenScore mide con escaneos reales si tu marca aparece en ChatGPT, Gemini y Claude para las preguntas que hacen tus clientes. Prueba Pro 7 días gratis, sin tarjeta."
+/>
 
 </div>
 

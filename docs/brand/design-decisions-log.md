@@ -16351,6 +16351,8 @@ la que ya esté en `main`) y con ella todas sus referencias
 
 ## 169. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
 
+> **Superseded en parte por §247 (Fase 2, 2026-10-09):** las tarjetas de color por clúster pasan a blancas con borde fino y el carril se identifica por su número.
+
 **Propuesta del fundador** (referencia: el listado de blog de Semrush —
 tarjetas de color plano, sin portada, título + subtítulo), iterada en un
 artefacto de diseño antes de tocar código y aprobada con Task Intake Report
@@ -21926,6 +21928,100 @@ los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
 **Trazabilidad.** `app/blog/que-software-de-facturacion-recomienda-la-ia/`, `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,
 `scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
 `.claude/rules/admin.md`.
+
+---
+
+## 247. BLOG-REDESIGN-1: el artículo del blog con la estética del estudio PDF «De buscar a preguntar» (2026-10-09)
+
+**Qué se decidió.** El fundador pidió que "al ver un post en el blog se
+parezca lo máximo posible" al estudio PDF «De buscar a preguntar», y que se
+remaqueten todos los posts. Aprobó la maqueta y el plan el mismo día
+(`docs/design-reference/blog-redesign-1/`). Los 22 artículos cambian a la vez
+porque todos se componen con la misma librería de bloques:
+
+- **Portada oscura** (`components/blog/article-hero.tsx`): migas, antetítulo
+  (clúster), titular Bricolage grande, entradilla (`description`), fecha,
+  actualización si la hay y tema. Sustituye a `<BlogCover>` + `# {post.title}`
+  + `<PostMeta>` en cada MDX, vía la nueva prop `hero` de `BlogPageShell`.
+- **Cifra grande en degradado sólo con `heroStat`** (`lib/blog/posts.ts`),
+  con fuente obligatoria (ver revisión de coherencia abajo). Un post
+  sin cifra con fuente sale sin cifra: elegir una para rellenar sería una métrica
+  falsa.
+- **Cuerpo** bajo `.lp-article`: h2 numerados 01, 02… (contador CSS, sólo h2
+  hijos directos de `.blog-body`), respuesta rápida en panel suave, cifras
+  como las tarjetas del PDF con la primera en oscuro, cita con barra azul,
+  autor en línea fina, cierre oscuro con resplandor y relacionados en
+  tarjetas. Las etiquetas pasan de monoespaciada a Figtree, como el PDF.
+
+**Por qué con ámbito.** `/comparativas`, `/docs` y `/glosario` usan los mismos
+bloques `.art-*`; nadie pidió cambiarlos. `BlogPageShell` sólo añade
+`lp-article` cuando recibe `hero`, y todo el CSS nuevo cuelga de ahí o de
+`.art-hero`.
+
+**La ilustración de portada sale del artículo** (fundador: "entiendo que con
+esto ya no hacen falta las imágenes de los posts"). Supera la regla de §73
+(SEO-POS-1 S6, "el artículo enseña la portada que declara"): `covers.test.ts`
+ahora exige `ArticleHero` y prohíbe `<BlogCover>` y `# {post.title}` en el
+MDX. `coverImage` **sigue siendo obligatorio**: lo usan el índice `/blog`, la
+tarjeta social de LinkedIn y el schema.
+
+**Pendiente.** Páginas de clúster con el mismo lenguaje (el índice se hizo
+en Fase 2, abajo), e imagen social generada automáticamente con este estilo, que
+es lo que de verdad haría innecesarias las ilustraciones en posts nuevos.
+Ningún post se ha reescrito: la figura de barras por motor de la maqueta es
+contenido, no plantilla, y el post de facturación sigue con su tabla.
+
+**Revisión de coherencia de los 22 posts (mismo día, a petición del
+fundador: "revisar absolutamente todos los posts del blog para que
+estéticamente se parezcan al nuevo post").** Se capturaron los 22 a 1280 y
+375 px y se corrigió lo que desentonaba:
+
+- `heroStat` deja de ser sólo dato propio: vale una cifra **que el post ya
+  publica** con fuente de terceros citable. Así entran GA4 (71 %, Attrifast),
+  agencias (1,08 %, Conductor), ecommerce (43 %, Capital One Shopping) y SaaS
+  B2B (51 %, G2). El antetítulo dice «Estudio GenScore» sólo con fuente
+  nuestra. Los demás posts siguen sin cifra: no tienen ninguna con fuente.
+- Cierre en un solo orden en todos: autor → cierre oscuro → relacionados
+  (diez posts lo tenían al revés). Fuera el CTA claro suelto (`.blog-cta`)
+  de «cómo elegir competidores», que duplicaba el cierre.
+- Una paleta: cifras secundarias en tinta (antes ámbar/verde/rojo),
+  «Acción rápida» en azul (antes verde), respuesta citada y checks de
+  «Hacer» en azul. El veredicto y el diagrama de pasos pasan a oscuro y a
+  borde fino como el resto. El rojo de «Evitar» se queda.
+
+**Fase 2: índice `/blog` (mismo día; el fundador: "échale una revisión a
+la portada del blog… mira específicamente los botones de ver más posts,
+que… queda un poco rarillo").**
+
+- Portada oscura igual que la del artículo (`.art-hero`), a ancho de
+  `.lp-inner`, con el último artículo como tarjeta destacada dentro; si el
+  destacado tiene `heroStat`, su cifra va al lado con la fuente.
+- Carriles numerados 01, 02… con el mismo contador y titular Bricolage que
+  las secciones del artículo; la descripción del carril en su propia línea.
+- Tarjetas blancas con borde fino, como las figuras del artículo. Los
+  colores pastel por clúster de BLOG-COVERS-2026-08 (§169) quedan
+  superseded: el número del carril identifica el clúster.
+- «Ver más →» era un enlace suelto alineado a la izquierda bajo la
+  rejilla. Pasa a botón con borde, centrado (ancho completo en móvil), que
+  dice «Ver más artículos» («Ver más comparativas» en ese carril). La
+  primera versión decía cuántos cargaba («Ver 1 artículo más»); el fundador
+  prefirió el genérico porque el número delata poco contenido, en línea con
+  su regla de no enseñar cifras absolutas pequeñas. Sigue cargando in situ,
+  como decidió el 2026-09-19.
+- El cierre «¿Aparece tu marca en ChatGPT?» toma el estilo del cierre del
+  artículo (fondo #081223 con resplandor cian); fuera el anillo decorativo.
+
+Capturas antes/después en `docs/design-reference/blog-redesign-1/`. Las
+páginas de clúster (`/blog/<clúster>`) no se han tocado: siguen pendientes.
+
+**Trazabilidad.** `components/blog/article-hero.tsx`,
+`components/blog/blog-page-shell.tsx`, `app/globals.css` (bloque
+BLOG-REDESIGN-1), `app/blog/*/page.mdx`, `lib/blog/posts.ts`,
+`lib/blog/covers.test.ts`, `.claude/rules/growth-content.md`,
+`app/blog/page.tsx`, `components/blog/blog-cluster-rail.tsx`,
+`components/blog/comparativas-rail.tsx`.
+
+---
 
 ## 248. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
 

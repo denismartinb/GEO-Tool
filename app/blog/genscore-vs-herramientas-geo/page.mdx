@@ -2,17 +2,16 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import { ProcessFlow } from "@/components/blog/process-flow";
 import {
   KeyTakeaway,
   AuthorBio,
   ArticleCta,
   Figure,
-  RecommendationSample,
-  PostMeta
+  RecommendationSample
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("genscore-vs-herramientas-geo");
 
@@ -22,13 +21,7 @@ export const metadata = blogPostMetadata(post);
 
 <BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 

@@ -39,7 +39,7 @@ export function ComparativasRail({
       </div>
       {hasMore && (
         <button type="button" className="blog-rail-more" onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}>
-          Ver más →
+          Ver más comparativas
         </button>
       )}
     </section>
