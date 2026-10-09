@@ -22159,7 +22159,7 @@ una **cifra de terceros con su fuente a la vista**, en una tarjeta compacta
 encima de «El producto» (diseño iterado con el fundador sobre capturas de la
 home real; aprobado el 2026-10-09):
 
-> 22% de los españoles ya usa sobre todo la IA **en lugar del buscador**, la
+> 22% de los españoles ya usa la IA **en lugar del buscador**, la
 > cifra más alta de Europa. Y **casi la mitad** de quienes la usan se apoya en
 > ella para comprar. — Fuentes: Bain & Company, 2025 · IAB Spain, 2026.
 
@@ -22215,6 +22215,12 @@ preview:
    gráficos son las que ya estaban verificadas en el artículo; no entra
    ninguna del PDF que no lo estuviera (p. ej. el 70% de IAB sobre
    información errónea, o los usuarios únicos de GfK DAM).
+
+**Ajuste final del fundador (antes del merge).** Quitó «sobre todo» de la
+tarjeta: «ya usa la IA en lugar del buscador». Se lee como la «replacement
+rate» de Bain; la redacción precisa («usa sobre todo un chatbot de IA en
+lugar del buscador») se mantiene en el cuerpo del artículo y en la FAQ, junto
+a la muestra. El `heroStat` y la descripción del post siguen a la tarjeta.
 
 **Numeración.** Nació como §250 y pasó a §251 antes de abrir el PR: la rama
 de FREE-REPORT-2 (PR #568) ya había reclamado §250.

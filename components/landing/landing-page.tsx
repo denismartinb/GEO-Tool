@@ -562,7 +562,7 @@ export function LandingPage() {
               <span className="lp-study-txt">
                 <span className="lp-study-eye">Estudio · De buscar a preguntar</span>
                 <span className="lp-study-q">
-                  de los españoles ya usa sobre todo la IA{" "}
+                  de los españoles ya usa la IA{" "}
                   <b>en lugar del buscador</b>, la cifra más alta de Europa. Y <b>casi la mitad</b> de
                   quienes la usan se apoya en ella para comprar.
                 </span>
