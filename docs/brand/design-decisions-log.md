@@ -21348,3 +21348,48 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 236. W5: «La IA te menciona pero recomienda a otro», anclado en casos reales de nuestras propias pruebas (2026-10-09)
+
+**Qué se decidió.** Escribir la pieza W5 de la cola semanal
+(`la-ia-te-menciona-pero-recomienda-a-otro`, clúster `playbooks`) a partir de
+casos que ya estaban documentados aquí, en vez de ejemplos genéricos: pedido
+del fundador, que quiere contenido construido sobre casos reales de «¿aparece
+tu marca en ChatGPT?». Distinto de `mi-marca-no-aparece-en-chatgpt-por-que`
+(cero menciones) y de `chatgpt-informacion-incorrecta-de-tu-empresa` (la IA
+menciona con un dato falso): aquí la marca sale y no es la recomendación.
+
+**Los tres casos y su fuente.**
+
+1. Comprobador gratuito con Movistar como marca de prueba, agosto de 2026 (§
+   Fase C de FREE-CHECKER-1, 2026-08-16): ChatGPT mencionó a Movistar pero
+   nombró antes a Orange; la lista de «otras marcas» mezclaba operadores
+   (Orange, Yoigo, MÁSMÓVIL) con plataformas incluidas en los paquetes
+   (Netflix, DAZN, Prime Video, Disney+, HBO Max, SkyShowtime); y el «puesto 1»
+   que casi enseñábamos era estructural, no medido. La clasificación operador /
+   plataforma de la Figura 1 es nuestra lectura de una sola respuesta y el pie
+   de la figura lo dice.
+2. Borrador del generador de contenido para el proyecto Movistar (§128): una
+   comparación sin datos contra cinco operadores. Se parafrasea, no se cita
+   literal, y el texto dice que no se publicó en ninguna parte. El límite legal
+   (art. 10 LCD) está tal como lo recoge §128, con aviso de que no es
+   asesoramiento jurídico.
+3. Proyecto de prueba Mozilla, 1 prompt × 3 motores, de 30 a 74 sin cambios
+   (`docs/geo-score-variability-2026-08.md`). Sólo se dice que la muestra era
+   mínima; **ninguna mecánica interna** del score (ni pesos ni fórmula ni la
+   causa de identidad de marca que el documento diagnostica) se publica.
+
+**Lo que no se afirma.** Ningún plazo ni resultado de las palancas. No se
+afirma que el producto mida sentimiento ni nada más allá de lo que el escaneo
+registra (mención, posición, competidores, fuentes citadas). Que el generador
+rechaza ahora frases con competidor + juicio de valor es la guarda C1 de §128,
+declarada en el texto como red y no garantía.
+
+**Pendiente.** Sin pasada de `ux-pilot` (se lanza a mano, decide el fundador).
+Marcar la fila W5 del calendario con el número de PR cuando exista.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `app/blog/la-ia-te-menciona-pero-
+recomienda-a-otro/page.mdx`, `public/blog/la-ia-te-menciona-pero-recomienda-a-
+otro/cover.webp` y su SVG fuente en `docs/design-reference/blog-covers/`,
+`tests/pilot/fixtures/server.mjs`, `tests/pilot/journeys/public-pages.spec.ts`,
+`docs/content-calendar.md`.

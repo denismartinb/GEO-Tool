@@ -306,6 +306,17 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "sectores"
   },
   {
+    slug: "la-ia-te-menciona-pero-recomienda-a-otro",
+    title: "La IA te menciona pero recomienda a otro: qué hacer cuando sales y no eres la respuesta",
+    description:
+      "Aparecer en ChatGPT no es ser su recomendación. Un caso real de nuestras pruebas, cómo leer una respuesta sin engañarte y qué palancas sí mueven algo (y cuál no).",
+    datePublished: "2026-10-09",
+    coverImage: "/blog/la-ia-te-menciona-pero-recomienda-a-otro/cover.webp",
+    coverIcon: "target",
+    primaryKeyword: "la ia te menciona pero recomienda a otro",
+    cluster: "playbooks"
+  },
+  {
     slug: "mi-marca-no-aparece-en-chatgpt-por-que",
     title: "Tu marca es nueva y la IA no la conoce todavía: por dónde empezar con GEO",
     description:

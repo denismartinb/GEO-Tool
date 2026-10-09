@@ -64,7 +64,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // esta tanda a petición del fundador — sin publicar todavía.
   "geo-negocios-locales-servicios-profesionales": "sectores",
   // GROWTH-2, N5 (2026-09-19).
-  "mi-marca-no-aparece-en-chatgpt-por-que": "playbooks"
+  "mi-marca-no-aparece-en-chatgpt-por-que": "playbooks",
+  // W5 (2026-10-09).
+  "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
