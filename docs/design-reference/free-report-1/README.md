@@ -24,14 +24,19 @@ de aquí):
    búsquedas en distintos momentos.
 2. El texto de privacidad no dice que el email sea «sólo para el informe»:
    una línea genérica de aceptación de la política, más una casilla opcional
-   sin marcar de «consejos y novedades» (necesaria para poder enviar correo
+   sin marcar (necesaria para poder enviar correo
    comercial a quien no es cliente, art. 21.1 LSSI).
 3. En vez de una portada esquemática con «[Tu marca]», la portada real del
    informe de La Fábrica del SEO, anonimizada («Tu Marca», `tumarca.es`); los
    porcentajes son los de ese informe.
 4. Titular con más fuerza: degradado azul a cian en la segunda mitad, burbuja
    de pregunta con cursor y el resplandor de la portada del PDF.
-5. «Qué incluye» en rejilla de 3×2 en escritorio (con `auto-fit` quedaban
+5. Titular final del fundador: «Cuando tu cliente le pregunta a la IA, ¿te
+   nombra a ti o a tu competencia?».
+6. La casilla ofrece «los estudios de GenScore sobre qué marcas recomienda la
+   IA» en vez de «consejos y novedades» (log §248, las tres vías de
+   consentimiento).
+7. «Qué incluye» en rejilla de 3×2 en escritorio (con `auto-fit` quedaban
    cuatro arriba, dos abajo y un hueco).
 
 **Desviaciones conscientes en la implementación:**

@@ -21927,6 +21927,18 @@ para validar demanda antes de automatizar nada.
 - **El límite se anota sólo tras entregar al operador.** Si se anotara antes,
   el reintento tras un fallo de Resend recibiría «ya hemos recibido tu
   petición» de algo que nadie recibió (hallazgo de QA).
+- **Tres vías de consentimiento, sin consentimiento implícito** (fundador,
+  2026-10-09, tras proponer quitar la casilla porque «nadie va a clicar»). Se
+  descartó dar el consentimiento por aceptado al enviar o premarcar la casilla:
+  no vale para correo comercial (art. 21.1 LSSI; TJUE Planet49). Lo que sí se
+  hace: (1) la casilla ofrece algo concreto que existe, los estudios de
+  GenScore sobre qué marcas recomienda la IA (§246), en vez de «consejos y
+  novedades»; (2) seguimiento sobre el propio informe, como mucho entrega y
+  dos recordatorios, que responde a la petición (art. 6.1.b) y no es marketing;
+  (3) el correo de entrega pide un «sí» por respuesta, que queda como prueba
+  en Gmail. Plantillas de (2) y (3) fuera del repo, en
+  `/mnt/project-files/estudios/informes/plantilla/correos-entrega-y-seguimiento.md`.
+  `/privacidad` describe las tres.
 - **Correos temporales** (lista corta en `DISPOSABLE_EMAIL_DOMAINS`) se
   rechazan con su propio mensaje: el informe no llegaría a nadie.
 - **Consentimiento comercial:** casilla sin marcar, separada de la aceptación

@@ -228,7 +228,7 @@ export function FreeReportForm({ children }: { children?: ReactNode }) {
                 checked={values.marketing}
                 onChange={(e) => setValues((v) => ({ ...v, marketing: e.target.checked }))}
               />
-              Quiero recibir consejos y novedades de GenScore. Puedo darme de baja cuando quiera.
+              Envíame también los estudios de GenScore sobre qué marcas recomienda la IA, y novedades de vez en cuando. Me doy de baja cuando quiera.
             </label>
             <p className="fr-legal">
               Al enviar aceptas la <Link href="/privacidad">Política de privacidad</Link>. GenScore tratará tus datos

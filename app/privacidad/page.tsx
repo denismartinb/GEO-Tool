@@ -57,13 +57,15 @@ export default function PrivacidadPage() {
       <h2>Si pides un informe gratuito</h2>
       <p>
         Si pides un informe GEO gratuito sin tener cuenta, tratamos la web, el email y la
-        descripción de lo que vendes que nos indicas, para preparar el informe, enviártelo y
-        atender lo que nos preguntes sobre él (medidas precontractuales solicitadas por ti, art.
-        6.1.b RGPD). Solo te enviaremos consejos y novedades de GenScore si marcas la casilla
-        correspondiente en el formulario (consentimiento, art. 6.1.a RGPD y art. 21.1 LSSI), y
-        puedes retirarlo en cualquier momento escribiendo a{" "}
-        <a href="mailto:soporte@genscore.es">soporte@genscore.es</a>. Conservamos estos datos durante un año desde tu petición si no llegas a crear
-        una cuenta, salvo que antes nos pidas borrarlos.
+        descripción de lo que vendes que nos indicas, para preparar el informe, enviártelo,
+        preguntarte después si lo has podido revisar y atender lo que nos preguntes sobre él
+        (medidas precontractuales solicitadas por ti, art. 6.1.b RGPD). Solo te enviaremos
+        estudios, consejos y novedades de GenScore si nos das tu consentimiento, marcando la
+        casilla del formulario o respondiendo que sí cuando te lo preguntemos al entregarte el
+        informe (art. 6.1.a RGPD y art. 21.1 LSSI). Puedes retirarlo en cualquier momento
+        escribiendo a <a href="mailto:soporte@genscore.es">soporte@genscore.es</a>. Conservamos
+        estos datos durante un año desde tu petición si no llegas a crear una cuenta, salvo que
+        antes nos pidas borrarlos.
       </p>
 
       <h2>A quién comunicamos tus datos (encargados del tratamiento)</h2>

@@ -68,7 +68,7 @@ export function buildOpsEmail(request: FreeReportRequest, input: { requestedAt: 
     row(
       "Comunicaciones",
       request.marketingConsent
-        ? "Sí, marcó la casilla de consejos y novedades"
+        ? "Sí, marcó la casilla de estudios y novedades"
         : "No — sólo el informe y lo necesario para atenderle"
     ),
     row("Pedido", `${escapeHtml(formatMadrid(input.requestedAt))} · ${input.requestedAt.toISOString()}`),
