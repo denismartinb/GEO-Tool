@@ -81,7 +81,7 @@ export function AdsConsent() {
   return (
     <div className="ads-consent" role="dialog" aria-modal="false" aria-labelledby="ads-consent-title">
       <p id="ads-consent-title" className="ads-consent-title">
-        {configuring ? "Elige qué cookies publicitarias aceptas" : "¿Nos dejas usar cookies publicitarias?"}
+        {configuring ? "Elige qué cookies publicitarias aceptas" : "¿Nos dejas usar un par de cookies?"}
       </p>
       {configuring ? (
         <div className="ads-consent-options">
@@ -119,10 +119,9 @@ export function AdsConsent() {
         </div>
       ) : (
         <p className="ads-consent-text">
-          Con tu permiso, Google y LinkedIn ponen cookies para medir qué anuncios nos traen registros y
-          para mostrarte anuncios de GenScore más adelante. Puedes elegir cada uso por separado. Sin tu
-          permiso no se carga ninguna, y el sitio funciona igual decidas lo que decidas.{" "}
-          <Link href="/cookies">Más información</Link>
+          Con tu permiso, usamos las cookies solo para medir qué anuncios nos traen visitas y para
+          mostrarte, si es de tu interés, información sobre GenScore más adelante. Sin tu permiso no
+          se carga ninguna. <Link href="/cookies">Más información</Link>
         </p>
       )}
       <div className="ads-consent-actions">
