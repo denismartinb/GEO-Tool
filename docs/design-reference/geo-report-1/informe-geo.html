@@ -1,0 +1,353 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe GenScore · La Fábrica del SEO</title><style>@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(fonts/3y9K6as8bTXq_nANBjzKo3IeZx8z6up5BeSl9D4dj_x9PpZBMlGIInE.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(fonts/3y9K6as8bTXq_nANBjzKo3IeZx8z6up5BeSl9D4dj_x9PpZBMlGIInE.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 800;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(fonts/3y9K6as8bTXq_nANBjzKo3IeZx8z6up5BeSl9D4dj_x9PpZBMlGIInE.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/_Xms-HUzqDCFdgfMm4S9DQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(fonts/_Xms-HUzqDCFdgfMm4S9DQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(fonts/_Xms-HUzqDCFdgfMm4S9DQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/_Xms-HUzqDCFdgfMm4S9DQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(fonts/_Xms-HUzqDCFdgfMm4S9DQ.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: "Figtree", sans-serif; color: #0b1426; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 210mm; height: 297mm; position: relative; overflow: hidden; page-break-after: always; break-after: page;
+  padding: 46px 58px 0; display: flex; flex-direction: column; background: #fff; }
+.page:last-child { page-break-after: auto; break-after: auto; }
+.disp { font-family: "Bricolage Grotesque", "Figtree", sans-serif; }
+.hd { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid #e7eaf0; }
+.hd .lg { height: 18px; }
+.hd span { font-size: 10.5px; font-weight: 600; color: #98a2b3; }
+.ft { margin-top: auto; display: flex; justify-content: space-between; padding: 16px 0 24px; border-top: 1px solid #eef1f6; font-size: 9.5px; color: #98a2b3; font-weight: 600; }
+.sec { display: flex; align-items: baseline; gap: 10px; margin-top: 26px; }
+.sec .num { font-family: "Bricolage Grotesque"; font-size: 13px; font-weight: 800; color: #2563eb; }
+.sec h2 { font-family: "Bricolage Grotesque"; font-size: 25px; font-weight: 800; letter-spacing: -.015em; margin: 0; line-height: 1.15; }
+.lede { font-size: 13.5px; line-height: 1.6; color: #3b4759; margin: 10px 0 0; max-width: 610px; }
+.lede b { color: #0b1426; }
+.eng { vertical-align: -2px; }
+
+/* cover */
+.cover { background: #081223; color: #fff; padding: 52px 60px 0; }
+.glow { position: absolute; inset: 0; pointer-events: none; }
+.cover .top { position: relative; display: flex; justify-content: space-between; align-items: center; }
+.cover .top img { height: 24px; }
+.cover .top span { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #98a2b3; }
+.cover .mid { position: relative; margin-top: auto; }
+.cover .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #09c5d6; }
+.cover h1 { font-family: "Bricolage Grotesque"; font-size: 56px; font-weight: 800; line-height: 1.04; letter-spacing: -.025em; margin: 18px 0 0; max-width: 600px; }
+.cover .sub { font-size: 15px; line-height: 1.6; color: #c7cedb; margin-top: 22px; max-width: 520px; }
+.cover .hero { position: relative; margin-top: 40px; display: flex; align-items: flex-end; gap: 26px; }
+.cover .big { font-family: "Bricolage Grotesque"; font-size: 132px; font-weight: 800; line-height: .85; letter-spacing: -.04em;
+  background: linear-gradient(120deg, #4f7bff, #09c5d6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cover .big small { font-size: 72px; margin-left: 2px; }
+.cover .hero p { font-size: 15px; line-height: 1.5; color: #e5e9f2; margin: 0 0 6px; max-width: 290px; }
+.cover .meta { position: relative; margin-top: 60px; display: flex; gap: 44px; padding: 26px 0 46px; border-top: 1px solid rgba(255,255,255,.1); }
+.cover .meta div div:first-child { font-size: 9.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #5b6b82; }
+.cover .meta div div:last-child { font-size: 14.5px; font-weight: 700; margin-top: 6px; }
+.cover .engs { display: flex; gap: 10px; align-items: center; }
+.cover .engs img { background: #fff; border-radius: 6px; padding: 3px; width: 22px; height: 22px; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 22px; }
+.stat { border: 1px solid #e7eaf0; border-radius: 14px; padding: 20px 18px 18px; }
+.stat .v { font-family: "Bricolage Grotesque"; font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.stat .v small { font-size: 17px; color: #98a2b3; font-weight: 700; }
+.stat .l { font-size: 11.5px; line-height: 1.45; color: #5b6b82; margin-top: 9px; }
+.stat.hot { background: #0b1426; border-color: #0b1426; color: #fff; }
+.stat.hot .l { color: #c7cedb; }
+.stat.hot .v { color: #09c5d6; }
+.finds { margin-top: 30px; display: flex; flex-direction: column; gap: 22px; }
+.find { display: grid; grid-template-columns: 34px 1fr; gap: 4px; }
+.find .k { font-family: "Bricolage Grotesque"; font-size: 15px; font-weight: 800; color: #2563eb; padding-top: 1px; }
+.find h3 { margin: 0; font-size: 15.5px; font-weight: 800; letter-spacing: -.005em; }
+.find p { margin: 5px 0 0; font-size: 13px; line-height: 1.6; color: #3b4759; }
+.find.pos .k { color: #15915a; } .find.neg .k { color: #d23b48; }
+
+/* matrix */
+table.mx { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 11px; }
+.mx th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #98a2b3; text-align: center; padding: 0 4px 7px; }
+.mx th.q { text-align: left; }
+.mx th img { display: block; margin: 0 auto 4px; }
+.mx td { padding: 5px 4px; border-bottom: 1px solid #eef1f6; vertical-align: middle; }
+.mx tr.grp td { padding: 11px 0 5px; border-bottom: 1px solid #d9dee8; font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #2563eb; }
+.mx td.n { width: 22px; color: #98a2b3; font-weight: 700; font-size: 10px; }
+.mx td.q { line-height: 1.35; color: #0b1426; padding-right: 12px; }
+.mx td.c { width: 66px; text-align: center; }
+.mx td.w { width: 82px; text-align: center; }
+.dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+.dot.ag { background: #ffb020; }
+.dot.no { border: 1.5px solid #d9dee8; }
+.pill { display: inline-block; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; }
+.pill.you { background: #2563eb; color: #fff; }
+.tag { display: inline-block; font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+.tag.ok { background: #e7f6ee; color: #15915a; }
+.tag.gap { background: #fff4dc; color: #a26700; }
+.tag.mute { color: #98a2b3; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 10.5px; color: #5b6b82; align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.note { font-size: 10.5px; line-height: 1.55; color: #5b6b82; margin-top: 12px; }
+
+/* bars */
+.bars { margin-top: 20px; display: flex; flex-direction: column; gap: 9px; }
+.bar { display: grid; grid-template-columns: 150px 1fr 34px; gap: 12px; align-items: center; }
+.bar .bn { font-size: 12px; font-weight: 600; color: #3b4759; text-align: right; }
+.bar .bt { height: 16px; background: #f3f5f9; border-radius: 5px; display: flex; overflow: hidden; }
+.bar .seg { height: 100%; }
+.seg.g { background: #4f7bff; } .seg.o { background: #0b1426; } .seg.c { background: #d97757; }
+.bar .bv { font-family: "Bricolage Grotesque"; font-weight: 800; font-size: 14px; }
+.bar.me .bn { color: #2563eb; font-weight: 800; }
+.bar.me .bt { outline: 2px solid #2563eb; outline-offset: 2px; }
+.cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+.card { border: 1px solid #e7eaf0; border-radius: 14px; padding: 16px 18px; }
+.card .ey { font-size: 9.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #98a2b3; }
+.card h4 { margin: 6px 0 0; font-size: 14.5px; font-weight: 800; }
+.card p { font-size: 12px; line-height: 1.58; color: #3b4759; margin: 7px 0 0; }
+.quote { margin-top: 10px; padding: 10px 12px; background: #f7f8fb; border-left: 3px solid #4f7bff; border-radius: 0 8px 8px 0; font-size: 11.5px; line-height: 1.55; color: #0b1426; }
+.quote .src { display: block; margin-top: 5px; font-size: 9.5px; color: #98a2b3; font-weight: 600; }
+.quote.o { border-left-color: #0b1426; }
+
+/* sources */
+.srcgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+.srccol { border: 1px solid #e7eaf0; border-radius: 14px; padding: 14px 14px 10px; }
+.srccol h4 { margin: 0 0 8px; font-size: 11.5px; font-weight: 800; }
+.srccol .r { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-top: 1px solid #f1f3f7; color: #3b4759; }
+.srccol .r b { font-family: "Bricolage Grotesque"; font-weight: 800; color: #0b1426; }
+.srccol .r.me { color: #2563eb; font-weight: 800; }
+.callout { margin-top: 18px; background: #0b1426; color: #fff; border-radius: 14px; padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.callout h4 { margin: 0; font-size: 14px; font-weight: 800; color: #09c5d6; }
+.callout p { margin: 6px 0 0; font-size: 12px; line-height: 1.58; color: #d5dbe6; }
+.callout code { font-family: "Figtree"; font-weight: 700; color: #fff; }
+
+/* tech table */
+table.tt { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 11.5px; }
+.tt th { text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em; color: #98a2b3; padding: 0 8px 8px; }
+.tt th.me { color: #2563eb; }
+.tt td { padding: 8px; border-top: 1px solid #eef1f6; vertical-align: top; line-height: 1.4; }
+.tt td.k { font-weight: 700; width: 30%; }
+.tt td.k small { display: block; font-weight: 500; color: #98a2b3; font-size: 10px; margin-top: 2px; }
+.tt td.me { background: #f5f8ff; }
+.ok, .bad, .warn { font-weight: 800; }
+.ok::before { content: "✓ "; color: #15915a; } .bad::before { content: "✕ "; color: #d23b48; } .warn::before { content: "! "; color: #d58a00; }
+.scorebox { display: flex; gap: 14px; margin-top: 18px; }
+.scorebox .s { flex: 1; border: 1px solid #e7eaf0; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+.scorebox .s.me { border-color: #2563eb; background: #f5f8ff; }
+.scorebox .v { font-family: "Bricolage Grotesque"; font-size: 34px; font-weight: 800; letter-spacing: -.03em; }
+.scorebox .v small { font-size: 15px; color: #98a2b3; }
+.scorebox .l { font-size: 11.5px; line-height: 1.45; color: #5b6b82; }
+.scorebox .l b { color: #0b1426; display: block; font-size: 13px; }
+
+/* plan */
+.acts { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; }
+.act { border: 1px solid #e7eaf0; border-radius: 14px; padding: 16px 18px; display: grid; grid-template-columns: 44px 1fr; gap: 6px; }
+.act .k { font-family: "Bricolage Grotesque"; font-size: 30px; font-weight: 800; color: #2563eb; line-height: 1; }
+.act h3 { margin: 0; font-size: 15.5px; font-weight: 800; }
+.act p { margin: 6px 0 0; font-size: 12px; line-height: 1.58; color: #3b4759; }
+.act .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chip { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: #eef3ff; color: #2563eb; }
+.chip.g { background: #e7f6ee; color: #15915a; }
+.quick { margin-top: 14px; background: #f7f8fb; border-radius: 14px; padding: 14px 18px; }
+.quick h4 { margin: 0; font-size: 12.5px; font-weight: 800; }
+.quick ul { margin: 8px 0 0; padding-left: 18px; font-size: 11.5px; line-height: 1.6; color: #3b4759; }
+
+/* method */
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
+.cols h4 { margin: 0 0 6px; font-size: 12.5px; font-weight: 800; }
+.cols p, .cols li { font-size: 11.5px; line-height: 1.6; color: #3b4759; }
+.cols ul { margin: 0; padding-left: 16px; }
+.cols p { margin: 0 0 10px; }
+.next { margin-top: 26px; border-radius: 18px; padding: 26px 28px; color: #fff; background: #081223; position: relative; overflow: hidden; }
+.next h3 { font-family: "Bricolage Grotesque"; font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin: 0; position: relative; }
+.next p { position: relative; font-size: 13px; line-height: 1.6; color: #d5dbe6; margin: 10px 0 0; max-width: 560px; }
+.next .sig { position: relative; margin-top: 18px; display: flex; align-items: center; gap: 14px; }
+.next .sig img { height: 20px; }
+.next .sig span { font-size: 12px; color: #98a2b3; font-weight: 600; }
+
+.cgrid { position: relative; margin-top: 70px; }
+.cgr { display: grid; grid-template-columns: 70px 1fr 44px; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cgr b { font-family: "Bricolage Grotesque"; font-size: 15px; font-weight: 800; color: #fff; }
+.cbar { height: 14px; border-radius: 7px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08); overflow: hidden; }
+.cbar i { display: block; height: 100%; border-radius: 7px; background: linear-gradient(90deg,#4f7bff,#09c5d6); box-shadow: 0 0 18px rgba(9,197,214,.55); }
+.cgr span { font-size: 11px; font-weight: 700; color: #98a2b3; text-align: right; }
+.cgc { display: grid; grid-template-columns: repeat(20, 1fr); gap: 6px; }
+.cgc i, .cgl i { display: block; aspect-ratio: 1; border-radius: 5px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08); }
+.cgc i.on, .cgl i.on { background: linear-gradient(135deg,#4f7bff,#09c5d6); border-color: transparent; box-shadow: 0 0 18px rgba(9,197,214,.55); }
+.cgl { display: flex; justify-content: space-between; margin: 12px 0 0 82px; font-size: 10.5px; color: #5b6b82; }
+.cgl .k { display: inline-flex; align-items: center; gap: 7px; color: #c7cedb; font-weight: 700; }
+.cgl i { width: 12px; height: 12px; border-radius: 3px; }
+.engp { margin-top: 34px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-top: 22px; border-top: 1px solid #e7eaf0; }
+.engp .eh { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 800; }
+.engp .ev { font-family: "Bricolage Grotesque"; font-size: 30px; font-weight: 800; letter-spacing: -.03em; margin-top: 8px; }
+.engp .ev small { font-size: 14px; color: #98a2b3; }
+.engp .el { font-size: 11.5px; line-height: 1.5; color: #5b6b82; margin-top: 4px; }
+.cloud { margin-top: 16px; border-top: 1px solid #e7eaf0; padding-top: 18px; }
+.cloud h4 { margin: 0; font-size: 13px; font-weight: 800; }
+.cloud p { margin: 4px 0 10px; font-size: 11.5px; color: #5b6b82; }
+.cloud .cs { display: flex; flex-wrap: wrap; gap: 5px; }
+.cloud .cs span { font-size: 10px; font-weight: 600; color: #3b4759; background: #f3f5f9; padding: 3px 8px; border-radius: 20px; }
+.cloud .cs span.me { background: #2563eb; color: #fff; font-weight: 800; }
+.dots { padding: 4px; display: grid; grid-template-columns: repeat(46, 1fr); gap: 3px; margin-top: 18px; }
+.dots i { aspect-ratio: 1; border-radius: 2px; background: #e3e8f0; }
+.dots i.me { background: #2563eb; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2563eb; }
+.dotsl { display: flex; justify-content: space-between; font-size: 10.5px; color: #5b6b82; margin-top: 8px; }
+.dotsl b { color: #2563eb; }
+.ey2 { margin-top: 18px; font-size: 9.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #98a2b3; }
+.read { margin-top: 18px; border-radius: 14px; background: #0b1426; color: #d5dbe6; padding: 16px 20px; font-size: 12px; line-height: 1.6; }
+.read b { color: #09c5d6; }
+.back { background: #081223; color: #fff; }
+.back .hd { border-bottom-color: rgba(255,255,255,.1); }
+.back .ft { margin-top: 0; border-top-color: rgba(255,255,255,.08); color: #5b6b82; }
+.back .bigq { position: relative; margin-top: 120px; }
+.back .bigq .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #09c5d6; }
+.back .bigq h2 { font-family: "Bricolage Grotesque"; font-size: 48px; font-weight: 800; letter-spacing: -.025em; line-height: 1.05; margin: 16px 0 0; max-width: 560px; }
+.back .bigq p { font-size: 14.5px; line-height: 1.65; color: #c7cedb; margin: 18px 0 0; max-width: 560px; }
+.back .bigq .sig { margin-top: 26px; display: flex; align-items: center; gap: 14px; }
+.back .bigq .sig img { height: 22px; } .back .bigq .sig span { font-size: 12.5px; color: #98a2b3; font-weight: 600; }
+.back .meth { position: relative; margin-top: auto; margin-bottom: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.1); }
+.back .meth h4 { margin: 0 0 4px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #98a2b3; }
+.back .meth p { margin: 0 0 12px; font-size: 10.5px; line-height: 1.6; color: #98a2b3; }
+.tt td { padding: 10px 8px; font-size: 12.5px; }
+.act p { font-size: 12.5px; }
+.quick ul { font-size: 12.5px; line-height: 1.75; }
+.scorebox.one{grid-template-columns:1fr 1fr}</style></head><body><section class="page cover"><svg class="glow" width="100%" height="100%" viewBox="0 0 794 1123" preserveAspectRatio="none" xmlns:c2pa="http://c2pa.org/manifest"><metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYToyYzk4OTg2OC03NTQwLTQ5ZDQtYjVmMS02N2IzM2Q4Mjc4MWYAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaI+QgF3kTVT6UIEl1txxEm8AAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDo5MDdlNWE3Ni0xYjI5LTRlYWEtODM4NS03YzVkN2ZlYjcxNTdscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNoDrS4UnJQMf9Cp4iUaZ6+LgAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggN5EgZY7RPxYYmRUjVZNwOSAjl3QDZUSoxOzL9rtvJ6OkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaC7htcwTpa602z4cCf/gEQYAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRNAAAAAAAAAAAAAAAAAGRoYXNoWCAMFBXfw87rsoNfovLu4sO9+porL6NVs5ir1pEnpXCxmWRuYW1lbmp1bWJmIG1hbmlmZXN0amV4Y2x1c2lvbnOBomVzdGFydBieZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjJjOTg5ODY4LTc1NDAtNDlkNC1iNWYxLTY3YjMzZDgyNzgxZi9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjMxYTJjYTYzLTc0MDMtNDdkMS1hODE1LThmZTA5NWQ2ZDA0ZHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCA3kSBljtE/FhiZFSNVk3A5ICOXdANlRKjE7Mv2u28no6JjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggASWwT95R4RLosCO47rj4Y9gFvHLE84osC/Qpi7skOzeiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggtMcZXjxd/HYadFk8t6VKSVkk29FInnvER7Ytw3KO5qZ0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQGJ5CCv07S3sT3sPfoQv+yzZA03ZRH2J1eIuCyRoDBKVZTpscsnvJe0DHrQnYAx0BFWoZijHOKnndHPReo5uYNE=</c2pa:manifest></metadata>
+<defs><radialGradient id="gl" cx="640" cy="140" r="520" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#09c5d6" stop-opacity=".30"/><stop offset=".55" stop-color="#2563eb" stop-opacity=".10"/>
+<stop offset="1" stop-color="#081223" stop-opacity="0"/></radialGradient></defs>
+<rect width="794" height="1123" fill="url(#gl)"/></svg>
+<div class="top"><img src="genscore-logo-white.svg" alt="GenScore"><span>Informe de La Fábrica del SEO</span></div>
+<div class="cgrid"><div class="cgr"><span>Gemini</span><div class="cbar"><i style="width:10%"></i></div><b>10%</b></div><div class="cgr"><span>ChatGPT</span><div class="cbar"><i style="width:5%"></i></div><b>5%</b></div><div class="cgr"><span>Claude</span><div class="cbar"><i style="width:0%"></i></div><b>0%</b></div><div class="cgl"><span>Respuestas que te nombran, por motor</span></div></div>
+<div class="mid">
+  <div class="eyebrow">Visibilidad en respuestas de IA · Octubre 2026</div>
+  <h1>Cuando tus clientes preguntan a la IA, ¿te nombra?</h1>
+  <div class="sub">GenScore hace a ChatGPT, Gemini y Claude las preguntas principales de búsqueda de quien busca lo que ofreces. Este informe resume sus respuestas, las webs que citaron y tu propia web.</div>
+</div>
+<div class="hero"><div class="big">5<small>%</small></div><p>de las respuestas te nombran. Aquí verás en cuáles, quién sale en tu lugar y qué cambiar primero.</p></div>
+<div class="meta">
+  <div><div>Dominio</div><div>lafabricadelseo.com</div></div>
+  <div><div>Escaneo</div><div>9 de octubre de 2026</div></div>
+  <div><div>Puntuación GEO</div><div>—</div></div>
+</div></section><section class="page"><div class="hd"><img src="genscore-logo.svg" class="lg" alt="GenScore"><span>La Fábrica del SEO · Lo esencial</span></div>
+<div class="sec"><span class="num">01</span><h2>Lo esencial en una página</h2></div>
+<p class="lede">El 28% de las respuestas recomienda marcas con nombre propio. La Fábrica del SEO sale en el 5%. Tu mejor tema es Local · Alicante y Marina Alta; el peor, Buscar agencia por especialidad.</p>
+<div class="stats"><div class="stat hot"><div class="v">5<small>%</small></div><div class="l">de las respuestas te nombran</div></div><div class="stat "><div class="v">&lt;1<small>%</small></div><div class="l">de las webs que cita la IA es la tuya</div></div><div class="stat "><div class="v">0<small>%</small></div><div class="l">de las respuestas de Claude te nombran</div></div><div class="stat "><div class="v">90<small>/100</small></div><div class="l">salud técnica de tu web para la IA</div></div></div>
+<div class="finds"><div class="find pos"><div class="k">✓</div><div><h3>Donde más te nombran: Local · Alicante y Marina Alta</h3><p>En este tema te nombra el 20% de las respuestas. Tu mejor puesto es 1.º en Gemini.</p></div></div><div class="find neg"><div class="k">✕</div><div><h3>Donde la IA recomienda a otros: Buscar agencia por especialidad</h3><p>En el 89% de las respuestas de este tema la IA nombra a otras marcas y a ti no.</p></div></div><div class="find neg"><div class="k">✕</div><div><h3>Human Level ocupa tu sitio</h3><p>Es la marca que más aparece en las respuestas donde tú no sales: en el 7% de ellas.</p></div></div><div class="find "><div class="k">→</div><div><h3>Tu web: base técnica y contenido</h3><p>Tu nota técnica es 90/100. El 5% de las preguntas principales de búsqueda tiene una página tuya que la responde.</p></div></div></div>
+<div class="engp"><div class="e"><div class="eh"><img class="eng" src="gemini.svg" width="18" height="18" alt=""> Gemini</div><div class="ev">10<small>%</small></div><div class="el">Mejor puesto: 1.º. Cita tu web.</div></div><div class="e"><div class="eh"><img class="eng" src="chatgpt.svg" width="18" height="18" alt=""> ChatGPT</div><div class="ev">5<small>%</small></div><div class="el">Mejor puesto: 2.º.</div></div><div class="e"><div class="eh"><img class="eng" src="claude.svg" width="18" height="18" alt=""> Claude</div><div class="ev">0<small>%</small></div><div class="el">No te nombra en ninguna respuesta.</div></div></div>
+<div class="ft"><span>GenScore · genscore.es · Escaneo del 9 de octubre de 2026</span><span>2 / 8</span></div></section><section class="page"><div class="hd"><img src="genscore-logo.svg" class="lg" alt="GenScore"><span>La Fábrica del SEO · Mapa de respuestas</span></div>
+<div class="sec"><span class="num">02</span><h2>Pregunta a pregunta: dónde apareces</h2></div>
+<p class="lede">Las preguntas principales de búsqueda que sigues en GenScore, agrupadas por tema. La última columna dice si tienes una página que la responda.</p>
+<table class="mx"><thead><tr><th class="q">Pregunta principal de búsqueda</th><th><img class="eng" src="gemini.svg" width="16" height="16" alt="">Gemini</th><th><img class="eng" src="chatgpt.svg" width="16" height="16" alt="">ChatGPT</th><th><img class="eng" src="claude.svg" width="16" height="16" alt="">Claude</th><th>¿Página<br>tuya?</th></tr></thead>
+<tbody><tr class="grp"><td colspan="5">Local · Alicante y Marina Alta</td></tr><tr><td class="q">¿Cómo elegir la mejor agencia de marketing digital en Benissa?</td><td class="c"><span class="pill you">1.º</span></td><td class="c"><span class="pill you">2.º</span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag ok">Sí</span></td></tr><tr><td class="q">¿Dónde encontrar expertos en marketing de contenidos que entiendan el mercado de Alicante?</td><td class="c"><span class="pill you">En lista</span></td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag gap">No · hueco</span></td></tr><tr><td class="q">Estrategias de marketing digital más efectivas para negocios locales en Alicante</td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag gap">No · hueco</span></td></tr><tr><td class="q">¿Cómo mejorar el posicionamiento SEO de mi negocio local en Alicante?</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">¿Cómo se gestiona la reputación online de una marca turística en Alicante?</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr class="grp"><td colspan="5">Buscar agencia por especialidad</td></tr><tr><td class="q">¿Qué agencias ofrecen SEO internacional para empresas en España?</td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot ag"></span></td><td class="w"><span class="tag gap">No · hueco</span></td></tr><tr><td class="q">¿Qué opinan los clientes de las agencias especializadas en SEO para IA?</td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag gap">No · hueco</span></td></tr><tr><td class="q">Mejores agencias con experiencia en email marketing internacional</td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot ag"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr class="grp"><td colspan="5">Precios y servicios</td></tr><tr><td class="q">Precio típico de una estrategia de marketing digital completa para pymes</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot ag"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">Coste de una auditoría SEO completa para un e-commerce en España</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">¿Cuánto cuesta una campaña de Meta Ads gestionada por profesionales?</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">Servicios de marketing digital esenciales para una startup</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot ag"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">Servicios clave para una pyme que quiere expandirse desde España</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">Alternativas a Google Ads para conseguir tráfico cualificado</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">¿Contrato una agencia de reputación online o lo hago yo?</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr class="grp"><td colspan="5">SEO para IA y búsqueda por voz</td></tr><tr><td class="q">¿Cómo mejorar la visibilidad en Google AI Overviews o Gemini?</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">Diferencias entre el SEO para Google y el SEO para ChatGPT</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">SEO tradicional frente a SEO impulsado por IA</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">¿Para qué empresas es más beneficioso el AVO (optimización de voz)?</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr><tr><td class="q">Beneficios de la optimización de voz (AVO) en el mercado español</td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="c"><span class="dot no"></span></td><td class="w"><span class="tag mute">No</span></td></tr></tbody></table>
+<div class="legend"><span><span class="pill you">1.º</span> Te nombra (puesto)</span><span><span class="dot ag"></span> Nombra a otras marcas</span><span><span class="dot no"></span> No nombra marcas</span><span><span class="tag gap">No · hueco</span> la IA recomienda a otros y no tienes página</span></div>
+<div class="ft"><span>GenScore · genscore.es · Escaneo del 9 de octubre de 2026</span><span>3 / 8</span></div></section><section class="page"><div class="hd"><img src="genscore-logo.svg" class="lg" alt="GenScore"><span>La Fábrica del SEO · Competencia</span></div>
+<div class="sec"><span class="num">03</span><h2>Quién aparece en tu lugar</h2></div>
+<p class="lede">Las marcas que más nombra la IA en tus preguntas principales de búsqueda, junto a la tuya.</p>
+<div class="bars"><div class="bar"><div class="bn">Human Level</div><div class="bt"><span class="seg g" style="width:50.0%"></span><span class="seg o" style="width:25.0%"></span><span class="seg c" style="width:25.0%"></span></div><div class="bv">7%</div></div><div class="bar"><div class="bn">Organik Marketing</div><div class="bt"><span class="seg g" style="width:25.0%"></span><span class="seg o" style="width:75.0%"></span></div><div class="bv">7%</div></div><div class="bar me"><div class="bn">La Fábrica del SEO</div><div class="bt"><span class="seg g" style="width:50.0%"></span><span class="seg o" style="width:25.0%"></span></div><div class="bv">5%</div></div><div class="bar"><div class="bn">Ameba</div><div class="bt"><span class="seg g" style="width:50.0%"></span></div><div class="bv">3%</div></div><div class="bar"><div class="bn">Cyberclick</div><div class="bt"><span class="seg c" style="width:50.0%"></span></div><div class="bv">3%</div></div><div class="bar"><div class="bn">Digital Nature</div><div class="bt"><span class="seg g" style="width:50.0%"></span></div><div class="bv">3%</div></div><div class="bar"><div class="bn">iSocialWeb</div><div class="bt"><span class="seg g" style="width:50.0%"></span></div><div class="bv">3%</div></div><div class="bar"><div class="bn">OrbitaClick</div><div class="bt"><span class="seg g" style="width:50.0%"></span></div><div class="bv">3%</div></div><div class="bar"><div class="bn">Pyme UP</div><div class="bt"><span class="seg g" style="width:50.0%"></span></div><div class="bv">3%</div></div><div class="bar"><div class="bn">SEOCOM</div><div class="bt"><span class="seg g" style="width:25.0%"></span><span class="seg o" style="width:25.0%"></span></div><div class="bv">3%</div></div></div>
+<div class="legend"><span><span class="dot" style="background:#4f7bff;border-radius:3px"></span> Gemini</span><span><span class="dot" style="background:#0b1426;border-radius:3px"></span> ChatGPT</span><span><span class="dot" style="background:#d97757;border-radius:3px"></span> Claude</span><span>% de respuestas que nombran a cada una</span></div>
+<div class="cards2"><div class="card"><div class="ey">Tu rival directo · la marca más nombrada</div><h4>Human Level</h4><p>Sale en el 7% de todas las respuestas y en el 7% de las que no te nombran. Lo nombra Gemini, ChatGPT y Claude.</p><div class="quote o">«Agencia reconocida por su enfoque innovador en marketing digital, especializada en posicionamiento SEO, SEM/SEA, publicidad online, analítica web y marketing de contenidos.»<span class="src">ChatGPT · pregunta sobre Alicante</span></div></div><div class="card"><div class="ey">También por delante de ti</div><h4>Organik Marketing</h4><p>Sale en el 7% de las respuestas, en Gemini y ChatGPT.</p><div class="quote o">«Organik Marketing se especializa en trabajar con promotoras, constructoras de villas, casas de turismo rural y bodegas locales en la región.»<span class="src">ChatGPT · pregunta sobre Benissa</span></div></div></div>
+<div class="cloud"><h4>Todas las marcas que nombró la IA en estas respuestas</h4><p>Resaltada, la tuya.</p><div class="cs"><span>Human Level</span><span>Organik Marketing</span><span class="me">La Fábrica del SEO</span><span>Ameba</span><span>Cyberclick</span><span>Digital Nature</span><span>iSocialWeb</span><span>OrbitaClick</span><span>Pyme UP</span><span>SEOCOM</span><span>40deFiebre</span><span>Action Rocket</span><span>Agencia SEO Barcelona</span><span>Agenciaseo.eu</span><span>Alcanza Marketing</span><span>Allora</span><span>Antevenio</span><span>Azurally</span><span>Bastida&amp;Farina</span><span>BENISEO</span><span>BigSEO</span><span>Bluecell Comunicación</span><span>BS Agency</span><span>Bulldog Digital Media</span><span>Carrascastudio</span><span>Clostr</span><span>Colabo Media Group</span><span>Comunicación Alicante</span><span>Dalemambo</span><span>Dobuss</span><span>Ecommedia</span><span>Elogia</span><span>Email Uplers</span><span>Evercom</span><span>Grupo Enfoca</span><span>Havas</span><span>iMedia Marketing</span><span>Inboundcycle</span><span>Isobar</span><span>knowmad mood</span><span>Latevaweb</span><span>Lirogo Digital</span><span>METMEDIA</span><span>NeoAttack</span><span>NeoDigital 360</span><span>Neting</span><span>nXo Marketing</span><span>Omnia Soluciones</span><span>Oxoigo Digital</span><span>Prismal Studio</span><span>RANKTOP</span><span>RODANET</span><span>ROI UP Group</span><span>Seo4Pymes</span><span>Sinergia Índigo</span><span>Sintegia</span><span>Surper</span><span>Talentum Digital</span><span>Tokio13</span><span>Vibra Marketing</span><span>Webpositer</span><span>Yinyang Agency</span></div></div>
+<div class="ft"><span>GenScore · genscore.es · Escaneo del 9 de octubre de 2026</span><span>4 / 8</span></div></section><section class="page"><div class="hd"><img src="genscore-logo.svg" class="lg" alt="GenScore"><span>La Fábrica del SEO · Fuentes</span></div>
+<div class="sec"><span class="num">04</span><h2>Qué webs lee la IA antes de responder</h2></div>
+<p class="lede">Las webs que citó la IA en sus respuestas, agrupadas por tipo y ordenadas por frecuencia. La tuya es el &lt;1%.</p>
+<div class="srcgrid"><div class="srccol"><h4>Tus competidores</h4><div class="r"><span>organikmarketing.es</span></div><div class="r"><span>amebacomunicacion.com</span></div><div class="r"><span>carrascastudio.com</span></div><div class="r"><span>consultorseoalicante.es</span></div><div class="r"><span>cyberclick.es</span></div><div class="r"><span>digital-nature.com</span></div><div class="r"><span>pymeup.com</span></div><div class="r me"><span>lafabricadelseo.com</span></div></div><div class="srccol"><h4>Comparadores y directorios</h4><div class="r"><span>sortlist.es</span></div><div class="r"><span>agencies.semrush.com</span></div><div class="r"><span>ctmd.es · ranking Alicante</span></div><div class="r"><span>cylex.es</span></div><div class="r"><span>es.gowork.com</span></div><div class="r"><span>goodfirms.co</span></div><div class="r"><span>marketingdigitalweb.es</span></div></div><div class="srccol"><h4>Medios y otras webs</h4><div class="r"><span>iebschool.com</span></div><div class="r"><span>es.semrush.com (blog)</span></div><div class="r"><span>socialmediapymes.com</span></div><div class="r"><span>cadenaser.com</span></div><div class="r"><span>camara.es</span></div><div class="r"><span>ceupe.com</span></div><div class="r"><span>huffingtonpost.es</span></div></div></div>
+<div class="callout"><div><h4>Tus páginas que cita la IA</h4><p><code>lafabricadelseo.com</code><br><code>lafabricadelseo.com/contacto</code><br><code>lafabricadelseo.com/nuestros-servicios/agencia-marketing-en-benissa</code><br></p><p>Son el &lt;1% de las webs que citó.</p></div><div><h4>La web que más cita</h4><p><code>iebschool.com</code>, en el 13% de las respuestas con fuentes.</p></div></div>
+<div class="ey2">Cómo te describe la IA</div><div class="cards2" style="margin-top:8px"><div class="quote">«La Fábrica del SEO en Benissa se especializa en SEO, GEO y SEM.»<span class="src">Gemini · pregunta sobre Benissa · fuente: tu web</span></div><div class="quote o">«La Fábrica del SEO ofrece una metodología 360º que incluye SEO, SEM, analítica web y optimización de la tasa de conversión.»<span class="src">ChatGPT · pregunta sobre Benissa · fuente: marketingdigitalweb.es</span></div></div>
+<div class="ft"><span>GenScore · genscore.es · Escaneo del 9 de octubre de 2026</span><span>5 / 8</span></div></section><section class="page"><div class="hd"><img src="genscore-logo.svg" class="lg" alt="GenScore"><span>La Fábrica del SEO · Auditoría técnica</span></div>
+<div class="sec"><span class="num">05</span><h2>Tu web, lista para la IA</h2></div>
+<p class="lede">Las mismas comprobaciones que ves en Auditoría web, sobre las páginas principales de tu dominio.</p>
+<div class="scorebox one">
+  <div class="s me"><div class="v">90<small>/100</small></div><div class="l"><b>La Fábrica del SEO</b>Salud técnica para la IA · páginas principales</div></div>
+  <div class="s"><div class="v">5<small>%</small></div><div class="l"><b>Cobertura de contenido</b>Preguntas principales de búsqueda con una página tuya que las responde</div></div>
+</div>
+<table class="tt"><thead><tr><th>Comprobación</th><th class="me">La Fábrica del SEO</th></tr></thead><tbody><tr><td class="k">Bots de IA con acceso<small>GPTBot, ClaudeBot, Google-Extended y otros</small></td><td class="me"><span class="ok">Todos</span></td></tr><tr><td class="k">llms.txt<small>Guía de la web pensada para modelos de IA</small></td><td class="me"><span class="ok">Lo tienes</span></td></tr><tr><td class="k">Mapa del sitio<small>Comprobado en /sitemap.xml</small></td><td class="me"><span class="bad">No responde</span></td></tr><tr><td class="k">La primera frase responde<small>Lo que la IA suele extraer y citar</small></td><td class="me"><span class="warn">Sólo en Benissa</span></td></tr><tr><td class="k">Datos estructurados<small>JSON-LD</small></td><td class="me"><span class="ok">Organization, dirección</span>; FAQPage en Benissa. Sin LocalBusiness</td></tr><tr><td class="k">Texto legible sin JavaScript</td><td class="me"><span class="ok">Sí</span>, texto completo</td></tr><tr><td class="k">Título de la página</td><td class="me"><span class="ok">Correcto</span> en portada; <span class="warn">largo en Benissa</span> (se corta)</td></tr><tr><td class="k">Meta descripción · H1 único · canonical · Open Graph</td><td class="me"><span class="ok">Correctos</span></td></tr><tr><td class="k">hreflang<small>Sólo importa si publicas en varios idiomas</small></td><td class="me"><span class="warn">No declarado</span></td></tr></tbody></table>
+<div class="read"><b>Lectura:</b> con una nota técnica de 90/100, lo que más pesa ahora es el contenido: sólo el 5% de tus preguntas principales de búsqueda tiene una página tuya que la responda.</div>
+<div class="ft"><span>GenScore · genscore.es · Escaneo del 9 de octubre de 2026</span><span>6 / 8</span></div></section><section class="page"><div class="hd"><img src="genscore-logo.svg" class="lg" alt="GenScore"><span>La Fábrica del SEO · Plan de acción</span></div>
+<div class="sec"><span class="num">06</span><h2>Tus tres primeras acciones</h2></div>
+<p class="lede">Las tres primeras de tu plan en GenScore, cada una ligada a preguntas del mapa. Márcalas como hechas en Recomendaciones y el próximo escaneo te dirá si la IA ha cambiado su respuesta.</p>
+<div class="acts"><div class="act"><div class="k">1</div><div><h3>Repetir el formato de Benissa para Alicante y la Marina Alta</h3><p>Tu página de Benissa es la única que la IA cita, y tiene lo que buscan los motores: preguntas frecuentes marcadas como FAQPage y una primera frase que responde. Gemini cita páginas de agencia por ciudad de tus competidores. Una página igual para Alicante (y para Dénia, Calp o Jávea si trabajas allí) entra en la misma conversación.</p><div class="meta"><span class=chip>Preguntas locales de Alicante</span><span class=chip>Hoy la IA recomienda a otras agencias</span><span class="chip g">Esfuerzo: bajo</span></div></div></div><div class="act"><div class="k">2</div><div><h3>Una página propia de posicionamiento en IA (GEO)</h3><p>Gemini ya dice que te especializas en GEO, pero cuando preguntan por agencias de SEO para IA, ChatGPT pone de ejemplo a Organik Marketing. No encontramos en tu web una página que responda a las preguntas sobre SEO para IA. Hace falta una con definición directa, proceso, rango de precio, un caso y preguntas frecuentes.</p><div class="meta"><span class=chip>Preguntas de SEO para IA</span><span class=chip>Terreno casi libre: apenas se nombran agencias</span><span class="chip g">Esfuerzo: medio</span></div></div></div><div class="act"><div class="k">3</div><div><h3>Estar en las fuentes que la IA consulta</h3><p>ChatGPT te describió con una ficha de marketingdigitalweb.es y para Alicante dio la nota y las reseñas de cada agencia. Revisa esa ficha, pide reseñas en tu perfil de Google y date de alta en Sortlist y Cylex, y propón entrar en rankings como el de consultorías de Alicante de ctmd.es: son fuentes que citó Gemini.</p><div class="meta"><span class=chip>Preguntas para elegir agencia</span><span class=chip>Afecta a ChatGPT y Gemini</span><span class="chip g">Esfuerzo: bajo, continuo</span></div></div></div></div>
+<div class="quick"><h4>Arreglos rápidos de tu web</h4><ul><li>Publicar /sitemap.xml (si ya tienes sitemap en otra ruta, basta con redirigir esa URL).</li><li>Añadir schema LocalBusiness o ProfessionalService con la dirección de Benissa y la zona que cubres.</li><li>Acortar el título de la página de Benissa, que hoy se corta en los resultados.</li><li>Abrir la portada con una frase que diga qué haces, para quién y dónde.</li></ul></div>
+<div class="ft"><span>GenScore · genscore.es · Escaneo del 9 de octubre de 2026</span><span>7 / 8</span></div></section><section class="page back"><svg class="glow" width="100%" height="100%" viewBox="0 0 794 1123" preserveAspectRatio="none" xmlns:c2pa="http://c2pa.org/manifest"><metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYToyYzk4OTg2OC03NTQwLTQ5ZDQtYjVmMS02N2IzM2Q4Mjc4MWYAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaI+QgF3kTVT6UIEl1txxEm8AAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDo5MDdlNWE3Ni0xYjI5LTRlYWEtODM4NS03YzVkN2ZlYjcxNTdscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNoDrS4UnJQMf9Cp4iUaZ6+LgAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggN5EgZY7RPxYYmRUjVZNwOSAjl3QDZUSoxOzL9rtvJ6OkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaC7htcwTpa602z4cCf/gEQYAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRNAAAAAAAAAAAAAAAAAGRoYXNoWCAMFBXfw87rsoNfovLu4sO9+porL6NVs5ir1pEnpXCxmWRuYW1lbmp1bWJmIG1hbmlmZXN0amV4Y2x1c2lvbnOBomVzdGFydBieZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOjJjOTg5ODY4LTc1NDAtNDlkNC1iNWYxLTY3YjMzZDgyNzgxZi9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjMxYTJjYTYzLTc0MDMtNDdkMS1hODE1LThmZTA5NWQ2ZDA0ZHJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCA3kSBljtE/FhiZFSNVk3A5ICOXdANlRKjE7Mv2u28no6JjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggASWwT95R4RLosCO47rj4Y9gFvHLE84osC/Qpi7skOzeiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggtMcZXjxd/HYadFk8t6VKSVkk29FInnvER7Ytw3KO5qZ0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQGJ5CCv07S3sT3sPfoQv+yzZA03ZRH2J1eIuCyRoDBKVZTpscsnvJe0DHrQnYAx0BFWoZijHOKnndHPReo5uYNE=</c2pa:manifest></metadata>
+<defs><radialGradient id="gl" cx="640" cy="140" r="520" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#09c5d6" stop-opacity=".30"/><stop offset=".55" stop-color="#2563eb" stop-opacity=".10"/>
+<stop offset="1" stop-color="#081223" stop-opacity="0"/></radialGradient></defs>
+<rect width="794" height="1123" fill="url(#gl)"/></svg>
+<div class="hd" style="position:relative"><img src="genscore-logo-white.svg" class="lg" alt="GenScore"><span>La Fábrica del SEO · Siguientes pasos</span></div>
+<div class="bigq">
+  <div class="eyebrow">07 · ¿Y ahora qué?</div>
+  <h2>La misma foto, en tu próximo escaneo</h2>
+  <p>GenScore vuelve a hacer estas preguntas principales de búsqueda en cada escaneo y te avisa de lo que cambia, pregunta a pregunta y motor a motor.</p>
+  <p>El detalle de cada respuesta, tu plan completo y la evolución de tu Puntuación GEO están en tu consola.</p>
+  <div class="sig"><span>genscore.es</span></div>
+</div>
+<div class="meth">
+  <div>
+    <h4>Las preguntas principales de búsqueda</h4>
+    <p>Son las que elegiste al dar de alta tu dominio a partir de lo que vendes, y las puedes cambiar en Prompts.</p>
+    <h4>Los motores</h4>
+    <p>ChatGPT, Gemini y Claude, preguntados múltiples veces, en distintos momentos. Las apps de consumo pueden responder algo distinto, y cada motor cambia con el tiempo.</p>
+  </div>
+  <div>
+    <h4>Qué contamos</h4>
+    <p>Una mención es que la respuesta nombre a tu marca, y el puesto es el orden en que aparece. Las fuentes son las URLs que citó el propio motor. Las citas son texto literal de la IA, no hechos verificados.</p>
+    <h4>Límites</h4>
+    <p>La IA no responde siempre igual: los porcentajes son la foto de este escaneo. Por eso GenScore repite la medición.</p>
+  </div>
+</div>
+<div class="ft" style="position:relative"><span>GenScore · genscore.es · Escaneo del 9 de octubre de 2026</span><span>8 / 8</span></div>
+</section></body></html>

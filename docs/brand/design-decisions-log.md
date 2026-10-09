@@ -21889,3 +21889,37 @@ los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
 **Trazabilidad.** `app/blog/que-software-de-facturacion-recomienda-la-ia/`, `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,
 `scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
 `.claude/rules/admin.md`.
+
+## 247. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
+
+**Qué se decidió.** El fundador vio el informe de prospecto hecho a mano para
+La Fábrica del SEO (estudio de `/admin/estudio`, §246) y lo prefirió al PDF de
+«Exportar plan» (§215–§219): «me gusta mucho más que el que ahora sale en la
+herramienta». Task Intake aprobado el 2026-10-09 («Sí a todo»), con cuatro
+decisiones: **sustituye** a «Exportar plan» con un solo botón «Descargar
+informe» en Visión general y Recomendaciones; los hallazgos se escriben con
+**plantillas sobre datos**, no los redacta una IA; la comparación técnica con
+un competidor queda **fuera** (traer webs de terceros amplía la superficie de
+descarga, zona de crawler según `CLAUDE.md`); lo tienen **todos los planes de
+pago y la prueba**. Diseño de la versión producto aprobado el mismo día
+(«Sí»), guardado en `docs/design-reference/geo-report-1/`.
+
+**Qué entra en esta fase.** Sólo el modelo: `lib/report/report-model.ts`,
+una función pura que convierte el último escaneo completado en todo lo que
+pintan las ocho páginas, con sus tests. No hay cambios visibles todavía; el
+componente de impresión y el cargador de datos son la Fase 2, y la reutilización
+desde `/admin/estudio` para prospección es la Fase 3.
+
+**Normas de contenido que fija el modelo** (fundador, 2026-10-09): sólo
+porcentajes y proporciones —toda cifra sale como fracción y se formatea con
+`formatShare`—; motores por su nombre, sin versiones; la lista de preguntas se
+llama «preguntas principales de búsqueda»; un bloque sin datos se omite. El
+test recorre el modelo entero buscando cifras absolutas y versiones.
+
+**Pendiente.** Fase 2 (cargador + componente de impresión con el aprendizaje
+de §217–§219, y retirada del informe de PDF-EXPORT-PLAN-1), Fase 3
+(`/admin/estudio` pinta el mismo componente). Sin aprobar: comparación técnica
+con un competidor y marca blanca para agencias.
+
+**Trazabilidad.** `lib/report/report-model.ts` (+test),
+`docs/design-reference/geo-report-1/`, `.claude/rules/report.md`.
