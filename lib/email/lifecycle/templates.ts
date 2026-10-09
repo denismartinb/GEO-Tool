@@ -454,7 +454,7 @@ export async function sendTrialEndedOfferEmail(
     {
       footerHtml: envelope.footerHtml,
       preheader: input.pro.promo
-        ? `Tu cuenta ha pasado a Free. Vuelve a Pro por ${input.pro.promo.price} €/mes para siempre: quedan ${input.pro.promo.remaining} plazas de precio fundador.`
+        ? `Tu cuenta ha pasado a Free. Vuelve a Pro por ${input.pro.promo.price} €/mes para siempre: quedan ${input.pro.promo.remaining} cuentas con precio fundador.`
         : "Tu cuenta ha pasado a Free. Tus datos siguen intactos."
     }
   );
@@ -532,21 +532,21 @@ export async function sendWinbackD10Email(
   if (!envelope) return false;
 
   const plan = H(input.pro.planName);
-  const slots = `${promo.remaining} ${promo.remaining === 1 ? "plaza" : "plazas"}`;
+  const slots = promo.remaining === 1 ? "Queda 1 cuenta" : `Quedan ${promo.remaining} cuentas`;
   const follow = input.domain ? `seguir <b style="color:#0B1426;">${H(input.domain)}</b> a diario` : "seguir tu dominio a diario";
 
   const html = wrap(
     `
     ${eyebrow("Precio fundador", "#A8660B")}
-    ${heading(`Quedan ${slots} a ${promo.price} €/mes para siempre`)}
-    ${paragraph(`Las primeras ${promo.total} suscripciones a ${plan} pagan <b style="color:#0B1426;">${promo.price} €/mes para siempre</b>, en lugar de ${input.pro.price} €, y pueden ${follow} en las respuestas de la IA. Cuando se ocupen las plazas, se aplica el precio normal. Es el último email que te enviamos sobre esto.`)}
+    ${heading(`${slots} con ${plan} a ${promo.price} €/mes para siempre`)}
+    ${paragraph(`Las cuentas con precio fundador de ${plan} pagan <b style="color:#0B1426;">${promo.price} €/mes para siempre</b>, en lugar de ${input.pro.price} €, y pueden ${follow} en las respuestas de la IA. Cuando se agoten, se aplica el precio normal. Es el último email que te enviamos sobre esto.`)}
     ${priceBox(input.pro)}
     ${button(url("/dashboard/settings?openPlan=pro", "winback_d10"), `Contratar ${plan} por ${promo.price} €/mes`)}
     `,
     {
       footerHtml: envelope.footerHtml,
-      preheader: `Precio fundador para siempre: quedan ${slots}. Es el último email que te enviamos sobre esto.`
+      preheader: `Precio fundador para siempre: ${slots.toLowerCase()} con este precio. Es el último email que te enviamos sobre esto.`
     }
   );
-  return sendEmail(to, `Quedan ${slots}: ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, envelope.headers);
+  return sendEmail(to, `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, envelope.headers);
 }

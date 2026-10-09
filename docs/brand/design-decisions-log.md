@@ -21399,7 +21399,7 @@ nada, y las pruebas ya caducadas tampoco.
   ciclo de vida, ni lunes (salvo el fin de prueba, que es aviso de cuenta), ni
   suscriptores, comped, internas o bajas, y nada pasados 30 días.
 - **Precios nunca escritos a mano**, y sobre el modelo de FOUNDER-PRICE-1
-  (§237, PR #556): «precio fundador para siempre», «quedan N de 50 plazas»,
+  (§237, PR #556): «precio fundador para siempre», «quedan N cuentas con precio fundador» (N leído de Stripe, sin mostrar el cupo total, como pide la adenda de §237),
   sin tachado ni fecha. Cuando se agoten las plazas, los correos pasan solos
   al precio normal y el D+10 deja de salir. **Este PR va encima de #556 y se
   mergea después.**

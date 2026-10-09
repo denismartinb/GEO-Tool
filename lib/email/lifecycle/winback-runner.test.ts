@@ -12,7 +12,7 @@ vi.mock("@/lib/email/lifecycle/templates", () => ({
 }));
 vi.mock("@/lib/email/transactional", () => ({ sendTrialEndedEmail: (...a: unknown[]) => sendTrialEndedEmail(...a) }));
 let promoPlans: string[] = ["pro", "starter"];
-vi.mock("@/lib/stripe", () => ({ getFounderOffer: async () => ({ planIds: promoPlans, remaining: 47, total: 50 }) }));
+vi.mock("@/lib/stripe", () => ({ getFounderOffer: async () => ({ planIds: promoPlans, remaining: 35, total: 38 }) }));
 
 import { notifyTrialEndedOnDowngrade, runTrialEndEmails, runWinbackEmails } from "./runner";
 

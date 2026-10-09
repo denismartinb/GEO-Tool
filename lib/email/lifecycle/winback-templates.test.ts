@@ -28,7 +28,7 @@ const snapshot: RunSnapshot = {
   topCompetitor: { name: "Clínica Sonrisa Norte", mentions: 19 },
   activeRecommendations: 6
 };
-const proWithPromo: PlanOffer = { planName: "Pro", price: 99, promo: { price: 69, remaining: 47, total: 50 } };
+const proWithPromo: PlanOffer = { planName: "Pro", price: 99, promo: { price: 69, remaining: 35, total: 38 } };
 const proNoPromo: PlanOffer = { planName: "Pro", price: 99, promo: null };
 const starter: PlanOffer = { planName: "Starter", price: 29, promo: null };
 const END = new Date("2026-10-05T10:00:00Z");
@@ -54,7 +54,7 @@ describe("fin de prueba", () => {
     expect(mail.subject).toBe("Tu prueba ha terminado. Tus datos de clinicaaurora.es siguen aquí");
     expect(mail.html).toContain("6 de 45");
     expect(mail.html).toContain("Volver a Pro por 69 €/mes");
-    expect(mail.html).toContain("Quedan 47 de 50 plazas");
+    expect(mail.html).toContain("Quedan 35 cuentas con precio fundador");
     expect(mail.html).not.toMatch(/Disponible hasta|durante \d+ meses|line-through/i);
     expect(mail.html).toContain("openPlan=pro");
     expect(mail.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
@@ -115,7 +115,7 @@ describe("D+10", () => {
 
   it("quotes the founder price as forever and the real slots left, with no calendar deadline", async () => {
     await sendWinbackD10Email(TO, USER, { domain: "clinicaaurora.es", pro: proWithPromo });
-    expect(last().subject).toBe("Quedan 47 plazas: Pro a 69 €/mes para siempre");
+    expect(last().subject).toBe("Quedan 35 cuentas con Pro a 69 €/mes para siempre");
     expect(last().html).toContain("en lugar de 99 €");
     expect(last().html).not.toMatch(/Últimos días|hasta el \d/);
   });
