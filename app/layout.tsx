@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, Bricolage_Grotesque, Figtree, JetBrains_Mono } from "next/font/google";
 import { PostHogProvider } from "@/components/posthog-provider";
+import { AdsConsent } from "@/components/ads/ads-consent";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
 import { CANONICAL_DEFINITION } from "@/lib/brand/canonical-definition";
 import {
@@ -168,6 +169,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
         <OrganizationSchema />
         <PostHogProvider>{children}</PostHogProvider>
+        <AdsConsent />
       </body>
     </html>
   );
