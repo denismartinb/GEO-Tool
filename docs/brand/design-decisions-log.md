@@ -22052,3 +22052,51 @@ camino de recuperación.
 `app/privacidad/page.tsx`, `app/sitemap.ts`, `app/globals.css` (bloque `fr-`),
 `public/informe-gratis/portada-ejemplo.webp`,
 `docs/design-reference/free-report-1/`.
+
+## 251. CONFIRM-CROSS-DEVICE-1: el enlace de confirmación funciona en otro dispositivo y ya no se salta la bienvenida, el aviso de alta ni `signup_completed` (2026-10-09)
+
+**Qué pasaba.** El correo «Confirm signup» llevaba el enlace PKCE de
+Supabase (`/auth/callback?code=…`). Ese `code` sólo se puede canjear en el
+navegador que hizo el alta, porque el verificador vive en sus cookies. Quien
+se registraba en el ordenador y confirmaba desde el móvil (o desde el
+navegador propio de la app de correo) veía su email confirmado igualmente
+por Supabase, pero el canje fallaba (`exchange_failed`, «PKCE code verifier
+not found»), la ruta le mandaba a `/login` con error y entraba a mano. La
+rama de «primera confirmación» no corría nunca: sin correo de bienvenida,
+sin aviso de alta al operador, sin `signup_completed` en PostHog. Lo
+destapó la prueba real del fundador tras FUNNEL-EVENTS-1 (§242): llegó
+`signup_submitted` y nada más, y el registro de Vercel de producción tenía
+el error a la hora exacta. Cuántas altas reales lo sufrieron antes no se
+puede saber: no quedaba registrado en ningún sitio salvo ese log efímero.
+
+**Decisión.**
+- Ruta nueva `/auth/confirm` que valida `token_hash` con
+  `supabase.auth.verifyOtp` (tipos `email` y `signup`). Un token hash no
+  necesita nada guardado en el navegador del alta.
+- Lo que tiene que pasar una vez al confirmar (bienvenida, aviso de alta,
+  `signup_completed`, cookie de conversión de Google de PAID-ADS-1) sale de
+  `/auth/callback` a `app/auth/first-confirmation.ts`, que usan las dos
+  rutas: así no pueden divergir.
+- `next` sólo acepta rutas del propio sitio (`safeNextPath`): `//otro.com`
+  o una URL absoluta caen a `/dashboard`. Antes `/auth/callback` lo pasaba
+  tal cual a `new URL(next, origin)`.
+- `/auth/callback` se queda para Google y para los enlaces enviados antes
+  del cambio de plantilla.
+
+**Fuera del repo (lo hace el fundador, después del deploy).** En Supabase →
+Authentication → Email Templates → «Confirm signup», el enlace pasa a:
+`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/dashboard`.
+Requiere que la Site URL de Supabase sea `https://www.genscore.es`. Hasta
+ese cambio nada se arregla: el código nuevo no recibe tráfico. El
+recordatorio de confirmación (CONFIRM-REMINDER-1, §234) reenvía la misma
+plantilla, así que se beneficia sin tocarlo.
+
+**Regla de premisa.** No se retira ningún camino: el enlace viejo sigue
+funcionando como antes en el mismo navegador.
+
+**Pendiente.** Comprobar en PostHog, tras el cambio de plantilla, que un alta
+confirmada desde otro dispositivo deja `signup_completed` con
+`method=password`.
+
+**Trazabilidad.** `app/auth/first-confirmation.ts`,
+`app/auth/confirm/route.ts` (+test), `app/auth/callback/route.ts`.
