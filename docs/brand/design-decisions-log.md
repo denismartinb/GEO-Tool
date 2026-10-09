@@ -21377,3 +21377,39 @@ aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
   1.500/día. Con el volumen medido seguimos dentro del gratuito (ADR 0042).
 
 **Rollback.** `GEMINI_MODEL=gemini-2.5-flash` en Vercel, sin tocar código.
+
+## 237. SITE-URL-SLASH-1: las auto-llamadas del escaneo iban a "//api/..." y Vercel las rechazaba con 508 (2026-10-09)
+
+**Qué se vio.** Logs de producción del 07 al 09-10 (Vercel, proyecto
+`geo-tool`): `[scan-runner] scan continuation was rejected { status: 508,
+url: 'https://www.genscore.es//api/scan/continue' }` y lo mismo para
+`//api/cron/run-audit` desde `audit-after-scan`, incluso en `chainIndex: 0`.
+`NEXT_PUBLIC_SITE_URL` acaba en "/" (el propio `billing/actions.ts` ya lo
+decía en un comentario y lo esquivaba en local) y `getSiteUrl()` lo devolvía
+tal cual.
+
+**Qué se decidió.** `getSiteUrl()` recorta espacios y barras finales. Arregla
+de una vez las tres auto-llamadas (`/api/scan/continue`,
+`/api/cron/sweep-continue`, `/api/cron/run-audit`) y el `emailRedirectTo` del
+recordatorio de confirmación (`lib/email/lifecycle/runner.ts`). Test en
+`lib/site-url.test.ts`.
+
+**Lo que NO se tocó, a propósito.** `app/{signup,login,forgot-password}/
+actions.ts` concatenan `NEXT_PUBLIC_SITE_URL` a mano y hoy mandan a Supabase
+`https://www.genscore.es//auth/callback`. Cambiarlo toca auth (Task Intake
+obligatorio) y depende de qué URLs tenga permitidas Supabase, que desde el
+repo no se ve. Pendiente: comprobar la lista de Redirect URLs en Supabase y
+unificarlos con `getSiteUrl()` en su propio PR. Alternativa sin código: quitar
+la barra final de `NEXT_PUBLIC_SITE_URL` en Vercel.
+
+**Abierto, no resuelto aquí: los timeouts de 60 s.** Los mismos logs muestran
+`Task timed out after 60 seconds` en `/api/scan/continue`,
+`/api/cron/sweep-continue` y `/api/cron/weekly-scans`. Causa probable (leída
+del código, no medida): `triggerScanContinuation` hace `await fetch` y la ruta
+`/api/scan/continue` no responde hasta terminar `executePendingScan`, así que
+cada eslabón espera el lote entero del siguiente dentro de su propio
+presupuesto y muere a los 60 s. El siguiente eslabón sigue vivo (es otra
+invocación), por eso los escaneos avanzan igualmente, pero cada eslabón
+consume una invocación de 60 s y el `response.ok` nunca llega a leerse. Que la
+ruta responda en cuanto acepta el lote y trabaje en `after()` es un cambio de
+pipeline con su propio Task Intake (agente `reliability`).
