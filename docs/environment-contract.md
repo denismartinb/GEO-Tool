@@ -81,12 +81,15 @@ MFA`) — worth doing once, calmly, before this is the only way in.
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
 | `GEMINI_API_KEY` | Yes | Vercel + local `.env.local` | `AIza...` |
-| `GEMINI_MODEL` | No (defaults to `gemini-2.5-flash`) | Vercel optional | Valid model id matching `/^gemini-[a-z0-9][a-z0-9._-]*$/i` |
+| `GEMINI_MODEL` | No (defaults to `gemini-3.6-flash`) | Vercel optional | Valid model id matching `/^gemini-[a-z0-9][a-z0-9._-]*$/i` |
 
 See `docs/adr/0002-gemini-model-pinning.md` and
-`docs/adr/0009-gemini-2.5-flash-model-pin.md` — model is pinned to
-`gemini-2.5-flash`. Do not change without an ADR. If a `GEMINI_MODEL`
-override is set in Vercel, it must also be updated to a served model id.
+`docs/adr/0042-gemini-3.6-flash-model-pin.md` — model is pinned to
+`gemini-3.6-flash`. Do not change without an ADR. If a `GEMINI_MODEL`
+override is set in Vercel, it wins over the code default: delete it (or set
+it to `gemini-3.6-flash`) for the pin to take effect. Setting it to
+`gemini-2.5-flash` is the documented rollback; temperature/thinking adapt to
+the model family on their own (`geminiGenerationTuning`).
 
 ### Claude (Anthropic)
 

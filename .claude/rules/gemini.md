@@ -13,6 +13,12 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   change is an ADR-worthy decision — see
   `docs/adr/0002-gemini-model-pinning.md`. Validate the id is still served
   before any smoke (the `gemini-2.0-flash` 404 came from a pinning gap).
+- **`generationConfig` sale de `geminiGenerationTuning(model)`, nunca a mano.**
+  Gemini 3 no admite apagar el razonamiento, `thinkingBudget` junto a
+  `thinkingLevel` es un 400 y Google desaconseja `temperature` por debajo de
+  1.0 (bucles); Gemini 2.x necesita lo contrario (ADR 0009). Cinco copias
+  escritas a mano habrían fallado todas a la vez con el primer cambio de
+  modelo (ADR 0042, log §236). Llamada nueva → usa la función.
 - **No new providers** (OpenAI, Perplexity) without explicit approval.
 - **No crawler** without explicit approval.
 - **Never fake Gemini results**, and never hide a provider failure behind a

@@ -33,11 +33,14 @@ import {
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// Pinned per docs/adr/0009-gemini-2.5-flash-model-pin.md — gemini-2.0-flash-001
-// was shut down by Google on 2026-06-01. gemini-2.5-flash is the recommended
-// replacement and has its own cutover date of 2026-10-16 to watch.
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.5-flash.";
+// Pinned per docs/adr/0042-gemini-3.6-flash-model-pin.md. History: ADR 0002
+// pinned gemini-2.0-flash-001 (shut down 2026-06-01), ADR 0009 re-pinned to
+// gemini-2.5-flash, whose access Google now restricts to existing users and
+// which returned unannounced 404s on 2026-07-09. gemini-3.6-flash is Google's
+// listed replacement for the 2.5 Flash line and the newest Flash that still
+// accepts thinkingLevel "minimal" (see geminiGenerationTuning).
+const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-3.6-flash.";
 
 /**
  * Hard per-call timeout shared by every direct Gemini `fetch`.
@@ -67,6 +70,31 @@ export function getGeminiApiError(status: number) {
   if (status === 429) return "Gemini API quota or rate limit reached.";
   if (status === 400) return "Gemini API rejected the request. Check GEMINI_MODEL and request configuration.";
   return `Gemini API request failed with status ${status}.`;
+}
+
+/**
+ * Model-family tuning shared by every Gemini call (ADR 0042).
+ *
+ * Gemini 2.x: `temperature: 0` (ADR 0009 addendum 2026-06-19) and
+ * `thinkingBudget: 0` (ADR 0009 addendum 2026-06-14) — kept for a
+ * `GEMINI_MODEL` override back to 2.5 as the rollback path.
+ *
+ * Gemini 3.x+: Google strongly recommends the default temperature (1.0) —
+ * lower values "may lead to looping or degraded performance", and a looping
+ * grounded call is a GeminiTimeoutError, i.e. a failed prompt. Thinking
+ * cannot be turned off; the lowest level is "minimal" on 3.5/3.6 Flash and
+ * 3.1 Flash-Lite, "low" elsewhere. `thinkingBudget` and `thinkingLevel` in
+ * the same request are a 400, so exactly one is ever sent.
+ */
+export function geminiGenerationTuning(model: string): {
+  temperature?: number;
+  thinkingConfig: { thinkingBudget: number } | { thinkingLevel: "minimal" | "low" };
+} {
+  if (/^gemini-[12]\./i.test(model)) {
+    return { temperature: 0, thinkingConfig: { thinkingBudget: 0 } };
+  }
+  const acceptsMinimal = /^gemini-3\.(?:[56]-flash|1-flash-lite)/i.test(model);
+  return { thinkingConfig: { thinkingLevel: acceptsMinimal ? "minimal" : "low" } };
 }
 
 export function getGeminiModel() {
@@ -161,8 +189,7 @@ export async function generateGeminiJson(promptBlock: string): Promise<unknown> 
     generateContentEndpoint(apiKey),
     JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
-      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-      generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
+      generationConfig: { ...geminiGenerationTuning(getGeminiModel()), responseMimeType: "application/json" }
     })
   );
 
@@ -215,7 +242,7 @@ export async function generateGroundedGeminiJson(promptBlock: string): Promise<u
     JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
       tools: [{ google_search: {} }],
-      generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
+      generationConfig: geminiGenerationTuning(getGeminiModel())
     })
   );
 

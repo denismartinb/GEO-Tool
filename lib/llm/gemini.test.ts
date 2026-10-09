@@ -83,10 +83,31 @@ describe("generateGeminiVisibilityAnswer", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [endpoint, init] = fetchMock.mock.calls[0];
-    expect(endpoint).toContain("gemini-2.5-flash");
+    expect(endpoint).toContain("/gemini-3.6-flash:generateContent");
 
     const body = JSON.parse(init.body as string);
     expect(body.tools).toEqual([{ google_search: {} }]);
+    // ADR 0042: Gemini 3 keeps its default temperature and minimal thinking,
+    // and never receives thinkingBudget next to thinkingLevel (a 400).
+    expect(body.generationConfig).toEqual({ thinkingConfig: { thinkingLevel: "minimal" } });
+  });
+
+  it("keeps the ADR 0009 tuning when GEMINI_MODEL rolls back to a 2.5 model", async () => {
+    process.env.GEMINI_MODEL = "gemini-2.5-flash";
+    const fetchMock = mockFetchOnce({
+      candidates: [{ content: { parts: [{ text: "Acme is great." }] } }],
+      modelVersion: "gemini-2.5-flash"
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateGeminiVisibilityAnswer({ prompt: "best widgets", country: "ES", language: "es" });
+
+    const [endpoint, init] = fetchMock.mock.calls[0];
+    expect(endpoint).toContain("/gemini-2.5-flash:generateContent");
+    expect(JSON.parse(init.body as string).generationConfig).toEqual({
+      temperature: 0,
+      thinkingConfig: { thinkingBudget: 0 }
+    });
   });
 
   it("sends a brand-blind, neutral generation prompt (docs/adr/0007)", async () => {

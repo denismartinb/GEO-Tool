@@ -21348,3 +21348,32 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 236. MODEL-PIN: Gemini pasa de gemini-2.5-flash a gemini-3.6-flash (2026-10-09, ADR 0042)
+
+**Qué se decidió.** El modelo fijado por defecto pasa a `gemini-3.6-flash`
+(`lib/llm/gemini-client.ts`). Las cinco llamadas a Gemini (generación del
+escaneo, extracción, JSON con y sin búsqueda, auditoría web) dejan de
+escribir su `generationConfig` a mano y lo piden a
+`geminiGenerationTuning(model)`: familia 2.x conserva `temperature: 0` y
+`thinkingBudget: 0` (ADR 0009); familia 3.x usa la temperatura por defecto y
+`thinkingLevel: "minimal"` (o `"low"` donde no existe `minimal`).
+
+**Por qué.** La fecha del 16-10 que motivó la tarea ya no figura en la página
+de Google (comprobado el 09-10: "No shutdown date announced"), pero la misma
+página limita el acceso a 2.5 a quien ya lo usaba y el 09-07 hubo 404 sin
+aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
+
+**Pendiente / conocido.**
+- Si `GEMINI_MODEL` sigue puesto en Vercel (ADR 0009 dice que se fijó a
+  `gemini-2.5-flash` el 2026-06-11), manda sobre el código: el fundador tiene
+  que borrarlo o cambiarlo. Desde el repo no se ve.
+- Falta la prueba real: un escaneo completo en el preview del PR. La sesión
+  que lo implementó no tenía clave ni salida a la API de Google.
+- Las puntuaciones cambiarán algo con el modelo nuevo y la varianza entre
+  escaneos sube al quitar `temperature: 0`; se acepta frente al riesgo de
+  bucles (fallos de escaneo). Revisar con datos tras una semana.
+- Coste: tokens ~2,5× y búsqueda con 5.000 consultas gratis/mes en vez de
+  1.500/día. Con el volumen medido seguimos dentro del gratuito (ADR 0042).
+
+**Rollback.** `GEMINI_MODEL=gemini-2.5-flash` en Vercel, sin tocar código.
