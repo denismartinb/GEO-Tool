@@ -94,7 +94,9 @@ export const config = {
      * - VERCEL-COST-1 Fase 3-b (2026-08-31): a subset of the pure
      *   public-marketing surface — comparativas, docs, glosario, gratis + its
      *   API, geo, cookies, privacidad, terminos, que-es-genscore, feed.xml,
-     *   llms.txt, robots.txt, sitemap.xml. None of these read the auth
+     *   llms.txt, robots.txt, sitemap.xml. GEO-SELF-1 Fase 1 adds
+     *   sobre-genscore, llms-full.txt and indexnow-key.txt under the same check (static, no
+     *   Supabase read, not one of the three names middleware.test.ts pins). None of these read the auth
      *   cookie server-side — verified no `supabase`/`getUser`/`getClaims`
      *   usage under any of these route trees — and the public header already
      *   resolves session via its own `fetch('/api/me')` call
@@ -120,6 +122,6 @@ export const config = {
      *   refresh. No such route exists today, but this repo has a documented
      *   history of exactly this class of silent matcher mistake.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore)(?:/|$)|feed\\.xml$|llms\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore|sobre-genscore)(?:/|$)|feed\\.xml$|llms\\.txt$|llms-full\\.txt$|indexnow-key\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

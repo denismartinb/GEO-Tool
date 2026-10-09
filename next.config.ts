@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "1mb"
     }
+  },
+  // GEO-SELF-1 Fase 1: the team, the docs and the code comments call the
+  // pricing page "/precios" (e.g. log §236, §243), but the route is `/pricing`,
+  // so anyone — or any AI answer — that guessed the Spanish URL got a 404. A permanent
+  // redirect keeps `/pricing` as the one canonical URL. This is NOT the
+  // apex → www redirect `docs/environment-contract.md` says must stay in
+  // Vercel's domain config; that one still lives there.
+  async redirects() {
+    return [{ source: "/precios", destination: "/pricing", permanent: true }];
   }
 };
 

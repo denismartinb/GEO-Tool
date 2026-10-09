@@ -36,7 +36,10 @@ export const MARKETING_CONTENT_LINKS: ReadonlyArray<{ href: string; label: strin
  * dominio es una declaración que nadie respalda (SEO-POS-1 Fase E, E2).
  */
 export const MARKETING_ENTITY_LINKS: ReadonlyArray<{ href: string; label: string }> = [
-  { href: "/que-es-genscore", label: "Qué es GenScore" }
+  { href: "/que-es-genscore", label: "Qué es GenScore" },
+  // GEO-SELF-1 Fase 1: la página `AboutPage` de la empresa. Misma razón que la
+  // de arriba — una página de entidad sin enlaces entrantes no la respalda nadie.
+  { href: "/sobre-genscore", label: "Quiénes somos" }
 ];
 
 /**

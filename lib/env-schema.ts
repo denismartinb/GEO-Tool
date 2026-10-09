@@ -132,6 +132,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   STRIPE_COUPON_ID_PRO_FOUNDER: "Pro no ofrece precio fundador: /precios y el checkout usan el precio normal",
   ADMIN_USER_IDS: "/admin es inalcanzable (404 para todo el mundo)",
   GOOGLE_SITE_VERIFICATION: "no se emite la meta de verificación de Search Console",
+  BING_SITE_VERIFICATION: "no se emite la meta msvalidate.01 de Bing Webmaster Tools",
+  INDEXNOW_KEY: "/indexnow-key.txt responde 404 y `pnpm indexnow:ping` no envía nada",
   INTERNAL_TEST_ACCOUNT_EMAILS:
     "ninguna cuenta queda exenta: todo alta nueva recibe los defaults de producción (sampling y auditoría por IA encendidos)",
   COMPED_ACCOUNT_EMAILS: "ninguna cuenta queda exenta de pagar: todo el mundo lee su plan real, incluido cualquiera pensado como comped"
@@ -198,6 +200,8 @@ export const envSchema = z.object({
 
   ADMIN_USER_IDS: optionalText,
   GOOGLE_SITE_VERIFICATION: optionalText,
+  BING_SITE_VERIFICATION: optionalText,
+  INDEXNOW_KEY: optionalText,
   INTERNAL_TEST_ACCOUNT_EMAILS: optionalText,
   COMPED_ACCOUNT_EMAILS: optionalText
 });

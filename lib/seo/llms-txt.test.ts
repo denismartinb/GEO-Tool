@@ -65,4 +65,18 @@ describe("buildLlmsTxt", () => {
       expect(link).toContain(SITE_URL);
     }
   });
+
+  it("enlaza «Quiénes somos» y la versión completa (GEO-SELF-1)", () => {
+    expect(content).toContain(`${SITE_URL}/sobre-genscore`);
+    expect(content).toContain(`${SITE_URL}/llms-full.txt`);
+    expect(content).toContain(`${SITE_URL}/pricing`);
+  });
+
+  it("describe el GEO Score con la preparación técnica de la web, no con los cuatro componentes de v3", () => {
+    // El resumen decía "presencia, prominencia, cuota de voz y autoridad":
+    // la lista de GEO Score v3, sin el componente técnico que GEO-SCORE-V4
+    // (2026-08-05) añadió.
+    expect(content).toMatch(/técnicamente[\s>]+preparada/);
+    expect(content).not.toContain("cuota de voz y autoridad)");
+  });
 });

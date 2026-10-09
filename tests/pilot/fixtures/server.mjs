@@ -95,6 +95,8 @@ const BLOG_SLUGS = [
 const PUBLIC_PAGES = new Map([
   ["/geo", "GEO — GenScore"],
   ["/que-es-genscore", "Qué es GenScore — GenScore"],
+  // GEO-SELF-1 Fase 1 (log §252).
+  ["/sobre-genscore", "Quiénes somos — GenScore"],
   ["/privacidad", "Privacidad — GenScore"],
   ["/cookies", "Cookies — GenScore"],
   ["/terminos", "Términos — GenScore"],

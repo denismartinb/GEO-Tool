@@ -159,6 +159,13 @@ test("/que-es-genscore renders and has its own canonical", async ({ page }, test
   await assertCanonical(page, "/que-es-genscore");
 });
 
+// GEO-SELF-1 Fase 1 (log §252): la página «Quiénes somos».
+test("/sobre-genscore renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/sobre-genscore", "sobre-genscore");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/sobre-genscore");
+});
+
 test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/geo", "geo");
   assertPageIsHealthy(findings);
