@@ -127,3 +127,110 @@ export function shouldRemindConfirmation(
   const age = hoursBetween(account.createdAt, now);
   return age >= CONFIRM_REMINDER_WINDOW_HOURS.from && age < CONFIRM_REMINDER_WINDOW_HOURS.to;
 }
+
+/* ------------------------------------------------- fin de prueba y recuperación */
+
+/**
+ * LIFECYCLE-WINBACK-1 (Fase D, log §238). What happens after the trial ends,
+ * as the founder approved it on 2026-09-28
+ * (`docs/design-reference/lifecycle-emails-1/`, "Después de la prueba"):
+ *
+ * - Fin de prueba (`trial_ended`): sent by the server the day the trial ends,
+ *   instead of only when the customer happens to open the console again
+ *   (`applyTrialExpiry`, lazy). Whoever never comes back used to get nothing.
+ * - Fin de prueba «tardía» (`trial_ended_late`): the same email, once, for a
+ *   trial that ended more than 48 h ago and was never told. It says so.
+ * - D+3 (`winback_d3`): the competitor gap of the last scan, 3 days after
+ *   either of the two above.
+ * - D+10 (`winback_d10`): the founder price (FOUNDER-PRICE-1, log §237), 7
+ *   days after D+3. Only while founder slots remain: the no-offer variant of the
+ *   approved design (a personal "¿qué te faltó?" signed by the founder) is
+ *   deliberately not built — the founder asked on 2026-10-09 to avoid
+ *   personal contact, and with no offer there is nothing else to say.
+ */
+export const TRIAL_END_KINDS = ["trial_ended", "trial_ended_late"] as const;
+export type TrialEndKind = (typeof TRIAL_END_KINDS)[number];
+export const WINBACK_KINDS = ["winback_d3", "winback_d10"] as const;
+export type WinbackKind = (typeof WINBACK_KINDS)[number];
+
+/** Every kind that counts towards "one lifecycle email every 48 h". */
+export const LIFECYCLE_SPACED_KINDS: readonly string[] = [...TRIAL_KINDS, ...TRIAL_END_KINDS, ...WINBACK_KINDS];
+
+/** A trial that ended longer ago than this, unannounced, gets the «tardía» version. */
+export const TRIAL_END_LATE_AFTER_HOURS = 48;
+/** D+3 opens 72 h after the end email and closes when D+10 would open. */
+export const WINBACK_D3_WINDOW_HOURS = { from: 72, to: 240 } as const;
+/** D+10 is measured from D+3 (7 days), or from the end email when D+3 never went out. */
+export const WINBACK_D10_AFTER_D3_HOURS = 168;
+export const WINBACK_D10_AFTER_END_HOURS = 240;
+/** Past this, a lapsed customer is not written to again: the sequence is over. */
+export const WINBACK_MAX_AGE_HOURS = 30 * 24;
+
+export type TrialEndAccountState = {
+  trialEndsAt: Date | null;
+  hasSubscription: boolean;
+  isExcluded: boolean;
+};
+
+/**
+ * Which end-of-trial email, if any. Pure: the caller has already loaded what
+ * was sent. Opting out of "consejos y ofertas" does NOT stop this decision —
+ * the end of a trial is account news; the caller sends the plain service
+ * version without an offer instead (category rule, log §232).
+ */
+export function decideTrialEndEmail(
+  account: TrialEndAccountState,
+  sentKinds: ReadonlySet<string>,
+  now: Date
+): { kind: TrialEndKind } | null {
+  if (account.isExcluded || account.hasSubscription || !account.trialEndsAt) return null;
+  if (account.trialEndsAt.getTime() > now.getTime()) return null;
+  if (TRIAL_END_KINDS.some((kind) => sentKinds.has(kind))) return null;
+  const hoursSinceEnd = hoursBetween(account.trialEndsAt, now);
+  return { kind: hoursSinceEnd > TRIAL_END_LATE_AFTER_HOURS ? "trial_ended_late" : "trial_ended" };
+}
+
+export type WinbackAccountState = {
+  hasSubscription: boolean;
+  isExcluded: boolean;
+  lifecycleOptIn: boolean;
+  /** When the end-of-trial email (either version) was sent. `null`: none yet. */
+  endEmailSentAt: Date | null;
+};
+
+export type WinbackSentState = {
+  kinds: ReadonlySet<string>;
+  /** `sent_at` of D+3, when it went out. */
+  d3SentAt: Date | null;
+  lastLifecycleSentAt: Date | null;
+};
+
+export function decideWinbackEmail(
+  account: WinbackAccountState,
+  sent: WinbackSentState,
+  promoActive: boolean,
+  now: Date
+): { kind: WinbackKind } | null {
+  if (account.isExcluded || account.hasSubscription || !account.lifecycleOptIn || !account.endEmailSentAt) return null;
+
+  const sinceEnd = hoursBetween(account.endEmailSentAt, now);
+  if (sinceEnd > WINBACK_MAX_AGE_HOURS) return null;
+
+  const recentlyEmailed =
+    sent.lastLifecycleSentAt !== null &&
+    hoursBetween(sent.lastLifecycleSentAt, now) < MIN_HOURS_BETWEEN_LIFECYCLE_EMAILS;
+  if (recentlyEmailed || isMonday(now)) return null;
+
+  if (!sent.kinds.has("winback_d10") && promoActive) {
+    const d10Due = sent.d3SentAt
+      ? hoursBetween(sent.d3SentAt, now) >= WINBACK_D10_AFTER_D3_HOURS
+      : sinceEnd >= WINBACK_D10_AFTER_END_HOURS;
+    if (d10Due) return { kind: "winback_d10" };
+  }
+
+  if (!sent.kinds.has("winback_d3") && sinceEnd >= WINBACK_D3_WINDOW_HOURS.from && sinceEnd < WINBACK_D3_WINDOW_HOURS.to) {
+    return { kind: "winback_d3" };
+  }
+
+  return null;
+}

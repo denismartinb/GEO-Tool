@@ -25,24 +25,21 @@ const getStripeClient = vi.fn();
 const getPriceIdForPlan = vi.fn();
 const getPromoCouponIdForPlan = vi.fn((_planId: string) => null as string | null);
 const isSelfServePlan = vi.fn((planId: string) => planId === "starter" || planId === "pro");
+// FOUNDER-PRICE-1: the founder offer (Stripe coupons + slots) and the
+// price-vs-catalog guard are both reads against Stripe — mocked so each test
+// states the shape it needs.
+const getActivePromoPlanIds = vi.fn(async () => ["starter", "pro"] as string[]);
+const stripePriceMatchesPlan = vi.fn(async () => true);
+const invalidateFounderOfferCache = vi.fn();
 vi.mock("@/lib/stripe", () => ({
   getStripeClient: (...args: unknown[]) => getStripeClient(...args),
   getPriceIdForPlan: (...args: unknown[]) => getPriceIdForPlan(...args),
   getPromoCouponIdForPlan: (...args: [string]) => getPromoCouponIdForPlan(...args),
-  isSelfServePlan: (...args: [string]) => isSelfServePlan(...args)
+  isSelfServePlan: (...args: [string]) => isSelfServePlan(...args),
+  getActivePromoPlanIds: () => getActivePromoPlanIds(),
+  stripePriceMatchesPlan: () => stripePriceMatchesPlan(),
+  invalidateFounderOfferCache: () => invalidateFounderOfferCache()
 }));
-
-// isPromoActive() reads the real wall clock (PROMO_ENDS_AT, app/pricing/plans-data.ts).
-// A test asserting on its output can't depend on that without breaking the
-// instant the real promo window closes — which is exactly what happened here
-// on 2026-09-01. PLANS stays real (planIdSchema is built from it at module
-// load, app/dashboard/settings/billing/actions.ts:18) — only isPromoActive is
-// made deterministic.
-const isPromoActive = vi.fn(() => true);
-vi.mock("@/app/pricing/plans-data", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/app/pricing/plans-data")>();
-  return { ...actual, isPromoActive: () => isPromoActive() };
-});
 
 const USER_ID = "user-1";
 
@@ -99,8 +96,11 @@ beforeEach(() => {
   getPriceIdForPlan.mockReset();
   getPromoCouponIdForPlan.mockReset();
   getPromoCouponIdForPlan.mockReturnValue(null);
-  isPromoActive.mockReset();
-  isPromoActive.mockReturnValue(true);
+  getActivePromoPlanIds.mockReset();
+  getActivePromoPlanIds.mockResolvedValue(["starter", "pro"]);
+  stripePriceMatchesPlan.mockReset();
+  stripePriceMatchesPlan.mockResolvedValue(true);
+  invalidateFounderOfferCache.mockReset();
   createServiceClient.mockReset();
   resetHeaderEntries();
 });
@@ -202,11 +202,7 @@ describe("createCheckoutSession", () => {
     );
   });
 
-  // PRICING-PROMO-1. isPromoActive() is mocked above (deterministic true by
-  // default) instead of depending on the real wall clock against the real
-  // PROMO_ENDS_AT — the previous version of this comment warned that these
-  // tests "only mean something while the promo window is open", and that is
-  // exactly what broke them the instant it closed on 2026-09-01.
+  // FOUNDER-PRICE-1 (replaces PRICING-PROMO-1's date window).
   it("applies the promo coupon to the Checkout Session when one is configured for the plan", async () => {
     const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
     getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
@@ -242,12 +238,12 @@ describe("createCheckoutSession", () => {
     expect(sessionParams).not.toHaveProperty("discounts");
   });
 
-  it("does not add a discounts param once the promo window has closed, even with a coupon configured", async () => {
+  it("does not add a discounts param once the founder slots are gone, even with a coupon configured", async () => {
     const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
     getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
     getPriceIdForPlan.mockReturnValue("price_pro_test");
     getPromoCouponIdForPlan.mockReturnValue("promo_pro_test");
-    isPromoActive.mockReturnValue(false);
+    getActivePromoPlanIds.mockResolvedValue([]);
     requireUser.mockResolvedValue({
       supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
       user: { id: USER_ID, email: "founder@example.com" }
@@ -258,6 +254,40 @@ describe("createCheckoutSession", () => {
 
     const sessionParams = create.mock.calls[0][0];
     expect(sessionParams).not.toHaveProperty("discounts");
+  });
+
+  it("refuses checkout without creating a session when the Stripe price does not match the catalog", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_old");
+    stripePriceMatchesPlan.mockResolvedValue(false);
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    const result = await createCheckoutSession("pro");
+
+    expect(result.success).toBe(false);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("forgets the cached founder offer when a discounted session fails", async () => {
+    const create = vi.fn().mockRejectedValue(new Error("coupon max_redemptions reached"));
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    getPromoCouponIdForPlan.mockReturnValue("promo_pro_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    const result = await createCheckoutSession("pro");
+
+    expect(result.success).toBe(false);
+    expect(invalidateFounderOfferCache).toHaveBeenCalledTimes(1);
   });
 
   it("strips a trailing slash from the NEXT_PUBLIC_SITE_URL fallback when no host header is present", async () => {

@@ -38,9 +38,9 @@ const snapshot: RunSnapshot = {
   activeRecommendations: 6
 };
 
-const proWithPromo: PlanOffer = { planName: "Pro", price: 179, promo: { price: 59, months: 6, endsLabel: "31 de octubre" } };
-const proNoPromo: PlanOffer = { planName: "Pro", price: 179, promo: null };
-const starter: PlanOffer = { planName: "Starter", price: 45, promo: { price: 19, months: 6, endsLabel: "31 de octubre" } };
+const proWithPromo: PlanOffer = { planName: "Pro", price: 99, promo: { price: 69, remaining: 35, total: 38 } };
+const proNoPromo: PlanOffer = { planName: "Pro", price: 99, promo: null };
+const starter: PlanOffer = { planName: "Starter", price: 29, promo: { price: 20, remaining: 35, total: 38 } };
 const lossRows = [{ label: "Motores de IA", pro: "3", free: "1" }];
 
 beforeEach(() => {
@@ -126,7 +126,7 @@ describe("D1 and D3 variants", () => {
 });
 
 describe("D5 prices", () => {
-  it("quotes the launch price, its duration and its real end date while the promo is live", async () => {
+  it("quotes the founder price as forever, with the real list price and the slots left", async () => {
     await sendTrialD5Email(TO, USER, {
       trialEndsAt: new Date("2026-10-05T10:00:00Z"),
       domain: "clinicaaurora.es",
@@ -136,10 +136,13 @@ describe("D5 prices", () => {
     });
     const { subject, html } = last();
     expect(subject).toBe("Tu prueba de Pro termina el lunes");
-    expect(html).toContain("Mantener Pro por 59 €/mes");
-    expect(html).toContain("Durante 6 meses. Después, 179 €/mes.");
-    expect(html).toContain("Disponible hasta el 31 de octubre");
-    expect(html).toContain("−67%");
+    expect(html).toContain("Mantener Pro por 69 €/mes");
+    expect(html).toContain("Para siempre, mientras mantengas tu suscripción. Precio normal: 99 €/mes.");
+    expect(html).toContain("Quedan 35 cuentas con precio fundador");
+    expect(html).toContain("−30%");
+    // FOUNDER-PRICE-1: no struck-through list price, no deadline (log §237).
+    expect(html).not.toContain("line-through");
+    expect(html).not.toMatch(/Disponible hasta|durante \d+ meses/i);
     // No testimonial in any email: the one that was here was invented (founder, 2026-10-08).
     expect(html).not.toMatch(/Nordika|Nerea|128\s?%/);
   });
@@ -149,12 +152,12 @@ describe("D5 prices", () => {
       trialEndsAt: new Date("2026-10-05T10:00:00Z"),
       domain: null,
       pro: proNoPromo,
-      starter: { planName: "Starter", price: 45, promo: null },
+      starter: { planName: "Starter", price: 29, promo: null },
       lossRows
     });
     const { html } = last();
-    expect(html).toContain("Mantener Pro por 179 €/mes");
-    expect(html).not.toContain("Precio de lanzamiento");
-    expect(html).not.toContain("Disponible hasta");
+    expect(html).toContain("Mantener Pro por 99 €/mes");
+    expect(html).not.toContain("Precio fundador");
+    expect(html).not.toContain("plazas");
   });
 });
