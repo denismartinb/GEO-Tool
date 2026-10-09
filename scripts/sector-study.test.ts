@@ -1,7 +1,16 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { aggregateBrands, brandKey, formatReport, parseArgs, SECTORS, type AnswerRecord } from "./sector-study";
+import {
+  aggregateBrands,
+  brandKey,
+  buildCustomStudy,
+  formatReport,
+  parseArgs,
+  SECTORS,
+  studySeeds,
+  type AnswerRecord
+} from "./sector-study";
 
 /**
  * SECTOR-STUDY-1. The generation/extraction half needs live provider keys and
@@ -132,6 +141,51 @@ describe("formatReport with no valid answers", () => {
     const records = [record({}), record({ engine: "openai", error: "x" })];
     const report = formatReport({ sector, records, rows: aggregateBrands(records, sector.seedBrands), samples: 1, date: "d" });
     expect(report).toContain("**Atención:** fallaron 1 de 2");
+  });
+});
+
+describe("buildCustomStudy", () => {
+  it("normalizes the domain, derives the brand and drops the brand from its own competitors", () => {
+    const built = buildCustomStudy({
+      domain: "https://www.lafabricadelseo.com/servicios",
+      prompts: ["¿Qué agencia SEO me recomiendas en Madrid?", " "],
+      competitors: ["Lafabricadelseo", "Agencia X", "Agencia X"]
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    expect(built.sector).toMatchObject({ label: "lafabricadelseo.com", brand: "Lafabricadelseo", custom: true });
+    expect(built.sector.prompts).toHaveLength(1);
+    expect(built.sector.seedBrands).toEqual(["Agencia X"]);
+    expect(studySeeds(built.sector)).toEqual(["Lafabricadelseo", "Agencia X"]);
+  });
+
+  it("rejects what the action must never pay for", () => {
+    expect(buildCustomStudy({ domain: "no es dominio", prompts: ["hola que tal"], competitors: [] })).toEqual({ ok: false, error: "bad_domain" });
+    expect(buildCustomStudy({ domain: "a.es", prompts: [], competitors: [] })).toEqual({ ok: false, error: "bad_prompt_count" });
+    expect(buildCustomStudy({ domain: "a.es", prompts: Array(16).fill("pregunta larga"), competitors: [] })).toEqual({
+      ok: false,
+      error: "bad_prompt_count"
+    });
+    expect(buildCustomStudy({ domain: "a.es", prompts: ["x".repeat(301)], competitors: [] })).toEqual({
+      ok: false,
+      error: "bad_prompt_length"
+    });
+  });
+
+  it("the report leads with the analysed brand and flags operator-written questions", () => {
+    const built = buildCustomStudy({ domain: "acme.es", brand: "Acme", prompts: ["¿Qué tienda me recomiendas?"], competitors: [] });
+    if (!built.ok) throw new Error("expected ok");
+    const records = [record({ seedMentions: [{ name: "Acme", position: 1 }] }), record({ engine: "openai" })];
+    const report = formatReport({
+      sector: built.sector,
+      records,
+      rows: aggregateBrands(records, studySeeds(built.sector)),
+      samples: 1,
+      date: "d"
+    });
+    expect(report).toContain("# ¿Recomienda la IA a Acme (acme.es)?");
+    expect(report).toContain("**Acme** aparece en el 50% de las respuestas válidas (1 de 2) y es la primera marca nombrada en 1.");
+    expect(report).toContain("Las preguntas las escribió el operador");
   });
 });
 

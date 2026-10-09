@@ -21378,6 +21378,13 @@ niega a publicar ranking, y con más del 20% de fallos lo avisa.
   función de 60 s. **No escribe en la base de datos**: el informe y las
   respuestas crudas se descargan. Por eso no lleva correo a `OPS_ALERT_EMAIL`,
   que la regla de `/admin` exige para escrituras.
+- Modo «una marca» en la misma página: dominio + preguntas del operador
+  (≤15) + competidores (≤15). La marca va al hueco de marca del extractor,
+  verificada literalmente como en un escaneo, y el informe abre con su
+  presencia. `buildCustomStudy` valida en el navegador y otra vez en la
+  acción en cada paso, y el informe avisa de que las preguntas las escribió
+  el operador. Sirve para sacar datos de un dominio concreto sin crear un
+  proyecto ni consumir cupo de nadie.
 - `scripts/domain-check.ts` (`pnpm check:domains`): la comprobación gratuita
   de la web, con las mismas dependencias que su ruta, en lote, para responder
   a un post de «déjame tu dominio». Local, sin fila en `public_checks`.

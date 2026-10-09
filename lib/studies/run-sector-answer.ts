@@ -42,21 +42,28 @@ export async function runSectorAnswer(input: {
           ? extractOpenAIStructuredData
           : extractClaudeStructuredData;
     const extracted = await extract({
-      brand: STUDY_SENTINEL_BRAND,
+      brand: sector.brand ?? STUDY_SENTINEL_BRAND,
       competitors: sector.seedBrands,
       rawResponseText: answer.text,
       promptText: prompt,
       deadlineAt
     });
-    const verified = verifyExtractedMentions(extracted.data, answer.text, STUDY_SENTINEL_BRAND);
+    const verified = verifyExtractedMentions(extracted.data, answer.text, sector.brand ?? STUDY_SENTINEL_BRAND);
+    // A custom study's own brand is counted like any seed, from the
+    // extractor's verified brand slot.
+    const brandMention =
+      sector.brand && verified.brand.mentioned ? [{ name: sector.brand, position: verified.brand.position }] : [];
     return {
       ...base,
       model: answer.model,
       error: null,
       rawText: answer.text,
-      seedMentions: verified.competitors
-        .filter((competitor) => competitor.mentioned)
-        .map((competitor) => ({ name: competitor.name, position: competitor.position })),
+      seedMentions: [
+        ...brandMention,
+        ...verified.competitors
+          .filter((competitor) => competitor.mentioned)
+          .map((competitor) => ({ name: competitor.name, position: competitor.position }))
+      ],
       otherBrands: verified.other_brands_mentioned
     };
   } catch (error) {

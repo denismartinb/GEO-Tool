@@ -23,6 +23,13 @@ export type SectorConfig = {
   prompts: string[];
   /** Candidates to look for. Not a ranking, not a claim. */
   seedBrands: string[];
+  /**
+   * Custom study only: the brand being analysed. It goes into the extractor's
+   * brand slot (verified literally, as in a scan) and leads the seed list.
+   */
+  brand?: string;
+  /** True when an operator wrote the questions (they may name brands). */
+  custom?: boolean;
 };
 
 export const SECTORS: SectorConfig[] = [
@@ -101,6 +108,53 @@ export const ENGINE_LABEL: Record<Engine, string> = { gemini: "Gemini", openai: 
 
 /** Never matches a real brand; extraction requires one. */
 export const STUDY_SENTINEL_BRAND = "Marca de control del estudio";
+
+export const CUSTOM_STUDY_LIMITS = { maxPrompts: 15, maxPromptChars: 300, maxCompetitors: 15, maxNameChars: 80 } as const;
+
+/**
+ * Builds and validates a one-off study for one brand with the operator's own
+ * questions and competitors. The server action runs it again: it never
+ * trusts what the browser sends. Returns an error code instead of throwing.
+ */
+export function buildCustomStudy(input: {
+  domain: string;
+  brand?: string;
+  prompts: string[];
+  competitors: string[];
+}): { ok: true; sector: SectorConfig } | { ok: false; error: string } {
+  const domain = input.domain
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split(/[/?#\s]/)[0];
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return { ok: false, error: "bad_domain" };
+  const fromDomain = domain
+    .split(".")[0]
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+  const brand = (input.brand?.trim() || fromDomain).slice(0, CUSTOM_STUDY_LIMITS.maxNameChars);
+  const prompts = input.prompts.map((prompt) => prompt.trim()).filter(Boolean);
+  if (prompts.length === 0 || prompts.length > CUSTOM_STUDY_LIMITS.maxPrompts) return { ok: false, error: "bad_prompt_count" };
+  if (prompts.some((prompt) => prompt.length < 5 || prompt.length > CUSTOM_STUDY_LIMITS.maxPromptChars)) {
+    return { ok: false, error: "bad_prompt_length" };
+  }
+  const competitors = [...new Set(input.competitors.map((name) => name.trim()).filter(Boolean))].filter(
+    (name) => brandKey(name) !== brandKey(brand)
+  );
+  if (competitors.length > CUSTOM_STUDY_LIMITS.maxCompetitors) return { ok: false, error: "too_many_competitors" };
+  if (competitors.some((name) => name.length > CUSTOM_STUDY_LIMITS.maxNameChars)) return { ok: false, error: "bad_competitor" };
+  return {
+    ok: true,
+    sector: { id: `custom-${domain}`, label: domain, country: "ES", language: "es", prompts, seedBrands: competitors, brand, custom: true }
+  };
+}
+
+/** Seeds to count, the analysed brand first. */
+export function studySeeds(sector: SectorConfig): string[] {
+  return sector.brand ? [sector.brand, ...sector.seedBrands] : sector.seedBrands;
+}
+
 /* ---- Counting and report (covered by scripts/sector-study.test.ts) ---- */
 
 export type AnswerRecord = {
@@ -238,14 +292,25 @@ export function formatReport(input: {
       ? [`> **Atención:** fallaron ${failed} de ${records.length} respuestas (más del 20%). Las cifras pueden estar sesgadas hacia los motores que sí respondieron; conviene repetir antes de publicar.`, ""]
       : [];
 
+  const brandRow = sector.brand ? rows.find((row) => brandKey(row.name) === brandKey(sector.brand ?? "")) : undefined;
+  const brandSummary = sector.brand
+    ? [
+        `**${sector.brand}** aparece en el ${pct(brandRow?.rate ?? 0)} de las respuestas válidas (${brandRow?.mentions ?? 0} de ${valid.length}) y es la primera marca nombrada en ${brandRow?.firstPlace ?? 0}.`,
+        ""
+      ]
+    : [];
+
   const lines = [
-    `# ¿Qué marcas españolas de ${sector.label} recomienda la IA?`,
+    sector.brand
+      ? `# ¿Recomienda la IA a ${sector.brand} (${sector.label})?`
+      : `# ¿Qué marcas españolas de ${sector.label} recomienda la IA?`,
     "",
     `Estudio GenScore · ${date} · ${sector.prompts.length} preguntas × ${engines.length} motores × ${samples} muestra(s) = ${records.length} respuestas pedidas, **${valid.length} válidas**${failed ? ` (${failed} fallidas, excluidas del cálculo)` : ""}.`,
     "",
     `Modelos: ${models.join(" · ") || "—"}`,
     "",
     ...failureWarning,
+    ...brandSummary,
     "## Ranking por presencia",
     "",
     "Presencia = porcentaje de respuestas válidas que nombran la marca (cada respuesta cuenta una vez por marca).",
@@ -271,7 +336,9 @@ export function formatReport(input: {
     "",
     "## Metodología",
     "",
-    "- Las preguntas no nombran ninguna marca. Son las que haría un comprador real.",
+    sector.custom
+      ? "- Las preguntas las escribió el operador para este estudio; léelas abajo antes de citar ninguna cifra."
+      : "- Las preguntas no nombran ninguna marca. Son las que haría un comprador real.",
     "- Cada motor recibe la misma instrucción neutral que usa un escaneo de GenScore: responder como a un usuario normal, sin favorecer ni evitar marcas.",
     "- Una mención solo cuenta si el nombre aparece literalmente en la respuesta (verificación de GenScore, no una inferencia del modelo).",
     "- Las respuestas de la IA varían entre ejecuciones. Esto es una foto de una fecha, no una clasificación permanente.",

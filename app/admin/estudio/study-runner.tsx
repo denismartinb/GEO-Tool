@@ -3,19 +3,33 @@
 import { useState } from "react";
 import {
   aggregateBrands,
+  buildCustomStudy,
+  CUSTOM_STUDY_LIMITS,
   ENGINE_LABEL,
   ENGINES,
   formatReport,
   SECTORS,
+  studySeeds,
   type AnswerRecord,
-  type Engine
+  type Engine,
+  type SectorConfig
 } from "@/lib/studies/sector-study";
-import { runSectorStudyStep } from "./actions";
+import { runSectorStudyStep, type StudySpec } from "./actions";
 
 type SectorOption = { id: string; label: string; promptCount: number };
 
 /** Two steps in flight at a time: ~6 provider calls, never a whole batch on one tick (.claude/rules/scan.md). */
 const STEP_CONCURRENCY = 2;
+
+const CUSTOM_ERRORS: Record<string, string> = {
+  bad_domain: "El dominio no parece válido.",
+  bad_prompt_count: `Escribe entre 1 y ${CUSTOM_STUDY_LIMITS.maxPrompts} preguntas, una por línea.`,
+  bad_prompt_length: `Cada pregunta debe tener entre 5 y ${CUSTOM_STUDY_LIMITS.maxPromptChars} caracteres.`,
+  too_many_competitors: `Como mucho ${CUSTOM_STUDY_LIMITS.maxCompetitors} competidores.`,
+  bad_competitor: `Cada competidor, como mucho ${CUSTOM_STUDY_LIMITS.maxNameChars} caracteres.`
+};
+
+const lines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
 
 function download(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -27,20 +41,33 @@ function download(name: string, content: string, type: string) {
 }
 
 export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
+  const [mode, setMode] = useState<"sector" | "custom">("sector");
   const [sectorId, setSectorId] = useState(sectors[0]?.id ?? "");
+  const [domain, setDomain] = useState("");
+  const [brand, setBrand] = useState("");
+  const [promptsText, setPromptsText] = useState("");
+  const [competitorsText, setCompetitorsText] = useState("");
   const [engines, setEngines] = useState<Engine[]>([...ENGINES]);
   const [samples, setSamples] = useState(2);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(0);
   const [total, setTotal] = useState(0);
   const [stepErrors, setStepErrors] = useState(0);
-  const [result, setResult] = useState<{ report: string; json: string; date: string } | null>(null);
+  const [result, setResult] = useState<{ report: string; json: string; date: string; slug: string } | null>(null);
 
-  const sector = sectors.find((candidate) => candidate.id === sectorId);
-  const answers = (sector?.promptCount ?? 0) * engines.length * samples;
+  const custom =
+    mode === "custom"
+      ? buildCustomStudy({ domain, brand, prompts: lines(promptsText), competitors: lines(competitorsText) })
+      : null;
+  const config: SectorConfig | undefined =
+    mode === "sector" ? SECTORS.find((candidate) => candidate.id === sectorId) : custom?.ok ? custom.sector : undefined;
+  const spec: StudySpec =
+    mode === "sector"
+      ? { kind: "sector", sectorId }
+      : { kind: "custom", domain, brand, prompts: lines(promptsText), competitors: lines(competitorsText) };
+  const answers = (config?.prompts.length ?? 0) * engines.length * samples;
 
   async function run() {
-    const config = SECTORS.find((candidate) => candidate.id === sectorId);
     if (!config || engines.length === 0) return;
     setRunning(true);
     setResult(null);
@@ -60,7 +87,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
         while (cursor < steps.length) {
           const step = steps[cursor++];
           try {
-            records.push(...(await runSectorStudyStep({ sectorId, engines, ...step })));
+            records.push(...(await runSectorStudyStep({ spec, engines, ...step })));
           } catch {
             // A step that died (timeout, deploy) still counts: its answers are
             // failures, never answers that named nobody.
@@ -75,10 +102,11 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     );
 
     records.sort((a, b) => a.sample - b.sample || a.promptIndex - b.promptIndex || a.engine.localeCompare(b.engine));
-    const rows = aggregateBrands(records, config.seedBrands);
+    const rows = aggregateBrands(records, studySeeds(config));
     const date = new Date().toISOString().slice(0, 10);
     setResult({
       date,
+      slug: config.id,
       report: formatReport({ sector: config, records, rows, samples, date, engines }),
       json: `${JSON.stringify({ sector: config, samples, engines, date, rows, records }, null, 2)}\n`
     });
@@ -89,7 +117,15 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     <section>
       <div className="adm-toolbar" style={{ flexWrap: "wrap", gap: 16, alignItems: "center" }}>
         <label>
-          Sector{" "}
+          <input type="radio" checked={mode === "sector"} onChange={() => setMode("sector")} disabled={running} /> Sector
+        </label>
+        <label>
+          <input type="radio" checked={mode === "custom"} onChange={() => setMode("custom")} disabled={running} /> Una marca
+        </label>
+      </div>
+
+      {mode === "sector" ? (
+        <div className="adm-toolbar">
           <select value={sectorId} onChange={(event) => setSectorId(event.target.value)} disabled={running}>
             {sectors.map((option) => (
               <option key={option.id} value={option.id}>
@@ -97,7 +133,29 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
               </option>
             ))}
           </select>
-        </label>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 10, maxWidth: 640, margin: "12px 0" }}>
+          <label>
+            Dominio <input value={domain} onChange={(event) => setDomain(event.target.value)} placeholder="ejemplo.es" disabled={running} />
+          </label>
+          <label>
+            Nombre de marca (opcional; si no, sale del dominio){" "}
+            <input value={brand} onChange={(event) => setBrand(event.target.value)} disabled={running} />
+          </label>
+          <label>
+            Preguntas, una por línea
+            <textarea rows={6} value={promptsText} onChange={(event) => setPromptsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
+          </label>
+          <label>
+            Competidores, uno por línea (opcional)
+            <textarea rows={4} value={competitorsText} onChange={(event) => setCompetitorsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
+          </label>
+          {custom && !custom.ok && (domain || promptsText) ? <p className="adm-note">{CUSTOM_ERRORS[custom.error] ?? custom.error}</p> : null}
+        </div>
+      )}
+
+      <div className="adm-toolbar" style={{ flexWrap: "wrap", gap: 16, alignItems: "center" }}>
         {ENGINES.map((engine) => (
           <label key={engine}>
             <input
@@ -123,7 +181,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
             ))}
           </select>
         </label>
-        <button type="button" onClick={run} disabled={running || engines.length === 0}>
+        <button type="button" onClick={run} disabled={running || !config || engines.length === 0}>
           {running ? "Ejecutando…" : `Lanzar (${answers} respuestas)`}
         </button>
       </div>
@@ -139,12 +197,12 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
       {result ? (
         <div>
           <div className="adm-toolbar" style={{ gap: 12 }}>
-            <button type="button" onClick={() => download(`estudio-${sectorId}-${result.date}.md`, result.report, "text/markdown")}>
+            <button type="button" onClick={() => download(`estudio-${result.slug}-${result.date}.md`, result.report, "text/markdown")}>
               Descargar informe (.md)
             </button>
             <button
               type="button"
-              onClick={() => download(`estudio-${sectorId}-${result.date}.json`, result.json, "application/json")}
+              onClick={() => download(`estudio-${result.slug}-${result.date}.json`, result.json, "application/json")}
             >
               Descargar respuestas (.json)
             </button>

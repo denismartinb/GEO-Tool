@@ -203,8 +203,9 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   to what the watchdog alerts on changes this column with it, in the same PR.
 - **`/admin/estudio` gasta llamadas a los motores, no escribe filas, y tiene
   que seguir así.** Cada paso es una server action con `requireOperator()` como
-  primera línea, valida sector, motores (subconjunto de los tres), pregunta y
-  repeticiones (≤3) antes de llamar a nadie, y devuelve los resultados al
+  primera línea, valida sector o estudio de una marca (`buildCustomStudy`,
+  rehecho en cada paso: nunca la copia del navegador), motores (subconjunto
+  de los tres), pregunta y repeticiones (≤3) antes de llamar a nadie, y devuelve los resultados al
   navegador para descargarlos. Si algún día persiste el estudio, eso es una
   escritura y necesita su Task Intake y su correo a `OPS_ALERT_EMAIL` como
   cualquier otra (`docs/brand/design-decisions-log.md` §238).
