@@ -89,4 +89,3 @@ igual.
 - **Un tipo nuevo en `email_sends` necesita migración**: 0037 fija `kind` con
   un `check` (0038 lo amplió, §236). El test de `winback-schedule.test.ts`
   comprueba que la migración permite todos los tipos que se anotan.
-

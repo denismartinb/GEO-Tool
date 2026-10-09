@@ -21417,4 +21417,3 @@ aviso antiguo y no entran en la recuperación (no hay registro de cuándo).
 `app/api/cron/lifecycle-emails/route.ts`,
 `supabase/migrations/0038_email_sends_winback_kinds.sql`,
 `.claude/rules/email.md`.
-
