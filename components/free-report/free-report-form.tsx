@@ -109,7 +109,7 @@ export function FreeReportForm({ children }: { children?: ReactNode }) {
               «¿Qué empresa me recomiendas para…?»<span className="fr-caret" />
             </div>
             <h1 className="fr-title">
-              Cuando tu cliente se lo pregunta a la IA, <span className="fr-grad">¿te nombra a ti o a tu competencia?</span>
+              Cuando tu cliente le pregunta a la IA, <span className="fr-grad">¿te nombra a ti o a tu competencia?</span>
             </h1>
             <p className="fr-lede">
               Te preparamos un informe de tu marca: en qué preguntas principales de búsqueda apareces, a quién
