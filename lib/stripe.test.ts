@@ -122,18 +122,22 @@ describe("getFounderOffer", () => {
 });
 
 describe("stripePriceMatchesPlan", () => {
-  it("accepts only a euro Price whose amount is the catalog price", async () => {
+  it("accepts only a tax-inclusive euro Price whose amount is the catalog price", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_x";
     const { getStripeClient, stripePriceMatchesPlan } = await import("./stripe");
     const stripe = getStripeClient()!;
 
-    priceRetrieve.mockResolvedValue({ currency: "eur", unit_amount: 9900 });
+    priceRetrieve.mockResolvedValue({ currency: "eur", unit_amount: 9900, tax_behavior: "inclusive" });
     expect(await stripePriceMatchesPlan(stripe, "price_pro", "pro")).toBe(true);
 
-    priceRetrieve.mockResolvedValue({ currency: "eur", unit_amount: 17900 });
+    priceRetrieve.mockResolvedValue({ currency: "eur", unit_amount: 17900, tax_behavior: "inclusive" });
     expect(await stripePriceMatchesPlan(stripe, "price_pro_old", "pro")).toBe(false);
 
-    priceRetrieve.mockResolvedValue({ currency: "usd", unit_amount: 2900 });
+    // /pricing shows IVA-inclusive prices: a tax-exclusive Price would add 21 % at checkout.
+    priceRetrieve.mockResolvedValue({ currency: "eur", unit_amount: 9900, tax_behavior: "exclusive" });
+    expect(await stripePriceMatchesPlan(stripe, "price_pro_excl", "pro")).toBe(false);
+
+    priceRetrieve.mockResolvedValue({ currency: "usd", unit_amount: 2900, tax_behavior: "inclusive" });
     expect(await stripePriceMatchesPlan(stripe, "price_starter_usd", "starter")).toBe(false);
   });
 });

@@ -21374,7 +21374,7 @@ la aprobación del fundador. Este cambio no la anticipa.
 ## 237. FOUNDER-PRICE-1: precios reales sin tachado y precio fundador para siempre en lugar de la promo de 6 meses (2026-10-09)
 
 **Qué.** Starter pasa de 45 € (promo 19 € durante 6 meses) a **29 €/mes**, y
-Pro de 179 € (promo 59 € durante 6 meses) a **99 €/mes**, ambos sin IVA. La
+Pro de 179 € (promo 59 € durante 6 meses) a **99 €/mes**, ambos con IVA incluido (decisión del fundador, 2026-10-09: la cifra anunciada es la que se paga; con el IVA dentro, el margen baja en torno a un 17 %). La
 promo de lanzamiento de PRICING-PROMO-1 (§152, prorrogada en §206 y §231) se
 retira y la sustituye un **precio fundador para siempre**: 20 € en Starter y
 69 € en Pro, para las primeras 50 suscripciones (`FOUNDER_SLOTS`), contadas
@@ -21405,7 +21405,8 @@ no deja margen con un Pro que use su cupo entero (~56 € de LLM al mes,
 - `getActivePromoPlanIds()` pasa a ser asíncrona y la leen `/pricing`, la
   consola, los correos D5 y el checkout.
 - Checkout comprueba con `stripePriceMatchesPlan` que el Price del entorno
-  cobra lo que dice `PLANS`, y si no, rechaza. Es lo que impide que un deploy
+  cobra lo que dice `PLANS` y que lleva el IVA incluido
+  (`tax_behavior: inclusive`). Si no, rechaza. Es lo que impide que un deploy
   con precios nuevos y el entorno viejo enseñe 99 € y cobre 179 €.
 - `/pricing` deja el tachado, dice «Precio fundador para siempre» y
   «Precio normal: 99 €/mes», y enseña la franja «quedan N de 50 plazas».

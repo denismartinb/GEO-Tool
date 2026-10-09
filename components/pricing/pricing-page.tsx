@@ -213,7 +213,7 @@ export async function PricingPage() {
             ))}
           </div>
           <p className="price-tax-note">
-            Todos los planes empiezan con 7 días de Pro gratis, sin tarjeta. Precios sin IVA.
+            Todos los planes empiezan con 7 días de Pro gratis, sin tarjeta. Precios con IVA incluido.
           </p>
         </div>
       </section>
