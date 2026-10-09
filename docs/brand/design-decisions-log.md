@@ -21366,12 +21366,12 @@ menciona con un dato falso): aquí la marca sale y no es la recomendación.
    nombró antes a Orange; la lista de «otras marcas» mezclaba operadores
    (Orange, Yoigo, MÁSMÓVIL) con plataformas incluidas en los paquetes
    (Netflix, DAZN, Prime Video, Disney+, HBO Max, SkyShowtime); y el «puesto 1»
-   que casi enseñábamos era estructural, no medido. La clasificación operador /
+   que llegó a enseñarse era estructural, no medido. La clasificación operador /
    plataforma de la Figura 1 es nuestra lectura de una sola respuesta y el pie
    de la figura lo dice.
 2. Borrador del generador de contenido para el proyecto Movistar (§128): una
    comparación sin datos contra cinco operadores. Se parafrasea, no se cita
-   literal, y el texto dice que no se publicó en ninguna parte. El límite legal
+   literal, y el texto dice que no lo publicamos. El límite legal
    (art. 10 LCD) está tal como lo recoge §128, con aviso de que no es
    asesoramiento jurídico.
 3. Proyecto de prueba Mozilla, 1 prompt × 3 motores, de 30 a 74 sin cambios

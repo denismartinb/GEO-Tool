@@ -166,7 +166,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | W2 | GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo | `sectores` | ✅ Publicado | #346 |
 | W3 | GEO para agencias: cómo vender un servicio de visibilidad en IA | `sectores` | ✅ Publicado | #349 |
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
-| W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | ✅ Escrito (2026-10-09, rama `claude/project-thread-iv6tac`, pendiente de PR) — slug `la-ia-te-menciona-pero-recomienda-a-otro` | — |
+| W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | 🟡 En PR (2026-10-09) — slug `la-ia-te-menciona-pero-recomienda-a-otro` | #555 |
 | W6 | Datos estructurados para GEO: qué marcar y qué no sirve de nada | `playbooks` | 🔲 Pendiente | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
