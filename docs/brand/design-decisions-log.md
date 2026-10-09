@@ -21368,8 +21368,42 @@ aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
 - Si `GEMINI_MODEL` sigue puesto en Vercel (ADR 0009 dice que se fijó a
   `gemini-2.5-flash` el 2026-06-11), manda sobre el código: el fundador tiene
   que borrarlo o cambiarlo. Desde el repo no se ve.
-- Falta la prueba real: un escaneo completo en el preview del PR. La sesión
-  que lo implementó no tenía clave ni salida a la API de Google.
+- Prueba real hecha el 09-10 en el preview: el piloto de escritura añadió un
+  prompt a mozilla.org y el escaneo terminó con Gemini respondiendo. Latencias
+  sin medir (el preview no guarda logs en Vercel).
+- Ese mismo día, en el asistente de alta, carrefour.es se quedó sin
+  competidores sugeridos. Causa probable, no confirmada (sin logs): la llamada
+  con búsqueda no puede pedir `responseMimeType: "application/json"` y Gemini 3
+  a temperatura 1.0 envuelve a veces el JSON en una frase. `parseLenientJson`
+  ahora cae al tramo `{…}` más externo antes de rendirse.
+  Y `firstCandidateText` une las partes sin separador: una respuesta con
+  búsqueda puede llegar en varias partes, y un `\n` metido dentro de una cadena
+  rompe el JSON. De paso, el asistente deja de sembrar una fila vacía de
+  competidor cuando no hay sugerencias: cerrada, se pintaba como una tarjeta
+  «Sin nombre / sin dominio» bajo «0 competidores».
+- **Causa real, encontrada después:** con `google_search`, Gemini 3.5/3.6
+  Flash pierde el PRINCIPIO del texto de la respuesta, cortado en una frontera
+  de cita (`finishReason: STOP`, sin error), con o sin `responseMimeType`. El
+  `{` inicial del JSON no llega nunca, así que ningún parser lo recupera. Está
+  reportado en el foro de Google ("Google Search grounding drops the beginning
+  of the response text", 4 de 5 pasadas en 3.6) y no lo hace 2.5. Arreglo en
+  `generateGroundedGeminiJson`: con Gemini 3, una llamada con búsqueda que
+  responde en prosa y una segunda sin búsqueda que la estructura con
+  `responseMimeType`. Si el corte cae en la prosa se pierde una línea, no la
+  lista entera. Cuesta una llamada más (sin búsqueda) por sugerencia.
+- Con ese arreglo carrefour.es SIGUIÓ sin competidores en el preview, y el
+  preview no guarda logs en Vercel. Para poder ver la causa, el asistente
+  enseña ahora el motivo en el aviso, sólo en previews (`VERCEL_ENV=preview`;
+  producción nunca recibe el campo): la categoría del error (`timeout`,
+  `quota`, `http`…), `schema` si el JSON no tiene la forma pedida, `no_items`
+  si la lista llega vacía o `filtered` si todas las filas se descartan aquí.
+  De paso se acepta un array suelto en vez de `{ competitors }`, y un objeto sin
+  la clave `competitors` deja de leerse como «sin competidores».
+- **El mismo corte afecta a las respuestas del escaneo** (`lib/llm/gemini.ts`)
+  y a la auditoría (`lib/web-audit/audit-domain-content.ts`), que también usan
+  `google_search`. Ahí la respuesta es prosa y no rompe nada visible, pero puede
+  perder la primera frase, y con ella una mención de marca. Sin medir; mirar si
+  las menciones de Gemini caen frente a 2.5 en la primera semana.
 - Las puntuaciones cambiarán algo con el modelo nuevo y la varianza entre
   escaneos sube al quitar `temperature: 0`; se acepta frente al riesgo de
   bucles (fallos de escaneo). Revisar con datos tras una semana.
@@ -21443,3 +21477,326 @@ haber cookies de analítica.
   guardar `utm_*` en el alta (fase aparte).
 - «Primer escaneo» no es un evento propio: es el primer `scan_completed` de
   cada persona, filtro nativo de los embudos de PostHog.
+## 238. LIFECYCLE-WINBACK-1: el fin de prueba lo envía el servidor, y las pruebas caducadas reciben su aviso «tardío», D+3 y D+10 (Fase D de LIFECYCLE-EMAILS-1, 2026-10-09)
+
+**De dónde viene.** Fase D del plan aprobado el 2026-09-28 (§232), con las
+plantillas de «Después de la prueba» de
+`docs/design-reference/lifecycle-emails-1/`. El fundador delegó el 2026-10-09
+el plan de primera venta en el proyecto, con la condición de evitar el
+contacto personal.
+
+**Qué pasaba.** El correo de fin de prueba sólo salía en `applyTrialExpiry`
+(`lib/billing.ts`), es decir, cuando la persona **volvía** a abrir la consola
+tras caducar. Quien no volvía —justo a quien había que recuperar— no recibía
+nada, y las pruebas ya caducadas tampoco.
+
+**Qué se decide.**
+
+- **Fin de prueba (`trial_ended`) lo envía el cron diario** el día que caduca,
+  con la última foto real del escaneo (Puntuación GEO, respuestas con mención,
+  recomendaciones abiertas) o sin cifras si no hay escaneo, y la oferta de
+  `resolvePlanOffer` (`PLANS` + precio fundador sólo si `getFounderOffer()`
+  dice que el checkout lo aplica, §237).
+- **Versión «tardía» (`trial_ended_late`)**, una vez, para una prueba que
+  caducó hace más de 48 h sin aviso. Se detecta sola: `current_plan` sigue sin
+  ser `free`, porque la consola, al degradar, pone `free` y borra
+  `trial_ends_at`; una cuenta que sigue así nunca pasó por ese camino ni, por
+  tanto, por su correo.
+- **Un solo envío, gane quien gane.** `sendTrialEndEmailOnce` lo comparten el
+  cron y `applyTrialExpiry` (que, con el interruptor encendido, ya no manda la
+  plantilla antigua): el primero que llega envía y anota en `email_sends`, el
+  otro lo ve y no repite.
+- **Quien se dio de baja de «consejos y ofertas»** recibe el aviso de servicio
+  de siempre (`sendTrialEndedEmail`, sin oferta), también anotado, y no entra
+  en la recuperación (§232).
+- **D+3 (`winback_d3`)**, 72 h después del fin de prueba: la distancia real con
+  el competidor más mencionado del último escaneo, o «vas por delante» si la
+  marca lidera. Nunca dice «N veces más» si la marca tiene 0 menciones. Sin
+  escaneo con ranking, no sale.
+- **D+10 (`winback_d10`)**, 7 días después de D+3 (o 10 desde el fin si D+3
+  no salió), **sólo mientras queden plazas de precio fundador** (§237). El
+  diseño aprobado lo planteaba como «Últimos días… hasta el 31 de octubre»;
+  esa fecha ya no existe, así que el D+10 cuenta las plazas reales que quedan,
+  leídas de Stripe, y nunca una fecha.
+- **La variante sin oferta del D+10 («¿Qué te faltó?», firmada por el
+  fundador) no se construye**: es contacto personal, que el fundador pidió
+  evitar el 2026-10-09, y sin oferta no hay nada más que decir. Si algún día se
+  quiere, es un cambio de `decideWinbackEmail` y una plantilla.
+- Reglas puras en `decideTrialEndEmail` y `decideWinbackEmail`
+  (`lib/email/lifecycle/schedule.ts`): una vez por tipo, 48 h entre correos de
+  ciclo de vida, ni lunes (salvo el fin de prueba, que es aviso de cuenta), ni
+  suscriptores, comped, internas o bajas, y nada pasados 30 días.
+- **Precios nunca escritos a mano**, y sobre el modelo de FOUNDER-PRICE-1
+  (§237, PR #556): «precio fundador para siempre», «quedan N cuentas con precio fundador» (N leído de Stripe, sin mostrar el cupo total, como pide la adenda de §237),
+  sin tachado ni fecha. Cuando se agoten las plazas, los correos pasan solos
+  al precio normal y el D+10 deja de salir. **Este PR va encima de #556 y se
+  mergea después.**
+- **El fin de prueba no promete un plan Free.** Dice «tu prueba de Pro ha
+  terminado», «ya no se escanea a diario» y «tus datos siguen intactos», que
+  es cierto tanto con el plan Free de hoy como con la cuenta de solo lectura
+  que Denis aprobó el 2026-10-09 (hilo «Revisión de precios y oferta»). Así
+  no importa cuál de los dos PR se mergee antes. **Pendiente fuera de este
+  PR:** `sendTrialEndedEmail` (`lib/email/transactional.ts`, para quien se dio
+  de baja de ofertas) y la tabla del D5 («Free, desde el…») siguen nombrando
+  Free; los corrige el PR de solo lectura.
+- **Un único plazo para todo el cron** (`lifecycleDeadline`): las tres pasadas
+  comparten la invocación de 60 s; ninguna se da sus propios 45 s.
+
+**Corrección al plan.** El plan decía «sin migración nueva», pero 0037 fija
+`kind` con un `check`. Hace falta **0038**, que sólo amplía los valores
+permitidos (sin tablas, columnas ni políticas). Se aplica a mano **antes** de
+encender `LIFECYCLE_EMAILS_ENABLED`: sin ella el correo sale pero no se anota,
+y la pasada siguiente lo repetiría.
+
+**Pendiente.** Fase E (medición en `/admin`). Fuera del repo: aplicar 0036,
+0037 y 0038, y encender el interruptor (requisito legal de §232 aún sin
+validar). Las cuentas que ya abrieron la consola tras caducar recibieron el
+aviso antiguo y no entran en la recuperación (no hay registro de cuándo).
+
+**Trazabilidad.** `lib/email/lifecycle/{schedule,templates,runner}.ts`
+(+`winback-*.test.ts`), `lib/billing.ts`, `lib/email/transactional.ts`,
+`app/api/cron/lifecycle-emails/route.ts`,
+`supabase/migrations/0038_email_sends_winback_kinds.sql`,
+`.claude/rules/email.md`.
+
+## 236. PRICING-FAQ-LIVE-1: el FAQ de /precios deja de decir que todavía no cobramos (2026-10-09)
+
+**Qué.** Dos respuestas de `PLAN_FAQ` (`app/pricing/plans-data.ts`) seguían
+escritas para la beta sin cobro: «Mientras no activemos la facturación real,
+cambiar de plan no tiene coste» y «Mientras no lancemos la facturación no hay
+límite de tiempo automático». Con el checkout de Stripe ya en real (sesión
+`cs_live_` vista por el fundador el 2026-10-09), las dos eran falsas: la prueba
+de Pro dura 7 días (`0017_reverse_trial.sql`) y pasa sola a Free, y la
+cancelación del Portal es a fin de periodo (`cancel_at`, `lib/billing.ts`).
+
+**Por qué.** Un visitante que lee en la página de precios que todavía no se
+cobra no tiene motivo para pagar, y la prueba «sin límite» contradice los
+correos D1/D3/D5 (§233). Mismo texto en el JSON-LD `FAQPage`, así que también
+llegaba a buscadores y motores generativos.
+
+**Cómo.** Sólo copy. Test nuevo en `app/pricing/faq-schema.test.ts` que impide
+que vuelvan esas frases y exige que el FAQ diga «7 días».
+
+**Pendiente.** La revisión completa de precios y de la oferta de lanzamiento
+(propuesta del 2026-10-09: precios reales sin tachar y precio fundador) espera
+la aprobación del fundador. Este cambio no la anticipa.
+
+## 237. FOUNDER-PRICE-1: precios reales sin tachado y precio fundador para siempre en lugar de la promo de 6 meses (2026-10-09)
+
+**Qué.** Starter pasa de 45 € (promo 19 € durante 6 meses) a **29 €/mes**, y
+Pro de 179 € (promo 59 € durante 6 meses) a **99 €/mes**, ambos con IVA incluido (decisión del fundador, 2026-10-09: la cifra anunciada es la que se paga; con el IVA dentro, el margen baja en torno a un 17 %). La
+promo de lanzamiento de PRICING-PROMO-1 (§152, prorrogada en §206 y §231) se
+retira y la sustituye un **precio fundador para siempre**: 20 € en Starter y
+69 € en Pro, para las primeras 50 suscripciones (`FOUNDER_SLOTS`), contadas
+desde `times_redeemed` de los cupones de Stripe. Free, Agencia, topes y
+prueba de 7 días no cambian. Superseded: §152 (cupón de 6 meses con
+`redeem_by`), §206 y §231 (ampliaciones de fecha), y el texto de la tira de
+promoción de §159.
+
+**Por qué.** Decisión del fundador (2026-10-09) sobre la revisión de pricing
+del hilo «Revisión de precios». En una marca sin clientes, «179 € tachado,
+ahora 59 €» se leía como precio inflado (nadie ha pagado nunca 179 €), y una
+fecha de corte prorrogada dos veces deja de crear urgencia. Además, 59 € casi
+no deja margen con un Pro que use su cupo entero (~56 € de LLM al mes,
+`docs/llm-cost-analysis-2026-08.md` §7). Referencia de mercado (agosto de
+2026): Otterly 29 $/189 $, Peec 95 $/245 $ y Semrush AI Toolkit 99 $.
+
+**Cómo.**
+- `getFounderOffer()` (`lib/stripe.ts`) es la única fuente de «se puede
+  mostrar y cobrar el precio fundador, y cuántas plazas quedan». Lee los
+  cupones de Stripe (`STRIPE_COUPON_ID_{STARTER,PRO}_FOUNDER`) y sólo da la
+  oferta por buena si cada cupón tiene exactamente la forma anunciada:
+  `forever`, `eur` y `amount_off = price − promoPrice`. Así un cupón viejo de
+  6 meses o un porcentaje no pueden anunciarse como «para siempre». Caché de
+  5 minutos, y de 60 s si hay error. Falla cerrado: sin oferta.
+- Se usa `amount_off` y no `percent_off` porque un 30 % sobre 29 € son
+  20,30 €, no los 20 € que enseña la pantalla.
+- Variables de cupón **nuevas**: las `_PROMO` ya no se leen.
+- `getActivePromoPlanIds()` pasa a ser asíncrona y la leen `/pricing`, la
+  consola, los correos D5 y el checkout.
+- Checkout comprueba con `stripePriceMatchesPlan` que el Price del entorno
+  cobra lo que dice `PLANS` y que lleva el IVA incluido
+  (`tax_behavior: inclusive`). Si no, rechaza. Es lo que impide que un deploy
+  con precios nuevos y el entorno viejo enseñe 99 € y cobre 179 €.
+- `/pricing` deja el tachado, dice «Precio fundador para siempre» y
+  «Precio normal: 99 €/mes», y enseña la franja «quedan N de 50 plazas».
+  Revalida cada 10 minutos, antes cada hora.
+- La tira pública pide la oferta a `/api/founder-offer` (estático,
+  revalidación de 10 minutos). Sin oferta, sólo queda la fila de la prueba,
+  quieta.
+- La consola y el correo D5 dicen «para siempre», sin fecha.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
+
+**Pendiente o conocido.**
+- El fundador tiene que crear en Stripe (modo real) los dos Prices y los dos
+  cupones, y apuntar las cuatro variables de Vercel **antes del merge**. Si
+  no lo hace, el checkout rechaza (Price) o no aplica descuento (cupón), pero
+  nunca cobra algo distinto de lo que enseña.
+- Una suscripción real con el cupón viejo de 6 meses (si existiera) dejaría
+  de mostrarse como rebajada en la consola, aunque Stripe se lo siga
+  aplicando.
+- La consola mantiene el tachado del precio normal real en «Tu plan» y en el
+  modal; sólo las superficies de captación lo pierden.
+- `lib/admin/users.ts` calcula el MRR con el precio normal, no con el de
+  fundador.
+- Fases propuestas y no incluidas aquí: plan anual (2 meses gratis), Agencia
+  en autoservicio desde 299 € y Free con un escaneo al mes.
+
+**Adenda (2026-10-09, mismo día, tras el despliegue).** El contador deja de
+decir «quedan N de 50 plazas» y pasa a «quedan N cuentas con precio especial»
+(tira pública y /precios) y «quedan N cuentas con precio fundador» (correo D5).
+Decisión del fundador: «50 de 50» lee como que nadie lo ha comprado. La cifra
+sigue saliendo de `times_redeemed` en Stripe; no se muestra un número inventado.
+Si se quiere enseñar 48, la forma honesta es bajar `max_redemptions` del cupón
+y `FOUNDER_SLOTS`, no restar en pantalla. También se aprendió al desplegar:
+un cupón con duración «Una vez» y un Price con comportamiento fiscal
+«Predeterminado» (que la API devuelve como `unspecified`) se rechazan, como
+estaba previsto; los dos se corrigieron en Stripe, sin tocar código.
+
+**Segunda adenda (2026-10-09).** El fundador fija las plazas en **38**, no 50:
+creó los cupones con `max_redemptions` 38 y `FOUNDER_SLOTS` pasa a 38, así que
+la web enseña «quedan 38» y la cifra baja con cada canje real. No es un número
+de pantalla: es el límite real de los cupones en Stripe.
+
+## 243. TRIAL-ONLY-1: sin plan Free — 7 días de Pro y, al terminar, cuenta en solo lectura (2026-10-09)
+
+**Decisión del fundador** (2026-10-09, «el plan free no aporta nada, solo
+complica el modelo… cuando se termine, se apaga el escaneo automático y se
+puede acceder solo en lectura»). Aprobó la propuesta con un «sí».
+
+**Qué cambia.**
+- `free` deja de venderse. Sigue existiendo como id interno (tipo `Plan`,
+  `check` de `profiles.current_plan`, webhook al cancelar), porque es el
+  estado de una cuenta sin plan: prueba terminada sin contratar o suscripción
+  cancelada. `SELLABLE_PLANS` (`app/pricing/plans-data.ts`) es lo que se
+  enseña: /precios (tarjetas a 3 columnas, matriz sin columna Free), el modal
+  «Cambiar de plan», `/docs/planes-y-limites`, el kit off-site y el
+  `?openPlan=` de Ajustes. Su ficha pasa a «Sin plan · Solo lectura».
+- **Solo lectura**: `createPendingScanRunCore` rechaza todo escaneo de una
+  cuenta `free` (antes dejaba uno completado), manual, reintento o cron, con el
+  plan EFECTIVO de `resolveSystemPlanId`; `createProjectCore` no crea
+  dominios; `suggestProjectSetup` no gasta llamadas de Gemini; la banda
+  superior (`kind: "free"`) sale siempre, sin X y sin que la calle el switch
+  de `/debug`, con «Elegir plan» directo al modal; el botón de escanear
+  explica el motivo en vez de «inténtalo de nuevo».
+- **El bloqueo por exceso de dominios no se aplica a `free`**
+  (`getDomainOverage`, `plan-billing-section`, borrado de dominios). Antes
+  cerraba la consola entera a toda prueba que terminara con 2+ dominios, que es
+  justo lo contrario de «puedes ver tus datos». Sigue para Pro → Starter.
+- **La prueba se queda en 7 días**, no 14: es lo que usan Otterly, Peec,
+  Semrush y Scrunch, la duración mueve poco la conversión, y 14 días empujaría
+  la primera venta más allá del objetivo del 24-10.
+- El comprobador anónimo `/gratis/aparece-mi-marca-en-chatgpt` queda como
+  único «gratis» sin registro.
+- Copy: FAQ de /precios y de la portada, correo de fin de prueba, D5
+  (tabla «Pro, hoy» frente a «Sin plan»: escaneos ninguno, datos en solo
+  lectura), recuperación D+3/D+10 («no se escanea», no «no se escanea a
+  diario»), aviso de fin de prueba en la consola, docs, blog, comparativas,
+  `/que-es-genscore`, `llms.txt`, el `SoftwareApplication` (la oferta de 0 €
+  pasa a «desde Starter») y los términos. Las comparativas pierden la ventaja
+  «única con plan gratuito permanente» y no reclaman exclusividad de la prueba.
+- Se retira la idea de «Free con un escaneo al mes» (pendiente en §237).
+
+**Regla de premisa (se retira un camino).** Se retira el escaneo único del
+plan Free. Premisa: toda alta nace con 7 días de Pro (`handle_new_user`,
+`0017_reverse_trial.sql`), así que el primer escaneo siempre ocurre en la
+prueba. Lo verifica hoy esa migración y los tests de `run-creation.test.ts`.
+Si la premisa fallara (una alta sin prueba), esa cuenta vería la banda de
+solo lectura y el modal de planes, nunca un callejón sin salida: la salida es
+contratar.
+
+**Pendiente o conocido.**
+- Las cuentas que ya están en `free` hoy (pruebas viejas) pasan a solo
+  lectura sin aviso propio; la banda se lo explica al entrar.
+- La consola de operador sigue llamando «Free» a ese estado.
+- Ninguna migración: `free` sigue en el `check` de la columna.
+
+**Adenda (2026-10-09, mismo PR): vuelve el tachado.** El fundador pide que el
+precio sin promoción aparezca tachado mientras dure el cupón. Corrige la parte
+de §237 que lo quitaba («sin tachado»). Mismas condiciones que el precio
+fundador: sólo se tacha cuando `getFounderOffer` confirma cupón y plazas, y lo
+tachado es el precio real de `PLANS` (29 € y 99 €), no uno inflado como el
+179 € de antes. Afecta a la tarjeta y la matriz de /precios, la tira pública
+y el bloque de precio de los correos (D5 y fin de prueba). La consola ya lo
+tachaba.
+
+## 244. PAID-ADS-1: consentimiento de cookies publicitarias y conversiones de Google Ads y LinkedIn, dormido hasta activarlo (2026-10-09)
+
+**Contexto.** Frente 4 del plan de primera venta: preparar Google Ads de
+búsqueda y LinkedIn Ads (unos 100 €/día) con conversiones medidas. El sitio no
+tenía ni banner de cookies ni etiquetas publicitarias, y `/cookies` prometía
+"sin cookies de analítica ni publicitarias" — una promesa que no se puede
+romper en silencio.
+
+**Decisión.**
+- **Todo depende de dos variables.** Sin `NEXT_PUBLIC_GOOGLE_ADS_ID` ni
+  `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` no hay banner, ni sección nueva en
+  `/cookies` y `/privacidad`, ni petición a terceros: el sitio se comporta
+  igual que antes. Ponerlas en Vercel enciende las tres cosas a la vez, en el
+  mismo deploy, para que la política nunca describa algo distinto de lo que
+  hace la web (`lib/ads/config.ts`).
+- **Consent Mode "básico": ninguna etiqueta antes de aceptar.** Más simple y
+  defendible que el modo avanzado (pings sin cookies antes del consentimiento),
+  a cambio de perder el modelado de conversiones de quien rechaza.
+- **Dos finalidades con consentimiento separado** (fundador, 2026-10-09, tras
+  revisar la primera versión, que juntaba las dos en un solo «Aceptar»):
+  *medir de qué anuncio vienes* (conversiones de Google Ads) y *mostrarte
+  anuncios de GenScore después* (remarketing en Google y LinkedIn). La AEPD
+  pide consentimiento por finalidad, y separadas mucha gente acepta medir y
+  rechaza el remarketing — y medir es lo que necesitan las reglas de corte.
+  La etiqueta de LinkedIn mide y hace retargeting con la misma cookie, así que
+  **sólo se carga bajo remarketing**, y sus conversiones sólo cuentan a quien
+  aceptó ambas. Google se carga con cualquiera de las dos;
+  `ad_personalization` sigue a la respuesta de remarketing y las conversiones
+  sólo se envían con medición. No hay categoría de analítica porque PostHog
+  sigue sin cookies.
+- **Primera capa: Rechazar todo, Configurar y Aceptar todo, con el mismo peso,
+  sin ✕** (cerrar no es consentir; guía de cookies de la AEPD, 2023).
+  Configurar abre un interruptor por finalidad, los dos apagados. Desde
+  `/cookies` el banner se reabre directamente en los interruptores, con la
+  respuesta actual. Retirar cualquiera de las dos borra las cookies
+  publicitarias de nuestro dominio y recarga la página.
+- **La decisión vive en `gs_ads_consent` 180 días**, versionada (`v2:m1r0`):
+  un cambio del texto del banner sube la versión y vuelve a preguntar. La `v1`
+  (una sola finalidad) nunca llegó a mostrarse a nadie: estaba dormida.
+- **Tres conversiones**: `free_check` (comprobación gratuita *completada*, no
+  fallida ni degradada), `sign_up` (`/signup/confirm`; los registros con Google
+  se marcan en `/auth/callback` con la cookie `gs_pending_conversion` sólo si ya
+  había consentimiento) y `purchase` (`?checkout=success`). Una conversión que
+  ocurre con el banner sin contestar se guarda en memoria y sólo se envía si se
+  acepta en esa misma vista; nunca se persiste.
+- Excluidas `/admin`, `/mfa` y `/debug`.
+
+**Pendiente / conocido.**
+- `purchase` se envía sin valor: el plan contratado lo confirma el webhook, no
+  la URL de vuelta. Si hace falta valor para pujar, la vía es la conversión
+  offline/API desde el webhook de Stripe — fase propia.
+- Un registro con contraseña con la confirmación de email desactivada va
+  directo a `/dashboard` y no se cuenta. Hoy la confirmación está activa.
+- Las campañas (estructura, palabras clave, anuncios, reglas de corte) viven
+  fuera del repo, en la carpeta del proyecto; nada se lanza sin el sí del
+  fundador.
+
+**Trazabilidad.** `lib/ads/{config,consent,track,tags,pending-conversion}.ts`
+(+tests), `components/ads/*`, `app/cookies/page.tsx`, `app/privacidad/page.tsx`,
+`app/auth/callback/route.ts`, `docs/environment-contract.md`.
+
+## 245. CHECKER-HOME-TRUTH-1: la banda de cierre deja de prometer una comprobación de 20 segundos que su campo no hace (2026-10-09)
+
+**Qué pasaba.** La banda de cierre de la portada (`HomeCtaBand`) decía «Una
+comprobación real contra ChatGPT, en 20 segundos» y, hasta hoy, «Sin
+registro». Pero su campo es `HeroDomainField`, que guarda el dominio y lleva a
+`/signup` desde §159: prometía el comprobador y entregaba el registro.
+
+**Decisión.** Sólo copy. La banda describe lo que hace su campo: el primer
+escaneo completo en ChatGPT, Gemini y Claude, con los 7 días de Pro gratis de
+toda cuenta nueva. No promete nada gratis después de la prueba, coherente con
+TRIAL-ONLY-1 (§243: sin plan Free, la cuenta queda en solo lectura). La FAQ del
+comprobador que atribuía tres motores «al plan Free» ya la corrigió
+TRIAL-ONLY-1; este PR la dejó como está en `main`.
+
+**Pendiente.** El comprobador sigue sin enlace desde el hero ni el menú y sin
+captura de correo (propuesto aparte, necesita su propio Task Intake).
+
+**Trazabilidad.** `components/landing/session-ctas.tsx`.

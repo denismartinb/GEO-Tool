@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 
-type Feedback = "none" | "failed" | "active_run";
+type Feedback = "none" | "failed" | "active_run" | "read_only";
 
 export function ScanTriggerButton({
   projectId,
@@ -36,6 +36,13 @@ export function ScanTriggerButton({
           router.refresh();
           return;
         }
+        if (body?.error === "free_plan_scan_limit_reached") {
+          // TRIAL-ONLY-1: the account has no plan (trial ended) and is
+          // read-only — say so instead of "inténtalo de nuevo", which would
+          // fail again.
+          setFeedback("read_only");
+          return;
+        }
         setFeedback("failed");
         return;
       }
@@ -56,6 +63,12 @@ export function ScanTriggerButton({
       {feedback === "failed" && (
         <p className="field-err" style={{ marginTop: 0 }}>
           No se pudo lanzar el escaneo. Inténtalo de nuevo.
+        </p>
+      )}
+      {feedback === "read_only" && (
+        <p className="field-err" style={{ marginTop: 0 }}>
+          Tu prueba de Pro ha terminado. <a href="/dashboard/settings?openPlan=pro#plan">Elige un plan</a> para
+          volver a escanear.
         </p>
       )}
       {feedback === "active_run" && (

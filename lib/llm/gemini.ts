@@ -31,7 +31,11 @@ import {
   type DomainAuditRawResponse
 } from "@/lib/web-audit/audit-domain-content";
 import { inferBrandAliases, inferBusinessProfile } from "@/lib/projects/infer-business-profile";
-import { suggestCompetitors, type SuggestedCompetitor } from "@/lib/competitors/competitor-suggestions-llm";
+import {
+  suggestCompetitors,
+  suggestCompetitorsWithReason,
+  type SuggestedCompetitor
+} from "@/lib/competitors/competitor-suggestions-llm";
 import {
   generateAddedPrompts,
   suggestPrompts,
@@ -73,7 +77,7 @@ export type {
 export { auditDomainContent };
 export type { DomainAuditInput, DomainAuditRawResponse };
 export { inferBrandAliases, inferBusinessProfile };
-export { suggestCompetitors };
+export { suggestCompetitors, suggestCompetitorsWithReason };
 export type { SuggestedCompetitor };
 export { generateAddedPrompts, suggestPrompts };
 export type { AddPromptsMode, GeneratedPromptCandidate };

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { LegalPageShell } from "@/components/legal-page-shell";
 import { contentMetadata } from "@/lib/seo/metadata";
+import { readAdsConfig } from "@/lib/ads/config";
+
+/** PAID-ADS-1: ad platforms appear here only once their tag is configured. */
+const ADS_CONFIG = readAdsConfig();
 
 export const metadata: Metadata = contentMetadata({
   title: "Política de Privacidad — GenScore",
@@ -62,12 +66,20 @@ export default function PrivacidadPage() {
         <li><strong>Stripe</strong> — procesa los pagos de tu suscripción (datos de facturación y de tu tarjeta; nunca almacenamos ni vemos el número completo de tu tarjeta, lo gestiona Stripe directamente). Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>PostHog</strong> (infraestructura en la Unión Europea) — analítica de producto para entender el uso de la aplicación. Las visitas se miden sin cookies y sin identificarte entre sesiones ni dispositivos. Si tienes cuenta, además registramos cuatro hitos (alta, escaneo completado, inicio de pago y pago) asociados a tu identificador interno de cuenta, nunca a tu email, para saber cuántas personas completan cada paso.</li>
         <li><strong>Sentry</strong> — monitorización de errores técnicos de la aplicación, para detectar y corregir fallos.</li>
+        {ADS_CONFIG.googleAdsId && (
+          <li><strong>Google Ads</strong> — solo con tu consentimiento, por separado para cada uso: medir qué anuncios traen registros y contrataciones, y mostrar anuncios de GenScore a quien ya visitó la web. Puede implicar transferencias fuera del Espacio Económico Europeo. Detalle en la Política de Cookies.</li>
+        )}
+        {ADS_CONFIG.linkedinPartnerId && (
+          <li><strong>LinkedIn</strong> (Insight Tag) — solo si aceptas que te mostremos anuncios de GenScore después de tu visita; con ese permiso también mide qué anuncios traen registros. Puede implicar transferencias fuera del Espacio Económico Europeo. Detalle en la Política de Cookies.</li>
+        )}
       </ul>
       <p>
         Las transferencias de datos a proveedores fuera del Espacio Económico Europeo se realizan
         amparadas en las garantías adecuadas previstas por el RGPD (cláusulas contractuales tipo u
-        otro mecanismo de transferencia válido del proveedor correspondiente). No vendemos ni
-        cedemos tus datos a terceros con fines publicitarios.
+        otro mecanismo de transferencia válido del proveedor correspondiente).{" "}
+        {ADS_CONFIG.googleAdsId || ADS_CONFIG.linkedinPartnerId
+          ? "No vendemos tus datos. Solo si aceptas las cookies publicitarias, Google y LinkedIn reciben datos de tu navegación en esta web para medir anuncios y mostrarte anuncios de GenScore; nunca les enviamos el contenido de tus proyectos."
+          : "No vendemos ni cedemos tus datos a terceros con fines publicitarios."}
       </p>
       <p>
         Esta política se actualizará si en el futuro se incorporan nuevos proveedores antes de que

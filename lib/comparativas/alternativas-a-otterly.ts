@@ -59,7 +59,7 @@ export const OTTERLY_STRENGTHS: { claim: string; context: string }[] = [
   {
     claim: "Usuarios ilimitados ya en el plan de 29 $/mes.",
     context:
-      "Con quince prompts incluidos. Es decir: todo el equipo puede entrar a mirar la misma muestra de quince consultas. En GenScore los usuarios ilimitados llegan desde Starter, pero el plan gratuito ya escanea de verdad y sin caducidad."
+      "Con quince prompts incluidos. Es decir: todo el equipo puede entrar a mirar la misma muestra de quince consultas. En GenScore los usuarios ilimitados llegan desde Starter, pero la prueba de 7 días de Pro ya escanea de verdad, con los tres motores."
   },
   {
     claim: "Seguimiento en más de 50 mercados.",
@@ -74,7 +74,7 @@ export const OTTERLY_STRENGTHS: { claim: string; context: string }[] = [
   {
     claim: "El precio de entrada de pago más bajo de la categoría.",
     context:
-      `De pago. GenScore empieza en cero, sin tarjeta y sin fecha de caducidad, así que la comparación de entrada no es 29 $ contra ${STARTER_PRICE} €: es 29 $ contra poder medir antes de decidir si pagas.`
+      `De pago. GenScore arranca en ${STARTER_PRICE} €/mes y deja medir 7 días con Pro sin tarjeta, así que la comparación de entrada es 29 $ contra ${STARTER_PRICE} € más una prueba completa antes de decidir si pagas.`
   }
 ];
 
@@ -147,7 +147,7 @@ export const ALTERNATIVES: Alternative[] = [
     oneLiner:
       "Mide cómo apareces en ChatGPT, Gemini y Claude, y genera el borrador de la solución (FAQ, datos estructurados, briefs) desde el plan Pro.",
     pricingNote:
-      `Gratis permanente sin tarjeta; Pro ${PRO_PRICE} €/mes con ~100 prompts — el escalón comparable al Standard de 189 $ de Otterly, sin add-ons por motor.`,
+      `7 días de Pro gratis sin tarjeta; Pro ${PRO_PRICE} €/mes con ~100 prompts — el escalón comparable al Standard de 189 $ de Otterly, sin add-ons por motor.`,
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     tradeoff:
       "No ejecuta Perplexity ni Copilot —sí ChatGPT, Gemini y Claude, los tres incluidos en todos los planes de pago, sin add-ons— y no desglosa la puntuación por país. Si tu negocio se juega en comparar mercados uno a uno, esa pieza concreta la cubre mejor Otterly.",

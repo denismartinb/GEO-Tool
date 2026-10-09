@@ -19,7 +19,7 @@ import { contentMetadata } from "@/lib/seo/metadata";
 export const metadata: Metadata = contentMetadata({
   title: "Posicionamiento GEO: mide si la IA cita tu marca — GenScore",
   description:
-    "GenScore mide si ChatGPT, Gemini y Claude mencionan y citan tu marca al responder en tu mercado, te compara con tus competidores y convierte cada hallazgo en acciones priorizadas. Primer escaneo gratis, sin tarjeta.",
+    "GenScore mide si ChatGPT, Gemini y Claude mencionan y citan tu marca al responder en tu mercado, te compara con tus competidores y convierte cada hallazgo en acciones priorizadas. Prueba Pro 7 días gratis, sin tarjeta.",
   path: ""
 });
 

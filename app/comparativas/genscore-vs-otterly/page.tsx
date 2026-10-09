@@ -48,7 +48,7 @@ export default function GenscoreVsOtterlyPage() {
       <div className="blog-body">
         <KeyTakeaway label="En dos frases">
           Otterly cubre nominalmente más motores y más mercados, y no tiene competencia real en
-          castellano ni en el bucle de acción — solo monitoriza y audita. GenScore empieza gratis, cubre
+          castellano ni en el bucle de acción — solo monitoriza y audita. GenScore se prueba 7 días con Pro y sin tarjeta, cubre
           los tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin coste extra por
           añadirlos, y convierte lo que detecta en acciones concretas, no solo en un informe.
         </KeyTakeaway>
@@ -113,7 +113,7 @@ export default function GenscoreVsOtterlyPage() {
 
         <ArticleCta
           title="¿Cuánto te cuesta de verdad no saberlo?"
-          text="Lanza tu escaneo gratuito y compara tu visibilidad real, sin pagar add-ons por motor. Sin tarjeta."
+          text="Prueba Pro 7 días gratis y compara tu visibilidad real, sin pagar add-ons por motor. Sin tarjeta."
         />
       </div>
     </BlogPageShell>

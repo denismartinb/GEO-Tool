@@ -50,7 +50,7 @@ export default function GenscoreVsProfoundPage() {
           Profound es una plataforma de analítica de visibilidad en IA bien financiada y dirigida a
           mid-market y grandes empresas, con cobertura nominal de hasta nueve motores — pero sin precio
           público, sin producto en castellano ni presencia conocida en el mercado hispanohablante.
-          GenScore empieza gratis, sin hablar con nadie de ventas, cubre los tres motores que de verdad
+          GenScore se prueba 7 días con Pro, sin tarjeta y sin hablar con nadie de ventas, cubre los tres motores que de verdad
           importan hoy (Gemini, Claude, ChatGPT) y convierte lo que detecta en acciones concretas, no
           solo en un panel de analítica.
         </KeyTakeaway>
@@ -100,7 +100,7 @@ export default function GenscoreVsProfoundPage() {
 
         <Verdict title="Cuándo elegir GenScore" badge="Cuándo elegir GenScore">
           Si operas en España o LATAM y quieres el producto en tu idioma, si prefieres ver un precio
-          antes de hablar con nadie y empezar gratis sin tarjeta, si gestionas varios dominios de
+          antes de hablar con nadie y probarlo 7 días sin tarjeta, si gestionas varios dominios de
           cliente y no quieres crear una cuenta separada por cada uno, o si lo que necesitas no es solo
           un panel de analítica sino que te digan qué hacer al respecto (recomendaciones con evidencia y
           un generador de soluciones listas para publicar), GenScore está construido específicamente
@@ -120,7 +120,7 @@ export default function GenscoreVsProfoundPage() {
 
         <ArticleCta
           title="¿Cuánto te cuesta de verdad no saberlo?"
-          text="Lanza tu escaneo gratuito y compara tu visibilidad real, sin hablar con ventas. Sin tarjeta."
+          text="Prueba Pro 7 días gratis y compara tu visibilidad real, sin hablar con ventas. Sin tarjeta."
         />
       </div>
     </BlogPageShell>

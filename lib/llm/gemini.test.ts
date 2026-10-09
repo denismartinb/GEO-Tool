@@ -8,6 +8,7 @@ import {
   inferBusinessProfile,
   otherBrandsRelevanceHint,
   suggestCompetitors,
+  suggestCompetitorsWithReason,
   suggestPrompts,
   GeminiConfigError,
   GeminiTimeoutError,
@@ -1012,7 +1013,10 @@ describe("inferBusinessProfile", () => {
 describe("suggestCompetitors (grounded, business-profile-driven)", () => {
   beforeEach(() => {
     process.env.GEMINI_API_KEY = "test-key";
-    delete process.env.GEMINI_MODEL;
+    // The single grounded call these cases mock is the Gemini 2.x path.
+    // Gemini 3 searches and structures in two calls (ADR 0042), covered in
+    // gemini-client.test.ts.
+    process.env.GEMINI_MODEL = "gemini-2.5-flash";
   });
 
   afterEach(() => {
@@ -1082,6 +1086,40 @@ describe("suggestCompetitors (grounded, business-profile-driven)", () => {
     });
 
     expect(result).toEqual([{ name: "Consultora Rival", domain: "consultorarival.es" }]);
+  });
+
+  it("accepts a bare array instead of the { competitors } wrapper", async () => {
+    const bare = JSON.stringify([{ name: "Consultora Rival", domain: "consultorarival.es" }]);
+    vi.stubGlobal("fetch", mockFetchOnce({ candidates: [{ content: { parts: [{ text: bare }] } }] }));
+
+    const result = await suggestCompetitorsWithReason({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(result).toEqual({ competitors: [{ name: "Consultora Rival", domain: "consultorarival.es" }], reason: null });
+  });
+
+  it.each([
+    ["schema", { rivals: [{ title: "X" }] }],
+    ["no_items", { competitors: [] }],
+    ["filtered", { competitors: [{ name: "iFinanciera", domain: "ifinanciera.es" }] }]
+  ])("says why the list is empty: %s", async (reason, body) => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", mockFetchOnce({ candidates: [{ content: { parts: [{ text: JSON.stringify(body) }] } }] }));
+
+    const result = await suggestCompetitorsWithReason({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(result).toEqual({ competitors: [], reason });
   });
 
   it("still excludes the brand's own domain and dedupes", async () => {

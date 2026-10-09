@@ -374,6 +374,27 @@ analytics cookies in use" claim in `/cookies` — if that ever changes,
 `/cookies` and `/privacidad` need a follow-up update to list PostHog as a
 processor before flipping the key on in production.
 
+
+### Paid ads and conversion tracking (PAID-ADS-1)
+
+All optional. **Setting either platform id is what turns the feature on**: the
+advertising-cookie banner, the ads section of `/cookies` and `/privacidad`, and
+— only after a visitor accepts — the tags. With neither set the site behaves
+exactly as before (no banner, no third-party request). Set them in
+**Production only**; previews keep the feature off unless deliberately tested.
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `NEXT_PUBLIC_GOOGLE_ADS_ID` | No | Vercel | `AW-` + digits (Google Ads → Objetivos → Conversiones → etiqueta) |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_FREE_CHECK` | No | Vercel | Conversion label of "Comprobación gratuita" |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_SIGN_UP` | No | Vercel | Conversion label of "Registro" |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_PURCHASE` | No | Vercel | Conversion label of "Contratación" |
+| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | No | Vercel | Digits (Campaign Manager → Insight Tag) |
+| `NEXT_PUBLIC_LINKEDIN_CONV_FREE_CHECK` / `_SIGN_UP` / `_PURCHASE` | No | Vercel | Digits — id of each LinkedIn conversion (method "JavaScript / event-specific") |
+
+`lib/ads/config.ts` rejects malformed ids rather than loading a tag for
+nothing. A kind with no label simply is not sent to that platform.
+
 ### Search Console y Bing Webmaster Tools (GROWTH-2 Fase 2.1)
 
 | Variable | Required | Where | Expected shape |
@@ -460,10 +481,11 @@ ha apoyado históricamente en el índice de Bing, así que este paso no es solo
 |---|---|---|---|
 | `STRIPE_SECRET_KEY` | No | Vercel + local `.env.local` | Stripe secret key — `sk_test_...` until the go-live checklist is done, then `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | No | Vercel | Signing secret for the `/api/webhooks/stripe` endpoint, from the Stripe Dashboard webhook config (`whsec_...`) |
-| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price |
-| `STRIPE_PRICE_ID_PRO` | No | Vercel | Stripe Price id for the Pro plan's recurring price |
-| `STRIPE_COUPON_ID_STARTER_PROMO` | No | Vercel | PRICING-PROMO-1: Stripe Coupon id (`amount_off`, `duration: repeating`, `duration_in_months: 6`, `redeem_by` = 2026-09-01T00:00:00+02:00) applied to Starter checkout while `isPromoActive()` (`app/pricing/plans-data.ts`) is true |
-| `STRIPE_COUPON_ID_PRO_PROMO` | No | Vercel | Same as above, for Pro |
+| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price. FOUNDER-PRICE-1: its `unit_amount` must equal `PLANS` (29 €, EUR, monthly, **tax inclusive** — IVA incluido, founder 2026-10-09) — checkout refuses otherwise (`stripePriceMatchesPlan`) |
+| `STRIPE_PRICE_ID_PRO` | No | Vercel | Same, for Pro (99 €) |
+| `STRIPE_COUPON_ID_STARTER_FOUNDER` | No | Vercel | FOUNDER-PRICE-1 (log §237): Stripe Coupon id, `amount_off` = 900 (9 €), `currency: eur`, `duration: forever`, `max_redemptions: 50`. Shown and applied only while it has exactly that shape and the founder slots (50, summed across both coupons) are not used up (`getFounderOffer`) |
+| `STRIPE_COUPON_ID_PRO_FOUNDER` | No | Vercel | Same, for Pro: `amount_off` = 3000 (30 €) |
+| ~~`STRIPE_COUPON_ID_STARTER_PROMO` / `STRIPE_COUPON_ID_PRO_PROMO`~~ | — | — | Retired by FOUNDER-PRICE-1: the 6-month launch coupons of PRICING-PROMO-1. No longer read; safe to delete from Vercel |
 
 All four are optional by design: `lib/stripe.ts`'s `getStripeClient()` returns
 `null` when `STRIPE_SECRET_KEY` is unset, and every caller (`createCheckoutSession`,
@@ -503,7 +525,7 @@ actions.
 | `RESEND_API_KEY` | No | Vercel + local `.env.local` | Resend API key (`re_...`) |
 | `RESEND_FROM_EMAIL` | No (defaults to `GenScore <onboarding@resend.dev>`, Resend's own shared test sender) | Vercel | `"GenScore <noreply@genscore.es>"` once a sending domain is verified in the Resend dashboard |
 | `EMAIL_UNSUBSCRIBE_SECRET` | No, but required before any "consejos y ofertas" email can go out | Vercel (Production; Preview optional) | Random string, ≥32 chars (`openssl rand -base64 32`). EMAIL-UNSUB-1 (log §232) |
-| `LIFECYCLE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the trial sequence (first scan ready, D1, D3, D5). Ignored while `EMAIL_UNSUBSCRIBE_SECRET` is unset. LIFECYCLE-TRIAL-1 (log §233) |
+| `LIFECYCLE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the trial sequence (first scan ready, D1, D3, D5) and the post-trial one (end of trial, late version, D+3, D+10 — LIFECYCLE-WINBACK-1, log §238). Ignored while `EMAIL_UNSUBSCRIBE_SECRET` is unset. Apply migrations 0036–0038 first. LIFECYCLE-TRIAL-1 (log §233) |
 
 Both optional by design: `lib/email/resend.ts`'s `getResendClient()` returns
 `null` when `RESEND_API_KEY` is unset, and every `lib/email/transactional.ts`
