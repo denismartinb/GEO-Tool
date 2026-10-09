@@ -1,17 +1,25 @@
 /**
  * PAID-ADS-1: injects the Google Ads (gtag.js) and LinkedIn Insight tags.
- * Called ONLY after the visitor accepted advertising cookies — this is
- * Consent Mode "basic": before consent, not a single request goes to Google or
- * LinkedIn, so there is nothing to model or leak.
+ * Called ONLY with the purposes the visitor accepted — this is Consent Mode
+ * "basic": before consent, not a single request goes to Google or LinkedIn,
+ * so there is nothing to model or leak.
+ * - Google (gtag.js) loads for either purpose; `ad_personalization` follows
+ *   the remarketing answer. Conversions are only sent under measurement
+ *   (`lib/ads/track.ts`).
+ * - LinkedIn Insight loads only under remarketing: its one cookie does
+ *   measurement and retargeting together (`lib/ads/consent.ts`).
+ * Safe to call again when the visitor grants more: it adds what is missing.
  */
 import type { AdsConfig } from "@/lib/ads/config";
+import type { AdsConsentState } from "@/lib/ads/consent";
 
 type AdsWindow = Window & {
   dataLayer?: unknown[];
   gtag?: (...args: unknown[]) => void;
   lintrk?: ((action: string, data: Record<string, unknown>) => void) & { q?: unknown[] };
   _linkedin_data_partner_ids?: string[];
-  __gsAdsTagsLoaded?: boolean;
+  __gsGoogleLoaded?: boolean;
+  __gsLinkedinLoaded?: boolean;
 };
 
 function injectScript(src: string): void {
@@ -21,30 +29,35 @@ function injectScript(src: string): void {
   document.head.appendChild(script);
 }
 
-export function loadAdTags(config: AdsConfig): void {
+export function loadAdTags(config: AdsConfig, consent: AdsConsentState): void {
   const w = window as AdsWindow;
-  if (w.__gsAdsTagsLoaded) return;
-  w.__gsAdsTagsLoaded = true;
 
-  if (config.googleAdsId) {
-    w.dataLayer = w.dataLayer || [];
-    w.gtag = function gtag() {
-      // gtag.js reads the `arguments` object itself, not an array — the
-      // official snippet pushes `arguments` for exactly that reason.
-      w.dataLayer!.push(arguments);
-    };
-    w.gtag("consent", "default", {
-      ad_storage: "granted",
-      ad_user_data: "granted",
-      ad_personalization: "granted",
-      analytics_storage: "denied"
-    });
-    w.gtag("js", new Date());
-    w.gtag("config", config.googleAdsId);
-    injectScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(config.googleAdsId)}`);
+  if (config.googleAdsId && (consent.measurement || consent.remarketing)) {
+    const personalization = consent.remarketing ? "granted" : "denied";
+    if (w.__gsGoogleLoaded) {
+      w.gtag?.("consent", "update", { ad_personalization: personalization });
+    } else {
+      w.__gsGoogleLoaded = true;
+      w.dataLayer = w.dataLayer || [];
+      w.gtag = function gtag() {
+        // gtag.js reads the `arguments` object itself, not an array — the
+        // official snippet pushes `arguments` for exactly that reason.
+        w.dataLayer!.push(arguments);
+      };
+      w.gtag("consent", "default", {
+        ad_storage: "granted",
+        ad_user_data: "granted",
+        ad_personalization: personalization,
+        analytics_storage: "denied"
+      });
+      w.gtag("js", new Date());
+      w.gtag("config", config.googleAdsId);
+      injectScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(config.googleAdsId)}`);
+    }
   }
 
-  if (config.linkedinPartnerId) {
+  if (config.linkedinPartnerId && consent.remarketing && !w.__gsLinkedinLoaded) {
+    w.__gsLinkedinLoaded = true;
     w._linkedin_data_partner_ids = w._linkedin_data_partner_ids || [];
     w._linkedin_data_partner_ids.push(config.linkedinPartnerId);
     if (!w.lintrk) {

@@ -21367,14 +21367,27 @@ romper en silencio.
 - **Consent Mode "básico": ninguna etiqueta antes de aceptar.** Más simple y
   defendible que el modo avanzado (pings sin cookies antes del consentimiento),
   a cambio de perder el modelado de conversiones de quien rechaza.
-- **Una sola categoría, "publicidad"**: medir qué anuncios traen registros y
-  remarketing. No hay categoría de analítica porque PostHog sigue sin cookies.
-- **Aceptar y Rechazar con el mismo peso en la primera capa, sin ✕** (cerrar no
-  es consentir; guía de cookies de la AEPD, 2023). El banner se reabre desde
-  `/cookies`. Retirar el consentimiento borra las cookies publicitarias de
-  nuestro dominio y recarga la página.
-- **La decisión vive en `gs_ads_consent` 180 días**, versionada (`v1:`): un
-  cambio del texto del banner sube la versión y vuelve a preguntar.
+- **Dos finalidades con consentimiento separado** (fundador, 2026-10-09, tras
+  revisar la primera versión, que juntaba las dos en un solo «Aceptar»):
+  *medir de qué anuncio vienes* (conversiones de Google Ads) y *mostrarte
+  anuncios de GenScore después* (remarketing en Google y LinkedIn). La AEPD
+  pide consentimiento por finalidad, y separadas mucha gente acepta medir y
+  rechaza el remarketing — y medir es lo que necesitan las reglas de corte.
+  La etiqueta de LinkedIn mide y hace retargeting con la misma cookie, así que
+  **sólo se carga bajo remarketing**, y sus conversiones sólo cuentan a quien
+  aceptó ambas. Google se carga con cualquiera de las dos;
+  `ad_personalization` sigue a la respuesta de remarketing y las conversiones
+  sólo se envían con medición. No hay categoría de analítica porque PostHog
+  sigue sin cookies.
+- **Primera capa: Rechazar todo, Configurar y Aceptar todo, con el mismo peso,
+  sin ✕** (cerrar no es consentir; guía de cookies de la AEPD, 2023).
+  Configurar abre un interruptor por finalidad, los dos apagados. Desde
+  `/cookies` el banner se reabre directamente en los interruptores, con la
+  respuesta actual. Retirar cualquiera de las dos borra las cookies
+  publicitarias de nuestro dominio y recarga la página.
+- **La decisión vive en `gs_ads_consent` 180 días**, versionada (`v2:m1r0`):
+  un cambio del texto del banner sube la versión y vuelve a preguntar. La `v1`
+  (una sola finalidad) nunca llegó a mostrarse a nadie: estaba dormida.
 - **Tres conversiones**: `free_check` (comprobación gratuita *completada*, no
   fallida ni degradada), `sign_up` (`/signup/confirm`; los registros con Google
   se marcan en `/auth/callback` con la cookie `gs_pending_conversion` sólo si ya

@@ -67,10 +67,10 @@ export default function PrivacidadPage() {
         <li><strong>PostHog</strong> (infraestructura en la Unión Europea) — analítica de producto para entender el uso de la aplicación. Funciona sin cookies (no te identifica entre sesiones ni dispositivos).</li>
         <li><strong>Sentry</strong> — monitorización de errores técnicos de la aplicación, para detectar y corregir fallos.</li>
         {ADS_CONFIG.googleAdsId && (
-          <li><strong>Google Ads</strong> — solo si aceptas las cookies publicitarias: mide qué anuncios traen registros y contrataciones y permite mostrar anuncios de GenScore a quien ya visitó la web. Puede implicar transferencias fuera del Espacio Económico Europeo. Detalle en la Política de Cookies.</li>
+          <li><strong>Google Ads</strong> — solo con tu consentimiento, por separado para cada uso: medir qué anuncios traen registros y contrataciones, y mostrar anuncios de GenScore a quien ya visitó la web. Puede implicar transferencias fuera del Espacio Económico Europeo. Detalle en la Política de Cookies.</li>
         )}
         {ADS_CONFIG.linkedinPartnerId && (
-          <li><strong>LinkedIn</strong> (Insight Tag) — solo si aceptas las cookies publicitarias, con la misma finalidad. Puede implicar transferencias fuera del Espacio Económico Europeo. Detalle en la Política de Cookies.</li>
+          <li><strong>LinkedIn</strong> (Insight Tag) — solo si aceptas que te mostremos anuncios de GenScore después de tu visita; con ese permiso también mide qué anuncios traen registros. Puede implicar transferencias fuera del Espacio Económico Europeo. Detalle en la Política de Cookies.</li>
         )}
       </ul>
       <p>

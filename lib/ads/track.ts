@@ -1,17 +1,19 @@
 /**
  * PAID-ADS-1: conversion events for Google Ads and LinkedIn.
  *
- * Contract: nothing reaches an ad platform unless the visitor accepted
- * advertising cookies. A conversion that happens while the banner is still
- * unanswered is held in memory and sent if — and only if — they accept on this
- * same page view; a "Rechazar" (or leaving) drops it. It is never persisted.
+ * Contract: nothing reaches an ad platform unless the visitor accepted the
+ * measurement purpose. LinkedIn additionally needs remarketing, because its
+ * tag only loads under that purpose (`lib/ads/tags.ts`). A conversion that
+ * happens while the banner is still unanswered is held in memory and sent if —
+ * and only if — they accept measurement on this same page view; anything else
+ * (or leaving) drops it. It is never persisted.
  *
  * Each kind fires at most once per browser tab session (`dedupeKey`), so a
  * reload of `/signup/confirm` or of the billing success URL does not count the
  * same sign-up or purchase twice.
  */
 import { adsEnabled, readAdsConfig, type AdsConfig, type ConversionKind } from "@/lib/ads/config";
-import { CONSENT_CHANGE_EVENT, readConsent, type ConsentChoice } from "@/lib/ads/consent";
+import { CONSENT_CHANGE_EVENT, readConsent, type AdsConsentState } from "@/lib/ads/consent";
 
 type AdsWindow = Window & {
   dataLayer?: unknown[];
@@ -29,8 +31,14 @@ const DEDUPE_PREFIX = "gs_conv_";
 export type TrackOptions = { value?: number; dedupeKey?: string };
 
 /** Pure: what each platform should receive for one conversion. */
-export function buildConversionCalls(config: AdsConfig, kind: ConversionKind, value?: number) {
+export function buildConversionCalls(
+  config: AdsConfig,
+  consent: AdsConsentState,
+  kind: ConversionKind,
+  value?: number
+) {
   const calls: Array<{ platform: "google"; sendTo: string; params: Record<string, unknown> } | { platform: "linkedin"; conversionId: number }> = [];
+  if (!consent.measurement) return calls;
   const label = config.googleLabels[kind];
   if (config.googleAdsId && label) {
     calls.push({
@@ -40,15 +48,15 @@ export function buildConversionCalls(config: AdsConfig, kind: ConversionKind, va
     });
   }
   const liConversion = config.linkedinConversions[kind];
-  if (config.linkedinPartnerId && liConversion && /^\d+$/.test(liConversion)) {
+  if (consent.remarketing && config.linkedinPartnerId && liConversion && /^\d+$/.test(liConversion)) {
     calls.push({ platform: "linkedin", conversionId: Number(liConversion) });
   }
   return calls;
 }
 
-function send(config: AdsConfig, conversion: PendingConversion): void {
+function send(config: AdsConfig, consent: AdsConsentState, conversion: PendingConversion): void {
   const w = window as AdsWindow;
-  for (const call of buildConversionCalls(config, conversion.kind, conversion.value)) {
+  for (const call of buildConversionCalls(config, consent, conversion.kind, conversion.value)) {
     if (call.platform === "google") {
       // `gtag` is a dataLayer push stub (components/ads/ad-tags.tsx) — safe to
       // call before gtag.js has finished downloading.
@@ -75,10 +83,10 @@ function ensureListener(config: AdsConfig): void {
   if (listening) return;
   listening = true;
   window.addEventListener(CONSENT_CHANGE_EVENT, (event) => {
-    const choice = (event as CustomEvent<ConsentChoice>).detail;
+    const consent = (event as CustomEvent<AdsConsentState>).detail;
     const queued = pending.splice(0, pending.length);
-    if (choice !== "granted") return;
-    for (const conversion of queued) send(config, conversion);
+    if (!consent.measurement) return;
+    for (const conversion of queued) send(config, consent, conversion);
   });
 }
 
@@ -88,12 +96,12 @@ export function trackConversion(kind: ConversionKind, options: TrackOptions = {}
   if (!adsEnabled(config)) return;
 
   const consent = readConsent();
-  if (consent === "denied") return;
+  if (consent && !consent.measurement) return;
   if (!claimDedupe(options.dedupeKey)) return;
 
   const conversion: PendingConversion = { kind, value: options.value };
-  if (consent === "granted") {
-    send(config, conversion);
+  if (consent) {
+    send(config, consent, conversion);
     return;
   }
   ensureListener(config);

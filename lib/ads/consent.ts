@@ -1,46 +1,63 @@
 /**
  * PAID-ADS-1: the visitor's advertising-cookie choice.
  *
- * One category only — "publicidad": measuring which Google/LinkedIn ads bring
- * sign-ups and showing GenScore ads to people who already visited. There is no
- * analytics category because PostHog runs cookieless (`components/
- * posthog-provider.tsx`) and needs no consent.
+ * Two purposes, consented separately (AEPD, Guía sobre el uso de cookies,
+ * 2023: consent is given per purpose, and the first layer offers accept,
+ * reject AND a way to choose):
+ * - `measurement`: which Google ad brought a sign-up, a free check or a
+ *   purchase (conversion tracking).
+ * - `remarketing`: showing GenScore ads later to people who already visited,
+ *   on Google and LinkedIn. The LinkedIn Insight tag does measurement and
+ *   retargeting with the same cookie and cannot be split, so it only loads
+ *   under this purpose.
+ * There is no analytics purpose because PostHog runs cookieless
+ * (`components/posthog-provider.tsx`) and needs no consent.
  *
  * The choice itself lives in a first-party cookie: remembering a consent
- * decision is a strictly-necessary use (AEPD, Guía sobre el uso de cookies,
- * 2023), so it is stored whichever way the visitor answers. 180 days, then we
- * ask again — well inside the AEPD's 24-month ceiling.
+ * decision is a strictly-necessary use, so it is stored whichever way the
+ * visitor answers. 180 days, then we ask again — well inside the AEPD's
+ * 24-month ceiling.
  */
 export const CONSENT_COOKIE = "gs_ads_consent";
-export const CONSENT_VERSION = "v1";
+export const CONSENT_VERSION = "v2";
 export const CONSENT_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 export const CONSENT_CHANGE_EVENT = "gs:ads-consent-change";
 export const CONSENT_OPEN_EVENT = "gs:ads-consent-open";
 
-export type ConsentChoice = "granted" | "denied";
+export type AdsConsentState = { measurement: boolean; remarketing: boolean };
 
-export function parseConsentCookie(cookieHeader: string): ConsentChoice | null {
+export const CONSENT_ALL: AdsConsentState = { measurement: true, remarketing: true };
+export const CONSENT_NONE: AdsConsentState = { measurement: false, remarketing: false };
+
+export function parseConsentCookie(cookieHeader: string): AdsConsentState | null {
   for (const part of cookieHeader.split(";")) {
     const [rawName, ...rest] = part.trim().split("=");
     if (rawName !== CONSENT_COOKIE) continue;
     const value = decodeURIComponent(rest.join("="));
     // A cookie from an older banner version is no consent at all: the text
     // the visitor agreed to is not the one we would now be relying on.
-    if (value === `${CONSENT_VERSION}:granted`) return "granted";
-    if (value === `${CONSENT_VERSION}:denied`) return "denied";
-    return null;
+    const match = new RegExp(`^${CONSENT_VERSION}:m([01])r([01])$`).exec(value);
+    if (!match) return null;
+    return { measurement: match[1] === "1", remarketing: match[2] === "1" };
   }
   return null;
 }
 
-export function serializeConsentCookie(choice: ConsentChoice, secure: boolean): string {
+export function serializeConsentCookie(state: AdsConsentState, secure: boolean): string {
+  const value = `${CONSENT_VERSION}:m${state.measurement ? 1 : 0}r${state.remarketing ? 1 : 0}`;
   return [
-    `${CONSENT_COOKIE}=${encodeURIComponent(`${CONSENT_VERSION}:${choice}`)}`,
+    `${CONSENT_COOKIE}=${encodeURIComponent(value)}`,
     "Path=/",
     `Max-Age=${CONSENT_MAX_AGE_SECONDS}`,
     "SameSite=Lax",
     ...(secure ? ["Secure"] : [])
   ].join("; ");
+}
+
+/** True when `next` withdraws a purpose `previous` had granted. */
+export function isWithdrawal(previous: AdsConsentState | null, next: AdsConsentState): boolean {
+  if (!previous) return false;
+  return (previous.measurement && !next.measurement) || (previous.remarketing && !next.remarketing);
 }
 
 /**
@@ -52,7 +69,7 @@ export function isAdCookieName(name: string): boolean {
   return /^(_gcl_|_gac_|li_fat_id$|li_sugr$|_uetsid$|_uetvid$)/.test(name);
 }
 
-export function readConsent(): ConsentChoice | null {
+export function readConsent(): AdsConsentState | null {
   if (typeof document === "undefined") return null;
   try {
     return parseConsentCookie(document.cookie);
@@ -61,11 +78,12 @@ export function readConsent(): ConsentChoice | null {
   }
 }
 
-export function writeConsent(choice: ConsentChoice): void {
+export function writeConsent(state: AdsConsentState): void {
   if (typeof document === "undefined") return;
-  document.cookie = serializeConsentCookie(choice, window.location.protocol === "https:");
-  if (choice === "denied") clearAdCookies();
-  window.dispatchEvent(new CustomEvent<ConsentChoice>(CONSENT_CHANGE_EVENT, { detail: choice }));
+  const previous = readConsent();
+  document.cookie = serializeConsentCookie(state, window.location.protocol === "https:");
+  if (isWithdrawal(previous, state)) clearAdCookies();
+  window.dispatchEvent(new CustomEvent<AdsConsentState>(CONSENT_CHANGE_EVENT, { detail: state }));
 }
 
 function clearAdCookies(): void {

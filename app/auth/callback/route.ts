@@ -83,7 +83,7 @@ export async function GET(request: Request) {
     // count — and only when the visitor already accepted ad cookies, which
     // this request can read because the consent cookie is first-party.
     countGoogleSignup =
-      method === "google" && parseConsentCookie(request.headers.get("cookie") ?? "") === "granted";
+      method === "google" && parseConsentCookie(request.headers.get("cookie") ?? "")?.measurement === true;
   }
 
   const response = NextResponse.redirect(new URL(next, url.origin));

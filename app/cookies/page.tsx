@@ -59,22 +59,35 @@ export default function CookiesPage() {
           <h2>Cookie de preferencia de cookies</h2>
           <ul>
             <li><strong>Nombre:</strong> gs_ads_consent.</li>
-            <li><strong>Finalidad:</strong> recordar si aceptaste o rechazaste las cookies publicitarias, para no volver a preguntarte en cada página.</li>
+            <li><strong>Finalidad:</strong> recordar qué usos publicitarios aceptaste o rechazaste, para no volver a preguntarte en cada página.</li>
             <li><strong>Titularidad:</strong> propia (primera parte). Es técnica y no requiere consentimiento.</li>
             <li><strong>Duración:</strong> 6 meses; después te lo volvemos a preguntar.</li>
           </ul>
           <p>
-            Si aceptaste las cookies publicitarias y te registras con Google, guardamos además
+            Si aceptaste la medición de anuncios y te registras con Google, guardamos además
             durante 10 minutos la cookie propia <code>gs_pending_conversion</code>, que solo dice
             «registro» para poder contarlo en la siguiente página y se borra al leerla.
           </p>
 
           <h2>Cookies publicitarias (solo con tu consentimiento)</h2>
           <p>
-            Si las aceptas, cargamos las etiquetas de estos anunciantes para saber qué anuncios nos
-            traen visitas, comprobaciones gratuitas, registros y contrataciones, y para mostrar
-            anuncios de GenScore a personas que ya visitaron la web. Si las rechazas, no se carga
-            ninguna etiqueta publicitaria y la web funciona exactamente igual.
+            Te pedimos permiso por separado para dos usos, y puedes aceptar uno sin el otro:
+          </p>
+          <ul>
+            <li>
+              <strong>Medir de qué anuncio vienes:</strong> saber qué anuncios de Google nos traen
+              comprobaciones gratuitas, registros y contrataciones.
+            </li>
+            <li>
+              <strong>Mostrarte anuncios de GenScore después:</strong> que Google y LinkedIn
+              recuerden tu visita para enseñarte anuncios nuestros más adelante. La etiqueta de
+              LinkedIn usa la misma cookie para medir y para volver a mostrarte anuncios, así que
+              solo se carga si aceptas este uso.
+            </li>
+          </ul>
+          <p>
+            Si rechazas los dos, no se carga ninguna etiqueta publicitaria y la web funciona
+            exactamente igual.
           </p>
           <ul>
             {ADS_CONFIG.googleAdsId && (

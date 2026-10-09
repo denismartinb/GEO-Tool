@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { CONSENT_COOKIE, isAdCookieName, parseConsentCookie, serializeConsentCookie } from "@/lib/ads/consent";
+import {
+  CONSENT_ALL,
+  CONSENT_COOKIE,
+  CONSENT_NONE,
+  isAdCookieName,
+  isWithdrawal,
+  parseConsentCookie,
+  serializeConsentCookie
+} from "@/lib/ads/consent";
 
 describe("parseConsentCookie", () => {
   it("returns null when the visitor has not answered", () => {
@@ -7,30 +15,44 @@ describe("parseConsentCookie", () => {
     expect(parseConsentCookie("sb-access-token=abc; other=1")).toBeNull();
   });
 
-  it("reads both answers of the current version", () => {
-    expect(parseConsentCookie(`a=1; ${CONSENT_COOKIE}=v1%3Agranted`)).toBe("granted");
-    expect(parseConsentCookie(`${CONSENT_COOKIE}=v1%3Adenied; a=1`)).toBe("denied");
+  it("reads each purpose of the current version separately", () => {
+    expect(parseConsentCookie(`a=1; ${CONSENT_COOKIE}=v2%3Am1r0`)).toEqual({ measurement: true, remarketing: false });
+    expect(parseConsentCookie(`${CONSENT_COOKIE}=v2%3Am0r1; a=1`)).toEqual({ measurement: false, remarketing: true });
+    expect(parseConsentCookie(`${CONSENT_COOKIE}=v2%3Am0r0`)).toEqual(CONSENT_NONE);
   });
 
   it("treats an answer to an older banner version as no answer", () => {
-    expect(parseConsentCookie(`${CONSENT_COOKIE}=v0%3Agranted`)).toBeNull();
+    expect(parseConsentCookie(`${CONSENT_COOKIE}=v1%3Agranted`)).toBeNull();
     expect(parseConsentCookie(`${CONSENT_COOKIE}=granted`)).toBeNull();
+    expect(parseConsentCookie(`${CONSENT_COOKIE}=v2%3Am1`)).toBeNull();
   });
 
   it("round-trips through serializeConsentCookie", () => {
-    const header = serializeConsentCookie("granted", true).split(";")[0];
-    expect(parseConsentCookie(header)).toBe("granted");
+    for (const state of [CONSENT_ALL, CONSENT_NONE, { measurement: true, remarketing: false }]) {
+      const header = serializeConsentCookie(state, true).split(";")[0];
+      expect(parseConsentCookie(header)).toEqual(state);
+    }
+  });
+});
+
+describe("isWithdrawal", () => {
+  it("is true only when a purpose that was granted is now refused", () => {
+    expect(isWithdrawal(null, CONSENT_NONE)).toBe(false);
+    expect(isWithdrawal(CONSENT_NONE, CONSENT_ALL)).toBe(false);
+    expect(isWithdrawal({ measurement: true, remarketing: false }, CONSENT_ALL)).toBe(false);
+    expect(isWithdrawal(CONSENT_ALL, { measurement: true, remarketing: false })).toBe(true);
+    expect(isWithdrawal({ measurement: true, remarketing: false }, CONSENT_NONE)).toBe(true);
   });
 });
 
 describe("serializeConsentCookie", () => {
   it("is site-wide, lax, bounded to 180 days and Secure on https", () => {
-    const value = serializeConsentCookie("denied", true);
+    const value = serializeConsentCookie(CONSENT_NONE, true);
     expect(value).toContain("Path=/");
     expect(value).toContain("SameSite=Lax");
     expect(value).toContain(`Max-Age=${180 * 24 * 60 * 60}`);
     expect(value).toContain("Secure");
-    expect(serializeConsentCookie("denied", false)).not.toContain("Secure");
+    expect(serializeConsentCookie(CONSENT_NONE, false)).not.toContain("Secure");
   });
 });
 

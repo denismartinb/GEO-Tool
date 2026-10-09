@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readAdsConfig } from "@/lib/ads/config";
-import { CONSENT_CHANGE_EVENT } from "@/lib/ads/consent";
+import { CONSENT_ALL, CONSENT_CHANGE_EVENT, CONSENT_NONE } from "@/lib/ads/consent";
 
 const ENV = {
   NEXT_PUBLIC_GOOGLE_ADS_ID: "AW-111",
@@ -14,20 +14,29 @@ describe("buildConversionCalls", () => {
   it("sends to every platform that has an id AND a label for that kind", async () => {
     const { buildConversionCalls } = await import("@/lib/ads/track");
     const config = readAdsConfig(ENV);
-    expect(buildConversionCalls(config, "sign_up")).toEqual([
+    expect(buildConversionCalls(config, CONSENT_ALL, "sign_up")).toEqual([
       { platform: "google", sendTo: "AW-111/signupLabel", params: {} },
       { platform: "linkedin", conversionId: 333 }
     ]);
-    expect(buildConversionCalls(config, "free_check")).toEqual([
+    expect(buildConversionCalls(config, CONSENT_ALL, "free_check")).toEqual([
       { platform: "google", sendTo: "AW-111/checkLabel", params: {} }
     ]);
-    expect(buildConversionCalls(config, "purchase")).toEqual([]);
+    expect(buildConversionCalls(config, CONSENT_ALL, "purchase")).toEqual([]);
+  });
+
+  it("sends nothing without measurement, and LinkedIn only with remarketing too", async () => {
+    const { buildConversionCalls } = await import("@/lib/ads/track");
+    const config = readAdsConfig(ENV);
+    expect(buildConversionCalls(config, { measurement: false, remarketing: true }, "sign_up")).toEqual([]);
+    expect(buildConversionCalls(config, { measurement: true, remarketing: false }, "sign_up")).toEqual([
+      { platform: "google", sendTo: "AW-111/signupLabel", params: {} }
+    ]);
   });
 
   it("attaches a value in EUR only when one is given", async () => {
     const { buildConversionCalls } = await import("@/lib/ads/track");
     const config = readAdsConfig({ ...ENV, NEXT_PUBLIC_GOOGLE_ADS_LABEL_PURCHASE: "buy" });
-    expect(buildConversionCalls(config, "purchase", 59)[0]).toEqual({
+    expect(buildConversionCalls(config, CONSENT_ALL, "purchase", 59)[0]).toEqual({
       platform: "google",
       sendTo: "AW-111/buy",
       params: { value: 59, currency: "EUR" }
@@ -71,8 +80,8 @@ describe("trackConversion and consent", () => {
     vi.unstubAllEnvs();
   });
 
-  it("sends nothing at all when the visitor rejected", async () => {
-    cookie = "gs_ads_consent=v1%3Adenied";
+  it("sends nothing at all when the visitor rejected measurement", async () => {
+    cookie = "gs_ads_consent=v2%3Am0r1";
     const { trackConversion } = await import("@/lib/ads/track");
     trackConversion("sign_up");
     expect(gtag).not.toHaveBeenCalled();
@@ -80,7 +89,7 @@ describe("trackConversion and consent", () => {
   });
 
   it("sends immediately when the visitor already accepted", async () => {
-    cookie = "gs_ads_consent=v1%3Agranted";
+    cookie = "gs_ads_consent=v2%3Am1r1";
     const { trackConversion } = await import("@/lib/ads/track");
     trackConversion("sign_up");
     expect(gtag).toHaveBeenCalledWith("event", "conversion", { send_to: "AW-111/signupLabel" });
@@ -91,20 +100,20 @@ describe("trackConversion and consent", () => {
     const { trackConversion } = await import("@/lib/ads/track");
     trackConversion("free_check");
     expect(gtag).not.toHaveBeenCalled();
-    target.dispatchEvent(new CustomEvent(CONSENT_CHANGE_EVENT, { detail: "granted" }));
+    target.dispatchEvent(new CustomEvent(CONSENT_CHANGE_EVENT, { detail: CONSENT_ALL }));
     expect(gtag).toHaveBeenCalledTimes(1);
   });
 
   it("drops a held conversion on reject", async () => {
     const { trackConversion } = await import("@/lib/ads/track");
     trackConversion("free_check");
-    target.dispatchEvent(new CustomEvent(CONSENT_CHANGE_EVENT, { detail: "denied" }));
-    target.dispatchEvent(new CustomEvent(CONSENT_CHANGE_EVENT, { detail: "granted" }));
+    target.dispatchEvent(new CustomEvent(CONSENT_CHANGE_EVENT, { detail: CONSENT_NONE }));
+    target.dispatchEvent(new CustomEvent(CONSENT_CHANGE_EVENT, { detail: CONSENT_ALL }));
     expect(gtag).not.toHaveBeenCalled();
   });
 
   it("counts a deduplicated conversion once per tab session", async () => {
-    cookie = "gs_ads_consent=v1%3Agranted";
+    cookie = "gs_ads_consent=v2%3Am1r1";
     const { trackConversion } = await import("@/lib/ads/track");
     trackConversion("sign_up", { dedupeKey: "sign_up" });
     trackConversion("sign_up", { dedupeKey: "sign_up" });
@@ -113,7 +122,7 @@ describe("trackConversion and consent", () => {
 
   it("is a no-op when no ad platform is configured", async () => {
     vi.unstubAllEnvs();
-    cookie = "gs_ads_consent=v1%3Agranted";
+    cookie = "gs_ads_consent=v2%3Am1r1";
     const { trackConversion } = await import("@/lib/ads/track");
     trackConversion("sign_up");
     expect(gtag).not.toHaveBeenCalled();

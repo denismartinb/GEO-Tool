@@ -10926,7 +10926,7 @@ select.set-field {
 
 /* ── PAID-ADS-1: banner de cookies publicitarias ─────────────────────────────
    Sólo existe en el DOM cuando hay un id de Google Ads o LinkedIn configurado
-   (components/ads/ads-consent.tsx). Aceptar y Rechazar llevan el MISMO estilo
+   (components/ads/ads-consent.tsx). Rechazar, Configurar y Aceptar llevan el MISMO estilo
    a propósito: la AEPD pide que rechazar no sea más difícil ni menos visible
    que aceptar. Se pinta en público y en consola, por eso vive aquí y no en
    console.css. */
@@ -10951,9 +10951,14 @@ select.set-field {
 .ads-consent-title { margin: 0 0 6px; font-weight: 600; font-size: 15px; }
 .ads-consent-text { margin: 0; color: var(--brand-ink-2); }
 .ads-consent-text a { color: var(--brand-blue); text-decoration: underline; }
-.ads-consent-actions { display: flex; gap: 10px; margin-top: 14px; }
+.ads-consent-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.ads-consent-options { display: grid; gap: 12px; }
+.ads-consent-option { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.ads-consent-option input { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--brand-blue); cursor: pointer; }
+.ads-consent-option strong { display: block; font-weight: 600; }
+.ads-consent-option-text { display: block; color: var(--brand-ink-2); }
 .ads-consent-btn {
-  flex: 1 1 0;
+  flex: 1 1 140px;
   min-height: 44px;
   padding: 10px 16px;
   border-radius: 10px;
@@ -10966,3 +10971,10 @@ select.set-field {
 }
 .ads-consent-btn:hover { background: #1d4ed8; }
 .ads-consent-btn:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 2px; }
+/* Three equal buttons don't fit side by side on a phone, and wrapping 2+1
+   leaves "Aceptar todo" alone at full width — bigger than "Rechazar todo".
+   Stacking keeps all three the same size. */
+@media (max-width: 520px) {
+  .ads-consent-actions { flex-direction: column; }
+  .ads-consent-btn { flex: none; width: 100%; }
+}
