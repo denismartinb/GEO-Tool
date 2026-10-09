@@ -3,6 +3,18 @@
 **Estado:** propuesta separada, **sin implementar**. No toca `lib/web-audit/**`, `fetch-page.ts` ni la auditoría hasta que el Director dé alcance y `data-guardian` revise (`.claude/rules/web-audit.md`: zona adyacente a «crawler»). Respuesta a Director 6070300363 (punto 4) y al complemento 6070280041. Diagnóstico de partida: `docs/specs/onboarding/wizard-ux-and-eci-diagnosis-proposal.md` §4 y §4b.
 **No hay bypass, importador manual, URL arbitraria, rotación de IP/UA, ni proveedor de rastreo en este documento** (el proveedor queda en backlog después del primer cliente, sin compra).
 
+## 0. Hecho frente a diagnóstico (Director 6070505045)
+
+| Afirmación | Estatus |
+|---|---|
+| `fetchPageSafely` devuelve `skipped_offsite` para HTTP no OK y para fallos de red que no son timeout; `skipped_error` existe y nunca se devuelve | **Hecho** (lectura de código) |
+| `readiness_score` es `null` (no 0) si ninguna página se analiza y la puntuación GEO excluye `technical` | **Hecho** (lectura de código) |
+| La web de `elcorteingles.es` respondió 301 → 403 a una lectura pública desde otra red | **Observación ajena** (aportada por el Director, otra red, 00:21:25) |
+| El fallo que vio Denis en Vercel fue un bloqueo de CDN | **Diagnóstico NO demostrado**: falta la evidencia de su ejecución; no se atribuye |
+| Que `cause = "blocked"` describa lo que pasó en producción | **Diagnóstico**: solo sería cierto si `httpStatus` se mide; hasta entonces `cause` sería una hipótesis rotulada como tal |
+
+Reglas que no cambian: campos nuevos **opcionales** y tri-estado; los lectores de filas antiguas siguen leyendo lo que ya leen; **no se reescriben históricos** (los snapshots con `skipped_offsite` para un 403 se muestran con su etiqueta histórica); no se importa una URL arbitraria.
+
 ## 1. Cuatro cosas que NO se mezclan
 
 | | Qué es | Depende de leer la web |
