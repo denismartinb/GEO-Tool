@@ -22224,6 +22224,96 @@ los informes de prospección.
 `components/report/{geo-report.tsx,geo-report.css,report-toolbar.tsx}` (+test),
 `lib/report/{report-data,report-pages,report-tech}.ts` (+tests),
 `.claude/rules/report.md`, `.claude/rules/recommendations.md`.
+
+## 251. STUDY-HOME-1: el estudio «De buscar a preguntar» llega al blog y a la portada como una cifra con su fuente (2026-10-09)
+
+**Qué se decidió.** El fundador pidió valorar una cita del estudio público «De
+buscar a preguntar» (PDF de 2026-10-09) en la portada, en el hueco del
+testimonio inventado que se retiró (§146 rectificado). Se descartó una cita
+con nombre: en ese hueco se habría leído como otro testimonio. Lo que entra es
+una **cifra de terceros con su fuente a la vista**, en una tarjeta compacta
+encima de «El producto» (diseño iterado con el fundador sobre capturas de la
+home real; aprobado el 2026-10-09):
+
+> 22% de los españoles ya usa la IA **en lugar del buscador**, la
+> cifra más alta de Europa. Y **casi la mitad** de quienes la usan se apoya en
+> ella para comprar. — Fuentes: Bain & Company, 2025 · IAB Spain, 2026.
+
+El botón «Ver el estudio» lleva a un **artículo nuevo**,
+`/blog/de-buscar-a-preguntar` (cluster `fundamentos`), que es la versión web
+del PDF y pasa a ser su URL canónica (el hilo del estudio publicará en
+LinkedIn sólo un resumen con enlace). El fundador eligió el artículo nuevo
+frente a enlazar el estudio de facturación ya publicado, que no contiene las
+cifras de la tarjeta.
+
+**Fidelidad de la frase (por qué no es la del fundador al pie de la letra).**
+El fundador propuso «utiliza regularmente la IA en lugar del buscador» y
+«casi la mitad lo hace para tomar una decisión de compra». Bain mide quien usa
+la IA *principalmente* en lugar del buscador (usarla con regularidad es otra
+cifra, mucho mayor), y el 45% de IAB es *entre usuarios de IA* y es «ayudarse
+en una compra»: el mismo estudio dice que sólo el 16% la cita entre los
+factores principales de su decisión. El fundador aceptó los dos matices.
+
+**Fuentes verificadas en origen el 2026-10-09** (no sólo copiadas del PDF):
+Bain, *Generative AI Consumer Survey* sept. 2025, n=7.298 en cinco países,
+1.440 en España, «Spanish consumers have the highest replacement rate, at
+22%»; IAB Spain y Elogia, encuesta online a 1.081 internautas 16-75, mayo-junio
+2026 (45%, 66%, 57%, 16%, 95%, 68%); AIMC Navegantes 28.ª ed., ~15.000
+respuestas, oct-dic 2025 (85,1% −8, 58,4% +8, 32,7% +15, Google 93,8%); Pew,
+900 adultos EE. UU., marzo 2025 (15% → 8%, 1%, 26% vs 16%). Cada cifra de
+terceros del artículo lleva fuente y muestra (`growth-content.md`). Se
+quitaron del artículo las del PDF sin muestra comprobable (Bain 60% sin clic,
+Seer +120%).
+
+**Dato propio.** Sólo porcentajes del estudio de facturación (§246), con
+enlace a él; ningún recuento, ninguna versión de modelo.
+
+**Segunda pasada (fundador, 2026-10-09).** Dos correcciones tras ver el
+preview:
+
+1. *En móvil el rótulo partía la lectura.* «Estudio · De buscar a preguntar»
+   quedaba entre el 22% y su frase. Bajo 640px `.lp-study-txt` pasa a
+   `display: contents` y el rótulo a `order: -1`: rótulo, cifra, frase, fuentes
+   y botón, sin tocar el marcado de escritorio.
+2. *El artículo tenía que estar en la plantilla nueva y tener el efecto del
+   PDF*, porque la portada enlaza a él. Usa `ArticleHero` (§247, ya en main)
+   con `heroStat` 22% · Bain & Company, 2025 (cifra que el artículo publica
+   con su muestra; el antetítulo dice «Blog GenScore», no «Estudio
+   GenScore», porque la fuente no es nuestra). Y llegan los gráficos del PDF
+   como bloques de artículo en `components/blog/article/charts.tsx`:
+   `BarChart` (AIMC y la verificación de IAB), `ColumnChart` + `ChartPair`
+   (Pew), `EngineChart` (presencia de cuatro marcas motor a motor, del
+   estudio de facturación §246) e `InsightPanel`/`Insight` (los recuadros
+   oscuros «Qué significa» del PDF). Cada barra lleva su cifra escrita —el
+   dibujo acompaña al número, nunca lo sustituye— y un 0% se escribe, no
+   desaparece (`charts.test.ts`). Paleta del artículo (tinta, azul, cian):
+   el degradado azul→cian sólo marca la fila de la IA. Las cifras de los
+   gráficos son las que ya estaban verificadas en el artículo; no entra
+   ninguna del PDF que no lo estuviera (p. ej. el 70% de IAB sobre
+   información errónea, o los usuarios únicos de GfK DAM).
+
+**Ajuste final del fundador (antes del merge).** Quitó «sobre todo» de la
+tarjeta: «ya usa la IA en lugar del buscador». Se lee como la «replacement
+rate» de Bain; la redacción precisa («usa sobre todo un chatbot de IA en
+lugar del buscador») se mantiene en el cuerpo del artículo y en la FAQ, junto
+a la muestra. El `heroStat` y la descripción del post siguen a la tarjeta.
+
+**Numeración.** Nació como §250 y pasó a §251 antes de abrir el PR: §250 lo
+reclamaban otras ramas (FREE-REPORT-2, PR #568; GEO-REPORT-1 Fase 2, ya en
+main).
+
+**Pendiente / conocido.** Si alguna de las dos cifras de la tarjeta se
+actualiza en su fuente, la tarjeta, el `heroStat` y el artículo cambian
+juntos. Los gráficos nuevos sólo los usa este artículo; están en el barril
+para quien los necesite, con la misma regla de fuente que `Stat`.
+
+**Trazabilidad.** `components/landing/landing-page.tsx` (`.lp-study`),
+`app/globals.css` (`.lp-study*` y bloque «Gráficos del estudio»),
+`components/blog/article/charts.tsx` (+test), `components/blog/article/index.ts`,
+`app/blog/de-buscar-a-preguntar/page.mdx`,
+`public/blog/de-buscar-a-preguntar/cover.webp`, `lib/blog/posts.ts`, listas del
+piloto, `docs/design-reference/study-home-1/`.
+
 ## 253. COVERAGE-WEEKLY-1 y EXTRACTION-SINGLE-MODEL-1: bajar el coste por escaneo sin tocar la nota (2026-10-09)
 
 **Contexto.** El fundador abrió una línea de optimización de costes. El análisis

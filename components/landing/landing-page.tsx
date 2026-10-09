@@ -548,6 +548,32 @@ export function LandingPage() {
           a partir de 70. */}
       <section className="lp-section lp-prod" id="pantallas">
         <div className="lp-inner">
+          {/* STUDY-HOME-1 (founder-approved 2026-10-09, log §251). A sourced
+              third-party figure, never a quote: this slot's predecessor was an
+              invented testimonial (log §146 rectified). The copy says exactly
+              what the sources measure — Bain counts people who MAINLY use a
+              chatbot instead of the search engine, and IAB's 45% is among AI
+              users and is "helps with a purchase", not "decides it" (only 16%
+              name AI as a main factor). The whole card links to the article
+              that carries every figure with its sample size. */}
+          <div className="lp-study">
+            <Link className="lp-study-card" href="/blog/de-buscar-a-preguntar">
+              <span className="lp-study-num">22<span>%</span></span>
+              <span className="lp-study-txt">
+                <span className="lp-study-eye">Estudio · De buscar a preguntar</span>
+                <span className="lp-study-q">
+                  de los españoles ya usa la IA{" "}
+                  <b>en lugar del buscador</b>, la cifra más alta de Europa. Y <b>casi la mitad</b> de
+                  quienes la usan se apoya en ella para comprar.
+                </span>
+                <span className="lp-study-src">Fuentes: Bain &amp; Company, 2025 · IAB Spain, 2026</span>
+              </span>
+              <span className="lp-study-go">
+                Ver el estudio
+                <Icon name="arrRight" size={14} />
+              </span>
+            </Link>
+          </div>
           <div className="lp-sec-head">
             <div className="lp-kicker">El producto</div>
             <h2 className="lp-h2">Cinco pantallas. Todo tu posicionamiento.</h2>
