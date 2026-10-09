@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ConversionOnMount } from "@/components/ads/conversion-on-mount";
 import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { getUsageSummary } from "@/lib/billing";
@@ -171,6 +172,7 @@ export default async function SettingsPage({
                 <h2 className="set-sech sp" id="plan">
                   Plan
                 </h2>
+                {checkout === "success" && <ConversionOnMount kind="purchase" dedupeKey="purchase" />}
                 <BillingContent
                   checkoutStatus={checkout}
                   openPlanId={SELLABLE_PLANS.some((p) => p.id === openPlan) ? (openPlan as Plan["id"]) : undefined}

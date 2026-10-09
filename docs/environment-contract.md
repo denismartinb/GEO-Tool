@@ -374,6 +374,27 @@ analytics cookies in use" claim in `/cookies` — if that ever changes,
 `/cookies` and `/privacidad` need a follow-up update to list PostHog as a
 processor before flipping the key on in production.
 
+
+### Paid ads and conversion tracking (PAID-ADS-1)
+
+All optional. **Setting either platform id is what turns the feature on**: the
+advertising-cookie banner, the ads section of `/cookies` and `/privacidad`, and
+— only after a visitor accepts — the tags. With neither set the site behaves
+exactly as before (no banner, no third-party request). Set them in
+**Production only**; previews keep the feature off unless deliberately tested.
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `NEXT_PUBLIC_GOOGLE_ADS_ID` | No | Vercel | `AW-` + digits (Google Ads → Objetivos → Conversiones → etiqueta) |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_FREE_CHECK` | No | Vercel | Conversion label of "Comprobación gratuita" |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_SIGN_UP` | No | Vercel | Conversion label of "Registro" |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_PURCHASE` | No | Vercel | Conversion label of "Contratación" |
+| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | No | Vercel | Digits (Campaign Manager → Insight Tag) |
+| `NEXT_PUBLIC_LINKEDIN_CONV_FREE_CHECK` / `_SIGN_UP` / `_PURCHASE` | No | Vercel | Digits — id of each LinkedIn conversion (method "JavaScript / event-specific") |
+
+`lib/ads/config.ts` rejects malformed ids rather than loading a tag for
+nothing. A kind with no label simply is not sent to that platform.
+
 ### Search Console y Bing Webmaster Tools (GROWTH-2 Fase 2.1)
 
 | Variable | Required | Where | Expected shape |
