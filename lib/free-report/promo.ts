@@ -1,7 +1,7 @@
 /**
  * FREE-REPORT-2 — when the «informe gratis» corner card may appear on a
  * content page. Pure, so the rules the founder approved on the canvas
- * (`docs/design-reference/free-report-1/`, log §250) are tested without a
+ * (`docs/design-reference/free-report-1/`, log §252) are tested without a
  * browser:
  *
  *  - only on content pages (blog, comparativas, glosario, docs) — never on the

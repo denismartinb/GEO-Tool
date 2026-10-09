@@ -41,3 +41,14 @@ Sólo porcentajes y proporciones, nunca cifras absolutas de preguntas,
 respuestas o escaneos. Motores por su nombre (ChatGPT, Gemini, Claude), sin
 versiones. La lista de preguntas se llama siempre «preguntas principales de
 búsqueda». Marcas en texto plano.
+
+## Dónde va «Descargar informe» (2026-10-09)
+
+`boton-informe.html` es la maqueta de la segunda vuelta que aprobó el fundador
+para Visión general:
+- en escritorio, la opción B: un botón con texto junto a la fecha del escaneo;
+- en móvil, la opción 2: la píldora de la fecha abre una hoja inferior con la
+  descarga.
+
+Las opciones 1 y 3 de móvil se quedan en la maqueta como descartadas. Ver log
+§250.

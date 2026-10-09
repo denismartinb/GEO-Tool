@@ -16351,6 +16351,8 @@ la que ya esté en `main`) y con ella todas sus referencias
 
 ## 169. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
 
+> **Superseded en parte por §247 (Fase 2, 2026-10-09):** las tarjetas de color por clúster pasan a blancas con borde fino y el carril se identifica por su número.
+
 **Propuesta del fundador** (referencia: el listado de blog de Semrush —
 tarjetas de color plano, sin portada, título + subtítulo), iterada en un
 artefacto de diseño antes de tocar código y aprobada con Task Intake Report
@@ -21927,6 +21929,100 @@ los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
 `scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
 `.claude/rules/admin.md`.
 
+---
+
+## 247. BLOG-REDESIGN-1: el artículo del blog con la estética del estudio PDF «De buscar a preguntar» (2026-10-09)
+
+**Qué se decidió.** El fundador pidió que "al ver un post en el blog se
+parezca lo máximo posible" al estudio PDF «De buscar a preguntar», y que se
+remaqueten todos los posts. Aprobó la maqueta y el plan el mismo día
+(`docs/design-reference/blog-redesign-1/`). Los 22 artículos cambian a la vez
+porque todos se componen con la misma librería de bloques:
+
+- **Portada oscura** (`components/blog/article-hero.tsx`): migas, antetítulo
+  (clúster), titular Bricolage grande, entradilla (`description`), fecha,
+  actualización si la hay y tema. Sustituye a `<BlogCover>` + `# {post.title}`
+  + `<PostMeta>` en cada MDX, vía la nueva prop `hero` de `BlogPageShell`.
+- **Cifra grande en degradado sólo con `heroStat`** (`lib/blog/posts.ts`),
+  con fuente obligatoria (ver revisión de coherencia abajo). Un post
+  sin cifra con fuente sale sin cifra: elegir una para rellenar sería una métrica
+  falsa.
+- **Cuerpo** bajo `.lp-article`: h2 numerados 01, 02… (contador CSS, sólo h2
+  hijos directos de `.blog-body`), respuesta rápida en panel suave, cifras
+  como las tarjetas del PDF con la primera en oscuro, cita con barra azul,
+  autor en línea fina, cierre oscuro con resplandor y relacionados en
+  tarjetas. Las etiquetas pasan de monoespaciada a Figtree, como el PDF.
+
+**Por qué con ámbito.** `/comparativas`, `/docs` y `/glosario` usan los mismos
+bloques `.art-*`; nadie pidió cambiarlos. `BlogPageShell` sólo añade
+`lp-article` cuando recibe `hero`, y todo el CSS nuevo cuelga de ahí o de
+`.art-hero`.
+
+**La ilustración de portada sale del artículo** (fundador: "entiendo que con
+esto ya no hacen falta las imágenes de los posts"). Supera la regla de §73
+(SEO-POS-1 S6, "el artículo enseña la portada que declara"): `covers.test.ts`
+ahora exige `ArticleHero` y prohíbe `<BlogCover>` y `# {post.title}` en el
+MDX. `coverImage` **sigue siendo obligatorio**: lo usan el índice `/blog`, la
+tarjeta social de LinkedIn y el schema.
+
+**Pendiente.** Páginas de clúster con el mismo lenguaje (el índice se hizo
+en Fase 2, abajo), e imagen social generada automáticamente con este estilo, que
+es lo que de verdad haría innecesarias las ilustraciones en posts nuevos.
+Ningún post se ha reescrito: la figura de barras por motor de la maqueta es
+contenido, no plantilla, y el post de facturación sigue con su tabla.
+
+**Revisión de coherencia de los 22 posts (mismo día, a petición del
+fundador: "revisar absolutamente todos los posts del blog para que
+estéticamente se parezcan al nuevo post").** Se capturaron los 22 a 1280 y
+375 px y se corrigió lo que desentonaba:
+
+- `heroStat` deja de ser sólo dato propio: vale una cifra **que el post ya
+  publica** con fuente de terceros citable. Así entran GA4 (71 %, Attrifast),
+  agencias (1,08 %, Conductor), ecommerce (43 %, Capital One Shopping) y SaaS
+  B2B (51 %, G2). El antetítulo dice «Estudio GenScore» sólo con fuente
+  nuestra. Los demás posts siguen sin cifra: no tienen ninguna con fuente.
+- Cierre en un solo orden en todos: autor → cierre oscuro → relacionados
+  (diez posts lo tenían al revés). Fuera el CTA claro suelto (`.blog-cta`)
+  de «cómo elegir competidores», que duplicaba el cierre.
+- Una paleta: cifras secundarias en tinta (antes ámbar/verde/rojo),
+  «Acción rápida» en azul (antes verde), respuesta citada y checks de
+  «Hacer» en azul. El veredicto y el diagrama de pasos pasan a oscuro y a
+  borde fino como el resto. El rojo de «Evitar» se queda.
+
+**Fase 2: índice `/blog` (mismo día; el fundador: "échale una revisión a
+la portada del blog… mira específicamente los botones de ver más posts,
+que… queda un poco rarillo").**
+
+- Portada oscura igual que la del artículo (`.art-hero`), a ancho de
+  `.lp-inner`, con el último artículo como tarjeta destacada dentro; si el
+  destacado tiene `heroStat`, su cifra va al lado con la fuente.
+- Carriles numerados 01, 02… con el mismo contador y titular Bricolage que
+  las secciones del artículo; la descripción del carril en su propia línea.
+- Tarjetas blancas con borde fino, como las figuras del artículo. Los
+  colores pastel por clúster de BLOG-COVERS-2026-08 (§169) quedan
+  superseded: el número del carril identifica el clúster.
+- «Ver más →» era un enlace suelto alineado a la izquierda bajo la
+  rejilla. Pasa a botón con borde, centrado (ancho completo en móvil), que
+  dice «Ver más artículos» («Ver más comparativas» en ese carril). La
+  primera versión decía cuántos cargaba («Ver 1 artículo más»); el fundador
+  prefirió el genérico porque el número delata poco contenido, en línea con
+  su regla de no enseñar cifras absolutas pequeñas. Sigue cargando in situ,
+  como decidió el 2026-09-19.
+- El cierre «¿Aparece tu marca en ChatGPT?» toma el estilo del cierre del
+  artículo (fondo #081223 con resplandor cian); fuera el anillo decorativo.
+
+Capturas antes/después en `docs/design-reference/blog-redesign-1/`. Las
+páginas de clúster (`/blog/<clúster>`) no se han tocado: siguen pendientes.
+
+**Trazabilidad.** `components/blog/article-hero.tsx`,
+`components/blog/blog-page-shell.tsx`, `app/globals.css` (bloque
+BLOG-REDESIGN-1), `app/blog/*/page.mdx`, `lib/blog/posts.ts`,
+`lib/blog/covers.test.ts`, `.claude/rules/growth-content.md`,
+`app/blog/page.tsx`, `components/blog/blog-cluster-rail.tsx`,
+`components/blog/comparativas-rail.tsx`.
+
+---
+
 ## 248. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
 
 **Qué se decidió.** El fundador vio el informe de prospecto hecho a mano para
@@ -22053,9 +22149,174 @@ camino de recuperación.
 `public/informe-gratis/portada-ejemplo.webp`,
 `docs/design-reference/free-report-1/`.
 
+## 250. GEO-REPORT-1 Fase 2: «Descargar informe» sustituye a «Exportar plan» — el informe de GenScore con los datos del último escaneo (2026-10-09)
+
+> Supersede a §215–§219 en lo que toca a «Exportar plan»: `export-report.tsx`/
+> `.css`, `ExportPlanModal` y el markdown de respaldo se borran. Sus
+> aprendizajes de impresión (§217–§219) se conservan y pasan al informe nuevo.
+
+**Qué se hizo.** El informe aprobado en §248 ya se genera con datos reales:
+- **Página propia, `/informe/[projectId]`, fuera del layout de la consola.**
+  Sin barra lateral ni cabecera fija ni contenedor de scroll alrededor, que
+  fue lo que deformó la portada de §217. Arriba hay una barra con «Volver a la
+  consola» y «Descargar PDF» (`window.print()`); la barra no se imprime.
+- **Cargador** `lib/report/report-data.ts`: lee el último escaneo completado
+  con el cliente del usuario (RLS) y cada cifra la toma de su dueño:
+  - la Puntuación GEO, de `resolveGeoScore` con el mismo histórico;
+  - la nota técnica y las comprobaciones, de `buildTechnicalIssuesReport`;
+  - el plan, de `selectPlan` sobre los mismos puntos potenciales que calcula
+    Recomendaciones (las tres acciones del informe son las de la pantalla);
+  - la columna «¿Página tuya?», del mapa de cobertura de ese mismo escaneo.
+
+  Las respuestas sin extracción se excluyen: no cuentan como «no te nombra».
+- **Componente** `components/report/geo-report.tsx` + `geo-report.css` (clases
+  `gr-`). Tiene ocho páginas como máximo, numeradas sobre las que de verdad
+  salen: un bloque sin datos se omite y las demás se renumeran. La matriz
+  pregunta a pregunta se reparte en varias páginas
+  (`lib/report/report-pages.ts`) estimando el alto de cada fila. Nunca se
+  recorta una pregunta.
+- **Botones.** En Recomendaciones, «Descargar informe» ocupa el sitio de
+  «Exportar plan». En la cabecera de Visión general (sólo con un escaneo
+  completado) la colocación la eligió el fundador sobre maquetas
+  (`docs/design-reference/geo-report-1/boton-informe.html`), después de
+  rechazar la primera versión, que bajo 900px dejaba un icono de flecha suelto
+  en medio de la cabecera («cutrísima»):
+  - desde 900px, un botón con texto junto a la píldora de la fecha (opción B);
+  - bajo 900px no hay botón. La píldora «Escaneado <fecha>» lleva una flechita
+    y abre una hoja inferior (`<dialog>` nativo) con el escaneo y el botón de
+    descarga (opción 2 de móvil). Motivo del fundador: un elemento permanente
+    y grande no tiene sentido para algo que no se descarga a diario.
+
+  Mientras corre un escaneo, la píldora vuelve a ser sólo de estado. Los
+  enlaces abren el informe en una pestaña nueva
+  (`app/dashboard/projects/[projectId]/scan-report-control.tsx`).
+- **Plan.** Lo tienen la prueba y los planes de pago (decisión 4 de §248). Una
+  cuenta `free` ve un aviso con su salida a elegir plan. `/informe` entra en el
+  `disallow` de `robots.ts`.
+- **Tipografía.** El informe carga sus propias Bricolage (600–800) y Figtree
+  (400–800) con `next/font`, porque el layout raíz carga menos pesos y
+  ampliarlos cambiaría el peso del texto en todo el sitio.
+
+**Regla de premisa (Cierre de fase, punto 4).** Esta fase retira un camino de
+recuperación: el `ExportPlanModal` con el markdown copiable, que salía cuando
+no existía `window.print`.
+- *Premisa*: el informe ya no es una capa oculta que sólo se ve al imprimir,
+  sino una página que se lee entera en pantalla. Si la impresión falla, el
+  contenido sigue delante del usuario, que puede leerlo, guardarlo desde el
+  menú del navegador o hacer capturas.
+- *Qué la verifica hoy*: el journey de lectura
+  `recommendations-interactions.spec.ts` (paso 6) abre el enlace y exige una
+  `.gr-page` visible, y `--journeys actions` hace lo mismo con veredicto.
+- *Qué se queda sin salida si falla*: un navegador sin `window.print` en el
+  que además no se pueda leer la página (por ejemplo, un visor incrustado que
+  bloquee las pestañas nuevas). Ahí el usuario sólo tiene «Volver a la
+  consola».
+
+**Verificado.** El PDF se generó con Playwright a partir de los datos reales
+del estudio de La Fábrica del SEO y salieron nueve páginas, una por sección, sin
+página en blanco al final. Con el escenario `safari-like` de §219 (márgenes de
+página impuestos) siguen saliendo nueve páginas, sin desbordar.
+
+**Pendiente.** Fase 3: `/admin/estudio` reutiliza el mismo componente para
+los informes de prospección.
+
+**Trazabilidad.** `app/informe/[projectId]/page.tsx`,
+`components/report/{geo-report.tsx,geo-report.css,report-toolbar.tsx}` (+test),
+`lib/report/{report-data,report-pages,report-tech}.ts` (+tests),
+`.claude/rules/report.md`, `.claude/rules/recommendations.md`.
+
+## 251. STUDY-HOME-1: el estudio «De buscar a preguntar» llega al blog y a la portada como una cifra con su fuente (2026-10-09)
+
+**Qué se decidió.** El fundador pidió valorar una cita del estudio público «De
+buscar a preguntar» (PDF de 2026-10-09) en la portada, en el hueco del
+testimonio inventado que se retiró (§146 rectificado). Se descartó una cita
+con nombre: en ese hueco se habría leído como otro testimonio. Lo que entra es
+una **cifra de terceros con su fuente a la vista**, en una tarjeta compacta
+encima de «El producto» (diseño iterado con el fundador sobre capturas de la
+home real; aprobado el 2026-10-09):
+
+> 22% de los españoles ya usa la IA **en lugar del buscador**, la
+> cifra más alta de Europa. Y **casi la mitad** de quienes la usan se apoya en
+> ella para comprar. — Fuentes: Bain & Company, 2025 · IAB Spain, 2026.
+
+El botón «Ver el estudio» lleva a un **artículo nuevo**,
+`/blog/de-buscar-a-preguntar` (cluster `fundamentos`), que es la versión web
+del PDF y pasa a ser su URL canónica (el hilo del estudio publicará en
+LinkedIn sólo un resumen con enlace). El fundador eligió el artículo nuevo
+frente a enlazar el estudio de facturación ya publicado, que no contiene las
+cifras de la tarjeta.
+
+**Fidelidad de la frase (por qué no es la del fundador al pie de la letra).**
+El fundador propuso «utiliza regularmente la IA en lugar del buscador» y
+«casi la mitad lo hace para tomar una decisión de compra». Bain mide quien usa
+la IA *principalmente* en lugar del buscador (usarla con regularidad es otra
+cifra, mucho mayor), y el 45% de IAB es *entre usuarios de IA* y es «ayudarse
+en una compra»: el mismo estudio dice que sólo el 16% la cita entre los
+factores principales de su decisión. El fundador aceptó los dos matices.
+
+**Fuentes verificadas en origen el 2026-10-09** (no sólo copiadas del PDF):
+Bain, *Generative AI Consumer Survey* sept. 2025, n=7.298 en cinco países,
+1.440 en España, «Spanish consumers have the highest replacement rate, at
+22%»; IAB Spain y Elogia, encuesta online a 1.081 internautas 16-75, mayo-junio
+2026 (45%, 66%, 57%, 16%, 95%, 68%); AIMC Navegantes 28.ª ed., ~15.000
+respuestas, oct-dic 2025 (85,1% −8, 58,4% +8, 32,7% +15, Google 93,8%); Pew,
+900 adultos EE. UU., marzo 2025 (15% → 8%, 1%, 26% vs 16%). Cada cifra de
+terceros del artículo lleva fuente y muestra (`growth-content.md`). Se
+quitaron del artículo las del PDF sin muestra comprobable (Bain 60% sin clic,
+Seer +120%).
+
+**Dato propio.** Sólo porcentajes del estudio de facturación (§246), con
+enlace a él; ningún recuento, ninguna versión de modelo.
+
+**Segunda pasada (fundador, 2026-10-09).** Dos correcciones tras ver el
+preview:
+
+1. *En móvil el rótulo partía la lectura.* «Estudio · De buscar a preguntar»
+   quedaba entre el 22% y su frase. Bajo 640px `.lp-study-txt` pasa a
+   `display: contents` y el rótulo a `order: -1`: rótulo, cifra, frase, fuentes
+   y botón, sin tocar el marcado de escritorio.
+2. *El artículo tenía que estar en la plantilla nueva y tener el efecto del
+   PDF*, porque la portada enlaza a él. Usa `ArticleHero` (§247, ya en main)
+   con `heroStat` 22% · Bain & Company, 2025 (cifra que el artículo publica
+   con su muestra; el antetítulo dice «Blog GenScore», no «Estudio
+   GenScore», porque la fuente no es nuestra). Y llegan los gráficos del PDF
+   como bloques de artículo en `components/blog/article/charts.tsx`:
+   `BarChart` (AIMC y la verificación de IAB), `ColumnChart` + `ChartPair`
+   (Pew), `EngineChart` (presencia de cuatro marcas motor a motor, del
+   estudio de facturación §246) e `InsightPanel`/`Insight` (los recuadros
+   oscuros «Qué significa» del PDF). Cada barra lleva su cifra escrita —el
+   dibujo acompaña al número, nunca lo sustituye— y un 0% se escribe, no
+   desaparece (`charts.test.ts`). Paleta del artículo (tinta, azul, cian):
+   el degradado azul→cian sólo marca la fila de la IA. Las cifras de los
+   gráficos son las que ya estaban verificadas en el artículo; no entra
+   ninguna del PDF que no lo estuviera (p. ej. el 70% de IAB sobre
+   información errónea, o los usuarios únicos de GfK DAM).
+
+**Ajuste final del fundador (antes del merge).** Quitó «sobre todo» de la
+tarjeta: «ya usa la IA en lugar del buscador». Se lee como la «replacement
+rate» de Bain; la redacción precisa («usa sobre todo un chatbot de IA en
+lugar del buscador») se mantiene en el cuerpo del artículo y en la FAQ, junto
+a la muestra. El `heroStat` y la descripción del post siguen a la tarjeta.
+
+**Numeración.** Nació como §250 y pasó a §251 antes de abrir el PR: §250 lo
+reclamaban otras ramas (FREE-REPORT-2, PR #568; GEO-REPORT-1 Fase 2, ya en
+main).
+
+**Pendiente / conocido.** Si alguna de las dos cifras de la tarjeta se
+actualiza en su fuente, la tarjeta, el `heroStat` y el artículo cambian
+juntos. Los gráficos nuevos sólo los usa este artículo; están en el barril
+para quien los necesite, con la misma regla de fuente que `Stat`.
+
+**Trazabilidad.** `components/landing/landing-page.tsx` (`.lp-study`),
+`app/globals.css` (`.lp-study*` y bloque «Gráficos del estudio»),
+`components/blog/article/charts.tsx` (+test), `components/blog/article/index.ts`,
+`app/blog/de-buscar-a-preguntar/page.mdx`,
+`public/blog/de-buscar-a-preguntar/cover.webp`, `lib/blog/posts.ts`, listas del
+piloto, `docs/design-reference/study-home-1/`.
+
 ---
 
-## 250. FREE-REPORT-2: el informe gratis, en toda la web pública (2026-10-09)
+## 252. FREE-REPORT-2: el informe gratis, en toda la web pública (2026-10-09)
 
 **Qué se decidió.** El fundador quiere maximizar la captación por email con el
 informe personalizado («merece la pena maximizarla»), y aprobó el plan entero
@@ -22089,6 +22350,15 @@ etiqueta.
 **Límite conocido.** Cada informe se prepara a mano: si la captación funciona,
 el cuello de botella pasa a ser el tiempo de preparación. Sigue sin haber
 evento de conversión publicitaria para este formulario (§244, §249).
+
+**Copy de la banda, corregido por el fundador sobre el preview.** Título
+«¿Lo analizamos? Te enviamos gratis un informe de tu marca.», primera viñeta
+«En qué preguntas te nombran» (decisión suya: en una viñeta corta se lee mejor
+sin «principales de búsqueda») y fuera la nota «Sin tarjeta y sin registrarte».
+Los artboards `Portada-banda*` se actualizaron con el mismo texto.
+En la misma pasada cambió dos viñetas de `/gratis/informe-geo`: «PDF de marca,
+listo para accionar» y «Revisado por nuestro equipo antes de enviártelo»
+(también en `Main.dc.html`).
 
 **Trazabilidad.** `lib/free-report/promo.ts` (+test),
 `components/free-report/{free-report-promo-card,free-report-offers}.tsx`,

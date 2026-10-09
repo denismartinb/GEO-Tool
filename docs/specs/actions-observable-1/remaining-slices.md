@@ -30,7 +30,7 @@ Recomendaciones. Estado real hoy:
 | 2 | Generar brief | `invisible` | 4a | ✅ mergeada |
 | 3 | Generar comparativa | `invisible` | 4a | ✅ mergeada |
 | 4 | Marcar como hecho | `real`, sin deshacer | 4a | ✅ mergeada |
-| 5 | **Exportar plan** | `real` | **4b** | ❌ pendiente |
+| 5 | **Exportar plan** | `real` | **4b** | ✅ mergeada (log §210); retirada en GEO-REPORT-1 Fase 2 (log §250): ahora es el enlace «Descargar informe» |
 | 6 | **Activar seguimiento recurrente** | `invisible` | **4b** | ❌ pendiente |
 
 Las tres primeras son **un solo botón** cuyo texto cambia por tipo de

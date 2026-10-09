@@ -100,7 +100,7 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
   { href: "/geo", label: "Qué es GEO" },
   { href: "/pricing", label: "Precios" },
   { href: "/blog", label: "Blog" },
-  // FREE-REPORT-2 (log §250): the free report, highlighted and last, on every
+  // FREE-REPORT-2 (log §252): the free report, highlighted and last, on every
   // public page. Plain link, no `?desde=`: the landing is also reached from
   // ads and outreach, and a nav click is not a campaign.
   { href: FREE_REPORT_PATH, label: "Informe gratis", lead: true }

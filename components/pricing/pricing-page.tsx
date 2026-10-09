@@ -221,7 +221,7 @@ export async function PricingPage() {
           <p className="price-tax-note">
             Todos los planes empiezan con 7 días de Pro gratis, sin tarjeta. Precios con IVA incluido.
           </p>
-          {/* FREE-REPORT-2 (log §250): one quiet line for whoever still doubts. */}
+          {/* FREE-REPORT-2 (log §252): one quiet line for whoever still doubts. */}
           <FreeReportPriceLine />
         </div>
       </section>

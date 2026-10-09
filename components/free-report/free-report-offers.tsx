@@ -5,7 +5,7 @@ import { FREE_REPORT_ENTRY, freeReportHref } from "@/lib/free-report/promo";
 /**
  * FREE-REPORT-2 — the free report offered inside the page, where a pop-up
  * would compete with the trial signup (home, pricing). Design:
- * `docs/design-reference/free-report-1/` (Portada-*, Precios-*), log §250.
+ * `docs/design-reference/free-report-1/` (Portada-*, Precios-*), log §252.
  */
 
 const COVER_SRC = "/informe-gratis/portada-ejemplo.webp";

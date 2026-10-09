@@ -127,11 +127,11 @@ export function FreeReportForm({ children }: { children?: ReactNode }) {
             <ul className="fr-bullets">
               <li>
                 <CheckIcon />
-                PDF de marca, listo para enseñar a tu equipo o a tu cliente
+                PDF de marca, listo para accionar
               </li>
               <li>
                 <CheckIcon />
-                Revisado por una persona antes de enviártelo
+                Revisado por nuestro equipo antes de enviártelo
               </li>
               <li>
                 <CheckIcon />

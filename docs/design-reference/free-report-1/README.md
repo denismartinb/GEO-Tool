@@ -48,7 +48,7 @@ de aquí):
   respuesta a su petición, no comercial.
 - En móvil no se pinta la burbuja de pregunta (no estaba en `Movil.dc.html`).
 
-## FREE-REPORT-2 — el informe en toda la web pública (2026-10-09, log §250)
+## FREE-REPORT-2 — el informe en toda la web pública (2026-10-09, log §252)
 
 Mismo canvas, tableros nuevos. El fundador validó la tarjeta del blog y aprobó
 el plan completo («Dibuja esa banda y vamos con todo»):
