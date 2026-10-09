@@ -76,12 +76,15 @@ describe("parseFreeReportForm", () => {
     expect(FIELD_ERROR_MESSAGES.email_disposable).toMatch(/temporal/);
   });
 
-  it("treats a filled honeypot, a missing timestamp or a too-fast submit as a bot", () => {
+  it("treats a filled honeypot as a bot", () => {
     expect(parseFreeReportForm(form({ website: "https://spam.example" }), NOW)).toEqual({ ok: false, kind: "bot" });
-    expect(parseFreeReportForm(form({ rendered_at: "0" }), NOW)).toEqual({ ok: false, kind: "bot" });
+  });
+
+  it("flags a missing timestamp or a too-fast submit separately from the honeypot", () => {
+    expect(parseFreeReportForm(form({ rendered_at: "0" }), NOW)).toEqual({ ok: false, kind: "too_fast" });
     expect(parseFreeReportForm(form({ rendered_at: String(NOW - MIN_FILL_MS + 1) }), NOW)).toEqual({
       ok: false,
-      kind: "bot"
+      kind: "too_fast"
     });
   });
 });
@@ -96,30 +99,44 @@ describe("readSource", () => {
   });
 });
 
+/** allows + record, the way the core uses them on a delivered request. */
+function take(limiter: ReturnType<typeof createRequestLimiter>, input: { ipHash: string | null; domain: string; email: string }, now: number) {
+  if (!limiter.allows(input, now)) return false;
+  limiter.record(input, now);
+  return true;
+}
+
 describe("createRequestLimiter", () => {
   it("allows one request per domain a day, then again after 24 h", () => {
     const limiter = createRequestLimiter();
     const input = { ipHash: "h", domain: "a.es", email: "x@a.es" };
-    expect(limiter.take(input, NOW)).toBe(true);
-    expect(limiter.take({ ...input, email: "y@a.es" }, NOW + 1000)).toBe(false);
-    expect(limiter.take(input, NOW + 24 * 60 * 60 * 1000 + 1)).toBe(true);
+    expect(take(limiter, input, NOW)).toBe(true);
+    expect(take(limiter, { ...input, email: "y@a.es" }, NOW + 1000)).toBe(false);
+    expect(take(limiter, input, NOW + 24 * 60 * 60 * 1000 + 1)).toBe(true);
   });
 
   it("caps requests per IP across different domains", () => {
     const limiter = createRequestLimiter({ perIpPerDay: 2, perDomainPerDay: 1, perEmailPerDay: 5 });
-    expect(limiter.take({ ipHash: "h", domain: "a.es", email: "x@a.es" }, NOW)).toBe(true);
-    expect(limiter.take({ ipHash: "h", domain: "b.es", email: "x@b.es" }, NOW)).toBe(true);
-    expect(limiter.take({ ipHash: "h", domain: "c.es", email: "x@c.es" }, NOW)).toBe(false);
+    expect(take(limiter, { ipHash: "h", domain: "a.es", email: "x@a.es" }, NOW)).toBe(true);
+    expect(take(limiter, { ipHash: "h", domain: "b.es", email: "x@b.es" }, NOW)).toBe(true);
+    expect(take(limiter, { ipHash: "h", domain: "c.es", email: "x@c.es" }, NOW)).toBe(false);
     // Without an IP hash only the domain and email limits apply.
-    expect(limiter.take({ ipHash: null, domain: "c.es", email: "x@c.es" }, NOW)).toBe(true);
+    expect(take(limiter, { ipHash: null, domain: "c.es", email: "x@c.es" }, NOW)).toBe(true);
+  });
+
+  it("allows() never records anything", () => {
+    const limiter = createRequestLimiter({ perIpPerDay: 1, perDomainPerDay: 1, perEmailPerDay: 1 });
+    const input = { ipHash: "h", domain: "a.es", email: "x@a.es" };
+    expect(limiter.allows(input, NOW)).toBe(true);
+    expect(limiter.allows(input, NOW)).toBe(true);
   });
 
   it("does not record a denied attempt", () => {
     const limiter = createRequestLimiter({ perIpPerDay: 5, perDomainPerDay: 1, perEmailPerDay: 1 });
-    expect(limiter.take({ ipHash: "h", domain: "a.es", email: "x@a.es" }, NOW)).toBe(true);
-    expect(limiter.take({ ipHash: "h", domain: "a.es", email: "z@z.es" }, NOW)).toBe(false);
+    expect(take(limiter, { ipHash: "h", domain: "a.es", email: "x@a.es" }, NOW)).toBe(true);
+    expect(take(limiter, { ipHash: "h", domain: "a.es", email: "z@z.es" }, NOW)).toBe(false);
     // z@z.es was not recorded by the denied attempt above.
-    expect(limiter.take({ ipHash: "h", domain: "b.es", email: "z@z.es" }, NOW)).toBe(true);
+    expect(take(limiter, { ipHash: "h", domain: "b.es", email: "z@z.es" }, NOW)).toBe(true);
   });
 });
 
@@ -148,6 +165,23 @@ describe("submitFreeReportCore", () => {
     const state = await submitFreeReportCore(form(), d);
     expect(state.status).toBe("ok");
     expect(log).toHaveBeenCalledWith("confirmation_not_accepted", { domain: "tuempresa.es" });
+  });
+
+  it("lets a visitor retry after the operator email failed (no false «ya recibido»)", async () => {
+    const sendOps = vi.fn(async () => false);
+    const d = deps({ sendOps });
+    expect((await submitFreeReportCore(form(), d)).status).toBe("error");
+    sendOps.mockResolvedValueOnce(true);
+    const retry = await submitFreeReportCore(form(), d);
+    expect(retry.status).toBe("ok");
+    expect(sendOps).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks a too-fast submit to retry instead of faking success", async () => {
+    const d = deps();
+    const state = await submitFreeReportCore(form({ rendered_at: "0" }), d);
+    expect(state).toEqual({ status: "error", message: SUBMIT_MESSAGES.tooFast });
+    expect(d.sendOps).not.toHaveBeenCalled();
   });
 
   it("answers a bot like a person and sends nothing", async () => {

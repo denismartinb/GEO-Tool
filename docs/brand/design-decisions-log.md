@@ -21920,8 +21920,13 @@ para validar demanda antes de automatizar nada.
   veces, no a un atacante. Proporcionado para una fase en la que un abuso
   cuesta dos correos y ningún LLM. Fase 3 (automática, con gasto) necesita
   tabla y el conteo que falla cerrado de `lib/free-checker/rate-limit.ts`.
-- **Bots:** campo trampa oculto y envío en menos de 3 s desde que se pintó el
-  formulario. Se les contesta como a una persona y no se envía nada.
+- **Bots:** un campo trampa relleno se contesta como a una persona y no se
+  envía nada. Un envío antes de 1,5 s desde que se pintó el formulario (o
+  antes de hidratar) NO se contesta con «recibido»: puede ser una persona con
+  autocompletado, así que se le pide pulsar otra vez (hallazgo de QA).
+- **El límite se anota sólo tras entregar al operador.** Si se anotara antes,
+  el reintento tras un fallo de Resend recibiría «ya hemos recibido tu
+  petición» de algo que nadie recibió (hallazgo de QA).
 - **Correos temporales** (lista corta en `DISPOSABLE_EMAIL_DOMAINS`) se
   rechazan con su propio mensaje: el informe no llegaría a nadie.
 - **Consentimiento comercial:** casilla sin marcar, separada de la aceptación
@@ -21944,6 +21949,11 @@ para validar demanda antes de automatizar nada.
   tabla en esta fase. Antes de enviar el primer correo comercial a estos
   contactos hace falta una tabla de solicitudes con su consentimiento y una
   baja que funcione sin cuenta: eso es Fase 2/3 y necesita migración.
+- **La conservación de un año es un compromiso sin mecanismo**: los datos sólo
+  viven en el buzón del operador y en Resend; borrarlos al año es manual.
+- **Cualquiera puede bloquear 24 h el dominio de otro** pidiendo su informe
+  (límite de uno por dominio). Aceptable en esta fase: el operador ve todas
+  las peticiones.
 - **Sin conversión de anuncios.** `ConversionKind` no tiene un tipo para esta
   petición; el hilo de anuncios de pago lo añade si quiere medirla.
 - **Las respuestas del solicitante van a `soporte@genscore.es`** (Reply-To).

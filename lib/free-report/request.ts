@@ -68,7 +68,7 @@ export const DISPOSABLE_EMAIL_DOMAINS = new Set([
 ]);
 
 /** Below this, nobody typed three fields: it is a script. */
-export const MIN_FILL_MS = 3_000;
+export const MIN_FILL_MS = 1_500;
 
 const RawSchema = z.object({
   domain: z.string().trim().min(1).max(255),
@@ -94,8 +94,14 @@ export type FreeReportParseResult =
   | { ok: true; request: FreeReportRequest }
   /** A person got a field wrong: say which. */
   | { ok: false; kind: "invalid"; field: FreeReportFieldError }
-  /** Honeypot or too fast. Answered like a success, never explained. */
-  | { ok: false; kind: "bot" };
+  /** Honeypot filled. Answered like a success, never explained. */
+  | { ok: false; kind: "bot" }
+  /**
+   * Sent before the form finished loading or faster than a person types.
+   * Usually a script, but a person with autofill can get here too, so it is
+   * NOT answered with a fake «recibido»: they are asked to send it again.
+   */
+  | { ok: false; kind: "too_fast" };
 
 export const FIELD_ERROR_MESSAGES: Record<FreeReportFieldError, string> = {
   domain: "Escribe la dirección de tu web, por ejemplo tuempresa.es.",
@@ -122,7 +128,7 @@ export function parseFreeReportForm(formData: FormData, now: number): FreeReport
 
   // Bots first: a filled honeypot must not learn which of its fields was wrong.
   if (raw.website.trim() !== "") return { ok: false, kind: "bot" };
-  if (!raw.renderedAt || now - raw.renderedAt < MIN_FILL_MS) return { ok: false, kind: "bot" };
+  if (!raw.renderedAt || now - raw.renderedAt < MIN_FILL_MS) return { ok: false, kind: "too_fast" };
 
   const domain = cleanDomain(raw.domain);
   if (!isWellFormedDomain(domain)) return { ok: false, kind: "invalid", field: "domain" };
@@ -170,20 +176,27 @@ export function createRequestLimiter(limits: RequestLimits = DEFAULT_REQUEST_LIM
 
   const recent = (key: string, now: number) => (hits.get(key) ?? []).filter((t) => now - t < DAY_MS);
 
-  return {
-    /** Checks and, when allowed, records the attempt. */
-    take(input: { ipHash: string | null; domain: string; email: string }, now: number): boolean {
-      const keys: Array<[string, number]> = [
-        [`d:${input.domain}`, limits.perDomainPerDay],
-        [`e:${input.email}`, limits.perEmailPerDay]
-      ];
-      if (input.ipHash) keys.push([`i:${input.ipHash}`, limits.perIpPerDay]);
+  const keysFor = (input: { ipHash: string | null; domain: string; email: string }) => {
+    const keys: Array<[string, number]> = [
+      [`d:${input.domain}`, limits.perDomainPerDay],
+      [`e:${input.email}`, limits.perEmailPerDay]
+    ];
+    if (input.ipHash) keys.push([`i:${input.ipHash}`, limits.perIpPerDay]);
+    return keys;
+  };
 
-      for (const [key, max] of keys) {
-        if (recent(key, now).length >= max) return false;
-      }
-      for (const [key] of keys) hits.set(key, [...recent(key, now), now]);
-      return true;
+  return {
+    /** Whether another request fits. Records nothing. */
+    allows(input: { ipHash: string | null; domain: string; email: string }, now: number): boolean {
+      return keysFor(input).every(([key, max]) => recent(key, now).length < max);
+    },
+    /**
+     * Records a request that was DELIVERED. Called only after the operator
+     * email is accepted: recording a failed attempt would answer the retry
+     * with «ya hemos recibido tu petición» for a request nobody received.
+     */
+    record(input: { ipHash: string | null; domain: string; email: string }, now: number): void {
+      for (const [key] of keysFor(input)) hits.set(key, [...recent(key, now), now]);
     }
   };
 }
