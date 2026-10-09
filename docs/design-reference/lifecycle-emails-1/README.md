@@ -18,7 +18,7 @@ de marca va incrustada como data URI, así que se abre sin red.
 | Apartado «Comunicaciones comerciales» de /privacidad | B | #544 |
 | Pie de baja + cabeceras `List-Unsubscribe` en los avisos | B | #544 |
 | Bienvenida ajustada, Primer escaneo listo, D1, D3, D5 | C · LIFECYCLE-TRIAL-1 | log §233 |
-| Fin de prueba (y variante «tardía»), D+3, D+10 (dos variantes) | D · LIFECYCLE-WINBACK-1 | pendiente |
+| Fin de prueba (y variante «tardía»), D+3, D+10 con promo (la variante sin promo, personal, no se construye) | D · LIFECYCLE-WINBACK-1 | log §236 |
 
 ## Invariantes de diseño que el piloto debe comprobar
 

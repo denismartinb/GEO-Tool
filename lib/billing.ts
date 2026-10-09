@@ -7,6 +7,7 @@ import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import { getActiveSubscriptionPromo } from "@/lib/stripe";
 import { isCompedAccountEmail } from "@/lib/billing/comped-accounts";
+import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
 import type { AuthenticatedContext } from "@/lib/auth";
 
 const DEFAULT_PLAN_ID: Plan["id"] = "pro";
@@ -97,7 +98,27 @@ async function applyTrialExpiry(userId: string, row: TrialFields | null | undefi
   }
 
   if (row.email) {
-    await sendTrialEndedEmail(row.email);
+    if (isLifecycleEmailEnabled() && row.trial_ends_at) {
+      // LIFECYCLE-WINBACK-1 (log §236): the lifecycle sequence owns the
+      // end-of-trial email — sent once, recorded, and the anchor of D+3/D+10.
+      // If the daily cron already sent it, this is a no-op; loaded on demand
+      // so reading a plan never depends on the email templates.
+      try {
+        const { notifyTrialEndedOnDowngrade } = await import("@/lib/email/lifecycle/runner");
+        await notifyTrialEndedOnDowngrade(createServiceClient(), {
+          userId,
+          email: row.email,
+          trialEndsAt: new Date(row.trial_ends_at)
+        });
+      } catch (notifyError) {
+        console.error("[geo:billing] end-of-trial email failed; the downgrade itself succeeded", {
+          userId,
+          message: notifyError instanceof Error ? notifyError.message : String(notifyError)
+        });
+      }
+    } else {
+      await sendTrialEndedEmail(row.email);
+    }
   }
 
   return "free";

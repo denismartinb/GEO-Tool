@@ -21348,3 +21348,73 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 236. LIFECYCLE-WINBACK-1: el fin de prueba lo envía el servidor, y las pruebas caducadas reciben su aviso «tardío», D+3 y D+10 (Fase D de LIFECYCLE-EMAILS-1, 2026-10-09)
+
+**De dónde viene.** Fase D del plan aprobado el 2026-09-28 (§232), con las
+plantillas de «Después de la prueba» de
+`docs/design-reference/lifecycle-emails-1/`. El fundador delegó el 2026-10-09
+el plan de primera venta en el proyecto, con la condición de evitar el
+contacto personal.
+
+**Qué pasaba.** El correo de fin de prueba sólo salía en `applyTrialExpiry`
+(`lib/billing.ts`), es decir, cuando la persona **volvía** a abrir la consola
+tras caducar. Quien no volvía —justo a quien había que recuperar— no recibía
+nada, y las pruebas ya caducadas tampoco.
+
+**Qué se decide.**
+
+- **Fin de prueba (`trial_ended`) lo envía el cron diario** el día que caduca,
+  con la última foto real del escaneo (Puntuación GEO, respuestas con mención,
+  recomendaciones abiertas) o sin cifras si no hay escaneo, y la oferta de
+  `resolvePlanOffer` (`PLANS` + promo sólo si `getActivePromoPlanIds()` la
+  aplica en el checkout).
+- **Versión «tardía» (`trial_ended_late`)**, una vez, para una prueba que
+  caducó hace más de 48 h sin aviso. Se detecta sola: `current_plan` sigue sin
+  ser `free`, porque la consola, al degradar, pone `free` y borra
+  `trial_ends_at`; una cuenta que sigue así nunca pasó por ese camino ni, por
+  tanto, por su correo.
+- **Un solo envío, gane quien gane.** `sendTrialEndEmailOnce` lo comparten el
+  cron y `applyTrialExpiry` (que, con el interruptor encendido, ya no manda la
+  plantilla antigua): el primero que llega envía y anota en `email_sends`, el
+  otro lo ve y no repite.
+- **Quien se dio de baja de «consejos y ofertas»** recibe el aviso de servicio
+  de siempre (`sendTrialEndedEmail`, sin oferta), también anotado, y no entra
+  en la recuperación (§232).
+- **D+3 (`winback_d3`)**, 72 h después del fin de prueba: la distancia real con
+  el competidor más mencionado del último escaneo, o «vas por delante» si la
+  marca lidera. Nunca dice «N veces más» si la marca tiene 0 menciones. Sin
+  escaneo con ranking, no sale.
+- **D+10 (`winback_d10`)**, 7 días después de D+3 (o 10 desde el fin si D+3
+  no salió), **sólo con promo activa**; «Últimos días» sólo si la promo acaba
+  en ≤14 días.
+- **La variante sin promo del D+10 («¿Qué te faltó?», firmada por el
+  fundador) no se construye**: es contacto personal, que el fundador pidió
+  evitar el 2026-10-09, y sin promo no hay nada más que decir. Si algún día se
+  quiere, es un cambio de `decideWinbackEmail` y una plantilla.
+- Reglas puras en `decideTrialEndEmail` y `decideWinbackEmail`
+  (`lib/email/lifecycle/schedule.ts`): una vez por tipo, 48 h entre correos de
+  ciclo de vida, ni lunes (salvo el fin de prueba, que es aviso de cuenta), ni
+  suscriptores, comped, internas o bajas, y nada pasados 30 días.
+- **Precios nunca escritos a mano.** Si la revisión de precios en curso retira
+  la promo, los correos pasan solos a precio sin tachar y el D+10 deja de salir.
+- **Un único plazo para todo el cron** (`lifecycleDeadline`): las tres pasadas
+  comparten la invocación de 60 s; ninguna se da sus propios 45 s.
+
+**Corrección al plan.** El plan decía «sin migración nueva», pero 0037 fija
+`kind` con un `check`. Hace falta **0038**, que sólo amplía los valores
+permitidos (sin tablas, columnas ni políticas). Se aplica a mano **antes** de
+encender `LIFECYCLE_EMAILS_ENABLED`: sin ella el correo sale pero no se anota,
+y la pasada siguiente lo repetiría.
+
+**Pendiente.** Fase E (medición en `/admin`). Fuera del repo: aplicar 0036,
+0037 y 0038, y encender el interruptor (requisito legal de §232 aún sin
+validar). Las cuentas que ya abrieron la consola tras caducar recibieron el
+aviso antiguo y no entran en la recuperación (no hay registro de cuándo).
+
+**Trazabilidad.** `lib/email/lifecycle/{schedule,templates,runner}.ts`
+(+`winback-*.test.ts`), `lib/billing.ts`, `lib/email/transactional.ts`,
+`app/api/cron/lifecycle-emails/route.ts`,
+`supabase/migrations/0038_email_sends_winback_kinds.sql`,
+`.claude/rules/email.md`.
+
