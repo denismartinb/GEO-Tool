@@ -70,7 +70,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // STUDY-HOME-1 (2026-10-09, log §251).
   "de-buscar-a-preguntar": "fundamentos",
   // W5 (2026-10-09).
-  "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks"
+  "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks",
+  // GEO-SELF-1 Fase 3 (2026-10-09, log §259).
+  "como-aparecer-en-gemini-y-vistas-creadas-con-ia": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

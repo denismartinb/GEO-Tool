@@ -89,7 +89,9 @@ const BLOG_SLUGS = [
   // STUDY-HOME-1 (2026-10-09, log §251).
   "de-buscar-a-preguntar",
   // W5 (2026-10-09).
-  "la-ia-te-menciona-pero-recomienda-a-otro"
+  "la-ia-te-menciona-pero-recomienda-a-otro",
+  // GEO-SELF-1 Fase 3 (2026-10-09, log §259).
+  "como-aparecer-en-gemini-y-vistas-creadas-con-ia"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
