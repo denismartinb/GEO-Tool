@@ -214,13 +214,21 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
   ).toBeVisible();
   await captureInteraction(page, testInfo, "recs-detalle-abierto");
 
-  // --- 6 · Exportar plan: descarga de verdad ------------------------------
-  const exportBtn = page.getByRole("button", { name: /exportar plan/i });
-  if (await exportBtn.count()) {
-    const [download] = await Promise.all([
-      page.waitForEvent("download", { timeout: 10_000 }),
-      exportBtn.first().click()
-    ]);
-    expect(download.suggestedFilename(), "el plan exportado no es un .md").toMatch(/\.md$/);
+  // --- 6 · Descargar informe: abre el informe de verdad -------------------
+  // GEO-REPORT-1 Fase 2 (log §250) sustituyó "Exportar plan" por un enlace a
+  // /informe/<proyecto>. Es navegación, así que el set de lectura puede
+  // abrirlo: se comprueba que pinta páginas del informe, no sólo el enlace.
+  const reportLink = page.getByRole("link", { name: /descargar informe/i });
+  if (await reportLink.count()) {
+    const href = await reportLink.first().getAttribute("href");
+    expect(href, "'Descargar informe' no lleva al informe").toMatch(/^\/informe\//);
+    const reportPage = await page.context().newPage();
+    await reportPage.goto(href!);
+    await expect(
+      reportPage.locator(".gr-page").first(),
+      "el informe abre sin ninguna página"
+    ).toBeVisible({ timeout: 15_000 });
+    await captureInteraction(reportPage, testInfo, "recs-informe", { fullContent: true });
+    await reportPage.close();
   }
 });

@@ -22149,6 +22149,82 @@ camino de recuperación.
 `public/informe-gratis/portada-ejemplo.webp`,
 `docs/design-reference/free-report-1/`.
 
+## 250. GEO-REPORT-1 Fase 2: «Descargar informe» sustituye a «Exportar plan» — el informe de GenScore con los datos del último escaneo (2026-10-09)
+
+> Supersede a §215–§219 en lo que toca a «Exportar plan»: `export-report.tsx`/
+> `.css`, `ExportPlanModal` y el markdown de respaldo se borran. Sus
+> aprendizajes de impresión (§217–§219) se conservan y pasan al informe nuevo.
+
+**Qué se hizo.** El informe aprobado en §248 ya se genera con datos reales:
+- **Página propia, `/informe/[projectId]`, fuera del layout de la consola.**
+  Sin barra lateral ni cabecera fija ni contenedor de scroll alrededor, que
+  fue lo que deformó la portada de §217. Arriba hay una barra con «Volver a la
+  consola» y «Descargar PDF» (`window.print()`); la barra no se imprime.
+- **Cargador** `lib/report/report-data.ts`: lee el último escaneo completado
+  con el cliente del usuario (RLS) y cada cifra la toma de su dueño:
+  - la Puntuación GEO, de `resolveGeoScore` con el mismo histórico;
+  - la nota técnica y las comprobaciones, de `buildTechnicalIssuesReport`;
+  - el plan, de `selectPlan` sobre los mismos puntos potenciales que calcula
+    Recomendaciones (las tres acciones del informe son las de la pantalla);
+  - la columna «¿Página tuya?», del mapa de cobertura de ese mismo escaneo.
+
+  Las respuestas sin extracción se excluyen: no cuentan como «no te nombra».
+- **Componente** `components/report/geo-report.tsx` + `geo-report.css` (clases
+  `gr-`). Tiene ocho páginas como máximo, numeradas sobre las que de verdad
+  salen: un bloque sin datos se omite y las demás se renumeran. La matriz
+  pregunta a pregunta se reparte en varias páginas
+  (`lib/report/report-pages.ts`) estimando el alto de cada fila. Nunca se
+  recorta una pregunta.
+- **Botones.** En Recomendaciones, «Descargar informe» ocupa el sitio de
+  «Exportar plan». En la cabecera de Visión general (sólo con un escaneo
+  completado) la colocación la eligió el fundador sobre maquetas
+  (`docs/design-reference/geo-report-1/boton-informe.html`), después de
+  rechazar la primera versión, que bajo 900px dejaba un icono de flecha suelto
+  en medio de la cabecera («cutrísima»):
+  - desde 900px, un botón con texto junto a la píldora de la fecha (opción B);
+  - bajo 900px no hay botón. La píldora «Escaneado <fecha>» lleva una flechita
+    y abre una hoja inferior (`<dialog>` nativo) con el escaneo y el botón de
+    descarga (opción 2 de móvil). Motivo del fundador: un elemento permanente
+    y grande no tiene sentido para algo que no se descarga a diario.
+
+  Mientras corre un escaneo, la píldora vuelve a ser sólo de estado. Los
+  enlaces abren el informe en una pestaña nueva
+  (`app/dashboard/projects/[projectId]/scan-report-control.tsx`).
+- **Plan.** Lo tienen la prueba y los planes de pago (decisión 4 de §248). Una
+  cuenta `free` ve un aviso con su salida a elegir plan. `/informe` entra en el
+  `disallow` de `robots.ts`.
+- **Tipografía.** El informe carga sus propias Bricolage (600–800) y Figtree
+  (400–800) con `next/font`, porque el layout raíz carga menos pesos y
+  ampliarlos cambiaría el peso del texto en todo el sitio.
+
+**Regla de premisa (Cierre de fase, punto 4).** Esta fase retira un camino de
+recuperación: el `ExportPlanModal` con el markdown copiable, que salía cuando
+no existía `window.print`.
+- *Premisa*: el informe ya no es una capa oculta que sólo se ve al imprimir,
+  sino una página que se lee entera en pantalla. Si la impresión falla, el
+  contenido sigue delante del usuario, que puede leerlo, guardarlo desde el
+  menú del navegador o hacer capturas.
+- *Qué la verifica hoy*: el journey de lectura
+  `recommendations-interactions.spec.ts` (paso 6) abre el enlace y exige una
+  `.gr-page` visible, y `--journeys actions` hace lo mismo con veredicto.
+- *Qué se queda sin salida si falla*: un navegador sin `window.print` en el
+  que además no se pueda leer la página (por ejemplo, un visor incrustado que
+  bloquee las pestañas nuevas). Ahí el usuario sólo tiene «Volver a la
+  consola».
+
+**Verificado.** El PDF se generó con Playwright a partir de los datos reales
+del estudio de La Fábrica del SEO y salieron nueve páginas, una por sección, sin
+página en blanco al final. Con el escenario `safari-like` de §219 (márgenes de
+página impuestos) siguen saliendo nueve páginas, sin desbordar.
+
+**Pendiente.** Fase 3: `/admin/estudio` reutiliza el mismo componente para
+los informes de prospección.
+
+**Trazabilidad.** `app/informe/[projectId]/page.tsx`,
+`components/report/{geo-report.tsx,geo-report.css,report-toolbar.tsx}` (+test),
+`lib/report/{report-data,report-pages,report-tech}.ts` (+tests),
+`.claude/rules/report.md`, `.claude/rules/recommendations.md`.
+
 ## 251. STUDY-HOME-1: el estudio «De buscar a preguntar» llega al blog y a la portada como una cifra con su fuente (2026-10-09)
 
 **Qué se decidió.** El fundador pidió valorar una cita del estudio público «De
@@ -22222,8 +22298,9 @@ rate» de Bain; la redacción precisa («usa sobre todo un chatbot de IA en
 lugar del buscador») se mantiene en el cuerpo del artículo y en la FAQ, junto
 a la muestra. El `heroStat` y la descripción del post siguen a la tarjeta.
 
-**Numeración.** Nació como §250 y pasó a §251 antes de abrir el PR: la rama
-de FREE-REPORT-2 (PR #568) ya había reclamado §250.
+**Numeración.** Nació como §250 y pasó a §251 antes de abrir el PR: §250 lo
+reclamaban otras ramas (FREE-REPORT-2, PR #568; GEO-REPORT-1 Fase 2, ya en
+main).
 
 **Pendiente / conocido.** Si alguna de las dos cifras de la tarjeta se
 actualiza en su fuente, la tarjeta, el `heroStat` y el artículo cambian
