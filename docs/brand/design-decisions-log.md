@@ -21381,6 +21381,21 @@ aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
   rompe el JSON. De paso, el asistente deja de sembrar una fila vacía de
   competidor cuando no hay sugerencias: cerrada, se pintaba como una tarjeta
   «Sin nombre / sin dominio» bajo «0 competidores».
+- **Causa real, encontrada después:** con `google_search`, Gemini 3.5/3.6
+  Flash pierde el PRINCIPIO del texto de la respuesta, cortado en una frontera
+  de cita (`finishReason: STOP`, sin error), con o sin `responseMimeType`. El
+  `{` inicial del JSON no llega nunca, así que ningún parser lo recupera. Está
+  reportado en el foro de Google ("Google Search grounding drops the beginning
+  of the response text", 4 de 5 pasadas en 3.6) y no lo hace 2.5. Arreglo en
+  `generateGroundedGeminiJson`: con Gemini 3, una llamada con búsqueda que
+  responde en prosa y una segunda sin búsqueda que la estructura con
+  `responseMimeType`. Si el corte cae en la prosa se pierde una línea, no la
+  lista entera. Cuesta una llamada más (sin búsqueda) por sugerencia.
+- **El mismo corte afecta a las respuestas del escaneo** (`lib/llm/gemini.ts`)
+  y a la auditoría (`lib/web-audit/audit-domain-content.ts`), que también usan
+  `google_search`. Ahí la respuesta es prosa y no rompe nada visible, pero puede
+  perder la primera frase, y con ella una mención de marca. Sin medir; mirar si
+  las menciones de Gemini caen frente a 2.5 en la primera semana.
 - Las puntuaciones cambiarán algo con el modelo nuevo y la varianza entre
   escaneos sube al quitar `temperature: 0`; se acepta frente al riesgo de
   bucles (fallos de escaneo). Revisar con datos tras una semana.

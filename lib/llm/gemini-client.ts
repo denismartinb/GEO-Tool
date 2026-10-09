@@ -90,7 +90,7 @@ export function geminiGenerationTuning(model: string): {
   temperature?: number;
   thinkingConfig: { thinkingBudget: number } | { thinkingLevel: "minimal" | "low" };
 } {
-  if (/^gemini-[12]\./i.test(model)) {
+  if (isGemini2Model(model)) {
     return { temperature: 0, thinkingConfig: { thinkingBudget: 0 } };
   }
   const acceptsMinimal = /^gemini-3\.(?:[56]-flash|1-flash-lite)/i.test(model);
@@ -259,12 +259,27 @@ export async function generateGroundedGeminiJson(promptBlock: string): Promise<u
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
 
+  const model = getGeminiModel();
+  if (!isGemini2Model(model)) {
+    // Gemini 3.5/3.6 Flash with google_search drops the START of the answer
+    // text at a citation-segment boundary (finishReason STOP, no error), with
+    // or without responseMimeType — so the opening `{` of a JSON reply never
+    // arrives and no parser can recover it. Reported upstream on
+    // discuss.ai.google.dev ("Google Search grounding drops the beginning of
+    // the response text", 4/5 runs on 3.6). Workaround: search in prose, then
+    // structure the findings in a second, ungrounded call that can use
+    // responseMimeType. A truncated prose answer loses one item, not all of
+    // them (ADR 0042, log §240).
+    const findings = await generateGroundedGeminiText(apiKey, groundedResearchPrompt(promptBlock));
+    return generateGeminiJson(structureFindingsPrompt(promptBlock, findings));
+  }
+
   const response = await fetchGeminiWithRetry(
     generateContentEndpoint(apiKey),
     JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
       tools: [{ google_search: {} }],
-      generationConfig: geminiGenerationTuning(getGeminiModel())
+      generationConfig: geminiGenerationTuning(model)
     })
   );
 
@@ -278,6 +293,50 @@ export async function generateGroundedGeminiJson(promptBlock: string): Promise<u
   } catch {
     throw new ExtractionError("invalid_json", "Gemini suggestion returned invalid JSON.");
   }
+}
+
+function isGemini2Model(model: string): boolean {
+  return /^gemini-[12]\./i.test(model);
+}
+
+async function generateGroundedGeminiText(apiKey: string, promptBlock: string): Promise<string> {
+  const response = await fetchGeminiWithRetry(
+    generateContentEndpoint(apiKey),
+    JSON.stringify({
+      contents: [{ parts: [{ text: promptBlock }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: geminiGenerationTuning(getGeminiModel())
+    })
+  );
+
+  const text = firstCandidateText(await response.json());
+  if (!text) {
+    throw new ExtractionError("empty", "Gemini grounded research returned empty text.");
+  }
+  return text;
+}
+
+/** Step 1 of the Gemini 3 grounded flow: the same task, answered as prose. */
+export function groundedResearchPrompt(promptBlock: string): string {
+  return [
+    "Use Google Search to research the task below.",
+    "Answer in plain prose, one finding per line, including every name and root domain you find.",
+    "Do NOT format the answer as JSON — a later step will structure it.",
+    "",
+    "--- TASK ---",
+    promptBlock
+  ].join("\n");
+}
+
+/** Step 2: the original task, answered as JSON from step 1's findings only. */
+export function structureFindingsPrompt(promptBlock: string, findings: string): string {
+  return [
+    promptBlock,
+    "",
+    "Base your answer ONLY on these web research findings. Do not add anything they do not support. If the first line looks cut off, use what is readable.",
+    "--- FINDINGS ---",
+    findings
+  ].join("\n");
 }
 
 export { GEMINI_API_URL, GEMINI_CALL_TIMEOUT_MS };

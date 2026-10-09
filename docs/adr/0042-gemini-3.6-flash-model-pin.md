@@ -71,6 +71,14 @@ that risk for no measured gain on this task. Same token price as 3.7/3.8.
   2026-08.md`, before sampling ×3) we stay inside the free search tier; past
   ~5,000 queries/month grounding becomes a real line item. Rough per-scan
   Gemini cost goes from ~$0.002/call to ~$0.004–0.006/call in tokens.
+- **Grounded JSON needs two calls on Gemini 3.** With `google_search`,
+  3.5/3.6 Flash drops the start of the answer text at a citation boundary
+  (`finishReason: STOP`), with or without `responseMimeType`, so a grounded
+  JSON reply loses its opening `{` (upstream report on discuss.ai.google.dev;
+  not seen on 2.5). `generateGroundedGeminiJson` therefore searches in prose
+  and structures the findings in a second, ungrounded JSON call. The scan's
+  and the web audit's grounded prose answers can lose their first sentence
+  the same way; unmeasured (log §240).
 - **Rollback:** set `GEMINI_MODEL=gemini-2.5-flash` in Vercel; no deploy of
   code needed and the 2.x tuning applies automatically.
 - **If `GEMINI_MODEL` is already set in Vercel** (ADR 0009 says it was set to

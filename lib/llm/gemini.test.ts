@@ -1012,7 +1012,10 @@ describe("inferBusinessProfile", () => {
 describe("suggestCompetitors (grounded, business-profile-driven)", () => {
   beforeEach(() => {
     process.env.GEMINI_API_KEY = "test-key";
-    delete process.env.GEMINI_MODEL;
+    // The single grounded call these cases mock is the Gemini 2.x path.
+    // Gemini 3 searches and structures in two calls (ADR 0042), covered in
+    // gemini-client.test.ts.
+    process.env.GEMINI_MODEL = "gemini-2.5-flash";
   });
 
   afterEach(() => {
