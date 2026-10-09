@@ -1240,6 +1240,22 @@ export async function executePendingScan({
       });
     }
 
+    // FUNNEL-EVENTS-1: one event per completed run, keyed by the account
+    // owner. "First scan" is a funnel filter in PostHog (first occurrence per
+    // person), so no extra query is spent here. In `after()` for the same
+    // reason as the email above: never on this invocation's budget, and
+    // nothing scheduled when analytics is off.
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      after(async () => {
+        const { captureFunnelEvent } = await import("@/lib/analytics/funnel-events");
+        await captureFunnelEvent("scan_completed", project.owner_user_id as string, {
+          project_id: projectId,
+          run_id: runId,
+          prompts_processed: totalSuccessCount ?? 0
+        });
+      });
+    }
+
     // AUDIT-AFTER-SCAN-1: the web audit is no longer something a human has to
     // remember to click. Queued here, after the run is durably 'completed',
     // because the audit reads the run's persisted results — queueing earlier

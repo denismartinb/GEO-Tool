@@ -16351,6 +16351,8 @@ la que ya esté en `main`) y con ella todas sus referencias
 
 ## 169. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
 
+> **Superseded en parte por §247 (Fase 2, 2026-10-09):** las tarjetas de color por clúster pasan a blancas con borde fino y el carril se identifica por su número.
+
 **Propuesta del fundador** (referencia: el listado de blog de Semrush —
 tarjetas de color plano, sin portada, título + subtítulo), iterada en un
 artefacto de diseño antes de tocar código y aprobada con Task Intake Report
@@ -21447,6 +21449,43 @@ invocación), por eso los escaneos avanzan igualmente, pero cada eslabón
 consume una invocación de 60 s y el `response.ok` nunca llega a leerse. Que la
 ruta responda en cuanto acepta el lote y trabaje en `after()` es un cambio de
 pipeline con su propio Task Intake (agente `reliability`).
+
+## 242. FUNNEL-EVENTS-1: cuatro hitos del embudo en PostHog, desde el servidor (2026-10-09)
+
+**Qué se decidió.** `lib/analytics/funnel-events.ts` envía a PostHog EU, por
+HTTP y desde el servidor: `signup_submitted` (alta con contraseña enviada,
+antes de confirmar), `signup_completed` (primera sesión real: callback de
+auth o alta sin confirmación), `scan_completed` (cada run completado, en
+`after()`), `checkout_started` (sesión de Stripe creada) y
+`payment_completed` (webhook `checkout.session.completed`, tras guardar el
+plan, con `uuid` derivado del id del evento de Stripe para que un reintento
+no cuente dos pagos). `distinct_id` = id de usuario de Supabase; nunca email,
+nombre ni dominio. Un intento, 2 s de tope, nunca lanza.
+
+**Por qué en servidor.** El SDK del navegador corre sin cookies
+(`persistence: "memory"`): cada carga es un id anónimo nuevo, así que con
+eventos de navegador el embudo registro → pago no se podía unir nunca. Se
+necesitaba antes de lanzar anuncios.
+
+**Privacidad.** `/privacidad` decía que PostHog «no te identifica entre
+sesiones ni dispositivos». Con estos hitos eso ya no es cierto para quien
+tiene cuenta, así que el texto se corrige en el mismo PR. **Es texto legal:
+lo valida el fundador en el Human Gate.** `/cookies` no cambia: sigue sin
+haber cookies de analítica.
+
+**Pendiente / conocido.**
+- El primer paso del embudo (visita anónima → alta) no se une a los demás:
+  la visita no tiene id persistente. Para atribuir anuncios hará falta
+  guardar `utm_*` en el alta (fase aparte).
+- «Primer escaneo» no es un evento propio: es el primer `scan_completed` de
+  cada persona, filtro nativo de los embudos de PostHog.
+
+**Adenda (2026-10-09, antes del merge).** Cada evento lleva
+`$geoip_disable: true`. El primer `signup_submitted` real del preview llegó
+con la ubicación de Vercel (Dublín, Irlanda) puesta en la persona, porque la
+petición sale del servidor; sin esto todo desglose por país en PostHog
+contaría a cada cliente como irlandés.
+
 ## 238. LIFECYCLE-WINBACK-1: el fin de prueba lo envía el servidor, y las pruebas caducadas reciben su aviso «tardío», D+3 y D+10 (Fase D de LIFECYCLE-EMAILS-1, 2026-10-09)
 
 **De dónde viene.** Fase D del plan aprobado el 2026-09-28 (§232), con las
@@ -21890,6 +21929,100 @@ los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
 `scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
 `.claude/rules/admin.md`.
 
+---
+
+## 247. BLOG-REDESIGN-1: el artículo del blog con la estética del estudio PDF «De buscar a preguntar» (2026-10-09)
+
+**Qué se decidió.** El fundador pidió que "al ver un post en el blog se
+parezca lo máximo posible" al estudio PDF «De buscar a preguntar», y que se
+remaqueten todos los posts. Aprobó la maqueta y el plan el mismo día
+(`docs/design-reference/blog-redesign-1/`). Los 22 artículos cambian a la vez
+porque todos se componen con la misma librería de bloques:
+
+- **Portada oscura** (`components/blog/article-hero.tsx`): migas, antetítulo
+  (clúster), titular Bricolage grande, entradilla (`description`), fecha,
+  actualización si la hay y tema. Sustituye a `<BlogCover>` + `# {post.title}`
+  + `<PostMeta>` en cada MDX, vía la nueva prop `hero` de `BlogPageShell`.
+- **Cifra grande en degradado sólo con `heroStat`** (`lib/blog/posts.ts`),
+  con fuente obligatoria (ver revisión de coherencia abajo). Un post
+  sin cifra con fuente sale sin cifra: elegir una para rellenar sería una métrica
+  falsa.
+- **Cuerpo** bajo `.lp-article`: h2 numerados 01, 02… (contador CSS, sólo h2
+  hijos directos de `.blog-body`), respuesta rápida en panel suave, cifras
+  como las tarjetas del PDF con la primera en oscuro, cita con barra azul,
+  autor en línea fina, cierre oscuro con resplandor y relacionados en
+  tarjetas. Las etiquetas pasan de monoespaciada a Figtree, como el PDF.
+
+**Por qué con ámbito.** `/comparativas`, `/docs` y `/glosario` usan los mismos
+bloques `.art-*`; nadie pidió cambiarlos. `BlogPageShell` sólo añade
+`lp-article` cuando recibe `hero`, y todo el CSS nuevo cuelga de ahí o de
+`.art-hero`.
+
+**La ilustración de portada sale del artículo** (fundador: "entiendo que con
+esto ya no hacen falta las imágenes de los posts"). Supera la regla de §73
+(SEO-POS-1 S6, "el artículo enseña la portada que declara"): `covers.test.ts`
+ahora exige `ArticleHero` y prohíbe `<BlogCover>` y `# {post.title}` en el
+MDX. `coverImage` **sigue siendo obligatorio**: lo usan el índice `/blog`, la
+tarjeta social de LinkedIn y el schema.
+
+**Pendiente.** Páginas de clúster con el mismo lenguaje (el índice se hizo
+en Fase 2, abajo), e imagen social generada automáticamente con este estilo, que
+es lo que de verdad haría innecesarias las ilustraciones en posts nuevos.
+Ningún post se ha reescrito: la figura de barras por motor de la maqueta es
+contenido, no plantilla, y el post de facturación sigue con su tabla.
+
+**Revisión de coherencia de los 22 posts (mismo día, a petición del
+fundador: "revisar absolutamente todos los posts del blog para que
+estéticamente se parezcan al nuevo post").** Se capturaron los 22 a 1280 y
+375 px y se corrigió lo que desentonaba:
+
+- `heroStat` deja de ser sólo dato propio: vale una cifra **que el post ya
+  publica** con fuente de terceros citable. Así entran GA4 (71 %, Attrifast),
+  agencias (1,08 %, Conductor), ecommerce (43 %, Capital One Shopping) y SaaS
+  B2B (51 %, G2). El antetítulo dice «Estudio GenScore» sólo con fuente
+  nuestra. Los demás posts siguen sin cifra: no tienen ninguna con fuente.
+- Cierre en un solo orden en todos: autor → cierre oscuro → relacionados
+  (diez posts lo tenían al revés). Fuera el CTA claro suelto (`.blog-cta`)
+  de «cómo elegir competidores», que duplicaba el cierre.
+- Una paleta: cifras secundarias en tinta (antes ámbar/verde/rojo),
+  «Acción rápida» en azul (antes verde), respuesta citada y checks de
+  «Hacer» en azul. El veredicto y el diagrama de pasos pasan a oscuro y a
+  borde fino como el resto. El rojo de «Evitar» se queda.
+
+**Fase 2: índice `/blog` (mismo día; el fundador: "échale una revisión a
+la portada del blog… mira específicamente los botones de ver más posts,
+que… queda un poco rarillo").**
+
+- Portada oscura igual que la del artículo (`.art-hero`), a ancho de
+  `.lp-inner`, con el último artículo como tarjeta destacada dentro; si el
+  destacado tiene `heroStat`, su cifra va al lado con la fuente.
+- Carriles numerados 01, 02… con el mismo contador y titular Bricolage que
+  las secciones del artículo; la descripción del carril en su propia línea.
+- Tarjetas blancas con borde fino, como las figuras del artículo. Los
+  colores pastel por clúster de BLOG-COVERS-2026-08 (§169) quedan
+  superseded: el número del carril identifica el clúster.
+- «Ver más →» era un enlace suelto alineado a la izquierda bajo la
+  rejilla. Pasa a botón con borde, centrado (ancho completo en móvil), que
+  dice «Ver más artículos» («Ver más comparativas» en ese carril). La
+  primera versión decía cuántos cargaba («Ver 1 artículo más»); el fundador
+  prefirió el genérico porque el número delata poco contenido, en línea con
+  su regla de no enseñar cifras absolutas pequeñas. Sigue cargando in situ,
+  como decidió el 2026-09-19.
+- El cierre «¿Aparece tu marca en ChatGPT?» toma el estilo del cierre del
+  artículo (fondo #081223 con resplandor cian); fuera el anillo decorativo.
+
+Capturas antes/después en `docs/design-reference/blog-redesign-1/`. Las
+páginas de clúster (`/blog/<clúster>`) no se han tocado: siguen pendientes.
+
+**Trazabilidad.** `components/blog/article-hero.tsx`,
+`components/blog/blog-page-shell.tsx`, `app/globals.css` (bloque
+BLOG-REDESIGN-1), `app/blog/*/page.mdx`, `lib/blog/posts.ts`,
+`lib/blog/covers.test.ts`, `.claude/rules/growth-content.md`,
+`app/blog/page.tsx`, `components/blog/blog-cluster-rail.tsx`,
+`components/blog/comparativas-rail.tsx`.
+
+---
+
 ## 248. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
 
 **Qué se decidió.** El fundador vio el informe de prospecto hecho a mano para
@@ -21923,6 +22056,98 @@ con un competidor y marca blanca para agencias.
 
 **Trazabilidad.** `lib/report/report-model.ts` (+test),
 `docs/design-reference/geo-report-1/`, `.claude/rules/report.md`.
+
+## 249. FREE-REPORT-1 Fase 1: «Pide tu informe GEO gratis», formulario con entrega manual en 48 h laborables (2026-10-09)
+
+**Qué.** Landing pública `/gratis/informe-geo` con un formulario de tres
+campos (web, email de trabajo, qué vendes) y una casilla opcional de
+comunicaciones. Al enviarlo, un correo al operador (`OPS_ALERT_EMAIL`) con la
+petición y un correo de confirmación al solicitante. Ninguna llamada a un LLM
+y ninguna migración: el operador lanza `/admin/estudio` (§246), el hilo de
+outreach cura el informe con la plantilla de prospecto y se envía a mano.
+Diseño aprobado por el fundador en `docs/design-reference/free-report-1/`.
+
+**Por qué.** El informe de prospecto de 8 páginas (La Fábrica del SEO,
+2026-10-09) le pareció al fundador mejor que todo lo que enseña el producto
+hoy, y pidió explotarlo como gancho para anuncios de pago y outreach. El
+comprobador gratuito da una respuesta de un motor; esto da el diagnóstico
+completo. Task Intake en el hilo «Outreach a empresas objetivo»: Fase 1 manual
+para validar demanda antes de automatizar nada.
+
+**Decisiones.**
+
+- **El éxito depende del correo al operador.** Si Resend no lo acepta, el
+  visitante ve un error y no recibe confirmación: decirle «recibido» de una
+  petición que nadie ha recibido es un éxito falso. El fallo sólo de la
+  confirmación no deshace nada, porque el operador ya tiene la petición.
+- **Límite por instancia, dicho como tal.** `createRequestLimiter`: una
+  petición por dominio y día, dos por email, tres por IP (hash con
+  `PUBLIC_CHECK_IP_SALT`; sin sal se omite la IP). Vive en memoria y Vercel
+  reparte peticiones entre instancias, así que frena al que pulsa veinte
+  veces, no a un atacante. Proporcionado para una fase en la que un abuso
+  cuesta dos correos y ningún LLM. Fase 3 (automática, con gasto) necesita
+  tabla y el conteo que falla cerrado de `lib/free-checker/rate-limit.ts`.
+- **Bots:** un campo trampa relleno se contesta como a una persona y no se
+  envía nada. Un envío antes de 1,5 s desde que se pintó el formulario (o
+  antes de hidratar) NO se contesta con «recibido»: puede ser una persona con
+  autocompletado, así que se le pide pulsar otra vez (hallazgo de QA).
+- **El límite se anota sólo tras entregar al operador.** Si se anotara antes,
+  el reintento tras un fallo de Resend recibiría «ya hemos recibido tu
+  petición» de algo que nadie recibió (hallazgo de QA).
+- **Tres vías de consentimiento, sin consentimiento implícito** (fundador,
+  2026-10-09, tras proponer quitar la casilla porque «nadie va a clicar»). Se
+  descartó dar el consentimiento por aceptado al enviar o premarcar la casilla:
+  no vale para correo comercial (art. 21.1 LSSI; TJUE Planet49). Lo que sí se
+  hace: (1) la casilla ofrece algo concreto que existe, los estudios de
+  GenScore sobre qué marcas recomienda la IA (§246), en vez de «consejos y
+  novedades»; (2) seguimiento sobre el propio informe, como mucho entrega y
+  dos recordatorios, que responde a la petición (art. 6.1.b) y no es marketing;
+  (3) el correo de entrega pide un «sí» por respuesta, que queda como prueba
+  en Gmail. Plantillas de (2) y (3) fuera del repo, en
+  `/mnt/project-files/estudios/informes/plantilla/correos-entrega-y-seguimiento.md`.
+  `/privacidad` describe las tres.
+- **Correos temporales** (lista corta en `DISPOSABLE_EMAIL_DOMAINS`) se
+  rechazan con su propio mensaje: el informe no llegaría a nadie.
+- **Consentimiento comercial:** casilla sin marcar, separada de la aceptación
+  de la política. Petición del fundador: texto genérico y que sirva de base
+  para nutrir leads; la casilla es lo que lo hace legal para quien no es
+  cliente (art. 21.1 LSSI; un consentimiento metido en las condiciones no vale,
+  `.claude/rules/email.md`). Nueva sección «Si pides un informe gratuito» en
+  `/privacidad`: base 6.1.b para el informe, 6.1.a para lo comercial,
+  conservación de un año sin cuenta.
+- **Copy público:** sin cifras absolutas, «preguntas principales de
+  búsqueda», motores sin versiones, «48 h laborables» (§246 y regla de
+  `growth-content.md`). Lo vigila `lib/free-report/emails.test.ts` en el
+  correo al solicitante.
+- **Bajo `/gratis/`** para que el matcher del middleware ya la salte: la
+  página no lee sesión.
+
+**Pendiente o roto conocido.**
+
+- **El consentimiento sólo queda registrado en el correo al operador.** No hay
+  tabla en esta fase. Antes de enviar el primer correo comercial a estos
+  contactos hace falta una tabla de solicitudes con su consentimiento y una
+  baja que funcione sin cuenta: eso es Fase 2/3 y necesita migración.
+- **La conservación de un año es un compromiso sin mecanismo**: los datos sólo
+  viven en el buzón del operador y en Resend; borrarlos al año es manual.
+- **Cualquiera puede bloquear 24 h el dominio de otro** pidiendo su informe
+  (límite de uno por dominio). Aceptable en esta fase: el operador ve todas
+  las peticiones.
+- **Sin conversión de anuncios.** `ConversionKind` no tiene un tipo para esta
+  petición; el hilo de anuncios de pago lo añade si quiere medirla.
+- **Las respuestas del solicitante van a `soporte@genscore.es`** (Reply-To).
+  Si ese buzón no se lee, esas respuestas se pierden.
+- Nadie enlaza aún a la página salvo el sitemap: los enlaces desde el blog
+  (tarjeta por tiempo de lectura, idea del fundador) van aparte, con su UX.
+
+**Regla de premisa (paso 4 del cierre).** No aplica: no se retira ningún
+camino de recuperación.
+
+**Trazabilidad.** `app/gratis/informe-geo/{page.tsx,actions.ts}`,
+`components/free-report/free-report-form.tsx`, `lib/free-report/*` (+tests),
+`app/privacidad/page.tsx`, `app/sitemap.ts`, `app/globals.css` (bloque `fr-`),
+`public/informe-gratis/portada-ejemplo.webp`,
+`docs/design-reference/free-report-1/`.
 
 ## 250. GEO-REPORT-1 Fase 2: «Descargar informe» sustituye a «Exportar plan» — el informe de GenScore con los datos del último escaneo (2026-10-09)
 

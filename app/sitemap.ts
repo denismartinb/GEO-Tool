@@ -62,6 +62,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "", lastModified: "2026-08-25" },
   { path: "/geo", lastModified: "2026-07-23" },
   { path: "/gratis/aparece-mi-marca-en-chatgpt", lastModified: "2026-08-15" },
+  { path: "/gratis/informe-geo", lastModified: "2026-10-09" },
   { path: "/que-es-genscore", lastModified: "2026-08-15" },
   { path: "/pricing", lastModified: "2026-08-25" },
   { path: "/blog", lastModified: "2026-07-12" },
@@ -73,7 +74,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/comparativas/mejores-herramientas-geo-en-espanol", lastModified: "2026-08-12" },
   { path: "/comparativas/genscore-vs-profound", lastModified: "2026-08-11" },
   { path: "/comparativas/alternativas-a-otterly", lastModified: "2026-08-12" },
-  { path: "/privacidad", lastModified: "2026-07-19" },
+  { path: "/privacidad", lastModified: "2026-10-09" },
   { path: "/cookies", lastModified: "2026-07-12" },
   { path: "/terminos", lastModified: "2026-07-19" }
 ];

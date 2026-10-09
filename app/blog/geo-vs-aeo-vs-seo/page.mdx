@@ -3,17 +3,16 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   CompareTable,
   Verdict,
   AuthorBio,
   ArticleCta,
-  Figure,
-  PostMeta
+  Figure
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("geo-vs-aeo-vs-seo");
 
@@ -48,13 +47,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -159,16 +152,16 @@ Llames a esto como lo llames, debajo siempre está lo mismo. Cuando alguien le p
 
 Eso no cambia según la sigla que elijas. Lo que cambia es qué estás midiendo: una posición en un buscador, o tu presencia dentro de una respuesta generada. Si todavía no tienes claro en cuál de las dos estás, ese es el primer paso, y es anterior a decidir cómo lo llamas.
 
-<ArticleCta
-  title="Deja de discutir el nombre y mide lo que importa"
-  text="GenScore te dice si ChatGPT, Gemini o Claude mencionan tu marca, con qué prominencia y si citan una fuente. Prueba Pro 7 días gratis, sin tarjeta."
-/>
-
 <AuthorBio>
 
 Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
 
 </AuthorBio>
+
+<ArticleCta
+  title="Deja de discutir el nombre y mide lo que importa"
+  text="GenScore te dice si ChatGPT, Gemini o Claude mencionan tu marca, con qué prominencia y si citan una fuente. Prueba Pro 7 días gratis, sin tarjeta."
+/>
 
 <RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
 

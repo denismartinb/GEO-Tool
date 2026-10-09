@@ -60,33 +60,36 @@ describe("todo artículo publicado tiene portada propia", () => {
 });
 
 /**
- * SEO-POS-1 S6 (log §71): tener la portada declarada no es lo mismo que
- * enseñarla. `BlogCover` sólo pinta la imagen si recibe `image`; sin esa prop
- * cae al degradado con icono — el respaldo que existe para los artículos SIN
- * portada, y que el fundador describió como "un icono de algo que no carga
- * bien".
+ * BLOG-REDESIGN-1 (log §247) — superseded el bloque de SEO-POS-1 S6 (log §71)
+ * que exigía `<BlogCover image=…>` en cada artículo. Desde el rediseño con la
+ * estética del estudio PDF, la cabecera del artículo es la portada oscura de
+ * `ArticleHero` y la ilustración ya no se pinta dentro del post (fundador,
+ * 2026-10-09). `coverImage` sigue siendo obligatorio arriba porque lo usan el
+ * índice `/blog`, la tarjeta social y el schema.
  *
- * Cuatro artículos estaban justo así: con `coverImage` declarado (y por tanto
- * con portada correcta en `/blog`, en la tarjeta social y en el schema) y con
- * el degradado en su propia cabecera. Los tests de arriba no lo veían porque
- * miran `BLOG_POSTS` y el disco, no el MDX; y como los cuatro se escribieron
- * copiando la cabecera del anterior, el fallo se propagaba solo.
+ * Lo que este bloque vigila ahora es lo mismo que vigilaba §71, un nivel más
+ * arriba: que ningún artículo se quede con la cabecera vieja por haber
+ * copiado la de otro.
  */
-describe("el artículo enseña la portada que declara", () => {
-  for (const post of BLOG_POSTS.filter((p) => p.coverImage)) {
-    it(`pasa image a BlogCover: ${post.slug}`, () => {
+describe("todo artículo usa la portada oscura del rediseño", () => {
+  for (const post of BLOG_POSTS) {
+    it(`renderiza <ArticleHero /> y no la cabecera anterior: ${post.slug}`, () => {
       const source = readFileSync(join(process.cwd(), "app", "blog", post.slug, "page.mdx"), "utf8");
-      const call = source.match(/<BlogCover[^>]*\/>/)?.[0] ?? "";
 
-      expect(call, `${post.slug} no renderiza <BlogCover />`).not.toBe("");
-      expect(
-        call,
-        `${post.slug} declara coverImage pero no se lo pasa a BlogCover, así que la ` +
-          "cabecera pinta el degradado con icono en vez de la portada real."
-      ).toContain("image={post.coverImage}");
-      expect(call, `${post.slug}: una portada real necesita alt`).toContain("alt=");
+      expect(source, `${post.slug} no pasa <ArticleHero /> a BlogPageShell`).toContain(
+        "<BlogPageShell hero={<ArticleHero post={post} />}>"
+      );
+      expect(source, `${post.slug} sigue pintando la ilustración dentro del artículo`).not.toContain("<BlogCover");
+      expect(source, `${post.slug} repite el título: ArticleHero ya pinta el h1`).not.toMatch(/^# \{post\.title\}/m);
     });
   }
+
+  it("la cifra de portada siempre lleva fuente", () => {
+    for (const post of BLOG_POSTS.filter((p) => p.heroStat)) {
+      expect(post.heroStat?.source.trim(), `${post.slug}: heroStat sin fuente`).toBeTruthy();
+      expect(post.heroStat?.value.trim(), `${post.slug}: heroStat sin valor`).toBeTruthy();
+    }
+  });
 });
 
 describe("la deuda de portadas solo puede encoger", () => {
