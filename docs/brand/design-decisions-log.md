@@ -21348,3 +21348,45 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 238. SECTOR-STUDY-1: estudio sectorial «¿qué marcas recomienda la IA?» con datos medidos, desde script o desde /admin/estudio (2026-10-09)
+
+**Para qué.** Contenido de captación (artículo del blog + dos posts de
+LinkedIn) basado en un dato propio: preguntar a los motores lo que pregunta un
+comprador de un sector y contar qué marcas nombran. La regla de siempre: ni
+una cifra que no salga de una medición.
+
+**Decisión.** La medición es la de un escaneo, no una imitación: la misma
+instrucción neutral de generación (ADR 0007), el mismo extractor de cada motor
+y la misma verificación literal de menciones (ADR 0021). Como no hay marca
+cliente, las candidatas del sector entran como lista vigilada (dan mención
+verificada y posición) y `other_brands_mentioned` recoge las demás (máximo 5
+por respuesta, así que su presencia es un mínimo y el informe lo dice). Una
+respuesta fallida se cuenta como fallo y sale del denominador, nunca como una
+respuesta que no nombró a nadie; con cero respuestas válidas el informe se
+niega a publicar ranking, y con más del 20% de fallos lo avisa.
+
+- `lib/studies/sector-study.ts`: sectores, conteo e informe. Puro, sin
+  `server-only`, para que el navegador agregue.
+- `lib/studies/run-sector-answer.ts`: una respuesta (generar + extraer +
+  verificar), con `server-only`.
+- `scripts/sector-study.ts` (`pnpm study:sector`): con las claves locales.
+- `/admin/estudio`: la misma medición con las claves de Vercel, porque el
+  fundador no tiene `ANTHROPIC_API_KEY` en local. El navegador lanza pasos de
+  una pregunta × motores elegidos (dos en vuelo), cada paso es una server
+  action con `requireOperator()` dentro y su propio presupuesto de 45 s en una
+  función de 60 s. **No escribe en la base de datos**: el informe y las
+  respuestas crudas se descargan. Por eso no lleva correo a `OPS_ALERT_EMAIL`,
+  que la regla de `/admin` exige para escrituras.
+- `scripts/domain-check.ts` (`pnpm check:domains`): la comprobación gratuita
+  de la web, con las mismas dependencias que su ruta, en lote, para responder
+  a un post de «déjame tu dominio». Local, sin fila en `public_checks`.
+
+**Pendiente.** El gasto de `/admin/estudio` no tiene techo más allá de lo que
+valida la acción (un sector, hasta 3 motores, hasta 3 repeticiones: como
+mucho ~108 respuestas por pasada) y del propio acceso de operador. Si pasa a
+usarse a menudo, merece un registro del coste.
+
+**Trazabilidad.** `lib/studies/*`, `app/admin/estudio/*`,
+`scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
+`.claude/rules/admin.md`.

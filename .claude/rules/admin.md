@@ -201,3 +201,10 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   both read the EFFECTIVE plan (`resolveSystemPlanId`), never the raw
   `current_plan` (`docs/brand/design-decisions-log.md` §229, §230). A change
   to what the watchdog alerts on changes this column with it, in the same PR.
+- **`/admin/estudio` gasta llamadas a los motores, no escribe filas, y tiene
+  que seguir así.** Cada paso es una server action con `requireOperator()` como
+  primera línea, valida sector, motores (subconjunto de los tres), pregunta y
+  repeticiones (≤3) antes de llamar a nadie, y devuelve los resultados al
+  navegador para descargarlos. Si algún día persiste el estudio, eso es una
+  escritura y necesita su Task Intake y su correo a `OPS_ALERT_EMAIL` como
+  cualquier otra (`docs/brand/design-decisions-log.md` §238).

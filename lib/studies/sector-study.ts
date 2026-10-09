@@ -1,0 +1,284 @@
+/**
+ * SECTOR-STUDY-1 — «¿Qué marcas españolas de <sector> recomienda la IA?»
+ *
+ * Pure half of the sector study: sector definitions, how mentions are
+ * counted, and the report. No network, no `server-only`, so the same code
+ * runs in the founder's local script (`scripts/sector-study.ts`) and in the
+ * operator page (`app/admin/estudio`), which aggregates in the browser.
+ * The provider calls live in `run-sector-answer.ts`.
+ *
+ * Every number in the report is a GenScore measurement: same brand-blind
+ * generation prompt as a scan (docs/adr/0007), same extraction and literal
+ * mention verification (docs/adr/0021). Seed brands are candidates to look
+ * for, never a claim about who leads.
+ */
+
+export type SectorConfig = {
+  id: string;
+  /** Human label, used in the report title: «¿Qué marcas españolas de <label> recomienda la IA?» */
+  label: string;
+  country: string;
+  language: string;
+  /** Neutral buyer questions. Never name a brand here — that would bias the answer. */
+  prompts: string[];
+  /** Candidates to look for. Not a ranking, not a claim. */
+  seedBrands: string[];
+};
+
+export const SECTORS: SectorConfig[] = [
+  {
+    id: "facturacion-pymes",
+    label: "software de facturación y contabilidad para autónomos y pymes",
+    country: "ES",
+    language: "es",
+    prompts: [
+      "¿Cuál es el mejor programa de facturación para autónomos en España?",
+      "¿Qué software de contabilidad me recomiendas para una pyme española?",
+      "Necesito un programa para hacer facturas que cumpla con Verifactu, ¿cuál uso?",
+      "¿Qué aplicación de facturación online es más fácil de usar para un autónomo que empieza?",
+      "Comparativa de programas de contabilidad en la nube para pequeñas empresas en España",
+      "¿Qué software de gestión empresarial (facturación, gastos e impuestos) usan las pymes en España?",
+      "¿Qué programa de facturación gratuito o barato me recomiendas para autónomos?",
+      "¿Con qué programa puedo llevar la contabilidad y presentar los modelos 303 y 130 yo mismo?",
+      "Mejores alternativas a Excel para llevar la facturación de una pequeña empresa",
+      "¿Qué software de facturación electrónica recomiendas para una empresa de servicios con 10 empleados?",
+      "¿Qué herramienta de contabilidad usan las gestorías y asesorías en España?",
+      "Busco un ERP sencillo para una pyme española que venda productos, ¿cuál me recomiendas?"
+    ],
+    seedBrands: [
+      "Holded",
+      "Quipu",
+      "Sage",
+      "Contasimple",
+      "Anfix",
+      "Billin",
+      "FacturaDirecta",
+      "Odoo",
+      "Zoho",
+      "a3 (Wolters Kluwer)",
+      "ContaSol",
+      "Declarando"
+    ]
+  },
+  {
+    id: "seguros-hogar",
+    label: "seguros de hogar",
+    country: "ES",
+    language: "es",
+    prompts: [
+      "¿Cuál es el mejor seguro de hogar en España?",
+      "¿Qué aseguradora de hogar me recomiendas para un piso de alquiler?",
+      "Seguro de hogar barato y con buena atención al cliente, ¿cuál contrato?",
+      "¿Qué compañía tiene el mejor seguro de hogar para una vivienda en propiedad con hipoteca?",
+      "Comparativa de seguros de hogar en España: ¿cuáles son los más recomendados?",
+      "¿Qué seguro de hogar cubre mejor los daños por agua?",
+      "¿Qué aseguradora de hogar responde más rápido en caso de siniestro?",
+      "Seguro de hogar online para jóvenes, ¿cuál me recomiendas?",
+      "¿Merece la pena cambiar el seguro de hogar del banco? ¿A qué compañía?",
+      "¿Qué seguro de hogar incluye asistencia de manitas o reparaciones?"
+    ],
+    seedBrands: [
+      "Mapfre",
+      "Línea Directa",
+      "Mutua Madrileña",
+      "AXA",
+      "Allianz",
+      "Generali",
+      "Zurich",
+      "Santalucía",
+      "Ocaso",
+      "Caser",
+      "Verti",
+      "Pelayo"
+    ]
+  }
+];
+
+export const ENGINES = ["gemini", "openai", "claude"] as const;
+export type Engine = (typeof ENGINES)[number];
+
+export const ENGINE_LABEL: Record<Engine, string> = { gemini: "Gemini", openai: "ChatGPT", claude: "Claude" };
+
+/** Never matches a real brand; extraction requires one. */
+export const STUDY_SENTINEL_BRAND = "Marca de control del estudio";
+/* ---- Counting and report (covered by scripts/sector-study.test.ts) ---- */
+
+export type AnswerRecord = {
+  engine: Engine;
+  promptIndex: number;
+  sample: number;
+  model: string | null;
+  /** null when generation or extraction failed — counted as a failure, never as "no brands". */
+  error: string | null;
+  rawText: string | null;
+  /** Seed brands with a verified mention, with their 1-based position in the answer. */
+  seedMentions: Array<{ name: string; position: number | null }>;
+  /** Non-seed brands the extractor surfaced (max 5 per answer). */
+  otherBrands: string[];
+};
+
+export type BrandRow = {
+  name: string;
+  seed: boolean;
+  /** Answers naming the brand / valid answers, over all engines. */
+  mentions: number;
+  rate: number;
+  perEngine: Record<Engine, { mentions: number; valid: number }>;
+  /** Times it was the first brand named (seed brands only — others have no position). */
+  firstPlace: number;
+  /** Distinct prompts in which it appeared at least once. */
+  promptsCovered: number;
+};
+
+/**
+ * Canonical key for counting: "Holded" / "holded" / "Holded." are the same
+ * brand. Deliberately conservative — no fuzzy matching, so two genuinely
+ * different names are never merged by accident; near-duplicates surface in
+ * the table for a human to judge.
+ */
+export function brandKey(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export function aggregateBrands(records: AnswerRecord[], seedBrands: string[]): BrandRow[] {
+  const valid = records.filter((record) => record.error === null);
+  const validPerEngine = Object.fromEntries(
+    ENGINES.map((engine) => [engine, valid.filter((record) => record.engine === engine).length])
+  ) as Record<Engine, number>;
+  const seedKeys = new Set(seedBrands.map(brandKey));
+  const rows = new Map<string, BrandRow & { prompts: Set<number> }>();
+
+  const rowFor = (name: string, seed: boolean) => {
+    const key = brandKey(name);
+    let row = rows.get(key);
+    if (!row) {
+      row = {
+        name,
+        seed,
+        mentions: 0,
+        rate: 0,
+        perEngine: Object.fromEntries(
+          ENGINES.map((engine) => [engine, { mentions: 0, valid: validPerEngine[engine] }])
+        ) as BrandRow["perEngine"],
+        firstPlace: 0,
+        promptsCovered: 0,
+        prompts: new Set<number>()
+      };
+      rows.set(key, row);
+    }
+    return row;
+  };
+
+  for (const seed of seedBrands) rowFor(seed, true);
+
+  for (const record of valid) {
+    // One answer counts once per brand, however many times it repeats the name.
+    const seen = new Set<string>();
+    for (const mention of record.seedMentions) {
+      const key = brandKey(mention.name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const row = rowFor(mention.name, true);
+      row.mentions += 1;
+      row.perEngine[record.engine].mentions += 1;
+      row.prompts.add(record.promptIndex);
+      if (mention.position === 1) row.firstPlace += 1;
+    }
+    for (const other of record.otherBrands) {
+      const key = brandKey(other);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      const row = rowFor(other, seedKeys.has(key));
+      row.mentions += 1;
+      row.perEngine[record.engine].mentions += 1;
+      row.prompts.add(record.promptIndex);
+    }
+  }
+
+  return [...rows.values()]
+    .map(({ prompts, ...row }) => ({
+      ...row,
+      rate: valid.length === 0 ? 0 : row.mentions / valid.length,
+      promptsCovered: prompts.size
+    }))
+    .sort((a, b) => b.mentions - a.mentions || b.firstPlace - a.firstPlace || a.name.localeCompare(b.name, "es"));
+}
+
+const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+export function formatReport(input: {
+  sector: SectorConfig;
+  records: AnswerRecord[];
+  rows: BrandRow[];
+  samples: number;
+  date: string;
+  /** Engines actually run. Defaults to all three. */
+  engines?: readonly Engine[];
+}): string {
+  const { sector, records, rows, samples, date } = input;
+  const engines = input.engines ?? ENGINES;
+  const valid = records.filter((record) => record.error === null);
+  const failed = records.length - valid.length;
+  const models = [...new Set(valid.map((record) => `${ENGINE_LABEL[record.engine]}: ${record.model ?? "?"}`))].sort();
+  const answersWithoutBrands = valid.filter((r) => r.seedMentions.length === 0 && r.otherBrands.length === 0).length;
+  const shown = rows.filter((row) => row.mentions > 0);
+  const neverNamed = rows.filter((row) => row.seed && row.mentions === 0).map((row) => row.name);
+
+  if (valid.length === 0) {
+    const causes = [...new Set(records.map((record) => record.error))].join(", ");
+    return `# Estudio sin datos: ${sector.label}\n\nNinguna de las ${records.length} respuestas fue válida (${causes}). No hay nada publicable; revisa las claves y vuelve a ejecutarlo.\n`;
+  }
+  const failureWarning =
+    failed / records.length > 0.2
+      ? [`> **Atención:** fallaron ${failed} de ${records.length} respuestas (más del 20%). Las cifras pueden estar sesgadas hacia los motores que sí respondieron; conviene repetir antes de publicar.`, ""]
+      : [];
+
+  const lines = [
+    `# ¿Qué marcas españolas de ${sector.label} recomienda la IA?`,
+    "",
+    `Estudio GenScore · ${date} · ${sector.prompts.length} preguntas × ${engines.length} motores × ${samples} muestra(s) = ${records.length} respuestas pedidas, **${valid.length} válidas**${failed ? ` (${failed} fallidas, excluidas del cálculo)` : ""}.`,
+    "",
+    `Modelos: ${models.join(" · ") || "—"}`,
+    "",
+    ...failureWarning,
+    "## Ranking por presencia",
+    "",
+    "Presencia = porcentaje de respuestas válidas que nombran la marca (cada respuesta cuenta una vez por marca).",
+    "",
+    `| # | Marca | Presencia | ${engines.map((engine) => ENGINE_LABEL[engine]).join(" | ")} | 1.ª nombrada | Preguntas (de ${sector.prompts.length}) |`,
+    `|---|---|---|${engines.map(() => "---").join("|")}|---|---|`,
+    ...shown.map((row, index) => {
+      const perEngine = engines.map((engine) => {
+        const cell = row.perEngine[engine];
+        return cell.valid === 0 ? "—" : `${pct(cell.mentions / cell.valid)} (${cell.mentions}/${cell.valid})`;
+      });
+      const first = row.seed ? String(row.firstPlace) : "n/d";
+      return `| ${index + 1} | ${row.name}${row.seed ? "" : " ·"} | ${pct(row.rate)} (${row.mentions}/${valid.length}) | ${perEngine.join(" | ")} | ${first} | ${row.promptsCovered} |`;
+    }),
+    "",
+    "`·` = marca que no estaba en la lista inicial de candidatas y que los motores nombraron por su cuenta. Para estas no se mide la posición (n/d), y el extractor recoge como máximo 5 por respuesta, así que su presencia es un mínimo.",
+    "",
+    `Respuestas que no nombran ninguna marca: ${answersWithoutBrands} de ${valid.length}.`,
+    "",
+    neverNamed.length
+      ? `Candidatas que ningún motor nombró: ${neverNamed.join(", ")}.`
+      : "Todas las candidatas aparecieron al menos una vez.",
+    "",
+    "## Metodología",
+    "",
+    "- Las preguntas no nombran ninguna marca. Son las que haría un comprador real.",
+    "- Cada motor recibe la misma instrucción neutral que usa un escaneo de GenScore: responder como a un usuario normal, sin favorecer ni evitar marcas.",
+    "- Una mención solo cuenta si el nombre aparece literalmente en la respuesta (verificación de GenScore, no una inferencia del modelo).",
+    "- Las respuestas de la IA varían entre ejecuciones. Esto es una foto de una fecha, no una clasificación permanente.",
+    "",
+    "## Preguntas",
+    "",
+    ...sector.prompts.map((prompt, index) => `${index + 1}. ${prompt}`)
+  ];
+  return `${lines.join("\n")}\n`;
+}
