@@ -18,7 +18,7 @@ export const metadata: Metadata = contentMetadata({
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
-/** Cuántas tarjetas se enseñan por carril al cargar la página, antes del primer clic en «Ver N más». */
+/** Cuántas tarjetas se enseñan por carril al cargar la página, antes del primer clic en «Ver más artículos». */
 const RAIL_SIZE = 3;
 
 /**

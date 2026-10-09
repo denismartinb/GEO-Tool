@@ -21966,9 +21966,11 @@ que… queda un poco rarillo").**
   superseded: el número del carril identifica el clúster.
 - «Ver más →» era un enlace suelto alineado a la izquierda bajo la
   rejilla. Pasa a botón con borde, centrado (ancho completo en móvil), que
-  dice cuántos carga: «Ver 3 artículos más», «Ver 1 artículo más», «Ver 2
-  comparativas más». Sigue cargando in situ, como decidió el fundador el
-  2026-09-19.
+  dice «Ver más artículos» («Ver más comparativas» en ese carril). La
+  primera versión decía cuántos cargaba («Ver 1 artículo más»); el fundador
+  prefirió el genérico porque el número delata poco contenido, en línea con
+  su regla de no enseñar cifras absolutas pequeñas. Sigue cargando in situ,
+  como decidió el 2026-09-19.
 - El cierre «¿Aparece tu marca en ChatGPT?» toma el estilo del cierre del
   artículo (fondo #081223 con resplandor cian); fuera el anillo decorativo.
 

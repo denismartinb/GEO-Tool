@@ -9560,7 +9560,7 @@ select.set-field {
    Misma portada oscura que el artículo, más ancha (la rejilla del índice usa
    `.lp-inner`, 1180px), con el último artículo como tarjeta destacada. Debajo,
    carriles numerados 01, 02… como las secciones del artículo, tarjetas blancas
-   con borde fino, y un botón «Ver N más» de verdad en vez del enlace suelto. */
+   con borde fino, y un botón «Ver más artículos» de verdad en vez del enlace suelto. */
 .blog-idx-hero-inner { padding-top: 8px; padding-bottom: 48px; }
 .blog-idx-hero .art-hero-eyebrow { margin-top: 56px; }
 .blog-idx-hero h1 {
@@ -9615,7 +9615,7 @@ select.set-field {
 }
 .lp-article .blog-tile p { color: var(--brand-ink-3); font-size: 14.5px; line-height: 1.55; }
 .lp-article .blog-tile time { margin-top: auto; padding-top: 16px; color: var(--brand-ink-4); font-size: 12.5px; }
-/* «Ver N más»: un botón con aspecto de botón, centrado bajo la rejilla. */
+/* «Ver más artículos»: un botón con aspecto de botón, centrado bajo la rejilla. */
 .lp-article .blog-rail-more {
   display: flex; align-items: center; justify-content: center; margin: 20px auto 0;
   height: 44px; padding: 0 22px; border: 1px solid #d5dbe6; border-radius: 10px; background: #fff;
