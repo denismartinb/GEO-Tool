@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import nextConfig from "./next.config";
 
 /**
- * GEO-SELF-1 Fase 1 (log §252). La página de precios vive en `/precios`
+ * GEO-SELF-1 Fase 1 (log §256). La página de precios vive en `/precios`
  * (decisión del fundador, 2026-10-09): es la URL canónica y la que enlazan el
  * menú y todo el sitio. `/pricing`, su ruta antigua, redirige con 308 para que
  * enlaces viejos, buscadores y respuestas de IA sigan llegando.

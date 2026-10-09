@@ -20,6 +20,8 @@ import {
 import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { getSiteUrl } from "@/lib/site-url";
 import { proVsFreeRows, resolvePlanOffer } from "@/lib/email/lifecycle/offers";
+import { loadReportInput } from "@/lib/report/report-data";
+import { buildReportModel, type ReportModel } from "@/lib/report/report-model";
 import {
   sendFirstScanReadyEmail,
   sendTrialD1Email,
@@ -257,7 +259,7 @@ export async function runLifecycleEmails({
     service.from("email_sends").select("owner_user_id, kind, sent_at").in("owner_user_id", ownerIds),
     service
       .from("projects")
-      .select("id, domain, owner_user_id, created_at")
+      .select("id, name, brand, domain, owner_user_id, created_at")
       .in("owner_user_id", ownerIds)
       .eq("is_archived", false)
       .order("created_at", { ascending: false })
@@ -306,7 +308,15 @@ export async function runLifecycleEmails({
       email: profile.email as string,
       userId: profile.id,
       trialEndsAt: new Date(profile.trial_ends_at as string),
-      project: mainProject ? { id: mainProject.id as string, domain: mainProject.domain as string } : null,
+      project: mainProject
+        ? {
+            id: mainProject.id as string,
+            name: (mainProject.name as string | null) ?? (mainProject.domain as string),
+            brand: (mainProject.brand as string | null) ?? null,
+            domain: mainProject.domain as string,
+            scanned: Boolean(scannedProject)
+          }
+        : null,
       now
     });
 
@@ -321,10 +331,35 @@ export async function runLifecycleEmails({
   return { status: "ok", considered: candidates.length, sent, failed, deferred };
 }
 
+type EmailProject = { id: string; name: string; brand: string | null; domain: string; scanned: boolean };
+
+/**
+ * TRIAL-REPORT-EMAIL-1 (log §254). The report of the project's last scan, for
+ * the last-day email. The service client skips RLS, so ownership is this
+ * caller's job: `project` always comes from the same `owner_user_id` query
+ * that chose the recipient, never from anywhere else. Any failure is `null`,
+ * and the email goes out in its deadline-only variant instead of not at all.
+ */
+async function loadReportForEmail(service: Service, project: EmailProject): Promise<ReportModel | null> {
+  try {
+    const input = await loadReportInput({
+      supabase: service,
+      project: { id: project.id, name: project.name, brand: project.brand, domain: project.domain }
+    });
+    return input ? buildReportModel(input) : null;
+  } catch (error) {
+    console.error("[geo:lifecycle] report for the last-day email failed", {
+      projectId: project.id,
+      message: error instanceof Error ? error.message : String(error)
+    });
+    return null;
+  }
+}
+
 async function sendDecision(
   service: Service,
   decision: TrialEmailDecision,
-  ctx: { email: string; userId: string; trialEndsAt: Date; project: { id: string; domain: string } | null; now: Date }
+  ctx: { email: string; userId: string; trialEndsAt: Date; project: EmailProject | null; now: Date }
 ): Promise<boolean> {
   const daysLeft = trialDaysLeft(ctx.trialEndsAt, ctx.now);
 
@@ -350,7 +385,9 @@ async function sendDecision(
 
   return sendTrialD5Email(ctx.email, ctx.userId, {
     trialEndsAt: ctx.trialEndsAt,
+    projectId: ctx.project?.id ?? null,
     domain: ctx.project?.domain ?? null,
+    report: ctx.project?.scanned ? await loadReportForEmail(service, ctx.project) : null,
     pro: await resolvePlanOffer("pro"),
     starter: await resolvePlanOffer("starter"),
     lossRows: proVsFreeRows()

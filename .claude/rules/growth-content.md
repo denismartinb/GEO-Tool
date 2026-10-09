@@ -294,17 +294,17 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   es el fichero sobre el que el producto publica una guía
   (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §47).
   **Lo mismo vale para `/llms-full.txt`** (`lib/seo/llms-full-txt.ts`, log
-  §252): importa los datos que renderiza cada página —por eso el FAQ de
+  §256): importa los datos que renderiza cada página —por eso el FAQ de
   `/que-es-genscore` y el texto de `/sobre-genscore` viven en `lib/brand/`—,
   nunca una segunda redacción. **Y la fecha de `/blog` y de cada pilar se
   deriva de sus artículos** (`lib/seo/sitemap-dates.ts`), no se escribe a mano:
-  las dos fechas a mano que había se quedaron rancias (log §252).
+  las dos fechas a mano que había se quedaron rancias (log §256).
 - **Un grupo con nombre en `robots.ts` repite la lista de `disallow` entera.**
   Según RFC 9309 un rastreador que encaja en un grupo con nombre ignora el de
   `*`: un `GPTBot` con sólo `allow: "/"` tendría abiertos `/dashboard` y
-  `/api` (`lib/seo/robots-rules.ts`, `app/robots.test.ts`; log §252).
+  `/api` (`lib/seo/robots-rules.ts`, `app/robots.test.ts`; log §256).
 - **Ni `founder` ni `Person` en el schema, ni nombre de persona, foto o
-  empleador en `/sobre-genscore`** (fundador, 2026-10-09; log §252). La
+  empleador en `/sobre-genscore`** (fundador, 2026-10-09; log §256). La
   entidad es la empresa; `author` y `publisher` de los artículos apuntan al
   `Organization` por `@id`. Firmar con nombre sería una fase propia.
 - **Una pantalla PÚBLICA sin valor de búsqueda lleva `robots: { index: false,

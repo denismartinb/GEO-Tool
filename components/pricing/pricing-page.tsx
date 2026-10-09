@@ -3,8 +3,9 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
+import { FreeReportPriceLine } from "@/components/free-report/free-report-offers";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { PlanCardCta } from "@/components/pricing/plan-card-cta";
 import { supportMailto } from "@/lib/support";
@@ -220,6 +221,8 @@ export async function PricingPage() {
           <p className="price-tax-note">
             Todos los planes empiezan con 7 días de Pro gratis, sin tarjeta. Precios con IVA incluido.
           </p>
+          {/* FREE-REPORT-2 (log §252): one quiet line for whoever still doubts. */}
+          <FreeReportPriceLine />
         </div>
       </section>
 
@@ -290,7 +293,7 @@ export async function PricingPage() {
                   {l.label}
                 </Link>
               ))}
-              {MARKETING_ENTITY_LINKS.map((l) => (
+              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>

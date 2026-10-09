@@ -22224,12 +22224,216 @@ los informes de prospección.
 `components/report/{geo-report.tsx,geo-report.css,report-toolbar.tsx}` (+test),
 `lib/report/{report-data,report-pages,report-tech}.ts` (+tests),
 `.claude/rules/report.md`, `.claude/rules/recommendations.md`.
-## 252. GEO-SELF-1 Fase 1: que los motores de IA puedan leer, verificar y describir a GenScore — frente técnico y frente de entidad (2026-10-09)
+
+## 251. STUDY-HOME-1: el estudio «De buscar a preguntar» llega al blog y a la portada como una cifra con su fuente (2026-10-09)
+
+**Qué se decidió.** El fundador pidió valorar una cita del estudio público «De
+buscar a preguntar» (PDF de 2026-10-09) en la portada, en el hueco del
+testimonio inventado que se retiró (§146 rectificado). Se descartó una cita
+con nombre: en ese hueco se habría leído como otro testimonio. Lo que entra es
+una **cifra de terceros con su fuente a la vista**, en una tarjeta compacta
+encima de «El producto» (diseño iterado con el fundador sobre capturas de la
+home real; aprobado el 2026-10-09):
+
+> 22% de los españoles ya usa la IA **en lugar del buscador**, la
+> cifra más alta de Europa. Y **casi la mitad** de quienes la usan se apoya en
+> ella para comprar. — Fuentes: Bain & Company, 2025 · IAB Spain, 2026.
+
+El botón «Ver el estudio» lleva a un **artículo nuevo**,
+`/blog/de-buscar-a-preguntar` (cluster `fundamentos`), que es la versión web
+del PDF y pasa a ser su URL canónica (el hilo del estudio publicará en
+LinkedIn sólo un resumen con enlace). El fundador eligió el artículo nuevo
+frente a enlazar el estudio de facturación ya publicado, que no contiene las
+cifras de la tarjeta.
+
+**Fidelidad de la frase (por qué no es la del fundador al pie de la letra).**
+El fundador propuso «utiliza regularmente la IA en lugar del buscador» y
+«casi la mitad lo hace para tomar una decisión de compra». Bain mide quien usa
+la IA *principalmente* en lugar del buscador (usarla con regularidad es otra
+cifra, mucho mayor), y el 45% de IAB es *entre usuarios de IA* y es «ayudarse
+en una compra»: el mismo estudio dice que sólo el 16% la cita entre los
+factores principales de su decisión. El fundador aceptó los dos matices.
+
+**Fuentes verificadas en origen el 2026-10-09** (no sólo copiadas del PDF):
+Bain, *Generative AI Consumer Survey* sept. 2025, n=7.298 en cinco países,
+1.440 en España, «Spanish consumers have the highest replacement rate, at
+22%»; IAB Spain y Elogia, encuesta online a 1.081 internautas 16-75, mayo-junio
+2026 (45%, 66%, 57%, 16%, 95%, 68%); AIMC Navegantes 28.ª ed., ~15.000
+respuestas, oct-dic 2025 (85,1% −8, 58,4% +8, 32,7% +15, Google 93,8%); Pew,
+900 adultos EE. UU., marzo 2025 (15% → 8%, 1%, 26% vs 16%). Cada cifra de
+terceros del artículo lleva fuente y muestra (`growth-content.md`). Se
+quitaron del artículo las del PDF sin muestra comprobable (Bain 60% sin clic,
+Seer +120%).
+
+**Dato propio.** Sólo porcentajes del estudio de facturación (§246), con
+enlace a él; ningún recuento, ninguna versión de modelo.
+
+**Segunda pasada (fundador, 2026-10-09).** Dos correcciones tras ver el
+preview:
+
+1. *En móvil el rótulo partía la lectura.* «Estudio · De buscar a preguntar»
+   quedaba entre el 22% y su frase. Bajo 640px `.lp-study-txt` pasa a
+   `display: contents` y el rótulo a `order: -1`: rótulo, cifra, frase, fuentes
+   y botón, sin tocar el marcado de escritorio.
+2. *El artículo tenía que estar en la plantilla nueva y tener el efecto del
+   PDF*, porque la portada enlaza a él. Usa `ArticleHero` (§247, ya en main)
+   con `heroStat` 22% · Bain & Company, 2025 (cifra que el artículo publica
+   con su muestra; el antetítulo dice «Blog GenScore», no «Estudio
+   GenScore», porque la fuente no es nuestra). Y llegan los gráficos del PDF
+   como bloques de artículo en `components/blog/article/charts.tsx`:
+   `BarChart` (AIMC y la verificación de IAB), `ColumnChart` + `ChartPair`
+   (Pew), `EngineChart` (presencia de cuatro marcas motor a motor, del
+   estudio de facturación §246) e `InsightPanel`/`Insight` (los recuadros
+   oscuros «Qué significa» del PDF). Cada barra lleva su cifra escrita —el
+   dibujo acompaña al número, nunca lo sustituye— y un 0% se escribe, no
+   desaparece (`charts.test.ts`). Paleta del artículo (tinta, azul, cian):
+   el degradado azul→cian sólo marca la fila de la IA. Las cifras de los
+   gráficos son las que ya estaban verificadas en el artículo; no entra
+   ninguna del PDF que no lo estuviera (p. ej. el 70% de IAB sobre
+   información errónea, o los usuarios únicos de GfK DAM).
+
+**Ajuste final del fundador (antes del merge).** Quitó «sobre todo» de la
+tarjeta: «ya usa la IA en lugar del buscador». Se lee como la «replacement
+rate» de Bain; la redacción precisa («usa sobre todo un chatbot de IA en
+lugar del buscador») se mantiene en el cuerpo del artículo y en la FAQ, junto
+a la muestra. El `heroStat` y la descripción del post siguen a la tarjeta.
+
+**Numeración.** Nació como §250 y pasó a §251 antes de abrir el PR: §250 lo
+reclamaban otras ramas (FREE-REPORT-2, PR #568; GEO-REPORT-1 Fase 2, ya en
+main).
+
+**Pendiente / conocido.** Si alguna de las dos cifras de la tarjeta se
+actualiza en su fuente, la tarjeta, el `heroStat` y el artículo cambian
+juntos. Los gráficos nuevos sólo los usa este artículo; están en el barril
+para quien los necesite, con la misma regla de fuente que `Stat`.
+
+**Trazabilidad.** `components/landing/landing-page.tsx` (`.lp-study`),
+`app/globals.css` (`.lp-study*` y bloque «Gráficos del estudio»),
+`components/blog/article/charts.tsx` (+test), `components/blog/article/index.ts`,
+`app/blog/de-buscar-a-preguntar/page.mdx`,
+`public/blog/de-buscar-a-preguntar/cover.webp`, `lib/blog/posts.ts`, listas del
+piloto, `docs/design-reference/study-home-1/`.
+
+---
+
+## 252. FREE-REPORT-2: el informe gratis, en toda la web pública (2026-10-09)
+
+**Qué se decidió.** El fundador quiere maximizar la captación por email con el
+informe personalizado («merece la pena maximizarla»), y aprobó el plan entero
+sobre el canvas de FREE-REPORT-1 («Dibuja esa banda y vamos con todo»):
+
+- **Tarjeta en la esquina** (`components/free-report/free-report-promo-card.tsx`)
+  en blog, comparativas, glosario y docs. Sale tras 40 s o al pasar la mitad
+  de la página, una vez por visita; cerrada, no vuelve en 7 días; nunca tras
+  pedir el informe ni con sesión iniciada. Las reglas son puras y con tests
+  (`lib/free-report/promo.ts`).
+- **Banda en la portada** (`FreeReportBand`), entre «Cinco pantallas» y las
+  preguntas frecuentes.
+- **Una línea bajo los precios** (`FreeReportPriceLine`).
+- **«Informe gratis» en la cabecera** (último, en azul, con «Nuevo») y en el
+  pie de las seis superficies públicas (`MARKETING_LEAD_LINKS`).
+
+**Por qué la portada y precios no llevan tarjeta emergente.** Quien llega ahí
+está cerca de registrarse con los 7 días de Pro, que vale más que un email; una
+tarjeta encima le quitaría clics a ese botón. El lector del blog todavía no va
+a registrarse, y para él el informe es el gancho. Se coordinó con el hilo «Cita
+del estudio en la portada»: su tarjeta va encima de «El producto» con un único
+botón, «Ver el estudio»; esta banda va debajo, separada por toda la sección de
+pantallas.
+
+**Procedencia.** Cada entrada lleva `?desde=` (`tarjeta-contenido`,
+`banda-portada`, `linea-precios`), que el formulario añade al origen que llega
+en el correo al operador. No es un UTM a propósito: un UTM en un enlace interno
+pisa la campaña real de la visita en la analítica. Cabecera y pie van sin
+etiqueta.
+
+**Límite conocido.** Cada informe se prepara a mano: si la captación funciona,
+el cuello de botella pasa a ser el tiempo de preparación. Sigue sin haber
+evento de conversión publicitaria para este formulario (§244, §249).
+
+**Copy de la banda, corregido por el fundador sobre el preview.** Título
+«¿Lo analizamos? Te enviamos gratis un informe de tu marca.», primera viñeta
+«En qué preguntas te nombran» (decisión suya: en una viñeta corta se lee mejor
+sin «principales de búsqueda») y fuera la nota «Sin tarjeta y sin registrarte».
+Los artboards `Portada-banda*` se actualizaron con el mismo texto.
+En la misma pasada cambió dos viñetas de `/gratis/informe-geo`: «PDF de marca,
+listo para accionar» y «Revisado por nuestro equipo antes de enviártelo»
+(también en `Main.dc.html`).
+
+**Trazabilidad.** `lib/free-report/promo.ts` (+test),
+`components/free-report/{free-report-promo-card,free-report-offers}.tsx`,
+`components/free-report/free-report-form.tsx` (`desde` y la marca de pedido),
+`components/blog/blog-page-shell.tsx`, `components/docs/docs-page-shell.tsx`,
+`components/landing/landing-page.tsx`, `components/pricing/pricing-page.tsx`,
+`components/marketing/public-header.tsx`,
+`components/marketing-content-links.ts` y los seis pies,
+`app/globals.css` (bloque FREE-REPORT-2),
+`docs/design-reference/free-report-1/` (tableros nuevos).
+
+## 254. TRIAL-REPORT-EMAIL-1: el informe del escaneo, en el último correo de la prueba (2026-10-09)
+
+**Qué se decidió.** El fundador pidió que un correo de la prueba de 7 días
+llevara el informe del último escaneo, bien maquetado («aporta valor y es
+sorprendente»), y que lo eligiéramos nosotros. Se le propuso el día 3. Él lo
+corrigió: el informe tiene que llegar junto a la urgencia, casi al final,
+porque el día 3 «todavía puedes pensar que te quedan 4 días y luego se te
+olvida». Aprobó la propuesta resultante («Si», 2026-10-09):
+
+- **El aviso de fin de prueba (`trial_d5`, §233) pasa al último día.** La
+  ventana va de 36–60 h restantes a 12–36 h. Sigue teniendo 24 h de ancho,
+  así que el cron diario cae en ella una sola vez, y nunca baja de 12 h, para
+  que llegue con medio día para actuar. El tipo conserva su nombre
+  `trial_d5` porque es un valor de `email_sends` y renombrarlo exigiría
+  migración.
+- **Con escaneo, el correo es el informe.** Lleva la Puntuación GEO, las
+  menciones por motor, quién aparece en las respuestas, una frase literal de
+  la IA, dos hallazgos y la primera acción. Debajo, un enlace al informe
+  completo (`/informe/<id>`) y después la oferta (precio fundador y «Mantener
+  Pro»). Todo sale de `buildReportModel`, el mismo modelo del informe
+  impreso (§248, §250), así que valen sus reglas: sólo porcentajes, motores
+  por nombre, la cita literal o ausente y un bloque sin datos se omite. Sin
+  escaneo, o si el informe falla al cargarse, sale el correo de fecha límite
+  aprobado en §233. Nunca se queda sin enviar.
+- **El día 7 se descartó** porque ese correo sale con la prueba ya caducada,
+  y la página del informe enseña un aviso en lugar del informe a una cuenta
+  sin plan. El botón llevaría a una puerta cerrada.
+- **El día 3 no cambia**, para no repetir contenido.
+- **La bienvenida** decía «Te avisaremos 2 días antes» y pasa a «Te avisaremos
+  el día antes».
+
+**El enlace pasa por `/login?next=`.** El informe exige sesión, y el login no
+volvía a la página de origen: `requireUser` redirige a `/login` sin más, y
+`login`/`signInWithGoogle` mandaban siempre a `/dashboard`. Ahora `/login`
+acepta `next` (y si ya hay sesión, redirige directamente ahí), lo conserva
+tras un intento fallido y lo pasa al callback de Google. `safeNextPath`
+(`lib/safe-next-path.ts`) sólo admite rutas de este sitio. El mismo filtro se
+aplica ahora en `/auth/callback`, que antes hacía `new URL(next, origin)` sin
+validar: `?next=//otro-sitio` sacaba al usuario del dominio.
+
+**Seguridad del cargador.** El cron usa el cliente de servicio, que se salta
+RLS. El proyecto del informe sale de la misma consulta por `owner_user_id`
+que elige al destinatario, nunca de otro sitio. La cita es texto libre de un
+LLM dentro de HTML de correo: se escapa con `escapeHtml`, porque aquí no hay
+React que lo haga (§202).
+
+**Pendiente o sabido.**
+- El diseño de referencia `docs/design-reference/lifecycle-emails-1/` sigue
+  diciendo «quedan 2 días» y «Te avisaremos 2 días antes». Es histórico: este
+  apartado lo sustituye.
+- La maqueta aprobada en el hilo vive en
+  `/mnt/project-files/frente-3-usuarios/correo-d3-informe-maqueta.png`. Se hizo
+  para el día 3; el contenido del informe es el mismo y cambian el
+  encabezado y la oferta.
+- `requireUser` sigue redirigiendo a `/login` sin `next`. Un enlace a otra
+  página protegida que no pase por `/login?next=` sigue aterrizando en el
+  panel.
+
+## 256. GEO-SELF-1 Fase 1: que los motores de IA puedan leer, verificar y describir a GenScore — frente técnico y frente de entidad (2026-10-09)
 
 > Plan aprobado por el fundador el 2026-10-09 («que GenScore salga citado por
 > los motores de IA»). Esta fase son los frentes F1 (técnico) y F2 (entidad);
 > los demás frentes del plan van en PRs propios. El número §251 lo tienen
-> reclamado cuatro ramas abiertas a la vez; por eso esta entrada es la §252.
+> reclamado cuatro ramas abiertas a la vez; por eso esta entrada es la §256.
 
 **Qué se hizo — F1, técnico.**
 - **`robots.ts` nombra a los rastreadores de IA** (`GPTBot`, `OAI-SearchBot`,

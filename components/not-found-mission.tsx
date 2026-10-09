@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 
 /**
@@ -129,7 +129,7 @@ export function NotFoundMission() {
                   {l.label}
                 </Link>
               ))}
-              {MARKETING_ENTITY_LINKS.map((l) => (
+              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>

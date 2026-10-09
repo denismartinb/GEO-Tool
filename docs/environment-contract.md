@@ -400,8 +400,8 @@ nothing. A kind with no label simply is not sent to that platform.
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
 | `GOOGLE_SITE_VERIFICATION` | No | Vercel + local `.env.local` | El token del `<meta name="google-site-verification" ...>`, **solo el valor del atributo `content`**, no la etiqueta completa |
-| `BING_SITE_VERIFICATION` | No | Vercel | GEO-SELF-1 Fase 1 (log §252). El token del `<meta name="msvalidate.01" ...>` de Bing Webmaster Tools, **solo el valor de `content`**. `app/layout.tsx` lo emite como `verification.other["msvalidate.01"]` sólo si existe |
-| `INDEXNOW_KEY` | No | Vercel + local (para `pnpm indexnow:ping`) | GEO-SELF-1 Fase 1 (log §252). Clave de IndexNow: 8–128 caracteres `a-z A-Z 0-9 -` (por ejemplo un UUID). Se sirve en `https://www.genscore.es/indexnow-key.txt`; sin ella, o mal formada, esa ruta da 404 y el ping no hace nada |
+| `BING_SITE_VERIFICATION` | No | Vercel | GEO-SELF-1 Fase 1 (log §256). El token del `<meta name="msvalidate.01" ...>` de Bing Webmaster Tools, **solo el valor de `content`**. `app/layout.tsx` lo emite como `verification.other["msvalidate.01"]` sólo si existe |
+| `INDEXNOW_KEY` | No | Vercel + local (para `pnpm indexnow:ping`) | GEO-SELF-1 Fase 1 (log §256). Clave de IndexNow: 8–128 caracteres `a-z A-Z 0-9 -` (por ejemplo un UUID). Se sirve en `https://www.genscore.es/indexnow-key.txt`; sin ella, o mal formada, esa ruta da 404 y el ping no hace nada |
 
 Igual que Sentry/PostHog: opcional por diseño. `app/layout.tsx` solo añade el
 `<meta>` de verificación cuando la variable existe (`verification.google` en el
@@ -477,14 +477,14 @@ ha apoyado históricamente en el índice de Bing, así que este paso no es solo
 "SEO clásico" — también alimenta la visibilidad en motores generativos
 (GROWTH-2, `docs/launch-plan.md` Fase 7).
 
-**`BING_SITE_VERIFICATION` (GEO-SELF-1 Fase 1, log §252).** Mismo patrón que
+**`BING_SITE_VERIFICATION` (GEO-SELF-1 Fase 1, log §256).** Mismo patrón que
 `GOOGLE_SITE_VERIFICATION`: método de etiqueta HTML, opcional, sin la variable
 no se pinta nada. **La propiedad ya está verificada por importación desde
 Search Console (arriba)**, así que esta variable sólo hace falta si Bing pide
 re-verificar o si el fundador prefiere un método que no dependa de Google. No
 la configures "por si acaso" por la misma razón que la de Google.
 
-**IndexNow — `INDEXNOW_KEY` (GEO-SELF-1 Fase 1, log §252).** IndexNow avisa a
+**IndexNow — `INDEXNOW_KEY` (GEO-SELF-1 Fase 1, log §256).** IndexNow avisa a
 Bing (y a los motores que se apoyan en su índice) de que una URL ha cambiado
 sin esperar al siguiente rastreo. Pasos:
 

@@ -66,7 +66,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // GROWTH-2, N5 (2026-09-19).
   "mi-marca-no-aparece-en-chatgpt-por-que": "playbooks",
   // SECTOR-STUDY-1 (2026-10-09, log §246).
-  "que-software-de-facturacion-recomienda-la-ia": "sectores"
+  "que-software-de-facturacion-recomienda-la-ia": "sectores",
+  // STUDY-HOME-1 (2026-10-09, log §251).
+  "de-buscar-a-preguntar": "fundamentos"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
@@ -159,7 +161,7 @@ test("/que-es-genscore renders and has its own canonical", async ({ page }, test
   await assertCanonical(page, "/que-es-genscore");
 });
 
-// GEO-SELF-1 Fase 1 (log §252): la página «Quiénes somos».
+// GEO-SELF-1 Fase 1 (log §256): la página «Quiénes somos».
 test("/sobre-genscore renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/sobre-genscore", "sobre-genscore");
   assertPageIsHealthy(findings);

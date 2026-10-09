@@ -16,8 +16,9 @@ import { homeBlogStrip } from "@/lib/landing/home-blog";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { HomeCtaBand } from "@/components/landing/session-ctas";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
+import { FreeReportBand } from "@/components/free-report/free-report-offers";
 
 
 /**
@@ -548,6 +549,32 @@ export function LandingPage() {
           a partir de 70. */}
       <section className="lp-section lp-prod" id="pantallas">
         <div className="lp-inner">
+          {/* STUDY-HOME-1 (founder-approved 2026-10-09, log §251). A sourced
+              third-party figure, never a quote: this slot's predecessor was an
+              invented testimonial (log §146 rectified). The copy says exactly
+              what the sources measure — Bain counts people who MAINLY use a
+              chatbot instead of the search engine, and IAB's 45% is among AI
+              users and is "helps with a purchase", not "decides it" (only 16%
+              name AI as a main factor). The whole card links to the article
+              that carries every figure with its sample size. */}
+          <div className="lp-study">
+            <Link className="lp-study-card" href="/blog/de-buscar-a-preguntar">
+              <span className="lp-study-num">22<span>%</span></span>
+              <span className="lp-study-txt">
+                <span className="lp-study-eye">Estudio · De buscar a preguntar</span>
+                <span className="lp-study-q">
+                  de los españoles ya usa la IA{" "}
+                  <b>en lugar del buscador</b>, la cifra más alta de Europa. Y <b>casi la mitad</b> de
+                  quienes la usan se apoya en ella para comprar.
+                </span>
+                <span className="lp-study-src">Fuentes: Bain &amp; Company, 2025 · IAB Spain, 2026</span>
+              </span>
+              <span className="lp-study-go">
+                Ver el estudio
+                <Icon name="arrRight" size={14} />
+              </span>
+            </Link>
+          </div>
           <div className="lp-sec-head">
             <div className="lp-kicker">El producto</div>
             <h2 className="lp-h2">Cinco pantallas. Todo tu posicionamiento.</h2>
@@ -1175,6 +1202,11 @@ export function LandingPage() {
           anonimiza, ni se conserva la cifra. Vuelve a haber un testimonio solo con el original y el
           permiso del cliente en el repositorio. `tests/no-invented-customer-claims.test.ts` lo vigila. */}
 
+      {/* FREE-REPORT-2 (log §252): the free report for whoever is not ready
+          to try the product yet. Integrated, never a pop-up here: on the home
+          a pop-up would compete with the trial signup. */}
+      <FreeReportBand />
+
       {/* FAQ — HOME-2026-08 Fase C. Abierta en escritorio, acordeón en móvil,
           como los dos artboards. El `FAQPage` sale de la MISMA constante que
           pinta la pantalla, así que no pueden divergir. */}
@@ -1278,7 +1310,7 @@ export function LandingPage() {
                   {l.label}
                 </Link>
               ))}
-              {MARKETING_ENTITY_LINKS.map((l) => (
+              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>

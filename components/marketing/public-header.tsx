@@ -9,8 +9,9 @@ import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { PromoStrip } from "@/components/landing/session-ctas";
 import { avatarInitials, showsPlanBadge } from "@/lib/account-chip";
 import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
+import { FREE_REPORT_PATH } from "@/lib/free-report/promo";
 
-type NavItem = { anchor: string; label: string } | { href: string; label: string };
+type NavItem = { anchor: string; label: string } | { href: string; label: string; lead?: boolean };
 
 
 /**
@@ -98,7 +99,11 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
   { anchor: "como", label: "Cómo funciona" },
   { href: "/geo", label: "Qué es GEO" },
   { href: "/precios", label: "Precios" },
-  { href: "/blog", label: "Blog" }
+  { href: "/blog", label: "Blog" },
+  // FREE-REPORT-2 (log §252): the free report, highlighted and last, on every
+  // public page. Plain link, no `?desde=`: the landing is also reached from
+  // ads and outreach, and a nav click is not a campaign.
+  { href: FREE_REPORT_PATH, label: "Informe gratis", lead: true }
 ];
 
 /**
@@ -160,7 +165,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   const links = PUBLIC_NAV_ITEMS.map((item) =>
     "anchor" in item
       ? { href: isHome ? `#${item.anchor}` : `/#${item.anchor}`, label: item.label, isAnchor: true }
-      : { href: item.href, label: item.label, isAnchor: false }
+      : { href: item.href, label: item.label, isAnchor: false, lead: "lead" in item && item.lead === true }
   );
 
   return (
@@ -192,8 +197,15 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
               {l.label}
             </a>
           ) : (
-            <Link key={l.href} href={l.href} className={l.href === activeHref ? "active" : ""}>
+            <Link
+              key={l.href}
+              href={l.href}
+              className={[l.href === activeHref ? "active" : "", "lead" in l && l.lead ? "lp-nav-lead" : ""]
+                .filter(Boolean)
+                .join(" ")}
+            >
               {l.label}
+              {"lead" in l && l.lead ? <span className="lp-nav-new">Nuevo</span> : null}
             </Link>
           )
         )}

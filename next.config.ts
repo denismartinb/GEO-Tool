@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "1mb"
     }
   },
-  // GEO-SELF-1 Fase 1 (log §252): the public pricing page lives at the
+  // GEO-SELF-1 Fase 1 (log §256): the public pricing page lives at the
   // Spanish URL `/precios` (founder decision 2026-10-09) — the one canonical
   // URL, the one every internal link and the menu point to. `/pricing`, its
   // old route, answers with a permanent redirect so old links, bookmarks,

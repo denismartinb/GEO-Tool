@@ -6622,6 +6622,39 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod { background: var(--canvas); border-top: 1px solid var(--line-soft); padding: 128px 0; }
 .lp-prod .lp-kicker { color: var(--ink-4); font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
 .lp-prod .lp-h2 { font-size: 42px; font-weight: 700; letter-spacing: -.03em; line-height: 1.08; margin-top: 22px; }
+
+/* STUDY-HOME-1 (log §251): sourced figure from «De buscar a preguntar»,
+   above the «El producto» head. One card, one button; the whole card is the
+   link. */
+.lp-study { max-width: 880px; margin: 0 auto 72px; }
+.lp-study-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 28px; padding: 22px 28px; background: #fff; border: 1px solid var(--brand-line); border-radius: 18px; box-shadow: 0 1px 2px rgba(11,20,38,.04), 0 12px 32px -18px rgba(37,99,235,.25); color: inherit; transition: border-color .2s, box-shadow .2s, transform .2s; }
+.lp-study-card:hover { border-color: rgba(37,99,235,.35); box-shadow: 0 1px 2px rgba(11,20,38,.04), 0 18px 40px -18px rgba(37,99,235,.35); transform: translateY(-1px); }
+.lp-study-card:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 3px; }
+.lp-study-num { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 64px; line-height: .9; letter-spacing: -.04em; padding-right: 4px; background: linear-gradient(135deg, var(--brand-blue) 30%, var(--brand-cyan)); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
+.lp-study-num span { font-size: .5em; vertical-align: .7em; margin-left: 2px; }
+.lp-study-txt { display: grid; gap: 6px; min-width: 0; }
+.lp-study-eye { font-size: 11.5px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--brand-blue); }
+.lp-study-q { font-size: 17px; line-height: 1.4; color: var(--brand-ink); font-weight: 500; text-wrap: balance; }
+.lp-study-q b { font-weight: 600; color: var(--brand-blue); }
+.lp-study-src { font-size: 12.5px; color: var(--brand-ink-3); }
+.lp-study-go { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14.5px; color: #fff; white-space: nowrap; padding: 11px 14px 11px 18px; border-radius: 999px; background: linear-gradient(135deg, var(--brand-blue), #3b7bff); box-shadow: 0 6px 16px -6px rgba(37,99,235,.55), inset 0 1px 0 rgba(255,255,255,.18); transition: box-shadow .2s; }
+.lp-study-go svg { width: 22px; height: 22px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,.18); transition: transform .2s; }
+.lp-study-card:hover .lp-study-go { box-shadow: 0 10px 22px -8px rgba(37,99,235,.65), inset 0 1px 0 rgba(255,255,255,.18); }
+.lp-study-card:hover .lp-study-go svg { transform: translateX(3px); }
+@media (prefers-reduced-motion: reduce) { .lp-study-card, .lp-study-go svg { transition: none; } .lp-study-card:hover { transform: none; } }
+@media (max-width: 640px) {
+  .lp-study { margin-bottom: 48px; }
+  .lp-study-card { grid-template-columns: 1fr; gap: 12px; padding: 22px 20px; }
+  .lp-study-num { font-size: 56px; justify-self: start; }
+  /* En móvil el rótulo va ENCIMA de la cifra: entre el 22% y su frase partía
+     la lectura (fundador, 2026-10-09). `display: contents` deja ordenar los
+     tres textos como hijos de la tarjeta sin tocar el marcado de escritorio. */
+  .lp-study-txt { display: contents; }
+  .lp-study-eye { order: -1; margin-bottom: -2px; }
+  .lp-study-src { margin-top: -4px; }
+  .lp-study-q { font-size: 15.5px; }
+  .lp-study-go { justify-self: start; margin-top: 6px; }
+}
 .lp-prod .lp-sec-sub { font-size: 17px; margin-top: 22px; }
 .lp-prod .lp-sec-head { max-width: 660px; margin-bottom: 46px; }
 
@@ -9556,6 +9589,85 @@ select.set-field {
   .lp-article .art-stats { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* --- Gráficos del estudio (STUDY-HOME-1, log §251) -------------------------
+   Los gráficos del PDF «De buscar a preguntar» como bloques de artículo
+   (`components/blog/article/charts.tsx`). Cada barra lleva su cifra escrita:
+   el dibujo acompaña al número, nunca lo sustituye. Degradado azul→cian sólo
+   en la fila de la IA; el resto en gris claro. */
+.art-chart-t {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--brand-ink-3); margin-bottom: 16px;
+}
+.art-bars ul, .art-cols ul, .art-eng ul { list-style: none; margin: 0; padding: 0; }
+.art-bars ul { display: grid; gap: 14px; }
+.art-bars-row { display: grid; grid-template-columns: minmax(120px, 210px) minmax(0, 1fr) 92px; gap: 14px; align-items: center; margin: 0; }
+.lp-article .blog-body .art-bars-row { font-size: 14px; line-height: 1.35; color: var(--brand-ink-2); }
+.art-bars-track { height: 14px; border-radius: 7px; background: #eef1f6; overflow: hidden; }
+.art-bars-fill { display: block; height: 100%; border-radius: 7px; background: #cbd3e1; }
+.art-bars-row.is-hl .art-bars-fill { background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan)); }
+.art-bars-v { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 17px; font-weight: 800; color: var(--brand-ink); white-space: nowrap; }
+.art-bars-v em {
+  margin-left: 8px; font-family: var(--font-body), "Figtree", sans-serif; font-style: normal;
+  font-size: 11px; font-weight: 700; color: var(--brand-ink-3);
+}
+.art-bars-row.is-hl .art-bars-l { color: var(--brand-ink); font-weight: 700; }
+.art-bars-row.is-hl .art-bars-v em { color: var(--brand-blue); }
+@media (max-width: 640px) {
+  .art-bars-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+  .art-bars-track { grid-column: 1 / -1; grid-row: 2; height: 12px; }
+}
+
+.art-chartpair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+@media (max-width: 640px) {
+  .art-chartpair { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+}
+.art-cols ul { display: flex; align-items: flex-end; gap: 14px; height: 210px; border-bottom: 1px solid #e7eaf0; }
+.art-cols-c {
+  position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  height: 100%; margin: 0; min-width: 0;
+}
+.art-cols-v { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 24px; font-weight: 800; color: var(--brand-ink); margin-bottom: 8px; }
+.art-cols-bar { display: block; width: 100%; max-width: 92px; border-radius: 8px 8px 0 0; background: #cbd3e1; }
+.art-cols-c.is-hl .art-cols-bar { background: linear-gradient(180deg, var(--brand-cyan), var(--brand-blue)); }
+.lp-article .blog-body .art-cols-l { font-size: 12.5px; line-height: 1.35; color: var(--brand-ink-3); text-align: center; }
+.art-cols-l { position: absolute; top: calc(100% + 10px); left: 0; right: 0; }
+.art-cols { padding-bottom: 46px; }
+
+.art-eng-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: -4px 0 18px; }
+.art-eng-k { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--brand-ink-2); }
+.art-eng-k::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--eng-c); }
+.art-eng-gemini { --eng-c: var(--brand-blue); }
+.art-eng-chatgpt { --eng-c: var(--brand-ink); }
+.art-eng-claude { --eng-c: var(--brand-cyan); }
+.art-eng-row { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 16px; align-items: center; padding: 12px 0; border-top: 1px solid #eef1f6; }
+.art-eng-row:first-of-type { border-top: 0; }
+.art-eng-b { font-size: 15px; font-weight: 800; color: var(--brand-ink); }
+.art-eng-row ul { display: grid; gap: 5px; }
+.art-eng-row li { display: grid; grid-template-columns: 62px minmax(0, 1fr) 42px; gap: 10px; align-items: center; margin: 0; }
+.lp-article .blog-body .art-eng-row li { font-size: 12px; line-height: 1.2; color: var(--brand-ink-3); }
+.art-eng-track { height: 9px; border-radius: 5px; background: #eef1f6; overflow: hidden; }
+.art-eng-fill { display: block; height: 100%; border-radius: 5px; background: var(--eng-c); }
+.art-eng-v { text-align: right; font-weight: 800; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .art-eng-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}
+
+.art-insights {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 32px;
+  margin: 36px 0; padding: 28px 30px; border-radius: 18px; background: #081223;
+}
+.art-insights::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(60% 90% at 100% 0%, rgba(9, 197, 214, .22), transparent 70%);
+}
+.art-insight { position: relative; }
+.art-insight-t { font-size: 15px; font-weight: 800; line-height: 1.3; color: var(--brand-cyan); margin-bottom: 8px; }
+.lp-article .blog-body .art-insight p { margin: 0; font-size: 14.5px; line-height: 1.65; color: #d5dbe6; }
+.lp-article .blog-body .art-insight strong { color: #fff; }
+@media (max-width: 640px) {
+  .art-insights { grid-template-columns: minmax(0, 1fr); padding: 24px 22px; }
+}
+
 /* --- Índice /blog (BLOG-REDESIGN-1 Fase 2) --------------------------------
    Misma portada oscura que el artículo, más ancha (la rejilla del índice usa
    `.lp-inner`, 1180px), con el último artículo como tarjeta destacada. Debajo,
@@ -11293,7 +11405,7 @@ select.set-field {
 /* ---------------------------------------------------------------------------
    FREE-REPORT-1 Fase 1 — /gratis/informe-geo («Pide tu informe GEO gratis»).
    Design: docs/design-reference/free-report-1/ (founder-approved 2026-10-09,
-   log §248). Every class is `fr-` prefixed so nothing here leaks into the
+   log §249). Every class is `fr-` prefixed so nothing here leaks into the
    rest of the marketing site.
    ------------------------------------------------------------------------- */
 .fr-hero {
@@ -11436,4 +11548,183 @@ select.set-field {
   .fr-done { padding: 28px 20px; }
   .fr-done-title { font-size: 26px; }
   .fr-btn { width: 100%; justify-content: center; }
+}
+
+/* ---------------------------------------------------------------------------
+   FREE-REPORT-2 — the free report offered across the public site: corner card
+   on content pages, band on the home, one line under the pricing cards, and
+   the «Informe gratis» nav link. Design: docs/design-reference/free-report-1/
+   (boards Blog-*, Portada-*, Precios-*, Cabecera-*; founder-approved
+   2026-10-09, log §252). Rules for when the card appears:
+   lib/free-report/promo.ts.
+   ------------------------------------------------------------------------- */
+.fr-promo {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  width: 340px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 22px 20px;
+  border-radius: 16px;
+  color: #fff;
+  background:
+    radial-gradient(260px 200px at 100% 0%, rgba(9, 197, 214, .30), rgba(37, 99, 235, .10) 55%, rgba(8, 18, 35, 0) 100%),
+    #081223;
+  box-shadow: 0 18px 44px rgba(8, 18, 35, .28);
+  font-family: var(--font-body);
+  animation: fr-promo-in .45s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes fr-promo-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fr-promo-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #9fb0cc;
+  cursor: pointer;
+}
+.fr-promo-close:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+.fr-promo-close:focus-visible { outline: 2px solid #8fe9f1; outline-offset: 1px; }
+.fr-promo-badge {
+  align-self: flex-start;
+  padding: 4px 9px;
+  border: 1px solid #2a3a5c;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8fe9f1;
+}
+.fr-promo-title {
+  margin: 0;
+  padding-right: 24px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 21px;
+  line-height: 1.15;
+}
+.fr-promo-body { margin: 0; font-size: 14px; line-height: 1.5; color: #c9d3e6; }
+.fr-promo-cta {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 10px;
+  background: var(--brand-blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+.fr-promo-cta:hover { background: #1d4ed8; color: #fff; }
+@media (max-width: 620px) {
+  .fr-promo { left: 12px; right: 12px; bottom: 12px; width: auto; padding: 18px 18px 16px; }
+  .fr-promo-title { font-size: 20px; }
+}
+
+/* Home band, between «Cinco pantallas» and the FAQ. */
+.fr-band-sec { padding: 8px 0 0; }
+.fr-band {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  padding: 44px 48px;
+  border-radius: 24px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(520px 340px at 100% 0%, rgba(9, 197, 214, .26), rgba(37, 99, 235, .10) 55%, rgba(8, 18, 35, 0) 100%),
+    #081223;
+}
+.fr-band-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.fr-band-pill {
+  align-self: flex-start;
+  padding: 5px 10px;
+  border: 1px solid #2a3a5c;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8fe9f1;
+}
+.fr-band-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+}
+.fr-band-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 15.5px; line-height: 1.45; color: #c9d3e6; }
+.fr-band-list li { display: flex; gap: 8px; }
+.fr-band-list svg { flex: none; margin-top: 3px; }
+.fr-band-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 6px; }
+.fr-band-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 10px;
+  background: var(--brand-blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+}
+.fr-band-cta:hover { background: #1d4ed8; color: #fff; }
+.fr-band-cover { margin: 0; flex: none; width: 210px; transform: rotate(3deg); }
+.fr-band-cover img { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 18px 40px rgba(0, 0, 0, .45); }
+@media (max-width: 760px) {
+  .fr-band { flex-direction: column; align-items: flex-start; gap: 24px; padding: 28px 20px; }
+  .fr-band-title { font-size: 26px; }
+  .fr-band-cover { width: 150px; align-self: center; }
+  .fr-band-cta { width: 100%; }
+}
+
+/* One line under the pricing cards. */
+.fr-price-line {
+  margin: 28px auto 0;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px dashed #b9c6dc;
+  border-radius: 14px;
+  background: #f6f8fc;
+}
+.fr-price-line img { flex: none; width: 40px; height: auto; border-radius: 3px; box-shadow: 0 4px 10px rgba(8, 18, 35, .18); }
+.fr-price-line p { margin: 0; font-size: 15.5px; line-height: 1.45; color: #34405a; }
+.fr-price-line strong { color: #0b1426; }
+.fr-price-line a { color: #1d4ed8; font-weight: 700; white-space: nowrap; }
+
+/* «Informe gratis» in the public nav. */
+.lp-nav-links a.lp-nav-lead { display: inline-flex; align-items: center; gap: 6px; color: #1d4ed8; font-weight: 700; }
+.lp-nav-new {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #e6f9fb;
+  color: #0e7490;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fr-promo { animation: none; }
 }
