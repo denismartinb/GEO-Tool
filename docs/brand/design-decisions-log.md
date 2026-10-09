@@ -21348,3 +21348,25 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 236. PRICING-FAQ-LIVE-1: el FAQ de /precios deja de decir que todavía no cobramos (2026-10-09)
+
+**Qué.** Dos respuestas de `PLAN_FAQ` (`app/pricing/plans-data.ts`) seguían
+escritas para la beta sin cobro: «Mientras no activemos la facturación real,
+cambiar de plan no tiene coste» y «Mientras no lancemos la facturación no hay
+límite de tiempo automático». Con el checkout de Stripe ya en real (sesión
+`cs_live_` vista por el fundador el 2026-10-09), las dos eran falsas: la prueba
+de Pro dura 7 días (`0017_reverse_trial.sql`) y pasa sola a Free, y la
+cancelación del Portal es a fin de periodo (`cancel_at`, `lib/billing.ts`).
+
+**Por qué.** Un visitante que lee en la página de precios que todavía no se
+cobra no tiene motivo para pagar, y la prueba «sin límite» contradice los
+correos D1/D3/D5 (§233). Mismo texto en el JSON-LD `FAQPage`, así que también
+llegaba a buscadores y motores generativos.
+
+**Cómo.** Sólo copy. Test nuevo en `app/pricing/faq-schema.test.ts` que impide
+que vuelvan esas frases y exige que el FAQ diga «7 días».
+
+**Pendiente.** La revisión completa de precios y de la oferta de lanzamiento
+(propuesta del 2026-10-09: precios reales sin tachar y precio fundador) espera
+la aprobación del fundador. Este cambio no la anticipa.
