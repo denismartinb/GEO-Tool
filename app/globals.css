@@ -10997,7 +10997,7 @@ select.set-field {
 /* ---------------------------------------------------------------------------
    FREE-REPORT-1 Fase 1 — /gratis/informe-geo («Pide tu informe GEO gratis»).
    Design: docs/design-reference/free-report-1/ (founder-approved 2026-10-09,
-   log §248). Every class is `fr-` prefixed so nothing here leaks into the
+   log §249). Every class is `fr-` prefixed so nothing here leaks into the
    rest of the marketing site.
    ------------------------------------------------------------------------- */
 .fr-hero {
@@ -11140,4 +11140,184 @@ select.set-field {
   .fr-done { padding: 28px 20px; }
   .fr-done-title { font-size: 26px; }
   .fr-btn { width: 100%; justify-content: center; }
+}
+
+/* ---------------------------------------------------------------------------
+   FREE-REPORT-2 — the free report offered across the public site: corner card
+   on content pages, band on the home, one line under the pricing cards, and
+   the «Informe gratis» nav link. Design: docs/design-reference/free-report-1/
+   (boards Blog-*, Portada-*, Precios-*, Cabecera-*; founder-approved
+   2026-10-09, log §250). Rules for when the card appears:
+   lib/free-report/promo.ts.
+   ------------------------------------------------------------------------- */
+.fr-promo {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  width: 340px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 22px 20px;
+  border-radius: 16px;
+  color: #fff;
+  background:
+    radial-gradient(260px 200px at 100% 0%, rgba(9, 197, 214, .30), rgba(37, 99, 235, .10) 55%, rgba(8, 18, 35, 0) 100%),
+    #081223;
+  box-shadow: 0 18px 44px rgba(8, 18, 35, .28);
+  font-family: var(--font-body);
+  animation: fr-promo-in .45s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes fr-promo-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fr-promo-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #9fb0cc;
+  cursor: pointer;
+}
+.fr-promo-close:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+.fr-promo-close:focus-visible { outline: 2px solid #8fe9f1; outline-offset: 1px; }
+.fr-promo-badge {
+  align-self: flex-start;
+  padding: 4px 9px;
+  border: 1px solid #2a3a5c;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8fe9f1;
+}
+.fr-promo-title {
+  margin: 0;
+  padding-right: 24px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 21px;
+  line-height: 1.15;
+}
+.fr-promo-body { margin: 0; font-size: 14px; line-height: 1.5; color: #c9d3e6; }
+.fr-promo-cta {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 10px;
+  background: var(--brand-blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+.fr-promo-cta:hover { background: #1d4ed8; color: #fff; }
+@media (max-width: 620px) {
+  .fr-promo { left: 12px; right: 12px; bottom: 12px; width: auto; padding: 18px 18px 16px; }
+  .fr-promo-title { font-size: 20px; }
+}
+
+/* Home band, between «Cinco pantallas» and the FAQ. */
+.fr-band-sec { padding: 8px 0 0; }
+.fr-band {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  padding: 44px 48px;
+  border-radius: 24px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(520px 340px at 100% 0%, rgba(9, 197, 214, .26), rgba(37, 99, 235, .10) 55%, rgba(8, 18, 35, 0) 100%),
+    #081223;
+}
+.fr-band-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.fr-band-pill {
+  align-self: flex-start;
+  padding: 5px 10px;
+  border: 1px solid #2a3a5c;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8fe9f1;
+}
+.fr-band-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+}
+.fr-band-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 15.5px; line-height: 1.45; color: #c9d3e6; }
+.fr-band-list li { display: flex; gap: 8px; }
+.fr-band-list svg { flex: none; margin-top: 3px; }
+.fr-band-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 6px; }
+.fr-band-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 10px;
+  background: var(--brand-blue);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+}
+.fr-band-cta:hover { background: #1d4ed8; color: #fff; }
+.fr-band-note { font-size: 13.5px; color: #9fb0cc; }
+.fr-band-cover { margin: 0; flex: none; width: 210px; transform: rotate(3deg); }
+.fr-band-cover img { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 18px 40px rgba(0, 0, 0, .45); }
+@media (max-width: 760px) {
+  .fr-band { flex-direction: column; align-items: flex-start; gap: 24px; padding: 28px 20px; }
+  .fr-band-title { font-size: 26px; }
+  .fr-band-cover { width: 150px; align-self: center; }
+  .fr-band-cta { width: 100%; }
+}
+
+/* One line under the pricing cards. */
+.fr-price-line {
+  margin: 28px auto 0;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px dashed #b9c6dc;
+  border-radius: 14px;
+  background: #f6f8fc;
+}
+.fr-price-line img { flex: none; width: 40px; height: auto; border-radius: 3px; box-shadow: 0 4px 10px rgba(8, 18, 35, .18); }
+.fr-price-line p { margin: 0; font-size: 15.5px; line-height: 1.45; color: #34405a; }
+.fr-price-line strong { color: #0b1426; }
+.fr-price-line a { color: #1d4ed8; font-weight: 700; white-space: nowrap; }
+
+/* «Informe gratis» in the public nav. */
+.lp-nav-links a.lp-nav-lead { display: inline-flex; align-items: center; gap: 6px; color: #1d4ed8; font-weight: 700; }
+.lp-nav-new {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #e6f9fb;
+  color: #0e7490;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fr-promo { animation: none; }
 }

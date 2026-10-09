@@ -16,8 +16,9 @@ import { homeBlogStrip } from "@/lib/landing/home-blog";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { HomeCtaBand } from "@/components/landing/session-ctas";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
+import { FreeReportBand } from "@/components/free-report/free-report-offers";
 
 
 /**
@@ -1175,6 +1176,11 @@ export function LandingPage() {
           anonimiza, ni se conserva la cifra. Vuelve a haber un testimonio solo con el original y el
           permiso del cliente en el repositorio. `tests/no-invented-customer-claims.test.ts` lo vigila. */}
 
+      {/* FREE-REPORT-2 (log §250): the free report for whoever is not ready
+          to try the product yet. Integrated, never a pop-up here: on the home
+          a pop-up would compete with the trial signup. */}
+      <FreeReportBand />
+
       {/* FAQ — HOME-2026-08 Fase C. Abierta en escritorio, acordeón en móvil,
           como los dos artboards. El `FAQPage` sale de la MISMA constante que
           pinta la pantalla, así que no pueden divergir. */}
@@ -1278,7 +1284,7 @@ export function LandingPage() {
                   {l.label}
                 </Link>
               ))}
-              {MARKETING_ENTITY_LINKS.map((l) => (
+              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>

@@ -40,6 +40,16 @@ export const MARKETING_ENTITY_LINKS: ReadonlyArray<{ href: string; label: string
 ];
 
 /**
+ * FREE-REPORT-2 (log §250): la oferta de captación, en todos los pies de
+ * página públicos. Lista aparte por el mismo motivo que
+ * `MARKETING_ENTITY_LINKS`: `MARKETING_CONTENT_LINKS` son las cuatro capas de
+ * contenido y su test las fija por igualdad exacta.
+ */
+export const MARKETING_LEAD_LINKS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/gratis/informe-geo", label: "Informe gratis" }
+];
+
+/**
  * Los shells de marketing con un pie de página público completo — la lista
  * que `marketing-content-links.test.ts` y `payment-badges.test.ts` recorren
  * para comprobar que su footer no se ha quedado atrás. Vive aquí, en el

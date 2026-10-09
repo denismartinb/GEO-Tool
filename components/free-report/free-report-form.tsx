@@ -5,6 +5,7 @@ import Link from "next/link";
 import { requestFreeReport } from "@/app/gratis/informe-geo/actions";
 import { FREE_REPORT_FIELDS } from "@/lib/free-report/request";
 import type { FreeReportState } from "@/lib/free-report/submit";
+import { PROMO_REQUESTED_KEY } from "@/lib/free-report/promo";
 
 /**
  * FREE-REPORT-1 Fase 1 — the hero, the form and its confirmation.
@@ -43,12 +44,20 @@ export function FreeReportForm({ children }: { children?: ReactNode }) {
   useEffect(() => {
     setRenderedAt(String(Date.now()));
     const params = new URLSearchParams(window.location.search);
-    const parts = [params.get("utm_source"), params.get("utm_campaign")].filter(Boolean);
+    // `desde` tags the GenScore page that sent the visitor (FREE-REPORT-2).
+    const parts = [params.get("utm_source"), params.get("utm_campaign"), params.get("desde")].filter(Boolean);
     setSource(parts.join(" / "));
   }, []);
 
   useEffect(() => {
-    if (state.status === "ok") topRef.current?.scrollIntoView({ block: "start" });
+    if (state.status !== "ok") return;
+    topRef.current?.scrollIntoView({ block: "start" });
+    // The corner card on content pages never comes back once asked for.
+    try {
+      window.localStorage.setItem(PROMO_REQUESTED_KEY, "1");
+    } catch {
+      // Unavailable storage only means the card may show again.
+    }
   }, [state.status]);
 
   if (state.status === "ok") {
