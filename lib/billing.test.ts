@@ -11,6 +11,13 @@ vi.mock("@/lib/email/transactional", () => ({
   sendTrialEndedEmail: (...args: unknown[]) => sendTrialEndedEmail(...args)
 }));
 
+const notifyTrialEndedOnDowngrade = vi.fn(async (..._args: unknown[]) => true);
+vi.mock("@/lib/email/lifecycle/runner", () => ({
+  notifyTrialEndedOnDowngrade: (...args: unknown[]) => notifyTrialEndedOnDowngrade(...args)
+}));
+let lifecycleOn = false;
+vi.mock("@/lib/email/lifecycle/flag", () => ({ isLifecycleEmailEnabled: () => lifecycleOn }));
+
 const getActiveSubscriptionPromo = vi.fn();
 vi.mock("@/lib/stripe", () => ({
   getActiveSubscriptionPromo: (...args: unknown[]) => getActiveSubscriptionPromo(...args)
@@ -104,6 +111,8 @@ beforeEach(() => {
   createServiceClient.mockReset();
   requireUser.mockReset();
   sendTrialEndedEmail.mockReset();
+  notifyTrialEndedOnDowngrade.mockClear();
+  lifecycleOn = false;
   getActiveSubscriptionPromo.mockReset();
   getActiveSubscriptionPromo.mockResolvedValue(null);
 });
@@ -133,6 +142,28 @@ describe("getPlanForUser — reverse trial expiry", () => {
     expect(plan.id).toBe("free");
     expect(updates).toEqual([{ patch: { current_plan: "free", trial_ends_at: null }, id: "user-1" }]);
     expect(sendTrialEndedEmail).toHaveBeenCalledWith("founder@example.com");
+  });
+
+  it("hands the end-of-trial email to the lifecycle sequence when its switch is on (LIFECYCLE-WINBACK-1)", async () => {
+    lifecycleOn = true;
+    const supabase = fakeProfileClient({
+      current_plan: "pro",
+      trial_ends_at: PAST,
+      stripe_subscription_id: null,
+      email: "founder@example.com"
+    });
+    const { client } = fakeServiceClient();
+    createServiceClient.mockReturnValue(client);
+
+    const plan = await getPlanForUser(supabase as never, "user-1");
+
+    expect(plan.id).toBe("free");
+    expect(sendTrialEndedEmail).not.toHaveBeenCalled();
+    expect(notifyTrialEndedOnDowngrade).toHaveBeenCalledWith(client, {
+      userId: "user-1",
+      email: "founder@example.com",
+      trialEndsAt: new Date(PAST)
+    });
   });
 
   it("doesn't send a trial-ended email when the downgrade write fails", async () => {

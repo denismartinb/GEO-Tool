@@ -11,7 +11,10 @@ import {
   paragraph,
   PREFERENCES_URL,
   scoreBar,
+  sectionLabel,
   sendEmail,
+  statCell,
+  statRow,
   subtext,
   wrap
 } from "@/lib/email/transactional";
@@ -375,4 +378,175 @@ export async function sendTrialD5Email(
     }
   );
   return sendEmail(to, `Tu prueba de Pro termina el ${endDay}`, html, envelope.headers);
+}
+
+/* ------------------------------------------- fin de prueba y recuperación */
+
+const dateWithMonth = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" });
+
+function starterLine(starter: PlanOffer, campaign: string, lead: string): string {
+  const price = starter.promo ? `${starter.promo.price} €/mes` : `${starter.price} €/mes`;
+  const forever = starter.promo ? " para siempre (precio fundador)" : "";
+  return subtext(
+    `${lead} <a href="${url("/dashboard/settings?openPlan=starter", campaign)}" style="${FOOTER_LINK_STYLE}">Starter por ${price}</a>${forever}.`
+  );
+}
+
+/** The last real scan, as three figures — or nothing when there is no scan to quote. */
+function lastScanBlock(snap: RunSnapshot | null): string {
+  if (!snap) return "";
+  const recs = snap.activeRecommendations;
+  return `${sectionLabel(`Tu último escaneo · ${dateWithMonth.format(snap.runDate)}`)}${statRow(
+    statCell(String(Math.round(snap.geoScore)), "Puntuación GEO", "em-stack-td") +
+      statCell(`${snap.brandMentions} de ${snap.answers}`, "respuestas te mencionan", "em-stack-td em-stack-second") +
+      statCell(String(recs), recs === 1 ? "recomendación abierta" : "recomendaciones abiertas", "em-stack-td em-stack-second")
+  )}`;
+}
+
+/**
+ * D7 · fin de prueba, and its «tardía» version (LIFECYCLE-WINBACK-1, log
+ * §238). Account news plus an offer, so it carries the lifecycle unsubscribe
+ * (log §232); whoever opted out gets the plain `sendTrialEndedEmail`
+ * instead — the runner decides, not this template.
+ */
+export async function sendTrialEndedOfferEmail(
+  to: string,
+  userId: string,
+  input: { late: boolean; trialEndsAt: Date; snapshot: RunSnapshot | null; pro: PlanOffer; starter: PlanOffer }
+): Promise<boolean> {
+  const envelope = lifecycleEnvelope(userId);
+  if (!envelope) return false;
+
+  const campaign = input.late ? "trial_ended_late" : "trial_ended";
+  const endDate = formatDateLong(input.trialEndsAt);
+  const domain = input.snapshot ? H(input.snapshot.domain) : null;
+  const intact = "tus dominios, escaneos y recomendaciones siguen intactos";
+
+  const subject = input.late
+    ? `Tu prueba de Pro terminó el ${endDate} (y no te avisamos)`
+    : input.snapshot
+      ? `Tu prueba ha terminado. Tus datos de ${input.snapshot.domain} siguen aquí`
+      : "Tu prueba ha terminado. Tus datos siguen aquí";
+
+  const opening = input.late
+    ? `${eyebrow("Un aviso que llega tarde", "#5B6B82")}
+    ${heading(`Tu prueba de Pro terminó el ${endDate}`)}
+    ${paragraph(`Tendríamos que haberte escrito ese día y no lo hicimos. Perdona. Tu cuenta ya no tiene Pro, pero ${intact}.`)}`
+    : `${eyebrow("Fin de la prueba", "#5B6B82")}
+    ${heading("Tu prueba de Pro ha terminado")}
+    ${paragraph(`Tus 7 días de <b style="color:#0B1426;">Pro</b> han terminado. Tus dominios, escaneos y recomendaciones siguen intactos: no hemos borrado nada.`)}`;
+
+  const bridge = input.late
+    ? input.pro.promo
+      ? "Si quieres retomarlo donde lo dejaste, el precio fundador sigue disponible mientras queden plazas:"
+      : "Si quieres retomarlo donde lo dejaste, puedes volver a Pro cuando quieras:"
+    : `A partir de hoy ${domain ? `<b style="color:#0B1426;">${domain}</b>` : "tu dominio"} ya no se escanea a diario. Si quieres seguir viendo cómo cambian las respuestas de la IA, vuelve cuando quieras:`;
+
+  const html = wrap(
+    `
+    ${opening}
+    ${lastScanBlock(input.snapshot)}
+    ${paragraph(bridge)}
+    ${priceBox(input.pro)}
+    ${button(url("/dashboard/settings?openPlan=pro", campaign), `Volver a Pro por ${offerPriceLabel(input.pro)}`)}
+    ${input.late ? "" : starterLine(input.starter, campaign, "¿Te basta con un escaneo semanal?")}
+    `,
+    {
+      footerHtml: envelope.footerHtml,
+      preheader: input.pro.promo
+        ? `Tu prueba de Pro ha terminado. Vuelve a Pro por ${input.pro.promo.price} €/mes para siempre: quedan ${input.pro.promo.remaining} cuentas con precio fundador.`
+        : "Tu prueba de Pro ha terminado. Tus datos siguen intactos."
+    }
+  );
+  return sendEmail(to, subject, html, envelope.headers);
+}
+
+/**
+ * D+3 · tus datos siguen aquí. The real gap with the most-mentioned rival of
+ * the last scan; when the customer leads, the «vas por delante» variant.
+ * Needs a scan with a ranking: without one the runner does not call it.
+ */
+export async function sendWinbackD3Email(
+  to: string,
+  userId: string,
+  input: { snapshot: RunSnapshot; pro: PlanOffer; starter: PlanOffer }
+): Promise<boolean> {
+  const envelope = lifecycleEnvelope(userId);
+  if (!envelope) return false;
+
+  const snap = input.snapshot;
+  const domain = H(snap.domain);
+  const rival = snap.topCompetitor;
+  const behind = rival !== null && rival.mentions > snap.brandMentions;
+  const ratio = behind && snap.brandMentions > 0 ? Math.floor(rival.mentions / snap.brandMentions) : 0;
+
+  const headline = !behind
+    ? "Vas por delante en la IA. ¿Sigues por delante?"
+    : ratio >= 2
+      ? `${rival.name} aparece ${ratio} veces más que tú`
+      : `${rival.name} aparece en más respuestas que tú`;
+  const subject = behind ? `${headline} en la IA` : headline;
+
+  const rows = [
+    ...(rival ? [{ label: H(rival.name), count: rival.mentions, total: snap.answers, isBrand: false }] : []),
+    { label: `${domain} (tú)`, count: snap.brandMentions, total: snap.answers, isBrand: true }
+  ];
+
+  const html = wrap(
+    `
+    ${eyebrow("Tus datos siguen aquí")}
+    ${heading(H(headline))}
+    ${versusBars(rows, `Respuestas en las que aparece · escaneo del ${dateWithMonth.format(snap.runDate)}`)}
+    ${paragraph(
+      behind
+        ? `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea a diario, así que no sabes si esa distancia ha crecido o si has empezado a cerrarla.`
+        : `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea a diario, así que no sabes si alguien te ha adelantado desde entonces.`
+    )}
+    ${priceBox(input.pro)}
+    ${button(url("/dashboard/settings?openPlan=pro", "winback_d3"), "Volver a medir a diario")}
+    ${starterLine(input.starter, "winback_d3", "O")}
+    `,
+    {
+      footerHtml: envelope.footerHtml,
+      preheader: `Es tu último escaneo de ${snap.domain}. Desde entonces no lo estás midiendo.`
+    }
+  );
+  return sendEmail(to, subject, html, envelope.headers);
+}
+
+/**
+ * D+10 · el precio fundador. Only while founder slots remain — its whole
+ * content is that offer, and the scarcity it quotes is the real count read
+ * from Stripe (`getFounderOffer`, FOUNDER-PRICE-1, log §237). Without an
+ * offer this returns `false` and nothing is sent. The design's calendar
+ * deadline ("Últimos días… hasta el 31 de octubre") no longer exists.
+ */
+export async function sendWinbackD10Email(
+  to: string,
+  userId: string,
+  input: { domain: string | null; pro: PlanOffer }
+): Promise<boolean> {
+  const promo = input.pro.promo;
+  if (!promo) return false;
+  const envelope = lifecycleEnvelope(userId);
+  if (!envelope) return false;
+
+  const plan = H(input.pro.planName);
+  const slots = promo.remaining === 1 ? "Queda 1 cuenta" : `Quedan ${promo.remaining} cuentas`;
+  const follow = input.domain ? `seguir <b style="color:#0B1426;">${H(input.domain)}</b> a diario` : "seguir tu dominio a diario";
+
+  const html = wrap(
+    `
+    ${eyebrow("Precio fundador", "#A8660B")}
+    ${heading(`${slots} con ${plan} a ${promo.price} €/mes para siempre`)}
+    ${paragraph(`Las cuentas con precio fundador de ${plan} pagan <b style="color:#0B1426;">${promo.price} €/mes para siempre</b>, en lugar de ${input.pro.price} €, y pueden ${follow} en las respuestas de la IA. Cuando se agoten, se aplica el precio normal. Es el último email que te enviamos sobre esto.`)}
+    ${priceBox(input.pro)}
+    ${button(url("/dashboard/settings?openPlan=pro", "winback_d10"), `Contratar ${plan} por ${promo.price} €/mes`)}
+    `,
+    {
+      footerHtml: envelope.footerHtml,
+      preheader: `Precio fundador para siempre: ${slots.toLowerCase()} con este precio. Es el último email que te enviamos sobre esto.`
+    }
+  );
+  return sendEmail(to, `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, envelope.headers);
 }
