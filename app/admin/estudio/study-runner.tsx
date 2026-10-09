@@ -47,7 +47,7 @@ const COMPARED_COMPETITORS = 3;
 
 const CUSTOM_ERRORS: Record<string, string> = {
   bad_domain: "El dominio no parece válido.",
-  bad_prompt_count: `Escribe entre 1 y ${CUSTOM_STUDY_LIMITS.maxPrompts} preguntas, una por línea.`,
+  bad_prompt_count: `Pulsa «Preparar con IA» para que las sugiera, o escribe entre 1 y ${CUSTOM_STUDY_LIMITS.maxPrompts} preguntas, una por línea.`,
   bad_prompt_length: `Cada pregunta debe tener entre 5 y ${CUSTOM_STUDY_LIMITS.maxPromptChars} caracteres.`,
   too_many_competitors: `Como mucho ${CUSTOM_STUDY_LIMITS.maxCompetitors} competidores.`,
   bad_competitor: `Cada competidor, como mucho ${CUSTOM_STUDY_LIMITS.maxNameChars} caracteres.`
@@ -269,7 +269,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
   }
 
   return (
-    <section>
+    <section className="adm-study">
       <div className="adm-toolbar" style={{ flexWrap: "wrap", gap: 16, alignItems: "center" }}>
         <label>
           <input type="radio" checked={mode === "sector"} onChange={() => setMode("sector")} disabled={running} /> Sector
@@ -299,7 +299,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
             <input value={brand} onChange={(event) => setBrand(event.target.value)} disabled={running} />
           </label>
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <button type="button" onClick={prepare} disabled={running || preparing || !domain.trim()}>
+            <button type="button" className="btn btn-primary" onClick={prepare} disabled={running || preparing || !domain.trim()}>
               {preparing ? "Preparando…" : "Preparar con IA"}
             </button>
             <label>
@@ -360,7 +360,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
             ))}
           </select>
         </label>
-        <button type="button" onClick={run} disabled={running || !config || engines.length === 0}>
+        <button type="button" className="btn btn-primary" onClick={run} disabled={running || !config || engines.length === 0}>
           {running ? "Ejecutando…" : `Lanzar (${answers} respuestas)`}
         </button>
       </div>
@@ -377,11 +377,12 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
       {result ? (
         <div>
           <div className="adm-toolbar" style={{ gap: 12 }}>
-            <button type="button" onClick={() => download(`estudio-${result.slug}-${result.date}.md`, result.report, "text/markdown")}>
+            <button type="button" className="btn btn-ghost" onClick={() => download(`estudio-${result.slug}-${result.date}.md`, result.report, "text/markdown")}>
               Descargar informe (.md)
             </button>
             <button
               type="button"
+              className="btn btn-ghost"
               onClick={() => download(`estudio-${result.slug}-${result.date}.json`, result.json, "application/json")}
             >
               Descargar respuestas (.json)
