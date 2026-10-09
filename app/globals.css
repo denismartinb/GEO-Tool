@@ -10938,3 +10938,58 @@ select.set-field {
   .onb2-editgrid { grid-template-columns: 1fr; }
   .onb2-rname, .onb2-rdom, .onb2-ptext { white-space: normal; }
 }
+
+/* ── PAID-ADS-1: banner de cookies publicitarias ─────────────────────────────
+   Sólo existe en el DOM cuando hay un id de Google Ads o LinkedIn configurado
+   (components/ads/ads-consent.tsx). Rechazar, Configurar y Aceptar llevan el MISMO estilo
+   a propósito: la AEPD pide que rechazar no sea más difícil ni menos visible
+   que aceptar. Se pinta en público y en consola, por eso vive aquí y no en
+   console.css. */
+.ads-consent {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 18px;
+  background: #fff;
+  color: var(--brand-ink);
+  border: 1px solid rgba(11, 20, 38, .12);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(11, 20, 38, .18);
+  font-family: var(--font-body), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ads-consent-title { margin: 0 0 6px; font-weight: 600; font-size: 15px; }
+.ads-consent-text { margin: 0; color: var(--brand-ink-2); }
+.ads-consent-text a { color: var(--brand-blue); text-decoration: underline; }
+.ads-consent-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.ads-consent-options { display: grid; gap: 12px; }
+.ads-consent-option { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.ads-consent-option input { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--brand-blue); cursor: pointer; }
+.ads-consent-option strong { display: block; font-weight: 600; }
+.ads-consent-option-text { display: block; color: var(--brand-ink-2); }
+.ads-consent-btn {
+  flex: 1 1 140px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--brand-blue);
+  background: var(--brand-blue);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ads-consent-btn:hover { background: #1d4ed8; }
+.ads-consent-btn:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 2px; }
+/* Three equal buttons don't fit side by side on a phone, and wrapping 2+1
+   leaves "Aceptar todo" alone at full width — bigger than "Rechazar todo".
+   Stacking keeps all three the same size. */
+@media (max-width: 520px) {
+  .ads-consent-actions { flex-direction: column; }
+  .ads-consent-btn { flex: none; width: 100%; }
+}
