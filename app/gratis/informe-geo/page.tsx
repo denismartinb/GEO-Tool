@@ -13,7 +13,7 @@ import { contentMetadata } from "@/lib/seo/metadata";
  *
  * The paid-ads and outreach hook: a branded multi-engine report, delivered by
  * hand in 48 working hours. Design approved by the founder on 2026-10-09
- * (`docs/design-reference/free-report-1/`, log §248).
+ * (`docs/design-reference/free-report-1/`, log §249).
  *
  * Copy rules this page must keep (founder, 2026-10-09; `.claude/rules/
  * growth-content.md`): no absolute counts of questions, answers or passes;

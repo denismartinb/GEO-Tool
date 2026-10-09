@@ -7,7 +7,7 @@ import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
  * A visitor leaves a domain, a work email and one sentence about what they
  * sell. Nothing here calls an LLM: the request reaches the operator by email,
  * who runs `/admin/estudio` and sends the report by hand within 48 working
- * hours (Task Intake, `docs/brand/design-decisions-log.md` §248). That is why
+ * hours (Task Intake, `docs/brand/design-decisions-log.md` §249). That is why
  * this phase needs no migration and no spend cap — the only thing a public
  * form can cost us here is email, and that is what `createRequestLimiter`
  * bounds.

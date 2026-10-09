@@ -34,7 +34,7 @@ de aquí):
 5. Titular final del fundador: «Cuando tu cliente le pregunta a la IA, ¿te
    nombra a ti o a tu competencia?».
 6. La casilla ofrece «los estudios de GenScore sobre qué marcas recomienda la
-   IA» en vez de «consejos y novedades» (log §248, las tres vías de
+   IA» en vez de «consejos y novedades» (log §249, las tres vías de
    consentimiento).
 7. «Qué incluye» en rejilla de 3×2 en escritorio (con `auto-fit` quedaban
    cuatro arriba, dos abajo y un hueco).
