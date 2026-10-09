@@ -4,7 +4,7 @@ import { getAccountRole } from "@/lib/account-role";
 import { getUsageSummary } from "@/lib/billing";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 import { deriveNameFromEmail } from "@/lib/derive-name-from-email";
-import { PLANS, resolveShownPromoPrice, type Plan } from "@/app/pricing/plans-data";
+import { PLANS, SELLABLE_PLANS, resolveShownPromoPrice, type Plan } from "@/app/pricing/plans-data";
 import { AccountSection } from "@/components/settings/account-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
@@ -98,14 +98,14 @@ export default async function SettingsPage({
   //
   // PROMO-CONSOLE-PARITY-1: and when there is no subscription yet (a free Pro
   // trial), the launch price this account WOULD pay. Without it this index read
-  // "Pro · 179 €/mes" while `/precios` and the change-plan modal said 59 €
-  // (founder, 2026-08-27). Same gate as the card — `getActivePromoPlanIds`
-  // needs the campaign date AND a configured Stripe coupon, so this line can
-  // never quote a discount checkout would refuse.
+  // the list price while `/precios` and the change-plan modal quoted the
+  // discounted one (founder, 2026-08-27). Same gate as the card —
+  // `getActivePromoPlanIds` reads the real Stripe coupons and the founder
+  // slots left, so this line can never quote a discount checkout would refuse.
   const shownPromo = resolveShownPromoPrice({
     plan,
     activePromoPrice: usage?.subscriptionPromo?.promoPrice,
-    promoPlanIds: getActivePromoPlanIds()
+    promoPlanIds: await getActivePromoPlanIds()
   });
   const planLabel =
     isAdmin && plan
@@ -144,7 +144,7 @@ export default async function SettingsPage({
           </div>
           {plan && (
             <span className="set-pill">
-              Plan {plan.name}
+              {plan.id === "free" ? "Sin plan · solo lectura" : `Plan ${plan.name}`}
               {trialDaysLeft !== null && ` · ${trialDaysLeft} ${trialDaysLeft === 1 ? "día" : "días"} de prueba`}
             </span>
           )}
@@ -173,7 +173,7 @@ export default async function SettingsPage({
                 </h2>
                 <BillingContent
                   checkoutStatus={checkout}
-                  openPlanId={PLANS.some((p) => p.id === openPlan) ? (openPlan as Plan["id"]) : undefined}
+                  openPlanId={SELLABLE_PLANS.some((p) => p.id === openPlan) ? (openPlan as Plan["id"]) : undefined}
                 />
               </>
             )}

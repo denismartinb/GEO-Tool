@@ -279,3 +279,11 @@ worse than no rule, because a future session will obey it anyway.
   (`docs/brand/design-decisions-log.md` §188). No unique constraint on
   `(project_id, run_id, dedupe_key)` exists yet to close this at the schema
   level — accepted residual risk, not this phase's scope.
+- **Una cuenta `free` no escanea, ni siquiera la primera vez.** Desde
+  TRIAL-ONLY-1 `free` no es un plan que se venda sino el estado de una cuenta
+  sin plan (prueba terminada o suscripción cancelada), en solo lectura:
+  `createPendingScanRunCore` rechaza todo run suyo —manual, reintento o cron—
+  con `free_plan_scan_limit_reached`, leyendo el plan efectivo. El primer
+  escaneo de toda alta ocurre en la prueba de Pro (`0017_reverse_trial.sql`).
+  Si algún día vuelve un plan gratuito que escanee, tendrá otro id, no éste
+  (`docs/brand/design-decisions-log.md` §243).

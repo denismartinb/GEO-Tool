@@ -43,9 +43,22 @@ describe("computeDataMaturity", () => {
     ).toEqual({ kind: "hidden" });
   });
 
-  it("shows the free-plan variant regardless of tracking state", () => {
+  it("shows the read-only variant for `free` whatever the history (TRIAL-ONLY-1)", () => {
     expect(
       computeDataMaturity({ completedScans: 1, latestStatus: "completed", recurringEnabled: false, planId: "free" })
+    ).toEqual({ kind: "free" });
+    // Zero scans (trial ended before any completed) and a full history both
+    // still need to be told why nothing scans any more.
+    expect(
+      computeDataMaturity({ completedScans: 0, latestStatus: undefined, recurringEnabled: false, planId: "free" })
+    ).toEqual({ kind: "free" });
+    expect(
+      computeDataMaturity({
+        completedScans: DATA_MATURITY_TARGET_SCANS + 2,
+        latestStatus: "completed",
+        recurringEnabled: true,
+        planId: "free"
+      })
     ).toEqual({ kind: "free" });
   });
 
@@ -203,11 +216,13 @@ describe("visibleDataMaturityState", () => {
     expect(visibleDataMaturityState({ state: futuro, dismissed: false, hidden: false })).toEqual(futuro);
   });
 
+  it("TRIAL-ONLY-1: `free` (solo lectura) ya no tiene X — ni un descarte viejo ni el switch lo callan", () => {
+    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: true, hidden: false })).toEqual({ kind: "free" });
+    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: true, hidden: true })).toEqual({ kind: "free" });
+  });
+
   it("`hidden` es del proyecto y `dismissed` de la X: ninguna anula a la otra", () => {
-    // La X descarta incluso `free`, que el switch no calla: son preferencias
-    // distintas y cada una manda en lo suyo.
-    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: true, hidden: false })).toBeNull();
-    expect(visibleDataMaturityState({ state: { kind: "free" }, dismissed: true, hidden: true })).toBeNull();
+    // Son preferencias distintas y cada una manda en lo suyo.
     expect(visibleDataMaturityState({ state: ACCUMULATING, dismissed: true, hidden: false })).toBeNull();
     expect(visibleDataMaturityState({ state: ACCUMULATING, dismissed: false, hidden: true })).toBeNull();
   });

@@ -20,6 +20,11 @@
  *    proyectos Free (`lib/scan/cron.ts`) y `createPendingScanRunCore` rechaza
  *    un segundo run. Decirle «de forma continua» a quien se acaba de registrar
  *    en Free sería prometerle algo que el backend no hace.
+ *    **TRIAL-ONLY-1 (2026-10-09)**: ya no hay plan Free que vender. Toda
+ *    cuenta empieza con 7 días de Pro (escaneo diario), y al terminar sin
+ *    contratar pasa a solo lectura. «De forma continua» vuelve a ser cierto
+ *    para todo el que escanea; «con tu cuenta gratis» deja de serlo y pasa a
+ *    «7 días de Pro gratis».
  * 3. «Cada fallo indica cuántos puntos recuperas» → **los que puntúan**.
  *    `llms_txt_missing` se emite siempre con `pointDelta: null`
  *    (`lib/web-audit/issues.ts`): el producto se niega a puntuarlo, y la
@@ -45,7 +50,7 @@ export const HOME_FAQ: readonly HomeFaqEntry[] = [
   },
   {
     q: "¿Cómo sé si mi marca aparece en ChatGPT?",
-    a: "Prueba el comprobador gratuito: sin registro, preguntamos a ChatGPT por tu categoría y te decimos si te nombra y qué marcas nombra en tu lugar. Es una foto de un motor; el escaneo completo, con tu cuenta gratis, repite la comprobación en Gemini y Claude, con tus propios prompts, y la repite de forma continua en los planes de pago.",
+    a: "Prueba el comprobador gratuito: sin registro, preguntamos a ChatGPT por tu categoría y te decimos si te nombra y qué marcas nombra en tu lugar. Es una foto de un motor; el escaneo completo, con 7 días de Pro gratis y sin tarjeta, repite la comprobación en Gemini y Claude, con tus propios prompts, y la repite de forma continua.",
     link: { href: "/gratis/aparece-mi-marca-en-chatgpt", label: "Probar el comprobador gratis" }
   },
   {

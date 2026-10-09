@@ -92,8 +92,8 @@ export default function TerminosPage() {
       <h2>Cancelación</h2>
       <p>
         Puedes eliminar tu cuenta y tus proyectos en cualquier momento desde la propia aplicación.
-        La eliminación de un proyecto es permanente. En el plan gratuito no existe compromiso de
-        permanencia.
+        La eliminación de un proyecto es permanente. Ni durante la prueba gratuita ni en los planes
+        mensuales existe compromiso de permanencia.
       </p>
 
       <h2>Limitación de responsabilidad</h2>
