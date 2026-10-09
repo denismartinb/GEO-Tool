@@ -105,6 +105,13 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   fue mejor: retirar el dato, porque **lo que no se publica no se queda
   rancio** (log §75).
 
+- **El hub `/estudios` no tiene datos propios.** Título, fecha, cifra y fuente
+  de cada estudio se leen de `BLOG_POSTS`; la única lista a mano es
+  `STUDY_ENTRIES` en `lib/estudios/studies.ts` (slug + tipo). Un estudio nuevo
+  se publica como artículo con `heroStat` y fuente, y se añade ahí en el mismo
+  PR; una segunda redacción de su cifra en el hub divergiría al primer
+  refresco (log §260).
+
 ## Imágenes
 
 - **Ningún visual es decorativo: todos son evidencia** (ADR 0028

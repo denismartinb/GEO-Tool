@@ -170,7 +170,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
 | W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | 🟡 En PR (2026-10-09) — slug `la-ia-te-menciona-pero-recomienda-a-otro` | #555 |
 | W6 | Datos estructurados para GEO: qué marcar y qué no sirve de nada | `playbooks` | 🔲 Pendiente | — |
-| G1 | Cómo aparecer en Gemini, las Vistas creadas con IA y el Modo IA de Google (GEO-SELF-1 Fase 3, log §259) — slug `como-aparecer-en-gemini-y-vistas-creadas-con-ia` | `playbooks` | 🟡 En PR (2026-10-09) | #(este) |
+| G1 | Cómo aparecer en Gemini, las Vistas creadas con IA y el Modo IA de Google (GEO-SELF-1 Fase 3, log §259) — slug `como-aparecer-en-gemini-y-vistas-creadas-con-ia` | `playbooks` | ✅ Publicado (2026-10-09) | #578 |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,
@@ -586,8 +586,9 @@ ratios, nunca recuentos absolutos (fundador, 2026-10-09).
 
 | # | Pieza | Cluster | Keyword primaria | Estado | PR |
 | --- | --- | --- | --- | --- | --- |
-| ST1 | ¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles? | `sectores` | qué software de facturación recomienda la ia | 🟡 En PR | #(este) |
-| ST2 | De buscar a preguntar: cómo la IA está cambiando la búsqueda en España (datos de terceros + dato propio de ST1) | `fundamentos` | búsqueda con ia en españa | 🟡 En PR | #(este) |
+| ST1 | ¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles? | `sectores` | qué software de facturación recomienda la ia | ✅ Publicado | #564 |
+| ST2 | De buscar a preguntar: cómo la IA está cambiando la búsqueda en España (datos de terceros + dato propio de ST1) | `fundamentos` | búsqueda con ia en españa | ✅ Publicado | #571 |
+| ST-H | Hub `/estudios`: reúne los estudios publicados con su cifra, su fuente y el método (GEO-SELF-1 Fase 4, log §260). Cada estudio nuevo se añade a `STUDY_ENTRIES` en `lib/estudios/studies.ts` | — | estudios búsqueda ia españa | 🟡 En PR (2026-10-09) | #(este) |
 
 ---
 
