@@ -41,7 +41,7 @@ export function resolveMaxSweepChainInvocations(): number {
 /**
  * PRICING-TRUTH-1 (PR b): recurring-scan cadence by the project owner's plan,
  * replacing the previous single hardcoded 24h interval applied to every
- * project regardless of plan — `/pricing` promises "Semanal" for Starter and
+ * project regardless of plan — `/precios` promises "Semanal" for Starter and
  * "Diario" for Pro/Agencia, but the cron ran every project daily. `free` is
  * listed only for completeness (its interval is never actually reached: a
  * free-plan project cannot have `recurring_scans_enabled=true` in practice —

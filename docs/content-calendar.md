@@ -584,6 +584,7 @@ ratios, nunca recuentos absolutos (fundador, 2026-10-09).
 | # | Pieza | Cluster | Keyword primaria | Estado | PR |
 | --- | --- | --- | --- | --- | --- |
 | ST1 | ¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles? | `sectores` | qué software de facturación recomienda la ia | 🟡 En PR | #(este) |
+| ST2 | De buscar a preguntar: cómo la IA está cambiando la búsqueda en España (datos de terceros + dato propio de ST1) | `fundamentos` | búsqueda con ia en españa | 🟡 En PR | #(este) |
 
 ---
 

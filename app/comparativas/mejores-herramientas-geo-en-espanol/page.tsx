@@ -210,7 +210,7 @@ export default function MejoresHerramientasGeoPage() {
         <h2>Metodología</h2>
         <p>
           Los datos de GenScore vienen directamente de los planes reales del producto (la misma fuente
-          que usa la página de <Link href="/pricing">Precios</Link>). Los datos de Otterly y Peec AI
+          que usa la página de <Link href="/precios">Precios</Link>). Los datos de Otterly y Peec AI
           proceden de sus respectivas comparativas dedicadas, enlazadas arriba, con su propia
           investigación y fecha de consulta. Los de CreceRank, Mentio, Profound, Scrunch AI y AthenaHQ proceden de una
           búsqueda agregada de reseñas de terceros — sus páginas oficiales de precios no se pudieron

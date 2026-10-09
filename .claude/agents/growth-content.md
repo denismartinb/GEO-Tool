@@ -42,10 +42,10 @@ technically accurate, not SEO filler.
   numbers/weights must match `docs/adr/0008-composite-geo-score.md` and
   `lib/scoring/run-scoring.ts` exactly — read the ADR before writing, don't
   reconstruct the formula from memory.
-- **Positioning/marketing copy** on `/`, `/pricing`, and future landing
+- **Positioning/marketing copy** on `/`, `/precios`, and future landing
   pages: honest about current plan caps, current feature set, current beta
   status. Same "no fake progress" rule as the rest of the product applies to
-  marketing copy — a claim on `/pricing` or the landing page is a promise,
+  marketing copy — a claim on `/precios` or the landing page is a promise,
   not just words.
 - **Lifecycle emails** (`lib/email/transactional.ts`): tone and copy quality
   for anything beyond the transactional minimum already shipped

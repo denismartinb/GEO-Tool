@@ -7,7 +7,7 @@ import { PLANS } from "@/app/pricing/plans-data";
  * y páginas de precios independientes) consultada el 2 de agosto de 2026 —
  * ver la nota de fecha en la propia página. Los precios y límites de
  * GenScore vienen de app/pricing/plans-data.ts, la misma fuente que usa
- * /pricing — no se reescriben a mano.
+ * /precios — no se reescriben a mano.
  *
  * TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2): ese último
  * párrafo era una promesa que el fichero no cumplía todavía — la fila de

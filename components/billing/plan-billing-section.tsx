@@ -78,7 +78,7 @@ export function PlanBillingSection({
   promoPlanIds?: string[];
   /**
    * PRECIO-BUTTONS-CONSOLE-1: opens "Cambiar de plan" on this plan as soon as
-   * the section mounts — the deep link from a `/pricing` CTA clicked while
+   * the section mounts — the deep link from a `/precios` CTA clicked while
    * logged in (`?openPlan=<id>`, validated by the page). Read once into the
    * initial state below, not in an effect: an effect would flash the closed
    * card for a frame before opening the modal.
@@ -394,7 +394,7 @@ export function PlanBillingSection({
                 cards), so it navigates there instead of opening the modal —
                 fundador, 2026-08-25. */}
             <Link
-              href="/pricing"
+              href="/precios"
               className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[8px] px-3 text-sm font-semibold bg-[var(--accent)] text-white hover:opacity-95"
             >
               Comparar planes

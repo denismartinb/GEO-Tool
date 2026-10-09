@@ -14,7 +14,7 @@ import { assertPageIsHealthy, captureInteraction, visitAsUser } from "../support
  * public page and is exactly what would surface a real bug if one of these
  * routes ever started bouncing a logged-in visitor to /login unexpectedly.
  *
- * Does NOT cover `/` or `/pricing`: both are client components that cannot
+ * Does NOT cover `/` or `/precios`: both are client components that cannot
  * export per-page `metadata` yet (see docs/launch-plan.md, Fase 7b ledger) —
  * add them here once a future phase gives them their own canonical.
  */
@@ -67,6 +67,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "mi-marca-no-aparece-en-chatgpt-por-que": "playbooks",
   // SECTOR-STUDY-1 (2026-10-09, log §246).
   "que-software-de-facturacion-recomienda-la-ia": "sectores",
+  // STUDY-HOME-1 (2026-10-09, log §251).
+  "de-buscar-a-preguntar": "fundamentos",
   // W5 (2026-10-09).
   "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks"
 };
@@ -159,6 +161,13 @@ test("/que-es-genscore renders and has its own canonical", async ({ page }, test
   const findings = await visitAsUser(page, testInfo, "/que-es-genscore", "que-es-genscore");
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/que-es-genscore");
+});
+
+// GEO-SELF-1 Fase 1 (log §256): la página «Quiénes somos».
+test("/sobre-genscore renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/sobre-genscore", "sobre-genscore");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/sobre-genscore");
 });
 
 test("/geo renders and has its own canonical", async ({ page }, testInfo) => {

@@ -244,7 +244,7 @@ export default function AlternativasAOtterlyPage() {
         <h2>Metodología</h2>
         <p>
           Los datos de GenScore vienen de los planes reales del producto, la misma fuente que usa la
-          página de <Link href="/pricing">Precios</Link>. Los de Otterly proceden de agregadores de
+          página de <Link href="/precios">Precios</Link>. Los de Otterly proceden de agregadores de
           reseñas de terceros consultados en la fecha indicada arriba: su página de precios no es
           accesible desde nuestro entorno, así que ninguna de sus cifras viene de fuente primaria. Se
           publican porque dos fuentes independientes entre sí coinciden y porque cuadran con lo que ya

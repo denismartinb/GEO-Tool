@@ -255,8 +255,8 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - **Una página de marketing nunca es `"use client"` en su raíz.** Eso impide
   exportar `metadata`, y la página se queda sin título, sin descripción y sin
   canonical propios sin que nada falle: es exactamente lo que les pasó a la
-  home y a `/pricing`. El patrón es página de servidor con la metadata +
-  componente cliente aparte (log §46; `app/pricing/pricing-metadata.test.ts`).
+  home y a `/precios`. El patrón es página de servidor con la metadata +
+  componente cliente aparte (log §46; `app/precios/pricing-metadata.test.ts`).
 - **La metadata no nombra motores que el producto no ejecuta.** Hoy son Gemini,
   Claude y ChatGPT. Un `<title>` con Perplexity o AI Overviews es el mismo
   reclamo falso que PRICING-TRUTH-1 retiró del producto, solo que en el sitio
@@ -269,7 +269,7 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   `openGraph` de una página **reemplaza** el del layout raíz en vez de
   fusionarse campo a campo, así que declarar solo `title`/`description` le quita
   a la página `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter
-  enteras, sin ningún error visible. Pasó en la home y en `/pricing` (log §47).
+  enteras, sin ningún error visible. Pasó en la home y en `/precios` (log §47).
 - **Un `og:image` sólo puede ser una imagen rasterizada.** Ninguna red social
   renderiza SVG: la tarjeta sale en blanco, y `ogImageFor()` filtra por `RASTER`
   justo por eso (log §47). **Desde el 2026-08-20 ninguna portada del blog es
@@ -293,6 +293,20 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   derivó hasta listar la mitad del contenido publicado sin que nada avisara — y
   es el fichero sobre el que el producto publica una guía
   (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §47).
+  **Lo mismo vale para `/llms-full.txt`** (`lib/seo/llms-full-txt.ts`, log
+  §256): importa los datos que renderiza cada página —por eso el FAQ de
+  `/que-es-genscore` y el texto de `/sobre-genscore` viven en `lib/brand/`—,
+  nunca una segunda redacción. **Y la fecha de `/blog` y de cada pilar se
+  deriva de sus artículos** (`lib/seo/sitemap-dates.ts`), no se escribe a mano:
+  las dos fechas a mano que había se quedaron rancias (log §256).
+- **Un grupo con nombre en `robots.ts` repite la lista de `disallow` entera.**
+  Según RFC 9309 un rastreador que encaja en un grupo con nombre ignora el de
+  `*`: un `GPTBot` con sólo `allow: "/"` tendría abiertos `/dashboard` y
+  `/api` (`lib/seo/robots-rules.ts`, `app/robots.test.ts`; log §256).
+- **Ni `founder` ni `Person` en el schema, ni nombre de persona, foto o
+  empleador en `/sobre-genscore`** (fundador, 2026-10-09; log §256). La
+  entidad es la empresa; `author` y `publisher` de los artículos apuntan al
+  `Organization` por `@id`. Firmar con nombre sería una fase propia.
 - **Una pantalla PÚBLICA sin valor de búsqueda lleva `robots: { index: false,
   follow: true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de

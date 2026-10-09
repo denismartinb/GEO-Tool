@@ -59,7 +59,7 @@ export default function TerminosPage() {
       <h2>Planes y precios</h2>
       <p>
         Los planes disponibles, sus características y precios se describen en nuestra{" "}
-        <Link href="/pricing">página de precios</Link>. Podemos modificar los precios o las
+        <Link href="/precios">página de precios</Link>. Podemos modificar los precios o las
         características de los planes; si el cambio te afecta de forma sustancial y ya eres
         cliente, te avisaremos con antelación razonable antes de que te sea aplicado.
       </p>

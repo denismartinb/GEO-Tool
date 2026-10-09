@@ -404,6 +404,25 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "de las respuestas de ChatGPT, Gemini y Claude nombran a Holded, la marca más presente.",
       source: "Estudio GenScore, 9 oct 2026"
     }
+  },
+  {
+    slug: "de-buscar-a-preguntar",
+    title: "De buscar a preguntar: cómo la IA está cambiando la búsqueda en España",
+    description:
+      "El 22% de los españoles ya usa la IA en lugar del buscador y casi la mitad de quienes la usan se apoya en ella para comprar. Los datos de AIMC, IAB Spain, Bain y Pew, con sus fuentes.",
+    datePublished: "2026-10-09",
+    coverImage: "/blog/de-buscar-a-preguntar/cover.webp",
+    coverIcon: "trendUp",
+    // STUDY-HOME-1 (log §251): blog version of the «De buscar a preguntar»
+    // PDF study. Third-party figures carry source and sample size; own data
+    // is percentages only.
+    primaryKeyword: "búsqueda con ia en españa",
+    cluster: "fundamentos",
+    heroStat: {
+      value: "22%",
+      label: "de los españoles ya usa la IA en lugar del buscador, la cifra más alta de Europa.",
+      source: "Bain & Company, 2025"
+    }
   }
 ];
 

@@ -130,7 +130,7 @@ describe("middleware · alcance", () => {
     // de la ruta y las exclusiones parecen no funcionar.
     const matcher = new RegExp(`^${config.matcher[0]}$`);
 
-    for (const included of ["/", "/dashboard", `/dashboard/projects/${PROJECT_ID}`, "/blog", "/pricing"]) {
+    for (const included of ["/", "/dashboard", `/dashboard/projects/${PROJECT_ID}`, "/blog", "/precios"]) {
       expect(matcher.test(included), included).toBe(true);
     }
   });

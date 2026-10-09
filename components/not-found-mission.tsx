@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 
 /**
@@ -32,7 +32,7 @@ const NAV_LINKS = [
   { href: "/geo", label: "Qué es GEO" },
   { href: "/blog", label: "Blog" },
   { href: "/comparativas", label: "Comparativas" },
-  { href: "/pricing", label: "Precios" }
+  { href: "/precios", label: "Precios" }
 ];
 
 /**
@@ -43,7 +43,7 @@ const NAV_LINKS = [
 const SHORTCUTS = [
   ...MARKETING_CONTENT_LINKS.filter((l) => l.href !== "/blog"),
   { href: "/geo", label: "Qué es el GEO" },
-  { href: "/pricing", label: "Precios" }
+  { href: "/precios", label: "Precios" }
 ];
 
 export function NotFoundMission() {
@@ -123,13 +123,13 @@ export function NotFoundMission() {
             <div className="links">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>
               ))}
-              {MARKETING_ENTITY_LINKS.map((l) => (
+              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>

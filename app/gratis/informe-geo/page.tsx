@@ -233,7 +233,7 @@ export default function FreeReportPage() {
             </Link>
             <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               <Link href="/blog">Blog</Link>
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>

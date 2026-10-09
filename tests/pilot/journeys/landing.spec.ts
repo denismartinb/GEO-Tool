@@ -8,10 +8,10 @@ import {
 } from "../support/journey";
 
 /**
- * Las dos páginas comerciales — `/` y `/pricing` — y el cajón de navegación
+ * Las dos páginas comerciales — `/` y `/precios` — y el cajón de navegación
  * móvil que las dos comparten.
  *
- * Por qué existe (2026-08-11, log §55). El piloto **no visitaba `/pricing`** y
+ * Por qué existe (2026-08-11, log §55). El piloto **no visitaba `/precios`** y
  * de `/` sólo tenía la pasada del tour del hero, que mira el tour. Y, sobre
  * todo: de las 560 capturas de la última pasada, **ninguna tenía el cajón
  * abierto**. El cajón sólo existe por debajo de 900 px y sólo después de un
@@ -34,8 +34,8 @@ test("la portada carga con su hero real", async ({ page }, testInfo) => {
   assertPageIsHealthy(findings);
 });
 
-test("/pricing carga con sus planes reales", async ({ page }, testInfo) => {
-  const findings = await visitAsUser(page, testInfo, "/pricing", "pricing", {
+test("/precios carga con sus planes reales", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/precios", "pricing", {
     describedAs: "las tarjetas de plan de la página de precios",
     anyOf: [{ selector: ".price-card" }, { text: /Starter/ }]
   });
@@ -50,7 +50,7 @@ test("/pricing carga con sus planes reales", async ({ page }, testInfo) => {
  * otras dos en vez de pasar en silencio — un test que no comprueba nada y
  * reporta verde es justo lo que produjo el incidente que lo motiva.
  */
-for (const path of ["/", "/pricing"]) {
+for (const path of ["/", "/precios"]) {
   const label = path === "/" ? "landing" : "pricing";
 
   test(`el cajón de navegación móvil de ${label} abre y sus botones se leen`, async ({ page }, testInfo) => {
@@ -75,7 +75,7 @@ for (const path of ["/", "/pricing"]) {
      * `.lp-mobnav` no está en el DOM hasta que ese estado se abre. Un clic
      * anterior a la hidratación no se encola: se pierde. Con
      * `waitForTimeout(1_000)` el test apostaba a que un preview frío hidrata en
-     * menos de un segundo, y el 2026-08-20 perdió esa apuesta en `/pricing`
+     * menos de un segundo, y el 2026-08-20 perdió esa apuesta en `/precios`
      * mientras `/` pasaba en la misma corrida (PR #446).
      *
      * Esto no afloja la comprobación —si el cajón no abre nunca, sigue fallando

@@ -11,6 +11,9 @@ vi.mock("@/lib/email/lifecycle/templates", () => ({
   sendFirstScanReadyEmail: (...a: unknown[]) => sendFirstScanReadyEmail(...a),
   formatDateLong: () => "31 de octubre"
 }));
+const loadReportInput = vi.fn(async (..._args: unknown[]): Promise<unknown> => ({ input: true }));
+vi.mock("@/lib/report/report-data", () => ({ loadReportInput: (...a: unknown[]) => loadReportInput(...a) }));
+vi.mock("@/lib/report/report-model", () => ({ buildReportModel: () => ({ model: true }) }));
 vi.mock("@/lib/stripe", () => ({
   getFounderOffer: async () => ({ planIds: ["pro", "starter"], remaining: 47, total: 50 })
 }));
@@ -111,15 +114,42 @@ describe("runLifecycleEmails", () => {
     expect(await runLifecycleEmails({ service, now: NOW })).toMatchObject({ considered: 0, sent: 0 });
   });
 
-  it("sends D5 with real plan prices two days before the end", async () => {
+  it("sends the last-day email with real plan prices", async () => {
     const { service } = fakeService({
-      profiles: { data: [trialProfile(120)] },
+      profiles: { data: [trialProfile(144)] },
       email_sends: { data: [{ owner_user_id: USER, kind: "trial_d3", sent_at: new Date(NOW.getTime() - 50 * HOUR).toISOString() }] }
     });
     await runLifecycleEmails({ service, now: NOW });
-    const input = sendTrialD5Email.mock.calls[0][2] as { pro: { price: number; promo: { price: number } | null } };
+    const input = sendTrialD5Email.mock.calls[0][2] as { pro: { price: number; promo: { price: number } | null }; report: unknown };
     expect(input.pro.price).toBe(99);
     expect(input.pro.promo?.price).toBe(69);
+    expect(input.report).toBeNull();
+    expect(loadReportInput).not.toHaveBeenCalled();
+  });
+
+  it("puts the report of the recipient's own scanned project in the last-day email (§254)", async () => {
+    const { service } = fakeService({
+      profiles: { data: [trialProfile(144)] },
+      projects: { data: [{ id: "p1", name: "Clínica Aurora", brand: "Aurora", domain: "clinicaaurora.es", owner_user_id: USER }] },
+      scan_runs: { data: [{ project_id: "p1" }] }
+    });
+    await runLifecycleEmails({ service, now: NOW });
+    expect(loadReportInput).toHaveBeenCalledWith(
+      expect.objectContaining({ project: { id: "p1", name: "Clínica Aurora", brand: "Aurora", domain: "clinicaaurora.es" } })
+    );
+    expect(sendTrialD5Email.mock.calls[0][2]).toMatchObject({ projectId: "p1", report: { model: true } });
+  });
+
+  it("still sends the deadline email when the report cannot be loaded", async () => {
+    loadReportInput.mockRejectedValueOnce(new Error("boom"));
+    const { service, upserts } = fakeService({
+      profiles: { data: [trialProfile(144)] },
+      projects: { data: [{ id: "p1", name: "Clínica Aurora", brand: null, domain: "clinicaaurora.es", owner_user_id: USER }] },
+      scan_runs: { data: [{ project_id: "p1" }] }
+    });
+    await runLifecycleEmails({ service, now: NOW });
+    expect(sendTrialD5Email.mock.calls[0][2]).toMatchObject({ report: null });
+    expect(upserts).toEqual([{ table: "email_sends", row: { owner_user_id: USER, kind: "trial_d5" } }]);
   });
 });
 

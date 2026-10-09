@@ -8,7 +8,10 @@
  *   usual case is that people add a domain and scan at sign-up, and then this
  *   email simply never goes out).
  * - D3 · first action — the top real recommendation, or a no-scan variant.
- * - D5 · two days left — deadline email; it outranks the other two.
+ * - D5 · last notice — deadline email, on the trial's last day; with a scan it
+ *   carries the GenScore report (TRIAL-REPORT-EMAIL-1, log §254). It
+ *   outranks the other two. The kind keeps its `trial_d5` name: it is a
+ *   value in `email_sends`, and renaming it would need a migration.
  *
  * Global rules: never to a paying, comped or internal account; never after
  * the trial has ended (that is Fase D's job); never to someone who opted out
@@ -28,8 +31,14 @@ const HOUR_MS = 60 * 60 * 1000;
 
 export const D1_WINDOW_HOURS = { from: 20, to: 72 } as const;
 export const D3_WINDOW_HOURS = { from: 72, to: 120 } as const;
-/** Hours LEFT until `trial_ends_at`: ~2 days, 24 h wide. */
-export const D5_REMAINING_WINDOW_HOURS = { above: 36, atMost: 60 } as const;
+/**
+ * Hours LEFT until `trial_ends_at`: the last day, 24 h wide. Was 36–60 h
+ * (~2 days) until §254: the founder wants the report next to the deadline,
+ * where the urgency is. Not lower than 12 h, so the email lands with half a
+ * day still left to act; and the trial can never end before the daily cron
+ * reaches this window, because the window is 24 h wide.
+ */
+export const D5_REMAINING_WINDOW_HOURS = { above: 12, atMost: 36 } as const;
 export const MIN_HOURS_BETWEEN_LIFECYCLE_EMAILS = 48;
 
 export type TrialAccountState = {

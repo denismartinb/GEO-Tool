@@ -65,3 +65,36 @@ export const APPLICATION_CATEGORY = "BusinessApplication";
 export const SITE_ORIGIN = "https://www.genscore.es";
 export const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 export const SOFTWARE_APPLICATION_ID = `${SITE_ORIGIN}/#software`;
+
+/**
+ * Perfiles externos reales de la organización (log §121) — los que van en
+ * `sameAs` del `Organization` y los que enlaza `/sobre-genscore`. Una sola
+ * lista para que la página y el schema no puedan divergir. Un perfil que no
+ * está aquí no existe todavía: no se añade hasta que el fundador dé su URL real.
+ */
+export const ORGANIZATION_SAME_AS = {
+  linkedin: "https://www.linkedin.com/company/genscore/",
+  g2: "https://www.g2.com/sellers/genscore"
+} as const;
+
+/**
+ * Año de nacimiento de la marca: GenScore se decidió como nombre público el
+ * 2026-07-09 (`docs/launch-plan.md` Fase 0). Sólo el año: es lo que se puede
+ * afirmar sin discutir qué día cuenta como "lanzamiento" (GEO-SELF-1).
+ */
+export const FOUNDING_YEAR = "2026";
+
+/** Dirección de contacto público, la misma que usan `/privacidad` y `/terminos`. */
+export const CONTACT_EMAIL = "soporte@genscore.es";
+
+/**
+ * Logo raster para el `Organization` y el `publisher` de los artículos. Google
+ * no acepta SVG como logo de organización en resultados enriquecidos, así que
+ * el `genscore-tile.svg` que había antes no servía para eso (GEO-SELF-1). Es el
+ * mismo icono de marca, exportado a 512×512.
+ */
+export const ORGANIZATION_LOGO = {
+  url: `${SITE_ORIGIN}/brand/icon-512.png`,
+  width: 512,
+  height: 512
+} as const;
