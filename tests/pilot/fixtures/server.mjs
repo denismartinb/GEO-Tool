@@ -85,7 +85,9 @@ const BLOG_SLUGS = [
   "geo-negocios-locales-servicios-profesionales",
   // GROWTH-2, N5 (2026-09-19).
   "mi-marca-no-aparece-en-chatgpt-por-que",
-  "que-software-de-facturacion-recomienda-la-ia"
+  "que-software-de-facturacion-recomienda-la-ia",
+  // STUDY-HOME-1 (2026-10-09, log §251).
+  "de-buscar-a-preguntar"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
