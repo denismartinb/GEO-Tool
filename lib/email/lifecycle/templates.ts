@@ -53,8 +53,12 @@ export type TopRecommendation = { title: string; description: string; engines: s
 export type PlanOffer = {
   planName: string;
   price: number;
-  /** Present only while the launch promo can really be redeemed at checkout. */
-  promo: { price: number; months: number; endsLabel: string } | null;
+  /**
+   * Present only while the founder price can really be redeemed at checkout
+   * (FOUNDER-PRICE-1, log §237): forever, for the first `total` subscriptions,
+   * `remaining` of which are still free.
+   */
+  promo: { price: number; remaining: number; total: number } | null;
 };
 
 const dateLong = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" });
@@ -120,12 +124,12 @@ export function priceBox(offer: PlanOffer): string {
   const off = Math.round(((offer.price - offer.promo.price) / offer.price) * 100);
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;border:2px solid #2563EB;border-radius:16px;"><tr><td style="padding:20px 22px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;">Precio de lanzamiento · ${H(offer.planName)}</td>
+      <td style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;">Precio fundador · ${H(offer.planName)}</td>
       <td align="right"><span style="display:inline-block;background:#E7F6EE;color:#15915A;font-weight:800;font-size:12.5px;padding:4px 10px;border-radius:999px;">−${off}%</span></td>
     </tr></table>
-    <div style="margin-top:10px;"><span style="font-size:18px;color:#94A1B5;text-decoration:line-through;font-weight:700;">${offer.price} €</span><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;padding-left:10px;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
-    <div style="font-size:13px;color:#3B4759;margin-top:4px;">Durante ${offer.promo.months} meses. Después, ${offer.price} €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>
-    <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Disponible hasta el ${offer.promo.endsLabel}</div>
+    <div style="margin-top:10px;"><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
+    <div style="font-size:13px;color:#3B4759;margin-top:4px;">Para siempre, mientras mantengas tu suscripción. Precio normal: ${offer.price} €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>
+    <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Quedan ${offer.promo.remaining} de ${offer.promo.total} plazas</div>
   </td></tr></table>`;
 }
 
@@ -330,7 +334,7 @@ export async function sendTrialD3Email(
 /**
  * D5 · quedan 2 días. Fulfils the welcome email's promise of a warning before
  * the trial ends. The table and the prices come from the caller (`PLANS`,
- * live promo) — the loss is what really happens on the end date.
+ * live founder offer) — the loss is what really happens on the end date.
  */
 export async function sendTrialD5Email(
   to: string,
@@ -350,7 +354,7 @@ export async function sendTrialD5Email(
   const endDate = formatDateLong(input.trialEndsAt);
   const who = input.domain ? `<b style="color:#0B1426;">${H(input.domain)}</b>` : "tu dominio";
   const starterPrice = input.starter.promo
-    ? `${input.starter.promo.price} €/mes (antes ${input.starter.price} €) durante ${input.starter.promo.months} meses`
+    ? `${input.starter.promo.price} €/mes para siempre (precio fundador)`
     : `${input.starter.price} €/mes`;
 
   const html = wrap(
@@ -366,7 +370,7 @@ export async function sendTrialD5Email(
     {
       footerHtml: envelope.footerHtml,
       preheader: input.pro.promo
-        ? `Mantén Pro por ${input.pro.promo.price} €/mes (antes ${input.pro.price} €). Precio de lanzamiento hasta el ${input.pro.promo.endsLabel}.`
+        ? `Mantén Pro por ${input.pro.promo.price} €/mes para siempre. Precio fundador: quedan ${input.pro.promo.remaining} plazas.`
         : `Tu prueba termina el ${endDate}. Elige tu plan para seguir midiendo a diario.`
     }
   );

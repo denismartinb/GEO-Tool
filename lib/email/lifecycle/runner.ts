@@ -337,8 +337,8 @@ async function sendDecision(
   return sendTrialD5Email(ctx.email, ctx.userId, {
     trialEndsAt: ctx.trialEndsAt,
     domain: ctx.project?.domain ?? null,
-    pro: resolvePlanOffer("pro"),
-    starter: resolvePlanOffer("starter"),
+    pro: await resolvePlanOffer("pro"),
+    starter: await resolvePlanOffer("starter"),
     lossRows: proVsFreeRows()
   });
 }

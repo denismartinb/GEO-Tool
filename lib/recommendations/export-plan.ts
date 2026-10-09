@@ -59,7 +59,7 @@ function writeRecommendation(lines: string[], rec: ExportPlanRecommendation, ind
 /**
  * Genera el markdown completo del plan de acción. `now` es inyectable
  * únicamente para que el test no dependa del reloj real — mismo motivo que
- * `isPromoActive()` se mockea en vez de leer la fecha real (log §197).
+ * el antiguo `isPromoActive()` se mockeaba en vez de leer la fecha real (log §197).
  */
 export function buildExportPlanMarkdown(params: {
   domain: string;
