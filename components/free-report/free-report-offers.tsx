@@ -11,7 +11,7 @@ import { FREE_REPORT_ENTRY, freeReportHref } from "@/lib/free-report/promo";
 const COVER_SRC = "/informe-gratis/portada-ejemplo.webp";
 
 const BAND_POINTS = [
-  "En qué preguntas principales de búsqueda te nombran",
+  "En qué preguntas te nombran",
   "A quién recomiendan en tu lugar",
   "Qué cambiar primero"
 ];
@@ -33,7 +33,7 @@ export function FreeReportBand() {
           <div className="fr-band-copy">
             <span className="fr-band-pill">Informe gratuito · en 48 h laborables</span>
             <h2 className="fr-band-title" id="fr-band-title">
-              ¿Prefieres que lo miremos nosotros? <span className="fr-grad">Te enviamos gratis un informe de tu marca.</span>
+              ¿Lo analizamos? <span className="fr-grad">Te enviamos gratis un informe de tu marca.</span>
             </h2>
             <ul className="fr-band-list">
               {BAND_POINTS.map((point) => (
@@ -47,7 +47,6 @@ export function FreeReportBand() {
               <Link className="fr-band-cta" href={freeReportHref(FREE_REPORT_ENTRY.homeBand)}>
                 Pedir mi informe gratis
               </Link>
-              <span className="fr-band-note">Sin tarjeta y sin registrarte.</span>
             </div>
           </div>
           <figure className="fr-band-cover">

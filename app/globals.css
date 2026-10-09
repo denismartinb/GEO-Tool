@@ -11278,7 +11278,6 @@ select.set-field {
   text-decoration: none;
 }
 .fr-band-cta:hover { background: #1d4ed8; color: #fff; }
-.fr-band-note { font-size: 13.5px; color: #9fb0cc; }
 .fr-band-cover { margin: 0; flex: none; width: 210px; transform: rotate(3deg); }
 .fr-band-cover img { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 18px 40px rgba(0, 0, 0, .45); }
 @media (max-width: 760px) {
