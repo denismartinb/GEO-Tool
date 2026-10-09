@@ -21960,3 +21960,95 @@ con un competidor y marca blanca para agencias.
 
 **Trazabilidad.** `lib/report/report-model.ts` (+test),
 `docs/design-reference/geo-report-1/`, `.claude/rules/report.md`.
+
+## 249. FREE-REPORT-1 Fase 1: «Pide tu informe GEO gratis», formulario con entrega manual en 48 h laborables (2026-10-09)
+
+**Qué.** Landing pública `/gratis/informe-geo` con un formulario de tres
+campos (web, email de trabajo, qué vendes) y una casilla opcional de
+comunicaciones. Al enviarlo, un correo al operador (`OPS_ALERT_EMAIL`) con la
+petición y un correo de confirmación al solicitante. Ninguna llamada a un LLM
+y ninguna migración: el operador lanza `/admin/estudio` (§246), el hilo de
+outreach cura el informe con la plantilla de prospecto y se envía a mano.
+Diseño aprobado por el fundador en `docs/design-reference/free-report-1/`.
+
+**Por qué.** El informe de prospecto de 8 páginas (La Fábrica del SEO,
+2026-10-09) le pareció al fundador mejor que todo lo que enseña el producto
+hoy, y pidió explotarlo como gancho para anuncios de pago y outreach. El
+comprobador gratuito da una respuesta de un motor; esto da el diagnóstico
+completo. Task Intake en el hilo «Outreach a empresas objetivo»: Fase 1 manual
+para validar demanda antes de automatizar nada.
+
+**Decisiones.**
+
+- **El éxito depende del correo al operador.** Si Resend no lo acepta, el
+  visitante ve un error y no recibe confirmación: decirle «recibido» de una
+  petición que nadie ha recibido es un éxito falso. El fallo sólo de la
+  confirmación no deshace nada, porque el operador ya tiene la petición.
+- **Límite por instancia, dicho como tal.** `createRequestLimiter`: una
+  petición por dominio y día, dos por email, tres por IP (hash con
+  `PUBLIC_CHECK_IP_SALT`; sin sal se omite la IP). Vive en memoria y Vercel
+  reparte peticiones entre instancias, así que frena al que pulsa veinte
+  veces, no a un atacante. Proporcionado para una fase en la que un abuso
+  cuesta dos correos y ningún LLM. Fase 3 (automática, con gasto) necesita
+  tabla y el conteo que falla cerrado de `lib/free-checker/rate-limit.ts`.
+- **Bots:** un campo trampa relleno se contesta como a una persona y no se
+  envía nada. Un envío antes de 1,5 s desde que se pintó el formulario (o
+  antes de hidratar) NO se contesta con «recibido»: puede ser una persona con
+  autocompletado, así que se le pide pulsar otra vez (hallazgo de QA).
+- **El límite se anota sólo tras entregar al operador.** Si se anotara antes,
+  el reintento tras un fallo de Resend recibiría «ya hemos recibido tu
+  petición» de algo que nadie recibió (hallazgo de QA).
+- **Tres vías de consentimiento, sin consentimiento implícito** (fundador,
+  2026-10-09, tras proponer quitar la casilla porque «nadie va a clicar»). Se
+  descartó dar el consentimiento por aceptado al enviar o premarcar la casilla:
+  no vale para correo comercial (art. 21.1 LSSI; TJUE Planet49). Lo que sí se
+  hace: (1) la casilla ofrece algo concreto que existe, los estudios de
+  GenScore sobre qué marcas recomienda la IA (§246), en vez de «consejos y
+  novedades»; (2) seguimiento sobre el propio informe, como mucho entrega y
+  dos recordatorios, que responde a la petición (art. 6.1.b) y no es marketing;
+  (3) el correo de entrega pide un «sí» por respuesta, que queda como prueba
+  en Gmail. Plantillas de (2) y (3) fuera del repo, en
+  `/mnt/project-files/estudios/informes/plantilla/correos-entrega-y-seguimiento.md`.
+  `/privacidad` describe las tres.
+- **Correos temporales** (lista corta en `DISPOSABLE_EMAIL_DOMAINS`) se
+  rechazan con su propio mensaje: el informe no llegaría a nadie.
+- **Consentimiento comercial:** casilla sin marcar, separada de la aceptación
+  de la política. Petición del fundador: texto genérico y que sirva de base
+  para nutrir leads; la casilla es lo que lo hace legal para quien no es
+  cliente (art. 21.1 LSSI; un consentimiento metido en las condiciones no vale,
+  `.claude/rules/email.md`). Nueva sección «Si pides un informe gratuito» en
+  `/privacidad`: base 6.1.b para el informe, 6.1.a para lo comercial,
+  conservación de un año sin cuenta.
+- **Copy público:** sin cifras absolutas, «preguntas principales de
+  búsqueda», motores sin versiones, «48 h laborables» (§246 y regla de
+  `growth-content.md`). Lo vigila `lib/free-report/emails.test.ts` en el
+  correo al solicitante.
+- **Bajo `/gratis/`** para que el matcher del middleware ya la salte: la
+  página no lee sesión.
+
+**Pendiente o roto conocido.**
+
+- **El consentimiento sólo queda registrado en el correo al operador.** No hay
+  tabla en esta fase. Antes de enviar el primer correo comercial a estos
+  contactos hace falta una tabla de solicitudes con su consentimiento y una
+  baja que funcione sin cuenta: eso es Fase 2/3 y necesita migración.
+- **La conservación de un año es un compromiso sin mecanismo**: los datos sólo
+  viven en el buzón del operador y en Resend; borrarlos al año es manual.
+- **Cualquiera puede bloquear 24 h el dominio de otro** pidiendo su informe
+  (límite de uno por dominio). Aceptable en esta fase: el operador ve todas
+  las peticiones.
+- **Sin conversión de anuncios.** `ConversionKind` no tiene un tipo para esta
+  petición; el hilo de anuncios de pago lo añade si quiere medirla.
+- **Las respuestas del solicitante van a `soporte@genscore.es`** (Reply-To).
+  Si ese buzón no se lee, esas respuestas se pierden.
+- Nadie enlaza aún a la página salvo el sitemap: los enlaces desde el blog
+  (tarjeta por tiempo de lectura, idea del fundador) van aparte, con su UX.
+
+**Regla de premisa (paso 4 del cierre).** No aplica: no se retira ningún
+camino de recuperación.
+
+**Trazabilidad.** `app/gratis/informe-geo/{page.tsx,actions.ts}`,
+`components/free-report/free-report-form.tsx`, `lib/free-report/*` (+tests),
+`app/privacidad/page.tsx`, `app/sitemap.ts`, `app/globals.css` (bloque `fr-`),
+`public/informe-gratis/portada-ejemplo.webp`,
+`docs/design-reference/free-report-1/`.
