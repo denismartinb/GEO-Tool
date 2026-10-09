@@ -22224,3 +22224,30 @@ los informes de prospección.
 `components/report/{geo-report.tsx,geo-report.css,report-toolbar.tsx}` (+test),
 `lib/report/{report-data,report-pages,report-tech}.ts` (+tests),
 `.claude/rules/report.md`, `.claude/rules/recommendations.md`.
+
+## 251. SEC-CHANGEPLAN-1 (urgente, sin migración): `changePlan` ya no concede planes de pago (2026-10-09)
+
+**Qué pasaba.** La server action `changePlan` (`app/dashboard/settings/billing/actions.ts`)
+validaba sólo que el id de plan existiera en `PLANS` y escribía `current_plan`
+con el service role. La regla «los planes de pago van por Stripe Checkout»
+vivía únicamente en el cliente (`change-plan-modal`), así que cualquier
+usuario con sesión que llamara la action a mano con `pro` o `agency` obtenía
+ese plan sin pagar. Con Stripe en live desde el 2026-10-09 pasó a ser urgente.
+
+**Qué cambia.** La action decide sobre el estado leído en servidor y sólo
+acepta dos destinos: `free` (bajada: cancela primero la suscripción real en
+Stripe, falla cerrado si no puede, y después revoca derechos con un `UPDATE`
+acotado a esa suscripción que debe tocar exactamente una fila) o el plan que
+la cuenta ya tiene (sólo archivar dominios, sin escribir el plan). Cualquier
+otro destino se rechaza antes de archivar nada.
+
+**Por qué separado de #549.** Es la mitad de SEC-CHANGEPLAN-1 + SEC-WEBHOOK-REGISTRY-1
+(PR #549) que no necesita migración, extraída tal cual con sus tests para
+poder desplegarla ya. El registro de eventos del webhook (migración nueva que
+hay que aplicar a mano antes del deploy) sigue en #549.
+
+**Pendiente.** Comprobar en Supabase si alguna cuenta tiene plan de pago sin
+`stripe_subscription_id` (consulta dada al fundador en el hilo). Una cuenta
+comped cuyo `current_plan` crudo sea `free` no puede usar el flujo de sólo
+archivar con su plan efectivo; riesgo aceptado (el cupo de Agencia hace
+improbable el exceso).
