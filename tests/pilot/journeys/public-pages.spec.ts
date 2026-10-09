@@ -68,7 +68,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // SECTOR-STUDY-1 (2026-10-09, log §246).
   "que-software-de-facturacion-recomienda-la-ia": "sectores",
   // STUDY-HOME-1 (2026-10-09, log §251).
-  "de-buscar-a-preguntar": "fundamentos"
+  "de-buscar-a-preguntar": "fundamentos",
+  // W5 (2026-10-09).
+  "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

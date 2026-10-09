@@ -22558,3 +22558,64 @@ React que lo haga (§202).
 `components/marketing-content-links.ts` (+test),
 `tests/pilot/journeys/public-pages.spec.ts`, `tests/pilot/fixtures/server.mjs`,
 `docs/environment-contract.md`.
+
+## 257. W5: «La IA te menciona pero recomienda a otro», anclado en casos reales de nuestras propias pruebas (2026-10-09)
+
+**Qué se decidió.** Escribir la pieza W5 de la cola semanal
+(`la-ia-te-menciona-pero-recomienda-a-otro`, clúster `playbooks`) a partir de
+casos que ya estaban documentados aquí, en vez de ejemplos genéricos: pedido
+del fundador, que quiere contenido construido sobre casos reales de «¿aparece
+tu marca en ChatGPT?». Distinto de `mi-marca-no-aparece-en-chatgpt-por-que`
+(cero menciones) y de `chatgpt-informacion-incorrecta-de-tu-empresa` (la IA
+menciona con un dato falso): aquí la marca sale y no es la recomendación.
+
+**Los tres casos y su fuente.**
+
+**Ninguna marca real del caso del comprobador ni del borrador se nombra en el
+artículo, ni en el cuerpo, ni en la FAQ, ni en los pies de figura** (decisión
+del fundador, 2026-10-09: la marca de prueba es la de su empleador y nombrarla
+le expone personalmente). La primera versión del artículo la nombraba, junto a
+su competidor y las plataformas de la respuesta; se retiró antes del merge.
+Regla para piezas futuras: **las marcas de los proyectos de prueba internos no
+se nombran en contenido público**; se describen sin sector identificable.
+
+1. Comprobador gratuito con una marca conocida como prueba (§ Fase C de
+   FREE-CHECKER-1, 2026-08-16): ChatGPT la mencionó pero nombró antes a su
+   competidor directo; la lista de «otras marcas» mezclaba competidores reales
+   con servicios incluidos en la propia oferta de la marca; y el «puesto 1»
+   que llegó a enseñarse era estructural, no medido. La Figura 1 ya no
+   reproduce esa respuesta: es un **ejemplo ilustrativo** declarado como tal en
+   su pie, para no reconstruir el sector.
+2. Borrador del generador de contenido de la misma marca de prueba (§128): una
+   comparación sin datos contra cinco competidores. Se parafrasea sin nombres
+   ni sector, y el texto dice que no lo publicamos. El límite legal (art. 10
+   LCD) está tal como lo recoge §128, con aviso de que no es asesoramiento
+   jurídico.
+3. Proyecto de prueba Mozilla, 1 prompt × 3 motores, de 30 a 74 sin cambios
+   (`docs/geo-score-variability-2026-08.md`). Sólo se dice que la muestra era
+   mínima; **ninguna mecánica interna** del score (ni pesos ni fórmula ni la
+   causa de identidad de marca que el documento diagnostica) se publica.
+
+**Lo que no se afirma.** Ningún plazo ni resultado de las palancas. No se
+afirma que el producto mida sentimiento ni nada más allá de lo que el escaneo
+registra (mención, posición, competidores, fuentes citadas). Que el generador
+rechaza ahora frases con competidor + juicio de valor es la guarda C1 de §128,
+declarada en el texto como red y no garantía.
+
+**Pendiente.** Sin pasada de `ux-pilot` (se lanza a mano, decide el fundador).
+Marcar la fila W5 del calendario con el número de PR cuando exista.
+
+**Trazabilidad.** `lib/blog/posts.ts`, `app/blog/la-ia-te-menciona-pero-
+recomienda-a-otro/page.mdx`, `public/blog/la-ia-te-menciona-pero-recomienda-a-
+otro/cover.webp` y su SVG fuente en `docs/design-reference/blog-covers/`,
+`tests/pilot/fixtures/server.mjs`, `tests/pilot/journeys/public-pages.spec.ts`,
+`docs/content-calendar.md`.
+
+**Actualización (2026-10-09, mismo PR).** Renumerada de §236 a §251 y después a §257, porque
+ambas estaban ocupadas en `main`. El artículo pasa al encabezado de
+BLOG-REDESIGN-1 (`ArticleHero`, sin `BlogCover` ni `# {post.title}`) para
+cumplir `covers.test.ts`. También se quitan las cuentas absolutas del texto,
+por la regla de contenido público de sólo porcentajes: «7 de 10» pasa a
+«70%», «una decena de marcas» y «nueve rivales» se reformulan sin número, y
+el caso del proyecto de prueba ya no dice cuántos prompts, motores o
+respuestas tenía ni las cifras exactas de la puntuación.
