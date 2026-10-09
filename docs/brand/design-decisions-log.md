@@ -21391,6 +21391,14 @@ aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
   responde en prosa y una segunda sin búsqueda que la estructura con
   `responseMimeType`. Si el corte cae en la prosa se pierde una línea, no la
   lista entera. Cuesta una llamada más (sin búsqueda) por sugerencia.
+- Con ese arreglo carrefour.es SIGUIÓ sin competidores en el preview, y el
+  preview no guarda logs en Vercel. Para poder ver la causa, el asistente
+  enseña ahora el motivo en el aviso, sólo en previews (`VERCEL_ENV=preview`;
+  producción nunca recibe el campo): la categoría del error (`timeout`,
+  `quota`, `http`…), `schema` si el JSON no tiene la forma pedida, `no_items`
+  si la lista llega vacía o `filtered` si todas las filas se descartan aquí.
+  De paso se acepta un array suelto en vez de `{ competitors }`, y un objeto sin
+  la clave `competitors` deja de leerse como «sin competidores».
 - **El mismo corte afecta a las respuestas del escaneo** (`lib/llm/gemini.ts`)
   y a la auditoría (`lib/web-audit/audit-domain-content.ts`), que también usan
   `google_search`. Ahí la respuesta es prosa y no rompe nada visible, pero puede

@@ -251,13 +251,14 @@ function DomainAnalyzingCard({ domain }: { domain: string }) {
  * neither. The operator gets the real cause by email
  * (`lib/llm/llm-incident.ts`); the user gets the way forward.
  */
-function SuggestionGapNotice({ kind }: { kind: "competitors" | "prompts" }) {
+function SuggestionGapNotice({ kind, reason }: { kind: "competitors" | "prompts"; reason?: string | null }) {
   const what = kind === "competitors" ? "competidores" : "prompts";
   return (
     <div className="add-hint" role="status" style={{ marginBottom: 12 }}>
       <Icon name="alertCircle" size={13} />
       No hemos podido sugerir {what} automáticamente para este dominio. Añádelos a mano — el escaneo funciona igual y
       podrás cambiarlos cuando quieras.
+      {reason ? <span style={{ opacity: 0.7 }}> (preview: {reason})</span> : null}
     </div>
   );
 }
@@ -571,6 +572,9 @@ export function OnboardingWizard({
    * step with nothing to read.
    */
   const [suggestFailed, setSuggestFailed] = useState<Array<"competitors" | "prompts">>([]);
+  // Preview-only diagnosis of an empty competitor suggestion (log §240); the
+  // server never sends it in production.
+  const [competitorsReason, setCompetitorsReason] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isDomainFocused, setIsDomainFocused] = useState(false);
   const [showDomainErr, setShowDomainErr] = useState(false);
@@ -648,8 +652,10 @@ export function OnboardingWizard({
     setShowDomainErr(false);
     setSuggestError(null);
     setSuggestFailed([]);
+    setCompetitorsReason(null);
     startTransition(async () => {
       const result = await suggestAction({ domain, country });
+      setCompetitorsReason(result.competitorsReason ?? null);
       if (!result.ok) {
         setSuggestError(
           "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
@@ -875,7 +881,7 @@ export function OnboardingWizard({
         </div>
 
         {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
-        {suggestFailed.includes("competitors") ? <SuggestionGapNotice kind="competitors" /> : null}
+        {suggestFailed.includes("competitors") ? <SuggestionGapNotice kind="competitors" reason={competitorsReason} /> : null}
 
         <div className="onb2-grid">
           <div>

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
-import { generateAddedPrompts, suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
+import { generateAddedPrompts, suggestCompetitorsWithReason, suggestPrompts } from "@/lib/llm/gemini";
 import { reportLlmIncident } from "@/lib/llm/llm-incident";
 import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
@@ -41,6 +41,13 @@ export type ProjectSetupSuggestion = {
    * server says which one happened.
    */
   failed: Array<"competitors" | "prompts">;
+  /**
+   * Why the competitor half came back empty (a self-authored category such as
+   * `timeout`, `schema`, `filtered`). Only ever set on Vercel previews, where
+   * runtime logs are not kept, so a failed suggestion can be diagnosed from
+   * the screen; production never receives it (log §240).
+   */
+  competitorsReason?: string;
 };
 
 /**
@@ -88,16 +95,21 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
 
   const failed: Array<"competitors" | "prompts"> = [];
 
+  let competitorsReason: string | null = null;
   const [competitors, prompts] = await Promise.all([
     // suggestCompetitors reports its own incident (it is the grounded call and
     // owns the error) and answers [] either way, so the flag here records that
-    // the half failed, not why.
-    suggestCompetitors({ brand, domain, country, language, profile: context.profile, limit: MAX_INITIAL_COMPETITORS }).catch(
-      () => {
+    // the half failed; the reason only travels to previews (below).
+    suggestCompetitorsWithReason({ brand, domain, country, language, profile: context.profile, limit: MAX_INITIAL_COMPETITORS })
+      .then((result) => {
+        competitorsReason = result.reason;
+        return result.competitors;
+      })
+      .catch(() => {
         failed.push("competitors");
+        competitorsReason = "unknown";
         return [];
-      }
-    ),
+      }),
     suggestPrompts({ brand, domain, country, language, profile: context.profile, limit: promptLimit }).catch(async (error) => {
       failed.push("prompts");
       await reportLlmIncident({ surface: "onboarding_suggestions", provider: "gemini", error, domain });
@@ -117,7 +129,8 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
     language,
     competitors,
     prompts,
-    failed
+    failed,
+    ...(process.env.VERCEL_ENV === "preview" && competitorsReason ? { competitorsReason } : {})
   };
 }
 
