@@ -60,7 +60,7 @@ const FAQ_ITEMS = [
   {
     question: "¿Comprobáis también Gemini y Claude?",
     answer:
-      "La comprobación gratuita pregunta a ChatGPT. El escaneo del plan Free, al crear una cuenta, cubre además Gemini y Claude sobre diez preguntas reales de tu categoría y repite en el tiempo para que veas la evolución."
+      "La comprobación gratuita pregunta a ChatGPT. Al crear tu cuenta gratis, el primer escaneo completo cubre además Gemini y Claude sobre preguntas reales de tu categoría. El seguimiento en el tiempo, para ver la evolución, es de los planes de pago: el plan Free se queda en un escaneo puntual con un motor."
   },
   {
     question: "¿Cuánto cuesta?",

@@ -21348,3 +21348,32 @@ sin cruzar con prompts activos (Visión general, Competidores) no se han
 revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
+
+## 239. CHECKER-HOME-TRUTH-1: la banda de cierre deja de prometer «sin registro» y el comprobador deja de atribuir tres motores al plan Free (2026-10-09)
+
+**Qué pasaba.** Dos promesas de la web pública que el producto no cumplía,
+encontradas al auditar el embudo de conversión en el código:
+
+- La banda de cierre de la portada (`HomeCtaBand`) decía «Una comprobación
+  real contra ChatGPT, en 20 segundos» y «Sin registro», pero reutiliza
+  `HeroDomainField`, que guarda el dominio y lleva a `/signup` desde §159. Es
+  decir, prometía el comprobador y entregaba el registro.
+- La FAQ del comprobador gratuito decía que «el escaneo del plan Free» cubre
+  Gemini y Claude y «repite en el tiempo». El plan Free tiene un motor y un
+  escaneo puntual (`app/pricing/plans-data.ts`, `caps.engines: 1`). Los tres
+  motores y la repetición los da la prueba de Pro con la que nace toda cuenta
+  y los planes de pago.
+
+**Decisión.** Sólo copy, sin tocar destinos ni diseño. La banda describe lo
+que hace su campo (primer escaneo completo gratis en los tres motores) y
+retira «Sin registro». La FAQ del comprobador atribuye los tres motores al
+primer escaneo de una cuenta nueva y el seguimiento en el tiempo a los planes
+de pago, diciendo qué queda en Free.
+
+**Pendiente.** El comprobador sigue sin enlace desde el hero ni el menú y sin
+captura de correo (propuesto aparte, necesita su propio Task Intake). La FAQ
+de `/precios` que niega el límite de 7 días de la prueba se corrige en el PR
+de precios (#556), no aquí.
+
+**Trazabilidad.** `components/landing/session-ctas.tsx`,
+`app/gratis/aparece-mi-marca-en-chatgpt/page.tsx`.

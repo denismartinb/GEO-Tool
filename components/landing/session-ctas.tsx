@@ -185,13 +185,12 @@ export function HomeCtaBand() {
           escritorio el espacio se colapsa al final de la línea y no se ve. */}
       <h2 className="lp-h2">Averigua qué dice la IA de ti <br />ahora mismo</h2>
       <p className="lp-sec-sub">
-        Una comprobación real contra ChatGPT, en 20 segundos. Después, primer escaneo completo gratis.
+        Escribe tu dominio y lanza tu primer escaneo completo gratis: preguntas reales de tu
+        categoría en ChatGPT, Gemini y Claude.
       </p>
       <div className="lp-close-field">
         <HeroDomainField withEngines={false} />
         <div className="lp-hero-note">
-          <span>Sin registro</span>
-          <span className="dot" aria-hidden="true" />
           <span>Sin tarjeta</span>
           <span className="dot" aria-hidden="true" />
           <span>Sin llamada de ventas</span>
