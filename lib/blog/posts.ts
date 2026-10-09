@@ -361,6 +361,20 @@ export const BLOG_POSTS: BlogPost[] = [
     // with /admin/estudio, published as percentages only (founder rule).
     primaryKeyword: "qué software de facturación recomienda la ia",
     cluster: "sectores"
+  },
+  {
+    slug: "de-buscar-a-preguntar",
+    title: "De buscar a preguntar: cómo la IA está cambiando la búsqueda en España",
+    description:
+      "El 22% de los españoles ya usa sobre todo la IA en lugar del buscador y casi la mitad de quienes la usan se apoya en ella para comprar. Los datos de AIMC, IAB Spain, Bain y Pew, con sus fuentes.",
+    datePublished: "2026-10-09",
+    coverImage: "/blog/de-buscar-a-preguntar/cover.webp",
+    coverIcon: "trendUp",
+    // STUDY-HOME-1 (log §250): blog version of the «De buscar a preguntar»
+    // PDF study. Third-party figures carry source and sample size; own data
+    // is percentages only.
+    primaryKeyword: "búsqueda con ia en españa",
+    cluster: "fundamentos"
   }
 ];
 

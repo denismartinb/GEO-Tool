@@ -22052,3 +22052,57 @@ camino de recuperación.
 `app/privacidad/page.tsx`, `app/sitemap.ts`, `app/globals.css` (bloque `fr-`),
 `public/informe-gratis/portada-ejemplo.webp`,
 `docs/design-reference/free-report-1/`.
+
+## 250. STUDY-HOME-1: el estudio «De buscar a preguntar» llega al blog y a la portada como una cifra con su fuente (2026-10-09)
+
+**Qué se decidió.** El fundador pidió valorar una cita del estudio público «De
+buscar a preguntar» (PDF de 2026-10-09) en la portada, en el hueco del
+testimonio inventado que se retiró (§146 rectificado). Se descartó una cita
+con nombre: en ese hueco se habría leído como otro testimonio. Lo que entra es
+una **cifra de terceros con su fuente a la vista**, en una tarjeta compacta
+encima de «El producto» (diseño iterado con el fundador sobre capturas de la
+home real; aprobado el 2026-10-09):
+
+> 22% de los españoles ya usa sobre todo la IA **en lugar del buscador**, la
+> cifra más alta de Europa. Y **casi la mitad** de quienes la usan se apoya en
+> ella para comprar. — Fuentes: Bain & Company, 2025 · IAB Spain, 2026.
+
+El botón «Ver el estudio» lleva a un **artículo nuevo**,
+`/blog/de-buscar-a-preguntar` (cluster `fundamentos`), que es la versión web
+del PDF y pasa a ser su URL canónica (el hilo del estudio publicará en
+LinkedIn sólo un resumen con enlace). El fundador eligió el artículo nuevo
+frente a enlazar el estudio de facturación ya publicado, que no contiene las
+cifras de la tarjeta.
+
+**Fidelidad de la frase (por qué no es la del fundador al pie de la letra).**
+El fundador propuso «utiliza regularmente la IA en lugar del buscador» y
+«casi la mitad lo hace para tomar una decisión de compra». Bain mide quien usa
+la IA *principalmente* en lugar del buscador (usarla con regularidad es otra
+cifra, mucho mayor), y el 45% de IAB es *entre usuarios de IA* y es «ayudarse
+en una compra»: el mismo estudio dice que sólo el 16% la cita entre los
+factores principales de su decisión. El fundador aceptó los dos matices.
+
+**Fuentes verificadas en origen el 2026-10-09** (no sólo copiadas del PDF):
+Bain, *Generative AI Consumer Survey* sept. 2025, n=7.298 en cinco países,
+1.440 en España, «Spanish consumers have the highest replacement rate, at
+22%»; IAB Spain y Elogia, encuesta online a 1.081 internautas 16-75, mayo-junio
+2026 (45%, 66%, 57%, 16%, 95%, 68%); AIMC Navegantes 28.ª ed., ~15.000
+respuestas, oct-dic 2025 (85,1% −8, 58,4% +8, 32,7% +15, Google 93,8%); Pew,
+900 adultos EE. UU., marzo 2025 (15% → 8%, 1%, 26% vs 16%). Cada cifra de
+terceros del artículo lleva fuente y muestra (`growth-content.md`). Se
+quitaron del artículo las del PDF sin muestra comprobable (Bain 60% sin clic,
+Seer +120%).
+
+**Dato propio.** Sólo porcentajes del estudio de facturación (§246), con
+enlace a él; ningún recuento, ninguna versión de modelo.
+
+**Pendiente / conocido.** El rediseño del blog (§247, rama sin mergear)
+rechaza la cabecera antigua: este artículo usa la plantilla actual y tendrá
+que convertirse a `ArticleHero` en el mismo PR que mergee segundo (avisado ese
+hilo). Si alguna de las dos cifras de la tarjeta se actualiza en su fuente,
+la tarjeta y el artículo cambian juntos.
+
+**Trazabilidad.** `components/landing/landing-page.tsx` (`.lp-study`),
+`app/globals.css`, `app/blog/de-buscar-a-preguntar/page.mdx`,
+`public/blog/de-buscar-a-preguntar/cover.webp`, `lib/blog/posts.ts`, listas del
+piloto.
