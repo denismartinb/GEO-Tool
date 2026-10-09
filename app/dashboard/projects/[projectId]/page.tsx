@@ -16,7 +16,7 @@ import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { MEAN_RANK_BRAND_HEADLINE, MEAN_RANK_COLUMN_LABEL } from "@/lib/competitors/mean-rank-copy";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
-import { ScanStatePill } from "@/components/scan-state-pill";
+import { ScanReportControl } from "./scan-report-control";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import {
   computeJointPotentialPoints,
@@ -799,27 +799,21 @@ export default async function ProjectDetailPage({
             </div>
           </div>
           <div className="ov-sticky-right">
-            {/* GEO-REPORT-1 Fase 2 (log §250): el informe de GenScore del último
-                escaneo completado, en su propia página. */}
-            {latestCompletedRun ? (
-              <a
-                href={`/informe/${projectId}`}
-                target="_blank"
-                rel="noopener"
-                className="btn btn-ghost btn-sm ov-hdr-report"
-                style={{ padding: "5px 11px", fontSize: 12 }}
-                aria-label="Descargar informe"
-              >
-                <Icon name="download" size={13} />
-                <span className="ov-hdr-report-label">Descargar informe</span>
-              </a>
-            ) : null}
-            <ScanStatePill
-              activeRun={activeRun}
+            {/* GEO-REPORT-1 Fase 2 (log §250): the pill and the way to the
+                report of the latest completed scan. */}
+            <ScanReportControl
+              projectId={projectId}
+              activeRun={activeRun ?? null}
               lastScanLabel={
                 latestCompletedRun
                   ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
                       .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                  : null
+              }
+              lastScanLongLabel={
+                latestCompletedRun
+                  ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                      .toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Madrid" })
                   : null
               }
             />

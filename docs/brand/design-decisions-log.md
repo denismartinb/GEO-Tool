@@ -21950,10 +21950,21 @@ con un competidor y marca blanca para agencias.
   pregunta a pregunta se reparte en varias páginas
   (`lib/report/report-pages.ts`) estimando el alto de cada fila. Nunca se
   recorta una pregunta.
-- **Botones.** «Descargar informe» aparece en la cabecera de Visión general
-  (sólo con un escaneo completado; bajo 900px queda sólo el icono, por la misma
-  razón que la línea de auditoría de `console.css`) y en el sitio de «Exportar
-  plan» en Recomendaciones. Los dos son enlaces que abren en una pestaña nueva.
+- **Botones.** En Recomendaciones, «Descargar informe» ocupa el sitio de
+  «Exportar plan». En la cabecera de Visión general (sólo con un escaneo
+  completado) la colocación la eligió el fundador sobre maquetas
+  (`docs/design-reference/geo-report-1/boton-informe.html`), después de
+  rechazar la primera versión, que bajo 900px dejaba un icono de flecha suelto
+  en medio de la cabecera («cutrísima»):
+  - desde 900px, un botón con texto junto a la píldora de la fecha (opción B);
+  - bajo 900px no hay botón. La píldora «Escaneado <fecha>» lleva una flechita
+    y abre una hoja inferior (`<dialog>` nativo) con el escaneo y el botón de
+    descarga (opción 2 de móvil). Motivo del fundador: un elemento permanente
+    y grande no tiene sentido para algo que no se descarga a diario.
+
+  Mientras corre un escaneo, la píldora vuelve a ser sólo de estado. Los
+  enlaces abren el informe en una pestaña nueva
+  (`app/dashboard/projects/[projectId]/scan-report-control.tsx`).
 - **Plan.** Lo tienen la prueba y los planes de pago (decisión 4 de §248). Una
   cuenta `free` ve un aviso con su salida a elegir plan. `/informe` entra en el
   `disallow` de `robots.ts`.
