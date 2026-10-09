@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { FreeReportPromoCard } from "@/components/free-report/free-report-promo-card";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 
 /**
@@ -84,7 +85,7 @@ export function BlogPageShell({
                   {l.label}
                 </Link>
               ))}
-              {MARKETING_ENTITY_LINKS.map((l) => (
+              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>
@@ -99,6 +100,7 @@ export function BlogPageShell({
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
       </footer>
+      <FreeReportPromoCard />
     </div>
   );
 }

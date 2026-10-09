@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Cuándo sale y cuándo no</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.grad{background:linear-gradient(90deg,#4f7bff 0%,#09c5d6 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+</style>
+</helmet>
+<div style="width: 640px; box-sizing: border-box; padding: 32px; font-family: Figtree, sans-serif; color: #0b1426; background: #f6f8fc; border: 1px solid #e1e6ef; border-radius: 16px">
+<h2 style="margin: 0 0 16px; font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px">Cuándo sale y cuándo no</h2>
+<ul style="margin: 0; padding-left: 20px; font-size: 15.5px; line-height: 1.6; display: grid; gap: 8px">
+<li><strong>Dónde:</strong> artículos del blog, comparativas, glosario y docs. Nunca en la portada, precios, el registro, la consola ni la propia landing del informe.</li>
+<li><strong>Cuándo:</strong> tras 40 segundos en la página o al pasar la mitad del artículo, lo primero que ocurra. Entra deslizándose desde abajo, sin oscurecer la página.</li>
+<li><strong>Cuántas veces:</strong> una por visita. Si la cierras, no vuelve en 7 días. Si ya pediste el informe, no vuelve más.</li>
+<li><strong>Quién no la ve:</strong> quien tiene sesión iniciada en GenScore.</li>
+<li><strong>Móvil:</strong> ocupa el ancho con margen y se cierra con la X; no tapa el texto mientras no aparece.</li>
+<li><strong>El botón</strong> lleva a /gratis/informe-geo, que ya está construida.</li>
+<li><strong>Accesibilidad:</strong> no roba el foco; con movimiento reducido aparece sin deslizarse.</li>
+</ul>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":460}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

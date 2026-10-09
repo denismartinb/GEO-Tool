@@ -22313,3 +22313,59 @@ para quien los necesite, con la misma regla de fuente que `Stat`.
 `app/blog/de-buscar-a-preguntar/page.mdx`,
 `public/blog/de-buscar-a-preguntar/cover.webp`, `lib/blog/posts.ts`, listas del
 piloto, `docs/design-reference/study-home-1/`.
+
+---
+
+## 252. FREE-REPORT-2: el informe gratis, en toda la web pública (2026-10-09)
+
+**Qué se decidió.** El fundador quiere maximizar la captación por email con el
+informe personalizado («merece la pena maximizarla»), y aprobó el plan entero
+sobre el canvas de FREE-REPORT-1 («Dibuja esa banda y vamos con todo»):
+
+- **Tarjeta en la esquina** (`components/free-report/free-report-promo-card.tsx`)
+  en blog, comparativas, glosario y docs. Sale tras 40 s o al pasar la mitad
+  de la página, una vez por visita; cerrada, no vuelve en 7 días; nunca tras
+  pedir el informe ni con sesión iniciada. Las reglas son puras y con tests
+  (`lib/free-report/promo.ts`).
+- **Banda en la portada** (`FreeReportBand`), entre «Cinco pantallas» y las
+  preguntas frecuentes.
+- **Una línea bajo los precios** (`FreeReportPriceLine`).
+- **«Informe gratis» en la cabecera** (último, en azul, con «Nuevo») y en el
+  pie de las seis superficies públicas (`MARKETING_LEAD_LINKS`).
+
+**Por qué la portada y precios no llevan tarjeta emergente.** Quien llega ahí
+está cerca de registrarse con los 7 días de Pro, que vale más que un email; una
+tarjeta encima le quitaría clics a ese botón. El lector del blog todavía no va
+a registrarse, y para él el informe es el gancho. Se coordinó con el hilo «Cita
+del estudio en la portada»: su tarjeta va encima de «El producto» con un único
+botón, «Ver el estudio»; esta banda va debajo, separada por toda la sección de
+pantallas.
+
+**Procedencia.** Cada entrada lleva `?desde=` (`tarjeta-contenido`,
+`banda-portada`, `linea-precios`), que el formulario añade al origen que llega
+en el correo al operador. No es un UTM a propósito: un UTM en un enlace interno
+pisa la campaña real de la visita en la analítica. Cabecera y pie van sin
+etiqueta.
+
+**Límite conocido.** Cada informe se prepara a mano: si la captación funciona,
+el cuello de botella pasa a ser el tiempo de preparación. Sigue sin haber
+evento de conversión publicitaria para este formulario (§244, §249).
+
+**Copy de la banda, corregido por el fundador sobre el preview.** Título
+«¿Lo analizamos? Te enviamos gratis un informe de tu marca.», primera viñeta
+«En qué preguntas te nombran» (decisión suya: en una viñeta corta se lee mejor
+sin «principales de búsqueda») y fuera la nota «Sin tarjeta y sin registrarte».
+Los artboards `Portada-banda*` se actualizaron con el mismo texto.
+En la misma pasada cambió dos viñetas de `/gratis/informe-geo`: «PDF de marca,
+listo para accionar» y «Revisado por nuestro equipo antes de enviártelo»
+(también en `Main.dc.html`).
+
+**Trazabilidad.** `lib/free-report/promo.ts` (+test),
+`components/free-report/{free-report-promo-card,free-report-offers}.tsx`,
+`components/free-report/free-report-form.tsx` (`desde` y la marca de pedido),
+`components/blog/blog-page-shell.tsx`, `components/docs/docs-page-shell.tsx`,
+`components/landing/landing-page.tsx`, `components/pricing/pricing-page.tsx`,
+`components/marketing/public-header.tsx`,
+`components/marketing-content-links.ts` y los seis pies,
+`app/globals.css` (bloque FREE-REPORT-2),
+`docs/design-reference/free-report-1/` (tableros nuevos).
