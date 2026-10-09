@@ -21449,6 +21449,43 @@ invocación), por eso los escaneos avanzan igualmente, pero cada eslabón
 consume una invocación de 60 s y el `response.ok` nunca llega a leerse. Que la
 ruta responda en cuanto acepta el lote y trabaje en `after()` es un cambio de
 pipeline con su propio Task Intake (agente `reliability`).
+
+## 242. FUNNEL-EVENTS-1: cuatro hitos del embudo en PostHog, desde el servidor (2026-10-09)
+
+**Qué se decidió.** `lib/analytics/funnel-events.ts` envía a PostHog EU, por
+HTTP y desde el servidor: `signup_submitted` (alta con contraseña enviada,
+antes de confirmar), `signup_completed` (primera sesión real: callback de
+auth o alta sin confirmación), `scan_completed` (cada run completado, en
+`after()`), `checkout_started` (sesión de Stripe creada) y
+`payment_completed` (webhook `checkout.session.completed`, tras guardar el
+plan, con `uuid` derivado del id del evento de Stripe para que un reintento
+no cuente dos pagos). `distinct_id` = id de usuario de Supabase; nunca email,
+nombre ni dominio. Un intento, 2 s de tope, nunca lanza.
+
+**Por qué en servidor.** El SDK del navegador corre sin cookies
+(`persistence: "memory"`): cada carga es un id anónimo nuevo, así que con
+eventos de navegador el embudo registro → pago no se podía unir nunca. Se
+necesitaba antes de lanzar anuncios.
+
+**Privacidad.** `/privacidad` decía que PostHog «no te identifica entre
+sesiones ni dispositivos». Con estos hitos eso ya no es cierto para quien
+tiene cuenta, así que el texto se corrige en el mismo PR. **Es texto legal:
+lo valida el fundador en el Human Gate.** `/cookies` no cambia: sigue sin
+haber cookies de analítica.
+
+**Pendiente / conocido.**
+- El primer paso del embudo (visita anónima → alta) no se une a los demás:
+  la visita no tiene id persistente. Para atribuir anuncios hará falta
+  guardar `utm_*` en el alta (fase aparte).
+- «Primer escaneo» no es un evento propio: es el primer `scan_completed` de
+  cada persona, filtro nativo de los embudos de PostHog.
+
+**Adenda (2026-10-09, antes del merge).** Cada evento lleva
+`$geoip_disable: true`. El primer `signup_submitted` real del preview llegó
+con la ubicación de Vercel (Dublín, Irlanda) puesta en la persona, porque la
+petición sale del servidor; sin esto todo desglose por país en PostHog
+contaría a cada cliente como irlandés.
+
 ## 238. LIFECYCLE-WINBACK-1: el fin de prueba lo envía el servidor, y las pruebas caducadas reciben su aviso «tardío», D+3 y D+10 (Fase D de LIFECYCLE-EMAILS-1, 2026-10-09)
 
 **De dónde viene.** Fase D del plan aprobado el 2026-09-28 (§232), con las
@@ -21983,3 +22020,131 @@ BLOG-REDESIGN-1), `app/blog/*/page.mdx`, `lib/blog/posts.ts`,
 `lib/blog/covers.test.ts`, `.claude/rules/growth-content.md`,
 `app/blog/page.tsx`, `components/blog/blog-cluster-rail.tsx`,
 `components/blog/comparativas-rail.tsx`.
+
+---
+
+## 248. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
+
+**Qué se decidió.** El fundador vio el informe de prospecto hecho a mano para
+La Fábrica del SEO (estudio de `/admin/estudio`, §246) y lo prefirió al PDF de
+«Exportar plan» (§215–§219): «me gusta mucho más que el que ahora sale en la
+herramienta». Task Intake aprobado el 2026-10-09 («Sí a todo»), con cuatro
+decisiones: **sustituye** a «Exportar plan» con un solo botón «Descargar
+informe» en Visión general y Recomendaciones; los hallazgos se escriben con
+**plantillas sobre datos**, no los redacta una IA; la comparación técnica con
+un competidor queda **fuera** (traer webs de terceros amplía la superficie de
+descarga, zona de crawler según `CLAUDE.md`); lo tienen **todos los planes de
+pago y la prueba**. Diseño de la versión producto aprobado el mismo día
+(«Sí»), guardado en `docs/design-reference/geo-report-1/`.
+
+**Qué entra en esta fase.** Sólo el modelo: `lib/report/report-model.ts`,
+una función pura que convierte el último escaneo completado en todo lo que
+pintan las ocho páginas, con sus tests. No hay cambios visibles todavía; el
+componente de impresión y el cargador de datos son la Fase 2, y la reutilización
+desde `/admin/estudio` para prospección es la Fase 3.
+
+**Normas de contenido que fija el modelo** (fundador, 2026-10-09): sólo
+porcentajes y proporciones —toda cifra sale como fracción y se formatea con
+`formatShare`—; motores por su nombre, sin versiones; la lista de preguntas se
+llama «preguntas principales de búsqueda»; un bloque sin datos se omite. El
+test recorre el modelo entero buscando cifras absolutas y versiones.
+
+**Pendiente.** Fase 2 (cargador + componente de impresión con el aprendizaje
+de §217–§219, y retirada del informe de PDF-EXPORT-PLAN-1), Fase 3
+(`/admin/estudio` pinta el mismo componente). Sin aprobar: comparación técnica
+con un competidor y marca blanca para agencias.
+
+**Trazabilidad.** `lib/report/report-model.ts` (+test),
+`docs/design-reference/geo-report-1/`, `.claude/rules/report.md`.
+
+## 249. FREE-REPORT-1 Fase 1: «Pide tu informe GEO gratis», formulario con entrega manual en 48 h laborables (2026-10-09)
+
+**Qué.** Landing pública `/gratis/informe-geo` con un formulario de tres
+campos (web, email de trabajo, qué vendes) y una casilla opcional de
+comunicaciones. Al enviarlo, un correo al operador (`OPS_ALERT_EMAIL`) con la
+petición y un correo de confirmación al solicitante. Ninguna llamada a un LLM
+y ninguna migración: el operador lanza `/admin/estudio` (§246), el hilo de
+outreach cura el informe con la plantilla de prospecto y se envía a mano.
+Diseño aprobado por el fundador en `docs/design-reference/free-report-1/`.
+
+**Por qué.** El informe de prospecto de 8 páginas (La Fábrica del SEO,
+2026-10-09) le pareció al fundador mejor que todo lo que enseña el producto
+hoy, y pidió explotarlo como gancho para anuncios de pago y outreach. El
+comprobador gratuito da una respuesta de un motor; esto da el diagnóstico
+completo. Task Intake en el hilo «Outreach a empresas objetivo»: Fase 1 manual
+para validar demanda antes de automatizar nada.
+
+**Decisiones.**
+
+- **El éxito depende del correo al operador.** Si Resend no lo acepta, el
+  visitante ve un error y no recibe confirmación: decirle «recibido» de una
+  petición que nadie ha recibido es un éxito falso. El fallo sólo de la
+  confirmación no deshace nada, porque el operador ya tiene la petición.
+- **Límite por instancia, dicho como tal.** `createRequestLimiter`: una
+  petición por dominio y día, dos por email, tres por IP (hash con
+  `PUBLIC_CHECK_IP_SALT`; sin sal se omite la IP). Vive en memoria y Vercel
+  reparte peticiones entre instancias, así que frena al que pulsa veinte
+  veces, no a un atacante. Proporcionado para una fase en la que un abuso
+  cuesta dos correos y ningún LLM. Fase 3 (automática, con gasto) necesita
+  tabla y el conteo que falla cerrado de `lib/free-checker/rate-limit.ts`.
+- **Bots:** un campo trampa relleno se contesta como a una persona y no se
+  envía nada. Un envío antes de 1,5 s desde que se pintó el formulario (o
+  antes de hidratar) NO se contesta con «recibido»: puede ser una persona con
+  autocompletado, así que se le pide pulsar otra vez (hallazgo de QA).
+- **El límite se anota sólo tras entregar al operador.** Si se anotara antes,
+  el reintento tras un fallo de Resend recibiría «ya hemos recibido tu
+  petición» de algo que nadie recibió (hallazgo de QA).
+- **Tres vías de consentimiento, sin consentimiento implícito** (fundador,
+  2026-10-09, tras proponer quitar la casilla porque «nadie va a clicar»). Se
+  descartó dar el consentimiento por aceptado al enviar o premarcar la casilla:
+  no vale para correo comercial (art. 21.1 LSSI; TJUE Planet49). Lo que sí se
+  hace: (1) la casilla ofrece algo concreto que existe, los estudios de
+  GenScore sobre qué marcas recomienda la IA (§246), en vez de «consejos y
+  novedades»; (2) seguimiento sobre el propio informe, como mucho entrega y
+  dos recordatorios, que responde a la petición (art. 6.1.b) y no es marketing;
+  (3) el correo de entrega pide un «sí» por respuesta, que queda como prueba
+  en Gmail. Plantillas de (2) y (3) fuera del repo, en
+  `/mnt/project-files/estudios/informes/plantilla/correos-entrega-y-seguimiento.md`.
+  `/privacidad` describe las tres.
+- **Correos temporales** (lista corta en `DISPOSABLE_EMAIL_DOMAINS`) se
+  rechazan con su propio mensaje: el informe no llegaría a nadie.
+- **Consentimiento comercial:** casilla sin marcar, separada de la aceptación
+  de la política. Petición del fundador: texto genérico y que sirva de base
+  para nutrir leads; la casilla es lo que lo hace legal para quien no es
+  cliente (art. 21.1 LSSI; un consentimiento metido en las condiciones no vale,
+  `.claude/rules/email.md`). Nueva sección «Si pides un informe gratuito» en
+  `/privacidad`: base 6.1.b para el informe, 6.1.a para lo comercial,
+  conservación de un año sin cuenta.
+- **Copy público:** sin cifras absolutas, «preguntas principales de
+  búsqueda», motores sin versiones, «48 h laborables» (§246 y regla de
+  `growth-content.md`). Lo vigila `lib/free-report/emails.test.ts` en el
+  correo al solicitante.
+- **Bajo `/gratis/`** para que el matcher del middleware ya la salte: la
+  página no lee sesión.
+
+**Pendiente o roto conocido.**
+
+- **El consentimiento sólo queda registrado en el correo al operador.** No hay
+  tabla en esta fase. Antes de enviar el primer correo comercial a estos
+  contactos hace falta una tabla de solicitudes con su consentimiento y una
+  baja que funcione sin cuenta: eso es Fase 2/3 y necesita migración.
+- **La conservación de un año es un compromiso sin mecanismo**: los datos sólo
+  viven en el buzón del operador y en Resend; borrarlos al año es manual.
+- **Cualquiera puede bloquear 24 h el dominio de otro** pidiendo su informe
+  (límite de uno por dominio). Aceptable en esta fase: el operador ve todas
+  las peticiones.
+- **Sin conversión de anuncios.** `ConversionKind` no tiene un tipo para esta
+  petición; el hilo de anuncios de pago lo añade si quiere medirla.
+- **Las respuestas del solicitante van a `soporte@genscore.es`** (Reply-To).
+  Si ese buzón no se lee, esas respuestas se pierden.
+- Nadie enlaza aún a la página salvo el sitemap: los enlaces desde el blog
+  (tarjeta por tiempo de lectura, idea del fundador) van aparte, con su UX.
+
+**Regla de premisa (paso 4 del cierre).** No aplica: no se retira ningún
+camino de recuperación.
+
+**Trazabilidad.** `app/gratis/informe-geo/{page.tsx,actions.ts}`,
+`components/free-report/free-report-form.tsx`, `lib/free-report/*` (+tests),
+`app/privacidad/page.tsx`, `app/sitemap.ts`, `app/globals.css` (bloque `fr-`),
+`public/informe-gratis/portada-ejemplo.webp`,
+`docs/design-reference/free-report-1/`.
