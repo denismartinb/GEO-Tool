@@ -28,7 +28,8 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   versión del modelo o "la misma instrucción que usa un escaneo" es
   información del producto que no se regala. Se dice qué motores (ChatGPT,
   Gemini, Claude), la fecha, el criterio ("solo cuenta si el nombre aparece en
-  la respuesta") y que se repitió "varias veces"; las preguntas se enseñan como
+  la respuesta") y que se repitió "múltiples veces, en distintos momentos"; las marcas
+  van en texto normal, sin negrita ni cursiva; las preguntas se enseñan como
   muestra, no completas, para que su número no se deduzca.
 - **Ninguna cifra de mercado de terceros se presenta como dato propio de
   Genscore.** Sólo el Observatorio (capa E, con aprobación aparte) genera dato
