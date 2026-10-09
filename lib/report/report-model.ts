@@ -12,7 +12,7 @@ import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
  * no Supabase, no `Date.now()`, no DOM. The loader (Fase 2) resolves the rows
  * and hands them in; this module decides what the report says about them.
  *
- * Content rules (founder, 2026-10-09; log §247), enforced by the tests:
+ * Content rules (founder, 2026-10-09; log §248), enforced by the tests:
  *  - only percentages and ratios, never an absolute count of questions,
  *    answers or scans — every figure leaves this module as a share;
  *  - engines by name only (ChatGPT, Gemini, Claude), never a model version;

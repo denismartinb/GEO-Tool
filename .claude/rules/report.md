@@ -1,14 +1,14 @@
 # Informe de GenScore — invariantes
 
 Se inyectan solos al tocar `lib/report/**`. Cada regla es trazable al
-histórico (`docs/brand/design-decisions-log.md` §247) o al diseño aprobado
+histórico (`docs/brand/design-decisions-log.md` §248) o al diseño aprobado
 (`docs/design-reference/geo-report-1/`).
 
 - **Sólo porcentajes y proporciones.** Ninguna cifra absoluta de preguntas,
   respuestas, escaneos o webs sale del modelo: todo es una fracción que se
   formatea con `formatShare`. Es norma del fundador para todo lo que lee un
   cliente o un prospecto («nada de cifras absolutas, y menos si son tan bajas,
-  quita credibilidad», §246–§247). El test recorre el modelo serializado.
+  quita credibilidad», §246–§248). El test recorre el modelo serializado.
 - **El conjunto de preguntas se llama «preguntas principales de búsqueda»**
   (`QUESTION_SET_LABEL`), nunca «las preguntas» a secas, para que no se lea
   como el total.

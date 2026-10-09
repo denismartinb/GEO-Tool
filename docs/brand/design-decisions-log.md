@@ -21890,7 +21890,7 @@ los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
 `scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
 `.claude/rules/admin.md`.
 
-## 247. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
+## 248. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
 
 **Qué se decidió.** El fundador vio el informe de prospecto hecho a mano para
 La Fábrica del SEO (estudio de `/admin/estudio`, §246) y lo prefirió al PDF de
