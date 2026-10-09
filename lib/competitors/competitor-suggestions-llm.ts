@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { generateGroundedGeminiJson, toIncidentError } from "@/lib/llm/gemini-client";
 import { reportLlmIncident } from "@/lib/llm/llm-incident";
+import { categorizeExtractionError } from "@/lib/llm/extraction-errors";
 import { isBrandDomain } from "@/lib/domains/brand-domain";
 import type { BusinessProfile } from "@/lib/llm/contracts";
 
@@ -26,16 +27,24 @@ function normalizeDomain(value: string): string {
 
 export type SuggestedCompetitor = { name: string; domain: string };
 
-const competitorsResponseSchema = z.object({
-  competitors: z
-    .array(
-      z.object({
-        name: z.string(),
-        domain: z.string()
-      })
-    )
-    .default([])
+const competitorItemSchema = z.object({
+  name: z.string(),
+  domain: z.string()
 });
+
+// The documented shape is `{ competitors: [...] }`; a bare array is accepted
+// too, because a model that drops the wrapper still answered the question.
+const competitorsResponseSchema = z.union([
+  z.object({ competitors: z.array(competitorItemSchema) }),
+  z.array(competitorItemSchema).transform((competitors) => ({ competitors }))
+]);
+
+/**
+ * Why a suggestion came back empty, in this codebase's own words: the thrown
+ * error's category, `schema` for JSON of the wrong shape, `no_items` when the
+ * model listed nobody, `filtered` when every item was dropped here.
+ */
+export type CompetitorSuggestionReason = string;
 
 /**
  * Real Gemini-backed suggestion of direct competitors for a brand/domain.
@@ -50,14 +59,23 @@ const competitorsResponseSchema = z.object({
  * ready to persist in project_competitors. Never throws on partial/garbage
  * items — it filters them out.
  */
-export async function suggestCompetitors(input: {
+type SuggestCompetitorsInput = {
   brand: string;
   domain: string;
   country: string;
   language: string;
   profile: BusinessProfile;
   limit?: number;
-}): Promise<SuggestedCompetitor[]> {
+};
+
+export async function suggestCompetitors(input: SuggestCompetitorsInput): Promise<SuggestedCompetitor[]> {
+  return (await suggestCompetitorsWithReason(input)).competitors;
+}
+
+/** Same as `suggestCompetitors`, plus why the list is empty when it is. */
+export async function suggestCompetitorsWithReason(
+  input: SuggestCompetitorsInput
+): Promise<{ competitors: SuggestedCompetitor[]; reason: CompetitorSuggestionReason | null }> {
   const limit = Math.min(Math.max(input.limit ?? 5, 1), 8);
   const promptBlock = [
     "You are a GEO market analyst. Use Google Search to find the most relevant DIRECT competitors of this specific business.",
@@ -90,10 +108,18 @@ export async function suggestCompetitors(input: {
       error: toIncidentError(error),
       domain: input.domain
     });
-    return [];
+    return { competitors: [], reason: categorizeExtractionError(toIncidentError(error)) };
   }
   const parsed = competitorsResponseSchema.safeParse(raw);
-  if (!parsed.success) return [];
+  if (!parsed.success) {
+    console.warn("[geo:competitors] suggestion JSON did not match the expected shape", {
+      domain: input.domain,
+      topLevel: Array.isArray(raw) ? "array" : typeof raw,
+      keys: raw && typeof raw === "object" && !Array.isArray(raw) ? Object.keys(raw).slice(0, 5) : []
+    });
+    return { competitors: [], reason: "schema" };
+  }
+  if (parsed.data.competitors.length === 0) return { competitors: [], reason: "no_items" };
 
   const ownDomain = normalizeDomain(input.domain);
   const seen = new Set<string>();
@@ -115,5 +141,5 @@ export async function suggestCompetitors(input: {
     if (out.length >= limit) break;
   }
 
-  return out;
+  return { competitors: out, reason: out.length === 0 ? "filtered" : null };
 }

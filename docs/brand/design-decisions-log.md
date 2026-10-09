@@ -21349,6 +21349,104 @@ revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
 
+## 240. MODEL-PIN: Gemini pasa de gemini-2.5-flash a gemini-3.6-flash (2026-10-09, ADR 0042)
+
+**Qué se decidió.** El modelo fijado por defecto pasa a `gemini-3.6-flash`
+(`lib/llm/gemini-client.ts`). Las cinco llamadas a Gemini (generación del
+escaneo, extracción, JSON con y sin búsqueda, auditoría web) dejan de
+escribir su `generationConfig` a mano y lo piden a
+`geminiGenerationTuning(model)`: familia 2.x conserva `temperature: 0` y
+`thinkingBudget: 0` (ADR 0009); familia 3.x usa la temperatura por defecto y
+`thinkingLevel: "minimal"` (o `"low"` donde no existe `minimal`).
+
+**Por qué.** La fecha del 16-10 que motivó la tarea ya no figura en la página
+de Google (comprobado el 09-10: "No shutdown date announced"), pero la misma
+página limita el acceso a 2.5 a quien ya lo usaba y el 09-07 hubo 404 sin
+aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
+
+**Pendiente / conocido.**
+- Si `GEMINI_MODEL` sigue puesto en Vercel (ADR 0009 dice que se fijó a
+  `gemini-2.5-flash` el 2026-06-11), manda sobre el código: el fundador tiene
+  que borrarlo o cambiarlo. Desde el repo no se ve.
+- Prueba real hecha el 09-10 en el preview: el piloto de escritura añadió un
+  prompt a mozilla.org y el escaneo terminó con Gemini respondiendo. Latencias
+  sin medir (el preview no guarda logs en Vercel).
+- Ese mismo día, en el asistente de alta, carrefour.es se quedó sin
+  competidores sugeridos. Causa probable, no confirmada (sin logs): la llamada
+  con búsqueda no puede pedir `responseMimeType: "application/json"` y Gemini 3
+  a temperatura 1.0 envuelve a veces el JSON en una frase. `parseLenientJson`
+  ahora cae al tramo `{…}` más externo antes de rendirse.
+  Y `firstCandidateText` une las partes sin separador: una respuesta con
+  búsqueda puede llegar en varias partes, y un `\n` metido dentro de una cadena
+  rompe el JSON. De paso, el asistente deja de sembrar una fila vacía de
+  competidor cuando no hay sugerencias: cerrada, se pintaba como una tarjeta
+  «Sin nombre / sin dominio» bajo «0 competidores».
+- **Causa real, encontrada después:** con `google_search`, Gemini 3.5/3.6
+  Flash pierde el PRINCIPIO del texto de la respuesta, cortado en una frontera
+  de cita (`finishReason: STOP`, sin error), con o sin `responseMimeType`. El
+  `{` inicial del JSON no llega nunca, así que ningún parser lo recupera. Está
+  reportado en el foro de Google ("Google Search grounding drops the beginning
+  of the response text", 4 de 5 pasadas en 3.6) y no lo hace 2.5. Arreglo en
+  `generateGroundedGeminiJson`: con Gemini 3, una llamada con búsqueda que
+  responde en prosa y una segunda sin búsqueda que la estructura con
+  `responseMimeType`. Si el corte cae en la prosa se pierde una línea, no la
+  lista entera. Cuesta una llamada más (sin búsqueda) por sugerencia.
+- Con ese arreglo carrefour.es SIGUIÓ sin competidores en el preview, y el
+  preview no guarda logs en Vercel. Para poder ver la causa, el asistente
+  enseña ahora el motivo en el aviso, sólo en previews (`VERCEL_ENV=preview`;
+  producción nunca recibe el campo): la categoría del error (`timeout`,
+  `quota`, `http`…), `schema` si el JSON no tiene la forma pedida, `no_items`
+  si la lista llega vacía o `filtered` si todas las filas se descartan aquí.
+  De paso se acepta un array suelto en vez de `{ competitors }`, y un objeto sin
+  la clave `competitors` deja de leerse como «sin competidores».
+- **El mismo corte afecta a las respuestas del escaneo** (`lib/llm/gemini.ts`)
+  y a la auditoría (`lib/web-audit/audit-domain-content.ts`), que también usan
+  `google_search`. Ahí la respuesta es prosa y no rompe nada visible, pero puede
+  perder la primera frase, y con ella una mención de marca. Sin medir; mirar si
+  las menciones de Gemini caen frente a 2.5 en la primera semana.
+- Las puntuaciones cambiarán algo con el modelo nuevo y la varianza entre
+  escaneos sube al quitar `temperature: 0`; se acepta frente al riesgo de
+  bucles (fallos de escaneo). Revisar con datos tras una semana.
+- Coste: tokens ~2,5× y búsqueda con 5.000 consultas gratis/mes en vez de
+  1.500/día. Con el volumen medido seguimos dentro del gratuito (ADR 0042).
+
+**Rollback.** `GEMINI_MODEL=gemini-2.5-flash` en Vercel, sin tocar código.
+
+## 241. SITE-URL-SLASH-1: las auto-llamadas del escaneo iban a "//api/..." y Vercel las rechazaba con 508 (2026-10-09)
+
+**Qué se vio.** Logs de producción del 07 al 09-10 (Vercel, proyecto
+`geo-tool`): `[scan-runner] scan continuation was rejected { status: 508,
+url: 'https://www.genscore.es//api/scan/continue' }` y lo mismo para
+`//api/cron/run-audit` desde `audit-after-scan`, incluso en `chainIndex: 0`.
+`NEXT_PUBLIC_SITE_URL` acaba en "/" (el propio `billing/actions.ts` ya lo
+decía en un comentario y lo esquivaba en local) y `getSiteUrl()` lo devolvía
+tal cual.
+
+**Qué se decidió.** `getSiteUrl()` recorta espacios y barras finales. Arregla
+de una vez las tres auto-llamadas (`/api/scan/continue`,
+`/api/cron/sweep-continue`, `/api/cron/run-audit`) y el `emailRedirectTo` del
+recordatorio de confirmación (`lib/email/lifecycle/runner.ts`). Test en
+`lib/site-url.test.ts`.
+
+**Lo que NO se tocó, a propósito.** `app/{signup,login,forgot-password}/
+actions.ts` concatenan `NEXT_PUBLIC_SITE_URL` a mano y hoy mandan a Supabase
+`https://www.genscore.es//auth/callback`. Cambiarlo toca auth (Task Intake
+obligatorio) y depende de qué URLs tenga permitidas Supabase, que desde el
+repo no se ve. Pendiente: comprobar la lista de Redirect URLs en Supabase y
+unificarlos con `getSiteUrl()` en su propio PR. Alternativa sin código: quitar
+la barra final de `NEXT_PUBLIC_SITE_URL` en Vercel.
+
+**Abierto, no resuelto aquí: los timeouts de 60 s.** Los mismos logs muestran
+`Task timed out after 60 seconds` en `/api/scan/continue`,
+`/api/cron/sweep-continue` y `/api/cron/weekly-scans`. Causa probable (leída
+del código, no medida): `triggerScanContinuation` hace `await fetch` y la ruta
+`/api/scan/continue` no responde hasta terminar `executePendingScan`, así que
+cada eslabón espera el lote entero del siguiente dentro de su propio
+presupuesto y muere a los 60 s. El siguiente eslabón sigue vivo (es otra
+invocación), por eso los escaneos avanzan igualmente, pero cada eslabón
+consume una invocación de 60 s y el `response.ok` nunca llega a leerse. Que la
+ruta responda en cuanto acepta el lote y trabaje en `after()` es un cambio de
+pipeline con su propio Task Intake (agente `reliability`).
 ## 238. LIFECYCLE-WINBACK-1: el fin de prueba lo envía el servidor, y las pruebas caducadas reciben su aviso «tardío», D+3 y D+10 (Fase D de LIFECYCLE-EMAILS-1, 2026-10-09)
 
 **De dónde viene.** Fase D del plan aprobado el 2026-09-28 (§232), con las
