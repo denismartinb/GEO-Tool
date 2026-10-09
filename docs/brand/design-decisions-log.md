@@ -21443,6 +21443,22 @@ mucho ~108 respuestas por pasada en un sector, ~180 en una marca con 20
 preguntas, más ≤20 búsquedas de cobertura) y del propio acceso de operador. Si pasa a
 usarse a menudo, merece un registro del coste.
 
-**Trazabilidad.** `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,
+**Primera publicación (2026-10-09).** El estudio de «software de facturación»
+se publica como artículo del blog, `/blog/que-software-de-facturacion-recomienda-la-ia`
+(cluster `sectores`): es el primer dato propio real que publica GenScore, cosa
+que `.claude/rules/growth-content.md` reserva para el Observatorio «con
+aprobación aparte» — esa aprobación es la del fundador, que encargó el estudio
+para publicarlo. Reglas suyas que el artículo cumple: **sólo porcentajes y
+ratios, nunca recuentos absolutos** de preguntas o respuestas; las marcas se
+nombran (información pública) y en LinkedIn no se etiqueta a las empresas. Del
+ranking se excluyen organismos, hojas de cálculo y pasarelas de pago, y se dice.
+Se retiró antes de publicar la afirmación de que Debitoor es hoy SumUp Facturas
+(no verificada; fundador, 2026-10-09). La explicación de por qué Claude difiere
+(responde sin buscar) va marcada como inferencia. Fuente de cada cifra:
+`/mnt/project-files/estudios/estudio-facturacion-pymes-2026-10-09.{md,json}`,
+fuera del repo. Portada dibujada en HTML y rasterizada a WebP, verificada en
+los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
+
+**Trazabilidad.** `app/blog/que-software-de-facturacion-recomienda-la-ia/`, `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,
 `scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
 `.claude/rules/admin.md`.

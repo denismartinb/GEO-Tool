@@ -84,7 +84,8 @@ const BLOG_SLUGS = [
   // esta tanda a petición del fundador — sin publicar todavía.
   "geo-negocios-locales-servicios-profesionales",
   // GROWTH-2, N5 (2026-09-19).
-  "mi-marca-no-aparece-en-chatgpt-por-que"
+  "mi-marca-no-aparece-en-chatgpt-por-que",
+  "que-software-de-facturacion-recomienda-la-ia"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
