@@ -21,6 +21,16 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 - **Toda afirmación sobre metodología, feature o capacidad del producto debe
   trazarse a un ADR o al código real.** Si no se puede trazar, no se publica
   (content-strategy §4.5).
+- **Un estudio con dato propio publica porcentajes y ratios, nunca cuántas
+  preguntas, repeticiones o respuestas lo componen, ni las versiones de los
+  modelos ni cómo está montada la medición** (fundador, 2026-10-09; log §246).
+  Un recuento bajo ("doce preguntas, dos veces") resta credibilidad, y la
+  versión del modelo o "la misma instrucción que usa un escaneo" es
+  información del producto que no se regala. Se dice qué motores (ChatGPT,
+  Gemini, Claude), la fecha, el criterio ("solo cuenta si el nombre aparece en
+  la respuesta") y que se repitió "múltiples veces, en distintos momentos"; las marcas
+  van en texto normal, sin negrita ni cursiva; las preguntas se enseñan como
+  muestra, no completas, para que su número no se deduzca.
 - **Ninguna cifra de mercado de terceros se presenta como dato propio de
   Genscore.** Sólo el Observatorio (capa E, con aprobación aparte) genera dato
   propio real.
