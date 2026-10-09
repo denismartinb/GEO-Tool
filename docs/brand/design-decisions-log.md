@@ -21653,3 +21653,22 @@ romper en silencio.
 **Trazabilidad.** `lib/ads/{config,consent,track,tags,pending-conversion}.ts`
 (+tests), `components/ads/*`, `app/cookies/page.tsx`, `app/privacidad/page.tsx`,
 `app/auth/callback/route.ts`, `docs/environment-contract.md`.
+
+## 245. CHECKER-HOME-TRUTH-1: la banda de cierre deja de prometer una comprobación de 20 segundos que su campo no hace (2026-10-09)
+
+**Qué pasaba.** La banda de cierre de la portada (`HomeCtaBand`) decía «Una
+comprobación real contra ChatGPT, en 20 segundos» y, hasta hoy, «Sin
+registro». Pero su campo es `HeroDomainField`, que guarda el dominio y lleva a
+`/signup` desde §159: prometía el comprobador y entregaba el registro.
+
+**Decisión.** Sólo copy. La banda describe lo que hace su campo: el primer
+escaneo completo en ChatGPT, Gemini y Claude, con los 7 días de Pro gratis de
+toda cuenta nueva. No promete nada gratis después de la prueba, coherente con
+TRIAL-ONLY-1 (§243: sin plan Free, la cuenta queda en solo lectura). La FAQ del
+comprobador que atribuía tres motores «al plan Free» ya la corrigió
+TRIAL-ONLY-1; este PR la dejó como está en `main`.
+
+**Pendiente.** El comprobador sigue sin enlace desde el hero ni el menú y sin
+captura de correo (propuesto aparte, necesita su propio Task Intake).
+
+**Trazabilidad.** `components/landing/session-ctas.tsx`.
