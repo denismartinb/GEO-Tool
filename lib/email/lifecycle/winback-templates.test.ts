@@ -55,7 +55,9 @@ describe("fin de prueba", () => {
     expect(mail.html).toContain("6 de 45");
     expect(mail.html).toContain("Volver a Pro por 69 €/mes");
     expect(mail.html).toContain("Quedan 35 cuentas con precio fundador");
-    expect(mail.html).not.toMatch(/Disponible hasta|durante \d+ meses|line-through/i);
+    expect(mail.html).not.toMatch(/Disponible hasta|durante \d+ meses/i);
+    // Struck-through list price is back while the coupon lasts (log §243).
+    expect(mail.html).toMatch(/line-through[^>]*>99 €</);
     expect(mail.html).toContain("openPlan=pro");
     expect(mail.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
   });

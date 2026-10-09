@@ -331,12 +331,12 @@ export async function sendTrialEndedEmail(to: string): Promise<boolean> {
       ${eyebrow("Tu prueba ha terminado", "#5B6B82")}
       ${heading("Se acabaron tus 7 días de Pro")}
       ${paragraph(
-        "Tus 7 días de prueba de <b style=\"color:#0B1426;\">Pro</b> han terminado y tu cuenta ha pasado a <b style=\"color:#0B1426;\">Free</b>. Tus dominios y escaneos siguen intactos — no hemos borrado nada."
+        "Tus 7 días de prueba de <b style=\"color:#0B1426;\">Pro</b> han terminado y tu cuenta ha pasado a <b style=\"color:#0B1426;\">solo lectura</b>. Tus dominios, escaneos y recomendaciones siguen ahí — no hemos borrado nada —, pero no se hacen escaneos nuevos."
       )}
-      ${paragraph("¿Te ha resultado útil ver cómo te menciona la IA? Recupera el acceso completo cuando quieras.")}
-      ${button("https://www.genscore.es/dashboard/settings/billing", "Ver planes")}
+      ${paragraph("¿Te ha resultado útil ver cómo te menciona la IA? Elige un plan y volvemos a escanear desde donde lo dejaste.")}
+      ${button("https://www.genscore.es/dashboard/settings?openPlan=pro#plan", "Elegir plan")}
     `,
-      { preheader: "Tu cuenta ha pasado a Free — tus datos siguen intactos." }
+      { preheader: "Tu cuenta está en solo lectura — tus datos siguen intactos." }
     )
   );
 }

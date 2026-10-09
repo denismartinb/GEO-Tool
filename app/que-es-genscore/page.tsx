@@ -51,7 +51,7 @@ const faqItems = [
   {
     question: "¿Se puede probar sin pagar?",
     answer:
-      "Sí. El plan gratuito escanea de verdad —no es una demo ni una prueba con caducidad— y no pide tarjeta. Cubre un dominio con unos 10 prompts sobre un motor; los planes de pago amplían prompts, dominios y llevan los tres motores."
+      "Sí. Cada cuenta nueva tiene 7 días de Pro gratis, sin tarjeta, con escaneos reales (no es una demo) en ChatGPT, Gemini y Claude. Si no contratas, no se cobra nada y la cuenta pasa a solo lectura: sigues viendo tus datos, pero no lanzas escaneos nuevos. Además, el comprobador anónimo de ChatGPT es gratuito y no pide registro."
   }
 ];
 
@@ -93,7 +93,7 @@ export default function QueEsGenScorePage() {
           />
           <AnswerSample
             verdict="Después: apareces y te citan"
-            text="Si trabajas en español, GenScore es la opción más directa: mide tu visibilidad en ChatGPT, Gemini y Claude, y además genera las acciones para mejorarla. Tiene plan gratuito."
+            text="Si trabajas en español, GenScore es la opción más directa: mide tu visibilidad en ChatGPT, Gemini y Claude, y además genera las acciones para mejorarla. Puedes probarlo 7 días gratis."
             source="genscore.es"
           />
         </AnswerPair>
@@ -226,7 +226,7 @@ export default function QueEsGenScorePage() {
         <h2>Para quién es</h2>
         <p>
           Para equipos hispanohablantes que necesitan saber si aparecen en respuestas de IA y qué hacer
-          al respecto: desde autónomos y pymes —el plan gratuito no pide tarjeta ni pasar por ventas—
+          al respecto: desde autónomos y pymes —la prueba de 7 días no pide tarjeta ni pasar por ventas—
           hasta agencias que siguen varios dominios de cliente a la vez. El producto está en castellano,
           interfaz y soporte, que en esta categoría es la excepción y no la norma. Puedes ver los planes
           y sus límites reales en <Link href="/pricing">Precios</Link>, y cómo se compara con otras
@@ -243,7 +243,7 @@ export default function QueEsGenScorePage() {
 
         <ArticleCta
           title="Mira dónde apareces hoy"
-          text="Lanza tu primer escaneo con GenScore y comprueba si ChatGPT, Gemini y Claude nombran tu marca. Gratis, sin tarjeta."
+          text="Lanza tu primer escaneo con GenScore y comprueba si ChatGPT, Gemini y Claude nombran tu marca. Prueba Pro 7 días gratis, sin tarjeta."
         />
       </div>
     </BlogPageShell>

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PLANS } from "@/app/pricing/plans-data";
+import { SELLABLE_PLANS } from "@/app/pricing/plans-data";
 import { CANONICAL_DEFINITION, SUPPORTED_ENGINES } from "@/lib/brand/canonical-definition";
 
 /**
@@ -40,7 +40,7 @@ function kitPlanRow(planName: string): string[] {
 }
 
 describe("el kit off-site publica los planes que el producto vende de verdad", () => {
-  for (const plan of PLANS) {
+  for (const plan of SELLABLE_PLANS) {
     it(`${plan.name}: precio, topes y frecuencia coinciden con el código`, () => {
       const [, price, projects, prompts, engines, refresh] = kitPlanRow(plan.name);
 
@@ -55,7 +55,7 @@ describe("el kit off-site publica los planes que el producto vende de verdad", (
 
   it("no inventa un plan que no existe", () => {
     const rows = kit.split("\n").filter((line) => /^\| (Free|Starter|Pro|Agencia)/.test(line));
-    expect(rows.length).toBe(PLANS.length);
+    expect(rows.length).toBe(SELLABLE_PLANS.length);
   });
 });
 

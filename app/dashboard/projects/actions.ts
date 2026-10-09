@@ -70,6 +70,13 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
   const brand = deriveBrandFromDomain(domain);
   const language = languageForCountry(country);
   const plan = await getPlanForUser(supabase, user.id);
+  // TRIAL-ONLY-1: an account without a plan is read-only and cannot create a
+  // domain (`createProjectCore`), so spending Gemini calls on suggestions for
+  // one is pure cost. The wizard already hides the button; this is the
+  // server-side half.
+  if (plan.id === "free") {
+    return empty;
+  }
   // suggestPrompts itself hard-caps at 15 (lib/llm/gemini.ts) regardless of
   // what's requested — Math.min just avoids asking for more than the plan
   // allows when a lower-tier plan's cap is below that.
@@ -337,7 +344,9 @@ export async function deleteProjects(projectIds: string[]): Promise<DeleteProjec
     .eq("owner_user_id", user.id)
     .eq("is_archived", false);
 
-  if (countError || (remainingCount ?? 0) > plan.caps.projects) {
+  // TRIAL-ONLY-1: without a plan nothing scans, so there is no domain cap to
+  // be "still over" — same exemption as `getDomainOverage`.
+  if (countError || (plan.id !== "free" && (remainingCount ?? 0) > plan.caps.projects)) {
     return {
       success: false,
       error: "Los dominios se eliminaron, pero todavía tienes más de los que permite tu plan. Recarga la página."

@@ -29,9 +29,21 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
   // suggestion calls (lib/llm/gemini.ts) for a domain that createProject
   // would reject anyway.
   const usage = await getUsageSummary();
-  const atProjectLimit = usage.projectCount >= usage.projectCap;
+  // TRIAL-ONLY-1: sin plan (prueba terminada) la cuenta es de solo lectura y
+  // no puede añadir dominios, tenga los que tenga.
+  const readOnly = usage.planId === "free";
+  const atProjectLimit = readOnly || usage.projectCount >= usage.projectCap;
+  const limitMessage = readOnly
+    ? "Tu prueba de Pro ha terminado. Elige un plan en Ajustes para añadir dominios y volver a escanear."
+    : errorMessages.project_limit_reached;
 
-  const errorMessage = params.error ? errorMessages[params.error] : atProjectLimit ? errorMessages.project_limit_reached : null;
+  const errorMessage = params.error
+    ? params.error === "project_limit_reached"
+      ? limitMessage
+      : errorMessages[params.error]
+    : atProjectLimit
+      ? limitMessage
+      : null;
 
   return (
     <OnboardingWizard

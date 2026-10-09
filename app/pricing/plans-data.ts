@@ -104,21 +104,24 @@ export type Plan = {
 
 export const PLANS: Plan[] = [
   {
+    // TRIAL-ONLY-1: no se vende (ver `SELLABLE_PLANS`). Es el estado de una
+    // cuenta cuya prueba de Pro terminó sin contratar, o cuya suscripción se
+    // canceló: entra y ve sus datos, pero no escanea.
     id: "free",
-    name: "Free / Scan",
+    name: "Sin plan",
     price: 0,
-    period: "siempre",
-    tagline: "Tu primer escaneo, gratis",
-    who: "Pruébalo sin tarjeta",
-    cta: "Escanear gratis",
+    priceLabel: "Solo lectura",
+    period: "mes",
+    tagline: "Ves tus datos, sin escaneos nuevos",
+    who: "Cuenta sin plan activo",
+    cta: "Elegir plan",
     ctaStyle: "ghost",
     highlights: [
-      "1 escaneo instantáneo, 1 dominio",
-      "~10 prompts · 1 motor de IA",
-      "GEO Score creíble + 3 acciones",
-      "Sin tendencia ni monitorización"
+      "Tus dominios, escaneos y recomendaciones siguen aquí",
+      "Sin escaneos nuevos ni seguimiento automático",
+      "Elige un plan para volver a escanear"
     ],
-    meter: { projects: "1", prompts: 10, engines: 1, refresh: "Puntual" },
+    meter: { projects: "1", prompts: 10, engines: 1, refresh: "Sin escaneos" },
     caps: { projects: 1, prompts: 10, engines: 1 }
   },
   {
@@ -183,45 +186,54 @@ export const PLANS: Plan[] = [
   }
 ];
 
+/**
+ * TRIAL-ONLY-1: los planes que se venden. `free` sigue en `PLANS` porque es
+ * el estado interno de una cuenta cuya prueba de Pro terminó sin contratar
+ * (modo solo lectura: ve sus datos, no escanea) y el que escribe el webhook
+ * al cancelar — pero ya no es una oferta, así que no aparece en /precios ni
+ * en el modal de cambio de plan.
+ */
+export const SELLABLE_PLANS: Plan[] = PLANS.filter((p) => p.id !== "free");
+
 // Matriz de comparación, agrupada por bloque de valor.
 // Celdas: true = incluido · false = no · string = detalle/límite.
-// Orden de columnas: free, starter, pro, agency.
+// Orden de columnas: el de `SELLABLE_PLANS` — starter, pro, agency.
 export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; vals: PlanCell[] }> }> = [
   {
     group: "Medición",
     rows: [
-      { label: "Dominios", vals: ["1", "1", "5", "A medida"] },
-      { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
-      { label: "Motores de IA", vals: ["1", "3", "3", "3"] },
-      { label: "Frecuencia de escaneo", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
-      { label: "Tendencia temporal", vals: [false, true, true, true] }
+      { label: "Dominios", vals: ["1", "5", "A medida"] },
+      { label: "Prompts monitorizados", vals: ["~25", "~100", "~300"] },
+      { label: "Motores de IA", vals: ["3", "3", "3"] },
+      { label: "Frecuencia de escaneo", vals: ["Semanal", "Diario", "Diario"] },
+      { label: "Tendencia temporal", vals: [true, true, true] }
     ]
   },
   {
     group: "Análisis",
     rows: [
-      { label: "Panorámica competitiva y cuota de voz", vals: [true, true, true, true] },
-      { label: "Distribución por motor de IA", vals: ["1 motor", true, true, true] },
-      { label: "Sentimiento y análisis de temas", vals: [false, false, true, true] },
-      { label: "Citas y fuentes profundas", vals: [false, "Básico", true, true] },
-      { label: "Detección de oportunidades de prompt", vals: [false, true, true, true] }
+      { label: "Panorámica competitiva y cuota de voz", vals: [true, true, true] },
+      { label: "Distribución por motor de IA", vals: [true, true, true] },
+      { label: "Sentimiento y análisis de temas", vals: [false, true, true] },
+      { label: "Citas y fuentes profundas", vals: ["Básico", true, true] },
+      { label: "Detección de oportunidades de prompt", vals: [true, true, true] }
     ]
   },
   {
     group: "Acción",
     rows: [
-      { label: "Bucle de acción priorizado", vals: ["3 acciones", true, true, true] },
-      { label: "Recomendaciones basadas en evidencia", vals: [false, true, true, true] },
-      { label: "Generador de soluciones", vals: [false, false, true, true] },
-      { label: "Credibilidad de medición visible", vals: [true, true, true, true] }
+      { label: "Bucle de acción priorizado", vals: [true, true, true] },
+      { label: "Recomendaciones basadas en evidencia", vals: [true, true, true] },
+      { label: "Generador de soluciones", vals: [false, true, true] },
+      { label: "Credibilidad de medición visible", vals: [true, true, true] }
     ]
   }
 ];
 
 export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   {
-    q: "¿Qué es el escaneo gratuito?",
-    a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de GenScore antes de pagar nada."
+    q: "¿Hay un plan gratuito?",
+    a: "No hay plan gratis para siempre: al registrarte tienes 7 días de Pro completo, sin tarjeta, que es la mejor forma de ver GenScore con tus propios datos. Si sólo quieres saber si ChatGPT menciona tu marca, el comprobador gratuito lo responde al momento y sin registro."
   },
   {
     q: "¿Por qué cobráis por prompts y motores?",
@@ -233,7 +245,7 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "¿Qué incluye la prueba de Pro?",
-    a: "Al registrarte tienes 7 días de Pro completo, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Si al terminar no contratas, tu cuenta pasa sola al plan Free, sin ningún cobro."
+    a: "Al registrarte tienes 7 días de Pro completo, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Si al terminar no contratas, no se te cobra nada: tu cuenta pasa a solo lectura, sigues viendo tus datos y vuelves a escanear en cuanto elijas un plan."
   },
   {
     q: "¿Qué es el precio fundador?",

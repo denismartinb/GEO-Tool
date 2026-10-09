@@ -117,7 +117,7 @@ export default function GenscoreVsPeecAiPage() {
 
         <ArticleCta
           title="¿Cuánto te cuesta de verdad no saberlo?"
-          text="Lanza tu escaneo gratuito y compara tu visibilidad real, sin pagar add-ons por idioma. Sin tarjeta."
+          text="Prueba Pro 7 días gratis y compara tu visibilidad real, sin pagar add-ons por idioma. Sin tarjeta."
         />
       </div>
     </BlogPageShell>

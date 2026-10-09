@@ -8,7 +8,7 @@ import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { PlanCardCta } from "@/components/pricing/plan-card-cta";
 import { supportMailto } from "@/lib/support";
-import { PLANS, PLAN_MATRIX, type Plan, type PlanCell } from "@/app/pricing/plans-data";
+import { SELLABLE_PLANS, PLAN_MATRIX, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 import { getFounderOffer } from "@/lib/stripe";
 
 
@@ -41,10 +41,13 @@ function PlanCard({ plan, promoPlanIds }: { plan: Plan; promoPlanIds: readonly s
                 el precio normal es real y se dice en palabras, en su propia
                 línea por la misma razón que la duración antes (fundador,
                 2026-08-27: partía en la tarjeta recomendada). */}
+            {/* Tachado de vuelta (fundador, 2026-10-09, log §243): el precio
+                normal se tacha mientras el cupón fundador exista y queden
+                plazas. Es el precio real sin descuento, no uno inflado. */}
+            <span className="price-was">{plan.price}&nbsp;€</span>
             <span className="price-amount">{plan.promoPrice}&nbsp;€</span>
             <span className="price-per">/{plan.period}</span>
             <span className="price-term">Precio fundador para siempre</span>
-            <span className="price-term price-term-soft">Precio normal: {plan.price}&nbsp;€/{plan.period}</span>
           </>
         ) : (
           <>
@@ -90,20 +93,22 @@ function MatrixCell({ v }: { v: PlanCell }) {
 function PlanMatrix({ promoPlanIds }: { promoPlanIds: readonly string[] }) {
   return (
     <div className="price-matrix-outer">
-      <p className="price-matrix-hint">Desliza para ver los 4 planes →</p>
+      <p className="price-matrix-hint">Desliza para ver los 3 planes →</p>
       <div className="price-matrix-wrap">
       <table className="price-matrix">
         <thead>
           <tr>
             <th className="price-mx-rowhead" />
-            {PLANS.map((p) => {
+            {SELLABLE_PLANS.map((p) => {
               const showPromo = promoPlanIds.includes(p.id) && p.promoPrice !== undefined;
               return (
                 <th key={p.id} className={p.recommended ? "price-rec" : ""}>
                   <div className="price-mx-planname">{p.name}</div>
                   <div className="price-mx-planprice">
                     {showPromo ? (
-                      <>{p.promoPrice}&nbsp;€</>
+                      <>
+                        <s className="price-mx-was">{p.price}&nbsp;€</s> {p.promoPrice}&nbsp;€
+                      </>
                     ) : (
                       p.priceLabel ?? (p.price === 0 ? "0 €" : p.price + " €")
                     )}
@@ -118,13 +123,13 @@ function PlanMatrix({ promoPlanIds }: { promoPlanIds: readonly string[] }) {
           {PLAN_MATRIX.map((grp) => (
             <Fragment key={grp.group}>
               <tr className="price-mx-grouprow">
-                <td colSpan={PLANS.length + 1}>{grp.group}</td>
+                <td colSpan={SELLABLE_PLANS.length + 1}>{grp.group}</td>
               </tr>
               {grp.rows.map((r) => (
                 <tr key={r.label} className="hoverable">
                   <td className="price-mx-rowhead">{r.label}</td>
                   {r.vals.map((v, j) => (
-                    <td key={PLANS[j].id} className={"price-mx-cell" + (PLANS[j].recommended ? " price-rec" : "")}>
+                    <td key={SELLABLE_PLANS[j].id} className={"price-mx-cell" + (SELLABLE_PLANS[j].recommended ? " price-rec" : "")}>
                       <MatrixCell v={v} />
                     </td>
                   ))}
@@ -208,7 +213,7 @@ export async function PricingPage() {
             </p>
           ) : null}
           <div className="price-cards">
-            {PLANS.map((p) => (
+            {SELLABLE_PLANS.map((p) => (
               <PlanCard key={p.id} plan={p} promoPlanIds={promoPlanIds} />
             ))}
           </div>
@@ -253,11 +258,11 @@ export async function PricingPage() {
           <div className="lp-ctaband">
             <div className="onb-aurora" style={{ opacity: 0.25 }}><div className="blob blob-2" /><div className="blob blob-3" /></div>
             <div style={{ position: "relative", zIndex: 2 }}>
-              <h2>Empieza con un escaneo gratis</h2>
-              <p>Mira tu GEO Score y tus 3 primeras acciones en minutos. Sin tarjeta.</p>
+              <h2>Prueba Pro 7 días gratis</h2>
+              <p>Mira tu GEO Score y tus primeras acciones en minutos. Sin tarjeta.</p>
               <div className="row">
-                <Link className="btn btn-white btn-lg" href="/signup?plan=free">
-                  Escanear gratis <Icon name="arrRight" size={16} />
+                <Link className="btn btn-white btn-lg" href="/signup">
+                  Empezar la prueba <Icon name="arrRight" size={16} />
                 </Link>
                 <a className="btn btn-onaccent btn-lg" href={supportMailto("Hablar con ventas")}>
                   Hablar con ventas

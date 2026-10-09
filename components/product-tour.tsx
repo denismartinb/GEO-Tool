@@ -861,7 +861,7 @@ export function ProductTour({
                     +0 pt en 5 escaneos
                   </span>
                   {/* Cierto, no una frase de folleto: `lib/scan/cron.ts`
-                      reescanea a diario en free/pro/agency y semanalmente en
+                      reescanea a diario en pro/agency y semanalmente en
                       starter. Si esa cadencia cambia, este texto cambia. */}
                   <span className="pt-badge pt-badge-mid">
                     <span className="pt-spin" style={{ width: 7, height: 7, borderWidth: 1.2 }} />
