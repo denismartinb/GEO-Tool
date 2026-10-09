@@ -135,7 +135,7 @@ export function PromoStrip() {
             <span className="lp-promo-row c">
               <span className="lp-promo-pill">Fundador</span>
               <span>
-                Quedan <b>{founder.remaining} de {founder.total}</b> plazas
+                Quedan <b>{founder.remaining}</b> cuentas con precio especial
               </span>
             </span>
           </>

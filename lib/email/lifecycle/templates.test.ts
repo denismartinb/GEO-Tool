@@ -138,7 +138,7 @@ describe("D5 prices", () => {
     expect(subject).toBe("Tu prueba de Pro termina el lunes");
     expect(html).toContain("Mantener Pro por 69 €/mes");
     expect(html).toContain("Para siempre, mientras mantengas tu suscripción. Precio normal: 99 €/mes.");
-    expect(html).toContain("Quedan 47 de 50 plazas");
+    expect(html).toContain("Quedan 47 cuentas con precio fundador");
     expect(html).toContain("−30%");
     // FOUNDER-PRICE-1: no struck-through list price, no deadline (log §237).
     expect(html).not.toContain("line-through");
