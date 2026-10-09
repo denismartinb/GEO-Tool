@@ -457,10 +457,11 @@ ha apoyado históricamente en el índice de Bing, así que este paso no es solo
 |---|---|---|---|
 | `STRIPE_SECRET_KEY` | No | Vercel + local `.env.local` | Stripe secret key — `sk_test_...` until the go-live checklist is done, then `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | No | Vercel | Signing secret for the `/api/webhooks/stripe` endpoint, from the Stripe Dashboard webhook config (`whsec_...`) |
-| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price |
-| `STRIPE_PRICE_ID_PRO` | No | Vercel | Stripe Price id for the Pro plan's recurring price |
-| `STRIPE_COUPON_ID_STARTER_PROMO` | No | Vercel | PRICING-PROMO-1: Stripe Coupon id (`amount_off`, `duration: repeating`, `duration_in_months: 6`, `redeem_by` = 2026-09-01T00:00:00+02:00) applied to Starter checkout while `isPromoActive()` (`app/pricing/plans-data.ts`) is true |
-| `STRIPE_COUPON_ID_PRO_PROMO` | No | Vercel | Same as above, for Pro |
+| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price. FOUNDER-PRICE-1: its `unit_amount` must equal `PLANS` (29 €, EUR, monthly, tax exclusive) — checkout refuses otherwise (`stripePriceMatchesPlan`) |
+| `STRIPE_PRICE_ID_PRO` | No | Vercel | Same, for Pro (99 €) |
+| `STRIPE_COUPON_ID_STARTER_FOUNDER` | No | Vercel | FOUNDER-PRICE-1 (log §237): Stripe Coupon id, `amount_off` = 900 (9 €), `currency: eur`, `duration: forever`, `max_redemptions: 50`. Shown and applied only while it has exactly that shape and the founder slots (50, summed across both coupons) are not used up (`getFounderOffer`) |
+| `STRIPE_COUPON_ID_PRO_FOUNDER` | No | Vercel | Same, for Pro: `amount_off` = 3000 (30 €) |
+| ~~`STRIPE_COUPON_ID_STARTER_PROMO` / `STRIPE_COUPON_ID_PRO_PROMO`~~ | — | — | Retired by FOUNDER-PRICE-1: the 6-month launch coupons of PRICING-PROMO-1. No longer read; safe to delete from Vercel |
 
 All four are optional by design: `lib/stripe.ts`'s `getStripeClient()` returns
 `null` when `STRIPE_SECRET_KEY` is unset, and every caller (`createCheckoutSession`,

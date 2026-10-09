@@ -21370,3 +21370,64 @@ que vuelvan esas frases y exige que el FAQ diga «7 días».
 **Pendiente.** La revisión completa de precios y de la oferta de lanzamiento
 (propuesta del 2026-10-09: precios reales sin tachar y precio fundador) espera
 la aprobación del fundador. Este cambio no la anticipa.
+
+## 237. FOUNDER-PRICE-1: precios reales sin tachado y precio fundador para siempre en lugar de la promo de 6 meses (2026-10-09)
+
+**Qué.** Starter pasa de 45 € (promo 19 € durante 6 meses) a **29 €/mes**, y
+Pro de 179 € (promo 59 € durante 6 meses) a **99 €/mes**, ambos sin IVA. La
+promo de lanzamiento de PRICING-PROMO-1 (§152, prorrogada en §206 y §231) se
+retira y la sustituye un **precio fundador para siempre**: 20 € en Starter y
+69 € en Pro, para las primeras 50 suscripciones (`FOUNDER_SLOTS`), contadas
+desde `times_redeemed` de los cupones de Stripe. Free, Agencia, topes y
+prueba de 7 días no cambian. Superseded: §152 (cupón de 6 meses con
+`redeem_by`), §206 y §231 (ampliaciones de fecha), y el texto de la tira de
+promoción de §159.
+
+**Por qué.** Decisión del fundador (2026-10-09) sobre la revisión de pricing
+del hilo «Revisión de precios». En una marca sin clientes, «179 € tachado,
+ahora 59 €» se leía como precio inflado (nadie ha pagado nunca 179 €), y una
+fecha de corte prorrogada dos veces deja de crear urgencia. Además, 59 € casi
+no deja margen con un Pro que use su cupo entero (~56 € de LLM al mes,
+`docs/llm-cost-analysis-2026-08.md` §7). Referencia de mercado (agosto de
+2026): Otterly 29 $/189 $, Peec 95 $/245 $ y Semrush AI Toolkit 99 $.
+
+**Cómo.**
+- `getFounderOffer()` (`lib/stripe.ts`) es la única fuente de «se puede
+  mostrar y cobrar el precio fundador, y cuántas plazas quedan». Lee los
+  cupones de Stripe (`STRIPE_COUPON_ID_{STARTER,PRO}_FOUNDER`) y sólo da la
+  oferta por buena si cada cupón tiene exactamente la forma anunciada:
+  `forever`, `eur` y `amount_off = price − promoPrice`. Así un cupón viejo de
+  6 meses o un porcentaje no pueden anunciarse como «para siempre». Caché de
+  5 minutos, y de 60 s si hay error. Falla cerrado: sin oferta.
+- Se usa `amount_off` y no `percent_off` porque un 30 % sobre 29 € son
+  20,30 €, no los 20 € que enseña la pantalla.
+- Variables de cupón **nuevas**: las `_PROMO` ya no se leen.
+- `getActivePromoPlanIds()` pasa a ser asíncrona y la leen `/pricing`, la
+  consola, los correos D5 y el checkout.
+- Checkout comprueba con `stripePriceMatchesPlan` que el Price del entorno
+  cobra lo que dice `PLANS`, y si no, rechaza. Es lo que impide que un deploy
+  con precios nuevos y el entorno viejo enseñe 99 € y cobre 179 €.
+- `/pricing` deja el tachado, dice «Precio fundador para siempre» y
+  «Precio normal: 99 €/mes», y enseña la franja «quedan N de 50 plazas».
+  Revalida cada 10 minutos, antes cada hora.
+- La tira pública pide la oferta a `/api/founder-offer` (estático,
+  revalidación de 10 minutos). Sin oferta, sólo queda la fila de la prueba,
+  quieta.
+- La consola y el correo D5 dicen «para siempre», sin fecha.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
+
+**Pendiente o conocido.**
+- El fundador tiene que crear en Stripe (modo real) los dos Prices y los dos
+  cupones, y apuntar las cuatro variables de Vercel **antes del merge**. Si
+  no lo hace, el checkout rechaza (Price) o no aplica descuento (cupón), pero
+  nunca cobra algo distinto de lo que enseña.
+- Una suscripción real con el cupón viejo de 6 meses (si existiera) dejaría
+  de mostrarse como rebajada en la consola, aunque Stripe se lo siga
+  aplicando.
+- La consola mantiene el tachado del precio normal real en «Tu plan» y en el
+  modal; sólo las superficies de captación lo pierden.
+- `lib/admin/users.ts` calcula el MRR con el precio normal, no con el de
+  fundador.
+- Fases propuestas y no incluidas aquí: plan anual (2 meses gratis), Agencia
+  en autoservicio desde 299 € y Free con un escaneo al mes.

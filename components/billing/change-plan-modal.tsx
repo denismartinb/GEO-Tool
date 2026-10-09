@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { SUPPORT_EMAIL } from "@/lib/support";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { PLANS, PROMO_DURATION_MONTHS, type Plan } from "@/app/pricing/plans-data";
+import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import type { ActiveProjectSummary } from "@/lib/billing";
 import type { CheckoutSessionResult, PortalIntent, PortalSessionResult } from "@/app/dashboard/settings/billing/actions";
 
@@ -369,7 +369,7 @@ export function ChangePlanModal({
                       <span className="cp-move-promo">
                         <span className="was">{money(target.price, 0)}</span>
                         <span className="now">{money(targetPromoPrice, 0)}</span>
-                        <span className="per">/mes · {PROMO_DURATION_MONTHS} meses</span>
+                        <span className="per">/mes · para siempre</span>
                       </span>
                     ) : (
                       <span className="per">· {planPrice(target)}</span>
@@ -385,8 +385,8 @@ export function ChangePlanModal({
                   {targetPromoPrice !== null && (
                     <>
                       {" "}
-                      Precio de lanzamiento: {money(targetPromoPrice, 0)}/mes durante {PROMO_DURATION_MONTHS} meses,
-                      después {planPrice(target)}.
+                      Precio fundador: {money(targetPromoPrice, 0)}/mes para siempre, mientras mantengas la
+                      suscripción (precio normal {planPrice(target)}).
                     </>
                   )}
                 </span>
@@ -401,7 +401,7 @@ export function ChangePlanModal({
               <div className="cp-foot-note">
                 {targetPromoPrice !== null ? (
                   <>
-                    <b>{money(targetPromoPrice, 0)}/mes</b> · {PROMO_DURATION_MONTHS} meses (antes {planPrice(target)})
+                    <b>{money(targetPromoPrice, 0)}/mes</b> · para siempre (normal {planPrice(target)})
                   </>
                 ) : (
                   planPrice(target)

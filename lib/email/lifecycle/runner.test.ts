@@ -11,7 +11,9 @@ vi.mock("@/lib/email/lifecycle/templates", () => ({
   sendFirstScanReadyEmail: (...a: unknown[]) => sendFirstScanReadyEmail(...a),
   formatDateLong: () => "31 de octubre"
 }));
-vi.mock("@/lib/stripe", () => ({ getActivePromoPlanIds: () => ["pro", "starter"] }));
+vi.mock("@/lib/stripe", () => ({
+  getFounderOffer: async () => ({ planIds: ["pro", "starter"], remaining: 47, total: 50 })
+}));
 
 import { maybeSendFirstScanReadyEmail, runConfirmationReminders, runLifecycleEmails } from "./runner";
 
@@ -116,8 +118,8 @@ describe("runLifecycleEmails", () => {
     });
     await runLifecycleEmails({ service, now: NOW });
     const input = sendTrialD5Email.mock.calls[0][2] as { pro: { price: number; promo: { price: number } | null } };
-    expect(input.pro.price).toBe(179);
-    expect(input.pro.promo?.price).toBe(59);
+    expect(input.pro.price).toBe(99);
+    expect(input.pro.promo?.price).toBe(69);
   });
 });
 

@@ -25,7 +25,7 @@ de marca va incrustada como data URI, así que se abre sin red.
 - Las cifras de las plantillas son de ejemplo (`clinicaaurora.es`). En
   producción cada número se lee del escaneo real, o la plantilla cae a su
   variante sin cifra. Nunca una cifra inventada.
-- Precios y fecha de la promo salen de `PLANS` y `PROMO_ENDS_AT`
+- Precios y fecha de la promo salen de `PLANS` y `PROMO_ENDS_AT` (superseded por FOUNDER-PRICE-1, log §237: precio fundador para siempre, plazas leídas de Stripe con `getFounderOffer`)
   (`app/pricing/plans-data.ts`), nunca escritos a mano.
 - **No hay ningún testimonio permitido** (rectificado 2026-10-08): el de «Nordika Home» que aquí se daba por real
   (log §146) era **inventado**, según el fundador. Los correos no llevan testimonio; la plantilla de este diseño

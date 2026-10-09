@@ -22,7 +22,6 @@
  */
 
 import { z } from "zod";
-import { isPromoActive } from "@/app/pricing/plans-data";
 
 /**
  * Un entero positivo con valor por defecto, que **nunca produce `NaN`**.
@@ -121,8 +120,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   STRIPE_WEBHOOK_SECRET: "los webhooks de Stripe se rechazan por firma inválida",
   STRIPE_PRICE_ID_STARTER: "el checkout del plan Starter no se puede crear",
   STRIPE_PRICE_ID_PRO: "el checkout del plan Pro no se puede crear",
-  STRIPE_COUPON_ID_STARTER_PROMO: "el checkout de Starter cobra el precio normal, sin la promo",
-  STRIPE_COUPON_ID_PRO_PROMO: "el checkout de Pro cobra el precio normal, sin la promo",
+  STRIPE_COUPON_ID_STARTER_FOUNDER: "Starter no ofrece precio fundador: /precios y el checkout usan el precio normal",
+  STRIPE_COUPON_ID_PRO_FOUNDER: "Pro no ofrece precio fundador: /precios y el checkout usan el precio normal",
   ADMIN_USER_IDS: "/admin es inalcanzable (404 para todo el mundo)",
   GOOGLE_SITE_VERIFICATION: "no se emite la meta de verificación de Search Console",
   INTERNAL_TEST_ACCOUNT_EMAILS:
@@ -178,8 +177,8 @@ export const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: optionalText,
   STRIPE_PRICE_ID_STARTER: optionalText,
   STRIPE_PRICE_ID_PRO: optionalText,
-  STRIPE_COUPON_ID_STARTER_PROMO: optionalText,
-  STRIPE_COUPON_ID_PRO_PROMO: optionalText,
+  STRIPE_COUPON_ID_STARTER_FOUNDER: optionalText,
+  STRIPE_COUPON_ID_PRO_FOUNDER: optionalText,
 
   ADMIN_USER_IDS: optionalText,
   GOOGLE_SITE_VERIFICATION: optionalText,
@@ -215,7 +214,7 @@ export type EnvProblem = {
  * primera: quien está configurando un despliegue quiere ver los cinco
  * problemas de una vez, no descubrirlos uno por despliegue.
  */
-export function checkEnvRules(env: Env, raw: RawEnv = {}, now: Date = new Date()): EnvProblem[] {
+export function checkEnvRules(env: Env, raw: RawEnv = {}, _now: Date = new Date()): EnvProblem[] {
   const problems: EnvProblem[] = [];
   const add = (variable: string, severity: EnvProblem["severity"], message: string) =>
     problems.push({ variable, severity, message });
@@ -276,17 +275,17 @@ export function checkEnvRules(env: Env, raw: RawEnv = {}, now: Date = new Date()
     add("STRIPE_*", "error", `Stripe está configurado a medias: faltan ${missing.join(", ")}. Un checkout que ningún webhook confirma deja al cliente pagando sin plan.`);
   }
 
-  // PRICING-PROMO-1: no es un error — la pantalla nunca promete un descuento
-  // que el cupón no puede dar (getActivePromoPlanIds exige las dos cosas) —
-  // pero si la ventana de la promo está abierta y Stripe funciona, casi
-  // seguro es que alguien olvidó crear los cupones, no que la promo no lleve
-  // descuento a propósito.
-  if (isPromoActive(now) && stripeSet.length === stripePieces.length) {
-    if (!env.STRIPE_COUPON_ID_STARTER_PROMO) {
-      add("STRIPE_COUPON_ID_STARTER_PROMO", "warning", "La promo está en fecha pero sin cupón: /pricing no mostrará descuento en Starter.");
+  // FOUNDER-PRICE-1 (log §237): no es un error — la pantalla nunca promete
+  // un descuento que el cupón no puede dar (getFounderOffer lee el cupón de
+  // Stripe) — pero con Stripe funcionando, faltar un cupón casi seguro es que
+  // alguien olvidó crearlo, no que el plan no lleve precio fundador a
+  // propósito. Sin fecha: la oferta se acaba por plazas, no por calendario.
+  if (stripeSet.length === stripePieces.length) {
+    if (!env.STRIPE_COUPON_ID_STARTER_FOUNDER) {
+      add("STRIPE_COUPON_ID_STARTER_FOUNDER", "warning", "Sin cupón fundador: /precios no mostrará precio fundador en Starter.");
     }
-    if (!env.STRIPE_COUPON_ID_PRO_PROMO) {
-      add("STRIPE_COUPON_ID_PRO_PROMO", "warning", "La promo está en fecha pero sin cupón: /pricing no mostrará descuento en Pro.");
+    if (!env.STRIPE_COUPON_ID_PRO_FOUNDER) {
+      add("STRIPE_COUPON_ID_PRO_FOUNDER", "warning", "Sin cupón fundador: /precios no mostrará precio fundador en Pro.");
     }
   }
 

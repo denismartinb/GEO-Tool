@@ -32,7 +32,7 @@ export type UsageSummary = {
   /** Set when a Portal-driven cancellation is scheduled (Stripe's cancel_at_period_end) — the real date the plan stops, not yet reflected as a downgrade since the account keeps access until then. */
   cancelAt: string | null;
   /** PRICING-PROMO-1: set when the real Stripe subscription is currently under one of our promo coupons — read from Stripe itself, see `getActiveSubscriptionPromo`. Null for a plain subscription, a trial, or Free. */
-  subscriptionPromo: { promoPrice: number; endsAt: string } | null;
+  subscriptionPromo: { promoPrice: number } | null;
 };
 
 type TrialFields = {

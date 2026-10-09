@@ -8,14 +8,14 @@ import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { PlanCardCta } from "@/components/pricing/plan-card-cta";
 import { supportMailto } from "@/lib/support";
-import { PLANS, PLAN_MATRIX, PROMO_DURATION_MONTHS, type Plan, type PlanCell } from "@/app/pricing/plans-data";
-import { getActivePromoPlanIds } from "@/lib/stripe";
+import { PLANS, PLAN_MATRIX, type Plan, type PlanCell } from "@/app/pricing/plans-data";
+import { getFounderOffer } from "@/lib/stripe";
 
 
-function PlanCard({ plan, promoActive }: { plan: Plan; promoActive: boolean }) {
+function PlanCard({ plan, promoPlanIds }: { plan: Plan; promoPlanIds: readonly string[] }) {
   const isRec = !!plan.recommended;
   const ctaClass = "btn btn-" + (plan.ctaStyle === "primary" ? "primary" : "ghost") + " btn-lg price-cta";
-  const showPromo = promoActive && plan.promoPrice !== undefined;
+  const showPromo = promoPlanIds.includes(plan.id) && plan.promoPrice !== undefined;
 
   return (
     <div className={"price-card" + (isRec ? " price-rec" : "")}>
@@ -36,15 +36,15 @@ function PlanCard({ plan, promoActive }: { plan: Plan; promoActive: boolean }) {
           <span className="price-amount">0&nbsp;€</span>
         ) : showPromo ? (
           <>
-            <span className="price-was">{plan.price}&nbsp;€</span>
+            {/* FOUNDER-PRICE-1 (log §237): sin precio tachado. El tachado de
+                PRICING-PROMO-1 (179 → 59) se leía como precio inflado; ahora
+                el precio normal es real y se dice en palabras, en su propia
+                línea por la misma razón que la duración antes (fundador,
+                2026-08-27: partía en la tarjeta recomendada). */}
             <span className="price-amount">{plan.promoPrice}&nbsp;€</span>
             <span className="price-per">/{plan.period}</span>
-            {/* La duración baja a su propia línea. Iba pegada como "· 6 meses"
-                y partía entre el "6" y "meses" en la tarjeta recomendada, que
-                es la más estrecha por su galón (fundador, 2026-08-27). Una
-                línea propia no depende del ancho; forzar `nowrap` en la misma
-                sólo cambia el corte por un desbordamiento. */}
-            <span className="price-term">durante {PROMO_DURATION_MONTHS} meses</span>
+            <span className="price-term">Precio fundador para siempre</span>
+            <span className="price-term price-term-soft">Precio normal: {plan.price}&nbsp;€/{plan.period}</span>
           </>
         ) : (
           <>
@@ -87,7 +87,7 @@ function MatrixCell({ v }: { v: PlanCell }) {
   return <span className="price-mx-txt">{v}</span>;
 }
 
-function PlanMatrix({ promoActive }: { promoActive: boolean }) {
+function PlanMatrix({ promoPlanIds }: { promoPlanIds: readonly string[] }) {
   return (
     <div className="price-matrix-outer">
       <p className="price-matrix-hint">Desliza para ver los 4 planes →</p>
@@ -97,15 +97,13 @@ function PlanMatrix({ promoActive }: { promoActive: boolean }) {
           <tr>
             <th className="price-mx-rowhead" />
             {PLANS.map((p) => {
-              const showPromo = promoActive && p.promoPrice !== undefined;
+              const showPromo = promoPlanIds.includes(p.id) && p.promoPrice !== undefined;
               return (
                 <th key={p.id} className={p.recommended ? "price-rec" : ""}>
                   <div className="price-mx-planname">{p.name}</div>
                   <div className="price-mx-planprice">
                     {showPromo ? (
-                      <>
-                        <span className="price-mx-was">{p.price}&nbsp;€</span> {p.promoPrice}&nbsp;€
-                      </>
+                      <>{p.promoPrice}&nbsp;€</>
                     ) : (
                       p.priceLabel ?? (p.price === 0 ? "0 €" : p.price + " €")
                     )}
@@ -150,12 +148,13 @@ function PlanMatrix({ promoActive }: { promoActive: boolean }) {
  * no era un enlace: no se podía abrir en otra pestaña, no salía el destino al
  * pasar por encima y el teclado no lo alcanzaba.
  */
-export function PricingPage() {
-  // PRICING-PROMO-1: mismas dos condiciones que getPromoCouponIdForPlan usa
-  // en el checkout real (app/dashboard/settings/billing/actions.ts) — fecha
-  // Y cupón de Stripe configurado. Si falta el cupón, esta pantalla no
-  // muestra ningún tachado, aunque la fecha lo permita.
-  const promoActive = getActivePromoPlanIds().length > 0;
+export async function PricingPage() {
+  // FOUNDER-PRICE-1: la misma lectura que usa el checkout real
+  // (app/dashboard/settings/billing/actions.ts) — cupones de Stripe con la
+  // forma exacta del precio mostrado y plazas libres. Si falta cualquiera de
+  // las dos cosas, esta pantalla enseña sólo el precio normal.
+  const founder = await getFounderOffer();
+  const promoPlanIds = founder.planIds;
 
   return (
     <div className="lp">
@@ -188,7 +187,7 @@ export function PricingPage() {
             Analiza tu presencia en IA y amplía prompts, motores y frecuencia a medida que creces.
           </p>
           <div className="lp-hero-note" style={{ marginTop: 22 }}>
-            <span><Icon name="check" size={14} className="text-[var(--pos)]" />Primer escaneo gratis</span>
+            <span><Icon name="check" size={14} className="text-[var(--pos)]" />7 días de Pro gratis</span>
             <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sin tarjeta</span>
             <span><Icon name="check" size={14} className="text-[var(--pos)]" />Cancela cuando quieras</span>
           </div>
@@ -199,11 +198,23 @@ export function PricingPage() {
       {/* CARDS */}
       <section className="lp-section" style={{ paddingTop: 8 }}>
         <div className="lp-inner">
+          {promoPlanIds.length > 0 ? (
+            // FOUNDER-PRICE-1: la cuenta es real — `times_redeemed` de los
+            // cupones de Stripe, con hasta cinco minutos de caché y una hora
+            // de revalidación de la página.
+            <p className="price-founder-band">
+              <Icon name="spark" size={14} />
+              Precio fundador para siempre: quedan <b>{founder.remaining} de {founder.total}</b> plazas
+            </p>
+          ) : null}
           <div className="price-cards">
             {PLANS.map((p) => (
-              <PlanCard key={p.id} plan={p} promoActive={promoActive} />
+              <PlanCard key={p.id} plan={p} promoPlanIds={promoPlanIds} />
             ))}
           </div>
+          <p className="price-tax-note">
+            Todos los planes empiezan con 7 días de Pro gratis, sin tarjeta. Precios sin IVA.
+          </p>
         </div>
       </section>
 
@@ -221,7 +232,7 @@ export function PricingPage() {
             <div className="lp-kicker">Comparativa</div>
             <h2 className="lp-h2">Todo lo que incluye cada plan</h2>
           </div>
-          <PlanMatrix promoActive={promoActive} />
+          <PlanMatrix promoPlanIds={promoPlanIds} />
         </div>
       </section>
 

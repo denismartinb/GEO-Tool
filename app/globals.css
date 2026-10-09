@@ -5592,6 +5592,8 @@ a.notif-row:hover {
 }
 .lp-promo-row.b { animation-delay: -3s; }
 .lp-promo-row.c { animation-delay: -6s; }
+/* FOUNDER-PRICE-1: sin oferta fundador sólo queda la fila de la prueba, quieta. */
+.lp-promo-row.solo { animation: none; }
 @keyframes lp-promo-cycle {
   0%, 29% { transform: translateY(0); opacity: 1; }
   33%, 96% { transform: translateY(-20px); opacity: 0; }
@@ -8003,6 +8005,12 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
    vecinas: es texto nuevo, y sobre el blanco de la tarjeta da 4,76:1 (AA)
    frente al 2,5:1 de `--ink-4`. */
 .price-term { display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+/* FOUNDER-PRICE-1 (log §237): precio normal en palabras bajo el fundador, y
+   la cuenta real de plazas sobre las tarjetas. */
+.price-term-soft { margin-top: 0; font-weight: 500; }
+.price-founder-band { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 18px; font-size: 14px; font-weight: 600; color: var(--ink-2); text-align: center; flex-wrap: wrap; }
+.price-founder-band b { color: var(--accent); }
+.price-tax-note { margin: 18px 0 0; text-align: center; font-size: 13px; color: var(--ink-3); }
 .price-who { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; font-weight: 550; min-height: 34px; }
 .price-cta { width: 100%; margin-top: 14px; }
 .price-card.price-rec .price-cta.btn-ghost { border-color: var(--accent-ring); }
