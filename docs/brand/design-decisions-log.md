@@ -21454,7 +21454,12 @@ nombran (información pública) y en LinkedIn no se etiqueta a las empresas. Del
 ranking se excluyen organismos, hojas de cálculo y pasarelas de pago, y se dice.
 Se retiró antes de publicar la afirmación de que Debitoor es hoy SumUp Facturas
 (no verificada; fundador, 2026-10-09). La explicación de por qué Claude difiere
-(responde sin buscar) va marcada como inferencia. Fuente de cada cifra:
+(responde sin buscar) va marcada como inferencia. Segunda pasada, mismo día (fundador): fuera también el número de preguntas
+y de repeticiones —«nada de cifras absolutas, y menos si son tan bajas, quita
+credibilidad»— y las versiones de los modelos y la referencia a la
+instrucción de los escaneos —«tampoco quiero dar info tan concreta del
+producto»—. Queda como norma en `.claude/rules/growth-content.md`; las
+preguntas se publican como muestra de cinco, no completas. Fuente de cada cifra:
 `/mnt/project-files/estudios/estudio-facturacion-pymes-2026-10-09.{md,json}`,
 fuera del repo. Portada dibujada en HTML y rasterizada a WebP, verificada en
 los dos recortes (tira de 96 px y caja móvil de ~3,35:1).

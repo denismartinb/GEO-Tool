@@ -34,7 +34,7 @@ export const faqItems = [
   {
     question: "¿Cómo se hizo el estudio?",
     answer:
-      "Hicimos doce preguntas de compra, en español y para España, ninguna con el nombre de una marca, dos veces a cada motor por API. Una marca solo cuenta si su nombre aparece literalmente en la respuesta. Las respuestas que fallaron no cuentan en ningún porcentaje."
+      "Hicimos a ChatGPT, Gemini y Claude preguntas reales de compra, en español y para España, ninguna con el nombre de una marca, y repetimos cada una varias veces porque la IA no responde siempre igual. Una marca solo cuenta si su nombre aparece en la respuesta."
   }
 ];
 
@@ -56,7 +56,7 @@ export const faqItems = [
 
 <KeyTakeaway>
 
-**Holded aparece en el 72% de las respuestas**, seguido de Sage (61%) y Contasimple (45%). Pero lo que más llama la atención es que los tres motores no recomiendan lo mismo: Contasimple sale en el 78% de las respuestas de Gemini y en ninguna de las de Claude. Medido el 9 de octubre de 2026 con doce preguntas de compra, dos veces a cada motor.
+**Holded aparece en el 72% de las respuestas**, seguido de Sage (61%) y Contasimple (45%). Pero lo que más llama la atención es que los tres motores no recomiendan lo mismo: Contasimple sale en el 78% de las respuestas de Gemini y en ninguna de las de Claude. Medido el 9 de octubre de 2026 con preguntas reales de compra, repetidas varias veces en cada motor.
 
 </KeyTakeaway>
 
@@ -97,7 +97,7 @@ Cómo leerla: una respuesta que repite el nombre tres veces cuenta una. Los moto
 
 ## Tres cosas que nos llamaron la atención
 
-**Los motores no se ponen de acuerdo.** Quipu aparece en el 83% de las respuestas de Gemini, en el 13% de las de ChatGPT y en ninguna de las de Claude. Con Debitoor pasa al revés: Claude lo nombra en el 74% de sus respuestas y los otros dos, nunca. Una posible explicación, que es inferencia nuestra y no lo hemos medido: Gemini y ChatGPT buscan en la web antes de responder y Claude responde de memoria. Medir solo en un motor da una foto incompleta.
+**Los motores no se ponen de acuerdo.** Quipu aparece en el 83% de las respuestas de Gemini, en el 13% de las de ChatGPT y en ninguna de las de Claude. Con Debitoor pasa al revés: Claude lo nombra en el 74% de sus respuestas y los otros dos, nunca. Una posible explicación, que es inferencia nuestra y no lo hemos medido: no todos los motores consultan la web antes de responder. Medir solo en un motor da una foto incompleta.
 
 **Marcas que la IA nombra por su cuenta.** Partimos de una lista de candidatas y los motores nombraron muchas más. Algunas con presencia notable: Gespymes (39% de las respuestas de Gemini), ContaPlus (39% de las de Claude) y STEL Order (30% de las de Gemini). Menos del 2% de las respuestas no nombró ninguna marca.
 
@@ -111,31 +111,24 @@ Y esto no pasa solo en software. Pasa con seguros, clínicas, abogados, tiendas 
 
 ## Metodología
 
-- **Preguntas:** preguntas reales de compra, en español y para España. Ninguna nombra una marca. Están todas en la Figura 2.
-- **Motores:** ChatGPT (gpt-4o-mini), Gemini (gemini-2.5-flash) y Claude (claude-haiku-4-5), consultados por API el 9 de octubre de 2026. Son los modelos con los que mide GenScore; las apps que usa el público pueden usar otras versiones. Gemini y ChatGPT buscan en la web antes de responder; Claude responde sin buscar.
-- **Repeticiones:** cada pregunta se hizo dos veces a cada motor, porque la IA no responde siempre lo mismo. Las respuestas que fallaron (un 4%) no cuentan en ningún porcentaje.
-- **Instrucción neutral:** cada motor responde como a un usuario normal, sin saber que se está midiendo a nadie. Es la misma instrucción que usa un escaneo de GenScore.
-- **Verificación:** una marca solo cuenta si su nombre aparece literalmente en la respuesta. No contamos menciones "por contexto".
+- **Preguntas:** preguntas reales de compra, en español y para España. Ninguna nombra una marca. Hay una muestra en la Figura 2.
+- **Motores:** ChatGPT, Gemini y Claude, consultados el 9 de octubre de 2026.
+- **Repeticiones:** cada pregunta se hizo varias veces a cada motor, porque la IA no responde siempre lo mismo. Las respuestas que fallaron no cuentan en ningún porcentaje.
+- **Instrucción neutral:** cada motor responde como a un usuario normal, sin saber que se está midiendo a nadie.
+- **Verificación:** una marca solo cuenta si su nombre aparece en la respuesta. No contamos menciones "por contexto".
 - **Límites:** es una foto de una fecha. Las respuestas cambian con el tiempo y entre ejecuciones; repetido otro día, el orden puede moverse.
 
 <Figure
   label="Figura 2"
-  caption="Las doce preguntas del estudio, tal como se hicieron. Ninguna nombra una marca."
+  caption="Algunas de las preguntas del estudio, tal como se hicieron. Ninguna nombra una marca."
 >
 <PromptSet
   prompts={[
     { text: "¿Cuál es el mejor programa de facturación para autónomos en España?", intent: "Recomendación" },
-    { text: "¿Qué software de contabilidad me recomiendas para una pyme española?", intent: "Recomendación" },
     { text: "Necesito un programa para hacer facturas que cumpla con Verifactu, ¿cuál uso?", intent: "Requisito legal" },
-    { text: "¿Qué aplicación de facturación online es más fácil de usar para un autónomo que empieza?", intent: "Facilidad de uso" },
-    { text: "Comparativa de programas de contabilidad en la nube para pequeñas empresas en España", intent: "Comparación" },
-    { text: "¿Qué software de gestión empresarial (facturación, gastos e impuestos) usan las pymes en España?", intent: "Descubrimiento" },
     { text: "¿Qué programa de facturación gratuito o barato me recomiendas para autónomos?", intent: "Precio" },
-    { text: "¿Con qué programa puedo llevar la contabilidad y presentar los modelos 303 y 130 yo mismo?", intent: "Requisito fiscal" },
     { text: "Mejores alternativas a Excel para llevar la facturación de una pequeña empresa", intent: "Alternativas" },
-    { text: "¿Qué software de facturación electrónica recomiendas para una empresa de servicios con 10 empleados?", intent: "Recomendación con contexto" },
     { text: "¿Qué herramienta de contabilidad usan las gestorías y asesorías en España?", intent: "Profesionales" },
-    { text: "Busco un ERP sencillo para una pyme española que venda productos, ¿cuál me recomiendas?", intent: "Recomendación con contexto" }
   ]}
 />
 </Figure>
