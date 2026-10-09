@@ -19,6 +19,7 @@ import {
   wrap
 } from "@/lib/email/transactional";
 import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
+import { formatShare, type ReportModel } from "@/lib/report/report-model";
 import { SITE_URL } from "@/lib/seo/metadata";
 
 /**
@@ -334,17 +335,106 @@ export async function sendTrialD3Email(
   return sendEmail(to, "Tus clientes ya le preguntan a la IA por tu sector", html, envelope.headers);
 }
 
+/** Where "Ver el informe completo" lands: through /login, which forwards a signed-in reader straight on. */
+export function reportLink(projectId: string, campaign: string): string {
+  return url(`/login?next=${encodeURIComponent(`/informe/${projectId}`)}`, campaign);
+}
+
+const toneColor = (tone: "pos" | "neg" | "info"): string =>
+  tone === "pos" ? "#15915A" : tone === "neg" ? "#D23B48" : "#2563EB";
+
 /**
- * D5 · quedan 2 días. Fulfils the welcome email's promise of a warning before
- * the trial ends. The table and the prices come from the caller (`PLANS`,
- * live founder offer) — the loss is what really happens on the end date.
+ * TRIAL-REPORT-EMAIL-1 (log §254). The GenScore report of the last scan,
+ * condensed to what fits an email, from the same `buildReportModel` the
+ * printed report uses — so every rule of `.claude/rules/report.md` holds here
+ * too: shares through `formatShare` only, engines by name, the quote literal
+ * or absent, a block without data omitted. React escapes the printed report;
+ * here nobody does, so every string that came from a scan goes through `H`.
+ */
+export function reportDigest(model: ReportModel): string {
+  const blocks: string[] = [];
+
+  if (model.geoScore !== null) {
+    blocks.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 0;background:#0B1426;border-radius:16px;"><tr><td style="padding:22px 22px 20px;">
+  <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7FB0FF;">Puntuación GEO</div>
+  <div style="margin-top:8px;"><span class="em-score-num" style="font-size:48px;font-weight:800;color:#ffffff;letter-spacing:-.03em;">${model.geoScore}</span><span style="font-size:16px;color:#8A96A8;font-weight:600;"> / 100</span></div>
+  ${scoreBar(model.geoScore, "#38BDF8").replace(/#E7EAF0/g, "#24314A")}
+  <div style="font-size:13px;color:#C9D2E0;margin-top:10px;">Te mencionan en el ${formatShare(model.cover.mentionShare)} de las respuestas a las preguntas principales de búsqueda de tu sector.</div>
+</td></tr></table>`);
+  }
+
+  if (model.engines.length > 0) {
+    blocks.push(sectionLabel("Menciones por motor"));
+    blocks.push(statRow(model.engines.map((e) => statCell(formatShare(e.mentionShare), H(e.label), "")).join("")));
+  }
+
+  const bars = model.competition.bars.slice(0, 4);
+  if (bars.length > 1) {
+    const rows = bars
+      .map((bar) => {
+        const pct = Math.round(bar.share * 100);
+        const color = bar.isBrand ? "#2563EB" : "#94A1B5";
+        const label = bar.isBrand ? `${H(bar.name)} (tú)` : H(bar.name);
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;"><tr>
+  <td style="font-size:13.5px;color:${bar.isBrand ? "#0B1426" : "#3B4759"};font-weight:${bar.isBrand ? 800 : 600};">${label}</td>
+  <td align="right" style="font-size:13.5px;font-weight:800;color:#0B1426;">${formatShare(bar.share)}</td></tr>
+  <tr><td colspan="2" style="padding-top:6px;">${scoreBar(pct, color).replace("margin-top:10px;", "")}</td></tr></table>`;
+      })
+      .join("");
+    blocks.push(sectionLabel("Quién aparece en las respuestas"));
+    blocks.push(
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr><td style="padding:8px 20px 16px;">${rows}</td></tr></table>`
+    );
+  }
+
+  const quote = model.sources?.brandQuotes[0] ?? model.competition.cards.find((card) => card.quote)?.quote ?? null;
+  if (quote) {
+    blocks.push(sectionLabel(`Lo que dijo ${H(quote.engineLabel)} · ${H(quote.topic)}`));
+    blocks.push(
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid #2563EB;"><tr><td style="padding:2px 0 2px 16px;font-size:14.5px;line-height:1.6;color:#0B1426;font-style:italic;">«${H(quote.text)}»</td></tr></table>
+<div style="font-size:11.5px;color:#5B6B82;margin-top:6px;padding-left:19px;">Frase literal de una respuesta de tu escaneo.</div>`
+    );
+  }
+
+  const findings = model.summary.findings.slice(0, 2);
+  if (findings.length > 0) {
+    blocks.push(sectionLabel("Lo más importante"));
+    blocks.push(
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${findings
+        .map(
+          (f) =>
+            `<tr><td valign="top" style="padding:10px 10px 0 0;width:10px;"><div style="width:8px;height:8px;border-radius:4px;background:${toneColor(f.tone)};margin-top:6px;"></div></td><td style="padding-top:10px;"><div style="font-size:14.5px;font-weight:800;color:#0B1426;">${H(f.title)}</div><div style="font-size:13.5px;line-height:1.5;color:#3B4759;margin-top:2px;">${H(f.text)}</div></td></tr>`
+        )
+        .join("")}</table>`
+    );
+  }
+
+  const action = model.plan[0];
+  if (action) {
+    blocks.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;background:#E9EFFD;border-radius:14px;"><tr><td style="padding:16px 20px;">
+  <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2563EB;">Tu primera acción</div>
+  <div style="margin-top:8px;font-size:15.5px;line-height:1.4;color:#0B1426;font-weight:800;">${H(action.title)}</div>
+</td></tr></table>`);
+  }
+
+  return blocks.join("\n");
+}
+
+/**
+ * Último aviso de la prueba (the `trial_d5` kind; log §233, moved to the
+ * last day by §254). Fulfils the welcome email's promise of a warning before
+ * the trial ends. With a scan, it carries the GenScore report of that scan
+ * (founder, 2026-10-09: the report next to the deadline, not mid-trial);
+ * without one, it is the deadline email as approved in §233.
  */
 export async function sendTrialD5Email(
   to: string,
   userId: string,
   input: {
     trialEndsAt: Date;
+    projectId: string | null;
     domain: string | null;
+    report: ReportModel | null;
     pro: PlanOffer;
     starter: PlanOffer;
     lossRows: Array<{ label: string; pro: string; free: string }>;
@@ -359,23 +449,41 @@ export async function sendTrialD5Email(
   const starterPrice = input.starter.promo
     ? `${input.starter.promo.price} €/mes para siempre (precio fundador)`
     : `${input.starter.price} €/mes`;
+  const offer = `
+    ${priceBox(input.pro)}
+    ${button(url("/dashboard/settings?openPlan=pro", "trial_d5"), `Mantener Pro por ${offerPriceLabel(input.pro)}`)}
+    ${subtext(`¿Te basta con un escaneo semanal? <a href="${url("/dashboard/settings?openPlan=starter", "trial_d5")}" style="${FOOTER_LINK_STYLE}">Starter por ${starterPrice}</a>.`)}`;
+  const preheader = input.pro.promo
+    ? `Mantén Pro por ${input.pro.promo.price} €/mes para siempre. Precio fundador: quedan ${input.pro.promo.remaining} plazas.`
+    : `Tu prueba termina el ${endDate}. Elige tu plan para seguir midiendo a diario.`;
+
+  if (input.report && input.projectId && input.domain) {
+    const engines = input.report.engines.map((e) => H(e.label));
+    const named = engines.length > 1 ? `${engines.slice(0, -1).join(", ")} y ${engines[engines.length - 1]}` : engines[0] ?? "la IA";
+    const html = wrap(
+      `
+      ${eyebrow("Último aviso de tu prueba", "#D23B48")}
+      ${heading(`Así te ve la IA: el informe de ${H(input.domain)}`)}
+      ${paragraph(`Tu prueba de Pro termina el ${endDay} ${endDate}. Antes, aquí tienes el informe de tu último escaneo: dónde te nombra ${named}, a quién recomienda en tu lugar y qué cambiar primero.`)}
+      ${reportDigest(input.report)}
+      ${subtext(`<a href="${reportLink(input.projectId, "trial_d5")}" style="${FOOTER_LINK_STYLE}">Ver el informe completo</a>, con el detalle por pregunta y tu plan de acción, listo para guardar en PDF y compartir con tu equipo.`)}
+      ${paragraph(`Desde el ${endDate}, ${who} dejará de escanearse: el informe se quedará con los datos de hoy y, si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
+      ${offer}
+      `,
+      { footerHtml: envelope.footerHtml, preheader }
+    );
+    return sendEmail(to, `Tu informe GEO de ${input.domain}, antes de que termine tu prueba`, html, envelope.headers);
+  }
 
   const html = wrap(
     `
-    ${eyebrow("Quedan 2 días", "#D23B48")}
+    ${eyebrow("Último aviso de tu prueba", "#D23B48")}
     ${heading(`Tu prueba de Pro termina el ${endDay} ${endDate}`)}
     ${paragraph(`Desde ese día, ${who} dejará de escanearse: verás tus datos, pero no se actualizan. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
     ${lossTable(input.lossRows, endDate)}
-    ${priceBox(input.pro)}
-    ${button(url("/dashboard/settings?openPlan=pro", "trial_d5"), `Mantener Pro por ${offerPriceLabel(input.pro)}`)}
-    ${subtext(`¿Te basta con un escaneo semanal? <a href="${url("/dashboard/settings?openPlan=starter", "trial_d5")}" style="${FOOTER_LINK_STYLE}">Starter por ${starterPrice}</a>.`)}
+    ${offer}
     `,
-    {
-      footerHtml: envelope.footerHtml,
-      preheader: input.pro.promo
-        ? `Mantén Pro por ${input.pro.promo.price} €/mes para siempre. Precio fundador: quedan ${input.pro.promo.remaining} plazas.`
-        : `Tu prueba termina el ${endDate}. Elige tu plan para seguir midiendo a diario.`
-    }
+    { footerHtml: envelope.footerHtml, preheader }
   );
   return sendEmail(to, `Tu prueba de Pro termina el ${endDay}`, html, envelope.headers);
 }
