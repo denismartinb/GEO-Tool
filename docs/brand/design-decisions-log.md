@@ -21379,21 +21379,37 @@ niega a publicar ranking, y con más del 20% de fallos lo avisa.
   respuestas crudas se descargan. Por eso no lleva correo a `OPS_ALERT_EMAIL`,
   que la regla de `/admin` exige para escrituras.
 - Modo «una marca» en la misma página: dominio + preguntas del operador
-  (≤15) + competidores (≤15). La marca va al hueco de marca del extractor,
+  (≤20) + competidores (≤15). La marca va al hueco de marca del extractor,
   verificada literalmente como en un escaneo, y el informe abre con su
   presencia. `buildCustomStudy` valida en el navegador y otra vez en la
   acción en cada paso, y el informe avisa de que las preguntas las escribió
   el operador. Sirve para sacar datos de un dominio concreto sin crear un
   proyecto ni consumir cupo de nadie.
+- Informe de prospecto (petición del fundador, 2026-10-09: «que el sistema
+  calcule los competidores… 15 o 20 prompts… insights de auditoría técnica;
+  nos va a servir para más informes»). «Preparar con IA» hace las mismas
+  tres llamadas que el alta de un proyecto —perfil desde la portada,
+  competidores con grounding, preguntas neutras de marca— y las deja en el
+  formulario para revisar; nunca lanza el estudio sola ni guarda nada.
+  `suggestPrompts` tiene tope 15, así que de 16 a 20 salen de
+  `generateAddedPrompts` en modo `auto`, deduplicadas contra la primera
+  tanda. Si la web no se puede identificar, lo dice y no inventa un perfil
+  (ADR 0020). La auditoría técnica (`lib/studies/prospect-audit.ts`) mira
+  sólo cuatro URLs fijas —portada, robots.txt, llms.txt, sitemap.xml— con
+  los mismos fetchers protegidos contra SSRF y las mismas comprobaciones que
+  la Auditoría web; no sigue enlaces (no es un crawler) y el informe dice
+  que no cubre el sitio entero. Lo que no se pudo leer sale como «sin
+  dato», nunca como aprobado.
 - `scripts/domain-check.ts` (`pnpm check:domains`): la comprobación gratuita
   de la web, con las mismas dependencias que su ruta, en lote, para responder
   a un post de «déjame tu dominio». Local, sin fila en `public_checks`.
 
 **Pendiente.** El gasto de `/admin/estudio` no tiene techo más allá de lo que
 valida la acción (un sector, hasta 3 motores, hasta 3 repeticiones: como
-mucho ~108 respuestas por pasada) y del propio acceso de operador. Si pasa a
+mucho ~108 respuestas por pasada en un sector, ~180 en una marca con 20
+preguntas) y del propio acceso de operador. Si pasa a
 usarse a menudo, merece un registro del coste.
 
-**Trazabilidad.** `lib/studies/*`, `app/admin/estudio/*`,
+**Trazabilidad.** `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,
 `scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
 `.claude/rules/admin.md`.

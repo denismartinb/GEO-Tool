@@ -14,7 +14,8 @@ import {
   type Engine,
   type SectorConfig
 } from "@/lib/studies/sector-study";
-import { runSectorStudyStep, type StudySpec } from "./actions";
+import { formatAuditSection, type ProspectAudit } from "@/lib/studies/prospect-audit-format";
+import { prepareBrandStudy, runProspectAuditAction, runSectorStudyStep, type StudySpec } from "./actions";
 
 type SectorOption = { id: string; label: string; promptCount: number };
 
@@ -27,6 +28,13 @@ const CUSTOM_ERRORS: Record<string, string> = {
   bad_prompt_length: `Cada pregunta debe tener entre 5 y ${CUSTOM_STUDY_LIMITS.maxPromptChars} caracteres.`,
   too_many_competitors: `Como mucho ${CUSTOM_STUDY_LIMITS.maxCompetitors} competidores.`,
   bad_competitor: `Cada competidor, como mucho ${CUSTOM_STUDY_LIMITS.maxNameChars} caracteres.`
+};
+
+const PREPARE_ERRORS: Record<string, string> = {
+  bad_domain: "El dominio no parece válido.",
+  homepage_unreadable: "No se pudo leer la portada de ese dominio; escribe las preguntas y competidores a mano.",
+  profile_failed: "La IA no devolvió un perfil del negocio (fallo del proveedor). Prueba otra vez.",
+  profile_low_confidence: "La IA no tiene claro a qué se dedica esta web; escribe las preguntas y competidores a mano."
 };
 
 const lines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
@@ -49,6 +57,10 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
   const [competitorsText, setCompetitorsText] = useState("");
   const [engines, setEngines] = useState<Engine[]>([...ENGINES]);
   const [samples, setSamples] = useState(2);
+  const [promptCount, setPromptCount] = useState(15);
+  const [preparing, setPreparing] = useState(false);
+  const [prepareNote, setPrepareNote] = useState<string | null>(null);
+  const [includeAudit, setIncludeAudit] = useState(true);
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(0);
   const [total, setTotal] = useState(0);
@@ -67,6 +79,29 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
       : { kind: "custom", domain, brand, prompts: lines(promptsText), competitors: lines(competitorsText) };
   const answers = (config?.prompts.length ?? 0) * engines.length * samples;
 
+  async function prepare() {
+    setPreparing(true);
+    setPrepareNote(null);
+    try {
+      const prepared = await prepareBrandStudy({ domain, brand, promptCount });
+      if (!prepared.ok) {
+        setPrepareNote(PREPARE_ERRORS[prepared.error] ?? prepared.error);
+        return;
+      }
+      setDomain(prepared.domain);
+      setBrand(prepared.brand);
+      setPromptsText(prepared.prompts.join("\n"));
+      setCompetitorsText(prepared.competitors.join("\n"));
+      setPrepareNote(
+        `Perfil detectado: ${prepared.profile}. ${prepared.prompts.length} preguntas y ${prepared.competitors.length} competidores sugeridos; revísalos antes de lanzar.`
+      );
+    } catch {
+      setPrepareNote("La preparación falló (tiempo agotado o error). Prueba otra vez.");
+    } finally {
+      setPreparing(false);
+    }
+  }
+
   async function run() {
     if (!config || engines.length === 0) return;
     setRunning(true);
@@ -80,6 +115,8 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     }
     setTotal(steps.length);
 
+    const auditPromise: Promise<ProspectAudit | null> =
+      mode === "custom" && includeAudit ? runProspectAuditAction({ domain }).catch(() => null) : Promise.resolve(null);
     const records: AnswerRecord[] = [];
     let cursor = 0;
     await Promise.all(
@@ -104,11 +141,16 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     records.sort((a, b) => a.sample - b.sample || a.promptIndex - b.promptIndex || a.engine.localeCompare(b.engine));
     const rows = aggregateBrands(records, studySeeds(config));
     const date = new Date().toISOString().slice(0, 10);
+    const audit = await auditPromise;
+    const auditSection =
+      mode === "custom" && includeAudit
+        ? `\n${audit ? formatAuditSection(audit) : "## Auditoría técnica\n\nNo se pudo ejecutar (tiempo agotado o error).\n"}`
+        : "";
     setResult({
       date,
       slug: config.id,
-      report: formatReport({ sector: config, records, rows, samples, date, engines }),
-      json: `${JSON.stringify({ sector: config, samples, engines, date, rows, records }, null, 2)}\n`
+      report: formatReport({ sector: config, records, rows, samples, date, engines }) + auditSection,
+      json: `${JSON.stringify({ sector: config, samples, engines, date, rows, records, audit }, null, 2)}\n`
     });
     setRunning(false);
   }
@@ -143,13 +185,33 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
             Nombre de marca (opcional; si no, sale del dominio){" "}
             <input value={brand} onChange={(event) => setBrand(event.target.value)} disabled={running} />
           </label>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <button type="button" onClick={prepare} disabled={running || preparing || !domain.trim()}>
+              {preparing ? "Preparando…" : "Preparar con IA"}
+            </button>
+            <label>
+              Preguntas a sugerir{" "}
+              <select value={promptCount} onChange={(event) => setPromptCount(Number(event.target.value))} disabled={running || preparing}>
+                {[10, 15, 20].map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <input type="checkbox" checked={includeAudit} onChange={(event) => setIncludeAudit(event.target.checked)} disabled={running} />{" "}
+              Incluir auditoría técnica
+            </label>
+          </div>
+          {prepareNote ? <p className="adm-note">{prepareNote}</p> : null}
           <label>
             Preguntas, una por línea
-            <textarea rows={6} value={promptsText} onChange={(event) => setPromptsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
+            <textarea rows={10} value={promptsText} onChange={(event) => setPromptsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
           </label>
           <label>
             Competidores, uno por línea (opcional)
-            <textarea rows={4} value={competitorsText} onChange={(event) => setCompetitorsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
+            <textarea rows={6} value={competitorsText} onChange={(event) => setCompetitorsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
           </label>
           {custom && !custom.ok && (domain || promptsText) ? <p className="adm-note">{CUSTOM_ERRORS[custom.error] ?? custom.error}</p> : null}
         </div>

@@ -1,8 +1,22 @@
 "use server";
 
 import { requireOperator } from "@/lib/admin/operator";
+import { resolveBusinessContext } from "@/lib/projects/business-profile";
+import { generateAddedPrompts, suggestPrompts } from "@/lib/projects/prompt-suggestions-llm";
+import { suggestCompetitors } from "@/lib/competitors/competitor-suggestions-llm";
+import { runProspectAudit } from "@/lib/studies/prospect-audit";
+import type { ProspectAudit } from "@/lib/studies/prospect-audit-format";
 import { runSectorAnswer } from "@/lib/studies/run-sector-answer";
-import { buildCustomStudy, ENGINES, SECTORS, type AnswerRecord, type Engine } from "@/lib/studies/sector-study";
+import {
+  brandFromDomain,
+  buildCustomStudy,
+  CUSTOM_STUDY_LIMITS,
+  ENGINES,
+  normalizeStudyDomain,
+  SECTORS,
+  type AnswerRecord,
+  type Engine
+} from "@/lib/studies/sector-study";
 
 /**
  * SECTOR-STUDY-1 — one step of a study from the operator console: one
@@ -59,4 +73,72 @@ export async function runSectorStudyStep(input: {
       runSectorAnswer({ sector: config, engine, promptIndex: input.promptIndex, sample: input.sample, deadlineAt })
     )
   );
+}
+
+export type PreparedBrandStudy =
+  | { ok: true; domain: string; brand: string; profile: string; competitors: string[]; prompts: string[] }
+  | { ok: false; error: string };
+
+/**
+ * "Preparar con IA" for a one-brand study: the same three calls a new project
+ * makes in onboarding (business profile from the homepage, grounded
+ * competitors, brand-neutral prompts), returned to the form for the operator
+ * to review — never run straight into a study, and never persisted.
+ * `suggestPrompts` caps at 15, so above that the rest come from the "auto"
+ * generator, deduplicated against the first batch.
+ */
+export async function prepareBrandStudy(input: { domain: string; brand?: string; promptCount: number }): Promise<PreparedBrandStudy> {
+  await requireOperator("/admin/estudio");
+
+  const domain = normalizeStudyDomain(String(input.domain ?? ""));
+  if (!domain) return { ok: false, error: "bad_domain" };
+  const brand = (String(input.brand ?? "").trim() || brandFromDomain(domain)).slice(0, CUSTOM_STUDY_LIMITS.maxNameChars);
+  const promptCount = Math.min(Math.max(Math.trunc(Number(input.promptCount) || 15), 5), CUSTOM_STUDY_LIMITS.maxPrompts);
+  const country = "ES";
+  const language = "es";
+
+  const context = await resolveBusinessContext({ domain, country, language }).catch(
+    () => ({ status: "unidentified", reason: "profile_failed" }) as const
+  );
+  if (context.status === "unidentified") return { ok: false, error: context.reason };
+  const profile = context.profile;
+
+  const [competitors, prompts] = await Promise.all([
+    suggestCompetitors({ brand, domain, country, language, profile, limit: 8 }).catch(() => []),
+    (async () => {
+      const first = (await suggestPrompts({ brand, domain, country, language, profile, limit: Math.min(promptCount, 15) }).catch(() => [])).map(
+        (prompt) => prompt.text
+      );
+      if (promptCount <= first.length) return first.slice(0, promptCount);
+      const more = await generateAddedPrompts({
+        mode: "auto",
+        brand,
+        domain,
+        country,
+        language,
+        existingPromptTexts: first,
+        existingCategories: [],
+        limit: promptCount - first.length,
+        profile
+      }).catch(() => []);
+      return [...first, ...more.map((prompt) => prompt.text)].slice(0, promptCount);
+    })()
+  ]);
+
+  return {
+    ok: true,
+    domain,
+    brand,
+    profile: `${profile.whatItSells} · ${profile.sector} / ${profile.subSector} · ${profile.geographicScope}`,
+    competitors: competitors.map((competitor) => competitor.name).slice(0, CUSTOM_STUDY_LIMITS.maxCompetitors),
+    prompts: prompts.filter((prompt) => prompt.length >= 5 && prompt.length <= CUSTOM_STUDY_LIMITS.maxPromptChars)
+  };
+}
+
+/** Technical audit of the domain's homepage + robots/llms/sitemap. No LLM, no rows written. */
+export async function runProspectAuditAction(input: { domain: string }): Promise<ProspectAudit | null> {
+  await requireOperator("/admin/estudio");
+  const domain = normalizeStudyDomain(String(input.domain ?? ""));
+  if (!domain) return null;
+  return runProspectAudit(domain);
 }

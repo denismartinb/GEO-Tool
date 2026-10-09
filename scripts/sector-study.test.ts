@@ -162,7 +162,7 @@ describe("buildCustomStudy", () => {
   it("rejects what the action must never pay for", () => {
     expect(buildCustomStudy({ domain: "no es dominio", prompts: ["hola que tal"], competitors: [] })).toEqual({ ok: false, error: "bad_domain" });
     expect(buildCustomStudy({ domain: "a.es", prompts: [], competitors: [] })).toEqual({ ok: false, error: "bad_prompt_count" });
-    expect(buildCustomStudy({ domain: "a.es", prompts: Array(16).fill("pregunta larga"), competitors: [] })).toEqual({
+    expect(buildCustomStudy({ domain: "a.es", prompts: Array(21).fill("pregunta larga"), competitors: [] })).toEqual({
       ok: false,
       error: "bad_prompt_count"
     });
@@ -185,7 +185,7 @@ describe("buildCustomStudy", () => {
     });
     expect(report).toContain("# ¿Recomienda la IA a Acme (acme.es)?");
     expect(report).toContain("**Acme** aparece en el 50% de las respuestas válidas (1 de 2) y es la primera marca nombrada en 1.");
-    expect(report).toContain("Las preguntas las escribió el operador");
+    expect(report).toContain("Las preguntas las eligió el operador");
   });
 });
 

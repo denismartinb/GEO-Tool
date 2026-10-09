@@ -206,6 +206,10 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   primera línea, valida sector o estudio de una marca (`buildCustomStudy`,
   rehecho en cada paso: nunca la copia del navegador), motores (subconjunto
   de los tres), pregunta y repeticiones (≤3) antes de llamar a nadie, y devuelve los resultados al
-  navegador para descargarlos. Si algún día persiste el estudio, eso es una
+  navegador para descargarlos. «Preparar con IA» y la auditoría técnica del
+  prospecto son acciones aparte con la misma puerta y tampoco escriben; la
+  auditoría lee sólo cuatro URLs fijas del dominio y no sigue enlaces —si
+  algún día recorre el sitio, es un crawler y necesita aprobación—.
+  Si algún día persiste el estudio, eso es una
   escritura y necesita su Task Intake y su correo a `OPS_ALERT_EMAIL` como
   cualquier otra (`docs/brand/design-decisions-log.md` §238).

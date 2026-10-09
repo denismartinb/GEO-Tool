@@ -109,7 +109,25 @@ export const ENGINE_LABEL: Record<Engine, string> = { gemini: "Gemini", openai: 
 /** Never matches a real brand; extraction requires one. */
 export const STUDY_SENTINEL_BRAND = "Marca de control del estudio";
 
-export const CUSTOM_STUDY_LIMITS = { maxPrompts: 15, maxPromptChars: 300, maxCompetitors: 15, maxNameChars: 80 } as const;
+export const CUSTOM_STUDY_LIMITS = { maxPrompts: 20, maxPromptChars: 300, maxCompetitors: 15, maxNameChars: 80 } as const;
+
+/** `https://www.Acme.es/x` → `acme.es`; null when it is not a plausible domain. */
+export function normalizeStudyDomain(raw: string): string | null {
+  const domain = raw
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split(/[/?#\s]/)[0];
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain) ? domain : null;
+}
+
+export function brandFromDomain(domain: string): string {
+  return domain
+    .split(".")[0]
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 /**
  * Builds and validates a one-off study for one brand with the operator's own
@@ -122,18 +140,9 @@ export function buildCustomStudy(input: {
   prompts: string[];
   competitors: string[];
 }): { ok: true; sector: SectorConfig } | { ok: false; error: string } {
-  const domain = input.domain
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .split(/[/?#\s]/)[0];
-  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return { ok: false, error: "bad_domain" };
-  const fromDomain = domain
-    .split(".")[0]
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-  const brand = (input.brand?.trim() || fromDomain).slice(0, CUSTOM_STUDY_LIMITS.maxNameChars);
+  const domain = normalizeStudyDomain(input.domain);
+  if (!domain) return { ok: false, error: "bad_domain" };
+  const brand = (input.brand?.trim() || brandFromDomain(domain)).slice(0, CUSTOM_STUDY_LIMITS.maxNameChars);
   const prompts = input.prompts.map((prompt) => prompt.trim()).filter(Boolean);
   if (prompts.length === 0 || prompts.length > CUSTOM_STUDY_LIMITS.maxPrompts) return { ok: false, error: "bad_prompt_count" };
   if (prompts.some((prompt) => prompt.length < 5 || prompt.length > CUSTOM_STUDY_LIMITS.maxPromptChars)) {
@@ -337,7 +346,7 @@ export function formatReport(input: {
     "## Metodología",
     "",
     sector.custom
-      ? "- Las preguntas las escribió el operador para este estudio; léelas abajo antes de citar ninguna cifra."
+      ? "- Las preguntas las eligió el operador para este estudio (escritas a mano o sugeridas por IA desde la web de la marca y revisadas); léelas abajo antes de citar ninguna cifra."
       : "- Las preguntas no nombran ninguna marca. Son las que haría un comprador real.",
     "- Cada motor recibe la misma instrucción neutral que usa un escaneo de GenScore: responder como a un usuario normal, sin favorecer ni evitar marcas.",
     "- Una mención solo cuenta si el nombre aparece literalmente en la respuesta (verificación de GenScore, no una inferencia del modelo).",
