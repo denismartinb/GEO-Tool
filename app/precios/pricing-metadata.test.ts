@@ -36,6 +36,11 @@ describe("metadata de la home", () => {
     expect(description.length).toBeGreaterThan(70);
   });
 
+  it("el título cita el precio real de entrada, nunca un plan gratis (TRIAL-ONLY-1)", () => {
+    expect(String(pricingMetadata.title)).toContain(`desde ${priceOf("Starter")} €`);
+    expect(String(pricingMetadata.title)).not.toMatch(/desde 0 €/);
+  });
+
   it("no nombra motores que el producto no ejecuta", () => {
     const text = `${String(homeMetadata.title)} ${homeMetadata.description ?? ""}`;
     expect(text).not.toMatch(/Perplexity|AI Overviews/i);

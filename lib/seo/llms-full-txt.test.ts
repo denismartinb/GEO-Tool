@@ -12,6 +12,8 @@ import { QUE_ES_GENSCORE_FAQ } from "@/lib/brand/que-es-genscore-faq";
 import { TOOLS } from "@/lib/comparativas/mejores-herramientas-geo";
 import { COMPARISON_ROWS as OTTERLY_ROWS } from "@/lib/comparativas/genscore-vs-otterly";
 import { ALTERNATIVES } from "@/lib/comparativas/alternativas-a-otterly";
+import { COMPARISON_ROWS as THREE_WAY_ROWS } from "@/lib/comparativas/profound-vs-peec-ai-vs-otterly";
+import { ALTERNATIVES as PEEC_ALTERNATIVES } from "@/lib/comparativas/alternativas-a-peec-ai";
 
 /**
  * GEO-SELF-1 Fase 1. Mismo fallo que `llms-txt.test.ts` impide en el índice
@@ -45,11 +47,13 @@ describe("buildLlmsFullTxt", () => {
     expect(content).toContain(GEO_SCORE_DEFINITION);
   });
 
-  it("incluye las cinco comparativas con sus datos", () => {
+  it("incluye todas las comparativas con sus datos", () => {
     for (const comp of COMPARATIVAS) expect(content, `falta ${comp.path}`).toContain(`${SITE_URL}${comp.path}`);
     for (const tool of TOOLS) expect(content).toContain(tool.oneLiner);
     for (const row of OTTERLY_ROWS) expect(content).toContain(row.otterly);
     for (const alt of ALTERNATIVES) expect(content).toContain(alt.tradeoff);
+    for (const row of THREE_WAY_ROWS) expect(content).toContain(row.takeaway);
+    for (const alt of PEEC_ALTERNATIVES) expect(content).toContain(alt.tradeoff);
   });
 
   it("marca las ventajas de los dos lados, como las tablas publicadas", () => {

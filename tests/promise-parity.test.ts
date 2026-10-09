@@ -52,6 +52,8 @@ const PRICE_QUOTING_FILES = [
   "lib/comparativas/genscore-vs-otterly.ts",
   "lib/comparativas/alternativas-a-otterly.ts",
   "lib/comparativas/mejores-herramientas-geo.ts",
+  "lib/comparativas/profound-vs-peec-ai-vs-otterly.ts",
+  "lib/comparativas/alternativas-a-peec-ai.ts",
   "app/comparativas/alternativas-a-otterly/page.tsx"
 ];
 

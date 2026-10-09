@@ -33,7 +33,7 @@ export const revalidate = 600;
  * catálogo porque es el mismo número.
  */
 export const metadata: Metadata = contentMetadata({
-  title: "Precios de GenScore — planes de posicionamiento GEO desde 0 €",
+  title: `Precios de GenScore — planes de posicionamiento GEO desde ${STARTER_PRICE} €/mes`,
   description: `Prueba Pro 7 días gratis, sin tarjeta, y sigue con Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
   path: "/precios"
 });

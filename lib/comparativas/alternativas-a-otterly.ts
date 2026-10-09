@@ -18,6 +18,17 @@
  * Los datos de GenScore vienen de `app/pricing/plans-data.ts`, la misma fuente
  * que usa /precios — no se reescriben a mano.
  *
+ * Refresco del 2026-10-09 (GEO-SELF-1 Fase 2, log §258): `otterly.ai/pricing`
+ * ya carga, y de ahí salen ahora los precios de la escalera (29/189/489 $), la
+ * ampliación de prompts y los motores: 4 incluidos (ChatGPT, AI Overviews,
+ * Perplexity y Copilot) y 3 como complemento (Google AI Mode, Gemini y
+ * Claude). La ficha de Peec AI se corrige con su web (1 país y 1 idioma en
+ * Starter, no «multi-país al mismo precio») y un precio orientativo de
+ * PricingSaaS; la de Profound, con su web y un tercero fechado; el precio de
+ * Scrunch, con su página de precios. Lo que no se
+ * ha vuelto a verificar (usuarios de Otterly, las suites) se queda
+ * como estaba en agosto.
+ *
  * TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2): esa última
  * frase no era cierta todavía — `pricingNote` de GenScore era el literal
  * "179 €/mes", igual que la comparativa 1:1 tenía el suyo. Corregido ahí y
@@ -27,7 +38,7 @@ import { PLANS } from "@/app/pricing/plans-data";
 
 const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
-export const RESEARCH_DATE = "12 de agosto de 2026";
+export const RESEARCH_DATE = "9 de octubre de 2026";
 
 /**
  * La escalera de precios de Otterly, que es el dato central de la pieza: el
@@ -67,9 +78,9 @@ export const OTTERLY_STRENGTHS: { claim: string; context: string }[] = [
       "Ventaja real si vendes en varios países a la vez. Si operas en España, o en España y un par de mercados LATAM con la misma web, es cobertura que pagas y no usas: el GEO Score de GenScore es por dominio, que es exactamente la unidad que necesitas cuando el dominio es uno."
   },
   {
-    claim: "Cobertura nominal de hasta 6 motores, incluidos Perplexity y Microsoft Copilot.",
+    claim: "Cuatro motores incluidos en todos los planes: ChatGPT, AI Overviews, Perplexity y Microsoft Copilot.",
     context:
-      "GenScore ejecuta ChatGPT, Gemini y Claude —los tres donde tus clientes preguntan hoy— y los tres en todos los planes de pago, sin add-ons. En Otterly, Gemini y Google AI Mode se cobran aparte en todos los niveles, así que la cobertura amplia se paga dos veces: en el plan y en el complemento."
+      "GenScore ejecuta ChatGPT, Gemini y Claude —los tres donde tus clientes preguntan hoy— y los tres en todos los planes de pago, sin add-ons. En Otterly, Google AI Mode, Gemini y Claude se cobran aparte en todos los niveles, así que la cobertura amplia se paga dos veces: en el plan y en el complemento."
   },
   {
     claim: "El precio de entrada de pago más bajo de la categoría.",
@@ -98,14 +109,14 @@ export const LEAVE_REASONS: LeaveReason[] = [
     title: "Te has quedado sin prompts y el siguiente escalón cuesta 6,5 veces más",
     shortLabel: "Tope de prompts",
     detail:
-      "El plan de 29 $ incluye 15 prompts. Quince consultas es una muestra pequeña para una marca con varias líneas de producto, y el salto siguiente no es proporcional: Standard cuesta 189 $/mes. Ampliar prompts sueltos sobre un plan tampoco es barato (unos 99 $/mes por cada 100 según fuentes de terceros). Es el motivo más citado en las reseñas públicas, y el más fácil de comprobar antes de contratar: cuenta tus prompts primero."
+      "El plan de 29 $ incluye 15 prompts. Quince consultas es una muestra pequeña para una marca con varias líneas de producto, y el salto siguiente no es proporcional: Standard cuesta 189 $/mes. Ampliar prompts sueltos sobre un plan tampoco es barato (99 $/mes por cada 100, en Standard y Premium, según su página de precios). Es el motivo más citado en las reseñas públicas, y el más fácil de comprobar antes de contratar: cuenta tus prompts primero."
   },
   {
     id: "addons",
     title: "Los motores que te importan no venían en el precio",
     shortLabel: "Motores de pago aparte",
     detail:
-      "Google AI Mode y Gemini son add-ons con coste extra en todos los niveles, no parte del plan base. El precio que comparaste no es el que vas a pagar si necesitas esos dos, y eso convierte cualquier comparación de precio de entrada entre herramientas en una comparación entre cosas distintas. Antes de decidir, sube los add-ons al precio base y vuelve a comparar."
+      "Google AI Mode, Gemini y Claude son add-ons con coste extra en todos los niveles, no parte del plan base. El precio que comparaste no es el que vas a pagar si necesitas alguno de esos tres, y eso convierte cualquier comparación de precio de entrada entre herramientas en una comparación entre cosas distintas. Antes de decidir, sube los add-ons al precio base y vuelve a comparar."
   },
   {
     id: "action",
@@ -119,7 +130,7 @@ export const LEAVE_REASONS: LeaveReason[] = [
     title: "Tu equipo no trabaja en inglés",
     shortLabel: "Producto en castellano",
     detail:
-      "La interfaz de Otterly está en inglés. Para un equipo que ya vive en inglés esto no es un problema en absoluto; para uno que no, es fricción diaria sobre la persona que menos debería tenerla — normalmente quien redacta el contenido, no quien lee el panel."
+      "No consta una versión en castellano de Otterly: su web no menciona idiomas de interfaz, y la que hemos visto está en inglés. Para un equipo que ya vive en inglés esto no es un problema en absoluto; para uno que no, es fricción diaria sobre la persona que menos debería tenerla — normalmente quien redacta el contenido, no quien lee el panel."
   }
 ];
 
@@ -157,13 +168,14 @@ export const ALTERNATIVES: Alternative[] = [
     slug: "peec-ai",
     name: "Peec AI",
     url: "https://peec.ai",
-    solves: ["addons"],
+    solves: ["prompts"],
     oneLiner:
-      "Monitorización GEO con cobertura multi-idioma y multi-país incluida en el precio, sin coste adicional por región.",
-    pricingNote: "Desde ~95 $/mes — cifra pública, confírmala en peec.ai.",
-    spanishSupport: "No confirmado — documentación e interfaz observadas en inglés.",
+      "Monitorización GEO con 50 prompts ya en el plan de entrada, usuarios ilimitados y varios países e idiomas desde su plan Pro.",
+    pricingNote:
+      "Su web no publica importes. Orientativo, según PricingSaaS (último visto el 14-09-2026): desde unos 80 $/mes con facturación anual.",
+    spanishSupport: "No consta — su web no menciona idiomas de interfaz; la que hemos visto está en inglés.",
     tradeoff:
-      "Su función \"Actions\" prioriza y sugiere, pero no redacta: el problema de ejecución sigue intacto. Y su entrada cuesta más del triple que la de Otterly.",
+      "Su función \"Actions\" prioriza y sugiere, pero no redacta: el problema de ejecución sigue intacto. En sus planes de autoservicio eliges 3 modelos (Claude queda para Enterprise), su Starter cubre un solo país, y su entrada cuesta casi el triple que la de Otterly.",
     comparisonHref: "/comparativas/genscore-vs-peec-ai"
   },
   {
@@ -174,8 +186,8 @@ export const ALTERNATIVES: Alternative[] = [
     oneLiner:
       "Analítica de visibilidad en IA orientada a mid-market y enterprise, con cobertura nominal amplia de motores y un panel dedicado de fuentes de citación.",
     pricingNote:
-      "Sin precio público — su web pide una demo. Fuentes de terceros citan cifras muy distintas según su fecha. Confírmalo en tryprofound.com.",
-    spanishSupport: "No encontrado con confianza — no verificado en fuente primaria.",
+      "Sin precio público: prueba gratuita de 7 días y plan Enterprise a medida. Según GEO Toolbox (tercero, 28-09-2026), sus planes de entrada se retiraron en septiembre de 2026. Confírmalo en tryprofound.com.",
+    spanishSupport: "No consta — anuncia su interfaz en más de 30 idiomas sin listarlos.",
     tradeoff:
       "Es un salto de categoría, no un cambio lateral: reseñas independientes señalan curva de aprendizaje pronunciada y que el coste por cliente rara vez sale a cuenta para pymes o agencias pequeñas. Si vienes del plan de 29 $, no es tu siguiente paso.",
     comparisonHref: "/comparativas/genscore-vs-profound"
@@ -201,8 +213,8 @@ export const ALTERNATIVES: Alternative[] = [
     oneLiner:
       "\"Agent Experience Platform\": además de medir, sirve una versión reducida de tu web a los rastreadores de IA y muestra en tiempo real qué agentes te visitan.",
     pricingNote:
-      "Cifras de agregadores de terceros, orientativamente desde unos 250-300 $/mes. Confírmalo en scrunch.com.",
-    spanishSupport: "No encontrado.",
+      "Starter a 300 $/mes, o 250 $/mes con pago anual, según su página de precios.",
+    spanishSupport: "No consta.",
     tradeoff:
       "Actúa sobre la capa técnica, no sobre el contenido: si lo que te falta es qué escribir, esto no lo resuelve. Y requiere alguien capaz de leer esa señal técnica y hacer algo con ella."
   }
