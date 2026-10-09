@@ -21368,8 +21368,14 @@ aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
 - Si `GEMINI_MODEL` sigue puesto en Vercel (ADR 0009 dice que se fijó a
   `gemini-2.5-flash` el 2026-06-11), manda sobre el código: el fundador tiene
   que borrarlo o cambiarlo. Desde el repo no se ve.
-- Falta la prueba real: un escaneo completo en el preview del PR. La sesión
-  que lo implementó no tenía clave ni salida a la API de Google.
+- Prueba real hecha el 09-10 en el preview: el piloto de escritura añadió un
+  prompt a mozilla.org y el escaneo terminó con Gemini respondiendo. Latencias
+  sin medir (el preview no guarda logs en Vercel).
+- Ese mismo día, en el asistente de alta, carrefour.es se quedó sin
+  competidores sugeridos. Causa probable, no confirmada (sin logs): la llamada
+  con búsqueda no puede pedir `responseMimeType: "application/json"` y Gemini 3
+  a temperatura 1.0 envuelve a veces el JSON en una frase. `parseLenientJson`
+  ahora cae al tramo `{…}` más externo antes de rendirse.
 - Las puntuaciones cambiarán algo con el modelo nuevo y la varianza entre
   escaneos sube al quitar `temperature: 0`; se acepta frente al riesgo de
   bucles (fallos de escaneo). Revisar con datos tras una semana.

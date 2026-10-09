@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { geminiGenerationTuning } from "@/lib/llm/gemini-client";
+import { geminiGenerationTuning, parseLenientJson } from "@/lib/llm/gemini-client";
 
 // ADR 0042 — which knobs each Gemini family receives. A wrong pairing here is
 // not cosmetic: thinkingBudget + thinkingLevel together is a 400 on every
@@ -35,5 +35,21 @@ describe("geminiGenerationTuning", () => {
       const keys = Object.keys(geminiGenerationTuning(model).thinkingConfig);
       expect(keys).toHaveLength(1);
     }
+  });
+});
+
+describe("parseLenientJson", () => {
+  it("parses bare and fenced JSON", () => {
+    expect(parseLenientJson('{"a":1}')).toEqual({ a: 1 });
+    expect(parseLenientJson('```json\n{"a":1}\n```')).toEqual({ a: 1 });
+  });
+
+  it("recovers JSON wrapped in prose (Gemini 3 at default temperature)", () => {
+    const text = 'Here are the competitors I found:\n{"competitors":[{"name":"Dia","domain":"dia.es"}]}\nLet me know if you need more.';
+    expect(parseLenientJson(text)).toEqual({ competitors: [{ name: "Dia", domain: "dia.es" }] });
+  });
+
+  it("still throws when there is no JSON object at all", () => {
+    expect(() => parseLenientJson("I could not find any competitors.")).toThrow();
   });
 });

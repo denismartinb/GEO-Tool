@@ -216,7 +216,17 @@ export function parseLenientJson(text: string): unknown {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = (fenced ? fenced[1] : trimmed).trim();
-  return JSON.parse(candidate);
+  try {
+    return JSON.parse(candidate);
+  } catch (error) {
+    // Gemini 3 at its default temperature (ADR 0042) sometimes wraps the
+    // grounded JSON in a sentence of prose instead of a fence. Fall back to
+    // the outermost {...} span; if that is not JSON either, rethrow.
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start === -1 || end <= start) throw error;
+    return JSON.parse(candidate.slice(start, end + 1));
+  }
 }
 
 /**
