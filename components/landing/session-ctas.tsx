@@ -129,7 +129,7 @@ export function PromoStrip() {
             <span className="lp-promo-row b">
               <span className="lp-promo-pill">{promoDiscountLabel(PRO_PLAN)}</span>
               <span>
-                Pro a <b>{PRO_PLAN.promoPrice}&nbsp;€/mes</b> para siempre
+                Pro a <s>{PRO_PLAN.price}&nbsp;€</s> <b>{PRO_PLAN.promoPrice}&nbsp;€/mes</b> para siempre
               </span>
             </span>
             <span className="lp-promo-row c">
@@ -173,10 +173,10 @@ export function RecommendationsCta() {
  *
  * A quien NO ha entrado se le ofrece lo del diseño aprobado: el mismo campo de
  * dominio del hero, sin la fila de motores, al comprobador gratuito. La promesa
- * es literal y comprobable — «Después, primer escaneo completo gratis» es
- * exactamente lo que da el plan Free: **un** escaneo completo, porque
- * `createPendingScanRunCore` rechaza el segundo y `runRecurringScanSweep`
- * descarta los proyectos Free (`lib/scan/cron.ts`).
+ * es literal y comprobable — «Después, 7 días de Pro gratis, sin tarjeta» es
+ * la prueba que abre toda alta (`0017_reverse_trial.sql`). TRIAL-ONLY-1
+ * (2026-10-09) retiró el plan Free y con él la frase anterior, «primer
+ * escaneo completo gratis», que describía su escaneo único.
  *
  * A quien SÍ ha entrado se le manda a su panel, y eso se conserva de
  * GENSCORE-HEADER-3: ofrecerle darse de alta —o un comprobador anónimo— a
@@ -207,7 +207,7 @@ export function HomeCtaBand() {
           escritorio el espacio se colapsa al final de la línea y no se ve. */}
       <h2 className="lp-h2">Averigua qué dice la IA de ti <br />ahora mismo</h2>
       <p className="lp-sec-sub">
-        Una comprobación real contra ChatGPT, en 20 segundos. Después, primer escaneo completo gratis.
+        Una comprobación real contra ChatGPT, en 20 segundos. Después, 7 días de Pro gratis, sin tarjeta.
       </p>
       <div className="lp-close-field">
         <HeroDomainField withEngines={false} />

@@ -34,7 +34,7 @@ export const revalidate = 600;
  */
 export const metadata: Metadata = contentMetadata({
   title: "Precios de GenScore — planes de posicionamiento GEO desde 0 €",
-  description: `Empieza gratis con un escaneo puntual y sube a Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
+  description: `Prueba Pro 7 días gratis, sin tarjeta, y sigue con Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
   path: "/pricing"
 });
 

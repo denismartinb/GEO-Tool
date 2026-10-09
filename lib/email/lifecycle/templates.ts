@@ -130,7 +130,7 @@ export function priceBox(offer: PlanOffer): string {
       <td style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;">Precio fundador · ${H(offer.planName)}</td>
       <td align="right"><span style="display:inline-block;background:#E7F6EE;color:#15915A;font-weight:800;font-size:12.5px;padding:4px 10px;border-radius:999px;">−${off}%</span></td>
     </tr></table>
-    <div style="margin-top:10px;"><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
+    <div style="margin-top:10px;"><span style="font-size:20px;font-weight:700;color:#8A96A8;text-decoration:line-through;margin-right:8px;">${offer.price} €</span><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
     <div style="font-size:13px;color:#3B4759;margin-top:4px;">Para siempre, mientras mantengas tu suscripción. Precio normal: ${offer.price} €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>
     <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Quedan ${offer.promo.remaining} cuentas con precio fundador</div>
   </td></tr></table>`;
@@ -142,7 +142,7 @@ function offerPriceLabel(offer: PlanOffer): string {
 
 /**
  * What changes when the trial ends, from `PLANS` via the caller: the rows
- * are the real Pro vs Free caps, never a marketing list typed here.
+ * are the real Pro caps against the read-only state (TRIAL-ONLY-1), never a marketing list typed here.
  */
 export function lossTable(rows: Array<{ label: string; pro: string; free: string }>, freeFromLabel: string): string {
   const head = (text: string, color: string) =>
@@ -153,7 +153,7 @@ export function lossTable(rows: Array<{ label: string; pro: string; free: string
         `<tr><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#3B4759;">${r.label}</td><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#0B1426;font-weight:700;">${r.pro}</td><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#5B6B82;">${r.free}</td></tr>`
     )
     .join("");
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #E7EAF0;border-radius:14px;overflow:hidden;"><tr>${head("", "#5B6B82")}${head("Pro, hoy", "#2563EB")}${head(`Free, desde el ${freeFromLabel}`, "#D23B48")}</tr>${body}</table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #E7EAF0;border-radius:14px;overflow:hidden;"><tr>${head("", "#5B6B82")}${head("Pro, hoy", "#2563EB")}${head(`Sin plan, desde el ${freeFromLabel}`, "#D23B48")}</tr>${body}</table>`;
 }
 
 /*
@@ -364,7 +364,7 @@ export async function sendTrialD5Email(
     `
     ${eyebrow("Quedan 2 días", "#D23B48")}
     ${heading(`Tu prueba de Pro termina el ${endDay} ${endDate}`)}
-    ${paragraph(`Desde ese día, ${who} dejará de escanearse a diario. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
+    ${paragraph(`Desde ese día, ${who} dejará de escanearse: verás tus datos, pero no se actualizan. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
     ${lossTable(input.lossRows, endDate)}
     ${priceBox(input.pro)}
     ${button(url("/dashboard/settings?openPlan=pro", "trial_d5"), `Mantener Pro por ${offerPriceLabel(input.pro)}`)}
@@ -440,7 +440,7 @@ export async function sendTrialEndedOfferEmail(
     ? input.pro.promo
       ? "Si quieres retomarlo donde lo dejaste, el precio fundador sigue disponible mientras queden plazas:"
       : "Si quieres retomarlo donde lo dejaste, puedes volver a Pro cuando quieras:"
-    : `A partir de hoy ${domain ? `<b style="color:#0B1426;">${domain}</b>` : "tu dominio"} ya no se escanea a diario. Si quieres seguir viendo cómo cambian las respuestas de la IA, vuelve cuando quieras:`;
+    : `A partir de hoy ${domain ? `<b style="color:#0B1426;">${domain}</b>` : "tu dominio"} ya no se escanea: tus datos siguen aquí, pero no se actualizan. Si quieres seguir viendo cómo cambian las respuestas de la IA, vuelve cuando quieras:`;
 
   const html = wrap(
     `
@@ -499,8 +499,8 @@ export async function sendWinbackD3Email(
     ${versusBars(rows, `Respuestas en las que aparece · escaneo del ${dateWithMonth.format(snap.runDate)}`)}
     ${paragraph(
       behind
-        ? `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea a diario, así que no sabes si esa distancia ha crecido o si has empezado a cerrarla.`
-        : `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea a diario, así que no sabes si alguien te ha adelantado desde entonces.`
+        ? `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes si esa distancia ha crecido o si has empezado a cerrarla.`
+        : `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes si alguien te ha adelantado desde entonces.`
     )}
     ${priceBox(input.pro)}
     ${button(url("/dashboard/settings?openPlan=pro", "winback_d3"), "Volver a medir a diario")}

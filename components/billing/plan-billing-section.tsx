@@ -101,7 +101,11 @@ export function PlanBillingSection({
   // plan's domain cap — the webhook that syncs `current_plan` deliberately
   // does not auto-archive anything (founder's choice: always let the owner
   // pick which domains to keep, never decide for them).
-  const isOverCapacity = projects.length > current.caps.projects;
+  //
+  // TRIAL-ONLY-1: never for `free`. Without a plan the account is read-only —
+  // nothing scans, so extra domains cost nothing and asking the owner to
+  // archive them would only take their own data away.
+  const isOverCapacity = planId !== "free" && projects.length > current.caps.projects;
 
   const trialDaysLeft = usage.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(usage.trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -197,7 +201,7 @@ export function PlanBillingSection({
           </div>
           <p className="order-2 flex-1 text-sm font-medium text-[var(--warn-ink)]">
             Estás probando <b>Pro</b> gratis — te quedan <b>{trialDaysLeft} día{trialDaysLeft === 1 ? "" : "s"}</b>.
-            Cuando termine, bajarás a Free si no contratas antes.
+            Cuando termine, tu cuenta pasará a solo lectura si no contratas antes.
           </p>
           <Button
             type="button"
@@ -234,7 +238,12 @@ export function PlanBillingSection({
           <h2 className="text-lg font-semibold text-[var(--ink)]">Tu plan</h2>
           <p className="sub">Facturación mensual</p>
         </div>
-        {cancelAtDate ? (
+        {planId === "free" ? (
+          <span className="badge badge-warn">
+            <Icon name="alertCircle" size={11} />
+            Solo lectura: sin escaneos nuevos
+          </span>
+        ) : cancelAtDate ? (
           <span className="badge badge-warn">
             <Icon name="alertCircle" size={11} />
             Cancelada — activa hasta el {cancelAtDate}
@@ -303,7 +312,7 @@ export function PlanBillingSection({
               <div className="space-y-3 border-t border-[var(--line-soft)] pt-4">
                 <p className="sub">
                   Tu suscripción está cancelada. Mantienes acceso a {current.name} hasta el{" "}
-                  <b>{cancelAtDate}</b>; después bajarás a Free. ¿Cambiaste de idea? Puedes reactivarla en el
+                  <b>{cancelAtDate}</b>; después tu cuenta pasará a solo lectura. ¿Cambiaste de idea? Puedes reactivarla en el
                   portal de Stripe.
                 </p>
                 <Button type="button" disabled={isPortalPending} onClick={handleManageBilling}>
@@ -314,7 +323,7 @@ export function PlanBillingSection({
               <div className="flex flex-col gap-2 border-t border-[var(--line-soft)] pt-4 sm:flex-row sm:flex-wrap">
                 <Button type="button" className="w-full sm:w-auto" onClick={() => setModal({})}>
                   <Icon name="arrUp" size={14} />
-                  Cambiar de plan
+                  {planId === "free" ? "Elegir plan" : "Cambiar de plan"}
                 </Button>
                 {/* Moved here from the block at the foot of the section, which
                     became generic support (founder, 2026-08-06). Without this

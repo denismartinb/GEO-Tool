@@ -29,14 +29,18 @@ export async function resolvePlanOffer(id: "pro" | "starter"): Promise<PlanOffer
   };
 }
 
-/** What really changes from Pro to Free, from each plan's own meter. */
+/**
+ * What really changes when the Pro trial ends. TRIAL-ONLY-1: the account no
+ * longer drops to a smaller plan — it goes read-only (no scans at all, no new
+ * domains, every existing datum kept), so the right column states that, not a
+ * reduced meter. The Pro side still reads from `PLANS`.
+ */
 export function proVsFreeRows(): Array<{ label: string; pro: string; free: string }> {
   const pro = plan("pro").meter;
-  const free = plan("free").meter;
   return [
-    { label: "Motores de IA", pro: String(pro.engines), free: String(free.engines) },
-    { label: "Prompts monitorizados", pro: `~${pro.prompts}`, free: `~${free.prompts}` },
-    { label: "Escaneo", pro: pro.refresh, free: free.refresh },
-    { label: "Dominios", pro: String(pro.projects), free: String(free.projects) }
+    { label: "Escaneos", pro: pro.refresh, free: "Ninguno" },
+    { label: "Motores de IA", pro: String(pro.engines), free: "—" },
+    { label: "Dominios", pro: String(pro.projects), free: "Sin añadir nuevos" },
+    { label: "Tus datos", pro: "Al día", free: "Solo lectura" }
   ];
 }

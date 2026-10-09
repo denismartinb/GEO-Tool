@@ -60,12 +60,12 @@ const FAQ_ITEMS = [
   {
     question: "¿Comprobáis también Gemini y Claude?",
     answer:
-      "La comprobación gratuita pregunta a ChatGPT. El escaneo del plan Free, al crear una cuenta, cubre además Gemini y Claude sobre diez preguntas reales de tu categoría y repite en el tiempo para que veas la evolución."
+      "La comprobación gratuita pregunta a ChatGPT. El escaneo completo, con los 7 días de prueba de Pro al crear una cuenta, cubre además Gemini y Claude sobre diez preguntas reales de tu categoría y repite en el tiempo para que veas la evolución."
   },
   {
     question: "¿Cuánto cuesta?",
     answer:
-      "La comprobación es gratuita y anónima. El escaneo completo está en el plan Free de GenScore, que tampoco pide tarjeta."
+      "La comprobación es gratuita y anónima. El escaneo completo cubre los tres motores y está incluido en los 7 días de prueba de Pro, que tampoco piden tarjeta."
   }
 ];
 
@@ -147,8 +147,8 @@ export default function FreeCheckerPage() {
           </p>
           <p>
             Para saber si te mencionan <em>de verdad</em> hace falta repetir un conjunto de
-            preguntas en el tiempo. Eso es lo que hace el escaneo del plan Free al crear una cuenta:
-            diez preguntas reales de tu categoría, y no solo en ChatGPT — también en{" "}
+            preguntas en el tiempo. Eso es lo que hace el escaneo completo durante la prueba de Pro de 7 días al crear una cuenta:
+            preguntas reales de tu categoría, y no solo en ChatGPT — también en{" "}
             <strong>Gemini</strong> y <strong>Claude</strong>, que son los otros dos motores que
             GenScore ejecuta. Cada motor responde distinto, y aparecer en uno no significa aparecer
             en los tres.

@@ -4,7 +4,7 @@ import { getAccountRole } from "@/lib/account-role";
 import { getUsageSummary } from "@/lib/billing";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 import { deriveNameFromEmail } from "@/lib/derive-name-from-email";
-import { PLANS, resolveShownPromoPrice, type Plan } from "@/app/pricing/plans-data";
+import { PLANS, SELLABLE_PLANS, resolveShownPromoPrice, type Plan } from "@/app/pricing/plans-data";
 import { AccountSection } from "@/components/settings/account-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
@@ -144,7 +144,7 @@ export default async function SettingsPage({
           </div>
           {plan && (
             <span className="set-pill">
-              Plan {plan.name}
+              {plan.id === "free" ? "Sin plan · solo lectura" : `Plan ${plan.name}`}
               {trialDaysLeft !== null && ` · ${trialDaysLeft} ${trialDaysLeft === 1 ? "día" : "días"} de prueba`}
             </span>
           )}
@@ -173,7 +173,7 @@ export default async function SettingsPage({
                 </h2>
                 <BillingContent
                   checkoutStatus={checkout}
-                  openPlanId={PLANS.some((p) => p.id === openPlan) ? (openPlan as Plan["id"]) : undefined}
+                  openPlanId={SELLABLE_PLANS.some((p) => p.id === openPlan) ? (openPlan as Plan["id"]) : undefined}
                 />
               </>
             )}

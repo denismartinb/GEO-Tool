@@ -7974,7 +7974,8 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 
 .price-hero { padding: 70px 0 30px; }
 
-.price-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; align-items: stretch; }
+/* TRIAL-ONLY-1: tres planes de pago, sin columna Free. */
+.price-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
 .price-card {
   position: relative; display: flex; flex-direction: column;
   background: #fff; border: 1px solid var(--line); border-radius: var(--r-xl);
@@ -8004,6 +8005,7 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
    `components/pricing/pricing-page.tsx`. `--ink-3` y no el `--ink-4` de sus
    vecinas: es texto nuevo, y sobre el blanco de la tarjeta da 4,76:1 (AA)
    frente al 2,5:1 de `--ink-4`. */
+.price-mx-was { color: var(--ink-3); font-weight: 600; }
 .price-term { display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
 /* FOUNDER-PRICE-1 (log §237): precio normal en palabras bajo el fundador, y
    la cuenta real de plazas sobre las tarjetas. */
@@ -8089,7 +8091,9 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .price-matrix-hint { display: none; }
 
 @media (max-width: 1000px) {
-  .price-cards { grid-template-columns: repeat(2, 1fr); }
+  /* Tres tarjetas en dos columnas dejan una huérfana: se apilan en una sola,
+     con ancho de lectura. */
+  .price-cards { grid-template-columns: 1fr; max-width: 520px; margin-inline: auto; }
   .price-meter-grid { grid-template-columns: 1fr; }
   .price-matrix-wrap { overflow-x: auto; }
   .price-matrix { min-width: 680px; }
@@ -8654,7 +8658,10 @@ select.set-field {
 /* CONSOLE-REDESIGN-1: Agencia ocupa la misma celda de la rejilla que un plan,
    pero no es un radio — no tiene precio self-serve en Stripe, así que se le da
    una salida real en vez de una selección que apagaba «Continuar». */
+/* TRIAL-ONLY-1: sin Free, quedan Starter y Pro en la primera fila y Agencia
+   ocupa la segunda entera en vez de quedarse sola en media columna. */
 .cp-sales {
+  grid-column: 1 / -1;
   display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
   padding: 15px 16px; border-radius: var(--r-lg);
   border: 1.5px dashed var(--line-strong); background: var(--surface-2);

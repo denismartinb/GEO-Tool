@@ -356,7 +356,12 @@ export async function getDomainOverage(): Promise<DomainOverage> {
     .select("id", { count: "exact", head: true })
     .eq("is_archived", false);
 
-  if (countError || activeCount == null || activeCount <= plan.caps.projects) {
+  // TRIAL-ONLY-1: never for `free`. Without a plan the account is read-only
+  // — nothing scans, so extra domains cost nothing — and the gate would lock
+  // the console of every trial that created 2+ domains on the day it ended,
+  // taking away the one thing read-only promises: seeing your own data. The
+  // gate keeps its job for a real paid downgrade (Pro → Starter).
+  if (plan.id === "free" || countError || activeCount == null || activeCount <= plan.caps.projects) {
     return {
       isOverCapacity: false,
       planId: plan.id,
