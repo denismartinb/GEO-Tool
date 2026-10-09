@@ -27,6 +27,8 @@ de marca va incrustada como data URI, así que se abre sin red.
   variante sin cifra. Nunca una cifra inventada.
 - Precios y fecha de la promo salen de `PLANS` y `PROMO_ENDS_AT`
   (`app/pricing/plans-data.ts`), nunca escritos a mano.
-- El único testimonio permitido es el de Nordika Home (real, log §146).
+- **No hay ningún testimonio permitido** (rectificado 2026-10-08): el de «Nordika Home» que aquí se daba por real
+  (log §146) era **inventado**, según el fundador. Los correos no llevan testimonio; la plantilla de este diseño
+  (`plantillas-y-baja.html`) lo conserva solo como artefacto histórico y no es fuente de contenido.
 - Un solo enlace de baja por email, en el pie.
 - Remitente del D+10 personal: `soporte@genscore.es` (fundador, 2026-09-28).

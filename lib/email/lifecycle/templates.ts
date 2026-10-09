@@ -149,12 +149,12 @@ export function lossTable(rows: Array<{ label: string; pro: string; free: string
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #E7EAF0;border-radius:14px;overflow:hidden;"><tr>${head("", "#5B6B82")}${head("Pro, hoy", "#2563EB")}${head(`Free, desde el ${freeFromLabel}`, "#D23B48")}</tr>${body}</table>`;
 }
 
-/** The one testimonial confirmed as real (log §146). Never another name. */
-export function nordikaQuote(): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 0;background:#F7F8FB;border-radius:14px;"><tr><td style="padding:18px 20px;">
-    <div style="font-size:14.5px;line-height:1.55;color:#0B1426;">«No sabíamos si ChatGPT nos nombraba, y mucho menos por qué. En tres meses hemos subido un <b>128% nuestra cuota de voz en IA</b>.»</div>
-    <div style="font-size:12.5px;color:#5B6B82;margin-top:8px;">Nerea Solís · Marketing digital en Nordika Home</div></td></tr></table>`;
-}
+/*
+ * No testimonial in any email. The quote that used to live here (a named person, a company and a
+ * growth figure, commented as "confirmed as real") was INVENTED — confirmed by the founder on 2026-10-08. It is NOT
+ * replaced with another customer, anonymised or kept as a figure: an email may carry a testimonial again only when
+ * the original evidence and the customer's consent are on record.
+ */
 
 function recommendationCard(rec: TopRecommendation): string {
   const engines = rec.engines.length
@@ -362,7 +362,6 @@ export async function sendTrialD5Email(
     ${priceBox(input.pro)}
     ${button(url("/dashboard/settings?openPlan=pro", "trial_d5"), `Mantener Pro por ${offerPriceLabel(input.pro)}`)}
     ${subtext(`¿Te basta con un escaneo semanal? <a href="${url("/dashboard/settings?openPlan=starter", "trial_d5")}" style="${FOOTER_LINK_STYLE}">Starter por ${starterPrice}</a>.`)}
-    ${nordikaQuote()}
     `,
     {
       footerHtml: envelope.footerHtml,
