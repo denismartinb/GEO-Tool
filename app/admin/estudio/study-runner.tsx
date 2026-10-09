@@ -272,10 +272,17 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     <section className="adm-study">
       <div className="adm-toolbar" style={{ flexWrap: "wrap", gap: 16, alignItems: "center" }}>
         <label>
-          <input type="radio" checked={mode === "sector"} onChange={() => setMode("sector")} disabled={running} /> Sector
+          <input type="radio" checked={mode === "sector"} onChange={() => {
+              setMode("sector");
+              setSamples(2);
+            }} disabled={running} /> Sector
         </label>
         <label>
-          <input type="radio" checked={mode === "custom"} onChange={() => setMode("custom")} disabled={running} /> Una marca
+          <input type="radio" checked={mode === "custom"} onChange={() => {
+              // A prospect report already has 15–20 questions × 3 engines; one repetition is the default there.
+              setMode("custom");
+              setSamples(1);
+            }} disabled={running} /> Una marca
         </label>
       </div>
 
