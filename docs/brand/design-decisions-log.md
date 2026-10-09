@@ -16351,6 +16351,8 @@ la que ya esté en `main`) y con ella todas sus referencias
 
 ## 169. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
 
+> **Superseded en parte por §247 (Fase 2, 2026-10-09):** las tarjetas de color por clúster pasan a blancas con borde fino y el carril se identifica por su número.
+
 **Propuesta del fundador** (referencia: el listado de blog de Semrush —
 tarjetas de color plano, sin portada, título + subtítulo), iterada en un
 artefacto de diseño antes de tocar código y aprobada con Task Intake Report
@@ -21926,8 +21928,8 @@ ahora exige `ArticleHero` y prohíbe `<BlogCover>` y `# {post.title}` en el
 MDX. `coverImage` **sigue siendo obligatorio**: lo usan el índice `/blog`, la
 tarjeta social de LinkedIn y el schema.
 
-**Pendiente (Fase 2, PR aparte).** Índice `/blog` y páginas de clúster con el
-mismo lenguaje, e imagen social generada automáticamente con este estilo, que
+**Pendiente.** Páginas de clúster con el mismo lenguaje (el índice se hizo
+en Fase 2, abajo), e imagen social generada automáticamente con este estilo, que
 es lo que de verdad haría innecesarias las ilustraciones en posts nuevos.
 Ningún post se ha reescrito: la figura de barras por motor de la maqueta es
 contenido, no plantilla, y el post de facturación sigue con su tabla.
@@ -21950,7 +21952,32 @@ estéticamente se parezcan al nuevo post").** Se capturaron los 22 a 1280 y
   «Hacer» en azul. El veredicto y el diagrama de pasos pasan a oscuro y a
   borde fino como el resto. El rojo de «Evitar» se queda.
 
+**Fase 2: índice `/blog` (mismo día; el fundador: "échale una revisión a
+la portada del blog… mira específicamente los botones de ver más posts,
+que… queda un poco rarillo").**
+
+- Portada oscura igual que la del artículo (`.art-hero`), a ancho de
+  `.lp-inner`, con el último artículo como tarjeta destacada dentro; si el
+  destacado tiene `heroStat`, su cifra va al lado con la fuente.
+- Carriles numerados 01, 02… con el mismo contador y titular Bricolage que
+  las secciones del artículo; la descripción del carril en su propia línea.
+- Tarjetas blancas con borde fino, como las figuras del artículo. Los
+  colores pastel por clúster de BLOG-COVERS-2026-08 (§169) quedan
+  superseded: el número del carril identifica el clúster.
+- «Ver más →» era un enlace suelto alineado a la izquierda bajo la
+  rejilla. Pasa a botón con borde, centrado (ancho completo en móvil), que
+  dice cuántos carga: «Ver 3 artículos más», «Ver 1 artículo más», «Ver 2
+  comparativas más». Sigue cargando in situ, como decidió el fundador el
+  2026-09-19.
+- El cierre «¿Aparece tu marca en ChatGPT?» toma el estilo del cierre del
+  artículo (fondo #081223 con resplandor cian); fuera el anillo decorativo.
+
+Capturas antes/después en `docs/design-reference/blog-redesign-1/`. Las
+páginas de clúster (`/blog/<clúster>`) no se han tocado: siguen pendientes.
+
 **Trazabilidad.** `components/blog/article-hero.tsx`,
 `components/blog/blog-page-shell.tsx`, `app/globals.css` (bloque
 BLOG-REDESIGN-1), `app/blog/*/page.mdx`, `lib/blog/posts.ts`,
-`lib/blog/covers.test.ts`, `.claude/rules/growth-content.md`.
+`lib/blog/covers.test.ts`, `.claude/rules/growth-content.md`,
+`app/blog/page.tsx`, `components/blog/blog-cluster-rail.tsx`,
+`components/blog/comparativas-rail.tsx`.

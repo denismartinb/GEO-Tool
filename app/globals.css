@@ -9556,6 +9556,91 @@ select.set-field {
   .lp-article .art-stats { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* --- Índice /blog (BLOG-REDESIGN-1 Fase 2) --------------------------------
+   Misma portada oscura que el artículo, más ancha (la rejilla del índice usa
+   `.lp-inner`, 1180px), con el último artículo como tarjeta destacada. Debajo,
+   carriles numerados 01, 02… como las secciones del artículo, tarjetas blancas
+   con borde fino, y un botón «Ver N más» de verdad en vez del enlace suelto. */
+.blog-idx-hero-inner { padding-top: 8px; padding-bottom: 48px; }
+.blog-idx-hero .art-hero-eyebrow { margin-top: 56px; }
+.blog-idx-hero h1 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: clamp(44px, 7vw, 72px);
+}
+.blog-idx-featured {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 48px; align-items: end;
+  margin-top: 40px; padding: 32px 34px; border-radius: 18px;
+  background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .12);
+  color: #fff; transition: border-color .15s, background .15s;
+}
+.blog-idx-featured:hover,
+.blog-idx-featured:focus-visible { border-color: var(--brand-cyan); background: rgba(255, 255, 255, .08); }
+.blog-idx-featured-tag { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-cyan); }
+.blog-idx-featured h2 {
+  margin: 14px 0 0; font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: clamp(24px, 3.2vw, 34px); font-weight: 800; line-height: 1.12; letter-spacing: -.02em; color: #fff; text-wrap: balance;
+}
+.blog-idx-featured p { margin: 14px 0 0; max-width: 620px; font-size: 16px; line-height: 1.6; color: #c7cedb; }
+.blog-idx-featured-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-top: 22px; font-size: 13.5px; font-weight: 700; }
+.blog-idx-featured-foot time { color: #8a9ab2; }
+.blog-idx-featured-go { color: #fff; }
+.blog-idx-featured-stat { display: flex; flex-direction: column; gap: 10px; max-width: 280px; }
+.blog-idx-featured-stat .art-hero-big { font-size: clamp(72px, 9vw, 112px); }
+.blog-idx-featured-stat p { margin: 0; font-size: 14px; line-height: 1.5; color: #e5e9f2; }
+.blog-idx-featured-stat p span { display: block; margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--brand-ink-4); }
+
+.lp-article .blog-rail { margin-top: 56px; }
+.lp-article .blog-rail:first-of-type { margin-top: 8px; }
+.lp-article .blog-rail-head { margin-bottom: 20px; }
+.lp-article .blog-rail-head-left { flex-wrap: wrap; row-gap: 6px; }
+.lp-article .blog-rail-head-left h2 {
+  counter-increment: art-sec; display: flex; align-items: baseline; gap: 12px;
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 30px; font-weight: 800; letter-spacing: -.015em; line-height: 1.15; color: var(--brand-ink);
+}
+.lp-article .blog-rail-head-left h2::before {
+  content: counter(art-sec, decimal-leading-zero); flex: none; font-size: 15px; font-weight: 800; color: var(--brand-blue);
+}
+.lp-article .blog-rail-head-left p { flex-basis: 100%; font-size: 15px; color: var(--brand-ink-3); }
+.lp-article .blog-rail-dot { display: none; }
+.lp-article .blog-tile {
+  background: #fff; border: 1px solid #e7eaf0; border-radius: 14px; padding: 24px 24px 22px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.lp-article .blog-tile:hover,
+.lp-article .blog-tile:focus-visible { border-color: var(--brand-blue); box-shadow: 0 6px 20px rgba(11, 20, 38, .06); }
+.lp-article .blog-tile h2 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 19px; font-weight: 800; line-height: 1.22; color: var(--brand-ink);
+}
+.lp-article .blog-tile p { color: var(--brand-ink-3); font-size: 14.5px; line-height: 1.55; }
+.lp-article .blog-tile time { margin-top: auto; padding-top: 16px; color: var(--brand-ink-4); font-size: 12.5px; }
+/* «Ver N más»: un botón con aspecto de botón, centrado bajo la rejilla. */
+.lp-article .blog-rail-more {
+  display: flex; align-items: center; justify-content: center; margin: 20px auto 0;
+  height: 44px; padding: 0 22px; border: 1px solid #d5dbe6; border-radius: 10px; background: #fff;
+  font-size: 14px; font-weight: 700; color: var(--brand-ink);
+}
+.lp-article .blog-rail-more:hover,
+.lp-article .blog-rail-more:focus-visible { text-decoration: none; border-color: var(--brand-blue); color: var(--brand-blue); }
+/* Cierre: el mismo que el de los artículos. */
+.lp-article .blog-banner { margin-top: 72px; border-radius: 18px; padding: 36px 34px; background: #081223; }
+.lp-article .blog-banner::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(70% 90% at 100% 0%, rgba(9, 197, 214, .25), transparent 70%);
+}
+.lp-article .blog-banner h2 { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 30px; line-height: 1.12; color: #fff; }
+.lp-article .blog-banner p { color: #d5dbe6; }
+.lp-article .blog-banner-cta { height: 44px; padding: 0 20px; border-radius: 10px; font-weight: 800; color: var(--brand-ink); }
+@media (max-width: 760px) {
+  .blog-idx-featured { grid-template-columns: minmax(0, 1fr); padding: 24px 22px; }
+  .blog-idx-hero .art-hero-eyebrow { margin-top: 36px; }
+  .lp-article .blog-rail-head-left h2 { font-size: 25px; }
+  .lp-article .blog-rail-more { width: 100%; }
+  .lp-article .blog-banner { padding: 28px 22px; }
+  .lp-article .blog-banner h2 { font-size: 25px; }
+}
+
 /* ============================================================
    DOMAINS-REDESIGN-1 — «Dominios» (.dm2-*)
 

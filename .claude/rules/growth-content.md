@@ -185,6 +185,11 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 - **Paleta del artículo: tinta, azul y cian.** El rojo sólo donde dice algo
   («Evitar», «Sin evidencia»); el verde de «Confirmada» igual. Nada de
   colores por decoración (log §247).
+- **El índice `/blog` usa la misma portada y el mismo ámbito.** Pasa su
+  portada por la prop `hero` de `BlogPageShell`, así que su cuerpo también va
+  bajo `.lp-article`: carriles numerados con el contador de las secciones,
+  tarjetas blancas y «Ver N más» como botón que dice cuántos carga (log §247,
+  Fase 2).
 - **El estilo del artículo vive bajo `.art-hero` y `.lp-article`.**
   `/comparativas`, `/docs` y `/glosario` comparten los bloques `.art-*` y no
   cambiaron; tocar `.art-*` sin ese ámbito los cambia a la vez (log §247).

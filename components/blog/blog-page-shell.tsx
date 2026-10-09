@@ -36,8 +36,8 @@ export function BlogPageShell({
    * (`<ArticleHero post={post} />`). When set, the body section gets the
    * `lp-article` scope that restyles the article blocks after the PDF study,
    * and the hero carries its own breadcrumb — so `breadcrumb` is ignored.
-   * Only blog articles pass it; /comparativas, /docs and /glosario keep the
-   * previous look.
+   * Blog articles and the /blog index pass it; /comparativas, /docs and
+   * /glosario keep the previous look.
    */
   hero?: ReactNode;
   children: ReactNode;

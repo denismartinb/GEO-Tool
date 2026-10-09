@@ -24,4 +24,8 @@ cifra de portada también con fuente de terceros que el post ya publica, un
 solo orden de cierre (autor, cierre oscuro, relacionados) y una sola paleta
 (tinta, azul, cian; rojo sólo en «Evitar»).
 
+**Índice `/blog` (Fase 2):** `indice-antes-1280.png` es como estaba;
+`indice-despues-1280.png` e `indice-despues-375.png` son la propuesta
+enseñada al fundador.
+
 Histórico: `docs/brand/design-decisions-log.md` §247.

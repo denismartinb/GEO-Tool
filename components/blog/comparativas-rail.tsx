@@ -18,6 +18,7 @@ export function ComparativasRail({
 }) {
   const [visibleCount, setVisibleCount] = useState(initialCount);
   const shown = items.slice(0, visibleCount);
+  const nextCount = Math.min(LOAD_MORE_STEP, items.length - visibleCount);
   const hasMore = visibleCount < items.length;
 
   return (
@@ -39,7 +40,7 @@ export function ComparativasRail({
       </div>
       {hasMore && (
         <button type="button" className="blog-rail-more" onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}>
-          Ver más →
+          Ver {nextCount} {nextCount === 1 ? "comparativa" : "comparativas"} más
         </button>
       )}
     </section>

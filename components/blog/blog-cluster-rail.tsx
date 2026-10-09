@@ -31,6 +31,7 @@ export function BlogClusterRail({
 }) {
   const [visibleCount, setVisibleCount] = useState(initialCount);
   const shown = posts.slice(0, visibleCount);
+  const nextCount = Math.min(LOAD_MORE_STEP, posts.length - visibleCount);
   const hasMore = visibleCount < posts.length;
 
   return (
@@ -57,7 +58,7 @@ export function BlogClusterRail({
       )}
       {hasMore && (
         <button type="button" className="blog-rail-more" onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}>
-          Ver más →
+          Ver {nextCount} {nextCount === 1 ? "artículo" : "artículos"} más
         </button>
       )}
     </section>
