@@ -15,7 +15,7 @@ export const metadata: Metadata = contentMetadata({
 
 export default function PrivacidadPage() {
   return (
-    <LegalPageShell title="Política de Privacidad" updated="28 de septiembre de 2026" activeHref="/privacidad">
+    <LegalPageShell title="Política de Privacidad" updated="9 de octubre de 2026" activeHref="/privacidad">
       <h2>Responsable del tratamiento</h2>
       <p>
         El responsable del tratamiento de los datos personales recogidos a través de GenScore es{" "}
@@ -52,6 +52,18 @@ export default function PrivacidadPage() {
         y sin necesidad de iniciar sesión. Los emails necesarios para prestar el servicio
         (seguridad, facturación y cambios de plan) no son comunicaciones comerciales y se envían
         mientras tengas cuenta.
+      </p>
+
+      <h2>Si pides un informe gratuito</h2>
+      <p>
+        Si pides un informe GEO gratuito sin tener cuenta, tratamos la web, el email y la
+        descripción de lo que vendes que nos indicas, para preparar el informe, enviártelo y
+        atender lo que nos preguntes sobre él (medidas precontractuales solicitadas por ti, art.
+        6.1.b RGPD). Solo te enviaremos consejos y novedades de GenScore si marcas la casilla
+        correspondiente en el formulario (consentimiento, art. 6.1.a RGPD y art. 21.1 LSSI), y
+        puedes retirarlo en cualquier momento escribiendo a{" "}
+        <a href="mailto:soporte@genscore.es">soporte@genscore.es</a>. Conservamos estos datos durante un año desde tu petición si no llegas a crear
+        una cuenta, salvo que antes nos pidas borrarlos.
       </p>
 
       <h2>A quién comunicamos tus datos (encargados del tratamiento)</h2>
