@@ -175,10 +175,22 @@ function generateContentEndpoint(apiKey: string): string {
   return `${GEMINI_API_URL}/${getGeminiModel()}:generateContent?key=${apiKey}`;
 }
 
-function firstCandidateText(data: {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+/**
+ * Both callers parse the result as JSON, so parts are concatenated with no
+ * separator: a grounded Gemini 3 answer can arrive split across several text
+ * parts, and a "\n" inserted mid-string is invalid JSON. Thought parts are
+ * skipped in case a model returns them without being asked (ADR 0042).
+ */
+export function firstCandidateText(data: {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>;
 }): string {
-  return data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
+  return (
+    data.candidates?.[0]?.content?.parts
+      ?.filter((part) => part.thought !== true)
+      .map((part) => part.text ?? "")
+      .join("")
+      .trim() ?? ""
+  );
 }
 
 export async function generateGeminiJson(promptBlock: string): Promise<unknown> {

@@ -21376,6 +21376,11 @@ aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
   con búsqueda no puede pedir `responseMimeType: "application/json"` y Gemini 3
   a temperatura 1.0 envuelve a veces el JSON en una frase. `parseLenientJson`
   ahora cae al tramo `{…}` más externo antes de rendirse.
+  Y `firstCandidateText` une las partes sin separador: una respuesta con
+  búsqueda puede llegar en varias partes, y un `\n` metido dentro de una cadena
+  rompe el JSON. De paso, el asistente deja de sembrar una fila vacía de
+  competidor cuando no hay sugerencias: cerrada, se pintaba como una tarjeta
+  «Sin nombre / sin dominio» bajo «0 competidores».
 - Las puntuaciones cambiarán algo con el modelo nuevo y la varianza entre
   escaneos sube al quitar `temperature: 0`; se acepta frente al riesgo de
   bucles (fallos de escaneo). Revisar con datos tras una semana.

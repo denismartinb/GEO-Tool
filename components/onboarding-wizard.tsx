@@ -655,7 +655,9 @@ export function OnboardingWizard({
           "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
         );
         setSuggestFailed(result.failed.length ? result.failed : ["competitors", "prompts"]);
-        setCompetitors([{ id: newId(), name: "", domain: "", source: "manual" }]);
+        // No blank placeholder row: closed, it rendered as a "Sin nombre / sin
+        // dominio" card under "0 competidores". "Añadir competidor" opens one.
+        setCompetitors([]);
         setPrompts([{ id: newId(), text: "", category: null }]);
         setLanguage((current) => result.language || current);
         setStep(1);
@@ -666,7 +668,7 @@ export function OnboardingWizard({
       setCompetitors(
         result.competitors.length
           ? result.competitors.map((c) => ({ id: newId(), ...c, source: "suggested" as const }))
-          : [{ id: newId(), name: "", domain: "", source: "manual" }]
+          : []
       );
       setPrompts(
         result.prompts.length
