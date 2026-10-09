@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PassField } from "@/components/ui/pass-field";
 import { BrandLogo } from "@/components/ui/brand-logo";
+import { safeNextPath } from "@/lib/safe-next-path";
 import { login, signInWithGoogle } from "./actions";
 import type { Metadata } from "next";
 
@@ -22,15 +23,16 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; deleted?: string }>;
+  searchParams: Promise<{ error?: string; deleted?: string; next?: string }>;
 }) {
   const params = await searchParams;
+  const next = safeNextPath(params.next);
 
   const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
-  if (user) redirect("/dashboard");
+  if (user) redirect(next ?? "/dashboard");
 
   return (
     <main className="auth-bg">
@@ -47,6 +49,7 @@ export default async function LoginPage({
         ) : null}
 
         <form action={login} className="auth-form">
+          {next ? <input type="hidden" name="next" value={next} /> : null}
           <div>
             <label className="field-label" htmlFor="email">Email de trabajo</label>
             <input
@@ -79,6 +82,7 @@ export default async function LoginPage({
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <form action={signInWithGoogle}>
+            {next ? <input type="hidden" name="next" value={next} /> : null}
             <button type="submit" className="auth-social">
               <svg width={17} height={17} viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

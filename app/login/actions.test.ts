@@ -53,6 +53,27 @@ describe("login", () => {
     ).rejects.toThrow("REDIRECT:/dashboard");
   });
 
+  it("lands on a page of this site the link asked for (§254)", async () => {
+    signInWithPassword.mockResolvedValue({ error: null });
+    await expect(
+      login(formData({ email: "user@example.com", password: "supersecret", next: "/informe/p1" }))
+    ).rejects.toThrow("REDIRECT:/informe/p1");
+  });
+
+  it("ignores a next that points at another host", async () => {
+    signInWithPassword.mockResolvedValue({ error: null });
+    await expect(
+      login(formData({ email: "user@example.com", password: "supersecret", next: "//evil.com" }))
+    ).rejects.toThrow("REDIRECT:/dashboard");
+  });
+
+  it("keeps next across a failed attempt", async () => {
+    signInWithPassword.mockResolvedValue({ error: { code: "invalid_credentials", message: "x" } });
+    await expect(
+      login(formData({ email: "user@example.com", password: "wrong", next: "/informe/p1" }))
+    ).rejects.toThrow(/&next=%2Finforme%2Fp1$/);
+  });
+
   it("maps the email_not_confirmed error code to a safe Spanish message", async () => {
     signInWithPassword.mockResolvedValue({
       error: { code: "email_not_confirmed", message: "Email not confirmed" }
@@ -100,6 +121,17 @@ describe("signInWithGoogle", () => {
     fetchMock.mockResolvedValue({ status: 302 } as Response);
     delete process.env.NEXT_PUBLIC_SITE_URL;
     delete process.env.VERCEL_URL;
+  });
+
+  it("carries a safe next through the OAuth callback (§254)", async () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://app.example.com";
+    signInWithOAuth.mockResolvedValue({ data: { url: "https://accounts.google.com/o/oauth2/auth" }, error: null });
+
+    await expect(signInWithGoogle(formData({ next: "/informe/p1" }))).rejects.toThrow(/^REDIRECT:/);
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: "google",
+      options: { redirectTo: "https://app.example.com/auth/callback?next=%2Finforme%2Fp1" }
+    });
   });
 
   it("builds redirectTo from NEXT_PUBLIC_SITE_URL and redirects to the returned OAuth url", async () => {

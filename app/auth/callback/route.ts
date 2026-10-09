@@ -3,6 +3,7 @@ import { sendWelcomeEmail } from "@/lib/email/transactional";
 import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
 import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import { NextResponse } from "next/server";
+import { safeNextPath } from "@/lib/safe-next-path";
 import { parseConsentCookie } from "@/lib/ads/consent";
 import { PENDING_CONVERSION_COOKIE } from "@/lib/ads/pending-conversion";
 
@@ -50,7 +51,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const providerError = url.searchParams.get("error_description") ?? url.searchParams.get("error");
-  const next = url.searchParams.get("next") ?? "/dashboard";
+  // Only a path on this site: `new URL("//evil.com", origin)` would leave it.
+  const next = safeNextPath(url.searchParams.get("next")) ?? "/dashboard";
 
   if (providerError) {
     console.error("[geo:auth-callback] provider_error", { providerError });

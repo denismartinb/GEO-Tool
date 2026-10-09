@@ -22369,3 +22369,61 @@ listo para accionar» y «Revisado por nuestro equipo antes de enviártelo»
 `components/marketing-content-links.ts` y los seis pies,
 `app/globals.css` (bloque FREE-REPORT-2),
 `docs/design-reference/free-report-1/` (tableros nuevos).
+
+## 254. TRIAL-REPORT-EMAIL-1: el informe del escaneo, en el último correo de la prueba (2026-10-09)
+
+**Qué se decidió.** El fundador pidió que un correo de la prueba de 7 días
+llevara el informe del último escaneo, bien maquetado («aporta valor y es
+sorprendente»), y que lo eligiéramos nosotros. Se le propuso el día 3. Él lo
+corrigió: el informe tiene que llegar junto a la urgencia, casi al final,
+porque el día 3 «todavía puedes pensar que te quedan 4 días y luego se te
+olvida». Aprobó la propuesta resultante («Si», 2026-10-09):
+
+- **El aviso de fin de prueba (`trial_d5`, §233) pasa al último día.** La
+  ventana va de 36–60 h restantes a 12–36 h. Sigue teniendo 24 h de ancho,
+  así que el cron diario cae en ella una sola vez, y nunca baja de 12 h, para
+  que llegue con medio día para actuar. El tipo conserva su nombre
+  `trial_d5` porque es un valor de `email_sends` y renombrarlo exigiría
+  migración.
+- **Con escaneo, el correo es el informe.** Lleva la Puntuación GEO, las
+  menciones por motor, quién aparece en las respuestas, una frase literal de
+  la IA, dos hallazgos y la primera acción. Debajo, un enlace al informe
+  completo (`/informe/<id>`) y después la oferta (precio fundador y «Mantener
+  Pro»). Todo sale de `buildReportModel`, el mismo modelo del informe
+  impreso (§248, §250), así que valen sus reglas: sólo porcentajes, motores
+  por nombre, la cita literal o ausente y un bloque sin datos se omite. Sin
+  escaneo, o si el informe falla al cargarse, sale el correo de fecha límite
+  aprobado en §233. Nunca se queda sin enviar.
+- **El día 7 se descartó** porque ese correo sale con la prueba ya caducada,
+  y la página del informe enseña un aviso en lugar del informe a una cuenta
+  sin plan. El botón llevaría a una puerta cerrada.
+- **El día 3 no cambia**, para no repetir contenido.
+- **La bienvenida** decía «Te avisaremos 2 días antes» y pasa a «Te avisaremos
+  el día antes».
+
+**El enlace pasa por `/login?next=`.** El informe exige sesión, y el login no
+volvía a la página de origen: `requireUser` redirige a `/login` sin más, y
+`login`/`signInWithGoogle` mandaban siempre a `/dashboard`. Ahora `/login`
+acepta `next` (y si ya hay sesión, redirige directamente ahí), lo conserva
+tras un intento fallido y lo pasa al callback de Google. `safeNextPath`
+(`lib/safe-next-path.ts`) sólo admite rutas de este sitio. El mismo filtro se
+aplica ahora en `/auth/callback`, que antes hacía `new URL(next, origin)` sin
+validar: `?next=//otro-sitio` sacaba al usuario del dominio.
+
+**Seguridad del cargador.** El cron usa el cliente de servicio, que se salta
+RLS. El proyecto del informe sale de la misma consulta por `owner_user_id`
+que elige al destinatario, nunca de otro sitio. La cita es texto libre de un
+LLM dentro de HTML de correo: se escapa con `escapeHtml`, porque aquí no hay
+React que lo haga (§202).
+
+**Pendiente o sabido.**
+- El diseño de referencia `docs/design-reference/lifecycle-emails-1/` sigue
+  diciendo «quedan 2 días» y «Te avisaremos 2 días antes». Es histórico: este
+  apartado lo sustituye.
+- La maqueta aprobada en el hilo vive en
+  `/mnt/project-files/frente-3-usuarios/correo-d3-informe-maqueta.png`. Se hizo
+  para el día 3; el contenido del informe es el mismo y cambian el
+  encabezado y la oferta.
+- `requireUser` sigue redirigiendo a `/login` sin `next`. Un enlace a otra
+  página protegida que no pase por `/login?next=` sigue aterrizando en el
+  panel.
