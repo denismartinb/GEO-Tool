@@ -100,6 +100,24 @@ describe("formatReport", () => {
   });
 });
 
+describe("formatReport with a subset of engines", () => {
+  it("only shows the engines that ran, and counts them in the header", () => {
+    const sector = SECTORS[0];
+    const records = [record({ seedMentions: [{ name: "Holded", position: 1 }] })];
+    const report = formatReport({
+      sector,
+      records,
+      rows: aggregateBrands(records, sector.seedBrands),
+      samples: 1,
+      date: "d",
+      engines: ["gemini", "openai"]
+    });
+    expect(report).toContain("× 2 motores");
+    expect(report).toContain("| Gemini | ChatGPT |");
+    expect(report).not.toContain("Claude |");
+  });
+});
+
 describe("formatReport with no valid answers", () => {
   it("refuses to print a ranking (no 'nobody named X' claims from zero data)", () => {
     const sector = SECTORS[0];
@@ -119,7 +137,15 @@ describe("formatReport with no valid answers", () => {
 
 describe("parseArgs", () => {
   it("defaults and bounds", () => {
-    expect(parseArgs(["--sector", "x"])).toEqual({ sector: "x", samples: 2, list: false, concurrency: 3 });
+    expect(parseArgs(["--sector", "x"])).toEqual({
+      sector: "x",
+      samples: 2,
+      list: false,
+      concurrency: 3,
+      engines: ["gemini", "openai", "claude"]
+    });
+    expect(parseArgs(["--engines", "gemini,openai"]).engines).toEqual(["gemini", "openai"]);
+    expect(() => parseArgs(["--engines", "perplexity"])).toThrow();
     expect(() => parseArgs(["--samples", "9"])).toThrow();
   });
 });

@@ -245,8 +245,11 @@ export function formatReport(input: {
   rows: BrandRow[];
   samples: number;
   date: string;
+  /** Engines actually run. Defaults to all three. */
+  engines?: readonly Engine[];
 }): string {
   const { sector, records, rows, samples, date } = input;
+  const engines = input.engines ?? ENGINES;
   const valid = records.filter((record) => record.error === null);
   const failed = records.length - valid.length;
   const models = [...new Set(valid.map((record) => `${ENGINE_LABEL[record.engine]}: ${record.model ?? "?"}`))].sort();
@@ -266,7 +269,7 @@ export function formatReport(input: {
   const lines = [
     `# ¿Qué marcas españolas de ${sector.label} recomienda la IA?`,
     "",
-    `Estudio GenScore · ${date} · ${sector.prompts.length} preguntas × ${ENGINES.length} motores × ${samples} muestra(s) = ${records.length} respuestas pedidas, **${valid.length} válidas**${failed ? ` (${failed} fallidas, excluidas del cálculo)` : ""}.`,
+    `Estudio GenScore · ${date} · ${sector.prompts.length} preguntas × ${engines.length} motores × ${samples} muestra(s) = ${records.length} respuestas pedidas, **${valid.length} válidas**${failed ? ` (${failed} fallidas, excluidas del cálculo)` : ""}.`,
     "",
     `Modelos: ${models.join(" · ") || "—"}`,
     "",
@@ -275,10 +278,10 @@ export function formatReport(input: {
     "",
     "Presencia = porcentaje de respuestas válidas que nombran la marca (cada respuesta cuenta una vez por marca).",
     "",
-    `| # | Marca | Presencia | ${ENGINES.map((engine) => ENGINE_LABEL[engine]).join(" | ")} | 1.ª nombrada | Preguntas (de ${sector.prompts.length}) |`,
-    `|---|---|---|${ENGINES.map(() => "---").join("|")}|---|---|`,
+    `| # | Marca | Presencia | ${engines.map((engine) => ENGINE_LABEL[engine]).join(" | ")} | 1.ª nombrada | Preguntas (de ${sector.prompts.length}) |`,
+    `|---|---|---|${engines.map(() => "---").join("|")}|---|---|`,
     ...shown.map((row, index) => {
-      const perEngine = ENGINES.map((engine) => {
+      const perEngine = engines.map((engine) => {
         const cell = row.perEngine[engine];
         return cell.valid === 0 ? "—" : `${pct(cell.mentions / cell.valid)} (${cell.mentions}/${cell.valid})`;
       });
@@ -308,7 +311,13 @@ export function formatReport(input: {
   return `${lines.join("\n")}\n`;
 }
 
-export function parseArgs(argv: string[]): { sector?: string; samples: number; list: boolean; concurrency: number } {
+export function parseArgs(argv: string[]): {
+  sector?: string;
+  samples: number;
+  list: boolean;
+  concurrency: number;
+  engines: Engine[];
+} {
   const value = (flag: string) => {
     const index = argv.indexOf(flag);
     return index === -1 ? undefined : argv[index + 1];
@@ -319,7 +328,12 @@ export function parseArgs(argv: string[]): { sector?: string; samples: number; l
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 6) {
     throw new Error("--concurrency must be an integer 1..6");
   }
-  return { sector: value("--sector"), samples, list: argv.includes("--list"), concurrency };
+  const enginesArg = value("--engines");
+  const engines = enginesArg ? (enginesArg.split(",").map((engine) => engine.trim()) as Engine[]) : [...ENGINES];
+  if (engines.length === 0 || engines.some((engine) => !ENGINES.includes(engine))) {
+    throw new Error(`--engines must be a comma list of ${ENGINES.join(", ")}`);
+  }
+  return { sector: value("--sector"), samples, list: argv.includes("--list"), concurrency, engines: [...new Set(engines)] };
 }
 
 /* ---- I/O (not covered by unit tests — needs live credentials) ---- */
@@ -406,13 +420,14 @@ async function main() {
   if (!sector) throw new Error(`Unknown sector "${args.sector}". Run with --list.`);
 
   loadDotEnvLocal();
-  const missing = ["GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"].filter((key) => !process.env[key]);
+  const keyFor: Record<Engine, string> = { gemini: "GEMINI_API_KEY", openai: "OPENAI_API_KEY", claude: "ANTHROPIC_API_KEY" };
+  const missing = args.engines.map((engine) => keyFor[engine]).filter((key) => !process.env[key]);
   if (missing.length) throw new Error(`Missing ${missing.join(", ")} (put them in .env.local).`);
 
   const tasks: Array<[Engine, number, number]> = [];
   for (let sample = 1; sample <= args.samples; sample += 1) {
     for (let promptIndex = 0; promptIndex < sector.prompts.length; promptIndex += 1) {
-      for (const engine of ENGINES) tasks.push([engine, promptIndex, sample]);
+      for (const engine of args.engines) tasks.push([engine, promptIndex, sample]);
     }
   }
   console.log(`[study] ${sector.id}: ${tasks.length} respuestas (${args.concurrency} en paralelo)…`);
@@ -441,7 +456,7 @@ async function main() {
     path.join(outDir, "results.json"),
     `${JSON.stringify({ sector, samples: args.samples, date, rows, records }, null, 2)}\n`
   );
-  const report = formatReport({ sector, records, rows, samples: args.samples, date });
+  const report = formatReport({ sector, records, rows, samples: args.samples, date, engines: args.engines });
   writeFileSync(path.join(outDir, "report.md"), report);
   console.log(`\n${report}\n[study] Guardado en ${outDir}/`);
 }
