@@ -21361,19 +21361,26 @@ menciona con un dato falso): aquí la marca sale y no es la recomendación.
 
 **Los tres casos y su fuente.**
 
-1. Comprobador gratuito con Movistar como marca de prueba, agosto de 2026 (§
-   Fase C de FREE-CHECKER-1, 2026-08-16): ChatGPT mencionó a Movistar pero
-   nombró antes a Orange; la lista de «otras marcas» mezclaba operadores
-   (Orange, Yoigo, MÁSMÓVIL) con plataformas incluidas en los paquetes
-   (Netflix, DAZN, Prime Video, Disney+, HBO Max, SkyShowtime); y el «puesto 1»
-   que llegó a enseñarse era estructural, no medido. La clasificación operador /
-   plataforma de la Figura 1 es nuestra lectura de una sola respuesta y el pie
-   de la figura lo dice.
-2. Borrador del generador de contenido para el proyecto Movistar (§128): una
-   comparación sin datos contra cinco operadores. Se parafrasea, no se cita
-   literal, y el texto dice que no lo publicamos. El límite legal
-   (art. 10 LCD) está tal como lo recoge §128, con aviso de que no es
-   asesoramiento jurídico.
+**Ninguna marca real del caso del comprobador ni del borrador se nombra en el
+artículo, ni en el cuerpo, ni en la FAQ, ni en los pies de figura** (decisión
+del fundador, 2026-10-09: la marca de prueba es la de su empleador y nombrarla
+le expone personalmente). La primera versión del artículo la nombraba, junto a
+su competidor y las plataformas de la respuesta; se retiró antes del merge.
+Regla para piezas futuras: **las marcas de los proyectos de prueba internos no
+se nombran en contenido público**; se describen sin sector identificable.
+
+1. Comprobador gratuito con una marca conocida como prueba (§ Fase C de
+   FREE-CHECKER-1, 2026-08-16): ChatGPT la mencionó pero nombró antes a su
+   competidor directo; la lista de «otras marcas» mezclaba competidores reales
+   con servicios incluidos en la propia oferta de la marca; y el «puesto 1»
+   que llegó a enseñarse era estructural, no medido. La Figura 1 ya no
+   reproduce esa respuesta: es un **ejemplo ilustrativo** declarado como tal en
+   su pie, para no reconstruir el sector.
+2. Borrador del generador de contenido de la misma marca de prueba (§128): una
+   comparación sin datos contra cinco competidores. Se parafrasea sin nombres
+   ni sector, y el texto dice que no lo publicamos. El límite legal (art. 10
+   LCD) está tal como lo recoge §128, con aviso de que no es asesoramiento
+   jurídico.
 3. Proyecto de prueba Mozilla, 1 prompt × 3 motores, de 30 a 74 sin cambios
    (`docs/geo-score-variability-2026-08.md`). Sólo se dice que la muestra era
    mínima; **ninguna mecánica interna** del score (ni pesos ni fórmula ni la

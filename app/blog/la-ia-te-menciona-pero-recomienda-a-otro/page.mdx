@@ -32,7 +32,7 @@ export const faqItems = [
   {
     question: "¿Cualquier marca que aparece junto a la mía es un competidor?",
     answer:
-      "No. En una respuesta real sobre un operador de telecomunicaciones, la lista de marcas nombradas mezclaba operadores que compiten de verdad con plataformas de streaming que van incluidas dentro de los paquetes. Las segundas aparecen en la respuesta, pero no se disputan tu cliente. Antes de actuar, separa quién compite contigo por la misma decisión de compra de quién solo comparte la frase."
+      "No. Una respuesta puede mezclar marcas que compiten de verdad contigo con otras que solo comparten la frase: herramientas que se usan junto a tu producto, plataformas que van incluidas en tu oferta o servicios de una categoría vecina. Las segundas aparecen en la respuesta, pero no se disputan tu cliente. Antes de actuar, separa quién compite contigo por la misma decisión de compra de quién solo comparte la frase."
   },
   {
     question: "¿Sirve de algo escribir una página que diga que somos mejores que el competidor?",
@@ -84,11 +84,11 @@ que más preocupa, y de ese caso hablamos en
 aparece en ChatGPT</a>. Pero hay un segundo escenario, menos comentado: tu
 marca aparece y aun así la IA se la acaba recomendando a otro.
 
-Un ejemplo real, de nuestras propias pruebas. En agosto de 2026 estábamos
-probando el comprobador gratuito de GenScore con Movistar como marca de
-ejemplo (era sólo una marca conocida con la que probar la herramienta). La pregunta iba a ChatGPT, que respondió y
-nombró a Movistar. Con eso, la casilla de "¿aparece?" quedaba en sí. Pero al
-leer la respuesta entera, ChatGPT citaba a Orange antes que a Movistar.
+Nos pasó en nuestras propias pruebas. Probando el comprobador gratuito de
+GenScore con una marca conocida, ChatGPT respondió y la nombró. Con eso, la
+casilla de "¿aparece?" quedaba en sí. Pero al leer la respuesta entera, el
+primer nombre que daba era el de su competidor directo, y la marca que
+comprobábamos venía después.
 
 Esa diferencia es toda la historia de este artículo. Una mención es un dato de
 presencia. Una recomendación es un dato de preferencia. Se miden distinto y se
@@ -118,26 +118,29 @@ verdad.
 
 ## Segundo, no todo el que aparece a tu lado es competencia
 
-Volvemos al caso de Movistar. La respuesta de ChatGPT nombraba más marcas
-además de Movistar y Orange: Yoigo, MÁSMÓVIL, Netflix, DAZN, Prime Video,
-Disney+, HBO Max y SkyShowtime. Si cuentas todas como "las marcas que te
-quitan el sitio", sales con una lista de nueve rivales. No lo eran.
+En aquella misma prueba, la respuesta de ChatGPT nombraba casi una decena de
+marcas. Unas pocas competían de verdad por el mismo cliente. El resto eran
+servicios que la marca comprobada incluye dentro de su propia oferta. Si
+cuentas todas como "las marcas que te quitan el sitio", sales con una lista de
+nueve rivales. No lo eran.
 
 <Figure
   label="Figura 1."
   wide
-  caption="Marcas nombradas por ChatGPT en una respuesta real sobre Movistar (prueba propia del comprobador gratuito de GenScore, agosto de 2026, una sola respuesta). La segunda columna es nuestra clasificación al leerla, no un dato que dé el motor."
+  caption="Ejemplo ilustrativo, no una respuesta real: cómo separar las marcas que nombra una respuesta. La clasificación la haces tú al leerla; el motor no la da."
 >
 
-| Marca nombrada | Qué es en esa respuesta |
+| Marca nombrada en la respuesta | Qué es para ti |
 |---|---|
-| Orange, Yoigo, MÁSMÓVIL | Operadores: compiten por el mismo cliente |
-| Netflix, DAZN, Prime Video, Disney+, HBO Max, SkyShowtime | Plataformas de contenido incluidas dentro de los paquetes: no compiten con el operador por la contratación |
+| Otras empresas que venden lo mismo que tú | Competencia: se disputan la misma decisión de compra |
+| Herramientas o servicios que tu cliente usa junto a tu producto | Complementos: aparecen, pero no te quitan el cliente |
+| Marcas que van incluidas dentro de tu propia oferta | Parte de tu propuesta: si salen, en cierto modo hablan de ti |
 
 </Figure>
 
-Esta separación cambia lo que haces. Si crees que Netflix es tu competidor,
-acabas escribiendo comparativas que no tienen sentido. Si la lista de
+Esta separación cambia lo que haces. Si tratas como competidor a un servicio
+que va dentro de tu propia oferta, acabas escribiendo comparativas que no
+tienen sentido. Si la lista de
 "rivales" es tan larga que no puedes actuar sobre ella, es que la lista está
 mal hecha. Nosotros mismos lo vivimos: la primera versión de nuestro
 comprobador presentaba esa lista entera como "quién apareció en tu lugar".
@@ -152,11 +155,11 @@ competidores de tu análisis GEO</a>.
 ## Tercero, desconfía de una posición que sale de una sola respuesta
 
 Aquí también nos equivocamos nosotros, y por eso lo contamos. Esa primera
-versión del comprobador enseñaba "Movistar en el puesto 1". Parecía un
+versión del comprobador enseñaba "tu marca, en el puesto 1". Parecía un
 buen resultado. Era falso en un sentido sutil: el comprobador solo analizaba
 la marca que le habías dado, así que el puesto 1 salía por construcción, no
 porque ChatGPT la hubiera puesto primera. Y en la respuesta real, ya hemos
-visto que Orange iba delante.
+visto que el competidor iba delante.
 
 No retocamos la cifra: eliminamos el dato de la pantalla. Un número que se
 puede mostrar mal vuelve a mostrarse mal, así que preferimos que no exista.
@@ -193,7 +196,7 @@ ordenadas de más a menos bajo tu control.
 
 <NumberedSection n={1} title="Haz que tu web sea fácil de comparar">
 
-Cuando alguien pregunta "Orange o Movistar" o "alternativas a X", el modelo
+Cuando alguien pregunta "X o Y" o "alternativas a X", el modelo
 necesita material para comparar. Si en tu web no queda claro qué ofreces, a
 quién, a qué precio y en qué te distingues con hechos, el modelo rellena con lo
 que encuentra fuera, que es lo que dicen otros. Una página con
@@ -247,10 +250,9 @@ dice algo incorrecto de tu empresa</a>.
 ## Lo que no funciona: escribir "somos mejores que X"
 
 Es la reacción más natural, y la que menos conviene. En una prueba interna del
-generador de contenido de GenScore, con Movistar de nuevo como proyecto de
-prueba, el borrador que salió afirmaba que Movistar mantenía un alto estándar
-de calidad y cobertura frente a cinco operadores nombrados, sin un solo dato
-detrás. No lo publicamos, pero nos sirvió para ver el problema:
+generador de contenido de GenScore, el borrador que salió afirmaba que la
+marca mantenía "un alto estándar de calidad" frente a cinco competidores
+nombrados, sin un solo dato detrás. No lo publicamos, pero nos sirvió para ver el problema:
 es texto que suena bien y no demuestra nada.
 
 Ese tipo de afirmación es un riesgo, no una táctica. En España la publicidad
