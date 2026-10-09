@@ -22021,6 +22021,8 @@ BLOG-REDESIGN-1), `app/blog/*/page.mdx`, `lib/blog/posts.ts`,
 `app/blog/page.tsx`, `components/blog/blog-cluster-rail.tsx`,
 `components/blog/comparativas-rail.tsx`.
 
+---
+
 ## 248. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
 
 **Qué se decidió.** El fundador vio el informe de prospecto hecho a mano para
