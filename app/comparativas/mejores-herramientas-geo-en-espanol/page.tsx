@@ -219,7 +219,7 @@ export default function MejoresHerramientasGeoPage() {
           búsqueda agregada de reseñas de terceros — sus páginas oficiales de precios no se pudieron
           consultar de forma directa durante la investigación — así que sus cifras de precio se tratan
           como orientativas, nunca como un hecho cerrado. Si detectas un dato desactualizado o inexacto
-          en cualquiera de las seis, dínoslo y lo corregimos.
+          en cualquiera de las ocho, dínoslo y lo corregimos.
         </p>
 
         <ArticleCta

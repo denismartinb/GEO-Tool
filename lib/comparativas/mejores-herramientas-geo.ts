@@ -177,7 +177,7 @@ export const TOOLS: ToolProfile[] = [
     spanishSupport: "No encontrado.",
     bestFor: "Equipos SaaS/B2B con capacidad técnica que quieren optimizar activamente cómo los agentes de IA rastrean su web, no solo medir el resultado.",
     context:
-      "Es la única de las seis que no se limita a medir: su \"Agent Experience Platform\" sirve activamente una versión reducida de tu web a los rastreadores de IA, y añade un feed en tiempo real de qué agentes visitan el sitio y con qué intención. Encaja mejor con equipos que ya tienen a alguien capaz de actuar sobre esa señal técnica, no solo de leer un informe."
+      "Es la única de las ocho que no se limita a medir: su \"Agent Experience Platform\" sirve activamente una versión reducida de tu web a los rastreadores de IA, y añade un feed en tiempo real de qué agentes visitan el sitio y con qué intención. Encaja mejor con equipos que ya tienen a alguien capaz de actuar sobre esa señal técnica, no solo de leer un informe."
   },
   {
     slug: "athenahq",
